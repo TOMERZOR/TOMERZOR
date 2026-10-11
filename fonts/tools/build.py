@@ -8,6 +8,7 @@ from fontTools.pens.areaPen import AreaPen
 from fontTools.pens.reverseContourPen import ReverseContourPen
 
 S, OUT = sys.argv[1], sys.argv[2]
+VARIANT = int(sys.argv[3]) if len(sys.argv) > 3 else 0   # 0 = the original letter shapes
 UH = 560          # height of a regular Hebrew letter, font units
 PEN = 46          # pen width, font units
 SB = 55           # side bearing
@@ -151,10 +152,33 @@ SYNTH = {
 }
 DOT = {'.', ',', ':'}
 
+def perturb(segs, ch):
+    """Re-draw a letter the way a hand never repeats itself: a little bigger or smaller,
+    leaning, sheared, with a gentle wobble through the stroke."""
+    import random, math
+    r = random.Random(f'{VARIANT}:{ch}')
+    pts = np.array([q for sg in segs for q in sg])
+    cx, cy = pts[:, 0].mean(), max(pts[:, 1].min(), 0) + 0.0
+    sx, sy = r.uniform(.94, 1.06), r.uniform(.93, 1.07)
+    rot = math.radians(r.uniform(-4.5, 4.5)); sh = r.uniform(-.07, .07)
+    ca, sa = math.cos(rot), math.sin(rot)
+    waves = [(r.uniform(-17, 17), r.uniform(-17, 17), r.uniform(.004, .012), r.uniform(.004, .012), r.uniform(0, 6.3)) for _ in range(2)]
+    def f(q):
+        x, y = q[0] - cx, q[1] - cy
+        x, y = x * sx + sh * y, y * sy
+        x, y = x * ca - y * sa, x * sa + y * ca
+        for ax, ay, fx, fy, ph in waves:
+            x += ax * math.sin(fy * q[1] + ph); y += ay * math.sin(fx * q[0] + ph * .7)
+        return np.array([x + cx, y + cy])
+    return [(f(a), f(b)) for a, b in segs], r.uniform(.9, 1.1)
+
 def render(ch):
     segs = glyph_segments(ch)
+    penk = 1.0
+    if VARIANT and ch not in DOT:
+        segs, penk = perturb(segs, ch)
     pts = np.array([q for sg in segs for q in sg])
-    pen = int(PEN * (1.7 if ch in DOT else 1))
+    pen = int(PEN * penk * (1.7 if ch in DOT else 1))
     pad = pen
     minx, miny = pts.min(0) - pad; maxx, maxy = pts.max(0) + pad
     Wc, Hc = int(maxx - minx) + 1, int(maxy - miny) + 1
@@ -221,9 +245,9 @@ ymin = min(getattr(glyphs[n], 'yMin', 0) for n in glyph_order)
 ymax = max(getattr(glyphs[n], 'yMax', 0) for n in glyph_order)
 asc, desc = max(ymax + 40, 820), min(ymin - 40, -300)
 fb.setupHorizontalHeader(ascent=asc, descent=desc, lineGap=120)
-fam = 'Tomer Hand'
-fb.setupNameTable({'familyName': fam, 'styleName': 'Regular', 'uniqueFontIdentifier': 'TomerHand-Regular-1.0',
-                   'fullName': fam + ' Regular', 'psName': 'TomerHand-Regular', 'version': 'Version 1.000'})
+fam = 'Tomer Hand' + (f' V{VARIANT}' if VARIANT else '')
+fb.setupNameTable({'familyName': fam, 'styleName': 'Regular', 'uniqueFontIdentifier': fam.replace(' ', '') + '-Regular-1.0',
+                   'fullName': fam + ' Regular', 'psName': fam.replace(' ', '') + '-Regular', 'version': 'Version 1.000'})
 fb.setupOS2(sTypoAscender=asc, sTypoDescender=desc, sTypoLineGap=120, usWinAscent=asc, usWinDescent=-desc,
             sxHeight=UH, sCapHeight=UH, ulUnicodeRange1=(1 << 0) | (1 << 11), ulCodePageRange1=(1 << 0) | (1 << 5),
             achVendID='TMRZ', fsType=0)

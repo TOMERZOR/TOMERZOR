@@ -9,4 +9,4 @@
 
 **בהדפסה:** גודל בפועל / 100%, בלי "התאם לדף".
 
-בנייה מחדש: `python3 tools/gen.py DIR` (DIR צריך להכיל את TomerHand-Regular.ttf), ואז `node tools/pdf.js DIR`.
+בנייה מחדש: מעתיקים לתיקייה DIR את `fonts/TomerHand-Regular.ttf` ואת `fonts/variants/*.ttf` (ארבע גרסאות של כל אות, `build.py WORK out.ttf N`), ואז `python3 tools/gen.py DIR` ו-`node tools/pdf.js DIR`.

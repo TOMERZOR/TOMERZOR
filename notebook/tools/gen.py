@@ -213,6 +213,40 @@ def page_html(P, S, guides):
     return '\n'.join(out)
 
 DECO_JS = r'''
+// ---- every letter written a little differently
+const FAM = ['TH', 'TH1', 'TH2', 'TH3', 'TH4'];
+function humanize(el) {
+  const last = {};
+  let drift = 0;
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+  for (const tn of nodes) {
+    const frag = document.createDocumentFragment();
+    for (const ch of tn.textContent) {
+      const sp = document.createElement('span');
+      sp.textContent = ch;
+      if (/\s/.test(ch)) {                                   // uneven gaps between words
+        sp.style.fontSize = U(.85, 1.3).toFixed(3) + 'em';
+      } else {
+        let v; do { v = Math.floor(rnd() * FAM.length); } while (v === last[ch] && FAM.length > 1);
+        last[ch] = v;
+        drift = Math.max(-.05, Math.min(.05, drift * .8 + U(-.015, .015)));   // baseline wanders slowly
+        sp.style.fontFamily = FAM[v];
+        sp.style.fontSize = U(.96, 1.04).toFixed(3) + 'em';
+        sp.style.position = 'relative';
+        sp.style.top = (drift + U(-.018, .018)).toFixed(3) + 'em';
+        sp.style.marginInline = U(-.008, .02).toFixed(3) + 'em';
+      }
+      frag.appendChild(sp);
+    }
+    tn.replaceWith(frag);
+  }
+}
+function humanizeAll() {
+  for (const el of document.querySelectorAll('.ln:not(.under)')) humanize(el);
+  for (const el of document.querySelectorAll('.ln.under')) el.innerHTML = el.previousElementSibling.innerHTML;
+}
+
 // seeded randomness so every render gives the same "hand"
 let seed = 12345;
 const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
@@ -289,6 +323,7 @@ function drawDeco() {
 def build(guides):
     css = f'''
 @font-face {{ font-family: TH; src: url("TomerHand-Regular.ttf"); }}
+''' + ''.join(f'@font-face {{ font-family: TH{v}; src: url("TomerHand-V{v}.ttf"); }}\n' for v in range(1, 5)) + f'''
 @page {{ size: 210mm 297mm; margin: 0; }}
 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
 html, body {{ background: #fff; }}
@@ -309,6 +344,9 @@ html, body {{ background: #fff; }}
     js = f'''
 const MM = 96 / 25.4, ASC = {ASC};
 async function layout() {{
+  await document.fonts.ready;
+  humanizeAll();
+  await Promise.all(FAM.map(f => document.fonts.load(`20px ${{f}}`, 'אבגH2')));
   await document.fonts.ready;
   for (const el of document.querySelectorAll('.ln')) {{
     let fs = +el.dataset.fs;

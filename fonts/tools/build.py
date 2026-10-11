@@ -68,7 +68,40 @@ def strokes_from(sk, xy, F):
             if j is not None: segs.append((F[i], F[j]))
     return segs
 
+
+# ---- extra glyphs (Latin, 9, parentheses) cut from other photos
+import os
+EXTRA = json.load(open(f'{S}/spec_latin.json')) if os.path.exists(f'{S}/spec_latin.json') else {}
+_INK = {}
+def extra_segments(ch):
+    e = EXTRA[ch]
+    if e['img'] not in _INK:
+        ink = np.load(f'{S}/lat/ink{e["img"]}.npy')
+        _INK[e['img']] = (ink, cv2.connectedComponents(ink, connectivity=8)[1])
+    ink, lb = _INK[e['img']]
+    if 'box' in e:
+        x0, y0, x1, y1 = e['box']; m = ink[y0:y1, x0:x1] > 0
+    else:
+        ids = []
+        for x, y, w, h in e['labels']:
+            v = lb[y:y + h, x:x + w]; v = v[v > 0]; ids.append(np.bincount(v).argmax())
+        x0 = min(b[0] for b in e['labels']); y0 = min(b[1] for b in e['labels'])
+        x1 = max(b[0] + b[2] for b in e['labels']); y1 = max(b[1] + b[3] for b in e['labels'])
+        if 'xcut' in e:
+            a, bb = e['xcut']; w = x1 - x0; x0, x1 = x0 + int(a * w), x0 + int(np.ceil(bb * w))
+        m = np.isin(lb[y0:y1, x0:x1], ids)
+    U = 6  # upsample the low-res photo before thinning
+    big = cv2.resize(m.astype(np.float32), None, fx=U, fy=U, interpolation=cv2.INTER_CUBIC)
+    big = cv2.GaussianBlur(big, (0, 0), U * 0.5) > 0.45
+    sk = skeletonize(big)
+    ys, xs = np.nonzero(sk)
+    s = e['to'] / e['ref'] / U
+    base = e.get('base', y1)
+    F = np.stack([xs * s, (base * U - (ys + y0 * U)) * s], 1)
+    return strokes_from(sk, (xs, ys), F)
+
 def glyph_segments(ch):
+    if ch in EXTRA: return extra_segments(ch)
     if ch in SYNTH: return SYNTH[ch]()
     F, sk, xy, s = skeleton_pts(ch)
     return strokes_from(sk, xy, F)
@@ -107,6 +140,13 @@ SYNTH = {
     'ץ': lambda: with_descender('צ', 0.30),
     'ף': lambda: with_descender('פ', 0.40, pick='right'),
     '-': bar(0, 250, 230, 265),
+    '/': bar(0, -60, 230, 600),
+    '=': lambda: bar(0, 190, 260, 200)() + bar(0, 330, 260, 340)(),
+    "'": bar(20, 560, 0, 420),
+    '"': lambda: bar(20, 560, 0, 420)() + bar(110, 560, 90, 420)(),
+    '\u05F3': bar(20, 560, 0, 420),
+    '\u05F4': lambda: bar(20, 560, 0, 420)() + bar(110, 560, 90, 420)(),
+    'o': lambda: [(a * 0.62, b * 0.62) for a, b in extra_segments('O')],
     ':': lambda: [(np.array([0, 0.]), np.array([0, 0.]))] * 1 + [(np.array([0, 330.]), np.array([0, 330.]))],
 }
 DOT = {'.', ',', ':'}
@@ -139,7 +179,7 @@ def render(ch):
         rec.closePath()
     return rec, (minx + pad, maxx - pad)
 
-CHARS = list(spec.keys()) + list(SYNTH.keys())
+CHARS = list(spec.keys()) + list(SYNTH.keys()) + list(EXTRA.keys())
 names = {'.notdef': '.notdef', ' ': 'space'}
 glyph_order = ['.notdef', 'space']; cmap = {32: 'space'}
 glyphs = {}; metrics = {}

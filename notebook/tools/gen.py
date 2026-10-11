@@ -47,8 +47,43 @@ def arrow(x0, y0, x1, y1):
     return (f'<path d="M{x0},{y0} L{x1},{y1} M{h1[0]:.2f},{h1[1]:.2f} L{x1},{y1} L{h2[0]:.2f},{h2[1]:.2f}" '
             f'fill="none" stroke="{INK}" stroke-width=".4" stroke-linecap="round" stroke-linejoin="round"/>')
 
-def hline(x0, x1, yy, w=.42): return f'<line x1="{x0}" y1="{yy}" x2="{x1}" y2="{yy}" stroke="{INK}" stroke-width="{w}" stroke-linecap="round"/>'
-def vline(xx, y0, y1, w=.5): return f'<line x1="{xx}" y1="{y0}" x2="{xx}" y2="{y1}" stroke="{INK}" stroke-width="{w}" stroke-linecap="round"/>'
+import random
+_rng = random.Random(7)
+
+def wobble(x0, y0, x1, y1, amp=.42, tilt=1.3, bow=.9):
+    """Smooth path that drifts like a line drawn freehand along a ruler-less edge."""
+    import math
+    L = math.hypot(x1 - x0, y1 - y0); n = max(3, int(L / 5))
+    ux, uy = (x1 - x0) / L, (y1 - y0) / L; px, py = -uy, ux
+    t0 = _rng.uniform(-tilt, tilt); b = _rng.uniform(-bow, bow)
+    noise = [0.0]
+    for _ in range(n): noise.append(noise[-1] * .55 + _rng.uniform(-amp, amp))
+    pts = []
+    for i in range(n + 1):
+        t = i / n
+        off = t0 * (t - .5) + b * math.sin(math.pi * t) + noise[i]
+        pts.append((x0 + (x1 - x0) * t + px * off, y0 + (y1 - y0) * t + py * off))
+    d = f'M{pts[0][0]:.2f},{pts[0][1]:.2f}'
+    for i in range(1, len(pts) - 1):
+        mx, my = (pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2
+        d += f' Q{pts[i][0]:.2f},{pts[i][1]:.2f} {mx:.2f},{my:.2f}'
+    d += f' L{pts[-1][0]:.2f},{pts[-1][1]:.2f}'
+    return d
+
+def pen(d, w=.42):  # ballpoint: main stroke plus a faint second pass so the weight varies
+    return (f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="{w}" stroke-linecap="round" stroke-linejoin="round"/>'
+            f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="{w*.6:.2f}" stroke-opacity=".35" stroke-linecap="round" '
+            f'transform="translate({_rng.uniform(-.15,.15):.2f},{_rng.uniform(-.15,.15):.2f})"/>')
+def marker(d, c, w):
+    return (f'<path d="{d}" fill="none" stroke="{MK[c][1]}" stroke-width="{w}" stroke-linecap="square" style="mix-blend-mode:multiply"/>'
+            f'<path d="{d}" fill="none" stroke="{MK[c][1]}" stroke-width="{w*.5:.2f}" stroke-opacity=".5" stroke-linecap="butt" '
+            f'transform="translate({_rng.uniform(-.3,.3):.2f},{_rng.uniform(-.25,.25):.2f})" style="mix-blend-mode:multiply"/>')
+
+def hline(x0, x1, yy, w=.42):
+    s0 = _rng.uniform(-1.2, 1.5); s1 = _rng.uniform(-1.5, 1.2)
+    return pen(wobble(x0 + s0, yy + _rng.uniform(-.3, .3), x1 + s1, yy + _rng.uniform(-.3, .3)), w)
+def vline(xx, y0, y1, w=.5):
+    return pen(wobble(xx + _rng.uniform(-.4, .4), y0 + _rng.uniform(-.8, .8), xx + _rng.uniform(-.6, .6), y1 + _rng.uniform(-.8, .8), tilt=.9), w)
 
 PAGES = []
 
@@ -63,7 +98,7 @@ P = [title(3, 'סוג תגובות כימיות', 'p', r=168),
      ln(12, '* באנדותרמי יש יותר קליטה.')]
 for i, w in enumerate(['בשניהם', 'פליטת אנרגיה', 'וגם', 'קליטת', 'אנרגיה']):
     P.append(ln(5 + i, w, r=204, fs=4.6, mx=19))
-S = [f'<path d="M{MARGIN_X+2.2},{y(4)+2.5} L{MARGIN_X+2.2},{y(9)+2}" stroke="{MK["p"][1]}" stroke-width="1.6" stroke-linecap="round"/>',
+S = [marker(wobble(MARGIN_X + 2.3, y(4) + 2, MARGIN_X + 2.0, y(9) + 2.6, amp=.2), 'p', 1.6),
      brace(MARGIN_X + 1, y(4) + 2.5, y(9) + 2)]
 PAGES.append((P, S))
 
@@ -121,7 +156,7 @@ P = [ln(0, 'יום שני', fs=5.4), ln(0, '14.9.26', l=16, ltr=True, fs=5.4),
      ln(30, 'אל', center=156, fs=4.4), ln(31, ulm('מתכת', 'y'), center=156, fs=4.6),
      ln(31, ulm('מתכת', 'y'), center=120, fs=4.6)]
 S = [arrow(134.5, y(29) + 1.2, 126.5, y(30) + 4.2), arrow(146, y(29) + .8, 150.5, y(30) + 1.8),
-     f'<path d="M113,{y(31)+3.2} Q142,{y(31)+2.4} 171,{y(31)+3.4}" stroke="{MK["y"][1]}" stroke-width="1.4" fill="none" stroke-linecap="round"/>']
+     marker(wobble(112.5, y(31) + 3.4, 171.5, y(31) + 3.0, amp=.25, bow=.7), 'y', 1.4)]
 PAGES.append((P, S))
 
 # ---------------- 5. תרגול שפה כימית
@@ -177,6 +212,80 @@ def page_html(P, S, guides):
     out.append('</section>')
     return '\n'.join(out)
 
+DECO_JS = r'''
+// seeded randomness so every render gives the same "hand"
+let seed = 12345;
+const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+const U = (a, b) => a + (b - a) * rnd();
+function wob(x0, y0, x1, y1, amp, bow) {
+  const L = Math.hypot(x1 - x0, y1 - y0), n = Math.max(3, Math.round(L / 6));
+  const tilt = U(-.5, .5) * Math.min(1, L / 40), b = U(-bow, bow);
+  let nz = 0, pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n; nz = nz * .5 + U(-amp, amp);
+    pts.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t + tilt * (t - .5) + b * Math.sin(Math.PI * t) + nz]);
+  }
+  let d = `M${pts[0][0].toFixed(2)},${pts[0][1].toFixed(2)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
+    d += ` Q${pts[i][0].toFixed(2)},${pts[i][1].toFixed(2)} ${mx.toFixed(2)},${my.toFixed(2)}`;
+  }
+  return d + ` L${pts[n][0].toFixed(2)},${pts[n][1].toFixed(2)}`;
+}
+function marker(svg, x0, x1, yy, w, col, op = .9) {
+  // chisel-tip highlighter: wandering centre line, uneven edges, slanted ends
+  const L = x1 - x0, n = Math.max(4, Math.round(L / 3)), sl = w * U(.35, .6);
+  const tilt = U(-.6, .6) * Math.min(1, L / 30), bow = U(-.5, .5);
+  let nz = 0, top = [], bot = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n; nz = nz * .6 + U(-.18, .18);
+    const cy = yy + tilt * (t - .5) + bow * Math.sin(Math.PI * t) + nz, x = x0 + L * t;
+    const hw = w / 2 * (1 + U(-.12, .12));
+    top.push([x + sl / 2, cy - hw]); bot.push([x - sl / 2, cy + hw]);
+  }
+  const P = top.concat(bot.reverse());
+  let d = `M${P[0][0].toFixed(2)},${P[0][1].toFixed(2)}`;
+  for (const p of P.slice(1)) d += ` L${p[0].toFixed(2)},${p[1].toFixed(2)}`;
+  const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  el.setAttribute('d', d + 'Z'); el.setAttribute('fill', col); el.setAttribute('fill-opacity', op);
+  el.setAttribute('stroke', col); el.setAttribute('stroke-width', '.25'); el.setAttribute('stroke-linejoin', 'round');
+  el.style.mixBlendMode = 'multiply';
+  svg.appendChild(el);
+}
+function drawDeco() {
+  const NS = 'http://www.w3.org/2000/svg';
+  for (const page of document.querySelectorAll('.page')) {
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('class', 'deco'); svg.setAttribute('viewBox', '0 0 210 297');
+    page.insertBefore(svg, page.firstChild);           // under the text
+    const P = page.getBoundingClientRect();
+    const add = (d, stroke, w, op, cap = 'round') => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d); p.setAttribute('fill', 'none'); p.setAttribute('stroke', stroke);
+      p.setAttribute('stroke-width', w); p.setAttribute('stroke-linecap', cap); p.setAttribute('stroke-linejoin', 'round');
+      if (op) { p.setAttribute('stroke-opacity', op); p.style.mixBlendMode = 'multiply'; }
+      svg.appendChild(p);
+    };
+    for (const sp of page.querySelectorAll('.hl, .ulm, .ul')) {
+      const ln = sp.closest('.ln'), fs = parseFloat(ln.style.fontSize), base = +ln.dataset.base;
+      const r = sp.getBoundingClientRect();
+      const x0 = (r.left - P.left) / MM, x1 = (r.right - P.left) / MM;
+      if (sp.classList.contains('ul')) {            // pen underline, a little over/short at the ends
+        const yy = base + .2 * fs;
+        add(wob(x0 + U(-1.5, .5), yy + U(-.4, .4), x1 + U(-.5, 1.8), yy + U(-.4, .4), .2, .5), '#23232f', .32);
+      } else {                                      // highlighter: wide translucent stroke + a streak
+        const col = getComputedStyle(sp).getPropertyValue('--h').trim();
+        const hl = sp.classList.contains('hl');
+        const yy = hl ? base - .17 * fs : base + .3 * fs, w = (hl ? .5 : .26) * fs;
+        const xa = x0 + U(-1.4, .2), xb = x1 + U(-.2, 1.6);
+        marker(svg, xa, xb, yy, w, col);
+        if (rnd() < .5) marker(svg, xa + U(2, 6), xb - U(1, 5), yy + U(-.2, .2) * w, w * U(.5, .8), col, .45); // second pass
+      }
+    }
+  }
+}
+'''
+
 def build(guides):
     css = f'''
 @font-face {{ font-family: TH; src: url("TomerHand-Regular.ttf"); }}
@@ -188,9 +297,10 @@ html, body {{ background: #fff; }}
 .ln {{ position: absolute; white-space: nowrap; letter-spacing: -.035em; word-spacing: .18em; font-family: TH; color: {INK}; line-height: {ASC + DESC}; }}
 .sb {{ font-size: .62em; position: relative; top: .3em; }}
 .dot {{ display: inline-block; width: .3em; height: .3em; border-radius: 50%; position: relative; top: -.15em; }}
-.hl {{ background: linear-gradient(transparent 50%, var(--h) 50%, var(--h) 82%, transparent 82%); padding: 0 .25em; border-radius: .2em; }}
-.ulm {{ border-bottom: .28em solid var(--h); padding-bottom: .05em; border-radius: .15em; }}
-.ul {{ text-decoration: underline; text-decoration-thickness: .06em; text-underline-offset: .18em; }}
+.hl {{ padding: 0 .15em; }}
+.ulm {{ }}
+.ul {{ }}
+.deco {{ position: absolute; inset: 0; width: 210mm; height: 297mm; }}
 .ttl {{ z-index: 2; letter-spacing: 0; }}
 ''' + ''.join(f'.ttl-{c} {{ color: {v[0]}; -webkit-text-stroke: .085em {v[0]}; }}\n' for c, v in MK.items()) + f'''
 .ttl-out {{ -webkit-text-stroke: .07em {MK['y'][0]}; }}
@@ -209,11 +319,13 @@ async function layout() {{
     el.style.top = (+el.dataset.base - ASC * fs) + 'mm';
     if (el.dataset.center) el.style.left = (+el.dataset.center - el.getBoundingClientRect().width / MM / 2) + 'mm';
   }}
+  drawDeco();
   document.body.dataset.ready = '1';
 }}
-layout();
+
 '''
     body = '\n'.join(page_html(P, S, guides) for P, S in PAGES)
+    js += DECO_JS + '\nlayout();\n'
     return f'<!doctype html><html lang="he"><head><meta charset="utf-8"><style>{css}</style></head><body>{body}<script>{js}</script></body></html>'
 
 if __name__ == '__main__':

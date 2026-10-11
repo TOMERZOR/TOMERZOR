@@ -134,21 +134,21 @@ P = [ln(0, 'יום שני', fs=5.4), ln(0, '7.9.26', l=16, ltr=True, fs=5.4),
      ln(10, chem('H2') + ' שני אטומים מחוברים של יסוד מימן. (מולקולת מימן).'),
      ln(14, 'יום שלישי:', fs=5.4), ln(14, '8.9.26', l=40, ltr=True, fs=5.4),
      ln(16, hl('שפה כימית:', 'k'), r=162),
-     ln(17, chem('H2') + ' - יסוד מימן, שני אטומים', mx=88),
-     ln(18, chem('2H') + ' - יסוד מימן, 2 אטומים ' + ul('נפרדים') + '.', mx=88),
-     ln(19, chem('H2O') + ' - תרכובת - 2 אטומי מימן, אטום אחד של חמצן.', mx=88),
-     ln(20, chem('Co') + ' - יסוד קובלט (אטום אחד)', mx=88),
-     ln(21, chem('CO') + ' - תרכובת - יסוד פחמן ויסוד חמצן.', mx=88),
-     ln(22, chem('CO2') + ' - תרכובת - אטום של פחמן ושני אטומים של חמצן.', mx=88),
-     ln(23, chem('C6H12O6') + ' תרכובת - 6 אטומים של פחמן, 12 אטומים', mx=88),
-     ln(24, 'של מימן ו-6 אטומים של חמצן.', mx=88),
+     ln(17, chem('H2') + ' - יסוד מימן, שני אטומים', mx=84),
+     ln(18, chem('2H') + ' - יסוד מימן, 2 אטומים ' + ul('נפרדים') + '.', mx=84),
+     ln(19, chem('H2O') + ' - תרכובת - 2 אטומי מימן, אטום אחד של חמצן.', mx=84),
+     ln(20, chem('Co') + ' - יסוד קובלט (אטום אחד)', mx=84),
+     ln(21, chem('CO') + ' - תרכובת - יסוד פחמן ויסוד חמצן.', mx=84),
+     ln(22, chem('CO2') + ' - תרכובת - אטום של פחמן ושני אטומים של חמצן.', mx=84),
+     ln(23, chem('C6H12O6') + ' תרכובת - 6 אטומים של פחמן, 12 אטומים', mx=84),
+     ln(24, 'של מימן ו-6 אטומים של חמצן.', mx=84),
      ln(16, ul('הערות:'), r=NR - 22),
-     ln(17, '* סמל יסוד מתחיל באות אנגלית', r=NR, mx=66), ln(18, 'גדולה.', r=NR - 4),
-     ln(19, 'במקרה ויש אות נוספת היא קטנה.', r=NR, mx=66),
-     ln(20, '* מספר קטן אחרי האות - מבטא כמות', r=NR, mx=66), ln(21, 'אטומים מחוברים.', r=NR - 4),
-     ln(22, '* מולקולה - אטומים מחוברים.', r=NR, mx=66),
-     ln(23, '* אות גדולה / אות גדולה עם קטנה - יסוד.', r=NR, mx=66),
-     ln(24, 'מספר גדול לפני האות - מספר מולקולות', r=NR, mx=66),
+     ln(17, '* סמל יסוד מתחיל באות אנגלית', r=NR, mx=64), ln(18, 'גדולה.', r=NR - 4),
+     ln(19, 'במקרה ויש אות נוספת היא קטנה.', r=NR, mx=64),
+     ln(20, '* מספר קטן אחרי האות - מבטא כמות', r=NR, mx=64), ln(21, 'אטומים מחוברים.', r=NR - 4),
+     ln(22, '* מולקולה - אטומים מחוברים.', r=NR, mx=64),
+     ln(23, '* אות גדולה / אות גדולה עם קטנה - יסוד.', r=NR, mx=64),
+     ln(24, 'מספר גדול לפני האות - מספר מולקולות', r=NR, mx=64),
      ln(26, 'עבודה בספר - 19.'),
      ln(27, '1. 6 אטומים של פחמן, 12 אטומים של מימן ו-6 אטומי חמצן.'),
      ln(28, '2.'), ln(28, chem('Li'), center=140, fs=6), ln(28, chem('H'), center=116, fs=6),
@@ -185,7 +185,7 @@ def build(guides):
 html, body {{ background: #fff; }}
 .page {{ position: relative; width: 210mm; height: 297mm; overflow: hidden; page-break-after: always; }}
 .ov {{ position: absolute; inset: 0; width: 210mm; height: 297mm; }}
-.ln {{ position: absolute; white-space: nowrap; letter-spacing: -.035em; font-family: TH; color: {INK}; line-height: {ASC + DESC}; }}
+.ln {{ position: absolute; white-space: nowrap; letter-spacing: -.035em; word-spacing: .18em; font-family: TH; color: {INK}; line-height: {ASC + DESC}; }}
 .sb {{ font-size: .62em; position: relative; top: .3em; }}
 .dot {{ display: inline-block; width: .3em; height: .3em; border-radius: 50%; position: relative; top: -.15em; }}
 .hl {{ background: linear-gradient(transparent 50%, var(--h) 50%, var(--h) 82%, transparent 82%); padding: 0 .25em; border-radius: .2em; }}

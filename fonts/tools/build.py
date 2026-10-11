@@ -208,7 +208,7 @@ tt = TTGlyphPen(None)
 for (a, b, c, e) in [((50, 0), (50, 600), (350, 600), (350, 0))]:
     tt.moveTo(a); tt.lineTo(d := e); tt.lineTo(c); tt.lineTo(b); tt.closePath()
 glyphs['.notdef'] = tt.glyph(); metrics['.notdef'] = (400, 50)
-glyphs['space'] = TTGlyphPen(None).glyph(); metrics['space'] = (260, 0)
+glyphs['space'] = TTGlyphPen(None).glyph(); metrics['space'] = (400, 0)
 # Map Hebrew maqaf / NBSP
 cmap[0xA0] = 'space'; cmap[0x05BE] = 'uni002D'
 

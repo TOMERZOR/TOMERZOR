@@ -1,0 +1,8 @@
+# Raw footage, AI-generated clips and renders stay out of the (public) repo
+assets/*.mp4
+assets/*.mov
+assets/*.MOV
+renders/
+snapshots/
+.hyperframes/
+node_modules/

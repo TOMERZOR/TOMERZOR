@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Shop | Dream Studios</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="collection">
+<div id="site-top"></div>
+<main>
+  <nav class="subnav" id="tabs" aria-label="Categories"></nav>
+  <div class="coll-head">
+    <h1 class="coll-title" id="coll-title">New Arrivals</h1>
+    <button class="filter-btn" type="button" id="filter-btn" aria-expanded="false" aria-controls="sort-panel"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Filter | Sort</button>
+  </div>
+  <div class="chips" id="chips" aria-label="Filter by line"></div>
+  <fieldset class="sort-panel" id="sort-panel" hidden style="margin:0;border-width:0 0 1px">
+    <legend class="sr-only">Sort products</legend>
+    <label><input type="radio" name="sort" id="sort-featured" value="featured" checked><span>Featured</span></label>
+    <label><input type="radio" name="sort" id="sort-low" value="low"><span>Price: Low to High</span></label>
+    <label><input type="radio" name="sort" id="sort-high" value="high"><span>Price: High to Low</span></label>
+    <label><input type="radio" name="sort" id="sort-az" value="az"><span>A–Z</span></label>
+  </fieldset>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" hidden><span id="empty-msg"></span><a class="pill pill--ink" href="#all">Shop New Arrivals</a></div>
+</main>
+<div id="site-footer"></div>
+<script src="assets/js/products.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

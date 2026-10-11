@@ -134,6 +134,16 @@ def with_descender(base, cut_frac, depth=-250, pick='low'):
     keep += [(line[i], line[i + 1]) for i in range(n - 1)]
     return keep
 
+def curve(P, n=60):
+    """Smooth pen stroke through control points (Catmull-Rom)."""
+    P = [np.array(p, float) for p in P]; P = [P[0]] + P + [P[-1]]; pts = []
+    for i in range(1, len(P) - 2):
+        for t in np.linspace(0, 1, n // (len(P) - 3), endpoint=False):
+            p0, p1, p2, p3 = P[i - 1], P[i], P[i + 1], P[i + 2]
+            pts.append(.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t ** 3))
+    pts.append(P[-2])
+    return [(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
+
 def bar(x0, y0, x1, y1):
     return lambda: [(np.array([x0, y0], float), np.array([x1, y1], float))]
 
@@ -142,6 +152,11 @@ SYNTH = {
     'ף': lambda: with_descender('פ', 0.40, pick='right'),
     '-': bar(0, 250, 230, 265),
     '/': bar(0, -60, 230, 600),
+    '?': lambda: curve([(20, 470), (60, 560), (170, 580), (250, 510), (240, 420), (150, 340), (130, 220)]) + [(np.array([128, 70.]), np.array([128, 70.]))],
+    '~': lambda: curve([(0, 300), (60, 350), (130, 300), (200, 250), (270, 300)]),
+    '\u2261': lambda: bar(0, 170, 300, 175)() + bar(0, 290, 300, 290)() + bar(0, 410, 300, 405)(),
+    '\u2192': lambda: bar(0, 270, 380, 275)() + bar(380, 275, 290, 350)() + bar(380, 275, 295, 195)(),
+    '\u2190': lambda: bar(0, 275, 380, 270)() + bar(0, 275, 90, 350)() + bar(0, 275, 85, 195)(),
     '=': lambda: bar(0, 190, 260, 200)() + bar(0, 330, 260, 340)(),
     "'": bar(20, 560, 0, 420),
     '"': lambda: bar(20, 560, 0, 420)() + bar(110, 560, 90, 420)(),
@@ -243,12 +258,15 @@ fb.setupGlyf(glyphs)
 fb.setupHorizontalMetrics(metrics)
 ymin = min(getattr(glyphs[n], 'yMin', 0) for n in glyph_order)
 ymax = max(getattr(glyphs[n], 'yMax', 0) for n in glyph_order)
-asc, desc = max(ymax + 40, 820), min(ymin - 40, -300)
+# fixed vertical metrics, identical in every variant, so mixing variants on one line
+# never moves the baseline; win metrics still cover the real glyph extent (no clipping)
+asc, desc = 979, -469
+win_asc, win_desc = max(ymax + 40, asc), max(-(ymin - 40), -desc)
 fb.setupHorizontalHeader(ascent=asc, descent=desc, lineGap=120)
 fam = 'Tomer Hand' + (f' V{VARIANT}' if VARIANT else '')
 fb.setupNameTable({'familyName': fam, 'styleName': 'Regular', 'uniqueFontIdentifier': fam.replace(' ', '') + '-Regular-1.0',
                    'fullName': fam + ' Regular', 'psName': fam.replace(' ', '') + '-Regular', 'version': 'Version 1.000'})
-fb.setupOS2(sTypoAscender=asc, sTypoDescender=desc, sTypoLineGap=120, usWinAscent=asc, usWinDescent=-desc,
+fb.setupOS2(sTypoAscender=asc, sTypoDescender=desc, sTypoLineGap=120, usWinAscent=win_asc, usWinDescent=win_desc,
             sxHeight=UH, sCapHeight=UH, ulUnicodeRange1=(1 << 0) | (1 << 11), ulCodePageRange1=(1 << 0) | (1 << 5),
             achVendID='TMRZ', fsType=0)
 fb.setupPost(); fb.setupDummyDSIG() if hasattr(fb, 'setupDummyDSIG') else None

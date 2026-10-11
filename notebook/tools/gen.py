@@ -22,8 +22,8 @@ def chem(s):
     out = re.sub(r'(?<=[A-Za-z])(\d+)', r'<span class="sb">\1</span>', H.escape(s))
     return f'<bdi dir="ltr">{out}</bdi>'
 
-def ln(k, t, r=TEXT_R, fs=5.6, mx=None, cls='', l=None, ltr=False, center=None):
-    return dict(k=k, t=t, r=r, fs=fs, mx=mx, cls=cls, l=l, ltr=ltr, center=center)
+def ln(k, t, r=TEXT_R, fs=5.6, mx=None, cls='', l=None, ltr=False, center=None, style=''):
+    return dict(k=k, t=t, r=r, fs=fs, mx=mx, cls=cls, l=l, ltr=ltr, center=center, style=style)
 
 def title(k, t, c, r=172, outline=False, fs=17):
     return ln(k, t, r=r, fs=fs, cls=f'ttl ttl-{c}' + (' ttl-out' if outline else ''))
@@ -32,6 +32,8 @@ dot = lambda c: f'<span class="dot" style="background:{MK[c][0]}"></span>'
 hl = lambda t, c: f'<span class="hl" style="--h:{MK[c][1]}">{t}</span>'
 ulm = lambda t, c: f'<span class="ulm" style="--h:{MK[c][1]}">{t}</span>'
 ul = lambda t: f'<span class="ul">{t}</span>'
+wav = lambda t, c: f'<span class="wav" style="--h:{MK[c][0]}">{t}</span>'
+pink = 'color:#e07a9a;'
 gap = lambda mm: f'<span style="display:inline-block;width:{mm}mm"></span>'
 
 def brace(x, y0, y1):
@@ -39,6 +41,12 @@ def brace(x, y0, y1):
     return (f'<path d="M{x},{y0} C{x+w*.6},{y0} {x+w*.6},{y0+1.5} {x+w*.6},{y0+3} L{x+w*.6},{m-2.5} '
             f'C{x+w*.6},{m-.8} {x+w},{m} {x+w*1.15},{m} C{x+w},{m} {x+w*.6},{m+.8} {x+w*.6},{m+2.5} '
             f'L{x+w*.6},{y1-3} C{x+w*.6},{y1-1.5} {x+w*.6},{y1} {x},{y1}" fill="none" stroke="{INK}" stroke-width=".45" stroke-linecap="round"/>')
+
+def braceL(x, y0, y1):
+    m = (y0 + y1) / 2; w = 2.6
+    return (f'<path d="M{x},{y0} C{x-w*.6},{y0} {x-w*.6},{y0+1.5} {x-w*.6},{y0+3} L{x-w*.6},{m-2.5} '
+            f'C{x-w*.6},{m-.8} {x-w},{m} {x-w*1.15},{m} C{x-w},{m} {x-w*.6},{m+.8} {x-w*.6},{m+2.5} '
+            f'L{x-w*.6},{y1-3} C{x-w*.6},{y1-1.5} {x-w*.6},{y1} {x},{y1}" fill="none" stroke="{INK}" stroke-width=".42" stroke-linecap="round"/>')
 
 def arrow(x0, y0, x1, y1):
     import math
@@ -78,6 +86,9 @@ def marker(d, c, w):
     return (f'<path d="{d}" fill="none" stroke="{MK[c][1]}" stroke-width="{w}" stroke-linecap="square" style="mix-blend-mode:multiply"/>'
             f'<path d="{d}" fill="none" stroke="{MK[c][1]}" stroke-width="{w*.5:.2f}" stroke-opacity=".5" stroke-linecap="butt" '
             f'transform="translate({_rng.uniform(-.3,.3):.2f},{_rng.uniform(-.25,.25):.2f})" style="mix-blend-mode:multiply"/>')
+
+def bond(x0, y0, x1, y1):
+    return pen(wobble(x0, y0, x1, y1, amp=.06, tilt=.25, bow=.12), .36)
 
 def hline(x0, x1, yy, w=.42):
     s0 = _rng.uniform(-1.2, 1.5); s1 = _rng.uniform(-1.5, 1.2)
@@ -190,6 +201,84 @@ P = [ln(0, 'יום שני', fs=5.4), ln(0, '7.9.26', l=16, ltr=True, fs=5.4),
      ln(29, 'ליתיום', center=140, fs=4.4), ln(29, 'מימן', center=116, fs=4.4)]
 PAGES.append((P, []))
 
+# ---------------- 6. תרגול נוסחת מבנה
+K = 'k'
+def structH(cx, k, left='', right='', up=False, down=False, atom='', fs=5.6):
+    """Atom at cx on line k, optional bonds to H drawn above/below (a line up/down)."""
+    P, S_ = [ln(k, atom, center=cx, ltr=True, fs=fs)], []
+    if left: P.append(ln(k, left, r=cx - 1.9, ltr=True, fs=fs))
+    if right: P.append(ln(k, right, l=cx + 1.9, ltr=True, fs=fs))
+    if up:
+        P.append(ln(k - 1, 'H', center=cx, ltr=True, fs=fs * .9)); S_.append(bond(cx, y(k - 1) + .4, cx + .1, y(k) - 4.2))
+    if down:
+        P.append(ln(k + 1, 'H', center=cx, ltr=True, fs=fs * .9)); S_.append(bond(cx, y(k) + .3, cx - .1, y(k + 1) - 3.9))
+    return P, S_
+
+P = [ln(0, 'יום ששי:', fs=5.4), ln(0, '9.10.26', l=16, ltr=True, fs=5.4),
+     title(3, 'תרגול נוסחת מבנה', K),
+     ln(5, ulm(chem('Br2'), K) + ' -', l=24, ltr=True), ln(5, 'Br-Br', l=48, ltr=True),
+     ln(7, ulm(chem('N2'), K) + ' -', l=24, ltr=True), ln(7, 'N≡N', l=48, ltr=True),
+     ln(9, ulm(chem('O2'), K) + ' -', l=24, ltr=True), ln(9, 'O=O', l=48, ltr=True),
+     ln(11, ulm(chem('O3'), K) + ' -', l=24, ltr=True), ln(11, 'אוזון', r=21, fs=4.6),
+     ln(10.55, 'O', center=50, ltr=True, fs=4.4), ln(10.55, 'O', center=58, ltr=True, fs=4.4),
+     ln(11.15, 'O', center=54, ltr=True, fs=4.4),
+     ln(13, ulm(chem('H2'), K) + ' -', l=24, ltr=True), ln(13, 'H - H', l=48, ltr=True),
+     ln(15, ulm(chem('Cl2'), K) + ' -', l=24, ltr=True), ln(15, 'Cl - Cl', l=48, ltr=True),
+     ln(17, ulm(chem('H2O'), K) + ' - H-O-H', l=24, ltr=True),
+     ln(5, ulm(chem('H2O2'), K) + ' - H-O-O-H', r=178, ltr=True),
+     ln(7, wav('תשובות עמוד 29 שאלות 1-3', K), r=176),
+     ln(9, hl('1.', K), r=186.5, fs=5), ln(9, '2, מכיוון שהחמצן נמצא בטור 6.', r=174),
+     ln(10, hl('2.', K), r=186.5, fs=5), ln(10, ulm(chem('NH3'), K) + ' -', l=95, ltr=True),
+     ln(13, ulm(chem('CH4'), K) + ' -', l=93, ltr=True),
+     ln(15, ulm(chem('H2O'), K) + ' -', l=92, ltr=True), ln(15, 'H-O-H', l=111, ltr=True),
+     ln(16, hl('3.', K), r=186.5, fs=5)]
+S = [marker(wobble(83, y(6) + 3.4, 179.5, y(6) + 3.2, amp=.15, tilt=.4, bow=.3), K, 1.1),
+     marker(wobble(83, y(6) + 3.4, 82.6, y(17) + 1, amp=.15, tilt=.5, bow=.4), K, 1.1),
+     bond(52.2, y(10.55) - 1.3, 55.8, y(10.55) - 1.4),                 # ozone ring bonds
+     bond(50.3, y(10.55) + .4, 53, y(11.15) - 3.0), bond(57.4, y(10.55) + .4, 55.2, y(11.15) - 2.9)]
+for p_, s_ in [structH(130, 10, 'H -', '- H', down=True, atom='N'),
+               structH(129, 13, 'H -', '- H', up=True, down=True, atom='C')]:
+    P += p_; S += s_
+PAGES.append((P, S))
+
+# ---------------- 7. קשר שיתופי
+P = [ln(0, 'יום שני', fs=5.4), ln(0, '5.10.26', l=16, ltr=True, fs=5.4),
+     title(3, 'קשר שיתופי', K, fs=19),
+     ln(4, '~ קשר קוולנטי ~', center=104, fs=4.4),
+     ln(5, '~', r=185, style=pink),
+     ln(5, 'קשר קוולנטי הוא קשר כימי שנוצר בין אטומים של יסודות ' + ulm(ul('אל מתכתיים'), K), mx=166),
+     ln(6, '(מימן ויסודות בטורים 3-8 ליד המדרגות)'),
+     ln(7, 'בקשר הקוולנטי יש שיתוף של אלקטרונים בין האטומים.'),
+     ln(8, 'מהי יכולת הקשר של יסודות לפי הטור בטבלה:', r=176),
+     ln(10, hl('טור 1', K) + ' - רק מימן - יכולת הקשר 1.'),
+     ln(11, hl('טור 4', K) + ' - יכולת קשר 4.'),
+     ln(12, hl('טור 5', K) + ' - יכולת קשר 3.'),
+     ln(13, hl('טור 6', K) + ' - יכולת קשר 2.'),
+     ln(14, hl('טור 7', K) + ' - יכולת קשר 1.'),
+     ln(12, 'למה?', center=92, fs=4.8), ln(13, "8 - מס' הטור", center=92, fs=4.4), ln(14, '= יכולת הקשר', center=92, fs=4.4),
+     ln(16, 'קשר קוולנטי בין אטומים'), ln(17, 'יוצר מולקולות.'),
+     ln(18, 'קשר קוולנטי יכול להיות במולקולות יסוד או במולקולות תרכובת.'),
+     title(20, 'נוסחת מבנה', K, r=160, fs=15),
+     ln(21, '~ נוסחת מבנה ~', center=104, fs=4.2),
+     ln(22, hl('תרגיל:', K), center=82, fs=5),
+     ln(23, '← ' + chem('CH4'), l=137, ltr=True, fs=6),
+     ln(23, '← ' + chem('NH3'), l=64, ltr=True, fs=6),
+     ln(25, hl('כללים לכתיבת נוסחת מבנה:', K), r=176),
+     ln(27, '1. נתחיל לכתוב מהאטום שיש לו את יכולת הקשר הגבוהה ביותר.'),
+     ln(28, '2. מתחילים למתוח קווים בין האטומים לפי יכולת קשר.'),
+     title(29.6, 'תרגול', K, r=176, fs=10),
+     ln(30.3, '~ תרגול ~', center=160, fs=3.8),
+     ln(31, ulm(chem('Br2'), K) + ' → Br-Br', l=24, ltr=True, fs=6),
+     ln(31, ulm(chem('ClH'), K) + ' →', l=88, ltr=True, fs=6),
+     ln(31, ulm(chem('H2'), K) + ' →  H-H', l=146, ltr=True, fs=6)]
+S = [braceL(103, y(9) + 1.5, y(14) + 2)]
+S += [f'<circle cx="{183.5 + _rng.uniform(-.3, .3):.2f}" cy="{y(k) - 1.6 + _rng.uniform(-.3, .3):.2f}" r=".75" fill="{MK[K][0]}"/>' for k in range(10, 15)]
+for p_, s_ in [structH(116, 23, 'H -', '- H', up=True, down=True, atom='C'),
+               structH(51, 23, 'H -', '', up=True, down=True, atom='N'),
+               structH(111, 31, '', '', down=True, atom='Cl', fs=6)]:
+    P += p_; S += s_
+PAGES.append((P, S))
+
 def page_html(P, S, guides):
     out = ['<section class="page">']
     if guides:
@@ -206,7 +295,7 @@ def page_html(P, S, guides):
                f'left:{it["center"]}mm;' if it['center'] is not None else f'right:{210 - it["r"]}mm;')
         d = 'ltr' if it['ltr'] else 'rtl'
         cls = 'ln ' + it['cls']
-        out.append(f'<div class="{cls}" dir="{d}" style="{pos}" {attrs}>{it["t"]}</div>')
+        out.append(f'<div class="{cls}" dir="{d}" style="{pos}{it.get("style", "")}" {attrs}>{it["t"]}</div>')
         if 'ttl-out' in it['cls']:   # black outline layer under the yellow bubble letters
             out.append(f'<div class="{cls} under" dir="{d}" style="{pos}" {attrs}>{it["t"]}</div>')
     out.append('</section>')
@@ -225,6 +314,7 @@ function humanize(el) {
     for (const ch of tn.textContent) {
       const sp = document.createElement('span');
       sp.textContent = ch;
+      sp.style.lineHeight = '0';     // never let a jittered letter or gap push the baseline
       if (/\s/.test(ch)) {                                   // uneven gaps between words
         sp.style.fontSize = U(.85, 1.3).toFixed(3) + 'em';
       } else {
@@ -304,6 +394,13 @@ function drawDeco() {
       const ln = sp.closest('.ln'), fs = parseFloat(ln.style.fontSize), base = +ln.dataset.base;
       const r = sp.getBoundingClientRect();
       const x0 = (r.left - P.left) / MM, x1 = (r.right - P.left) / MM;
+      if (sp.classList.contains('wav')) {           // wavy marker underline
+        const col = getComputedStyle(sp).getPropertyValue('--h').trim(), yy = base + .3 * fs;
+        let d = `M${(x0 - 1).toFixed(2)},${yy.toFixed(2)}`;
+        for (let x = x0 - 1; x < x1 + 1; x += 1.1) d += ` Q${(x + .55).toFixed(2)},${(yy + (Math.round((x - x0) / 1.1) % 2 ? .7 : -.7) + U(-.15, .15)).toFixed(2)} ${(x + 1.1).toFixed(2)},${(yy + U(-.1, .1)).toFixed(2)}`;
+        add(d, col, .5, .85);
+        continue;
+      }
       if (sp.classList.contains('ul')) {            // pen underline, a little over/short at the ends
         const yy = base + .2 * fs;
         add(wob(x0 + U(-1.5, .5), yy + U(-.4, .4), x1 + U(-.5, 1.8), yy + U(-.4, .4), .2, .5), '#23232f', .32);

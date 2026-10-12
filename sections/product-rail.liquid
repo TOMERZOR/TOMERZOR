@@ -1,5 +1,8 @@
 {%- liquid
   assign rail_collection = section.settings.collection
+  if rail_collection == blank
+    assign rail_collection = collections.all
+  endif
   assign limit = section.settings.limit
 -%}
 <section class="section" aria-labelledby="rail-title-{{ section.id }}">
@@ -35,7 +38,7 @@
   "class": "section-rail",
   "settings": [
     { "type": "text", "id": "title", "label": "Heading", "default": "New Arrivals" },
-    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "collection", "id": "collection", "label": "Collection", "info": "Leave empty to show products from your whole store." },
     { "type": "range", "id": "limit", "label": "Products to show", "min": 4, "max": 16, "step": 1, "default": 8 },
     { "type": "checkbox", "id": "show_count", "label": "Show product count", "default": true },
     { "type": "text", "id": "link_label", "label": "Link label", "default": "View All" },

@@ -58,30 +58,6 @@ window.DREAM = {
       details: ["Baggy fit, knee length", "Five-pocket construction", "Leather back patch", "100% cotton denim", "Wash cold, inside out"]
     },
     {
-      id: "portrait-tee",
-      name: "Dream Portrait Tee Pink",
-      category: "tees",
-      line: "Graphic",
-      price: 199,
-      color: { name: "Washed Pink", hex: "#ebc7cf" },
-      sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-      images: ["portrait-tee.jpg"],
-      description: "A halftone portrait printed in sepia on washed pink, with the Dream script on the chest.",
-      details: ["Boxy, oversized fit with dropped shoulders", "Ribbed crew neck", "100% cotton", "Wash cold, inside out"]
-    },
-    {
-      id: "rodeo-tee",
-      name: "Rodeo Grid Tee Baby Blue",
-      category: "tees",
-      line: "Graphic",
-      price: 199,
-      color: { name: "Baby Blue", hex: "#cfe0f0" },
-      sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-      images: ["rodeo-tee.jpg"],
-      description: "Twelve bronco riders in twelve colours, printed as a grid across the front.",
-      details: ["Boxy, oversized fit with dropped shoulders", "Ribbed crew neck", "100% cotton", "Wash cold, inside out"]
-    },
-    {
       id: "graphic-designer-tee",
       name: "In Need For Graphic Designer Tee",
       category: "tees",

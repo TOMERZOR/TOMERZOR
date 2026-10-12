@@ -87,7 +87,7 @@
     <div class="search__body">
       <div id="search-suggest">
         <p class="label-muted">Popular Searches</p>
-        <ul class="popular">${D.products.map((p) => `<li><button type="button" data-q="${esc(p.name.replace(/ (Navy|Pink|Baby Blue)$/, ""))}">${esc(p.name.replace(/ (Navy|Pink|Baby Blue)$/, ""))}</button></li>`).join("")}</ul>
+        <ul class="popular">${D.products.map((p) => `<li><button type="button" data-q="${esc(p.name.replace(/ Navy$/, ""))}">${esc(p.name.replace(/ Navy$/, ""))}</button></li>`).join("")}</ul>
         <p class="label-muted">Recommended For You</p>
       </div>
       <div class="grid" id="search-results" style="margin-inline:calc(-1 * var(--gutter))"></div>
@@ -147,14 +147,27 @@
 
   /* ---------- header behaviour ---------- */
   const header = $("#header");
-  const onScroll = () => header.classList.toggle("is-solid", window.scrollY > 40);
-  if (page === "home") { onScroll(); window.addEventListener("scroll", onScroll, { passive: true }); }
-  else header.classList.add("is-solid");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let lastY = window.scrollY;
+  const onScroll = () => {
+    const y = window.scrollY;
+    if (page === "home") header.classList.toggle("is-solid", y > 40);
+    const overlayOpen = document.body.classList.contains("menu-open") || document.body.classList.contains("search-open");
+    if (Math.abs(y - lastY) > 6) { header.classList.toggle("is-hidden", y > lastY && y > 240 && !overlayOpen); lastY = y; }
+  };
+  if (page !== "home") header.classList.add("is-solid");
+  onScroll(); window.addEventListener("scroll", onScroll, { passive: true });
+  // Overlays open right under the header, wherever the page is scrolled.
+  const placeOverlays = () => {
+    header.classList.remove("is-hidden");
+    const top = Math.max(0, header.getBoundingClientRect().bottom);
+    $$(".overlay").forEach((o) => (o.style.paddingTop = `${top}px`));
+  };
 
   const body = document.body;
   const menu = $("#menu"), search = $("#search"), menuBtn = $("#menu-btn"), searchBtn = $("#search-btn");
   function setMenu(open) {
-    if (open) setSearch(false);
+    if (open) { setSearch(false); placeOverlays(); }
     menu.classList.toggle("is-open", open);
     body.classList.toggle("menu-open", open);
     body.classList.toggle("is-locked", open);
@@ -164,6 +177,7 @@
   }
   function setSearch(open) {
     if (open && menu.classList.contains("is-open")) setMenu(false);
+    if (open) placeOverlays();
     search.classList.toggle("is-open", open);
     body.classList.toggle("search-open", open);
     body.classList.toggle("is-locked", open);
@@ -210,10 +224,15 @@
     if (line) line.qty += 1; else bag.push({ id, size, qty: 1 });
     saveBag();
   }
+  let shownCount = null;
   function renderBag() {
     const count = bag.reduce((n, l) => n + l.qty, 0);
     const total = bag.reduce((n, l) => n + l.qty * byId(l.id).price, 0);
-    $$("[data-bag-count]").forEach((el) => (el.textContent = count || ""));
+    $$("[data-bag-count]").forEach((el) => {
+      if (shownCount !== null && count > shownCount) replay(el, "bump");
+      el.textContent = count || "";
+    });
+    shownCount = count;
     const left = D.freeShippingFrom - total;
     $("#ship").innerHTML = (left > 0 ? `You're <strong>${money(left)}</strong> away from free shipping` : "You've unlocked <strong>free shipping</strong>") +
       `<div class="ship__track"><div class="ship__fill" style="width:${Math.min(100, (total / D.freeShippingFrom) * 100)}%"></div></div>`;
@@ -250,6 +269,7 @@
     favs = favs.includes(id) ? favs.filter((f) => f !== id) : [...favs, id];
     store.set("dream.favs", favs);
     renderFavs();
+    if (favs.includes(id)) $$(`[data-fav="${id}"]`).forEach((b) => replay(b, "pop"));
     toast(favs.includes(id) ? "Saved to wishlist" : "Removed from wishlist");
     document.dispatchEvent(new CustomEvent("favs:change"));
   }
@@ -289,8 +309,31 @@
   // Remember the product a card links to, in case the host drops the URL hash.
   document.addEventListener("click", (e) => {
     const a = e.target.closest("a[href^='product.html#']");
-    if (a) { try { sessionStorage.setItem("dream.pid", a.getAttribute("href").split("#")[1]); } catch (err) { /* ignore */ } }
+    if (!a) return;
+    try { sessionStorage.setItem("dream.pid", a.getAttribute("href").split("#")[1]); } catch (err) { /* ignore */ }
+    // Name the clicked image so the browser morphs it into the product page gallery.
+    const img = a.querySelector(".card__media img");
+    if (img) { $$("img").forEach((i) => (i.style.viewTransitionName = "")); img.style.viewTransitionName = "pdp-image"; }
   });
+  window.addEventListener("pageshow", () => $$(".card__media img").forEach((i) => (i.style.viewTransitionName = "")));
+
+  /* ---------- motion helpers ---------- */
+  function replay(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+  // Scroll reveal: content rises in as it enters the viewport. Skipped for reduced motion.
+  const io = !reduceMotion && "IntersectionObserver" in window ? new IntersectionObserver((entries) => {
+    entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); } });
+  }, { rootMargin: "0px 0px -6% 0px", threshold: 0.12 }) : null;
+  function reveal(els) {
+    if (!io) return;
+    let row = 0, lastTop = null;
+    els.forEach((el) => {
+      if (el.classList.contains("is-in")) return;
+      const t = el.getBoundingClientRect().top;
+      row = t === lastTop ? row + 1 : 0; lastTop = t;
+      el.style.setProperty("--d", `${Math.min(row, 5) * 70}ms`);
+      el.classList.add("reveal"); io.observe(el);
+    });
+  }
 
   function bindRailNav(scope) {
     $$("[data-rail-prev], [data-rail-next]", scope).forEach((btn) => btn.addEventListener("click", () => {
@@ -304,6 +347,7 @@
     $("#rail-new").innerHTML = D.products.filter((p) => p.tag === "New").concat(D.products.filter((p) => p.tag !== "New")).map(card).join("");
     $("#rail-wanted").innerHTML = [...D.products].reverse().map(card).join("");
     $$("[data-count]").forEach((el) => (el.textContent = D.products.length));
+    reveal($$(".section__head, .rail .card, .tile, .campaign > *, .story > div > *"));
     bindRailNav(document);
   }
 
@@ -329,6 +373,7 @@
         `<button type="button" data-line="${esc(k)}" aria-pressed="${state.line === k}" class="${state.line === k ? "dot" : ""}">${esc(label)}</button>`).join("") : "";
       $("#chips").hidden = lines.length <= 1;
       $("#grid").innerHTML = list.map(card).join("");
+      reveal($$("#grid .card"));
       $("#empty").hidden = list.length > 0;
       $("#empty-msg").textContent = state.cat === "wishlist" ? "Your wishlist is empty. Tap the heart on any product to save it here." : "Nothing here yet. New pieces drop soon.";
     }
@@ -351,7 +396,7 @@
 
     $("#pdp").innerHTML = `
       <div class="gallery-wrap">
-        <div class="gallery" id="gallery">${p.images.map((src, i) => `<figure><img src="${IMG + src}" alt="${esc(p.name)}, view ${i + 1}" ${i ? 'loading="lazy"' : ""}></figure>`).join("")}</div>
+        <div class="gallery" id="gallery">${p.images.map((src, i) => `<figure><img src="${IMG + src}" alt="${esc(p.name)}, view ${i + 1}" ${i ? 'loading="lazy"' : 'style="view-transition-name:pdp-image"'}></figure>`).join("")}</div>
         ${p.images.length > 1 ? `<span class="gallery-count" id="gallery-count">1 / ${p.images.length}</span>` : ""}
       </div>
       <div class="buy"><div class="buy__inner">
@@ -401,6 +446,7 @@
     if (gc) g.addEventListener("scroll", () => { gc.textContent = `${Math.round(g.scrollLeft / g.clientWidth) + 1} / ${p.images.length}`; }, { passive: true });
 
     $("#rail-related").innerHTML = D.products.filter((x) => x.id !== p.id).map(card).join("");
+    reveal($$(".section__head, #rail-related .card"));
     bindRailNav(document);
     window.addEventListener("hashchange", () => { if (byId(location.hash.slice(1))) location.reload(); });
   }
@@ -431,4 +477,5 @@
   if (page === "collection") initCollection();
   if (page === "product") initProduct();
   renderBag(); renderFavs();
+  reveal($$(".footer__top > *"));
 })();

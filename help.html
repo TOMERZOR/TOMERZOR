@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<title>Help &amp; Policies | Dream Studios</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preload" href="assets/fonts/inter-tight-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/style.css">
+<meta name="description" content="Shipping, returns, size guide, contact, privacy, cookies, terms of sale and accessibility at Dream Studios.">
+</head>
+<body data-page="help">
+<div id="site-top"></div>
+<main>
+  <nav class="subnav" id="policy-tabs" aria-label="Help and policies">
+    <a href="#shipping">Shipping</a>
+    <a href="#returns">Returns &amp; Refunds</a>
+    <a href="#size-guide">Size Guide</a>
+    <a href="#contact">Contact</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#cookies">Cookies</a>
+    <a href="#terms">Terms of Sale</a>
+    <a href="#accessibility">Accessibility</a>
+  </nav>
+
+  <div class="policies">
+    <!-- Every value in a data-bind span comes from assets/js/products.js. -->
+
+    <section class="policy" id="shipping" aria-labelledby="shipping-title">
+      <h1 class="policy__title" id="shipping-title">Shipping</h1>
+      <p class="policy__meta">Last updated <span data-bind="policiesUpdated"></span></p>
+
+      <h2>Where we ship</h2>
+      <p>We currently ship within Israel only. International shipping is coming soon.</p>
+
+      <h2>Processing time</h2>
+      <p>Orders are packed and handed to the courier within <span data-bind="shipping.dispatch"></span> of payment. Orders placed on Friday, Saturday or a public holiday are processed on the next business day.</p>
+
+      <h2>Delivery options and costs</h2>
+      <div class="table-scroll">
+        <table class="policy-table">
+          <thead><tr><th>Method</th><th>Delivery time</th><th>Cost</th></tr></thead>
+          <tbody>
+            <tr><td data-bind="shipping.standard.name"></td><td data-bind="shipping.standard.time"></td><td><span data-bind="shipping.standard.fee" data-money></span>, free over <span data-bind="freeShippingFrom" data-money></span></td></tr>
+            <tr><td data-bind="shipping.express.name"></td><td data-bind="shipping.express.time"></td><td><span data-bind="shipping.express.fee" data-money></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Delivery times start once your order has shipped and are counted in business days (Sunday–Thursday). You'll see the exact cost and expected delivery date at checkout before you pay.</p>
+
+      <h2>Tracking</h2>
+      <p>When your order ships, we email you a tracking number and a link to follow your parcel.</p>
+
+      <h2>Delivery problems</h2>
+      <ul>
+        <li><strong>Late parcel:</strong> if your order hasn't arrived 3 business days after the latest expected date, contact us and we'll chase it with the courier.</li>
+        <li><strong>Lost or damaged parcel:</strong> we're responsible for your order until it's delivered. If it's lost or arrives damaged, we'll send a replacement or a full refund.</li>
+        <li><strong>Wrong address:</strong> check your address at checkout. If a parcel comes back to us because of an incorrect address, we'll contact you to resend it. The second delivery may be charged.</li>
+      </ul>
+    </section>
+
+    <section class="policy" id="returns" aria-labelledby="returns-title">
+      <h1 class="policy__title" id="returns-title">Returns &amp; Refunds</h1>
+      <p class="policy__meta">Last updated <span data-bind="policiesUpdated"></span></p>
+
+      <h2>Our return policy</h2>
+      <p>You can return or exchange any item within <span data-bind="returns.days"></span> days of delivery. Items must be unworn, unwashed and undamaged, with the original tags attached. We don't charge a cancellation fee.</p>
+
+      <h2>How to return</h2>
+      <ol>
+        <li>Email <span data-bind="business.email"></span> with your order number and the items you're returning.</li>
+        <li>We'll reply within 2 business days with the return address and instructions.</li>
+        <li>Pack the items securely and send them back. Keep your shipping receipt until your refund arrives.</li>
+      </ol>
+      <p>Return shipping is paid by you, unless the item is faulty or we sent the wrong item.</p>
+
+      <h2>Refunds</h2>
+      <p>We refund you to your original payment method within <span data-bind="returns.refundDays"></span> days of receiving your returned items. Your bank may take a few more days to show it. The original delivery fee is refunded only if the item was faulty or wrong.</p>
+
+      <h2>Exchanges</h2>
+      <p>Need a different size? Tell us in your return email. We'll send the new size as soon as your return arrives, subject to stock. Exchanges ship free.</p>
+
+      <h2>Faulty or wrong items</h2>
+      <p>If something arrives faulty or isn't what you ordered, email us within 14 days of delivery with your order number and a photo. We'll send a replacement or a full refund including delivery costs.</p>
+
+      <h2>Cancelling an order</h2>
+      <p>You can cancel an order at no cost before it ships by emailing us. Once it has shipped, follow the return steps above.</p>
+
+      <h2>Your legal rights</h2>
+      <p>Our policy is in addition to your rights under the Israeli Consumer Protection Law, 1981. For online purchases, the law lets you cancel within 14 days of receiving the item. If you are 65 or older, a person with a disability or a new immigrant (up to 5 years since immigration), and the purchase included a conversation with us (for example by phone), you can cancel within 4 months. Nothing in this policy limits those rights.</p>
+    </section>
+
+    <section class="policy" id="size-guide" aria-labelledby="size-title">
+      <h1 class="policy__title" id="size-title">Size Guide</h1>
+      <p>Measurements are taken with the garment laid flat, in centimetres. Our tees have a boxy, oversized fit with dropped shoulders. For a closer fit, size down.</p>
+      <h2>T-Shirts</h2>
+      <div class="table-scroll">
+        <table class="policy-table">
+          <thead><tr><th>Size</th><th>XS</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th></tr></thead>
+          <tbody>
+            <tr><td>Chest width</td><td>56</td><td>59</td><td>62</td><td>65</td><td>68</td><td>71</td></tr>
+            <tr><td>Length</td><td>67</td><td>69</td><td>71</td><td>73</td><td>75</td><td>77</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h2>Denim Shorts</h2>
+      <div class="table-scroll">
+        <table class="policy-table">
+          <thead><tr><th>Size</th><th>28</th><th>30</th><th>32</th><th>34</th><th>36</th></tr></thead>
+          <tbody>
+            <tr><td>Waist</td><td>72</td><td>77</td><td>82</td><td>87</td><td>92</td></tr>
+            <tr><td>Length</td><td>54</td><td>55</td><td>56</td><td>57</td><td>58</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="policy" id="contact" aria-labelledby="contact-title">
+      <h1 class="policy__title" id="contact-title">Contact</h1>
+      <p>Questions about an order, a size or anything else? We reply within 2 business days.</p>
+      <dl class="policy-dl">
+        <dt>Email</dt><dd data-bind="business.email"></dd>
+        <dt>Phone</dt><dd data-bind="business.phone"></dd>
+        <dt>Hours</dt><dd data-bind="business.hours"></dd>
+        <dt>Address</dt><dd data-bind="business.address"></dd>
+        <dt>Business</dt><dd><span data-bind="business.legalName"></span> · <span data-bind="business.businessId"></span></dd>
+      </dl>
+    </section>
+
+    <section class="policy" id="privacy" aria-labelledby="privacy-title">
+      <h1 class="policy__title" id="privacy-title">Privacy Policy</h1>
+      <p class="policy__meta">Last updated <span data-bind="policiesUpdated"></span></p>
+      <p>This policy explains what personal information <span data-bind="business.legalName"></span> (“Dream Studios”, “we”) collects when you use this website or buy from us, why we collect it, and what rights you have. It is written to meet the Israeli Privacy Protection Law, 1981, and, for visitors in the European Union, the GDPR.</p>
+
+      <h2>Who is responsible for your data</h2>
+      <p><span data-bind="business.legalName"></span>, <span data-bind="business.businessId"></span>, <span data-bind="business.address"></span>. Contact us about privacy at <span data-bind="business.email"></span>.</p>
+
+      <h2>What we collect</h2>
+      <ul>
+        <li><strong>Orders:</strong> your name, delivery address, phone number, email address and what you bought.</li>
+        <li><strong>Payments:</strong> handled by our payment provider. We never see or store your full card number.</li>
+        <li><strong>Newsletter:</strong> your email address, year of birth and the date you gave consent.</li>
+        <li><strong>Customer service:</strong> the messages you send us.</li>
+        <li><strong>Technical data:</strong> your IP address, browser and device type, kept in our hosting provider's server logs for security.</li>
+        <li><strong>On your device:</strong> your bag, wishlist and cookie choices, stored in your browser. See the <a href="#cookies">Cookie Policy</a>.</li>
+      </ul>
+      <p>You don't have to give us your information, but we can't process an order without your contact and delivery details.</p>
+
+      <h2>Why we use it</h2>
+      <ul>
+        <li>To process, deliver and support your orders, including returns (needed to fulfil our contract with you).</li>
+        <li>To keep tax and accounting records, as required by law.</li>
+        <li>To send marketing emails, only if you've agreed. You can unsubscribe at any time.</li>
+        <li>To keep the website secure and prevent fraud.</li>
+      </ul>
+
+      <h2>Who we share it with</h2>
+      <p>We share only what's needed with service providers who work for us: website hosting, payment processing, delivery couriers and our email service. They may only use your data to provide their service to us. We may also disclose information when the law requires it. We never sell your personal information.</p>
+      <p>Some of these providers store data outside Israel. When that happens, we use providers that protect your data to a standard at least equal to Israeli law and, for EU visitors, the GDPR.</p>
+
+      <h2>How long we keep it</h2>
+      <ul>
+        <li>Order and invoice records: 7 years, as required by Israeli tax law.</li>
+        <li>Newsletter details: until you unsubscribe.</li>
+        <li>Customer service messages: 2 years after the conversation ends.</li>
+        <li>Server logs: up to 90 days.</li>
+      </ul>
+
+      <h2>Your rights</h2>
+      <p>You can ask to see the personal information we hold about you, correct it, or delete it where we don't need to keep it by law. You can withdraw your marketing consent at any time with the unsubscribe link in any email. If you're in the EU, you can also ask us to restrict or object to processing and to receive your data in a portable format.</p>
+      <p>Email <span data-bind="business.email"></span> and we'll answer within 30 days. If you're not happy with our answer, you can complain to the Israeli Privacy Protection Authority or, in the EU, to your local data protection authority.</p>
+
+      <h2>Children</h2>
+      <p>Our newsletter is only for people aged <span data-bind="newsletterMinAge"></span> or older, and we don't knowingly collect information from children. If you think a child has given us their details, contact us and we'll delete them.</p>
+
+      <h2>Security</h2>
+      <p>The site is served over HTTPS, access to customer data is limited to people who need it, and payments go through a certified payment provider.</p>
+
+      <h2>Changes</h2>
+      <p>If we change this policy, we'll update the date at the top. For significant changes, we'll let customers know by email.</p>
+    </section>
+
+    <section class="policy" id="cookies" aria-labelledby="cookies-title">
+      <h1 class="policy__title" id="cookies-title">Cookie Policy</h1>
+      <p class="policy__meta">Last updated <span data-bind="policiesUpdated"></span></p>
+      <p>Cookies and browser storage are small pieces of data a website saves on your device. We keep ours to a minimum.</p>
+
+      <h2>What we use now</h2>
+      <p>We only use storage that's needed for the store to work. It stays on your device and isn't sent to us or anyone else. We don't use advertising or tracking cookies, and our fonts are hosted on our own server, so loading this site doesn't contact Google or other third parties.</p>
+      <div class="table-scroll">
+        <table class="policy-table">
+          <thead><tr><th>Name</th><th>Purpose</th><th>Type</th><th>Kept for</th></tr></thead>
+          <tbody>
+            <tr><td><code>dream.bag</code></td><td>Remembers what's in your bag</td><td>Necessary</td><td>Until you clear it</td></tr>
+            <tr><td><code>dream.favs</code></td><td>Remembers your wishlist</td><td>Necessary</td><td>Until you clear it</td></tr>
+            <tr><td><code>dream.consent</code></td><td>Remembers your cookie choices</td><td>Necessary</td><td>12 months</td></tr>
+            <tr><td><code>dream.pid</code></td><td>Opens the right product page</td><td>Necessary</td><td>This browser session</td></tr>
+            <tr><td><code>dream.underage</code></td><td>Applies the newsletter age limit</td><td>Necessary</td><td>This browser session</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Optional cookies</h2>
+      <p>If we add analytics or marketing tools in the future, they will only run after you allow them, and we'll list them here first. You can review or change your choices at any time.</p>
+      <p><button class="pill pill--ink" type="button" data-cookie-settings>Cookie settings</button></p>
+
+      <h2>Managing storage in your browser</h2>
+      <p>You can delete cookies and site data in your browser settings at any time. Your bag and wishlist will be emptied if you do.</p>
+    </section>
+
+    <section class="policy" id="terms" aria-labelledby="terms-title">
+      <h1 class="policy__title" id="terms-title">Terms of Sale</h1>
+      <p class="policy__meta">Last updated <span data-bind="policiesUpdated"></span></p>
+      <p>These terms apply to every purchase from this website. By placing an order, you agree to them.</p>
+
+      <h2>1. About us</h2>
+      <p>This store is run by <span data-bind="business.legalName"></span>, <span data-bind="business.businessId"></span>, <span data-bind="business.address"></span>. Email <span data-bind="business.email"></span>, phone <span data-bind="business.phone"></span>.</p>
+
+      <h2>2. Who can buy</h2>
+      <p>You must be 18 or older, or have a parent or guardian's permission, and have a delivery address in Israel.</p>
+
+      <h2>3. Products and prices</h2>
+      <p>Prices are in Israeli new shekels (NIS) and include VAT. Delivery costs are shown at checkout before you pay. We do our best to show colours accurately, but they can look slightly different on different screens. If a price on the site is clearly wrong, we'll contact you before shipping and you can cancel for a full refund.</p>
+
+      <h2>4. Orders</h2>
+      <p>Your order is confirmed when you receive our order confirmation email. If an item turns out to be out of stock, we'll let you know and refund it in full.</p>
+
+      <h2>5. Payment</h2>
+      <p>Payments are processed securely by our payment provider. Your card is charged when you place the order. We'll send a tax invoice by email.</p>
+
+      <h2>6. Delivery</h2>
+      <p>Delivery times and costs are set out in our <a href="#shipping">Shipping policy</a>. We're responsible for your order until it's delivered to you.</p>
+
+      <h2>7. Cancellations and returns</h2>
+      <p>You can cancel or return as described in our <a href="#returns">Returns &amp; Refunds policy</a>, in addition to your rights under the Consumer Protection Law, 1981.</p>
+
+      <h2>8. Our designs</h2>
+      <p>All designs, graphics, logos, photos and text on this site belong to Dream Studios. You may not copy or use them for commercial purposes without our written permission.</p>
+
+      <h2>9. Liability</h2>
+      <p>To the extent the law allows, we're not responsible for indirect losses caused by using the site or our products. Nothing in these terms limits your rights as a consumer under Israeli law.</p>
+
+      <h2>10. Law and jurisdiction</h2>
+      <p>These terms are governed by the laws of the State of Israel. The competent courts in <span data-bind="business.courtsCity"></span> have jurisdiction, without limiting your right to sue in the court nearest to your home where the law allows it.</p>
+
+      <h2>11. Changes</h2>
+      <p>We may update these terms from time to time. The version on the site when you place your order applies to that order.</p>
+    </section>
+
+    <section class="policy" id="accessibility" aria-labelledby="a11y-title">
+      <h1 class="policy__title" id="a11y-title">Accessibility Statement</h1>
+      <p class="policy__meta">Last updated <span data-bind="policiesUpdated"></span></p>
+      <p>We want everyone to be able to shop with us. This site is built to meet Israeli Standard 5568, based on WCAG 2.0 level AA, in line with the Equal Rights for Persons with Disabilities (Service Accessibility Adjustments) Regulations, 2013.</p>
+
+      <h2>What we've done</h2>
+      <ul>
+        <li>The whole site works with a keyboard, with a visible focus outline.</li>
+        <li>Images have text descriptions for screen readers.</li>
+        <li>Buttons, forms and menus have clear labels, and headings follow a logical order.</li>
+        <li>Text and background colours have strong contrast.</li>
+        <li>The layout adapts to phones, tablets and computers, and text can be enlarged up to 200%.</li>
+        <li>Animations switch off when your device's “reduce motion” setting is on.</li>
+      </ul>
+
+      <h2>Known limitations</h2>
+      <p>We keep reviewing the site. If you find a page or feature that's hard to use, please tell us and we'll fix it or help you complete your purchase another way.</p>
+
+      <h2>Accessibility coordinator</h2>
+      <dl class="policy-dl">
+        <dt>Name</dt><dd data-bind="business.accessibilityContact"></dd>
+        <dt>Email</dt><dd data-bind="business.email"></dd>
+        <dt>Phone</dt><dd data-bind="business.phone"></dd>
+      </dl>
+    </section>
+  </div>
+</main>
+<div id="site-footer"></div>
+<script src="assets/js/products.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

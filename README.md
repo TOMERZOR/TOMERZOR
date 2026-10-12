@@ -4,6 +4,7 @@ Storefront for Dream Studios, a static site (HTML, CSS, vanilla JS, no build ste
 
 - `index.html`: home (campaign hero, New Arrivals, category tiles, Created By God denim, Most Wanted, Universe)
 - `collection.html#all|tees|denim|wishlist`: collection with tabs, line filters and sorting
+- `help.html#shipping|returns|size-guide|contact|privacy|cookies|terms|accessibility`: help and legal policies
 - `product.html#<product-id>`: product page with gallery, sizes, size guide and bag
 - `assets/js/products.js`: the catalogue. Edit names, prices, sizes and copy here
 - `assets/img/`: product and campaign photos
@@ -14,12 +15,13 @@ Preview locally: `npx http-server .` and open http://localhost:8080
 
 ## Legal checklist before launch
 
-Not legal advice. Check these with a lawyer for the countries you sell to.
+Not legal advice. Have a lawyer review the policies in `help.html` for the countries you sell to.
 
-- **Business details:** fill in `business` in `assets/js/products.js`. They show in the site footer.
+- **Business details:** fill in `business` in `assets/js/products.js` (legal name, business ID, address, phone, email, accessibility coordinator). They appear in the footer and across the policies.
+- **Shipping and returns:** the delivery times, fees and return rules in `shipping` and `returns` are suggested defaults. Change them to match how you actually operate.
+- **Policies:** shipping, returns and refunds, size guide, contact, privacy, cookies, terms of sale and accessibility statement are in `help.html`. Update "Last updated" (`policiesUpdated`) whenever you change one. Israeli law expects consumer-facing terms to be available in Hebrew too.
+- **Cookies:** the site only uses necessary browser storage, so no banner is shown. When you add analytics or a pixel, set that category's `enabled: true` in `cookies`, load the script inside `DreamConsent.onGrant("analytics", ...)`, and add it to the table in the Cookie Policy. The consent banner then appears automatically.
 - **Fonts:** self-hosted from `assets/fonts/` (SIL OFL), so no visitor data goes to Google.
-- **Tracking:** none. If you add analytics, a pixel or session replay, add a consent banner first, and mask form inputs in any replay tool.
-- **Newsletter:** asks for year of birth (minimum age set by `newsletterMinAge`, default 16) and an unticked marketing-consent box. Connect it to your email provider and store the consent date.
+- **Newsletter:** asks for year of birth (minimum age `newsletterMinAge`, default 16) and an unticked marketing-consent box. Connect it to your email provider and store the consent date.
 - **Marketing emails:** start from `emails/marketing-email.html`. Every email needs the unsubscribe link and your postal address. In Israel, start the subject with "פרסומת".
-- **Purchase terms:** shipping, taxes and the 30-day returns policy are shown under Add to Bag and Checkout. Make sure they match your real policy.
-- **Still missing:** Privacy Policy, Terms of Sale and Returns pages (the footer Help links are placeholders).
+- **Accessibility:** the statement in `help.html` says the site aims for IS 5568 (WCAG 2.0 AA). Get an accessibility audit before launch and name a real coordinator.

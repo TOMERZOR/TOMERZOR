@@ -7,11 +7,33 @@ window.DREAM = {
   // Replace the bracketed placeholders before launch.
   business: {
     name: "Dream Studios",
+    legalName: "[Legal business name]",
+    businessId: "[Business ID: ח.פ. / ע.מ.]",
     address: "[Street and number, City, Postal code, Israel]",
-    email: "[hello@your-domain.com]"
+    email: "[hello@your-domain.com]",
+    phone: "[Phone number]",
+    hours: "Sunday–Thursday, 10:00–17:00",
+    accessibilityContact: "[Name of accessibility coordinator]",
+    courtsCity: "Tel Aviv"
   },
   newsletterMinAge: 16,
+  // Shipping and returns terms used across the site and on help.html.
+  // These are suggested defaults: confirm each one matches how you actually operate.
   freeShippingFrom: 400,
+  shipping: {
+    dispatch: "1–2 business days",
+    standard: { name: "Standard delivery", time: "3–5 business days", fee: 29 },
+    express: { name: "Express delivery", time: "1–2 business days", fee: 49 }
+  },
+  returns: { days: 30, refundDays: 14 },
+  policiesUpdated: "12 October 2026",
+  // Optional cookie categories. Set `enabled: true` only when you add a tool that needs it
+  // (e.g. Google Analytics, Meta Pixel). The consent banner appears automatically once
+  // any category is enabled, and scripts should load through DreamConsent.onGrant().
+  cookies: {
+    analytics: { enabled: false, label: "Analytics", text: "Helps us understand how the store is used, like which pages are visited." },
+    marketing: { enabled: false, label: "Marketing", text: "Lets us measure our ads and show you relevant ones on other sites." }
+  },
   season: "FW26 · 01",
   categories: {
     tees: "T-Shirts",

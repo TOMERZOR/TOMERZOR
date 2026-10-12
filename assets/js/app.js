@@ -74,7 +74,7 @@
     </div>
     <div class="menu__foot">
       <a class="row-link" href="index.html#universe">Universe ${icon("arrow")}</a>
-      <a class="row-link" href="#footer">Support ${icon("arrow")}</a>
+      <a class="row-link" href="help.html#contact">Support ${icon("arrow")}</a>
     </div>
   </div>
 
@@ -120,7 +120,7 @@
           </select>
           <label class="consent" for="news-consent">
             <input id="news-consent" type="checkbox" required>
-            <span>I agree to receive marketing emails from ${esc(D.business.name)} about drops and offers, about twice a month. Unsubscribe anytime with the link in every email.</span>
+            <span>I agree to receive marketing emails from ${esc(D.business.name)} about drops and offers, about twice a month. Unsubscribe anytime with the link in every email. See our <a href="help.html#privacy">Privacy Policy</a>.</span>
           </label>
           <button class="pill pill--ink" type="submit">Subscribe</button>
         </form>
@@ -132,17 +132,20 @@
         <li><a href="collection.html#denim">Denim</a></li>
         <li><a href="collection.html#wishlist">Wishlist</a></li></ul></div>
       <div class="fcol"><h4>Help</h4><ul>
-        <li><a href="#">Shipping</a></li>
-        <li><a href="#">Returns &amp; Exchanges</a></li>
-        <li><a href="#">Size Guide</a></li>
-        <li><a href="#">Contact</a></li></ul></div>
+        <li><a href="help.html#shipping">Shipping</a></li>
+        <li><a href="help.html#returns">Returns &amp; Refunds</a></li>
+        <li><a href="help.html#size-guide">Size Guide</a></li>
+        <li><a href="help.html#contact">Contact</a></li></ul></div>
       <div class="fcol"><h4>Universe</h4><ul>
         <li><a href="index.html#universe">About Dream</a></li>
         <li><a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a></li>
         <li><a href="https://tiktok.com" target="_blank" rel="noopener">TikTok</a></li></ul></div>
     </div>
     <div class="footer__mark" aria-hidden="true">Dream<sup>®</sup>Studios</div>
-    <div class="footer__legal"><span>© 2026 ${esc(D.business.name)}. All rights reserved.</span><span>${esc(D.business.address)} · ${esc(D.business.email)}</span><span>Prices in ${D.currency} · Taxes included</span></div>
+    <nav class="footer__policies" aria-label="Legal">
+      <a href="help.html#privacy">Privacy Policy</a><a href="help.html#cookies">Cookie Policy</a><a href="help.html#terms">Terms of Sale</a><a href="help.html#returns">Refund Policy</a><a href="help.html#shipping">Shipping Policy</a><a href="help.html#accessibility">Accessibility</a><button type="button" data-cookie-settings>Cookie Settings</button>
+    </nav>
+    <div class="footer__legal"><span>© 2026 ${esc(D.business.legalName)} · ${esc(D.business.businessId)}</span><span>${esc(D.business.address)} · ${esc(D.business.email)}</span><span>Prices in ${D.currency} · VAT included</span></div>
   </footer>`;
 
   /* ---------- header behaviour ---------- */
@@ -251,7 +254,7 @@
     }).join("") : `<div class="drawer__empty"><span>Your bag is empty.</span><a class="pill pill--ink" href="collection.html#all">Shop New Arrivals</a></div>`;
     $("#bag-foot").innerHTML = bag.length ? `<div class="drawer__total"><span>Subtotal</span><span>${money(total)}</span></div>
       <button class="pill pill--ink pill--block" type="button" id="checkout">Checkout</button>
-      <p class="fine">Taxes included. Shipping calculated at checkout, free over ${money(D.freeShippingFrom)}. Free returns within 30 days of delivery, unworn with tags attached.</p>` : "";
+      <p class="fine">Taxes included. Shipping calculated at checkout, free over ${money(D.freeShippingFrom)}. ${D.returns.days}-day returns. By checking out you agree to our <a href="help.html#terms">Terms of Sale</a> and <a href="help.html#returns">Refund Policy</a>.</p>` : "";
     const co = $("#checkout");
     if (co) co.addEventListener("click", () => toast("Checkout opens with the store launch"));
   }
@@ -418,7 +421,7 @@
             <button class="fav-btn" type="button" data-fav="${p.id}" aria-pressed="${favs.includes(p.id)}" aria-label="Save to wishlist">${icon("heart")}</button>
           </div>
           <p class="buy__msg" id="buy-msg" role="status"></p>
-          <p class="fine">Taxes included. Free shipping over ${money(D.freeShippingFrom)}. Free returns within 30 days of delivery, unworn with tags attached.</p>
+          <p class="fine">Taxes included. Free shipping over ${money(D.freeShippingFrom)}. Returns within ${D.returns.days} days of delivery. <a href="help.html#returns">Refund Policy</a></p>
         </div>
         <div class="acc">
           <details open><summary>Description ${icon("plus")}</summary><div class="acc__body"><p>${esc(p.description)}</p></div></details>
@@ -426,7 +429,7 @@
           <details id="size-guide"><summary>Size Guide ${icon("plus")}</summary><div class="acc__body"><div class="table-scroll"><table class="size-table">
             ${sizeRows.map((r, i) => `<tr>${r.map((c) => (i ? "<td>" : "<th>") + c + (i ? "</td>" : "</th>")).join("")}</tr>`).join("")}
           </table></div><p style="margin-top:10px">Measured flat. For a less oversized look, size down.</p></div></details>
-          <details><summary>Shipping &amp; Returns ${icon("plus")}</summary><div class="acc__body"><p>Free shipping on orders over ${money(D.freeShippingFrom)}. Returns and exchanges within 30 days of delivery, unworn with tags attached.</p></div></details>
+          <details><summary>Shipping &amp; Returns ${icon("plus")}</summary><div class="acc__body"><p>${D.shipping.standard.name}: ${D.shipping.standard.time}, ${money(D.shipping.standard.fee)}, free over ${money(D.freeShippingFrom)}. ${D.shipping.express.name}: ${D.shipping.express.time}, ${money(D.shipping.express.fee)}.</p><p>Returns and exchanges within ${D.returns.days} days of delivery, unworn with tags attached. <a href="help.html#shipping">Shipping Policy</a> · <a href="help.html#returns">Refund Policy</a></p></div></details>
         </div>
       </div></div>`;
 
@@ -450,6 +453,84 @@
     bindRailNav(document);
     window.addEventListener("hashchange", () => { if (byId(location.hash.slice(1))) location.reload(); });
   }
+
+  function initHelp() {
+    const get = (path) => path.split(".").reduce((o, k) => (o == null ? o : o[k]), D);
+    $$("[data-bind]").forEach((el) => {
+      const v = get(el.dataset.bind);
+      el.textContent = el.hasAttribute("data-money") ? money(v) : v;
+    });
+    const sections = $$(".policy"), ids = sections.map((s) => s.id);
+    const show = () => {
+      const id = ids.includes(location.hash.slice(1)) ? location.hash.slice(1) : ids[0];
+      sections.forEach((s) => (s.hidden = s.id !== id));
+      $$("#policy-tabs a").forEach((a) => {
+        const on = a.getAttribute("href") === `#${id}`;
+        a.setAttribute("aria-current", on); a.classList.toggle("dot", on);
+        if (on) a.scrollIntoView({ block: "nearest", inline: "center" });
+      });
+      document.title = `${$(`#${id} .policy__title`).textContent} | Dream Studios`;
+    };
+    window.addEventListener("hashchange", () => { show(); window.scrollTo({ top: 0 }); });
+    show();
+  }
+
+  /* ---------- cookie consent ----------
+     Necessary storage (bag, wishlist, these choices) needs no consent.
+     Optional categories come from D.cookies; the banner only appears once one is enabled.
+     Load optional scripts with: DreamConsent.onGrant("analytics", () => { ... }) */
+  const optional = Object.entries(D.cookies).filter(([, c]) => c.enabled).map(([k]) => k);
+  let consent = store.get("dream.consent", null);
+  if (consent && Date.now() - consent.date > 365 * 864e5) consent = null; // ask again after 12 months
+  const waiting = {};
+  window.DreamConsent = {
+    has: (cat) => !!(consent && consent[cat] && D.cookies[cat] && D.cookies[cat].enabled),
+    onGrant(cat, fn) { if (this.has(cat)) fn(); else (waiting[cat] = waiting[cat] || []).push(fn); }
+  };
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="cookie" id="cookie-banner" role="region" aria-label="Cookie consent" hidden>
+      <p class="cookie__title">Cookies</p>
+      <p class="cookie__text">We use necessary storage to run your bag and wishlist. With your permission, we'd also like to use ${optional.map((k) => D.cookies[k].label.toLowerCase()).join(" and ")} cookies. <a href="help.html#cookies">Cookie Policy</a></p>
+      <div class="cookie__actions">
+        <button class="pill pill--line" type="button" data-consent="none">Reject all</button>
+        <button class="pill pill--line" type="button" data-cookie-settings>Settings</button>
+        <button class="pill pill--ink" type="button" data-consent="all">Accept all</button>
+      </div>
+    </div>
+    <div class="cookie cookie--panel" id="cookie-panel" role="dialog" aria-modal="false" aria-labelledby="cookie-panel-title" hidden>
+      <div class="cookie__head"><p class="cookie__title" id="cookie-panel-title">Cookie Settings</p><button class="icon-btn" type="button" id="cookie-close" aria-label="Close cookie settings">${icon("close")}</button></div>
+      <div class="cookie__cats">
+        <label class="cookie__cat"><span><strong>Necessary</strong><span>Runs your bag, wishlist and these choices. Always on.</span></span><input class="switch" type="checkbox" checked disabled></label>
+        ${Object.entries(D.cookies).map(([k, c]) => `
+        <label class="cookie__cat" for="consent-${k}"><span><strong>${esc(c.label)}${c.enabled ? "" : " · Not in use"}</strong><span>${esc(c.text)}</span></span>
+          <input class="switch" type="checkbox" id="consent-${k}" data-cat="${k}" ${c.enabled ? "" : "disabled"}></label>`).join("")}
+      </div>
+      <div class="cookie__actions">
+        <button class="pill pill--line" type="button" data-consent="none">Reject all</button>
+        <button class="pill pill--ink" type="button" id="cookie-save">Save choices</button>
+      </div>
+    </div>`);
+  const banner = $("#cookie-banner"), panel = $("#cookie-panel");
+  function saveConsent(choice) {
+    consent = { date: Date.now() };
+    Object.keys(D.cookies).forEach((k) => (consent[k] = !!choice[k] && D.cookies[k].enabled));
+    store.set("dream.consent", consent);
+    banner.hidden = true; panel.hidden = true;
+    Object.keys(waiting).forEach((k) => { if (window.DreamConsent.has(k)) { waiting[k].forEach((fn) => fn()); waiting[k] = []; } });
+    toast("Cookie choices saved");
+  }
+  function openPanel() {
+    $$("[data-cat]", panel).forEach((i) => (i.checked = window.DreamConsent.has(i.dataset.cat)));
+    banner.hidden = true; panel.hidden = false; $("#cookie-close").focus();
+  }
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-cookie-settings]")) openPanel();
+    const c = e.target.closest("[data-consent]");
+    if (c) saveConsent(Object.fromEntries(Object.keys(D.cookies).map((k) => [k, c.dataset.consent === "all"])));
+  });
+  $("#cookie-save").addEventListener("click", () => saveConsent(Object.fromEntries($$("[data-cat]", panel).map((i) => [i.dataset.cat, i.checked]))));
+  $("#cookie-close").addEventListener("click", () => { panel.hidden = true; if (optional.length && !consent) banner.hidden = false; });
+  if (optional.length && !consent) banner.hidden = false;
 
   /* ---------- newsletter ---------- */
   const nf = $("#news-form");
@@ -476,6 +557,7 @@
   if (page === "home") initHome();
   if (page === "collection") initCollection();
   if (page === "product") initProduct();
+  if (page === "help") initHelp();
   renderBag(); renderFavs();
   reveal($$(".footer__top > *"));
 })();

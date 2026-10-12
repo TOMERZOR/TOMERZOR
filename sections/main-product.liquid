@@ -1,0 +1,204 @@
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+  assign media_count = product.media.size
+-%}
+<div class="pdp" data-product-section>
+  <div class="gallery-wrap">
+    <div class="gallery" id="gallery">
+      {%- for media in product.media -%}
+        <figure data-media-id="{{ media.id }}">
+          {%- case media.media_type -%}
+            {%- when 'image' -%}
+              {%- liquid
+                assign loading = 'lazy'
+                assign vt = ''
+                if forloop.first
+                  assign loading = 'eager'
+                  assign vt = 'view-transition-name: pdp-image'
+                endif
+              -%}
+              {{ media | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 1024px) 30vw, 100vw', loading: loading, alt: media.alt | default: product.title, style: vt }}
+            {%- when 'video' -%}
+              {{ media | video_tag: controls: true, playsinline: true, muted: true, loop: true, image_size: '1100x' }}
+            {%- when 'external_video' -%}
+              {{ media | external_video_tag }}
+            {%- when 'model' -%}
+              {{ media | model_viewer_tag }}
+          {%- endcase -%}
+        </figure>
+      {%- else -%}
+        <figure>{{ 'product-apparel-1' | placeholder_svg_tag: 'placeholder-svg' }}</figure>
+      {%- endfor -%}
+    </div>
+    {%- if media_count > 1 -%}<span class="gallery-count" id="gallery-count">1 / {{ media_count }}</span>{%- endif -%}
+  </div>
+
+  <div class="buy"><div class="buy__inner">
+    <nav class="crumbs" aria-label="{{ 'general.breadcrumb' | t }}">
+      <a href="{{ routes.all_products_collection_url }}">{{ 'general.shop' | t }}</a>
+      {%- if collection -%}<span>/</span><a href="{{ collection.url }}">{{ collection.title | escape }}</a>{%- elsif product.type != blank -%}<span>/</span><span>{{ product.type | escape }}</span>{%- endif -%}
+    </nav>
+    <h1 class="buy__name">{{ product.title | escape }}</h1>
+    <div class="buy__price">{% render 'price', product: product, variant: current %}</div>
+    <div class="buy__tax">
+      {%- if cart.taxes_included -%}{{ 'cart.taxes_included' | t }}{%- else -%}{{ 'cart.taxes_at_checkout' | t }}{%- endif -%}
+      {%- if shop.shipping_policy.body != blank %} <a href="{{ shop.shipping_policy.url }}">{{ 'products.shipping_calculated' | t }}</a>{% endif -%}
+    </div>
+
+    {%- form 'product', product, id: 'product-form', class: 'buy__form', novalidate: 'novalidate', data-product-form: '' -%}
+      <input type="hidden" name="id" value="{{ current.id }}" data-variant-id>
+
+      {%- unless product.has_only_default_variant -%}
+        {%- for option in product.options_with_values -%}
+          {%- liquid
+            assign option_name = option.name | downcase
+            assign is_color = false
+            if option_name == 'color' or option_name == 'colour' or option_name == 'צבע'
+              assign is_color = true
+            endif
+            assign is_size = false
+            if option_name contains 'size' or option_name == 'מידה'
+              assign is_size = true
+            endif
+          -%}
+          <fieldset class="opt" data-option-index="{{ forloop.index0 }}"{% if is_size %} data-size-option{% endif %}>
+            <legend class="opt__label">{{ option.name | escape }} <span data-option-value>{{ option.selected_value | escape }}</span>
+              {%- if is_size and section.settings.size_guide_page != blank -%}
+                <button type="button" class="link-btn" data-open-size-guide>{{ 'products.size_guide' | t }}</button>
+              {%- endif -%}
+            </legend>
+            <div class="{% if is_color %}color-options{% else %}sizes{% endif %}">
+              {%- for value in option.values -%}
+                {%- assign input_id = section.id | append: '-' | append: forloop.parentloop.index | append: '-' | append: forloop.index -%}
+                <input type="radio" id="{{ input_id }}" name="option-{{ forloop.parentloop.index }}" value="{{ value | escape }}"{% if option.selected_value == value %} checked{% endif %}>
+                {%- if is_color -%}
+                  {%- liquid
+                    assign swatch_style = 'background: var(--tile)'
+                    if value.swatch.image
+                      assign swatch_url = value.swatch.image | image_url: width: 60
+                      assign swatch_style = 'background: url(' | append: swatch_url | append: ') center / cover'
+                    elsif value.swatch.color
+                      assign swatch_style = 'background: ' | append: value.swatch.color
+                    endif
+                  -%}
+                  <label for="{{ input_id }}" title="{{ value | escape }}"><span class="swatch swatch--lg" style="{{ swatch_style }}"></span><span class="sr-only">{{ value | escape }}</span></label>
+                {%- else -%}
+                  <label for="{{ input_id }}">{{ value | escape }}</label>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+          </fieldset>
+        {%- endfor -%}
+        <noscript>
+          <label class="opt__label" for="variant-select">{{ 'products.choose_option' | t }}</label>
+          <select id="variant-select" name="id" class="news__field">
+            {%- for variant in product.variants -%}
+              <option value="{{ variant.id }}"{% if variant == current %} selected{% endif %}{% unless variant.available %} disabled{% endunless %}>{{ variant.title | escape }} – {{ variant.price | money }}</option>
+            {%- endfor -%}
+          </select>
+        </noscript>
+      {%- endunless -%}
+
+      <div class="buy__cta">
+        <div class="buy__row">
+          <button class="pill pill--ink pill--block" type="submit" name="add" data-add-button{% unless current.available %} disabled{% endunless %}>
+            {%- if current.available -%}{{ 'products.add_to_bag' | t }}{%- else -%}{{ 'products.sold_out' | t }}{%- endif -%}
+          </button>
+          <button class="fav-btn" type="button" data-fav="{{ product.handle }}" aria-pressed="false" aria-label="{{ 'wishlist.save' | t: title: product.title | escape }}">{% render 'icon', name: 'heart' %}</button>
+        </div>
+        {%- if section.settings.show_dynamic_checkout -%}{{ form | payment_button }}{%- endif -%}
+        <p class="buy__msg" data-product-msg role="status"></p>
+        {% render 'purchase-terms' %}
+      </div>
+    {%- endform -%}
+
+    <div class="acc">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'description' -%}
+            {%- if product.description != blank -%}
+              <details {% if block.settings.open %}open{% endif %} {{ block.shopify_attributes }}>
+                <summary>{{ block.settings.title | escape }} {% render 'icon', name: 'plus' %}</summary>
+                <div class="acc__body rte">{{ product.description }}</div>
+              </details>
+            {%- endif -%}
+          {%- when 'collapsible' -%}
+            <details {% if block.settings.open %}open{% endif %} {{ block.shopify_attributes }}>
+              <summary>{{ block.settings.title | escape }} {% render 'icon', name: 'plus' %}</summary>
+              <div class="acc__body rte">{{ block.settings.content }}{{ block.settings.page.content }}</div>
+            </details>
+          {%- when 'size_guide' -%}
+            {%- if section.settings.size_guide_page != blank -%}
+              <details id="size-guide" {{ block.shopify_attributes }}>
+                <summary>{{ block.settings.title | escape }} {% render 'icon', name: 'plus' %}</summary>
+                <div class="acc__body rte">{{ section.settings.size_guide_page.content }}</div>
+              </details>
+            {%- endif -%}
+          {%- when 'shipping' -%}
+            <details {{ block.shopify_attributes }}>
+              <summary>{{ block.settings.title | escape }} {% render 'icon', name: 'plus' %}</summary>
+              <div class="acc__body rte">
+                {{ block.settings.content }}
+                <p>
+                  {%- if shop.shipping_policy != blank -%}<a href="{{ shop.shipping_policy.url }}">{{ shop.shipping_policy.title | escape }}</a>{%- endif -%}
+                  {%- if shop.shipping_policy != blank and shop.refund_policy != blank %} · {% endif -%}
+                  {%- if shop.refund_policy != blank -%}<a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title | escape }}</a>{%- endif -%}
+                </p>
+              </div>
+            </details>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+  </div></div>
+
+  <script type="application/json" data-product-json>{{ product | json }}</script>
+</div>
+
+{% schema %}
+{
+  "name": "Product",
+  "class": "section-main-product",
+  "settings": [
+    { "type": "page", "id": "size_guide_page", "label": "Size guide page", "info": "Create a page with your size tables, then choose it here." },
+    { "type": "checkbox", "id": "show_dynamic_checkout", "label": "Show express checkout buttons", "default": false }
+  ],
+  "blocks": [
+    {
+      "type": "description",
+      "name": "Description",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Description" },
+        { "type": "checkbox", "id": "open", "label": "Open by default", "default": true }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "name": "Collapsible tab",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Details & Fit" },
+        { "type": "richtext", "id": "content", "label": "Content" },
+        { "type": "page", "id": "page", "label": "Or show a page" },
+        { "type": "checkbox", "id": "open", "label": "Open by default", "default": false }
+      ]
+    },
+    {
+      "type": "size_guide",
+      "name": "Size guide",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Size Guide" }
+      ]
+    },
+    {
+      "type": "shipping",
+      "name": "Shipping & returns",
+      "limit": 1,
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Shipping & Returns" },
+        { "type": "richtext", "id": "content", "label": "Content", "default": "<p>Standard delivery in 3–5 business days, free over 400 NIS. Returns and exchanges within 30 days of delivery, unworn with tags attached.</p>" }
+      ]
+    }
+  ]
+}
+{% endschema %}

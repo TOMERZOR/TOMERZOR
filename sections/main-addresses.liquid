@@ -1,0 +1,27 @@
+{%- paginate customer.addresses by 10 -%}
+<div class="page-wrap account-form">
+  <p><a class="arrow-link" href="{{ routes.account_url }}">{% render 'icon', name: 'back' %} {{ 'customer.account_title' | t }}</a></p>
+  <h1 class="policy__title">{{ 'customer.addresses' | t }}</h1>
+  {%- for address in customer.addresses -%}
+    <details class="address">
+      <summary>{{ address | format_address }}{% if address == customer.default_address %}<em>{{ 'customer.default' | t }}</em>{% endif %}</summary>
+      {%- form 'customer_address', address -%}
+        {% render 'address-fields', form: form, address: address %}
+        <button class="pill pill--ink" type="submit">{{ 'customer.save' | t }}</button>
+      {%- endform -%}
+      <form method="post" action="{{ address.url }}"><input type="hidden" name="_method" value="delete"><button class="link-btn" type="submit">{{ 'cart.remove' | t }}</button></form>
+    </details>
+  {%- endfor -%}
+  {% render 'pagination', paginate: paginate %}
+  <details class="address" {% if customer.addresses.size == 0 %}open{% endif %}>
+    <summary>{{ 'customer.add_address' | t }}</summary>
+    {%- form 'customer_address', customer.new_address -%}
+      {% render 'address-fields', form: form, address: customer.new_address %}
+      <button class="pill pill--ink" type="submit">{{ 'customer.add_address' | t }}</button>
+    {%- endform -%}
+  </details>
+</div>
+{%- endpaginate -%}
+{% schema %}
+{ "name": "Addresses", "class": "section-main-addresses", "settings": [] }
+{% endschema %}

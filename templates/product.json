@@ -1,0 +1,56 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "settings": {
+        "show_dynamic_checkout": false
+      },
+      "blocks": {
+        "description": {
+          "type": "description",
+          "settings": {
+            "title": "Description",
+            "open": true
+          }
+        },
+        "details": {
+          "type": "collapsible",
+          "settings": {
+            "title": "Details & Fit",
+            "content": "<ul><li>Boxy, oversized fit with dropped shoulders</li><li>Ribbed crew neck</li><li>Wash cold, inside out</li></ul>",
+            "open": false
+          }
+        },
+        "size-guide": {
+          "type": "size_guide",
+          "settings": {
+            "title": "Size Guide"
+          }
+        },
+        "shipping": {
+          "type": "shipping",
+          "settings": {
+            "title": "Shipping & Returns"
+          }
+        }
+      },
+      "block_order": [
+        "description",
+        "details",
+        "size-guide",
+        "shipping"
+      ]
+    },
+    "recommendations": {
+      "type": "product-recommendations",
+      "settings": {
+        "title": "You May Also Like",
+        "limit": 8
+      }
+    }
+  },
+  "order": [
+    "main",
+    "recommendations"
+  ]
+}

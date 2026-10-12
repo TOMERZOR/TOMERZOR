@@ -1,0 +1,27 @@
+<div class="page-wrap">
+  <p><a class="arrow-link" href="{{ routes.account_url }}">{% render 'icon', name: 'back' %} {{ 'customer.account_title' | t }}</a></p>
+  <h1 class="policy__title">{{ 'customer.order' | t }} {{ order.name }}</h1>
+  <p class="policy__meta">{{ order.created_at | time_tag: format: 'date_at_time' }}{% if order.cancelled %} · {{ 'customer.cancelled' | t }}{% endif %}</p>
+  <div class="table-scroll">
+    <table class="policy-table">
+      <thead><tr><th>{{ 'customer.product' | t }}</th><th>{{ 'cart.quantity' | t }}</th><th>{{ 'customer.total' | t }}</th></tr></thead>
+      <tbody>
+        {%- for item in order.line_items -%}
+          <tr><td><a href="{{ item.product.url }}">{{ item.title | escape }}</a>{% if item.fulfillment %}<br><small>{{ item.fulfillment.tracking_company }} {{ item.fulfillment.tracking_number }}</small>{% endif %}</td><td>{{ item.quantity }}</td><td>{{ item.final_line_price | money }}</td></tr>
+        {%- endfor -%}
+      </tbody>
+      <tfoot>
+        <tr><td colspan="2">{{ 'cart.subtotal' | t }}</td><td>{{ order.line_items_subtotal_price | money }}</td></tr>
+        {%- for shipping_method in order.shipping_methods -%}<tr><td colspan="2">{{ shipping_method.title | escape }}</td><td>{{ shipping_method.price | money }}</td></tr>{%- endfor -%}
+        <tr><td colspan="2"><strong>{{ 'customer.total' | t }}</strong></td><td><strong>{{ order.total_price | money }}</strong></td></tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="account__addresses">
+    {%- if order.shipping_address -%}<div><h2 class="opt__label">{{ 'customer.shipping_address' | t }}</h2>{{ order.shipping_address | format_address }}</div>{%- endif -%}
+    {%- if order.billing_address -%}<div><h2 class="opt__label">{{ 'customer.billing_address' | t }}</h2>{{ order.billing_address | format_address }}</div>{%- endif -%}
+  </div>
+</div>
+{% schema %}
+{ "name": "Order", "class": "section-main-order", "settings": [] }
+{% endschema %}

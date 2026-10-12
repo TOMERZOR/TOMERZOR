@@ -1,0 +1,25 @@
+{
+  "type": "footer",
+  "name": "Footer group",
+  "sections": {
+    "footer": {
+      "type": "footer",
+      "blocks": {
+        "shop": { "type": "menu", "settings": { "heading": "Shop", "menu": "footer" } },
+        "help": { "type": "menu", "settings": { "heading": "Help", "menu": "help" } },
+        "universe": { "type": "menu", "settings": { "heading": "Universe", "menu": "universe" } }
+      },
+      "block_order": ["shop", "help", "universe"],
+      "settings": {
+        "show_newsletter": true,
+        "newsletter_title": "Join the",
+        "newsletter_script": "Dream",
+        "newsletter_text": "New drops first. No spam.",
+        "show_wordmark": true,
+        "wordmark_first": "Dream",
+        "wordmark_second": "Studios"
+      }
+    }
+  },
+  "order": ["footer"]
+}

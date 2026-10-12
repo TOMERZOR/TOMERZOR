@@ -1,0 +1,128 @@
+{%- liquid
+  assign overlay = false
+  if section.settings.transparent_on_home and template.name == 'index'
+    assign overlay = true
+  endif
+  assign featured_menu = section.settings.overlay_menu | default: section.settings.menu
+-%}
+<header class="header{% if overlay %} header--overlay{% else %} is-solid{% endif %}" id="header" data-header {{ section.shopify_attributes }}>
+  <div class="header__left">
+    <button class="icon-btn" id="menu-btn" type="button" aria-label="{{ 'header.open_menu' | t }}" aria-expanded="false" aria-controls="menu" data-label-open="{{ 'header.open_menu' | t }}" data-label-close="{{ 'header.close_menu' | t }}">
+      <span class="menu-icon-open">{% render 'icon', name: 'menu' %}</span>
+      <span class="menu-icon-close">{% render 'icon', name: 'close' %}</span>
+    </button>
+    <a class="logo" href="{{ routes.root_url }}" aria-label="{{ shop.name | escape }}">
+      {%- if section.settings.logo != blank -%}
+        {{ section.settings.logo | image_url: width: 400 | image_tag: class: 'logo__image', alt: shop.name, style: 'height: 26px; width: auto' }}
+      {%- else -%}
+        {{ section.settings.logo_first | escape }}{% if section.settings.logo_registered %}<sup>®</sup>{% else %}&nbsp;{% endif %}{{ section.settings.logo_second | escape }}
+      {%- endif -%}
+    </a>
+    {%- if section.settings.menu != blank -%}
+      <nav class="header__nav" aria-label="{{ 'header.primary' | t }}">
+        {%- for link in section.settings.menu.links -%}
+          <a href="{{ link.url }}"{% if link.current %} aria-current="page"{% endif %}>{{ link.title | escape }}</a>
+        {%- endfor -%}
+      </nav>
+    {%- endif -%}
+  </div>
+  <div class="header__right">
+    <a class="icon-btn" id="search-btn" href="{{ routes.search_url }}" aria-label="{{ 'header.search' | t }}" aria-expanded="false" aria-controls="search">{% render 'icon', name: 'search' %}</a>
+    {%- if shop.customer_accounts_enabled -%}
+      <a class="icon-btn hide-sm" href="{{ routes.account_url }}" aria-label="{{ 'header.account' | t }}">{% render 'icon', name: 'user' %}</a>
+    {%- endif -%}
+    {%- if settings.wishlist_page != blank -%}
+      <a class="icon-btn" href="{{ settings.wishlist_page.url }}" aria-label="{{ 'header.wishlist' | t }}">{% render 'icon', name: 'heart' %}<span class="count" data-fav-count></span></a>
+    {%- endif -%}
+    <a class="icon-btn" id="bag-btn" href="{{ routes.cart_url }}" aria-label="{{ 'header.bag' | t }}" aria-controls="bag">
+      {%- render 'icon', name: 'bag' -%}
+      <span class="count" data-cart-count>{% if cart.item_count > 0 %}{{ cart.item_count }}{% endif %}</span>
+    </a>
+  </div>
+</header>
+
+<div class="overlay" id="menu" aria-label="{{ 'header.menu' | t }}">
+  <button class="search-field search-field--fake" type="button" data-open-search>
+    {%- render 'icon', name: 'search' -%}<span>{{ 'search.placeholder' | t }}</span>
+  </button>
+  {%- if featured_menu != blank -%}
+    <nav class="menu__big" aria-label="{{ 'header.featured' | t }}">
+      {%- for link in featured_menu.links -%}
+        <a href="{{ link.url }}">{{ link.title | escape }}</a>
+      {%- endfor -%}
+    </nav>
+  {%- endif -%}
+  {%- if section.settings.rows_menu != blank -%}
+    <div class="menu__rows">
+      {%- for link in section.settings.rows_menu.links -%}
+        <a class="row-link" href="{{ link.url }}">{{ link.title | escape }} {% render 'icon', name: 'arrow' %}</a>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+  {%- if section.settings.foot_menu != blank -%}
+    <div class="menu__foot">
+      {%- for link in section.settings.foot_menu.links -%}
+        <a class="row-link" href="{{ link.url }}">{{ link.title | escape }} {% render 'icon', name: 'arrow' %}</a>
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+  {%- if localization.available_languages.size > 1 -%}
+    <div class="menu__lang">
+      {%- form 'localization', id: 'MenuLanguageForm' -%}
+        <label class="sr-only" for="menu-language">{{ 'header.language' | t }}</label>
+        <select id="menu-language" name="locale_code" onchange="this.form.submit()">
+          {%- for language in localization.available_languages -%}
+            <option value="{{ language.iso_code }}"{% if language.iso_code == localization.language.iso_code %} selected{% endif %}>{{ language.endonym_name | capitalize }}</option>
+          {%- endfor -%}
+        </select>
+      {%- endform -%}
+    </div>
+  {%- endif -%}
+</div>
+
+<div class="overlay" id="search" aria-label="{{ 'header.search' | t }}">
+  <form class="search-field" action="{{ routes.search_url }}" method="get" role="search" id="search-form">
+    <button type="button" id="search-back" aria-label="{{ 'search.close' | t }}">{% render 'icon', name: 'back' %}</button>
+    <label class="sr-only" for="search-input">{{ 'search.label' | t }}</label>
+    <input id="search-input" type="search" name="q" placeholder="{{ 'search.placeholder' | t }}" autocomplete="off">
+    <input type="hidden" name="type" value="product">
+  </form>
+  <div class="search__body">
+    <div id="search-suggest">
+      {%- assign popular = section.settings.popular_searches | split: ',' -%}
+      {%- if popular.size > 0 -%}
+        <p class="label-muted">{{ 'search.popular' | t }}</p>
+        <ul class="popular">
+          {%- for term in popular -%}
+            {%- assign term = term | strip -%}
+            <li><a href="{{ routes.search_url }}?q={{ term | url_encode }}&type=product" data-q="{{ term | escape }}">{{ term | escape }}</a></li>
+          {%- endfor -%}
+        </ul>
+      {%- endif -%}
+    </div>
+    <div id="search-results" aria-live="polite"></div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Header",
+  "class": "section-header",
+  "enabled_on": { "groups": ["header"] },
+  "settings": [
+    { "type": "header", "content": "Logo" },
+    { "type": "image_picker", "id": "logo", "label": "Logo image", "info": "Leave empty to use the text logo below." },
+    { "type": "text", "id": "logo_first", "label": "Logo first word", "default": "Dream" },
+    { "type": "checkbox", "id": "logo_registered", "label": "Show ® between words", "default": true },
+    { "type": "text", "id": "logo_second", "label": "Logo second word", "default": "Studios" },
+    { "type": "checkbox", "id": "transparent_on_home", "label": "Transparent over the home page hero", "default": true },
+    { "type": "header", "content": "Menus" },
+    { "type": "link_list", "id": "menu", "label": "Desktop menu", "default": "main-menu" },
+    { "type": "link_list", "id": "overlay_menu", "label": "Menu overlay: large links", "info": "Defaults to the desktop menu." },
+    { "type": "link_list", "id": "rows_menu", "label": "Menu overlay: category rows" },
+    { "type": "link_list", "id": "foot_menu", "label": "Menu overlay: bottom rows", "info": "For example Universe and Support." },
+    { "type": "header", "content": "Search" },
+    { "type": "text", "id": "popular_searches", "label": "Popular searches", "info": "Separate with commas.", "default": "Circle Logo Tee, Warriors With A Dream Tee, Created By God Denim Shorts, Graphic Tees" }
+  ]
+}
+{% endschema %}

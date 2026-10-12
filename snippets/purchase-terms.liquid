@@ -1,0 +1,15 @@
+{%- comment -%}
+  Purchase terms shown right next to the checkout and add-to-bag buttons.
+  Links point to the policies set in Settings > Policies.
+{%- endcomment -%}
+<p class="fine">
+  {%- if cart.taxes_included -%}{{ 'cart.taxes_included' | t }}{%- else -%}{{ 'cart.taxes_at_checkout' | t }}{%- endif %}
+  {{ 'cart.shipping_at_checkout' | t }}
+  {%- if settings.returns_days > 0 %} {{ 'cart.returns_days' | t: days: settings.returns_days }}{% endif %}
+  {%- if shop.terms_of_service != blank or shop.refund_policy != blank %}
+    {{ 'cart.agree_prefix' | t }}
+    {%- if shop.terms_of_service != blank %} <a href="{{ shop.terms_of_service.url }}">{{ shop.terms_of_service.title | escape }}</a>{% endif -%}
+    {%- if shop.terms_of_service != blank and shop.refund_policy != blank %} {{ 'cart.and' | t }}{% endif -%}
+    {%- if shop.refund_policy != blank %} <a href="{{ shop.refund_policy.url }}">{{ shop.refund_policy.title | escape }}</a>{% endif -%}.
+  {%- endif -%}
+</p>

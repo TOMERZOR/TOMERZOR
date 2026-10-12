@@ -1,0 +1,105 @@
+{%- paginate collection.products by section.settings.per_page -%}
+  {%- if section.settings.tabs_menu != blank -%}
+    <nav class="subnav" aria-label="{{ 'collections.categories' | t }}">
+      {%- for link in section.settings.tabs_menu.links -%}
+        <a href="{{ link.url }}"{% if link.active %} aria-current="page" class="dot"{% endif %}>{{ link.title | escape }}</a>
+      {%- endfor -%}
+    </nav>
+  {%- endif -%}
+
+  <div class="coll-head">
+    <h1 class="coll-title">{{ collection.title | escape }}<sup>{{ collection.products_count }}</sup></h1>
+    <button class="filter-btn" type="button" id="filter-btn" aria-expanded="false" aria-controls="facets">
+      {%- render 'icon', name: 'sliders' -%}{{ 'collections.filter_sort' | t }}
+    </button>
+  </div>
+
+  {%- if collection.description != blank -%}
+    <div class="coll-desc rte">{{ collection.description }}</div>
+  {%- endif -%}
+
+  {%- liquid
+    assign active_count = 0
+    for filter in collection.filters
+      assign active_count = active_count | plus: filter.active_values.size
+      if filter.type == 'price_range' and filter.min_value.value or filter.max_value.value
+        assign active_count = active_count | plus: 1
+      endif
+    endfor
+  -%}
+  {%- if active_count > 0 -%}
+    <div class="chips chips--active">
+      {%- for filter in collection.filters -%}
+        {%- for value in filter.active_values -%}
+          <a href="{{ value.url_to_remove }}" class="chip-remove">{{ value.label | escape }} {% render 'icon', name: 'close' %}</a>
+        {%- endfor -%}
+        {%- if filter.type == 'price_range' -%}
+          {%- if filter.min_value.value or filter.max_value.value -%}
+            <a href="{{ filter.url_to_remove }}" class="chip-remove">{{ filter.min_value.value | default: 0 | money }}–{{ filter.max_value.value | default: filter.range_max | money }} {% render 'icon', name: 'close' %}</a>
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      <a href="{{ collection.url }}?sort_by={{ collection.sort_by }}" class="link-btn">{{ 'collections.clear_all' | t }}</a>
+    </div>
+  {%- endif -%}
+
+  <form class="facets" id="facets" action="{{ collection.url }}" method="get" data-facets hidden>
+    {%- assign sort_by = collection.sort_by | default: collection.default_sort_by -%}
+    <fieldset class="facets__group">
+      <legend>{{ 'collections.sort_by' | t }}</legend>
+      <div class="facets__options">
+        {%- for option in collection.sort_options -%}
+          <label class="choice"><input type="radio" name="sort_by" value="{{ option.value | escape }}"{% if option.value == sort_by %} checked{% endif %}><span>{{ option.name | escape }}</span></label>
+        {%- endfor -%}
+      </div>
+    </fieldset>
+    {%- for filter in collection.filters -%}
+      <fieldset class="facets__group">
+        <legend>{{ filter.label | escape }}</legend>
+        {%- case filter.type -%}
+          {%- when 'list', 'boolean' -%}
+            <div class="facets__options">
+              {%- for value in filter.values -%}
+                <label class="choice{% if value.count == 0 and value.active == false %} is-empty{% endif %}">
+                  <input type="checkbox" name="{{ value.param_name }}" value="{{ value.value | escape }}"{% if value.active %} checked{% endif %}{% if value.count == 0 and value.active == false %} disabled{% endif %}>
+                  <span>{{ value.label | escape }} <small>({{ value.count }})</small></span>
+                </label>
+              {%- endfor -%}
+            </div>
+          {%- when 'price_range' -%}
+            <div class="facets__price">
+              <label>{{ 'collections.from' | t }} <input type="number" name="{{ filter.min_value.param_name }}" value="{% if filter.min_value.value %}{{ filter.min_value.value | money_without_currency | remove: ',' }}{% endif %}" min="0" max="{{ filter.range_max | money_without_currency | remove: ',' }}" placeholder="0" inputmode="numeric"></label>
+              <label>{{ 'collections.to' | t }} <input type="number" name="{{ filter.max_value.param_name }}" value="{% if filter.max_value.value %}{{ filter.max_value.value | money_without_currency | remove: ',' }}{% endif %}" min="0" max="{{ filter.range_max | money_without_currency | remove: ',' }}" placeholder="{{ filter.range_max | money_without_currency | remove: ',' }}" inputmode="numeric"></label>
+            </div>
+        {%- endcase -%}
+      </fieldset>
+    {%- endfor -%}
+    <button class="pill pill--ink facets__apply" type="submit">{{ 'collections.apply' | t }}</button>
+  </form>
+
+  {%- if collection.products.size > 0 -%}
+    <div class="grid" id="product-grid">
+      {%- for product in collection.products -%}
+        {% render 'product-card', product: product %}
+      {%- endfor -%}
+    </div>
+  {%- else -%}
+    <div class="empty">
+      <span>{%- if active_count > 0 -%}{{ 'collections.no_matches' | t }}{%- else -%}{{ 'collections.empty' | t }}{%- endif -%}</span>
+      <a class="pill pill--ink" href="{% if active_count > 0 %}{{ collection.url }}{% else %}{{ routes.all_products_collection_url }}{% endif %}">{%- if active_count > 0 -%}{{ 'collections.clear_all' | t }}{%- else -%}{{ 'cart.continue_shopping' | t }}{%- endif -%}</a>
+    </div>
+  {%- endif -%}
+
+  {% render 'pagination', paginate: paginate %}
+{%- endpaginate -%}
+
+{% schema %}
+{
+  "name": "Collection",
+  "class": "section-main-collection",
+  "settings": [
+    { "type": "link_list", "id": "tabs_menu", "label": "Category tabs menu", "info": "Links to your collections, shown as tabs above the title." },
+    { "type": "range", "id": "per_page", "label": "Products per page", "min": 8, "max": 48, "step": 4, "default": 24 }
+  ]
+}
+{% endschema %}

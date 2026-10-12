@@ -1,0 +1,30 @@
+{
+  "current": {
+    "color_ink": "#1e2230",
+    "color_ink_soft": "#6c707c",
+    "color_paper": "#ffffff",
+    "color_tile": "#f4f3f0",
+    "color_bar": "#f9efdc",
+    "color_accent": "#e3a73b",
+    "color_accent_2": "#c8281e",
+    "free_shipping_from": 400,
+    "returns_days": 30,
+    "newsletter_min_age": 16,
+    "enable_motion": true
+  },
+  "presets": {
+    "Default": {
+      "color_ink": "#1e2230",
+      "color_ink_soft": "#6c707c",
+      "color_paper": "#ffffff",
+      "color_tile": "#f4f3f0",
+      "color_bar": "#f9efdc",
+      "color_accent": "#e3a73b",
+      "color_accent_2": "#c8281e",
+      "free_shipping_from": 400,
+      "returns_days": 30,
+      "newsletter_min_age": 16,
+      "enable_motion": true
+    }
+  }
+}

@@ -1,0 +1,30 @@
+<div class="page-wrap account-form">
+  <div id="login-panel">
+    <h1 class="policy__title">{{ 'customer.login_title' | t }}</h1>
+    {%- form 'customer_login', novalidate: 'novalidate' -%}
+      {%- if form.errors -%}<div class="form-status form-status--error" role="alert">{{ form.errors | default_errors }}</div>{%- endif -%}
+      <label class="field"><span>{{ 'customer.email' | t }}</span><input class="news__field" type="email" name="customer[email]" autocomplete="email" required></label>
+      {%- if form.password_needed -%}
+        <label class="field"><span>{{ 'customer.password' | t }}</span><input class="news__field" type="password" name="customer[password]" autocomplete="current-password" required></label>
+        <a class="link-btn" href="#recover">{{ 'customer.forgot_password' | t }}</a>
+      {%- endif -%}
+      <button class="pill pill--ink" type="submit">{{ 'customer.sign_in' | t }}</button>
+      <a class="arrow-link" href="{{ routes.account_register_url }}">{{ 'customer.create_account' | t }} {% render 'icon', name: 'arrow' %}</a>
+    {%- endform -%}
+  </div>
+  <div id="recover">
+    <h2 class="section__title">{{ 'customer.reset_title' | t }}</h2>
+    {%- form 'recover_customer_password' -%}
+      {%- if form.posted_successfully? -%}<p class="form-status" role="status">{{ 'customer.reset_sent' | t }}</p>{%- endif -%}
+      {%- if form.errors -%}<div class="form-status form-status--error" role="alert">{{ form.errors | default_errors }}</div>{%- endif -%}
+      <label class="field"><span>{{ 'customer.email' | t }}</span><input class="news__field" type="email" name="email" autocomplete="email" required></label>
+      <button class="pill pill--ink" type="submit">{{ 'customer.reset_submit' | t }}</button>
+    {%- endform -%}
+  </div>
+  {%- if shop.checkout.guest_login -%}
+    {%- form 'guest_login' -%}<button class="pill pill--line" type="submit">{{ 'customer.guest' | t }}</button>{%- endform -%}
+  {%- endif -%}
+</div>
+{% schema %}
+{ "name": "Login", "class": "section-main-login", "settings": [] }
+{% endschema %}

@@ -1,0 +1,46 @@
+{%- liquid
+  assign rail_collection = section.settings.collection
+  assign limit = section.settings.limit
+-%}
+<section class="section" aria-labelledby="rail-title-{{ section.id }}">
+  <div class="section__head">
+    <h2 class="section__title" id="rail-title-{{ section.id }}">
+      {{- section.settings.title | escape -}}
+      {%- if section.settings.show_count and rail_collection != blank %}<sup>{{ rail_collection.products_count }}</sup>{% endif -%}
+    </h2>
+    <div class="section__tools">
+      <div class="rail-nav">
+        <button type="button" data-rail-prev="rail-{{ section.id }}" aria-label="{{ 'general.previous' | t }}">{% render 'icon', name: 'back' %}</button>
+        <button type="button" data-rail-next="rail-{{ section.id }}" aria-label="{{ 'general.next' | t }}">{% render 'icon', name: 'arrow' %}</button>
+      </div>
+      {%- if section.settings.link_label != blank -%}
+        <a class="arrow-link" href="{{ section.settings.link | default: rail_collection.url | default: routes.all_products_collection_url }}">{{ section.settings.link_label | escape }} {% render 'icon', name: 'arrow' %}</a>
+      {%- endif -%}
+    </div>
+  </div>
+  <div class="rail" id="rail-{{ section.id }}">
+    {%- if rail_collection != blank and rail_collection.products_count > 0 -%}
+      {%- for product in rail_collection.products limit: limit -%}
+        {% render 'product-card', product: product %}
+      {%- endfor -%}
+    {%- else -%}
+      {%- for i in (1..4) -%}{% render 'placeholder-card', index: i %}{%- endfor -%}
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Product row",
+  "class": "section-rail",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Heading", "default": "New Arrivals" },
+    { "type": "collection", "id": "collection", "label": "Collection" },
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 4, "max": 16, "step": 1, "default": 8 },
+    { "type": "checkbox", "id": "show_count", "label": "Show product count", "default": true },
+    { "type": "text", "id": "link_label", "label": "Link label", "default": "View All" },
+    { "type": "url", "id": "link", "label": "Link", "info": "Defaults to the collection." }
+  ],
+  "presets": [{ "name": "Product row" }]
+}
+{% endschema %}

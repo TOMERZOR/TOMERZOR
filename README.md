@@ -13,6 +13,10 @@ Bag and wishlist are kept in the visitor's browser (localStorage). Checkout and 
 
 Preview locally: `npx http-server .` and open http://localhost:8080
 
+## Shopify
+
+The Shopify version of the store is in `shopify-theme/` (also published as the `shopify-theme` branch). Setup steps, policies, pages and a product import file are in `shopify-setup/`; start with `shopify-setup/README.md`.
+
 ## Legal checklist before launch
 
 Not legal advice. Have a lawyer review the policies in `help.html` for the countries you sell to.

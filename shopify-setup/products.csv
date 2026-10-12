@@ -1,0 +1,24 @@
+Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Image Src,Image Position,Image Alt Text,Gift Card,Status
+circle-logo-tee,Circle Logo Tee Navy,"<p>The Dream Studios® circle logo, printed large across the back in mustard. Clean front with a small file-name print at the hem.</p><ul><li>Boxy, oversized fit with dropped shoulders</li><li>Ribbed crew neck</li><li>100% cotton</li><li>Wash cold, inside out</li></ul>",Dream Studios,,T-Shirts,"Logo, new",TRUE,Size,XS,DS-CLT-XS,260,,deny,manual,189.00,,TRUE,TRUE,,,,FALSE,draft
+circle-logo-tee,,,,,,,,,S,DS-CLT-S,260,,deny,manual,189.00,,TRUE,TRUE,,,,,
+circle-logo-tee,,,,,,,,,M,DS-CLT-M,260,,deny,manual,189.00,,TRUE,TRUE,,,,,
+circle-logo-tee,,,,,,,,,L,DS-CLT-L,260,,deny,manual,189.00,,TRUE,TRUE,,,,,
+circle-logo-tee,,,,,,,,,XL,DS-CLT-XL,260,,deny,manual,189.00,,TRUE,TRUE,,,,,
+circle-logo-tee,,,,,,,,,XXL,DS-CLT-XXL,260,,deny,manual,189.00,,TRUE,TRUE,,,,,
+warriors-tee,Warriors With A Dream Tee,"<p>Three warriors looking up, printed in red across the back over “warriors with a Dream © est 2026”. Italic DREAMSTUDIOS wordmark on the chest.</p><ul><li>Boxy, oversized fit with dropped shoulders</li><li>Ribbed crew neck</li><li>100% cotton</li><li>Wash cold, inside out</li></ul>",Dream Studios,,T-Shirts,"Graphic, new",TRUE,Size,XS,DS-WWD-XS,260,,deny,manual,199.00,,TRUE,TRUE,,,,FALSE,draft
+warriors-tee,,,,,,,,,S,DS-WWD-S,260,,deny,manual,199.00,,TRUE,TRUE,,,,,
+warriors-tee,,,,,,,,,M,DS-WWD-M,260,,deny,manual,199.00,,TRUE,TRUE,,,,,
+warriors-tee,,,,,,,,,L,DS-WWD-L,260,,deny,manual,199.00,,TRUE,TRUE,,,,,
+warriors-tee,,,,,,,,,XL,DS-WWD-XL,260,,deny,manual,199.00,,TRUE,TRUE,,,,,
+warriors-tee,,,,,,,,,XXL,DS-WWD-XXL,260,,deny,manual,199.00,,TRUE,TRUE,,,,,
+created-by-god-shorts,Created By God Denim Shorts,"<p>Baggy jorts in a sun-faded vintage wash. Creation hands printed on both back pockets, “Created By god” in yellow and a leather Dream patch at the waist.</p><ul><li>Baggy fit, knee length</li><li>Five-pocket construction</li><li>Leather back patch</li><li>100% cotton denim</li><li>Wash cold, inside out</li></ul>",Dream Studios,,Denim,"Denim, new",TRUE,Size,28,DS-CBG-28,600,,deny,manual,349.00,,TRUE,TRUE,,,,FALSE,draft
+created-by-god-shorts,,,,,,,,,30,DS-CBG-30,600,,deny,manual,349.00,,TRUE,TRUE,,,,,
+created-by-god-shorts,,,,,,,,,32,DS-CBG-32,600,,deny,manual,349.00,,TRUE,TRUE,,,,,
+created-by-god-shorts,,,,,,,,,34,DS-CBG-34,600,,deny,manual,349.00,,TRUE,TRUE,,,,,
+created-by-god-shorts,,,,,,,,,36,DS-CBG-36,600,,deny,manual,349.00,,TRUE,TRUE,,,,,
+graphic-designer-tee,In Need For Graphic Designer Tee,"<p>Hand-drawn blue lettering across the chest, signed with a small Dream script underneath.</p><ul><li>Boxy, oversized fit with dropped shoulders</li><li>Ribbed crew neck</li><li>100% cotton</li><li>Wash cold, inside out</li></ul>",Dream Studios,,T-Shirts,Graphic,TRUE,Size,XS,DS-GDT-XS,260,,deny,manual,169.00,,TRUE,TRUE,,,,FALSE,draft
+graphic-designer-tee,,,,,,,,,S,DS-GDT-S,260,,deny,manual,169.00,,TRUE,TRUE,,,,,
+graphic-designer-tee,,,,,,,,,M,DS-GDT-M,260,,deny,manual,169.00,,TRUE,TRUE,,,,,
+graphic-designer-tee,,,,,,,,,L,DS-GDT-L,260,,deny,manual,169.00,,TRUE,TRUE,,,,,
+graphic-designer-tee,,,,,,,,,XL,DS-GDT-XL,260,,deny,manual,169.00,,TRUE,TRUE,,,,,
+graphic-designer-tee,,,,,,,,,XXL,DS-GDT-XXL,260,,deny,manual,169.00,,TRUE,TRUE,,,,,

@@ -1,0 +1,15 @@
+{%- comment -%} Line icons. Usage: {% render 'icon', name: 'bag' %} {%- endcomment -%}
+<svg class="icon icon--{{ name }}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  {%- case name -%}
+    {%- when 'menu' -%}<path d="M3 6h18M3 12h18M3 18h18"/>
+    {%- when 'close' -%}<path d="M5 5l14 14M19 5L5 19"/>
+    {%- when 'search' -%}<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>
+    {%- when 'user' -%}<circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4.2 4.3-6 8-6s6.8 1.8 8 6"/>
+    {%- when 'heart' -%}<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/>
+    {%- when 'bag' -%}<path d="M4.5 9.5h15l-1 10.5h-13z"/><path d="M8.5 9.5V8a3.5 3.5 0 0 1 7 0v1.5"/>
+    {%- when 'arrow' -%}<path d="M4 12h15M14 7l5 5-5 5"/>
+    {%- when 'back' -%}<path d="M20 12H5M10 7l-5 5 5 5"/>
+    {%- when 'plus' -%}<path d="M12 5v14M5 12h14"/>
+    {%- when 'sliders' -%}<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>
+  {%- endcase -%}
+</svg>

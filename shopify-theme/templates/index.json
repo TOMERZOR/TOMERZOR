@@ -1,0 +1,98 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero",
+      "settings": {
+        "eyebrow": "FW26 · 01",
+        "title": "Warriors with a Dream",
+        "button_1_label": "Shop Now",
+        "button_1_link": "shopify://collections/all",
+        "button_2_label": "Created By God",
+        "button_2_link": ""
+      }
+    },
+    "new-arrivals": {
+      "type": "product-rail",
+      "settings": {
+        "title": "New Arrivals",
+        "collection": "",
+        "limit": 8,
+        "show_count": true,
+        "link_label": "View All",
+        "link": ""
+      }
+    },
+    "tiles": {
+      "type": "category-tiles",
+      "blocks": {
+        "t1": {
+          "type": "tile",
+          "settings": {
+            "label": "T-Shirts",
+            "link": ""
+          }
+        },
+        "t2": {
+          "type": "tile",
+          "settings": {
+            "label": "Denim",
+            "link": ""
+          }
+        },
+        "t3": {
+          "type": "tile",
+          "settings": {
+            "label": "Circle Logo",
+            "link": ""
+          }
+        }
+      },
+      "block_order": [
+        "t1",
+        "t2",
+        "t3"
+      ],
+      "settings": {}
+    },
+    "campaign": {
+      "type": "campaign",
+      "settings": {
+        "eyebrow": "FW2026 Denim",
+        "title": "Created By",
+        "script": "god",
+        "button_label": "Shop Now",
+        "button_link": "",
+        "background": "#f8f5ef"
+      }
+    },
+    "most-wanted": {
+      "type": "product-rail",
+      "settings": {
+        "title": "Most Wanted",
+        "collection": "",
+        "limit": 8,
+        "show_count": false,
+        "link_label": "T-Shirts",
+        "link": ""
+      }
+    },
+    "story": {
+      "type": "story",
+      "settings": {
+        "eyebrow": "Universe",
+        "title": "Warriors with a",
+        "script": "Dream",
+        "link_label": "Shop the drop",
+        "link": ""
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "new-arrivals",
+    "tiles",
+    "campaign",
+    "most-wanted",
+    "story"
+  ]
+}

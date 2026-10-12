@@ -1,0 +1,33 @@
+{%- layout none -%}
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ 'gift_card.title' | t: value: gift_card.initial_value | money }} – {{ shop.name }}</title>
+  {% render 'theme-styles' %}
+  {{ 'theme.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'vendor/qrcode.js' | shopify_asset_url }}" defer></script>
+  {{ content_for_header }}
+</head>
+<body>
+  <main class="password">
+    <div class="logo password__logo">{{ shop.name | escape }}</div>
+    <h1 class="campaign__title">{{ gift_card.balance | money }}</h1>
+    {%- if gift_card.expired or gift_card.enabled == false -%}
+      <p class="password__msg">{{ 'gift_card.disabled' | t }}</p>
+    {%- endif -%}
+    <p class="password__msg">{{ 'gift_card.use_code' | t }}</p>
+    <p class="gift-code"><strong>{{ gift_card.code | format_code }}</strong></p>
+    <div id="QrCode" data-identifier="{{ gift_card.qr_identifier }}"></div>
+    <script>
+      window.addEventListener('load', function () {
+        var el = document.getElementById('QrCode');
+        if (window.QRCode && el) new QRCode(el, { text: el.dataset.identifier, width: 120, height: 120 });
+      });
+    </script>
+    {%- if gift_card.pass_url -%}<a href="{{ gift_card.pass_url }}">{{ 'gift_card.apple_wallet' | t }}</a>{%- endif -%}
+    <a class="pill pill--ink" href="{{ shop.url }}">{{ 'gift_card.shop' | t }}</a>
+  </main>
+</body>
+</html>

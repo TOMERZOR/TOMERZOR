@@ -1,0 +1,13 @@
+<div class="page-wrap">
+  <h1 class="policy__title">{{ page.title | escape }}<sup data-fav-count></sup></h1>
+  {%- if page.content != blank -%}<div class="rte">{{ page.content }}</div>{%- endif -%}
+</div>
+<div class="grid" data-wishlist-grid></div>
+<div class="empty" data-wishlist-empty hidden>
+  <span>{{ 'wishlist.empty' | t }}</span>
+  <a class="pill pill--ink" href="{{ routes.all_products_collection_url }}">{{ 'cart.continue_shopping' | t }}</a>
+</div>
+
+{% schema %}
+{ "name": "Wishlist", "class": "section-main-wishlist", "settings": [] }
+{% endschema %}

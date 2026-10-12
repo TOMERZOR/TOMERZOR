@@ -1,0 +1,9 @@
+<label class="field"><span>{{ 'customer.first_name' | t }}</span><input class="news__field" type="text" name="address[first_name]" value="{{ form.first_name }}" autocomplete="given-name"></label>
+<label class="field"><span>{{ 'customer.last_name' | t }}</span><input class="news__field" type="text" name="address[last_name]" value="{{ form.last_name }}" autocomplete="family-name"></label>
+<label class="field"><span>{{ 'customer.address1' | t }}</span><input class="news__field" type="text" name="address[address1]" value="{{ form.address1 }}" autocomplete="address-line1"></label>
+<label class="field"><span>{{ 'customer.address2' | t }}</span><input class="news__field" type="text" name="address[address2]" value="{{ form.address2 }}" autocomplete="address-line2"></label>
+<label class="field"><span>{{ 'customer.city' | t }}</span><input class="news__field" type="text" name="address[city]" value="{{ form.city }}" autocomplete="address-level2"></label>
+<label class="field"><span>{{ 'customer.country' | t }}</span><select class="news__field" name="address[country]" autocomplete="country" data-default="{{ form.country }}">{{ all_country_option_tags }}</select></label>
+<label class="field"><span>{{ 'customer.zip' | t }}</span><input class="news__field" type="text" name="address[zip]" value="{{ form.zip }}" autocomplete="postal-code"></label>
+<label class="field"><span>{{ 'customer.phone' | t }}</span><input class="news__field" type="tel" name="address[phone]" value="{{ form.phone }}" autocomplete="tel"></label>
+<label class="consent"><input type="checkbox" name="address[default]" value="1"{% if address == customer.default_address %} checked{% endif %}><span>{{ 'customer.set_default' | t }}</span></label>

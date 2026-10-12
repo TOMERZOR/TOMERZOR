@@ -1,0 +1,21 @@
+{%- comment -%}
+  Product price. Pass `product`, and optionally `variant` for the selected variant.
+{%- endcomment -%}
+{%- liquid
+  assign target = variant | default: product.selected_or_first_available_variant
+  assign show_from = false
+  if variant == blank and product.price_varies
+    assign show_from = true
+  endif
+-%}
+<span class="price" data-price>
+  {%- if show_from -%}
+    {%- assign min_price = product.price_min | money -%}
+    {{ 'products.from_price' | t: price: min_price }}
+  {%- else -%}
+    {{ target.price | money }}
+  {%- endif -%}
+  {%- if target.compare_at_price > target.price -%}
+    <s class="price__was">{{ target.compare_at_price | money }}</s>
+  {%- endif -%}
+</span>

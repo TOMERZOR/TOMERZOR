@@ -1,0 +1,28 @@
+{%- paginate customer.orders by 20 -%}
+<div class="page-wrap">
+  <h1 class="policy__title">{{ 'customer.account_title' | t }}</h1>
+  <p>{{ customer.name | escape }} · {{ customer.email | escape }} · <a class="link-btn" href="{{ routes.account_logout_url }}">{{ 'customer.log_out' | t }}</a></p>
+  <h2 class="section__title account__h2">{{ 'customer.orders' | t }}</h2>
+  {%- if customer.orders.size > 0 -%}
+    <div class="table-scroll">
+      <table class="policy-table">
+        <thead><tr><th>{{ 'customer.order' | t }}</th><th>{{ 'customer.date' | t }}</th><th>{{ 'customer.payment' | t }}</th><th>{{ 'customer.fulfillment' | t }}</th><th>{{ 'customer.total' | t }}</th></tr></thead>
+        <tbody>
+          {%- for order in customer.orders -%}
+            <tr><td><a href="{{ order.customer_url }}">{{ order.name }}</a></td><td>{{ order.created_at | time_tag: format: 'date' }}</td><td>{{ order.financial_status_label }}</td><td>{{ order.fulfillment_status_label }}</td><td>{{ order.total_price | money }}</td></tr>
+          {%- endfor -%}
+        </tbody>
+      </table>
+    </div>
+    {% render 'pagination', paginate: paginate %}
+  {%- else -%}
+    <p>{{ 'customer.no_orders' | t }}</p>
+  {%- endif -%}
+  <h2 class="section__title account__h2">{{ 'customer.addresses' | t }}</h2>
+  {%- if customer.default_address -%}<p>{{ customer.default_address | format_address }}</p>{%- endif -%}
+  <a class="arrow-link" href="{{ routes.account_addresses_url }}">{{ 'customer.manage_addresses' | t }} {% render 'icon', name: 'arrow' %}</a>
+</div>
+{%- endpaginate -%}
+{% schema %}
+{ "name": "Account", "class": "section-main-account", "settings": [] }
+{% endschema %}

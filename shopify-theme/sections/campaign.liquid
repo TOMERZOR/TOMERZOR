@@ -1,0 +1,29 @@
+<section class="campaign" style="background: {{ section.settings.background }}" aria-labelledby="campaign-{{ section.id }}">
+  {%- if section.settings.eyebrow != blank -%}<span class="campaign__eyebrow">{{ section.settings.eyebrow | escape }}</span>{%- endif -%}
+  <h2 class="campaign__title" id="campaign-{{ section.id }}">{{ section.settings.title | escape }} <span class="script">{{ section.settings.script | escape }}</span></h2>
+  {%- if section.settings.button_label != blank -%}
+    <a class="pill pill--ink" href="{{ section.settings.button_link | default: routes.all_products_collection_url }}">{{ section.settings.button_label | escape }}</a>
+  {%- endif -%}
+  {%- if section.settings.image != blank -%}
+    {{ section.settings.image | image_url: width: 1120 | image_tag: loading: 'lazy', widths: '560, 840, 1120', sizes: '(min-width: 600px) 560px, 100vw', alt: section.settings.image.alt }}
+  {%- else -%}
+    <img src="{{ 'shorts-back.jpg' | asset_url }}" alt="" loading="lazy" width="1000" height="1250">
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "Campaign banner",
+  "class": "section-campaign",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Small text", "default": "FW2026 Denim" },
+    { "type": "text", "id": "title", "label": "Heading", "default": "Created By" },
+    { "type": "text", "id": "script", "label": "Heading (script word)", "default": "god" },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Shop Now" },
+    { "type": "url", "id": "button_link", "label": "Button link" },
+    { "type": "image_picker", "id": "image", "label": "Image", "info": "A product on a plain background works best." },
+    { "type": "color", "id": "background", "label": "Background", "default": "#f8f5ef" }
+  ],
+  "presets": [{ "name": "Campaign banner" }]
+}
+{% endschema %}

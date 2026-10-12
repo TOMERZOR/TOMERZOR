@@ -1,0 +1,20 @@
+<div class="page-wrap"><h1 class="policy__title">{{ 'collections.all' | t }}</h1></div>
+<section class="tiles tiles--grid">
+  {%- for collection in collections -%}
+    {%- unless collection.handle == 'frontpage' -%}
+      <a class="tile" href="{{ collection.url }}">
+        {%- assign tile_image = collection.featured_image | default: collection.products.first.featured_media.preview_image -%}
+        {%- if tile_image -%}
+          {{ tile_image | image_url: width: 1000 | image_tag: loading: 'lazy', widths: '400, 700, 1000', sizes: '(min-width: 900px) 33vw, 84vw', alt: '' }}
+        {%- else -%}
+          {{ 'collection-1' | placeholder_svg_tag: 'placeholder-svg' }}
+        {%- endif -%}
+        <span class="tile__label">{{ collection.title | escape }}</span>
+      </a>
+    {%- endunless -%}
+  {%- endfor -%}
+</section>
+
+{% schema %}
+{ "name": "Collections list", "class": "section-main-list-collections", "settings": [] }
+{% endschema %}

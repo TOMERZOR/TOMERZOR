@@ -1,0 +1,13 @@
+{%- comment -%} Rendered by theme.js as search results inside the search overlay. {%- endcomment -%}
+{%- if predictive_search.performed -%}
+  {%- if predictive_search.resources.products.size > 0 -%}
+    <div class="grid search__grid">
+      {%- for product in predictive_search.resources.products -%}
+        {% render 'product-card', product: product %}
+      {%- endfor -%}
+    </div>
+    <a class="arrow-link search__all" href="{{ routes.search_url }}?q={{ predictive_search.terms | url_encode }}&type=product">{{ 'search.view_all' | t: terms: predictive_search.terms }} {% render 'icon', name: 'arrow' %}</a>
+  {%- else -%}
+    <div class="empty">{{ 'search.no_results' | t: terms: predictive_search.terms }}</div>
+  {%- endif -%}
+{%- endif -%}

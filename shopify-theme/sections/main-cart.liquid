@@ -1,0 +1,37 @@
+<div class="page-wrap">
+  <h1 class="policy__title">{{ 'cart.title' | t }}</h1>
+  {%- if cart.item_count > 0 -%}
+    <form action="{{ routes.cart_url }}" method="post" class="cart-page">
+      <div class="cart-page__items">
+        {%- for item in cart.items -%}
+          <div class="line-item">
+            <a href="{{ item.url }}" tabindex="-1" aria-hidden="true">{%- if item.image -%}{{ item.image | image_url: width: 240 | image_tag: loading: 'lazy', alt: '' }}{%- endif -%}</a>
+            <div>
+              <div class="line-item__top"><a class="line-item__name" href="{{ item.url }}">{{ item.product.title | escape }}</a><span>{{ item.final_line_price | money }}</span></div>
+              <div class="line-item__meta">{%- unless item.product.has_only_default_variant -%}{{ item.variant.title | escape }}{%- endunless -%}</div>
+              <div class="line-item__bottom">
+                <label class="sr-only" for="qty-{{ forloop.index }}">{{ 'cart.quantity' | t }}</label>
+                <input class="cart-qty" id="qty-{{ forloop.index }}" type="number" name="updates[]" value="{{ item.quantity }}" min="0">
+                <a class="link-btn" href="{{ item.url_to_remove }}">{{ 'cart.remove' | t }}</a>
+              </div>
+            </div>
+          </div>
+        {%- endfor -%}
+      </div>
+      <div class="cart-page__summary">
+        <label class="opt__label" for="cart-note">{{ 'cart.note' | t }}</label>
+        <textarea class="cart-note" id="cart-note" name="note">{{ cart.note }}</textarea>
+        <div class="drawer__total"><span>{{ 'cart.subtotal' | t }}</span><span>{{ cart.total_price | money }}</span></div>
+        <button class="pill pill--line pill--block" type="submit" name="update">{{ 'cart.update' | t }}</button>
+        <button class="pill pill--ink pill--block" type="submit" name="checkout">{{ 'cart.checkout' | t }}</button>
+        {% render 'purchase-terms' %}
+      </div>
+    </form>
+  {%- else -%}
+    <div class="empty"><span>{{ 'cart.empty' | t }}</span><a class="pill pill--ink" href="{{ routes.all_products_collection_url }}">{{ 'cart.continue_shopping' | t }}</a></div>
+  {%- endif -%}
+</div>
+
+{% schema %}
+{ "name": "Cart", "class": "section-main-cart", "settings": [] }
+{% endschema %}

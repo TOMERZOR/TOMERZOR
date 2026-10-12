@@ -1,0 +1,8 @@
+{%- comment -%} Shown in the theme editor before a collection is chosen. {%- endcomment -%}
+<article class="card">
+  <div class="card__media">{{ 'product-apparel-' | append: index | placeholder_svg_tag: 'placeholder-svg' }}</div>
+  <div class="card__info">
+    <span class="card__name">{{ 'products.example_title' | t }}</span>
+    <span class="card__price">{{ 18900 | money }}</span>
+  </div>
+</article>

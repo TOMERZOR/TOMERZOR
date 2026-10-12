@@ -1,0 +1,20 @@
+<div class="page-wrap policy">
+  <h1 class="policy__title">{{ page.title | escape }}</h1>
+  <div class="rte">{{ page.content }}</div>
+  {%- form 'contact', id: 'ContactForm', class: 'contact-form' -%}
+    {%- if form.posted_successfully? -%}
+      <p class="form-status" role="status" tabindex="-1" autofocus>{{ 'contact.success' | t }}</p>
+    {%- elsif form.errors -%}
+      <div class="form-status form-status--error" role="alert">{{ form.errors | default_errors }}</div>
+    {%- endif -%}
+    <label class="field"><span>{{ 'contact.name' | t }}</span><input class="news__field" type="text" name="contact[name]" autocomplete="name" value="{{ form.name }}"></label>
+    <label class="field"><span>{{ 'contact.email' | t }} *</span><input class="news__field" type="email" name="contact[email]" autocomplete="email" required value="{{ form.email }}"></label>
+    <label class="field"><span>{{ 'contact.order' | t }}</span><input class="news__field" type="text" name="contact[order]" value="{{ form.order }}"></label>
+    <label class="field"><span>{{ 'contact.message' | t }} *</span><textarea class="cart-note" name="contact[body]" required>{{ form.body }}</textarea></label>
+    <button class="pill pill--ink" type="submit">{{ 'contact.send' | t }}</button>
+  {%- endform -%}
+</div>
+
+{% schema %}
+{ "name": "Contact page", "class": "section-main-contact", "settings": [] }
+{% endschema %}

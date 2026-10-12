@@ -1,0 +1,47 @@
+{%- comment -%} Full-bleed campaign hero. Two images side by side on desktop, one on mobile. {%- endcomment -%}
+<section class="hero" aria-label="{{ section.settings.title | escape }}">
+  <div class="hero__media">
+    {%- for i in (1..2) -%}
+      {%- liquid
+        if i == 1
+          assign img = section.settings.image_1
+          assign fallback = 'campaign-lifestyle.jpg'
+        else
+          assign img = section.settings.image_2
+          assign fallback = 'warriors-tee-back.jpg'
+        endif
+      -%}
+      {%- if img != blank -%}
+        {{ img | image_url: width: 1600 | image_tag: widths: '600, 900, 1200, 1600', sizes: '(min-width: 900px) 50vw, 100vw', loading: 'eager', fetchpriority: 'high', alt: img.alt }}
+      {%- else -%}
+        <img src="{{ fallback | asset_url }}" alt="" width="1000" height="1250" loading="eager">
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+  <div class="hero__content">
+    {%- if section.settings.eyebrow != blank -%}<span class="hero__eyebrow">{{ section.settings.eyebrow | escape }}</span>{%- endif -%}
+    {%- if section.settings.title != blank -%}<h1 class="hero__title">{{ section.settings.title | escape }}</h1>{%- endif -%}
+    <div class="hero__ctas">
+      {%- if section.settings.button_1_label != blank -%}<a class="pill" href="{{ section.settings.button_1_link | default: routes.all_products_collection_url }}">{{ section.settings.button_1_label | escape }}</a>{%- endif -%}
+      {%- if section.settings.button_2_label != blank -%}<a class="pill" href="{{ section.settings.button_2_link | default: routes.all_products_collection_url }}">{{ section.settings.button_2_label | escape }}</a>{%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Hero",
+  "class": "section-hero",
+  "settings": [
+    { "type": "image_picker", "id": "image_1", "label": "Image (left / mobile)" },
+    { "type": "image_picker", "id": "image_2", "label": "Image (right, desktop only)" },
+    { "type": "text", "id": "eyebrow", "label": "Small text", "default": "FW26 · 01" },
+    { "type": "text", "id": "title", "label": "Heading", "default": "Warriors with a Dream" },
+    { "type": "text", "id": "button_1_label", "label": "First button label", "default": "Shop Now" },
+    { "type": "url", "id": "button_1_link", "label": "First button link" },
+    { "type": "text", "id": "button_2_label", "label": "Second button label", "default": "Created By God" },
+    { "type": "url", "id": "button_2_link", "label": "Second button link" }
+  ],
+  "presets": [{ "name": "Hero" }]
+}
+{% endschema %}

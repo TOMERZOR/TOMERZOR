@@ -1,0 +1,28 @@
+<section class="story" id="universe" aria-labelledby="story-{{ section.id }}">
+  <div>
+    {%- if section.settings.eyebrow != blank -%}<p class="eyebrow">{{ section.settings.eyebrow | escape }}</p>{%- endif -%}
+    <h2 class="story__title" id="story-{{ section.id }}">{{ section.settings.title | escape }} <span class="script">{{ section.settings.script | escape }}</span>.</h2>
+  </div>
+  <div class="story__copy">
+    {{ section.settings.text }}
+    {%- if section.settings.link_label != blank -%}
+      <a class="arrow-link" href="{{ section.settings.link | default: routes.all_products_collection_url }}">{{ section.settings.link_label | escape }} {% render 'icon', name: 'arrow' %}</a>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Brand story",
+  "class": "section-story",
+  "settings": [
+    { "type": "text", "id": "eyebrow", "label": "Small text", "default": "Universe" },
+    { "type": "text", "id": "title", "label": "Heading", "default": "Warriors with a" },
+    { "type": "text", "id": "script", "label": "Heading (script word)", "default": "Dream" },
+    { "type": "richtext", "id": "text", "label": "Text", "default": "<p><strong>Dream Studios, est. 2026.</strong> Graphic tees and denim for the ones still building something.</p><p>Every drop starts as an idea we couldn't stop talking about, then gets printed big and worn loud.</p>" },
+    { "type": "text", "id": "link_label", "label": "Link label", "default": "Shop the drop" },
+    { "type": "url", "id": "link", "label": "Link" }
+  ],
+  "presets": [{ "name": "Brand story" }]
+}
+{% endschema %}

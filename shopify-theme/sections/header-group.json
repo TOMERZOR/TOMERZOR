@@ -1,0 +1,29 @@
+{
+  "type": "header",
+  "name": "Header group",
+  "sections": {
+    "announcement-bar": {
+      "type": "announcement-bar",
+      "blocks": {
+        "message-1": { "type": "message", "settings": { "text": "Free shipping on orders over 400 NIS", "link": "" } },
+        "message-2": { "type": "message", "settings": { "text": "30 days easy returns & exchanges", "link": "" } },
+        "message-3": { "type": "message", "settings": { "text": "Taxes included", "link": "" } },
+        "message-4": { "type": "message", "settings": { "text": "New drop FW26 · 01 is live", "link": "" } }
+      },
+      "block_order": ["message-1", "message-2", "message-3", "message-4"],
+      "settings": {}
+    },
+    "header": {
+      "type": "header",
+      "settings": {
+        "logo_first": "Dream",
+        "logo_registered": true,
+        "logo_second": "Studios",
+        "transparent_on_home": true,
+        "menu": "main-menu",
+        "popular_searches": "Circle Logo Tee, Warriors With A Dream Tee, Created By God Denim Shorts, Graphic Tees"
+      }
+    }
+  },
+  "order": ["announcement-bar", "header"]
+}

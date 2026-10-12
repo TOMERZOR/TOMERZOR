@@ -1,0 +1,5 @@
+{%- comment -%}
+  Renders one product card in the context of a product URL.
+  The wishlist page requests /products/<handle>?section_id=card-render.
+{%- endcomment -%}
+{%- if product -%}{% render 'product-card', product: product %}{%- endif -%}

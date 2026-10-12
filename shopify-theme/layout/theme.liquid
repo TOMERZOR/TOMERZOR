@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}" dir="{% if request.locale.iso_code == 'he' %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ settings.color_paper }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {%- if settings.favicon != blank -%}
+    <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 64, height: 64 }}">
+  {%- endif -%}
+
+  <title>
+    {{ page_title }}
+    {%- if current_tags %} &ndash; {{ 'general.tagged_with' | t: tags: current_tags | join: ', ' }}{% endif -%}
+    {%- if current_page != 1 %} &ndash; {{ 'general.page' | t: page: current_page }}{% endif -%}
+    {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+  </title>
+  {%- if page_description -%}
+    <meta name="description" content="{{ page_description | escape }}">
+  {%- endif -%}
+  {% render 'meta-tags' %}
+
+  {{ 'inter-tight-latin.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+  {% render 'theme-styles' %}
+  {{ 'theme.css' | asset_url | stylesheet_tag }}
+
+  <script>
+    window.theme = {
+      routes: {
+        root: {{ routes.root_url | json }},
+        cart: {{ routes.cart_url | json }},
+        cartAdd: {{ routes.cart_add_url | json }},
+        cartChange: {{ routes.cart_change_url | json }},
+        search: {{ routes.search_url | json }},
+        predictiveSearch: {{ routes.predictive_search_url | json }},
+        recommendations: {{ routes.product_recommendations_url | json }}
+      },
+      moneyFormat: {{ shop.money_format | json }},
+      newsletterMinAge: {{ settings.newsletter_min_age | default: 16 }},
+      cookiePolicyUrl: {% if settings.cookie_policy_page != blank %}{{ settings.cookie_policy_page.url | json }}{% else %}{{ shop.privacy_policy.url | default: routes.root_url | json }}{% endif %},
+      strings: {
+        addToBag: {{ 'products.add_to_bag' | t | json }},
+        soldOut: {{ 'products.sold_out' | t | json }},
+        unavailable: {{ 'products.unavailable' | t | json }},
+        chooseOption: {{ 'products.choose_option' | t | json }},
+        addError: {{ 'cart.add_error' | t | json }},
+        savedToWishlist: {{ 'wishlist.saved' | t | json }},
+        removedFromWishlist: {{ 'wishlist.removed' | t | json }},
+        wishlistEmpty: {{ 'wishlist.empty' | t | json }},
+        newsEmail: {{ 'newsletter.error_email' | t | json }},
+        newsYear: {{ 'newsletter.error_year' | t | json }},
+        newsUnderage: {{ 'newsletter.error_underage' | t: age: settings.newsletter_min_age | json }},
+        newsConsent: {{ 'newsletter.error_consent' | t | json }}
+      }
+    };
+  </script>
+  <script src="{{ 'theme.js' | asset_url }}" defer></script>
+
+  {{ content_for_header }}
+</head>
+
+<body class="template-{{ template.name | handle }}{% if template.suffix %} template-{{ template.name | handle }}-{{ template.suffix | handle }}{% endif %}{% unless settings.enable_motion %} no-motion{% endunless %}">
+  <a class="skip-link" href="#MainContent">{{ 'general.skip_to_content' | t }}</a>
+
+  {% sections 'header-group' %}
+
+  <main id="MainContent" tabindex="-1">
+    {{ content_for_layout }}
+  </main>
+
+  {% sections 'footer-group' %}
+
+  {% section 'cart-drawer' %}
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<div class="empty empty--page">
+  <h1 class="policy__title">{{ 'general.not_found' | t }}</h1>
+  <span>{{ 'general.not_found_text' | t }}</span>
+  <a class="pill pill--ink" href="{{ routes.all_products_collection_url }}">{{ 'cart.continue_shopping' | t }}</a>
+</div>
+
+{% schema %}
+{ "name": "404", "class": "section-main-404", "settings": [] }
+{% endschema %}

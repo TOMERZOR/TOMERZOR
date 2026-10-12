@@ -1,0 +1,24 @@
+{%- comment -%}
+  Colour swatches for a product card. Uses Shopify's option swatches when set
+  (Products > Variants > colour option > swatch), otherwise a neutral square.
+{%- endcomment -%}
+{%- for option in product.options_with_values -%}
+  {%- assign option_name = option.name | downcase -%}
+  {%- if option_name == 'color' or option_name == 'colour' or option_name == 'צבע' -%}
+    <span class="swatches">
+      {%- for value in option.values limit: 6 -%}
+        {%- liquid
+          assign swatch_style = 'background: var(--tile)'
+          if value.swatch.image
+            assign swatch_url = value.swatch.image | image_url: width: 40
+            assign swatch_style = 'background: url(' | append: swatch_url | append: ') center / cover'
+          elsif value.swatch.color
+            assign swatch_style = 'background: ' | append: value.swatch.color
+          endif
+        -%}
+        <span class="swatch{% if forloop.first %} is-active{% endif %}" style="{{ swatch_style }}" title="{{ value | escape }}"></span>
+      {%- endfor -%}
+    </span>
+    {%- break -%}
+  {%- endif -%}
+{%- endfor -%}

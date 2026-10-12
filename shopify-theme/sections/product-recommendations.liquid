@@ -1,0 +1,28 @@
+{%- comment -%} Loaded by theme.js from Shopify's recommendations endpoint. {%- endcomment -%}
+<section class="section" data-recommendations data-url="{{ routes.product_recommendations_url }}?section_id={{ section.id }}&product_id={{ product.id }}&limit={{ section.settings.limit }}" aria-labelledby="recs-{{ section.id }}">
+  {%- if recommendations.performed? and recommendations.products_count > 0 -%}
+    <div class="section__head">
+      <h2 class="section__title" id="recs-{{ section.id }}">{{ section.settings.title | escape }}</h2>
+      <div class="rail-nav">
+        <button type="button" data-rail-prev="recs-rail-{{ section.id }}" aria-label="{{ 'general.previous' | t }}">{% render 'icon', name: 'back' %}</button>
+        <button type="button" data-rail-next="recs-rail-{{ section.id }}" aria-label="{{ 'general.next' | t }}">{% render 'icon', name: 'arrow' %}</button>
+      </div>
+    </div>
+    <div class="rail" id="recs-rail-{{ section.id }}">
+      {%- for product in recommendations.products -%}
+        {% render 'product-card', product: product %}
+      {%- endfor -%}
+    </div>
+  {%- endif -%}
+</section>
+
+{% schema %}
+{
+  "name": "You may also like",
+  "class": "section-recommendations",
+  "settings": [
+    { "type": "text", "id": "title", "label": "Heading", "default": "You May Also Like" },
+    { "type": "range", "id": "limit", "label": "Products to show", "min": 2, "max": 10, "step": 1, "default": 8 }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,43 @@
+{%- assign fallbacks = 'warriors-tee-front.jpg,lifestyle-crop.jpg,circle-tee-back.jpg' | split: ',' -%}
+<section class="tiles" aria-label="{{ 'general.shop_by_category' | t }}">
+  {%- for block in section.blocks -%}
+    <a class="tile" href="{{ block.settings.link | default: routes.all_products_collection_url }}" {{ block.shopify_attributes }}>
+      {%- if block.settings.image != blank -%}
+        {{ block.settings.image | image_url: width: 1200 | image_tag: loading: 'lazy', widths: '400, 600, 800, 1200', sizes: '(min-width: 900px) 33vw, 84vw', alt: '' }}
+      {%- else -%}
+        {%- assign fb_index = forloop.index0 | modulo: 3 -%}
+        <img src="{{ fallbacks[fb_index] | asset_url }}" alt="" loading="lazy" width="1000" height="1250">
+      {%- endif -%}
+      <span class="tile__label">{{ block.settings.label | escape }}</span>
+    </a>
+  {%- endfor -%}
+</section>
+
+{% schema %}
+{
+  "name": "Category tiles",
+  "class": "section-tiles",
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "tile",
+      "name": "Tile",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "label", "label": "Label", "default": "T-Shirts" },
+        { "type": "url", "id": "link", "label": "Link" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Category tiles",
+      "blocks": [
+        { "type": "tile", "settings": { "label": "T-Shirts" } },
+        { "type": "tile", "settings": { "label": "Denim" } },
+        { "type": "tile", "settings": { "label": "Circle Logo" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

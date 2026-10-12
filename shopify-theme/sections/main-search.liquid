@@ -1,0 +1,31 @@
+{%- paginate search.results by 24 -%}
+  <div class="page-wrap">
+    <h1 class="policy__title">{{ 'search.title' | t }}{% if search.performed %}<sup>{{ search.results_count }}</sup>{% endif %}</h1>
+    <form class="search-page-form" action="{{ routes.search_url }}" method="get" role="search">
+      <label class="sr-only" for="search-page-input">{{ 'search.label' | t }}</label>
+      <input class="news__field" id="search-page-input" type="search" name="q" value="{{ search.terms | escape }}" placeholder="{{ 'search.placeholder' | t }}">
+      <input type="hidden" name="type" value="product">
+      <button class="pill pill--ink" type="submit">{{ 'search.submit' | t }}</button>
+    </form>
+  </div>
+  {%- if search.performed -%}
+    {%- if search.results_count > 0 -%}
+      <div class="grid">
+        {%- for item in search.results -%}
+          {%- if item.object_type == 'product' -%}
+            {% render 'product-card', product: item %}
+          {%- else -%}
+            <article class="card card--text"><a class="card__link" href="{{ item.url }}"><span class="card__name">{{ item.title | escape }}</span></a></article>
+          {%- endif -%}
+        {%- endfor -%}
+      </div>
+      {% render 'pagination', paginate: paginate %}
+    {%- else -%}
+      <div class="empty">{{ 'search.no_results' | t: terms: search.terms }}</div>
+    {%- endif -%}
+  {%- endif -%}
+{%- endpaginate -%}
+
+{% schema %}
+{ "name": "Search results", "class": "section-main-search", "settings": [] }
+{% endschema %}

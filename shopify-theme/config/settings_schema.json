@@ -1,0 +1,59 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "Dream Studios",
+    "theme_version": "1.0.0",
+    "theme_author": "Dream Studios",
+    "theme_documentation_url": "https://help.shopify.com/manual/online-store/themes",
+    "theme_support_url": "https://help.shopify.com"
+  },
+  {
+    "name": "Colours",
+    "settings": [
+      { "type": "color", "id": "color_ink", "label": "Text and buttons", "default": "#1e2230" },
+      { "type": "color", "id": "color_ink_soft", "label": "Secondary text", "default": "#6c707c" },
+      { "type": "color", "id": "color_paper", "label": "Background", "default": "#ffffff" },
+      { "type": "color", "id": "color_tile", "label": "Product image background", "default": "#f4f3f0" },
+      { "type": "color", "id": "color_bar", "label": "Announcement bar", "default": "#f9efdc" },
+      { "type": "color", "id": "color_accent", "label": "Accent (script words)", "default": "#e3a73b" },
+      { "type": "color", "id": "color_accent_2", "label": "Second accent", "default": "#c8281e" }
+    ]
+  },
+  {
+    "name": "Favicon",
+    "settings": [
+      { "type": "image_picker", "id": "favicon", "label": "Favicon", "info": "Square image, at least 64 × 64 px." }
+    ]
+  },
+  {
+    "name": "Cart",
+    "settings": [
+      { "type": "number", "id": "free_shipping_from", "label": "Free shipping from (store currency)", "info": "Shows a progress bar in the bag. Set to 0 to hide. Set the real rates in Settings > Shipping and delivery.", "default": 400 },
+      { "type": "number", "id": "returns_days", "label": "Return period in days", "info": "Shown next to the checkout and add-to-bag buttons. Set to 0 to hide.", "default": 30 },
+      { "type": "url", "id": "empty_cart_link", "label": "Empty bag button link" }
+    ]
+  },
+  {
+    "name": "Wishlist",
+    "settings": [
+      { "type": "page", "id": "wishlist_page", "label": "Wishlist page", "info": "Create a page using the 'page.wishlist' template, then choose it here. The heart in the header links to it." }
+    ]
+  },
+  {
+    "name": "Legal",
+    "settings": [
+      { "type": "paragraph", "content": "Shipping, refund, privacy, terms and contact policies come from Settings > Policies in your Shopify admin." },
+      { "type": "text", "id": "legal_name", "label": "Legal business name", "info": "Shown in the footer. Defaults to your store name." },
+      { "type": "text", "id": "business_id", "label": "Business ID", "info": "For example: ע.מ. 123456789" },
+      { "type": "page", "id": "cookie_policy_page", "label": "Cookie policy page" },
+      { "type": "page", "id": "accessibility_page", "label": "Accessibility statement page" },
+      { "type": "range", "id": "newsletter_min_age", "label": "Newsletter minimum age", "min": 13, "max": 18, "step": 1, "default": 16 }
+    ]
+  },
+  {
+    "name": "Motion",
+    "settings": [
+      { "type": "checkbox", "id": "enable_motion", "label": "Enable animations", "info": "Animations always switch off for visitors who turned on reduced motion on their device.", "default": true }
+    ]
+  }
+]

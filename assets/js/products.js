@@ -3,6 +3,14 @@
    with the real specs before launch. Images live in assets/img/. */
 window.DREAM = {
   currency: "NIS",
+  // Legal details shown in the footer and required in every marketing email.
+  // Replace the bracketed placeholders before launch.
+  business: {
+    name: "Dream Studios",
+    address: "[Street and number, City, Postal code, Israel]",
+    email: "[hello@your-domain.com]"
+  },
+  newsletterMinAge: 16,
   freeShippingFrom: 400,
   season: "FW26 · 01",
   categories: {

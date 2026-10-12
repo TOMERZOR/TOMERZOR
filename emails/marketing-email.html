@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  Dream Studios marketing email template.
+
+  Every marketing email must keep the footer below: sender name, postal address,
+  contact email and a working one-click unsubscribe link.
+
+  Before sending:
+  - Replace the [bracketed] business details (same values as `business` in assets/js/products.js).
+  - Replace {{unsubscribe_url}} with your email provider's unsubscribe tag, e.g.
+      Klaviyo: {% unsubscribe_url %}   Mailchimp: *|UNSUB|*   Shopify Email: added automatically.
+  - Israel (Communications Law, section 30A): start the subject line with the word "פרסומת"
+    (advertisement), and only send to people who opted in through the site's consent checkbox.
+  - Process unsubscribes immediately and never email that address again with marketing.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dream Studios</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f3f0;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f3f0;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#1e2230;">
+          <tr>
+            <td style="padding:28px 32px;font-size:26px;font-weight:800;letter-spacing:-1.4px;">Dream<sup style="font-size:9px;">®</sup>Studios</td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 32px;font-size:16px;line-height:1.5;">
+              <!-- Email content goes here -->
+              <h1 style="margin:0 0 12px;font-size:32px;font-weight:600;letter-spacing:-1.5px;line-height:1.05;">New drop: FW26 · 01</h1>
+              <p style="margin:0 0 24px;">Warriors with a Dream. New graphic tees and the Created By God denim shorts are live now.</p>
+              <a href="[https://your-domain.com/collection.html#all]" style="display:inline-block;background:#1e2230;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:999px;font-size:15px;">Shop Now</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px 32px;border-top:1px solid #e6e4df;font-size:12px;line-height:1.6;color:#6c707c;">
+              You're getting this email because you signed up for the Dream Studios newsletter.<br>
+              <a href="{{unsubscribe_url}}" style="color:#1e2230;">Unsubscribe</a> at any time. We'll stop right away.<br><br>
+              Dream Studios<br>
+              [Street and number, City, Postal code, Israel]<br>
+              [hello@your-domain.com]
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

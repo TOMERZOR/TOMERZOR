@@ -112,8 +112,17 @@
         <p>New drops first. No spam.</p>
         <form id="news-form" novalidate>
           <label class="sr-only" for="news-email">Email address</label>
-          <input id="news-email" type="email" placeholder="Email address" autocomplete="email" required>
-          <button type="submit">Subscribe</button>
+          <input class="news__field" id="news-email" type="email" placeholder="Email address" autocomplete="email" required>
+          <label class="sr-only" for="news-year">Year of birth</label>
+          <select class="news__field" id="news-year" required>
+            <option value="">Year of birth</option>
+            ${Array.from({ length: 90 }, (_, i) => new Date().getFullYear() - i).map((y) => `<option>${y}</option>`).join("")}
+          </select>
+          <label class="consent" for="news-consent">
+            <input id="news-consent" type="checkbox" required>
+            <span>I agree to receive marketing emails from ${esc(D.business.name)} about drops and offers, about twice a month. Unsubscribe anytime with the link in every email.</span>
+          </label>
+          <button class="pill pill--ink" type="submit">Subscribe</button>
         </form>
         <div class="news__msg" id="news-msg" role="status"></div>
       </div>
@@ -133,7 +142,7 @@
         <li><a href="https://tiktok.com" target="_blank" rel="noopener">TikTok</a></li></ul></div>
     </div>
     <div class="footer__mark" aria-hidden="true">Dream<sup>®</sup>Studios</div>
-    <div class="footer__legal"><span>© 2026 Dream Studios. All rights reserved.</span><span>Prices in ${D.currency} · Taxes included</span></div>
+    <div class="footer__legal"><span>© 2026 ${esc(D.business.name)}. All rights reserved.</span><span>${esc(D.business.address)} · ${esc(D.business.email)}</span><span>Prices in ${D.currency} · Taxes included</span></div>
   </footer>`;
 
   /* ---------- header behaviour ---------- */
@@ -222,8 +231,8 @@
         </div></div>`;
     }).join("") : `<div class="drawer__empty"><span>Your bag is empty.</span><a class="pill pill--ink" href="collection.html#all">Shop New Arrivals</a></div>`;
     $("#bag-foot").innerHTML = bag.length ? `<div class="drawer__total"><span>Subtotal</span><span>${money(total)}</span></div>
-      <p class="fine">Taxes included. Shipping calculated at checkout.</p>
-      <button class="pill pill--ink pill--block" type="button" id="checkout">Checkout</button>` : "";
+      <button class="pill pill--ink pill--block" type="button" id="checkout">Checkout</button>
+      <p class="fine">Taxes included. Shipping calculated at checkout, free over ${money(D.freeShippingFrom)}. Free returns within 30 days of delivery, unworn with tags attached.</p>` : "";
     const co = $("#checkout");
     if (co) co.addEventListener("click", () => toast("Checkout opens with the store launch"));
   }
@@ -364,6 +373,7 @@
             <button class="fav-btn" type="button" data-fav="${p.id}" aria-pressed="${favs.includes(p.id)}" aria-label="Save to wishlist">${icon("heart")}</button>
           </div>
           <p class="buy__msg" id="buy-msg" role="status"></p>
+          <p class="fine">Taxes included. Free shipping over ${money(D.freeShippingFrom)}. Free returns within 30 days of delivery, unworn with tags attached.</p>
         </div>
         <div class="acc">
           <details open><summary>Description ${icon("plus")}</summary><div class="acc__body"><p>${esc(p.description)}</p></div></details>
@@ -399,8 +409,22 @@
   const nf = $("#news-form");
   if (nf) nf.addEventListener("submit", (e) => {
     e.preventDefault();
+    const msg = $("#news-msg");
     const v = $("#news-email").value.trim();
-    $("#news-msg").textContent = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? "You're on the list. See you at the next drop." : "Enter a valid email address, like name@example.com.";
+    const year = +$("#news-year").value;
+    let blocked = false;
+    try { blocked = sessionStorage.getItem("dream.underage") === "1"; } catch (err) { /* ignore */ }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { msg.textContent = "Enter a valid email address, like name@example.com."; return; }
+    if (!year) { msg.textContent = "Choose your year of birth."; return; }
+    // Neutral age screen: the cut-off isn't shown up front, and a rejected visitor can't retry this session.
+    if (blocked || new Date().getFullYear() - year < D.newsletterMinAge) {
+      try { sessionStorage.setItem("dream.underage", "1"); } catch (err) { /* ignore */ }
+      msg.textContent = `Sorry, you need to be ${D.newsletterMinAge} or older to join the newsletter.`;
+      nf.querySelectorAll("input, select, button").forEach((el) => (el.disabled = true));
+      return;
+    }
+    if (!$("#news-consent").checked) { msg.textContent = "Tick the box to agree to marketing emails."; return; }
+    msg.textContent = "You're on the list. See you at the next drop.";
   });
 
   if (page === "home") initHome();

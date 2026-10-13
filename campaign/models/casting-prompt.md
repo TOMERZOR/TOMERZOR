@@ -92,6 +92,19 @@ Pass these job IDs as reference images (`medias`) in new generations to keep the
 | Nico | `hero/06-nico.png` | `478ab8cc-d7ce-4d58-aa95-06838529eb50` |
 | Group | `group/01-the-crew.png` | `926df7ad-d890-496b-beba-9bb4aba193ec` |
 
+### Full-body shots (tough attitude)
+
+These are the campaign attitude: good-looking faces with a hard attitude. Expect fierce stares, power poses (hand on hip, arms crossed, low squat), sunglasses, leather and boots, a slightly low camera angle, and a hard on-camera flash with crisp shadows. A contact sheet of all six is in `fullbody/lineup-preview.jpg`.
+
+| Model | Full-body | Higgsfield job ID |
+|---|---|---|
+| Maya | `fullbody/01-maya.png` | `2bb91c01-8a29-4f3b-941f-68f3aef4d110` |
+| Kofi | `fullbody/02-kofi.png` | `18089299-6113-4e5d-b841-3db0ae92d32b` |
+| Rin | `fullbody/03-rin.png` | `e1a8c883-fbdc-4c4c-b8f5-6370e292dfb1` |
+| Luca | `fullbody/04-luca.png` | `7283c97c-3099-42d9-ac57-385dd308870b` |
+| Zara | `fullbody/05-zara.png` | `b3155928-20a3-4257-a349-05e3b936c95a` |
+| Nico | `fullbody/06-nico.png` | `905d7b69-07dd-4e1e-aefb-7826cb8fdc8c` |
+
 **What worked:**
 - **Single portraits:** Soul 2.0 (`soul_2`) at 3:4. Words like "beautiful/handsome model, glowing skin, soft diffused light, warm smile" keep the look attractive instead of harsh.
 - **Edits and multi-person shots:** GPT Image 2.5 (`gpt_image_2_5`, quality high, 2k) with the hero portraits as `image_references`. I used it for Maya's stronger freckles, Nico's vitiligo and "ds" monogram, and the group shot.

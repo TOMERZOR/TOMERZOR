@@ -29,3 +29,7 @@ Not legal advice. Have a lawyer review the policies in `help.html` for the count
 - **Newsletter:** asks for year of birth (minimum age `newsletterMinAge`, default 16) and an unticked marketing-consent box. Connect it to your email provider and store the consent date.
 - **Marketing emails:** start from `emails/marketing-email.html`. Every email needs the unsubscribe link and your postal address. In Israel, start the subject with "פרסומת".
 - **Accessibility:** the statement in `help.html` says the site aims for IS 5568 (WCAG 2.0 AA). Get an accessibility audit before launch and name a real coordinator.
+
+## Galed (גלעד)
+
+A hiking-partner app (find people to walk a trail, an Israel National Trail section, or a trek abroad with) lives in `galed/`. It is a React + Vite PWA with its own design language. See `galed/README.md` and the feature roadmap in `galed/FEATURES.md`.

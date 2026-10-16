@@ -1,18 +1,19 @@
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
+import { useActions } from "../actions";
 import { MatchStamp } from "../components/cards";
 import { IconBack, IconBookmark, IconCar, IconClock, IconPin, IconShield } from "../components/icons";
 import { Avatar, Blaze, Cairn, Elevation, blazeName } from "../components/marks";
 import { CountUp } from "../components/ui";
-import { personById, type Thread } from "../data/seed";
 import { trailById } from "../data/trails";
 import { carLabel, matchScore, rangeLabel, spotsLeft } from "../lib";
 import { useNav } from "../nav";
-import { useStore } from "../store";
+import { findPerson, myRequest, useStore } from "../store";
 
 export function PostDetail({ id }: { id: string }) {
   const { state, dispatch } = useStore();
-  const { pop, push, toast } = useNav();
+  const { pop, push, setTab } = useNav();
+  const actions = useActions();
   const scroller = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scroller });
   const imgY = useTransform(scrollY, [0, 400], [0, 140]);
@@ -22,49 +23,18 @@ export function PostDetail({ id }: { id: string }) {
   const post = state.posts.find((p) => p.id === id);
   if (!post) return null;
   const t = trailById(post.trailId);
-  const host = personById(post.authorId);
+  const host = findPerson(state, post.authorId);
   const mine = post.authorId === "me";
-  const requested = state.requested.includes(post.id);
+  const status = myRequest(state, post.id)?.status;
+  const pending = state.requests.filter((r) => r.postId === post.id && r.status === "pending").length;
   const saved = state.saved.includes(post.id);
   const left = spotsLeft(post);
   const score = matchScore(post, state.me);
 
-  const openChat = () => {
+  const openChat = async () => {
     if (!host) return;
-    const existing = state.threads.find((th) => th.withId === host.id);
-    if (existing) return push({ k: "chat", id: existing.id });
-    const thread: Thread = {
-      id: `t-${host.id}`,
-      withId: host.id,
-      postId: post.id,
-      unread: 0,
-      messages: [
-        {
-          id: "sys",
-          from: "system",
-          kind: "system",
-          text: `שיחה על ${t.name} · ${rangeLabel(post)}`,
-          at: Date.now(),
-        },
-      ],
-      plan: {
-        meet: post.meet,
-        time: `${rangeLabel(post)} · ${post.start}`,
-        cars: carLabel[post.car],
-        gear: [
-          { label: "מים לכל אחד", who: "כולם", done: false },
-          { label: "ערכת עזרה ראשונה", who: "?", done: false },
-        ],
-        shareWithEmergency: false,
-      },
-    };
-    dispatch({ type: "openThread", thread });
-    push({ k: "chat", id: thread.id });
-  };
-
-  const request = () => {
-    dispatch({ type: "request", postId: post.id });
-    toast(`הבקשה נשלחה ל${host?.name.split(" ")[0] ?? "מארגן/ת"}. אבן נוספה לגלעד.`);
+    const threadId = await actions.openChat(host.id, post.id);
+    if (threadId) push({ k: "chat", id: threadId });
   };
 
   return (
@@ -164,17 +134,21 @@ export function PostDetail({ id }: { id: string }) {
               <Avatar name={host.name} ink={host.ink} size={54} verified={host.verified} />
               <div className="host-main">
                 <span className="host-name">
-                  {host.name} <small>· {host.age}, {host.city}</small>
+                  {host.name}{" "}
+                  <small>
+                    · {host.age ? `${host.age}, ` : ""}
+                    {host.city}
+                  </small>
                 </span>
                 <span className="mono host-meta">
-                  {host.hikes} יציאות · {host.showUp}% הגיעו · {host.pace} קמ״ש
+                  {host.hikes} יציאות · {host.showUp === null ? "חדש/ה בגלעד" : `${host.showUp}% הגיעו`} · {host.pace} קמ״ש
                 </span>
               </div>
               <IconBack className="host-chev" />
             </motion.button>
           )}
 
-          <blockquote className="note">{post.note}</blockquote>
+          {post.note && <blockquote className="note">{post.note}</blockquote>}
 
           <div className="tags">
             {post.tags.map((x) => (
@@ -189,16 +163,20 @@ export function PostDetail({ id }: { id: string }) {
               מי בא <span className="mono">{post.joined.length + 1}/{post.spots + 1}</span>
             </h3>
             <div className="crew-row">
-              {host && <Avatar name={host.name} ink={host.ink} size={44} />}
+              {mine ? <Avatar name={state.me.name || "אני"} ink="flame" size={44} /> : host && <Avatar name={host.name} ink={host.ink} size={44} />}
               {post.joined.map((pid) => {
-                const p = personById(pid);
+                if (pid === "me") return <Avatar key={pid} name={state.me.name || "אני"} ink="flame" size={44} />;
+                const p = findPerson(state, pid);
                 return p ? <Avatar key={pid} name={p.name} ink={p.ink} size={44} /> : null;
               })}
-              {Array.from({ length: left }, (_, i) => (
-                <span key={i} className={`crew-empty ${i === 0 && requested ? "pending" : ""}`}>
-                  {i === 0 && requested ? <Cairn count={2} size={30} drop /> : i === 0 ? "את/ה?" : ""}
-                </span>
-              ))}
+              {Array.from({ length: left }, (_, i) => {
+                const waiting = i === 0 && status === "pending";
+                return (
+                  <span key={i} className={`crew-empty ${waiting ? "pending" : ""}`}>
+                    {waiting ? <Cairn count={2} size={30} drop /> : i === 0 && !mine ? "את/ה?" : ""}
+                  </span>
+                );
+              })}
             </div>
           </section>
 
@@ -213,31 +191,57 @@ export function PostDetail({ id }: { id: string }) {
         </article>
       </div>
 
-      {!mine && (
-        <motion.div className="cta" initial={{ y: 100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 26, delay: 0.25 }}>
-          <button className="btn btn-ghost" onClick={openChat}>
-            הודעה
+      <motion.div className="cta" initial={{ y: 100 }} animate={{ y: 0 }} transition={{ type: "spring", stiffness: 260, damping: 26, delay: 0.25 }}>
+        {mine ? (
+          <button
+            className="btn btn-ink btn-wide"
+            onClick={() => {
+              setTab("inbox");
+            }}
+          >
+            {pending ? `${pending} בקשות ממתינות לתשובה` : "היציאה שלך · עוד אין בקשות"}
           </button>
-          <AnimatePresence mode="wait" initial={false}>
-            {requested ? (
-              <motion.span key="done" className="btn btn-done" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                ✓ ממתין לאישור
-              </motion.span>
-            ) : (
-              <motion.button
-                key="req"
-                className="btn btn-flame"
-                onClick={request}
-                disabled={left === 0}
-                exit={{ scale: 0.8, opacity: 0 }}
-                whileTap={{ scale: 0.96 }}
-              >
-                {left === 0 ? "הקבוצה מלאה" : "בקשה להצטרף"}
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
+        ) : (
+          <>
+            <button className="btn btn-ghost" onClick={openChat}>
+              הודעה
+            </button>
+            <AnimatePresence mode="wait" initial={false}>
+              {status === "accepted" ? (
+                <motion.span key="ok" className="btn btn-done" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                  ✓ אושר · נתראה בשביל
+                </motion.span>
+              ) : status === "pending" ? (
+                <motion.button
+                  key="wait"
+                  className="btn btn-pending"
+                  onClick={() => actions.withdraw(post.id)}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  aria-label="ממתין לאישור. לחיצה מבטלת את הבקשה"
+                >
+                  ממתין לאישור <small>· ביטול</small>
+                </motion.button>
+              ) : status === "declined" ? (
+                <motion.span key="no" className="btn btn-muted" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  הפעם זה לא הסתדר
+                </motion.span>
+              ) : (
+                <motion.button
+                  key="req"
+                  className="btn btn-flame"
+                  onClick={() => actions.request(post.id)}
+                  disabled={left === 0}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  whileTap={{ scale: 0.96 }}
+                >
+                  {left === 0 ? "הקבוצה מלאה" : "בקשה להצטרף"}
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+      </motion.div>
     </div>
   );
 }

@@ -182,7 +182,7 @@ export function Avatar({
       <span className="avatar-letters">{initials(name)}</span>
       {verified && size >= 40 && (
         <span className="avatar-badge" title="פרופיל מאומת">
-          <svg viewBox="0 0 12 12" width="100%" height="100%">
+          <svg viewBox="0 0 12 12" width="11" height="11">
             <path d="M3 6.2l2 2 4-4.4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
         </span>

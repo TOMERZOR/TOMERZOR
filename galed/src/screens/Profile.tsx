@@ -4,16 +4,18 @@ import { TicketCard } from "../components/cards";
 import { IconMoon, IconShield, IconSun } from "../components/icons";
 import { Avatar, Blaze, Cairn, Topo } from "../components/marks";
 import { BackBar, CountUp, DayStrip, SectionTitle } from "../components/ui";
-import { personById } from "../data/seed";
+import { isLive } from "../backend/config";
 import { trails } from "../data/trails";
 import { useNav } from "../nav";
-import { useStore } from "../store";
+import { useActions } from "../actions";
+import { findPerson, useStore } from "../store";
 
 const doneTrails = ["eingedi", "arbel", "amud", "dolomites"];
 
 export function Profile() {
   const { state, dispatch } = useStore();
   const { push, toast } = useNav();
+  const actions = useActions();
   const { me } = state;
   const [contact, setContact] = useState(me.emergencyContact);
   const saved = state.posts.filter((p) => state.saved.includes(p.id));
@@ -61,7 +63,7 @@ export function Profile() {
       </dl>
 
       <SectionTitle kicker="מי שמחפש שותפים בימים האלה יראה אותך קודם">הימים הפנויים שלי</SectionTitle>
-      <DayStrip selected={me.freeDays} onToggle={(d) => dispatch({ type: "toggleFreeDay", offset: d })} />
+      <DayStrip selected={me.freeDays} onToggle={(d) => actions.toggleFreeDay(d)} />
 
       <SectionTitle kicker="פספורט שבילים">איפה כבר הלכתי</SectionTitle>
       <div className="passport">
@@ -104,9 +106,9 @@ export function Profile() {
       <SectionTitle>בטיחות</SectionTitle>
       <form
         className="emergency"
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          toast("איש הקשר לחירום נשמר");
+          if (await actions.saveEmergency(contact.trim())) toast("איש הקשר לחירום נשמר");
         }}
       >
         <IconShield />
@@ -125,9 +127,15 @@ export function Profile() {
           <IconMoon /> לילה בשטח
         </button>
       </div>
-      <button className="linkbtn" onClick={() => dispatch({ type: "reset" })}>
-        איפוס נתוני הדגמה
-      </button>
+      {isLive ? (
+        <button className="linkbtn" onClick={() => actions.signOut()}>
+          יציאה מהחשבון{state.session.email ? ` (${state.session.email})` : ""}
+        </button>
+      ) : (
+        <button className="linkbtn" onClick={() => dispatch({ type: "reset" })}>
+          איפוס נתוני הדגמה
+        </button>
+      )}
     </div>
   );
 }
@@ -135,22 +143,29 @@ export function Profile() {
 export function Person({ id }: { id: string }) {
   const { state } = useStore();
   const { pop, push } = useNav();
-  const p = personById(id);
+  const actions = useActions();
+  const p = findPerson(state, id);
   if (!p) return null;
   const theirs = state.posts.filter((x) => x.authorId === id);
   const thread = state.threads.find((t) => t.withId === id);
+  // a conversation is always about a hike: theirs, or one of mine they asked to join
+  const about = thread?.postId ?? theirs[0]?.id ?? state.requests.find((r) => r.userId === id)?.postId;
+  const openChat = async () => {
+    const threadId = thread?.id ?? (about ? await actions.openChat(id, about) : null);
+    if (threadId) push({ k: "chat", id: threadId });
+  };
   return (
     <div className="person">
       <BackBar onBack={pop} />
       <div className="person-scroll">
         <header className="person-head">
-          <Topo seed={p.age} rings={9} cx={200} cy={110} gap={18} className="me-topo" />
+          <Topo seed={p.age ?? p.hikes + 3} rings={9} cx={200} cy={110} gap={18} className="me-topo" />
           <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: "spring", stiffness: 260, damping: 18 }}>
             <Avatar name={p.name} ink={p.ink} size={104} verified={p.verified} />
           </motion.div>
           <h1 className="display">{p.name}</h1>
           <p className="mono me-meta">
-            {p.age} · {p.city} · {p.langs.join(" / ")}
+            {[p.age, p.city, p.langs.join(" / ")].filter(Boolean).join(" · ")}
           </p>
           <p className="person-bio">{p.bio}</p>
         </header>
@@ -164,8 +179,14 @@ export function Person({ id }: { id: string }) {
           <div>
             <dt>הגיעו</dt>
             <dd className="mono">
-              <CountUp to={p.showUp} />
-              <small>%</small>
+              {p.showUp === null ? (
+                "—"
+              ) : (
+                <>
+                  <CountUp to={p.showUp} />
+                  <small>%</small>
+                </>
+              )}
             </dd>
           </div>
           <div>
@@ -211,9 +232,9 @@ export function Person({ id }: { id: string }) {
         )}
         <div className="detail-pad" />
       </div>
-      {thread && (
+      {about && (
         <div className="cta">
-          <button className="btn btn-flame btn-wide" onClick={() => push({ k: "chat", id: thread.id })}>
+          <button className="btn btn-flame btn-wide" onClick={openChat}>
             לשיחה עם {p.name.split(" ")[0]}
           </button>
         </div>

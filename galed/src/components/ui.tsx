@@ -15,7 +15,7 @@ export function Chip({
   group?: string;
 }) {
   return (
-    <button className={`chip ${active ? "on" : ""}`} onClick={onClick} aria-pressed={!!active}>
+    <button type="button" className={`chip ${active ? "on" : ""}`} onClick={onClick} aria-pressed={!!active}>
       {active && group && <motion.span layoutId={`chip-${group}`} className="chip-ink" transition={spring} />}
       {active && !group && <span className="chip-ink" />}
       <span className="chip-text">{children}</span>
@@ -39,7 +39,7 @@ export function Segmented<T extends string>({
   return (
     <div className="seg" role="radiogroup">
       {options.map((o) => (
-        <button key={o.v} role="radio" aria-checked={value === o.v} className={value === o.v ? "on" : ""} onClick={() => onChange(o.v)}>
+        <button type="button" key={o.v} role="radio" aria-checked={value === o.v} className={value === o.v ? "on" : ""} onClick={() => onChange(o.v)}>
           {value === o.v && <motion.span layoutId={`seg-${id}`} className="seg-ink" transition={spring} />}
           <span>{o.label}</span>
         </button>
@@ -50,7 +50,7 @@ export function Segmented<T extends string>({
 
 export function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: () => void; label: string; hint?: string }) {
   return (
-    <button className="toggle-row" role="switch" aria-checked={on} onClick={onChange}>
+    <button type="button" className="toggle-row" role="switch" aria-checked={on} onClick={onChange}>
       <span className="toggle-text">
         <span>{label}</span>
         {hint && <small>{hint}</small>}
@@ -65,14 +65,14 @@ export function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (
 export function Stepper({ value, min, max, onChange, unit }: { value: number; min: number; max: number; onChange: (n: number) => void; unit?: string }) {
   return (
     <div className="stepper">
-      <button onClick={() => onChange(Math.max(min, value - 1))} aria-label="פחות" disabled={value <= min}>
+      <button type="button" onClick={() => onChange(Math.max(min, value - 1))} aria-label="פחות" disabled={value <= min}>
         −
       </button>
       <motion.b key={value} className="mono" initial={{ y: -10, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
         {value}
         {unit && <small> {unit}</small>}
       </motion.b>
-      <button onClick={() => onChange(Math.min(max, value + 1))} aria-label="יותר" disabled={value >= max}>
+      <button type="button" onClick={() => onChange(Math.min(max, value + 1))} aria-label="יותר" disabled={value >= max}>
         +
       </button>
     </div>
@@ -100,6 +100,7 @@ export function DayStrip({
         return (
           <motion.button
             key={i}
+            type="button"
             className={`day ${on ? "on" : ""} ${weekend ? "weekend" : ""}`}
             onClick={() => onToggle(i)}
             whileTap={{ scale: 0.9 }}

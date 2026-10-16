@@ -6,6 +6,7 @@ import { BackBar, Chip, DayStrip, Segmented, Stepper } from "../components/ui";
 import type { Post } from "../data/seed";
 import { trails, type Level } from "../data/trails";
 import { useNav } from "../nav";
+import { useActions } from "../actions";
 import { useStore } from "../store";
 
 const steps = ["לאן", "מתי", "עם מי", "פרסום"];
@@ -13,7 +14,8 @@ const tagOptions = ["יציאה לפני זריחה", "קצב נינוח", "צי
 const times = ["05:00", "05:30", "06:00", "07:00", "08:00"];
 
 export function Compose() {
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
+  const actions = useActions();
   const { pop, setTab, toast } = useNav();
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -27,6 +29,7 @@ export function Compose() {
   const [car, setCar] = useState<Post["car"]>("has-car");
   const [tags, setTags] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [meet, setMeet] = useState("");
   const [stamped, setStamped] = useState(false);
 
   const trail = trails.find((t) => t.id === trailId);
@@ -46,7 +49,7 @@ export function Compose() {
         car,
         tags,
         note: note || "מחפש/ת שותפים לדרך.",
-        meet: "יתואם בצ׳אט",
+        meet: meet.trim() || "יתואם בצ׳אט",
         createdHoursAgo: 0,
       }
     : null;
@@ -57,15 +60,14 @@ export function Compose() {
   };
   const canNext = step === 0 ? !!trail : true;
 
-  const publish = () => {
+  const publish = async () => {
     if (!draft) return;
     setStamped(true);
-    window.setTimeout(() => {
-      dispatch({ type: "publish", post: draft });
-      toast("היציאה פורסמה. נעדכן כשמישהו יבקש להצטרף.");
-      pop();
-      setTab("feed");
-    }, 1300);
+    const [ok] = await Promise.all([actions.publish(draft), new Promise((r) => window.setTimeout(r, 1300))]);
+    if (!ok) return setStamped(false);
+    toast("היציאה פורסמה. נעדכן כשמישהו יבקש להצטרף.");
+    pop();
+    setTab("feed");
   };
 
   return (
@@ -150,6 +152,17 @@ export function Compose() {
                       </Chip>
                     ))}
                   </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="meet">נקודת מפגש</label>
+                  <input
+                    id="meet"
+                    className="textfield"
+                    value={meet}
+                    onChange={(e) => setMeet(e.target.value)}
+                    placeholder={trail ? `למשל: חניון ההתחלה, ${trail.area}` : "חניון, צומת, תחנה"}
+                    maxLength={200}
+                  />
                 </div>
                 <div className="field">
                   <label>גמישות</label>

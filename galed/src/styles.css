@@ -244,11 +244,11 @@ img {
 .avatar-badge {
   position: absolute;
   inset-block-end: -2px;
-  inset-inline-end: -2px;
-  width: 36%;
-  min-width: 13px;
-  max-width: 20px;
-  aspect-ratio: 1;
+  inset-inline-end: -5px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
   border-radius: 50%;
   background: var(--paper-hi);
   color: var(--moss);
@@ -2276,4 +2276,200 @@ img {
   .pending-dot {
     animation: none;
   }
+}
+
+/* ── Requests ───────────────────────────────────────────── */
+
+.btn-pending {
+  background: var(--paper-hi);
+  border-style: dashed;
+  border-color: var(--flame);
+  color: var(--ink);
+}
+.btn-pending small {
+  font-weight: 400;
+  color: var(--ink-3);
+  margin-inline-start: 4px;
+}
+.btn-muted {
+  background: var(--paper-2);
+  color: var(--ink-3);
+  box-shadow: none;
+}
+
+.incoming {
+  display: grid;
+  gap: 12px;
+}
+.incoming-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper-hi);
+  box-shadow: 3px 3px 0 var(--flame);
+}
+.incoming-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.incoming-who > span {
+  display: grid;
+}
+.incoming-who small {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.incoming-trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.incoming-card blockquote {
+  margin: 0;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--line);
+  font-family: var(--f-display);
+  font-weight: 500;
+  font-size: 15.5px;
+}
+.incoming-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.linkbtn.inline {
+  display: inline;
+  margin: 0;
+  margin-inline-start: auto;
+  font-size: 13.5px;
+  color: var(--ultra);
+}
+
+.status {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1.2px solid currentColor;
+}
+.status-pending {
+  color: var(--flame);
+}
+.status-accepted {
+  color: var(--moss);
+}
+.status-declined,
+.status-withdrawn {
+  color: var(--ink-3);
+}
+
+/* ── Sign-in and profile setup ──────────────────────────── */
+
+.auth {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px 16px;
+  background: var(--paper);
+  overflow: hidden;
+}
+.auth-center {
+  align-items: center;
+}
+.auth-scroll {
+  justify-content: flex-start;
+  overflow-y: auto;
+}
+.auth-topo {
+  height: 60%;
+}
+.auth-head {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+.auth-head h1 {
+  font-size: 42px;
+}
+.auth-head p {
+  margin: 0;
+  color: var(--ink-2);
+}
+.auth-card {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper-hi);
+  box-shadow: var(--shadow);
+}
+.auth-card > label,
+.auth-row label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-top: 6px;
+}
+.auth-card h2 {
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 24px;
+}
+.auth-card p {
+  margin: 0;
+}
+.auth-card .chips {
+  margin: 0;
+  padding: 0;
+}
+.auth-card .toggles {
+  margin-top: 6px;
+}
+.auth-card .btn {
+  margin-top: 10px;
+}
+.auth-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 10px;
+}
+.auth-row > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.textfield {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper);
+  line-height: 1.45;
+  resize: none;
+}
+.textfield[aria-invalid="true"] {
+  border-color: var(--blaze-red);
+}
+.field .textfield {
+  background: var(--paper-hi);
+}
+.form-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--blaze-red);
 }

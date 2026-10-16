@@ -1,8 +1,11 @@
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
+import { useLiveSync } from "./actions";
+import { isLive } from "./backend/config";
 import { IconChat, IconCompass, IconPack, IconPlus, IconTrail } from "./components/icons";
 import { SvgDefs } from "./components/marks";
 import { NavProvider, useNav, type Screen, type Tab } from "./nav";
+import { Loading, ProfileSetup, SignIn } from "./screens/Auth";
 import { Chat } from "./screens/Chat";
 import { Compose } from "./screens/Compose";
 import { Feed } from "./screens/Feed";
@@ -62,6 +65,18 @@ function Shell() {
   const { state } = useStore();
   const { tab, stack, toastText } = useNav();
   const scroller = useRef<HTMLDivElement>(null);
+  useLiveSync();
+  const gate = !state.onboarded
+    ? null
+    : !isLive
+      ? "app"
+      : state.session.status === "unknown"
+        ? "loading"
+        : state.session.status === "out"
+          ? "signin"
+          : state.session.needsProfile
+            ? "profile"
+            : "app";
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
@@ -82,7 +97,11 @@ function Shell() {
         )}
       </AnimatePresence>
 
-      {state.onboarded && (
+      {gate === "loading" && <Loading />}
+      {gate === "signin" && <SignIn />}
+      {gate === "profile" && <ProfileSetup />}
+
+      {gate === "app" && (
         <>
           <motion.div
             className="layer base"

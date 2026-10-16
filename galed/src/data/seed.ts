@@ -6,12 +6,12 @@ export interface Person {
   id: string;
   name: string;
   g: Gender;
-  age: number;
+  age: number | null;
   city: string;
   pace: number; // km/h on flat ground
   level: Level;
   hikes: number;
-  showUp: number; // % of planned hikes they actually came to
+  showUp: number | null; // % of planned hikes they actually came to; null until there is history
   langs: string[];
   car: boolean;
   bio: string;

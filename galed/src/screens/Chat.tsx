@@ -3,27 +3,17 @@ import { useEffect, useRef, useState } from "react";
 import { IconCar, IconCheck, IconClock, IconPin, IconSend, IconShield } from "../components/icons";
 import { Avatar, Blaze } from "../components/marks";
 import { BackBar } from "../components/ui";
-import { personById } from "../data/seed";
 import { trailById } from "../data/trails";
 import { clock } from "../lib";
 import { useNav } from "../nav";
-import { useStore } from "../store";
+import { useActions } from "../actions";
+import { findPerson, useStore } from "../store";
 
 const quick = ["איזה קצב נוח לך?", "יש לך רכב?", "מה עם מים בדרך?", "אפשר להביא כלב?", "סגור, אני בא/ה"];
 
-// Canned replies so the prototype feels alive. A real backend replaces this.
-function replyTo(text: string, g: "f" | "m" | "x"): string {
-  const bring = g === "f" ? "מביאה" : "מביא";
-  if (text.includes("קצב")) return "בערך 4-4.5 קמ״ש בשטח פתוח, יותר לאט בירידות. עוצרים כל שעה וחצי.";
-  if (text.includes("רכב")) return "יש לי רכב. אם גם לך יש, נשאיר אחד בסוף ונחסוך טרמפ.";
-  if (text.includes("מים")) return `אין מים בדרך. 3-4 ליטר לאדם, ואני ${bring} עוד 2 ברכב.`;
-  if (text.includes("כלב")) return "בשמחה, רק שיהיה עם מים משלו ורצועה בקטעים עם מטפסים.";
-  if (text.includes("סגור") || text.includes("בא")) return "מעולה! הוספתי אותך לתוכנית. נתראה בנקודת המפגש 🙌";
-  return "נשמע טוב. בוא/י נסגור את הפרטים בכרטיס התוכנית למעלה.";
-}
-
 export function Chat({ id }: { id: string }) {
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
+  const actions = useActions();
   const { pop, push } = useNav();
   const thread = state.threads.find((t) => t.id === id);
   const [text, setText] = useState("");
@@ -32,34 +22,29 @@ export function Chat({ id }: { id: string }) {
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (thread?.unread) dispatch({ type: "read", threadId: id });
-  }, [thread?.unread, id, dispatch]);
+    if (thread?.unread) void actions.markRead(id);
+  }, [thread?.unread, id, actions]);
 
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [thread?.messages.length, typing]);
 
   if (!thread) return null;
-  const who = personById(thread.withId)!;
+  const who = findPerson(state, thread.withId);
+  if (!who) return null;
   const post = state.posts.find((p) => p.id === thread.postId);
   const trail = post ? trailById(post.trailId) : null;
   const done = thread.plan.gear.filter((g) => g.done).length;
 
   const send = (body: string) => {
-    const msg = body.trim();
-    if (!msg) return;
-    dispatch({ type: "send", threadId: id, message: { id: crypto.randomUUID(), from: "me", text: msg, at: Date.now() } });
+    if (!body.trim()) return;
     setText("");
-    window.setTimeout(() => setTyping(true), 500);
-    window.setTimeout(() => {
-      setTyping(false);
-      dispatch({
-        type: "send",
-        threadId: id,
-        message: { id: crypto.randomUUID(), from: who.id, text: replyTo(msg, who.g), at: Date.now() },
-      });
-    }, 1900);
+    void actions.send(id, body, setTyping);
   };
+
+  const plan = thread.plan;
+  const toggleGear = (i: number) =>
+    actions.setPlan(id, { ...plan, gear: plan.gear.map((g, k) => (k === i ? { ...g, done: !g.done } : g)) });
 
   return (
     <div className="chat">
@@ -111,7 +96,7 @@ export function Chat({ id }: { id: string }) {
               <ul className="gear">
                 {thread.plan.gear.map((g, i) => (
                   <li key={g.label}>
-                    <button className={g.done ? "done" : ""} onClick={() => dispatch({ type: "toggleGear", threadId: id, index: i })}>
+                    <button className={g.done ? "done" : ""} onClick={() => toggleGear(i)}>
                       <span className="box">{g.done && <IconCheck size={14} />}</span>
                       <span className="gear-label">{g.label}</span>
                       <span className="mono gear-who">{g.who}</span>
@@ -121,7 +106,7 @@ export function Chat({ id }: { id: string }) {
               </ul>
               <button
                 className={`share ${thread.plan.shareWithEmergency ? "on" : ""}`}
-                onClick={() => dispatch({ type: "toggleShare", threadId: id })}
+                onClick={() => actions.setPlan(id, { ...plan, shareWithEmergency: !plan.shareWithEmergency })}
                 aria-pressed={thread.plan.shareWithEmergency}
               >
                 <IconShield size={18} />

@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
 import type { Post } from "../data/seed";
-import { personById } from "../data/seed";
 import { trailById } from "../data/trails";
 import { matchScore, rangeLabel, shortDay, spotsLeft, type Me } from "../lib";
 import { Avatar, Blaze } from "./marks";
+import { findPerson, useStore } from "../store";
 
 const seeks = (g: "f" | "m" | "x") => (g === "f" ? "מחפשת" : g === "m" ? "מחפש" : "מחפש/ת");
 
@@ -26,12 +26,16 @@ export function MatchStamp({ score, big }: { score: number; big?: boolean }) {
   );
 }
 
-const authorOf = (post: Post, me: Me) =>
-  post.authorId === "me" ? { name: `${me.name} (אני)`, ink: "flame" as const, verified: false, g: "x" as const } : personById(post.authorId);
+function useAuthor(post: Post, me: Me) {
+  const { state } = useStore();
+  return post.authorId === "me"
+    ? { name: `${me.name} (אני)`, ink: "flame" as const, verified: false, g: "x" as const, pace: me.pace }
+    : findPerson(state, post.authorId);
+}
 
 export function TicketCard({ post, me, onOpen, index = 0 }: { post: Post; me: Me; onOpen: () => void; index?: number }) {
   const t = trailById(post.trailId);
-  const a = authorOf(post, me);
+  const a = useAuthor(post, me);
   const d = shortDay(post.dayOffset);
   const left = spotsLeft(post);
   return (
@@ -46,7 +50,7 @@ export function TicketCard({ post, me, onOpen, index = 0 }: { post: Post; me: Me
     >
       <div className="ticket-cover">
         <img src={t.cover} alt="" loading="lazy" />
-        <MatchStamp score={matchScore(post, me)} />
+        {post.authorId !== "me" && <MatchStamp score={matchScore(post, me)} />}
       </div>
       <div className="ticket-body">
         <div className="ticket-kicker">
@@ -82,7 +86,7 @@ export function TicketCard({ post, me, onOpen, index = 0 }: { post: Post; me: Me
 
 export function PosterCard({ post, me, onOpen, index }: { post: Post; me: Me; onOpen: () => void; index: number }) {
   const t = trailById(post.trailId);
-  const a = personById(post.authorId);
+  const a = useAuthor(post, me);
   return (
     <motion.button
       className="poster"

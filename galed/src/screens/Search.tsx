@@ -4,16 +4,17 @@ import { TicketCard } from "../components/cards";
 import { IconSearch } from "../components/icons";
 import { Topo } from "../components/marks";
 import { Chip, CountUp, DayStrip, Segmented, SectionTitle, Toggle } from "../components/ui";
-import { personById } from "../data/seed";
 import { intSections, trailById, type Level } from "../data/trails";
 import { useNav } from "../nav";
-import { useStore } from "../store";
+import { useActions } from "../actions";
+import { findPerson, useStore } from "../store";
 
 const levels: Level[] = ["קל", "בינוני", "קשה", "מאתגר"];
 type When = "any" | "weekend" | "week" | "month";
 
 export function Search() {
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
+  const actions = useActions();
   const { push } = useNav();
   const [q, setQ] = useState("");
   const [region, setRegion] = useState<"all" | "il" | "abroad">("all");
@@ -50,7 +51,7 @@ export function Search() {
     return state.posts
       .filter((p) => {
         const t = trailById(p.trailId);
-        const a = personById(p.authorId);
+        const a = findPerson(state, p.authorId);
         const text = `${t.name} ${t.segment} ${t.area} ${t.country} ${a?.name ?? ""} ${p.tags.join(" ")}`;
         if (q && !text.includes(q.trim())) return false;
         if (region !== "all" && t.region !== region) return false;
@@ -139,7 +140,7 @@ export function Search() {
           </Chip>
         ))}
       </div>
-      <DayStrip selected={state.me.freeDays} onToggle={(d) => dispatch({ type: "toggleFreeDay", offset: d })} marks={perDay} />
+      <DayStrip selected={state.me.freeDays} onToggle={(d) => actions.toggleFreeDay(d)} marks={perDay} />
       <p className="hint">סימנת {state.me.freeDays.length} ימים פנויים. יציאות בימים האלה עולות בהתאמה.</p>
 
       <SectionTitle>רמה וקצב</SectionTitle>

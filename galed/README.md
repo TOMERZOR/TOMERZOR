@@ -21,7 +21,7 @@ npm run build    # בדיקת טיפוסים + בנייה ל-dist/
 
 1. פותחים פרויקט חינמי ב-[supabase.com](https://supabase.com).
 2. ב-SQL Editor מריצים את הקבצים ב-`supabase/migrations/` לפי הסדר (`0001_init.sql`, ואז `0002_checkins.sql`).
-3. ב-Authentication → URL Configuration מוסיפים את כתובת האתר (למשל `http://localhost:5173` ואת כתובת האתר המפורסם) ל-Redirect URLs. משם חוזרים מקישור הכניסה במייל.
+3. ב-Authentication → Email Templates → Magic Link מוסיפים את הקוד לתבנית (`{{ .Token }}`). הכניסה היא בקוד בן 6 ספרות שנשלח במייל. פרטים בהמשך, ב"הגדרות ב-Supabase לפני חנות".
 4. מעתיקים את `.env.example` ל-`.env.local` וממלאים את `VITE_SUPABASE_URL` ו-`VITE_SUPABASE_ANON_KEY` מ-Project Settings → API.
 5. `npm run dev`. מסך הפתיחה יוביל לכניסה במייל ואז להשלמת פרופיל.
 
@@ -65,6 +65,79 @@ supabase/tests/alerts.sh   # מריץ את פונקציית ההתראות ב-De
 
 `test:db` צריך Postgres 16 מותקן (`/usr/lib/postgresql/16/bin`, או `PG_BIN`). `test:api` צריך גם את [PostgREST](https://postgrest.org) (ב-PATH או ב-`POSTGREST`), ו-`alerts.sh` צריך גם [Deno](https://deno.com) (ב-PATH או ב-`DENO`). עדכונים בזמן אמת (Realtime) לא נבדקים מקומית. צריך לבדוק אותם מול פרויקט Supabase אמיתי.
 
+## אפליקציה ל-iPhone ולאנדרואיד (Capacitor)
+
+אותו קוד רץ כאפליקציה מקורית. הפרויקטים נמצאים ב-`ios/` וב-`android/`, וההגדרות ב-`capacitor.config.ts`: מזהה `app.galed` ושם "גלעד". **את המזהה אפשר לשנות רק לפני ההעלאה הראשונה לחנות.** האייקון ומסך הפתיחה נוצרים מ-`assets/` עם `npx capacitor-assets generate`.
+
+```bash
+npm run cap:sync   # בונה ומעתיק לפרויקטים המקוריים
+npm run ios        # פותח ב-Xcode (צריך Mac)
+npm run android    # פותח ב-Android Studio
+```
+
+באפליקציה המקורית נוסף:
+- רטט קל בבחירות, באישור בקשה וב"חזרתי".
+- צבע שורת הסטטוס מתחלף עם מצב לילה.
+- מסך פתיחה.
+- כפתור "חזור" באנדרואיד.
+- פס "אין קליטה". "חזרתי" שנלחץ בלי קליטה נשמר ונשלח אוטומטית כשהקליטה חוזרת.
+
+### בנייה אוטומטית ב-GitHub (בלי Mac)
+
+`.github/workflows/galed.yml` רץ על כל שינוי בתיקייה:
+1. **web:** בדיקת טיפוסים, בנייה, וכל הבדיקות (unit, db, api, alerts).
+2. **android:** APK להתקנה ישירה על טלפון (debug), ו-AAB לחנות. ה-AAB חתום כשיש סודות.
+3. **ios:** בנייה לסימולטור. כשיש סודות של App Store Connect, הוא גם מעלה ל-TestFlight. ההעלאה רצה כשמפעילים את ה-workflow ידנית עם "testflight", או על `main`.
+
+את הקבצים שנבנו מורידים מעמוד ההרצה ב-GitHub (Actions → ההרצה → Artifacts).
+
+**משתנים** (Settings → Secrets and variables → Actions → Variables):
+| שם | מאיפה |
+|---|---|
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API |
+| `VITE_REVIEW_EMAIL` | המייל של חשבון הבודק של Apple/Google (ראו בהמשך) |
+
+**סודות ל-iOS** (Secrets):
+| שם | מאיפה |
+|---|---|
+| `APPLE_TEAM_ID` | developer.apple.com → Account → Membership |
+| `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID`, `APPSTORE_PRIVATE_KEY` | App Store Connect → Users and Access → Integrations → App Store Connect API → מפתח עם הרשאת Admin. את קובץ ה-‎.p8 מדביקים כמו שהוא |
+
+לפני ההעלאה הראשונה פותחים את האפליקציה ב-App Store Connect: My Apps → + → New App, עם ה-Bundle ID `app.galed`. החתימה מנוהלת אוטומטית דרך המפתח.
+
+**סודות לאנדרואיד** (Secrets):
+| שם | מאיפה |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | `keytool -genkeypair -v -keystore galed.jks -alias galed -keyalg RSA -keysize 2048 -validity 10000`, ואז `base64 -w0 galed.jks`. **שמרו את הקובץ והסיסמאות במקום בטוח** |
+| `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD` | מה שבחרתם בפקודה |
+
+את ה-AAB הראשון מעלים ידנית ל-Play Console (Testing → Closed testing). בחשבון פרטי חדש צריך 12 בודקים במשך 14 יום לפני שאפשר לפרסם.
+
+### הגדרות ב-Supabase לפני חנות
+1. **קוד כניסה במייל:** ב-Authentication → Email Templates → Magic Link, משנים את התבנית כך שתכלול את הקוד:
+   ```html
+   <h2>הקוד שלך לגלעד</h2>
+   <p style="font-size:28px;letter-spacing:6px"><b>{{ .Token }}</b></p>
+   <p>הקוד תקף לשעה. אם לא ביקשת אותו, אפשר להתעלם.</p>
+   ```
+   כדאי גם להגדיר שרת מייל משלכם (Authentication → SMTP). השרת המובנה מוגבל לכמה הודעות בשעה.
+2. **חשבון לבודק של Apple:** Authentication → Users → Add user, עם מייל וסיסמה. את המייל שמים ב-`VITE_REVIEW_EMAIL`. במסך הכניסה, המייל הזה מקבל שדה סיסמה במקום קוד. את המייל והסיסמה כותבים ב-App Review Information. כדאי למלא לחשבון פרופיל ולפרסם ממנו יציאה, כדי שהבודק יראה אפליקציה חיה.
+3. **דיווחים:** מגיעים לטבלה `reports` (Table Editor). מבטיחים לבדוק כל דיווח תוך 24 שעות, אז כדאי להגדיר התראה: Database → Webhooks על `reports`, אל מייל או Slack.
+
+### מה למלא ב-App Store Connect
+- **Privacy Policy URL:** הכתובת של `privacy.html` מהאתר שפרסמתם (נבנה אוטומטית ל-`dist/`). Support URL: `terms.html` או דף עם מייל.
+- **App Privacy:**
+  - נאסף: Contact Info (Email, Phone של איש קשר לחירום), User Content (Messages, Other), Identifiers (User ID), Other Data (שנת לידה).
+  - הכל Linked to the user.
+  - בלי Tracking.
+- **Age Rating:** יש תוכן של משתמשים ותקשורת בין משתמשים, ולכן הדירוג יצא גבוה. בתנאים גלעד מוגדרת ל-18+.
+- **Review Notes**, מה לכתוב לבודק:
+  - פרטי החשבון.
+  - איפה נמצאים דיווח וחסימה: "⋯" בפרופיל, בצ׳אט ובעמוד יציאה, ולחיצה על הודעה.
+  - איפה מחיקת החשבון: אני → חשבון ופרטיות.
+  - שהטקסט מסונן.
+- **צילומי מסך:** ‏6.9 אינץ׳ (1320×2868).
+
 ## מבנה
 
 | קובץ | מה יש בו |
@@ -77,6 +150,9 @@ supabase/tests/alerts.sh   # מריץ את פונקציית ההתראות ב-De
 | `src/backend/live.ts` | השכבה מול Supabase: שאילתות, המרה לטיפוסים של האפליקציה, Realtime |
 | `supabase/migrations/` | סכמת מסד הנתונים והרשאות |
 | `supabase/functions/checkin-alerts/` | פונקציית ההתראות: SMS לאיש הקשר כשמישהו לא סימן "חזרתי" |
+| `src/components/safety.tsx` | דיווח, חסימה, מחיקת חשבון, תנאים ופרטיות (מתוך `src/legal.ts`) |
+| `src/native.ts` | רטט, שורת סטטוס, מסך פתיחה, כפתור "חזור", זיהוי קליטה |
+| `ios/`, `android/`, `capacitor.config.ts`, `assets/` | האפליקציות המקוריות, האייקון ומסך הפתיחה |
 | `src/components/safetrip.tsx` | כרטיס "יציאה בטוחה" בעמוד היציאה, והפס "בשטח · חזרתי" מעל הניווט |
 | `supabase/tests/` | בדיקות הרשאות, API ופונקציית ההתראות |
 | `src/nav.tsx` | ניווט: טאבים + מחסנית מסכים, הודעות קופצות |

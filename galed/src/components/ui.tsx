@@ -1,6 +1,7 @@
 import { AnimatePresence, animate, motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { shortDay } from "../lib";
+import { haptic } from "../native";
 import { IconBack } from "./icons";
 
 export function Chip({
@@ -15,7 +16,15 @@ export function Chip({
   group?: string;
 }) {
   return (
-    <button type="button" className={`chip ${active ? "on" : ""}`} onClick={onClick} aria-pressed={!!active}>
+    <button
+      type="button"
+      className={`chip ${active ? "on" : ""}`}
+      onClick={() => {
+        haptic("tap");
+        onClick?.();
+      }}
+      aria-pressed={!!active}
+    >
       {active && group && <motion.span layoutId={`chip-${group}`} className="chip-ink" transition={spring} />}
       {active && !group && <span className="chip-ink" />}
       <span className="chip-text">{children}</span>
@@ -50,7 +59,16 @@ export function Segmented<T extends string>({
 
 export function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: () => void; label: string; hint?: string }) {
   return (
-    <button type="button" className="toggle-row" role="switch" aria-checked={on} onClick={onChange}>
+    <button
+      type="button"
+      className="toggle-row"
+      role="switch"
+      aria-checked={on}
+      onClick={() => {
+        haptic("tap");
+        onChange();
+      }}
+    >
       <span className="toggle-text">
         <span>{label}</span>
         {hint && <small>{hint}</small>}

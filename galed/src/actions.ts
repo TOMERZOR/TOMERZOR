@@ -8,6 +8,25 @@ import { isLive } from "./backend/config";
 import * as live from "./backend/live";
 import { people as seedPeople, posts as seedPosts, threads as seedThreads, type Post, type Thread } from "./data/seed";
 import { filterMessage, friendlyError, hasBannedTerm } from "./filter";
+import { haptic } from "./native";
+
+// "חזרתי" pressed without signal is kept here and sent when the phone is back online.
+const PENDING_KEY = "galed:pending-checkins";
+type Pending = { postId: string; status: "returned" | "cancelled" };
+const readPending = (): Pending[] => {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+};
+const writePending = (list: Pending[]) => {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+};
 import { trailById } from "./data/trails";
 import { carLabel, clock, GRACE_MIN, rangeLabel } from "./lib";
 import { useNav } from "./nav";
@@ -75,6 +94,7 @@ export function useActions() {
         const post = ref.current.posts.find((p) => p.id === postId);
         const host = post && findPerson(ref.current, post.authorId);
         dispatch({ type: "upsertRequest", request: { postId, userId: "me", status: "pending", message, at: Date.now() } });
+        haptic("success");
         if (!isLive) {
           toast(`הבקשה נשלחה ל${host ? first(host.name) : "מארגן/ת"}.`);
           window.setTimeout(() => {
@@ -146,6 +166,7 @@ export function useActions() {
           toast(filterMessage);
           return false;
         }
+        haptic("tap");
         const tempId = `tmp-${crypto.randomUUID()}`;
         dispatch({ type: "send", threadId, message: { id: tempId, from: "me", text: body, at: Date.now() } });
         if (!isLive) {
@@ -212,8 +233,20 @@ export function useActions() {
           const name = ref.current.me.emergencyName || "איש הקשר";
           toast(prev.status === "alerted" ? `ברוכים השבים! ${name} יקבל/תקבל עדכון שהכל בסדר.` : "ברוכים השבים! אבן נוספה לגלעד.");
         }
-        if (isLive && !(await guard(async () => dispatch({ type: "upsertCheckin", checkin: await live.setCheckinStatus(postId, status, me) }))))
-          dispatch({ type: "upsertCheckin", checkin: prev });
+        if (status === "returned") haptic("success");
+        if (!isLive) return;
+        try {
+          dispatch({ type: "upsertCheckin", checkin: await live.setCheckinStatus(postId, status, me) });
+        } catch (e) {
+          if (!navigator.onLine) {
+            writePending([...readPending().filter((x) => x.postId !== postId), { postId, status }]);
+            toast("אין קליטה. נסמן ״חזרתי״ ברגע שהקליטה תחזור, גם אם האפליקציה סגורה ונפתחת שוב.");
+          } else {
+            console.error(e);
+            toast(friendlyError(e));
+            dispatch({ type: "upsertCheckin", checkin: prev });
+          }
+        }
       },
 
       async saveProfile(input: live.ProfileInput) {
@@ -243,6 +276,7 @@ export function useActions() {
       async block(userId: string) {
         const person = findPerson(ref.current, userId);
         if (isLive && !(await guard(() => live.block(userId)))) return false;
+        haptic("warning");
         dispatch({ type: "block", userId, name: person?.name ?? "" });
         toast(`${person ? first(person.name) : "המשתמש/ת"} ${person?.g === "f" ? "חסומה" : "חסום"}. לא תראו יותר זה את זה בגלעד.`);
         return true;
@@ -328,6 +362,24 @@ export function useLiveSync() {
       data.subscription.unsubscribe();
     };
   }, [dispatch, toast]);
+
+  useEffect(() => {
+    if (!isLive || !userId) return;
+    const flush = async () => {
+      for (const p of readPending()) {
+        try {
+          dispatch({ type: "upsertCheckin", checkin: await live.setCheckinStatus(p.postId, p.status, userId) });
+          writePending(readPending().filter((x) => x.postId !== p.postId));
+          if (p.status === "returned") toast("הקליטה חזרה: סימנו ״חזרתי״.");
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    };
+    void flush();
+    window.addEventListener("online", flush);
+    return () => window.removeEventListener("online", flush);
+  }, [userId, dispatch, toast]);
 
   useEffect(() => {
     if (!isLive || !userId) return;

@@ -199,6 +199,11 @@ export async function sendSignInCode(email: string) {
   if (error) throw new Error(error.message);
 }
 
+export async function signInWithPassword(email: string, password: string) {
+  const { error } = await sb().auth.signInWithPassword({ email, password });
+  if (error) throw new Error(error.message);
+}
+
 export async function verifySignInCode(email: string, token: string) {
   const { error } = await sb().auth.verifyOtp({ email, token, type: "email" });
   if (error) throw new Error(error.message);

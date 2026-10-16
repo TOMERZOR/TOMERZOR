@@ -2983,3 +2983,29 @@ img {
 .auth-row-links .linkbtn.inline {
   margin: 0;
 }
+
+/* ── Native app ─────────────────────────────────────────── */
+
+.offline {
+  position: absolute;
+  z-index: 160;
+  top: 0;
+  inset-inline: 0;
+  padding: 6px 16px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* phones: the frame is the screen; keep content clear of the notch */
+@media (max-width: 559px) {
+  body {
+    background: var(--paper);
+  }
+  .device {
+    height: calc(100dvh - env(safe-area-inset-top));
+    margin-top: env(safe-area-inset-top);
+  }
+}

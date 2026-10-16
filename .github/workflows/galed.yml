@@ -1,0 +1,169 @@
+name: Galed
+
+# Builds and tests the app on every change under galed/.
+# - web:     typecheck, build, unit/database/API/alert tests
+# - android: debug APK (install on a phone) + release AAB (signed when secrets exist)
+# - ios:     simulator build; with App Store Connect secrets it can also archive
+#            and upload to TestFlight (run manually with "testflight", or on main)
+# Secrets and variables are listed in galed/README.md.
+
+on:
+  push:
+    paths: ["galed/**", ".github/workflows/galed.yml"]
+  pull_request:
+    paths: ["galed/**", ".github/workflows/galed.yml"]
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: "Upload the iOS build to TestFlight"
+        type: boolean
+        default: false
+
+concurrency:
+  group: galed-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: galed
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: galed/package-lock.json
+      - run: npm ci
+      - name: Typecheck and build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_REVIEW_EMAIL: ${{ vars.VITE_REVIEW_EMAIL }}
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Database tests
+        run: npm run test:db
+        env:
+          PG_BIN: /usr/lib/postgresql/16/bin
+      - name: Install PostgREST
+        run: |
+          curl -sSL https://github.com/PostgREST/postgrest/releases/download/v12.2.3/postgrest-v12.2.3-linux-static-x64.tar.xz | tar xJ -C "$RUNNER_TEMP"
+          echo "POSTGREST=$RUNNER_TEMP/postgrest" >> "$GITHUB_ENV"
+      - name: API tests
+        run: npm run test:api
+        env:
+          PG_BIN: /usr/lib/postgresql/16/bin
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.6
+      - name: Alert function tests
+        run: supabase/tests/alerts.sh
+        env:
+          PG_BIN: /usr/lib/postgresql/16/bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: galed/dist
+          retention-days: 7
+
+  android:
+    needs: web
+    runs-on: ubuntu-24.04
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: galed/dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: galed/package-lock.json
+      - run: npm ci
+      - run: npx cap sync android
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Release signing key
+        if: env.HAS_KEYSTORE == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+      - name: Build APK and AAB
+        working-directory: galed/android
+        run: ./gradlew --no-daemon assembleDebug bundleRelease
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: galed-android
+          path: |
+            galed/android/app/build/outputs/apk/debug/app-debug.apk
+            galed/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
+
+  ios:
+    needs: web
+    runs-on: macos-15
+    env:
+      HAS_ASC: ${{ secrets.APPSTORE_PRIVATE_KEY != '' && secrets.APPLE_TEAM_ID != '' }}
+      UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.testflight || github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: galed/dist
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: galed/package-lock.json
+      - run: npm ci
+      - run: npx cap sync ios
+      - name: Use the newest Xcode on the runner
+        run: |
+          xcode=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
+      - name: Build for the simulator
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 40
+          test "${PIPESTATUS[0]}" -eq 0
+        shell: bash
+      - name: Archive and upload to TestFlight
+        if: env.HAS_ASC == 'true' && env.UPLOAD == 'true'
+        shell: bash
+        env:
+          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+          APPSTORE_PRIVATE_KEY: ${{ secrets.APPSTORE_PRIVATE_KEY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -o pipefail
+          key="$RUNNER_TEMP/AuthKey_${APPSTORE_KEY_ID}.p8"
+          printf '%s' "$APPSTORE_PRIVATE_KEY" > "$key"
+          auth=(-allowProvisioningUpdates -authenticationKeyPath "$key" -authenticationKeyID "$APPSTORE_KEY_ID" -authenticationKeyIssuerID "$APPSTORE_ISSUER_ID")
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Galed.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            "${auth[@]}" archive | tail -n 40
+          sed "s/TEAM_ID/$APPLE_TEAM_ID/" ios/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Galed.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            "${auth[@]}" | tail -n 40

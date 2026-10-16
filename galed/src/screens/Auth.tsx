@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useActions } from "../actions";
-import { sendSignInCode, verifySignInCode } from "../backend/live";
+import { reviewEmail } from "../backend/config";
+import { sendSignInCode, signInWithPassword, verifySignInCode } from "../backend/live";
 import { LegalSheet } from "../components/safety";
 import { Cairn, Topo } from "../components/marks";
 import { Chip, Segmented, Toggle } from "../components/ui";
@@ -21,13 +22,18 @@ export function Loading() {
 export function SignIn() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [step, setStep] = useState<"email" | "code">("email");
+  const [step, setStep] = useState<"email" | "code" | "password">("email");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [doc, setDoc] = useState<"terms" | "privacy" | null>(null);
 
   const sendCode = async (e?: React.FormEvent) => {
     e?.preventDefault();
+    if (reviewEmail && email.trim().toLowerCase() === reviewEmail) {
+      setStep("password");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -90,6 +96,28 @@ export function SignIn() {
             </button>
             .
           </p>
+        </form>
+      ) : step === "password" ? (
+        <form
+          className="auth-card"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError("");
+            try {
+              await signInWithPassword(email.trim(), password);
+            } catch {
+              setError("הסיסמה לא נכונה.");
+              setBusy(false);
+            }
+          }}
+        >
+          <label htmlFor="password">סיסמה</label>
+          <input id="password" className="textfield" type="password" dir="ltr" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          {error && <p className="form-error">{error}</p>}
+          <button className="btn btn-flame btn-wide" disabled={busy || !password}>
+            כניסה
+          </button>
         </form>
       ) : (
         <motion.form className="auth-card" onSubmit={verify} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>

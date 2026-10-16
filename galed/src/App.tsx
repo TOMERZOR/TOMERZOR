@@ -1,10 +1,11 @@
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useDemoAlertJob, useLiveSync } from "./actions";
 import { FieldBanner } from "./components/safetrip";
 import { isLive } from "./backend/config";
 import { IconChat, IconCompass, IconPack, IconPlus, IconTrail } from "./components/icons";
 import { SvgDefs } from "./components/marks";
+import { hideSplash, setStatusBar, useBackButton, useOnline } from "./native";
 import { NavProvider, useNav, type Screen, type Tab } from "./nav";
 import { Loading, ProfileSetup, SignIn } from "./screens/Auth";
 import { Chat } from "./screens/Chat";
@@ -64,7 +65,8 @@ function StackScreen({ s }: { s: Screen }) {
 
 function Shell() {
   const { state } = useStore();
-  const { tab, stack, toastText } = useNav();
+  const { tab, stack, toastText, pop, setTab } = useNav();
+  const online = useOnline();
   const scroller = useRef<HTMLDivElement>(null);
   useLiveSync();
   useDemoAlertJob();
@@ -86,7 +88,24 @@ function Shell() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme === "night" ? "dark" : "light";
+    setStatusBar(state.theme);
   }, [state.theme]);
+
+  useEffect(() => hideSplash(), []);
+
+  useBackButton(
+    useCallback(() => {
+      if (stack.length) {
+        pop();
+        return true;
+      }
+      if (tab !== "feed") {
+        setTab("feed");
+        return true;
+      }
+      return false;
+    }, [stack.length, tab, pop, setTab]),
+  );
 
   return (
     <div className="device">
@@ -159,6 +178,13 @@ function Shell() {
             transition={{ type: "spring", stiffness: 400, damping: 28 }}
           >
             {toastText}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {!online && (
+          <motion.div className="offline" role="status" initial={{ y: -40 }} animate={{ y: 0 }} exit={{ y: -40 }}>
+            אין קליטה כרגע. ״חזרתי״ יישלח אוטומטית כשהקליטה תחזור.
           </motion.div>
         )}
       </AnimatePresence>

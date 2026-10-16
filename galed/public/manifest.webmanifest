@@ -7,5 +7,53 @@
   "display": "standalone",
   "background_color": "#EEE6D3",
   "theme_color": "#EEE6D3",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "icons/icon-48.webp",
+      "type": "image/webp",
+      "sizes": "48x48",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-72.webp",
+      "type": "image/webp",
+      "sizes": "72x72",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-96.webp",
+      "type": "image/webp",
+      "sizes": "96x96",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-128.webp",
+      "type": "image/webp",
+      "sizes": "128x128",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.webp",
+      "type": "image/webp",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-256.webp",
+      "type": "image/webp",
+      "sizes": "256x256",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.webp",
+      "type": "image/webp",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ]
 }

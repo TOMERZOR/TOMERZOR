@@ -13,9 +13,9 @@
     "test:unit": "supabase/tests/unit.sh"
   },
   "dependencies": {
-    "@fontsource/frank-ruhl-libre": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans-hebrew": "^5.3.0",
+    "@fontsource/secular-one": "^5.3.0",
     "@supabase/supabase-js": "^2.117.2",
     "framer-motion": "^11.11.17",
     "react": "^18.3.1",

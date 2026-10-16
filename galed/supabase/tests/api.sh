@@ -50,6 +50,6 @@ for _ in $(seq 50); do
 done
 
 "$app/node_modules/.bin/esbuild" "$here/api.test.ts" --bundle --platform=node --format=esm \
-  --define:import.meta.env.VITE_SUPABASE_URL='"unused"' --define:import.meta.env.VITE_SUPABASE_ANON_KEY='"unused"' \
+  --define:import.meta.env.VITE_SUPABASE_URL='"unused"' --define:import.meta.env.VITE_SUPABASE_ANON_KEY='"unused"' --define:import.meta.env.VITE_REVIEW_EMAIL='""' \
   --log-level=warning --outfile="$work/api.test.mjs"
 PGRST_PORT="$rest_port" node "$work/api.test.mjs"

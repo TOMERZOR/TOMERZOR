@@ -4,6 +4,7 @@ import { useActions } from "../actions";
 import { MatchStamp } from "../components/cards";
 import { IconBack, IconBookmark, IconCar, IconClock, IconPin, IconShield } from "../components/icons";
 import { Avatar, Blaze, Cairn, Elevation, blazeName } from "../components/marks";
+import { SafeTripCard } from "../components/safetrip";
 import { CountUp } from "../components/ui";
 import { trailById } from "../data/trails";
 import { carLabel, matchScore, rangeLabel, spotsLeft } from "../lib";
@@ -26,6 +27,7 @@ export function PostDetail({ id }: { id: string }) {
   const host = findPerson(state, post.authorId);
   const mine = post.authorId === "me";
   const status = myRequest(state, post.id)?.status;
+  const onCrew = mine || status === "accepted";
   const pending = state.requests.filter((r) => r.postId === post.id && r.status === "pending").length;
   const saved = state.saved.includes(post.id);
   const left = spotsLeft(post);
@@ -180,13 +182,17 @@ export function PostDetail({ id }: { id: string }) {
             </div>
           </section>
 
-          <aside className="safety">
-            <IconShield />
-            <p>
-              לפני כל יציאה אפשר לשתף את המסלול, השעה והשותפים עם איש קשר לחירום. אם לא סימנת ״חזרתי״ עד שעה שתבחר/י, הוא
-              מקבל הודעה.
-            </p>
-          </aside>
+          {onCrew ? (
+            <SafeTripCard post={post} />
+          ) : (
+            <aside className="safety">
+              <IconShield />
+              <p>
+                מי שבקבוצה קובע/ת שעת חזרה. אם לא סימנת ״חזרתי״ עד חצי שעה אחריה, איש הקשר לחירום שלך מקבל SMS עם המסלול, נקודת
+                המפגש והשותפים.
+              </p>
+            </aside>
+          )}
           <div className="detail-pad" />
         </article>
       </div>

@@ -18,6 +18,7 @@ export function Profile() {
   const actions = useActions();
   const { me } = state;
   const [contact, setContact] = useState(me.emergencyContact);
+  const [contactName, setContactName] = useState(me.emergencyName);
   const saved = state.posts.filter((p) => state.saved.includes(p.id));
   const mine = state.posts.filter((p) => p.authorId === "me");
 
@@ -103,16 +104,26 @@ export function Profile() {
         </>
       )}
 
-      <SectionTitle>בטיחות</SectionTitle>
+      <SectionTitle kicker="מקבל/ת SMS אם לא סימנת ״חזרתי״ בזמן. רק את/ה רואה את הפרטים">איש קשר לחירום</SectionTitle>
       <form
         className="emergency"
         onSubmit={async (e) => {
           e.preventDefault();
-          if (await actions.saveEmergency(contact.trim())) toast("איש הקשר לחירום נשמר");
+          if (await actions.saveEmergency(contactName.trim(), contact.trim())) toast("איש הקשר לחירום נשמר");
         }}
       >
         <IconShield />
-        <input value={contact} onChange={(e) => setContact(e.target.value)} placeholder="טלפון של איש קשר לחירום" inputMode="tel" />
+        <input id="ec-name-profile" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="שם" maxLength={60} aria-label="שם איש הקשר" />
+        <input
+          id="ec-phone-profile"
+          value={contact}
+          onChange={(e) => setContact(e.target.value)}
+          placeholder="טלפון"
+          inputMode="tel"
+          dir="ltr"
+          maxLength={30}
+          aria-label="טלפון איש הקשר"
+        />
         <button className="btn btn-ink btn-sm" type="submit">
           שמירה
         </button>

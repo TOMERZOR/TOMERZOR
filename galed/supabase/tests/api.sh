@@ -29,7 +29,7 @@ trap cleanup EXIT
 
 psql=(psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U postgres -d postgres)
 "${psql[@]}" -f "$here/stub_auth.sql"
-"${psql[@]}" -f "$app/supabase/migrations/0001_init.sql"
+for m in "$app"/supabase/migrations/*.sql; do "${psql[@]}" -f "$m"; done
 "${psql[@]}" <<'SQL'
 create role authenticator login noinherit;
 grant anon, authenticated to authenticator;

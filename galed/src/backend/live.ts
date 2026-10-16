@@ -6,7 +6,7 @@ import { createClient, type RealtimeChannel, type SupabaseClient } from "@supaba
 import type { Message, Person, Post, Thread } from "../data/seed";
 import type { Level } from "../data/trails";
 import type { Me } from "../lib";
-import type { JoinRequest, RequestStatus } from "../store";
+import type { Checkin, CheckinStatus, JoinRequest, RequestStatus } from "../store";
 import { supabaseKey, supabaseUrl } from "./config";
 
 let client: SupabaseClient | null = null;
@@ -69,6 +69,15 @@ interface RequestRow {
   status: RequestStatus;
   message: string;
   updated_at: string;
+}
+interface CheckinRow {
+  id: string;
+  user_id: string;
+  post_id: string;
+  return_by: string;
+  status: CheckinStatus;
+  returned_at: string | null;
+  alerted_at: string | null;
 }
 interface MessageRow {
   id: string;
@@ -142,6 +151,16 @@ export const toMessage = (r: MessageRow, me: string): Message => ({
   at: Date.parse(r.created_at),
 });
 
+export const toCheckin = (r: CheckinRow, me: string): Checkin => ({
+  id: r.id,
+  postId: r.post_id,
+  userId: who(r.user_id, me),
+  returnBy: Date.parse(r.return_by),
+  status: r.status,
+  returnedAt: r.returned_at ? Date.parse(r.returned_at) : undefined,
+  wasAlerted: Boolean(r.alerted_at),
+});
+
 const emptyPlan: Thread["plan"] = { meet: "", time: "", cars: "", gear: [], shareWithEmergency: false };
 
 const toThread = (r: ThreadRow, me: string): Thread => {
@@ -189,7 +208,7 @@ export const signOut = () => sb().auth.signOut();
 export async function loadMe(me: string): Promise<{ me: Me; needsProfile: boolean }> {
   const [profile, priv, stats] = await Promise.all([
     sb().from("profiles").select("*").eq("id", me).single(),
-    sb().from("private_settings").select("emergency_phone").eq("user_id", me).maybeSingle(),
+    sb().from("private_settings").select("emergency_name, emergency_phone").eq("user_id", me).maybeSingle(),
     sb().from("profile_stats").select("hikes").eq("id", me).maybeSingle(),
   ]);
   const p = check(profile) as ProfileRow;
@@ -202,6 +221,7 @@ export async function loadMe(me: string): Promise<{ me: Me; needsProfile: boolea
       level: p.level,
       hikes: Number((stats.data as { hikes: number } | null)?.hikes ?? 0),
       emergencyContact: (priv.data as { emergency_phone: string } | null)?.emergency_phone ?? "",
+      emergencyName: (priv.data as { emergency_name: string } | null)?.emergency_name ?? "",
       freeDays: p.free_days.map(offsetFromISO).filter((d) => d >= 0 && d < 21),
     },
   };
@@ -209,12 +229,13 @@ export async function loadMe(me: string): Promise<{ me: Me; needsProfile: boolea
 
 export async function loadEverything(me: string) {
   const since = isoFromOffset(-1);
-  const [profiles, stats, posts, requests, threads] = await Promise.all([
+  const [profiles, stats, posts, requests, threads, checkins] = await Promise.all([
     sb().from("profiles").select("*").neq("id", me).neq("name", ""),
     sb().from("profile_stats").select("id, hikes"),
     sb().from("posts").select("*").eq("cancelled", false).gte("start_date", since).order("start_date").limit(300),
     sb().from("join_requests").select("post_id, user_id, status, message, updated_at"),
     loadThreads(me),
+    sb().from("checkins").select("id, user_id, post_id, return_by, status, returned_at, alerted_at"),
   ]);
   const hikes = new Map((check(stats) as { id: string; hikes: number }[]).map((s) => [s.id, Number(s.hikes)]));
   const reqRows = check(requests) as RequestRow[];
@@ -225,6 +246,7 @@ export async function loadEverything(me: string) {
     posts: (check(posts) as PostRow[]).map((r) => toPost(r, me, crew(r.id))),
     requests: reqRows.map((r) => toRequest(r, me)),
     threads,
+    checkins: (check(checkins) as CheckinRow[]).map((r) => toCheckin(r, me)),
   };
 }
 
@@ -315,8 +337,28 @@ export async function saveFreeDays(me: string, offsets: number[]) {
   check(await sb().from("profiles").update({ free_days: offsets.map(isoFromOffset) }).eq("id", me));
 }
 
-export async function saveEmergency(me: string, phone: string) {
-  check(await sb().from("private_settings").update({ emergency_phone: phone }).eq("user_id", me));
+export async function saveEmergency(me: string, name: string, phone: string) {
+  check(await sb().from("private_settings").update({ emergency_name: name, emergency_phone: phone }).eq("user_id", me));
+}
+
+const checkinCols = "id, user_id, post_id, return_by, status, returned_at, alerted_at";
+
+/** Sets (or moves) my return time for a hike and re-arms the check-in. */
+export async function scheduleCheckin(postId: string, returnBy: number, me: string): Promise<Checkin> {
+  const return_by = new Date(returnBy).toISOString();
+  const ins = await sb().from("checkins").insert({ post_id: postId, return_by }).select(checkinCols).single();
+  if (ins.error?.code !== "23505") return toCheckin(check(ins) as CheckinRow, me);
+  const row = check(
+    await sb().from("checkins").update({ return_by, status: "scheduled" }).eq("post_id", postId).eq("user_id", me).select(checkinCols).single(),
+  ) as CheckinRow;
+  return toCheckin(row, me);
+}
+
+export async function setCheckinStatus(postId: string, status: Exclude<CheckinStatus, "alerted">, me: string): Promise<Checkin> {
+  const row = check(
+    await sb().from("checkins").update({ status }).eq("post_id", postId).eq("user_id", me).select(checkinCols).single(),
+  ) as CheckinRow;
+  return toCheckin(row, me);
 }
 
 // ── realtime ────────────────────────────────────────────────
@@ -325,6 +367,7 @@ export type LiveEvent =
   | { kind: "message"; threadId: string; row: MessageRow }
   | { kind: "request"; row: RequestRow }
   | { kind: "plan"; threadId: string; plan: Thread["plan"] }
+  | { kind: "checkin"; row: CheckinRow }
   | { kind: "post" };
 
 /** Row-level security limits each event to rows this user may read. */
@@ -339,6 +382,9 @@ export function subscribe(onEvent: (e: LiveEvent) => void): () => void {
     )
     .on("postgres_changes", { event: "UPDATE", schema: "public", table: "threads" }, (p) =>
       onEvent({ kind: "plan", threadId: (p.new as ThreadRow).id, plan: { ...emptyPlan, ...(p.new as ThreadRow).plan } }),
+    )
+    .on("postgres_changes", { event: "*", schema: "public", table: "checkins" }, (p) =>
+      onEvent({ kind: "checkin", row: p.new as CheckinRow }),
     )
     .on("postgres_changes", { event: "INSERT", schema: "public", table: "posts" }, () => onEvent({ kind: "post" }))
     .subscribe();

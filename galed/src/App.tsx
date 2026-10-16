@@ -1,6 +1,7 @@
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
-import { useLiveSync } from "./actions";
+import { useDemoAlertJob, useLiveSync } from "./actions";
+import { FieldBanner } from "./components/safetrip";
 import { isLive } from "./backend/config";
 import { IconChat, IconCompass, IconPack, IconPlus, IconTrail } from "./components/icons";
 import { SvgDefs } from "./components/marks";
@@ -66,6 +67,7 @@ function Shell() {
   const { tab, stack, toastText } = useNav();
   const scroller = useRef<HTMLDivElement>(null);
   useLiveSync();
+  useDemoAlertJob();
   const gate = !state.onboarded
     ? null
     : !isLive
@@ -124,6 +126,7 @@ function Shell() {
                 </motion.main>
               </AnimatePresence>
             </div>
+            <FieldBanner />
             <TabBar />
           </motion.div>
 

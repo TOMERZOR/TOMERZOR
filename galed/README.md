@@ -20,12 +20,28 @@ npm run build    # בדיקת טיפוסים + בנייה ל-dist/
 כשמגדירים פרויקט Supabase, האפליקציה עוברת **למצב אמיתי**: הרשמה במייל, פרופילים, יציאות, בקשות הצטרפות וצ׳אט בין משתמשים, עם עדכונים בזמן אמת.
 
 1. פותחים פרויקט חינמי ב-[supabase.com](https://supabase.com).
-2. ב-SQL Editor מריצים את כל הקובץ `supabase/migrations/0001_init.sql`.
+2. ב-SQL Editor מריצים את הקבצים ב-`supabase/migrations/` לפי הסדר (`0001_init.sql`, ואז `0002_checkins.sql`).
 3. ב-Authentication → URL Configuration מוסיפים את כתובת האתר (למשל `http://localhost:5173` ואת כתובת האתר המפורסם) ל-Redirect URLs. משם חוזרים מקישור הכניסה במייל.
 4. מעתיקים את `.env.example` ל-`.env.local` וממלאים את `VITE_SUPABASE_URL` ו-`VITE_SUPABASE_ANON_KEY` מ-Project Settings → API.
 5. `npm run dev`. מסך הפתיחה יוביל לכניסה במייל ואז להשלמת פרופיל.
 
 לפרסום: כל אירוח סטטי (Vercel, Netlify, Cloudflare Pages) עם `npm run build`, אותם שני משתני סביבה, ותיקיית `dist`.
+
+### "חזרתי": הודעת SMS לאיש קשר לחירום
+
+כדי שההודעה באמת תישלח, צריך עוד שלושה דברים. בלעדיהם כל השאר עובד, רק בלי ה-SMS.
+
+1. **חשבון [Twilio](https://www.twilio.com)** עם מספר שולח (או שם שולח מאושר) שיכול לשלוח SMS לישראל.
+2. **פריסת הפונקציה וההגדרות שלה** (עם [Supabase CLI](https://supabase.com/docs/guides/cli)):
+   ```bash
+   supabase functions deploy checkin-alerts --no-verify-jwt
+   supabase secrets set CRON_SECRET=<מחרוזת אקראית ארוכה> \
+     TWILIO_ACCOUNT_SID=<...> TWILIO_AUTH_TOKEN=<...> TWILIO_FROM=<+972... או שם שולח>
+   ```
+   הפונקציה עונה רק לקריאה שמכילה את `CRON_SECRET`, ולכן אפשר לכבות את בדיקת ה-JWT.
+3. **הפעלה כל 5 דקות:** ממלאים את שני הפרטים ב-`supabase/schedule_checkin_alerts.sql` ומריצים אותו ב-SQL Editor.
+
+איך זה עובד: מי שבקבוצה של יציאה (המארגן ומי שאושר) קובע שעת חזרה. אם הוא לא סימן "חזרתי" עד 30 דקות אחריה, איש הקשר מקבל SMS עם שם המסלול, התאריך, נקודת המפגש ושמות השותפים. אם הוא מסמן "חזרתי" אחרי שההודעה יצאה, נשלחת הודעה שנייה שהכל בסדר. כל ריצה "תופסת" את השורות שהיא שולחת, כך ששתי ריצות חופפות לא שולחות פעמיים, ושליחה שנכשלה נשלחת שוב בריצה הבאה.
 
 ### אבטחה
 
@@ -36,15 +52,18 @@ npm run build    # בדיקת טיפוסים + בנייה ל-dist/
 - בקשה ממתינה גלויה רק למבקש ולמארגן. רשימת המאושרים גלויה לכולם.
 - אי אפשר לאשר מעבר למספר המקומות, ואי אפשר לבקש להצטרף ליציאה של עצמך.
 - שיחה נפתחת רק דרך הפונקציה `start_thread`, ותמיד מול מארגן היציאה. אי אפשר להכניס אדם זר לשיחה.
+- שעת חזרה אפשר לקבוע רק ביציאה שאת/ה בקבוצה שלה. השותפים רואים מי חזר, אבל לא את פרטי איש הקשר. רק פונקציית ההתראות (service role) יכולה לסמן "נשלחה הודעה".
 
 ### בדיקות
 
 ```bash
-npm run test:db    # מריץ את המיגרציה ובדיקות הרשאות על Postgres 16 מקומי
-npm run test:api   # מריץ את src/backend/live.ts מול PostgREST אמיתי: פרופיל, פרסום, בקשה, אישור, צ׳אט
+npm run test:unit  # נוסח ה-SMS ונרמול מספרי טלפון (Node בלבד)
+npm run test:db    # מריץ את המיגרציות ובדיקות הרשאות על Postgres 16 מקומי, כולל "חזרתי"
+npm run test:api   # מריץ את src/backend/live.ts מול PostgREST אמיתי: פרופיל, פרסום, בקשה, אישור, חזרתי, צ׳אט
+supabase/tests/alerts.sh   # מריץ את פונקציית ההתראות ב-Deno מול PostgREST ו-Twilio מדומה
 ```
 
-`test:db` צריך Postgres 16 מותקן (`/usr/lib/postgresql/16/bin`, או `PG_BIN`). `test:api` צריך גם את [PostgREST](https://postgrest.org) (ב-PATH או ב-`POSTGREST`). עדכונים בזמן אמת (Realtime) לא נבדקים מקומית. צריך לבדוק אותם מול פרויקט Supabase אמיתי.
+`test:db` צריך Postgres 16 מותקן (`/usr/lib/postgresql/16/bin`, או `PG_BIN`). `test:api` צריך גם את [PostgREST](https://postgrest.org) (ב-PATH או ב-`POSTGREST`), ו-`alerts.sh` צריך גם [Deno](https://deno.com) (ב-PATH או ב-`DENO`). עדכונים בזמן אמת (Realtime) לא נבדקים מקומית. צריך לבדוק אותם מול פרויקט Supabase אמיתי.
 
 ## מבנה
 
@@ -57,7 +76,9 @@ npm run test:api   # מריץ את src/backend/live.ts מול PostgREST אמית
 | `src/actions.ts` | כל פעולה במסכים: במצב הדגמה נשארת בדפדפן, במצב אמיתי נשמרת ב-Supabase. כולל טעינה וזמן אמת |
 | `src/backend/live.ts` | השכבה מול Supabase: שאילתות, המרה לטיפוסים של האפליקציה, Realtime |
 | `supabase/migrations/` | סכמת מסד הנתונים והרשאות |
-| `supabase/tests/` | בדיקות הרשאות ובדיקת API |
+| `supabase/functions/checkin-alerts/` | פונקציית ההתראות: SMS לאיש הקשר כשמישהו לא סימן "חזרתי" |
+| `src/components/safetrip.tsx` | כרטיס "יציאה בטוחה" בעמוד היציאה, והפס "בשטח · חזרתי" מעל הניווט |
+| `supabase/tests/` | בדיקות הרשאות, API ופונקציית ההתראות |
 | `src/nav.tsx` | ניווט: טאבים + מחסנית מסכים, הודעות קופצות |
 | `src/components/marks.tsx` | שפת העיצוב: סימון שביל, קווי גובה, גלעד, אווטאר, פרופיל גובה |
 | `src/screens/` | פתיחה, כניסה והשלמת פרופיל, פיד, חיפוש, עמוד יציאה, צ׳אט, הודעות ובקשות, פרופיל, פרסום יציאה |

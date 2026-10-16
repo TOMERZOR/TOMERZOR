@@ -4,10 +4,10 @@ import { IconCar, IconCheck, IconClock, IconPin, IconSend, IconShield } from "..
 import { Avatar, Blaze } from "../components/marks";
 import { BackBar } from "../components/ui";
 import { trailById } from "../data/trails";
-import { clock } from "../lib";
+import { clock, whenLabel } from "../lib";
 import { useNav } from "../nav";
 import { useActions } from "../actions";
-import { findPerson, useStore } from "../store";
+import { findPerson, myCheckin, useStore } from "../store";
 
 const quick = ["איזה קצב נוח לך?", "יש לך רכב?", "מה עם מים בדרך?", "אפשר להביא כלב?", "סגור, אני בא/ה"];
 
@@ -35,6 +35,7 @@ export function Chat({ id }: { id: string }) {
   const post = state.posts.find((p) => p.id === thread.postId);
   const trail = post ? trailById(post.trailId) : null;
   const done = thread.plan.gear.filter((g) => g.done).length;
+  const checkin = post ? myCheckin(state, post.id) : undefined;
 
   const send = (body: string) => {
     if (!body.trim()) return;
@@ -104,14 +105,16 @@ export function Chat({ id }: { id: string }) {
                   </li>
                 ))}
               </ul>
-              <button
-                className={`share ${thread.plan.shareWithEmergency ? "on" : ""}`}
-                onClick={() => actions.setPlan(id, { ...plan, shareWithEmergency: !plan.shareWithEmergency })}
-                aria-pressed={thread.plan.shareWithEmergency}
-              >
-                <IconShield size={18} />
-                <span>{thread.plan.shareWithEmergency ? "המסלול משותף עם איש הקשר לחירום" : "שיתוף המסלול עם איש קשר לחירום"}</span>
-              </button>
+              {post && (
+                <button className={`share ${checkin && checkin.status !== "cancelled" ? "on" : ""}`} onClick={() => push({ k: "post", id: post.id })}>
+                  <IconShield size={18} />
+                  <span>
+                    {checkin && checkin.status !== "cancelled"
+                      ? `יציאה בטוחה פעילה · חזרה עד ${whenLabel(checkin.returnBy)}`
+                      : "יציאה בטוחה: קביעת שעת חזרה ואיש קשר לחירום"}
+                  </span>
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

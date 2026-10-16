@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test:db": "supabase/tests/run.sh",
-    "test:api": "supabase/tests/api.sh"
+    "test:api": "supabase/tests/api.sh",
+    "test:unit": "supabase/tests/unit.sh"
   },
   "dependencies": {
     "@fontsource/frank-ruhl-libre": "^5.3.0",

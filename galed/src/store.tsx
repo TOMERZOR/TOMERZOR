@@ -21,6 +21,18 @@ export interface JoinRequest {
   at: number;
 }
 
+export type CheckinStatus = "scheduled" | "returned" | "cancelled" | "alerted";
+
+export interface Checkin {
+  id: string;
+  postId: string;
+  userId: string; // "me" for my own
+  returnBy: number; // ms timestamp
+  status: CheckinStatus;
+  returnedAt?: number;
+  wasAlerted?: boolean; // the contact was texted before I marked myself back
+}
+
 export interface Session {
   status: "unknown" | "out" | "in";
   needsProfile: boolean;
@@ -35,6 +47,7 @@ export interface State {
   posts: Post[];
   threads: Thread[];
   requests: JoinRequest[];
+  checkins: Checkin[];
   saved: string[];
   theme: "day" | "night";
   session: Session;
@@ -42,7 +55,8 @@ export interface State {
 
 type Action =
   | { type: "onboard" }
-  | { type: "hydrate"; data: Partial<Pick<State, "me" | "people" | "posts" | "threads" | "requests">> }
+  | { type: "hydrate"; data: Partial<Pick<State, "me" | "people" | "posts" | "threads" | "requests" | "checkins">> }
+  | { type: "upsertCheckin"; checkin: Checkin }
   | { type: "session"; session: Session }
   | { type: "publish"; post: Post }
   | { type: "replacePost"; tempId: string; post: Post }
@@ -66,10 +80,11 @@ export const demoMe: Me = {
   level: "קשה",
   hikes: 14,
   emergencyContact: "",
+  emergencyName: "",
   freeDays: [1, 2, 8, 9, 15],
 };
 
-const blankMe: Me = { name: "", city: "", pace: 4, level: "בינוני", hikes: 0, emergencyContact: "", freeDays: [] };
+const blankMe: Me = { name: "", city: "", pace: 4, level: "בינוני", hikes: 0, emergencyContact: "", emergencyName: "", freeDays: [] };
 
 const initial: State = isLive
   ? {
@@ -79,6 +94,7 @@ const initial: State = isLive
       posts: [],
       threads: [],
       requests: [],
+      checkins: [],
       saved: [],
       theme: "day",
       session: { status: "unknown", needsProfile: false },
@@ -90,6 +106,7 @@ const initial: State = isLive
       posts: seedPosts,
       threads: seedThreads,
       requests: [],
+      checkins: [],
       saved: ["p3"],
       theme: "day",
       session: { status: "in", needsProfile: false },
@@ -102,7 +119,10 @@ const persisted = (s: State) => (isLive ? { onboarded: s.onboarded, theme: s.the
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...initial, ...JSON.parse(raw), session: initial.session };
+    if (raw) {
+      const saved = JSON.parse(raw);
+      return { ...initial, ...saved, me: { ...initial.me, ...saved.me }, checkins: saved.checkins ?? [], session: initial.session };
+    }
   } catch {
     /* storage can be unavailable; the app still works in memory */
   }
@@ -136,6 +156,11 @@ function reducer(s: State, a: Action): State {
         return { ...p, joined: r.status === "accepted" ? [...without, r.userId] : without };
       });
       return { ...s, posts, requests: [...rest, r] };
+    }
+    case "upsertCheckin": {
+      const c = a.checkin;
+      const rest = s.checkins.filter((x) => !(x.postId === c.postId && x.userId === c.userId));
+      return { ...s, checkins: [...rest, c] };
     }
     case "toggleSave":
       return {
@@ -191,4 +216,10 @@ export const useStore = () => {
 };
 
 export const findPerson = (s: State, id: string) => s.people.find((p) => p.id === id);
+export const myCheckin = (s: State, postId: string) => s.checkins.find((c) => c.postId === postId && c.userId === "me");
+/** The organiser and accepted members, as ids ("me" for me). */
+export const crewOf = (s: State, postId: string) => {
+  const post = s.posts.find((p) => p.id === postId);
+  return post ? [post.authorId, ...post.joined] : [];
+};
 export const myRequest = (s: State, postId: string) => s.requests.find((r) => r.postId === postId && r.userId === "me");

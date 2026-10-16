@@ -7,7 +7,8 @@ export interface Me {
   pace: number;
   level: Level;
   hikes: number;
-  emergencyContact: string;
+  emergencyContact: string; // phone
+  emergencyName: string;
   freeDays: number[]; // day offsets marked free in the next 21 days
 }
 
@@ -100,3 +101,54 @@ export const clock = (ms: number) => {
   const d = new Date(ms);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
+
+// ── Safe trip ("חזרתי") ───────────────────────────────────
+
+/** Minutes after the return time before the emergency contact is texted. */
+export const GRACE_MIN = 30;
+
+export const startsAt = (p: Post) => {
+  const d = dateFromOffset(p.dayOffset);
+  const [h, m] = p.start.split(":").map(Number);
+  d.setHours(h, m, 0, 0);
+  return d.getTime();
+};
+
+/** Start of the last day, plus the trail's longer time estimate, plus an hour of slack, on the half hour. */
+export function suggestedReturn(p: Post): number {
+  const hours = trailOf(p).hours.match(/\d+/g)?.map(Number) ?? [6];
+  const end = startsAt(p) + (p.days - 1) * 86_400_000 + (Math.max(...hours) + 1) * 3_600_000;
+  return Math.ceil(end / 1_800_000) * 1_800_000;
+}
+
+export type TripPhase = "none" | "upcoming" | "field" | "overdue" | "alerted" | "returned";
+
+export function tripPhase(c: { status: string; returnBy: number } | undefined, p: Post, now = Date.now()): TripPhase {
+  if (!c || c.status === "cancelled") return "none";
+  if (c.status === "returned") return "returned";
+  if (c.status === "alerted") return "alerted";
+  if (now > c.returnBy) return "overdue";
+  return now >= startsAt(p) - 3_600_000 ? "field" : "upcoming";
+}
+
+/** "היום 14:30", "מחר 14:30" or "ש׳ 18.10 14:30" */
+export function whenLabel(ms: number) {
+  const d = new Date(ms);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const day = Math.round((new Date(d).setHours(0, 0, 0, 0) - today.getTime()) / 86_400_000);
+  const time = clock(ms);
+  if (day === 0) return `היום ${time}`;
+  if (day === 1) return `מחר ${time}`;
+  return `${shortDay(day).dow} ${ddmm(d)} ${time}`;
+}
+
+export const minutesLeft = (ms: number, now = Date.now()) => Math.round((ms - now) / 60_000);
+
+export function durationLabel(min: number) {
+  const m = Math.abs(min);
+  if (m < 60) return `${m} דק׳`;
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return r ? `${h}:${String(r).padStart(2, "0")} ש׳` : `${h} ש׳`;
+}

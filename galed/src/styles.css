@@ -2473,3 +2473,257 @@ img {
   font-size: 13px;
   color: var(--blaze-red);
 }
+
+/* ── Safe trip ("חזרתי") ────────────────────────────────── */
+
+.trip {
+  margin-top: 26px;
+  padding: 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--ultra) 7%, var(--paper-hi));
+  box-shadow: 3px 3px 0 var(--ultra);
+  display: grid;
+  gap: 10px;
+}
+.trip-overdue,
+.trip-alerted {
+  background: color-mix(in srgb, var(--flame) 14%, var(--paper-hi));
+  box-shadow: 3px 3px 0 var(--flame);
+  border-color: var(--flame);
+}
+.trip-returned {
+  background: color-mix(in srgb, var(--moss) 10%, var(--paper-hi));
+  box-shadow: 3px 3px 0 var(--moss);
+}
+.trip-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.trip-head svg {
+  color: var(--ultra);
+}
+.trip-head h3 {
+  margin: 0;
+  flex: 1;
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 20px;
+}
+.trip-phase {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1.2px solid currentColor;
+  color: var(--ink-3);
+}
+.trip-upcoming .trip-phase,
+.trip-field .trip-phase {
+  color: var(--ultra);
+}
+.trip-overdue .trip-phase,
+.trip-alerted .trip-phase {
+  color: var(--flame);
+}
+.trip-returned .trip-phase {
+  color: var(--moss);
+}
+.trip-body {
+  display: grid;
+  gap: 10px;
+}
+.trip-body p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.trip-when {
+  font-size: 15px;
+  color: var(--ink);
+}
+.trip-status small {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.trip-back {
+  grid-template-columns: auto 1fr;
+  align-items: end;
+}
+.trip-contact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.trip-contact .textfield {
+  background: var(--paper-hi);
+}
+.trip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.trip-back-btn {
+  min-height: 46px;
+  padding: 0 22px;
+  font-size: 17px;
+}
+.linkbtn.inline.muted {
+  color: var(--ink-3);
+  margin-inline-start: 0;
+}
+
+.tpick {
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper-hi);
+  overflow: hidden;
+}
+.tpick button {
+  flex: none;
+  width: 64px;
+  font-family: var(--f-mono);
+  font-size: 14px;
+  color: var(--ultra);
+}
+.tpick button:first-child {
+  border-inline-end: 1.5px dashed var(--line);
+}
+.tpick button:last-child {
+  border-inline-start: 1.5px dashed var(--line);
+}
+.tpick-value {
+  flex: 1;
+  display: grid;
+  justify-items: center;
+  padding: 6px 0;
+}
+.tpick-value small {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.tpick-value b {
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink);
+}
+
+.trip-crew {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+.trip-member {
+  position: relative;
+}
+.trip-member i {
+  position: absolute;
+  inset-block-end: -1px;
+  inset-inline-end: -2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--paper-hi);
+  background: var(--ink-3);
+}
+.trip-member.ph-returned i {
+  background: var(--moss);
+}
+.trip-member.ph-field i,
+.trip-member.ph-upcoming i {
+  background: var(--ultra);
+}
+.trip-member.ph-overdue i,
+.trip-member.ph-alerted i {
+  background: var(--flame);
+}
+.trip-crew-label {
+  margin-inline-start: auto;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.field-banner {
+  position: absolute;
+  z-index: 6;
+  inset-inline: 10px;
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 6px;
+  padding-inline-start: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 12px;
+  background: var(--ultra);
+  color: #fff;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.fb-overdue,
+.fb-alerted {
+  background: var(--flame);
+  color: #1a1206;
+}
+.fb-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: inherit;
+}
+.fb-main > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fb-main small {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.fb-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.fb-back {
+  flex: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+  background: var(--paper-hi);
+  color: var(--ink);
+  font-weight: 700;
+}
+:root[data-theme="dark"] .fb-back {
+  color: #0f1330;
+  background: #f6f0e2;
+}
+
+.emergency {
+  flex-wrap: wrap;
+}
+.emergency input {
+  flex: 1 1 110px;
+  min-height: 38px;
+  padding: 0 6px;
+  border-bottom: 1px dashed var(--line);
+}
+@media (prefers-reduced-motion: reduce) {
+  .fb-dot {
+    animation: none;
+  }
+}

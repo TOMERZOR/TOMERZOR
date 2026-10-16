@@ -18,6 +18,7 @@ fi
 trap '"${as[@]}" "$bin/pg_ctl" -D "$data" -m immediate stop >/dev/null' EXIT
 psql=(psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U postgres -d postgres)
 "${psql[@]}" -f "$here/stub_auth.sql"
-"${psql[@]}" -f "$here/../migrations/0001_init.sql"
+for m in "$here"/../migrations/*.sql; do "${psql[@]}" -f "$m"; done
 "${psql[@]}" -o /dev/null -f "$here/rls_test.sql"
+"${psql[@]}" -o /dev/null -f "$here/checkins_test.sql"
 echo "all database tests passed"

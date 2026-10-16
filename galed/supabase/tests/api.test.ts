@@ -51,11 +51,11 @@ try {
   expect((await live.loadMe(alice)).needsProfile, "new user is asked to fill in a profile");
   await live.saveProfile(alice, { name: "אליס כהן", gender: "f", pace: 4.5, level: "קשה", has_car: true, birth_year: 1994 });
   await live.saveFreeDays(alice, [1, 2]);
-  await live.saveEmergency(alice, "050-1234567");
+  await live.saveEmergency(alice, "אמא", "050-1234567");
   const meA = await live.loadMe(alice);
   expect(!meA.needsProfile && meA.me.name === "אליס כהן", "profile saved");
   expect(meA.me.freeDays.join() === "1,2", "free days round-trip as day offsets");
-  expect(meA.me.emergencyContact === "050-1234567", "emergency contact saved privately");
+  expect(meA.me.emergencyContact === "050-1234567" && meA.me.emergencyName === "אמא", "emergency contact saved privately");
 
   // ── publish ──
   const draft: Post = {
@@ -103,6 +103,15 @@ try {
   bobView = await live.loadEverything(bob);
   expect(bobView.posts.find((p) => p.id === post.id)?.joined.includes("me"), "Bob is on the crew list as \"me\"");
 
+  // ── safe trip ──
+  const back = Date.now() + 5 * 3_600_000;
+  let ck = await live.scheduleCheckin(post.id, back, bob);
+  expect(ck.userId === "me" && ck.status === "scheduled" && Math.abs(ck.returnBy - back) < 1000, "Bob sets a return time");
+  ck = await live.scheduleCheckin(post.id, back + 3_600_000, bob);
+  expect(Math.abs(ck.returnBy - back - 3_600_000) < 1000, "moving the return time updates the same check-in");
+  ck = await live.setCheckinStatus(post.id, "returned", bob);
+  expect(ck.status === "returned" && ck.returnedAt !== undefined && !ck.wasAlerted, "Bob marks himself back");
+
   // ── chat ──
   const threadId = await live.startThread(alice, post.id);
   expect((await live.startThread(alice, post.id)) === threadId, "start_thread reuses the thread");
@@ -115,6 +124,7 @@ try {
   expect(t?.withId === bob && t.messages[0]?.from === bob, "Alice sees the thread with Bob");
   expect(t?.unread === 1, "Alice has one unread message");
   expect(t?.plan.meet === "מרכז המבקרים", "plan starts from the post");
+  expect((await live.loadEverything(alice)).checkins.some((c) => c.userId === bob && c.status === "returned"), "Alice sees her partner is back");
   await live.markRead(threadId, alice);
   await live.savePlan(threadId, { ...t!.plan, cars: "הרכב של אליס בסוף", gear: [{ label: "גזייה", who: "אליס", done: true }] });
   threads = await live.loadThreads(alice);

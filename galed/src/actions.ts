@@ -8,9 +8,9 @@ import { isLive } from "./backend/config";
 import * as live from "./backend/live";
 import type { Post, Thread } from "./data/seed";
 import { trailById } from "./data/trails";
-import { carLabel, rangeLabel } from "./lib";
+import { carLabel, clock, GRACE_MIN, rangeLabel } from "./lib";
 import { useNav } from "./nav";
-import { findPerson, useStore, type RequestStatus, type State } from "./store";
+import { findPerson, myCheckin, useStore, type Checkin, type RequestStatus, type State } from "./store";
 
 const first = (name: string) => name.split(" ")[0];
 
@@ -49,8 +49,8 @@ export function useActions() {
     [toast],
   );
 
-  return useMemo(
-    () => ({
+  return useMemo(() => {
+    const api = {
       async publish(draft: Post): Promise<boolean> {
         if (!isLive) {
           dispatch({ type: "publish", post: draft });
@@ -171,9 +171,41 @@ export function useActions() {
         if (isLive) await guard(() => live.saveFreeDays(me, freeDays));
       },
 
-      async saveEmergency(phone: string) {
-        dispatch({ type: "setMe", me: { emergencyContact: phone } });
-        return isLive ? guard(() => live.saveEmergency(me, phone)) : true;
+      async saveEmergency(name: string, phone: string) {
+        dispatch({ type: "setMe", me: { emergencyContact: phone, emergencyName: name } });
+        return isLive ? guard(() => live.saveEmergency(me, name, phone)) : true;
+      },
+
+      /** Sets or moves my return time for a hike. */
+      async scheduleCheckin(postId: string, returnBy: number): Promise<boolean> {
+        const prev = myCheckin(ref.current, postId);
+        const local: Checkin = { id: prev?.id ?? `local-${postId}`, postId, userId: "me", returnBy, status: "scheduled", wasAlerted: false };
+        dispatch({ type: "upsertCheckin", checkin: local });
+        if (!isLive) return true;
+        const ok = await guard(async () => dispatch({ type: "upsertCheckin", checkin: await live.scheduleCheckin(postId, returnBy, me) }));
+        if (!ok) dispatch({ type: "upsertCheckin", checkin: prev ?? { ...local, status: "cancelled" } });
+        return ok;
+      },
+
+      async extendCheckin(postId: string, minutes: number) {
+        const c = myCheckin(ref.current, postId);
+        if (!c) return false;
+        return api.scheduleCheckin(postId, Math.max(c.returnBy, Date.now()) + minutes * 60_000);
+      },
+
+      async setCheckinStatus(postId: string, status: "returned" | "cancelled") {
+        const prev = myCheckin(ref.current, postId);
+        if (!prev) return;
+        dispatch({
+          type: "upsertCheckin",
+          checkin: { ...prev, status, returnedAt: status === "returned" ? Date.now() : undefined, wasAlerted: prev.wasAlerted || prev.status === "alerted" },
+        });
+        if (status === "returned") {
+          const name = ref.current.me.emergencyName || "איש הקשר";
+          toast(prev.status === "alerted" ? `ברוכים השבים! ${name} יקבל/תקבל עדכון שהכל בסדר.` : "ברוכים השבים! אבן נוספה לגלעד.");
+        }
+        if (isLive && !(await guard(async () => dispatch({ type: "upsertCheckin", checkin: await live.setCheckinStatus(postId, status, me) }))))
+          dispatch({ type: "upsertCheckin", checkin: prev });
       },
 
       async saveProfile(input: live.ProfileInput) {
@@ -195,9 +227,9 @@ export function useActions() {
       async signOut() {
         if (isLive) await live.signOut();
       },
-    }),
-    [dispatch, toast, guard, me],
-  );
+    };
+    return api;
+  }, [dispatch, toast, guard, me]);
 }
 
 /** Live mode only: follows the sign-in state, loads data, and listens for changes. */
@@ -251,6 +283,15 @@ export function useLiveSync() {
         if (post?.authorId === "me" && r.status === "pending" && person)
           toast(`${first(person.name)} ${person.g === "f" ? "ביקשה" : "ביקש"} להצטרף ל${trailById(post.trailId).name}`);
         if (r.userId === "me" && r.status === "accepted") toast("הבקשה שלך אושרה. אבן נוספה לגלעד.");
+      } else if (e.kind === "checkin") {
+        const c = live.toCheckin(e.row, userId);
+        const before = s.checkins.find((x) => x.id === c.id);
+        dispatch({ type: "upsertCheckin", checkin: c });
+        const person = findPerson(s, c.userId);
+        if (person && c.status === "returned" && before?.status !== "returned")
+          toast(`${first(person.name)} ${person.g === "f" ? "חזרה" : "חזר"} מהמסלול בשלום`);
+        if (c.userId === "me" && c.status === "alerted" && before?.status !== "alerted")
+          toast(`עברה שעת החזרה. נשלחה הודעה ל${s.me.emergencyName || "איש הקשר שלך"}.`);
       } else if (e.kind === "plan") {
         dispatch({ type: "setPlan", threadId: e.threadId, plan: e.plan });
       } else {
@@ -259,4 +300,27 @@ export function useLiveSync() {
       }
     });
   }, [userId, dispatch, toast]);
+}
+
+/** Demo mode only: plays the alert job, so an overdue check-in turns "alerted" after the grace period. */
+export function useDemoAlertJob() {
+  const { state, dispatch } = useStore();
+  const { toast } = useNav();
+  const ref = useRef(state);
+  ref.current = state;
+  useEffect(() => {
+    if (isLive) return;
+    const tick = () => {
+      for (const c of ref.current.checkins) {
+        if (c.userId === "me" && c.status === "scheduled" && Date.now() > c.returnBy + GRACE_MIN * 60_000) {
+          dispatch({ type: "upsertCheckin", checkin: { ...c, status: "alerted", wasAlerted: true } });
+          const who = ref.current.me.emergencyName || "איש הקשר";
+          toast(`עברה שעת החזרה (${clock(c.returnBy)}). בגרסה האמיתית ${who} מקבל/ת עכשיו SMS.`);
+        }
+      }
+    };
+    tick();
+    const id = window.setInterval(tick, 15_000);
+    return () => window.clearInterval(id);
+  }, [dispatch, toast]);
 }

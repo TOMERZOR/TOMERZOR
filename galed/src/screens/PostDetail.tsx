@@ -1,11 +1,12 @@
 import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useActions } from "../actions";
 import { MatchStamp } from "../components/cards";
 import { IconBack, IconBookmark, IconCar, IconClock, IconPin, IconShield } from "../components/icons";
 import { Avatar, Blaze, Cairn, Elevation, blazeName } from "../components/marks";
+import { ReportSheet, type ReportTarget } from "../components/safety";
 import { SafeTripCard } from "../components/safetrip";
-import { CountUp } from "../components/ui";
+import { CountUp, MoreMenu } from "../components/ui";
 import { trailById } from "../data/trails";
 import { carLabel, matchScore, rangeLabel, spotsLeft } from "../lib";
 import { useNav } from "../nav";
@@ -15,6 +16,7 @@ export function PostDetail({ id }: { id: string }) {
   const { state, dispatch } = useStore();
   const { pop, push, setTab } = useNav();
   const actions = useActions();
+  const [report, setReport] = useState<ReportTarget | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ container: scroller });
   const imgY = useTransform(scrollY, [0, 400], [0, 140]);
@@ -58,7 +60,19 @@ export function PostDetail({ id }: { id: string }) {
             <IconBookmark filled={saved} />
           </motion.span>
         </button>
+        {!mine && host && (
+          <MoreMenu
+            glass
+            items={[
+              {
+                label: "דיווח על היציאה",
+                onClick: () => setReport({ userId: host.id, what: "post", postId: post.id, snapshot: `${t.name} · ${post.note} · ${post.meet}` }),
+              },
+            ]}
+          />
+        )}
       </motion.div>
+      <ReportSheet target={report} onClose={() => setReport(null)} onBlocked={() => setTab("feed")} />
 
       <div className="detail-scroll" ref={scroller}>
         <div className="detail-cover">

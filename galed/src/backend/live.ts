@@ -193,11 +193,14 @@ export async function currentUser() {
 export const onAuthChange = (f: (userId: string | null, email?: string) => void) =>
   sb().auth.onAuthStateChange((_e, session) => f(session?.user.id ?? null, session?.user.email));
 
-export async function sendSignInLink(email: string) {
-  const { error } = await sb().auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: window.location.href.split("#")[0] },
-  });
+/** Emails a one-time sign-in code (the template must include {{ .Token }}; see README). */
+export async function sendSignInCode(email: string) {
+  const { error } = await sb().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) throw new Error(error.message);
+}
+
+export async function verifySignInCode(email: string, token: string) {
+  const { error } = await sb().auth.verifyOtp({ email, token, type: "email" });
   if (error) throw new Error(error.message);
 }
 
@@ -211,9 +214,9 @@ export async function loadMe(me: string): Promise<{ me: Me; needsProfile: boolea
     sb().from("private_settings").select("emergency_name, emergency_phone").eq("user_id", me).maybeSingle(),
     sb().from("profile_stats").select("hikes").eq("id", me).maybeSingle(),
   ]);
-  const p = check(profile) as ProfileRow;
+  const p = check(profile) as ProfileRow & { terms_accepted_at: string | null };
   return {
-    needsProfile: !p.name.trim(),
+    needsProfile: !p.name.trim() || !p.terms_accepted_at,
     me: {
       name: p.name,
       city: p.city,
@@ -327,6 +330,7 @@ export interface ProfileInput {
   level?: Level;
   has_car?: boolean;
   bio?: string;
+  terms_accepted_at?: string;
 }
 
 export async function saveProfile(me: string, fields: ProfileInput) {
@@ -359,6 +363,48 @@ export async function setCheckinStatus(postId: string, status: Exclude<CheckinSt
     await sb().from("checkins").update({ status }).eq("post_id", postId).eq("user_id", me).select(checkinCols).single(),
   ) as CheckinRow;
   return toCheckin(row, me);
+}
+
+// ── safety ──────────────────────────────────────────────────
+
+export async function loadBlocked(): Promise<{ id: string; name: string }[]> {
+  return (check(await sb().from("blocks").select("blocked_id, blocked_name")) as { blocked_id: string; blocked_name: string }[]).map((r) => ({
+    id: r.blocked_id,
+    name: r.blocked_name,
+  }));
+}
+
+export async function block(userId: string) {
+  const res = await sb().from("blocks").insert({ blocked_id: userId });
+  if (res.error?.code !== "23505") check(res);
+}
+
+export async function unblock(userId: string, me: string) {
+  check(await sb().from("blocks").delete().eq("blocker_id", me).eq("blocked_id", userId));
+}
+
+export type ReportReason = "harassment" | "inappropriate" | "spam" | "fake" | "unsafe" | "other";
+
+export async function report(r: { targetId: string; postId?: string; messageId?: string; reason: ReportReason; details: string; snapshot: string }) {
+  check(
+    await sb().from("reports").insert({
+      target_id: r.targetId,
+      post_id: r.postId ?? null,
+      message_id: r.messageId ?? null,
+      reason: r.reason,
+      details: r.details,
+      snapshot: r.snapshot.slice(0, 2000),
+    }),
+  );
+}
+
+export async function deleteMyAccount() {
+  check(await sb().rpc("delete_my_account"));
+  try {
+    await sb().auth.signOut();
+  } catch {
+    /* the account is gone either way; signing out only clears this device */
+  }
 }
 
 // ── realtime ────────────────────────────────────────────────

@@ -2729,3 +2729,257 @@ img {
     animation: none;
   }
 }
+
+/* ── Sheets, menus, safety ──────────────────────────────── */
+
+.sheet-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 140;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.sheet {
+  position: relative;
+  max-height: 86%;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-top: 2px solid var(--ink);
+  border-radius: 18px 18px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 8px;
+}
+.sheet-title {
+  flex: 1;
+  margin: 0;
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-size: 24px;
+}
+.sheet-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink);
+  background: var(--paper-hi);
+  font-size: 14px;
+}
+.sheet-body {
+  overflow-y: auto;
+  padding: 4px 16px 18px;
+  display: grid;
+  gap: 12px;
+  scrollbar-width: none;
+}
+.sheet-body .chips {
+  margin: 0;
+  padding: 0;
+}
+.sheet-body .toggles {
+  margin: 0;
+}
+.sheet-lede,
+.sheet-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.sheet-note {
+  color: var(--brick);
+  font-weight: 600;
+}
+.sheet-list {
+  margin: 0;
+  padding-inline-start: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.sheet-label {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.btn-danger {
+  background: var(--brick);
+  color: #fff;
+}
+
+.more {
+  position: relative;
+}
+.more-dots {
+  font-size: 22px;
+  line-height: 1;
+  transform: translateY(-3px);
+}
+.more-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+}
+.more-menu {
+  position: absolute;
+  z-index: 9;
+  top: calc(100% + 6px);
+  inset-inline-end: 0;
+  min-width: 190px;
+  display: grid;
+  padding: 4px;
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper-hi);
+  box-shadow: var(--shadow);
+  transform-origin: top left;
+}
+.more-menu button {
+  padding: 10px 12px;
+  text-align: start;
+  font-size: 14.5px;
+  border-radius: 4px;
+}
+.more-menu button:hover,
+.more-menu button:focus-visible {
+  background: var(--paper-2);
+}
+.more-menu .danger {
+  color: var(--brick);
+  font-weight: 600;
+}
+.detail-bar .more-menu {
+  inset-inline-end: 0;
+}
+
+.msg.theirs {
+  cursor: pointer;
+}
+.msg-report {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1.2px solid var(--brick);
+  color: var(--brick);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--paper);
+}
+
+.account {
+  border: 1.5px solid var(--ink);
+  border-radius: var(--r);
+  background: var(--paper-hi);
+  overflow: hidden;
+}
+.account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 14px;
+  font-size: 15px;
+  text-align: start;
+}
+.account-row + .account-row,
+.account-blocked + .account-row {
+  border-top: 1px dashed var(--line);
+}
+.account-row small {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.account-row.static {
+  flex-wrap: wrap;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.account-row.danger {
+  color: var(--brick);
+  font-weight: 600;
+}
+.account-blocked {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+}
+.account-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.blocked-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.agree {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 10px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+.agree input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--flame);
+}
+.auth-legal {
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.auth-row-links {
+  display: flex;
+  justify-content: space-between;
+}
+.code-input {
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.legal {
+  display: grid;
+  gap: 14px;
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.legal h3 {
+  margin: 0 0 4px;
+  font-family: var(--f-display);
+  font-weight: 400;
+  font-size: 18px;
+}
+.legal p {
+  margin: 0 0 6px;
+  color: var(--ink-2);
+}
+.legal-intro {
+  font-size: 15.5px;
+  color: var(--ink) !important;
+}
+.legal-meta {
+  font-size: 11.5px;
+  color: var(--ink-3) !important;
+}
+.auth-row-links .linkbtn.inline {
+  margin: 0;
+}

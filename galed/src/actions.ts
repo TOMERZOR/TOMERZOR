@@ -6,7 +6,8 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isLive } from "./backend/config";
 import * as live from "./backend/live";
-import type { Post, Thread } from "./data/seed";
+import { people as seedPeople, posts as seedPosts, threads as seedThreads, type Post, type Thread } from "./data/seed";
+import { filterMessage, friendlyError, hasBannedTerm } from "./filter";
 import { trailById } from "./data/trails";
 import { carLabel, clock, GRACE_MIN, rangeLabel } from "./lib";
 import { useNav } from "./nav";
@@ -25,8 +26,6 @@ function demoReply(text: string, g: "f" | "m" | "x"): string {
   return "נשמע טוב. בוא/י נסגור את הפרטים בכרטיס התוכנית למעלה.";
 }
 
-const failed = "השמירה נכשלה. בדקו את החיבור ונסו שוב.";
-
 export function useActions() {
   const { state, dispatch } = useStore();
   const { toast } = useNav();
@@ -42,7 +41,7 @@ export function useActions() {
         return true;
       } catch (e) {
         console.error(e);
-        toast(failed);
+        toast(friendlyError(e));
         return false;
       }
     },
@@ -52,6 +51,10 @@ export function useActions() {
   return useMemo(() => {
     const api = {
       async publish(draft: Post): Promise<boolean> {
+        if (hasBannedTerm(`${draft.note} ${draft.meet} ${draft.tags.join(" ")}`)) {
+          toast(filterMessage);
+          return false;
+        }
         if (!isLive) {
           dispatch({ type: "publish", post: draft });
           const asker = ref.current.people.find((p) => p.id === "omer");
@@ -135,9 +138,14 @@ export function useActions() {
         return id;
       },
 
-      async send(threadId: string, text: string, onTyping?: (on: boolean) => void) {
+      /** Returns false when the text was not sent (empty or caught by the filter). */
+      async send(threadId: string, text: string, onTyping?: (on: boolean) => void): Promise<boolean> {
         const body = text.trim();
-        if (!body) return;
+        if (!body) return false;
+        if (hasBannedTerm(body)) {
+          toast(filterMessage);
+          return false;
+        }
         const tempId = `tmp-${crypto.randomUUID()}`;
         dispatch({ type: "send", threadId, message: { id: tempId, from: "me", text: body, at: Date.now() } });
         if (!isLive) {
@@ -149,9 +157,9 @@ export function useActions() {
             dispatch({ type: "send", threadId, message: { id: crypto.randomUUID(), from: thread?.withId ?? "", text: demoReply(body, other?.g ?? "x"), at: Date.now() } });
             dispatch({ type: "read", threadId });
           }, 1900);
-          return;
+          return true;
         }
-        await guard(async () => dispatch({ type: "replaceMessage", threadId, tempId, message: await live.sendMessage(threadId, body, me) }));
+        return guard(async () => dispatch({ type: "replaceMessage", threadId, tempId, message: await live.sendMessage(threadId, body, me) }));
       },
 
       async setPlan(threadId: string, plan: Thread["plan"]) {
@@ -209,6 +217,10 @@ export function useActions() {
       },
 
       async saveProfile(input: live.ProfileInput) {
+        if (hasBannedTerm(`${input.name ?? ""} ${input.bio ?? ""} ${input.city ?? ""}`)) {
+          toast(filterMessage);
+          return false;
+        }
         dispatch({
           type: "setMe",
           me: {
@@ -226,6 +238,55 @@ export function useActions() {
 
       async signOut() {
         if (isLive) await live.signOut();
+      },
+
+      async block(userId: string) {
+        const person = findPerson(ref.current, userId);
+        if (isLive && !(await guard(() => live.block(userId)))) return false;
+        dispatch({ type: "block", userId, name: person?.name ?? "" });
+        toast(`${person ? first(person.name) : "המשתמש/ת"} ${person?.g === "f" ? "חסומה" : "חסום"}. לא תראו יותר זה את זה בגלעד.`);
+        return true;
+      },
+
+      async unblock(userId: string) {
+        if (!isLive) {
+          dispatch({ type: "unblock", userId });
+          const s = ref.current;
+          dispatch({
+            type: "hydrate",
+            data: {
+              people: [...s.people, ...seedPeople.filter((p) => p.id === userId)],
+              posts: [...s.posts, ...seedPosts.filter((p) => p.authorId === userId)],
+              threads: [...s.threads, ...seedThreads.filter((t) => t.withId === userId)],
+            },
+          });
+          return;
+        }
+        if (!(await guard(() => live.unblock(userId, me)))) return;
+        dispatch({ type: "unblock", userId });
+        dispatch({ type: "hydrate", data: await live.loadEverything(me) });
+      },
+
+      async report(r: { targetId: string; postId?: string; messageId?: string; reason: live.ReportReason; details: string; snapshot: string }) {
+        const ok = isLive ? await guard(() => live.report(r)) : true;
+        if (ok) toast("תודה. הדיווח התקבל ונבדק תוך 24 שעות.");
+        return ok;
+      },
+
+      async deleteAccount() {
+        if (!isLive) {
+          try {
+            localStorage.removeItem("galed:v2");
+          } catch {
+            /* ignore */
+          }
+          dispatch({ type: "reset", onboarded: false });
+          toast("החשבון נמחק. בהדגמה זה מאפס את הנתונים.");
+          return true;
+        }
+        const ok = await guard(() => live.deleteMyAccount());
+        if (ok) toast("החשבון וכל הנתונים שלך נמחקו.");
+        return ok;
       },
     };
     return api;
@@ -249,9 +310,9 @@ export function useLiveSync() {
         return;
       }
       try {
-        const [mine, all] = await Promise.all([live.loadMe(id), live.loadEverything(id)]);
+        const [mine, all, blocked] = await Promise.all([live.loadMe(id), live.loadEverything(id), live.loadBlocked()]);
         if (cancelled) return;
-        dispatch({ type: "hydrate", data: { me: mine.me, ...all } });
+        dispatch({ type: "hydrate", data: { me: mine.me, ...all, blocked } });
         dispatch({ type: "session", session: { status: "in", needsProfile: mine.needsProfile, userId: id, email } });
       } catch (e) {
         console.error(e);

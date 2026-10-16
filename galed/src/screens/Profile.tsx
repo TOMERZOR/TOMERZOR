@@ -3,7 +3,9 @@ import { useState } from "react";
 import { TicketCard } from "../components/cards";
 import { IconMoon, IconShield, IconSun } from "../components/icons";
 import { Avatar, Blaze, Cairn, Topo } from "../components/marks";
-import { BackBar, CountUp, DayStrip, SectionTitle } from "../components/ui";
+import { BlockSheet, DeleteAccountSheet, LegalSheet, ReportSheet, type ReportTarget } from "../components/safety";
+import { BackBar, CountUp, DayStrip, MoreMenu, SectionTitle } from "../components/ui";
+import { SUPPORT_EMAIL } from "../legal";
 import { isLive } from "../backend/config";
 import { trails } from "../data/trails";
 import { useNav } from "../nav";
@@ -19,6 +21,8 @@ export function Profile() {
   const { me } = state;
   const [contact, setContact] = useState(me.emergencyContact);
   const [contactName, setContactName] = useState(me.emergencyName);
+  const [doc, setDoc] = useState<"terms" | "privacy" | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const saved = state.posts.filter((p) => state.saved.includes(p.id));
   const mine = state.posts.filter((p) => p.authorId === "me");
 
@@ -138,23 +142,58 @@ export function Profile() {
           <IconMoon /> לילה בשטח
         </button>
       </div>
-      {isLive ? (
-        <button className="linkbtn" onClick={() => actions.signOut()}>
-          יציאה מהחשבון{state.session.email ? ` (${state.session.email})` : ""}
+      <SectionTitle>חשבון ופרטיות</SectionTitle>
+      <div className="account">
+        {state.blocked.length > 0 && (
+          <div className="account-blocked">
+            <span className="account-label">חסומים</span>
+            {state.blocked.map((b) => (
+              <span key={b.id} className="blocked-row">
+                <span>{b.name || "משתמש/ת"}</span>
+                <button type="button" className="linkbtn inline" onClick={() => actions.unblock(b.id)}>
+                  ביטול חסימה
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <button type="button" className="account-row" onClick={() => setDoc("terms")}>
+          תנאי שימוש
         </button>
-      ) : (
-        <button className="linkbtn" onClick={() => dispatch({ type: "reset" })}>
-          איפוס נתוני הדגמה
+        <button type="button" className="account-row" onClick={() => setDoc("privacy")}>
+          מדיניות פרטיות
         </button>
-      )}
+        <div className="account-row static">
+          <span>צריך עזרה או רוצה לדווח?</span>
+          <span className="mono" dir="ltr">
+            {SUPPORT_EMAIL}
+          </span>
+        </div>
+        {isLive ? (
+          <button type="button" className="account-row" onClick={() => actions.signOut()}>
+            יציאה מהחשבון{state.session.email ? <small dir="ltr"> {state.session.email}</small> : null}
+          </button>
+        ) : (
+          <button type="button" className="account-row" onClick={() => dispatch({ type: "reset" })}>
+            איפוס נתוני הדגמה
+          </button>
+        )}
+        <button type="button" className="account-row danger" onClick={() => setDeleting(true)}>
+          מחיקת החשבון
+        </button>
+      </div>
+      <LegalSheet which={doc} onClose={() => setDoc(null)} />
+      <DeleteAccountSheet open={deleting} onClose={() => setDeleting(false)} />
     </div>
   );
 }
 
 export function Person({ id }: { id: string }) {
   const { state } = useStore();
-  const { pop, push } = useNav();
+  const { pop, push, setTab } = useNav();
   const actions = useActions();
+  const [report, setReport] = useState<ReportTarget | null>(null);
+  const [blocking, setBlocking] = useState<string | null>(null);
   const p = findPerson(state, id);
   if (!p) return null;
   const theirs = state.posts.filter((x) => x.authorId === id);
@@ -167,7 +206,19 @@ export function Person({ id }: { id: string }) {
   };
   return (
     <div className="person">
-      <BackBar onBack={pop} />
+      <BackBar
+        onBack={pop}
+        end={
+          <MoreMenu
+            items={[
+              { label: `דיווח על ${p.name.split(" ")[0]}`, onClick: () => setReport({ userId: p.id, what: "user", snapshot: `${p.name} · ${p.bio}` }) },
+              { label: "חסימה", onClick: () => setBlocking(p.id), danger: true },
+            ]}
+          />
+        }
+      />
+      <ReportSheet target={report} onClose={() => setReport(null)} onBlocked={() => setTab("feed")} />
+      <BlockSheet userId={blocking} onClose={() => setBlocking(null)} onBlocked={() => setTab("feed")} />
       <div className="person-scroll">
         <header className="person-head">
           <Topo seed={p.age ?? p.hikes + 3} rings={9} cx={200} cy={110} gap={18} className="me-topo" />

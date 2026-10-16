@@ -21,4 +21,5 @@ psql=(psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$port" -U postgres -d postg
 for m in "$here"/../migrations/*.sql; do "${psql[@]}" -f "$m"; done
 "${psql[@]}" -o /dev/null -f "$here/rls_test.sql"
 "${psql[@]}" -o /dev/null -f "$here/checkins_test.sql"
+"${psql[@]}" -o /dev/null -f "$here/safety_test.sql"
 echo "all database tests passed"

@@ -162,6 +162,7 @@ function Shell() {
           </motion.div>
         )}
       </AnimatePresence>
+      <div id="sheet-root" />
       <div className="grain" aria-hidden />
     </div>
   );

@@ -2,7 +2,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { IconCar, IconCheck, IconClock, IconPin, IconSend, IconShield } from "../components/icons";
 import { Avatar, Blaze } from "../components/marks";
-import { BackBar } from "../components/ui";
+import { BlockSheet, ReportSheet, type ReportTarget } from "../components/safety";
+import { BackBar, MoreMenu } from "../components/ui";
 import { trailById } from "../data/trails";
 import { clock, whenLabel } from "../lib";
 import { useNav } from "../nav";
@@ -14,7 +15,10 @@ const quick = ["איזה קצב נוח לך?", "יש לך רכב?", "מה עם �
 export function Chat({ id }: { id: string }) {
   const { state } = useStore();
   const actions = useActions();
-  const { pop, push } = useNav();
+  const { pop, push, setTab } = useNav();
+  const [report, setReport] = useState<ReportTarget | null>(null);
+  const [blocking, setBlocking] = useState<string | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
   const thread = state.threads.find((t) => t.id === id);
   const [text, setText] = useState("");
   const [typing, setTyping] = useState(false);
@@ -39,8 +43,9 @@ export function Chat({ id }: { id: string }) {
 
   const send = (body: string) => {
     if (!body.trim()) return;
-    setText("");
-    void actions.send(id, body, setTyping);
+    void actions.send(id, body, setTyping).then((sent) => {
+      if (sent) setText("");
+    });
   };
 
   const plan = thread.plan;
@@ -49,7 +54,17 @@ export function Chat({ id }: { id: string }) {
 
   return (
     <div className="chat">
-      <BackBar onBack={pop}>
+      <BackBar
+        onBack={pop}
+        end={
+          <MoreMenu
+            items={[
+              { label: `דיווח על ${who.name.split(" ")[0]}`, onClick: () => setReport({ userId: who.id, what: "user", postId: thread.postId || undefined, snapshot: who.name }) },
+              { label: "חסימה", onClick: () => setBlocking(who.id), danger: true },
+            ]}
+          />
+        }
+      >
         <button className="chat-who" onClick={() => push({ k: "person", id: who.id })}>
           <Avatar name={who.name} ink={who.ink} size={34} verified={who.verified} />
           <span>
@@ -138,9 +153,23 @@ export function Chat({ id }: { id: string }) {
               initial={{ opacity: 0, y: 14, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 32 }}
+              onClick={mine ? undefined : () => setPicked(picked === m.id ? null : m.id)}
             >
               <p>{m.text}</p>
               <time className="mono">{clock(m.at)}</time>
+              {picked === m.id && (
+                <button
+                  type="button"
+                  className="msg-report"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPicked(null);
+                    setReport({ userId: who.id, what: "message", messageId: m.id.startsWith("m") || m.id.startsWith("tmp") ? undefined : m.id, postId: thread.postId || undefined, snapshot: m.text });
+                  }}
+                >
+                  דיווח על ההודעה
+                </button>
+              )}
             </motion.div>
           );
         })}
@@ -160,6 +189,8 @@ export function Chat({ id }: { id: string }) {
         <div ref={end} />
       </div>
 
+      <ReportSheet target={report} onClose={() => setReport(null)} onBlocked={() => setTab("feed")} />
+      <BlockSheet userId={blocking} onClose={() => setBlocking(null)} onBlocked={() => setTab("feed")} />
       <div className="composer">
         <div className="quick">
           {quick.map((q) => (

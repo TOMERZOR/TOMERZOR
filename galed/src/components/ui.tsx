@@ -1,4 +1,4 @@
-import { animate, motion, useInView } from "framer-motion";
+import { AnimatePresence, animate, motion, useInView } from "framer-motion";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { shortDay } from "../lib";
 import { IconBack } from "./icons";
@@ -133,13 +133,14 @@ export function CountUp({ to, decimals = 0 }: { to: number; decimals?: number })
   return <span ref={ref}>{v.toLocaleString("he-IL", { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}</span>;
 }
 
-export function BackBar({ onBack, children, transparent }: { onBack: () => void; children?: ReactNode; transparent?: boolean }) {
+export function BackBar({ onBack, children, transparent, end }: { onBack: () => void; children?: ReactNode; transparent?: boolean; end?: ReactNode }) {
   return (
     <div className={`backbar ${transparent ? "clear" : ""}`}>
       <button className="iconbtn" onClick={onBack} aria-label="חזרה">
         <IconBack />
       </button>
       <div className="backbar-mid">{children}</div>
+      {end}
     </div>
   );
 }
@@ -152,6 +153,43 @@ export function SectionTitle({ kicker, children, action }: { kicker?: string; ch
         <h2>{children}</h2>
       </div>
       {action}
+    </div>
+  );
+}
+
+/** A "⋯" button with a short list of actions. */
+export function MoreMenu({ items, label = "עוד פעולות", glass }: { items: { label: string; onClick: () => void; danger?: boolean }[]; label?: string; glass?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="more">
+      <button type="button" className={`iconbtn ${glass ? "glass" : ""}`} aria-label={label} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="more-dots" aria-hidden>
+          ⋯
+        </span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <button type="button" className="more-scrim" aria-label="סגירה" onClick={() => setOpen(false)} />
+            <motion.div className="more-menu" role="menu" initial={{ opacity: 0, y: -6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6 }}>
+              {items.map((it) => (
+                <button
+                  key={it.label}
+                  type="button"
+                  role="menuitem"
+                  className={it.danger ? "danger" : ""}
+                  onClick={() => {
+                    setOpen(false);
+                    it.onClick();
+                  }}
+                >
+                  {it.label}
+                </button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

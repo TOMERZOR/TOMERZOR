@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useActions } from "../actions";
-import { sendSignInLink } from "../backend/live";
+import { sendSignInCode, verifySignInCode } from "../backend/live";
+import { LegalSheet } from "../components/safety";
 import { Cairn, Topo } from "../components/marks";
 import { Chip, Segmented, Toggle } from "../components/ui";
 import type { Level } from "../data/trails";
@@ -19,18 +20,36 @@ export function Loading() {
 
 export function SignIn() {
   const [email, setEmail] = useState("");
-  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [doc, setDoc] = useState<"terms" | "privacy" | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setState("sending");
+  const sendCode = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setBusy(true);
+    setError("");
     try {
-      await sendSignInLink(email.trim());
-      setState("sent");
+      await sendSignInCode(email.trim());
+      setStep("code");
+      setCode("");
     } catch (err) {
-      setError(err instanceof Error && /rate/i.test(err.message) ? "נשלחו יותר מדי קישורים. נסו שוב בעוד דקה." : "לא הצלחנו לשלוח את הקישור. בדקו את הכתובת ונסו שוב.");
-      setState("error");
+      setError(err instanceof Error && /rate|seconds/i.test(err.message) ? "נשלחו יותר מדי קודים. נסו שוב בעוד דקה." : "לא הצלחנו לשלוח קוד. בדקו את הכתובת ונסו שוב.");
+    }
+    setBusy(false);
+  };
+
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      // on success the auth listener in useLiveSync takes over
+      await verifySignInCode(email.trim(), code.trim());
+    } catch {
+      setError("הקוד לא נכון או שפג תוקפו. אפשר לבקש קוד חדש.");
+      setBusy(false);
     }
   };
 
@@ -40,20 +59,10 @@ export function SignIn() {
       <div className="auth-head">
         <Cairn count={4} size={64} />
         <h1 className="display riso">כניסה לגלעד</h1>
-        <p>נשלח קישור כניסה למייל. בלי סיסמה.</p>
+        <p>נשלח קוד כניסה למייל. בלי סיסמה.</p>
       </div>
-      {state === "sent" ? (
-        <motion.div className="auth-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <h2>בדקו את המייל</h2>
-          <p>
-            שלחנו קישור אל <b dir="ltr">{email}</b>. פתחו אותו במכשיר הזה, והכניסה תסתיים לבד.
-          </p>
-          <button className="linkbtn inline" onClick={() => setState("idle")}>
-            כתובת אחרת
-          </button>
-        </motion.div>
-      ) : (
-        <form className="auth-card" onSubmit={submit}>
+      {step === "email" ? (
+        <form className="auth-card" onSubmit={sendCode}>
           <label htmlFor="email">מייל</label>
           <input
             id="email"
@@ -66,12 +75,57 @@ export function SignIn() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@example.com"
           />
-          {state === "error" && <p className="form-error">{error}</p>}
-          <button className="btn btn-flame btn-wide" disabled={state === "sending"}>
-            {state === "sending" ? "שולחים…" : "שליחת קישור כניסה"}
+          {error && <p className="form-error">{error}</p>}
+          <button className="btn btn-flame btn-wide" disabled={busy}>
+            {busy ? "שולחים…" : "שליחת קוד"}
           </button>
+          <p className="auth-legal">
+            בכניסה את/ה מאשר/ת את{" "}
+            <button type="button" className="linkbtn inline" onClick={() => setDoc("terms")}>
+              תנאי השימוש
+            </button>{" "}
+            ואת{" "}
+            <button type="button" className="linkbtn inline" onClick={() => setDoc("privacy")}>
+              מדיניות הפרטיות
+            </button>
+            .
+          </p>
         </form>
+      ) : (
+        <motion.form className="auth-card" onSubmit={verify} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+          <h2>הקוד בדרך</h2>
+          <p>
+            שלחנו קוד אל <b dir="ltr">{email}</b>.
+          </p>
+          <label htmlFor="code">קוד כניסה</label>
+          <input
+            id="code"
+            className="textfield code-input mono"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            dir="ltr"
+            maxLength={10}
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            placeholder="••••••"
+            autoFocus
+          />
+          {error && <p className="form-error">{error}</p>}
+          <button className="btn btn-flame btn-wide" disabled={busy || code.length < 6}>
+            {busy ? "בודקים…" : "כניסה"}
+          </button>
+          <div className="auth-row-links">
+            <button type="button" className="linkbtn inline" onClick={() => sendCode()} disabled={busy}>
+              שליחה מחדש
+            </button>
+            <button type="button" className="linkbtn inline muted" onClick={() => setStep("email")}>
+              כתובת אחרת
+            </button>
+          </div>
+        </motion.form>
       )}
+      <LegalSheet which={doc} onClose={() => setDoc(null)} />
     </div>
   );
 }
@@ -91,22 +145,26 @@ export function ProfileSetup() {
   const [car, setCar] = useState(false);
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [doc, setDoc] = useState<"terms" | "privacy" | null>(null);
   const year = Number(birthYear);
-  const yearOk = !birthYear || (year >= 1930 && year <= new Date().getFullYear() - 16);
+  const yearOk = birthYear.length === 4 && year >= 1930 && year <= new Date().getFullYear() - 18;
+  const yearWrong = birthYear.length === 4 && !yearOk;
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !yearOk) return;
+    if (!name.trim() || !yearOk || !agreed) return;
     setSaving(true);
     await actions.saveProfile({
       name: name.trim(),
       gender,
-      birth_year: birthYear ? year : null,
+      birth_year: year,
       city: city.trim(),
       pace,
       level,
       has_car: car,
       bio: bio.trim(),
+      terms_accepted_at: new Date().toISOString(),
     });
     setSaving(false);
   };
@@ -147,11 +205,12 @@ export function ProfileSetup() {
               maxLength={4}
               value={birthYear}
               onChange={(e) => setBirthYear(e.target.value.replace(/\D/g, ""))}
-              aria-invalid={!yearOk}
+              aria-invalid={yearWrong}
+              required
             />
           </div>
         </div>
-        {!yearOk && <p className="form-error">גלעד פתוח מגיל 16. בדקו את שנת הלידה.</p>}
+        {yearWrong && <p className="form-error">גלעד מיועד לגיל 18 ומעלה.</p>}
 
         <label>הקצב שלי בשטח פתוח (קמ״ש)</label>
         <div className="chips wrap">
@@ -178,10 +237,26 @@ export function ProfileSetup() {
         <label htmlFor="bio">כמה מילים עליי</label>
         <textarea id="bio" className="textfield" rows={3} maxLength={500} value={bio} onChange={(e) => setBio(e.target.value)} placeholder="איפה הלכת, מה הקצב, מה חשוב לך בשביל" />
 
-        <button className="btn btn-flame btn-wide" disabled={saving || !name.trim() || !yearOk}>
+        <label className="agree">
+          <input type="checkbox" id="agree" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+          <span>
+            מלאו לי 18, ואני מסכים/ה ל
+            <button type="button" className="linkbtn inline" onClick={() => setDoc("terms")}>
+              תנאי השימוש
+            </button>
+            , כולל אפס סובלנות לתוכן פוגעני, ול
+            <button type="button" className="linkbtn inline" onClick={() => setDoc("privacy")}>
+              מדיניות הפרטיות
+            </button>
+            .
+          </span>
+        </label>
+
+        <button className="btn btn-flame btn-wide" disabled={saving || !name.trim() || !yearOk || !agreed}>
           {saving ? "שומרים…" : "יוצאים לדרך"}
         </button>
       </form>
+      <LegalSheet which={doc} onClose={() => setDoc(null)} />
     </div>
   );
 }

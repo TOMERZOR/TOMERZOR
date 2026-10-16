@@ -48,6 +48,7 @@ export interface State {
   threads: Thread[];
   requests: JoinRequest[];
   checkins: Checkin[];
+  blocked: { id: string; name: string }[];
   saved: string[];
   theme: "day" | "night";
   session: Session;
@@ -55,8 +56,10 @@ export interface State {
 
 type Action =
   | { type: "onboard" }
-  | { type: "hydrate"; data: Partial<Pick<State, "me" | "people" | "posts" | "threads" | "requests" | "checkins">> }
+  | { type: "hydrate"; data: Partial<Pick<State, "me" | "people" | "posts" | "threads" | "requests" | "checkins" | "blocked">> }
   | { type: "upsertCheckin"; checkin: Checkin }
+  | { type: "block"; userId: string; name: string }
+  | { type: "unblock"; userId: string }
   | { type: "session"; session: Session }
   | { type: "publish"; post: Post }
   | { type: "replacePost"; tempId: string; post: Post }
@@ -69,7 +72,7 @@ type Action =
   | { type: "setPlan"; threadId: string; plan: Thread["plan"] }
   | { type: "setMe"; me: Partial<Me> }
   | { type: "setTheme"; theme: State["theme"] }
-  | { type: "reset" };
+  | { type: "reset"; onboarded?: boolean };
 
 const KEY = "galed:v2";
 
@@ -95,6 +98,7 @@ const initial: State = isLive
       threads: [],
       requests: [],
       checkins: [],
+      blocked: [],
       saved: [],
       theme: "day",
       session: { status: "unknown", needsProfile: false },
@@ -107,6 +111,7 @@ const initial: State = isLive
       threads: seedThreads,
       requests: [],
       checkins: [],
+      blocked: [],
       saved: ["p3"],
       theme: "day",
       session: { status: "in", needsProfile: false },
@@ -121,7 +126,14 @@ function load(): State {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const saved = JSON.parse(raw);
-      return { ...initial, ...saved, me: { ...initial.me, ...saved.me }, checkins: saved.checkins ?? [], session: initial.session };
+      return {
+        ...initial,
+        ...saved,
+        me: { ...initial.me, ...saved.me },
+        checkins: saved.checkins ?? [],
+        blocked: saved.blocked ?? [],
+        session: initial.session,
+      };
     }
   } catch {
     /* storage can be unavailable; the app still works in memory */
@@ -162,6 +174,21 @@ function reducer(s: State, a: Action): State {
       const rest = s.checkins.filter((x) => !(x.postId === c.postId && x.userId === c.userId));
       return { ...s, checkins: [...rest, c] };
     }
+    case "block": {
+      // a blocked person disappears from everything right away
+      const id = a.userId;
+      return {
+        ...s,
+        blocked: [...s.blocked.filter((b) => b.id !== id), { id, name: a.name }],
+        people: s.people.filter((p) => p.id !== id),
+        posts: s.posts.filter((p) => p.authorId !== id).map((p) => ({ ...p, joined: p.joined.filter((j) => j !== id) })),
+        threads: s.threads.filter((t) => t.withId !== id),
+        requests: s.requests.filter((r) => r.userId !== id),
+        checkins: s.checkins.filter((c) => c.userId !== id),
+      };
+    }
+    case "unblock":
+      return { ...s, blocked: s.blocked.filter((x) => x.id !== a.userId) };
     case "toggleSave":
       return {
         ...s,
@@ -191,7 +218,7 @@ function reducer(s: State, a: Action): State {
     case "setTheme":
       return { ...s, theme: a.theme };
     case "reset":
-      return { ...initial, onboarded: true, session: s.session };
+      return { ...initial, onboarded: a.onboarded ?? true, session: s.session };
   }
 }
 

@@ -12,6 +12,7 @@ const SECRET = process.env.JWT_SECRET!;
 const REST = Number(process.env.PGRST_PORT);
 const alice = "a0000000-0000-0000-0000-000000000001";
 const bob = "b0000000-0000-0000-0000-000000000002";
+const carol = "c0000000-0000-0000-0000-000000000003";
 
 const b64 = (o: object) => Buffer.from(JSON.stringify(o)).toString("base64url");
 function jwt(sub: string) {
@@ -50,6 +51,8 @@ try {
   as(alice);
   expect((await live.loadMe(alice)).needsProfile, "new user is asked to fill in a profile");
   await live.saveProfile(alice, { name: "אליס כהן", gender: "f", pace: 4.5, level: "קשה", has_car: true, birth_year: 1994 });
+  expect((await live.loadMe(alice)).needsProfile, "still asked to accept the terms");
+  await live.saveProfile(alice, { terms_accepted_at: new Date().toISOString() });
   await live.saveFreeDays(alice, [1, 2]);
   await live.saveEmergency(alice, "אמא", "050-1234567");
   const meA = await live.loadMe(alice);
@@ -81,7 +84,7 @@ try {
 
   // ── Bob finds it and asks to join ──
   as(bob);
-  await live.saveProfile(bob, { name: "בוב לוי", gender: "m", pace: 4, level: "בינוני" });
+  await live.saveProfile(bob, { name: "בוב לוי", gender: "m", pace: 4, level: "בינוני", birth_year: 1990, terms_accepted_at: new Date().toISOString() });
   let bobView = await live.loadEverything(bob);
   const seen = bobView.posts.find((p) => p.id === post.id);
   expect(seen && seen.authorId === alice, "Bob sees Alice's post with her id");
@@ -133,6 +136,40 @@ try {
   as(bob);
   t = (await live.loadThreads(bob)).find((x) => x.id === threadId);
   expect(t?.plan.cars === "הרכב של אליס בסוף" && t.plan.gear.length === 1, "Bob sees Alice's plan change");
+  // ── safety ──
+  as(alice);
+  await live.report({ targetId: bob, postId: post.id, reason: "spam", details: "", snapshot: "test" });
+  expect(true, "Alice reports Bob");
+  as(bob);
+  await live.block(alice);
+  await live.block(alice); // blocking twice is harmless
+  const blocked = await live.loadBlocked();
+  expect(blocked.length === 1 && blocked[0].id === alice && blocked[0].name === "אליס כהן", "Bob's blocked list shows Alice by name");
+  bobView = await live.loadEverything(bob);
+  expect(!bobView.people.some((p) => p.id === alice) && !bobView.posts.some((p) => p.id === post.id), "Alice and her hike are hidden from Bob");
+  let blockedSend = false;
+  try {
+    await live.sendMessage(threadId, "עדיין פה?", bob);
+  } catch {
+    blockedSend = true;
+  }
+  expect(blockedSend, "Bob cannot message Alice after blocking");
+  await live.unblock(alice, bob);
+  expect((await live.loadEverything(bob)).posts.some((p) => p.id === post.id), "unblocking brings her back");
+
+  let filtered = "";
+  try {
+    await live.sendMessage(threadId, "fuck", bob);
+  } catch (e) {
+    filtered = String(e);
+  }
+  expect(/objectionable/.test(filtered), "the server rejects objectionable text");
+
+  as(carol);
+  await live.saveProfile(carol, { name: "כרמל", birth_year: 1999, terms_accepted_at: new Date().toISOString() });
+  await live.deleteMyAccount();
+  as(alice);
+  expect(!(await live.loadEverything(alice)).people.some((p) => p.id === carol), "a deleted account is gone");
 } catch (e) {
   failures++;
   console.log("  FAIL threw:", e);

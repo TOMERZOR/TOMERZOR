@@ -35,7 +35,8 @@ create role authenticator login noinherit;
 grant anon, authenticated to authenticator;
 insert into auth.users (id, email) values
   ('a0000000-0000-0000-0000-000000000001', 'alice@example.com'),
-  ('b0000000-0000-0000-0000-000000000002', 'bob@example.com');
+  ('b0000000-0000-0000-0000-000000000002', 'bob@example.com'),
+  ('c0000000-0000-0000-0000-000000000003', 'carol@example.com');
 SQL
 
 PGRST_DB_URI="postgres://authenticator@127.0.0.1:$port/postgres" \

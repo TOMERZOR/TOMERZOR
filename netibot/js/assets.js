@@ -80,6 +80,9 @@ const Assets = {
     }
     action.time = this.idleTime;
     mixer.update(0);
+    // The standing pose per bone: running exaggerates the walk relative to it.
+    this.idlePose = {};
+    scene.traverse(o => { if (o.isBone) this.idlePose[o.name] = o.quaternion.clone(); });
     mixer.stopAllAction();
   },
 

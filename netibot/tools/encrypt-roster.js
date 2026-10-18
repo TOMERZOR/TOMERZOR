@@ -10,6 +10,17 @@ const { webcrypto } = require('crypto');
 const dir = path.join(__dirname, '..');
 const src = fs.readFileSync(path.join(dir, 'js/roster.js'), 'utf8');
 const ROSTER = new Function(src + '; return ROSTER;')();
+// Cartoon portraits of the real cast (tools/faces/<id>.webp, git-ignored) travel inside the
+// encrypted roster too, so the public repo has neither the names nor the faces.
+const faceDir = path.join(__dirname, 'faces');
+if (fs.existsSync(faceDir)) {
+  ROSTER.faces = {};
+  for (const f of fs.readdirSync(faceDir)) {
+    const m = f.match(/^([\w-]+)\.(webp|png|jpg)$/);
+    if (m) ROSTER.faces[m[1]] = `data:image/${m[2] === 'jpg' ? 'jpeg' : m[2]};base64,` + fs.readFileSync(path.join(faceDir, f)).toString('base64');
+  }
+  console.log('faces:', Object.keys(ROSTER.faces).length);
+}
 const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 (async () => {

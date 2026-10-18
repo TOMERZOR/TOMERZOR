@@ -54,6 +54,16 @@ function avatarHtml(person) {
   return `<div class="avatar" style="background:${person.color || '#4b5a2a'}"><span class="av-emoji">${person.emoji || '🪖'}</span><span class="av-letter">${letter}</span></div>`;
 }
 
+// A speaker's cartoon portrait: from the cast when it carries one (the real cast's travel
+// inside the encrypted roster), else the public ones for the player and made-up characters.
+const FACE_RE = /^(assets\/faces\/[\w-]+\.(webp|png|jpg)|data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+\/=]+)$/;
+function faceUrl(who) {
+  const own = (id) => { const u = (ROSTER.faces && ROSTER.faces[id]) || (DATA.faces && DATA.faces[id]); return u && FACE_RE.test(u) ? u : null; };
+  if (who !== 'player') return own(who);
+  // Playing as a cast member (multiplayer): their face; otherwise the generic soldier.
+  return (G.profile && G.profile.as && own(G.profile.as)) || `assets/faces/player_${G.profile && G.profile.gender === 'f' ? 'f' : 'm'}.webp`;
+}
+
 // Gender/name tokens are resolved in any text added to the page, so templates
 // in mini-games and screens can use them without calling fmt() themselves.
 const TOKEN_RE = /\[[^\/\]]*\/[^\]]*\]|\{(name|battery|gdud|platoon|hq)\}|\{@@?\w+\}/;
@@ -164,12 +174,14 @@ const UI = {
         const name = line.who === 'player' ? fmt('{name}') : person ? person.name : ch.name;
         const rank = person && person.rank ? `<span class="rank-chip">${RANKS[person.rank]}</span>` : '';
         const title = person ? `${rank}<span class="who-title">${fmtAs(person, person.title || '')}</span>` : '';
-        const pic = line.who === 'player'
-          ? `<div class="portrait-fallback">🪖</div>`
+        const face = faceUrl(line.who);
+        const pic = face ? `<img class="face" src="${face}" alt="">`
+          : line.who === 'player' ? `<div class="portrait-fallback">🪖</div>`
           : person ? avatarHtml(person) : ch.img ? `<img src="${ch.img}" alt="">` : `<div class="portrait-fallback">${ch.icon}</div>`;
         d.innerHTML = `${pic}<div class="body"><div class="who">${name} ${title}</div><div class="txt"></div>
           <div class="choices"></div><div class="hint">${line.choices ? '' : (G.touch ? 'הקש להמשך' : 'רווח / E / לחיצה להמשך')}</div></div>`;
         d.classList.remove('hidden');
+        d.classList.toggle('has-face', !!face);
         const full = fmtAs(person, line.text);
         const txt = d.querySelector('.txt');
         let n = 0;

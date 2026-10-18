@@ -302,6 +302,8 @@ const DATA = {
   ],
 
   // Voices that are not part of the cast.
+  // Cartoon portraits for the dialog box (the cast's own come with the roster).
+  faces: { rafael: 'assets/faces/rafael.webp' },
   characters: {
     officer: { name: 'קצין תורן', img: null, icon: '🔦' },
     narrator: { name: '', img: null, icon: '📻' },

@@ -853,8 +853,14 @@ const Scene3D = {
   makeRiggedSoldier(look, name) {
     const root = new THREE.Group();
     const made = Assets.soldier();
-    root.add(made.object);
-    const parts = { root, rigged: true };
+    // The lean group tips the whole body forward when running, pivoting at the feet.
+    const lean = new THREE.Group();
+    root.add(lean);
+    lean.add(made.object);
+    const parts = { root, rigged: true, lean };
+    const RUN_GAIN = { LeftUpLeg: 1.7, RightUpLeg: 1.7, LeftLeg: 1.6, RightLeg: 1.6, LeftArm: 2.3, RightArm: 2.3, LeftForeArm: 1.8, RightForeArm: 1.8 };
+    parts.runBones = [];
+    if (Assets.idlePose) made.inner.traverse(o => { if (o.isBone && RUN_GAIN[o.name] && Assets.idlePose[o.name]) parts.runBones.push({ bone: o, ref: Assets.idlePose[o.name], inv: Assets.idlePose[o.name].clone().invert(), k: RUN_GAIN[o.name] }); });
     if (Assets.walkClip) {
       parts.mixer = new THREE.AnimationMixer(made.inner);
       parts.action = parts.mixer.clipAction(Assets.walkClip);
@@ -1012,6 +1018,21 @@ const Scene3D = {
           const near = (Assets.idleTimes || [0]).some(it => { const g = Math.abs(t - it); return Math.min(g, D - g) < D * 0.035; });
           if (near || m.settle > 0.45) { m.idle = true; m.action.time = near ? t : Assets.idleTime || 0; m.mixer.update(0); }
           else m.mixer.update(dt * Math.max(1.2, m.rate || 1.4));
+        }
+        // Running: the same cycle, faster and exaggerated — longer strides, a bigger arm
+        // pump, a forward lean and a bounce. Only on frames the mixer has just posed.
+        const runT = moving && (ent.running || ent.r) ? 1 : 0;
+        m.runK = (m.runK || 0) + (runT - (m.runK || 0)) * Math.min(1, dt * 6);
+        if (m.lean) m.lean.rotation.z = -0.24 * m.runK;
+        if (moving && m.runK > 0.01 && m.runBones) {
+          const d = this._q || (this._q = new THREE.Quaternion()), id = this._qi || (this._qi = new THREE.Quaternion());
+          for (const rb of m.runBones) {
+            d.copy(rb.inv).multiply(rb.bone.quaternion);
+            id.identity().slerp(d, 1 + (rb.k - 1) * m.runK);
+            rb.bone.quaternion.copy(rb.ref).multiply(id);
+          }
+          const ph = m.action.time / Assets.walkClip.duration * Math.PI * 2;
+          m.root.position.y = Math.abs(Math.sin(ph)) * 0.07 * m.runK;
         }
       }
       return;

@@ -337,3 +337,7 @@ input[type=text] {
 .side input[type=range] { width: 100%; }
 .side .row2 { display: flex; gap: 8px; }
 .side .row2 .btn { flex: 1; }
+
+.invite { background: rgba(242,193,78,.1); border: 1px solid var(--gold); border-radius: 12px; padding: 10px 12px; margin: 8px 0; line-height: 1.5; }
+.invite-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.invite-row input { flex: 1; min-width: 160px; width: auto; font-size: 13px; direction: ltr; text-align: left; }

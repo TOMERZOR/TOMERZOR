@@ -26,6 +26,7 @@ const fake = (p) => {
 };
 const out = {
   ...ROSTER,
+  example: true,
   platoon: 'פלגת אלמוג',
   sites: { ...ROSTER.sites, hq: 'אתר השליטה' },
   people: ROSTER.people.map(fake),

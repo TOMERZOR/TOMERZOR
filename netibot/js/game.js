@@ -714,6 +714,8 @@ const Game = {
     };
     $('#m-help').onclick = () => this.help(false);
     $('#m-multi').onclick = () => { Sound.unlock(); this.multiMenu(); };
+    // Opened from an invite link: straight to choosing who you are.
+    if (Lobby.invited() && !this.invitedOnce) { this.invitedOnce = true; this.multiMenu(); }
     for (const b of document.querySelectorAll('[data-audio]')) b.onclick = () => this.toggleAudio(b.dataset.audio);
     this.syncAudioButtons();
     Sound.music('menu');
@@ -789,24 +791,41 @@ const Game = {
 
   // Multiplayer: pick who you are from the cast and join everyone who has the link open.
   async multiMenu() {
-    UI.screen('<div class="content"><div class="panel"><h2>🌐 מולטיפלייר</h2><p>מתחבר לחדר...</p></div></div>', 'assets/title.jpg');
+    UI.screen('<div class="content"><div class="panel"><h2>🌐 מולטיפלייר</h2><p>מתחבר ללובי...</p></div></div>', 'assets/title.jpg');
     const room = await Multi.init();
     if (!room) {
       UI.screen(`<div class="content"><div class="panel"><h2>🌐 מולטיפלייר</h2>
-        <p>מולטיפלייר עובד כשפותחים את המשחק דרך הקישור שלו ב־claude.ai: כל מי שפותח את הקישור באותו זמן נמצא באותו עולם ורואה את כולם.</p>
-        <p>שלחו לפלגה את הקישור (שיתוף → הזמנה), וכל אחד בוחר מי הוא מהרשימה.</p>
-        <div class="actions"><button class="btn" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
+        <p>לא הצלחתי להתחבר ללובי. כדאי לבדוק את האינטרנט ולנסות שוב.</p>
+        <div class="actions"><button class="btn" id="mm-retry">לנסות שוב</button><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
+      $('#mm-retry').onclick = () => this.multiMenu();
       $('#mm-back').onclick = () => this.title();
       return;
     }
+    const link = Lobby.inviteLink();
     const render = () => {
       const taken = new Set(Multi.peers.map(p => p.who));
       const people = ROSTER.people.filter(p => p.map === 'netivot' || ['bc', 'deputy_bc', 'harasar', 'rasap', 'deputy_rasap', 'sarsap', 'interceptors', 'officer1', 'officer2', 'officer3', 'ops', 'hamalist'].includes(p.id));
       UI.screen(`<div class="content"><div class="panel">
-        <h2>🌐 מי את[ה/]?</h2><p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => esc(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
+        <h2>🌐 מי את[ה/]?</h2>
+        ${link ? `<div class="invite"><b>🔗 הזמנה לחברים</b> — שולחים להם את הקישור, הם לוחצים ונכנסים. בלי חשבון ובלי הרשמה.
+          ${room.lobby ? '' : '<br><small>כאן ב־claude.ai הלובי לא זמין, אז כדי לשחק עם מי שנכנס מהקישור — [תפתח/תפתחי] גם את[ה/] את הקישור.</small>'}
+          <div class="invite-row"><input type="text" readonly id="mm-link" value="${esc(link)}"><button class="btn small" id="mm-share">📤 שלח בוואטסאפ</button><button class="btn small ghost" id="mm-copy">📋 העתק</button></div></div>` : ''}
+        <p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => esc(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
         <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}"><div class="big">${p.emoji}</div><div class="nm">${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
         <div class="actions"><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
       $('#mm-back').onclick = () => this.title();
+      if (link) {
+        const text = 'בוא[/י] לשחק איתי בנתיבוט 🛡️ לוחצים על הקישור ובוחרים מי את[ה/]:';
+        $('#mm-share').onclick = async () => {
+          if (navigator.share) { try { await navigator.share({ title: 'נתיבוט', text: fmt(text), url: link }); return; } catch (e) { /* fall through to WhatsApp */ } }
+          window.open('https://wa.me/?text=' + encodeURIComponent(fmt(text) + '\n' + link), '_blank');
+        };
+        $('#mm-copy').onclick = async () => {
+          const inp = $('#mm-link');
+          try { await navigator.clipboard.writeText(link); } catch (e) { inp.select(); document.execCommand('copy'); }
+          UI.toast('הקישור הועתק ✔', 'good');
+        };
+      }
       $('#screen').querySelectorAll('.card').forEach(c => c.onclick = () => {
         if (c.classList.contains('off')) { UI.toast('מישהו כבר משחק בתור הדמות הזאת'); return; }
         Sound.click();
@@ -816,11 +835,19 @@ const Game = {
         G.state = saved ? saved.state : this.newState('free');
         G.state.mode = 'multi.' + person.id;
         Multi.start(person.id);
-        this.startWorld(!saved).then(() => UI.toast('🌐 מחובר[/ת]! T או 💬 — לכתוב לכולם · G — מפה'));
+        this.multiRender = null;
+        this.startWorld(!saved).then(() => UI.toast('🌐 מחובר[/ת]! T — לכתוב לכולם · לחיצה על המפה הקטנה — איפה כולם'));
       });
     };
-    render();
     this.multiRender = render;
+    render();
+    // Keep the "who's online" line fresh while choosing.
+    let seen = Multi.peers.map(p => p.who + p.name).sort().join();
+    const refresh = setInterval(() => {
+      if (this.multiRender !== render || !$('#mm-back')) { clearInterval(refresh); return; }
+      const now = Multi.peers.map(p => p.who + p.name).sort().join();
+      if (now !== seen) { seen = now; render(); }
+    }, 1500);
   },
 
   chooseGdud(mode) {

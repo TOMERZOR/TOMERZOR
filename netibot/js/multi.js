@@ -1,7 +1,7 @@
-// Multiplayer through the artifact's live room: everyone who has the game's link open sees
-// the others walking around, each playing as themselves from the cast. Presence carries
-// the player's site, position and speech bubble; nothing is stored. Off the claude.ai
-// link (a local copy, GitHub) the room is absent and the game stays single player.
+// Multiplayer: everyone in the same lobby sees the others walking around, each playing as
+// themselves from the cast. Presence carries the player's site, position and speech bubble;
+// nothing is stored. The room is the invite-link lobby (js/lobby.js) or, inside claude.ai,
+// the artifact's live room.
 const Multi = {
   room: null,
   ready: null,
@@ -11,17 +11,23 @@ const Multi = {
   sent: '',
   sendT: 0,
 
+  // The lobby from the invite link comes first (it works for anyone, no account needed);
+  // inside claude.ai the artifact's own room is the fallback.
   init() {
     if (this.ready) return this.ready;
     this.ready = (async () => {
-      try {
-        if (!window.claude || !window.claude.use) return null;
-        const room = await window.claude.use('room');
-        if (!room) return null;
-        this.room = room;
-        room.onPeers(ch => this.onPeers(ch.peers));
-        return room;
-      } catch (e) { return null; }
+      let room = null;
+      try { room = await Lobby.connect(Lobby.code()); } catch (e) { room = null; }
+      if (!room) {
+        try {
+          if (window.claude && window.claude.use) room = await window.claude.use('room');
+        } catch (e) { room = null; }
+      }
+      if (!room) { this.ready = null; return null; }
+      this.room = room;
+      room.onPeers(ch => this.onPeers(ch.peers));
+      window.addEventListener('pagehide', () => { if (room.leave) room.leave(); });
+      return room;
     })();
     return this.ready;
   },

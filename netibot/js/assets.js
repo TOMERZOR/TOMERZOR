@@ -96,19 +96,43 @@ const Assets = {
   // (tools/encrypt-roster.js). They load in the background once the roster is unlocked;
   // until then (or without the key) everyone uses the shared soldier.
   people: {},
+  peopleErr: {},
   loadPeople() {
     const ids = Object.keys(ROSTER.models || {});
     if (!ids.length || !Lobby.cryptoKey || !window.DecompressionStream || !THREE.GLTFLoader || !this.walkClip) return Promise.resolve();
     const loader = new THREE.GLTFLoader();
-    // The ones you see first go first: the local player, then whoever is on this site.
-    const first = (id) => (G.profile && G.profile.as === id ? 0 : G.npcs && G.npcs.some(n => n.id === id) ? 1 : 2);
-    ids.sort((a, b) => first(a) - first(b));
-    return ids.reduce((chain, id) => chain.then(() => this.loadPerson(loader, id)).catch(() => {}), Promise.resolve());
+    // Whoever you'd see first goes next: the local player, then whoever is on this site,
+    // nearest first. Asked again before every model, since loading starts on the title screen
+    // and a slow phone is still at it when the game begins.
+    const rank = (id) => {
+      if (G.profile && G.profile.as === id) return -1;
+      const n = G.npcs && G.player && G.npcs.find(n => n.id === id);
+      return n ? Math.hypot(n.x - G.player.x, n.y - G.player.y) : 1e9;
+    };
+    const failed = [];
+    const next = (left, retry) => {
+      if (!left.length) return Promise.resolve();
+      left.sort((a, b) => rank(a) - rank(b));
+      const id = left.shift();
+      return this.loadPerson(loader, id)
+        .then(() => { delete this.peopleErr[id]; })
+        .catch((e) => { this.peopleErr[id] = String((e && e.message) || e); if (!retry) failed.push(id); console.warn('person model', id, e); })
+        .then(() => next(left, retry));
+    };
+    // A model that failed (a dropped connection, usually) gets one more try at the end.
+    return next(ids.slice(), false).then(() => failed.length && new Promise(r => setTimeout(r, 2000)).then(() => next(failed, true)));
+  },
+  // For the menu: how many of the cast's own models are in, and which failed.
+  peopleStatus() {
+    const all = Object.keys(ROSTER.models || {});
+    if (!all.length || !Lobby.cryptoKey) return '';
+    const bad = Object.keys(this.peopleErr).map(id => (Cast.get(id) || {}).short || id);
+    return `👥 דמויות: ${Object.keys(this.people).length}/${all.length}` + (bad.length ? ` · לא נטענו: ${bad.join(', ')}` : '');
   },
   async loadPerson(loader, id) {
     const file = String(ROSTER.models[id]).replace(/[^a-f0-9]/g, '');
     const res = await fetch(`assets/people/${file}.bin`);
-    if (!res.ok) return;
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const buf = new Uint8Array(await res.arrayBuffer());
     const zipped = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
     const glb = await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();

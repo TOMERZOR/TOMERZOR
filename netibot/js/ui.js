@@ -272,7 +272,7 @@ const UI = {
     G.keys.clear();
     m.classList.remove('hidden');
     m.innerHTML = `<div class="scrim"></div><div class="drawer">
-      <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>
+      <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>${Assets.peopleStatus() ? `<div class="paused">${Assets.peopleStatus()}</div>` : ''}
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
       ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}

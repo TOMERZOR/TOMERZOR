@@ -4,8 +4,8 @@ const Assets = {
   models: {},
   anims: {},
   images: {},
-  MODELS: ['launcher', 'tower', 'truck', 'container', 'pickup', 'palm', 'soldier', 'radar', 'generator', 'burger'],
-  IMAGES: ['sand', 'wall', 'asphalt', 'grass'],
+  MODELS: ['launcher', 'tower', 'truck', 'container', 'pickup', 'palm', 'soldier', 'radar', 'generator', 'burger', 'cranetruck'],
+  IMAGES: ['sand', 'wall', 'asphalt', 'grass', 'shekem', 'bibi', 'babasali'],
 
   load(onProgress = () => {}) {
     const total = this.MODELS.length + this.IMAGES.length;

@@ -368,6 +368,26 @@ const Scene3D = {
             this.mealProps.push(rec);
           }
           break;
+        case 'shekemwall': {
+          // The canteen's back wall: shelves of snacks and the drinks fridges (top of the picture).
+          const img = Assets.images.shekem;
+          let mat = this.mat(0xd8c9a0);
+          if (img) {
+            const tex = new THREE.Texture(img);
+            tex.needsUpdate = true;
+            tex.encoding = THREE.sRGBEncoding;
+            tex.anisotropy = 4;
+            tex.repeat.set(1, 350 / 576);
+            tex.offset.set(0, 1 - 350 / 576);
+            mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 });
+          }
+          const h = Math.min(WALL_H - 0.1, w * 350 / 1024);
+          const wall = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+          wall.position.set(0, h / 2 + 0.02, 0);
+          wall.rotation.y = Math.PI;
+          g.add(wall);
+          break;
+        }
         case 'desk':
           this.box(w, 0.75, d, this.mat(0x7a5a36), 0, 0.375, 0, g);
           this.box(0.6, 0.4, 0.06, this.mat(0x222222), 0, 0.98, -0.1, g);
@@ -945,7 +965,8 @@ const Scene3D = {
       parts.acts = { walk: parts.mixer.clipAction(walkClip) };
       if (clips && clips.run) parts.acts.run = parts.mixer.clipAction(clips.run);
       if (clips && clips.idle) parts.acts.idle = parts.mixer.clipAction(clips.idle);
-      parts.w = { walk: 0, run: 0, idle: 1 };
+      if (clips && clips.dance) parts.acts.dance = parts.mixer.clipAction(clips.dance);
+      parts.w = { walk: 0, run: 0, idle: 1, dance: 0 };
       for (const k in parts.acts) { parts.acts[k].play(); parts.acts[k].setEffectiveWeight(k === 'idle' ? 1 : 0); }
       // Without an idle clip, standing is the first frame of the walk.
       if (!parts.acts.idle) parts.acts.walk.setEffectiveWeight(1);
@@ -1097,7 +1118,8 @@ const Scene3D = {
         // mixer poses every bone from the clips each frame, so nothing builds up while paused.
         const speed = ent.speed !== undefined ? ent.speed : ent.running ? 165 : moving ? 90 : 0;
         const running = moving && ent.running && m.acts.run;
-        const want = { idle: moving ? 0 : 1, walk: moving && !running ? 1 : 0, run: running ? 1 : 0 };
+        const dancing = ent.dancing && m.acts.dance && !moving;
+        const want = dancing ? { dance: 1 } : { idle: moving ? 0 : 1, walk: moving && !running ? 1 : 0, run: running ? 1 : 0 };
         const k = Math.min(1, dt * 8);
         for (const n in m.acts) {
           m.w[n] += ((want[n] || 0) - m.w[n]) * k;
@@ -1165,40 +1187,44 @@ const Scene3D = {
       this.root.add(g);
       return g;
     }
-    // The site arrives the civilian way: a tractor unit with a loader crane behind the cab,
-    // towing a flatbed trailer with the container (or the launcher) on it. Front is +x.
-    const paint = this.mat(0xc23a2b, { metalness: 0.35, roughness: 0.45 });
-    const steel = this.mat(0x2a2d30, { metalness: 0.5, roughness: 0.6 });
-    const yellow = this.mat(0xe8b21e, { metalness: 0.3, roughness: 0.5 });
-    const glass = this.mat(0x9fc3d8, { metalness: 0.6, roughness: 0.15 });
-    const tyre = this.mat(0x161616);
-    const wheel = (x, z, r = 0.52) => { const w = this.cyl(r, r, 0.42, tyre, x, r, z, g, 14); w.rotation.x = Math.PI / 2; };
-    // Tractor: chassis, cab with windscreen, bumper, lights, fuel tanks.
-    this.box(6.2, 0.45, 2.1, steel, 2.9, 0.95, 0, g);
-    this.box(2.1, 2.5, 2.5, paint, 4.95, 2.4, 0, g);
-    this.box(2.0, 0.5, 2.55, this.mat(0x8e2a1f), 4.95, 3.75, 0, g);
-    this.box(0.06, 1.0, 2.2, glass, 6.02, 2.95, 0, g);
-    for (const z of [-1.26, 1.26]) this.box(1.0, 0.8, 0.05, glass, 5.25, 2.95, z, g);
-    this.box(0.25, 0.5, 2.5, steel, 6.05, 1.15, 0, g);
-    const lamp = new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xfff0b0, emissiveIntensity: 0.9 });
-    for (const z of [-0.95, 0.95]) this.box(0.08, 0.22, 0.4, lamp, 6.1, 1.5, z, g);
-    for (const z of [-1.1, 1.1]) { const t = this.cyl(0.32, 0.32, 1.1, this.mat(0xb8bcc0, { metalness: 0.8, roughness: 0.3 }), 3.3, 1.0, z, g, 12); t.rotation.z = Math.PI / 2; }
-    wheel(4.9, -1.1); wheel(4.9, 1.1); wheel(1.6, -1.1); wheel(1.6, 1.1); wheel(0.4, -1.1); wheel(0.4, 1.1);
-    // Loader crane behind the cab: turret, column and the folded knuckle boom.
-    this.cyl(0.55, 0.65, 0.5, yellow, 3.4, 1.4, 0, g, 14);
-    this.box(0.5, 1.8, 0.5, yellow, 3.4, 2.4, 0, g);
-    const arm = this.box(0.35, 0.35, 3.6, yellow, 3.4, 3.35, 0, g);
-    arm.rotation.x = 0.08;
-    this.box(0.25, 0.25, 3.2, this.mat(0xd9a316), 3.4, 2.95, 0, g);
-    // Fifth wheel and the trailer: deck, side rails, rear axles, a red-white tail.
-    this.box(1.2, 0.2, 1.2, steel, 1.3, 1.25, 0, g);
-    this.box(9.4, 0.32, 2.5, this.mat(0x3a3d40, { metalness: 0.4 }), -3.0, 1.35, 0, g);
-    for (const z of [-1.22, 1.22]) this.box(9.4, 0.14, 0.08, yellow, -3.0, 1.55, z, g);
-    for (const x of [-5.9, -4.8, -3.7]) { wheel(x, -1.1, 0.5); wheel(x, 1.1, 0.5); }
-    for (let i = 0; i < 4; i++) this.box(0.05, 0.3, 0.6, this.mat(i % 2 ? 0xffffff : 0xd8261f), -7.72, 1.1, -0.9 + i * 0.6, g);
+    // The site arrives the civilian way: a crane truck towing a flatbed trailer with the
+    // container (or the launcher) on it. Front is +x. The Higgsfield model when it loaded,
+    // otherwise built from boxes.
+    const model = this.addModel(g, 'cranetruck', { rotY: Math.PI, length: 14 });
+    if (!model) {
+      const paint = this.mat(0xc23a2b, { metalness: 0.35, roughness: 0.45 });
+      const steel = this.mat(0x2a2d30, { metalness: 0.5, roughness: 0.6 });
+      const yellow = this.mat(0xe8b21e, { metalness: 0.3, roughness: 0.5 });
+      const glass = this.mat(0x9fc3d8, { metalness: 0.6, roughness: 0.15 });
+      const tyre = this.mat(0x161616);
+      const wheel = (x, z, r = 0.52) => { const w = this.cyl(r, r, 0.42, tyre, x, r, z, g, 14); w.rotation.x = Math.PI / 2; };
+      // Tractor: chassis, cab with windscreen, bumper, lights, fuel tanks.
+      this.box(6.2, 0.45, 2.1, steel, 2.9, 0.95, 0, g);
+      this.box(2.1, 2.5, 2.5, paint, 4.95, 2.4, 0, g);
+      this.box(2.0, 0.5, 2.55, this.mat(0x8e2a1f), 4.95, 3.75, 0, g);
+      this.box(0.06, 1.0, 2.2, glass, 6.02, 2.95, 0, g);
+      for (const z of [-1.26, 1.26]) this.box(1.0, 0.8, 0.05, glass, 5.25, 2.95, z, g);
+      this.box(0.25, 0.5, 2.5, steel, 6.05, 1.15, 0, g);
+      const lamp = new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xfff0b0, emissiveIntensity: 0.9 });
+      for (const z of [-0.95, 0.95]) this.box(0.08, 0.22, 0.4, lamp, 6.1, 1.5, z, g);
+      for (const z of [-1.1, 1.1]) { const t = this.cyl(0.32, 0.32, 1.1, this.mat(0xb8bcc0, { metalness: 0.8, roughness: 0.3 }), 3.3, 1.0, z, g, 12); t.rotation.z = Math.PI / 2; }
+      wheel(4.9, -1.1); wheel(4.9, 1.1); wheel(1.6, -1.1); wheel(1.6, 1.1); wheel(0.4, -1.1); wheel(0.4, 1.1);
+      // Loader crane behind the cab: turret, column and the folded knuckle boom.
+      this.cyl(0.55, 0.65, 0.5, yellow, 3.4, 1.4, 0, g, 14);
+      this.box(0.5, 1.8, 0.5, yellow, 3.4, 2.4, 0, g);
+      const arm = this.box(0.35, 0.35, 3.6, yellow, 3.4, 3.35, 0, g);
+      arm.rotation.x = 0.08;
+      this.box(0.25, 0.25, 3.2, this.mat(0xd9a316), 3.4, 2.95, 0, g);
+      // Fifth wheel and the trailer: deck, side rails, rear axles, a red-white tail.
+      this.box(1.2, 0.2, 1.2, steel, 1.3, 1.25, 0, g);
+      this.box(9.4, 0.32, 2.5, this.mat(0x3a3d40, { metalness: 0.4 }), -3.0, 1.35, 0, g);
+      for (const z of [-1.22, 1.22]) this.box(9.4, 0.14, 0.08, yellow, -3.0, 1.55, z, g);
+      for (const x of [-5.9, -4.8, -3.7]) { wheel(x, -1.1, 0.5); wheel(x, 1.1, 0.5); }
+      for (let i = 0; i < 4; i++) this.box(0.05, 0.3, 0.6, this.mat(i % 2 ? 0xffffff : 0xd8261f), -7.72, 1.1, -0.9 + i * 0.6, g);
+    }
     // The load on the trailer, lifted off by the crane (or raised in place, for the launcher).
     const load = new THREE.Group();
-    load.position.set(-3.0, 1.51, 0);
+    if (model) load.position.set(-2.6, 1.55, 0); else load.position.set(-3.0, 1.51, 0);
     if (item.kind === 'launcher') {
       this.box(5.5, 1.5, 2.2, this.mat(0x4b5a2a), 0, 0.75, 0, load);
       for (const x of [-1.9, 0, 1.9]) this.box(0.12, 1.6, 2.3, this.mat(0x3c4822), x, 0.75, 0, load);
@@ -1208,7 +1234,7 @@ const Scene3D = {
     }
     g.add(load);
     g.userData.load = load;
-    g.userData.craneX = 3.4;
+    g.userData.craneX = model ? 3.1 : 3.4;
     g.traverse(o => { if (o.isMesh) o.castShadow = true; });
     const lb = this.label(item.name, { size: 0.8 });
     lb.position.set(-1.4, 5.0, 0);
@@ -1390,10 +1416,10 @@ const Scene3D = {
 
     // People.
     const pr = G.profile;
-    const want = (Multi.on && pr.as) || null;
+    const want = ((Multi.on || (G.state && G.state.role)) && pr.as) || null;
     if (this.player && (this.player.who !== want || (want && !this.player.own && Assets.people[want]))) { this.root.remove(this.player.root); this.player = null; }
     if (!this.player) {
-      this.player = this.makeSoldier({ id: Multi.on ? pr.as : null, skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: 'beret', uniform: 0x5b6b3c });
+      this.player = this.makeSoldier({ id: want, skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: 'beret', uniform: 0x5b6b3c });
     }
     const pm = this.player;
     pm.beret.visible = false;
@@ -1667,14 +1693,25 @@ const Scene3D = {
   // The cheeseburger monster, his cheeseburgers, and the healthy food flying back.
   updateBoss(dt, now) {
     this.bossBits = this.bossBits || { burgers: new Map(), shots: new Map(), picks: new Map() };
-    if (!Boss.active || World.id !== 'hq') {
-      if (this.bossMesh) { this.root.remove(this.bossMesh); this.bossMesh = null; }
+    if (!Boss.active || World.id !== Boss.cfg.map) {
+      if (this.bossMesh) { this.root.remove(this.bossMesh); this.bossMesh = null; this.bossGiant = null; }
       for (const k of ['burgers', 'shots', 'picks']) { for (const m of this.bossBits[k].values()) this.root.remove(m); this.bossBits[k].clear(); }
       return;
     }
+    if (this.bossMesh && this.bossMesh.userData.kind !== Boss.kind) { this.root.remove(this.bossMesh); this.bossMesh = null; this.bossGiant = null; }
     if (!this.bossMesh || this.bossMesh.parent !== this.root) {
       const g = new THREE.Group();
-      if (!this.addModel(g, 'burger', { height: 7 })) {
+      g.userData.kind = Boss.kind;
+      if (Boss.kind !== 'burger') {
+        // A person boss: their own character, giant.
+        const person = Cast.get(Boss.cfg.npc) || {};
+        const look = { id: Boss.cfg.npc, skin: person.skin || '#d9a77c', hair: person.hair || '#2b1d12', head: person.head || 'beret', female: !!person.female, rank: person.rank };
+        const m = this.makeSoldier(look, null);
+        if (m.root.parent) m.root.parent.remove(m.root);
+        m.root.scale.setScalar(2.6);
+        this.bossGiant = m;
+        g.add(m.root);
+      } else if (!this.addModel(g, 'burger', { height: 7 })) {
         const bun = this.mat(0xd99a3e), patty = this.mat(0x5a3218), cheese = this.mat(0xf2c12e), lettuce = this.mat(0x5fae3a);
         const top = new THREE.Mesh(new THREE.SphereGeometry(2.6, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), bun);
         top.position.y = 4.2; g.add(top);
@@ -1690,10 +1727,20 @@ const Scene3D = {
     }
     const bm = this.bossMesh;
     const P = G.player;
-    bm.position.set(Boss.x * S3, Math.abs(Math.sin(now / 260)) * 0.25, Boss.y * S3);
-    bm.rotation.y = Math.atan2(P.x - Boss.x, P.y - Boss.y);
-    const k = 1 + Boss.flash * 0.12;
-    bm.scale.set(k, 1 / k, k);
+    if (this.bossGiant) {
+      // The giant dances (the battery commander) or marches (the sergeant major) in place, facing the player.
+      const gm = this.bossGiant;
+      bm.position.set(Boss.x * S3, 0, Boss.y * S3);
+      this.animateSoldier(gm, { x: 0, y: 0, angle: Math.atan2(P.y - Boss.y, P.x - Boss.x), dancing: Boss.kind === 'baum', speed: 60 }, Boss.kind !== 'baum', dt);
+      gm.root.position.set(0, 0, 0);
+      const k = 1 + Boss.flash * 0.08;
+      bm.scale.set(k, 1 / k, k);
+    } else {
+      bm.position.set(Boss.x * S3, Math.abs(Math.sin(now / 260)) * 0.25, Boss.y * S3);
+      bm.rotation.y = Math.atan2(P.x - Boss.x, P.y - Boss.y);
+      const k = 1 + Boss.flash * 0.12;
+      bm.scale.set(k, 1 / k, k);
+    }
     if (Boss.bubble !== this.bossBubbleRef) {
       if (this.bossBubble) bm.remove(this.bossBubble);
       this.bossBubble = Boss.bubble ? this.label(Boss.bubble.text, { bg: 'rgba(255,240,200,.97)', fg: '#5a1a0a', size: 1.6 }) : null;
@@ -1718,9 +1765,47 @@ const Scene3D = {
       this.cyl(0.3, 0.28, 0.1, this.mat(0xd99a3e), 0, -0.15, 0, g, 12);
       return g;
     };
+    // What the bosses throw: cheeseburgers, gefilte fish, uniform reports.
+    const projectile = () => {
+      if (Boss.kind === 'burger') return smallBurger();
+      const g = new THREE.Group();
+      if (Boss.kind === 'baum') {
+        const f = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), this.mat(0xd8c7a0));
+        f.scale.set(1.3, 0.55, 0.8); g.add(f);
+        const c = this.cyl(0.08, 0.08, 0.03, this.mat(0xe8781f), 0, 0.17, 0, g, 10); void c;
+      } else {
+        this.box(0.42, 0.02, 0.56, this.mat(0xf6f3ea), 0, 0, 0, g);
+        this.box(0.3, 0.022, 0.05, this.mat(0xc0392b), 0, 0.001, -0.18, g);
+      }
+      return g;
+    };
+    const poster = (img, w, h, frame) => {
+      const g = new THREE.Group();
+      const im = Assets.images[img];
+      let mat = this.mat(0xffffff);
+      if (im) { const t = new THREE.Texture(im); t.needsUpdate = true; t.encoding = THREE.sRGBEncoding; mat = new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }); }
+      if (frame) this.box(w + 0.06, h + 0.06, 0.03, this.mat(frame, { metalness: 0.5 }), 0, 0, -0.02, g);
+      const pl = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      g.add(pl);
+      return g;
+    };
     const healthy = (kind) => {
       const g = new THREE.Group();
-      if (kind.id === 'broccoli') {
+      if (kind.id === 'karaoke') {
+        this.box(0.36, 0.26, 0.22, this.mat(0x222222), 0, 0, 0, g);
+        this.cyl(0.05, 0.035, 0.26, this.mat(0xd63384, { metalness: 0.4 }), 0.12, 0.22, 0, g, 8);
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), this.mat(0xcfcfcf, { metalness: 0.7 })); b.position.set(0.12, 0.38, 0); g.add(b);
+        for (const x of [-0.09, 0.05]) { const sp = this.cyl(0.06, 0.06, 0.02, this.mat(0x555555), x - 0.03, 0, 0.115, g, 12); sp.rotation.x = Math.PI / 2; }
+      } else if (kind.id === 'seeds') {
+        this.box(0.26, 0.32, 0.1, this.mat(0xf2c12e), 0, 0, 0, g);
+        for (let i = 0; i < 6; i++) { const sd = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 4), this.mat(0x111111)); sd.scale.set(1, 0.5, 1.6); sd.position.set(-0.08 + (i % 3) * 0.08, 0.2, -0.03 + Math.floor(i / 3) * 0.06); g.add(sd); }
+      } else if (kind.id === 'bibi') g.add(poster('bibi', 0.46, 0.46, null));
+      else if (kind.id === 'babasali') g.add(poster('babasali', 0.34, 0.45, 0xc9a227));
+      else if (kind.id === 'boots') { for (const x of [-0.1, 0.1]) { this.box(0.14, 0.24, 0.16, this.mat(0x0c0c0c, { metalness: 0.6, roughness: 0.15 }), x, 0, 0, g); this.box(0.14, 0.08, 0.3, this.mat(0x0c0c0c, { metalness: 0.6, roughness: 0.15 }), x, -0.08, 0.08, g); } }
+      else if (kind.id === 'beret') { const b = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 8), this.mat(kind.color)); b.scale.set(1, 0.3, 1); g.add(b); }
+      else if (kind.id === 'razor') { this.box(0.06, 0.32, 0.04, this.mat(0x2f6fb5), 0, 0, 0, g); this.box(0.2, 0.05, 0.05, this.mat(0xd8d8d8, { metalness: 0.8 }), 0, 0.17, 0, g); }
+      else if (kind.id === 'belt') { const t = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 20), this.mat(kind.color)); t.rotation.x = Math.PI / 2; g.add(t); this.box(0.09, 0.07, 0.03, this.mat(0x111111), 0, 0, 0.2, g); }
+      else if (kind.id === 'broccoli') {
         this.cyl(0.06, 0.08, 0.3, this.mat(0x9fcf6a), 0, -0.1, 0, g, 6);
         for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), this.mat(kind.color)); b.position.set(Math.cos(i * 1.3) * 0.12, 0.1 + (i % 2) * 0.06, Math.sin(i * 1.3) * 0.12); g.add(b); }
       } else if (kind.id === 'ricecake') this.cyl(0.24, 0.24, 0.08, this.mat(kind.color), 0, 0, 0, g, 16);
@@ -1730,7 +1815,7 @@ const Scene3D = {
       else { this.box(0.4, 0.07, 0.14, this.mat(0x2f2f2f), 0, 0, 0, g); this.box(0.2, 0.072, 0.142, this.mat(0xf2c14e), 0, 0, 0, g); }
       return g;
     };
-    sync([...Boss.burgers, ...(Boss.remoteBurgers || [])], this.bossBits.burgers, smallBurger, (b, m) => {
+    sync([...Boss.burgers, ...(Boss.remoteBurgers || [])], this.bossBits.burgers, projectile, (b, m) => {
       const t = Math.min(1, b.t / b.dur);
       m.position.set((b.x0 + (b.x1 - b.x0) * t) * S3, 4 + Math.sin(t * Math.PI) * 5 - t * 3.6, (b.y0 + (b.y1 - b.y0) * t) * S3);
       m.rotation.x = t * 9;

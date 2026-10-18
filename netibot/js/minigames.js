@@ -663,9 +663,11 @@ const Minigames = {
 
   // ---------- canteen shop ----------
   shop(box, opts, done) {
+    const seller = Cast.get('shekemist');
+    const greet = seller ? fmt(pick(seller.lines)) : '';
     const render = () => {
       const S = G.state;
-      box.innerHTML = `<h3>ש.ק. — הקנטינה</h3><div class="sub">יתרה: <b style="color:var(--gold)">₪${S.money}</b></div>
+      box.innerHTML = `<h3>ש.ק. — הקנטינה</h3>${seller ? `<div class="sub">🥐 <b>${seller.short}:</b> ${greet}</div>` : ''}<div class="sub">יתרה: <b style="color:var(--gold)">₪${S.money}</b></div>
         <div class="grid">${DATA.shop.map(it => `<div class="card" data-id="${it.id}"><div class="big">${it.icon}</div><div class="nm">${it.name}</div>
         <div class="ds">₪${it.price} · ${it.energy ? `אנרגיה ${it.energy > 0 ? '+' : ''}${it.energy}` : ''} ${it.morale ? `מורל ${it.morale > 0 ? '+' : ''}${it.morale}` : ''}</div></div>`).join('')}</div>
         <div class="actions"><button class="btn ghost" id="sh-x">יציאה</button></div>`;

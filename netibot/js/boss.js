@@ -7,7 +7,34 @@ const BOSS_TAUNTS = [
   'קלוריות זה כוח! כוח זה פז"ם!',
   'המנעול שלי! כמו כל החטיפים בסוללה!',
 ];
+// His lines, recorded in a monster voice (ElevenLabs). Index matches BOSS_TAUNTS.
+const BOSS_VOICE = 'assets/audio/boss/';
+const BOSS_TAUNT_VOICE = ['intro', 'taunt2', 'taunt3', 'taunt4', 'taunt5'];
 const BOSS_ARENA = { x0: 15 * TS, x1: 45 * TS, y0: 13.5 * TS, y1: 21 * TS };
+
+// Every boss shares the same fight: pick up what hurts them, throw it back, dodge what they
+// throw. The cheeseburger at HQ is the story's; the other two come out of events.
+const BOSSES = {
+  burger: {
+    map: 'hq', arena: BOSS_ARENA, icon: '🍔', name: () => "צ'יזבורגרו", npc: 'deputy_rasap', ammo: () => DATA.healthy,
+    taunts: BOSS_TAUNTS, voice: true, throws: 'burger', meter: 'כולסטרול',
+    hitMe: '🍔 צ\'יזבורגר בפרצוף! כולסטרול +20', full: '🚑 {@medic1}: כולסטרול מאה?! [שתה/שתי] מים ו[תחזור/תחזרי] לקרב',
+  },
+  // The battery commander, after p_liran told her what he reads on guard.
+  baum: {
+    map: 'netivot', arena: { x0: 23.5 * TS, x1: 34.5 * TS, y0: 21.5 * TS, y1: 29 * TS }, icon: '📚', name: () => fmt('{@@bc}'), npc: 'bc', ammo: () => DATA.mizrahi,
+    taunts: ['ספר?! בשמירה?! בשמירה קוראים את הגדר!', 'אצלי בסוללה קוראים רק נהלים. בעמידה.', 'גפילטע פיש! בתאבון, {platoon}!', 'תכבו את המוזיקה הזאת! שימו שופן!', 'באקסל שלי אין עמודה לגרעינים!'],
+    throws: 'gefilte', meter: 'גפילטע', hp: 120,
+    hitMe: '🐟 גפילטע פיש בפרצוף! +20', full: '🥴 יותר מדי גפילטע... {@p_shaked} מביא[/ה] לך פיתה עם חריף. [תחזור/תחזרי] לקרב!',
+  },
+  // The battery sergeant major, who found one too many things wrong with your uniform.
+  harasar: {
+    map: 'hq', arena: BOSS_ARENA, icon: '👀', name: () => fmt('{@@harasar}'), npc: 'harasar', ammo: () => DATA.uniform,
+    taunts: ['מי בלי חגור?!', 'אני רואה חול על הנעליים שלך מפה!', 'זקן! אני רואה זקן! תגזור[/י]!', 'דום! גם הדשא בדום!', 'שלושה ימי ריתוק! לכולם! עכשיו!'],
+    throws: 'report', meter: 'דו"חות', hp: 110,
+    hitMe: '📋 דו"ח תלבושת! +20', full: '📋 חמישה דו"חות! {@sarsap} חותם[/ת] לך על מחילה. [תחזור/תחזרי] לקרב!',
+  },
+};
 
 const Boss = {
   active: false,
@@ -15,10 +42,16 @@ const Boss = {
   NAME: "צ'יזבורגרו",
 
   // coop: { id, max } when the fight is shared with the other players in the lobby.
-  start(coop = null) {
+  start(coop = null, kind = 'burger') {
+    const cfg = this.cfg = BOSSES[kind];
+    this.kind = kind;
+    this.arena = cfg.arena;
+    this.NAME = cfg.name();
+    this.cx = (cfg.arena.x0 + cfg.arena.x1) / 2;
+    this.span = (cfg.arena.x1 - cfg.arena.x0) / 3;
     this.active = true;
     this.coop = coop;
-    this.max = coop ? coop.max : 100;
+    this.max = coop ? coop.max : cfg.hp || 100;
     this.hp = this.max;
     this.myDmg = 0;
     this.peerDmg = 0;
@@ -27,45 +60,50 @@ const Boss = {
     this.remoteBurgers = [];
     this.remoteSeen = new Map();
     this.chol = 0;
-    this.ammo = Object.fromEntries(DATA.healthy.map(k => [k.id, 0]));
+    this.ammo = Object.fromEntries(cfg.ammo().map(k => [k.id, 0]));
     this.pickups = [];
     this.shots = [];
     this.burgers = [];
-    this.x = 30 * TS;
-    this.y = 15.6 * TS;
+    this.x = this.cx;
+    this.y = cfg.arena.y0 + 2.1 * TS;
     this.dir = 1;
     this.throwCd = 2.5;
     this.tauntCd = 4;
     this.flash = 0;
-    this.bubble = { text: BOSS_TAUNTS[0], t: 3.5 };
-    this.lastPick = 'broccoli';
+    this.bubble = { text: fmt(cfg.taunts[0]), t: 3.5 };
+    this.hurtCd = 3;
+    if (cfg.voice && !(Date.now() - (this.introAt || 0) < 15000)) Sound.voice(BOSS_VOICE + 'intro.mp3');
+    this.lastPick = cfg.ammo()[0].id;
     if (coop) { this.taken = new Set(); this.myTaken = []; this.pickCache = {}; this.coopPickups(); }
     else for (let i = 0; i < Boss.PICKUPS; i++) this.spawnPickup();
-    G.player.x = 30 * TS;
-    G.player.y = 20.5 * TS;
+    G.player.x = this.cx;
+    G.player.y = cfg.arena.y1 - 0.5 * TS;
     G.player.carry = false;
     Scene3D.yaw = 0;
     // Everyone else at HQ clears the arena and watches from the edges.
-    G.npcs.forEach((n, i) => { n.x = n.spot.x = (6 + (i % 12) * 4.5) * TS; n.y = n.spot.y = (i < 12 ? 23.6 : 12.4) * TS; n.path = []; n.wander = null; });
-    G.npcs = G.npcs.filter(n => n.id !== 'deputy_rasap');
+    if (cfg.map === 'hq') G.npcs.forEach((n, i) => { n.x = n.spot.x = (6 + (i % 12) * 4.5) * TS; n.y = n.spot.y = (i < 12 ? 23.6 : 12.4) * TS; n.path = []; n.wander = null; });
+    else G.npcs.forEach((n, i) => { n.x = n.spot.x = (i % 2 ? 35.6 : 22.4) * TS; n.y = n.spot.y = (22 + Math.floor(i / 2) * 1.1) * TS; n.path = []; n.wander = null; });
+    G.npcs = G.npcs.filter(n => n.id !== cfg.npc);
     $('#boss-hud').classList.remove('hidden');
     this.hud();
-    UI.toast(G.touch ? '🥦 לאסוף אוכל בריא מהדשא · כפתור E — לזרוק' : '🥦 לאסוף אוכל בריא מהדשא · E — לזרוק');
+    const a = cfg.ammo();
+    UI.toast(`${a[0].icon} לאסוף ${a.map(k => k.name).join(', ')} · ${G.touch ? 'כפתור E' : 'E'} — לזרוק`);
   },
 
   // Co-op: pickup number n lies in the same spot for everyone (seeded by the fight id), and
   // one that anybody took is gone for everybody.
   coopPickup(n) {
     const id = this.coop.id % 1000003;
-    const kinds = DATA.healthy;
+    const kinds = this.cfg.ammo();
     for (let g = 0; g < 40; g++) {
       const r = (k) => { const v = Math.sin(id * 0.0131 + n * 78.233 + g * 12.9898 + k * 4.1414) * 43758.5453; return v - Math.floor(v); };
-      const x = BOSS_ARENA.x0 + r(1) * (BOSS_ARENA.x1 - BOSS_ARENA.x0);
-      const y = BOSS_ARENA.y0 + 2 * TS + r(2) * (BOSS_ARENA.y1 - BOSS_ARENA.y0 - 2 * TS);
+      const A = this.arena;
+      const x = A.x0 + r(1) * (A.x1 - A.x0);
+      const y = A.y0 + 2 * TS + r(2) * (A.y1 - A.y0 - 2 * TS);
       if (World.blocked(x, y, 14)) continue;
       return { n, x, y, kind: kinds[Math.floor(r(3) * kinds.length)] };
     }
-    return { n, x: 30 * TS, y: 19 * TS, kind: kinds[0] };
+    return { n, x: this.cx, y: this.arena.y1 - 2 * TS, kind: kinds[0] };
   },
   coopPickups() {
     for (const p of Multi.peers) if (p.boss && p.boss.id === this.coop.id) for (const n of p.boss.tk || []) this.taken.add(n);
@@ -75,10 +113,10 @@ const Boss = {
   },
 
   spawnPickup() {
-    const kinds = DATA.healthy;
+    const kinds = this.cfg.ammo(), A = this.arena;
     for (let guard = 0; guard < 40; guard++) {
-      const x = BOSS_ARENA.x0 + Math.random() * (BOSS_ARENA.x1 - BOSS_ARENA.x0);
-      const y = BOSS_ARENA.y0 + 2 * TS + Math.random() * (BOSS_ARENA.y1 - BOSS_ARENA.y0 - 2 * TS);
+      const x = A.x0 + Math.random() * (A.x1 - A.x0);
+      const y = A.y0 + 2 * TS + Math.random() * (A.y1 - A.y0 - 2 * TS);
       if (World.blocked(x, y, 14) || Math.hypot(x - this.x, y - this.y) < 4 * TS) continue;
       this.pickups.push({ x, y, kind: kinds[Math.floor(Math.random() * kinds.length)] });
       return;
@@ -93,10 +131,10 @@ const Boss = {
       // Shared fight: everyone sees him in the same place (a path from the start time), and
       // his HP is what's left after the damage every player has dealt.
       const t = (Date.now() - this.coop.id) / 1000;
-      this.x = 30 * TS + Math.sin(t / (hurt ? 2.2 : 3.4)) * 10 * TS;
+      this.x = this.cx + Math.sin(t / (hurt ? 2.2 : 3.4)) * this.span;
       let peer = 0;
       for (const p of Multi.peers) if (p.boss && p.boss.id === this.coop.id) peer += p.boss.dmg;
-      if (peer > this.peerDmg) { this.flash = 1; if (!this.bubble || this.bubble.t < 1) this.bubble = { text: pick(DATA.healthy).hit, t: 1.8 }; Sound.splat(); }
+      if (peer > this.peerDmg) { this.flash = 1; if (!this.bubble || this.bubble.t < 1) this.bubble = { text: pick(this.cfg.ammo()).hit, t: 1.8 }; Sound.splat(); }
       this.peerDmg = Math.max(this.peerDmg, peer);
       this.hp = Math.max(0, this.max - this.myDmg - this.peerDmg);
       if (this.hp <= 0) { this.end(true); return; }
@@ -104,8 +142,8 @@ const Boss = {
       // He shuffles from side to side, faster when hurt.
       const speed = (hurt ? 75 : 45) * dt;
       this.x += this.dir * speed;
-      if (this.x > 40 * TS) this.dir = -1;
-      if (this.x < 20 * TS) this.dir = 1;
+      if (this.x > this.cx + this.span) this.dir = -1;
+      if (this.x < this.cx - this.span) this.dir = 1;
     }
     // Keep the player out of his bun.
     const dx = P.x - this.x, dy = P.y - this.y, d = Math.hypot(dx, dy);
@@ -114,7 +152,8 @@ const Boss = {
     this.flash = Math.max(0, this.flash - dt * 3);
 
     this.tauntCd -= dt;
-    if (this.tauntCd <= 0 && !this.bubble) { this.tauntCd = 7 + Math.random() * 5; this.bubble = { text: pick(BOSS_TAUNTS), t: 3.2 }; }
+    if (this.tauntCd <= 0 && !this.bubble) { this.tauntCd = 7 + Math.random() * 5; this.taunt(1 + Math.floor(Math.random() * (this.cfg.taunts.length - 1))); }
+    this.hurtCd -= dt;
 
     // Cheeseburgers, aimed where the player is heading.
     this.throwCd -= dt;
@@ -219,7 +258,8 @@ const Boss = {
   async startCoop(invite = false) {
     const here = invite ? Multi.peers.length : Multi.peers.filter(p => p.site === 'hq').length;
     const coop = { id: Date.now(), max: 100 + 70 * here };
-    await UI.cutscene([{ img: 'assets/boss2.jpg', who: '{@@deputy_rasap}', text: `${here ? 'כמה אתם? ' + (here + 1) + '?! ' : ''}אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*` }]);
+    this.introAt = Date.now();
+    await UI.cutscene([{ img: 'assets/boss2.jpg', voice: BOSS_VOICE + 'intro.mp3', who: '{@@deputy_rasap}', text: `${here ? 'כמה אתם? ' + (here + 1) + '?! ' : ''}אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*` }]);
     this.start(coop);
   },
   // Called every frame in multiplayer: join a fight someone at HQ started, or hear about it.
@@ -263,8 +303,8 @@ const Boss = {
 
   // Throw whatever healthy food you have most of (E / the action button).
   throw() {
-    const kinds = DATA.healthy.filter(k => this.ammo[k.id] > 0).sort((a, b) => this.ammo[b.id] - this.ammo[a.id]);
-    if (!kinds.length) { UI.toast('אין תחמושת בריאה! לאסוף ברוקולי, פריכיות וחטיפי חלבון', 'bad'); return; }
+    const kinds = this.cfg.ammo().filter(k => this.ammo[k.id] > 0).sort((a, b) => this.ammo[b.id] - this.ammo[a.id]);
+    if (!kinds.length) { UI.toast(`אין תחמושת! לאסוף ${this.cfg.ammo().map(k => k.icon).join(' ')}`, 'bad'); return; }
     const k = kinds[0];
     this.ammo[k.id]--;
     this.shots.push({ x: G.player.x, y: G.player.y, kind: k, t: 0 });
@@ -272,14 +312,64 @@ const Boss = {
     Sound.whoosh();
   },
 
+  taunt(i) {
+    this.bubble = { text: fmt(this.cfg.taunts[i]), t: 3.6 };
+    if (this.cfg.voice) Sound.voice(BOSS_VOICE + BOSS_TAUNT_VOICE[i] + '.mp3');
+  },
+
+  // Starting one of the event bosses: a short cutscene, then the fight where they stand.
+  async startOther(kind) {
+    if (kind === 'baum') {
+      await UI.talk([
+        { who: 'p_liran', text: 'המפקדת! המפקדת! {first} קרא ספר בשמירה! ספר עם תמונות! על מיירטים! אוגה!' },
+        { who: 'bc', text: '...ספר. בשמירה. ב־ש־מ־י־ר־ה.' },
+      ]);
+      await UI.cutscene([
+        { img: '', who: '', text: 'משהו נשבר אצל {@bc}. היא גדלה... וגדלה... מפלצת נהלים בגובה שלוש קומות, עם אקסל ביד אחת וגפילטע פיש ביד השנייה.' },
+        { img: '', who: '{@@p_shalev}', text: 'יש רק דבר אחד שהיא לא תעמוד בו — תרבות מזרחית! קריוקי, גרעינים שחורים, הפוסטר של ביבי והתמונה של הבבא סאלי! [תאסוף/תאספי] ו[תזרוק/תזרקי] (E)!' },
+      ]);
+    } else {
+      await UI.cutscene([
+        { img: '', who: '', text: '{@harasar} מסתכל עליך מלמטה למעלה. הוריד. ושוב העלה. "...אין לך מה להגיד? טוב. לי יש." — הוא מתנפח, מתנפח, ענק עם פנקס דו"חות.' },
+        { img: '', who: '{@@sarsap}', text: 'רס"ר אפשר להביס רק בדבר אחד: תלבושת מושלמת. [תאסוף/תאספי] נעליים מצוחצחות, כומתה מקופלת, גילוח וחגור — ו[תזרוק/תזרקי] עליו (E)!' },
+      ]);
+    }
+    this.start(null, kind);
+  },
+  // The end of the other bosses.
+  async endOther() {
+    const kind = this.kind;
+    $('#boss-hud').classList.add('hidden');
+    this.burgers = []; this.shots = []; this.pickups = [];
+    if (kind === 'baum') {
+      await UI.cutscene([{ img: '', who: '', text: 'גרעינים, קריוקי, ביבי והבבא סאלי... {@bc} מתכווצת חזרה לגודל רגיל, יושבת על הדשא ומזמזמת "יא מאמא" בלי לשים לב.' }]);
+      await UI.talk([
+        { who: 'bc', text: '...זה היה... מרגש. אני לא אגיד לאף אחד. ואם מישהו ישאל — זה היה תרגיל.' },
+        { who: 'bc', text: '{@p_liran}, שמירה כפולה. עם הספר. ותביא לי את הגרעינים, יש לי עוד חצי שעה עד הנסיעה.' },
+      ]);
+      G.state.flags.baumBoss = true;
+      Game.achieve('baum_boss');
+      Game.addScore(15, 'ניצחת את {@bc}');
+    } else {
+      await UI.cutscene([{ img: '', who: '', text: 'נעליים מבריקות, כומתה בכותפת, גילוח חלק וחגור... {@harasar} מתכווץ, מסתכל עליך מלמטה למעלה — ובפעם הראשונה בהיסטוריה של הסוללה, אין לו מה להגיד.' }]);
+      await UI.talk([{ who: 'harasar', text: '...*מצדיע* זה לא קרה. ואם תספר[/י] — שלושה ימי ריתוק. ...טוב, שניים.' }]);
+      G.state.flags.harasarBoss = true;
+      Game.achieve('harasar_boss');
+      Game.addScore(15, 'ניצחת את {@harasar}');
+    }
+    Game.addStat('morale', 15);
+    Game.resetNpcs();
+  },
+
   hitBoss(kind) {
     if (!this.active) return;
-    const dmg = { protein: 10, ricecake: 8, broccoli: 9, carrot: 8, apple: 9, cucumber: 7 }[kind.id] || 8;
+    const dmg = kind.dmg || 8;
     this.myDmg += dmg;
     this.hp = Math.max(0, this.max - this.myDmg - this.peerDmg);
     this.flash = 1;
     this.bubble = { text: kind.hit, t: 2.2 };
     Sound.splat();
+    if (this.cfg.voice && this.hurtCd <= 0 && this.hp > 0) { this.hurtCd = 9 + Math.random() * 6; Sound.voice(BOSS_VOICE + 'hurt.mp3'); }
     G.shake = 0.25;
     if (this.hp <= 0) this.end(true);
   },
@@ -287,24 +377,26 @@ const Boss = {
   hitPlayer() {
     this.chol = Math.min(100, this.chol + 20);
     G.shake = 0.4;
-    UI.toast('🍔 צ\'יזבורגר בפרצוף! כולסטרול +20', 'bad');
+    UI.toast(this.cfg.hitMe, 'bad');
     if (this.chol < 100) return;
     this.chol = 30;
-    UI.toast(fmt('🚑 {@medic1}: כולסטרול מאה?! [שתה/שתי] מים ו[תחזור/תחזרי] לקרב'), 'bad');
+    UI.toast(this.cfg.full, 'bad');
   },
 
   hud() {
     const h = $('#boss-hud');
     if (!h) return;
-    const ammo = DATA.healthy.map(k => `<span class="ammo">${k.icon} ${this.ammo[k.id]}</span>`).join('');
+    const ammo = this.cfg.ammo().map(k => `<span class="ammo">${k.icon} ${this.ammo[k.id]}</span>`).join('');
     const team = this.coop ? Multi.peers.filter(p => p.boss && p.boss.id === this.coop.id).length + 1 : 1;
     const pct = Math.max(0, Math.round(this.hp / this.max * 100));
-    h.innerHTML = `<div class="boss-top"><span class="boss-name">🍔 ${this.NAME}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
-      <div class="boss-row"><span>🩸</span><div class="chol-bar${this.chol >= 70 ? ' hot' : ''}"><b style="width:${this.chol}%"></b></div>${ammo}</div>`;
+    h.innerHTML = `<div class="boss-top"><span class="boss-name">${this.cfg.icon} ${this.NAME}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
+      <div class="boss-row"><span title="${this.cfg.meter}">🩸</span><div class="chol-bar${this.chol >= 70 ? ' hot' : ''}"><b style="width:${this.chol}%"></b></div>${ammo}</div>`;
   },
 
   async end(win) {
     this.active = false;
+    if (this.kind !== 'burger') { await this.endOther(); return; }
+    if (win) Sound.voice(BOSS_VOICE + 'defeat.mp3');
     if (this.coop) {
       (this.doneIds = this.doneIds || new Set()).add(this.coop.id);
       $('#boss-hud').classList.add('hidden');

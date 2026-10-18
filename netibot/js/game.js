@@ -39,7 +39,7 @@ const LAYOUT = {
   hq: {
     bc: [26, 7], deputy_bc: [27, 12], harasar: [32, 8], rasap: [45, 8], deputy_rasap: [48, 7], sarsap: [46, 13], interceptors: [55, 9],
     ops: [9, 8], hamalist: [15, 9], medic1: [7, 29], medic2: [10, 27], medic3: [10, 29], tech_comms: [38, 28], tech_ground: [41, 28], tech_launch: [43, 27],
-    driver1: [9, 34], driver2: [13, 38], officer1: null, officer2: null, officer3: null,
+    driver1: [9, 34], driver2: [13, 38], shekemist: [41, 36], officer1: null, officer2: null, officer3: null,
   },
   field: { commander: [33, 31], driver1: [28, 37], driver2: [33, 37], p_nevo: null, p_shalev: null, p_ofek: null, p_miriam: null },
 };
@@ -248,7 +248,7 @@ const Game = {
     const regions = WANDER[map];
     G.npcs = [];
     let ri = 0;
-    const people = [...ROSTER.people, ROSTER.easterEgg];
+    const people = [...ROSTER.people, ROSTER.easterEgg, ...DATA.extras];
     const taken = Multi.taken();
     for (const person of people) {
       // Somebody playing as this character replaces them in the world; in multiplayer the
@@ -728,6 +728,7 @@ const Game = {
         ${story ? `<button class="btn" id="m-cont">▶ מצב סיפור — להמשיך (יום ${story.state.day}, ${esc(story.profile.name)})</button>` : ''}
         <button class="btn ${story ? 'ghost' : ''}" id="m-new">${story ? 'משחק חדש מההתחלה' : 'מצב סיפור — משחק חדש'}</button>
         <button class="btn ghost" id="m-free">אימונים חופשיים</button>
+        <button class="btn ghost" id="m-role">🎭 מצב תפקיד — לשחק בתור מישהו מהפלגה</button>
         <button class="btn ghost" id="m-multi">🌐 מולטיפלייר — לשחק עם הפלגה</button>
         <button class="btn ghost" id="m-help">איך משחקים</button>
         <div class="audio-row"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button><button class="btn small ghost" data-fs="text"></button></div>
@@ -753,6 +754,7 @@ const Game = {
     };
     $('#m-help').onclick = () => this.help(false);
     $('#m-multi').onclick = () => { Sound.unlock(); this.multiMenu(); };
+    $('#m-role').onclick = () => { Sound.unlock(); Roles.menu(); };
     // Opened from an invite link: straight to choosing who you are.
     if (Lobby.invited() && !this.invitedOnce) { this.invitedOnce = true; this.multiMenu(); }
     for (const b of document.querySelectorAll('[data-audio]')) b.onclick = () => this.toggleAudio(b.dataset.audio);

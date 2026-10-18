@@ -265,6 +265,7 @@ const Story = {
 
   planFor(day) {
     const S = G.state;
+    if (Roles.current()) return Roles.planFor(day);
     if (S.mode === 'story' && S.graduated && !S.wentHome) return FINAL_DAY;
     if (S.mode === 'story' && !S.graduated && DAYS[Math.min(day, 5)]) {
       const d = DAYS[S.examRetry ? 5 : Math.min(day, 5)];
@@ -433,6 +434,7 @@ const Story = {
       if (this.has('snack') && !this.has('find_lock')) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, 'לפתוח את ארונית החטיפים הסודית', () => this.openSnack(), 40);
       else if (Multi.on) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 להעיר את צ\'יזבורגרו — קרב עם כל מי שבשו"ב', () => Boss.startCoop(), 40);
       Events.interactables(add);
+      Roles.interactables(add);
       return list;
     }
     if (World.id === 'field') {
@@ -456,6 +458,7 @@ const Story = {
 
     if (!P.carry) add(SPOTS.dining.x, SPOTS.dining.y, 'לאכול', () => this.eat(), 40);
     Events.interactables(add);
+    Roles.interactables(add);
     if (this.has('lock_gate') && !this.has('boss')) add(SPOTS.gate.x, SPOTS.gate.y, 'לנעול את השער עם המנעול', () => this.lockGate(), 50);
     add(SPOTS.hamal.x, SPOTS.hamal.y, 'עמדת בקרה', () => this.radarShift(), 40);
     add(SPOTS.board.x, SPOTS.board.y, 'לוח אימונים', () => this.trainingMenu(), 40);
@@ -810,7 +813,14 @@ const Story = {
       driver1: ['דבאי, תנהג[/י] את[ה/]. אני רואה רק במראות, ובמראות רואים רק אותך.', 'ההגה שלך. אם יש שריטה — זה עליך.'],
       driver2: ['[קח/קחי] את ההגה, [אחי/אחותי]. שבע דקות, כמו שאני הייתי עושה.', 'אני עם הפלייליסט, את[ה/] עם ההגה. דיל.'],
     }[tr.driver];
-    UI.talk([{ who: tr.driver, text: `${pick(lines)} יש לי פה: ${tr.item.name}.` }]);
+    UI.talk([{ who: tr.driver, text: `${pick(lines)} יש לי פה: ${tr.item.name}.`, choices: [
+      { label: '🔒 לחגור חגורה', value: 1 },
+      { label: 'בלי חגורה — זה רק מאתיים מטר', value: 0 },
+    ] }]).then(v => {
+      if (v) return;
+      UI.toast('🚨 בלי חגורה! מישהו מהלשכה ראה...', 'bad');
+      Events.charge('belt');
+    });
   },
 
   // ---------- at the controls ----------
@@ -1040,7 +1050,7 @@ const Story = {
     if (!S.dayFlags.nightDone) {
       S.dayFlags.nightDone = true;
       const r = Math.random();
-      if (r < 0.05 && Cast.get('commander') && Events.orinDance) { await Events.orinDance(); }
+      if (r < 0.05 && Cast.get('commander') && !Multi.taken().has('commander')) { await Events.orinDance(); }
       else if (r < 0.05 + 0.33) {
         await UI.cutscene([{ img: 'assets/redalert.jpg', who: '', text: '02:13. הטלפונים מצפצפים, האורות נדלקים. "הקפצה! צבע אדום — תרגיל!"' }]);
         this.alert(true, 'night-drill');
@@ -1211,6 +1221,7 @@ const Story = {
     const r = await Mini.open('guard', { duration: 60 });
     if (!r.asleep && r.errors === 0) Game.achieve('awake');
     this.complete('guard', r.asleep ? -10 : r.score, r.asleep ? 'נרדמת בשמירה!' : 'שמירת לילה');
+    if (r.asleep) Events.charge('post');
     S.clock = Math.max(S.clock, 24 * 60);
     Game.addStat('energy', -25);
     UI.toast('המשמרת נגמרה. ללכת לישון!');
@@ -1305,7 +1316,7 @@ const Story = {
       Sound.gate();
       car.state = 'entering';
       if (v.ok) Game.addScore(gs.drill ? 1 : 3, 'רכב מורשה נכנס');
-      else { gs.mistakes++; Game.addScore(-8, 'הכנסת רכב לא מורשה!'); }
+      else { gs.mistakes++; Game.addScore(-8, 'הכנסת רכב לא מורשה!'); if (!gs.drill) Events.charge('gate'); }
     } else {
       car.state = 'leaving';
       if (v.ok) { gs.mistakes++; Game.addScore(-3, 'סירבת לרכב מורשה'); }
@@ -1498,10 +1509,11 @@ const Story = {
     f.classList.remove('on');
     await UI.cutscene([
       { img: 'assets/boss1.jpg', who: '{@@deputy_rasap}', text: 'זה המנעול האחרון בסוללה. והוא שלי. כמו הבמבה. כמו הביסלי. כמו כל מה שבארונית הזאת.' },
-      { img: 'assets/boss2.jpg', who: '{@@deputy_rasap}', text: 'אתם רוצים יציאה הביתה?! אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*' },
+      { img: 'assets/boss2.jpg', voice: 'assets/audio/boss/intro.mp3', who: '{@@deputy_rasap}', text: 'אתם רוצים יציאה הביתה?! אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*' },
       { img: 'assets/boss3.jpg', who: '', text: '{@deputy_rasap} הפך לצ\'יזבורגרו — מפלצת צ\'יזבורגר ענקית! רק דבר אחד מפחיד אותו: אוכל בריא. [אסוף/אספי] ברוקולי, גזר, תפוחים, מלפפונים, פריכיות וחטיפי חלבון — ו[זרוק/זרקי] עליו (E)!' },
     ]);
     this.complete('snack', 0);
+    Boss.introAt = Date.now();
     Boss.start();
   },
   async lockGate() {

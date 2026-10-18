@@ -245,6 +245,17 @@ const Sound = (() => {
     setMusic(on) { prefs.music = on; savePrefs(); applyVolumes(); },
     setVolume(kind, v) { prefs[kind + 'Vol'] = v; savePrefs(); applyVolumes(); },
     music(mood) { if (!ensure()) return; Music.set(mood); },
+    // Recorded voice lines (mp3). A new line cuts off the one still playing.
+    voice(src) {
+      if (!prefs.sfx) return;
+      try {
+        if (this._voice) this._voice.pause();
+        const a = this._voice = new Audio(src);
+        a.volume = Math.min(1, prefs.sfxVol * 1.1);
+        a.play().catch(() => {});
+      } catch (e) { /* autoplay may be blocked */ }
+    },
+    stopVoice() { if (this._voice) { this._voice.pause(); this._voice = null; } },
     _music: Music,
     STYLES: { lofi: 'לו-פיי רגוע', mizrahi: 'מזרחית', ambient: 'אווירה שקטה' },
     get style() { return Music.style(); },

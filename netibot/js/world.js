@@ -141,6 +141,7 @@ const World = {
       prop('fridge', 57.1, 26.1, 0.9, 0.8);
       prop('stove', 55.9, 26.1, 1.0, 0.7);
       prop('counter', 39.2, 35.6, 3.6, 0.55);
+      prop('shekemwall', 39.02, 36.9, 3.96, 0.08, false);
       // The gym: a weights rack, benches and a treadmill nobody has fixed since 2019.
       prop('gymrack', 46.4, 38.6, 3.2, 0.7);
       prop('bench', 47.3, 36.6, 0.6, 1.5);

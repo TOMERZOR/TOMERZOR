@@ -151,6 +151,9 @@ const DATA = {
   ],
 
   achievements: [
+    { id: 'baum_boss', name: 'מזרחית מנצחת', desc: 'הבסת את מפקדת הסוללה עם קריוקי וגרעינים' },
+    { id: 'harasar_boss', name: 'אין לו מה להגיד', desc: 'הבסת את הרס"ר עם תלבושת מושלמת' },
+    { id: 'orin_dance', name: 'אף אחד לא יאמין', desc: 'המפקדת העירה רק אותך באמצע הלילה ורקדה' },
     { id: 'beret', name: 'כומתה כחולה', desc: 'סיימת טירונות וקיבלת כומתה' },
     { id: 'first_shelter', name: 'בזמן!', desc: 'הגעת למיגונית בזמן בצבע אדום' },
     { id: 'speedy', name: 'ברק', desc: 'הגעת למיגונית בפחות מ-10 שניות' },
@@ -321,12 +324,44 @@ const DATA = {
 
   // Healthy weapons against the cheeseburger monster, and what hurts him most about each.
   healthy: [
-    { id: 'broccoli', name: 'ברוקולי', icon: '🥦', color: 0x3f8f2f, hit: 'אוי לא! סיבים תזונתיים!' },
-    { id: 'ricecake', name: 'פריכיות', icon: '🍘', color: 0xe8d6a0, hit: 'אוי לא! מזון לא מעובד!' },
-    { id: 'protein', name: 'חטיף חלבון', icon: '💪', color: 0x7a4a2a, hit: 'רק לא זה! דל סוכר!' },
-    { id: 'carrot', name: 'גזר', icon: '🥕', color: 0xe8781f, hit: 'בטא־קרוטן?! העיניים שלי רואות טוב מדי!' },
-    { id: 'apple', name: 'תפוח', icon: '🍎', color: 0xd8261f, hit: 'תפוח ביום — ואני בבית חולים!' },
-    { id: 'cucumber', name: 'מלפפון', icon: '🥒', color: 0x4f9e33, hit: 'מים! הרבה מים! אני מתייבש מבריאות!' },
+    { id: 'broccoli', dmg: 9, name: 'ברוקולי', icon: '🥦', color: 0x3f8f2f, hit: 'אוי לא! סיבים תזונתיים!' },
+    { id: 'ricecake', dmg: 8, name: 'פריכיות', icon: '🍘', color: 0xe8d6a0, hit: 'אוי לא! מזון לא מעובד!' },
+    { id: 'protein', dmg: 10, name: 'חטיף חלבון', icon: '💪', color: 0x7a4a2a, hit: 'רק לא זה! דל סוכר!' },
+    { id: 'carrot', dmg: 8, name: 'גזר', icon: '🥕', color: 0xe8781f, hit: 'בטא־קרוטן?! העיניים שלי רואות טוב מדי!' },
+    { id: 'apple', dmg: 9, name: 'תפוח', icon: '🍎', color: 0xd8261f, hit: 'תפוח ביום — ואני בבית חולים!' },
+    { id: 'cucumber', dmg: 7, name: 'מלפפון', icon: '🥒', color: 0x4f9e33, hit: 'מים! הרבה מים! אני מתייבש מבריאות!' },
+  ],
+
+  // What the battery commander can't stand (she's Ashkenazi), for her boss fight.
+  mizrahi: [
+    { id: 'karaoke', dmg: 11, name: 'ערכת קריוקי', icon: '🎤', color: 0xd63384, hit: 'לא! רק לא "מאמי, מאמי"! אני שומעת רק שופן!' },
+    { id: 'seeds', dmg: 7, name: 'גרעינים שחורים', icon: '🌻', color: 0x1f1f1f, hit: 'קליפות! על הדרגות שלי?!' },
+    { id: 'bibi', dmg: 10, name: 'פוסטר של ביבי', icon: '🖼️', color: 0x1d4fa8, hit: '"כפרה עליך"?! אני מצביעה מרצ!' },
+    { id: 'babasali', dmg: 12, name: 'תמונה של הבבא סאלי', icon: '🕯️', color: 0xc9a227, hit: 'ברכה?! אני לא צריכה ברכה, אני צריכה נוהל!' },
+  ],
+  // What a battery sergeant major has nothing to say about, for his.
+  uniform: [
+    { id: 'boots', dmg: 9, name: 'נעליים מצוחצחות', icon: '👞', color: 0x111111, hit: 'מבריק?! אני רואה בהן את הפנים שלי! אאאא!' },
+    { id: 'beret', dmg: 10, name: 'כומתה מקופלת', icon: '🎖️', color: 0x4a6fa5, hit: 'כומתה מקופלת כמו בספר! לא!' },
+    { id: 'razor', dmg: 8, name: 'גילוח מושלם', icon: '🪒', color: 0xc0c0c0, hit: 'חלק?! אין לי על מה לרשום!' },
+    { id: 'belt', dmg: 9, name: 'חגור', icon: '🎗️', color: 0x3c4822, hit: 'יש לו חגור?! זה לא קרה אף פעם!' },
+  ],
+
+  // Made-up characters who live in the world like the cast does.
+  extras: [
+    {
+      id: 'shekemist', map: 'hq', name: "ז'אן-פייר דה־לה־קנטין", short: "ז'אן-פייר", first: "ז'אן-פייר", head: 'none', emoji: '🥐', color: '#2b4c8c',
+      title: 'השקמיסט · עלה מפריז, נתקע בש"ק של {hq}',
+      lines: [
+        'בונז\'ור! ברוך הבא לש"ק. פה זה לא פריז, אבל הבמבה טרייה. כמעט.',
+        'בפריז היה לי בית קפה ליד הסן. פה יש לי מקרר של קולה ליד הדשא. זה גם רומנטי, בדרכו.',
+        'קרואסון? אין. אבל יש בורקס של אתמול, ובצרפתית קוראים לזה "וינטאז\'".',
+        'אני לא מבין למה כולם קונים אנרגיה בשתיים בלילה. אצלנו בצרפת ישנים. ואז שובתים.',
+        'אומלט דו פרומאז\'! ...לא, סתם. יש רק טוסט. אבל אני אגיד את זה במבטא.',
+        'מי שמשלם במזומן מקבל "מרסי". מי שמשלם בביט מקבל "מרסי" יותר מהר.',
+      ],
+      barks: ['בונז\'ור!', 'אוֹ לָה לָה, איזה תור', 'סה לה וי 🥐', 'מרסי, מרסי'],
+    },
   ],
 
   // Voices that are not part of the cast.

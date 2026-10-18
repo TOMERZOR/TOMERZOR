@@ -44,6 +44,8 @@ const Events = {
     if (story ? day === 2 : Math.random() < 0.5) S.dayFlags.techAt = story ? 15 * 60 : (13 + Math.random() * 4) * 60;
     // Ofek drinks three litres a day for the creatine. Some day around noon he'll need you.
     if (day >= 2 && Math.random() < 0.5) S.dayFlags.ofekAt = (11 + Math.random() * 4) * 60;
+    // Last night the commander danced in front of you. Try telling someone.
+    if (S.flags.orinDanced) { S.flags.orinDanced = false; S.dayFlags.orinTell = true; }
     // Every morning the meter settles a bit lower the closer going home is.
     S.shchora = Math.max(this.base(), Math.min(100, S.shchora - 6));
   },
@@ -64,6 +66,8 @@ const Events = {
     if (S.dayFlags.techAt && S.clock >= S.dayFlags.techAt && !S.dayFlags.tech && free && World.id === 'netivot') this.startTech();
     if (this.tech) this.updateTech(dt);
     if (S.dayFlags.ofekAt && S.clock >= S.dayFlags.ofekAt && !S.dayFlags.ofek && free && World.id === 'netivot') this.ofekCalls();
+    if (S.flags.charges && S.flags.charges.length && free && S.flags.chargedDay !== S.day && S.clock >= 9 * 60 && !S.dayFlags.trial) { S.dayFlags.trial = true; this.trial(); }
+    if (S.dayFlags.orinTell && free && S.clock >= 7 * 60 + 10) { S.dayFlags.orinTell = false; this.nobodyBelieves(); }
     this.watchBaum();
     if (this.baum) this.updateBaum(dt);
     if (this.chores) this.updateChores(dt);
@@ -76,10 +80,105 @@ const Events = {
       this.fart(arad);
     }
   },
+  // ---------- discipline: a trial before the battery commander ----------
+  CHARGES: {
+    gate: 'הכנסת אדם לא מורשה לאתר',
+    belt: 'נסיעה ברכב צבאי בלי חגורת בטיחות',
+    post: 'הפקרת עמדת שמירה',
+  },
+  charge(kind) {
+    const S = G.state;
+    S.flags = S.flags || {};
+    S.flags.charges = S.flags.charges || [];
+    if (S.flags.charges.includes(kind)) return;
+    S.flags.charges.push(kind);
+    S.flags.chargedDay = S.day;
+    UI.toast(`📋 נפתח לך תיק: ${this.CHARGES[kind]}. מחר — משפט אצל {@bc}`, 'bad');
+  },
+  async trial() {
+    const S = G.state;
+    const list = S.flags.charges.slice();
+    S.flags.charges = [];
+    Sound.horn();
+    await UI.cutscene([{ img: '', who: '', text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו." — דקה אחר כך [אתה/את] בדום מול השולחן שלה.' }]);
+    await UI.talk([
+      { who: 'bc', text: 'שב[/י]. לא, [תעמוד/תעמדי]. אני פותחת את התיק.' },
+      ...list.map((k, i) => ({ who: 'bc', text: `סעיף ${i + 1}: ${this.CHARGES[k]}.${k === 'belt' ? ' מאתיים מטר זה מספיק כדי להתהפך. שאלו את המשאית של 2019.' : k === 'gate' ? ' את[ה/] יודע[/ת] מי זה היה? גם אני לא. זאת הבעיה.' : ' עמדה בלי שומר זה סתם כיסא עם נוף.'}` })),
+    ]);
+    const plea = await UI.talk([{ who: 'bc', text: 'מה יש לך להגיד להגנתך?', choices: [
+      { label: '🙏 להודות ולהתנצל', value: 'admit' },
+      { label: '🎭 "זה היה תרגיל"', value: 'drill' },
+      { label: `👉 להאשים את {@p_liran}`, value: 'blame' },
+    ] }]);
+    let level = list.length > 1 ? 2 : 1; // 0 acquitted · 1 reprimand · 2 confined · 3 harsh
+    let reply;
+    if (plea === 'admit') { level = Math.max(1, level - 1); reply = 'הודאה זה התחלה טובה. לא הייתי מוותרת לך, אבל קמתי היום במצב רוח.'; }
+    else if (plea === 'drill' && Math.random() < 0.35) { level = 0; reply = '...תרגיל. של מי? ...אתה יודע מה, אין לי כוח לבדוק. זוכה[/ת]. צא[/י] לפני שאני מתחרטת.'; }
+    else if (plea === 'drill') { level++; reply = 'אני בונה את התרגילים בסוללה. את התרגיל הזה לא בניתי.'; }
+    else if (Math.random() < 0.5) { level = Math.max(0, level - 1); reply = '{@p_liran}? ...כן, זה נשמע כמוהו. אני ארשום גם אותו. את[ה/] — עם נזיפה.'; }
+    else { level++; reply = '{@p_liran} היה איתי בלשכה כל הבוקר. עכשיו יש לך גם סעיף של העלאת עלילה.'; }
+    await UI.talk([{ who: 'bc', text: reply }]);
+    const verdicts = [
+      ['זוכה[/ת] מכל האשמות. 🎉', () => { Game.addStat('morale', 8); }],
+      ['נזיפה, ורישום בתיק האישי.', () => { Game.addScore(-3, 'נזיפה ממפקדת הסוללה'); Game.addStat('morale', -4); }],
+      ['ריתוק לבסיס — היציאה הביתה נדחית ביום.', () => { S.homeDay = (S.homeDay || DATA.homeDay) + 1; Game.addScore(-6, 'ריתוק'); Game.addStat('morale', -8); }],
+      ['ריתוק, ו־7 ימי מחבוש על תנאי. ושבוע תורנות מטבח.', () => { S.homeDay = (S.homeDay || DATA.homeDay) + 1; Game.addScore(-10, 'משפט אצל מפקדת הסוללה'); Game.addStat('morale', -12); this.addShchora(10, 'משפט'); }],
+    ];
+    const [text, apply] = verdicts[Math.min(3, level)];
+    apply();
+    level ? Sound.bad() : Sound.good();
+    await UI.talk([{ who: 'bc', text: `גזר הדין: ${text}` }]);
+  },
+
+  // 5% of nights: the commander wakes only you, dances, and says things nobody will believe.
+  async orinDance() {
+    const P = G.player;
+    let n = Game.npc('commander');
+    const visitor = !n;
+    const spot = { x: P.x + Math.cos(P.angle || 0) * 1.6 * TS, y: P.y + Math.sin(P.angle || 0) * 1.6 * TS };
+    if (World.blocked(spot.x, spot.y, 10)) { spot.x = P.x; spot.y = P.y + 1.6 * TS; }
+    if (visitor) n = Game.addVisitor('commander', spot);
+    if (!n) return;
+    const keep = { x: n.x, y: n.y, wander: n.wander, spot: { ...n.spot } };
+    n.x = n.spot.x = spot.x; n.y = n.spot.y = spot.y; n.path = []; n.wander = null;
+    n.angle = Math.atan2(P.y - n.y, P.x - n.x);
+    await UI.cutscene([{ img: '', who: '', text: '03:40. מישהו מנער לך את הכתף. רק לך — כל השאר ישנים. זאת {@commander}. היא מחייכת. ואז היא מתחילה... לרקוד?' }]);
+    n.dancing = true;
+    Sound.music('deploy');
+    const said = [
+      'את[ה/] רוצה לדעת למה יצאתי לקורס קצינים? בשביל הכומתה. רק בשביל הכומתה. וגם כי שמעתי שבבה"ד 1 יש פיצה.',
+      'אני בכלל רציתי להיות פלגצ\'ית. כמוך. עד היום אני מתאמנת בלילה על פריסת אתרים עם לגו.',
+      'לוח המשמרות? אני לא באמת יודעת לקרוא אותו. אני רק מצביעה ונראית בטוחה.',
+      '"ליבת המיירט" — המצאתי את זה. אין דבר כזה. כולם מהנהנים.',
+      'אני אוהבת את הצבע אדום. באמת. זה הזמן היחיד ששקט לי בראש.',
+      'פעם בשבוע אני רוקדת ככה מול מישהו אחר מהפלגה. אף אחד מהם לא הצליח לשכנע אף אחד.',
+    ].sort(() => Math.random() - 0.5).slice(0, 3);
+    await UI.talk([
+      ...said.map(t => ({ who: 'commander', text: '*רוקדת* ' + t })),
+      { who: 'commander', text: 'ועכשיו לישון. ובבוקר — זה לא קרה. ואם תספר[/י], אף אחד לא יאמין לך. 😉', choices: [{ label: '...לחזור לישון', value: 1 }] },
+    ]);
+    n.dancing = false;
+    if (visitor) Game.removeVisitor('commander');
+    else { n.x = keep.x; n.y = keep.y; n.spot = keep.spot; n.wander = keep.wander; }
+    G.state.flags.orinDanced = true;
+    Game.achieve('orin_dance');
+  },
+  async nobodyBelieves() {
+    const S = G.state;
+    const who = ['friend', 'p_liran', 'p_shaked', 'p_nevo'].find(id => Cast.get(id) && !Multi.taken().has(id)) || 'friend';
+    const v = await UI.talk([{ who: 'player', text: 'אני חייב[/ת] לספר למישהו מה קרה בלילה...', choices: [{ label: `לספר ל{@${who}}`, value: 1 }, { label: 'לשתוק', value: 0 }] }]);
+    if (!v) return;
+    await UI.talk([
+      { who: 'player', text: '{@commander} העירה אותי בשלוש בלילה, רקדה מולי ואמרה שהיא יצאה לקורס קצינים בשביל הכומתה!' },
+      { who, text: pick(['כן בטח. וגם {@@bc} עשתה לך טיקטוק?', 'אחי, זה הקריאטין של {@p_ofek}. אמרתי לך לא לשתות מהבקבוק שלו.', 'חלמת. גם אני חלמתי פעם ש{@harasar} חייך.', '{@commander}? רוקדת? היא אפילו לא מזיזה את הראש בהקפצה.']) },
+      { who: 'player', text: '...אף אחד לא מאמין לי.' },
+    ]);
+    Game.addStat('morale', -2);
+  },
   async ofekCalls() {
     const S = G.state;
     S.dayFlags.ofek = true;
-    if (Multi.on && Multi.taken().has('p_ofek')) return; // a real Ofek can go by himself
+    if (Multi.taken().has('p_ofek')) return; // a real Ofek can go by himself
     Sound.pop();
     await UI.talk([
       { who: 'p_ofek', text: '*בקשר* {name}, {name}, כאן {@p_ofek} מהעמדה. [תחליף/תחליפי] אותי רגע? הקריאטין. שלושה ליטר מים. זה מגיע.' },
@@ -90,6 +189,7 @@ const Events = {
   },
   async swapOfek() {
     const r = await Mini.open('guard', { duration: 25 });
+    if (r.asleep) this.charge('post');
     await UI.talk([{ who: 'p_ofek', text: r.success ? '*חוזר מנגב ידיים* חזרתי. אתה גיבור. אני ארשום אותך בתחקיר — בקטע טוב.' : '*חוזר* ...נרדמת בעמדה? בגללי? אני אכתוב תחקיר. על שנינו.' }]);
     Story.complete('ofek_swap', r.success ? 4 : 0, 'החלפת את {@p_ofek} בשמירה');
     Game.addStat('morale', 3);
@@ -169,6 +269,16 @@ const Events = {
         { who: 'interceptors', text: 'שימלא בעט. לא בפחם. ולא על קיר המערה.' },
       ]);
       UI.toast('קיבלת טופס הקצאה 📝 — להביא ל{@p_liran}', 'good');
+      return true;
+    }
+    if (n.id === 'harasar' && World.id === 'hq' && S.day >= 2 && !S.flags.harasarBoss && !S.dayFlags.harasarDare && !Boss.active) {
+      S.dayFlags.harasarDare = true;
+      const v = await UI.talk([{ who: 'harasar', text: 'מי בלי חגור?! ...את[ה/]. נעליים עם חול, כומתה בכיס, זיפים. שלושה דו"חות.', choices: [
+        { label: 'לקבל את הדו"חות בשקט', value: 0 },
+        { label: '🥊 "הרס"ר, יש לי חגור. [תסתכל/תסתכל] טוב."', value: 1 },
+      ] }]);
+      if (v) Boss.startOther('harasar');
+      else { Game.addStat('morale', -3); UI.toast('📋 שלושה דו"חות תלבושת', 'bad'); }
       return true;
     }
     if (n.id === 'p_arad' && Math.random() < 0.5) { this.fart(n); return false; }
@@ -403,6 +513,11 @@ const Events = {
     // What stayed hidden turns into a feast tonight.
     G.state.dayFlags.feast = b.food.length - seen.length;
     this.baum = null;
+    // p_liran can't keep it to himself, and she has never been told anything worse.
+    if (!b.coop && !G.state.flags.baumBoss && Cast.get('p_liran') && !Multi.taken().has('p_liran') && Math.random() < 0.5) {
+      Boss.startOther('baum');
+      return;
+    }
     Game.setNpcSpot('bc', SPOTS.gate);
     setTimeout(() => Game.removeVisitor('bc'), 9000);
   },

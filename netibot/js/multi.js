@@ -69,6 +69,7 @@ const Multi = {
   taken() {
     const ids = new Set(this.peers.map(p => p.who));
     if (this.on && this.as) ids.add(this.as);
+    if (G.state && G.state.role) ids.add(G.state.role); // role mode: you are them
     return ids;
   },
   here() { return this.peers.filter(p => p.site === World.id); },

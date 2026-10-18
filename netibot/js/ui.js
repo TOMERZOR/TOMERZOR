@@ -15,7 +15,7 @@ const el = (tag, attrs = {}, html = '') => {
 const Cast = {
   byId: {},
   init() {
-    for (const p of [...ROSTER.people, ROSTER.easterEgg]) this.byId[p.id] = p;
+    for (const p of [...ROSTER.people, ROSTER.easterEgg, ...DATA.extras]) this.byId[p.id] = p;
   },
   get(id) { return this.byId[id]; },
   short(id) { const p = this.byId[id]; return p ? p.short : id; },
@@ -250,6 +250,7 @@ const UI = {
         s.innerHTML = `<div class="cutscene">${sl.img ? `<img src="${sl.img}" alt="">` : ''}
           <div class="cap">${who}<div>${fmt(sl.text)}</div><div class="next">${i + 1}/${slides.length} ◂</div></div></div>`;
         s.querySelector('.cutscene').onclick = next;
+        if (sl.voice) Sound.voice(sl.voice);
       };
       const next = () => { Sound.click(); i++; show(); };
       const onKey = (e) => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); next(); } };

@@ -852,7 +852,7 @@ const Game = {
           ${room.lobby ? '' : '<br><small>כאן ב־claude.ai הלובי לא זמין, אז כדי לשחק עם מי שנכנס מהקישור — [תפתח/תפתחי] גם את[ה/] את הקישור.</small>'}
           <div class="invite-row"><input type="text" readonly id="mm-link" value="${esc(link)}"><button class="btn small" id="mm-share">📤 שלח בוואטסאפ</button><button class="btn small ghost" id="mm-copy">📋 העתק</button></div></div>` : ''}
         <p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => esc(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
-        <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}"><div class="big">${p.emoji}</div><div class="nm">${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
+        <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}">${faceUrl(p.id) ? `<img class="card-face" src="${faceUrl(p.id)}" alt="">` : `<div class="big">${p.emoji}</div>`}<div class="nm">${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
         <div class="actions"><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
       $('#mm-back').onclick = () => this.title();
       if (link) {

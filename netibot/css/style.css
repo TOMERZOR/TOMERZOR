@@ -244,6 +244,10 @@ input[type=text] {
 .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; }
 .swatch.sel { border-color: var(--gold); }
 
+/* The cast's cartoon portraits and the scene art can't be long-pressed, dragged or
+   right-clicked to save: they ignore the pointer, so the tap goes to what's behind them. */
+img.face, img.card-face, .cutscene img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+
 /* Cutscene */
 .cutscene { position: fixed; inset: 0; background: #000; display: flex; align-items: flex-end; justify-content: center; }
 .cutscene img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: kenburns 14s ease-out forwards; }

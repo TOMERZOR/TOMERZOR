@@ -600,8 +600,8 @@ const Story = {
       await this.radarShift();
     } else if (id === 'harasar' && !S.dayFlags.uniform) {
       S.dayFlags.uniform = true;
-      await UI.talk([{ who: 'harasar', text: 'בדיקת לבוש! עמוד[/י] ישר. ...מה זה החגור הזה? ליישר. מהר!' }]);
-      const r = await Mini.open('qte', { title: 'יישור מדים מול הרס"ר', sub: 'חגור, כומתה, שרוולים. [הקש/הקישי] מהר!', length: 4, time: 5, silent: true });
+      await UI.talk([{ who: 'harasar', text: 'בדיקת לבוש! עמוד[/י] ישר. ...איפה החוגר? להוציא. מהר!' }]);
+      const r = await Mini.open('qte', { title: 'יישור מדים מול הרס"ר', sub: 'חוגר, כומתה, שרוולים. [הקש/הקישי] מהר!', length: 4, time: 5, silent: true });
       await UI.talk([{ who: 'harasar', text: r.success ? 'טוב. הפעם. אני עוד אמצא משהו. אני תמיד מוצא.' : 'הכומתה על הכתף, השרוולים מגולגלים, ובנעליים יש חוף שלם. [לך/לכי] לתקן.' }]);
       Game.addScore(r.success ? 3 : -2, r.success ? 'עברת בדיקת לבוש' : 'נכשלת בבדיקת לבוש');
     } else if (World.id === 'field' && (id === 'driver1' || id === 'driver2') && this.deployTruck && this.deployTruck.state === 'waiting') {

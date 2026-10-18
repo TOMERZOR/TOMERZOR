@@ -100,10 +100,13 @@ const Events = {
     const list = S.flags.charges.slice();
     S.flags.charges = [];
     Sound.horn();
-    await UI.cutscene([{ img: '', who: '', text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו." — דקה אחר כך [אתה/את] בדום מול השולחן שלה.' }]);
+    await UI.cutscene([{ img: Assets.scene('trial'), who: '', text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו." — דקה אחר כך [אתה/את] בדום מול השולחן שלה. ליד הדלת עומד {@harasar}, ידיים שלובות.' }]);
+    const back = await this.toOffice();
     await UI.talk([
       { who: 'bc', text: 'שב[/י]. לא, [תעמוד/תעמדי]. אני פותחת את התיק.' },
+      { who: 'harasar', text: '...ותעמוד[/י] ישר. מול מפקדת סוללה לא נשענים.' },
       ...list.map((k, i) => ({ who: 'bc', text: `סעיף ${i + 1}: ${this.CHARGES[k]}.${k === 'belt' ? ' מאתיים מטר זה מספיק כדי להתהפך. שאלו את המשאית של 2019.' : k === 'gate' ? ' את[ה/] יודע[/ת] מי זה היה? גם אני לא. זאת הבעיה.' : ' עמדה בלי שומר זה סתם כיסא עם נוף.'}` })),
+      { who: 'harasar', text: 'ואם מותר לי, המפקדת: גם בלי חוגר. רשמתי.' },
     ]);
     const plea = await UI.talk([{ who: 'bc', text: 'מה יש לך להגיד להגנתך?', choices: [
       { label: '🙏 להודות ולהתנצל', value: 'admit' },
@@ -127,7 +130,50 @@ const Events = {
     const [text, apply] = verdicts[Math.min(3, level)];
     apply();
     level ? Sound.bad() : Sound.good();
-    await UI.talk([{ who: 'bc', text: `גזר הדין: ${text}` }]);
+    await UI.talk([{ who: 'bc', text: `גזר הדין: ${text}` }, { who: 'harasar', text: level ? 'בוא[/י], אני מלווה אותך החוצה. ...ולסגור את הכפתור העליון.' : '...זוכה[/ת]. טוב. אבל אני עוד אתפוס אותך.' }]);
+    await this.leaveOffice(back);
+  },
+  // The trial is held in the commander's office at HQ: she stands at her desk, the
+  // sergeant-major by the door, and you in front of her. Anyone away at a site is brought
+  // over for it and sent back after.
+  toOffice() {
+    // Busy through the walk over, so no other event or boss starts in between.
+    UI.busy = true;
+    return new Promise(done => UI.fade(() => {
+      const P = G.player;
+      const back = { map: World.id, x: P.x, y: P.y };
+      if (P.carry) P.carry = false;
+      if (World.id !== 'hq') Game.switchMap('hq');
+      const place = (id, tx, ty) => {
+        const at = { x: tx * TS, y: ty * TS };
+        const n = Game.npc(id) || Game.addVisitor(id, at);
+        if (!n) return;
+        back[id] = { ...n.spot };
+        n.x = at.x; n.y = at.y; n.path = []; n.spot = at;
+        n.angle = Math.atan2(P.y - n.y, P.x - n.x);
+      };
+      P.x = 26 * TS; P.y = 7.9 * TS; P.angle = -Math.PI / 2;
+      Scene3D.yaw = 0; Scene3D.camX = undefined;
+      place('bc', 26, 6.55);
+      place('harasar', 24.3, 7.5);
+      setTimeout(() => {
+        // The idle clip looks around; while the dialog holds the frame, hold them at its
+        // start, looking straight at you.
+        for (const [n, m] of Scene3D.models) if ((n.id === 'bc' || n.id === 'harasar') && m.acts && m.acts.idle) { m.acts.idle.time = 0.3; m.mixer.update(0); }
+        done(back);
+      }, 500);
+    }));
+  },
+  leaveOffice(back) {
+    for (const id of ['bc', 'harasar']) if (back[id]) Game.setNpcSpot(id, back[id]);
+    if (back.map === 'hq') return;
+    UI.busy = true;
+    return new Promise(done => UI.fade(() => {
+      Game.switchMap(back.map);
+      G.player.x = back.x; G.player.y = back.y;
+      UI.busy = false;
+      done();
+    }));
   },
 
   // 5% of nights: the commander wakes only you, dances, and says things nobody will believe.
@@ -142,7 +188,7 @@ const Events = {
     const keep = { x: n.x, y: n.y, wander: n.wander, spot: { ...n.spot } };
     n.x = n.spot.x = spot.x; n.y = n.spot.y = spot.y; n.path = []; n.wander = null;
     n.angle = Math.atan2(P.y - n.y, P.x - n.x);
-    await UI.cutscene([{ img: '', who: '', text: '03:40. מישהו מנער לך את הכתף. רק לך — כל השאר ישנים. זאת {@commander}. היא מחייכת. ואז היא מתחילה... לרקוד?' }]);
+    await UI.cutscene([{ img: Assets.scene('orin_dance'), who: '', text: '03:40. מישהו מנער לך את הכתף. רק לך — כל השאר ישנים. זאת {@commander}. היא מחייכת. ואז היא מתחילה... לרקוד?' }]);
     n.dancing = true;
     Sound.music('deploy');
     const said = [
@@ -273,9 +319,9 @@ const Events = {
     }
     if (n.id === 'harasar' && World.id === 'hq' && S.day >= 2 && !S.flags.harasarBoss && !S.dayFlags.harasarDare && !Boss.active) {
       S.dayFlags.harasarDare = true;
-      const v = await UI.talk([{ who: 'harasar', text: 'מי בלי חגור?! ...את[ה/]. נעליים עם חול, כומתה בכיס, זיפים. שלושה דו"חות.', choices: [
+      const v = await UI.talk([{ who: 'harasar', text: 'מי בלי חוגר?! ...את[ה/]. נעליים עם חול, כומתה בכיס, זיפים. שלושה דו"חות.', choices: [
         { label: 'לקבל את הדו"חות בשקט', value: 0 },
-        { label: '🥊 "הרס"ר, יש לי חגור. [תסתכל/תסתכל] טוב."', value: 1 },
+        { label: '🥊 "הרס"ר, יש לי חוגר. [תסתכל/תסתכל] טוב."', value: 1 },
       ] }]);
       if (v) Boss.startOther('harasar');
       else { Game.addStat('morale', -3); UI.toast('📋 שלושה דו"חות תלבושת', 'bad'); }

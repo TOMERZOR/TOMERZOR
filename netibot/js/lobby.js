@@ -76,7 +76,7 @@ const Lobby = {
       const real = JSON.parse(new TextDecoder().decode(plain));
       if (!real || !Array.isArray(real.people)) return;
       this.cryptoKey = key;
-      if (!ROSTER.example) { ROSTER.faces = real.faces; ROSTER.models = real.models; return; }
+      if (!ROSTER.example) { ROSTER.faces = real.faces; ROSTER.models = real.models; ROSTER.scenes = real.scenes; return; }
       ROSTER = real;
       ROSTER.example = false;
       try { localStorage.setItem('netibot.key', k); } catch (e) { /* ignore */ }

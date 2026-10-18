@@ -150,6 +150,23 @@ const Assets = {
     this.people[id] = { scene: g.scene, fit, walk };
     if (window.Scene3D && Scene3D.personReady) Scene3D.personReady(id);
   },
+  // Cutscene art of the real cast, encrypted the same way (ROSTER.scenes). Small, so it all
+  // loads up front; until it's in (or without the key) the slide just has no picture.
+  scenes: {},
+  loadScenes() {
+    const all = ROSTER.scenes || {};
+    if (!Lobby.cryptoKey) return Promise.resolve();
+    return Promise.all(Object.keys(all).map(async (name) => {
+      try {
+        const res = await fetch(`assets/people/${String(all[name]).replace(/[^a-f0-9]/g, '')}.bin`);
+        if (!res.ok) return;
+        const buf = new Uint8Array(await res.arrayBuffer());
+        const jpg = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
+        this.scenes[name] = URL.createObjectURL(new Blob([jpg], { type: 'image/jpeg' }));
+      } catch (e) { console.warn('scene', name, e); }
+    }));
+  },
+  scene(name) { return this.scenes[name] || ''; },
   walkFor(id) { return (id && this.people[id] && this.people[id].walk) || this.walkClip; },
 
   // ---------- animation retargeting ----------

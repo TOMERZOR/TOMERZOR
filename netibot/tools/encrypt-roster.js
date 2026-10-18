@@ -46,6 +46,22 @@ const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').re
     }
     console.log('models:', Object.keys(ROSTER.models).length);
   }
+  // Cutscene art that shows the real cast (tools/scenes/<name>.jpg, git-ignored) goes the same
+  // way, without the gzip: assets/people/<hash>.bin, listed in ROSTER.scenes.
+  const scenesIn = path.join(__dirname, 'scenes');
+  if (fs.existsSync(scenesIn)) {
+    ROSTER.scenes = {};
+    for (const f of fs.readdirSync(scenesIn)) {
+      const m = f.match(/^([\w-]+)\.jpg$/);
+      if (!m) continue;
+      const name = require('crypto').createHash('sha256').update(b64u(raw) + ':scene/' + m[1]).digest('hex').slice(0, 16);
+      const fiv = webcrypto.getRandomValues(new Uint8Array(12));
+      const enc = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv: fiv }, key, fs.readFileSync(path.join(scenesIn, f)));
+      fs.writeFileSync(path.join(peopleOut, name + '.bin'), Buffer.concat([Buffer.from(fiv), Buffer.from(enc)]));
+      ROSTER.scenes[m[1]] = name;
+    }
+    console.log('scenes:', Object.keys(ROSTER.scenes).length);
+  }
   const iv = webcrypto.getRandomValues(new Uint8Array(12));
   const data = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(ROSTER)));
   fs.writeFileSync(path.join(dir, 'js/roster.enc.js'),

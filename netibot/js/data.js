@@ -344,7 +344,7 @@ const DATA = {
     { id: 'boots', dmg: 9, name: 'נעליים מצוחצחות', icon: '👞', color: 0x111111, hit: 'מבריק?! אני רואה בהן את הפנים שלי! אאאא!' },
     { id: 'beret', dmg: 10, name: 'כומתה מקופלת', icon: '🎖️', color: 0x4a6fa5, hit: 'כומתה מקופלת כמו בספר! לא!' },
     { id: 'razor', dmg: 8, name: 'גילוח מושלם', icon: '🪒', color: 0xc0c0c0, hit: 'חלק?! אין לי על מה לרשום!' },
-    { id: 'belt', dmg: 9, name: 'חגור', icon: '🎗️', color: 0x3c4822, hit: 'יש לו חגור?! זה לא קרה אף פעם!' },
+    { id: 'belt', dmg: 9, name: 'חוגר', icon: '🪪', color: 0x3c4822, hit: 'יש לו חוגר?! זה לא קרה אף פעם!' },
   ],
 
   // Made-up characters who live in the world like the cast does.

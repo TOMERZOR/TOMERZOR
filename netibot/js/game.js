@@ -938,10 +938,14 @@ const Game = {
 };
 
 // Models and textures load first; the title screen shows progress meanwhile.
+// No "save image" menu or drag-out for any picture in the game (see img.face in the CSS).
+document.addEventListener('contextmenu', (e) => { if (e.target.closest('img, .cutscene')) e.preventDefault(); });
+document.addEventListener('dragstart', (e) => { if (e.target.tagName === 'IMG') e.preventDefault(); });
+
 window.addEventListener('load', () => {
   UI.screen('<div class="content"><div class="logo">נתי<span>בוט</span></div><div class="tagline" id="load-msg">טוען גרפיקה... 0%</div></div>');
   Promise.all([
     Assets.load(p => { const m = document.getElementById('load-msg'); if (m) m.textContent = `טוען גרפיקה... ${Math.round(p * 100)}%`; }),
     Lobby.unlock(),
-  ]).then(() => { Game.init(); Assets.loadPeople(); });
+  ]).then(() => { Game.init(); Assets.loadScenes(); Assets.loadPeople(); });
 });

@@ -1112,7 +1112,8 @@ const Scene3D = {
       m.root.position.set(ent.x * S3, 0, ent.y * S3);
       let d = -ent.angle - m.root.rotation.y;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      m.root.rotation.y += d * Math.min(1, dt * 12);
+      // While the game waits on a scene (dt 0) whoever was just placed turns at once.
+      m.root.rotation.y += d * (dt ? Math.min(1, dt * 12) : 1);
       if (m.mixer) {
         // Weights glide between idle, walk and run; the stride follows the real speed. The
         // mixer poses every bone from the clips each frame, so nothing builds up while paused.
@@ -1804,7 +1805,7 @@ const Scene3D = {
       else if (kind.id === 'boots') { for (const x of [-0.1, 0.1]) { this.box(0.14, 0.24, 0.16, this.mat(0x0c0c0c, { metalness: 0.6, roughness: 0.15 }), x, 0, 0, g); this.box(0.14, 0.08, 0.3, this.mat(0x0c0c0c, { metalness: 0.6, roughness: 0.15 }), x, -0.08, 0.08, g); } }
       else if (kind.id === 'beret') { const b = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 8), this.mat(kind.color)); b.scale.set(1, 0.3, 1); g.add(b); }
       else if (kind.id === 'razor') { this.box(0.06, 0.32, 0.04, this.mat(0x2f6fb5), 0, 0, 0, g); this.box(0.2, 0.05, 0.05, this.mat(0xd8d8d8, { metalness: 0.8 }), 0, 0.17, 0, g); }
-      else if (kind.id === 'belt') { const t = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 20), this.mat(kind.color)); t.rotation.x = Math.PI / 2; g.add(t); this.box(0.09, 0.07, 0.03, this.mat(0x111111), 0, 0, 0.2, g); }
+      else if (kind.id === 'belt') { this.box(0.34, 0.02, 0.22, this.mat(0xe9edf2), 0, 0, 0, g); this.box(0.1, 0.022, 0.13, this.mat(0x8a6a4a), -0.09, 0.002, 0, g); this.box(0.14, 0.022, 0.03, this.mat(0x2f6fb3), 0.07, 0.002, 0.05, g); this.box(0.14, 0.022, 0.02, this.mat(0x777777), 0.07, 0.002, -0.02, g); }
       else if (kind.id === 'broccoli') {
         this.cyl(0.06, 0.08, 0.3, this.mat(0x9fcf6a), 0, -0.1, 0, g, 6);
         for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), this.mat(kind.color)); b.position.set(Math.cos(i * 1.3) * 0.12, 0.1 + (i % 2) * 0.06, Math.sin(i * 1.3) * 0.12); g.add(b); }
@@ -1872,7 +1873,7 @@ const Scene3D = {
       }
     }
     need = Math.min(need, 1.38);
-    this.effPitch += (need - this.effPitch) * Math.min(1, dt * 6);
+    this.effPitch += (need - this.effPitch) * (dt ? Math.min(1, dt * 6) : 1);
     const p = this.effPitch;
     const c = this.camera;
     c.position.set(tx + sx * Math.cos(p) * this.dist, ty + Math.sin(p) * this.dist, tz + sz * Math.cos(p) * this.dist);

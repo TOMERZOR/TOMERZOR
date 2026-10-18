@@ -136,15 +136,17 @@ const Scene3D = {
     ground.receiveShadow = true;
     sc.add(ground);
     let sandTex = null;
-    if (Assets.images.sand) {
-      sandTex = new THREE.Texture(Assets.images.sand);
+    const green = World.id === 'hq';
+    const groundImg = green ? Assets.images.grass : Assets.images.sand;
+    if (groundImg) {
+      sandTex = new THREE.Texture(groundImg);
       sandTex.needsUpdate = true;
       sandTex.encoding = THREE.sRGBEncoding;
       sandTex.wrapS = sandTex.wrapT = THREE.RepeatWrapping;
       sandTex.repeat.set(1400 / 8, 1400 / 8);
       sandTex.anisotropy = 8;
     }
-    const desert = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), this.mat(sandTex ? 0xd8c9a8 : 0xc9ad78, { roughness: 1, map: sandTex }));
+    const desert = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), this.mat(sandTex ? (green ? 0xc4d2a8 : 0xd8c9a8) : (green ? 0x6f8f45 : 0xc9ad78), { roughness: 1, map: sandTex }));
     desert.rotation.x = -Math.PI / 2;
     desert.position.set(W / 2, -0.03, H / 2);
     desert.receiveShadow = true;
@@ -247,15 +249,16 @@ const Scene3D = {
       bw.rotation.y = m.rotation.y;
       bw.castShadow = false;
     };
-    const a = 5, b = 123, top = 5, bot = 83;
+    const [fx0, fy0, fx1, fy1] = World.fence;
+    const a = fx0 * 2 + 1, b = fx1 * 2 + 1, top = fy0 * 2 + 1, bot = fy1 * 2 + 1;
     panel(a, top, b, top);
     panel(a, top, a, bot);
     panel(b, top, b, bot);
     panel(a, bot, 58, bot);
     panel(66, bot, b, bot);
     const posts = [];
-    for (let x = 2; x <= 61; x++) { posts.push([x * 2 + 1, top]); if (x < 29 || x > 32) posts.push([x * 2 + 1, bot]); }
-    for (let y = 3; y <= 40; y++) { posts.push([a, y * 2 + 1]); posts.push([b, y * 2 + 1]); }
+    for (let x = fx0; x <= fx1; x++) { posts.push([x * 2 + 1, top]); if (x < 29 || x > 32) posts.push([x * 2 + 1, bot]); }
+    for (let y = fy0 + 1; y < fy1; y++) { posts.push([a, y * 2 + 1]); posts.push([b, y * 2 + 1]); }
     const im = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06, 0.06, fenceH + 0.3, 6), this.mat(0x5d5d5d, { metalness: 0.5 }), posts.length);
     const m = new THREE.Matrix4();
     posts.forEach(([x, z], i) => { m.makeTranslation(x, (fenceH + 0.3) / 2, z); im.setMatrixAt(i, m); });
@@ -288,7 +291,7 @@ const Scene3D = {
           const frame = this.mat(0x4a5340, { metalness: 0.4 });
           this.box(w, 0.32, d, frame, 0, 0.16, 0, g);
           this.box(w * 0.96, 0.14, d * 0.96, this.mat(0x6b7a4b), 0, 0.39, 0, g);
-          const top = o.y < 28 * TS;
+          const top = o.top !== undefined ? o.top : o.y < 28 * TS;
           const end = top ? -d / 2 + 0.28 : d / 2 - 0.28;
           this.box(w * 0.78, 0.12, 0.34, this.mat(0xf1ece0), 0, 0.52, end, g);
           rec.neat = this.box(w * 0.98, 0.06, d * 0.62, this.mat(0x55663a), 0, 0.49, -end * 0.35, g);
@@ -393,7 +396,7 @@ const Scene3D = {
           board.castShadow = true;
           g.add(board);
           // Earth berm behind the targets.
-          if (!this.bermBuilt) { this.bermBuilt = true; this.box(32, 1.6, 1.2, this.mat(0xb89a62), 25.5 * 2 - cx, 0.8, -1.4, g); }
+          if (o.berm) this.box(o.berm[1], 1.6, 1.2, this.mat(0xb89a62), o.berm[0] * 2 - cx, 0.8, -1.4, g);
           break;
         }
         case 'sign': {
@@ -476,6 +479,66 @@ const Scene3D = {
           const lb = this.label(o.label, { size: 0.8 });
           lb.position.set(0, 3.2, 0);
           g.add(lb);
+          break;
+        }
+        case 'fridge': {
+          this.box(w, 1.85, d, this.mat(0xe8ecef, { roughness: 0.4, metalness: 0.2 }), 0, 0.925, 0, g);
+          this.box(0.04, 0.5, 0.05, this.mat(0x999999, { metalness: 0.7 }), w / 2 - 0.15, 1.2, d / 2 + 0.03, g);
+          this.box(w * 0.98, 0.02, 0.02, this.mat(0xaaaaaa), 0, 1.25, d / 2 + 0.01, g);
+          const mag = this.box(0.12, 0.12, 0.02, this.mat(0x2fa3d8), -0.15, 1.5, d / 2 + 0.02, g);
+          void mag;
+          break;
+        }
+        case 'stove': {
+          this.box(w, 0.9, d, this.mat(0x2b2b2b, { metalness: 0.4 }), 0, 0.45, 0, g);
+          for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) this.cyl(0.12, 0.12, 0.02, this.mat(0x111111), sx * w * 0.24, 0.91, sz * d * 0.22, g, 12);
+          const pan = this.cyl(0.18, 0.15, 0.08, this.mat(0x555555, { metalness: 0.6 }), -w * 0.24, 0.96, -d * 0.22, g, 14);
+          void pan;
+          this.box(0.3, 0.03, 0.04, this.mat(0x333333), -w * 0.24 - 0.3, 0.98, -d * 0.22, g);
+          break;
+        }
+        case 'junk': {
+          rec.junk = g;
+          const k = o.junk;
+          if (k === 'crt') { this.box(0.55, 0.48, 0.5, this.mat(0xcfc8b0), 0, 0.24, 0, g); this.box(0.42, 0.34, 0.02, this.mat(0x223322, { emissive: 0x112211 }), 0, 0.26, 0.26, g); }
+          else if (k === 'chair') { const seat = this.box(0.45, 0.06, 0.45, this.mat(0x5a3a22), 0, 0.42, 0, g); seat.rotation.z = 0.25; for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1]]) this.box(0.05, 0.42, 0.05, this.mat(0x3a2a1a), sx * 0.18, 0.21, sz * 0.18, g); this.box(0.45, 0.45, 0.05, this.mat(0x5a3a22), 0, 0.7, -0.2, g); }
+          else if (k === 'fax') { this.box(0.5, 0.2, 0.4, this.mat(0xd8d4c4), 0, 0.1, 0, g); this.box(0.3, 0.02, 0.3, this.mat(0xffffff), 0, 0.22, -0.05, g); }
+          else if (k === 'papers') { for (let i = 0; i < 4; i++) { const p = this.box(0.42, 0.18, 0.3, this.mat(i % 2 ? 0xf2f0e6 : 0xe6e0c8), 0, 0.09 + i * 0.18, 0, g); p.rotation.y = i * 0.2; } }
+          else if (k === 'cables') { this.box(0.6, 0.3, 0.45, this.mat(0x8a6a44), 0, 0.15, 0, g); for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.02, 6, 16), this.mat([0x111111, 0xd8392b, 0x2f6fd8][i])); t.position.set(-0.15 + i * 0.15, 0.34, 0); t.rotation.x = 1.2; g.add(t); } }
+          else if (k === 'tent') { const t = this.cyl(0.22, 0.22, 1.2, this.mat(0x4b5a2a), 0, 0.22, 0, g, 10); t.rotation.z = Math.PI / 2; }
+          else if (k === 'board') {
+            const bt = this.canvasTex(128, 96, (c) => { c.fillStyle = '#f4f1e6'; c.fillRect(0, 0, 128, 96); c.strokeStyle = '#333'; for (let i = 1; i < 6; i++) { c.beginPath(); c.moveTo(0, i * 16); c.lineTo(128, i * 16); c.stroke(); } c.fillStyle = '#1f4fa8'; c.font = '800 14px Rubik'; c.textAlign = 'center'; c.fillText('שמירות', 64, 13); });
+            const bm = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.6), new THREE.MeshStandardMaterial({ map: bt, side: THREE.DoubleSide }));
+            bm.position.set(0, 0.7, 0); bm.rotation.y = -Math.PI / 2; g.add(bm);
+            this.box(0.04, 0.7, 0.04, this.mat(0x6b4a2a), 0, 0.35, 0, g);
+          }
+          break;
+        }
+        case 'pullup': {
+          const steel = this.mat(0x6f6f6f, { metalness: 0.7, roughness: 0.35 });
+          for (const sx of [-w / 2, w / 2]) this.cyl(0.05, 0.05, 2.5, steel, sx, 1.25, 0, g, 8);
+          const bar = this.cyl(0.03, 0.03, w, steel, 0, 2.45, 0, g, 8);
+          bar.rotation.z = Math.PI / 2;
+          for (const sx of [-0.35, 0.35]) { const pl = this.cyl(0.22, 0.22, 0.05, this.mat(0x1d1d1d), sx, 0.03, 0.6, g, 16); void pl; }
+          break;
+        }
+        case 'tree': {
+          const h = 4.5 + (o.x % 3);
+          this.cyl(0.14, 0.22, h * 0.55, this.mat(0x6b5236), 0, h * 0.27, 0, g, 7);
+          const leaf = this.mat(0x4f7a2f);
+          for (const [dx, dy, dz, r] of [[0, h * 0.7, 0, 1.4], [0.6, h * 0.6, 0.4, 1.0], [-0.5, h * 0.62, -0.4, 1.1], [0, h * 0.88, 0, 0.9]]) {
+            const m = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), leaf);
+            m.position.set(dx, dy, dz);
+            m.castShadow = true;
+            g.add(m);
+          }
+          break;
+        }
+        case 'snackcab': {
+          this.box(w, 1.6, d, this.mat(0x6b4a2a), 0, 0.8, 0, g);
+          for (let i = 0; i < 3; i++) this.box(w * 0.9, 0.04, d * 0.9, this.mat(0x4a3220), 0, 0.4 + i * 0.4, 0, g);
+          rec.cabDoor = this.box(0.04, 1.5, d * 0.95, this.mat(0x7a5a36), -w / 2 - 0.02, 0.8, 0, g);
+          for (let i = 0; i < 6; i++) this.box(0.18, 0.22, 0.12, this.mat([0xd8392b, 0xf2c14e, 0x2f6fd8][i % 3]), -0.1 + (i % 2) * 0.2, 0.55 + Math.floor(i / 2) * 0.4, -0.3 + (i % 3) * 0.3, g);
           break;
         }
         case 'shelter': {
@@ -565,7 +628,7 @@ const Scene3D = {
       this.fadeLabels.push(s);
     }
     const areas = {
-      netivot: [['רחבת מסדרים', 39.5, 28, 2.4], ['מטווח', 25.5, 10.5, 2.8], ['מסלול כושר', 18, 18, 2], ['עמדת שמירה', 59, 38, 8]],
+      netivot: [['רחבת מסדרים', 38.8, 25.3, 2.4], ['מטווח', 20, 11.2, 2.8], ['מסלול כושר', 20, 16.7, 2], ['עמדת שמירה', 49.6, 38.3, 8]],
       hq: [['חניון נהגים', 10.5, 37, 5.5]],
       field: DATA.deploy.map(d => [d.name, d.x + d.w / 2, d.y + d.h / 2, 1.2]),
     }[World.id];
@@ -621,38 +684,65 @@ const Scene3D = {
   },
 
   buildHorizon() {
-    // Distant dunes, the town of Netivot to the south-east, a few palms.
-    const dune = this.mat(0xc4a46c, { roughness: 1 });
+    // Netivot: dunes and the town to the south-east. Hafetz Haim: green Shfela hills,
+    // orchards and the red roofs of Gedera.
+    const green = World.id === 'hq';
+    const dune = this.mat(green ? 0x7f9a55 : 0xc4a46c, { roughness: 1 });
     const rnd = mulberry(11);
     for (let i = 0; i < 26; i++) {
       const a = (i / 26) * Math.PI * 2;
       const r = 230 + rnd() * 90;
       const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), dune);
-      m.scale.set(40 + rnd() * 50, 8 + rnd() * 14, 30 + rnd() * 30);
+      m.scale.set(40 + rnd() * 50, (green ? 14 : 8) + rnd() * 14, 30 + rnd() * 30);
       m.position.set(64 + Math.cos(a) * r, -2, 46 + Math.sin(a) * r);
       this.root.add(m);
     }
     this.town = [];
     const townMat = new THREE.MeshStandardMaterial({ color: 0xe6dfcf, roughness: 0.9, emissive: 0xffc56b, emissiveIntensity: 0 });
+    const roof = this.mat(0xb5532e);
     for (let i = 0; i < 60; i++) {
-      const w = 6 + rnd() * 10, h = 6 + rnd() * 22, d = 6 + rnd() * 10;
+      const w = 6 + rnd() * 10, h = (green ? 5 : 6) + rnd() * (green ? 12 : 22), d = 6 + rnd() * 10;
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), townMat);
-      m.position.set(150 + rnd() * 170, h / 2, 210 + rnd() * 110);
+      const x = 150 + rnd() * 170, z = 210 + rnd() * 110;
+      m.position.set(x, h / 2, z);
       this.root.add(m);
+      if (green && i % 2 === 0) {
+        const r = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.75, 3.5, 4), roof);
+        r.position.set(x, h + 1.7, z);
+        r.rotation.y = Math.PI / 4;
+        this.root.add(r);
+      }
     }
     this.townMat = townMat;
-    const trunk = this.mat(0x7a5a36), leaf = this.mat(0x5d7a32);
-    for (let i = 0; i < 12; i++) {
-      const x = 4 + i * 11 + rnd() * 4, z = 92 + rnd() * 6;
-      const palm = Assets.model('palm', { height: 6.5 + rnd() * 2, rotY: rnd() * 6 });
-      if (palm) { palm.position.set(x, 0, z); this.root.add(palm); continue; }
-      this.cyl(0.18, 0.28, 6, trunk, x, 3, z, null, 6);
-      for (let k = 0; k < 6; k++) {
-        const f = this.box(2.6, 0.08, 0.6, leaf, x, 6, z);
-        f.rotation.y = k * Math.PI / 3;
-        f.rotation.z = -0.35;
-        f.position.x += Math.cos(k * Math.PI / 3) * 1.1;
-        f.position.z -= Math.sin(k * Math.PI / 3) * 1.1;
+    if (green) {
+      // Orchards and eucalyptus rows around the base, as instanced meshes.
+      const spots = [];
+      for (let row = 0; row < 7; row++) for (let i = 0; i < 26; i++) spots.push([-20 + i * 7 + rnd() * 2, 100 + row * 7 + rnd() * 2, 2.6 + rnd()]);
+      for (let i = 0; i < 40; i++) spots.push([-8 - rnd() * 40, -10 + i * 3.2 + rnd() * 2, 6 + rnd() * 4]);
+      for (let i = 0; i < 40; i++) spots.push([136 + rnd() * 40, -10 + i * 3.2 + rnd() * 2, 6 + rnd() * 4]);
+      for (let i = 0; i < 30; i++) spots.push([-10 + i * 5 + rnd() * 3, -12 - rnd() * 30, 5 + rnd() * 5]);
+      const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.15, 0.25, 1, 6), this.mat(0x6b5236), spots.length);
+      const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), this.mat(0x4a7a2c), spots.length);
+      const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pos = new THREE.Vector3();
+      spots.forEach(([x, z, h], i) => {
+        m.compose(pos.set(x, h * 0.3, z), q, sc.set(1, h * 0.6, 1)); trunks.setMatrixAt(i, m);
+        m.compose(pos.set(x, h * 0.75, z), q, sc.set(h * 0.32, h * 0.36, h * 0.32)); crowns.setMatrixAt(i, m);
+      });
+      this.root.add(trunks, crowns);
+    } else {
+      const trunk = this.mat(0x7a5a36), leaf = this.mat(0x5d7a32);
+      for (let i = 0; i < 12; i++) {
+        const x = 4 + i * 11 + rnd() * 4, z = 92 + rnd() * 6;
+        const palm = Assets.model('palm', { height: 6.5 + rnd() * 2, rotY: rnd() * 6 });
+        if (palm) { palm.position.set(x, 0, z); this.root.add(palm); continue; }
+        this.cyl(0.18, 0.28, 6, trunk, x, 3, z, null, 6);
+        for (let k = 0; k < 6; k++) {
+          const f = this.box(2.6, 0.08, 0.6, leaf, x, 6, z);
+          f.rotation.y = k * Math.PI / 3;
+          f.rotation.z = -0.35;
+          f.position.x += Math.cos(k * Math.PI / 3) * 1.1;
+          f.position.z -= Math.sin(k * Math.PI / 3) * 1.1;
+        }
       }
     }
     // Stars for the night sky.
@@ -739,13 +829,13 @@ const Scene3D = {
     parts.beret.visible = head0 === 'beret';
     parts.helmet.visible = head0 === 'helmet';
     parts.cap.visible = head0 === 'cap';
-    parts.carry = this.box(0.55, 0.45, 0.7, this.mat(0x56653a), 0.45, 1.15, 0, root);
-    parts.carry.visible = false;
+    this.carryProps(parts, root, 0.45, 1.15);
     if (name) {
       parts.tag = this.label(name, { size: 0.55 });
       parts.tag.position.set(0, 2.25, 0);
       root.add(parts.tag);
     }
+    this.extras(parts, look, root);
     // Soldiers use a soft blob instead of real shadow casting: far fewer draw calls with a crowd.
     root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
     if (!this.blobMat) this.blobMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
@@ -816,9 +906,8 @@ const Scene3D = {
         pin(chest, ep);
       }
     }
-    parts.carry = this.box(0.5, 0.42, 0.62, this.mat(0x56653a), 0.38, 1.1, 0, root);
+    this.carryProps(parts, root, 0.38, 1.1);
     pin(chest, parts.carry);
-    parts.carry.visible = false;
 
     if (!this.blobMat) this.blobMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
     const blob = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16), this.blobMat);
@@ -830,13 +919,81 @@ const Scene3D = {
       parts.tag.position.set(0, 2.15, 0);
       root.add(parts.tag);
     }
+    this.extras(parts, look, root);
     // Start each soldier at a different point of the stride.
     if (parts.action) parts.action.time = Math.random() * Assets.walkClip.duration;
     this.root.add(root);
     return parts;
   },
 
+  // Everything a soldier can carry, hidden until needed: canister, catering crate, water,
+  // outside food, a fire extinguisher, a squeegee.
+  carryProps(parts, root, x, y) {
+    const g = new THREE.Group();
+    g.position.set(x, y, 0);
+    root.add(g);
+    const k = {};
+    k.canister = this.box(0.5, 0.42, 0.62, this.mat(0x56653a), 0, 0, 0, g);
+    k.crate = new THREE.Group();
+    this.box(0.46, 0.3, 0.6, this.mat(0x2f6fb3), 0, 0, 0, k.crate);
+    this.box(0.42, 0.05, 0.56, this.mat(0xe0b060), 0, 0.17, 0, k.crate);
+    k.water = new THREE.Group();
+    const bottle = this.mat(0x9fd3f0, { transparent: true, opacity: 0.75, roughness: 0.2 });
+    for (let i = 0; i < 6; i++) this.cyl(0.07, 0.07, 0.34, bottle, -0.08 + (i % 2) * 0.16, 0, -0.16 + Math.floor(i / 2) * 0.16, k.water, 8);
+    k.food = new THREE.Group();
+    this.box(0.42, 0.06, 0.42, this.mat(0xd9b77a), 0, 0, 0, k.food);
+    this.box(0.2, 0.01, 0.2, this.mat(0xc0392b), 0, 0.035, 0, k.food);
+    k.ext = this.cyl(0.1, 0.1, 0.5, this.mat(0xd8261f, { metalness: 0.3 }), 0, 0, 0, g, 10);
+    k.squeegee = new THREE.Group();
+    const stick = this.cyl(0.02, 0.02, 1.5, this.mat(0x8a6a44), 0.45, -0.45, 0, k.squeegee, 6);
+    stick.rotation.z = -1.0;
+    this.box(0.08, 0.06, 0.5, this.mat(0x222222), 1.05, -0.98, 0, k.squeegee);
+    for (const n of ['crate', 'water', 'food', 'squeegee']) g.add(k[n]);
+    for (const n in k) k[n].visible = false;
+    parts.carry = g;
+    parts.carry.visible = false;
+    parts.carryKinds = k;
+  },
+  setCarry(m, kind) {
+    m.carry.visible = !!kind;
+    const want = kind === true ? 'canister' : kind;
+    for (const n in m.carryKinds) m.carryKinds[n].visible = n === want;
+  },
+  // Per-character extras: size (Arad is 1.5x everyone) and Nevo's loyal flies.
+  extras(parts, look, root) {
+    if (look.scale && look.scale !== 1) root.scale.setScalar(look.scale);
+    if (look.flies) {
+      parts.flies = new THREE.Group();
+      parts.flies.position.y = 1.75;
+      const fm = new THREE.MeshBasicMaterial({ color: 0x111111 });
+      for (let i = 0; i < 6; i++) {
+        const f = new THREE.Mesh(new THREE.SphereGeometry(0.025, 5, 4), fm);
+        f.userData.a = i * 1.05;
+        parts.flies.add(f);
+      }
+      root.add(parts.flies);
+    }
+  },
+  setBubble(m, text, h = 2.8) {
+    if (text === m.bubbleText) return;
+    if (m.bubbleSprite) m.root.remove(m.bubbleSprite);
+    m.bubbleSprite = null;
+    if (text) {
+      m.bubbleSprite = this.label(text, { bg: 'rgba(255,255,255,.95)', fg: '#1d1d10', size: 0.62 });
+      m.bubbleSprite.position.set(0, h, 0);
+      m.root.add(m.bubbleSprite);
+    }
+    m.bubbleText = text;
+  },
+
   animateSoldier(m, ent, moving, dt) {
+    if (m.flies) {
+      const t = performance.now() / 1000;
+      m.flies.children.forEach((f, i) => {
+        const a = f.userData.a + t * (3 + i * 0.4);
+        f.position.set(Math.cos(a) * (0.3 + 0.08 * Math.sin(t * 5 + i)), 0.15 + Math.sin(t * 7 + i) * 0.12, Math.sin(a) * 0.3);
+      });
+    }
     if (m.rigged) {
       m.root.position.set(ent.x * S3, 0, ent.y * S3);
       let d = -ent.angle - m.root.rotation.y;
@@ -886,6 +1043,21 @@ const Scene3D = {
   makeTruck(item) {
     const g = new THREE.Group();
     if (this.addModel(g, 'truck', { rotY: Math.PI, length: 9 })) {
+      if (item.catering) {
+        // Rafael's refrigerated catering box on the back, with the logo on both sides.
+        const logo = this.canvasTex(256, 96, (c) => {
+          c.fillStyle = '#f7f7f4'; c.fillRect(0, 0, 256, 96);
+          c.fillStyle = '#c0392b'; c.fillRect(0, 70, 256, 14);
+          c.fillStyle = '#1d4fa8'; c.font = '800 38px Rubik, Arial'; c.textAlign = 'center'; c.direction = 'rtl';
+          c.fillText('רפאל קייטרינג', 128, 50);
+        });
+        const side = new THREE.MeshStandardMaterial({ map: logo, roughness: 0.6 });
+        const white = this.mat(0xf4f4f0, { roughness: 0.6 });
+        const box = new THREE.Mesh(new THREE.BoxGeometry(5.4, 2.7, 2.6), [white, white, white, white, side, side]);
+        box.position.set(-1.6, 2.75, 0);
+        box.castShadow = true;
+        g.add(box);
+      }
       const lb = this.label(item.name, { size: 0.8 });
       lb.position.set(0, 4.6, 0);
       g.add(lb);
@@ -945,8 +1117,11 @@ const Scene3D = {
     s.head = new THREE.Mesh(new THREE.SphereGeometry(s.kind === 'rocket' ? 0.5 : 0.4, 8, 6), new THREE.MeshBasicMaterial({ color: s.kind === 'rocket' ? 0xff6a3a : 0xffffff, fog: false }));
     this.scene.add(s.head);
   },
-  puff(at) {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xdddddd, transparent: true, opacity: 0.6, depthWrite: false }));
+  greenPuff(px, py, size = 1) {
+    this.puff(new THREE.Vector3(px * S3 - 0.3, 0.7 * size, py * S3), 0x8fbf3a, 0.5 * size);
+  },
+  puff(at, color = 0xdddddd, size = 1) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(size, 10, 8), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.6, depthWrite: false }));
     m.position.copy(at);
     this.scene.add(m);
     this.sky.push({ kind: 'smoke', mesh: m, t: 0 });
@@ -1064,6 +1239,8 @@ const Scene3D = {
         }
         pos.needsUpdate = true;
       } else if (o.kind === 'console') r.screens.material.emissiveIntensity = 0.6 + Math.sin(now / 300) * 0.2;
+      else if (o.kind === 'junk') r.g.visible = !o.gone;
+      else if (o.kind === 'snackcab') r.cabDoor.rotation.y = THREE.MathUtils.lerp(r.cabDoor.rotation.y, Boss.active || G.state.achievements.includes('boss') ? -1.4 : 0, Math.min(1, dt * 4));
     }
     this.gateArm.rotation.z = World.gateOpen * Math.PI / 2.2;
 
@@ -1075,7 +1252,8 @@ const Scene3D = {
     const pm = this.player;
     pm.beret.visible = !G.alert;
     pm.helmet.visible = !!G.alert;
-    pm.carry.visible = !!P.carry;
+    this.setCarry(pm, P.carry);
+    this.setBubble(pm, P.bubble ? P.bubble.text : null);
     this.animateSoldier(pm, P, P.moving, dt);
 
     const alive = new Set(G.npcs);
@@ -1086,17 +1264,7 @@ const Scene3D = {
       const moving = Math.hypot(n.x - m.last.x, n.y - m.last.y) > 0.01;
       m.last = { x: n.x, y: n.y };
       // Speech bubble over the head.
-      const bt = n.bubble ? n.bubble.text : null;
-      if (bt !== m.bubbleText) {
-        if (m.bubbleSprite) m.root.remove(m.bubbleSprite);
-        m.bubbleSprite = null;
-        if (bt) {
-          m.bubbleSprite = this.label(bt, { bg: 'rgba(255,255,255,.95)', fg: '#1d1d10', size: 0.62 });
-          m.bubbleSprite.position.set(0, 2.8, 0);
-          m.root.add(m.bubbleSprite);
-        }
-        m.bubbleText = bt;
-      }
+      this.setBubble(m, n.bubble ? n.bubble.text : null);
       if (G.alert && n.sheltering) { m.helmet.visible = true; m.beret.visible = m.cap.visible = false; }
       else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = n.look.head === 'beret'; m.cap.visible = n.look.head === 'cap'; }
       this.animateSoldier(m, n, moving, dt);
@@ -1122,6 +1290,10 @@ const Scene3D = {
     }
     if (this.lastTruck && this.lastTruck !== tr && this.lastTruck.mesh) this.root.remove(this.lastTruck.mesh);
     this.lastTruck = tr;
+
+    this.updateRemotes(dt, now);
+    this.updateEvents(dt, now);
+    this.updateBoss(dt, now);
 
     const here = World.id === 'netivot';
     this.syncSmall(here ? Story.trash : [], this.trashMeshes, (t) => {
@@ -1176,6 +1348,164 @@ const Scene3D = {
     this.updateCamera(dt);
   },
 
+  // Other players in the room, drawn as soldiers with their name.
+  updateRemotes(dt, now) {
+    this.remotes = this.remotes || new Map();
+    const list = Multi.on ? Multi.here() : [];
+    const alive = new Set(list.map(p => p.peer));
+    for (const [k, m] of this.remotes) if (!alive.has(k) || m.site !== World.id || m.root.parent !== this.root) { if (m.root.parent) m.root.parent.remove(m.root); this.remotes.delete(k); }
+    for (const p of list) {
+      let m = this.remotes.get(p.peer);
+      if (!m) {
+        const person = Cast.get(p.who) || {};
+        const look = { skin: person.skin || DATA.skinTones[(p.who.length * 7) % 4], hair: person.hair || DATA.hairColors[(p.who.length * 3) % 3], head: person.head || 'beret', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies };
+        m = this.makeSoldier(look, '🌐 ' + (p.name || person.short || ''));
+        m.site = World.id;
+        this.remotes.set(p.peer, m);
+      }
+      this.setCarry(m, p.c);
+      if (p.say && p.say.at !== m.sayAt) { m.sayAt = p.say.at; m.sayUntil = Math.abs(Date.now() - p.say.at) < 15000 ? now + 5000 : 0; m.sayText = p.say.text; }
+      this.setBubble(m, m.sayUntil > now ? m.sayText : null);
+      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r }, p.m, dt);
+    }
+  },
+
+  // Event props: Rafael's truck, the food to hide from the battery commander, Amsalem's
+  // extinguishers and the puddle.
+  updateEvents(dt, now) {
+    const r = World.id === 'netivot' ? Events.rafael : null;
+    if (r) {
+      if (!r.mesh) r.mesh = this.makeTruck({ name: '🚚 רפאל קייטרינג', color: 0xf2f2f2, catering: true });
+      r.mesh.position.set(r.x * S3, 0, r.y * S3);
+      r.mesh.rotation.y = -r.angle;
+    }
+    if (this.lastRafael && this.lastRafael !== r && this.lastRafael.mesh) { this.root.remove(this.lastRafael.mesh); this.lastRafael.mesh = null; }
+    this.lastRafael = r;
+
+    this.foodMeshes = this.foodMeshes || new Map();
+    const b = World.id === 'netivot' && Events.baum;
+    this.syncSmall(b ? b.food.filter(f => !f.hidden && !f.carried) : [], this.foodMeshes, (f) => {
+      const g = new THREE.Group();
+      const colors = { pizza: 0xd9b77a, shawarma: 0xe8d6a0, sushi: 0x222222, burger: 0x8a5a2a, chips: 0xd8392b, malawach: 0xe0b060 };
+      this.box(0.45, f.id === 'pizza' ? 0.07 : 0.22, 0.4, this.mat(colors[f.id] || 0xcccccc), 0, 0.12, 0, g);
+      const em = this.label(f.icon, { bg: 'rgba(0,0,0,0)', size: 0.9 });
+      em.position.set(0, 0.75, 0);
+      g.add(em);
+      g.userData.bob = em;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.55, 24), new THREE.MeshBasicMaterial({ color: 0xe63b2e, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.03;
+      g.add(ring);
+      g.userData.ring = ring;
+      return g;
+    }, now);
+
+    this.choreMeshes = this.choreMeshes || new Map();
+    const c = World.id === 'hq' && Events.chores;
+    const items = c ? [...c.ext.filter(e => e !== c.carrying), c.puddle] : [];
+    for (const [k, m] of this.choreMeshes) if (!items.includes(k)) { this.root.remove(m); this.choreMeshes.delete(k); }
+    for (const it of items) {
+      let m = this.choreMeshes.get(it);
+      if (!m) {
+        if (it === c.puddle) {
+          m = new THREE.Mesh(new THREE.CircleGeometry(0.9, 20), new THREE.MeshStandardMaterial({ color: 0x5fa8d8, transparent: true, opacity: 0.65, roughness: 0.05, metalness: 0.3, depthWrite: false }));
+          m.rotation.x = -Math.PI / 2;
+          m.scale.set(1.3, 1, 1);
+        } else {
+          m = new THREE.Group();
+          this.cyl(0.11, 0.11, 0.55, this.mat(0xd8261f, { metalness: 0.3 }), 0, 0.28, 0, m, 10);
+          this.cyl(0.03, 0.03, 0.12, this.mat(0x222222), 0, 0.6, 0, m, 6);
+        }
+        this.root.add(m);
+        this.choreMeshes.set(it, m);
+      }
+      m.position.set(it.x * S3, it === c.puddle ? 0.035 : 0, it.y * S3);
+    }
+  },
+
+  // The cheeseburger monster, his cheeseburgers, and the healthy food flying back.
+  updateBoss(dt, now) {
+    this.bossBits = this.bossBits || { burgers: new Map(), shots: new Map(), picks: new Map() };
+    if (!Boss.active || World.id !== 'hq') {
+      if (this.bossMesh) { this.root.remove(this.bossMesh); this.bossMesh = null; }
+      for (const k of ['burgers', 'shots', 'picks']) { for (const m of this.bossBits[k].values()) this.root.remove(m); this.bossBits[k].clear(); }
+      return;
+    }
+    if (!this.bossMesh || this.bossMesh.parent !== this.root) {
+      const g = new THREE.Group();
+      if (!this.addModel(g, 'burger', { height: 7 })) {
+        const bun = this.mat(0xd99a3e), patty = this.mat(0x5a3218), cheese = this.mat(0xf2c12e), lettuce = this.mat(0x5fae3a);
+        const top = new THREE.Mesh(new THREE.SphereGeometry(2.6, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), bun);
+        top.position.y = 4.2; g.add(top);
+        this.cyl(2.7, 2.7, 0.3, lettuce, 0, 4.0, 0, g, 20);
+        this.cyl(2.75, 2.75, 0.25, cheese, 0, 3.75, 0, g, 4);
+        this.cyl(2.6, 2.6, 0.9, patty, 0, 3.2, 0, g, 20);
+        this.cyl(2.5, 2.4, 1.0, bun, 0, 2.3, 0, g, 20);
+        for (const sx of [-1, 1]) this.cyl(0.35, 0.4, 1.8, bun, sx * 1.2, 0.9, 0, g, 8);
+        for (const sx of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(0.38, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })); e.position.set(sx * 0.9, 5.5, 2.0); g.add(e); }
+      }
+      this.bossMesh = g;
+      this.root.add(g);
+    }
+    const bm = this.bossMesh;
+    const P = G.player;
+    bm.position.set(Boss.x * S3, Math.abs(Math.sin(now / 260)) * 0.25, Boss.y * S3);
+    bm.rotation.y = Math.atan2(P.x - Boss.x, P.y - Boss.y);
+    const k = 1 + Boss.flash * 0.12;
+    bm.scale.set(k, 1 / k, k);
+    if (Boss.bubble !== this.bossBubbleRef) {
+      if (this.bossBubble) bm.remove(this.bossBubble);
+      this.bossBubble = Boss.bubble ? this.label(Boss.bubble.text, { bg: 'rgba(255,240,200,.97)', fg: '#5a1a0a', size: 1.6 }) : null;
+      if (this.bossBubble) { this.bossBubble.position.set(0, 8.4, 0); bm.add(this.bossBubble); }
+      this.bossBubbleRef = Boss.bubble;
+    }
+    const sync = (list, map, make, place) => {
+      const alive = new Set(list);
+      for (const [o, m] of map) if (!alive.has(o)) { this.root.remove(m); map.delete(o); }
+      for (const o of list) {
+        let m = map.get(o);
+        if (!m) { m = make(o); this.root.add(m); map.set(o, m); }
+        place(o, m);
+      }
+    };
+    const smallBurger = () => {
+      const g = new THREE.Group();
+      const top = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), this.mat(0xd99a3e));
+      top.position.y = 0.06; g.add(top);
+      this.cyl(0.33, 0.33, 0.06, this.mat(0xf2c12e), 0, 0.03, 0, g, 4);
+      this.cyl(0.31, 0.31, 0.12, this.mat(0x5a3218), 0, -0.05, 0, g, 12);
+      this.cyl(0.3, 0.28, 0.1, this.mat(0xd99a3e), 0, -0.15, 0, g, 12);
+      return g;
+    };
+    const healthy = (kind) => {
+      const g = new THREE.Group();
+      if (kind.id === 'broccoli') {
+        this.cyl(0.06, 0.08, 0.3, this.mat(0x9fcf6a), 0, -0.1, 0, g, 6);
+        for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), this.mat(kind.color)); b.position.set(Math.cos(i * 1.3) * 0.12, 0.1 + (i % 2) * 0.06, Math.sin(i * 1.3) * 0.12); g.add(b); }
+      } else if (kind.id === 'ricecake') this.cyl(0.24, 0.24, 0.08, this.mat(kind.color), 0, 0, 0, g, 16);
+      else { this.box(0.4, 0.07, 0.14, this.mat(0x2f2f2f), 0, 0, 0, g); this.box(0.2, 0.072, 0.142, this.mat(0xf2c14e), 0, 0, 0, g); }
+      return g;
+    };
+    sync(Boss.burgers, this.bossBits.burgers, smallBurger, (b, m) => {
+      const t = Math.min(1, b.t / b.dur);
+      m.position.set((b.x0 + (b.x1 - b.x0) * t) * S3, 4 + Math.sin(t * Math.PI) * 5 - t * 3.6, (b.y0 + (b.y1 - b.y0) * t) * S3);
+      m.rotation.x = t * 9;
+    });
+    sync(Boss.shots, this.bossBits.shots, (s) => healthy(s.kind), (s, m) => {
+      m.position.set(s.x * S3, 1.4 + Math.sin(Math.min(1, s.t * 2) * Math.PI) * 1.5, s.y * S3);
+      m.rotation.set(s.t * 12, s.t * 7, 0);
+    });
+    sync(Boss.pickups, this.bossBits.picks, (p) => {
+      const g = healthy(p.kind);
+      g.scale.setScalar(1.6);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.6, 24), new THREE.MeshBasicMaterial({ color: 0x6cc24a, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = -0.45;
+      g.add(ring);
+      return g;
+    }, (p, m) => { m.position.set(p.x * S3, 0.5 + Math.sin(now / 300 + p.x) * 0.1, p.y * S3); m.rotation.y = now / 700; });
+  },
+
   syncSmall(list, map, make, now) {
     const alive = new Set(list);
     for (const [k, m] of map) if (!alive.has(k)) { this.root.remove(m); map.delete(k); }
@@ -1183,6 +1513,7 @@ const Scene3D = {
       let m = map.get(it);
       if (!m) { m = make(it); m.position.set(it.x * S3, 0, it.y * S3); this.root.add(m); map.set(it, m); }
       if (m.userData.ring) m.userData.ring.material.opacity = 0.35 + Math.sin(now / 250) * 0.25;
+      if (m.userData.bob) m.userData.bob.position.y = 0.75 + Math.sin(now / 300) * 0.08;
     }
   },
 

@@ -30,8 +30,11 @@
       <div class="bar"><span>אנרגיה</span><i><b id="bar-energy"></b></i></div>
       <div class="bar"><span>מורל</span><i><b id="bar-morale"></b></i></div>
       <div class="bar"><span>ציון פלג"צ</span><i><b id="bar-score"></b></i></div>
+      <div class="bar"><span>שחורה</span><i class="dark"><b id="bar-shchora"></b></i></div>
     </div>
-    <div class="hud-card hud-money"><span id="hud-money"></span></div>
+    <div class="hud-card hud-money"><span id="hud-money"></span><span id="hud-home" class="hud-sub"></span></div>
+    <button id="btn-map" class="hud-btn" title="מפה (G)">🗺️</button>
+    <button id="btn-chat" class="hud-btn hidden" title="צ'אט (T)">💬</button>
     <button id="btn-music" class="hud-btn" title="מוזיקה (M)">🎵</button>
     <button id="btn-sfx" class="hud-btn" title="אפקטים (N)">🔊</button>
     <button id="btn-phone" class="hud-btn" title="טלפון (Tab)">📱</button>
@@ -41,11 +44,13 @@
   <div id="alert-banner" class="alert-banner hidden"></div>
   <canvas id="minimap" width="192" height="138"></canvas>
   <div id="toasts"></div>
+  <div id="boss-hud" class="boss-hud hidden"></div>
 </div>
 
 <!-- Touch controls -->
 <div id="touch" class="hidden">
-  <div id="stick"><div id="stick-knob"></div></div>
+  <div id="stick" class="stick"><span class="ar up">▲</span><span class="ar dn">▼</span><span class="ar lt">◀</span><span class="ar rt">▶</span><div id="stick-knob" class="knob"></div></div>
+  <div id="look" class="stick"><span class="eye">👁</span><div id="look-knob" class="knob"></div></div>
   <button id="t-act" class="t-btn">E</button>
   <button id="t-run" class="t-btn small">ריצה</button>
 </div>
@@ -55,7 +60,9 @@
 <div id="dialog" class="dialog hidden"></div>
 <div id="mini" class="mini hidden"></div>
 <div id="phone" class="phone hidden"></div>
+<div id="map" class="map hidden"></div>
 <div id="fade" class="fade"></div>
+<div id="rotate" class="rotate"><div>📱↻</div><p>סובבו את הטלפון לרוחב</p></div>
 
 <script src="vendor/three.min.js"></script>
 <script src="vendor/GLTFLoader.js"></script>
@@ -70,6 +77,9 @@
 <script src="js/ui.js"></script>
 <script src="js/minigames.js"></script>
 <script src="js/story.js"></script>
+<script src="js/events.js"></script>
+<script src="js/boss.js"></script>
+<script src="js/multi.js"></script>
 <script src="js/scene3d.js"></script>
 <script src="js/game.js"></script>
 </body>

@@ -65,25 +65,29 @@ const DATA = {
   // Buildings are drawn roofless so the player can see inside.
   // doors: tile coordinates on the building outline that stay open.
   maps: {
+    // Netivot is a small site: the fence encloses 40x34 tiles around the shared gate.
     netivot: {
+      fence: [12, 8, 51, 41],
+      roads: [[29, 16, 32, 41]],
       buildings: [
-        { id: 'barracks', name: 'מגורים — פלג"צ', x: 5, y: 24, w: 15, h: 9, doors: [[19, 28]] },
-        { id: 'dining', name: 'חדר אוכל', x: 5, y: 34, w: 10, h: 6, doors: [[9, 34]] },
-        { id: 'kantina', name: 'ש.ק.', x: 17, y: 35, w: 6, h: 4, doors: [[19, 35]] },
-        { id: 'office', name: 'משרד מפקדים', x: 44, y: 33, w: 6, h: 5, doors: [[46, 33]] },
+        { id: 'boys', name: 'מגורים — בנים', x: 13, y: 20, w: 10, h: 7, doors: [[22, 23]] },
+        { id: 'girls', name: 'מגורים — בנות', x: 13, y: 27, w: 10, h: 7, doors: [[22, 30]] },
+        { id: 'kitchen', name: 'מטבחון', x: 13, y: 34, w: 6, h: 5, doors: [[18, 36]] },
+        { id: 'dining', name: 'חדר אוכל', x: 20, y: 34, w: 7, h: 6, doors: [[23, 34]] },
+        { id: 'hamal', name: 'עמדת בקרה מקומית', x: 35, y: 16, w: 8, h: 6, doors: [[38, 21]] },
+        { id: 'depot', name: 'מחסן מארזים', x: 44, y: 23, w: 7, h: 7, doors: [[44, 26]] },
+        { id: 'store', name: 'מחסן רספ"ייה', x: 35, y: 29, w: 7, h: 5, doors: [[38, 29]] },
+        { id: 'office', name: 'משרד מפקדים', x: 44, y: 31, w: 7, h: 5, doors: [[44, 33]] },
         { id: 'booth', name: 'ש"ג', x: 34, y: 38, w: 3, h: 3, doors: [[34, 39]] },
-        { id: 'depot', name: 'מחסן מארזים', x: 50, y: 24, w: 9, h: 7, doors: [[50, 27]] },
-        { id: 'hamal', name: 'עמדת בקרה מקומית', x: 5, y: 5, w: 9, h: 7, doors: [[9, 11]] },
-        { id: 'mig1', name: 'מיגונית', x: 22, y: 26, w: 3, h: 3, doors: [[23, 28]], shelter: true },
-        { id: 'mig2', name: 'מיגונית', x: 36, y: 12, w: 3, h: 3, doors: [[37, 14]], shelter: true },
-        { id: 'mig3', name: 'מיגונית', x: 53, y: 33, w: 3, h: 3, doors: [[53, 34]], shelter: true },
-        { id: 'mig4', name: 'מיגונית', x: 26, y: 37, w: 3, h: 3, doors: [[27, 37]], shelter: true },
-        { id: 'mig5', name: 'מיגונית', x: 15, y: 13, w: 3, h: 3, doors: [[16, 13]], shelter: true },
+        { id: 'mig1', name: 'מיגונית', x: 24, y: 26, w: 3, h: 3, doors: [[25, 26]], shelter: true },
+        { id: 'mig2', name: 'מיגונית', x: 24, y: 20, w: 3, h: 3, doors: [[25, 22]], shelter: true },
+        { id: 'mig3', name: 'מיגונית', x: 46, y: 17, w: 3, h: 3, doors: [[47, 19]], shelter: true },
+        { id: 'mig4', name: 'מיגונית', x: 38, y: 35, w: 3, h: 3, doors: [[39, 37]], shelter: true },
       ],
       launchers: [
-        { id: 'L1', name: 'משגר 1', x: 41, y: 4 },
-        { id: 'L2', name: 'משגר 2', x: 48, y: 4 },
-        { id: 'L3', name: 'משגר 3', x: 55, y: 4 },
+        { id: 'L1', name: 'משגר 1', x: 37, y: 10 },
+        { id: 'L2', name: 'משגר 2', x: 42, y: 10 },
+        { id: 'L3', name: 'משגר 3', x: 47, y: 10 },
       ],
     },
     hq: {
@@ -97,6 +101,7 @@ const DATA = {
         { id: 'dining', name: 'חדר אוכל', x: 14, y: 25, w: 11, h: 7, doors: [[19, 25]] },
         { id: 'tech', name: 'מעבדת טכנאים', x: 36, y: 25, w: 9, h: 6, doors: [[40, 25]] },
         { id: 'barracks', name: 'מגורים', x: 47, y: 25, w: 12, h: 7, doors: [[52, 25]] },
+        { id: 'kantina', name: 'ש"ק — קנטינה', x: 38, y: 33, w: 6, h: 5, doors: [[40, 33]] },
         { id: 'mig1', name: 'מיגונית', x: 26, y: 14, w: 3, h: 3, doors: [[27, 16]], shelter: true },
         { id: 'mig2', name: 'מיגונית', x: 44, y: 14, w: 3, h: 3, doors: [[45, 16]], shelter: true },
         { id: 'mig3', name: 'מיגונית', x: 34, y: 33, w: 3, h: 3, doors: [[35, 33]], shelter: true },
@@ -163,6 +168,16 @@ const DATA = {
     { id: 'caught', name: 'נתפסת', desc: '{@inspector} תפסה אותך ונתנה מסדר' },
     { id: 'ruth', name: 'הבגרות של {@@ruth}', desc: 'מצאת את ה־Easter Egg' },
     { id: 'social', name: 'מכיר[/ה] את כולם', desc: 'דיברת עם 20 אנשים שונים' },
+    { id: 'yasmin', name: 'שרדת את {@inspector}', desc: 'עברת את מסדר הניקיון הרצחני' },
+    { id: 'fridge', name: 'מלך התוקפים', desc: 'רשמת את כל התוקפים במקרר בלי טעות' },
+    { id: 'hidden', name: 'אף אחד לא ראה כלום', desc: 'החבאת את כל האוכל לפני הביקורת של {@bc}' },
+    { id: 'rafael', name: 'סבל של רפאל', desc: 'פרקת את ארוחת הצהריים לחדר האוכל' },
+    { id: 'chef', name: 'שף מטבחון', desc: 'בישלת במטבחון' },
+    { id: 'tech', name: 'ביקורת עברה', desc: 'עברת ביקורת טכנאים בלי הערות' },
+    { id: 'amsalem', name: 'מטפים ושלוליות', desc: 'סיימת את המשימות של {@rasap}' },
+    { id: 'ugga', name: 'אוגה בוגה', desc: 'עזרת ל{@p_liran} להגיש בקשה לקורס מיירטים' },
+    { id: 'boss', name: 'מנצח הצ\'יזבורגר', desc: 'הבסת את {@deputy_rasap} בעזרת אוכל בריא' },
+    { id: 'home', name: 'יציאה הביתה!', desc: 'נעלת את השער ויצאת הביתה' },
   ],
 
   // Final exam questions. Answers reflect what the game teaches.
@@ -224,11 +239,72 @@ const DATA = {
       { from: '{@friend}', text: 'מחר מבחן סיום פלג"צ. אני כתבתי אותו, אז... בהצלחה 😏' },
     ],
     5: [{ from: 'אמא ❤️', text: 'בהצלחה במבחן! אני מחזיקה אצבעות 🤞' }],
+    6: [
+      { from: 'אמא ❤️', text: 'מחר בבית!!! הכנתי שניצלים. ועוגה. ועוד שניצלים.' },
+      { from: '{@p_ofek}', text: 'אחי אני כבר על התיק. פחית Blue חמישית לכבוד היציאה 💙' },
+    ],
   },
+
+  // The calendar: day 1 of the story is this date (day, month).
+  startDate: [12, 10],
+  // Days until going home on leave in story mode.
+  homeDay: 6,
+
+  // The Netivot storeroom: years of things nobody touches. "at" is the tile position.
+  junk: [
+    { id: 'crt', name: 'מסך CRT שעדיין מחובר ל־Windows 98', icon: '🖥️', at: [36.1, 30.1], keep: false },
+    { id: 'chair', name: 'כיסא עם שלוש רגליים ותקווה', icon: '🪑', at: [36.1, 31.2], keep: false },
+    { id: 'fax', name: 'מכונת פקס. אף אחד לא יודע את המספר שלה', icon: '📠', at: [36.1, 32.2], keep: false },
+    { id: 'papers', name: 'ערימת טפסים משנת 2012, בשלושה עותקים', icon: '📚', at: [37.3, 32.2], keep: false },
+    { id: 'cables', name: 'קופסת כבלים שלא מתאימים לשום דבר', icon: '🧶', at: [39.6, 30.1], keep: false },
+    { id: 'tent', name: 'אוהל סיירים בלי יתדות ובלי סיירים', icon: '⛺', at: [40.0, 31.2], keep: false },
+    { id: 'board', name: 'לוח שמירות מקורי של {@commander}', icon: '📋', at: [39.6, 32.2], keep: true },
+  ],
+
+  // Fridge inventory for the Yasmin inspection. off = days from today to the expiry date.
+  fridge: [
+    { name: 'חלב 3%', icon: '🥛', off: 3 },
+    { name: 'קוטג\' 5%', icon: '🧀', off: -2 },
+    { name: 'חומוס', icon: '🫘', off: 12 },
+    { name: 'יוגורט של {@p_nevo}', icon: '🥣', off: -390 },
+    { name: 'שניצל מלפני שבוע', icon: '🍗', off: -6 },
+    { name: 'תבנית ביצים', icon: '🥚', off: 9 },
+    { name: 'פחית Blue של {@p_ofek} (החמישית היום)', icon: '💙', off: 200 },
+    { name: 'קופסת קינואה וברוקולי של {@p_shaked}', icon: '🥗', off: 2 },
+    { name: 'רוטב שום מהפיצה של שישי', icon: '🧄', off: 30 },
+    { name: 'עגבנייה בודדת ועצובה', icon: '🍅', off: -1 },
+  ],
+
+  // Kitchenette recipes.
+  recipes: [
+    { id: 'shakshuka', name: 'שקשוקה', icon: '🍳', energy: 30, morale: 10, steps: 'בצל, עגבניות, ביצים, לא לגעת!', len: 5 },
+    { id: 'toast', name: 'טוסט גבינה', icon: '🥪', energy: 20, morale: 8, steps: 'לחם, גבינה, לסגור, ללחוץ חזק', len: 4 },
+    { id: 'pasta', name: 'פסטה ברוטב עגבניות', icon: '🍝', energy: 35, morale: 8, steps: 'מים, מלח, פסטה, רוטב, לסנן', len: 6 },
+    { id: 'noodles', name: 'נודלס כוס — המנה של {@p_liran}', icon: '🍜', energy: 15, morale: 12, steps: 'מים רותחים. זהו. זה כל המתכון.', len: 3 },
+    { id: 'quinoa', name: 'סלט קינואה של {@p_shaked}', icon: '🥗', energy: 25, morale: 4, healthy: true, steps: 'קינואה, ברוקולי, לימון, עוד ברוקולי', len: 6 },
+  ],
+
+  // Food bought outside the base, to hide before the battery commander's inspection.
+  outsideFood: [
+    { id: 'pizza', name: 'קרטון פיצה משפחתית', icon: '🍕', at: [18.5, 23.5] },
+    { id: 'shawarma', name: 'שווארמה בלאפה', icon: '🌯', at: [18.5, 30.5] },
+    { id: 'sushi', name: 'מגש סושי', icon: '🍣', at: [23.5, 36.9] },
+    { id: 'burger', name: 'שקית המבורגרים', icon: '🍔', at: [15.7, 36.6] },
+    { id: 'chips', name: 'קופסת צ\'יפס ענקית', icon: '🍟', at: [39.5, 25.5] },
+    { id: 'malawach', name: 'מלאווח עם ביצה', icon: '🫓', at: [27.5, 29.5] },
+  ],
+
+  // Healthy weapons against the cheeseburger monster, and what hurts him most about each.
+  healthy: [
+    { id: 'broccoli', name: 'ברוקולי', icon: '🥦', color: 0x3f8f2f, hit: 'אוי לא! סיבים תזונתיים!' },
+    { id: 'ricecake', name: 'פריכיות', icon: '🍘', color: 0xe8d6a0, hit: 'אוי לא! מזון לא מעובד!' },
+    { id: 'protein', name: 'חטיף חלבון', icon: '💪', color: 0x7a4a2a, hit: 'רק לא זה! דל סוכר!' },
+  ],
 
   // Voices that are not part of the cast.
   characters: {
     officer: { name: 'קצין תורן', img: null, icon: '🔦' },
     narrator: { name: '', img: null, icon: '📻' },
+    rafael: { name: 'נהג רפאל קייטרינג', img: null, icon: '🚚' },
   },
 };

@@ -687,6 +687,59 @@ const Minigames = {
     render();
   },
 
+  // ---------- kitchenette: pick a recipe, then cook it ----------
+  cook(box, opts, done) {
+    box.innerHTML = `<h3>🍳 מטבחון</h3><div class="sub">מה מבשלים? (אוכל ביתי מוריד שחורה)</div>
+      <div class="grid">${DATA.recipes.map(r => `<div class="card" data-id="${r.id}"><div class="big">${r.icon}</div><div class="nm">${fmt(r.name)}</div>
+      <div class="ds">${fmt(r.steps)}</div><div class="ds">אנרגיה +${r.energy} · מורל +${r.morale}</div></div>`).join('')}</div>
+      <div class="actions"><button class="btn ghost" id="ck-x">לא עכשיו</button></div>`;
+    box.querySelector('#ck-x').onclick = () => done({});
+    Mini.onKey(e => { if (e.code === 'Escape') done({}); });
+    box.querySelectorAll('.card').forEach(cd => cd.onclick = () => {
+      const recipe = DATA.recipes.find(r => r.id === cd.dataset.id);
+      Sound.click();
+      Mini.cleanup.forEach(fn => fn());
+      Mini.cleanup = [];
+      Minigames.qte(box, { title: `${recipe.icon} ${fmt(recipe.name)}`, sub: fmt(recipe.steps) + ' — [הקש/הקישי] את הרצף לפני שנשרף!', length: recipe.len, time: recipe.len * 1.7 }, (r) => done({ recipe, success: r.success }));
+    });
+  },
+
+  // ---------- Yasmin's fridge: write down every expiry date ----------
+  fridge(box, opts, done) {
+    const items = DATA.fridge.slice().sort(() => Math.random() - 0.5).slice(0, opts.count || 6);
+    const today = opts.day || 1;
+    let i = 0, errors = 0;
+    const log = [];
+    const show = () => {
+      if (i >= items.length) {
+        const thrown = items.filter(it => it.off < 0).map(it => `${it.icon} ${fmt(it.name)}`);
+        return Mini.result(box, {
+          title: 'יומן תוקפים — מקרר המטבחון', big: errors ? `${errors} טעויות` : 'מושלם', ok: errors <= 1,
+          lines: [`נרשמו ${items.length} פריטים.`, thrown.length ? `לפח (פג תוקף): ${thrown.join(' · ')}` : 'הכל בתוקף. נס.', errors ? '{@inspector}: "התאריך כתוב על המוצר. בגדול. מה קשה?"' : '{@inspector}: "...אין לי מה להגיד. זה מפחיד אותי."'],
+        }, () => done({ success: errors <= 1, errors }));
+      }
+      const it = items[i];
+      const right = gameDate(today, it.off);
+      const opts2 = [right];
+      for (const d of [it.off + 1, it.off - 3, it.off + 10, it.off - 1, it.off + 30]) { const v = gameDate(today, d); if (!opts2.includes(v)) opts2.push(v); if (opts2.length >= 4) break; }
+      opts2.sort(() => Math.random() - 0.5);
+      box.innerHTML = `<h3>🧊 המקרר — פריט ${i + 1} מתוך ${items.length}</h3>
+        <div class="sub">היום ${gameDate(today)}. [תקרא/תקראי] את התוקף על המוצר ו[תרשום/תרשמי] ביומן.</div>
+        <div class="fridge-item"><div class="fi-icon">${it.icon}</div><div><div class="fi-name">${fmt(it.name)}</div><div class="fi-label">בתוקף עד: <b>${right}</b></div></div></div>
+        <div class="grid">${opts2.map(d => `<button class="btn ghost quiz-opt" data-d="${d}">📝 ${d}</button>`).join('')}</div>
+        <div class="doc">${log.length ? log.map(l => `${l.icon} ${fmt(l.name)} — ${l.d} ${l.exp ? '❌ פג' : '✔'}`).join('<br>') : 'יומן ריק. {@inspector} מסתכלת.'}</div>`;
+      box.querySelectorAll('[data-d]').forEach(b => b.onclick = () => {
+        const good = b.dataset.d === right;
+        if (!good) { errors++; Sound.bad(); b.style.background = '#7b1a12'; UI.toast('{@inspector}: "זה לא מה שכתוב!"', 'bad'); return; }
+        Sound.good();
+        log.push({ icon: it.icon, name: it.name, d: right, exp: it.off < 0 });
+        i++;
+        show();
+      });
+    };
+    show();
+  },
+
   // ---------- training menu (free mode) ----------
   training(box, opts, done) {
     const items = [

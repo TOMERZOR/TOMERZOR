@@ -222,6 +222,89 @@ const UI = {
     });
   },
 
+  // ---------- map: where everyone is ----------
+  toggleMap(force) {
+    const m = $('#map');
+    const open = force !== undefined ? force : m.classList.contains('hidden');
+    if (!open) { m.classList.add('hidden'); clearInterval(this.mapTimer); G.paused = false; return; }
+    if (this.busy || Mini.active || !G.running) return;
+    G.paused = true;
+    m.classList.remove('hidden');
+    m.innerHTML = `<canvas id="map-c"></canvas><div class="who-list"></div><button class="btn small ghost close" id="map-x">✕ סגור</button>`;
+    $('#map-x').onclick = () => this.toggleMap(false);
+    this.drawMap();
+    this.mapTimer = setInterval(() => this.drawMap(), 500);
+  },
+  drawMap() {
+    const c = $('#map-c');
+    if (!c) return;
+    const [fx0, fy0, fx1, fy1] = World.fence;
+    const x0 = fx0 - 1, y0 = fy0 - 1, cols = fx1 - fx0 + 3, rows = fy1 - fy0 + 5;
+    const s = 22;
+    c.width = cols * s; c.height = rows * s;
+    const g = c.getContext('2d');
+    const col = { [T.OUT]: World.id === 'hq' ? '#5d7a3a' : '#8f7c55', [T.SAND]: '#b9a57a', [T.WALL]: '#3c3a33', [T.FLOOR]: '#8e8c84', [T.ROAD]: '#3a3a38', [T.FENCE]: '#666', [T.PAD]: '#86847c', [T.GRASS]: '#7f9c55', [T.TRACK]: '#8f5440', [T.GATE]: '#3a3a38' };
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) { g.fillStyle = col[World.tile(x + x0, y + y0)]; g.fillRect(x * s, y * s, s, s); }
+    const px = (v) => (v / TS - x0) * s, py = (v) => (v / TS - y0) * s;
+    g.textAlign = 'center';
+    g.direction = 'rtl';
+    g.font = '700 15px Rubik, Arial';
+    for (const b of World.def.buildings) {
+      if (b.shelter) { g.fillStyle = '#e63b2e'; g.fillRect((b.x - x0 + 1) * s, (b.y - y0 + 1) * s, s, s); continue; }
+      g.fillStyle = 'rgba(0,0,0,.55)';
+      const tw = g.measureText(b.name).width + 10;
+      g.fillRect((b.x - x0 + b.w / 2) * s - tw / 2, (b.y - y0 + b.h / 2) * s - 11, tw, 20);
+      g.fillStyle = '#f4f1e6';
+      g.fillText(b.name, (b.x - x0 + b.w / 2) * s, (b.y - y0 + b.h / 2) * s + 5);
+    }
+    const dot = (x, y, color, label, big) => {
+      g.fillStyle = color;
+      g.strokeStyle = '#000';
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(px(x), py(y), big ? 9 : 6, 0, 7); g.fill(); g.stroke();
+      if (!label) return;
+      g.font = `800 ${big ? 15 : 13}px Rubik, Arial`;
+      g.lineWidth = 3;
+      g.strokeStyle = 'rgba(0,0,0,.85)';
+      g.strokeText(label, px(x), py(y) - 11);
+      g.fillStyle = '#fff';
+      g.fillText(label, px(x), py(y) - 11);
+    };
+    for (const n of G.npcs) dot(n.x, n.y, n.person.color || '#d6dccd', n.short);
+    for (const p of Multi.here()) dot(p.dx, p.dy, '#5be0ff', '🌐 ' + p.name, true);
+    dot(G.player.x, G.player.y, '#f2c14e', fmt('את[ה/]'), true);
+    // Who is where, across all sites.
+    const where = (n) => {
+      const b = World.def.buildings.find(b => n.x >= b.x * TS && n.x < (b.x + b.w) * TS && n.y >= b.y * TS && n.y < (b.y + b.h) * TS);
+      return b ? b.name : 'בחוץ';
+    };
+    const rows2 = [];
+    for (const p of Multi.peers) rows2.push(`<div class="pp"><b>🌐 ${p.name}</b><i>${fmt(ROSTER.sites[p.site] || '')}</i></div>`);
+    const platoon = ROSTER.people.filter(p => p.map === 'netivot');
+    const list = platoon.map(p => {
+      const n = G.npcs.find(x => x.id === p.id);
+      const site = n ? `${fmt(ROSTER.sites[World.id])} · ${where(n)}` : Multi.taken().has(p.id) ? 'משחק[/ת] באונליין' : fmt(ROSTER.sites[p.map]);
+      return `<div class="pp"><b>${p.emoji} ${p.short}</b><i>${fmt(site)}</i></div>`;
+    }).join('');
+    const others = G.npcs.filter(n => !platoon.some(p => p.id === n.id)).map(n => `<div class="pp"><b>${n.person.emoji || ''} ${n.short}</b><i>${where(n)}</i></div>`).join('');
+    const wl = $('#map').querySelector('.who-list');
+    wl.innerHTML = `${rows2.length ? `<h3>🌐 שחקנים מחוברים</h3>${rows2.join('')}` : ''}<h3>${fmt('{platoon}')}</h3>${list}${others ? `<h3>${fmt(ROSTER.sites[World.id])}</h3>${others}` : ''}`;
+  },
+
+  // ---------- multiplayer chat ----------
+  chat() {
+    if (!Multi.on || $('.chat-box')) return;
+    G.paused = true;
+    const box = el('div', { class: 'chat-box' }, '<input type="text" maxlength="80" placeholder="מה להגיד לכולם?"><button class="btn small">שלח</button>');
+    document.body.appendChild(box);
+    const inp = box.querySelector('input');
+    const close = () => { box.remove(); G.paused = false; };
+    const send = () => { Multi.speak(inp.value); close(); };
+    box.querySelector('button').onclick = send;
+    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(); if (e.key === 'Escape') close(); };
+    inp.focus();
+  },
+
   // ---------- phone ----------
   phoneTab: 'tasks',
   togglePhone(force) {
@@ -258,6 +341,7 @@ const UI = {
         <div class="ph-item">ציון פלג"צ: <b>${Math.round(S.score)}</b> / ${DATA.passScore} למעבר</div>
         <div class="ph-item">יירוטים שראית: <b>${S.stats.intercepts}</b> · אזעקות: <b>${S.stats.alerts}</b></div>
         <div class="ph-item">מארזים שהוחלפו: <b>${S.stats.reloads}</b> · רכבים בש"ג: <b>${S.stats.cars}</b></div>
+        <div class="ph-item">שחורה: <b>${Math.round(S.shchora || 0)}</b>/100 · יציאה הביתה: <b>${Events.daysToHome() ? `עוד ${Events.daysToHome()} ימים` : 'היום!'}</b></div>
         <div class="ph-item">יתרון גדוד: ${G.perk ? G.perk.label : '—'}</div>`;
     } else if (this.phoneTab === 'ach') {
       body.innerHTML = DATA.achievements.map(a => {

@@ -87,6 +87,7 @@ const Sound = (() => {
     night: { bpm: 70, scale: MINOR, bass: [0, -4, -2, -5], drums: 'hat', lead: 0.35, pad: true, vol: 0.8 },
     deploy: { bpm: 118, scale: HIJAZ, bass: [0, 0, -2, 1], drums: 'drive', lead: 0.55, pad: false, vol: 1 },
     tension: { bpm: 128, scale: MINOR, bass: [0, 0, 1, 0], drums: 'pulse', lead: 0, pad: false, vol: 0.7 },
+    boss: { bpm: 140, scale: HIJAZ, bass: [0, 1, 0, -2], drums: 'drive', lead: 0.8, pad: false, vol: 1 },
   };
   const Music = {
     mood: null, next: null, step: 0, bar: 0, time: 0, timer: null, seed: 1,
@@ -202,6 +203,30 @@ const Sound = (() => {
     horn() { tone(196, 0.35, 'sawtooth', 0.08); tone(247, 0.35, 'sawtooth', 0.06); },
     truck() { noise(1.2, 0.18, 180); tone(55, 1.2, 'sawtooth', 0.05, 70); },
     pop() { tone(700, 0.05, 'sine', 0.05, 1100); },
+    fart() {
+      // A low, wobbling raspberry.
+      if (!ensure() || !prefs.sfx) return;
+      const t = ctx.currentTime;
+      const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(95, t);
+      o.frequency.exponentialRampToValueAtTime(55, t + 0.7);
+      lfo.frequency.value = 28;
+      lg.gain.value = 30;
+      lfo.connect(lg).connect(o.frequency);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.75);
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 600;
+      o.connect(f).connect(g).connect(sfxBus);
+      o.start(t); lfo.start(t);
+      o.stop(t + 0.8); lfo.stop(t + 0.8);
+      noise(0.5, 0.05, 300, 'lowpass');
+    },
+    splat() { noise(0.18, 0.35, 900, 'lowpass'); tone(140, 0.12, 'sine', 0.1, 60); },
+    whoosh() { noise(0.35, 0.12, 1800, 'bandpass', 0, null, 1.5); },
     travel() { noise(1.5, 0.15, 220); tone(65, 1.5, 'sawtooth', 0.04, 90); },
     startSiren() {
       if (!prefs.sfx || !ensure() || siren) return;

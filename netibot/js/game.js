@@ -7,6 +7,7 @@ const G = {
   cam: { x: 0, y: 0, w: 800, h: 600, zoom: 1 },
   keys: new Set(),
   stick: { x: 0, y: 0 },
+  look: { x: 0, y: 0 },
   touch: false,
   touchRun: false,
   paused: true,
@@ -26,13 +27,14 @@ let miniBase = null;
 
 // Where each cast member stands on each site: a fixed tile, or a wander region.
 const WANDER = {
-  netivot: [{ x0: 4, y0: 13, x1: 33, y1: 23 }, { x0: 33, y0: 22, x1: 59, y1: 32 }, { x0: 17, y0: 30, x1: 40, y1: 40 }, { x0: 36, y0: 3, x1: 59, y1: 12 }, { x0: 6, y0: 25, x1: 18, y1: 31 }],
+  netivot: [{ x0: 27, y0: 17, x1: 34, y1: 34 }, { x0: 35, y0: 22, x1: 43, y1: 28 }, { x0: 19, y0: 30, x1: 28, y1: 33 }, { x0: 33, y0: 9, x1: 50, y1: 15 }, { x0: 13, y0: 9, x1: 26, y1: 13 }],
   hq: [{ x0: 4, y0: 13, x1: 59, y1: 23 }, { x0: 24, y0: 26, x1: 34, y1: 40 }, { x0: 40, y0: 32, x1: 59, y1: 40 }],
   field: [{ x0: 20, y0: 30, x1: 40, y1: 40 }, { x0: 26, y0: 18, x1: 40, y1: 28 }],
 };
 const LAYOUT = {
   netivot: {
-    commander: () => SPOTS.commander, sergeant: () => SPOTS.sergeantDoor, inspector: () => tc(30, 28), friend: () => tc(24, 31), ruth: () => tc(3, 14),
+    commander: () => SPOTS.commander, sergeant: () => SPOTS.sergeantDoor, inspector: () => tc(33, 30), friend: () => tc(27, 31), ruth: () => SPOTS.pullup,
+    p_liran: [43, 28], p_shaked: () => TRACK_POINTS[0],
   },
   hq: {
     bc: [26, 7], deputy_bc: [27, 12], harasar: [32, 8], rasap: [45, 8], deputy_rasap: [48, 7], sarsap: [46, 13], interceptors: [55, 9],
@@ -41,7 +43,9 @@ const LAYOUT = {
   },
   field: { commander: [33, 31], driver1: [28, 37], driver2: [33, 37], p_nevo: null, p_shalev: null, p_ofek: null, p_miriam: null },
 };
-const WANDERERS = new Set(['friend', 'inspector', 'officer1', 'officer2', 'officer3', 'harasar']);
+const WANDERERS = new Set(['friend', 'inspector', 'officer1', 'officer2', 'officer3', 'harasar', 'rasap']);
+// Who hunts for idle soldiers on each site.
+const CHASERS = { netivot: 'inspector', hq: 'rasap' };
 
 const Game = {
   // ---------- boot ----------
@@ -55,6 +59,7 @@ const Game = {
     this.resize();
     window.addEventListener('resize', () => this.resize());
     G.touch = matchMedia('(pointer: coarse)').matches;
+    document.body.classList.toggle('touch', G.touch);
     this.title();
     requestAnimationFrame(t => this.frame(t));
   },
@@ -82,6 +87,8 @@ const Game = {
       if (e.code === 'Escape' && !$('#phone').classList.contains('hidden')) UI.togglePhone(false);
       if (e.code === 'KeyM') this.toggleAudio('music');
       if (e.code === 'KeyN') this.toggleAudio('sfx');
+      if (e.code === 'KeyG' && !Mini.active && !UI.busy) UI.toggleMap();
+      if (e.code === 'KeyT' && Multi.on && !Mini.active && !UI.busy) { e.preventDefault(); UI.chat(); }
       if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused) this.interact();
     });
     document.addEventListener('keyup', (e) => G.keys.delete(e.code));
@@ -92,7 +99,7 @@ const Game = {
     let sid = null, cx = 0, cy = 0;
     const moveStick = (x, y) => {
       let dx = x - cx, dy = y - cy;
-      const d = Math.hypot(dx, dy), max = 50;
+      const d = Math.hypot(dx, dy), max = 60;
       if (d > max) { dx = dx / d * max; dy = dy / d * max; }
       G.stick.x = dx / max; G.stick.y = dy / max;
       knob.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -109,7 +116,33 @@ const Game = {
     const endStick = (e) => { if (e.pointerId !== sid) return; sid = null; G.stick.x = G.stick.y = 0; knob.style.transform = ''; };
     stick.addEventListener('pointerup', endStick);
     stick.addEventListener('pointercancel', endStick);
+    // Second joystick on the right: look around.
+    const lstick = $('#look'), lknob = $('#look-knob');
+    let lid = null, lx = 0, ly = 0;
+    const moveLook = (x, y) => {
+      let dx = x - lx, dy = y - ly;
+      const d = Math.hypot(dx, dy), max = 60;
+      if (d > max) { dx = dx / d * max; dy = dy / d * max; }
+      G.look.x = dx / max; G.look.y = dy / max;
+      lknob.style.transform = `translate(${dx}px, ${dy}px)`;
+      Scene3D.lastLook = performance.now();
+    };
+    lstick.addEventListener('pointerdown', (e) => {
+      Sound.unlock();
+      lid = e.pointerId;
+      const r = lstick.getBoundingClientRect();
+      lx = r.left + r.width / 2; ly = r.top + r.height / 2;
+      lstick.setPointerCapture(lid);
+      moveLook(e.clientX, e.clientY);
+    });
+    lstick.addEventListener('pointermove', (e) => { if (e.pointerId === lid) moveLook(e.clientX, e.clientY); });
+    const endLookStick = (e) => { if (e.pointerId !== lid) return; lid = null; G.look.x = G.look.y = 0; lknob.style.transform = ''; };
+    lstick.addEventListener('pointerup', endLookStick);
+    lstick.addEventListener('pointercancel', endLookStick);
     $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
+    $('#btn-map').addEventListener('click', () => UI.toggleMap());
+    $('#minimap').addEventListener('click', () => UI.toggleMap());
+    $('#btn-chat').addEventListener('click', () => UI.chat());
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
     $('#btn-phone').addEventListener('click', () => UI.togglePhone());
     $('#btn-music').addEventListener('click', () => this.toggleAudio('music'));
@@ -138,7 +171,7 @@ const Game = {
       e.preventDefault();
       Scene3D.dist = Math.max(3, Math.min(14, Scene3D.dist + e.deltaY * 0.01));
     }, { passive: false });
-    document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touch) { G.touch = true; if (G.running) $('#touch').classList.remove('hidden'); } }, true);
+    document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touch) { G.touch = true; document.body.classList.add('touch'); if (G.running) $('#touch').classList.remove('hidden'); } }, true);
   },
 
   toggleAudio(kind) {
@@ -159,6 +192,7 @@ const Game = {
 
   interact() {
     if (G.alert) return;
+    if (Boss.active) { Boss.throw(); return; }
     const it = this.nearestInteractable();
     if (it) { Sound.click(); it.action(); }
   },
@@ -168,7 +202,9 @@ const Game = {
     let best = null, bd = Infinity;
     for (const it of Story.interactables()) {
       const d = Math.hypot(it.x - p.x, it.y - p.y);
-      if (d < it.r + p.r && d < bd) { bd = d; best = it; }
+      // Objects win over a passer-by: talking needs you to be clearly closer to the person.
+      const score = d + (it.talk ? 28 : 0);
+      if (d < it.r + p.r && score < bd) { bd = score; best = it; }
     }
     return best;
   },
@@ -197,7 +233,7 @@ const Game = {
   resetNpcs() {
     const mk = (person, spot, wander) => ({
       id: person.id, person, short: person.short, x: spot.x, y: spot.y, r: 12, angle: Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: Math.random() * 4, wander,
-      look: { skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank },
+      look: { skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies },
       barkCd: 8 + Math.random() * 20, chaseCd: 60,
     });
     const map = World.id;
@@ -206,7 +242,10 @@ const Game = {
     G.npcs = [];
     let ri = 0;
     const people = [...ROSTER.people, ROSTER.easterEgg];
+    const taken = Multi.taken();
     for (const person of people) {
+      // Somebody playing as this character replaces them in the world.
+      if (taken.has(person.id)) continue;
       const onMap = map === 'field' ? person.id in layout : person.map === map || (person.id === 'ruth' && map === 'netivot');
       if (!onMap) continue;
       const fixed = layout[person.id];
@@ -216,7 +255,7 @@ const Game = {
       else if (Array.isArray(fixed)) spot = tc(fixed[0], fixed[1]);
       else spot = this.walkableNear(tc(Math.floor((region.x0 + region.x1) / 2), Math.floor((region.y0 + region.y1) / 2))) || tc(30, 30);
       const wanders = !fixed || WANDERERS.has(person.id);
-      const w = person.id === 'inspector' ? { x0: 5, y0: 13, x1: 58, y1: 39 } : person.id === 'friend' ? { x0: 20, y0: 24, x1: 33, y1: 33 } : region;
+      const w = person.id === 'inspector' ? { x0: 13, y0: 9, x1: 50, y1: 40 } : person.id === 'friend' ? { x0: 24, y0: 29, x1: 33, y1: 34 } : person.id === 'rasap' ? { x0: 4, y0: 13, x1: 59, y1: 23 } : region;
       G.npcs.push(mk(person, spot, wanders && person.id !== 'ruth' ? w : null));
     }
   },
@@ -230,6 +269,20 @@ const Game = {
     }
     return null;
   },
+  // Someone from another site visiting this one for a while (a technician, the battery commander).
+  addVisitor(id, spot) {
+    if (this.npc(id)) return this.npc(id);
+    const person = Cast.get(id);
+    if (!person) return null;
+    const n = {
+      id, person, short: person.short, x: spot.x, y: spot.y, r: 12, angle: -Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: 4, wander: null, visitor: true,
+      look: { skin: person.skin || DATA.skinTones[(id.length * 7) % 4], hair: person.hair || DATA.hairColors[(id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1 },
+      barkCd: 20, chaseCd: 999,
+    };
+    G.npcs.push(n);
+    return n;
+  },
+  removeVisitor(id) { G.npcs = G.npcs.filter(n => !(n.visitor && n.id === id)); },
   setNpcSpot(id, spot) {
     const n = this.npc(id);
     if (!n) return;
@@ -253,7 +306,7 @@ const Game = {
   updateNpcs(dt) {
     const P = G.player;
     for (const n of G.npcs) {
-      if (n.id === 'inspector') this.updateChase(n, dt);
+      if (n.id === CHASERS[World.id]) this.updateChase(n, dt);
       if (n.bubble) { n.bubble.t -= dt; if (n.bubble.t <= 0) n.bubble = null; }
       n.barkCd -= dt;
       if (n.barkCd <= 0 && !n.bubble && !G.alert && n.person.barks) {
@@ -268,7 +321,7 @@ const Game = {
         const tgt = n.path[0];
         const dx = tgt.x - n.x, dy = tgt.y - n.y;
         const d = Math.hypot(dx, dy);
-        const sp = (n.sheltering ? 150 : n.chasing ? 104 : 70) * dt;
+        const sp = (n.sheltering ? 150 : n.chasing ? 104 : n.running ? 125 : 70) * dt;
         if (d <= sp) { n.x = tgt.x; n.y = tgt.y; n.path.shift(); }
         else { n.x += dx / d * sp; n.y += dy / d * sp; n.angle = Math.atan2(dy, dx); n.walk += dt * (n.sheltering ? 16 : 9); }
         continue;
@@ -276,6 +329,14 @@ const Game = {
       // Face the player when close.
       const pd = Math.hypot(P.x - n.x, P.y - n.y);
       if (n.chasing) continue;
+      // Shaked never stops training: laps around the track, pausing only to talk.
+      if (n.person.runner && World.id === 'netivot' && !G.alert && pd > 70) {
+        n.lap = ((n.lap || 0) + 1) % TRACK_POINTS.length;
+        const q = TRACK_POINTS[n.lap];
+        n.path = World.path(n.x, n.y, q.x, q.y) || [];
+        n.running = true;
+        continue;
+      }
       if (pd < 90) { n.angle = Math.atan2(P.y - n.y, P.x - n.x); continue; }
       if (n.wander && !G.alert) {
         n.idle -= dt;
@@ -297,7 +358,7 @@ const Game = {
     const P = G.player;
     const d = Math.hypot(P.x - n.x, P.y - n.y);
     n.chaseCd -= dt;
-    const allowed = World.id === 'netivot' && !G.alert && !Story.run && Story.chaseAllowed();
+    const allowed = !G.alert && !Story.run && !Boss.active && (World.id === 'netivot' ? Story.chaseAllowed() : Events.amsalemAllowed());
     if (!n.chasing) {
       if (allowed && n.chaseCd <= 0 && d < 170) {
         n.chasing = true;
@@ -305,7 +366,7 @@ const Game = {
         const c = n.person.chase;
         n.bubble = { text: fmtAs(n.person, c[Math.floor(Math.random() * c.length)]), t: 3 };
         Sound.whistle();
-        UI.toast(fmt('😱 {@inspector} ראתה אותך! לברוח (Shift)!'), 'bad');
+        UI.toast(fmt(`😱 ${n.short} ראתה אותך! לברוח (Shift)!`), 'bad');
       }
       return;
     }
@@ -313,14 +374,14 @@ const Game = {
       n.chasing = false;
       n.chaseCd = 75;
       n.path = World.path(n.x, n.y, n.spot.x, n.spot.y) || [];
-      if (allowed) { UI.toast(fmt('😅 ברחת מ{@inspector}!'), 'good'); Game.achieve('escape'); }
+      if (allowed) { UI.toast(fmt(`😅 ברחת מ${n.short}!`), 'good'); Game.achieve('escape'); }
       return;
     }
     if (d < 28) {
       n.chasing = false;
       n.chaseCd = 90;
       n.path = [];
-      Story.caught();
+      if (World.id === 'hq') Events.amsalemCaught(); else Story.caught();
       return;
     }
     n.repath -= dt;
@@ -349,7 +410,7 @@ const Game = {
       const live = !G.paused && !UI.busy;
       if (live) this.update(dt);
       Scene3D.update(live ? dt : 0, t);
-      Sound.music(G.alert ? 'tension' : World.id === 'field' && Story.has('deploy') ? 'deploy' : this.darkness() > 0.3 ? 'night' : 'day');
+      Sound.music(Boss.active ? 'boss' : G.alert ? 'tension' : World.id === 'field' && Story.has('deploy') ? 'deploy' : this.darkness() > 0.3 ? 'night' : 'day');
       Scene3D.render();
       this.drawOverlay(t);
       this.drawMinimap();
@@ -372,6 +433,10 @@ const Game = {
     if (k.has('ArrowLeft') || k.has('KeyQ')) Scene3D.yaw += dt * 2.2;
     if (k.has('ArrowRight') || k.has('KeyR')) Scene3D.yaw -= dt * 2.2;
     if (G.stick.x || G.stick.y) { mx = G.stick.x; my = G.stick.y; }
+    if (G.look.x || G.look.y) {
+      Scene3D.yaw -= G.look.x * dt * 2.6;
+      Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + G.look.y * dt * 1.4));
+    }
     const len = Math.hypot(mx, my);
     const wantsRun = k.has('ShiftLeft') || k.has('ShiftRight') || G.touchRun || !!G.alert;
     P.running = false;
@@ -385,10 +450,10 @@ const Game = {
         const drain = (G.perk && G.perk.key === 'stamina' ? 0.6 : 1.2) * dt * (G.alert ? 0.3 : 1);
         S.energy = Math.max(0, S.energy - drain);
       }
-      if (P.carry) speed *= 0.62;
+      if (P.carry) speed *= P.carry === 'squeegee' ? 0.8 : 0.62;
       if (S.energy < 15) {
         speed *= 0.7;
-        if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול משהו או לקנות קפה בש.ק.', 'bad'); }
+        if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול, לבשל במטבחון או לקנות קפה בש"ק בשו"ב', 'bad'); }
       } else G.lowEnergyWarned = false;
       const B = Scene3D.basis();
       const vx = B.rx * mx - B.fx * my, vy = B.rz * mx - B.fz * my;
@@ -416,6 +481,8 @@ const Game = {
 
     this.updateNpcs(dt);
     Story.update(dt);
+    Multi.update(dt);
+    if (P.bubble) { P.bubble.t -= dt; if (P.bubble.t <= 0) P.bubble = null; }
 
     if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 1.2);
 
@@ -481,30 +548,38 @@ const Game = {
   },
 
   drawMinimap() {
-    const s = 3;
+    // The minimap frames the fenced site plus the road outside the gate.
+    const [fx0, fy0, fx1, fy1] = World.fence;
+    const ox = fx0 - 1, oy = fy0 - 1, cols = fx1 - fx0 + 3, rows = 45 - fy0;
+    const s = Math.min(mini.width / cols, mini.height / rows);
+    const mx = (v) => (v / TS - ox) * s, my = (v) => (v / TS - oy) * s;
     if (!miniBase) {
       miniBase = document.createElement('canvas');
-      miniBase.width = World.W * s;
-      miniBase.height = World.H * s;
+      miniBase.width = mini.width;
+      miniBase.height = mini.height;
       const g = miniBase.getContext('2d');
-      const col = { [T.OUT]: '#8f7c55', [T.SAND]: '#b9a57a', [T.WALL]: '#3c3a33', [T.FLOOR]: '#8e8c84', [T.ROAD]: '#3a3a38', [T.FENCE]: '#555', [T.PAD]: '#86847c', [T.GRASS]: '#7f8c55', [T.TRACK]: '#8f5440', [T.GATE]: '#3a3a38' };
-      for (let y = 0; y < World.H; y++) for (let x = 0; x < World.W; x++) { g.fillStyle = col[World.grid[y][x]]; g.fillRect(x * s, y * s, s, s); }
+      const col = { [T.OUT]: World.id === 'hq' ? '#5d7a3a' : '#8f7c55', [T.SAND]: '#b9a57a', [T.WALL]: '#3c3a33', [T.FLOOR]: '#8e8c84', [T.ROAD]: '#3a3a38', [T.FENCE]: '#555', [T.PAD]: '#86847c', [T.GRASS]: '#7f8c55', [T.TRACK]: '#8f5440', [T.GATE]: '#3a3a38' };
+      g.fillStyle = col[T.OUT];
+      g.fillRect(0, 0, mini.width, mini.height);
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) { g.fillStyle = col[World.tile(x + ox, y + oy)]; g.fillRect(Math.floor(x * s), Math.floor(y * s), Math.ceil(s), Math.ceil(s)); }
       g.fillStyle = '#e63b2e';
-      for (const sh of World.shelters) g.fillRect(sh.x / TS * s - 3, sh.y / TS * s - 3, 6, 6);
+      for (const sh of World.shelters) g.fillRect(mx(sh.x) - 3, my(sh.y) - 3, 6, 6);
     }
     mctx.clearRect(0, 0, mini.width, mini.height);
     mctx.drawImage(miniBase, 0, 0);
     const t = this.objectiveTarget();
-    if (t) { mctx.fillStyle = '#f2c14e'; mctx.beginPath(); mctx.arc(t.x / TS * s, t.y / TS * s, 4, 0, 7); mctx.fill(); }
+    if (t) { mctx.fillStyle = '#f2c14e'; mctx.beginPath(); mctx.arc(mx(t.x), my(t.y), 4, 0, 7); mctx.fill(); }
     mctx.fillStyle = '#d6dccd';
-    for (const n of G.npcs) mctx.fillRect(n.x / TS * s - 1, n.y / TS * s - 1, 2, 2);
-    for (const tr of Story.trash) { mctx.fillStyle = '#4aa3df'; mctx.fillRect(tr.x / TS * s - 1, tr.y / TS * s - 1, 3, 3); }
+    for (const n of G.npcs) mctx.fillRect(mx(n.x) - 1, my(n.y) - 1, 2.5, 2.5);
+    for (const tr of Story.trash) { mctx.fillStyle = '#4aa3df'; mctx.fillRect(mx(tr.x) - 1, my(tr.y) - 1, 3, 3); }
+    mctx.fillStyle = '#5be0ff';
+    for (const p of Multi.here()) { mctx.beginPath(); mctx.arc(mx(p.dx), my(p.dy), 3, 0, 7); mctx.fill(); }
     mctx.fillStyle = '#fff';
     mctx.strokeStyle = '#000';
-    mctx.beginPath(); mctx.arc(G.player.x / TS * s, G.player.y / TS * s, 3.5, 0, 7); mctx.fill(); mctx.stroke();
+    const px = mx(G.player.x), py = my(G.player.y);
+    mctx.beginPath(); mctx.arc(px, py, 3.5, 0, 7); mctx.fill(); mctx.stroke();
     // View direction wedge.
     const B = Scene3D.basis();
-    const px = G.player.x / TS * s, py = G.player.y / TS * s;
     const a = Math.atan2(B.fz, B.fx);
     mctx.fillStyle = 'rgba(255,255,255,.22)';
     mctx.beginPath(); mctx.moveTo(px, py); mctx.arc(px, py, 22, a - 0.5, a + 0.5); mctx.closePath(); mctx.fill();
@@ -519,6 +594,9 @@ const Game = {
     $('#bar-energy').style.width = S.energy + '%';
     $('#bar-morale').style.width = S.morale + '%';
     $('#bar-score').style.width = Math.min(100, S.score / DATA.passScore * 100) + '%';
+    $('#bar-shchora').style.width = (S.shchora || 0) + '%';
+    $('#hud-home').textContent = Events.daysToHome() ? `🏠 עוד ${Events.daysToHome()} ימים` : '🏠 היום!';
+    $('#btn-chat').classList.toggle('hidden', !Multi.on);
     $('#hud-money').textContent = `₪${S.money}`;
     UI.objective(Story.objective());
   },
@@ -536,7 +614,8 @@ const Game = {
     return {
       mode, day: 1, clock: 360, score: 0, energy: 100, morale: 75, money: 30,
       inbox: [], achievements: [], graduated: false, examRetry: false,
-      myBed: 2, myLocker: 1, dayFlags: {}, trainCount: {},
+      myBed: G.profile && G.profile.gender === 'f' ? 10 : 2, myLocker: G.profile && G.profile.gender === 'f' ? 4 : 1, dayFlags: {}, trainCount: {},
+      shchora: 45, homeDay: DATA.homeDay, flags: {}, junkDone: [],
       stats: { intercepts: 0, alerts: 0, reloads: 0, cars: 0, purchases: 0, days: 0 },
     };
   },
@@ -551,6 +630,7 @@ const Game = {
   },
 
   async startWorld(fresh) {
+    this.landscape();
     UI.clearScreen();
     $('#hud').classList.remove('hidden');
     if (G.touch) $('#touch').classList.remove('hidden');
@@ -560,6 +640,17 @@ const Game = {
     if (fresh) this.achieve('beret');
     this.syncAudioButtons();
     await Story.startDay(G.state.day);
+  },
+
+  // Phones play sideways: go fullscreen and ask the browser to lock landscape.
+  landscape() {
+    if (!G.touch) return;
+    const el = document.documentElement;
+    const lock = () => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* not supported */ } };
+    try {
+      if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(lock, lock);
+      else lock();
+    } catch (e) { lock(); }
   },
 
   // ---------- menus ----------
@@ -573,6 +664,7 @@ const Game = {
         ${story ? `<button class="btn" id="m-cont">המשך — יום ${story.state.day} (${story.profile.name})</button>` : ''}
         <button class="btn ${story ? 'ghost' : ''}" id="m-new">מצב סיפור — משחק חדש</button>
         <button class="btn ghost" id="m-free">אימונים חופשיים</button>
+        <button class="btn ghost" id="m-multi">🌐 מולטיפלייר — לשחק עם הפלגה</button>
         <button class="btn ghost" id="m-help">איך משחקים</button>
         <div class="audio-row"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
       </div>
@@ -587,6 +679,7 @@ const Game = {
       else this.createCharacter('free');
     };
     $('#m-help').onclick = () => this.help(false);
+    $('#m-multi').onclick = () => { Sound.unlock(); this.multiMenu(); };
     for (const b of document.querySelectorAll('[data-audio]')) b.onclick = () => this.toggleAudio(b.dataset.audio);
     this.syncAudioButtons();
     Sound.music('menu');
@@ -598,14 +691,16 @@ const Game = {
       <p><b>המטרה:</b> לעבור את פלג"צ — חמישה ימים בפלגה הצעירה של סוללת כיפת ברזל ליד נתיבות — ולעבור את מבחן הסיום. צריך ציון פלג"צ של ${DATA.passScore} לפחות ולעבור 3 מתוך 4 חלקי המבחן.</p>
       <p><b>מקלדת:</b> WASD — הליכה (קדימה = לכיוון שהמצלמה מסתכלת) · Shift — ריצה · E — פעולה · רווח — המשך שיחה · Tab — טלפון.</p>
       <p><b>מצלמה:</b> גרירה עם העכבר מסובבת את המצלמה סביב הדמות, גלגלת — זום. אפשר גם חצים ימינה/שמאלה (או Q ו-R).</p>
-      <p><b>בטלפון:</b> ג'ויסטיק משמאל להליכה, גרירה עם האצבע על המסך לסיבוב המצלמה, כפתור E לפעולה וכפתור "ריצה".</p>
+      <p><b>בטלפון:</b> משחקים לרוחב. ג'ויסטיק שמאלי — הליכה קדימה, אחורה, ימינה ושמאלה. ג'ויסטיק ימני — להסתכל מסביב. כפתור E לפעולה וכפתור "ריצה".</p>
+      <p><b>מפה:</b> G או לחיצה על המפה הקטנה — מפה גדולה שמראה איפה כל אחד מהפלגה.</p>
+      <p><b>שחורה:</b> המד השחור. עולה מכל משימה ומכל דבר מנפיץ, ויורד ככל שמתקרבים ליציאה הביתה (ומאוכל טוב).</p>
       <p><b>החץ הצהוב</b> בתחתית המסך מצביע על המשימה הבאה, והחץ המרחף מעל המטרה מסמן אותה בעולם.</p>
       <p><b>תחנת הסעות:</b> ליד השער בכל אתר. משם נוסעים בין אתר נתיבות, ה{hq} ואתר הפריסה.</p>
       <p><b>{@inspector}:</b> מסתובבת בבסיס ומחפשת את מי לתפוס למסדר. אם היא רואה אותך — לרוץ (Shift). אם היא תופסת — יש מסדר פתע.</p>
       <p><b>צבע אדום:</b> יש ${DATA.redAlertSeconds} שניות להגיע למיגונית (גג עם פס אדום, ונקודות אדומות במפה). החץ האדום מראה את הקרובה.</p>
       <p><b>מארזים:</b> אחרי יירוטים משגר מתרוקן. לוקחים מארז במחסן, סוחבים למשגר ומבצעים את שלבי ההחלפה.</p>
       <p><b>ש"ג:</b> בודקים שם ומספר רכב מול רשימת הכניסה. מורשה — פותחים, ואחרי שעבר — סוגרים מיד!</p>
-      <p><b>אנרגיה ומורל:</b> אוכלים בחדר האוכל, קונים בש.ק., ישנים במיטה. בלי אנרגיה זזים לאט.</p>
+      <p><b>אנרגיה ומורל:</b> אוכלים בחדר האוכל, מבשלים במטבחון, קונים בש"ק בשו"ב, ישנים במיטה. בלי אנרגיה זזים לאט.</p>
       <div class="actions"><button class="btn" id="h-ok">${inGame ? 'חזרה למשחק' : 'הבנתי'}</button></div>
     </div></div>`;
     if (inGame) {
@@ -656,6 +751,42 @@ const Game = {
       };
     };
     render();
+  },
+
+  // Multiplayer: pick who you are from the cast and join everyone who has the link open.
+  async multiMenu() {
+    UI.screen('<div class="content"><div class="panel"><h2>🌐 מולטיפלייר</h2><p>מתחבר לחדר...</p></div></div>', 'assets/title.jpg');
+    const room = await Multi.init();
+    if (!room) {
+      UI.screen(`<div class="content"><div class="panel"><h2>🌐 מולטיפלייר</h2>
+        <p>מולטיפלייר עובד כשפותחים את המשחק דרך הקישור שלו ב־claude.ai: כל מי שפותח את הקישור באותו זמן נמצא באותו עולם ורואה את כולם.</p>
+        <p>שלחו לפלגה את הקישור (שיתוף → הזמנה), וכל אחד בוחר מי הוא מהרשימה.</p>
+        <div class="actions"><button class="btn" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
+      $('#mm-back').onclick = () => this.title();
+      return;
+    }
+    const render = () => {
+      const taken = new Set(Multi.peers.map(p => p.who));
+      const people = ROSTER.people.filter(p => p.map === 'netivot' || ['bc', 'deputy_bc', 'harasar', 'rasap', 'deputy_rasap', 'sarsap', 'interceptors', 'officer1', 'officer2', 'officer3', 'ops', 'hamalist'].includes(p.id));
+      UI.screen(`<div class="content"><div class="panel">
+        <h2>🌐 מי את[ה/]?</h2><p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => fmt(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
+        <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}"><div class="big">${p.emoji}</div><div class="nm">${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
+        <div class="actions"><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
+      $('#mm-back').onclick = () => this.title();
+      $('#screen').querySelectorAll('.card').forEach(c => c.onclick = () => {
+        if (c.classList.contains('off')) { UI.toast('מישהו כבר משחק בתור הדמות הזאת'); return; }
+        Sound.click();
+        const person = Cast.get(c.dataset.id);
+        G.profile = { name: person.short, gender: person.female ? 'f' : 'm', skin: person.skin || DATA.skinTones[1], hair: person.hair || DATA.hairColors[0], gdud: '947', battery: 'ido', as: person.id };
+        const saved = this.load('multi.' + person.id);
+        G.state = saved ? saved.state : this.newState('free');
+        G.state.mode = 'multi.' + person.id;
+        Multi.start(person.id);
+        this.startWorld(!saved).then(() => UI.toast('🌐 מחובר[/ת]! T או 💬 — לכתוב לכולם · G — מפה'));
+      });
+    };
+    render();
+    this.multiRender = render;
   },
 
   chooseGdud(mode) {

@@ -102,6 +102,7 @@ const DATA = {
         { id: 'tech', name: 'מעבדת טכנאים', x: 36, y: 25, w: 9, h: 6, doors: [[40, 25]] },
         { id: 'barracks', name: 'מגורים', x: 47, y: 25, w: 12, h: 7, doors: [[52, 25]] },
         { id: 'kantina', name: 'ש"ק — קנטינה', x: 38, y: 33, w: 6, h: 5, doors: [[40, 33]] },
+        { id: 'gym', name: 'חדר כושר', x: 46, y: 35, w: 8, h: 5, doors: [[50, 35]] },
         { id: 'mig1', name: 'מיגונית', x: 26, y: 14, w: 3, h: 3, doors: [[27, 16]], shelter: true },
         { id: 'mig2', name: 'מיגונית', x: 44, y: 14, w: 3, h: 3, doors: [[45, 16]], shelter: true },
         { id: 'mig3', name: 'מיגונית', x: 34, y: 33, w: 3, h: 3, doors: [[35, 33]], shelter: true },
@@ -276,6 +277,30 @@ const DATA = {
   ],
 
   // Kitchenette recipes.
+  // The dining room: each meal has a few dishes; up to three plates a meal.
+  menu: {
+    breakfast: [
+      { id: 'omelette', name: 'חביתה וסלט ישראלי', icon: '🍳', energy: 18, morale: 3 },
+      { id: 'shakshuka', name: 'שקשוקה עם לחם', icon: '🥘', energy: 22, morale: 5 },
+      { id: 'yogurt', name: 'יוגורט וגרנולה', icon: '🥣', energy: 10, morale: 2, healthy: true },
+      { id: 'cornflakes', name: 'קורנפלקס עם חלב', icon: '🥛', energy: 8, morale: 2 },
+      { id: 'coffee', name: 'קפה שחור', icon: '☕', energy: 12, morale: 4 },
+    ],
+    lunch: [
+      { id: 'schnitzel', name: 'שניצל ופירה', icon: '🍗', energy: 25, morale: 5 },
+      { id: 'majadra', name: 'מג׳דרה ויוגורט', icon: '🍚', energy: 20, morale: 3 },
+      { id: 'kebab', name: 'קבב ואורז', icon: '🍢', energy: 24, morale: 5 },
+      { id: 'salad', name: 'סלט ירקות גדול', icon: '🥗', energy: 8, morale: 1, healthy: true },
+      { id: 'kubbeh', name: 'מרק קובה', icon: '🍲', energy: 18, morale: 6 },
+    ],
+    dinner: [
+      { id: 'pasta', name: 'פסטה ברוטב עגבניות', icon: '🍝', energy: 22, morale: 4 },
+      { id: 'soup', name: 'מרק עדשים', icon: '🍲', energy: 16, morale: 4 },
+      { id: 'shnitzelonim', name: 'שניצלונים וצ׳יפס', icon: '🍟', energy: 22, morale: 7 },
+      { id: 'tuna', name: 'סלט טונה וביצה', icon: '🥚', energy: 14, morale: 2, healthy: true },
+      { id: 'pudding', name: 'מלבי לקינוח', icon: '🍮', energy: 6, morale: 6 },
+    ],
+  },
   recipes: [
     { id: 'shakshuka', name: 'שקשוקה', icon: '🍳', energy: 30, morale: 10, steps: 'בצל, עגבניות, ביצים, לא לגעת!', len: 5 },
     { id: 'toast', name: 'טוסט גבינה', icon: '🥪', energy: 20, morale: 8, steps: 'לחם, גבינה, לסגור, ללחוץ חזק', len: 4 },
@@ -299,6 +324,9 @@ const DATA = {
     { id: 'broccoli', name: 'ברוקולי', icon: '🥦', color: 0x3f8f2f, hit: 'אוי לא! סיבים תזונתיים!' },
     { id: 'ricecake', name: 'פריכיות', icon: '🍘', color: 0xe8d6a0, hit: 'אוי לא! מזון לא מעובד!' },
     { id: 'protein', name: 'חטיף חלבון', icon: '💪', color: 0x7a4a2a, hit: 'רק לא זה! דל סוכר!' },
+    { id: 'carrot', name: 'גזר', icon: '🥕', color: 0xe8781f, hit: 'בטא־קרוטן?! העיניים שלי רואות טוב מדי!' },
+    { id: 'apple', name: 'תפוח', icon: '🍎', color: 0xd8261f, hit: 'תפוח ביום — ואני בבית חולים!' },
+    { id: 'cucumber', name: 'מלפפון', icon: '🥒', color: 0x4f9e33, hit: 'מים! הרבה מים! אני מתייבש מבריאות!' },
   ],
 
   // Voices that are not part of the cast.

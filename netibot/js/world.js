@@ -141,6 +141,12 @@ const World = {
       prop('fridge', 57.1, 26.1, 0.9, 0.8);
       prop('stove', 55.9, 26.1, 1.0, 0.7);
       prop('counter', 39.2, 35.6, 3.6, 0.55);
+      // The gym: a weights rack, benches and a treadmill nobody has fixed since 2019.
+      prop('gymrack', 46.4, 38.6, 3.2, 0.7);
+      prop('bench', 47.3, 36.6, 0.6, 1.5);
+      prop('bench', 49.0, 36.6, 0.6, 1.5);
+      prop('treadmill', 51.4, 36.3, 0.9, 1.8);
+      prop('treadmill', 52.7, 36.3, 0.9, 1.8);
       // Hidden behind the shelves of the rasap's storeroom. Nobody knows about it. Officially.
       prop('snackcab', 49.0, 6.6, 0.9, 1.2);
       prop('radar', 21, 14, 2, 2);

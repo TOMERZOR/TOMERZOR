@@ -34,6 +34,7 @@ const SPOTS_HQ = {
   clinic: { x: 10.5 * TS, y: 28.6 * TS },
   dining: { x: 19.5 * TS, y: 29.5 * TS },
   kantina: { x: 40.5 * TS, y: 35 * TS },
+  gym: { x: 50.2 * TS, y: 37.6 * TS },
   stove: { x: 56.4 * TS, y: 27.3 * TS },
   snack: { x: 48.6 * TS, y: 7.2 * TS },
   arena: tc(30, 18),
@@ -62,6 +63,7 @@ const TASKS = {
   hq_gear: { title: 'לחתום על ציוד אצל {@rasap}', desc: 'ברספ"ייה ב{hq}.', target: () => SPOTS_HQ.rasap, pts: 0, map: 'hq' },
   deploy: { title: 'פריסת אתר חדש', desc: 'לנסוע לאתר הפריסה ולהכווין את המשאיות עם המכולות.', target: () => Story.deployTarget(), pts: 0, map: 'field' },
   surprise: { title: 'מסדר פתע של {@inspector}: לטאטא אבק במגורים', desc: 'נתפסת. קורה לטובים ביותר.', target: () => inspectionTarget(), pts: 0, optional: true },
+  ofek_swap: { title: 'להחליף את {@p_ofek} בעמדה — הוא חייב שירותים', desc: 'קריאטין, מים, ושלושה ליטר של דחיפות.', target: () => SPOTS.tower, pts: 0, optional: true },
   guard: { title: 'שמירת לילה בעמדה', desc: 'עמדת השמירה בפינת הבסיס.', target: () => SPOTS.tower, pts: 0 },
   train2: { title: 'שני אימונים (לוח אימונים / מטווח / מסלול)', desc: '', target: () => SPOTS.board, pts: 0, count: 2 },
   exam_reload: { title: 'מבחן: החלפת מארז', desc: 'הסמלת ליד משגר 2.', target: () => (G.state.dayFlags.examReload ? reloadTarget() : npcPos('sergeant')), pts: 0 },
@@ -81,7 +83,7 @@ const TASKS = {
   amsalem: { title: 'המטפים "לשם" והשלולית "לשם"', desc: 'כי {@rasap} אמרה.', map: 'hq', target: () => choresTarget(), pts: 0, optional: true },
   find_lock: { title: 'למצוא מנעול חדש לשער של נתיבות', desc: 'רק לרס"פית יש מנעולים.', map: 'hq', target: () => npcPos('rasap'), pts: 0 },
   snack: { title: 'לפתוח את ארונית החטיפים הסודית של {@deputy_rasap}', desc: 'מאחורי המדפים ברספ"ייה.', map: 'hq', target: () => SPOTS_HQ.snack, pts: 0 },
-  boss: { title: 'להביס את מפלצת הצ\'יזבורגר!', desc: 'לאסוף אוכל בריא ולזרוק עליו.', map: 'hq', target: () => (Boss.active && Boss.pickups[0]) || null, pts: 0 },
+  boss: { title: 'להביס את צ\'יזבורגרו!', desc: 'לאסוף אוכל בריא ולזרוק עליו.', map: 'hq', target: () => (Boss.active && Boss.pickups[0]) || null, pts: 0 },
   lock_gate: { title: 'לנעול את השער של נתיבות ולצאת הביתה', desc: 'עם המנעול האחרון בסוללה.', target: () => SPOTS.gate, pts: 0, last: true },
 };
 const FINAL_DAY = { title: 'יום אחרון לפני יציאה הביתה 🏠', tasks: ['lineup', 'find_lock', 'snack', 'boss', 'lock_gate'], alerts: [] };
@@ -425,10 +427,11 @@ const Story = {
       add(SPOTS_HQ.hamal.x, SPOTS_HQ.hamal.y, 'עמדת בקרה בחמ"ל', () => this.radarShift(), 44);
       add(SPOTS_HQ.rasap.x, SPOTS_HQ.rasap.y, this.has('hq_gear') ? 'לחתום על ציוד' : 'דלפק הרספ"ייה', () => this.talkTo(Game.npc('rasap') || { id: 'rasap', person: Cast.get('rasap') }), 44);
       add(SPOTS_HQ.clinic.x, SPOTS_HQ.clinic.y, 'מרפאה', () => this.clinic(), 40);
+      add(SPOTS_HQ.gym.x, SPOTS_HQ.gym.y, '🏋️ להתאמן בחדר הכושר', () => this.gym(), 40);
       add(SPOTS_HQ.dining.x, SPOTS_HQ.dining.y, 'לאכול', () => this.eat(), 40);
       add(SPOTS_HQ.kantina.x, SPOTS_HQ.kantina.y, 'לקנות בש"ק', () => Mini.open('shop'), 40);
       if (this.has('snack') && !this.has('find_lock')) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, 'לפתוח את ארונית החטיפים הסודית', () => this.openSnack(), 40);
-      else if (Multi.on) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 להעיר את מפלצת הצ\'יזבורגר — קרב עם כל מי שבשו"ב', () => Boss.startCoop(), 40);
+      else if (Multi.on) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 להעיר את צ\'יזבורגרו — קרב עם כל מי שבשו"ב', () => Boss.startCoop(), 40);
       Events.interactables(add);
       return list;
     }
@@ -458,7 +461,8 @@ const Story = {
     add(SPOTS.board.x, SPOTS.board.y, 'לוח אימונים', () => this.trainingMenu(), 40);
     add(SPOTS.range.x, SPOTS.range.y, 'מטווח', () => this.training('range'), 44);
     add(SPOTS.track.x, SPOTS.track.y, 'מסלול כושר', () => this.training('run'), 40);
-    add(SPOTS.tower.x, SPOTS.tower.y, 'עמדת שמירה', () => this.guardShift(), 44);
+    if (this.has('ofek_swap')) add(SPOTS.tower.x, SPOTS.tower.y, '🚽 להחליף את {@p_ofek} בעמדה', () => Events.swapOfek(), 60);
+    else add(SPOTS.tower.x, SPOTS.tower.y, 'עמדת שמירה', () => this.guardShift(), 44);
 
     if (World.launchers.some(l => l.needsReload) && !P.carry) add(SPOTS.depot.x, SPOTS.depot.y, 'לקחת מארז', () => this.takeCanister(), 50);
     for (const L of World.launchers) {
@@ -618,6 +622,18 @@ const Story = {
       { who: 'sarsap', text: 'ואם חסר משהו — זה אצלי. ...לא, רגע, זה אצלך עכשיו. מזל טוב.' },
     ]);
     this.complete('hq_gear', 5, 'חתימה על ציוד');
+  },
+  async gym() {
+    const S = G.state;
+    if (S.dayFlags.gym) { UI.toast('כבר התאמנת היום. השרירים צריכים לנוח, ו[אתה/את] צריך[/ה] מקלחת.'); return; }
+    const r = await Mini.open('qte', { title: 'חדר כושר — סט אחרון', sub: 'עוד חזרה אחת! [הקש/הקישי] את הרצף לפני שהמשקולת מנצחת.', length: 7, time: 9, silent: true });
+    S.dayFlags.gym = true;
+    if (!r.success) { Game.addStat('energy', -6); UI.toast('המשקולת ניצחה. היום. 😮‍💨', 'bad'); return; }
+    Game.addStat('energy', -8);
+    Game.addStat('morale', 8);
+    Events.addShchora(-2);
+    Game.addScore(2, 'אימון בחדר הכושר');
+    await UI.talk([{ who: 'p_shaked', text: pick(['יפה! עכשיו ברוקולי וחלבון. לא, צ׳יפס זה לא חלבון.', 'עוד סט אחד ואתה מוכן ל{@deputy_rasap}. כלומר לצ׳יזבורגרו.', 'גאה בך. מחר — רגליים. אל תברח[/י].']) }]);
   },
   async clinic() {
     const S = G.state;
@@ -966,16 +982,33 @@ const Story = {
       if (v === 'wait') { await this.waitForDinner(); return; }
       if (v !== 'eat') return;
     }
-    if (S.dayFlags['ate_' + meal]) { UI.toast('כבר אכלת בארוחה הזאת'); return; }
-    if (S.dayFlags['ate_' + meal]) { UI.toast('כבר אכלת בארוחה הזאת'); return; }
     if (meal === 'lunch' && World.id === 'netivot' && this.has('rafael')) { UI.toast('האוכל עדיין במשאית של רפאל. קודם לפרוק!', 'bad'); return; }
+    // Choose from the dishes on the counter; up to three plates a meal.
+    const eaten = S.dayFlags['eat_' + meal] = S.dayFlags['eat_' + meal] || [];
+    if (eaten.length >= 3) { UI.toast('כבר אכלת שלוש מנות. עוד ביס ואת[ה/] מתגלגל[/ת] למסדר.'); return; }
+    const feast = meal === 'dinner' && S.dayFlags.feast && !eaten.includes('feast');
+    const dishes = DATA.menu[meal].filter(d => !eaten.includes(d.id));
+    const choices = dishes.map(d => ({ label: `${d.icon} ${d.name}`, value: d.id }));
+    if (feast) choices.unshift({ label: '🍕 החגיגה: כל האוכל שהוחבא מ{@bc}!', value: 'feast' });
+    choices.push({ label: 'סיימתי', value: null });
+    const title = { breakfast: 'ארוחת בוקר', lunch: 'ארוחת צהריים', dinner: 'ארוחת ערב' }[meal];
+    const pickId = await UI.talk([{ who: 'player', text: `${title}. מה לוקחים? (${eaten.length}/3 מנות)`, choices }]);
+    if (!pickId) return;
+    eaten.push(pickId);
     S.dayFlags['ate_' + meal] = true;
-    Game.addStat('energy', 30);
-    Game.addStat('morale', 6);
-    Events.addShchora(-3);
-    let food = { breakfast: 'חביתה, סלט ולחמניה 🍳', lunch: S.dayFlags.rafaelFood ? 'שניצל של רפאל ופירה 🍗' : 'שניצל ופירה 🍗', dinner: 'פסטה ומרק 🍝' }[meal];
-    if (meal === 'dinner' && S.dayFlags.feast) { food = 'חגיגה: כל האוכל שהוחבא מ{@bc}! 🍕🌯🍣'; Game.addStat('morale', 12); }
-    UI.toast(food, 'good');
+    if (pickId === 'feast') {
+      Game.addStat('energy', 30); Game.addStat('morale', 14); Events.addShchora(-4);
+      UI.toast('🍕🌯🍣 חגיגה!', 'good');
+    } else {
+      const d = DATA.menu[meal].find(x => x.id === pickId);
+      let name = d.name;
+      if (pickId === 'schnitzel' && S.dayFlags.rafaelFood) name = 'שניצל של רפאל ופירה';
+      Game.addStat('energy', d.energy);
+      Game.addStat('morale', d.morale);
+      Events.addShchora(d.healthy ? -3 : -2);
+      UI.toast(`${d.icon} ${name} · אנרגיה +${d.energy}`, 'good');
+      if (d.healthy) Game.addScore(1, 'אוכל בריא');
+    }
     if (meal === 'dinner') this.complete('dinner');
   },
   async waitForDinner() {
@@ -1003,8 +1036,45 @@ const Story = {
       if (!v) return;
     }
     this.complete('sleep');
+    // Lights out — but the night isn't always quiet.
+    if (!S.dayFlags.nightDone) {
+      S.dayFlags.nightDone = true;
+      const r = Math.random();
+      if (r < 0.05 && Cast.get('commander') && Events.orinDance) { await Events.orinDance(); }
+      else if (r < 0.05 + 0.33) {
+        await UI.cutscene([{ img: 'assets/redalert.jpg', who: '', text: '02:13. הטלפונים מצפצפים, האורות נדלקים. "הקפצה! צבע אדום — תרגיל!"' }]);
+        this.alert(true, 'night-drill');
+        return; // endAlert puts everyone back to bed
+      }
+    }
+    this.goToSleep();
+  },
+  // In multiplayer the day moves on only when everyone online is asleep.
+  goToSleep() {
+    const S = G.state;
+    if (Multi.on && Multi.peers.length) { this.waitForAll(); return; }
     S.dayFlags.ending = true;
     this.endDay();
+  },
+  waitForAll() {
+    const S = G.state;
+    Multi.sleeping = true;
+    let box = $('#sleep-wait');
+    if (!box) { box = document.createElement('div'); box.id = 'sleep-wait'; box.className = 'sleep-wait'; document.body.appendChild(box); }
+    box.innerHTML = '<div class="sw-z">😴</div><div class="sw-t"></div><button class="btn small ghost" data-up>לקום מהמיטה</button>';
+    box.classList.remove('hidden');
+    G.paused = true;
+    const stop = () => { clearInterval(timer); box.classList.add('hidden'); Multi.sleeping = false; G.paused = false; };
+    box.querySelector('[data-up]').onclick = () => { stop(); UI.toast('קמת. כולם מחכים לך במיטה 🛏️'); };
+    const tick = () => {
+      const awake = Multi.peers.filter(p => !p.sl);
+      box.querySelector('.sw-t').textContent = awake.length
+        ? `ישנים ${Multi.peers.length + 1 - awake.length}/${Multi.peers.length + 1}. מחכים ל: ${awake.map(p => p.name).join(', ')}`
+        : 'כולם ישנים. לילה טוב...';
+      if (!awake.length || !Multi.on) { stop(); S.dayFlags.ending = true; this.endDay(); }
+    };
+    const timer = setInterval(tick, 500);
+    tick();
   },
   async trainingMenu() {
     const r = await Mini.open('training');
@@ -1315,6 +1385,13 @@ const Story = {
       return;
     }
     if (A.kind === 'drill-train') { this.trainingDone('alertDrill', A.made, 4); return; }
+    if (A.kind === 'night-drill') {
+      Game.addScore(A.made ? 3 : -3, A.made ? 'הקפצת לילה — הגעת בזמן' : 'הקפצת לילה — איחרת');
+      await UI.talk([{ who: 'sergeant', text: A.made ? 'מצוין. חזרה למיטות, ובשקט. מי שמדבר — שומר.' : 'בפעם הבאה בפיג׳מה, אבל בזמן. חזרה למיטות.' }]);
+      Game.addStat('energy', -8);
+      this.goToSleep();
+      return;
+    }
     if (A.kind === 'exam') {
       this.examParts.alert = A.made;
       this.complete('exam_alert', A.made ? 10 : 0, 'מבחן צבע אדום');
@@ -1422,7 +1499,7 @@ const Story = {
     await UI.cutscene([
       { img: 'assets/boss1.jpg', who: '{@@deputy_rasap}', text: 'זה המנעול האחרון בסוללה. והוא שלי. כמו הבמבה. כמו הביסלי. כמו כל מה שבארונית הזאת.' },
       { img: 'assets/boss2.jpg', who: '{@@deputy_rasap}', text: 'אתם רוצים יציאה הביתה?! אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*' },
-      { img: 'assets/boss3.jpg', who: '', text: '{@deputy_rasap} הפך למפלצת צ\'יזבורגר ענקית! רק דבר אחד מפחיד מפלצת כזאת: אוכל בריא. [אסוף/אספי] ברוקולי, פריכיות וחטיפי חלבון — ו[זרוק/זרקי] עליו (E)!' },
+      { img: 'assets/boss3.jpg', who: '', text: '{@deputy_rasap} הפך לצ\'יזבורגרו — מפלצת צ\'יזבורגר ענקית! רק דבר אחד מפחיד אותו: אוכל בריא. [אסוף/אספי] ברוקולי, גזר, תפוחים, מלפפונים, פריכיות וחטיפי חלבון — ו[זרוק/זרקי] עליו (E)!' },
     ]);
     this.complete('snack', 0);
     Boss.start();

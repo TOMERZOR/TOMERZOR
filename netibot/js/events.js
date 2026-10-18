@@ -42,6 +42,8 @@ const Events = {
     // Technician inspections: day 2 in the story, and now and then afterwards.
     const story = S.mode === 'story' && !S.graduated;
     if (story ? day === 2 : Math.random() < 0.5) S.dayFlags.techAt = story ? 15 * 60 : (13 + Math.random() * 4) * 60;
+    // Ofek drinks three litres a day for the creatine. Some day around noon he'll need you.
+    if (day >= 2 && Math.random() < 0.5) S.dayFlags.ofekAt = (11 + Math.random() * 4) * 60;
     // Every morning the meter settles a bit lower the closer going home is.
     S.shchora = Math.max(this.base(), Math.min(100, S.shchora - 6));
   },
@@ -61,6 +63,7 @@ const Events = {
     if (this.rafael) this.updateRafael(dt);
     if (S.dayFlags.techAt && S.clock >= S.dayFlags.techAt && !S.dayFlags.tech && free && World.id === 'netivot') this.startTech();
     if (this.tech) this.updateTech(dt);
+    if (S.dayFlags.ofekAt && S.clock >= S.dayFlags.ofekAt && !S.dayFlags.ofek && free && World.id === 'netivot') this.ofekCalls();
     this.watchBaum();
     if (this.baum) this.updateBaum(dt);
     if (this.chores) this.updateChores(dt);
@@ -72,6 +75,24 @@ const Events = {
       this.fartCd = 22 + Math.random() * 20;
       this.fart(arad);
     }
+  },
+  async ofekCalls() {
+    const S = G.state;
+    S.dayFlags.ofek = true;
+    if (Multi.on && Multi.taken().has('p_ofek')) return; // a real Ofek can go by himself
+    Sound.pop();
+    await UI.talk([
+      { who: 'p_ofek', text: '*בקשר* {name}, {name}, כאן {@p_ofek} מהעמדה. [תחליף/תחליפי] אותי רגע? הקריאטין. שלושה ליטר מים. זה מגיע.' },
+      { who: 'p_ofek', text: 'אני לא עוזב עמדה בלי מחליף — אני הנע"ת בטיחות, אני כותב על זה תחקירים. אבל [תמהר/תמהרי]. ממש.' },
+    ]);
+    Story.addTask('ofek_swap');
+    S.dayFlags.ofekDeadline = S.clock + 40;
+  },
+  async swapOfek() {
+    const r = await Mini.open('guard', { duration: 25 });
+    await UI.talk([{ who: 'p_ofek', text: r.success ? '*חוזר מנגב ידיים* חזרתי. אתה גיבור. אני ארשום אותך בתחקיר — בקטע טוב.' : '*חוזר* ...נרדמת בעמדה? בגללי? אני אכתוב תחקיר. על שנינו.' }]);
+    Story.complete('ofek_swap', r.success ? 4 : 0, 'החלפת את {@p_ofek} בשמירה');
+    Game.addStat('morale', 3);
   },
   fart(n) {
     Sound.fart();
@@ -373,11 +394,12 @@ const Events = {
     P.carry = false;
     if (b.coop) {
       (this.baumDone = this.baumDone || new Set()).add(b.coop.id);
-      Game.addScore(seen.length ? Math.max(-6, 4 - seen.length * 2) : 10, seen.length ? 'הביקורת של {@bc}' : 'נוהל אנה פרנק — ביחד');
+      Game.addScore(seen.length ? -Math.min(6, seen.length * 2) : 10, seen.length ? 'הביקורת של {@bc}' : 'נוהל אנה פרנק — ביחד');
       if (!seen.length) Game.achieve('hidden');
     } else if (!seen.length) { Game.achieve('hidden'); Story.complete('baum', 10, 'נוהל אנה פרנק הצליח'); }
-    else Story.complete('baum', Math.max(-8, 4 - seen.length * 3), 'הביקורת של {@bc}');
-    this.addShchora(8, 'ביקורת מפקדת סוללה');
+    else Story.complete('baum', -Math.min(8, seen.length * 3), 'הביקורת של {@bc}');
+    // She only makes trouble when she actually finds outside food.
+    if (seen.length) this.addShchora(4 + seen.length * 2, 'ביקורת מפקדת סוללה');
     // What stayed hidden turns into a feast tonight.
     G.state.dayFlags.feast = b.food.length - seen.length;
     this.baum = null;

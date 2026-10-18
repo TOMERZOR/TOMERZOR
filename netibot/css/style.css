@@ -421,3 +421,8 @@ body.touch .ctl-hud { bottom: 150px; width: min(420px, calc(100% - 380px)); font
 .invite-card .ic-row .btn { flex: 1; }
 .invite-card .ic-row .ghost { flex: 0 0 44px; }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ---------- Waiting for everyone to sleep (multiplayer) ---------- */
+.sleep-wait { position: fixed; inset: 0; z-index: 35; background: radial-gradient(circle at 50% 40%, rgba(20,24,40,.85), rgba(4,6,12,.95)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--ink); text-align: center; padding: 20px; }
+.sleep-wait .sw-z { font-size: 64px; animation: pulse 1.6s infinite alternate; }
+.sleep-wait .sw-t { font-weight: 700; font-size: 18px; max-width: 520px; line-height: 1.5; }

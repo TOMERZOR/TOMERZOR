@@ -11,6 +11,8 @@ const BOSS_ARENA = { x0: 15 * TS, x1: 45 * TS, y0: 13.5 * TS, y1: 21 * TS };
 
 const Boss = {
   active: false,
+  PICKUPS: 9, // healthy food lying around the arena at any time
+  NAME: "צ'יזבורגרו",
 
   // coop: { id, max } when the fight is shared with the other players in the lobby.
   start(coop = null) {
@@ -25,7 +27,7 @@ const Boss = {
     this.remoteBurgers = [];
     this.remoteSeen = new Map();
     this.chol = 0;
-    this.ammo = { broccoli: 0, ricecake: 0, protein: 0 };
+    this.ammo = Object.fromEntries(DATA.healthy.map(k => [k.id, 0]));
     this.pickups = [];
     this.shots = [];
     this.burgers = [];
@@ -38,7 +40,7 @@ const Boss = {
     this.bubble = { text: BOSS_TAUNTS[0], t: 3.5 };
     this.lastPick = 'broccoli';
     if (coop) { this.taken = new Set(); this.myTaken = []; this.pickCache = {}; this.coopPickups(); }
-    else for (let i = 0; i < 4; i++) this.spawnPickup();
+    else for (let i = 0; i < Boss.PICKUPS; i++) this.spawnPickup();
     G.player.x = 30 * TS;
     G.player.y = 20.5 * TS;
     G.player.carry = false;
@@ -68,7 +70,7 @@ const Boss = {
   coopPickups() {
     for (const p of Multi.peers) if (p.boss && p.boss.id === this.coop.id) for (const n of p.boss.tk || []) this.taken.add(n);
     const out = [];
-    for (let n = 0; out.length < 4 && n < 5000; n++) if (!this.taken.has(n)) out.push(this.pickCache[n] || (this.pickCache[n] = this.coopPickup(n)));
+    for (let n = 0; out.length < Boss.PICKUPS && n < 5000; n++) if (!this.taken.has(n)) out.push(this.pickCache[n] || (this.pickCache[n] = this.coopPickup(n)));
     this.pickups = out;
   },
 
@@ -165,7 +167,7 @@ const Boss = {
     if (this.coop) this.coopPickups();
     else if (this.pickups.some(p => p.taken)) {
       this.pickups = this.pickups.filter(p => !p.taken);
-      while (this.pickups.length < 4) this.spawnPickup();
+      while (this.pickups.length < Boss.PICKUPS) this.spawnPickup();
     }
     this.hud();
   },
@@ -233,12 +235,12 @@ const Boss = {
     for (const q of Multi.peers) if (q.boss && q.boss.id === id) dealt += q.boss.dmg;
     if (dealt >= p.boss.max) { this.doneIds.add(id); return; }
     if (World.id === 'hq' && p.site === 'hq') {
-      UI.toast(`🍔 ${p.name} העיר[/ה] את מפלצת הצ'יזבורגר! לקרב!`, 'bad');
+      UI.toast(`🍔 ${p.name} העיר[/ה] את צ'יזבורגרו! לקרב!`, 'bad');
       this.start({ id, max: p.boss.max });
     } else if (!this.heard.has(id)) {
       this.heard.add(id);
       Sound.horn();
-      UI.invite(`🍔 ${p.name} קורא לך לקרב בוס נגד מפלצת הצ'יזבורגר בשו"ב!`, '⚔️ להצטרף עכשיו', () => this.joinCoop(id, p.boss.max));
+      UI.invite(`🍔 ${p.name} קורא לך לקרב בוס נגד צ'יזבורגרו בשו"ב!`, '⚔️ להצטרף עכשיו', () => this.joinCoop(id, p.boss.max));
     }
   },
   // Accepting an invite: straight to the arena (free) and into the same fight.
@@ -272,7 +274,7 @@ const Boss = {
 
   hitBoss(kind) {
     if (!this.active) return;
-    const dmg = kind.id === 'protein' ? 10 : kind.id === 'ricecake' ? 8 : 9;
+    const dmg = { protein: 10, ricecake: 8, broccoli: 9, carrot: 8, apple: 9, cucumber: 7 }[kind.id] || 8;
     this.myDmg += dmg;
     this.hp = Math.max(0, this.max - this.myDmg - this.peerDmg);
     this.flash = 1;
@@ -297,7 +299,7 @@ const Boss = {
     const ammo = DATA.healthy.map(k => `<span class="ammo">${k.icon} ${this.ammo[k.id]}</span>`).join('');
     const team = this.coop ? Multi.peers.filter(p => p.boss && p.boss.id === this.coop.id).length + 1 : 1;
     const pct = Math.max(0, Math.round(this.hp / this.max * 100));
-    h.innerHTML = `<div class="boss-top"><span class="boss-name">🍔 ${fmt('{@deputy_rasap}')}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
+    h.innerHTML = `<div class="boss-top"><span class="boss-name">🍔 ${this.NAME}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
       <div class="boss-row"><span>🩸</span><div class="chol-bar${this.chol >= 70 ? ' hot' : ''}"><b style="width:${this.chol}%"></b></div>${ammo}</div>`;
   },
 
@@ -308,7 +310,7 @@ const Boss = {
       $('#boss-hud').classList.add('hidden');
       this.burgers = []; this.shots = []; this.pickups = []; this.remoteShots = []; this.remoteBurgers = [];
       const team = Multi.peers.filter(p => p.boss && p.boss.id === this.coop.id).map(p => p.name);
-      await UI.cutscene([{ img: 'assets/boss3.jpg', who: '', text: `ניצחתם ביחד! ${team.length ? team.join(', ') + ' ו־' + fmt('{name}') : fmt('{name}')} — סיבים תזונתיים, מזון לא מעובד ודל סוכר. המפלצת מתכווצת בחזרה ל{@deputy_rasap}.` }]);
+      await UI.cutscene([{ img: 'assets/boss3.jpg', who: '', text: `ניצחתם ביחד! ${team.length ? team.join(', ') + ' ו־' + fmt('{name}') : fmt('{name}')} — סיבים תזונתיים, מזון לא מעובד ודל סוכר. צ'יזבורגרו מתכווץ בחזרה ל{@deputy_rasap}.` }]);
       await UI.talk([{ who: 'deputy_rasap', text: '*יושב על הדשא* ...אתם כמה, ואני אחד. זה לא הוגן. ...זה סלט? אני מרגיש סלט.' }]);
       Game.achieve('boss');
       Game.addScore(15, 'קרב בוס משותף');
@@ -323,7 +325,7 @@ const Boss = {
     this.remoteShots = [];
     this.remoteBurgers = [];
     await UI.cutscene([
-      { img: 'assets/boss3.jpg', who: '', text: 'סיבים תזונתיים, מזון לא מעובד ודל סוכר... המפלצת מתכווצת, מתכווצת... ונשאר רק {@deputy_rasap}, יושב על הדשא עם שומשום על הכתפיים.' },
+      { img: 'assets/boss3.jpg', who: '', text: 'סיבים תזונתיים, מזון לא מעובד ודל סוכר... צ\'יזבורגרו מתכווץ, מתכווץ... ונשאר רק {@deputy_rasap}, יושב על הדשא עם שומשום על הכתפיים.' },
     ]);
     await UI.talk([
       { who: 'deputy_rasap', text: '*מוריד משקפי שמש לאט* ...אני מרגיש קליל. זה סלט? אני מרגיש... סלט.' },
@@ -331,7 +333,7 @@ const Boss = {
       { who: 'rasap', text: 'אני יודעת על הארונית מנובמבר 25. חתמת עליה?' },
     ]);
     Game.achieve('boss');
-    Story.complete('boss', 20, 'ניצחת את מפלצת הצ\'יזבורגר');
+    Story.complete('boss', 20, 'ניצחת את צ\'יזבורגרו');
     Game.resetNpcs();
     UI.toast('🔒 קיבלת את המנעול! לנסוע לנתיבות ולנעול את השער', 'good');
   },

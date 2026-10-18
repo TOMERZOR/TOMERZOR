@@ -469,12 +469,13 @@ const Game = {
       if (wantsRun && S.energy > 3) {
         speed = 165;
         P.running = true;
-        const drain = (G.perk && G.perk.key === 'stamina' ? 0.6 : 1.2) * dt * (G.alert ? 0.3 : 1);
+        const drain = (G.perk && G.perk.key === 'stamina' ? 0.25 : 0.45) * dt * (G.alert ? 0.3 : 1);
         S.energy = Math.max(0, S.energy - drain);
       }
       if (P.carry) speed *= P.carry === 'squeegee' ? 0.8 : 0.62;
-      if (S.energy < 15) {
-        speed *= 0.7;
+      // Tired slows you only when nearly empty, and not by much: walking slowly isn't fun.
+      if (S.energy < 8) {
+        speed *= 0.85;
         if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול, לבשל במטבחון או לקנות קפה בש"ק בשו"ב', 'bad'); }
       } else G.lowEnergyWarned = false;
       const B = Scene3D.basis();
@@ -512,7 +513,7 @@ const Game = {
     }
 
     // Needs drift over the day.
-    S.energy = Math.max(0, S.energy - dt * DATA.minutesPerSecond * 0.06);
+    S.energy = Math.max(0, S.energy - dt * DATA.minutesPerSecond * 0.025);
     S.morale = Math.max(0, S.morale - dt * DATA.minutesPerSecond * (G.perk && G.perk.key === 'morale' ? 0.004 : 0.008));
 
     // Gate animation.

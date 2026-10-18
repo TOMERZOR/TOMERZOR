@@ -53,6 +53,7 @@ const Multi = {
           b: Array.isArray(s.fx.b) ? s.fx.b.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x0: +o.x0 || 0, y0: +o.y0 || 0, x1: +o.x1 || 0, y1: +o.y1 || 0 })) : [],
         } : null,
         // A red alert this player is in: everyone online at that site gets it too.
+        sl: !!s.sl,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
         boss: s.boss && +s.boss.id ? { id: +s.boss.id, max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)), tk: Array.isArray(s.boss.tk) ? s.boss.tk.slice(-40).map(n => Math.floor(+n)).filter(n => n >= 0 && n < 5000) : [] } : null,
         // Smoothed position for drawing.
@@ -93,6 +94,7 @@ const Multi = {
       v: 1, who: this.as, name: G.profile.name, site: World.id,
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null,
+      sl: !!this.sleeping,
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
       boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : null,
       fx: Boss.active && Boss.coop ? Boss.fxOut() : null,

@@ -118,6 +118,8 @@ const Scene3D = {
     this.root = new THREE.Group();
     this.scene.add(this.root);
     this.models = new Map();
+    this.mealProps = [];
+    this.mealShown = undefined;
     this.trashMeshes = new Map();
     this.dustMeshes = new Map();
     this.player = null;
@@ -279,6 +281,34 @@ const Scene3D = {
     for (const o of World.objects) this.addProp(o);
   },
 
+  // Food on a plate or a tray. Each meal has its own: omelette and salad in the morning,
+  // schnitzel and puree at lunch, pasta and soup at dinner. updateMeals shows the right one.
+  dish(parent, x, y, z, r, slot = 0) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    parent.add(g);
+    const make = (parts) => { const k = new THREE.Group(); for (const p of parts) k.add(p); k.visible = false; g.add(k); return k; };
+    const disc = (rr, h, color, dx = 0, dz = 0, dy = 0) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rr, rr, h, 12), this.mat(color)); m.position.set(dx, h / 2 + dy, dz); return m; };
+    const ball = (rr, color, dx = 0, dz = 0) => { const m = new THREE.Mesh(new THREE.SphereGeometry(rr, 8, 6), this.mat(color)); m.position.set(dx, rr * 0.6, dz); return m; };
+    const v = slot % 3;
+    g.userData.kinds = {
+      breakfast: make(v === 0 ? [disc(r * 0.75, 0.025, 0xf2d04e), ball(r * 0.25, 0xd8261f, r * 0.5, r * 0.3), ball(r * 0.22, 0x5fae3a, -r * 0.5, -r * 0.3)]
+        : v === 1 ? [ball(r * 0.4, 0xd9a35c, 0, 0), ball(r * 0.3, 0xf4efe4, r * 0.5, 0)] : [disc(r * 0.8, 0.03, 0xfaf6ea), ball(r * 0.25, 0x5fae3a, 0, 0)]),
+      lunch: make(v === 0 ? [disc(r * 0.6, 0.03, 0xc98a3c, -r * 0.2), ball(r * 0.35, 0xf2ead2, r * 0.5, 0)]
+        : v === 1 ? [disc(r * 0.8, 0.04, 0xeacb7a), ball(r * 0.2, 0x8a3a1a, 0, 0)] : [ball(r * 0.3, 0xe07a2c, -r * 0.3), ball(r * 0.3, 0x5fae3a, r * 0.3)]),
+      dinner: make(v === 0 ? [disc(r * 0.7, 0.04, 0xf0c34e), ball(r * 0.18, 0xd8261f, 0, 0)]
+        : v === 1 ? [disc(r * 0.75, 0.05, 0xc2462a)] : [ball(r * 0.35, 0xe8d9b0, 0, 0), ball(r * 0.2, 0x5fae3a, r * 0.5, 0)]),
+    };
+    return g;
+  },
+  updateMeals() {
+    const c = G.state ? G.state.clock % 1440 : 0;
+    const meal = c >= 6.5 * 60 && c < 10 * 60 ? 'breakfast' : c >= 11.5 * 60 && c < 15 * 60 ? 'lunch' : c >= 17 * 60 && c < 21 * 60 ? 'dinner' : null;
+    if (meal === this.mealShown) return;
+    this.mealShown = meal;
+    for (const rec of this.mealProps) for (const d of rec.meals) for (const k in d.userData.kinds) d.userData.kinds[k].visible = k === meal;
+  },
+
   addProp(o) {
     {
       const cx = (o.x + o.w / 2) * S3, cz = (o.y + o.h / 2) * S3, w = o.w * S3, d = o.h * S3;
@@ -315,11 +345,28 @@ const Scene3D = {
         case 'table':
           this.box(w, 0.08, d, this.mat(0x8a6a44), 0, 0.75, 0, g);
           this.box(w * 0.9, 0.7, 0.12, this.mat(0x5a4630), 0, 0.36, 0, g);
-          for (let i = 0; i < 4; i++) this.cyl(0.13, 0.13, 0.03, this.mat(0xf1ece0), -w / 2 + 0.4 + i * (w - 0.8) / 3, 0.81, 0, g);
+          rec.meals = [];
+          for (let i = 0; i < 4; i++) {
+            const px = -w / 2 + 0.4 + i * (w - 0.8) / 3;
+            this.cyl(0.13, 0.13, 0.03, this.mat(0xf1ece0), px, 0.81, 0, g);
+            rec.meals.push(this.dish(g, px, 0.83, 0, 0.11));
+          }
+          this.mealProps.push(rec);
           break;
         case 'counter':
           this.box(w, 0.95, d, this.mat(0x9a9a92, { metalness: 0.3 }), 0, 0.475, 0, g);
           this.box(w, 0.05, d + 0.08, this.mat(0xc9c9c1, { metalness: 0.5, roughness: 0.4 }), 0, 0.97, 0, g);
+          // A serving counter in a dining room carries trays of whatever is being served.
+          if (World.def && World.def.buildings.some(b => b.id === 'dining' && o.x >= b.x * TS && o.x < (b.x + b.w) * TS && o.y >= b.y * TS && o.y < (b.y + b.h) * TS)) {
+            rec.meals = [];
+            const n = Math.max(2, Math.floor(w / 0.7));
+            for (let i = 0; i < n; i++) {
+              const px = -w / 2 + 0.35 + i * (w - 0.7) / Math.max(1, n - 1);
+              this.box(0.5, 0.06, d * 0.7, this.mat(0xb8bcc0, { metalness: 0.6, roughness: 0.3 }), px, 1.02, 0, g);
+              rec.meals.push(this.dish(g, px, 1.05, 0, 0.2, i));
+            }
+            this.mealProps.push(rec);
+          }
           break;
         case 'desk':
           this.box(w, 0.75, d, this.mat(0x7a5a36), 0, 0.375, 0, g);
@@ -512,6 +559,28 @@ const Scene3D = {
             bm.position.set(0, 0.7, 0); bm.rotation.y = -Math.PI / 2; g.add(bm);
             this.box(0.04, 0.7, 0.04, this.mat(0x6b4a2a), 0, 0.35, 0, g);
           }
+          break;
+        }
+        case 'gymrack': {
+          this.box(w, 0.08, d, this.mat(0x2a2a2a), 0, 0.9, 0, g);
+          for (const sx of [-w / 2 + 0.1, w / 2 - 0.1]) this.box(0.08, 1.0, d, this.mat(0x2a2a2a), sx, 0.5, 0, g);
+          for (let i = 0; i < 6; i++) { const r = 0.09 + (i % 3) * 0.03; const db = this.cyl(r, r, 0.12, this.mat(0x1a1a1a, { metalness: 0.6 }), -w / 2 + 0.35 + i * (w - 0.7) / 5, 0.98 + r, 0, g, 12); db.rotation.x = Math.PI / 2; }
+          break;
+        }
+        case 'bench': {
+          this.box(w, 0.1, d, this.mat(0x1f3a6a), 0, 0.45, 0, g);
+          this.box(0.08, 0.42, 0.08, this.mat(0x333333), 0, 0.2, -d / 2 + 0.15, g);
+          this.box(0.08, 0.42, 0.08, this.mat(0x333333), 0, 0.2, d / 2 - 0.15, g);
+          const bar = this.cyl(0.02, 0.02, 1.4, this.mat(0xcccccc, { metalness: 0.8 }), 0, 1.0, -d / 2 + 0.2, g, 6); bar.rotation.z = Math.PI / 2;
+          for (const sx of [-0.62, 0.62]) { const p = this.cyl(0.18, 0.18, 0.05, this.mat(0x111111), sx, 1.0, -d / 2 + 0.2, g, 14); p.rotation.z = Math.PI / 2; }
+          break;
+        }
+        case 'treadmill': {
+          this.box(w, 0.12, d, this.mat(0x222222), 0, 0.12, 0, g);
+          this.box(w * 0.8, 0.02, d * 0.8, this.mat(0x111111), 0, 0.19, 0, g);
+          for (const sx of [-w / 2 + 0.05, w / 2 - 0.05]) this.box(0.05, 1.1, 0.05, this.mat(0x555555, { metalness: 0.5 }), sx, 0.7, -d / 2 + 0.1, g);
+          this.box(w, 0.25, 0.2, this.mat(0x333333), 0, 1.25, -d / 2 + 0.1, g);
+          this.box(w * 0.5, 0.1, 0.02, new THREE.MeshStandardMaterial({ color: 0x0a2a3a, emissive: 0x2a8fbf, emissiveIntensity: 0.8 }), 0, 1.3, -d / 2 + 0.21, g);
           break;
         }
         case 'pullup': {
@@ -1423,6 +1492,7 @@ const Scene3D = {
     }
 
     this.updateSky(dt);
+    this.updateMeals();
     this.updateCamera(dt);
   },
 
@@ -1654,6 +1724,9 @@ const Scene3D = {
         this.cyl(0.06, 0.08, 0.3, this.mat(0x9fcf6a), 0, -0.1, 0, g, 6);
         for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), this.mat(kind.color)); b.position.set(Math.cos(i * 1.3) * 0.12, 0.1 + (i % 2) * 0.06, Math.sin(i * 1.3) * 0.12); g.add(b); }
       } else if (kind.id === 'ricecake') this.cyl(0.24, 0.24, 0.08, this.mat(kind.color), 0, 0, 0, g, 16);
+      else if (kind.id === 'carrot') { const c = this.cyl(0.07, 0.01, 0.42, this.mat(kind.color), 0, 0, 0, g, 8); c.rotation.z = 1.2; this.cyl(0.05, 0.02, 0.12, this.mat(0x4f9e33), -0.22, 0.08, 0, g, 6).rotation.z = 1.2; void c; }
+      else if (kind.id === 'apple') { const a = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), this.mat(kind.color)); g.add(a); this.cyl(0.015, 0.015, 0.1, this.mat(0x5a3a1a), 0, 0.18, 0, g, 5); }
+      else if (kind.id === 'cucumber') { const c = this.cyl(0.07, 0.07, 0.4, this.mat(kind.color), 0, 0, 0, g, 10); c.rotation.z = Math.PI / 2; }
       else { this.box(0.4, 0.07, 0.14, this.mat(0x2f2f2f), 0, 0, 0, g); this.box(0.2, 0.072, 0.142, this.mat(0xf2c14e), 0, 0, 0, g); }
       return g;
     };

@@ -65,15 +65,18 @@ const Lobby = {
     return window.ROSTER_KEY || null;
   },
   // Decrypt the real cast when this copy only has the made-up one. Resolves either way.
+  // On the owner's copy (real roster.js) it still decrypts, for the faces and 3D models.
   async unlock() {
     const k = this.key();
-    if (!ROSTER.example || !k || !window.ROSTER_ENC || !window.crypto || !crypto.subtle) return;
+    if (!k || !window.ROSTER_ENC || !window.crypto || !crypto.subtle) return;
     try {
       const un = (t) => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
       const key = await crypto.subtle.importKey('raw', un(k), 'AES-GCM', false, ['decrypt']);
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un(ROSTER_ENC.iv) }, key, un(ROSTER_ENC.data));
       const real = JSON.parse(new TextDecoder().decode(plain));
       if (!real || !Array.isArray(real.people)) return;
+      this.cryptoKey = key;
+      if (!ROSTER.example) { ROSTER.faces = real.faces; ROSTER.models = real.models; return; }
       ROSTER = real;
       ROSTER.example = false;
       try { localStorage.setItem('netibot.key', k); } catch (e) { /* ignore */ }

@@ -27,6 +27,25 @@ const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').re
   const keyFile = path.join(__dirname, 'roster.key');
   const raw = fs.existsSync(keyFile) ? Buffer.from(fs.readFileSync(keyFile, 'utf8').trim(), 'base64url') : webcrypto.getRandomValues(new Uint8Array(16));
   const key = await webcrypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']);
+  // Their rigged 3D models (tools/people/<id>.glb, packed with tools/pack-person.py) are
+  // gzipped and encrypted with the same key into assets/people/<hash>.bin; the roster only
+  // says which file is whose.
+  const peopleIn = path.join(__dirname, 'people'), peopleOut = path.join(dir, 'assets/people');
+  if (fs.existsSync(peopleIn)) {
+    fs.mkdirSync(peopleOut, { recursive: true });
+    for (const f of fs.readdirSync(peopleOut)) if (f.endsWith('.bin')) fs.unlinkSync(path.join(peopleOut, f));
+    ROSTER.models = {};
+    for (const f of fs.readdirSync(peopleIn)) {
+      const m = f.match(/^([\w-]+)\.glb$/);
+      if (!m) continue;
+      const name = require('crypto').createHash('sha256').update(b64u(raw) + ':' + m[1]).digest('hex').slice(0, 16);
+      const fiv = webcrypto.getRandomValues(new Uint8Array(12));
+      const enc = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv: fiv }, key, require('zlib').gzipSync(fs.readFileSync(path.join(peopleIn, f)), { level: 9 }));
+      fs.writeFileSync(path.join(peopleOut, name + '.bin'), Buffer.concat([Buffer.from(fiv), Buffer.from(enc)]));
+      ROSTER.models[m[1]] = name;
+    }
+    console.log('models:', Object.keys(ROSTER.models).length);
+  }
   const iv = webcrypto.getRandomValues(new Uint8Array(12));
   const data = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(ROSTER)));
   fs.writeFileSync(path.join(dir, 'js/roster.enc.js'),

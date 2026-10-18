@@ -850,20 +850,29 @@ const Scene3D = {
 
   // Higgsfield-generated rigged soldier with a walk cycle. Headgear, hair bun, rank
   // and the carried canister are pinned to the skeleton so they move with it.
+  // A cast member's own model finished loading: rebuild whoever is drawn as them.
+  personReady(id) {
+    const drop = (m) => { if (m && m.root.parent) m.root.parent.remove(m.root); };
+    for (const [n, m] of this.models) if (m.who === id && !m.own) { drop(m); this.models.delete(n); }
+    for (const [k, m] of this.remotes) if (m.who === id && !m.own) { drop(m); this.remotes.delete(k); }
+    if (this.player && this.player.who === id && !this.player.own) { drop(this.player); this.player = null; }
+  },
+
   makeRiggedSoldier(look, name) {
     const root = new THREE.Group();
-    const made = Assets.soldier();
+    const made = Assets.soldier(look.id);
+    const own = !!(look.id && Assets.people[look.id]);
     // The lean group tips the whole body forward when running, pivoting at the feet.
     const lean = new THREE.Group();
     root.add(lean);
     lean.add(made.object);
-    const parts = { root, rigged: true, lean };
+    const parts = { root, rigged: true, lean, who: look.id || null, own };
     const RUN_GAIN = { LeftUpLeg: 1.7, RightUpLeg: 1.7, LeftLeg: 1.6, RightLeg: 1.6, LeftArm: 2.3, RightArm: 2.3, LeftForeArm: 1.8, RightForeArm: 1.8 };
     parts.runBones = [];
     if (Assets.idlePose) made.inner.traverse(o => { if (o.isBone && RUN_GAIN[o.name] && Assets.idlePose[o.name]) parts.runBones.push({ bone: o, ref: Assets.idlePose[o.name], inv: Assets.idlePose[o.name].clone().invert(), k: RUN_GAIN[o.name] }); });
     if (Assets.walkClip) {
       parts.mixer = new THREE.AnimationMixer(made.inner);
-      parts.action = parts.mixer.clipAction(Assets.walkClip);
+      parts.action = parts.mixer.clipAction(Assets.walkFor(look.id));
       parts.action.play();
     }
     root.updateMatrixWorld(true);
@@ -886,7 +895,7 @@ const Scene3D = {
     this.box(0.14, 0.025, 0.22, this.mat(0x3b4a2a), 0.17, -0.03, 0, parts.cap);
     parts.cap.position.set(headPos.x, top - 0.05, headPos.z);
     pin(head, parts.cap);
-    if (look.female) {
+    if (look.female && !own) {
       const bun = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), hair);
       bun.position.set(headPos.x - 0.13, top - 0.13, headPos.z);
       pin(head, bun);
@@ -896,7 +905,7 @@ const Scene3D = {
     parts.helmet.visible = h === 'helmet';
     parts.cap.visible = false;
 
-    if (look.rank) {
+    if (look.rank && !own) {
       const blue = this.mat(0x1f4fa8, { roughness: 0.6 });
       const white = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x666666, roughness: 0.4 });
       for (const side of [-1, 1]) {
@@ -1317,8 +1326,10 @@ const Scene3D = {
 
     // People.
     const pr = G.profile;
+    const want = (Multi.on && pr.as) || null;
+    if (this.player && (this.player.who !== want || (want && !this.player.own && Assets.people[want]))) { this.root.remove(this.player.root); this.player = null; }
     if (!this.player) {
-      this.player = this.makeSoldier({ skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: 'beret', uniform: 0x5b6b3c });
+      this.player = this.makeSoldier({ id: Multi.on ? pr.as : null, skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: 'beret', uniform: 0x5b6b3c });
     }
     const pm = this.player;
     pm.beret.visible = false;
@@ -1523,7 +1534,7 @@ const Scene3D = {
       let m = this.remotes.get(p.peer);
       if (!m) {
         const person = Cast.get(p.who) || {};
-        const look = { skin: person.skin || DATA.skinTones[(p.who.length * 7) % 4], hair: person.hair || DATA.hairColors[(p.who.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies };
+        const look = { id: p.who, skin: person.skin || DATA.skinTones[(p.who.length * 7) % 4], hair: person.hair || DATA.hairColors[(p.who.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies };
         m = this.makeSoldier(look, '🌐 ' + (p.name || person.short || ''));
         m.site = World.id;
         this.remotes.set(p.peer, m);

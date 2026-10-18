@@ -39,13 +39,7 @@ const Assets = {
   // The rigged soldier: measure it once, and pin the walk cycle in place
   // (the clip moves the hips forward; the game moves the character itself).
   prepareSoldier(scene, clips) {
-    // Measure the skinned geometry itself: the armature's centimetre scale is undone by
-    // the bind matrices, so a world-space box of the scene would be 100x too small.
-    let geo = null;
-    scene.traverse(o => { if (o.isSkinnedMesh && !geo) geo = o.geometry; });
-    geo.computeBoundingBox();
-    const bb = geo.boundingBox;
-    this.soldierFit = { scale: 1.75 / (bb.max.y - bb.min.y), minY: bb.min.y };
+    this.soldierFit = this.measure(scene, 1.75);
     this.walkClip = clips[0] || null;
     if (!this.walkClip) return;
     for (const tr of this.walkClip.tracks) {
@@ -86,12 +80,61 @@ const Assets = {
     mixer.stopAllAction();
   },
 
-  // A fresh copy of the rigged soldier facing +x, 1.75 m tall, with its own skeleton.
-  soldier() {
-    const src = this.models.soldier;
+  // Measure the skinned geometry itself: the armature's centimetre scale is undone by
+  // the bind matrices, so a world-space box of the scene would be 100x too small.
+  measure(scene, height) {
+    let geo = null, hips = null;
+    scene.traverse(o => { if (o.isSkinnedMesh && !geo) geo = o.geometry; if (o.isBone && o.name === 'Hips' && !hips) hips = o; });
+    geo.computeBoundingBox();
+    const bb = geo.boundingBox;
+    return { scale: height / (bb.max.y - bb.min.y), minY: bb.min.y, hipsY: hips ? hips.position.y : 0 };
+  },
+
+  // ---------- the platoon's own characters ----------
+  // Each real cast member has a rigged model of their own, encrypted like their name
+  // (tools/encrypt-roster.js). They load in the background once the roster is unlocked;
+  // until then (or without the key) everyone uses the shared soldier.
+  people: {},
+  loadPeople() {
+    const ids = Object.keys(ROSTER.models || {});
+    if (!ids.length || !Lobby.cryptoKey || !window.DecompressionStream || !THREE.GLTFLoader || !this.walkClip) return Promise.resolve();
+    const loader = new THREE.GLTFLoader();
+    // The ones you see first go first: the local player, then whoever is on this site.
+    const first = (id) => (G.profile && G.profile.as === id ? 0 : G.npcs && G.npcs.some(n => n.id === id) ? 1 : 2);
+    ids.sort((a, b) => first(a) - first(b));
+    return ids.reduce((chain, id) => chain.then(() => this.loadPerson(loader, id)).catch(() => {}), Promise.resolve());
+  },
+  async loadPerson(loader, id) {
+    const file = String(ROSTER.models[id]).replace(/[^a-f0-9]/g, '');
+    const res = await fetch(`assets/people/${file}.bin`);
+    if (!res.ok) return;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const zipped = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
+    const glb = await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+    const g = await new Promise((ok, no) => loader.parse(glb, '', ok, no));
+    g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 0.85; } });
+    const person = Cast.get(id) || {};
+    const fit = this.measure(g.scene, person.female ? 1.68 : 1.76);
+    // The shared walk cycle, with the hips at this skeleton's own height.
+    const walk = this.walkClip.clone();
+    for (const tr of walk.tracks) {
+      if (tr.name !== 'Hips.position') continue;
+      const dy = fit.hipsY - this.soldierFit.hipsY;
+      for (let i = 1; i < tr.values.length; i += 3) tr.values[i] += dy;
+    }
+    this.people[id] = { scene: g.scene, fit, walk };
+    if (window.Scene3D && Scene3D.personReady) Scene3D.personReady(id);
+  },
+  walkFor(id) { return (id && this.people[id] && this.people[id].walk) || this.walkClip; },
+
+  // A fresh copy of the rigged soldier facing +x, 1.75 m tall, with its own skeleton
+  // (a cast member's own model when it has loaded).
+  soldier(id) {
+    const person = id && this.people[id];
+    const src = person ? person.scene : this.models.soldier;
     if (!src || !THREE.SkeletonUtils) return null;
     const inner = THREE.SkeletonUtils.clone(src);
-    const f = this.soldierFit;
+    const f = person ? person.fit : this.soldierFit;
     inner.scale.setScalar(f.scale);
     inner.position.y = -f.minY * f.scale;
     const facing = new THREE.Group();

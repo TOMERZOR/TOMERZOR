@@ -240,7 +240,7 @@ const Game = {
   resetNpcs() {
     const mk = (person, spot, wander) => ({
       id: person.id, person, short: person.short, x: spot.x, y: spot.y, r: 12, angle: Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: Math.random() * 4, wander,
-      look: { skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies },
+      look: { id: person.id, skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies },
       barkCd: 8 + Math.random() * 20, chaseCd: 60,
     });
     const map = World.id;
@@ -284,7 +284,7 @@ const Game = {
     if (!person) return null;
     const n = {
       id, person, short: person.short, x: spot.x, y: spot.y, r: 12, angle: -Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: 4, wander: null, visitor: true,
-      look: { skin: person.skin || DATA.skinTones[(id.length * 7) % 4], hair: person.hair || DATA.hairColors[(id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1 },
+      look: { id, skin: person.skin || DATA.skinTones[(id.length * 7) % 4], hair: person.hair || DATA.hairColors[(id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1 },
       barkCd: 20, chaseCd: 999,
     };
     G.npcs.push(n);
@@ -940,5 +940,5 @@ window.addEventListener('load', () => {
   Promise.all([
     Assets.load(p => { const m = document.getElementById('load-msg'); if (m) m.textContent = `טוען גרפיקה... ${Math.round(p * 100)}%`; }),
     Lobby.unlock(),
-  ]).then(() => Game.init());
+  ]).then(() => { Game.init(); Assets.loadPeople(); });
 });

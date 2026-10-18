@@ -13,7 +13,7 @@ const Assets = {
     const loader = THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
     const models = this.MODELS.map(name => new Promise(resolve => {
       if (!loader) return resolve();
-      loader.load(`assets/models/${name}.glb`, (g) => {
+      loader.load(`assets/models/${name}.json`, (g) => {
         // glTF defaults to fully metallic, which renders near-black without an environment map.
         g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 0.85; } });
         this.models[name] = g.scene;

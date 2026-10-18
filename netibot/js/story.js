@@ -50,7 +50,7 @@ const TASKS = {
   locker: { title: 'לסדר ציוד בלוקר', desc: 'במגורים — הלוקר שלך מסומן.', target: () => lockerSpot(G.state.myLocker), pts: 3 },
   drill: { title: 'תרגיל צבע אדום עם {@sergeant}', desc: '{@sergeant} מחכה ליד המגורים.', target: () => npcPos('sergeant'), pts: 0 },
   clean: { title: 'ניקיון שטח — לאסוף 10 פסולת', desc: 'לחפש פסולת ברחבי הבסיס (מסומן במפה).', target: () => nearestTrash(), pts: 8 },
-  dinner: { title: 'ארוחת ערב בחדר האוכל', desc: '', target: () => SPOTS.dining, pts: 2 },
+  dinner: { title: 'ארוחת ערב בחדר האוכל (מ־17:00)', desc: 'אפשר לחכות בחדר האוכל עד שמגישים.', target: () => SPOTS.dining, pts: 2 },
   sleep: { title: 'לישון במיטה שלך', desc: 'המיטה שלך במגורים. שינה מסיימת את היום ושומרת משחק.', target: () => bedSpot(G.state.myBed), pts: 0, last: true },
   lineup: { title: 'מסדר בוקר עד 06:45', desc: 'רחבת המסדרים. לא לאחר!', target: () => SPOTS.parade, pts: 4 },
   reload_train: { title: 'תדריך טעינה אצל {@sergeant}', desc: 'ליד מחסן המארזים.', target: () => npcPos('sergeant'), pts: 2 },
@@ -835,9 +835,20 @@ const Story = {
       Game.achieve('clean');
     }
   },
-  eat() {
+  async eat() {
     const S = G.state;
-    const meal = S.clock < 10 * 60 ? 'breakfast' : S.clock < 16 * 60 ? 'lunch' : 'dinner';
+    const meal = S.clock < 10 * 60 ? 'breakfast' : S.clock < 17 * 60 ? 'lunch' : 'dinner';
+    // The dinner task can't be done in the morning: offer to wait in the dining room until it's served.
+    if (meal !== 'dinner' && this.has('dinner')) {
+      const ate = S.dayFlags['ate_' + meal];
+      const choices = [{ label: '⏩ לחכות לארוחת ערב (18:00)', value: 'wait' }];
+      if (!ate) choices.push({ label: meal === 'breakfast' ? '🍳 לאכול ארוחת בוקר' : '🍗 לאכול צהריים', value: 'eat' });
+      choices.push({ label: 'לא עכשיו', value: null });
+      const v = await UI.talk([{ who: 'player', text: `ארוחת ערב מוגשת מ־17:00, ועכשיו ${clockText()}.`, choices }]);
+      if (v === 'wait') { await this.waitForDinner(); return; }
+      if (v !== 'eat') return;
+    }
+    if (S.dayFlags['ate_' + meal]) { UI.toast('כבר אכלת בארוחה הזאת'); return; }
     if (S.dayFlags['ate_' + meal]) { UI.toast('כבר אכלת בארוחה הזאת'); return; }
     if (meal === 'lunch' && World.id === 'netivot' && this.has('rafael')) { UI.toast('האוכל עדיין במשאית של רפאל. קודם לפרוק!', 'bad'); return; }
     S.dayFlags['ate_' + meal] = true;
@@ -849,6 +860,22 @@ const Story = {
     UI.toast(food, 'good');
     if (meal === 'dinner') this.complete('dinner');
   },
+  async waitForDinner() {
+    const S = G.state;
+    if (Events.rafael) { UI.toast('קודם לפרוק את רפאל — המשאית מחכה בשער', 'bad'); return; }
+    UI.fade(() => {
+      S.clock = Math.max(S.clock, 18 * 60);
+      // Whatever was scheduled for the skipped hours happened without you.
+      this.pendingAlerts = this.pendingAlerts.filter(t => t > S.clock);
+      if (!S.dayFlags.rafael) { S.dayFlags.rafael = true; S.dayFlags.rafaelFood = true; }
+      if (S.dayFlags.techAt && !S.dayFlags.tech) S.dayFlags.tech = true;
+      Game.addStat('energy', -10);
+    });
+    await new Promise(r => setTimeout(r, 650));
+    UI.toast('⏩ השעה 18:00 — ארוחת ערב!');
+    await this.eat();
+  },
+
   async sleep() {
     const S = G.state;
     const open = this.tasks.filter(t => !t.done && !t.last);

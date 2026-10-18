@@ -103,6 +103,7 @@ const World = {
       for (let i = 0; i < 5; i++) prop('target', 19.5 + i * 3, 3.3, 0.9, 0.3, false);
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← נתיבות 3 ק"מ' });
       prop('books', 3.3, 13.2, 0.8, 0.6, false);
+      prop('generator', 45.6, 31.2, 1.6, 0.9);
       for (const [x, y] of [[33, 26], [45, 24], [21, 31], [60, 24], [3, 40], [24, 33], [50, 38]]) prop('palm', x + 0.2, y + 0.2, 0.6, 0.6, false);
       site.launchers = def.launchers.map(L => prop('launcher', L.x + 0.15, L.y, 2.7, 4.4, true, { id: L.id, name: L.name, ammo: 20, needsReload: false }));
       for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40],
@@ -125,6 +126,7 @@ const World = {
       prop('console', 37.2, 26.1, 6.6, 0.8);
       for (let x = 48; x <= 56; x += 2) prop('bed', x + 0.1, 28.9, 0.8, 1.9, true, { messy: false });
       prop('radar', 21, 14, 2, 2);
+      prop('generator', 17.6, 13.2, 1.6, 0.9);
       prop('truck', 6, 35.2, 2.4, 4.6, true, { color: 0x56653a });
       prop('truck', 10, 35.2, 2.4, 4.6, true, { color: 0x4f5a3a });
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← שו"ב' });

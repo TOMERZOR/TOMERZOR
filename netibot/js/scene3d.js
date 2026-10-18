@@ -344,6 +344,7 @@ const Scene3D = {
           g.add(rec.light);
           break;
         case 'radar': {
+          if (this.addModel(g, 'radar', { length: 4.6, rotY: 0.6 })) break;
           this.box(w * 0.7, 1.2, d * 0.7, this.mat(0x6f746a), 0, 0.6, 0, g);
           this.cyl(0.15, 0.2, 2.2, this.mat(0x8b8f88, { metalness: 0.6 }), 0, 2.3, 0, g);
           rec.dish = new THREE.Group();
@@ -411,6 +412,10 @@ const Scene3D = {
         case 'launcher':
           this.buildLauncher(rec, w, d);
           break;
+        case 'generator': {
+          this.addModel(g, 'generator', { length: Math.max(w, d) * 1.05, rotY: w > d ? 0 : Math.PI / 2 }) || this.box(w, 1.3, d, this.mat(0x4b5a2a), 0, 0.65, 0, g);
+          break;
+        }
         case 'palm': {
           const palm = Assets.model('palm', { height: 7 + (o.x % 3), rotY: o.y % 6 });
           if (palm) g.add(palm);
@@ -664,6 +669,7 @@ const Scene3D = {
 
   // ---------- characters and vehicles ----------
   makeSoldier(look, name) {
+    if (Assets.has('soldier')) return this.makeRiggedSoldier(look, name);
     const root = new THREE.Group();
     const uni = this.mat(look.uniform || 0x56653a);
     const skin = this.mat(look.skin || '#d9a77c');
@@ -722,7 +728,9 @@ const Scene3D = {
           leaf.rotation.y = Math.PI / 4;
           this.box(0.016, 0.016, 0.07, white, 0, 0.026, side * 0.08, ep);
         } else {
-          for (let i = 0; i < look.rank; i++) this.box(0.17, 0.016, 0.04, white, 0, 0.026, (i - (look.rank - 1) / 2) * 0.08, ep);
+          // A single bar sits at the outer end of the shoulder strap, away from the neck.
+          if (look.rank === 1) this.box(0.17, 0.016, 0.04, white, 0, 0.026, side * 0.05, ep);
+          else for (let i = 0; i < look.rank; i++) this.box(0.17, 0.016, 0.04, white, 0, 0.026, (i - (look.rank - 1) / 2) * 0.08, ep);
         }
         root.add(ep);
       }
@@ -749,7 +757,99 @@ const Scene3D = {
     return parts;
   },
 
+  // Higgsfield-generated rigged soldier with a walk cycle. Headgear, hair bun, rank
+  // and the carried canister are pinned to the skeleton so they move with it.
+  makeRiggedSoldier(look, name) {
+    const root = new THREE.Group();
+    const made = Assets.soldier();
+    root.add(made.object);
+    const parts = { root, rigged: true };
+    if (Assets.walkClip) {
+      parts.mixer = new THREE.AnimationMixer(made.inner);
+      parts.action = parts.mixer.clipAction(Assets.walkClip);
+      parts.action.play();
+    }
+    root.updateMatrixWorld(true);
+    const head = Assets.bone(made.inner, [/^head$/i, /head(?!.*end)/i, /neck/i]);
+    const chest = Assets.bone(made.inner, [/spine0?2/i, /chest/i, /spine0?1/i, /spine/i]) || head;
+    const headPos = head ? head.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, 1.55, 0);
+    const top = 1.75;
+    const pin = (bone, mesh) => { root.add(mesh); if (bone) bone.attach(mesh); return mesh; };
+    const hair = this.mat(look.hair || '#2b1d12');
+
+    parts.beret = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.14, 0.06, 16), this.mat(0x8fa6c4));
+    parts.beret.position.set(headPos.x - 0.01, top - 0.03, headPos.z - 0.02);
+    parts.beret.rotation.x = -0.28;
+    pin(head, parts.beret);
+    parts.helmet = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), this.mat(0x4f5e34));
+    parts.helmet.position.set(headPos.x, top - 0.13, headPos.z);
+    pin(head, parts.helmet);
+    parts.cap = new THREE.Group();
+    this.box(0.26, 0.08, 0.26, this.mat(0x3b4a2a), 0, 0, 0, parts.cap);
+    this.box(0.14, 0.025, 0.22, this.mat(0x3b4a2a), 0.17, -0.03, 0, parts.cap);
+    parts.cap.position.set(headPos.x, top - 0.05, headPos.z);
+    pin(head, parts.cap);
+    if (look.female) {
+      const bun = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), hair);
+      bun.position.set(headPos.x - 0.13, top - 0.13, headPos.z);
+      pin(head, bun);
+    }
+    const h = look.head || 'none';
+    parts.beret.visible = h === 'beret';
+    parts.helmet.visible = h === 'helmet';
+    parts.cap.visible = h === 'cap';
+
+    if (look.rank) {
+      const blue = this.mat(0x1f4fa8, { roughness: 0.6 });
+      const white = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x666666, roughness: 0.4 });
+      for (const side of [-1, 1]) {
+        const ep = new THREE.Group();
+        ep.position.set(headPos.x - 0.02, 1.44, side * 0.17);
+        this.box(0.14, 0.03, 0.15, blue, 0, 0, 0, ep);
+        if (look.rank === 'leaf') {
+          const leaf = this.box(0.08, 0.014, 0.08, white, 0, 0.022, 0, ep);
+          leaf.rotation.y = Math.PI / 4;
+        } else {
+          if (look.rank === 1) this.box(0.12, 0.014, 0.03, white, 0, 0.022, side * 0.045, ep);
+          else for (let i = 0; i < look.rank; i++) this.box(0.12, 0.014, 0.03, white, 0, 0.022, (i - (look.rank - 1) / 2) * 0.06, ep);
+        }
+        pin(chest, ep);
+      }
+    }
+    parts.carry = this.box(0.5, 0.42, 0.62, this.mat(0x56653a), 0.38, 1.1, 0, root);
+    pin(chest, parts.carry);
+    parts.carry.visible = false;
+
+    if (!this.blobMat) this.blobMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
+    const blob = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16), this.blobMat);
+    blob.rotation.x = -Math.PI / 2;
+    blob.position.y = 0.03;
+    root.add(blob);
+    if (name) {
+      parts.tag = this.label(name, { size: 0.55 });
+      parts.tag.position.set(0, 2.15, 0);
+      root.add(parts.tag);
+    }
+    // Start each soldier at a different point of the stride.
+    if (parts.action) parts.action.time = Math.random() * Assets.walkClip.duration;
+    this.root.add(root);
+    return parts;
+  },
+
   animateSoldier(m, ent, moving, dt) {
+    if (m.rigged) {
+      m.root.position.set(ent.x * S3, 0, ent.y * S3);
+      let d = -ent.angle - m.root.rotation.y;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      m.root.rotation.y += d * Math.min(1, dt * 12);
+      if (m.mixer) {
+        // Walk while moving (faster when running); stand on a neutral frame otherwise.
+        const speed = ent.running ? 2.1 : 1.4;
+        if (moving) { m.mixer.update(dt * speed); m.idle = false; }
+        else if (!m.idle) { m.idle = true; m.action.time = Assets.idleTime || 0; m.mixer.update(0); }
+      }
+      return;
+    }
     m.root.position.set(ent.x * S3, 0, ent.y * S3);
     const target = -ent.angle;
     let d = target - m.root.rotation.y;
@@ -951,7 +1051,7 @@ const Scene3D = {
       if (o.kind === 'bed') { r.messy.visible = o.messy; r.neat.visible = !o.messy; }
       else if (o.kind === 'locker') r.door.rotation.y = THREE.MathUtils.lerp(r.door.rotation.y, o.open ? -1.8 : 0, Math.min(1, dt * 8));
       else if (o.kind === 'panel') r.light.material.color.set(World.gateOpen > 0.5 ? 0x46d16b : 0xe63b2e);
-      else if (o.kind === 'radar') r.dish.rotation.y = now / 900;
+      else if (o.kind === 'radar' && r.dish) r.dish.rotation.y = now / 900;
       else if (o.kind === 'launcher') {
         this.drawAmmo(r);
         r.empty.visible = o.needsReload;

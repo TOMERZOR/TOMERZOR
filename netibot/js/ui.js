@@ -241,7 +241,6 @@ const UI = {
       <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
-      <button class="btn ghost" data-m="map">🗺️ מפה — איפה כולם</button>
       ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button>' : ''}
       <div class="row2"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
       <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">

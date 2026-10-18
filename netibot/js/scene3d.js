@@ -829,7 +829,7 @@ const Scene3D = {
     // Nobody wears the beret on their head on base; it stays folded away.
     parts.beret.visible = false;
     parts.helmet.visible = head0 === 'helmet';
-    parts.cap.visible = head0 === 'cap';
+    parts.cap.visible = false;
     this.carryProps(parts, root, 0.45, 1.15);
     if (name) {
       parts.tag = this.label(name, { size: 0.55 });
@@ -888,7 +888,7 @@ const Scene3D = {
     const h = look.head || 'none';
     parts.beret.visible = false;
     parts.helmet.visible = h === 'helmet';
-    parts.cap.visible = h === 'cap';
+    parts.cap.visible = false;
 
     if (look.rank) {
       const blue = this.mat(0x1f4fa8, { roughness: 0.6 });
@@ -1001,10 +1001,18 @@ const Scene3D = {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       m.root.rotation.y += d * Math.min(1, dt * 12);
       if (m.mixer) {
-        // Walk while moving (faster when running); stand on a neutral frame otherwise.
-        const speed = ent.running ? 2.1 : 1.4;
-        if (moving) { m.mixer.update(dt * speed); m.idle = false; }
-        else if (!m.idle) { m.idle = true; m.action.time = Assets.idleTime || 0; m.mixer.update(0); }
+        // The stride follows the real speed. On stopping, the soldier finishes the step
+        // into the nearest feet-together pose rather than snapping to it.
+        const rate = ent.speed !== undefined ? Math.max(0.6, ent.speed / 90 * 1.4) : ent.running ? 2.1 : 1.4;
+        const D = Assets.walkClip.duration;
+        if (moving) { m.mixer.update(dt * rate); m.idle = false; m.rate = rate; m.settle = 0; }
+        else if (!m.idle) {
+          m.settle = (m.settle || 0) + dt;
+          const t = m.action.time % D;
+          const near = (Assets.idleTimes || [0]).some(it => { const g = Math.abs(t - it); return Math.min(g, D - g) < D * 0.035; });
+          if (near || m.settle > 0.45) { m.idle = true; m.action.time = near ? t : Assets.idleTime || 0; m.mixer.update(0); }
+          else m.mixer.update(dt * Math.max(1.2, m.rate || 1.4));
+        }
       }
       return;
     }
@@ -1267,7 +1275,7 @@ const Scene3D = {
       // Speech bubble over the head.
       this.setBubble(m, n.bubble ? n.bubble.text : null);
       if (G.alert && n.sheltering) { m.helmet.visible = true; m.beret.visible = m.cap.visible = false; }
-      else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = false; m.cap.visible = n.look.head === 'cap'; }
+      else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = false; m.cap.visible = false; }
       this.animateSoldier(m, n, moving, dt);
     }
 
@@ -1524,7 +1532,13 @@ const Scene3D = {
     const P = G.player;
     // Look slightly past the right shoulder, like most third-person games.
     const B = this.basis();
-    const tx = P.x * S3 + B.rx * 0.45, tz = P.y * S3 + B.rz * 0.45, ty = 1.55;
+    // The camera trails the soldier slightly, which reads smoother than a rigid follow.
+    const fx = P.x * S3, fz = P.y * S3;
+    if (this.camX === undefined || Math.hypot(fx - this.camX, fz - this.camZ) > 6) { this.camX = fx; this.camZ = fz; }
+    const k = Math.min(1, dt * 12);
+    this.camX += (fx - this.camX) * k;
+    this.camZ += (fz - this.camZ) * k;
+    const tx = this.camX + B.rx * 0.45, tz = this.camZ + B.rz * 0.45, ty = 1.55;
     const sx = Math.sin(this.yaw), sz = Math.cos(this.yaw);
     let need = this.pitch;
     const horiz = this.dist * Math.cos(this.pitch);

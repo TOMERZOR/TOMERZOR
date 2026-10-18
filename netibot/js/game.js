@@ -147,7 +147,7 @@ const Game = {
     lstick.addEventListener('pointerup', endLookStick);
     lstick.addEventListener('pointercancel', endLookStick);
     $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
-    $('#minimap').addEventListener('click', () => UI.toggleMap());
+    $('#minimap').addEventListener('pointerdown', (e) => { e.stopPropagation(); Sound.unlock(); UI.toggleMap(true); });
     $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
 
@@ -443,11 +443,12 @@ const Game = {
     }
     const len = Math.hypot(mx, my);
     const wantsRun = k.has('ShiftLeft') || k.has('ShiftRight') || G.touchRun || !!G.alert;
+    if (len > 1) { mx /= len; my /= len; }
+    // Target velocity from the input: the stick is analogue, so a light push walks slowly.
+    let speed = 0, tvx = 0, tvy = 0;
     P.running = false;
-    P.moving = false;
     if (len > 0.1) {
-      if (len > 1) { mx /= len; my /= len; }
-      let speed = 90;
+      speed = 90;
       if (wantsRun && S.energy > 3) {
         speed = 165;
         P.running = true;
@@ -460,18 +461,36 @@ const Game = {
         if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול, לבשל במטבחון או לקנות קפה בש"ק בשו"ב', 'bad'); }
       } else G.lowEnergyWarned = false;
       const B = Scene3D.basis();
-      const vx = B.rx * mx - B.fx * my, vy = B.rz * mx - B.fz * my;
+      const dx = B.rx * mx - B.fx * my, dy = B.rz * mx - B.fz * my;
+      tvx = dx * speed; tvy = dy * speed;
       // Third-person follow: when walking forward the camera swings in behind the soldier.
       if (my < -0.3 && performance.now() - Scene3D.lastLook > 1200) {
-        const want = Math.atan2(-vx, -vy);
+        const want = Math.atan2(-dx, -dy);
         const diff = Math.atan2(Math.sin(want - Scene3D.yaw), Math.cos(want - Scene3D.yaw));
         if (Math.abs(diff) < 2.2) Scene3D.yaw += diff * Math.min(1, dt * 1.6);
       }
-      World.move(P, vx * speed * dt, vy * speed * dt);
-      P.angle = Math.atan2(vy, vx);
-      P.moving = true;
+    }
+    // Ease into and out of motion instead of starting and stopping dead.
+    P.vx = P.vx || 0; P.vy = P.vy || 0;
+    const ease = Math.min(1, dt * (len > 0.1 ? 9 : 11));
+    P.vx += (tvx - P.vx) * ease;
+    P.vy += (tvy - P.vy) * ease;
+    const v = Math.hypot(P.vx, P.vy);
+    if (v < 4 && len <= 0.1) P.vx = P.vy = 0;
+    P.speed = v;
+    P.moving = v > 6;
+    if (P.moving) {
+      const bx = P.x, by = P.y;
+      World.move(P, P.vx * dt, P.vy * dt);
+      // Sliding along a wall: keep only the speed that actually moved us.
+      if (Math.abs(P.x - bx) < Math.abs(P.vx * dt) * 0.5) P.vx *= 0.5;
+      if (Math.abs(P.y - by) < Math.abs(P.vy * dt) * 0.5) P.vy *= 0.5;
+      // Turn toward where we are heading, smoothly.
+      const want = Math.atan2(P.vy, P.vx);
+      const d = Math.atan2(Math.sin(want - P.angle), Math.cos(want - P.angle));
+      P.angle += d * Math.min(1, dt * 10);
       const before = P.walk;
-      P.walk += dt * (P.running ? 15 : 10);
+      P.walk += dt * v / 90 * 10;
       if (Math.floor(before / Math.PI) !== Math.floor(P.walk / Math.PI)) Sound.step();
     }
 
@@ -707,7 +726,7 @@ const Game = {
       <p><b>מקלדת:</b> WASD — הליכה (קדימה = לכיוון שהמצלמה מסתכלת) · Shift — ריצה · E — פעולה · רווח — המשך שיחה · Tab — טלפון.</p>
       <p><b>מצלמה:</b> גרירה עם העכבר מסובבת את המצלמה סביב הדמות, גלגלת — זום. אפשר גם חצים ימינה/שמאלה (או Q ו-R).</p>
       <p><b>בטלפון:</b> משחקים לרוחב. ג'ויסטיק שמאלי — הליכה קדימה, אחורה, ימינה ושמאלה. ג'ויסטיק ימני — להסתכל מסביב. כפתור E לפעולה וכפתור "ריצה".</p>
-      <p><b>מפה:</b> G או לחיצה על המפה הקטנה — מפה גדולה שמראה איפה כל אחד מהפלגה.</p>
+      <p><b>מפה:</b> לחיצה על המפה הקטנה (או G) — מפה גדולה וחיה שמראה איפה כל אחד מהפלגה.</p>
       <p><b>שחורה:</b> המד השחור. עולה מכל משימה ומכל דבר מנפיץ, ויורד ככל שמתקרבים ליציאה הביתה (ומאוכל טוב).</p>
       <p><b>החץ הצהוב</b> בתחתית המסך מצביע על המשימה הבאה, והחץ המרחף מעל המטרה מסמן אותה בעולם.</p>
       <p><b>תחנת הסעות:</b> ליד השער בכל אתר. משם נוסעים בין אתר נתיבות, ה{hq} ואתר הפריסה.</p>

@@ -58,18 +58,25 @@ const Assets = {
     const action = mixer.clipAction(this.walkClip);
     action.play();
     const feet = [this.bone(scene, [/^leftfoot$/i]), this.bone(scene, [/^rightfoot$/i])];
+    // The stride passes a feet-together pose twice per cycle; find both, so a soldier who
+    // stops can finish the step they are in instead of snapping.
     this.idleTime = 0;
+    this.idleTimes = [0];
     if (feet[0] && feet[1]) {
-      let best = Infinity;
+      const best = [Infinity, Infinity], at = [0, 0];
       const a = new THREE.Vector3(), b = new THREE.Vector3();
-      for (let i = 0; i < 40; i++) {
-        const t = this.walkClip.duration * i / 40;
+      const D = this.walkClip.duration;
+      for (let i = 0; i < 60; i++) {
+        const t = D * i / 60;
         action.time = t;
         mixer.update(0);
         scene.updateMatrixWorld(true);
         const d = feet[0].getWorldPosition(a).distanceTo(feet[1].getWorldPosition(b));
-        if (d < best) { best = d; this.idleTime = t; }
+        const h = t < D / 2 ? 0 : 1;
+        if (d < best[h]) { best[h] = d; at[h] = t; }
       }
+      this.idleTime = best[0] <= best[1] ? at[0] : at[1];
+      this.idleTimes = at;
     }
     action.time = this.idleTime;
     mixer.update(0);

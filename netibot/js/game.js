@@ -654,6 +654,7 @@ const Game = {
 
   async startWorld(fresh) {
     this.landscape();
+    document.body.classList.add('playing');
     UI.clearScreen();
     $('#hud').classList.remove('hidden');
     if (G.touch) $('#touch').classList.remove('hidden');
@@ -815,11 +816,7 @@ const Game = {
         <div class="actions"><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
       $('#mm-back').onclick = () => this.title();
       if (link) {
-        const text = 'בוא[/י] לשחק איתי בנתיבוט 🛡️ לוחצים על הקישור ובוחרים מי את[ה/]:';
-        $('#mm-share').onclick = async () => {
-          if (navigator.share) { try { await navigator.share({ title: 'נתיבוט', text: fmt(text), url: link }); return; } catch (e) { /* fall through to WhatsApp */ } }
-          window.open('https://wa.me/?text=' + encodeURIComponent(fmt(text) + '\n' + link), '_blank');
-        };
+        $('#mm-share').onclick = () => this.shareInvite();
         $('#mm-copy').onclick = async () => {
           const inp = $('#mm-link');
           try { await navigator.clipboard.writeText(link); } catch (e) { inp.select(); document.execCommand('copy'); }
@@ -848,6 +845,14 @@ const Game = {
       const now = Multi.peers.map(p => p.who + p.name).sort().join();
       if (now !== seen) { seen = now; render(); }
     }, 1500);
+  },
+
+  // Send the invite link: the phone's share sheet when there is one, WhatsApp otherwise.
+  async shareInvite() {
+    const link = Lobby.inviteLink();
+    const text = fmt('בוא[/י] לשחק איתי בנתיבוט 🛡️ לוחצים על הקישור ובוחרים מי את[ה/]:');
+    if (navigator.share) { try { await navigator.share({ title: 'נתיבוט', text, url: link }); return; } catch (e) { /* fall through to WhatsApp */ } }
+    window.open('https://wa.me/?text=' + encodeURIComponent(text + '\n' + link), '_blank');
   },
 
   chooseGdud(mode) {

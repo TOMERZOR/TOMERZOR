@@ -241,7 +241,7 @@ const UI = {
       <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
-      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button>' : ''}
+      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button>' : ''}
       <div class="row2"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
       <button class="btn small ghost" id="sd-style">🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}</button>
       <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">
@@ -266,6 +266,7 @@ const UI = {
       phone: () => { this.toggleMenu(false); this.togglePhone(true); },
       map: () => { this.toggleMenu(false); this.toggleMap(true); },
       chat: () => { this.toggleMenu(false); this.chat(); },
+      invite: () => Game.shareInvite(),
       help: () => { this.toggleMenu(false); Game.help(true); },
       save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },
       exit: () => { Game.save(); location.reload(); },

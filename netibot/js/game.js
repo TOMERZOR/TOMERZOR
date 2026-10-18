@@ -697,4 +697,9 @@ const Game = {
   },
 };
 
-window.addEventListener('load', () => Game.init());
+// Models and textures load first; the title screen shows progress meanwhile.
+window.addEventListener('load', () => {
+  UI.screen('<div class="content"><div class="logo">נתי<span>בוט</span></div><div class="tagline" id="load-msg">טוען גרפיקה... 0%</div></div>');
+  Assets.load(p => { const m = document.getElementById('load-msg'); if (m) m.textContent = `טוען גרפיקה... ${Math.round(p * 100)}%`; })
+    .then(() => Game.init());
+});

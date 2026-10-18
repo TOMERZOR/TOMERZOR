@@ -103,6 +103,7 @@ const World = {
       for (let i = 0; i < 5; i++) prop('target', 19.5 + i * 3, 3.3, 0.9, 0.3, false);
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← נתיבות 3 ק"מ' });
       prop('books', 3.3, 13.2, 0.8, 0.6, false);
+      for (const [x, y] of [[33, 26], [45, 24], [21, 31], [60, 24], [3, 40], [24, 33], [50, 38]]) prop('palm', x + 0.2, y + 0.2, 0.6, 0.6, false);
       site.launchers = def.launchers.map(L => prop('launcher', L.x + 0.15, L.y, 2.7, 4.4, true, { id: L.id, name: L.name, ammo: 20, needsReload: false }));
       for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40],
         [21, 29], [21, 34], [43, 32], [49, 31], [12, 33], [40, 10], [47, 10], [54, 10], [14, 12], [36, 24], [44, 24], [57, 35]]) lamp(x, y);
@@ -127,6 +128,7 @@ const World = {
       prop('truck', 6, 35.2, 2.4, 4.6, true, { color: 0x56653a });
       prop('truck', 10, 35.2, 2.4, 4.6, true, { color: 0x4f5a3a });
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← שו"ב' });
+      for (const [x, y] of [[30, 13], [38, 13], [19, 21], [46, 33], [3, 24], [60, 20]]) prop('palm', x + 0.2, y + 0.2, 0.6, 0.6, false);
       for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40], [17, 34], [24, 12], [40, 12], [50, 33]]) lamp(x, y);
     } else if (id === 'field') {
       prop('sign', 40, 43.2, 3, 0.6, false, { text: 'אתר פריסה' });
@@ -261,12 +263,24 @@ const World = {
       [T.WALL]: ['#6e6a5e'],
       [T.FENCE]: ['#e2cd9c'],
     };
+    // Higgsfield textures for sand and asphalt, tiled across the whole map so tiles join seamlessly.
+    const pattern = (img, tiles) => {
+      if (!img) return null;
+      const p = g.createPattern(img, 'repeat');
+      if (p.setTransform) p.setTransform(new DOMMatrix().scale(tiles * TS / img.width));
+      return p;
+    };
+    const sandP = pattern(Assets.images.sand, 5);
+    const roadP = pattern(Assets.images.asphalt, 3);
     for (let y = 0; y < this.H; y++) {
       for (let x = 0; x < this.W; x++) {
         const t = grid[y][x];
         const pal = colors[t];
-        g.fillStyle = pal[Math.floor(rnd() * pal.length)];
+        const textured = (t === T.SAND || t === T.OUT || t === T.FENCE) ? sandP : (t === T.ROAD || t === T.GATE) ? roadP : null;
+        g.fillStyle = textured || pal[Math.floor(rnd() * pal.length)];
         g.fillRect(x * TS, y * TS, TS, TS);
+        if (textured && t === T.OUT) { g.fillStyle = 'rgba(110,80,40,.12)'; g.fillRect(x * TS, y * TS, TS, TS); }
+        if (textured) continue;
         if (t === T.SAND || t === T.OUT) {
           g.fillStyle = 'rgba(120,90,40,.12)';
           for (let i = 0; i < 3; i++) g.fillRect(x * TS + rnd() * TS, y * TS + rnd() * TS, 2, 2);

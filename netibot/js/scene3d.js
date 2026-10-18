@@ -104,6 +104,13 @@ const Scene3D = {
     return s;
   },
   at(px, py) { return { x: px * S3, z: py * S3 }; },
+  // Add a Higgsfield-generated model to a group; returns false when it isn't loaded.
+  addModel(g, name, fit) {
+    const m = Assets.model(name, fit);
+    if (!m) return false;
+    g.add(m);
+    return true;
+  },
 
   // ---------- world construction ----------
   build() {
@@ -128,7 +135,16 @@ const Scene3D = {
     ground.position.set(W / 2, 0, H / 2);
     ground.receiveShadow = true;
     sc.add(ground);
-    const desert = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), this.mat(0xc9ad78, { roughness: 1 }));
+    let sandTex = null;
+    if (Assets.images.sand) {
+      sandTex = new THREE.Texture(Assets.images.sand);
+      sandTex.needsUpdate = true;
+      sandTex.encoding = THREE.sRGBEncoding;
+      sandTex.wrapS = sandTex.wrapT = THREE.RepeatWrapping;
+      sandTex.repeat.set(1400 / 8, 1400 / 8);
+      sandTex.anisotropy = 8;
+    }
+    const desert = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), this.mat(sandTex ? 0xd8c9a8 : 0xc9ad78, { roughness: 1, map: sandTex }));
     desert.rotation.x = -Math.PI / 2;
     desert.position.set(W / 2, -0.03, H / 2);
     desert.receiveShadow = true;
@@ -162,16 +178,26 @@ const Scene3D = {
       if (World.grid[y][x] !== T.WALL) continue;
       (shelterTiles.has(x + ',' + y) ? shelters : walls).push([x, y]);
     }
-    const make = (list, h, color) => {
-      const im = new THREE.InstancedMesh(new THREE.BoxGeometry(2, h, 2), this.mat(color, { roughness: 0.95 }), list.length);
+    let wallTex = null;
+    if (Assets.images.wall) {
+      wallTex = new THREE.Texture(Assets.images.wall);
+      wallTex.needsUpdate = true;
+      wallTex.encoding = THREE.sRGBEncoding;
+      wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+      wallTex.repeat.set(1, 1.4);
+      wallTex.anisotropy = 4;
+    }
+    const make = (list, h, color, textured) => {
+      const mat = this.mat(wallTex && textured ? color : 0xd9cfb6, { roughness: 0.95, map: textured ? wallTex : null });
+      const im = new THREE.InstancedMesh(new THREE.BoxGeometry(2, h, 2), mat, list.length);
       const m = new THREE.Matrix4();
       list.forEach(([x, y], i) => { m.makeTranslation(x * 2 + 1, h / 2, y * 2 + 1); im.setMatrixAt(i, m); });
       im.castShadow = true;
       im.receiveShadow = true;
       this.root.add(im);
     };
-    make(walls, WALL_H, 0xd9cfb6);
-    make(shelters, SHELTER_H, 0x9b9a90);
+    make(walls, WALL_H, 0xffffff, true);
+    make(shelters, SHELTER_H, 0xb4b2a8, true);
     // Wall caps and red bands on shelters.
     const red = this.mat(0xd8392b);
     for (const b of World.def.buildings) {
@@ -328,6 +354,7 @@ const Scene3D = {
           break;
         }
         case 'tower': {
+          if (this.addModel(g, 'tower', { height: 7.6 })) break;
           const leg = this.mat(0x5a5246, { metalness: 0.4 });
           for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) this.cyl(0.1, 0.12, 4.6, leg, sx * (w / 2 - 0.3), 2.3, sz * (d / 2 - 0.3), g, 6);
           this.box(w + 0.6, 0.2, d + 0.6, this.mat(0x7b7264), 0, 4.6, 0, g);
@@ -384,6 +411,11 @@ const Scene3D = {
         case 'launcher':
           this.buildLauncher(rec, w, d);
           break;
+        case 'palm': {
+          const palm = Assets.model('palm', { height: 7 + (o.x % 3), rotY: o.y % 6 });
+          if (palm) g.add(palm);
+          break;
+        }
         case 'busstop': {
           this.box(w, 0.08, 1.4, this.mat(0x3a6e8f), 0, 2.4, 0, g);
           for (const sx of [-w / 2 + 0.1, w / 2 - 0.1]) this.cyl(0.05, 0.05, 2.4, this.mat(0x888888), sx, 1.2, -0.5, g, 6);
@@ -407,6 +439,7 @@ const Scene3D = {
           break;
         }
         case 'truck': {
+          if (this.addModel(g, 'truck', { rotY: Math.PI / 2, depth: d })) break;
           const tm = this.mat(o.color || 0x56653a);
           this.box(w * 0.85, 0.5, d, this.mat(0x23281d), 0, 0.85, 0, g);
           this.box(w * 0.85, 1.7, 1.9, tm, 0, 2, d / 2 - 0.95, g);
@@ -418,6 +451,13 @@ const Scene3D = {
           break;
         }
         case 'container': {
+          if (Assets.has('container')) {
+            this.addModel(g, 'container', { rotY: w > d ? Math.PI / 2 : 0, size: [w, 2.6, d] });
+            const lb = this.label(o.label, { size: 0.8 });
+            lb.position.set(0, 3.3, 0);
+            g.add(lb);
+            break;
+          }
           const tex = this.canvasTex(128, 64, (c) => {
             const col = '#' + new THREE.Color(o.color || 0x5d6b3e).getHexString();
             c.fillStyle = col; c.fillRect(0, 0, 128, 64);
@@ -450,6 +490,16 @@ const Scene3D = {
 
   buildLauncher(rec, w, d) {
     const g = rec.g;
+    if (this.addModel(g, 'launcher', { depth: d })) {
+      // The launch box points north (-z); interceptors leave from its top end.
+      rec.muzzle = new THREE.Object3D();
+      rec.muzzle.position.set(0, 5.2, -d / 2 + 1);
+      g.add(rec.muzzle);
+      rec.empty = this.label('ריק — להחליף מארז', { bg: 'rgba(230,59,46,.92)', size: 1.3 });
+      rec.empty.position.set(0, 7, 0);
+      g.add(rec.empty);
+      return;
+    }
     const olive = this.mat(0x4b5a2a);
     const dark = this.mat(0x23281d);
     this.box(w * 0.78, 0.5, d, dark, 0, 0.95, 0, g);
@@ -484,6 +534,7 @@ const Scene3D = {
   },
 
   drawAmmo(rec) {
+    if (!rec.ammoCanvas) return;
     const o = rec.o;
     const key = o.ammo + ':' + o.needsReload;
     if (key === rec.ammoKey) return;
@@ -588,6 +639,8 @@ const Scene3D = {
     const trunk = this.mat(0x7a5a36), leaf = this.mat(0x5d7a32);
     for (let i = 0; i < 12; i++) {
       const x = 4 + i * 11 + rnd() * 4, z = 92 + rnd() * 6;
+      const palm = Assets.model('palm', { height: 6.5 + rnd() * 2, rotY: rnd() * 6 });
+      if (palm) { palm.position.set(x, 0, z); this.root.add(palm); continue; }
       this.cyl(0.18, 0.28, 6, trunk, x, 3, z, null, 6);
       for (let k = 0; k < 6; k++) {
         const f = this.box(2.6, 0.08, 0.6, leaf, x, 6, z);
@@ -713,6 +766,10 @@ const Scene3D = {
 
   makeCar(color) {
     const g = new THREE.Group();
+    if (this.addModel(g, 'pickup', { rotY: Math.PI / 2, length: 5.3, tint: new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.45) })) {
+      this.root.add(g);
+      return g;
+    }
     const body = this.mat(color, { metalness: 0.35, roughness: 0.5 });
     this.box(4.3, 0.85, 1.9, body, 0, 0.75, 0, g);
     this.box(2.3, 0.7, 1.75, body, -0.35, 1.5, 0, g);
@@ -728,6 +785,13 @@ const Scene3D = {
 
   makeTruck(item) {
     const g = new THREE.Group();
+    if (this.addModel(g, 'truck', { rotY: Math.PI, length: 9 })) {
+      const lb = this.label(item.name, { size: 0.8 });
+      lb.position.set(0, 4.6, 0);
+      g.add(lb);
+      this.root.add(g);
+      return g;
+    }
     const olive = this.mat(0x56653a);
     this.box(9, 0.5, 2.4, this.mat(0x23281d), 0, 0.9, 0, g);
     this.box(2, 2.1, 2.4, olive, 3.6, 2.1, 0, g);

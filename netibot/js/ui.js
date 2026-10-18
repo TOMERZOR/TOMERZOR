@@ -243,6 +243,7 @@ const UI = {
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
       ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button>' : ''}
       <div class="row2"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
+      <button class="btn small ghost" id="sd-style">🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}</button>
       <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">
       <label for="sd-svol">עוצמת אפקטים</label><input type="range" id="sd-svol" min="0" max="1" step="0.05" value="${Sound.prefs.sfxVol}">
       <button class="btn ghost" data-m="help">❓ איך משחקים</button>
@@ -251,6 +252,12 @@ const UI = {
     </div>`;
     m.querySelector('.scrim').onclick = () => this.toggleMenu(false);
     m.querySelectorAll('[data-audio]').forEach(b => b.onclick = () => Game.toggleAudio(b.dataset.audio));
+    m.querySelector('#sd-style').onclick = (e) => {
+      const keys = Object.keys(Sound.STYLES);
+      Sound.setStyle(keys[(keys.indexOf(Sound.style) + 1) % keys.length]);
+      e.target.textContent = `🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}`;
+      if (!Sound.prefs.music) Game.toggleAudio('music');
+    };
     m.querySelector('#sd-mvol').oninput = (e) => Sound.setVolume('music', +e.target.value);
     m.querySelector('#sd-svol').oninput = (e) => Sound.setVolume('sfx', +e.target.value);
     Game.syncAudioButtons();

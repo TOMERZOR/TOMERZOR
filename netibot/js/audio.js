@@ -5,7 +5,7 @@ const Sound = (() => {
   let master = null, sfxBus = null, musicBus = null;
   let siren = null;
   let noiseBuf = null;
-  const prefs = { sfx: true, music: true, sfxVol: 0.8, musicVol: 0.55 };
+  const prefs = { sfx: true, music: true, sfxVol: 0.8, musicVol: 0.5, style: 'lofi' };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem('netibot.audio') || '{}')); } catch (e) { /* storage may be blocked */ }
   const savePrefs = () => { try { localStorage.setItem('netibot.audio', JSON.stringify(prefs)); } catch (e) { /* ignore */ } };
 
@@ -76,21 +76,32 @@ const Sound = (() => {
   const later = (ms, fn) => setTimeout(fn, ms);
 
   // ---------- music ----------
-  // A small step sequencer. Each mood has its own tempo, scale and parts; the
-  // melody is generated from a seed per bar so it varies but stays in key.
+  // A small generative composer. Each piece has a form (A, A', B, a quiet bridge), a chord
+  // progression and a short motif that comes back with variations, so it sounds like a
+  // song instead of a loop. Between pieces there is a pause of near-silence.
+  // Three styles: Mizrahi (darbuka and oud-like plucks), lo-fi (soft keys, lazy drums,
+  // vinyl crackle) and ambient (pads and bells only).
   const N = (semi) => 146.83 * Math.pow(2, semi / 12); // semitones above D3
   const HIJAZ = [0, 1, 4, 5, 7, 8, 10, 12, 13, 16, 17, 19];   // D freygish: the Middle-Eastern sound
   const MINOR = [0, 2, 3, 5, 7, 8, 10, 12, 14, 15, 17, 19];
+  const DORIAN = [0, 2, 3, 5, 7, 9, 10, 12, 14, 15, 17, 19];
+  // Progressions as chord roots in semitones, one chord per bar.
+  const PROGS = {
+    mizrahi: [[0, 0, -2, 1], [0, -4, -2, 1], [0, 5, 3, 1], [0, -2, -4, 1]],
+    lofi: [[0, 5, -2, 3], [0, -4, 5, -2], [0, 3, 5, -2], [0, -2, -4, -5]],
+    ambient: [[0, -4, 5, -2], [0, 3, -2, 5], [0, -5, -2, 0]],
+  };
+  // Moods set tempo and energy; tension and the boss have their own fixed sound.
   const MOODS = {
-    menu: { bpm: 84, scale: HIJAZ, bass: [0, -5, -2, 0], drums: 'soft', lead: 0.5, pad: true, vol: 1 },
-    day: { bpm: 100, scale: HIJAZ, bass: [0, 5, -2, 0], drums: 'darbuka', lead: 0.65, pad: true, vol: 1 },
-    night: { bpm: 70, scale: MINOR, bass: [0, -4, -2, -5], drums: 'hat', lead: 0.35, pad: true, vol: 0.8 },
-    deploy: { bpm: 118, scale: HIJAZ, bass: [0, 0, -2, 1], drums: 'drive', lead: 0.55, pad: false, vol: 1 },
-    tension: { bpm: 128, scale: MINOR, bass: [0, 0, 1, 0], drums: 'pulse', lead: 0, pad: false, vol: 0.7 },
-    boss: { bpm: 140, scale: HIJAZ, bass: [0, 1, 0, -2], drums: 'drive', lead: 0.8, pad: false, vol: 1 },
+    menu: { bpm: 84, energy: 0.5 },
+    day: { bpm: 96, energy: 0.8 },
+    night: { bpm: 72, energy: 0.45 },
+    deploy: { bpm: 116, energy: 1 },
+    tension: { bpm: 128, energy: 1, fixed: 'pulse' },
+    boss: { bpm: 140, energy: 1, fixed: 'boss' },
   };
   const Music = {
-    mood: null, next: null, step: 0, bar: 0, time: 0, timer: null, seed: 1,
+    mood: null, next: null, step: 0, bar: 0, time: 0, timer: null, seed: 1, song: null,
     set(mood) {
       if (mood === this.mood || mood === this.next) return;
       if (!this.mood) { this.mood = mood; return this.start(); }
@@ -104,68 +115,119 @@ const Sound = (() => {
     },
     stop() { clearInterval(this.timer); this.timer = null; this.mood = this.next = null; },
     rand() { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; },
+    style() { return prefs.style || 'lofi'; },
+    // A new piece: progression, transposition, two motifs, and the pause that follows it.
+    newSong() {
+      this.seed = 1 + Math.floor(Math.random() * 1e6);
+      const st = this.style();
+      const progs = PROGS[st];
+      const motif = () => {
+        const m = [];
+        for (let i = 0; i < 16; i++) m.push(this.rand() < (st === 'ambient' ? 0.12 : 0.42) ? Math.floor(this.rand() * 5) : null);
+        m[0] = 0;
+        return m;
+      };
+      this.song = {
+        style: st, prog: progs[Math.floor(this.rand() * progs.length)], shift: [0, -2, 3, 5][Math.floor(this.rand() * 4)],
+        motifA: motif(), motifB: motif(), bars: 32, rest: 6 + Math.floor(this.rand() * 6), at: 0,
+      };
+    },
     tick() {
       if (!ctx) return;
       while (this.time < ctx.currentTime + 0.25) {
         if (this.step % 16 === 0) {
-          if (this.next) { this.mood = this.next; this.next = null; }
-          this.bar++;
-          this.seed = 7 + (this.bar % 8) * 131; // an 8-bar phrase that repeats
+          if (this.next) { this.mood = this.next; this.next = null; if (MOODS[this.mood].fixed) this.song = null; }
+          if (!this.song || this.song.style !== this.style() || this.song.at >= this.song.bars + this.song.rest) this.newSong();
+          this.bar = this.song.at++;
         }
-        this.play(MOODS[this.mood], this.step % 16, this.time);
-        this.time += 60 / MOODS[this.mood].bpm / 4;
+        if (!this.song) this.newSong();
+        const m = MOODS[this.mood];
+        if (m.fixed) this.playFixed(m, this.step % 16, this.time);
+        else this.play(m, this.step % 16, this.time);
+        // Lo-fi swings its off-beats a little.
+        const swing = this.style() === 'lofi' && !m.fixed ? (this.step % 2 ? -0.025 : 0.025) : 0;
+        this.time += 60 / m.bpm / 4 * (1 + swing);
         this.step++;
       }
     },
+    // Tension (red alert) and the boss fight: short, driving, no pauses.
+    playFixed(m, s, t) {
+      const bus = musicBus;
+      const root = m.fixed === 'boss' ? [0, 1, 0, -2][Math.floor(this.step / 16) % 4] : [0, 0, 1, 0][Math.floor(this.step / 16) % 4];
+      if (s % 4 === 0) tone(110, 0.18, 'sine', 0.4, 40, t, bus);
+      if (m.fixed === 'boss') {
+        if (s === 4 || s === 12) noise(0.12, 0.16, 1800, 'bandpass', t, bus, 1);
+        if (s % 2 === 1) noise(0.03, 0.05, 8000, 'highpass', t, bus);
+        if (s % 2 === 0 && Math.random() < 0.6) tone(N(HIJAZ[Math.floor(Math.random() * 8)] + 12), 0.22, 'square', 0.05, null, t, bus);
+      }
+      if (s % 2 === 0) tone(N(root - 12), 0.12, 'triangle', 0.3, null, t, bus);
+    },
     play(m, s, t) {
       const bus = musicBus;
-      const v = m.vol;
-      const root = m.bass[this.bar % 4];
-      // Drums.
-      const kick = (vol = 0.5) => { tone(110, 0.18, 'sine', vol * v, 40, t, bus); };
-      const dum = () => { tone(95, 0.22, 'sine', 0.42 * v, 60, t, bus); noise(0.08, 0.12 * v, 300, 'lowpass', t, bus); };
-      const tek = (vol = 0.14) => noise(0.05, vol * v, 3200, 'bandpass', t, bus, 4);
-      const hat = (vol = 0.05) => noise(0.03, vol * v, 8000, 'highpass', t, bus);
-      if (m.drums === 'darbuka') {
-        if (s === 0 || s === 10) dum();
-        if (s === 4 || s === 6 || s === 12) tek();
-        if (s % 2 === 1 && this.rand() < 0.35) tek(0.06);
-      } else if (m.drums === 'soft') {
-        if (s === 0) dum();
-        if (s === 8) tek(0.08);
-      } else if (m.drums === 'hat') {
-        if (s % 4 === 2) hat(0.03);
-      } else if (m.drums === 'drive') {
-        if (s % 4 === 0) kick(0.5);
-        if (s === 4 || s === 12) { noise(0.12, 0.16 * v, 1800, 'bandpass', t, bus, 1); }
-        if (s % 2 === 1) hat(0.05);
-      } else if (m.drums === 'pulse') {
-        if (s % 4 === 0) kick(0.4);
+      const S = this.song;
+      const st = S.style;
+      const e = m.energy;
+      const scale = st === 'mizrahi' ? HIJAZ : st === 'lofi' ? DORIAN : MINOR;
+      // The pause between pieces: a soft held note every other bar, then nothing.
+      if (S.at > S.bars) {
+        if (s === 0 && S.at % 2 === 0 && S.at < S.bars + S.rest - 1) this.pad(N(S.shift), 0.018, 60 / m.bpm * 8, t);
+        return;
       }
-      // Bass.
-      const bassHits = m.drums === 'pulse' ? [0, 2, 4, 6, 8, 10, 12, 14] : m.drums === 'drive' ? [0, 3, 6, 8, 11, 14] : [0, 6, 10];
-      if (bassHits.includes(s)) tone(N(root - 12), m.drums === 'pulse' ? 0.12 : 0.35, 'triangle', 0.32 * v, null, t, bus);
-      // Pad: a soft chord held for the bar.
-      if (m.pad && s === 0) {
-        for (const iv of [0, 7, 12]) {
-          const o = ctx.createOscillator();
-          const g = ctx.createGain();
-          o.type = 'sine';
-          o.frequency.value = N(root + iv);
-          const len = 60 / m.bpm * 4;
-          g.gain.setValueAtTime(0.0001, t);
-          g.gain.linearRampToValueAtTime(0.045 * v, t + len * 0.3);
-          g.gain.linearRampToValueAtTime(0.0001, t + len);
-          o.connect(g).connect(bus);
-          o.start(t);
-          o.stop(t + len + 0.05);
+      const bar = this.bar;
+      const section = Math.floor(bar / 8);           // 0 A, 1 A', 2 B, 3 quiet bridge
+      const root = S.prog[bar % 4] + S.shift;
+      const third = scale.includes(((root - S.shift) % 12 + 12 + 3) % 12) ? 3 : 4;
+      const chord = [0, third, 7, st === 'lofi' ? 10 : 12];
+      const quiet = section === 3;
+      // Drums.
+      const kick = (vol) => tone(st === 'lofi' ? 80 : 105, 0.2, 'sine', vol, 42, t, bus);
+      const hat = (vol) => noise(0.03, vol, 8000, 'highpass', t, bus);
+      if (st === 'mizrahi' && !quiet) {
+        if (s === 0 || s === 10) { tone(95, 0.22, 'sine', 0.36 * e, 60, t, bus); noise(0.08, 0.1 * e, 300, 'lowpass', t, bus); }
+        if (s === 4 || s === 6 || s === 12) noise(0.05, 0.11 * e, 3200, 'bandpass', t, bus, 4);
+        if (section === 2 && s % 2 === 1 && this.rand() < 0.3) noise(0.04, 0.05 * e, 3200, 'bandpass', t, bus, 4);
+      } else if (st === 'lofi' && !quiet) {
+        if (s === 0 || (s === 10 && this.rand() < 0.6)) kick(0.3 * e);
+        if (s === 4 || s === 12) noise(0.14, 0.06 * e, 1600, 'bandpass', t, bus, 0.8);
+        if (s % 2 === 0) hat(0.022 * e);
+        if (this.rand() < 0.08) noise(0.02, 0.012, 5000, 'highpass', t, bus); // vinyl crackle
+      }
+      // Bass on the chord root.
+      if (st !== 'ambient' && !quiet && (s === 0 || (s === 8 && section !== 0) || (st === 'mizrahi' && s === 6))) tone(N(root - 12), 0.4, 'triangle', 0.26 * e, null, t, bus);
+      // Chords: a held pad, or soft keys stabs in lo-fi.
+      if (s === 0) {
+        if (st === 'lofi') for (const iv of chord) tone(N(root + iv), 1.1, 'sine', 0.035, null, t, bus);
+        else this.pad(N(root), st === 'ambient' ? 0.05 : 0.035, 60 / m.bpm * 4, t, chord);
+      }
+      if (st === 'lofi' && s === 7 && !quiet) for (const iv of chord.slice(1)) tone(N(root + iv), 0.5, 'sine', 0.022, null, t, bus);
+      // Melody: the motif of this section, with one note changed now and then.
+      if (s % 2 === 0) {
+        const motif = section === 2 ? S.motifB : S.motifA;
+        let deg = motif[(bar % 2) * 8 + s / 2];
+        if (deg === null || (quiet && this.rand() < 0.7) || (section === 0 && bar % 8 < 2)) return;
+        if (section === 1 && this.rand() < 0.2) deg = (deg + 1 + Math.floor(this.rand() * 2)) % 5;
+        const i = scale.indexOf(((root - S.shift) % 12 + 12) % 12);
+        const note = scale[Math.max(0, i) + deg] !== undefined ? scale[Math.max(0, i) + deg] : scale[deg];
+        if (st === 'ambient') tone(N(note + S.shift + 24), 1.6, 'sine', 0.05, null, t, bus);
+        else if (st === 'lofi') tone(N(note + S.shift + 12), 0.45, 'triangle', 0.06 * e, null, t, bus);
+        else {
+          tone(N(note + S.shift + 12), 0.26, 'triangle', 0.09 * e, null, t, bus);
+          tone(N(note + S.shift + 24), 0.1, 'sine', 0.025 * e, null, t + 0.03, bus);
         }
       }
-      // Lead: plucked notes from the scale, generated per bar.
-      if (m.lead && s % 2 === 0 && this.rand() < m.lead) {
-        const deg = Math.floor(this.rand() * m.scale.length);
-        tone(N(m.scale[deg] + 12), 0.28, 'triangle', 0.12 * v, null, t, bus);
-        if (this.rand() < 0.25) tone(N(m.scale[deg] + 24), 0.12, 'sine', 0.04 * v, null, t + 0.06, bus);
+    },
+    pad(freq, vol, len, t, ivs = [0, 7, 12]) {
+      for (const iv of ivs) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = freq * Math.pow(2, iv / 12);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(vol, t + len * 0.3);
+        g.gain.linearRampToValueAtTime(0.0001, t + len);
+        o.connect(g).connect(musicBus);
+        o.start(t);
+        o.stop(t + len + 0.05);
       }
     },
   };
@@ -183,6 +245,10 @@ const Sound = (() => {
     setMusic(on) { prefs.music = on; savePrefs(); applyVolumes(); },
     setVolume(kind, v) { prefs[kind + 'Vol'] = v; savePrefs(); applyVolumes(); },
     music(mood) { if (!ensure()) return; Music.set(mood); },
+    _music: Music,
+    STYLES: { lofi: 'לו-פיי רגוע', mizrahi: 'מזרחית', ambient: 'אווירה שקטה' },
+    get style() { return Music.style(); },
+    setStyle(st) { prefs.style = st; savePrefs(); if (Music.song) Music.song.at = 1e9; },
 
     // ---------- effects ----------
     click() { tone(880, 0.05, 'square', 0.04); },

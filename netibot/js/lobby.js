@@ -57,9 +57,34 @@ const Lobby = {
       ROSTER.fromLink = true;
     } catch (e) { /* a broken link keeps the default names */ }
   },
+  // The key that opens js/roster.enc.js: from the link, or remembered from an earlier visit,
+  // or (on the owner's own copy) from js/roster.key.js.
+  key() {
+    if (this.params().k) return this.params().k.replace(/[^A-Za-z0-9_-]/g, '');
+    try { const k = localStorage.getItem('netibot.key'); if (k) return k; } catch (e) { /* storage may be blocked */ }
+    return window.ROSTER_KEY || null;
+  },
+  // Decrypt the real cast when this copy only has the made-up one. Resolves either way.
+  async unlock() {
+    const k = this.key();
+    if (!ROSTER.example || !k || !window.ROSTER_ENC || !window.crypto || !crypto.subtle) return;
+    try {
+      const un = (t) => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+      const key = await crypto.subtle.importKey('raw', un(k), 'AES-GCM', false, ['decrypt']);
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un(ROSTER_ENC.iv) }, key, un(ROSTER_ENC.data));
+      const real = JSON.parse(new TextDecoder().decode(plain));
+      if (!real || !Array.isArray(real.people)) return;
+      ROSTER = real;
+      ROSTER.example = false;
+      try { localStorage.setItem('netibot.key', k); } catch (e) { /* ignore */ }
+    } catch (e) { /* a wrong key keeps the made-up names */ }
+  },
   inviteLink() {
     const onPages = location.protocol.startsWith('http') && !/claude|claudeusercontent/.test(location.hostname) && location.hostname !== 'localhost';
     const base = onPages ? location.origin + location.pathname : PAGES_URL;
+    const k = this.key();
+    // Short link with the key; the long names-in-the-link form only if this copy has no key.
+    if (k && window.ROSTER_ENC) return `${base}#l=${this.code()}&k=${k}`;
     return `${base}#l=${this.code()}${ROSTER.example ? '' : '&n=' + this.encodeNames()}`;
   },
 

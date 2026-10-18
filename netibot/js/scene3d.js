@@ -1495,12 +1495,12 @@ const Scene3D = {
       else { this.box(0.4, 0.07, 0.14, this.mat(0x2f2f2f), 0, 0, 0, g); this.box(0.2, 0.072, 0.142, this.mat(0xf2c14e), 0, 0, 0, g); }
       return g;
     };
-    sync(Boss.burgers, this.bossBits.burgers, smallBurger, (b, m) => {
+    sync([...Boss.burgers, ...(Boss.remoteBurgers || [])], this.bossBits.burgers, smallBurger, (b, m) => {
       const t = Math.min(1, b.t / b.dur);
       m.position.set((b.x0 + (b.x1 - b.x0) * t) * S3, 4 + Math.sin(t * Math.PI) * 5 - t * 3.6, (b.y0 + (b.y1 - b.y0) * t) * S3);
       m.rotation.x = t * 9;
     });
-    sync(Boss.shots, this.bossBits.shots, (s) => healthy(s.kind), (s, m) => {
+    sync([...Boss.shots, ...(Boss.remoteShots || [])], this.bossBits.shots, (s) => healthy(s.kind), (s, m) => {
       m.position.set(s.x * S3, 1.4 + Math.sin(Math.min(1, s.t * 2) * Math.PI) * 1.5, s.y * S3);
       m.rotation.set(s.t * 12, s.t * 7, 0);
     });

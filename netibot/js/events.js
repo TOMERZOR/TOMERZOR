@@ -61,6 +61,7 @@ const Events = {
     if (this.rafael) this.updateRafael(dt);
     if (S.dayFlags.techAt && S.clock >= S.dayFlags.techAt && !S.dayFlags.tech && free && World.id === 'netivot') this.startTech();
     if (this.tech) this.updateTech(dt);
+    this.watchBaum();
     if (this.baum) this.updateBaum(dt);
     if (this.chores) this.updateChores(dt);
 
@@ -99,10 +100,11 @@ const Events = {
         add(at.x, at.y, st.label, () => this.techStep(), 46);
       }
       if (this.baum && this.baum.phase === 'hide') {
-        if (!P.carry) for (const f of this.baum.food) if (!f.hidden && !f.carried) add(f.x, f.y, `להרים: ${f.name}`, () => this.pickFood(f), 34);
+        if (!P.carry) for (const f of this.baum.food) if (!f.hidden && !f.carried && !f.peerCarried) add(f.x, f.y, `להרים: ${f.name}`, () => this.pickFood(f), 34);
         if (P.carry === 'food') for (const h of this.hideSpots()) add(h.x, h.y, h.label, () => this.hideFood(h), h.r || 32);
       }
       add(SPOTS.pullup.x, SPOTS.pullup.y, 'מתקן מתח', () => this.pullups(), 30);
+      if (Multi.on && !this.baum) add(SPOTS.board.x, SPOTS.board.y + 30, '🍕 נוהל אנה פרנק — {@bc} מגיעה! (לכל מי שבנתיבות)', () => this.startBaumCoop(), 34);
     } else if (World.id === 'hq') {
       add(SPOTS_HQ.stove.x, SPOTS_HQ.stove.y, 'לבשל במטבחון', () => this.cook(), 30);
       const c = this.chores;
@@ -286,9 +288,11 @@ const Events = {
   },
 
   // ---------- the battery commander's visit: hide all the food from outside ----------
-  startBaum() {
+  // coop: { id } in multiplayer, when everyone at Netivot hides the food together.
+  startBaum(coop = null, quiet = false) {
     const food = DATA.outsideFood.map(f => ({ ...f, name: fmt(f.name), x: f.at[0] * TS, y: f.at[1] * TS, hidden: false }));
-    this.baum = { t: 120, food, phase: 'hide', used: {} };
+    this.baum = { t: 120, food, phase: 'hide', used: {}, coop, myHid: new Set() };
+    if (quiet) return;
     UI.cutscene([{ img: 'assets/hide.jpg', who: '{@@commander}', text: '{@@bc} בדרך לביקורת פתע! יש לנו שתי דקות. כל האוכל שקנינו בחוץ — להחביא, עכשיו. מפעילים נוהל אנה פרנק!' }]).then(() =>
       UI.talk([
         { who: 'p_nevo', text: 'גם את הדאודורנט שלי להחביא?' },
@@ -316,6 +320,7 @@ const Events = {
     const b = this.baum;
     const f = b.carrying;
     f.hidden = true;
+    b.myHid.add(f.id);
     f.carried = false;
     b.carrying = null;
     b.used[h.id] = (b.used[h.id] || 0) + 1;
@@ -328,8 +333,21 @@ const Events = {
   updateBaum(dt) {
     const b = this.baum;
     if (b.phase !== 'hide') return;
-    if (UI.busy || Mini.active) return;
-    b.t -= dt;
+    if (b.coop) {
+      // Shared: one clock for everyone, and whatever anyone hid or is holding is off the floor.
+      b.t = 120 - (Date.now() - b.coop.id) / 1000;
+      const hid = new Set(b.myHid), held = new Set();
+      for (const p of Multi.peers) if (p.baum && p.baum.id === b.coop.id) { p.baum.hid.forEach(id => hid.add(id)); if (p.baum.carry) held.add(p.baum.carry); }
+      for (const f of b.food) { f.hidden = hid.has(f.id); f.peerCarried = held.has(f.id) && !f.carried; }
+      if (b.carrying && b.carrying.hidden && !b.myHid.has(b.carrying.id)) { b.carrying.carried = false; b.carrying = null; G.player.carry = false; }
+      // Everything hidden: she arrives two seconds later instead of waiting out the clock.
+      if (!b.food.some(f => !f.hidden)) b.coop.doneAt = b.coop.doneAt || Date.now() + 2000;
+      if (b.coop.doneAt) b.t = Math.min(b.t, (b.coop.doneAt - Date.now()) / 1000);
+      if (UI.busy || Mini.active) return;
+    } else {
+      if (UI.busy || Mini.active) return;
+      b.t -= dt;
+    }
     const hidden = b.food.filter(x => x.hidden).length;
     const m = Math.max(0, Math.ceil(b.t));
     UI.banner(fmt(`🍕 נוהל אנה פרנק 🍕<small>{@bc} מגיעה בעוד ${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')} · הוחבאו ${hidden}/${b.food.length}</small>`));
@@ -353,7 +371,11 @@ const Events = {
     } else lines.push({ who: 'bc', text: `${seen.length} פריטי אוכל מבחוץ. סימנתי בכתום. {@@commander}, נדבר.` });
     await UI.talk(lines);
     P.carry = false;
-    if (!seen.length) { Game.achieve('hidden'); Story.complete('baum', 10, 'נוהל אנה פרנק הצליח'); }
+    if (b.coop) {
+      (this.baumDone = this.baumDone || new Set()).add(b.coop.id);
+      Game.addScore(seen.length ? Math.max(-6, 4 - seen.length * 2) : 10, seen.length ? 'הביקורת של {@bc}' : 'נוהל אנה פרנק — ביחד');
+      if (!seen.length) Game.achieve('hidden');
+    } else if (!seen.length) { Game.achieve('hidden'); Story.complete('baum', 10, 'נוהל אנה פרנק הצליח'); }
     else Story.complete('baum', Math.max(-8, 4 - seen.length * 3), 'הביקורת של {@bc}');
     this.addShchora(8, 'ביקורת מפקדת סוללה');
     // What stayed hidden turns into a feast tonight.
@@ -361,6 +383,23 @@ const Events = {
     this.baum = null;
     Game.setNpcSpot('bc', SPOTS.gate);
     setTimeout(() => Game.removeVisitor('bc'), 9000);
+  },
+  // Multiplayer: start the inspection for everyone at Netivot, or join one that is running.
+  startBaumCoop() { this.startBaum({ id: Date.now() }); },
+  watchBaum() {
+    if (!Multi.on || this.baum || Boss.active) return;
+    this.baumDone = this.baumDone || new Set();
+    this.baumHeard = this.baumHeard || new Set();
+    const p = Multi.peers.find(q => q.baum && !this.baumDone.has(q.baum.id) && Date.now() - q.baum.id < 118000);
+    if (!p) return;
+    if (World.id === 'netivot' && p.site === 'netivot') {
+      this.startBaum({ id: p.baum.id }, true);
+      UI.toast(fmt(`🍕 ${p.name}: {@bc} בדרך! נוהל אנה פרנק — להחביא את כל האוכל!`), 'bad');
+      Sound.whistle();
+    } else if (!this.baumHeard.has(p.baum.id)) {
+      this.baumHeard.add(p.baum.id);
+      UI.toast(fmt(`🍕 נוהל אנה פרנק בנתיבות! ${p.name} צריך[/ה] עזרה`), 'bad');
+    }
   },
 
   // ---------- Yasmin's boss inspection (day 3) ----------

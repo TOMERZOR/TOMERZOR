@@ -20,6 +20,10 @@ const Boss = {
     this.hp = this.max;
     this.myDmg = 0;
     this.peerDmg = 0;
+    this.fxLog = { s: [], b: [] };
+    this.remoteShots = [];
+    this.remoteBurgers = [];
+    this.remoteSeen = new Map();
     this.chol = 0;
     this.ammo = { broccoli: 0, ricecake: 0, protein: 0 };
     this.pickups = [];
@@ -97,6 +101,7 @@ const Boss = {
         const tx = P.x + Math.cos(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * 80 : 0);
         const ty = P.y + Math.sin(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * 80 : 0);
         this.burgers.push({ x0: this.x, y0: this.y, x1: tx, y1: ty, t: 0, dur: 1.15 });
+        if (this.coop) this.fxLog.b.push({ t: Date.now(), x0: Math.round(this.x), y0: Math.round(this.y), x1: Math.round(tx), y1: Math.round(ty) });
       }
       Sound.whoosh();
     }
@@ -121,6 +126,7 @@ const Boss = {
     }
     this.shots = this.shots.filter(s => !s.done);
     if (!this.active) return;
+    if (this.coop) this.updateRemoteFx();
 
     for (const p of this.pickups) {
       if (Math.hypot(P.x - p.x, P.y - p.y) < 34) {
@@ -136,6 +142,48 @@ const Boss = {
       while (this.pickups.length < 4) this.spawnPickup();
     }
     this.hud();
+  },
+
+  // What this player threw in the last moment, for the others to draw.
+  fxOut() {
+    const now = Date.now();
+    this.fxLog.s = this.fxLog.s.filter(o => now - o.t < 1600).slice(-8);
+    this.fxLog.b = this.fxLog.b.filter(o => now - o.t < 1300).slice(-8);
+    return { s: this.fxLog.s, b: this.fxLog.b };
+  },
+  // The other players' healthy food and the cheeseburgers thrown at them. Each item is timed
+  // from when it first arrived here, so clocks that differ between phones don't matter.
+  updateRemoteFx() {
+    const now = performance.now();
+    const shots = [], burgers = [], live = new Set();
+    for (const p of Multi.peers) {
+      if (!p.fx || !p.boss || p.boss.id !== this.coop.id || p.site !== 'hq') continue;
+      for (const o of p.fx.s) {
+        const key = p.peer + 's' + o.t;
+        live.add(key);
+        let r = this.remoteSeen.get(key);
+        if (!r) { r = { first: now, x: o.x, y: o.y, sx: o.x, sy: o.y, kind: DATA.healthy.find(k => k.id === o.k) || DATA.healthy[0], t: 0 }; this.remoteSeen.set(key, r); }
+        r.t = (now - r.first) / 1000;
+        const bx = this.x, by = this.y - 0.5 * TS;
+        const dur = Math.max(0.15, Math.hypot(bx - r.sx, by - r.sy) / 520);
+        const k = Math.min(1, r.t / dur);
+        r.x = r.sx + (bx - r.sx) * k;
+        r.y = r.sy + (by - r.sy) * k;
+        if (k < 1) shots.push(r);
+      }
+      for (const o of p.fx.b) {
+        const key = p.peer + 'b' + o.t;
+        live.add(key);
+        let r = this.remoteSeen.get(key);
+        if (!r) { r = { first: now, x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1, t: 0, dur: 1.15 }; this.remoteSeen.set(key, r); }
+        r.t = (now - r.first) / 1000;
+        if (r.t < r.dur) burgers.push(r);
+        else if (!r.splat) { r.splat = true; Sound.splat(); }
+      }
+    }
+    for (const k of this.remoteSeen.keys()) if (!live.has(k)) this.remoteSeen.delete(k);
+    this.remoteShots = shots;
+    this.remoteBurgers = burgers;
   },
 
   // Multiplayer: wake the monster for everyone at HQ. The others join from the presence.
@@ -173,6 +221,7 @@ const Boss = {
     const k = kinds[0];
     this.ammo[k.id]--;
     this.shots.push({ x: G.player.x, y: G.player.y, kind: k, t: 0 });
+    if (this.coop) this.fxLog.s.push({ t: Date.now(), x: Math.round(G.player.x), y: Math.round(G.player.y), k: k.id });
     Sound.whoosh();
   },
 
@@ -216,7 +265,7 @@ const Boss = {
     if (this.coop) {
       (this.doneIds = this.doneIds || new Set()).add(this.coop.id);
       $('#boss-hud').classList.add('hidden');
-      this.burgers = []; this.shots = []; this.pickups = [];
+      this.burgers = []; this.shots = []; this.pickups = []; this.remoteShots = []; this.remoteBurgers = [];
       const team = Multi.peers.filter(p => p.boss && p.boss.id === this.coop.id).map(p => p.name);
       await UI.cutscene([{ img: 'assets/boss3.jpg', who: '', text: `ניצחתם ביחד! ${team.length ? team.join(', ') + ' ו־' + fmt('{name}') : fmt('{name}')} — סיבים תזונתיים, מזון לא מעובד ודל סוכר. המפלצת מתכווצת בחזרה ל{@deputy_rasap}.` }]);
       await UI.talk([{ who: 'deputy_rasap', text: '*יושב על הדשא* ...אתם כמה, ואני אחד. זה לא הוגן. ...זה סלט? אני מרגיש סלט.' }]);
@@ -230,6 +279,8 @@ const Boss = {
     this.burgers = [];
     this.shots = [];
     this.pickups = [];
+    this.remoteShots = [];
+    this.remoteBurgers = [];
     await UI.cutscene([
       { img: 'assets/boss3.jpg', who: '', text: 'סיבים תזונתיים, מזון לא מעובד ודל סוכר... המפלצת מתכווצת, מתכווצת... ונשאר רק {@deputy_rasap}, יושב על הדשא עם שומשום על הכתפיים.' },
     ]);

@@ -47,6 +47,11 @@ const Multi = {
         x: +s.x || 0, y: +s.y || 0, a: +s.a || 0, m: !!s.m, r: !!s.r, c: s.c ? String(s.c).slice(0, 12) : false,
         say: s.say && typeof s.say.text === 'string' ? { text: s.say.text.slice(0, 80), at: +s.say.at || 0 } : null,
         // A co-op boss fight this player is in: which one, its max HP, the damage they dealt.
+        baum: s.baum && +s.baum.id ? { id: +s.baum.id, hid: Array.isArray(s.baum.hid) ? s.baum.hid.slice(0, 10).map(String) : [], carry: s.baum.carry ? String(s.baum.carry).slice(0, 16) : null } : null,
+        fx: s.fx && typeof s.fx === 'object' ? {
+          s: Array.isArray(s.fx.s) ? s.fx.s.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x: +o.x || 0, y: +o.y || 0, k: String(o.k || '').slice(0, 12) })) : [],
+          b: Array.isArray(s.fx.b) ? s.fx.b.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x0: +o.x0 || 0, y0: +o.y0 || 0, x1: +o.x1 || 0, y1: +o.y1 || 0 })) : [],
+        } : null,
         boss: s.boss && +s.boss.id ? { id: +s.boss.id, max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)) } : null,
         // Smoothed position for drawing.
         dx: old ? old.dx : +s.x || 0, dy: old ? old.dy : +s.y || 0,
@@ -86,6 +91,8 @@ const Multi = {
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null,
       boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg } : null,
+      fx: Boss.active && Boss.coop ? Boss.fxOut() : null,
+      baum: Events.baum && Events.baum.coop ? { id: Events.baum.coop.id, hid: [...Events.baum.myHid], carry: Events.baum.carrying ? Events.baum.carrying.id : null } : null,
     };
     const key = JSON.stringify(st);
     if (key === this.sent) return;

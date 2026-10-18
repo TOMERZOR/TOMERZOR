@@ -58,6 +58,9 @@ const Game = {
     this.bindInput();
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    const saveNow = () => { if (G.running && G.state) this.save(); };
+    window.addEventListener('pagehide', saveNow);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
     G.touch = matchMedia('(pointer: coarse)').matches;
     document.body.classList.toggle('touch', G.touch);
     this.title();
@@ -83,13 +86,17 @@ const Game = {
       G.keys.add(e.code);
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
       if (!G.running) return;
-      if ((e.code === 'Tab' || e.code === 'KeyP') && !Mini.active && !UI.busy) UI.togglePhone();
-      if (e.code === 'Escape' && !$('#phone').classList.contains('hidden')) UI.togglePhone(false);
+      if ((e.code === 'Tab' || e.code === 'KeyP') && !Mini.active && !UI.busy && !UI.menuOpen()) UI.togglePhone();
+      if (e.code === 'Escape' && !Mini.active) {
+        if (!$('#phone').classList.contains('hidden')) UI.togglePhone(false);
+        else if (UI.mapOpen()) UI.toggleMap(false);
+        else UI.toggleMenu();
+      }
       if (e.code === 'KeyM') this.toggleAudio('music');
       if (e.code === 'KeyN') this.toggleAudio('sfx');
-      if (e.code === 'KeyG' && !Mini.active && !UI.busy) UI.toggleMap();
+      if (e.code === 'KeyG' && !Mini.active && !UI.busy && !UI.menuOpen()) UI.toggleMap();
       if (e.code === 'KeyT' && Multi.on && !Mini.active && !UI.busy) { e.preventDefault(); UI.chat(); }
-      if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused) this.interact();
+      if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused && !UI.mapOpen()) this.interact();
     });
     document.addEventListener('keyup', (e) => G.keys.delete(e.code));
     window.addEventListener('blur', () => G.keys.clear());
@@ -140,13 +147,9 @@ const Game = {
     lstick.addEventListener('pointerup', endLookStick);
     lstick.addEventListener('pointercancel', endLookStick);
     $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
-    $('#btn-map').addEventListener('click', () => UI.toggleMap());
     $('#minimap').addEventListener('click', () => UI.toggleMap());
-    $('#btn-chat').addEventListener('click', () => UI.chat());
+    $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
-    $('#btn-phone').addEventListener('click', () => UI.togglePhone());
-    $('#btn-music').addEventListener('click', () => this.toggleAudio('music'));
-    $('#btn-sfx').addEventListener('click', () => this.toggleAudio('sfx'));
 
     // Camera: drag on the world (mouse or a finger outside the joystick) to look around, wheel to zoom.
     const looks = new Map();
@@ -181,9 +184,6 @@ const Game = {
     UI.toast(kind === 'music' ? (Sound.prefs.music ? '🎵 מוזיקה פועלת' : '🎵 מוזיקה כבויה') : (Sound.prefs.sfx ? '🔊 אפקטים פועלים' : '🔇 אפקטים כבויים'));
   },
   syncAudioButtons() {
-    $('#btn-music').classList.toggle('off', !Sound.prefs.music);
-    $('#btn-sfx').classList.toggle('off', !Sound.prefs.sfx);
-    $('#btn-sfx').textContent = Sound.prefs.sfx ? '🔊' : '🔇';
     for (const b of document.querySelectorAll('[data-audio]')) {
       const on = Sound.prefs[b.dataset.audio];
       b.textContent = b.dataset.audio === 'music' ? `🎵 מוזיקה: ${on ? 'פועלת' : 'כבויה'}` : `${on ? '🔊' : '🔇'} אפקטים: ${on ? 'פועלים' : 'כבויים'}`;
@@ -191,7 +191,7 @@ const Game = {
   },
 
   interact() {
-    if (G.alert) return;
+    if (G.alert || UI.mapOpen()) return;
     if (Boss.active) { Boss.throw(); return; }
     const it = this.nearestInteractable();
     if (it) { Sound.click(); it.action(); }
@@ -415,6 +415,8 @@ const Game = {
       this.drawOverlay(t);
       this.drawMinimap();
       if ((this.hudT = (this.hudT || 0) + dt) > 0.2) { this.hudT = 0; this.hud(); }
+      // Autosave every few seconds, so story mode always continues where you stopped.
+      if ((this.autoT = (this.autoT || 0) + dt) > 10 && !UI.busy && !Mini.active && !G.alert && !Boss.active && Story.tasks.length) { this.autoT = 0; this.save(); }
     }
     requestAnimationFrame(tt => this.frame(tt));
   },
@@ -433,6 +435,8 @@ const Game = {
     if (k.has('ArrowLeft') || k.has('KeyQ')) Scene3D.yaw += dt * 2.2;
     if (k.has('ArrowRight') || k.has('KeyR')) Scene3D.yaw -= dt * 2.2;
     if (G.stick.x || G.stick.y) { mx = G.stick.x; my = G.stick.y; }
+    // With the map open the world keeps going, but the player stands still.
+    if (UI.mapOpen()) mx = my = 0;
     if (G.look.x || G.look.y) {
       Scene3D.yaw -= G.look.x * dt * 2.6;
       Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + G.look.y * dt * 1.4));
@@ -596,7 +600,6 @@ const Game = {
     $('#bar-score').style.width = Math.min(100, S.score / DATA.passScore * 100) + '%';
     $('#bar-shchora').style.width = (S.shchora || 0) + '%';
     $('#hud-home').textContent = Events.daysToHome() ? `🏠 עוד ${Events.daysToHome()} ימים` : '🏠 היום!';
-    $('#btn-chat').classList.toggle('hidden', !Multi.on);
     $('#hud-money').textContent = `₪${S.money}`;
     UI.objective(Story.objective());
   },
@@ -604,6 +607,7 @@ const Game = {
   // ---------- save ----------
   key(mode) { return 'netibot.' + (mode || G.state.mode); },
   save() {
+    if (G.running && G.state && Story.tasks.length) G.state.snap = Story.snapshot();
     try { localStorage.setItem(this.key(), JSON.stringify({ profile: G.profile, state: G.state })); } catch (e) { /* storage may be blocked */ }
   },
   load(mode) {
@@ -639,7 +643,9 @@ const Game = {
     this.applyProfile();
     if (fresh) this.achieve('beret');
     this.syncAudioButtons();
-    await Story.startDay(G.state.day);
+    const snap = G.state.snap;
+    if (!fresh && snap && snap.day === G.state.day && snap.tasks && snap.tasks.length) await Story.resumeDay(snap);
+    else await Story.startDay(G.state.day);
   },
 
   // Phones play sideways: go fullscreen and ask the browser to lock landscape.
@@ -661,8 +667,8 @@ const Game = {
       <div class="logo-sub">NETIBOT</div>
       <div class="tagline">הסוללה של נתיבות · משחק עולם פתוח בגוף שלישי</div>
       <div class="menu">
-        ${story ? `<button class="btn" id="m-cont">המשך — יום ${story.state.day} (${story.profile.name})</button>` : ''}
-        <button class="btn ${story ? 'ghost' : ''}" id="m-new">מצב סיפור — משחק חדש</button>
+        ${story ? `<button class="btn" id="m-cont">▶ מצב סיפור — להמשיך (יום ${story.state.day}, ${esc(story.profile.name)})</button>` : ''}
+        <button class="btn ${story ? 'ghost' : ''}" id="m-new">${story ? 'משחק חדש מההתחלה' : 'מצב סיפור — משחק חדש'}</button>
         <button class="btn ghost" id="m-free">אימונים חופשיים</button>
         <button class="btn ghost" id="m-multi">🌐 מולטיפלייר — לשחק עם הפלגה</button>
         <button class="btn ghost" id="m-help">איך משחקים</button>
@@ -671,7 +677,16 @@ const Game = {
       <div class="footnote">משחק בדיוני. כל הדמויות, השמות והאירועים במשחק מומצאים.</div>
     </div>`, 'assets/title.jpg');
     if (story) $('#m-cont').onclick = () => { Sound.unlock(); G.profile = story.profile; G.state = story.state; this.startWorld(false); };
-    $('#m-new').onclick = () => { Sound.unlock(); this.createCharacter('story'); };
+    $('#m-new').onclick = () => {
+      Sound.unlock();
+      if (!story) { this.createCharacter('story'); return; }
+      // A saved story is never thrown away by accident.
+      UI.screen(`<div class="content"><div class="panel"><h2>להתחיל מההתחלה?</h2>
+        <p>יש לך משחק שמור — יום ${story.state.day} (${esc(story.profile.name)}). משחק חדש ימחק אותו.</p>
+        <div class="actions"><button class="btn" id="n-cont">▶ לא, להמשיך מאיפה שעצרתי</button><button class="btn red" id="n-new">כן, משחק חדש</button></div></div></div>`, 'assets/title.jpg');
+      $('#n-cont').onclick = () => { G.profile = story.profile; G.state = story.state; this.startWorld(false); };
+      $('#n-new').onclick = () => this.createCharacter('story');
+    };
     $('#m-free').onclick = () => {
       Sound.unlock();
       const free = this.load('free');
@@ -769,7 +784,7 @@ const Game = {
       const taken = new Set(Multi.peers.map(p => p.who));
       const people = ROSTER.people.filter(p => p.map === 'netivot' || ['bc', 'deputy_bc', 'harasar', 'rasap', 'deputy_rasap', 'sarsap', 'interceptors', 'officer1', 'officer2', 'officer3', 'ops', 'hamalist'].includes(p.id));
       UI.screen(`<div class="content"><div class="panel">
-        <h2>🌐 מי את[ה/]?</h2><p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => fmt(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
+        <h2>🌐 מי את[ה/]?</h2><p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => esc(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
         <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}"><div class="big">${p.emoji}</div><div class="nm">${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
         <div class="actions"><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
       $('#mm-back').onclick = () => this.title();

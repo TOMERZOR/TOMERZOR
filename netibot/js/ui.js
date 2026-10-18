@@ -44,6 +44,9 @@ function fmtAs(person, text) {
   return fmt(String(text).replace(/\{first\}/g, person.first).replace(/\{short\}/g, person.short).replace(/\{full\}/g, person.name));
 }
 
+// For text from other players before it goes into HTML.
+const esc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 const RANKS = { 1: 'סגן־משנה', 2: 'סגן', 3: 'סרן', leaf: 'רב־סרן' };
 
 function avatarHtml(person) {
@@ -222,30 +225,92 @@ const UI = {
     });
   },
 
+  // ---------- side menu (☰): pauses the game ----------
+  menuOpen() { return !$('#side').classList.contains('hidden'); },
+  toggleMenu(force) {
+    const m = $('#side');
+    const open = force !== undefined ? force : m.classList.contains('hidden');
+    if (!open) { m.classList.add('hidden'); m.innerHTML = ''; G.paused = false; return; }
+    if (this.busy || Mini.active || !G.running) return;
+    if (this.mapOpen()) this.toggleMap(false);
+    if (!$('#phone').classList.contains('hidden')) this.togglePhone(false);
+    G.paused = true;
+    G.keys.clear();
+    m.classList.remove('hidden');
+    m.innerHTML = `<div class="scrim"></div><div class="drawer">
+      <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>
+      <button class="btn" data-m="resume">▶ חזרה למשחק</button>
+      <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
+      <button class="btn ghost" data-m="map">🗺️ מפה — איפה כולם</button>
+      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button>' : ''}
+      <div class="row2"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
+      <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">
+      <label for="sd-svol">עוצמת אפקטים</label><input type="range" id="sd-svol" min="0" max="1" step="0.05" value="${Sound.prefs.sfxVol}">
+      <button class="btn ghost" data-m="help">❓ איך משחקים</button>
+      <button class="btn ghost" data-m="save">💾 שמור עכשיו</button>
+      <button class="btn red" data-m="exit">🚪 שמירה ויציאה לתפריט</button>
+    </div>`;
+    m.querySelector('.scrim').onclick = () => this.toggleMenu(false);
+    m.querySelectorAll('[data-audio]').forEach(b => b.onclick = () => Game.toggleAudio(b.dataset.audio));
+    m.querySelector('#sd-mvol').oninput = (e) => Sound.setVolume('music', +e.target.value);
+    m.querySelector('#sd-svol').oninput = (e) => Sound.setVolume('sfx', +e.target.value);
+    Game.syncAudioButtons();
+    const act = {
+      resume: () => this.toggleMenu(false),
+      phone: () => { this.toggleMenu(false); this.togglePhone(true); },
+      map: () => { this.toggleMenu(false); this.toggleMap(true); },
+      chat: () => { this.toggleMenu(false); this.chat(); },
+      help: () => { this.toggleMenu(false); Game.help(true); },
+      save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },
+      exit: () => { Game.save(); location.reload(); },
+    };
+    m.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { Sound.click(); act[b.dataset.m](); });
+  },
+
   // ---------- map: where everyone is ----------
+  // The world keeps running behind the map (the player just stands still), so everyone
+  // on it moves live.
+  mapOpen() { return !$('#map').classList.contains('hidden'); },
   toggleMap(force) {
     const m = $('#map');
     const open = force !== undefined ? force : m.classList.contains('hidden');
-    if (!open) { m.classList.add('hidden'); clearInterval(this.mapTimer); G.paused = false; return; }
-    if (this.busy || Mini.active || !G.running) return;
-    G.paused = true;
+    if (!open) { m.classList.add('hidden'); cancelAnimationFrame(this.mapRaf); this.mapBase = null; return; }
+    if (this.busy || Mini.active || !G.running || G.alert) return;
     m.classList.remove('hidden');
+    G.keys.clear();
     m.innerHTML = `<canvas id="map-c"></canvas><div class="who-list"></div><button class="btn small ghost close" id="map-x">✕ סגור</button>`;
     $('#map-x').onclick = () => this.toggleMap(false);
-    this.drawMap();
-    this.mapTimer = setInterval(() => this.drawMap(), 500);
+    this.mapBase = null;
+    this.mapListT = 0;
+    const tick = (t) => {
+      if (!this.mapOpen()) return;
+      // Anything that needs the player closes the map: a conversation, a mini-game, a siren.
+      if (this.busy || Mini.active || G.alert) { this.toggleMap(false); return; }
+      this.drawMap(t);
+      this.mapRaf = requestAnimationFrame(tick);
+    };
+    this.mapRaf = requestAnimationFrame(tick);
   },
-  drawMap() {
+  drawMap(t = 0) {
     const c = $('#map-c');
     if (!c) return;
     const [fx0, fy0, fx1, fy1] = World.fence;
     const x0 = fx0 - 1, y0 = fy0 - 1, cols = fx1 - fx0 + 3, rows = fy1 - fy0 + 5;
     const s = 22;
-    c.width = cols * s; c.height = rows * s;
+    if (c.width !== cols * s) { c.width = cols * s; c.height = rows * s; }
+    if (!this.mapBase) {
+      this.mapBase = document.createElement('canvas');
+      this.mapBase.width = c.width; this.mapBase.height = c.height;
+      this.drawMapBase(this.mapBase.getContext('2d'), x0, y0, cols, rows, s);
+    }
     const g = c.getContext('2d');
+    g.drawImage(this.mapBase, 0, 0);
+    this.drawMapPeople(g, x0, y0, s);
+    if (t - this.mapListT > 500) { this.mapListT = t; this.drawMapList(); }
+  },
+  drawMapBase(g, x0, y0, cols, rows, s) {
     const col = { [T.OUT]: World.id === 'hq' ? '#5d7a3a' : '#8f7c55', [T.SAND]: '#b9a57a', [T.WALL]: '#3c3a33', [T.FLOOR]: '#8e8c84', [T.ROAD]: '#3a3a38', [T.FENCE]: '#666', [T.PAD]: '#86847c', [T.GRASS]: '#7f9c55', [T.TRACK]: '#8f5440', [T.GATE]: '#3a3a38' };
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) { g.fillStyle = col[World.tile(x + x0, y + y0)]; g.fillRect(x * s, y * s, s, s); }
-    const px = (v) => (v / TS - x0) * s, py = (v) => (v / TS - y0) * s;
     g.textAlign = 'center';
     g.direction = 'rtl';
     g.font = '700 15px Rubik, Arial';
@@ -257,6 +322,11 @@ const UI = {
       g.fillStyle = '#f4f1e6';
       g.fillText(b.name, (b.x - x0 + b.w / 2) * s, (b.y - y0 + b.h / 2) * s + 5);
     }
+  },
+  drawMapPeople(g, x0, y0, s) {
+    const px = (v) => (v / TS - x0) * s, py = (v) => (v / TS - y0) * s;
+    g.textAlign = 'center';
+    g.direction = 'rtl';
     const dot = (x, y, color, label, big) => {
       g.fillStyle = color;
       g.strokeStyle = '#000';
@@ -273,13 +343,15 @@ const UI = {
     for (const n of G.npcs) dot(n.x, n.y, n.person.color || '#d6dccd', n.short);
     for (const p of Multi.here()) dot(p.dx, p.dy, '#5be0ff', '🌐 ' + p.name, true);
     dot(G.player.x, G.player.y, '#f2c14e', fmt('את[ה/]'), true);
+  },
+  drawMapList() {
     // Who is where, across all sites.
     const where = (n) => {
       const b = World.def.buildings.find(b => n.x >= b.x * TS && n.x < (b.x + b.w) * TS && n.y >= b.y * TS && n.y < (b.y + b.h) * TS);
       return b ? b.name : 'בחוץ';
     };
     const rows2 = [];
-    for (const p of Multi.peers) rows2.push(`<div class="pp"><b>🌐 ${p.name}</b><i>${fmt(ROSTER.sites[p.site] || '')}</i></div>`);
+    for (const p of Multi.peers) rows2.push(`<div class="pp"><b>🌐 ${esc(p.name)}</b><i>${fmt(ROSTER.sites[p.site] || '')}</i></div>`);
     const platoon = ROSTER.people.filter(p => p.map === 'netivot');
     const list = platoon.map(p => {
       const n = G.npcs.find(x => x.id === p.id);

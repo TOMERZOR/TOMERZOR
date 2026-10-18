@@ -196,6 +196,60 @@ const Story = {
     await this.morning(day);
   },
 
+  // Everything needed to pick the day up again later, mid-day: tasks, the player, the mess.
+  snapshot() {
+    const net = World.cache.netivot || World;
+    return {
+      day: G.state.day, map: World.id, x: Math.round(G.player.x), y: Math.round(G.player.y), yaw: Scene3D.yaw,
+      tasks: this.tasks.map(t => ({ id: t.id, done: t.done, progress: t.progress || 0 })),
+      alerts: this.pendingAlerts.slice(),
+      trash: this.trash.map(t => ({ x: t.x, y: t.y, kind: t.kind })),
+      dust: this.dust.map(d => ({ x: d.x, y: d.y })),
+      beds: net.beds.map(b => b.messy), lockers: net.lockers.map(l => l.open),
+      launchers: net.launchers.map(l => ({ ammo: l.ammo, needsReload: l.needsReload })),
+    };
+  },
+
+  async resumeDay(snap) {
+    const S = G.state;
+    S.flags = S.flags || {};
+    S.junkDone = S.junkDone || [];
+    S.dayFlags = S.dayFlags || {};
+    this.gateShift = null;
+    this.run = null;
+    Scene3D.clearSky();
+    G.alert = null;
+    UI.banner(null);
+    Sound.stopSiren();
+    G.player.carry = false;
+    if (World.id !== 'netivot') Game.switchMap('netivot');
+    World.gateOpen = World.gateTarget = 0;
+    (snap.beds || []).forEach((m, i) => { if (World.beds[i]) World.beds[i].messy = m; });
+    (snap.lockers || []).forEach((o, i) => { if (World.lockers[i]) World.lockers[i].open = o; });
+    (snap.launchers || []).forEach((l, i) => { if (World.launchers[i]) Object.assign(World.launchers[i], l); });
+    for (const o of World.objects) if (o.kind === 'junk') o.gone = S.junkDone.includes(o.junk);
+    // Events that were halfway through (a truck at the gate, a visiting technician) start over.
+    Events.rafael = Events.tech = Events.baum = Events.chores = null;
+    const redo = { rafael: 'rafael', techcheck: 'tech', amsalem: 'amsalem' };
+    this.tasks = snap.tasks.filter(t => TASKS[t.id] && (t.done || !redo[t.id])).map(t => ({ id: t.id, ...TASKS[t.id], done: t.done, progress: t.progress }));
+    for (const t of snap.tasks) if (!t.done && redo[t.id]) S.dayFlags[redo[t.id]] = false;
+    // A boss fight never resumes halfway: open the snack cabinet again.
+    if (this.has('boss')) { const sn = this.tasks.find(t => t.id === 'snack'); if (sn) sn.done = false; }
+    this.pendingAlerts = (snap.alerts || []).filter(t => t > S.clock);
+    this.trash = snap.trash || [];
+    this.dust = snap.dust || [];
+    if (snap.map && snap.map !== 'netivot') Game.switchMap(snap.map);
+    else Game.resetNpcs();
+    G.player.x = snap.x;
+    G.player.y = snap.y;
+    if (World.blocked(G.player.x, G.player.y, G.player.r)) { const q = Game.walkableNear(G.player) || travelSpot(); G.player.x = q.x; G.player.y = q.y; }
+    Scene3D.yaw = snap.yaw || 0;
+    if (this.has('reload_train') || this.has('exam_reload')) Game.setNpcSpot('sergeant', this.has('exam_reload') ? launcherSpot(World.launchers[1]) : SPOTS.sergeantDepot);
+    if (this.tasks.some(t => !t.done && t.id.startsWith('y_'))) { const y = Game.npc('inspector'); if (y) { y.wanderSaved = y.wander; y.wander = null; } }
+    if (this.has('baum') && !this.has('lineup') && World.id === 'netivot') Events.startBaum();
+    UI.toast('ממשיכים מאיפה שעצרת ✔', 'good');
+  },
+
   planFor(day) {
     const S = G.state;
     if (S.mode === 'story' && S.graduated && !S.wentHome) return FINAL_DAY;
@@ -582,7 +636,7 @@ const Story = {
     Sound.whistle();
     await UI.talk([
       { who: 'inspector', text: pick(['תפסתי אותך! מסדר פתע. ארבעה כתמי אבק במגורים, עכשיו.', 'חשבת שתברח[/י]? יש לי סיבולת של מסדרים. לטאטא את המגורים!', 'מה זה, טיול? מסדר פתע! המגורים מחכים לך.']) },
-      { who: 'p_shalev', text: 'טפו עלא וושק... ברוך השם שזה לא אני הפעם.' },
+      { who: 'p_shalev', text: 'טפנו עלא וושק... ברוך השם שזה לא אני הפעם.' },
     ]);
     for (let i = 0; i < 4; i++) this.dust.push(dustSpot());
     this.addTask('surprise');

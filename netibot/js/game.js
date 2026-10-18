@@ -94,6 +94,7 @@ const Game = {
       }
       if (e.code === 'KeyM') this.toggleAudio('music');
       if (e.code === 'KeyN') this.toggleAudio('sfx');
+      if (e.code === 'KeyF' && !Mini.active && !UI.busy) this.toggleFullscreen();
       if (e.code === 'KeyG' && !Mini.active && !UI.busy && !UI.menuOpen()) UI.toggleMap();
       if (e.code === 'KeyT' && Multi.on && !Mini.active && !UI.busy) { e.preventDefault(); UI.chat(); }
       if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused && !UI.mapOpen()) this.interact();
@@ -149,6 +150,10 @@ const Game = {
     $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
     $('#minimap').addEventListener('pointerdown', (e) => { e.stopPropagation(); Sound.unlock(); UI.toggleMap(true); });
     $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
+    $('#btn-fs').addEventListener('click', () => this.toggleFullscreen());
+    document.addEventListener('fullscreenchange', () => this.syncFullscreen());
+    document.addEventListener('webkitfullscreenchange', () => this.syncFullscreen());
+    this.syncFullscreen();
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
 
     // Camera: drag on the world (mouse or a finger outside the joystick) to look around, wheel to zoom.
@@ -679,6 +684,26 @@ const Game = {
     } catch (e) { lock(); }
   },
 
+  // Full screen on/off. iPhones only allow it for videos, so there the game explains how to
+  // add it to the home screen, which opens it without the browser bars.
+  fsElement() { return document.fullscreenElement || document.webkitFullscreenElement; },
+  toggleFullscreen() {
+    Sound.unlock();
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (this.fsElement()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+    if (!req) { UI.toast('באייפון: שיתוף ⬆️ ← "הוספה למסך הבית" — ואז המשחק נפתח במסך מלא', ''); return; }
+    try {
+      const p = req.call(el, { navigationUI: 'hide' });
+      const lock = () => { try { if (G.touch && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* not supported */ } };
+      if (p && p.then) p.then(lock, () => UI.toast('הדפדפן לא מאפשר מסך מלא כאן', 'bad')); else lock();
+    } catch (e) { UI.toast('הדפדפן לא מאפשר מסך מלא כאן', 'bad'); }
+  },
+  syncFullscreen() {
+    const on = !!this.fsElement();
+    for (const b of document.querySelectorAll('[data-fs]')) b.textContent = b.dataset.fs === 'icon' ? (on ? '🗗' : '⛶') : (on ? '🗗 יציאה ממסך מלא' : '⛶ מסך מלא');
+  },
+
   // ---------- menus ----------
   title() {
     const story = this.load('story');
@@ -692,7 +717,7 @@ const Game = {
         <button class="btn ghost" id="m-free">אימונים חופשיים</button>
         <button class="btn ghost" id="m-multi">🌐 מולטיפלייר — לשחק עם הפלגה</button>
         <button class="btn ghost" id="m-help">איך משחקים</button>
-        <div class="audio-row"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
+        <div class="audio-row"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button><button class="btn small ghost" data-fs="text"></button></div>
       </div>
       <div class="footnote">משחק בדיוני. כל הדמויות, השמות והאירועים במשחק מומצאים.</div>
     </div>`, 'assets/title.jpg');
@@ -718,7 +743,9 @@ const Game = {
     // Opened from an invite link: straight to choosing who you are.
     if (Lobby.invited() && !this.invitedOnce) { this.invitedOnce = true; this.multiMenu(); }
     for (const b of document.querySelectorAll('[data-audio]')) b.onclick = () => this.toggleAudio(b.dataset.audio);
+    for (const b of document.querySelectorAll('#screen [data-fs]')) b.onclick = () => this.toggleFullscreen();
     this.syncAudioButtons();
+    this.syncFullscreen();
     Sound.music('menu');
   },
 

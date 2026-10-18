@@ -6,6 +6,12 @@
 <title>נתיבוט</title>
 <meta name="description" content="משחק עולם פתוח: חייל/ת בפלג&quot;צ של סוללת כיפת ברזל בנתיבות.">
 <meta name="theme-color" content="#1f2a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="נתיבוט">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
@@ -19,6 +25,7 @@
 <div id="hud" class="hidden">
   <div class="hud-top">
     <button id="btn-menu" class="hud-btn" title="תפריט (Esc)" aria-label="תפריט">☰</button>
+    <button id="btn-fs" class="hud-btn" data-fs="icon" title="מסך מלא (F)" aria-label="מסך מלא">⛶</button>
     <div class="hud-card hud-who">
       <div id="hud-name" class="hud-name"></div>
       <div id="hud-unit" class="hud-sub"></div>

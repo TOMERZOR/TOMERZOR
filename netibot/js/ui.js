@@ -246,6 +246,7 @@ const UI = {
       <button class="btn small ghost" id="sd-style">🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}</button>
       <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">
       <label for="sd-svol">עוצמת אפקטים</label><input type="range" id="sd-svol" min="0" max="1" step="0.05" value="${Sound.prefs.sfxVol}">
+      <button class="btn ghost" data-m="fs" data-fs="text"></button>
       <button class="btn ghost" data-m="help">❓ איך משחקים</button>
       <button class="btn ghost" data-m="save">💾 שמור עכשיו</button>
       <button class="btn red" data-m="exit">🚪 שמירה ויציאה לתפריט</button>
@@ -261,12 +262,14 @@ const UI = {
     m.querySelector('#sd-mvol').oninput = (e) => Sound.setVolume('music', +e.target.value);
     m.querySelector('#sd-svol').oninput = (e) => Sound.setVolume('sfx', +e.target.value);
     Game.syncAudioButtons();
+    Game.syncFullscreen();
     const act = {
       resume: () => this.toggleMenu(false),
       phone: () => { this.toggleMenu(false); this.togglePhone(true); },
       map: () => { this.toggleMenu(false); this.toggleMap(true); },
       chat: () => { this.toggleMenu(false); this.chat(); },
       invite: () => Game.shareInvite(),
+      fs: () => Game.toggleFullscreen(),
       help: () => { this.toggleMenu(false); Game.help(true); },
       save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },
       exit: () => { Game.save(); location.reload(); },

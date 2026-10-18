@@ -94,6 +94,17 @@ const DAYS = {
   5: { title: 'יום 5 — מבחן סיום פלג"צ', tasks: ['lineup', 'exam_reload', 'exam_alert', 'exam_radar', 'exam_quiz', 'graduation'], alerts: [] },
 };
 
+// A free spot a step or two from a teleport target, facing it rather than on top of it.
+function warpSpot(t) {
+  for (let r = 1.2; r < 6; r += 0.6) {
+    for (let k = 0; k < 12; k++) {
+      const a = k / 12 * Math.PI * 2 + Math.PI / 2;
+      const x = t.x + Math.cos(a) * r * TS, y = t.y + Math.sin(a) * r * TS;
+      if (!World.blocked(x, y, 13)) return { x, y };
+    }
+  }
+  return null;
+}
 function npcPos(id) { const n = Game.npc(id); return n ? { x: n.x, y: n.y } : null; }
 function lockerSpot(i) { const l = World.lockers[i]; return { x: l.x + l.w + 16, y: l.y + l.h / 2 }; }
 function bedSpot(i) { const b = World.beds[i]; return { x: b.x + b.w / 2, y: b.top ? b.y + b.h + 14 : b.y - 14 }; }
@@ -342,6 +353,14 @@ const Story = {
     if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !this.gateShift?.car && World.id !== 'field') {
       this.pendingAlerts.shift();
       this.alert(false);
+    }
+    // A friend online at this site set off a red alert: it's everyone's.
+    const ra = this.remoteAlert;
+    if (ra && Date.now() - ra.at > 20000) this.remoteAlert = null;
+    else if (ra && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.ctl && World.id !== 'field') {
+      this.remoteAlert = null;
+      this.alert(false, 'real', ra.id);
+      UI.toast(`🚨 ${ra.from}: אזעקה! כולם למיגונית!`, 'bad');
     }
     if (G.alert) this.updateAlert(dt);
     if (this.gateShift) this.updateGate(dt);
@@ -674,6 +693,46 @@ const Story = {
     });
   },
 
+  // ---------- teleport ----------
+  // For 2₪ you skip the walk (and the bus): straight to where the current task is.
+  WARP_PRICE: 2,
+  warpTarget() {
+    if (G.alert || Boss.active || this.ctl || this.run || Mini.active || UI.busy || G.paused || !G.running) return null;
+    const t = this.current();
+    if (!t) return null;
+    const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';
+    if (tmap !== World.id) return { map: tmap };
+    if (t.id === 'deploy') return null;
+    const o = this.objective();
+    if (!o || !o.target) return null;
+    if (Math.hypot(o.target.x - G.player.x, o.target.y - G.player.y) < 7 * TS) return null;
+    return { map: World.id };
+  },
+  warp() {
+    const w = this.warpTarget();
+    if (!w) return;
+    const S = G.state;
+    if (S.money < this.WARP_PRICE) { Sound.bad(); UI.toast(`אין מספיק כסף — להשתגר עולה ${this.WARP_PRICE}₪`, 'bad'); return; }
+    S.money -= this.WARP_PRICE;
+    Sound.whoosh();
+    UI.fade(() => {
+      if (w.map !== World.id) {
+        if (G.player.carry) G.player.carry = false;
+        if (Events.chores && Events.chores.dragging) Events.chores.dragging = false;
+        if (w.map === 'field' && S.deploy && S.deploy.done) { S.deploy = { placed: [] }; delete World.cache.field; }
+        Game.switchMap(w.map);
+        if (w.map === 'hq') Game.achieve('hq');
+        if (w.map === 'field' && this.has('deploy')) setTimeout(() => this.startDeploy(), 600);
+      }
+      const o = this.objective();
+      const q = o && o.target && warpSpot(o.target);
+      if (q) { G.player.x = q.x; G.player.y = q.y; G.player.vx = G.player.vy = 0; }
+      Scene3D.greenPuff(G.player.x, G.player.y, 1.4);
+      UI.toast(`⚡ השתגרת! −${this.WARP_PRICE}₪`, 'good');
+      Game.hud();
+    });
+  },
+
   // ---------- site deployment ----------
   // The deployment is hands-on: drive each truck in from the gate with the arrows, then
   // raise the launcher or lower the container onto its marked pad with the crane.
@@ -741,6 +800,8 @@ const Story = {
   // ---------- at the controls ----------
   // input: { steer, throttle, mx, my, lower, raise } from Game.update.
   ctlInput(inp) { this.ctlIn = inp; },
+  // The launcher goes up to 70°; the green range is a few degrees either side.
+  RAISE: { target: 70, lo: 67, hi: 73, max: 85 },
   updateCtl(dt) {
     const c = this.ctl, tr = this.deployTruck, inp = this.ctlIn || {};
     if (!tr) { this.ctl = null; return; }
@@ -753,7 +814,7 @@ const Story = {
       tr.angle += (inp.steer || 0) * dt * 1.6 * Math.max(-1, Math.min(1, tr.speed / 60));
       const nx = tr.x + Math.cos(tr.angle) * tr.speed * dt, ny = tr.y + Math.sin(tr.angle) * tr.speed * dt;
       World.gateTarget = tr.y > 38 * TS ? 1 : World.gateTarget;
-      const hits = [-1.8, 0, 1.8].some(o => World.blocked(nx + Math.cos(tr.angle) * o * TS, ny + Math.sin(tr.angle) * o * TS, 20));
+      const hits = [-2.4, -1.2, 0, 1.2, 2.4].some(o => World.blocked(nx + Math.cos(tr.angle) * o * TS, ny + Math.sin(tr.angle) * o * TS, 20));
       if (hits) { if (Math.abs(tr.speed) > 40) { Sound.bad(); G.shake = 0.2; } tr.speed = -tr.speed * 0.3; }
       else { tr.x = nx; tr.y = ny; }
       // Parked: slow, and the truck's middle beside the yellow outline.
@@ -762,7 +823,7 @@ const Story = {
       if (near && c.stillT > 0.6) {
         tr.speed = 0;
         Sound.horn();
-        if (it.kind === 'launcher') { this.ctl = { mode: 'raise', angle: 0, holdT: 0 }; tr.state = 'raise'; UI.toast('🚀 להזקיף את המשגר: ↑ להרים, ↓ להוריד — ולהחזיק בטווח הירוק'); }
+        if (it.kind === 'launcher') { this.ctl = { mode: 'raise', angle: 0, holdT: 0 }; tr.state = 'raise'; UI.toast('🚀 להזקיף את המשגר ל־70 מעלות: ↑ להרים, ↓ להוריד — ולהחזיק בטווח הירוק'); }
         else { this.ctl = { mode: 'crane', hx: tr.x, hy: tr.y, cx: tr.x, cy: tr.y, vx: 0, vy: 0, h: 6.5 }; tr.state = 'crane'; UI.toast('🏗️ להוריד עם המנוף: חצים — להזיז, רווח/E — להוריד, Shift — להרים'); }
         return;
       }
@@ -779,8 +840,9 @@ const Story = {
       }
     } else if (c.mode === 'raise') {
       // ↑/↓ swing the launch box; it has to sit in the green range for a moment.
-      c.angle = Math.max(0, Math.min(75, c.angle + (inp.throttle || 0) * 28 * dt));
-      const ok = c.angle >= 52 && c.angle <= 62;
+      const R = this.RAISE;
+      c.angle = Math.max(0, Math.min(R.max, c.angle + (inp.throttle || 0) * 30 * dt));
+      const ok = c.angle >= R.lo && c.angle <= R.hi;
       c.holdT = ok ? c.holdT + dt : Math.max(0, c.holdT - dt * 2);
       if (c.holdT > 1.3) { Sound.good(); this.placeDeploy(); }
     } else if (c.mode === 'crane') {
@@ -1190,9 +1252,10 @@ const Story = {
   },
 
   // ---------- red alert ----------
-  alert(drill, kind = 'real') {
+  alert(drill, kind = 'real', sid = null) {
     const S = G.state;
     G.alert = { drill, kind, t: DATA.redAlertSeconds, phase: 'run', inside: 0, elapsed: 0, spawned: 0, spawnT: 0.6 };
+    if (!drill) G.alert.sid = sid || Multi.newAlertId();
     if (!drill) S.stats.alerts++;
     Sound.startSiren();
     if (this.gateShift && this.gateShift.car && this.gateShift.car.state === 'waiting') this.gateShift.car.honk = 99;

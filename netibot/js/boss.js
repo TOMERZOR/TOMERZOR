@@ -37,7 +37,8 @@ const Boss = {
     this.flash = 0;
     this.bubble = { text: BOSS_TAUNTS[0], t: 3.5 };
     this.lastPick = 'broccoli';
-    for (let i = 0; i < 4; i++) this.spawnPickup();
+    if (coop) { this.taken = new Set(); this.myTaken = []; this.pickCache = {}; this.coopPickups(); }
+    else for (let i = 0; i < 4; i++) this.spawnPickup();
     G.player.x = 30 * TS;
     G.player.y = 20.5 * TS;
     G.player.carry = false;
@@ -47,6 +48,28 @@ const Boss = {
     G.npcs = G.npcs.filter(n => n.id !== 'deputy_rasap');
     $('#boss-hud').classList.remove('hidden');
     this.hud();
+    UI.toast(G.touch ? '🥦 לאסוף אוכל בריא מהדשא · כפתור E — לזרוק' : '🥦 לאסוף אוכל בריא מהדשא · E — לזרוק');
+  },
+
+  // Co-op: pickup number n lies in the same spot for everyone (seeded by the fight id), and
+  // one that anybody took is gone for everybody.
+  coopPickup(n) {
+    const id = this.coop.id % 1000003;
+    const kinds = DATA.healthy;
+    for (let g = 0; g < 40; g++) {
+      const r = (k) => { const v = Math.sin(id * 0.0131 + n * 78.233 + g * 12.9898 + k * 4.1414) * 43758.5453; return v - Math.floor(v); };
+      const x = BOSS_ARENA.x0 + r(1) * (BOSS_ARENA.x1 - BOSS_ARENA.x0);
+      const y = BOSS_ARENA.y0 + 2 * TS + r(2) * (BOSS_ARENA.y1 - BOSS_ARENA.y0 - 2 * TS);
+      if (World.blocked(x, y, 14)) continue;
+      return { n, x, y, kind: kinds[Math.floor(r(3) * kinds.length)] };
+    }
+    return { n, x: 30 * TS, y: 19 * TS, kind: kinds[0] };
+  },
+  coopPickups() {
+    for (const p of Multi.peers) if (p.boss && p.boss.id === this.coop.id) for (const n of p.boss.tk || []) this.taken.add(n);
+    const out = [];
+    for (let n = 0; out.length < 4 && n < 5000; n++) if (!this.taken.has(n)) out.push(this.pickCache[n] || (this.pickCache[n] = this.coopPickup(n)));
+    this.pickups = out;
   },
 
   spawnPickup() {
@@ -128,16 +151,19 @@ const Boss = {
     if (!this.active) return;
     if (this.coop) this.updateRemoteFx();
 
+    if (this.coop) this.coopPickups();
     for (const p of this.pickups) {
       if (Math.hypot(P.x - p.x, P.y - p.y) < 34) {
         p.taken = true;
+        if (this.coop) { this.taken.add(p.n); this.myTaken.push(p.n); }
         this.ammo[p.kind.id] += 2;
         this.lastPick = p.kind.id;
         Sound.pickup();
         UI.toast(`${p.kind.icon} ${p.kind.name} ×2`, 'good');
       }
     }
-    if (this.pickups.some(p => p.taken)) {
+    if (this.coop) this.coopPickups();
+    else if (this.pickups.some(p => p.taken)) {
       this.pickups = this.pickups.filter(p => !p.taken);
       while (this.pickups.length < 4) this.spawnPickup();
     }
@@ -187,8 +213,9 @@ const Boss = {
   },
 
   // Multiplayer: wake the monster for everyone at HQ. The others join from the presence.
-  async startCoop() {
-    const here = Multi.peers.filter(p => p.site === 'hq').length;
+  // invite: started from the menu, so everyone online is asked to come, not only who's at HQ.
+  async startCoop(invite = false) {
+    const here = invite ? Multi.peers.length : Multi.peers.filter(p => p.site === 'hq').length;
     const coop = { id: Date.now(), max: 100 + 70 * here };
     await UI.cutscene([{ img: 'assets/boss2.jpg', who: '{@@deputy_rasap}', text: `${here ? 'כמה אתם? ' + (here + 1) + '?! ' : ''}אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*` }]);
     this.start(coop);
@@ -210,8 +237,26 @@ const Boss = {
       this.start({ id, max: p.boss.max });
     } else if (!this.heard.has(id)) {
       this.heard.add(id);
-      UI.toast(`🍔 ${p.name} נלחם[/ת] במפלצת הצ'יזבורגר בשו"ב! לנסוע לעזור`, 'bad');
+      Sound.horn();
+      UI.invite(`🍔 ${p.name} קורא לך לקרב בוס נגד מפלצת הצ'יזבורגר בשו"ב!`, '⚔️ להצטרף עכשיו', () => this.joinCoop(id, p.boss.max));
     }
+  },
+  // Accepting an invite: straight to the arena (free) and into the same fight.
+  joinCoop(id, max) {
+    if (this.active || G.alert || Story.ctl) return;
+    UI.fade(() => {
+      if (World.id !== 'hq') { if (G.player.carry) G.player.carry = false; Game.switchMap('hq'); }
+      this.start({ id, max });
+      UI.toast('⚔️ הצטרפת לקרב! לאסוף אוכל בריא ולזרוק', 'good');
+    });
+  },
+  // From the menu: invite everyone online and wake the monster at HQ.
+  inviteCoop() {
+    if (this.active || G.alert || Story.ctl) { UI.toast('לא עכשיו', 'bad'); return; }
+    UI.fade(() => {
+      if (World.id !== 'hq') { if (G.player.carry) G.player.carry = false; Game.switchMap('hq'); }
+      this.startCoop(true);
+    });
   },
 
   // Throw whatever healthy food you have most of (E / the action button).
@@ -243,10 +288,7 @@ const Boss = {
     UI.toast('🍔 צ\'יזבורגר בפרצוף! כולסטרול +20', 'bad');
     if (this.chol < 100) return;
     this.chol = 30;
-    UI.talk([
-      { who: 'medic1', text: 'כולסטרול מאה?! [שתה/שתי] מים. [תאכל/תאכלי] מלפפון. ו[תחזור/תחזרי] לקרב.' },
-      { who: 'medic2', text: 'שמתי לך פלסטר על העורק. זה עוזר. בערך.' },
-    ]);
+    UI.toast(fmt('🚑 {@medic1}: כולסטרול מאה?! [שתה/שתי] מים ו[תחזור/תחזרי] לקרב'), 'bad');
   },
 
   hud() {
@@ -254,10 +296,9 @@ const Boss = {
     if (!h) return;
     const ammo = DATA.healthy.map(k => `<span class="ammo">${k.icon} ${this.ammo[k.id]}</span>`).join('');
     const team = this.coop ? Multi.peers.filter(p => p.boss && p.boss.id === this.coop.id).length + 1 : 1;
-    h.innerHTML = `<div class="boss-name">🍔 ${fmt('{@deputy_rasap}')} — מפלצת הצ'יזבורגר${team > 1 ? ` · ${team} לוחמים ביחד` : ''}</div>
-      <div class="boss-bar"><b style="width:${this.hp / this.max * 100}%"></b></div>
-      <div class="boss-row"><span>כולסטרול</span><div class="chol-bar"><b style="width:${this.chol}%"></b></div>${ammo}</div>
-      <div class="boss-hint">${G.touch ? 'כפתור E — לזרוק' : 'E — לזרוק'} · לאסוף אוכל בריא מהדשא</div>`;
+    const pct = Math.max(0, Math.round(this.hp / this.max * 100));
+    h.innerHTML = `<div class="boss-top"><span class="boss-name">🍔 ${fmt('{@deputy_rasap}')}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
+      <div class="boss-row"><span>🩸</span><div class="chol-bar${this.chol >= 70 ? ' hot' : ''}"><b style="width:${this.chol}%"></b></div>${ammo}</div>`;
   },
 
   async end(win) {

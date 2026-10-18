@@ -1051,42 +1051,73 @@ const Scene3D = {
 
   makeTruck(item) {
     const g = new THREE.Group();
-    if (this.addModel(g, 'truck', { rotY: Math.PI, length: 9 })) {
-      if (item.catering) {
-        // Rafael's refrigerated catering box on the back, with the logo on both sides.
-        const logo = this.canvasTex(256, 96, (c) => {
-          c.fillStyle = '#f7f7f4'; c.fillRect(0, 0, 256, 96);
-          c.fillStyle = '#c0392b'; c.fillRect(0, 70, 256, 14);
-          c.fillStyle = '#1d4fa8'; c.font = '800 38px Rubik, Arial'; c.textAlign = 'center'; c.direction = 'rtl';
-          c.fillText('רפאל קייטרינג', 128, 50);
-        });
-        const side = new THREE.MeshStandardMaterial({ map: logo, roughness: 0.6 });
-        const white = this.mat(0xf4f4f0, { roughness: 0.6 });
-        const box = new THREE.Mesh(new THREE.BoxGeometry(5.4, 2.7, 2.6), [white, white, white, white, side, side]);
-        box.position.set(-1.6, 2.75, 0);
-        box.castShadow = true;
-        g.add(box);
-      }
+    if (item.catering && this.addModel(g, 'truck', { rotY: Math.PI, length: 9 })) {
+      // Rafael's refrigerated catering box on the back, with the logo on both sides.
+      const logo = this.canvasTex(256, 96, (c) => {
+        c.fillStyle = '#f7f7f4'; c.fillRect(0, 0, 256, 96);
+        c.fillStyle = '#c0392b'; c.fillRect(0, 70, 256, 14);
+        c.fillStyle = '#1d4fa8'; c.font = '800 38px Rubik, Arial'; c.textAlign = 'center'; c.direction = 'rtl';
+        c.fillText('רפאל קייטרינג', 128, 50);
+      });
+      const side = new THREE.MeshStandardMaterial({ map: logo, roughness: 0.6 });
+      const white = this.mat(0xf4f4f0, { roughness: 0.6 });
+      const box = new THREE.Mesh(new THREE.BoxGeometry(5.4, 2.7, 2.6), [white, white, white, white, side, side]);
+      box.position.set(-1.6, 2.75, 0);
+      box.castShadow = true;
+      g.add(box);
       const lb = this.label(item.name, { size: 0.8 });
       lb.position.set(0, 4.6, 0);
       g.add(lb);
       this.root.add(g);
       return g;
     }
-    const olive = this.mat(0x56653a);
-    this.box(9, 0.5, 2.4, this.mat(0x23281d), 0, 0.9, 0, g);
-    this.box(2, 2.1, 2.4, olive, 3.6, 2.1, 0, g);
-    this.box(0.05, 0.8, 2, this.mat(0x9fc3d8, { metalness: 0.6, roughness: 0.2 }), 4.62, 2.5, 0, g);
-    for (const x of [-3.2, -1.8, 3.4]) for (const z of [-1.15, 1.15]) {
-      const wh = this.cyl(0.55, 0.55, 0.4, this.mat(0x1b1b1b), x, 0.55, z, g, 12);
-      wh.rotation.x = Math.PI / 2;
+    // The site arrives the civilian way: a tractor unit with a loader crane behind the cab,
+    // towing a flatbed trailer with the container (or the launcher) on it. Front is +x.
+    const paint = this.mat(0xc23a2b, { metalness: 0.35, roughness: 0.45 });
+    const steel = this.mat(0x2a2d30, { metalness: 0.5, roughness: 0.6 });
+    const yellow = this.mat(0xe8b21e, { metalness: 0.3, roughness: 0.5 });
+    const glass = this.mat(0x9fc3d8, { metalness: 0.6, roughness: 0.15 });
+    const tyre = this.mat(0x161616);
+    const wheel = (x, z, r = 0.52) => { const w = this.cyl(r, r, 0.42, tyre, x, r, z, g, 14); w.rotation.x = Math.PI / 2; };
+    // Tractor: chassis, cab with windscreen, bumper, lights, fuel tanks.
+    this.box(6.2, 0.45, 2.1, steel, 2.9, 0.95, 0, g);
+    this.box(2.1, 2.5, 2.5, paint, 4.95, 2.4, 0, g);
+    this.box(2.0, 0.5, 2.55, this.mat(0x8e2a1f), 4.95, 3.75, 0, g);
+    this.box(0.06, 1.0, 2.2, glass, 6.02, 2.95, 0, g);
+    for (const z of [-1.26, 1.26]) this.box(1.0, 0.8, 0.05, glass, 5.25, 2.95, z, g);
+    this.box(0.25, 0.5, 2.5, steel, 6.05, 1.15, 0, g);
+    const lamp = new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xfff0b0, emissiveIntensity: 0.9 });
+    for (const z of [-0.95, 0.95]) this.box(0.08, 0.22, 0.4, lamp, 6.1, 1.5, z, g);
+    for (const z of [-1.1, 1.1]) { const t = this.cyl(0.32, 0.32, 1.1, this.mat(0xb8bcc0, { metalness: 0.8, roughness: 0.3 }), 3.3, 1.0, z, g, 12); t.rotation.z = Math.PI / 2; }
+    wheel(4.9, -1.1); wheel(4.9, 1.1); wheel(1.6, -1.1); wheel(1.6, 1.1); wheel(0.4, -1.1); wheel(0.4, 1.1);
+    // Loader crane behind the cab: turret, column and the folded knuckle boom.
+    this.cyl(0.55, 0.65, 0.5, yellow, 3.4, 1.4, 0, g, 14);
+    this.box(0.5, 1.8, 0.5, yellow, 3.4, 2.4, 0, g);
+    const arm = this.box(0.35, 0.35, 3.6, yellow, 3.4, 3.35, 0, g);
+    arm.rotation.x = 0.08;
+    this.box(0.25, 0.25, 3.2, this.mat(0xd9a316), 3.4, 2.95, 0, g);
+    // Fifth wheel and the trailer: deck, side rails, rear axles, a red-white tail.
+    this.box(1.2, 0.2, 1.2, steel, 1.3, 1.25, 0, g);
+    this.box(9.4, 0.32, 2.5, this.mat(0x3a3d40, { metalness: 0.4 }), -3.0, 1.35, 0, g);
+    for (const z of [-1.22, 1.22]) this.box(9.4, 0.14, 0.08, yellow, -3.0, 1.55, z, g);
+    for (const x of [-5.9, -4.8, -3.7]) { wheel(x, -1.1, 0.5); wheel(x, 1.1, 0.5); }
+    for (let i = 0; i < 4; i++) this.box(0.05, 0.3, 0.6, this.mat(i % 2 ? 0xffffff : 0xd8261f), -7.72, 1.1, -0.9 + i * 0.6, g);
+    // The load on the trailer, lifted off by the crane (or raised in place, for the launcher).
+    const load = new THREE.Group();
+    load.position.set(-3.0, 1.51, 0);
+    if (item.kind === 'launcher') {
+      this.box(5.5, 1.5, 2.2, this.mat(0x4b5a2a), 0, 0.75, 0, load);
+      for (const x of [-1.9, 0, 1.9]) this.box(0.12, 1.6, 2.3, this.mat(0x3c4822), x, 0.75, 0, load);
+    } else {
+      this.box(6.0, 2.4, 2.35, this.mat(item.color || 0x5d6b3e, { roughness: 0.7 }), 0, 1.2, 0, load);
+      for (let i = -5; i <= 5; i++) this.box(0.05, 2.2, 2.4, this.mat(0x000000, { transparent: true, opacity: 0.12 }), i * 0.5, 1.2, 0, load);
     }
-    const load = item.kind === 'launcher'
-      ? this.box(5.5, 1.6, 2.2, olive, -1.4, 2.0, 0, g)
-      : this.box(5.8, 2.3, 2.3, this.mat(item.color || 0x5d6b3e), -1.4, 2.35, 0, g);
-    void load;
+    g.add(load);
+    g.userData.load = load;
+    g.userData.craneX = 3.4;
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
     const lb = this.label(item.name, { size: 0.8 });
-    lb.position.set(-1.4, 4.4, 0);
+    lb.position.set(-1.4, 5.0, 0);
     g.add(lb);
     this.root.add(g);
     return g;
@@ -1385,21 +1416,23 @@ const Scene3D = {
     hud.classList.remove('hidden');
     const it = tr.item;
     if (c.mode === 'drive') {
-      this.ctlFocus = { x: tr.x, y: tr.y };
+      // Look past the load: high behind the trailer, aimed a little ahead of the cab.
+      this.ctlFocus = { x: tr.x + Math.cos(tr.angle) * 4 / S3, y: tr.y + Math.sin(tr.angle) * 4 / S3 };
       // Swing in behind the truck.
       const want = Math.atan2(-Math.cos(tr.angle), -Math.sin(tr.angle));
       const d = Math.atan2(Math.sin(want - this.yaw), Math.cos(want - this.yaw));
       this.yaw += d * Math.min(1, dt * 2.5);
-      this.dist += (12 - this.dist) * Math.min(1, dt * 3);
-      this.pitch += (0.42 - this.pitch) * Math.min(1, dt * 3);
+      this.dist += (19 - this.dist) * Math.min(1, dt * 3);
+      this.pitch += (0.62 - this.pitch) * Math.min(1, dt * 3);
       hud.innerHTML = `<div class="t">🚛 ${it.name} — לנהוג עד הסימון הצהוב</div><div class="keys">${G.touch ? 'ג\'ויסטיק: למעלה נסיעה, למטה רוורס, הצדדים הגה' : '↑ נסיעה · ↓ רוורס/בלם · ← → הגה'} · לעצור ליד הסימון</div>`;
     } else if (c.mode === 'raise') {
       this.ctlFocus = { x: tr.x, y: tr.y };
       this.dist += (13 - this.dist) * Math.min(1, dt * 3);
       this.pitch += (0.3 - this.pitch) * Math.min(1, dt * 3);
       if (tr.mesh && !this.raiseBox) {
+        if (tr.mesh.userData.load) tr.mesh.userData.load.visible = false;
         const pivot = new THREE.Group();
-        pivot.position.set(-0.6, 2.3, 0);
+        pivot.position.set(-0.3, 1.55, 0);
         const box = new THREE.Group();
         this.box(5.4, 1.5, 2.3, this.mat(0x4b5a2a), -2.7, 0.75, 0, box);
         for (const x of [-0.8, -2.7, -4.6]) this.box(0.12, 1.6, 2.4, this.mat(0x3c4822), x, 0.75, 0, box);
@@ -1408,9 +1441,9 @@ const Scene3D = {
         this.raiseBox = pivot;
       }
       if (this.raiseBox) this.raiseBox.rotation.z = -c.angle * Math.PI / 180;
-      const pct = (v) => (v / 75 * 100).toFixed(1);
-      hud.innerHTML = `<div class="t">🚀 להזקיף את המשגר — ${Math.round(c.angle)}°</div>
-        <div class="gauge"><div class="zone" style="left:${pct(52)}%;width:${pct(10)}%"></div><div class="needle" style="left:${pct(c.angle)}%"></div></div>
+      const pct = (v) => (v / Story.RAISE.max * 100).toFixed(1);
+      hud.innerHTML = `<div class="t">🚀 להזקיף את המשגר ל־${Story.RAISE.target} מעלות — עכשיו ${Math.round(c.angle)}</div>
+        <div class="gauge"><div class="zone" style="left:${pct(Story.RAISE.lo)}%;width:${pct(Story.RAISE.hi - Story.RAISE.lo)}%"></div><div class="mark" style="left:${pct(Story.RAISE.target)}%">${Story.RAISE.target}°</div><div class="needle" style="left:${pct(c.angle)}%"></div></div>
         <div class="keys">${G.touch ? 'ג\'ויסטיק למעלה/למטה' : '↑ להרים · ↓ להוריד'} · להחזיק בירוק${c.holdT > 0 ? ' — ' + '■'.repeat(Math.ceil(c.holdT / 1.3 * 5)) : ''}</div>`;
     } else if (c.mode === 'crane') {
       this.ctlFocus = { x: c.cx, y: c.cy };
@@ -1420,10 +1453,11 @@ const Scene3D = {
         const o = World.containerObject(it);
         const rec = this.addProp(o);
         const group = new THREE.Group();
-        // A truck-mounted crane: yellow mast beside the truck, a boom, and the cable.
-        const mast = this.box(0.35, 9, 0.35, this.mat(0xe0b020, { metalness: 0.3 }), 0, 4.5, 0, group);
-        void mast;
-        const boom = new THREE.Mesh(new THREE.BoxGeometry(1, 0.35, 0.35), this.mat(0xe0b020, { metalness: 0.3 }));
+        // The truck's own loader crane: the column stands where the folded one is, the
+        // boom reaches out over the load.
+        if (tr.mesh && tr.mesh.userData.load) tr.mesh.userData.load.visible = false;
+        this.box(0.5, 2.6, 0.5, this.mat(0xe8b21e, { metalness: 0.3 }), 0, 2.8, 0, group);
+        const boom = new THREE.Mesh(new THREE.BoxGeometry(1, 0.4, 0.4), this.mat(0xe8b21e, { metalness: 0.3 }));
         group.add(boom);
         const cable = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 2 }));
         cable.frustumCulled = false;
@@ -1431,16 +1465,16 @@ const Scene3D = {
         const foot = new THREE.Mesh(new THREE.PlaneGeometry(o.w * S3, o.h * S3), new THREE.MeshBasicMaterial({ color: 0xe63b2e, transparent: true, opacity: 0.35, depthWrite: false }));
         foot.rotation.x = -Math.PI / 2;
         this.root.add(group, foot);
-        // Beside the truck, not on it, so it doesn't stand between the camera and the load.
-        group.position.set((tr.x - Math.sin(tr.angle) * 1.8 * TS) * S3, 0, (tr.y + Math.cos(tr.angle) * 1.8 * TS) * S3);
+        const cx = (tr.mesh && tr.mesh.userData.craneX) || 0;
+        group.position.set((tr.x + Math.cos(tr.angle) * cx / S3) * S3, 0, (tr.y + Math.sin(tr.angle) * cx / S3) * S3);
         this.crane = { rec, group, boom, cable, foot, o };
       }
       const cr = this.crane;
       const lx = c.cx * S3, lz = c.cy * S3, top = cr.rec.g.children.length ? 2.6 : 2.6;
       // The load hangs with its bottom at height c.h; its group origin is the bottom.
       cr.rec.g.position.set(lx, c.h, lz);
-      const mtop = new THREE.Vector3(cr.group.position.x, 9, cr.group.position.z);
-      const hook = new THREE.Vector3(c.hx * S3, Math.max(c.h + top + 1.2, 4.5), c.hy * S3);
+      const mtop = new THREE.Vector3(cr.group.position.x, 4.1, cr.group.position.z);
+      const hook = new THREE.Vector3(c.hx * S3, Math.max(c.h + top + 1.2, 5.2), c.hy * S3);
       // Boom from the mast top to above the hook.
       const mid = mtop.clone().add(hook).multiplyScalar(0.5);
       cr.boom.position.copy(mid.sub(cr.group.position));

@@ -95,6 +95,7 @@ const Game = {
       if (e.code === 'KeyM') this.toggleAudio('music');
       if (e.code === 'KeyN') this.toggleAudio('sfx');
       if (e.code === 'KeyF' && !Mini.active && !UI.busy) this.toggleFullscreen();
+      if (e.code === 'KeyX' && !Mini.active && !UI.busy && !G.paused) Story.warp();
       if (e.code === 'KeyG' && !Mini.active && !UI.busy && !UI.menuOpen()) UI.toggleMap();
       if (e.code === 'KeyT' && Multi.on && !Mini.active && !UI.busy) { e.preventDefault(); UI.chat(); }
       if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused && !UI.mapOpen()) this.interact();
@@ -768,6 +769,7 @@ const Game = {
       <p><b>מצלמה:</b> גרירה עם העכבר מסובבת את המצלמה סביב הדמות, גלגלת — זום. אפשר גם חצים ימינה/שמאלה (או Q ו-R).</p>
       <p><b>בטלפון:</b> משחקים לרוחב. ג'ויסטיק שמאלי — הליכה קדימה, אחורה, ימינה ושמאלה. ג'ויסטיק ימני — להסתכל מסביב. כפתור E לפעולה וכפתור "ריצה".</p>
       <p><b>מפה:</b> לחיצה על המפה הקטנה (או G) — מפה גדולה וחיה שמראה איפה כל אחד מהפלגה.</p>
+      <p><b>השתגרות:</b> הכפתור ⚡ בחלון המשימה (או X) — קפיצה ישר למקום של המשימה ב־2₪, בלי ללכת ובלי הסעה.</p>
       <p><b>שחורה:</b> המד השחור. עולה מכל משימה ומכל דבר מנפיץ, ויורד ככל שמתקרבים ליציאה הביתה (ומאוכל טוב).</p>
       <p><b>החץ הצהוב</b> בתחתית המסך מצביע על המשימה הבאה, והחץ המרחף מעל המטרה מסמן אותה בעולם.</p>
       <p><b>תחנת הסעות:</b> ליד השער בכל אתר. משם נוסעים בין אתר נתיבות, ה{hq} ואתר הפריסה.</p>

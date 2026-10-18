@@ -52,11 +52,14 @@ const Multi = {
           s: Array.isArray(s.fx.s) ? s.fx.s.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x: +o.x || 0, y: +o.y || 0, k: String(o.k || '').slice(0, 12) })) : [],
           b: Array.isArray(s.fx.b) ? s.fx.b.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x0: +o.x0 || 0, y0: +o.y0 || 0, x1: +o.x1 || 0, y1: +o.y1 || 0 })) : [],
         } : null,
-        boss: s.boss && +s.boss.id ? { id: +s.boss.id, max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)) } : null,
+        // A red alert this player is in: everyone online at that site gets it too.
+        al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
+        boss: s.boss && +s.boss.id ? { id: +s.boss.id, max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)), tk: Array.isArray(s.boss.tk) ? s.boss.tk.slice(-40).map(n => Math.floor(+n)).filter(n => n >= 0 && n < 5000) : [] } : null,
         // Smoothed position for drawing.
         dx: old ? old.dx : +s.x || 0, dy: old ? old.dy : +s.y || 0,
       };
     });
+    if (this.on) for (const p of this.peers) if (p.al) this.alertFrom(p);
     // A player who joins as someone replaces that character's NPC.
     if (this.on && this.peers.map(p => p.who).sort().join() !== before) Game.resetNpcs();
   },
@@ -90,7 +93,8 @@ const Multi = {
       v: 1, who: this.as, name: G.profile.name, site: World.id,
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null,
-      boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg } : null,
+      al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
+      boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : null,
       fx: Boss.active && Boss.coop ? Boss.fxOut() : null,
       baum: Events.baum && Events.baum.coop ? { id: Events.baum.coop.id, hid: [...Events.baum.myHid], carry: Events.baum.carrying ? Events.baum.carrying.id : null } : null,
     };
@@ -98,6 +102,21 @@ const Multi = {
     if (key === this.sent) return;
     this.sent = key;
     this.room.presence(st).catch(() => {});
+  },
+
+  // Red alerts are shared: when a friend's siren goes off at your site, yours does too.
+  // Each alert has an id, so it spreads once and doesn't bounce back and forth.
+  seenAlerts: new Set(),
+  alertFrom(p) {
+    if (this.seenAlerts.has(p.al.id)) return;
+    this.seenAlerts.add(p.al.id);
+    if (p.al.site !== World.id) { UI.toast(`🚨 צבע אדום ב${siteName(p.al.site)} — ${p.name} במיגונית`, 'bad'); return; }
+    Story.remoteAlert = { id: p.al.id, from: p.name, at: Date.now() };
+  },
+  newAlertId() {
+    const id = Math.floor(Math.random() * 1e9) + 1;
+    this.seenAlerts.add(id);
+    return id;
   },
 
   // A line of chat over your head for everyone on the same site.

@@ -104,8 +104,29 @@ const UI = {
 
   objective(obj) {
     const o = $('#objective');
-    if (!obj) { o.innerHTML = ''; return; }
-    o.innerHTML = `<div class="obj-title">משימה</div>${fmt(obj.text)}`;
+    const warp = obj && Story.warpTarget();
+    const html = !obj ? '' : `<div class="obj-title">משימה</div>${fmt(obj.text)}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.WARP_PRICE}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
+    // Only rebuilt when it changes, so a tap on the teleport button isn't lost.
+    if (html === this.objHtml) return;
+    this.objHtml = html;
+    o.innerHTML = html;
+    const b = o.querySelector('[data-warp]');
+    if (b) b.addEventListener('click', (e) => { e.stopPropagation(); Story.warp(); });
+  },
+
+  // A card at the top with an action button (a friend's invite); it goes away by itself.
+  invite(text, label, onYes) {
+    let box = $('#invite-card');
+    if (box) box.remove();
+    box = document.createElement('div');
+    box.id = 'invite-card';
+    box.className = 'invite-card';
+    box.innerHTML = `<div class="ic-text">${esc(text)}</div><div class="ic-row"><button class="btn small" data-y>${esc(label)}</button><button class="btn small ghost" data-n>✕</button></div>`;
+    $('#hud').appendChild(box);
+    const close = () => { box.remove(); clearTimeout(timer); };
+    const timer = setTimeout(close, 25000);
+    box.querySelector('[data-y]').onclick = () => { close(); onYes(); };
+    box.querySelector('[data-n]').onclick = close;
   },
 
   fade(cb) {
@@ -241,7 +262,7 @@ const UI = {
       <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
-      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button>' : ''}
+      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}
       <div class="row2"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
       <button class="btn small ghost" id="sd-style">🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}</button>
       <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">
@@ -269,6 +290,7 @@ const UI = {
       map: () => { this.toggleMenu(false); this.toggleMap(true); },
       chat: () => { this.toggleMenu(false); this.chat(); },
       invite: () => Game.shareInvite(),
+      bossInvite: () => { this.toggleMenu(false); Boss.inviteCoop(); },
       fs: () => Game.toggleFullscreen(),
       help: () => { this.toggleMenu(false); Game.help(true); },
       save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },

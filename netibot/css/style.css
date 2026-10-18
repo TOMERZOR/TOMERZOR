@@ -64,6 +64,9 @@ button { font-family: inherit; }
   border-radius: 8px; padding: 8px 12px; font-size: 14px; line-height: 1.4;
 }
 .objective:empty { display: none; }
+.objective .warp { display: block; margin-top: 6px; pointer-events: auto; cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; color: #1a1a10; background: linear-gradient(#ffd96a, #e8b21e); border: 0; border-radius: 6px; padding: 4px 10px; box-shadow: 0 2px 0 #9c7410; }
+.objective .warp:active { transform: translateY(1px); box-shadow: none; }
+.objective .warp kbd { font: inherit; font-size: 10px; background: rgba(0,0,0,.18); border-radius: 3px; padding: 0 4px; }
 .objective .obj-title { font-weight: 800; color: var(--gold); font-size: 12px; letter-spacing: .5px; }
 .prompt {
   position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
@@ -130,14 +133,18 @@ body.touch .prompt { bottom: max(14px, env(safe-area-inset-bottom)); max-width: 
 @keyframes spin { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
 
 /* ---------- Boss ---------- */
-.boss-hud { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 64px); left: 50%; transform: translateX(-50%); width: min(520px, 70vw); background: var(--panel); border: 2px solid #e0a020; border-radius: 12px; padding: 8px 12px; }
-.boss-name { font-weight: 800; color: #ffcf5a; font-size: 15px; margin-bottom: 4px; }
-.boss-bar { height: 14px; background: rgba(255,255,255,.12); border-radius: 7px; overflow: hidden; }
+.boss-hud { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 62px); left: 50%; transform: translateX(-50%); width: min(380px, 44vw); padding: 4px 8px 5px; background: rgba(12,14,10,.62); border: 1px solid rgba(232,160,42,.55); border-radius: 8px; pointer-events: none; }
+.boss-top { display: flex; align-items: center; gap: 6px; }
+.boss-name { font-weight: 800; color: #ffcf5a; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
+.boss-pct { font-weight: 800; font-size: 11px; color: #fff; min-width: 30px; text-align: left; }
+.boss-team { font-size: 11px; opacity: .85; white-space: nowrap; }
+.boss-bar { flex: 1; height: 9px; background: rgba(255,255,255,.12); border-radius: 5px; overflow: hidden; }
 .boss-bar b { display: block; height: 100%; background: linear-gradient(90deg, #c0392b, #e8a02a); transition: width .2s; }
-.boss-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; flex-wrap: wrap; }
-.chol-bar { flex: 1; min-width: 80px; height: 9px; background: rgba(255,255,255,.12); border-radius: 5px; overflow: hidden; }
+.boss-row { display: flex; align-items: center; gap: 5px; margin-top: 3px; font-size: 11px; }
+.chol-bar { flex: 1; min-width: 40px; height: 6px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; }
 .chol-bar b { display: block; height: 100%; background: #f2d04e; }
-.ammo { background: rgba(255,255,255,.08); border-radius: 8px; padding: 2px 8px; font-weight: 800; }
+.chol-bar.hot b { background: #ff6a3d; }
+.ammo { background: rgba(255,255,255,.08); border-radius: 6px; padding: 0 5px; font-weight: 800; white-space: nowrap; }
 .boss-hint { font-size: 11px; opacity: .7; margin-top: 4px; }
 
 /* ---------- Map ---------- */
@@ -308,7 +315,7 @@ input[type=text] {
   #t-run { right: calc(max(18px, env(safe-area-inset-right)) + 150px); bottom: calc(max(26px, env(safe-area-inset-bottom)) + 78px); width: 52px; height: 52px; }
   body.touch .prompt { max-width: calc(100% - 440px); font-size: 13px; padding: 6px 12px; }
   .alert-banner { font-size: 24px; top: 32%; }
-  .boss-hud { top: 50px; padding: 5px 10px; }
+  .boss-hud { top: 50px; width: min(320px, 40vw); }
   .phone { height: calc(100% - 16px); }
 }
 @media (max-width: 720px) {
@@ -354,6 +361,15 @@ input[type=text] {
 .ctl-hud .t { font-weight: 800; color: var(--gold); margin-bottom: 4px; }
 .ctl-hud .gauge { position: relative; height: 14px; border-radius: 7px; background: rgba(255,255,255,.12); margin: 6px 0 2px; overflow: hidden; }
 .ctl-hud .gauge .zone { position: absolute; top: 0; bottom: 0; background: rgba(108,194,74,.6); }
+.ctl-hud .gauge .mark { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255,255,255,.7); font-size: 0; }
 .ctl-hud .gauge .needle { position: absolute; top: -2px; bottom: -2px; width: 5px; margin-left: -2px; background: #fff; border-radius: 2px; }
 .ctl-hud .keys { font-size: 12px; opacity: .8; }
 body.touch .ctl-hud { bottom: 150px; width: min(420px, calc(100% - 380px)); font-size: 12px; }
+
+/* ---------- Invite card ---------- */
+.invite-card { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 64px); left: 50%; transform: translateX(-50%); width: min(420px, 80vw); pointer-events: auto; background: rgba(14,16,10,.92); border: 1px solid var(--gold); border-radius: 10px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0,0,0,.45); animation: toast-in .25s ease-out; z-index: 6; }
+.invite-card .ic-text { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+.invite-card .ic-row { display: flex; gap: 8px; }
+.invite-card .ic-row .btn { flex: 1; }
+.invite-card .ic-row .ghost { flex: 0 0 44px; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }

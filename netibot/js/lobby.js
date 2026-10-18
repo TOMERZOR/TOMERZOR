@@ -4,7 +4,7 @@
 // The invite link can also carry the cast's real names in its #fragment. A fragment is never
 // sent to any server, so the names exist only in the link shared with the friends.
 const LOBBY_BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt', 'wss://test.mosquitto.org:8081'];
-const PAGES_URL = 'https://tomerzor.github.io/tomerzor/netibot/';
+const PAGES_URL = 'https://tomerzor.github.io/TOMERZOR/netibot/';
 
 const Lobby = {
   // #l=<lobby code>&n=<names>&b=<broker url, for testing>

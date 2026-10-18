@@ -249,8 +249,9 @@ const Game = {
     const people = [...ROSTER.people, ROSTER.easterEgg];
     const taken = Multi.taken();
     for (const person of people) {
-      // Somebody playing as this character replaces them in the world.
-      if (taken.has(person.id)) continue;
+      // Somebody playing as this character replaces them in the world; in multiplayer the
+      // playable cast exists only as the players who are connected.
+      if (taken.has(person.id) || (Multi.on && Multi.playable(person))) continue;
       const onMap = map === 'field' ? person.id in layout : person.map === map || (person.id === 'ruth' && map === 'netivot');
       if (!onMap) continue;
       const fixed = layout[person.id];
@@ -832,7 +833,7 @@ const Game = {
     const link = Lobby.inviteLink();
     const render = () => {
       const taken = new Set(Multi.peers.map(p => p.who));
-      const people = ROSTER.people.filter(p => p.map === 'netivot' || ['bc', 'deputy_bc', 'harasar', 'rasap', 'deputy_rasap', 'sarsap', 'interceptors', 'officer1', 'officer2', 'officer3', 'ops', 'hamalist'].includes(p.id));
+      const people = ROSTER.people.filter(p => Multi.playable(p));
       UI.screen(`<div class="content"><div class="panel">
         <h2>🌐 מי את[ה/]?</h2>
         ${link ? `<div class="invite"><b>🔗 הזמנה לחברים</b> — שולחים להם את הקישור, הם לוחצים ונכנסים. בלי חשבון ובלי הרשמה.

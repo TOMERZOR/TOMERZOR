@@ -10,6 +10,10 @@ const Multi = {
   peers: [],       // other players: { peer, who, name, site, x, y, a, m, r, c, say }
   sent: '',
   sendT: 0,
+  // Cast members a player can be. In multiplayer they only exist as real players: whoever
+  // isn't connected isn't in the world.
+  PLAYABLE_HQ: ['bc', 'deputy_bc', 'harasar', 'rasap', 'deputy_rasap', 'sarsap', 'interceptors', 'officer1', 'officer2', 'officer3', 'ops', 'hamalist'],
+  playable(person) { return person.map === 'netivot' || this.PLAYABLE_HQ.includes(person.id); },
 
   // The lobby from the invite link comes first (it works for anyone, no account needed);
   // inside claude.ai the artifact's own room is the fallback.
@@ -42,6 +46,8 @@ const Multi = {
         peer: p.peer, who: String(s.who).slice(0, 40), name: String(s.name || '').slice(0, 24), site: s.site,
         x: +s.x || 0, y: +s.y || 0, a: +s.a || 0, m: !!s.m, r: !!s.r, c: s.c ? String(s.c).slice(0, 12) : false,
         say: s.say && typeof s.say.text === 'string' ? { text: s.say.text.slice(0, 80), at: +s.say.at || 0 } : null,
+        // A co-op boss fight this player is in: which one, its max HP, the damage they dealt.
+        boss: s.boss && +s.boss.id ? { id: +s.boss.id, max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)) } : null,
         // Smoothed position for drawing.
         dx: old ? old.dx : +s.x || 0, dy: old ? old.dy : +s.y || 0,
       };
@@ -79,6 +85,7 @@ const Multi = {
       v: 1, who: this.as, name: G.profile.name, site: World.id,
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null,
+      boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg } : null,
     };
     const key = JSON.stringify(st);
     if (key === this.sent) return;

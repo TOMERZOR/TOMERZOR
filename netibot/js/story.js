@@ -348,6 +348,7 @@ const Story = {
     if (this.run) this.updateRun(dt);
     if (World.id === 'field') this.updateDeploy(dt);
     Events.update(dt);
+    Boss.watchCoop();
     Boss.update(dt);
     // Morning lineup: arriving at the parade ground completes it.
     if (this.has('lineup') && !G.alert) {
@@ -408,6 +409,7 @@ const Story = {
       add(SPOTS_HQ.dining.x, SPOTS_HQ.dining.y, 'לאכול', () => this.eat(), 40);
       add(SPOTS_HQ.kantina.x, SPOTS_HQ.kantina.y, 'לקנות בש"ק', () => Mini.open('shop'), 40);
       if (this.has('snack') && !this.has('find_lock')) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, 'לפתוח את ארונית החטיפים הסודית', () => this.openSnack(), 40);
+      else if (Multi.on) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 להעיר את מפלצת הצ\'יזבורגר — קרב עם כל מי שבשו"ב', () => Boss.startCoop(), 40);
       Events.interactables(add);
       return list;
     }

@@ -30,8 +30,9 @@ const Assets = {
       img.onerror = () => { tick(); resolve(); };
       img.src = `assets/tex/${name}.jpg`;
     }));
+    const anims = fetch('assets/models/anims.json').then(r => (r.ok ? r.json() : null)).then(a => { this.animLib = a; }).catch(() => {});
     const timeout = new Promise(resolve => setTimeout(resolve, 25000));
-    return Promise.race([Promise.all([...models, ...images]), timeout]);
+    return Promise.race([Promise.all([...models, ...images, anims]), timeout]);
   },
 
   has(name) { return !!this.models[name]; },
@@ -126,6 +127,65 @@ const Assets = {
     if (window.Scene3D && Scene3D.personReady) Scene3D.personReady(id);
   },
   walkFor(id) { return (id && this.people[id] && this.people[id].walk) || this.walkClip; },
+
+  // ---------- animation retargeting ----------
+  // The walk, run and idle clips (assets/models/anims.json) were recorded on one skeleton.
+  // Every rig has the same bones, but each bone rests at a slightly different angle, so a
+  // clip copied as-is bends knees and arms the wrong way. Instead each bone's rotation away
+  // from the source's rest pose is carried over in world space, onto the target's own rest.
+  clipsFor(scene, key) {
+    this.clipCache = this.clipCache || {};
+    if (this.clipCache[key]) return this.clipCache[key];
+    const lib = this.animLib;
+    if (!lib) return null;
+    const bones = {};
+    scene.traverse(o => { if (o.isBone) bones[o.name] = o; });
+    if (!bones.Hips) return null;
+    const Q = (a) => new THREE.Quaternion(a[0], a[1], a[2], a[3]);
+    const order = lib.bones.filter(b => bones[b]);
+    // World rest rotations of the target (the armature above the hips is shared).
+    const wrT = {};
+    for (const b of order) {
+      const p = lib.parent[b];
+      wrT[b] = (p && wrT[p] ? wrT[p].clone() : new THREE.Quaternion()).multiply(bones[b].quaternion);
+    }
+    const hipsT = bones.Hips.position;
+    const out = {};
+    for (const name in lib.clips) {
+      const c = lib.clips[name], n = c.times.length;
+      // ...and of the skeleton this clip was recorded on.
+      const rest = c.rest || lib.rest, wrS = {}, invS = {};
+      for (const b of order) {
+        const p = lib.parent[b];
+        wrS[b] = (p && wrS[p] ? wrS[p].clone() : new THREE.Quaternion()).multiply(Q(rest[b]));
+        invS[b] = wrS[b].clone().invert();
+      }
+      const scaleY = hipsT.y / (c.hipsY || lib.hipsY);
+      const vals = {}; for (const b of order) vals[b] = new Float32Array(n * 4);
+      const hips = new Float32Array(n * 3);
+      const waS = {}, waT = {}, tmp = new THREE.Quaternion(), loc = new THREE.Quaternion();
+      for (let f = 0; f < n; f++) {
+        for (const b of order) {
+          const p = lib.parent[b];
+          const q = c.q[b] ? tmp.fromArray(c.q[b], f * 4) : Q(rest[b]);
+          waS[b] = (p && waS[p] ? waS[p].clone() : new THREE.Quaternion()).multiply(q);
+          // D = world anim * inverse(world rest), applied to the target's world rest.
+          waT[b] = waS[b].clone().multiply(invS[b]).multiply(wrT[b]);
+          loc.copy(p && waT[p] ? waT[p] : new THREE.Quaternion()).invert().multiply(waT[b]);
+          loc.toArray(vals[b], f * 4);
+        }
+        // The hips bob at the target's height; the game moves the character itself.
+        hips[f * 3] = hipsT.x;
+        hips[f * 3 + 1] = (c.hips ? c.hips[f * 3 + 1] : (c.hipsY || lib.hipsY)) * scaleY;
+        hips[f * 3 + 2] = hipsT.z;
+      }
+      const tracks = order.map(b => new THREE.QuaternionKeyframeTrack(b + '.quaternion', c.times, vals[b]));
+      tracks.push(new THREE.VectorKeyframeTrack('Hips.position', c.times, hips));
+      out[name] = new THREE.AnimationClip(name, c.duration, tracks);
+    }
+    this.clipCache[key] = out;
+    return out;
+  },
 
   // A fresh copy of the rigged soldier facing +x, 1.75 m tall, with its own skeleton
   // (a cast member's own model when it has loaded).

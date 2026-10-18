@@ -867,13 +867,20 @@ const Scene3D = {
     root.add(lean);
     lean.add(made.object);
     const parts = { root, rigged: true, lean, who: look.id || null, own };
-    const RUN_GAIN = { LeftUpLeg: 1.7, RightUpLeg: 1.7, LeftLeg: 1.6, RightLeg: 1.6, LeftArm: 2.3, RightArm: 2.3, LeftForeArm: 1.8, RightForeArm: 1.8 };
-    parts.runBones = [];
-    if (Assets.idlePose) made.inner.traverse(o => { if (o.isBone && RUN_GAIN[o.name] && Assets.idlePose[o.name]) parts.runBones.push({ bone: o, ref: Assets.idlePose[o.name], inv: Assets.idlePose[o.name].clone().invert(), k: RUN_GAIN[o.name] }); });
-    if (Assets.walkClip) {
+    // Idle, walk and run clips, blended by speed. A cast member's own skeleton gets the clips
+    // moved onto it (Assets.clipsFor); without the library the old walk cycle is used.
+    const clips = Assets.clipsFor(own ? Assets.people[look.id].scene : Assets.models.soldier, own ? look.id : '_soldier');
+    if (clips || Assets.walkClip) {
       parts.mixer = new THREE.AnimationMixer(made.inner);
-      parts.action = parts.mixer.clipAction(Assets.walkFor(look.id));
-      parts.action.play();
+      const walkClip = clips ? (look.female && clips.walkF ? clips.walkF : clips.walk) : Assets.walkFor(look.id);
+      parts.acts = { walk: parts.mixer.clipAction(walkClip) };
+      if (clips && clips.run) parts.acts.run = parts.mixer.clipAction(clips.run);
+      if (clips && clips.idle) parts.acts.idle = parts.mixer.clipAction(clips.idle);
+      parts.w = { walk: 0, run: 0, idle: 1 };
+      for (const k in parts.acts) { parts.acts[k].play(); parts.acts[k].setEffectiveWeight(k === 'idle' ? 1 : 0); }
+      // Without an idle clip, standing is the first frame of the walk.
+      if (!parts.acts.idle) parts.acts.walk.setEffectiveWeight(1);
+      parts.action = parts.acts.walk;
     }
     root.updateMatrixWorld(true);
     const head = Assets.bone(made.inner, [/^head$/i, /head(?!.*end)/i, /neck/i]);
@@ -936,8 +943,9 @@ const Scene3D = {
       root.add(parts.tag);
     }
     this.extras(parts, look, root);
-    // Start each soldier at a different point of the stride.
-    if (parts.action) parts.action.time = Math.random() * Assets.walkClip.duration;
+    // Start each soldier at a different point of the cycles.
+    if (parts.acts) for (const k in parts.acts) parts.acts[k].time = Math.random() * parts.acts[k].getClip().duration;
+    if (parts.mixer) parts.mixer.update(0);
     this.root.add(root);
     return parts;
   },
@@ -1016,33 +1024,20 @@ const Scene3D = {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       m.root.rotation.y += d * Math.min(1, dt * 12);
       if (m.mixer) {
-        // The stride follows the real speed. On stopping, the soldier finishes the step
-        // into the nearest feet-together pose rather than snapping to it.
-        const rate = ent.speed !== undefined ? Math.max(0.6, ent.speed / 90 * 1.4) : ent.running ? 2.1 : 1.4;
-        const D = Assets.walkClip.duration;
-        if (moving) { m.mixer.update(dt * rate); m.idle = false; m.rate = rate; m.settle = 0; }
-        else if (!m.idle) {
-          m.settle = (m.settle || 0) + dt;
-          const t = m.action.time % D;
-          const near = (Assets.idleTimes || [0]).some(it => { const g = Math.abs(t - it); return Math.min(g, D - g) < D * 0.035; });
-          if (near || m.settle > 0.45) { m.idle = true; m.action.time = near ? t : Assets.idleTime || 0; m.mixer.update(0); }
-          else m.mixer.update(dt * Math.max(1.2, m.rate || 1.4));
+        // Weights glide between idle, walk and run; the stride follows the real speed. The
+        // mixer poses every bone from the clips each frame, so nothing builds up while paused.
+        const speed = ent.speed !== undefined ? ent.speed : ent.running ? 165 : moving ? 90 : 0;
+        const running = moving && ent.running && m.acts.run;
+        const want = { idle: moving ? 0 : 1, walk: moving && !running ? 1 : 0, run: running ? 1 : 0 };
+        const k = Math.min(1, dt * 8);
+        for (const n in m.acts) {
+          m.w[n] += ((want[n] || 0) - m.w[n]) * k;
+          m.acts[n].setEffectiveWeight(m.acts.idle || n !== 'walk' ? m.w[n] : 1);
         }
-        // Running: the same cycle, faster and exaggerated — longer strides, a bigger arm
-        // pump, a forward lean and a bounce. Only on frames the mixer has just posed.
-        const runT = moving && (ent.running || ent.r) ? 1 : 0;
-        m.runK = (m.runK || 0) + (runT - (m.runK || 0)) * Math.min(1, dt * 6);
-        if (m.lean) m.lean.rotation.z = -0.24 * m.runK;
-        if (moving && m.runK > 0.01 && m.runBones) {
-          const d = this._q || (this._q = new THREE.Quaternion()), id = this._qi || (this._qi = new THREE.Quaternion());
-          for (const rb of m.runBones) {
-            d.copy(rb.inv).multiply(rb.bone.quaternion);
-            id.identity().slerp(d, 1 + (rb.k - 1) * m.runK);
-            rb.bone.quaternion.copy(rb.ref).multiply(id);
-          }
-          const ph = m.action.time / Assets.walkClip.duration * Math.PI * 2;
-          m.root.position.y = Math.abs(Math.sin(ph)) * 0.07 * m.runK;
-        }
+        m.acts.walk.timeScale = moving ? Math.max(0.5, speed / 90) * 1.15 : (m.acts.idle ? 1 : 0);
+        if (m.acts.run) m.acts.run.timeScale = Math.max(0.6, speed / 165) * 1.0;
+        if (!m.acts.idle && !moving) m.acts.walk.time = 0;
+        m.mixer.update(dt);
       }
       return;
     }

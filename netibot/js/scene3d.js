@@ -826,7 +826,8 @@ const Scene3D = {
       }
     }
     const head0 = look.head || 'none';
-    parts.beret.visible = head0 === 'beret';
+    // Nobody wears the beret on their head on base; it stays folded away.
+    parts.beret.visible = false;
     parts.helmet.visible = head0 === 'helmet';
     parts.cap.visible = head0 === 'cap';
     this.carryProps(parts, root, 0.45, 1.15);
@@ -885,7 +886,7 @@ const Scene3D = {
       pin(head, bun);
     }
     const h = look.head || 'none';
-    parts.beret.visible = h === 'beret';
+    parts.beret.visible = false;
     parts.helmet.visible = h === 'helmet';
     parts.cap.visible = h === 'cap';
 
@@ -1250,7 +1251,7 @@ const Scene3D = {
       this.player = this.makeSoldier({ skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: 'beret', uniform: 0x5b6b3c });
     }
     const pm = this.player;
-    pm.beret.visible = !G.alert;
+    pm.beret.visible = false;
     pm.helmet.visible = !!G.alert;
     this.setCarry(pm, P.carry);
     this.setBubble(pm, P.bubble ? P.bubble.text : null);
@@ -1266,7 +1267,7 @@ const Scene3D = {
       // Speech bubble over the head.
       this.setBubble(m, n.bubble ? n.bubble.text : null);
       if (G.alert && n.sheltering) { m.helmet.visible = true; m.beret.visible = m.cap.visible = false; }
-      else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = n.look.head === 'beret'; m.cap.visible = n.look.head === 'cap'; }
+      else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = false; m.cap.visible = n.look.head === 'cap'; }
       this.animateSoldier(m, n, moving, dt);
     }
 
@@ -1358,7 +1359,7 @@ const Scene3D = {
       let m = this.remotes.get(p.peer);
       if (!m) {
         const person = Cast.get(p.who) || {};
-        const look = { skin: person.skin || DATA.skinTones[(p.who.length * 7) % 4], hair: person.hair || DATA.hairColors[(p.who.length * 3) % 3], head: person.head || 'beret', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies };
+        const look = { skin: person.skin || DATA.skinTones[(p.who.length * 7) % 4], hair: person.hair || DATA.hairColors[(p.who.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1, flies: !!person.flies };
         m = this.makeSoldier(look, '🌐 ' + (p.name || person.short || ''));
         m.site = World.id;
         this.remotes.set(p.peer, m);

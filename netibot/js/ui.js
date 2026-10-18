@@ -44,6 +44,8 @@ function fmtAs(person, text) {
   return fmt(String(text).replace(/\{first\}/g, person.first).replace(/\{short\}/g, person.short).replace(/\{full\}/g, person.name));
 }
 
+const RANKS = { 1: 'סגן־משנה', 2: 'סגן', 3: 'סרן', leaf: 'רב־סרן' };
+
 function avatarHtml(person) {
   const letter = (person.first || person.short || '?').charAt(0);
   return `<div class="avatar" style="background:${person.color || '#4b5a2a'}"><span class="av-emoji">${person.emoji || '🪖'}</span><span class="av-letter">${letter}</span></div>`;
@@ -77,6 +79,7 @@ const UI = {
 
   toast(text, kind = '') {
     const t = el('div', { class: `toast ${kind}` }, fmt(text));
+    if (String(text).includes('📱')) Sound.ding();
     $('#toasts').appendChild(t);
     setTimeout(() => t.remove(), 2700);
   },
@@ -135,7 +138,8 @@ const UI = {
         const person = Cast.get(line.who);
         const ch = DATA.characters[line.who] || { name: line.who, icon: '💬' };
         const name = line.who === 'player' ? fmt('{name}') : person ? person.name : ch.name;
-        const title = person ? `<span class="who-title">${fmtAs(person, person.title || '')}</span>` : '';
+        const rank = person && person.rank ? `<span class="rank-chip">${RANKS[person.rank]}</span>` : '';
+        const title = person ? `${rank}<span class="who-title">${fmtAs(person, person.title || '')}</span>` : '';
         const pic = line.who === 'player'
           ? `<div class="portrait-fallback">🪖</div>`
           : person ? avatarHtml(person) : ch.img ? `<img src="${ch.img}" alt="">` : `<div class="portrait-fallback">${ch.icon}</div>`;
@@ -148,6 +152,7 @@ const UI = {
         clearInterval(typing);
         typing = setInterval(() => {
           n += 2;
+          if (n % 6 === 0) Sound.blip();
           txt.textContent = full.slice(0, n);
           if (n >= full.length) { clearInterval(typing); typing = null; showChoices(); }
         }, 18);
@@ -261,11 +266,17 @@ const UI = {
       }).join('');
     } else {
       body.innerHTML = `
-        <div class="ph-item"><button class="btn small ghost" id="ph-mute">${Sound.muted ? '🔇 הפעל צליל' : '🔊 השתק'}</button></div>
+        <div class="ph-item"><button class="btn small ghost" data-audio="music"></button>
+          <label for="ph-mvol">עוצמת מוזיקה</label><input type="range" id="ph-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}"></div>
+        <div class="ph-item"><button class="btn small ghost" data-audio="sfx"></button>
+          <label for="ph-svol">עוצמת אפקטים</label><input type="range" id="ph-svol" min="0" max="1" step="0.05" value="${Sound.prefs.sfxVol}"></div>
         <div class="ph-item"><button class="btn small ghost" id="ph-save">💾 שמור עכשיו</button></div>
         <div class="ph-item"><button class="btn small ghost" id="ph-help">❓ איך משחקים</button></div>
         <div class="ph-item"><button class="btn small red" id="ph-menu">יציאה לתפריט</button></div>`;
-      body.querySelector('#ph-mute').onclick = () => { Sound.setMuted(!Sound.muted); this.renderPhone(); };
+      body.querySelectorAll('[data-audio]').forEach(b => b.onclick = () => Game.toggleAudio(b.dataset.audio));
+      body.querySelector('#ph-mvol').oninput = (e) => Sound.setVolume('music', +e.target.value);
+      body.querySelector('#ph-svol').oninput = (e) => Sound.setVolume('sfx', +e.target.value);
+      Game.syncAudioButtons();
       body.querySelector('#ph-save').onclick = () => { Game.save(); this.toast('נשמר ✔', 'good'); };
       body.querySelector('#ph-help').onclick = () => { this.togglePhone(false); Game.help(true); };
       body.querySelector('#ph-menu').onclick = () => { Game.save(); location.reload(); };

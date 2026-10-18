@@ -656,6 +656,24 @@ const Scene3D = {
     this.box(0.3, 0.1, 0.3, this.mat(0x3b4a2a), 0, 1.8, 0, parts.cap);
     this.box(0.16, 0.03, 0.26, this.mat(0x3b4a2a), 0.2, 1.76, 0, parts.cap);
     root.add(parts.cap);
+    // Officer rank: blue shoulder boards with white bars ("ארונות"), or the major's leaf ("פלאפל").
+    if (look.rank) {
+      const blue = this.mat(0x1f4fa8, { roughness: 0.6 });
+      const white = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x666666, roughness: 0.4 });
+      for (const side of [-1, 1]) {
+        const ep = new THREE.Group();
+        ep.position.set(0, 1.505, side * 0.2);
+        this.box(0.22, 0.04, 0.22, blue, 0, 0, 0, ep);
+        if (look.rank === 'leaf') {
+          const leaf = this.box(0.1, 0.016, 0.1, white, 0, 0.026, 0, ep);
+          leaf.rotation.y = Math.PI / 4;
+          this.box(0.016, 0.016, 0.07, white, 0, 0.026, side * 0.08, ep);
+        } else {
+          for (let i = 0; i < look.rank; i++) this.box(0.17, 0.016, 0.04, white, 0, 0.026, (i - (look.rank - 1) / 2) * 0.08, ep);
+        }
+        root.add(ep);
+      }
+    }
     const head0 = look.head || 'none';
     parts.beret.visible = head0 === 'beret';
     parts.helmet.visible = head0 === 'helmet';

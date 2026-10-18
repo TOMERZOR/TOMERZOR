@@ -677,7 +677,7 @@ const Minigames = {
         Game.addStat('morale', it.morale);
         S.stats.purchases++;
         if (S.stats.purchases >= 5) Game.achieve('shopper');
-        Sound.good();
+        Sound.coin();
         UI.toast(`${it.icon} ${it.name}`, 'good');
         render();
       });

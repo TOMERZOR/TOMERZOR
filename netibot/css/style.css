@@ -47,6 +47,10 @@ button { font-family: inherit; }
 #bar-morale { background: #4aa3df; }
 #bar-score { background: var(--gold); }
 .hud-money { font-weight: 800; color: var(--gold); }
+.hud-btn.off { opacity: .4; text-decoration: line-through; }
+.audio-row { display: flex; gap: 8px; justify-content: center; margin-top: 4px; }
+.ph-item input[type=range] { width: 100%; }
+.rank-chip { display: inline-block; font-size: 11px; font-weight: 800; color: #fff; background: #1f4fa8; border-radius: 5px; padding: 1px 6px; margin-right: 6px; }
 .hud-btn {
   pointer-events: auto; background: var(--panel); border: 1px solid var(--line); color: var(--ink);
   border-radius: 10px; font-size: 22px; width: 48px; cursor: pointer;

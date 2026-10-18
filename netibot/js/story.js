@@ -548,7 +548,7 @@ const Story = {
       const driver = (S.deploy.placed.length % 2) ? 'driver2' : 'driver1';
       tr = this.deployTruck = { item, driver, x: 30.5 * TS, y: 46 * TS, angle: -Math.PI / 2, state: 'arriving' };
       World.gateTarget = 1;
-      Sound.gate();
+      Sound.truck();
     }
     const sp = 170 * dt;
     const drive = (tx, ty) => {
@@ -558,7 +558,7 @@ const Story = {
       tr.angle = Math.atan2(dy, dx);
       return false;
     };
-    if (tr.state === 'arriving' && drive(30.5 * TS, 35 * TS)) { tr.state = 'waiting'; World.gateTarget = 0; UI.toast(`🚛 הגיעה משאית: ${tr.item.name}`); }
+    if (tr.state === 'arriving' && drive(30.5 * TS, 35 * TS)) { tr.state = 'waiting'; World.gateTarget = 0; Sound.horn(); UI.toast(`🚛 הגיעה משאית: ${tr.item.name}`); }
     else if (tr.state === 'driving') {
       const it = tr.item;
       if (drive((it.x + it.w / 2) * TS, (it.y + it.h / 2) * TS)) { tr.state = 'unload'; this.unloadTruck(); }
@@ -660,7 +660,7 @@ const Story = {
   },
   sweep(d) {
     this.dust.splice(this.dust.indexOf(d), 1);
-    Sound.click();
+    Sound.sweep();
     this.checkPrep();
   },
   checkPrep() {
@@ -674,7 +674,7 @@ const Story = {
   },
   pickTrash(t) {
     this.trash.splice(this.trash.indexOf(t), 1);
-    Sound.click();
+    Sound.pickup();
     if (!this.trash.length && this.has('clean')) {
       this.complete('clean');
       Game.achieve('clean');

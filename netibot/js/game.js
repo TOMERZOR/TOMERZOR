@@ -80,6 +80,8 @@ const Game = {
       if (!G.running) return;
       if ((e.code === 'Tab' || e.code === 'KeyP') && !Mini.active && !UI.busy) UI.togglePhone();
       if (e.code === 'Escape' && !$('#phone').classList.contains('hidden')) UI.togglePhone(false);
+      if (e.code === 'KeyM') this.toggleAudio('music');
+      if (e.code === 'KeyN') this.toggleAudio('sfx');
       if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused) this.interact();
     });
     document.addEventListener('keyup', (e) => G.keys.delete(e.code));
@@ -110,6 +112,8 @@ const Game = {
     $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
     $('#btn-phone').addEventListener('click', () => UI.togglePhone());
+    $('#btn-music').addEventListener('click', () => this.toggleAudio('music'));
+    $('#btn-sfx').addEventListener('click', () => this.toggleAudio('sfx'));
 
     // Camera: drag on the world (mouse or a finger outside the joystick) to look around, wheel to zoom.
     const looks = new Map();
@@ -135,6 +139,22 @@ const Game = {
       Scene3D.dist = Math.max(3, Math.min(14, Scene3D.dist + e.deltaY * 0.01));
     }, { passive: false });
     document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touch) { G.touch = true; if (G.running) $('#touch').classList.remove('hidden'); } }, true);
+  },
+
+  toggleAudio(kind) {
+    Sound.unlock();
+    if (kind === 'music') Sound.setMusic(!Sound.prefs.music); else Sound.setSfx(!Sound.prefs.sfx);
+    this.syncAudioButtons();
+    UI.toast(kind === 'music' ? (Sound.prefs.music ? '🎵 מוזיקה פועלת' : '🎵 מוזיקה כבויה') : (Sound.prefs.sfx ? '🔊 אפקטים פועלים' : '🔇 אפקטים כבויים'));
+  },
+  syncAudioButtons() {
+    $('#btn-music').classList.toggle('off', !Sound.prefs.music);
+    $('#btn-sfx').classList.toggle('off', !Sound.prefs.sfx);
+    $('#btn-sfx').textContent = Sound.prefs.sfx ? '🔊' : '🔇';
+    for (const b of document.querySelectorAll('[data-audio]')) {
+      const on = Sound.prefs[b.dataset.audio];
+      b.textContent = b.dataset.audio === 'music' ? `🎵 מוזיקה: ${on ? 'פועלת' : 'כבויה'}` : `${on ? '🔊' : '🔇'} אפקטים: ${on ? 'פועלים' : 'כבויים'}`;
+    }
   },
 
   interact() {
@@ -167,6 +187,7 @@ const Game = {
     const S = G.state;
     if (!S || S.achievements.includes(id)) return;
     S.achievements.push(id);
+    Sound.fanfare();
     const a = DATA.achievements.find(x => x.id === id);
     if (a) setTimeout(() => UI.toast(`🏅 הישג: ${a.name}`, 'ach'), 400);
   },
@@ -176,7 +197,7 @@ const Game = {
   resetNpcs() {
     const mk = (person, spot, wander) => ({
       id: person.id, person, short: person.short, x: spot.x, y: spot.y, r: 12, angle: Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: Math.random() * 4, wander,
-      look: { skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female },
+      look: { skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank },
       barkCd: 8 + Math.random() * 20, chaseCd: 60,
     });
     const map = World.id;
@@ -240,6 +261,7 @@ const Game = {
         if (Math.hypot(P.x - n.x, P.y - n.y) < 220) {
           const b = n.person.barks;
           n.bubble = { text: fmtAs(n.person, b[Math.floor(Math.random() * b.length)]), t: 3.5 };
+          Sound.pop();
         }
       }
       if (n.path.length) {
@@ -307,6 +329,7 @@ const Game = {
 
   // Move to another site (Netivot, HQ, deployment field).
   switchMap(id) {
+    Sound.travel();
     World.use(id);
     G.map = id;
     Story.trashVisible = id === 'netivot';
@@ -326,6 +349,7 @@ const Game = {
       const live = !G.paused && !UI.busy;
       if (live) this.update(dt);
       Scene3D.update(live ? dt : 0, t);
+      Sound.music(G.alert ? 'tension' : World.id === 'field' && Story.has('deploy') ? 'deploy' : this.darkness() > 0.3 ? 'night' : 'day');
       Scene3D.render();
       this.drawOverlay(t);
       this.drawMinimap();
@@ -534,6 +558,7 @@ const Game = {
     G.paused = false;
     this.applyProfile();
     if (fresh) this.achieve('beret');
+    this.syncAudioButtons();
     await Story.startDay(G.state.day);
   },
 
@@ -549,6 +574,7 @@ const Game = {
         <button class="btn ${story ? 'ghost' : ''}" id="m-new">מצב סיפור — משחק חדש</button>
         <button class="btn ghost" id="m-free">אימונים חופשיים</button>
         <button class="btn ghost" id="m-help">איך משחקים</button>
+        <div class="audio-row"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
       </div>
       <div class="footnote">משחק בדיוני. כל הדמויות, השמות והאירועים במשחק מומצאים.</div>
     </div>`, 'assets/title.jpg');
@@ -561,6 +587,9 @@ const Game = {
       else this.createCharacter('free');
     };
     $('#m-help').onclick = () => this.help(false);
+    for (const b of document.querySelectorAll('[data-audio]')) b.onclick = () => this.toggleAudio(b.dataset.audio);
+    this.syncAudioButtons();
+    Sound.music('menu');
   },
 
   help(inGame) {

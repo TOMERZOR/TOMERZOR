@@ -196,7 +196,7 @@ const UI = {
   renderPhone() {
     const p = $('#phone');
     const tabs = [['tasks', 'משימות'], ['msgs', 'הודעות'], ['stats', 'סטטוס'], ['ach', 'הישגים'], ['set', 'הגדרות']];
-    p.innerHTML = `<div class="ph-head"><span>${clockText()}</span><span>NetiBot</span><button class="btn small ghost" id="ph-close">✕</button></div>
+    p.innerHTML = `<div class="ph-head"><span>${clockText()}</span><span>נתיבוט</span><button class="btn small ghost" id="ph-close">✕</button></div>
       <div class="ph-tabs">${tabs.map(([k, n]) => `<button data-t="${k}" class="${this.phoneTab === k ? 'sel' : ''}">${n}</button>`).join('')}</div>
       <div class="ph-body"></div>`;
     p.querySelector('#ph-close').onclick = () => this.togglePhone(false);

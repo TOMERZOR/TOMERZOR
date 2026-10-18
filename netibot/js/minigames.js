@@ -213,7 +213,7 @@ const Minigames = {
           } else err();
         });
       } else if (stepIdx === 4) {
-        stage.innerHTML = `<p>[הפעל/הפעילי] בדיקת תקינות:</p><button class="btn" id="bit">▶ BIT</button><div class="timing" style="height:16px"><div class="zone" id="bit-p" style="left:0;width:0%"></div></div>`;
+        stage.innerHTML = `<p>[הפעל/הפעילי] בדיקת תקינות:</p><button class="btn" id="bit">▶ בדיקה עצמית</button><div class="timing" style="height:16px"><div class="zone" id="bit-p" style="left:0;width:0%"></div></div>`;
         stage.querySelector('#bit').onclick = (e) => {
           e.target.disabled = true;
           let p = 0;

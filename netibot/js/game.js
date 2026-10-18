@@ -18,9 +18,8 @@ const G = {
 };
 
 const canvas = $('#world');
-const ctx = canvas.getContext('2d');
-const lightCanvas = document.createElement('canvas');
-const lctx = lightCanvas.getContext('2d');
+const overlay = $('#overlay');
+const octx = overlay.getContext('2d');
 const mini = $('#minimap');
 const mctx = mini.getContext('2d');
 let miniBase = null;
@@ -37,6 +36,8 @@ const Game = {
   // ---------- boot ----------
   init() {
     World.build();
+    Scene3D.init(canvas);
+    Scene3D.build();
     this.bindInput();
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -48,14 +49,12 @@ const Game = {
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = window.innerWidth, h = window.innerHeight;
-    canvas.width = Math.floor(w * dpr);
-    canvas.height = Math.floor(h * dpr);
-    G.cam.zoom = Math.max(0.74, Math.min(1.15, Math.min(w, h) / 720));
-    G.cam.w = w / G.cam.zoom;
-    G.cam.h = h / G.cam.zoom;
+    Scene3D.resize(w, h, dpr);
+    overlay.width = Math.floor(w * dpr);
+    overlay.height = Math.floor(h * dpr);
+    G.cam.w = w;
+    G.cam.h = h;
     G.dpr = dpr;
-    lightCanvas.width = Math.ceil(G.cam.w);
-    lightCanvas.height = Math.ceil(G.cam.h);
   },
 
   // ---------- input ----------
@@ -98,6 +97,29 @@ const Game = {
     $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
     $('#btn-phone').addEventListener('click', () => UI.togglePhone());
+
+    // Camera: drag on the world (mouse or a finger outside the joystick) to look around, wheel to zoom.
+    const looks = new Map();
+    canvas.addEventListener('pointerdown', (e) => {
+      Sound.unlock();
+      looks.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener('pointermove', (e) => {
+      const l = looks.get(e.pointerId);
+      if (!l) return;
+      const k = e.pointerType === 'touch' ? 0.009 : 0.006;
+      Scene3D.yaw -= (e.clientX - l.x) * k;
+      Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + (e.clientY - l.y) * k * 0.7));
+      l.x = e.clientX; l.y = e.clientY;
+    });
+    const endLook = (e) => looks.delete(e.pointerId);
+    canvas.addEventListener('pointerup', endLook);
+    canvas.addEventListener('pointercancel', endLook);
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      Scene3D.dist = Math.max(3, Math.min(14, Scene3D.dist + e.deltaY * 0.01));
+    }, { passive: false });
     document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touch) { G.touch = true; if (G.running) $('#touch').classList.remove('hidden'); } }, true);
   },
 
@@ -193,7 +215,7 @@ const Game = {
         const tgt = n.path[0];
         const dx = tgt.x - n.x, dy = tgt.y - n.y;
         const d = Math.hypot(dx, dy);
-        const sp = (n.sheltering ? 190 : 80) * dt;
+        const sp = (n.sheltering ? 150 : 70) * dt;
         if (d <= sp) { n.x = tgt.x; n.y = tgt.y; n.path.shift(); }
         else { n.x += dx / d * sp; n.y += dy / d * sp; n.angle = Math.atan2(dy, dx); n.walk += dt * (n.sheltering ? 16 : 9); }
         continue;
@@ -221,8 +243,12 @@ const Game = {
     const dt = Math.min(0.05, (t - (this.last || t)) / 1000);
     this.last = t;
     if (G.running) {
-      if (!G.paused && !UI.busy) this.update(dt);
-      this.render(t);
+      const live = !G.paused && !UI.busy;
+      if (live) this.update(dt);
+      Scene3D.update(live ? dt : 0, t);
+      Scene3D.render();
+      this.drawOverlay(t);
+      this.drawMinimap();
       if ((this.hudT = (this.hudT || 0) + dt) > 0.2) { this.hudT = 0; this.hud(); }
     }
     requestAnimationFrame(tt => this.frame(tt));
@@ -232,22 +258,25 @@ const Game = {
     const S = G.state, P = G.player;
     S.clock += dt * DATA.minutesPerSecond;
 
-    // Movement.
+    // Movement relative to the camera: W/up = away from the camera.
     let mx = 0, my = 0;
     const k = G.keys;
     if (k.has('KeyW') || k.has('ArrowUp')) my -= 1;
     if (k.has('KeyS') || k.has('ArrowDown')) my += 1;
-    if (k.has('KeyA') || k.has('ArrowLeft')) mx -= 1;
-    if (k.has('KeyD') || k.has('ArrowRight')) mx += 1;
+    if (k.has('KeyA')) mx -= 1;
+    if (k.has('KeyD')) mx += 1;
+    if (k.has('ArrowLeft') || k.has('KeyQ')) Scene3D.yaw += dt * 2.2;
+    if (k.has('ArrowRight') || k.has('KeyR')) Scene3D.yaw -= dt * 2.2;
     if (G.stick.x || G.stick.y) { mx = G.stick.x; my = G.stick.y; }
     const len = Math.hypot(mx, my);
     const wantsRun = k.has('ShiftLeft') || k.has('ShiftRight') || G.touchRun || !!G.alert;
     P.running = false;
+    P.moving = false;
     if (len > 0.1) {
       if (len > 1) { mx /= len; my /= len; }
-      let speed = 130;
+      let speed = 90;
       if (wantsRun && S.energy > 3) {
-        speed = 225;
+        speed = 165;
         P.running = true;
         const drain = (G.perk && G.perk.key === 'stamina' ? 0.6 : 1.2) * dt * (G.alert ? 0.3 : 1);
         S.energy = Math.max(0, S.energy - drain);
@@ -257,8 +286,11 @@ const Game = {
         speed *= 0.7;
         if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול משהו או לקנות קפה בש.ק.', 'bad'); }
       } else G.lowEnergyWarned = false;
-      World.move(P, mx * speed * dt, my * speed * dt);
-      P.angle = Math.atan2(my, mx);
+      const B = Scene3D.basis();
+      const vx = B.rx * mx - B.fx * my, vy = B.rz * mx - B.fz * my;
+      World.move(P, vx * speed * dt, vy * speed * dt);
+      P.angle = Math.atan2(vy, vx);
+      P.moving = true;
       const before = P.walk;
       P.walk += dt * (P.running ? 15 : 10);
       if (Math.floor(before / Math.PI) !== Math.floor(P.walk / Math.PI)) Sound.step();
@@ -275,68 +307,10 @@ const Game = {
     this.updateNpcs(dt);
     Story.update(dt);
 
-    // Camera.
-    const cam = G.cam;
-    cam.x = Math.max(0, Math.min(World.W * TS - cam.w, P.x - cam.w / 2));
-    cam.y = Math.max(0, Math.min(World.H * TS - cam.h, P.y - cam.h / 2));
-    if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 20);
+    if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 1.2);
 
     const it = this.nearestInteractable();
     UI.prompt(it && !G.alert ? it.label : null);
-  },
-
-  render(now) {
-    const cam = G.cam;
-    const z = cam.zoom * G.dpr;
-    ctx.setTransform(z, 0, 0, z, 0, 0);
-    const sx = G.shake ? (Math.random() - 0.5) * G.shake : 0, sy = G.shake ? (Math.random() - 0.5) * G.shake : 0;
-    ctx.save();
-    ctx.translate(sx, sy);
-    World.render(ctx, { x: Math.floor(cam.x), y: Math.floor(cam.y), w: Math.ceil(cam.w), h: Math.ceil(cam.h) }, now);
-    ctx.save();
-    ctx.translate(-Math.floor(cam.x), -Math.floor(cam.y));
-    Story.draw(ctx, now);
-
-    // People, sorted by y for overlap.
-    const P = G.player;
-    const people = [...G.npcs.map(n => ({ e: n, npc: true })), { e: P, npc: false }].sort((a, b) => a.e.y - b.e.y);
-    const pr = G.profile;
-    for (const { e, npc } of people) {
-      if (npc) {
-        drawSoldier(ctx, e.x, e.y, e.angle, e.walk, e.look);
-        ctx.font = '700 11px Rubik, Arial';
-        ctx.textAlign = 'center';
-        ctx.direction = 'rtl';
-        ctx.fillStyle = 'rgba(20,26,16,.6)';
-        const w = ctx.measureText(e.short).width + 8;
-        ctx.fillRect(e.x - w / 2, e.y - 32, w, 15);
-        ctx.fillStyle = '#f4f1e6';
-        ctx.fillText(e.short, e.x, e.y - 20);
-      } else {
-        drawSoldier(ctx, P.x, P.y, P.angle, P.walk, {
-          skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: G.alert ? 'helmet' : 'beret', carry: P.carry,
-          uniform: '#55663a',
-        });
-      }
-    }
-    this.drawObjectiveMarker(now);
-    ctx.restore();
-    this.drawLighting(now);
-    ctx.restore();
-
-    // Screen-space effects.
-    ctx.setTransform(z, 0, 0, z, 0, 0);
-    Story.drawSky(ctx);
-    if (G.alert && G.alert.phase === 'run') {
-      const a = 0.18 + Math.sin(now / 160) * 0.1;
-      const grad = ctx.createRadialGradient(cam.w / 2, cam.h / 2, cam.h * 0.3, cam.w / 2, cam.h / 2, cam.h * 0.8);
-      grad.addColorStop(0, 'rgba(230,59,46,0)');
-      grad.addColorStop(1, `rgba(230,59,46,${a})`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, cam.w, cam.h);
-    }
-    this.drawEdgeArrow();
-    this.drawMinimap();
   },
 
   darkness() {
@@ -349,99 +323,51 @@ const Game = {
     return 0.62;
   },
 
-  drawLighting(now) {
-    const dark = this.darkness();
-    if (dark <= 0.01) return;
-    const cam = G.cam;
-    const w = lightCanvas.width, h = lightCanvas.height;
-    lctx.globalCompositeOperation = 'source-over';
-    lctx.clearRect(0, 0, w, h);
-    lctx.fillStyle = `rgba(8,12,36,${dark})`;
-    lctx.fillRect(0, 0, w, h);
-    lctx.globalCompositeOperation = 'destination-out';
-    const light = (x, y, r, s = 1) => {
-      const g = lctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, `rgba(0,0,0,${s})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      lctx.fillStyle = g;
-      lctx.fillRect(x - r, y - r, r * 2, r * 2);
-    };
-    for (const L of World.lamps) {
-      const x = L.x - cam.x, y = L.y - cam.y;
-      if (x < -L.r || y < -L.r || x > w + L.r || y > h + L.r) continue;
-      light(x, y, L.r, 0.85);
-    }
-    light(G.player.x - cam.x, G.player.y - cam.y, 120, 0.7);
-    const car = Story.gateShift && Story.gateShift.car;
-    if (car && !car.hidden) light(car.x - cam.x + Math.cos(car.angle) * 60, car.y - cam.y + Math.sin(car.angle) * 60, 90, 0.9);
-    ctx.save();
-    ctx.setTransform(G.cam.zoom * G.dpr, 0, 0, G.cam.zoom * G.dpr, 0, 0);
-    ctx.drawImage(lightCanvas, 0, 0);
-    // Warm lamp glow.
-    ctx.globalCompositeOperation = 'lighter';
-    for (const L of World.lamps) {
-      if (L.r > 160) continue;
-      const x = L.x - cam.x, y = L.y - cam.y;
-      if (x < -60 || y < -60 || x > w + 60 || y > h + 60) continue;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, 60);
-      g.addColorStop(0, `rgba(255,200,120,${0.25 * dark})`);
-      g.addColorStop(1, 'rgba(255,200,120,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(x - 60, y - 60, 120, 120);
-    }
-    ctx.restore();
-  },
-
   objectiveTarget() {
     if (G.alert && G.alert.phase === 'run') return World.nearestShelter(G.player.x, G.player.y);
     const o = Story.objective();
     return o && o.target;
   },
 
-  drawObjectiveMarker(now) {
+  // Screen overlay: red-alert vignette and a compass arrow toward the objective.
+  drawOverlay(now) {
+    const w = G.cam.w, h = G.cam.h;
+    octx.setTransform(G.dpr, 0, 0, G.dpr, 0, 0);
+    octx.clearRect(0, 0, w, h);
+    if (G.alert && G.alert.phase === 'run') {
+      const a = 0.22 + Math.sin(now / 160) * 0.1;
+      const grad = octx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.85);
+      grad.addColorStop(0, 'rgba(230,59,46,0)');
+      grad.addColorStop(1, `rgba(230,59,46,${a})`);
+      octx.fillStyle = grad;
+      octx.fillRect(0, 0, w, h);
+    }
     const t = this.objectiveTarget();
-    if (!t) return;
-    const bob = Math.sin(now / 200) * 5;
-    ctx.fillStyle = G.alert ? '#e63b2e' : '#f2c14e';
-    ctx.strokeStyle = '#1d1d10';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(t.x, t.y - 22 + bob);
-    ctx.lineTo(t.x - 10, t.y - 38 + bob);
-    ctx.lineTo(t.x + 10, t.y - 38 + bob);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  },
-
-  drawEdgeArrow() {
-    const t = this.objectiveTarget();
-    if (!t) return;
-    const cam = G.cam;
-    const x = t.x - cam.x, y = t.y - cam.y;
-    if (x > 20 && y > 20 && x < cam.w - 20 && y < cam.h - 20) return;
-    const cx = cam.w / 2, cy = cam.h / 2;
-    const ang = Math.atan2(y - cy, x - cx);
-    const pad = 44;
-    const k = Math.min(Math.abs((cam.w / 2 - pad) / Math.cos(ang)), Math.abs((cam.h / 2 - pad) / Math.sin(ang)));
-    const ax = cx + Math.cos(ang) * k, ay = cy + Math.sin(ang) * k;
-    ctx.save();
-    ctx.translate(ax, ay);
-    ctx.rotate(ang);
-    ctx.fillStyle = G.alert ? '#e63b2e' : '#f2c14e';
-    ctx.strokeStyle = '#1d1d10';
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(18, 0); ctx.lineTo(-10, -13); ctx.lineTo(-4, 0); ctx.lineTo(-10, 13); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.restore();
-    const dist = Math.round(Math.hypot(t.x - G.player.x, t.y - G.player.y) / TS * 2);
-    ctx.font = '800 13px Rubik, Arial';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#fff';
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 3;
-    ctx.strokeText(`${dist}מ'`, ax - Math.cos(ang) * 30, ay - Math.sin(ang) * 30 + 4);
-    ctx.fillText(`${dist}מ'`, ax - Math.cos(ang) * 30, ay - Math.sin(ang) * 30 + 4);
+    if (!t || UI.busy || Mini.active) return;
+    const P = G.player;
+    const vx = t.x - P.x, vy = t.y - P.y;
+    const distM = Math.hypot(vx, vy) * S3;
+    if (distM < 2.5) return;
+    const B = Scene3D.basis();
+    const ang = Math.atan2(vx * B.rx + vy * B.rz, vx * B.fx + vy * B.fz);
+    const cx = w / 2, cy = h - (G.touch ? 215 : 120);
+    octx.save();
+    octx.translate(cx, cy);
+    octx.rotate(ang);
+    octx.fillStyle = G.alert ? '#e63b2e' : '#f2c14e';
+    octx.strokeStyle = '#1d1d10';
+    octx.lineWidth = 2.5;
+    octx.beginPath(); octx.moveTo(0, -24); octx.lineTo(15, 10); octx.lineTo(0, 3); octx.lineTo(-15, 10); octx.closePath();
+    octx.fill(); octx.stroke();
+    octx.restore();
+    octx.font = '800 14px Rubik, Arial';
+    octx.textAlign = 'center';
+    octx.lineWidth = 3;
+    octx.strokeStyle = 'rgba(0,0,0,.8)';
+    octx.fillStyle = '#fff';
+    const label = `${Math.round(distM)} מ'`;
+    octx.strokeText(label, cx, cy + 34);
+    octx.fillText(label, cx, cy + 34);
   },
 
   drawMinimap() {
@@ -466,8 +392,12 @@ const Game = {
     mctx.fillStyle = '#fff';
     mctx.strokeStyle = '#000';
     mctx.beginPath(); mctx.arc(G.player.x / TS * s, G.player.y / TS * s, 3.5, 0, 7); mctx.fill(); mctx.stroke();
-    mctx.strokeStyle = 'rgba(255,255,255,.7)';
-    mctx.strokeRect(G.cam.x / TS * s, G.cam.y / TS * s, G.cam.w / TS * s, G.cam.h / TS * s);
+    // View direction wedge.
+    const B = Scene3D.basis();
+    const px = G.player.x / TS * s, py = G.player.y / TS * s;
+    const a = Math.atan2(B.fz, B.fx);
+    mctx.fillStyle = 'rgba(255,255,255,.22)';
+    mctx.beginPath(); mctx.moveTo(px, py); mctx.arc(px, py, 22, a - 0.5, a + 0.5); mctx.closePath(); mctx.fill();
   },
 
   hud() {
@@ -525,8 +455,9 @@ const Game = {
   title() {
     const story = this.load('story');
     UI.screen(`<div class="shade"></div><div class="content">
-      <div class="logo">Neti<span>Bot</span></div>
-      <div class="tagline">הסוללה של נתיבות · משחק עולם פתוח בכיפת ברזל</div>
+      <div class="logo">נתי<span>בוט</span></div>
+      <div class="logo-sub">NETIBOT</div>
+      <div class="tagline">הסוללה של נתיבות · משחק עולם פתוח בגוף שלישי</div>
       <div class="menu">
         ${story ? `<button class="btn" id="m-cont">המשך — יום ${story.state.day} (${story.profile.name})</button>` : ''}
         <button class="btn ${story ? 'ghost' : ''}" id="m-new">מצב סיפור — משחק חדש</button>
@@ -550,8 +481,10 @@ const Game = {
     const html = `<div class="content"><div class="panel">
       <h2>איך משחקים</h2>
       <p><b>המטרה:</b> לעבור את פלג"צ — חמישה ימים בפלגה הצעירה של סוללת כיפת ברזל ליד נתיבות — ולעבור את מבחן הסיום. צריך ציון פלג"צ של ${DATA.passScore} לפחות ולעבור 3 מתוך 4 חלקי המבחן.</p>
-      <p><b>מקלדת:</b> WASD / חצים — הליכה · Shift — ריצה · E — פעולה · רווח — המשך שיחה · Tab — טלפון (משימות, הודעות, הישגים).</p>
-      <p><b>בטלפון:</b> ג'ויסטיק משמאל, כפתור E לפעולה, כפתור "ריצה".</p>
+      <p><b>מקלדת:</b> WASD — הליכה (קדימה = לכיוון שהמצלמה מסתכלת) · Shift — ריצה · E — פעולה · רווח — המשך שיחה · Tab — טלפון.</p>
+      <p><b>מצלמה:</b> גרירה עם העכבר מסובבת את המצלמה סביב הדמות, גלגלת — זום. אפשר גם חצים ימינה/שמאלה (או Q ו-R).</p>
+      <p><b>בטלפון:</b> ג'ויסטיק משמאל להליכה, גרירה עם האצבע על המסך לסיבוב המצלמה, כפתור E לפעולה וכפתור "ריצה".</p>
+      <p><b>החץ הצהוב</b> בתחתית המסך מצביע על המשימה הבאה, והחץ המרחף מעל המטרה מסמן אותה בעולם.</p>
       <p><b>צבע אדום:</b> יש ${DATA.redAlertSeconds} שניות להגיע למיגונית (גג עם פס אדום, ונקודות אדומות במפה). החץ האדום מראה את הקרובה.</p>
       <p><b>מארזים:</b> אחרי יירוטים משגר מתרוקן. לוקחים מארז במחסן, סוחבים למשגר ומבצעים את שלבי ההחלפה.</p>
       <p><b>ש"ג:</b> בודקים שם ומספר רכב מול רשימת הכניסה. מורשה — פותחים, ואחרי שעבר — סוגרים מיד!</p>
@@ -636,7 +569,7 @@ const Game = {
       this.applyProfile();
       if (mode === 'story') {
         await UI.cutscene([
-          { img: 'assets/title.jpg', text: '{gdud}, סוללת {battery}. האתר: גבעה חולית ליד נתיבות. כולם קוראים לו NetiBot.' },
+          { img: 'assets/title.jpg', text: '{gdud}, סוללת {battery}. האתר: גבעה חולית ליד נתיבות. כולם קוראים לו נתיבוט.' },
           { img: 'assets/guard.jpg', text: 'אבל לפני שאת[ה/] באמת חלק מהסוללה — יש פלג"צ: הפלגה הצעירה. חמישה ימים של משימות, שמירות, אזעקות — ומבחן סיום.' },
           { img: 'assets/redalert.jpg', text: `חוק ראשון בנתיבות: כשיש צבע אדום — יש לך ${DATA.redAlertSeconds} שניות להגיע למיגונית. בלי ויכוחים.` },
         ]);

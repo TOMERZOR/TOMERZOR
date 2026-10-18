@@ -19,7 +19,9 @@ html, body {
   user-select: none; -webkit-user-select: none;
   touch-action: none;
 }
-canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: grab; touch-action: none; }
+canvas#world:active { cursor: grabbing; }
+canvas#overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; }
 .hidden { display: none !important; }
 button { font-family: inherit; }
 
@@ -109,9 +111,10 @@ button { font-family: inherit; }
 .screen:empty { display: none; }
 .screen .shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,14,8,.15), rgba(10,14,8,.85)); }
 .screen .content { position: relative; width: min(980px, 100%); padding: 24px 16px; text-align: center; }
-.logo { font-size: clamp(54px, 12vw, 120px); font-weight: 800; letter-spacing: -2px; line-height: 1; direction: ltr;
+.logo { font-size: clamp(54px, 12vw, 120px); font-weight: 800; line-height: 1;
   text-shadow: 0 4px 0 #0008, 0 0 30px rgba(242,193,78,.35); }
 .logo span { color: var(--gold); }
+.logo-sub { font-size: clamp(14px, 2.4vw, 18px); letter-spacing: 6px; opacity: .7; margin-top: 6px; direction: ltr; }
 .tagline { font-size: clamp(16px, 3vw, 22px); margin: 10px 0 28px; opacity: .92; }
 .menu { display: flex; flex-direction: column; gap: 10px; align-items: center; }
 .btn {

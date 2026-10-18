@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>NetiBot — הסוללה של נתיבות</title>
+<title>נתיבוט</title>
 <meta name="description" content="משחק עולם פתוח: חייל/ת בפלג&quot;צ של סוללת כיפת ברזל בנתיבות.">
 <meta name="theme-color" content="#1f2a1a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +13,7 @@
 </head>
 <body>
 <canvas id="world"></canvas>
+<canvas id="overlay"></canvas>
 
 <!-- HUD -->
 <div id="hud" class="hidden">
@@ -54,12 +55,14 @@
 <div id="phone" class="phone hidden"></div>
 <div id="fade" class="fade"></div>
 
+<script src="vendor/three.min.js"></script>
 <script src="js/data.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/world.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/minigames.js"></script>
 <script src="js/story.js"></script>
+<script src="js/scene3d.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

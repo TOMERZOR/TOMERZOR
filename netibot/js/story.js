@@ -83,7 +83,6 @@ const Story = {
   tasks: [],
   trash: [],
   dust: [],
-  sky: [],
   pendingAlerts: [],
   gateShift: null,
   run: null,
@@ -101,7 +100,7 @@ const Story = {
     this.dust = [];
     this.gateShift = null;
     this.run = null;
-    this.sky = [];
+    Scene3D.clearSky();
     G.alert = null;
     UI.banner(null);
     Sound.stopSiren();
@@ -208,7 +207,6 @@ const Story = {
       this.alert(false);
     }
     if (G.alert) this.updateAlert(dt);
-    this.updateSky(dt);
     if (this.gateShift) this.updateGate(dt);
     if (this.run) this.updateRun(dt);
     // Morning lineup: arriving at the parade ground completes it.
@@ -354,7 +352,7 @@ const Story = {
       if (!S2.dayFlags.seeds) {
         S2.dayFlags.seeds = true;
         await UI.talk([
-          { who: 'friend', text: ['קח[י] גרעינים, על חשבוני 🌻', '[אתה/את] יודע[/ת] למה קוראים לזה NetiBot? כי כל הבוטים פה בנתיבות 🤖😂', 'שמעתי שהמפקד ישן עם הכומתה. אל תגיד[/י] שאמרתי.', 'בשמירה [תעשה/תעשי] שטיפת פנים כל כמה דקות, עובד.'][S2.day % 4] },
+          { who: 'friend', text: ['קח[י] גרעינים, על חשבוני 🌻', '[אתה/את] יודע[/ת] למה קוראים לזה נתיבוט? כי כל הבוטים פה בנתיבות 🤖😂', 'שמעתי שהמפקד ישן עם הכומתה. אל תגיד[/י] שאמרתי.', 'בשמירה [תעשה/תעשי] שטיפת פנים כל כמה דקות, עובד.'][S2.day % 4] },
         ]);
         Game.addStat('morale', 8);
         UI.toast('מורל +8 🌻', 'good');
@@ -735,62 +733,11 @@ const Story = {
   },
 
   spawnThreat() {
-    // Screen-space rocket from the west, interceptor from the nearest loaded launcher.
-    const vw = G.cam.w, vh = G.cam.h;
-    const rocket = { kind: 'rocket', x: -20, y: vh * (0.1 + Math.random() * 0.35), vx: 160 + Math.random() * 60, vy: 25 + Math.random() * 30, trail: [] };
+    // A rocket from the west; a loaded launcher fires an interceptor at it.
     const launchers = World.launchers.filter(l => l.ammo > 0);
     const L = launchers[Math.floor(Math.random() * launchers.length)] || World.launchers[0];
-    const lx = Math.max(10, Math.min(vw - 10, L.x + L.w / 2 - G.cam.x));
-    const ly = Math.max(10, Math.min(vh - 10, L.y - G.cam.y));
     L.ammo = Math.max(0, L.ammo - 1 - Math.floor(Math.random() * 3));
-    this.sky.push(rocket);
-    setTimeout(() => {
-      Sound.launch();
-      this.sky.push({ kind: 'interceptor', x: lx, y: ly, target: rocket, trail: [] });
-    }, 500 + Math.random() * 500);
-  },
-  updateSky(dt) {
-    for (const s of this.sky) {
-      s.trail.push({ x: s.x, y: s.y });
-      if (s.trail.length > 26) s.trail.shift();
-      if (s.kind === 'rocket') { s.x += s.vx * dt; s.y += s.vy * dt; if (s.x > G.cam.w + 40) s.dead = true; }
-      else if (s.kind === 'interceptor') {
-        const tg = s.target;
-        const d = Math.hypot(tg.x - s.x, tg.y - s.y);
-        const sp = 520 * dt;
-        if (d < sp + 6 || tg.dead) {
-          s.dead = true;
-          if (!tg.dead) {
-            tg.dead = true;
-            this.sky.push({ kind: 'boom', x: tg.x, y: tg.y, r: 2, trail: [] });
-            Sound.boom();
-            G.state.stats.intercepts++;
-            G.shake = 8;
-          }
-        } else { s.x += (tg.x - s.x) / d * sp; s.y += (tg.y - s.y) / d * sp; }
-      } else if (s.kind === 'boom') { s.r += dt * 90; if (s.r > 60) s.dead = true; }
-    }
-    this.sky = this.sky.filter(s => !s.dead);
-  },
-  drawSky(ctx) {
-    for (const s of this.sky) {
-      if (s.kind === 'boom') {
-        const a = 1 - s.r / 60;
-        ctx.fillStyle = `rgba(255,220,120,${a * 0.8})`;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 0.5, 0, 7); ctx.fill();
-        ctx.strokeStyle = `rgba(255,255,255,${a})`;
-        ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.stroke();
-        continue;
-      }
-      ctx.strokeStyle = s.kind === 'rocket' ? 'rgba(90,80,70,.6)' : 'rgba(240,240,240,.85)';
-      ctx.lineWidth = s.kind === 'rocket' ? 3 : 4;
-      ctx.beginPath();
-      s.trail.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
-      ctx.stroke();
-      ctx.fillStyle = s.kind === 'rocket' ? '#ff6a3a' : '#fff';
-      ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, 7); ctx.fill();
-    }
+    Scene3D.spawnThreat(L);
   },
 
   spawnTrash(n) {
@@ -806,41 +753,6 @@ const Story = {
       const x = (tx + 0.5) * TS, y = (ty + 0.5) * TS;
       if (World.blocked(x, y, 14)) continue;
       this.trash.push({ x, y, kind: Math.floor(Math.random() * 3) });
-    }
-  },
-
-  // World-space dynamic drawing: trash, dust, cars, markers.
-  draw(ctx, now) {
-    for (const t of this.trash) {
-      ctx.fillStyle = ['#d8d2c2', '#3a6ea5', '#b33'][t.kind];
-      if (t.kind === 0) { ctx.beginPath(); ctx.ellipse(t.x, t.y, 8, 6, 0.5, 0, 7); ctx.fill(); }
-      else { ctx.fillRect(t.x - 4, t.y - 8, 8, 16); }
-      ctx.fillStyle = 'rgba(242,193,78,.5)';
-      ctx.beginPath(); ctx.arc(t.x, t.y, 14 + Math.sin(now / 250) * 2, 0, 7); ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1;
-    }
-    for (const d of this.dust) {
-      ctx.fillStyle = 'rgba(110,90,60,.5)';
-      for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(d.x + Math.sin(i * 2.1) * 8, d.y + Math.cos(i * 1.7) * 6, 4, 0, 7); ctx.fill(); }
-    }
-    if (this.gateShift && this.gateShift.car && !this.gateShift.car.hidden) drawCar(ctx, this.gateShift.car);
-    if (this.run) {
-      const p = this.run.points[this.run.idx];
-      ctx.strokeStyle = '#f2c14e';
-      ctx.lineWidth = 4;
-      ctx.beginPath(); ctx.arc(p.x, p.y, 26 + Math.sin(now / 150) * 4, 0, 7); ctx.stroke();
-    }
-    {
-      // Training board sign.
-      const b = SPOTS.board;
-      ctx.fillStyle = '#6b4a2a';
-      ctx.fillRect(b.x - 4, b.y - 26, 4, 26);
-      ctx.fillRect(b.x + 22, b.y - 26, 4, 26);
-      ctx.fillStyle = '#e9e4d4';
-      ctx.fillRect(b.x - 8, b.y - 44, 38, 24);
-      ctx.fillStyle = '#333';
-      ctx.font = '700 9px Rubik';
-      ctx.textAlign = 'center';
-      ctx.fillText('אימונים', b.x + 11, b.y - 28);
     }
   },
 

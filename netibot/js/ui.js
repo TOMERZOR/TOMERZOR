@@ -11,20 +11,47 @@ const el = (tag, attrs = {}, html = '') => {
   return e;
 };
 
-// "[מוכן/מוכנה]" picks by gender; {name} {battery} {gdud} are filled from the save.
+// The cast from js/roster.js (or the public js/roster.example.js).
+const Cast = {
+  byId: {},
+  init() {
+    for (const p of [...ROSTER.people, ROSTER.easterEgg]) this.byId[p.id] = p;
+  },
+  get(id) { return this.byId[id]; },
+  short(id) { const p = this.byId[id]; return p ? p.short : id; },
+  full(id) { const p = this.byId[id]; return p ? p.name : id; },
+};
+
+// "[מוכן/מוכנה]" picks by gender; {name} {battery} {gdud} are filled from the save;
+// {@id} / {@@id} are a cast member's short / full name; {platoon} {hq} name the unit and HQ site.
 function fmt(text) {
   const p = G.profile || {};
   const female = p.gender === 'f';
   return String(text)
     .replace(/\[([^\/\]]*)\/([^\]]*)\]/g, (_, m, f) => (female ? f : m))
+    .replace(/\{@@(\w+)\}/g, (_, id) => Cast.full(id))
+    .replace(/\{@(\w+)\}/g, (_, id) => Cast.short(id))
+    .replace(/\{platoon\}/g, ROSTER.platoon)
+    .replace(/\{hq\}/g, ROSTER.sites.hq)
     .replace(/\{name\}/g, p.name || 'חייל')
     .replace(/\{battery\}/g, p.batteryName || '')
     .replace(/\{gdud\}/g, p.gdudName || '');
 }
 
+// Same, plus the speaker's own {first} {short} {full}.
+function fmtAs(person, text) {
+  if (!person) return fmt(text);
+  return fmt(String(text).replace(/\{first\}/g, person.first).replace(/\{short\}/g, person.short).replace(/\{full\}/g, person.name));
+}
+
+function avatarHtml(person) {
+  const letter = (person.first || person.short || '?').charAt(0);
+  return `<div class="avatar" style="background:${person.color || '#4b5a2a'}"><span class="av-emoji">${person.emoji || '🪖'}</span><span class="av-letter">${letter}</span></div>`;
+}
+
 // Gender/name tokens are resolved in any text added to the page, so templates
 // in mini-games and screens can use them without calling fmt() themselves.
-const TOKEN_RE = /\[[^\/\]]*\/[^\]]*\]|\{(name|battery|gdud)\}/;
+const TOKEN_RE = /\[[^\/\]]*\/[^\]]*\]|\{(name|battery|gdud|platoon|hq)\}|\{@@?\w+\}/;
 function fixTokens(root) {
   if (root.nodeType === 3) { if (TOKEN_RE.test(root.nodeValue)) root.nodeValue = fmt(root.nodeValue); return; }
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -82,7 +109,13 @@ const UI = {
   },
 
   // lines: [{who:'commander', text:'...', choices:[{label, value}]}]. Resolves with last choice value.
+  // Conversations queue up, so an event can't open a dialog on top of another one.
   talk(lines) {
+    const run = () => this.showTalk(lines);
+    this.talkQueue = (this.talkQueue || Promise.resolve()).then(run, run);
+    return this.talkQueue;
+  },
+  showTalk(lines) {
     return new Promise(resolve => {
       this.busy = true;
       const d = $('#dialog');
@@ -99,15 +132,17 @@ const UI = {
           return;
         }
         const line = lines[i];
+        const person = Cast.get(line.who);
         const ch = DATA.characters[line.who] || { name: line.who, icon: '💬' };
-        const name = line.who === 'player' ? fmt('{name}') : ch.name;
+        const name = line.who === 'player' ? fmt('{name}') : person ? person.name : ch.name;
+        const title = person ? `<span class="who-title">${fmtAs(person, person.title || '')}</span>` : '';
         const pic = line.who === 'player'
           ? `<div class="portrait-fallback">🪖</div>`
-          : ch.img ? `<img src="${ch.img}" alt="">` : `<div class="portrait-fallback">${ch.icon}</div>`;
-        d.innerHTML = `${pic}<div class="body"><div class="who">${name}</div><div class="txt"></div>
+          : person ? avatarHtml(person) : ch.img ? `<img src="${ch.img}" alt="">` : `<div class="portrait-fallback">${ch.icon}</div>`;
+        d.innerHTML = `${pic}<div class="body"><div class="who">${name} ${title}</div><div class="txt"></div>
           <div class="choices"></div><div class="hint">${line.choices ? '' : (G.touch ? 'הקש להמשך' : 'רווח / E / לחיצה להמשך')}</div></div>`;
         d.classList.remove('hidden');
-        const full = fmt(line.text);
+        const full = fmtAs(person, line.text);
         const txt = d.querySelector('.txt');
         let n = 0;
         clearInterval(typing);
@@ -131,7 +166,7 @@ const UI = {
         if (!line) return;
         if (typing) {
           clearInterval(typing); typing = null;
-          d.querySelector('.txt').textContent = fmt(line.text);
+          d.querySelector('.txt').textContent = fmtAs(Cast.get(line.who), line.text);
           if (line.choices) {
             const box = d.querySelector('.choices');
             if (!box.children.length) for (const c of line.choices) {
@@ -210,7 +245,7 @@ const UI = {
         : '<p>אין משימות פתוחות. אפשר להסתובב בבסיס, להתאמן או לקנות משהו בש.ק.</p>';
     } else if (this.phoneTab === 'msgs') {
       const msgs = S.inbox.slice().reverse();
-      body.innerHTML = msgs.length ? msgs.map(m => `<div class="ph-msg"><div class="from">${m.from}</div>${fmt(m.text)}</div>`).join('') : '<p>אין הודעות.</p>';
+      body.innerHTML = msgs.length ? msgs.map(m => `<div class="ph-msg"><div class="from">${fmt(m.from)}</div>${fmt(m.text)}</div>`).join('') : '<p>אין הודעות.</p>';
     } else if (this.phoneTab === 'stats') {
       body.innerHTML = `
         <div class="ph-item"><div class="t">${fmt('{name}')}</div>${fmt('{gdud}')} · סוללת ${fmt('{battery}')}</div>

@@ -5,6 +5,8 @@ const TS = DATA.tile;
 const World = {
   W: DATA.mapW,
   H: DATA.mapH,
+  id: 'netivot',
+  def: null,        // DATA.maps entry for the current site
   grid: [],
   objects: [],      // solid or decorative props, in px
   lamps: [],        // light sources for night time
@@ -15,104 +17,146 @@ const World = {
   gateOpen: 0,      // 0 = closed, 1 = fully open
   gateTarget: 0,
   baked: null,
+  cache: {},
 
-  build() {
+  // Switch to a site. Each site is built once and keeps its state (beds, launchers, containers).
+  use(id) {
+    if (!this.cache[id]) this.cache[id] = this.build(id);
+    Object.assign(this, this.cache[id]);
+    this.id = id;
+    this.gateOpen = this.gateTarget = 0;
+  },
+
+  build(id) {
     const { W, H } = this;
-    this.grid = Array.from({ length: H }, () => new Array(W).fill(T.OUT));
-    const fill = (x0, y0, x1, y1, t) => {
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (this.inside(x, y)) this.grid[y][x] = t;
+    const site = {
+      id, def: DATA.maps[id], grid: Array.from({ length: H }, () => new Array(W).fill(T.OUT)),
+      objects: [], lamps: [], shelters: [], beds: [], lockers: [], launchers: [], baked: null,
     };
-    this.objects = [];
-    this.lamps = [];
-    this.shelters = [];
-    this.beds = [];
-    this.lockers = [];
+    const g = site.grid;
+    const fill = (x0, y0, x1, y1, t) => {
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (this.inside(x, y)) g[y][x] = t;
+    };
+    const prop = (kind, tx, ty, tw, th, solid = true, extra = {}) => {
+      const o = { kind, x: tx * TS, y: ty * TS, w: tw * TS, h: th * TS, solid, ...extra };
+      site.objects.push(o);
+      return o;
+    };
+    const lamp = (x, y) => site.lamps.push({ x: (x + 0.5) * TS, y: (y + 0.5) * TS, r: 150 });
 
-    // Base ground and fence.
+    // Every site shares the same fenced rectangle, gate and access roads.
     fill(2, 2, 61, 41, T.SAND);
-    for (let x = 2; x <= 61; x++) { this.grid[2][x] = T.FENCE; this.grid[41][x] = T.FENCE; }
-    for (let y = 2; y <= 41; y++) { this.grid[y][2] = T.FENCE; this.grid[y][61] = T.FENCE; }
-
-    // Roads: outside highway, gate road and the inner road.
+    for (let x = 2; x <= 61; x++) { g[2][x] = T.FENCE; g[41][x] = T.FENCE; }
+    for (let y = 2; y <= 41; y++) { g[y][2] = T.FENCE; g[y][61] = T.FENCE; }
     fill(0, 42, W - 1, 44, T.ROAD);
     fill(29, 22, 32, 41, T.ROAD);
     fill(4, 22, 59, 23, T.ROAD);
-    for (let x = 29; x <= 32; x++) this.grid[41][x] = T.GATE;
+    for (let x = 29; x <= 32; x++) g[41][x] = T.GATE;
 
-    // Training areas.
-    fill(18, 3, 33, 11, T.GRASS);
-    fill(6, 15, 30, 20, T.TRACK);
-    fill(7, 16, 29, 19, T.GRASS);
-    fill(34, 25, 44, 30, T.PAD);
-    fill(44, 26, 49, 28, T.PAD);
+    const def = site.def;
+    if (id === 'netivot') {
+      fill(18, 3, 33, 11, T.GRASS);
+      fill(6, 15, 30, 20, T.TRACK);
+      fill(7, 16, 29, 19, T.GRASS);
+      fill(34, 25, 44, 30, T.PAD);
+      fill(44, 26, 49, 28, T.PAD);
+      for (const L of def.launchers) fill(L.x - 1, L.y - 1, L.x + 3, L.y + 5, T.PAD);
+    } else if (id === 'hq') {
+      fill(5, 34, 16, 40, T.PAD);
+      fill(20, 13, 23, 16, T.PAD);
+    } else if (id === 'field') {
+      for (const it of DATA.deploy) fill(it.x, it.y, it.x + it.w - 1, it.y + it.h - 1, T.PAD);
+    }
 
-    for (const L of DATA.launchers) fill(L.x - 1, L.y - 1, L.x + 3, L.y + 5, T.PAD);
-
-    // Buildings.
-    for (const b of DATA.buildings) {
+    for (const b of def.buildings) {
       fill(b.x, b.y, b.x + b.w - 1, b.y + b.h - 1, T.FLOOR);
-      for (let x = b.x; x < b.x + b.w; x++) { this.grid[b.y][x] = T.WALL; this.grid[b.y + b.h - 1][x] = T.WALL; }
-      for (let y = b.y; y < b.y + b.h; y++) { this.grid[y][b.x] = T.WALL; this.grid[y][b.x + b.w - 1] = T.WALL; }
-      for (const [dx, dy] of b.doors) this.grid[dy][dx] = T.FLOOR;
-      if (b.shelter) this.shelters.push({ id: b.id, x: (b.x + 1.5) * TS, y: (b.y + 1.5) * TS, door: { x: (b.doors[0][0] + 0.5) * TS, y: (b.doors[0][1] + 0.5) * TS } });
+      for (let x = b.x; x < b.x + b.w; x++) { g[b.y][x] = T.WALL; g[b.y + b.h - 1][x] = T.WALL; }
+      for (let y = b.y; y < b.y + b.h; y++) { g[y][b.x] = T.WALL; g[y][b.x + b.w - 1] = T.WALL; }
+      for (const [dx, dy] of b.doors) g[dy][dx] = T.FLOOR;
+      if (b.shelter) site.shelters.push({ id: b.id, x: (b.x + 1.5) * TS, y: (b.y + 1.5) * TS, door: { x: (b.doors[0][0] + 0.5) * TS, y: (b.doors[0][1] + 0.5) * TS } });
+      if (b.w > 3) site.lamps.push({ x: (b.x + b.w / 2) * TS, y: (b.y + b.h / 2) * TS, r: Math.max(b.w, b.h) * TS * 0.6 });
     }
 
-    const prop = (kind, tx, ty, tw, th, solid = true, extra = {}) => {
-      const o = { kind, x: tx * TS, y: ty * TS, w: tw * TS, h: th * TS, solid, ...extra };
-      this.objects.push(o);
-      return o;
-    };
+    // Bus stop for travelling between sites.
+    const [sx, sy] = DATA.travelStop;
+    prop('busstop', sx + 0.6, sy - 0.2, 1.4, 0.5, false);
 
-    // Barracks interior: two rows of beds and lockers.
-    let bedIndex = 0;
-    for (const row of [25, 29.9]) {
-      for (let x = 7; x <= 17; x += 2) {
-        const b = prop('bed', x + 0.1, row + 0.05, 0.8, 1.9, true, { index: bedIndex++, messy: false });
-        this.beds.push(b);
+    if (id === 'netivot') {
+      let bedIndex = 0;
+      for (const row of [25, 29.9]) {
+        for (let x = 7; x <= 17; x += 2) site.beds.push(prop('bed', x + 0.1, row + 0.05, 0.8, 1.9, true, { index: bedIndex++, messy: false }));
       }
+      for (let y = 27; y <= 29; y++) site.lockers.push(prop('locker', 6.05, y + 0.05, 0.7, 0.9, true, { open: false, index: y - 27 }));
+      prop('table', 6.3, 36.6, 2.4, 0.7);
+      prop('table', 10.3, 36.6, 2.4, 0.7);
+      prop('counter', 6.2, 38.25, 7.6, 0.6);
+      prop('counter', 18.2, 37.3, 3.6, 0.55);
+      prop('desk', 46, 35.5, 2, 0.8);
+      prop('console', 6.2, 6.1, 6.6, 0.8);
+      prop('console', 6.2, 8.6, 1.4, 1.6);
+      prop('canisters', 52.6, 25.1, 5.2, 1.4);
+      prop('canisters', 52.6, 28.5, 5.2, 1.3);
+      prop('panel', 35.25, 38.95, 0.5, 0.35, false);
+      prop('radar', 15, 6, 2, 2);
+      prop('tower', 58, 37, 2, 2);
+      prop('flag', 39.3, 25.1, 0.4, 0.4);
+      for (let i = 0; i < 5; i++) prop('target', 19.5 + i * 3, 3.3, 0.9, 0.3, false);
+      prop('sign', 40, 43.2, 3, 0.6, false, { text: '← נתיבות 3 ק"מ' });
+      prop('books', 3.3, 13.2, 0.8, 0.6, false);
+      site.launchers = def.launchers.map(L => prop('launcher', L.x + 0.15, L.y, 2.7, 4.4, true, { id: L.id, name: L.name, ammo: 20, needsReload: false }));
+      for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40],
+        [21, 29], [21, 34], [43, 32], [49, 31], [12, 33], [40, 10], [47, 10], [54, 10], [14, 12], [36, 24], [44, 24], [57, 35]]) lamp(x, y);
+    } else if (id === 'hq') {
+      prop('console', 6.2, 6.1, 11.6, 0.8);
+      prop('screens', 6.4, 5.2, 11.2, 0.4, false);
+      prop('console', 8, 9.2, 6, 0.8);
+      prop('desk', 24.5, 5.2, 3, 0.9);
+      prop('flag', 29.4, 11.4, 0.4, 0.4);
+      prop('desk', 33.4, 6.4, 2.2, 0.8);
+      prop('counter', 42.2, 9.3, 7.6, 0.6);
+      prop('canisters', 42.4, 5.1, 7.2, 0.8);
+      prop('canisters', 57, 5.2, 2.6, 5.4);
+      prop('bed', 6.3, 26.1, 0.8, 1.9, true, { messy: false });
+      prop('bed', 8.3, 26.1, 0.8, 1.9, true, { messy: false });
+      prop('counter', 15.4, 30.2, 8.4, 0.6);
+      prop('table', 16.4, 27.4, 3, 0.7);
+      prop('table', 20.4, 27.4, 3, 0.7);
+      prop('console', 37.2, 26.1, 6.6, 0.8);
+      for (let x = 48; x <= 56; x += 2) prop('bed', x + 0.1, 28.9, 0.8, 1.9, true, { messy: false });
+      prop('radar', 21, 14, 2, 2);
+      prop('truck', 6, 35.2, 2.4, 4.6, true, { color: 0x56653a });
+      prop('truck', 10, 35.2, 2.4, 4.6, true, { color: 0x4f5a3a });
+      prop('sign', 40, 43.2, 3, 0.6, false, { text: '← שו"ב' });
+      for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40], [17, 34], [24, 12], [40, 12], [50, 33]]) lamp(x, y);
+    } else if (id === 'field') {
+      prop('sign', 40, 43.2, 3, 0.6, false, { text: 'אתר פריסה' });
+      for (const [x, y] of [[28, 21], [33, 21], [33, 30], [33, 38], [28, 40]]) lamp(x, y);
+      // Containers already placed on an earlier visit.
+      for (const id2 of (G.state && G.state.deploy && G.state.deploy.placed) || []) this.placeContainer(site, DATA.deploy.find(d => d.id === id2));
     }
-    for (let y = 27; y <= 29; y++) this.lockers.push(prop('locker', 6.05, y + 0.05, 0.7, 0.9, true, { open: false, index: y - 27 }));
+    this.bake(site);
+    return site;
+  },
 
-    // Dining hall.
-    prop('table', 6.3, 36.6, 2.4, 0.7);
-    prop('table', 10.3, 36.6, 2.4, 0.7);
-    prop('counter', 6.2, 38.25, 7.6, 0.6);
-    // Kantina counter.
-    prop('counter', 18.2, 37.3, 3.6, 0.55);
-    // Office desk.
-    prop('desk', 46, 35.5, 2, 0.8);
-    // Hamal consoles.
-    prop('console', 6.2, 6.1, 6.6, 0.8);
-    prop('console', 6.2, 8.6, 1.4, 1.6);
-    // Depot canister stacks.
-    prop('canisters', 52.6, 25.1, 5.2, 1.4);
-    prop('canisters', 52.6, 28.5, 5.2, 1.3);
-    // Booth panel.
-    prop('panel', 35.25, 38.95, 0.5, 0.35, false);
-    // Radar dish, guard tower, flagpole, shooting targets.
-    prop('radar', 15, 6, 2, 2);
-    prop('tower', 58, 37, 2, 2);
-    prop('flag', 39.3, 25.1, 0.4, 0.4);
-    for (let i = 0; i < 5; i++) prop('target', 19.5 + i * 3, 3.3, 0.9, 0.3, false);
-    prop('sign', 40, 43.2, 3, 0.6, false, { text: '← נתיבות 3 ק"מ' });
-
-    this.launchers = DATA.launchers.map(L => {
-      const o = prop('launcher', L.x + 0.15, L.y, 2.7, 4.4, true, { id: L.id, name: L.name, ammo: 20, needsReload: false, angle: 0 });
-      return o;
-    });
-
-    // Street lamps.
-    const lampTiles = [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40],
-      [21, 29], [21, 34], [43, 32], [49, 31], [12, 33], [40, 10], [47, 10], [54, 10], [14, 12], [36, 24], [44, 24], [57, 35]];
-    for (const [x, y] of lampTiles) this.lamps.push({ x: (x + 0.5) * TS, y: (y + 0.5) * TS, r: 150 });
-    for (const b of DATA.buildings) if (b.w > 3) this.lamps.push({ x: (b.x + b.w / 2) * TS, y: (b.y + b.h / 2) * TS, r: Math.max(b.w, b.h) * TS * 0.6 });
-
-    this.bake();
+  // Put a deployed container (or the launcher/shelter) on its pad in the field site.
+  placeContainer(site, item) {
+    const s = site || this;
+    if (s.objects.some(o => o.deployId === item.id)) return;
+    const o = { kind: item.kind || 'container', deployId: item.id, label: item.name, color: item.color, x: (item.x + 0.3) * TS, y: (item.y + 0.3) * TS, w: (item.w - 0.6) * TS, h: (item.h - 0.6) * TS, solid: true };
+    if (item.kind === 'launcher') Object.assign(o, { ammo: 20, needsReload: false, name: item.name, x: (item.x + 0.15) * TS, y: item.y * TS, w: 2.7 * TS, h: 4.4 * TS });
+    s.objects.push(o);
+    if (item.kind === 'launcher') s.launchers.push(o);
+    if (item.kind === 'shelter') {
+      // A field shelter is a solid block you can't stand in, so its door spot counts as cover.
+      o.solid = true;
+      s.shelters.push({ id: item.id, x: (item.x + item.w / 2) * TS, y: (item.y + item.h + 0.4) * TS, door: { x: (item.x + item.w / 2) * TS, y: (item.y + item.h + 0.4) * TS } });
+    }
+    return o;
   },
 
   inside(x, y) { return x >= 0 && y >= 0 && x < this.W && y < this.H; },
   tile(x, y) { return this.inside(x, y) ? this.grid[y][x] : T.OUT; },
-  building(id) { return DATA.buildings.find(b => b.id === id); },
+  building(id) { return this.def.buildings.find(b => b.id === id); },
 
   blockedTile(tx, ty) {
     if (!this.inside(tx, ty)) return true;
@@ -198,7 +242,8 @@ const World = {
   },
 
   // Pre-render static ground into one big canvas.
-  bake() {
+  bake(site) {
+    const grid = site.grid;
     const c = document.createElement('canvas');
     c.width = this.W * TS;
     c.height = this.H * TS;
@@ -218,7 +263,7 @@ const World = {
     };
     for (let y = 0; y < this.H; y++) {
       for (let x = 0; x < this.W; x++) {
-        const t = this.grid[y][x];
+        const t = grid[y][x];
         const pal = colors[t];
         g.fillStyle = pal[Math.floor(rnd() * pal.length)];
         g.fillRect(x * TS, y * TS, TS, TS);
@@ -242,15 +287,28 @@ const World = {
     g.beginPath(); g.moveTo(4 * TS, 23 * TS); g.lineTo(60 * TS, 23 * TS); g.stroke();
     g.setLineDash([]);
 
-    // Track lane line.
-    g.strokeStyle = 'rgba(255,255,255,.5)';
-    g.lineWidth = 2;
-    g.strokeRect(6.5 * TS, 15.5 * TS, 24 * TS, 5 * TS);
+    if (site.id === 'netivot') {
+      // Track lane line and parade ground border.
+      g.strokeStyle = 'rgba(255,255,255,.5)';
+      g.lineWidth = 2;
+      g.strokeRect(6.5 * TS, 15.5 * TS, 24 * TS, 5 * TS);
+      g.strokeStyle = '#f4f1e6';
+      g.lineWidth = 3;
+      g.strokeRect(35 * TS, 26 * TS, 9 * TS, 4 * TS);
+    }
+    if (site.id === 'field') {
+      // Painted outlines where each container goes.
+      g.setLineDash([12, 8]);
+      g.strokeStyle = '#f2c14e';
+      g.lineWidth = 4;
+      for (const it of DATA.deploy) g.strokeRect(it.x * TS + 4, it.y * TS + 4, it.w * TS - 8, it.h * TS - 8);
+      g.setLineDash([]);
+    }
 
     // Walls with depth.
     for (let y = 0; y < this.H; y++) {
       for (let x = 0; x < this.W; x++) {
-        const t = this.grid[y][x];
+        const t = grid[y][x];
         if (t === T.WALL) {
           g.fillStyle = '#5d594f';
           g.fillRect(x * TS, y * TS, TS, TS);
@@ -279,7 +337,7 @@ const World = {
     }
 
     // Shelter roofs are concrete coloured so they stand out.
-    for (const b of DATA.buildings) {
+    for (const b of site.def.buildings) {
       if (!b.shelter) continue;
       g.fillStyle = 'rgba(160,160,150,.35)';
       g.fillRect(b.x * TS, b.y * TS, b.w * TS, b.h * TS);
@@ -287,12 +345,7 @@ const World = {
       g.fillRect((b.x + 1) * TS + 6, b.y * TS + 4, TS - 12, 6);
     }
 
-    // Parade ground border.
-    g.strokeStyle = '#f4f1e6';
-    g.lineWidth = 3;
-    g.strokeRect(35 * TS, 26 * TS, 9 * TS, 4 * TS);
-
-    this.baked = c;
+    site.baked = c;
   },
 };
 

@@ -6,9 +6,10 @@ const SHELTER_H = 2.4;
 
 const Scene3D = {
   yaw: 0,          // camera orbit angle around the player (0 = camera south of player)
-  pitch: 0.42,
-  effPitch: 0.42,
-  dist: 7,
+  pitch: 0.3,
+  effPitch: 0.3,
+  dist: 5.2,
+  lastLook: 0,
   sky: [],
   models: new Map(),
   trashMeshes: new Map(),
@@ -62,7 +63,7 @@ const Scene3D = {
     m.position.set(x, y, z);
     m.castShadow = true;
     m.receiveShadow = true;
-    (parent || this.scene).add(m);
+    (parent || this.root).add(m);
     return m;
   },
   cyl(rt, rb, h, material, x = 0, y = 0, z = 0, parent = null, seg = 12) {
@@ -70,7 +71,7 @@ const Scene3D = {
     m.position.set(x, y, z);
     m.castShadow = true;
     m.receiveShadow = true;
-    (parent || this.scene).add(m);
+    (parent || this.root).add(m);
     return m;
   },
   canvasTex(w, h, draw) {
@@ -106,7 +107,16 @@ const Scene3D = {
 
   // ---------- world construction ----------
   build() {
-    const sc = this.scene;
+    if (this.root) this.scene.remove(this.root);
+    this.root = new THREE.Group();
+    this.scene.add(this.root);
+    this.models = new Map();
+    this.trashMeshes = new Map();
+    this.dustMeshes = new Map();
+    this.player = null;
+    this.lastCar = null;
+    this.bermBuilt = false;
+    const sc = this.root;
     const W = World.W * 2, H = World.H * 2;
 
     // Ground: the baked tile map as a texture, plus open desert around it.
@@ -144,7 +154,7 @@ const Scene3D = {
 
   buildWalls() {
     const shelterTiles = new Set();
-    for (const b of DATA.buildings) if (b.shelter) {
+    for (const b of World.def.buildings) if (b.shelter) {
       for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) shelterTiles.add(x + ',' + y);
     }
     const walls = [], shelters = [];
@@ -158,13 +168,13 @@ const Scene3D = {
       list.forEach(([x, y], i) => { m.makeTranslation(x * 2 + 1, h / 2, y * 2 + 1); im.setMatrixAt(i, m); });
       im.castShadow = true;
       im.receiveShadow = true;
-      this.scene.add(im);
+      this.root.add(im);
     };
     make(walls, WALL_H, 0xd9cfb6);
     make(shelters, SHELTER_H, 0x9b9a90);
     // Wall caps and red bands on shelters.
     const red = this.mat(0xd8392b);
-    for (const b of DATA.buildings) {
+    for (const b of World.def.buildings) {
       if (b.shelter) {
         this.box(b.w * 2, 0.35, 0.08, red, (b.x + b.w / 2) * 2, SHELTER_H - 0.4, b.y * 2 - 0.02);
         this.box(b.w * 2, 0.35, 0.08, red, (b.x + b.w / 2) * 2, SHELTER_H - 0.4, (b.y + b.h) * 2 + 0.02);
@@ -204,7 +214,7 @@ const Scene3D = {
       const m = new THREE.Mesh(new THREE.PlaneGeometry(len, fenceH), new THREE.MeshStandardMaterial({ map: t, transparent: true, alphaTest: 0.25, side: THREE.DoubleSide, roughness: 0.7, metalness: 0.4 }));
       m.position.set((x0 + x1) / 2, fenceH / 2, (z0 + z1) / 2);
       m.rotation.y = -Math.atan2(z1 - z0, x1 - x0);
-      this.scene.add(m);
+      this.root.add(m);
       // Barbed wire along the top.
       const bw = this.cyl(0.05, 0.05, len, this.mat(0x777777), (x0 + x1) / 2, fenceH + 0.15, (z0 + z1) / 2, null, 5);
       bw.rotation.z = Math.PI / 2;
@@ -224,7 +234,7 @@ const Scene3D = {
     const m = new THREE.Matrix4();
     posts.forEach(([x, z], i) => { m.makeTranslation(x, (fenceH + 0.3) / 2, z); im.setMatrixAt(i, m); });
     im.castShadow = true;
-    this.scene.add(im);
+    this.root.add(im);
 
     // Gate barrier: post plus a red/white arm that lifts.
     this.box(0.5, 1.2, 0.5, this.mat(0x555555), 57.6, 0.6, 83);
@@ -232,16 +242,20 @@ const Scene3D = {
     this.gateArm.position.set(57.8, 1.05, 83);
     const stripes = this.canvasTex(256, 16, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#f4f1e6' : '#e63b2e'; g.fillRect(i * 32, 0, 32, 16); } });
     this.box(8, 0.16, 0.16, new THREE.MeshStandardMaterial({ map: stripes }), 4, 0, 0, this.gateArm);
-    this.scene.add(this.gateArm);
+    this.root.add(this.gateArm);
   },
 
   buildProps() {
     this.props = [];
-    for (const o of World.objects) {
+    for (const o of World.objects) this.addProp(o);
+  },
+
+  addProp(o) {
+    {
       const cx = (o.x + o.w / 2) * S3, cz = (o.y + o.h / 2) * S3, w = o.w * S3, d = o.h * S3;
       const g = new THREE.Group();
       g.position.set(cx, 0, cz);
-      this.scene.add(g);
+      this.root.add(g);
       const rec = { o, g };
       switch (o.kind) {
         case 'bed': {
@@ -351,7 +365,7 @@ const Scene3D = {
           board.castShadow = true;
           g.add(board);
           // Earth berm behind the targets.
-          if (!this.bermBuilt) { this.bermBuilt = true; this.box(32, 1.6, 1.2, this.mat(0xb89a62), 25.5 * 2 - cx + 0, 0.8, -1.4, g); }
+          if (!this.bermBuilt) { this.bermBuilt = true; this.box(32, 1.6, 1.2, this.mat(0xb89a62), 25.5 * 2 - cx, 0.8, -1.4, g); }
           break;
         }
         case 'sign': {
@@ -370,8 +384,67 @@ const Scene3D = {
         case 'launcher':
           this.buildLauncher(rec, w, d);
           break;
+        case 'busstop': {
+          this.box(w, 0.08, 1.4, this.mat(0x3a6e8f), 0, 2.4, 0, g);
+          for (const sx of [-w / 2 + 0.1, w / 2 - 0.1]) this.cyl(0.05, 0.05, 2.4, this.mat(0x888888), sx, 1.2, -0.5, g, 6);
+          this.box(w * 0.9, 0.08, 0.4, this.mat(0x7a5a36), 0, 0.5, -0.4, g);
+          const sign = this.label('🚌 תחנת הסעות', { bg: 'rgba(30,90,140,.92)', size: 0.75 });
+          sign.position.set(0, 3.1, 0);
+          g.add(sign);
+          break;
+        }
+        case 'books': {
+          for (let i = 0; i < 4; i++) this.box(0.35, 0.08, 0.26, this.mat([0xb33a2e, 0x2e6fb3, 0xe0c040, 0x3a8f4f][i]), (i - 1.5) * 0.12, 0.04 + i * 0.08, 0, g);
+          const lampM = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xfff1cc, emissive: 0xffd590, emissiveIntensity: 1 }));
+          lampM.position.set(0.4, 0.4, 0);
+          g.add(lampM);
+          break;
+        }
+        case 'screens': {
+          const sm = new THREE.MeshStandardMaterial({ color: 0x0b2a3a, emissive: 0x2a8fd0, emissiveIntensity: 0.7 });
+          for (let i = 0; i < 4; i++) this.box(w / 4 - 0.2, 1.2, 0.08, sm, -w / 2 + w / 8 + i * w / 4, 2.1, 0, g);
+          rec.screens = { material: sm };
+          break;
+        }
+        case 'truck': {
+          const tm = this.mat(o.color || 0x56653a);
+          this.box(w * 0.85, 0.5, d, this.mat(0x23281d), 0, 0.85, 0, g);
+          this.box(w * 0.85, 1.7, 1.9, tm, 0, 2, d / 2 - 0.95, g);
+          this.box(w * 0.85, 1.6, d - 2.4, tm, 0, 1.9, -1.1, g);
+          for (const z of [-d / 2 + 0.9, d / 2 - 1]) for (const sx of [-1, 1]) {
+            const wh = this.cyl(0.5, 0.5, 0.4, this.mat(0x1b1b1b), sx * w * 0.44, 0.5, z, g, 12);
+            wh.rotation.z = Math.PI / 2;
+          }
+          break;
+        }
+        case 'container': {
+          const tex = this.canvasTex(128, 64, (c) => {
+            const col = '#' + new THREE.Color(o.color || 0x5d6b3e).getHexString();
+            c.fillStyle = col; c.fillRect(0, 0, 128, 64);
+            c.fillStyle = 'rgba(0,0,0,.18)';
+            for (let x = 0; x < 128; x += 8) c.fillRect(x, 0, 3, 64);
+          });
+          tex.wrapS = THREE.RepeatWrapping;
+          tex.repeat.set(Math.max(1, w / 2), 1);
+          this.box(w, 2.5, d, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8, metalness: 0.2 }), 0, 1.25, 0, g);
+          this.box(0.9, 1.9, 0.06, this.mat(0x3a3a3a), 0, 0.95, d / 2 + 0.03, g);
+          const lb = this.label(o.label, { size: 0.8 });
+          lb.position.set(0, 3.2, 0);
+          g.add(lb);
+          break;
+        }
+        case 'shelter': {
+          this.box(w, 2.4, d, this.mat(0x9b9a90, { roughness: 0.95 }), 0, 1.2, 0, g);
+          this.box(w + 0.05, 0.35, d + 0.05, this.mat(0xd8392b), 0, 2.0, 0, g);
+          this.box(1.1, 1.8, 0.06, this.mat(0x222222), 0, 0.9, d / 2 + 0.03, g);
+          const lb = this.label('מיגונית', { bg: 'rgba(200,45,35,.9)', size: 0.8 });
+          lb.position.set(0, 3.2, 0);
+          g.add(lb);
+          break;
+        }
       }
       this.props.push(rec);
+      return rec;
     }
   },
 
@@ -429,18 +502,24 @@ const Scene3D = {
 
   buildLabels() {
     this.fadeLabels = [];
-    for (const b of DATA.buildings) {
+    for (const b of World.def.buildings) {
       const s = this.label(b.name, b.shelter ? { bg: 'rgba(200,45,35,.9)', size: 0.8 } : {});
       s.position.set((b.x + b.w / 2) * 2, b.shelter ? SHELTER_H + 1.0 : WALL_H + 1.3, (b.y + b.h / 2) * 2);
-      this.scene.add(s);
+      this.root.add(s);
       this.fadeLabels.push(s);
     }
-    for (const [t, x, y, h] of [['רחבת מסדרים', 39.5, 28, 2.4], ['מטווח', 25.5, 10.5, 2.8], ['מסלול כושר', 18, 18, 2], ['עמדת שמירה', 59, 38, 8]]) {
+    const areas = {
+      netivot: [['רחבת מסדרים', 39.5, 28, 2.4], ['מטווח', 25.5, 10.5, 2.8], ['מסלול כושר', 18, 18, 2], ['עמדת שמירה', 59, 38, 8]],
+      hq: [['חניון נהגים', 10.5, 37, 5.5]],
+      field: DATA.deploy.map(d => [d.name, d.x + d.w / 2, d.y + d.h / 2, 1.2]),
+    }[World.id];
+    for (const [t, x, y, h] of areas) {
       const s = this.label(t, { size: 0.85 });
       s.position.set(x * 2, h, y * 2);
-      this.scene.add(s);
+      this.root.add(s);
       this.fadeLabels.push(s);
     }
+    if (World.id !== 'netivot') return;
     // Training board.
     const b = SPOTS.board;
     const g = new THREE.Group();
@@ -454,7 +533,7 @@ const Scene3D = {
     board.position.y = 1.5;
     g.add(board);
     for (const sx of [-0.6, 0.6]) this.cyl(0.04, 0.04, 1.5, this.mat(0x6b4a2a), sx, 0.75, 0, g, 5);
-    this.scene.add(g);
+    this.root.add(g);
   },
 
   buildLamps() {
@@ -475,12 +554,12 @@ const Scene3D = {
       const p = new THREE.Mesh(new THREE.PlaneGeometry(r * 1.6, r * 1.6), this.poolMat);
       p.rotation.x = -Math.PI / 2;
       p.position.set(x, 0.04, z);
-      this.scene.add(p);
+      this.root.add(p);
       if (L.r > 160) continue;
       this.cyl(0.07, 0.09, 4.6, pole, x, 2.3, z, null, 6);
       const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), this.bulbMat);
       bulb.position.set(x, 4.6, z);
-      this.scene.add(bulb);
+      this.root.add(bulb);
       this.bulbs.push({ x, z });
     }
   },
@@ -495,7 +574,7 @@ const Scene3D = {
       const m = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8), dune);
       m.scale.set(40 + rnd() * 50, 8 + rnd() * 14, 30 + rnd() * 30);
       m.position.set(64 + Math.cos(a) * r, -2, 46 + Math.sin(a) * r);
-      this.scene.add(m);
+      this.root.add(m);
     }
     this.town = [];
     const townMat = new THREE.MeshStandardMaterial({ color: 0xe6dfcf, roughness: 0.9, emissive: 0xffc56b, emissiveIntensity: 0 });
@@ -503,7 +582,7 @@ const Scene3D = {
       const w = 6 + rnd() * 10, h = 6 + rnd() * 22, d = 6 + rnd() * 10;
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), townMat);
       m.position.set(150 + rnd() * 170, h / 2, 210 + rnd() * 110);
-      this.scene.add(m);
+      this.root.add(m);
     }
     this.townMat = townMat;
     const trunk = this.mat(0x7a5a36), leaf = this.mat(0x5d7a32);
@@ -527,7 +606,7 @@ const Scene3D = {
     const sg = new THREE.BufferGeometry();
     sg.setAttribute('position', new THREE.BufferAttribute(pts, 3));
     this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false }));
-    this.scene.add(this.stars);
+    this.root.add(this.stars);
   },
 
   // ---------- characters and vehicles ----------
@@ -588,7 +667,14 @@ const Scene3D = {
       parts.tag.position.set(0, 2.25, 0);
       root.add(parts.tag);
     }
-    this.scene.add(root);
+    // Soldiers use a soft blob instead of real shadow casting: far fewer draw calls with a crowd.
+    root.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
+    if (!this.blobMat) this.blobMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false });
+    const blob = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16), this.blobMat);
+    blob.rotation.x = -Math.PI / 2;
+    blob.position.y = 0.03;
+    root.add(blob);
+    this.root.add(root);
     return parts;
   },
 
@@ -618,7 +704,28 @@ const Scene3D = {
       wh.rotation.x = Math.PI / 2;
     }
     for (const z of [-0.65, 0.65]) this.box(0.06, 0.18, 0.35, new THREE.MeshStandardMaterial({ color: 0xfff6d0, emissive: 0xfff0b0, emissiveIntensity: 0.9 }), 2.16, 0.85, z, g);
-    this.scene.add(g);
+    this.root.add(g);
+    return g;
+  },
+
+  makeTruck(item) {
+    const g = new THREE.Group();
+    const olive = this.mat(0x56653a);
+    this.box(9, 0.5, 2.4, this.mat(0x23281d), 0, 0.9, 0, g);
+    this.box(2, 2.1, 2.4, olive, 3.6, 2.1, 0, g);
+    this.box(0.05, 0.8, 2, this.mat(0x9fc3d8, { metalness: 0.6, roughness: 0.2 }), 4.62, 2.5, 0, g);
+    for (const x of [-3.2, -1.8, 3.4]) for (const z of [-1.15, 1.15]) {
+      const wh = this.cyl(0.55, 0.55, 0.4, this.mat(0x1b1b1b), x, 0.55, z, g, 12);
+      wh.rotation.x = Math.PI / 2;
+    }
+    const load = item.kind === 'launcher'
+      ? this.box(5.5, 1.6, 2.2, olive, -1.4, 2.0, 0, g)
+      : this.box(5.8, 2.3, 2.3, this.mat(item.color || 0x5d6b3e), -1.4, 2.35, 0, g);
+    void load;
+    const lb = this.label(item.name, { size: 0.8 });
+    lb.position.set(-1.4, 4.4, 0);
+    g.add(lb);
+    this.root.add(g);
     return g;
   },
 
@@ -636,7 +743,7 @@ const Scene3D = {
       if (!G.alert && !rocket.alive) return;
       Sound.launch();
       const start = new THREE.Vector3();
-      if (rec && rec.muzzle) rec.muzzle.getWorldPosition(start); else start.set(L.x * S3, 4, L.y * S3);
+      if (rec && rec.muzzle) rec.muzzle.getWorldPosition(start); else start.set(170, 2, 15 + Math.random() * 60);
       const it = { kind: 'interceptor', pos: start, vel: new THREE.Vector3(0, 30, -10), target: rocket };
       this.addTrail(it, 0xf2f2f2);
       this.sky.push(it);
@@ -790,12 +897,24 @@ const Scene3D = {
     this.animateSoldier(pm, P, P.moving, dt);
 
     const alive = new Set(G.npcs);
-    for (const [n, m] of this.models) if (!alive.has(n)) { this.scene.remove(m.root); this.models.delete(n); }
+    for (const [n, m] of this.models) if (!alive.has(n)) { this.root.remove(m.root); this.models.delete(n); }
     for (const n of G.npcs) {
       let m = this.models.get(n);
       if (!m) { m = this.makeSoldier(n.look, n.short); this.models.set(n, m); m.last = { x: n.x, y: n.y }; }
       const moving = Math.hypot(n.x - m.last.x, n.y - m.last.y) > 0.01;
       m.last = { x: n.x, y: n.y };
+      // Speech bubble over the head.
+      const bt = n.bubble ? n.bubble.text : null;
+      if (bt !== m.bubbleText) {
+        if (m.bubbleSprite) m.root.remove(m.bubbleSprite);
+        m.bubbleSprite = null;
+        if (bt) {
+          m.bubbleSprite = this.label(bt, { bg: 'rgba(255,255,255,.95)', fg: '#1d1d10', size: 0.62 });
+          m.bubbleSprite.position.set(0, 2.8, 0);
+          m.root.add(m.bubbleSprite);
+        }
+        m.bubbleText = bt;
+      }
       if (G.alert && n.sheltering) { m.helmet.visible = true; m.beret.visible = m.cap.visible = false; }
       else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = n.look.head === 'beret'; m.cap.visible = n.look.head === 'cap'; }
       this.animateSoldier(m, n, moving, dt);
@@ -809,10 +928,21 @@ const Scene3D = {
       car.mesh.position.set(car.x * S3, 0, car.y * S3);
       car.mesh.rotation.y = -car.angle;
     }
-    if (this.lastCar && this.lastCar !== car && this.lastCar.mesh) this.scene.remove(this.lastCar.mesh);
+    if (this.lastCar && this.lastCar !== car && this.lastCar.mesh) this.root.remove(this.lastCar.mesh);
     this.lastCar = car;
 
-    this.syncSmall(Story.trash, this.trashMeshes, (t) => {
+    // Deployment trucks carrying containers.
+    const tr = World.id === 'field' ? Story.deployTruck : null;
+    if (tr) {
+      if (!tr.mesh) tr.mesh = this.makeTruck(tr.item);
+      tr.mesh.position.set(tr.x * S3, 0, tr.y * S3);
+      tr.mesh.rotation.y = -tr.angle;
+    }
+    if (this.lastTruck && this.lastTruck !== tr && this.lastTruck.mesh) this.root.remove(this.lastTruck.mesh);
+    this.lastTruck = tr;
+
+    const here = World.id === 'netivot';
+    this.syncSmall(here ? Story.trash : [], this.trashMeshes, (t) => {
       const g = new THREE.Group();
       const mats = [0xe7e2d4, 0x3a6ea5, 0xb33a2e];
       const item = t.kind === 0
@@ -829,7 +959,7 @@ const Scene3D = {
       g.userData.ring = ring;
       return g;
     }, now);
-    this.syncSmall(Story.dust, this.dustMeshes, () => {
+    this.syncSmall(here ? Story.dust : [], this.dustMeshes, () => {
       const g = new THREE.Group();
       for (let i = 0; i < 5; i++) {
         const m = new THREE.Mesh(new THREE.CircleGeometry(0.16 + Math.random() * 0.1, 10), new THREE.MeshBasicMaterial({ color: 0x6e5a3c, transparent: true, opacity: 0.6, depthWrite: false }));
@@ -866,10 +996,10 @@ const Scene3D = {
 
   syncSmall(list, map, make, now) {
     const alive = new Set(list);
-    for (const [k, m] of map) if (!alive.has(k)) { this.scene.remove(m); map.delete(k); }
+    for (const [k, m] of map) if (!alive.has(k)) { this.root.remove(m); map.delete(k); }
     for (const it of list) {
       let m = map.get(it);
-      if (!m) { m = make(it); m.position.set(it.x * S3, 0, it.y * S3); this.scene.add(m); map.set(it, m); }
+      if (!m) { m = make(it); m.position.set(it.x * S3, 0, it.y * S3); this.root.add(m); map.set(it, m); }
       if (m.userData.ring) m.userData.ring.material.opacity = 0.35 + Math.sin(now / 250) * 0.25;
     }
   },
@@ -878,7 +1008,9 @@ const Scene3D = {
   // the camera, the camera tilts up to look over it instead of clipping.
   updateCamera(dt) {
     const P = G.player;
-    const tx = P.x * S3, tz = P.y * S3, ty = 1.5;
+    // Look slightly past the right shoulder, like most third-person games.
+    const B = this.basis();
+    const tx = P.x * S3 + B.rx * 0.45, tz = P.y * S3 + B.rz * 0.45, ty = 1.55;
     const sx = Math.sin(this.yaw), sz = Math.cos(this.yaw);
     let need = this.pitch;
     const horiz = this.dist * Math.cos(this.pitch);

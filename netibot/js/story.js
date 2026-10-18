@@ -19,36 +19,48 @@ const SPOTS = {
   start: tc(12, 28),
 };
 const TRACK_POINTS = [tc(6, 15), tc(30, 15), tc(30, 20), tc(6, 20)];
+const SPOTS_HQ = {
+  hamal: { x: 11.5 * TS, y: 7.6 * TS },
+  rasap: { x: 45.5 * TS, y: 10.5 * TS },
+  clinic: { x: 10.5 * TS, y: 28.6 * TS },
+  dining: { x: 19.5 * TS, y: 29.5 * TS },
+};
+const travelSpot = () => tc(DATA.travelStop[0] + 0.6, DATA.travelStop[1]);
+const siteName = (id) => fmt(ROSTER.sites[id]);
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // Task catalogue. target() returns the waypoint in px.
 const TASKS = {
-  meet_cmd: { title: 'להתייצב אצל מפקד הפלגה', desc: 'ברחבת המסדרים.', target: () => npcPos('commander'), pts: 2 },
+  meet_cmd: { title: 'להתייצב אצל {@@commander}', desc: 'קצינת הפלגה, ברחבת המסדרים.', target: () => npcPos('commander'), pts: 2 },
   locker: { title: 'לסדר ציוד בלוקר', desc: 'במגורים — הלוקר שלך מסומן.', target: () => lockerSpot(G.state.myLocker), pts: 3 },
-  drill: { title: 'תרגיל צבע אדום עם הסמלת', desc: 'הסמלת מאיה מחכה ליד המגורים.', target: () => npcPos('sergeant'), pts: 0 },
+  drill: { title: 'תרגיל צבע אדום עם {@sergeant}', desc: '{@sergeant} מחכה ליד המגורים.', target: () => npcPos('sergeant'), pts: 0 },
   clean: { title: 'ניקיון שטח — לאסוף 10 פסולת', desc: 'לחפש פסולת ברחבי הבסיס (מסומן במפה).', target: () => nearestTrash(), pts: 8 },
   dinner: { title: 'ארוחת ערב בחדר האוכל', desc: '', target: () => SPOTS.dining, pts: 2 },
   sleep: { title: 'לישון במיטה שלך', desc: 'המיטה שלך במגורים. שינה מסיימת את היום ושומרת משחק.', target: () => bedSpot(G.state.myBed), pts: 0, last: true },
   lineup: { title: 'מסדר בוקר עד 06:45', desc: 'רחבת המסדרים. לא לאחר!', target: () => SPOTS.parade, pts: 4 },
-  reload_train: { title: 'תדריך טעינה אצל הסמלת', desc: 'ליד מחסן המארזים.', target: () => npcPos('sergeant'), pts: 2 },
+  reload_train: { title: 'תדריך טעינה אצל {@sergeant}', desc: 'ליד מחסן המארזים.', target: () => npcPos('sergeant'), pts: 2 },
   reload: { title: 'להחליף מארז במשגר הריק', desc: 'לקחת מארז מהמחסן ולהביא למשגר המסומן "ריק".', target: () => reloadTarget(), pts: 8 },
   gate: { title: 'משמרת ש"ג', desc: 'להיכנס לעמדת הש"ג ולבדוק את הרכבים שמגיעים.', target: () => SPOTS.booth, pts: 0 },
   inspection_prep: { title: 'להכין את החדר למסדר ניקיון', desc: 'לסדר מיטות, לסגור לוקרים ולטאטא אבק.', target: () => inspectionTarget(), pts: 0 },
-  inspection: { title: 'לקרוא לסמלת לבדיקה', desc: 'כשהחדר מוכן — הסמלת בתוך המגורים.', target: () => npcPos('sergeant'), pts: 0 },
-  radar: { title: 'משמרת בקרה בחמ"ל', desc: 'עמדת המחשב בחמ"ל.', target: () => SPOTS.hamal, pts: 0 },
+  inspection: { title: 'לקרוא ל{@inspector} לבדיקה', desc: 'כשהחדר מוכן — {@inspector} בתוך המגורים.', target: () => npcPos('inspector'), pts: 0 },
+  radar: { title: 'משמרת בקרה בחמ"ל הסוללתי', desc: 'ב{hq}, אצל {@@ops}.', target: () => SPOTS_HQ.hamal, pts: 0, map: 'hq' },
+  hq_gear: { title: 'לחתום על ציוד אצל {@rasap}', desc: 'ברספ"ייה ב{hq}.', target: () => SPOTS_HQ.rasap, pts: 0, map: 'hq' },
+  deploy: { title: 'פריסת אתר חדש', desc: 'לנסוע לאתר הפריסה ולהכווין את המשאיות עם המכולות.', target: () => Story.deployTarget(), pts: 0, map: 'field' },
+  surprise: { title: 'מסדר פתע של {@inspector}: לטאטא אבק במגורים', desc: 'נתפסת. קורה לטובים ביותר.', target: () => inspectionTarget(), pts: 0, optional: true },
   guard: { title: 'שמירת לילה בעמדה', desc: 'עמדת השמירה בפינת הבסיס.', target: () => SPOTS.tower, pts: 0 },
   train2: { title: 'שני אימונים (לוח אימונים / מטווח / מסלול)', desc: '', target: () => SPOTS.board, pts: 0, count: 2 },
   exam_reload: { title: 'מבחן: החלפת מארז', desc: 'הסמלת ליד משגר 2.', target: () => (G.state.dayFlags.examReload ? reloadTarget() : npcPos('sergeant')), pts: 0 },
-  exam_alert: { title: 'מבחן: תרגיל צבע אדום', desc: 'המפקד ברחבה מתחיל את התרגיל.', target: () => npcPos('commander'), pts: 0 },
+  exam_alert: { title: 'מבחן: תרגיל צבע אדום', desc: '{@commander} ברחבה מתחילה את התרגיל.', target: () => npcPos('commander'), pts: 0 },
   exam_radar: { title: 'מבחן: עמדת בקרה', desc: 'בחמ"ל.', target: () => SPOTS.hamal, pts: 0 },
-  exam_quiz: { title: 'מבחן ידע אצל המפקד', desc: '', target: () => npcPos('commander'), pts: 0 },
-  graduation: { title: 'לשמוע את התוצאה מהמפקד', desc: '', target: () => npcPos('commander'), pts: 0 },
+  exam_quiz: { title: 'מבחן ידע אצל {@commander}', desc: '', target: () => npcPos('commander'), pts: 0 },
+  graduation: { title: 'לשמוע את התוצאה מ{@@bc}', desc: 'בלשכת מפקדת הסוללה ב{hq}.', target: () => npcPos('bc'), pts: 0, map: 'hq' },
 };
 
 const DAYS = {
   1: { title: 'יום 1 — קליטה בפלג"צ', tasks: ['meet_cmd', 'locker', 'drill', 'clean', 'dinner', 'sleep'], alerts: [] },
-  2: { title: 'יום 2 — משגרים', tasks: ['lineup', 'reload_train', 'gate', 'sleep'], alerts: [11 * 60 + 20] },
+  2: { title: 'יום 2 — משגרים וחתימות', tasks: ['lineup', 'reload_train', 'hq_gear', 'gate', 'sleep'], alerts: [11 * 60 + 20] },
   3: { title: 'יום 3 — מסדר ניקיון', tasks: ['lineup', 'inspection_prep', 'inspection', 'radar', 'guard', 'sleep'], alerts: [14 * 60] },
-  4: { title: 'יום 4 — אימונים', tasks: ['lineup', 'train2', 'gate', 'sleep'], alerts: [10 * 60 + 10, 16 * 60 + 40] },
+  4: { title: 'יום 4 — המצב מתחמם: פורסים אתר', tasks: ['lineup', 'deploy', 'train2', 'sleep'], alerts: [17 * 60 + 10] },
   5: { title: 'יום 5 — מבחן סיום פלג"צ', tasks: ['lineup', 'exam_reload', 'exam_alert', 'exam_radar', 'exam_quiz', 'graduation'], alerts: [] },
 };
 
@@ -108,6 +120,7 @@ const Story = {
     World.beds.forEach(b => b.messy = false);
     World.lockers.forEach(l => l.open = false);
     G.player.carry = false;
+    if (World.id !== 'netivot') Game.switchMap('netivot');
 
     const plan = this.planFor(day);
     this.tasks = plan.tasks.map(id => ({ id, ...TASKS[id], done: false, progress: 0 }));
@@ -131,7 +144,7 @@ const Story = {
       return { title: d.title, tasks: d.tasks, alerts: d.alerts };
     }
     // Free play / after graduation: a random mix every day.
-    const pool = ['gate', 'radar', 'guard', 'clean', 'train2'];
+    const pool = ['gate', 'radar', 'guard', 'clean', 'train2', 'hq_gear', 'deploy'];
     const picks = pool.sort(() => Math.random() - 0.5).slice(0, 3);
     const alerts = [];
     const n = 1 + Math.floor(Math.random() * 3);
@@ -142,10 +155,12 @@ const Story = {
   async morning(day) {
     const S = G.state;
     if (S.mode === 'story' && day === 1) {
+      const same = (G.profile.name || '').trim() === Cast.get('friend').first;
       await UI.talk([
-        { who: 'friend', text: 'יו, {name}! את[ה/] הפלג"צניק[/ית] החדש[/ה]? אני שקד. [ברוך הבא/ברוכה הבאה] לנתיבות 😄' },
-        { who: 'friend', text: 'טיפ ראשון: תמיד לדעת איפה המיגונית הכי קרובה. טיפ שני: הגרעינים בש.ק. מעולים.' },
-        { who: 'friend', text: 'המפקד מחכה ברחבת המסדרים. [תעקוב/תעקבי] אחרי החץ הצהוב. בהצלחה!' },
+        { who: 'friend', text: 'יו, {name}! את[ה/] הפלג"צניק[/ית] החדש[/ה]? אני {@friend}. אני גם בפלגה... וגם בניתי את המשחק הזה. כן, זה מוזר גם לי.' },
+        ...(same ? [{ who: 'friend', text: 'רגע... גם לך קוראים {name}? אחד מאיתנו מיותר במשחק. ...טוב, אני כתבתי את הקוד, אז זה לא אני.' }] : []),
+        { who: 'friend', text: 'שלושה כללים בנתיבות: אחת — לדעת איפה המיגונית. שתיים — הגרעינים בש.ק. שלוש — כש{@inspector} מחפשת מישהו למסדר, רצים. Shift. ברצינות.' },
+        { who: 'friend', text: '{@@commander} מחכה ברחבת המסדרים. [תעקוב/תעקבי] אחרי החץ הצהוב. ואם נתקעת בקיר — זה פיצ\'ר.' },
       ]);
     } else if (this.has('lineup')) {
       Sound.whistle();
@@ -188,7 +203,10 @@ const Story = {
   objective() {
     if (G.alert) return null;
     const t = this.current();
-    if (!t) return { text: 'אין משימות. אפשר להסתובב, להתאמן או ללכת לישון.' };
+    if (!t) return { text: World.id === 'netivot' ? 'אין משימות. אפשר להסתובב, להתאמן או ללכת לישון.' : 'אין משימות כאן. תחנת ההסעות מחזירה לנתיבות.', target: World.id === 'netivot' ? null : travelSpot() };
+    const tmap = t.map || 'netivot';
+    if (tmap !== World.id) return { text: `לנסוע ל${siteName(tmap)} — ${fmt(t.title)}`, target: travelSpot() };
+    if (t.id === 'deploy') return { text: this.deployText(), target: this.deployTarget() };
     let text = t.title;
     if (t.id === 'clean') text += ` (${10 - this.trash.length}/10)`;
     if (t.id === 'train2') text += ` (${t.progress}/2)`;
@@ -202,17 +220,18 @@ const Story = {
   update(dt) {
     const S = G.state;
     // Scheduled alerts wait for the player to be free.
-    if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !this.gateShift?.car) {
+    if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !this.gateShift?.car && World.id !== 'field') {
       this.pendingAlerts.shift();
       this.alert(false);
     }
     if (G.alert) this.updateAlert(dt);
     if (this.gateShift) this.updateGate(dt);
     if (this.run) this.updateRun(dt);
+    if (World.id === 'field') this.updateDeploy(dt);
     // Morning lineup: arriving at the parade ground completes it.
     if (this.has('lineup') && !G.alert) {
       const p = G.player;
-      if (p.x > 34 * TS && p.x < 45 * TS && p.y > 25 * TS && p.y < 31 * TS) this.lineup();
+      if (World.id === 'netivot' && p.x > 34 * TS && p.x < 45 * TS && p.y > 25 * TS && p.y < 31 * TS) this.lineup();
       else if (S.clock > 8 * 60 && !S.dayFlags.lineupMissed) {
         S.dayFlags.lineupMissed = true;
         this.complete('lineup', -8, 'פספסת את מסדר הבוקר');
@@ -232,8 +251,8 @@ const Story = {
     Sound.whistle();
     const bonus = G.perk && G.perk.key === 'discipline' ? 3 : 0;
     const lines = late
-      ? [{ who: 'commander', text: `איחור של ${Math.round(S.clock - (6 * 60 + 45))} דקות, {name}. בצבא זמן זה זמן. זה יירשם.` }]
-      : [{ who: 'commander', text: 'בוקר טוב פלגה! עמוד דום... עמוד נוח. {name}, בזמן — יפה מאוד.' }];
+      ? [{ who: 'commander', text: `איחור של ${Math.round(S.clock - (6 * 60 + 45))} דקות, {name}. אני לא כועסת. אני רושמת. זה יותר גרוע.` }]
+      : [{ who: 'commander', text: pick(['בוקר טוב {platoon}! עמוד דום... עמוד נוח. {name}, בזמן — יפה מאוד.', 'בוקר! כולם פה? {@p_liran}, גם הנשמה צריכה להיות פה, לא רק הגוף.', 'בוקר טוב. {@p_ofek}, לא, אין עדכון על ברסה במסדר.']) }];
     const today = this.tasks.filter(t => !t.done && !t.last).map(t => '• ' + fmt(t.title)).join('\n');
     if (today) lines.push({ who: 'commander', text: 'המשימות להיום אצלך בטלפון: ' + today.replace(/\n/g, '  ') });
     await UI.talk(lines);
@@ -247,8 +266,21 @@ const Story = {
     const add = (x, y, label, action, r = 46) => list.push({ x, y, label, action, r });
     const P = G.player;
 
-    // NPCs.
     for (const n of G.npcs) add(n.x, n.y, `לדבר עם ${n.short}`, () => this.talkTo(n), 50);
+    const ts = travelSpot();
+    add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
+
+    if (World.id === 'hq') {
+      add(SPOTS_HQ.hamal.x, SPOTS_HQ.hamal.y, 'עמדת בקרה בחמ"ל', () => this.radarShift(), 44);
+      add(SPOTS_HQ.rasap.x, SPOTS_HQ.rasap.y, this.has('hq_gear') ? 'לחתום על ציוד' : 'דלפק הרספ"ייה', () => this.talkTo(Game.npc('rasap') || { id: 'rasap', person: Cast.get('rasap') }), 44);
+      add(SPOTS_HQ.clinic.x, SPOTS_HQ.clinic.y, 'מרפאה', () => this.clinic(), 40);
+      add(SPOTS_HQ.dining.x, SPOTS_HQ.dining.y, 'לאכול', () => this.eat(), 40);
+      return list;
+    }
+    if (World.id === 'field') {
+      this.deployInteractables(add);
+      return list;
+    }
 
     // Own bed / locker.
     World.beds.forEach((b, i) => {
@@ -288,80 +320,329 @@ const Story = {
   },
 
   // ---------- NPC conversations ----------
+  // A random line from the character that isn't the one they said last time.
+  chatter(n) {
+    const lines = n.person.lines;
+    let line = pick(lines);
+    if (lines.length > 1) while (line === n.lastLine) line = pick(lines);
+    n.lastLine = line;
+    return UI.talk([{ who: n.id, text: line }]);
+  },
+
   async talkTo(n) {
     const S = G.state;
-    if (n.id === 'commander') {
+    S.talked = S.talked || [];
+    if (!S.talked.includes(n.id)) { S.talked.push(n.id); if (S.talked.length >= 20) Game.achieve('social'); }
+    if (n.chasing) return;
+    const id = n.id;
+
+    if (id === 'commander') {
       if (this.has('meet_cmd')) {
-        await UI.talk([
-          { who: 'commander', text: 'אז את[ה/] {name}. אני סגן אורי, מפקד הפלגה הצעירה — הפלג"צ.' },
-          { who: 'commander', text: 'פה בנתיבות לא משחקים. כשיש צבע אדום — יש לך 30 שניות להיות במיגונית. כשיש יירוט — מישהו צריך להחליף מארז. וכשיש שמירה — לא נרדמים.' },
-          { who: 'commander', text: 'בעוד חמישה ימים יש מבחן סיום פלג"צ. מי שעובר[/ת] — עולה לסוללה {battery} כ[לוחם/לוחמת] [מוסמך/מוסמכת]. [מוכן/מוכנה]?', choices: [{ label: 'כן המפקד!', value: 1 }, { label: 'נראה לי...', value: 0 }] },
-        ]).then(v => { if (!v) Game.addStat('morale', -3); });
-        await UI.talk([{ who: 'commander', text: 'יפה. קודם כל — [לך/לכי] למגורים ותסדר[/י] את הציוד בלוקר שלך.' }]);
+        const v = await UI.talk([
+          { who: 'commander', text: 'אז את[ה/] {name}. אני {@@commander}, קצינת הפלגה. פה קוראים לי "שני ארונות". את הסיבה [תגלה/תגלי] לבד.' },
+          { who: 'commander', text: 'בנתיבות לא משחקים. צבע אדום — 30 שניות למיגונית. יירוט — מישהו מחליף מארז. שמירה — לא נרדמים. ו{@inspector}? ממנה פשוט [תיזהר/תיזהרי].' },
+          { who: 'commander', text: 'בעוד חמישה ימים יש מבחן סיום פלג"צ. מי שעובר[/ת] עולה לסוללת {battery} כ[לוחם/לוחמת] [מוסמך/מוסמכת] ונוסע[/ת] ל{hq} לפגוש את {@@bc}. [מוכן/מוכנה]?', choices: [{ label: 'כן המפקדת!', value: 1 }, { label: 'נראה לי...', value: 0 }] },
+        ]);
+        await UI.talk([{ who: 'commander', text: v ? 'יפה. ככה אני אוהבת. קודם כל — [לך/לכי] למגורים ו[תסדר/תסדרי] את הציוד בלוקר.' : '"נראה לי" זה לא תשובה בצבא. זה מצב רוח. [לך/לכי] לסדר את הלוקר, ותחזור[/י] עם תשובה.' }]);
+        if (!v) Game.addStat('morale', -3);
         this.complete('meet_cmd');
       } else if (this.has('exam_alert') && !this.has('exam_reload')) {
-        await UI.talk([{ who: 'commander', text: 'מבחן צבע אדום. כשאני שורק — רצים למיגונית. זמן מתחיל... עכשיו!' }]);
+        await UI.talk([{ who: 'commander', text: 'מבחן צבע אדום. כשאני שורקת — רצים למיגונית. בלי לצרוח הפעם. זמן מתחיל... עכשיו!' }]);
         this.alert(true, 'exam');
       } else if (this.has('exam_quiz') && !this.has('exam_radar') && !this.has('exam_alert')) {
-        await UI.talk([{ who: 'commander', text: 'שלב אחרון: מבחן ידע. חמש שאלות. [תחשוב/תחשבי] לפני שאת[ה/] עונה.' }]);
+        await UI.talk([{ who: 'commander', text: 'שלב אחרון: מבחן ידע. חמש שאלות. [תחשוב/תחשבי] לפני שאת[ה/] עונה. {@friend} אמר שהוא כתב את השאלות. אל תסמוך[/י] עליו.' }]);
         const r = await Mini.open('quiz', { questions: DATA.quiz, count: 5 });
         this.examParts.quiz = r.success;
         this.complete('exam_quiz', r.success ? 10 : 0, 'מבחן ידע');
-      } else if (this.has('graduation') && !this.tasks.some(t => t.id.startsWith('exam_') && !t.done)) {
-        await this.graduation();
+        if (!this.has('graduation')) return;
+        await UI.talk([{ who: 'commander', text: 'סיימת. את התוצאה [תשמע/תשמעי] מ{@@bc} ב{hq}. ההסעה בתחנה. ו{name}... [תתלבש/תתלבשי] יפה, {@harasar} שם.' }]);
       } else {
-        const lines = ['[תמשיך/תמשיכי] במשימות, {name}. הטלפון שלך יודע מה נשאר.', 'סוללה טובה זה סוללה שמחה. ומוכנה.', 'ראיתי אותך [רץ/רצה] למיגונית. ככה עושים את זה.'];
-        await UI.talk([{ who: 'commander', text: lines[Math.floor(Math.random() * lines.length)] }]);
+        await this.chatter(n);
       }
-    } else if (n.id === 'sergeant') {
+    } else if (id === 'sergeant') {
       if (this.has('drill') && !this.has('locker') && !this.has('meet_cmd')) {
         await UI.talk([
-          { who: 'sergeant', text: 'אני מאיה, הסמלת שלך. בוא[/י] נעשה תרגיל: כשתשמע[/י] אזעקה — רצים למיגונית הקרובה. המיגוניות מסומנות בפס אדום על הגג ובמפה.' },
-          { who: 'sergeant', text: 'מתחילים... עכשיו!' },
+          { who: 'sergeant', text: 'אני {@sergeant}, המש"קית שלך. כולם קוראים לי מלכה, ואני לא מתווכחת 👑' },
+          { who: 'sergeant', text: 'בוא[/י] נעשה תרגיל: כשיש אזעקה — רצים למיגונית הקרובה. פס אדום על הגג, נקודה אדומה במפה. מתחילים... עכשיו!' },
         ]);
         this.alert(true, 'drill');
       } else if (this.has('drill')) {
-        await UI.talk([{ who: 'sergeant', text: 'קודם [תסיים/תסיימי] עם המפקד והלוקר, אחר כך תרגיל.' }]);
+        await UI.talk([{ who: 'sergeant', text: 'קודם [תסיים/תסיימי] עם {@commander} והלוקר, מלך[/ה]. אחר כך תרגיל.' }]);
       } else if (this.has('reload_train')) {
         await UI.talk([
-          { who: 'sergeant', text: 'היום לומדים להחליף מארז. משגר 1 ריק לצורך תרגול.' },
-          { who: 'sergeant', text: 'נכנסים למחסן, לוקחים מארז, מביאים למשגר ומבצעים את השלבים: נעילת בטיחות, תפסים, מנוף, כבלים, בדיקה. מהר וזהיר.' },
+          { who: 'sergeant', text: 'היום לומדים להחליף מארז. משגר 1 ריק בשבילך, באהבה.' },
+          { who: 'sergeant', text: 'נכנסים למחסן, לוקחים מארז, מביאים למשגר: נעילת בטיחות, תפסים, מנוף, כבלים, בדיקה. ואם {@tech_launch} שואל — לא נגעת בכלום.' },
         ]);
         World.launchers[0].needsReload = true;
         World.launchers[0].ammo = 0;
         this.complete('reload_train');
         this.addTask('reload');
         Game.setNpcSpot('sergeant', SPOTS.sergeantDoor);
-      } else if (this.has('inspection') && !this.has('inspection_prep')) {
-        await this.inspect();
-      } else if (this.has('inspection_prep')) {
-        const left = World.beds.filter(b => b.messy).length + World.lockers.filter(l => l.open).length + this.dust.length;
-        await UI.talk([{ who: 'sergeant', text: `עוד ${left} דברים לסדר בחדר. מסדר ניקיון זה לא המלצה 😉` }]);
       } else if (this.has('exam_reload')) {
-        await UI.talk([{ who: 'sergeant', text: 'מבחן טעינה: משגר 2 ריק. 80 שניות. אני עם סטופר. בהצלחה!' }]);
+        await UI.talk([{ who: 'sergeant', text: 'מבחן טעינה: משגר 2 ריק. 80 שניות. יש לי סטופר ואמונה מלאה בך 👑' }]);
         World.launchers[1].needsReload = true;
         World.launchers[1].ammo = 0;
         G.state.dayFlags.examReload = true;
         UI.toast('לקחת מארז מהמחסן ולהביא למשגר 2');
       } else {
-        const lines = ['[שתה/שתי] מים, חם פה בנגב.', 'אם המורל נמוך — ש.ק. פתוח. רק אל [תגזים/תגזימי] עם משקאות אנרגיה.', 'המגורים צריכים להיות מסודרים תמיד. תמיד.'];
-        await UI.talk([{ who: 'sergeant', text: lines[Math.floor(Math.random() * lines.length)] }]);
+        await this.chatter(n);
       }
-    } else if (n.id === 'friend') {
-      const S2 = G.state;
-      if (!S2.dayFlags.seeds) {
-        S2.dayFlags.seeds = true;
-        await UI.talk([
-          { who: 'friend', text: ['קח[י] גרעינים, על חשבוני 🌻', '[אתה/את] יודע[/ת] למה קוראים לזה נתיבוט? כי כל הבוטים פה בנתיבות 🤖😂', 'שמעתי שהמפקד ישן עם הכומתה. אל תגיד[/י] שאמרתי.', 'בשמירה [תעשה/תעשי] שטיפת פנים כל כמה דקות, עובד.'][S2.day % 4] },
-        ]);
+    } else if (id === 'inspector') {
+      if (this.has('inspection') && !this.has('inspection_prep')) await this.inspect();
+      else if (this.has('inspection_prep') || this.has('surprise')) {
+        const left = World.beds.filter(b => b.messy).length + World.lockers.filter(l => l.open).length + this.dust.length;
+        await UI.talk([{ who: 'inspector', text: `עוד ${left} דברים לסדר. ספרתי. פעמיים. ואז עוד פעם, ליתר ביטחון.` }]);
+      } else await this.chatter(n);
+    } else if (id === 'friend') {
+      if (!S.dayFlags.seeds) {
+        S.dayFlags.seeds = true;
+        await UI.talk([{ who: 'friend', text: pick([
+          'קח[י] גרעינים. בקוד המקורי זה היה +5 מורל, אבל חיבבתי אותך אז שמתי +8 🌻',
+          'יודע[/ת] למה קוראים לזה נתיבוט? כי נתיבות + בוט. לקח לי שלושה ימים להמציא את זה.',
+          'טיפ ממי שכתב את המשחק: {@inspector} לא רואה אותך כשאת[ה/] רץ[/ה]. ...טוב, היא רואה. אבל היא לא מספיקה.',
+          'אם תמצא[/י] באג — תגיד[/י] ל{@p_nevo}. הוא בטוח יגיד שזה הוא שבר.',
+        ]) }]);
         Game.addStat('morale', 8);
         UI.toast('מורל +8 🌻', 'good');
-      } else {
-        await UI.talk([{ who: 'friend', text: ['יאללה, יש משימות!', 'אני הולך לש.ק., רוצה משהו?', 'עוד יום ועוד יום, ואז רגילה 🏠'][Math.floor(Math.random() * 3)] }]);
-      }
+      } else await this.chatter(n);
+    } else if (id === 'ruth') {
+      await this.ruth();
+    } else if (id === 'bc') {
+      if (this.has('graduation') && !this.tasks.some(t => t.id.startsWith('exam_') && !t.done)) await this.graduation();
+      else await this.chatter(n);
+    } else if (id === 'rasap') {
+      if (this.has('hq_gear')) await this.signGear();
+      else await this.chatter(n);
+    } else if (id === 'ops' && this.has('radar')) {
+      await UI.talk([
+        { who: 'ops', text: 'משמרת בקרה. [שב/שבי] בעמדה, עיניים על המסך. {@hamalist} — שקט.' },
+        { who: 'hamalist', text: 'אני שקטה!!! זה הקול השקט שלי!!!' },
+      ]);
+      await this.radarShift();
+    } else if (id === 'harasar' && !S.dayFlags.uniform) {
+      S.dayFlags.uniform = true;
+      await UI.talk([{ who: 'harasar', text: 'בדיקת לבוש! עמוד[/י] ישר. ...מה זה החגור הזה? ליישר. מהר!' }]);
+      const r = await Mini.open('qte', { title: 'יישור מדים מול הרס"ר', sub: 'חגור, כומתה, שרוולים. [הקש/הקישי] מהר!', length: 4, time: 5, silent: true });
+      await UI.talk([{ who: 'harasar', text: r.success ? 'טוב. הפעם. אני עוד אמצא משהו. אני תמיד מוצא.' : 'הכומתה על הכתף, השרוולים מגולגלים, ובנעליים יש חוף שלם. [לך/לכי] לתקן.' }]);
+      Game.addScore(r.success ? 3 : -2, r.success ? 'עברת בדיקת לבוש' : 'נכשלת בבדיקת לבוש');
+    } else if (World.id === 'field' && (id === 'driver1' || id === 'driver2') && this.deployTruck && this.deployTruck.state === 'waiting') {
+      this.acceptTruck();
     } else {
-      await UI.talk([{ who: n.short, text: n.lines[Math.floor(Math.random() * n.lines.length)] }]);
+      await this.chatter(n);
     }
+  },
+
+  // ---------- HQ ----------
+  async signGear() {
+    await UI.talk([
+      { who: 'rasap', text: 'שלום, אני {@rasap}. באת לחתום? יופי. אפוד, קסדה, מימייה, פנס — וחתימה על זה שחתמת.' },
+      { who: 'deputy_rasap', text: '*נשען על הדלפק בהילוך איטי* ...תחתום[/י] חזק. כמו בסרטים.' },
+      { who: 'rasap', text: '{@deputy_rasap}, אתה מפריע. ותוריד את המשקפיים, אנחנו בתוך מבנה.' },
+    ]);
+    const r = await Mini.open('qte', { title: 'חתימה על טופס ציוד', sub: 'שם, מספר אישי, חתימה, חתימה על החתימה. [הקש/הקישי] את הרצף!', length: 6, time: 9, silent: true });
+    if (!r.success) { await UI.talk([{ who: 'rasap', text: 'החתימה יצאה עקומה. גם את זה צריך לחתום מחדש. עוד פעם.' }]); return; }
+    await UI.talk([
+      { who: 'rasap', text: 'חתום. עכשיו הציוד קיים. אם הוא נעלם — את[ה/] קיים[/ת] אצלי בטבלה 📦' },
+      { who: 'sarsap', text: 'ואם חסר משהו — זה אצלי. ...לא, רגע, זה אצלך עכשיו. מזל טוב.' },
+    ]);
+    this.complete('hq_gear', 5, 'חתימה על ציוד');
+  },
+  async clinic() {
+    const S = G.state;
+    if (S.dayFlags.clinic) { await UI.talk([{ who: 'medic1', text: 'כבר היית היום. [שתה/שתי] מים. כן, שוב.' }]); return; }
+    S.dayFlags.clinic = true;
+    await UI.talk([
+      { who: 'medic3', text: 'שלום! מה כואב? ...הכל? אקמול, מים ומנוחה.' },
+      { who: 'medic2', text: 'ופלסטר. תמיד יש פלסטר.' },
+      { who: 'medic1', text: '[שתה/שתי] את כל הבקבוק. אני מסתכלת.' },
+    ]);
+    Game.addStat('energy', 25);
+    Game.addStat('morale', 4);
+    UI.toast('אנרגיה +25 💧', 'good');
+  },
+
+  // ---------- easter egg ----------
+  async ruth() {
+    const S = G.state;
+    const egg = ROSTER.easterEgg;
+    if (S.achievements.includes('ruth')) { await UI.talk([{ who: 'ruth', text: 'שששש! אני לא פה. אני בכיתה. [תגיד/תגידי] ל{@commander} שלום ממני 📚' }]); return; }
+    const v = await UI.talk([
+      { who: 'ruth', text: egg.hello },
+      { who: 'ruth', text: egg.question, choices: egg.answers.map((a, i) => ({ label: a, value: i + 1 })) },
+    ]);
+    const right = v - 1 === egg.ok;
+    await UI.talk([{ who: 'ruth', text: right ? egg.right : egg.wrong }]);
+    if (right) { Game.achieve('ruth'); Game.addStat('morale', 10); }
+  },
+
+  // ---------- inspector chase ----------
+  chaseAllowed() {
+    return G.state && !this.has('meet_cmd') && !this.has('inspection_prep') && !this.has('inspection') && !this.has('surprise') && !this.gateShift && !G.player.carry;
+  },
+  async caught() {
+    Game.achieve('caught');
+    Sound.whistle();
+    await UI.talk([
+      { who: 'inspector', text: pick(['תפסתי אותך! מסדר פתע. ארבעה כתמי אבק במגורים, עכשיו.', 'חשבת שתברח[/י]? יש לי סיבולת של מסדרים. לטאטא את המגורים!', 'מה זה, טיול? מסדר פתע! המגורים מחכים לך.']) },
+      { who: 'p_shalev', text: 'טפו עלא וושק... ברוך השם שזה לא אני הפעם.' },
+    ]);
+    for (let i = 0; i < 4; i++) this.dust.push({ x: (7 + Math.random() * 11) * TS, y: (27.3 + Math.random() * 2.2) * TS });
+    this.addTask('surprise');
+    Game.addStat('morale', -4);
+  },
+
+  // ---------- travel between sites ----------
+  async travelMenu() {
+    if (this.gateShift) { UI.toast('קודם לסיים את משמרת הש"ג'); return; }
+    if (this.run) { UI.toast('קודם לסיים את הריצה'); return; }
+    const S = G.state;
+    const dests = ['netivot', 'hq'];
+    if (this.has('deploy') || (S.deploy && S.deploy.placed && S.deploy.placed.length)) dests.push('field');
+    const choices = dests.filter(d => d !== World.id).map(d => ({ label: `ל${siteName(d)}`, value: d }));
+    choices.push({ label: 'לא עכשיו', value: null });
+    const dest = await UI.talk([{ who: 'player', text: 'לאן נוסעים?', choices }]);
+    if (!dest) return;
+    const driver = pick(['driver1', 'driver2']);
+    const ride = {
+      driver1: ['דבאי, תעלה[/י]. חגורה! ...אצלנו ברוסיה לא שמים. פה כן.', 'נוסעים. אם יש בורות — זה לא אני, זה הכביש.'],
+      driver2: ['[אחי/אחותי] תעלה[/י], יש לי פלייליסט שיעשה לך צמרמורת.', 'לפי וויז עשרים דקות. לפי {@driver2} — שבע.'],
+    }[driver];
+    await UI.talk([{ who: driver, text: pick(ride) }]);
+    if (G.player.carry) { G.player.carry = false; UI.toast('את המארז השארת בתחנה. {@interceptors} לא יאהב את זה.'); }
+    if (dest === 'field' && S.deploy && S.deploy.done) { S.deploy = { placed: [] }; delete World.cache.field; }
+    UI.fade(() => {
+      S.clock += 25;
+      Game.switchMap(dest);
+      UI.toast(`הגעת ל${siteName(dest)}`, 'good');
+      if (dest === 'hq') Game.achieve('hq');
+      if (dest === 'field' && this.has('deploy')) setTimeout(() => this.startDeploy(), 600);
+    });
+  },
+
+  // ---------- site deployment ----------
+  deployTruck: null,
+  nextDeployItem() {
+    const placed = (G.state.deploy && G.state.deploy.placed) || [];
+    return DATA.deploy.find(d => !placed.includes(d.id));
+  },
+  async startDeploy() {
+    const S = G.state;
+    S.deploy = S.deploy || { placed: [] };
+    if (S.deploy.intro) return;
+    S.deploy.intro = true;
+    await UI.talk([
+      { who: 'commander', text: 'המצב מתחמם. פורסים אתר חדש, עכשיו. המשאיות בדרך עם המכולות.' },
+      { who: 'commander', text: 'כל משאית שמגיעה — [תקבל/תקבלי] אותה ליד השער ו[תכווין/תכווני] אותה למקום המסומן. קודם מיגונית. אחר כך משגר. ואז כל השאר.' },
+      { who: 'p_nevo', text: 'אפשר להתחיל מהשירותים הכימיים? יש לי סיבות אישיות.' },
+      { who: 'commander', text: 'לא.' },
+    ]);
+  },
+  updateDeploy(dt) {
+    if (!this.has('deploy')) return;
+    const S = G.state;
+    if (!S.deploy || !S.deploy.intro) return;
+    let tr = this.deployTruck;
+    if (!tr) {
+      const item = this.nextDeployItem();
+      if (!item) return;
+      const driver = (S.deploy.placed.length % 2) ? 'driver2' : 'driver1';
+      tr = this.deployTruck = { item, driver, x: 30.5 * TS, y: 46 * TS, angle: -Math.PI / 2, state: 'arriving' };
+      World.gateTarget = 1;
+      Sound.gate();
+    }
+    const sp = 170 * dt;
+    const drive = (tx, ty) => {
+      const dx = tx - tr.x, dy = ty - tr.y, d = Math.hypot(dx, dy);
+      if (d < sp) { tr.x = tx; tr.y = ty; return true; }
+      tr.x += dx / d * sp; tr.y += dy / d * sp;
+      tr.angle = Math.atan2(dy, dx);
+      return false;
+    };
+    if (tr.state === 'arriving' && drive(30.5 * TS, 35 * TS)) { tr.state = 'waiting'; World.gateTarget = 0; UI.toast(`🚛 הגיעה משאית: ${tr.item.name}`); }
+    else if (tr.state === 'driving') {
+      const it = tr.item;
+      if (drive((it.x + it.w / 2) * TS, (it.y + it.h / 2) * TS)) { tr.state = 'unload'; this.unloadTruck(); }
+    } else if (tr.state === 'leaving') {
+      World.gateTarget = 1;
+      if (drive(30.5 * TS, 47 * TS)) { this.deployTruck = null; World.gateTarget = 0; }
+    }
+  },
+  acceptTruck() {
+    const tr = this.deployTruck;
+    if (!tr || tr.state !== 'waiting') return;
+    tr.state = 'assigned';
+    const lines = {
+      driver1: ['דבאי, [תכווין/תכווני] אותי. אני רואה רק במראות.', 'אני נוסע לאן שאת[ה/] מצביע[/ה]. אם זה לא נכון — זה עליך.'],
+      driver2: ['[תגיד/תגידי] לי איפה, ואני שם בשבע שניות. שש אם מגבירים.', 'שים[/י] לב, אני נכנס בסטייל.'],
+    }[tr.driver];
+    UI.talk([{ who: tr.driver, text: `${pick(lines)} יש לי פה: ${tr.item.name}.` }]);
+  },
+  async guideTo(item) {
+    const tr = this.deployTruck;
+    if (item.id !== tr.item.id) {
+      const jokes = {
+        driver1: ['זה לא המקום. אפילו אני יודע, ואני רק נוהג.', 'פה? ברוסיה היינו שמים פה שלג. לא את זה.'],
+        driver2: [`[אחי/אחותי], [תסתכל/תסתכלי] על השלט. "${item.name}" זה לא "${tr.item.name}". ...אני מקווה.`, 'אני מוריד פה ואז {@commander} מורידה אותי. לא.'],
+      }[tr.driver];
+      await UI.talk([{ who: tr.driver, text: pick(jokes) }]);
+      Game.addScore(-1, 'כיוון למקום הלא נכון');
+      return;
+    }
+    tr.state = 'driving';
+    Sound.click();
+  },
+  async unloadTruck() {
+    const tr = this.deployTruck;
+    const r = await Mini.open('qte', { title: `פריקה וקשירה: ${tr.item.name}`, sub: 'שרשראות, ווים, רצועות. [הקש/הקישי] מהר לפני שהמנוף מאבד סבלנות!', length: 5, time: 9, silent: true });
+    if (!r.success) { UI.toast('הרצועה השתחררה, עוד פעם', 'bad'); this.unloadTruck(); return; }
+    const S = G.state;
+    S.deploy.placed.push(tr.item.id);
+    const o = World.placeContainer(null, tr.item);
+    if (o) Scene3D.addProp(o);
+    Game.addScore(3, `הוצב: ${tr.item.name}`);
+    tr.state = 'leaving';
+    if (!this.nextDeployItem()) this.finishDeploy();
+  },
+  async finishDeploy() {
+    const S = G.state;
+    S.deploy.done = true;
+    await UI.talk([
+      { who: 'commander', text: 'האתר פרוס. מיגונית, משגר, חדרי שינה, חדר אוכל, מטבח, מקלחות ושירותים. {platoon} — כל הכבוד.' },
+      { who: 'p_nevo', text: 'ואני חנכתי את השירותים הכימיים. לא תודה לי, תודה למדע.' },
+      { who: 'driver2', text: 'ואת כל זה עשינו בשבע דקות. לפי השעון שלי.' },
+    ]);
+    Game.achieve('deploy');
+    this.complete('deploy', 15, 'פריסת אתר');
+  },
+  deployInteractables(add) {
+    const tr = this.deployTruck;
+    if (!tr) return;
+    if (tr.state === 'waiting') add(tr.x, tr.y, `לקבל את המשאית (${tr.item.name})`, () => this.acceptTruck(), 80);
+    if (tr.state === 'assigned') {
+      const placed = G.state.deploy.placed;
+      for (const it of DATA.deploy) {
+        if (placed.includes(it.id)) continue;
+        add((it.x + it.w / 2) * TS, (it.y + it.h / 2) * TS, `להכווין לכאן: ${it.name}`, () => this.guideTo(it), Math.max(it.w, it.h) * TS * 0.45);
+      }
+    }
+  },
+  deployTarget() {
+    if (World.id !== 'field') return travelSpot();
+    const tr = this.deployTruck;
+    if (!tr) return null;
+    if (tr.state === 'waiting') return { x: tr.x, y: tr.y };
+    if (tr.state === 'assigned') return { x: (tr.item.x + tr.item.w / 2) * TS, y: (tr.item.y + tr.item.h / 2) * TS };
+    return null;
+  },
+  deployText() {
+    const S = G.state;
+    const n = (S.deploy && S.deploy.placed.length) || 0;
+    const tr = this.deployTruck;
+    let step = 'ממתינים למשאית';
+    if (tr && tr.state === 'waiting') step = `לקבל משאית ליד השער: ${tr.item.name}`;
+    else if (tr && tr.state === 'assigned') step = `להכווין את המשאית למקום של: ${tr.item.name}`;
+    else if (tr && tr.state === 'driving') step = 'המשאית בדרך למקום';
+    return `פריסת אתר (${n}/${DATA.deploy.length}) — ${step}`;
   },
 
   // ---------- simple actions ----------
@@ -383,9 +664,13 @@ const Story = {
     this.checkPrep();
   },
   checkPrep() {
+    if (this.has('surprise') && !this.dust.length) {
+      this.complete('surprise', 2, 'מסדר פתע');
+      UI.talk([{ who: 'inspector', text: pick(['...טוב. הפעם עברת. אני עדיין מסתכלת עליך.', 'נקי. בערך. נגיד שנקי.']) }]);
+    }
     if (!this.has('inspection_prep')) return;
     const left = World.beds.filter(b => b.messy).length + World.lockers.filter(l => l.open).length + this.dust.length;
-    if (!left) { this.complete('inspection_prep', 3, 'החדר מוכן'); UI.toast('החדר מוכן! לקרוא לסמלת', 'good'); }
+    if (!left) { this.complete('inspection_prep', 3, 'החדר מוכן'); UI.toast('החדר מוכן! לקרוא ל{@inspector}', 'good'); }
   },
   pickTrash(t) {
     this.trash.splice(this.trash.indexOf(t), 1);
@@ -409,7 +694,7 @@ const Story = {
   async sleep() {
     const S = G.state;
     const open = this.tasks.filter(t => !t.done && !t.last);
-    if (S.mode === 'story' && this.has('graduation')) { UI.toast('קודם לשמוע תוצאות מהמפקד'); return; }
+    if (S.mode === 'story' && this.has('graduation')) { UI.toast('קודם לשמוע את התוצאה מ{@@bc}'); return; }
     if (S.clock < 19 * 60 && open.length) {
       const v = await UI.talk([{ who: 'player', text: `עוד ${open.length} משימות פתוחות והשעה ${clockText()}. ללכת לישון בכל זאת?`, choices: [{ label: 'כן, לישון', value: 1 }, { label: 'לא, עוד רגע', value: 0 }] }]);
       if (!v) return;
@@ -503,19 +788,24 @@ const Story = {
     World.lockers[2].open = true;
     this.dust = [];
     for (let i = 0; i < 5; i++) this.dust.push({ x: (7 + Math.random() * 11) * TS, y: (27.3 + Math.random() * 2.2) * TS });
-    Game.setNpcSpot('sergeant', SPOTS.sergeantBarracks);
+    const insp = Game.npc('inspector');
+    if (insp) { insp.wanderSaved = insp.wander; insp.wander = null; }
+    Game.setNpcSpot('inspector', SPOTS.sergeantBarracks);
   },
   async inspect() {
     const S = G.state;
     const left = World.beds.filter(b => b.messy).length + World.lockers.filter(l => l.open).length + this.dust.length;
     const lateness = Math.max(0, S.clock - 12 * 60) / 30;
     const grade = Math.max(30, Math.round(100 - left * 10 - lateness * 5));
-    await UI.cutscene([{ img: 'assets/inspection.jpg', who: 'סמלת מאיה', text: `מסדר ניקיון! ...מעבירה אצבע על הלוקר... בודקת פינות מיטה... ציון: ${grade}` }]);
-    await UI.talk([{ who: 'sergeant', text: grade >= 90 ? 'מושלם. אני כמעט מתרגשת. כל הפלגה יוצאת להפסקה בזכותך!' : grade >= 70 ? 'עובר. בפעם הבאה גם הפינות של המיטה.' : 'זה לא מסדר, זה אסון. ריתוק לחמישי... סתם. אבל תשתפר[/י].' }]);
+    await UI.cutscene([{ img: 'assets/inspection.jpg', who: '{@inspector}', text: `מסדר ניקיון! ...מעבירה אצבע על הלוקר... מרימה מזרן... מסתכלת על המנורה מלמטה... ציון: ${grade}` }]);
+    await UI.talk([{ who: 'inspector', text: grade >= 90 ? 'מושלם. אני... אני כמעט מרוצה. אל [תתרגל/תתרגלי].' : grade >= 70 ? 'עובר. אבל ראיתי גרגר חול מתחת למיטה. והוא ראה אותי.' : 'זה לא מסדר, זה אתר ארכיאולוגי. מחר שוב. ובעוד שעה גם.' }]);
+    if (grade >= 90) await UI.talk([{ who: 'sergeant', text: 'שמעתם? {@inspector} אמרה "כמעט מרוצה"! זה היסטורי 👑' }]);
     if (grade >= 90) Game.achieve('inspection');
     Game.addStat('morale', grade >= 70 ? 6 : -6);
     this.complete('inspection', Math.round(grade / 7), 'מסדר ניקיון');
-    Game.setNpcSpot('sergeant', SPOTS.sergeantDoor);
+    const insp = Game.npc('inspector');
+    if (insp && insp.wanderSaved) insp.wander = insp.wanderSaved;
+    Game.setNpcSpot('inspector', tc(30, 28));
   },
 
   // ---------- control room / guard ----------
@@ -713,7 +1003,7 @@ const Story = {
     if (A.kind === 'drill') {
       if (A.made) this.complete('drill', 5, 'תרגיל צבע אדום');
       else { UI.toast('ננסה שוב — לדבר עם הסמלת', 'bad'); }
-      if (A.made) await UI.talk([{ who: 'sergeant', text: 'מצוין! ככה בדיוק. עכשיו ניקיון שטח: יש פסולת מפוזרת בכל הבסיס. 10 פריטים, בבקשה.' }]);
+      if (A.made) await UI.talk([{ who: 'sergeant', text: 'מלך[/ה]! ככה בדיוק 👑 עכשיו ניקיון שטח: יש פסולת בכל הבסיס. 10 פריטים, לפני ש{@inspector} רואה.' }]);
       return;
     }
     if (A.kind === 'drill-train') { this.trainingDone('alertDrill', A.made, 4); return; }
@@ -725,17 +1015,18 @@ const Story = {
     Game.addScore(A.made ? 6 : -10, A.made ? 'הגעת למיגונית בזמן' : 'לא הגעת למיגונית');
     Game.addStat('morale', A.made ? 2 : -10);
     // The busiest launcher needs a fresh canister.
-    const L = World.launchers.slice().sort((a, b) => a.ammo - b.ammo)[0];
+    const L = (World.cache.netivot || World).launchers.slice().sort((a, b) => a.ammo - b.ammo)[0];
     L.needsReload = true;
     L.ammo = 0;
-    await UI.talk([{ who: 'commander', text: `כל הכבוד לכולם. היו יירוטים — ${L.name} ריק. {name}, להחליף מארז, עכשיו.` }]);
+    await UI.talk([{ who: World.id === 'hq' ? 'interceptors' : 'commander', text: World.id === 'hq' ? `יצאו מיירטים. ${L.name} בנתיבות ריק. ספרתי. {name}, [סע/סעי] להחליף מארז.` : `כל הכבוד לכולם. היו יירוטים — ${L.name} ריק. {name}, להחליף מארז, עכשיו.` }]);
     this.addTask('reload');
   },
 
   spawnThreat() {
     // A rocket from the west; a loaded launcher fires an interceptor at it.
-    const launchers = World.launchers.filter(l => l.ammo > 0);
-    const L = launchers[Math.floor(Math.random() * launchers.length)] || World.launchers[0];
+    const all = (World.cache.netivot || World).launchers;
+    const launchers = all.filter(l => l.ammo > 0);
+    const L = launchers[Math.floor(Math.random() * launchers.length)] || all[0];
     L.ammo = Math.max(0, L.ammo - 1 - Math.floor(Math.random() * 3));
     Scene3D.spawnThreat(L);
   },
@@ -766,10 +1057,18 @@ const Story = {
       S.graduated = true;
       S.examRetry = false;
       Game.achieve('palgatz');
-      await UI.talk([{ who: 'commander', text: `{name}... עברת ${parts} מתוך 4 חלקים, ציון פלג"צ ${Math.round(S.score)}. אין מה להגיד —` }]);
+      await UI.talk([
+        { who: 'bc', text: `{name}. קיבלתי את התוצאות. בדקתי פעמיים. באקסל. ${parts} מתוך 4 חלקים, ציון פלג"צ ${Math.round(S.score)}.` },
+        { who: 'bc', text: 'סימנתי את השורה שלך בירוק. אני לא מסמנת בירוק סתם.' },
+      ]);
       await UI.cutscene([
-        { img: 'assets/graduation.jpg', who: 'סגן אורי', text: 'עברת את פלג"צ! מהיום את[ה/] [לוחם/לוחמת] [מוסמך/מוסמכת] בסוללת {battery}, {gdud}.' },
-        { img: 'assets/graduation.jpg', who: '', text: 'קיבלת דרגת רב"ט 🎖️ הבסיס פתוח לך: משמרות, אזעקות, משגרים — כל יום משהו אחר. ככה נראה סוללה אמיתית.' },
+        { img: 'assets/graduation.jpg', who: '{@@bc}', text: 'עברת את פלג"צ! מהיום את[ה/] [לוחם/לוחמת] [מוסמך/מוסמכת] בסוללת {battery}, {gdud}.' },
+        { img: 'assets/graduation.jpg', who: '', text: 'קיבלת דרגת רב"ט 🎖️ {@commander} מחייכת (פעם ראשונה שמישהו רואה את זה), {@sergeant} בוכה, ו{@inspector} כבר מחפשת אבק על הדרגה החדשה.' },
+      ]);
+      await UI.talk([
+        { who: 'harasar', text: 'מזל טוב. עכשיו [תיישר/תיישרי] את הכומתה, רב"ט.' },
+        { who: 'hamalist', text: 'מזל טוב!!!!!! 🎉🎉🎉 אני כל כך שמחה שאני הולכת לשתות עוד קפה!!!' },
+        { who: 'deputy_bc', text: 'דבאי, מספיק חגיגות. יש סוללה להפעיל.' },
       ]);
       S.mode = 'story';
       Game.save();
@@ -779,8 +1078,8 @@ const Story = {
       this.complete('graduation');
       S.examRetry = true;
       await UI.talk([
-        { who: 'commander', text: `עברת ${parts} מתוך 4 חלקים וציון הפלג"צ שלך ${Math.round(S.score)} (צריך ${DATA.passScore}). זה עוד לא שם.` },
-        { who: 'commander', text: 'מחר — מבחן חוזר. [תתאמן/תתאמני] היום במטווח, בבקרה ובטעינה. אני מאמין בך.' },
+        { who: 'bc', text: `עברת ${parts} מתוך 4 חלקים וציון הפלג"צ שלך ${Math.round(S.score)} (צריך ${DATA.passScore}). סימנתי בכתום. כתום זה לא אדום, אבל זה גם לא ירוק.` },
+        { who: 'bc', text: 'מחר — מבחן חוזר בנתיבות. [תתאמן/תתאמני] במטווח, בבקרה ובטעינה. לוח זמנים מצורף.' },
       ]);
       this.examParts = {};
       this.tasks.push({ id: 'sleep', ...TASKS.sleep, done: false });

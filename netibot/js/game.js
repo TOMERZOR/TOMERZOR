@@ -24,18 +24,31 @@ const mini = $('#minimap');
 const mctx = mini.getContext('2d');
 let miniBase = null;
 
-const SOLDIER_NAMES = [
-  { short: 'עומר', lines: ['ראית את המפקד? הוא מחפש מישהו לתורנות מטבח 😬', 'עוד שבוע ויוצאים הביתה.'] },
-  { short: 'נועה', female: true, lines: ['תזכיר[/י] לי איפה המיגונית הכי קרובה?', 'הקפה בש.ק. הוא הדבר היחיד שמחזיק אותי.'] },
-  { short: 'יונתן', lines: ['אני בשמירה הלילה. תתפלל[/י] בשבילי.', 'שמעת את היירוט אתמול? הרגשתי אותו בבטן.'] },
-  { short: 'ליה', female: true, lines: ['המשגרים נראים מדהים בשקיעה.', 'סיימתי מסדר ניקיון, אני מתה מעייפות.'] },
-  { short: 'אביב', lines: ['מישהו לקח לי את הכומתה?!', 'בנתיבות יש את הבורקס הכי טוב, [אחי/אחותי].'] },
-];
+// Where each cast member stands on each site: a fixed tile, or a wander region.
+const WANDER = {
+  netivot: [{ x0: 4, y0: 13, x1: 33, y1: 23 }, { x0: 33, y0: 22, x1: 59, y1: 32 }, { x0: 17, y0: 30, x1: 40, y1: 40 }, { x0: 36, y0: 3, x1: 59, y1: 12 }, { x0: 6, y0: 25, x1: 18, y1: 31 }],
+  hq: [{ x0: 4, y0: 13, x1: 59, y1: 23 }, { x0: 24, y0: 26, x1: 34, y1: 40 }, { x0: 40, y0: 32, x1: 59, y1: 40 }],
+  field: [{ x0: 20, y0: 30, x1: 40, y1: 40 }, { x0: 26, y0: 18, x1: 40, y1: 28 }],
+};
+const LAYOUT = {
+  netivot: {
+    commander: () => SPOTS.commander, sergeant: () => SPOTS.sergeantDoor, inspector: () => tc(30, 28), friend: () => tc(24, 31), ruth: () => tc(3, 14),
+  },
+  hq: {
+    bc: [26, 7], deputy_bc: [27, 12], harasar: [32, 8], rasap: [45, 8], deputy_rasap: [48, 7], sarsap: [46, 13], interceptors: [55, 9],
+    ops: [9, 8], hamalist: [15, 9], medic1: [7, 29], medic2: [10, 27], medic3: [10, 29], tech_comms: [38, 28], tech_ground: [41, 28], tech_launch: [43, 27],
+    driver1: [9, 34], driver2: [13, 38], officer1: null, officer2: null, officer3: null,
+  },
+  field: { commander: [33, 31], driver1: [28, 37], driver2: [33, 37], p_nevo: null, p_shalev: null, p_ofek: null, p_miriam: null },
+};
+const WANDERERS = new Set(['friend', 'inspector', 'officer1', 'officer2', 'officer3', 'harasar']);
 
 const Game = {
   // ---------- boot ----------
   init() {
-    World.build();
+    Cast.init();
+    World.use('netivot');
+    G.map = 'netivot';
     Scene3D.init(canvas);
     Scene3D.build();
     this.bindInput();
@@ -110,6 +123,7 @@ const Game = {
       if (!l) return;
       const k = e.pointerType === 'touch' ? 0.009 : 0.006;
       Scene3D.yaw -= (e.clientX - l.x) * k;
+      Scene3D.lastLook = performance.now();
       Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + (e.clientY - l.y) * k * 0.7));
       l.x = e.clientX; l.y = e.clientY;
     });
@@ -160,23 +174,30 @@ const Game = {
   // ---------- NPCs ----------
   npc(id) { return G.npcs.find(n => n.id === id); },
   resetNpcs() {
-    const P = G.profile;
-    const mk = (id, short, spot, look, extra = {}) => ({ id, short, x: spot.x, y: spot.y, r: 12, angle: Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: 0, look, ...extra });
-    G.npcs = [
-      mk('commander', 'סגן אורי', SPOTS.commander, { skin: '#d9a77c', hair: '#2b1d12', head: 'beret' }),
-      mk('sergeant', 'סמלת מאיה', SPOTS.sergeantDoor, { skin: '#e0b38c', hair: '#1d150f', head: 'beret', female: true }),
-      mk('friend', 'שקד', tc(24, 31), { skin: '#c48b5e', hair: '#1d150f', head: 'none' }, { wander: { x0: 20, y0: 24, x1: 33, y1: 33 } }),
-    ];
-    const regions = [{ x0: 4, y0: 13, x1: 33, y1: 23 }, { x0: 33, y0: 22, x1: 59, y1: 32 }, { x0: 17, y0: 30, x1: 40, y1: 40 }, { x0: 36, y0: 3, x1: 59, y1: 12 }, { x0: 6, y0: 25, x1: 18, y1: 31 }];
-    SOLDIER_NAMES.forEach((s, i) => {
-      const r = regions[i % regions.length];
-      const sp = tc(Math.floor((r.x0 + r.x1) / 2), Math.floor((r.y0 + r.y1) / 2));
-      const spot = this.walkableNear(sp) || sp;
-      G.npcs.push(mk('s' + i, s.short, spot, {
-        skin: DATA.skinTones[i % 4], hair: DATA.hairColors[(i + 1) % 4], head: i % 2 ? 'cap' : 'none', female: s.female,
-      }, { wander: r, lines: s.lines }));
+    const mk = (person, spot, wander) => ({
+      id: person.id, person, short: person.short, x: spot.x, y: spot.y, r: 12, angle: Math.PI / 2, walk: 0, path: [], spot: { ...spot }, idle: Math.random() * 4, wander,
+      look: { skin: person.skin || DATA.skinTones[(person.id.length * 7) % 4], hair: person.hair || DATA.hairColors[(person.id.length * 3) % 3], head: person.head || 'none', female: !!person.female },
+      barkCd: 8 + Math.random() * 20, chaseCd: 60,
     });
-    void P;
+    const map = World.id;
+    const layout = LAYOUT[map];
+    const regions = WANDER[map];
+    G.npcs = [];
+    let ri = 0;
+    const people = [...ROSTER.people, ROSTER.easterEgg];
+    for (const person of people) {
+      const onMap = map === 'field' ? person.id in layout : person.map === map || (person.id === 'ruth' && map === 'netivot');
+      if (!onMap) continue;
+      const fixed = layout[person.id];
+      const region = regions[ri++ % regions.length];
+      let spot;
+      if (typeof fixed === 'function') spot = fixed();
+      else if (Array.isArray(fixed)) spot = tc(fixed[0], fixed[1]);
+      else spot = this.walkableNear(tc(Math.floor((region.x0 + region.x1) / 2), Math.floor((region.y0 + region.y1) / 2))) || tc(30, 30);
+      const wanders = !fixed || WANDERERS.has(person.id);
+      const w = person.id === 'inspector' ? { x0: 5, y0: 13, x1: 58, y1: 39 } : person.id === 'friend' ? { x0: 20, y0: 24, x1: 33, y1: 33 } : region;
+      G.npcs.push(mk(person, spot, wanders && person.id !== 'ruth' ? w : null));
+    }
   },
   walkableNear(p) {
     for (let r = 0; r < 6; r++) {
@@ -211,17 +232,28 @@ const Game = {
   updateNpcs(dt) {
     const P = G.player;
     for (const n of G.npcs) {
+      if (n.id === 'inspector') this.updateChase(n, dt);
+      if (n.bubble) { n.bubble.t -= dt; if (n.bubble.t <= 0) n.bubble = null; }
+      n.barkCd -= dt;
+      if (n.barkCd <= 0 && !n.bubble && !G.alert && n.person.barks) {
+        n.barkCd = 18 + Math.random() * 25;
+        if (Math.hypot(P.x - n.x, P.y - n.y) < 220) {
+          const b = n.person.barks;
+          n.bubble = { text: fmtAs(n.person, b[Math.floor(Math.random() * b.length)]), t: 3.5 };
+        }
+      }
       if (n.path.length) {
         const tgt = n.path[0];
         const dx = tgt.x - n.x, dy = tgt.y - n.y;
         const d = Math.hypot(dx, dy);
-        const sp = (n.sheltering ? 150 : 70) * dt;
+        const sp = (n.sheltering ? 150 : n.chasing ? 104 : 70) * dt;
         if (d <= sp) { n.x = tgt.x; n.y = tgt.y; n.path.shift(); }
         else { n.x += dx / d * sp; n.y += dy / d * sp; n.angle = Math.atan2(dy, dx); n.walk += dt * (n.sheltering ? 16 : 9); }
         continue;
       }
       // Face the player when close.
       const pd = Math.hypot(P.x - n.x, P.y - n.y);
+      if (n.chasing) continue;
       if (pd < 90) { n.angle = Math.atan2(P.y - n.y, P.x - n.x); continue; }
       if (n.wander && !G.alert) {
         n.idle -= dt;
@@ -236,6 +268,54 @@ const Game = {
         }
       }
     }
+  },
+
+  // The inspector hunts for anyone idle. Running gets you away; walking doesn't.
+  updateChase(n, dt) {
+    const P = G.player;
+    const d = Math.hypot(P.x - n.x, P.y - n.y);
+    n.chaseCd -= dt;
+    const allowed = World.id === 'netivot' && !G.alert && !Story.run && Story.chaseAllowed();
+    if (!n.chasing) {
+      if (allowed && n.chaseCd <= 0 && d < 170) {
+        n.chasing = true;
+        n.repath = 0;
+        const c = n.person.chase;
+        n.bubble = { text: fmtAs(n.person, c[Math.floor(Math.random() * c.length)]), t: 3 };
+        Sound.whistle();
+        UI.toast(fmt('😱 {@inspector} ראתה אותך! לברוח (Shift)!'), 'bad');
+      }
+      return;
+    }
+    if (!allowed || d > 330) {
+      n.chasing = false;
+      n.chaseCd = 75;
+      n.path = World.path(n.x, n.y, n.spot.x, n.spot.y) || [];
+      if (allowed) { UI.toast(fmt('😅 ברחת מ{@inspector}!'), 'good'); Game.achieve('escape'); }
+      return;
+    }
+    if (d < 28) {
+      n.chasing = false;
+      n.chaseCd = 90;
+      n.path = [];
+      Story.caught();
+      return;
+    }
+    n.repath -= dt;
+    if (n.repath <= 0) { n.repath = 0.4; n.path = World.path(n.x, n.y, P.x, P.y) || []; }
+  },
+
+  // Move to another site (Netivot, HQ, deployment field).
+  switchMap(id) {
+    World.use(id);
+    G.map = id;
+    Story.trashVisible = id === 'netivot';
+    Scene3D.build();
+    this.resetNpcs();
+    miniBase = null;
+    const a = tc(DATA.travelStop[0] + 1, DATA.travelStop[1] + 1);
+    G.player.x = a.x; G.player.y = a.y;
+    Scene3D.yaw = 0;
   },
 
   // ---------- frame ----------
@@ -288,6 +368,12 @@ const Game = {
       } else G.lowEnergyWarned = false;
       const B = Scene3D.basis();
       const vx = B.rx * mx - B.fx * my, vy = B.rz * mx - B.fz * my;
+      // Third-person follow: when walking forward the camera swings in behind the soldier.
+      if (my < -0.3 && performance.now() - Scene3D.lastLook > 1200) {
+        const want = Math.atan2(-vx, -vy);
+        const diff = Math.atan2(Math.sin(want - Scene3D.yaw), Math.cos(want - Scene3D.yaw));
+        if (Math.abs(diff) < 2.2) Scene3D.yaw += diff * Math.min(1, dt * 1.6);
+      }
       World.move(P, vx * speed * dt, vy * speed * dt);
       P.angle = Math.atan2(vy, vx);
       P.moving = true;
@@ -485,6 +571,8 @@ const Game = {
       <p><b>מצלמה:</b> גרירה עם העכבר מסובבת את המצלמה סביב הדמות, גלגלת — זום. אפשר גם חצים ימינה/שמאלה (או Q ו-R).</p>
       <p><b>בטלפון:</b> ג'ויסטיק משמאל להליכה, גרירה עם האצבע על המסך לסיבוב המצלמה, כפתור E לפעולה וכפתור "ריצה".</p>
       <p><b>החץ הצהוב</b> בתחתית המסך מצביע על המשימה הבאה, והחץ המרחף מעל המטרה מסמן אותה בעולם.</p>
+      <p><b>תחנת הסעות:</b> ליד השער בכל אתר. משם נוסעים בין אתר נתיבות, ה{hq} ואתר הפריסה.</p>
+      <p><b>{@inspector}:</b> מסתובבת בבסיס ומחפשת את מי לתפוס למסדר. אם היא רואה אותך — לרוץ (Shift). אם היא תופסת — יש מסדר פתע.</p>
       <p><b>צבע אדום:</b> יש ${DATA.redAlertSeconds} שניות להגיע למיגונית (גג עם פס אדום, ונקודות אדומות במפה). החץ האדום מראה את הקרובה.</p>
       <p><b>מארזים:</b> אחרי יירוטים משגר מתרוקן. לוקחים מארז במחסן, סוחבים למשגר ומבצעים את שלבי ההחלפה.</p>
       <p><b>ש"ג:</b> בודקים שם ומספר רכב מול רשימת הכניסה. מורשה — פותחים, ואחרי שעבר — סוגרים מיד!</p>

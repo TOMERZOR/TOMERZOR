@@ -61,28 +61,64 @@ const DATA = {
   mapW: 64,
   mapH: 46,
 
+  // Sites. Every site shares the fence, gate and access roads; buildings differ.
   // Buildings are drawn roofless so the player can see inside.
   // doors: tile coordinates on the building outline that stay open.
-  buildings: [
-    { id: 'barracks', name: 'מגורים — פלג"צ', x: 5, y: 24, w: 15, h: 9, doors: [[19, 28]] },
-    { id: 'dining', name: 'חדר אוכל', x: 5, y: 34, w: 10, h: 6, doors: [[9, 34]] },
-    { id: 'kantina', name: 'ש.ק.', x: 17, y: 35, w: 6, h: 4, doors: [[19, 35]] },
-    { id: 'office', name: 'משרד מפקד', x: 44, y: 33, w: 6, h: 5, doors: [[46, 33]] },
-    { id: 'booth', name: 'ש"ג', x: 34, y: 38, w: 3, h: 3, doors: [[34, 39]] },
-    { id: 'depot', name: 'מחסן מארזים', x: 50, y: 24, w: 9, h: 7, doors: [[50, 27]] },
-    { id: 'hamal', name: 'חמ"ל', x: 5, y: 5, w: 9, h: 7, doors: [[9, 11]] },
-    { id: 'mig1', name: 'מיגונית', x: 22, y: 26, w: 3, h: 3, doors: [[23, 28]], shelter: true },
-    { id: 'mig2', name: 'מיגונית', x: 36, y: 12, w: 3, h: 3, doors: [[37, 14]], shelter: true },
-    { id: 'mig3', name: 'מיגונית', x: 53, y: 33, w: 3, h: 3, doors: [[53, 34]], shelter: true },
-    { id: 'mig4', name: 'מיגונית', x: 26, y: 37, w: 3, h: 3, doors: [[27, 37]], shelter: true },
-    { id: 'mig5', name: 'מיגונית', x: 15, y: 13, w: 3, h: 3, doors: [[16, 13]], shelter: true },
-  ],
+  maps: {
+    netivot: {
+      buildings: [
+        { id: 'barracks', name: 'מגורים — פלג"צ', x: 5, y: 24, w: 15, h: 9, doors: [[19, 28]] },
+        { id: 'dining', name: 'חדר אוכל', x: 5, y: 34, w: 10, h: 6, doors: [[9, 34]] },
+        { id: 'kantina', name: 'ש.ק.', x: 17, y: 35, w: 6, h: 4, doors: [[19, 35]] },
+        { id: 'office', name: 'משרד מפקדים', x: 44, y: 33, w: 6, h: 5, doors: [[46, 33]] },
+        { id: 'booth', name: 'ש"ג', x: 34, y: 38, w: 3, h: 3, doors: [[34, 39]] },
+        { id: 'depot', name: 'מחסן מארזים', x: 50, y: 24, w: 9, h: 7, doors: [[50, 27]] },
+        { id: 'hamal', name: 'עמדת בקרה מקומית', x: 5, y: 5, w: 9, h: 7, doors: [[9, 11]] },
+        { id: 'mig1', name: 'מיגונית', x: 22, y: 26, w: 3, h: 3, doors: [[23, 28]], shelter: true },
+        { id: 'mig2', name: 'מיגונית', x: 36, y: 12, w: 3, h: 3, doors: [[37, 14]], shelter: true },
+        { id: 'mig3', name: 'מיגונית', x: 53, y: 33, w: 3, h: 3, doors: [[53, 34]], shelter: true },
+        { id: 'mig4', name: 'מיגונית', x: 26, y: 37, w: 3, h: 3, doors: [[27, 37]], shelter: true },
+        { id: 'mig5', name: 'מיגונית', x: 15, y: 13, w: 3, h: 3, doors: [[16, 13]], shelter: true },
+      ],
+      launchers: [
+        { id: 'L1', name: 'משגר 1', x: 41, y: 4 },
+        { id: 'L2', name: 'משגר 2', x: 48, y: 4 },
+        { id: 'L3', name: 'משגר 3', x: 55, y: 4 },
+      ],
+    },
+    hq: {
+      buildings: [
+        { id: 'hamal', name: 'חמ"ל סוללתי', x: 5, y: 4, w: 14, h: 9, doors: [[12, 12]] },
+        { id: 'bc', name: 'לשכת מפקדת הסוללה', x: 22, y: 4, w: 8, h: 6, doors: [[25, 9]] },
+        { id: 'harasar', name: 'משרד הרס"ר', x: 31, y: 4, w: 6, h: 6, doors: [[33, 9]] },
+        { id: 'rasap', name: 'רספ"ייה', x: 40, y: 4, w: 11, h: 8, doors: [[45, 11]] },
+        { id: 'interceptors', name: 'מחסן מיירטים', x: 53, y: 4, w: 8, h: 8, doors: [[53, 7]] },
+        { id: 'clinic', name: 'מרפאה', x: 5, y: 25, w: 8, h: 6, doors: [[12, 28]] },
+        { id: 'dining', name: 'חדר אוכל', x: 14, y: 25, w: 11, h: 7, doors: [[19, 25]] },
+        { id: 'tech', name: 'מעבדת טכנאים', x: 36, y: 25, w: 9, h: 6, doors: [[40, 25]] },
+        { id: 'barracks', name: 'מגורים', x: 47, y: 25, w: 12, h: 7, doors: [[52, 25]] },
+        { id: 'mig1', name: 'מיגונית', x: 26, y: 14, w: 3, h: 3, doors: [[27, 16]], shelter: true },
+        { id: 'mig2', name: 'מיגונית', x: 44, y: 14, w: 3, h: 3, doors: [[45, 16]], shelter: true },
+        { id: 'mig3', name: 'מיגונית', x: 34, y: 33, w: 3, h: 3, doors: [[35, 33]], shelter: true },
+        { id: 'mig4', name: 'מיגונית', x: 20, y: 34, w: 3, h: 3, doors: [[21, 34]], shelter: true },
+      ],
+      launchers: [],
+    },
+    field: { buildings: [], launchers: [] },
+  },
 
-  // Launchers sit on concrete pads in the north of the site.
-  launchers: [
-    { id: 'L1', name: 'משגר 1', x: 41, y: 4 },
-    { id: 'L2', name: 'משגר 2', x: 48, y: 4 },
-    { id: 'L3', name: 'משגר 3', x: 55, y: 4 },
+  // Bus stop (tile) used to travel between sites; the same spot on every site.
+  travelStop: [26, 33],
+
+  // What a site deployment brings, in the order the trucks arrive. Tiles on the field site.
+  deploy: [
+    { id: 'shelter', name: 'מיגונית', kind: 'shelter', x: 24, y: 26, w: 3, h: 3, color: 0x9b9a90 },
+    { id: 'launcher', name: 'משגר', kind: 'launcher', x: 40, y: 4, w: 5, h: 6, color: 0x4b5a2a },
+    { id: 'sleep', name: 'חדרי שינה', x: 8, y: 10, w: 9, h: 4, color: 0x5d6b3e },
+    { id: 'dining', name: 'חדר אוכל', x: 8, y: 16, w: 8, h: 4, color: 0x8a6a3a },
+    { id: 'kitchen', name: 'מטבח', x: 18, y: 16, w: 5, h: 4, color: 0x9a9a92 },
+    { id: 'showers', name: 'מקלחות', x: 46, y: 27, w: 6, h: 3, color: 0x3a6e8f },
+    { id: 'toilets', name: 'שירותים כימיים', x: 54, y: 27, w: 4, h: 3, color: 0x2f7fbf },
   ],
 
   // Gate visitors for ש"ג duty. "ok" visitors appear on the day's entry list.
@@ -95,7 +131,7 @@ const DATA = {
     { name: 'דוד אזולאי', role: 'קבלן גידור', car: '12-345-67' },
     { name: 'רב"ט ליאור חדד', role: 'מכונאי', car: '66-781-23' },
     { name: 'שירן מזרחי', role: 'משלוח דואר', car: '83-150-42' },
-    { name: 'אבי ביטון', role: 'פיצה לסוללה?!', car: '90-001-55' },
+    { name: 'אבי ממן', role: 'פיצה לסוללה?!', car: '90-001-55' },
     { name: 'סרן תמר לוי', role: 'רופאת גדוד', car: '29-874-36' },
   ],
 
@@ -121,10 +157,21 @@ const DATA = {
     { id: 'sniper', name: 'קלע', desc: '80+ במטווח' },
     { id: 'shopper', name: 'לקוח קבוע', desc: 'קנית 5 פעמים בש.ק.' },
     { id: 'palgatz', name: 'סיימתי פלג"צ!', desc: 'עברת את מבחן סיום פלג"צ' },
+    { id: 'deploy', name: 'פורסים!', desc: 'פרסת אתר חדש מאפס' },
+    { id: 'hq', name: 'ביקור בשו"ב', desc: 'נסעת לאתר השליטה של הסוללה' },
+    { id: 'escape', name: 'חמקן[/ית]', desc: 'ברחת מ{@inspector} לפני שתפסה אותך' },
+    { id: 'caught', name: 'נתפסת', desc: '{@inspector} תפסה אותך ונתנה מסדר' },
+    { id: 'ruth', name: 'הבגרות של {@@ruth}', desc: 'מצאת את ה־Easter Egg' },
+    { id: 'social', name: 'מכיר[/ה] את כולם', desc: 'דיברת עם 20 אנשים שונים' },
   ],
 
   // Final exam questions. Answers reflect what the game teaches.
   quiz: [
+    {
+      q: 'פורסים אתר חדש. איזו מכולה מציבים ראשונה?',
+      a: ['חדר אוכל', 'מיגונית', 'שירותים כימיים', 'הרמקול של הנהג'],
+      ok: 1,
+    },
     {
       q: 'נשמעת אזעקת צבע אדום. מה עושים קודם?',
       a: ['ממשיכים במשימה', 'רצים למיגונית הקרובה', 'מתקשרים הביתה', 'מחפשים את המפקד'],
@@ -161,27 +208,26 @@ const DATA = {
   messages: {
     1: [
       { from: 'אמא ❤️', text: 'מאמי! איך הבסיס? אכלת? תשלח[/י] תמונה עם הכומתה!!' },
-      { from: 'קבוצת הפלגה', text: 'מי לוקח את המיטה ליד המזגן? 😤' },
+      { from: 'קבוצת הפלגה', text: '{@p_ofek}: מי לוקח את המיטה ליד המזגן? אני מוכן לשלם 😤' },
     ],
     2: [
       { from: 'אבא', text: 'שמעתי שיש אזעקות בדרום. [תשמור/תשמרי] על עצמך ותקשיב[/י] למפקדים.' },
-      { from: 'שקד (חבר מהפלגה)', text: '[אחי/אחותי] יש לי גרעינים למשמרת, תביא[/י] קולה' },
+      { from: '{@p_nevo}', text: '[אחי/אחותי] יש לי רעיון למשמרת. אל תשאל[/י]. תביא[/י] קולה.' },
     ],
     3: [
       { from: 'אמא ❤️', text: 'הכנתי לך שניצלים לשישי. מתי יוצאים?' },
-      { from: 'קבוצת הפלגה', text: 'מסדר ניקיון מחר!!! מי ניקה את השירותים???' },
+      { from: '{@inspector}', text: 'מסדר ניקיון מחר!!! מי ניקה את השירותים??? אני יודעת שלא.' },
     ],
     4: [
       { from: 'סבתא', text: 'נכד[/ה] שלי החייל[/ת] 🥹 אני כל כך גאה' },
-      { from: 'שקד (חבר מהפלגה)', text: 'מחר מבחן סיום פלג"צ. לא לישון בשמירה 😂' },
+      { from: '{@commander}', text: 'המצב מתחמם. היום כנראה פורסים אתר. להיות מוכנים לנסיעה.' },
+      { from: '{@friend}', text: 'מחר מבחן סיום פלג"צ. אני כתבתי אותו, אז... בהצלחה 😏' },
     ],
     5: [{ from: 'אמא ❤️', text: 'בהצלחה במבחן! אני מחזיקה אצבעות 🤞' }],
   },
 
+  // Voices that are not part of the cast.
   characters: {
-    commander: { name: 'סגן אורי — מפקד הפלגה', img: 'assets/commander.jpg', icon: '🎖️' },
-    sergeant: { name: 'סמלת מאיה', img: 'assets/sergeant.jpg', icon: '📋' },
-    friend: { name: 'שקד', img: 'assets/friend.jpg', icon: '😄' },
     officer: { name: 'קצין תורן', img: null, icon: '🔦' },
     narrator: { name: '', img: null, icon: '📻' },
   },

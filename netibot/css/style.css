@@ -347,3 +347,13 @@ input[type=text] {
   .card { padding: 10px; }
   .card .nm { font-size: 15px; }
 }
+
+/* ---------- Deployment controls ---------- */
+.ctl-hud { position: absolute; left: 50%; bottom: max(70px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(480px, 80vw);
+  background: var(--panel); border: 2px solid var(--gold); border-radius: 12px; padding: 8px 12px; text-align: center; font-size: 14px; }
+.ctl-hud .t { font-weight: 800; color: var(--gold); margin-bottom: 4px; }
+.ctl-hud .gauge { position: relative; height: 14px; border-radius: 7px; background: rgba(255,255,255,.12); margin: 6px 0 2px; overflow: hidden; }
+.ctl-hud .gauge .zone { position: absolute; top: 0; bottom: 0; background: rgba(108,194,74,.6); }
+.ctl-hud .gauge .needle { position: absolute; top: -2px; bottom: -2px; width: 5px; margin-left: -2px; background: #fff; border-radius: 2px; }
+.ctl-hud .keys { font-size: 12px; opacity: .8; }
+body.touch .ctl-hud { bottom: 150px; width: min(420px, calc(100% - 380px)); font-size: 12px; }

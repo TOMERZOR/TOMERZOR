@@ -1249,6 +1249,16 @@ const Scene3D = {
         pos.needsUpdate = true;
       } else if (o.kind === 'console') r.screens.material.emissiveIntensity = 0.6 + Math.sin(now / 300) * 0.2;
       else if (o.kind === 'junk') r.g.visible = !o.gone;
+      else if (o.kind === 'stove') {
+        const left = Math.ceil(Events.cookLeft());
+        const text = left ? `⏳ ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : '';
+        if (text !== r.cdText) {
+          if (r.cd) r.g.remove(r.cd);
+          r.cd = text ? this.label(text, { bg: 'rgba(40,20,10,.85)', fg: '#ffcf5a', size: 0.6 }) : null;
+          if (r.cd) { r.cd.position.set(0, 1.9, 0); r.g.add(r.cd); }
+          r.cdText = text;
+        }
+      }
       else if (o.kind === 'snackcab') r.cabDoor.rotation.y = THREE.MathUtils.lerp(r.cabDoor.rotation.y, Boss.active || G.state.achievements.includes('boss') ? -1.4 : 0, Math.min(1, dt * 4));
     }
     this.gateArm.rotation.z = World.gateOpen * Math.PI / 2.2;
@@ -1303,6 +1313,7 @@ const Scene3D = {
     this.updateRemotes(dt, now);
     this.updateEvents(dt, now);
     this.updateBoss(dt, now);
+    this.updateDeployCtl(dt, now);
 
     const here = World.id === 'netivot';
     this.syncSmall(here ? Story.trash : [], this.trashMeshes, (t) => {
@@ -1355,6 +1366,96 @@ const Scene3D = {
 
     this.updateSky(dt);
     this.updateCamera(dt);
+  },
+
+  // Deployment: the camera rides with the truck, the launch box swings up, and the crane
+  // lowers its swinging load onto the marked pad.
+  updateDeployCtl(dt, now) {
+    const c = World.id === 'field' ? Story.ctl : null;
+    const tr = Story.deployTruck;
+    const hud = $('#ctl-hud');
+    if (!c || !tr) {
+      if (this.ctlFocus) { this.ctlFocus = null; this.dist = this.savedDist || this.dist; this.pitch = this.savedPitch || this.pitch; }
+      if (this.crane) { this.root.remove(this.crane.group); this.props = this.props.filter(p => p !== this.crane.rec); this.root.remove(this.crane.rec.g); this.crane = null; }
+      if (this.raiseBox) { this.raiseBox.parent && this.raiseBox.parent.remove(this.raiseBox); this.raiseBox = null; }
+      hud.classList.add('hidden');
+      return;
+    }
+    if (!this.ctlFocus) { this.savedDist = this.dist; this.savedPitch = this.pitch; }
+    hud.classList.remove('hidden');
+    const it = tr.item;
+    if (c.mode === 'drive') {
+      this.ctlFocus = { x: tr.x, y: tr.y };
+      // Swing in behind the truck.
+      const want = Math.atan2(-Math.cos(tr.angle), -Math.sin(tr.angle));
+      const d = Math.atan2(Math.sin(want - this.yaw), Math.cos(want - this.yaw));
+      this.yaw += d * Math.min(1, dt * 2.5);
+      this.dist += (12 - this.dist) * Math.min(1, dt * 3);
+      this.pitch += (0.42 - this.pitch) * Math.min(1, dt * 3);
+      hud.innerHTML = `<div class="t">🚛 ${it.name} — לנהוג עד הסימון הצהוב</div><div class="keys">${G.touch ? 'ג\'ויסטיק: למעלה נסיעה, למטה רוורס, הצדדים הגה' : '↑ נסיעה · ↓ רוורס/בלם · ← → הגה'} · לעצור ליד הסימון</div>`;
+    } else if (c.mode === 'raise') {
+      this.ctlFocus = { x: tr.x, y: tr.y };
+      this.dist += (13 - this.dist) * Math.min(1, dt * 3);
+      this.pitch += (0.3 - this.pitch) * Math.min(1, dt * 3);
+      if (tr.mesh && !this.raiseBox) {
+        const pivot = new THREE.Group();
+        pivot.position.set(-0.6, 2.3, 0);
+        const box = new THREE.Group();
+        this.box(5.4, 1.5, 2.3, this.mat(0x4b5a2a), -2.7, 0.75, 0, box);
+        for (const x of [-0.8, -2.7, -4.6]) this.box(0.12, 1.6, 2.4, this.mat(0x3c4822), x, 0.75, 0, box);
+        pivot.add(box);
+        tr.mesh.add(pivot);
+        this.raiseBox = pivot;
+      }
+      if (this.raiseBox) this.raiseBox.rotation.z = -c.angle * Math.PI / 180;
+      const pct = (v) => (v / 75 * 100).toFixed(1);
+      hud.innerHTML = `<div class="t">🚀 להזקיף את המשגר — ${Math.round(c.angle)}°</div>
+        <div class="gauge"><div class="zone" style="left:${pct(52)}%;width:${pct(10)}%"></div><div class="needle" style="left:${pct(c.angle)}%"></div></div>
+        <div class="keys">${G.touch ? 'ג\'ויסטיק למעלה/למטה' : '↑ להרים · ↓ להוריד'} · להחזיק בירוק${c.holdT > 0 ? ' — ' + '■'.repeat(Math.ceil(c.holdT / 1.3 * 5)) : ''}</div>`;
+    } else if (c.mode === 'crane') {
+      this.ctlFocus = { x: c.cx, y: c.cy };
+      this.dist += (15 - this.dist) * Math.min(1, dt * 3);
+      this.pitch += (1.0 - this.pitch) * Math.min(1, dt * 3);
+      if (!this.crane) {
+        const o = World.containerObject(it);
+        const rec = this.addProp(o);
+        const group = new THREE.Group();
+        // A truck-mounted crane: yellow mast beside the truck, a boom, and the cable.
+        const mast = this.box(0.35, 9, 0.35, this.mat(0xe0b020, { metalness: 0.3 }), 0, 4.5, 0, group);
+        void mast;
+        const boom = new THREE.Mesh(new THREE.BoxGeometry(1, 0.35, 0.35), this.mat(0xe0b020, { metalness: 0.3 }));
+        group.add(boom);
+        const cable = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0x111111, linewidth: 2 }));
+        cable.frustumCulled = false;
+        group.add(cable);
+        const foot = new THREE.Mesh(new THREE.PlaneGeometry(o.w * S3, o.h * S3), new THREE.MeshBasicMaterial({ color: 0xe63b2e, transparent: true, opacity: 0.35, depthWrite: false }));
+        foot.rotation.x = -Math.PI / 2;
+        this.root.add(group, foot);
+        // Beside the truck, not on it, so it doesn't stand between the camera and the load.
+        group.position.set((tr.x - Math.sin(tr.angle) * 1.8 * TS) * S3, 0, (tr.y + Math.cos(tr.angle) * 1.8 * TS) * S3);
+        this.crane = { rec, group, boom, cable, foot, o };
+      }
+      const cr = this.crane;
+      const lx = c.cx * S3, lz = c.cy * S3, top = cr.rec.g.children.length ? 2.6 : 2.6;
+      // The load hangs with its bottom at height c.h; its group origin is the bottom.
+      cr.rec.g.position.set(lx, c.h, lz);
+      const mtop = new THREE.Vector3(cr.group.position.x, 9, cr.group.position.z);
+      const hook = new THREE.Vector3(c.hx * S3, Math.max(c.h + top + 1.2, 4.5), c.hy * S3);
+      // Boom from the mast top to above the hook.
+      const mid = mtop.clone().add(hook).multiplyScalar(0.5);
+      cr.boom.position.copy(mid.sub(cr.group.position));
+      cr.boom.scale.x = Math.max(0.1, mtop.distanceTo(hook));
+      cr.boom.lookAt(hook);
+      cr.boom.rotateY(Math.PI / 2);
+      const pts = cr.cable.geometry.attributes.position;
+      pts.setXYZ(0, hook.x - cr.group.position.x, hook.y, hook.z - cr.group.position.z);
+      pts.setXYZ(1, lx - cr.group.position.x, c.h + top, lz - cr.group.position.z);
+      pts.needsUpdate = true;
+      cr.foot.position.set(lx, 0.06, lz);
+      cr.foot.material.color.set(c.aligned ? 0x6cc24a : 0xe63b2e);
+      hud.innerHTML = `<div class="t">🏗️ ${it.name} — גובה ${c.h.toFixed(1)} מ' ${c.aligned ? '· ✔ על הסימון' : '· לכוון לסימון הצהוב'}</div>
+        <div class="keys">${G.touch ? 'ג\'ויסטיק — להזיז · E (להחזיק) — להוריד · "ריצה" — להרים' : 'חצים — להזיז · רווח/E (להחזיק) — להוריד · Shift — להרים'} · להוריד לאט כשהוא לא מתנדנד</div>`;
+    }
   },
 
   // Other players in the room, drawn as soldiers with their name.
@@ -1529,7 +1630,8 @@ const Scene3D = {
   // Orbit camera behind the player. When a wall sits between the player and
   // the camera, the camera tilts up to look over it instead of clipping.
   updateCamera(dt) {
-    const P = G.player;
+    // At the deployment controls the camera follows the truck or the crane load instead.
+    const P = this.ctlFocus || G.player;
     // Look slightly past the right shoulder, like most third-person games.
     const B = this.basis();
     // The camera trails the soldier slightly, which reads smoother than a rigid follow.

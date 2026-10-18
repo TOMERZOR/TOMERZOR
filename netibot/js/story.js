@@ -397,7 +397,7 @@ const Story = {
     const add = (x, y, label, action, r = 46) => list.push({ x, y, label, action, r });
     const P = G.player;
 
-    if (Boss.active) return list;
+    if (Boss.active || this.ctl) return list;
     for (const n of G.npcs) list.push({ x: n.x, y: n.y, label: `לדבר עם ${n.short}`, action: () => this.talkTo(n), r: 50, talk: true });
     const ts = travelSpot();
     add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
@@ -675,7 +675,10 @@ const Story = {
   },
 
   // ---------- site deployment ----------
+  // The deployment is hands-on: drive each truck in from the gate with the arrows, then
+  // raise the launcher or lower the container onto its marked pad with the crane.
   deployTruck: null,
+  ctl: null, // { mode: 'drive' | 'raise' | 'crane', ... } while the player is at the controls
   nextDeployItem() {
     const placed = (G.state.deploy && G.state.deploy.placed) || [];
     return DATA.deploy.find(d => !placed.includes(d.id));
@@ -687,11 +690,12 @@ const Story = {
     S.deploy.intro = true;
     await UI.talk([
       { who: 'commander', text: 'המצב מתחמם. פורסים אתר חדש, עכשיו. המשאיות בדרך עם המכולות.' },
-      { who: 'commander', text: 'כל משאית שמגיעה — [תקבל/תקבלי] אותה ליד השער ו[תכווין/תכווני] אותה למקום המסומן. קודם מיגונית. אחר כך משגר. ואז כל השאר.' },
+      { who: 'commander', text: 'כל משאית שמגיעה — את[ה/] [מנווט/מנווטת] אותה בעצמך עד הסימון הצהוב. משגר — [מזקיף/מזקיפה]. מכולה — [מוריד/מורידה] עם המנוף, בדיוק על הסימון. קודם מיגונית.' },
       { who: 'p_nevo', text: 'אפשר להתחיל מהשירותים הכימיים? יש לי סיבות אישיות.' },
       { who: 'commander', text: 'לא.' },
     ]);
   },
+  padCenter(it) { return { x: (it.x + it.w / 2) * TS, y: (it.y + it.h / 2) * TS }; },
   updateDeploy(dt) {
     if (!this.has('deploy')) return;
     const S = G.state;
@@ -701,7 +705,7 @@ const Story = {
       const item = this.nextDeployItem();
       if (!item) return;
       const driver = (S.deploy.placed.length % 2) ? 'driver2' : 'driver1';
-      tr = this.deployTruck = { item, driver, x: 30.5 * TS, y: 46 * TS, angle: -Math.PI / 2, state: 'arriving' };
+      tr = this.deployTruck = { item, driver, x: 30.5 * TS, y: 46 * TS, angle: -Math.PI / 2, speed: 0, state: 'arriving' };
       World.gateTarget = 1;
       Sound.truck();
     }
@@ -713,49 +717,105 @@ const Story = {
       tr.angle = Math.atan2(dy, dx);
       return false;
     };
-    if (tr.state === 'arriving' && drive(30.5 * TS, 35 * TS)) { tr.state = 'waiting'; World.gateTarget = 0; Sound.horn(); UI.toast(`🚛 הגיעה משאית: ${tr.item.name}`); }
-    else if (tr.state === 'driving') {
-      const it = tr.item;
-      if (drive((it.x + it.w / 2) * TS, (it.y + it.h / 2) * TS)) { tr.state = 'unload'; this.unloadTruck(); }
-    } else if (tr.state === 'leaving') {
+    if (tr.state === 'arriving' && drive(30.5 * TS, 37 * TS)) { tr.state = 'waiting'; World.gateTarget = 0; Sound.horn(); UI.toast(`🚛 הגיעה משאית: ${tr.item.name} — לגשת אליה ולהכווין`); }
+    else if (tr.state === 'leaving') {
       World.gateTarget = 1;
-      if (drive(30.5 * TS, 47 * TS)) { this.deployTruck = null; World.gateTarget = 0; }
+      // Back to the main road first, then out of the gate.
+      const out = Math.abs(tr.x - 30.5 * TS) > 4 ? drive(30.5 * TS, Math.max(tr.y, 24 * TS)) : drive(30.5 * TS, 47 * TS);
+      if (out && tr.y > 46 * TS) { this.deployTruck = null; World.gateTarget = 0; }
     }
+    if (this.ctl) this.updateCtl(dt);
   },
   acceptTruck() {
     const tr = this.deployTruck;
     if (!tr || tr.state !== 'waiting') return;
-    tr.state = 'assigned';
+    tr.state = 'drive';
+    this.ctl = { mode: 'drive', stillT: 0, wrongT: 0, joked: {} };
     const lines = {
-      driver1: ['דבאי, [תכווין/תכווני] אותי. אני רואה רק במראות.', 'אני נוסע לאן שאת[ה/] מצביע[/ה]. אם זה לא נכון — זה עליך.'],
-      driver2: ['[תגיד/תגידי] לי איפה, ואני שם בשבע שניות. שש אם מגבירים.', 'שים[/י] לב, אני נכנס בסטייל.'],
+      driver1: ['דבאי, תנהג[/י] את[ה/]. אני רואה רק במראות, ובמראות רואים רק אותך.', 'ההגה שלך. אם יש שריטה — זה עליך.'],
+      driver2: ['[קח/קחי] את ההגה, [אחי/אחותי]. שבע דקות, כמו שאני הייתי עושה.', 'אני עם הפלייליסט, את[ה/] עם ההגה. דיל.'],
     }[tr.driver];
     UI.talk([{ who: tr.driver, text: `${pick(lines)} יש לי פה: ${tr.item.name}.` }]);
   },
-  async guideTo(item) {
-    const tr = this.deployTruck;
-    if (item.id !== tr.item.id) {
-      const jokes = {
-        driver1: ['זה לא המקום. אפילו אני יודע, ואני רק נוהג.', 'פה? ברוסיה היינו שמים פה שלג. לא את זה.'],
-        driver2: [`[אחי/אחותי], [תסתכל/תסתכלי] על השלט. "${item.name}" זה לא "${tr.item.name}". ...אני מקווה.`, 'אני מוריד פה ואז {@commander} מורידה אותי. לא.'],
-      }[tr.driver];
-      await UI.talk([{ who: tr.driver, text: pick(jokes) }]);
-      Game.addScore(-1, 'כיוון למקום הלא נכון');
-      return;
+
+  // ---------- at the controls ----------
+  // input: { steer, throttle, mx, my, lower, raise } from Game.update.
+  ctlInput(inp) { this.ctlIn = inp; },
+  updateCtl(dt) {
+    const c = this.ctl, tr = this.deployTruck, inp = this.ctlIn || {};
+    if (!tr) { this.ctl = null; return; }
+    const it = tr.item, pc = this.padCenter(it);
+    if (c.mode === 'drive') {
+      // Simple truck physics: throttle, drag, and steering that needs speed to turn.
+      tr.speed += (inp.throttle || 0) * 140 * dt;
+      tr.speed *= Math.pow(inp.throttle ? 0.6 : 0.15, dt);
+      tr.speed = Math.max(-60, Math.min(150, tr.speed));
+      tr.angle += (inp.steer || 0) * dt * 1.6 * Math.max(-1, Math.min(1, tr.speed / 60));
+      const nx = tr.x + Math.cos(tr.angle) * tr.speed * dt, ny = tr.y + Math.sin(tr.angle) * tr.speed * dt;
+      World.gateTarget = tr.y > 38 * TS ? 1 : World.gateTarget;
+      const hits = [-1.8, 0, 1.8].some(o => World.blocked(nx + Math.cos(tr.angle) * o * TS, ny + Math.sin(tr.angle) * o * TS, 20));
+      if (hits) { if (Math.abs(tr.speed) > 40) { Sound.bad(); G.shake = 0.2; } tr.speed = -tr.speed * 0.3; }
+      else { tr.x = nx; tr.y = ny; }
+      // Parked: slow, and the truck's middle beside the yellow outline.
+      const near = Math.hypot(tr.x - pc.x, tr.y - pc.y) < (Math.max(it.w, it.h) / 2 + 2) * TS;
+      c.stillT = Math.abs(tr.speed) < 12 ? c.stillT + dt : 0;
+      if (near && c.stillT > 0.6) {
+        tr.speed = 0;
+        Sound.horn();
+        if (it.kind === 'launcher') { this.ctl = { mode: 'raise', angle: 0, holdT: 0 }; tr.state = 'raise'; UI.toast('🚀 להזקיף את המשגר: ↑ להרים, ↓ להוריד — ולהחזיק בטווח הירוק'); }
+        else { this.ctl = { mode: 'crane', hx: tr.x, hy: tr.y, cx: tr.x, cy: tr.y, vx: 0, vy: 0, h: 6.5 }; tr.state = 'crane'; UI.toast('🏗️ להוריד עם המנוף: חצים — להזיז, רווח/E — להוריד, Shift — להרים'); }
+        return;
+      }
+      // Stopped by the wrong pad: the driver has opinions.
+      const wrong = !near && DATA.deploy.find(d => d.id !== it.id && !G.state.deploy.placed.includes(d.id) && Math.hypot(tr.x - this.padCenter(d).x, tr.y - this.padCenter(d).y) < (Math.max(d.w, d.h) / 2 + 1.5) * TS);
+      if (wrong && c.stillT > 0.8 && !c.joked[wrong.id]) {
+        c.joked[wrong.id] = true;
+        const jokes = {
+          driver1: [`זה הסימון של ${wrong.name}. ברוסיה היינו מתווכחים. פה — סע הלאה.`, 'זה לא המקום. אפילו אני יודע, ואני רק יושב פה.'],
+          driver2: [`[אחי/אחותי], זה "${wrong.name}". אני מחזיק "${it.name}". ...אני מקווה.`, 'אם אני מוריד פה, {@commander} מורידה אותי. נוסעים.'],
+        }[tr.driver];
+        UI.toast(fmt(`🚛 ${Cast.short(tr.driver)}: ${pick(jokes)}`));
+        Game.addScore(-1, 'חנייה במקום הלא נכון');
+      }
+    } else if (c.mode === 'raise') {
+      // ↑/↓ swing the launch box; it has to sit in the green range for a moment.
+      c.angle = Math.max(0, Math.min(75, c.angle + (inp.throttle || 0) * 28 * dt));
+      const ok = c.angle >= 52 && c.angle <= 62;
+      c.holdT = ok ? c.holdT + dt : Math.max(0, c.holdT - dt * 2);
+      if (c.holdT > 1.3) { Sound.good(); this.placeDeploy(); }
+    } else if (c.mode === 'crane') {
+      // The hook follows the arrows; the load swings after it on its cable.
+      const B = Scene3D.basis();
+      const mx = inp.mx || 0, my = inp.my || 0;
+      c.hx += (B.rx * mx - B.fx * my) * 60 * dt;
+      c.hy += (B.rz * mx - B.fz * my) * 60 * dt;
+      const lim = (Math.max(it.w, it.h) / 2 + 4) * TS;
+      c.hx = Math.max(pc.x - lim, Math.min(pc.x + lim, c.hx));
+      c.hy = Math.max(pc.y - lim, Math.min(pc.y + lim, c.hy));
+      const k = 6, damp = 2.2;
+      c.vx += ((c.hx - c.cx) * k - c.vx * damp) * dt;
+      c.vy += ((c.hy - c.cy) * k - c.vy * damp) * dt;
+      c.cx += c.vx * dt;
+      c.cy += c.vy * dt;
+      if (inp.lower) c.h = Math.max(0, c.h - 1.4 * dt);
+      if (inp.raise) c.h = Math.min(7, c.h + 1.8 * dt);
+      c.aligned = Math.abs(c.cx - pc.x) < 0.7 * TS && Math.abs(c.cy - pc.y) < 0.7 * TS;
+      if (c.h <= 0) {
+        if (c.aligned && Math.hypot(c.vx, c.vy) < 60) { Sound.boom(); G.shake = 0.3; this.placeDeploy(); }
+        else { c.h = 1.6; Sound.bad(); G.shake = 0.2; UI.toast(c.aligned ? 'מתנדנד מדי! לחכות שיתייצב' : 'לא על הסימון! להרים ולכוון שוב', 'bad'); Game.addScore(-1, 'הורדה לא מדויקת'); }
+      }
     }
-    tr.state = 'driving';
-    Sound.click();
   },
-  async unloadTruck() {
+  placeDeploy() {
     const tr = this.deployTruck;
-    const r = await Mini.open('qte', { title: `פריקה וקשירה: ${tr.item.name}`, sub: 'שרשראות, ווים, רצועות. [הקש/הקישי] מהר לפני שהמנוף מאבד סבלנות!', length: 5, time: 9, silent: true });
-    if (!r.success) { UI.toast('הרצועה השתחררה, עוד פעם', 'bad'); this.unloadTruck(); return; }
     const S = G.state;
     S.deploy.placed.push(tr.item.id);
     const o = World.placeContainer(null, tr.item);
     if (o) Scene3D.addProp(o);
     Game.addScore(3, `הוצב: ${tr.item.name}`);
+    this.ctl = null;
     tr.state = 'leaving';
+    tr.speed = 0;
     if (!this.nextDeployItem()) this.finishDeploy();
   },
   async finishDeploy() {
@@ -771,22 +831,15 @@ const Story = {
   },
   deployInteractables(add) {
     const tr = this.deployTruck;
-    if (!tr) return;
-    if (tr.state === 'waiting') add(tr.x, tr.y, `לקבל את המשאית (${tr.item.name})`, () => this.acceptTruck(), 80);
-    if (tr.state === 'assigned') {
-      const placed = G.state.deploy.placed;
-      for (const it of DATA.deploy) {
-        if (placed.includes(it.id)) continue;
-        add((it.x + it.w / 2) * TS, (it.y + it.h / 2) * TS, `להכווין לכאן: ${it.name}`, () => this.guideTo(it), Math.max(it.w, it.h) * TS * 0.45);
-      }
-    }
+    if (!tr || this.ctl) return;
+    if (tr.state === 'waiting') add(tr.x, tr.y, `לקחת את ההגה: ${tr.item.name}`, () => this.acceptTruck(), 90);
   },
   deployTarget() {
     if (World.id !== 'field') return travelSpot();
     const tr = this.deployTruck;
     if (!tr) return null;
     if (tr.state === 'waiting') return { x: tr.x, y: tr.y };
-    if (tr.state === 'assigned') return { x: (tr.item.x + tr.item.w / 2) * TS, y: (tr.item.y + tr.item.h / 2) * TS };
+    if (tr.state === 'drive' || tr.state === 'crane') return this.padCenter(tr.item);
     return null;
   },
   deployText() {
@@ -794,9 +847,10 @@ const Story = {
     const n = (S.deploy && S.deploy.placed.length) || 0;
     const tr = this.deployTruck;
     let step = 'ממתינים למשאית';
-    if (tr && tr.state === 'waiting') step = `לקבל משאית ליד השער: ${tr.item.name}`;
-    else if (tr && tr.state === 'assigned') step = `להכווין את המשאית למקום של: ${tr.item.name}`;
-    else if (tr && tr.state === 'driving') step = 'המשאית בדרך למקום';
+    if (tr && tr.state === 'waiting') step = `לקחת את ההגה של המשאית: ${tr.item.name}`;
+    else if (tr && tr.state === 'drive') step = `לנהוג עד הסימון של: ${tr.item.name}`;
+    else if (tr && tr.state === 'raise') step = 'להזקיף את המשגר';
+    else if (tr && tr.state === 'crane') step = `להוריד עם המנוף: ${tr.item.name}`;
     return `פריסת אתר (${n}/${DATA.deploy.length}) — ${step}`;
   },
 

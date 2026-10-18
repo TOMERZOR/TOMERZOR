@@ -147,7 +147,8 @@ const Game = {
     const endLookStick = (e) => { if (e.pointerId !== lid) return; lid = null; G.look.x = G.look.y = 0; lknob.style.transform = ''; };
     lstick.addEventListener('pointerup', endLookStick);
     lstick.addEventListener('pointercancel', endLookStick);
-    $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
+    $('#t-act').addEventListener('pointerdown', (e) => { e.preventDefault(); Sound.unlock(); G.actHeld = true; if (!UI.busy && !Mini.active && !G.paused) this.interact(); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('#t-act').addEventListener(ev, () => { G.actHeld = false; });
     $('#minimap').addEventListener('pointerdown', (e) => { e.stopPropagation(); Sound.unlock(); UI.toggleMap(true); });
     $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
     $('#btn-fs').addEventListener('click', () => this.toggleFullscreen());
@@ -196,7 +197,7 @@ const Game = {
   },
 
   interact() {
-    if (G.alert || UI.mapOpen()) return;
+    if (G.alert || UI.mapOpen() || Story.ctl) return;
     if (Boss.active) { Boss.throw(); return; }
     const it = this.nearestInteractable();
     if (it) { Sound.click(); it.action(); }
@@ -438,11 +439,20 @@ const Game = {
     if (k.has('KeyS') || k.has('ArrowDown')) my += 1;
     if (k.has('KeyA')) mx -= 1;
     if (k.has('KeyD')) mx += 1;
-    if (k.has('ArrowLeft') || k.has('KeyQ')) Scene3D.yaw += dt * 2.2;
-    if (k.has('ArrowRight') || k.has('KeyR')) Scene3D.yaw -= dt * 2.2;
+    // At the deployment controls the arrows drive the truck / crane, so they don't turn the camera.
+    if ((k.has('ArrowLeft') && !Story.ctl) || k.has('KeyQ')) Scene3D.yaw += dt * 2.2;
+    if ((k.has('ArrowRight') && !Story.ctl) || k.has('KeyR')) Scene3D.yaw -= dt * 2.2;
     if (G.stick.x || G.stick.y) { mx = G.stick.x; my = G.stick.y; }
     // With the map open the world keeps going, but the player stands still.
     if (UI.mapOpen()) mx = my = 0;
+    if (Story.ctl) {
+      const key = (...c) => (c.some(x => k.has(x)) ? 1 : 0);
+      const clamp = (v) => Math.max(-1, Math.min(1, v));
+      const steer = clamp(key('ArrowRight', 'KeyD') - key('ArrowLeft', 'KeyA') + (G.stick.x || 0));
+      const throttle = clamp(key('ArrowUp', 'KeyW') - key('ArrowDown', 'KeyS') - (G.stick.y || 0));
+      Story.ctlInput({ steer, throttle, mx: steer, my: -throttle, lower: !!(k.has('Space') || k.has('KeyE') || G.actHeld), raise: !!(k.has('ShiftLeft') || k.has('ShiftRight') || G.touchRun) });
+      mx = my = 0;
+    }
     if (G.look.x || G.look.y) {
       Scene3D.yaw -= G.look.x * dt * 2.6;
       Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + G.look.y * dt * 1.4));

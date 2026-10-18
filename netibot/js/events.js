@@ -84,7 +84,7 @@ const Events = {
   interactables(add) {
     const S = G.state, P = G.player;
     if (World.id === 'netivot') {
-      add(SPOTS.stove.x, SPOTS.stove.y, 'לבשל במטבחון', () => this.cook(), 30);
+      add(SPOTS.stove.x, SPOTS.stove.y, this.cookLabel(), () => this.cook(), 30);
       add(SPOTS.fridge.x, SPOTS.fridge.y, Story.has('y_fridge') ? 'לרשום תוקפים במקרר' : 'לפתוח את המקרר', () => this.fridge(), 28);
       for (const o of World.objects) {
         if (o.kind !== 'junk' || o.gone) continue;
@@ -106,7 +106,7 @@ const Events = {
       add(SPOTS.pullup.x, SPOTS.pullup.y, 'מתקן מתח', () => this.pullups(), 30);
       if (Multi.on && !this.baum) add(SPOTS.board.x, SPOTS.board.y + 30, '🍕 נוהל אנה פרנק — {@bc} מגיעה! (לכל מי שבנתיבות)', () => this.startBaumCoop(), 34);
     } else if (World.id === 'hq') {
-      add(SPOTS_HQ.stove.x, SPOTS_HQ.stove.y, 'לבשל במטבחון', () => this.cook(), 30);
+      add(SPOTS_HQ.stove.x, SPOTS_HQ.stove.y, this.cookLabel(), () => this.cook(), 30);
       const c = this.chores;
       if (c) {
         if (!P.carry) for (const e of c.ext) if (!e.done) add(e.x, e.y, 'להרים מטף', () => { P.carry = 'ext'; c.carrying = e; Sound.pickup(); }, 34);
@@ -487,13 +487,25 @@ const Events = {
     if (!right) Game.addScore(-1, 'החלטה לא נכונה במחסן');
     if (!World.objects.some(x => x.kind === 'junk' && !x.gone)) Story.complete('y_store', 5, 'המחסן מסודר');
   },
+  // The stove needs a break between meals: two and a half game hours.
+  cookLeft() {
+    const S = G.state;
+    const at = S.dayFlags.cookAt;
+    if (at === undefined) return 0;
+    return Math.max(0, at + 150 - S.clock) / DATA.minutesPerSecond; // real seconds
+  },
+  cookLabel() {
+    const left = this.cookLeft();
+    if (!left) return 'לבשל במטבחון';
+    const s = Math.ceil(left);
+    return `⏳ המטבחון מתקרר — אפשר לבשל שוב בעוד ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  },
   async cook() {
     const S = G.state;
-    const meal = S.clock < 10 * 60 ? 'breakfast' : S.clock < 16 * 60 ? 'lunch' : 'dinner';
-    if (S.dayFlags['cook_' + meal]) { UI.toast('כבר בישלת בארוחה הזאת. גם המחבת צריכה מנוחה.'); return; }
+    if (this.cookLeft()) { UI.toast(this.cookLabel() + '. גם המחבת צריכה מנוחה.'); return; }
     const r = await Mini.open('cook');
     if (!r.recipe) return;
-    S.dayFlags['cook_' + meal] = true;
+    S.dayFlags.cookAt = S.clock;
     const rec = r.recipe;
     if (!r.success) { UI.toast('נשרף... 🔥 לפחות יש ריח', 'bad'); Game.addStat('morale', -2); return; }
     Game.addStat('energy', rec.energy);

@@ -116,7 +116,7 @@ const World = {
       prop('generator', 45.2, 37.5, 1.6, 0.9);
       // The storeroom nobody has touched in years.
       for (const j of DATA.junk) site.objects.push({ kind: 'junk', junk: j.id, x: j.at[0] * TS, y: j.at[1] * TS, w: 0.9 * TS, h: 0.9 * TS, solid: false, gone: false });
-      for (const [x, y] of [[27, 24], [33, 22], [43, 29], [27, 38], [34, 34], [48, 21], [21, 40]]) prop('palm', x + 0.2, y + 0.2, 0.6, 0.6, false);
+      for (const [x, y] of [[27, 24], [33, 22], [43, 29], [27, 38], [34, 34], [48, 21], [25, 32]]) prop('palm', x + 0.25, y + 0.25, 0.5, 0.5, true);
       site.launchers = def.launchers.map(L => prop('launcher', L.x + 0.15, L.y, 2.7, 4.4, true, { id: L.id, name: L.name, ammo: 20, needsReload: false }));
       for (const [x, y] of [[28, 17], [33, 17], [28, 25], [33, 25], [28, 33], [33, 32], [28, 40], [33, 40], [23, 32], [27, 19],
         [43, 22], [43, 30], [34, 14], [45, 16], [41, 22], [19, 40], [37, 40], [47, 40]]) lamp(x, y);
@@ -148,7 +148,7 @@ const World = {
       prop('truck', 6, 35.2, 2.4, 4.6, true, { color: 0x56653a });
       prop('truck', 10, 35.2, 2.4, 4.6, true, { color: 0x4f5a3a });
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← גדרה 4 ק"מ' });
-      for (const [x, y] of [[30, 13], [38, 13], [19, 21], [3, 24], [60, 20], [33, 18], [55, 34], [4, 18], [58, 13], [23, 38]]) prop('tree', x + 0.2, y + 0.2, 0.6, 0.6, false);
+      for (const [x, y] of [[30, 13], [38, 13], [19, 21], [3, 24], [60, 20], [33, 18], [55, 34], [4, 18], [58, 13], [23, 38]]) prop('tree', x + 0.25, y + 0.25, 0.5, 0.5, true);
       for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40], [17, 34], [24, 12], [40, 12], [50, 33]]) lamp(x, y);
     } else if (id === 'field') {
       prop('sign', 40, 43.2, 3, 0.6, false, { text: 'אתר פריסה' });
@@ -161,11 +161,16 @@ const World = {
   },
 
   // Put a deployed container (or the launcher/shelter) on its pad in the field site.
+  // The prop a deployed item becomes on its pad (also drawn hanging from the crane).
+  containerObject(item) {
+    const o = { kind: item.kind || 'container', deployId: item.id, label: item.name, color: item.color, x: (item.x + 0.3) * TS, y: (item.y + 0.3) * TS, w: (item.w - 0.6) * TS, h: (item.h - 0.6) * TS, solid: true };
+    if (item.kind === 'launcher') Object.assign(o, { ammo: 20, needsReload: false, name: item.name, x: (item.x + 0.15) * TS, y: item.y * TS, w: 2.7 * TS, h: 4.4 * TS });
+    return o;
+  },
   placeContainer(site, item) {
     const s = site || this;
     if (s.objects.some(o => o.deployId === item.id)) return;
-    const o = { kind: item.kind || 'container', deployId: item.id, label: item.name, color: item.color, x: (item.x + 0.3) * TS, y: (item.y + 0.3) * TS, w: (item.w - 0.6) * TS, h: (item.h - 0.6) * TS, solid: true };
-    if (item.kind === 'launcher') Object.assign(o, { ammo: 20, needsReload: false, name: item.name, x: (item.x + 0.15) * TS, y: item.y * TS, w: 2.7 * TS, h: 4.4 * TS });
+    const o = this.containerObject(item);
     s.objects.push(o);
     if (item.kind === 'launcher') s.launchers.push(o);
     if (item.kind === 'shelter') {

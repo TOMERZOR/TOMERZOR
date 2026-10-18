@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NetiBot — הסוללה של נתיבות</title>
+<meta name="description" content="משחק עולם פתוח: חייל/ת בפלג&quot;צ של סוללת כיפת ברזל בנתיבות.">
+<meta name="theme-color" content="#1f2a1a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="world"></canvas>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="hud-card hud-who">
+      <div id="hud-name" class="hud-name"></div>
+      <div id="hud-unit" class="hud-sub"></div>
+    </div>
+    <div class="hud-card hud-clock">
+      <div id="hud-day" class="hud-sub"></div>
+      <div id="hud-time" class="hud-time"></div>
+    </div>
+    <div class="hud-card hud-bars">
+      <div class="bar"><span>אנרגיה</span><i><b id="bar-energy"></b></i></div>
+      <div class="bar"><span>מורל</span><i><b id="bar-morale"></b></i></div>
+      <div class="bar"><span>ציון פלג"צ</span><i><b id="bar-score"></b></i></div>
+    </div>
+    <div class="hud-card hud-money"><span id="hud-money"></span></div>
+    <button id="btn-phone" class="hud-btn" title="טלפון (Tab)">📱</button>
+  </div>
+  <div id="objective" class="objective"></div>
+  <div id="prompt" class="prompt hidden"></div>
+  <div id="alert-banner" class="alert-banner hidden"></div>
+  <canvas id="minimap" width="192" height="138"></canvas>
+  <div id="toasts"></div>
+</div>
+
+<!-- Touch controls -->
+<div id="touch" class="hidden">
+  <div id="stick"><div id="stick-knob"></div></div>
+  <button id="t-act" class="t-btn">E</button>
+  <button id="t-run" class="t-btn small">ריצה</button>
+</div>
+
+<!-- Screens / overlays -->
+<div id="screen" class="screen"></div>
+<div id="dialog" class="dialog hidden"></div>
+<div id="mini" class="mini hidden"></div>
+<div id="phone" class="phone hidden"></div>
+<div id="fade" class="fade"></div>
+
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/minigames.js"></script>
+<script src="js/story.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

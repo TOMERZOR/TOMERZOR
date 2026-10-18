@@ -10,7 +10,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="נתיבוט">
-<link rel="manifest" href="manifest.json">
+<!-- No web manifest on purpose: its start_url would drop the #key from the invite link,
+     so a home-screen copy would lose the real names. The meta tags above still open it full screen. -->
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

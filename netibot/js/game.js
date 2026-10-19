@@ -817,7 +817,7 @@ const Game = {
         ${story ? `<button class="btn" id="m-cont">▶ להמשיך (יום ${story.state.day}, ${esc(story.profile.name)})</button>` : ''}
         <button class="btn ${story ? 'ghost' : ''}" id="m-new">${story ? 'משחק חדש מההתחלה' : '▶ משחק חדש'}</button>
         <button class="btn ghost" id="m-multi">🌐 לשחק עם הפלגה</button>
-        <div class="menu-row"><button class="btn small ghost" id="m-free">🎯 אימונים</button><button class="btn small ghost" id="m-role">🎭 לשחק בתור מישהו</button></div>
+        <div class="menu-row"><button class="btn small ghost" id="m-role">🎭 לשחק בתור מישהו</button></div>
       </div>
       <div class="footnote">משחק בדיוני. כל הדמויות, השמות והאירועים במשחק מומצאים.</div>
     </div>`, 'assets/title.jpg');
@@ -831,12 +831,6 @@ const Game = {
         <div class="actions"><button class="btn" id="n-cont">▶ לא, להמשיך מאיפה שעצרתי</button><button class="btn red" id="n-new">כן, משחק חדש</button></div></div></div>`, 'assets/title.jpg');
       $('#n-cont').onclick = () => { G.profile = story.profile; G.state = story.state; this.startWorld(false); };
       $('#n-new').onclick = () => this.createCharacter('story');
-    };
-    $('#m-free').onclick = () => {
-      Sound.unlock();
-      const free = this.load('free');
-      if (free) { G.profile = free.profile; G.state = free.state; this.startWorld(false).then(() => Story.trainingMenu()); }
-      else this.createCharacter('free');
     };
     $('#m-help').onclick = () => { Sound.unlock(); Sound.click(); this.help(false); };
     $('#m-sound').onclick = (e) => { Sound.unlock(); Settings.soundCard(e.currentTarget); };
@@ -917,7 +911,7 @@ const Game = {
             { img: 'assets/redalert.jpg', text: `חוק ראשון בנתיבות: כשיש צבע אדום — יש לך ${DATA.redAlertSeconds} שניות להגיע למיגונית. בלי ויכוחים.` },
           ]);
         }
-        this.startWorld(true).then(() => { if (mode === 'free') { UI.toast('אימונים חופשיים: כל העמדות פתוחות'); Story.trainingMenu(); } });
+        this.startWorld(true);
       };
     };
     render();

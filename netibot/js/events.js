@@ -602,6 +602,17 @@ const Events = {
     // What stayed hidden turns into a feast tonight.
     G.state.dayFlags.feast = b.food.length - seen.length;
     this.baum = null;
+    // In the story it's the day's showdown: p_liran tells her, she stays, and there's time
+    // to bring the things that will break her.
+    if (!b.coop && Story.has('b_boss')) {
+      await UI.talk([
+        { who: 'p_liran', text: 'המפקדת! המפקדת! {first} קרא ספר בשמירה! ספר עם תמונות! על מיירטים! אוגה!' },
+        { who: 'bc', text: '...ספר. בשמירה. ב־ש־מ־י־ר־ה. אני לא נוסעת. אני הולכת לנשום במשרד. וכשאני חוזרת — מישהו פה מקבל.' },
+        { who: 'p_shalev', text: '*לוחש* יש רק דבר אחד שהיא לא עומדת בו: תרבות מזרחית. קריוקי, גרעינים, הפוסטר, הבבא סאלי. [תאסוף/תאספי] מהר מהחבר\'ה ו[תלך/תלכי] אליה.' },
+      ]);
+      Game.setNpcSpot('bc', BossArcs.BC_SPOT());
+      return;
+    }
     // p_liran can't keep it to himself, and she has never been told anything worse.
     if (!b.coop && !G.state.flags.baumBoss && Cast.get('p_liran') && !Multi.taken().has('p_liran') && Math.random() < 0.5) {
       Boss.startOther('baum');

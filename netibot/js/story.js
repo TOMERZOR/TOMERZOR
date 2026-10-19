@@ -90,13 +90,13 @@ const TASKS = {
   boss: { title: 'להביס את צ\'יזבורגרו!', desc: 'לאסוף אוכל בריא ולזרוק עליו.', map: 'hq', target: () => (Boss.active && Boss.pickups[0]) || null, pts: 0 },
   lock_gate: { title: 'לנעול את השער של נתיבות ולצאת הביתה', desc: 'עם המנעול האחרון בסוללה.', target: () => SPOTS.gate, pts: 0, last: true },
 };
-const FINAL_DAY = { title: 'יום אחרון לפני יציאה הביתה 🏠', tasks: ['lineup', 'find_lock', 'snack', 'boss', 'lock_gate'], alerts: [] };
+const FINAL_DAY = { title: 'יום אחרון לפני יציאה הביתה 🏠', tasks: ['lineup', 'f_veggies', 'find_lock', 'snack', 'boss', 'lock_gate'], alerts: [] };
 
 const DAYS = {
   1: { title: 'יום 1 — קליטה בפלג"צ', tasks: ['meet_cmd', 'locker', 'drill', 'clean', 'dinner', 'sleep'], alerts: [] },
-  2: { title: 'יום 2 — משגרים וחתימות', tasks: ['lineup', 'reload_train', 'hq_gear', 'gate', 'sleep'], alerts: [13 * 60 + 20] },
+  2: { title: 'יום 2 — משגרים, חתימות, והרס"ר', tasks: ['lineup', 'reload_train', 'h_shine', 'h_beret', 'h_shave', 'hq_gear', 'h_belt', 'h_boss', 'gate', 'sleep'], alerts: [13 * 60 + 20] },
   3: { title: 'יום 3 — בוס: המסדר הרצחני של {@inspector}', tasks: ['lineup', 'y_room', 'y_fridge', 'y_store', 'y_trash', 'y_final', 'radar', 'guard', 'sleep'], alerts: [16 * 60 + 30] },
-  4: { title: 'יום 4 — נוהל אנה פרנק, ופורסים אתר', tasks: ['lineup', 'baum', 'deploy', 'train2', 'sleep'], alerts: [17 * 60 + 10] },
+  4: { title: 'יום 4 — נוהל אנה פרנק, ומפקדת הסוללה', tasks: ['lineup', 'baum', 'b_karaoke', 'b_seeds', 'b_bibi', 'b_babasali', 'b_boss', 'deploy', 'sleep'], alerts: [17 * 60 + 10] },
   5: { title: 'יום 5 — מבחן סיום פלג"צ', tasks: ['lineup', 'exam_reload', 'exam_alert', 'exam_radar', 'exam_quiz', 'graduation'], alerts: [] },
 };
 
@@ -350,6 +350,10 @@ const Story = {
     const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';
     if (tmap !== World.id) return { text: `לנסוע ל${siteName(tmap)} — ${fmt(t.title)}`, target: travelSpot(), urgent: !!t.urgent, how: t.urgent ? 'ללכת לתחנת ההסעות וללחוץ E' : '' };
     if (t.id === 'deploy') return { text: this.deployText(), target: this.deployTarget() };
+    // Everything done early: free time until the evening, then bed.
+    if (t.id === 'sleep' && (G.state.clock % 1440) >= 5 * 60 && (G.state.clock % 1440) < 20 * 60) {
+      return { text: 'זמן חופשי עד הערב 🌤️', how: 'אפשר להתאמן בלוח האימונים, לשבת במרכז אתר או לקנות בש"ק. לישון — מ־20:00', target: null };
+    }
     let text = t.title;
     if (t.id === 'clean') text += ` (${10 - this.trash.length}/10)`;
     if (t.id === 'train2') text += ` (${t.progress}/2)`;
@@ -392,6 +396,7 @@ const Story = {
     Events.update(dt);
     Curious.update(dt);
     Kashag.update(dt);
+    BossArcs.update();
     Boss.watchCoop();
     Boss.update(dt);
     // Morning lineup: arriving at the parade ground completes it.
@@ -421,6 +426,8 @@ const Story = {
       : [{ who: 'commander', text: pick(['בוקר טוב {platoon}! עמוד דום... עמוד נוח. {name}, בזמן — יפה מאוד.', 'בוקר! כולם פה? {@p_liran}, גם הנשמה צריכה להיות פה, לא רק הגוף.', 'בוקר טוב. {@p_ofek}, לא, אין עדכון על ברסה במסדר.']) }];
     const today = this.tasks.filter(t => !t.done && !t.last).map(t => '• ' + fmt(t.title)).join('\n');
     if (today) lines.push({ who: 'commander', text: 'המשימות להיום אצלך בטלפון: ' + today.replace(/\n/g, '  ') });
+    if (this.has('h_shine')) lines.push({ who: 'sergeant', text: 'ועוד דבר: היום {@harasar} עושה ביקורת תלבושת בשו"ב. נעליים, כומתה, גילוח, חוגר. מי שלא מוכן — לא חוזר אותו בן אדם.' });
+    if (this.has('f_veggies')) lines.push({ who: 'p_shaked', text: '*לוחשת* שמעתי שיש בשו"ב מישהו שאוכל רק צ\'יזבורגרים. [בוא/בואי] אליי לפני שאת[ה/] נוסע[/ת], יש לי משהו בשבילך. 🥦' });
     await UI.talk(lines);
     Game.addScore(late ? -5 : 4 + bonus, late ? 'איחור למסדר' : 'מסדר בוקר בזמן');
     if (this.has('y_room')) await Events.yasminIntro();
@@ -447,6 +454,7 @@ const Story = {
       list.push({ x: n.x, y: n.y, label: `לדבר עם ${n.short}`, action: () => this.talkTo(n), r: 50, talk: true });
     }
     Tutorial.interactables(add);
+    BossArcs.interactables(add);
     // The tables at "מרכז אתר".
     for (const st of World.seats) {
       if (P.sit === st) add(st.x, st.y, '🧍 לקום', () => Game.standUp(), 34);
@@ -477,7 +485,7 @@ const Story = {
     World.beds.forEach((b, i) => {
       const sp = bedSpot(i);
       if (b.messy) add(sp.x, sp.y, 'לסדר מיטה', () => this.fixBed(b), 34);
-      else if (i === S.myBed) add(sp.x, sp.y, 'לישון', () => this.sleep(), 34);
+      else if (i === S.myBed) add(sp.x, sp.y, S.clock < 20 * 60 ? '😴 לנוח עד הערב' : 'לישון', () => this.sleep(), 34);
     });
     World.lockers.forEach((l, i) => {
       const sp = lockerSpot(i);
@@ -530,6 +538,7 @@ const Story = {
     if (n.chasing) return;
     if (n.curious) { await Curious.talk(n); return; }
     if (n.id === 'madag') { await Kashag.talk(n); return; }
+    if (await BossArcs.talk(n)) return;
     const id = n.id;
     if (await Events.talkTo(n)) return;
     if (this.has('find_lock') && id !== 'rasap' && await this.lockHint(n)) return;
@@ -1074,9 +1083,17 @@ const Story = {
     const S = G.state;
     const open = this.tasks.filter(t => !t.done && !t.last);
     if (S.mode === 'story' && this.has('graduation')) { UI.toast('קודם לשמוע את התוצאה מ{@@bc}'); return; }
-    if (S.clock < 19 * 60 && open.length) {
-      const v = await UI.talk([{ who: 'player', text: `עוד ${open.length} משימות פתוחות והשעה ${clockText()}. ללכת לישון בכל זאת?`, choices: [{ label: 'כן, לישון', value: 1 }, { label: 'לא, עוד רגע', value: 0 }] }]);
+    // In the daytime the bed is for a rest until the evening, not for ending the day.
+    if (S.clock < 20 * 60) {
+      const v = await UI.talk([{ who: 'player', text: `השעה ${clockText()}, מוקדם מדי לישון. כיבוי אורות רק בערב.${open.length ? ` ויש עוד ${open.length} משימות פתוחות.` : ''}`, choices: [{ label: '😴 לנוח עד הערב (20:00)', value: 1 }, { label: 'לא, לקום', value: 0 }] }]);
       if (!v) return;
+      UI.fade(() => {
+        S.clock = 20 * 60;
+        this.pendingAlerts = this.pendingAlerts.filter(t => t > S.clock);
+      });
+      Game.addStat('energy', 30);
+      UI.toast('😴 נחת עד הערב. אנרגיה +30');
+      return;
     }
     this.complete('sleep');
     // Lights out — but the night isn't always quiet.

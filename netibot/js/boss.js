@@ -76,6 +76,7 @@ const Boss = {
     this.lastPick = cfg.ammo()[0].id;
     if (coop) { this.taken = new Set(); this.myTaken = []; this.pickCache = {}; this.coopPickups(); }
     else for (let i = 0; i < Boss.PICKUPS; i++) this.spawnPickup();
+    if (!coop) BossArcs.apply(kind);
     G.player.x = this.cx;
     G.player.y = cfg.arena.y1 - 0.5 * TS;
     G.player.carry = false;
@@ -318,9 +319,9 @@ const Boss = {
   },
 
   // Starting one of the event bosses: a short cutscene, then the fight where they stand.
-  async startOther(kind) {
+  async startOther(kind, opts = {}) {
     if (kind === 'baum') {
-      await UI.talk([
+      if (!opts.skipIntro) await UI.talk([
         { who: 'p_liran', text: 'המפקדת! המפקדת! {first} קרא ספר בשמירה! ספר עם תמונות! על מיירטים! אוגה!' },
         { who: 'bc', text: '...ספר. בשמירה. ב־ש־מ־י־ר־ה.' },
       ]);
@@ -348,12 +349,14 @@ const Boss = {
         { who: 'bc', text: '{@p_liran}, שמירה כפולה. עם הספר. ותביא לי את הגרעינים, יש לי עוד חצי שעה עד הנסיעה.' },
       ]);
       G.state.flags.baumBoss = true;
+      BossArcs.won('baum');
       Game.achieve('baum_boss');
       Game.addScore(15, 'ניצחת את {@bc}');
     } else {
       await UI.cutscene([{ img: Assets.scene('harasar_win'), who: '', text: 'נעליים מבריקות, כומתה בכותפת, גילוח חלק וחוגר... {@harasar} מתכווץ, מסתכל עליך מלמטה למעלה — ובפעם הראשונה בהיסטוריה של הסוללה, אין לו מה להגיד.' }]);
       await UI.talk([{ who: 'harasar', text: '...*מצדיע* זה לא קרה. ואם תספר[/י] — שלושה ימי ריתוק. ...טוב, שניים.' }]);
       G.state.flags.harasarBoss = true;
+      BossArcs.won('harasar');
       Game.achieve('harasar_boss');
       Game.addScore(15, 'ניצחת את {@harasar}');
     }

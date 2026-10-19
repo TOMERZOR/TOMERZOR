@@ -1,9 +1,55 @@
-/* Red alert musical chairs: the round's count on top, your stamina, and red edges while the
-   siren is on. */
+/* Red alert musical chairs, first person: a compass strip on top with the shelters, the round
+   and your breath under it, a small map in the corner, red edges while the siren is on, and a
+   door frame around the view once you're inside. */
 #arcade .al { position: absolute; inset: 0; pointer-events: none; }
-#arcade .al-top { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font-size: 17px; white-space: nowrap; }
-#arcade .al-st { top: calc(max(8px, env(safe-area-inset-top)) + 46px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; width: min(200px, 40vw); font-size: 13px; }
-#arcade .al-st i { flex: 1; height: 8px; background: #0c0e0c; border-radius: 4px; overflow: hidden; display: block; }
+
+/* The compass strip: ±100° of the yard around where you look. */
+#arcade .al-cmp { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 300px)); height: 40px; direction: ltr; overflow: hidden;
+  background: linear-gradient(rgba(14,16,12,.78), rgba(14,16,12,.6)); border: 2px solid var(--trim); border-radius: 10px; box-shadow: var(--bevel); }
+#arcade .al-ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background-image: linear-gradient(90deg, rgba(244,241,230,.45) 2px, transparent 2px); background-repeat: repeat-x;
+  -webkit-mask-image: linear-gradient(90deg, transparent 10%, #000 13%, #000 87%, transparent 90%); mask-image: linear-gradient(90deg, transparent 10%, #000 13%, #000 87%, transparent 90%); }
+/* The ends of the strip are behind you: a shade darker. */
+#arcade .al-cmp::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.4) 11.5%, transparent 11.5% 88.5%, rgba(0,0,0,.4) 88.5%); }
+#arcade .al-mid { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 0; height: 0; border: 7px solid transparent; border-top-color: var(--gold-hi); }
+#arcade .al-mk { position: absolute; top: 3px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; line-height: 1; white-space: nowrap; }
+#arcade .al-mk b { display: block; min-width: 22px; padding: 2px 4px; border-radius: 6px; background: #cfc8b8; color: #161616; font: 900 14px Rubik, sans-serif; text-align: center; box-shadow: 0 1px 0 #000a; }
+#arcade .al-mk i { font: 800 10px Rubik, sans-serif; font-style: normal; color: #f4f1e6; margin-top: 2px; text-shadow: 0 1px 0 #000; direction: rtl; unicode-bidi: isolate; }
+#arcade .al-mk.open b { background: #3cff6a; box-shadow: 0 0 10px #3cff6a, 0 1px 0 #000a; }
+#arcade .al-mk.taken b { background: #e2342a; color: #fff; opacity: .75; }
+#arcade .al-mk.mine b { background: var(--gold-hi); }
+#arcade .al-mk.best { transform: translateX(-50%) scale(1.22); z-index: 1; }
+#arcade .al-mk.best b { animation: al-best .4s ease-in-out infinite alternate; }
+@keyframes al-best { from { box-shadow: 0 0 4px #3cff6a; } to { box-shadow: 0 0 16px #3cff6a, 0 0 0 2px #fff; } }
+#arcade .al-mk.edge { opacity: .85; }
+#arcade .al-mk.edge.l b::before { content: '◀ '; font-size: 10px; }
+#arcade .al-mk.edge.r b::after { content: ' ▶'; font-size: 10px; }
+
+/* The round, and your breath as a thin bar under it. */
+#arcade .al-top { top: calc(max(8px, env(safe-area-inset-top)) + 48px); left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; padding: 3px 10px 5px; }
+#arcade .al-st { display: block; height: 5px; margin-top: 3px; background: #0c0e0c; border-radius: 3px; overflow: hidden; }
 #arcade .al-st b { display: block; height: 100%; background: linear-gradient(90deg, #7cc8ff, #2f7fc4); transition: width .15s; }
-#arcade .al-red { position: absolute; inset: 0; box-shadow: inset 0 0 90px 24px rgba(216,38,31,.6); animation: al-pulse .45s ease-in-out infinite alternate; }
-@keyframes al-pulse { from { opacity: .35; } to { opacity: 1; } }
+
+/* The map in the corner, turned so where you look is up. */
+#arcade .al-map { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); width: 112px; height: 112px; filter: drop-shadow(0 2px 4px #000a); }
+
+/* The siren: red edges pulsing, and a red flash when it starts. */
+#arcade .al-red { position: absolute; inset: 0; box-shadow: inset 0 0 110px 34px rgba(216,38,31,.7); animation: al-pulse .45s ease-in-out infinite alternate; }
+@keyframes al-pulse { from { opacity: .3; } to { opacity: 1; } }
+#arcade .al-flash { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, rgba(255,40,30,.15) 30%, rgba(255,30,20,.95)); }
+
+/* Inside: the shelter's concrete door frame around the yard. */
+/* The jambs fade out low down, so the sticks on a phone stay in sight. */
+#arcade .al-in { position: absolute; inset: 0; overflow: hidden; -webkit-mask-image: linear-gradient(#000 38%, transparent 64%); mask-image: linear-gradient(#000 38%, transparent 64%); }
+#arcade .al-in::before { content: ''; position: absolute; left: 17vw; right: 17vw; top: 11vh; bottom: -40px; border-radius: 22vh 22vh 0 0 / 12vh 12vh 0 0;
+  box-shadow: 0 0 0 100vmax #4c4840, inset 0 0 0 10px #615c52, inset 0 0 60px 22px rgba(0,0,0,.55); }
+#arcade .al-in::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 60%, transparent 45%, rgba(0,0,0,.35)); }
+#arcade .al-in span { position: absolute; z-index: 1; left: 50%; top: 27%; transform: translateX(-50%); background: rgba(20,26,16,.85); border: 2px solid #3cff6a; color: #d8ffd9; border-radius: 10px; padding: 4px 12px; font-weight: 900; white-space: nowrap; }
+
+/* Phones: the lines at the bottom stay between the sticks; the map and strip shrink a little. */
+body.touch #arcade.al-fp .ar-say { max-width: calc(100vw - 470px); font-size: 13px; }
+@media (max-height: 520px) {
+  #arcade .al-map { width: 86px; height: 86px; }
+  #arcade .al-cmp { width: min(560px, calc(100vw - 260px)); }
+  #arcade .al-top { top: calc(max(6px, env(safe-area-inset-top)) + 42px); font-size: 13px; }
+  #arcade .al-in span { font-size: 13px; }
+}

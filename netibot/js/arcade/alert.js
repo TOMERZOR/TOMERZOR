@@ -18,6 +18,9 @@ const ALERT_LINES = {
   meOut: ['[נשארת/נשארת] בחוץ! עשר שכיבות סמיכה, ואת[ה/] [צופה/צופה] משם.'],
   push: ['💪 דחיפה!', '🤚 זוז!', '🫸 תור!'],
   shut: ['🔒 תפוס!', '🚪 מלא!'],
+  // What the ones running past you yell (over their heads, in their own voice).
+  shout: ['זוז!!', 'מפנים!!', '[אני ראשון/אני ראשונה]!', 'סליחה סליחה סליחה!', 'אמאאאא!', 'לא לדחוף!!', 'מיגונית! מיגונית!', 'השניצל שלי!!', 'מי לקח לי את הכיסא?!'],
+  behind: ['👀 תסתכל[/י] מסביב — הפס למעלה מראה איפה המיגוניות', '🧭 ירוק בפס למעלה = דלת פנויה. בצד = מאחוריך'],
 };
 
 // [m/f] text about someone in the game: their own gender, not the player's.
@@ -31,13 +34,16 @@ const AlertGame = {
   desc: 'אוכלים בשולחנות, ופתאום אזעקה — ותמיד יש מיגונית אחת פחות. לרוץ, לדחוף (E), ולא להישאר בחוץ.',
   cover: 'assets/arcade/cover_alert.jpg', solo: true, online: true, minOnline: 2,
   R: 12.5,    // the shelters stand on a circle this far from the middle
+  FOV: 74,    // first person: wide enough to see a soldier shoving in from the side
+  EYE: 1.6,   // eye height, metres
 
   build() {
     if (this.scene) return;
     const sc = this.scene = new THREE.Scene();
     sc.background = new THREE.Color(0x9fd0f2);
     sc.fog = new THREE.Fog(0xcfe3ee, 60, 180);
-    this.camera = new THREE.PerspectiveCamera(50, 1, 0.3, 500);
+    // First person: your own eyes, 1.6 m up. The near plane is close so door frames don't clip.
+    this.camera = new THREE.PerspectiveCamera(this.FOV, 1, 0.08, 500);
     sc.add(new THREE.HemisphereLight(0xe8f2ff, 0xc9a56a, 0.8));
     const sun = new THREE.DirectionalLight(0xfff0d4, 1.1);
     sun.position.set(18, 40, 14); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
@@ -105,19 +111,24 @@ const AlertGame = {
       const m = Arcade.soldier(this.scene, c.isMe ? Arcade.look(null) : Arcade.look(Cast.get(c.who) ? c.who : null));
       const tag = Scene3D.label(c.isMe ? `⭐ ${c.name}` : c.name, { bg: c.isMe ? 'rgba(242,193,46,.95)' : 'rgba(20,26,16,.8)', fg: c.isMe ? '#1b1b1b' : '#f4f1e6', size: 0.5 });
       tag.position.y = 2.3; m.root.add(tag);
-      return { ...c, m, tag, x: 0, z: 0, vx: 0, vz: 0, a: 0, ix: 0, iz: 0, stun: 0, pushCd: 0, inside: -1, out: false, stamina: 1, seat: i };
+      return { ...c, m, tag, x: 0, z: 0, vx: 0, vz: 0, a: 0, yaw: 0, pitch: -0.04, bob: 0, ix: 0, iz: 0, stun: 0, pushCd: 0, inside: -1, out: false, stamina: 1, seat: i };
     });
     this.me = this.ps.find(p => p.isMe);
     this.round = 0; this.order = []; this.done = false; this.resultsAt = null; this.events = []; this.seen = new Set();
-    this.pushups = 0; this.hostSeen = performance.now(); this.stayT = 0;
+    this.pushups = 0; this.hostSeen = performance.now(); this.stayT = 0; this.kick = 0; this.shoutT = 0; this.otherStepT = 0; this.hinted = false; this.roll = 0;
     this.st = { r: 0, ph: 'calm', occ: {}, out: [], shel: this.ps.length - 1 };
     this.shelters = [];
     for (let i = 0; i < this.ps.length - 1; i++) this.shelters.push(this.makeShelter(i, this.ps.length - 1));
+    // The world's camera drag lands in Scene3D.yaw / pitch; we read the change each frame and
+    // put them back (see lookInput), so remember where they were.
+    if (!this.look0) this.look0 = { yaw: Scene3D.yaw, pitch: Scene3D.pitch };
+    Scene3D.yaw = 0; Scene3D.pitch = 0.7;
     this.ui();
-    Arcade.buttons({ act: '🤚', run: 'ריצה' });
+    Arcade.buttons({ act: '🤚', run: 'ריצה', look: true });
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>🚨 צבע אדום — כיסאות מוזיקליים</h2>
       <p class="ar-sub">אוכלים ליד השולחנות. כשיש אזעקה — לרוץ לדלת של מיגונית פנויה (המנורה ירוקה). יש תמיד אחת פחות ממספר השחקנים! מי שנשאר בחוץ — שכיבות סמיכה בצד.</p>
-      <p class="ar-sub">${G.touch ? 'ג\'ויסטיק — ללכת · ריצה — לרוץ · 🤚 — לדחוף' : 'WASD / חצים — ללכת · Shift — ריצה · E / רווח — לדחוף'} · ואם זה רק אופנוע — לא לזוז 😅</p>`);
+      <p class="ar-sub">${G.touch ? 'ג\'ויסטיק שמאלי — ללכת · ימני / גרירה על המסך — להסתכל · ריצה · 🤚 — לדחוף' : 'WASD — ללכת · גרירה עם העכבר — להסתכל · Shift — ריצה · E / רווח — לדחוף'}</p>
+      <p class="ar-sub">🧭 הפס למעלה מראה איפה כל מיגונית (ירוק = פנויה, בצד = מאחוריך) · 🗺️ מפה קטנה בפינה · ואם זה רק אופנוע — לא לזוז 😅</p>`);
     this.newRound(true);
     Arcade.countdown(performance.now() + (ctx.solo ? 4200 : 3200), () => { Arcade.panel(''); this.started = true; this.t = 0; }, '🍽️!');
   },
@@ -144,6 +155,8 @@ const AlertGame = {
       const a = k / alive.length * Math.PI * 2 + 0.3, r = 5.6;
       p.x = Math.cos(a) * r; p.z = Math.sin(a) * r; p.a = a + Math.PI; p.inside = -1; p.vx = p.vz = p.ix = p.iz = 0; p.stun = 0;
       p.m.root.visible = true; p.wander = { x: p.x, z: p.z, t: 0 };
+      // You sit facing the tables; the others, too.
+      p.yaw = p.a; p.shouted = false;
     });
     for (const s of this.shelters) { s.who = null; this.lamp(s, false); }
     for (const p of this.ps) p.laughed = false;
@@ -162,16 +175,31 @@ const AlertGame = {
 
   // ---------- each frame ----------
   update(dt) {
-    if (!this.started) { this.animate(dt); this.hud(); return; }
+    if (!this.started) { this.lookInput(dt); this.animate(dt); this.hud(); return; }
     // Out and watching the bots alone: the rest of the game goes by faster.
     if (this.ctx.solo && this.me && this.me.out && !this.done) dt *= 2;
     this.t += dt;
     if (!this.host) this.follow();
     else this.referee(dt);
+    this.lookInput(dt);
     this.move(dt);
     this.animate(dt);
     this.hud();
     if (this.done && this.resultsAt && performance.now() > this.resultsAt) { this.resultsAt = null; this.results(); }
+  },
+  // Looking around: a drag on the screen (mouse or a finger off the sticks), the right stick,
+  // or ← → / Q R. The world's drag handler turns Scene3D's camera, so we take its change each
+  // frame and put it back where it was.
+  lookInput(dt) {
+    const me = this.me, V = Settings.v || {};
+    const dYaw = Scene3D.yaw, dPitch = Scene3D.pitch - 0.7;
+    Scene3D.yaw = 0; Scene3D.pitch = 0.7;
+    if (!me || this.done) return;
+    const k = G.keys, sens = V.sens || 1, inv = V.invertY ? -1 : 1, look = G.look || {};
+    const turn = (k.has('ArrowRight') || k.has('KeyR') ? 1 : 0) - (k.has('ArrowLeft') || k.has('KeyQ') ? 1 : 0);
+    const y = me.yaw - dYaw + turn * dt * 2.4 + (look.x || 0) * dt * 2.8 * sens;
+    me.yaw = Math.atan2(Math.sin(y), Math.cos(y));
+    me.pitch = Math.max(-0.7, Math.min(0.6, me.pitch - dPitch - (look.y || 0) * dt * 1.5 * sens * inv));
   },
   // The host's phone runs the round: the siren, the doors, and who's left outside.
   referee(dt) {
@@ -265,7 +293,8 @@ const AlertGame = {
     Sound.whistle();
     if (p.isMe) {
       Arcade.big('😩 [נשארת/נשארת] בחוץ!', 1800); Arcade.say(fmt(pick(ALERT_LINES.meOut)), null, 3000); Sound.bad(); G.shake = 0.6;
-      Arcade.buttons({ act: '💪', run: false });
+      Arcade.buttons({ act: '💪', run: false, look: true });
+      p.yaw = Math.PI; p.pitch = 0.08;
       if (this.ctx.solo) setTimeout(() => this.me && this.me.out && !this.done && Arcade.say(G.touch ? '💪 — שכיבת סמיכה · ⏩ הסיבובים הבאים מהר יותר' : 'E / רווח — שכיבת סמיכה · ⏩ הסיבובים הבאים מהר יותר', null, 3200), 3200);
     } else Arcade.say(`${alertAbout(p, pick(ALERT_LINES.out))} <b><bdi data-raw>${esc(p.name)}</bdi></b> 😅`, null, 2600);
     this.pop(p, '😩');
@@ -316,8 +345,13 @@ const AlertGame = {
       if (p.out || p.inside >= 0) continue;
       let ix = 0, iz = 0, run = false;
       if (p.isMe) {
-        const inp = Arcade.input();
-        ix = inp.x; iz = -inp.y; run = inp.run;
+        // First person: forward is where you look, A / D (or the stick) step to the sides.
+        // The arrows ← → turn instead (see lookInput), so they're left out here.
+        const k = G.keys, key = (...c) => (c.some(x => k.has(x)) ? 1 : 0);
+        let sx = key('KeyD') - key('KeyA') + (G.stick.x || 0), sy = key('KeyW', 'ArrowUp') - key('KeyS', 'ArrowDown') - (G.stick.y || 0);
+        const l = Math.hypot(sx, sy); if (l > 1) { sx /= l; sy /= l; }
+        const fx = Math.cos(p.yaw), fz = Math.sin(p.yaw);
+        ix = fx * sy - fz * sx; iz = fz * sy + fx * sx; run = Arcade.input().run;
       } else if (p.bot) [ix, iz, run] = this.botMove(p, dt);
       if (p.stun > 0) { ix = iz = 0; }
       // Running costs stamina; it comes back when walking.
@@ -329,7 +363,8 @@ const AlertGame = {
       p.vx += (tvx - p.vx) * Math.min(1, dt * 10); p.vz += (tvz - p.vz) * Math.min(1, dt * 10);
       p.x += (p.vx + p.ix) * dt; p.z += (p.vz + p.iz) * dt;
       p.ix *= Math.exp(-5 * dt); p.iz *= Math.exp(-5 * dt);
-      if (Math.hypot(p.vx, p.vz) > 0.3) p.a = Math.atan2(p.vz, p.vx);
+      if (p.isMe) p.a = p.yaw;
+      else if (Math.hypot(p.vx, p.vz) > 0.3) p.a = Math.atan2(p.vz, p.vx);
       // Keep off the shelters' walls and inside the yard.
       for (const s of this.shelters) { if (s.gone) continue; const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz); if (d < 2.3) { p.x = s.x + dx / d * 2.3; p.z = s.z + dz / d * 2.3; } }
       const r = Math.hypot(p.x, p.z); if (r > 22) { p.x *= 22 / r; p.z *= 22 / r; }
@@ -355,7 +390,7 @@ const AlertGame = {
           s.who = p.who;
           this.puff(s.door.x, s.door.z, 0.8);
           Sound.synth.tone(220, 0.15, 'square', 0.05);
-          if (p.isMe) { Arcade.big('✅ בפנים!', 1000); Sound.good(); }
+          if (p.isMe) { Arcade.big('✅ בפנים!', 1000); Sound.good(); p.yaw = Math.atan2(-s.z, -s.x); p.pitch = -0.06; }
           break;
         }
       }
@@ -386,6 +421,13 @@ const AlertGame = {
       const dx = s.door.x - p.x, dz = s.door.z - p.z, d = Math.hypot(dx, dz);
       const rival = this.ps.find(q => q !== p && !q.out && q.inside < 0 && Math.hypot(q.x - p.x, q.z - p.z) < 1.4);
       if (rival && p.pushCd <= 0 && Math.random() < dt * 3) this.push(p);
+      // Tearing past you: a yell over the head (once a round each, not all at once).
+      const me = this.me;
+      if (me && !p.shouted && !me.out && Math.hypot(me.x - p.x, me.z - p.z) < 3.2 && this.t > this.shoutT && Math.random() < dt * 2.5) {
+        p.shouted = true; this.shoutT = this.t + 0.5;
+        this.pop(p, alertAbout(p, pick(ALERT_LINES.shout)));
+        Sound.synth.tone(300 + Math.random() * 160, 0.14, 'sawtooth', 0.035, 230);
+      }
       return [dx / d, dz / d, true];
     }
     if (p.jumpy > 0) { p.jumpy -= dt; const s = this.nearestShelter(p); if (s) { const dx = s.door.x - p.x, dz = s.door.z - p.z, d = Math.hypot(dx, dz); return [dx / d * 0.8, dz / d * 0.8, true]; } }
@@ -423,6 +465,7 @@ const AlertGame = {
       if (d < bd && (dx * fx + dz * fz) / (d || 1) > 0.3) { bd = d; hit = q; }
     }
     p.pushT = 0.3;
+    if (p.isMe) this.kick = 1;
     if (p.isMe || (hit && hit.isMe)) Sound.synth.noise(0.15, 0.2, 600);
     if (!hit) return;
     const dx = hit.x - p.x, dz = hit.z - p.z, d = Math.hypot(dx, dz) || 1;
@@ -497,21 +540,96 @@ const AlertGame = {
       if (s.open !== open) { s.open = open; this.lamp(s, open); }
       s.glow.material.opacity = open ? 0.5 + Math.sin(t * 10) * 0.4 : 0.6;
     }
-    // The camera: high behind you, looking at the yard; it follows you a little.
-    const me = this.me, cam = this.camera;
-    const fx = me && !me.out ? me.x * 0.45 : 0, fz = me && !me.out ? me.z * 0.45 : 0;
-    const want = new THREE.Vector3(fx, 21, fz + 22);
-    cam.position.lerp(want, Math.min(1, dt * 3));
-    if (G.shake > 0) { cam.position.x += (Math.random() - 0.5) * G.shake; G.shake = Math.max(0, G.shake - dt); }
-    cam.lookAt(fx, 0, fz + 1);
-    this.flashT = Math.max(0, (this.flashT || 0) - dt * 0.6);
+    this.steps(dt);
+    this.cam(dt);
+    this.flashT = Math.max(0, (this.flashT || 0) - dt * 1.4);
+  },
+  // Your own eyes. Outside: 1.6 m up, bobbing as you run. In a shelter: in the doorway, looking
+  // out. Out of the game: from the floor, between push-ups. At the end: around the winner.
+  cam(dt) {
+    const me = this.me, c = this.camera;
+    if (!me) return;
+    const t = performance.now() / 1000, V = Settings.v || {};
+    let x, y, z, roll = 0, fov = this.FOV;
+    if (this.done) {
+      me.m.root.visible = true;
+      const a = t * 0.3;
+      c.position.set(Math.cos(a) * 6.5, 2.4, Math.sin(a) * 6.5);
+      c.lookAt(0, 1.1, 0);
+      if (Math.abs(c.fov - fov) > 0.05) { c.fov = fov; c.updateProjectionMatrix(); }
+      return;
+    }
+    me.m.root.visible = false;
+    if (me.out) {
+      // Nose to the ground at the side; each push-up lifts you a little.
+      const down = Math.sin((me.pushDip || 0) * Math.PI);
+      x = me.x + Math.cos(me.a) * 0.85; z = me.z + Math.sin(me.a) * 0.85; y = 0.66 - down * 0.34;
+    } else if (me.inside >= 0 && this.shelters[me.inside]) {
+      // Just inside the door.
+      const s = this.shelters[me.inside];
+      x = s.x + (s.door.x - s.x) * 0.5; z = s.z + (s.door.z - s.z) * 0.5; y = this.EYE;
+    } else {
+      const v = Math.hypot(me.vx, me.vz), amp = Math.min(1, v / 8.2);
+      // A step every half turn of the phase: up-down twice a stride, side to side once.
+      const ph0 = me.bobPh || 0;
+      me.bobPh = ph0 + dt * v * 1.35;
+      if (v > 1 && Math.floor(me.bobPh / Math.PI) !== Math.floor(ph0 / Math.PI)) this.step(v > 6 ? 0.07 : 0.045, 1);
+      const bob = Math.sin(me.bobPh * 2) * 0.055 * amp, sway = Math.sin(me.bobPh) * 0.04 * amp;
+      x = me.x - Math.sin(me.yaw) * sway; z = me.z + Math.cos(me.yaw) * sway; y = this.EYE + bob;
+      // Sprinting widens the view a touch; a strafe leans you into it.
+      if (v > 6 && me.stamina > 0.05) fov += 5;
+      const side = (-Math.sin(me.yaw) * me.vx + Math.cos(me.yaw) * me.vz) / 8.2;
+      roll = -side * 0.035;
+    }
+    // Shoved: the world tips for a moment.
+    if (me.stun > 0) roll += Math.sin(t * 22) * 0.06 + 0.1;
+    this.roll += (roll - this.roll) * Math.min(1, dt * 10);
+    if (G.shake > 0) {
+      if (V.shake !== false) { x += (Math.random() - 0.5) * G.shake * 0.35; y += (Math.random() - 0.5) * G.shake * 0.25; }
+      G.shake = Math.max(0, G.shake - dt);
+    }
+    // A shove of your own punches the view in for a moment.
+    this.kick = Math.max(0, (this.kick || 0) - dt * 3.5);
+    fov += Math.sin(Math.min(1, this.kick) * Math.PI) * 9;
+    this.fov = (this.fov || fov) + (fov - (this.fov || fov)) * Math.min(1, dt * 8);
+    if (Math.abs(c.fov - this.fov) > 0.05) { c.fov = this.fov; c.updateProjectionMatrix(); }
+    const cp = Math.cos(me.pitch);
+    c.position.set(x, y, z);
+    c.lookAt(x + Math.cos(me.yaw) * cp, y + Math.sin(me.pitch), z + Math.sin(me.yaw) * cp);
+    if (this.roll) c.rotateZ(this.roll);
+  },
+  // Footsteps on the sand: yours, and the ones running close by (the nearest few).
+  step(vol, bright) { Sound.synth.noise(0.06, vol, 700 + bright * 500, 'bandpass', 0, null, 1.1); },
+  steps(dt) {
+    const me = this.me;
+    this.otherStepT = Math.max(0, (this.otherStepT || 0) - dt);
+    if (!me || !this.started || this.done) return;
+    for (const p of this.ps) {
+      if (p === me || p.out || p.inside >= 0) continue;
+      const ph = p.m.walkPh || 0, k = Math.floor(ph / Math.PI);
+      if (k === p.stepK) continue;
+      p.stepK = k;
+      const v = p.peer ? p.rv || 0 : Math.hypot(p.vx, p.vz), d = Math.hypot(p.x - me.x, p.z - me.z);
+      if (v < 1 || d > 7 || this.otherStepT > 0) continue;
+      this.otherStepT = 0.06;
+      this.step((v > 6 ? 0.05 : 0.03) * (1 - d / 7), 0.4);
+    }
   },
 
   // ---------- the overlay ----------
+  // The overlay: a compass strip on top (where each shelter is, green when its door is open),
+  // the round under it with your breath, a small map in the corner, the siren's red edges, and
+  // a door frame around the view when you're inside.
   ui() {
-    Arcade.hud(`<div class="al"><div class="al-top ar-chip"></div><div class="al-st ar-chip"><span>🏃</span><i><b></b></i></div><div class="al-red hidden"></div></div>`);
+    Arcade.hud(`<div class="al"><div class="al-red hidden"></div><div class="al-flash"></div>
+      <div class="al-in hidden"><span>✅ בפנים! מחכים שכולם ימצאו מקום…</span></div>
+      <div class="al-cmp"><div class="al-ticks"></div><i class="al-mid"></i></div>
+      <div class="al-top ar-chip"><span></span><i class="al-st"><b></b></i></div>
+      <canvas class="al-map" width="200" height="200"></canvas></div>`);
     const h = $('#arcade .al');
-    this.el = { top: h.querySelector('.al-top'), st: h.querySelector('.al-st b'), red: h.querySelector('.al-red') };
+    $('#arcade').classList.add('al-fp');
+    this.el = { top: h.querySelector('.al-top span'), st: h.querySelector('.al-st b'), red: h.querySelector('.al-red'), flash: h.querySelector('.al-flash'),
+      inside: h.querySelector('.al-in'), cmp: h.querySelector('.al-cmp'), ticks: h.querySelector('.al-ticks'), map: h.querySelector('.al-map'), marks: [] };
   },
   hud() {
     const e = this.el;
@@ -522,8 +640,87 @@ const AlertGame = {
     const tail = me && me.out ? ` · 💪 ${this.pushups}${this.ctx.solo ? ' ⏩' : ''}` : '';
     const html = this.done ? '🏆' : ph === 'siren' ? `🚨 ${Math.max(0, free - taken)} פנויות · ${Math.max(0, alive - taken)} בחוץ${tail}` : `🍽️ ${alive} שחקנים · ${free} מיגוניות${tail}`;
     if (e.top.innerHTML !== html) e.top.innerHTML = html;
-    if (this.me) e.st.style.width = Math.round(this.me.stamina * 100) + '%';
+    if (me) e.st.style.width = Math.round(me.stamina * 100) + '%';
     e.red.classList.toggle('hidden', ph !== 'siren' || this.done);
+    e.flash.style.opacity = (this.flashT > 0 ? Math.min(1, this.flashT) * 0.55 : 0).toFixed(2);
+    e.inside.classList.toggle('hidden', !me || me.inside < 0 || this.done);
+    this.compass();
+    this.minimap();
+    // Standing still in a siren with every open door behind you: a nudge, once a game.
+    if (me && ph === 'siren' && !this.hinted && !me.out && me.inside < 0 && this.sirenT > 1.6 && Math.hypot(me.vx, me.vz) < 1) {
+      const s = this.nearestShelter(me, true);
+      if (s && Math.abs(this.rel(s.door.x, s.door.z)) > 1.6) { this.hinted = true; Arcade.say(fmt(pick(ALERT_LINES.behind)), null, 2600); }
+    }
+  },
+  // Where a point is from where you look: radians, + to the right, ± π behind.
+  rel(x, z) {
+    const me = this.me, d = Math.atan2(z - me.z, x - me.x) - me.yaw;
+    return Math.atan2(Math.sin(d), Math.cos(d));
+  },
+  // The strip on top: ±90° spread over most of it; what's further round, behind you, is
+  // squeezed into its ends, with an arrow.
+  compass() {
+    const e = this.el, me = this.me;
+    if (!e.cmp || !me) return;
+    const hide = this.done || me.out;
+    e.cmp.classList.toggle('hidden', hide);
+    if (hide) return;
+    const SPAN = 1.6, IN = 0.8, live = this.shelters.filter(s => !s.gone), siren = this.st.ph === 'siren';
+    if (e.marks.length !== this.shelters.length) {
+      e.marks.forEach(m => m.remove());
+      e.marks = this.shelters.map(s => { const m = document.createElement('span'); m.className = 'al-mk'; m.innerHTML = `<b>${s.i + 1}</b><i></i>`; e.cmp.appendChild(m); return m; });
+    }
+    const best = siren && me.inside < 0 ? this.nearestShelter(me, true) : null;
+    for (const s of this.shelters) {
+      const m = e.marks[s.i];
+      if (s.gone) { m.style.display = 'none'; continue; }
+      m.style.display = '';
+      const r = this.rel(s.door.x, s.door.z), a = Math.abs(r), edge = a > SPAN;
+      const f = Math.sign(r) * (edge ? IN + (a - SPAN) / (Math.PI - SPAN) * (1 - IN) : a / SPAN * IN);
+      m.style.left = (50 + f * 45).toFixed(1) + '%';
+      const open = siren && this.st.occ[s.i] == null, mine = me.inside === s.i;
+      const cls = `al-mk${siren ? (open ? ' open' : ' taken') : ''}${s === best ? ' best' : ''}${mine ? ' mine' : ''}${edge ? (r > 0 ? ' edge r' : ' edge l') : ''}`;
+      if (m.className !== cls) m.className = cls;
+      const d = `${Math.round(Math.hypot(s.door.x - me.x, s.door.z - me.z))}מ׳`;
+      const label = mine ? '✅' : siren && !open ? '🔒' : d;
+      if (m.lastChild.textContent !== label) m.lastChild.textContent = label;
+    }
+    // Ticks every 30°, sliding as you turn.
+    const w = e.cmp.clientWidth || 400, per = w * 0.9 * IN / (2 * SPAN) * (Math.PI / 6);
+    e.ticks.style.backgroundSize = `${per.toFixed(1)}px 100%`;
+    e.ticks.style.backgroundPosition = `${(w / 2 - me.yaw / (Math.PI / 6) * per).toFixed(1)}px 0`;
+    if (!live.length) e.cmp.classList.add('hidden');
+  },
+  // The corner map, turned so where you look is up: the yard, the shelters, everyone.
+  minimap() {
+    const cv = this.el.map, me = this.me;
+    if (!cv || !me) return;
+    const g = cv.getContext('2d'), W = cv.width, R = W / 2, k = (R - 8) / 22;
+    const fx = Math.cos(me.yaw), fz = Math.sin(me.yaw);
+    // World → map: your look is up, your right is right.
+    const P = (x, z) => [R + (-x * fz + z * fx) * k, R - (x * fx + z * fz) * k];
+    g.clearRect(0, 0, W, W);
+    g.fillStyle = 'rgba(16,20,14,.72)'; g.beginPath(); g.arc(R, R, R - 2, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(242,193,78,.8)'; g.lineWidth = 3; g.stroke();
+    g.fillStyle = 'rgba(176,172,164,.55)'; g.beginPath(); g.arc(R, R, 7.5 * k, 0, Math.PI * 2); g.fill();
+    const siren = this.st.ph === 'siren';
+    for (const s of this.shelters) {
+      if (s.gone) continue;
+      const [x, y] = P(s.x, s.z), open = siren && this.st.occ[s.i] == null;
+      g.fillStyle = !siren ? '#cfc8b8' : open ? '#3cff6a' : '#ff3a2a';
+      g.fillRect(x - 9, y - 9, 18, 18);
+      g.fillStyle = '#111'; g.font = 'bold 14px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(String(s.i + 1), x, y + 1);
+    }
+    for (const p of this.ps) {
+      if (p === me || p.out || p.inside >= 0) continue;
+      const [x, y] = P(p.x, p.z);
+      g.fillStyle = p.peer ? '#7cc8ff' : '#f4f1e6'; g.beginPath(); g.arc(x, y, 5, 0, Math.PI * 2); g.fill();
+    }
+    if (!me.out) {
+      const [x, y] = P(me.x, me.z);
+      g.fillStyle = '#f2c14e'; g.strokeStyle = '#1b1b1b'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x, y - 10); g.lineTo(x + 7, y + 7); g.lineTo(x, y + 3); g.lineTo(x - 7, y + 7); g.closePath(); g.fill(); g.stroke();
+    }
   },
   finish() {
     if (this.done) return;
@@ -558,6 +755,8 @@ const AlertGame = {
   },
   leave() {
     Sound.stopSiren();
+    // The world's camera as it was before the game.
+    if (this.look0) { Scene3D.yaw = this.look0.yaw; Scene3D.pitch = this.look0.pitch; this.look0 = null; }
     this.clear();
     this.done = false; this.resultsAt = null; this.events = []; this.el = null;
   },

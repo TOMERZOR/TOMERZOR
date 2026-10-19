@@ -168,7 +168,6 @@ const Game = {
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('#t-act').addEventListener(ev, () => { G.actHeld = false; });
     $('#minimap').addEventListener('pointerdown', (e) => { e.stopPropagation(); Sound.unlock(); UI.toggleMap(true); });
     $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
-    $('#btn-fs').addEventListener('click', () => this.toggleFullscreen());
     // The soldier's details (name, rank, unit) fold into a small face button.
     $('#btn-who').addEventListener('click', (e) => {
       e.stopPropagation();

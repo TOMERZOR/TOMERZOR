@@ -153,12 +153,18 @@ const UI = {
   objective(obj) {
     const o = $('#objective');
     const warp = obj && Story.warpTarget();
-    const html = !obj ? '' : `<div class="obj-title">${obj.urgent ? '⚡ משימה דחופה' : 'משימה'}</div>${fmt(obj.text)}${obj.how ? `<div class="obj-how">👉 ${fmt(obj.how)}</div>` : ''}${obj.after ? `<div class="obj-after">אחר כך: ${fmt(obj.after)}</div>` : ''}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.warpPrice(warp)}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
+    const html = !obj ? '' : `<div class="obj-title">${obj.urgent ? '⚡ משימה דחופה' : 'משימה'}</div><span class="obj-text">${fmt(obj.text)}</span>${obj.how ? `<div class="obj-how">👉 ${fmt(obj.how)}</div>` : ''}${obj.after ? `<div class="obj-after">אחר כך: ${fmt(obj.after)}</div>` : ''}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.warpPrice(warp)}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
     // Only rebuilt when it changes, so a tap on the teleport button isn't lost.
     if (html === this.objHtml) return;
     this.objHtml = html;
     o.innerHTML = html;
     o.classList.toggle('urgent', !!(obj && obj.urgent));
+    // Opened in full when it changes, then folded down to its first line after a few seconds so
+    // it doesn't cover the world; a tap opens it again.
+    o.classList.remove('folded');
+    clearTimeout(this.objFold);
+    this.objFold = setTimeout(() => o.classList.add('folded'), obj && obj.urgent ? 14000 : 7000);
+    if (!o.dataset.fold) { o.dataset.fold = 1; o.addEventListener('click', (e) => { if (e.target.closest('[data-warp]')) return; o.classList.toggle('folded'); clearTimeout(this.objFold); if (!o.classList.contains('folded')) this.objFold = setTimeout(() => o.classList.add('folded'), 7000); }); }
     if (obj && obj.urgent && !this.wasUrgent) Sound.ding && Sound.ding();
     this.wasUrgent = !!(obj && obj.urgent);
     const b = o.querySelector('[data-warp]');

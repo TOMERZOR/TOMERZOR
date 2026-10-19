@@ -1,1 +1,63 @@
-/* placeholder */
+/* The platoon quiz show: the question on top, four colored answers at the bottom, the stage
+   in between. */
+body.qz-on #touch { display: none !important; }
+#arcade .qz { position: absolute; inset: 0; pointer-events: none; }
+#arcade .qz-q {
+  position: absolute; top: max(8px, env(safe-area-inset-top)); left: 64px; right: 64px; margin: 0 auto; max-width: 760px;
+  background: linear-gradient(180deg, rgba(22,34,74,.94), rgba(10,15,36,.94)); border: 2px solid #ffb347; border-radius: 14px;
+  box-shadow: 0 0 22px rgba(255,179,71,.35), 0 6px 0 rgba(0,0,0,.35); padding: 8px 14px 10px; text-align: center; color: #fff;
+}
+#arcade .qz-q.pop { animation: qz-in .35s cubic-bezier(.2,1.5,.4,1); }
+@keyframes qz-in { from { transform: scale(.85); opacity: 0; } to { transform: none; opacity: 1; } }
+#arcade .qz-meta { display: flex; gap: 8px; justify-content: center; font-size: 12px; font-weight: 800; color: #ffd23f; margin-bottom: 3px; }
+#arcade .qz-meta span { background: rgba(255,255,255,.08); border-radius: 8px; padding: 1px 8px; }
+#arcade .qz-meta .qz-x2 { background: #e8392b; color: #fff; animation: qz-pulse .6s infinite alternate; }
+@keyframes qz-pulse { to { transform: scale(1.12); } }
+#arcade .qz-text { font-size: clamp(17px, 2.6vw, 26px); font-weight: 900; line-height: 1.25; text-shadow: 0 2px 0 rgba(0,0,0,.5); }
+#arcade .qz-hint { font-size: 13px; opacity: .8; margin-top: 4px; }
+#arcade .qz-bar { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) - 4px); left: 64px; right: 64px; margin: 0 auto; max-width: 760px; height: 5px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; z-index: 2; }
+#arcade .qz-bar b { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ffd23f, #ff8a2a); transition: width .1s linear; float: left; }
+#arcade .qz-bar.low b { background: #ff4a3a; }
+#arcade .qz.intro .qz-bar, #arcade .qz.intro .qz-ans, #arcade .qz.done .qz-bar, #arcade .qz.done .qz-ans { visibility: hidden; }
+#arcade .qz-ans {
+  position: absolute; left: max(10px, env(safe-area-inset-left)); right: max(10px, env(safe-area-inset-right)); bottom: max(8px, env(safe-area-inset-bottom));
+  margin: 0 auto; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+}
+#arcade .qz-a {
+  position: relative; display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 6px 12px; border-radius: 12px; cursor: pointer;
+  border: 0; color: #fff; font: 800 clamp(14px, 2vw, 19px) Rubik, sans-serif; text-align: right; direction: rtl;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 100%, #fff 18%), var(--c)); box-shadow: 0 5px 0 var(--d), 0 8px 16px rgba(0,0,0,.35);
+  text-shadow: 0 1px 0 rgba(0,0,0,.45); transition: transform .08s, opacity .25s, filter .25s; animation: qz-a-in .35s both;
+}
+@keyframes qz-a-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+#arcade .qz-a:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--d); }
+#arcade .qz-a .qz-ic { font-size: 22px; width: 30px; text-align: center; flex: none; }
+#arcade .qz-a .qz-t { flex: 1; }
+#arcade .qz-a .qz-k { flex: none; width: 22px; height: 22px; border-radius: 6px; background: rgba(0,0,0,.25); font-size: 13px; display: grid; place-items: center; }
+body.touch #arcade .qz-a .qz-k { display: none; }
+#arcade .qz-a.off { opacity: .45; filter: saturate(.5); }
+#arcade .qz-a.mine { outline: 4px solid #fff; outline-offset: 2px; transform: scale(1.02); }
+#arcade .qz-a.mine::after { content: '🔒'; position: absolute; top: -10px; left: -6px; font-size: 18px; }
+#arcade .qz.reveal .qz-a { opacity: .35; filter: grayscale(.7); }
+#arcade .qz.reveal .qz-a.right { opacity: 1; filter: none; animation: qz-right .6s ease-out; box-shadow: 0 0 0 4px #7dff6a, 0 0 28px rgba(125,255,106,.7); }
+#arcade .qz.reveal .qz-a.right::before { content: '✅'; position: absolute; top: -12px; right: -6px; font-size: 22px; }
+#arcade .qz.reveal .qz-a.wrong { opacity: .9; filter: none; animation: qz-shake .4s; }
+#arcade .qz.reveal .qz-a.wrong::before { content: '❌'; position: absolute; top: -12px; right: -6px; font-size: 20px; }
+@keyframes qz-right { 30% { transform: scale(1.08); } }
+@keyframes qz-shake { 25%, 75% { transform: translateX(-6px); } 50% { transform: translateX(6px); } }
+#arcade .qz-say {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 128px); max-width: min(680px, 86vw);
+  background: rgba(255,248,230,.97); color: #3a2600; border-radius: 14px; padding: 7px 14px; font-weight: 700; font-size: clamp(13px, 1.8vw, 16px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); text-align: center; line-height: 1.3;
+}
+#arcade .qz-say.pop { animation: qz-say .35s cubic-bezier(.2,1.6,.4,1); }
+@keyframes qz-say { from { transform: translateX(-50%) scale(.7); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+#arcade .qz.done .qz-say { bottom: max(14px, env(safe-area-inset-bottom)); }
+#arcade .qz-me { top: calc(max(8px, env(safe-area-inset-top)) + 2px); right: max(8px, env(safe-area-inset-right)); color: #ffd23f; font-size: 15px; }
+@media (max-height: 520px) {
+  #arcade .qz-q { padding: 4px 10px 6px; left: 56px; right: 70px; }
+  #arcade .qz-text { font-size: 16px; }
+  #arcade .qz-a { min-height: 40px; padding: 4px 10px; font-size: 14px; }
+  #arcade .qz-a .qz-ic { font-size: 17px; width: 22px; }
+  #arcade .qz-say { bottom: calc(max(8px, env(safe-area-inset-bottom)) + 100px); font-size: 13px; padding: 5px 10px; }
+}

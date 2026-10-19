@@ -277,7 +277,9 @@ const Arcade = {
     const loader = new THREE.GLTFLoader();
     return Promise.all(names.map(name => Assets.models[name] ? null : new Promise(ok => {
       loader.load(`assets/models/${name}.json`, (g) => {
-        g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0.05; o.material.roughness = 0.75; o.geometry.userData.keep = o.material.userData.keep = true; if (o.material.map) o.material.map.userData.keep = true; } });
+        // Shared models are marked keep, so a game's dispose() leaves them alone.
+        const keep = (x) => { if (x) (x.userData = x.userData || {}).keep = true; };
+        g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0.05; o.material.roughness = 0.75; keep(o.geometry); keep(o.material); keep(o.material.map); } });
         Assets.models[name] = g.scene;
         ok();
       }, undefined, () => ok());
@@ -304,7 +306,7 @@ const Arcade = {
     obj.traverse(o => {
       if (o.geometry && !o.geometry.userData.keep) o.geometry.dispose();
       const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
-      for (const m of ms) { if (m.userData.keep) continue; if (m.map && !m.map.userData.keep) m.map.dispose(); m.dispose(); }
+      for (const m of ms) { if (m.userData.keep) continue; if (m.map && !(m.map.userData && m.map.userData.keep)) m.map.dispose(); m.dispose(); }
     });
   },
 

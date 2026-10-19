@@ -45,6 +45,28 @@ const BOSSES = {
     hitMe: '🗯️ לייזר של משפטים!', hitDmg: 9, full: '🤯 יותר מדי מילים! {@medic1} מביאה לך מים ואטמי אוזניים. [תחזור/תחזרי] לקרב!',
   },
 };
+// The difficulty ramp. A boss's tier is how many of the OTHER bosses this save has already
+// beaten (Boss.tierOf): the first one anyone meets is beatable but takes real dodging, each next
+// one is a clear step up, and a replay of a later boss stays hard. Capped at the last row:
+// tough, still fair on a phone. Columns:
+//   hp     × the boss's base HP (and of what the preps take off it)
+//   spread × the scatter of the extra throws in a volley (the first one is always aimed)
+//   lead   seconds of your movement it aims ahead (never more than the throw's flight time)
+//   track  0-1: how much it reads where you really move rather than where you face
+//   pace   × the time between throws, slams and screeches
+//   extra  more throws in every volley
+//   reach  px from where a throw lands that still hits you
+//   rain   the second pattern: a shower of N throws around you, once hurt (tier 0: only enraged)
+const BOSS_TIERS = [
+  { hp: 1.90, spread: 0.80, lead: 0.90, track: 0.35, pace: 0.80, extra: 0, reach: 42, rain: 3 },
+  { hp: 2.10, spread: 0.65, lead: 1.00, track: 0.55, pace: 0.72, extra: 0, reach: 44, rain: 4 },
+  { hp: 2.30, spread: 0.52, lead: 1.08, track: 0.75, pace: 0.65, extra: 1, reach: 46, rain: 5 },
+  { hp: 2.55, spread: 0.42, lead: 1.15, track: 0.90, pace: 0.58, extra: 1, reach: 48, rain: 6 },
+];
+// What they shout as the shower starts.
+const BOSS_RAIN = { burger: "גשם של צ'יזבורגרים!!!", baum: 'גפילטע מהשמיים!!!', harasar: 'דו"חות לכולם!!! מכל הכיוונים!!!', bar: 'בלה־בלה־בלה־בלה־בלה!!!' };
+// Who's been beaten, per boss, in this save.
+const BOSS_BEATEN = { burger: (S) => S.achievements.includes('boss'), baum: (S) => !!S.flags.baumBoss, harasar: (S) => !!S.flags.harasarBoss, bar: (S) => !!S.flags.barBoss };
 // What they say when you go down, and when they win and dance.
 const BOSS_KO = {
   burger: ['עוד מנה? יש לי מלאי!', 'כולסטרול מאה! ואני רק התחלתי!', 'שומשום על הקבר שלך!'],
@@ -73,6 +95,16 @@ const Boss = {
   active: false,
   PICKUPS: 9, // healthy food lying around the arena at any time
   NAME: "צ'יזבורגרו",
+  T: BOSS_TIERS[0],
+
+  // 0 for the first boss this save meets, one more for every other boss already beaten.
+  tierOf(kind) {
+    const S = G.state;
+    if (!S) return 0;
+    const n = Object.entries(BOSS_BEATEN).filter(([k, beat]) => k !== kind && beat(S)).length;
+    return Math.min(BOSS_TIERS.length - 1, n);
+  },
+  hpOf(kind) { return Math.round((BOSSES[kind].hp || 100) * BOSS_TIERS[this.tierOf(kind)].hp); },
 
   // coop: { id, max } when the fight is shared with the other players in the lobby.
   start(coop = null, kind = 'burger') {
@@ -85,7 +117,9 @@ const Boss = {
     this.span = (cfg.arena.x1 - cfg.arena.x0) / 3;
     this.active = true;
     this.coop = coop;
-    this.max = coop ? coop.max : cfg.hp || 100;
+    this.tier = this.tierOf(kind);
+    this.T = BOSS_TIERS[this.tier];
+    this.max = coop ? coop.max : this.hpOf(kind);
     this.hp = this.max;
     this.myDmg = 0;
     this.peerDmg = 0;
@@ -100,7 +134,7 @@ const Boss = {
     this.inv = 0;
     this.victory = 0;
     this.slam = null;
-    this.slamCd = 9;
+    this.slamCd = 9 * this.T.pace;
     this.enraged = false;
     document.body.classList.add('boss-fight');
     this.ammo = Object.fromEntries(cfg.ammo().map(k => [k.id, 0]));
@@ -110,13 +144,15 @@ const Boss = {
     this.x = this.cx;
     this.y = cfg.arena.y0 + 2.1 * TS;
     this.dir = 1;
-    this.throwCd = 2.5;
+    this.throwCd = 2.5 * this.T.pace;
     this.tauntCd = 4;
     this.flash = 0;
     this.bubble = { text: fmt(cfg.taunts[0]), t: 3.5 };
     this.hurtCd = 3;
     this.screech = null;
-    this.screechCd = 8;
+    this.screechCd = 8 * this.T.pace;
+    this.rainCd = 4 * this.T.pace;
+    this.rainQ = [];
     if (cfg.voices) this.taunt(0);
     if (cfg.voice && !(Date.now() - (this.introAt || 0) < 15000)) Sound.voice(BOSS_VOICE + 'intro.mp3');
     this.lastPick = cfg.ammo()[0].id;
@@ -135,6 +171,7 @@ const Boss = {
     this.hud();
     const a = cfg.ammo();
     UI.toast(`${a[0].icon} לאסוף ${a.map(k => k.name).join(', ')} · ${G.touch ? 'כפתור E' : 'E'} — לזרוק`);
+    if (this.tier) setTimeout(() => this.active && UI.toast(`${'🔥'.repeat(this.tier)} ${this.NAME} ${this.fem ? 'למדה' : 'למד'} מהבוסים שכבר הבסת — יותר חזק${this.fem ? 'ה' : ''} ומכוון${this.fem ? 'ת' : ''} יותר`, 'bad'), 2600);
   },
 
   // Co-op: pickup number n lies in the same spot for everyone (seeded by the fight id), and
@@ -218,27 +255,33 @@ const Boss = {
     // Cheeseburgers, aimed where the player is heading.
     this.throwCd -= dt;
     if (this.throwCd <= 0) {
-      this.throwCd = (this.enraged ? 0.8 : hurt ? 1.05 : 1.5) + Math.random() * 0.6;
+      const T = this.T;
+      this.throwCd = ((this.enraged ? 0.8 : hurt ? 1.05 : 1.5) + Math.random() * 0.6) * T.pace;
       const words = this.cfg.throws === 'words';
       // Her laser is a quick straight burst of sentences in a row.
-      const n = words ? (this.enraged ? 5 : hurt ? 4 : 3) : this.enraged ? 3 : hurt ? 2 : 1;
+      const n = (words ? (this.enraged ? 5 : hurt ? 4 : 3) : this.enraged ? 3 : hurt ? 2 : 1) + T.extra;
+      // Where you're heading: the way you face at your pace, blended (track) with how you
+      // really move, so turning on the spot doesn't fool the later bosses.
+      const pace = P.running ? 165 : 90;
+      const hx = Math.cos(P.angle) * pace, hy = Math.sin(P.angle) * pace;
+      const vx = hx + ((P.vx || 0) - hx) * T.track, vy = hy + ((P.vy || 0) - hy) * T.track;
       for (let i = 0; i < n; i++) {
-        const lead = P.moving ? 0.75 : 0;
-        const spread = words ? 26 : 80;
-        const tx = P.x + Math.cos(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * spread : 0);
-        const ty = P.y + Math.sin(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * spread : 0);
-        if (words) { this.burgers.push({ x0: this.x, y0: this.y, x1: tx, y1: ty, t: -i * 0.14, dur: 0.6, text: pick(BOSS_WORDS) }); continue; }
-        this.burgers.push({ x0: this.x, y0: this.y, x1: tx, y1: ty, t: 0, dur: 1.15 });
-        if (this.coop) this.fxLog.b.push({ t: Date.now(), x0: Math.round(this.x), y0: Math.round(this.y), x1: Math.round(tx), y1: Math.round(ty) });
+        const dur = words ? 0.6 : 1.15, delay = words ? i * 0.14 : 0;
+        const lead = P.moving ? Math.min(T.lead, dur + delay) : 0;
+        const spread = (words ? 26 : 80) * T.spread;
+        const tx = P.x + vx * lead + (i ? (Math.random() - 0.5) * spread : 0);
+        const ty = P.y + vy * lead + (i ? (Math.random() - 0.5) * spread : 0);
+        this.lob(tx, ty, delay);
       }
       if (words) Sound.zap(); else Sound.whoosh();
     }
+    this.updateRain(dt, hurt);
     for (const b of this.burgers) {
       b.t += dt;
       if (b.t >= b.dur && !b.done) {
         b.done = true;
         if (b.text) Sound.pop(); else Sound.splat();
-        if (Math.hypot(P.x - b.x1, P.y - b.y1) < 38) this.hitPlayer();
+        if (Math.hypot(P.x - b.x1, P.y - b.y1) < this.T.reach) this.hitPlayer();
       }
     }
     this.burgers = this.burgers.filter(b => !b.done);
@@ -277,6 +320,40 @@ const Boss = {
     this.hud();
   },
 
+  // One throw (a cheeseburger, a fish, a report, a sentence) to land at x, y.
+  // A sentence can wait its turn in the burst (drawn from t ≥ 0); the others are thrown now.
+  lob(x, y, delay = 0) {
+    if (this.cfg.throws === 'words') { this.burgers.push({ x0: this.x, y0: this.y, x1: x, y1: y, t: -delay, dur: 0.6, text: pick(BOSS_WORDS) }); return; }
+    this.burgers.push({ x0: this.x, y0: this.y, x1: x, y1: y, t: 0, dur: 1.15 });
+    if (this.coop) this.fxLog.b.push({ t: Date.now(), x0: Math.round(this.x), y0: Math.round(this.y), x1: Math.round(x), y1: Math.round(y) });
+  },
+  // The second pattern, once they're hurt: a shower around you — one on where you're going,
+  // the rest scattered a few steps away — so standing still or running straight both cost.
+  updateRain(dt, hurt) {
+    const T = this.T, P = G.player;
+    // The shower's throws leave one after another.
+    if (this.rainQ && this.rainQ.length) {
+      this.rainQ.forEach(q => { q.at -= dt; });
+      for (const q of this.rainQ.filter(q => q.at <= 0)) this.lob(q.x, q.y);
+      this.rainQ = this.rainQ.filter(q => q.at > 0);
+    }
+    if (!(this.tier ? hurt : this.enraged) || this.dead > 0) return;
+    this.rainCd -= dt;
+    if (this.rainCd > 0) return;
+    this.rainCd = ((this.enraged ? 5.5 : 7.5) + Math.random() * 2) * T.pace;
+    this.bubble = { text: BOSS_RAIN[this.kind] || '!!!', t: 1.6 };
+    if (!this.rainWarned) { this.rainWarned = true; UI.toast('☔ מטח! לזוז הצידה — לא להישאר במקום', 'bad'); }
+    const ahead = P.moving ? 0.6 : 0;
+    for (let i = 0; i < T.rain; i++) {
+      const a = Math.random() * Math.PI * 2, r = i ? (0.9 + Math.random() * 1.6) * TS : 0;
+      const A = this.arena;
+      const x = Math.max(A.x0, Math.min(A.x1, P.x + (P.vx || 0) * ahead + Math.cos(a) * r));
+      const y = Math.max(A.y0 + 2 * TS, Math.min(A.y1, P.y + (P.vy || 0) * ahead + Math.sin(a) * r));
+      (this.rainQ = this.rainQ || []).push({ x, y, at: 0.25 + i * 0.16 });
+    }
+    Sound.whoosh();
+  },
+
   // The hawk's cry: she rears up for a moment (time to get away), then it spreads 6 tiles out.
   updateScreech(dt, hurt) {
     const P = G.player;
@@ -293,7 +370,7 @@ const Boss = {
     s.t += dt;
     if (s.t > 0.9) s.r = Math.min(1, (s.t - 0.9) / 0.5) * 6 * TS;
     if (!s.hit && s.r > 0 && Math.hypot(P.x - s.x, P.y - s.y) < s.r) { s.hit = true; this.hitPlayer('🦅 שאגת נץ! האוזניים מצפצפות', 30); }
-    if (s.t > 1.6) { this.screech = null; this.screechCd = (hurt ? 6 : 9) + Math.random() * 3; }
+    if (s.t > 1.6) { this.screech = null; this.screechCd = ((hurt ? 6 : 9) + Math.random() * 3) * this.T.pace; }
   },
 
   // The others' heavy attack: they mark the spot where you stand (a red circle on the grass),
@@ -318,7 +395,7 @@ const Boss = {
       G.shake = Math.max(G.shake || 0, 0.35);
       if (Math.hypot(P.x - s.x, P.y - s.y) < s.R) this.hitPlayer(this.cfg.slamHit || '💥 בום! ישר עליך!', 34);
     }
-    if (s.t > s.warn + 0.45) { this.slam = null; this.slamCd = (this.enraged ? 4.5 : hurt ? 6 : 8.5) + Math.random() * 2.5; }
+    if (s.t > s.warn + 0.45) { this.slam = null; this.slamCd = ((this.enraged ? 4.5 : hurt ? 6 : 8.5) + Math.random() * 2.5) * this.T.pace; }
   },
 
   // Down: a moment on the grass, then back at the edge of the arena with a few seconds' cover.
@@ -351,6 +428,7 @@ const Boss = {
   // Three times down: the boss wins and dances it in, then the fight's over.
   lose() {
     this.victory = 6.5;
+    this.rainQ = [];
     this.burgers = [];
     this.shots = [];
     this.screech = null;
@@ -420,7 +498,7 @@ const Boss = {
   async startCoop(invite = false, kind = 'burger') {
     const cfg = BOSSES[kind];
     const here = invite ? Multi.peers.length : Multi.peers.filter(p => p.site === cfg.map).length;
-    const coop = { id: Date.now(), max: (cfg.hp || 100) + 90 * here };
+    const coop = { id: Date.now(), max: this.hpOf(kind) + 90 * here };
     this.introAt = Date.now();
     if (kind === 'burger') await UI.cutscene([{ img: 'assets/boss2.jpg', voice: BOSS_VOICE + 'intro.mp3', who: '{@@deputy_rasap}', text: `${here ? 'כמה אתם? ' + (here + 1) + '?! ' : ''}אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*` }]);
     else await this.intro(kind, { skipIntro: true });
@@ -615,7 +693,7 @@ const Boss = {
     const ammo = this.cfg.ammo().map(k => `<span class="ammo">${k.icon} ${this.ammo[k.id]}</span>`).join('');
     const team = this.coop ? Multi.peers.filter(p => p.boss && p.boss.id === this.coop.id).length + 1 : 1;
     const pct = Math.max(0, Math.round(this.hp / this.max * 100));
-    h.innerHTML = `<div class="boss-top"><span class="boss-name">${this.cfg.icon} ${this.NAME}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
+    h.innerHTML = `<div class="boss-top"><span class="boss-name">${this.cfg.icon} ${this.NAME}${this.tier ? ` <small title="${fmt('רמה לפי הבוסים שכבר הבסת')}">${'🔥'.repeat(this.tier)}</small>` : ''}</span><div class="boss-bar"><b style="width:${pct}%"></b></div><span class="boss-pct">${pct}%</span>${team > 1 ? `<span class="boss-team">👥${team}</span>` : ''}</div>
       <div class="boss-row"><span class="boss-lives" title="חיים">${[0, 1, 2].map(i => i < 3 - this.deaths ? '❤️' : '🖤').join('')}</span><div class="chol-bar life${this.life <= 35 ? ' hot' : ''}${this.inv > 0.4 ? ' inv' : ''}"><b style="width:${this.life}%"></b></div>${ammo}</div>`;
   },
 

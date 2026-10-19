@@ -656,6 +656,8 @@ const Game = {
 
   objectiveTarget() {
     if (G.alert && G.alert.phase === 'run') return World.nearestShelter(G.player.x, G.player.y);
+    // In a boss fight the errand doesn't matter: no arrow, marker or minimap dot until it's over.
+    if (Boss.active) return null;
     const o = Story.objective();
     return o && o.target;
   },

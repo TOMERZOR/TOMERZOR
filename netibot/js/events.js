@@ -67,7 +67,7 @@ const Events = {
     if (S.dayFlags.techAt && S.clock >= S.dayFlags.techAt && !S.dayFlags.tech && free && World.id === 'netivot') this.startTech();
     if (this.tech) this.updateTech(dt);
     if (S.dayFlags.ofekAt && S.clock >= S.dayFlags.ofekAt && !S.dayFlags.ofek && free && World.id === 'netivot') this.ofekCalls();
-    if (S.flags.charges && S.flags.charges.length && free && S.flags.chargedDay !== S.day && S.clock >= 9 * 60 && !S.dayFlags.trial) { S.dayFlags.trial = true; this.trial(); }
+    this.updateSummons(free);
     if (S.dayFlags.orinTell && free && S.clock >= 7 * 60 + 10) { S.dayFlags.orinTell = false; this.nobodyBelieves(); }
     this.watchBaum();
     if (this.baum) this.updateBaum(dt);
@@ -87,6 +87,58 @@ const Events = {
     belt: 'נסיעה ברכב צבאי בלי חגורת בטיחות',
     post: 'הפקרת עמדת שמירה',
     curious: 'מסירת מידע לאזרח סקרן בשער',
+    noshow: 'לא [התייצב/התייצבה] לזימון',
+  },
+  // The commander's office at HQ (DATA.maps.hq 'bc': tiles 22-29 × 4-9, door at 25,9). The
+  // summons points at the doorway; stepping in past the door is turning up.
+  OFFICE: { x0: 22.6, x1: 29.4, y0: 4.6, y1: 8.95, door: [25, 8.2] },
+  inOffice() {
+    const O = this.OFFICE, P = G.player, x = P.x / TS, y = P.y / TS;
+    return World.id === 'hq' && x > O.x0 && x < O.x1 && y > O.y0 && y < O.y1;
+  },
+  // A summons is a day's errand: rung in at 09:00, kept in S.flags.summons ({ day }) so it
+  // lives through a save, and shown as an urgent task pointing at the office door.
+  // Nobody is pulled out of anything for it: not an alert, a boss, the gate, a mini-game, the
+  // club, a race, the deploy controls or a run.
+  updateSummons(free) {
+    const S = G.state;
+    const idle = free && !Arcade.active && !Race.active && !Story.ctl && !Story.run && !Kashag.running && !Tutorial.active;
+    const sm = S.flags.summons;
+    if (sm && sm.day !== S.day) {
+      // The day ended and nobody showed up: one more charge, and the phone rings again at nine.
+      delete S.flags.summons;
+      S.flags.charges = S.flags.charges || [];
+      if (!S.flags.charges.includes('noshow')) S.flags.charges.push('noshow');
+      Story.tasks = Story.tasks.filter(t => t.id !== 'summons');
+      UI.toast(`📋 ${fmt('לא התייצבת לזימון אצל {@bc}')}. נוסף לך סעיף בתיק — והטלפון יצלצל שוב`, 'bad');
+      return;
+    }
+    if (sm) {
+      if (!Story.has('summons') && Story.tasks.length) this.summonTask();
+      if (idle && this.inOffice()) { delete S.flags.summons; this.trial(); }
+      return;
+    }
+    if (S.flags.charges && S.flags.charges.length && idle && S.flags.chargedDay !== S.day && S.clock >= 9 * 60 && !S.dayFlags.trial) { S.dayFlags.trial = true; this.summon(); }
+  },
+  // The phone rings: she wants you in her office at HQ. Now. Then you have to get there.
+  async summon() {
+    const S = G.state;
+    S.flags.summons = { day: S.day };
+    for (const t of [0, 380, 1300, 1680]) setTimeout(() => Sound.beep(true), t);
+    const here = this.inOffice();
+    await UI.cutscene([
+      { img: Assets.scene('trial'), text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו."' },
+      { img: Assets.scene('trial_cmd'), who: '{@@bc}', text: here ? '...רגע. את[ה/] כבר פה? טוב. [תסגור/תסגרי] את הדלת.' : 'בלשכה שלי, בשו"ב. ואם אני אצטרך להתקשר פעמיים — זה כבר סעיף נוסף.' },
+    ]);
+    if (S.flags.summons && !this.inOffice()) this.summonTask();
+  },
+  // The errand on the HUD: urgent, so it takes the panel and the arrow until you're there.
+  summonTask() {
+    TASKS.summons = TASKS.summons || {
+      title: '🏛️ [גש/גשי] ללשכה של {@bc} בשו"ב', desc: 'זימון לשיחת דין. לא מאחרים לשיחת דין.', map: 'hq', pts: 0, optional: true, urgent: true,
+      target: () => tc(...this.OFFICE.door), how: () => (World.id === 'hq' ? 'להיכנס ללשכה — הדלת שהחץ מראה' : 'לנסוע לשו"ב בתחנת ההסעות, ולהיכנס ללשכה'),
+    };
+    Story.addTask('summons', false);
   },
   charge(kind) {
     const S = G.state;
@@ -117,10 +169,11 @@ const Events = {
     const S = G.state;
     const list = S.flags.charges.slice();
     S.flags.charges = [];
+    delete S.flags.summons;
+    Story.tasks = Story.tasks.filter(t => t.id !== 'summons');
     Sound.horn();
     UI.cinema(true, (line) => this.trialShot(line));
     await UI.cutscene([
-      { img: Assets.scene('trial'), text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו."' },
       { img: Assets.scene('trial_cmd'), who: '{@@bc}', text: 'היא לא מרימה את הראש מהתיק. רק מעבירה דף. ועוד דף. זה סימן רע.' },
       { img: Assets.scene('trial_door'), who: '{@harasar}', text: 'ליד הדלת עומד {@harasar}. ידיים שלובות. מחייך. זה סימן עוד יותר רע.' },
       { img: Assets.scene('trial_plea'), who: '{name}', text: 'ואת[ה/] באמצע, בדום. טיפת זיעה אחת מתחילה לרדת מהמצח.' },
@@ -131,7 +184,7 @@ const Events = {
       { who: 'narrator', shot: 'wide', text: 'הלשכה של מפקדת הסוללה. שקט. רק המזגן, והדפים.' },
       { who: 'bc', text: 'שב[/י]. לא, [תעמוד/תעמדי]. אני פותחת את התיק.' },
       { who: 'harasar', text: '...ותעמוד[/י] ישר. מול מפקדת סוללה לא נשענים.' },
-      ...list.map((k, i) => ({ who: 'bc', text: `סעיף ${i + 1}: ${this.CHARGES[k]}.${k === 'belt' ? ' מאתיים מטר זה מספיק כדי להתהפך. שאלו את המשאית של 2019.' : k === 'gate' ? ' את[ה/] יודע[/ת] מי זה היה? גם אני לא. זאת הבעיה.' : k === 'curious' ? ' "תייר". עם פנקס. ושאלות. ואת[ה/] ענית. על כולן.' : ' עמדה בלי שומר זה סתם כיסא עם נוף.'}` })),
+      ...list.map((k, i) => ({ who: 'bc', text: `סעיף ${i + 1}: ${this.CHARGES[k]}.${k === 'belt' ? ' מאתיים מטר זה מספיק כדי להתהפך. שאלו את המשאית של 2019.' : k === 'gate' ? ' את[ה/] יודע[/ת] מי זה היה? גם אני לא. זאת הבעיה.' : k === 'curious' ? ' "תייר". עם פנקס. ושאלות. ואת[ה/] ענית. על כולן.' : k === 'noshow' ? ' התקשרתי. חיכיתי. הזמנתי קפה. הקפה התקרר. את[ה/] לא.' : ' עמדה בלי שומר זה סתם כיסא עם נוף.'}` })),
       { who: 'harasar', text: 'ואם מותר לי, המפקדת: גם בלי חוגר. רשמתי.' },
     ]);
     const plea = await UI.talk([{ who: 'bc', text: 'מה יש לך להגיד להגנתך?', choices: [

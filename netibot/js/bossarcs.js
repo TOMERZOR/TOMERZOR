@@ -121,7 +121,7 @@ const BossArcs = {
     const got = [];
     for (const [k, v] of Object.entries(pre)) if (k in Boss.ammo) { Boss.ammo[k] += v; got.push(k); }
     const preps = Object.entries(BOSS_PREP).filter(([id, p]) => p.boss === kind && p.item && Story.tasks.some(t => t.id === id && t.done)).length;
-    if (preps && !Boss.coop) { Boss.max = Math.max(50, Boss.max - preps * 10); Boss.hp = Boss.max; }
+    if (preps && !Boss.coop) { Boss.max = Math.max(Math.round(50 * Boss.T.hp), Boss.max - Math.round(preps * 10 * Boss.T.hp)); Boss.hp = Boss.max; }
     if (got.length) {
       G.state.dayFlags.bossAmmo = {};
       setTimeout(() => UI.toast(`🎒 הבאת מוכן לקרב — ${preps} הכנות: הבוס חלש יותר!`, 'good'), 1500);

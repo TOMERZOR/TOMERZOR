@@ -824,3 +824,49 @@ input.shake { animation: in-shake .4s; border-color: #ff6a3d !important; }
 #race .rc-hud > .rc-splat { position: absolute; inset: 0; padding: 0; border-radius: 0; pointer-events: none; background: radial-gradient(circle at 40% 45%, rgba(242,193,46,.85) 0 9%, rgba(120,60,20,.75) 10% 16%, transparent 17%), radial-gradient(circle at 62% 58%, rgba(214,60,40,.75) 0 6%, transparent 7%), radial-gradient(circle at 30% 70%, rgba(240,230,200,.7) 0 5%, transparent 6%); animation: rc-splat 2.2s ease-in forwards; border: 0; box-shadow: none; }
 @keyframes rc-splat { from { transform: scale(1.3); opacity: 1; } 70% { opacity: .9; } to { transform: scale(1) translateY(20px); opacity: 0; } }
 @media (max-height: 520px) { #race .rc-coins { top: calc(max(8px, env(safe-area-inset-top)) + 50px); right: calc(max(8px, env(safe-area-inset-right)) + 100px); font-size: 13px; } #race .rc-maps { grid-template-columns: repeat(4, 1fr); } #race .rc-mi i { display: none; } }
+/* ---------- כש"ג: the two laps run on tapped feet (js/kashag.js) ---------- */
+#kashag-tap { position: fixed; inset: 0; pointer-events: none; z-index: 6; direction: rtl; }
+#kashag-tap.hidden { display: none; }
+body.kashag-tap #touch .stick, body.kashag-tap #t-act, body.kashag-tap #t-run, body.kashag-tap #hud .prompt { display: none !important; }
+#kashag-tap .kt-foot {
+  position: absolute; bottom: max(18px, env(safe-area-inset-bottom)); pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
+  display: flex; direction: ltr; align-items: center; justify-content: center; gap: 8px;
+  font: 900 18px Rubik, Arial, sans-serif; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.45);
+  background: linear-gradient(#5d6b3a, #39431f); border: 3px solid var(--gold); border-radius: 22px; box-shadow: 0 5px 0 #1e2410, 0 8px 18px rgba(0,0,0,.45);
+  padding: 8px 18px; min-width: 140px; height: 62px;
+}
+#kashag-tap .kt-l { left: max(16px, env(safe-area-inset-left)); }
+#kashag-tap .kt-r { right: max(16px, env(safe-area-inset-right)); }
+#kashag-tap .kt-l .kt-ic { display: inline-block; transform: scaleX(-1); }
+#kashag-tap .kt-ic { font-size: 26px; }
+#kashag-tap .kt-foot kbd { font: 800 11px Rubik, Arial; background: rgba(0,0,0,.3); border-radius: 5px; padding: 1px 6px; opacity: .85; }
+#kashag-tap .kt-foot.hit { animation: kt-hit .16s ease-out; }
+#kashag-tap .kt-foot.bad { animation: kt-bad .3s ease-out; }
+@keyframes kt-hit { 40% { transform: translateY(4px) scale(.96); box-shadow: 0 1px 0 #1e2410, 0 3px 8px rgba(0,0,0,.45); filter: brightness(1.25); } }
+@keyframes kt-bad { 25% { transform: translateX(-6px) rotate(-3deg); background: #a3231a; } 60% { transform: translateX(6px) rotate(3deg); background: #a3231a; } }
+#kashag-tap .kt-meter {
+  position: absolute; bottom: max(22px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+  width: min(260px, calc(100vw - 380px)); min-width: 150px; background: var(--panel); border: 2px solid var(--trim); border-radius: 14px; box-shadow: var(--bevel);
+  padding: 6px 10px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 2px 6px;
+}
+#kashag-tap .kt-bar { position: relative; flex: 1 0 100%; height: 12px; border-radius: 6px; background: rgba(0,0,0,.35); overflow: hidden; direction: ltr; }
+#kashag-tap .kt-bar b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #d8453a; border-radius: 6px; transition: width .08s linear; }
+#kashag-tap .kt-bar b.ok { background: #f2c14e; }
+#kashag-tap .kt-bar b.hot { background: #5cc25a; }
+#kashag-tap .kt-bar .kt-ok { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #fff; opacity: .8; }
+#kashag-tap .kt-cad { font: 900 20px Rubik, Arial; color: var(--gold-hi, #ffd23f); }
+#kashag-tap .kt-unit { font-size: 12px; opacity: .8; }
+#kashag-tap .kt-say {
+  position: absolute; bottom: calc(max(22px, env(safe-area-inset-bottom)) + 70px); left: 50%; transform: translateX(-50%);
+  max-width: min(460px, calc(100vw - 32px)); background: rgba(255,248,225,.97); color: #3a2a0a; font-weight: 800; font-size: 15px;
+  border: 2px solid var(--gold); border-radius: 14px; padding: 6px 12px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,.35);
+  animation: kt-say .25s cubic-bezier(.2,1.6,.4,1);
+}
+#kashag-tap .kt-say.hidden { display: none; }
+@keyframes kt-say { from { transform: translateX(-50%) scale(.6); opacity: 0; } }
+body:not(.touch) #kashag-tap .kt-foot { min-width: 0; height: 46px; font-size: 15px; padding: 4px 12px; opacity: .9; }
+body.touch #kashag-tap .kt-foot kbd { display: none; }
+@media (max-height: 420px) {
+  #kashag-tap .kt-foot { height: 58px; min-width: 128px; }
+  #kashag-tap .kt-say { font-size: 13px; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 62px); }
+}

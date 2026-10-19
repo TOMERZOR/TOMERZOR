@@ -7,6 +7,7 @@ const Settings = {
     textSpeed: 'normal', arrow: true, voices: true, curious: true,
   },
   v: {},
+  HUD_BASE: 0.87,
   load() {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('netibot.settings') || '{}'); } catch (e) { /* storage may be blocked */ }
@@ -31,7 +32,9 @@ const Settings = {
 
   apply() {
     const v = this.v, root = document.documentElement, body = document.body;
-    root.style.setProperty('--hud-scale', v.hudScale);
+    // The HUD is drawn at 87% by default so it leaves more of the screen to the game; the
+    // setting scales that up or down (70%–140%).
+    root.style.setProperty('--hud-scale', (Settings.HUD_BASE * v.hudScale).toFixed(3));
     root.style.setProperty('--stick-scale', v.stickSize);
     if (body) {
       body.classList.toggle('lefty', !!v.lefty);
@@ -132,7 +135,7 @@ const Settings = {
     } else if (t === 'display') {
       body = this.seg('quality', '✨ איכות גרפיקה', [['auto', 'אוטומטי'], ['low', 'נמוכה'], ['mid', 'בינונית'], ['high', 'גבוהה']], 'נמוכה = בלי צללים, הכי חלק בטלפונים חלשים')
         + this.sw('saver', '🔋 חיסכון בסוללה', '30 פריימים בשנייה במקום 60')
-        + this.seg('hudScale', '🔠 גודל הממשק', [[0.85, 'קטן'], [1, 'רגיל'], [1.15, 'גדול']])
+        + `<div class="set-row"><div class="set-l">🔠 גודל הממשק<small>הכרטיסים למעלה, המשימה, המפה, השיחות וההודעות</small></div><div class="set-hud"><input type="range" id="st-hud" min="0.7" max="1.4" step="0.05" value="${this.v.hudScale}"><b id="st-hud-v">${Math.round(this.v.hudScale * 100)}%</b><button class="btn small ghost" id="st-hud-reset">איפוס</button></div></div>`
         + this.sw('minimap', '🗺️ מפה קטנה')
         + this.sw('shake', '💥 רעידות מסך', 'ביירוטים ובפיצוצים')
         + this.sw('fps', '⏱️ מונה FPS')
@@ -172,6 +175,12 @@ const Settings = {
       box.querySelectorAll(`[data-seg="${b.dataset.seg}"]`).forEach(x => x.classList.toggle('sel', x === b));
     });
     this.bindSound(box);
+    const hud = box.querySelector('#st-hud');
+    if (hud) {
+      const show = (val) => { box.querySelector('#st-hud-v').textContent = Math.round(val * 100) + '%'; };
+      hud.oninput = (e) => { this.set('hudScale', +e.target.value); show(+e.target.value); if (typeof UI !== 'undefined' && UI.placeObjective) UI.placeObjective(); };
+      box.querySelector('#st-hud-reset').onclick = () => { Sound.click(); hud.value = 1; this.set('hudScale', 1); show(1); if (typeof UI !== 'undefined' && UI.placeObjective) UI.placeObjective(); };
+    }
     const sens = box.querySelector('#st-sens');
     if (sens) sens.oninput = (e) => this.set('sens', +e.target.value);
     const fs = box.querySelector('#st-fs');

@@ -452,7 +452,7 @@ body.touch .ctl-hud { bottom: 150px; width: min(420px, calc(100% - 380px)); font
 .invite-card .ic-row { display: flex; gap: 8px; }
 .invite-card .ic-row .btn { flex: 1; }
 .invite-card .ic-row .ghost { flex: 0 0 44px; }
-@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, -8px) scale(var(--hud-scale, 0.87)); } to { opacity: 1; transform: translate(-50%, 0) scale(var(--hud-scale, 0.87)); } }
 
 /* ---------- Waiting for everyone to sleep (multiplayer) ---------- */
 .sleep-wait { position: fixed; inset: 0; z-index: 35; background: radial-gradient(circle at 50% 40%, rgba(20,24,40,.85), rgba(4,6,12,.95)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--ink); text-align: center; padding: 20px; }
@@ -524,7 +524,13 @@ body.touch .ctl-hud { bottom: 150px; width: min(420px, calc(100% - 380px)); font
 }
 
 /* ---------- Player options ---------- */
-.hud-top, .objective, #minimap, .prompt { zoom: var(--hud-scale, 1); }
+.hud-top, .objective, #minimap, .prompt { zoom: var(--hud-scale, 0.87); }
+/* Centred with left: 50%, so these scale with a transform instead (zoom would also shrink the 50%). */
+.dialog { transform: translateX(-50%) scale(var(--hud-scale, 0.87)); transform-origin: 50% 100%; }
+#toasts, .invite-card { transform: translateX(-50%) scale(var(--hud-scale, 0.87)); transform-origin: 50% 0; }
+.set-hud { display: flex; align-items: center; gap: 8px; }
+.set-hud input { width: min(180px, 30vw); }
+.set-hud b { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
 #touch .stick, #touch .t-btn { zoom: var(--stick-scale, 1); }
 body.no-minimap #minimap { display: none; }
 body.lefty #stick { left: auto; right: max(18px, env(safe-area-inset-right)); }

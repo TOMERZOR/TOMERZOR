@@ -284,7 +284,8 @@ const Game = {
     for (const person of people) {
       // Somebody playing as this character replaces them in the world; in multiplayer the
       // playable cast exists only as the players who are connected.
-      if (taken.has(person.id) || (Multi.on && Multi.playable(person))) continue;
+      // The bosses stay, though (unless a friend plays them): talking to one starts a fight for all.
+      if (taken.has(person.id) || (Multi.on && Multi.playable(person) && !BOSS_OF[person.id])) continue;
       const onMap = map === 'field' ? person.id in layout : person.map === map || (person.id === 'ruth' && map === 'netivot');
       if (!onMap) continue;
       const fixed = layout[person.id];

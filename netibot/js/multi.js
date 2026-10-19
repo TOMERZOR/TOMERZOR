@@ -59,7 +59,7 @@ const Multi = {
         // A red alert this player is in: everyone online at that site gets it too.
         sl: !!s.sl,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
-        boss: s.boss && +s.boss.id ? { id: +s.boss.id, max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)), tk: Array.isArray(s.boss.tk) ? s.boss.tk.slice(-40).map(n => Math.floor(+n)).filter(n => n >= 0 && n < 5000) : [] } : null,
+        boss: s.boss && +s.boss.id ? { id: +s.boss.id, k: String(s.boss.k || 'burger').slice(0, 12), max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)), tk: Array.isArray(s.boss.tk) ? s.boss.tk.slice(-40).map(n => Math.floor(+n)).filter(n => n >= 0 && n < 5000) : [] } : null,
         // Smoothed position for drawing.
         dx: old ? old.dx : +s.x || 0, dy: old ? old.dy : +s.y || 0,
       };
@@ -104,7 +104,7 @@ const Multi = {
       sl: !!this.sleeping,
       race: Race.presence(),
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
-      boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : null,
+      boss: Boss.active && Boss.coop ? { id: Boss.coop.id, k: Boss.kind, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : Boss.coopTail && Date.now() < Boss.coopTail.until ? Boss.coopTail.st : null,
       fx: Boss.active && Boss.coop ? Boss.fxOut() : null,
       baum: Events.baum && Events.baum.coop ? { id: Events.baum.coop.id, hid: [...Events.baum.myHid], carry: Events.baum.carrying ? Events.baum.carrying.id : null } : null,
     };

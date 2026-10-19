@@ -65,7 +65,7 @@ const TASKS = {
   deploy: { title: 'פריסת אתר חדש', desc: 'לנסוע לאתר הפריסה ולהכווין את המשאיות עם המכולות.', target: () => Story.deployTarget(), pts: 0, map: 'field' },
   surprise: { title: 'מסדר פתע של {@inspector}: לטאטא אבק במגורים', desc: 'נתפסת. קורה לטובים ביותר.', target: () => inspectionTarget(), pts: 0, optional: true, urgent: true, how: 'ללכת למה שהחץ מראה וללחוץ E: מיטות, לוקרים ואבק' },
   ofek_swap: { title: 'להחליף את {@p_ofek} בעמדה — הוא חייב שירותים', desc: 'קריאטין, מים, ושלושה ליטר של דחיפות.', target: () => SPOTS.tower, pts: 0, optional: true, urgent: true, how: 'לרוץ לעמדת השמירה בפינת הבסיס וללחוץ E' },
-  guard: { title: 'שמירת לילה בעמדה', desc: 'עמדת השמירה בפינת הבסיס.', target: () => SPOTS.tower, pts: 0 },
+  guard: { title: 'שמירת לילה בעמדה (22:00)', desc: 'עמדת השמירה בפינת הבסיס. מתחילה ב־22:00, לא לפני.', target: () => SPOTS.tower, pts: 0, after: 22 * 60 },
   train2: { title: 'שני אימונים (לוח אימונים / מטווח / מסלול)', desc: '', target: () => SPOTS.board, pts: 0, count: 2 },
   exam_reload: { title: 'מבחן: החלפת מארז', desc: 'הסמלת ליד משגר 2.', target: () => (G.state.dayFlags.examReload ? reloadTarget() : npcPos('sergeant')), pts: 0 },
   exam_alert: { title: 'מבחן: תרגיל צבע אדום', desc: '{@commander} במרכז האתר מתחילה את התרגיל.', target: () => npcPos('commander'), pts: 0 },
@@ -326,7 +326,14 @@ const Story = {
   has(id) { return this.tasks.some(t => t.id === id && !t.done); },
   // Something that came up mid-day (a launcher to reload, a delivery, a curious civilian at the
   // gate) takes over the task panel and the arrow until it's done; then the day's plan is back.
-  current() { return this.tasks.find(t => !t.done && t.urgent) || this.tasks.find(t => !t.done); },
+  // A night task (after: minute of the day) waits for its hour: whatever else is open comes
+  // first, but not bed; that waits until the night task is done.
+  waiting(t) { const m = G.state.clock % 1440; return !!t.after && m < t.after && m >= 5 * 60; },
+  current() {
+    const open = this.tasks.filter(t => !t.done);
+    const night = open.find(t => t.after);
+    return open.find(t => t.urgent) || open.find(t => !this.waiting(t) && !(night && t.last)) || open[0];
+  },
   mainTask() { return this.tasks.find(t => !t.done && !t.urgent); },
   addTask(id, beforeLast = true) {
     if (this.has(id)) return;
@@ -354,6 +361,7 @@ const Story = {
     const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';
     if (tmap !== World.id) return { text: `לנסוע ל${siteName(tmap)} — ${fmt(t.title)}`, target: travelSpot(), urgent: !!t.urgent, how: t.urgent ? 'ללכת לתחנת ההסעות וללחוץ E' : '' };
     if (t.id === 'deploy') return { text: this.deployText(), target: this.deployTarget() };
+    if (this.waiting(t)) return { text: `זמן חופשי עד ${clockText(t.after)} 🌤️`, how: `ואז: ${fmt(t.title)}. עד אז אפשר להתאמן, לשבת במרכז אתר או לקנות בש"ק.`, target: null };
     // Everything done early: free time until the evening, then bed.
     if (t.id === 'sleep' && (G.state.clock % 1440) >= 5 * 60 && (G.state.clock % 1440) < 20 * 60) {
       return { text: 'זמן חופשי עד הערב 🌤️', how: 'אפשר להתאמן בלוח האימונים, לשבת במרכז אתר או לקנות בש"ק. לישון — מ־20:00', target: null };
@@ -546,6 +554,7 @@ const Story = {
     if (n.chasing) return;
     if (n.curious) { await Curious.talk(n); return; }
     if (n.id === 'madag') { await Kashag.talk(n); return; }
+    if (await Boss.offerCoop(n)) return;
     if (await BossArcs.talk(n)) return;
     const id = n.id;
     if (await Events.talkTo(n)) return;
@@ -1277,13 +1286,21 @@ const Story = {
   },
   async guardShift() {
     if (!this.has('guard')) { this.training('guard'); return; }
-    const S = G.state;
-    UI.fade(() => {
-      S.clock = Math.max(S.clock, 22 * 60);
-      // Alerts scheduled for hours that were skipped don't fire late.
-      this.pendingAlerts = this.pendingAlerts.filter(t => t > S.clock);
-    });
-    await new Promise(r => setTimeout(r, 600));
+    const S = G.state, m = S.clock % 1440;
+    // A night watch is at night. In the evening you can wait at the post for it; by day, no.
+    if (m >= 5 * 60 && m < 18 * 60) { UI.toast(`שמירת הלילה מתחילה ב־22:00. עכשיו ${clockText()} — עוד לא לילה 🌤️`, 'bad'); return; }
+    if (m >= 5 * 60 && m < 21.5 * 60) {
+      const v = await UI.talk([{ who: 'player', text: `השמירה מתחילה ב־22:00. עכשיו ${clockText()}.`, choices: [{ label: '⏳ לחכות בעמדה עד 22:00', value: 1 }, { label: 'אחר כך', value: 0 }] }]);
+      if (!v) return;
+    }
+    if (m >= 5 * 60) {
+      UI.fade(() => {
+        S.clock = Math.max(S.clock, Math.floor(S.clock / 1440) * 1440 + 22 * 60);
+        // Alerts scheduled for hours that were skipped don't fire late.
+        this.pendingAlerts = this.pendingAlerts.filter(t => t > S.clock);
+      });
+      await new Promise(r => setTimeout(r, 600));
+    }
     const r = await Mini.open('guard', { duration: 60 });
     if (!r.asleep && r.errors === 0) Game.achieve('awake');
     this.complete('guard', r.asleep ? -10 : r.score, r.asleep ? 'נרדמת בשמירה!' : 'שמירת לילה');

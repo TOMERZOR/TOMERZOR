@@ -45,6 +45,14 @@ const BOSSES = {
     hitMe: '🗯️ לייזר של משפטים! כאב ראש +8', hitDmg: 8, full: '🤯 יותר מדי מילים! {@medic1} מביאה לך מים ואטמי אוזניים. [תחזור/תחזרי] לקרב!',
   },
 };
+// Who turns into which boss: talking to them online offers a fight for everyone.
+const BOSS_OF = { deputy_rasap: 'burger', bc: 'baum', harasar: 'harasar', hamalist: 'bar' };
+const BOSS_DARE = {
+  burger: '*מוריד משקפי שמש לאט* ...אתם רוצים לראות את הצד השני שלי? את הצד עם השומשום?',
+  baum: 'ביקורת? אני אתן לכם ביקורת. לכולכם. ביחד. תביאו את כל הפלגה.',
+  harasar: 'ביקורת תלבושת קבוצתית? אני אוהב קבוצות. יותר אנשים — יותר דו"חות.',
+  bar: 'כולם רוצים לשמוע אותי?!?! וואו!!! תקראו לכולם!!! יש לי כל כך הרבה מה להגיד!!!',
+};
 // What her sentence laser is made of.
 const BOSS_WORDS = ['בלה בלה', 'ואז היא אמרה', 'רגע רגע רגע', 'סבבה והכל', 'אבל!!!', 'קפה?!', 'בקיצור...', 'לא, רגע', 'שמעת?!', '#@!?', 'יאללה יאללה', 'מה?!', 'ש־ק־ט', 'וואאאו!!!', 'אמרתי לך!'];
 
@@ -264,12 +272,12 @@ const Boss = {
     const now = performance.now();
     const shots = [], burgers = [], live = new Set();
     for (const p of Multi.peers) {
-      if (!p.fx || !p.boss || p.boss.id !== this.coop.id || p.site !== 'hq') continue;
+      if (!p.fx || !p.boss || p.boss.id !== this.coop.id || p.site !== this.cfg.map) continue;
       for (const o of p.fx.s) {
         const key = p.peer + 's' + o.t;
         live.add(key);
         let r = this.remoteSeen.get(key);
-        if (!r) { r = { first: now, x: o.x, y: o.y, sx: o.x, sy: o.y, kind: DATA.healthy.find(k => k.id === o.k) || DATA.healthy[0], t: 0 }; this.remoteSeen.set(key, r); }
+        if (!r) { const am = this.cfg.ammo(); r = { first: now, x: o.x, y: o.y, sx: o.x, sy: o.y, kind: am.find(k => k.id === o.k) || am[0], t: 0 }; this.remoteSeen.set(key, r); }
         r.t = (now - r.first) / 1000;
         const bx = this.x, by = this.y - 0.5 * TS;
         const dur = Math.max(0.15, Math.hypot(bx - r.sx, by - r.sy) / 520);
@@ -282,7 +290,7 @@ const Boss = {
         const key = p.peer + 'b' + o.t;
         live.add(key);
         let r = this.remoteSeen.get(key);
-        if (!r) { r = { first: now, x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1, t: 0, dur: 1.15 }; this.remoteSeen.set(key, r); }
+        if (!r) { const words = this.cfg.throws === 'words'; r = { first: now, x0: o.x0, y0: o.y0, x1: o.x1, y1: o.y1, t: 0, dur: words ? 0.6 : 1.15, text: words ? pick(BOSS_WORDS) : null }; this.remoteSeen.set(key, r); }
         r.t = (now - r.first) / 1000;
         if (r.t < r.dur) burgers.push(r);
         else if (!r.splat) { r.splat = true; Sound.splat(); }
@@ -293,16 +301,28 @@ const Boss = {
     this.remoteBurgers = burgers;
   },
 
-  // Multiplayer: wake the monster for everyone at HQ. The others join from the presence.
-  // invite: started from the menu, so everyone online is asked to come, not only who's at HQ.
-  async startCoop(invite = false) {
-    const here = invite ? Multi.peers.length : Multi.peers.filter(p => p.site === 'hq').length;
-    const coop = { id: Date.now(), max: 100 + 70 * here };
+  // Multiplayer: wake a boss for everyone at its site. The others join from the presence.
+  // invite: asked for (the menu, or talking to the boss), so everyone online is called in.
+  async startCoop(invite = false, kind = 'burger') {
+    const cfg = BOSSES[kind];
+    const here = invite ? Multi.peers.length : Multi.peers.filter(p => p.site === cfg.map).length;
+    const coop = { id: Date.now(), max: (cfg.hp || 100) + 70 * here };
     this.introAt = Date.now();
-    await UI.cutscene([{ img: 'assets/boss2.jpg', voice: BOSS_VOICE + 'intro.mp3', who: '{@@deputy_rasap}', text: `${here ? 'כמה אתם? ' + (here + 1) + '?! ' : ''}אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*` }]);
-    this.start(coop);
+    if (kind === 'burger') await UI.cutscene([{ img: 'assets/boss2.jpg', voice: BOSS_VOICE + 'intro.mp3', who: '{@@deputy_rasap}', text: `${here ? 'כמה אתם? ' + (here + 1) + '?! ' : ''}אתם תסגרו 35, ואני אנפיץ אתכם!!! *שומשום... גבינה... רוטב אלף האיים...*` }]);
+    else await this.intro(kind, { skipIntro: true });
+    this.start(coop, kind);
+    if (here) UI.toast(`👥 הזמנה נשלחה ל־${here} שחקנים — הם מצטרפים מכל מקום`, 'good');
   },
-  // Called every frame in multiplayer: join a fight someone at HQ started, or hear about it.
+  // Talking to someone who turns into a boss, online: fight them with everyone, or just talk.
+  async offerCoop(n) {
+    const kind = BOSS_OF[n.id];
+    if (!kind || !Multi.on || this.active || G.alert || Story.ctl) return false;
+    const v = await UI.talk([{ who: n.id, text: BOSS_DARE[kind], choices: [{ label: `⚔️ קרב בוס אונליין — להזמין את כולם (${Multi.peers.length})`, value: 1 }, { label: '💬 לדבר', value: 0 }] }]);
+    if (!v) return false;
+    this.inviteCoop(kind);
+    return true;
+  },
+  // Called every frame in multiplayer: join a fight someone started here, or hear about it.
   watchCoop() {
     if (!Multi.on || this.active || UI.busy || Mini.active || G.alert) return;
     const now = Date.now();
@@ -314,30 +334,33 @@ const Boss = {
     let dealt = 0;
     for (const q of Multi.peers) if (q.boss && q.boss.id === id) dealt += q.boss.dmg;
     if (dealt >= p.boss.max) { this.doneIds.add(id); return; }
-    if (World.id === 'hq' && p.site === 'hq') {
-      UI.toast(`🍔 ${p.name} העיר[/ה] את צ'יזבורגרו! לקרב!`, 'bad');
-      this.start({ id, max: p.boss.max });
+    const kind = BOSSES[p.boss.k] ? p.boss.k : 'burger', cfg = BOSSES[kind], name = cfg.name();
+    if (World.id === cfg.map && p.site === cfg.map) {
+      UI.toast(`${cfg.icon} קרב בוס נגד ${name}! ${p.name} כבר בפנים — לקרב!`, 'bad');
+      this.start({ id, max: p.boss.max }, kind);
     } else if (!this.heard.has(id)) {
       this.heard.add(id);
       Sound.horn();
-      UI.invite(`🍔 ${p.name} קורא לך לקרב בוס נגד צ'יזבורגרו בשו"ב!`, '⚔️ להצטרף עכשיו', () => this.joinCoop(id, p.boss.max));
+      UI.invite(`${cfg.icon} ${p.name}: קרב בוס נגד ${name} ב${siteName(cfg.map)}! בואו ביחד`, '⚔️ להצטרף עכשיו', () => this.joinCoop(id, p.boss.max, kind));
     }
   },
   // Accepting an invite: straight to the arena (free) and into the same fight.
-  joinCoop(id, max) {
-    if (this.active || G.alert || Story.ctl) return;
+  joinCoop(id, max, kind = 'burger') {
+    if (this.active || G.alert || Story.ctl || Race.active) return;
+    const cfg = BOSSES[kind];
     UI.fade(() => {
-      if (World.id !== 'hq') { if (G.player.carry) G.player.carry = false; Game.switchMap('hq'); }
-      this.start({ id, max });
-      UI.toast('⚔️ הצטרפת לקרב! לאסוף אוכל בריא ולזרוק', 'good');
+      if (World.id !== cfg.map) { if (G.player.carry) G.player.carry = false; Game.switchMap(cfg.map); }
+      this.start({ id, max }, kind);
+      UI.toast(`⚔️ הצטרפת לקרב! לאסוף ${cfg.ammo().map(k => k.icon).join(' ')} ולזרוק`, 'good');
     });
   },
-  // From the menu: invite everyone online and wake the monster at HQ.
-  inviteCoop() {
+  // From the menu (the cheeseburger) or a boss's own dare: everyone online is invited.
+  inviteCoop(kind = 'burger') {
     if (this.active || G.alert || Story.ctl) { UI.toast('לא עכשיו', 'bad'); return; }
+    const cfg = BOSSES[kind];
     UI.fade(() => {
-      if (World.id !== 'hq') { if (G.player.carry) G.player.carry = false; Game.switchMap('hq'); }
-      this.startCoop(true);
+      if (World.id !== cfg.map) { if (G.player.carry) G.player.carry = false; Game.switchMap(cfg.map); }
+      this.startCoop(true, kind);
     });
   },
 
@@ -361,6 +384,10 @@ const Boss = {
 
   // Starting one of the event bosses: a short cutscene, then the fight where they stand.
   async startOther(kind, opts = {}) {
+    await this.intro(kind, opts);
+    this.start(null, kind);
+  },
+  async intro(kind, opts = {}) {
     if (kind === 'baum') {
       if (!opts.skipIntro) await UI.talk([
         { who: 'p_liran', text: 'המפקדת! המפקדת! {first} קרא ספר בשמירה! ספר עם תמונות! על מיירטים! אוגה!' },
@@ -381,7 +408,6 @@ const Boss = {
         { img: Assets.scene('harasar_intro'), who: '{@@sarsap}', text: 'רס"ר אפשר להביס רק בדבר אחד: תלבושת מושלמת. [תאסוף/תאספי] נעליים מצוחצחות, כומתה מקופלת, גילוח וחוגר — ו[תזרוק/תזרקי] עליו (E)!' },
       ]);
     }
-    this.start(null, kind);
   },
   // The end of the other bosses.
   async endOther() {
@@ -455,7 +481,21 @@ const Boss = {
 
   async end(win) {
     this.active = false;
-    if (this.kind !== 'burger') { await this.endOther(); return; }
+    // Whoever lands the last hit keeps telling the others for a few seconds, so their fight
+    // ends too instead of waiting on a boss that's already down.
+    if (this.coop) this.coopTail = { until: Date.now() + 10000, st: { id: this.coop.id, k: this.kind, max: this.max, dmg: this.myDmg, tk: (this.myTaken || []).slice(-30) } };
+    if (this.kind !== 'burger') {
+      const coop = this.coop;
+      if (coop) {
+        (this.doneIds = this.doneIds || new Set()).add(coop.id);
+        const team = Multi.peers.filter(p => p.boss && p.boss.id === coop.id).map(p => p.name);
+        if (team.length) UI.toast(`👥 ניצחתם ביחד: ${team.join(', ')} ו־${fmt('{name}')}!`, 'good');
+        this.remoteShots = []; this.remoteBurgers = [];
+      }
+      await this.endOther();
+      if (coop) { Game.addScore(5, 'קרב בוס משותף'); this.coop = null; }
+      return;
+    }
     if (win) Sound.voice(BOSS_VOICE + 'defeat.mp3');
     if (this.coop) {
       (this.doneIds = this.doneIds || new Set()).add(this.coop.id);

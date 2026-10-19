@@ -118,7 +118,7 @@ const World = {
       prop('canisters', 45.8, 24.1, 3.9, 1.3);
       prop('canisters', 45.8, 27.5, 3.9, 1.3);
       prop('panel', 35.25, 38.95, 0.5, 0.35, false);
-      prop('radar', 43.6, 17.4, 2, 2);
+      prop('radar', 32.6, 10.8, 2, 2); // north of the control post, clear of the depot–launcher path
       prop('tower', 48.6, 37.3, 2, 2);
       prop('flag', 38.3, 23.1, 0.4, 0.4);
       for (let i = 0; i < 5; i++) prop('target', 14.6 + i * 2.6, 9.3, 0.9, 0.3, false, i ? {} : { berm: [20, 28] });

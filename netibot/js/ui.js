@@ -24,11 +24,14 @@ const Cast = {
 
 // "[מוכן/מוכנה]" picks by gender; {name} {battery} {gdud} are filled from the save;
 // {@id} / {@@id} are a cast member's short / full name; {platoon} {hq} name the unit and HQ site.
+const FINAL_TO_MEDIAL = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
 function fmt(text) {
   const p = G.profile || {};
   const female = p.gender === 'f';
   return String(text)
     .replace(/\[([^\/\]]*)\/([^\]]*)\]/g, (_, m, f) => (female ? f : m))
+    // A suffix glued onto a final letter ("חותם[/ת]") needs the medial form: חותמת, not חותםת.
+    .replace(/[ךםןףץ](?=[\u05d0-\u05ea])/g, c => FINAL_TO_MEDIAL[c])
     .replace(/\{@@(\w+)\}/g, (_, id) => Cast.full(id))
     .replace(/\{@(\w+)\}/g, (_, id) => Cast.short(id))
     .replace(/\{platoon\}/g, ROSTER.platoon)
@@ -169,6 +172,18 @@ const UI = {
     this.wasUrgent = !!(obj && obj.urgent);
     const b = o.querySelector('[data-warp]');
     if (b) b.addEventListener('click', (e) => { e.stopPropagation(); Story.warp(); });
+    this.placeObjective();
+  },
+  // The panel sits right under the top row of HUD cards, however tall they came out (phones,
+  // the HUD-size setting), so it never covers the clock, the face or the menu.
+  placeObjective() {
+    const o = $('#objective'), row = $('#hud .hud-top');
+    if (!o || !row) return;
+    if (!this.objRO && window.ResizeObserver) { this.objRO = new ResizeObserver(() => this.placeObjective()); this.objRO.observe(row); window.addEventListener('resize', () => this.placeObjective()); }
+    const bottom = row.getBoundingClientRect().bottom;
+    if (!bottom) return;
+    const z = parseFloat(getComputedStyle(o).zoom) || 1;
+    o.style.top = Math.round((bottom + 6) / z) + 'px';
   },
 
   // A card at the top with an action button (a friend's invite); it goes away by itself.

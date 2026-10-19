@@ -217,6 +217,7 @@ const Arcade = {
   // A host's invite: shown once in the world, with a button that brings you into the lobby.
   watch() {
     if (this.active || Race.active || !Multi.on) return;
+    this.nudge();
     const p = Multi.peers.find(q => q.ar && q.ar.host && q.ar.cd > 3 && !this.seenInvites.has(q.ar.id));
     if (!p) return;
     const game = this.game(p.ar.g);
@@ -228,6 +229,27 @@ const Arcade = {
       if (!q || q.ar.cd < 2) { UI.toast('המשחק כבר התחיל', 'bad'); return; }
       if (this.active || Race.active || Boss.active || G.alert) return;
       this.play(game, { id: q.ar.id, host: false, startAt: performance.now() + q.ar.cd * 1000 });
+    });
+  },
+  // Now and then, with friends online, someone from the platoon dares you to a game against one
+  // of them. The button invites everyone, like the hub does.
+  nudge() {
+    const now = performance.now();
+    if (!Multi.peers.length) { this.nudgeAt = 0; return; }
+    if (!this.nudgeAt) { this.nudgeAt = now + (240 + Math.random() * 180) * 1000; return; }
+    if (now < this.nudgeAt) return;
+    if (G.paused || G.alert || Boss.active || Story.ctl || Mini.active || UI.busy || $('#invite-card') || Multi.peers.some(p => p.ar || p.race)) { this.nudgeAt = now + 20000; return; }
+    this.nudgeAt = now + (480 + Math.random() * 360) * 1000;
+    const games = [...this.games.filter(g => g.online), { id: 'race', icon: '🏎️', name: 'תחרות מפקדי נסיעה' }];
+    const g = games[Math.floor(Math.random() * games.length)];
+    const peer = Multi.peers[Math.floor(Math.random() * Multi.peers.length)];
+    const line = NUDGES[Math.floor(Math.random() * NUDGES.length)];
+    const text = fmt(line).replace(/\{peer\}/g, peer.name || 'מישהו').replace(/\{g\}/g, `${g.icon} ${g.name}`);
+    Sound.pop();
+    UI.invite(text, '🎮 להזמין', () => {
+      if (this.active || Race.active || Boss.active || G.alert) return;
+      if (g.id === 'race') { Race.open(); return; }
+      this.play(this.game(g.id), { id: Date.now(), host: true, startAt: performance.now() + 20000 });
     });
   },
   // The others in this game, with their latest state: [{ who, name, peer, s }].
@@ -349,3 +371,15 @@ const Arcade = {
     return { id, skin: person.skin || DATA.skinTones[(id.length * 7) % 4], hair: person.hair || DATA.hairColors[(id.length * 3) % 3], head: person.head || 'none', female: !!person.female, rank: person.rank, scale: person.scale || 1 };
   },
 };
+
+// Dares from the platoon to play a friend who's online. {peer} is that friend, {g} the game.
+const NUDGES = [
+  '🎲 {@p_liran}: "פתחתי הימורים: את[ה/] נגד {peer} ב{g}. המפסיד שוטף כלים בחדר האוכל. אוגה בוגה!"',
+  '📻 {@commander} בקשר: "{name}, יש לך עשר דקות הפסקה. ראיתי ש{peer} גם בהפסקה. ...לא ראיתי כלום. המועדון פתוח."',
+  '🍫 {@p_choco}: "ספרתי את המשחקים בינך לבין {peer} ב{g}. אפס. זה אומר שעוד לא שיחקתם. ...נכון?"',
+  '🏋️ {@p_shaked}: "פוצ׳! את[ה/] ו{peer}, סיבוב {g}? מי שמפסיד עושה עשרים שכיבות סמיכה. אני סופרת."',
+  '🎶 {@p_shalev}: "בעזרת השם יש {g} במועדון. מי שמנצח את {peer}, אני שר לו. 🎶 שאטי לייק א מלודי... 🎶"',
+  '📱 בקבוצה של הפלגה: "מי בא ל{g}? צריך עוד מישהו מול {peer} 👀"',
+  '💤 {@p_nevo}: "אני הולך לישון. אבל אם את[ה/] ו{peer} משחקים {g}, תעירו אותי לגמר."',
+  '🕷️ {@p_rotem}: "ספיידרמן היה מזמין את {peer} ל{g}. רק אומרת."',
+];

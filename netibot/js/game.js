@@ -39,7 +39,7 @@ const LAYOUT = {
   hq: {
     bc: [26, 7], deputy_bc: [27, 12], harasar: [32, 8], rasap: [45, 8], deputy_rasap: [48, 7], sarsap: [46, 13], interceptors: [55, 9],
     ops: [9, 8], hamalist: [15, 9], medic1: [7, 29], medic2: [10, 27], medic3: [10, 29], tech_comms: [38, 28], tech_ground: [41, 28], tech_launch: [43, 27],
-    driver1: [9, 34], driver2: [13, 38], shekemist: [41, 36], officer1: null, officer2: null, officer3: null,
+    driver1: [9, 34], driver2: [13, 38], shekemist: [41, 36], p_choco: [42, 34], officer1: null, officer2: null, officer3: null,
   },
   field: { commander: [33, 31], driver1: [28, 37], driver2: [33, 37], p_nevo: null, p_shalev: null, p_ofek: null, p_miriam: null },
 };
@@ -271,6 +271,18 @@ const Game = {
     UI.toast(`${pts > 0 ? '+' : ''}${pts} ${reason}`, pts >= 0 ? 'good' : 'bad');
     (pts >= 0 ? Sound.good : Sound.bad)();
     if (pts < 0) Settings.buzz(90);
+    if (pts > 0) this.goodNewsSong();
+  },
+  // When something good happens near {@p_shalev}, he can't help it: he sings.
+  goodNewsSong() {
+    const n = G.npcs && G.npcs.find(q => q.id === 'p_shalev');
+    if (!n || G.alert || Boss.active || n.bubble && n.bubble.song) return;
+    const now = performance.now();
+    if (this.songAt && now - this.songAt < 45000 || Math.hypot(n.x - G.player.x, n.y - G.player.y) > 480 || Math.random() > 0.6) return;
+    this.songAt = now;
+    n.bubble = { text: '🎶 שאטי לייק א מלודי אין מיי הד 🎶', t: 4.5, song: true };
+    n.barkCd = Math.max(n.barkCd, 10);
+    Sound.pop();
   },
   achieve(id) {
     const S = G.state;
@@ -279,6 +291,7 @@ const Game = {
     Sound.fanfare();
     const a = DATA.achievements.find(x => x.id === id);
     if (a) setTimeout(() => UI.toast(`🏅 הישג: ${a.name}`, 'ach'), 400);
+    this.goodNewsSong();
   },
 
   // ---------- NPCs ----------

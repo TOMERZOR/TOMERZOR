@@ -34,7 +34,19 @@ const BOSSES = {
     throws: 'report', meter: 'דו"חות', hp: 110,
     hitMe: '📋 דו"ח תלבושת! +20', full: '📋 חמישה דו"חות! {@sarsap} חותם[/ת] לך על מחילה. [תחזור/תחזרי] לקרב!',
   },
+  // The HQ's operations clerk, who talked for three hours straight and grew hawk wings. She
+  // shoots a laser of sentences and screeches like a hawk; ritalin, a sedative and a dog
+  // muzzle bring her down. Her lines are recorded (ElevenLabs) and travel encrypted with the
+  // cast (ROSTER.audio), since they name the platoon.
+  bar: {
+    map: 'hq', arena: BOSS_ARENA, icon: '🦅', name: () => fmt('{@@hamalist}'), npc: 'hamalist', ammo: () => DATA.calm,
+    taunts: ['הוא סבבה והכל... אבל הוא מ{platoon}!', 'ואז היא אמרה לה שהוא אמר לו שבכלל זה היה ביום שלישי... רגע, על מה דיברנו?!', 'שתיתי רק ארבעה קפה!!! אני ממש רגועה!!!', 'יש לי שלושה מסכים בחמ"ל ושלושה נושאים במקביל!!!', 'מי צריך שקט כשיש אותי?!', 'בלה בלה בלה — ואז — בלה!!!'],
+    voices: ['bar_gutman', 'bar_rant'], throws: 'words', meter: 'כאב ראש', hp: 120, screech: true,
+    hitMe: '🗯️ לייזר של משפטים! כאב ראש +8', hitDmg: 8, full: '🤯 יותר מדי מילים! {@medic1} מביאה לך מים ואטמי אוזניים. [תחזור/תחזרי] לקרב!',
+  },
 };
+// What her sentence laser is made of.
+const BOSS_WORDS = ['בלה בלה', 'ואז היא אמרה', 'רגע רגע רגע', 'סבבה והכל', 'אבל!!!', 'קפה?!', 'בקיצור...', 'לא, רגע', 'שמעת?!', '#@!?', 'יאללה יאללה', 'מה?!', 'ש־ק־ט', 'וואאאו!!!', 'אמרתי לך!'];
 
 const Boss = {
   active: false,
@@ -72,6 +84,9 @@ const Boss = {
     this.flash = 0;
     this.bubble = { text: fmt(cfg.taunts[0]), t: 3.5 };
     this.hurtCd = 3;
+    this.screech = null;
+    this.screechCd = 8;
+    if (cfg.voices) this.taunt(0);
     if (cfg.voice && !(Date.now() - (this.introAt || 0) < 15000)) Sound.voice(BOSS_VOICE + 'intro.mp3');
     this.lastPick = cfg.ammo()[0].id;
     if (coop) { this.taken = new Set(); this.myTaken = []; this.pickCache = {}; this.coopPickups(); }
@@ -160,25 +175,30 @@ const Boss = {
     this.throwCd -= dt;
     if (this.throwCd <= 0) {
       this.throwCd = (hurt ? 1.2 : 1.9) + Math.random() * 0.8;
-      const n = hurt ? 2 : 1;
+      const words = this.cfg.throws === 'words';
+      // Her laser is a quick straight burst of three sentences in a row.
+      const n = words ? (hurt ? 4 : 3) : hurt ? 2 : 1;
       for (let i = 0; i < n; i++) {
         const lead = P.moving ? 0.6 : 0;
-        const tx = P.x + Math.cos(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * 80 : 0);
-        const ty = P.y + Math.sin(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * 80 : 0);
+        const spread = words ? 26 : 80;
+        const tx = P.x + Math.cos(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * spread : 0);
+        const ty = P.y + Math.sin(P.angle) * (P.running ? 165 : 90) * lead + (i ? (Math.random() - 0.5) * spread : 0);
+        if (words) { this.burgers.push({ x0: this.x, y0: this.y, x1: tx, y1: ty, t: -i * 0.14, dur: 0.6, text: pick(BOSS_WORDS) }); continue; }
         this.burgers.push({ x0: this.x, y0: this.y, x1: tx, y1: ty, t: 0, dur: 1.15 });
         if (this.coop) this.fxLog.b.push({ t: Date.now(), x0: Math.round(this.x), y0: Math.round(this.y), x1: Math.round(tx), y1: Math.round(ty) });
       }
-      Sound.whoosh();
+      if (words) Sound.zap(); else Sound.whoosh();
     }
     for (const b of this.burgers) {
       b.t += dt;
       if (b.t >= b.dur && !b.done) {
         b.done = true;
-        Sound.splat();
+        if (b.text) Sound.pop(); else Sound.splat();
         if (Math.hypot(P.x - b.x1, P.y - b.y1) < 38) this.hitPlayer();
       }
     }
     this.burgers = this.burgers.filter(b => !b.done);
+    if (this.cfg.screech) this.updateScreech(dt, hurt);
 
     // Healthy food flies at him.
     for (const s of this.shots) {
@@ -210,6 +230,25 @@ const Boss = {
       while (this.pickups.length < Boss.PICKUPS) this.spawnPickup();
     }
     this.hud();
+  },
+
+  // The hawk's cry: she rears up for a moment (time to get away), then it spreads 6 tiles out.
+  updateScreech(dt, hurt) {
+    const P = G.player;
+    if (!this.screech) {
+      this.screechCd -= dt;
+      if (this.screechCd > 0) return;
+      this.screech = { t: 0, x: this.x, y: this.y, r: 0 };
+      this.bubble = { text: 'קיייייייייי!!! 🦅', t: 1.6 };
+      Sound.screech();
+      if (!this.warned) { this.warned = true; UI.toast('🦅 היא עומדת לשאוג — [תתרחק/תתרחקי] ממנה!', 'bad'); }
+      return;
+    }
+    const s = this.screech;
+    s.t += dt;
+    if (s.t > 0.9) s.r = Math.min(1, (s.t - 0.9) / 0.5) * 6 * TS;
+    if (!s.hit && s.r > 0 && Math.hypot(P.x - s.x, P.y - s.y) < s.r) { s.hit = true; this.hitPlayer('🦅 שאגת נץ! האוזניים מצפצפות. כאב ראש +20'); }
+    if (s.t > 1.6) { this.screech = null; this.screechCd = (hurt ? 6 : 9) + Math.random() * 3; }
   },
 
   // What this player threw in the last moment, for the others to draw.
@@ -314,8 +353,10 @@ const Boss = {
   },
 
   taunt(i) {
-    this.bubble = { text: fmt(this.cfg.taunts[i]), t: 3.6 };
+    this.bubble = { text: fmt(this.cfg.taunts[i]), t: i === 1 && this.cfg.voices ? 6 : 3.6 };
     if (this.cfg.voice) Sound.voice(BOSS_VOICE + BOSS_TAUNT_VOICE[i] + '.mp3');
+    const v = this.cfg.voices && this.cfg.voices[i] && Assets.voice(this.cfg.voices[i]);
+    if (v) Sound.voice(v);
   },
 
   // Starting one of the event bosses: a short cutscene, then the fight where they stand.
@@ -328,6 +369,11 @@ const Boss = {
       await UI.cutscene([
         { img: Assets.scene('baum_intro'), who: '', text: 'משהו נשבר אצל {@bc}. היא גדלה... וגדלה... מפלצת נהלים בגובה שלוש קומות, עם אקסל ביד אחת וגפילטע פיש ביד השנייה.' },
         { img: Assets.scene('baum_intro'), who: '{@@p_shalev}', text: 'יש רק דבר אחד שהיא לא תעמוד בו — תרבות מזרחית! קריוקי, גרעינים שחורים, הפוסטר של ביבי והתמונה של הבבא סאלי! [תאסוף/תאספי] ו[תזרוק/תזרקי] (E)!' },
+      ]);
+    } else if (kind === 'bar') {
+      await UI.cutscene([
+        { img: Assets.scene('bar_intro'), who: '', text: '{@hamalist} מדברת. ומדברת. ומדברת. שלוש שעות בלי לנשום — ופתאום צומחות לה כנפיים של נץ. היא ממריאה מעל הדשא של {hq} ופותחת את הפה...' },
+        { img: Assets.scene('bar_intro'), who: '{@@ops}', text: 'זה נגמר רק בשלושה דברים: בקבוקון ריטלין, חומר מרדים ומחסום פה. [תאסוף/תאספי] ו[תזרוק/תזרקי] עליה (E)! וכשהיא שואגת — [תתרחק/תתרחקי]!' },
       ]);
     } else {
       await UI.cutscene([
@@ -352,6 +398,17 @@ const Boss = {
       BossArcs.won('baum');
       Game.achieve('baum_boss');
       Game.addScore(15, 'ניצחת את {@bc}');
+    } else if (kind === 'bar') {
+      Sound.stopVoice();
+      await UI.cutscene([{ img: Assets.scene('bar_win'), who: '', text: 'ריטלין, מרדים ומחסום... הכנפיים מתקפלות לאט. {@hamalist} נוחתת על הדשא, מחייכת, ונרדמת באמצע משפט. בפעם הראשונה בהיסטוריה של {hq} — שקט.' }]);
+      await UI.talk([
+        { who: 'hamalist', text: '...מה?! לא ישנתי!!! עצמתי עיניים כדי לחשוב!!! ...אבל באמת, הוא סבבה והכל. רק...' },
+        { who: 'ops', text: 'שקט בקשר. סוף סוף. {name}, את[ה/] מקבל[/ת] ממני מדליה. מדליה שקטה.' },
+      ]);
+      G.state.flags.barBoss = true;
+      BossArcs.won('bar');
+      Game.achieve('bar_boss');
+      Game.addScore(15, 'ניצחת את {@hamalist}');
     } else {
       await UI.cutscene([{ img: Assets.scene('harasar_win'), who: '', text: 'נעליים מבריקות, כומתה בכותפת, גילוח חלק וחוגר... {@harasar} מתכווץ, מסתכל עליך מלמטה למעלה — ובפעם הראשונה בהיסטוריה של הסוללה, אין לו מה להגיד.' }]);
       await UI.talk([{ who: 'harasar', text: '...*מצדיע* זה לא קרה. ואם תספר[/י] — שלושה ימי ריתוק. ...טוב, שניים.' }]);
@@ -377,10 +434,10 @@ const Boss = {
     if (this.hp <= 0) this.end(true);
   },
 
-  hitPlayer() {
-    this.chol = Math.min(100, this.chol + 20);
+  hitPlayer(msg, amount = msg ? 20 : this.cfg.hitDmg || 20) {
+    this.chol = Math.min(100, this.chol + amount);
     G.shake = 0.4;
-    UI.toast(this.cfg.hitMe, 'bad');
+    UI.toast(msg || this.cfg.hitMe, 'bad');
     if (this.chol < 100) return;
     this.chol = 30;
     UI.toast(this.cfg.full, 'bad');

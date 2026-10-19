@@ -1976,15 +1976,51 @@ const Scene3D = {
     }
   },
 
+  // Hawk wings on a character's back (the root faces +x): layered feathers, darker at the
+  // shoulder and pale at the tips. Returns the two wing pivots, which flap around x.
+  addWings(root) {
+    const dark = this.mat(0x4a2e16), mid = this.mat(0x8a5a2e), tip = this.mat(0xe3c79a);
+    // One feather: a flat blade that narrows to a rounded tip.
+    const feather = (len, w, m1, m2, parent) => {
+      const f = new THREE.Group();
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.32, w * 0.5, len * 0.72, 6), m1);
+      shaft.scale.x = 0.18; shaft.position.y = len * 0.36; f.add(shaft);
+      const end = new THREE.Mesh(new THREE.SphereGeometry(w * 0.34, 8, 6), m2);
+      end.scale.set(0.18, len * 0.5 / (w * 0.34), 1); end.position.y = len * 0.8; f.add(end);
+      parent.add(f);
+      return f;
+    };
+    return [-1, 1].map(side => {
+      const pivot = new THREE.Group();
+      pivot.position.set(-0.14, 1.3, side * 0.08);
+      // Long flight feathers fanned from the wrist, upward and back; shorter coverts on top.
+      for (let i = 0; i < 9; i++) {
+        const a = -0.15 + i * 0.13, len = 0.75 + Math.sin(i / 8 * Math.PI) * 0.45;
+        const f = feather(len, 0.2, i < 3 ? dark : mid, tip, pivot);
+        f.rotation.set(side * (Math.PI / 2 - a), 0, -0.25 - i * 0.03);
+        f.position.x = -0.01 * i;
+      }
+      for (let i = 0; i < 5; i++) {
+        const f = feather(0.42, 0.22, dark, mid, pivot);
+        f.rotation.set(side * (Math.PI / 2 - 0.5 - i * 0.18), 0, -0.2);
+        f.position.x = 0.02;
+      }
+      root.add(pivot);
+      return pivot;
+    });
+  },
+
   // The cheeseburger monster, his cheeseburgers, and the healthy food flying back.
   updateBoss(dt, now) {
     this.bossBits = this.bossBits || { burgers: new Map(), shots: new Map(), picks: new Map() };
     if (!Boss.active || World.id !== Boss.cfg.map) {
-      if (this.bossMesh) { this.root.remove(this.bossMesh); this.bossMesh = null; this.bossGiant = null; }
+      if (this.bossMesh) { this.root.remove(this.bossMesh); this.bossMesh = null; this.bossGiant = null; this.bossWings = null; }
       for (const k of ['burgers', 'shots', 'picks']) { for (const m of this.bossBits[k].values()) this.root.remove(m); this.bossBits[k].clear(); }
+      if (this.screechRing) { this.root.remove(this.screechRing); this.screechRing = null; }
       return;
     }
     if (this.bossMesh && this.bossMesh.userData.kind !== Boss.kind) { this.root.remove(this.bossMesh); this.bossMesh = null; this.bossGiant = null; }
+    if (!this.bossMesh) this.bossWings = null;
     if (!this.bossMesh || this.bossMesh.parent !== this.root) {
       const g = new THREE.Group();
       g.userData.kind = Boss.kind;
@@ -1997,6 +2033,7 @@ const Scene3D = {
         m.root.scale.setScalar(2.6);
         this.bossGiant = m;
         g.add(m.root);
+        if (Boss.kind === 'bar') this.bossWings = this.addWings(m.root);
       } else if (!this.addModel(g, 'burger', { height: 7 })) {
         const bun = this.mat(0xd99a3e), patty = this.mat(0x5a3218), cheese = this.mat(0xf2c12e), lettuce = this.mat(0x5fae3a);
         const top = new THREE.Mesh(new THREE.SphereGeometry(2.6, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), bun);
@@ -2021,6 +2058,12 @@ const Scene3D = {
       gm.root.position.set(0, 0, 0);
       const k = 1 + Boss.flash * 0.08;
       bm.scale.set(k, 1 / k, k);
+      if (this.bossWings) {
+        // She hovers over the lawn, flapping; harder while she screeches.
+        const t = now / 1000, fast = Boss.screech ? 16 : 7;
+        bm.position.y = 0.9 + Math.sin(t * 2.2) * 0.35;
+        this.bossWings.forEach((w, i) => { w.rotation.x = (i ? 1 : -1) * (0.15 + Math.sin(t * fast) * 0.55); });
+      }
     } else {
       bm.position.set(Boss.x * S3, Math.abs(Math.sin(now / 260)) * 0.25, Boss.y * S3);
       bm.rotation.y = Math.atan2(P.x - Boss.x, P.y - Boss.y);
@@ -2051,9 +2094,10 @@ const Scene3D = {
       this.cyl(0.3, 0.28, 0.1, this.mat(0xd99a3e), 0, -0.15, 0, g, 12);
       return g;
     };
-    // What the bosses throw: cheeseburgers, gefilte fish, uniform reports.
-    const projectile = () => {
+    // What the bosses throw: cheeseburgers, gefilte fish, uniform reports, sentences.
+    const projectile = (b) => {
       if (Boss.kind === 'burger') return smallBurger();
+      if (b && b.text) return this.label(b.text, { bg: 'rgba(255,255,255,.95)', fg: '#c2185b', size: 1.1 });
       const g = new THREE.Group();
       if (Boss.kind === 'baum') {
         const f = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 8), this.mat(0xd8c7a0));
@@ -2091,6 +2135,13 @@ const Scene3D = {
       else if (kind.id === 'beret') { const b = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 8), this.mat(kind.color)); b.scale.set(1, 0.3, 1); g.add(b); }
       else if (kind.id === 'razor') { this.box(0.06, 0.32, 0.04, this.mat(0x2f6fb5), 0, 0, 0, g); this.box(0.2, 0.05, 0.05, this.mat(0xd8d8d8, { metalness: 0.8 }), 0, 0.17, 0, g); }
       else if (kind.id === 'belt') { this.box(0.34, 0.02, 0.22, this.mat(0xe9edf2), 0, 0, 0, g); this.box(0.1, 0.022, 0.13, this.mat(0x8a6a4a), -0.09, 0.002, 0, g); this.box(0.14, 0.022, 0.03, this.mat(0x2f6fb3), 0.07, 0.002, 0.05, g); this.box(0.14, 0.022, 0.02, this.mat(0x777777), 0.07, 0.002, -0.02, g); }
+      else if (kind.id === 'ritalin') { this.cyl(0.1, 0.1, 0.24, this.mat(kind.color, { roughness: 0.3 }), 0, 0, 0, g, 12); this.cyl(0.11, 0.11, 0.07, this.mat(0xf6f3ea), 0, 0.15, 0, g, 12); this.box(0.205, 0.1, 0.01, this.mat(0xf6f3ea), 0, 0, 0.1, g); }
+      else if (kind.id === 'sedative') { this.cyl(0.07, 0.07, 0.22, this.mat(kind.color, { roughness: 0.2 }), 0, 0, 0, g, 10); this.cyl(0.04, 0.04, 0.06, this.mat(0x999999, { metalness: 0.6 }), 0, 0.14, 0, g, 8); const mo = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), this.mat(0xf2c12e)); mo.position.set(0, 0.02, 0.07); g.add(mo); }
+      else if (kind.id === 'muzzle') {
+        for (const [r, y] of [[0.16, 0], [0.12, 0.12]]) { const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.025, 6, 16), this.mat(kind.color)); t.rotation.x = Math.PI / 2; t.position.y = y; g.add(t); }
+        for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; const s = this.box(0.03, 0.14, 0.03, this.mat(kind.color), Math.cos(a) * 0.14, 0.06, Math.sin(a) * 0.14, g); void s; }
+        const strap = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.02, 6, 16, Math.PI), this.mat(0x3a2414)); strap.position.y = 0.05; g.add(strap);
+      }
       else if (kind.id === 'broccoli') {
         this.cyl(0.06, 0.08, 0.3, this.mat(0x9fcf6a), 0, -0.1, 0, g, 6);
         for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), this.mat(kind.color)); b.position.set(Math.cos(i * 1.3) * 0.12, 0.1 + (i % 2) * 0.06, Math.sin(i * 1.3) * 0.12); g.add(b); }
@@ -2103,6 +2154,13 @@ const Scene3D = {
     };
     sync([...Boss.burgers, ...(Boss.remoteBurgers || [])], this.bossBits.burgers, projectile, (b, m) => {
       const t = Math.min(1, b.t / b.dur);
+      if (b.text) {
+        // A straight shot, mouth to target.
+        m.visible = b.t >= 0;
+        const k = Math.max(0, t);
+        m.position.set((b.x0 + (b.x1 - b.x0) * k) * S3, 4.6 - k * 3.4, (b.y0 + (b.y1 - b.y0) * k) * S3);
+        return;
+      }
       m.position.set((b.x0 + (b.x1 - b.x0) * t) * S3, 4 + Math.sin(t * Math.PI) * 5 - t * 3.6, (b.y0 + (b.y1 - b.y0) * t) * S3);
       m.rotation.x = t * 9;
     });
@@ -2110,6 +2168,29 @@ const Scene3D = {
       m.position.set(s.x * S3, 1.4 + Math.sin(Math.min(1, s.t * 2) * Math.PI) * 1.5, s.y * S3);
       m.rotation.set(s.t * 12, s.t * 7, 0);
     });
+    // The hawk's cry: a red warning circle while she rears up, then the shock spreading out.
+    if (Boss.screech && !this.screechRing) {
+      const g = new THREE.Group();
+      const warn = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 48), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+      const wave = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 48), new THREE.MeshBasicMaterial({ color: 0xfff1c1, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+      for (const r of [warn, wave]) { r.rotation.x = -Math.PI / 2; g.add(r); }
+      g.userData = { warn, wave };
+      this.screechRing = g;
+      this.root.add(g);
+    }
+    if (this.screechRing) {
+      const s = Boss.screech;
+      if (!s) { this.root.remove(this.screechRing); this.screechRing = null; }
+      else {
+        const R = 6 * TS * S3, { warn, wave } = this.screechRing.userData;
+        this.screechRing.position.set(s.x * S3, 0.08, s.y * S3);
+        warn.scale.setScalar(R);
+        warn.material.opacity = 0.35 + Math.abs(Math.sin(now / 90)) * 0.45;
+        wave.visible = s.r > 0;
+        wave.scale.setScalar(Math.max(0.01, s.r * S3));
+        wave.material.opacity = 0.9 - Math.min(1, s.r / (6 * TS)) * 0.6;
+      }
+    }
     sync(Boss.pickups, this.bossBits.picks, (p) => {
       const g = healthy(p.kind);
       g.scale.setScalar(1.6);

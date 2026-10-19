@@ -158,6 +158,7 @@ const DATA = {
     { id: 'kashag', name: 'מצוין בכש"ג', desc: 'קיבלת ציון מצוין במבחן הכושר של המדא"גית' },
     { id: 'baum_boss', name: 'מזרחית מנצחת', desc: 'הבסת את מפקדת הסוללה עם קריוקי וגרעינים' },
     { id: 'harasar_boss', name: 'אין לו מה להגיד', desc: 'הבסת את הרס"ר עם תלבושת מושלמת' },
+    { id: 'bar_boss', name: 'שקט בחמ"ל', desc: 'הנחתת את הנץ המדבר עם ריטלין, מרדים ומחסום' },
     { id: 'orin_dance', name: 'אף אחד לא יאמין', desc: 'המפקדת העירה רק אותך באמצע הלילה ורקדה' },
     { id: 'beret', name: 'כומתה כחולה', desc: 'סיימת טירונות וקיבלת כומתה' },
     { id: 'first_shelter', name: 'בזמן!', desc: 'הגעת למיגונית בזמן בצבע אדום' },
@@ -350,6 +351,12 @@ const DATA = {
     { id: 'beret', dmg: 10, name: 'כומתה מקופלת', icon: '🎖️', color: 0x4a6fa5, hit: 'כומתה מקופלת כמו בספר! לא!' },
     { id: 'razor', dmg: 8, name: 'גילוח מושלם', icon: '🪒', color: 0xc0c0c0, hit: 'חלק?! אין לי על מה לרשום!' },
     { id: 'belt', dmg: 9, name: 'חוגר', icon: '🪪', color: 0x3c4822, hit: 'יש לו חוגר?! זה לא קרה אף פעם!' },
+  ],
+  // What finally quiets the HQ's operations clerk (the winged boss).
+  calm: [
+    { id: 'ritalin', dmg: 10, name: 'בקבוקון ריטלין', icon: '💊', color: 0xe8781f, hit: 'רגע... אני... מרוכזת?! זה מפחיד אותי!!!' },
+    { id: 'sedative', dmg: 9, name: 'חומר מרדים', icon: '💤', color: 0x5f8fd8, hit: 'אני לא עייפה... אני רק... עוצמת עיניים... לשנייה...' },
+    { id: 'muzzle', dmg: 11, name: 'מחסום פה', icon: '🐶', color: 0x7a4a26, hit: 'ממממ! מממממ ממ!!! (היא עדיין מדברת)' },
   ],
 
   // Made-up characters who live in the world like the cast does.

@@ -294,6 +294,13 @@ const Sound = (() => {
     horn() { tone(196, 0.35, 'sawtooth', 0.08); tone(247, 0.35, 'sawtooth', 0.06); },
     truck() { noise(1.2, 0.18, 180); tone(55, 1.2, 'sawtooth', 0.05, 70); },
     pop() { tone(700, 0.05, 'sine', 0.05, 1100); },
+    // A hawk's cry: a long falling scream with a breathy edge.
+    screech() {
+      tone(3300, 0.9, 'sawtooth', 0.05, 2100); tone(3000, 0.9, 'sine', 0.08, 2300);
+      noise(0.8, 0.08, 3200, 'bandpass', 0, null, 4);
+      later(950, () => { tone(3100, 0.5, 'sawtooth', 0.04, 2200); tone(2900, 0.5, 'sine', 0.06, 2300); });
+    },
+    zap() { tone(1900, 0.16, 'square', 0.04, 260); },
     fart() {
       // A low, wobbling raspberry.
       if (!ensure() || !prefs.sfx) return;

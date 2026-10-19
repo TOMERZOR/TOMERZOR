@@ -62,6 +62,22 @@ const b64u = (buf) => Buffer.from(buf).toString('base64').replace(/\+/g, '-').re
     }
     console.log('scenes:', Object.keys(ROSTER.scenes).length);
   }
+  // Voice lines that name real people (tools/audio/<name>.mp3, git-ignored), the same way:
+  // assets/people/<hash>.bin, listed in ROSTER.audio.
+  const audioIn = path.join(__dirname, 'audio');
+  if (fs.existsSync(audioIn)) {
+    ROSTER.audio = {};
+    for (const f of fs.readdirSync(audioIn)) {
+      const m = f.match(/^([\w-]+)\.mp3$/);
+      if (!m) continue;
+      const name = require('crypto').createHash('sha256').update(b64u(raw) + ':audio/' + m[1]).digest('hex').slice(0, 16);
+      const fiv = webcrypto.getRandomValues(new Uint8Array(12));
+      const enc = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv: fiv }, key, fs.readFileSync(path.join(audioIn, f)));
+      fs.writeFileSync(path.join(peopleOut, name + '.bin'), Buffer.concat([Buffer.from(fiv), Buffer.from(enc)]));
+      ROSTER.audio[m[1]] = name;
+    }
+    console.log('audio:', Object.keys(ROSTER.audio).length);
+  }
   const iv = webcrypto.getRandomValues(new Uint8Array(12));
   const data = await webcrypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(ROSTER)));
   fs.writeFileSync(path.join(dir, 'js/roster.enc.js'),

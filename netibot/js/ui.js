@@ -48,8 +48,8 @@ function fmtAs(person, text) {
 const esc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const RANKS = { 1: 'סגן־משנה', 2: 'סגן', 3: 'סרן', leaf: 'רב־סרן', rabat: 'רב"ט', samal: 'סמל', samar: 'סמ"ר' };
-// The platoon are corporals, apart from the two sergeants; officers carry a rank in the roster.
-const RANK_OF = { inspector: 'samal', ruth: 'samar' };
+// The platoon are corporals, apart from the sergeants; officers carry a rank in the roster.
+const RANK_OF = { inspector: 'samal', ruth: 'samar', hamalist: 'samal' };
 function rankOf(person) {
   if (!person) return null;
   if (person.rank) return person.rank;

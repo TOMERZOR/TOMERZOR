@@ -168,23 +168,27 @@ const Assets = {
     this.people[id] = { scene: g.scene, fit, walk };
     if (typeof Scene3D !== 'undefined' && Scene3D.personReady) Scene3D.personReady(id);
   },
-  // Cutscene art of the real cast, encrypted the same way (ROSTER.scenes). Small, so it all
-  // loads up front; until it's in (or without the key) the slide just has no picture.
+  // Cutscene art of the real cast, encrypted the same way (ROSTER.scenes), and voice lines
+  // that name them (ROSTER.audio). Small, so it all loads up front; until it's in (or without
+  // the key) the slide just has no picture and the line no voice.
   scenes: {},
+  voices: {},
   loadScenes() {
-    const all = ROSTER.scenes || {};
     if (!Lobby.cryptoKey) return Promise.resolve();
-    return Promise.all(Object.keys(all).map(async (name) => {
+    const open = (all, out, type) => Object.keys(all).map(async (name) => {
       try {
         const res = await fetch(`assets/people/${String(all[name]).replace(/[^a-f0-9]/g, '')}.bin`);
         if (!res.ok) return;
         const buf = new Uint8Array(await res.arrayBuffer());
-        const jpg = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
-        this.scenes[name] = URL.createObjectURL(new Blob([jpg], { type: 'image/jpeg' }));
-      } catch (e) { console.warn('scene', name, e); }
-    })).then(() => { if (typeof Scene3D !== 'undefined' && Scene3D.idoLogoReady) Scene3D.idoLogoReady(); });
+        const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
+        out[name] = URL.createObjectURL(new Blob([plain], { type }));
+      } catch (e) { console.warn('encrypted asset', name, e); }
+    });
+    return Promise.all([...open(ROSTER.scenes || {}, this.scenes, 'image/jpeg'), ...open(ROSTER.audio || {}, this.voices, 'audio/mpeg')])
+      .then(() => { if (typeof Scene3D !== 'undefined' && Scene3D.idoLogoReady) Scene3D.idoLogoReady(); });
   },
   scene(name) { return this.scenes[name] || ''; },
+  voice(name) { return this.voices[name] || ''; },
   walkFor(id) { return (id && this.people[id] && this.people[id].walk) || this.walkClip; },
 
   // ---------- animation retargeting ----------

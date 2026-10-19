@@ -2,6 +2,7 @@
 // each one done brings a weapon to the fight (starting ammo) and takes a bit off the boss.
 //  Day 2 at HQ — the battery sergeant major: polished boots, a folded beret, a shave, the חוגר.
 //  Day 4 at Netivot — the battery commander: karaoke, black seeds, the poster, the Baba Sali.
+//  Day 3 at HQ — the operations clerk with hawk wings: ritalin, a sedative, a dog muzzle.
 //  The last day — Cheeseburgero: vegetables from the platoon's fitness nut.
 const BOSS_PREP = {
   h_shine: { boss: 'harasar', item: 'boots', n: 2, title: 'לצחצח נעליים לביקורת של {@harasar}', desc: 'בלוקר שלך במגורים.', spot: () => lockerSpot(G.state.myLocker), label: '👞 לצחצח נעליים', qte: 'צחצוח נעליים' },
@@ -22,6 +23,14 @@ const BOSS_PREP = {
     lines: ['חיים שלי, הבבא סאלי? [קח/קחי], יש לי עוד שלוש. ברכה לדרך.', 'ואם היא מתחילה לבכות — [תן/תני] לה רוגלך. תמיד יש לי רוגלך.'] },
   b_boss: { boss: 'baum', fight: true, title: 'להתעמת עם {@bc}', desc: 'היא עוד באתר, ועצבנית. עם כל מה שאספת.', who: 'bc' },
 
+  r_ritalin: { boss: 'bar', item: 'ritalin', n: 2, map: 'hq', title: 'בקבוקון ריטלין מ{@medic1} במרפאה', desc: 'ב{hq}. היא תבין למה.', who: 'medic1',
+    lines: ['ריטלין? בשביל {@hamalist}?! ...קח[/י] שניים. ובקבוק מים. שתית מים?', 'ואם זה לא עובד — אין לי מה להציע חוץ ממים. הרבה מים.'] },
+  r_sedative: { boss: 'bar', item: 'sedative', n: 2, title: 'חומר מרדים מ{@p_rotem}', desc: 'אל תשאל[/י] למה יש לה.', who: 'p_rotem',
+    lines: ['חומר מרדים? יש לי. רשת קורים לא תמיד מספיקה. 🕷️', 'שתי טיפות והיא ישנה כמו {@p_nevo} בשמירה. כלומר — מיד.'] },
+  r_muzzle: { boss: 'bar', item: 'muzzle', n: 2, title: 'מחסום פה של כלבים מ{@p_liran}', desc: 'יש לו אחד. אין לו כלב.', who: 'p_liran',
+    lines: ['אוגה! מחסום! לכלב של {@p_liran}!', '...אין ל{@p_liran} כלב. {@p_liran} קנה בשביל {@hamalist}. מזמן. אוגה.'] },
+  r_boss: { boss: 'bar', fight: true, map: 'hq', title: 'להשתיק את {@hamalist}', desc: 'בדשא של {hq}. היא עדיין מדברת.', who: 'hamalist' },
+
   f_veggies: { boss: 'burger', item: 'broccoli', n: 3, title: 'ירקות לקרב מ{@p_shaked}', desc: 'אם מישהו יודע איך מנצחים צ\'יזבורגר — זאת היא.', who: 'p_shaked',
     lines: ['צ\'יזבורגר?! [קח/קחי] ברוקולי. הרבה ברוקולי. הוא יברח מזה כמו {@p_nevo} ממקלחת.', 'וגם גזר. ועוד ברוקולי. זה לא נשק, זה דרך חיים. 🥦'], also: { carrot: 2 } },
 };
@@ -31,19 +40,27 @@ const BossArcs = {
   BC_SPOT: () => tc(47, 33),
   // She stays on the site until it's settled, even after a trip elsewhere or a reload.
   update() {
+    for (const t of Story.tasks) if (!t.done && !t.urgent && BOSS_PREP[t.id] && BOSS_PREP[t.id].fight && !this.left(BOSS_PREP[t.id].boss)) t.urgent = true;
     if (!Story.has('b_boss') || Story.has('baum') || World.id !== 'netivot' || Boss.active || Game.npc('bc')) return;
     Game.addVisitor('bc', this.BC_SPOT());
   },
-  // Each prep is an ordinary task, so the HUD, the arrow and the phone all list it.
+  // Each prep is an ordinary task, so the HUD, the arrow and the phone all list it. Once the
+  // preps are done the fight turns urgent (update): it takes over the panel and the arrow.
   init() {
     for (const [id, p] of Object.entries(BOSS_PREP)) {
       TASKS[id] = {
         title: p.title, desc: p.desc, map: p.map, pts: 0,
         target: () => (p.spot ? p.spot() : npcPos(p.who)),
+        ...(p.fight ? { how: '⚔️ הבוס מחכה! ללכת ולדבר (E) — הקרב מתחיל' } : {}),
       };
     }
   },
+  // After the first week, every day in the story brings one of the bosses back, with its
+  // errands on the way.
+  ARCS: { harasar: ['h_shine', 'h_beret', 'h_shave', 'h_belt', 'h_boss'], baum: ['b_karaoke', 'b_seeds', 'b_bibi', 'b_babasali', 'b_boss'], bar: ['r_ritalin', 'r_sedative', 'r_muzzle', 'r_boss'] },
+  arcFor(day) { const k = Object.keys(this.ARCS); return this.ARCS[k[day % k.length]]; },
   ammo() { const S = G.state; return (S && S.dayFlags && S.dayFlags.bossAmmo) || {}; },
+  left(boss) { return Object.entries(BOSS_PREP).filter(([id, p]) => p.boss === boss && p.item && Story.has(id)).length; },
   done(boss) { return Object.entries(BOSS_PREP).filter(([id, p]) => p.boss === boss && p.item && !Story.has(id) && Story.tasks.some(t => t.id === id)).length; },
   give(id) {
     const p = BOSS_PREP[id], S = G.state;
@@ -86,7 +103,10 @@ const BossArcs = {
       const v = await UI.talk([{ who: 'player', text: `עוד ${left} דברים להכין לפני הקרב. להתחיל בכל זאת?`, choices: [{ label: '⚔️ כן, עכשיו', value: 1 }, { label: 'קודם להתכונן', value: 0 }] }]);
       if (!v) return true;
     }
-    if (boss === 'harasar') {
+    if (boss === 'bar') {
+      await UI.talk([{ who: 'hamalist', text: 'היי היי {name}!!! שמעת מה קרה?! הוא סבבה והכל, אבל — רגע, מה זה בידיים שלך?! זה... מחסום?!' }]);
+      Boss.startOther('bar');
+    } else if (boss === 'harasar') {
       await UI.talk([{ who: 'harasar', text: '{name}. ביקורת תלבושת. [עמוד/עמדי] ישר. ...נעליים? כומתה? גילוח? חוגר? בוא[/י] נראה מה יש לך.' }]);
       Boss.startOther('harasar');
     } else {
@@ -109,7 +129,7 @@ const BossArcs = {
   },
   // Done with a fight: the arc's last task.
   won(kind) {
-    const id = kind === 'harasar' ? 'h_boss' : kind === 'baum' ? 'b_boss' : null;
+    const id = { harasar: 'h_boss', baum: 'b_boss', bar: 'r_boss' }[kind] || null;
     if (id && Story.has(id)) Story.complete(id, 8, fmt(BOSS_PREP[id].title));
   },
 };

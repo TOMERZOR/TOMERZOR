@@ -95,7 +95,7 @@ const FINAL_DAY = { title: 'יום אחרון לפני יציאה הביתה �
 const DAYS = {
   1: { title: 'יום 1 — קליטה בפלג"צ', tasks: ['meet_cmd', 'locker', 'drill', 'clean', 'dinner', 'sleep'], alerts: [] },
   2: { title: 'יום 2 — משגרים, חתימות, והרס"ר', tasks: ['lineup', 'reload_train', 'h_shine', 'h_beret', 'h_shave', 'hq_gear', 'h_belt', 'h_boss', 'gate', 'sleep'], alerts: [13 * 60 + 20] },
-  3: { title: 'יום 3 — בוס: המסדר הרצחני של {@inspector}', tasks: ['lineup', 'y_room', 'y_fridge', 'y_store', 'y_trash', 'y_final', 'radar', 'guard', 'sleep'], alerts: [16 * 60 + 30] },
+  3: { title: 'יום 3 — שני בוסים: המסדר של {@inspector} והנץ של החמ"ל', tasks: ['lineup', 'y_room', 'y_fridge', 'y_store', 'y_trash', 'y_final', 'r_sedative', 'r_muzzle', 'r_ritalin', 'r_boss', 'sleep'], alerts: [16 * 60 + 30] },
   4: { title: 'יום 4 — נוהל אנה פרנק, ומפקדת הסוללה', tasks: ['lineup', 'baum', 'b_karaoke', 'b_seeds', 'b_bibi', 'b_babasali', 'b_boss', 'deploy', 'sleep'], alerts: [17 * 60 + 10] },
   5: { title: 'יום 5 — מבחן סיום פלג"צ', tasks: ['lineup', 'exam_reload', 'exam_alert', 'exam_radar', 'exam_quiz', 'graduation'], alerts: [] },
 };
@@ -288,7 +288,9 @@ const Story = {
     const alerts = [];
     const n = 1 + Math.floor(Math.random() * 3);
     for (let i = 0; i < n; i++) alerts.push(8 * 60 + Math.floor(Math.random() * 11 * 60));
-    return { title: `יום ${day} בסוללה ${fmt('{battery}')}`, tasks: ['lineup', ...picks, 'sleep'], alerts: alerts.sort((a, b) => a - b) };
+    // In the story, every one of these days also brings a boss back, with its errands.
+    const boss = S.mode === 'story' ? BossArcs.arcFor(day) : [];
+    return { title: `יום ${day} בסוללה ${fmt('{battery}')}${boss.length ? ' ⚔️' : ''}`, tasks: ['lineup', ...boss, ...picks.slice(0, boss.length ? 2 : 3), 'sleep'], alerts: alerts.sort((a, b) => a - b) };
   },
 
   async morning(day) {

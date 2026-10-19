@@ -442,7 +442,7 @@ const Story = {
     const today = this.tasks.filter(t => !t.done && !t.last).map(t => '• ' + fmt(t.title)).join('\n');
     if (today) lines.push({ who: 'commander', text: 'המשימות להיום אצלך בטלפון: ' + today.replace(/\n/g, '  ') });
     if (this.has('h_shine')) lines.push({ who: 'sergeant', text: 'ועוד דבר: היום {@harasar} עושה ביקורת תלבושת בשו"ב. נעליים, כומתה, גילוח, חוגר. מי שלא מוכן — לא חוזר אותו בן אדם.' });
-    if (this.has('f_veggies')) lines.push({ who: 'p_shaked', text: '*לוחשת* שמעתי שיש בשו"ב מישהו שאוכל רק צ\'יזבורגרים. [בוא/בואי] אליי לפני שאת[ה/] נוסע[/ת], יש לי משהו בשבילך. 🥦' });
+    if (this.has('f_veggies')) lines.push({ who: 'p_shaked', text: '*לוחשת* שמעתי שיש בשו"ב מישהו שאוכל רק צ\'יזבורגרים. [בוא/בואי] אליי לפני שאת[ה/] נוסע[/ת], פוצ׳, יש לי משהו בשבילך. 🥦' });
     await UI.talk(lines);
     Game.addScore(late ? -5 : 4 + bonus, late ? 'איחור למסדר' : 'מסדר בוקר בזמן');
     if (this.has('y_room')) await Events.yasminIntro();
@@ -477,9 +477,10 @@ const Story = {
     }
     const ts = travelSpot();
     add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
-    // The club's door (the container behind the bus stop): the mini-games are inside.
-    const club = { x: (DATA.travelStop[0] + 0.6) * TS, y: (DATA.travelStop[1] - 1.6) * TS };
-    if (!P.carry) add(club.x, club.y, '🎮 להיכנס למועדון — משחקונים', () => Arcade.enterClub(), 40);
+    // The club's door (the container by the road, just past the bus stop): the mini-games are inside.
+    const co = World.objects.find(o => o.kind === 'club');
+    const club = co && (co.face === 'e' ? { x: co.x + co.w + 0.5 * TS, y: co.y + co.h / 2 } : { x: co.x + co.w / 2, y: co.y + co.h + 0.5 * TS });
+    if (club && !P.carry) add(club.x, club.y, '🎮 להיכנס למועדון — משחקונים', () => Arcade.enterClub(), 40);
 
     if (World.id === 'hq') {
       add(SPOTS_HQ.hamal.x, SPOTS_HQ.hamal.y, 'עמדת בקרה בחמ"ל', () => this.radarShift(), 44);
@@ -699,7 +700,7 @@ const Story = {
     Game.addStat('morale', 8);
     Events.addShchora(-2);
     Game.addScore(2, 'אימון בחדר הכושר');
-    await UI.talk([{ who: 'p_shaked', text: pick(['יפה! עכשיו ברוקולי וחלבון. לא, צ׳יפס זה לא חלבון.', 'עוד סט אחד ואתה מוכן ל{@deputy_rasap}. כלומר לצ׳יזבורגרו.', 'גאה בך. מחר — רגליים. אל תברח[/י].']) }]);
+    await UI.talk([{ who: 'p_shaked', text: pick(['יפה, פוצ׳! עכשיו ברוקולי וחלבון. לא, צ׳יפס זה לא חלבון.', 'עוד סט אחד ואת[ה/] [מוכן/מוכנה] ל{@deputy_rasap}. כלומר לצ׳יזבורגרו.', 'גאה בך, פוצ׳. מחר — רגליים. אל תברח[/י].', 'איזה פוצ׳ים אתם כשאתם מזיעים. עוד סט!']) }]);
   },
   async clinic() {
     const S = G.state;
@@ -1638,7 +1639,7 @@ const Story = {
       p_ofek: 'אני אשמור על השער כל הלילה. אני הכי מבצעי בפלגה. רק תביא[/י] שש פחיות Blue.',
       p_liran: '{first} ישים אבן גדולה בשער. אבן זה מנעול. אוגה בוגה.',
       p_rotem: 'ספיידרמן היה סוגר את השער בקורים. אין לי קורים. יש לי גומייה.',
-      p_shaked: 'בזמן שאת[ה/] [מחפש/מחפשת] מנעול, אני אעשה עוד סט. [תזכור/תזכרי]: רק ל{@rasap} יש מנעולים.',
+      p_shaked: 'בזמן שאת[ה/] [מחפש/מחפשת] מנעול, פוצ׳, אני אעשה עוד סט. [תזכור/תזכרי]: רק ל{@rasap} יש מנעולים.',
       p_arad: '💨 ...סליחה. מנעול? בחולדה לא נועלים. כל הקיבוץ יודע מי לקח מה.',
       friend: 'בקוד כתבתי שהמנעול אצל {@rasap} בשו"ב. ...אל תשאל[/י] מה כתבתי אחרי זה.',
     };

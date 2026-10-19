@@ -602,36 +602,41 @@ const Scene3D = {
           break;
         }
         case 'club': {
+          // Built with its door on local +z. Standing lengthwise by the road (face 'e'), the group
+          // turns a quarter so the door faces east, and its local width runs along the world's z.
+          const turned = o.face === 'e';
+          if (turned) g.rotation.y = Math.PI / 2;
+          const cw = turned ? d : w, cd = turned ? w : d;
           // The club: an old container with a lit doorway, a neon sign and string lights.
-          if (!this.addModel(g, 'container', { rotY: Math.PI / 2, size: [w, 2.6, d] })) this.box(w, 2.5, d, this.mat(0x4b5a2a, { roughness: 0.8, metalness: 0.2 }), 0, 1.25, 0, g);
+          if (!this.addModel(g, 'container', { rotY: Math.PI / 2, size: [cw, 2.6, cd] })) this.box(cw, 2.5, cd, this.mat(0x4b5a2a, { roughness: 0.8, metalness: 0.2 }), 0, 1.25, 0, g);
           const glow = new THREE.MeshBasicMaterial({ color: 0x8a3cff });
-          this.box(1.25, 2.15, 0.05, glow, 0, 1.075, d / 2 + 0.03, g);
+          this.box(1.25, 2.15, 0.05, glow, 0, 1.075, cd / 2 + 0.03, g);
           const frame = this.mat(0x2a2a2a, { metalness: 0.6 });
-          for (const sx of [-1, 1]) this.box(0.08, 2.2, 0.1, frame, sx * 0.66, 1.1, d / 2 + 0.05, g);
-          this.box(1.4, 0.1, 0.1, frame, 0, 2.2, d / 2 + 0.05, g);
+          for (const sx of [-1, 1]) this.box(0.08, 2.2, 0.1, frame, sx * 0.66, 1.1, cd / 2 + 0.05, g);
+          this.box(1.4, 0.1, 0.1, frame, 0, 2.2, cd / 2 + 0.05, g);
           // The door swung open against the wall.
           const door = this.box(1.2, 2.1, 0.06, this.mat(0x56653a, { metalness: 0.4 }), 0, 1.05, 0, new THREE.Group());
           const hinge = new THREE.Group();
-          hinge.position.set(0.66, 0, d / 2 + 0.06);
+          hinge.position.set(0.66, 0, cd / 2 + 0.06);
           door.position.set(0.6, 1.05, 0);
           hinge.add(door);
           hinge.rotation.y = -1.9;
           g.add(hinge);
           const light = new THREE.PointLight(0xb36bff, 1.4, 6, 2);
-          light.position.set(0, 1.4, d / 2 + 0.8);
+          light.position.set(0, 1.4, cd / 2 + 0.8);
           g.add(light);
           // A doormat and a crate to sit on by the door.
-          this.box(1.1, 0.03, 0.6, this.mat(0x7a2b2b), 0, 0.015, d / 2 + 0.4, g);
-          this.box(0.55, 0.45, 0.45, this.mat(0x8a6a3a), -w / 2 + 0.6, 0.225, d / 2 + 0.5, g);
+          this.box(1.1, 0.03, 0.6, this.mat(0x7a2b2b), 0, 0.015, cd / 2 + 0.4, g);
+          this.box(0.55, 0.45, 0.45, this.mat(0x8a6a3a), -cw / 2 + 0.6, 0.225, cd / 2 + 0.5, g);
           // String lights along the top front edge, twinkling (update).
           const cols = [0xff4f6a, 0xffd23f, 0x4fd1ff, 0x7dff6a, 0xff8f3f];
           rec.bulbs = cols.map(c => new THREE.MeshBasicMaterial({ color: c }));
           const geo = new THREE.SphereGeometry(0.07, 8, 6);
           const n = 14;
           for (let i = 0; i < n; i++) {
-            const t = i / (n - 1), x = -w / 2 + 0.15 + t * (w - 0.3);
+            const t = i / (n - 1), x = -cw / 2 + 0.15 + t * (cw - 0.3);
             const bulb = new THREE.Mesh(geo, rec.bulbs[i % cols.length]);
-            bulb.position.set(x, 2.55 - Math.sin(t * Math.PI * 3) ** 2 * 0.22, d / 2 + 0.1);
+            bulb.position.set(x, 2.55 - Math.sin(t * Math.PI * 3) ** 2 * 0.22, cd / 2 + 0.1);
             g.add(bulb);
           }
           const sign = this.label('🎮 מועדון', { bg: 'rgba(110,40,180,.95)', size: 1.1 });
@@ -639,7 +644,7 @@ const Scene3D = {
           g.add(sign);
           rec.sign = sign;
           const sub = this.label('🕹️ משחקונים · E', { bg: 'rgba(20,20,30,.85)', fg: '#ffd23f', size: 0.55 });
-          sub.position.set(0, 2.9, d / 2 + 0.2);
+          sub.position.set(0, 2.9, cd / 2 + 0.2);
           g.add(sub);
           break;
         }

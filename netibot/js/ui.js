@@ -497,7 +497,10 @@ const UI = {
     }
     // The bus stop and the race, by the gate.
     const [tx, ty] = DATA.travelStop;
-    for (const [x, y, label, bg] of [[tx + 0.6, ty - 0.6, '🚌 הסעות', 'rgba(30,90,140,.9)'], [tx + 0.6, ty - 3.4, '🎮 מועדון', 'rgba(110,40,180,.92)']]) {
+    const club = World.objects.find(o => o.kind === 'club');
+    const marks = [[tx + 0.6, ty - 0.6, '🚌 הסעות', 'rgba(30,90,140,.9)']];
+    if (club) marks.push([(club.x + club.w / 2) / TS, (club.y + club.h / 2) / TS, '🎮 מועדון', 'rgba(110,40,180,.92)']);
+    for (const [x, y, label, bg] of marks) {
       const w = g.measureText(label).width + 12, cx = (x - x0) * s, cy = (y - y0) * s;
       g.fillStyle = bg; g.fillRect(cx - w / 2, cy - 11, w, 20);
       g.fillStyle = '#fff'; g.fillText(label, cx, cy + 5);

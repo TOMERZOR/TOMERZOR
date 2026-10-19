@@ -94,8 +94,13 @@ const World = {
     // Bus stop for travelling between sites.
     const [sx, sy] = DATA.travelStop;
     prop('busstop', sx + 0.6, sy - 0.2, 1.4, 0.5, false);
-    // Behind it, the club: a container the platoon turned into a game room (js/arcade.js).
-    prop('club', sx - 0.9, sy - 3.4, 3, 1.3, true);
+    // Just past it, the club: a container the platoon turned into a game room (js/arcade.js).
+    // It stands lengthwise beside the gate road, door facing east onto the road, clear of
+    // the rooms' doors (it used to sit right outside the girls' room). Tile of its NW corner,
+    // set so it fully covers the tiles it stands on (paths go around, nobody snags an edge);
+    // on the field it moves a tile west for the driver standing at (28, 37).
+    const [cx, cy] = { netivot: [27.25, 34.15], hq: [27.25, 34.15], field: [26.3, 34.15] }[id] || [27.25, 34.15];
+    prop('club', cx, cy, 1.3, 3, true, { face: 'e' });
 
     if (id === 'netivot') {
       // Two sleeping rooms, boys and girls: 8 beds and 3 lockers each.

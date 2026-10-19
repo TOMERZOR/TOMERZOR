@@ -476,7 +476,8 @@ const Story = {
     }
     const ts = travelSpot();
     add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
-    if (!P.carry) add(ts.x + 2.2 * TS, ts.y, '🏎️ תחרות מפקדי נסיעה', () => Race.open(), 36);
+    const rs = tc(DATA.travelStop[0] + 2.8, DATA.travelStop[1]);
+    if (!P.carry) add(rs.x, rs.y, '🏎️ תחרות מפקדי נסיעה', () => Race.open(), 36);
 
     if (World.id === 'hq') {
       add(SPOTS_HQ.hamal.x, SPOTS_HQ.hamal.y, 'עמדת בקרה בחמ"ל', () => this.radarShift(), 44);

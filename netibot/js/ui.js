@@ -489,6 +489,13 @@ const UI = {
       g.fillStyle = '#f4f1e6';
       g.fillText(b.name, (b.x - x0 + b.w / 2) * s, (b.y - y0 + b.h / 2) * s + 5);
     }
+    // The bus stop and the race, by the gate.
+    const [tx, ty] = DATA.travelStop;
+    for (const [x, y, label, bg] of [[tx + 0.6, ty - 0.6, '🚌 הסעות', 'rgba(30,90,140,.9)'], [tx + 3.6, ty + 1.4, '🏎️ מירוץ', 'rgba(192,57,43,.92)']]) {
+      const w = g.measureText(label).width + 12, cx = (x - x0) * s, cy = (y - y0) * s;
+      g.fillStyle = bg; g.fillRect(cx - w / 2, cy - 11, w, 20);
+      g.fillStyle = '#fff'; g.fillText(label, cx, cy + 5);
+    }
   },
   drawMapPeople(g, x0, y0, s) {
     const px = (v) => (v / TS - x0) * s, py = (v) => (v / TS - y0) * s;

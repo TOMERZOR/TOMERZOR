@@ -601,6 +601,21 @@ const Scene3D = {
           g.add(sign);
           break;
         }
+        case 'racesign': {
+          // A pole with a checkered flag and the race's name, by the bus stop.
+          this.cyl(0.06, 0.06, 3.2, this.mat(0xdddddd), 0, 1.6, 0, g, 6);
+          const c = document.createElement('canvas'); c.width = 64; c.height = 48;
+          const cg = c.getContext('2d');
+          for (let x = 0; x < 8; x++) for (let y = 0; y < 6; y++) { cg.fillStyle = (x + y) % 2 ? '#111' : '#fff'; cg.fillRect(x * 8, y * 8, 8, 8); }
+          const ft = new THREE.CanvasTexture(c);
+          const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.8), new THREE.MeshBasicMaterial({ map: ft, side: THREE.DoubleSide }));
+          flag.position.set(0.55, 2.8, 0);
+          g.add(flag);
+          const sign = this.label('🏎️ תחרות מפקדי נסיעה', { bg: 'rgba(192,57,43,.95)', size: 0.75 });
+          sign.position.set(0, 3.7, 0);
+          g.add(sign);
+          break;
+        }
         case 'books': {
           for (let i = 0; i < 4; i++) this.box(0.35, 0.08, 0.26, this.mat([0xb33a2e, 0x2e6fb3, 0xe0c040, 0x3a8f4f][i]), (i - 1.5) * 0.12, 0.04 + i * 0.08, 0, g);
           const lampM = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshStandardMaterial({ color: 0xfff1cc, emissive: 0xffd590, emissiveIntensity: 1 }));

@@ -14,6 +14,34 @@
 
 const RUN_LANES = [-2.3, 0, 2.3];
 const RUN_TRIP = 6;   // seconds a stumble counts: a second one in that time and she's got you
+const RUN_ROLL = 0.75;   // seconds a slide lasts: one forward roll
+const RUN_DAWN_T = 72;   // seconds of running from night to full daylight
+// The sunrise, by how far along it is (0 night … 1 day): the sky's three rings (zenith,
+// a band over the horizon, the horizon itself, which the fog takes too), the hemisphere
+// light, the sun's light, how far the lamps are still on, the stars, and the sun's height.
+const RUN_DAWN = [
+  { k: 0.00, zen: 0x0b1024, mid: 0x0f1733, hor: 0x161e3e, hs: 0x5d6aa8, hg: 0x2a2018, hi: 0.70, sc: 0xbcc8ff, si: 0.55, lamp: 1, stars: 1, sunY: -45, sunO: 0 },
+  { k: 0.12, zen: 0x0f1a3e, mid: 0x1c2452, hor: 0x3a2d52, hs: 0x7a86c2, hg: 0x3a2e20, hi: 1.00, sc: 0xc8ccf0, si: 0.70, lamp: 1, stars: 0.85, sunY: -32, sunO: 0 },
+  { k: 0.30, zen: 0x1c2f6c, mid: 0x6b3f7a, hor: 0xd8703a, hs: 0x9099c8, hg: 0x4e3c2a, hi: 1.10, sc: 0xffc39a, si: 0.80, lamp: 0.75, stars: 0.35, sunY: -9, sunO: 0.7 },
+  { k: 0.55, zen: 0x4878c8, mid: 0xe89a7a, hor: 0xffb270, hs: 0xa9c1e8, hg: 0x7a6248, hi: 1.15, sc: 0xffdcb0, si: 1.05, lamp: 0.2, stars: 0, sunY: 16, sunO: 1 },
+  { k: 0.80, zen: 0x5c98e0, mid: 0xb9cde6, hor: 0xf2d4aa, hs: 0xbfd8f4, hg: 0x8f7a5c, hi: 1.20, sc: 0xfff0d8, si: 1.15, lamp: 0, stars: 0, sunY: 42, sunO: 1 },
+  { k: 1.00, zen: 0x5aa2ec, mid: 0xa8cbe8, hor: 0xdde8ee, hs: 0xcfe4ff, hg: 0x9a8468, hi: 1.25, sc: 0xfff6e8, si: 1.20, lamp: 0, stars: 0, sunY: 72, sunO: 0.9 },
+];
+// The tuck. The back and head bend forward (turns in radians about the body's left-right
+// axis, on top of the run pose); each limb is aimed outright, in the body's own frame
+// (forward, up, out to its side), so it comes out the same whatever stride the run was in:
+// knees to the chest, heels to the seat, arms round the shins.
+// (Our models name the spine Spine02 / Spine01 / Spine and the neck "neck"; Mixamo ones,
+// Spine / Spine1 / Spine2 and "Neck". Whatever a model doesn't have is skipped.)
+const RUN_TUCK = [
+  ['Spine02', -0.3], ['Spine01', -0.3], ['Spine', -0.25], ['Spine1', -0.3], ['Spine2', -0.3],
+  ['neck', -0.25], ['Neck', -0.25], ['Head', -0.35],
+];
+const RUN_LOW = ['Head', 'Hips', 'Spine', 'Spine01', 'Spine1', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftArm', 'RightArm'];
+const RUN_AIM = [
+  ['UpLeg', 'Leg', 0.55, 0.83, 0.12], ['Leg', 'Foot', -0.45, -0.89, 0.05],
+  ['Arm', 'ForeArm', 0.5, -0.8, 0.25], ['ForeArm', 'Hand', 0.35, -0.94, -0.35],
+];
 const RUN_POWERS = {
   shoes: { icon: 'assets/arcade/run_sneakers.png', name: 'נעלי מד"ס', dur: 7, say: '{@madag}: "נעלי מד״ס! עכשיו את[ה/] טס[/ה]!"' },
   fly: { icon: 'assets/arcade/run_energy.png', name: 'פחית אנרגיה', dur: 6.5, say: '{@p_ofek}: "הפחית שלי!!! ...טוב, תשאיר[/י] לי חצי."' },
@@ -40,22 +68,51 @@ const RunnerGame = {
     if (this.scene) return;
     const sc = this.scene = new THREE.Scene();
     sc.background = new THREE.Color(0x0b1024);
-    sc.fog = new THREE.Fog(0x0b1024, 30, 120);
+    sc.fog = new THREE.Fog(0x161e3e, 30, 120);
     this.camera = new THREE.PerspectiveCamera(64, 1, 0.1, 400);
-    sc.add(new THREE.HemisphereLight(0x5d6aa8, 0x2a2018, 0.7));
-    const moon = this.moon = new THREE.DirectionalLight(0xbcc8ff, 0.55);
-    moon.position.set(-10, 30, 10); moon.castShadow = true;
-    moon.shadow.mapSize.set(1024, 1024);
-    Object.assign(moon.shadow.camera, { left: -14, right: 14, top: 20, bottom: -20, near: 1, far: 80 });
-    sc.add(moon, moon.target);
-    // The stars and the moon.
+    this.hemi = new THREE.HemisphereLight(0x5d6aa8, 0x2a2018, 0.7);
+    sc.add(this.hemi);
+    // The moon's light, which turns into the sun's as the morning comes.
+    const sun = this.sunLight = new THREE.DirectionalLight(0xbcc8ff, 0.55);
+    sun.position.set(-10, 30, 10); sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 20, bottom: -20, near: 1, far: 80 });
+    sc.add(sun, sun.target);
+    // The sky: a dome of three colour rings (the horizon, a band over it, the zenith) that
+    // the sunrise repaints each frame — far cheaper than a sky shader on a phone.
+    const dg = new THREE.CylinderGeometry(330, 330, 260, 32, 10, true);
+    dg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(dg.attributes.position.count * 3), 3));
+    this.dome = new THREE.Mesh(dg, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+    this.dome.position.y = 90;   // from 40 m under the horizon to 220 m over it
+    this.dome.renderOrder = -1;
+    sc.add(this.dome);
+    // Each vertex's height over the horizon (0 … 1) and how much it faces the sunrise, once.
+    const dp = dg.attributes.position;
+    this.domeV = [];
+    for (let i = 0; i < dp.count; i++) {
+      const x = dp.getX(i), y = dp.getY(i) + 90, z = dp.getZ(i), r = Math.hypot(x, z) || 1;
+      this.domeV.push({ e: Math.max(0, Math.atan2(y - 3, r)) / (Math.PI / 2), f: Math.max(0, (-z / r) * 0.92 + (x / r) * 0.12) });
+    }
+    // The stars and the moon, which fade out; the sun, which comes up ahead.
     const sg = new THREE.BufferGeometry(), sp = [];
     for (let i = 0; i < 700; i++) { const a = Math.random() * Math.PI * 2, e = Math.random() * 1.2 + 0.1, r = 300; sp.push(Math.cos(a) * Math.cos(e) * r, Math.sin(e) * r, Math.sin(a) * Math.cos(e) * r); }
     sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
-    this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: false, fog: false }));
+    this.stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 1.5, sizeAttenuation: false, fog: false, transparent: true }));
     sc.add(this.stars);
-    const moonM = new THREE.Mesh(new THREE.SphereGeometry(9, 20, 14), new THREE.MeshBasicMaterial({ color: 0xfff6d8, fog: false }));
+    const moonM = this.moonM = new THREE.Mesh(new THREE.SphereGeometry(9, 20, 14), new THREE.MeshBasicMaterial({ color: 0xfff6d8, fog: false, transparent: true }));
     moonM.position.set(-80, 120, -260); this.stars.add(moonM);
+    this.glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,240,190,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+    const glow = (s, c, o) => { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glowTex, color: c, opacity: o, depthWrite: false, fog: false, blending: THREE.AdditiveBlending })); m.scale.set(s, s, 1); m.renderOrder = -1; return m; };
+    // The sun: a wide warm haze and a bright core, coming up ahead and a little to the right.
+    this.sun = new THREE.Group();
+    this.sunHaze = glow(170, 0xff8a50, 0.55); this.sunCore = glow(34, 0xfff0c0, 1);
+    this.sun.add(this.sunHaze, this.sunCore);
+    this.sun.position.set(40, -45, -280); this.sun.visible = false;
+    this.stars.add(this.sun);
+    this.dawn = {};
+    for (const n of ['zen', 'mid', 'hor', 'hs', 'hg', 'sc']) this.dawn[n] = new THREE.Color();
+    this.tmpC = new THREE.Color(); this.tmpC2 = new THREE.Color();
+    this.lampK = 1;
     // Shared pieces.
     const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, ...o });
     this.mat = {
@@ -77,7 +134,6 @@ const RunnerGame = {
     const g = cv.getContext('2d'); g.fillStyle = '#4f5d32'; g.fillRect(0, 0, 256, 128); g.strokeStyle = '#3a4524'; g.lineWidth = 8; g.strokeRect(4, 4, 248, 120);
     g.fillStyle = '#e8dcb0'; g.font = '900 40px Rubik, Arial'; g.textAlign = 'center'; g.direction = 'rtl'; g.fillText('תחמושת', 128, 80);
     this.mat.crateFace = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(cv), roughness: 0.8 });
-    this.glowTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,240,190,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
     this.iconTex = {};
     for (const k in RUN_POWERS) { const t = new THREE.TextureLoader().load(RUN_POWERS[k].icon); t.encoding = THREE.sRGBEncoding; this.iconTex[k] = t; }
   },
@@ -87,18 +143,22 @@ const RunnerGame = {
     this.build();
     this.ctx = ctx;
     this.clear();
-    Arcade.loadModels(['arc_sandbags', 'arc_dumpster', 'car_van']).then(() => { this.modelsIn = true; });
+    Arcade.loadModels(['arc_sandbags', 'arc_dumpster', 'car_van']).then(() => { this.modelsIn = true; this.upgrade(); });
     this.rnd = Arcade.rng(ctx.seed);
     this.chunks = []; this.obs = []; this.coins = []; this.powers = []; this.segs = [];
     this.genZ = 0; this.nextItemAt = 90 + this.rnd() * 50; this.laneBusy = [0, 0, 0]; this.lastVanZ = -99;
-    this.p = { lane: 1, x: 0, y: 0, vy: 0, z: 0, slide: 0, ground: 0, dead: false, trips: 0, tripT: 0 };
+    this.p = { lane: 1, x: 0, y: 0, vy: 0, z: 0, slide: 0, rollT: 0, ground: 0, dead: false, trips: 0, tripT: 0 };
     this.d = 0; this.prevD = 0; this.speed = 10; this.coinsGot = 0; this.score = 0; this.power = {}; this.helmet = false; this.grace = 0;
+    // Night again: the time run so far drives the sunrise.
+    this.runT = 0; this.day = -1;
     this.chaser = { gap: 6, z: 6 };
     this.lineT = 4; this.t = 0; this.fovKick = 0;
     // A rematch starts clean: the opening's one-time beats, the camera, the bits in the air.
     this.shout = this.goNow = false; this.look = null; this.inspX = null; this.flyCam = 0; this.bestSaid = false; G.shake = 0;
     for (const b of this.bits || []) this.scene.remove(b.m);
     this.bits = [];
+    for (const u of this.puffs || []) this.scene.remove(u.s);
+    this.puffs = [];
     this.stage = 'intro';
     this.me = Arcade.soldier(this.scene, Arcade.look(null));
     this.insp = Arcade.soldier(this.scene, Arcade.look('inspector'));
@@ -107,8 +167,9 @@ const RunnerGame = {
     // (A soldier's model faces its local +x.)
     fl.position.set(0.3, 1.4, 0.3); this.insp.root.add(fl); this.insp.root.add(fl.target);
     fl.target.position.set(10, 0, 0);
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(2.4, 9, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    const beam = this.beam = new THREE.Mesh(new THREE.ConeGeometry(2.4, 9, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     beam.rotation.z = Math.PI / 2; beam.position.set(4.8, 1.2, 0.3); this.insp.root.add(beam);
+    this.sky(0);
     this.ghosts = new Map();
     for (let i = 0; i < 4; i++) this.genChunk();
     this.ui();
@@ -167,7 +228,7 @@ const RunnerGame = {
   // ---------- the course ----------
   // 30 m at a time: the ground, the battery on both sides, and a few rows of obstacles.
   genChunk() {
-    const z0 = this.genZ, L = 30, rnd = this.rnd, g = new THREE.Group();
+    const z0 = this.genZ, L = 30, rnd = this.rnd, g = new THREE.Group(), lamps = [];
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, L), this.mat.sand); ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.01, -(z0 + L / 2)); ground.receiveShadow = true; g.add(ground);
     const path = new THREE.Mesh(new THREE.PlaneGeometry(7.6, L), this.mat.path); path.rotation.x = -Math.PI / 2; path.position.set(0, 0, -(z0 + L / 2)); path.receiveShadow = true; g.add(path);
     // The battery: containers, sandbags, lamps, a launcher now and then.
@@ -183,11 +244,12 @@ const RunnerGame = {
       if ((Math.round(z0 / 30) % 2 === 0) === (side > 0)) {
         const pole = new THREE.Mesh(this.geo.lampPole, this.mat.post); pole.position.set(side * 4.6, 2.5, -(z0 + 15)); g.add(pole);
         const head = new THREE.Mesh(this.geo.lampHead, this.mat.lamp); head.position.set(side * 4.2, 5, -(z0 + 15)); g.add(head);
-        const lt = new THREE.PointLight(0xffd890, 1.4, 18, 1.6); lt.position.set(side * 3.6, 4.6, -(z0 + 15)); g.add(lt);
+        // On at night, off by day (sky() dims them with the sunrise).
+        const lt = new THREE.PointLight(0xffd890, 1.4 * this.lampK, 18, 1.6); lt.position.set(side * 3.6, 4.6, -(z0 + 15)); g.add(lt); lamps.push(lt);
       }
     }
     this.scene.add(g);
-    this.chunks.push({ g, z0, L });
+    this.chunks.push({ g, z0, L, lamps });
     // Rows of obstacles, never all three lanes shut; coins in the open lanes.
     if (z0 >= 30) {
       const gap = Math.max(11, 17 - this.d / 250);
@@ -244,7 +306,7 @@ const RunnerGame = {
       o.h = 0.9; o.act = 'jump';
     } else if (kind === 'bags') {
       const s = Assets.has('arc_sandbags') ? Assets.model('arc_sandbags', { length: 2 }) : null;
-      if (s) { s.rotation.y = 0; g.add(s); } else { const b = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 0.9), new THREE.MeshStandardMaterial({ color: 0xb8a070 })); b.position.y = 0.4; g.add(b); }
+      if (s) { s.rotation.y = 0; g.add(s); } else { const b = o.fb = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 0.9), new THREE.MeshStandardMaterial({ color: 0xb8a070 })); b.position.y = 0.4; g.add(b); }
       o.h = 0.9; o.act = 'jump';
     } else if (kind === 'barrier') {
       // A red-and-white boom at chest height: slide under it.
@@ -260,7 +322,7 @@ const RunnerGame = {
       o.y0 = 1.05; o.h = 1.6; o.act = 'slide'; o.len = 0.3;
     } else if (kind === 'dumpster') {
       const d = Assets.has('arc_dumpster') ? Assets.model('arc_dumpster', { length: 1.9, rotY: Math.PI / 2 }) : null;
-      if (d) g.add(d); else { const b = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.6, 1.4), new THREE.MeshStandardMaterial({ color: 0x2f5f3f })); b.position.y = 0.8; g.add(b); }
+      if (d) g.add(d); else { const b = o.fb = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.6, 1.4), new THREE.MeshStandardMaterial({ color: 0x2f5f3f })); b.position.y = 0.8; g.add(b); }
       o.h = 1.7; o.len = 1.6; o.act = 'side';
     } else if (kind === 'container') {
       // A container across the lane, a ramp in front of some: run up and along the roof.
@@ -274,7 +336,7 @@ const RunnerGame = {
       }
     } else if (kind === 'van') {
       const v = Assets.has('car_van') ? Assets.model('car_van', { length: 5.6, rotY: Math.PI }) : null;
-      if (v) g.add(v); else { const b = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 5.4), new THREE.MeshStandardMaterial({ color: 0xe8e3d3 })); b.position.y = 1; g.add(b); }
+      if (v) g.add(v); else { const b = o.fb = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 5.4), new THREE.MeshStandardMaterial({ color: 0xe8e3d3 })); b.position.y = 1; g.add(b); }
       for (const sx of [-0.6, 0.6]) { const h = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xfff6d8 })); h.position.set(sx, 0.9, 2.75); g.add(h); }
       const beam = new THREE.Mesh(new THREE.ConeGeometry(1.8, 10, 14, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false })); beam.rotation.x = -Math.PI / 2; beam.position.set(0, 0.9, 7.8); g.add(beam);
       o.h = 2.3; o.len = 5.6; o.act = 'side'; o.move = 9; o.zc = 0;
@@ -289,6 +351,19 @@ const RunnerGame = {
     if (this.segs.length > 80) this.segs.shift();
     if (o.top) this.laneBusy[lane] = Math.max(this.laneBusy[lane], z1);
     if (kind === 'van') this.lastVanZ = z;
+  },
+  // The first stretch is laid out before the models have loaded: their stand-in boxes get
+  // the real sandbags, dumpster and van as soon as they're in.
+  upgrade() {
+    const MODEL = { bags: ['arc_sandbags', { length: 2 }], dumpster: ['arc_dumpster', { length: 1.9, rotY: Math.PI / 2 }], van: ['car_van', { length: 5.6, rotY: Math.PI }] };
+    for (const o of this.obs || []) {
+      if (!o.fb || !MODEL[o.kind] || !Assets.has(MODEL[o.kind][0])) continue;
+      const m = Assets.model(...MODEL[o.kind]);
+      if (!m) continue;
+      if (o.kind === 'bags') m.rotation.y = 0;
+      m.traverse(x => { if (x.isMesh) { x.castShadow = true; if (o.done) x.visible = false; } });
+      o.m.remove(o.fb); o.m.add(m); o.fb = null;
+    }
   },
   coin(lane, z, y) {
     const m = new THREE.Mesh(this.geo.coin, this.coinMats);
@@ -350,7 +425,13 @@ const RunnerGame = {
     if (c === 'left' && p.lane > 0) { p.lane--; this.whoosh(); }
     else if (c === 'right' && p.lane < 2) { p.lane++; this.whoosh(); }
     else if (c === 'jump' && p.y <= p.ground + 0.05 && !this.power.fly) { p.vy = this.power.spring ? 16.5 : 10.5; p.slide = 0; Sound.synth.tone(380, 0.12, 'triangle', 0.06, 760); }
-    else if (c === 'slide') { p.slide = 0.75; if (p.y > p.ground + 0.1) p.vy = Math.min(p.vy, -14); Sound.synth.noise(0.25, 0.08, 1200, 'bandpass'); }
+    else if (c === 'slide') {
+      // A forward roll. Asked again mid-roll: finish this turn, then one more.
+      if (p.slide > 0) p.slide = RUN_ROLL - (p.rollT % RUN_ROLL) + RUN_ROLL;
+      else { p.slide = RUN_ROLL; p.rollT = 0; if (p.y <= p.ground + 0.1) this.puff(p.x, p.y, p.z); }
+      if (p.y > p.ground + 0.1) p.vy = Math.min(p.vy, -14);
+      Sound.synth.noise(0.25, 0.08, 1200, 'bandpass');
+    }
   },
   whoosh() { Sound.synth.noise(0.12, 0.05, 2200, 'bandpass'); },
 
@@ -416,6 +497,9 @@ const RunnerGame = {
       if (p.y <= p.ground) { if (p.vy < -6) Sound.step(); p.y = p.ground; p.vy = 0; }
     }
     p.slide = Math.max(0, p.slide - dt);
+    p.rollT = p.slide > 0 ? p.rollT + dt : 0;
+    this.runT += dt;
+    this.sky(this.runT / RUN_DAWN_T);
     // The van drives at you.
     for (const o of this.obs) if (o.move && Math.abs(o.z - this.d) < 70) { o.z -= o.move * dt; o.m.position.z = -o.z; }
     this.hits();
@@ -503,6 +587,70 @@ const RunnerGame = {
     m.position.set(x, y, z); this.scene.add(m);
     (this.bits = this.bits || []).push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 8, 5 + Math.random() * 5, (Math.random() - 0.5) * 8), t: 0 });
   },
+  // A little cloud of dust where a roll starts, left behind as you go.
+  puff(x, y, z) {
+    for (let i = 0; i < 7; i++) {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glowTex, color: this.dustCol || 0xb8a47c, transparent: true, opacity: 0.5, depthWrite: false }));
+      s.position.set(x + (Math.random() - 0.5) * 0.9, y + 0.15 + Math.random() * 0.3, z - 0.3 + (Math.random() - 0.5) * 0.8);
+      this.scene.add(s);
+      this.puffs.push({ s, t: 0, life: 0.45 + Math.random() * 0.25, r: 0.8 + Math.random() * 0.6, v: new THREE.Vector3((Math.random() - 0.5) * 3, 0.5 + Math.random(), -this.speed * 0.5 + Math.random() * 2) });
+    }
+  },
+  // The sunrise at k (0 night … 1 day): the sky, the fog, the two lights, the lamps and her
+  // flashlight going out, the stars fading and the sun coming up. Only colours and numbers,
+  // and one small buffer of sky colours — nothing a phone would feel.
+  sky(k) {
+    k = Math.max(0, Math.min(1, k));
+    if (this.day >= 0 && Math.abs(k - this.day) < 0.003 && (k < 1 || this.day === 1)) return;
+    this.day = k;
+    let i = 0;
+    while (i < RUN_DAWN.length - 2 && k > RUN_DAWN[i + 1].k) i++;
+    const A = RUN_DAWN[i], Bk = RUN_DAWN[i + 1], f = Math.min(1, (k - A.k) / (Bk.k - A.k));
+    const D = this.dawn, n = (key) => A[key] + (Bk[key] - A[key]) * f;
+    for (const c of ['zen', 'mid', 'hor', 'hs', 'hg', 'sc']) D[c].setHex(A[c]).lerp(this.tmpC.setHex(Bk[c]), f);
+    // The glow over the horizon ahead, strongest while the sun is coming up.
+    const glowK = Math.max(0, Math.sin(Math.PI * Math.min(1, Math.max(0, (k - 0.14) / 0.72)))) * 0.85;
+    const glowC = this.tmpC2.setHex(0xff8c4a);
+    const col = this.dome.geometry.attributes.color, V = this.domeV, c = this.tmpC;
+    for (let j = 0; j < V.length; j++) {
+      const { e, f: face } = V[j];
+      if (e < 0.07) c.copy(D.hor).lerp(D.mid, e / 0.07);
+      else c.copy(D.mid).lerp(D.zen, Math.min(1, (e - 0.07) / 0.38));
+      const g = glowK * face * face * face * Math.max(0, 1 - e / 0.22);
+      if (g > 0) c.lerp(glowC, Math.min(1, g));
+      // (The keys are sRGB, like any colour picker; the renderer wants linear.)
+      c.convertSRGBToLinear();
+      col.setXYZ(j, c.r, c.g, c.b);
+    }
+    col.needsUpdate = true;
+    // The fog is the horizon ahead, so the far end of the track melts into the sky.
+    const fog = this.scene.fog.color.copy(D.hor).lerp(glowC, Math.min(1, glowK * 0.78));
+    this.scene.background.copy(fog);   // the clear colour isn't converted: it stays sRGB
+    fog.convertSRGBToLinear();
+    this.scene.fog.near = 30 + k * 15; this.scene.fog.far = 120 + k * 40;
+    this.hemi.color.copy(D.hs); this.hemi.groundColor.copy(D.hg); this.hemi.intensity = n('hi');
+    this.sunLight.color.copy(D.sc); this.sunLight.intensity = n('si');
+    // Moonlight from high behind on the left; sunlight from ahead on the right, climbing.
+    const sw = Math.min(1, Math.max(0, (k - 0.25) / 0.35));
+    this.lightOff = this.lightOff || new THREE.Vector3();
+    this.lightOff.set(-10 + 32 * sw, 30 - 16 * sw + 22 * sw * k, 10 - 32 * sw + 14 * sw * k);
+    // The lamps (and the lamp heads' glow) go off, the flashlight stops mattering.
+    const lamp = this.lampK = n('lamp');
+    for (const ch of this.chunks || []) for (const lt of ch.lamps || []) lt.intensity = 1.4 * lamp;
+    this.mat.lamp.color.setHex(0x8f8c84).lerp(this.tmpC.setHex(0xffe2a0), lamp);
+    if (this.flash) { this.flash.intensity = 2.2 * (0.3 + 0.7 * lamp); this.beam.material.opacity = 0.05 * lamp; }
+    const st = n('stars');
+    this.stars.material.opacity = st; this.moonM.material.opacity = st; this.moonM.visible = st > 0.01;
+    // The sun: low, big and orange, then up, smaller-looking and white.
+    const so = n('sunO');
+    this.sun.visible = so > 0.01;
+    this.sun.position.y = n('sunY');
+    this.sunCore.material.opacity = so; this.sunHaze.material.opacity = 0.55 * so * (1 - 0.5 * k);
+    this.sunCore.material.color.setHex(0xffa860).lerp(this.tmpC.setHex(0xfff8e8), Math.min(1, k * 1.4));
+    this.sunHaze.material.color.setHex(0xff6a30).lerp(this.tmpC.setHex(0xffe6b8), k);
+    // Dust looks like dust in the light it's in.
+    this.dustCol = this.tmpC.setHex(0x4a4a58).lerp(this.tmpC2.setHex(0xd2bd92), Math.min(1, k * 1.6)).getHex();
+  },
   collect(dt) {
     const p = this.p, mag = this.power.magnet;
     for (const c of this.coins) {
@@ -582,9 +730,14 @@ const RunnerGame = {
       me.root.rotation.x = this.shout ? -0.05 : 0.12 + Math.sin(t * 1.5) * 0.05;
     } else {
       const sp = run ? this.speed : 0;
-      Arcade.pose(me, p.x, p.z, -Math.PI / 2, run ? Math.min(9, sp) : 0, dt);
+      // Mid-roll the run cycle holds still (the tuck goes on top of it).
+      const rolling = me.roll && me.roll.a < 0;
+      this.untuck(me);
+      Arcade.pose(me, p.x, p.z, -Math.PI / 2, run ? Math.min(9, sp) : 0, rolling ? 0 : dt);
       me.root.position.y = p.y;
-      me.root.rotation.x = p.slide > 0 ? -1.1 : this.power.fly ? -0.6 : this.stage === 'caught' ? 0.3 : 0;
+      me.root.rotation.x = this.power.fly ? -0.6 : this.stage === 'caught' ? 0.3 : 0;
+      this.roll(me, dt);
+      this.blob(me);
     }
     me.root.visible = !((p.tripT > RUN_TRIP - 1.5 || this.grace > 0) && Math.floor(t * 12) % 2);
     // Her: walking up to the booth, then running behind you with the flashlight.
@@ -624,8 +777,135 @@ const RunnerGame = {
     cam.lookAt(this.look);
     cam.fov = 64 + (this.power.shoes ? 8 : 0) + Math.min(8, (this.speed - 10) * 0.6) + this.fovKick;
     cam.updateProjectionMatrix();
-    this.moon.position.set(p.x - 10, 30, p.z + 10); this.moon.target.position.set(p.x, 0, p.z - 6);
+    // The light comes from the moon, high behind on the left, then from the sun, low ahead.
+    const o = this.lightOff;
+    this.sunLight.position.set(p.x + o.x, o.y, p.z + o.z); this.sunLight.target.position.set(p.x, 0, p.z - 6);
     this.stars.position.set(0, 0, p.z);
+    this.dome.position.z = p.z;
+    for (const u of this.puffs) { u.t += dt; const k = u.t / u.life; u.s.position.addScaledVector(u.v, dt); u.v.multiplyScalar(1 - dt * 3); u.s.scale.setScalar(u.r * (0.5 + k * 1.4)); u.s.material.opacity = 0.55 * (1 - k) * (1 - k); }
+    this.puffs = this.puffs.filter(u => { if (u.t >= u.life) { this.scene.remove(u.s); u.s.material.dispose(); return false; } return true; });
+  },
+
+  // The slide is a forward roll: you tuck into a ball (knees to the chest, arms round the
+  // shins, chin down) and turn once around your middle while still running forward. Cut short
+  // by a jump, the turn finishes in the air — a flip.
+  roll(me, dt) {
+    const p = this.p, R = me.roll = me.roll || { a: 0, w: 0 }, TAU = Math.PI * 2;
+    let left;   // how much of the turn is still to go (radians)
+    if (p.slide > 0 && this.stage === 'run') { R.a = -TAU * (p.rollT / RUN_ROLL); left = TAU * p.slide / RUN_ROLL; }
+    else if (R.a < 0) {
+      const end = -TAU * Math.ceil(-R.a / TAU - 1e-4);
+      R.a -= dt * TAU / RUN_ROLL * 1.2;
+      left = R.a - end;
+      if (R.a <= end) { R.a = 0; left = 0; }
+    } else left = 0;
+    // Tucked while turning; opening up for the last bit of it, to land on your feet.
+    const want = R.a < 0 && left > 0.9 ? 1 : 0;
+    R.w += (want - R.w) * Math.min(1, dt * (want ? 22 : 9));
+    if (R.w < 0.01 && R.a === 0) { R.w = 0; return; }
+    const w = R.w, root = me.root;
+    if (me.rigged && me.mixer) this.tuck(me, w);
+    // Turn around the middle of the ball, which rolls on the ground (or wherever you are):
+    // from the hips standing to the tucked body's own centre, w of the way.
+    if (me.hipY == null) me.hipY = 0.95;
+    const s = root.scale.y, bc = me.ballC || { x: 0.1, y: 0.55 }, br = me.ballR || 0.5;
+    const cx = bc.x * w * s, cy = (me.hipY + (bc.y - me.hipY) * w) * s, h = (me.hipY + (br - me.hipY) * w) * s;
+    root.rotation.x = R.a;
+    const c = this.tmpV || (this.tmpV = new THREE.Vector3());
+    c.set(cx, cy, 0).applyEuler(root.rotation);
+    root.position.y = p.y + h - c.y;
+    root.position.z = p.z - c.z;
+    // Then exactly on the ground: whatever's lowest right now (head, back, seat, boots) just
+    // touches it, so the ball neither sinks nor floats as it turns.
+    const B = me.tuckB;
+    if (B && w > 0.02) {
+      root.updateMatrixWorld(true);
+      let low = Infinity;
+      for (const n of RUN_LOW) if (B[n]) low = Math.min(low, B[n].getWorldPosition(c).y);
+      if (low < Infinity) root.position.y += (p.y + 0.11 * s - low) * w;
+    }
+  },
+  // The soft shadow stays on the ground under you (it's part of the model, so it would ride
+  // up with a jump and turn over with a roll), a little smaller the higher you are.
+  blob(me) {
+    const b = me.blob === undefined ? (me.blob = me.root.children.find(o => o.isMesh && o.geometry && o.geometry.type === 'CircleGeometry') || null) : me.blob;
+    if (!b) return;
+    const p = this.p, r = me.root, V = this.tv2 || (this.tv2 = { v: new THREE.Vector3(), q: new THREE.Quaternion(), flat: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2) });
+    r.updateMatrixWorld(true);
+    b.position.copy(r.worldToLocal(V.v.set(p.x, p.ground + 0.03, p.z)));
+    b.quaternion.copy(r.getWorldQuaternion(V.q).invert().multiply(V.flat));
+    b.scale.setScalar(Math.max(0.45, 1 - (p.y - p.ground) * 0.12) / (r.scale.y || 1));
+  },
+  // Knees up, heels in, back rounded, head down, arms wrapped round the shins — w of the way.
+  tuck(me, w) {
+    if (!me.tuckB) {
+      const B = {};
+      me.root.traverse(o => { if (o.isBone && !B[o.name]) B[o.name] = o; });
+      me.tuckB = B;
+      // The hips' height standing, to turn the ball around its middle.
+      const r = me.root, ry = r.position.y, rx = r.rotation.x;
+      r.position.y = 0; r.rotation.x = 0; r.updateMatrixWorld(true);
+      if (B.Hips) me.hipY = B.Hips.getWorldPosition(new THREE.Vector3()).y / (r.scale.y || 1);
+      r.position.y = ry; r.rotation.x = rx;
+    }
+    const B = me.tuckB, Q = THREE.Quaternion;
+    const q = this.tq || (this.tq = { d: new Q(), b: new Q(), p: new Q(), axis: new THREE.Vector3() });
+    // The body's own left-right axis: turning round it moves things forward or back.
+    q.axis.set(1, 0, 0);
+    me.root.updateMatrixWorld(true);
+    const turn = (name, a) => {
+      const bone = B[name];
+      if (!bone || !bone.parent) return;
+      q.d.setFromAxisAngle(q.axis, a * w);
+      bone.getWorldQuaternion(q.b); bone.parent.getWorldQuaternion(q.p);
+      bone.quaternion.copy(q.p.invert().multiply(q.d.multiply(q.b)));
+      bone.updateMatrixWorld(true);
+    };
+    // Kept, to put back before the next frame's pose: with the run cycle held still the mixer
+    // doesn't rewrite a bone it thinks hasn't changed, and the tuck would pile up.
+    const save = me.tuckSave || (me.tuckSave = []);
+    save.length = 0;
+    for (const [n] of RUN_TUCK) if (B[n]) save.push([B[n], B[n].quaternion.clone()]);
+    for (const side of ['Left', 'Right']) for (const [n] of RUN_AIM) if (B[side + n]) save.push([B[side + n], B[side + n].quaternion.clone()]);
+    for (const [n, a] of RUN_TUCK) turn(n, a);
+    // The limbs: from where the run had them to where the tuck wants them, w of the way.
+    const V = this.tv || (this.tv = { a: new THREE.Vector3(), b: new THREE.Vector3(), want: new THREE.Vector3(), rq: new Q(), id: new Q() });
+    me.root.getWorldQuaternion(V.rq);
+    const hips = B.Hips && B.Hips.getWorldPosition(new THREE.Vector3());
+    for (const side of ['Left', 'Right']) {
+      // Which way is out to this side, in the body's frame (its +z or -z).
+      const sh = B[side + 'UpLeg'];
+      if (!sh || !hips) continue;
+      const out = Math.sign(sh.getWorldPosition(V.a).sub(hips).applyQuaternion(V.rq.clone().invert()).z) || (side === 'Left' ? 1 : -1);
+      for (const [n, c, fx, fy, fz] of RUN_AIM) {
+        const bone = B[side + n], kid = B[side + c];
+        if (!bone || !kid || !bone.parent) continue;
+        bone.getWorldPosition(V.a); kid.getWorldPosition(V.b);
+        const cur = V.b.sub(V.a).normalize();
+        V.want.set(fx, fy, fz * out).normalize().applyQuaternion(V.rq);
+        q.d.setFromUnitVectors(cur, V.want);
+        q.d.slerp(V.id, 1 - w);
+        bone.getWorldQuaternion(q.b); bone.parent.getWorldQuaternion(q.p);
+        bone.quaternion.copy(q.p.invert().multiply(q.d.multiply(q.b)));
+        bone.updateMatrixWorld(true);
+      }
+    }
+    // Fully tucked the first time: where the ball's middle is (in the model's own frame,
+    // forward and up) and how big it is, from the head, hips, knees, feet and hands.
+    if (w > 0.98 && !me.ballC) {
+      const pts = ['Head', 'Hips', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot', 'LeftHand', 'RightHand', 'Spine'].filter(n => B[n]).map(n => me.root.worldToLocal(B[n].getWorldPosition(new THREE.Vector3())));
+      if (pts.length >= 5) {
+        const c = pts.reduce((a, v) => a.add(v), new THREE.Vector3()).multiplyScalar(1 / pts.length);
+        // The lowest point when the ball is upright, plus a little for the boots' soles.
+        me.ballC = { x: c.x, y: c.y };
+        me.ballR = Math.max(0.35, Math.min(0.7, pts.reduce((m, v) => Math.max(m, Math.hypot(v.x - c.x, v.y - c.y)), 0) * 0.8 + 0.06));
+      }
+    }
+  },
+  untuck(me) {
+    if (!me.tuckSave || !me.tuckSave.length) return;
+    for (const [bone, q] of me.tuckSave) bone.quaternion.copy(q);
+    me.tuckSave.length = 0;
   },
 
   // ---------- the overlay ----------
@@ -693,6 +973,8 @@ const RunnerGame = {
     this.clear();
     for (const b of this.bits || []) this.scene.remove(b.m);
     this.bits = [];
+    for (const u of this.puffs || []) this.scene.remove(u.s);
+    this.puffs = [];
     this.ghosts = new Map();
     this.shout = this.goNow = false;
     this.stage = null; this.el = null;

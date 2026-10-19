@@ -205,7 +205,7 @@ const Arcade = {
     const medal = (i) => ['🥇', '🥈', '🥉'][i] || i + 1;
     const p = this.panel(`${opts.img ? `<img class="ar-banner" src="${opts.img}" alt="">` : ''}<h2>${title}</h2>${opts.sub ? `<p class="ar-sub">${opts.sub}</p>` : ''}
       <table class="ar-res">${rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${medal(i)}</td><td><bdi data-raw>${esc(r.name)}</bdi></td><td>${r.value == null ? '' : r.value}</td></tr>`).join('')}</table>
-      ${prize ? `<p class="ar-sub">+${prize}₪</p>` : ''}
+      ${prize ? `<p class="ar-sub"><bdi dir="ltr">+${prize}₪</bdi></p>` : ''}
       <div class="ar-row">${this.net ? '' : '<button class="btn" data-m="again">🔁 עוד סיבוב</button>'}<button class="btn ghost" data-m="hub">🎮 למועדון</button><button class="btn ghost" data-m="back">↩ לבסיס</button></div>`);
     const again = p.querySelector('[data-m=again]');
     if (again) again.onclick = () => { Sound.click(); this.begin({ solo: true }); };

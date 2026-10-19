@@ -7,6 +7,7 @@
 // seed), and the scores race each other live.
 
 const DOME_LINES = {
+  clean: ['{@ops}: "גל נקי! אף נפילה בשטח בנוי!"', '{@commander}: "...אין לי מה להעיר. תרשמו את התאריך."', '{@sergeant}: "מלכים! 👑 אף רקטה לא עברה!"'],
   wave: ['{@ops}: "שיגורים מעזה! כל העמדות — כוננות!"', '{@hamalist}: "רקטה! עוד רקטה! ועוד אחת! ואז היא אמרה לי—"', '{@ops}: "מטח! מטח! כולם לעמדות!"'],
   hit: ['{@p_liran}: "אוגה!!! בום!"', '{@p_ofek}: "הכי מבצעי בסוללה!"', '{@sergeant}: "מלך[/ה]! 👑"', '{@ops}: "יירוט מוצלח!"', '{@hamalist}: "וואו!!! ראית?! ראית?!"'],
   combo: ['{@p_ofek}: "רצף! אני רושם את זה בתחקיר — לטובה!"', '{@commander}: "...לא רע. בכלל לא רע."', '{@p_liran}: "אוגה אוגה אוגה!!!"'],
@@ -20,7 +21,7 @@ const DOME_LINES = {
 const DOME_WAVES = [
   { len: 26, rockets: 11, salvo: 0, grads: 0, drones: 0, birds: 1, open: 0.35 },
   { len: 28, rockets: 12, salvo: 1, grads: 5, drones: 1, birds: 1, open: 0.35 },
-  { len: 30, rockets: 12, salvo: 2, grads: 7, drones: 2, birds: 2, open: 0.3 },
+  { len: 30, rockets: 12, salvo: 2, grads: 6, drones: 2, birds: 2, open: 0.3 },
 ];
 
 const DomeGame = {
@@ -81,7 +82,7 @@ const DomeGame = {
     this.tex = { smoke: soft('rgba(255,255,255,1)'), glow: soft('rgba(255,240,210,1)') };
     // A pool of sprites for smoke, sparks and flashes.
     this.pool = [];
-    for (let i = 0; i < 420; i++) {
+    for (let i = 0; i < 480; i++) {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex.smoke, transparent: true, depthWrite: false }));
       s.visible = false; sc.add(s);
       this.pool.push({ s, live: false });
@@ -206,18 +207,20 @@ const DomeGame = {
     this.threats = []; this.shots = []; this.smoke = [];
     this.city = 100; this.score = 0; this.hits = 0; this.wasted = 0; this.combo = 0; this.best = 0;
     this.ammo = this.MAG; this.reloadT = 0;
-    this.wave = -1; this.t = -1; this.started = false; this.over = false;
+    this.wave = -1; this.t = -1; this.clock = 0; this.started = false; this.over = false; this.waveDone = 0; this.botEv = []; this.lockOn = null;
     this.flash = 0; this.shake = 0; this.lineT = 0;
     this.ret = { x: innerWidth / 2, y: innerHeight * 0.38 };
-    this.bots = ctx.solo ? Arcade.bots(3, rnd).map(b => ({ ...b, name: fmt(`{@${b.id}}`), skill: 0.55 + rnd() * 0.35, score: 0 })) : [];
+    this.bots = ctx.solo ? Arcade.bots(3, rnd).map(b => ({ ...b, name: fmt(`{@${b.id}}`), skill: 0.42 + rnd() * 0.3, score: 0 })) : [];
     this.ui();
     this.bind();
-    Arcade.buttons({ act: '🚀', run: false });
+    Arcade.buttons({ act: '🚀', run: '🔄' });
+    G.touchRun = false; $('#t-run').classList.remove('on');
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>🛡️ כיפת ברזל — משמרת לילה</h2>
       <p class="ar-sub">🔴 <b>רקטה אדומה</b> בדרך לבתים — ליירט! · ⚪ <b>עשן אפור</b> נופלת בשטח פתוח — לא לגעת · ✈️ כטב"ם שווה כפול · 🕊️ יונה — לא יורים ביונים!</p>
-      <p class="ar-sub">${G.touch ? 'נוגעים ברקטה כדי לשגר, או מכוונים בג\'ויסטיק ו־🚀' : 'עכבר: מכוונים ולוחצים · או חצים + רווח/E · R — טעינה'}</p>`);
+      <p class="ar-sub">${G.touch ? 'נוגעים ברקטה כדי לשגר · 🔄 — מארז חדש · או מכוונים בג\'ויסטיק ו־🚀' : 'עכבר: מכוונים ולוחצים · או חצים + רווח/E · R — טעינה'}</p>`);
     Sound.music('tension');
-    Arcade.countdown(performance.now() + (ctx.solo ? 5200 : 3600), () => { Arcade.panel(''); this.started = true; this.nextWave(); }, '🚀!');
+    // (Leaving during the countdown must not start a night, and its siren, back on base.)
+    Arcade.countdown(performance.now() + (ctx.solo ? 5200 : 3600), () => { if (!this.active || Arcade.active !== this) return; Arcade.panel(''); this.started = true; this.nextWave(); }, '🚀!');
   },
   clear() {
     for (const o of [...(this.threats || []), ...(this.shots || [])]) this.scene.remove(o.obj);
@@ -252,10 +255,13 @@ const DomeGame = {
     this.wave++;
     if (this.wave >= DOME_WAVES.length) { this.finish(); return; }
     this.t = -2.5; this.queue = [...this.plan[this.wave]];
+    this.waveHits = 0; this.waveFell = 0;
+    // The crew swaps the magazine between waves.
+    if (this.wave > 0 && this.ammo < this.MAG) { this.ammo = this.MAG; this.reloadT = 0; Sound.synth.tone(660, 0.08, 'square', 0.06); }
     Arcade.big(`גל ${this.wave + 1}/${DOME_WAVES.length}`, 1800);
     Arcade.say(fmt(pick(DOME_LINES.wave)), null, 3000);
     Sound.startSiren();
-    Sound.synth.later(2600, () => Sound.stopSiren());
+    Sound.synth.later(2600, () => { if (this.active) Sound.stopSiren(); });
   },
 
   // ---------- input ----------
@@ -264,34 +270,37 @@ const DomeGame = {
     this.onDown = (e) => {
       if (!this.started || this.over || e.target.closest('button, .ar-panel, #touch')) return;
       this.ret.x = e.clientX; this.ret.y = e.clientY;
-      this.fireAt(e.clientX, e.clientY, e.pointerType === 'touch' ? 150 : 110);
+      // A finger is fat and the rockets move: a wide catch, leaning toward the red ones.
+      const touch = e.pointerType !== 'mouse';
+      this.fireAt(e.clientX, e.clientY, touch ? 150 : 110, touch);
     };
     addEventListener('pointermove', this.onMove);
     addEventListener('pointerdown', this.onDown);
   },
   unbind() { removeEventListener('pointermove', this.onMove); removeEventListener('pointerdown', this.onDown); },
-  act() { if (this.started && !this.over) this.fireAt(this.ret.x, this.ret.y, 140); },
+  act() { if (this.started && !this.over) this.fireAt(this.ret.x, this.ret.y, 140, G.touch); },
   // Where a 3D point lands on the screen.
   screen(v) {
     const p = v.clone().project(this.camera), r = Scene3D.renderer.domElement.getBoundingClientRect();
     return { x: r.left + (p.x + 1) / 2 * r.width, y: r.top + (1 - p.y) / 2 * r.height, front: p.z < 1 };
   },
-  // The threat nearest a point on the screen (within r px), preferring one nobody's chasing.
-  pickAt(x, y, r) {
+  // The threat nearest a point on the screen (within r px), preferring one nobody's chasing
+  // (and, for a finger, one that's heading for the houses).
+  pickAt(x, y, r, lean = false) {
     let best = null, bd = r;
     for (const th of this.threats) {
       if (th.dead) continue;
       const s = this.screen(th.obj.position);
       if (!s.front) continue;
-      const d = Math.hypot(s.x - x, s.y - y) + (th.chased ? 40 : 0);
+      const d = Math.hypot(s.x - x, s.y - y) + (th.chased ? 40 : 0) + (lean && (th.open || th.kind === 'bird') ? 45 : 0);
       if (d < bd) { bd = d; best = th; }
     }
     return best;
   },
-  fireAt(x, y, r) {
+  fireAt(x, y, r, lean = false) {
     if (this.reloadT > 0) { Sound.synth.tone(180, 0.08, 'square', 0.05); return; }
     if (this.ammo <= 0) { this.reload(); return; }
-    const th = this.pickAt(x, y, r);
+    const th = this.pickAt(x, y, r, lean);
     if (!th) { Sound.synth.tone(240, 0.05, 'square', 0.04); this.ping(x, y, 'miss'); return; }
     this.ammo--;
     th.chased = (th.chased || 0) + 1;
@@ -306,6 +315,8 @@ const DomeGame = {
     Sound.launch();
     this.shake = Math.max(this.shake, 0.25);
     this.ping(x, y, 'lock');
+    // The lock ring jumps onto what it picked, so a tap shows what it's chasing.
+    this.lockOn = { th, t: 0.7 };
     if (this.ammo === 0) this.reload();
   },
   reload() {
@@ -334,18 +345,24 @@ const DomeGame = {
       this.mouse = true;
     }
     if (G.keys.has('KeyR')) this.reload();
+    // On the phone the second button (🔄) swaps the magazine. It's a toggle in the world; here
+    // every press counts once.
+    if (G.touchRun) { G.touchRun = false; $('#t-run').classList.remove('on'); if (this.started && !this.over) this.reload(); }
     if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) { this.ammo = this.MAG; Sound.synth.tone(660, 0.08, 'square', 0.06); Sound.synth.later(90, () => Sound.synth.tone(990, 0.1, 'square', 0.06)); } }
     if (this.started && !this.over) {
       this.t += dt;
       while (this.queue.length && this.queue[0].at <= this.t) this.spawn(this.queue.shift());
-      if (!this.queue.length && !this.threats.some(th => !th.dead) && this.t > 2) this.nextWave();
-      // The bots score as the night goes on.
-      for (const b of this.bots) if (Math.random() < dt * 0.55 * b.skill) b.score += 100;
+      if (!this.waveDone && !this.queue.length && !this.threats.some(th => !th.dead) && this.t > 2) this.endWave();
+      if (this.waveDone && (this.waveDone -= dt) <= 0) { this.waveDone = 0; this.nextWave(); }
+      // The bots: each one gets (or misses) the same threats you do, a moment after they rise.
+      this.clock += dt;
+      this.botEv = this.botEv.filter(ev => { if (ev.at > this.clock) return true; ev.b.score = Math.max(0, ev.b.score + ev.pts); return false; });
     }
     this.updateThreats(dt);
     this.updateShots(dt);
     this.updateParts(dt);
     this.lineT -= dt;
+    if (this.lockOn && (this.lockOn.t -= dt) <= 0) this.lockOn = null;
     // The night sky lights up on every explosion.
     this.flash = Math.max(0, this.flash - dt * 2.2);
     this.hemi.intensity = 0.75 + this.flash * 1.2;
@@ -354,6 +371,17 @@ const DomeGame = {
     this.hud();
     if (this.over && this.resultsAt && performance.now() > this.resultsAt) { this.resultsAt = null; this.results(); }
   },
+  // A wave is over: a beat to breathe, and a bonus when nothing fell on the houses.
+  endWave() {
+    this.waveDone = 2;
+    if (this.wave >= DOME_WAVES.length - 1) { this.waveDone = 0.8; return; }
+    if (!this.waveFell && this.waveHits) {
+      this.score += 200;
+      Arcade.big('✨ גל נקי! 200+', 1500);
+      Arcade.say(fmt(pick(DOME_LINES.clean)), null, 2400);
+      Sound.ding();
+    } else Arcade.big(`✅ גל ${this.wave + 1} מאחורינו`, 1400);
+  },
   spawn(p) {
     const obj = p.kind === 'drone' ? this.makeDrone() : p.kind === 'bird' ? this.makeBird() : this.makeRocket(p.open ? 'open' : p.kind);
     const th = { ...p, obj, age: 0, smokeT: 0 };
@@ -361,6 +389,12 @@ const DomeGame = {
     th.p1 = new THREE.Vector3(p.to.x, p.to.y, p.to.z);
     this.place(th, 0);
     this.threats.push(th);
+    for (const b of this.bots) {
+      if (p.kind === 'bird') continue;
+      const at = this.clock + 1.2 + Math.random() * p.T * 0.5;
+      if (!p.open && Math.random() < b.skill) this.botEv.push({ at, b, pts: (p.kind === 'drone' ? 250 : p.kind === 'grad' ? 120 : 100) + (Math.random() < b.skill * 0.5 ? 40 : 0) });
+      else if (p.open && Math.random() < 0.08) this.botEv.push({ at, b, pts: -50 });
+    }
     if (p.kind === 'drone') { Arcade.say(fmt(pick(DOME_LINES.drone)), null, 2400); Sound.synth.tone(110, 1.2, 'sawtooth', 0.02, 130); }
     else if (p.kind !== 'bird') Sound.synth.tone(900, 0.12, 'sine', 0.02, 1400);
   },
@@ -382,11 +416,16 @@ const DomeGame = {
       this.place(th, th.age);
       // Smoke behind rockets: thick and dark over houses, thin and gray over the dunes.
       if (th.kind !== 'bird') {
+        // (Puffs are laid along the way since the last frame, so a slow frame leaves no gaps.)
+        const step = th.kind === 'drone' ? 0.14 : 0.05, last = th.lastPos || th.obj.position.clone();
         th.smokeT -= dt;
-        if (th.smokeT <= 0) {
-          th.smokeT = th.kind === 'drone' ? 0.14 : 0.05;
-          this.part(th.obj.position, th.open || th.kind === 'drone' ? { color: 0x9a9690, size: 1.6, grow: 2.2, life: 1.3, alpha: 0.32 } : { color: 0xb8a8a0, size: 2, grow: 2.6, life: 1.6, alpha: 0.5 });
+        for (let n = 0; th.smokeT <= 0 && n < 4; n++) {
+          const at = last.clone().lerp(th.obj.position, Math.max(0, 1 + th.smokeT / Math.max(dt, 1e-3)));
+          th.smokeT += step;
+          this.part(at, th.open || th.kind === 'drone' ? { color: 0x9a9690, size: 2.6, grow: 1.8, life: 1.1, alpha: 0.3 } : { color: 0xb8a8a0, size: 3.2, grow: 2, life: 1.4, alpha: 0.45 });
         }
+        if (th.smokeT < 0) th.smokeT = 0;
+        th.lastPos = (th.lastPos || new THREE.Vector3()).copy(th.obj.position);
       } else {
         const w = th.obj.userData.wings, f = Math.sin(th.age * 14) * 0.7;
         w[0].rotation.z = f; w[1].rotation.z = -f;
@@ -406,7 +445,8 @@ const DomeGame = {
       for (let i = 0; i < 4; i++) this.part(pos, { color: 0xb8a080, size: 6, grow: 2, life: 2, alpha: 0.4, v: new THREE.Vector3(0, 3, 0) });
       return;
     }
-    const dmg = th.kind === 'drone' ? 15 : th.kind === 'grad' ? 8 : 11;
+    const dmg = th.kind === 'drone' ? 12 : th.kind === 'grad' ? 6 : 8;
+    this.waveFell++;
     this.city = Math.max(0, this.city - dmg);
     this.combo = 0;
     this.explode(pos, 1.6);
@@ -422,6 +462,8 @@ const DomeGame = {
       s.t += dt;
       const pos = s.obj.position, th = s.target;
       // Up out of the launcher first, then homing: aim at where the threat is about to be.
+      // Its target fell or was hit by someone else's: the interceptor looks for another one.
+      if (th && th.dead && s.t < 3.2) { const n = this.nearestFor(pos); if (n) { s.target = n; n.chased = (n.chased || 0) + 1; continue; } }
       if (s.t > 0.3 && th && !th.dead) {
         const d = th.obj.position.distanceTo(pos), lead = d / 160;
         const ahead = th.obj.position.clone();
@@ -434,10 +476,21 @@ const DomeGame = {
       pos.addScaledVector(s.v, dt);
       s.obj.lookAt(pos.clone().add(s.v));
       s.smokeT = (s.smokeT || 0) - dt;
-      if (s.smokeT <= 0) { s.smokeT = 0.025; this.part(pos, { color: 0xf2f0ea, size: 1.1, grow: 2.2, life: 1.4, alpha: 0.55 }); }
+      for (let n = 0; s.smokeT <= 0 && n < 4; n++) { this.part(pos.clone().addScaledVector(s.v, Math.max(-dt, s.smokeT)), { color: 0xf2f0ea, size: 2.6, grow: 1.6, life: 1.2, alpha: 0.5 }); s.smokeT += 0.025; }
+      if (s.smokeT < 0) s.smokeT = 0;
       if (s.t > 4.5 || pos.y < 0) { s.done = true; this.part(pos, { glow: true, color: 0xffd27a, size: 3, grow: 1, life: 0.3, alpha: 1 }); }
     }
     this.shots = this.shots.filter(s => { if (s.done) this.scene.remove(s.obj); return !s.done; });
+  },
+  // The closest threat on its way to the houses that nobody else is chasing, within reach.
+  nearestFor(pos) {
+    let best = null, bd = 260;
+    for (const th of this.threats) {
+      if (th.dead || th.open || th.kind === 'bird' || th.chased || th.age > th.T - 0.8) continue;
+      const d = th.obj.position.distanceTo(pos);
+      if (d < bd) { bd = d; best = th; }
+    }
+    return best;
   },
   intercept(s, th) {
     s.done = true;
@@ -459,7 +512,7 @@ const DomeGame = {
       Arcade.say(fmt(pick(DOME_LINES.waste)), null, 3000);
       return;
     }
-    this.hits++; this.combo++; this.best = Math.max(this.best, this.combo);
+    this.hits++; this.waveHits++; this.combo++; this.best = Math.max(this.best, this.combo);
     const pts = (th.kind === 'drone' ? 250 : th.kind === 'grad' ? 120 : 100) + Math.min(5, this.combo - 1) * 20;
     this.score += pts;
     this.floater(`+${pts}${this.combo >= 3 ? ` ×${this.combo}` : ''}`, th.obj.position, '#ffd23f');
@@ -480,9 +533,11 @@ const DomeGame = {
     const cam = this.camera;
     this.shake = Math.max(0, this.shake - dt * 1.4);
     // Behind the battery, looking up over the city; the sight pulls the view a little.
-    const nx = (this.ret.x / innerWidth - 0.5), ny = (this.ret.y / innerHeight - 0.5);
+    // (A finger's taps don't: the sky would slide away from under the next tap.)
+    const nx = this.mouse ? this.ret.x / innerWidth - 0.5 : 0, ny = this.mouse ? this.ret.y / innerHeight - 0.5 : -0.1;
     this.camLook = this.camLook || new THREE.Vector3(0, 40, -150);
-    const want = new THREE.Vector3(nx * 40, 42 - ny * 18, -150);
+    // A short (phone) screen looks higher: the HUD takes its top, and the rockets arc there.
+    const want = new THREE.Vector3(nx * 40, (innerHeight < 520 ? 56 : 42) - ny * 18, -150);
     this.camLook.lerp(want, Math.min(1, dt * 1.5));
     cam.position.set(0 + (Math.random() - 0.5) * this.shake, 7 + (Math.random() - 0.5) * this.shake, 30);
     cam.lookAt(this.camLook);
@@ -490,14 +545,15 @@ const DomeGame = {
 
   // ---------- the overlay ----------
   ui() {
-    Arcade.hud(`<div class="dm">
+    // The threat tags go first, under the chips, so a rocket passing behind the score never
+    // covers it.
+    Arcade.hud(`<div class="dm"><div class="dm-tags"></div>
       <div class="dm-top ar-chip"><span class="dm-score">0</span><span class="dm-wave"></span></div>
       <div class="dm-city ar-chip"><span>🏙️ העיר</span><i><b></b></i></div>
       <div class="dm-ammo ar-chip"><span class="dm-tubes"></span><span class="dm-rel hidden">טוען...</span></div>
       <canvas class="dm-radar" width="150" height="150"></canvas>
       <div class="dm-board"></div>
-      <div class="dm-ret hidden"></div><div class="dm-lock hidden"></div>
-      <div class="dm-tags"></div></div>`);
+      <div class="dm-ret hidden"></div><div class="dm-lock hidden"></div></div>`);
     const h = $('#arcade .dm');
     this.el = { score: h.querySelector('.dm-score'), wave: h.querySelector('.dm-wave'), city: h.querySelector('.dm-city b'), cityBox: h.querySelector('.dm-city'), tubes: h.querySelector('.dm-tubes'), rel: h.querySelector('.dm-rel'), radar: h.querySelector('.dm-radar'), board: h.querySelector('.dm-board'), ret: h.querySelector('.dm-ret'), lock: h.querySelector('.dm-lock'), tags: h.querySelector('.dm-tags') };
   },
@@ -516,7 +572,9 @@ const DomeGame = {
     // The sight follows the mouse (or the stick); the threat it would pick gets a ring.
     e.ret.classList.toggle('hidden', !this.mouse || !this.started || this.over);
     e.ret.style.transform = `translate(${this.ret.x}px, ${this.ret.y}px)`;
-    const aim = this.mouse && this.started && !this.over ? this.pickAt(this.ret.x, this.ret.y, 110) : null;
+    let aim = this.mouse && this.started && !this.over ? this.pickAt(this.ret.x, this.ret.y, 110) : null;
+    if (this.lockOn && this.lockOn.th.dead) this.lockOn = null;
+    if (this.lockOn && !aim) aim = this.lockOn.th;
     e.lock.classList.toggle('hidden', !aim);
     if (aim) { const s = this.screen(aim.obj.position); e.lock.style.transform = `translate(${s.x}px, ${s.y}px)`; e.lock.classList.toggle('bad', !!(aim.open || aim.kind === 'bird')); }
     // A small tag on each threat: houses or dunes, drone, pigeon.
@@ -573,11 +631,11 @@ const DomeGame = {
   },
   results() {
     const rows = this.ctx.solo
-      ? [...this.bots.map(b => ({ name: b.name, value: b.score + Math.round(b.skill * 300), me: false })), { name: G.profile.name, value: this.score, me: true }]
+      ? [...this.bots.map(b => ({ name: b.name, value: b.score + Math.round(55 + b.skill * 45) * 5, me: false })), { name: G.profile.name, value: this.score, me: true }]
       : [...Arcade.others().map(o => ({ name: o.name, value: (o.s && o.s.sc) || 0, me: false })), { name: G.profile.name, value: this.score, me: true }];
     rows.sort((a, b) => b.value - a.value);
     rows.forEach(r => { r.value = `${r.value} נק'`; });
-    const sub = `🎯 ${this.hits} יירוטים · 🔥 רצף ${this.best} · 🏙️ העיר ${this.city}% (+${this.bonus})${this.wasted ? ` · 💸 ${this.wasted} מיותרים` : ''}`;
+    const sub = `🎯 ${this.hits} יירוטים · 🔥 רצף ${this.best} · 🏙️ העיר ${this.city}%${this.bonus ? ` (${this.bonus}+)` : ''}${this.wasted ? ` · 💸 ${this.wasted} מיותרים` : ''}`;
     Arcade.results('🛡️ כיפת ברזל — משמרת לילה', rows, { sub, img: 'assets/arcade/win_dome.jpg' });
   },
 

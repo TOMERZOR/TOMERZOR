@@ -10,44 +10,53 @@
 // a[0] is always the right answer; they're shuffled when asked. cat: 'cast' (who's who),
 // 'lore' (the game itself), 'dome' (the real thing). say: the host's line on the reveal.
 const QUIZ_POOL = [
-  { cat: 'cast', q: 'מי שואלת כל פעם מחדש "שתית מים?"', a: ['{@medic1}', '{@madag}', '{@commander}', '{@rasap}'] },
-  { cat: 'cast', q: 'מה {@p_liran} אומר כשהוא מתרגש?', a: ['"אוגה!"', '"וואלה!"', '"חיים שלי!"', '"אוי ואבוי!"'], say: 'אוגה. אוגה אוגה. ...סליחה, נדבק לי.' },
+  { cat: 'cast', q: 'מי שואלת כל פעם מחדש "שתית מים?"', a: ['{@medic1}', '{@madag}', '{@commander}', '{@rasap}'], say: 'שתית מים? ...מה? זה מדבק.' },
+  { cat: 'cast', q: 'מה {@p_liran} אומר כשהוא מתרגש?', a: ['"אוגה בוגה!"', '"וואלה!"', '"חיים שלי!"', '"מון דיה!"'], say: 'אוגה בוגה. אוגה אוגה. ...סליחה, נדבק לי.' },
   { cat: 'cast', q: 'מאיזה קיבוץ {@p_arad}?', a: ['חולדה', 'דגניה', 'עין גדי', 'יטבתה'], say: 'חולדה! הקיבוץ עם הנפיחות הכי גבוהות בארץ.' },
-  { cat: 'cast', q: 'מי בפלגה מעריצה של ספיידרמן?', a: ['{@p_rotem}', '{@p_hila}', '{@p_shaked}', '{@p_miriam}'] },
+  { cat: 'cast', q: 'מי בפלגה מעריצה של ספיידרמן?', a: ['{@p_rotem}', '{@p_hila}', '{@p_shaked}', '{@p_miriam}'], say: 'יש לה פלסטר של ספיידרמן. הוא מרפא פי שניים.' },
   { cat: 'cast', q: 'מי חיה מכושר ומברוקולי?', a: ['{@p_shaked}', '{@p_rotem}', '{@inspector}', '{@p_hila}'], say: 'ברוקולי לארוחת בוקר. ברוקולי לצהריים. ובערב? שייק ברוקולי.' },
-  { cat: 'cast', q: 'מי מחזיק בתואר "הכי מבצעי בפלגה"?', a: ['{@p_ofek}', '{@p_nevo}', '{@p_shalev}', '{@p_aharon}'], say: 'הכי מבצעי. וגם הכי הרבה פחיות אנרגיה לכל מטר רבוע.' },
-  { cat: 'cast', q: 'מי חולם לעבור לגולני? (רק אם לא נכנסים לשטח אויב)', a: ['{@p_shalev}', '{@p_liran}', '{@p_ofek}', '{@p_arad}'] },
+  { cat: 'cast', q: 'מי מחזיק בתואר "הכי מבצעי בפלגה"?', a: ['{@p_ofek}', '{@p_nevo}', '{@p_shalev}', '{@p_aharon}'], say: 'הכי מבצעי. וגם יודע איפה כל השירותים באתר. זה קשור.' },
+  { cat: 'cast', q: 'מי יעבור לגולני — ביום שגולני יעברו לנתיבות?', a: ['{@p_shalev}', '{@p_liran}', '{@p_ofek}', '{@p_arad}'], say: 'בגולני יש כומתה חומה. אצלנו יש מזגן. קשה להחליט.' },
   { cat: 'cast', q: 'מי בנה את המשחק הזה?', a: ['{@friend}', '{@bc}', '{@ops}', '{@p_ofek}'], say: 'בשמירות לילה. לכן יש בו כל כך הרבה שמירות לילה.' },
   { cat: 'cast', q: 'מאיפה {@p_miriam}?', a: ['ירושלים', 'אילת', 'חיפה', 'נתיבות'], say: 'חיים שלי, רוגלך למי שענה נכון!' },
   { cat: 'cast', q: 'איזו שפה {@p_aharon} מדבר כשהוא מתעצבן?', a: ['צרפתית', 'רוסית', 'אמהרית', 'ספרדית'], say: 'Oh là là! ...זה כל הצרפתית שאני יודעת.' },
-  { cat: 'cast', q: 'מה {@deputy_rasap} לא מוריד אף פעם, גם לא בלילה?', a: ['משקפי שמש', 'כומתה', 'אפוד', 'כפכפים'] },
+  { cat: 'cast', q: 'מה {@deputy_rasap} לא מוריד אף פעם, גם לא בלילה?', a: ['משקפי שמש', 'כומתה', 'אפוד', 'כפכפים'], say: '"זו הגנה מפני שאלות." ...טוב, אז לא אשאל.' },
+  { cat: 'cast', q: 'מה {@deputy_rasap} מחביא ומכחיש שבכלל קיים?', a: ['ארונית חטיפים', 'מחסנית רזרבית', 'כלב', 'את הפנס שלי'], say: '"איזו ארונית? אין ארונית." ...יש ארונית.' },
   { cat: 'cast', q: 'מה {@rasap} צריכה ממך על כל דבר?', a: ['חתימה', 'סלפי', 'מאה שקל', 'שיר'], say: 'חתמת על התשובה? לא? אז היא לא נחשבת. ...טוב, נחשבת.' },
-  { cat: 'cast', q: 'מה יש ל{@madag} תמיד על הצוואר?', a: ['משרוקית', 'מפתחות', 'מגבת', 'שעון עצר'] },
+  { cat: 'cast', q: 'מה יש ל{@madag} תמיד על הצוואר?', a: ['משרוקית', 'מפתחות', 'מגבת', 'שעון עצר'], say: '*פייייייי!* ...סליחה. רפלקס.' },
   { cat: 'cast', q: 'באיזו תוכנה {@bc} חיה?', a: ['אקסל', 'טיקטוק', 'פוטושופ', 'מיינקראפט'], say: 'יש לה גיליון לכל דבר. גם לגיליונות.' },
+  { cat: 'cast', q: 'מה {@bc} שומעת בסוף יום ארוך?', a: ['שופן', 'מזרחית בווליום', 'פודקאסט על אקסל', 'את הסירנה'], say: 'שופן. ובגלל זה קריוקי מפיל אותה. מדע.' },
+  { cat: 'cast', q: 'מה {@deputy_bc} צועקת כשצריך מהר?', a: ['"דבאי!"', '"יאללה!"', '"ואמוס!"', '"צ\'יק צ\'אק!"'], say: 'דבאי זה "יאללה". בליסטרו זה "מהר". ביחד זה "עכשיו".' },
   { cat: 'cast', q: 'מי מלכת מסדרי הניקיון?', a: ['{@inspector}', '{@sergeant}', '{@commander}', '{@p_hila}'], say: 'היא ישנה עם פנס. בשביל השערות.' },
   { cat: 'cast', q: 'מי המלכה של הפלגה?', a: ['{@sergeant}', '{@inspector}', '{@p_miriam}', '{@hamalist}'], say: 'אני! מי עוד? 👑 תודה, תודה, אין צורך במחיאות כפיים. ...טוב, יש.' },
   { cat: 'cast', q: 'מתי {@hamalist} מפסיקה לדבר?', a: ['אף פעם', 'ב־22:00', 'בשבת', 'כשהיא ישנה'], say: 'גם כשהיא ישנה. בדקנו.' },
-  { cat: 'cast', q: 'מה הכינוי של {@commander}?', a: ['"שני ארונות"', '"הפנס"', '"שקשוקה"', '"המיירטת"'] },
-  { cat: 'cast', q: 'מי בפלגה הוא "המשוגעת הרשמית"?', a: ['{@p_hila}', '{@p_rotem}', '{@p_shaked}', '{@p_miriam}'] },
-  { cat: 'cast', q: 'מה {@harasar} הכי אוהב לבדוק?', a: ['את התלבושת', 'את המטבח', 'את הנשקים', 'את מזג האוויר'], say: 'חוגר, נעליים, גילוח. ובסוף — מחילה, אם {@sarsap} חותם[/ת].' },
+  { cat: 'cast', q: 'כמה מים {@p_ofek} שותה במשמרת?', a: ['שלושה ליטר', 'כוס אחת', 'אף טיפה, רק אנרגיה', 'ליטר וחצי'], say: 'ואין שירותים בעמדה. תחשבו על זה רגע.' },
+  { cat: 'cast', q: 'מה הכינוי של {@commander}?', a: ['"שני ארונות"', '"הפנס"', '"שקשוקה"', '"המיירטת"'], say: 'אחד לציוד, ואחד לציוד שהיא מחרימה ממך.' },
+  { cat: 'cast', q: 'מי בפלגה "לא משוגעת, רק מרובת אנרגיות"?', a: ['{@p_hila}', '{@p_rotem}', '{@p_shaked}', '{@p_miriam}'], say: 'ככה כתוב בטופס. אז זה רשמי.' },
+  { cat: 'cast', q: 'מה {@harasar} הכי אוהב לבדוק?', a: ['את התלבושת', 'את המטבח', 'את הנשקים', 'את מזג האוויר'], say: 'חוגר, נעליים, גילוח. ובסוף — עוד פעם חוגר.' },
   { cat: 'lore', q: 'ממה צ\'יזבורגרו הכי מפחד?', a: ['אוכל בריא', 'שמירות', 'מים קרים', '{@harasar}'], say: 'ברוקולי! גזר! פריכיות! *צ\'יזבורגרו בוכה בפינה*' },
-  { cat: 'lore', q: 'מה זורקים על {@hamalist} כשצומחות לה כנפיים?', a: ['ריטלין, מרדים ומחסום פה', 'קפה, קפה וקפה', 'פיתות עם חריף', 'אטמי אוזניים'] },
-  { cat: 'lore', q: 'מה מביס את {@harasar} בקרב?', a: ['תלבושת מושלמת', 'בדיחה טובה', 'גפילטע פיש', 'שיר של אייל גולן'] },
+  { cat: 'lore', q: 'למה {@deputy_rasap} הופך כשמשהו נשבר בו?', a: ['צ\'יזבורגרו', 'מפלצת נהלים', 'נץ מדבר', 'פלאפל מעופף'], say: 'מפלצת צ\'יזבורגר ענקית. עם שומשום על הכתפיים.' },
+  { cat: 'lore', q: 'מה זורקים על {@hamalist} כשצומחות לה כנפיים?', a: ['ריטלין, מרדים ומחסום פה', 'קפה, קפה וקפה', 'פיתות עם חריף', 'אטמי אוזניים'], say: 'ואז, בפעם הראשונה בהיסטוריה — שקט בחמ"ל.' },
+  { cat: 'lore', q: 'מה מביס את {@harasar} בקרב?', a: ['תלבושת מושלמת', 'בדיחה טובה', 'גפילטע פיש', 'קריוקי וגרעינים'], say: 'נעליים מצוחצחות, כומתה מקופלת, גילוח וחוגר. ופתאום אין לו מה להגיד.' },
   { cat: 'lore', q: 'מה {@bc} זורקת כשהיא הופכת לענקית?', a: ['גפילטע פיש', 'דו"חות', 'צ\'יזבורגרים', 'בלונים'], say: 'ומה מביס אותה? קריוקי וגרעינים שחורים. מתבקש.' },
-  { cat: 'lore', q: 'איך כולם קוראים לאתר ליד נתיבות?', a: ['נתיבוט', 'נתיבולנד', 'הגבעה', 'החולית'] },
-  { cat: 'lore', q: 'מה זה פלג"צ?', a: ['הפלגה הצעירה', 'פלוגת צנחנים', 'פלאפל, גלידה, צ\'יפס', 'פיקוד לוגיסטי צבאי'] },
+  { cat: 'lore', q: 'איך כולם קוראים לאתר ליד נתיבות?', a: ['נתיבוט', 'נתיבולנד', 'הגבעה', 'החולית'], say: 'נתיבוט. כמו המשחק. צירוף מקרים מוחלט.' },
+  { cat: 'lore', q: 'מה זה פלג"צ?', a: ['הפלגה הצעירה', 'פלוגת צנחנים', 'פלאפל, גלידה, צ\'יפס', 'פיקוד לוגיסטי צבאי'], say: 'פלאפל, גלידה וצ\'יפס — רק בסופ"ש.' },
+  { cat: 'lore', q: 'כמה ימים נמשך פלג"צ?', a: ['חמישה', 'שבוע וחצי', 'חודש', 'עד ש{@harasar} מרוצה'], say: 'רשמית — חמישה. רגשית — שנה.' },
+  { cat: 'lore', q: 'כמה נקודות צריך בציון פלג"צ כדי לעבור?', a: () => [`${DATA.passScore}`, `${DATA.passScore * 2}`, `${Math.round(DATA.passScore / 3)}`, 'מיליון'], say: 'ולעבור 3 מתוך 4 חלקי מבחן הסיום. אין הנחות.' },
   { cat: 'lore', q: () => `בנתיבות, כמה זמן יש מהאזעקה עד שצריך להיות במיגונית?`, a: () => [`${DATA.redAlertSeconds} שניות`, `${DATA.redAlertSeconds * 2} שניות`, 'דקה וחצי', '5 שניות'], say: 'ובלי צרחות. {@commander} ביקשה.' },
   { cat: 'lore', q: 'מה {@cur_ortal} עושה ליד השער?', a: ['מצלמת סטורי', 'מוכרת פלאפל', 'מחפשת את הרס"פ', 'עושה ש"ג'], say: 'עם מיקום והכל. ...זה עלה לייב.', need: 'cur_ortal' },
   { cat: 'dome', q: 'איך נקרא הטיל המיירט של כיפת ברזל?', a: ['תמיר', 'חץ', 'פטריוט', 'שרביט'], say: 'תמיר! וכל אחד עולה יותר מהמכונית של אבא שלך.' },
-  { cat: 'dome', q: 'מה כיפת ברזל עושה לרקטה שתיפול בשטח פתוח?', a: ['נותנת לה ליפול', 'מיירטת פעמיים, ליתר ביטחון', 'שולחת הודעה לחמ"ל', 'מצלמת לסטורי'], say: 'חבל על התמיר. מאה אלף דולר זה לא צחוק.' },
-  { cat: 'dome', q: 'כמה מיירטים יש במשגר אחד של כיפת ברזל?', a: ['20', '4', '7', '100'] },
+  { cat: 'dome', q: 'מה כיפת ברזל עושה לרקטה שתיפול בשטח פתוח?', a: ['נותנת לה ליפול', 'מיירטת פעמיים, ליתר ביטחון', 'שולחת הודעה לחמ"ל', 'מצלמת לסטורי'], say: 'חבל על התמיר. {@bc} כבר פתחה על זה גיליון.' },
+  { cat: 'dome', q: 'כמה מיירטים יש במשגר אחד של כיפת ברזל?', a: ['20', '4', '7', '100'], say: 'עשרים. במשחקון קיבלת רק 16 — {@bc} עשתה תקציב.' },
   { cat: 'dome', q: 'מי מפתחת את כיפת ברזל?', a: ['רפאל', 'אלביט', 'אינטל', 'תנובה'], say: 'תנובה מפתחת קוטג\'. זה גם חשוב. אבל לא.' },
-  { cat: 'dome', q: 'באיזו שנה כיפת ברזל יירטה רקטה בפעם הראשונה?', a: ['2011', '2006', '2016', '1999'] },
-  { cat: 'dome', q: 'מה התפקיד של המכ"ם בסוללה?', a: ['לגלות ולעקוב אחרי האיום', 'לחמם את הקפה', 'לצלם את השער', 'לקלוט רדיו'] },
-  { cat: 'dome', q: 'איזו מערכת מיירטת טילים בליסטיים ארוכי טווח?', a: ['חץ', 'כיפת ברזל', 'תמיר', 'מגן דוד אדום'] },
-  { cat: 'dome', q: 'מה צבע הכומתה של חיל האוויר?', a: ['כחולה־אפורה', 'ירוקה', 'חומה', 'סגולה'] },
+  { cat: 'dome', q: 'באיזו שנה כיפת ברזל יירטה רקטה בפעם הראשונה?', a: ['2011', '2006', '2016', '1999'], say: 'אפריל 2011. מאז — אלפי יירוטים. ואף יונה. ...כמעט.' },
+  { cat: 'dome', q: 'מה התפקיד של המכ"ם בסוללה?', a: ['לגלות ולעקוב אחרי האיום', 'לחמם את הקפה', 'לצלם את השער', 'לקלוט רדיו'], say: 'הוא רואה הכל. כמו {@inspector}, רק בלי להעיר.' },
+  { cat: 'dome', q: 'איזו מערכת מיירטת טילים בליסטיים ארוכי טווח?', a: ['חץ', 'כיפת ברזל', 'תמיר', 'מגן דוד אדום'], say: 'חץ למעלה, כיפה באמצע, ואנחנו — למטה, במיגונית.' },
+  { cat: 'dome', q: 'מה צבע הכומתה של חיל האוויר?', a: ['כחולה־אפורה', 'ירוקה', 'חומה', 'סגולה'], say: 'חומה זה גולני. {@p_shalev}, תפסיק לחלום.' },
+  { cat: 'dome', q: 'מה זה כטב"ם?', a: ['כלי טיס בלתי מאויש', 'כלי טיס בלי מזגן', 'כמה טילים, בערך, מחר', 'כיפה טובה, ברזל מצוין'], say: 'בלתי מאויש. כמו המטבח בשבת בבוקר.' },
+  { cat: 'dome', q: 'מה זה "מטח"?', a: ['הרבה רקטות בבת אחת', 'רקטה אחת גדולה במיוחד', 'הפסקת קפה בחמ"ל', 'מסדר ניקיון מפתיע'], say: '{@hamalist} קוראת לזה "יום שלישי".' },
   { cat: 'dome', q: 'מה עושים כשיש צבע אדום?', a: ['רצים למיגונית', 'מצלמים את השמיים', 'ממשיכים לאכול', 'מתקשרים לאמא'], say: 'קודם מיגונית. אמא — אחרי.' },
-  { cat: 'dome', q: 'איך קוראים למבנה הבטון הקטן שרצים אליו באזעקה?', a: ['מיגונית', 'מכולה', 'ש"ג', 'קנטינה'] },
+  { cat: 'dome', q: 'איך קוראים למבנה הבטון הקטן שרצים אליו באזעקה?', a: ['מיגונית', 'מכולה', 'ש"ג', 'קנטינה'], say: 'מיגונית. הנכס הכי מבוקש בנתיבות. גם בלי נוף.' },
 ];
 const QUIZ_COLORS = [
   { c: '#e8392b', dark: '#7a1a12', icon: '✦', hex: 0xe8392b },
@@ -156,7 +165,7 @@ const QuizGame = {
     g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(10, 12, W - 20, 54);
     g.direction = 'rtl'; g.textAlign = 'center';
     g.fillStyle = '#fff'; g.font = '800 34px Rubik, Arial';
-    g.fillText(c.name.slice(0, 12), W / 2, 52);
+    g.fillText((c.gone ? '🚪 ' : '') + c.name.slice(0, c.gone ? 10 : 12), W / 2, 52);
     g.font = '900 72px Rubik, Arial';
     g.fillStyle = '#fff'; g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 6;
     const s = String(Math.round(c.shown));
@@ -171,13 +180,14 @@ const QuizGame = {
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
     g.strokeStyle = 'rgba(255,179,71,.85)'; g.lineWidth = 8; g.strokeRect(4, 4, W - 8, H - 8);
     g.direction = 'rtl'; g.textAlign = 'center';
+    // Kept to the lower part: on a phone the question box covers the top of the screen.
     g.fillStyle = '#ffd23f'; g.font = '900 64px Rubik, Arial';
-    g.fillText(text, W / 2, 110);
+    g.fillText(text, W / 2, 126);
     g.fillStyle = '#e6ecff'; g.font = '700 30px Rubik, Arial';
-    g.fillText(sub, W / 2, 160);
+    g.fillText(sub, W / 2, 172);
     if (frac != null) {
-      g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(60, 188, W - 120, 14);
-      g.fillStyle = frac < 0.25 ? '#ff5a4a' : '#ffd23f'; g.fillRect(60 + (W - 120) * (1 - frac), 188, (W - 120) * frac, 14);
+      g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(60, 192, W - 120, 14);
+      g.fillStyle = frac < 0.25 ? '#ff5a4a' : '#ffd23f'; g.fillRect(60 + (W - 120) * (1 - frac), 192, (W - 120) * frac, 14);
     }
     this.screenTex.needsUpdate = true;
   },
@@ -192,6 +202,33 @@ const QuizGame = {
       j.position.set(Math.cos(a) * 0.13, 0.0, Math.sin(a) * 0.13); g.add(j);
     }
     return g;
+  },
+
+  // The crown sits on the host's head, whatever her height: on the top of her model, pinned to
+  // the head bone so it bobs with her.
+  crownHost(m, cr) {
+    const root = m.root, body = (m.lean && m.lean.children[0]) || root;
+    root.updateMatrixWorld(true);
+    let head = null;
+    root.traverse(o => { if (!head && o.isBone && /head(?!.*(end|top))/i.test(o.name)) head = o; });
+    const hp = head ? head.getWorldPosition(new THREE.Vector3()) : new THREE.Vector3(0, 1.6, 0);
+    // The highest point of the (skinned) model right over the head.
+    let top = -Infinity;
+    const v = new THREE.Vector3();
+    body.traverseVisible(o => {
+      const pos = o.isMesh && o.geometry && o.geometry.attributes.position;
+      if (!pos) return;
+      const step = Math.max(1, Math.floor(pos.count / 6000));
+      for (let i = 0; i < pos.count; i += step) {
+        if (o.isSkinnedMesh) o.boneTransform(i, v); else v.fromBufferAttribute(pos, i);
+        v.applyMatrix4(o.matrixWorld);
+        if (v.y > top && Math.hypot(v.x - hp.x, v.z - hp.z) < 0.22) top = v.y;
+      }
+    });
+    if (!isFinite(top) || top < hp.y) top = hp.y + 0.2;
+    cr.position.copy(root.worldToLocal(new THREE.Vector3(hp.x, top - 0.03, hp.z)));
+    root.add(cr);
+    if (head) head.attach(cr);
   },
 
   // ---------- a round ----------
@@ -213,7 +250,7 @@ const QuizGame = {
     });
     // The contestants: online, everyone in the game; alone, you and three from the platoon.
     const list = ctx.solo
-      ? [{ who: null, name: G.profile.name, isMe: true }, ...Arcade.bots(3, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, skill: 0.45 + rnd() * 0.3 }))]
+      ? [{ who: null, name: G.profile.name, isMe: true }, ...Arcade.bots(3, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, skill: 0.4 + rnd() * 0.3 }))]
       : ctx.players.slice(0, 6).map(p => ({ who: p.isMe ? null : (Cast.get(p.who) ? p.who : null), name: p.name, isMe: p.isMe, peer: p.peer }));
     const n = list.length, span = this.span = Math.min(11, 2.3 * (n - 1));
     this.cs = list.map((c, i) => {
@@ -227,23 +264,28 @@ const QuizGame = {
     this.cs.forEach(c => this.drawPanel(c));
     // The host, stage right, with her crown; the officer heckles from the wings.
     this.host = Arcade.soldier(this.scene, Arcade.look('sergeant'));
-    const cr = this.crown(); cr.position.y = 1.86; this.host.root.add(cr);
+    this.crownHost(this.host, this.crown());
     this.hostX = span / 2 + 1.9;
-    this.qi = -1; this.stage = 'intro'; this.t0 = null; this.lastKeys = new Set(); this.ticked = -1;
+    this.qi = -1; this.stage = 'intro'; this.t0 = null; this.ticked = -1;
     this.buildUi();
+    // Keys 1-4 (and the numpad) answer, straight from the key event so a quick tap counts.
+    if (!this.onKey) this.onKey = (e) => { const m = /^(Digit|Numpad)([1-4])$/.exec(e.code); if (m && !e.repeat && Arcade.active === this && !Settings.isOpen()) this.answer(+m[2] - 1); };
+    removeEventListener('keydown', this.onKey);
+    addEventListener('keydown', this.onKey);
     document.body.classList.add('qz-on');
     Arcade.buttons({ act: false, run: false });
     this.drawScreen('🎤', 'הבוחן של הפלגה', null);
-    this.ui.q.innerHTML = `<div class="qz-text">${fmt(pick(QUIZ_HOST.intro))}</div><div class="qz-hint">10 שאלות · מהר = יותר נקודות · 1-4 במקלדת · האחרונה שווה כפול</div>`;
+    this.ui.q.innerHTML = `<div class="qz-text">${fmt(pick(QUIZ_HOST.intro))}</div><div class="qz-hint">10 שאלות · מהר = יותר נקודות · ${G.touch ? 'נוגעים בתשובה' : '1-4 במקלדת או קליק'} · האחרונה שווה כפול</div>`;
     Sound.music('boss');
-    Arcade.countdown(performance.now() + (ctx.solo ? 4200 : 3200), () => { this.t0 = performance.now(); }, '🎤!');
+    Arcade.countdown(performance.now() + (ctx.solo ? 4200 : 3200), () => { if (Arcade.active === this && this.stage === 'intro') this.t0 = performance.now(); }, '🎤!');
     this.camT = 0;
   },
   clear() {
     for (const c of this.cs || []) { this.scene.remove(c.pod.g); this.scene.remove(c.m.root); }
     if (this.host) this.scene.remove(this.host.root);
     for (const f of this.confetti) { f.live = false; f.m.visible = false; }
-    this.cs = []; this.host = null;
+    for (const p of this.pops || []) { this.scene.remove(p.s); p.s.material.map.dispose(); p.s.material.dispose(); }
+    this.cs = []; this.host = null; this.pops = [];
   },
   buildUi() {
     const h = Arcade.hud(`<div class="qz">
@@ -268,7 +310,8 @@ const QuizGame = {
         const p = q.cat === 'cast' ? c.skill - 0.08 : c.skill;
         const right = Math.random() < p;
         c.botAns = right ? q.right : [0, 1, 2, 3].filter(k => k !== q.right)[Math.floor(Math.random() * 3)];
-        c.botAt = 2 + Math.random() * (right ? 6.5 : 8.5);
+        // Now and then one of them just freezes and doesn't answer at all.
+        c.botAt = Math.random() < 0.07 ? 99 : 2 + Math.random() * (right ? 6.5 : 8.5);
       }
     }
     const last = i === this.N - 1;
@@ -360,19 +403,14 @@ const QuizGame = {
   // ---------- each frame ----------
   update(dt, t) {
     const now = performance.now();
-    // Keys 1-4 (and the numpad) answer.
-    const keys = G.keys;
-    for (let k = 0; k < 4; k++) {
-      const down = keys.has('Digit' + (k + 1)) || keys.has('Numpad' + (k + 1));
-      if (down && !this.lastKeys.has(k)) this.answer(k);
-      if (down) this.lastKeys.add(k); else this.lastKeys.delete(k);
-    }
     if (this.t0 != null && this.stage !== 'done') {
       const total = (now - this.t0) / 1000, slot = this.QT + this.RV;
       const qi = Math.floor(total / slot), inQ = total - qi * slot;
-      if (qi >= this.N) this.finish();
+      // (A long hitch, or the phone sleeping, can jump past a reveal: it still happens, so the
+      // answer you gave still counts.)
+      if (qi >= this.N) { if (this.stage === 'ask') this.reveal(); this.finish(); }
       else {
-        if (qi !== this.qi) this.showQuestion(qi);
+        if (qi !== this.qi) { if (this.stage === 'ask') this.reveal(); this.showQuestion(qi); }
         if (this.stage === 'ask') {
           const left = this.QT - inQ;
           for (const c of this.cs) {
@@ -397,7 +435,7 @@ const QuizGame = {
       if (c.peer) {
         const o = Arcade.others().find(x => x.peer === c.peer);
         if (o && o.s && o.s.sc != null) c.score = o.s.sc;
-        if (!o && !c.gone) { c.gone = true; c.name += ' (יצא)'; this.drawPanel(c); }
+        if (!o && !c.gone) { c.gone = true; this.drawPanel(c); }
       }
       if (c.shown !== c.score) {
         c.shown = Math.min(c.score, c.shown + Math.max(10, (c.score - c.shown) * dt * 4));
@@ -490,7 +528,7 @@ const QuizGame = {
   results() {
     const rows = this.ranking().map(c => ({ name: c.name, value: `${c.score} נק'`, me: c.isMe }));
     const me = rows.findIndex(r => r.me);
-    const sub = me === 0 ? fmt('{@sergeant}: "מלך[/ה] של הבוחן! 👑 מגיעה לך כתר. ...שלי לא."') : me === rows.length - 1 ? fmt('{@commander}: "מקום אחרון. אני מצפה לראות אותך בשיעור חינוך."') : fmt('{@sergeant}: "לא רע! בפעם הבאה — פחות לנחש, יותר ללמוד."');
+    const sub = me === 0 ? fmt('{@sergeant}: "מלך[/ה] של הבוחן! 👑 מגיע לך כתר. ...לא שלי."') : me === rows.length - 1 ? fmt('{@commander}: "מקום אחרון. אני מצפה לראות אותך בשיעור חינוך."') : fmt('{@sergeant}: "לא רע! בפעם הבאה — פחות לנחש, יותר ללמוד."');
     Arcade.results('🎤 הבוחן של הפלגה', rows, { sub, img: 'assets/arcade/win_quiz.jpg' });
   },
 
@@ -505,8 +543,7 @@ const QuizGame = {
   act() {},
   leave() {
     document.body.classList.remove('qz-on');
-    for (const p of this.pops || []) this.scene.remove(p.s);
-    this.pops = [];
+    removeEventListener('keydown', this.onKey);
     this.clear();
     this.t0 = null; this.stage = null;
   },

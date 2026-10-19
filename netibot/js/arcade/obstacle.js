@@ -8,13 +8,19 @@ const OBST_LINES = {
   start: ['{@madag}: "*שורקת* על הקו! מי שאחרון — עושה את זה עוד פעם!"', '{@madag}: "שלושים שניות! ...טוב, ארבעים. אבל זה הגבול!"'],
   trip: ['אאוץ\'!', 'הצמיג!', '😵'],
   hurdle: ['בום! לקפוץ!', 'המשוכה ניצחה'],
-  stuck: ['נתקע[/ה] ברשת! לזחול!', 'למטה! לזחול! (⬇️)'],
+  stuck: ['נתקע[/ה] ברשת! לזחול!', 'למטה! על הבטן!'],
   fall: ['🌊 שפלאש!', 'לבוץ!', 'הקורה ניצחה'],
-  wall: ['לטפס! (E E E)', 'יד, רגל, יד!'],
+  wall: ['לטפס! לטפס! לטפס!', 'יד, רגל, יד!'],
   finish: ['{@madag}: "*שריקה ארוכה* יפה! ...אבל יכולת יותר מהר."', '{@madag}: "זה מה שנקרא כושר קרבי!"'],
+  dnf: ['{@madag}: "לא סיימת? אין דבר. מחר בחמש בבוקר — שוב."', '{@madag}: "המסלול לא הולך לשום מקום. גם את[ה/] לא, עד שתסיימ[/י]."'],
   crowd: ['{@p_shaked}: "יאללה! עוד קצת! ברוקולי!"', '{@p_hila}: "קדימה!!! אני משוגעת עלייך!!!"', '{@p_liran}: "אוגה! אוגה! אוגה!"', '{@p_ofek}: "תשתה משהו! פחית?"'],
 };
 const OBST_LANES = [-4.8, -1.6, 1.6, 4.8];
+// What the next obstacle wants, on the keyboard and on the phone's buttons.
+const OBST_HINTS = {
+  keys: { tires: 'רווח — לקפוץ מעל הצמיגים!', hurdles: 'רווח — לקפוץ מעל המשוכות!', net: '⬇️ להחזיק — לזחול מתחת לרשת!', mud: '🟫 בוץ! להמשיך לדחוף!', beam: '⬅️➡️ שיווי משקל!', wall: '🧱 קיר — רווח מהר!', climbing: '🧱 רווח! רווח! רווח!', bars: '🤸 מתח — רווח בקצב!', barring: '🤸 רווח! [אל תיפול/אל תיפלי]!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' },
+  touch: { tires: '🦘 קפיצה — מעל הצמיגים!', hurdles: '🦘 קפיצה — מעל המשוכות!', net: '🐛 להחזיק זחילה — מתחת לרשת!', mud: '🟫 בוץ! להמשיך לדחוף!', beam: '🕹️ ימינה/שמאלה — שיווי משקל!', wall: '🧱 קיר — קפיצה מהר!', climbing: '🧱 קפיצה! קפיצה! קפיצה!', bars: '🤸 מתח — קפיצה בקצב!', barring: '🤸 קפיצה! [אל תיפול/אל תיפלי]!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' },
+};
 
 const ObstacleGame = {
   id: 'obstacle', name: 'מסלול המכשולים של {@madag}', icon: '🏃‍♂️',
@@ -108,12 +114,13 @@ const ObstacleGame = {
       }
       if (s.type === 'finish') {
         // The finish arch (Higgsfield) and a red ribbon across all lanes.
-        const arch = Assets.model('arc_arch', { length: lanesW + 2 });
+        const arch = Assets.model('arc_arch', { length: lanesW + 12 });
         if (arch) { arch.position.set(0, 0, -s.z0); C.add(arch); }
         this.ribbon = add(new THREE.BoxGeometry(lanesW, 0.12, 0.04), M.red, 0, 1.15, s.z0);
       }
     }
-    const startArch = Assets.model('arc_arch', { length: lanesW + 2 });
+    // Wide enough that its posts stand outside the outer lanes, out of the camera's face.
+    const startArch = Assets.model('arc_arch', { length: lanesW + 12 });
     if (startArch) { startArch.position.set(0, 0, -2); C.add(startArch); }
     // Bunting along the sides.
     for (const side of [-1, 1]) for (let z = 0; z < this.len + 10; z += 6) {
@@ -143,19 +150,36 @@ const ObstacleGame = {
       m.root.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.userData.c0 = o.material.color.clone(); } });
       const tag = Scene3D.label(c.isMe ? `⭐ ${c.name}` : c.name, { bg: c.isMe ? 'rgba(242,193,46,.95)' : 'rgba(20,26,16,.8)', fg: c.isMe ? '#1b1b1b' : '#f4f1e6', size: 0.5 });
       tag.position.y = 2.3; m.root.add(tag);
-      return { ...c, m, lane: i, x: OBST_LANES[i], z: 0, y: 0, vy: 0, v: 0, mode: 'run', stun: 0, mud: 0, bal: 0, climb: 0, bar: 0, barT: 0, fin: 0, tripZ: -1, hitZ: -1 };
+      return { ...c, m, tag, lane: i, x: OBST_LANES[i], z: 0, y: 0, vy: 0, v: 0, mode: 'run', stun: 0, mud: 0, bal: 0, climb: 0, bar: 0, barT: 0, fin: 0, tripZ: -1, hitZ: -1 };
     });
     this.me = this.rs.find(r => r.isMe);
     // The PT instructor at the finish, whistle in hand, and a few from the platoon cheering.
     this.madag = Arcade.soldier(this.scene, Arcade.look('madag'));
     this.fans = Arcade.bots(4, rnd).map((b, i) => ({ m: Arcade.soldier(this.scene, Arcade.look(b.id)), x: (i % 2 ? 8.6 : -8.6), z: 20 + i * 22 }));
-    this.t = 0; this.started = false; this.done = false; this.lastE = false; this.lineT = 5;
+    this.t = 0; this.started = false; this.done = false; this.lastE = false; this.lineT = 5; this.ribbonCut = false; this.nagged = false; G.shake = 0;
     this.ui();
     Arcade.buttons({ act: 'קפיצה', run: 'זחילה' });
+    this.bindCrawl();
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>🏃‍♂️ מסלול המכשולים של {@madag}</h2>
       <p class="ar-sub">${G.touch ? 'ג\'ויסטיק למעלה — לרוץ · קפיצה — לקפוץ/לטפס/להתקדם במתח · זחילה (להחזיק) — מתחת לרשת · ימינה/שמאלה — שיווי משקל על הקורה' : '⬆️ / W — לרוץ · רווח / E — לקפוץ, לטפס על הקיר, להתקדם במתח · ⬇️ / S (להחזיק) — לזחול מתחת לרשת · ⬅️ ➡️ — שיווי משקל על הקורה'}</p>`);
     Sound.music('day');
     Arcade.countdown(performance.now() + (ctx.solo ? 4800 : 3400), () => { Arcade.panel(''); this.started = true; Sound.whistle(); Arcade.say(fmt(pick(OBST_LINES.start)), null, 2600); }, '🏁!');
+  },
+  // The phone's second button is a toggle everywhere else (run); here it's held to crawl.
+  bindCrawl() {
+    const b = $('#t-run');
+    this.crawlHeld = false;
+    if (!b || this.crawlOn) return;
+    this.runWas = G.touchRun;
+    this.crawlOn = (e) => { this.crawlHeld = e.type === 'pointerdown'; G.touchRun = false; b.classList.toggle('on', this.crawlHeld); };
+    for (const ev of ['pointerdown', 'pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, this.crawlOn);
+  },
+  unbindCrawl() {
+    const b = $('#t-run');
+    if (b && this.crawlOn) for (const ev of ['pointerdown', 'pointerup', 'pointercancel', 'pointerleave']) b.removeEventListener(ev, this.crawlOn);
+    this.crawlOn = null; this.crawlHeld = false;
+    G.touchRun = !!this.runWas;
+    if (b) b.classList.toggle('on', G.touchRun);
   },
   clear() {
     for (const r of this.rs || []) this.scene.remove(r.m.root);
@@ -170,7 +194,7 @@ const ObstacleGame = {
   update(dt) {
     if (this.started && !this.done) this.t += dt;
     const inp = Arcade.input(), keys = G.keys;
-    const crawl = !!(keys.has('ArrowDown') || keys.has('KeyS') || G.touchRun || (G.stick.y || 0) > 0.5);
+    const crawl = !!(keys.has('ArrowDown') || keys.has('KeyS') || this.crawlHeld || (G.stick.y || 0) > 0.5);
     const pressed = inp.held && !this.lastE;
     this.lastE = inp.held;
     for (const r of this.rs) {
@@ -182,8 +206,15 @@ const ObstacleGame = {
     }
     this.lineT -= dt;
     if (this.lineT <= 0 && this.started && !this.done) { this.lineT = 6 + Math.random() * 5; Arcade.say(fmt(pick(OBST_LINES.crowd)), null, 2200); }
-    // Finished when everyone local is over the line (or the timer runs long).
+    // Finished when everyone local is over the line (or the timer runs long). If you're the
+    // last one out there, she waits a bit, nags, and then calls it.
     if (!this.done && this.started && this.me.fin && (this.rs.every(r => r.fin || r.peer) || this.t > this.me.fin + 12)) this.finish();
+    const others = this.rs.filter(r => !r.isMe);
+    if (!this.done && this.started && !this.me.fin && others.length && others.every(r => r.fin)) {
+      const last = Math.max(...others.map(r => r.fin));
+      if (!this.nagged && this.t > last + 12) { this.nagged = true; Arcade.say(fmt('{@madag}: "נו?! כולם כבר בשקם! עוד עשר שניות ואני סוגרת את המסלול!"'), null, 3200); Sound.whistle(); }
+      if (this.t > last + 24) { Arcade.big('⏱️ נגמר הזמן', 1400); this.finish(); }
+    }
     this.animate(dt);
     this.hud();
     if (this.done && this.resultsAt && performance.now() > this.resultsAt) { this.resultsAt = null; this.results(); }
@@ -212,8 +243,6 @@ const ObstacleGame = {
       else if (r.z > bs.z1) { r.mode = 'run'; r.y = 0; r.z = bs.z1 + 0.6; }
       return;
     }
-    if (type === 'wall' && r.z >= s.z0 + 1.4 && r.z < s.z0 + 2.4 && r.mode === 'run' && r.y < 2) { r.mode = 'climb'; r.climb = 0; r.v = 0; r.z = s.z0 + 1.55; if (r.isMe) Arcade.say(fmt(pick(OBST_LINES.wall)), null, 1600); return; }
-    if (type === 'bars' && r.z >= s.z0 && r.z < s.z0 + 0.6 && r.mode === 'run') { r.mode = 'bars'; r.barS = s; r.barT = 0; r.v = 0; return; }
     // Running: forward input, slowed by mud, the net, a stumble.
     const want = c.fwd > 0.1 ? top * Math.min(1, c.fwd + 0.2) * (r.skill && !r.isMe ? r.skill : 1) : 0;
     let mult = 1;
@@ -229,6 +258,11 @@ const ObstacleGame = {
     r.vy -= 16 * dt; r.y = Math.max(0, r.y + r.vy * dt); if (r.y === 0) r.vy = 0;
     const z0 = r.z;
     r.z += r.v * dt;
+    // The wall and the monkey bars stop you where they start, however long the frame was.
+    for (const q of this.sections) {
+      if (q.type === 'wall' && z0 < q.z0 + 1.55 && r.z >= q.z0 + 1.55 && r.y < 2) { r.mode = 'climb'; r.climb = 0; r.v = 0; r.z = q.z0 + 1.55; if (r.isMe) Arcade.say(fmt(pick(OBST_LINES.wall)), null, 1600); return; }
+      if (q.type === 'bars' && z0 < q.z0 + 0.1 && r.z >= q.z0 + 0.1) { r.mode = 'bars'; r.barS = q; r.barT = 0; r.v = 0; r.z = q.z0 + 0.1; r.vy = 0; return; }
+    }
     // The beam: keep your balance with left/right or fall in.
     if (type === 'beam' && r.z > s.z0 && r.z < s.z1) {
       r.bal += (Math.sin(this.t * 2.3 + r.lane) * 0.9 + (Math.random() - 0.5) * 2.4) * dt * (0.5 + r.v / 7) - c.side * dt * 2.6;
@@ -238,8 +272,10 @@ const ObstacleGame = {
     } else r.bal *= 0.9;
     // Tires: on the ground over a row without jumping — a stumble.
     if (type === 'tires') for (let z = s.z0 + 1.5; z < s.z1; z += 2) if (z0 < z && r.z >= z && r.y < 0.25 && r.tripZ !== z) { r.tripZ = z; r.stun = 0.45; r.v *= 0.3; if (r.isMe) { this.pop(r, pick(OBST_LINES.trip)); Sound.bump(); } }
-    // Hurdles: into the bar — bounced back.
-    if (type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) if (z0 < z - 0.3 && r.z >= z - 0.3 && r.y < 1.0 && r.hitZ !== z) { r.hitZ = z; r.z = z - 1.2; r.v = 0; r.stun = 0.6; if (r.isMe) { this.pop(r, pick(OBST_LINES.hurdle)); Sound.bump(); G.shake = 0.3; } }
+    // Hurdles: into the bar — bounced back. (A jump peaks just under a meter; the bar's top is
+    // at about that, and the feet tuck up, so anything over 0.6 clears it.)
+    if (type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) if (z0 < z - 0.3 && r.z >= z - 0.3 && r.y < 0.6 && r.hitZ !== z) { r.hitZ = z; r.z = z - 1.2; r.v = 0; r.stun = 0.6; if (r.isMe) { this.pop(r, pick(OBST_LINES.hurdle)); Sound.bump(); G.shake = 0.3; } }
+      else if (z0 < z - 0.3 && r.z >= z - 0.3 && r.isMe && r.hitZ !== z) { r.hitZ = z; Sound.synth.tone(660, 0.08, 'triangle', 0.04, 990); }
     // The slide: up the steps, then fast down into the pool.
     if (type === 'slide') {
       const L = s.z1 - s.z0, u = r.z - s.z0;
@@ -316,6 +352,8 @@ const ObstacleGame = {
     const mudC = new THREE.Color(0x5a3a20);
     for (const r of this.rs) {
       const m = r.m;
+      // Someone just behind you would have their name tag filling the screen.
+      if (r.tag && !r.isMe && this.me) r.tag.visible = r.z > this.me.z - 2;
       const pose = r.mode === 'climb' || r.mode === 'bars' || r.mode === 'fallen' ? 0 : r.v;
       Arcade.pose(m, r.x, -r.z, -Math.PI / 2, pose, dt);
       m.root.position.y = r.y + (r.mode === 'fallen' ? -0.3 : 0);
@@ -364,9 +402,8 @@ const ObstacleGame = {
     e.time.textContent = `⏱️ ${tt.toFixed(1)}`;
     e.bar.querySelectorAll('span').forEach(sp => { const r = this.rs[+sp.dataset.i]; sp.style.right = `${Math.min(100, r.z / this.len * 100)}%`; });
     const s = this.sectionAt(me.z + 2.5), type = me.mode === 'climb' ? 'climbing' : me.mode === 'bars' ? 'barring' : s ? s.type : '';
-    const hint = { tires: '⬆️ לקפוץ מעל הצמיגים!', hurdles: '⬆️ קפיצה מעל המשוכות!', net: '⬇️ לזחול מתחת לרשת!', mud: '🟫 בוץ!', beam: '⬅️➡️ שיווי משקל!', wall: '🧱 קיר — ללחוץ מהר!', climbing: '🧱 ללחוץ מהר מהר מהר!', bars: '🤸 מתח — ללחוץ בקצב!', barring: '🤸 ללחוץ! אל תיפול!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' }[type] || '';
-    const hh = G.touch ? hint.replace('⬆️', 'קפיצה').replace('⬇️', 'זחילה') : hint;
-    if (e.hint.textContent !== hh) { e.hint.textContent = hh; e.hint.classList.remove('pop'); void e.hint.offsetWidth; e.hint.classList.add('pop'); }
+    const hh = (G.touch ? OBST_HINTS.touch : OBST_HINTS.keys)[type] || '';
+    if (e.hint.textContent !== fmt(hh)) { e.hint.textContent = fmt(hh); e.hint.classList.remove('pop'); void e.hint.offsetWidth; e.hint.classList.add('pop'); }
     e.mash.classList.toggle('hidden', me.mode !== 'climb');
     if (me.mode === 'climb') e.mashB.style.width = `${Math.round(me.climb * 100)}%`;
     const onBeam = s && s.type === 'beam' && me.z > s.z0 && me.z < s.z1;
@@ -382,7 +419,9 @@ const ObstacleGame = {
     const best = (G.state.obstacleBest = G.state.obstacleBest || 0);
     const nb = this.me.fin && (!best || this.me.fin < best);
     if (nb) G.state.obstacleBest = this.me.fin;
-    Arcade.results(`🏃‍♂️ מסלול המכשולים של ${fmt('{@madag}')}`, rows, { sub: `${nb ? '⏱️ שיא חדש! ' : best ? `השיא שלך: ${best.toFixed(1)} ש' · ` : ''}${fmt(pick(OBST_LINES.finish))}`, img: 'assets/arcade/win_obstacle.jpg' });
+    // On a phone held sideways the table and the buttons need the room more than the picture.
+    Arcade.buttons({ act: false, run: false });
+    Arcade.results(`🏃‍♂️ מסלול המכשולים של ${fmt('{@madag}')}`, rows, { sub: `${nb ? '⏱️ שיא חדש! ' : best ? `השיא שלך: ${best.toFixed(1)} ש' · ` : ''}${fmt(pick(this.me.fin ? OBST_LINES.finish : OBST_LINES.dnf))}`, img: innerHeight < 500 ? null : 'assets/arcade/win_obstacle.jpg' });
   },
 
   render(renderer) {
@@ -391,6 +430,11 @@ const ObstacleGame = {
   },
   presence() { const r = this.me; return r ? { z: Math.round(r.z * 10) / 10, y: Math.round(r.y * 10) / 10, v: Math.round(r.v * 10) / 10, m: r.mode, c: r.crawl ? 1 : 0, mud: Math.round(r.mud * 10) / 10, b: Math.round(r.bal * 10) / 10, fin: r.fin ? Math.round(r.fin * 10) / 10 : 0 } : null; },
   act() {},
-  leave() { this.clear(); this.el = null; this.ribbonCut = false; this.done = false; this.resultsAt = null; },
+  leave() {
+    // Left during the 3-2-1: drop the countdown, so it can't go off in the next game.
+    if (Arcade.cdGo) { Arcade.cdAt = null; Arcade.cdGo = null; }
+    this.unbindCrawl();
+    this.clear(); this.el = null; this.ribbonCut = false; this.done = false; this.started = false; this.resultsAt = null;
+  },
 };
 Arcade.register(ObstacleGame);

@@ -13,6 +13,7 @@
 // show the real inspector travel encrypted with the cast (Assets.scene('run_insp' | 'run_chase')).
 
 const RUN_LANES = [-2.3, 0, 2.3];
+const RUN_TRIP = 6;   // seconds a stumble counts: a second one in that time and she's got you
 const RUN_POWERS = {
   shoes: { icon: 'assets/arcade/run_sneakers.png', name: 'נעלי מד"ס', dur: 7, say: '{@madag}: "נעלי מד״ס! עכשיו את[ה/] טס[/ה]!"' },
   fly: { icon: 'assets/arcade/run_energy.png', name: 'פחית אנרגיה', dur: 6.5, say: '{@p_ofek}: "הפחית שלי!!! ...טוב, תשאיר[/י] לי חצי."' },
@@ -63,10 +64,11 @@ const RunnerGame = {
       crate: M(0x4f5d32), stripe: M(0xd8261f), white: M(0xf2f2f2), post: M(0x777777, { metalness: 0.5 }),
       lamp: new THREE.MeshBasicMaterial({ color: 0xffe2a0 }), rope: new THREE.LineBasicMaterial({ color: 0xdddddd }),
       sock: [M(0xf2f2f2), M(0x2f7fe0), M(0xd8261f), M(0x222222)], cont: M(0x56653a, { metalness: 0.2 }), ramp: M(0x6a6a5a, { metalness: 0.4 }),
+      gold: new THREE.MeshBasicMaterial({ color: 0xffd23f }),
     };
     this.mat.sand.map.wrapS = this.mat.sand.map.wrapT = THREE.RepeatWrapping; this.mat.sand.map.repeat.set(6, 30);
     this.mat.path.map.wrapS = this.mat.path.map.wrapT = THREE.RepeatWrapping; this.mat.path.map.repeat.set(2, 20);
-    this.geo = { crate: new THREE.BoxGeometry(1.5, 0.9, 1.1), lampPole: new THREE.CylinderGeometry(0.08, 0.1, 5, 6), lampHead: new THREE.BoxGeometry(0.6, 0.25, 0.3), coin: new THREE.CylinderGeometry(0.42, 0.42, 0.1, 22) };
+    this.geo = { crate: new THREE.BoxGeometry(1.5, 0.9, 1.1), lampPole: new THREE.CylinderGeometry(0.08, 0.1, 5, 6), lampHead: new THREE.BoxGeometry(0.6, 0.25, 0.3), coin: new THREE.CylinderGeometry(0.42, 0.42, 0.1, 22), bit: new THREE.BoxGeometry(0.2, 0.2, 0.2) };
     const face = new THREE.TextureLoader().load('assets/race/coin.png'); face.encoding = THREE.sRGBEncoding;
     const fm = new THREE.MeshStandardMaterial({ map: face, metalness: 0.55, roughness: 0.3, emissive: 0x6a4a00, emissiveIntensity: 0.7, transparent: true });
     this.coinMats = [new THREE.MeshStandardMaterial({ color: 0xd9a92e, metalness: 0.8, roughness: 0.3, emissive: 0x4a3400 }), fm, fm];
@@ -87,21 +89,26 @@ const RunnerGame = {
     this.clear();
     Arcade.loadModels(['arc_sandbags', 'arc_dumpster', 'car_van']).then(() => { this.modelsIn = true; });
     this.rnd = Arcade.rng(ctx.seed);
-    this.chunks = []; this.obs = []; this.coins = []; this.powers = []; this.vans = [];
-    this.genZ = 0; this.nextItemAt = 120 + this.rnd() * 60;
+    this.chunks = []; this.obs = []; this.coins = []; this.powers = []; this.segs = [];
+    this.genZ = 0; this.nextItemAt = 90 + this.rnd() * 50; this.laneBusy = [0, 0, 0]; this.lastVanZ = -99;
     this.p = { lane: 1, x: 0, y: 0, vy: 0, z: 0, slide: 0, ground: 0, dead: false, trips: 0, tripT: 0 };
-    this.d = 0; this.speed = 10; this.coinsGot = 0; this.score = 0; this.power = {}; this.helmet = false;
+    this.d = 0; this.prevD = 0; this.speed = 10; this.coinsGot = 0; this.score = 0; this.power = {}; this.helmet = false; this.grace = 0;
     this.chaser = { gap: 6, z: 6 };
-    this.lineT = 4; this.t = 0;
+    this.lineT = 4; this.t = 0; this.fovKick = 0;
+    // A rematch starts clean: the opening's one-time beats, the camera, the bits in the air.
+    this.shout = this.goNow = false; this.look = null; this.inspX = null; this.flyCam = 0; this.bestSaid = false; G.shake = 0;
+    for (const b of this.bits || []) this.scene.remove(b.m);
+    this.bits = [];
     this.stage = 'intro';
     this.me = Arcade.soldier(this.scene, Arcade.look(null));
     this.insp = Arcade.soldier(this.scene, Arcade.look('inspector'));
     // Her flashlight: a real spot light, and a cone of dusty light in front of her.
     const fl = this.flash = new THREE.SpotLight(0xfff2d0, 2.2, 30, 0.45, 0.5, 1.2);
+    // (A soldier's model faces its local +x.)
     fl.position.set(0.3, 1.4, 0.3); this.insp.root.add(fl); this.insp.root.add(fl.target);
-    fl.target.position.set(0, 0, 10);
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(2.4, 9, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    beam.rotation.x = -Math.PI / 2; beam.position.set(0.3, 1.2, 4.8); this.insp.root.add(beam);
+    fl.target.position.set(10, 0, 0);
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(2.4, 9, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: 0.05, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    beam.rotation.z = Math.PI / 2; beam.position.set(4.8, 1.2, 0.3); this.insp.root.add(beam);
     this.ghosts = new Map();
     for (let i = 0; i < 4; i++) this.genChunk();
     this.ui();
@@ -117,6 +124,9 @@ const RunnerGame = {
     if (this.insp) this.scene.remove(this.insp.root);
     for (const g of (this.ghosts || new Map()).values()) this.scene.remove(g.m.root);
     if (this.booth) { this.scene.remove(this.booth); this.booth = null; }
+    for (const k of ['zzz', 'wake']) if (this[k]) { this.scene.remove(this[k]); this[k] = null; }
+    if (this.bub && this.insp) this.insp.root.remove(this.bub);
+    this.bub = null;
     this.chunks = []; this.obs = []; this.coins = []; this.powers = [];
   },
 
@@ -126,13 +136,17 @@ const RunnerGame = {
     this.booth = this.makeBooth();
     this.stage = 'cine'; this.cineT = 0;
     if (!this.ctx.solo) { this.cineT = 6.5; return; }
+    // A rematch goes straight to the booth: you've seen the stills.
+    if (this.seenIntro) return;
+    this.seenIntro = true;
+    this.inCut = true;
     await UI.cutscene([
       { img: 'assets/arcade/run_booth.jpg', who: '', text: '02:47. שמירה בש"ג. שקט. רק הזמזום של הפנס, והג\'וק שעושה סיבובים מסביבו. העיניים נעצמות... רק לשנייה...' },
       { img: 'assets/arcade/run_sleep.jpg', who: '', text: 'זזזז... חלום על שחרור, על שווארמה, על מיטה אמיתית... ופתאום — אור לבן בפרצוף.' },
       { img: real || 'assets/arcade/run_booth.jpg', who: '{@@inspector}', text: 'ישנת. בשמירה. בשמירה שלי. ...{name}, יש לך שלוש שניות.' },
       { img: chase || 'assets/arcade/cover_runner.jpg', who: '', text: 'שלוש שניות זה הרבה זמן. [רוץ/רוצי]!!! ⬅️ ➡️ להחליף נתיב · ⬆️ לקפוץ · ⬇️ להחליק. בטלפון — להחליק עם האצבע.' },
     ]);
-    if (this.stage === 'cine') this.cineT = Math.max(this.cineT, 0);
+    this.inCut = false;
   },
   makeBooth() {
     // The guard booth the run starts from, a few meters behind the start line, and a chair.
@@ -181,30 +195,46 @@ const RunnerGame = {
     }
     this.genZ += L;
   },
+  // A row never leaves you without a way through: a lane still taken by a container from an
+  // earlier row counts as blocked, and when every lane has something in it, at most one of
+  // them is a wall (the rest you jump or slide).
   row(z) {
-    const rnd = this.rnd, kinds = [];
-    const n = rnd() < 0.35 ? 1 : rnd() < 0.8 ? 2 : 3;
-    const lanes = [0, 1, 2].sort(() => rnd() - 0.5).slice(0, n);
-    let blockers = 0;
+    const rnd = this.rnd, kinds = [], SIDE = ['dumpster', 'container', 'van'];
+    const busy = [0, 1, 2].filter(l => this.laneBusy[l] > z - 6);
+    const open = [0, 1, 2].filter(l => !busy.includes(l));
+    const n = Math.min(open.length, rnd() < 0.35 ? 1 : rnd() < 0.8 ? 2 : 3);
+    const lanes = open.sort(() => rnd() - 0.5).slice(0, n);
+    const maxSide = busy.length + n >= 3 ? 1 : 2;
+    let side = busy.length;
     for (const l of lanes) {
       let k = ['crate', 'bags', 'barrier', 'laundry', 'dumpster', 'container', 'van'][Math.floor(rnd() * 7)];
-      if ((k === 'dumpster' || k === 'container' || k === 'van') && ++blockers >= 2 && n === 3) k = 'crate';
-      if (k === 'van' && this.d < 150) k = 'dumpster';
+      if (k === 'van' && (z < 300 || !this.vanOk(l, z))) k = 'dumpster';
+      if (SIDE.includes(k) && side + 1 > maxSide) k = rnd() < 0.5 ? 'crate' : 'barrier';
+      if (SIDE.includes(k)) side++;
       kinds.push([l, k]);
       this.obstacle(l, z, k);
     }
     // Coins in a free lane (or over a jumpable thing, in an arc).
-    const free = [0, 1, 2].filter(l => !lanes.includes(l));
+    const free = open.filter(l => !lanes.includes(l));
     const lane = free.length ? free[Math.floor(rnd() * free.length)] : kinds.find(([, k]) => k === 'crate' || k === 'bags')?.[0];
     if (lane != null && rnd() < 0.75) {
       const over = !free.includes(lane);
       for (let i = 0; i < 6; i++) this.coin(lane, z - 5 + i * 2, over ? 1 + Math.sin(i / 5 * Math.PI) * 1.6 : 1);
     }
-    if (this.genZ + z > this.nextItemAt && free.length) {
-      this.nextItemAt = z + 140 + rnd() * 120;
+    if (z > this.nextItemAt && free.length) {
+      this.nextItemAt = z + 130 + rnd() * 110;
       const keys = Object.keys(RUN_POWERS);
       this.powerUp(free[0], z + 8, keys[Math.floor(rnd() * keys.length)]);
     }
+  },
+  // The van drives at you for its last ~35 m: its lane there must be empty, and the other two
+  // lanes must never both be walls at the same spot.
+  vanOk(l, z) {
+    if (z - this.lastVanZ < 50) return false;
+    const a = z - 40, b = z + 3, near = this.segs.filter(g => g.z1 > a - 2 && g.z0 < b);
+    if (near.some(g => g.lane === l)) return false;
+    const walls = near.filter(g => g.side);
+    return !walls.some(g => walls.some(h => h.lane !== g.lane && h.z0 < g.z1 + 2 && g.z0 < h.z1 + 2));
   },
   obstacle(lane, z, kind) {
     const x = RUN_LANES[lane], g = new THREE.Group(), M = this.mat;
@@ -253,6 +283,12 @@ const RunnerGame = {
     g.position.set(x, 0, -z);
     this.scene.add(g);
     this.obs.push(o);
+    // What the course planner remembers: where each thing stands, and how long a lane stays taken.
+    const z0 = o.top ? z - (o.ramp || 0) : z - o.len / 2, z1 = o.top ? z + o.len : z + o.len / 2;
+    this.segs.push({ lane, z0, z1, side: o.act === 'side' });
+    if (this.segs.length > 80) this.segs.shift();
+    if (o.top) this.laneBusy[lane] = Math.max(this.laneBusy[lane], z1);
+    if (kind === 'van') this.lastVanZ = z;
   },
   coin(lane, z, y) {
     const m = new THREE.Mesh(this.geo.coin, this.coinMats);
@@ -271,21 +307,36 @@ const RunnerGame = {
   },
 
   // ---------- input ----------
+  // Swipes (a finger or the mouse): the move fires as soon as the finger has gone far enough,
+  // not when it lifts, so it feels instant; a tap is a jump.
   bind() {
     this.keysWas = new Set();
-    this.onDown = (e) => { if (e.target.closest('button, .ar-panel, #screen')) return; this.sw = { x: e.clientX, y: e.clientY, t: performance.now() }; };
-    this.onUp = (e) => {
-      if (!this.sw) return;
-      const dx = e.clientX - this.sw.x, dy = e.clientY - this.sw.y;
-      this.sw = null;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 26) { this.cmd('jump'); return; }
+    const swipe = (dx, dy) => {
       if (Math.abs(dx) > Math.abs(dy)) this.cmd(dx > 0 ? 'right' : 'left');
       else this.cmd(dy < 0 ? 'jump' : 'slide');
     };
+    this.onDown = (e) => { if (e.target.closest('button, .ar-panel, #screen')) return; this.sw = { id: e.pointerId, x: e.clientX, y: e.clientY, fired: false }; };
+    this.onMove = (e) => {
+      const s = this.sw;
+      if (!s || s.id !== e.pointerId || s.fired) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) >= 28) { s.fired = true; swipe(dx, dy); }
+    };
+    this.onUp = (e) => {
+      const s = this.sw;
+      if (!s || s.id !== e.pointerId) return;
+      this.sw = null;
+      if (s.fired) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.hypot(dx, dy) < 18) this.cmd('jump'); else swipe(dx, dy);
+    };
+    this.onCancel = () => { this.sw = null; };
     addEventListener('pointerdown', this.onDown);
+    addEventListener('pointermove', this.onMove);
     addEventListener('pointerup', this.onUp);
+    addEventListener('pointercancel', this.onCancel);
   },
-  unbind() { removeEventListener('pointerdown', this.onDown); removeEventListener('pointerup', this.onUp); },
+  unbind() { removeEventListener('pointerdown', this.onDown); removeEventListener('pointermove', this.onMove); removeEventListener('pointerup', this.onUp); removeEventListener('pointercancel', this.onCancel); },
   keys() {
     const k = G.keys, now = new Set();
     const map = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', ArrowDown: 'slide', KeyS: 'slide' };
@@ -319,8 +370,9 @@ const RunnerGame = {
     if (UI.busy) return;
     this.cineT += dt;
     const t = this.cineT, p = this.p;
-    if (t < 1.6) { this.inspAt = { x: -2.2, z: 1.8 + (1.6 - t) * 3 }; }
-    else this.inspAt = { x: -1.2, z: 3.2 };
+    // She walks in from the dark to the booth's open front and shines it in your face.
+    if (t < 1.6) { const k = t / 1.6; this.inspAt = { x: -4 + k * 3.3, z: 1.6 + k * 0.7 }; }
+    else this.inspAt = { x: -0.7, z: 2.3 };
     if (t > 1.7 && !this.shout) { this.shout = true; Arcade.say(fmt('{@inspector}: "{name}!!! ישנת בשמירה?!"'), null, 2400); Sound.whistle(); this.zzz.visible = false; this.wake = Scene3D.label('❗', { bg: 'rgba(216,38,31,.95)', size: 0.8 }); this.wake.position.set(0, 2.3, 4.3); this.scene.add(this.wake); }
     if (t > 2.9 && !this.goNow) {
       this.goNow = true;
@@ -338,8 +390,22 @@ const RunnerGame = {
     // Faster and faster; the sneakers and the energy drink go faster still.
     this.speed = Math.min(22, 10 + this.d / 110) * (this.power.shoes ? 1.35 : 1) * (this.power.fly ? 1.2 : 1);
     p.z -= this.speed * dt;
+    this.prevD = this.d;
     this.d = Math.max(0, -p.z);
-    for (const k in this.power) { if (this.power[k] > 0) { this.power[k] -= dt; if (this.power[k] <= 0) { delete this.power[k]; if (k === 'fly') p.vy = 0; } } }
+    this.grace = Math.max(0, this.grace - dt);
+    this.fovKick = Math.max(0, this.fovKick - dt * 12);
+    for (const k in this.power) {
+      if (this.power[k] > 0) {
+        this.power[k] -= dt;
+        if (this.power[k] <= 0) {
+          delete this.power[k];
+          Sound.synth.tone(700, 0.25, 'triangle', 0.05, 240);
+          // Coming down from the energy drink (or out of the sneakers' rush): a moment to land.
+          if (k === 'fly') { p.vy = 0; this.grace = 1.6; }
+          if (k === 'shoes') this.grace = 0.8;
+        }
+      }
+    }
     // Sideways: glide toward the lane.
     p.x += (RUN_LANES[p.lane] - p.x) * Math.min(1, dt * 14);
     // What's under the feet: the ground, a container roof, a ramp.
@@ -357,11 +423,18 @@ const RunnerGame = {
     // The chase: she's a few meters back and closes in after each trip.
     p.tripT = Math.max(0, p.tripT - dt);
     if (p.tripT <= 0 && p.trips) p.trips = 0;
-    const want = p.trips ? 2.2 : this.power.shoes || this.power.fly ? 14 : 8;
+    const want = p.trips ? 2.8 : this.power.shoes || this.power.fly ? 14 : 8;
     this.chaser.gap += (want - this.chaser.gap) * Math.min(1, dt * (p.trips ? 3 : 0.4));
-    this.inspAt = { x: p.x * 0.6, z: p.z + this.chaser.gap };
+    // Off to one side, so when she's right on you she doesn't hide you from the camera.
+    const side = p.lane === 2 ? -1.3 : 1.3;
+    this.inspX = (this.inspX == null ? p.x : this.inspX) + (p.x + side - (this.inspX == null ? p.x : this.inspX)) * Math.min(1, dt * 4);
+    this.inspAt = { x: this.inspX, z: p.z + this.chaser.gap };
+    // She's behind the camera most of the time, so her shouting comes as a line on the screen;
+    // when she's right on you, over her head.
     this.lineT -= dt;
-    if (this.lineT <= 0) { this.lineT = 6 + Math.random() * 5; this.bubble(fmt(pick(RUN_LINES.chase))); }
+    if (this.lineT <= 0) { this.lineT = 6 + Math.random() * 5; const l = pick(RUN_LINES.chase); if (p.trips) this.bubble(fmt(l)); else Arcade.say(l, 'inspector', 2200); }
+    const best = G.state.runnerBest || 0;
+    if (!this.bestSaid && best > 200 && this.score > best) { this.bestSaid = true; Arcade.big('🏆 שיא!', 1000); Sound.ding(); }
     // New ground ahead, old behind.
     while (this.genZ < this.d + 150) this.genChunk();
     while (this.chunks.length && this.chunks[0].z0 + this.chunks[0].L < this.d - 25) this.scene.remove(this.chunks.shift().g);
@@ -383,44 +456,50 @@ const RunnerGame = {
     return g;
   },
   hits() {
-    const p = this.p, d = this.d, sliding = p.slide > 0, top = sliding ? 0.8 : 1.75;
+    const p = this.p, d = this.d, d0 = this.prevD, sliding = p.slide > 0, top = sliding ? 0.8 : 1.75;
+    const safe = this.power.shoes || this.power.fly || this.grace > 0;
     for (const o of this.obs) {
-      if (o.done || o.lane !== p.lane && Math.abs(RUN_LANES[o.lane] - p.x) > 1.3) continue;
-      const zc = o.zc || 0, front = o.z + zc * 0 , back = o.z + o.len;
-      const z0 = o.top ? o.z : o.z - o.len / 2, z1 = o.top ? back : o.z + o.len / 2;
-      if (d < z0 - 0.3 || d > z1 + 0.3) continue;
+      if (o.done || o.ignore > this.t || o.lane !== p.lane && Math.abs(RUN_LANES[o.lane] - p.x) > 1.3) continue;
+      const z0 = o.top ? o.z : o.z - o.len / 2, z1 = o.top ? o.z + o.len : o.z + o.len / 2;
+      // Swept: at full speed on a slow phone one frame can be longer than a barrier is thick.
+      if (d < z0 - 0.3 || d0 > z1 + 0.3) continue;
       const y0 = o.y0 || 0, y1 = o.top || o.h;
       // Standing on a roof is fine; running into its end isn't.
       if (o.top && p.y >= o.top - 0.35) continue;
       if (o.top && o.ramp && p.y >= p.ground - 0.1 && p.ground > 0.2) continue;
       if (p.y >= y1 - 0.05 || p.y + top <= y0) continue;
-      // Sideways into something while changing lanes: a trip, not the end.
-      if (Math.abs(RUN_LANES[o.lane] - p.x) > 0.7) { this.trip(o); continue; }
-      if (this.power.shoes || this.power.fly) { o.done = true; this.smash(o); continue; }
+      // Sideways into something while changing lanes: bounced back to your lane, a stumble.
+      if (Math.abs(RUN_LANES[o.lane] - p.x) > 0.7) { if (!safe) this.trip(o, true); continue; }
+      if (safe) { o.done = true; this.smash(o); continue; }
       if (this.helmet) { this.helmet = false; o.done = true; this.smash(o); this.bubble('הקסדה הצילה אותך!', true); Sound.ding(); continue; }
-      if ((o.act === 'jump' || o.act === 'slide') && !o.tripped && (o.act === 'jump' ? p.y > 0.3 : true)) { o.tripped = true; this.trip(o); continue; }
+      // Something low or a line to duck: you knock it over and stumble. A wall: she's got you.
+      if (o.act === 'jump' || o.act === 'slide') { this.trip(o, false); if (this.stage !== 'run') return; continue; }
       this.caught(o);
       return;
     }
   },
-  trip(o) {
+  // A stumble: she closes right in. A second one before you've got away — caught.
+  trip(o, sideways) {
     const p = this.p;
-    o.tripped = true;
+    o.ignore = this.t + 0.6;
     if (p.trips && p.tripT > 0) { this.caught(o); return; }
-    p.trips = 1; p.tripT = 8;
-    Sound.bump(); G.shake = 0.4; this.shakeT = 0.4;
-    // Stumbled sideways: back to where you came from.
-    if (Math.abs(RUN_LANES[o.lane] - p.x) > 0.7) p.lane = RUN_LANES.indexOf(RUN_LANES.reduce((a, b) => Math.abs(b - p.x) < Math.abs(a - p.x) ? b : a));
+    p.trips = 1; p.tripT = RUN_TRIP;
+    Sound.bump(); Sound.whistle(); G.shake = 0.5;
+    if (sideways) {
+      // Back to the lane you came from.
+      p.lane = RUN_LANES.indexOf(RUN_LANES.reduce((a, b) => Math.abs(b - p.x) < Math.abs(a - p.x) ? b : a));
+      if (p.lane === o.lane) p.lane = o.lane + (p.x > RUN_LANES[o.lane] ? 1 : -1);
+    } else { o.done = true; this.smash(o, true); }
     this.bubble(fmt(pick(RUN_LINES.trip)));
     Arcade.say(fmt(pick(RUN_LINES.near)), null, 1800);
   },
-  smash(o) {
-    Sound.splat();
-    o.m.traverse(m => { if (m.isMesh) m.visible = false; });
+  smash(o, quiet = false) {
+    if (!quiet) { Sound.splat(); G.shake = Math.max(G.shake, 0.25); }
+    o.m.traverse(m => { if (m.isMesh || m.isSprite || m.isLine) m.visible = false; });
     for (let i = 0; i < 8; i++) this.debris(o.m.position.x, 0.8, o.m.position.z);
   },
-  debris(x, y, z) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), this.mat.crate);
+  debris(x, y, z, mat = this.mat.crate) {
+    const m = new THREE.Mesh(this.geo.bit, mat);
     m.position.set(x, y, z); this.scene.add(m);
     (this.bits = this.bits || []).push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 8, 5 + Math.random() * 5, (Math.random() - 0.5) * 8), t: 0 });
   },
@@ -446,10 +525,21 @@ const RunnerGame = {
       u.got = true; this.scene.remove(u.m);
       const P = RUN_POWERS[u.kind];
       if (u.kind === 'helmet') this.helmet = true; else this.power[u.kind] = P.dur;
-      if (u.kind === 'fly') p.vy = 0;
-      Sound.fanfare();
+      if (u.kind === 'fly') { p.vy = 0; this.skyCoins(); }
+      Sound.fanfare(); Sound.boost();
+      this.fovKick = 14; G.shake = Math.max(G.shake, 0.2);
+      for (let i = 0; i < 14; i++) this.debris(p.x, p.y + 1, p.z - 1, this.mat.gold);
       Arcade.big(P.name, 1100);
       Arcade.say(fmt(P.say), null, 2600);
+    }
+  },
+  // Up on the energy drink: a trail of shekels in the air, weaving between the lanes.
+  skyCoins() {
+    const len = RUN_POWERS.fly.dur * this.speed * 1.2 - 14;
+    let lane = this.p.lane;
+    for (let i = 0, z = this.d + 14; z < this.d + len; i++, z += 2.4) {
+      if (i && i % 7 === 0) lane = Math.max(0, Math.min(2, lane + (this.rnd() < 0.5 ? -1 : 1)));
+      this.coin(lane, z, 6.8);
     }
   },
   bubble(text, good = false) {
@@ -487,19 +577,21 @@ const RunnerGame = {
     const p = this.p, t = this.t, me = this.me, run = this.stage === 'run';
     // You: asleep on the chair, then running, jumping, sliding, flying.
     if (this.stage === 'cine' && this.cineT < 2.9) {
-      Scene3D.animateSoldier(me, { x: 0, y: 4.3 / S3, angle: -Math.PI / 2, speed: 0 }, false, dt);
-      me.root.position.y = 0.05; me.root.rotation.x = 0.25 + Math.sin(t * 1.5) * 0.04;
+      // Asleep on the chair, the head nodding; bolt upright at her shout.
+      Scene3D.animateSoldier(me, { x: 0, y: 4.3 / S3, angle: -Math.PI / 2, speed: 0, sit: true }, false, dt);
+      me.root.rotation.x = this.shout ? -0.05 : 0.12 + Math.sin(t * 1.5) * 0.05;
     } else {
       const sp = run ? this.speed : 0;
       Arcade.pose(me, p.x, p.z, -Math.PI / 2, run ? Math.min(9, sp) : 0, dt);
       me.root.position.y = p.y;
       me.root.rotation.x = p.slide > 0 ? -1.1 : this.power.fly ? -0.6 : this.stage === 'caught' ? 0.3 : 0;
     }
-    me.root.visible = !(p.tripT > 6 && Math.floor(t * 12) % 2);
+    me.root.visible = !((p.tripT > RUN_TRIP - 1.5 || this.grace > 0) && Math.floor(t * 12) % 2);
     // Her: walking up to the booth, then running behind you with the flashlight.
-    const ia = this.inspAt || { x: -2.2, z: 6 };
+    const ia = this.inspAt || { x: -4, z: 1.6 };
     const irun = this.stage === 'run' || (this.stage === 'caught' && this.caughtT < 0.8);
-    Arcade.pose(this.insp, ia.x, ia.z, this.stage === 'cine' && this.cineT < 2.9 ? -Math.PI / 2 + (this.cineT > 1.6 ? 0.6 : 0) : -Math.PI / 2, irun ? 8.5 : this.stage === 'cine' && this.cineT < 1.6 ? 3 : 0, dt);
+    const cine = this.stage === 'cine' && this.cineT < 2.9;
+    Arcade.pose(this.insp, ia.x, ia.z, cine ? (this.cineT < 1.6 ? 0.3 : Math.PI / 2 - 0.25) : -Math.PI / 2, irun ? 8.5 : cine && this.cineT < 1.6 ? 2.2 : 0, dt);
     this.zzz && (this.zzz.position.y = 2.1 + Math.sin(t * 2) * 0.1);
     // Bits flying off smashed things.
     for (const b of this.bits || []) { b.t += dt; b.v.y -= 20 * dt; b.m.position.addScaledVector(b.v, dt); b.m.rotation.x += dt * 9; }
@@ -518,15 +610,19 @@ const RunnerGame = {
     // The camera: behind and above, swinging in from the booth at the start.
     const cam = this.camera;
     let want, look;
-    if (this.stage === 'cine' && this.cineT < 2.9) { const a = 0.7 - this.cineT * 0.22; want = new THREE.Vector3(Math.sin(a) * 4.6, 1.9 + this.cineT * 0.15, 4.3 - Math.cos(a) * 4.6); look = new THREE.Vector3(0, 1.0, 4.3); }
+    if (this.stage === 'cine' && this.cineT < 2.9) { const a = 0.42 - this.cineT * 0.12; want = new THREE.Vector3(Math.sin(a) * 4.6, 1.9 + this.cineT * 0.15, 4.3 - Math.cos(a) * 4.6); look = new THREE.Vector3(0, 1.0, 4.3); }
     else if (this.stage === 'caught' || this.stage === 'over') { want = new THREE.Vector3(p.x + 4, p.y + 2.4, p.z - 4); look = new THREE.Vector3(p.x, p.y + 1.1, p.z + 0.5); }
-    else { want = new THREE.Vector3(p.x * 0.7, p.y * 0.6 + 3.4, p.z + 6.2); look = new THREE.Vector3(p.x * 0.85, p.y * 0.5 + 1.2, p.z - 6); }
+    else {
+      // Up on the energy drink the camera goes up with you, so you see the shekels in the air.
+      const f = this.flyCam = (this.flyCam || 0) + ((this.power.fly ? 1 : 0) - (this.flyCam || 0)) * Math.min(1, dt * 2.5);
+      want = new THREE.Vector3(p.x * 0.7, p.y * (0.6 + f * 0.4) + 3.4 - f * 1, p.z + 6.2); look = new THREE.Vector3(p.x * 0.85, p.y * (0.5 + f * 0.45) + 1.2, p.z - 6);
+    }
     cam.position.lerp(want, Math.min(1, dt * (this.stage === 'run' ? 8 : 3)));
     this.look = this.look || look.clone();
     this.look.lerp(look, Math.min(1, dt * 8));
     if (G.shake > 0) { cam.position.x += (Math.random() - 0.5) * G.shake * 0.4; cam.position.y += (Math.random() - 0.5) * G.shake * 0.4; G.shake = Math.max(0, G.shake - dt * 1.5); }
     cam.lookAt(this.look);
-    cam.fov = 64 + (this.power.shoes ? 8 : 0) + Math.min(8, (this.speed - 10) * 0.6);
+    cam.fov = 64 + (this.power.shoes ? 8 : 0) + Math.min(8, (this.speed - 10) * 0.6) + this.fovKick;
     cam.updateProjectionMatrix();
     this.moon.position.set(p.x - 10, 30, p.z + 10); this.moon.target.position.set(p.x, 0, p.z - 6);
     this.stars.position.set(0, 0, p.z);
@@ -541,18 +637,27 @@ const RunnerGame = {
       <div class="rn-board"></div>
       <div class="rn-danger hidden"></div></div>`);
     const h = $('#arcade .rn');
-    this.el = { d: h.querySelector('.rn-d'), coins: h.querySelector('.rn-coins b'), pw: h.querySelector('.rn-pw'), board: h.querySelector('.rn-board'), danger: h.querySelector('.rn-danger') };
+    this.el = { root: h, d: h.querySelector('.rn-d'), coins: h.querySelector('.rn-coins b'), pw: h.querySelector('.rn-pw'), board: h.querySelector('.rn-board'), danger: h.querySelector('.rn-danger') };
   },
   hud() {
     const e = this.el;
     if (!e) return;
     e.d.textContent = Math.floor(this.d);
     e.coins.textContent = this.coinsGot;
-    let pw = '';
-    for (const k in this.power) pw += `<span><img src="${RUN_POWERS[k].icon}" alt=""><i style="--p:${Math.max(0, this.power[k] / RUN_POWERS[k].dur * 100)}%"></i></span>`;
-    if (this.helmet) pw += `<span><img src="${RUN_POWERS.helmet.icon}" alt=""></span>`;
-    if (e.pw.innerHTML !== pw) e.pw.innerHTML = pw;
+    // The power-ups you have: built when the set changes, the time left filled in each frame.
+    const ks = Object.keys(this.power), set = ks.join() + (this.helmet ? ',helmet' : '');
+    if (e.pwSet !== set) {
+      e.pwSet = set;
+      e.pw.innerHTML = [...ks, ...(this.helmet ? ['helmet'] : [])].map(k => `<span data-k="${k}"><img src="${RUN_POWERS[k].icon}" alt=""><i></i></span>`).join('');
+    }
+    for (const sp of e.pw.children) {
+      const k = sp.dataset.k;
+      if (k === 'helmet' || this.power[k] == null) continue;
+      sp.lastChild.style.setProperty('--p', `${Math.max(0, Math.round(this.power[k] / RUN_POWERS[k].dur * 100))}%`);
+      sp.classList.toggle('end', this.power[k] < 1.6);
+    }
     e.danger.classList.toggle('hidden', !(this.p.trips && this.stage === 'run'));
+    e.root.classList.toggle('over', this.stage === 'over' || (this.stage === 'cine' && UI.busy));
     const rows = Arcade.others().map(o => ({ name: o.name, d: (o.s && o.s.d) || 0, dead: o.s && o.s.dead }));
     if (rows.length) {
       rows.push({ name: G.profile.name, d: Math.floor(this.d), me: true });
@@ -575,8 +680,13 @@ const RunnerGame = {
     renderer.render(this.scene, this.camera);
   },
   presence() { return { d: Math.floor(this.d), sc: this.score, x: Math.round(this.p.x * 10) / 10, y: Math.round(this.p.y * 10) / 10, dead: this.stage === 'caught' || this.stage === 'over' ? 1 : 0 }; },
-  act() { this.cmd('jump'); },
+  // Space is read with the arrows (keys()); E and Enter jump too. The action button is hidden here.
+  act() { if (!G.keys.has('Space')) this.cmd('jump'); },
   leave() {
+    // Left in the middle of the stills: close them too (each click is the next slide).
+    for (let i = 0; i < 6 && this.inCut && $('#screen .cutscene'); i++) $('#screen .cutscene').click();
+    this.inCut = false;
+    this.seenIntro = false;   // back from the hub next time: the stills again
     this.unbind();
     document.body.classList.remove('rn-on');
     clearTimeout(this.bubT);

@@ -25,7 +25,7 @@ const BOSSES = {
     map: 'netivot', arena: { x0: 23.5 * TS, x1: 34.5 * TS, y0: 21.5 * TS, y1: 29 * TS }, icon: '📚', name: () => fmt('{@@bc}'), npc: 'bc', ammo: () => DATA.mizrahi,
     taunts: ['ספר?! בשמירה?! בשמירה קוראים את הגדר!', 'אצלי בסוללה קוראים רק נהלים. בעמידה.', 'גפילטע פיש! בתאבון, {platoon}!', 'תכבו את המוזיקה הזאת! שימו שופן!', 'באקסל שלי אין עמודה לגרעינים!'],
     throws: 'gefilte', meter: 'גפילטע', hp: 150, hitDmg: 22,
-    hitMe: '🐟 גפילטע פיש בפרצוף!', full: '🥴 יותר מדי גפילטע... {@p_shaked} מביא[/ה] לך פיתה עם חריף. [תחזור/תחזרי] לקרב!',
+    hitMe: '🐟 גפילטע פיש בפרצוף!', full: '🥴 יותר מדי גפילטע... {@p_shaked} מביאה לך פיתה עם חריף: "[תאכל/תאכלי], פוצ׳". [תחזור/תחזרי] לקרב!',
   },
   // The battery sergeant major, who found one too many things wrong with your uniform.
   harasar: {

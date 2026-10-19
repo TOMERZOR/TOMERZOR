@@ -373,7 +373,7 @@ const Events = {
     if (n.id === 'p_arad' && Math.random() < 0.5) { this.fart(n); return false; }
     if (n.id === 'p_shaked' && !S.dayFlags.shakedSnack) {
       S.dayFlags.shakedSnack = true;
-      await UI.talk([{ who: 'p_shaked', text: pick(['[קח/קחי] חטיף חלבון. בלי סוכר, בלי שמחה, עם המון חלבון 💪', 'אכלת היום ירק? במבה זה לא ירק. [קח/קחי] גזר.']) }]);
+      await UI.talk([{ who: 'p_shaked', text: pick(['[קח/קחי] חטיף חלבון, פוצ׳. בלי סוכר, בלי שמחה, עם המון חלבון 💪', 'אכלת היום ירק? במבה זה לא ירק. [קח/קחי] גזר. [תראה/תראי] איזה פוצ׳ הוא.', 'פוצ׳! [חכה/חכי]! שכחת את החטיף חלבון. אני דואגת לפוצ׳ים שלי.']) }]);
       Game.addStat('energy', 10);
       UI.toast('אנרגיה +10 🥕', 'good');
       return true;
@@ -749,7 +749,7 @@ const Events = {
     Game.addStat('morale', rec.morale);
     this.addShchora(-6, `${rec.icon} ${fmt(rec.name)}`);
     Game.achieve('chef');
-    if (rec.healthy && World.id === 'netivot') UI.talk([{ who: 'p_shaked', text: 'קינואה?! ברוקולי?! אני כל כך גאה בך שאני עושה עוד סט! 💪' }]);
+    if (rec.healthy && World.id === 'netivot') UI.talk([{ who: 'p_shaked', text: 'קינואה?! ברוקולי?! איזה פוצ׳ את[ה/]! אני כל כך גאה בך שאני עושה עוד סט! 💪' }]);
     else if (rec.id === 'noodles') UI.talk([{ who: 'p_liran', text: 'נודלס! {first} אוהב נודלס! אוגה בוגה!' }]);
   },
   async pullups() {

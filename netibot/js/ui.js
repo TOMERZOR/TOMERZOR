@@ -334,6 +334,7 @@ const UI = {
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
       ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 צ\'אט — לכולם או למישהו</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}
+      <button class="btn" data-m="race">🏎️ תחרות מפקדי נסיעה${Multi.on && Multi.peers.length ? ' — אפשר עם חברים' : ''}</button>
       <button class="btn ghost" data-m="settings">⚙️ הגדרות — שמע, שליטה, תצוגה</button>
       <button class="btn ghost" data-m="help">❓ איך משחקים</button>
       <button class="btn ghost" data-m="save">💾 שמור עכשיו</button>
@@ -347,6 +348,7 @@ const UI = {
       chat: () => { this.toggleMenu(false); this.chat(); },
       invite: () => Game.shareInvite(),
       bossInvite: () => { this.toggleMenu(false); Boss.inviteCoop(); },
+      race: () => { this.toggleMenu(false); Race.open(); },
       settings: () => { this.toggleMenu(false); Settings.open(); },
       help: () => { this.toggleMenu(false); Game.help(true); },
       save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },

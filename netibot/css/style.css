@@ -615,3 +615,57 @@ body.locked #rotate { display: none !important; }
 .chatp .cp-row input { flex: 1; min-width: 0; font: 15px Rubik, Arial; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: #0d100c; color: var(--ink); }
 .map .who-list .pp-chat { cursor: pointer; }
 .map .who-list .pp-chat:hover b { color: var(--gold); }
+
+/* ---------- the driving commanders' race ---------- */
+#race { position: fixed; inset: 0; z-index: 22; pointer-events: none; color: var(--ink); direction: rtl; }
+#race button, #race .rc-panel { pointer-events: auto; }
+#race .rc-x { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--trim); background: var(--panel); color: var(--ink); font-size: 20px; font-weight: 900; cursor: pointer; }
+#race .rc-hud > div { position: absolute; background: var(--panel); border: 2px solid var(--trim); border-radius: 10px; box-shadow: var(--bevel); padding: 4px 10px; font-weight: 900; }
+#race .rc-pos { top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); font-size: 18px; }
+#race .rc-pos b { font-size: 34px; color: var(--gold); }
+#race .rc-lap { top: max(8px, env(safe-area-inset-top)); right: calc(max(8px, env(safe-area-inset-right)) + 96px); font-size: 16px; }
+#race .rc-time { top: max(8px, env(safe-area-inset-top)); right: calc(max(8px, env(safe-area-inset-right)) + 210px); font: 900 16px monospace; }
+#race .rc-spd { top: calc(max(8px, env(safe-area-inset-top)) + 58px); right: max(8px, env(safe-area-inset-right)); font-size: 26px; color: var(--gold-hi); }
+#race .rc-spd small { font-size: 12px; color: var(--ink); }
+#race .rc-mini { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 54px); left: max(8px, env(safe-area-inset-left)); width: 120px; height: 120px; background: rgba(214,186,130,.55); border: 2px solid var(--trim); border-radius: 12px; }
+#race .rc-boost { position: absolute; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px); right: calc(max(12px, env(safe-area-inset-right)) + 12px); padding: 8px 14px; border-radius: 22px; border: 2px solid var(--gold-edge); background: #4a4a3a; color: var(--ink); font: 900 16px Rubik, sans-serif; cursor: pointer; }
+#race .rc-boost i { display: block; height: 5px; margin-top: 4px; background: rgba(0,0,0,.4); border-radius: 3px; overflow: hidden; }
+#race .rc-boost i b { display: block; height: 100%; background: var(--gold); }
+#race .rc-boost.ready { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: #2a1d00; animation: rc-glow 0.8s ease-in-out infinite alternate; }
+@keyframes rc-glow { to { box-shadow: 0 0 18px rgba(255,214,0,.9); } }
+#race .rc-say { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 8px); left: 50%; transform: translateX(-50%); font-size: 16px; max-width: 70vw; text-align: center; }
+#race .rc-say.pop, #race .rc-cd.pop { animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
+@keyframes rc-pop { from { transform: translateX(-50%) scale(.3); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+#race .rc-cd { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); font: 900 clamp(48px, 14vw, 120px) Rubik, sans-serif; color: var(--gold-hi); -webkit-text-stroke: 3px #3a2600; text-shadow: 0 6px 0 #3a2600, 0 10px 30px rgba(0,0,0,.5); white-space: nowrap; }
+#race .rc-panel { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: min(820px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto; background: var(--panel); border: 2px solid var(--trim); border-radius: 14px; box-shadow: var(--bevel); padding: 14px; text-align: center; }
+#race .rc-panel h2 { margin: 0 0 4px; color: var(--gold-hi); }
+#race .rc-sub { margin: 4px 0 10px; opacity: .9; }
+#race .rc-cars { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+#race .rc-car { display: flex; flex-direction: column; gap: 3px; align-items: stretch; background: rgba(255,255,255,.06); border: 2px solid var(--line); border-radius: 12px; padding: 6px; color: var(--ink); font: inherit; cursor: pointer; text-align: right; }
+#race .rc-car:hover, #race .rc-car:focus-visible { border-color: var(--gold); background: rgba(242,193,78,.12); }
+#race .rc-car img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; background: #f4efe3; border-radius: 8px; }
+#race .rc-car b { font-size: 16px; }
+#race .rc-car i { font-size: 12px; opacity: .8; font-style: normal; }
+#race .rc-stat { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+#race .rc-stat s { flex: 1; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) var(--v), rgba(255,255,255,.12) var(--v)); }
+#race .rc-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+#race .rc-who { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+#race .rc-who span { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 3px 10px; }
+#race .rc-res { width: 100%; border-collapse: collapse; margin: 6px 0; }
+#race .rc-res td { padding: 6px; border-bottom: 1px solid var(--line); }
+#race .rc-res tr.me { background: rgba(242,193,78,.18); font-weight: 900; }
+@media (max-width: 700px) {
+  #race .rc-lap { right: calc(max(8px, env(safe-area-inset-right)) + 82px); font-size: 13px; }
+  #race .rc-time { display: none; }
+  #race .rc-mini { width: 90px; height: 90px; }
+  #race .rc-cars { grid-template-columns: repeat(2, 1fr); }
+}
+#race .rc-banner { width: 100%; max-height: 24vh; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 6px; }
+#race .rc-panel { width: min(820px, calc(100vw - 120px)); }
+@media (max-height: 520px) {
+  #race .rc-banner { max-height: 16vh; }
+  #race .rc-panel { padding: 8px 10px; }
+  #race .rc-panel h2 { font-size: 18px; }
+  #race .rc-car img { aspect-ratio: 16 / 9; }
+  #race .rc-stat { font-size: 10px; }
+}

@@ -54,6 +54,8 @@ const Multi = {
           s: Array.isArray(s.fx.s) ? s.fx.s.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x: +o.x || 0, y: +o.y || 0, k: String(o.k || '').slice(0, 12) })) : [],
           b: Array.isArray(s.fx.b) ? s.fx.b.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x0: +o.x0 || 0, y0: +o.y0 || 0, x1: +o.x1 || 0, y1: +o.y1 || 0 })) : [],
         } : null,
+        // A race they're in or hosting (cd: seconds until the host's start).
+        race: s.race && +s.race.id ? { id: +s.race.id, host: !!s.race.host, car: String(s.race.car || '').slice(0, 12), x: +s.race.x || 0, z: +s.race.z || 0, a: +s.race.a || 0, v: +s.race.v || 0, lap: Math.max(0, Math.min(9, +s.race.lap | 0)), pr: Math.max(-2000, Math.min(9000, +s.race.pr || 0)), fin: Math.max(0, +s.race.fin || 0), cd: Math.max(0, Math.min(60, +s.race.cd || 0)) } : null,
         // A red alert this player is in: everyone online at that site gets it too.
         sl: !!s.sl,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
@@ -100,6 +102,7 @@ const Multi = {
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,
+      race: Race.presence(),
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
       boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : null,
       fx: Boss.active && Boss.coop ? Boss.fxOut() : null,

@@ -301,6 +301,28 @@ const Sound = (() => {
       later(950, () => { tone(3100, 0.5, 'sawtooth', 0.04, 2200); tone(2900, 0.5, 'sine', 0.06, 2300); });
     },
     zap() { tone(1900, 0.16, 'square', 0.04, 260); },
+    // The race: an engine whose pitch follows the speed (0..1, null to stop), bumps, beeps.
+    engine(level) {
+      if (level == null || !prefs.sfx || !ensure()) {
+        if (this._eng) { const e = this._eng; e.g.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => { try { e.o.stop(); e.o2.stop(); } catch (err) { /* stopped */ } }, 300); this._eng = null; }
+        return;
+      }
+      if (!this._eng) {
+        const o = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = 0;
+        o.connect(f); o2.connect(f); f.connect(g).connect(sfxBus);
+        o.start(); o2.start();
+        this._eng = { o, o2, g };
+      }
+      const t = ctx.currentTime, e = this._eng;
+      e.o.frequency.setTargetAtTime(48 + level * 150, t, 0.06);
+      e.o2.frequency.setTargetAtTime(24 + level * 75, t, 0.06);
+      e.g.gain.setTargetAtTime(0.025 + level * 0.035, t, 0.08);
+    },
+    bump() { noise(0.25, 0.45, 600); tone(95, 0.22, 'square', 0.1, 45); later(50, () => tone(1500, 0.07, 'triangle', 0.05)); },
+    beep(hi) { tone(hi ? 1320 : 660, hi ? 0.55 : 0.2, 'square', 0.07); },
+    skid() { noise(0.35, 0.05, 2600, 'bandpass', 0, null, 3); },
+    boost() { noise(0.6, 0.12, 900, 'bandpass', 0, null, 1); tone(180, 0.5, 'sawtooth', 0.05, 420); },
     fart() {
       // A low, wobbling raspberry.
       if (!ensure() || !prefs.sfx) return;

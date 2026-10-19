@@ -91,6 +91,11 @@ const Game = {
       G.keys.add(e.code);
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
       if (!G.running) return;
+      if (Race.active) {
+        if (e.code === 'Space' || e.code === 'KeyE') Race.boost();
+        if (e.code === 'Escape') Race.exit();
+        return;
+      }
       if ((e.code === 'Tab' || e.code === 'KeyP') && !Mini.active && !UI.busy && !UI.menuOpen()) UI.togglePhone();
       if (e.code === 'Escape' && !Mini.active) {
         if (!$('#phone').classList.contains('hidden')) UI.togglePhone(false);
@@ -221,6 +226,7 @@ const Game = {
   },
 
   interact() {
+    if (Race.active) { Race.boost(); return; }
     if (G.alert || UI.mapOpen() || Story.ctl) return;
     if (Boss.active) { Boss.throw(); return; }
     const it = this.nearestInteractable();
@@ -459,6 +465,13 @@ const Game = {
     if (Settings.v.fps) {
       this.fpsN = (this.fpsN || 0) + 1;
       if (t - (this.fpsT || 0) > 1000) { const f = $('#fps'); if (f) f.textContent = `${Math.round(this.fpsN * 1000 / (t - (this.fpsT || t - 1000)))} FPS`; this.fpsN = 0; this.fpsT = t; }
+    }
+    // The race is a world of its own: while it's on, only it updates and draws.
+    if (G.running && Race.active) {
+      Race.frame(dt, t);
+      Race.render();
+      requestAnimationFrame(tt => this.frame(tt));
+      return;
     }
     if (G.running) {
       const live = !G.paused && !UI.busy;

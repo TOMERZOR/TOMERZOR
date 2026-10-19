@@ -1226,7 +1226,9 @@ const Scene3D = {
       turn(B[up], 1.45);
       turn(B[low], -1.45);
     }
-    m.root.position.y -= m.thighLen * 0.97;
+    // Hips on the bench: about a hand above the seat.
+    const hipsY = B.Hips ? B.Hips.getWorldPosition(new V()).y : m.thighLen;
+    m.root.position.y -= hipsY - ((this.seatH || 0.45) + 0.08);
   },
 
   animateSoldier(m, ent, moving, dt) {
@@ -1469,9 +1471,13 @@ const Scene3D = {
       if (k <= 0) this.camFlash.visible = false;
     }
   },
-  // Brown wooden pergola: four posts with corner braces, a gable roof of slats, and a
-  // picnic table with a bench on each long side (the seats are in World.seats).
+  // Brown wooden pergola over a picnic table with a bench on each long side (the seats are
+  // in World.seats): the Higgsfield model of the real one, or simple boxes until it loads.
   pergola(g, w, d) {
+    // The model's table runs along x with the benches on either side, like the seats; scaled
+    // so the bench is at sitting height (about half a metre).
+    if (this.addModel(g, 'pergola', { size: [w, 2.0, d] })) { this.seatH = 0.56; return; }
+    this.seatH = 0.45;
     const wood = this.mat(0x7a4a26, { roughness: 0.9 }), dark = this.mat(0x5e3519, { roughness: 0.9 });
     const hx = w / 2 - 0.08, hz = d / 2 - 0.08, ph = 2.15;
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {

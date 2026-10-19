@@ -4,7 +4,7 @@ const Assets = {
   models: {},
   anims: {},
   images: {},
-  MODELS: ['launcher', 'tower', 'truck', 'container', 'pickup', 'palm', 'soldier', 'radar', 'generator', 'burger', 'cranetruck'],
+  MODELS: ['launcher', 'tower', 'truck', 'container', 'pickup', 'palm', 'soldier', 'radar', 'generator', 'burger', 'cranetruck', 'pergola'],
   IMAGES: ['sand', 'wall', 'container', 'asphalt', 'grass', 'shekem', 'bibi', 'babasali'],
 
   load(onProgress = () => {}) {

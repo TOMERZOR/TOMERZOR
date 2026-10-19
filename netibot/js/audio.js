@@ -5,6 +5,7 @@ const Sound = (() => {
   let master = null, sfxBus = null, musicBus = null;
   let siren = null;
   let noiseBuf = null;
+  const voiceBufs = {};
   const prefs = { sfx: true, music: true, sfxVol: 0.8, musicVol: 0.5, style: 'lofi' };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem('netibot.audio') || '{}')); } catch (e) { /* storage may be blocked */ }
   const savePrefs = () => { try { localStorage.setItem('netibot.audio', JSON.stringify(prefs)); } catch (e) { /* ignore */ } };
@@ -246,16 +247,29 @@ const Sound = (() => {
     setVolume(kind, v) { prefs[kind + 'Vol'] = v; savePrefs(); applyVolumes(); },
     music(mood) { if (!ensure()) return; Music.set(mood); },
     // Recorded voice lines (mp3). A new line cuts off the one still playing.
+    // Voice lines (the boss) play through WebAudio like any other effect. An <audio> element
+    // would show up on the phone as media playing (lock screen, Spotify-style controls) and
+    // pause the user's own music.
     voice(src) {
-      if (!prefs.sfx || (typeof Settings !== 'undefined' && !Settings.v.voices)) return;
-      try {
-        if (this._voice) this._voice.pause();
-        const a = this._voice = new Audio(src);
-        a.volume = Math.min(1, prefs.sfxVol * 1.1);
-        a.play().catch(() => {});
-      } catch (e) { /* autoplay may be blocked */ }
+      if (!prefs.sfx || (typeof Settings !== 'undefined' && !Settings.v.voices) || !ensure()) return;
+      this.stopVoice();
+      const token = this._vt;
+      voiceBufs[src] = voiceBufs[src] || fetch(src).then(r => r.arrayBuffer()).then(b => new Promise((ok, no) => ctx.decodeAudioData(b, ok, no)));
+      voiceBufs[src].then(buf => {
+        if (token !== this._vt) return;
+        const s = ctx.createBufferSource();
+        const g = ctx.createGain();
+        g.gain.value = 1.15;
+        s.buffer = buf;
+        s.connect(g).connect(sfxBus);
+        s.start();
+        this._voice = s;
+      }).catch(() => { delete voiceBufs[src]; });
     },
-    stopVoice() { if (this._voice) { this._voice.pause(); this._voice = null; } },
+    stopVoice() {
+      this._vt = (this._vt || 0) + 1;
+      if (this._voice) { try { this._voice.stop(); } catch (e) { /* already ended */ } this._voice = null; }
+    },
     _music: Music,
     STYLES: { lofi: 'לו-פיי רגוע', mizrahi: 'מזרחית', ambient: 'אווירה שקטה' },
     get style() { return Music.style(); },

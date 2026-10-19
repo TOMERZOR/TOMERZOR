@@ -37,17 +37,15 @@ const Curious = {
 
   // 1-2 a day, at random times in daylight, at Netivot.
   plan(S) {
-    const n = Math.random() < 0.5 ? 1 : 2;
-    const times = [];
-    for (let i = 0; i < n; i++) times.push(9 * 60 + Math.floor(Math.random() * 10 * 60));
-    S.dayFlags.curiousPlan = times.sort((a, b) => a - b);
+    // Three a day, spread over the daylight hours, in every mode.
+    S.dayFlags.curiousPlan = [0, 1, 2].map(k => 8 * 60 + 30 + k * 220 + Math.floor(Math.random() * 150));
   },
   update(dt) {
     const S = G.state;
     if (!S) return;
     if (this.npc && G.alert && !this.npc.leaving) { this.leave(this.npc, true); this.clearTask(); }
     if (this.npc) { this.updateNpc(dt); return; }
-    if (!Settings.v.curious || World.id !== 'netivot' || (S.mode === 'story' && S.day < 2)) return;
+    if (!Settings.v.curious || World.id !== 'netivot') return;
     if (!S.dayFlags.curiousPlan) this.plan(S);
     const next = S.dayFlags.curiousPlan[0];
     if (next === undefined || S.clock < next) return;

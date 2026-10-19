@@ -364,9 +364,12 @@ const UI = {
     if (this.busy || Mini.active || !G.running || G.alert) return;
     m.classList.remove('hidden');
     G.keys.clear();
-    m.innerHTML = `<canvas id="map-c"></canvas><div class="who-list"></div><button class="btn small ghost close" id="map-x">✕ סגור</button>`;
+    m.innerHTML = `<div class="map-view" id="map-v"><canvas id="map-c"></canvas>
+      <div class="map-zoom"><button class="icon-btn" data-z="1.4" aria-label="זום פנימה">＋</button><button class="icon-btn" data-z="0.7" aria-label="זום החוצה">−</button><button class="icon-btn" data-z="0" aria-label="לראות הכל">⤢</button></div></div>
+      <div class="who-list"></div><button class="btn small ghost close" id="map-x">✕ סגור</button>`;
     $('#map-x').onclick = () => this.toggleMap(false);
     this.mapBase = null;
+    this.mapZoomSetup();
     this.mapListT = 0;
     const tick = (t) => {
       if (!this.mapOpen()) return;
@@ -382,8 +385,12 @@ const UI = {
     if (!c) return;
     const [fx0, fy0, fx1, fy1] = World.fence;
     const x0 = fx0 - 1, y0 = fy0 - 1, cols = fx1 - fx0 + 3, rows = fy1 - fy0 + 5;
-    const s = 22;
-    if (c.width !== cols * s) { c.width = cols * s; c.height = rows * s; }
+    // Drawn sharper when zoomed in (up to 3x), shown at the zoom the player picked.
+    const z = this.mapZ || { z: 1 };
+    const s = 22 * Math.max(1, Math.min(3, Math.round(z.z * 2) / 2));
+    if (c.width !== cols * s) { c.width = cols * s; c.height = rows * s; this.mapBase = null; }
+    this.mapW = cols * 22; this.mapH = rows * 22;
+    if (!z.ready) this.mapZoomApply();
     if (!this.mapBase) {
       this.mapBase = document.createElement('canvas');
       this.mapBase.width = c.width; this.mapBase.height = c.height;
@@ -393,6 +400,76 @@ const UI = {
     g.drawImage(this.mapBase, 0, 0);
     this.drawMapPeople(g, x0, y0, s);
     if (t - this.mapListT > 500) { this.mapListT = t; this.drawMapList(); }
+  },
+  // Zoom: pinch or the mouse wheel around a point, + / − buttons, drag to move around.
+  mapZoomSetup() {
+    const v = $('#map-v');
+    this.mapZ = { z: 1, x: 0, y: 0, ready: false };
+    const pts = new Map();
+    let pinch = null;
+    const zoomAt = (k, px, py) => {
+      const Z = this.mapZ, ds = this.mapFit() * Z.z;
+      const lx = (px - Z.x) / ds, ly = (py - Z.y) / ds;
+      Z.z = Math.max(1, Math.min(5, Z.z * k));
+      const nd = this.mapFit() * Z.z;
+      Z.x = px - lx * nd; Z.y = py - ly * nd;
+      this.mapZoomApply();
+    };
+    v.addEventListener('wheel', (e) => { e.preventDefault(); const r = v.getBoundingClientRect(); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+    v.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
+      v.setPointerCapture(e.pointerId);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+    });
+    v.addEventListener('pointermove', (e) => {
+      const p = pts.get(e.pointerId);
+      if (!p) return;
+      const r = v.getBoundingClientRect();
+      if (pts.size >= 2) {
+        p.x = e.clientX; p.y = e.clientY;
+        const [a, b] = [...pts.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) zoomAt(d / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top);
+        pinch = d;
+        return;
+      }
+      this.mapZ.x += e.clientX - p.x; this.mapZ.y += e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      this.mapZoomApply();
+    });
+    const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; };
+    v.addEventListener('pointerup', up);
+    v.addEventListener('pointercancel', up);
+    v.querySelectorAll('[data-z]').forEach(b => b.onclick = () => {
+      Sound.click();
+      const k = +b.dataset.z;
+      if (!k) { this.mapZ.z = 1; this.mapZ.ready = false; this.mapZoomApply(); return; }
+      // Buttons zoom toward the player.
+      const ds = this.mapFit() * this.mapZ.z, P = this.mapPlayerPx();
+      zoomAt(k, P ? this.mapZ.x + P.x * ds : v.clientWidth / 2, P ? this.mapZ.y + P.y * ds : v.clientHeight / 2);
+    });
+  },
+  mapFit() {
+    const v = $('#map-v');
+    if (!v || !this.mapW) return 1;
+    return Math.min(v.clientWidth / this.mapW, v.clientHeight / this.mapH);
+  },
+  mapPlayerPx() {
+    const [fx0, fy0] = World.fence;
+    return { x: (G.player.x / TS - (fx0 - 1)) * 22, y: (G.player.y / TS - (fy0 - 1)) * 22 };
+  },
+  mapZoomApply() {
+    const v = $('#map-v'), c = $('#map-c'), Z = this.mapZ;
+    if (!v || !c || !this.mapW) return;
+    const ds = this.mapFit() * Z.z, w = this.mapW * ds, h = this.mapH * ds;
+    // Fitted: centred. Zoomed: the map always covers the view, no empty edges.
+    if (!Z.ready || Z.z <= 1) { Z.x = (v.clientWidth - w) / 2; Z.y = (v.clientHeight - h) / 2; Z.ready = true; }
+    if (w > v.clientWidth) Z.x = Math.min(0, Math.max(v.clientWidth - w, Z.x)); else Z.x = (v.clientWidth - w) / 2;
+    if (h > v.clientHeight) Z.y = Math.min(0, Math.max(v.clientHeight - h, Z.y)); else Z.y = (v.clientHeight - h) / 2;
+    c.style.width = w + 'px';
+    c.style.height = h + 'px';
+    c.style.transform = `translate(${Z.x}px, ${Z.y}px)`;
   },
   drawMapBase(g, x0, y0, cols, rows, s) {
     const col = { [T.OUT]: World.id === 'hq' ? '#5d7a3a' : '#8f7c55', [T.SAND]: '#b9a57a', [T.WALL]: '#3c3a33', [T.FLOOR]: '#8e8c84', [T.ROAD]: '#3a3a38', [T.FENCE]: '#666', [T.PAD]: '#86847c', [T.GRASS]: '#7f9c55', [T.TRACK]: '#8f5440', [T.GATE]: '#3a3a38' };

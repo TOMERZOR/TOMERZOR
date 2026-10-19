@@ -585,3 +585,12 @@ body.locked .screen { background: #0b0d0a !important; }
 .locked-msg { margin-top: 30vh; text-align: center; color: #9a9a90; font-size: 18px; }
 .locked-msg .lk { font-size: 48px; margin-bottom: 8px; }
 body.locked #rotate { display: none !important; }
+
+/* ---------- Big map: zoom and pan ---------- */
+.map .map-view { flex: 1; min-width: 0; position: relative; overflow: hidden; border-radius: 12px; background: #11160d; touch-action: none; cursor: grab; }
+.map .map-view canvas { position: absolute; left: 0; top: 0; flex: none; max-height: none; border-radius: 0; transform-origin: 0 0; }
+.map .map-zoom { position: absolute; left: 10px; bottom: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 2; }
+.map .map-zoom .icon-btn { font-size: 24px; }
+.pick-look { display: flex; gap: 14px; justify-content: center; margin: 6px 0 14px; }
+.pick-look .card-face { width: 96px; height: 96px; opacity: .35; transition: opacity .15s, transform .15s; }
+.pick-look .card-face.sel { opacity: 1; transform: scale(1.08); }

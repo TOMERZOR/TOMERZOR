@@ -139,7 +139,8 @@ const Assets = {
     await this.addPerson(loader, id, glb);
   },
   // Made-up characters (the curious civilians) have plain public models, loaded when needed.
-  publicPeople: { cur_shmulik: 'assets/models/cur_shmulik.json', cur_ortal: 'assets/models/cur_ortal.json', cur_victor: 'assets/models/cur_victor.json' },
+  // The player's own soldier (one for boys, one for girls) comes first.
+  publicPeople: { player_m: 'assets/models/player_m.json', player_f: 'assets/models/player_f.json', cur_shmulik: 'assets/models/cur_shmulik.json', cur_ortal: 'assets/models/cur_ortal.json', cur_victor: 'assets/models/cur_victor.json' },
   loadPublicPerson(id) {
     if (this.people[id] || !this.publicPeople[id] || !this.walkClip) return Promise.resolve();
     this.publicLoading = this.publicLoading || {};
@@ -155,7 +156,7 @@ const Assets = {
   async addPerson(loader, id, glb, path = '') {
     const g = await new Promise((ok, no) => loader.parse(glb, path, ok, no));
     g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 0.85; } });
-    const person = Cast.get(id) || {};
+    const person = Cast.get(id) || { female: id === 'player_f' };
     const fit = this.measure(g.scene, person.female ? 1.68 : 1.76);
     // The shared walk cycle, with the hips at this skeleton's own height.
     const walk = this.walkClip.clone();

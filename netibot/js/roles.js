@@ -247,6 +247,11 @@ const Roles = {
     const alerts = [];
     if (Math.random() < 0.6) alerts.push(9 * 60 + Math.floor(Math.random() * 9 * 60));
     // Night-only duties go last, so the arrow starts with what can be done now.
+    // Online there's more to do: a couple of the site's general tasks as well.
+    if (String(G.state.mode).startsWith('multi.')) {
+      const extra = ['radar', 'clean', 'train2', 'hq_gear', 'guard'].filter(t => !r.tasks.includes(t)).sort(() => Math.random() - 0.5).slice(0, 2);
+      rest.push(...extra);
+    }
     const own = [...r.every, ...rest].sort((a, b) => (TASKS[a].after ? 1 : 0) - (TASKS[b].after ? 1 : 0));
     return {
       title: `יום ${day} בתור ${person.short}`,

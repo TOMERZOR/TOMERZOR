@@ -1691,7 +1691,9 @@ const Scene3D = {
 
     // People.
     const pr = G.profile;
-    const want = ((Multi.on || (G.state && G.state.role)) && pr.as) || null;
+    // Playing as a cast member: their model. Otherwise the game's own soldier for boys or girls.
+    const own = `player_${pr.gender === 'f' ? 'f' : 'm'}`;
+    const want = ((Multi.on || (G.state && G.state.role)) && pr.as) || (Assets.people[own] ? own : null);
     if (this.player && (this.player.who !== want || (want && !this.player.own && Assets.people[want]))) { this.root.remove(this.player.root); this.player = null; }
     if (!this.player) {
       this.player = this.makeSoldier({ id: want, skin: pr.skin, hair: pr.hair, female: pr.gender === 'f', head: 'beret', uniform: 0x5b6b3c });

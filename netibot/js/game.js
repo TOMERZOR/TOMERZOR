@@ -53,6 +53,7 @@ const Game = {
   // ---------- boot ----------
   init() {
     Cast.init();
+    mergeExtraLines();
     Curious.register();
     Settings.apply();
     World.use('netivot');
@@ -842,9 +843,7 @@ const Game = {
     $('#m-set').onclick = () => { Sound.unlock(); Sound.click(); Settings.open(); };
     $('#m-multi').onclick = () => { Sound.unlock(); this.multiMenu(); };
     $('#m-role').onclick = () => { Sound.unlock(); Roles.menu(); };
-    // Opened from an invite link: straight to choosing who you are.
-    if (Lobby.invited() && !this.invitedOnce) { this.invitedOnce = true; this.multiMenu(); }
-    else Install.maybeShow();
+    Install.maybeShow();
     Sound.music('menu');
   },
 
@@ -889,16 +888,13 @@ const Game = {
         <div class="row"><label>אני</label>
           <button class="chip ${p.gender === 'm' ? 'sel' : ''}" data-g="m">חייל</button>
           <button class="chip ${p.gender === 'f' ? 'sel' : ''}" data-g="f">חיילת</button></div>
-        <div class="row"><label>גוון עור</label>${DATA.skinTones.map(c => `<span class="swatch ${p.skin === c ? 'sel' : ''}" data-s="${c}" style="background:${c}"></span>`).join('')}</div>
-        <div class="row"><label>שיער</label>${DATA.hairColors.map(c => `<span class="swatch ${p.hair === c ? 'sel' : ''}" data-h="${c}" style="background:${c}"></span>`).join('')}</div>
+        <div class="pick-look">${['m', 'f'].map(g => `<img class="card-face ${p.gender === g ? 'sel' : ''}" src="assets/faces/player_${g}.webp" alt="" data-g="${g}">`).join('')}</div>
         <div class="actions"><button class="btn" id="c-next">המשך ◂</button><button class="btn ghost" id="c-back">חזרה</button></div>
       </div></div>`, 'assets/beret.jpg');
       $('#screen').querySelector('.panel').innerHTML = fmt($('#screen').querySelector('.panel').innerHTML);
       const name = $('#c-name');
       name.oninput = () => p.name = name.value.trim();
       $('#screen').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { p.name = name.value.trim(); p.gender = b.dataset.g; render(); });
-      $('#screen').querySelectorAll('[data-s]').forEach(b => b.onclick = () => { p.name = name.value.trim(); p.skin = b.dataset.s; render(); });
-      $('#screen').querySelectorAll('[data-h]').forEach(b => b.onclick = () => { p.name = name.value.trim(); p.hair = b.dataset.h; render(); });
       $('#c-back').onclick = () => this.title();
       $('#c-next').onclick = async () => {
         p.name = name.value.trim() || (p.gender === 'f' ? 'חיילת' : 'חייל');
@@ -968,6 +964,8 @@ const Game = {
         const saved = this.load('multi.' + person.id);
         G.state = saved ? saved.state : this.newState('free');
         G.state.mode = 'multi.' + person.id;
+        // Online, everyone does the job of who they play (their own duties), not just the gate.
+        if (ROLES[person.id]) G.state.role = person.id;
         Multi.start(person.id);
         this.multiRender = null;
         this.startWorld(!saved).then(() => UI.toast('🌐 מחובר[/ת]! T — לכתוב לכולם · לחיצה על המפה הקטנה — איפה כולם'));

@@ -85,6 +85,7 @@ const Events = {
     gate: 'הכנסת אדם לא מורשה לאתר',
     belt: 'נסיעה ברכב צבאי בלי חגורת בטיחות',
     post: 'הפקרת עמדת שמירה',
+    curious: 'מסירת מידע לאזרח סקרן בשער',
   },
   charge(kind) {
     const S = G.state;
@@ -95,17 +96,41 @@ const Events = {
     S.flags.chargedDay = S.day;
     UI.toast(`📋 נפתח לך תיק: ${this.CHARGES[kind]}. מחר — משפט אצל {@bc}`, 'bad');
   },
+  // Shots for the trial, filmed in the office at HQ (metres; see toOffice for who stands where).
+  TRIAL_SHOTS: {
+    bc: { from: [52.55, 1.62, 14.55], end: [52.38, 1.6, 14.2], at: [52, 1.5, 13.1], dur: 7000 },
+    bcOver: { from: [52.75, 1.86, 16.95], end: [52.62, 1.82, 16.55], at: [52, 1.42, 13.1], dur: 7000 },
+    harasar: { from: [50.35, 1.62, 14.3], end: [50.05, 1.6, 14.45], at: [48.6, 1.52, 15.0], dur: 7000 },
+    player: { from: [53.05, 2.0, 12.6], end: [52.9, 1.95, 12.9], at: [52, 0.95, 15.8], dur: 7000 },
+    wide: { from: [55.7, 2.7, 17.7], end: [55.1, 2.5, 17.2], at: [50.8, 1.1, 14.4], dur: 9000 },
+  },
+  trialShot(line) {
+    const T = this.TRIAL_SHOTS;
+    if (line.shot) return T[line.shot];
+    if (line.choices || line.who === 'player') return T.player;
+    if (line.who === 'harasar') return T.harasar;
+    if (line.who === 'bc') { this.bcAlt = !this.bcAlt; return this.bcAlt ? T.bc : T.bcOver; }
+    return T.wide;
+  },
   async trial() {
     const S = G.state;
     const list = S.flags.charges.slice();
     S.flags.charges = [];
     Sound.horn();
-    await UI.cutscene([{ img: Assets.scene('trial'), who: '', text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו." — דקה אחר כך [אתה/את] בדום מול השולחן שלה. ליד הדלת עומד {@harasar}, ידיים שלובות.' }]);
+    UI.cinema(true, (line) => this.trialShot(line));
+    await UI.cutscene([
+      { img: Assets.scene('trial'), text: 'הטלפון מצלצל. "{name}? כאן הלשכה של {@@bc}. [אתה/את] [מוזמן/מוזמנת] לשיחת דין. עכשיו."' },
+      { img: Assets.scene('trial_cmd'), who: '{@@bc}', text: 'היא לא מרימה את הראש מהתיק. רק מעבירה דף. ועוד דף. זה סימן רע.' },
+      { img: Assets.scene('trial_door'), who: '{@harasar}', text: 'ליד הדלת עומד {@harasar}. ידיים שלובות. מחייך. זה סימן עוד יותר רע.' },
+      { img: Assets.scene('trial_plea'), who: '{name}', text: 'ואת[ה/] באמצע, בדום. טיפת זיעה אחת מתחילה לרדת מהמצח.' },
+    ]);
     const back = await this.toOffice();
+    this.bcAlt = false;
     await UI.talk([
+      { who: 'narrator', shot: 'wide', text: 'הלשכה של מפקדת הסוללה. שקט. רק המזגן, והדפים.' },
       { who: 'bc', text: 'שב[/י]. לא, [תעמוד/תעמדי]. אני פותחת את התיק.' },
       { who: 'harasar', text: '...ותעמוד[/י] ישר. מול מפקדת סוללה לא נשענים.' },
-      ...list.map((k, i) => ({ who: 'bc', text: `סעיף ${i + 1}: ${this.CHARGES[k]}.${k === 'belt' ? ' מאתיים מטר זה מספיק כדי להתהפך. שאלו את המשאית של 2019.' : k === 'gate' ? ' את[ה/] יודע[/ת] מי זה היה? גם אני לא. זאת הבעיה.' : ' עמדה בלי שומר זה סתם כיסא עם נוף.'}` })),
+      ...list.map((k, i) => ({ who: 'bc', text: `סעיף ${i + 1}: ${this.CHARGES[k]}.${k === 'belt' ? ' מאתיים מטר זה מספיק כדי להתהפך. שאלו את המשאית של 2019.' : k === 'gate' ? ' את[ה/] יודע[/ת] מי זה היה? גם אני לא. זאת הבעיה.' : k === 'curious' ? ' "תייר". עם פנקס. ושאלות. ואת[ה/] ענית. על כולן.' : ' עמדה בלי שומר זה סתם כיסא עם נוף.'}` })),
       { who: 'harasar', text: 'ואם מותר לי, המפקדת: גם בלי חוגר. רשמתי.' },
     ]);
     const plea = await UI.talk([{ who: 'bc', text: 'מה יש לך להגיד להגנתך?', choices: [
@@ -129,8 +154,14 @@ const Events = {
     ];
     const [text, apply] = verdicts[Math.min(3, level)];
     apply();
+    // The verdict: the stamp comes down (an insert shot), then back in the room.
+    if (Assets.scene('trial_stamp')) {
+      Sound.boom();
+      await UI.cutscene([{ img: Assets.scene('trial_stamp'), who: '{@@bc}', text: `*בום.* החותמת יורדת על הדף. גזר הדין: ${text}` }]);
+    }
     level ? Sound.bad() : Sound.good();
     await UI.talk([{ who: 'bc', text: `גזר הדין: ${text}` }, { who: 'harasar', text: level ? 'בוא[/י], אני מלווה אותך החוצה. ...ולסגור את הכפתור העליון.' : '...זוכה[/ת]. טוב. אבל אני עוד אתפוס אותך.' }]);
+    UI.cinema(false);
     await this.leaveOffice(back);
   },
   // The trial is held in the commander's office at HQ: she stands at her desk, the
@@ -152,7 +183,7 @@ const Events = {
         n.x = at.x; n.y = at.y; n.path = []; n.spot = at;
         n.angle = Math.atan2(P.y - n.y, P.x - n.x);
       };
-      P.x = 26 * TS; P.y = 7.9 * TS; P.angle = -Math.PI / 2;
+      P.x = 26 * TS; P.y = 7.9 * TS; P.angle = -Math.PI / 2; P.vx = P.vy = 0; P.moving = false;
       Scene3D.yaw = 0; Scene3D.camX = undefined;
       place('bc', 26, 6.55);
       place('harasar', 24.3, 7.5);
@@ -160,6 +191,8 @@ const Events = {
         // The idle clip looks around; while the dialog holds the frame, hold them at its
         // start, looking straight at you.
         for (const [n, m] of Scene3D.models) if ((n.id === 'bc' || n.id === 'harasar') && m.acts && m.acts.idle) { m.acts.idle.time = 0.3; m.mixer.update(0); }
+        const pm = Scene3D.player;
+        if (pm && pm.acts && pm.acts.idle) { pm.acts.idle.time = 0.3; pm.mixer.update(0); }
         done(back);
       }, 500);
     }));

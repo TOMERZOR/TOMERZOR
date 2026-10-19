@@ -151,6 +151,9 @@ const DATA = {
   ],
 
   achievements: [
+    { id: 'curious', name: 'שומר[/ת] הסף', desc: 'הרחקת 3 סקרנים מהשער בלי לגלות כלום' },
+    { id: 'police', name: 'שלוש שנים זה לא צחוק', desc: 'הזמנת משטרה לסקרן שצילם את האתר' },
+    { id: 'tutorial', name: 'קראת את ההוראות', desc: 'סיימת את הדרכת הכפתורים' },
     { id: 'baum_boss', name: 'מזרחית מנצחת', desc: 'הבסת את מפקדת הסוללה עם קריוקי וגרעינים' },
     { id: 'harasar_boss', name: 'אין לו מה להגיד', desc: 'הבסת את הרס"ר עם תלבושת מושלמת' },
     { id: 'orin_dance', name: 'אף אחד לא יאמין', desc: 'המפקדת העירה רק אותך באמצע הלילה ורקדה' },
@@ -371,5 +374,6 @@ const DATA = {
     officer: { name: 'קצין תורן', img: null, icon: '🔦' },
     narrator: { name: '', img: null, icon: '📻' },
     rafael: { name: 'נהג רפאל קייטרינג', img: null, icon: '🚚' },
+    police: { name: 'שוטר', img: null, icon: '👮' },
   },
 };

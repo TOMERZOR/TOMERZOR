@@ -127,7 +127,7 @@ const Assets = {
     const all = Object.keys(ROSTER.models || {});
     if (!all.length || !Lobby.cryptoKey) return '';
     const bad = Object.keys(this.peopleErr).map(id => (Cast.get(id) || {}).short || id);
-    return `👥 דמויות: ${Object.keys(this.people).length}/${all.length}` + (bad.length ? ` · לא נטענו: ${bad.join(', ')}` : '');
+    return `👥 דמויות: ${all.filter(id => this.people[id]).length}/${all.length}` + (bad.length ? ` · לא נטענו: ${bad.join(', ')}` : '');
   },
   async loadPerson(loader, id) {
     const file = String(ROSTER.models[id]).replace(/[^a-f0-9]/g, '');
@@ -136,6 +136,22 @@ const Assets = {
     const buf = new Uint8Array(await res.arrayBuffer());
     const zipped = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
     const glb = await new Response(new Blob([zipped]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+    await this.addPerson(loader, id, glb);
+  },
+  // Made-up characters (the curious civilians) have plain public models, loaded when needed.
+  publicPeople: { cur_shmulik: 'assets/models/cur_shmulik.glb', cur_ortal: 'assets/models/cur_ortal.glb', cur_victor: 'assets/models/cur_victor.glb' },
+  loadPublicPerson(id) {
+    if (this.people[id] || !this.publicPeople[id] || !this.walkClip) return Promise.resolve();
+    this.publicLoading = this.publicLoading || {};
+    if (!this.publicLoading[id]) {
+      this.publicLoading[id] = fetch(this.publicPeople[id])
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
+        .then(glb => this.addPerson(new THREE.GLTFLoader(), id, glb))
+        .catch(e => { console.warn('public model', id, e); delete this.publicLoading[id]; });
+    }
+    return this.publicLoading[id];
+  },
+  async addPerson(loader, id, glb) {
     const g = await new Promise((ok, no) => loader.parse(glb, '', ok, no));
     g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 0.85; } });
     const person = Cast.get(id) || {};
@@ -148,7 +164,7 @@ const Assets = {
       for (let i = 1; i < tr.values.length; i += 3) tr.values[i] += dy;
     }
     this.people[id] = { scene: g.scene, fit, walk };
-    if (window.Scene3D && Scene3D.personReady) Scene3D.personReady(id);
+    if (typeof Scene3D !== 'undefined' && Scene3D.personReady) Scene3D.personReady(id);
   },
   // Cutscene art of the real cast, encrypted the same way (ROSTER.scenes). Small, so it all
   // loads up front; until it's in (or without the key) the slide just has no picture.
@@ -164,7 +180,7 @@ const Assets = {
         const jpg = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, Lobby.cryptoKey, buf.slice(12));
         this.scenes[name] = URL.createObjectURL(new Blob([jpg], { type: 'image/jpeg' }));
       } catch (e) { console.warn('scene', name, e); }
-    }));
+    })).then(() => { if (typeof Scene3D !== 'undefined' && Scene3D.idoLogoReady) Scene3D.idoLogoReady(); });
   },
   scene(name) { return this.scenes[name] || ''; },
   walkFor(id) { return (id && this.people[id] && this.people[id].walk) || this.walkClip; },

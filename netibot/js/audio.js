@@ -247,7 +247,7 @@ const Sound = (() => {
     music(mood) { if (!ensure()) return; Music.set(mood); },
     // Recorded voice lines (mp3). A new line cuts off the one still playing.
     voice(src) {
-      if (!prefs.sfx) return;
+      if (!prefs.sfx || (typeof Settings !== 'undefined' && !Settings.v.voices)) return;
       try {
         if (this._voice) this._voice.pause();
         const a = this._voice = new Audio(src);

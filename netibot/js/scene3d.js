@@ -48,6 +48,7 @@ const Scene3D = {
 
   resize(w, h, dpr) {
     this.renderer.setPixelRatio(Math.min(dpr, 2));
+    if (this.sun && typeof Settings !== 'undefined') this.sun.castShadow = Settings.shadows();
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.fov = w < h ? 74 : 62;
@@ -177,10 +178,13 @@ const Scene3D = {
     for (const b of World.def.buildings) if (b.shelter) {
       for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) shelterTiles.add(x + ',' + y);
     }
-    const walls = [], shelters = [];
+    const walls = [], shelters = [], windows = [];
+    // The gate booth has windows on the gate side (west and south), to watch the road.
+    const booth = World.def.buildings.find(b => b.id === 'booth');
+    const isWindow = (x, y) => booth && x >= booth.x && x < booth.x + booth.w && y >= booth.y && y < booth.y + booth.h && (x === booth.x || y === booth.y + booth.h - 1);
     for (let y = 0; y < World.H; y++) for (let x = 0; x < World.W; x++) {
       if (World.grid[y][x] !== T.WALL) continue;
-      (shelterTiles.has(x + ',' + y) ? shelters : walls).push([x, y]);
+      (shelterTiles.has(x + ',' + y) ? shelters : isWindow(x, y) ? windows : walls).push([x, y]);
     }
     let wallTex = null;
     if (Assets.images.wall) {
@@ -202,6 +206,18 @@ const Scene3D = {
     };
     make(walls, WALL_H, 0xffffff, true);
     make(shelters, SHELTER_H, 0xb4b2a8, true);
+    if (windows.length) {
+      const wm = this.mat(0xffffff, { roughness: 0.95, map: wallTex });
+      const glass = new THREE.MeshStandardMaterial({ color: 0xbfd8e6, transparent: true, opacity: 0.18, roughness: 0.1, metalness: 0.2, depthWrite: false });
+      for (const [x, y] of windows) {
+        this.box(2, 1.05, 2, wm, x * 2 + 1, 0.525, y * 2 + 1);
+        this.box(2, 0.75, 2, wm, x * 2 + 1, WALL_H - 0.375, y * 2 + 1);
+        const pane = this.box(1.96, WALL_H - 1.8, 0.04, glass, x * 2 + 1, 1.05 + (WALL_H - 1.8) / 2, y * 2 + 1);
+        pane.castShadow = false;
+        if (x === booth.x) pane.rotation.y = Math.PI / 2;
+        this.box(2.02, 0.06, 2.02, this.mat(0x6f6a5c), x * 2 + 1, 1.08, y * 2 + 1);
+      }
+    }
     // Wall caps and red bands on shelters.
     const red = this.mat(0xd8392b);
     for (const b of World.def.buildings) {
@@ -464,6 +480,10 @@ const Scene3D = {
           g.add(board);
           // Earth berm behind the targets.
           if (o.berm) this.box(o.berm[1], 1.6, 1.2, this.mat(0xb89a62), o.berm[0] * 2 - cx, 0.8, -1.4, g);
+          break;
+        }
+        case 'idobox': {
+          this.idoBox(g, w, d, o.face || 1);
           break;
         }
         case 'sign': {
@@ -942,8 +962,8 @@ const Scene3D = {
   // A cast member's own model finished loading: rebuild whoever is drawn as them.
   personReady(id) {
     const drop = (m) => { if (m && m.root.parent) m.root.parent.remove(m.root); };
-    for (const [n, m] of this.models) if (m.who === id && !m.own) { drop(m); this.models.delete(n); }
-    for (const [k, m] of this.remotes) if (m.who === id && !m.own) { drop(m); this.remotes.delete(k); }
+    for (const [n, m] of this.models || []) if (m.who === id && !m.own) { drop(m); this.models.delete(n); }
+    for (const [k, m] of this.remotes || []) if (m.who === id && !m.own) { drop(m); this.remotes.delete(k); }
     if (this.player && this.player.who === id && !this.player.own) { drop(this.player); this.player = null; }
   },
 
@@ -1329,6 +1349,119 @@ const Scene3D = {
     }
     this.sky = this.sky.filter(s => !s.dead);
     this.flash.intensity = Math.max(0, this.flash.intensity - dt * 12);
+    if (this.tutCrate) this.tutCrate.userData.ring.scale.setScalar(1 + Math.sin(performance.now() / 220) * 0.14);
+    if (this.camFlash && this.camFlash.visible) {
+      this.camFlashT -= dt;
+      const k = Math.max(0, this.camFlashT / 0.18);
+      this.camFlash.material.opacity = k;
+      this.camFlash.scale.setScalar(0.6 + (1 - k) * 1.4);
+      this.camFlashL.intensity = k * 3;
+      if (k <= 0) this.camFlash.visible = false;
+    }
+  },
+  // A white corrugated container with barred windows and the battery's emblem painted on the
+  // side (face: +1 = the side toward +z / south, -1 = north). The emblem is the real one,
+  // from the encrypted scene art; without the key it's just the battery's name in paint.
+  idoBox(g, w, d, face) {
+    const h = 2.6;
+    const wall = this.canvasTex(256, 64, (c) => {
+      c.fillStyle = '#e9e6dc'; c.fillRect(0, 0, 256, 64);
+      for (let x = 0; x < 256; x += 8) { c.fillStyle = 'rgba(0,0,0,.07)'; c.fillRect(x, 0, 3, 64); c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x + 4, 0, 2, 64); }
+      c.fillStyle = 'rgba(120,80,40,.18)'; c.fillRect(0, 60, 256, 4);
+    });
+    wall.wrapS = THREE.RepeatWrapping;
+    wall.repeat.set(w / 2.5, 1);
+    const body = this.box(w, h, d, this.mat(0xffffff, { map: wall, roughness: 0.7 }), 0, h / 2 + 0.1, 0, g);
+    body.castShadow = true;
+    this.box(w + 0.12, 0.08, d + 0.25, this.mat(0x8f8a7c, { metalness: 0.3 }), 0, h + 0.16, 0, g);
+    this.box(w + 0.05, 0.12, d + 0.05, this.mat(0x6f6d66), 0, 0.06, 0, g);
+    // The painted side comes from the photo, windows and all (2.56:1, the wall's full height).
+    const fz = face * (d / 2 + 0.01);
+    const ph = h - 0.25;
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(ph * 2.56, ph), new THREE.MeshStandardMaterial({ transparent: true, roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -2 }));
+    plane.position.set(0, 0.1 + h / 2, fz + face * 0.012);
+    if (face < 0) plane.rotation.y = Math.PI;
+    g.add(plane);
+    this.idoDecals = (this.idoDecals || []).filter(m => m.parent && m.parent.parent);
+    this.idoDecals.push(plane);
+    this.paintIdo(plane);
+  },
+  // The emblem when the scene art is in; else the name, hand-painted style.
+  paintIdo(plane) {
+    const url = Assets.scene('ido_logo');
+    if (url && this.idoTex) { plane.material.map = this.idoTex; plane.material.needsUpdate = true; return; }
+    if (url && !this.idoLoading) {
+      this.idoLoading = true;
+      const img = new Image();
+      img.onload = () => {
+        // Feather the photo's edges into the white wall.
+        this.idoTex = this.canvasTex(1024, 400, (c, W, H) => {
+          c.drawImage(img, 0, 0, W, H);
+          c.globalCompositeOperation = 'destination-in';
+          const gx = c.createLinearGradient(0, 0, W, 0);
+          gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(0.06, '#000'); gx.addColorStop(0.94, '#000'); gx.addColorStop(1, 'rgba(0,0,0,0)');
+          c.fillStyle = gx; c.fillRect(0, 0, W, H);
+          const gy = c.createLinearGradient(0, 0, 0, H);
+          gy.addColorStop(0, 'rgba(0,0,0,0)'); gy.addColorStop(0.08, '#000'); gy.addColorStop(0.92, '#000'); gy.addColorStop(1, 'rgba(0,0,0,0)');
+          c.fillStyle = gy; c.fillRect(0, 0, W, H);
+        });
+        for (const m of this.idoDecals || []) { m.material.map = this.idoTex; m.material.needsUpdate = true; }
+      };
+      img.src = url;
+    }
+    if (!plane.material.map) {
+      if (!this.idoText) {
+        this.idoText = this.canvasTex(1024, 400, (c, W, H) => {
+          // Two barred windows and the battery's name.
+          for (const x of [40, 770]) {
+            c.fillStyle = '#d8d6cf'; c.fillRect(x - 6, 14, 226, 196);
+            c.fillStyle = '#8d8a80'; c.fillRect(x, 20, 214, 184);
+            c.strokeStyle = '#f2f0ea'; c.lineWidth = 6;
+            for (let k = 0; k <= 4; k++) { c.beginPath(); c.moveTo(x + k * 53, 20); c.lineTo(x + k * 53, 204); c.stroke(); }
+            c.beginPath(); c.moveTo(x, 112); c.lineTo(x + 214, 112); c.stroke();
+          }
+          c.fillStyle = '#4a4e57'; c.font = '900 150px Rubik, Arial'; c.textAlign = 'center'; c.direction = 'rtl';
+          c.fillText('אידו אגדה', W / 2, H * 0.9);
+        });
+      }
+      plane.material.map = this.idoText;
+      plane.material.needsUpdate = true;
+    }
+  },
+  idoLogoReady() { for (const m of this.idoDecals || []) this.paintIdo(m); },
+  // The tutorial's practice crate: an olive ammo box with a bobbing glow ring.
+  tutorialCrate(at) {
+    if (this.tutCrate) { this.root.remove(this.tutCrate); this.tutCrate = null; }
+    if (!at) return;
+    const g = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.5), this.mat(0x4b5a2a));
+    box.position.y = 0.25;
+    box.castShadow = true;
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(0.84, 0.06, 0.54), this.mat(0x3a4520));
+    lid.position.y = 0.52;
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.08, 0.52), this.mat(0xf2c14e, { emissive: 0x6b4a0c }));
+    band.position.y = 0.32;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.78, 32), new THREE.MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.8, side: THREE.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.03;
+    g.add(box, lid, band, ring);
+    g.position.set(at.x * S3, 0, at.y * S3);
+    g.userData.ring = ring;
+    this.tutCrate = g;
+    this.root.add(g);
+  },
+  // A camera's flash going off (a curious civilian photographing the site).
+  cameraFlash(x, y) {
+    if (!this.camFlash) {
+      this.camFlash = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, fog: false }));
+      this.camFlashL = new THREE.PointLight(0xf4f8ff, 0, 9, 2);
+      this.scene.add(this.camFlash, this.camFlashL);
+    }
+    this.camFlash.position.set(x * S3, 1.45, y * S3 - 0.35);
+    this.camFlashL.position.copy(this.camFlash.position);
+    this.camFlash.visible = true;
+    this.camFlashT = 0.18;
+    Sound.click();
   },
   boom(at) {
     Sound.boom();
@@ -1441,6 +1574,9 @@ const Scene3D = {
       if (G.alert && n.sheltering) { m.helmet.visible = true; m.beret.visible = m.cap.visible = false; }
       else { m.helmet.visible = n.look.head === 'helmet'; m.beret.visible = false; m.cap.visible = false; }
       this.animateSoldier(m, n, moving, dt);
+      // Film mode: no name tags over the actors.
+      const tag = m.tag || (m.parts && m.parts.tag);
+      if (tag) tag.visible = !this.shot;
     }
 
     // Gate car.
@@ -1849,7 +1985,60 @@ const Scene3D = {
 
   // Orbit camera behind the player. When a wall sits between the player and
   // the camera, the camera tilts up to look over it instead of clipping.
+  // A film-style shot that holds the camera instead of following the player: it eases in
+  // from wherever the camera was, then drifts slowly from `from` to `end` (a dolly) while
+  // looking at `at`. Positions are in metres: { from: [x, y, z], end?, at: [x, y, z], dur }.
+  setShot(s) {
+    if (!s) { this.shot = null; this.camX = undefined; return; }
+    const c = this.camera;
+    this.shot = { ...s, t0: performance.now(), p0: c.position.clone(), l0: this.shotLook ? this.shotLook.clone() : null };
+  },
+  shotCamera() {
+    const s = this.shot, c = this.camera;
+    const now = performance.now();
+    const k = Math.min(1, (now - s.t0) / (s.dur || 6000));
+    const V = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+    const pos = V(s.from).lerp(V(s.end || s.from), k);
+    const at = V(s.at).lerp(V(s.atEnd || s.at), k);
+    // The cut itself: a quick ease from the last framing (0.45 s), like a whip pan.
+    const e = Math.min(1, (now - s.t0) / 450);
+    const ee = e * e * (3 - 2 * e);
+    if (s.cut === false && ee < 1) {
+      pos.lerpVectors(s.p0, pos, ee);
+      if (s.l0) at.lerpVectors(s.l0, at, ee);
+    }
+    c.position.copy(pos);
+    c.lookAt(at);
+    this.shotLook = at;
+  },
+
+  // On a gate shift, inside the booth: first person, looking out of the window at the road.
+  fps() {
+    const gs = Story.gateShift;
+    return !!(gs && World.id === 'netivot' && !Boss.active && Math.hypot(G.player.x - SPOTS.booth.x, G.player.y - SPOTS.booth.y) < TS * 0.75);
+  },
+  fpsCamera() {
+    const P = G.player, c = this.camera;
+    if (!this.inFps) {
+      this.inFps = true;
+      this.fpsSaved = this.pitch;
+      // Face the gate and the road.
+      const dx = SPOTS.gate.x - P.x, dz = (SPOTS.gate.y + 2.2 * TS) - P.y;
+      this.yaw = Math.atan2(dx, dz) + Math.PI;
+      this.pitch = 0.42;
+    }
+    const look = -(this.pitch - 0.42) * 0.9;
+    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+    c.position.set(P.x * S3, 1.66, P.y * S3);
+    c.lookAt(P.x * S3 + fx * 4, 1.66 + Math.tan(look) * 4, P.y * S3 + fz * 4);
+  },
+
   updateCamera(dt) {
+    if (this.shot) { this.shotCamera(); return; }
+    const fps = this.fps();
+    if (this.player) this.player.root.visible = !fps;
+    if (fps) { this.fpsCamera(); return; }
+    if (this.inFps) { this.inFps = false; this.camX = undefined; this.pitch = this.fpsSaved || 0.3; }
     // At the deployment controls the camera follows the truck or the crane load instead.
     const P = this.ctlFocus || G.player;
     // Look slightly past the right shoulder, like most third-person games.
@@ -1877,7 +2066,7 @@ const Scene3D = {
     const p = this.effPitch;
     const c = this.camera;
     c.position.set(tx + sx * Math.cos(p) * this.dist, ty + Math.sin(p) * this.dist, tz + sz * Math.cos(p) * this.dist);
-    if (G.shake > 0) c.position.add(new THREE.Vector3((Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake));
+    if (G.shake > 0 && Settings.v.shake) c.position.add(new THREE.Vector3((Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake, (Math.random() - 0.5) * G.shake));
     c.lookAt(tx, ty + 0.2, tz);
   },
 

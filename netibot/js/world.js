@@ -114,6 +114,8 @@ const World = {
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← נתיבות 3 ק"מ' });
       prop('pullup', 14.2, 39.5, 1.8, 0.4, false);
       prop('generator', 45.2, 37.5, 1.6, 0.9);
+      // The battery's own white container with its emblem, by the gate.
+      prop('idobox', 39.4, 39.25, 5, 1.35, true, { face: -1 });
       // The storeroom nobody has touched in years.
       for (const j of DATA.junk) site.objects.push({ kind: 'junk', junk: j.id, x: j.at[0] * TS, y: j.at[1] * TS, w: 0.9 * TS, h: 0.9 * TS, solid: false, gone: false });
       for (const [x, y] of [[27, 24], [33, 22], [43, 29], [27, 38], [34, 34], [48, 21], [25, 32]]) prop('palm', x + 0.25, y + 0.25, 0.5, 0.5, true);
@@ -148,6 +150,7 @@ const World = {
       prop('bench', 49.0, 36.6, 0.6, 1.5);
       prop('treadmill', 51.4, 36.3, 0.9, 1.8);
       prop('treadmill', 52.7, 36.3, 0.9, 1.8);
+      prop('idobox', 47.6, 19.2, 5, 1.35, true, { face: 1 });
       // Hidden behind the shelves of the rasap's storeroom. Nobody knows about it. Officially.
       prop('snackcab', 49.0, 6.6, 0.9, 1.2);
       prop('radar', 21, 14, 2, 2);
@@ -159,6 +162,7 @@ const World = {
       for (const [x, y] of [[28, 21], [33, 21], [20, 21], [10, 21], [45, 21], [56, 21], [33, 30], [33, 38], [28, 40], [33, 40], [17, 34], [24, 12], [40, 12], [50, 33]]) lamp(x, y);
     } else if (id === 'field') {
       prop('sign', 40, 43.2, 3, 0.6, false, { text: 'אתר פריסה' });
+      prop('idobox', 14, 32.2, 5, 1.35, true, { face: 1 });
       for (const [x, y] of [[28, 21], [33, 21], [33, 30], [33, 38], [28, 40]]) lamp(x, y);
       // Containers already placed on an earlier visit.
       for (const id2 of (G.state && G.state.deploy && G.state.deploy.placed) || []) this.placeContainer(site, DATA.deploy.find(d => d.id === id2));

@@ -115,11 +115,14 @@ const UI = {
   objective(obj) {
     const o = $('#objective');
     const warp = obj && Story.warpTarget();
-    const html = !obj ? '' : `<div class="obj-title">משימה</div>${fmt(obj.text)}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.WARP_PRICE}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
+    const html = !obj ? '' : `<div class="obj-title">${obj.urgent ? '⚡ משימה דחופה' : 'משימה'}</div>${fmt(obj.text)}${obj.how ? `<div class="obj-how">👉 ${fmt(obj.how)}</div>` : ''}${obj.after ? `<div class="obj-after">אחר כך: ${fmt(obj.after)}</div>` : ''}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.WARP_PRICE}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
     // Only rebuilt when it changes, so a tap on the teleport button isn't lost.
     if (html === this.objHtml) return;
     this.objHtml = html;
     o.innerHTML = html;
+    o.classList.toggle('urgent', !!(obj && obj.urgent));
+    if (obj && obj.urgent && !this.wasUrgent) Sound.ding && Sound.ding();
+    this.wasUrgent = !!(obj && obj.urgent);
     const b = o.querySelector('[data-warp]');
     if (b) b.addEventListener('click', (e) => { e.stopPropagation(); Story.warp(); });
   },
@@ -169,6 +172,8 @@ const UI = {
           return;
         }
         const line = lines[i];
+        // A cinematic scene frames whoever is speaking.
+        if (this.shotFor) { const sh = this.shotFor(line); if (sh) Scene3D.setShot(sh); }
         const person = Cast.get(line.who);
         const ch = DATA.characters[line.who] || { name: line.who, icon: '💬' };
         const name = line.who === 'player' ? fmt('{name}') : person ? person.name : ch.name;
@@ -187,7 +192,7 @@ const UI = {
         let n = 0;
         clearInterval(typing);
         typing = setInterval(() => {
-          n += 2;
+          n += Settings.textStep();
           if (n % 6 === 0) Sound.blip();
           txt.textContent = full.slice(0, n);
           if (n >= full.length) { clearInterval(typing); typing = null; showChoices(); }
@@ -228,6 +233,21 @@ const UI = {
       document.addEventListener('keydown', onKey);
       show();
     });
+  },
+
+  // Film mode: black bars top and bottom, no HUD, and the camera framing each speaker
+  // (shotFor(line) returns a Scene3D shot for that line).
+  cinema(on, shotFor) {
+    document.body.classList.toggle('cinema', !!on);
+    let bars = $('#bars');
+    if (on && !bars) {
+      bars = el('div', { id: 'bars', class: 'bars' }, '<i class="top"></i><i class="bot"></i>');
+      document.body.appendChild(bars);
+      requestAnimationFrame(() => bars.classList.add('on'));
+    }
+    if (!on && bars) { bars.classList.remove('on'); setTimeout(() => bars.remove(), 400); }
+    this.shotFor = on ? shotFor || null : null;
+    if (!on) Scene3D.setShot(null);
   },
 
   // Full-screen illustrated scene: [{img, who, text}]
@@ -272,31 +292,16 @@ const UI = {
     G.keys.clear();
     m.classList.remove('hidden');
     m.innerHTML = `<div class="scrim"></div><div class="drawer">
-      <h2>☰ תפריט</h2><div class="paused">⏸ המשחק בהפסקה</div>${Assets.peopleStatus() ? `<div class="paused">${Assets.peopleStatus()}</div>` : ''}
+      <div class="drawer-head"><h2>☰ תפריט</h2><button class="icon-btn" data-m="settings" aria-label="הגדרות" title="הגדרות">⚙️</button></div><div class="paused">⏸ המשחק בהפסקה</div>${Assets.peopleStatus() ? `<div class="paused">${Assets.peopleStatus()}</div>` : ''}
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
       ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}
-      <div class="row2"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button></div>
-      <button class="btn small ghost" id="sd-style">🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}</button>
-      <label for="sd-mvol">עוצמת מוזיקה</label><input type="range" id="sd-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}">
-      <label for="sd-svol">עוצמת אפקטים</label><input type="range" id="sd-svol" min="0" max="1" step="0.05" value="${Sound.prefs.sfxVol}">
-      <button class="btn ghost" data-m="fs" data-fs="text"></button>
+      <button class="btn ghost" data-m="settings">⚙️ הגדרות — שמע, שליטה, תצוגה</button>
       <button class="btn ghost" data-m="help">❓ איך משחקים</button>
       <button class="btn ghost" data-m="save">💾 שמור עכשיו</button>
       <button class="btn red" data-m="exit">🚪 שמירה ויציאה לתפריט</button>
     </div>`;
     m.querySelector('.scrim').onclick = () => this.toggleMenu(false);
-    m.querySelectorAll('[data-audio]').forEach(b => b.onclick = () => Game.toggleAudio(b.dataset.audio));
-    m.querySelector('#sd-style').onclick = (e) => {
-      const keys = Object.keys(Sound.STYLES);
-      Sound.setStyle(keys[(keys.indexOf(Sound.style) + 1) % keys.length]);
-      e.target.textContent = `🎶 סגנון מוזיקה: ${Sound.STYLES[Sound.style]}`;
-      if (!Sound.prefs.music) Game.toggleAudio('music');
-    };
-    m.querySelector('#sd-mvol').oninput = (e) => Sound.setVolume('music', +e.target.value);
-    m.querySelector('#sd-svol').oninput = (e) => Sound.setVolume('sfx', +e.target.value);
-    Game.syncAudioButtons();
-    Game.syncFullscreen();
     const act = {
       resume: () => this.toggleMenu(false),
       phone: () => { this.toggleMenu(false); this.togglePhone(true); },
@@ -304,7 +309,7 @@ const UI = {
       chat: () => { this.toggleMenu(false); this.chat(); },
       invite: () => Game.shareInvite(),
       bossInvite: () => { this.toggleMenu(false); Boss.inviteCoop(); },
-      fs: () => Game.toggleFullscreen(),
+      settings: () => { this.toggleMenu(false); Settings.open(); },
       help: () => { this.toggleMenu(false); Game.help(true); },
       save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },
       exit: () => { Game.save(); location.reload(); },
@@ -457,7 +462,7 @@ const UI = {
         <div class="ph-item">דרגה: <b>${rankName()}</b></div>
         <div class="ph-item">ציון פלג"צ: <b>${Math.round(S.score)}</b> / ${DATA.passScore} למעבר</div>
         <div class="ph-item">יירוטים שראית: <b>${S.stats.intercepts}</b> · אזעקות: <b>${S.stats.alerts}</b></div>
-        <div class="ph-item">מארזים שהוחלפו: <b>${S.stats.reloads}</b> · רכבים בש"ג: <b>${S.stats.cars}</b></div>
+        <div class="ph-item">מארזים שהוחלפו: <b>${S.stats.reloads}</b> · רכבים בש"ג: <b>${S.stats.cars}</b> · סקרנים שהורחקו: <b>${S.stats.curiousOk || 0}</b></div>
         <div class="ph-item">שחורה: <b>${Math.round(S.shchora || 0)}</b>/100 · יציאה הביתה: <b>${Events.daysToHome() ? `עוד ${Events.daysToHome()} ימים` : 'היום!'}</b></div>
         <div class="ph-item">יתרון גדוד: ${G.perk ? G.perk.label : '—'}</div>`;
     } else if (this.phoneTab === 'ach') {
@@ -467,17 +472,11 @@ const UI = {
       }).join('');
     } else {
       body.innerHTML = `
-        <div class="ph-item"><button class="btn small ghost" data-audio="music"></button>
-          <label for="ph-mvol">עוצמת מוזיקה</label><input type="range" id="ph-mvol" min="0" max="1" step="0.05" value="${Sound.prefs.musicVol}"></div>
-        <div class="ph-item"><button class="btn small ghost" data-audio="sfx"></button>
-          <label for="ph-svol">עוצמת אפקטים</label><input type="range" id="ph-svol" min="0" max="1" step="0.05" value="${Sound.prefs.sfxVol}"></div>
+        <div class="ph-item"><button class="btn small ghost" id="ph-set">⚙️ כל ההגדרות — שמע, שליטה, תצוגה</button></div>
         <div class="ph-item"><button class="btn small ghost" id="ph-save">💾 שמור עכשיו</button></div>
         <div class="ph-item"><button class="btn small ghost" id="ph-help">❓ איך משחקים</button></div>
         <div class="ph-item"><button class="btn small red" id="ph-menu">יציאה לתפריט</button></div>`;
-      body.querySelectorAll('[data-audio]').forEach(b => b.onclick = () => Game.toggleAudio(b.dataset.audio));
-      body.querySelector('#ph-mvol').oninput = (e) => Sound.setVolume('music', +e.target.value);
-      body.querySelector('#ph-svol').oninput = (e) => Sound.setVolume('sfx', +e.target.value);
-      Game.syncAudioButtons();
+      body.querySelector('#ph-set').onclick = () => { this.togglePhone(false); Settings.open(); };
       body.querySelector('#ph-save').onclick = () => { Game.save(); this.toast('נשמר ✔', 'good'); };
       body.querySelector('#ph-help').onclick = () => { this.togglePhone(false); Game.help(true); };
       body.querySelector('#ph-menu').onclick = () => { Game.save(); location.reload(); };

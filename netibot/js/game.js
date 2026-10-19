@@ -51,6 +51,8 @@ const Game = {
   // ---------- boot ----------
   init() {
     Cast.init();
+    Curious.register();
+    Settings.apply();
     World.use('netivot');
     G.map = 'netivot';
     Scene3D.init(canvas);
@@ -70,7 +72,7 @@ const Game = {
   resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = window.innerWidth, h = window.innerHeight;
-    Scene3D.resize(w, h, dpr);
+    Scene3D.resize(w, h, Math.min(dpr, Settings.dprCap()));
     overlay.width = Math.floor(w * dpr);
     overlay.height = Math.floor(h * dpr);
     G.cam.w = w;
@@ -82,7 +84,7 @@ const Game = {
   bindInput() {
     document.addEventListener('keydown', (e) => {
       Sound.unlock();
-      if (e.target.tagName === 'INPUT') return;
+      if (e.target.tagName === 'INPUT' || Settings.isOpen()) return;
       G.keys.add(e.code);
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(e.code)) e.preventDefault();
       if (!G.running) return;
@@ -168,10 +170,10 @@ const Game = {
     canvas.addEventListener('pointermove', (e) => {
       const l = looks.get(e.pointerId);
       if (!l) return;
-      const k = e.pointerType === 'touch' ? 0.009 : 0.006;
+      const k = (e.pointerType === 'touch' ? 0.009 : 0.006) * Settings.v.sens;
       Scene3D.yaw -= (e.clientX - l.x) * k;
       Scene3D.lastLook = performance.now();
-      Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + (e.clientY - l.y) * k * 0.7));
+      Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + (e.clientY - l.y) * k * 0.7 * (Settings.v.invertY ? -1 : 1)));
       l.x = e.clientX; l.y = e.clientY;
     });
     const endLook = (e) => looks.delete(e.pointerId);
@@ -225,6 +227,7 @@ const Game = {
     G.state.score = Math.max(0, G.state.score + pts);
     UI.toast(`${pts > 0 ? '+' : ''}${pts} ${reason}`, pts >= 0 ? 'good' : 'bad');
     (pts >= 0 ? Sound.good : Sound.bad)();
+    if (pts < 0) Settings.buzz(90);
   },
   achieve(id) {
     const S = G.state;
@@ -299,6 +302,7 @@ const Game = {
   },
   npcsToShelters() {
     for (const n of G.npcs) {
+      if (n.curious) continue;
       const s = World.nearestShelter(n.x, n.y);
       const jitter = { x: s.x + (Math.random() - 0.5) * 14, y: s.y + (Math.random() - 0.5) * 14 };
       n.path = World.path(n.x, n.y, jitter.x, jitter.y) || [];
@@ -307,6 +311,7 @@ const Game = {
   },
   npcsReturn() {
     for (const n of G.npcs) {
+      if (n.curious) continue;
       n.sheltering = false;
       n.path = World.path(n.x, n.y, n.spot.x, n.spot.y) || [];
     }
@@ -412,8 +417,14 @@ const Game = {
 
   // ---------- frame ----------
   frame(t) {
+    // Battery saver: about 30 frames a second.
+    if (Settings.v.saver && t - (this.last || 0) < 30) { requestAnimationFrame(tt => this.frame(tt)); return; }
     const dt = Math.min(0.05, (t - (this.last || t)) / 1000);
     this.last = t;
+    if (Settings.v.fps) {
+      this.fpsN = (this.fpsN || 0) + 1;
+      if (t - (this.fpsT || 0) > 1000) { const f = $('#fps'); if (f) f.textContent = `${Math.round(this.fpsN * 1000 / (t - (this.fpsT || t - 1000)))} FPS`; this.fpsN = 0; this.fpsT = t; }
+    }
     if (G.running) {
       const live = !G.paused && !UI.busy;
       if (live) this.update(dt);
@@ -431,7 +442,8 @@ const Game = {
 
   update(dt) {
     const S = G.state, P = G.player;
-    S.clock += dt * DATA.minutesPerSecond;
+    // The clock (and the day's events) wait while the controls tutorial is on.
+    if (!Tutorial.active) S.clock += dt * DATA.minutesPerSecond;
 
     // Movement relative to the camera: W/up = away from the camera.
     let mx = 0, my = 0;
@@ -455,8 +467,8 @@ const Game = {
       mx = my = 0;
     }
     if (G.look.x || G.look.y) {
-      Scene3D.yaw -= G.look.x * dt * 2.6;
-      Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + G.look.y * dt * 1.4));
+      Scene3D.yaw -= G.look.x * dt * 2.6 * Settings.v.sens;
+      Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + G.look.y * dt * 1.4 * Settings.v.sens * (Settings.v.invertY ? -1 : 1)));
     }
     const len = Math.hypot(mx, my);
     const wantsRun = k.has('ShiftLeft') || k.has('ShiftRight') || G.touchRun || !!G.alert;
@@ -521,7 +533,7 @@ const Game = {
     if (World.gateTarget === 0 && World.gateOpen > 0.05 && World.blocked(P.x, P.y, P.r) && P.y > 40 * TS) World.gateOpen = 1;
 
     this.updateNpcs(dt);
-    Story.update(dt);
+    if (!Tutorial.active) Story.update(dt);
     Multi.update(dt);
     if (P.bubble) { P.bubble.t -= dt; if (P.bubble.t <= 0) P.bubble = null; }
 
@@ -561,7 +573,7 @@ const Game = {
       octx.fillRect(0, 0, w, h);
     }
     const t = this.objectiveTarget();
-    if (!t || UI.busy || Mini.active) return;
+    if (!t || UI.busy || Mini.active || (!Settings.v.arrow && !G.alert)) return;
     const P = G.player;
     const vx = t.x - P.x, vy = t.y - P.y;
     const distM = Math.hypot(vx, vy) * S3;
@@ -663,6 +675,9 @@ const Game = {
 
   applyProfile() {
     const p = G.profile;
+    // Everyone serves in battery Ido of battalion 947 (older saves picked one).
+    p.gdud = '947';
+    p.battery = 'ido';
     const gd = DATA.gdudim.find(g => g.id === p.gdud);
     G.perk = gd ? gd.perk : null;
     p.gdudName = gd ? gd.name : '';
@@ -684,6 +699,7 @@ const Game = {
     const snap = G.state.snap;
     if (!fresh && snap && snap.day === G.state.day && snap.tasks && snap.tasks.length) await Story.resumeDay(snap);
     else await Story.startDay(G.state.day);
+    Tutorial.maybeStart();
   },
 
   // Phones play sideways: go fullscreen and ask the browser to lock landscape.
@@ -720,18 +736,17 @@ const Game = {
   // ---------- menus ----------
   title() {
     const story = this.load('story');
-    UI.screen(`<div class="shade"></div><div class="content">
+    UI.screen(`<div class="shade"></div>
+      <div class="corner"><button class="icon-btn" id="m-help" aria-label="איך משחקים" title="איך משחקים">?</button><button class="icon-btn" id="m-sound" aria-label="מוזיקה ואפקטים" title="מוזיקה ואפקטים">${Sound.prefs.music || Sound.prefs.sfx ? '🔊' : '🔇'}</button><button class="icon-btn" id="m-set" aria-label="הגדרות" title="הגדרות">⚙️</button></div>
+      <div class="content">
       <div class="logo">נתי<span>בוט</span></div>
       <div class="logo-sub">NETIBOT</div>
       <div class="tagline">הסוללה של נתיבות · משחק עולם פתוח בגוף שלישי</div>
       <div class="menu">
-        ${story ? `<button class="btn" id="m-cont">▶ מצב סיפור — להמשיך (יום ${story.state.day}, ${esc(story.profile.name)})</button>` : ''}
-        <button class="btn ${story ? 'ghost' : ''}" id="m-new">${story ? 'משחק חדש מההתחלה' : 'מצב סיפור — משחק חדש'}</button>
-        <button class="btn ghost" id="m-free">אימונים חופשיים</button>
-        <button class="btn ghost" id="m-role">🎭 מצב תפקיד — לשחק בתור מישהו מהפלגה</button>
-        <button class="btn ghost" id="m-multi">🌐 מולטיפלייר — לשחק עם הפלגה</button>
-        <button class="btn ghost" id="m-help">איך משחקים</button>
-        <div class="audio-row"><button class="btn small ghost" data-audio="music"></button><button class="btn small ghost" data-audio="sfx"></button><button class="btn small ghost" data-fs="text"></button></div>
+        ${story ? `<button class="btn" id="m-cont">▶ להמשיך (יום ${story.state.day}, ${esc(story.profile.name)})</button>` : ''}
+        <button class="btn ${story ? 'ghost' : ''}" id="m-new">${story ? 'משחק חדש מההתחלה' : '▶ משחק חדש'}</button>
+        <button class="btn ghost" id="m-multi">🌐 לשחק עם הפלגה</button>
+        <div class="menu-row"><button class="btn small ghost" id="m-free">🎯 אימונים</button><button class="btn small ghost" id="m-role">🎭 לשחק בתור מישהו</button></div>
       </div>
       <div class="footnote">משחק בדיוני. כל הדמויות, השמות והאירועים במשחק מומצאים.</div>
     </div>`, 'assets/title.jpg');
@@ -752,15 +767,14 @@ const Game = {
       if (free) { G.profile = free.profile; G.state = free.state; this.startWorld(false).then(() => Story.trainingMenu()); }
       else this.createCharacter('free');
     };
-    $('#m-help').onclick = () => this.help(false);
+    $('#m-help').onclick = () => { Sound.unlock(); Sound.click(); this.help(false); };
+    $('#m-sound').onclick = (e) => { Sound.unlock(); Settings.soundCard(e.currentTarget); };
+    $('#m-set').onclick = () => { Sound.unlock(); Sound.click(); Settings.open(); };
     $('#m-multi').onclick = () => { Sound.unlock(); this.multiMenu(); };
     $('#m-role').onclick = () => { Sound.unlock(); Roles.menu(); };
     // Opened from an invite link: straight to choosing who you are.
     if (Lobby.invited() && !this.invitedOnce) { this.invitedOnce = true; this.multiMenu(); }
-    for (const b of document.querySelectorAll('[data-audio]')) b.onclick = () => this.toggleAudio(b.dataset.audio);
-    for (const b of document.querySelectorAll('#screen [data-fs]')) b.onclick = () => this.toggleFullscreen();
-    this.syncAudioButtons();
-    this.syncFullscreen();
+    else Install.maybeShow();
     Sound.music('menu');
   },
 
@@ -824,10 +838,20 @@ const Game = {
             { img: 'assets/beret.jpg', text: 'סוף הטירונות. חודשיים של שטח, מטווחים, שמירות ושינה של ארבע שעות. והלילה — טקס סיום.' },
             { img: 'assets/beret.jpg', who: 'מפקד הטירונות', text: '{name}! צעד[/י] קדימה... בשם חיל האוויר — קבל[/י] את הכומתה.' },
             { img: 'assets/beret.jpg', text: 'הכומתה הכחולה-אפורה על הראש. אמא בוכה בקהל. עכשיו מתחיל הדבר האמיתי.' },
-            { img: 'assets/reload.jpg', text: 'שובצת למערך ההגנה האווירית — כיפת ברזל. נשאר רק לבחור: לאיזה גדוד ולאיזו סוללה?' },
+            { img: 'assets/reload.jpg', text: 'שובצת למערך ההגנה האווירית — כיפת ברזל: גדוד 947, סוללת אידו.' },
           ]);
         }
-        this.chooseGdud(mode);
+        p.gdud = '947';
+        p.battery = 'ido';
+        this.applyProfile();
+        if (mode === 'story') {
+          await UI.cutscene([
+            { img: 'assets/title.jpg', text: '{gdud}, סוללת {battery}. האתר: גבעה חולית ליד נתיבות. כולם קוראים לו נתיבוט.' },
+            { img: 'assets/guard.jpg', text: 'אבל לפני שאת[ה/] באמת חלק מהסוללה — יש פלג"צ: הפלגה הצעירה. חמישה ימים של משימות, שמירות, אזעקות — ומבחן סיום.' },
+            { img: 'assets/redalert.jpg', text: `חוק ראשון בנתיבות: כשיש צבע אדום — יש לך ${DATA.redAlertSeconds} שניות להגיע למיגונית. בלי ויכוחים.` },
+          ]);
+        }
+        this.startWorld(true).then(() => { if (mode === 'free') { UI.toast('אימונים חופשיים: כל העמדות פתוחות'); Story.trainingMenu(); } });
       };
     };
     render();
@@ -898,43 +922,6 @@ const Game = {
     window.open('https://wa.me/?text=' + encodeURIComponent(text + '\n' + link), '_blank');
   },
 
-  chooseGdud(mode) {
-    const p = G.profile;
-    UI.screen(`<div class="content"><div class="panel">
-      <h2>בחירת גדוד</h2><p>כל גדוד נותן יתרון קטן במשחק.</p>
-      <div class="grid">${DATA.gdudim.map(g => `<div class="card ${p.gdud === g.id ? 'sel' : ''}" data-id="${g.id}">
-        <div class="big" style="color:${g.color}">${g.id}</div><div class="nm">${g.name}</div><div class="ds">${g.perk.label}</div>
-        <div class="ds">סוללות: ${g.batteries.map(b => b.name).join(' · ')}</div></div>`).join('')}</div>
-      <div class="actions"><button class="btn ghost" id="g-back">חזרה</button></div>
-    </div></div>`, 'assets/title.jpg');
-    $('#screen').querySelectorAll('.card').forEach(c => c.onclick = () => { Sound.click(); p.gdud = c.dataset.id; this.chooseBattery(mode); });
-    $('#g-back').onclick = () => this.createCharacter(mode);
-  },
-
-  chooseBattery(mode) {
-    const p = G.profile;
-    const gd = DATA.gdudim.find(g => g.id === p.gdud);
-    UI.screen(`<div class="content"><div class="panel">
-      <h2>${gd.name} — בחירת סוללה</h2><p>לאיזו סוללה את[ה/] עולה?</p>
-      <div class="grid">${gd.batteries.map(b => `<div class="card" data-id="${b.id}"><div class="big">🛡️</div><div class="nm">סוללת ${b.name}</div><div class="ds">${gd.name}</div></div>`).join('')}</div>
-      <div class="actions"><button class="btn ghost" id="b-back">חזרה</button></div>
-    </div></div>`, 'assets/title.jpg');
-    $('#screen').querySelector('.panel').innerHTML = fmt($('#screen').querySelector('.panel').innerHTML);
-    $('#screen').querySelectorAll('.card').forEach(c => c.onclick = async () => {
-      Sound.click();
-      p.battery = c.dataset.id;
-      this.applyProfile();
-      if (mode === 'story') {
-        await UI.cutscene([
-          { img: 'assets/title.jpg', text: '{gdud}, סוללת {battery}. האתר: גבעה חולית ליד נתיבות. כולם קוראים לו נתיבוט.' },
-          { img: 'assets/guard.jpg', text: 'אבל לפני שאת[ה/] באמת חלק מהסוללה — יש פלג"צ: הפלגה הצעירה. חמישה ימים של משימות, שמירות, אזעקות — ומבחן סיום.' },
-          { img: 'assets/redalert.jpg', text: `חוק ראשון בנתיבות: כשיש צבע אדום — יש לך ${DATA.redAlertSeconds} שניות להגיע למיגונית. בלי ויכוחים.` },
-        ]);
-      }
-      this.startWorld(true).then(() => { if (mode === 'free') { UI.toast('אימונים חופשיים: כל העמדות פתוחות'); Story.trainingMenu(); } });
-    });
-    $('#b-back').onclick = () => this.chooseGdud(mode);
-  },
 };
 
 // Models and textures load first; the title screen shows progress meanwhile.
@@ -947,5 +934,10 @@ window.addEventListener('load', () => {
   Promise.all([
     Assets.load(p => { const m = document.getElementById('load-msg'); if (m) m.textContent = `טוען גרפיקה... ${Math.round(p * 100)}%`; }),
     Lobby.unlock(),
-  ]).then(() => { Game.init(); Assets.loadScenes(); Assets.loadPeople(); });
+  ]).then(() => {
+    Game.init();
+    Assets.loadScenes();
+    // The real cast first, then the made-up visitors (curious civilians at the gate).
+    Assets.loadPeople().then(() => Object.keys(Assets.publicPeople).reduce((p, id) => p.then(() => Assets.loadPublicPerson(id)), Promise.resolve()));
+  });
 });

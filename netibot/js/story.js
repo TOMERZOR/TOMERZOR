@@ -55,15 +55,16 @@ const TASKS = {
   sleep: { title: 'לישון במיטה שלך', desc: 'המיטה שלך במגורים. שינה מסיימת את היום ושומרת משחק.', target: () => bedSpot(G.state.myBed), pts: 0, last: true },
   lineup: { title: 'מסדר בוקר עד 06:45', desc: 'רחבת המסדרים. לא לאחר!', target: () => SPOTS.parade, pts: 4 },
   reload_train: { title: 'תדריך טעינה אצל {@sergeant}', desc: 'ליד מחסן המארזים.', target: () => npcPos('sergeant'), pts: 2 },
-  reload: { title: 'להחליף מארז במשגר הריק', desc: 'לקחת מארז מהמחסן ולהביא למשגר המסומן "ריק".', target: () => reloadTarget(), pts: 8 },
+  reload: { title: 'להחליף מארז במשגר הריק', desc: 'לקחת מארז מהמחסן ולהביא למשגר המסומן "ריק".', target: () => reloadTarget(), pts: 8, urgent: true,
+    how: () => (G.player.carry === 'canister' ? 'לסחוב את המארז למשגר שמסומן "ריק" וללחוץ E' : 'ללכת למחסן המארזים וללחוץ E כדי לקחת מארז') },
   gate: { title: 'משמרת ש"ג', desc: 'להיכנס לעמדת הש"ג ולבדוק את הרכבים שמגיעים.', target: () => SPOTS.booth, pts: 0 },
   inspection_prep: { title: 'להכין את החדר למסדר ניקיון', desc: 'לסדר מיטות, לסגור לוקרים ולטאטא אבק.', target: () => inspectionTarget(), pts: 0 },
   inspection: { title: 'לקרוא ל{@inspector} לבדיקה', desc: 'כשהחדר מוכן — {@inspector} בתוך המגורים.', target: () => npcPos('inspector'), pts: 0 },
   radar: { title: 'משמרת בקרה בחמ"ל הסוללתי', desc: 'ב{hq}, אצל {@@ops}.', target: () => SPOTS_HQ.hamal, pts: 0, map: 'hq' },
   hq_gear: { title: 'לחתום על ציוד אצל {@rasap}', desc: 'ברספ"ייה ב{hq}.', target: () => SPOTS_HQ.rasap, pts: 0, map: 'hq' },
   deploy: { title: 'פריסת אתר חדש', desc: 'לנסוע לאתר הפריסה ולהכווין את המשאיות עם המכולות.', target: () => Story.deployTarget(), pts: 0, map: 'field' },
-  surprise: { title: 'מסדר פתע של {@inspector}: לטאטא אבק במגורים', desc: 'נתפסת. קורה לטובים ביותר.', target: () => inspectionTarget(), pts: 0, optional: true },
-  ofek_swap: { title: 'להחליף את {@p_ofek} בעמדה — הוא חייב שירותים', desc: 'קריאטין, מים, ושלושה ליטר של דחיפות.', target: () => SPOTS.tower, pts: 0, optional: true },
+  surprise: { title: 'מסדר פתע של {@inspector}: לטאטא אבק במגורים', desc: 'נתפסת. קורה לטובים ביותר.', target: () => inspectionTarget(), pts: 0, optional: true, urgent: true, how: 'ללכת למה שהחץ מראה וללחוץ E: מיטות, לוקרים ואבק' },
+  ofek_swap: { title: 'להחליף את {@p_ofek} בעמדה — הוא חייב שירותים', desc: 'קריאטין, מים, ושלושה ליטר של דחיפות.', target: () => SPOTS.tower, pts: 0, optional: true, urgent: true, how: 'לרוץ לעמדת השמירה בפינת הבסיס וללחוץ E' },
   guard: { title: 'שמירת לילה בעמדה', desc: 'עמדת השמירה בפינת הבסיס.', target: () => SPOTS.tower, pts: 0 },
   train2: { title: 'שני אימונים (לוח אימונים / מטווח / מסלול)', desc: '', target: () => SPOTS.board, pts: 0, count: 2 },
   exam_reload: { title: 'מבחן: החלפת מארז', desc: 'הסמלת ליד משגר 2.', target: () => (G.state.dayFlags.examReload ? reloadTarget() : npcPos('sergeant')), pts: 0 },
@@ -71,8 +72,9 @@ const TASKS = {
   exam_radar: { title: 'מבחן: עמדת בקרה', desc: 'בחמ"ל.', target: () => SPOTS.hamal, pts: 0 },
   exam_quiz: { title: 'מבחן ידע אצל {@commander}', desc: '', target: () => npcPos('commander'), pts: 0 },
   graduation: { title: 'לשמוע את התוצאה מ{@@bc}', desc: 'בלשכת מפקדת הסוללה ב{hq}.', target: () => npcPos('bc'), pts: 0, map: 'hq' },
-  rafael: { title: 'לפרוק את רפאל: 2 ארגזים ושישיית מים לחדר האוכל', desc: 'משאית הקייטרינג מחכה בכביש ליד השער.', target: () => (!Events.rafael ? null : ['crate', 'water'].includes(G.player.carry) ? SPOTS.diningDrop : { x: Events.rafael.x, y: Events.rafael.y }), pts: 0 },
-  techcheck: { title: 'ביקורת טכנאים: משגר, גנרטור, עמדת בקרה', desc: 'ללוות את הטכנאי בכל התחנות.', target: () => (Events.tech && Events.tech.step < TECH_STEPS.length ? TECH_STEPS[Events.tech.step].at() : null), pts: 0 },
+  rafael: { title: 'לפרוק את רפאל: 2 ארגזים ושישיית מים לחדר האוכל', desc: 'משאית הקייטרינג מחכה בכביש ליד השער.', urgent: true,
+    how: () => (['crate', 'water'].includes(G.player.carry) ? 'לסחוב לחדר האוכל וללחוץ E' : 'ללכת למשאית ליד השער וללחוץ E כדי להרים'), target: () => (!Events.rafael ? null : ['crate', 'water'].includes(G.player.carry) ? SPOTS.diningDrop : { x: Events.rafael.x, y: Events.rafael.y }), pts: 0 },
+  techcheck: { title: 'ביקורת טכנאים: משגר, גנרטור, עמדת בקרה', desc: 'ללוות את הטכנאי בכל התחנות.', urgent: true, how: 'ללכת לתחנה שהחץ מראה וללחוץ E', target: () => (Events.tech && Events.tech.step < TECH_STEPS.length ? TECH_STEPS[Events.tech.step].at() : null), pts: 0 },
   baum: { title: 'נוהל אנה פרנק: להחביא את כל האוכל מבחוץ', desc: 'לוקרים, מקפיא, מאחורי הגנרטור, מחסן הרספ"ייה.', target: () => baumTarget(), pts: 0 },
   y_room: { title: 'בוס {@inspector}: לסדר את המגורים שלך', desc: 'מיטות, לוקרים ואבק.', target: () => inspectionTarget(), pts: 0 },
   y_fridge: { title: 'בוס {@inspector}: לרשום תוקפים במקרר', desc: 'המקרר במטבחון.', target: () => SPOTS.fridge, pts: 0 },
@@ -80,7 +82,8 @@ const TASKS = {
   y_trash: { title: 'בוס {@inspector}: לאסוף 8 פסולת בשטח', desc: '', target: () => nearestTrash(), pts: 0 },
   y_final: { title: 'הקרב האחרון: לקרוא ל{@inspector} למסדר', desc: 'כשהכל מוכן. או כשנגמר האומץ.', target: () => npcPos('inspector'), pts: 0 },
   ugga: { title: 'טופס הקצאה לקורס מיירטים בשביל {@p_liran}', desc: 'אצל {@interceptors} בשו"ב.', map: () => (G.state.flags.ugga === 1 ? 'hq' : 'netivot'), target: () => npcPos(G.state.flags.ugga === 1 ? 'interceptors' : 'p_liran'), pts: 0, optional: true },
-  amsalem: { title: 'המטפים "לשם" והשלולית "לשם"', desc: 'כי {@rasap} אמרה.', map: 'hq', target: () => choresTarget(), pts: 0, optional: true },
+  amsalem: { title: 'המטפים "לשם" והשלולית "לשם"', desc: 'כי {@rasap} אמרה.', map: 'hq', target: () => choresTarget(), pts: 0, optional: true, urgent: true, how: 'להרים עם E ולסחוב למקום שהחץ מראה' },
+  curious: { title: 'סקרן[/ית] בשער! לגשת ולטפל', desc: 'אזרח סקרן ליד השער של האתר. לגשת, לדבר ולהרחיק בעדינות.', target: () => Curious.target(), pts: 0, optional: true, urgent: true, how: 'ללכת לשער ולדבר איתו (E)' },
   find_lock: { title: 'למצוא מנעול חדש לשער של נתיבות', desc: 'רק לרס"פית יש מנעולים.', map: 'hq', target: () => npcPos('rasap'), pts: 0 },
   snack: { title: 'לפתוח את ארונית החטיפים הסודית של {@deputy_rasap}', desc: 'מאחורי המדפים ברספ"ייה.', map: 'hq', target: () => SPOTS_HQ.snack, pts: 0 },
   boss: { title: 'להביס את צ\'יזבורגרו!', desc: 'לאסוף אוכל בריא ולזרוק עליו.', map: 'hq', target: () => (Boss.active && Boss.pickups[0]) || null, pts: 0 },
@@ -173,6 +176,7 @@ const Story = {
     S.energy = 100;
     S.dayFlags = {};
     S.trainCount = {};
+    Curious.reset();
     this.trash = [];
     this.dust = [];
     this.gateShift = null;
@@ -243,7 +247,8 @@ const Story = {
     for (const o of World.objects) if (o.kind === 'junk') o.gone = S.junkDone.includes(o.junk);
     // Events that were halfway through (a truck at the gate, a visiting technician) start over.
     Events.rafael = Events.tech = Events.baum = Events.chores = null;
-    const redo = { rafael: 'rafael', techcheck: 'tech', amsalem: 'amsalem' };
+    const redo = { rafael: 'rafael', techcheck: 'tech', amsalem: 'amsalem', curious: 'curiousNow' };
+    Curious.npc = null;
     this.tasks = snap.tasks.filter(t => TASKS[t.id] && (t.done || !redo[t.id])).map(t => ({ id: t.id, ...TASKS[t.id], done: t.done, progress: t.progress }));
     for (const t of snap.tasks) if (!t.done && redo[t.id]) S.dayFlags[redo[t.id]] = false;
     // A boss fight never resumes halfway: open the snack cabinet again.
@@ -311,7 +316,10 @@ const Story = {
   // ---------- tasks ----------
   taskList() { return this.tasks.filter(t => !t.hidden); },
   has(id) { return this.tasks.some(t => t.id === id && !t.done); },
-  current() { return this.tasks.find(t => !t.done); },
+  // Something that came up mid-day (a launcher to reload, a delivery, a curious civilian at the
+  // gate) takes over the task panel and the arrow until it's done; then the day's plan is back.
+  current() { return this.tasks.find(t => !t.done && t.urgent) || this.tasks.find(t => !t.done); },
+  mainTask() { return this.tasks.find(t => !t.done && !t.urgent); },
   addTask(id, beforeLast = true) {
     if (this.has(id)) return;
     const t = { id, ...TASKS[id], done: false, progress: 0 };
@@ -332,10 +340,11 @@ const Story = {
 
   objective() {
     if (G.alert) return null;
+    if (Tutorial.active) return Tutorial.objective();
     const t = this.current();
     if (!t) return { text: World.id === 'netivot' ? 'אין משימות. אפשר להסתובב, להתאמן או ללכת לישון.' : 'אין משימות כאן. תחנת ההסעות מחזירה לנתיבות.', target: World.id === 'netivot' ? null : travelSpot() };
     const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';
-    if (tmap !== World.id) return { text: `לנסוע ל${siteName(tmap)} — ${fmt(t.title)}`, target: travelSpot() };
+    if (tmap !== World.id) return { text: `לנסוע ל${siteName(tmap)} — ${fmt(t.title)}`, target: travelSpot(), urgent: !!t.urgent, how: t.urgent ? 'ללכת לתחנת ההסעות וללחוץ E' : '' };
     if (t.id === 'deploy') return { text: this.deployText(), target: this.deployTarget() };
     let text = t.title;
     if (t.id === 'clean') text += ` (${10 - this.trash.length}/10)`;
@@ -346,7 +355,14 @@ const Story = {
     if (t.id === 'y_final' && this.tasks.some(x => !x.done && x.id.startsWith('y_') && x.id !== 'y_final')) text = `בוס {@inspector}: עוד ${Events.yasminLeft()} דברים לסדר`;
     if (t.id === 'gate' && this.gateShift) text = `משמרת ש"ג — רכב ${Math.min(this.gateShift.done + 1, this.gateShift.total)}/${this.gateShift.total}`;
     if (this.run) text = `מסלול כושר — נקודה ${this.run.idx + 1}/${this.run.points.length} · ${this.run.time.toFixed(0)} שנ'`;
-    return { text, target: this.run ? this.run.points[this.run.idx] : (t.target ? t.target() : null) };
+    const o = { text, target: this.run ? this.run.points[this.run.idx] : (t.target ? t.target() : null) };
+    if (t.urgent && !this.run) {
+      o.urgent = true;
+      o.how = typeof t.how === 'function' ? t.how() : t.how;
+      const main = this.mainTask();
+      if (main) o.after = main.title;
+    }
+    return o;
   },
 
   // ---------- per-frame ----------
@@ -370,6 +386,7 @@ const Story = {
     if (this.run) this.updateRun(dt);
     if (World.id === 'field') this.updateDeploy(dt);
     Events.update(dt);
+    Curious.update(dt);
     Boss.watchCoop();
     Boss.update(dt);
     // Morning lineup: arriving at the parade ground completes it.
@@ -420,7 +437,11 @@ const Story = {
     const P = G.player;
 
     if (Boss.active || this.ctl) return list;
-    for (const n of G.npcs) list.push({ x: n.x, y: n.y, label: `לדבר עם ${n.short}`, action: () => this.talkTo(n), r: 50, talk: true });
+    for (const n of G.npcs) {
+      if (n.curious) { if (!n.leaving) list.push({ x: n.x, y: n.y, label: `לדבר עם ${n.short} (סקרן[/ית]) ולהרחיק`, action: () => this.talkTo(n), r: 84 }); continue; }
+      list.push({ x: n.x, y: n.y, label: `לדבר עם ${n.short}`, action: () => this.talkTo(n), r: 50, talk: true });
+    }
+    Tutorial.interactables(add);
     const ts = travelSpot();
     add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
 
@@ -497,6 +518,7 @@ const Story = {
     S.talked = S.talked || [];
     if (!S.talked.includes(n.id)) { S.talked.push(n.id); if (S.talked.length >= 20) Game.achieve('social'); }
     if (n.chasing) return;
+    if (n.curious) { await Curious.talk(n); return; }
     const id = n.id;
     if (await Events.talkTo(n)) return;
     if (this.has('find_lock') && id !== 'rasap' && await this.lockHint(n)) return;
@@ -567,7 +589,7 @@ const Story = {
       if (!S.dayFlags.seeds) {
         S.dayFlags.seeds = true;
         await UI.talk([{ who: 'friend', text: pick([
-          'קח[י] גרעינים. בקוד המקורי זה היה +5 מורל, אבל חיבבתי אותך אז שמתי +8 🌻',
+          'קח[/י] גרעינים. בקוד המקורי זה היה +5 מורל, אבל חיבבתי אותך אז שמתי +8 🌻',
           'יודע[/ת] למה קוראים לזה נתיבוט? כי נתיבות + בוט. לקח לי שלושה ימים להמציא את זה.',
           'טיפ ממי שכתב את המשחק: {@inspector} לא רואה אותך כשאת[ה/] רץ[/ה]. ...טוב, היא רואה. אבל היא לא מספיקה.',
           'אם תמצא[/י] באג — תגיד[/י] ל{@p_nevo}. הוא בטוח יגיד שזה הוא שבר.',
@@ -668,7 +690,7 @@ const Story = {
 
   // ---------- inspector chase ----------
   chaseAllowed() {
-    return G.state && !this.has('meet_cmd') && !this.has('inspection_prep') && !this.has('inspection') && !this.has('surprise') && !this.gateShift && !G.player.carry
+    return G.state && !Tutorial.active && !this.has('meet_cmd') && !this.has('inspection_prep') && !this.has('inspection') && !this.has('surprise') && !this.gateShift && !G.player.carry
       && !this.tasks.some(t => !t.done && t.id.startsWith('y_')) && !Events.baum && !Events.tech;
   },
   async caught() {
@@ -1087,7 +1109,7 @@ const Story = {
     tick();
   },
   async trainingMenu() {
-    const r = await Mini.open('training');
+    const r = await Mini.open('training', { exit: true });
     if (r.pick) this.training(r.pick);
   },
 
@@ -1095,11 +1117,11 @@ const Story = {
     const S = G.state;
     const count = S.trainCount[kind] || 0;
     let ok = false, pts = 0;
-    if (kind === 'range') { const r = await Mini.open('range'); ok = r.success; pts = Math.round(r.score / 10); if (r.score >= 80) Game.achieve('sniper'); }
-    else if (kind === 'reload') { const r = await Mini.open('reload', { launcher: 'משגר אימון' }); ok = r.success; pts = 5; }
-    else if (kind === 'radar') { const r = await Mini.open('radar', { duration: 35 }); ok = r.success; pts = Math.round(r.accuracy / 15); if (r.accuracy >= 90) Game.achieve('radar'); }
-    else if (kind === 'guard') { const r = await Mini.open('guard', { duration: 40 }); ok = r.success; pts = 5; }
-    else if (kind === 'quiz') { const r = await Mini.open('quiz', { questions: DATA.quiz, count: 5 }); ok = r.success; pts = r.right; }
+    if (kind === 'range') { const r = await Mini.open('range', { exit: true }); ok = r.success; pts = Math.round(r.score / 10); if (r.score >= 80) Game.achieve('sniper'); }
+    else if (kind === 'reload') { const r = await Mini.open('reload', { launcher: 'משגר אימון', exit: true }); ok = r.success; pts = 5; }
+    else if (kind === 'radar') { const r = await Mini.open('radar', { duration: 35, exit: true }); ok = r.success; pts = Math.round(r.accuracy / 15); if (r.accuracy >= 90) Game.achieve('radar'); }
+    else if (kind === 'guard') { const r = await Mini.open('guard', { duration: 40, exit: true }); ok = r.success; pts = 5; }
+    else if (kind === 'quiz') { const r = await Mini.open('quiz', { questions: DATA.quiz, count: 5, exit: true }); ok = r.success; pts = r.right; }
     else if (kind === 'alertDrill') { await UI.talk([{ who: 'sergeant', text: 'תרגיל! [רוץ/רוצי] למיגונית!' }]); this.alert(true, 'drill-train'); return; }
     else if (kind === 'run') { this.startRun(); return; }
     else if (kind === 'gateDrill') { this.startGateShift(3, true); UI.toast('לרוץ לעמדת הש"ג!'); return; }
@@ -1339,6 +1361,7 @@ const Story = {
     if (!drill) G.alert.sid = sid || Multi.newAlertId();
     if (!drill) S.stats.alerts++;
     Sound.startSiren();
+    Settings.buzz([300, 120, 300, 120, 300]);
     if (this.gateShift && this.gateShift.car && this.gateShift.car.state === 'waiting') this.gateShift.car.honk = 99;
     Game.npcsToShelters();
     if (G.player.carry) UI.toast('השארת הכל על הקרקע — רוץ!', 'bad');

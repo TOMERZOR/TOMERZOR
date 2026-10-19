@@ -13,7 +13,11 @@ const Mini = {
       G.paused = true;
       this.active = name;
       this.cleanup = [];
+      // A late timer from a game that already ended must not close the next one.
+      let finished = false;
       const done = (result) => {
+        if (finished) return;
+        finished = true;
         this.cleanup.forEach(fn => fn());
         this.cleanup = [];
         root.classList.add('hidden');
@@ -22,6 +26,13 @@ const Mini = {
         G.paused = false;
         resolve(result || {});
       };
+      // Training (and anything else that can be left halfway) gets an ✕ to leave it.
+      if (opts.exit) {
+        const x = el('button', { class: 'icon-btn mg-x', 'aria-label': 'יציאה', title: 'יציאה (Esc)' }, '✕');
+        x.onclick = () => { Sound.click(); done({ quit: true }); };
+        root.appendChild(x);
+        this.onKey(e => { if (e.code === 'Escape') { e.preventDefault(); done({ quit: true }); } });
+      }
       Minigames[name](box, opts, done);
     });
   },

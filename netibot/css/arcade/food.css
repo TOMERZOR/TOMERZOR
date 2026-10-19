@@ -1,12 +1,40 @@
-/* The schnitzel war: the clock, what's in your hand, the scores, and sauce on the screen when
-   you get hit. */
+/* The schnitzel war: the clock, what's in your hand and the roll's wait, a small note when you
+   pick something up, the scores, and sauce round the edges of the screen when you get hit.
+   Nothing sits over the middle of the hall while playing. */
 #arcade .fd { position: absolute; inset: 0; pointer-events: none; }
 #arcade .fd-time { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font: 900 20px Rubik, sans-serif; color: #fff; }
 #arcade .fd-time.low { color: #ff6a5a; animation: qz-pulse .5s infinite alternate; }
-#arcade .fd-hand { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px); left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
+#arcade .fd-bar { position: absolute; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px); left: 50%; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; }
+#arcade .fd-bar .ar-chip { position: relative; }
+#arcade .fd-hand { font-size: 15px; white-space: nowrap; }
 #arcade .fd-hand.ready { border-color: #ffd23f; color: #ffd23f; animation: rc-glow .6s ease-in-out infinite alternate; }
+/* The roll's wait (the keyboard's; on a phone it's on the button). */
+#arcade .fd-roll { font-size: 12px; white-space: nowrap; overflow: hidden; color: #bdb6a4; padding: 4px 8px; }
+#arcade .fd-roll i { position: absolute; inset: 0 auto 0 0; width: 100%; background: rgba(255,210,63,.18); }
+#arcade .fd-roll span { position: relative; }
+#arcade .fd-roll.ready { color: #ffd23f; border-color: rgba(255,210,63,.7); }
+body.touch #arcade .fd-roll { display: none; }
+/* Picked something up: a small note just above the hand chip, gone in a second and a half. */
+#arcade .fd-got { position: absolute; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 92px); left: 50%; transform: translateX(-50%); background: rgba(30,20,10,.78); border: 1px solid rgba(255,210,63,.6); border-radius: 8px; padding: 2px 9px; font-size: 12px; color: #fff3dc; white-space: nowrap; }
+#arcade .fd-got b { color: #ffd23f; }
+#arcade .fd-got.show { animation: fd-got 1.5s ease-out forwards; }
+@keyframes fd-got { 0% { opacity: 0; transform: translateX(-50%) translateY(6px); } 12% { opacity: 1; transform: translateX(-50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-4px); } }
 #arcade .fd-board { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
 #arcade .fd-board div { display: flex; gap: 10px; justify-content: space-between; min-width: 120px; background: rgba(30,20,10,.72); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 2px 8px; color: #fff3dc; }
 #arcade .fd-board div.me { border-color: #ffd23f; color: #ffd23f; font-weight: 900; }
-#arcade .fd-splat { position: absolute; inset: 0; background: radial-gradient(circle at 30% 40%, rgba(200,144,42,.75) 0 8%, transparent 9%), radial-gradient(circle at 70% 60%, rgba(216,38,31,.65) 0 6%, transparent 7%), radial-gradient(circle at 55% 25%, rgba(232,214,160,.7) 0 5%, transparent 6%); animation: rc-splat 1.2s ease-in forwards; }
-@media (max-height: 520px) { body.touch #arcade .fd-hand { bottom: auto; top: calc(max(8px, env(safe-area-inset-top)) + 44px); } }
+/* Hit: sauce on the lens, round the edges (the middle, where you aim, stays clear). */
+#arcade .fd-splat { position: absolute; inset: 0; background: radial-gradient(circle at 4% 16%, rgba(200,144,42,.75) 0 7%, transparent 7.5%), radial-gradient(circle at 96% 78%, rgba(216,38,31,.65) 0 6%, transparent 6.5%), radial-gradient(circle at 92% 8%, rgba(232,214,160,.7) 0 4%, transparent 4.5%), radial-gradient(circle at 8% 92%, rgba(216,38,31,.55) 0 4%, transparent 4.5%), radial-gradient(ellipse at 50% 50%, transparent 62%, rgba(200,144,42,.28) 100%); animation: rc-splat 1.2s ease-in forwards; }
+/* The phone's buttons in this game: the throw button shows the food in hand (dim when
+   there's none, a hop when it changes); the roll button's wait goes round it as a wedge. */
+body.fd-on #t-act { font-size: 34px; text-shadow: none; }
+body.fd-on #t-act.fd-empty { opacity: .55; font-size: 26px; }
+body.fd-on #t-act.fd-new { animation: fd-hop .35s cubic-bezier(.2,1.6,.4,1); }
+@keyframes fd-hop { from { transform: scale(.6); } to { transform: scale(1); } }
+body.fd-on #t-run { overflow: hidden; }
+body.fd-on #t-run::after { content: ''; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(rgba(0,0,0,.62) calc(var(--fd-cd, 0) * 360deg), transparent 0); }
+body.fd-on #t-run.fd-cool { color: rgba(242,193,78,.55); }
+@media (max-height: 520px) {
+  body.touch #arcade .fd-bar { bottom: auto; top: calc(max(8px, env(safe-area-inset-top)) + 44px); }
+  body.touch #arcade .fd-got { bottom: auto; top: calc(max(8px, env(safe-area-inset-top)) + 80px); }
+  body.fd-on #t-act { font-size: 28px; }
+}

@@ -158,6 +158,7 @@ const Game = {
     $('#minimap').addEventListener('pointerdown', (e) => { e.stopPropagation(); Sound.unlock(); UI.toggleMap(true); });
     $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
     $('#btn-fs').addEventListener('click', () => this.toggleFullscreen());
+    $('#btn-chat').addEventListener('click', () => { Sound.unlock(); if (UI.chatOpen()) UI.closeChat(); else UI.chat(); });
     document.addEventListener('fullscreenchange', () => this.syncFullscreen());
     document.addEventListener('webkitfullscreenchange', () => this.syncFullscreen());
     this.syncFullscreen();

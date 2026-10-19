@@ -103,11 +103,13 @@ function faceUrl(who) {
 // Gender/name tokens are resolved in any text added to the page, so templates
 // in mini-games and screens can use them without calling fmt() themselves.
 const TOKEN_RE = /\[[^\/\]]*\/[^\]]*\]|\{(name|battery|gdud|platoon|hq)\}|\{@@?\w+\}/;
+// What players type (chat) sits in [data-raw] and is left as written.
+const isRaw = (n) => n.parentElement && n.parentElement.closest('[data-raw]');
 function fixTokens(root) {
-  if (root.nodeType === 3) { if (TOKEN_RE.test(root.nodeValue)) root.nodeValue = fmt(root.nodeValue); return; }
+  if (root.nodeType === 3) { if (TOKEN_RE.test(root.nodeValue) && !isRaw(root)) root.nodeValue = fmt(root.nodeValue); return; }
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const hits = [];
-  for (let n = w.nextNode(); n; n = w.nextNode()) if (TOKEN_RE.test(n.nodeValue)) hits.push(n);
+  for (let n = w.nextNode(); n; n = w.nextNode()) if (TOKEN_RE.test(n.nodeValue) && !isRaw(n)) hits.push(n);
   for (const n of hits) n.nodeValue = fmt(n.nodeValue);
 }
 new MutationObserver(muts => {
@@ -331,7 +333,7 @@ const UI = {
       <div class="drawer-head"><h2>☰ תפריט</h2><button class="icon-btn" data-m="settings" aria-label="הגדרות" title="הגדרות">⚙️</button></div><div class="paused">⏸ המשחק בהפסקה</div>${Assets.peopleStatus() ? `<div class="paused">${Assets.peopleStatus()}</div>` : ''}
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
-      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 הודעה לכולם</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}
+      ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 צ\'אט — לכולם או למישהו</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}
       <button class="btn ghost" data-m="settings">⚙️ הגדרות — שמע, שליטה, תצוגה</button>
       <button class="btn ghost" data-m="help">❓ איך משחקים</button>
       <button class="btn ghost" data-m="save">💾 שמור עכשיו</button>
@@ -514,7 +516,7 @@ const UI = {
       return b ? b.name : 'בחוץ';
     };
     const rows2 = [];
-    for (const p of Multi.peers) rows2.push(`<div class="pp"><b>🌐 ${esc(p.name)}</b><i>${fmt(ROSTER.sites[p.site] || '')}</i></div>`);
+    for (const p of Multi.peers) rows2.push(`<div class="pp pp-chat" data-chat="${esc(p.who)}"><b>🌐 ${esc(p.name)} 💬</b><i>${fmt(ROSTER.sites[p.site] || '')}</i></div>`);
     const platoon = ROSTER.people.filter(p => p.map === 'netivot');
     const list = platoon.map(p => {
       const n = G.npcs.find(x => x.id === p.id);
@@ -523,21 +525,58 @@ const UI = {
     }).join('');
     const others = G.npcs.filter(n => !platoon.some(p => p.id === n.id)).map(n => `<div class="pp"><b>${n.person.emoji || ''} ${n.short}</b><i>${where(n)}</i></div>`).join('');
     const wl = $('#map').querySelector('.who-list');
+    wl.onclick = (e) => { const r = e.target.closest('[data-chat]'); if (r) { this.toggleMap(false); this.chat(r.dataset.chat); } };
     wl.innerHTML = `${rows2.length ? `<h3>🌐 שחקנים מחוברים</h3>${rows2.join('')}` : ''}<h3>${fmt('{platoon}')}</h3>${list}${others ? `<h3>${fmt(ROSTER.sites[World.id])}</h3>${others}` : ''}`;
   },
 
   // ---------- multiplayer chat ----------
-  chat() {
-    if (!Multi.on || $('.chat-box')) return;
-    G.paused = true;
-    const box = el('div', { class: 'chat-box' }, '<input type="text" maxlength="80" placeholder="מה להגיד לכולם?"><button class="btn small">שלח</button>');
+  // A side panel: the conversation, who to send to (everyone or one player), and a box.
+  chatTo: '',
+  chatOpen() { return !!$('#chatp'); },
+  chat(to) {
+    if (!Multi.on) return;
+    if (to !== undefined) this.chatTo = to;
+    if (this.chatOpen()) { this.chatRefresh(); $('#chatp input').focus(); return; }
+    const box = el('div', { id: 'chatp', class: 'chatp' }, `<div class="cp-head"><b>💬 צ'אט</b><button class="icon-btn small" id="cp-x" aria-label="סגירה">✕</button></div>
+      <div class="cp-log"></div><div class="cp-to"></div>
+      <div class="cp-row"><input type="text" maxlength="160" placeholder="מה לכתוב?"><button class="btn small" id="cp-send">שלח</button></div>`);
     document.body.appendChild(box);
     const inp = box.querySelector('input');
-    const close = () => { box.remove(); G.paused = false; };
-    const send = () => { Multi.speak(inp.value); close(); };
-    box.querySelector('button').onclick = send;
-    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(); if (e.key === 'Escape') close(); };
-    inp.focus();
+    const send = () => { const v = inp.value; if (!v.trim()) return; inp.value = ''; Multi.send(v, this.chatTo); };
+    box.querySelector('#cp-send').onclick = send;
+    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(); if (e.key === 'Escape') this.closeChat(); };
+    box.querySelector('#cp-x').onclick = () => this.closeChat();
+    Multi.unread = 0;
+    this.chatRefresh();
+    if (!G.touch) inp.focus();
+  },
+  closeChat() { const b = $('#chatp'); if (b) b.remove(); G.keys.clear(); this.chatRefresh(); },
+  chatRefresh() {
+    const btn = $('#btn-chat');
+    if (btn) {
+      btn.classList.toggle('hidden', !Multi.on);
+      btn.innerHTML = '💬' + (Multi.unread && !this.chatOpen() ? `<i class="badge">${Math.min(9, Multi.unread)}</i>` : '');
+    }
+    const box = $('#chatp');
+    if (!box) return;
+    Multi.unread = 0;
+    // The person picked earlier may have left.
+    if (this.chatTo && !Multi.peers.some(p => p.who === this.chatTo)) this.chatTo = '';
+    const to = box.querySelector('.cp-to');
+    const opts = [['', '👥 כולם'], ...Multi.peers.map(p => [p.who, p.name])];
+    const key = opts.map(o => o.join(':')).join() + '|' + this.chatTo;
+    if (to.dataset.k !== key) {
+      to.dataset.k = key;
+      to.innerHTML = `<span>אל:</span>${opts.map(([id, n]) => `<button data-to="${esc(id)}" class="${this.chatTo === id ? 'sel' : ''}">${id ? '🔒 ' : ''}${esc(n)}</button>`).join('')}`;
+      to.querySelectorAll('[data-to]').forEach(b => b.onclick = () => { this.chatTo = b.dataset.to; this.chatRefresh(); box.querySelector('input').focus(); });
+    }
+    const nameOf = (id) => { const p = Multi.peers.find(q => q.who === id); return p ? p.name : (Cast.get(id) || {}).short || id; };
+    const log = box.querySelector('.cp-log');
+    log.innerHTML = Multi.chatLog.length ? Multi.chatLog.map(m => `<div class="cp-msg ${m.mine ? 'mine' : ''} ${m.to ? 'dm' : ''}">
+      <div class="cp-who">${m.mine ? fmt('את[ה/]') : `<span data-raw>${esc(m.name)}</span>`}${m.to ? (m.mine ? ` ← 🔒 ${esc(nameOf(m.to))}` : ' ← 🔒 רק אליך') : ''} · ${clockText(new Date(m.at).getHours() * 60 + new Date(m.at).getMinutes())}</div><span data-raw>${esc(m.text)}</span></div>`).join('')
+      : fmt('<p class="cp-empty">עוד אין הודעות. [בחר/בחרי] למי לכתוב — לכולם או לשחקן מסוים (🔒 רק הוא יראה).</p>');
+    log.scrollTop = log.scrollHeight;
+    box.querySelector('input').placeholder = this.chatTo ? `הודעה פרטית ל${nameOf(this.chatTo)}...` : 'הודעה לכולם...';
   },
 
   // ---------- phone ----------

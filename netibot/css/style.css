@@ -594,3 +594,24 @@ body.locked #rotate { display: none !important; }
 .pick-look { display: flex; gap: 14px; justify-content: center; margin: 6px 0 14px; }
 .pick-look .card-face { width: 96px; height: 96px; opacity: .35; transition: opacity .15s, transform .15s; }
 .pick-look .card-face.sel { opacity: 1; transform: scale(1.08); }
+
+/* ---------- Multiplayer chat ---------- */
+#btn-chat { position: relative; }
+#btn-chat .badge { position: absolute; top: -6px; left: -6px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--red); color: #fff; font: 800 11px/18px Rubik, Arial; font-style: normal; text-align: center; padding: 0 4px; }
+.chatp { position: fixed; z-index: 28; top: max(8px, env(safe-area-inset-top)); bottom: max(8px, env(safe-area-inset-bottom)); left: max(8px, env(safe-area-inset-left)); width: min(380px, calc(100vw - 16px));
+  display: flex; flex-direction: column; background: var(--panel); border: 2px solid var(--trim); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.55); padding: 10px; }
+.chatp .cp-head { display: flex; align-items: center; justify-content: space-between; color: var(--gold); font-size: 16px; margin-bottom: 6px; }
+.chatp .cp-log { flex: 1; min-height: 0; overflow-y: auto; touch-action: pan-y; display: flex; flex-direction: column; gap: 6px; padding: 2px; }
+.chatp .cp-msg { background: rgba(255,255,255,.07); border-radius: 12px 12px 12px 4px; padding: 6px 10px; max-width: 88%; align-self: flex-end; font-size: 14px; line-height: 1.4; word-break: break-word; }
+.chatp .cp-msg.mine { align-self: flex-start; background: #1d3a5c; border-radius: 12px 12px 4px 12px; }
+.chatp .cp-msg.dm { border: 1px dashed var(--gold); }
+.chatp .cp-who { font-size: 11px; opacity: .7; margin-bottom: 2px; }
+.chatp .cp-empty { opacity: .65; font-size: 13px; line-height: 1.5; }
+.chatp .cp-to { display: flex; gap: 5px; overflow-x: auto; touch-action: pan-x; padding: 6px 0; align-items: center; flex-shrink: 0; }
+.chatp .cp-to span { font-size: 12px; opacity: .7; flex: none; }
+.chatp .cp-to button { flex: none; border: 2px solid var(--line); background: rgba(255,255,255,.05); color: var(--ink); border-radius: 999px; padding: 4px 10px; font: 700 13px Rubik, Arial; cursor: pointer; }
+.chatp .cp-to button.sel { border-color: var(--gold); background: rgba(242,193,78,.22); color: var(--gold); }
+.chatp .cp-row { display: flex; gap: 6px; flex-shrink: 0; }
+.chatp .cp-row input { flex: 1; min-width: 0; font: 15px Rubik, Arial; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: #0d100c; color: var(--ink); }
+.map .who-list .pp-chat { cursor: pointer; }
+.map .who-list .pp-chat:hover b { color: var(--gold); }

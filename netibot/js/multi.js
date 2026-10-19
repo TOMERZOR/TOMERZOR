@@ -46,6 +46,8 @@ const Multi = {
         peer: p.peer, who: String(s.who).slice(0, 40), name: String(s.name || '').slice(0, 24), site: s.site,
         x: +s.x || 0, y: +s.y || 0, a: +s.a || 0, m: !!s.m, r: !!s.r, c: s.c ? String(s.c).slice(0, 12) : false,
         say: s.say && typeof s.say.text === 'string' ? { text: s.say.text.slice(0, 80), at: +s.say.at || 0 } : null,
+        // Their last few chat messages, sealed: to everyone (to '') or to one player's cast id.
+        cm: Array.isArray(s.cm) ? s.cm.slice(-8).filter(o => o && typeof o === 'object' && typeof o.d === 'string' && o.d.length < 800).map(o => ({ i: String(o.i || '').slice(0, 16), to: String(o.to || '').slice(0, 40), d: o.d, at: +o.at || 0 })) : [],
         // A co-op boss fight this player is in: which one, its max HP, the damage they dealt.
         baum: s.baum && +s.baum.id ? { id: +s.baum.id, hid: Array.isArray(s.baum.hid) ? s.baum.hid.slice(0, 10).map(String) : [], carry: s.baum.carry ? String(s.baum.carry).slice(0, 16) : null } : null,
         fx: s.fx && typeof s.fx === 'object' ? {
@@ -61,6 +63,7 @@ const Multi = {
       };
     });
     if (this.on) for (const p of this.peers) if (p.al) this.alertFrom(p);
+    if (this.on) for (const p of this.peers) this.readChat(p);
     // A player who joins as someone replaces that character's NPC.
     if (this.on && this.peers.map(p => p.who).sort().join() !== before) Game.resetNpcs();
   },
@@ -78,6 +81,7 @@ const Multi = {
     this.on = true;
     this.as = personId;
     this.update(1);
+    UI.chatRefresh();
   },
 
   update(dt) {
@@ -94,7 +98,7 @@ const Multi = {
     const st = {
       v: 1, who: this.as, name: G.profile.name, site: World.id,
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
-      m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null,
+      m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
       boss: Boss.active && Boss.coop ? { id: Boss.coop.id, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : null,
@@ -120,6 +124,46 @@ const Multi = {
     const id = Math.floor(Math.random() * 1e9) + 1;
     this.seenAlerts.add(id);
     return id;
+  },
+
+  // ---------- chat ----------
+  // Everyone's last messages ride along in their presence; each one is read once.
+  chatLog: [],   // { from, name, to, text, at, mine }
+  outbox: [],
+  seenMsg: new Set(),
+  unread: 0,
+  async send(text, to = '') {
+    const t = String(text || '').replace(/[\u0000-\u001f\u200b-\u200f\u202a-\u202e]/g, '').trim().slice(0, 160);
+    if (!t || !Lobby.cryptoKey) return;
+    const at = Date.now();
+    const d = await Lobby.seal(JSON.stringify({ t }));
+    this.outbox = [...this.outbox, { i: Math.random().toString(36).slice(2, 10), to, d, at }].slice(-8);
+    this.chatLog.push({ from: this.as, name: G.profile.name, to, text: t, at, mine: true });
+    // To everyone: also a bubble over your head, like before.
+    if (!to) this.speak(t.slice(0, 80));
+    else Sound.pop();
+    UI.chatRefresh();
+  },
+  async readChat(p) {
+    for (const m of p.cm || []) {
+      const key = p.peer + ':' + m.i;
+      if (this.seenMsg.has(key)) continue;
+      this.seenMsg.add(key);
+      // Not for me, or old (from before I joined).
+      if ((m.to && m.to !== this.as) || Date.now() - m.at > 10 * 60 * 1000) continue;
+      try {
+        const { t } = JSON.parse(await Lobby.open(m.d));
+        const msg = { from: p.who, name: p.name, to: m.to, text: String(t).slice(0, 160), at: m.at };
+        this.chatLog.push(msg);
+        this.chatLog = this.chatLog.slice(-80);
+        if (!UI.chatOpen()) {
+          this.unread++;
+          UI.toast(`${m.to ? '🔒' : '💬'} <span data-raw>${esc(p.name)}</span>${m.to ? ' (רק אליך)' : ''}: <span data-raw>${esc(msg.text)}</span>`);
+          Sound.ding();
+        }
+        UI.chatRefresh();
+      } catch (e) { /* not sealed with our key */ }
+    }
   },
 
   // A line of chat over your head for everyone on the same site.

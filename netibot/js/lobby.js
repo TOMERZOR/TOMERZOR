@@ -71,7 +71,7 @@ const Lobby = {
     if (!k || !window.ROSTER_ENC || !window.crypto || !crypto.subtle) return;
     try {
       const un = (t) => Uint8Array.from(atob(t.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-      const key = await crypto.subtle.importKey('raw', un(k), 'AES-GCM', false, ['decrypt']);
+      const key = await crypto.subtle.importKey('raw', un(k), 'AES-GCM', false, ['encrypt', 'decrypt']);
       const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un(ROSTER_ENC.iv) }, key, un(ROSTER_ENC.data));
       const real = JSON.parse(new TextDecoder().decode(plain));
       if (!real || !Array.isArray(real.people)) return;
@@ -81,6 +81,22 @@ const Lobby = {
       ROSTER.example = false;
       try { localStorage.setItem('netibot.key', k); } catch (e) { /* ignore */ }
     } catch (e) { /* a wrong key keeps the made-up names */ }
+  },
+  // Chat lines travel through a public relay, so they're sealed with the same key as the
+  // cast: only people with the invite link can read them.
+  async seal(text) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, this.cryptoKey, new TextEncoder().encode(text)));
+    const all = new Uint8Array(12 + ct.length);
+    all.set(iv); all.set(ct, 12);
+    let bin = '';
+    all.forEach(b => { bin += String.fromCharCode(b); });
+    return btoa(bin);
+  },
+  async open(b64) {
+    const all = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: all.slice(0, 12) }, this.cryptoKey, all.slice(12));
+    return new TextDecoder().decode(pt);
   },
   // A remembered key that no longer opens anything is dropped, so it can't come back.
   forgetKey() {

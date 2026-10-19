@@ -91,12 +91,13 @@ const SoccerGame = {
     // Bots on the same team split: one attacks, one keeps goal.
     for (const team of [0, 1]) { const bots = this.cars.filter(c => c.team === team && c.bot); if (bots.length > 1) bots[1].role = 'defend'; else if (bots.length === 1 && this.cars.filter(c => c.team === team).length > 1) bots[0].role = 'defend'; }
     this.me = this.cars.find(c => c.isMe);
-    this.score = [0, 0]; this.t = 0; this.started = false; this.over = false; this.lineT = 3; this.events = [];
+    this.score = [0, 0]; this.t = 0; this.started = false; this.over = false; this.lineT = 3; this.events = []; this.camSnap = true;
     this.kickoff(0);
     this.ui();
-    Arcade.buttons({ act: '🚀', run: 'בלם' });
+    Arcade.buttons({ act: '🚀', run: '⏪ רוורס' });
+    this.revOff();
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>⚽ כדורגל סופות</h2>
-      <p class="ar-sub">את[ה/] בקבוצה ה${this.me.team === 0 ? 'כחולה 🔵 — תוקפים ימינה ➡️' : 'אדומה 🔴 — תוקפים שמאלה ⬅️'}. ${G.touch ? 'ג\'ויסטיק — לנהוג · 🚀 — טורבו · בלם' : 'חצים / WASD — לנהוג · E / רווח — טורבו'} · לנסוע לתוך הכדור כדי לבעוט. ${this.LEN / 60} דקות או ${this.WIN} שערים.</p>`);
+      <p class="ar-sub">את[ה/] בקבוצה ה${this.me.team === 0 ? 'כחולה 🔵 — תוקפים ימינה ➡️' : 'אדומה 🔴 — תוקפים שמאלה ⬅️'}. ${G.touch ? 'ג\'ויסטיק — לנהוג (נוסעים לבד) · 🚀 — טורבו · ⏪ — רוורס' : 'חצים / WASD — לנהוג · E / רווח — טורבו'} · לנסוע לתוך הכדור כדי לבעוט. ${this.LEN / 60} דקות או ${this.WIN} שערים.</p>`);
     Sound.music('boss');
     Arcade.countdown(performance.now() + (ctx.solo ? 4600 : 3600), () => { Arcade.panel(''); this.started = true; Sound.whistle(); }, '⚽!');
   },
@@ -131,27 +132,34 @@ const SoccerGame = {
     const byTeam = [0, 1].map(t => this.cars.filter(c => c.team === t));
     for (const t of [0, 1]) byTeam[t].forEach((c, k) => {
       const side = t === 0 ? -1 : 1;
-      c.x = side * (14 + k * 6); c.z = (k % 2 ? 1 : -1) * k * 4; c.a = t === 0 ? 0 : Math.PI;
-      c.v = 0; c.ix = c.iz = 0; c.spin = 0; c.boost = 1;
+      // The first in front at the circle; the others back and wide, out of the camera's way.
+      c.x = side * (k ? 23 : 14); c.z = k ? (k % 2 ? 9 : -9) : 0; c.a = t === 0 ? 0 : Math.PI;
+      c.v = 0; c.ix = c.iz = 0; c.spin = 0; c.boost = 1; c.steer = 0; c.rev = 0; c.stuckT = 0; c.boostT = 0;
     });
-    this.frozen = 1.2;
+    this.frozen = 1.4; this.celebrate = 0; this.lastTouch = null; this.camSnap = true;
     void b; void conceded;
   },
 
   // ---------- each frame ----------
   update(dt) {
+    this.dt = dt;
     if (this.started && !this.over) {
       this.t += dt;
       if (this.t >= this.LEN) this.finish();
     }
+    // After a goal: a moment to celebrate (the ball in the net, everyone can still drive), then
+    // everyone back to their half; at the whistle, play on.
+    if (this.celebrate > 0) { this.celebrate -= dt; if (this.celebrate <= 0 && !this.over) this.kickoff(this.lastGoal); }
+    const wasFrozen = this.frozen > 0;
     this.frozen = Math.max(0, (this.frozen || 0) - dt);
+    if (wasFrozen && this.frozen <= 0 && this.started && !this.over && this.t > 1) { Sound.whistle(); Arcade.big('⚽!', 600); }
     const live = this.started && !this.over && this.frozen <= 0;
     for (const c of this.cars) {
       if (c.peer) { this.remote(c, dt); continue; }
-      if (!live) { c.v *= 0.9; this.moveCar(c, { steer: 0, thr: 0 }, dt); continue; }
-      this.moveCar(c, c.isMe ? this.input() : this.bot(c), dt);
+      if (!live) { c.v *= Math.exp(-5 * dt); this.moveCar(c, { steer: 0, thr: 0 }, dt); continue; }
+      this.moveCar(c, c.isMe ? this.input() : this.bot(c, dt), dt);
     }
-    if (this.host) { if (live) this.physics(dt); }
+    if (this.host) { if (live) { const n = dt > 0.025 ? 2 : 1; for (let i = 0; i < n; i++) this.physics(dt / n); } }
     else this.followBall(dt);
     this.lineT -= dt;
     this.animate(dt);
@@ -163,9 +171,15 @@ const SoccerGame = {
     let steer = key('ArrowRight', 'KeyD') - key('ArrowLeft', 'KeyA') + (st.x || 0);
     let thr = key('ArrowUp', 'KeyW') - key('ArrowDown', 'KeyS');
     if (G.touch && !thr) thr = st.y > 0.45 ? -1 : 1;
-    if (G.touchRun) thr = -1;
+    // The phone's second button toggles (it's the world's run button): a tap puts the car in
+    // reverse for a moment, or until it's tapped again.
+    if (G.touchRun) {
+      this.revT = (this.revT || 0) + (this.dt || 0);
+      if (this.revT > 1.6) this.revOff(); else thr = -1;
+    } else this.revT = 0;
     return { steer: Math.max(-1, Math.min(1, steer)), thr };
   },
+  revOff() { G.touchRun = false; this.revT = 0; const r = $('#t-run'); if (r) r.classList.remove('on'); },
   act() { const c = this.me; if (!c || !this.started || this.over || c.boost < 0.3) return; c.boostT = 1.0; c.boost = Math.max(0, c.boost - 0.5); Sound.boost(); },
   moveCar(c, inp, dt) {
     const T = c.type;
@@ -177,67 +191,122 @@ const SoccerGame = {
     const sp = Math.min(1, Math.abs(c.v) / 8);
     c.a += c.steer * 2.1 * T.grip * sp * Math.sign(c.v || 1) * dt + c.spin * dt;
     c.spin *= Math.exp(-4 * dt);
+    const r = T.len * 0.42, inMouth = Math.abs(c.x) > SOC_L - r + 0.01 && Math.abs(c.z) < SOC_GOAL;
     c.x += Math.cos(c.a) * c.v * dt + c.ix * dt; c.z += Math.sin(c.a) * c.v * dt + c.iz * dt;
     c.ix *= Math.exp(-3 * dt); c.iz *= Math.exp(-3 * dt);
-    // The walls: sandbags all round (the goal mouths are open, and shallow).
-    const r = T.len * 0.42, lx = SOC_L - r + (Math.abs(c.z) < SOC_GOAL ? 2.4 : 0);
-    if (Math.abs(c.x) > lx) { c.x = Math.sign(c.x) * lx; c.v *= -0.3; this.thud(c); }
+    // The walls: sandbags all round (the goal mouths are open, and shallow). A car already in a
+    // goal mouth is kept between its posts instead of jumping back onto the pitch.
+    if (inMouth) {
+      if (Math.abs(c.z) > SOC_GOAL - 1.1) { c.z = Math.sign(c.z) * (SOC_GOAL - 1.1); c.iz *= -0.5; this.thud(c); }
+      if (Math.abs(c.x) > SOC_L - r + 2.4) { c.x = Math.sign(c.x) * (SOC_L - r + 2.4); c.v *= -0.3; c.ix *= -0.5; this.thud(c); }
+    } else {
+      const lx = SOC_L - r + (Math.abs(c.z) < SOC_GOAL - 1.1 ? 2.4 : 0);
+      if (Math.abs(c.x) > lx) { c.x = Math.sign(c.x) * lx; c.v *= -0.3; c.ix *= -0.5; this.thud(c); }
+    }
     if (Math.abs(c.z) > SOC_W - r) { c.z = Math.sign(c.z) * (SOC_W - r); c.v *= 0.6; c.iz *= -0.5; this.thud(c); }
     c.boostT = Math.max(0, c.boostT - dt); c.boost = Math.min(1, c.boost + dt / 6);
     c.bumpT = Math.max(0, c.bumpT - dt);
   },
   thud(c) { if (c.isMe && c.bumpT <= 0) { c.bumpT = 0.4; Sound.bump(); if (Math.random() < 0.15) Arcade.say(fmt(pick(SOC_LINES.wall)), null, 1800); } },
-  // The bots: an attacker goes for the ball from behind it (aiming at the goal), a defender
-  // stays between the ball and its own goal.
-  bot(c) {
-    const b = this.b, gx = c.team === 0 ? SOC_L : -SOC_L, own = -gx;
-    let tx, tz;
-    if (c.role === 'defend' && Math.sign(b.x - own) * Math.sign(-own) < 0.5 && Math.abs(b.x - own) > 14) { tx = own * 0.7 + (b.x - own) * 0.25; tz = b.z * 0.5; }
-    else {
-      // A point just behind the ball, on the line from the goal through the ball.
-      const dx = b.x - gx, dz = b.z, d = Math.hypot(dx, dz) || 1;
-      tx = b.x + dx / d * 3.2; tz = b.z + dz / d * 3.2;
-      if (Math.hypot(tx - c.x, tz - c.z) < 3.5) { tx = b.x; tz = b.z; }
+  // The bots. An attacker gets behind the ball (on the line from the goal it attacks, through
+  // the ball) and drives through it; from the wrong side it swings round the ball instead of
+  // pushing it home. A defender waits in front of its own goal and comes out when the ball is
+  // in its half. Anyone who is stuck against a wall backs out.
+  bot(c, dt = 1 / 60) {
+    const b = this.b, dir = c.team === 0 ? 1 : -1, gx = dir * SOC_L, ox = -gx;
+    const clampX = (x) => Math.max(-SOC_L + 2.5, Math.min(SOC_L - 2.5, x)), clampZ = (z) => Math.max(-SOC_W + 2.5, Math.min(SOC_W - 2.5, z));
+    // Backing out of a wall (or another car) for a moment.
+    if (c.rev > 0) { c.rev -= dt; return { steer: c.revSteer, thr: -1 }; }
+    if (c.wantGo && Math.abs(c.v) < 2.5) c.stuckT = (c.stuckT || 0) + dt; else c.stuckT = 0;
+    if (c.stuckT > 0.7) { c.stuckT = 0; c.rev = 0.6 + Math.random() * 0.4; c.revSteer = Math.random() < 0.5 ? -1 : 1; return { steer: c.revSteer, thr: -1 }; }
+    // Where the ball will be in a moment.
+    const lead = Math.min(0.7, Math.hypot(b.x - c.x, b.z - c.z) / 35);
+    const px = clampX(b.x + b.vx * lead), pz = clampZ(b.z + b.vz * lead);
+    const inOurHalf = (px - ox) * dir < SOC_L * 0.85;
+    const mate = this.cars.find(o => o !== c && o.team === c.team);
+    // The defender comes out when the ball is in our half, or when it's much closer than the teammate.
+    const closer = mate && Math.hypot(px - c.x, pz - c.z) + 6 < Math.hypot(px - mate.x, pz - mate.z);
+    let tx, tz, slow = false, hit = false;
+    if (c.role === 'defend' && !inOurHalf && !closer) {
+      tx = ox + dir * 6; tz = Math.max(-4, Math.min(4, pz * 0.35));
+      slow = Math.hypot(tx - c.x, tz - c.z) < 4;
+    } else {
+      // From the goal we attack through the ball: the spot behind it.
+      const az = Math.max(-3, Math.min(3, pz)), ux0 = px - gx, uz0 = pz - az, ul = Math.hypot(ux0, uz0) || 1, ux = ux0 / ul, uz = uz0 / ul;
+      const bx = px + ux * 3.8, bz = pz + uz * 3.8;
+      const along = (c.x - px) * -ux + (c.z - pz) * -uz; // > 0: the car is between the ball and the goal it attacks
+      if (along > -1.5) {
+        // Wrong side: around the ball, a car's length to the side of it.
+        const side = (c.z - pz) * ux - (c.x - px) * uz >= 0 ? 1 : -1;
+        tx = px + ux * 5 - uz * side * 6.5; tz = pz + uz * 5 + ux * side * 6.5;
+      } else if (Math.hypot(bx - c.x, bz - c.z) < 4.5 || along < -2 && Math.abs(((c.x - px) * uz - (c.z - pz) * ux)) < 1.8) { tx = px; tz = pz; hit = true; }
+      else { tx = bx; tz = bz; }
     }
+    // Not going for the ball: keep out of its way (a car driving home through it scores for them).
+    if (!hit) {
+      const sx = tx - c.x, sz = tz - c.z, sl = Math.hypot(sx, sz) || 1, ex = sx / sl, ez = sz / sl;
+      const tb = (b.x - c.x) * ex + (b.z - c.z) * ez, lat = (b.x - c.x) * -ez + (b.z - c.z) * ex;
+      if (tb > 0 && tb < sl + 2 && Math.abs(lat) < 5.5) { const side = lat > 0 ? -1 : 1; tx = b.x + -ez * side * 7; tz = b.z + ex * side * 7; }
+    }
+    tx = clampX(tx); tz = clampZ(tz);
     let da = Math.atan2(tz - c.z, tx - c.x) - c.a;
     da = Math.atan2(Math.sin(da), Math.cos(da));
-    const back = Math.abs(da) > 2.4 && Math.hypot(tx - c.x, tz - c.z) < 8;
-    if (c.boost > 0.8 && Math.abs(da) < 0.2 && Math.hypot(b.x - c.x, b.z - c.z) < 12 && Math.random() < 0.02) { c.boostT = 0.9; c.boost -= 0.5; }
-    return { steer: Math.max(-1, Math.min(1, (back ? -da : da) * 2.2)), thr: back ? -1 : Math.abs(da) > 1.4 ? 0.4 : 1 };
+    const dist = Math.hypot(tx - c.x, tz - c.z), back = Math.abs(da) > 2.3 && dist < 7;
+    const toBall = Math.hypot(b.x - c.x, b.z - c.z);
+    if (c.boost > 0.7 && Math.abs(da) < 0.18 && toBall < 14 && hit && Math.random() < dt * 1.5) { c.boostT = 0.9; c.boost -= 0.5; }
+    const thr = back ? -1 : slow ? (dist > 1.5 ? 0.3 : 0) : Math.abs(da) > 1.3 ? 0.35 : 1;
+    c.wantGo = thr !== 0;
+    return { steer: Math.max(-1, Math.min(1, (back ? -da : da) * 2.4)), thr };
   },
-  // The ball (on the host): gravity, bounces off the ground and walls, cars hit it.
+  // The ball (on the host): gravity, bounces off the ground, the walls, the posts and the nets;
+  // the cars hit it.
   physics(dt) {
     const b = this.b;
     b.vy -= 22 * dt;
     b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
     if (b.y < SOC_R) { b.y = SOC_R; if (b.vy < -3) { b.vy *= -0.55; this.puff(b.x, b.z, 0xe6d2a6, 1.4); } else b.vy = 0; b.vx *= 1 - dt * 0.6; b.vz *= 1 - dt * 0.6; }
-    // Into a goal?
-    if (Math.abs(b.x) > SOC_L + SOC_R * 0.4 && Math.abs(b.z) < SOC_GOAL) { this.goal(b.x > 0 ? 0 : 1); return; }
-    if (Math.abs(b.x) > SOC_L - SOC_R && Math.abs(b.z) >= SOC_GOAL - 0.3) { b.x = Math.sign(b.x) * (SOC_L - SOC_R); b.vx *= -0.75; this.bounce(); }
-    if (Math.abs(b.x) > SOC_L + 2.6) { b.x = Math.sign(b.x) * (SOC_L + 2.6); b.vx *= -0.5; }
-    if (Math.abs(b.z) > SOC_W - SOC_R) { b.z = Math.sign(b.z) * (SOC_W - SOC_R); b.vz *= -0.75; this.bounce(); }
-    // A low ceiling over the pitch, and a speed limit, so it stays a game.
+    // A low ceiling over the pitch.
     if (b.y > 12) { b.y = 12; b.vy = -Math.abs(b.vy) * 0.5; }
-    const v = Math.hypot(b.vx, b.vz); if (v > 38) { b.vx *= 38 / v; b.vz *= 38 / v; }
+    this.walls();
+    // Into a goal? (After a goal, the ball just rolls about in the net.)
+    if (!this.celebrate && Math.abs(b.x) > SOC_L + 0.5 && Math.abs(b.z) < SOC_GOAL) { this.goal(b.x > 0 ? 0 : 1); return; }
     for (const c of this.cars) c.kickT = Math.max(0, (c.kickT || 0) - dt);
     for (const c of this.cars) {
       const r = c.type.len * 0.45 + SOC_R, dx = b.x - c.x, dz = b.z - c.z, d = Math.hypot(dx, dz);
       if (d >= r || d < 0.01 || b.y > 3.6) continue;
       const nx = dx / d, nz = dz / d;
       b.x = c.x + nx * r; b.z = c.z + nz * r;
-      const cvx = Math.cos(c.a) * c.v + c.ix, cvz = Math.sin(c.a) * c.v + c.iz;
+      const hx = Math.cos(c.a), hz = Math.sin(c.a);
+      const cvx = hx * c.v + c.ix, cvz = hz * c.v + c.iz;
       const rel = (cvx - b.vx) * nx + (cvz - b.vz) * nz;
-      if (rel > 0 && !(c.kickT > 0)) {
-        // One kick per touch: along the hit, a little up (more with the turbo).
+      if (rel > 0) {
+        // Along the hit, nudged the way the car points (so you can aim), a little up (more
+        // with the turbo). A touch in a row only pushes; a fresh one kicks.
+        const fresh = !(c.kickT > 0);
         c.kickT = 0.18;
-        const k = 1.3 + (c.boostT > 0 ? 0.45 : 0);
-        b.vx += nx * rel * k; b.vz += nz * rel * k;
-        b.vy = Math.max(b.vy, Math.min(7, rel * 0.22 + (c.boostT > 0 ? 3 : 0)));
-        c.v *= 0.82;
+        const front = Math.max(0, hx * nx + hz * nz);
+        let kx = nx + hx * 0.4 * front, kz = nz + hz * 0.4 * front; const kl = Math.hypot(kx, kz); kx /= kl; kz /= kl;
+        const k = fresh ? 1.3 + (c.boostT > 0 ? 0.45 : 0) : 1.02;
+        b.vx += kx * rel * k; b.vz += kz * rel * k;
+        if (fresh) b.vy = Math.max(b.vy, Math.min(8, rel * 0.22 + (c.boostT > 0 ? 3.5 : 0)));
+        if (fresh) c.v *= 0.82;
         this.lastTouch = c;
-        if (rel > 6) { this.puff(b.x, b.z, 0xffffff, 1); if (c.isMe || this.ctx.solo) Sound.synth.noise(0.12, 0.25, 900); }
+        if (fresh && rel > 6) {
+          this.puff(b.x, b.z, 0xffffff, 1);
+          if (c.isMe || this.ctx.solo) Sound.synth.noise(0.12, Math.min(0.4, 0.12 + rel * 0.01), 900);
+          if (c.isMe && rel > 16) G.shake = Math.max(G.shake || 0, 0.18);
+        }
         if (this.lineT <= 0 && rel > 10) { this.lineT = 7; Arcade.say(fmt(pick(SOC_LINES.kick)), null, 2400); }
       }
+    }
+    const v = Math.hypot(b.vx, b.vz); if (v > 36) { b.vx *= 36 / v; b.vz *= 36 / v; }
+    // A car pinning the ball against a wall: the wall wins, the car is pushed back and the
+    // ball squirts up out of the squeeze.
+    if (this.walls()) for (const c of this.cars) {
+      const r = c.type.len * 0.45 + SOC_R, dx = b.x - c.x, dz = b.z - c.z, d = Math.hypot(dx, dz);
+      if (d >= r || d < 0.01 || b.y > 3.6) continue;
+      if (!c.peer) { c.x -= dx / d * (r - d); c.z -= dz / d * (r - d); c.v *= 0.5; }
+      b.vy = Math.max(b.vy, 7);
     }
     // Cars bump each other a little.
     for (let i = 0; i < this.cars.length; i++) for (let j = i + 1; j < this.cars.length; j++) {
@@ -250,27 +319,54 @@ const SoccerGame = {
     }
     this.ball.position.set(b.x, b.y, b.z);
   },
+  // Keeps the ball inside: the side walls, the end walls beside the goals, the four posts, and
+  // inside a goal its side and back nets. True if it touched anything.
+  walls() {
+    const b = this.b, R = SOC_R, sx = Math.sign(b.x) || 1, sz = Math.sign(b.z) || 1;
+    let hit = false;
+    const reflect = (nx, nz, e) => { const vn = b.vx * nx + b.vz * nz; if (vn < 0) { b.vx -= (1 + e) * vn * nx; b.vz -= (1 + e) * vn * nz; if (vn < -4) this.bounce(); } hit = true; };
+    if (Math.abs(b.z) > SOC_W - R) { b.z = sz * (SOC_W - R); reflect(0, -sz, 0.75); }
+    // The posts.
+    for (const pz of [-SOC_GOAL, SOC_GOAL]) {
+      const dx = b.x - sx * SOC_L, dz = b.z - pz, d = Math.hypot(dx, dz), rr = R + 0.3;
+      if (d < rr && d > 0.001) { b.x = sx * SOC_L + dx / d * rr; b.z = pz + dz / d * rr; reflect(dx / d, dz / d, 0.7); }
+    }
+    if (Math.abs(b.x) > SOC_L) {
+      // In a goal: its side nets and back net.
+      if (Math.abs(b.z) > SOC_GOAL - R) { b.z = sz * (SOC_GOAL - R); reflect(0, -sz, 0.3); }
+      if (Math.abs(b.x) > SOC_L + 1.5) { b.x = sx * (SOC_L + 1.5); reflect(-sx, 0, 0.25); }
+    } else if (Math.abs(b.x) > SOC_L - R && Math.abs(b.z) >= SOC_GOAL) { b.x = sx * (SOC_L - R); reflect(-sx, 0, 0.75); }
+    return hit;
+  },
   bounce() { Sound.synth.tone(140, 0.08, 'sine', 0.06); },
   goal(team) {
     this.score[team]++;
-    const own = this.lastTouch && this.lastTouch.team !== team;
-    Sound.fanfare(); Sound.horn();
-    Arcade.big(`⚽ גול! ${team === 0 ? '🔵' : '🔴'} ${this.score[0]}:${this.score[1]}`, 2000);
-    Arcade.say(fmt(pick(own ? SOC_LINES.own : SOC_LINES.goal)), null, 3000);
-    for (let i = 0; i < 40; i++) this.puff(this.b.x + (Math.random() - 0.5) * 4, this.b.z + (Math.random() - 0.5) * 6, [0xffd23f, 0xff4f6a, 0x4fd1ff, 0xffffff][i % 4], 1.4, 2 + Math.random() * 4);
+    const by = this.lastTouch, own = by && by.team !== team;
+    this.lastGoal = team; this.celebrate = 2.6;
+    Sound.fanfare(); Sound.horn(); Sound.synth.later(250, () => Sound.synth.noise(1.6, 0.18, 1400, 'bandpass')); // the stands
+    Arcade.big(`⚽ גול! ${team === 0 ? '🔵' : '🔴'} ${this.score[0]}:${this.score[1]}`, 2200);
+    Arcade.say(`${by ? `<b>${esc(by.name)}</b> · ` : ''}${fmt(pick(own ? SOC_LINES.own : SOC_LINES.goal))}`, null, 3000);
+    this.confetti(this.b.x, this.b.z);
     G.shake = 0.6;
-    this.goalT = (this.goalT || 0) + 1;
-    if (this.score[team] >= this.WIN) { this.finish(); return; }
-    this.kickoff(team);
+    this.b.vx *= 0.35; this.b.vz *= 0.35;
+    if (this.score[team] >= this.WIN) this.finish();
   },
+  confetti(x, z) { for (let i = 0; i < 40; i++) this.puff(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 6, [0xffd23f, 0xff4f6a, 0x4fd1ff, 0xffffff][i % 4], 1.4, 2 + Math.random() * 4); },
   // A guest: the ball, the score and the bots from the host.
   followBall(dt) {
     const h = Arcade.others().find(o => o.host), s = h && h.s;
     if (!s || !s.b) return;
     const [x, y, z, vx, vy, vz] = s.b, b = this.b, k = Math.min(1, dt * 12);
     b.x += (x + vx * 0.08 - b.x) * k; b.y += (y - b.y) * k; b.z += (z + vz * 0.08 - b.z) * k;
+    b.vx = vx; b.vy = vy; b.vz = vz;
     this.ball.position.set(b.x, b.y, b.z);
-    if (s.sc && (s.sc[0] !== this.score[0] || s.sc[1] !== this.score[1])) { const team = s.sc[0] > this.score[0] ? 0 : 1; this.score = s.sc.slice(); Sound.fanfare(); Arcade.big(`⚽ גול! ${team === 0 ? '🔵' : '🔴'} ${this.score[0]}:${this.score[1]}`, 2000); this.kickoff(team); }
+    if (s.sc && (s.sc[0] !== this.score[0] || s.sc[1] !== this.score[1])) {
+      const team = s.sc[0] > this.score[0] ? 0 : 1; this.score = s.sc.slice();
+      Sound.fanfare(); G.shake = 0.6; this.confetti(b.x, b.z);
+      Arcade.big(`⚽ גול! ${team === 0 ? '🔵' : '🔴'} ${this.score[0]}:${this.score[1]}`, 2200);
+      // Back to our half when the host does (it celebrates as long).
+      this.lastGoal = team; this.celebrate = 2.6;
+    }
     if (s.over && !this.over) this.finish();
   },
   remote(c, dt) {
@@ -311,7 +407,8 @@ const SoccerGame = {
       let da = toB - c.a; da = Math.atan2(Math.sin(da), Math.cos(da));
       const ca = c.a + da * 0.55;
       const want = new THREE.Vector3(c.x - Math.cos(ca) * 11, 6.5, c.z - Math.sin(ca) * 11);
-      cam.position.lerp(want, Math.min(1, dt * 4));
+      cam.position.lerp(want, this.camSnap ? 1 : Math.min(1, dt * 4));
+      this.camSnap = false;
       if (G.shake > 0) { cam.position.x += (Math.random() - 0.5) * G.shake; G.shake = Math.max(0, G.shake - dt); }
       cam.lookAt((c.x + b.x) / 2, 1.2, (c.z + b.z) / 2);
     }
@@ -345,7 +442,8 @@ const SoccerGame = {
   },
   results() {
     const [b, r] = this.score;
-    const rows = [...this.cars].sort((x, y) => (this.score[y.team] - this.score[x.team])).map(c => ({ name: `${c.team === 0 ? '🔵' : '🔴'} ${c.name}`, value: `${this.score[c.team]}:${this.score[1 - c.team]}`, me: c.isMe }));
+    const meFirst = b === r ? -1 : 1; // a draw isn't a win: then you're listed last
+    const rows = [...this.cars].sort((x, y) => (this.score[y.team] - this.score[x.team]) || ((y.isMe ? 1 : 0) - (x.isMe ? 1 : 0)) * meFirst).map(c => ({ name: `${c.team === 0 ? '🔵' : '🔴'} ${c.name}`, value: `${this.score[c.team]}:${this.score[1 - c.team]}`, me: c.isMe }));
     const won = (b > r ? 0 : 1) === this.me.team && b !== r;
     Arcade.results(`⚽ כדורגל סופות · ${b}:${r}`, rows, { sub: fmt(won ? '{@hamalist}: "אלופים!!! אני הולכת לספר לכל הבסיס!!! לכל הגדוד!!!"' : '{@hamalist}: "היה משחק מטורף!!! ...מי ניצח? לא שמתי לב, דיברתי."'), img: 'assets/arcade/win_soccer.jpg', prize: won ? 10 : b === r ? 4 : 2 });
   },
@@ -361,6 +459,6 @@ const SoccerGame = {
     if (this.host) { const b = this.b; out.b = [b.x, b.y, b.z, b.vx, b.vy, b.vz].map(n => Math.round(n * 10) / 10); out.sc = this.score; out.over = this.over ? 1 : 0; }
     return out;
   },
-  leave() { this.clear(); this.el = null; this.over = false; this.resultsAt = null; },
+  leave() { this.revOff(); this.clear(); this.el = null; this.over = false; this.resultsAt = null; },
 };
 Arcade.register(SoccerGame);

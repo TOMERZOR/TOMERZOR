@@ -3,7 +3,7 @@
 #arcade .fd { position: absolute; inset: 0; pointer-events: none; }
 #arcade .fd-time { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font: 900 20px Rubik, sans-serif; color: #fff; }
 #arcade .fd-time.low { color: #ff6a5a; animation: qz-pulse .5s infinite alternate; }
-#arcade .fd-hand { bottom: max(14px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
+#arcade .fd-hand { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 52px); left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
 #arcade .fd-hand.ready { border-color: #ffd23f; color: #ffd23f; animation: rc-glow .6s ease-in-out infinite alternate; }
 #arcade .fd-board { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
 #arcade .fd-board div { display: flex; gap: 10px; justify-content: space-between; min-width: 120px; background: rgba(30,20,10,.72); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 2px 8px; color: #fff3dc; }

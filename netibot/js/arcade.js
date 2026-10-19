@@ -98,6 +98,7 @@ const Arcade = {
     Sound.engine(null);
     Sound.stopVoice();
     this.active = null; this.net = null; this.phase = null;
+    this.cdAt = null; this.cdGo = null;
     const u = $('#arcade'); if (u) u.remove();
     $('#hud').classList.remove('hidden');
     $('#overlay').classList.remove('hidden');

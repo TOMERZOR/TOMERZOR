@@ -23,6 +23,14 @@ const HIDE_SPOTS = [
   { kind: 'palm', x: 8, z: 12, q: 0.25, name: 'מאחורי הדקל' }, { kind: 'container', x: -15, z: -12, q: 0.85, name: 'מאחורי המכולה' },
 ];
 
+// The solid part of each kind of hiding place: half its width and depth (x, z), in meters.
+const HIDE_BOX = { container: [1.4, 3.2], dumpster: [1.1, 0.7], bags: [1.1, 0.7], palm: [0.4, 0.4], table: [1.3, 0.6] };
+// [m/f] text about someone in the game: their own gender, not the player's.
+const hideAbout = (p, text) => {
+  const female = p.isMe ? (G.profile || {}).gender === 'f' : !!(Cast.get(p.who) || {}).female;
+  return fmt(String(text).replace(/\[([^\/\]]*)\/([^\]]*)\]/g, (_, m, f) => (female ? f : m)));
+};
+
 const HideGame = {
   id: 'hide', name: 'מחבואים — ביקורת לילה', icon: '🔦',
   desc: '{@harasar} עושה סיבוב לילה עם פנס. להתחבא, לחמוק בשקט, לאסוף חטיפים — ולא להיתפס באור.',
@@ -96,25 +104,29 @@ const HideGame = {
     this.sk = { m: Arcade.soldier(this.scene, Arcade.look('harasar')), x: -18, z: -17, a: Math.PI / 4, target: null, check: 0, look: 0, chase: null };
     const fl = this.light = new THREE.SpotLight(0xfff2d0, 3, 22, 0.42, 0.45, 1.1);
     fl.castShadow = !G.touch; fl.shadow.mapSize.set(512, 512);
-    fl.position.set(0.35, 1.45, 0.25); this.sk.m.root.add(fl); this.sk.m.root.add(fl.target); fl.target.position.set(0, 0, 10);
-    const beam = this.beam = new THREE.Mesh(new THREE.ConeGeometry(3.6, 11, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    beam.rotation.x = -Math.PI / 2 + 0.12; beam.position.set(0.35, 1.0, 5.6); this.sk.m.root.add(beam);
+    // A soldier model faces its own +x: the light and its beam point that way, as wide as
+    // the cone he catches in (11 m, 0.42 rad each side), so what you see is what he sees.
+    fl.position.set(0.25, 1.45, 0.35); this.sk.m.root.add(fl); this.sk.m.root.add(fl.target); fl.target.position.set(10, 0, 0);
+    const beam = this.beam = new THREE.Mesh(new THREE.ConeGeometry(11 * Math.tan(0.4), 11, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2d0, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    beam.rotation.z = Math.PI / 2 - 0.1; beam.position.set(5.6, 1.0, 0.35); this.sk.m.root.add(beam);
     // Snacks hidden about.
     this.snacks = [];
     for (let i = 0; i < 9; i++) {
-      const x = (rnd() - 0.5) * 34, z = (rnd() - 0.5) * 34;
+      // Somewhere you can reach: not inside a container or a dumpster.
+      let x = 0, z = 0;
+      for (let k = 0; k < 20; k++) { x = (rnd() - 0.5) * 34; z = (rnd() - 0.5) * 34; if (!this.spots.some(s => this.edge(s, x, z) < 0.9)) break; }
       const sp = Scene3D.label(['🍫', '🥨', '🥫', '🍪'][i % 4], { bg: 'rgba(0,0,0,0)', size: 0.7 });
       sp.position.set(x, 0.6, z); this.scene.add(sp);
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.soft, color: 0xffd27a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5 })); glow.scale.setScalar(1.4); glow.position.set(x, 0.4, z); this.scene.add(glow);
       this.snacks.push({ x, z, sp, glow, got: false });
     }
-    this.phase = 'hide'; this.t = 0; this.counted = -1; this.started = false; this.over = false; this.lineT = 4;
+    this.phase = 'hide'; this.t = 0; this.counted = -1; this.started = false; this.over = false; this.lineT = 4; this.resultsAt = null; this.closeT = 0;
     this.st = { caught: [], sk: null };
     this.ui();
-    Arcade.buttons({ act: 'להתחבא', run: 'ריצה' });
+    Arcade.buttons({ act: '🙈', run: 'ריצה' });
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>🔦 מחבואים — ביקורת לילה</h2>
-      <p class="ar-sub">יש לך ${this.HIDE} שניות להתחבא. ${G.touch ? '"להתחבא" ליד מכולה, פח, שולחן או שקים — ושוב כדי לצאת.' : 'E ליד מכולה, פח, שולחן או שקים — להתחבא, ושוב E — לצאת.'} מי שבאור של הפנס — נתפס. ריצה עושה רעש.</p>
-      <p class="ar-sub">🍫 חטיפים מפוזרים בחצר — שווים נקודות. שווה את הסיכון?</p>`);
+      <p class="ar-sub">יש לך ${this.HIDE} שניות להתחבא. ${G.touch ? '🙈 ליד מכולה, פח, שולחן, שקים או דקל — להתחבא, ושוב 🙈 — לצאת.' : 'E ליד מכולה, פח, שולחן, שקים או דקל — להתחבא, ושוב E — לצאת.'} מי שבאור של הפנס — נתפס. ריצה עושה רעש.</p>
+      <p class="ar-sub">🍫 חטיפים מפוזרים בחצר — מי שאוסף יותר מנצח בשוויון. אבל השקית מרשרשת, והוא שומע. שווה את הסיכון?</p>`);
     Sound.music('night');
     Arcade.countdown(performance.now() + (ctx.solo ? 4600 : 3400), () => { Arcade.panel(''); this.started = true; this.t = 0; }, '🙈!');
   },
@@ -128,6 +140,8 @@ const HideGame = {
 
   // ---------- each frame ----------
   update(dt) {
+    // Caught and only watching the bots: the rest of the night goes by faster.
+    if (this.ctx.solo && this.me && this.me.caught && !this.over) dt *= 3;
     if (this.started && !this.over) {
       this.t += dt;
       if (this.phase === 'hide') {
@@ -152,8 +166,12 @@ const HideGame = {
       p.x = Math.max(-20, Math.min(20, p.x)); p.z = Math.max(-20, Math.min(20, p.z));
       this.block(p);
       // Running is loud.
-      p.noise = Math.max(0, p.noise - dt) + (run && l > 0.1 ? dt * 2 : 0);
-      for (const s of this.snacks) if (!s.got && Math.hypot(s.x - p.x, s.z - p.z) < 1) { s.got = true; s.sp.visible = s.glow.visible = false; p.snacks++; if (p.isMe) { Sound.coin(); Arcade.say(fmt(pick(HIDE_LINES.snack)), null, 2000); } }
+      p.noise = Math.min(2, Math.max(0, p.noise - dt) + (run && l > 0.1 && p.spot < 0 ? dt * 2 : 0));
+      for (const s of this.snacks) if (!s.got && Math.hypot(s.x - p.x, s.z - p.z) < 1) {
+        // A snack rustles: a little noise of its own.
+        s.got = true; s.sp.visible = s.glow.visible = false; p.snacks++; p.noise = Math.max(p.noise, 0.9);
+        if (p.isMe) { Sound.coin(); Sound.synth.noise(0.25, 0.08, 3000); this.pop(s.x, s.z, `🍫 ${p.snacks}`); Arcade.say(fmt(pick(HIDE_LINES.snack)), null, 2000); }
+      }
     }
     if (this.host && this.started && !this.over) this.seeker(dt);
     this.animate(dt);
@@ -161,26 +179,50 @@ const HideGame = {
     if (this.over && this.resultsAt && performance.now() > this.resultsAt) { this.resultsAt = null; this.results(); }
   },
   // Things you can't walk through.
+  // How far (x, z) is from a hiding place's solid part (0 inside).
+  edge(s, x, z) {
+    const r = HIDE_BOX[s.kind];
+    return Math.hypot(Math.max(0, Math.abs(x - s.x) - r[0]), Math.max(0, Math.abs(z - s.z) - r[1]));
+  },
   block(p) {
     for (const s of this.spots) {
-      const r = s.kind === 'container' ? [1.4, 3.2] : s.kind === 'palm' ? [0.4, 0.4] : s.kind === 'table' ? [0, 0] : [1.1, 0.7];
+      // You walk under a table, not through a wall.
+      const r = s.kind === 'table' ? [0, 0] : HIDE_BOX[s.kind];
       const dx = p.x - s.x, dz = p.z - s.z, ox = r[0] + 0.3 - Math.abs(dx), oz = r[1] + 0.3 - Math.abs(dz);
       if (r[0] && ox > 0 && oz > 0 && p.spot !== s.i) { if (ox < oz) p.x += Math.sign(dx || 1) * ox; else p.z += Math.sign(dz || 1) * oz; }
     }
   },
-  spotNear(p) {
-    let best = null, bd = 2.6;
-    for (const s of this.spots) { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < bd && (s.who == null || s.who === p.who)) { bd = d; best = s; } }
+  // The hiding place you're next to (free, or yours); any: taken ones too.
+  spotNear(p, any = false) {
+    let best = null, bd = 1.3;
+    for (const s of this.spots) { const d = this.edge(s, p.x, p.z); if (d < bd && (any || s.who == null || s.who === p.who)) { bd = d; best = s; } }
     return best;
   },
   // E: into the nearest hiding place, or out of it.
   act() {
     const p = this.me;
     if (!p || p.caught || !this.started || this.over) return;
-    if (p.spot >= 0) { const s = this.spots[p.spot]; s.who = null; p.spot = -1; p.x = s.x + 2.2; Sound.synth.noise(0.2, 0.05, 900); return; }
+    if (p.spot >= 0) { this.unhide(p); Sound.synth.noise(0.2, 0.05, 900); return; }
     const s = this.spotNear(p);
-    if (!s) { Sound.synth.tone(200, 0.06, 'square', 0.03); return; }
+    if (!s) {
+      const taken = this.spotNear(p, true);
+      if (taken) {
+        const q = this.ps.find(x => x.who === taken.who);
+        Arcade.big('🤫 תפוס!', 900);
+        Arcade.say(`${q ? `<b><bdi data-raw>${esc(q.name)}</bdi>:</b> ` : ''}${fmt(pick(['"ששש! תפוס פה! [לך/לכי] למקום אחר!"', '"אין מקום! [זוז/זוזי]!"', '"ששש... הוא יראה את שנינו!"']))}`, null, 1800);
+      }
+      Sound.synth.tone(200, 0.06, 'square', 0.03);
+      return;
+    }
     this.hideIn(p, s);
+  },
+  // Out of a hiding place, a step further out from where you were tucked in.
+  unhide(p) {
+    const s = this.spots[p.spot];
+    s.who = null; p.spot = -1;
+    const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz);
+    if (d > 0.1) { p.x += dx / d * 0.8; p.z += dz / d * 0.8; } else p.z += 1.6;
+    this.block(p);
   },
   hideIn(p, s) {
     s.who = p.who; p.spot = s.i; p.vx = p.vz = 0;
@@ -199,21 +241,31 @@ const HideGame = {
       if (p.caught) continue;
       const dx = p.x - sk.x, dz = p.z - sk.z, d = Math.hypot(dx, dz);
       let da = Math.atan2(dz, dx) - sk.a; da = Math.atan2(Math.sin(da), Math.cos(da));
-      const inBeam = d < 11 && Math.abs(da) < 0.42;
-      p.lit = inBeam && p.spot < 0 ? 1 : 0;
-      if ((inBeam && p.spot < 0) || d < 1.2) { this.catch(p); continue; }
-      // Noise draws him over.
-      if (p.noise > 0.4 && p.spot < 0 && (!sk.target || !sk.target.noise)) sk.target = { x: p.x, z: p.z, noise: true };
+      const inBeam = d < 11 && Math.abs(da) < 0.42 && p.spot < 0 && !this.shaded(sk, p);
+      // In the beam a moment (less up close) and you're caught; out of it fast enough, you're not.
+      p.lit = inBeam ? (p.lit || 0) + dt : Math.max(0, (p.lit || 0) - dt * 2);
+      if ((inBeam && p.lit > (d < 4 ? 0.12 : 0.45)) || (d < 1.2 && p.spot < 0)) { this.catch(p); continue; }
+      // Noise draws him over, if he's near enough to hear it.
+      if (p.noise > 0.4 && p.spot < 0 && d < 15 && (!sk.target || !sk.target.noise)) { sk.target = { x: p.x, z: p.z, noise: true }; sk.check = 0; if (p.isMe) Arcade.say('👂 הוא שמע משהו...', null, 1400); this.bubble(pick(['מה זה היה?!', 'שמעתי!', 'מי שם?!'])); }
     }
     // Where next: a noise, the hiding places (the bad ones first), now and then the yard.
     if (!sk.target) {
-      const cand = this.spots.filter(s => Date.now() - (s.checked || 0) > 9000);
-      if (cand.length && Math.random() < 0.8) { cand.sort((a, b) => (a.q + Math.hypot(a.x - sk.x, a.z - sk.z) / 40) - (b.q + Math.hypot(b.x - sk.x, b.z - sk.z) / 40)); const s = cand[Math.floor(Math.random() * Math.min(3, cand.length))]; sk.target = { x: s.x, z: s.z, spot: s }; }
-      else sk.target = { x: (Math.random() - 0.5) * 34, z: (Math.random() - 0.5) * 34 };
+      // He doesn't know who's where: he goes by how good a place looks, and how far it is.
+      const cand = this.spots.filter(s => this.t - (s.checked || -99) > 12);
+      if (cand.length && Math.random() < 0.75) { cand.sort((a, b) => (a.q + Math.hypot(a.x - sk.x, a.z - sk.z) / 40) - (b.q + Math.hypot(b.x - sk.x, b.z - sk.z) / 40)); const s = cand[Math.floor(Math.random() * Math.min(3, cand.length))]; sk.target = { x: s.x, z: s.z, spot: s }; }
+      else {
+        // A walk across the yard, to somewhere he can stand.
+        let x = 0, z = 0;
+        for (let k = 0; k < 12; k++) { x = (Math.random() - 0.5) * 34; z = (Math.random() - 0.5) * 34; if (!this.spots.some(s => this.edge(s, x, z) < 1.6)) break; }
+        sk.target = { x, z };
+      }
+      sk.moved = { x: sk.x, z: sk.z, t: 0 };
     }
     const tg = sk.target, dx = tg.x - sk.x, dz = tg.z - sk.z, d = Math.hypot(dx, dz);
     tg.age = (tg.age || 0) + dt;
     if (tg.age > 12 && sk.check <= 0) { sk.target = null; return; }
+    // Walking into a wall for two seconds: somewhere else, then.
+    if (sk.check <= 0 && sk.moved && (sk.moved.t += dt) > 2) { if (Math.hypot(sk.x - sk.moved.x, sk.z - sk.moved.z) < 1) { if (tg.spot) tg.spot.checked = this.t - 6; sk.target = null; return; } sk.moved = { x: sk.x, z: sk.z, t: 0 }; }
     if (sk.check > 0) {
       // Searching a hiding place: a look around with the light.
       sk.check -= dt;
@@ -221,10 +273,11 @@ const HideGame = {
       if (sk.check <= 0) {
         const s = tg.spot;
         if (s) {
-          s.checked = Date.now();
+          s.checked = this.t;
           const p = s.who != null && this.ps.find(q => q.who === s.who && !q.caught);
-          if (p && Math.random() > s.q * 0.7) this.catch(p);
-          else if (p && p.isMe) Arcade.say('😮‍💨 הוא עבר לידך...', null, 1600);
+          // Still and quiet, you might get away with it; noisy, he finds you.
+          if (p && Math.random() > s.q * 0.75 - Math.min(0.5, p.noise)) this.catch(p);
+          else if (p && p.isMe) { Arcade.say('😮‍💨 הוא עבר לידך...', null, 1600); Sound.synth.tone(180, 0.4, 'sine', 0.05, 120); }
         }
         sk.target = null;
       }
@@ -237,10 +290,20 @@ const HideGame = {
       sk.x += Math.cos(sk.a) * sp * dt; sk.z += Math.sin(sk.a) * sp * dt;
       sk.v = sp;
       // Walk round the props.
-      for (const s of this.spots) { const r = s.kind === 'container' ? 3 : s.kind === 'table' ? 0 : 1.3; if (!r) continue; const ex = sk.x - s.x, ez = sk.z - s.z, e = Math.hypot(ex, ez); if (e < r && e > 0.01) { sk.x = s.x + ex / e * r; sk.z = s.z + ez / e * r; } }
+      for (const s of this.spots) { const r = s.kind === 'container' ? 3 : s.kind === 'table' ? 1.4 : 1.3; const ex = sk.x - s.x, ez = sk.z - s.z, e = Math.hypot(ex, ez); if (e < r && e > 0.01) { sk.x = s.x + ex / e * r; sk.z = s.z + ez / e * r; } }
+      sk.x = Math.max(-19, Math.min(19, sk.x)); sk.z = Math.max(-19, Math.min(19, sk.z));
     }
     if (sk.check > 0) sk.v = 0;
     this.st.sk = [Math.round(sk.x * 10) / 10, Math.round(sk.z * 10) / 10, Math.round(sk.a * 100) / 100, sk.v ? 1 : 0];
+  },
+  // A container between him and you keeps you out of his light.
+  shaded(sk, p) {
+    const n = Math.ceil(Math.hypot(p.x - sk.x, p.z - sk.z) / 0.5);
+    for (let k = 1; k < n; k++) {
+      const x = sk.x + (p.x - sk.x) * k / n, z = sk.z + (p.z - sk.z) * k / n;
+      for (const s of this.spots) if (s.kind === 'container' && Math.abs(x - s.x) < 1.3 && Math.abs(z - s.z) < 3.1) return true;
+    }
+    return false;
   },
   catch(p) {
     if (p.caught) return;
@@ -249,34 +312,42 @@ const HideGame = {
     if (!this.st.caught.includes(p.who)) this.st.caught.push(p.who);
     // Out to the wall for push-ups.
     const k = this.st.caught.length;
-    p.x = -16 + k * 1.6; p.z = 18.5;
+    p.x = -12 + k * 2; p.z = -18.6;
     this.bubble(fmt(pick(HIDE_LINES.found)));
     Sound.whistle();
-    if (p.isMe) { Arcade.big('🔦 נתפסת!', 1600); Sound.bad(); G.shake = 0.5; }
-    else Arcade.say(`🔦 <bdi data-raw>${esc(p.name)}</bdi> נתפס[/ה]!`, null, 2000);
+    if (p.isMe) { Arcade.big('🔦 נתפסת!', 1600); Sound.bad(); G.shake = 0.5; Arcade.buttons({ act: false, run: false }); if (this.ctx.solo && !this.ps.every(q => q.caught)) setTimeout(() => this.me && this.me.caught && !this.over && Arcade.say('⏩ שכיבות סמיכה ליד הגדר — והלילה עובר מהר יותר', null, 2600), 1800); }
+    else Arcade.say(`🔦 <bdi data-raw>${esc(p.name)}</bdi> ${hideAbout(p, 'נתפס[/ה]')}!`, null, 2000);
     if (this.ps.every(q => q.caught)) this.finish();
   },
   // The bots: run to a hiding place while he counts; the brave ones go for snacks.
   bot(p, dt) {
     if (p.spot >= 0) {
       // Now and then the brave ones slip out for a snack, if he's far.
-      if (this.phase === 'seek' && Math.random() < dt * 0.05 * p.nerve && Math.hypot(this.sk.x - p.x, this.sk.z - p.z) > 14) { this.spots[p.spot].who = null; p.spot = -1; p.out = 3; }
+      if (this.phase === 'seek' && Math.random() < dt * 0.05 * p.nerve && Math.hypot(this.sk.x - p.x, this.sk.z - p.z) > 14 && this.snacks.some(q => !q.got)) { this.unhide(p); p.out = 3.5; p.goal = null; }
       return [0, 0, false];
     }
     if (p.out > 0) {
+      // Out for the nearest snack — and back in a hurry when he looks this way.
       p.out -= dt;
-      const s = this.snacks.find(q => !q.got);
-      if (s && p.out > 1) { const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz); return [dx / d, dz / d, false]; }
+      const sk = this.sk, near = Math.hypot(sk.x - p.x, sk.z - p.z) < 9;
+      let s = null, bd = Infinity;
+      for (const q of this.snacks) { const d = Math.hypot(q.x - p.x, q.z - p.z); if (!q.got && d < bd) { bd = d; s = q; } }
+      if (s && p.out > 1 && !near) { const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz) || 1; return [dx / d, dz / d, false]; }
+      p.out = 0;
     }
-    if (!p.goal || (p.goal.who != null && p.goal.who !== p.who)) {
-      const free = this.spots.filter(s => s.who == null);
+    if (!p.goal || (p.goal.who != null && p.goal.who !== p.who) || (p.goalT -= dt) <= 0) {
+      const free = this.spots.filter(s => s.who == null && s !== p.stuckAt);
       free.sort((a, b) => (Math.hypot(a.x - p.x, a.z - p.z) - a.q * 8) - (Math.hypot(b.x - p.x, b.z - p.z) - b.q * 8));
+      // Stuck going for one too long: try another.
+      if (p.goal && p.goalT <= 0) p.stuckAt = p.goal;
       p.goal = free[Math.floor(Math.random() * Math.min(2, free.length))];
+      p.goalT = 7;
     }
     const s = p.goal;
     if (!s) return [0, 0, false];
-    const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz);
-    if (d < 2.4) { this.hideIn(p, s); p.goal = null; return [0, 0, false]; }
+    if (this.edge(s, p.x, p.z) < 1) { this.hideIn(p, s); p.goal = null; p.stuckAt = null; return [0, 0, false]; }
+    const dx = s.x - p.x, dz = s.z - p.z, d = Math.hypot(dx, dz) || 1;
+    // Out in the open while he looks: quietly; while he counts: run.
     return [dx / d, dz / d, this.phase === 'hide'];
   },
   follow() {
@@ -299,6 +370,11 @@ const HideGame = {
   },
 
   // ---------- drawing ----------
+  pop(x, z, text) {
+    const l = Scene3D.label(text, { bg: 'rgba(255,214,0,.95)', fg: '#3a1a0a', size: 0.55 });
+    l.position.set(x, 1.6, z); this.scene.add(l);
+    this.fx.push({ m: l, t: 0 });
+  },
   bubble(text) {
     if (this.bub) this.sk.m.root.remove(this.bub);
     this.bub = Scene3D.label(text, { bg: 'rgba(255,248,230,.97)', fg: '#3a1a0a', size: 0.5 });
@@ -309,23 +385,31 @@ const HideGame = {
     const t = performance.now() / 1000, sk = this.sk;
     if (!sk) return;
     if (!this.host && sk.tx != null) { const k = Math.min(1, dt * 8); sk.x += (sk.tx - sk.x) * k; sk.z += (sk.tz - sk.z) * k; let da = sk.ta - sk.a; da = Math.atan2(Math.sin(da), Math.cos(da)); sk.a += da * k; }
+    // A guest works out the warning for itself (the host says when you're caught).
+    if (!this.host && this.me && this.phase === 'seek' && !this.me.caught) {
+      const me = this.me, dx = me.x - sk.x, dz = me.z - sk.z, d = Math.hypot(dx, dz);
+      let da = Math.atan2(dz, dx) - sk.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+      me.lit = d < 11 && Math.abs(da) < 0.42 && me.spot < 0 && !this.shaded(sk, me) ? 1 : 0;
+    }
     Arcade.pose(sk.m, sk.x, sk.z, sk.a, sk.v || 0, dt);
     this.beam.material.opacity = this.phase === 'seek' ? 0.09 : 0.03;
     this.light.intensity = this.phase === 'seek' ? 3 : 0.6;
     for (const p of this.ps) {
       const v = Math.hypot(p.vx, p.vz);
       const hidden = p.spot >= 0;
-      if (p.caught) { Arcade.pose(p.m, p.x, p.z, -Math.PI / 2, 0, dt); p.m.root.rotation.z = -1.25; p.m.root.position.y = 0.32 + Math.abs(Math.sin(t * 3 + p.x)) * 0.22; continue; }
+      if (p.caught) { Arcade.pose(p.m, p.x, p.z, 0, 0, dt); p.m.root.rotation.x = 0; p.m.root.rotation.z = -1.22 - Math.abs(Math.sin(t * 3 + p.x)) * 0.2; p.m.root.position.y = 0.06; p.m.root.visible = true; p.m.tag.visible = true; continue; }
       const win = this.over && this.ranking()[0] === p;
       if (win) Scene3D.animateSoldier(p.m, { x: p.x / S3, y: p.z / S3, angle: Math.PI / 2, speed: 0, dancing: true }, false, dt);
       else Arcade.pose(p.m, p.x, p.z, p.a, v, dt);
-      p.m.root.rotation.z = 0;
+      p.m.root.rotation.x = 0;
       // Crouched when hidden; the others' hidden soldiers are hard to see (but you see yours).
-      p.m.root.rotation.x = hidden ? -0.5 : 0;
+      p.m.root.rotation.z = hidden ? -0.45 : 0;   // (the model faces its own +x: a tip about z leans forward)
       p.m.root.position.y = hidden ? -0.35 : 0;
       p.m.root.visible = !hidden || p.isMe || this.over;
       p.m.tag.visible = !hidden || p.isMe;
     }
+    for (const f of this.fx) { f.t += dt; f.m.position.y += dt * 1.2; }
+    this.fx = this.fx.filter(f => { if (f.t < 1.2) return true; this.scene.remove(f.m); return false; });
     for (const s of this.snacks) if (!s.got) { s.sp.position.y = 0.6 + Math.sin(t * 3 + s.x) * 0.1; s.glow.material.opacity = 0.35 + Math.sin(t * 4 + s.z) * 0.2; }
     // The camera: high behind you; the whole yard when you've been caught.
     const me = this.me, cam = this.camera;
@@ -350,8 +434,9 @@ const HideGame = {
     e.top.innerHTML = this.over ? '🏆' : this.phase === 'hide' ? `🙈 להתחבא! ${Math.ceil(Math.max(0, left))}` : `🔦 ${Math.ceil(Math.max(0, left))} · ${alive} עוד מסתתרים`;
     e.me.innerHTML = `🍫 ${me.snacks}${me.caught ? ' · 😩 נתפסת' : me.spot >= 0 ? ` · 🙈 ${this.spots[me.spot].name}` : ''}`;
     e.lit.classList.toggle('hidden', !(me.lit && !me.caught));
-    const near = !me.caught && me.spot < 0 && this.spotNear(me);
-    const hint = me.caught || this.over ? '' : me.spot >= 0 ? `${G.touch ? '"להתחבא"' : 'E'} — לצאת` : near ? `${G.touch ? '"להתחבא"' : 'E'} — ${near.name}` : '';
+    const near = !me.caught && me.spot < 0 && this.spotNear(me), taken = !near && !me.caught && me.spot < 0 && this.spotNear(me, true);
+    const key = G.touch ? '🙈' : 'E';
+    const hint = me.caught || this.over ? '' : me.spot >= 0 ? `${key} — לצאת` : near ? `${key} — ${near.name}` : taken ? `🤫 ${taken.name} — תפוס` : '';
     if (e.hint.textContent !== hint) e.hint.textContent = hint;
   },
   ranking() {

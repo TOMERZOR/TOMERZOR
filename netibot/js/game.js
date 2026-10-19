@@ -180,7 +180,9 @@ const Game = {
     document.addEventListener('fullscreenchange', () => this.syncFullscreen());
     document.addEventListener('webkitfullscreenchange', () => this.syncFullscreen());
     this.syncFullscreen();
-    $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
+    // Run is a toggle on foot; in the race it is a brake you hold.
+    $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = Race.active ? true : !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('#t-run').addEventListener(ev, () => { if (Race.active && G.touchRun) { G.touchRun = false; $('#t-run').classList.remove('on'); } });
 
     // Camera: drag on the world (mouse or a finger outside the joystick) to look around, wheel to zoom.
     const looks = new Map();

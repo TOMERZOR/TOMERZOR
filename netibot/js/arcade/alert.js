@@ -11,10 +11,19 @@ const ALERT_LINES = {
   calm: ['{@p_miriam}: "חיים שלי, מי רוצה עוד שניצל?"', '{@p_shaked}: "יש פה ברוקולי? למה אין פה ברוקולי?!"', '{@p_nevo}: "*אוכל עם הידיים*"', '{@p_arad}: "💨 ...זה לא אני."', '{@hamalist}: "ואז היא אמרה לי — רגע, זה אוכל? אני אוכלת ומדברת!"'],
   siren: ['{@ops}: "צבע אדום! צבע אדום!"', '{@commander}: "למיגוניות! עכשיו!!!"', '{@medic1}: "בלי לדחוף! ...אוקיי, עם לדחוף."'],
   fake: ['🏍️ ...זה היה רק אופנוע.', '{@p_liran}: "אוגה? ...אה. אופנוע."', '{@sergeant}: "מלכים, זה טרקטורון. תירגעו."'],
-  out: ['{@commander}: "נשאר[/ה] בחוץ?! עשר שכיבות סמיכה. עכשיו."', '{@harasar}: "בחוץ בצבע אדום? דו"ח. ועוד דו"ח."', '{@madag}: "*שורקת* שכיבות סמיכה! אחת! שתיים!"'],
+  out: ['{@commander}: "נשאר[/ה] בחוץ?! עשר שכיבות סמיכה. עכשיו."', '{@harasar}: "בחוץ בצבע אדום? דו"ח. ועוד דו"ח."', '{@madag}: "*שורקת* שכיבות סמיכה! אחת! שתיים!"', '{@medic1}: "ה[וא/יא] בסדר! ...רק נעלב[/ה]."'],
+  jumpy: ['{@sergeant}: "לאן רצת? זה אופנוע. לשבת."', '{@p_liran}: "חחחח ראיתם [אותו/אותה] רץ[/ה]?"', '{@commander}: "תירגע[/י]. זה רק אופנוע."'],
+  stay: ['{@commander}: "לשבת ליד השולחן! אין אזעקה!"', '{@sergeant}: "מי קם באמצע ארוחה?!"'],
+  pushups: ['{@madag}: "יפה! עוד עשר!"', '{@commander}: "ככה! זה קצב!"', '{@harasar}: "לא סופר. מההתחלה."'],
   meOut: ['[נשארת/נשארת] בחוץ! עשר שכיבות סמיכה, ואת[ה/] [צופה/צופה] משם.'],
   push: ['💪 דחיפה!', '🤚 זוז!', '🫸 תור!'],
   shut: ['🔒 תפוס!', '🚪 מלא!'],
+};
+
+// [m/f] text about someone in the game: their own gender, not the player's.
+const alertAbout = (p, text) => {
+  const female = p.isMe ? (G.profile || {}).gender === 'f' : !!(Cast.get(p.who) || {}).female;
+  return fmt(String(text).replace(/\[([^\/\]]*)\/([^\]]*)\]/g, (_, m, f) => (female ? f : m)));
 };
 
 const AlertGame = {
@@ -90,7 +99,7 @@ const AlertGame = {
     const rnd = this.rnd = Arcade.rng(ctx.seed);
     this.host = ctx.solo || !!(ctx.net && ctx.net.host);
     const list = ctx.solo
-      ? [{ who: 'me', name: G.profile.name, isMe: true }, ...Arcade.bots(5, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, react: 0.25 + rnd() * 0.55, speed: 0.86 + rnd() * 0.12 }))]
+      ? [{ who: 'me', name: G.profile.name, isMe: true }, ...Arcade.bots(5, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, react: 0.25 + rnd() * 0.5, speed: 0.88 + rnd() * 0.11 }))]
       : ctx.players.map(p => ({ who: p.isMe ? (Multi.as || 'me') : p.who, name: p.name, isMe: p.isMe, peer: p.peer }));
     this.ps = list.map((c, i) => {
       const m = Arcade.soldier(this.scene, c.isMe ? Arcade.look(null) : Arcade.look(Cast.get(c.who) ? c.who : null));
@@ -99,14 +108,15 @@ const AlertGame = {
       return { ...c, m, tag, x: 0, z: 0, vx: 0, vz: 0, a: 0, ix: 0, iz: 0, stun: 0, pushCd: 0, inside: -1, out: false, stamina: 1, seat: i };
     });
     this.me = this.ps.find(p => p.isMe);
-    this.round = 0; this.order = [];
+    this.round = 0; this.order = []; this.done = false; this.resultsAt = null; this.events = []; this.seen = new Set();
+    this.pushups = 0; this.hostSeen = performance.now(); this.stayT = 0;
     this.st = { r: 0, ph: 'calm', occ: {}, out: [], shel: this.ps.length - 1 };
     this.shelters = [];
     for (let i = 0; i < this.ps.length - 1; i++) this.shelters.push(this.makeShelter(i, this.ps.length - 1));
     this.ui();
     Arcade.buttons({ act: '🤚', run: 'ריצה' });
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>🚨 צבע אדום — כיסאות מוזיקליים</h2>
-      <p class="ar-sub">כשיש אזעקה — לרוץ לדלת של מיגונית פנויה. יש תמיד אחת פחות ממספר השחקנים! מי שנשאר בחוץ — שכיבות סמיכה בצד.</p>
+      <p class="ar-sub">אוכלים ליד השולחנות. כשיש אזעקה — לרוץ לדלת של מיגונית פנויה (המנורה ירוקה). יש תמיד אחת פחות ממספר השחקנים! מי שנשאר בחוץ — שכיבות סמיכה בצד.</p>
       <p class="ar-sub">${G.touch ? 'ג\'ויסטיק — ללכת · ריצה — לרוץ · 🤚 — לדחוף' : 'WASD / חצים — ללכת · Shift — ריצה · E / רווח — לדחוף'} · ואם זה רק אופנוע — לא לזוז 😅</p>`);
     this.newRound(true);
     Arcade.countdown(performance.now() + (ctx.solo ? 4200 : 3200), () => { Arcade.panel(''); this.started = true; this.t = 0; }, '🍽️!');
@@ -136,7 +146,8 @@ const AlertGame = {
       p.m.root.visible = true; p.wander = { x: p.x, z: p.z, t: 0 };
     });
     for (const s of this.shelters) { s.who = null; this.lamp(s, false); }
-    this.st.occ = {}; this.st.ph = 'calm';
+    for (const p of this.ps) p.laughed = false;
+    this.st.occ = {}; this.st.ph = 'calm'; this.fakeEnd = 0;
     // When the siren goes (or a motorbike), from the seed so every phone agrees.
     this.calmLen = 4 + this.rnd() * 5;
     this.fake = !first && this.rnd() < 0.3 ? 1.5 + this.rnd() * (this.calmLen - 2) : 0;
@@ -152,6 +163,8 @@ const AlertGame = {
   // ---------- each frame ----------
   update(dt) {
     if (!this.started) { this.animate(dt); this.hud(); return; }
+    // Out and watching the bots alone: the rest of the game goes by faster.
+    if (this.ctx.solo && this.me && this.me.out && !this.done) dt *= 2;
     this.t += dt;
     if (!this.host) this.follow();
     else this.referee(dt);
@@ -167,6 +180,8 @@ const AlertGame = {
       this.lineT -= dt;
       if (this.lineT <= 0) { this.lineT = 3 + Math.random() * 3; Arcade.say(fmt(pick(ALERT_LINES.calm)), null, 2400); }
       if (this.fake && !this.fakeDone && this.t > this.fake) { this.fakeDone = true; this.motorbike(); st.fakeAt = (st.fakeAt || 0) + 1; }
+      // Don't let the siren come right on the heels of a motorbike: give the table a moment.
+      if (this.fakeDone && this.t > this.fake + 0.5 && this.calmLen < this.fake + 2.5) this.calmLen = this.fake + 2.5;
       if (this.t > this.calmLen) { st.ph = 'siren'; st.sAt = (st.sAt || 0) + 1; this.siren(); }
     } else if (st.ph === 'siren') {
       this.sirenT += dt;
@@ -179,11 +194,11 @@ const AlertGame = {
       }
       const free = this.shelters.filter(s => !s.gone && st.occ[s.i] == null);
       const outside = this.ps.filter(p => !p.out && !Object.values(st.occ).includes(p.who));
-      if (!free.length || this.sirenT > 14) {
+      if (!free.length || !outside.length || this.sirenT > 14) {
         // The ones still outside (the last one, or anyone if time ran out) are out.
-        const losers = free.length ? outside : outside;
-        for (const p of losers) this.eliminate(p);
+        for (const p of outside) this.eliminate(p);
         st.ph = 'out'; this.outT = 0;
+        if (!outside.length) Sound.stopSiren();
       }
     } else if (st.ph === 'out') {
       this.outT += dt;
@@ -193,16 +208,21 @@ const AlertGame = {
   // A guest follows the host's state: the siren, the doors, who's out.
   follow() {
     const h = Arcade.others().find(o => o.host), s = h && h.s;
-    if (!s || !s.st) return;
+    if (!s || !s.st) {
+      // The host left: the game can't go on without its referee.
+      if (!this.done && performance.now() - this.hostSeen > 6000) { UI.toast('המארח יצא מהמשחק', 'bad'); const me = this.me; if (me && !me.out) this.st.win = me.who; this.finish(); }
+      return;
+    }
+    this.hostSeen = performance.now();
     const st = s.st;
     if (st.fakeAt && st.fakeAt !== this.st.fakeAt) { this.st.fakeAt = st.fakeAt; this.motorbike(); }
-    if (st.r !== this.st.r) { this.st.r = st.r; this.closeOne(st.gone); this.newRound(); }
+    if (st.r !== this.st.r) { this.st.r = st.r; this.closeOne(st.gone); if (st.open != null) this.shelters.forEach(x => { if (x.i >= st.open) this.closeOne(x.i); }); this.newRound(); }
     if (st.ph === 'siren' && this.st.ph !== 'siren') { this.st.ph = 'siren'; this.siren(); }
     this.st.occ = st.occ || {};
     for (const p of this.ps) if (p.isMe && p.inside >= 0 && this.st.occ[p.inside] && this.st.occ[p.inside] !== p.who) { this.bounce(p); p.inside = -1; }
     for (const w of st.out || []) { const p = this.ps.find(q => q.who === w); if (p && !p.out) this.eliminate(p); }
     if (st.ph === 'out' && this.st.ph !== 'out') { this.st.ph = 'out'; }
-    if (st.win && !this.done) this.finish();
+    if (st.win && !this.done) { this.st.win = st.win; this.finish(); }
   },
   siren() {
     Sound.music('tension');
@@ -219,7 +239,10 @@ const AlertGame = {
     Sound.synth.tone(380, 0.9, 'sawtooth', 0.05, 760);
     Sound.synth.later(500, () => Sound.synth.noise(0.6, 0.1, 400));
     Arcade.big('🏍️ ...?', 1100);
-    for (const p of this.ps) if (p.bot && Math.random() < 0.5) { p.jumpy = 1.2; }
+    for (const p of this.ps) if (p.bot && Math.random() < 0.45) { p.jumpy = 1.2; }
+    // Whoever runs for a door now gets laughed at (and has spent their breath).
+    this.fakeEnd = this.t + 2.2;
+    for (const p of this.ps) p.r0 = Math.hypot(p.x, p.z);
     setTimeout(() => this.ctx && Arcade.say(fmt(pick(ALERT_LINES.fake)), null, 2400), 900);
   },
   bounce(p) {
@@ -231,26 +254,34 @@ const AlertGame = {
   },
   eliminate(p) {
     if (p.out) return;
-    p.out = true; p.inside = -1;
+    p.out = true; p.inside = -1; p.outRound = this.st.r + 1;
     this.order.push(p);
     if (!this.st.out.includes(p.who)) this.st.out.push(p.who);
-    // To the side, for push-ups.
+    // To the side, for push-ups: a row on the right, heads toward the yard.
     const k = this.order.length;
-    p.x = -9 + k * 1.6; p.z = 10.5; p.a = -Math.PI / 2;
+    p.x = 15.8; p.z = 1 + k * 1.3; p.a = Math.PI;
     p.m.root.visible = true;
     Sound.stopSiren();
     Sound.whistle();
-    if (p.isMe) { Arcade.big('😩 [נשארת/נשארת] בחוץ!', 1800); Arcade.say(fmt(pick(ALERT_LINES.meOut)), null, 3000); Sound.bad(); }
-    else Arcade.say(`${fmt(pick(ALERT_LINES.out))} <b><bdi data-raw>${esc(p.name)}</bdi></b> 😅`, null, 2600);
+    if (p.isMe) {
+      Arcade.big('😩 [נשארת/נשארת] בחוץ!', 1800); Arcade.say(fmt(pick(ALERT_LINES.meOut)), null, 3000); Sound.bad(); G.shake = 0.6;
+      Arcade.buttons({ act: '💪', run: false });
+      if (this.ctx.solo) setTimeout(() => this.me && this.me.out && !this.done && Arcade.say(G.touch ? '💪 — שכיבת סמיכה · ⏩ הסיבובים הבאים מהר יותר' : 'E / רווח — שכיבת סמיכה · ⏩ הסיבובים הבאים מהר יותר', null, 3200), 3200);
+    } else Arcade.say(`${alertAbout(p, pick(ALERT_LINES.out))} <b><bdi data-raw>${esc(p.name)}</bdi></b> 😅`, null, 2600);
+    this.pop(p, '😩');
   },
   // Next round: everyone out of the shelters, one shelter closed for renovations.
   nextRound() {
     const alive = this.ps.filter(p => !p.out);
     if (alive.length <= 1) { this.st.win = alive[0] ? alive[0].who : 1; this.finish(); return; }
-    const gone = this.shelters.filter(s => !s.gone).slice(-1)[0];
+    const open = this.shelters.filter(s => !s.gone);
+    const gone = open.slice(-1)[0];
     this.st.ph = 'between';
     this.st.r++; this.st.gone = gone ? gone.i : -1;
     this.closeOne(this.st.gone);
+    // Always one shelter fewer than those still in (if two went out at once, close more).
+    for (const s of open.slice(alive.length - 1)) this.closeOne(s.i);
+    this.st.open = alive.length - 1;
     UI.fade(() => this.newRound());
   },
   closeOne(i) {
@@ -302,6 +333,18 @@ const AlertGame = {
       // Keep off the shelters' walls and inside the yard.
       for (const s of this.shelters) { if (s.gone) continue; const dx = p.x - s.x, dz = p.z - s.z, d = Math.hypot(dx, dz); if (d < 2.3) { p.x = s.x + dx / d * 2.3; p.z = s.z + dz / d * 2.3; } }
       const r = Math.hypot(p.x, p.z); if (r > 22) { p.x *= 22 / r; p.z *= 22 / r; }
+      // Lunch is at the tables: no waiting by a door before the siren.
+      if (!siren && r > 7.2) {
+        p.x *= 7.2 / r; p.z *= 7.2 / r;
+        if (p.isMe && (this.stayT -= dt) <= 0 && st.ph === 'calm') { this.stayT = 5; Arcade.say(fmt(pick(ALERT_LINES.stay)), null, 2000); }
+      }
+      // A motorbike, and off you ran: everyone laughs.
+      if (this.fakeEnd && this.t < this.fakeEnd && !p.laughed && r > (p.r0 || 0) + 1.2 && r > 6.6) {
+        p.laughed = true;
+        this.pop(p, '😅 אופנוע!');
+        if (p.isMe) { Arcade.say(fmt(pick(ALERT_LINES.jumpy)), null, 2400); Sound.bad(); }
+        else if (Math.random() < 0.5) Arcade.say(alertAbout(p, pick(ALERT_LINES.jumpy)), null, 2200);
+      }
       // At a door when the siren's on: in.
       if (siren) {
         for (const s of this.shelters) {
@@ -354,7 +397,21 @@ const AlertGame = {
     return d > 0.6 ? [dx / d * 0.45, dz / d * 0.45, false] : [0, 0, false];
   },
   // E: a shove for whoever's right in front.
-  act() { if (this.me && !this.me.out && this.me.inside < 0 && this.started) this.push(this.me); },
+  act() {
+    const me = this.me;
+    if (!me || !this.started) return;
+    if (me.out && !this.done) { this.pushup(); return; }
+    if (!me.out && me.inside < 0) this.push(me);
+  },
+  // Out: your own push-ups, one per press (the others just count theirs).
+  pushup() {
+    const t = performance.now();
+    if (t - (this.lastPush || 0) < 220) return;
+    this.lastPush = t;
+    this.pushups++; this.me.pushDip = 1;
+    Sound.synth.tone(300 + Math.min(this.pushups, 30) * 12, 0.08, 'triangle', 0.06);
+    if (this.pushups % 10 === 0) { this.pop(this.me, `💪 ${this.pushups}`); Arcade.say(fmt(pick(ALERT_LINES.pushups)), null, 2000); Sound.good(); }
+  },
   push(p) {
     if (p.pushCd > 0 || p.stun > 0) return;
     p.pushCd = 1.1;
@@ -406,19 +463,24 @@ const AlertGame = {
     const t = performance.now() / 1000;
     for (const p of this.ps) {
       const v = p.peer ? p.rv || 0 : Math.hypot(p.vx, p.vz);
-      if (p.out) {
-        // Push-ups at the side.
+      if (p.out && !(this.done && this.st.win === p.who)) {
+        // Push-ups at the side (yours go down when you press).
         Arcade.pose(p.m, p.x, p.z, p.a, 0, dt);
-        p.m.root.rotation.x = 0; p.m.root.rotation.z = -1.25;
-        p.m.root.position.y = 0.32 + Math.abs(Math.sin(t * 3 + p.seat)) * 0.22;
+        p.m.root.rotation.x = 0; p.m.root.position.y = 0.06;
+        let down;
+        if (p.isMe && !p.peer) { p.pushDip = Math.max(0, (p.pushDip || 0) - dt * 4); down = Math.sin(p.pushDip * Math.PI); }
+        else down = Math.abs(Math.sin(t * 3 + p.seat));
+        // The model faces its own +x, so a tip about z is face-down.
+        p.m.root.rotation.z = -1.22 - down * 0.2;
         continue;
       }
-      p.m.root.rotation.z = 0;
+      p.m.root.rotation.x = 0;
       const dancing = this.done && this.st.win === p.who;
       if (dancing) Scene3D.animateSoldier(p.m, { x: p.x / S3, y: p.z / S3, angle: Math.PI / 2, speed: 0, dancing: true }, false, dt);
       else Arcade.pose(p.m, p.x, p.z, p.a, v, dt);
       p.m.root.position.y = 0;
-      p.m.root.rotation.x = p.stun > 0 ? -0.35 : p.pushT > 0 ? 0.3 : 0;
+      // Rocked back by a shove, leaning into one of your own.
+      p.m.root.rotation.z = p.stun > 0 ? 0.35 : p.pushT > 0 ? -0.3 : 0;
       p.pushT = Math.max(0, (p.pushT || 0) - dt);
     }
     for (const f of this.fx) {
@@ -428,7 +490,13 @@ const AlertGame = {
       if (f.rise) f.m.position.y += dt * 1.5;
     }
     this.fx = this.fx.filter(f => { if (f.keep || f.t < (f.puff ? 0.9 : 1.2)) return true; this.scene.remove(f.m); return false; });
-    for (const s of this.shelters) if (!s.gone && this.st.ph === 'siren') s.glow.material.opacity = 0.5 + Math.sin(t * 10) * 0.4;
+    // Lamps: green while a shelter's free in the siren, red once someone's in (or no siren).
+    for (const s of this.shelters) {
+      if (s.gone) continue;
+      const open = this.st.ph === 'siren' && this.st.occ[s.i] == null;
+      if (s.open !== open) { s.open = open; this.lamp(s, open); }
+      s.glow.material.opacity = open ? 0.5 + Math.sin(t * 10) * 0.4 : 0.6;
+    }
     // The camera: high behind you, looking at the yard; it follows you a little.
     const me = this.me, cam = this.camera;
     const fx = me && !me.out ? me.x * 0.45 : 0, fz = me && !me.out ? me.z * 0.45 : 0;
@@ -450,7 +518,9 @@ const AlertGame = {
     if (!e) return;
     const alive = this.ps.filter(p => !p.out).length, free = this.shelters.filter(s => !s.gone).length;
     const ph = this.st.ph;
-    const html = this.done ? '🏆' : ph === 'siren' ? `🚨 ${free - Object.keys(this.st.occ).length} מיגוניות פנויות · ${alive} בחוץ` : `🍽️ ${alive} שחקנים · ${free} מיגוניות`;
+    const taken = Object.keys(this.st.occ).length, me = this.me;
+    const tail = me && me.out ? ` · 💪 ${this.pushups}${this.ctx.solo ? ' ⏩' : ''}` : '';
+    const html = this.done ? '🏆' : ph === 'siren' ? `🚨 ${Math.max(0, free - taken)} פנויות · ${Math.max(0, alive - taken)} בחוץ${tail}` : `🍽️ ${alive} שחקנים · ${free} מיגוניות${tail}`;
     if (e.top.innerHTML !== html) e.top.innerHTML = html;
     if (this.me) e.st.style.width = Math.round(this.me.stamina * 100) + '%';
     e.red.classList.toggle('hidden', ph !== 'siren' || this.done);
@@ -460,13 +530,16 @@ const AlertGame = {
     this.done = true;
     Sound.stopSiren();
     Sound.fanfare();
-    const win = this.ps.find(p => p.who === this.st.win) || this.ps.find(p => !p.out);
-    if (win) { win.out = false; win.x = 0; win.z = 0; win.inside = -1; win.m.root.visible = true; this.order.push(win); }
+    const win = this.ps.find(p => p.who === this.st.win && !p.out) || this.ps.find(p => !p.out);
+    if (win) { this.st.win = win.who; win.x = 0; win.z = 0; win.inside = -1; win.m.root.visible = true; win.m.root.rotation.set(0, 0, 0); this.order.push(win); this.puff(0, 0, 2.4); }
+    // Whoever's still standing (a guest whose host left) after the winner.
+    for (const p of this.ps) if (!this.order.includes(p)) this.order.splice(Math.max(0, this.order.length - 1), 0, p);
     Arcade.big(win && win.isMe ? '🏆 שרדת!' : `🏆 ${win ? win.name : ''}`, 1800);
+    if (win && win.isMe) G.shake = 0.5;
     this.resultsAt = performance.now() + 3200;
   },
   results() {
-    const rows = [...this.order].reverse().map((p, i) => ({ name: p.name, value: i === 0 ? '🏆 שרד[/ה] הכל' : `נפסל[/ה] בסיבוב ${this.ps.length - i}`, me: p.isMe }));
+    const rows = [...this.order].reverse().map((p, i) => ({ name: p.name, value: (i === 0 && !p.out ? alertAbout(p, '🏆 שרד[/ה] הכל') : !p.out ? alertAbout(p, 'נשאר[/ה] במשחק') : alertAbout(p, `נפסל[/ה] בסיבוב ${p.outRound || 1}`)) + (p.isMe && this.pushups ? ` · 💪 ${this.pushups}` : ''), me: p.isMe }));
     const sub = this.order[this.order.length - 1] === this.me ? fmt('{@commander}: "הכי מהיר[/ה] למיגונית בסוללה. ככה זה צריך להיות."') : fmt('{@madag}: "*שורקת* כל מי שנשאר בחוץ — עוד עשר!"');
     Arcade.results('🚨 צבע אדום — כיסאות מוזיקליים', rows, { sub, img: 'assets/arcade/win_alert.jpg' });
   },
@@ -480,7 +553,7 @@ const AlertGame = {
     if (!me) return null;
     const ev = (this.events || []).filter(e => performance.now() - e.at < 2500).map(({ at, ...e }) => e);
     const out = { x: Math.round(me.x * 10) / 10, z: Math.round(me.z * 10) / 10, a: Math.round(me.a * 100) / 100, v: Math.round(Math.hypot(me.vx, me.vz) * 10) / 10, in: me.inside, ev };
-    if (this.host) out.st = { r: this.st.r, ph: this.st.ph, occ: this.st.occ, out: this.st.out, gone: this.st.gone, fakeAt: this.st.fakeAt, win: this.st.win };
+    if (this.host) out.st = { r: this.st.r, ph: this.st.ph, occ: this.st.occ, out: this.st.out, gone: this.st.gone, open: this.st.open, fakeAt: this.st.fakeAt, win: this.st.win };
     return out;
   },
   leave() {

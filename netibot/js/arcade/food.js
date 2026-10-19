@@ -35,8 +35,9 @@ const FoodGame = {
     key.position.set(6, 14, 8); key.castShadow = true; key.shadow.mapSize.set(1024, 1024);
     Object.assign(key.shadow.camera, { left: -16, right: 16, top: 12, bottom: -12, near: 1, far: 40 });
     sc.add(key);
-    // Neon tubes in the ceiling.
-    for (const x of [-8, 0, 8]) for (const z of [-5, 3]) { const t = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.2), new THREE.MeshBasicMaterial({ color: 0xfffef0 })); t.position.set(x, 4.9, z); sc.add(t); }
+    // Neon tubes in the ceiling (only the row by the far wall: the camera looks down from above
+    // the ceiling, so tubes over the middle of the hall would hang in mid-air).
+    for (const x of [-8, 0, 8]) for (const z of [-7]) { const t = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 0.2), new THREE.MeshBasicMaterial({ color: 0xfffef0 })); t.position.set(x, 4.9, z); sc.add(t); }
     // The floor: tiles; the walls: painted, and the serving counter from Higgsfield.
     const tc = document.createElement('canvas'); tc.width = tc.height = 128;
     const tg = tc.getContext('2d');
@@ -89,7 +90,7 @@ const FoodGame = {
     this.layout(rnd);
     if (!Assets.has('arc_table')) Arcade.loadModels(['arc_table']).then(() => { if (this.ctx === ctx) this.layout(Arcade.rng(ctx.seed)); });
     const list = ctx.solo
-      ? [{ who: 'me', name: G.profile.name, isMe: true }, ...Arcade.bots(3, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, aim: 0.5 + rnd() * 0.35 }))]
+      ? [{ who: 'me', name: G.profile.name, isMe: true }, ...Arcade.bots(3, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, aim: 0.45 + rnd() * 0.3 }))]
       : ctx.players.slice(0, 6).map(p => ({ who: p.isMe ? (Multi.as || 'me') : p.who, name: p.name, isMe: p.isMe, peer: p.peer }));
     const starts = [[0, 7], [-10, -7], [10, -7], [-11, 6], [11, 6], [0, -8]];
     this.ps = list.map((c, i) => {
@@ -101,7 +102,7 @@ const FoodGame = {
       return { ...c, m, x, z, vx: 0, vz: 0, a: Math.atan2(-z, -x), hand: null, score: 0, hits: 0, mess: 0, dive: 0, diveCd: 0, stun: 0, throwCd: 0, think: 0 };
     });
     this.me = this.ps.find(p => p.isMe);
-    this.shots = []; this.t = 0; this.started = false; this.over = false; this.hitBy = {}; this.lineT = 6;
+    this.shots = []; this.t = 0; this.started = false; this.over = false; this.hitBy = {}; this.lineT = 6; this.camSnap = true; this.lastRun = false; this.lastTR = G.touchRun; this.meSplat = 0;
     this.ui();
     Arcade.buttons({ act: '🍗', run: 'צלילה' });
     Arcade.panel(`<img class="ar-banner" src="${this.cover}" alt=""><h2>🍗 מלחמת שניצלים</h2>
@@ -128,7 +129,12 @@ const FoodGame = {
       if (p.peer) { this.remote(p, dt); continue; }
       if (!this.started || this.over) continue;
       let ix = 0, iz = 0, dive = false;
-      if (p.isMe) { const inp = Arcade.input(); ix = inp.x; iz = -inp.y; dive = inp.run && !this.lastRun; this.lastRun = inp.run; }
+      if (p.isMe) {
+        // Shift dives as it goes down; the phone's button toggles, so every tap is a dive.
+        const inp = Arcade.input(), sh = G.keys.has('ShiftLeft') || G.keys.has('ShiftRight');
+        ix = inp.x; iz = -inp.y; dive = (sh && !this.lastRun) || G.touchRun !== this.lastTR;
+        this.lastRun = sh; this.lastTR = G.touchRun;
+      }
       else [ix, iz, dive] = this.bot(p, dt);
       if (dive && p.diveCd <= 0) { p.dive = 0.45; p.diveCd = 1.6; const l = Math.hypot(ix, iz) || 1; p.dvx = (ix || Math.cos(p.a + Math.PI / 2)) / l * 13; p.dvz = (iz || Math.sin(p.a + Math.PI / 2)) / l * 13; if (p.isMe) Sound.whoosh(); }
       const sp = p.stun > 0 ? 1.2 : 5.2;
@@ -173,14 +179,14 @@ const FoodGame = {
     const target = this.ps.filter(q => q !== p && !q.out).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
     if (!target) return [0, 0, dive];
     const dx = target.x - p.x, dz = target.z - p.z, d = Math.hypot(dx, dz);
-    if (d < 11 && p.throwCd <= 0 && p.think <= 0) { p.a = Math.atan2(dz, dx); this.throw(p, Math.random() < p.aim ? target : null); p.think = 0.8 + Math.random() * 1.2; }
+    if (d < 11 && p.throwCd <= 0 && p.think <= 0) { p.a = Math.atan2(dz, dx); this.throw(p, Math.random() < p.aim ? target : null, (Math.random() - 0.5) * (1.1 - p.aim) * 0.6); p.think = 1 + Math.random() * 1.3; }
     // Keep a fair distance and circle a little.
     const want = d > 8 ? 1 : d < 5 ? -1 : 0;
     return [dx / d * want + (-dz / d) * 0.5, dz / d * want + (dx / d) * 0.5, dive];
   },
   act() { if (this.started && !this.over && this.me && this.me.hand) this.throw(this.me); else if (this.me && !this.me.hand) Sound.synth.tone(200, 0.06, 'square', 0.03); },
   // A throw: aimed at whoever's most in front (a little help), arcing.
-  throw(p, target = null) {
+  throw(p, target = null, err = 0) {
     if (!p.hand || p.throwCd > 0) return;
     const kind = FOOD_KINDS[p.hand], k = p.hand;
     p.hand = null; p.throwCd = 0.45;
@@ -196,6 +202,8 @@ const FoodGame = {
     }
     let dx = Math.cos(p.a), dz = Math.sin(p.a), flight = 0.6;
     if (target) { const ex = target.x - p.x, ez = target.z - p.z, d = Math.hypot(ex, ez); flight = d / kind.speed; dx = (ex + target.vx * flight * 0.7) / d; dz = (ez + target.vz * flight * 0.7) / d; const l = Math.hypot(dx, dz); dx /= l; dz /= l; p.a = Math.atan2(dz, dx); }
+    // A bot's hand isn't perfect.
+    if (err) { const c = Math.cos(err), sn = Math.sin(err); [dx, dz] = [dx * c - dz * sn, dx * sn + dz * c]; }
     const s = { k, from: p, x: p.x + dx * 0.6, y: 1.4, z: p.z + dz * 0.6, vx: dx * kind.speed, vy: (-0.2 + 4.9 * Math.max(0.25, flight) ** 2) / Math.max(0.25, flight), vz: dz * kind.speed, t: 0, id: Math.floor(Math.random() * 1e9) };
     s.m = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.foodTex[k] }));
     s.m.scale.setScalar(kind.size);
@@ -223,26 +231,29 @@ const FoodGame = {
       if (s.dead) continue;
       // Tables and the floor stop it.
       for (const t of this.tables) if (Math.abs(s.x - t.x) < t.w && Math.abs(s.z - t.z) < t.d && s.y < 0.9) { this.splat(s.x, 0.9, s.z, kind.splat, 0.6); s.dead = true; Sound.splat(); break; }
-      if (s.y < 0.05 || Math.abs(s.x) > this.W + 2 || Math.abs(s.z) > this.D + 2) { this.splat(s.x, 0.02, s.z, kind.splat, 0.8, true); s.dead = true; if (kind.area) this.area(s); }
+      const wx = Math.abs(s.x) > this.W + 1.95, wz = Math.abs(s.z) > this.D + 1.95;
+      if ((wx || wz) && s.y > 0.15) { this.wallSplat(s, kind); s.dead = true; Sound.splat(); }
+      else if (s.y < 0.05) { this.splat(s.x, 0.02, s.z, kind.splat, kind.area ? 1.3 : 0.8, true); s.dead = true; Sound.splat(); if (kind.area) this.area(s); }
     }
     this.shots = this.shots.filter(s => { if (s.dead) this.scene.remove(s.m); return !s.dead; });
   },
   // Hummus splashes on everyone close by.
-  area(s) {
-    for (const q of this.ps) if (q !== s.from && !q.peer && Math.hypot(q.x - s.x, q.z - s.z) < FOOD_KINDS.hummus.area) this.hit({ ...s, dead: false, splash: true }, q);
+  area(s, skip = null) {
+    for (const q of this.ps) if (q !== s.from && q !== skip && !q.peer && q.dive <= 0 && Math.hypot(q.x - s.x, q.z - s.z) < FOOD_KINDS.hummus.area) this.hit({ ...s, dead: false, splash: true }, q);
   },
   hit(s, q) {
     s.dead = true;
     const kind = FOOD_KINDS[s.k], from = s.from;
-    q.mess = Math.min(1, q.mess + 0.12); q.stun = 0.35;
+    q.mess = Math.min(1, q.mess + 0.12); q.stun = 0.35; q.hits++;
     q.vx += (s.vx || 0) * 0.15; q.vz += (s.vz || 0) * 0.15;
     this.splat(q.x, 1.3, q.z, kind.splat, 0.9);
+    this.stain(q, kind.splat);
     // The score: the local thrower's, and online, the victim's phone tells the thrower.
     if (from && !from.peer) from.score += kind.pts;
     if (from && from.peer) { this.hitBy[from.who] = (this.hitBy[from.who] || 0) + kind.pts; }
-    if (from && from.isMe) { Sound.splat(); Sound.synth.later(60, () => Sound.ding()); this.pop(q, pick(FOOD_LINES.hit)); }
+    if (from && from.isMe) { Sound.splat(); Sound.synth.later(60, () => Sound.ding()); this.pop(q, `${pick(FOOD_LINES.hit)}${kind.pts > 1 ? ` ${kind.pts}+` : ''}`); }
     if (q.isMe) { Sound.splat(); G.shake = 0.35; this.meSplat = 1; if (Math.random() < 0.4) Arcade.say(pick(FOOD_LINES.got), null, 1600); }
-    if (kind.area && !s.splash) this.area(s);
+    if (kind.area && !s.splash) this.area(s, q);
   },
   // Food thrown on the other phones.
   remoteShots() {
@@ -266,6 +277,9 @@ const FoodGame = {
     p.vx = (s.x - p.x) / Math.max(dt, 0.016) * 0.1; p.vz = (s.z - p.z) / Math.max(dt, 0.016) * 0.1;
     p.x += (s.x - p.x) * k; p.z += (s.z - p.z) * k;
     let da = s.a - p.a; da = Math.atan2(Math.sin(da), Math.cos(da)); p.a += da * k;
+    if ((s.mess || 0) > p.mess + 0.05) this.stain(p, [0xc8902a, 0xd8261f, 0xe8d090][Math.floor(Math.random() * 3)]);
+    // They took food: the table closest to them is empty on this phone too.
+    if (s.h && !p.hand) { const t = this.tables.filter(q => q.back <= 0).sort((a, c) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(c.x - p.x, c.z - p.z))[0]; if (t && Math.hypot(t.x - p.x, t.z - p.z) < 3.5) { t.back = 3.5 + Math.random() * 2; t.item.visible = false; } }
     p.mess = s.mess || 0; p.dive = s.dv ? 0.1 : 0; p.hand = s.h || null;
     // Their score: what every phone (mine included) says they hit.
     let sc = (this.hitBy[p.who] || 0);
@@ -282,12 +296,37 @@ const FoodGame = {
   // ---------- effects ----------
   splat(x, y, z, color, size, floor = false) {
     const m = floor ? new THREE.Mesh(new THREE.PlaneGeometry(size * 1.6, size * 1.6), new THREE.MeshBasicMaterial({ map: this.splatTex, color, transparent: true, depthWrite: false })) : new THREE.Sprite(new THREE.SpriteMaterial({ map: this.splatTex, color, transparent: true, depthWrite: false }));
-    if (floor) m.rotation.x = -Math.PI / 2;
+    if (floor) { m.rotation.x = -Math.PI / 2; m.rotation.z = Math.random() * Math.PI * 2; }
     else m.scale.setScalar(size);
     m.position.set(x, y + (floor ? 0.01 : 0), z);
     this.scene.add(m);
-    this.fx.push({ m, t: 0, life: floor ? 20 : 0.5, floor });
+    if (floor) m.material.opacity = 0.9;
+    this.fx.push({ m, t: 0, life: floor ? 25 : 0.5, floor });
     if (this.fx.filter(f => f.floor).length > 60) { const f = this.fx.find(f => f.floor); f.t = f.life; }
+  },
+  // Food on a wall: a splat on it, and a few drips running down.
+  wallSplat(s, kind) {
+    const wx = Math.abs(s.x) > this.W + 1.95, sx = Math.sign(s.x), sz = Math.sign(s.z);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.2), new THREE.MeshBasicMaterial({ map: this.splatTex, color: kind.splat, transparent: true, depthWrite: false, opacity: 0.9 }));
+    const y = Math.min(4.6, Math.max(0.4, s.y));
+    if (wx) { m.position.set(sx * (this.W + 1.97), y, Math.max(-this.D - 1.5, Math.min(this.D + 1.5, s.z))); m.rotation.y = -sx * Math.PI / 2; }
+    else { m.position.set(Math.max(-this.W - 1.5, Math.min(this.W + 1.5, s.x)), y, sz * (this.D + 1.97)); m.rotation.y = sz > 0 ? Math.PI : 0; }
+    m.rotation.z = Math.random() * 6.3;
+    this.scene.add(m);
+    this.fx.push({ m, t: 0, life: 25, floor: true });
+    if (this.fx.filter(f => f.floor).length > 70) { const f = this.fx.find(f => f.floor); f.t = Math.max(f.t, f.life - 0.5); }
+  },
+  // A stain that stays on someone's uniform (a few at most; the oldest goes).
+  stain(q, color) {
+    if (!q.m) return;
+    q.stains = q.stains || [];
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.splatTex, color, transparent: true, depthWrite: false }));
+    const a = Math.random() * Math.PI * 2;
+    sp.position.set(Math.cos(a) * 0.22, 0.85 + Math.random() * 0.8, Math.sin(a) * 0.22);
+    sp.scale.setScalar(0.28 + Math.random() * 0.22);
+    sp.material.rotation = Math.random() * 6.3;
+    q.m.root.add(sp); q.stains.push(sp);
+    if (q.stains.length > 9) q.m.root.remove(q.stains.shift());
   },
   pop(q, text) {
     const l = Scene3D.label(text, { bg: 'rgba(255,214,0,.95)', fg: '#b3001b', size: 0.5 });
@@ -305,7 +344,7 @@ const FoodGame = {
       p.m.root.position.y = p.dive > 0 ? 0.3 : 0;
       p.throwT = Math.max(0, (p.throwT || 0) - dt);
       p.m.root.rotation.x = p.throwT > 0 ? 0.35 : p.stun > 0 ? -0.25 : 0;
-      if (Math.abs((p.messShown || 0) - p.mess) > 0.03) { p.messShown = p.mess; p.m.root.traverse(o => { if (o.isMesh && o.userData.c0) o.material.color.copy(o.userData.c0).lerp(sauce, p.mess * 0.6); }); }
+      if (Math.abs((p.messShown || 0) - p.mess) > 0.03) { p.messShown = p.mess; p.m.root.traverse(o => { if (o.isMesh && o.userData.c0) o.material.color.copy(o.userData.c0).lerp(sauce, p.mess * 0.4); }); }
       // The food in hand floats over the head.
       if (p.hand !== p.handShown) {
         if (p.handSprite) p.m.root.remove(p.handSprite);
@@ -314,12 +353,18 @@ const FoodGame = {
         p.handShown = p.hand;
       }
     }
-    for (const f of this.fx) { f.t += dt; if (!f.floor) { f.m.material.opacity = Math.max(0, 1 - f.t / f.life); if (f.rise) f.m.position.y += dt * 1.4; else f.m.scale.multiplyScalar(1 + dt * 2); } }
+    for (const f of this.fx) {
+      f.t += dt;
+      if (f.floor) { if (f.life - f.t < 2) f.m.material.opacity = Math.max(0, (f.life - f.t) / 2) * 0.9; continue; }
+      f.m.material.opacity = Math.max(0, 1 - f.t / f.life);
+      if (f.rise) f.m.position.y += dt * 1.4; else f.m.scale.multiplyScalar(1 + dt * 2);
+    }
     this.fx = this.fx.filter(f => { if (f.t < f.life) return true; this.scene.remove(f.m); return false; });
     // The camera: high behind you, the hall in view.
     const me = this.me, cam = this.camera;
     const want = new THREE.Vector3(me.x * 0.75, 7.2, me.z * 0.7 + 8.8);
-    cam.position.lerp(want, Math.min(1, dt * 4));
+    cam.position.lerp(want, this.camSnap ? 1 : Math.min(1, dt * 4));
+    this.camSnap = false;
     if (G.shake > 0) { cam.position.x += (Math.random() - 0.5) * G.shake * 0.5; G.shake = Math.max(0, G.shake - dt); }
     cam.lookAt(me.x * 0.85, 0.6, me.z * 0.8 - 1.5);
     this.meSplat = Math.max(0, (this.meSplat || 0) - dt * 0.7);
@@ -332,7 +377,8 @@ const FoodGame = {
     this.el = { time: h.querySelector('.fd-time'), hand: h.querySelector('.fd-hand'), board: h.querySelector('.fd-board'), splat: h.querySelector('.fd-splat') };
   },
   ranking() {
-    return [...this.ps].map(p => ({ p, s: p.isMe ? this.myScore() : p.score })).sort((a, b) => b.s - a.s).map(x => x.p);
+    // Most hits first; on a tie, whoever got hit less (and the bots before you: a tie isn't a win).
+    return [...this.ps].map(p => ({ p, s: p.isMe ? this.myScore() : p.score, h: p.peer ? p.mess * 8 : p.hits })).sort((a, b) => b.s - a.s || a.h - b.h || (a.p.isMe ? 1 : 0) - (b.p.isMe ? 1 : 0)).map(x => x.p);
   },
   hud() {
     const e = this.el, me = this.me;
@@ -355,7 +401,7 @@ const FoodGame = {
     this.resultsAt = performance.now() + 3000;
   },
   results() {
-    const rows = this.ranking().map(p => ({ name: p.name, value: `${p.isMe ? this.myScore() : p.score} פגיעות`, me: p.isMe }));
+    const rows = this.ranking().map(p => { const n = p.isMe ? this.myScore() : p.score; return { name: p.name, value: n === 1 ? 'פגיעה אחת' : `${n} פגיעות`, me: p.isMe }; });
     Arcade.results('🍗 מלחמת שניצלים', rows, { sub: fmt(pick(['הטבח: "כולם — שוטפים כלים. עכשיו."', '{@inspector}: "מסדר ניקיון בחדר אוכל. בעוד חמש דקות."', '{@rasap}: "שמונה שניצלים, שלוש פיתות וחומוס. מי חותם?"'])), img: 'assets/arcade/win_food.jpg' });
   },
 

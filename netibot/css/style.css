@@ -740,7 +740,10 @@ body.locked #rotate { display: none !important; }
 #arcade .ar-res td { padding: 6px; border-bottom: 1px solid var(--line); }
 #arcade .ar-res tr.me { background: rgba(242,193,78,.18); font-weight: 900; }
 #arcade .ar-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-@media (max-height: 520px) { #arcade .ar-banner { max-height: 16vh; } #arcade .ar-panel { padding: 8px 10px; } }
+@media (max-height: 520px) {
+  #arcade .ar-banner { max-height: 12vh; } #arcade .ar-panel { padding: 8px 10px; } #arcade .ar-res td { padding: 2px 6px; }
+  body.touch #arcade .ar-say { max-width: calc(100vw - 340px); font-size: 13px; }
+}
 @media (max-width: 700px) { .ar-grid { grid-template-columns: 1fr 1fr; } .ar-info b { font-size: 15px; } .ar-info i { font-size: 12px; } }
 
 /* Character creation: story mode won't start without a name. */

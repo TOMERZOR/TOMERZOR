@@ -443,7 +443,7 @@ const Game = {
     n.chaseCd -= dt;
     const allowed = !G.alert && !Story.run && !Boss.active && (World.id === 'netivot' ? Story.chaseAllowed() : Events.amsalemAllowed());
     if (!n.chasing) {
-      if (allowed && n.chaseCd <= 0 && d < 170) {
+      if (allowed && n.chaseCd <= 0 && d < 140) {
         n.chasing = true;
         n.repath = 0;
         const c = n.person.chase;
@@ -455,15 +455,21 @@ const Game = {
     }
     if (!allowed || d > 330) {
       n.chasing = false;
-      n.chaseCd = 75;
+      n.chaseCd = 110;
       n.path = World.path(n.x, n.y, n.spot.x, n.spot.y) || [];
       if (allowed) { UI.toast(fmt(`😅 ברחת מ${n.short}!`), 'good'); Game.achieve('escape'); }
       return;
     }
     if (d < 28) {
       n.chasing = false;
-      n.chaseCd = 90;
+      n.chaseCd = 130;
       n.path = [];
+      // She isn't all bad: sometimes she just lets you off.
+      if (World.id === 'netivot' && Math.random() < 0.3) {
+        n.bubble = { text: fmtAs(n.person, pick(['...טוב, נראה עייף[/ה]. הפעם עברת. רק הפעם.', 'תפסתי! ...נו, [לך/לכי]. היה לך יום ארוך.', 'אני אעשה כאילו לא ראיתי. אל תתרגל[/י].'])), t: 3.5 };
+        UI.toast(fmt(`😮‍💨 ${n.short} ויתרה לך הפעם`), 'good');
+        return;
+      }
       if (World.id === 'hq') Events.amsalemCaught(); else Story.caught();
       return;
     }

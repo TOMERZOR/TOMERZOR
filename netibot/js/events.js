@@ -685,7 +685,7 @@ const Events = {
     const late = Math.max(0, S.clock - 13 * 60) / 15;
     const grade = Math.max(20, Math.round(100 - left * 6 - late * 4 - (S.dayFlags.fridgeErrors || 0) * 3));
     await UI.cutscene([{ img: 'assets/inspection.jpg', who: '{@inspector}', text: `מסדר! ...אצבע על הלוקר... פנס מתחת למיטה... מריחה את המקרר... סופרת קולבים במחסן... ציון: ${grade}` }]);
-    await UI.talk([{ who: 'inspector', text: grade >= 85 ? 'אני... אין לי מה להגיד. זה לא קרה לי אף פעם. אני הולכת לשבת רגע.' : grade >= 65 ? 'עברת. בקושי. ראיתי גרגר חול שמסתכל עליי מתחת למיטה.' : 'זה לא מסדר. זה אתר ארכיאולוגי. מחר שוב, ובשש בבוקר.' }]);
+    await UI.talk([{ who: 'inspector', text: grade >= 85 ? 'אני... אין לי מה להגיד. זה לא קרה לי אף פעם. אני הולכת לשבת רגע.' : grade >= 65 ? 'עברת. בקושי. ראיתי גרגר חול שמסתכל עליי מתחת למיטה.' : 'זה עוד לא מסדר. אבל ראיתי שהשתדלת. מחר בבוקר נעבור על זה ביחד, ואני מביאה סמרטוטים.' }]);
     if (grade >= 85) await UI.talk([{ who: 'sergeant', text: 'ניצחת את {@inspector}! מלך[/ה]! 👑 זה נכנס להיסטוריה של הפלגה.' }]);
     if (grade >= 65) Game.achieve('yasmin');
     Game.addStat('morale', grade >= 65 ? 8 : -6);

@@ -739,12 +739,12 @@ const Story = {
     Game.achieve('caught');
     Sound.whistle();
     await UI.talk([
-      { who: 'inspector', text: pick(['תפסתי אותך! מסדר פתע. ארבעה כתמי אבק במגורים, עכשיו.', 'חשבת שתברח[/י]? יש לי סיבולת של מסדרים. לטאטא את המגורים!', 'מה זה, טיול? מסדר פתע! המגורים מחכים לך.']) },
+      { who: 'inspector', text: pick(['תפסתי אותך! מסדר פתע קטן. שלושה כתמי אבק במגורים, ונגמר.', 'חשבת שתברח[/י]? יש לי סיבולת של מסדרים. רק לטאטא קצת את המגורים, יאללה.', 'מה זה, טיול? מסדר פתע, אבל קטן. בגלל שאני במצב רוח טוב.']) },
       { who: 'p_shalev', text: 'טפנו עלא וושק... ברוך השם שזה לא אני הפעם.' },
     ]);
-    for (let i = 0; i < 4; i++) this.dust.push(dustSpot());
+    for (let i = 0; i < 3; i++) this.dust.push(dustSpot());
     this.addTask('surprise');
-    Game.addStat('morale', -4);
+    Game.addStat('morale', -2);
   },
 
   // ---------- travel between sites ----------

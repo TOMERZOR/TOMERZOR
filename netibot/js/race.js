@@ -1,23 +1,40 @@
 // The driving commanders' race (תחרות מפקדי נסיעה): a world of its own. The player is the
 // driving commander in the passenger seat and gives the orders; the driver does the rest.
-// Four maps with three tracks each (js/racemaps.js), five cars, bumps that knock rivals off
+// Four maps with three tracks each (js/racemaps.js), a garage of eight cars in four tiers that
+// open up with the player's rank (the higher, the faster), bumps that knock rivals off
 // the line, and Mario Kart style pickups on the road: spinning shekel coins (up to ten, each
 // a little more speed) and floating jerrycans that hand out a power-up. Friends online join
-// through an invite; alone, three commanders from the cast race you.
+// through an invite; alone, three commanders from the cast race you, in cars of your tier.
 // The cars, the coin, the jerrycan and the pine are Higgsfield models (assets/models/); the
 // original desert circuit's map was painted over RACE_POINTS.
 const RACE_POINTS = [[0, -70], [60, -78], [100, -55], [108, -15], [82, 12], [48, 18], [30, 45], [52, 80], [25, 108], [-30, 104], [-60, 78], [-58, 40], [-92, 20], [-104, -25], [-72, -60]];
 const RACE_MAP = { cx: 2.171, cz: 15.677, size: 280 };
 const RACE_LAPS = 3;
+// The garage opens up with the rank: a tier per rank, two cars each (the weaker first), from the
+// slow and sturdy ones a corporal gets to the officers' beast. Playing as a cast member uses their
+// rank. Lap times (negev, easy, the bot brain at full skill): ~80s, ~73s, ~65s, ~57-59s.
+const RACE_RANKS = ['rabat', 'samal', 'samar', '1', '2', '3', 'leaf'];
+const RACE_TIERS = [
+  { tier: 0, unlock: 'rabat', name: 'רכבי הפלגה', desc: 'איטיים, אבל סוחבים הכל' },
+  { tier: 1, unlock: 'samal', name: 'רכבי הסמלים', desc: 'יותר כוח, יותר משקל' },
+  { tier: 2, unlock: 'samar', name: 'רכבי המפקדים', desc: 'מהירים באמת. להחזיק חזק' },
+  { tier: 3, unlock: '1', name: 'רכבי הקצינים', desc: 'מפלצות. שהרס"פית לא תשמע' },
+];
 // top: m/s, acc: m/s², grip: turning, mass: who wins a bump, len: model length (m). The
 // models were lifted facing +z; rotY turns them to face +x like everything else here.
+// model: which of the five models (assets/models/car_<model>.json) it is; paint: how it's
+// repainted (tint multiplies the texture, hue turns it, stripes are projected onto the body).
 const RACE_CARS = [
-  { id: 'sufa', name: 'סופה', desc: 'זריזה בפניות', top: 33, acc: 15, grip: 1.15, mass: 1, len: 4.1, rotY: Math.PI / 2 },
-  { id: 'hummer', name: 'האמר', desc: 'כבד. מעיף את כולם', top: 31, acc: 12.5, grip: 0.95, mass: 1.7, len: 4.8, rotY: Math.PI / 2 },
-  { id: 'hilux', name: 'היילקס', desc: 'מאוזנת בכל', top: 34, acc: 14, grip: 1.0, mass: 1.25, len: 5.2, rotY: Math.PI / 2 },
-  { id: 'van', name: 'ההסעה', desc: 'טסה בישורת, נוטה בסיבוב', top: 37, acc: 11.5, grip: 0.82, mass: 1.45, len: 5.6, rotY: Math.PI / 2 },
-  { id: 'picanto', name: 'הפיקנטו של אמא', desc: 'קטנה, מהירה, עפה מכל מכה', top: 33, acc: 17, grip: 1.2, mass: 0.7, len: 3.6, rotY: Math.PI / 2 },
+  { id: 'van', name: 'ההסעה', desc: 'איטית, כבדה, לא זזה ממכה', tier: 0, top: 29, acc: 10, grip: 0.85, mass: 1.5, len: 5.6, rotY: Math.PI / 2 },
+  { id: 'picanto', name: 'הפיקנטו של אמא', desc: 'קטנה, זריזה, עפה מכל מכה', tier: 0, top: 27, acc: 14, grip: 1.2, mass: 0.7, len: 3.6, rotY: Math.PI / 2 },
+  { id: 'hummer', name: 'האמר', desc: 'כבד. מעיף את כולם', tier: 1, top: 32, acc: 13, grip: 0.95, mass: 1.8, len: 4.8, rotY: Math.PI / 2 },
+  { id: 'hilux', name: 'היילקס', desc: 'מאוזנת בכל', tier: 1, top: 33, acc: 13.5, grip: 1.0, mass: 1.25, len: 5.2, rotY: Math.PI / 2 },
+  { id: 'sufa', name: 'סופה', desc: 'מהירה וזריזה בפניות', tier: 2, top: 36, acc: 16, grip: 1.15, mass: 1.0, len: 4.1, rotY: Math.PI / 2 },
+  { id: 'jeep_cmd', name: 'הג\'יפ של המג"ד', desc: 'שחור, מהיר, ועם חלונות כהים', tier: 2, model: 'hilux', paint: { tint: 0x33363c, badge: ['מג"ד', '#1c2a4f', '#ffffff'] }, top: 39, acc: 16, grip: 1.12, mass: 1.7, len: 5.2, rotY: Math.PI / 2 },
+  { id: 'picanto_t', name: 'פיקנטו טורבו', desc: 'של אמא, אחרי שהקצין "שיפר" אותה', tier: 3, model: 'picanto', paint: { hue: 205, tint: 0xd8e4ff, stripes: '#ffffff', badge: ['TURBO', '#ffffff', '#1f4fd0'] }, top: 39, acc: 19, grip: 1.3, mass: 0.75, len: 3.6, rotY: Math.PI / 2 },
+  { id: 'sufa_gt', name: 'סופה GT', desc: 'המפלצת. פסי מירוץ ושום רחמים', tier: 3, model: 'sufa', paint: { tint: 0x40423f, sat: 0.3, stripes: '#f2c12e', badge: ['GT', '#f2c12e', '#151515'] }, top: 46, acc: 21, grip: 1.3, mass: 1.1, len: 4.1, rotY: Math.PI / 2 },
 ];
+for (const c of RACE_CARS) { c.model = c.model || c.id; c.unlock = RACE_TIERS[c.tier].unlock; }
 // What a jerrycan gives. w: how likely, by place (leader … last), so the last gets the good stuff.
 const RACE_ITEMS = [
   { id: 'turbo', icon: '⛽', name: 'דלק טורבו', w: [1, 3, 5] },
@@ -76,6 +93,7 @@ const Race = {
     for (const k in Assets.models) mark(Assets.models[k]);
     if (RaceWorld.pine) { shared.add(RaceWorld.pine.geo); shared.add(RaceWorld.pine.mat); }
     if (RaceWorld.roadT) shared.add(RaceWorld.roadT);
+    for (const k in this.paints || {}) { const c = this.paints[k]; if (c.map) shared.add(c.map); if (c.stripes) shared.add(c.stripes); for (const g of c.geos ? c.geos.values() : []) shared.add(g); }
     if (RaceWorld.pineBB) { shared.add(RaceWorld.pineBB.geo); shared.add(RaceWorld.pineBB.mat); shared.add(RaceWorld.pineBB.mat.map); }
     W.scene.traverse(o => {
       if (o.geometry && !shared.has(o.geometry)) o.geometry.dispose();
@@ -363,16 +381,182 @@ const Race = {
   loadModels() {
     if (this.modelsLoading) return this.modelsLoading;
     const loader = new THREE.GLTFLoader();
-    const names = [...RACE_CARS.map(c => 'car_' + c.id), 'race_fuel', 'race_pine'];
-    this.modelsLoading = Promise.all(names.map(n => new Promise(ok => {
+    const names = [...new Set(RACE_CARS.map(c => 'car_' + c.model)), 'race_fuel', 'race_pine'];
+    const models = names.map(n => new Promise(ok => {
       if (Assets.models[n]) return ok();
       loader.load(`assets/models/${n}.json`, (g) => {
         g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0.1; o.material.roughness = n === 'race_pine' ? 0.95 : 0.6; } });
         Assets.models[n] = g.scene;
         ok();
       }, undefined, () => ok());
-    })));
+    }));
+    // The repainted cars' pictures for the pick screen: the base car's picture, recoloured.
+    this.thumbs = this.thumbs || {};
+    const thumbs = RACE_CARS.filter(c => c.paint).map(c => new Promise(ok => {
+      const img = new Image();
+      img.onload = () => { try { this.thumbs[c.id] = this.recolor(img, c.paint, true).toDataURL('image/png'); } catch (e) { /* keep the base picture */ } ok(); };
+      img.onerror = () => ok();
+      img.src = `assets/race/car_${c.model}.webp`;
+    }));
+    this.modelsLoading = Promise.all([...models, ...thumbs]);
     return this.modelsLoading;
+  },
+  // A picture (or a model's texture) repainted: the hue turned, the colour washed out or
+  // tinted, pixel by pixel. thumb: the pick screen's picture, whose white background (what's
+  // white and reaches the edge) stays white, and which gets the car's sticker in the corner.
+  recolor(img, paint, thumb = false) {
+    const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height), px = d.data;
+    const t = new THREE.Color(paint.tint == null ? 0xffffff : paint.tint);
+    // The CSS hue-rotate matrix, then saturation, then the tint.
+    const a = (paint.hue || 0) * Math.PI / 180, cs = Math.cos(a), sn = Math.sin(a), s = paint.sat == null ? 1 : paint.sat;
+    const M = [0.213 + cs * 0.787 - sn * 0.213, 0.715 - cs * 0.715 - sn * 0.715, 0.072 - cs * 0.072 + sn * 0.928,
+      0.213 - cs * 0.213 + sn * 0.143, 0.715 + cs * 0.285 + sn * 0.140, 0.072 - cs * 0.072 - sn * 0.283,
+      0.213 - cs * 0.213 - sn * 0.787, 0.715 - cs * 0.715 + sn * 0.715, 0.072 + cs * 0.928 + sn * 0.072];
+    const w = c.width, h = c.height, bg = thumb ? new Uint8Array(w * h) : null;
+    if (thumb) {
+      const white = (k) => px[k * 4] > 251 && px[k * 4 + 1] > 251 && px[k * 4 + 2] > 251;
+      const stack = [];
+      for (let x = 0; x < w; x++) stack.push(x, (h - 1) * w + x);
+      for (let y = 0; y < h; y++) stack.push(y * w, y * w + w - 1);
+      while (stack.length) {
+        const k = stack.pop();
+        if (bg[k] || !white(k)) continue;
+        bg[k] = 1;
+        const x = k % w;
+        if (x > 0) stack.push(k - 1);
+        if (x < w - 1) stack.push(k + 1);
+        if (k >= w) stack.push(k - w);
+        if (k < w * (h - 1)) stack.push(k + w);
+      }
+    }
+    for (let i = 0; i < px.length; i += 4) {
+      if (bg && bg[i >> 2]) continue;
+      const r = px[i], gg = px[i + 1], b = px[i + 2];
+      let R = M[0] * r + M[1] * gg + M[2] * b, G1 = M[3] * r + M[4] * gg + M[5] * b, B = M[6] * r + M[7] * gg + M[8] * b;
+      const l = 0.213 * R + 0.715 * G1 + 0.072 * B;
+      R = (l + (R - l) * s) * t.r; G1 = (l + (G1 - l) * s) * t.g; B = (l + (B - l) * s) * t.b;
+      px[i] = R < 0 ? 0 : R > 255 ? 255 : R; px[i + 1] = G1 < 0 ? 0 : G1 > 255 ? 255 : G1; px[i + 2] = B < 0 ? 0 : B > 255 ? 255 : B;
+    }
+    g.putImageData(d, 0, 0);
+    if (thumb && paint.badge) this.sticker(g, w, h, paint.badge);
+    return c;
+  },
+  // The sticker on a repainted car's picture: a tilted label with a strip of checkers.
+  sticker(g, w, h, [text, bgc, fg]) {
+    const k = w / 400, fs = Math.round(30 * k);
+    g.save();
+    g.font = `900 ${fs}px Rubik, Arial, sans-serif`;
+    const tw = g.measureText(text).width, bw = tw + fs * 1.5, bh = fs * 1.35;
+    g.translate(w * 0.05 + bw / 2, h * 0.1 + bh / 2);
+    g.rotate(-0.12);
+    g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 6 * k; g.shadowOffsetY = 2 * k;
+    g.fillStyle = bgc;
+    g.beginPath(); g.moveTo(-bw / 2 + 6 * k, -bh / 2); g.arcTo(bw / 2, -bh / 2, bw / 2, bh / 2, 6 * k); g.arcTo(bw / 2, bh / 2, -bw / 2, bh / 2, 6 * k); g.arcTo(-bw / 2, bh / 2, -bw / 2, -bh / 2, 6 * k); g.arcTo(-bw / 2, -bh / 2, bw / 2, -bh / 2, 6 * k); g.fill();
+    g.shadowColor = 'transparent';
+    // Checkers down the sticker's left end.
+    const sq = bh / 4;
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) { g.fillStyle = (i + j) % 2 ? fg : bgc; g.fillRect(-bw / 2 + 4 * k + j * sq, -bh / 2 + i * sq, sq, sq); }
+    g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, sq, fs * 0.05);
+    g.restore();
+  },
+  // A repainted car: its model's texture recoloured once (cached), then racing stripes laid over
+  // the body: a second copy of the body whose texture is projected from above, so the stripes
+  // run down the bonnet, the roof and the boot whatever the model's own mapping.
+  paintCar(m, type) {
+    const P = type.paint;
+    this.paints = this.paints || {};
+    // The meshes first: the stripes added below are meshes too, and must not be painted again.
+    const meshes = [];
+    m.traverse(o => { if (o.isMesh) meshes.push(o); });
+    meshes.forEach(o => {
+      const src = o.material;
+      let cached = this.paints[type.id];
+      if (!cached) {
+        cached = this.paints[type.id] = {};
+        if (src.map && src.map.image && (P.hue != null || P.sat != null)) {
+          try {
+            const tex = new THREE.CanvasTexture(this.recolor(src.map.image, P));
+            tex.flipY = src.map.flipY; tex.encoding = src.map.encoding; tex.wrapS = src.map.wrapS; tex.wrapT = src.map.wrapT;
+            cached.map = tex;
+          } catch (e) { /* a plain tint then */ }
+        }
+        if (P.stripes) {
+          const cv = document.createElement('canvas'); cv.width = 512; cv.height = 256;
+          const g = cv.getContext('2d');
+          g.fillStyle = P.stripes;
+          g.fillRect(30, 103, 452, 20); g.fillRect(30, 133, 452, 20);
+          g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(30, 123, 452, 10);
+          cached.stripes = new THREE.CanvasTexture(cv);
+          cached.stripes.flipY = false;
+        }
+      }
+      o.material = src.clone();
+      // The recoloured texture carries the tint already; a plain tint is just the material's colour.
+      if (cached.map) o.material.map = cached.map;
+      else if (P.tint != null) o.material.color = new THREE.Color(P.tint).convertSRGBToLinear();
+      if (!cached.stripes) return;
+      cached.geos = cached.geos || new Map();
+      let geo = cached.geos.get(o.geometry);
+      if (!geo) {
+        geo = o.geometry.clone();
+        geo.computeBoundingBox();
+        const bb = geo.boundingBox, pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
+        // The model faces +z before rotY: length along z, width along x.
+        for (let i = 0; i < pos.count; i++) { uv[i * 2] = (pos.getZ(i) - bb.min.z) / (bb.max.z - bb.min.z || 1); uv[i * 2 + 1] = (pos.getX(i) - bb.min.x) / (bb.max.x - bb.min.x || 1); }
+        geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        cached.geos.set(o.geometry, geo);
+      }
+      // The models come without normals (flat shaded); the stripes have to be lit the same way.
+      const deco = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: cached.stripes, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, roughness: 0.4, metalness: 0.2, flatShading: !geo.attributes.normal }));
+      deco.scale.setScalar(1.004);
+      o.add(deco);
+    });
+  },
+
+  // ---------- ranks and the garage ----------
+  myRank() { return String(typeof playerRank === 'function' ? playerRank() : (G.state && G.state.rank) || 'rabat'); },
+  rankIdx(r) { const i = RACE_RANKS.indexOf(String(r)); return i < 0 ? 0 : i; },
+  unlocked(type) { return this.rankIdx(this.myRank()) >= this.rankIdx(type.unlock); },
+  myTier() { return RACE_TIERS.filter(t => this.rankIdx(this.myRank()) >= this.rankIdx(t.unlock)).length - 1; },
+  bestCar() { const open = RACE_CARS.filter(t => this.unlocked(t)); return open[open.length - 1] || RACE_CARS[0]; },
+  // What opened since the last visit to the garage (a promotion in between), remembered in the
+  // save. Everything ever opened stays seen, so playing as an officer and back doesn't repeat it;
+  // the first visit counts only the starters as seen, so a sergeant hears about their new cars.
+  newlyUnlocked() {
+    const have = RACE_CARS.filter(t => this.unlocked(t)).map(t => t.id);
+    const seen = Array.isArray(G.state.raceSeen) ? G.state.raceSeen : RACE_CARS.filter(t => t.tier === 0).map(t => t.id);
+    const fresh = have.filter(id => !seen.includes(id));
+    G.state.raceSeen = [...new Set([...seen, ...have])];
+    return fresh;
+  },
+  // Three rivals' cars: mostly your own tier, some from the one below, and now and then one
+  // from the tier above, to chase. Different cars where there are enough, never three alike.
+  botCars(n) {
+    const tier = this.myTier(), count = {}, out = [];
+    const use = (c) => { count[c.id] = (count[c.id] || 0) + 1; return c; };
+    if (this.myType) use(this.myType);
+    for (let i = 0; i < n; i++) {
+      const r = Math.random(), want = r < 0.15 ? tier + 1 : r < 0.72 ? tier : tier - 1;
+      const t = Math.max(0, Math.min(RACE_TIERS.length - 1, want));
+      const all = RACE_CARS.filter(c => c.tier === t), free = all.filter(c => !count[c.id]), twice = all.filter(c => (count[c.id] || 0) < 2);
+      out.push(use(pick(free.length ? free : twice.length ? twice : all)));
+    }
+    return out;
+  },
+  // A toast inside the race's own layer (the game's toasts live in the HUD, hidden here).
+  toast(text, kind = '') {
+    const u = $('#race');
+    if (!u) return;
+    u.querySelectorAll('.rc-toast').forEach(x => x.remove());
+    const t = document.createElement('div');
+    t.className = `rc-toast ${kind}`;
+    t.innerHTML = fmt(text);
+    u.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
   },
   // Building a map takes a moment: a panel, then the world, then what comes next.
   loading(then) {
@@ -384,8 +568,8 @@ const Race = {
     const root = new THREE.Group(), tilt = new THREE.Group();
     root.rotation.order = 'YXZ';
     root.add(tilt);
-    const m = Assets.model('car_' + type.id, { length: type.len, rotY: type.rotY });
-    if (m) tilt.add(m);
+    const m = Assets.model('car_' + type.model, { length: type.len, rotY: type.rotY });
+    if (m) { if (type.paint) this.paintCar(m, type); tilt.add(m); }
     else {
       // Until the model is in: a box car.
       const body = new THREE.Mesh(new THREE.BoxGeometry(type.len, 1.4, 2), new THREE.MeshStandardMaterial({ color: 0x6b7a3a }));
@@ -436,20 +620,37 @@ const Race = {
   pickScreen() {
     this.phase = 'pick';
     const map = RACE_MAPS.find(m => m.id === this.mapId);
+    // The garage: a column per rank, the locked ones greyed out; what a promotion just opened glows.
+    const rank = this.myRank(), fresh = this.newlyUnlocked(), thumbs = this.thumbs || {};
+    const bar = (v) => `${Math.round(Math.max(4, Math.min(100, v * 100)))}%`;
+    const car = (c) => {
+      const open = this.unlocked(c), isNew = fresh.includes(c.id);
+      return `<button class="rc-car ${open ? '' : 'locked'} ${isNew ? 'new' : ''}" data-id="${c.id}" ${open ? '' : 'aria-disabled="true"'}>
+        ${isNew ? '<em class="rc-new">חדש!</em>' : ''}<img src="${thumbs[c.id] || `assets/race/car_${c.model}.webp`}" alt=""><b>${open ? '' : '🔒 '}${c.name}</b><i>${open ? c.desc : `נפתח בדרגת ${RANKS[c.unlock]}`}</i>
+        <span class="rc-stat">מהירות<s style="--v:${bar((c.top - 24) / 21)}"></s></span><span class="rc-stat">תאוצה<s style="--v:${bar((c.acc - 8) / 13)}"></s></span><span class="rc-stat">משקל<s style="--v:${bar(c.mass / 1.9)}"></s></span></button>`;
+    };
+    const tiers = RACE_TIERS.map(t => { const open = this.rankIdx(rank) >= this.rankIdx(t.unlock); return `<div class="rc-tier ${open ? '' : 'locked'}"><div class="rc-th">${open ? '' : '🔒 '}${rankIcon(t.unlock)} <b>${t.name}</b><i>${open ? t.desc : `מדרגת ${RANKS[t.unlock]}`}</i></div>${RACE_CARS.filter(c => c.tier === t.tier).map(car).join('')}</div>`; }).join('');
     const p = this.panel(`<h2>${map.emoji} ${map.name} · ${RACE_LEVELS[this.lv].stars} ${RACE_LEVELS[this.lv].name}</h2>
       <p class="rc-sub">את[ה/] מפקד[/ת] הנסיעה: את[ה/] נותנ[/ת] פקודות (חצים / ג'ויסטיק), הנהג מבצע. 3 סיבובים. 🪙 מטבעות = מהירות · ⛽ ג'ריקן = הפתעה (E / 🗣️ להשתמש). מותר להתנגש 😈</p>
-      <div class="rc-cars">${RACE_CARS.map((c, i) => `<button class="rc-car" data-i="${i}"><img src="assets/race/car_${c.id}.webp" alt=""><b>${c.name}</b><i>${c.desc}</i>
-        <span class="rc-stat">מהירות<s style="--v:${Math.round((c.top - 28) / 10 * 100)}%"></s></span><span class="rc-stat">תאוצה<s style="--v:${Math.round((c.acc - 10) / 8 * 100)}%"></s></span><span class="rc-stat">משקל<s style="--v:${Math.round(c.mass / 1.8 * 100)}%"></s></span></button>`).join('')}</div>
+      <p class="rc-rank">${rankIcon(rank)} <span>הדרגה שלך: <b>${RANKS[rank] || rank}</b></span> · <span>${this.myTier() < RACE_TIERS.length - 1 ? `הרכבים הבאים נפתחים בדרגת ${RANKS[RACE_TIERS[this.myTier() + 1].unlock]}` : 'כל המוסך פתוח 🔑'}</span>${this.net ? '' : ' · <span>המפקדים מהפלגה נוהגים ברכבים מהרמה שלך (ולפעמים מעליה 😈)</span>'}</p>
+      <div class="rc-tiers">${tiers}</div>
       ${this.net ? '' : '<div class="rc-row"><button class="btn ghost small" data-m="maps">↩ מפה אחרת</button></div>'}`);
-    p.querySelectorAll('.rc-car').forEach(b => b.addEventListener('click', () => this.chose(RACE_CARS[+b.dataset.i])));
+    p.querySelectorAll('.rc-car').forEach(b => b.addEventListener('click', () => this.chose(RACE_CARS.find(c => c.id === b.dataset.id))));
     const back = p.querySelector('[data-m=maps]');
     if (back) back.addEventListener('click', () => this.mapScreen());
-    // Behind the panel: the camera circles the start line.
+    if (fresh.length) {
+      Sound.fanfare();
+      this.toast(`🔓 ${fresh.length > 1 ? 'רכבים חדשים במוסך' : 'רכב חדש במוסך'}: ${fresh.map(id => RACE_CARS.find(c => c.id === id).name).join(', ')}!`, 'ach');
+      const first = p.querySelector('.rc-car.new'); if (first) setTimeout(() => first.scrollIntoView({ block: 'nearest' }), 50);
+    }
+    // Behind the panel: the camera circles the start line, the best car you have on it.
     this.clearCars();
-    this.me = this.addCar(RACE_CARS[0], { isMe: true });
+    this.me = this.addCar(this.bestCar(), { isMe: true });
     this.place(this.me, 0);
   },
   async chose(type) {
+    if (!type) return;
+    if (!this.unlocked(type)) { Sound.bad(); this.toast(`🔒 ${type.name} — נפתח בדרגת ${RANKS[type.unlock]}`, 'bad'); return; }
     this.myType = type;
     Sound.pickup();
     if (this.net) { this.lobby(); return; }
@@ -480,16 +681,20 @@ const Race = {
     Object.assign(c, { x: g.x, z: g.z, a: g.a, idx: g.idx, v: 0, lap: 0, half: false, crossed: false, prev: g.idx, y: this.W.roadY(g.idx, g.x, g.z) });
   },
   myLabel() { return `🗣️ ${fmt('{name}')}`; },
+  // A car you may drive: the one picked, unless the rank no longer allows it (playing as someone else).
+  myCar() { if (!this.myType || !this.unlocked(this.myType)) this.myType = this.bestCar(); return this.myType; },
   startSolo() {
     this.net = null;
+    this.myCar();
     this.clearCars();
     this.me = this.addCar(this.myType, { isMe: true, who: Multi.as || 'me', label: this.myLabel(), driver: pick(['driver1', 'driver2']) });
-    // Three commanders from the cast, each in a different car; faster on the harder tracks.
+    // Three commanders from the cast, in cars of your tier (one may have sneaked a better one);
+    // faster on the harder tracks.
     const cast = ROSTER.people.filter(p => p.map === 'netivot' && p.id.startsWith('p_'));
     const names = cast.length ? cast.sort(() => Math.random() - 0.5).slice(0, 3).map(p => p.short) : ['בוט 1', 'בוט 2', 'בוט 3'];
-    const others = RACE_CARS.filter(t => t !== this.myType).sort(() => Math.random() - 0.5);
+    const cars = this.botCars(names.length);
     const [s0, s1] = RACE_LEVELS[this.lv].skill;
-    names.forEach((n, i) => this.addCar(others[i % others.length], { bot: true, label: `🗣️ ${n}`, skill: s0 + Math.random() * (s1 - s0), lane: (Math.random() - 0.5) * this.half * 0.8 }));
+    names.forEach((n, i) => this.addCar(cars[i], { bot: true, label: `🗣️ ${n}`, skill: s0 + Math.random() * (s1 - s0), lane: (Math.random() - 0.5) * this.half * 0.8 }));
     // The rivals in front, you at the back of the grid: everyone to overtake.
     [...this.cars.filter(c => c.bot), this.me].forEach((c, i) => this.place(c, i));
     this.countdown(performance.now() + 3600);
@@ -499,6 +704,7 @@ const Race = {
   // Online: wait at the start line for whoever joins, then everyone starts together.
   lobby() {
     this.phase = 'lobby';
+    this.myCar();
     this.clearCars();
     this.me = this.addCar(this.myType, { isMe: true, who: Multi.as || 'me', label: this.myLabel(), driver: pick(['driver1', 'driver2']) });
     this.panel(`<h2>🏁 ממתינים למפקדים...</h2><p class="rc-sub rc-wait"></p><div class="rc-who"></div>`);
@@ -522,7 +728,7 @@ const Race = {
     }
     this.place(this.me, this.racers().indexOf(Multi.as || 'me'));
     if (left <= 3.5) {
-      if (!peers.length) { UI.toast('אף אחד לא הצטרף — מתחרים נגד מפקדים מהפלגה', 'bad'); this.startSolo(); return; }
+      if (!peers.length) { this.toast('אף אחד לא הצטרף — מתחרים נגד מפקדים מהפלגה', 'bad'); this.startSolo(); return; }
       this.countdown(this.net.startAt);
     }
   },
@@ -530,7 +736,7 @@ const Race = {
     if (!this.active || !this.net || !this.me || !this.myType) return null;
     const c = this.me;
     const ev = (this.events || []).filter(e => performance.now() - e.at < 4000).slice(-4).map(({ at, ...e }) => e);
-    return { id: this.net.id, host: !!this.net.host, map: this.mapId, lv: this.lv, car: this.myType.id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, a: Math.round(c.a * 100) / 100, v: Math.round(c.v), lap: c.lap, pr: Math.round(this.progress(c)), fin: c.fin ? Math.round(c.fin * 100) / 100 : 0, sh: c.shieldT > 0 ? 1 : 0, ev, cd: this.net.host && this.phase === 'lobby' ? Math.round((this.net.startAt - performance.now()) / 100) / 10 : 0 };
+    return { id: this.net.id, host: !!this.net.host, map: this.mapId, lv: this.lv, car: this.myCar().id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, a: Math.round(c.a * 100) / 100, v: Math.round(c.v), lap: c.lap, pr: Math.round(this.progress(c)), fin: c.fin ? Math.round(c.fin * 100) / 100 : 0, sh: c.shieldT > 0 ? 1 : 0, ev, cd: this.net.host && this.phase === 'lobby' ? Math.round((this.net.startAt - performance.now()) / 100) / 10 : 0 };
   },
   // In the world: a friend's race invite pops up once.
   watch() {
@@ -653,8 +859,12 @@ const Race = {
     const tx = s.x - Math.sin(s.a) * c.lane, tz = s.z + Math.cos(s.a) * c.lane;
     let d = Math.atan2(tz - c.z, tx - c.x) - c.a;
     d = Math.atan2(Math.sin(d), Math.cos(d));
-    const ahead = S[(c.idx + this.ahead(36)) % N].a - S[c.idx].a, sharp = Math.abs(Math.atan2(Math.sin(ahead), Math.cos(ahead)));
-    let thr = sharp > 0.9 && c.v > 20 ? 0.15 : sharp > 0.6 && c.v > 26 ? 0.5 : 1;
+    // How sharp the bend ahead is (looking further the faster it goes), and how fast this car
+    // can take it: the grippier, the faster. Too fast: off the gas until it fits.
+    const look = this.ahead(36 + Math.max(0, c.v - 24) * 0.8);
+    const ahead = S[(c.idx + look) % N].a - S[c.idx].a, sharp = Math.abs(Math.atan2(Math.sin(ahead), Math.cos(ahead)));
+    const vc = (sharp > 0.9 ? 25 : sharp > 0.6 ? 31 : sharp > 0.4 ? 38 : 99) * c.type.grip;
+    let thr = c.v > vc + 4 ? 0 : c.v > vc ? 0.3 : 1;
     // Keep the race close: the leaders ease off when far in front of the player.
     if (this.me && !this.me.fin && this.progress(c) - this.progress(this.me) > this.ahead(70)) thr = Math.min(thr, 0.4);
     if (c.boost >= 1 && Math.random() < 0.004 && this.phase === 'race') { c.boost = 0; c.boostT = 1.2; }

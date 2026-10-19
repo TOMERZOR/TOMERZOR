@@ -47,13 +47,13 @@ const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
 // Task catalogue. target() returns the waypoint in px.
 const TASKS = {
-  meet_cmd: { title: 'להתייצב אצל {@@commander}', desc: 'קצינת הפלגה, ברחבת המסדרים.', target: () => npcPos('commander'), pts: 2 },
+  meet_cmd: { title: 'להתייצב אצל {@@commander}', desc: 'קצינת הפלגה, במרכז האתר.', target: () => npcPos('commander'), pts: 2 },
   locker: { title: 'לסדר ציוד בלוקר', desc: 'במגורים — הלוקר שלך מסומן.', target: () => lockerSpot(G.state.myLocker), pts: 3 },
   drill: { title: 'תרגיל צבע אדום עם {@sergeant}', desc: '{@sergeant} מחכה ליד המגורים.', target: () => npcPos('sergeant'), pts: 0 },
   clean: { title: 'ניקיון שטח — לאסוף 10 פסולת', desc: 'לחפש פסולת ברחבי הבסיס (מסומן במפה).', target: () => nearestTrash(), pts: 8 },
   dinner: { title: 'ארוחת ערב בחדר האוכל (מ־17:00)', desc: 'אפשר לחכות בחדר האוכל עד שמגישים.', target: () => SPOTS.dining, pts: 2 },
   sleep: { title: 'לישון במיטה שלך', desc: 'המיטה שלך במגורים. שינה מסיימת את היום ושומרת משחק.', target: () => bedSpot(G.state.myBed), pts: 0, last: true },
-  lineup: { title: 'מסדר בוקר עד 06:45', desc: 'רחבת המסדרים. לא לאחר!', target: () => SPOTS.parade, pts: 4 },
+  lineup: { title: 'מסדר בוקר עד 06:45', desc: 'מרכז האתר. לא לאחר!', target: () => SPOTS.parade, pts: 4 },
   reload_train: { title: 'תדריך טעינה אצל {@sergeant}', desc: 'ליד מחסן המארזים.', target: () => npcPos('sergeant'), pts: 2 },
   reload: { title: 'להחליף מארז במשגר הריק', desc: 'לקחת מארז מהמחסן ולהביא למשגר המסומן "ריק".', target: () => reloadTarget(), pts: 8, urgent: true,
     how: () => (G.player.carry === 'canister' ? 'לסחוב את המארז למשגר שמסומן "ריק" וללחוץ E' : 'ללכת למחסן המארזים וללחוץ E כדי לקחת מארז') },
@@ -68,7 +68,7 @@ const TASKS = {
   guard: { title: 'שמירת לילה בעמדה', desc: 'עמדת השמירה בפינת הבסיס.', target: () => SPOTS.tower, pts: 0 },
   train2: { title: 'שני אימונים (לוח אימונים / מטווח / מסלול)', desc: '', target: () => SPOTS.board, pts: 0, count: 2 },
   exam_reload: { title: 'מבחן: החלפת מארז', desc: 'הסמלת ליד משגר 2.', target: () => (G.state.dayFlags.examReload ? reloadTarget() : npcPos('sergeant')), pts: 0 },
-  exam_alert: { title: 'מבחן: תרגיל צבע אדום', desc: '{@commander} ברחבה מתחילה את התרגיל.', target: () => npcPos('commander'), pts: 0 },
+  exam_alert: { title: 'מבחן: תרגיל צבע אדום', desc: '{@commander} במרכז האתר מתחילה את התרגיל.', target: () => npcPos('commander'), pts: 0 },
   exam_radar: { title: 'מבחן: עמדת בקרה', desc: 'בחמ"ל.', target: () => SPOTS.hamal, pts: 0 },
   exam_quiz: { title: 'מבחן ידע אצל {@commander}', desc: '', target: () => npcPos('commander'), pts: 0 },
   graduation: { title: 'לשמוע את התוצאה מ{@@bc}', desc: 'בלשכת מפקדת הסוללה ב{hq}.', target: () => npcPos('bc'), pts: 0, map: 'hq' },
@@ -83,6 +83,7 @@ const TASKS = {
   y_final: { title: 'הקרב האחרון: לקרוא ל{@inspector} למסדר', desc: 'כשהכל מוכן. או כשנגמר האומץ.', target: () => npcPos('inspector'), pts: 0 },
   ugga: { title: 'טופס הקצאה לקורס מיירטים בשביל {@p_liran}', desc: 'אצל {@interceptors} בשו"ב.', map: () => (G.state.flags.ugga === 1 ? 'hq' : 'netivot'), target: () => npcPos(G.state.flags.ugga === 1 ? 'interceptors' : 'p_liran'), pts: 0, optional: true },
   amsalem: { title: 'המטפים "לשם" והשלולית "לשם"', desc: 'כי {@rasap} אמרה.', map: 'hq', target: () => choresTarget(), pts: 0, optional: true, urgent: true, how: 'להרים עם E ולסחוב למקום שהחץ מראה' },
+  kashag: { title: 'מבחן כש"ג עם {@madag}', desc: 'המדא"גית של הגדוד, במסלול הכושר: שכיבות, בטן ושתי הקפות.', target: () => (Kashag.running && Story.run ? Story.run.points[Story.run.idx] : npcPos('madag') || SPOTS.track), pts: 0, urgent: true, how: () => (Kashag.running ? 'לרוץ דרך הנקודות הצהובות' : 'ללכת למסלול הכושר ולדבר עם המדא"גית (E)') },
   curious: { title: 'סקרן[/ית] בשער! לגשת ולטפל', desc: 'אזרח סקרן ליד השער של האתר. לגשת, לדבר ולהרחיק בעדינות.', target: () => Curious.target(), pts: 0, optional: true, urgent: true, how: 'ללכת לשער ולדבר איתו (E)' },
   find_lock: { title: 'למצוא מנעול חדש לשער של נתיבות', desc: 'רק לרס"פית יש מנעולים.', map: 'hq', target: () => npcPos('rasap'), pts: 0 },
   snack: { title: 'לפתוח את ארונית החטיפים הסודית של {@deputy_rasap}', desc: 'מאחורי המדפים ברספ"ייה.', map: 'hq', target: () => SPOTS_HQ.snack, pts: 0 },
@@ -247,7 +248,8 @@ const Story = {
     for (const o of World.objects) if (o.kind === 'junk') o.gone = S.junkDone.includes(o.junk);
     // Events that were halfway through (a truck at the gate, a visiting technician) start over.
     Events.rafael = Events.tech = Events.baum = Events.chores = null;
-    const redo = { rafael: 'rafael', techcheck: 'tech', amsalem: 'amsalem', curious: 'curiousNow' };
+    const redo = { rafael: 'rafael', techcheck: 'tech', amsalem: 'amsalem', curious: 'curiousNow', kashag: 'kashag' };
+    Kashag.running = false;
     Curious.npc = null;
     this.tasks = snap.tasks.filter(t => TASKS[t.id] && (t.done || !redo[t.id])).map(t => ({ id: t.id, ...TASKS[t.id], done: t.done, progress: t.progress }));
     for (const t of snap.tasks) if (!t.done && redo[t.id]) S.dayFlags[redo[t.id]] = false;
@@ -277,8 +279,10 @@ const Story = {
       return { title: d.title, tasks: d.tasks, alerts: d.alerts };
     }
     // Free play / after graduation: a random mix every day.
-    const pool = ['gate', 'radar', 'guard', 'clean', 'train2', 'hq_gear', 'deploy'];
-    const picks = pool.sort(() => Math.random() - 0.5).slice(0, 3);
+    // Gate shifts come up about one day in four.
+    const pool = ['radar', 'guard', 'clean', 'train2', 'hq_gear', 'deploy'];
+    const picks = pool.sort(() => Math.random() - 0.5).slice(0, Math.random() < 0.25 ? 2 : 3);
+    if (picks.length === 2) picks.push('gate');
     const alerts = [];
     const n = 1 + Math.floor(Math.random() * 3);
     for (let i = 0; i < n; i++) alerts.push(8 * 60 + Math.floor(Math.random() * 11 * 60));
@@ -293,7 +297,7 @@ const Story = {
         { who: 'friend', text: 'יו, {name}! את[ה/] הפלג"צניק[/ית] החדש[/ה]? אני {@friend}. אני גם בפלגה... וגם בניתי את המשחק הזה. כן, זה מוזר גם לי.' },
         ...(same ? [{ who: 'friend', text: 'רגע... גם לך קוראים {name}? אחד מאיתנו מיותר במשחק. ...טוב, אני כתבתי את הקוד, אז זה לא אני.' }] : []),
         { who: 'friend', text: 'שלושה כללים בנתיבות: אחת — לדעת איפה המיגונית. שתיים — הגרעינים בש.ק. שלוש — כש{@inspector} מחפשת מישהו למסדר, רצים. Shift. ברצינות.' },
-        { who: 'friend', text: '{@@commander} מחכה ברחבת המסדרים. [תעקוב/תעקבי] אחרי החץ הצהוב. ואם נתקעת בקיר — זה פיצ\'ר.' },
+        { who: 'friend', text: '{@@commander} מחכה במרכז האתר. [תעקוב/תעקבי] אחרי החץ הצהוב. ואם נתקעת בקיר — זה פיצ\'ר.' },
       ]);
     } else if (this.has('lineup')) {
       Sound.whistle();
@@ -387,6 +391,7 @@ const Story = {
     if (World.id === 'field') this.updateDeploy(dt);
     Events.update(dt);
     Curious.update(dt);
+    Kashag.update(dt);
     Boss.watchCoop();
     Boss.update(dt);
     // Morning lineup: arriving at the parade ground completes it.
@@ -442,6 +447,11 @@ const Story = {
       list.push({ x: n.x, y: n.y, label: `לדבר עם ${n.short}`, action: () => this.talkTo(n), r: 50, talk: true });
     }
     Tutorial.interactables(add);
+    // The tables at "מרכז אתר".
+    for (const st of World.seats) {
+      if (P.sit === st) add(st.x, st.y, '🧍 לקום', () => Game.standUp(), 34);
+      else if (!st.by && !P.sit && !P.carry) add(st.exit.x, st.exit.y, '🪑 לשבת', () => Game.sitDown(st), 22);
+    }
     const ts = travelSpot();
     add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
 
@@ -519,6 +529,7 @@ const Story = {
     if (!S.talked.includes(n.id)) { S.talked.push(n.id); if (S.talked.length >= 20) Game.achieve('social'); }
     if (n.chasing) return;
     if (n.curious) { await Curious.talk(n); return; }
+    if (n.id === 'madag') { await Kashag.talk(n); return; }
     const id = n.id;
     if (await Events.talkTo(n)) return;
     if (this.has('find_lock') && id !== 'rasap' && await this.lockHint(n)) return;
@@ -1136,10 +1147,10 @@ const Story = {
     if (t) { t.progress++; if (t.progress >= 2) this.complete('train2', 4, 'שני אימונים'); }
   },
 
-  startRun() {
+  startRun(opts = {}) {
     if (this.run) return;
     const pts = [...TRACK_POINTS, ...TRACK_POINTS, SPOTS.track];
-    this.run = { points: pts, idx: 0, time: 0 };
+    this.run = { points: pts, idx: 0, time: 0, kashag: !!opts.kashag };
     Sound.whistle();
     UI.toast('🏃 2 הקפות! לרוץ דרך הנקודות הצהובות');
   },
@@ -1152,6 +1163,7 @@ const Story = {
       Sound.click();
       if (r.idx >= r.points.length) {
         this.run = null;
+        if (r.kashag) { Kashag.runDone(r.time); return; }
         const ok = r.time < 75;
         UI.toast(ok ? `סיימת ב-${r.time.toFixed(1)} שניות! 💪` : `${r.time.toFixed(1)} שניות — איטי מדי`, ok ? 'good' : 'bad');
         Game.addStat('energy', -12);
@@ -1252,7 +1264,7 @@ const Story = {
   // ---------- gate shifts ----------
   boothAction() {
     const gs = this.gateShift;
-    if (!gs && this.has('gate')) { this.startGateShift(4, false); return; }
+    if (!gs && this.has('gate')) { this.startGateShift(2, false); return; }
     if (gs && gs.car && gs.car.state === 'waiting') { this.checkCar(gs.car); return; }
     World.gateTarget = World.gateTarget ? 0 : 1;
     Sound.gate();

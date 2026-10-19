@@ -47,7 +47,43 @@ function fmtAs(person, text) {
 // For text from other players before it goes into HTML.
 const esc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const RANKS = { 1: 'סגן־משנה', 2: 'סגן', 3: 'סרן', leaf: 'רב־סרן' };
+const RANKS = { 1: 'סגן־משנה', 2: 'סגן', 3: 'סרן', leaf: 'רב־סרן', rabat: 'רב"ט', samal: 'סמל', samar: 'סמ"ר' };
+// The platoon are corporals, apart from the two sergeants; officers carry a rank in the roster.
+const RANK_OF = { inspector: 'samal', ruth: 'samar' };
+function rankOf(person) {
+  if (!person) return null;
+  if (person.rank) return person.rank;
+  if (RANK_OF[person.id]) return RANK_OF[person.id];
+  if (person.map === 'netivot' && ROSTER.people.includes(person)) return 'rabat';
+  return null;
+}
+// The rank as a small insignia, like the Air Force's: navy slides with light-blue sleeve
+// stripes for enlisted ranks (a silver leaf on top for staff sergeant), silver bars or a
+// leaf for officers.
+function rankIcon(r) {
+  if (!r || !RANKS[r]) return '';
+  const leaf = (cx, cy, s) => `<path transform="translate(${cx} ${cy}) scale(${s})" d="M0-7 L1.6-3.2 5.5-4.6 3.6-0.8 7 0.6 3.2 2 3.8 5.6 0.8 3.6 0 7-0.8 3.6-3.8 5.6-3.2 2-7 0.6-3.6-0.8-5.5-4.6-1.6-3.2Z" fill="#cfd5dc" stroke="#8a929c" stroke-width="0.6"/>`;
+  let body;
+  if (r === 'rabat' || r === 'samal' || r === 'samar') {
+    const n = r === 'rabat' ? 2 : 3;
+    const top = n === 2 ? 6 : 3.5;
+    let stripes = '';
+    for (let i = 0; i < n; i++) {
+      const y = top + i * 5.5;
+      stripes += `<polygon points="${9.5 - y * 0.32},${y} ${36 - y * 0.32},${y} ${35 - (y + 3.6) * 0.32},${y + 3.6} ${8.5 - (y + 3.6) * 0.32},${y + 3.6}" fill="url(#rk-s)"/>`;
+    }
+    body = `<polygon points="8,1 39,1 32,21 1,21" fill="#1c2a4f"/>${stripes}${r === 'samar' ? leaf(20, 11, 0.95) : ''}`;
+  } else {
+    const bars = { 1: 1, 2: 2, 3: 3 }[r];
+    let inner = '';
+    if (bars) for (let i = 0; i < bars; i++) inner += `<rect x="${20 - bars * 3.5 + i * 7 + 1}" y="5" width="5" height="12" rx="1" fill="#d5dade" stroke="#8a929c" stroke-width="0.6"/>`;
+    else inner = leaf(20, 11, 1.05);
+    body = `<rect x="2" y="1" width="36" height="20" rx="3" fill="#1c2a4f"/>${inner}`;
+  }
+  return `<svg class="rank-ico" viewBox="0 0 40 22" role="img" aria-label="${RANKS[r]}"><title>${RANKS[r]}</title><defs><pattern id="rk-s" width="2" height="2" patternUnits="userSpaceOnUse" patternTransform="rotate(-60)"><rect width="2" height="2" fill="#e8f1fb"/><rect width="1" height="2" fill="#5f9fe0"/></pattern></defs>${body}</svg>`;
+}
+// The rank and its name, for next to a name.
+function rankBadge(r) { return r && RANKS[r] ? `<span class="rank-badge">${rankIcon(r)}<span>${RANKS[r]}</span></span>` : ''; }
 
 function avatarHtml(person) {
   const letter = (person.first || person.short || '?').charAt(0);
@@ -177,7 +213,7 @@ const UI = {
         const person = Cast.get(line.who);
         const ch = DATA.characters[line.who] || { name: line.who, icon: '💬' };
         const name = line.who === 'player' ? fmt('{name}') : person ? person.name : ch.name;
-        const rank = person && person.rank ? `<span class="rank-chip">${RANKS[person.rank]}</span>` : '';
+        const rank = line.who === 'player' ? rankBadge(playerRank()) : rankBadge(rankOf(person));
         const title = person ? `${rank}<span class="who-title">${fmtAs(person, person.title || '')}</span>` : '';
         const face = faceUrl(line.who);
         const pic = face ? `<img class="face" src="${face}" alt="">`
@@ -406,7 +442,7 @@ const UI = {
     const list = platoon.map(p => {
       const n = G.npcs.find(x => x.id === p.id);
       const site = n ? `${fmt(ROSTER.sites[World.id])} · ${where(n)}` : Multi.taken().has(p.id) ? 'משחק[/ת] באונליין' : fmt(ROSTER.sites[p.map]);
-      return `<div class="pp"><b>${p.emoji} ${p.short}</b><i>${fmt(site)}</i></div>`;
+      return `<div class="pp"><b>${rankIcon(rankOf(p))} ${p.emoji} ${p.short}</b><i>${fmt(site)}</i></div>`;
     }).join('');
     const others = G.npcs.filter(n => !platoon.some(p => p.id === n.id)).map(n => `<div class="pp"><b>${n.person.emoji || ''} ${n.short}</b><i>${where(n)}</i></div>`).join('');
     const wl = $('#map').querySelector('.who-list');
@@ -459,7 +495,7 @@ const UI = {
     } else if (this.phoneTab === 'stats') {
       body.innerHTML = `
         <div class="ph-item"><div class="t">${fmt('{name}')}</div>${fmt('{gdud}')} · סוללת ${fmt('{battery}')}</div>
-        <div class="ph-item">דרגה: <b>${rankName()}</b></div>
+        <div class="ph-item">דרגה: ${rankBadge(playerRank())}</div>
         <div class="ph-item">ציון פלג"צ: <b>${Math.round(S.score)}</b> / ${DATA.passScore} למעבר</div>
         <div class="ph-item">יירוטים שראית: <b>${S.stats.intercepts}</b> · אזעקות: <b>${S.stats.alerts}</b></div>
         <div class="ph-item">מארזים שהוחלפו: <b>${S.stats.reloads}</b> · רכבים בש"ג: <b>${S.stats.cars}</b> · סקרנים שהורחקו: <b>${S.stats.curiousOk || 0}</b></div>
@@ -489,8 +525,11 @@ function clockText(min = G.state ? G.state.clock : 0) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-function rankName() {
-  const S = G.state;
-  if (S.graduated) return S.score >= 400 ? 'סמל' : 'רב"ט';
-  return 'טוראי — פלג"צ';
+// The player's own rank: a cast member's when playing as one; otherwise it grows with the
+// game: corporal in the young platoon, sergeant after passing it, staff sergeant a week on.
+function playerRank() {
+  const p = G.profile || {};
+  if (p.as && Cast.get(p.as)) return rankOf(Cast.get(p.as)) || 'rabat';
+  return (G.state && G.state.rank) || 'rabat';
 }
+function rankName() { return RANKS[playerRank()]; }

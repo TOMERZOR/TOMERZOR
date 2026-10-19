@@ -71,7 +71,7 @@ const ROLE_TASKS = {
       { label: '🎤 הרצאה על לוגיסטיקה מ{@p_arad}', reply: 'אחרי עשר דקות נשארו רק {@p_arad} והכיסאות.' },
     ] }]),
   },
-  r_money: { title: 'לאסוף כסף לפיצה מכל הפלגה', desc: 'ברחבה. אף אחד לא עונה בקבוצה.', target: () => SPOTS.parade, pts: 3, run: roleQte('גביית כסף לפיצה', 'כל אחד אומר "אני אעביר בביט אחר כך". [תגבה/תגבי] מהר!') },
+  r_money: { title: 'לאסוף כסף לפיצה מכל הפלגה', desc: 'במרכז האתר. אף אחד לא עונה בקבוצה.', target: () => SPOTS.parade, pts: 3, run: roleQte('גביית כסף לפיצה', 'כל אחד אומר "אני אעביר בביט אחר כך". [תגבה/תגבי] מהר!') },
   // ----- p_ofek: בטיחות, תחקירים וציוד לחימה -----
   r_debrief: {
     title: 'לכתוב תחקיר בטיחות', desc: 'בחמ"ל. מה קרה, למה קרה, ואיך זה לא יקרה שוב.', target: () => SPOTS.hamal, pts: 6,
@@ -99,7 +99,7 @@ const ROLE_TASKS = {
   // ----- p_rotem: רפואה -----
   r_medkit: { title: 'לבדוק את תיק החובש', desc: 'במחסן. תחבושות, חוסם עורקים, ופלסטרים של ספיידרמן.', target: () => SPOTS.store, pts: 4, run: roleQte('בדיקת תיק חובש', 'תחבושת, חוסם עורקים, מספריים, פלסטר של ספיידרמן 🕷️') },
   r_hydrate: {
-    title: 'לוודא שכולם שותים מים', desc: 'ברחבה. במיוחד {@p_ofek}. במיוחד לא {@p_ofek}.', target: () => SPOTS.parade, pts: 4,
+    title: 'לוודא שכולם שותים מים', desc: 'במרכז האתר. במיוחד {@p_ofek}. במיוחד לא {@p_ofek}.', target: () => SPOTS.parade, pts: 4,
     run: roleChoose([{ who: 'p_ofek', text: 'שתיתי כבר חמישה ליטר. קריאטין. אני צריך עוד?', options: [
       { label: 'מספיק! והשירותים בצד השני', ok: true, reply: 'צודקת. אני... אני חייב ללכת. עכשיו.', who: 'p_ofek' },
       { label: 'עוד שניים, ליתר ביטחון', reply: '*רץ לשירותים באמצע המשפט*', who: 'p_ofek' },
@@ -108,7 +108,7 @@ const ROLE_TASKS = {
   // ----- p_miriam: עוזרת מפ"ל -----
   r_mafal: { title: 'לעדכן את טבלת הנוכחות של המפ"ל', desc: 'בלוח האימונים.', target: () => SPOTS.board, pts: 4, run: roleQte('טבלת נוכחות', 'מי בבית, מי ביציאה, מי "בדרך" כבר שלוש שעות.') },
   r_forms: {
-    title: 'להחתים את {@commander} על טפסים', desc: 'ברחבה.', target: () => npcPosR('commander'), pts: 4,
+    title: 'להחתים את {@commander} על טפסים', desc: 'במרכז האתר.', target: () => npcPosR('commander'), pts: 4,
     run: roleChoose([{ who: 'commander', text: 'עוד טפסים? מה זה הפעם?', options: [
       { label: 'בקשת יציאה של {@p_nevo}, ותחקיר של {@p_ofek}', ok: true, reply: '*חותמת* תודה. בלעדייך הפלגה הייתה מתפרקת.', who: 'commander' },
       { label: 'לא יודעת, [תחתמי/תחתמי] וזהו', reply: '...חתמתי בטעות על ויתור על היציאה שלי. אבל בסדר.', who: 'commander' },
@@ -150,7 +150,7 @@ const ROLE_TASKS = {
     ]),
   },
   r_tash: {
-    title: 'שיחת ת"ש עם {@p_nevo}', desc: 'ברחבה. כולם קוראים לו "הומלס" — אולי יש סיבה.', target: () => npcPosR('p_nevo') || SPOTS.parade, pts: 5,
+    title: 'שיחת ת"ש עם {@p_nevo}', desc: 'במרכז האתר. כולם קוראים לו "הומלס" — אולי יש סיבה.', target: () => npcPosR('p_nevo') || SPOTS.parade, pts: 5,
     run: roleChoose([{ who: 'p_nevo', text: 'אני בסדר... פשוט אין לי איפה לכבס בבית, אז אני לא מתקלח. שיטה פרקטית.', options: [
       { label: 'נסדר לך מכונת כביסה מהת"ש. ומקלחת — היום', ok: true, reply: '...באמת? תודה. אני אתקלח. אולי.', who: 'p_nevo' },
       { label: 'זה לא מעניין אותי, [תתקלח/תתקלח]', reply: 'אוקיי... *הולך להתקלח עצוב*', who: 'p_nevo' },
@@ -161,7 +161,7 @@ const ROLE_TASKS = {
   r_reload_brief: { title: 'להעביר תדריך טעינה לפלג"צניקים', desc: 'ליד מחסן המארזים.', target: () => SPOTS.depot, pts: 6, run: roleMini('reload', { launcher: 'משגר אימון' }) },
   // ----- commander: קצינת הפלגה -----
   r_lineup_cmd: {
-    title: 'לנהל את מסדר הבוקר', desc: 'ברחבת המסדרים.', target: () => SPOTS.parade, pts: 5,
+    title: 'לנהל את מסדר הבוקר', desc: 'במרכז האתר.', target: () => SPOTS.parade, pts: 5,
     run: roleChoose([{ text: 'הפלגה בשלשות. מה ההודעה של הבוקר?', options: [
       { label: 'היום ביקורת, יש פריסה, ומי שמחביא אוכל — שיחביא טוב', ok: true, reply: '*כל הפלגה מהנהנת. {@p_arad} מזיז בשקט שקית מאחורי הגב.*' },
       { label: 'אין הודעות. לכו', reply: '*מסדר של שלושים שניות. {@bc} תשמע על זה.*' },
@@ -182,7 +182,7 @@ const ROLE_TASKS = {
     },
   },
   r_night: {
-    title: 'הקפצה לילית לפלגה (אחרי 22:00)', desc: 'ברחבה. בתור המפקדת — את מחליטה מתי. ואף אחד לא יאמין.', target: () => SPOTS.parade, pts: 6, after: 22 * 60,
+    title: 'הקפצה לילית לפלגה (אחרי 22:00)', desc: 'במרכז האתר. בתור המפקדת — את מחליטה מתי. ואף אחד לא יאמין.', target: () => SPOTS.parade, pts: 6, after: 22 * 60,
     run: async () => {
       await UI.cutscene([{ img: 'assets/redalert.jpg', who: '{@@commander}', text: '23:47. את לוחצת על הכפתור. בכל המגורים נדלקים האורות. "הקפצה! צבע אדום — תרגיל!"' }]);
       Story.alert(true, 'night-drill');

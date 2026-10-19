@@ -31,7 +31,7 @@ const World = {
     const { W, H } = this;
     const site = {
       id, def: DATA.maps[id], grid: Array.from({ length: H }, () => new Array(W).fill(T.OUT)),
-      objects: [], lamps: [], shelters: [], beds: [], lockers: [], launchers: [], baked: null,
+      objects: [], lamps: [], shelters: [], beds: [], lockers: [], launchers: [], seats: [], baked: null,
       fence: DATA.maps[id].fence || [2, 2, 61, 41],
     };
     const g = site.grid;
@@ -44,6 +44,17 @@ const World = {
       return o;
     };
     const lamp = (x, y) => site.lamps.push({ x: (x + 0.5) * TS, y: (y + 0.5) * TS, r: 150 });
+    // A brown wooden pergola over a picnic table: four seats, two on each bench.
+    const pergola = (tx, ty) => {
+      const o = prop('pergola', tx, ty, 1.4, 1.6, true);
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+      for (const side of [-1, 1]) for (const dx of [-0.24, 0.24]) {
+        site.seats.push({
+          x: cx + dx * TS, y: cy + side * 0.4 * TS, angle: side < 0 ? Math.PI / 2 : -Math.PI / 2,
+          exit: { x: cx + dx * TS, y: side < 0 ? o.y - 0.4 * TS : o.y + o.h + 0.4 * TS }, by: null, pergola: o,
+        });
+      }
+    };
 
     // Every site has a fenced rectangle with the gate at the bottom on the access road.
     const [fx0, fy0, fx1, fy1] = site.fence;
@@ -114,6 +125,9 @@ const World = {
       prop('sign', 40, 43.2, 3, 0.6, false, { text: '← נתיבות 3 ק"מ' });
       prop('pullup', 14.2, 39.5, 1.8, 0.4, false);
       prop('generator', 45.2, 37.5, 1.6, 0.9);
+      // "מרכז אתר": the middle of the site, with two shaded tables to sit at.
+      pergola(35.3, 24.6);
+      pergola(40.3, 24.6);
       // The battery's own white container with its emblem, by the gate.
       prop('idobox', 39.4, 39.25, 5, 1.35, true, { face: -1 });
       // The storeroom nobody has touched in years.
@@ -151,6 +165,8 @@ const World = {
       prop('treadmill', 51.4, 36.3, 0.9, 1.8);
       prop('treadmill', 52.7, 36.3, 0.9, 1.8);
       prop('idobox', 47.6, 19.2, 5, 1.35, true, { face: 1 });
+      pergola(48.5, 15);
+      pergola(52, 15);
       // Hidden behind the shelves of the rasap's storeroom. Nobody knows about it. Officially.
       prop('snackcab', 49.0, 6.6, 0.9, 1.2);
       prop('radar', 21, 14, 2, 2);
@@ -344,13 +360,10 @@ const World = {
     g.setLineDash([]);
 
     if (site.id === 'netivot') {
-      // Track lane line and parade ground border.
+      // Track lane line.
       g.strokeStyle = 'rgba(255,255,255,.5)';
       g.lineWidth = 2;
       g.strokeRect(13.5 * TS, 14.5 * TS, 13 * TS, 5 * TS);
-      g.strokeStyle = '#f4f1e6';
-      g.lineWidth = 3;
-      g.strokeRect(35.2 * TS, 23.2 * TS, 7.6 * TS, 4.6 * TS);
     }
     if (site.id === 'field') {
       // Painted outlines where each container goes.

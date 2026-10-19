@@ -43,6 +43,8 @@ const LAYOUT = {
   },
   field: { commander: [33, 31], driver1: [28, 37], driver2: [33, 37], p_nevo: null, p_shalev: null, p_ofek: null, p_miriam: null },
 };
+// Who sits at the "מרכז אתר" tables on each site (index into World.seats).
+const SEATED = { netivot: { p_hila: 0, p_miriam: 1, p_aharon: 6 }, hq: { medic3: 1, driver2: 6 } };
 const WANDERERS = new Set(['friend', 'inspector', 'officer1', 'officer2', 'officer3', 'harasar', 'rasap']);
 // Who hunts for idle soldiers on each site.
 const CHASERS = { netivot: 'inspector', hq: 'rasap' };
@@ -199,6 +201,23 @@ const Game = {
     }
   },
 
+  sitDown(seat) {
+    const P = G.player;
+    if (seat.by || P.carry) return;
+    seat.by = 'player';
+    P.sit = seat;
+    P.x = seat.x; P.y = seat.y; P.angle = seat.angle; P.vx = P.vy = 0;
+    Sound.click();
+    UI.toast(G.touch ? '🪑 ישבת. להזיז את הג\'ויסטיק כדי לקום' : '🪑 ישבת. W/A/S/D כדי לקום');
+  },
+  standUp() {
+    const P = G.player, s = P.sit;
+    if (!s) return;
+    s.by = null;
+    P.sit = null;
+    P.x = s.exit.x; P.y = s.exit.y;
+  },
+
   interact() {
     if (G.alert || UI.mapOpen() || Story.ctl) return;
     if (Boss.active) { Boss.throw(); return; }
@@ -250,6 +269,7 @@ const Game = {
     const layout = LAYOUT[map];
     const regions = WANDER[map];
     G.npcs = [];
+    for (const s of World.seats) if (s.by !== 'player') s.by = null;
     let ri = 0;
     const people = [...ROSTER.people, ROSTER.easterEgg, ...DATA.extras];
     const taken = Multi.taken();
@@ -267,6 +287,14 @@ const Game = {
       else spot = this.walkableNear(tc(Math.floor((region.x0 + region.x1) / 2), Math.floor((region.y0 + region.y1) / 2))) || tc(30, 30);
       const wanders = !fixed || WANDERERS.has(person.id);
       const w = person.id === 'inspector' ? { x0: 13, y0: 9, x1: 50, y1: 40 } : person.id === 'friend' ? { x0: 24, y0: 29, x1: 33, y1: 34 } : person.id === 'rasap' ? { x0: 4, y0: 13, x1: 59, y1: 23 } : region;
+      const seat = SEATED[map] && World.seats[SEATED[map][person.id]];
+      if (seat && !seat.by) {
+        const n = mk(person, { x: seat.x, y: seat.y }, null);
+        n.seat = seat;
+        seat.by = person.id;
+        G.npcs.push(n);
+        continue;
+      }
       G.npcs.push(mk(person, spot, wanders && person.id !== 'ruth' ? w : null));
     }
   },
@@ -313,6 +341,7 @@ const Game = {
     for (const n of G.npcs) {
       if (n.curious) continue;
       n.sheltering = false;
+      if (n.seat) { n.path = (World.path(n.x, n.y, n.seat.exit.x, n.seat.exit.y) || []).concat([{ x: n.seat.x, y: n.seat.y }]); continue; }
       n.path = World.path(n.x, n.y, n.spot.x, n.spot.y) || [];
     }
   },
@@ -330,6 +359,9 @@ const Game = {
           Sound.pop();
         }
       }
+      // At the table: sitting, facing across it.
+      n.sitting = !!(n.seat && !n.path.length && !G.alert && Math.hypot(n.x - n.seat.x, n.y - n.seat.y) < 4);
+      if (n.sitting) { n.angle = n.seat.angle; continue; }
       if (n.path.length) {
         const tgt = n.path[0];
         const dx = tgt.x - n.x, dy = tgt.y - n.y;
@@ -404,6 +436,7 @@ const Game = {
   // Move to another site (Netivot, HQ, deployment field).
   switchMap(id) {
     Sound.travel();
+    if (G.player.sit) { G.player.sit.by = null; G.player.sit = null; }
     World.use(id);
     G.map = id;
     Story.trashVisible = id === 'netivot';
@@ -469,6 +502,16 @@ const Game = {
     if (G.look.x || G.look.y) {
       Scene3D.yaw -= G.look.x * dt * 2.6 * Settings.v.sens;
       Scene3D.pitch = Math.max(0.12, Math.min(1.3, Scene3D.pitch + G.look.y * dt * 1.4 * Settings.v.sens * (Settings.v.invertY ? -1 : 1)));
+    }
+    // Sitting at a table: any push on the stick gets you up; resting there restores a little.
+    if (P.sit) {
+      if (Math.hypot(mx, my) > 0.3 || G.alert || Story.ctl) this.standUp();
+      else {
+        mx = my = 0; P.vx = P.vy = 0;
+        P.x = P.sit.x; P.y = P.sit.y; P.angle = P.sit.angle;
+        S.energy = Math.min(100, S.energy + dt * 0.25);
+        S.morale = Math.min(100, S.morale + dt * 0.08);
+      }
     }
     const len = Math.hypot(mx, my);
     const wantsRun = k.has('ShiftLeft') || k.has('ShiftRight') || G.touchRun || !!G.alert;
@@ -640,7 +683,9 @@ const Game = {
 
   hud() {
     const S = G.state;
-    $('#hud-name').textContent = fmt('{name}');
+    const nameHtml = rankIcon(playerRank()) + esc(fmt('{name}'));
+    if (nameHtml !== this.nameHtml) { this.nameHtml = nameHtml; $('#hud-name').innerHTML = nameHtml; }
+    this.checkRank();
     $('#hud-unit').textContent = fmt('{gdud} · {battery}');
     $('#hud-day').textContent = `יום ${S.day}${S.graduated ? '' : ' בפלג"צ'}`;
     $('#hud-time').textContent = clockText();
@@ -648,9 +693,33 @@ const Game = {
     $('#bar-morale').style.width = S.morale + '%';
     $('#bar-score').style.width = Math.min(100, S.score / DATA.passScore * 100) + '%';
     $('#bar-shchora').style.width = (S.shchora || 0) + '%';
-    $('#hud-home').textContent = Events.daysToHome() ? `🏠 עוד ${Events.daysToHome()} ימים` : '🏠 היום!';
+    const confined = (S.confinedUntil || 0) - S.day;
+    $('#hud-home').textContent = confined > 0 ? `🔒 ריתוק · עוד ${confined} ימים` : Events.daysToHome() ? `🏠 עוד ${Events.daysToHome()} ימים` : '🏠 היום!';
     $('#hud-money').textContent = `₪${S.money}`;
     UI.objective(Story.objective());
+  },
+
+  // ---------- ranks ----------
+  // Promotions: sergeant once the young platoon is passed, staff sergeant a week later (or
+  // with a high enough score). Playing as a cast member keeps their own rank.
+  RANK_ORDER: ['rabat', 'samal', 'samar'],
+  checkRank() {
+    const S = G.state;
+    if (!S || G.profile.as || UI.busy || Mini.active || G.alert || Boss.active || Tutorial.active) return;
+    if (S.graduated && !S.gradDay) S.gradDay = S.day;
+    const want = !S.graduated ? 'rabat' : (S.day >= S.gradDay + 7 || S.score >= 400) ? 'samar' : 'samal';
+    const have = S.rank || 'rabat';
+    if (this.RANK_ORDER.indexOf(want) <= this.RANK_ORDER.indexOf(have)) return;
+    S.rank = want;
+    Sound.fanfare();
+    Settings.buzz([80, 60, 80, 60, 200]);
+    this.achieve('rank_' + want);
+    UI.toast(`🎖️ הועלית לדרגת ${RANKS[want]}!`, 'ach');
+    UI.talk([
+      { who: 'commander', text: want === 'samal'
+        ? '{name}, [בוא/בואי] רגע. ...מהיום את[ה/] סמל. שלושה פסים. אל [תתרגל/תתרגלי], זה רק אומר שמותר לי לצעוק עליך יותר.'
+        : '{name}. סמל ראשון. עלה על הפסים. ראית כמה זמן עבר? אני גאה. בשקט. אל תספר[/י] לאף אחד.' },
+    ]);
   },
 
   // ---------- save ----------
@@ -879,7 +948,7 @@ const Game = {
           ${room.lobby ? '' : '<br><small>כאן ב־claude.ai הלובי לא זמין, אז כדי לשחק עם מי שנכנס מהקישור — [תפתח/תפתחי] גם את[ה/] את הקישור.</small>'}
           <div class="invite-row"><input type="text" readonly id="mm-link" value="${esc(link)}"><button class="btn small" id="mm-share">📤 שלח בוואטסאפ</button><button class="btn small ghost" id="mm-copy">📋 העתק</button></div></div>` : ''}
         <p>מחוברים עכשיו: ${Multi.peers.length ? Multi.peers.map(p => esc(p.name)).join(' · ') : 'רק את[ה/]... בינתיים'}</p>
-        <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}">${faceUrl(p.id) ? `<img class="card-face" src="${faceUrl(p.id)}" alt="">` : `<div class="big">${p.emoji}</div>`}<div class="nm">${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
+        <div class="grid">${people.map(p => `<div class="card ${taken.has(p.id) ? 'off' : ''}" data-id="${p.id}">${faceUrl(p.id) ? `<img class="card-face" src="${faceUrl(p.id)}" alt="">` : `<div class="big">${p.emoji}</div>`}<div class="nm">${rankIcon(rankOf(p))} ${p.name}</div><div class="ds">${fmtAs(p, p.title || '')}${taken.has(p.id) ? ' · כבר מחובר[/ת]' : ''}</div></div>`).join('')}</div>
         <div class="actions"><button class="btn ghost" id="mm-back">חזרה</button></div></div></div>`, 'assets/title.jpg');
       $('#mm-back').onclick = () => this.title();
       if (link) {

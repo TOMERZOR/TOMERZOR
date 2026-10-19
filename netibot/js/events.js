@@ -44,6 +44,7 @@ const Events = {
     if (story ? day === 2 : Math.random() < 0.5) S.dayFlags.techAt = story ? 15 * 60 : (13 + Math.random() * 4) * 60;
     // Ofek drinks three litres a day for the creatine. Some day around noon he'll need you.
     if (day >= 2 && Math.random() < 0.5) S.dayFlags.ofekAt = (11 + Math.random() * 4) * 60;
+    Kashag.plan(day);
     // Last night the commander danced in front of you. Try telling someone.
     if (S.flags.orinDanced) { S.flags.orinDanced = false; S.dayFlags.orinTell = true; }
     // Every morning the meter settles a bit lower the closer going home is.
@@ -138,7 +139,8 @@ const Events = {
       { label: '🎭 "זה היה תרגיל"', value: 'drill' },
       { label: `👉 להאשים את {@p_liran}`, value: 'blame' },
     ] }]);
-    let level = list.length > 1 ? 2 : 1; // 0 acquitted · 1 reprimand · 2 confined · 3 harsh
+    // 0 acquitted · 1 reprimand · 2-4 confined to base for 14, 21 or 28 days.
+    let level = Math.min(4, list.length + 1);
     let reply;
     if (plea === 'admit') { level = Math.max(1, level - 1); reply = 'הודאה זה התחלה טובה. לא הייתי מוותרת לך, אבל קמתי היום במצב רוח.'; }
     else if (plea === 'drill' && Math.random() < 0.35) { level = 0; reply = '...תרגיל. של מי? ...אתה יודע מה, אין לי כוח לבדוק. זוכה[/ת]. צא[/י] לפני שאני מתחרטת.'; }
@@ -146,13 +148,21 @@ const Events = {
     else if (Math.random() < 0.5) { level = Math.max(0, level - 1); reply = '{@p_liran}? ...כן, זה נשמע כמוהו. אני ארשום גם אותו. את[ה/] — עם נזיפה.'; }
     else { level++; reply = '{@p_liran} היה איתי בלשכה כל הבוקר. עכשיו יש לך גם סעיף של העלאת עלילה.'; }
     await UI.talk([{ who: 'bc', text: reply }]);
+    const confine = (days, pts, morale, extra) => () => {
+      S.homeDay = (S.homeDay || DATA.homeDay) + days;
+      S.confinedUntil = Math.max(S.confinedUntil || 0, S.day + days);
+      Game.addScore(-pts, `ריתוק ${days} ימים`);
+      Game.addStat('morale', -morale);
+      if (extra) extra();
+    };
     const verdicts = [
       ['זוכה[/ת] מכל האשמות. 🎉', () => { Game.addStat('morale', 8); }],
       ['נזיפה, ורישום בתיק האישי.', () => { Game.addScore(-3, 'נזיפה ממפקדת הסוללה'); Game.addStat('morale', -4); }],
-      ['ריתוק לבסיס — היציאה הביתה נדחית ביום.', () => { S.homeDay = (S.homeDay || DATA.homeDay) + 1; Game.addScore(-6, 'ריתוק'); Game.addStat('morale', -8); }],
-      ['ריתוק, ו־7 ימי מחבוש על תנאי. ושבוע תורנות מטבח.', () => { S.homeDay = (S.homeDay || DATA.homeDay) + 1; Game.addScore(-10, 'משפט אצל מפקדת הסוללה'); Game.addStat('morale', -12); this.addShchora(10, 'משפט'); }],
+      ['14 ימי ריתוק לבסיס. היציאה הביתה נדחית בשבועיים.', confine(14, 6, 10)],
+      ['21 ימי ריתוק לבסיס. שלושה שבועות בלי בית.', confine(21, 9, 14)],
+      ['28 ימי ריתוק לבסיס, ושבוע תורנות מטבח. חודש שלם פה.', confine(28, 12, 18, () => this.addShchora(10, 'משפט'))],
     ];
-    const [text, apply] = verdicts[Math.min(3, level)];
+    const [text, apply] = verdicts[Math.max(0, Math.min(4, level))];
     apply();
     // The verdict: the stamp comes down (an insert shot), then back in the room.
     if (Assets.scene('trial_stamp')) {

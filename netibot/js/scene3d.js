@@ -195,8 +195,18 @@ const Scene3D = {
       wallTex.repeat.set(1, 1.4);
       wallTex.anisotropy = 4;
     }
-    const make = (list, h, color, textured) => {
-      const mat = this.mat(wallTex && textured ? color : 0xd9cfb6, { roughness: 0.95, map: textured ? wallTex : null });
+    // The site's buildings are white army containers (corrugated steel); the shelters stay concrete.
+    let boxTex = null;
+    if (Assets.images.container) {
+      boxTex = new THREE.Texture(Assets.images.container);
+      boxTex.needsUpdate = true;
+      boxTex.encoding = THREE.sRGBEncoding;
+      boxTex.wrapS = boxTex.wrapT = THREE.RepeatWrapping;
+      boxTex.anisotropy = 4;
+    }
+    this.boxTex = boxTex;
+    const make = (list, h, color, textured, tex = wallTex) => {
+      const mat = tex && textured ? this.mat(color, { roughness: 0.8, map: tex }) : this.mat(0xe4e1d6, { roughness: 0.9 });
       const im = new THREE.InstancedMesh(new THREE.BoxGeometry(2, h, 2), mat, list.length);
       const m = new THREE.Matrix4();
       list.forEach(([x, y], i) => { m.makeTranslation(x * 2 + 1, h / 2, y * 2 + 1); im.setMatrixAt(i, m); });
@@ -204,10 +214,10 @@ const Scene3D = {
       im.receiveShadow = true;
       this.root.add(im);
     };
-    make(walls, WALL_H, 0xffffff, true);
+    make(walls, WALL_H, 0xffffff, true, boxTex);
     make(shelters, SHELTER_H, 0xb4b2a8, true);
     if (windows.length) {
-      const wm = this.mat(0xffffff, { roughness: 0.95, map: wallTex });
+      const wm = boxTex ? this.mat(0xffffff, { roughness: 0.8, map: boxTex }) : this.mat(0xe4e1d6);
       const glass = new THREE.MeshStandardMaterial({ color: 0xbfd8e6, transparent: true, opacity: 0.18, roughness: 0.1, metalness: 0.2, depthWrite: false });
       for (const [x, y] of windows) {
         this.box(2, 1.05, 2, wm, x * 2 + 1, 0.525, y * 2 + 1);
@@ -227,14 +237,81 @@ const Scene3D = {
         // A roof slab half over the shelter keeps the inside visible from above.
         this.box(b.w * 2, 0.25, b.h * 2 * 0.45, this.mat(0x8a8980), (b.x + b.w / 2) * 2, SHELTER_H + 0.12, b.y * 2 + b.h * 2 * 0.225);
       } else {
-        // Thin darker cap along the top of each building's walls.
-        const cap = this.mat(0xa59b84);
+        // Thin cap along the top of each container's walls.
+        const cap = this.mat(0xcfcbc0, { metalness: 0.2 });
         const cx = (b.x + b.w / 2) * 2, cz = (b.y + b.h / 2) * 2;
         this.box(b.w * 2, 0.12, 2, cap, cx, WALL_H + 0.06, b.y * 2 + 1);
         this.box(b.w * 2, 0.12, 2, cap, cx, WALL_H + 0.06, (b.y + b.h) * 2 - 1);
         this.box(2, 0.12, b.h * 2, cap, b.x * 2 + 1, WALL_H + 0.06, cz);
         this.box(2, 0.12, b.h * 2, cap, (b.x + b.w) * 2 - 1, WALL_H + 0.06, cz);
       }
+    }
+    this.containerDetails(booth);
+  },
+
+  // Barred windows along the containers' outer walls, and a frame with a little awning and a
+  // lamp over every door, like the site's real containers. Instanced: two draw calls a site.
+  containerDetails(booth) {
+    const wins = [], doors = [];
+    const isWall = (x, y) => World.tile(x, y) === T.WALL;
+    for (const b of World.def.buildings) {
+      if (b.shelter || b === booth) continue;
+      const sides = [
+        { n: [0, -1], tiles: (i) => [b.x + i, b.y], len: b.w },
+        { n: [0, 1], tiles: (i) => [b.x + i, b.y + b.h - 1], len: b.w },
+        { n: [-1, 0], tiles: (i) => [b.x, b.y + i], len: b.h },
+        { n: [1, 0], tiles: (i) => [b.x + b.w - 1, b.y + i], len: b.h },
+      ];
+      for (const s of sides) {
+        let gap = 1;
+        for (let i = 1; i < s.len - 1; i++) {
+          const [x, y] = s.tiles(i);
+          const [px, py] = s.tiles(i - 1), [nx, ny] = s.tiles(i + 1);
+          // Outside the wall must be open ground (a neighbouring building would hide it).
+          if (World.blockedTile(x + s.n[0], y + s.n[1])) { gap = 0; continue; }
+          if (!isWall(x, y)) { doors.push({ x, y, n: s.n }); gap = 0; continue; }
+          gap++;
+          if (gap >= 3 && isWall(px, py) && isWall(nx, ny)) { wins.push({ x, y, n: s.n }); gap = 0; }
+        }
+      }
+      for (const [x, y] of b.doors || []) if (!World.blockedTile(x, y)) {
+        const n = y === b.y ? [0, -1] : y === b.y + b.h - 1 ? [0, 1] : x === b.x ? [-1, 0] : [1, 0];
+        if (!doors.some(d => d.x === x && d.y === y)) doors.push({ x, y, n });
+      }
+    }
+    const place = (im, list, h, out, extra) => {
+      const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), sc = new THREE.Vector3(1, 1, 1);
+      list.forEach((w, i) => {
+        e.set(extra || 0, Math.atan2(w.n[0], w.n[1]), 0, 'YXZ');
+        q.setFromEuler(e);
+        m.compose(new THREE.Vector3(w.x * 2 + 1 + w.n[0] * (1 + out), h, w.y * 2 + 1 + w.n[1] * (1 + out)), q, sc);
+        im.setMatrixAt(i, m);
+      });
+      this.root.add(im);
+    };
+    if (wins.length) {
+      if (!this.winTex) this.winTex = this.canvasTex(128, 128, (c) => {
+        c.fillStyle = '#f2f1ec'; c.fillRect(0, 0, 128, 128);
+        c.fillStyle = '#4c5458'; c.fillRect(10, 10, 108, 108);
+        c.fillStyle = 'rgba(190,210,220,.35)'; c.fillRect(10, 10, 52, 108);
+        c.fillStyle = '#d9d7d0'; c.fillRect(62, 10, 4, 108);
+        // The security grille: thin white diamonds.
+        c.strokeStyle = '#f7f6f2'; c.lineWidth = 3;
+        for (let k = -128; k < 256; k += 22) { c.beginPath(); c.moveTo(10 + k, 10); c.lineTo(10 + k + 108, 118); c.stroke(); c.beginPath(); c.moveTo(118 - k, 10); c.lineTo(118 - k - 108, 118); c.stroke(); }
+        c.strokeStyle = '#f2f1ec'; c.lineWidth = 10; c.strokeRect(5, 5, 118, 118);
+      });
+      const im = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.25, 1.05), new THREE.MeshStandardMaterial({ map: this.winTex, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2 }), wins.length);
+      place(im, wins, 1.75, 0.012);
+      const aw = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, 0.04, 0.38), this.mat(0xe8e6df, { metalness: 0.25 }), wins.length);
+      place(aw, wins, 2.42, 0.17, -0.3);
+    }
+    if (doors.length) {
+      const frame = new THREE.InstancedMesh(new THREE.BoxGeometry(2, 0.7, 0.12), this.mat(0xeae8e1, { map: this.boxTex }), doors.length);
+      place(frame, doors, WALL_H - 0.35, -0.06);
+      const aw = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.05, 0.6), this.mat(0xdedcd4, { metalness: 0.25 }), doors.length);
+      place(aw, doors, 2.62, 0.28, -0.28);
+      const lamp = new THREE.InstancedMesh(new THREE.BoxGeometry(0.34, 0.16, 0.08), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff2c8, emissiveIntensity: 0.4 }), doors.length);
+      place(lamp, doors, 2.42, 0.03);
     }
   },
 
@@ -480,6 +557,10 @@ const Scene3D = {
           g.add(board);
           // Earth berm behind the targets.
           if (o.berm) this.box(o.berm[1], 1.6, 1.2, this.mat(0xb89a62), o.berm[0] * 2 - cx, 0.8, -1.4, g);
+          break;
+        }
+        case 'pergola': {
+          this.pergola(g, w, d);
           break;
         }
         case 'idobox': {
@@ -737,8 +818,8 @@ const Scene3D = {
       this.fadeLabels.push(s);
     }
     const areas = {
-      netivot: [['רחבת מסדרים', 38.8, 25.3, 2.4], ['מטווח', 20, 11.2, 2.8], ['מסלול כושר', 20, 16.7, 2], ['עמדת שמירה', 49.6, 38.3, 8]],
-      hq: [['חניון נהגים', 10.5, 37, 5.5]],
+      netivot: [['מרכז אתר', 38.8, 24.2, 3.2], ['מטווח', 20, 11.2, 2.8], ['מסלול כושר', 20, 16.7, 2], ['עמדת שמירה', 49.6, 38.3, 8]],
+      hq: [['חניון נהגים', 10.5, 37, 5.5], ['מרכז אתר', 51, 14.4, 3.2]],
       field: DATA.deploy.map(d => [d.name, d.x + d.w / 2, d.y + d.h / 2, 1.2]),
     }[World.id];
     for (const [t, x, y, h] of areas) {
@@ -1120,6 +1201,34 @@ const Scene3D = {
     m.bubbleText = text;
   },
 
+  // Sitting on a bench: on top of the idle clip, thighs swing forward to horizontal, shins
+  // back down, and the body drops so the hips rest on the seat.
+  sitPose(m, ent) {
+    if (!m.sitB) {
+      const B = {};
+      m.root.traverse(o => { if (o.isBone && /^(Hips|LeftUpLeg|RightUpLeg|LeftLeg|RightLeg)$/.test(o.name) && !B[o.name]) B[o.name] = o; });
+      m.sitB = B;
+    }
+    const B = m.sitB;
+    if (!B.LeftUpLeg || !B.LeftLeg) return;
+    const V = THREE.Vector3, Q = THREE.Quaternion;
+    m.root.updateMatrixWorld(true);
+    if (!m.thighLen) m.thighLen = B.LeftUpLeg.getWorldPosition(new V()).distanceTo(B.LeftLeg.getWorldPosition(new V()));
+    const axis = new V(-Math.sin(ent.angle), 0, Math.cos(ent.angle));
+    const turn = (bone, a) => {
+      const qd = new Q().setFromAxisAngle(axis, a);
+      const bw = bone.getWorldQuaternion(new Q()), pw = bone.parent.getWorldQuaternion(new Q());
+      bone.quaternion.copy(pw.invert().multiply(qd.multiply(bw)));
+      bone.updateMatrixWorld(true);
+    };
+    for (const [up, low] of [['LeftUpLeg', 'LeftLeg'], ['RightUpLeg', 'RightLeg']]) {
+      if (!B[up] || !B[low]) continue;
+      turn(B[up], 1.45);
+      turn(B[low], -1.45);
+    }
+    m.root.position.y -= m.thighLen * 0.97;
+  },
+
   animateSoldier(m, ent, moving, dt) {
     if (m.flies) {
       const t = performance.now() / 1000;
@@ -1150,6 +1259,7 @@ const Scene3D = {
         if (m.acts.run) m.acts.run.timeScale = Math.max(0.6, speed / 165) * 1.0;
         if (!m.acts.idle && !moving) m.acts.walk.time = 0;
         m.mixer.update(dt);
+        if (ent.sit || ent.sitting) this.sitPose(m, ent);
       }
       return;
     }
@@ -1357,6 +1467,37 @@ const Scene3D = {
       this.camFlash.scale.setScalar(0.6 + (1 - k) * 1.4);
       this.camFlashL.intensity = k * 3;
       if (k <= 0) this.camFlash.visible = false;
+    }
+  },
+  // Brown wooden pergola: four posts with corner braces, a gable roof of slats, and a
+  // picnic table with a bench on each long side (the seats are in World.seats).
+  pergola(g, w, d) {
+    const wood = this.mat(0x7a4a26, { roughness: 0.9 }), dark = this.mat(0x5e3519, { roughness: 0.9 });
+    const hx = w / 2 - 0.08, hz = d / 2 - 0.08, ph = 2.15;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      this.box(0.12, ph, 0.12, wood, sx * hx, ph / 2, sz * hz, g);
+      const br = this.box(0.06, 0.5, 0.06, wood, sx * hx, ph - 0.25, sz * (hz - 0.2), g);
+      br.rotation.x = sz * 0.75;
+    }
+    for (const sz of [-1, 1]) this.box(w, 0.12, 0.1, dark, 0, ph, sz * hz, g);
+    for (const sx of [-1, 1]) this.box(0.1, 0.12, d, dark, sx * hx, ph, 0, g);
+    // The gable roof: two sloping planes of slats, ridge along x.
+    const slope = 0.5, half = d / 2 + 0.25, len = half / Math.cos(slope);
+    for (const sz of [-1, 1]) {
+      const roof = new THREE.Group();
+      roof.position.set(0, ph + 0.06 + Math.tan(slope) * half / 2, sz * half / 2);
+      roof.rotation.x = sz * slope;
+      for (let i = 0; i < 9; i++) this.box(w + 0.3, 0.04, len / 9 - 0.02, i % 2 ? wood : dark, 0, 0, -len / 2 + (i + 0.5) * len / 9, roof);
+      g.add(roof);
+    }
+    this.box(w + 0.3, 0.1, 0.12, dark, 0, ph + 0.06 + Math.tan(slope) * half, 0, g);
+    // Table and benches.
+    const tw = w - 0.55;
+    this.box(tw, 0.06, 0.75, wood, 0, 0.74, 0, g);
+    for (const sx of [-1, 1]) { const l = this.box(0.06, 0.78, 0.06, dark, sx * (tw / 2 - 0.25), 0.38, 0, g); l.scale.z = 9; }
+    for (const sz of [-1, 1]) {
+      this.box(tw, 0.05, 0.3, wood, 0, 0.45, sz * 0.8, g);
+      for (const sx of [-1, 1]) this.box(0.06, 0.45, 0.06, dark, sx * (tw / 2 - 0.15), 0.22, sz * 0.8, g);
     }
   },
   // A white corrugated container with barred windows and the battery's emblem painted on the

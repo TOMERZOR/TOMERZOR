@@ -139,20 +139,21 @@ const Assets = {
     await this.addPerson(loader, id, glb);
   },
   // Made-up characters (the curious civilians) have plain public models, loaded when needed.
-  publicPeople: { cur_shmulik: 'assets/models/cur_shmulik.glb', cur_ortal: 'assets/models/cur_ortal.glb', cur_victor: 'assets/models/cur_victor.glb' },
+  publicPeople: { cur_shmulik: 'assets/models/cur_shmulik.json', cur_ortal: 'assets/models/cur_ortal.json', cur_victor: 'assets/models/cur_victor.json' },
   loadPublicPerson(id) {
     if (this.people[id] || !this.publicPeople[id] || !this.walkClip) return Promise.resolve();
     this.publicLoading = this.publicLoading || {};
     if (!this.publicLoading[id]) {
       this.publicLoading[id] = fetch(this.publicPeople[id])
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); })
-        .then(glb => this.addPerson(new THREE.GLTFLoader(), id, glb))
+        .then(gltf => this.addPerson(new THREE.GLTFLoader(), id, gltf, 'assets/models/'))
         .catch(e => { console.warn('public model', id, e); delete this.publicLoading[id]; });
     }
     return this.publicLoading[id];
   },
-  async addPerson(loader, id, glb) {
-    const g = await new Promise((ok, no) => loader.parse(glb, '', ok, no));
+  // glb: a binary .glb, or a .json glTF whose textures sit next to it in `path`.
+  async addPerson(loader, id, glb, path = '') {
+    const g = await new Promise((ok, no) => loader.parse(glb, path, ok, no));
     g.scene.traverse(o => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 0.85; } });
     const person = Cast.get(id) || {};
     const fit = this.measure(g.scene, person.female ? 1.68 : 1.76);

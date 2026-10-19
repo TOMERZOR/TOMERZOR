@@ -181,6 +181,7 @@ const Story = {
     this.trash = [];
     this.dust = [];
     this.gateShift = null;
+    this.gateCall = null;
     this.run = null;
     Scene3D.clearSky();
     G.alert = null;
@@ -234,6 +235,7 @@ const Story = {
     S.junkDone = S.junkDone || [];
     S.dayFlags = S.dayFlags || {};
     this.gateShift = null;
+    this.gateCall = null;
     this.run = null;
     Scene3D.clearSky();
     G.alert = null;
@@ -391,6 +393,7 @@ const Story = {
     }
     if (G.alert) this.updateAlert(dt);
     if (this.gateShift) this.updateGate(dt);
+    if (this.gateCall) this.updateGateCall(dt);
     if (this.run) this.updateRun(dt);
     if (World.id === 'field') this.updateDeploy(dt);
     Events.update(dt);
@@ -514,6 +517,7 @@ const Story = {
 
     // Gate booth panel.
     const gs = this.gateShift;
+    if (this.lockedOut()) add(G.player.x, G.player.y, '📞 לקרוא למישהו שיפתח את השער', () => this.callGate(), 30);
     let gateLabel = World.gateTarget ? 'לסגור מחסום' : 'לפתוח מחסום';
     if (gs && gs.car && gs.car.state === 'waiting') gateLabel = 'לבדוק את הרכב';
     else if (!gs && this.has('gate')) gateLabel = 'להתחיל משמרת ש"ג';
@@ -755,8 +759,15 @@ const Story = {
   },
 
   // ---------- teleport ----------
-  // For 2₪ you skip the walk (and the bus): straight to where the current task is.
-  WARP_PRICE: 2,
+  // You skip the walk (and the bus) straight to where the current task is. The farther it
+  // is, the more it costs: 1₪ for every 25 meters on the same site, 8₪ to another site.
+  warpPrice(w = this.warpTarget()) {
+    if (!w) return 0;
+    if (w.map !== World.id) return 8;
+    const o = this.objective();
+    const m = Math.hypot(o.target.x - G.player.x, o.target.y - G.player.y) / TS * 2;
+    return Math.max(1, Math.min(5, Math.round(m / 25)));
+  },
   warpTarget() {
     if (G.alert || Boss.active || this.ctl || this.run || Mini.active || UI.busy || G.paused || !G.running) return null;
     const t = this.current();
@@ -772,9 +783,9 @@ const Story = {
   warp() {
     const w = this.warpTarget();
     if (!w) return;
-    const S = G.state;
-    if (S.money < this.WARP_PRICE) { Sound.bad(); UI.toast(`אין מספיק כסף — להשתגר עולה ${this.WARP_PRICE}₪`, 'bad'); return; }
-    S.money -= this.WARP_PRICE;
+    const S = G.state, price = this.warpPrice(w);
+    if (S.money < price) { Sound.bad(); UI.toast(`אין מספיק כסף — להשתגר לשם עולה ${price}₪`, 'bad'); return; }
+    S.money -= price;
     Sound.whoosh();
     UI.fade(() => {
       if (w.map !== World.id) {
@@ -789,7 +800,7 @@ const Story = {
       const q = o && o.target && warpSpot(o.target);
       if (q) { G.player.x = q.x; G.player.y = q.y; G.player.vx = G.player.vy = 0; }
       Scene3D.greenPuff(G.player.x, G.player.y, 1.4);
-      UI.toast(`⚡ השתגרת! −${this.WARP_PRICE}₪`, 'good');
+      UI.toast(`⚡ השתגרת! −${price}₪`, 'good');
       Game.hud();
     });
   },
@@ -1276,6 +1287,64 @@ const Story = {
     S.clock = Math.max(S.clock, 24 * 60);
     Game.addStat('energy', -25);
     UI.toast('המשמרת נגמרה. ללכת לישון!');
+  },
+
+  // ---------- locked out ----------
+  // On the road outside a closed gate you can phone someone to come and open it. Each call
+  // gets someone else, until everyone on the site has had a turn.
+  gateCall: null,
+  GATE_CALL_LINES: [
+    'נו באמת, {name}. מי יוצא מהשער כשאין אף אחד בש"ג?',
+    'פתוח! ואל תספר[/י] ל{@harasar}.',
+    'הייתי באמצע לאכול שניצל... יאללה, [תיכנס/תיכנסי].',
+    'סיסמה? ...סתם. אין סיסמה. כבר שלושה חודשים.',
+    'זה עולה לך שוקו מהש"ק. שניים.',
+    'חשבתי שאת[ה/] {@p_nevo}. גם הוא תמיד נתקע בחוץ.',
+    'מהר מהר, לפני שמישהו רואה שהמחסום פתוח!',
+    'הטלפון צלצל ונבהלתי שזו אזעקה. אל תעשה[/י] לי את זה.',
+  ],
+  lockedOut() {
+    const P = G.player;
+    return !this.gateCall && !this.gateShift && !G.alert && World.gateTarget === 0 && World.gateOpen < 0.5
+      && P.y > 41.5 * TS && Math.abs(P.x - 30.5 * TS) < 10 * TS;
+  },
+  async callGate() {
+    const S = G.state;
+    const pool = G.npcs.filter(n => n.person && !n.curious && !n.visitor && !n.sheltering);
+    S.flags.gateCalled = (S.flags.gateCalled || []).filter(id => pool.some(n => n.id === id));
+    if (pool.length && pool.every(n => S.flags.gateCalled.includes(n.id))) S.flags.gateCalled = [];
+    const n = pool.find(m => !S.flags.gateCalled.includes(m.id)) || null;
+    if (n) S.flags.gateCalled.push(n.id);
+    Sound.ding && Sound.ding();
+    UI.toast(n ? `📞 מתקשר[/ת] ל${n.short}...` : '📞 מתקשר[/ת]...');
+    this.gateCall = { n, t: 0, back: n ? { ...n.spot } : null };
+    if (!n) return;
+    // They come down to the gate from the inside.
+    const at = warpSpot({ x: 30.5 * TS, y: 39.2 * TS }) || { x: 33 * TS, y: 39 * TS };
+    setTimeout(() => {
+      if (!this.gateCall || this.gateCall.n !== n) return;
+      n.x = n.spot.x = at.x; n.y = n.spot.y = at.y; n.path = []; n.wander = null;
+      n.angle = Math.PI / 2;
+    }, 900);
+  },
+  updateGateCall(dt) {
+    const c = this.gateCall, P = G.player;
+    c.t += dt;
+    if (!c.opened && c.t > 1.6) {
+      c.opened = true;
+      World.gateTarget = 1;
+      Sound.gate();
+      const line = pick(this.GATE_CALL_LINES);
+      if (c.n) UI.talk([{ who: c.n.id, text: line }]);
+      else UI.toast('מישהו פתח מרחוק. לא שאלת מי.', 'good');
+    }
+    // Closed again once you're in (or after a while), and they go back to what they were doing.
+    if (c.opened && !UI.busy && (P.y < 39.6 * TS || c.t > 25)) {
+      World.gateTarget = 0;
+      Sound.gate();
+      if (c.n && c.back) Game.setNpcSpot(c.n.id, c.back);
+      this.gateCall = null;
+    }
   },
 
   // ---------- gate shifts ----------

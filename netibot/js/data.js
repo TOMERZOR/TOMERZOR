@@ -81,7 +81,6 @@ const DATA = {
         { id: 'booth', name: 'ש"ג', x: 34, y: 38, w: 3, h: 3, doors: [[34, 39]] },
         { id: 'mig1', name: 'מיגונית', x: 24, y: 26, w: 3, h: 3, doors: [[25, 26]], shelter: true },
         { id: 'mig2', name: 'מיגונית', x: 24, y: 20, w: 3, h: 3, doors: [[25, 22]], shelter: true },
-        { id: 'mig3', name: 'מיגונית', x: 46, y: 17, w: 3, h: 3, doors: [[47, 19]], shelter: true },
         { id: 'mig4', name: 'מיגונית', x: 38, y: 35, w: 3, h: 3, doors: [[39, 37]], shelter: true },
       ],
       launchers: [

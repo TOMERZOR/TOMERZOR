@@ -153,7 +153,7 @@ const UI = {
   objective(obj) {
     const o = $('#objective');
     const warp = obj && Story.warpTarget();
-    const html = !obj ? '' : `<div class="obj-title">${obj.urgent ? '⚡ משימה דחופה' : 'משימה'}</div>${fmt(obj.text)}${obj.how ? `<div class="obj-how">👉 ${fmt(obj.how)}</div>` : ''}${obj.after ? `<div class="obj-after">אחר כך: ${fmt(obj.after)}</div>` : ''}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.WARP_PRICE}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
+    const html = !obj ? '' : `<div class="obj-title">${obj.urgent ? '⚡ משימה דחופה' : 'משימה'}</div>${fmt(obj.text)}${obj.how ? `<div class="obj-how">👉 ${fmt(obj.how)}</div>` : ''}${obj.after ? `<div class="obj-after">אחר כך: ${fmt(obj.after)}</div>` : ''}${warp ? `<button class="warp" data-warp>⚡ להשתגר לשם · ${Story.warpPrice(warp)}₪${G.touch ? '' : ' <kbd>X</kbd>'}</button>` : ''}`;
     // Only rebuilt when it changes, so a tap on the teleport button isn't lost.
     if (html === this.objHtml) return;
     this.objHtml = html;

@@ -1,1 +1,12 @@
-/* placeholder */
+/* The schnitzel war: the clock, what's in your hand, the scores, and sauce on the screen when
+   you get hit. */
+#arcade .fd { position: absolute; inset: 0; pointer-events: none; }
+#arcade .fd-time { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); font: 900 20px Rubik, sans-serif; color: #fff; }
+#arcade .fd-time.low { color: #ff6a5a; animation: qz-pulse .5s infinite alternate; }
+#arcade .fd-hand { bottom: max(14px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); font-size: 15px; white-space: nowrap; }
+#arcade .fd-hand.ready { border-color: #ffd23f; color: #ffd23f; animation: rc-glow .6s ease-in-out infinite alternate; }
+#arcade .fd-board { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+#arcade .fd-board div { display: flex; gap: 10px; justify-content: space-between; min-width: 120px; background: rgba(30,20,10,.72); border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 2px 8px; color: #fff3dc; }
+#arcade .fd-board div.me { border-color: #ffd23f; color: #ffd23f; font-weight: 900; }
+#arcade .fd-splat { position: absolute; inset: 0; background: radial-gradient(circle at 30% 40%, rgba(200,144,42,.75) 0 8%, transparent 9%), radial-gradient(circle at 70% 60%, rgba(216,38,31,.65) 0 6%, transparent 7%), radial-gradient(circle at 55% 25%, rgba(232,214,160,.7) 0 5%, transparent 6%); animation: rc-splat 1.2s ease-in forwards; }
+@media (max-height: 520px) { body.touch #arcade .fd-hand { bottom: auto; top: calc(max(8px, env(safe-area-inset-top)) + 44px); } }

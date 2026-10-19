@@ -1,1 +1,10 @@
-/* placeholder */
+/* Sufa soccer: the scoreboard and clock on top, your boost, and an arrow to the goal you attack. */
+#arcade .sc { position: absolute; inset: 0; pointer-events: none; }
+#arcade .sc-board { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: center; font: 900 20px Rubik, sans-serif; direction: ltr; }
+#arcade .sc-b { color: #6ab4ff; } #arcade .sc-r { color: #ff6a5a; }
+#arcade .sc-t { font-size: 14px; color: #fff; opacity: .9; }
+#arcade .sc-boost { bottom: max(14px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; width: min(220px, 44vw); }
+#arcade .sc-boost i { flex: 1; height: 9px; background: #0c0e0c; border-radius: 4px; overflow: hidden; display: block; }
+#arcade .sc-boost b { display: block; height: 100%; background: linear-gradient(90deg, #ff9a3c, #ffd23f); }
+#arcade .sc-arrow { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 52px); left: 50%; width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-bottom: 22px solid rgba(255,210,63,.85); transform-origin: 50% 70%; }
+@media (max-height: 520px) { body.touch #arcade .sc-boost { bottom: auto; top: calc(max(8px, env(safe-area-inset-top)) + 44px); } body.touch #arcade .sc-arrow { top: calc(max(8px, env(safe-area-inset-top)) + 80px); } }

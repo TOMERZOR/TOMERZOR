@@ -37,6 +37,8 @@ const Arcade = {
   open(club = false) {
     if (this.active || Race.active || G.alert || Boss.active || Story.ctl || Mini.active) { UI.toast('לא עכשיו', 'bad'); return; }
     G.paused = true;
+    // The games' models start loading while you choose, so they're in by the time you play.
+    this.loadModels(['arc_shelter', 'arc_table', 'arc_arch', 'arc_goal', 'arc_dumpster', 'arc_sandbags', 'arc_rocket', 'car_van', 'car_sufa', 'car_hummer', 'car_hilux', 'car_picanto']);
     const online = Multi.on && Multi.peers.length;
     const card = (g) => `<div class="ar-card" data-g="${g.id}">
         <img src="${g.cover}" alt="">

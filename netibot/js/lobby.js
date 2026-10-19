@@ -82,6 +82,11 @@ const Lobby = {
       try { localStorage.setItem('netibot.key', k); } catch (e) { /* ignore */ }
     } catch (e) { /* a wrong key keeps the made-up names */ }
   },
+  // A remembered key that no longer opens anything is dropped, so it can't come back.
+  forgetKey() {
+    if (this.params().k) return;
+    try { localStorage.removeItem('netibot.key'); } catch (e) { /* ignore */ }
+  },
   inviteLink() {
     const onPages = location.protocol.startsWith('http') && !/claude|claudeusercontent/.test(location.hostname) && location.hostname !== 'localhost';
     const base = onPages ? location.origin + location.pathname : PAGES_URL;

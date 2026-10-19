@@ -578,3 +578,10 @@ body.cinema .cutscene .cap { z-index: 2; background: rgba(10,12,10,.78); }
 .reps-two .btn { min-width: 120px; font-size: 30px; padding: 10px 20px; }
 .mini .actions .btn#rp-go { min-width: 220px; margin: 0 auto; }
 @media (max-height: 520px) { .reps-fig { font-size: 44px; } }
+
+/* ---------- Locked: no valid key ---------- */
+body.locked #world, body.locked #overlay, body.locked #hud, body.locked #touch { display: none !important; }
+body.locked .screen { background: #0b0d0a !important; }
+.locked-msg { margin-top: 30vh; text-align: center; color: #9a9a90; font-size: 18px; }
+.locked-msg .lk { font-size: 48px; margin-bottom: 8px; }
+body.locked #rotate { display: none !important; }

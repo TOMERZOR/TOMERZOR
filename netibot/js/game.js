@@ -694,7 +694,8 @@ const Game = {
     $('#bar-score').style.width = Math.min(100, S.score / DATA.passScore * 100) + '%';
     $('#bar-shchora').style.width = (S.shchora || 0) + '%';
     const confined = (S.confinedUntil || 0) - S.day;
-    $('#hud-home').textContent = confined > 0 ? `🔒 ריתוק · עוד ${confined} ימים` : Events.daysToHome() ? `🏠 עוד ${Events.daysToHome()} ימים` : '🏠 היום!';
+    // Confinement days are added to the days until going home (homeDay moves with them).
+    $('#hud-home').textContent = Events.daysToHome() ? `${confined > 0 ? '🔒' : '🏠'} עוד ${Events.daysToHome()} ימים` : '🏠 היום!';
     $('#hud-money').textContent = `₪${S.money}`;
     UI.objective(Story.objective());
   },
@@ -998,11 +999,21 @@ const Game = {
 document.addEventListener('contextmenu', (e) => { if (e.target.closest('img, .cutscene')) e.preventDefault(); });
 document.addEventListener('dragstart', (e) => { if (e.target.tagName === 'IMG') e.preventDefault(); });
 
-window.addEventListener('load', () => {
+// The game opens only with a valid key (from the current invite link, or remembered from it).
+// Any other link, an old one included, gets a locked page and nothing of the game.
+window.addEventListener('load', async () => {
+  document.body.classList.add('booting');
+  await Lobby.unlock();
+  if (!Lobby.cryptoKey) {
+    Lobby.forgetKey();
+    document.body.classList.add('locked');
+    UI.screen('<div class="content"><div class="locked-msg"><div class="lk">🔒</div><p>הקישור הזה לא פעיל.</p></div></div>');
+    return;
+  }
+  document.body.classList.remove('booting');
   UI.screen('<div class="content"><div class="logo">נתי<span>בוט</span></div><div class="tagline" id="load-msg">טוען גרפיקה... 0%</div></div>');
   Promise.all([
     Assets.load(p => { const m = document.getElementById('load-msg'); if (m) m.textContent = `טוען גרפיקה... ${Math.round(p * 100)}%`; }),
-    Lobby.unlock(),
   ]).then(() => {
     Game.init();
     Assets.loadScenes();

@@ -601,19 +601,46 @@ const Scene3D = {
           g.add(sign);
           break;
         }
-        case 'racesign': {
-          // A pole with a checkered flag and the race's name, by the bus stop.
-          this.cyl(0.06, 0.06, 3.2, this.mat(0xdddddd), 0, 1.6, 0, g, 6);
-          const c = document.createElement('canvas'); c.width = 64; c.height = 48;
-          const cg = c.getContext('2d');
-          for (let x = 0; x < 8; x++) for (let y = 0; y < 6; y++) { cg.fillStyle = (x + y) % 2 ? '#111' : '#fff'; cg.fillRect(x * 8, y * 8, 8, 8); }
-          const ft = new THREE.CanvasTexture(c);
-          const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.8), new THREE.MeshBasicMaterial({ map: ft, side: THREE.DoubleSide }));
-          flag.position.set(0.55, 2.8, 0);
-          g.add(flag);
-          const sign = this.label('🏎️ תחרות מפקדי נסיעה', { bg: 'rgba(192,57,43,.95)', size: 0.75 });
-          sign.position.set(0, 3.7, 0);
+        case 'club': {
+          // The club: an old container with a lit doorway, a neon sign and string lights.
+          if (!this.addModel(g, 'container', { rotY: Math.PI / 2, size: [w, 2.6, d] })) this.box(w, 2.5, d, this.mat(0x4b5a2a, { roughness: 0.8, metalness: 0.2 }), 0, 1.25, 0, g);
+          const glow = new THREE.MeshBasicMaterial({ color: 0x8a3cff });
+          this.box(1.25, 2.15, 0.05, glow, 0, 1.075, d / 2 + 0.03, g);
+          const frame = this.mat(0x2a2a2a, { metalness: 0.6 });
+          for (const sx of [-1, 1]) this.box(0.08, 2.2, 0.1, frame, sx * 0.66, 1.1, d / 2 + 0.05, g);
+          this.box(1.4, 0.1, 0.1, frame, 0, 2.2, d / 2 + 0.05, g);
+          // The door swung open against the wall.
+          const door = this.box(1.2, 2.1, 0.06, this.mat(0x56653a, { metalness: 0.4 }), 0, 1.05, 0, new THREE.Group());
+          const hinge = new THREE.Group();
+          hinge.position.set(0.66, 0, d / 2 + 0.06);
+          door.position.set(0.6, 1.05, 0);
+          hinge.add(door);
+          hinge.rotation.y = -1.9;
+          g.add(hinge);
+          const light = new THREE.PointLight(0xb36bff, 1.4, 6, 2);
+          light.position.set(0, 1.4, d / 2 + 0.8);
+          g.add(light);
+          // A doormat and a crate to sit on by the door.
+          this.box(1.1, 0.03, 0.6, this.mat(0x7a2b2b), 0, 0.015, d / 2 + 0.4, g);
+          this.box(0.55, 0.45, 0.45, this.mat(0x8a6a3a), -w / 2 + 0.6, 0.225, d / 2 + 0.5, g);
+          // String lights along the top front edge, twinkling (update).
+          const cols = [0xff4f6a, 0xffd23f, 0x4fd1ff, 0x7dff6a, 0xff8f3f];
+          rec.bulbs = cols.map(c => new THREE.MeshBasicMaterial({ color: c }));
+          const geo = new THREE.SphereGeometry(0.07, 8, 6);
+          const n = 14;
+          for (let i = 0; i < n; i++) {
+            const t = i / (n - 1), x = -w / 2 + 0.15 + t * (w - 0.3);
+            const bulb = new THREE.Mesh(geo, rec.bulbs[i % cols.length]);
+            bulb.position.set(x, 2.55 - Math.sin(t * Math.PI * 3) ** 2 * 0.22, d / 2 + 0.1);
+            g.add(bulb);
+          }
+          const sign = this.label('🎮 מועדון', { bg: 'rgba(110,40,180,.95)', size: 1.1 });
+          sign.position.set(0, 3.5, 0);
           g.add(sign);
+          rec.sign = sign;
+          const sub = this.label('🕹️ משחקונים · E', { bg: 'rgba(20,20,30,.85)', fg: '#ffd23f', size: 0.55 });
+          sub.position.set(0, 2.9, d / 2 + 0.2);
+          g.add(sub);
           break;
         }
         case 'books': {
@@ -1687,6 +1714,11 @@ const Scene3D = {
         this.drawAmmo(r);
         r.empty.visible = o.needsReload;
         if (o.needsReload) r.empty.material.opacity = 0.75 + Math.sin(now / 200) * 0.25;
+      } else if (o.kind === 'club') {
+        // The club's string lights twinkle and the sign breathes.
+        r.bulbs.forEach((m, i) => m.color.setHSL(((i * 0.2 + now / 4000) % 1), 1, 0.45 + 0.2 * Math.sin(now / 180 + i * 2)));
+        if (!r.signBase) r.signBase = r.sign.scale.clone();
+        r.sign.scale.copy(r.signBase).multiplyScalar(1 + Math.sin(now / 400) * 0.03);
       } else if (o.kind === 'flag') {
         const pos = r.flag.geometry.attributes.position;
         for (let i = 0; i < pos.count; i++) {
@@ -1725,6 +1757,12 @@ const Scene3D = {
     this.setCarry(pm, P.carry);
     this.setBubble(pm, P.bubble ? P.bubble.text : null);
     this.animateSoldier(pm, P, P.moving, dt);
+    // In a boss fight: blinking while covered after a respawn, flat on the grass when down.
+    if (Boss.active) {
+      pm.root.visible = !(Boss.inv > 0.5 && Math.floor(now / 100) % 2);
+      if (Boss.dead > 0 || (Boss.victory && Boss.deaths >= 3)) { pm.root.rotation.z = THREE.MathUtils.lerp(pm.root.rotation.z, Math.PI / 2, Math.min(1, dt * 8)); pm.root.position.y = 0.25; }
+      else pm.root.rotation.z = 0;
+    } else if (pm.root.rotation.z) pm.root.rotation.z = 0;
 
     const alive = new Set(G.npcs);
     for (const [n, m] of this.models) if (!alive.has(n)) { this.root.remove(m.root); this.models.delete(n); }
@@ -2069,7 +2107,9 @@ const Scene3D = {
       // The giant dances (the battery commander) or marches (the sergeant major) in place, facing the player.
       const gm = this.bossGiant;
       bm.position.set(Boss.x * S3, 0, Boss.y * S3);
-      this.animateSoldier(gm, { x: 0, y: 0, angle: Math.atan2(P.y - Boss.y, P.x - Boss.x), dancing: Boss.kind === 'baum', speed: 60 }, Boss.kind !== 'baum', dt);
+      // Having won, every one of them breaks into the victory dance.
+      const dance = Boss.kind === 'baum' || !!Boss.victory;
+      this.animateSoldier(gm, { x: 0, y: 0, angle: Math.atan2(P.y - Boss.y, P.x - Boss.x), dancing: dance, speed: 60 }, !dance, dt);
       gm.root.position.set(0, 0, 0);
       const k = 1 + Boss.flash * 0.08;
       bm.scale.set(k, 1 / k, k);
@@ -2082,6 +2122,13 @@ const Scene3D = {
     } else {
       bm.position.set(Boss.x * S3, Math.abs(Math.sin(now / 260)) * 0.25, Boss.y * S3);
       bm.rotation.y = Math.atan2(P.x - Boss.x, P.y - Boss.y);
+      // The cheeseburger's victory dance: hops, spins and wiggles.
+      if (Boss.victory) {
+        const t = now / 1000;
+        bm.position.y = Math.abs(Math.sin(t * 6)) * 1.4;
+        bm.rotation.y = t * 4;
+        bm.rotation.z = Math.sin(t * 9) * 0.18;
+      } else bm.rotation.z = 0;
       const k = 1 + Boss.flash * 0.12;
       bm.scale.set(k, 1 / k, k);
     }
@@ -2184,7 +2231,8 @@ const Scene3D = {
       m.rotation.set(s.t * 12, s.t * 7, 0);
     });
     // The hawk's cry: a red warning circle while she rears up, then the shock spreading out.
-    if (Boss.screech && !this.screechRing) {
+    const ring = Boss.screech || Boss.slam;
+    if (ring && !this.screechRing) {
       const g = new THREE.Group();
       const warn = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 48), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
       const wave = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 48), new THREE.MeshBasicMaterial({ color: 0xfff1c1, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
@@ -2194,16 +2242,18 @@ const Scene3D = {
       this.root.add(g);
     }
     if (this.screechRing) {
-      const s = Boss.screech;
+      const s = ring;
       if (!s) { this.root.remove(this.screechRing); this.screechRing = null; }
       else {
-        const R = 6 * TS * S3, { warn, wave } = this.screechRing.userData;
+        const R = (s.R || 6 * TS) * S3, { warn, wave } = this.screechRing.userData;
         this.screechRing.position.set(s.x * S3, 0.08, s.y * S3);
         warn.scale.setScalar(R);
         warn.material.opacity = 0.35 + Math.abs(Math.sin(now / 90)) * 0.45;
         wave.visible = s.r > 0;
         wave.scale.setScalar(Math.max(0.01, s.r * S3));
-        wave.material.opacity = 0.9 - Math.min(1, s.r / (6 * TS)) * 0.6;
+        wave.material.opacity = 0.9 - Math.min(1, s.r / (s.R || 6 * TS)) * 0.6;
+        // A slam's warning circle fills in as it's about to land.
+        if (s.slam) { warn.material.color.setHex(0xff2a1a); warn.scale.setScalar(R * (0.3 + 0.7 * Math.min(1, s.t / s.warn))); }
       }
     }
     sync(Boss.pickups, this.bossBits.picks, (p) => {

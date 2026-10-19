@@ -412,6 +412,7 @@ const Story = {
     BossArcs.update();
     Boss.watchCoop();
     Race.watch();
+    Arcade.watch();
     Boss.update(dt);
     // Morning lineup: arriving at the parade ground completes it.
     if (this.has('lineup') && !G.alert) {
@@ -476,8 +477,9 @@ const Story = {
     }
     const ts = travelSpot();
     add(ts.x, ts.y, 'תחנת הסעות', () => this.travelMenu(), 46);
-    const rs = tc(DATA.travelStop[0] + 2.8, DATA.travelStop[1]);
-    if (!P.carry) add(rs.x, rs.y, '🏎️ תחרות מפקדי נסיעה', () => Race.open(), 36);
+    // The club's door (the container behind the bus stop): the mini-games are inside.
+    const club = { x: (DATA.travelStop[0] + 0.6) * TS, y: (DATA.travelStop[1] - 1.6) * TS };
+    if (!P.carry) add(club.x, club.y, '🎮 להיכנס למועדון — משחקונים', () => Arcade.enterClub(), 40);
 
     if (World.id === 'hq') {
       add(SPOTS_HQ.hamal.x, SPOTS_HQ.hamal.y, 'עמדת בקרה בחמ"ל', () => this.radarShift(), 44);
@@ -487,6 +489,7 @@ const Story = {
       add(SPOTS_HQ.dining.x, SPOTS_HQ.dining.y, 'לאכול', () => this.eat(), 40);
       add(SPOTS_HQ.kantina.x, SPOTS_HQ.kantina.y, 'לקנות בש"ק', () => Mini.open('shop'), 40);
       if (this.has('snack') && !this.has('find_lock')) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, 'לפתוח את ארונית החטיפים הסודית', () => this.openSnack(), 40);
+      else if (this.has('boss') && !Boss.active) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 סיבוב שני מול צ\'יזבורגרו', () => UI.fade(() => Boss.start()), 40);
       else if (Multi.on) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 להעיר את צ\'יזבורגרו — קרב עם כל מי שבשו"ב', () => Boss.startCoop(), 40);
       Events.interactables(add);
       Roles.interactables(add);
@@ -1125,8 +1128,8 @@ const Story = {
     if (!S.dayFlags.nightDone) {
       S.dayFlags.nightDone = true;
       const r = Math.random();
-      if (r < 0.05 && Cast.get('commander') && !Multi.taken().has('commander')) { await Events.orinDance(); }
-      else if (r < 0.05 + 0.33) {
+      if (r < 0.33 && Cast.get('commander') && !Multi.taken().has('commander')) { await Events.orinDance(); }
+      else if (r < 0.33 + 0.25) {
         await UI.cutscene([{ img: 'assets/redalert.jpg', who: '', text: '02:13. הטלפונים מצפצפים, האורות נדלקים. "הקפצה! צבע אדום — תרגיל!"' }]);
         this.alert(true, 'night-drill');
         return; // endAlert puts everyone back to bed

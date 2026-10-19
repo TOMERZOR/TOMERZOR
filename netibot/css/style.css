@@ -70,6 +70,14 @@ button { font-family: inherit; }
   border-radius: 9px; font-size: 22px; width: 48px; cursor: pointer;
 }
 .hud-btn:active { transform: translateY(1px); }
+/* The soldier's details: a face button that opens a small card under it. */
+.who-wrap { position: relative; display: flex; }
+#btn-who { padding: 2px; overflow: hidden; }
+#btn-who img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; border-radius: 6px; display: block; }
+#btn-who[aria-expanded="true"] { border-color: var(--gold); }
+.who-pop, #who-pop { position: absolute; top: calc(100% + 6px); right: 0; z-index: 6; min-width: 170px; white-space: nowrap; pointer-events: auto; animation: who-in .18s ease-out; }
+#who-pop::before { content: ''; position: absolute; top: -8px; right: 16px; border: 7px solid transparent; border-bottom-color: var(--trim); border-top: 0; }
+@keyframes who-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .objective {
   position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 64px); right: 8px;
   max-width: min(360px, 70vw); background: var(--panel); border: 2px solid var(--trim); box-shadow: var(--bevel);
@@ -172,6 +180,18 @@ body.touch .prompt { bottom: max(14px, env(safe-area-inset-bottom)); max-width: 
 .chol-bar { flex: 1; min-width: 40px; height: 6px; background: rgba(255,255,255,.12); border-radius: 3px; overflow: hidden; }
 .chol-bar b { display: block; height: 100%; background: #f2d04e; }
 .chol-bar.hot b { background: #ff6a3d; }
+/* The player's own life in a boss fight: three hearts and a red bar that blinks while covered. */
+.chol-bar.life { height: 9px; box-shadow: inset 0 1px 2px #000, 0 0 0 1px rgba(255,255,255,.12); }
+.chol-bar.life b { background: linear-gradient(180deg, #ff8a7a, #d8261f); transition: width .2s; }
+.chol-bar.life.hot b { animation: life-pulse .5s infinite alternate; }
+.chol-bar.life.inv b { background: linear-gradient(180deg, #fff6c8, #f2c12e); }
+@keyframes life-pulse { from { filter: brightness(1); } to { filter: brightness(1.8); } }
+.boss-lives { font-size: 12px; letter-spacing: -2px; white-space: nowrap; }
+.boss-ko { position: fixed; left: 50%; top: 38vh; transform: translateX(-50%); font-size: clamp(22px, 5vw, 40px); font-weight: 900; color: #fff; text-shadow: 0 3px 0 #000, 0 0 18px rgba(216,38,31,.8); white-space: nowrap; animation: ko-pop .35s ease-out; }
+@keyframes ko-pop { from { transform: translateX(-50%) scale(1.8); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+/* A boss fight clears the top of the screen: only the menu button and the boss bar stay. */
+body.boss-fight .hud-top > .hud-card, body.boss-fight #btn-fs, body.boss-fight #btn-chat, body.boss-fight #objective, body.boss-fight #minimap { display: none !important; }
+body.boss-fight .boss-hud { top: max(8px, env(safe-area-inset-top)); width: min(440px, 52vw); }
 .ammo { background: rgba(255,255,255,.08); border-radius: 6px; padding: 0 5px; font-weight: 800; white-space: nowrap; }
 .boss-hint { font-size: 11px; opacity: .7; margin-top: 4px; }
 
@@ -370,7 +390,6 @@ img.face, img.card-face, .cutscene img { -webkit-touch-callout: none; -webkit-us
 }
 @media (max-width: 720px) {
   .hud-bars { min-width: 150px; }
-  .hud-who { display: none; }
   #minimap { width: 128px; height: 92px; bottom: auto; top: calc(max(8px, env(safe-area-inset-top)) + 64px); left: 8px; }
   .objective { max-width: calc(100% - 150px); font-size: 13px; }
   .dialog > img, .dialog .portrait-fallback, .dialog .avatar, .avatar { width: 66px; height: 66px; margin-top: -32px; }
@@ -669,3 +688,56 @@ body.locked #rotate { display: none !important; }
   #race .rc-car img { aspect-ratio: 16 / 9; }
   #race .rc-stat { font-size: 10px; }
 }
+
+/* ---------- the club (מועדון): hub, overlay, shared pieces ---------- */
+.arcade-hub { position: fixed; inset: 0; z-index: 40; background: radial-gradient(circle at 50% 0%, rgba(60,70,40,.96), rgba(10,12,8,.97)); overflow-y: auto; direction: rtl; color: var(--ink); padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 16px max(12px, env(safe-area-inset-left)); }
+.ar-hub { max-width: 1100px; margin: 0 auto; }
+/* Inside the club: the container's room behind a dark veil, string-light glow at the top. */
+.arcade-hub { background: linear-gradient(180deg, rgba(14,8,24,.55), rgba(8,6,12,.88) 40%, rgba(6,5,8,.95)), url(../assets/arcade/club.jpg) center / cover fixed, #0b0810; }
+.arcade-hub.club { animation: club-in .5s ease-out; }
+@keyframes club-in { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }
+.ar-head h2 { color: #ffd23f; text-shadow: 0 0 10px rgba(179,107,255,.9), 0 3px 0 #4a1a7a; }
+.ar-head h2 small { font-size: 15px; color: #e6d4ff; text-shadow: none; font-weight: 700; margin-inline-start: 6px; }
+.arcade-hub .ar-card { background: rgba(28,22,36,.86); border-color: rgba(179,107,255,.35); backdrop-filter: blur(3px); }
+.arcade-hub .ar-card:hover { border-color: #ffd23f; box-shadow: 0 0 18px rgba(179,107,255,.45), var(--bevel); }
+.ar-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.ar-head h2 { margin: 0; font-size: 28px; color: var(--gold-hi); text-shadow: 0 3px 0 var(--gold-edge); }
+.ar-head p { margin: 0; flex: 1; opacity: .85; }
+.ar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.ar-card { position: relative; display: flex; flex-direction: column; background: var(--panel); border: 2px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--bevel); transition: transform .15s, border-color .15s; }
+.ar-card:hover { transform: translateY(-3px); border-color: var(--gold); }
+.ar-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+.ar-info { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.ar-info b { font-size: 18px; }
+.ar-info i { font-style: normal; font-size: 13px; opacity: .85; flex: 1; }
+.ar-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.ar-tags span { font-size: 11px; background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 10px; padding: 1px 7px; }
+.ar-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.ar-need { font-size: 12px; opacity: .7; }
+#arcade { position: fixed; inset: 0; z-index: 22; pointer-events: none; color: var(--ink); direction: rtl; }
+#arcade button, #arcade .ar-panel, #arcade .ar-hud .pe { pointer-events: auto; }
+#arcade .ar-x { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--trim); background: var(--panel); color: var(--ink); font-size: 20px; font-weight: 900; cursor: pointer; z-index: 3; }
+#arcade .ar-hud { position: absolute; inset: 0; }
+#arcade .ar-chip { position: absolute; background: var(--panel); border: 2px solid var(--trim); border-radius: 10px; box-shadow: var(--bevel); padding: 4px 10px; font-weight: 900; }
+#arcade .ar-cd { position: absolute; top: 28%; left: 50%; transform: translateX(-50%); font: 900 clamp(44px, 13vw, 116px) Rubik, sans-serif; color: var(--gold-hi); -webkit-text-stroke: 3px #3a2600; text-shadow: 0 6px 0 #3a2600, 0 10px 30px rgba(0,0,0,.5); white-space: nowrap; z-index: 2; }
+#arcade .ar-say { position: absolute; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 8px); left: 50%; transform: translateX(-50%); background: var(--panel); border: 2px solid var(--trim); border-radius: 10px; padding: 5px 12px; font-weight: 800; max-width: 70vw; text-align: center; z-index: 2; }
+#arcade .ar-say.pop, #arcade .ar-cd.pop { animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
+#arcade .ar-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(720px, calc(100vw - 120px)); max-height: calc(100vh - 16px); overflow-y: auto; background: var(--panel); border: 2px solid var(--trim); border-radius: 14px; box-shadow: var(--bevel); padding: 14px; text-align: center; z-index: 4; }
+#arcade .ar-panel h2 { margin: 0 0 4px; color: var(--gold-hi); }
+#arcade .ar-sub { margin: 4px 0 10px; opacity: .9; }
+#arcade .ar-banner { width: 100%; max-height: 26vh; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 6px; }
+#arcade .ar-who { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+#arcade .ar-who span { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 3px 10px; }
+#arcade .ar-who span.me { border-color: var(--gold); color: var(--gold-hi); }
+#arcade .ar-res { width: 100%; border-collapse: collapse; margin: 6px 0; }
+#arcade .ar-res td { padding: 6px; border-bottom: 1px solid var(--line); }
+#arcade .ar-res tr.me { background: rgba(242,193,78,.18); font-weight: 900; }
+#arcade .ar-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+@media (max-height: 520px) { #arcade .ar-banner { max-height: 16vh; } #arcade .ar-panel { padding: 8px 10px; } }
+@media (max-width: 700px) { .ar-grid { grid-template-columns: 1fr 1fr; } .ar-info b { font-size: 15px; } .ar-info i { font-size: 12px; } }
+
+/* Character creation: story mode won't start without a name. */
+.c-err { color: #ff8a7a; font-weight: 800; margin: 6px 0 0; }
+#c-next.off { opacity: .45; filter: grayscale(.6); }
+input.shake { animation: in-shake .4s; border-color: #ff6a3d !important; }
+@keyframes in-shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }

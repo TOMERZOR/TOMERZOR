@@ -301,6 +301,9 @@ const Sound = (() => {
       later(950, () => { tone(3100, 0.5, 'sawtooth', 0.04, 2200); tone(2900, 0.5, 'sine', 0.06, 2300); });
     },
     zap() { tone(1900, 0.16, 'square', 0.04, 260); },
+    // The building blocks, for games that make their own effects (js/arcade/*):
+    // tone(freq, dur, type, vol, slideTo), noise(dur, vol, cutoff, filterType, at, bus, q), later(ms, fn).
+    synth: { tone: (...a) => tone(...a), noise: (...a) => noise(...a), later: (...a) => later(...a), now: () => (ensure() ? ctx.currentTime : 0) },
     // The race: an engine whose pitch follows the speed (0..1, null to stop), bumps, beeps.
     engine(level) {
       if (level == null || !prefs.sfx || !ensure()) {

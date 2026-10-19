@@ -96,6 +96,12 @@ const Game = {
         if (e.code === 'Escape') Race.exit();
         return;
       }
+      if (Arcade.active) {
+        if ((e.code === 'Space' || e.code === 'KeyE' || e.code === 'Enter') && !e.repeat) Arcade.act();
+        if (e.code === 'Escape') Arcade.exit();
+        return;
+      }
+      if ($('#arcade-hub') && e.code === 'Escape') { Arcade.closeHub(); return; }
       if ((e.code === 'Tab' || e.code === 'KeyP') && !Mini.active && !UI.busy && !UI.menuOpen()) UI.togglePhone();
       if (e.code === 'Escape' && !Mini.active) {
         if (!$('#phone').classList.contains('hidden')) UI.togglePhone(false);
@@ -163,6 +169,14 @@ const Game = {
     $('#minimap').addEventListener('pointerdown', (e) => { e.stopPropagation(); Sound.unlock(); UI.toggleMap(true); });
     $('#btn-menu').addEventListener('click', () => { Sound.unlock(); UI.toggleMenu(); });
     $('#btn-fs').addEventListener('click', () => this.toggleFullscreen());
+    // The soldier's details (name, rank, unit) fold into a small face button.
+    $('#btn-who').addEventListener('click', (e) => {
+      e.stopPropagation();
+      Sound.click();
+      const open = $('#who-pop').classList.toggle('hidden') === false;
+      $('#btn-who').setAttribute('aria-expanded', open);
+      if (open) { this.hud(); clearTimeout(this.whoT); this.whoT = setTimeout(() => { $('#who-pop').classList.add('hidden'); $('#btn-who').setAttribute('aria-expanded', false); }, 6000); }
+    });
     $('#btn-chat').addEventListener('click', () => { Sound.unlock(); if (UI.chatOpen()) UI.closeChat(); else UI.chat(); });
     document.addEventListener('fullscreenchange', () => this.syncFullscreen());
     document.addEventListener('webkitfullscreenchange', () => this.syncFullscreen());
@@ -227,6 +241,7 @@ const Game = {
 
   interact() {
     if (Race.active) { Race.boost(); return; }
+    if (Arcade.active) { Arcade.act(); return; }
     if (G.alert || UI.mapOpen() || Story.ctl) return;
     if (Boss.active) { Boss.throw(); return; }
     const it = this.nearestInteractable();
@@ -474,6 +489,11 @@ const Game = {
       requestAnimationFrame(tt => this.frame(tt));
       return;
     }
+    if (G.running && Arcade.active) {
+      Arcade.frame(dt, t);
+      requestAnimationFrame(tt => this.frame(tt));
+      return;
+    }
     if (G.running) {
       const live = !G.paused && !UI.busy;
       if (live) this.update(dt);
@@ -507,6 +527,8 @@ const Game = {
     if (G.stick.x || G.stick.y) { mx = G.stick.x; my = G.stick.y; }
     // With the map open the world keeps going, but the player stands still.
     if (UI.mapOpen()) mx = my = 0;
+    // Knocked out by a boss (or watching them dance on your grave): no moving.
+    if (Boss.active && (Boss.dead > 0 || Boss.victory)) mx = my = 0;
     if (Story.ctl) {
       const key = (...c) => (c.some(x => k.has(x)) ? 1 : 0);
       const clamp = (v) => Math.max(-1, Math.min(1, v));
@@ -703,7 +725,11 @@ const Game = {
     if (nameHtml !== this.nameHtml) { this.nameHtml = nameHtml; $('#hud-name').innerHTML = nameHtml; }
     this.checkRank();
     $('#hud-unit').textContent = fmt('{gdud} · {battery}');
-    $('#hud-day').textContent = `יום ${S.day}${S.graduated ? '' : ' בפלג"צ'}`;
+    const face = faceUrl('player');
+    if (face !== this.faceShown) { this.faceShown = face; $('#hud-face').src = face; }
+    $('#hud-more').textContent = `${rankName()}${G.profile && G.profile.as ? ' · ' + ((Cast.get(G.profile.as) || {}).title || '') : ''} · ⭐ ${S.score} נק'`;
+    // Online everyone shares one week, counted from Sunday; alone it's your day in the platoon.
+    $('#hud-day').textContent = Multi.on ? `יום ${WEEKDAYS[(Math.max(1, S.day) - 1) % 7]}` : `יום ${S.day}${S.graduated ? '' : ' בפלג"צ'}`;
     $('#hud-time').textContent = clockText();
     $('#bar-energy').style.width = S.energy + '%';
     $('#bar-morale').style.width = S.morale + '%';
@@ -898,15 +924,28 @@ const Game = {
           <button class="chip ${p.gender === 'm' ? 'sel' : ''}" data-g="m">חייל</button>
           <button class="chip ${p.gender === 'f' ? 'sel' : ''}" data-g="f">חיילת</button></div>
         <div class="pick-look">${['m', 'f'].map(g => `<img class="card-face ${p.gender === g ? 'sel' : ''}" src="assets/faces/player_${g}.webp" alt="" data-g="${g}">`).join('')}</div>
+        ${mode === 'story' ? '<p id="c-err" class="c-err hidden">✋ בלי שם אין כומתה. איך קוראים לך?</p>' : ''}
         <div class="actions"><button class="btn" id="c-next">המשך ◂</button><button class="btn ghost" id="c-back">חזרה</button></div>
       </div></div>`, 'assets/beret.jpg');
       $('#screen').querySelector('.panel').innerHTML = fmt($('#screen').querySelector('.panel').innerHTML);
       const name = $('#c-name');
-      name.oninput = () => p.name = name.value.trim();
+      // Story mode needs a real name: the whole platoon is going to call you by it.
+      const need = () => mode === 'story' && !p.name;
+      const err = $('#c-err');
+      name.oninput = () => { p.name = name.value.trim(); $('#c-next').classList.toggle('off', need()); if (!need() && err) err.classList.add('hidden'); };
+      $('#c-next').classList.toggle('off', need());
       $('#screen').querySelectorAll('[data-g]').forEach(b => b.onclick = () => { p.name = name.value.trim(); p.gender = b.dataset.g; render(); });
       $('#c-back').onclick = () => this.title();
       $('#c-next').onclick = async () => {
-        p.name = name.value.trim() || (p.gender === 'f' ? 'חיילת' : 'חייל');
+        p.name = name.value.trim();
+        if (need()) {
+          err.classList.remove('hidden');
+          name.classList.remove('shake'); void name.offsetWidth; name.classList.add('shake');
+          name.focus();
+          Sound.bad();
+          return;
+        }
+        p.name = p.name || (p.gender === 'f' ? 'חיילת' : 'חייל');
         G.state = this.newState(mode);
         if (mode === 'story') {
           await UI.cutscene([

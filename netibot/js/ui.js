@@ -334,7 +334,7 @@ const UI = {
       <button class="btn" data-m="resume">▶ חזרה למשחק</button>
       <button class="btn ghost" data-m="phone">📱 טלפון — משימות, הודעות, הישגים</button>
       ${Multi.on ? '<button class="btn ghost" data-m="chat">💬 צ\'אט — לכולם או למישהו</button><button class="btn ghost" data-m="invite">📤 להזמין חברים (וואטסאפ)</button><button class="btn" data-m="bossInvite">🍔 להזמין את כולם לקרב בוס ביחד</button>' : ''}
-      <button class="btn" data-m="race">🏎️ תחרות מפקדי נסיעה${Multi.on && Multi.peers.length ? ' — אפשר עם חברים' : ''}</button>
+      <button class="btn" data-m="arcade">🎮 מועדון — ${Arcade.games.length + 1} משחקונים${Multi.on && Multi.peers.length ? ', גם עם חברים' : ''}</button>
       <button class="btn ghost" data-m="settings">⚙️ הגדרות — שמע, שליטה, תצוגה</button>
       <button class="btn ghost" data-m="help">❓ איך משחקים</button>
       <button class="btn ghost" data-m="save">💾 שמור עכשיו</button>
@@ -348,7 +348,7 @@ const UI = {
       chat: () => { this.toggleMenu(false); this.chat(); },
       invite: () => Game.shareInvite(),
       bossInvite: () => { this.toggleMenu(false); Boss.inviteCoop(); },
-      race: () => { this.toggleMenu(false); Race.open(); },
+      arcade: () => { this.toggleMenu(false); Arcade.open(); },
       settings: () => { this.toggleMenu(false); Settings.open(); },
       help: () => { this.toggleMenu(false); Game.help(true); },
       save: () => { Game.save(); this.toast('נשמר ✔', 'good'); },
@@ -491,7 +491,7 @@ const UI = {
     }
     // The bus stop and the race, by the gate.
     const [tx, ty] = DATA.travelStop;
-    for (const [x, y, label, bg] of [[tx + 0.6, ty - 0.6, '🚌 הסעות', 'rgba(30,90,140,.9)'], [tx + 3.6, ty + 1.4, '🏎️ מירוץ', 'rgba(192,57,43,.92)']]) {
+    for (const [x, y, label, bg] of [[tx + 0.6, ty - 0.6, '🚌 הסעות', 'rgba(30,90,140,.9)'], [tx + 0.6, ty - 3.4, '🎮 מועדון', 'rgba(110,40,180,.92)']]) {
       const w = g.measureText(label).width + 12, cx = (x - x0) * s, cy = (y - y0) * s;
       g.fillStyle = bg; g.fillRect(cx - w / 2, cy - 11, w, 20);
       g.fillStyle = '#fff'; g.fillText(label, cx, cy + 5);
@@ -645,6 +645,7 @@ const UI = {
   },
 };
 
+const WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 function clockText(min = G.state ? G.state.clock : 0) {
   const h = Math.floor(min / 60) % 24, m = Math.floor(min % 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;

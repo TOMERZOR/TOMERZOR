@@ -94,8 +94,8 @@ const World = {
     // Bus stop for travelling between sites.
     const [sx, sy] = DATA.travelStop;
     prop('busstop', sx + 0.6, sy - 0.2, 1.4, 0.5, false);
-    // Next to it, the sign for the driving commanders' race (js/race.js).
-    prop('racesign', sx + 2.5, sy - 0.4, 0.6, 0.4, false);
+    // Behind it, the club: a container the platoon turned into a game room (js/arcade.js).
+    prop('club', sx - 0.9, sy - 3.4, 3, 1.3, true);
 
     if (id === 'netivot') {
       // Two sleeping rooms, boys and girls: 8 beds and 3 lockers each.

@@ -56,6 +56,8 @@ const Multi = {
         } : null,
         // A race they're in or hosting (cd: seconds until the host's start).
         race: s.race && +s.race.id ? { id: +s.race.id, host: !!s.race.host, car: String(s.race.car || '').slice(0, 12), x: +s.race.x || 0, z: +s.race.z || 0, a: +s.race.a || 0, v: +s.race.v || 0, lap: Math.max(0, Math.min(9, +s.race.lap | 0)), pr: Math.max(-2000, Math.min(9000, +s.race.pr || 0)), fin: Math.max(0, +s.race.fin || 0), cd: Math.max(0, Math.min(60, +s.race.cd || 0)) } : null,
+        // An arcade game they're in or hosting; s is the game's own small state (checked by size).
+        ar: s.ar && +s.ar.id && typeof s.ar.g === 'string' ? { id: +s.ar.id, g: s.ar.g.slice(0, 12), host: !!s.ar.host, cd: Math.max(0, Math.min(60, +s.ar.cd || 0)), s: s.ar.s && typeof s.ar.s === 'object' && JSON.stringify(s.ar.s).length < 1600 ? s.ar.s : null } : null,
         // A red alert this player is in: everyone online at that site gets it too.
         sl: !!s.sl,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
@@ -103,6 +105,7 @@ const Multi = {
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,
       race: Race.presence(),
+      ar: Arcade.presence(),
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
       boss: Boss.active && Boss.coop ? { id: Boss.coop.id, k: Boss.kind, max: Boss.max, dmg: Boss.myDmg, tk: Boss.myTaken.slice(-30) } : Boss.coopTail && Date.now() < Boss.coopTail.until ? Boss.coopTail.st : null,
       fx: Boss.active && Boss.coop ? Boss.fxOut() : null,

@@ -219,7 +219,7 @@ const Events = {
     }));
   },
 
-  // 5% of nights: the commander wakes only you, dances, and says things nobody will believe.
+  // A third of nights: the commander wakes only you, dances, and says things nobody will believe.
   async orinDance() {
     const P = G.player;
     let n = Game.npc('commander');

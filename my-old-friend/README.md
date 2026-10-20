@@ -1,24 +1,35 @@
 # My Old Friend
 
-An iPhone app where **Moffy**, a cute pink helper, looks through the camera and explains technology to older people, one small step at a time. He listens, talks back out loud, and hops over to point at the exact button to press. Hebrew and English.
+**AI for the third age.** An iPhone app where **Moffy**, a cute pink helper, looks through the camera and explains technology to older people, one small step at a time. He listens, talks back out loud, and hops over to point at the exact button to press. Hebrew and English.
 
 ## How it works
 
 1. The person points the camera at the thing they need help with (a TV remote, a WhatsApp screen, a computer, and so on).
-2. They tap the big pink **Tap and talk** button and say what they need.
+2. They tap the big **Tap and talk** button and say what they need.
 3. Moffy takes a picture, asks Claude (Anthropic's AI) for the next step, then:
    - says it out loud, slowly,
    - shows it in big letters,
    - hops next to the thing to press and circles it.
 4. They say "done" or "what next?", and Moffy gives the next step.
 
-Also: **Say again**, **Type** (for typing instead of talking), **Start over**, hide/show camera, and Settings (language, letter size, voice speed).
+The main screen has one big button. Everything else stays quiet: **Say again** inside Moffy's words, **Type instead** and **New question** as plain text buttons, and a gear for Settings (language, letter size, slow voice, camera on/off, API key).
+
+## Design rules (from Apple's Human Interface Guidelines)
+
+- **Contrast:** the action color #B8336A carries white text at 5.7:1, and body text is 7.9:1 or more. Bright pink is reserved for Moffy and is never used for text.
+- **Text size:** every text uses a system text style in SF Rounded, so it grows with the iPhone's Larger Text setting. The in-app letter size sets a minimum.
+- **Motion:** calm by default. Moffy breathes slowly and blinks; he hops only when something happens. With Reduce Motion on, he and the pointing ring stay still and simply fade in.
+- **Feedback:** Moffy's spoken words always appear on screen too, and a light vibration marks when listening starts and stops and when an answer arrives.
+- **AI transparency:** the welcome screen and Settings say Moffy is an AI, that he can make mistakes, and that photos are sent over the internet.
+- **Dark mode:** every color has a dark variant.
+
+The App Store texts (English and Hebrew) are in `AppStore.md`.
 
 ## What's in the folder
 
 | Folder | What it does |
 |---|---|
-| `MyOldFriend/Moffy/` | Moffy himself (bobbing, blinking, hopping, eyes that follow things) and the pointing ring and arrow |
+| `MyOldFriend/Moffy/` | Moffy himself (breathing, blinking, hopping, eyes that follow things) and the pointing ring |
 | `MyOldFriend/Brain/MoffyPrompt.swift` | **Moffy's personality and teaching rules.** Edit this to change how he talks |
 | `MyOldFriend/Brain/ClaudeBrain.swift` | Sends the question and camera photo to Claude |
 | `MyOldFriend/Brain/DemoBrain.swift` | Practice mode, used until a key is added |
@@ -27,12 +38,14 @@ Also: **Say again**, **Type** (for typing instead of talking), **Start over**, h
 
 ## Running it on an iPhone
 
-You need a **Mac with Xcode 16 or newer** (free from the Mac App Store).
+On your MacBook:
 
-1. Open `MyOldFriend.xcodeproj` in Xcode.
-2. Click the project at the top left → **Signing & Capabilities** → choose your **Team** (your Apple ID works; sign in under Xcode → Settings → Accounts).
-3. Plug in the iPhone, pick it at the top of Xcode, and press ▶︎ (Run).
-4. On the iPhone, the first time only: **Settings → General → VPN & Device Management** → trust your developer profile. iOS 16+ also asks you to turn on **Developer Mode**.
+1. Install **Xcode** from the Mac App Store (free, about 10 GB). Open it once and let it install its components.
+2. Get the code: in Terminal, `git clone https://github.com/TOMERZOR/TOMERZOR.git`, then `cd TOMERZOR && git checkout claude/my-old-friend-app`. Or download the branch as a ZIP from GitHub.
+3. Open `my-old-friend/MyOldFriend.xcodeproj` in Xcode.
+4. Click the project at the top left → **Signing & Capabilities** → choose your **Team** (your Apple ID works; sign in under Xcode → Settings → Accounts).
+5. Plug in the iPhone, pick it at the top of Xcode, and press ▶︎ (Run).
+6. On the iPhone, the first time only: **Settings → General → VPN & Device Management** → trust your developer profile. iOS 16+ also asks you to turn on **Developer Mode**.
 
 With a free Apple ID the app runs for 7 days before you have to press Run again. To share it through TestFlight or the App Store, you need the Apple Developer Program ($99/year).
 
@@ -53,13 +66,16 @@ Don't send the key to anyone or paste it into a chat. It is stored encrypted in 
 
 **Before publishing:** a key stored inside the app is fine for testing on your own family's phones, but a published app needs a small server that holds the key, so nobody can pull it out of the app. That is the next step before the App Store.
 
+You can also try it without an iPhone: pick an iPhone simulator at the top of Xcode and press ▶︎. The camera doesn't work in the simulator, so Moffy helps from words only.
+
 ## Moffy's look
 
-A pink rounded square with two white pill eyes, based on the original drawing. His moods:
+A pink rounded square with two white pill eyes, based on the original drawing. His eyes carry the feeling, and his body moves little:
 
-- **happy**: eyes become ^ ^ and he wiggles
-- **listening**: eyes open wide and he bobs faster
-- **thinking**: eyes look up, three dots bounce, he sways
-- **talking**: he squishes on every word
-- **pointing**: he hops next to the target, leans and looks at it
+- **waiting**: a slow breath and natural blinks
+- **listening**: eyes open wide, he leans toward you
+- **thinking**: eyes look up, three dots glow in turn
+- **talking**: a small nod on each word
+- **happy**: eyes become ^ ^ and he gives one small hop
+- **pointing**: he hops next to the target, looks at it, and a ring draws itself around it
 - **worried**: tilted eyes, used for scam warnings and errors

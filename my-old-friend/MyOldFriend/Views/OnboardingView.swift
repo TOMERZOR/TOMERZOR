@@ -1,81 +1,121 @@
 import SwiftUI
 
-/// First launch: pick a language, meet Moffy, allow the camera and microphone.
+/// First launch, two calm screens: pick a language, then meet Moffy and allow the camera and microphone.
 struct OnboardingView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step = 0
     @State private var asking = false
 
     var body: some View {
         ZStack {
-            Theme.cream.ignoresSafeArea()
+            Theme.surface.ignoresSafeArea()
             if step == 0 {
-                languageStep.transition(.asymmetric(insertion: .opacity, removal: .move(edge: .leading).combined(with: .opacity)))
+                languageStep.transition(.opacity)
             } else {
-                meetStep.transition(.move(edge: .trailing).combined(with: .opacity))
+                meetStep.transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 24)))
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: step)
+        .animation(.easeInOut(duration: 0.4), value: step)
     }
 
     private var languageStep: some View {
-        VStack(spacing: 28) {
+        VStack(spacing: 0) {
             Spacer()
-            MoffyView(mood: .happy, size: 190)
-            VStack(spacing: 6) {
+            MoffyView(mood: .happy, size: 170)
+            VStack(spacing: 8) {
                 Text("My Old Friend")
-                    .font(.system(size: 40, weight: .heavy, design: .rounded))
-                Text("החבר הוותיק שלי")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(Theme.inkSoft)
+                    .font(.rounded(.largeTitle, .heavy))
+                    .foregroundStyle(Theme.ink)
+                Text("AI for the third age")
+                    .font(.rounded(.title3, .semibold))
+                    .foregroundStyle(Theme.inkSecondary)
+                Text("בינה מלאכותית לגיל השלישי")
+                    .font(.rounded(.title3, .semibold))
+                    .foregroundStyle(Theme.inkSecondary)
             }
-            .foregroundStyle(Theme.ink)
+            .multilineTextAlignment(.center)
+            .padding(.top, 24)
             Spacer()
-            VStack(spacing: 16) {
+            VStack(spacing: 14) {
                 ForEach([AppLanguage.hebrew, .english]) { language in
-                    BigButton(title: language.nativeName, height: 88) {
+                    BigButton(title: language.nativeName, minHeight: 80) {
                         settings.language = language
                         step = 1
                     }
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .padding(.bottom, 20)
         }
     }
 
     private var meetStep: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            MoffyView(mood: asking ? .thinking : .talking, size: 170, wordPulse: helper.speaker.wordPulse)
-            Text(settings.t("Hi! I'm Moffy.", "שלום! אני מופי."))
-                .font(.system(size: settings.textSize.title + 6, weight: .heavy, design: .rounded))
-                .foregroundStyle(Theme.ink)
-            Text(intro)
-                .font(.system(size: settings.textSize.body, weight: .medium, design: .rounded))
-                .foregroundStyle(Theme.inkSoft)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 28)
-            Spacer()
-            BigButton(title: settings.t("Let's start", "בואו נתחיל"), systemImage: "hand.thumbsup.fill", height: 88) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                HStack {
+                    Spacer()
+                    MoffyView(mood: asking ? .thinking : .talking, size: 130, wordPulse: helper.speaker.wordPulse)
+                    Spacer()
+                }
+                .padding(.top, 24)
+
+                Text(settings.t("Hi! I'm Moffy.", "שלום! אני מופי."))
+                    .font(.rounded(.largeTitle, .heavy))
+                    .foregroundStyle(Theme.ink)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    row("camera.fill", settings.t("Show me what you need help with.", "הראו לי במה צריך עזרה."))
+                    row("mic.fill", settings.t("Tell me in your own words.", "ספרו לי במילים שלכם."))
+                    row("hand.point.up.left.fill", settings.t("I'll show you, one small step at a time.", "אני אראה לכם, צעד קטן אחד בכל פעם."))
+                }
+
+                // Apple asks apps to say clearly where AI is used and what it can't do.
+                Label {
+                    Text(settings.t("Moffy is an AI. He can make mistakes, so for money or health matters, check with someone you trust. When you ask, your question and the camera picture are sent over the internet so he can understand them.",
+                                    "מופי הוא בינה מלאכותית. הוא יכול לטעות, ולכן בענייני כסף או בריאות כדאי לבדוק עם מישהו שסומכים עליו. כששואלים, השאלה ותמונת המצלמה נשלחות דרך האינטרנט כדי שיוכל להבין אותן."))
+                        .font(.rounded(.body))
+                        .foregroundStyle(Theme.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "info.circle.fill").foregroundStyle(Theme.actionText)
+                }
+                .padding(16)
+                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.card))
+            }
+            .padding(.horizontal, 24)
+        }
+        .safeAreaInset(edge: .bottom) {
+            BigButton(title: settings.t("Let's start", "בואו נתחיל"), minHeight: 80) {
                 Task { await allowAndStart() }
             }
             .disabled(asking)
             .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .padding(.vertical, 12)
+            .background(Theme.surface)
         }
         .onAppear {
-            helper.speaker.speak(settings.t("Hi! I'm Moffy. ", "שלום! אני מופי. ") + intro,
+            helper.speaker.speak(settings.t("Hi! I'm Moffy. Show me what you need help with, tell me in your own words, and I'll show you, one small step at a time. Tap Let's start, and then tap Allow.",
+                                            "שלום! אני מופי. הראו לי במה צריך עזרה, ספרו לי במילים שלכם, ואני אראה לכם צעד קטן אחד בכל פעם. לחצו על בואו נתחיל, ואחר כך על אישור."),
                                  language: settings.lang, speed: settings.speechSpeed)
         }
     }
 
-    private var intro: String {
-        settings.t("I can look through your camera and help you with phones, computers, the TV and more, one small step at a time. The phone will now ask if I may use the camera and microphone. Please tap Allow.",
-                   "אני יכול להסתכל דרך המצלמה ולעזור לכם עם הטלפון, המחשב, הטלוויזיה ועוד, צעד קטן אחד בכל פעם. עכשיו הטלפון ישאל אם מותר לי להשתמש במצלמה ובמיקרופון. לחצו על \"אישור\".")
+    private func row(_ symbol: String, _ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Image(systemName: symbol)
+                .font(.rounded(.title2, .semibold))
+                .foregroundStyle(Theme.actionText)
+                .frame(width: 36)
+            Text(text)
+                .font(.rounded(.title2, .semibold))
+                .foregroundStyle(Theme.ink)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
+    /// The system asks for the camera, then the microphone, right after the person agrees to start.
     private func allowAndStart() async {
         asking = true
         helper.speaker.stop()

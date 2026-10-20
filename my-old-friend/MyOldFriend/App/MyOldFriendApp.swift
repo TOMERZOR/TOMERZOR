@@ -26,7 +26,8 @@ extension View {
             .environmentObject(helper)
             .environment(\.layoutDirection, settings.lang.layoutDirection)
             .environment(\.locale, settings.lang.locale)
-            .tint(Theme.pink)
+            .dynamicTypeSize(settings.textSize.minimum ... .accessibility4)
+            .tint(Theme.action)
     }
 }
 

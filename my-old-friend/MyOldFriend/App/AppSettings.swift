@@ -11,13 +11,14 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     var nativeName: String { self == .hebrew ? "עברית" : "English" }
 }
 
+/// The smallest letters the app will show. Text still grows further with the iPhone's own text size.
 enum TextSize: Int, CaseIterable, Identifiable {
     case large, extraLarge, huge
 
     var id: Int { rawValue }
-    var title: CGFloat { [28, 34, 42][rawValue] }
-    var body: CGFloat { [22, 26, 32][rawValue] }
-    var button: CGFloat { [24, 28, 32][rawValue] }
+    var minimum: DynamicTypeSize { [.xLarge, .xxxLarge, .accessibility2][rawValue] }
+    /// Size of the sample "A" on the settings button.
+    var sample: CGFloat { [24, 31, 40][rawValue] }
 }
 
 /// Everything the person (or their helper) can change. Saved on the phone.
@@ -40,6 +41,9 @@ final class AppSettings: ObservableObject {
     @Published var readAloud: Bool {
         didSet { defaults.set(readAloud, forKey: "readAloud") }
     }
+    @Published var useCamera: Bool {
+        didSet { defaults.set(useCamera, forKey: "useCamera") }
+    }
 
     init() {
         language = defaults.string(forKey: "language").flatMap(AppLanguage.init(rawValue:))
@@ -47,6 +51,7 @@ final class AppSettings: ObservableObject {
         textSize = TextSize(rawValue: defaults.integer(forKey: "textSize")) ?? .large
         speechSpeed = defaults.object(forKey: "speechSpeed") as? Double ?? 0.85
         readAloud = defaults.object(forKey: "readAloud") as? Bool ?? true
+        useCamera = defaults.object(forKey: "useCamera") as? Bool ?? true
     }
 
     var lang: AppLanguage { language ?? .english }

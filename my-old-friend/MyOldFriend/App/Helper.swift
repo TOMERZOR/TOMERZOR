@@ -13,7 +13,7 @@ final class Helper: ObservableObject {
 
     @Published private(set) var phase: Phase = .ready
     @Published private(set) var reply: MoffyReply
-    @Published var cameraOn = true
+    var cameraOn: Bool { settings.useCamera }
     /// The size of the camera area on screen, so the snapshot is cut to match what the person sees.
     var stageSize: CGSize = .zero
 
@@ -105,7 +105,7 @@ final class Helper: ObservableObject {
     }
 
     func setCamera(on: Bool) {
-        cameraOn = on
+        settings.useCamera = on
         if on { camera.start() } else { camera.stop() }
     }
 

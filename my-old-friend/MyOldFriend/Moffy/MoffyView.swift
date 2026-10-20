@@ -5,52 +5,56 @@ enum MoffyMood: String, Equatable {
 }
 
 /// Moffy: a pink rounded square with two white eyes.
-/// He bobs, blinks, hops when his mood changes, squishes on every spoken word,
-/// and his eyes follow whatever he is looking at.
+///
+/// His motion is calm on purpose: a slow breath and natural blinks while he waits, one small hop
+/// when something happens, a gentle nod on spoken words. Eyes carry most of the feeling.
+/// With Reduce Motion on he holds still and only his eyes change.
 struct MoffyView: View {
     var mood: MoffyMood
     var size: CGFloat = 160
     /// Where Moffy looks, from -1 to 1 on each axis. (0, 0) is straight at you.
     var look: CGSize = .zero
-    /// Changes once per spoken word, so Moffy bounces along with his voice.
+    /// Changes once per spoken word, so Moffy nods along with his voice.
     var wordPulse: Int = 0
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hop: CGFloat = 0
     @State private var squash: CGFloat = 1
 
     var body: some View {
-        TimelineView(.animation) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            figure(time: t)
+        TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { timeline in
+            figure(time: reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size * 1.12)
         .onChange(of: mood) { _, newMood in
-            if newMood != .idle { jump() }
+            if [.happy, .pointing, .listening].contains(newMood) { jump() }
         }
-        .onChange(of: wordPulse) { _, _ in squish() }
+        .onChange(of: wordPulse) { _, _ in nod() }
         .accessibilityElement()
         .accessibilityLabel("Moffy")
+        .accessibilityHidden(true)
     }
 
     private func figure(time t: Double) -> some View {
-        let speed: Double = mood == .listening ? 3.2 : (mood == .thinking ? 1.4 : 2.2)
-        let bob = CGFloat(sin(t * speed)) * size * 0.03
-        let blink = mood != .happy && t.truncatingRemainder(dividingBy: 3.6) < 0.14
-        let sway = mood == .thinking ? sin(t * 1.6) * 7 : Double(look.width) * 9
-        let wiggle = mood == .happy ? sin(t * 9) * 3 : 0
-        let lift = -(hop + bob)
+        // One slow breath every ~4 seconds; a little quicker while listening.
+        let breathRate = mood == .listening ? 2.2 : 1.5
+        let breath = 1 + CGFloat(sin(t * breathRate)) * 0.012
+        // A natural blink every 4.5 seconds, plus a quick double blink now and then.
+        let cycle = t.truncatingRemainder(dividingBy: 4.5)
+        let blink = !reduceMotion && mood != .happy && (cycle < 0.12 || (Int(t / 4.5) % 3 == 0 && cycle > 0.22 && cycle < 0.32))
+        let tilt = mood == .thinking ? 4.0 : Double(look.width) * 6
 
         return ZStack(alignment: .bottom) {
-            // Shadow on the floor shrinks when he jumps.
             Ellipse()
-                .fill(Color.black.opacity(0.18))
-                .frame(width: size * 0.7 * (1 - min(hop / size, 0.3)), height: size * 0.09)
+                .fill(Color.black.opacity(0.14))
+                .frame(width: size * 0.66 * (1 - min(hop / size, 0.3)), height: size * 0.08)
                 .blur(radius: 3)
 
             character(blink: blink, time: t)
-                .scaleEffect(x: 2 - squash, y: squash, anchor: .bottom)
-                .rotationEffect(.degrees(sway + wiggle), anchor: .bottom)
-                .offset(y: lift - size * 0.06)
+                .scaleEffect(x: (2 - squash) / breath, y: squash * breath, anchor: .bottom)
+                .rotationEffect(.degrees(tilt), anchor: .bottom)
+                .offset(y: -hop - size * 0.05)
+                .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.8), value: tilt)
         }
         .frame(width: size, height: size * 1.12, alignment: .bottom)
     }
@@ -61,48 +65,51 @@ struct MoffyView: View {
 
         return ZStack {
             RoundedRectangle(cornerRadius: corner, style: .continuous)
-                .fill(Theme.pinkDeep)
+                .fill(Theme.moffyDeep)
                 .offset(y: size * 0.035)
             RoundedRectangle(cornerRadius: corner, style: .continuous)
-                .fill(LinearGradient(colors: [Theme.pinkLight, Theme.pink],
-                                     startPoint: .top, endPoint: .bottom))
+                .fill(LinearGradient(colors: [Theme.moffyLight, Theme.moffy], startPoint: .top, endPoint: .bottom))
             Capsule()
-                .fill(Color.white.opacity(0.35))
-                .frame(width: size * 0.42, height: size * 0.05)
-                .offset(x: -size * 0.08, y: -size * 0.39)
+                .fill(Color.white.opacity(0.32))
+                .frame(width: size * 0.4, height: size * 0.045)
+                .offset(x: -size * 0.08, y: -size * 0.38)
             HStack(spacing: size * 0.2) {
                 MoffyEye(mood: mood, blink: blink, size: size, side: -1)
                 MoffyEye(mood: mood, blink: blink, size: size, side: 1)
             }
             .offset(x: eyeShift.width, y: eyeShift.height - size * 0.06)
+            .animation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.8), value: look)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: mood)
             if mood == .thinking {
                 ThinkingDots(time: t, size: size)
-                    .offset(x: size * 0.42, y: -size * 0.55)
+                    .offset(x: size * 0.4, y: -size * 0.56)
+                    .transition(.opacity)
             }
         }
         .frame(width: size, height: size * 0.92)
     }
 
+    /// One small, quick hop: the "I've got something!" moment.
     private func jump() {
-        withAnimation(.spring(response: 0.18, dampingFraction: 0.55)) {
-            hop = size * 0.22
-            squash = 1.06
+        guard !reduceMotion else { return }
+        withAnimation(.easeOut(duration: 0.16)) {
+            hop = size * 0.14
+            squash = 1.04
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.17) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.45)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.62)) {
                 hop = 0
-                squash = 0.88
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.14) {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.4)) { squash = 1 }
+                squash = 1
             }
         }
     }
 
-    private func squish() {
-        withAnimation(.easeOut(duration: 0.07)) { squash = 0.93 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-            withAnimation(.spring(response: 0.22, dampingFraction: 0.45)) { squash = 1 }
+    /// A tiny dip on each spoken word.
+    private func nod() {
+        guard !reduceMotion else { return }
+        withAnimation(.easeOut(duration: 0.08)) { squash = 0.975 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) {
+            withAnimation(.easeOut(duration: 0.18)) { squash = 1 }
         }
     }
 }
@@ -115,12 +122,11 @@ private struct MoffyEye: View {
     let side: CGFloat
 
     var body: some View {
-        switch mood {
-        case .happy:
+        if mood == .happy {
             HappyEye()
                 .stroke(Color.white, style: StrokeStyle(lineWidth: size * 0.065, lineCap: .round, lineJoin: .round))
                 .frame(width: size * 0.15, height: size * 0.08)
-        default:
+        } else {
             Capsule()
                 .fill(Color.white)
                 .frame(width: size * 0.085, height: height)
@@ -150,6 +156,7 @@ private struct HappyEye: Shape {
     }
 }
 
+/// Three dots that rise and fall slowly while Moffy thinks. Still with Reduce Motion.
 private struct ThinkingDots: View {
     let time: Double
     let size: CGFloat
@@ -158,9 +165,9 @@ private struct ThinkingDots: View {
         HStack(spacing: size * 0.04) {
             ForEach(0..<3, id: \.self) { i in
                 Circle()
-                    .fill(Theme.pink)
-                    .frame(width: size * 0.07, height: size * 0.07)
-                    .offset(y: CGFloat(sin(time * 5 - Double(i) * 0.8)) * size * 0.04)
+                    .fill(Theme.moffy)
+                    .frame(width: size * 0.065, height: size * 0.065)
+                    .opacity(0.45 + 0.55 * max(0, sin(time * 3 - Double(i) * 0.9)))
             }
         }
     }
@@ -178,5 +185,5 @@ private struct ThinkingDots: View {
         }
     }
     .padding()
-    .background(Theme.cream)
+    .background(Theme.surface)
 }

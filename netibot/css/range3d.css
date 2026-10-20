@@ -163,3 +163,13 @@
 
 /* The world's HUD stays out of the way while the range is on screen. */
 body.r3d-on #hud, body.r3d-on #touch, body.r3d-on #overlay, body.r3d-on #minimap { visibility: hidden; }
+/* The full course's results card on a short phone screen: the stages in two columns, so the
+   button stays on screen. */
+@media (max-height: 520px) {
+  .mini .r3-res { font-size: 12px; margin-top: 2px; }
+  .mini .r3-res tbody { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+  .mini .r3-res tr { display: flex; gap: 6px; justify-content: space-between; }
+  .mini .r3-res td { padding: 1px 2px; }
+  .mini .box:has(.r3-res) p { margin: 3px 0; font-size: 13px; }
+  .mini .box:has(.r3-res) .result-big { font-size: 34px; }
+}

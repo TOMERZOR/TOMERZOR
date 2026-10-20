@@ -103,7 +103,7 @@ final class Helper: ObservableObject {
 
     func sayAgain() {
         guard phase == .ready, let reply else { return }
-        speaker.speak(reply.say, language: settings.lang, speed: settings.speechSpeed * 0.9)
+        speaker.speak(reply.spoken, language: settings.lang, speed: settings.speechSpeed * 0.9)
     }
 
     /// Clears the conversation and the card, quietly.
@@ -126,8 +126,8 @@ final class Helper: ObservableObject {
     private func prepareVoice() {
         var lines: [(text: String, language: AppLanguage)] = []
         for language in AppLanguage.allCases {
-            for kind in FixedLine.allCases { lines.append((Self.line(kind, language).say, language)) }
-            for kind in AccessLine.allCases { lines.append((Self.accessLine(kind, language).say, language)) }
+            for kind in FixedLine.allCases { lines.append((Self.line(kind, language).spoken, language)) }
+            for kind in AccessLine.allCases { lines.append((Self.accessLine(kind, language).spoken, language)) }
             lines.append((Self.voiceSample(language), language))
         }
         MoffyVoice.prepare(lines)
@@ -175,7 +175,7 @@ final class Helper: ObservableObject {
     private func show(_ newReply: MoffyReply, speak: Bool) {
         reply = newReply
         if speak && settings.readAloud {
-            speaker.speak(newReply.say, language: settings.lang, speed: settings.speechSpeed)
+            speaker.speak(newReply.spoken, language: settings.lang, speed: settings.speechSpeed)
         }
     }
 
@@ -184,6 +184,12 @@ final class Helper: ObservableObject {
     enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other }
 
     static func line(_ kind: FixedLine, _ language: AppLanguage) -> MoffyReply {
+        var reply = plainLine(kind, language)
+        if language == .hebrew { reply.speak = HebrewVoice.vocalized(reply.say) }
+        return reply
+    }
+
+    private static func plainLine(_ kind: FixedLine, _ language: AppLanguage) -> MoffyReply {
         let he = language == .hebrew
         func t(_ en: String, _ hebrew: String) -> String { he ? hebrew : en }
         switch kind {

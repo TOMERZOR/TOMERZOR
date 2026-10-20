@@ -154,7 +154,7 @@ async function ask(
     // Only answers count against the free questions, and only Moffy's own answers get a new voice clip.
     await check.count();
     if (env.USAGE) {
-      const said = `said:${await sha256(`${VOICES[language]}|${VOICE_MODEL}|${reply.say.trim()}`)}`;
+      const said = `said:${await sha256(`${VOICES[language]}|${VOICE_MODEL}|${reply.speak.trim()}`)}`;
       ctx.waitUntil(env.USAGE.put(said, "1", { expirationTtl: 7 * 86_400 }));
     }
     return json({ reply, raw: answer, access: check.access });
@@ -176,6 +176,8 @@ async function ask(
 
 interface Reply {
   say: string;
+  /** The same words written for the voice: nikud where a Hebrew word could be misread. */
+  speak: string;
   caption: string;
   mood: "happy" | "explaining" | "thinking" | "worried";
   step: number;
@@ -190,6 +192,7 @@ function parseReply(text: string): Reply | null {
     const point = data.point;
     return {
       say: data.say,
+      speak: typeof data.speak === "string" && data.speak.trim() ? data.speak : data.say,
       caption: data.caption,
       mood: (["happy", "explaining", "thinking", "worried"] as const).includes(data.mood as Reply["mood"])
         ? (data.mood as Reply["mood"])

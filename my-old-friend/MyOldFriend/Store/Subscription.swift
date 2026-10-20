@@ -110,6 +110,12 @@ extension Helper {
     enum AccessLine: CaseIterable { case trialOver, dailyLimit }
 
     static func accessLine(_ kind: AccessLine, _ language: AppLanguage) -> MoffyReply {
+        var reply = plainAccessLine(kind, language)
+        if language == .hebrew { reply.speak = HebrewVoice.vocalized(reply.say) }
+        return reply
+    }
+
+    private static func plainAccessLine(_ kind: AccessLine, _ language: AppLanguage) -> MoffyReply {
         let he = language == .hebrew
         func t(_ en: String, _ hebrew: String) -> String { he ? hebrew : en }
         switch kind {

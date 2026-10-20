@@ -6,6 +6,8 @@ import UIKit
 struct MoffyReply: Identifiable, Equatable {
     let id = UUID()
     var say: String
+    /// The same words written for the voice (Hebrew nikud where a word could be misread). Empty means use `say`.
+    var speak: String = ""
     var caption: String
     var mood: MoffyMood
     /// Where to point, from 0 to 1 across and down the camera picture. Nil means don't point.
@@ -19,6 +21,9 @@ struct MoffyReply: Identifiable, Equatable {
     var raw: String = ""
     /// Subscription or free questions left, from the server.
     var access: ServerAccess? = nil
+
+    /// What the voice reads.
+    var spoken: String { speak.isEmpty ? say : speak }
 
     /// A step is waiting to be done, so the main button offers "Done, next step".
     var isOpenStep: Bool { step > 0 && !finished }
@@ -57,6 +62,7 @@ extension MoffyReply {
             let label: String
         }
         let say: String
+        let speak: String?
         let caption: String
         let mood: String
         let step: Int
@@ -81,7 +87,7 @@ extension MoffyReply {
         if wire.point.visible {
             point = CGPoint(x: min(max(wire.point.x, 0.02), 0.98), y: min(max(wire.point.y, 0.02), 0.98))
         }
-        return MoffyReply(say: wire.say, caption: wire.caption, mood: mood,
+        return MoffyReply(say: wire.say, speak: wire.speak ?? "", caption: wire.caption, mood: mood,
                           point: point, pointLabel: wire.point.label,
                           step: max(wire.step, 0), finished: wire.finished, raw: text)
     }

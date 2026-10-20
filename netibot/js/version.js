@@ -1,2 +1,2 @@
 // The build, stamped by tools/stamp.py (phones online compare it).
-const NETIBOT_VER = '202610201113';
+const NETIBOT_VER = '202610201211';

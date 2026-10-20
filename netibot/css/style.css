@@ -989,3 +989,5 @@ body.touch #kashag-tap .kt-foot kbd { display: none; }
   #race .rc-res td.rc-cn { display: none; }
 }
 @media (pointer: coarse) { #race [data-m=quick] small { display: none; } }
+/* The battery commander's power-up (js/events.js baumPowerUp): lightning flashes. */
+#pw-flash { position: fixed; inset: 0; z-index: 70; pointer-events: none; background: radial-gradient(circle at 50% 40%, rgba(255,255,255,.95), rgba(190,220,255,.6) 45%, rgba(120,60,255,.25)); opacity: 0; transition: opacity 40ms; }

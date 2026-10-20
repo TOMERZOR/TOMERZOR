@@ -2045,6 +2045,18 @@ const Scene3D = {
       ring.position.y = 0.03;
       g.add(ring);
       g.userData.ring = ring;
+      g.add(this.beam(0xff4a3a));
+      return g;
+    }, now);
+    this.hideMeshes = this.hideMeshes || new Map();
+    this.syncSmall(b && b.phase === 'hide' && G.player.carry === 'food' ? Events.hideSpots() : [], this.hideMeshes, () => {
+      const g = new THREE.Group();
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.72, 28), new THREE.MeshBasicMaterial({ color: 0x3ee05a, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+      ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04;
+      g.add(ring); g.userData.ring = ring;
+      const em = this.label('🤫', { bg: 'rgba(0,0,0,0)', size: 0.9 });
+      em.position.set(0, 0.75, 0); g.add(em); g.userData.bob = em;
+      g.add(this.beam(0x3ee05a));
       return g;
     }, now);
 
@@ -2309,6 +2321,12 @@ const Scene3D = {
     }, (p, m) => { m.position.set(p.x * S3, 0.5 + Math.sin(now / 300 + p.x) * 0.1, p.y * S3); m.rotation.y = now / 700; });
   },
 
+  // A thin glowing pillar of light, to find something from across the site.
+  beam(color) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.16, 7, 8, 1, true), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.32, depthWrite: false, side: THREE.DoubleSide }));
+    m.position.y = 3.5;
+    return m;
+  },
   syncSmall(list, map, make, now) {
     const alive = new Set(list);
     for (const [k, m] of map) if (!alive.has(k)) { this.root.remove(m); map.delete(k); }

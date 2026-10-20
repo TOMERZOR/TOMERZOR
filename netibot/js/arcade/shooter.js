@@ -1283,7 +1283,7 @@ const ShooterGame = {
     else if (p.isMe) {
       this.myShots.push(shot);
       // A guest sees its own hit at once (and what it should take off); the host decides.
-      if (hit.who) { this.hm = 0.25; this.hmKill = false; Sound.synth.tone(hit.head ? 2400 : 1500, 0.05, 'triangle', hit.head ? 0.12 : 0.08); this.dmgNum(hit, this.dmgCalc(hit.who, this.shotDmg(p, W, dist), !!hit.head).hp, !!hit.head, hit.who); }
+      if (hit.who && hit.who.team !== p.team) { this.hm = 0.25; this.hmKill = false; Sound.synth.tone(hit.head ? 2400 : 1500, 0.05, 'triangle', hit.head ? 0.12 : 0.08); this.dmgNum(hit, this.dmgCalc(hit.who, this.shotDmg(p, W, dist), !!hit.head).hp, !!hit.head, hit.who); }
     }
     // Everyone near hears it (the bots learn where you are).
     this.heard(p);
@@ -1643,6 +1643,8 @@ const ShooterGame = {
   // A hit (the host decides): base damage from the shooter's gun (or a grenade), where it hit.
   damage(v, from, base, head, at) {
     if (!v.alive || this.st !== 'live') return;
+    // No friendly fire: a teammate's shot (or grenade) does nothing; only your own grenade hurts you.
+    if (from && from !== v && from.team === v.team) return;
     const c = this.dmgCalc(v, base, head), dmg = c.hp;
     v.armor = Math.max(0, (v.armor || 0) - c.ar);
     v.hp -= dmg; v.hurtAt = this.t;

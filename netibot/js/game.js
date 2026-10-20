@@ -566,8 +566,9 @@ const Game = {
   },
   update(dt) {
     const S = G.state, P = G.player;
-    // The clock (and the day's events) wait while the controls tutorial is on.
-    if (!Tutorial.active) S.clock += dt * DATA.minutesPerSecond;
+    // The clock (and the day's events) wait while the controls tutorial is on, and through a
+    // boss fight (no alerts, shifts or errands start mid-fight; the day picks up after).
+    if (!Tutorial.active && !Boss.active) S.clock += dt * DATA.minutesPerSecond;
     // Stuck inside something solid (an old save, a prop that moved onto a spot): after a
     // moment there, step out to the nearest free tile.
     if (!P.sit && !Story.ctl && World.blocked(P.x, P.y, P.r)) {

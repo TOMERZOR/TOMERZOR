@@ -575,12 +575,16 @@ const Events = {
       ]));
   },
   hideSpots() {
-    const spots = [];
-    World.lockers.forEach((l, i) => { const sp = lockerSpot(i); spots.push({ id: 'locker' + i, x: sp.x, y: sp.y, label: 'להחביא בלוקר', r: 30 }); });
-    spots.push({ id: 'freezer', ...SPOTS.fridge, label: 'להחביא במקפיא — {@bc} לא פותחת מקפיאים' });
-    spots.push({ id: 'generator', ...SPOTS.generator, label: 'להחביא מאחורי הגנרטור', r: 44 });
-    spots.push({ id: 'store', ...SPOTS.store, label: 'להחביא במחסן הרספ"ייה', r: 44 });
-    return spots.filter(h => (this.baum.used[h.id] || 0) < 2);
+    const b = this.baum;
+    if (!b.spots) {
+      const spots = [];
+      World.lockers.forEach((l, i) => { const sp = lockerSpot(i); spots.push({ id: 'locker' + i, x: sp.x, y: sp.y, label: 'להחביא בלוקר', r: 30 }); });
+      spots.push({ id: 'freezer', ...SPOTS.fridge, label: 'להחביא במקפיא — {@bc} לא פותחת מקפיאים' });
+      spots.push({ id: 'generator', ...SPOTS.generator, label: 'להחביא מאחורי הגנרטור', r: 44 });
+      spots.push({ id: 'store', ...SPOTS.store, label: 'להחביא במחסן הרספ"ייה', r: 44 });
+      b.spots = spots;
+    }
+    return b.spots.filter(h => (b.used[h.id] || 0) < 2);
   },
   pickFood(f) {
     f.carried = true;
@@ -655,24 +659,107 @@ const Events = {
     // What stayed hidden turns into a feast tonight.
     G.state.dayFlags.feast = b.food.length - seen.length;
     this.baum = null;
-    // In the story it's the day's showdown: p_liran tells her, she stays, and there's time
-    // to bring the things that will break her.
-    if (!b.coop && Story.has('b_boss')) {
-      await UI.talk([
-        { who: 'p_liran', text: 'המפקדת! המפקדת! {first} קרא ספר בשמירה! ספר עם תמונות! על מיירטים! אוגה!' },
-        { who: 'bc', text: '...ספר. בשמירה. ב־ש־מ־י־ר־ה. אני לא נוסעת. אני הולכת לנשום במשרד. וכשאני חוזרת — מישהו פה מקבל.' },
-        { who: 'p_shalev', text: '*לוחש* יש רק דבר אחד שהיא לא עומדת בו: תרבות מזרחית. קריוקי, גרעינים, הפוסטר, הבבא סאלי. [תאסוף/תאספי] מהר מהחבר\'ה ו[תלך/תלכי] אליה.' },
-      ]);
-      Game.setNpcSpot('bc', BossArcs.BC_SPOT());
-      return;
-    }
-    // p_liran can't keep it to himself, and she has never been told anything worse.
-    if (!b.coop && !G.state.flags.baumBoss && Cast.get('p_liran') && !Multi.taken().has('p_liran') && Math.random() < 0.5) {
-      Boss.startOther('baum');
+    // In the story it's her showdown: the whole platoon in a half circle in front of her, she
+    // asks what they did today, p_liran tells her, and she powers up into the boss.
+    if (!b.coop && (Story.has('b_boss') || !G.state.flags.baumBoss) && Cast.get('p_liran') && !Multi.taken().has('p_liran')) {
+      await this.baumCircle();
       return;
     }
     Game.setNpcSpot('bc', SPOTS.gate);
     setTimeout(() => Game.removeVisitor('bc'), 9000);
+  },
+  // The end of the inspection in the story: everyone at the site stands in a half circle in
+  // front of her (a film scene with the cinema camera), the question, p_liran's answer, the
+  // power-up — she grows into the monster — and her boss fight starts right there.
+  async baumCircle() {
+    const bc = Game.npc('bc');
+    if (!bc) { Boss.startOther('baum'); return; }
+    const P = G.player, T = TS;
+    const c = { x: bc.x, y: bc.y };
+    // The platoon (not visitors or passers-by), p_liran in the middle-right so the camera finds him.
+    const all = G.npcs.filter(n => !n.visitor && !n.curious && n.person && n.id !== 'bc' && n.id !== 'inspector');
+    const lir = all.find(n => n.id === 'p_liran');
+    let crew = all.filter(n => n !== lir).slice(0, lir ? 9 : 10);
+    if (lir) crew.splice(Math.min(crew.length, Math.ceil(crew.length / 2) + 1), 0, lir);
+    const n = crew.length + 1, R = 3.4 * T;
+    const spots = [];
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI * (0.12 + 0.76 * (n === 1 ? 0.5 : i / (n - 1)));
+      let r = R, x, y;
+      do { x = c.x + Math.cos(a) * r; y = c.y + Math.sin(a) * r; r -= 0.3 * T; } while (World.blocked(x, y, 12) && r > 1.4 * T);
+      spots.push({ x, y });
+    }
+    const mid = Math.floor(n / 2);
+    await new Promise(ok => UI.fade(() => {
+      const place = (e, s) => { e.x = s.x; e.y = s.y; e.vx = e.vy = 0; e.angle = Math.atan2(c.y - s.y, c.x - s.x); };
+      let k = 0;
+      for (let i = 0; i < n; i++) {
+        if (i === mid) { place(P, spots[i]); continue; }
+        const e = crew[k++];
+        if (!e) continue;
+        place(e, spots[i]); e.path = []; e.spot = { x: spots[i].x, y: spots[i].y }; e.idle = 6;
+      }
+      bc.path = []; bc.angle = Math.PI / 2;
+      ok();
+    }));
+    const V = (e, h = 1.5) => [e.x * S3, h, e.y * S3];
+    const toward = (from, to, d, h) => { const dx = to.x - from.x, dy = to.y - from.y, l = Math.hypot(dx, dy) || 1; return [(from.x + dx / l * d) * S3, h, (from.y + dy / l * d) * S3]; };
+    const liran = Game.npc('p_liran') || P;
+    const shots = {
+      wide: { from: [c.x * S3, 9.5, (c.y + R + 1.4 * T) * S3], end: [c.x * S3, 8.6, (c.y + R + 0.9 * T) * S3], at: [c.x * S3, 0.8, (c.y + R * 0.45) * S3], dur: 9000 },
+      bc: { from: toward(c, P, 1.7 * T, 1.75), end: toward(c, P, 1.45 * T, 1.7), at: V(bc, 1.55), dur: 7000 },
+      liran: { from: toward(liran, c, 1.5 * T, 1.7), end: toward(liran, c, 1.3 * T, 1.65), at: V(liran, 1.5), dur: 6000 },
+      crew: { from: toward(c, P, 0.6 * T, 2.2), end: toward(c, P, 0.8 * T, 2.0), at: V(P, 1.2), dur: 8000 },
+      power: { from: [(c.x + 1.6 * T) * S3, 0.5, (c.y + 2.6 * T) * S3], end: [(c.x + 1.1 * T) * S3, 0.4, (c.y + 3.1 * T) * S3], at: V(bc, 2.6), dur: 6000 },
+    };
+    UI.cinema(true, (line) => shots[line.shot || (line.who === 'bc' ? 'bc' : line.who === 'p_liran' ? 'liran' : 'crew')]);
+    await UI.talk([
+      { who: 'narrator', shot: 'wide', text: 'כל הפלגה בחצי גורן מול {@bc}. אף אחד לא זז. אפילו {@p_nevo} עומד ישר.' },
+      { who: 'bc', text: 'יפה. ביקורת נגמרה. ועכשיו — שאלה אחת, ואני רוצה תשובה כנה. מה עשיתם היום?' },
+      { who: 'commander', text: 'המפקדת, סדר יום רגיל. מסדר, שמירות, החלפת מארזים—' },
+      { who: 'bc', text: 'לא שאלתי אותך. שאלתי אותם. {platoon}? מה. עשיתם. היום?' },
+      { who: 'p_nevo', shot: 'crew', text: '...נשמנו?' },
+      { who: 'p_liran', text: 'אני קראתי ספר בשמירה!!! ספר עם תמונות! על מיירטים! סיימתי שני פרקים! אוגה!' },
+      { who: 'narrator', shot: 'crew', text: 'שקט. מישהו מאחור משתעל. {@p_shalev} סוגר את העיניים.' },
+      { who: 'bc', text: '...ספר. בשמירה. ב־ש־מ־י־ר־ה.' },
+    ]);
+    await this.baumPowerUp(bc, shots.power);
+    UI.cinema(false);
+    // Straight into her fight: what was left to prepare doesn't matter now.
+    for (const id of BossArcs.ARCS.baum) { const t = Story.tasks.find(x => x.id === id && !x.done && !BOSS_PREP[id].fight); if (t) t.done = true; }
+    Boss.startOther('baum', { skipIntro: true });
+  },
+  // POWER UP: the camera low at her feet, the ground shaking, lightning flashes, a rising roar,
+  // and she grows three times her size before the fight takes over.
+  baumPowerUp(bc, shot) {
+    const m = Scene3D.models && Scene3D.models.get(bc);
+    Scene3D.setShot(shot);
+    UI.banner(fmt('⚡ POWER UP ⚡<small>{@bc} נהיית מפלצת נהלים</small>'));
+    Sound.horn();
+    const S = Sound.synth;
+    S.tone(70, 2.4, 'sawtooth', 0.12, 260); S.noise(2.4, 0.18, 500, 'lowpass');
+    let fl = document.querySelector('#pw-flash');
+    if (!fl) { fl = document.createElement('div'); fl.id = 'pw-flash'; document.body.appendChild(fl); }
+    return new Promise(ok => {
+      const t0 = performance.now(), D = 2600;
+      const step = () => {
+        const k = Math.min(1, (performance.now() - t0) / D);
+        if (m) {
+          const s = 1 + 2.2 * k * k;
+          m.root.scale.setScalar(s * (1 + Math.sin(k * 60) * 0.03 * (1 - k)));
+          m.root.position.x += (Math.random() - 0.5) * 0.06 * k;
+        }
+        G.shake = 0.5 * k;
+        fl.style.opacity = Math.random() < 0.12 + 0.3 * k ? String(0.5 + Math.random() * 0.4) : '0';
+        if (k < 1) { requestAnimationFrame(step); return; }
+        fl.style.opacity = '0';
+        setTimeout(() => fl.remove(), 300);
+        UI.banner(null);
+        S.tone(1800, 0.4, 'square', 0.08, 120); S.noise(0.9, 0.3, 1200);
+        ok();
+      };
+      step();
+    });
   },
   // Multiplayer: start the inspection for everyone at Netivot, or join one that is running.
   startBaumCoop() { this.startBaum({ id: Date.now() }); },

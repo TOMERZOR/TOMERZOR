@@ -356,6 +356,16 @@ const Story = {
   objective() {
     if (G.alert) return null;
     if (Tutorial.active) return Tutorial.objective();
+    // The battery commander is on her way: everything else waits until she has been and gone.
+    const bm = Events.baum;
+    if (bm && bm.phase === 'hide' && World.id === 'netivot') {
+      const left = bm.food.filter(f => !f.hidden).length, carry = G.player.carry === 'food';
+      return {
+        text: fmt(`🍕 נוהל אנה פרנק — להחביא את האוכל (${bm.food.length - left}/${bm.food.length})`),
+        target: baumTarget(), urgent: true,
+        how: carry ? 'להחביא: לוקר, מקפיא, מאחורי הגנרטור או במחסן הרספ"ייה (הקרן הירוקה) — E' : 'להרים את האוכל שליד הקרן האדומה — E',
+      };
+    }
     const t = this.current();
     if (!t) return { text: World.id === 'netivot' ? 'אין משימות. אפשר להסתובב, להתאמן או ללכת לישון.' : 'אין משימות כאן. תחנת ההסעות מחזירה לנתיבות.', target: World.id === 'netivot' ? null : travelSpot() };
     const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';
@@ -389,7 +399,7 @@ const Story = {
   update(dt) {
     const S = G.state;
     // Scheduled alerts wait for the player to be free.
-    if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !this.gateShift?.car && World.id !== 'field') {
+    if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.gateShift?.car && World.id !== 'field') {
       this.pendingAlerts.shift();
       this.alert(false);
     }
@@ -423,7 +433,7 @@ const Story = {
         this.complete('lineup', -8, 'פספסת את מסדר הבוקר');
       }
     }
-    if (S.clock >= 25 * 60 + 30 && !UI.busy && !Mini.active && !G.alert && !S.dayFlags.ending) {
+    if (S.clock >= 25 * 60 + 30 && !UI.busy && !Mini.active && !G.alert && !Boss.active && !S.dayFlags.ending) {
       S.dayFlags.ending = true;
       UI.toast('נרדמת בעמידה... 😴', 'bad');
       this.endDay(true);
@@ -792,6 +802,7 @@ const Story = {
   },
   warpTarget() {
     if (G.alert || Boss.active || this.ctl || this.run || Mini.active || UI.busy || G.paused || !G.running) return null;
+    if (Events.baum && Events.baum.phase === 'hide') return null; // no jumping off mid-inspection
     const t = this.current();
     if (!t) return null;
     const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';

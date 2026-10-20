@@ -1,0 +1,122 @@
+/* The Gonni heist (js/heist.js): the planning board, the HUD, the cinema, the photo, the keypad. */
+#arcade .hs-hud { position: absolute; inset: 0; pointer-events: none; }
+#arcade .hs-hud .hidden { display: none !important; }
+#arcade .hs-obj { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 260px); text-align: center; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#arcade .hs-stat { top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); font-size: 15px; white-space: nowrap; }
+#arcade .hs-stat.hs-red { background: linear-gradient(180deg, #8a1410, #4a0806); border-color: #ff6a5a; animation: hs-blink .6s steps(2) infinite; }
+@keyframes hs-blink { 50% { filter: brightness(1.5); } }
+#arcade .hs-hint { position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 56px); transform: translateX(-50%); font-weight: 900; font-size: 17px; color: var(--gold-hi); text-shadow: 0 2px 3px #000, 0 0 10px #000; white-space: nowrap; }
+#arcade .hs-meter { position: absolute; left: 50%; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 90px); transform: translateX(-50%); width: min(320px, 60vw); text-align: center; font-weight: 800; text-shadow: 0 2px 2px #000; }
+#arcade .hs-meter i { display: block; height: 12px; margin-top: 3px; border-radius: 8px; background: rgba(0,0,0,.6); border: 2px solid var(--trim); overflow: hidden; }
+#arcade .hs-meter b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold-lo), var(--gold-hi)); transition: width .08s linear; }
+#arcade .hs-fire { position: absolute; pointer-events: auto; right: calc(max(18px, env(safe-area-inset-right)) + 262px); bottom: max(28px, env(safe-area-inset-bottom)); width: 70px; height: 70px; border-radius: 50%; border: 3px solid #ffb4a8; background: radial-gradient(circle at 40% 35%, #e8463a, #8a1410); color: #fff; font-size: 30px; box-shadow: 0 4px 12px rgba(0,0,0,.5); }
+#arcade .hs-fire:active { transform: scale(.92); }
+
+/* ---------- the planning board ---------- */
+body.hs-noctl #touch { display: none !important; }
+#arcade .hs-board { position: absolute; inset: 0; pointer-events: auto; display: flex; align-items: center; justify-content: center; padding: max(8px, env(safe-area-inset-top)) 60px max(8px, env(safe-area-inset-bottom)); background: radial-gradient(circle at 50% 50%, rgba(10,8,4,.2), rgba(10,8,4,.75)); }
+#arcade .hs-bd { width: min(1040px, 100%); max-height: 100%; overflow-y: auto; padding: 12px 14px; border-radius: 16px; border: 2px solid var(--trim); box-shadow: 0 16px 40px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.06);
+  background: linear-gradient(180deg, rgba(40,30,18,.88), rgba(20,16,10,.94)), url(../assets/heist/board.jpg) center / cover; text-align: center; }
+#arcade .hs-bhead h2 { margin: 0; color: var(--gold-hi); font-size: 24px; text-shadow: 0 2px 0 #3a2600; }
+#arcade .hs-bhead p { margin: 2px 0 10px; opacity: .9; font-size: 14px; }
+#arcade .hs-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+#arcade .hs-card { position: relative; display: flex; flex-direction: column; background: #f3ead2; color: #2a2010; border-radius: 6px; overflow: hidden; box-shadow: 0 6px 14px rgba(0,0,0,.5); transform: rotate(-1deg); transition: transform .15s; }
+#arcade .hs-card:nth-child(2n) { transform: rotate(1.2deg); }
+#arcade .hs-card:hover { transform: rotate(0) translateY(-3px); }
+#arcade .hs-card::before { content: ''; position: absolute; top: 4px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff8a7a, #b0201a); box-shadow: 0 2px 3px rgba(0,0,0,.5); z-index: 1; }
+#arcade .hs-card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border-bottom: 3px solid #fff; }
+#arcade .hs-card.ok img { filter: saturate(.6) brightness(.9); }
+#arcade .hs-cbody { padding: 6px 8px 8px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+#arcade .hs-cbody b { font-size: 16px; }
+#arcade .hs-cbody i { font-style: normal; font-size: 12px; opacity: .85; flex: 1; }
+#arcade .hs-cbody em { font-style: normal; font-size: 12px; font-weight: 800; color: #1a5a2a; }
+#arcade .hs-tag { align-self: center; font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 10px; background: #e8dcb8; }
+#arcade .hs-card.req .hs-tag { background: #ffd8c8; color: #8a1a0a; }
+#arcade .hs-card.ok .hs-tag { background: #c8f0c8; color: #1a5a1a; }
+#arcade .hs-card.ok::after { content: '✔'; position: absolute; top: 18%; left: 50%; transform: translate(-50%, -50%) rotate(-14deg); font: 900 54px Rubik, sans-serif; color: rgba(40,160,60,.85); text-shadow: 0 2px 6px rgba(0,0,0,.4); pointer-events: none; }
+#arcade .hs-brow { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+#arcade .hs-crewl, #arcade .hs-apl { flex: 1; min-width: 240px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 12px; padding: 6px 8px; }
+#arcade .hs-crewl b, #arcade .hs-apl b { width: 100%; font-size: 13px; color: var(--gold); }
+#arcade .hs-crewl span { background: rgba(255,255,255,.08); border: 1px solid var(--line); border-radius: 14px; padding: 2px 10px; font-size: 14px; }
+#arcade .hs-crewl span.me { border-color: var(--gold); color: var(--gold-hi); }
+#arcade .hs-crewl small { opacity: .75; }
+#arcade .hs-ap { font: 800 14px Rubik, sans-serif; color: var(--ink); background: rgba(255,255,255,.08); border: 2px solid var(--line); border-radius: 10px; padding: 4px 10px; cursor: pointer; }
+#arcade .hs-ap.on { border-color: var(--gold); background: rgba(242,193,78,.25); color: var(--gold-hi); }
+#arcade .hs-ap.locked { opacity: .5; cursor: not-allowed; }
+#arcade .hs-go { margin-top: 10px; }
+#arcade .hs-start { font-size: 19px; padding: 10px 26px; }
+#arcade .hs-start.off { filter: grayscale(.8); opacity: .7; }
+#arcade .hs-wait { font-weight: 800; }
+
+/* The car picker. */
+#arcade .hs-cars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+#arcade .hs-car { display: flex; flex-direction: column; gap: 4px; align-items: center; background: rgba(0,0,0,.45); border: 2px solid var(--line); border-radius: 12px; padding: 8px; cursor: pointer; transition: border-color .15s, transform .15s; }
+#arcade .hs-car:hover { border-color: var(--gold); transform: translateY(-3px); }
+#arcade .hs-car img { width: 100%; max-height: 110px; object-fit: contain; }
+#arcade .hs-car b { font-size: 15px; color: var(--gold-hi); }
+#arcade .hs-car i { font-style: normal; font-size: 12px; opacity: .85; min-height: 2.4em; }
+#arcade .hs-bars { width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 3px 6px; align-items: center; font-size: 12px; }
+#arcade .hs-bars u { display: block; height: 8px; border-radius: 4px; background: linear-gradient(90deg, var(--gold) var(--v), rgba(255,255,255,.12) var(--v)); }
+
+/* ---------- the cinema: letterbox, stills, a line at a time ---------- */
+#arcade.hs-cinema .hs-hud > :not(.hs-board) { visibility: hidden; }
+#arcade.hs-cinema .hs-board { display: none !important; }
+#arcade .hs-cine { position: absolute; inset: 0; pointer-events: auto; z-index: 5; cursor: pointer; }
+#arcade .hs-cine::before, #arcade .hs-cine::after { content: ''; position: absolute; left: 0; right: 0; height: 10vh; background: #000; z-index: 2; pointer-events: none; animation: hs-bar .4s ease-out; }
+#arcade .hs-cine::before { top: 0; } #arcade .hs-cine::after { bottom: 0; }
+@keyframes hs-bar { from { transform: scaleY(0); } }
+#arcade .hs-still { position: absolute; inset: 0; background: #000; opacity: 0; transition: opacity .35s; overflow: hidden; }
+#arcade .hs-still.on { opacity: 1; }
+#arcade .hs-still img { width: 100%; height: 100%; object-fit: cover; animation: kenburns 14s ease-out forwards; }
+#arcade .hs-cap { z-index: 3; pointer-events: none; bottom: calc(10vh + 6px) !important; background: linear-gradient(180deg, rgba(10,12,10,.62), rgba(10,12,10,.86)); border-color: rgba(242,193,78,.45); box-shadow: none; }
+#arcade .hs-cap.hidden { display: none; }
+#arcade .hs-cap .txt { text-shadow: 0 2px 2px #000; min-height: 1.3em; }
+#arcade .hs-cap.nobody .hs-face { display: none; }
+#arcade .hs-face img, #arcade .hs-face .portrait-fallback, #arcade .hs-face .avatar { width: 92px; height: 92px; margin-top: -42px; border-radius: 14px; object-fit: cover; flex: none; border: 3px solid var(--gold); box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 8px 16px rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; font-size: 40px; background: radial-gradient(circle at 50% 35%, #6d7d45, var(--olive) 70%); }
+#arcade .hs-skip { position: absolute; z-index: 4; top: calc(10vh + 8px); right: max(10px, env(safe-area-inset-right)); font: 800 14px Rubik, sans-serif; color: var(--ink); background: rgba(0,0,0,.55); border: 1px solid var(--line); border-radius: 14px; padding: 4px 12px; cursor: pointer; }
+
+/* ---------- the photo through the window ---------- */
+#arcade .hs-cam { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s; }
+#arcade .hs-cam.on { opacity: 1; }
+#arcade .hs-cam::before { content: ''; position: absolute; inset: 4vh 4vw; border: 2px solid rgba(255,255,255,.35); border-radius: 18px; }
+#arcade .hs-ret { position: absolute; left: 50%; top: 50%; width: 22vmin; height: 22vmin; transform: translate(-50%, -50%); border: 3px solid rgba(255,255,255,.7); border-radius: 50%; }
+#arcade .hs-ret i { position: absolute; inset: 18%; border: 3px dashed rgba(255,255,255,.8); border-radius: 50%; transition: transform .08s linear; }
+#arcade .hs-cam.in .hs-ret { border-color: #5aff8a; box-shadow: 0 0 18px rgba(90,255,138,.5); }
+#arcade .hs-rec { position: absolute; top: calc(4vh + 10px); left: calc(4vw + 64px); color: #ff4a3a; font: 900 16px monospace; animation: hs-blink 1s steps(2) infinite; }
+#arcade .hs-flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+
+/* ---------- the safe's keypad ---------- */
+#arcade .hs-pad { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; background: rgba(0,0,0,.45); z-index: 4; }
+#arcade .hs-pad-in { background: linear-gradient(180deg, #4a5a34, #2a3420); border: 3px solid #1a2010; border-radius: 16px; padding: 12px; box-shadow: 0 14px 30px rgba(0,0,0,.6); width: min(260px, 70vw); }
+#arcade .hs-note { background: #ffe14a; color: #1a2a6a; font: 900 20px Rubik, sans-serif; padding: 4px; border-radius: 3px; transform: rotate(-3deg); margin-bottom: 8px; box-shadow: 0 3px 6px rgba(0,0,0,.4); }
+#arcade .hs-screen { background: #0a1a0a; color: #5aff8a; font: 900 30px monospace; letter-spacing: 10px; direction: ltr; padding: 4px; border-radius: 6px; margin-bottom: 8px; text-shadow: 0 0 8px #3aff6a; }
+#arcade .hs-pad.bad .hs-screen { color: #ff4a3a; animation: in-shake .35s; }
+#arcade .hs-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; direction: ltr; }
+#arcade .hs-keys button { font: 900 20px Rubik, sans-serif; padding: 8px 0; border-radius: 8px; border: 2px solid #1a1a1a; background: linear-gradient(180deg, #d8d8d0, #9a9a90); color: #1a1a1a; cursor: pointer; }
+#arcade .hs-keys button:active { transform: translateY(2px); }
+
+/* ---------- phones (844 × 390) ---------- */
+@media (max-height: 520px) {
+  #arcade .hs-board { padding: 6px 56px; }
+  #arcade .hs-bd { padding: 6px 8px; }
+  #arcade .hs-bhead h2 { font-size: 18px; } #arcade .hs-bhead p { margin: 0 0 4px; font-size: 12px; }
+  #arcade .hs-cards { gap: 6px; }
+  #arcade .hs-card img { aspect-ratio: 21 / 9; }
+  #arcade .hs-cbody { padding: 3px 5px 5px; gap: 2px; } #arcade .hs-cbody b { font-size: 13px; } #arcade .hs-cbody i { display: none; }
+  #arcade .hs-cbody .btn.small { padding: 3px 6px; font-size: 12px; }
+  #arcade .hs-card.ok::after { font-size: 36px; }
+  #arcade .hs-brow { margin-top: 5px; gap: 6px; } #arcade .hs-crewl, #arcade .hs-apl { padding: 3px 6px; gap: 4px; min-width: 200px; }
+  #arcade .hs-crewl span, #arcade .hs-ap { font-size: 12px; padding: 2px 7px; }
+  #arcade .hs-go { margin-top: 5px; } #arcade .hs-start { font-size: 15px; padding: 6px 16px; }
+  #arcade .hs-car img { max-height: 60px; } #arcade .hs-car i { font-size: 11px; }
+  #arcade .hs-obj, #arcade .hs-stat { font-size: 12px; padding: 3px 8px; }
+  #arcade .hs-obj { max-width: calc(100vw - 330px); }
+  #arcade .hs-hint { font-size: 14px; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 44px); }
+  body.touch #arcade .hs-hint { left: auto; right: 50%; transform: translateX(50%); max-width: calc(100vw - 380px); white-space: normal; text-align: center; }
+  #arcade .hs-meter { bottom: calc(max(10px, env(safe-area-inset-bottom)) + 72px); }
+  #arcade .hs-fire { right: calc(max(18px, env(safe-area-inset-right)) + 222px); width: 58px; height: 58px; font-size: 24px; }
+  #arcade .hs-cap { padding: 8px 10px 6px !important; } #arcade .hs-cap .txt { font-size: 14px; }
+  #arcade .hs-face img, #arcade .hs-face .portrait-fallback, #arcade .hs-face .avatar { width: 64px; height: 64px; margin-top: -30px; font-size: 28px; }
+  #arcade .hs-keys button { padding: 4px 0; font-size: 16px; } #arcade .hs-screen { font-size: 22px; } #arcade .hs-note { font-size: 15px; }
+}
+@media (max-width: 700px) { #arcade .hs-cards { grid-template-columns: repeat(2, 1fr); } #arcade .hs-cars { grid-template-columns: 1fr; } }

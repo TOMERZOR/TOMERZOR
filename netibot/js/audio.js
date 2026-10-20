@@ -304,10 +304,14 @@ const Sound = (() => {
     // The building blocks, for games that make their own effects (js/arcade/*):
     // tone(freq, dur, type, vol, slideTo), noise(dur, vol, cutoff, filterType, at, bus, q), later(ms, fn).
     synth: { tone: (...a) => tone(...a), noise: (...a) => noise(...a), later: (...a) => later(...a), now: () => (ensure() ? ctx.currentTime : 0) },
-    // The race: an engine whose pitch follows the speed (0..1, null to stop), bumps, beeps.
-    engine(level) {
+    // The race: an engine with a five-speed gearbox (level = speed 0..1, null to stop; gas = on
+    // the throttle). In each gear the revs climb with the speed; at the top of a gear it shifts up:
+    // the throttle lifts for a moment, a clunk, and the revs drop. Slowing down, it shifts down
+    // with a little throttle blip. this.gear is the gear it's in (1-5), for the speedometer.
+    engine(level, gas = true) {
       if (level == null || !prefs.sfx || !ensure()) {
         if (this._eng) { const e = this._eng; e.g.gain.setTargetAtTime(0, ctx.currentTime, 0.05); setTimeout(() => { try { e.o.stop(); e.o2.stop(); } catch (err) { /* stopped */ } }, 300); this._eng = null; }
+        if (level == null) this.gear = 1;
         return;
       }
       if (!this._eng) {
@@ -315,12 +319,37 @@ const Sound = (() => {
         o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = 0;
         o.connect(f); o2.connect(f); f.connect(g).connect(sfxBus);
         o.start(); o2.start();
-        this._eng = { o, o2, g };
+        this._eng = { o, o2, f, g, gear: 1, shiftT: 0 };
       }
       const t = ctx.currentTime, e = this._eng;
-      e.o.frequency.setTargetAtTime(48 + level * 150, t, 0.06);
-      e.o2.frequency.setTargetAtTime(24 + level * 75, t, 0.06);
-      e.g.gain.setTargetAtTime(0.025 + level * 0.035, t, 0.08);
+      // Where each gear tops out, as a share of the car's top speed (shorter low gears).
+      const TOP = [0, 0.2, 0.38, 0.56, 0.76, 1.02];
+      let shift = 0;
+      if (e.gear < 5 && level > TOP[e.gear] && gas) { e.gear++; shift = 1; }
+      else if (e.gear > 1 && level < TOP[e.gear - 1] - 0.05) { e.gear--; shift = -1; }
+      this.gear = e.gear;
+      const lo = e.gear === 1 ? 0 : TOP[e.gear - 1] - 0.05, hi = TOP[e.gear];
+      const rpm = (e.gear === 1 ? 0.16 : 0.32) + 0.68 * Math.max(0, Math.min(1, (level - lo) / (hi - lo)));
+      const hz = 42 + rpm * 165;
+      if (shift > 0) {
+        // Up: off the gas, clunk, the revs fall to the bottom of the next gear.
+        e.shiftT = t + 0.17;
+        e.g.gain.cancelScheduledValues(t); e.g.gain.setTargetAtTime(0.012, t, 0.02);
+        e.o.frequency.setTargetAtTime(hz, t + 0.05, 0.035); e.o2.frequency.setTargetAtTime(hz / 2, t + 0.05, 0.035);
+        noise(0.06, 0.07, 1400, 'bandpass', 0, null, 2); tone(140, 0.05, 'square', 0.035, 90);
+        if (e.gear >= 3) later(60, () => noise(0.18, 0.03, 3500, 'highpass'));
+      } else if (shift < 0) {
+        // Down: a blip of throttle, then the revs settle higher in the lower gear.
+        e.shiftT = t + 0.14;
+        e.o.frequency.setTargetAtTime(hz * 1.25, t, 0.03); e.o2.frequency.setTargetAtTime(hz * 0.62, t, 0.03);
+        e.g.gain.setTargetAtTime(0.06, t, 0.03);
+        noise(0.05, 0.05, 1200, 'bandpass', 0, null, 2);
+      }
+      if (t < e.shiftT) return;
+      e.o.frequency.setTargetAtTime(hz, t, 0.05);
+      e.o2.frequency.setTargetAtTime(hz / 2, t, 0.05);
+      e.f.frequency.setTargetAtTime(gas ? 700 + rpm * 900 : 500 + rpm * 400, t, 0.08);
+      e.g.gain.setTargetAtTime((gas ? 0.022 : 0.014) + rpm * (gas ? 0.04 : 0.022), t, 0.08);
     },
     bump() { noise(0.25, 0.45, 600); tone(95, 0.22, 'square', 0.1, 45); later(50, () => tone(1500, 0.07, 'triangle', 0.05)); },
     beep(hi) { tone(hi ? 1320 : 660, hi ? 0.55 : 0.2, 'square', 0.07); },

@@ -659,6 +659,7 @@ body.locked #rotate { display: none !important; }
 #race .rc-time { top: max(8px, env(safe-area-inset-top)); right: calc(max(8px, env(safe-area-inset-right)) + 210px); font: 900 16px monospace; }
 #race .rc-spd { top: calc(max(8px, env(safe-area-inset-top)) + 58px); right: max(8px, env(safe-area-inset-right)); font-size: 26px; color: var(--gold-hi); }
 #race .rc-spd small { font-size: 12px; color: var(--ink); }
+#race .rc-spd .rc-gear { display: inline-block; margin-inline-start: 8px; min-width: 22px; padding: 0 5px; border-radius: 6px; background: rgba(0,0,0,.45); border: 1px solid var(--gold); font-size: 16px; color: #fff; text-align: center; vertical-align: middle; }
 #race .rc-mini { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 54px); left: max(8px, env(safe-area-inset-left)); width: 120px; height: 120px; background: rgba(214,186,130,.55); border: 2px solid var(--trim); border-radius: 12px; }
 #race .rc-boost { position: absolute; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px); right: calc(max(12px, env(safe-area-inset-right)) + 12px); padding: 8px 14px; border-radius: 22px; border: 2px solid var(--gold-edge); background: #4a4a3a; color: var(--ink); font: 900 16px Rubik, sans-serif; cursor: pointer; }
 #race .rc-boost i { display: block; height: 5px; margin-top: 4px; background: rgba(0,0,0,.4); border-radius: 3px; overflow: hidden; }

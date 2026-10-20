@@ -1184,7 +1184,7 @@ const Race = {
     this.overtakes();
     this.draw(dt, t);
     this.hud();
-    if (this.me && this.phase !== 'map' && this.phase !== 'pick') Sound.engine(Math.min(1, Math.abs(this.me.v) / this.me.type.top));
+    if (this.me && this.phase !== 'map' && this.phase !== 'pick') Sound.engine(Math.min(1, Math.abs(this.me.v) / this.me.type.top), this.me.thr > 0 || this.me.nesT > 0);
     else Sound.engine(null);
     if (this.phase === 'done' && this.resultsAt && performance.now() > this.resultsAt) { this.resultsAt = null; this.results(); }
   },
@@ -1298,7 +1298,7 @@ const Race = {
     h.querySelector('.rc-lap').textContent = `סיבוב ${Math.min(RACE_LAPS, c.lap + 1)}/${RACE_LAPS}`;
     const tt = c.fin || Math.max(0, this.raceT);
     h.querySelector('.rc-time').textContent = `${Math.floor(tt / 60)}:${String(Math.floor(tt % 60)).padStart(2, '0')}.${Math.floor(tt * 10 % 10)}`;
-    h.querySelector('.rc-spd').innerHTML = `${Math.round(Math.abs(c.v) * 3.6)}<small> קמ"ש</small>`;
+    h.querySelector('.rc-spd').innerHTML = `${Math.round(Math.abs(c.v) * 3.6)}<small> קמ"ש</small><b class="rc-gear">${c.v < -0.5 ? 'R' : Sound.gear || 1}</b>`;
     const coins = `🪙 <b>${c.coins}</b><small>/10</small>`;
     const ce = h.querySelector('.rc-coins');
     if (ce.innerHTML !== coins) { ce.innerHTML = coins; ce.classList.remove('pop'); void ce.offsetWidth; ce.classList.add('pop'); }

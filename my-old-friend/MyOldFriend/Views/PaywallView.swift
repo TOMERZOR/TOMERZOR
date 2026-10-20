@@ -13,20 +13,20 @@ struct PaywallView: View {
     var body: some View {
         let store = helper.subscription
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 20) {
                 HStack {
                     Spacer()
-                    MoffyView(mood: .happy, size: 96)
+                    MoffyView(mood: .happy, size: 80)
                     Spacer()
                 }
-                .padding(.top, 40)
+                .padding(.top, 20)
 
                 Text(settings.t("Keep Moffy by your side", "מופי ממשיכה לעזור כל יום"))
                     .font(.ui(.largeTitle, .bold))
                     .foregroundStyle(Theme.ink)
                     .fixedSize(horizontal: false, vertical: true)
 
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 14) {
                     row("camera.viewfinder", settings.t("Help with any device, whenever you need it.",
                                                         "עזרה עם כל מכשיר, מתי שצריך."))
                     row("hand.point.up.left.fill", settings.t("One clear step at a time, out loud and in big letters.",
@@ -49,7 +49,7 @@ struct PaywallView: View {
             .padding(.bottom, 16)
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 12) {
+            VStack(spacing: 10) {
                 Text(settings.t("\(store.price) a month", "\(store.price) לחודש"))
                     .font(.ui(.title2, .bold))
                     .foregroundStyle(Theme.ink)

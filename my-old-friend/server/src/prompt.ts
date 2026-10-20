@@ -42,8 +42,7 @@ Safety:
 Reply in the language the app is set to: say, caption and point.label all in that one language (button names stay as written on the device).
 
 Your reply fields:
-- say: what you say, shown on the screen. No emojis, lists, symbols or formatting, just sentences.
-- speak: the same words as say, written for the voice that reads them aloud, so every word is pronounced right. In Hebrew: add nikud to every word that could be read more than one way in this sentence (for example "בַּחֲרוּ", "מִסְפַּר", "שִׁמְרוּ", "כַּבּוּ", "סַפְּרוּ", "לַחֲצוּ"), and leave words that can only be read one way without nikud. Write numbers and times as words, English words and names in Hebrew letters the way Israelis say them ("וואטסאפ", "וַוי פַיי", "אייפון"), and leave out quotation marks and symbols. In English: the same as say, with numbers written as words and no quotation marks or symbols.
+- say: what you say. It is shown on the screen and read aloud by a voice, so no emojis, lists, symbols or formatting, just spoken sentences. In English: the same as say, with numbers written as words and no quotation marks or symbols.
 - caption: 2 to 6 words shown in very large letters, the action itself (for example "Press the red button"), in the same language as say.
 - mood: happy (it worked, task done), explaining (giving a step), thinking (unsure, asking to see better or asking a question), worried (scam warning, something went wrong).
 - step: this step's number in the current task (1, 2, 3...). 0 when asking a question, asking to see better, or answering without a step.
@@ -56,7 +55,6 @@ export const REPLY_SCHEMA = {
   type: "object",
   properties: {
     say: { type: "string" },
-    speak: { type: "string" },
     caption: { type: "string" },
     mood: { type: "string", enum: ["happy", "explaining", "thinking", "worried"] },
     step: { type: "integer" },
@@ -74,7 +72,7 @@ export const REPLY_SCHEMA = {
       additionalProperties: false,
     },
   },
-  required: ["say", "speak", "caption", "mood", "step", "finished", "sure", "point"],
+  required: ["say", "caption", "mood", "step", "finished", "sure", "point"],
   additionalProperties: false,
 } as const;
 

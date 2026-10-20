@@ -38,7 +38,7 @@ const VOICES: Record<Language, string> = {
   he: "d4eLZ8u5dfBCsjp4YPyz",
   en: "zHGX9VSXpW8cGSDRCqy0",
 };
-const VOICE_MODEL = "eleven_v3";
+const VOICE_MODEL = "eleven_v4";
 
 const MAX_QUESTION = 2_000;
 const MAX_SPEAK = 1_500;
@@ -154,7 +154,7 @@ async function ask(
     // Only answers count against the free questions, and only Moffy's own answers get a new voice clip.
     await check.count();
     if (env.USAGE) {
-      const said = `said:${await sha256(`${VOICES[language]}|${VOICE_MODEL}|${reply.speak.trim()}`)}`;
+      const said = `said:${await sha256(`${VOICES[language]}|${VOICE_MODEL}|${reply.say.trim()}`)}`;
       ctx.waitUntil(env.USAGE.put(said, "1", { expirationTtl: 7 * 86_400 }));
     }
     return json({ reply, raw: answer, access: check.access });
@@ -176,8 +176,6 @@ async function ask(
 
 interface Reply {
   say: string;
-  /** The same words written for the voice: nikud where a Hebrew word could be misread. */
-  speak: string;
   caption: string;
   mood: "happy" | "explaining" | "thinking" | "worried";
   step: number;
@@ -192,7 +190,6 @@ function parseReply(text: string): Reply | null {
     const point = data.point;
     return {
       say: data.say,
-      speak: typeof data.speak === "string" && data.speak.trim() ? data.speak : data.say,
       caption: data.caption,
       mood: (["happy", "explaining", "thinking", "worried"] as const).includes(data.mood as Reply["mood"])
         ? (data.mood as Reply["mood"])
@@ -247,26 +244,25 @@ async function speak(body: Record<string, unknown>, env: Env, ctx: ExecutionCont
     }
   }
 
-  const generate = (languageCode?: Language) =>
+  const generate = (settings: boolean) =>
     fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "content-type": "application/json", accept: "audio/mpeg" },
       body: JSON.stringify({
         text,
         model_id: VOICE_MODEL,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 0.92 },
-        ...(languageCode ? { language_code: languageCode } : {}),
+        ...(settings ? { language_code: language, voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 0.92 } } : {}),
       }),
     });
 
   let generated: Response;
   try {
-    // Naming the language keeps Hebrew pronunciation right. If the voice model ever refuses the
-    // setting, the clip is made without it rather than not at all.
-    generated = await generate(language);
+    // Naming the language keeps Hebrew pronunciation right, and a slightly slower pace suits older
+    // listeners. If the voice model ever refuses these settings, the clip is made with its defaults.
+    generated = await generate(true);
     if (generated.status === 400 || generated.status === 422) {
       await generated.body?.cancel();
-      generated = await generate();
+      generated = await generate(false);
     }
   } catch (error) {
     // The app falls back to the phone's own voice.

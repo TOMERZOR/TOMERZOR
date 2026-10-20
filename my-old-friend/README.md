@@ -113,13 +113,13 @@ Set it up once in **App Store Connect** (needs the Apple Developer Program):
 ### What it costs
 
 - **Claude Haiku 5.5** at medium effort ($0.10 per million input tokens, $0.50 per million output tokens): one question with a photo is roughly 3,000 to 4,000 input tokens and a few hundred output tokens, so **well under a tenth of a US cent per question**. In a 16-question test with camera pictures it matched Claude Opus 5.5 on every case. A question Haiku's safety checks decline is retried once on Opus 5.5 (about 2 cents). To switch model, change `MODEL` in `server/src/index.ts`.
-- **ElevenLabs** (`eleven_v3`, roughly $0.08 to $0.10 per 1,000 characters on pay-as-you-go API pricing; check your plan): Moffy's answers are one or two short sentences, about 100 characters, so **about 1 cent per new answer**. Repeats are free (see below). The voice is now the main cost.
+- **ElevenLabs** (`eleven_v4`; a 130-character sentence cost about 2.4 cents on the creative plan used for testing, and API pricing per character may be lower, so check your plan): Moffy's answers are one or two short sentences, about 100 characters, so **roughly 1 to 2 cents per new answer**. Repeats are free (see below). The voice is now the main cost.
 - **Per subscriber:** ₪24.90 a month leaves about ₪17.90 after VAT and Apple's 15%. At about 1 cent a question, that covers roughly 400 questions a month; the server's daily limit (40 questions) keeps heavy use in check.
 - **Cloudflare:** the free plan is enough to try it out. Its 10 ms CPU limit per request can be tight for large photos, so for real use take the Workers Paid plan ($5 a month).
 
 ### Moffy's voice
 
-Moffy speaks with a warm female voice from ElevenLabs: **Yael – Gentle, Confident Ad** in Hebrew and **Emily – Trustworthy, Warm, Conversational** in English, using the `eleven_v3` model. Because the voice is female, Moffy speaks about herself in the feminine in Hebrew ("אני מקשיבה", "רגע, אני מסתכלת…").
+Moffy speaks with a warm female voice from ElevenLabs: **Yael – Gentle, Confident Ad** in Hebrew and **Emily – Trustworthy, Warm, Conversational** in English, using the `eleven_v4` model, which reads Hebrew in context ("מִסְפַּר" or "מְסַפֵּר") without nikud. Because the voice is female, Moffy speaks about herself in the feminine in Hebrew ("אני מקשיבה", "רגע, אני מסתכלת…").
 
 **Nothing is generated twice.** Every clip is saved on the phone the first time it plays (`Library/Caches/MoffyVoice`), and the server keeps a copy for everyone. "Say again", repeated answers and the app's fixed lines (errors, "I didn't hear anything", and so on) play from a saved copy for free; the phone saves the fixed lines on first launch. Offline, or in practice mode, Moffy uses the nicest female voice installed on the iPhone.
 

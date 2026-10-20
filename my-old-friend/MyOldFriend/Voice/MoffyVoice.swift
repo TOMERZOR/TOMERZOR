@@ -9,7 +9,7 @@ enum MoffyVoice {
     /// Hebrew: "Yael – Gentle, Confident Ad". English: "Emily – Trustworthy, Warm, Conversational".
     static let hebrewVoiceID = "d4eLZ8u5dfBCsjp4YPyz"
     static let englishVoiceID = "zHGX9VSXpW8cGSDRCqy0"
-    static let model = "eleven_v3"
+    static let model = "eleven_v4"
 
     /// False in practice mode (no server set up); then Moffy uses the iPhone's own voice.
     static var isAvailable: Bool { Backend.isConfigured }

@@ -17,18 +17,26 @@ const OBST_LINES = {
 };
 const OBST_LANES = [-4.8, -1.6, 1.6, 4.8];
 // The obstacles are sized to the mocap clips (assets/models/anims.json): the jump in "wallGrab"
-// hangs from a rail at 1.95 m on a 2.3 m wall, "barJump" hangs from a bar at 2.15 m (the wrists
-// just under it), and "crawl" keeps the head just under a net at 0.7 m.
-const OBST_WALL_H = 2.3, OBST_BAR_Y = 2.15, OBST_NET_Y = 0.7;
+// hangs from a rail at 1.95 m on a 2.3 m wall, "barJump" hangs from a bar at 2.4 m (arms up, the
+// boots clear of the mud), and "crawl" keeps the head under a net at 0.7 m. Each lane's wall, net
+// and bars are drawn to the size of whoever runs in it (someone 1.5x gets a wall 1.5x as tall),
+// so the clips meet them the same way; drive() then puts hands and feet on them exactly.
+const OBST_WALL_H = 2.3, OBST_BAR_Y = 2.4, OBST_NET_Y = 0.7;
+// Tires: two columns of small tires lying flat, a row every metre; the run through them is the
+// run clip, its stride locked to the rows so each footfall lands in a tire (one every 2 m, left
+// and right in turn).
+const OBST_TIRE_DZ = 1.0, OBST_TIRE_DX = 0.32, OBST_STEP = 2.0;
+const OBST_BEAM_TOP = 0.69; // the beam's upper surface
 const OBST_FADE = 0.2;      // seconds to blend into or out of a clip
 const OBST_CM = 0.0094;     // metres per centimetre of the recorded skeleton, on our soldiers
 const OBST_CRAWL = 1.5;     // m/s on the belly
 const OBST_CLIPS = ['wallGrab', 'wallClimb', 'crawl', 'hurdle', 'barJump', 'barSwing', 'barFall', 'vault'];
+const OBST_LIMBS = { LA: 'LeftArm', LF: 'LeftForeArm', LH: 'LeftHand', RA: 'RightArm', RF: 'RightForeArm', RH: 'RightHand', LU: 'LeftUpLeg', LL: 'LeftLeg', LFt: 'LeftFoot', LT: 'LeftToeBase', RU: 'RightUpLeg', RL: 'RightLeg', RFt: 'RightFoot', RT: 'RightToeBase', Hips: 'Hips' };
 const obstEase = (u) => { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); };
 // What the next obstacle wants, on the keyboard and on the phone's buttons.
 const OBST_HINTS = {
-  keys: { tires: 'רווח — לקפוץ מעל הצמיגים!', hurdles: 'רווח — לקפוץ מעל המשוכות!', net: '⬇️ להחזיק — לזחול מתחת לרשת!', mud: '🟫 בוץ! להמשיך לדחוף!', beam: '⬅️➡️ שיווי משקל!', wall: '🧱 קיר — רווח מהר!', climbing: '🧱 רווח! רווח! רווח!', bars: '🤸 מתח — רווח בקצב!', barring: '🤸 רווח! [אל תיפול/אל תיפלי]!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' },
-  touch: { tires: '🦘 קפיצה — מעל הצמיגים!', hurdles: '🦘 קפיצה — מעל המשוכות!', net: '🐛 להחזיק זחילה — מתחת לרשת!', mud: '🟫 בוץ! להמשיך לדחוף!', beam: '🕹️ ימינה/שמאלה — שיווי משקל!', wall: '🧱 קיר — קפיצה מהר!', climbing: '🧱 קפיצה! קפיצה! קפיצה!', bars: '🤸 מתח — קפיצה בקצב!', barring: '🤸 קפיצה! [אל תיפול/אל תיפלי]!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' },
+  keys: { tires: '⬆️ לרוץ — צעד בתוך כל צמיג!', hurdles: 'רווח — לקפוץ מעל המשוכות!', net: '⬇️ להחזיק — לזחול מתחת לרשת!', mud: '🟫 בוץ! להמשיך לדחוף!', beam: '⬅️➡️ שיווי משקל!', wall: '🧱 קיר — רווח מהר!', climbing: '🧱 רווח! רווח! רווח!', bars: '🤸 מתח — רווח בקצב!', barring: '🤸 רווח! [אל תיפול/אל תיפלי]!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' },
+  touch: { tires: '🕹️ למעלה — צעד בתוך כל צמיג!', hurdles: '🦘 קפיצה — מעל המשוכות!', net: '🐛 להחזיק זחילה — מתחת לרשת!', mud: '🟫 בוץ! להמשיך לדחוף!', beam: '🕹️ ימינה/שמאלה — שיווי משקל!', wall: '🧱 קיר — קפיצה מהר!', climbing: '🧱 קפיצה! קפיצה! קפיצה!', bars: '🤸 מתח — קפיצה בקצב!', barring: '🤸 קפיצה! [אל תיפול/אל תיפלי]!', slide: '🛝 מגלשה!', finish: '🏁 קו הסיום!' },
 };
 
 const ObstacleGame = {
@@ -91,22 +99,24 @@ const ObstacleGame = {
     // Lane ropes, start and finish lines.
     for (const x of [-6.4, -3.2, 0, 3.2, 6.4]) add(new THREE.BoxGeometry(0.06, 0.06, this.len + 14), M.rope, x, 0.3, this.len / 2);
     for (const s of this.sections) {
-      for (const lx of OBST_LANES) {
-        if (s.type === 'tires') for (let z = s.z0 + 1.5; z < s.z1; z += 2) for (const dx of [-0.5, 0.5]) add(this.geo.tire, M.tire, lx + dx, 0.18, z, Math.PI / 2);
+      for (let li = 0; li < OBST_LANES.length; li++) {
+        const lx = OBST_LANES[li], sc = this.laneSc(li);
+        if (s.type === 'tires') for (const z of this.tireRows(s)) for (const dx of [-OBST_TIRE_DX, OBST_TIRE_DX]) add(this.geo.tire, M.tire, lx + dx, 0.08, z, Math.PI / 2);
         else if (s.type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) {
           // An inflatable bar, red and yellow, on two fat posts.
           for (let k = 0; k < 4; k++) add(this.geo.bar, k % 2 ? M.yellow : M.red, lx - 0.9 + k * 0.6 + 0.3, 0.75, z, 0, 0, Math.PI / 2);
           for (const dx of [-1.25, 1.25]) add(this.geo.post, M.red, lx + dx, 0.45, z);
         }
         else if (s.type === 'net') {
-          const net = new THREE.Mesh(new THREE.PlaneGeometry(2.8, s.z1 - s.z0), M.net); net.rotation.x = -Math.PI / 2; net.position.set(lx, OBST_NET_Y, -(s.z0 + s.z1) / 2); C.add(net);
-          for (let z = s.z0; z <= s.z1 + 0.01; z += (s.z1 - s.z0) / 3) for (const dx of [-1.35, 1.35]) { const p = add(this.geo.pole, M.wood, lx + dx, OBST_NET_Y / 2, z); p.scale.y = OBST_NET_Y / 0.8; }
+          const NY = OBST_NET_Y * sc;
+          const net = new THREE.Mesh(new THREE.PlaneGeometry(2.8, s.z1 - s.z0), M.net); net.rotation.x = -Math.PI / 2; net.position.set(lx, NY, -(s.z0 + s.z1) / 2); C.add(net);
+          for (let z = s.z0; z <= s.z1 + 0.01; z += (s.z1 - s.z0) / 3) for (const dx of [-1.35, 1.35]) { const p = add(this.geo.pole, M.wood, lx + dx, NY / 2, z); p.scale.y = NY / 0.8; }
         }
         else if (s.type === 'mud' || s.type === 'beam' || s.type === 'bars') {
           const mud = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.1, s.z1 - s.z0), M.mud); mud.position.set(lx, 0.02, -(s.z0 + s.z1) / 2); mud.receiveShadow = true; C.add(mud);
           if (s.type === 'beam') { add(this.geo.beam(s.z1 - s.z0), M.wood, lx, 0.55, (s.z0 + s.z1) / 2, Math.PI / 2); for (const z of [s.z0, s.z1]) add(this.geo.pole, M.wood, lx, 0.3, z); }
           if (s.type === 'bars') {
-            const Y = OBST_BAR_Y;
+            const Y = OBST_BAR_Y * sc;
             for (const dx of [-0.8, 0.8]) { add(new THREE.BoxGeometry(0.08, 0.08, s.z1 - s.z0), M.steel, lx + dx, Y + 0.06, (s.z0 + s.z1) / 2); for (const z of [s.z0, s.z1]) add(new THREE.CylinderGeometry(0.06, 0.06, Y + 0.1, 6), M.steel, lx + dx, (Y + 0.1) / 2, z); }
             for (const z of this.rungs(s)) add(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6), M.yellow, lx, Y, z, 0, 0, Math.PI / 2);
           }
@@ -114,18 +124,19 @@ const ObstacleGame = {
         else if (s.type === 'wall') {
           // A planked wall with a grab rail on the face (where the jump lands the hands) and
           // slats to climb by, capped on top.
-          const H = OBST_WALL_H, zc = s.z0 + 2;
+          const H = OBST_WALL_H * sc, zc = s.z0 + 2;
           const w = add(new THREE.BoxGeometry(2.6, H, 0.3), M.planks, lx, H / 2, zc); w.userData.wall = true;
           add(new THREE.BoxGeometry(2.7, 0.08, 0.36), M.wood, lx, H + 0.04, zc);
-          for (const y of [0.55, 1.05, 1.5, 1.95]) add(new THREE.BoxGeometry(2.4, 0.07, 0.07), y === 1.95 ? M.red : M.wood, lx, y, zc - 0.18);
+          for (const y of [0.55, 1.05, 1.5, 1.95]) add(new THREE.BoxGeometry(2.4, 0.07, 0.07), y === 1.95 ? M.red : M.wood, lx, y * sc, zc - 0.18);
           for (const dx of [-1.25, 1.25]) add(new THREE.BoxGeometry(0.12, H + 0.15, 0.4), M.wood, lx + dx, (H + 0.15) / 2, zc);
         }
         else if (s.type === 'slide') {
           // Up the steps, down the inflatable slide into the pool.
           const L = s.z1 - s.z0, top = 3.2;
           for (let k = 0; k < 5; k++) add(new THREE.BoxGeometry(2.6, top * (k + 1) / 5, 0.8), M.blue, lx, top * (k + 1) / 10, s.z0 + 0.4 + k * 0.8);
-          const ramp = add(new THREE.BoxGeometry(2.6, 0.3, Math.hypot(L - 6, top)), M.yellow, lx, top / 2, s.z0 + 4 + (L - 6) / 2, Math.atan2(top, L - 6));
-          for (const dx of [-1.35, 1.35]) add(new THREE.BoxGeometry(0.3, 0.6, Math.hypot(L - 6, top)), M.red, lx + dx, top / 2 + 0.3, s.z0 + 4 + (L - 6) / 2, Math.atan2(top, L - 6));
+          // (High end on the steps, low end at the pool: tipped back toward the start.)
+          const ramp = add(new THREE.BoxGeometry(2.6, 0.3, Math.hypot(L - 6, top)), M.yellow, lx, top / 2, s.z0 + 4 + (L - 6) / 2, -Math.atan2(top, L - 6));
+          for (const dx of [-1.35, 1.35]) add(new THREE.BoxGeometry(0.3, 0.6, Math.hypot(L - 6, top)), M.red, lx + dx, top / 2 + 0.3, s.z0 + 4 + (L - 6) / 2, -Math.atan2(top, L - 6));
           void ramp;
           const pool = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.25, 3), M.water); pool.position.set(lx, 0.12, -(s.z1 - 1)); C.add(pool);
         }
@@ -154,11 +165,9 @@ const ObstacleGame = {
     this.ctx = ctx;
     this.clear();
     const rnd = Arcade.rng(ctx.seed);
-    this.geo = this.geo || { tire: new THREE.TorusGeometry(0.42, 0.16, 8, 16), bar: new THREE.CylinderGeometry(0.22, 0.22, 0.62, 12), post: new THREE.CylinderGeometry(0.2, 0.24, 0.9, 10), pole: new THREE.CylinderGeometry(0.06, 0.06, 0.8, 6), beam: (l) => new THREE.CylinderGeometry(0.14, 0.14, l, 10) };
+    this.geo = this.geo || { tire: new THREE.TorusGeometry(0.25, 0.08, 8, 18), bar: new THREE.CylinderGeometry(0.22, 0.22, 0.62, 12), post: new THREE.CylinderGeometry(0.2, 0.24, 0.9, 10), pole: new THREE.CylinderGeometry(0.06, 0.06, 0.8, 6), beam: (l) => new THREE.CylinderGeometry(0.14, 0.14, l, 10) };
     this.sections = this.plan(rnd);
     this.len = this.sections[this.sections.length - 1].z0;
-    const go = () => this.buildCourse();
-    if (Assets.has('arc_arch')) go(); else { go(); Arcade.loadModels(['arc_arch']).then(() => { if (this.ctx === ctx) go(); }); }
     const list = ctx.solo
       ? [{ who: null, name: G.profile.name, isMe: true }, ...Arcade.bots(3, rnd).map(b => ({ who: b.id, name: fmt(`{@${b.id}}`), bot: true, skill: 0.78 + rnd() * 0.17 }))]
       : ctx.players.slice(0, 4).map(p => ({ who: p.isMe ? null : (Cast.get(p.who) ? p.who : null), name: p.name, isMe: p.isMe, peer: p.peer }));
@@ -175,6 +184,9 @@ const ObstacleGame = {
       return r;
     });
     this.me = this.rs.find(r => r.isMe);
+    // The course, once it's known who runs in which lane (their wall, net and bars fit them).
+    const go = () => this.buildCourse();
+    if (Assets.has('arc_arch')) go(); else { go(); Arcade.loadModels(['arc_arch']).then(() => { if (this.ctx === ctx) go(); }); }
     // The PT instructor at the finish, whistle in hand, and a few from the platoon cheering.
     this.madag = Arcade.soldier(this.scene, Arcade.look('madag'));
     this.fans = Arcade.bots(4, rnd).map((b, i) => ({ m: Arcade.soldier(this.scene, Arcade.look(b.id)), x: (i % 2 ? 8.6 : -8.6), z: 20 + i * 22 }));
@@ -214,6 +226,9 @@ const ObstacleGame = {
   sectionAt(z) { return this.sections.find(s => z >= s.z0 - 0.5 && z <= s.z1 + 0.5); },
   // The monkey bars' rungs, 1.1 m apart: one swing of "barSwing" carries the body about that far.
   rungs(s) { const out = []; for (let z = s.z0 + 0.5; z < s.z1; z += 1.1) out.push(z); return out; },
+  tireRows(s) { const out = []; for (let z = s.z0 + 1; z < s.z1 - 0.4; z += OBST_TIRE_DZ) out.push(z); return out; },
+  // How big the runner in a lane is drawn (their obstacles are sized to match).
+  laneSc(li) { const r = this.rs && this.rs[li]; return Math.max(0.8, Math.min(1.6, (r && r.sc) || 1)); },
 
   // ---------- the mocap clips ----------
   // Every soldier gets the obstacle clips (retargeted onto their own rig by Assets.clipsFor) as
@@ -229,15 +244,43 @@ const ObstacleGame = {
     const hands = [Assets.bone(m.root, [/^lefthand$/i]), Assets.bone(m.root, [/^righthand$/i])];
     if (!hands[0] || !hands[1]) return null;
     this.twins = this.twins || new WeakMap();
-    if (!this.twins.has(clips)) this.twins.set(clips, { hurdle2: clips.hurdle.clone(), barSwing2: clips.barSwing.clone() });
+    if (!this.twins.has(clips)) this.twins.set(clips, { hurdle2: clips.hurdle.clone(), barSwing2: clips.barSwing.clone(), ...(clips.run ? { tireRun: clips.run.clone() } : {}) });
     const all = { ...Object.fromEntries(OBST_CLIPS.map(k => [k, clips[k]])), ...this.twins.get(clips) };
-    const R = { acts: {}, w: {}, t: {}, hands, v: new THREE.Vector3(), u: new THREE.Vector3() };
+    const b = {};
+    for (const k in OBST_LIMBS) b[k] = Assets.bone(m.root, [new RegExp('^' + OBST_LIMBS[k] + '$', 'i')]);
+    const R = { acts: {}, w: {}, t: {}, hands, b, ik: Object.values(b).every(Boolean), v: new THREE.Vector3(), u: new THREE.Vector3() };
+    if (all.tireRun) R.gait = this.gait(m, all.tireRun, b);
     for (const k in all) {
       const a = m.mixer.clipAction(all[k]);
       a.play(); a.timeScale = 0; a.setEffectiveWeight(0);
       R.acts[k] = a; R.w[k] = 0; R.t[k] = 0;
     }
     return R;
+  },
+  // Where in the run clip each foot is planted (lowest), and how far ahead of the hips it is
+  // then: the tire run locks the clip's phase to the rows so those footfalls land in the tires.
+  gait(m, clip, b) {
+    if (!b.LFt || !b.RFt) return null;
+    const mx = new THREE.AnimationMixer(m.mixer.getRoot()), a = mx.clipAction(clip), v = new THREE.Vector3();
+    a.play();
+    const g = { D: clip.duration, L: { y: 9 }, R: { y: 9 } };
+    for (let i = 0; i < 48; i++) {
+      a.time = clip.duration * i / 48; mx.update(0); m.root.updateMatrixWorld(true);
+      for (const [f, bone] of [['L', b.LFt], ['R', b.RFt]]) {
+        m.root.worldToLocal(bone.getWorldPosition(v));
+        if (v.y < g[f].y) g[f] = { y: v.y, t: a.time, fwd: v.x };
+      }
+    }
+    mx.stopAllAction(); mx.uncacheRoot(mx.getRoot());
+    return g;
+  },
+  // The run clip's time for a runner at z in the tires: the left foot down in a tire every 4 m,
+  // starting on the first row; the right foot half a cycle later, 2 m on.
+  tirePhase(r, s) {
+    const g = r.rig && r.rig.gait;
+    if (!g) return 0;
+    const u = (r.z + g.L.fwd * (r.sc || 1) - (s.z0 + 1)) / (2 * OBST_STEP);
+    return (((g.L.t + u * g.D) % g.D) + g.D) % g.D;
   },
   // How far forward the recorded hips travel in a clip by time t (metres): the clips arrive
   // pinned in place, so the game moves the soldier by this where the move carries them.
@@ -272,7 +315,9 @@ const ObstacleGame = {
     Arcade.pose(m, r.x, -r.z, -Math.PI / 2, r.mode === 'fallen' || r.mode === 'bars' ? 0 : r.v, dt);
     m.root.position.y = r.ry;
     m.root.rotation.x = r.sliding ? 0.7 : 0;
-    m.root.rotation.z = r.mode === 'fallen' ? 1.4 : r.bal * 0.45;
+    m.root.rotation.z = r.mode === 'fallen' ? 1.4 : 0;
+    // The wobble on the beam: a roll to the side (bal > 0 to the left), pivoting at the boots.
+    if (m.lean) m.lean.rotation.x = r.mode === 'fallen' ? 0 : -r.bal * 0.45;
     if (r.mode === 'fallen') m.root.position.y -= 0.3;
     // Hanging on: where the pose has the hands, and how far to move to put them on the bar.
     let P = 0, tz = 0, ty = 0, pw = 0;
@@ -286,6 +331,7 @@ const ObstacleGame = {
       m.root.position.y += (Math.max(0, ty - h.y) - m.root.position.y) * amt;
       m.root.position.z += (-tz - h.z - m.root.position.z) * amt;
     }
+    if (R.ik) this.fit(r);
     r.rz = -m.root.position.z;
     r.rootY = m.root.position.y;
     // How fast the clip runs, for the others to carry it on between updates.
@@ -293,6 +339,147 @@ const ObstacleGame = {
     const rate = dt ? Math.max(-6, Math.min(6, (r.at - r.atPrev) / dt)) : 0;
     r.ar += (rate - r.ar) * Math.min(1, dt * 8);
     r.atPrev = r.at; r.akPrev = k;
+  },
+
+  // ---------- contacts ----------
+  // After the mixer has posed a soldier: the corrections that put them on what they're on. The
+  // root (height, how far from the wall, a lean) for your own soldier and the bots (the others
+  // send theirs), and arms and legs (two-bone IK) for everyone. Course z is -world z throughout.
+  fit(r) {
+    const m = r.m, R = r.rig, B = R.b, k = r.ak || '', w = k ? R.w[k] || 0 : 0, sc = r.sc || 1, local = !r.peer;
+    const s = this.sectionAt(r.z), V = THREE.Vector3;
+    const P = (bone) => { const v = bone.getWorldPosition(new V()); v.z = -v.z; return v; };   // course coords
+    const T = (x, y, z) => new V(x, y, -z);                                                     // back to world
+    const lift = (dy, dz = 0) => { m.root.position.y += dy; m.root.position.z -= dz; m.root.updateMatrixWorld(true); };
+    m.root.updateMatrixWorld(true);
+    const q = this.sections.find(x => x.type === 'wall' && r.z > x.z0 - 1 && r.z < x.z1 + 2);
+    if (q && (k === 'wallGrab' || k === 'wallClimb' || (k === 'vault' && r.mode === 'climb'))) {
+      const H = OBST_WALL_H * sc, zc = q.z0 + 2, face = zc - 0.15, back = zc + 0.15, railY = 1.95 * sc + 0.035, railZ = zc - 0.2;
+      if (k === 'wallClimb' && local) {
+        // Hand over hand: the lower hand holds where the climb has got to (from the rail up to the
+        // top edge), the body hangs from it, off the face.
+        const lo = P(B.LH).y < P(B.RH).y ? B.LH : B.RH, h = P(lo), u = obstEase((r.ct || 0) / 1.5);
+        const gy = railY + 0.03 * sc + (H - railY) * u;
+        lift((gy - h.y) * w, (railZ - h.z) * w);
+      }
+      if (local && (k === 'wallGrab' || k === 'wallClimb')) {
+        // Boots and knees against the planks, not in them: lean the body out from the grip.
+        const grip = P(B.LH).add(P(B.RH)).multiplyScalar(0.5);
+        let e = 0, low = grip.y;
+        for (const bn of [B.LT, B.RT, B.LFt, B.RFt, B.LL, B.RL]) { const p = P(bn); const lim = face - (bn === B.LL || bn === B.RL ? 0.09 : 0.05) * sc; if (p.z - lim > e) { e = p.z - lim; low = p.y; } }
+        if (e > 0) {
+          const a = Math.min(0.4, Math.atan2(e, Math.max(0.3, grip.y - low))) * w;
+          m.root.rotation.x -= a; m.root.updateMatrixWorld(true);
+          const g2 = P(B.LH).add(P(B.RH)).multiplyScalar(0.5);
+          lift(grip.y - g2.y, grip.z - g2.z);
+        }
+      }
+      // Hands: on the face while climbing (no deeper than it), flat on the top once they're over
+      // it or while pressing up onto it, and never inside the wall on the way down the far side.
+      const press = k === 'vault' && P(B.Hips).z < face - 0.02;
+      for (const [A, F, Hd] of [[B.LA, B.LF, B.LH], [B.RA, B.RF, B.RH]]) {
+        const h = P(Hd), top = H + 0.08 + 0.045 * sc;   // (the cap is 8 cm thick)
+        let t = null;
+        if (press) t = new V(h.x, top, face + 0.1);
+        else if (k !== 'vault' && h.y > H - 0.02 && h.z > face - 0.25) t = new V(h.x, top, Math.max(face + 0.07, Math.min(back - 0.05, h.z)));
+        else if (k !== 'vault' && h.z > face - 0.04 && h.y > 0.9 * sc) t = new V(h.x, h.y, face - 0.04);
+        else if (h.y < top && h.z > face - 0.04 && h.z < back + 0.04) {
+          // Inside it: out by the nearest side.
+          const dT = top - h.y, dF = h.z - (face - 0.04), dB = back + 0.04 - h.z, d = Math.min(dT, dF, dB);
+          t = d === dT ? new V(h.x, top, h.z) : d === dF ? new V(h.x, h.y, face - 0.04) : new V(h.x, h.y, back + 0.09);
+        }
+        if (t) this.ik(A, F, Hd, T(t.x, t.y, t.z), press ? (1 - obstEase((m.root.position.y - (H - 1.45 * sc)) / (0.5 * sc))) * w : w);
+      }
+      // Boots: toes against the face, not through it, on the way up.
+      if (k !== 'vault') for (const [U, L, Ft, Tt] of [[B.LU, B.LL, B.LFt, B.LT], [B.RU, B.RL, B.RFt, B.RT]]) {
+        const tz = P(Tt).z - (face - 0.04 * sc);
+        if (tz > 0) { const f = P(Ft); this.ik(U, L, Ft, T(f.x, f.y, f.z - tz), w); }
+      }
+    }
+    // The crawl's recorded body lies a hand above the floor: down onto it.
+    if (k === 'crawl' && local) lift(-0.075 * sc * w);
+    // Over the hurdles: the recorded tuck, lifted just enough that no part of the legs (or the
+    // hands) goes through the inflatable bar.
+    if ((k === 'hurdle' || k === 'hurdle2') && local && s && s.type === 'hurdles') {
+      let need = 0;
+      const pts = [];
+      for (const [a, b2] of [[B.Hips, B.LU], [B.LU, B.LL], [B.LL, B.LFt], [B.LFt, B.LT], [B.Hips, B.RU], [B.RU, B.RL], [B.RL, B.RFt], [B.RFt, B.RT], [B.LF, B.LH], [B.RF, B.RH]]) {
+        const p0 = P(a), p1 = P(b2);
+        for (let i = 0; i <= 3; i++) pts.push(p0.clone().lerp(p1, i / 3));
+      }
+      const rad = 0.22 + 0.1 * sc;
+      for (const hz of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) for (const p of pts) {
+        const dz = p.z - hz;
+        if (Math.abs(dz) < rad) need = Math.max(need, 0.75 + Math.sqrt(rad * rad - dz * dz) - p.y);
+      }
+      if (need > 0) lift(Math.min(0.9, need) * w);
+    }
+    // The beam: boots on its top, under the body, not either side of it.
+    if (s && s.type === 'beam' && r.z > s.z0 - 0.3 && r.z < s.z1 && !k && r.mode === 'run' && r.y > 0.3) {
+      const lx = r.x;
+      for (const [U, L, Ft] of [[B.LU, B.LL, B.LFt], [B.RU, B.RL, B.RFt]]) {
+        const f = P(Ft);
+        if (f.y < OBST_BEAM_TOP + 0.35) this.ik(U, L, Ft, T(lx + (f.x - lx) * 0.35, Math.max(f.y, OBST_BEAM_TOP + 0.1 * sc), f.z), 1);
+      }
+    }
+    // The tires: each boot comes down in the middle of the tire it's over (in from above, over
+    // the rim, not through it), and the leg swings toward its own column of tires on the way.
+    if (k === 'tireRun' && s && s.type === 'tires') {
+      const rows = this.tireRows(s), rim = 0.16 + 0.03, hole = 0.25 - 0.08;
+      for (const [U, L, Ft, side] of [[B.LU, B.LL, B.LFt, -1], [B.RU, B.RL, B.RFt, 1]]) {
+        const f = P(Ft), cx = r.x + side * OBST_TIRE_DX;
+        const c = rows.reduce((a, z) => (Math.abs(z - f.z - 0.05) < Math.abs(a - f.z - 0.05) ? z : a), rows[0]);
+        const down = obstEase((0.24 * sc - f.y) / 0.1);
+        const t = new V(f.x + (cx - f.x) * obstEase((0.7 - Math.abs(c - f.z)) / 0.35), f.y, f.z + (c - 0.05 * sc - f.z) * down);
+        // Over the rubber (between the hole and the outside of the rim), the sole stays above it.
+        const dh = Math.hypot(t.x - cx, t.z - (c - 0.05 * sc)), sole = t.y - 0.13 * sc;
+        if (dh > hole * 0.6 && dh < 0.25 + 0.08 + 0.12 && sole < rim) t.y += rim - sole;
+        this.ik(U, L, Ft, T(t.x, t.y, t.z), w);
+      }
+    }
+    // Down the slide sitting: legs out in front along the slope, leaning back a little, the
+    // seat on the surface.
+    if (r.sliding && s && s.type === 'slide') {
+      const L = s.z1 - s.z0, a = Math.atan2(3.2, L - 6), Q = THREE.Quaternion;
+      m.root.rotation.x = -a + 0.12; m.root.updateMatrixWorld(true);
+      for (const [U, L2] of [[B.LU, B.LL], [B.RU, B.RL]]) {
+        // Thigh and shin straight out ahead (the run's knee bend taken out), heels just off the surface.
+        const hipP = U.getWorldPosition(new V()), kn = L2.getWorldPosition(new V()), dn = kn.clone().sub(hipP).normalize();
+        const want = new V(0, -Math.sin(a - 0.12 + 0.1), -Math.cos(a - 0.12 + 0.1));
+        U.updateMatrixWorld(true);
+        const qa = new Q().setFromUnitVectors(dn, want), bw = U.getWorldQuaternion(new Q()), pw = U.parent.getWorldQuaternion(new Q());
+        U.quaternion.copy(pw.invert().multiply(qa.multiply(bw))); U.updateMatrixWorld(true);
+        const kn2 = L2.getWorldPosition(new V()), ft = (U === B.LU ? B.LFt : B.RFt).getWorldPosition(new V());
+        const dn2 = ft.clone().sub(kn2).normalize(), qb = new Q().setFromUnitVectors(dn2, want), bw2 = L2.getWorldQuaternion(new Q()), pw2 = L2.parent.getWorldQuaternion(new Q());
+        L2.quaternion.copy(pw2.invert().multiply(qb.multiply(bw2))); L2.updateMatrixWorld(true);
+      }
+      if (local) {
+        m.root.updateMatrixWorld(true);
+        const hp = P(B.Hips), surf = 3.2 * (1 - (hp.z - s.z0 - 4) / (L - 6)) + 0.15 / Math.cos(a);
+        lift(surf + 0.13 * sc - hp.y);
+      }
+    }
+  },
+  // Two-bone IK (shoulder-elbow-hand, hip-knee-ankle) in world space: bends the limb in the plane
+  // it's already bent in so the end reaches t, by weight w.
+  ik(a, b, c, t, w = 1) {
+    if (!a || !b || !c || w <= 0.001) return;
+    const V = THREE.Vector3, Q = THREE.Quaternion, cl = (x) => Math.max(-1, Math.min(1, x));
+    const A = a.getWorldPosition(new V()), Bp = b.getWorldPosition(new V()), C = c.getWorldPosition(new V());
+    const tg = C.clone().lerp(t, Math.min(1, w));
+    const lab = A.distanceTo(Bp), lcb = Bp.distanceTo(C), lat = Math.max(0.01, Math.min(lab + lcb - 1e-3, A.distanceTo(tg)));
+    const ac = C.clone().sub(A).normalize(), ab = Bp.clone().sub(A).normalize(), ba = ab.clone().negate(), bc = C.clone().sub(Bp).normalize();
+    // (A straight limb has no bend plane: bend it toward the front.)
+    const axis = new V().crossVectors(ac, ab);
+    if (axis.lengthSq() < 1e-6) axis.crossVectors(ac, Math.abs(ac.y) < 0.9 ? new V(0, 1, 0) : new V(1, 0, 0));
+    axis.normalize();
+    const a0 = Math.acos(cl(ac.dot(ab))), b0 = Math.acos(cl(ba.dot(bc)));
+    const a1 = Math.acos(cl((lcb * lcb - lab * lab - lat * lat) / (-2 * lab * lat))), b1 = Math.acos(cl((lat * lat - lab * lab - lcb * lcb) / (-2 * lab * lcb)));
+    const turn = (bone, q) => { const bw = bone.getWorldQuaternion(new Q()), pw = bone.parent.getWorldQuaternion(new Q()); bone.quaternion.copy(pw.invert().multiply(q.multiply(bw))); bone.updateMatrixWorld(true); };
+    turn(a, new Q().setFromAxisAngle(axis, a1 - a0));
+    turn(b, new Q().setFromAxisAngle(axis, b1 - b0));
+    const C2 = c.getWorldPosition(new V()).sub(A).normalize();
+    turn(a, new Q().setFromUnitVectors(C2, tg.clone().sub(A).normalize()));
   },
 
   // ---------- each frame ----------
@@ -311,9 +498,10 @@ const ObstacleGame = {
     }
     this.lineT -= dt;
     if (this.lineT <= 0 && this.started && !this.done) { this.lineT = 6 + Math.random() * 5; Arcade.say(fmt(pick(OBST_LINES.crowd)), null, 2200); }
-    // Finished when everyone local is over the line (or the timer runs long). If you're the
+    // Finished when everyone (online too, so their time makes the table) is over the line, or
+    // the timer runs long. If you're the
     // last one out there, she waits a bit, nags, and then calls it.
-    if (!this.done && this.started && this.me.fin && (this.rs.every(r => r.fin || r.peer) || this.t > this.me.fin + 12)) this.finish();
+    if (!this.done && this.started && this.me.fin && (this.rs.every(r => r.fin) || this.t > this.me.fin + 12)) this.finish();
     const others = this.rs.filter(r => !r.isMe);
     if (!this.done && this.started && !this.me.fin && others.length && others.every(r => r.fin)) {
       const last = Math.max(...others.map(r => r.fin));
@@ -339,13 +527,16 @@ const ObstacleGame = {
     const want = c.fwd > 0.1 ? top * Math.min(1, c.fwd + 0.2) * (r.skill && !r.isMe ? r.skill : 1) : 0;
     let mult = 1;
     if (type === 'mud') { mult = 0.42; r.mud = Math.min(1, r.mud + dt * 0.15); }
+    // High knees through the tires: a bit slower than the open track.
+    if (type === 'tires' && r.z > s.z0 && r.z < s.z1 - 0.5) mult = 0.8;
     // The net: you can only get under it on your belly, and under it you stay down (forward or
     // crawl keeps you going; let go of both and you lie there).
-    const net = this.sections.find(q => q.type === 'net' && r.z > q.z0 - 1.2 && r.z < q.z1 + 0.25);
-    const entry = net ? net.z0 - 0.35 : 0;
+    // (Down on the belly before the net's edge: the crawl reaches 0.75 m ahead of the hips.)
+    const net = this.sections.find(q => q.type === 'net' && r.z > q.z0 - 2.2 && r.z < q.z1 + 0.25);
+    const entry = net ? net.z0 - 1.1 * (r.sc || 1) : 0;
     const under = net && r.z > entry && r.z < net.z1 + 0.2;
-    if (net && (under || (c.crawl && r.z > net.z0 - 0.9 && r.y <= 0.01))) {
-      if (!r.crawl) { r.crawl = true; r.hop = null; r.ct = r.rig ? r.rig.acts.crawl.getClip().duration * 0.5 : 0; }
+    if (net && (under || (c.crawl && r.z > net.z0 - 2 && r.y <= 0.01))) {
+      if (!r.crawl) { r.crawl = true; r.hop = null; r.v = Math.min(r.v, 2.2); r.ct = r.rig ? r.rig.acts.crawl.getClip().duration * 0.5 : 0; }
     } else r.crawl = false;
     if (r.stun > 0) mult = 0.1;
     if (r.crawl) r.v += ((c.crawl || c.fwd > 0.1 ? OBST_CRAWL * (r.skill && !r.isMe ? 0.75 + r.skill * 0.3 : 1) : 0) - r.v) * Math.min(1, dt * 5);
@@ -353,7 +544,11 @@ const ObstacleGame = {
     // Jumping. Over the hurdles it's the recorded jump, a whole flying tuck.
     if (c.jump && r.y <= 0.01 && !r.crawl) {
       r.vy = 5.6; Sound.synth.tone(400, 0.08, 'triangle', 0.04, 700);
-      if (type === 'hurdles' && r.rig) { r.hop = 0; r.hopAlt = !r.hopAlt; }
+      if (type === 'hurdles' && r.rig) {
+        // The tuck in the clip (0.86 s) is timed to come over the bar ahead, whenever you took off.
+        const hz = [s.z0 + 4, s.z0 + 10, s.z0 + 16].find(z => z > r.z + 0.2);
+        r.hop = 0; r.hopAlt = !r.hopAlt; r.hopBar = Math.max(0.2, Math.min(0.55, hz != null ? (hz - r.z) / Math.max(3, r.v) : 0.47));
+      }
     }
     r.vy -= 16 * dt; r.y = Math.max(0, r.y + r.vy * dt); if (r.y === 0) r.vy = 0;
     const z0 = r.z;
@@ -373,7 +568,8 @@ const ObstacleGame = {
     if (r.hop != null) {
       // Takeoff to landing of the clip over the jump's 0.7 s in the air, then the stumble out.
       r.hop += dt;
-      r.hopT = r.y > 0 || r.hop < 0.1 ? 0.3 + r.hop * 1.2 : (r.hopT || 1.14) + dt * 1.8;
+      const tb = r.hopBar || 0.47;
+      r.hopT = r.y > 0 || r.hop < 0.1 ? (r.hop < tb ? 0.3 + 0.56 * r.hop / tb : Math.min(1.14, 0.86 + 0.28 * (r.hop - tb) / Math.max(0.15, 0.7 - tb))) : Math.max(1.14, r.hopT || 1.14) + dt * 1.8;
       if (r.hopT >= 1.62 || r.crawl) r.hop = null;
       else { r.ak = r.hopAlt ? 'hurdle2' : 'hurdle'; r.at = r.hopT; r.ry = r.y * 0.5; }
     }
@@ -389,23 +585,31 @@ const ObstacleGame = {
         return;
       }
     }
-    // The beam: keep your balance with left/right or fall in.
+    // The beam: keep your balance with left/right or fall in. (A hop up onto it from just
+    // before its end, boots on its top.)
+    const bm = this.sections.find(q => q.type === 'beam' && r.z > q.z0 - 0.7 && r.z <= q.z0);
+    if (bm && !r.crawl && r.mode === 'run') { const h = (OBST_BEAM_TOP + 0.03) * obstEase((r.z - (bm.z0 - 0.7)) / 0.6); r.y = Math.max(r.y, h); r.ry = Math.max(r.ry, h); }
+    if (type === 'beam' && r.z > s.z1 && r.z < s.z1 + 0.35 && r.mode === 'run') { r.y = Math.max(r.y, OBST_BEAM_TOP + 0.03); r.ry = Math.max(r.ry, OBST_BEAM_TOP + 0.03); }
     if (type === 'beam' && r.z > s.z0 && r.z < s.z1) {
       r.bal += (Math.sin(this.t * 2.3 + r.lane) * 0.9 + (Math.random() - 0.5) * 2.4) * dt * (0.5 + r.v / 7) - c.side * dt * 2.6;
       r.bal *= 1 - dt * 0.4;
-      r.y = Math.max(r.y, 0.62); r.ry = Math.max(r.ry, 0.62);
+      if (!r.beamAt || r.beamAt.s !== s) r.beamAt = { s, t: this.t };
+      r.y = Math.max(r.y, OBST_BEAM_TOP + 0.03); r.ry = Math.max(r.ry, OBST_BEAM_TOP + 0.03);
       if (Math.abs(r.bal) > 1) this.fall(r, s.z0 - 0.4);
     } else r.bal *= 0.9;
-    // Tires: on the ground over a row without jumping — a stumble.
-    if (type === 'tires') for (let z = s.z0 + 1.5; z < s.z1; z += 2) if (z0 < z && r.z >= z && r.y < 0.25 && r.tripZ !== z) { r.tripZ = z; r.stun = 0.45; r.v *= 0.3; if (r.isMe) { this.pop(r, pick(OBST_LINES.trip)); Sound.bump(); } }
+    // Tires: the run clip, its stride locked to the rows (see tirePhase), each footfall in a tire.
+    // Jump in there and you come down on a rim: a stumble.
+    if (type === 'tires' && r.rig && r.rig.acts.tireRun && !r.ak && r.y <= 0.01 && r.v > 1.5 && r.z > s.z0 - 0.3 && r.z < s.z1 - 0.4) { r.ak = 'tireRun'; r.at = this.tirePhase(r, s); }
+    if (type === 'tires' && r.vy < 0 && r.y > 0 && r.y + r.vy * dt <= 0 && r.z > s.z0 + 0.5 && r.z < s.z1 - 0.5) { r.stun = 0.45; r.v *= 0.3; if (r.isMe) { this.pop(r, pick(OBST_LINES.trip)); Sound.bump(); } }
     // Hurdles: into the bar — bounced back. (A jump peaks just under a meter; the bar's top is
     // at about that, and the feet tuck up, so anything over 0.6 clears it.)
-    if (type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) if (z0 < z - 0.3 && r.z >= z - 0.3 && r.y < 0.6 && r.hitZ !== z) { r.hitZ = z; r.z = z - 1.2; r.v = 0; r.stun = 0.6; r.hop = null; if (r.isMe) { this.pop(r, pick(OBST_LINES.hurdle)); Sound.bump(); G.shake = 0.3; } }
+    if (type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) if (z0 < z - 0.3 && r.z >= z - 0.3 && r.y < 0.6) { r.hitZ = z; r.z = z - 1.2; r.v = 0; r.stun = 0.6; r.hop = null; if (r.isMe) { this.pop(r, pick(OBST_LINES.hurdle)); Sound.bump(); G.shake = 0.3; } }
       else if (z0 < z - 0.3 && r.z >= z - 0.3 && r.isMe && r.hitZ !== z) { r.hitZ = z; Sound.synth.tone(660, 0.08, 'triangle', 0.04, 990); }
     // The slide: up the steps, then fast down into the pool.
     if (type === 'slide') {
       const L = s.z1 - s.z0, u = r.z - s.z0;
-      if (u < 4) r.y = Math.max(r.y, Math.min(3.2, u / 4 * 3.2));
+      // Up the five steps one at a time (each 0.8 m deep, 0.64 m up), on top of each one.
+      if (u < 4) { const n = Math.floor((u + 0.25) / 0.8); r.y = Math.max(r.y, Math.min(3.2, 0.64 * (n + obstEase(((u + 0.25) - n * 0.8) / 0.25)))); }
       else if (u < L - 2) { r.y = 3.2 * (1 - (u - 4) / (L - 6)); r.v = Math.max(r.v, 11); r.sliding = true; }
       else if (r.sliding) { r.sliding = false; r.y = 0; this.splash(r); r.mud = Math.max(0, r.mud - 0.6); }
       r.ry = r.y;
@@ -416,7 +620,9 @@ const ObstacleGame = {
   // as far up as you've mashed — stop and you slide back), pull up onto the top and leap down
   // the far side ("vault" starts standing on a ledge, so it starts on the wall's top).
   wall(r, c, dt) {
-    const q = r.wq, H = OBST_WALL_H, face = q.z0 + 1.55, mid = q.z0 + 2, sc = r.sc || 1, ledge = H - 0.92 * sc, hang = 0.42 * sc;
+    // (ledge: the root's height with the vault's first pose standing on the top; the clip's hips
+    // start 0.7 m above its boots.)
+    const sc = r.sc || 1, q = r.wq, H = OBST_WALL_H * sc, face = q.z0 + 1.55, mid = q.z0 + 2, ledge = H - 0.7 * sc, wallF = q.z0 + 1.85;
     if (r.ph === 'grab' || r.ph === 'up') {
       r.climb = Math.min(1.05, Math.max(0, r.climb - dt * 0.12) + (c.jump ? 0.17 : 0));
       if (c.jump) Sound.synth.tone(300 + r.climb * 400, 0.04, 'square', 0.03);
@@ -430,17 +636,23 @@ const ObstacleGame = {
     }
     r.pt += dt;
     if (r.ph === 'grab') {
+      // The jump ends with both hands on the red rail (drive() moves the body so they are).
       r.ak = 'wallGrab'; r.at = Math.min(1.26, 0.12 + r.pt * 1.35); r.ry = 0;
+      r.pins.wallGrab = { z: q.z0 + 1.8, y: 1.95 * sc + 0.065 * sc, w: obstEase((r.at - 0.5) / 0.2) };
       if (r.at >= 1.26) { r.ph = 'up'; r.pt = 0; r.ct = 0; }
     } else if (r.ph === 'up') {
-      // The climb clip rises 0.95 m in its 2 s; it starts where the grab left the hips.
+      // Hand over hand ("wallClimb"); fit() hangs the body from the lower hand, which goes from
+      // the rail to the top edge as far as you've mashed.
       r.ct += (1.5 * Math.min(1, r.climb) - r.ct) * Math.min(1, dt * 6);
-      r.ak = 'wallClimb'; r.at = r.ct; r.ry = hang;
-      if (r.climbed && r.ct > 1.4) { r.ph = 'top'; r.pt = 0; if (r.isMe) Sound.good(); }
+      r.ak = 'wallClimb'; r.at = r.ct; r.ry = 0;
+      if (r.climbed && r.ct > 1.4) { r.ph = 'top'; r.pt = 0; r.top0 = { y: r.rootY || 0, z: r.rz || face }; if (r.isMe) Sound.good(); }
     } else if (r.ph === 'top') {
-      const u = obstEase(r.pt / 0.38);
-      r.ak = 'vault'; r.at = 0.12; r.ry = hang + (ledge - hang) * u; r.z = face + (mid - face) * u;
-      if (r.pt >= 0.38) { r.ph = 'drop'; r.pt = 0; r.landed = false; }
+      // Pressing up on the top edge: straight up in front of the face until the boots clear the
+      // top, then forward onto it.
+      const u = obstEase(r.pt / 0.36), v = obstEase((r.pt - 0.3) / 0.26), t0 = r.top0 || { y: 0.4, z: face };
+      const zf = wallF - 0.28 * sc;
+      r.ak = 'vault'; r.at = 0.12; r.ry = t0.y + (ledge - t0.y) * u; r.z = t0.z + (zf - t0.z) * u + (mid - zf) * v;
+      if (r.pt >= 0.56) { r.ph = 'drop'; r.pt = 0; r.landed = false; }
     } else {
       r.ak = 'vault'; r.at = 0.12 + r.pt * 1.7;
       r.z = mid + (this.rootFwd('vault', r.at) - this.rootFwd('vault', 0.12)) * sc;
@@ -456,7 +668,7 @@ const ObstacleGame = {
   // follows on, faster the faster you press. Hang too long and the grip goes ("barFall", into
   // the mud, back to the start). After the last bar you let go and drop off.
   bars(r, c, dt) {
-    const bs = r.barS, rungs = r.rungList, last = rungs.length - 1, BY = OBST_BAR_Y - 0.06;
+    const bs = r.barS, rungs = r.rungList, last = rungs.length - 1, BY = (OBST_BAR_Y - 0.06) * Math.max(0.8, Math.min(1.6, r.sc || 1));
     const rung = (k) => rungs[Math.max(0, Math.min(last, k))];
     if (!r.rig) {
       r.barT += dt; r.ry = r.y = 1.0;
@@ -528,8 +740,8 @@ const ObstacleGame = {
   bot(r, dt) {
     const s = this.sectionAt(r.z + 1.2), type = s ? s.type : 'run', k = r.skill;
     const c = { fwd: 0.85 + k * 0.15, side: 0, crawl: false, jump: false };
-    if (type === 'tires') { for (let z = s.z0 + 1.5; z < s.z1; z += 2) if (z - r.z > 0.4 && z - r.z < 1.1 && Math.random() < k + 0.1) c.jump = true; }
-    if (type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) if (z - r.z > 0.6 && z - r.z < 1.5 && Math.random() < k * 0.6) c.jump = true;
+    // (Too close and the jump can't get up in time: the take-off window grows with speed.)
+    if (type === 'hurdles') for (const z of [s.z0 + 4, s.z0 + 10, s.z0 + 16]) if (z - r.z > 0.9 + r.v * 0.08 && z - r.z < 2.4 && Math.random() < k * 0.6) c.jump = true;
     if (type === 'net') c.crawl = Math.random() < 0.97;
     if (type === 'beam') c.side = r.bal * (0.6 + k * 0.6) + (Math.random() - 0.5) * 0.4;
     if (r.mode === 'climb') c.jump = Math.random() < dt * (5 + k * 6);
@@ -662,9 +874,9 @@ const ObstacleGame = {
   camClear(p, me) {
     const cz = -p.z;
     for (const q of this.sections) {
-      if (q.type === 'wall') { const f = q.z0 + 1.85; if (me.z > f - 0.25 && me.ph !== 'grab' && me.ph !== 'up' && cz < f + 0.7 && cz > f - 6) p.y = Math.max(p.y, OBST_WALL_H + 1.1); }
-      else if (q.type === 'bars' && cz > q.z0 - 0.4 && cz < q.z1 + 0.4) p.y = Math.max(p.y, OBST_BAR_Y + 0.6);
-      else if (q.type === 'net' && cz > q.z0 - 0.4 && cz < q.z1 + 0.4) p.y = Math.max(p.y, OBST_NET_Y + 0.8);
+      if (q.type === 'wall') { const f = q.z0 + 1.85; if (me.z > f - 0.25 && me.ph !== 'grab' && me.ph !== 'up' && cz < f + 0.7 && cz > f - 6) p.y = Math.max(p.y, OBST_WALL_H * (me.sc || 1) + 1.1); }
+      else if (q.type === 'bars' && cz > q.z0 - 0.4 && cz < q.z1 + 0.4) p.y = Math.max(p.y, OBST_BAR_Y * (me.sc || 1) + 0.6);
+      else if (q.type === 'net' && cz > q.z0 - 0.4 && cz < q.z1 + 0.4) p.y = Math.max(p.y, OBST_NET_Y * (me.sc || 1) + 0.8);
       else if (q.type === 'slide') {
         // Up on the steps or on the ramp: stay over your head, so the steps behind don't fill the view.
         if (me.z > q.z0 && me.z < q.z1) p.y = Math.max(p.y, (me.rootY || 0) + 1.8);
@@ -677,9 +889,14 @@ const ObstacleGame = {
 
   // ---------- the overlay ----------
   ui() {
-    Arcade.hud(`<div class="ob"><div class="ob-time ar-chip">0.0</div><div class="ob-bar"><i></i></div><div class="ob-hint"></div><div class="ob-mash hidden"><b></b></div><div class="ob-bal hidden"><i></i></div></div>`);
+    Arcade.hud(`<div class="ob"><div class="ob-time ar-chip">0.0</div><div class="ob-bar"><i></i></div><div class="ob-hint"></div><div class="ob-mash hidden"><b></b></div><div class="ob-bal hidden"><i></i></div><div class="ob-tip hidden"></div></div>`);
     const h = $('#arcade .ob');
-    this.el = { time: h.querySelector('.ob-time'), bar: h.querySelector('.ob-bar'), hint: h.querySelector('.ob-hint'), mash: h.querySelector('.ob-mash'), mashB: h.querySelector('.ob-mash b'), bal: h.querySelector('.ob-bal'), balI: h.querySelector('.ob-bal i') };
+    this.el = { time: h.querySelector('.ob-time'), bar: h.querySelector('.ob-bar'), hint: h.querySelector('.ob-hint'), mash: h.querySelector('.ob-mash'), mashB: h.querySelector('.ob-mash b'), bal: h.querySelector('.ob-bal'), balI: h.querySelector('.ob-bal i'), tip: h.querySelector('.ob-tip') };
+    // How the beam's balance works, under its meter: on a phone the joystick (left/right), on a
+    // keyboard A/D or the arrows. Leaning one way, push the other (the meter shows the lean).
+    this.el.tip.innerHTML = G.touch
+      ? '<span class="ob-ico">🕹️</span><b>⬅️➡️</b><span>נוטים לצד? ג׳ויסטיק לצד השני</span>'
+      : '<span class="ob-keys"><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd></span><span>נוטים לצד? לחצו לצד השני</span>';
     // Everyone's progress as dots on a bar.
     this.el.bar.innerHTML = this.rs.map((r, i) => `<span class="${r.isMe ? 'me' : ''}" data-i="${i}"></span>`).join('') + this.sections.map(s => `<em style="right:${(s.z0 / this.len * 100).toFixed(1)}%"></em>`).join('');
   },
@@ -696,7 +913,13 @@ const ObstacleGame = {
     if (me.mode === 'climb') e.mashB.style.width = `${Math.round(me.climb * 100)}%`;
     const onBeam = s && s.type === 'beam' && me.z > s.z0 && me.z < s.z1;
     e.bal.classList.toggle('hidden', !onBeam);
-    if (onBeam) e.balI.style.left = `${50 + me.bal * 48}%`;
+    // The marker sits on the side the body leans to (bal > 0 tips the soldier to the screen's left).
+    if (onBeam) e.balI.style.left = `${50 - me.bal * 48}%`;
+    // The tip: the first seconds on the beam, and again whenever the lean gets big.
+    if (onBeam && Math.abs(me.bal) > 0.55) this.tipUntil = Math.max(this.tipUntil || 0, this.t + 2.2);
+    const tipOn = onBeam && ((me.beamAt && this.t - me.beamAt.t < 3.2) || this.t < (this.tipUntil || 0));
+    if (e.tip.classList.contains('hidden') === tipOn) e.tip.classList.toggle('hidden', !tipOn);
+    if (!onBeam) this.tipUntil = 0;
   },
   finish() {
     this.done = true;

@@ -13,3 +13,17 @@
 #arcade .ob-mash b { display: block; height: 100%; background: linear-gradient(90deg, #f2c12e, #7dff6a); }
 #arcade .ob-bal { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 82px); left: 50%; transform: translateX(-50%); width: min(300px, 60vw); height: 16px; border-radius: 8px; background: linear-gradient(90deg, #d8261f, #f2c12e 30%, #7dff6a 45%, #7dff6a 55%, #f2c12e 70%, #d8261f); border: 2px solid #fff; }
 #arcade .ob-bal i { position: absolute; top: -6px; width: 6px; height: 28px; margin-left: -3px; background: #fff; border-radius: 3px; box-shadow: 0 0 6px #000; }
+/* The beam's balance tip, just under the meter: an icon (the joystick on a phone, the keys on a
+   keyboard), the arrows, and a few words. Small, on one line, gone after the first seconds. */
+#arcade .ob-tip { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 106px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 14px; background: rgba(12,16,12,.72); border: 1px solid rgba(255,255,255,.35); color: #fff; font: 800 13px Rubik, sans-serif; white-space: nowrap; direction: rtl; animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
+#arcade .ob-tip.hidden { display: none; }
+#arcade .ob-tip .ob-ico { font-size: 17px; line-height: 1; }
+#arcade .ob-tip b { font-size: 13px; letter-spacing: -1px; direction: ltr; }
+#arcade .ob-tip .ob-keys { direction: ltr; display: inline-flex; align-items: center; gap: 2px; opacity: .95; }
+#arcade .ob-tip kbd { display: inline-block; min-width: 15px; padding: 0 3px; border-radius: 4px; background: #f4f1e6; color: #1b1b1b; font: 800 11px/16px Rubik, sans-serif; text-align: center; box-shadow: 0 2px 0 #8a8670; }
+/* Phones held sideways: the meter and the tip a little higher and smaller, clear of the soldier. */
+@media (max-height: 460px) {
+  #arcade .ob-bal { top: calc(max(6px, env(safe-area-inset-top)) + 70px); height: 12px; width: min(240px, 46vw); }
+  #arcade .ob-bal i { top: -5px; height: 22px; }
+  #arcade .ob-tip { top: calc(max(6px, env(safe-area-inset-top)) + 88px); font-size: 12px; padding: 2px 8px 2px 6px; }
+}

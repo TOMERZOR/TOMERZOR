@@ -33,7 +33,7 @@ The App Store texts (English and Hebrew) are in `AppStore.md`.
 | Folder | What it does |
 |---|---|
 | `MyOldFriend/Moffy/` | Moffy (breathing, blinking, hopping, eyes that follow things) and the pointing ring |
-| `MyOldFriend/Brain/MoffyPrompt.swift` | **Moffy's personality and teaching rules.** Edit this to change how Moffy talks |
+| `server/src/prompt.ts` | **Moffy's personality and teaching rules.** Edit this to change how Moffy talks; it takes effect on the next server deploy, no app update needed |
 | `MyOldFriend/Brain/ServerBrain.swift` | Sends the question and camera photo to Moffy's server |
 | `MyOldFriend/Brain/DemoBrain.swift` | Practice mode, used when the app is built without a server |
 | `MyOldFriend/App/Backend.swift` | Reads the server's address and token from `Backend.plist` |

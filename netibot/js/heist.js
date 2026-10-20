@@ -59,7 +59,7 @@ const Heist = {
     this.n = 0; this.k = null; this.cur = null; this.opt = {}; this.lostT = 0;
     this.ui();
     Arcade.buttons({ act: 'E', run: 'ריצה' });
-    Arcade.loadModels(['container', 'launcher', 'radar', 'tower', 'generator', 'palm', 'arc_sandbags', 'arc_table', 'gun_pistol', 'gun_rifle', 'car_hummer', 'car_hilux', 'hs_cart', 'hs_chain', 'hs_bag', 'pickup', 'truck']).then(() => { if (this.ctx === ctx && this.cur && this.cur.dress) this.cur.dress(); });
+    Arcade.loadModels(['container', 'launcher', 'radar', 'tower', 'generator', 'palm', 'arc_sandbags', 'arc_table', 'gun_pistol', 'gun_rifle', 'car_hummer', 'car_hilux', 'hs_cart', 'hs_chain', 'hs_bag', 'hs_shov', 'pickup', 'truck']).then(() => { if (this.ctx === ctx && this.cur && this.cur.dress) this.cur.dress(); });
     Sound.music('night');
     this.bindKeys();
     if (this.host) this.go('board');

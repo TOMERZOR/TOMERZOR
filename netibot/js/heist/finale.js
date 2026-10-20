@@ -11,6 +11,8 @@
 const HS_SAFE = { x: -2.6, z: -12.5 }, HS_PANEL = { x: -10.3, z: -8.6 }, HS_DOOR = { x: -6, z: -6.5 };
 const HS_SPAWN = { gate: [10, 36, 13.6, 38.5, -Math.PI / 2], fence: [27, -31, 31, -33, Math.PI], beach: [-44, 6, -46, 13, -Math.PI / 2] };
 const HS_EXIT = { x: 10, z: 112 };
+// Where the command post's model stands over the walls (its door on the south side, at ours).
+const HS_SHELL = { x: -6, z: -10, ry: 0, size: [11.4, 4.0, 8.2] };
 const HS_FIN_LINES = {
   td: ['💤 לילה טוב', '💤 *נרדם באמצע משפט*', '💤 חלום על שחרור', '💤 שינה מתוקה'],
   hit: ['📟 MILES: פגיעה!', '📟 *ביפ ביפ* — נפסל', '📟 "זה לא נחשב!" — נחשב.'],
@@ -42,7 +44,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     this.st = { al: 0, at: 180, sf: 0, L: 0, B: 0, dr: '', inn: [], hp: {}, cut: this.appr === 'fence' ? 0 : 1, done: 0, bar: 1 };
     this.me2 = { tds: 0, shots: 0, hits: 0 };
     this.ammo = 12; this.fireCool = 0; this.T = 0; this.drill = { p: 0, heat: 0, jam: 0, nz: 0 }; this.alarmed = false; this.safeShown = false; this.mineCarry = 0;
-    this.safeOpen = 0; this.el2 = undefined; this.hudOff = false; this.cutDone = false; this.barBroke = false; this.escSent = false; this.boarded = false;
+    this.safeOpen = 0; this.el2 = undefined; this.hudOff = false; this.beatDone = false; this.cutDone = false; this.barBroke = false; this.escSent = false; this.boarded = false;
     this.tracers = []; this.dropL = this.dropB = null; this.flashRed = 0; this.pad = null; this.nzT = 0;
     this.uses = this.makeUses();
     Sound.music('night');
@@ -59,6 +61,13 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     const foam = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 600), new THREE.MeshBasicMaterial({ color: 0xcfe6ff, transparent: true, opacity: 0.35 }));
     foam.rotation.x = -Math.PI / 2; foam.position.set(-52.2, 0.07, 40); sc.add(foam); this.foam = foam;
     H.col(-56, 40, 4, 600, 3);
+    // Wet sand along the waterline (its foam runs along the shore), and a softer strip above it.
+    const wet = Arcade.texture('assets/heist/tex_beach.jpg'); wet.wrapS = wet.wrapT = THREE.RepeatWrapping; wet.repeat.set(75, 1.25);
+    const beach = new THREE.Mesh(new THREE.PlaneGeometry(600, 10), new THREE.MeshStandardMaterial({ map: wet, color: 0x8d8070, roughness: 0.55, metalness: 0.1 }));
+    beach.rotation.set(-Math.PI / 2, 0, Math.PI / 2); beach.position.set(-47, 0.03, 40); beach.receiveShadow = true; sc.add(beach);
+    const dry = Arcade.texture('assets/heist/tex_beach.jpg'); dry.wrapS = dry.wrapT = THREE.RepeatWrapping; dry.repeat.set(100, 0.75);
+    const edge = new THREE.Mesh(new THREE.PlaneGeometry(600, 6), new THREE.MeshStandardMaterial({ map: dry, color: 0x9a8c76, roughness: 0.9, transparent: true, opacity: 0.55, depthWrite: false }));
+    edge.rotation.set(-Math.PI / 2, 0, Math.PI / 2); edge.position.set(-39, 0.025, 40); sc.add(edge);
     // The roads: the battery's gate down to the base's gate, the beach track.
     H.road(10, 22, 10, 124, 8); H.road(10, 30, 40, 30, 6, 0.025); H.road(40, 30, 40, -34, 6, 0.03); H.road(40, -34, 20, -34, 6, 0.025); H.road(10, 46, -44, 46, 6, 0.025); H.road(-44, 46, -46, 0, 6, 0.03);
     // The battery's fence; the north-east bit is the one we cut.
@@ -81,16 +90,20 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     this.exitB = H.beacon(HS_EXIT.x, HS_EXIT.z + 4, 0x5adfff, 14); this.exitB.visible = false;
     // The command post: concrete, a door to the south, the console, the safe, a red light on the roof.
     const cw = H.mat(0xa8a497, { map: Arcade.texture('assets/heist/tex_concrete.jpg', 2) });
-    H.box(-6, -13.5, 10, 0.3, 3, cw); H.box(-11, -10, 0.3, 7, 3, cw); H.box(-1, -10, 0.3, 7, 3, cw);
-    H.box(-8.95, -6.5, 4.1, 0.3, 3, cw); H.box(-3.05, -6.5, 4.1, 0.3, 3, cw);
-    H.box(-6, -6.5, 1.6, 0.3, 0.6, cw, { y: 2.4, col: false });
+    // The walls are boxes (they're also what you bump into); from outside, the Higgsfield
+    // model of the post (sandbags, dish, beacon) stands over them — see dress() and drawWorld().
+    const walls = this.walls = new THREE.Group(); sc.add(walls);
+    const wp = { parent: walls };
+    H.box(-6, -13.5, 10, 0.3, 3, cw, wp); H.box(-11, -10, 0.3, 7, 3, cw, wp); H.box(-1, -10, 0.3, 7, 3, cw, wp);
+    H.box(-8.95, -6.5, 4.1, 0.3, 3, cw, wp); H.box(-3.05, -6.5, 4.1, 0.3, 3, cw, wp);
+    H.box(-6, -6.5, 1.6, 0.3, 0.6, cw, { y: 2.4, col: false, parent: walls });
     const fl = new THREE.Mesh(new THREE.PlaneGeometry(10, 7), H.mat(0x445a3a, { map: Arcade.texture('assets/heist/tex_floor.jpg', 3) }));
     fl.rotation.x = -Math.PI / 2; fl.position.set(-6, 0.03, -10); fl.receiveShadow = true; sc.add(fl);
     const roof = this.roof = new THREE.Group(); sc.add(roof);
-    H.box(-6, -10, 10.6, 7.6, 0.25, H.mat(0x8a877c, { map: Arcade.texture('assets/heist/tex_concrete.jpg', 3) }), { y: 3, col: false, parent: roof });
-    const tag = Scene3D.label(fmt('📡 השו"ב של גוני'), { bg: 'rgba(20,26,16,.85)', size: 0.9 }); tag.position.set(-6, 5.4, -10); roof.add(tag);
+    this.slab = H.box(-6, -10, 10.6, 7.6, 0.25, H.mat(0x8a877c, { map: Arcade.texture('assets/heist/tex_concrete.jpg', 3) }), { y: 3, col: false, parent: roof });
+    const tag = Scene3D.label(fmt('📡 השו"ב של גוני'), { bg: 'rgba(20,26,16,.85)', size: 0.9 }); tag.position.set(-6, 5.8, -10); sc.add(tag);
     // A glow from the window over the console side.
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.9), new THREE.MeshBasicMaterial({ color: 0x7affa8, transparent: true, opacity: 0.55 })); win.position.set(-3.6, 1.9, -6.33); sc.add(win);
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.9), new THREE.MeshBasicMaterial({ color: 0x7affa8, transparent: true, opacity: 0.55 })); win.position.set(-3.6, 1.9, -6.33); walls.add(win);
     const dish = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3), H.mat(0xdddddd, { side: THREE.DoubleSide }));
     dish.position.set(-3, 3.9, -11.5); dish.rotation.x = 2.3; roof.add(dish);
     for (const [x, h] of [[-9.6, 3.2], [-8.8, 2.4]]) { const an = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, h, 5), H.mat(0x333333)); an.position.set(x, 3.1 + h / 2, -12.6); roof.add(an); }
@@ -148,6 +161,11 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     const H = Heist;
     for (const o of this.decor || []) H.scene.remove(o);
     this.decor = [];
+    // The command post from outside: the model over the box walls (its door on our door).
+    this.shell = Assets.model('hs_shov', { size: HS_SHELL.size, rotY: HS_SHELL.ry });
+    if (this.shell) { this.shell.position.set(HS_SHELL.x, 0, HS_SHELL.z); H.scene.add(this.shell); this.decor.push(this.shell); }
+    // Its roof is a little higher than the walls': the dish, the antennas and the beacon go up on it.
+    this.slab.visible = !this.shell; this.roof.position.y = this.shell ? HS_SHELL.size[1] - 3.05 : 0;
     for (const [name, x, z, fit, ry] of this.props) {
       const m = Assets.model(name, fit);
       if (!m) continue;
@@ -214,6 +232,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     g.st = 'run'; g.runT = 0; g.sus = 1;
     void p;
     this.say(pick(HS_FIN_LINES.run), 'bad');
+    this.runBeat(g);
     Heist.pop(g.x, g.z, pick(HS_FIN_LINES.shout), { bg: 'rgba(255,248,230,.97)', y: 2.6 });
   },
   extraSim(g, dt, saw) {
@@ -225,7 +244,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
         const d = Math.hypot(b.x - g.x, b.z - g.z);
         if (d > g.R * 0.8) continue;
         let da = Math.atan2(b.z - g.z, b.x - g.x) - g.a; da = Math.atan2(Math.sin(da), Math.cos(da));
-        if (Math.abs(da) < g.half && Heist.los(g.x, g.z, b.x, b.z)) { b.found = true; g.st = 'run'; g.runT = 0; g.sus = 1; this.say(pick(HS_FIN_LINES.body), 'bad'); break; }
+        if (Math.abs(da) < g.half && Heist.los(g.x, g.z, b.x, b.z)) { b.found = true; g.st = 'run'; g.runT = 0; g.sus = 1; this.say(pick(HS_FIN_LINES.body), 'bad'); this.runBeat(g); break; }
       }
     }
   },
@@ -469,7 +488,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     if (!st) return;
     const before = this.gs.map(g => g.st);
     this.guardsIn(st.g);
-    this.gs.forEach((g, i) => { if (g.st === 'run' && before[i] !== 'run') this.say(pick(HS_FIN_LINES.run), 'bad'); });
+    this.gs.forEach((g, i) => { if (g.st === 'run' && before[i] !== 'run') { this.say(pick(HS_FIN_LINES.run), 'bad'); this.runBeat(g); } });
     for (const k of ['al', 'at', 'sf', 'L', 'B', 'dr', 'cut', 'bar']) if (st[k] !== undefined) this.st[k] = st[k];
     this.st.inn = Array.isArray(st.inn) ? st.inn : [];
     this.st.hp = st.hp && typeof st.hp === 'object' ? st.hp : {};
@@ -590,7 +609,9 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
   },
   drawWorld(dt, t) {
     const H = Heist, st = this.st, me = this.mePl, s = t / 1000;
-    this.roof.visible = !this.inside(me) || me.hidden;
+    const out = !this.inside(me) || me.hidden;
+    if (this.shell) { this.shell.visible = out; this.walls.visible = !out; }
+    this.roof.visible = out;
     // The siren light.
     const al = !!st.al;
     this.redL.intensity = al ? 2.2 + Math.sin(s * 9) * 1.4 : 0;
@@ -648,6 +669,20 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
       { shot: { from: [s[0] + 2.5, 2.2, s[1] + 4], to: [s[0] + 1.5, 2, s[1] + 3], at: [s[0], 1.3, s[1] - 4], dur: 6000 }, who: who('p_liran'), text: ap },
       { text: G.touch ? 'E מאחורי שומר — להפיל בשקט · 🔫 — MILES (רועש!) · להחזיק E — כספת וגדר' : 'E מאחורי שומר — להפיל בשקט · F / קליק — MILES (רועש!) · להחזיק E — כספת וגדר · Shift — ריצה (רועשת)', icon: '🎮', ms: 5200 },
     ];
+  },
+  // The first time someone runs for the alarm: a beat on him, on everyone's screen (the guards wait).
+  runBeat(g) {
+    const H = Heist, n = H.n;
+    if (this.beatDone || this.over || H.cine || this.st.al) return;
+    this.beatDone = true;
+    const dx = HS_DOOR.x - g.x, dz = HS_DOOR.z - g.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+    const live = this.live;
+    this.live = false;
+    Sound.whistle();
+    H.play([
+      { img: 'assets/heist/alarm_run.jpg', text: 'הוא ראה. והוא רץ — ללחצן האזעקה בשו"ב.', icon: '🚨', ms: 2600 },
+      { shot: { from: [g.x - ux * 6 + uz * 2, 3.4, g.z - uz * 6 - ux * 2], to: [g.x - ux * 3.5 + uz * 1.2, 2.4, g.z - uz * 3.5 - ux * 1.2], at: [g.x, 1.3, g.z], atEnd: [HS_DOOR.x, 1.2, HS_DOOR.z], dur: 2800 }, who: H.ctx.solo ? 'p_liran' : '', text: 'לעצור אותו! להפיל אותו מאחור — או MILES. לפני שהוא לוחץ!', ms: 2800 },
+    ]).then(() => { if (H.n === n) this.live = live || !this.over; });
   },
   // The safe's open: everyone sees it (the guards wait).
   safeReveal() {

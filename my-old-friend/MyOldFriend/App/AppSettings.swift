@@ -44,6 +44,10 @@ final class AppSettings: ObservableObject {
     @Published var useCamera: Bool {
         didSet { defaults.set(useCamera, forKey: "useCamera") }
     }
+    /// When the person agreed, on the welcome screen, to send questions and pictures to the AI services.
+    @Published var agreedToAIAt: Date? {
+        didSet { defaults.set(agreedToAIAt, forKey: "agreedToAIAt") }
+    }
 
     init() {
         language = defaults.string(forKey: "language").flatMap(AppLanguage.init(rawValue:))
@@ -52,6 +56,7 @@ final class AppSettings: ObservableObject {
         speechSpeed = defaults.object(forKey: "speechSpeed") as? Double ?? 0.85
         readAloud = defaults.object(forKey: "readAloud") as? Bool ?? true
         useCamera = defaults.object(forKey: "useCamera") as? Bool ?? true
+        agreedToAIAt = defaults.object(forKey: "agreedToAIAt") as? Date
     }
 
     var lang: AppLanguage { language ?? .english }

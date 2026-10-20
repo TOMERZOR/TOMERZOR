@@ -17,6 +17,8 @@ struct MoffyReply: Identifiable, Equatable {
     var finished: Bool = false
     /// The exact text that came back from Claude, kept for the conversation history.
     var raw: String = ""
+    /// Subscription or free questions left, from the server.
+    var access: ServerAccess? = nil
 
     /// A step is waiting to be done, so the main button offers "Done, next step".
     var isOpenStep: Bool { step > 0 && !finished }
@@ -36,6 +38,10 @@ enum BrainError: Error {
     case offline
     /// The server refused the app or is missing its keys: the developer's problem, not the user's.
     case notSetUp
+    /// The free questions are used up and there is no subscription.
+    case trialOver
+    /// The subscriber's fair-use limit for today.
+    case dailyLimit
     case busy
     case refused
     case unreadable

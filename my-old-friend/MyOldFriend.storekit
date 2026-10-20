@@ -1,0 +1,64 @@
+{
+  "identifier" : "4B1D7F2E",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6740000001",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "he",
+    "_storefront" : "ISR",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21500001",
+      "localizations" : [
+
+      ],
+      "name" : "Moffy",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "24.90",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "6740000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Moffy helps every day, one step at a time.",
+              "displayName" : "My Old Friend monthly",
+              "locale" : "en_US"
+            },
+            {
+              "description" : "מופי עוזרת כל יום, צעד אחד בכל פעם.",
+              "displayName" : "החבר הוותיק שלי – מנוי חודשי",
+              "locale" : "he"
+            }
+          ],
+          "productID" : "com.tomerzor.myoldfriend.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Monthly",
+          "subscriptionGroupID" : "21500001",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

@@ -33,6 +33,9 @@ MADE FOR OLDER EYES, EARS AND HANDS
 A FRIEND WHO WATCHES OUT FOR YOU
 Moffy warns you gently when something looks like a scam, such as a message asking for codes, passwords or money, and suggests calling someone you trust.
 
+TRY IT FREE
+Your first 20 questions are free. Then a monthly subscription keeps Moffy helping every day. Someone in the family can buy it and share it through Family Sharing. Cancel any time in the iPhone's Settings.
+
 GOOD TO KNOW
 Moffy is an AI and can make mistakes. For money or health decisions, check with someone you trust. When you ask a question, your words and the camera picture are sent over the internet so Moffy can understand them.
 
@@ -72,6 +75,9 @@ seniors,elderly,AI helper,tech help,grandparents,accessibility,big text,voice,ca
 חבר ששומר עליכם
 מופי מזהירה בעדינות כשמשהו נראה כמו עוקץ, למשל הודעה שמבקשת קודים, סיסמאות או כסף, וממליצה להתקשר למישהו שסומכים עליו.
 
+מנסים בחינם
+20 השאלות הראשונות בחינם. אחר כך מנוי חודשי שומר על מופי לצדכם כל יום. מישהו מהמשפחה יכול לקנות אותו ולשתף דרך שיתוף משפחתי. אפשר לבטל בכל עת בהגדרות של האייפון.
+
 חשוב לדעת
 מופי היא בינה מלאכותית ויכולה לטעות. בהחלטות של כסף או בריאות כדאי לבדוק עם מישהו שסומכים עליו. כששואלים שאלה, המילים ותמונת המצלמה נשלחות דרך האינטרנט כדי שמופי תוכל להבין אותן.
 
@@ -85,3 +91,12 @@ seniors,elderly,AI helper,tech help,grandparents,accessibility,big text,voice,ca
 3. "One small step at a time." / "צעד קטן אחד בכל פעם."
 4. "Big letters. Slow, clear voice." / "אותיות גדולות. קול איטי וברור."
 5. "Warns you about scams." / "מזהירה מפני עוקצים."
+
+## In-app purchase
+
+- **Product ID:** `com.tomerzor.myoldfriend.monthly` (auto-renewable, 1 month, group "Moffy")
+- **Price:** ₪24.90, Family Sharing on
+- **Display name:** My Old Friend monthly / החבר הוותיק שלי – מנוי חודשי
+- **Description:** Moffy helps every day, one step at a time. / מופי עוזרת כל יום, צעד אחד בכל פעם.
+- **Privacy Policy URL:** `https://<your server>/privacy`
+- **Terms of Use:** Apple's standard EULA (add a link to it in the app description: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/)

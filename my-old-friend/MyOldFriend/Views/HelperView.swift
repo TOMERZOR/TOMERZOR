@@ -42,6 +42,10 @@ struct HelperView: View {
             TypeQuestionView { text in helper.ask(typed: text) }
                 .inheritingAppEnvironment(settings: settings, helper: helper)
         }
+        .sheet(isPresented: Binding(get: { helper.subscription.showPaywall },
+                                    set: { helper.subscription.showPaywall = $0 })) {
+            PaywallView().inheritingAppEnvironment(settings: settings, helper: helper)
+        }
     }
 
     /// Tells the helper which part of the picture is inside the frame, for the snapshot.

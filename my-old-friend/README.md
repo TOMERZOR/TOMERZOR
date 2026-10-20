@@ -39,7 +39,8 @@ The App Store texts (English and Hebrew) are in `AppStore.md`.
 | `MyOldFriend/App/Backend.swift` | Reads the server's address and token from `Backend.plist` |
 | `MyOldFriend/Camera/`, `MyOldFriend/Voice/` | Camera, listening, and speaking (Moffy's natural voice with an on-phone cache, the iPhone's voice as a fallback) |
 | `server/` | Moffy's server (a Cloudflare Worker). It holds the Claude and ElevenLabs keys |
-| `MyOldFriend/Views/` | The screens: welcome, main helper screen, settings, typing |
+| `MyOldFriend/Views/` | The screens: welcome (with the agreement to send data to the AI), main helper screen, settings, typing, subscription |
+| `MyOldFriend/Store/` | The subscription (StoreKit 2) and the phone's random install ID |
 
 ## Running it on an iPhone
 
@@ -75,6 +76,7 @@ npx wrangler login                          # opens the browser to sign in to Cl
 npx wrangler secret put ANTHROPIC_API_KEY   # paste the Claude key when asked
 npx wrangler secret put ELEVENLABS_API_KEY  # paste the ElevenLabs key
 npx wrangler secret put APP_TOKEN           # make up a long random password, e.g. from `openssl rand -hex 24`
+npx wrangler kv namespace create USAGE      # counts free questions; paste the id it prints into wrangler.toml
 npx wrangler deploy                         # prints the address, like https://my-old-friend.NAME.workers.dev
 ```
 
@@ -85,6 +87,28 @@ Finally, tell the app where the server is: copy `Backend.example.plist` to `MyOl
 **Optional, recommended:** keep one shared copy of every voice clip, so a sentence is made only once for all users. Run `npx wrangler r2 bucket create moffy-voice`, remove the `#` in front of the three `[[r2_buckets]]` lines in `server/wrangler.toml`, and deploy again. Without it, each Cloudflare data center keeps its own copy.
 
 **Set spending limits** in both the Anthropic console (**Limits**) and ElevenLabs, so a surprise can't run up a bill. The `APP_TOKEN` keeps casual strangers out, but it ships inside the app, so treat the limits as the real protection.
+
+**Privacy policy:** the server publishes one at `https://…workers.dev/privacy` (English and Hebrew), and the App Store listing, the welcome screen and the subscription screen link to it. Put your contact email in `CONTACT_EMAIL` in `server/src/pages.ts` before publishing.
+
+### The subscription (₪24.90 a month, 20 free questions)
+
+Every phone gets **20 free questions**. After that Moffy says the free questions are over and the subscription screen opens: **₪24.90 a month** through Apple, shareable with the family (so a son or daughter can pay for a parent). Subscribers get up to 40 questions a day, as a fair-use cap. Both numbers are `TRIAL_QUESTIONS` and `DAILY_LIMIT` in `server/wrangler.toml`.
+
+How it is enforced: the app makes a random ID for the phone (kept in the Keychain, so reinstalling doesn't reset it) and sends it with each question. The server counts free questions per ID in the `USAGE` KV namespace. A subscriber's app also sends Apple's subscription number, and the server asks Apple's App Store Server API whether it is active (remembered for 6 hours). New voice clips are made only for Moffy's own recent answers, plus 30 a day per phone for the app's fixed sentences, so nobody can use the server as a free voice service.
+
+Set it up once in **App Store Connect** (needs the Apple Developer Program):
+
+1. **Business** (Agreements, Tax and Banking): accept the Paid Apps agreement and add your bank and tax details. Subscriptions don't work until this is done.
+2. Your app → **Subscriptions** → create a group "Moffy" and a subscription with product ID `com.tomerzor.myoldfriend.monthly`, duration 1 month, price ₪24.90 (Israel; Apple fills in the other countries), **Family Sharing** on, and a name and description in English and Hebrew.
+3. **Users and Access** → **Integrations** → **In-App Purchase** → generate a key. Download the `.p8` file (only possible once) and note the key ID and the issuer ID shown above the list. Then:
+
+   ```sh
+   npx wrangler secret put APPLE_ISSUER_ID
+   npx wrangler secret put APPLE_KEY_ID
+   npx wrangler secret put APPLE_PRIVATE_KEY   # paste the whole .p8 file, including the BEGIN and END lines
+   ```
+
+**Trying purchases before the App Store:** `MyOldFriend.storekit` is a test store with the same subscription at ₪24.90. In Xcode: **Product → Scheme → Edit Scheme → Run → Options → StoreKit Configuration** → choose `MyOldFriend.storekit`. Purchases in Xcode are fake and Apple's servers don't know them, so for that kind of testing only, run the server with `npx wrangler dev --var DEV_TRUST_SUBSCRIPTIONS:true`, or deploy with that variable temporarily. Never leave it on in the real server. TestFlight purchases are real sandbox purchases and are checked with Apple normally.
 
 ### What it costs
 

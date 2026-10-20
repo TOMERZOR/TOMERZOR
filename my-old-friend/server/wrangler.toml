@@ -8,6 +8,22 @@ compatibility_flags = ["nodejs_compat"]
 #   npx wrangler secret put ANTHROPIC_API_KEY
 #   npx wrangler secret put ELEVENLABS_API_KEY
 #   npx wrangler secret put APP_TOKEN        # any long random string; the same one goes in the app
+#   npx wrangler secret put APPLE_ISSUER_ID  # App Store Connect → Users and Access → Integrations →
+#   npx wrangler secret put APPLE_KEY_ID     #   In-App Purchase: the issuer ID, the key's ID,
+#   npx wrangler secret put APPLE_PRIVATE_KEY #  and the whole downloaded .p8 file
+
+# Free questions per phone, and the fair-use cap per subscriber per day.
+[vars]
+TRIAL_QUESTIONS = "20"
+DAILY_LIMIT = "40"
+BUNDLE_ID = "com.tomerzor.myoldfriend"
+
+# Counts free questions and checks subscriptions. Create it once with
+#   npx wrangler kv namespace create USAGE
+# and paste the id it prints here.
+[[kv_namespaces]]
+binding = "USAGE"
+id = "PASTE-THE-ID-FROM-wrangler-kv-namespace-create"
 
 # Optional: keep every voice clip forever, shared by all users (create it first:
 #   npx wrangler r2 bucket create moffy-voice), then uncomment:

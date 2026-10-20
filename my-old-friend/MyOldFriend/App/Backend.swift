@@ -21,6 +21,15 @@ enum Backend {
 
     static var isConfigured: Bool { baseURL != nil }
 
+    /// The privacy policy the server publishes, for the subscription screen and the welcome screen.
+    static var privacyURL: URL? { baseURL?.appendingPathComponent("privacy") }
+
+    /// Apple's subscription number while the person is subscribed; the server checks it with Apple.
+    static var subscriptionID: String? {
+        get { UserDefaults.standard.string(forKey: "subscriptionID") }
+        set { UserDefaults.standard.set(newValue, forKey: "subscriptionID") }
+    }
+
     enum Failure: Error { case notConfigured, offline, status(Int, String) }
 
     /// POSTs JSON to the server and returns the body of a 200 answer.
@@ -31,6 +40,8 @@ enum Backend {
         request.timeoutInterval = timeout
         request.setValue("application/json", forHTTPHeaderField: "content-type")
         request.setValue(appToken, forHTTPHeaderField: "x-app-token")
+        request.setValue(InstallID.value.uuidString.lowercased(), forHTTPHeaderField: "x-install-id")
+        if let subscriptionID { request.setValue(subscriptionID, forHTTPHeaderField: "x-subscription") }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let data: Data

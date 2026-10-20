@@ -72,13 +72,21 @@ struct OnboardingView: View {
                     row("hand.point.up.left.fill", settings.t("I'll show you exactly what to press, one step at a time.", "אני אראה לכם בדיוק על מה ללחוץ, צעד אחד בכל פעם."))
                 }
 
-                // Apple asks apps to say clearly where AI is used and what it can't do.
+                // Apple asks apps to say clearly where AI is used, what it can't do, and to get the
+                // person's agreement before sending their data to another company's AI.
                 Label {
-                    Text(settings.t("Moffy is an AI and can make mistakes, so for money or health matters, check with someone you trust. When you ask, your question and the camera picture are sent over the internet so Moffy can understand them.",
-                                    "מופי היא בינה מלאכותית ויכולה לטעות, ולכן בענייני כסף או בריאות כדאי לבדוק עם מישהו שסומכים עליו. כששואלים, השאלה ותמונת המצלמה נשלחות דרך האינטרנט כדי שמופי תוכל להבין אותן."))
-                        .font(.ui(.body))
-                        .foregroundStyle(Theme.inkSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(settings.t("Moffy is an AI and can make mistakes, so for money or health matters, check with someone you trust. When you ask a question, your words and the camera picture are sent to Claude, an AI by Anthropic, so Moffy can understand them, and Moffy's answer is sent to ElevenLabs to be read out loud. Nothing is sent until you ask.",
+                                        "מופי היא בינה מלאכותית ויכולה לטעות, ולכן בענייני כסף או בריאות כדאי לבדוק עם מישהו שסומכים עליו. כששואלים שאלה, המילים ותמונת המצלמה נשלחות ל-Claude, בינה מלאכותית של Anthropic, כדי שמופי תוכל להבין אותן, והתשובה של מופי נשלחת ל-ElevenLabs כדי להקריא אותה. שום דבר לא נשלח לפני ששואלים."))
+                            .font(.ui(.body))
+                            .foregroundStyle(Theme.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let privacy = Backend.privacyURL {
+                            Link(settings.t("Privacy Policy", "מדיניות פרטיות"), destination: privacy)
+                                .font(.ui(.body, .semibold))
+                                .foregroundStyle(Theme.actionText)
+                        }
+                    }
                 } icon: {
                     Image(systemName: "info.circle.fill").foregroundStyle(Theme.actionText)
                 }
@@ -88,7 +96,7 @@ struct OnboardingView: View {
             .padding(.horizontal, 24)
         }
         .safeAreaInset(edge: .bottom) {
-            PinkButton(title: settings.t("Let's start", "בואו נתחיל"), isBusy: asking, minHeight: 76) {
+            PinkButton(title: settings.t("I agree, let's start", "מסכימים, אפשר להתחיל"), isBusy: asking, minHeight: 76) {
                 Task { await allowAndStart() }
             }
             .disabled(asking)
@@ -97,8 +105,8 @@ struct OnboardingView: View {
             .background(Theme.surface)
         }
         .onAppear {
-            helper.speaker.speak(settings.t("Hi! I'm Moffy. Show me what you need help with, tell me in your own words, and I'll show you exactly what to press, one step at a time. Tap Let's start, and then tap Allow.",
-                                            "שלום! אני מופי. הראו לי במה צריך עזרה, ספרו לי במילים שלכם, ואני אראה לכם בדיוק על מה ללחוץ, צעד אחד בכל פעם. לחצו על בואו נתחיל, ואחר כך על אישור."),
+            helper.speaker.speak(settings.t("Hi! I'm Moffy. Show me what you need help with, tell me in your own words, and I'll show you exactly what to press, one step at a time. If that's all right, tap I agree, and then tap Allow.",
+                                            "שלום! אני מופי. הראו לי במה צריך עזרה, ספרו לי במילים שלכם, ואני אראה לכם בדיוק על מה ללחוץ, צעד אחד בכל פעם. אם זה בסדר, לחצו על מסכימים, ואחר כך על אישור."),
                                  language: settings.lang, speed: settings.speechSpeed)
         }
     }
@@ -123,6 +131,8 @@ struct OnboardingView: View {
         _ = await CameraService.requestAccess()
         _ = await SpeechListener.requestAccess()
         asking = false
+        // Finishing here is the agreement to send questions and pictures to Claude and ElevenLabs.
+        settings.agreedToAIAt = Date()
         settings.hasOnboarded = true
     }
 }

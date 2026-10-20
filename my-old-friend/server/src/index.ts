@@ -1,4 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { allowNewClip, checkAccess, type AccessEnv } from "./access";
+import { TERMS_URL, privacyPage } from "./pages";
 import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, noPhotoNote, type Language } from "./prompt";
 
 /**
@@ -6,12 +8,17 @@ import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, noPhotoNote, type Language }
  * Moffy's answer; it sends the answer's words and gets them back in Moffy's voice. The Claude and
  * ElevenLabs keys live here, so people who install the app never set anything up.
  *
- *   POST /v1/ask    { question, language, history?, photo? }  ->  { reply }
+ *   POST /v1/ask    { question, language, history?, photo? }  ->  { reply, raw, access }
  *   POST /v1/speak  { text, language }                        ->  audio/mpeg
+ *   GET  /privacy                                             ->  the privacy policy
+ *   GET  /terms                                               ->  Apple's standard licence agreement
  *   GET  /health                                              ->  "ok"
+ *
+ * Both POST routes need the phone's install ID (header x-install-id). Each phone gets a few free
+ * questions; after that the monthly subscription (header x-subscription) is checked with Apple.
  */
 
-interface Env {
+interface Env extends AccessEnv {
   ANTHROPIC_API_KEY: string;
   ELEVENLABS_API_KEY: string;
   /** Shared with the app; requests without it are refused. */
@@ -37,10 +44,19 @@ const MAX_HISTORY = 12;
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    if (request.method === "GET" && url.pathname === "/health") return new Response("ok");
+    if (request.method === "GET") {
+      if (url.pathname === "/health") return new Response("ok");
+      if (url.pathname === "/privacy") return privacyPage();
+      if (url.pathname === "/terms") return Response.redirect(TERMS_URL, 302);
+      return json({ error: "not_found" }, 404);
+    }
     if (request.method !== "POST") return json({ error: "not_found" }, 404);
     if (env.APP_TOKEN && request.headers.get("x-app-token") !== env.APP_TOKEN) {
       return json({ error: "unauthorized" }, 401);
+    }
+    const installId = request.headers.get("x-install-id")?.toLowerCase() ?? "";
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(installId)) {
+      return json({ error: "bad_request" }, 400);
     }
 
     let body: Record<string, unknown>;
@@ -52,9 +68,9 @@ export default {
 
     switch (url.pathname) {
       case "/v1/ask":
-        return ask(body, env);
+        return ask(body, env, ctx, request, installId);
       case "/v1/speak":
-        return speak(body, env, ctx);
+        return speak(body, env, ctx, installId);
       default:
         return json({ error: "not_found" }, 404);
     }
@@ -68,12 +84,21 @@ interface HistoryTurn {
   text: string;
 }
 
-async function ask(body: Record<string, unknown>, env: Env): Promise<Response> {
+async function ask(
+  body: Record<string, unknown>,
+  env: Env,
+  ctx: ExecutionContext,
+  request: Request,
+  installId: string,
+): Promise<Response> {
   const language = readLanguage(body.language);
   const question = typeof body.question === "string" ? body.question.trim().slice(0, MAX_QUESTION) : "";
   const photo = typeof body.photo === "string" ? body.photo : undefined;
   if (!question) return json({ error: "bad_request" }, 400);
   if (photo && photo.length > MAX_PHOTO_BASE64) return json({ error: "photo_too_large" }, 413);
+
+  const check = await checkAccess(request, env, installId);
+  if (!check.allowed) return json({ error: check.error, access: check.access }, check.status);
 
   // Earlier turns go back as plain text only, so each question stays cheap.
   const history = readHistory(body.history);
@@ -114,7 +139,14 @@ async function ask(body: Record<string, unknown>, env: Env): Promise<Response> {
       .join("");
     const reply = parseReply(answer);
     if (!reply) return json({ error: "unreadable" }, 502);
-    return json({ reply, raw: answer });
+
+    // Only answers count against the free questions, and only Moffy's own answers get a new voice clip.
+    await check.count();
+    if (env.USAGE) {
+      const said = `said:${await sha256(`${VOICES[language]}|${VOICE_MODEL}|${reply.say.trim()}`)}`;
+      ctx.waitUntil(env.USAGE.put(said, "1", { expirationTtl: 7 * 86_400 }));
+    }
+    return json({ reply, raw: answer, access: check.access });
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) return json({ error: "busy" }, 503);
     if (error instanceof Anthropic.InternalServerError) return json({ error: "busy" }, 503);
@@ -167,7 +199,7 @@ function parseReply(text: string): Reply | null {
 
 // MARK: - Moffy's voice
 
-async function speak(body: Record<string, unknown>, env: Env, ctx: ExecutionContext): Promise<Response> {
+async function speak(body: Record<string, unknown>, env: Env, ctx: ExecutionContext, installId: string): Promise<Response> {
   const language = readLanguage(body.language);
   const text = typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > MAX_SPEAK) return json({ error: "bad_request" }, 400);
@@ -187,6 +219,18 @@ async function speak(body: Record<string, unknown>, env: Env, ctx: ExecutionCont
     const response = audioResponse(audio);
     ctx.waitUntil(cache.put(cacheRequest, response.clone()));
     return response;
+  }
+
+  // New clips are made for Moffy's recent answers; anything else (the app's fixed sentences) has a
+  // small daily allowance per phone, so the voice can't be used as a free text-to-speech service.
+  let countClip = async () => {};
+  if (env.USAGE) {
+    const said = await env.USAGE.get(`said:${await sha256(`${voice}|${VOICE_MODEL}|${text}`)}`);
+    if (!said) {
+      const allowance = await allowNewClip(env, installId);
+      if (!allowance.ok) return json({ error: "daily_limit" }, 429);
+      countClip = allowance.count;
+    }
   }
 
   let generated: Response;
@@ -212,6 +256,7 @@ async function speak(body: Record<string, unknown>, env: Env, ctx: ExecutionCont
 
   const audio = await generated.arrayBuffer();
   const response = audioResponse(audio);
+  ctx.waitUntil(countClip());
   ctx.waitUntil(cache.put(cacheRequest, response.clone()));
   if (env.VOICE_CACHE) {
     ctx.waitUntil(env.VOICE_CACHE.put(key, audio, { httpMetadata: { contentType: "audio/mpeg" } }));

@@ -10,6 +10,7 @@ final class Helper: ObservableObject {
     let camera = CameraService()
     let listener = SpeechListener()
     let speaker = Speaker()
+    let subscription = Subscription()
 
     @Published private(set) var phase: Phase = .ready
     /// Moffy's latest answer. Nil when there is nothing to show (the camera is all there is).
@@ -31,7 +32,8 @@ final class Helper: ObservableObject {
     init(settings: AppSettings) {
         self.settings = settings
         // Views watch the helper; pass along changes from its parts.
-        for part in [camera.objectWillChange, listener.objectWillChange, speaker.objectWillChange, settings.objectWillChange] {
+        for part in [camera.objectWillChange, listener.objectWillChange, speaker.objectWillChange, settings.objectWillChange,
+                     subscription.objectWillChange] {
             part.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         }
         listener.onFinished = { [weak self] heard in self?.heard(heard) }
@@ -125,6 +127,7 @@ final class Helper: ObservableObject {
         var lines: [(text: String, language: AppLanguage)] = []
         for language in AppLanguage.allCases {
             for kind in FixedLine.allCases { lines.append((Self.line(kind, language).say, language)) }
+            for kind in AccessLine.allCases { lines.append((Self.accessLine(kind, language).say, language)) }
             lines.append((Self.voiceSample(language), language))
         }
         MoffyVoice.prepare(lines)
@@ -154,10 +157,12 @@ final class Helper: ObservableObject {
             // Keep the last few exchanges; enough for "what's next?" without growing forever.
             if history.count > 16 { history.removeFirst(history.count - 16) }
             phase = .ready
+            subscription.update(from: answer.access)
             show(answer, speak: true)
         } catch {
             phase = .ready
             show(Self.problemReply(for: error, settings.lang), speak: true)
+            if case .trialOver? = error as? BrainError { subscription.trialEnded() }
         }
     }
 
@@ -184,19 +189,19 @@ final class Helper: ObservableObject {
         switch kind {
         case .microphoneOff:
             return MoffyReply(say: t("I can't hear you yet. Please allow the microphone in the phone's Settings, or tap the keyboard button and type.",
-                                     "אני עוד לא שומעת אתכם. אשרו את המיקרופון בהגדרות של הטלפון, או לחצו על כפתור המקלדת וכתבו."),
+                                     "אני עוד לא שומעת אתכם. צריך לאשר את המיקרופון בהגדרות של הטלפון, או ללחוץ על המקלדת ולכתוב לי."),
                               caption: t("The microphone is off", "המיקרופון כבוי"), mood: .worried)
         case .didNotHear:
             return MoffyReply(say: t("I didn't hear anything. Tap the button and tell me what you need.",
-                                     "לא שמעתי כלום. לחצו על הכפתור וספרו לי מה צריך."),
+                                     "לא שמעתי כלום. תלחצו על הכפתור ותגידו לי מה צריך."),
                               caption: t("Tap and talk", "לחצו ודברו"), mood: .thinking)
         case .offline:
-            return MoffyReply(say: t("I can't reach the internet. Check that Wi-Fi is on, then try again.",
-                                     "אני לא מצליחה להתחבר לאינטרנט. בדקו שה-Wi-Fi דלוק ונסו שוב."),
+            return MoffyReply(say: t("I've lost the internet. Check that Wi-Fi is on, and we'll try again.",
+                                     "אין לי אינטרנט כרגע. תבדקו שה-Wi-Fi דלוק, וננסה שוב."),
                               caption: t("No internet", "אין אינטרנט"), mood: .worried)
         case .notSetUp:
-            return MoffyReply(say: t("I can't answer right now because of a problem on my side. Please try again later.",
-                                     "אני לא יכולה לענות כרגע בגלל תקלה אצלי. נסו שוב מאוחר יותר."),
+            return MoffyReply(say: t("Something on my end isn't working right now. Let's try again a bit later.",
+                                     "משהו אצלי לא עובד כרגע. ננסה שוב קצת אחר כך."),
                               caption: t("Try again later", "נסו שוב מאוחר יותר"), mood: .worried)
         case .busy:
             return MoffyReply(say: t("I'm a little busy right now. Let's try again in a moment.",
@@ -223,6 +228,8 @@ final class Helper: ObservableObject {
         case .notSetUp?: return line(.notSetUp, language)
         case .busy?: return line(.busy, language)
         case .refused?: return line(.refused, language)
+        case .trialOver?: return accessLine(.trialOver, language)
+        case .dailyLimit?: return accessLine(.dailyLimit, language)
         default: return line(.other, language)
         }
     }
@@ -264,6 +271,8 @@ extension Helper {
             show(sampleReply, speak: false)
         case "demo":
             Task { await playDemo() }
+        case "paywall":
+            subscription.showPaywall = true
         default:
             break
         }

@@ -25,6 +25,8 @@ struct ServerBrain: MoffyBrain {
             case "busy": throw BrainError.busy
             case "refused": throw BrainError.refused
             case "unauthorized", "server_setup": throw BrainError.notSetUp
+            case "trial_over": throw BrainError.trialOver
+            case "daily_limit": throw BrainError.dailyLimit
             default: throw BrainError.other("HTTP \(status) \(code)")
             }
         }
@@ -33,6 +35,11 @@ struct ServerBrain: MoffyBrain {
               let raw = json["raw"] as? String else {
             throw BrainError.unreadable
         }
-        return try MoffyReply.parse(raw)
+        var reply = try MoffyReply.parse(raw)
+        if let access = json["access"] as? [String: Any] {
+            reply.access = ServerAccess(subscribed: access["subscribed"] as? Bool ?? false,
+                                        trialLeft: access["trialLeft"] as? Int ?? 0)
+        }
+        return reply
     }
 }

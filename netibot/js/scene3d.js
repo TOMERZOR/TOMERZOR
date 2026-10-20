@@ -1309,6 +1309,14 @@ const Scene3D = {
         if (!m.acts.idle && !moving) m.acts.walk.time = 0;
         m.mixer.update(dt);
         if (ent.sit || ent.sitting) this.sitPose(m, ent);
+        // Seated, the name tag comes down with the head, so it shows across a table too.
+        const tag = m.tag || (m.parts && m.parts.tag);
+        if (tag) {
+          if (tag.userData.y0 == null) { tag.userData.y0 = tag.position.y; tag.userData.s0 = tag.scale.clone(); }
+          const sat = !!(ent.sit || ent.sitting);
+          tag.position.y = tag.userData.y0 - (sat ? 0.36 : 0);
+          tag.scale.copy(tag.userData.s0).multiplyScalar(sat ? 0.4 : 1);
+        }
       }
       return;
     }
@@ -1808,6 +1816,7 @@ const Scene3D = {
     this.lastTruck = tr;
 
     this.updateRemotes(dt, now);
+    if (typeof Shesh !== 'undefined') Shesh.update(dt, now);
     this.updateEvents(dt, now);
     this.updateBoss(dt, now);
     this.updateDeployCtl(dt, now);
@@ -1977,7 +1986,9 @@ const Scene3D = {
       this.setCarry(m, p.c);
       if (p.say && p.say.at !== m.sayAt) { m.sayAt = p.say.at; m.sayUntil = Math.abs(Date.now() - p.say.at) < 15000 ? now + 5000 : 0; m.sayText = p.say.text; }
       this.setBubble(m, m.sayUntil > now ? m.sayText : null);
-      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r }, p.m, dt);
+      // Sitting at a pergola table (their seat rides in presence, see js/sheshbesh.js).
+      const sitting = !!(p.ar && p.ar.g === 'shesh' && p.ar.s && p.ar.s.st != null);
+      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r, sitting }, p.m && !sitting, dt);
     }
   },
 
@@ -2333,11 +2344,42 @@ const Scene3D = {
     c.lookAt(P.x * S3 + fx * 4, 1.66 + Math.tan(look) * 4, P.y * S3 + fz * 4);
   },
 
+  // Sitting at a pergola table: first person from the bench, looking across the table at
+  // whoever sits opposite and the backgammon board (js/sheshbesh.js). Dragging / the look
+  // stick turn the head: up to 100° either way from the seat's facing, 40° up or down.
+  seatFps() { const s = G.player.sit; return !!(s && s.pergola && !Boss.active); },
+  seatCamera() {
+    const P = G.player, s = P.sit, c = this.camera;
+    const fx0 = Math.cos(s.angle), fz0 = Math.sin(s.angle);
+    const base = Math.atan2(fx0, fz0) + Math.PI;
+    if (this.inSeat !== s) {
+      if (!this.inSeat) this.seatSaved = { pitch: this.pitch, fov: c.fov };
+      this.inSeat = s;
+      this.yaw = base;
+      this.pitch = 0.88;
+      c.fov = 70; c.updateProjectionMatrix();
+    }
+    const d = Math.max(-1.75, Math.min(1.75, Math.atan2(Math.sin(this.yaw - base), Math.cos(this.yaw - base))));
+    this.yaw = base + d;
+    const look = Math.max(-0.7, Math.min(0.7, -(this.pitch - 0.71) * 1.18));
+    const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw);
+    const eye = (this.seatH || 0.45) + 0.74;
+    const x = P.x * S3 + fx0 * 0.05, z = P.y * S3 + fz0 * 0.05;
+    c.position.set(x, eye, z);
+    c.lookAt(x + fx * Math.cos(look), eye + Math.sin(look), z + fz * Math.cos(look));
+  },
+
   updateCamera(dt) {
-    if (this.shot) { this.shotCamera(); return; }
-    const fps = this.fps();
-    if (this.player) this.player.root.visible = !fps;
+    if (this.shot) { if (this.player && this.inSeat) this.player.root.visible = true; this.shotCamera(); return; }
+    const fps = this.fps(), seat = !fps && this.seatFps();
+    if (this.player) this.player.root.visible = !fps && !seat;
     if (fps) { this.fpsCamera(); return; }
+    if (seat) { this.seatCamera(); return; }
+    if (this.inSeat) {
+      this.inSeat = null; this.camX = undefined;
+      this.pitch = this.seatSaved.pitch;
+      this.camera.fov = this.seatSaved.fov; this.camera.updateProjectionMatrix();
+    }
     if (this.inFps) { this.inFps = false; this.camX = undefined; this.pitch = this.fpsSaved || 0.3; }
     // At the deployment controls the camera follows the truck or the crane load instead.
     const P = this.ctlFocus || G.player;

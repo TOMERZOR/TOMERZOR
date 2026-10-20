@@ -472,7 +472,11 @@ const Story = {
     BossArcs.interactables(add);
     // The tables at "מרכז אתר".
     for (const st of World.seats) {
-      if (P.sit === st) add(st.x, st.y, '🧍 לקום', () => Game.standUp(), 34);
+      if (P.sit === st) {
+        // At a pergola the board on the table may be what you're looking at (js/sheshbesh.js).
+        const sb = typeof Shesh !== 'undefined' && Shesh.interact(st);
+        add(st.x, st.y, sb ? sb.label : '🧍 לקום', sb ? sb.action : () => Game.standUp(), 34);
+      }
       else if (!st.by && !P.sit && !P.carry) add(st.exit.x, st.exit.y, '🪑 לשבת', () => Game.sitDown(st), 22);
     }
     const ts = travelSpot();

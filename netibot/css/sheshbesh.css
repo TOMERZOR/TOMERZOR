@@ -1,0 +1,97 @@
+/* Backgammon (שש בש) at the pergola tables: reticle, score strip, dice, buttons, end card. */
+#shesh { position: fixed; inset: 0; pointer-events: none; z-index: 4; }
+#shesh.hidden, #shesh .hidden { display: none !important; }
+
+/* The reticle: a quiet dot that turns into a gold ring over something you can use. */
+#shesh .sb-ret {
+  position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%;
+  background: rgba(255,255,255,.85); box-shadow: 0 0 0 1.5px rgba(0,0,0,.55); transition: all .12s ease-out;
+}
+#shesh .sb-ret.on {
+  width: 22px; height: 22px; margin: -11px 0 0 -11px; background: transparent;
+  border: 2.5px solid var(--gold); box-shadow: 0 0 0 1.5px rgba(0,0,0,.5), 0 0 12px rgba(242,193,78,.7);
+}
+
+/* Score strip: you on the right, them on the left, dice and what's happening in the middle. */
+#shesh .sb-top {
+  position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 64px); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: stretch; gap: 8px; direction: rtl;
+}
+#shesh .sb-p {
+  display: flex; align-items: center; gap: 7px; min-width: 132px; padding: 6px 12px; border-radius: 12px;
+  background: var(--panel); border: 2px solid var(--line); box-shadow: var(--bevel); transition: border-color .2s, box-shadow .2s;
+}
+#shesh .sb-p b { font-size: 14px; max-width: 92px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#shesh .sb-p .sb-pip { margin-inline-start: auto; font-size: 13px; color: #cfd3c3; font-variant-numeric: tabular-nums; }
+#shesh .sb-p .sb-pip em { font-style: normal; color: var(--gold); }
+#shesh .sb-p.turn { border-color: var(--gold); box-shadow: var(--bevel), 0 0 14px rgba(242,193,78,.55); }
+#shesh .sb-p.turn b::after { content: ' ◂'; color: var(--gold); }
+#shesh .sb-chip { width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 -2px 0 rgba(0,0,0,.25), 0 1px 2px #000; }
+#shesh .sb-chip.w { background: radial-gradient(circle at 40% 35%, #fffaf0, #e3d6b8 60%, #c8b894); }
+#shesh .sb-chip.b { background: radial-gradient(circle at 40% 35%, #5c4a3e, #2d2420 60%, #171210); border: 1px solid #6b5a4c; }
+#shesh .sb-mid {
+  min-width: 170px; padding: 4px 12px; border-radius: 12px; text-align: center;
+  background: rgba(16,18,14,.72); border: 1px solid var(--line);
+}
+#shesh .sb-dice { font-size: 30px; line-height: 1.05; letter-spacing: 2px; color: #fff8e6; min-height: 30px; direction: ltr; text-shadow: 0 2px 0 #000; }
+#shesh .sb-dice .used { opacity: .28; }
+#shesh .sb-dice .spin { display: inline-block; font-size: 24px; animation: sb-spin .35s linear infinite; }
+@keyframes sb-spin { to { transform: rotate(360deg); } }
+#shesh .sb-msg { font-size: 13px; font-weight: 700; color: var(--gold-hi); min-height: 16px; }
+
+/* What the one across the table says. */
+#shesh .sb-say {
+  position: absolute; left: 50%; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 104px); transform: translateX(-50%);
+  max-width: min(560px, 70vw); padding: 8px 16px; border-radius: 14px; font-size: 15px; line-height: 1.35; text-align: center;
+  background: rgba(255,255,255,.95); color: #1d1d10; box-shadow: 0 6px 18px rgba(0,0,0,.35); animation: sb-pop .22s ease-out;
+}
+#shesh .sb-say b { color: #6b4a0c; }
+@keyframes sb-pop { from { transform: translateX(-50%) scale(.85); opacity: 0; } }
+
+#shesh .sb-btns {
+  position: absolute; left: 50%; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 50px); transform: translateX(-50%);
+  display: flex; gap: 8px; pointer-events: auto;
+}
+#shesh .sb-btns .btn, #shesh .sb-end .btn { min-width: 0; width: auto; margin: 0; padding: 8px 14px; font-size: 15px; white-space: nowrap; }
+#shesh .sb-roll { font-size: 17px !important; padding: 10px 22px !important; animation: sb-glow 1.2s ease-in-out infinite; }
+@keyframes sb-glow { 50% { box-shadow: 0 0 18px rgba(242,193,78,.85); } }
+
+#shesh .sb-end {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -62%); pointer-events: auto; text-align: center;
+  min-width: 260px; padding: 14px 20px; border-radius: 14px; background: var(--panel); border: 2px solid var(--trim);
+  box-shadow: 0 10px 30px rgba(0,0,0,.5); animation: sb-pop2 .3s ease-out;
+}
+@keyframes sb-pop2 { from { transform: translate(-50%, -62%) scale(.8); opacity: 0; } }
+#shesh .sb-end h3 { margin: 0 0 4px; font-size: 22px; color: var(--gold); }
+#shesh .sb-end p { margin: 2px 0; font-size: 14px; color: #dcdccc; }
+#shesh .sb-end .sb-prize { color: var(--gold-hi); font-weight: 800; }
+#shesh .sb-row { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+
+#shesh .sb-tip {
+  position: absolute; left: 50%; bottom: calc(max(18px, env(safe-area-inset-bottom)) + 52px); transform: translateX(-50%);
+  padding: 5px 14px; border-radius: 999px; font-size: 13px; white-space: nowrap; background: rgba(10,12,9,.7); color: #e6e3d4;
+}
+#shesh .sb-tip kbd { font: inherit; font-weight: 800; background: rgba(255,255,255,.15); border-radius: 4px; padding: 0 5px; }
+
+/* Seated: the compass arrow means nothing; in a game, the objective and the map step aside. */
+body.shesh-fpv #overlay { visibility: hidden; }
+body.shesh-game #objective, body.shesh-game #minimap { display: none; }
+
+/* Phones (landscape, about 390 px tall): everything smaller, the strip right under the top row. */
+@media (max-height: 500px) {
+  #shesh .sb-top { top: calc(max(4px, env(safe-area-inset-top)) + 62px); gap: 5px; }
+  #shesh .sb-p { min-width: 0; padding: 3px 8px; gap: 5px; border-radius: 10px; }
+  #shesh .sb-p b { font-size: 12px; max-width: 70px; }
+  #shesh .sb-p .sb-pip { font-size: 11px; }
+  #shesh .sb-chip { width: 12px; height: 12px; }
+  #shesh .sb-mid { min-width: 120px; padding: 2px 8px; }
+  #shesh .sb-dice { font-size: 22px; min-height: 22px; }
+  #shesh .sb-msg { font-size: 11px; }
+  #shesh .sb-say { font-size: 13px; padding: 6px 12px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 84px); max-width: 52vw; }
+  #shesh .sb-btns { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 40px); }
+  #shesh .sb-btns .btn { padding: 6px 10px; font-size: 13px; }
+  #shesh .sb-roll { font-size: 15px !important; padding: 8px 16px !important; }
+  #shesh .sb-tip { font-size: 11px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 44px); }
+  #shesh .sb-end { min-width: 220px; padding: 10px 14px; }
+  #shesh .sb-end h3 { font-size: 18px; }
+}

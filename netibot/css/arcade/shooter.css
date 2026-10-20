@@ -1,0 +1,76 @@
+/* Little Netivot (shooter): the scoreboard on top, the kill feed, the crosshair that opens with
+   the spread, hit marker, damage vignette and direction, health and ammo, and on phones the fire,
+   reload, jump and weapon buttons. */
+#arcade .sh { position: absolute; inset: 0; pointer-events: none; }
+#arcade .sh-board { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; font: 900 18px Rubik, sans-serif; direction: ltr; padding: 4px 12px; white-space: nowrap; }
+#arcade .sh-board b { font-size: 22px; }
+#arcade .sh-b b { color: #6ab4ff; } #arcade .sh-r b { color: #ff6a5a; }
+#arcade .sh-board s { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 2px; vertical-align: middle; text-decoration: none; background: currentColor; box-shadow: 0 0 0 1px rgba(0,0,0,.6); }
+#arcade .sh-b s { color: #6ab4ff; } #arcade .sh-r s { color: #ff6a5a; }
+#arcade .sh-board s.out { background: #222; color: #555; }
+#arcade .sh-board s.me { box-shadow: 0 0 0 2px #ffd23f; }
+#arcade .sh-mid { display: flex; flex-direction: column; align-items: center; line-height: 1.05; direction: rtl; }
+#arcade .sh-mid b { font-size: 12px !important; color: var(--gold-hi); }
+#arcade .sh-mid i { font-style: normal; font-size: 15px; font-variant-numeric: tabular-nums; color: #fff; }
+#arcade .sh-mid i.low { color: #ff6a5a; animation: sh-blink .6s steps(2) infinite; }
+@keyframes sh-blink { 50% { opacity: .45; } }
+
+#arcade .sh-feed { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 4px); right: max(10px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 3px; align-items: flex-end; font: 800 13px Rubik, sans-serif; }
+#arcade .sh-feed div { background: rgba(14,16,14,.72); border-radius: 6px; padding: 2px 8px; white-space: nowrap; animation: sh-in .25s ease-out; }
+#arcade .sh-feed div.mine { box-shadow: inset 0 0 0 1px #ffd23f; }
+@keyframes sh-in { from { transform: translateX(20px); opacity: 0; } }
+
+/* Crosshair: four ticks, --gap from the centre. */
+#arcade .sh-cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --gap: 6px; }
+#arcade .sh-cross i { position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.55); transition: transform .06s linear; }
+#arcade .sh-cross i:nth-child(1), #arcade .sh-cross i:nth-child(2) { width: 2px; height: 9px; left: -1px; }
+#arcade .sh-cross i:nth-child(3), #arcade .sh-cross i:nth-child(4) { width: 9px; height: 2px; top: -1px; }
+#arcade .sh-cross i:nth-child(1) { top: calc(-1 * var(--gap) - 9px); }
+#arcade .sh-cross i:nth-child(2) { top: var(--gap); }
+#arcade .sh-cross i:nth-child(3) { left: calc(-1 * var(--gap) - 9px); }
+#arcade .sh-cross i:nth-child(4) { left: var(--gap); }
+#arcade .sh-cross::after { content: ''; position: absolute; left: -1px; top: -1px; width: 2px; height: 2px; background: #fff; border-radius: 50%; }
+#arcade .sh-hm { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -52%); font: 900 30px Rubik, sans-serif; color: #fff; text-shadow: 0 0 3px #000; opacity: 0; }
+#arcade .sh-hm.kill { color: #ff4a3a; font-size: 38px; }
+
+#arcade .sh-vig { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(190,10,0,.55) 85%, rgba(140,0,0,.85)); }
+#arcade .sh-dirs { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+#arcade .sh-dirs i { position: absolute; left: -80px; top: -150px; width: 160px; height: 300px; transform-origin: 80px 150px; background: radial-gradient(ellipse 70px 22px at 50% 14px, rgba(255,50,20,1), rgba(255,40,20,.5) 45%, rgba(255,40,20,0) 75%); }
+
+#arcade .sh-hp { left: max(12px, env(safe-area-inset-left)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 4px); display: flex; align-items: center; gap: 8px; direction: ltr; width: min(230px, 30vw); }
+#arcade .sh-hp span { color: #ff6a5a; }
+#arcade .sh-hp i { flex: 1; height: 10px; background: #0c0e0c; border-radius: 5px; overflow: hidden; display: block; }
+#arcade .sh-hp i b { display: block; height: 100%; background: linear-gradient(90deg, #4fbf4a, #9be86f); transition: width .15s; }
+#arcade .sh-hp em { font-style: normal; min-width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+#arcade .sh-hp.low i b { background: linear-gradient(90deg, #d8261f, #ff7a4a); }
+#arcade .sh-hp.low { animation: sh-blink .8s steps(2) infinite; }
+
+#arcade .sh-ammo { right: max(12px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 4px); direction: ltr; display: flex; align-items: baseline; gap: 6px; }
+#arcade .sh-ammo b { font: 900 30px Rubik, sans-serif; font-variant-numeric: tabular-nums; }
+#arcade .sh-ammo small { font-size: 15px; opacity: .8; }
+#arcade .sh-ammo .sh-wn { font-size: 12px; color: var(--gold-hi); margin-left: 4px; direction: rtl; }
+#arcade .sh-ammo.empty b { color: #ff5a4a; }
+#arcade .sh-hint { position: absolute; left: 50%; top: calc(50% + 90px); transform: translateX(-50%); font-weight: 800; font-size: 14px; background: rgba(14,16,14,.6); border-radius: 8px; padding: 3px 10px; white-space: nowrap; }
+#arcade .sh-hint:empty { display: none; }
+
+/* Phone buttons (right side; the move stick stays on the left). */
+#arcade .sh-fire, #arcade .sh-reload, #arcade .sh-jump, #arcade .sh-swap { position: absolute; border-radius: 50%; border: 3px solid var(--gold); background: radial-gradient(circle at 40% 30%, rgba(90,40,30,.85), rgba(26,18,14,.85) 70%); color: #fff; font-weight: 900; box-shadow: 0 0 0 2px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.5); touch-action: none; -webkit-user-select: none; user-select: none; }
+#arcade .sh-fire { right: calc(max(16px, env(safe-area-inset-right)) + 4px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 4px); width: 92px; height: 92px; font-size: 38px; border-color: #ff7a4a; }
+#arcade .sh-fire:active { transform: scale(.94); background: radial-gradient(circle at 40% 30%, rgba(200,80,40,.9), rgba(60,20,10,.9) 70%); }
+#arcade .sh-reload { right: calc(max(16px, env(safe-area-inset-right)) + 112px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 74px); width: 56px; height: 56px; font-size: 24px; background: radial-gradient(circle at 40% 30%, #4a4f4a, #1a1d1a 70%); }
+#arcade .sh-jump { right: calc(max(16px, env(safe-area-inset-right)) + 110px); bottom: max(14px, env(safe-area-inset-bottom)); width: 58px; height: 58px; font-size: 26px; background: radial-gradient(circle at 40% 30%, #4a4f4a, #1a1d1a 70%); }
+#arcade .sh-swap { right: calc(max(16px, env(safe-area-inset-right)) + 2px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 108px); border-radius: 12px; height: 34px; padding: 0 10px; font-size: 13px; white-space: nowrap; background: rgba(26,30,26,.85); }
+#arcade .sh.touch .sh-ammo { bottom: auto; right: auto; left: calc(max(8px, env(safe-area-inset-left)) + 52px); top: max(8px, env(safe-area-inset-top)); padding: 2px 8px; }
+#arcade .sh.touch .sh-ammo b { font-size: 22px; }
+#arcade .sh.touch .sh-hp { left: calc(max(8px, env(safe-area-inset-left)) + 52px); top: calc(max(8px, env(safe-area-inset-top)) + 42px); bottom: auto; width: 150px; padding: 2px 8px; }
+#arcade .sh.touch .sh-feed { top: calc(max(8px, env(safe-area-inset-top)) + 2px); font-size: 11px; }
+#arcade .sh.touch .sh-board { font-size: 15px; gap: 8px; padding: 2px 10px; }
+#arcade .sh.touch .sh-board b { font-size: 18px; }
+#arcade .sh.touch .sh-hint { top: calc(50% + 36px); font-size: 12px; }
+@media (max-width: 900px) { #arcade .sh-feed { max-width: 30vw; } #arcade .sh-feed div { overflow: hidden; text-overflow: ellipsis; max-width: 30vw; } }
+#arcade .ar-panel .sh-ctl { font-size: 13px; opacity: .8; }
+#arcade .ar-panel .sh-modes .btn { min-width: 170px; }
+#arcade .sh.pre > :not(.sh-feed) { display: none; }
+#arcade .sh.spec .sh-hp, #arcade .sh.spec .sh-ammo, #arcade .sh.spec .sh-cross, #arcade .sh.spec button { display: none; }
+/* The round banners are longer than a countdown digit: smaller, so they fit a phone. */
+#arcade:has(.sh) .ar-cd { font-size: clamp(30px, 7.5vw, 84px); top: 22%; }

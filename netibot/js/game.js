@@ -189,7 +189,7 @@ const Game = {
     canvas.addEventListener('pointerdown', (e) => {
       Sound.unlock();
       looks.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      canvas.setPointerCapture(e.pointerId);
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
     });
     canvas.addEventListener('pointermove', (e) => {
       const l = looks.get(e.pointerId);

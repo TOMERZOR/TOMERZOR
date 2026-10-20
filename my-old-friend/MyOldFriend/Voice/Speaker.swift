@@ -32,13 +32,11 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
             speakWithPhoneVoice(text, language: language, speed: speed)
             return
         }
-        fetch = Task { [weak self] in
+        fetch = Task { @MainActor [weak self] in
             let clip = try? await voice.clip(for: text, language: language)
-            await MainActor.run {
-                guard let self, current == self.ticket else { return }
-                if let clip, self.play(clip, speed: speed) { return }
-                self.speakWithPhoneVoice(text, language: language, speed: speed)
-            }
+            guard let self, current == self.ticket else { return }
+            if let clip, self.play(clip, speed: speed) { return }
+            self.speakWithPhoneVoice(text, language: language, speed: speed)
         }
     }
 

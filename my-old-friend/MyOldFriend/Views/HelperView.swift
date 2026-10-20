@@ -12,15 +12,16 @@ struct HelperView: View {
     var body: some View {
         GeometryReader { geo in
             let layout = StageLayout(size: geo.size, insets: geo.safeAreaInsets, controlHeight: controlHeight)
-            ZStack {
+            VStack(spacing: 0) {
+                TopBar(showSettings: $showSettings)
+                    .frame(height: layout.topBar)
+                Spacer(minLength: 0)
+                BottomPanel(cardHeight: layout.cardReserve, showTyping: $showTyping, controlHeight: $controlHeight)
+            }
+            // The picture is a background, so it reaches the screen edges without moving the controls.
+            .background(alignment: .topLeading) {
                 StageView(layout: layout)
                     .ignoresSafeArea()
-                VStack(spacing: 0) {
-                    TopBar(showSettings: $showSettings)
-                        .frame(height: layout.topBar)
-                    Spacer(minLength: 0)
-                    BottomPanel(cardHeight: layout.cardReserve, showTyping: $showTyping, controlHeight: $controlHeight)
-                }
             }
             .onAppear { report(layout) }
             .onChange(of: layout.compact) { _, _ in report(layout) }
@@ -156,8 +157,8 @@ private struct StageView: View {
         if let target {
             let below = target.y < answerFrame.midY
             let side: CGFloat = target.x > answerFrame.midX ? -1 : 1
-            return clamp(CGPoint(x: target.x + side * moffySize * 0.75,
-                                 y: target.y + (below ? 1 : -1) * moffySize * 1.35))
+            return clamp(CGPoint(x: target.x + side * moffySize * 0.95,
+                                 y: target.y + (below ? 1 : -1) * moffySize * 1.5))
         }
         let x = settings.lang == .hebrew ? frame.maxX - half - 10 : frame.minX + half + 10
         return CGPoint(x: x, y: frame.maxY - half * 1.04 - 10)
@@ -370,13 +371,20 @@ private struct AnswerCard: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
     let maxHeight: CGFloat
+    @State private var contentHeight: CGFloat = 120
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
+        // As tall as the words need, up to the space kept for it; longer answers scroll.
+        ScrollView {
             content
-            ScrollView { content }
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { contentHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { _, height in contentHeight = height }
+                })
         }
-        .frame(maxHeight: maxHeight)
+        .scrollBounceBehavior(.basedOnSize)
+        .frame(height: min(contentHeight, maxHeight))
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)

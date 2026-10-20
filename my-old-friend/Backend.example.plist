@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Copy to MyOldFriend/Backend.plist (kept out of git) and fill in your server's address and token. -->
+<plist version="1.0">
+<dict>
+	<key>ServerURL</key>
+	<string>https://my-old-friend.YOUR-NAME.workers.dev</string>
+	<key>AppToken</key>
+	<string>the same APP_TOKEN you gave the server</string>
+</dict>
+</plist>

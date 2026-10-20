@@ -34,7 +34,8 @@ protocol MoffyBrain {
 
 enum BrainError: Error {
     case offline
-    case badKey
+    /// The server refused the app or is missing its keys: the developer's problem, not the user's.
+    case notSetUp
     case busy
     case refused
     case unreadable

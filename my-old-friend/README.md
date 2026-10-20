@@ -34,9 +34,11 @@ The App Store texts (English and Hebrew) are in `AppStore.md`.
 |---|---|
 | `MyOldFriend/Moffy/` | Moffy (breathing, blinking, hopping, eyes that follow things) and the pointing ring |
 | `MyOldFriend/Brain/MoffyPrompt.swift` | **Moffy's personality and teaching rules.** Edit this to change how Moffy talks |
-| `MyOldFriend/Brain/ClaudeBrain.swift` | Sends the question and camera photo to Claude |
-| `MyOldFriend/Brain/DemoBrain.swift` | Practice mode, used until a key is added |
-| `MyOldFriend/Camera/`, `MyOldFriend/Voice/` | Camera, listening, and speaking (ElevenLabs voice with an on-phone cache, the iPhone's voice as a fallback) |
+| `MyOldFriend/Brain/ServerBrain.swift` | Sends the question and camera photo to Moffy's server |
+| `MyOldFriend/Brain/DemoBrain.swift` | Practice mode, used when the app is built without a server |
+| `MyOldFriend/App/Backend.swift` | Reads the server's address and token from `Backend.plist` |
+| `MyOldFriend/Camera/`, `MyOldFriend/Voice/` | Camera, listening, and speaking (Moffy's natural voice with an on-phone cache, the iPhone's voice as a fallback) |
+| `server/` | Moffy's server (a Cloudflare Worker). It holds the Claude and ElevenLabs keys |
 | `MyOldFriend/Views/` | The screens: welcome, main helper screen, settings, typing |
 
 ## Running it on an iPhone
@@ -54,31 +56,49 @@ With a free Apple ID the app runs for 7 days before you have to press Run again.
 
 Every change pushed to GitHub is also built automatically on GitHub's Mac servers (`.github/workflows/my-old-friend-ios.yml`), to check that it compiles.
 
-## Getting a Claude API key
+## Moffy's server (so nobody has to set anything up)
 
-Without a key, Moffy runs in **practice mode**: everything works except actually seeing and understanding.
+People who install the app never see a key or a setting. The app talks to a small server of yours, in `server/`, which holds the Claude and ElevenLabs keys and passes questions and voice requests on. It runs on **Cloudflare Workers**. Until the app is built with a server address, Moffy runs in **practice mode**: everything works except actually seeing and understanding.
 
-1. Go to **console.anthropic.com** and sign up.
-2. **Billing** → add credit (the minimum is a few dollars).
-3. **API Keys** → **Create Key** → copy it (it starts with `sk-ant-`).
-4. In the app: ⚙︎ Settings → scroll to **For the helper who sets this up** → paste → **Save key**.
+You need three accounts, all set up by you, once:
 
-Don't send the key to anyone or paste it into a chat. It is stored encrypted in the iPhone's Keychain.
+1. **Claude:** go to **console.anthropic.com** → **Billing** → add credit → **API Keys** → **Create Key** (it starts with `sk-ant-`).
+2. **ElevenLabs:** go to **elevenlabs.io** → your profile → **API keys** → create a key. Using library voices like Yael through the API may need a paid plan.
+3. **Cloudflare:** sign up at **dash.cloudflare.com** (free).
 
-**Cost:** the app uses Claude Opus 5.5 ($4 per million input tokens, $20 per million output tokens). One question with a photo is roughly 2,000 to 3,000 input tokens and a few hundred output tokens, so **about 2 to 3 US cents per question**. $5 covers roughly 200 questions. Claude Haiku 5.5 would cost about 40 times less but is less precise at pointing. To switch, change `model` in `ClaudeBrain.swift`.
+Then, on your MacBook, in Terminal (Node.js from nodejs.org must be installed):
 
-**Before publishing:** a key stored inside the app is fine for testing on your own family's phones, but a published app needs a small server that holds the key, so nobody can pull it out of the app. That is the next step before the App Store.
+```sh
+cd TOMERZOR/my-old-friend/server
+npm install
+npx wrangler login                          # opens the browser to sign in to Cloudflare
+npx wrangler secret put ANTHROPIC_API_KEY   # paste the Claude key when asked
+npx wrangler secret put ELEVENLABS_API_KEY  # paste the ElevenLabs key
+npx wrangler secret put APP_TOKEN           # make up a long random password, e.g. from `openssl rand -hex 24`
+npx wrangler deploy                         # prints the address, like https://my-old-friend.NAME.workers.dev
+```
 
-## Moffy's voice (ElevenLabs)
+Paste keys only into these prompts, never into a chat or a file in git. Check it works by opening `https://…workers.dev/health` in a browser: it should say `ok`.
+
+Finally, tell the app where the server is: copy `Backend.example.plist` to `MyOldFriend/Backend.plist`, fill in the address and the same `APP_TOKEN`, and press ▶︎ in Xcode. `Backend.plist` is kept out of git.
+
+**Optional, recommended:** keep one shared copy of every voice clip, so a sentence is made only once for all users. Run `npx wrangler r2 bucket create moffy-voice`, remove the `#` in front of the three `[[r2_buckets]]` lines in `server/wrangler.toml`, and deploy again. Without it, each Cloudflare data center keeps its own copy.
+
+**Set spending limits** in both the Anthropic console (**Limits**) and ElevenLabs, so a surprise can't run up a bill. The `APP_TOKEN` keeps casual strangers out, but it ships inside the app, so treat the limits as the real protection.
+
+### What it costs
+
+- **Claude Opus 5.5** ($4 per million input tokens, $20 per million output tokens): one question with a photo is roughly 2,000 to 3,000 input tokens and a few hundred output tokens, so **about 2 to 3 US cents per question**. To switch model, change `MODEL` in `server/src/index.ts`.
+- **ElevenLabs:** each new answer is spoken once, roughly 2 to 3 cents a clip depending on your plan. Repeats are free (see below).
+- **Cloudflare:** the free plan is enough to try it out. Its 10 ms CPU limit per request can be tight for large photos, so for real use take the Workers Paid plan ($5 a month).
+
+### Moffy's voice
 
 Moffy speaks with a warm female voice from ElevenLabs: **Yael – Gentle, Confident Ad** in Hebrew and **Emily – Trustworthy, Warm, Conversational** in English, using the `eleven_v3` model. Because the voice is female, Moffy speaks about herself in the feminine in Hebrew ("אני מקשיבה", "רגע, אני מסתכלת…").
 
-1. Sign up at **elevenlabs.io** → click your profile → **API keys** → create a key.
-2. In the app: ⚙︎ Settings → **Moffy's voice** → paste → **Save key**.
+**Nothing is generated twice.** Every clip is saved on the phone the first time it plays (`Library/Caches/MoffyVoice`), and the server keeps a copy for everyone. "Say again", repeated answers and the app's fixed lines (errors, "I didn't hear anything", and so on) play from a saved copy for free; the phone saves the fixed lines on first launch. Offline, or in practice mode, Moffy uses the nicest female voice installed on the iPhone.
 
-**Nothing is generated twice.** Every clip is saved on the phone the first time it is made (`Library/Caches/MoffyVoice`), keyed by voice, model and exact words. "Say again", repeated answers and the app's fixed lines (errors, "I didn't hear anything", and so on) play from the saved copy for free; the fixed lines are prepared right after the key is saved. Only a new answer from Claude is new text, so each new answer is generated once. Without a key, or offline, Moffy uses the nicest female voice installed on the iPhone.
-
-To change voices, edit `hebrewVoiceID` and `englishVoiceID` in `MyOldFriend/Voice/ElevenLabsVoice.swift`.
+To change voices, edit `VOICES` in `server/src/index.ts` and the matching IDs in `MyOldFriend/Voice/MoffyVoice.swift`.
 
 ## Trying it without an iPhone
 

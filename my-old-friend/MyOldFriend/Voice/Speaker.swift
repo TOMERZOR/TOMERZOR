@@ -28,12 +28,12 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
         AudioSessionSetup.configure()
         let current = ticket
 
-        guard let voice = ElevenLabsVoice.current() else {
+        guard MoffyVoice.isAvailable else {
             speakWithPhoneVoice(text, language: language, speed: speed)
             return
         }
         fetch = Task { @MainActor [weak self] in
-            let clip = try? await voice.clip(for: text, language: language)
+            let clip = try? await MoffyVoice.clip(for: text, language: language)
             guard let self, current == self.ticket else { return }
             if let clip, self.play(clip, speed: speed) { return }
             self.speakWithPhoneVoice(text, language: language, speed: speed)
@@ -52,7 +52,7 @@ final class Speaker: NSObject, ObservableObject, AVSpeechSynthesizerDelegate, AV
         isSpeaking = false
     }
 
-    // MARK: - ElevenLabs clip
+    // MARK: - Natural voice clip
 
     private func play(_ file: URL, speed: Double) -> Bool {
         guard let player = try? AVAudioPlayer(contentsOf: file) else { return false }

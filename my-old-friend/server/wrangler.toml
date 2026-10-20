@@ -1,0 +1,16 @@
+# The server behind the My Old Friend app. Holds the Claude and ElevenLabs keys so the app needs no setup.
+name = "my-old-friend"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets (set once, never committed):
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put ELEVENLABS_API_KEY
+#   npx wrangler secret put APP_TOKEN        # any long random string; the same one goes in the app
+
+# Optional: keep every voice clip forever, shared by all users (create it first:
+#   npx wrangler r2 bucket create moffy-voice), then uncomment:
+# [[r2_buckets]]
+# binding = "VOICE_CACHE"
+# bucket_name = "moffy-voice"

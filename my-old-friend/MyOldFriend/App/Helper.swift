@@ -35,16 +35,12 @@ final class Helper: ObservableObject {
             part.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         }
         listener.onFinished = { [weak self] heard in self?.heard(heard) }
+        prepareVoice()
     }
 
-    var hasKey: Bool { !(Keychain.load(account: Keychain.apiKeyAccount) ?? "").isEmpty }
-    var hasVoiceKey: Bool { ElevenLabsVoice.current() != nil }
-
+    /// Moffy's server when the app was built with one; practice mode otherwise.
     private var brain: MoffyBrain {
-        if let key = Keychain.load(account: Keychain.apiKeyAccount), !key.isEmpty {
-            return ClaudeBrain(apiKey: key)
-        }
-        return DemoBrain()
+        Backend.isConfigured ? ServerBrain() : DemoBrain()
     }
 
     /// The answer card is up while Moffy listens, looks, or has something to say.
@@ -123,15 +119,15 @@ final class Helper: ObservableObject {
         if on { camera.start() } else { camera.stop() }
     }
 
-    /// Makes the natural voice for the app's fixed lines once, right after an ElevenLabs key is saved.
-    func prepareVoice() {
-        guard let voice = ElevenLabsVoice.current() else { return }
+    /// Saves the natural voice for the app's fixed lines on the phone, so they play instantly and
+    /// offline. Lines already saved are skipped, so after the first launch this does nothing.
+    private func prepareVoice() {
         var lines: [(text: String, language: AppLanguage)] = []
         for language in AppLanguage.allCases {
             for kind in FixedLine.allCases { lines.append((Self.line(kind, language).say, language)) }
             lines.append((Self.voiceSample(language), language))
         }
-        voice.prepare(lines)
+        MoffyVoice.prepare(lines)
     }
 
     // MARK: - Conversation
@@ -180,7 +176,7 @@ final class Helper: ObservableObject {
 
     // MARK: - Fixed lines (the only words Moffy says that don't come from Claude)
 
-    enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, badKey, busy, refused, other }
+    enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other }
 
     static func line(_ kind: FixedLine, _ language: AppLanguage) -> MoffyReply {
         let he = language == .hebrew
@@ -198,10 +194,10 @@ final class Helper: ObservableObject {
             return MoffyReply(say: t("I can't reach the internet. Check that Wi-Fi is on, then try again.",
                                      "אני לא מצליחה להתחבר לאינטרנט. בדקו שה-Wi-Fi דלוק ונסו שוב."),
                               caption: t("No internet", "אין אינטרנט"), mood: .worried)
-        case .badKey:
-            return MoffyReply(say: t("I'm not set up properly. Please ask your helper to check the key in Settings.",
-                                     "משהו בהגדרות שלי לא תקין. בקשו ממי שעוזר לכם לבדוק את המפתח בהגדרות."),
-                              caption: t("Ask your helper", "בקשו עזרה"), mood: .worried)
+        case .notSetUp:
+            return MoffyReply(say: t("I can't answer right now because of a problem on my side. Please try again later.",
+                                     "אני לא יכולה לענות כרגע בגלל תקלה אצלי. נסו שוב מאוחר יותר."),
+                              caption: t("Try again later", "נסו שוב מאוחר יותר"), mood: .worried)
         case .busy:
             return MoffyReply(say: t("I'm a little busy right now. Let's try again in a moment.",
                                      "אני קצת עסוקה כרגע. ננסה שוב עוד רגע."),
@@ -224,7 +220,7 @@ final class Helper: ObservableObject {
     private static func problemReply(for error: Error, _ language: AppLanguage) -> MoffyReply {
         switch error as? BrainError {
         case .offline?: return line(.offline, language)
-        case .badKey?: return line(.badKey, language)
+        case .notSetUp?: return line(.notSetUp, language)
         case .busy?: return line(.busy, language)
         case .refused?: return line(.refused, language)
         default: return line(.other, language)
@@ -236,7 +232,7 @@ final class Helper: ObservableObject {
 // MARK: - Screenshot scenes (test builds only)
 
 /// Launch with `-screenshotScene <name>` in the simulator to show one moment of the app,
-/// without a camera, microphone or API key. Used by the GitHub workflow that takes screenshots.
+/// without a camera, microphone or server. Used by the GitHub workflow that takes screenshots.
 extension Helper {
     private var sampleReply: MoffyReply {
         MoffyReply(

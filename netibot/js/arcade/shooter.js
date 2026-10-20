@@ -2362,6 +2362,19 @@ const ShooterGame = {
       this.lookMoving = 0.15;
     };
     this.drag = new Map();
+    // A second mouse button pressed (or let go) while another is held can come only as a
+    // pointer move with new buttons, no pointerdown or mousedown (aim with the right button,
+    // then the left didn't fire). Every mouse event notes the buttons; a move that changes them acts.
+    this.mb = 0;
+    const chord = (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const b = e.buttons | 0, was = this.mb;
+      this.mb = b;
+      if (e.type !== 'pointermove' || b === was || !this.slots || this.over || (document.pointerLockElement !== cv && !this.noLock)) return;
+      if ((b & 1) && !(was & 1)) this.fireDown(); else if (!(b & 1) && (was & 1)) this.fireUp();
+      if ((b & 2) && !(was & 2)) { this.adsHold = true; this.adsTog = false; } else if (!(b & 2) && (was & 2)) this.adsHold = false;
+    };
+    for (const t of ['pointerdown', 'pointerup', 'pointermove']) on(window, t, chord, true);
     // With the pointer locked, clicks are caught first: the world's own camera drag would try to
     // capture the pointer, which a locked pointer refuses (an error each click).
     on(window, 'pointerdown', (e) => {

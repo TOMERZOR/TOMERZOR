@@ -1485,6 +1485,19 @@ const Range3D = {
     };
     const playing = () => this.mode === 'live' || this.mode === 'count';
     this.drag = new Map();
+    // A second mouse button pressed (or let go) while another is held comes only as a pointer
+    // move with new buttons, no pointerdown: aiming with the right button and then clicking the
+    // left never fired. Every mouse event notes the buttons; a move that changes them acts.
+    this.mb = 0;
+    const chord = (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const b = e.buttons | 0, was = this.mb;
+      this.mb = b;
+      if (e.type !== 'pointermove' || b === was || !playing() || (!this.locked() && !this.noLock)) return;
+      if ((b & 1) && !(was & 1)) this.fireDown(); else if (!(b & 1) && (was & 1)) this.fireUp();
+      if ((b & 2) && !(was & 2)) this.ads = true; else if (!(b & 2) && (was & 2)) this.ads = false;
+    };
+    for (const t of ['pointerdown', 'pointerup', 'pointermove']) on(window, t, chord, true);
     // With the pointer locked, the click is the trigger (and the right button aims).
     on(window, 'pointerdown', (e) => {
       if (!this.locked() || e.pointerType !== 'mouse') return;

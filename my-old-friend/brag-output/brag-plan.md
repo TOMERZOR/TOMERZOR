@@ -22,3 +22,9 @@
 | 18.0–21.0 | Outro | Moffy, "My Old Friend", "20 שאלות ראשונות חינם · ₪24.90 לחודש", "בקרוב לאייפון" | — |
 
 Music: none bundled here; the real voice line carries the audio.
+
+## Revision 2: faster, with sound
+- 17.4 s instead of 22 s (Yael's line sped up 12%).
+- Music: a light ukulele and glockenspiel bed (ElevenLabs Sound Effects v2, looping), ducked under Yael's line, faded out at the end.
+- Sound effects: a message ding per bubble, whooshes on scene changes, a bounce when Moffy lands, a buzz on the scam cross, a chime on the offer.
+- Mixed to about -14 LUFS for social platforms.

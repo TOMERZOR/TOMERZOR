@@ -1287,7 +1287,7 @@ const Scene3D = {
       });
     }
     if (m.rigged) {
-      m.root.position.set(ent.x * S3, 0, ent.y * S3);
+      m.root.position.set(ent.x * S3, ent.jz || 0, ent.y * S3);
       let d = -ent.angle - m.root.rotation.y;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       // While the game waits on a scene (dt 0) whoever was just placed turns at once.
@@ -1331,7 +1331,7 @@ const Scene3D = {
     m.legR.rotation.z = -s;
     if (m.carry.visible) { m.armL.rotation.z = m.armR.rotation.z = 1.25; }
     else { m.armL.rotation.z = -s * 0.8; m.armR.rotation.z = s * 0.8; }
-    m.root.position.y = Math.abs(Math.sin(ent.walk)) * 0.04 * m.swing;
+    m.root.position.y = Math.abs(Math.sin(ent.walk)) * 0.04 * m.swing + (ent.jz || 0);
   },
 
   makeCar(color) {
@@ -1988,7 +1988,7 @@ const Scene3D = {
       this.setBubble(m, m.sayUntil > now ? m.sayText : null);
       // Sitting at a pergola table (their seat rides in presence, see js/sheshbesh.js).
       const sitting = !!(p.ar && p.ar.g === 'shesh' && p.ar.s && p.ar.s.st != null);
-      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r, sitting }, p.m && !sitting, dt);
+      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r, sitting, jz: p.jz || 0 }, p.m && !sitting, dt);
     }
   },
 

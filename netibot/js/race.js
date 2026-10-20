@@ -494,6 +494,7 @@ const Race = {
     $('#overlay').classList.add('hidden');
     // On the phone: the run button brakes and E is the commander's shout (or the power-up).
     $('#t-run').textContent = 'בלם';
+    $('#t-jump').classList.add('hidden');
     G.touchRun = false; $('#t-run').classList.remove('on');
     $('#t-act').textContent = '🗣️';
     $('#look').classList.add('hidden');
@@ -518,6 +519,7 @@ const Race = {
     $('#hud').classList.remove('hidden');
     $('#overlay').classList.remove('hidden');
     $('#t-run').textContent = 'ריצה';
+    $('#t-jump').classList.remove('hidden');
     G.touchRun = false; $('#t-run').classList.remove('on');
     $('#t-act').textContent = 'E';
     $('#look').classList.remove('hidden');

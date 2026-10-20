@@ -118,6 +118,7 @@ const Game = {
       if (e.code === 'KeyG' && !Mini.active && !UI.busy && !UI.menuOpen()) UI.toggleMap();
       if (e.code === 'KeyT' && Multi.on && !Mini.active && !UI.busy) { e.preventDefault(); UI.chat(); }
       if ((e.code === 'KeyE' || e.code === 'Enter') && !UI.busy && !Mini.active && !G.paused && !UI.mapOpen()) this.interact();
+      if (e.code === 'Space' && !e.repeat && !UI.busy && !Mini.active && !G.paused && !UI.mapOpen()) this.jump();
     });
     document.addEventListener('keyup', (e) => G.keys.delete(e.code));
     window.addEventListener('blur', () => G.keys.clear());
@@ -184,6 +185,7 @@ const Game = {
     document.addEventListener('webkitfullscreenchange', () => this.syncFullscreen());
     this.syncFullscreen();
     // Run is a toggle on foot; in the race it is a brake you hold.
+    $('#t-jump').addEventListener('pointerdown', (e) => { e.preventDefault(); this.jump(); });
     $('#t-run').addEventListener('pointerdown', (e) => { e.preventDefault(); G.touchRun = Race.active ? true : !G.touchRun; $('#t-run').classList.toggle('on', G.touchRun); });
     for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('#t-run').addEventListener(ev, () => { if (Race.active && G.touchRun) { G.touchRun = false; $('#t-run').classList.remove('on'); } });
 
@@ -210,7 +212,7 @@ const Game = {
       e.preventDefault();
       Scene3D.dist = Math.max(3, Math.min(14, Scene3D.dist + e.deltaY * 0.01));
     }, { passive: false });
-    document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touch) { G.touch = true; document.body.classList.add('touch'); if (G.running) $('#touch').classList.remove('hidden'); } }, true);
+    document.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && !G.touch) { G.touch = true; document.body.classList.add('touch'); if (G.running) $('#touch').classList.remove('hidden'); Settings.apply(); } }, true);
   },
 
   toggleAudio(kind) {
@@ -549,8 +551,20 @@ const Game = {
     }
   },
 
+  // A jump (Space / the ⤒ button): up and back down, walking or running, wherever you are.
+  // Only the body leaves the ground; the map's walls still hold you in.
+  jump() {
+    const P = G.player;
+    if (!G.running || !P || P.sit || P.carry || Story.ctl || (P.jz || 0) > 0.02 || P.jv) return;
+    P.jv = P.running ? 4.9 : 4.4;
+    Sound.synth.noise(0.08, 0.06, 900, 'bandpass', 0, null, 1);
+  },
   update(dt) {
     const S = G.state, P = G.player;
+    if (P.jv || P.jz > 0) {
+      P.jv -= 13 * dt; P.jz = (P.jz || 0) + P.jv * dt;
+      if (P.jz <= 0) { P.jz = 0; P.jv = 0; Sound.synth.noise(0.07, 0.07, 500, 'lowpass'); }
+    }
     // The clock (and the day's events) wait while the controls tutorial is on.
     if (!Tutorial.active) S.clock += dt * DATA.minutesPerSecond;
     // Stuck inside something solid (an old save, a prop that moved onto a spot): after a
@@ -934,9 +948,9 @@ const Game = {
     const html = `<div class="content"><div class="panel">
       <h2>איך משחקים</h2>
       <p><b>המטרה:</b> לעבור את פלג"צ — חמישה ימים בפלגה הצעירה של סוללת כיפת ברזל ליד נתיבות — ולעבור את מבחן הסיום. צריך ציון פלג"צ של ${DATA.passScore} לפחות ולעבור 3 מתוך 4 חלקי המבחן.</p>
-      <p><b>מקלדת:</b> WASD — הליכה (קדימה = לכיוון שהמצלמה מסתכלת) · Shift — ריצה · E — פעולה · רווח — המשך שיחה · Tab — טלפון.</p>
+      <p><b>מקלדת:</b> WASD — הליכה (קדימה = לכיוון שהמצלמה מסתכלת) · Shift — ריצה · רווח — קפיצה (ובשיחה — המשך) · E — פעולה · Tab — טלפון.</p>
       <p><b>מצלמה:</b> גרירה עם העכבר מסובבת את המצלמה סביב הדמות, גלגלת — זום. אפשר גם חצים ימינה/שמאלה (או Q ו-R).</p>
-      <p><b>בטלפון:</b> משחקים לרוחב. ג'ויסטיק שמאלי — הליכה קדימה, אחורה, ימינה ושמאלה. ג'ויסטיק ימני — להסתכל מסביב. כפתור E לפעולה וכפתור "ריצה".</p>
+      <p><b>בטלפון:</b> משחקים לרוחב. ג'ויסטיק שמאלי — הליכה קדימה, אחורה, ימינה ושמאלה. ג'ויסטיק ימני — להסתכל מסביב. כפתור E לפעולה, כפתור "ריצה" ו־⤒ לקפיצה.</p>
       <p><b>מפה:</b> לחיצה על המפה הקטנה (או G) — מפה גדולה וחיה שמראה איפה כל אחד מהפלגה.</p>
       <p><b>השתגרות:</b> הכפתור ⚡ בחלון המשימה (או X) — קפיצה ישר למקום של המשימה ב־2₪, בלי ללכת ובלי הסעה.</p>
       <p><b>שחורה:</b> המד השחור. עולה מכל משימה ומכל דבר מנפיץ, ויורד ככל שמתקרבים ליציאה הביתה (ומאוכל טוב).</p>

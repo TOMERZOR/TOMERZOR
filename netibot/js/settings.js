@@ -30,11 +30,19 @@ const Settings = {
   textStep() { return { slow: 1, normal: 2, fast: 4, instant: 1e6 }[this.v.textSpeed] || 2; },
   buzz(pattern) { try { if (this.v.vibrate && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* not supported */ } },
 
+  // The HUD's base size. On a phone 87%, so it leaves the screen to the game. On a computer it
+  // grows with the window (a big monitor gets a big HUD), from 115% on a small laptop up to 240%.
+  hudBase() {
+    const touch = typeof G !== 'undefined' && G.touch;
+    if (touch || matchMedia('(pointer: coarse)').matches) return this.HUD_BASE;
+    return Math.max(1.15, Math.min(2.4, Math.min(innerWidth / 1050, innerHeight / 580)));
+  },
   apply() {
     const v = this.v, root = document.documentElement, body = document.body;
     // The HUD is drawn at 87% by default so it leaves more of the screen to the game; the
     // setting scales that up or down (70%–140%).
-    root.style.setProperty('--hud-scale', (Settings.HUD_BASE * v.hudScale).toFixed(3));
+    root.style.setProperty('--hud-scale', (this.hudBase() * v.hudScale).toFixed(3));
+    if (!this.hudWatch) { this.hudWatch = true; window.addEventListener('resize', () => document.documentElement.style.setProperty('--hud-scale', (this.hudBase() * this.v.hudScale).toFixed(3))); }
     root.style.setProperty('--stick-scale', v.stickSize);
     if (body) {
       body.classList.toggle('lefty', !!v.lefty);

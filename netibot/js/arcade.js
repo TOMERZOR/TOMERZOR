@@ -159,7 +159,8 @@ const Arcade = {
   },
   // The phone's two buttons: labels for this game (null puts the world's back).
   buttons(b) {
-    const act = $('#t-act'), run = $('#t-run'), look = $('#look');
+    const act = $('#t-act'), run = $('#t-run'), look = $('#look'), jump = $('#t-jump');
+    if (jump) jump.classList.toggle('hidden', !!b); // the world's jump; games have their own buttons
     if (!b) { act.textContent = 'E'; run.textContent = 'ריצה'; look.classList.remove('hidden'); run.classList.remove('hidden'); act.classList.remove('hidden'); return; }
     act.textContent = b.act || 'E';
     run.textContent = b.run || 'ריצה';

@@ -1,7 +1,8 @@
 // Little Netivot (נתיבות הקטנה): a first-person 1-on-1 / 2-on-2 shootout in a tiny town square
 // at dusk — containers, shelters, two Iron Dome launchers and the radar for cover, a container
-// you can climb up a ramp, lamp posts, and a welcome sign. An M16 (or an M4 or a Tavor from the
-// shop, with a holographic sight if you bought one) and a Glock, armour and grenades bought at
+// you can climb up a ramp, lamp posts, and a welcome sign. An M16 (or an M4, a Tavor, a Negev or a
+// marksman rifle from the HQ's armory, js/armory.js, with the attachments fitted there: a
+// suppressor, a foregrip, a bipod, a holographic sight or an ACOG) and a Glock, armour and grenades bought at
 // the start of each round, rounds to three, bots who take cover, peek, flank, retreat, throw
 // grenades and complain. It's a drill, everyone insists.
 // Alone: you (and a bot teammate in 2v2) against the platoon's bots. Online: the host's phone is
@@ -9,8 +10,8 @@
 // moves themselves and reports their own shots (what they hit), which the host checks against
 // the walls before it counts.
 
-// The guns. Three rifles (the M16 everyone has; the M4 and the Tavor bought with the game's
-// shekels and kept for good) and the Glock as the sidearm. The dearer the rifle, the better:
+// The guns. Five rifles (the M16 everyone has; the M4, the Tavor, the Negev and the marksman
+// rifle bought with the game's shekels and kept for good) and the Glock as the sidearm. The dearer the rifle, the better:
 // more damage, a tighter spread, faster and steadier. slot: which of the two you carry it in.
 // ads: aiming down the sights — the zoom (the world's and your gun's), and how much of the
 // spread, the speed, the kick and the bloom is left. Each rifle has iron sights (sight: the rail
@@ -23,22 +24,51 @@ const SH_W = {
     ads: { fov: 50, vm: 56, spread: 0.3, move: 0.55, kick: 0.65, bloom: 0.55 },
     sight: { rail: 0.124, cx: 0.014, line: 0.168, rear: -0.235, front: 0.262, post: 0.1 }, holo: -0.12, cut: [[0.125, -0.3, -0.03], [0.103, 0.232, 0.3]],
     grip: [-0.065, -0.27], fore: [0.035, 0.12], hip: [0.2, -0.2, -0.62] },
-  m4: { id: 'm4', slot: 'rifle', name: 'M4', price: 120, dmg: 22, rate: 0.095, auto: true, spread: 0.006, move: 0.022, air: 0.06, bloom: 0.007, bloomMax: 0.045, kick: 0.011, mag: 30, reserve: 90, reload: 1.4, draw: 0.45, len: 0.82, model: 'gun_m4', muzzle: [0.01, 0.083, 0.41], speed: 1,
+  m4: { id: 'm4', slot: 'rifle', name: 'M4', price: 50, dmg: 22, rate: 0.095, auto: true, spread: 0.006, move: 0.022, air: 0.06, bloom: 0.007, bloomMax: 0.045, kick: 0.011, mag: 30, reserve: 90, reload: 1.4, draw: 0.45, len: 0.82, model: 'gun_m4', muzzle: [0.01, 0.083, 0.41], speed: 1,
     desc: 'קרבין קצר ואוטומטי. יותר נזק, פיזור קטן יותר.', img: 'assets/arcade/sh_m4.jpg',
     ads: { fov: 48, vm: 56, spread: 0.25, move: 0.6, kick: 0.6, bloom: 0.5 },
     sight: { rail: 0.124, cx: 0.01, line: 0.17, rear: -0.12, front: 0.31, post: 0.09 }, holo: -0.01, cut: [[0.126, -0.165, -0.08], [0.1, 0.262, 0.345]],
     grip: [-0.075, -0.17], fore: [0.035, 0.17], hip: [0.2, -0.2, -0.56] },
-  tavor: { id: 'tavor', slot: 'rifle', name: 'תבור', price: 260, dmg: 26, rate: 0.085, auto: true, spread: 0.0035, move: 0.018, air: 0.05, bloom: 0.005, bloomMax: 0.035, kick: 0.009, mag: 30, reserve: 90, reload: 1.3, draw: 0.5, len: 0.72, model: 'gun_rifle', muzzle: [0, 0.067, 0.36], speed: 0.97,
+  tavor: { id: 'tavor', slot: 'rifle', name: 'תבור', price: 110, dmg: 26, rate: 0.085, auto: true, spread: 0.0035, move: 0.018, air: 0.05, bloom: 0.005, bloomMax: 0.035, kick: 0.009, mag: 30, reserve: 90, reload: 1.3, draw: 0.5, len: 0.72, model: 'gun_rifle', muzzle: [0, 0.067, 0.36], speed: 0.97,
     desc: 'הבולפאפ של צה״ל. הכי מדויק, הכי חזק, הכי מהיר.', img: 'assets/arcade/sh_tavor.jpg',
     ads: { fov: 45, vm: 56, spread: 0.2, move: 0.55, kick: 0.6, bloom: 0.5 },
     sight: { rail: 0.122, cx: -0.006, line: 0.163, rear: -0.035, front: 0.2, post: 0.12 }, holo: 0.045, cut: [[0.1225, -0.008, 0.1]],
     grip: [-0.07, 0.03], fore: [-0.03, 0.24], hip: [0.2, -0.2, -0.5] },
+  // The Negev (a light machine gun: a hundred rounds, fast, heavy and loose) and the marksman
+  // rifle (bolt action, its own scope, a body shot takes three quarters). Numbers off the models
+  // (as in js/range3d.js); the marksman's scope is its own (scope: the eye point behind it).
+  negev: { id: 'negev', slot: 'rifle', name: 'נגב', price: 80, dmg: 21, rate: 0.068, auto: true, spread: 0.012, move: 0.034, air: 0.07, bloom: 0.0045, bloomMax: 0.05, kick: 0.009, mag: 100, reserve: 100, reload: 2.6, draw: 0.75, len: 1.0, model: 'gun_negev', muzzle: [0.01, 0.05, 0.5], speed: 0.86,
+    desc: 'מקלע קל. מאה כדורים, יורה בלי הפסקה, כבד ופחות מדויק.', img: 'assets/arcade/sh_negev.jpg',
+    ads: { fov: 52, vm: 56, spread: 0.38, move: 0.5, kick: 0.6, bloom: 0.6 },
+    sight: { rail: 0.119, cx: 0.008, line: 0.158, rear: -0.06, front: 0.36, post: 0.1 }, holo: -0.02,
+    grip: [-0.06, -0.22], fore: [-0.02, 0.22], hip: [0.2, -0.165, -0.64] },
+  sniper: { id: 'sniper', slot: 'rifle', name: 'רובה צלפים', price: 150, dmg: 75, rate: 1.05, auto: false, bolt: true, spread: 0.03, move: 0.05, air: 0.09, bloom: 0, bloomMax: 0, kick: 0.05, mag: 5, reserve: 20, reload: 2.2, draw: 0.65, len: 1.12, model: 'gun_sniper', muzzle: [0.017, 0.039, 0.56], speed: 0.9,
+    desc: 'נעילת בריח וכוונת משלו. פגיעה בגוף — שלושה רבעים, בראש — סוף.', img: 'assets/arcade/sh_sniper.jpg', scope: true,
+    ads: { fov: 14, vm: 50, spread: 0.004, move: 0.45, kick: 0.5, bloom: 0, t: 0.32 },
+    eye: { x: 0.005, y: 0.119, z: -0.33, d: 0.1 }, sight: { rail: 0.1, cx: 0.01 },
+    grip: [-0.055, -0.36], fore: [-0.03, 0.1], hip: [0.2, -0.16, -0.66] },
   pistol: { id: 'pistol', slot: 'pistol', name: 'גלוק', dmg: 20, rate: 0.17, auto: false, spread: 0.003, move: 0.012, air: 0.04, bloom: 0.012, bloomMax: 0.04, kick: 0.022, mag: 12, reserve: 48, reload: 1.1, draw: 0.3, len: 0.19, model: 'gun_pistol', muzzle: [0, 0.051, 0.095], speed: 1.05,
     ads: { fov: 58, vm: 48, spread: 0.45, move: 0.75, kick: 0.75, bloom: 0.7 } },
 };
-const SH_GUNS = ['m16', 'm4', 'tavor'];
+const SH_GUNS = ['m16', 'm4', 'tavor', 'negev', 'sniper'];
 // The holographic sight (bought once, fits every rifle): a ring and a dot through its window.
-const SH_HOLO = { id: 'holo', name: 'כוונת הולוגרפית', price: 90, img: 'assets/arcade/sh_holo.jpg', desc: 'טבעת אדומה ונקודה, רואים דרכה הכול. מתאימה לכל רובה.', s: 0.095 };
+const SH_HOLO = { id: 'holo', name: 'כוונת הולוגרפית', price: 35, optic: 1, img: 'assets/arcade/sh_holo.jpg', desc: 'טבעת אדומה ונקודה, רואים דרכה הכול. מתאימה לכל רובה.', s: 0.095 };
+// The attachments (js/armory.js sells them, at the HQ's armory): each bought once, owned for
+// good and fitted per rifle (G.state.shFit). One optic at a time: the holo or the ACOG.
+//  supp  — a quieter, muffled report the others hear from much closer (hear: metres), a small
+//          flash, a little less damage far off (fall: lost at range, from near to far metres).
+//  grip  — less kick and bloom, and the bloom settles faster.
+//  bipod — standing still and aiming: much steadier (spread, kick and bloom), nothing otherwise.
+//  acog  — a 4x scope with a chevron and horseshoe: the zoom (fov), tighter through it, slower up.
+const SH_ATT = {
+  supp: { id: 'supp', name: 'משתיק קול', price: 40, model: 'att_supp', img: 'assets/arcade/sh_supp.jpg', icon: '🤫', desc: 'שקט. שומעים אותך רק מקרוב, בלי הבזק. טיפה פחות נזק למרחק.', hear: 9, quiet: 18, fall: 0.12, near: 12, far: 32, flash: 0.3 },
+  grip: { id: 'grip', name: 'ידית הסתערות', price: 25, model: 'att_grip', img: 'assets/arcade/sh_grip.jpg', icon: '✊', desc: 'פחות רתע, הנשק חוזר מהר למקום.', kick: 0.68, bloom: 0.72, settle: 1.7 },
+  bipod: { id: 'bipod', name: 'דו־רגלית', price: 30, model: 'att_bipod', img: 'assets/arcade/sh_bipod.jpg', icon: '🦵', desc: 'עומדים במקום ומכוונים — יציב כמו סלע. בתנועה — לא עוזרת.', spread: 0.35, kick: 0.35, bloom: 0.4 },
+  acog: { id: 'acog', name: 'כוונת טריג׳יקון', price: 60, model: 'att_acog', img: 'assets/arcade/sh_acog.jpg', icon: '🔭', desc: 'זום פי 4 עם חץ ופרסה. הכי טובה לרחוק, עולה לעין לאט יותר.', optic: 2, fov: 20.6, spread: 0.55, t: 0.3, move: 0.85 },
+};
+const SH_OPTICS = [null, 'holo', 'acog'];
+const SH_LEGS_UP = -1.05; // the bipod folded: its legs swung forward and up toward the barrel // the optic's number (in the presence too)
+const SH_HEAR = 26; // how far bots hear an ordinary shot (m)
 // The buy phase at the start of each round, with the round's own money (not the shekels).
 const SH_BUY = [
   { id: 'vest', key: 'Digit3', n: 3, icon: '🦺', img: 'assets/arcade/sh_vest.jpg', name: 'שכפ״ץ', price: 400, tip: 'סופג חצי מהפגיעות עד 50 נקודות שריון' },
@@ -56,7 +86,7 @@ const SH_SFX = {
   dry: 0.7, mag_out: 0.75, mag_in: 0.8, bolt: 0.9, pmag: 0.75, pslide: 0.75, mag_drop: 0.55, hit_concrete: 0.55, hit_metal: 0.45, ads: 0.35,
   whizz: 0.7, pin: 0.7, bounce: 0.6, boom: 1,
 };
-const SH_SHOTS = { m16: ['shot_m16', 'shot_m16b'], m4: ['shot_m4', 'shot_m4b'], tavor: ['shot_tavor'], pistol: ['shot_glock', 'shot_glockb'] };
+const SH_SHOTS = { m16: ['shot_m16', 'shot_m16b'], m4: ['shot_m4', 'shot_m4b'], tavor: ['shot_tavor'], negev: ['shot_m4b', 'shot_m16'], sniper: ['shot_m16b'], pistol: ['shot_glock', 'shot_glockb'] };
 const SH_BUFS = {};
 const SH_WK = ['rifle', 'pistol'];
 const SH_TEAM = [{ name: 'כחולים', icon: '🔵', color: 0x2f7fe0, css: '#5aa8ff' }, { name: 'אדומים', icon: '🔴', color: 0xd8261f, css: '#ff6a5a' }];
@@ -174,7 +204,50 @@ const ShooterGame = {
     this.buildGrid();
   },
   // A player's gun in a slot: their rifle (the one they chose or were given) or the Glock.
-  wp(p, w = p.w) { return SH_W[w === 'pistol' ? 'pistol' : (p && p.gun) || 'm16']; },
+  wp(p, w = p.w) { return w === 'pistol' ? SH_W.pistol : this.loadW((p && p.gun) || 'm16', p && p.att); },
+  // ---------- loadouts: a rifle and what is fitted on it ----------
+  // att: { o: optic (0 none, 1 holo, 2 acog), s: suppressor, g: foregrip, b: bipod } (0/1 each).
+  att(a) { a = a || {}; return { o: a.o === 2 ? 2 : a.o === 1 ? 1 : 0, s: a.s ? 1 : 0, g: a.g ? 1 : 0, b: a.b ? 1 : 0 }; },
+  attKey(a) { a = this.att(a); return `${a.o}${a.s}${a.g}${a.b}`; },
+  // Packed small for the presence: the optic, and the rest as bits (1 supp, 2 grip, 4 bipod).
+  attBits(a) { a = this.att(a); return a.s | (a.g << 1) | (a.b << 2); },
+  attFrom(o, bits) { return this.att({ o: +o || 0, s: bits & 1, g: bits & 2, b: bits & 4 }); },
+  // A rifle's numbers with its attachments (the bipod's steadiness depends on standing still, so
+  // it is applied per shot, see steady). Cached per rifle and fitting.
+  loadW(gun, a) {
+    const base = SH_W[gun] || SH_W.m16;
+    a = this.att(a);
+    if (base.scope) a.o = 0; // the marksman rifle has its own scope
+    const key = gun + ':' + this.attKey(a);
+    this.wCache = this.wCache || {};
+    if (this.wCache[key]) return this.wCache[key];
+    const W = { ...base, ads: { ...base.ads }, att: a, adsT: base.ads.t || SH_ADS_T, hear: SH_HEAR, settle: 1 };
+    if (a.s) { const A = SH_ATT.supp; W.hear = A.hear; W.supp = true; W.draw += 0.05; }
+    if (a.g) { const A = SH_ATT.grip; W.kick *= A.kick; W.bloom *= A.bloom; W.settle = A.settle; }
+    if (a.b) { W.bipod = true; W.draw += 0.08; }
+    if (a.o === 2) { const A = SH_ATT.acog; W.ads.fov = A.fov; W.ads.spread *= A.spread; W.ads.move *= A.move; W.adsT = A.t; W.ads.vm = 40; W.acog = true; }
+    return (this.wCache[key] = W);
+  },
+  // The bipod: standing still on the ground with the gun up, a multiplier (spread, kick, bloom).
+  steady(p, W) {
+    if (!W.bipod || !p.onGround || Math.hypot(p.vx || 0, p.vz || 0) > 0.6 || (p.adsK || 0) < 0.6) return null;
+    return SH_ATT.bipod;
+  },
+  // Your spread right now (the crosshair, the shot): the gun, moving, in the air, the bloom,
+  // the sight and the bipod.
+  spreadOf(p, W = this.wp(p)) {
+    const moving = Math.hypot(p.vx || 0, p.vz || 0) > 1, ak = p.adsK || 0;
+    let s = (W.spread + (moving ? W.move : 0) + (p.onGround === false ? W.air : 0) + (p.bloom || 0)) * (1 - (1 - W.ads.spread) * ak);
+    if (W.scope && ak < 0.85) s = W.spread + (moving ? W.move : 0) + (p.onGround === false ? W.air : 0);
+    const st = this.steady(p, W); if (st) s *= st.spread;
+    return s;
+  },
+  // A hit's damage from the shooter's rifle: a suppressed one loses a little far off.
+  shotDmg(p, W, dist) {
+    let d = W.dmg;
+    if (W.supp && dist != null) { const A = SH_ATT.supp; d *= 1 - A.fall * Math.max(0, Math.min(1, (dist - A.near) / (A.far - A.near))); }
+    return d;
+  },
   radial(a, b) {
     const c = document.createElement('canvas'); c.width = c.height = 64;
     const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
@@ -524,9 +597,12 @@ const ShooterGame = {
     this.vmNadeT = 0;
   },
   // Builds a gun for the view model or a soldier's hands: the model, or a stand-in made of boxes.
-  // key: a gun id (m16 / m4 / tavor / pistol); holo: with the holographic sight on the rail.
-  makeGun(key, forVm, holo = false) {
+  // key: a gun id (m16 / m4 / tavor / negev / sniper / pistol); att: what is fitted (see att()),
+  // or true for just the holographic sight.
+  makeGun(key, forVm, att = null) {
     const W = SH_W[key], src = Assets.models[W.model], rifle = W.slot === 'rifle';
+    const a = this.att(att === true ? { o: 1 } : att);
+    if (W.scope) a.o = 0;
     const g = new THREE.Group();
     if (src) {
       const m = src.clone(true);
@@ -557,11 +633,84 @@ const ShooterGame = {
       };
       if (rifle) { const cx = W.sight.cx; g.userData.rh = hand(cx + 0.012, W.grip[0], W.grip[1], 0.35, 0.12); g.userData.lh = hand(cx - 0.035, W.fore[0], W.fore[1], -0.33, -0.51); g.userData.lhY = W.fore[0]; }
       else { g.userData.rh = hand(0.024, -0.06, -0.065, 0.3, 0.15, 1.15); g.userData.lh = hand(-0.03, -0.075, -0.05, 0.3, -0.45, 1.1); g.userData.lhY = -0.075; }
-      if (rifle) { this.ironSights(g, W); if (holo) this.mountHolo(g, W, true); }
+      if (rifle) { if (W.scope) g.userData.eye = W.eye; else this.ironSights(g, W); if (a.o === 1) this.mountHolo(g, W, true); else if (a.o === 2) this.mountAcog(g, W, true); }
       else this.pistolSights(g);
-    } else if (rifle && holo) this.mountHolo(g, W, false);
+    } else if (rifle) { if (a.o === 1) this.mountHolo(g, W, false); else if (a.o === 2) this.mountAcog(g, W, false); }
     const mz = new THREE.Object3D(); mz.position.set(...W.muzzle); g.add(mz); g.userData.muzzle = mz;
+    if (rifle) this.mountKit(g, key, W, a, forVm);
+    g.userData.att = a;
     return g;
+  },
+  // An attachment model, brightened like the guns (null while it isn't loaded).
+  attModel(name, scale, forVm) {
+    const src = Assets.models[name];
+    if (!src) return null;
+    const m = src.clone(true); m.scale.setScalar(scale);
+    m.traverse(o => {
+      if (!o.isMesh) return;
+      o.frustumCulled = false; o.castShadow = !forVm;
+      if (!o.material.userData.shLit) { o.material = o.material.clone(); o.material.color.setScalar(1.8); o.material.metalness = 0; o.material.roughness = 0.7; o.material.userData.shLit = true; }
+    });
+    return m;
+  },
+  // How low the gun's underside is at z (its own units × its length), for what hangs under it:
+  // the lowest point of the model within a couple of centimetres of z, near the middle.
+  underY(key, z) {
+    const W = SH_W[key], src = Assets.models[W.model];
+    this.underCache = this.underCache || {};
+    const ck = key + ':' + z.toFixed(3);
+    if (this.underCache[ck] != null) return this.underCache[ck];
+    let lo = Infinity;
+    if (src) {
+      src.updateMatrixWorld(true);
+      const v = new THREE.Vector3(), cx = W.sight ? W.sight.cx : 0;
+      src.traverse(o => {
+        if (!o.isMesh) return;
+        const pos = o.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).multiplyScalar(W.len);
+          if (Math.abs(v.z - z) < 0.02 && Math.abs(v.x - cx) < 0.03 && v.y < lo) lo = v.y;
+        }
+      });
+    }
+    if (!isFinite(lo)) lo = (W.fore ? W.fore[0] : -0.03) + 0.01;
+    return (this.underCache[ck] = lo);
+  },
+  // The suppressor on the muzzle, the foregrip under the handguard (where the left hand goes),
+  // the bipod further forward (folded along the barrel; it swings down when it's in use).
+  mountKit(g, key, W, a, forVm) {
+    const cx = W.sight ? W.sight.cx : 0;
+    if (a.s) {
+      const L = 0.17, m = this.attModel('att_supp', L, forVm);
+      if (m) { m.rotation.y = Math.PI / 2; m.position.set(W.muzzle[0], W.muzzle[1], W.muzzle[2] + L / 2 - 0.012); g.add(m); g.userData.supp = m; }
+      g.userData.muzzle && g.userData.muzzle.position.set(W.muzzle[0], W.muzzle[1], W.muzzle[2] + L - 0.01);
+    }
+    if (a.g) {
+      const z = W.fore[1], y = this.underY(key, z), m = this.attModel('att_grip', 0.1, forVm);
+      if (m) { m.position.set(cx, y - 0.048, z); g.add(m); g.userData.vgrip = m; }
+      g.userData.foreAt = [y - 0.07, z];
+      const lh = g.userData.lh;
+      // (The hand round its lower half, a little to the left, so the top of the grip shows.)
+      if (lh) { lh.position.set(cx - 0.02, y - 0.082, z - 0.01); lh.rotation.set(0.2, -0.25, 0); g.userData.lhY = lh.position.y; }
+    }
+    if (a.b) {
+      const z = Math.min(W.muzzle[2] - 0.08, W.fore[1] + 0.16), y = this.underY(key, z), m = this.attModel('att_bipod', 0.2, forVm);
+      if (m) {
+        const pivot = new THREE.Group(); pivot.position.set(cx, y + 0.004, z); m.position.y = -0.1; pivot.add(m);
+        pivot.rotation.x = SH_LEGS_UP; g.add(pivot); g.userData.bipod = pivot;
+      }
+    }
+  },
+  // The ACOG on the rail: 4x, a tan housing; for your own gun its eye point is behind the
+  // eyepiece (through it, the scope overlay takes over, see hud).
+  mountAcog(g, W, forVm) {
+    const s = 0.15, S = W.sight, m = this.attModel('att_acog', s, forVm);
+    const z = W.holo + 0.01, base = S.rail + 0.245 * s;
+    if (m) { m.rotation.y = Math.PI; m.position.set(S.cx, base, z); g.add(m); g.userData.acog = m; }
+    if (forVm) {
+      g.userData.eye = { x: S.cx, y: base + 0.07 * s, z: z - 0.5 * s, d: 0.07 };
+      const ir = g.userData.irons; if (ir) { ir.rear.visible = false; ir.front.visible = false; }
+    }
   },
   // Drops the triangles inside boxes [y0, z0, z1] (above y0, between z0 and z1) from a copy of a
   // mesh (s: the model's scale).
@@ -660,16 +809,25 @@ const ShooterGame = {
     add(new THREE.CircleGeometry(0.0016, 12), white, cx, top - 0.0032, 0.0821).rotation.y = Math.PI;
     g.userData.eye = { x: cx, y: top, z: -0.068, d: 0.27 };
   },
-  // (Re)builds your guns once the models are in: each rifle with and without the holo, the Glock.
+  // (Re)builds your guns once the models are in (each rifle and fitting is made when first
+  // needed), and everyone's in their hands.
   dressGuns() {
     for (const k in this.vmGuns) this.vm.remove(this.vmGuns[k]);
-    this.vmGuns = {};
-    for (const k of [...SH_GUNS, 'pistol']) for (const h of k === 'pistol' ? [false] : [false, true]) { const id = k + (h ? '+' : ''); this.vmGuns[id] = this.makeGun(k, true, h); this.vmGuns[id].visible = false; this.vm.add(this.vmGuns[id]); }
+    this.vmGuns = {}; this.underCache = {};
     for (const p of this.ps || []) this.armSoldier(p);
   },
-  // Your gun in the view model now.
-  vmGun(me) { return this.vmGuns[me.w === 'pistol' ? 'pistol' : (me.gun || 'm16') + (me.sight ? '+' : '')]; },
+  // Your gun in the view model now (built the first time).
+  vmGun(me) {
+    const id = me.w === 'pistol' ? 'pistol' : (me.gun || 'm16') + ':' + this.attKey(me.att);
+    if (!this.vmGuns[id]) { const g = this.makeGun(me.w === 'pistol' ? 'pistol' : me.gun || 'm16', true, me.w === 'pistol' ? null : me.att); g.visible = false; this.vm.add(g); this.vmGuns[id] = g; }
+    return this.vmGuns[id];
+  },
 
+  // The fitted attachments as little icons (the HUD's weapon name, the loadout chip).
+  attIcons(a) {
+    a = this.att(a);
+    return (a.o === 1 ? ' 🔴' : a.o === 2 ? ' ' + SH_ATT.acog.icon : '') + (a.s ? ' ' + SH_ATT.supp.icon : '') + (a.g ? ' ' + SH_ATT.grip.icon : '') + (a.b ? ' ' + SH_ATT.bipod.icon : '');
+  },
   // ---------- a match ----------
   enter(ctx) {
     this.build();
@@ -678,7 +836,7 @@ const ShooterGame = {
     this.slots = null; this.md = null;
     this.dress();
     this.dressGuns();
-    const need = ['gun_rifle', 'gun_m16', 'gun_m4', 'gun_pistol', 'sight_holo', 'prop_nade', 'prop_vest', 'prop_helmet', 'arc_shelter', 'arc_sandbags', 'arc_dumpster'];
+    const need = ['gun_rifle', 'gun_m16', 'gun_m4', 'gun_negev', 'gun_sniper', 'gun_pistol', 'sight_holo', 'att_supp', 'att_grip', 'att_bipod', 'att_acog', 'prop_nade', 'prop_vest', 'prop_helmet', 'arc_shelter', 'arc_sandbags', 'arc_dumpster'];
     if (need.some(n => !Assets.has(n))) Arcade.loadModels(need).then(() => { if (this.ctx !== ctx) return; this.dress(); this.dressGuns(); });
     this.host = ctx.solo || !!(ctx.net && ctx.net.host);
     this.rnd = Arcade.rng(ctx.seed);
@@ -715,68 +873,70 @@ const ShooterGame = {
       <p class="ar-sub sh-ctl">${ctl}</p>`);
     if (!p) return;
     p.querySelectorAll('[data-md]').forEach(b => b.onclick = () => { Sound.click(); this.pick(+b.dataset.md); });
-    p.querySelectorAll('.sh-card').forEach(b => b.onclick = () => this.shopPick(b.dataset.id));
+    p.querySelectorAll('.sh-gchip').forEach(b => b.onclick = () => this.shopPick(b.dataset.id));
   },
-  // ---------- the gun shop (the game's shekels, owned for good) ----------
+  // ---------- your guns (the game's shekels, owned for good; sold at the HQ's armory) ----------
+  // G.state.shOwned: the rifles and attachments bought (the M16 is everyone's); shGun: the rifle
+  // in hand; shFit: per rifle, what is fitted { o: 'holo' | 'acog' | null, s, g, b }. Saves from
+  // before the armory have only shSight ('holo' on every rifle), which still counts until the
+  // rifle is fitted at the armory.
   owned() {
     const st = G.state || {};
     return new Set(['m16', ...(Array.isArray(st.shOwned) ? st.shOwned : [])]);
   },
   myGun() { const g = (G.state || {}).shGun; return SH_GUNS.includes(g) && this.owned().has(g) ? g : 'm16'; },
-  mySight() { return (G.state || {}).shSight === 'holo' && this.owned().has('holo'); },
-  shopHtml() {
-    const own = this.owned(), money = (G.state || {}).money || 0, gun = this.myGun(), holo = this.mySight();
-    const bar = (v) => `${Math.round(Math.max(6, Math.min(100, v * 100)))}%`;
-    const card = (it, isGun) => {
-      const mine = own.has(it.id), on = isGun ? gun === it.id : holo;
-      const chip = mine ? (on ? `<em class="sh-on">✔ ${isGun ? 'ביד' : 'מורכבת'}</em>` : '<em class="sh-own">🔑 שלך</em>') : `<span class="sh-price ${money < it.price ? 'short' : ''}">🔑 ${it.price} ₪</span>`;
-      const stats = isGun
-        ? `<span class="sh-stat">נזק<s style="--v:${bar((it.dmg - 12) / 16)}"></s></span><span class="sh-stat">דיוק<s style="--v:${bar((0.011 - it.spread) / 0.008)}"></s></span><span class="sh-stat">קצב<s style="--v:${bar(it.burst ? 0.45 : (0.12 - it.rate) / 0.04)}"></s></span>`
-        : `<span class="sh-stat">${mine ? (on ? 'לחיצה — להוריד' : 'לחיצה — להרכיב') : 'לכל הרובים'}</span>`;
-      return `<button class="sh-card ${on ? 'on' : ''} ${mine ? '' : 'locked'}" data-id="${it.id}">${chip}<img src="${it.img}" alt=""><b>${it.name}</b><i>${isGun ? `${it.dmg} נזק · ${it.burst ? 'צרור 3' : 'אוטומטי'}` : it.desc}</i>${stats}</button>`;
-    };
-    return `<div class="sh-shop"><p class="sh-wallet">🛒 הנשקייה · 💰 בארנק: <b>${money} ₪</b></p><div class="sh-cards">${SH_GUNS.map(id => card(SH_W[id], true)).join('')}${card(SH_HOLO, false)}</div></div>`;
+  fitOf(gun) {
+    const st = G.state || {}, own = this.owned(), f = st.shFit && st.shFit[gun];
+    const o = f ? f.o : (st.shSight === 'holo' ? 'holo' : null);
+    return { o: (o === 'holo' || o === 'acog') && own.has(o) && !(SH_W[gun] || {}).scope ? o : null, s: !!(f && f.s && own.has('supp')), g: !!(f && f.g && own.has('grip')), b: !!(f && f.b && own.has('bipod')) };
   },
-  // A card tapped: owned → take it (or put the sight on / off); not owned → buy (or not enough).
+  setFit(gun, fit) {
+    const st = G.state; if (!st) return;
+    st.shFit = { ...(st.shFit || {}) };
+    st.shFit[gun] = { o: fit.o || null, s: !!fit.s, g: !!fit.g, b: !!fit.b };
+    // (Kept in step for the rifle in hand, for anything that still reads the old field.)
+    if (gun === this.myGun()) st.shSight = fit.o === 'holo' ? 'holo' : null;
+  },
+  myAtt(gun = this.myGun()) { const f = this.fitOf(gun); return this.att({ o: SH_OPTICS.indexOf(f.o) > 0 ? SH_OPTICS.indexOf(f.o) : 0, s: f.s, g: f.g, b: f.b }); },
+  mySight() { return this.myAtt().o === 1; },
+  // Something from the armory's shelves: a rifle, the holo, or an attachment.
+  item(id) { return SH_W[id] && SH_GUNS.includes(id) ? SH_W[id] : id === 'holo' ? SH_HOLO : SH_ATT[id] || null; },
+  // Buys it with the game's shekels (false: already yours, or not enough). A rifle goes in your
+  // hands; an attachment onto gun (the rifle in hand unless said).
+  buyItem(id, gun = this.myGun()) {
+    const it = this.item(id), st = G.state;
+    if (!it || !st || this.owned().has(id) || (st.money || 0) < it.price) return false;
+    st.money -= it.price;
+    st.shOwned = [...new Set([...(Array.isArray(st.shOwned) ? st.shOwned : []), id])];
+    st.stats = st.stats || {}; st.stats.purchases = (st.stats.purchases || 0) + 1;
+    if (SH_GUNS.includes(id)) st.shGun = id;
+    else {
+      const f = this.fitOf(gun);
+      if (id === 'holo' || id === 'acog') { if (!SH_W[gun].scope) f.o = id; } else f[{ supp: 's', grip: 'g', bipod: 'b' }[id]] = true;
+      this.setFit(gun, f);
+    }
+    if (typeof Game !== 'undefined') Game.save();
+    return true;
+  },
+  // The intro panel's corner: the rifle in hand with what's on it, your other rifles to switch
+  // to, and where the shop is now.
+  shopHtml() {
+    const own = this.owned(), gun = this.myGun(), W = SH_W[gun], money = (G.state || {}).money || 0;
+    const chips = SH_GUNS.filter(id => own.has(id)).map(id => `<button class="sh-gchip ${id === gun ? 'on' : ''}" data-id="${id}"><img src="${SH_W[id].img}" alt=""><b>${SH_W[id].name}</b><i>${this.attIcons(this.myAtt(id)) || '—'}</i></button>`).join('');
+    const a = this.myAtt(gun);
+    const fitted = [a.o === 1 ? SH_HOLO : a.o === 2 ? SH_ATT.acog : null, a.s && SH_ATT.supp, a.g && SH_ATT.grip, a.b && SH_ATT.bipod].filter(Boolean);
+    return `<div class="sh-shop sh-load"><p class="sh-wallet">🎒 הנשק שלך · 💰 ${money} ₪</p>
+      <div class="sh-lmain"><img src="${W.img}" alt=""><div><b>${W.name}</b><span>${W.dmg} נזק · ${W.burst ? 'צרור 3' : W.bolt ? 'בריח' : 'אוטומטי'}${W.mag > 30 ? ` · ${W.mag} כדורים` : ''}</span>
+      <span class="sh-fitted">${fitted.length ? fitted.map(f => `<em>${f.icon || '🔴'} ${f.name}</em>`).join('') : '<em class="none">בלי תוספות</em>'}</span></div></div>
+      ${chips.length > 1 ? `<div class="sh-gchips">${chips}</div>` : ''}
+      <p class="sh-armhint">🔧 שיפוצים בנשקייה בשו"ב — רובים, משתיק, ידית, דו־רגלית וכוונות</p></div>`;
+  },
+  // A rifle chip tapped: that one in hand.
   shopPick(id) {
-    const it = id === 'holo' ? SH_HOLO : SH_W[id];
-    if (!it || this.slots || !G.state) return;
-    if (this.owned().has(id)) {
-      Sound.click();
-      if (id === 'holo') G.state.shSight = this.mySight() ? null : 'holo'; else G.state.shGun = id;
-      Game.save(); this.intro(); return;
-    }
-    const money = G.state.money || 0;
-    if (money < it.price) {
-      Sound.bad();
-      UI.toast(`💸 ${it.name} עולה ${it.price} ₪ ויש לך ${money} ₪. חסרים עוד <b>${it.price - money} ₪</b> — עוד כמה משחקונים טובים וזה מסתדר 😉`, 'bad');
-      return;
-    }
+    if (this.slots || !G.state || !this.owned().has(id) || !SH_GUNS.includes(id)) return;
     Sound.click();
-    const root = $('#arcade');
-    root.querySelectorAll('.sh-confirm').forEach(x => x.remove());
-    const box = document.createElement('div');
-    box.className = 'sh-confirm';
-    box.innerHTML = `<div class="sh-cf"><img src="${it.img}" alt=""><h3>לקנות ${id === 'holo' ? 'את ה' : 'את ה־'}${it.name}?</h3>
-      <p>${it.price} ₪ מהארנק (יש לך ${money} ₪, יישארו <b>${money - it.price} ₪</b>).<br>שלך לתמיד${id === 'holo' ? ' — על כל רובה' : ''}.</p>
-      <div class="ar-row"><button class="btn" data-m="yes">🔑 לקנות ב-${it.price} ₪</button><button class="btn ghost" data-m="no">לא עכשיו</button></div></div>`;
-    root.appendChild(box);
-    const close = () => box.remove();
-    box.addEventListener('click', (e) => { if (e.target === box) close(); });
-    box.querySelector('[data-m=no]').onclick = () => { Sound.click(); close(); };
-    box.querySelector('[data-m=yes]').onclick = () => {
-      close();
-      if ((G.state.money || 0) < it.price || this.owned().has(id) || this.slots) return;
-      G.state.money -= it.price;
-      G.state.shOwned = [...new Set([...(Array.isArray(G.state.shOwned) ? G.state.shOwned : []), id])];
-      if (id === 'holo') G.state.shSight = 'holo'; else G.state.shGun = id;
-      G.state.stats = G.state.stats || {}; G.state.stats.purchases = (G.state.stats.purchases || 0) + 1;
-      Game.save();
-      Sound.coin(); setTimeout(() => Sound.fanfare(), 180);
-      this.intro();
-      UI.toast(`🔑 ה${id === 'holo' ? '' : '־'}${it.name} שלך! שילמת ${it.price} ₪ · נשארו ${G.state.money} ₪`, 'ach');
-    };
-    box.querySelector('[data-m=yes]').focus();
+    G.state.shGun = id; G.state.shSight = this.fitOf(id).o === 'holo' ? 'holo' : null;
+    Game.save(); this.intro();
   },
   clear() {
     for (const p of this.ps || []) { this.scene.remove(p.m.root); if (p.m.flash) this.scene.remove(p.m.flash); if (p.m.vest) this.scene.remove(p.m.vest); if (p.m.helm) this.scene.remove(p.m.helm); }
@@ -826,17 +986,22 @@ const ShooterGame = {
       tag.position.y = 2.15; m.root.add(tag); m.tag = tag;
       m.root.traverse(o => { if (o.isMesh && o.material !== Scene3D.blobMat) o.castShadow = true; });
       const p = { ...s, i, team, m, x: 0, z: 0, y: 0, vx: 0, vz: 0, vy: 0, a: 0, pitch: 0, hp: 100, alive: true, k: 0, d: 0, w: 'rifle', ammo: {}, hurtAt: -99, skill: s.bot ? 0.62 + this.rnd() * 0.22 : 1, female: s.isMe ? (G.profile || {}).gender === 'f' : !!(Cast.get(s.who) || {}).female,
-        gun: s.isMe ? this.myGun() : 'm16', sight: s.isMe ? this.mySight() : false, cash: SH_CASH.start, armor: 0, helmet: false, nadeN: 0 };
+        gun: s.isMe ? this.myGun() : 'm16', att: s.isMe ? this.myAtt() : this.att(null), cash: SH_CASH.start, armor: 0, helmet: false, nadeN: 0 };
       this.armSoldier(p);
       return p;
     });
     // Your teammate bot is a bit better than the others; in 1v1 the bot is fair.
     for (const p of this.ps) if (p.bot && this.ps.some(q => q.isMe && q.team === p.team)) p.skill = Math.min(0.9, p.skill + 0.08);
-    // The bots' rifles (the host picks): mostly up to the best gun a human here has, now and then
-    // one better; a holo sight sometimes.
+    // The bots' rifles (the host picks): mostly up to the best of the three assault rifles a human
+    // here has, now and then one better, once in a while a Negev; a sight and a grip sometimes.
     if (this.host) {
-      const top = Math.max(1, ...this.ps.filter(p => !p.bot).map(p => SH_GUNS.indexOf(p.gun)));
-      for (const p of this.ps) if (p.bot) { p.gun = SH_GUNS[Math.min(2, Math.floor(this.rnd() * (top + 1)) + (this.rnd() < 0.15 ? 1 : 0))]; p.sight = this.rnd() < 0.3; this.armSoldier(p); }
+      const top = Math.max(1, ...this.ps.filter(p => !p.bot).map(p => Math.min(2, SH_GUNS.indexOf(p.gun))));
+      for (const p of this.ps) if (p.bot) {
+        p.gun = this.rnd() < 0.1 ? 'negev' : SH_GUNS[Math.min(2, Math.floor(this.rnd() * (top + 1)) + (this.rnd() < 0.15 ? 1 : 0))];
+        const r = this.rnd();
+        p.att = this.att({ o: r < 0.25 ? 1 : r < 0.35 ? 2 : 0, g: this.rnd() < 0.3, s: this.rnd() < 0.12 });
+        this.armSoldier(p);
+      }
     }
     this.me = this.ps.find(p => p.isMe) || null;
   },
@@ -858,8 +1023,8 @@ const ShooterGame = {
     };
     m.vest = wear('prop_vest', Math.PI / 2); m.helm = wear('prop_helmet', Math.PI);
     if (!m.headBone) m.root.traverse(o => { if (o.isBone && !m.headBone && o.name === 'Head') m.headBone = o; if (o.isBone && !m.hipBone && o.name === 'Hips') m.hipBone = o; });
-    m.guns = {}; m.gunId = (p.gun || 'm16') + (p.sight ? '+' : '');
-    for (const k of SH_WK) { const g = this.makeGun(k === 'rifle' ? p.gun || 'm16' : 'pistol', false, k === 'rifle' && !!p.sight); g.rotation.y = Math.PI / 2; m.gunMount.add(g); m.guns[k] = g; }
+    m.guns = {}; m.gunId = (p.gun || 'm16') + ':' + this.attKey(p.att);
+    for (const k of SH_WK) { const g = this.makeGun(k === 'rifle' ? p.gun || 'm16' : 'pistol', false, k === 'rifle' ? p.att : null); g.rotation.y = Math.PI / 2; m.gunMount.add(g); m.guns[k] = g; }
     // The flash at the muzzle when they fire.
     m.flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.flashTex[0], transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
     m.flash.visible = false; m.flash.scale.setScalar(0.5); this.scene.add(m.flash);
@@ -951,7 +1116,7 @@ const ShooterGame = {
       else if (p.bot && this.host) this.bot(p, dt, live);
       else this.remote(p, dt);
       p.cool = Math.max(0, (p.cool || 0) - dt);
-      p.bloom = Math.max(0, (p.bloom || 0) - dt * 0.12);
+      p.bloom = Math.max(0, (p.bloom || 0) - dt * 0.12 * (p.w === 'rifle' ? this.wp(p).settle || 1 : 1));
       if (p.reloadT > 0) { p.reloadT -= dt; if (p.reloadT <= 0) this.finishReload(p); }
       if (p.drawT > 0) p.drawT -= dt;
       // Health comes back slowly after four seconds out of fire (the host decides).
@@ -1001,7 +1166,7 @@ const ShooterGame = {
     // The sight: up while the right button is held (or after Z / 🎯), not while running, reloading
     // or bringing a gun up. adsK eases 0 → 1 over SH_ADS_T.
     p.ads = (this.adsHold || this.adsTog) && !p.sprint && p.reloadT <= 0 && p.drawT <= 0.05 && !this.over && this.st !== 'pick';
-    p.adsK = Math.max(0, Math.min(1, (p.adsK || 0) + (p.ads ? 1 : -1) * dt / SH_ADS_T));
+    p.adsK = Math.max(0, Math.min(1, (p.adsK || 0) + (p.ads ? 1 : -1) * dt / (this.wp(p).adsT || SH_ADS_T)));
     if (p.ads && !this.adsWas) this.sfx('ads', { cap: 2 });
     this.adsWas = p.ads;
     if (!live) { ix = iy = 0; }
@@ -1096,11 +1261,11 @@ const ShooterGame = {
   // (here when this phone is the referee, or reported to the host when it isn't).
   fire(p, aim = null) {
     const W = this.wp(p);
-    const moving = Math.hypot(p.vx, p.vz) > 1, air = !p.onGround;
-    const ak = p.adsK || 0;
-    let spread = (W.spread + (moving ? W.move : 0) + (air ? W.air : 0) + p.bloom) * (1 - (1 - W.ads.spread) * ak);
+    const ak = p.adsK || 0, st = this.steady(p, W);
+    let spread = this.spreadOf(p, W);
     if (aim && aim.extra) spread += aim.extra;
-    p.bloom = Math.min(W.bloomMax, p.bloom + W.bloom * (1 - (1 - W.ads.bloom) * ak));
+    p.bloom = Math.min(W.bloomMax, p.bloom + W.bloom * (1 - (1 - W.ads.bloom) * ak) * (st ? st.bloom : 1));
+    this.lastSpread = spread;
     const yaw = aim ? aim.yaw : p.a, pit = aim ? aim.pitch : p.pitch;
     const r = spread * Math.sqrt(Math.random()), th = Math.random() * Math.PI * 2;
     const ey = yaw + Math.cos(th) * r, ep = pit + Math.sin(th) * r;
@@ -1110,14 +1275,15 @@ const ShooterGame = {
     p.fired++; p.magShots = (p.magShots || 0) + 1;
     if (hit.who) p.magHits = (p.magHits || 0) + 1;
     // Recoil for the player.
-    if (p.isMe) { const kk = W.kick * (1 - (1 - W.ads.kick) * ak); this.look.pitch = Math.min(1.3, this.look.pitch + kk * (0.8 + Math.random() * 0.4)); this.look.yaw += (Math.random() - 0.5) * kk * 0.5; this.kick = 1; }
+    if (p.isMe) { const kk = W.kick * (1 - (1 - W.ads.kick) * ak) * (st ? st.kick : 1); this.lastKick = kk; this.look.pitch = Math.min(1.3, this.look.pitch + kk * (0.8 + Math.random() * 0.4)); this.look.yaw += (Math.random() - 0.5) * kk * 0.5; this.kick = 1; }
     const shot = { id: this.seq++, s: p.i, w: p.w === 'rifle' ? 0 : 1, o: [o.x, o.y, o.z], e: [hit.x, hit.y, hit.z], v: hit.who ? hit.who.i : -1, hs: hit.head ? 1 : 0, at: performance.now() };
     this.shotFx(p, shot, hit);
-    if (this.host) { if (hit.who) this.damage(hit.who, p, W.dmg, !!hit.head, hit); if (p.bot || p.isMe) this.botShots.push(shot); }
+    const dist = Math.hypot(hit.x - o.x, hit.y - o.y, hit.z - o.z);
+    if (this.host) { if (hit.who) this.damage(hit.who, p, this.shotDmg(p, W, dist), !!hit.head, hit); if (p.bot || p.isMe) this.botShots.push(shot); }
     else if (p.isMe) {
       this.myShots.push(shot);
       // A guest sees its own hit at once (and what it should take off); the host decides.
-      if (hit.who) { this.hm = 0.25; this.hmKill = false; Sound.synth.tone(hit.head ? 2400 : 1500, 0.05, 'triangle', hit.head ? 0.12 : 0.08); this.dmgNum(hit, this.dmgCalc(hit.who, W.dmg, !!hit.head).hp, !!hit.head, hit.who); }
+      if (hit.who) { this.hm = 0.25; this.hmKill = false; Sound.synth.tone(hit.head ? 2400 : 1500, 0.05, 'triangle', hit.head ? 0.12 : 0.08); this.dmgNum(hit, this.dmgCalc(hit.who, this.shotDmg(p, W, dist), !!hit.head).hp, !!hit.head, hit.who); }
     }
     // Everyone near hears it (the bots learn where you are).
     this.heard(p);
@@ -1143,9 +1309,12 @@ const ShooterGame = {
     if (!isMe && p.m.guns) { const g = p.m.guns[w]; if (g && g.userData.muzzle) { const v = g.userData.muzzle.getWorldPosition(new THREE.Vector3()); mx = v.x; my = v.y; mz = v.z; } }
     else { const right = 0.18 * (1 - (p.adsK || 0)); mx += -Math.sin(p.a) * right + Math.cos(p.a) * 0.5; mz += Math.cos(p.a) * right + Math.sin(p.a) * 0.5; }
     // The flash: two drawn frames (the star, then the smaller one), however fast the screen is.
-    if (isMe) { this.vmFlashN = 2; this.vmFlash.material.rotation = Math.random() * 6; this.ejectShell(w); }
-    else { p.m.flashN = 2; p.m.flash.position.set(mx, my, mz); p.m.flash.material.rotation = Math.random() * 6; p.m.flash.scale.setScalar(w === 'rifle' ? 0.55 : 0.4); }
-    this.flashLight.position.set(mx, my, mz); this.flashLight.intensity = 2.2;
+    // (A suppressor all but hides it: a small flash, hardly any light.)
+    const fk = w === 'rifle' && this.wp(p, 'rifle').supp ? SH_ATT.supp.flash : 1;
+    this.lastFlash = fk;
+    if (isMe) { this.vmFlashN = 2; this.vmFlashK = fk; this.vmFlash.material.rotation = Math.random() * 6; this.ejectShell(w); }
+    else { p.m.flashN = 2; p.m.flash.position.set(mx, my, mz); p.m.flash.material.rotation = Math.random() * 6; p.m.flash.scale.setScalar((w === 'rifle' ? 0.55 : 0.4) * fk); }
+    this.flashLight.position.set(mx, my, mz); this.flashLight.intensity = 2.2 * fk * fk;
     // Tracer: every rifle shot, some pistol ones.
     if (w === 'rifle' || Math.random() < 0.5) {
       // Yours starts a few metres out, so it doesn't streak across your own face.
@@ -1159,7 +1328,9 @@ const ShooterGame = {
     // The bang.
     const me = this.me, dist = me ? Math.hypot(ox - me.x, oz - me.z) : 0;
     const v = isMe ? 1 : Math.max(0.12, 1 - dist / 45), cut = isMe ? 1 : Math.max(0.35, 1 - dist / 40);
+    const quiet = w === 'rifle' && this.wp(p, 'rifle').supp;
     if (this.shotSound(p, w, ox, oz)) { /* the recorded report */ }
+    else if (quiet) { if (isMe || dist < SH_ATT.supp.quiet) Sound.synth.noise(0.06, 0.12 * (isMe ? 1 : Math.max(0, 1 - dist / SH_ATT.supp.quiet)), 900, 'lowpass'); }
     else if (w === 'rifle') { Sound.synth.noise(0.11, 0.42 * v, 2600 * cut); Sound.synth.noise(0.28, 0.22 * v, 420, 'lowpass'); Sound.synth.tone(120, 0.07, 'square', 0.05 * v, 50); }
     else { Sound.synth.noise(0.08, 0.38 * v, 3400 * cut); Sound.synth.tone(190, 0.06, 'square', 0.05 * v, 80); Sound.synth.noise(0.18, 0.12 * v, 600, 'lowpass'); }
     if (isMe) G.shake = Math.max(G.shake || 0, w === 'rifle' ? 0.03 : 0.05);
@@ -1279,14 +1450,25 @@ const ShooterGame = {
   // distance and direction, a far one with the across-town take mixed in.
   shotSound(p, w, x, z) {
     const gun = w === 'pistol' ? 'pistol' : (p.gun || 'm16'), takes = SH_SHOTS[gun], name = takes[Math.floor(Math.random() * takes.length)];
-    const rate = gun === 'tavor' ? 1.06 : gun === 'm4' ? 0.97 : 1;
+    const rate = gun === 'tavor' ? 1.06 : gun === 'm4' ? 0.97 : gun === 'negev' ? 0.92 : gun === 'sniper' ? 0.8 : 1;
+    // Suppressed: a muffled, softer "thup" (yours), and the others only hear it from close by.
+    if (w !== 'pistol' && this.wp(p, 'rifle').supp) {
+      const Q = SH_ATT.supp;
+      if (p.isMe) { this.lastShotVol = 0.4; if (!this.sfx(name, { vol: 0.4, rate: rate * 1.18, lp: 1500, echo: 0.04, cap: 5 })) return false; Sound.synth.noise(0.07, 0.1, 900, 'lowpass'); Sound.synth.tone(1500, 0.02, 'square', 0.015); return true; }
+      const h = this.heardAt(x, z);
+      this.lastShotVol = h.d > Q.quiet ? 0 : 0.45 * Math.pow(1 - h.d / Q.quiet, 1.4);
+      if (h.d > Q.quiet) return true;
+      return this.sfx(name, { vol: this.lastShotVol, rate: rate * 1.18, pan: h.pan, lp: Math.min(1300, h.lp), echo: 0.05, delay: h.delay, cap: 6 });
+    }
     if (p.isMe) {
+      this.lastShotVol = 1;
       if (!this.sfx(name, { vol: 1, rate, echo: 0.2, cap: 5 })) return false;
       Sound.synth.tone(gun === 'pistol' ? 2400 : 1700, 0.025, 'square', 0.025);
       Sound.synth.noise(0.09, 0.12, 180, 'lowpass');
       return true;
     }
     const h = this.heardAt(x, z);
+    this.lastShotVol = h.vol * 0.9;
     if (!this.sfx(name, { vol: h.vol * 0.9, rate, pan: h.pan, lp: h.lp, echo: h.echo, delay: h.delay, cap: 6 })) return false;
     if (h.d > 18) this.sfx('far', { vol: Math.min(1, (h.d - 18) / 20) * 0.7, pan: h.pan * 0.6, lp: 2500, delay: h.delay, cap: 3 });
     return true;
@@ -1573,12 +1755,15 @@ const ShooterGame = {
   },
   // Someone fired: bots within earshot learn roughly where.
   heard(p) {
+    const R = this.hearRange(p);
     for (const b of this.ps) {
       if (!b.bot || !b.alive || b.team === p.team) continue;
       const d = Math.hypot(b.x - p.x, b.z - p.z);
-      if (d < 26 && (!b.know || this.t - b.know.t > 1.5)) b.know = { x: p.x + (Math.random() - 0.5) * 3, z: p.z + (Math.random() - 0.5) * 3, t: this.t, who: p };
+      if (d < R && (!b.know || this.t - b.know.t > 1.5)) b.know = { x: p.x + (Math.random() - 0.5) * 3, z: p.z + (Math.random() - 0.5) * 3, t: this.t, who: p };
     }
   },
+  // How far a shot from p carries (a suppressor: much less).
+  hearRange(p) { return p.w === 'pistol' ? SH_HEAR : this.wp(p).hear; },
   enemiesOf(b) { return this.ps.filter(e => e.team !== b.team && e.alive); },
   canSee(b, e) {
     const dx = e.x - b.x, dz = e.z - b.z, d = Math.hypot(dx, dz);
@@ -1784,7 +1969,7 @@ const ShooterGame = {
       if (s.ar) p.armor = s.ar[i] || 0;
       if (s.hm) p.helmet = !!s.hm[i];
       if (s.gn) p.nadeN = s.gn[i] || 0;
-      if (p.remoteBot && s.gu && s.gu[i] >= 0) { const gun = SH_GUNS[s.gu[i]], sight = !!(s.gs || [])[i]; if (gun !== p.gun || sight !== !!p.sight) { p.gun = gun; p.sight = sight; this.armSoldier(p); } }
+      if (p.remoteBot && s.gu && s.gu[i] >= 0) this.setLoadout(p, SH_GUNS[s.gu[i]] || 'm16', this.attFrom((s.gs || [])[i], (s.ga || [])[i] || 0));
     });
     // Grenades: new ones appear (caught up to their age); one gone from the host's list went off.
     const gl = s.gr || [], ids = new Set(gl.map(r => r[0]));
@@ -1816,7 +2001,7 @@ const ShooterGame = {
       if (this.host && victim) {
         // The referee: the shooter is alive and where it says, and nothing solid is in the way.
         const ok = p.alive && victim.alive && Math.hypot(ox - p.x, oz - p.z) < 4 && this.sees({ x: ox, y: oy - SH_EYE, z: oz }, ex, ey, ez) && Math.hypot(ex - victim.x, ez - victim.z) < 2.2;
-        if (ok) this.damage(victim, p, this.wp(p).dmg, !!hs);
+        if (ok) this.damage(victim, p, this.shotDmg(p, this.wp(p), L), !!hs);
       }
       if (this.host) this.heard(p);
     }
@@ -1856,7 +2041,12 @@ const ShooterGame = {
     if (s.rl && !p.netReload) this.reloadSound(p, this.wp(p), false);
     p.netReload = !!s.rl;
     p.ads = !!s.ad;
-    if (!p.remoteBot && s.g != null) { const gun = SH_GUNS[s.g] || 'm16', sight = !!s.o; if (gun !== p.gun || sight !== !!p.sight) { p.gun = gun; p.sight = sight; this.armSoldier(p); } }
+    if (!p.remoteBot && s.g != null) this.setLoadout(p, SH_GUNS[s.g] || 'm16', this.attFrom(s.o, s.at || 0));
+  },
+  // Someone's rifle and fitting from the network: re-armed when it changed.
+  setLoadout(p, gun, a) {
+    if (gun === p.gun && this.attKey(a) === this.attKey(p.att)) return;
+    p.gun = gun; p.att = a; this.armSoldier(p);
   },
   presence() {
     const me = this.me, r1 = (n) => Math.round(n * 10) / 10, r2 = (n) => Math.round(n * 100) / 100;
@@ -1865,7 +2055,7 @@ const ShooterGame = {
     if (me) Object.assign(out, { x: r1(me.x), z: r1(me.z), y: r1(me.y), a: r2(me.a), p: r2(me.pitch), w: me.w === 'pistol' ? 1 : 0, rl: me.reloadT > 0 ? 1 : 0 });
     // One more flag while you aim, so the others see the gun at your eye; your rifle and sight.
     if (me && me.alive && me.ads) out.ad = 1;
-    if (me) { out.g = SH_GUNS.indexOf(me.gun); if (me.sight) out.o = 1; }
+    if (me) { out.g = SH_GUNS.indexOf(me.gun); const a = this.att(me.att); if (a.o) out.o = a.o; if (this.attBits(a)) out.at = this.attBits(a); }
     const pack = (list) => list.filter(s => now - s.at < 600).slice(-10).map(s => [s.id % 100000, s.s, s.w, ...s.o.map(r1), ...s.e.map(r1), s.v, s.hs]);
     if (this.host) {
       this.botShots = this.botShots.filter(s => now - s.at < 600);
@@ -1882,7 +2072,7 @@ const ShooterGame = {
         b: this.ps.filter(p => p.bot).map(p => [p.i, r1(p.x), r1(p.z), r1(p.y), r2(p.a), r2(p.pitch), p.w === 'pistol' ? 1 : 0, p.reloadT > 0 ? 1 : 0]),
         // The round's money, armour, helmets, grenades in hand, everyone's rifle and sight.
         $: this.ps.map(p => p.cash || 0), ar: this.ps.map(p => Math.ceil(p.armor || 0)), hm: this.ps.map(p => (p.helmet ? 1 : 0)), gn: this.ps.map(p => p.nadeN || 0),
-        gu: this.ps.map(p => SH_GUNS.indexOf(p.gun)), gs: this.ps.map(p => (p.sight ? 1 : 0)),
+        gu: this.ps.map(p => SH_GUNS.indexOf(p.gun)), gs: this.ps.map(p => this.att(p.att).o), ga: this.ps.map(p => this.attBits(p.att)),
         gr: this.nades.filter(n => !n.boom).slice(-5).map(n => [n.id, n.s, r2(n.x), r2(n.y), r2(n.z), r1(n.vx), r1(n.vy), r1(n.vz), r2(n.t)]),
       };
     } else {
@@ -1918,11 +2108,12 @@ const ShooterGame = {
       if (m.gunMount) {
         const low = (p.reloadT > 0 || p.netReload) ? 0.5 : p.sprint ? 0.35 : 0;
         // Aiming (another player online): the gun up at the eye, in front of the face.
-        p.adsK = Math.max(0, Math.min(1, (p.adsK || 0) + (p.ads && p.alive && !low ? 1 : -1) * dt / SH_ADS_T));
+        p.adsK = Math.max(0, Math.min(1, (p.adsK || 0) + (p.ads && p.alive && !low ? 1 : -1) * dt / (W.adsT || SH_ADS_T)));
         const ak = p.adsK * p.adsK * (3 - 2 * p.adsK), r = p.w === 'rifle', fwd = r ? (0.03 - this.wp(p).grip[1]) * 0.75 : 0;
         m.gunMount.position.set((r ? 0.32 : 0.42) + fwd + ak * (r ? -0.04 : 0.1), 1.36 - low * 0.25 + ak * (r ? 0.12 : 0.16), 0.1 - ak * (r ? 0.06 : 0.1));
         m.gunMount.rotation.set(0, p.w === 'pistol' ? -0.05 * (1 - ak) : 0, (p.alive ? p.pitch : 0) - low);
       }
+      if (m.guns && m.guns.rifle) this.legs(m.guns.rifle, W.bipod && p.ads && sp < 0.6 && p.alive, dt);
       if (p.alive && m.bones && m.bones.RightArm) this.aimPose(p);
       // Muzzle flash.
       if (m.flash) { m.flash.visible = m.flashN > 0; if (m.flashN > 0) { m.flash.material.map = this.flashTex[2 - m.flashN]; m.flashN--; } }
@@ -1986,7 +2177,8 @@ const ShooterGame = {
     const V = THREE.Vector3;
     const W = this.wp(p), rf = p.w === 'rifle';
     const grip = g.localToWorld(new V(0, rf ? W.grip[0] + 0.02 : -0.035, rf ? W.grip[1] : -0.05));
-    const fore = g.localToWorld(new V(0, rf ? W.fore[0] + 0.02 : -0.04, rf ? W.fore[1] - 0.02 : -0.04));
+    const fa = rf && g.userData.foreAt;
+    const fore = g.localToWorld(fa ? new V(0, fa[0] + 0.02, fa[1] - 0.01) : new V(0, rf ? W.fore[0] + 0.02 : -0.04, rf ? W.fore[1] - 0.02 : -0.04));
     const side = new V(-Math.sin(p.a), 0, Math.cos(p.a));
     this.ik(B.RightArm, B.RightForeArm, B.RightHand, grip, new V(0, -1, 0).addScaledVector(side, 0.6));
     if (B.LeftArm && B.LeftForeArm && B.LeftHand) this.ik(B.LeftArm, B.LeftForeArm, B.LeftHand, fore, new V(0, -1, 0).addScaledVector(side, -0.8));
@@ -2117,13 +2309,18 @@ const ShooterGame = {
     if (me.drawT > 0) { const p = me.drawT / W.draw; y -= p * p * 0.3; rx -= p * 0.8; }
     g.position.set(x, y, z);
     g.rotation.set(rx, Math.PI + ry, rz);
+    // The bipod swings down when it's doing its job (still, the gun up), and folds when you move.
+    this.legs(g, !!this.steady(me, W), dt);
+    // Through a 4x (the ACOG, the marksman's scope) the scope overlay takes over: the gun goes.
+    this.scoped = me.w === 'rifle' && (W.acog || W.scope) && e > 0.85;
+    g.visible = !this.scoped;
     // The flash at the muzzle.
     const mz = g.userData.muzzle.getWorldPosition(new THREE.Vector3());
     const fl = this.vmFlashN > 0;
     this.vmFlash.visible = fl;
     if (fl) { this.vmFlash.material.map = this.flashTex[2 - this.vmFlashN]; this.vmFlashN--; }
     this.vmFlash.position.copy(mz).add(new THREE.Vector3(0, 0, -0.04));
-    this.vmFlash.scale.setScalar((me.w === 'rifle' ? 0.2 : 0.16) * (1 - 0.45 * e));
+    this.vmFlash.scale.setScalar((me.w === 'rifle' ? 0.2 * (this.vmFlashK || 1) : 0.16) * (1 - 0.45 * e));
     // The gun's own camera closes in a little too, so the sight fills a bit more of the screen.
     const vf = 62 + (W.ads.vm - 62) * e;
     if (Math.abs(this.vmCam.fov - vf) > 0.001) { this.vmCam.fov = vf; this.vmCam.updateProjectionMatrix(); }
@@ -2144,6 +2341,13 @@ const ShooterGame = {
     this.shells = this.shells.filter(s => { if (s.t < 0.7) return true; this.vmScene.remove(s.m); return false; });
   },
 
+  // The bipod's legs on a gun: down (in use) or folded forward along the barrel.
+  legs(g, down, dt) {
+    const b = g && g.userData.bipod;
+    if (!b) return;
+    const want = down ? 0 : SH_LEGS_UP;
+    b.rotation.x += (want - b.rotation.x) * Math.min(1, dt * 10);
+  },
   // ---------- input: mouse look (pointer lock), touch look and buttons ----------
   bind() {
     this.unbind();
@@ -2255,6 +2459,13 @@ const ShooterGame = {
   // ---------- the overlay ----------
   ui() {
     Arcade.hud(`<div class="sh">
+      <div class="sh-scope"><div class="sh-lens"><svg class="sh-acogret" viewBox="-100 -100 200 200" aria-hidden="true">
+        <path d="M -30 34 A 46 46 0 1 1 30 34" fill="none" stroke="#ff8a1c" stroke-width="3.2" stroke-linecap="round"/>
+        <path d="M -9 9 L 0 0 L 9 9" fill="none" stroke="#ff8a1c" stroke-width="3.4" stroke-linejoin="miter"/>
+        <path d="M 0 9 V 74 M -7 22 H 7 M -5.5 34 H 5.5 M -4.5 46 H 4.5 M -3.5 58 H 3.5" stroke="#1a1a1a" stroke-width="1.6"/></svg>
+        <svg class="sh-snipret" viewBox="-100 -100 200 200" aria-hidden="true"><path d="M -100 0 H -8 M 8 0 H 100 M 0 -100 V -8 M 0 8 V 100" stroke="#111" stroke-width="1.4"/>
+        <path d="M -100 0 H -55 M 55 0 H 100 M 0 -100 V -55 M 0 55 V 100" stroke="#111" stroke-width="4"/><circle r="1.6" fill="#d22"/>
+        ${[-40, -30, -20, -10, 10, 20, 30, 40].map(k => `<circle cx="${k}" r="1.3" fill="#111"/><circle cy="${k}" r="1.3" fill="#111"/>`).join('')}</svg></div></div>
       <div class="sh-board ar-chip"><span class="sh-b"></span><span class="sh-mid"><b class="sh-rd"></b><i class="sh-t"></i></span><span class="sh-r"></span></div>
       <div class="sh-feed"></div>
       <div class="sh-vig"></div><div class="sh-dirs"></div>
@@ -2268,7 +2479,7 @@ const ShooterGame = {
     </div>`);
     const h = $('#arcade .sh');
     const q = (s) => h.querySelector(s);
-    this.el = { root: h, b: q('.sh-b'), r: q('.sh-r'), rd: q('.sh-rd'), t: q('.sh-t'), feed: q('.sh-feed'), vig: q('.sh-vig'), dirs: q('.sh-dirs'), cross: q('.sh-cross'), hm: q('.sh-hm'), dt: q('.sh-dt'), hp: q('.sh-hp b'), hpn: q('.sh-hp em'), hpBox: q('.sh-hp'), ammo: q('.sh-ammo b'), res: q('.sh-ammo small'), wn: q('.sh-wn'), swap: q('.sh-swap'), ads: q('.sh-ads'), nade: q('.sh-nade'), ar: q('.sh-ar b'), arn: q('.sh-ar em'), arBox: q('.sh-ar'), helm: q('.sh-helm'), nd: q('.sh-nd'), buy: q('.sh-buy'), cash: q('.sh-cash'), bt: q('.sh-bt'), hint: q('.sh-hint'), ammoBox: q('.sh-ammo') };
+    this.el = { root: h, b: q('.sh-b'), r: q('.sh-r'), rd: q('.sh-rd'), t: q('.sh-t'), feed: q('.sh-feed'), vig: q('.sh-vig'), dirs: q('.sh-dirs'), cross: q('.sh-cross'), hm: q('.sh-hm'), dt: q('.sh-dt'), hp: q('.sh-hp b'), hpn: q('.sh-hp em'), hpBox: q('.sh-hp'), ammo: q('.sh-ammo b'), res: q('.sh-ammo small'), wn: q('.sh-wn'), swap: q('.sh-swap'), ads: q('.sh-ads'), nade: q('.sh-nade'), ar: q('.sh-ar b'), arn: q('.sh-ar em'), arBox: q('.sh-ar'), helm: q('.sh-helm'), nd: q('.sh-nd'), buy: q('.sh-buy'), cash: q('.sh-cash'), bt: q('.sh-bt'), hint: q('.sh-hint'), ammoBox: q('.sh-ammo'), scope: q('.sh-scope') };
     h.classList.toggle('touch', !!G.touch);
     h.classList.add('pre');
   },
@@ -2312,13 +2523,13 @@ const ShooterGame = {
     // Ammo.
     const a = me.ammo[me.w] || [0, 0];
     e.ammo.textContent = a[0]; e.res.textContent = `/ ${a[1]}`;
-    e.wn.textContent = me.reloadT > 0 ? 'מחליף מחסנית…' : this.wp(me).name + (me.w === 'rifle' && me.sight ? ' · 🔴' : '');
+    e.wn.textContent = me.reloadT > 0 ? 'מחליף מחסנית…' : this.wp(me).name + (me.w === 'rifle' ? this.attIcons(me.att) : '');
     e.ammoBox.classList.toggle('empty', a[0] === 0);
     if (e.swap) { const o = me.w === 'rifle' ? 'pistol' : 'rifle'; const t = `${this.wp(me).name} ⇄ ${this.wp(me, o).name}`; if (e.swap.textContent !== t) e.swap.textContent = t; }
     // The crosshair opens with the spread.
-    const W = this.wp(me), moving = Math.hypot(me.vx, me.vz) > 1;
+    const W = this.wp(me);
     const ak = me.adsK || 0;
-    const spread = (W.spread + (moving ? W.move : 0) + (me.onGround ? 0 : W.air) + me.bloom) * (1 - (1 - W.ads.spread) * ak);
+    const spread = this.spreadOf(me, W);
     const px = spread * (innerHeight / 2) / Math.tan(this.camera.fov * Math.PI / 360);
     e.cross.style.setProperty('--gap', `${Math.round(5 + px)}px`);
     e.cross.classList.toggle('hidden', !me.alive || me.sprint || this.st === 'pick' || this.over || ak > 0.85);
@@ -2326,6 +2537,10 @@ const ShooterGame = {
     const co = (1 - Math.min(1, ak / 0.85)).toFixed(2);
     if (e.cross.style.opacity !== co) e.cross.style.opacity = co;
     if (e.ads) e.ads.classList.toggle('on', !!(this.adsTog || me.ads));
+    // The 4x scope's view: the ACOG's chevron and horseshoe, or the marksman's crosshair.
+    const sc = !!(this.scoped && me.alive && this.slots && !this.over);
+    e.scope.classList.toggle('on', sc);
+    e.scope.classList.toggle('snip', sc && !!W.scope);
     // The hit marker and the damage.
     this.hm = Math.max(0, this.hm - this.dt);
     e.hm.style.opacity = this.hm > 0 ? Math.min(1, this.hm * 6) : 0;
@@ -2366,7 +2581,7 @@ const ShooterGame = {
     for (const p of this.ps || []) clearTimeout(p.bubbleT);
     this.clear();
     this.slots = null; this.el = null; this.over = false; this.resultsAt = null; this.trigger = false; this.pickT = null;
-    this.adsHold = false; this.adsTog = false; this.fovNow = SH_FOV;
+    this.adsHold = false; this.adsTog = false; this.fovNow = SH_FOV; this.scoped = false;
     if (this.camera) { this.camera.fov = SH_FOV; this.camera.updateProjectionMatrix(); }
   },
 };

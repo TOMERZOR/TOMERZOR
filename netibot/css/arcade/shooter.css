@@ -150,3 +150,35 @@
 #arcade .sh-dt.pop { animation: sh-dt .18s ease-out; }
 #arcade .sh-dt small { font-size: 13px; font-weight: 700; color: #ffd23f; margin-inline-end: 6px; }
 @keyframes sh-dt { from { transform: translateX(-50%) scale(1.25); } }
+/* Your loadout on the intro panel: the rifle in hand and what's fitted, your other rifles,
+   and the hint to the armory at the HQ (js/armory.js, css/armory.css). */
+#arcade .ar-panel .sh-load { padding: 6px 8px; border-radius: 10px; background: rgba(0,0,0,.22); border: 1px solid var(--trim); }
+#arcade .ar-panel .sh-lmain { display: flex; gap: 10px; align-items: center; text-align: right; }
+#arcade .ar-panel .sh-lmain img { width: 120px; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 8px; background: #ddd; flex: none; }
+#arcade .ar-panel .sh-lmain b { display: block; font-size: 17px; color: var(--gold-hi); }
+#arcade .ar-panel .sh-lmain span { display: block; font-size: 12px; opacity: .9; }
+#arcade .ar-panel .sh-fitted { display: flex !important; flex-wrap: wrap; gap: 4px; margin-top: 4px; opacity: 1 !important; }
+#arcade .ar-panel .sh-fitted em { font-style: normal; font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 9px; background: #1f6f3a; color: #fff; }
+#arcade .ar-panel .sh-fitted em.none { background: rgba(255,255,255,.12); color: var(--ink); }
+#arcade .ar-panel .sh-gchips { display: flex; gap: 5px; margin-top: 6px; overflow-x: auto; }
+#arcade .ar-panel .sh-gchip { flex: 0 0 auto; display: flex; align-items: center; gap: 5px; padding: 2px 8px 2px 4px; border-radius: 9px; border: 2px solid var(--trim); background: rgba(0,0,0,.25); color: var(--ink); font: 800 12px Rubik, sans-serif; cursor: pointer; pointer-events: auto; }
+#arcade .ar-panel .sh-gchip img { width: 42px; height: 28px; object-fit: cover; border-radius: 5px; background: #ddd; }
+#arcade .ar-panel .sh-gchip i { font-style: normal; font-size: 10px; opacity: .85; }
+#arcade .ar-panel .sh-gchip.on { border-color: #6cc24a; box-shadow: 0 0 0 2px rgba(108,194,74,.35); }
+#arcade .ar-panel .sh-armhint { margin: 6px 0 0; font-size: 12px; font-weight: 800; color: var(--gold-hi); }
+@media (max-height: 500px) {
+  #arcade .ar-panel .sh-lmain img { width: 84px; }
+  #arcade .ar-panel .sh-lmain b { font-size: 15px; }
+  #arcade .ar-panel .sh-load { padding: 4px 6px; }
+}
+/* Through a 4x (the ACOG or the marksman's scope): a round lens in a dark ring, the reticle in
+   it — the ACOG's amber horseshoe and chevron with its drop ticks, or the marksman's crosshair. */
+#arcade .sh-scope { position: absolute; inset: 0; display: none; pointer-events: none; align-items: center; justify-content: center; background: #050505; }
+#arcade .sh-scope.on { display: flex; }
+#arcade .sh-lens { position: relative; width: min(94vh, 94vw); aspect-ratio: 1; border-radius: 50%; box-shadow: 0 0 0 100vmax #050505, inset 0 0 6vmin 2vmin rgba(0,0,0,.92), inset 0 0 0 1.2vmin #1b1a17; background: radial-gradient(circle, transparent 62%, rgba(0,0,0,.35) 82%, rgba(0,0,0,.75)); }
+#arcade .sh-scope { background: none; }
+#arcade .sh-lens svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#arcade .sh-acogret { filter: drop-shadow(0 0 2px rgba(255,140,30,.65)); }
+#arcade .sh-snipret { display: none; }
+#arcade .sh-scope.snip .sh-snipret { display: block; }
+#arcade .sh-scope.snip .sh-acogret { display: none; }

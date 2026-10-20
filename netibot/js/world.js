@@ -172,6 +172,14 @@ const World = {
       prop('treadmill', 51.4, 36.3, 0.9, 1.8);
       prop('treadmill', 52.7, 36.3, 0.9, 1.8);
       prop('idobox', 47.6, 19.2, 5, 1.35, true, { face: 1 });
+      // The armory (js/armory.js draws these): the counter facing the door, two gun racks along
+      // the back wall behind it, a gunsmith's workbench by each side wall, the sign over the door.
+      prop('armcounter', 9.0, 16.98, 2.0, 0.52);
+      prop('armrack', 8.12, 16.05, 1.35, 0.42);
+      prop('armrack', 10.88, 16.05, 1.35, 0.42);
+      prop('armbench', 8.06, 17.75, 0.62, 1.2);
+      prop('armbench', 12.3, 17.7, 0.62, 1.2);
+      prop('armsign', 10.0, 19.78, 1.0, 0.5, false);
       pergola(48.5, 15);
       pergola(52, 15);
       // Hidden behind the shelves of the rasap's storeroom. Nobody knows about it. Officially.

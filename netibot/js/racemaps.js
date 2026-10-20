@@ -195,6 +195,7 @@ const RaceWorld = {
     else { time('terrain', () => this.terrain(W)); time('road', () => this.road(W)); }
     time('far', () => this.far(W));
     time('start', () => { this.startLine(W); this.battery(W); });
+    time('props', () => { if (!W.painted) this.kerbs(W); this.props(W); });
     if (map.id === 'negev' && !W.painted) time('negev', () => this.negevDecor(W));
     if (map.id === 'hatzor') time('hatzor', () => this.hatzorDecor(W));
     if (map.forest) time('forest', () => this.forest(W));
@@ -242,7 +243,8 @@ const RaceWorld = {
     const map = new THREE.Mesh(new THREE.PlaneGeometry(RACE_MAP.size, RACE_MAP.size), new THREE.MeshStandardMaterial({ map: this.tex('assets/race/map.jpg'), roughness: 0.95 }));
     map.material.map.wrapS = map.material.map.wrapT = THREE.ClampToEdgeWrapping;
     map.rotation.x = -Math.PI / 2; map.position.set(RACE_MAP.cx, 0, RACE_MAP.cz); map.receiveShadow = true; W.scene.add(map);
-    // Tire walls on the bends, like before.
+    // Tire walls on the bends, like before (the real ones, in props(), when the model is in).
+    if (Assets.models.race_tires) return;
     const N = S_len(W), black = new THREE.MeshStandardMaterial({ color: 0x1d1d1d, roughness: 0.9 }), tire = new THREE.TorusGeometry(0.42, 0.2, 8, 14);
     const S = W.samples;
     for (let i = 0; i < N; i += 7) {
@@ -384,11 +386,34 @@ const RaceWorld = {
     const line = new THREE.Mesh(new THREE.PlaneGeometry(W.half * 2, 1.6), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(ck), roughness: 0.8, polygonOffset: true, polygonOffsetFactor: -3 }));
     line.rotation.set(-Math.PI / 2, 0, -s0.a - Math.PI / 2);
     line.position.set(s0.x, s0.y + 0.08, s0.z); sc.add(line);
-    const post = new THREE.MeshStandardMaterial({ color: 0xc0392b });
-    for (const k of [-1, 1]) {
-      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7, 10), post);
-      p.position.set(s0.x + nx * k * (W.half + 1.2), s0.y + 3.5, s0.z + nz * k * (W.half + 1.2));
-      p.castShadow = true; sc.add(p);
+    // The start/finish gantry (a Higgsfield model) with its five start lights, or two posts.
+    const span = 2 * W.half + 5, G = Assets.model('race_gantry', { length: span });
+    let bannerY = 6.2, bannerW = 2 * W.half + 2.4;
+    if (G) {
+      G.position.set(s0.x, s0.y, s0.z); G.rotation.y = -(s0.a + Math.PI / 2);
+      sc.add(G);
+      const h = new THREE.Box3().setFromObject(G).getSize(new THREE.Vector3()).y;
+      bannerY = h * 0.58; bannerW = 2 * W.half;
+      // The light bar under the beam: five lamps facing the grid (and the finish side too).
+      const bar = new THREE.Group(), box = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.3, 6.2), new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.6 }));
+      bar.add(box);
+      W.startLights = [];
+      const disc = new THREE.CircleGeometry(0.5, 20);
+      for (let k = 0; k < 5; k++) {
+        const m = new THREE.MeshBasicMaterial({ color: 0x2a0d0d, fog: false });
+        for (const f of [-1, 1]) { const d = new THREE.Mesh(disc, m); d.position.set(f * 0.26, 0, (k - 2) * 1.2); d.rotation.y = f * Math.PI / 2; bar.add(d); }
+        W.startLights.push(m);
+      }
+      // On top of the beam, where the whole grid can see it.
+      bar.position.set(s0.x, s0.y + h + 0.45, s0.z); bar.rotation.y = -s0.a;
+      sc.add(bar);
+    } else {
+      const post = new THREE.MeshStandardMaterial({ color: 0xc0392b });
+      for (const k of [-1, 1]) {
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 7, 10), post);
+        p.position.set(s0.x + nx * k * (W.half + 1.2), s0.y + 3.5, s0.z + nz * k * (W.half + 1.2));
+        p.castShadow = true; sc.add(p);
+      }
     }
     const c = document.createElement('canvas'); c.width = 1024; c.height = 128;
     const g = c.getContext('2d');
@@ -397,10 +422,170 @@ const RaceWorld = {
     g.fillStyle = '#fff'; g.font = '900 52px Rubik, Arial'; g.textAlign = 'center'; g.direction = 'rtl';
     g.fillText(`🏁 תחרות מפקדי נסיעה · ${W.map.name} 🏁`, 512, 82);
     const bt = new THREE.CanvasTexture(c); bt.encoding = THREE.sRGBEncoding;
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(2 * W.half + 2.4, 2.2), new THREE.MeshBasicMaterial({ map: bt, side: THREE.DoubleSide }));
-    banner.position.set(s0.x, s0.y + 6.2, s0.z);
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(bannerW, bannerW * 2.2 / (2 * W.half + 2.4)), new THREE.MeshBasicMaterial({ map: bt, side: THREE.DoubleSide }));
+    banner.position.set(s0.x, s0.y + bannerY, s0.z);
     banner.rotation.y = -s0.a - Math.PI / 2;
     sc.add(banner);
+  },
+  // How hard the road turns at each sample (radians over ~24 m, + = left), for kerbs and walls.
+  turns(W) {
+    if (W.turnAt) return W.turnAt;
+    const S = W.samples, N = S.length;
+    let len = 0; for (let i = 0; i < N; i++) len += Math.hypot(S[(i + 1) % N].x - S[i].x, S[(i + 1) % N].z - S[i].z);
+    const k = Math.max(2, Math.round(12 / (len / N)));
+    W.step = len / N;
+    W.turnAt = S.map((_, i) => { const d = S[(i + k) % N].a - S[(i - k + N) % N].a; return Math.atan2(Math.sin(d), Math.cos(d)); });
+    return W.turnAt;
+  },
+  // Red and white kerbs on the bends, both sides, a stripe every 1.5 m; the cars rumble on them.
+  kerbs(W) {
+    const S = W.samples, N = S.length, T = this.turns(W), on = T.map(t => Math.abs(t) > 0.2);
+    // Grow each bend a little so the kerbs start before it and end after it.
+    const grow = Math.round(6 / W.step), kerb = on.map((_, i) => { for (let j = -grow; j <= grow; j++) if (on[(i + j + N) % N]) return true; return false; });
+    W.kerbAt = kerb;
+    if (!this.kerbT) {
+      const c = document.createElement('canvas'); c.width = 16; c.height = 64;
+      const g = c.getContext('2d'); g.fillStyle = '#d9342b'; g.fillRect(0, 0, 16, 32); g.fillStyle = '#f4f2ec'; g.fillRect(0, 32, 16, 32);
+      g.fillStyle = 'rgba(0,0,0,.18)'; g.fillRect(0, 0, 3, 64);
+      this.kerbT = new THREE.CanvasTexture(c); this.kerbT.encoding = THREE.sRGBEncoding; this.kerbT.wrapT = THREE.RepeatWrapping; this.kerbT.anisotropy = 4;
+    }
+    const mat = new THREE.MeshStandardMaterial({ map: this.kerbT, roughness: 0.75, polygonOffset: true, polygonOffsetFactor: -3, side: THREE.DoubleSide });
+    for (const side of [-1, 1]) {
+      const pos = [], uv = [], idx = [];
+      let dist = 0, run = -1;
+      for (let i = 0; i <= N; i++) {
+        const s = S[i % N], p = S[(i - 1 + N) % N];
+        if (i) dist += Math.hypot(s.x - p.x, s.z - p.z);
+        if (!kerb[i % N] || i === N) { run = -1; continue; }
+        const nx = -Math.sin(s.a) * side, nz = Math.cos(s.a) * side, base = pos.length / 3;
+        for (const [o, u, lift] of [[W.half - 0.55, 0, 0.075], [W.half + 0.75, 1, 0.13]]) { pos.push(s.x + nx * o, s.y + lift, s.z + nz * o); uv.push(u, dist / 3); }
+        if (run >= 0) { const a = run, b = base; if (side > 0) idx.push(a, a + 1, b, a + 1, b + 1, b); else idx.push(a, b, a + 1, a + 1, b, b + 1); }
+        run = base;
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geo.setIndex(idx); geo.computeVertexNormals();
+      if (pos.length && geo.attributes.normal.getY(0) < 0) { for (let t = 0; t < idx.length; t += 3) [idx[t + 1], idx[t + 2]] = [idx[t + 2], idx[t + 1]]; geo.setIndex(idx); geo.computeVertexNormals(); }
+      const m = new THREE.Mesh(geo, mat); m.receiveShadow = true; W.scene.add(m);
+    }
+  },
+  // The trackside, from Higgsfield models: tire walls on the outside of the sharp bends (off the
+  // rail roads), feather flags along the start straight, and grandstands of cheering soldiers.
+  props(W) {
+    const S = W.samples, N = S.length, T = this.turns(W), sc = W.scene, rails = W.rails;
+    const at = (i, side, off) => { const s = S[(i + N) % N]; return { x: s.x - Math.sin(s.a) * side * off, z: s.z + Math.cos(s.a) * side * off, s }; };
+    const free = (x, z, min) => W.nearRoad(x, z).d > min;
+    W.flags = [];
+    // Tire walls: 4 stacks across the outside of each sharp bend's apex, one InstancedMesh.
+    const tm = Assets.models.race_tires;
+    if (tm && !rails) {
+      let geo = null, mat = null;
+      tm.updateMatrixWorld(true);
+      tm.traverse(o => { if (o.isMesh && !geo) { geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld); mat = o.material; } });
+      geo.computeBoundingBox();
+      const bb = geo.boundingBox, k = 1.15 / (bb.max.x - bb.min.x);
+      geo.translate(-(bb.min.x + bb.max.x) / 2, -bb.min.y, -(bb.min.z + bb.max.z) / 2); geo.scale(k, k, k);
+      if (!geo.attributes.normal) geo.computeVertexNormals();
+      const spots = [];
+      let last = -999;
+      const order = T.map((t, i) => [Math.abs(t), i]).sort((a, b) => b[0] - a[0]);
+      for (const [mag, i] of order) {
+        if (mag < 0.45 || spots.length >= 6) break;
+        if (spots.some(q => Math.min(Math.abs(q - i), N - Math.abs(q - i)) * W.step < 40)) continue;
+        spots.push(i); last = i;
+      }
+      const mats = [];
+      const off = W.half + (W.painted ? 4.2 : 4.5);
+      for (const i of spots) {
+        const side = T[i] > 0 ? -1 : 1;
+        for (let j = -4; j <= 4; j++) {
+          const ii = (i + Math.round(j * 1.15 / W.step) + N) % N, p = at(ii, side, off);
+          if (!free(p.x, p.z, off - 0.6)) continue;
+          for (let r = 0; r < (Math.abs(j) === 4 ? 2 : 1); r++) mats.push({ x: p.x, z: p.z, y: (W.painted ? 0 : W.ground(p.x, p.z)) + r * 0.78, a: p.s.a + (j * 0.7 + r) % 3, red: (j + 99) % 2 });
+        }
+      }
+      for (const red of [0, 1]) {
+        const list = mats.filter(m => m.red === red);
+        if (!list.length) continue;
+        const mt = mat.clone(); if (!red) mt.color = new THREE.Color(0x3a3a3a);
+        const im = new THREE.InstancedMesh(geo, mt, list.length), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), one = new THREE.Vector3(1, 1, 1);
+        list.forEach((m, n) => { q.setFromAxisAngle(up, -m.a); m4.compose(new THREE.Vector3(m.x, m.y, m.z), q, one); im.setMatrixAt(n, m4); });
+        im.receiveShadow = true;
+        sc.add(im);
+      }
+      W.tireWalls = spots;
+    }
+    // Feather flags: both sides of the straight before and after the line, then a pair at each bend wall.
+    const fm = Assets.models.race_flag;
+    if (fm) {
+      const off = W.half + (rails ? 2.6 : 3.2);
+      const put = (i, side) => {
+        const p = at(i, side, off);
+        if (!free(p.x, p.z, off - 0.5)) return;
+        const f = Assets.model('race_flag', { height: 5.2 });
+        f.position.set(p.x, W.painted ? 0 : W.ground(p.x, p.z), p.z);
+        f.userData.r = -p.s.a + (side > 0 ? Math.PI : 0) + Math.PI / 2; f.userData.ph = i * 0.37;
+        f.rotation.y = f.userData.r;
+        sc.add(f); W.flags.push(f);
+      };
+      const step = Math.round(16 / W.step);
+      for (let k = -5; k <= 4; k++) if (k) for (const side of [-1, 1]) put(k * step + (side > 0 ? Math.round(step / 2) : 0), side);
+    }
+    // Grandstands facing the road, by the start: two on the side away from the battery.
+    const stand = Assets.models.race_stand;
+    W.stands = [];
+    if (stand) {
+      const off = W.half + (rails ? 7.5 : 11);
+      for (const k of [-34, -6, 22]) {
+        const i = (Math.round(k / W.step) + N) % N, side = -1, p = at(i, side, off);
+        if (!free(p.x, p.z, off - 2)) continue;
+        const m = Assets.model('race_stand', { length: 13 });
+        // The crowd on its steps: a row of cheering soldiers per step, bobbing (draw() in race.js).
+        const bx = new THREE.Box3().setFromObject(m), sz = bx.getSize(new THREE.Vector3());
+        m.position.set(p.x, W.painted ? 0 : W.ground(p.x, p.z) - 0.1, p.z);
+        m.rotation.y = -p.s.a + (side > 0 ? Math.PI : 0);
+        const rows = 5;
+        for (let r = 0; r < rows; r++) {
+          const f = (r + 0.6) / (rows + 0.4), tex = this.crowdTex((k * 7 + r * 3) & 3);
+          const row = new THREE.Mesh(new THREE.PlaneGeometry(sz.x * 0.86, 1.25), new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.35, roughness: 0.9, side: THREE.DoubleSide }));
+          const y0 = sz.y * (0.1 + f * 0.82) + 0.55;
+          row.position.set(0, y0, sz.z * (0.42 - f * 0.86));
+          row.userData = { y0, ph: r * 1.3 + k };
+          m.add(row); W.crowds = W.crowds || []; W.crowds.push(row);
+        }
+        sc.add(m); W.stands.push(m);
+      }
+    }
+  },
+  // A row of spectators (soldiers in olive, some with flags, some with their arms up), drawn once.
+  crowdTex(v) {
+    this.crowdT = this.crowdT || [];
+    if (this.crowdT[v]) return this.crowdT[v];
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 128;
+    const g = c.getContext('2d'), rnd = Arcade.rng(91 + v * 17);
+    const skin = ['#f1c9a5', '#d9a77e', '#b97f55', '#8d5a3b', '#f6d7bd'], olive = ['#56653a', '#4c5a33', '#5f6f40', '#6b7748'];
+    for (let i = 0; i < 22; i++) {
+      const x = 22 + i * 45.5 + (rnd() - 0.5) * 10, up = rnd() < 0.45, flag = rnd() < 0.3, h = 6 + rnd() * 10, col = olive[Math.floor(rnd() * olive.length)];
+      g.fillStyle = col; g.strokeStyle = col; g.lineCap = 'round';
+      // Body and arms.
+      g.beginPath(); g.moveTo(x - 15, 128); g.quadraticCurveTo(x - 16, 66 + h, x, 64 + h); g.quadraticCurveTo(x + 16, 66 + h, x + 15, 128); g.fill();
+      g.lineWidth = 8;
+      for (const sd of [-1, 1]) { g.beginPath(); g.moveTo(x + sd * 11, 76 + h); if (up) g.lineTo(x + sd * 17, 34 + h); else g.lineTo(x + sd * 19, 104 + h); g.stroke(); }
+      // Head and cap.
+      g.fillStyle = skin[Math.floor(rnd() * skin.length)];
+      g.beginPath(); g.arc(x, 50 + h, 13, 0, 7); g.fill();
+      g.fillStyle = col; g.beginPath(); g.arc(x, 46 + h, 13.5, Math.PI, 0); g.fill(); g.fillRect(x - 2, 42 + h, 18, 5);
+      if (flag) {
+        const fx = x + 18, fy = up ? 12 + h : 52 + h;
+        g.fillStyle = '#7a5a3a'; g.fillRect(fx, fy, 3, 36);
+        g.fillStyle = '#ffffff'; g.fillRect(fx + 3, fy, 30, 20);
+        g.fillStyle = '#1f4fd0'; g.fillRect(fx + 3, fy + 3, 30, 3); g.fillRect(fx + 3, fy + 14, 30, 3);
+      }
+    }
+    const t = this.crowdT[v] = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    return t;
   },
   // An Iron Dome launcher and its radar by the start, on every map: it's their race, after all.
   battery(W) {
@@ -418,6 +603,8 @@ const RaceWorld = {
       const x = b.cx + (rnd() - 0.5) * range * 2, z = b.cz + (rnd() - 0.5) * range * 2;
       const r = W.nearRoad(x, z);
       if (r.d < min || r.d > max) continue;
+      // Keep the grandstands clear (trees, palms and huts grew through them).
+      if ((W.stands || []).some(s => Math.abs(s.position.x - x) + Math.abs(s.position.z - z) < 17)) continue;
       out.push({ x, z, y: W.ground(x, z) });
     }
     return out;

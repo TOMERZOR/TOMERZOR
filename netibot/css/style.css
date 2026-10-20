@@ -926,3 +926,61 @@ body.touch #kashag-tap .kt-foot kbd { display: none; }
 /* The home screen's online button: as visible as "play", in blue. */
 .menu .btn.online { background: linear-gradient(180deg, #3d8bff, #1f5fd0); color: #fff; border-color: #9cc4ff; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .menu .btn.online small { font-size: 12px; font-weight: 600; opacity: .9; }
+/* ---------- the race, polished: start lights, gaps, wrong way, lap flash, look back, results (#race) ---------- */
+#race .rc-time small { display: block; font: 700 11px monospace; opacity: .85; text-align: center; min-height: 0; }
+#race .rc-time small:empty { display: none; }
+#race .rc-hud > .rc-gap { top: calc(max(8px, env(safe-area-inset-top)) + 112px); right: max(8px, env(safe-area-inset-right)); display: flex; flex-direction: column; gap: 1px; padding: 3px 9px; font-size: 12px; max-width: 200px; }
+#race .rc-gap span { display: flex; gap: 5px; align-items: baseline; white-space: nowrap; overflow: hidden; }
+#race .rc-gap bdi { overflow: hidden; text-overflow: ellipsis; max-width: 110px; font-weight: 700; opacity: .9; }
+#race .rc-gap b { font: 900 13px monospace; margin-inline-start: auto; }
+#race .rc-gap .up b { color: #ff9a8a; }
+#race .rc-gap .dn b { color: #8fe39a; }
+#race .rc-hud > .rc-wrong { top: 40%; left: 50%; transform: translateX(-50%); padding: 8px 22px; border-color: #ffd0c8; background: linear-gradient(180deg, #e8412f, #9e1b10); color: #fff; font: 900 clamp(22px, 5vw, 40px) Rubik, sans-serif; text-shadow: 0 2px 0 rgba(0,0,0,.35); white-space: nowrap; animation: rc-wrong .5s ease-in-out infinite alternate; }
+#race .rc-wrong small { display: block; font-size: 45%; text-align: center; opacity: .9; }
+@keyframes rc-wrong { from { transform: translateX(-50%) scale(1); } to { transform: translateX(-50%) scale(1.07); box-shadow: 0 0 30px rgba(255,60,40,.85); } }
+#race .rc-hud > .rc-lapf { top: 21%; left: 50%; transform: translateX(-50%); padding: 6px 18px; font-size: 18px; white-space: nowrap; border-color: var(--gold); }
+#race .rc-lapf b { font: 900 24px monospace; color: var(--gold-hi); }
+#race .rc-lapf em { font-style: normal; color: #8fe39a; }
+#race .rc-lapf.pop { animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
+#race .rc-hud > .rc-lights { top: calc(max(8px, env(safe-area-inset-top)) + 8px); left: 50%; transform: translateX(-50%); display: flex; direction: ltr; gap: 8px; padding: 6px 10px; border-radius: 14px; background: #121316; border-color: #3a3c42; }
+#race .rc-lights i { width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #4a1b1b, #220909); box-shadow: inset 0 -2px 4px rgba(0,0,0,.6); }
+#race .rc-lights i.on { background: radial-gradient(circle at 40% 35%, #ffb3a8, #ff2a1a 55%, #a00); box-shadow: 0 0 16px rgba(255,40,20,.9); }
+#race .rc-lights.go i.on { background: radial-gradient(circle at 40% 35%, #d8ffe0, #2ee860 55%, #0a8a2a); box-shadow: 0 0 18px rgba(60,255,110,.9); }
+#race .rc-hud > .rc-keys { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 58px); left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 700; white-space: nowrap; opacity: .92; }
+#race .rc-lb { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 184px); left: max(8px, env(safe-area-inset-left)); width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--trim); background: var(--panel); font-size: 20px; cursor: pointer; touch-action: none; -webkit-user-select: none; user-select: none; }
+#race .rc-lb:active { background: var(--gold); }
+#race .rc-hud.hidden .rc-lb { display: none; }
+/* Results: the podium line, a header row, gaps and best laps. */
+#race .rc-podium { display: inline-flex; align-items: baseline; gap: 8px; margin: 0 auto 4px; padding: 4px 18px; border-radius: 14px; font-size: 26px; background: rgba(255,255,255,.07); border: 2px solid var(--line); }
+#race .rc-podium b { font-size: 28px; color: var(--gold-hi); }
+#race .rc-podium small { font-size: 14px; opacity: .75; }
+#race .rc-podium.p1 { border-color: var(--gold); background: linear-gradient(180deg, rgba(242,193,46,.3), rgba(242,193,46,.08)); animation: rc-glow .8s ease-in-out 4 alternate; }
+#race .rc-res tr.rc-rh td { font-size: 11px; opacity: .65; padding: 2px 6px; border-bottom: 1px solid var(--line); }
+#race .rc-res td.rc-pl { font-size: 20px; width: 34px; }
+#race .rc-res td.rc-gp { font-family: monospace; color: #ffb3a8; font-size: 13px; }
+#race .rc-res td.rc-bl { font-family: monospace; font-size: 12px; opacity: .85; }
+#race .rc-res td.rc-bl.top { color: #8fe39a; font-weight: 900; opacity: 1; }
+#race .rc-res tr.p1 td { background: rgba(242,193,46,.08); }
+#race .rc-prize b { color: #ffd23f; font-size: 18px; }
+#race .rc-inv { font-size: 13px; color: var(--gold-hi); }
+#race .btn small { font-size: 11px; opacity: .75; }
+@media (pointer: coarse) { #race .rc-hud > .rc-keys { display: none; } }
+@media (max-height: 520px) {
+  #race .rc-hud > .rc-time { display: block; top: max(6px, env(safe-area-inset-top)); left: 50%; right: auto; transform: translateX(-50%); padding: 2px 8px; font-size: 13px; }
+  #race .rc-time small { display: inline; margin-inline-start: 6px; font-size: 10px; }
+  #race .rc-hud > .rc-coins { top: calc(max(8px, env(safe-area-inset-top)) + 100px); right: max(8px, env(safe-area-inset-right)); }
+  #race .rc-hud > .rc-gap { top: calc(max(6px, env(safe-area-inset-top)) + 34px); left: 50%; right: auto; transform: translateX(-50%); flex-direction: row; gap: 10px; font-size: 11px; padding: 2px 8px; max-width: 46vw; }
+  #race .rc-gap bdi { max-width: 70px; }
+  #race .rc-hud > .rc-nes { top: calc(max(8px, env(safe-area-inset-top)) + 64px); }
+  #race .rc-hud > .rc-lights { top: calc(max(6px, env(safe-area-inset-top)) + 62px); gap: 5px; padding: 4px 7px; }
+  #race .rc-lights i { width: 20px; height: 20px; }
+  #race .rc-hud > .rc-lapf { top: 30%; font-size: 14px; }
+  #race .rc-hud > .rc-wrong { top: 44%; font-size: 22px; padding: 4px 14px; }
+  #race .rc-lapf b { font-size: 18px; }
+  #race .rc-lb { top: calc(max(8px, env(safe-area-inset-top)) + 182px); width: 38px; height: 38px; font-size: 17px; }
+  #race .rc-podium { font-size: 18px; padding: 2px 12px; }
+  #race .rc-podium b { font-size: 20px; }
+  #race .rc-res td { padding: 3px 5px; font-size: 13px; }
+  #race .rc-res td.rc-cn { display: none; }
+}
+@media (pointer: coarse) { #race [data-m=quick] small { display: none; } }

@@ -102,6 +102,8 @@ const DATA = {
         { id: 'barracks', name: 'מגורים', x: 47, y: 25, w: 12, h: 7, doors: [[52, 25]] },
         { id: 'kantina', name: 'שק"ם — קנטינה', x: 38, y: 33, w: 6, h: 5, doors: [[40, 33]] },
         { id: 'gym', name: 'חדר כושר', x: 46, y: 35, w: 8, h: 5, doors: [[50, 35]] },
+        // The armory: a small container by the road, its door facing it (js/armory.js).
+        { id: 'armory', name: '🔫 נשקייה', x: 7, y: 15, w: 7, h: 5, doors: [[10, 19]] },
         { id: 'mig1', name: 'מיגונית', x: 26, y: 14, w: 3, h: 3, doors: [[27, 16]], shelter: true },
         { id: 'mig2', name: 'מיגונית', x: 44, y: 14, w: 3, h: 3, doors: [[45, 16]], shelter: true },
         { id: 'mig3', name: 'מיגונית', x: 34, y: 33, w: 3, h: 3, doors: [[35, 33]], shelter: true },

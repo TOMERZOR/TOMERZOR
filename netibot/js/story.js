@@ -300,7 +300,7 @@ const Story = {
       await UI.talk([
         { who: 'friend', text: 'יו, {name}! את[ה/] הפלג"צניק[/ית] החדש[/ה]? אני {@friend}. אני גם בפלגה... וגם בניתי את המשחק הזה. כן, זה מוזר גם לי.' },
         ...(same ? [{ who: 'friend', text: 'רגע... גם לך קוראים {name}? אחד מאיתנו מיותר במשחק. ...טוב, אני כתבתי את הקוד, אז זה לא אני.' }] : []),
-        { who: 'friend', text: 'שלושה כללים בנתיבות: אחת — לדעת איפה המיגונית. שתיים — הגרעינים בש.ק. שלוש — כש{@inspector} מחפשת מישהו למסדר, רצים. Shift. ברצינות.' },
+        { who: 'friend', text: 'שלושה כללים בנתיבות: אחת — לדעת איפה המיגונית. שתיים — הגרעינים בשק"ם שלוש — כש{@inspector} מחפשת מישהו למסדר, רצים. Shift. ברצינות.' },
         { who: 'friend', text: '{@@commander} מחכה במרכז האתר. [תעקוב/תעקבי] אחרי החץ הצהוב. ואם נתקעת בקיר — זה פיצ\'ר.' },
       ]);
     } else if (this.has('lineup')) {
@@ -361,10 +361,10 @@ const Story = {
     const tmap = (typeof t.map === 'function' ? t.map() : t.map) || 'netivot';
     if (tmap !== World.id) return { text: `לנסוע ל${siteName(tmap)} — ${fmt(t.title)}`, target: travelSpot(), urgent: !!t.urgent, how: t.urgent ? 'ללכת לתחנת ההסעות וללחוץ E' : '' };
     if (t.id === 'deploy') return { text: this.deployText(), target: this.deployTarget() };
-    if (this.waiting(t)) return { text: `זמן חופשי עד ${clockText(t.after)} 🌤️`, how: `ואז: ${fmt(t.title)}. עד אז אפשר להתאמן, לשבת במרכז אתר או לקנות בש"ק.`, target: null };
+    if (this.waiting(t)) return { text: `זמן חופשי עד ${clockText(t.after)} 🌤️`, how: `ואז: ${fmt(t.title)}. עד אז אפשר להתאמן, לשבת במרכז אתר או לקנות בשק"ם.`, target: null };
     // Everything done early: free time until the evening, then bed.
     if (t.id === 'sleep' && (G.state.clock % 1440) >= 5 * 60 && (G.state.clock % 1440) < 20 * 60) {
-      return { text: 'זמן חופשי עד הערב 🌤️', how: 'אפשר להתאמן בלוח האימונים, לשבת במרכז אתר או לקנות בש"ק. לישון — מ־20:00', target: null };
+      return { text: 'זמן חופשי עד הערב 🌤️', how: 'אפשר להתאמן בלוח האימונים, לשבת במרכז אתר או לקנות בשק"ם. לישון — מ־20:00', target: null };
     }
     let text = t.title;
     if (t.id === 'clean') text += ` (${10 - this.trash.length}/10)`;
@@ -492,7 +492,7 @@ const Story = {
       add(SPOTS_HQ.clinic.x, SPOTS_HQ.clinic.y, 'מרפאה', () => this.clinic(), 40);
       add(SPOTS_HQ.gym.x, SPOTS_HQ.gym.y, '🏋️ להתאמן בחדר הכושר', () => this.gym(), 40);
       add(SPOTS_HQ.dining.x, SPOTS_HQ.dining.y, 'לאכול', () => this.eat(), 40);
-      add(SPOTS_HQ.kantina.x, SPOTS_HQ.kantina.y, 'לקנות בש"ק', () => Mini.open('shop'), 40);
+      add(SPOTS_HQ.kantina.x, SPOTS_HQ.kantina.y, 'לקנות בשק"ם', () => Mini.open('shop'), 40);
       if (this.has('snack') && !this.has('find_lock')) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, 'לפתוח את ארונית החטיפים הסודית', () => this.openSnack(), 40);
       else if (this.has('boss') && !Boss.active) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 סיבוב שני מול צ\'יזבורגרו', () => UI.fade(() => Boss.start()), 40);
       else if (Multi.on) add(SPOTS_HQ.snack.x, SPOTS_HQ.snack.y, '🍔 להעיר את צ\'יזבורגרו — קרב עם כל מי שבשו"ב', () => Boss.startCoop(), 40);
@@ -1328,7 +1328,7 @@ const Story = {
     'פתוח! ואל תספר[/י] ל{@harasar}.',
     'הייתי באמצע לאכול שניצל... יאללה, [תיכנס/תיכנסי].',
     'סיסמה? ...סתם. אין סיסמה. כבר שלושה חודשים.',
-    'זה עולה לך שוקו מהש"ק. שניים.',
+    'זה עולה לך שוקו מהשק"ם. שניים.',
     'חשבתי שאת[ה/] {@p_nevo}. גם הוא תמיד נתקע בחוץ.',
     'מהר מהר, לפני שמישהו רואה שהמחסום פתוח!',
     'הטלפון צלצל ונבהלתי שזו אזעקה. אל תעשה[/י] לי את זה.',

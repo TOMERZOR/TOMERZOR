@@ -44,12 +44,12 @@ const Arcade = {
         <img src="${g.cover}" alt="">
         <div class="ar-info"><b>${g.icon} ${g.name}</b><i>${fmt(g.desc)}</i>
           <div class="ar-tags">${g.solo ? '<span>🤖 לבד</span>' : ''}${g.online ? `<span>👥 ${g.minOnline > 2 ? g.minOnline + '+' : ''}אונליין</span>` : ''}</div>
-          <div class="ar-btns">${g.solo ? `<button class="btn small" data-m="solo">▶ לשחק</button>` : ''}${g.online && online ? `<button class="btn small ${g.solo ? 'ghost' : ''}" data-m="host">👥 להזמין את כולם (${Multi.peers.length})</button>` : ''}${g.online && !g.solo && !online ? '<span class="ar-need">צריך חברים מחוברים</span>' : ''}</div>
+          <div class="ar-btns">${g.solo ? `<button class="btn small" data-m="solo">▶ לשחק</button>` : ''}${g.online && online ? `<button class="btn small ${g.solo ? 'ghost' : ''}" data-m="host">👥 להזמין חברים (${Multi.peers.length})</button>` : ''}${g.online && !g.solo && !online ? '<span class="ar-need">צריך חברים מחוברים</span>' : ''}</div>
         </div></div>`;
     const race = { id: 'race', icon: '🏎️', name: 'תחרות מפקדי נסיעה', desc: 'מירוץ במדבר עם 5 מכוניות. מותר להתנגש.', cover: 'assets/race/intro.jpg', solo: true, online: true, minOnline: 2 };
     const box = this.hubBox();
     box.classList.toggle('club', !!club);
-    box.innerHTML = `<div class="ar-hub"><div class="ar-head"><h2>🎮 מועדון <small>משחקונים</small></h2><p>${online ? `👥 ${Multi.peers.length} חברים מחוברים — אפשר להזמין את כולם` : 'לבד נגד הפלגה, או אונליין כשחברים מחוברים'}</p>
+    box.innerHTML = `<div class="ar-hub"><div class="ar-head"><h2>🎮 מועדון <small>משחקונים</small></h2><p>${online ? `👥 ${Multi.peers.length} חברים מחוברים — אפשר להזמין את כולם או רק את מי שבוחרים` : 'לבד נגד הפלגה, או אונליין כשחברים מחוברים'}</p>
       <button class="icon-btn ar-close" aria-label="סגירה">✕</button></div>
       <div class="ar-grid">${[race, ...this.games].map(card).join('')}</div></div>`;
     box.querySelector('.ar-close').onclick = () => this.closeHub();
@@ -60,8 +60,33 @@ const Arcade = {
       this.closeHub();
       // The race has its own car picker, which also offers racing with friends.
       if (id === 'race') { Race.open(); return; }
-      this.play(this.game(id), mode === 'host' ? { id: Date.now(), host: true, startAt: performance.now() + 20000 } : null);
+      if (mode !== 'host') { this.play(this.game(id), null); return; }
+      const g = this.game(id);
+      this.pickInvitees(`${g.icon} ${g.name}`, (to) => this.play(g, { id: Date.now(), host: true, startAt: performance.now() + 20000, to }));
     }));
+  },
+  // Who to invite: everyone online, or only the friends you tick. cb(null) = everyone,
+  // cb([cast ids]) = just them; cancelling calls nothing. The race uses it too.
+  pickInvitees(title, cb, onCancel = null) {
+    const peers = Multi.peers.slice();
+    if (!peers.length) { cb(null); return; }
+    let box = $('#ar-pick');
+    if (box) box.remove();
+    box = document.createElement('div');
+    box.id = 'ar-pick';
+    box.className = 'ar-pick';
+    box.innerHTML = `<div class="ar-pick-card"><h3>${title}</h3><p>את מי להזמין?</p>
+      <div class="ar-pick-list">${peers.map(p => `<button class="ar-pick-p on" data-w="${esc(p.who)}"><i>✔</i><bdi data-raw>${esc(p.name || 'חבר')}</bdi><small>${esc(siteName(p.site) || '')}</small></button>`).join('')}</div>
+      <div class="ar-row"><button class="btn" data-k="all">👥 להזמין את כולם (${peers.length})</button><button class="btn ghost" data-k="some">✉️ רק את מי שסימנתי</button></div>
+      <button class="btn ghost small" data-k="no">ביטול</button></div>`;
+    document.body.appendChild(box);
+    const chosen = () => [...box.querySelectorAll('.ar-pick-p.on')].map(b => b.dataset.w);
+    const sync = () => { const n = chosen().length; const b = box.querySelector('[data-k="some"]'); b.disabled = !n; b.textContent = n === peers.length ? '✉️ רק את מי שסימנתי' : `✉️ להזמין ${n} שסימנתי`; };
+    box.querySelectorAll('.ar-pick-p').forEach(b => b.onclick = () => { Sound.click(); b.classList.toggle('on'); sync(); });
+    box.querySelector('[data-k="all"]').onclick = () => { Sound.click(); box.remove(); cb(null); };
+    box.querySelector('[data-k="some"]').onclick = () => { const to = chosen(); if (!to.length) return; Sound.click(); box.remove(); cb(to.length === peers.length ? null : to); };
+    box.querySelector('[data-k="no"]').onclick = () => { Sound.click(); box.remove(); if (onCancel) onCancel(); };
+    sync();
   },
   hubBox() {
     let b = $('#arcade-hub');
@@ -222,6 +247,7 @@ const Arcade = {
     if (!p) return;
     const game = this.game(p.ar.g);
     this.seenInvites.add(p.ar.id);
+    if (p.ar.to && !p.ar.to.includes(Multi.as)) return; // the host invited only others
     if (!game) return;
     if (Multi.verGate(p, `מזמין ל${game.name}`)) return;
     Sound.horn();
@@ -267,7 +293,7 @@ const Arcade = {
     if (!this.active || !this.net) return null;
     let s = null;
     try { s = this.phase === 'play' && this.active.presence ? this.active.presence() : null; } catch (e) { s = null; }
-    return { g: this.active.id, id: this.net.id, host: !!this.net.host, cd: this.net.host && this.phase === 'lobby' ? Math.round((this.net.startAt - performance.now()) / 100) / 10 : 0, s };
+    return { g: this.active.id, id: this.net.id, host: !!this.net.host, cd: this.net.host && this.phase === 'lobby' ? Math.round((this.net.startAt - performance.now()) / 100) / 10 : 0, to: this.net.host && this.net.to ? this.net.to : null, s };
   },
   lobby() {
     this.phase = 'lobby';
@@ -282,7 +308,7 @@ const Arcade = {
       if (peer && peer.ar.cd > 0) this.net.startAt = performance.now() + peer.ar.cd * 1000;
     }
     const w = $('#arcade .ar-wait'), who = $('#arcade .ar-who');
-    if (w) w.textContent = `מתחילים בעוד ${Math.ceil(left)} שניות — כל מי שמחובר קיבל הזמנה`;
+    if (w) w.textContent = `מתחילים בעוד ${Math.ceil(left)} שניות — ${this.net.to ? `הזמנה נשלחה ל${this.net.to.map(id => (Multi.peers.find(q => q.who === id) || {}).name || '').filter(Boolean).join(', ')}` : 'כל מי שמחובר קיבל הזמנה'}`;
     if (who) {
       const html = this.players().map(p => `<span class="${p.isMe ? 'me' : ''}"><bdi data-raw>${esc(p.name)}</bdi></span>`).join('');
       if (who.innerHTML !== html) who.innerHTML = html;

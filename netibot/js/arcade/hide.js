@@ -81,6 +81,7 @@ const HideGame = {
 
   // ---------- a game ----------
   enter(ctx) {
+    this.camLook = null;
     this.build();
     this.ctx = ctx;
     this.clear();
@@ -411,13 +412,16 @@ const HideGame = {
     for (const f of this.fx) { f.t += dt; f.m.position.y += dt * 1.2; }
     this.fx = this.fx.filter(f => { if (f.t < 1.2) return true; this.scene.remove(f.m); return false; });
     for (const s of this.snacks) if (!s.got) { s.sp.position.y = 0.6 + Math.sin(t * 3 + s.x) * 0.1; s.glow.material.opacity = 0.35 + Math.sin(t * 4 + s.z) * 0.2; }
-    // The camera: high behind you; the whole yard when you've been caught.
-    const me = this.me, cam = this.camera;
-    const fx = me.caught ? 0 : me.x, fz = me.caught ? 0 : me.z;
-    const want = new THREE.Vector3(fx * 0.8, me.caught ? 30 : 13, fz * 0.8 + (me.caught ? 22 : 12));
-    cam.position.lerp(want, Math.min(1, dt * 3));
+    // The camera: close behind your own soldier (just high enough to see over a container),
+    // lower still while you're hiding; the whole yard once you've been caught or it's over.
+    const me = this.me, cam = this.camera, wide = me.caught || this.over;
+    const fx = wide ? 0 : me.x, fz = wide ? 0 : me.z, hid = !wide && me.spot >= 0;
+    const want = new THREE.Vector3(fx, wide ? 30 : hid ? 4.6 : 5.6, fz + (wide ? 22 : hid ? 4.8 : 6));
+    cam.position.lerp(want, Math.min(1, dt * (wide ? 2 : 6)));
     if (G.shake > 0) { cam.position.x += (Math.random() - 0.5) * G.shake; G.shake = Math.max(0, G.shake - dt); }
-    cam.lookAt(fx * 0.9, 0, fz * 0.9 - 1);
+    this.camLook = this.camLook || new THREE.Vector3(fx, 0.8, fz - 1.4);
+    this.camLook.lerp(new THREE.Vector3(fx, wide ? 0 : 0.8, fz - (wide ? 1 : 1.4)), Math.min(1, dt * (wide ? 2 : 8)));
+    cam.lookAt(this.camLook);
   },
 
   // ---------- the overlay ----------

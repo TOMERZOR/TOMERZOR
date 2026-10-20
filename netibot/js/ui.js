@@ -637,7 +637,7 @@ const UI = {
       const tasks = Story.taskList();
       body.innerHTML = tasks.length
         ? tasks.map(t => `<div class="ph-item ${t.done ? 'done' : ''}"><div class="t">${t.done ? '✔' : '◻'} ${fmt(t.title)}</div>${t.desc ? fmt(t.desc) : ''}</div>`).join('')
-        : '<p>אין משימות פתוחות. אפשר להסתובב בבסיס, להתאמן או לקנות משהו בש.ק.</p>';
+        : '<p>אין משימות פתוחות. אפשר להסתובב בבסיס, להתאמן או לקנות משהו בשק"ם.</p>';
     } else if (this.phoneTab === 'msgs') {
       const msgs = S.inbox.slice().reverse();
       body.innerHTML = msgs.length ? msgs.map(m => `<div class="ph-msg"><div class="from">${fmt(m.from)}</div>${fmt(m.text)}</div>`).join('') : '<p>אין הודעות.</p>';

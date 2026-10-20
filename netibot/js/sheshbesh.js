@@ -161,7 +161,7 @@ const SheshRules = {
 // ---------- what the cast says across the board ----------
 // [m/f] is the player's gender; «m|f» is the speaker's own.
 const SHESH_LINES = {
-  accept: ['יאללה, שש בש! אני «מזהיר|מזהירה» אותך מראש: «אלוף|אלופת» הפלגה.', 'סבבה. מי שמפסיד מביא שתייה מהש"ק.', 'שש בש? [אחי/אחותי], «נולדתי|נולדתי» עם קוביות ביד.', 'רק משחק אחד. ...טוב, אולי שניים. לא, אחד.', 'פתח[/י] את הלוח, {name}. אני רק «אסדר|אסדר» את האבנים... ואנצח.'],
+  accept: ['יאללה, שש בש! אני «מזהיר|מזהירה» אותך מראש: «אלוף|אלופת» הפלגה.', 'סבבה. מי שמפסיד מביא שתייה מהשק"ם.', 'שש בש? [אחי/אחותי], «נולדתי|נולדתי» עם קוביות ביד.', 'רק משחק אחד. ...טוב, אולי שניים. לא, אחד.', 'פתח[/י] את הלוח, {name}. אני רק «אסדר|אסדר» את האבנים... ואנצח.'],
   decline: ['לא עכשיו, אני באמצע לחשוב על כלום. זה חשוב.', 'אני «שבור|שבורה» מהשמירה. [תשאל/תשאלי] אותי עוד דקה.', 'בפעם האחרונה ששיחקתי הפסדתי ל{@rasap} ובכיתי. עוד לא «מוכן|מוכנה» נפשית.', 'שש בש? עכשיו? הקוביות שלי בכביסה.'],
   yes2: ['טוב, טוב. [שכנעת/שכנעת]. סיבוב אחד.', 'אוף. בסדר. אבל אם אני «מנצח|מנצחת», את[ה/] «מוזג|מוזג» לי קפה... [תמזוג/תמזגי].', 'נו באמת. ...יאללה, שים[/י] אבנים.'],
   again: ['עוד אחד? קדימה, עכשיו ברצינות.', 'נקמה! שים[/י] אבנים.', 'הפעם אני לא «מרחם|מרחמת».'],
@@ -218,7 +218,12 @@ const Shesh = {
     this.place(dt);
     this.stepAnims(dt);
     // A game starting tilts the head down to the board (still free to look around).
-    if (this.tilt > 0 && Scene3D.inSeat) { this.tilt -= dt; Scene3D.pitch += (1.08 - Scene3D.pitch) * Math.min(1, dt * 5); }
+    if (this.tilt > 0 && Scene3D.inSeat) { this.tilt -= dt; Scene3D.pitch += (1.12 - Scene3D.pitch) * Math.min(1, dt * 5); }
+    // During a game the view zooms in on the board (and back out after).
+    if (Scene3D.inSeat && Scene3D.camera) {
+      const c = Scene3D.camera, want = this.m && this.m.phase !== 'over' ? 46 : 70;
+      if (Math.abs(c.fov - want) > 0.05) { c.fov += (want - c.fov) * Math.min(1, dt * 4); c.updateProjectionMatrix(); }
+    }
     if (this.seat) this.seated(dt);
     this.releaseHelper(dt);
     this.hud();
@@ -391,6 +396,7 @@ const Shesh = {
   },
   // Puts every checker where the position says (no animation).
   layout(b) {
+    if (this.m && b === this.board) this.paint(b, this.m);
     this.anims = this.anims.filter(a => a.die);
     if (this.lifted && b === this.board) this.lifted = null;
     b.loc = [[], []];
@@ -1117,6 +1123,13 @@ const Shesh = {
     u.querySelector('.sb-flag').onclick = () => this.quit();
     return u;
   },
+  // Whose checkers are which colour: on your own phone you play side 0, so online the guest's
+  // side 0 is dark and the host's light, the same colours on both boards (not both white).
+  col(s, m = this.m) { return m && m.online && !m.host ? 1 - s : s; },
+  paint(b, m) {
+    if (!this.M) return;
+    for (let s = 0; s < 2; s++) for (const c of b.checkers[s]) c.material = this.M.side[this.col(s, m)];
+  },
   hud() {
     const on = !!(this.seat && Scene3D.inSeat && G.running && !Arcade.active && !Race.active);
     let u = $('#shesh');
@@ -1143,6 +1156,8 @@ const Shesh = {
     top.classList.toggle('hidden', !m);
     if (m) {
       const R = SheshRules;
+      const cw = (s) => (this.col(s) === 0 ? 'w' : 'b');
+      for (const [sel, s] of [['.me .sb-chip', 0], ['.op .sb-chip', 1]]) { const e = u.querySelector(sel); if (e && !e.classList.contains(cw(s))) e.className = 'sb-chip ' + cw(s); }
       set('.me .sb-n', esc(G.profile.name || 'אני'));
       set('.op .sb-n', esc(m.opp.name));
       set('.me .sb-pip', `${R.pips(m.pos[0])}${m.pos[0][0] ? ` · <em>${m.pos[0][0]}/15</em>` : ''}`);

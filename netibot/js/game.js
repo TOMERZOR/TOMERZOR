@@ -612,7 +612,7 @@ const Game = {
       // Tired slows you only when nearly empty, and not by much: walking slowly isn't fun.
       if (S.energy < 8) {
         speed *= 0.85;
-        if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול, לבשל במטבחון או לקנות קפה בש"ק בשו"ב', 'bad'); }
+        if (!G.lowEnergyWarned) { G.lowEnergyWarned = true; UI.toast('אין כוח... לאכול, לבשל במטבחון או לקנות קפה בשק"ם בשו"ב', 'bad'); }
       } else G.lowEnergyWarned = false;
       const B = Scene3D.basis();
       const dx = B.rx * mx - B.fx * my, dy = B.rz * mx - B.fz * my;
@@ -902,7 +902,7 @@ const Game = {
       <div class="menu">
         ${story ? `<button class="btn" id="m-cont">▶ להמשיך (יום ${story.state.day}, ${esc(story.profile.name)})</button>` : ''}
         <button class="btn ${story ? 'ghost' : ''}" id="m-new">${story ? 'משחק חדש מההתחלה' : '▶ משחק חדש'}</button>
-        <button class="btn ghost" id="m-multi">🌐 לשחק עם הפלגה</button>
+        <button class="btn online" id="m-multi">🌐 לשחק עם הפלגה — אונליין<small>משחקונים, מירוצים ושש בש עם החברים</small></button>
         <div class="menu-row"><button class="btn small ghost" id="m-role">🎭 לשחק בתור מישהו</button></div>
       </div>
       <div class="footnote">משחק בדיוני. כל הדמויות, השמות והאירועים במשחק מומצאים.</div>
@@ -943,7 +943,7 @@ const Game = {
       <p><b>צבע אדום:</b> יש ${DATA.redAlertSeconds} שניות להגיע למיגונית (גג עם פס אדום, ונקודות אדומות במפה). החץ האדום מראה את הקרובה.</p>
       <p><b>מארזים:</b> אחרי יירוטים משגר מתרוקן. לוקחים מארז במחסן, סוחבים למשגר ומבצעים את שלבי ההחלפה.</p>
       <p><b>ש"ג:</b> בודקים שם ומספר רכב מול רשימת הכניסה. מורשה — פותחים, ואחרי שעבר — סוגרים מיד!</p>
-      <p><b>אנרגיה ומורל:</b> אוכלים בחדר האוכל, מבשלים במטבחון, קונים בש"ק בשו"ב, ישנים במיטה. בלי אנרגיה זזים לאט.</p>
+      <p><b>אנרגיה ומורל:</b> אוכלים בחדר האוכל, מבשלים במטבחון, קונים בשק"ם בשו"ב, ישנים במיטה. בלי אנרגיה זזים לאט.</p>
       <div class="actions"><button class="btn" id="h-ok">${inGame ? 'חזרה למשחק' : 'הבנתי'}</button></div>
     </div></div>`;
     if (inGame) {

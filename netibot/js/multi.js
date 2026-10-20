@@ -55,11 +55,11 @@ const Multi = {
           b: Array.isArray(s.fx.b) ? s.fx.b.slice(0, 10).filter(o => o && typeof o === 'object').map(o => ({ t: +o.t || 0, x0: +o.x0 || 0, y0: +o.y0 || 0, x1: +o.x1 || 0, y1: +o.y1 || 0 })) : [],
         } : null,
         // A race they're in or hosting (cd: seconds until the host's start).
-        race: s.race && +s.race.id ? { id: +s.race.id, host: !!s.race.host, car: String(s.race.car || '').slice(0, 12), x: +s.race.x || 0, z: +s.race.z || 0, a: +s.race.a || 0, v: +s.race.v || 0, lap: Math.max(0, Math.min(9, +s.race.lap | 0)), pr: Math.max(-2000, Math.min(9000, +s.race.pr || 0)), fin: Math.max(0, +s.race.fin || 0), cd: Math.max(0, Math.min(60, +s.race.cd || 0)),
+        race: s.race && +s.race.id ? { id: +s.race.id, host: !!s.race.host, car: String(s.race.car || '').slice(0, 12), x: +s.race.x || 0, z: +s.race.z || 0, a: +s.race.a || 0, v: +s.race.v || 0, lap: Math.max(0, Math.min(9, +s.race.lap | 0)), pr: Math.max(-2000, Math.min(9000, +s.race.pr || 0)), fin: Math.max(0, +s.race.fin || 0), cd: Math.max(0, Math.min(60, +s.race.cd || 0)), to: Array.isArray(s.race.to) ? s.race.to.slice(0, 12).map(x => String(x).slice(0, 40)) : null,
           map: String(s.race.map || '').slice(0, 12), lv: Math.max(0, Math.min(2, +s.race.lv | 0)), sh: s.race.sh ? 1 : 0, bo: s.race.bo ? 1 : 0,
           ev: Array.isArray(s.race.ev) ? s.race.ev.slice(-4).filter(e => e && typeof e === 'object').map(e => ({ id: +e.id || 0, k: String(e.k || '').slice(0, 8), x: +e.x || 0, z: +e.z || 0, a: +e.a || 0, w: String(e.w || '').slice(0, 40) })) : [] } : null,
         // An arcade game they're in or hosting; s is the game's own small state (checked by size).
-        ar: s.ar && +s.ar.id && typeof s.ar.g === 'string' ? { id: +s.ar.id, g: s.ar.g.slice(0, 12), host: !!s.ar.host, cd: Math.max(0, Math.min(60, +s.ar.cd || 0)), s: s.ar.s && typeof s.ar.s === 'object' && JSON.stringify(s.ar.s).length < 1600 ? s.ar.s : null } : null,
+        ar: s.ar && +s.ar.id && typeof s.ar.g === 'string' ? { id: +s.ar.id, g: s.ar.g.slice(0, 12), host: !!s.ar.host, cd: Math.max(0, Math.min(60, +s.ar.cd || 0)), to: Array.isArray(s.ar.to) ? s.ar.to.slice(0, 12).map(x => String(x).slice(0, 40)) : null, s: s.ar.s && typeof s.ar.s === 'object' && JSON.stringify(s.ar.s).length < 1600 ? s.ar.s : null } : null,
         // A red alert this player is in: everyone online at that site gets it too.
         sl: !!s.sl,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,

@@ -908,3 +908,19 @@ body.touch #kashag-tap .kt-foot kbd { display: none; }
   #race .rc-cf p { font-size: 12px; }
   #race .rc-cf .rc-row { margin-top: 6px; }
 }
+/* Who to invite (js/arcade.js pickInvitees): everyone, or the friends you tick. */
+.ar-pick { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); direction: rtl; padding: 12px; }
+.ar-pick-card { width: min(440px, 100%); max-height: calc(100vh - 24px); overflow-y: auto; background: var(--panel, #232a1c); border: 2px solid var(--gold, #c9a33a); border-radius: 16px; padding: 14px 16px; text-align: center; color: var(--ink, #f3ecd8); box-shadow: 0 10px 40px rgba(0,0,0,.6); }
+.ar-pick-card h3 { margin: 0 0 2px; font-size: 20px; }
+.ar-pick-card p { margin: 0 0 10px; opacity: .85; }
+.ar-pick-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.ar-pick-p { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 12px; border: 2px solid rgba(255,255,255,.18); background: rgba(0,0,0,.25); color: inherit; font: 700 15px Rubik, sans-serif; cursor: pointer; }
+.ar-pick-p i { font-style: normal; width: 20px; height: 20px; border-radius: 6px; border: 2px solid rgba(255,255,255,.4); display: inline-grid; place-items: center; font-size: 12px; color: transparent; }
+.ar-pick-p small { opacity: .6; font-weight: 500; font-size: 12px; }
+.ar-pick-p.on { border-color: var(--gold, #c9a33a); background: rgba(201,163,58,.18); }
+.ar-pick-p.on i { background: var(--gold, #c9a33a); border-color: var(--gold, #c9a33a); color: #1b1b1b; }
+.ar-pick-card .ar-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+.ar-pick-card button:disabled { opacity: .45; }
+/* The home screen's online button: as visible as "play", in blue. */
+.menu .btn.online { background: linear-gradient(180deg, #3d8bff, #1f5fd0); color: #fff; border-color: #9cc4ff; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.menu .btn.online small { font-size: 12px; font-weight: 600; opacity: .9; }

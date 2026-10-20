@@ -114,13 +114,13 @@ extension Helper {
         func t(_ en: String, _ hebrew: String) -> String { he ? hebrew : en }
         switch kind {
         case .trialOver:
-            return MoffyReply(say: t("That was the last free question. To keep me helping you every day, you can join the monthly subscription, or ask someone in the family to set it up for you.",
-                                     "השאלות בחינם נגמרו. כדי שאמשיך לעזור לכם כל יום, אפשר להצטרף למנוי החודשי, או לבקש ממישהו מהמשפחה לסדר את זה בשבילכם."),
+            return MoffyReply(say: t("That was the last free question. To continue, you can join the monthly subscription, or a family member can set it up for you.",
+                                     "השאלות בחינם הסתיימו. כדי להמשיך, אפשר להצטרף למנוי החודשי, או לבקש מבן משפחה להסדיר אותו עבורכם."),
                               caption: t("Join to keep going", "ממשיכים עם מנוי"), mood: .talking)
         case .dailyLimit:
-            return MoffyReply(say: t("We did a lot today! Let's carry on tomorrow, I'll be right here.",
-                                     "עשינו הרבה היום! בואו נמשיך מחר, אני כאן."),
-                              caption: t("Let's continue tomorrow", "נמשיך מחר"), mood: .happy)
+            return MoffyReply(say: t("We've reached today's limit. I'll be glad to continue tomorrow.",
+                                     "הגענו למכסה היומית. אשמח להמשיך לעזור מחר."),
+                              caption: t("Continue tomorrow", "נמשיך מחר"), mood: .happy)
         }
     }
 }

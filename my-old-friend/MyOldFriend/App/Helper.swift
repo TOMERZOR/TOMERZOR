@@ -188,33 +188,33 @@ final class Helper: ObservableObject {
         func t(_ en: String, _ hebrew: String) -> String { he ? hebrew : en }
         switch kind {
         case .microphoneOff:
-            return MoffyReply(say: t("I can't hear you yet. Please allow the microphone in the phone's Settings, or tap the keyboard button and type.",
-                                     "אני עוד לא שומעת אתכם. צריך לאשר את המיקרופון בהגדרות של הטלפון, או ללחוץ על המקלדת ולכתוב לי."),
+            return MoffyReply(say: t("I can't hear you yet. Please allow the microphone in the phone's Settings, or tap the keyboard button and type your question.",
+                                     "אני עדיין לא שומעת אתכם. אשרו בבקשה את המיקרופון בהגדרות של הטלפון, או לחצו על המקלדת וכתבו לי."),
                               caption: t("The microphone is off", "המיקרופון כבוי"), mood: .worried)
         case .didNotHear:
-            return MoffyReply(say: t("I didn't hear anything. Tap the button and tell me what you need.",
-                                     "לא שמעתי כלום. תלחצו על הכפתור ותגידו לי מה צריך."),
+            return MoffyReply(say: t("I didn't hear anything. Please tap the button and tell me how I can help.",
+                                     "לא שמעתי דבר. לחצו בבקשה על הכפתור ואמרו לי במה אוכל לעזור."),
                               caption: t("Tap and talk", "לחצו ודברו"), mood: .thinking)
         case .offline:
-            return MoffyReply(say: t("I've lost the internet. Check that Wi-Fi is on, and we'll try again.",
-                                     "אין לי אינטרנט כרגע. תבדקו שה-Wi-Fi דלוק, וננסה שוב."),
+            return MoffyReply(say: t("There's no internet connection right now. Please check that Wi-Fi is on, then try again.",
+                                     "אין כרגע חיבור לאינטרנט. בדקו בבקשה שה-Wi-Fi פועל, ונסו שוב."),
                               caption: t("No internet", "אין אינטרנט"), mood: .worried)
         case .notSetUp:
-            return MoffyReply(say: t("Something on my end isn't working right now. Let's try again a bit later.",
-                                     "משהו אצלי לא עובד כרגע. ננסה שוב קצת אחר כך."),
+            return MoffyReply(say: t("There's a problem on my side at the moment. Please try again in a few minutes.",
+                                     "יש כרגע תקלה אצלי. נסו בבקשה שוב בעוד כמה דקות."),
                               caption: t("Try again later", "נסו שוב מאוחר יותר"), mood: .worried)
         case .busy:
-            return MoffyReply(say: t("I'm a little busy right now. Let's try again in a moment.",
-                                     "אני קצת עסוקה כרגע. ננסה שוב עוד רגע."),
+            return MoffyReply(say: t("It's very busy right now. Please try again in a moment.",
+                                     "יש כרגע עומס. נסו בבקשה שוב בעוד רגע."),
                               caption: t("Try again soon", "נסו שוב עוד רגע"), mood: .thinking)
         case .refused:
-            return MoffyReply(say: t("I can't help with that one. Let's try something else.",
-                                     "בזה אני לא יכולה לעזור. בואו ננסה משהו אחר."),
-                              caption: t("Let's try something else", "ננסה משהו אחר"), mood: .worried)
+            return MoffyReply(say: t("I'm afraid I can't help with that. You're welcome to ask me something else.",
+                                     "בזה לצערי אני לא יכולה לעזור. אפשר לשאול אותי על משהו אחר."),
+                              caption: t("Ask something else", "שאלו משהו אחר"), mood: .worried)
         case .other:
-            return MoffyReply(say: t("Something went wrong on my side. Let's try that again.",
-                                     "משהו השתבש אצלי. בואו ננסה שוב."),
-                              caption: t("Let's try again", "ננסה שוב"), mood: .worried)
+            return MoffyReply(say: t("Something went wrong on my side. Please try again.",
+                                     "משהו השתבש אצלי. נסו בבקשה שוב."),
+                              caption: t("Please try again", "נסו שוב"), mood: .worried)
         }
     }
 

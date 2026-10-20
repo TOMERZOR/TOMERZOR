@@ -11,8 +11,15 @@ struct MoffyReply: Identifiable, Equatable {
     /// Where to point, from 0 to 1 across and down the camera picture. Nil means don't point.
     var point: CGPoint? = nil
     var pointLabel: String = ""
+    /// 1, 2, 3… when this is a step of a task; 0 for a question, a clarification or a plain answer.
+    var step: Int = 0
+    /// True when the task is complete.
+    var finished: Bool = false
     /// The exact text that came back from Claude, kept for the conversation history.
     var raw: String = ""
+
+    /// A step is waiting to be done, so the main button offers "Done, next step".
+    var isOpenStep: Bool { step > 0 && !finished }
 }
 
 struct ChatTurn {
@@ -45,6 +52,8 @@ extension MoffyReply {
         let say: String
         let caption: String
         let mood: String
+        let step: Int
+        let finished: Bool
         let point: Point
     }
 
@@ -66,6 +75,7 @@ extension MoffyReply {
             point = CGPoint(x: min(max(wire.point.x, 0.02), 0.98), y: min(max(wire.point.y, 0.02), 0.98))
         }
         return MoffyReply(say: wire.say, caption: wire.caption, mood: mood,
-                          point: point, pointLabel: wire.point.label, raw: text)
+                          point: point, pointLabel: wire.point.label,
+                          step: max(wire.step, 0), finished: wire.finished, raw: text)
     }
 }

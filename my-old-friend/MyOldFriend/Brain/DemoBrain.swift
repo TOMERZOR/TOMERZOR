@@ -7,21 +7,24 @@ struct DemoBrain: MoffyBrain {
     func reply(to question: String, photo: UIImage?, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply {
         try await Task.sleep(nanoseconds: 1_200_000_000)
         let he = language == .hebrew
+        let step = history.count / 2 + 1
         if photo != nil {
             return MoffyReply(
                 say: he
-                    ? "אני עוד במצב תרגול, אז אני לא באמת רואה. אבל ככה אני מראה לכם על מה ללחוץ! בקשו ממי שעוזר לכם להוסיף לי מפתח בהגדרות."
-                    : "I'm still in practice mode, so I can't really see yet. But this is how I'll show you what to press! Ask your helper to add my key in Settings.",
+                    ? "אני עדיין במצב תרגול, אז אני לא באמת רואה. כך אראה לכם על מה ללחוץ. כדי שאוכל לעזור באמת, צריך להוסיף מפתח בהגדרות."
+                    : "I'm still in practice mode, so I can't really see yet. This is how I'll show you what to press. To get real help, add a key in Settings.",
                 caption: he ? "מצב תרגול" : "Practice mode",
-                mood: .happy,
+                mood: .talking,
                 point: CGPoint(x: 0.5, y: 0.45),
-                pointLabel: he ? "כאן!" : "Here!"
+                pointLabel: he ? "כאן" : "Here",
+                step: step,
+                finished: step >= 3
             )
         }
         return MoffyReply(
             say: he
-                ? "שמעתי אתכם! אני עוד במצב תרגול. בקשו ממי שעוזר לכם להוסיף לי מפתח בהגדרות, ואז אוכל לעזור באמת."
-                : "I heard you! I'm still in practice mode. Ask your helper to add my key in Settings, and then I can really help.",
+                ? "שמעתי אתכם. אני עדיין במצב תרגול. כדי שאוכל לעזור באמת, צריך להוסיף מפתח בהגדרות."
+                : "I heard you. I'm still in practice mode. To get real help, add a key in Settings.",
             caption: he ? "מצב תרגול" : "Practice mode",
             mood: .happy
         )

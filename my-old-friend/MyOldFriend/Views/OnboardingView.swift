@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// First launch, two calm screens: pick a language, then meet Moffy and allow the camera and microphone.
+/// This is the only place Moffy introduces herself.
 struct OnboardingView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
@@ -23,24 +24,24 @@ struct OnboardingView: View {
     private var languageStep: some View {
         VStack(spacing: 0) {
             Spacer()
-            MoffyView(mood: .happy, size: 170)
+            MoffyView(mood: .happy, size: 136)
             VStack(spacing: 8) {
                 Text("My Old Friend")
-                    .font(.rounded(.largeTitle, .heavy))
+                    .font(.ui(.largeTitle, .bold))
                     .foregroundStyle(Theme.ink)
                 Text("AI for the third age")
-                    .font(.rounded(.title3, .semibold))
+                    .font(.ui(.title3, .medium))
                     .foregroundStyle(Theme.inkSecondary)
                 Text("בינה מלאכותית לגיל השלישי")
-                    .font(.rounded(.title3, .semibold))
+                    .font(.ui(.title3, .medium))
                     .foregroundStyle(Theme.inkSecondary)
             }
             .multilineTextAlignment(.center)
-            .padding(.top, 24)
+            .padding(.top, 28)
             Spacer()
             VStack(spacing: 14) {
                 ForEach([AppLanguage.hebrew, .english]) { language in
-                    BigButton(title: language.nativeName, minHeight: 80) {
+                    PinkButton(title: language.nativeName, minHeight: 76) {
                         settings.language = language
                         step = 1
                     }
@@ -56,38 +57,38 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 22) {
                 HStack {
                     Spacer()
-                    MoffyView(mood: asking ? .thinking : .talking, size: 130, wordPulse: helper.speaker.wordPulse)
+                    MoffyView(mood: asking ? .thinking : .talking, size: 104, wordPulse: helper.speaker.wordPulse)
                     Spacer()
                 }
                 .padding(.top, 24)
 
                 Text(settings.t("Hi! I'm Moffy.", "שלום! אני מופי."))
-                    .font(.rounded(.largeTitle, .heavy))
+                    .font(.ui(.largeTitle, .bold))
                     .foregroundStyle(Theme.ink)
 
                 VStack(alignment: .leading, spacing: 16) {
-                    row("camera.fill", settings.t("Show me what you need help with.", "הראו לי במה צריך עזרה."))
+                    row("camera.viewfinder", settings.t("Show me what you need help with.", "הראו לי במה צריך עזרה."))
                     row("mic.fill", settings.t("Tell me in your own words.", "ספרו לי במילים שלכם."))
-                    row("hand.point.up.left.fill", settings.t("I'll show you, one small step at a time.", "אני אראה לכם, צעד קטן אחד בכל פעם."))
+                    row("hand.point.up.left.fill", settings.t("I'll show you exactly what to press, one step at a time.", "אני אראה לכם בדיוק על מה ללחוץ, צעד אחד בכל פעם."))
                 }
 
                 // Apple asks apps to say clearly where AI is used and what it can't do.
                 Label {
-                    Text(settings.t("Moffy is an AI. He can make mistakes, so for money or health matters, check with someone you trust. When you ask, your question and the camera picture are sent over the internet so he can understand them.",
-                                    "מופי הוא בינה מלאכותית. הוא יכול לטעות, ולכן בענייני כסף או בריאות כדאי לבדוק עם מישהו שסומכים עליו. כששואלים, השאלה ותמונת המצלמה נשלחות דרך האינטרנט כדי שיוכל להבין אותן."))
-                        .font(.rounded(.body))
+                    Text(settings.t("Moffy is an AI and can make mistakes, so for money or health matters, check with someone you trust. When you ask, your question and the camera picture are sent over the internet so Moffy can understand them.",
+                                    "מופי היא בינה מלאכותית ויכולה לטעות, ולכן בענייני כסף או בריאות כדאי לבדוק עם מישהו שסומכים עליו. כששואלים, השאלה ותמונת המצלמה נשלחות דרך האינטרנט כדי שמופי תוכל להבין אותן."))
+                        .font(.ui(.body))
                         .foregroundStyle(Theme.inkSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "info.circle.fill").foregroundStyle(Theme.actionText)
                 }
                 .padding(16)
-                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.card))
+                .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Theme.hairline.opacity(0.5)))
             }
             .padding(.horizontal, 24)
         }
         .safeAreaInset(edge: .bottom) {
-            BigButton(title: settings.t("Let's start", "בואו נתחיל"), minHeight: 80) {
+            PinkButton(title: settings.t("Let's start", "בואו נתחיל"), isBusy: asking, minHeight: 76) {
                 Task { await allowAndStart() }
             }
             .disabled(asking)
@@ -96,8 +97,8 @@ struct OnboardingView: View {
             .background(Theme.surface)
         }
         .onAppear {
-            helper.speaker.speak(settings.t("Hi! I'm Moffy. Show me what you need help with, tell me in your own words, and I'll show you, one small step at a time. Tap Let's start, and then tap Allow.",
-                                            "שלום! אני מופי. הראו לי במה צריך עזרה, ספרו לי במילים שלכם, ואני אראה לכם צעד קטן אחד בכל פעם. לחצו על בואו נתחיל, ואחר כך על אישור."),
+            helper.speaker.speak(settings.t("Hi! I'm Moffy. Show me what you need help with, tell me in your own words, and I'll show you exactly what to press, one step at a time. Tap Let's start, and then tap Allow.",
+                                            "שלום! אני מופי. הראו לי במה צריך עזרה, ספרו לי במילים שלכם, ואני אראה לכם בדיוק על מה ללחוץ, צעד אחד בכל פעם. לחצו על בואו נתחיל, ואחר כך על אישור."),
                                  language: settings.lang, speed: settings.speechSpeed)
         }
     }
@@ -105,11 +106,11 @@ struct OnboardingView: View {
     private func row(_ symbol: String, _ text: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 14) {
             Image(systemName: symbol)
-                .font(.rounded(.title2, .semibold))
+                .font(.ui(.title2, .semibold))
                 .foregroundStyle(Theme.actionText)
                 .frame(width: 36)
             Text(text)
-                .font(.rounded(.title2, .semibold))
+                .font(.ui(.title2, .semibold))
                 .foregroundStyle(Theme.ink)
                 .fixedSize(horizontal: false, vertical: true)
         }

@@ -5,8 +5,10 @@ struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
     @Environment(\.dismiss) private var dismiss
-    @State private var keyDraft = ""
+    @State private var claudeDraft = ""
+    @State private var voiceDraft = ""
     @State private var hasKey = false
+    @State private var hasVoiceKey = false
 
     var body: some View {
         NavigationStack {
@@ -27,7 +29,7 @@ struct SettingsView: View {
                         ForEach(TextSize.allCases) { size in
                             Button { settings.textSize = size } label: {
                                 Text("A")
-                                    .font(.system(size: size.sample, weight: .bold, design: .rounded))
+                                    .font(.system(size: size.sample, weight: .bold))
                                     .frame(maxWidth: .infinity, minHeight: 64)
                             }
                             .buttonStyle(ChoiceStyle(selected: settings.textSize == size))
@@ -45,7 +47,7 @@ struct SettingsView: View {
                         get: { settings.speechSpeed < 0.8 },
                         set: { slow in
                             settings.speechSpeed = slow ? 0.7 : 0.85
-                            helper.speaker.speak(settings.t("This is how I sound.", "ככה אני נשמע."),
+                            helper.speaker.speak(Helper.voiceSample(settings.lang),
                                                  language: settings.lang, speed: settings.speechSpeed)
                         }))
                     Toggle(settings.t("Use the camera", "להשתמש במצלמה"), isOn: Binding(
@@ -55,18 +57,19 @@ struct SettingsView: View {
                     Text(settings.t("Moffy", "מופי"))
                 } footer: {
                     Text(settings.t("With the camera off, Moffy helps from your words alone.",
-                                    "כשהמצלמה כבויה, מופי עוזר רק לפי מה שאומרים לו."))
+                                    "כשהמצלמה כבויה, מופי עוזרת רק לפי מה שאומרים לה."))
                 }
 
-                caregiverSection
+                claudeSection
+                voiceSection
 
                 Section(settings.t("About", "אודות")) {
-                    Text(settings.t("My Old Friend is AI for the third age. Moffy is an AI and can make mistakes. Your questions and camera pictures are sent over the internet to Claude, an AI by Anthropic, so he can answer.",
-                                    "החבר הוותיק שלי היא בינה מלאכותית לגיל השלישי. מופי הוא בינה מלאכותית ויכול לטעות. השאלות ותמונות המצלמה נשלחות דרך האינטרנט ל-Claude, בינה מלאכותית של Anthropic, כדי שיוכל לענות."))
+                    Text(settings.t("My Old Friend is AI for the third age. Moffy is an AI and can make mistakes. Your questions and camera pictures are sent over the internet to Claude, an AI by Anthropic, so Moffy can answer. With a voice key, Moffy's words are sent to ElevenLabs to be spoken.",
+                                    "החבר הוותיק שלי היא בינה מלאכותית לגיל השלישי. מופי היא בינה מלאכותית ויכולה לטעות. השאלות ותמונות המצלמה נשלחות דרך האינטרנט ל-Claude, בינה מלאכותית של Anthropic, כדי שמופי תוכל לענות. עם מפתח קול, המילים של מופי נשלחות ל-ElevenLabs כדי להקריא אותן."))
                         .foregroundStyle(Theme.inkSecondary)
                 }
             }
-            .font(.rounded(.title3))
+            .font(.ui(.title3))
             .tint(Theme.action)
             .scrollContentBackground(.hidden)
             .background(Theme.surface)
@@ -75,40 +78,79 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(settings.t("Done", "סיום")) { dismiss() }
-                        .font(.rounded(.headline, .bold))
+                        .font(.ui(.headline, .bold))
                 }
             }
         }
-        .onAppear { hasKey = helper.hasKey }
+        .onAppear {
+            hasKey = helper.hasKey
+            hasVoiceKey = helper.hasVoiceKey
+        }
     }
 
-    /// For the family member or friend who sets the app up.
-    private var caregiverSection: some View {
+    /// For the family member or friend who sets the app up: the Claude key.
+    private var claudeSection: some View {
         Section {
-            Label(hasKey ? settings.t("Connected", "מחובר") : settings.t("Practice mode, no key yet", "מצב תרגול, אין מפתח עדיין"),
-                  systemImage: hasKey ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                .foregroundStyle(hasKey ? Color.green : Color.orange)
-            SecureField(settings.t("Paste API key", "הדביקו מפתח API"), text: $keyDraft)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .font(.system(.body, design: .monospaced))
-            Button(settings.t("Save key", "שמירת מפתח")) {
-                Keychain.save(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines), account: Keychain.apiKeyAccount)
-                keyDraft = ""
+            status(hasKey, on: settings.t("Connected to Claude", "מחובר ל-Claude"),
+                   off: settings.t("Practice mode, no key yet", "מצב תרגול, אין מפתח עדיין"))
+            keyField(settings.t("Paste Claude API key", "הדביקו מפתח API של Claude"), text: $claudeDraft)
+            keyButtons(draft: $claudeDraft, has: hasKey, account: Keychain.apiKeyAccount) {
                 hasKey = helper.hasKey
-            }
-            .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            if hasKey {
-                Button(settings.t("Remove key", "מחיקת מפתח"), role: .destructive) {
-                    Keychain.delete(account: Keychain.apiKeyAccount)
-                    hasKey = helper.hasKey
-                }
             }
         } header: {
             Text(settings.t("For the helper who sets this up", "למי שמתקין את האפליקציה"))
         } footer: {
             Text(settings.t("An Anthropic API key from console.anthropic.com, stored encrypted on this phone only. Model: ",
                             "מפתח API של Anthropic מהאתר console.anthropic.com, נשמר מוצפן בטלפון הזה בלבד. מודל: ") + ClaudeBrain.model)
+        }
+    }
+
+    /// The ElevenLabs key, for Moffy's natural voice.
+    private var voiceSection: some View {
+        Section {
+            status(hasVoiceKey, on: settings.t("Natural voice is on", "הקול הטבעי פעיל"),
+                   off: settings.t("Using the iPhone's voice", "משתמשת בקול של האייפון"))
+            keyField(settings.t("Paste ElevenLabs key (voice)", "הדביקו מפתח ElevenLabs (קול)"), text: $voiceDraft)
+            keyButtons(draft: $voiceDraft, has: hasVoiceKey, account: ElevenLabsVoice.keyAccount) {
+                hasVoiceKey = helper.hasVoiceKey
+                if hasVoiceKey { helper.prepareVoice() }
+            }
+        } header: {
+            Text(settings.t("Moffy's voice", "הקול של מופי"))
+        } footer: {
+            Text(settings.t("From elevenlabs.io (Profile, API keys), stored encrypted on this phone only. Each new answer is made once and saved on the phone; repeats and fixed phrases play from the saved copy for free.",
+                            "מהאתר elevenlabs.io (פרופיל, מפתחות API), נשמר מוצפן בטלפון הזה בלבד. כל תשובה חדשה נוצרת פעם אחת ונשמרת בטלפון; חזרות ומשפטים קבועים מתנגנים מהעותק השמור בחינם."))
+        }
+    }
+
+    private func status(_ isOn: Bool, on: String, off: String) -> some View {
+        Label(isOn ? on : off, systemImage: isOn ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+            .foregroundStyle(isOn ? Color.green : Color.orange)
+    }
+
+    private func keyField(_ placeholder: String, text: Binding<String>) -> some View {
+        SecureField(placeholder, text: text)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .font(.system(.body, design: .monospaced))
+    }
+
+    @ViewBuilder
+    private func keyButtons(draft: Binding<String>, has: Bool, account: String, changed: @escaping () -> Void) -> some View {
+        let trimmed = draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        PinkButton(title: settings.t("Save key", "שמירת מפתח"), minHeight: 56) {
+            Keychain.save(trimmed, account: account)
+            draft.wrappedValue = ""
+            changed()
+        }
+        .disabled(trimmed.isEmpty)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+        if has {
+            Button(settings.t("Remove key", "מחיקת מפתח"), role: .destructive) {
+                Keychain.delete(account: account)
+                changed()
+            }
         }
     }
 }

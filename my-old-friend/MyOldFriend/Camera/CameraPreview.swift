@@ -2,7 +2,7 @@ import AVFoundation
 import SwiftUI
 import UIKit
 
-/// Shows the live camera, filling its area the same way `ImagePrep.crop` cuts the snapshot,
+/// Shows the live camera, filling the whole screen the same way `ImagePrep.crop` assumes,
 /// so a spot in the picture Moffy sees is the same spot on screen.
 struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
@@ -24,20 +24,22 @@ struct CameraPreview: UIViewRepresentable {
 }
 
 enum ImagePrep {
-    /// Cuts the middle of the picture to the shape of the screen area, like the live preview does.
-    static func crop(_ image: UIImage, toAspect aspect: CGFloat) -> UIImage {
-        guard let cgImage = image.cgImage, aspect > 0 else { return image }
+    /// Cuts out the part of the picture inside `rect`, where the picture fills `screenSize` the way the
+    /// live preview does (scaled to fill, centered). So a spot in the snapshot is the same spot on screen.
+    static func crop(_ image: UIImage, screenSize: CGSize, rect: CGRect) -> UIImage {
+        guard let cgImage = image.cgImage, screenSize.width > 0, screenSize.height > 0,
+              rect.width > 0, rect.height > 0 else { return image }
         let width = CGFloat(cgImage.width)
         let height = CGFloat(cgImage.height)
-        var rect = CGRect(x: 0, y: 0, width: width, height: height)
-        if width / height > aspect {
-            rect.size.width = height * aspect
-            rect.origin.x = (width - rect.width) / 2
-        } else {
-            rect.size.height = width / aspect
-            rect.origin.y = (height - rect.height) / 2
-        }
-        guard let cropped = cgImage.cropping(to: rect.integral) else { return image }
+        let scale = max(screenSize.width / width, screenSize.height / height)
+        let offsetX = (screenSize.width - width * scale) / 2
+        let offsetY = (screenSize.height - height * scale) / 2
+        let pixels = CGRect(x: (rect.minX - offsetX) / scale,
+                            y: (rect.minY - offsetY) / scale,
+                            width: rect.width / scale,
+                            height: rect.height / scale)
+            .intersection(CGRect(x: 0, y: 0, width: width, height: height))
+        guard !pixels.isNull, let cropped = cgImage.cropping(to: pixels.integral) else { return image }
         return UIImage(cgImage: cropped)
     }
 

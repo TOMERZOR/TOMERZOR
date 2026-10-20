@@ -51,7 +51,7 @@ struct PointerView: View {
 
             if !label.isEmpty {
                 Text(label)
-                    .font(.rounded(.title3, .bold))
+                    .font(.ui(.title3, .bold))
                     .foregroundStyle(Color.white)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)

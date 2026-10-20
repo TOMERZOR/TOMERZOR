@@ -1,40 +1,30 @@
 import SwiftUI
 
-/// The main screen, top to bottom: what the camera sees (with Moffy in it), what Moffy says,
-/// and one big button to talk. Everything else is quiet.
+/// The main screen. The camera fills the whole screen; a frame marks what Moffy sees; a status line
+/// at the top; Moffy's answer in a card at the bottom; one pink button to act.
 struct HelperView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
     @State private var showSettings = UserDefaults.standard.string(forKey: "screenshotScene") == "settings"
     @State private var showTyping = false
+    @State private var controlHeight: CGFloat = 77
 
     var body: some View {
-        VStack(spacing: 14) {
-            GeometryReader { geo in
-                StageView(size: geo.size, showSettings: $showSettings)
-                    .onAppear { helper.stageSize = geo.size }
-                    .onChange(of: geo.size) { _, size in helper.stageSize = size }
-            }
-            .frame(minHeight: 220)
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .padding(.horizontal, 12)
-
-            VStack(spacing: 12) {
-                CaptionCard()
-                TalkButton()
-                HStack(spacing: 8) {
-                    QuietButton(title: settings.t("Type instead", "לכתוב במקום"), systemImage: "keyboard") {
-                        showTyping = true
-                    }
-                    QuietButton(title: settings.t("New question", "שאלה חדשה"), systemImage: "arrow.counterclockwise") {
-                        helper.startOver()
-                    }
+        GeometryReader { geo in
+            let layout = StageLayout(size: geo.size, insets: geo.safeAreaInsets, controlHeight: controlHeight)
+            ZStack {
+                StageView(layout: layout)
+                    .ignoresSafeArea()
+                VStack(spacing: 0) {
+                    TopBar(showSettings: $showSettings)
+                        .frame(height: layout.topBar)
+                    Spacer(minLength: 0)
+                    BottomPanel(cardHeight: layout.cardReserve, showTyping: $showTyping, controlHeight: $controlHeight)
                 }
             }
-            .padding(.horizontal, 16)
+            .onAppear { report(layout) }
+            .onChange(of: layout.compact) { _, _ in report(layout) }
         }
-        .padding(.top, 4)
-        .padding(.bottom, 4)
         .background(Theme.surface.ignoresSafeArea())
         .onAppear { helper.appeared() }
         // Feel it as well as see it: a tap when listening starts and stops, a soft knock when Moffy answers.
@@ -43,7 +33,7 @@ struct HelperView: View {
             if old == .listening { return .stop }
             return nil
         }
-        .sensoryFeedback(.impact(weight: .light), trigger: helper.reply.id)
+        .sensoryFeedback(.impact(weight: .light), trigger: helper.reply?.id)
         .sheet(isPresented: $showSettings) {
             SettingsView().inheritingAppEnvironment(settings: settings, helper: helper)
         }
@@ -52,74 +42,125 @@ struct HelperView: View {
                 .inheritingAppEnvironment(settings: settings, helper: helper)
         }
     }
+
+    /// Tells the helper which part of the picture is inside the frame, for the snapshot.
+    private func report(_ layout: StageLayout) {
+        helper.screenSize = layout.screenSize
+        helper.viewfinder = layout.onScreen(layout.compact)
+    }
 }
 
-/// The camera area. Moffy waits in a corner and hops over to whatever he points at.
+/// Where things go. `size` and the frames are in safe-area coordinates; `onScreen` converts.
+struct StageLayout {
+    let size: CGSize
+    let insets: EdgeInsets
+    let controlHeight: CGFloat
+    let topBar: CGFloat = 68
+
+    /// The space kept for the answer card above the button.
+    var cardReserve: CGFloat { min(max(size.height * 0.3, 200), 320) }
+    private var controlTop: CGFloat { size.height - controlHeight - 8 }
+
+    /// The frame while Moffy listens, looks or answers; the card sits below it.
+    var compact: CGRect {
+        let bottom = max(controlTop - 12 - cardReserve - 14, topBar + 160)
+        return CGRect(x: 16, y: topBar, width: size.width - 32, height: bottom - topBar)
+    }
+
+    /// The frame while waiting: it reaches down to the button.
+    var expanded: CGRect {
+        CGRect(x: 16, y: topBar, width: size.width - 32, height: max(controlTop - 16 - topBar, 160))
+    }
+
+    var screenSize: CGSize {
+        CGSize(width: size.width + insets.leading + insets.trailing, height: size.height + insets.top + insets.bottom)
+    }
+
+    func onScreen(_ rect: CGRect) -> CGRect {
+        rect.offsetBy(dx: insets.leading, dy: insets.top)
+    }
+}
+
+/// Everything drawn on the picture, in whole-screen coordinates: camera, frame, pointer, Moffy.
 private struct StageView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
-    let size: CGSize
-    @Binding var showSettings: Bool
+    let layout: StageLayout
 
     private var cameraVisible: Bool { helper.showsSampleScene || (helper.cameraOn && helper.camera.isAuthorized) }
-    private var moffySize: CGFloat { cameraVisible ? 104 : min(200, size.width * 0.45) }
+    private var moffySize: CGFloat { cameraVisible ? 83 : 160 }
+    private var frame: CGRect { layout.onScreen(helper.showsCard ? layout.compact : layout.expanded) }
+    private var answerFrame: CGRect { layout.onScreen(layout.compact) }
 
     private var target: CGPoint? {
-        guard cameraVisible, let point = helper.reply.point else { return nil }
-        return CGPoint(x: point.x * size.width, y: point.y * size.height)
+        guard cameraVisible, helper.phase == .ready, let point = helper.reply?.point else { return nil }
+        return CGPoint(x: answerFrame.minX + point.x * answerFrame.width,
+                       y: answerFrame.minY + point.y * answerFrame.height)
     }
 
     var body: some View {
+        let screen = layout.screenSize
         ZStack {
             if helper.showsSampleScene {
-                SampleSceneView()
+                SampleSceneView(focus: answerFrame)
             } else if cameraVisible {
                 CameraPreview(session: helper.camera.session)
                     .transition(.opacity)
             } else {
-                noCamera
+                Theme.surface
+            }
+
+            if cameraVisible {
+                FrameMask(hole: frame)
+                    .fill(Color.black.opacity(0.3), style: FillStyle(eoFill: true))
+                    .allowsHitTesting(false)
+                FrameCorners(rect: frame)
+                    .stroke(helper.phase == .thinking ? Theme.moffy : Color.white,
+                            style: StrokeStyle(lineWidth: 5, lineCap: .round, lineJoin: .round))
+                    .shadow(color: .black.opacity(0.25), radius: 3)
+                    .allowsHitTesting(false)
+            } else {
+                noCameraText
             }
 
             if let target {
                 PointerView(target: target, moffyCenter: moffyCenter, moffySize: moffySize,
-                            label: helper.reply.pointLabel, bounds: size)
-                    .id(helper.reply.id)
+                            label: helper.reply?.pointLabel ?? "", bounds: screen)
+                    .id(helper.reply?.id)
                     .transition(.opacity)
             }
 
             MoffyView(mood: helper.mood, size: moffySize, look: look, wordPulse: helper.speaker.wordPulse)
                 .position(moffyCenter)
                 .animation(reduceMotion ? nil : .spring(response: 0.5, dampingFraction: 0.78), value: moffyCenter)
-
-            settingsButton
         }
-        .frame(width: size.width, height: size.height)
+        .frame(width: screen.width, height: screen.height)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.45, dampingFraction: 0.85), value: frame)
         .animation(.easeInOut(duration: 0.3), value: cameraVisible)
-        // The stage is a picture of the real world, so left and right stay as they are in Hebrew too.
+        // The picture is the real world, so left and right stay as they are in Hebrew too.
         .environment(\.layoutDirection, .leftToRight)
     }
 
-    /// Where Moffy stands: beside the thing he points at, or in his corner.
+    /// Moffy stands in the bottom corner of the frame, or beside the thing he points at.
     private var moffyCenter: CGPoint {
         let half = moffySize / 2
-        let margin: CGFloat = 16
+        if !cameraVisible {
+            return CGPoint(x: frame.midX, y: frame.minY + frame.height * 0.4)
+        }
+        let area = answerFrame.insetBy(dx: half + 8, dy: half * 1.04 + 8)
         func clamp(_ p: CGPoint) -> CGPoint {
-            CGPoint(x: min(max(p.x, half + margin), size.width - half - margin),
-                    y: min(max(p.y, half + margin + 56), size.height - half - margin))
+            CGPoint(x: min(max(p.x, area.minX), area.maxX), y: min(max(p.y, area.minY), area.maxY))
         }
         if let target {
-            let below = target.y < size.height * 0.45
-            let side: CGFloat = target.x > size.width / 2 ? -1 : 1
-            return clamp(CGPoint(x: target.x + side * moffySize * 0.7,
-                                 y: target.y + (below ? 1 : -1) * moffySize * 1.3))
+            let below = target.y < answerFrame.midY
+            let side: CGFloat = target.x > answerFrame.midX ? -1 : 1
+            return clamp(CGPoint(x: target.x + side * moffySize * 0.75,
+                                 y: target.y + (below ? 1 : -1) * moffySize * 1.35))
         }
-        if cameraVisible {
-            let x = settings.lang == .hebrew ? size.width - half - margin : half + margin
-            return clamp(CGPoint(x: x, y: size.height - half - margin))
-        }
-        return CGPoint(x: size.width / 2, y: size.height * 0.5)
+        let x = settings.lang == .hebrew ? frame.maxX - half - 10 : frame.minX + half + 10
+        return CGPoint(x: x, y: frame.maxY - half * 1.04 - 10)
     }
 
     private var look: CGSize {
@@ -136,162 +177,273 @@ private struct StageView: View {
         }
     }
 
-    private var noCamera: some View {
-        ZStack(alignment: .bottom) {
-            Theme.card
+    private var noCameraText: some View {
+        VStack(spacing: 8) {
             if helper.cameraOn && !helper.camera.isAuthorized {
-                VStack(spacing: 10) {
-                    Text(settings.t("Moffy can't see yet.", "מופי עוד לא רואה."))
-                        .font(.rounded(.title3, .bold))
-                        .foregroundStyle(Theme.ink)
-                    Button(settings.t("Allow the camera", "לאשר את המצלמה")) {
-                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                    }
-                    .font(.rounded(.title3, .semibold))
-                    .foregroundStyle(Theme.actionText)
-                    .frame(minHeight: 44)
+                Text(settings.t("Moffy can't see yet.", "מופי עוד לא רואה."))
+                    .font(.ui(.title3, .semibold))
+                    .foregroundStyle(Theme.ink)
+                Button(settings.t("Allow the camera", "לאשר את המצלמה")) {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
                 }
-                .multilineTextAlignment(.center)
-                .padding(20)
-                .environment(\.layoutDirection, settings.lang.layoutDirection)
+                .font(.ui(.title3, .semibold))
+                .foregroundStyle(Theme.actionText)
+                .frame(minHeight: 44)
+            } else {
+                Text(settings.t("Camera is off. Moffy helps from your words.", "המצלמה כבויה. מופי עוזרת לפי מה שאומרים לה."))
+                    .font(.ui(.title3))
+                    .foregroundStyle(Theme.inkSecondary)
             }
         }
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: frame.width - 32)
+        .position(x: frame.midX, y: moffyCenter.y + moffySize * 0.75 + 40)
+    }
+}
+
+/// Darkens everything outside the frame, so it's clear what Moffy is looking at.
+private struct FrameMask: Shape {
+    var hole: CGRect
+
+    var animatableData: CGRect.AnimatableData {
+        get { hole.animatableData }
+        set { hole.animatableData = newValue }
     }
 
-    private var settingsButton: some View {
-        VStack {
+    func path(in rect: CGRect) -> Path {
+        var path = Path(rect)
+        path.addRoundedRect(in: hole, cornerSize: CGSize(width: 28, height: 28), style: .continuous)
+        return path
+    }
+}
+
+/// Four rounded corner marks around the frame, like a camera viewfinder.
+private struct FrameCorners: Shape {
+    var rect: CGRect
+
+    var animatableData: CGRect.AnimatableData {
+        get { rect.animatableData }
+        set { rect.animatableData = newValue }
+    }
+
+    func path(in _: CGRect) -> Path {
+        let arm: CGFloat = 34
+        let radius: CGFloat = 22
+        var path = Path()
+        let corners: [(CGPoint, CGFloat, CGFloat)] = [
+            (CGPoint(x: rect.minX, y: rect.minY), 1, 1),
+            (CGPoint(x: rect.maxX, y: rect.minY), -1, 1),
+            (CGPoint(x: rect.minX, y: rect.maxY), 1, -1),
+            (CGPoint(x: rect.maxX, y: rect.maxY), -1, -1),
+        ]
+        for (corner, dx, dy) in corners {
+            path.move(to: CGPoint(x: corner.x, y: corner.y + dy * (arm + radius)))
+            path.addLine(to: CGPoint(x: corner.x, y: corner.y + dy * radius))
+            path.addQuadCurve(to: CGPoint(x: corner.x + dx * radius, y: corner.y), control: corner)
+            path.addLine(to: CGPoint(x: corner.x + dx * (arm + radius), y: corner.y))
+        }
+        return path
+    }
+}
+
+/// The status line at the top and the settings button.
+private struct TopBar: View {
+    @EnvironmentObject private var settings: AppSettings
+    @EnvironmentObject private var helper: Helper
+    @Binding var showSettings: Bool
+
+    var body: some View {
+        ZStack {
+            if let status {
+                HStack(spacing: 8) {
+                    if helper.phase == .thinking {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: helper.phase == .listening ? "waveform" : "camera.viewfinder")
+                            .foregroundStyle(Theme.actionText)
+                    }
+                    Text(status)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .font(.ui(.headline, .semibold))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().stroke(Color.white.opacity(0.4), lineWidth: 1))
+                .padding(.horizontal, 76)
+                .transition(.opacity)
+                .accessibilityElement(children: .combine)
+            }
             HStack {
                 Spacer()
-                Button { showSettings = true } label: {
-                    Image(systemName: "gearshape.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(Theme.ink)
-                        .frame(width: 52, height: 52)
-                        .background(Circle().fill(.regularMaterial))
+                GlassCircleButton(systemImage: "gearshape.fill", label: settings.t("Settings", "הגדרות"), size: 52) {
+                    showSettings = true
                 }
-                .buttonStyle(PressableStyle())
-                .accessibilityLabel(settings.t("Settings", "הגדרות"))
             }
-            Spacer()
+            .padding(.horizontal, 16)
         }
-        .padding(12)
+        .animation(.easeInOut(duration: 0.25), value: status)
+    }
+
+    private var status: String? {
+        switch helper.phase {
+        case .listening: return settings.t("Listening…", "מקשיבה…")
+        case .thinking: return settings.t("Looking…", "מסתכלת…")
+        case .ready:
+            if helper.reply != nil { return nil }
+            return helper.cameraOn
+                ? settings.t("Point at what you need help with", "כוונו למה שצריך עזרה בו")
+                : settings.t("Tell me what you need", "ספרו לי מה צריך")
+        }
     }
 }
 
-/// What Moffy is saying, in big letters, with a button to hear it again.
-private struct CaptionCard: View {
+/// The answer card and the button bar.
+private struct BottomPanel: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let cardHeight: CGFloat
+    @Binding var showTyping: Bool
+    @Binding var controlHeight: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.rounded(.title, .bold))
-                .foregroundStyle(Theme.ink)
-                .lineLimit(3)
-                .minimumScaleFactor(0.75)
-                .contentTransition(.opacity)
-            if !message.isEmpty {
-                Text(message)
-                    .font(.rounded(.title3))
-                    .foregroundStyle(Theme.inkSecondary)
-                    .lineLimit(6)
-                    .minimumScaleFactor(0.75)
-                    .contentTransition(.opacity)
+        VStack(spacing: 12) {
+            if helper.showsCard {
+                AnswerCard(maxHeight: cardHeight)
+                    .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             }
-            if helper.phase == .ready && !helper.reply.say.isEmpty {
-                Button { helper.sayAgain() } label: {
-                    Label(settings.t("Say again", "להגיד שוב"), systemImage: "speaker.wave.2.fill")
-                        .font(.rounded(.headline, .semibold))
-                        .foregroundStyle(Theme.actionText)
-                        .frame(minHeight: 44)
-                }
-                .buttonStyle(PressableStyle())
-                .transition(.opacity)
-            }
+            controls
+                .background(GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { controlHeight = proxy.size.height }
+                        .onChange(of: proxy.size.height) { _, height in controlHeight = height }
+                })
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Theme.card))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
-        .animation(.easeInOut(duration: 0.25), value: title)
-        .animation(.easeInOut(duration: 0.25), value: message)
-        .accessibilityElement(children: .combine)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.45, dampingFraction: 0.85), value: helper.showsCard)
     }
 
-    private var title: String {
-        switch helper.phase {
-        case .listening: return settings.t("I'm listening…", "אני מקשיב…")
-        case .thinking: return settings.t("Let me look…", "רגע, אני מסתכל…")
-        case .ready: return helper.reply.caption
+    private var controls: some View {
+        HStack(alignment: .top, spacing: 12) {
+            PinkButton(title: primary.title, systemImage: primary.icon, isBusy: helper.phase == .thinking, action: primary.action)
+                .disabled(helper.phase == .thinking)
+                .accessibilityHint(primary.hint)
+            GlassCircleButton(systemImage: secondary.icon, label: secondary.label, size: 72, action: secondary.action)
+                .disabled(helper.phase != .ready)
+                .opacity(helper.phase == .ready ? 1 : 0.5)
         }
     }
 
-    private var message: String {
+    private var primary: (title: String, icon: String, hint: String, action: () -> Void) {
+        let t = settings.t
         switch helper.phase {
         case .listening:
-            return helper.listener.transcript.isEmpty
-                ? settings.t("Tell me what you need.", "ספרו לי מה צריך.")
-                : "“\(helper.listener.transcript)”"
-        case .thinking: return ""
-        case .ready: return helper.reply.say
+            return (t("I'm done", "סיימתי"), "stop.circle.fill", t("Stops listening", "מפסיקה להקשיב"), { helper.talkButtonTapped() })
+        case .thinking:
+            return (t("Looking…", "מסתכלת…"), "", "", {})
+        case .ready:
+            if helper.reply?.isOpenStep == true {
+                return (t("Done, next step", "עשיתי, לשלב הבא"), "checkmark",
+                        t("Moffy looks again and gives the next step", "מופי מסתכלת שוב ונותנת את השלב הבא"), { helper.stepDone() })
+            }
+            if helper.reply?.finished == true {
+                return (t("Ask something else", "לשאול משהו אחר"), "mic.fill", t("Starts listening", "מתחילה להקשיב"), { helper.talkButtonTapped() })
+            }
+            return (t("Tap and talk", "לחצו ודברו"), "mic.fill", t("Starts listening", "מתחילה להקשיב"), { helper.talkButtonTapped() })
         }
+    }
+
+    private var secondary: (icon: String, label: String, action: () -> Void) {
+        if helper.reply?.isOpenStep == true {
+            return ("mic.fill", settings.t("Ask a question instead", "לשאול שאלה במקום"), { helper.talkButtonTapped() })
+        }
+        return ("keyboard", settings.t("Type instead", "לכתוב במקום"), { showTyping = true })
     }
 }
 
-/// The one big button. Tap to talk, tap again when done.
-private struct TalkButton: View {
+/// What Moffy says, or what Moffy hears, in a white card.
+private struct AnswerCard: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
+    let maxHeight: CGFloat
 
     var body: some View {
-        Button { helper.talkButtonTapped() } label: {
-            HStack(spacing: 14) {
-                switch helper.phase {
-                case .thinking: ProgressView().tint(.white).controlSize(.large)
-                case .listening: Image(systemName: "stop.circle.fill")
-                case .ready: Image(systemName: "mic.fill")
-                }
-                Text(title)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-            }
-            .font(.rounded(.title, .bold))
-            .foregroundStyle(Color.white)
-            .frame(maxWidth: .infinity, minHeight: 88)
-            .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Theme.action))
-            .overlay(ListeningRing(active: helper.phase == .listening))
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView { content }
         }
-        .buttonStyle(PressableStyle())
-        .disabled(helper.phase == .thinking)
-        .accessibilityHint(helper.phase == .listening
-                           ? settings.t("Stops listening", "מפסיק להקשיב")
-                           : settings.t("Starts listening", "מתחיל להקשיב"))
-    }
-
-    private var title: String {
-        switch helper.phase {
-        case .ready: return settings.t("Tap and talk", "לחצו ודברו")
-        case .listening: return settings.t("I'm done", "סיימתי")
-        case .thinking: return settings.t("Thinking…", "חושב…")
-        }
-    }
-}
-
-/// A slow ring that spreads out from the button while Moffy listens. A still outline with Reduce Motion.
-private struct ListeningRing: View {
-    let active: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30, paused: !active || reduceMotion)) { timeline in
-            let progress = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.8) / 1.8
+        .frame(maxHeight: maxHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Theme.action, lineWidth: 3)
-                .padding(-CGFloat(progress) * 10)
-                .opacity(active ? (reduceMotion ? 1 : 1 - progress) : 0)
+                .fill(Theme.card)
+                .shadow(color: .black.opacity(0.18), radius: 24, y: 8)
+        )
+        .overlay(alignment: .topTrailing) {
+            if helper.phase == .ready && helper.reply != nil {
+                Button { helper.startOver() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Theme.inkSecondary)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Theme.hairline))
+                        .frame(width: 48, height: 48)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableStyle())
+                .padding(6)
+                .accessibilityLabel(settings.t("Start over", "להתחיל מחדש"))
+            }
         }
-        .allowsHitTesting(false)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            switch helper.phase {
+            case .listening:
+                Text(helper.listener.transcript.isEmpty
+                     ? settings.t("Tell me what you need.", "ספרו לי מה צריך.")
+                     : "“\(helper.listener.transcript)”")
+                    .font(.ui(.title2, .semibold))
+                    .foregroundStyle(helper.listener.transcript.isEmpty ? Theme.inkSecondary : Theme.ink)
+            case .thinking:
+                Text("“\(helper.lastQuestion)”")
+                    .font(.ui(.title3))
+                    .foregroundStyle(Theme.inkSecondary)
+            case .ready:
+                if let reply = helper.reply {
+                    if reply.step > 0 {
+                        Text(settings.t("STEP \(reply.step)", "שלב \(reply.step)"))
+                            .font(.ui(.subheadline, .bold))
+                            .tracking(1.2)
+                            .foregroundStyle(Theme.actionText)
+                            .padding(.trailing, 44)
+                    }
+                    Text(reply.caption)
+                        .font(.ui(.title, .bold))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.trailing, 44)
+                    Text(reply.say)
+                        .font(.ui(.title3))
+                        .foregroundStyle(Theme.inkSecondary)
+                    Button { helper.sayAgain() } label: {
+                        Label(settings.t("Say again", "להגיד שוב"), systemImage: "speaker.wave.2.fill")
+                            .font(.ui(.headline, .semibold))
+                            .foregroundStyle(Theme.actionText)
+                            .frame(minHeight: 44)
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
     }
 }

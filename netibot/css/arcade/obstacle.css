@@ -1,5 +1,6 @@
 /* The obstacle course: the clock, everyone's progress on a bar, what the next obstacle wants,
-   the climbing meter and the balance meter. */
+   the climbing meter and the balance meter (up under the hint, clear of your soldier, whom the
+   chase camera keeps in the lower half). */
 #arcade .ob { position: absolute; inset: 0; pointer-events: none; }
 #arcade .ob-time { top: max(8px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); font: 900 18px Rubik, sans-serif; color: #ffd23f; direction: ltr; }
 #arcade .ob-bar { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 14px); left: 64px; right: 120px; margin: 0 auto; max-width: 520px; height: 10px; border-radius: 5px; background: rgba(20,24,20,.7); border: 2px solid rgba(255,255,255,.25); }
@@ -8,7 +9,7 @@
 #arcade .ob-bar em { position: absolute; top: -3px; width: 2px; height: 16px; background: rgba(255,255,255,.4); }
 #arcade .ob-hint { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 40px); left: 50%; transform: translateX(-50%); font: 900 clamp(16px, 2.6vw, 24px) Rubik, sans-serif; color: #fff; text-shadow: 0 2px 0 #000, 0 0 10px rgba(0,0,0,.5); white-space: nowrap; }
 #arcade .ob-hint.pop { animation: rc-pop .35s cubic-bezier(.2,1.6,.4,1); }
-#arcade .ob-mash { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); width: min(260px, 50vw); height: 18px; border-radius: 9px; background: rgba(0,0,0,.6); border: 2px solid #fff; overflow: hidden; }
+#arcade .ob-mash { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 80px); left: 50%; transform: translateX(-50%); width: min(260px, 50vw); height: 18px; border-radius: 9px; background: rgba(0,0,0,.6); border: 2px solid #fff; overflow: hidden; }
 #arcade .ob-mash b { display: block; height: 100%; background: linear-gradient(90deg, #f2c12e, #7dff6a); }
-#arcade .ob-bal { position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%); width: min(300px, 60vw); height: 16px; border-radius: 8px; background: linear-gradient(90deg, #d8261f, #f2c12e 30%, #7dff6a 45%, #7dff6a 55%, #f2c12e 70%, #d8261f); border: 2px solid #fff; }
+#arcade .ob-bal { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 82px); left: 50%; transform: translateX(-50%); width: min(300px, 60vw); height: 16px; border-radius: 8px; background: linear-gradient(90deg, #d8261f, #f2c12e 30%, #7dff6a 45%, #7dff6a 55%, #f2c12e 70%, #d8261f); border: 2px solid #fff; }
 #arcade .ob-bal i { position: absolute; top: -6px; width: 6px; height: 28px; margin-left: -3px; background: #fff; border-radius: 3px; box-shadow: 0 0 6px #000; }

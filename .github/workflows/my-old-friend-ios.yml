@@ -1,0 +1,31 @@
+name: My Old Friend iOS build
+
+on:
+  push:
+    paths:
+      - "my-old-friend/**"
+      - ".github/workflows/my-old-friend-ios.yml"
+  pull_request:
+    paths:
+      - "my-old-friend/**"
+      - ".github/workflows/my-old-friend-ios.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Build for the iPhone simulator
+        working-directory: my-old-friend
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project MyOldFriend.xcodeproj \
+            -target MyOldFriend \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log

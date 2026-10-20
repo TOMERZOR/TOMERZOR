@@ -1,5 +1,5 @@
 // Two of the heist's preps that aren't about sneaking past guards:
-//  - the safe code (קוד הכספת): a photo through the window of the sticky note on the Gonni
+//  - the safe code (קוד הכספת): a photo through the window of the sticky note on the Johnny
 //    duty officer's screen, ducking whenever his chair squeaks round;
 //  - the getaway vehicle (רכב מילוט): pick one of three, then drive it to the hideout
 //    without wrecking it (or running anyone over).
@@ -127,7 +127,7 @@ Heist.stages.code = {
     this.ui();
     const n = H.n;
     H.play([
-      { img: 'assets/heist/prep_code.jpg', who: Cast.get('p_choco') ? 'p_choco' : '', text: 'קצין התורן של גוני? הוא כותב את הקוד של הכספת על פתק צהוב ומדביק על המסך. כולם יודעים. חוץ ממנו.' },
+      { img: 'assets/heist/prep_code.jpg', who: Cast.get('p_choco') ? 'p_choco' : '', text: 'קצין התורן של ג׳וני? הוא כותב את הקוד של הכספת על פתק צהוב ומדביק על המסך. כולם יודעים. חוץ ממנו.' },
       { shot: { from: [0, 1.6, 3.4], to: [0, 1.55, 2.4], at: [0.6, 1.3, -5], dur: 6000 }, who: H.ctx.solo ? 'p_shaked' : '', text: 'כל כמה שניות הכיסא שלו חורק — והוא מסתובב לחלון. כשהוא חורק: להתכופף!' },
       { shot: { from: [0, 1.55, 2.4], to: [0.3, 1.5, 1.6], at: [1.62, 1.42, -5.3], dur: 5000 }, text: G.touch ? '🕹️ לכוון · להחזיק E — לצלם כשהפתק בעיגול · ריצה — להתכופף' : '⬅️➡️⬆️⬇️ לכוון · להחזיק E — לצלם כשהפתק בעיגול · Shift — להתכופף', icon: '📸' },
     ]).then(() => { if (H.n === n) this.live = true; });

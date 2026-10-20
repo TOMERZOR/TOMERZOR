@@ -1,5 +1,5 @@
-// The heist's finale: Gonni's battery at Palmachim, by the sea. In by the chosen approach
-// (the main gate in Gonni shirts, a cut in the north-east fence, or the smokers' gap from the
+// The heist's finale: Johnny's battery at Palmachim, by the sea. In by the chosen approach
+// (the main gate in Johnny shirts, a cut in the north-east fence, or the smokers' gap from the
 // beach), past the guards to their command post (the שו"ב), the safe (the code from the photo
 // on a keypad, or the drill — loud, and it overheats), the chain and the padlock, back to the
 // getaway vehicle, and out through the base's gate.
@@ -101,7 +101,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     fl.rotation.x = -Math.PI / 2; fl.position.set(-6, 0.03, -10); fl.receiveShadow = true; sc.add(fl);
     const roof = this.roof = new THREE.Group(); sc.add(roof);
     this.slab = H.box(-6, -10, 10.6, 7.6, 0.25, H.mat(0x8a877c, { map: Arcade.texture('assets/heist/tex_concrete.jpg', 3) }), { y: 3, col: false, parent: roof });
-    const tag = Scene3D.label(fmt('📡 השו"ב של גוני'), { bg: 'rgba(20,26,16,.85)', size: 0.9 }); tag.position.set(-6, 5.8, -10); sc.add(tag);
+    const tag = Scene3D.label(fmt('📡 השו"ב של ג׳וני'), { bg: 'rgba(20,26,16,.85)', size: 0.9 }); tag.position.set(-6, 5.8, -10); sc.add(tag);
     // A glow from the window over the console side.
     const win = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.9), new THREE.MeshBasicMaterial({ color: 0x7affa8, transparent: true, opacity: 0.55 })); win.position.set(-3.6, 1.9, -6.33); walls.add(win);
     const dish = new THREE.Mesh(new THREE.SphereGeometry(0.9, 16, 8, 0, Math.PI * 2, 0, Math.PI / 3), H.mat(0xdddddd, { side: THREE.DoubleSide }));
@@ -203,7 +203,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
 
   // ---------- the guards ----------
   guards() {
-    const G2 = (o) => this.addGuard({ rifle: true, name: o.name || 'שומר מגוני', ...o });
+    const G2 = (o) => this.addGuard({ rifle: true, name: o.name || 'שומר מג׳וני', ...o });
     G2({ x: 10, z: 21.5, a: Math.PI / 2, R: 9, sweep: 0.6, name: 'השער' });
     G2({ x: -28, z: -21.5, path: [[-28, -21.5, 2], [28, -21.5, 2]], R: 9 });
     G2({ x: -14, z: -3, path: [[-14, -3, 1.2], [2, -3, 1.2], [2, -16, 1.2], [-14, -16, 1.2]], R: 9 });
@@ -215,7 +215,7 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     // Two more who come out of the gate when the alarm goes.
     for (let k = 0; k < 2; k++) { const g = G2({ x: 10 + k * 2, z: 26, a: -Math.PI / 2, R: 11, name: 'תגבורת' }); g.st = 'off'; }
   },
-  // In Gonni shirts, walking calmly, you're one of them (until you're in the שו"ב with their chain).
+  // In Johnny shirts, walking calmly, you're one of them (until you're in the שו"ב with their chain).
   seenMul(g, p) {
     let k = 1;
     const inside = this.inside(p);
@@ -659,10 +659,10 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
   introSeq() {
     const H = Heist, solo = H.ctx.solo, who = (id) => (solo ? id : '');
     const s = HS_SPAWN[this.appr];
-    const ap = { gate: 'במדים של גוני, מהשער הראשי. לחייך, לנופף, לא לרוץ.', fence: 'הגדר בצפון־מזרח, ליד המכולה. הקאטר אצלך. משם — ישר לשו"ב.', beach: 'מהחוף, דרך הפרצה של המעשנים. הנעליים יירטבו. זה המחיר.' }[this.appr];
+    const ap = { gate: 'במדים של ג׳וני, מהשער הראשי. לחייך, לנופף, לא לרוץ.', fence: 'הגדר בצפון־מזרח, ליד המכולה. הקאטר אצלך. משם — ישר לשו"ב.', beach: 'מהחוף, דרך הפרצה של המעשנים. הנעליים יירטבו. זה המחיר.' }[this.appr];
     return [
-      { img: 'assets/heist/arrive.jpg', text: 'פלמחים. 03:00. הים שקט. גוני — פחות. ' + HS_CARS[this.opt.car || 'hilux'].name + ' עוצר בלי אורות.', ms: 5000 },
-      { shot: { from: [s[0] + 6, 18, s[1] + 16], to: [-2, 24, 30], at: [s[0], 0, s[1]], atEnd: [-4, 0, -6], dur: 7500 }, text: 'הסוללה של גוני. משגרים, רדאר, מכולות — ובאמצע, השו"ב.', icon: '🗺️' },
+      { img: 'assets/heist/arrive.jpg', text: 'פלמחים. 03:00. הים שקט. ג׳וני — פחות. ' + HS_CARS[this.opt.car || 'hilux'].name + ' עוצר בלי אורות.', ms: 5000 },
+      { shot: { from: [s[0] + 6, 18, s[1] + 16], to: [-2, 24, 30], at: [s[0], 0, s[1]], atEnd: [-4, 0, -6], dur: 7500 }, text: 'הסוללה של ג׳וני. משגרים, רדאר, מכולות — ובאמצע, השו"ב.', icon: '🗺️' },
       { shot: { from: [-12, 4, 2], to: [-2, 3.5, 1], at: [-6, 1.2, -3], dur: 6500 }, who: who('p_shaked'), text: 'כל שומר — עם משולש. ירוק זה רגוע, אדום זה ראה אותך. ומי שרואה — רץ לשו"ב ללחוץ על האזעקה.' },
       { img: 'assets/heist/shov.jpg', who: who('p_liran'), text: 'השו"ב. בפנים: הכספת. ובכספת: השרשרת.' + (this.opt.code ? ` ויש לנו את הקוד: ${this.opt.code}.` : ' אין לנו קוד — אז מקדחים. בשקט. כמה שאפשר.') },
       { shot: { from: [-4.5, 2.2, -7.2], to: [-5.5, 2, -7.6], at: [-8, 0.8, -11.6], atEnd: [-3, 0.9, -12.5], dur: 6000 }, who: who('p_nevo'), text: 'מישהו ישן שם בפנים, על הכיסא. אני מזדהה איתו. לא להעיר.' },
@@ -718,12 +718,12 @@ Heist.stages.fin = Object.assign(Object.create(HSStealth), {
     if (win) Sound.fanfare(); else Sound.bad();
     const left = H.crew.filter(c => !c.bot && !this.st.inn.includes(c.who));
     const seq = win ? [
-      { img: 'assets/heist/escape.jpg', text: al ? 'המחסום מאחורינו. הצפירה מתרחקת. ...או שזה {@p_nevo} נוחר מאחורה.' : 'המחסום מאחורינו. אף אחד בגוני עוד לא יודע. הם יגלו בבוקר. במסדר. מול כולם.', ms: 5200 },
-      { img: 'assets/heist/win.jpg', text: 'זריחה על החוף של פלמחים. השרשרת והמנעול של גוני — אצלנו.', ms: 4800 },
+      { img: 'assets/heist/escape.jpg', text: al ? 'המחסום מאחורינו. הצפירה מתרחקת. ...או שזה {@p_nevo} נוחר מאחורה.' : 'המחסום מאחורינו. אף אחד בג׳וני עוד לא יודע. הם יגלו בבוקר. במסדר. מול כולם.', ms: 5200 },
+      { img: 'assets/heist/win.jpg', text: 'זריחה על החוף של פלמחים. השרשרת והמנעול של ג׳וני — אצלנו.', ms: 4800 },
       { who: solo ? 'p_liran' : '', text: 'בכנס הגדוד הבא — היא על הצוואר של {name}. ואנחנו מחייכים. רק מחייכים.' },
       { who: solo ? 'p_nevo' : '', text: al ? 'תזכירו לי למה הייתה אזעקה? ...אה, נכון. בגללנו.' : 'בלי אזעקה. בלי שריטה. אני הולך לישון שלושה ימים.' },
     ] : [
-      { img: 'assets/heist/fail.jpg', text: 'המשטרה הצבאית. פנסים בפרצוף. "ידיים על הראש". השרשרת נשארת בגוני.', ms: 5200 },
+      { img: 'assets/heist/fail.jpg', text: 'המשטרה הצבאית. פנסים בפרצוף. "ידיים על הראש". השרשרת נשארת בג׳וני.', ms: 5200 },
       { who: solo ? 'p_nevo' : '', text: 'רק שתדעו — אני ישנתי כל הערב. יש לי עדים. אתם.' },
       { who: solo ? 'p_shaked' : '', text: 'ההכנות עוד אצלנו. עוד ניסיון — ובשקט הפעם.' },
     ];

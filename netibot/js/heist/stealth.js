@@ -1,7 +1,7 @@
 // The heist's sneaking: guards who walk their rounds, a vision triangle on the sand for each
 // (cut short by walls, green → yellow → red as they grow suspicious), hearing for runners,
 // takedowns from behind, and things to pick up or hold E at. The two sneaking preps (the
-// tools from our storeroom, the shirts off Gonni's laundry line) are made of it here, and
+// tools from our storeroom, the shirts off Johnny's laundry line) are made of it here, and
 // the finale (js/heist/finale.js) builds on it.
 // Online the host's phone moves the guards and decides who's been seen; each player moves
 // themselves and sends what they did as events (Heist.emit).
@@ -495,11 +495,11 @@ Heist.stages.tools = hsSneakPrep({
   },
 });
 
-// ---------- prep 4 (bonus): Gonni's shirts, off their laundry line at Palmachim ----------
+// ---------- prep 4 (bonus): Johnny's shirts, off their laundry line at Palmachim ----------
 Heist.stages.uni = hsSneakPrep({
-  id: 'uni', exitName: 'הג\'יפ', goal: 'לאסוף 4 חולצות של גוני', exit: [-17, 11], bounds: [-20, 20, -14, 14],
-  staffHint: 'זה חייל של גוני. כאן לא מפילים — רק גונבים כביסה.',
-  staffLines: ['"אתם מגוני? ...לא נראה לי שראיתי אתכם."', '"מי לקח לי את החולצה?!"', '"שקט, אני בטלפון עם אמא."'],
+  id: 'uni', exitName: 'הג\'יפ', goal: 'לאסוף 4 חולצות של ג׳וני', exit: [-17, 11], bounds: [-20, 20, -14, 14],
+  staffHint: 'זה חייל של ג׳וני. כאן לא מפילים — רק גונבים כביסה.',
+  staffLines: ['"אתם מג׳וני? ...לא נראה לי שראיתי אתכם."', '"מי לקח לי את החולצה?!"', '"שקט, אני בטלפון עם אמא."'],
   items: [{ x: -5, z: -6, icon: '🎽', name: 'חולצה', hold: 0.8 }, { x: 4.5, z: 0, icon: '🎽', name: 'חולצה', hold: 0.8 }, { x: -2, z: 6, icon: '🎽', name: 'חולצה', hold: 0.8 }, { x: 7, z: -6, icon: '🎽', name: 'חולצה', hold: 0.8 }],
   build(H) {
     // Three clotheslines between posts, shirts flapping on them.
@@ -531,25 +531,25 @@ Heist.stages.uni = hsSneakPrep({
     const t = Assets.model('tower', { height: 7 }); if (t) { t.position.set(17, 0, -11); add(t); }
   },
   guards(H) {
-    this.addGuard({ x: -10, z: -3, path: [[-10, -3, 1.4], [10, -3, 1.4], [10, 3, 1.4], [-10, 3, 1.4]], R: 8.5, rifle: true, name: 'שומר מגוני' });
-    this.addGuard({ x: 12, z: -9, a: Math.PI * 0.85, R: 7, half: 0.55, sweep: 1.0, rifle: true, name: 'מעשן מגוני' });
-    this.addGuard({ x: 16, z: 9.5, path: [[16, 9.5, 2], [-8, 9.5, 2]], R: 8, rifle: true, name: 'שומר מגוני' });
+    this.addGuard({ x: -10, z: -3, path: [[-10, -3, 1.4], [10, -3, 1.4], [10, 3, 1.4], [-10, 3, 1.4]], R: 8.5, rifle: true, name: 'שומר מג׳וני' });
+    this.addGuard({ x: 12, z: -9, a: Math.PI * 0.85, R: 7, half: 0.55, sweep: 1.0, rifle: true, name: 'מעשן מג׳וני' });
+    this.addGuard({ x: 16, z: 9.5, path: [[16, 9.5, 2], [-8, 9.5, 2]], R: 8, rifle: true, name: 'שומר מג׳וני' });
   },
   intro(H) {
     return [
-      { img: 'assets/heist/prep_uni.jpg', who: H.ctx.solo ? 'p_liran' : '', text: 'פלמחים, 02:10. חבל הכביסה של גוני. ארבע חולצות עם הסמל שלהם — ואנחנו גוני. לפחות לחצי שעה.' },
+      { img: 'assets/heist/prep_uni.jpg', who: H.ctx.solo ? 'p_liran' : '', text: 'פלמחים, 02:10. חבל הכביסה של ג׳וני. ארבע חולצות עם הסמל שלהם — ואנחנו ג׳וני. לפחות לחצי שעה.' },
       { shot: { from: [-14, 13, 18], to: [10, 12, 16], at: [0, 0, 0], dur: 6500 }, text: 'הכביסה מסתירה אותך מהם — אפשר לעבור דרכה. אבל המשולשים... עדיין רואים.', icon: '👀' },
     ];
   },
-  caughtLine: () => 'שומר מגוני: "היי! זאת החולצה שלי?!"',
+  caughtLine: () => 'שומר מג׳וני: "היי! זאת החולצה שלי?!"',
   winSeq(H) {
     return [
-      { img: 'assets/heist/prep_uni.jpg', who: H.ctx.solo ? 'p_shaked' : '', text: 'ארבע חולצות של גוני. אחת עם כתם חומוס, אחת במידה XXL. מי שמתלונן — מקבל את ה־XXL.' },
+      { img: 'assets/heist/prep_uni.jpg', who: H.ctx.solo ? 'p_shaked' : '', text: 'ארבע חולצות של ג׳וני. אחת עם כתם חומוס, אחת במידה XXL. מי שמתלונן — מקבל את ה־XXL.' },
     ];
   },
   failSeq(H) {
     return [
-      { img: 'assets/heist/fail.jpg', name: 'שומר מגוני', icon: '🪖', text: 'מה, גונבים כביסה? מאיזו סוללה אתם? ...לכו מפה לפני שאני קורא לקצין.' },
+      { img: 'assets/heist/fail.jpg', name: 'שומר מג׳וני', icon: '🪖', text: 'מה, גונבים כביסה? מאיזו סוללה אתם? ...לכו מפה לפני שאני קורא לקצין.' },
       { who: H.ctx.solo ? 'p_nevo' : '', text: 'אמרתי לכם ללבוש שחור. אף אחד לא מקשיב לי.' },
     ];
   },

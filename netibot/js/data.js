@@ -41,7 +41,7 @@ const DATA = {
       perk: { key: 'reload', label: 'טעינה מהירה: זמן נוסף בהחלפת מארזים' },
       color: '#f2c14e',
       batteries: [
-        { id: 'goni', name: 'גוני' },
+        { id: 'goni', name: 'ג׳וני' },
         { id: 'ido', name: 'אידו' },
         { id: 'bazelet', name: 'בזלת' },
       ],

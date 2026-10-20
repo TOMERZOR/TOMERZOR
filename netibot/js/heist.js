@@ -1,8 +1,8 @@
-// The Gonni heist (השוד בגוני): a GTA-style heist in the club, Kosatka planning board and all.
+// The Johnny heist (השוד בג׳וני): a GTA-style heist in the club, Kosatka planning board and all.
 // The crew plans in a dead container behind the dining hall: two preps are a must (the
 // break-in tools from our own storeroom, a getaway vehicle driven to the hideout), two more
-// make the night easier (a photo of the safe code, Gonni shirts off their laundry line). The
-// finale is at Palmachim, in Gonni's battery: guards with a vision triangle on the sand that
+// make the night easier (a photo of the safe code, Johnny shirts off their laundry line). The
+// finale is at Palmachim, in Johnny's battery: guards with a vision triangle on the sand that
 // goes green, yellow, red; whoever sees you runs to raise the alarm in their command post
 // (the שו"ב). Take them down quietly from behind, or with the MILES pistol (loud), crack the
 // safe, grab the chain and the padlock, and drive out past the gate.
@@ -16,8 +16,8 @@ const HS_CREW = ['p_liran', 'p_nevo', 'p_shaked'];
 const HS_PREPS = [
   { id: 'tools', icon: '🧰', name: 'כלי פריצה', req: true, img: 'assets/heist/prep_tools.jpg', desc: 'מקדחה וקאטר מהמחסן של הסוללה. בלילה. בלי ש{@harasar} ישים לב.' },
   { id: 'car', icon: '🚙', name: 'רכב מילוט', req: true, img: 'assets/heist/prep_car.jpg', desc: 'לבחור רכב — ולהביא אותו למחבוא בשלום, בלי לדרוס אף אחד.' },
-  { id: 'code', icon: '🔢', name: 'קוד הכספת', req: false, img: 'assets/heist/prep_code.jpg', desc: 'לצלם את הפתק על המסך של קצין התורן בגוני. בלי קוד — מקדחים. וזה רועש.' },
-  { id: 'uni', icon: '🎽', name: 'מדים של גוני', req: false, img: 'assets/heist/prep_uni.jpg', desc: 'חולצות של גוני מחבל הכביסה שלהם. ככה נכנסים בשער הראשי כאילו אנחנו משם.' },
+  { id: 'code', icon: '🔢', name: 'קוד הכספת', req: false, img: 'assets/heist/prep_code.jpg', desc: 'לצלם את הפתק על המסך של קצין התורן בג׳וני. בלי קוד — מקדחים. וזה רועש.' },
+  { id: 'uni', icon: '🎽', name: 'מדים של ג׳וני', req: false, img: 'assets/heist/prep_uni.jpg', desc: 'חולצות של ג׳וני מחבל הכביסה שלהם. ככה נכנסים בשער הראשי כאילו אנחנו משם.' },
 ];
 // Getaway vehicles. top m/s, acc m/s², grip turning, armor (hits it takes), noise (guards hear
 // it), stats for the cards: speed, armor, quiet (of 5).
@@ -27,7 +27,7 @@ const HS_CARS = {
   cart: { id: 'cart', name: 'עגלת הגולף של השק"ם', model: 'hs_cart', len: 2.9, img: 'assets/heist/i_cart.webp', top: 14, acc: 11, grip: 1.4, armor: 3, noise: 0, stats: [2, 1, 5], desc: 'שקטה לגמרי. איטית לגמרי. עוברת מתחת למחסום.' },
 };
 const HS_APPR = {
-  gate: { name: 'השער הראשי', icon: '🚪', need: 'uni', desc: 'נכנסים במדים של גוני. "ערב טוב!"' },
+  gate: { name: 'השער הראשי', icon: '🚪', need: 'uni', desc: 'נכנסים במדים של ג׳וני. "ערב טוב!"' },
   fence: { name: 'חיתוך הגדר', icon: '✂️', desc: 'מהצפון־מזרח, עם הקאטר. שקט, אם לא רצים.' },
   beach: { name: 'מהים', icon: '🌊', desc: 'לאורך החוף, דרך הפרצה של המעשנים. ארוך, אבל ריק.' },
 };
@@ -39,8 +39,8 @@ const HS_BANTER = {
 };
 
 const Heist = {
-  id: 'heist', name: 'השוד בגוני', icon: '💰',
-  desc: 'שוד בסגנון GTA: הכנות, רכב מילוט — ושרשרת עם מנעול בכספת של השו"ב של גוני בפלמחים. אונליין מ־2.',
+  id: 'heist', name: 'השוד בג׳וני', icon: '💰',
+  desc: 'שוד בסגנון GTA: הכנות, רכב מילוט — ושרשרת עם מנעול בכספת של השו"ב של ג׳וני בפלמחים. אונליין מ־2.',
   cover: 'assets/heist/cover.jpg', solo: true, online: true, minOnline: 2,
   stages: {},
 
@@ -63,7 +63,7 @@ const Heist = {
     Sound.music('night');
     this.bindKeys();
     if (this.host) this.go('board');
-    else Arcade.panel('<h2>💰 השוד בגוני</h2><p class="ar-sub">⏳ מתחברים לצוות...</p>');
+    else Arcade.panel('<h2>💰 השוד בג׳וני</h2><p class="ar-sub">⏳ מתחברים לצוות...</p>');
   },
   leave() {
     if (this.cur && this.cur.leave) try { this.cur.leave(); } catch (e) { console.warn(e); }
@@ -260,7 +260,7 @@ const Heist = {
     if (tag) { const l = Scene3D.label(tag, { bg, fg, size: 0.4 }); l.position.y = 2.2; m.root.add(l); m.tag = l; }
     return m;
   },
-  // A guard of Gonni: a helmet, no cast face.
+  // A guard of Johnny: a helmet, no cast face.
   gonniLook(i) { return { id: null, skin: DATA.skinTones[i % 4], hair: DATA.hairColors[i % 3], head: 'helmet', female: i % 3 === 1, uniform: 0x5b6b3c }; },
   // A glowing column over where to go.
   beacon(x, z, color = 0xffd34a, h = 9, w = 0.55) {
@@ -569,12 +569,12 @@ Heist.stages.board = {
     const [a, b, c] = [bot('p_liran'), bot('p_shaked'), bot('p_nevo')];
     return H.play([
       { img: 'assets/heist/brief.jpg', text: 'מכולה נטושה מאחורי חדר האוכל. 23:40. מישהו הביא במבה. מישהו הביא מפה. ומישהו הביא... תוכנית.', ms: 5200 },
-      { shot: S.left, who: a, text: 'בכל כנס גדוד של 947, גוני מנפנפים בה. "השרשרת". עם המנעול. כאילו זה גביע המדינה.' },
+      { shot: S.left, who: a, text: 'בכל כנס גדוד של 947, ג׳וני מנפנפים בה. "השרשרת". עם המנעול. כאילו זה גביע המדינה.' },
       { shot: S.right, who: b, text: 'והיא שוכבת להם בכספת, בשו"ב שלהם בפלמחים. עם שומרים. עם משולשי ראייה. עם אזעקה.' },
       { shot: S.table, who: c, text: 'אז... אנחנו לא הולכים לישון הלילה?' },
       { shot: S.left, who: a, text: 'אנחנו הולכים לגנוב אותה. ובכנס הבא — היא תהיה על הצוואר של {name}.' },
       { shot: S.me, who: 'player', text: 'אני בפנים. מה צריך?' },
-      { shot: S.board, img: 'assets/heist/board.jpg', who: b, text: 'קודם הכנות. כלי פריצה ורכב מילוט — חובה. קוד הכספת ומדים של גוני — בונוס, אבל עם זה הלילה נהיה הרבה יותר קל.' },
+      { shot: S.board, img: 'assets/heist/board.jpg', who: b, text: 'קודם הכנות. כלי פריצה ורכב מילוט — חובה. קוד הכספת ומדים של ג׳וני — בונוס, אבל עם זה הלילה נהיה הרבה יותר קל.' },
       { shot: S.wide, who: c, text: 'ואני מבקש 15 אחוז. על הבמבה.' },
     ]);
   },
@@ -606,7 +606,7 @@ Heist.stages.board = {
     const crew = H.crew.map((c, i) => `<span class="${c.isMe ? 'me' : ''}"><bdi data-raw>${esc(c.name)}</bdi> <small>${split[i] || 0}%</small></span>`).join('');
     const ready = H.ready();
     const box = H.board(`<div class="hs-bd">
-      <div class="hs-bhead"><h2>📋 לוח תכנון — השוד בגוני</h2><p>🎯 המטרה: השרשרת והמנעול בכספת של השו"ב של גוני, פלמחים</p></div>
+      <div class="hs-bhead"><h2>📋 לוח תכנון — השוד בג׳וני</h2><p>🎯 המטרה: השרשרת והמנעול בכספת של השו"ב של ג׳וני, פלמחים</p></div>
       <div class="hs-cards">${HS_PREPS.map(card).join('')}</div>
       <div class="hs-brow"><div class="hs-crewl"><b>👥 הצוות</b>${crew}</div>
         <div class="hs-apl"><b>🧭 כניסה</b>${apprBtns}</div></div>

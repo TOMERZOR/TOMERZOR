@@ -27,7 +27,11 @@ interface Env extends AccessEnv {
   VOICE_CACHE?: R2Bucket;
 }
 
-const MODEL = "claude-opus-5-5";
+// Haiku thinking at medium effort matched Opus on every case of our test set, at a small fraction
+// of the cost. Opus answers only the rare question Haiku's safety checks decline.
+const MODEL = "claude-haiku-5-5";
+const MODEL_EFFORT = "medium";
+const REFUSAL_MODEL = "claude-opus-5-5";
 
 // Hebrew: "Yael – Gentle, Confident Ad". English: "Emily – Trustworthy, Warm, Conversational".
 const VOICES: Record<Language, string> = {
@@ -39,7 +43,7 @@ const VOICE_MODEL = "eleven_v3";
 const MAX_QUESTION = 2_000;
 const MAX_SPEAK = 1_500;
 const MAX_PHOTO_BASE64 = 2_500_000; // ~1.8 MB JPEG; the app sends ~1280 px, well under this
-const MAX_HISTORY = 12;
+const MAX_HISTORY = 8;
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -117,22 +121,29 @@ async function ask(
   messages.push({ role: "user", content });
 
   const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const format = { type: "json_schema", schema: REPLY_SCHEMA as unknown as Record<string, unknown> };
   try {
-    const response = await client.beta.messages.create({
+    let response = await client.beta.messages.create({
       model: MODEL,
-      max_tokens: 8000,
+      max_tokens: 4000,
       system: SYSTEM_PROMPT,
       messages,
-      // Low effort keeps answers quick; Moffy's replies are short.
-      output_config: {
-        effort: "low",
-        format: { type: "json_schema", schema: REPLY_SCHEMA as unknown as Record<string, unknown> },
-      },
-      // If a safety check declines a request, the API retries it on a suitable other model.
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      output_config: { effort: MODEL_EFFORT, format },
     } as unknown as Anthropic.Beta.MessageCreateParamsNonStreaming);
 
+    // Haiku has no server-side fallback, so a question its safety checks decline gets one more try
+    // on Opus, which can fall back further on its own.
+    if (response.stop_reason === "refusal") {
+      response = await client.beta.messages.create({
+        model: REFUSAL_MODEL,
+        max_tokens: 4000,
+        system: SYSTEM_PROMPT,
+        messages,
+        output_config: { effort: "low", format },
+        betas: ["server-side-fallback-2026-07-01"],
+        fallbacks: "default",
+      } as unknown as Anthropic.Beta.MessageCreateParamsNonStreaming);
+    }
     if (response.stop_reason === "refusal") return json({ error: "refused" }, 422);
     const answer = response.content
       .flatMap((block) => (block.type === "text" ? [block.text] : []))
@@ -233,17 +244,27 @@ async function speak(body: Record<string, unknown>, env: Env, ctx: ExecutionCont
     }
   }
 
-  let generated: Response;
-  try {
-    generated = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
+  const generate = (languageCode?: Language) =>
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { "xi-api-key": env.ELEVENLABS_API_KEY, "content-type": "application/json", accept: "audio/mpeg" },
       body: JSON.stringify({
         text,
         model_id: VOICE_MODEL,
         voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: 0.92 },
+        ...(languageCode ? { language_code: languageCode } : {}),
       }),
     });
+
+  let generated: Response;
+  try {
+    // Naming the language keeps Hebrew pronunciation right. If the voice model ever refuses the
+    // setting, the clip is made without it rather than not at all.
+    generated = await generate(language);
+    if (generated.status === 400 || generated.status === 422) {
+      await generated.body?.cancel();
+      generated = await generate();
+    }
   } catch (error) {
     // The app falls back to the phone's own voice.
     console.error("ElevenLabs unreachable", error);

@@ -112,8 +112,9 @@ Set it up once in **App Store Connect** (needs the Apple Developer Program):
 
 ### What it costs
 
-- **Claude Opus 5.5** ($4 per million input tokens, $20 per million output tokens): one question with a photo is roughly 2,000 to 3,000 input tokens and a few hundred output tokens, so **about 2 to 3 US cents per question**. To switch model, change `MODEL` in `server/src/index.ts`.
-- **ElevenLabs:** each new answer is spoken once, roughly 2 to 3 cents a clip depending on your plan. Repeats are free (see below).
+- **Claude Haiku 5.5** at medium effort ($0.10 per million input tokens, $0.50 per million output tokens): one question with a photo is roughly 3,000 to 4,000 input tokens and a few hundred output tokens, so **well under a tenth of a US cent per question**. In a 16-question test with camera pictures it matched Claude Opus 5.5 on every case. A question Haiku's safety checks decline is retried once on Opus 5.5 (about 2 cents). To switch model, change `MODEL` in `server/src/index.ts`.
+- **ElevenLabs** (`eleven_v3`, roughly $0.08 to $0.10 per 1,000 characters on pay-as-you-go API pricing; check your plan): Moffy's answers are one or two short sentences, about 100 characters, so **about 1 cent per new answer**. Repeats are free (see below). The voice is now the main cost.
+- **Per subscriber:** ₪24.90 a month leaves about ₪17.90 after VAT and Apple's 15%. At about 1 cent a question, that covers roughly 400 questions a month; the server's daily limit (40 questions) keeps heavy use in check.
 - **Cloudflare:** the free plan is enough to try it out. Its 10 ms CPU limit per request can be tight for large photos, so for real use take the Workers Paid plan ($5 a month).
 
 ### Moffy's voice

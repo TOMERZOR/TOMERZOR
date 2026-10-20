@@ -197,6 +197,17 @@ private struct StageView: View {
         func clamp(_ p: CGPoint) -> CGPoint {
             CGPoint(x: min(max(p.x, area.minX), area.maxX), y: min(max(p.y, area.minY), area.maxY))
         }
+        if let target, helper.attachedPhoto != nil {
+            // A screenshot is narrower than the frame: stand in the empty space beside it, level with the target.
+            let left = pictureRect.minX - half - 10
+            let right = pictureRect.maxX + half + 10
+            let roomLeft = left - half >= answerFrame.minX
+            let roomRight = right + half <= answerFrame.maxX
+            if roomLeft || roomRight {
+                let x = roomRight && (!roomLeft || target.x <= pictureRect.midX) ? right : left
+                return CGPoint(x: x, y: min(max(target.y, area.minY), area.maxY))
+            }
+        }
         if let target {
             let below = target.y < answerFrame.midY
             let side: CGFloat = target.x > answerFrame.midX ? -1 : 1

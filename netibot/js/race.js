@@ -3,7 +3,10 @@
 // Four maps with three tracks each (js/racemaps.js), a garage of eight cars in four tiers that
 // open up with the player's rank (the higher, the faster), bumps that knock rivals off
 // the line, and Mario Kart style pickups on the road: spinning shekel coins (up to ten, each
-// a little more speed) and floating jerrycans that hand out a power-up. Friends online join
+// a little more speed), floating jerrycans that hand out a power-up, and "נס על האש": a
+// finjan of instant coffee bubbling on a little fire, on the inside of the bends, that kicks the
+// car into a short, wild burst the moment you drive through it. A car you haven't the rank for
+// can also be bought with the shekels (G.state.money) and is yours for good. Friends online join
 // through an invite; alone, three commanders from the cast race you, in cars of your tier.
 // The cars, the coin, the jerrycan and the pine are Higgsfield models (assets/models/); the
 // original desert circuit's map was painted over RACE_POINTS.
@@ -15,10 +18,12 @@ const RACE_LAPS = 3;
 // rank. Lap times (negev, easy, the bot brain at full skill): ~80s, ~73s, ~65s, ~57-59s.
 const RACE_RANKS = ['rabat', 'samal', 'samar', '1', '2', '3', 'leaf'];
 const RACE_TIERS = [
-  { tier: 0, unlock: 'rabat', name: 'רכבי הפלגה', desc: 'איטיים, אבל סוחבים הכל' },
-  { tier: 1, unlock: 'samal', name: 'רכבי הסמלים', desc: 'יותר כוח, יותר משקל' },
-  { tier: 2, unlock: 'samar', name: 'רכבי המפקדים', desc: 'מהירים באמת. להחזיק חזק' },
-  { tier: 3, unlock: '1', name: 'רכבי הקצינים', desc: 'מפלצות. שהרס"פית לא תשמע' },
+// price: what a car of the tier costs in shekels before the rank opens it (a race pays 1-29₪:
+// a sergeant's car is a few good races, the officers' ones a real grind).
+  { tier: 0, unlock: 'rabat', price: 0, name: 'רכבי הפלגה', desc: 'איטיים, אבל סוחבים הכל' },
+  { tier: 1, unlock: 'samal', price: 70, name: 'רכבי הסמלים', desc: 'יותר כוח, יותר משקל' },
+  { tier: 2, unlock: 'samar', price: 160, name: 'רכבי המפקדים', desc: 'מהירים באמת. להחזיק חזק' },
+  { tier: 3, unlock: '1', price: 340, name: 'רכבי הקצינים', desc: 'מפלצות. שהרס"פית לא תשמע' },
 ];
 // top: m/s, acc: m/s², grip: turning, mass: who wins a bump, len: model length (m). The
 // models were lifted facing +z; rotY turns them to face +x like everything else here.
@@ -34,7 +39,9 @@ const RACE_CARS = [
   { id: 'picanto_t', name: 'פיקנטו טורבו', desc: 'של אמא, אחרי שהקצין "שיפר" אותה', tier: 3, model: 'picanto', paint: { hue: 205, tint: 0xd8e4ff, stripes: '#ffffff', badge: ['TURBO', '#ffffff', '#1f4fd0'] }, top: 39, acc: 19, grip: 1.3, mass: 0.75, len: 3.6, rotY: Math.PI / 2 },
   { id: 'sufa_gt', name: 'סופה GT', desc: 'המפלצת. פסי מירוץ ושום רחמים', tier: 3, model: 'sufa', paint: { tint: 0x40423f, sat: 0.3, stripes: '#f2c12e', badge: ['GT', '#f2c12e', '#151515'] }, top: 46, acc: 21, grip: 1.3, mass: 1.1, len: 4.1, rotY: Math.PI / 2 },
 ];
-for (const c of RACE_CARS) { c.model = c.model || c.id; c.unlock = RACE_TIERS[c.tier].unlock; }
+for (const c of RACE_CARS) { c.model = c.model || c.id; c.unlock = RACE_TIERS[c.tier].unlock; c.price = RACE_TIERS[c.tier].price; }
+// The נס על האש burst: how long (s), how much more top speed and push, and the kick on contact.
+const RACE_NES = { t: 1.8, top: 1.5, acc: 2.4, kick: 7, back: 6 };
 // What a jerrycan gives. w: how likely, by place (leader … last), so the last gets the good stuff.
 const RACE_ITEMS = [
   { id: 'turbo', icon: '⛽', name: 'דלק טורבו', w: [1, 3, 5] },
@@ -58,6 +65,8 @@ const RACE_LINES = {
   oilHit: ['שמן?! מי שפך פה שמן?!', 'אנחנו מסתובבים!!!', 'הההההה!!! 🌀'],
   item: { turbo: '⛽ "מלא! עכשיו לטוס!"', oil: '🛢️ "שישתזפו בשמן מאחורינו"', mega: '📢 "כולם — זוזו!!!"', shield: '🛡️ "חגורה! עכשיו אף אחד לא מזיז אותנו"', burger: '🍔 "צ\'יזבורגרו שולח ד"ש!"' },
   burgerHit: ['צ\'יזבורגר בשמשה!!! אני לא רואה כלום!', 'זה... רוטב אלף האיים?!'],
+  nes: ['נס על האש!!! אני רואה את הקולות!!!', 'שלוש כפיות, בלי סוכר, בלי ברקס!!!', 'הקפה של הש"ג! עכשיו אני ער עד השחרור!!!', 'מי שם פינג\'אן על הכביש?! ...תודה!!!', 'זה לא קפה, זה דלק סילוני!!!'],
+  nesBot: ['☕ סלורפ!', '☕🔥 נס!', '☕ חם! חם!'],
 };
 
 const Race = {
@@ -95,6 +104,7 @@ const Race = {
     if (RaceWorld.roadT) shared.add(RaceWorld.roadT);
     for (const k in this.paints || {}) { const c = this.paints[k]; if (c.map) shared.add(c.map); if (c.stripes) shared.add(c.stripes); for (const g of c.geos ? c.geos.values() : []) shared.add(g); }
     if (RaceWorld.pineBB) { shared.add(RaceWorld.pineBB.geo); shared.add(RaceWorld.pineBB.mat); shared.add(RaceWorld.pineBB.mat.map); }
+    for (const kit of [this.nesKit, this.flameKit]) for (const k in kit || {}) { const v = kit[k]; if (v && (v.isMaterial || v.isBufferGeometry || v.isGeometry || v.isTexture)) { shared.add(v); if (v.map) shared.add(v.map); } }
     W.scene.traverse(o => {
       if (o.geometry && !shared.has(o.geometry)) o.geometry.dispose();
       for (const m of o.material ? [].concat(o.material) : []) { if (shared.has(m)) continue; if (m.map && !shared.has(m.map)) m.map.dispose(); m.dispose(); }
@@ -119,8 +129,10 @@ const Race = {
   },
 
   // ---------- coins and jerrycans ----------
-  // Rows of coins every ~65 m, weaving across the road; a line of jerrycans every ~200 m.
-  // Placed from the map's own seed, so everyone online sees them in the same places.
+  // Rows of coins every ~65 m, weaving across the road; a line of jerrycans every ~200 m; the
+  // map's own spots for נס על האש (racemaps.js), with no coin on top of them.
+  // Placed from the map's own seed, so everyone online sees them in the same places. Each phone
+  // has its own: what you pick up is gone only for you (and your bots), like the coins.
   pickups() {
     const W = this.W, S = this.samples, N = S.length, rnd = Arcade.rng(W.map.id.length * 7919 + W.lv * 31 + 7);
     this.items = [];
@@ -133,7 +145,8 @@ const Race = {
     }
     const add = (kind, i, lat) => {
       const s = S[i % N], g = new THREE.Group();
-      if (kind === 'coin') {
+      if (kind === 'nes') g.add(this.nesModel());
+      else if (kind === 'coin') {
         const m = new THREE.Mesh(this.coinGeo, this.coinMats); m.rotation.x = Math.PI / 2; m.castShadow = true; g.add(m);
       } else {
         const m = Assets.model('race_fuel', { height: 1.25 });
@@ -143,32 +156,60 @@ const Race = {
         glow.scale.setScalar(3); g.add(glow);
       }
       const x = s.x - Math.sin(s.a) * lat, z = s.z + Math.cos(s.a) * lat;
-      g.position.set(x, s.y + 1.25, z);
+      const y = s.y + (kind === 'nes' ? 1.6 : 1.25);
+      g.position.set(x, y, z);
       this.scene.add(g);
-      this.items.push({ kind, i: i % N, x, z, y: s.y + 1.25, obj: g, off: 0, ph: rnd() * 6 });
+      const it = { kind, i: i % N, x, z, y, lat, obj: g, off: 0, ph: rnd() * 6 };
+      // Under the finjan: arrows on the road, so you see it coming and can line up for it.
+      if (kind === 'nes') { it.pad = this.nesPad(s, x, z, this.W.roadY(i % N, x, z) + 0.07); this.scene.add(it.pad); }
+      this.items.push(it);
     };
-    const step = this.ahead(65), half = this.half;
+    const half = this.half, L = W.map.levels[W.lv] || {};
+    const nes = (L.boosts || []).map(([f, side]) => ({ i: Math.round(f * N) % N, lat: side * half }));
+    const step = this.ahead(65);
     for (let i = this.ahead(45), k = 0; i < N - this.ahead(20); i += step, k++) {
       const lat0 = (rnd() - 0.5) * half * 1.1, drift = (rnd() - 0.5) * half * 0.5;
-      for (let j = 0; j < 4; j++) add('coin', i + j * this.ahead(5), Math.max(-half * 0.75, Math.min(half * 0.75, lat0 + drift * j)));
+      for (let j = 0; j < 4; j++) {
+        const ci = i + j * this.ahead(5), lat = Math.max(-half * 0.75, Math.min(half * 0.75, lat0 + drift * j));
+        if (nes.some(b => Math.abs(b.i - ci) < this.ahead(9) && Math.abs(b.lat - lat) < 3.2)) continue;
+        add('coin', ci, lat);
+      }
     }
+    for (const b of nes) add('nes', b.i, b.lat);
     const fstep = this.ahead(200);
     for (let i = this.ahead(120); i < N - this.ahead(30); i += fstep) for (const f of [-0.55, -0.18, 0.18, 0.55]) add('fuel', i, f * half * 1.5);
   },
   updatePickups(dt, t) {
     const all = this.cars;
+    // The arrows under the finjans run forward (one shared texture), the fires flicker.
+    if (this.nesKit) {
+      this.nesKit.padTex.offset.y = (this.nesKit.padTex.offset.y - dt * 1.6) % 1;
+      const f = 1 + Math.sin(t / 37) * 0.18 + Math.sin(t / 23) * 0.1;
+      this.nesKit.fireO.opacity = 0.75 + Math.sin(t / 41) * 0.2;
+      this.nesKit.flick = f;
+    }
     for (const p of this.items) {
+      if (p.pad) p.pad.children[0].material.opacity = p.off > 0 ? 0.3 : 0.95;
       if (p.off > 0) { p.off -= dt; if (p.off <= 0) { p.obj.visible = true; p.obj.scale.setScalar(0.01); } continue; }
-      p.obj.rotation.y = t / 380 + p.ph;
-      p.obj.position.y = p.y + Math.sin(t / 300 + p.ph) * 0.18;
+      if (p.kind === 'nes') {
+        // The finjan turns slowly on its fire (it's heavy), the steam rises, the fire dances.
+        p.obj.rotation.y = t / 900 + p.ph;
+        p.obj.position.y = p.y + Math.sin(t / 420 + p.ph) * 0.08;
+        const k = p.obj.children[0];
+        if (k && k.userData.fire) { k.userData.fire.scale.y = this.nesKit.flick; for (const st of k.userData.steam) { st.userData.t = (st.userData.t + dt * 0.7) % 1; st.position.y = 0.55 + st.userData.t * 1.3; st.material.opacity = 0.55 * Math.sin(st.userData.t * Math.PI); st.scale.setScalar(0.35 + st.userData.t * 0.7); } }
+      } else {
+        p.obj.rotation.y = t / 380 + p.ph;
+        p.obj.position.y = p.y + Math.sin(t / 300 + p.ph) * 0.18;
+      }
       if (p.obj.scale.x < 1) p.obj.scale.setScalar(Math.min(1, p.obj.scale.x + dt * 4));
       if (this.phase !== 'race' && this.phase !== 'done') continue;
       for (const c of all) {
         if (Math.abs(c.x - p.x) > 2.6 || Math.abs(c.z - p.z) > 2.6) continue;
-        if (Math.hypot(c.x - p.x, c.z - p.z) > (p.kind === 'coin' ? 2.1 : 2.5)) continue;
-        p.off = p.kind === 'coin' ? 7 : 4;
+        if (Math.hypot(c.x - p.x, c.z - p.z) > (p.kind === 'coin' ? 2.1 : p.kind === 'nes' ? 2.4 : 2.5)) continue;
+        p.off = p.kind === 'coin' ? 7 : p.kind === 'nes' ? 6 : 4;
         p.obj.visible = false;
         if (p.kind === 'coin') this.gotCoin(c, p);
+        else if (p.kind === 'nes') this.gotNes(c, p);
         else this.gotFuel(c, p);
         break;
       }
@@ -193,6 +234,96 @@ const Race = {
     c.rolling = c.isMe ? 1.1 : 0.01;
     if (c.isMe) { Sound.pickup(); this.sparkle(p.x, p.y, p.z, 0xff5a3a); }
     if (c.bot) c.useAt = this.raceT + 1.5 + Math.random() * 4;
+  },
+  // נס על האש: a gulp, and the car leaps: more top speed and push for a moment, and a kick now.
+  gotNes(c, p) {
+    const fresh = !(c.nesT > 0);
+    c.nesT = RACE_NES.t;
+    c.v = Math.max(c.v, 0) + RACE_NES.kick;
+    c.nesN = (c.nesN || 0) + 1;
+    if (c.isMe) {
+      this.nesSound();
+      this.sparkle(p.x, p.y, p.z, 0xff8a2a);
+      this.say(pick(RACE_LINES.nes), 'driver');
+      this.shake = Math.max(this.shake || 0, 0.25);
+      if (fresh) this.nesFlash = 1;
+    } else if (this.me && Math.hypot(c.x - this.me.x, c.z - this.me.z) < 90) this.star(c.x, c.z, pick(RACE_LINES.nesBot));
+  },
+  // A hiss (the pot), two slurps, then the engine roars up.
+  nesSound() {
+    const S = Sound.synth;
+    S.noise(0.16, 0.16, 3800, 'highpass');
+    S.later(110, () => S.tone(240, 0.11, 'sine', 0.13, 560));
+    S.later(220, () => S.tone(280, 0.13, 'sine', 0.13, 680));
+    S.later(330, () => { Sound.boost(); S.tone(85, 1.1, 'sawtooth', 0.07, 300); S.noise(1.0, 0.14, 700, 'lowpass'); });
+  },
+  // The finjan on its little fire: a copper pot with its long handle, the coffee foaming, two
+  // flames and three crossed sticks under it, steam on top, a warm glow. Built once, cloned.
+  nesModel() {
+    const K = this.nesKit = this.nesKit || (() => {
+      const k = {};
+      k.copper = new THREE.MeshStandardMaterial({ color: 0xc8743a, metalness: 0.75, roughness: 0.32, emissive: 0x3a1400, emissiveIntensity: 0.5 });
+      k.wood = new THREE.MeshStandardMaterial({ color: 0x5a3a1e, roughness: 0.9 });
+      k.coffee = new THREE.MeshStandardMaterial({ color: 0x3a1d0a, roughness: 0.25 });
+      k.foam = new THREE.MeshStandardMaterial({ color: 0xc89a62, roughness: 0.8 });
+      k.potG = new THREE.CylinderGeometry(0.4, 0.55, 0.72, 22);
+      k.rimG = new THREE.TorusGeometry(0.41, 0.05, 8, 26);
+      k.discG = new THREE.CircleGeometry(0.38, 22);
+      k.foamG = new THREE.CircleGeometry(0.22, 16);
+      k.spoutG = new THREE.ConeGeometry(0.1, 0.22, 8);
+      k.handleG = new THREE.BoxGeometry(1.0, 0.08, 0.1);
+      k.stickG = new THREE.CylinderGeometry(0.06, 0.07, 1.1, 6);
+      k.fireG = new THREE.ConeGeometry(0.42, 0.75, 10, 1, true);
+      k.fireO = new THREE.MeshBasicMaterial({ color: 0xff6a1a, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      k.fireI = new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      k.steamT = this.softTex('rgba(255,255,255,1)');
+      k.glowT = this.softTex('rgba(255,150,60,1)');
+      // The arrows on the road: three chevrons, orange on dark, running forward.
+      const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128;
+      const g = cv.getContext('2d');
+      for (let r = 0; r < 2; r++) {
+        const y0 = r * 64;
+        g.lineJoin = 'round'; g.lineWidth = 17; g.strokeStyle = 'rgba(60,20,0,.4)';
+        g.beginPath(); g.moveTo(22, y0 + 56); g.lineTo(64, y0 + 18); g.lineTo(106, y0 + 56); g.stroke();
+        g.lineWidth = 11; g.strokeStyle = r ? '#ffc23a' : '#ff7a1a';
+        g.beginPath(); g.moveTo(22, y0 + 56); g.lineTo(64, y0 + 18); g.lineTo(106, y0 + 56); g.stroke();
+      }
+      k.padTex = new THREE.CanvasTexture(cv); k.padTex.wrapS = k.padTex.wrapT = THREE.RepeatWrapping; k.padTex.repeat.set(1, 3);
+      k.padG = new THREE.PlaneGeometry(3.4, 7);
+      k.flick = 1;
+      return k;
+    })();
+    const g = new THREE.Group();
+    const pot = new THREE.Mesh(K.potG, K.copper); pot.castShadow = true; g.add(pot);
+    const rim = new THREE.Mesh(K.rimG, K.copper); rim.rotation.x = Math.PI / 2; rim.position.y = 0.36; g.add(rim);
+    const cof = new THREE.Mesh(K.discG, K.coffee); cof.rotation.x = -Math.PI / 2; cof.position.y = 0.3; g.add(cof);
+    const foam = new THREE.Mesh(K.foamG, K.foam); foam.rotation.x = -Math.PI / 2; foam.position.set(0.05, 0.305, -0.04); g.add(foam);
+    const spout = new THREE.Mesh(K.spoutG, K.copper); spout.rotation.z = -1.1; spout.position.set(0.44, 0.33, 0); g.add(spout);
+    const handle = new THREE.Mesh(K.handleG, K.wood); handle.rotation.z = -0.35; handle.position.set(-0.9, 0.35, 0); g.add(handle);
+    const fire = new THREE.Group(); fire.position.y = -0.62;
+    const fo = new THREE.Mesh(K.fireG, K.fireO); fo.position.y = 0.2; fire.add(fo);
+    const fi = new THREE.Mesh(K.fireG, K.fireI); fi.scale.set(0.5, 0.65, 0.5); fi.position.y = 0.1; fire.add(fi);
+    g.add(fire);
+    for (let i = 0; i < 3; i++) { const s = new THREE.Mesh(K.stickG, K.wood); s.rotation.set(Math.PI / 2 - 0.25, i * 2.1, 0, 'YXZ'); s.position.y = -0.82; g.add(s); }
+    const steam = [];
+    for (let i = 0; i < 3; i++) {
+      const st = new THREE.Sprite(new THREE.SpriteMaterial({ map: K.steamT, color: 0xffffff, transparent: true, depthWrite: false, opacity: 0.4 }));
+      st.userData.t = i / 3; st.position.set((i - 1) * 0.12, 0.6, 0); g.add(st); steam.push(st);
+    }
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: K.glowT, color: 0xffb070, transparent: true, depthWrite: false, opacity: 0.6 }));
+    glow.scale.setScalar(4.2); glow.position.y = -0.2; g.add(glow);
+    g.userData.fire = fire; g.userData.steam = steam;
+    g.scale.setScalar(1.6);
+    return g;
+  },
+  nesPad(s, x, z, y) {
+    const K = this.nesKit, holder = new THREE.Group();
+    const m = new THREE.Mesh(K.padG, new THREE.MeshBasicMaterial({ map: K.padTex, transparent: true, opacity: 0.95, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }));
+    // Flat on the road, the arrows pointing the way the race goes.
+    m.rotation.set(-Math.PI / 2, 0, -Math.PI / 2);
+    holder.add(m);
+    holder.position.set(x, y, z); holder.rotation.y = -s.a;
+    return holder;
   },
   sparkle(x, y, z, color) {
     for (let i = 0; i < 6; i++) this.puff(x + (Math.random() - 0.5), z + (Math.random() - 0.5), color, 0.5, y);
@@ -520,7 +651,10 @@ const Race = {
   // ---------- ranks and the garage ----------
   myRank() { return String(typeof playerRank === 'function' ? playerRank() : (G.state && G.state.rank) || 'rabat'); },
   rankIdx(r) { const i = RACE_RANKS.indexOf(String(r)); return i < 0 ? 0 : i; },
-  unlocked(type) { return this.rankIdx(this.myRank()) >= this.rankIdx(type.unlock); },
+  // A car is yours by rank, or because you bought it (G.state.raceOwned, for good, whatever the rank).
+  rankOpen(type) { return this.rankIdx(this.myRank()) >= this.rankIdx(type.unlock); },
+  owned(type) { return !!(G.state && Array.isArray(G.state.raceOwned) && G.state.raceOwned.includes(type.id)); },
+  unlocked(type) { return this.rankOpen(type) || this.owned(type); },
   myTier() { return RACE_TIERS.filter(t => this.rankIdx(this.myRank()) >= this.rankIdx(t.unlock)).length - 1; },
   bestCar() { const open = RACE_CARS.filter(t => this.unlocked(t)); return open[open.length - 1] || RACE_CARS[0]; },
   // What opened since the last visit to the garage (a promotion in between), remembered in the
@@ -535,8 +669,9 @@ const Race = {
   },
   // Three rivals' cars: mostly your own tier, some from the one below, and now and then one
   // from the tier above, to chase. Different cars where there are enough, never three alike.
+  // A car bought above the rank brings the rivals up to one tier below it: still an edge, not a walkover.
   botCars(n) {
-    const tier = this.myTier(), count = {}, out = [];
+    const tier = Math.max(this.myTier(), this.myType ? this.myType.tier - 1 : 0), count = {}, out = [];
     const use = (c) => { count[c.id] = (count[c.id] || 0) + 1; return c; };
     if (this.myType) use(this.myType);
     for (let i = 0; i < n; i++) {
@@ -581,8 +716,20 @@ const Race = {
     // The seat-belt shield: a bubble around the car while it lasts.
     const bubble = new THREE.Mesh(new THREE.SphereGeometry(type.len * 0.62, 20, 14), new THREE.MeshBasicMaterial({ color: 0x6ad0ff, transparent: true, opacity: 0.22, depthWrite: false }));
     bubble.position.y = 1; bubble.scale.y = 0.7; bubble.visible = false; root.add(bubble);
+    // The exhaust flames of a נס על האש burst: two cones out the back, flickering.
+    const F = this.flameKit = this.flameKit || {
+      geo: new THREE.ConeGeometry(0.3, 1.8, 10, 1, true),
+      outer: new THREE.MeshBasicMaterial({ color: 0xff5a14, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+      inner: new THREE.MeshBasicMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+    };
+    const flame = new THREE.Group();
+    for (const side of [-1, 1]) {
+      const o = new THREE.Mesh(F.geo, F.outer); o.rotation.z = Math.PI / 2; o.position.set(-type.len / 2 - 0.85, 0.55, side * 0.42); flame.add(o);
+      const i = new THREE.Mesh(F.geo, F.inner); i.rotation.z = Math.PI / 2; i.scale.set(0.45, 0.55, 0.45); i.position.set(-type.len / 2 - 0.45, 0.55, side * 0.42); flame.add(i);
+    }
+    flame.visible = false; tilt.add(flame);
     this.scene.add(root);
-    return { root, tilt, bubble };
+    return { root, tilt, bubble, flame };
   },
 
   // ---------- UI ----------
@@ -593,7 +740,8 @@ const Race = {
     u.id = 'race';
     u.innerHTML = `<div class="rc-hud hidden"><div class="rc-pos"></div><div class="rc-lap"></div><div class="rc-time"></div><div class="rc-spd"></div>
       <div class="rc-coins"></div><canvas class="rc-mini" width="150" height="150"></canvas>
-      <button class="rc-boost"><span class="rc-item"></span><span class="rc-lbl">🗣️ צעקה</span><i><b></b></i></button><div class="rc-say hidden"></div><div class="rc-splat hidden"></div></div>
+      <button class="rc-boost"><span class="rc-item"></span><span class="rc-lbl">🗣️ צעקה</span><i><b></b></i></button><div class="rc-say hidden"></div><div class="rc-splat hidden"></div>
+      <div class="rc-streak"></div><div class="rc-nes hidden"><span class="rc-nes-i">☕🔥</span><b>נס על האש!</b><i><s></s></i></div></div>
       <div class="rc-cd hidden"></div><div class="rc-panel hidden"></div>
       <button class="rc-x" title="יציאה" aria-label="יציאה מהמירוץ">✕</button>`;
     document.body.appendChild(u);
@@ -623,21 +771,26 @@ const Race = {
     // The garage: a column per rank, the locked ones greyed out; what a promotion just opened glows.
     const rank = this.myRank(), fresh = this.newlyUnlocked(), thumbs = this.thumbs || {};
     const bar = (v) => `${Math.round(Math.max(4, Math.min(100, v * 100)))}%`;
+    const money = G.state.money || 0, bought = this.justBought;
+    this.justBought = null;
     const car = (c) => {
-      const open = this.unlocked(c), isNew = fresh.includes(c.id);
-      return `<button class="rc-car ${open ? '' : 'locked'} ${isNew ? 'new' : ''}" data-id="${c.id}" ${open ? '' : 'aria-disabled="true"'}>
-        ${isNew ? '<em class="rc-new">חדש!</em>' : ''}<img src="${thumbs[c.id] || `assets/race/car_${c.model}.webp`}" alt=""><b>${open ? '' : '🔒 '}${c.name}</b><i>${open ? c.desc : `נפתח בדרגת ${RANKS[c.unlock]}`}</i>
+      const open = this.unlocked(c), isNew = fresh.includes(c.id) || bought === c.id, mine = open && !this.rankOpen(c);
+      // Locked: the rank that opens it, and the price to have it now (dimmer when it's out of reach).
+      const buy = open ? '' : `<span class="rc-buy ${money < c.price ? 'short' : ''}">🔑 לקנות · ${c.price} ₪</span>`;
+      return `<button class="rc-car ${open ? '' : 'locked'} ${isNew ? 'new' : ''}" data-id="${c.id}" ${open ? '' : `aria-label="${c.name}: ${`נפתח בדרגת ${RANKS[c.unlock]}`}, או לקנות ב-${c.price} ₪"`}>
+        ${isNew ? '<em class="rc-new">חדש!</em>' : mine ? '<em class="rc-own">🔑 שלך</em>' : ''}<img src="${thumbs[c.id] || `assets/race/car_${c.model}.webp`}" alt=""><b>${open ? '' : '🔒 '}${c.name}</b><i>${open ? c.desc : `נפתח בדרגת ${RANKS[c.unlock]}`}</i>${buy}
         <span class="rc-stat">מהירות<s style="--v:${bar((c.top - 24) / 21)}"></s></span><span class="rc-stat">תאוצה<s style="--v:${bar((c.acc - 8) / 13)}"></s></span><span class="rc-stat">משקל<s style="--v:${bar(c.mass / 1.9)}"></s></span></button>`;
     };
     const tiers = RACE_TIERS.map(t => { const open = this.rankIdx(rank) >= this.rankIdx(t.unlock); return `<div class="rc-tier ${open ? '' : 'locked'}"><div class="rc-th">${open ? '' : '🔒 '}${rankIcon(t.unlock)} <b>${t.name}</b><i>${open ? t.desc : `מדרגת ${RANKS[t.unlock]}`}</i></div>${RACE_CARS.filter(c => c.tier === t.tier).map(car).join('')}</div>`; }).join('');
     const p = this.panel(`<h2>${map.emoji} ${map.name} · ${RACE_LEVELS[this.lv].stars} ${RACE_LEVELS[this.lv].name}</h2>
-      <p class="rc-sub">את[ה/] מפקד[/ת] הנסיעה: את[ה/] נותנ[/ת] פקודות (חצים / ג'ויסטיק), הנהג מבצע. 3 סיבובים. 🪙 מטבעות = מהירות · ⛽ ג'ריקן = הפתעה (E / 🗣️ להשתמש). מותר להתנגש 😈</p>
-      <p class="rc-rank">${rankIcon(rank)} <span>הדרגה שלך: <b>${RANKS[rank] || rank}</b></span> · <span>${this.myTier() < RACE_TIERS.length - 1 ? `הרכבים הבאים נפתחים בדרגת ${RANKS[RACE_TIERS[this.myTier() + 1].unlock]}` : 'כל המוסך פתוח 🔑'}</span>${this.net ? '' : ' · <span>המפקדים מהפלגה נוהגים ברכבים מהרמה שלך (ולפעמים מעליה 😈)</span>'}</p>
+      <p class="rc-sub">את[ה/] מפקד[/ת] הנסיעה: את[ה/] נותנ[/ת] פקודות (חצים / ג'ויסטיק), הנהג מבצע. 3 סיבובים. 🪙 מטבעות = מהירות · ⛽ ג'ריקן = הפתעה (E / 🗣️ להשתמש) · ☕🔥 נס על האש = טורבו מיד. מותר להתנגש 😈</p>
+      <p class="rc-rank">${rankIcon(rank)} <span>הדרגה שלך: <b>${RANKS[rank] || rank}</b></span> · <span class="rc-wallet">💰 בארנק: <b>${money} ₪</b></span> · <span>${this.myTier() < RACE_TIERS.length - 1 ? `הרכבים הבאים נפתחים בדרגת ${RANKS[RACE_TIERS[this.myTier() + 1].unlock]}` : 'כל המוסך פתוח 🔑'}</span>${this.net ? '' : ' · <span>המפקדים מהפלגה נוהגים ברכבים מהרמה שלך (ולפעמים מעליה 😈)</span>'}</p>
       <div class="rc-tiers">${tiers}</div>
       ${this.net ? '' : '<div class="rc-row"><button class="btn ghost small" data-m="maps">↩ מפה אחרת</button></div>'}`);
     p.querySelectorAll('.rc-car').forEach(b => b.addEventListener('click', () => this.chose(RACE_CARS.find(c => c.id === b.dataset.id))));
     const back = p.querySelector('[data-m=maps]');
     if (back) back.addEventListener('click', () => this.mapScreen());
+    if (bought) { const el = p.querySelector(`.rc-car[data-id="${bought}"]`); if (el) setTimeout(() => el.scrollIntoView({ block: 'nearest' }), 50); }
     if (fresh.length) {
       Sound.fanfare();
       this.toast(`🔓 ${fresh.length > 1 ? 'רכבים חדשים במוסך' : 'רכב חדש במוסך'}: ${fresh.map(id => RACE_CARS.find(c => c.id === id).name).join(', ')}!`, 'ach');
@@ -650,7 +803,7 @@ const Race = {
   },
   async chose(type) {
     if (!type) return;
-    if (!this.unlocked(type)) { Sound.bad(); this.toast(`🔒 ${type.name} — נפתח בדרגת ${RANKS[type.unlock]}`, 'bad'); return; }
+    if (!this.unlocked(type)) { this.buy(type); return; }
     this.myType = type;
     Sound.pickup();
     if (this.net) { this.lobby(); return; }
@@ -660,6 +813,45 @@ const Race = {
       <div class="rc-row"><button class="btn" data-m="friends">👥 להזמין את כל מי שמחובר (${Multi.peers.length})</button><button class="btn ghost" data-m="bots">🤖 נגד מפקדים מהפלגה</button></div>`);
     p.querySelector('[data-m=friends]').addEventListener('click', () => { this.net = { id: Date.now(), host: true, startAt: performance.now() + 20000, map: this.mapId, lv: this.lv }; this.lobby(); });
     p.querySelector('[data-m=bots]').addEventListener('click', () => this.startSolo());
+  },
+
+  // A locked car: not enough shekels, a friendly word with what's missing; enough, a confirm.
+  buy(type) {
+    const money = G.state.money || 0;
+    if (money < type.price) {
+      Sound.bad();
+      this.toast(`💸 ${type.name} עולה ${type.price} ₪ ויש לך ${money} ₪. חסרים עוד <b>${type.price - money} ₪</b> — עוד כמה מירוצים טובים וזה מסתדר 😉`, 'bad');
+      return;
+    }
+    Sound.click();
+    const u = $('#race');
+    u.querySelectorAll('.rc-confirm').forEach(x => x.remove());
+    const box = document.createElement('div');
+    box.className = 'rc-confirm';
+    box.innerHTML = fmt(`<div class="rc-cf"><img src="${(this.thumbs || {})[type.id] || `assets/race/car_${type.model}.webp`}" alt="">
+      <h3>לקנות את ${type.name}?</h3>
+      <p>${type.price} ₪ מהארנק (יש לך ${money} ₪, יישארו ${money - type.price} ₪).<br>שלך לתמיד — גם בלי דרגת ${RANKS[type.unlock]}.</p>
+      <div class="rc-row"><button class="btn" data-m="yes">🔑 לקנות ב-${type.price} ₪</button><button class="btn ghost" data-m="no">לא עכשיו</button></div></div>`);
+    u.appendChild(box);
+    const close = () => box.remove();
+    box.addEventListener('click', (e) => { if (e.target === box) close(); });
+    box.querySelector('[data-m=no]').addEventListener('click', () => { Sound.click(); close(); });
+    box.querySelector('[data-m=yes]').addEventListener('click', () => {
+      close();
+      if ((G.state.money || 0) < type.price || this.phase !== 'pick') return;
+      G.state.money -= type.price;
+      G.state.raceOwned = [...new Set([...(Array.isArray(G.state.raceOwned) ? G.state.raceOwned : []), type.id])];
+      // Seen already: no "new car in the garage" for what you just bought.
+      const seen = Array.isArray(G.state.raceSeen) ? G.state.raceSeen : RACE_CARS.filter(t => this.rankOpen(t)).map(t => t.id);
+      G.state.raceSeen = [...new Set([...seen, type.id])];
+      G.state.stats = G.state.stats || {}; G.state.stats.purchases = (G.state.stats.purchases || 0) + 1;
+      Game.save();
+      Sound.coin(); setTimeout(() => Sound.fanfare(), 180);
+      this.justBought = type.id;
+      this.pickScreen();
+      this.toast(`🔑 ${type.name} שלך! שילמת ${type.price} ₪ · נשארו ${G.state.money} ₪`, 'ach');
+    });
+    box.querySelector('[data-m=yes]').focus();
   },
 
   // ---------- grid ----------
@@ -736,7 +928,7 @@ const Race = {
     if (!this.active || !this.net || !this.me || !this.myType) return null;
     const c = this.me;
     const ev = (this.events || []).filter(e => performance.now() - e.at < 4000).slice(-4).map(({ at, ...e }) => e);
-    return { id: this.net.id, host: !!this.net.host, map: this.mapId, lv: this.lv, car: this.myCar().id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, a: Math.round(c.a * 100) / 100, v: Math.round(c.v), lap: c.lap, pr: Math.round(this.progress(c)), fin: c.fin ? Math.round(c.fin * 100) / 100 : 0, sh: c.shieldT > 0 ? 1 : 0, ev, cd: this.net.host && this.phase === 'lobby' ? Math.round((this.net.startAt - performance.now()) / 100) / 10 : 0 };
+    return { id: this.net.id, host: !!this.net.host, map: this.mapId, lv: this.lv, car: this.myCar().id, x: Math.round(c.x * 10) / 10, z: Math.round(c.z * 10) / 10, a: Math.round(c.a * 100) / 100, v: Math.round(c.v), lap: c.lap, pr: Math.round(this.progress(c)), fin: c.fin ? Math.round(c.fin * 100) / 100 : 0, sh: c.shieldT > 0 ? 1 : 0, bo: c.nesT > 0 ? 1 : 0, ev, cd: this.net.host && this.phase === 'lobby' ? Math.round((this.net.startAt - performance.now()) / 100) / 10 : 0 };
   },
   // In the world: a friend's race invite pops up once.
   watch() {
@@ -809,8 +1001,10 @@ const Race = {
     c.idx = near.i;
     c.off = near.d > this.half + 0.5;
     // Every coin is a little more top speed (ten at most).
-    let top = T.top * (c.skill || 1) * (1 + c.coins * 0.012) * (c.off ? 0.55 : 1) * (c.boostT > 0 ? (c.turbo ? 1.4 : 1.3) : 1);
-    if (c.thr > 0) c.v += c.thr * T.acc * (c.boostT > 0 ? 1.6 : 1) * Math.max(0, 1 - c.v / top) * dt;
+    // A shout or a turbo, or the coffee (the strongest, and they don't stack).
+    const nes = c.nesT > 0;
+    let top = T.top * (c.skill || 1) * (1 + c.coins * 0.012) * (c.off ? 0.55 : 1) * Math.max(c.boostT > 0 ? (c.turbo ? 1.4 : 1.3) : 1, nes ? RACE_NES.top : 1);
+    if (c.thr > 0 || (nes && !c.thr && !(c.slipT > 0))) c.v += Math.max(c.thr, nes ? 1 : 0) * T.acc * Math.max(c.boostT > 0 ? 1.6 : 1, nes ? RACE_NES.acc : 1) * Math.max(0, 1 - c.v / top) * dt;
     else if (c.thr < 0) c.v = Math.max(-8, c.v - (c.v > 0 ? 24 : 7) * dt);
     else c.v -= c.v * 0.6 * dt;
     if (c.v > top) c.v -= (c.v - top) * 2.2 * dt;
@@ -846,6 +1040,7 @@ const Race = {
     c.pitch = Math.atan2(W.ground(c.x + fx, c.z + fz) - W.ground(c.x - fx, c.z - fz), 3.2);
     c.boostT = Math.max(0, c.boostT - dt);
     if (c.boostT <= 0) c.turbo = false;
+    c.nesT = Math.max(0, (c.nesT || 0) - dt);
     c.shieldT = Math.max(0, c.shieldT - dt);
     c.boost = Math.min(1, c.boost + dt / 9);
     c.bumpT = Math.max(0, c.bumpT - dt);
@@ -856,7 +1051,9 @@ const Race = {
   // Bots aim a little down the road, at their own lane, and lift on the sharp bends.
   botInput(c) {
     const S = this.samples, N = S.length, s = S[(c.idx + this.ahead(16)) % N];
-    const tx = s.x - Math.sin(s.a) * c.lane, tz = s.z + Math.cos(s.a) * c.lane;
+    // A finjan coming up: some go for it (the better the driver, the likelier), some stay on line.
+    const nes = c.bot ? this.nesAhead(c) : null, lane = nes ? nes.lat : c.lane;
+    const tx = s.x - Math.sin(s.a) * lane, tz = s.z + Math.cos(s.a) * lane;
     let d = Math.atan2(tz - c.z, tx - c.x) - c.a;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     // How sharp the bend ahead is (looking further the faster it goes), and how fast this car
@@ -869,6 +1066,19 @@ const Race = {
     if (this.me && !this.me.fin && this.progress(c) - this.progress(this.me) > this.ahead(70)) thr = Math.min(thr, 0.4);
     if (c.boost >= 1 && Math.random() < 0.004 && this.phase === 'race') { c.boost = 0; c.boostT = 1.2; }
     return { steer: Math.max(-1, Math.min(1, d * 2.4)), thr };
+  },
+  nesAhead(c) {
+    const N = this.samples.length;
+    for (const p of this.items) {
+      if (p.kind !== 'nes' || p.off > 0) continue;
+      const d = (p.i - c.idx + N) % N;
+      if (d < this.ahead(4) || d > this.ahead(60)) continue;
+      c.nesWant = c.nesWant || {};
+      const key = p.i + ':' + c.lap;
+      if (c.nesWant[key] == null) c.nesWant[key] = Math.random() < 0.35 + ((c.skill || 0.85) - 0.8) * 2;
+      return c.nesWant[key] ? p : null;
+    }
+    return null;
   },
   // How far along the race a car is. The grid is just behind the line, so until a car first
   // crosses it, it's at the end of "lap minus one". A friend's car reports its own.
@@ -939,7 +1149,7 @@ const Race = {
         r.tag = Scene3D.label(`🗣️ ${p.name}`, { size: 0.9 }); r.tag.position.y = 3.4; r.obj.root.add(r.tag);
         this.remoteCars.set(p.peer, r);
       }
-      r.tx = p.race.x; r.tz = p.race.z; r.ta = p.race.a; r.v = p.race.v; r.lap = p.race.lap; r.pr = p.race.pr; r.fin = p.race.fin; r.sh = p.race.sh;
+      r.tx = p.race.x; r.tz = p.race.z; r.ta = p.race.a; r.v = p.race.v; r.lap = p.race.lap; r.pr = p.race.pr; r.fin = p.race.fin; r.sh = p.race.sh; r.nesT = p.race.bo ? 1 : 0;
       r.idx = this.nearest(r.tx, r.tz, r.idx).i;
       out.push(r);
     }
@@ -981,7 +1191,7 @@ const Race = {
   draw(dt, t) {
     const all = [...this.cars, ...this.remoteCars.values()];
     for (const c of all) {
-      const { root, tilt, bubble } = c.obj;
+      const { root, tilt, bubble, flame } = c.obj;
       root.position.set(c.x, c.y || 0, c.z);
       root.rotation.y = -c.a;
       root.rotation.z = c.pitch || 0;
@@ -993,13 +1203,16 @@ const Race = {
       tilt.position.y = (c.off ? Math.abs(Math.sin(t / 45)) * 0.12 : Math.abs(Math.sin(t / 70)) * 0.03) * sp + Math.max(0, bump) * 0.6;
       bubble.visible = c.shieldT > 0 || !!c.sh;
       if (bubble.visible) bubble.material.opacity = 0.16 + Math.sin(t / 90) * 0.08;
+      flame.visible = c.nesT > 0;
+      if (flame.visible) { const k = 0.75 + Math.random() * 0.5, fade = Math.min(1, c.nesT / 0.35); flame.scale.set(0.6 + fade * k * 0.9, 1, 1); }
       // Dust behind: thick off the road, a puff when drifting, flames on a boost.
       c.dustT = (c.dustT || 0) - dt;
       const drift = Math.abs(c.steer || 0) > 0.7 && c.v > 20;
-      if ((c.off || drift || c.boostT > 0) && c.v > 6 && c.dustT <= 0) {
-        c.dustT = 0.04;
+      if ((c.off || drift || c.boostT > 0 || c.nesT > 0) && c.v > 6 && c.dustT <= 0) {
+        c.dustT = c.nesT > 0 ? 0.025 : 0.04;
         const ground = this.W.map.id === 'hatzor' || this.W.map.forest ? 0xc8b49a : 0xe6d2a6;
-        this.puff(c.x - Math.cos(c.a) * c.type.len * 0.5, c.z - Math.sin(c.a) * c.type.len * 0.5, c.boostT > 0 ? (c.turbo ? 0x6ad0ff : 0xff9a3c) : ground, c.off ? 1.6 : 1, (c.y || 0) + 0.5);
+        const col = c.nesT > 0 ? (Math.random() < 0.5 ? 0xff6a1a : 0xffc04a) : c.boostT > 0 ? (c.turbo ? 0x6ad0ff : 0xff9a3c) : ground;
+        this.puff(c.x - Math.cos(c.a) * c.type.len * (c.nesT > 0 ? 0.75 : 0.5), c.z - Math.sin(c.a) * c.type.len * (c.nesT > 0 ? 0.75 : 0.5), col, c.off ? 1.6 : c.nesT > 0 ? 1.3 : 1, (c.y || 0) + 0.5);
         if (drift && c.isMe && Math.random() < 0.05) Sound.skid();
       }
     }
@@ -1017,7 +1230,9 @@ const Race = {
     // The chase camera: behind and above, wider and shakier as it speeds up.
     const c = this.me, W = this.W;
     if (c) {
-      const cam = this.camera, back = 9, up = 4.6;
+      // The coffee kicks the camera back and the view wide, easing out as the burst ends.
+      const kick = c.nesT > 0 ? Math.min(1, c.nesT / 0.5) : 0;
+      const cam = this.camera, back = 9 + kick * 2.2, up = 4.6 - kick * 0.6;
       const w = this.renderSize();
       if (cam.aspect !== w) { cam.aspect = w; }
       const cy = c.y || 0;
@@ -1029,7 +1244,7 @@ const Race = {
       this.shake = Math.max(0, (this.shake || 0) - dt * 1.5);
       if (this.shake && Settings.v.shake) cam.position.add(new THREE.Vector3((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake));
       cam.lookAt(c.x + Math.cos(c.a) * 6, cy + 1.2, c.z + Math.sin(c.a) * 6);
-      cam.fov = (w < 1 ? 74 : 62) + Math.min(1, Math.abs(c.v) / 35) * 12 + (c.boostT > 0 ? (c.turbo ? 10 : 6) : 0);
+      cam.fov = (w < 1 ? 74 : 62) + Math.min(1, Math.abs(c.v) / 35) * 12 + Math.max(c.boostT > 0 ? (c.turbo ? 10 : 6) : 0, kick * 20);
       cam.updateProjectionMatrix();
       const d = this.sun.userData.dir;
       this.sun.position.set(c.x + d.x * 120, cy + d.y * 120, c.z + d.z * 120);
@@ -1097,6 +1312,14 @@ const Race = {
     b.classList.toggle('ready', c.boost >= 1 || !!c.item);
     b.querySelector('b').style.width = `${Math.round(c.boost * 100)}%`;
     $('#t-act').textContent = c.item ? c.item.icon : '🗣️';
+    // The coffee: speed lines round the screen, the badge with what's left of it, a hot speedometer.
+    const nes = c.nesT > 0, ne = h.querySelector('.rc-nes');
+    h.querySelector('.rc-streak').classList.toggle('on', nes);
+    h.querySelector('.rc-spd').classList.toggle('hot', nes);
+    if (nes) {
+      if (ne.classList.contains('hidden') || this.nesFlash) { ne.classList.remove('hidden', 'pop'); void ne.offsetWidth; ne.classList.add('pop'); this.nesFlash = 0; }
+      ne.querySelector('s').style.width = `${Math.round(c.nesT / RACE_NES.t * 100)}%`;
+    } else ne.classList.add('hidden');
     const sp = h.querySelector('.rc-splat');
     this.splatT = Math.max(0, (this.splatT || 0) - 1 / 30);
     sp.classList.toggle('hidden', !(this.splatT > 0));
@@ -1106,6 +1329,9 @@ const Race = {
     g.clearRect(0, 0, 150, 150);
     g.strokeStyle = 'rgba(40,40,44,.85)'; g.lineWidth = 6; g.lineJoin = 'round';
     g.beginPath(); S.forEach((s, i) => (i ? g.lineTo(ox(s.x), oz(s.z)) : g.moveTo(ox(s.x), oz(s.z)))); g.closePath(); g.stroke();
+    // The finjans still waiting for you, as little orange marks.
+    g.fillStyle = '#ff7a1a';
+    for (const p of this.items) if (p.kind === 'nes' && !(p.off > 0)) g.fillRect(ox(p.x) - 2.5, oz(p.z) - 2.5, 5, 5);
     for (const o of st) { g.fillStyle = o === c ? '#f2c12e' : o.ghost ? '#4fc3f7' : '#e74c3c'; g.beginPath(); g.arc(ox(o.x), oz(o.z), o === c ? 5 : 4, 0, 7); g.fill(); }
   },
   say(text, who) {

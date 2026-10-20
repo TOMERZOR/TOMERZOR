@@ -26,9 +26,9 @@ html, body {
   user-select: none; -webkit-user-select: none;
   touch-action: none;
 }
-canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; cursor: grab; touch-action: none; }
+canvas#world { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; cursor: grab; touch-action: none; }
 canvas#world:active { cursor: grabbing; }
-canvas#overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; }
+canvas#overlay { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; pointer-events: none; }
 .hidden { display: none !important; }
 button { font-family: inherit; }
 
@@ -216,7 +216,9 @@ body.boss-fight .boss-hud { top: max(8px, env(safe-area-inset-top)); width: min(
 
 /* ---------- Screens ---------- */
 .screen {
-  position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center;
+  /* inset 0 alone left a dark strip at the bottom on iPhones after turning to portrait (the
+     page kept the landscape height); the large viewport height always reaches the bottom. */
+  position: fixed; inset: 0; height: 100vh; height: 100lvh; bottom: auto; min-height: 100%; display: flex; align-items: flex-start; justify-content: center;
   background-size: cover; background-position: center; overflow-y: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch;
 }
 .screen:empty { display: none; }

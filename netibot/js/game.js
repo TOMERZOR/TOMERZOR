@@ -63,6 +63,9 @@ const Game = {
     this.bindInput();
     this.resize();
     window.addEventListener('resize', () => this.resize());
+    // iPhones settle their new size a moment after turning the phone; size again then, and
+    // scroll back to the top so the page doesn't stay at the old height with a gap below.
+    window.addEventListener('orientationchange', () => { for (const ms of [120, 450, 900]) setTimeout(() => { window.scrollTo(0, 0); this.resize(); }, ms); });
     const saveNow = () => { if (G.running && G.state) this.save(); };
     window.addEventListener('pagehide', saveNow);
     document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });

@@ -30,7 +30,7 @@ final class Subscription: ObservableObject {
         trialLeft = UserDefaults.standard.object(forKey: "trialLeft") as? Int ?? Self.trialQuestions
         // Renewals, refunds and purchases made on another device arrive here.
         updates = Task.detached { [weak self] in
-            for await result in Transaction.updates {
+            for await result in StoreKit.Transaction.updates {
                 if case .verified(let transaction) = result { await transaction.finish() }
                 await self?.refresh()
             }
@@ -45,8 +45,8 @@ final class Subscription: ObservableObject {
 
     /// Reads the active subscription (the person's own, or shared by family) from the App Store.
     func refresh() async {
-        var active: Transaction?
-        for await result in Transaction.currentEntitlements {
+        var active: StoreKit.Transaction?
+        for await result in StoreKit.Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
                transaction.productID == Self.productID,
                transaction.revocationDate == nil {

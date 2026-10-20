@@ -1117,7 +1117,7 @@ const ShooterGame = {
     else if (p.isMe) {
       this.myShots.push(shot);
       // A guest sees its own hit at once (and what it should take off); the host decides.
-      if (hit.who) { this.hm = 0.25; this.hmKill = false; Sound.synth.tone(hit.head ? 2400 : 1500, 0.05, 'triangle', hit.head ? 0.12 : 0.08); this.dmgNum(hit, this.dmgCalc(hit.who, W.dmg, !!hit.head).hp, !!hit.head); }
+      if (hit.who) { this.hm = 0.25; this.hmKill = false; Sound.synth.tone(hit.head ? 2400 : 1500, 0.05, 'triangle', hit.head ? 0.12 : 0.08); this.dmgNum(hit, this.dmgCalc(hit.who, W.dmg, !!hit.head).hp, !!hit.head, hit.who); }
     }
     // Everyone near hears it (the bots learn where you are).
     this.heard(p);
@@ -1421,21 +1421,33 @@ const ShooterGame = {
     }
     for (const b of this.ps) if (b.bot && b.alive && Math.hypot(b.x - x, b.z - z) < 20 && owner) b.know = { x: owner.x, z: owner.z, t: this.t, who: owner };
   },
-  // A number floating up from where you hit someone (yellow; red and bigger in the head).
-  dmgNum(at, dmg, head) {
-    const v = Math.round(dmg);
-    if (v < 1 || !at) return;
-    const t = this.canvasTex(128, 64, (g) => {
-      g.font = `900 ${head ? 50 : 42}px Rubik, Arial`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'ltr';
-      g.lineWidth = 7; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(`-${v}`, 64, 34);
-      g.fillStyle = head ? '#ff3a2a' : '#ffd23f'; g.fillText(`-${v}`, 64, 34);
-    });
-    const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false }));
-    m.renderOrder = 10;
-    m.position.set(at.x + (Math.random() - 0.5) * 0.3, at.y + 0.15, at.z + (Math.random() - 0.5) * 0.3);
-    this.scene.add(m);
-    this.nums.push({ m, t: 0, head });
-    if (this.nums.length > 14) { const o = this.nums.shift(); this.scene.remove(o.m); o.m.material.map.dispose(); o.m.material.dispose(); }
+  // What a hit took off, on the screen where it landed: a number that jumps up and fades
+  // (yellow; red and bigger in the head), and under the crosshair the total you've taken off
+  // the same soldier in a row (it resets two seconds after you stop hitting him).
+  dmgNum(at, dmg, head, who = null) {
+    const v = Math.round(dmg), root = this.el && this.el.root;
+    if (v < 1 || !at || !root) return;
+    const q = new THREE.Vector3(at.x, at.y, at.z).project(this.camera);
+    const W = root.clientWidth || innerWidth, H = root.clientHeight || innerHeight;
+    const on = q.z < 1 && Math.abs(q.x) < 1.1 && Math.abs(q.y) < 1.1;
+    const x = on ? (q.x + 1) / 2 * W : W / 2, y = on ? (1 - q.y) / 2 * H : H / 2;
+    const n = document.createElement('b');
+    n.className = 'sh-dn' + (head ? ' head' : '');
+    n.textContent = `-${v}`; n.dir = 'ltr';
+    n.style.left = `${Math.round(x + 22 + (Math.random() - 0.5) * 26)}px`;
+    n.style.top = `${Math.round(y - 18 + (Math.random() - 0.5) * 16)}px`;
+    root.appendChild(n);
+    setTimeout(() => n.remove(), 950);
+    const T = this.dmgTot;
+    if (T && T.who === who && who && this.t - T.at < 2) { T.sum += v; T.n++; T.at = this.t; }
+    else this.dmgTot = { who, sum: v, n: 1, at: this.t };
+    const e = this.el.dt;
+    if (e) {
+      const D = this.dmgTot, name = D.who && D.who.name ? `<small>${esc(D.who.name)}</small>` : '';
+      e.innerHTML = `${name}<bdi dir="ltr">-${D.sum}</bdi>${D.who && D.who.hp <= 0 ? ' 💀' : ''}`;
+      e.classList.toggle('show', D.n > 1 || head);
+      e.classList.remove('pop'); void e.offsetWidth; e.classList.add('pop');
+    }
   },
 
   // ---------- damage, deaths, rounds (the referee) ----------
@@ -1452,7 +1464,7 @@ const ShooterGame = {
     const c = this.dmgCalc(v, base, head), dmg = c.hp;
     v.armor = Math.max(0, (v.armor || 0) - c.ar);
     v.hp -= dmg; v.hurtAt = this.t;
-    if (from.isMe && from !== v) this.dmgNum(at || { x: v.x, y: v.y + 1.3, z: v.z }, dmg, head);
+    if (from.isMe && from !== v) this.dmgNum(at || { x: v.x, y: v.y + 1.3, z: v.z }, dmg, head, v);
     const id = this.seq++;
     this.hits.push({ id, v: v.i, a: from.i, d: Math.round(dmg), hs: head ? 1 : 0, at: performance.now() });
     this.onHit(v, from, dmg, head);
@@ -2246,7 +2258,7 @@ const ShooterGame = {
       <div class="sh-board ar-chip"><span class="sh-b"></span><span class="sh-mid"><b class="sh-rd"></b><i class="sh-t"></i></span><span class="sh-r"></span></div>
       <div class="sh-feed"></div>
       <div class="sh-vig"></div><div class="sh-dirs"></div>
-      <div class="sh-cross"><i></i><i></i><i></i><i></i></div><div class="sh-hm">✕</div>
+      <div class="sh-cross"><i></i><i></i><i></i><i></i></div><div class="sh-hm">✕</div><div class="sh-dt"></div>
       <div class="sh-hp ar-chip"><span>❤</span><i><b></b></i><em></em></div>
       <div class="sh-ar ar-chip"><span>🛡</span><i><b></b></i><em></em><u class="sh-helm">⛑️</u><u class="sh-nd"></u></div>
       <div class="sh-buy"><div class="sh-bh"><b>🛒 קניות</b> <span class="sh-cash"></span> <i class="sh-bt"></i></div><div class="sh-bi">${SH_BUY.map(it => `<button class="sh-bb pe" data-b="${it.id}">${G.touch ? '' : `<kbd>${it.n}</kbd>`}<img src="${it.img}" alt=""><b>${it.name}</b><em>💵 ${it.price}</em><small>${it.tip}</small></button>`).join('')}</div></div>
@@ -2256,7 +2268,7 @@ const ShooterGame = {
     </div>`);
     const h = $('#arcade .sh');
     const q = (s) => h.querySelector(s);
-    this.el = { root: h, b: q('.sh-b'), r: q('.sh-r'), rd: q('.sh-rd'), t: q('.sh-t'), feed: q('.sh-feed'), vig: q('.sh-vig'), dirs: q('.sh-dirs'), cross: q('.sh-cross'), hm: q('.sh-hm'), hp: q('.sh-hp b'), hpn: q('.sh-hp em'), hpBox: q('.sh-hp'), ammo: q('.sh-ammo b'), res: q('.sh-ammo small'), wn: q('.sh-wn'), swap: q('.sh-swap'), ads: q('.sh-ads'), nade: q('.sh-nade'), ar: q('.sh-ar b'), arn: q('.sh-ar em'), arBox: q('.sh-ar'), helm: q('.sh-helm'), nd: q('.sh-nd'), buy: q('.sh-buy'), cash: q('.sh-cash'), bt: q('.sh-bt'), hint: q('.sh-hint'), ammoBox: q('.sh-ammo') };
+    this.el = { root: h, b: q('.sh-b'), r: q('.sh-r'), rd: q('.sh-rd'), t: q('.sh-t'), feed: q('.sh-feed'), vig: q('.sh-vig'), dirs: q('.sh-dirs'), cross: q('.sh-cross'), hm: q('.sh-hm'), dt: q('.sh-dt'), hp: q('.sh-hp b'), hpn: q('.sh-hp em'), hpBox: q('.sh-hp'), ammo: q('.sh-ammo b'), res: q('.sh-ammo small'), wn: q('.sh-wn'), swap: q('.sh-swap'), ads: q('.sh-ads'), nade: q('.sh-nade'), ar: q('.sh-ar b'), arn: q('.sh-ar em'), arBox: q('.sh-ar'), helm: q('.sh-helm'), nd: q('.sh-nd'), buy: q('.sh-buy'), cash: q('.sh-cash'), bt: q('.sh-bt'), hint: q('.sh-hint'), ammoBox: q('.sh-ammo') };
     h.classList.toggle('touch', !!G.touch);
     h.classList.add('pre');
   },
@@ -2318,6 +2330,7 @@ const ShooterGame = {
     this.hm = Math.max(0, this.hm - this.dt);
     e.hm.style.opacity = this.hm > 0 ? Math.min(1, this.hm * 6) : 0;
     e.hm.classList.toggle('kill', !!this.hmKill);
+    if (e.dt && this.dmgTot && this.t - this.dmgTot.at > 2) { e.dt.classList.remove('show'); this.dmgTot = null; }
     this.dmgFx = Math.max(0, this.dmgFx - this.dt * 0.7);
     const lowHp = me.alive && me.hp < 35 ? 0.25 + Math.sin(now / 180) * 0.08 : 0;
     e.vig.style.opacity = Math.min(1, Math.max(this.dmgFx, lowHp, me.alive ? 0 : 0.5));

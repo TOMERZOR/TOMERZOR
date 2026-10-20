@@ -141,3 +141,12 @@
 }
 /* The round banners are longer than a countdown digit: smaller, so they fit a phone. */
 #arcade:has(.sh) .ar-cd { font-size: clamp(30px, 7.5vw, 84px); top: 22%; }
+/* What each hit took off: a number where it landed, and the running total under the crosshair. */
+#arcade .sh-dn { position: absolute; z-index: 6; pointer-events: none; font: 900 30px Rubik, sans-serif; color: #ffd23f; direction: ltr; transform: translate(-50%, -50%); -webkit-text-stroke: 1.5px rgba(0,0,0,.75); text-shadow: 0 2px 5px rgba(0,0,0,.8); animation: sh-dn .95s ease-out forwards; }
+#arcade .sh-dn.head { font-size: 40px; color: #ff3a2a; }
+@keyframes sh-dn { 0% { opacity: 0; transform: translate(-50%, -30%) scale(1.5); } 12% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -160%) scale(.9); } }
+#arcade .sh-dt { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); z-index: 6; pointer-events: none; font: 900 22px Rubik, sans-serif; color: #fff; direction: rtl; white-space: nowrap; padding: 2px 10px; border-radius: 10px; background: rgba(0,0,0,.45); text-shadow: 0 1px 3px #000; opacity: 0; transition: opacity .25s; }
+#arcade .sh-dt.show { opacity: 1; }
+#arcade .sh-dt.pop { animation: sh-dt .18s ease-out; }
+#arcade .sh-dt small { font-size: 13px; font-weight: 700; color: #ffd23f; margin-inline-end: 6px; }
+@keyframes sh-dt { from { transform: translateX(-50%) scale(1.25); } }

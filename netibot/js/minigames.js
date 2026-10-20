@@ -571,8 +571,15 @@ const Minigames = {
     });
   },
 
-  // ---------- shooting range ----------
+  // ---------- shooting range: the classic one, or the first-person weapons range (js/range3d.js) ----------
   range(box, opts, done) {
+    if (typeof Range3D === 'undefined' || opts.classic) { this.rangeClassic(box, opts, done); return; }
+    box.innerHTML = `<h3>🎯 מטווח</h3><div class="sub">איזה מטווח היום?</div>
+      <div class="grid"><div class="card" data-m="classic"><div class="big">🎯</div><div class="nm">מטווח קלאסי</div><div class="ds">10 כדורים, כוונת מתנדנדת</div></div>
+      <div class="card" data-m="weapons"><div class="big">🔫</div><div class="nm">מטווח נשק</div><div class="ds">גוף ראשון: תבור, גלוק, נגב וצלף. מטרות זזות, בית ירי וכטב"ם</div></div></div>`;
+    box.querySelectorAll('[data-m]').forEach(c => c.onclick = () => { Sound.click(); box.innerHTML = ''; if (c.dataset.m === 'weapons') Range3D.play(box, opts, done); else this.rangeClassic(box, opts, done); });
+  },
+  rangeClassic(box, opts, done) {
     box.innerHTML = `<h3>מטווח — 10 כדורים</h3><div class="sub">[כוון/כווני] ו[לחץ/לחצי] לירות. [החזק/החזיקי] Shift או את כפתור "עצירת נשימה" כדי לייצב את הכוונת.</div>`;
     const { c, g, pos } = Mini.canvas(box, 800, 420);
     box.insertAdjacentHTML('beforeend', `<div class="stats"><span>כדורים: <span class="v" id="rg-b">10</span></span><span>ניקוד: <span class="v" id="rg-s">0</span></span></div>
@@ -756,7 +763,7 @@ const Minigames = {
   // ---------- training menu (free mode) ----------
   training(box, opts, done) {
     const items = [
-      ['range', '🎯', 'מטווח', 'ירי בכוונת מתנדנדת'],
+      ['range', '🎯', 'מטווח', 'קלאסי, או נשק בגוף ראשון'],
       ['reload', '🚀', 'החלפת מארז', 'נגד השעון'],
       ['radar', '📡', 'עמדת בקרה', 'מה ליירט ומה לא'],
       ['guard', '🌙', 'שמירת לילה', 'לא להירדם'],

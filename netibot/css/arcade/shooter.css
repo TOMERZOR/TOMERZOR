@@ -1,6 +1,6 @@
 /* Little Netivot (shooter): the scoreboard on top, the kill feed, the crosshair that opens with
-   the spread, hit marker, damage vignette and direction, health and ammo, and on phones the fire,
-   reload, jump and weapon buttons. */
+   the spread (and fades out through the sight), hit marker, damage vignette and direction, health
+   and ammo, and on phones the fire, reload, jump, sight and weapon buttons. */
 #arcade .sh { position: absolute; inset: 0; pointer-events: none; }
 #arcade .sh-board { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; font: 900 18px Rubik, sans-serif; direction: ltr; padding: 4px 12px; white-space: nowrap; }
 #arcade .sh-board b { font-size: 22px; }
@@ -21,7 +21,7 @@
 @keyframes sh-in { from { transform: translateX(20px); opacity: 0; } }
 
 /* Crosshair: four ticks, --gap from the centre. */
-#arcade .sh-cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --gap: 6px; }
+#arcade .sh-cross { position: absolute; left: 50%; top: 50%; width: 0; height: 0; --gap: 6px; transition: opacity .08s linear; }
 #arcade .sh-cross i { position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.55); transition: transform .06s linear; }
 #arcade .sh-cross i:nth-child(1), #arcade .sh-cross i:nth-child(2) { width: 2px; height: 9px; left: -1px; }
 #arcade .sh-cross i:nth-child(3), #arcade .sh-cross i:nth-child(4) { width: 9px; height: 2px; top: -1px; }
@@ -45,6 +45,28 @@
 #arcade .sh-hp.low i b { background: linear-gradient(90deg, #d8261f, #ff7a4a); }
 #arcade .sh-hp.low { animation: sh-blink .8s steps(2) infinite; }
 
+/* Armour: a blue bar over the health, the helmet and the grenades in hand beside it. */
+#arcade .sh-ar { left: max(12px, env(safe-area-inset-left)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 42px); display: flex; align-items: center; gap: 8px; direction: ltr; width: min(230px, 30vw); padding: 2px 10px; font-size: 13px; }
+#arcade .sh-ar span { color: #7ab8ff; }
+#arcade .sh-ar i { flex: 1; height: 7px; background: #0c0e0c; border-radius: 4px; overflow: hidden; display: block; }
+#arcade .sh-ar i b { display: block; height: 100%; background: linear-gradient(90deg, #2f6fd0, #7ab8ff); transition: width .15s; }
+#arcade .sh-ar em { font-style: normal; min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+#arcade .sh-ar u { text-decoration: none; }
+#arcade .sh-ar.none { opacity: .55; }
+/* Floating buy menu during the round's 3-2-1. */
+#arcade .sh-buy { position: absolute; left: 50%; top: calc(max(8px, env(safe-area-inset-top)) + 58px); transform: translateX(-50%); background: rgba(16,20,16,.86); border: 2px solid var(--trim); border-radius: 12px; padding: 6px 8px 8px; text-align: center; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+#arcade .sh-bh { font-weight: 900; margin-bottom: 5px; display: flex; gap: 10px; justify-content: center; align-items: baseline; }
+#arcade .sh-bh .sh-cash { color: #9be86f; } #arcade .sh-bh i { font-style: normal; opacity: .75; font-size: 12px; }
+#arcade .sh-bi { display: flex; gap: 6px; }
+#arcade .sh-bb { position: relative; width: 112px; padding: 4px 4px 5px; border-radius: 10px; border: 2px solid var(--gold); background: rgba(40,44,36,.95); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 1px; font: 800 13px Rubik, sans-serif; touch-action: none; }
+#arcade .sh-bb img { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; }
+#arcade .sh.touch .sh-bb img { width: 34px; height: 34px; }
+#arcade .sh-bb em { font-style: normal; color: #9be86f; font-size: 12px; }
+#arcade .sh-bb small { font-size: 10px; opacity: .7; line-height: 1.15; }
+#arcade .sh-bb kbd { position: absolute; top: 3px; left: 4px; font: 900 11px Rubik, sans-serif; background: var(--gold); color: #1b1b1b; border-radius: 4px; padding: 0 4px; }
+#arcade .sh-bb.no { opacity: .45; border-color: rgba(255,255,255,.25); }
+#arcade .sh-bb.have { opacity: 1; border-color: #6cc24a; }
+#arcade .sh-bb.have em::after { content: ' ✔'; }
 #arcade .sh-ammo { right: max(12px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 4px); direction: ltr; display: flex; align-items: baseline; gap: 6px; }
 #arcade .sh-ammo b { font: 900 30px Rubik, sans-serif; font-variant-numeric: tabular-nums; }
 #arcade .sh-ammo small { font-size: 15px; opacity: .8; }
@@ -54,12 +76,24 @@
 #arcade .sh-hint:empty { display: none; }
 
 /* Phone buttons (right side; the move stick stays on the left). */
-#arcade .sh-fire, #arcade .sh-reload, #arcade .sh-jump, #arcade .sh-swap { position: absolute; border-radius: 50%; border: 3px solid var(--gold); background: radial-gradient(circle at 40% 30%, rgba(90,40,30,.85), rgba(26,18,14,.85) 70%); color: #fff; font-weight: 900; box-shadow: 0 0 0 2px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.5); touch-action: none; -webkit-user-select: none; user-select: none; }
+#arcade .sh-fire, #arcade .sh-reload, #arcade .sh-jump, #arcade .sh-swap, #arcade .sh-ads, #arcade .sh-nade { position: absolute; border-radius: 50%; border: 3px solid var(--gold); background: radial-gradient(circle at 40% 30%, rgba(90,40,30,.85), rgba(26,18,14,.85) 70%); color: #fff; font-weight: 900; box-shadow: 0 0 0 2px rgba(0,0,0,.5), 0 4px 10px rgba(0,0,0,.5); touch-action: none; -webkit-user-select: none; user-select: none; }
 #arcade .sh-fire { right: calc(max(16px, env(safe-area-inset-right)) + 4px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 4px); width: 92px; height: 92px; font-size: 38px; border-color: #ff7a4a; }
 #arcade .sh-fire:active { transform: scale(.94); background: radial-gradient(circle at 40% 30%, rgba(200,80,40,.9), rgba(60,20,10,.9) 70%); }
 #arcade .sh-reload { right: calc(max(16px, env(safe-area-inset-right)) + 112px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 74px); width: 56px; height: 56px; font-size: 24px; background: radial-gradient(circle at 40% 30%, #4a4f4a, #1a1d1a 70%); }
 #arcade .sh-jump { right: calc(max(16px, env(safe-area-inset-right)) + 110px); bottom: max(14px, env(safe-area-inset-bottom)); width: 58px; height: 58px; font-size: 26px; background: radial-gradient(circle at 40% 30%, #4a4f4a, #1a1d1a 70%); }
 #arcade .sh-swap { right: calc(max(16px, env(safe-area-inset-right)) + 2px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 108px); border-radius: 12px; height: 34px; padding: 0 10px; font-size: 13px; white-space: nowrap; background: rgba(26,30,26,.85); }
+/* The sight toggle: above the weapon chip, in reach of the thumb that fires. */
+#arcade .sh-ads { right: calc(max(16px, env(safe-area-inset-right)) + 22px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 150px); width: 54px; height: 54px; font-size: 26px; background: radial-gradient(circle at 40% 30%, #4a4f4a, #1a1d1a 70%); }
+#arcade .sh-ads.on { border-color: #ff4a3a; background: radial-gradient(circle at 40% 30%, rgba(200,60,40,.9), rgba(60,16,10,.9) 70%); box-shadow: 0 0 0 2px rgba(0,0,0,.5), 0 0 12px rgba(255,70,50,.7); }
+/* The grenade button: left of the sight toggle; dim when there's none. */
+#arcade .sh-nade { right: calc(max(16px, env(safe-area-inset-right)) + 90px); bottom: calc(max(22px, env(safe-area-inset-bottom)) + 150px); width: 54px; height: 54px; font-size: 24px; background: radial-gradient(circle at 40% 30%, #4a5a3a, #1a1d1a 70%); }
+#arcade .sh-nade small { position: absolute; right: -2px; bottom: -2px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--gold); color: #1b1b1b; font-size: 12px; line-height: 18px; }
+#arcade .sh-nade small:empty { display: none; }
+#arcade .sh-nade.off { opacity: .4; }
+#arcade .sh.touch .sh-ar { left: calc(max(8px, env(safe-area-inset-left)) + 52px); top: calc(max(8px, env(safe-area-inset-top)) + 72px); bottom: auto; width: 150px; padding: 1px 8px; font-size: 11px; }
+#arcade .sh.touch .sh-buy { top: calc(max(8px, env(safe-area-inset-top)) + 46px); padding: 4px 6px 6px; }
+#arcade .sh.touch .sh-bb { width: 100px; }
+#arcade .sh.touch .sh-bb small { display: none; }
 #arcade .sh.touch .sh-ammo { bottom: auto; right: auto; left: calc(max(8px, env(safe-area-inset-left)) + 52px); top: max(8px, env(safe-area-inset-top)); padding: 2px 8px; }
 #arcade .sh.touch .sh-ammo b { font-size: 22px; }
 #arcade .sh.touch .sh-hp { left: calc(max(8px, env(safe-area-inset-left)) + 52px); top: calc(max(8px, env(safe-area-inset-top)) + 42px); bottom: auto; width: 150px; padding: 2px 8px; }
@@ -71,6 +105,39 @@
 #arcade .ar-panel .sh-ctl { font-size: 13px; opacity: .8; }
 #arcade .ar-panel .sh-modes .btn { min-width: 170px; }
 #arcade .sh.pre > :not(.sh-feed) { display: none; }
-#arcade .sh.spec .sh-hp, #arcade .sh.spec .sh-ammo, #arcade .sh.spec .sh-cross, #arcade .sh.spec button { display: none; }
+#arcade .sh.spec .sh-hp, #arcade .sh.spec .sh-ar, #arcade .sh.spec .sh-ammo, #arcade .sh.spec .sh-cross, #arcade .sh.spec button, #arcade .sh.spec .sh-buy { display: none; }
+
+/* The gun shop on the intro panel: a card per rifle and the sight, stat bars, a price or "yours". */
+#arcade .ar-panel .sh-shop { margin: 6px 0 4px; }
+#arcade .ar-panel .sh-wallet { margin: 0 0 4px; font-weight: 800; font-size: 14px; }
+#arcade .ar-panel .sh-wallet b { color: var(--gold-hi); }
+#arcade .ar-panel .sh-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+#arcade .ar-panel .sh-card { position: relative; display: flex; flex-direction: column; gap: 2px; align-items: stretch; padding: 4px 6px 6px; border-radius: 10px; border: 2px solid var(--trim); background: rgba(0,0,0,.25); color: var(--ink); text-align: right; font: 700 12px Rubik, sans-serif; cursor: pointer; }
+#arcade .ar-panel .sh-card.on { border-color: #6cc24a; box-shadow: 0 0 0 2px rgba(108,194,74,.35); }
+#arcade .ar-panel .sh-card img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 6px; background: #ddd; }
+#arcade .ar-panel .sh-card b { font-size: 14px; color: var(--gold-hi); }
+#arcade .ar-panel .sh-card i { font-style: normal; font-size: 11px; opacity: .8; line-height: 1.2; min-height: 2.4em; }
+#arcade .ar-panel .sh-card.locked img { filter: grayscale(.6) brightness(.8); }
+#arcade .ar-panel .sh-stat { display: flex; align-items: center; gap: 5px; font-size: 10px; }
+#arcade .ar-panel .sh-stat s { flex: 1; height: 5px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) var(--v), rgba(255,255,255,.12) var(--v)); }
+#arcade .ar-panel .sh-card em, #arcade .ar-panel .sh-price { position: absolute; top: 7px; left: 8px; z-index: 1; padding: 1px 7px; border-radius: 10px; font: 900 11px Rubik, sans-serif; font-style: normal; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+#arcade .ar-panel .sh-own { background: #1f6f3a; color: #fff; }
+#arcade .ar-panel .sh-on { background: #6cc24a; color: #10200a; }
+#arcade .ar-panel .sh-price { background: linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color: #2a1d00; }
+#arcade .ar-panel .sh-price.short { background: rgba(30,30,30,.85); color: var(--ink); border: 1px solid rgba(255,255,255,.25); }
+#arcade .sh-confirm { position: absolute; inset: 0; z-index: 8; display: flex; align-items: center; justify-content: center; padding: 8px; background: rgba(0,0,0,.55); pointer-events: auto; }
+#arcade .sh-cf { width: min(360px, 92vw); background: var(--panel); border: 2px solid var(--gold); border-radius: 14px; padding: 10px 12px; text-align: center; box-shadow: var(--bevel); }
+#arcade .sh-cf img { width: 160px; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 8px; }
+#arcade .sh-cf h3 { margin: 4px 0; color: var(--gold-hi); }
+#arcade .sh-cf p { margin: 4px 0 8px; font-size: 14px; }
+@media (max-height: 500px) {
+  #arcade .ar-panel .sh-banner { display: none; }
+  #arcade .ar-panel .sh-rules { font-size: 12px; margin: 2px 0; }
+  #arcade .ar-panel .sh-modes { margin: 4px 0; }
+  #arcade .ar-panel .sh-card i { display: none; }
+  #arcade .ar-panel .sh-card img { aspect-ratio: 2 / 1; }
+  #arcade .ar-panel .sh-card { padding: 3px 5px 4px; }
+  #arcade .sh-cf img { width: 110px; }
+}
 /* The round banners are longer than a countdown digit: smaller, so they fit a phone. */
 #arcade:has(.sh) .ar-cd { font-size: clamp(30px, 7.5vw, 84px); top: 22%; }

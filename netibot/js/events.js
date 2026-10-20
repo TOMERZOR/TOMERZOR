@@ -56,7 +56,7 @@ const Events = {
   // ---------- per frame ----------
   update(dt) {
     const S = G.state;
-    const free = !G.alert && !Mini.active && !UI.busy && !Story.gateShift && !Boss.active;
+    const free = !G.alert && !Mini.active && !UI.busy && !Story.gateShift && !Boss.active && Game.calm();
     // The meter relaxes toward its base; above 85 it eats into morale.
     const mins = dt * DATA.minutesPerSecond;
     if (S.shchora > this.base()) S.shchora = Math.max(this.base(), S.shchora - mins * 0.02);
@@ -769,6 +769,10 @@ const Events = {
     this.baumHeard = this.baumHeard || new Set();
     const p = Multi.peers.find(q => q.baum && !this.baumDone.has(q.baum.id) && Date.now() - q.baum.id < 118000);
     if (!p) return;
+    if (Game.engaged() || UI.busy) {
+      if (!this.baumHeard.has(p.baum.id)) { this.baumHeard.add(p.baum.id); UI.toast(fmt(`🍕 ${p.name}: נוהל אנה פרנק בנתיבות — כשתסיים[/י] מה שאת[ה/] עושה, אפשר להצטרף`)); }
+      return;
+    }
     if (World.id === 'netivot' && p.site === 'netivot') {
       this.startBaum({ id: p.baum.id }, true);
       UI.toast(fmt(`🍕 ${p.name}: {@bc} בדרך! נוהל אנה פרנק — להחביא את כל האוכל!`), 'bad');

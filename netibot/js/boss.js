@@ -516,7 +516,7 @@ const Boss = {
   },
   // Called every frame in multiplayer: join a fight someone started here, or hear about it.
   watchCoop() {
-    if (!Multi.on || this.active || UI.busy || Mini.active || G.alert) return;
+    if (!Multi.on || this.active || UI.busy || Mini.active || G.alert || Game.engaged()) return;
     const now = Date.now();
     this.doneIds = this.doneIds || new Set();
     this.heard = this.heard || new Set();

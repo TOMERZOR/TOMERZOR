@@ -49,7 +49,7 @@ const Curious = {
     if (!S.dayFlags.curiousPlan) this.plan(S);
     const next = S.dayFlags.curiousPlan[0];
     if (next === undefined || S.clock < next) return;
-    if (G.alert || Mini.active || UI.busy || Boss.active || Story.ctl || Story.run || S.clock > 21 * 60) return;
+    if (G.alert || Mini.active || UI.busy || Boss.active || Story.ctl || Story.run || S.clock > 21 * 60 || !Game.calm()) return;
     S.dayFlags.curiousPlan.shift();
     this.arrive();
   },

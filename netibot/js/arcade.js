@@ -244,6 +244,7 @@ const Arcade = {
   watch() {
     if (this.active || Race.active || !Multi.on) return;
     this.nudge();
+    if (Game.engaged() || UI.busy || $('#invite-card')) return; // busy: the invite waits
     const p = Multi.peers.find(q => q.ar && q.ar.host && q.ar.cd > 3 && !this.seenInvites.has(q.ar.id));
     if (!p) return;
     const game = this.game(p.ar.g);
@@ -266,7 +267,7 @@ const Arcade = {
     if (!Multi.peers.length) { this.nudgeAt = 0; return; }
     if (!this.nudgeAt) { this.nudgeAt = now + (240 + Math.random() * 180) * 1000; return; }
     if (now < this.nudgeAt) return;
-    if (G.paused || G.alert || Boss.active || Story.ctl || Mini.active || UI.busy || $('#invite-card') || Multi.peers.some(p => p.ar || p.race)) { this.nudgeAt = now + 20000; return; }
+    if (G.paused || !Game.calm() || $('#invite-card') || Multi.peers.some(p => p.ar || p.race)) { this.nudgeAt = now + 20000; return; }
     this.nudgeAt = now + (480 + Math.random() * 360) * 1000;
     const games = [...this.games.filter(g => g.online), { id: 'race', icon: '🏎️', name: 'תחרות מפקדי נסיעה' }];
     const g = games[Math.floor(Math.random() * games.length)];

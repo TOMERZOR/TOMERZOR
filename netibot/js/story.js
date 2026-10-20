@@ -399,14 +399,14 @@ const Story = {
   update(dt) {
     const S = G.state;
     // Scheduled alerts wait for the player to be free.
-    if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.gateShift?.car && World.id !== 'field') {
+    if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !Boss.active && !Game.engaged() && World.id !== 'field') {
       this.pendingAlerts.shift();
       this.alert(false);
     }
     // A friend online at this site set off a red alert: it's everyone's.
     const ra = this.remoteAlert;
     if (ra && Date.now() - ra.at > 20000) this.remoteAlert = null;
-    else if (ra && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.ctl && World.id !== 'field') {
+    else if (ra && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.ctl && World.id !== 'field' && !Game.engaged()) {
       this.remoteAlert = null;
       this.alert(false, 'real', ra.id);
       UI.toast(`🚨 ${ra.from}: אזעקה! כולם למיגונית!`, 'bad');

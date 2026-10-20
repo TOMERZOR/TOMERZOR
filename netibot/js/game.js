@@ -696,6 +696,32 @@ const Game = {
     return 0.62;
   },
 
+  // ---------- one thing at a time ----------
+  // What is going on right now, or null: an alert, a fight, an inspection, a delivery, a shift,
+  // a visitor at the gate, a mini-game... Events (yours and your friends') only start when
+  // nothing is, and after a breather (calm()), so they never pile up on each other online.
+  engaged() {
+    if (G.alert) return 'alert';
+    if (Boss.active) return 'boss';
+    if (Mini.active) return 'mini';
+    if (Arcade.active || Race.active) return 'game';
+    if (Events.baum) return 'baum';
+    if (Events.rafael) return 'rafael';
+    if (Events.tech) return 'tech';
+    if (Events.chores) return 'chores';
+    if (Curious.npc) return 'curious';
+    if (Kashag.running) return 'kashag';
+    if (Story.gateShift || Story.gateCall) return 'gate';
+    if (Story.run || Story.ctl) return 'task';
+    if (typeof Shesh !== 'undefined' && Shesh.m && Shesh.m.phase !== 'over') return 'shesh';
+    return null;
+  },
+  // Free, and has been for a little while (25 s after the last thing ended).
+  calm() {
+    const now = performance.now();
+    if (this.engaged() || UI.busy) { this.busyUntil = now; return false; }
+    return now - (this.busyUntil || -1e9) > 25000;
+  },
   objectiveTarget() {
     if (G.alert && G.alert.phase === 'run') return World.nearestShelter(G.player.x, G.player.y);
     // In a boss fight the errand doesn't matter: no arrow, marker or minimap dot until it's over.

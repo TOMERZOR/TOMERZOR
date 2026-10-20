@@ -36,7 +36,7 @@ const Kashag = {
     const S = G.state;
     if (this.tap) this.updateTap(dt);
     if (!S.dayFlags.kashagAt || S.dayFlags.kashag || S.clock < S.dayFlags.kashagAt) return;
-    if (World.id !== 'netivot' || G.alert || Mini.active || UI.busy || Boss.active || Story.ctl || Story.run || Story.gateShift) return;
+    if (World.id !== 'netivot' || G.alert || Mini.active || UI.busy || Boss.active || Story.ctl || Story.run || Story.gateShift || !Game.calm()) return;
     this.arrive();
   },
   async arrive() {

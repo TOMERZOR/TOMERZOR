@@ -978,6 +978,7 @@ const Race = {
   // In the world: a friend's race invite pops up once.
   watch() {
     if (this.active || !Multi.on) return;
+    if (Game.engaged() || UI.busy || $('#invite-card')) return; // busy: the invite waits
     const p = Multi.peers.find(q => q.race && q.race.host && q.race.cd > 3 && !this.seenInvites.has(q.race.id));
     if (!p) return;
     this.seenInvites.add(p.race.id);

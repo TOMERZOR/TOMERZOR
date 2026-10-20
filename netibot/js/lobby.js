@@ -171,10 +171,11 @@ function lobbyRoom(client, base, me) {
       if (pr && typeof pr === 'object' && !Array.isArray(pr)) { peers.set(id, { presence: pr, t: Date.now() }); emit(); }
     } catch (e) { /* not ours */ }
   });
-  // Someone who closed the tab without saying goodbye drops out after a few seconds.
+  // Someone who closed the tab without saying goodbye drops out after a few seconds (12, so a
+  // phone that freezes a moment loading a game's models isn't dropped from it).
   setInterval(() => {
     let changed = false;
-    for (const [id, p] of peers) if (Date.now() - p.t > 6000) { peers.delete(id); changed = true; }
+    for (const [id, p] of peers) if (Date.now() - p.t > 12000) { peers.delete(id); changed = true; }
     if (changed) emit();
   }, 1000);
   const send = () => { if (last) { client.publish(base + 'p/' + me, last); lastSent = Date.now(); } };

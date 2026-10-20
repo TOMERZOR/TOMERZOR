@@ -683,6 +683,7 @@ const Shesh = {
       };
       // Both offered at once: the older offer wins, no questions asked.
       if (this.offer && !this.offer.npc && this.offer.to === who) { if (id < this.offer.id) go(); return; }
+      if (Multi.verGate(o.p, 'מזמין לשש בש')) return;
       Sound.horn();
       const fem = o.person && o.person.female;
       UI.invite(`🎲 ${name} ${fem ? 'מזמינה' : 'מזמין'} אותך לשש בש!`, '🎲 לשחק', go);

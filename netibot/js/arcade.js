@@ -223,6 +223,7 @@ const Arcade = {
     const game = this.game(p.ar.g);
     this.seenInvites.add(p.ar.id);
     if (!game) return;
+    if (Multi.verGate(p, `מזמין ל${game.name}`)) return;
     Sound.horn();
     UI.invite(`${game.icon} הזמנה מ${p.name}: ${game.name}! מתחילים בעוד ${Math.round(p.ar.cd)} שניות`, '🎮 להצטרף', () => {
       const q = Multi.peers.find(r => r.ar && r.ar.id === p.ar.id);

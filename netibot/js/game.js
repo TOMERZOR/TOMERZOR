@@ -495,9 +495,27 @@ const Game = {
   },
 
   // ---------- frame ----------
+  // The next frame is booked first, so an error in one frame never freezes the screen. A
+  // mini-game that keeps throwing (often two phones on different versions online) is left,
+  // back to the base, instead of hanging.
   frame(t) {
+    requestAnimationFrame(tt => this.frame(tt));
+    try { this.step(t); } catch (e) { this.crashed(e); }
+  },
+  crashed(e) {
+    console.error(e);
+    const now = performance.now();
+    this.errs = (this.errs || []).filter(x => now - x < 4000);
+    this.errs.push(now);
+    if (this.errs.length < 3 || !(Race.active || Arcade.active)) return;
+    this.errs = [];
+    try { if (Race.active) Race.exit(); } catch (err) { Race.active = false; }
+    try { if (Arcade.active) Arcade.exit(); } catch (err) { Arcade.active = null; }
+    UI.toast(Multi.on ? '😵 המשחקון נתקע וחזרת לבסיס. אם שיחקתם אונליין — כדאי ששניכם תרעננו את הדף.' : '😵 המשחקון נתקע וחזרת לבסיס.', 'bad');
+  },
+  step(t) {
     // Battery saver: about 30 frames a second.
-    if (Settings.v.saver && t - (this.last || 0) < 30) { requestAnimationFrame(tt => this.frame(tt)); return; }
+    if (Settings.v.saver && t - (this.last || 0) < 30) return;
     const dt = Math.min(0.05, (t - (this.last || t)) / 1000);
     this.last = t;
     if (Settings.v.fps) {
@@ -508,12 +526,10 @@ const Game = {
     if (G.running && Race.active) {
       Race.frame(dt, t);
       Race.render();
-      requestAnimationFrame(tt => this.frame(tt));
       return;
     }
     if (G.running && Arcade.active) {
       Arcade.frame(dt, t);
-      requestAnimationFrame(tt => this.frame(tt));
       return;
     }
     if (G.running) {
@@ -528,7 +544,6 @@ const Game = {
       // Autosave every few seconds, so story mode always continues where you stopped.
       if ((this.autoT = (this.autoT || 0) + dt) > 10 && !UI.busy && !Mini.active && !G.alert && !Boss.active && Story.tasks.length) { this.autoT = 0; this.save(); }
     }
-    requestAnimationFrame(tt => this.frame(tt));
   },
 
   update(dt) {

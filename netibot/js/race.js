@@ -936,6 +936,7 @@ const Race = {
     const p = Multi.peers.find(q => q.race && q.race.host && q.race.cd > 3 && !this.seenInvites.has(q.race.id));
     if (!p) return;
     this.seenInvites.add(p.race.id);
+    if (Multi.verGate(p, 'מזמין לתחרות מפקדי נסיעה')) return;
     Sound.horn();
     const map = RACE_MAPS.find(m => m.id === p.race.map) || RACE_MAPS[0];
     UI.invite(`🏎️ הזמנה מ${p.name}: תחרות מפקדי נסיעה ב${map.name}! מתחילים בעוד ${Math.round(p.race.cd)} שניות`, '🏁 להצטרף', () => {

@@ -43,7 +43,7 @@ const Multi = {
       const s = p.presence;
       const old = this.peers.find(q => q.peer === p.peer);
       return {
-        peer: p.peer, who: String(s.who).slice(0, 40), name: String(s.name || '').slice(0, 24), site: s.site,
+        peer: p.peer, who: String(s.who).slice(0, 40), name: String(s.name || '').slice(0, 24), site: s.site, ver: String(s.ver || '').slice(0, 20),
         x: +s.x || 0, y: +s.y || 0, a: +s.a || 0, m: !!s.m, r: !!s.r, c: s.c ? String(s.c).slice(0, 12) : false,
         say: s.say && typeof s.say.text === 'string' ? { text: s.say.text.slice(0, 80), at: +s.say.at || 0 } : null,
         // Their last few chat messages, sealed: to everyone (to '') or to one player's cast id.
@@ -69,9 +69,27 @@ const Multi = {
       };
     });
     if (this.on) for (const p of this.peers) if (p.al) this.alertFrom(p);
+    // Someone on another version of the game: playing together could hang, so say it once.
+    if (this.on) for (const p of this.peers) if (this.otherVer(p) && !this.warnedVer.has(p.peer)) {
+      this.warnedVer.add(p.peer);
+      UI.toast(`⚠️ ${p.name || 'מישהו'} משחק בגרסה אחרת של המשחק. כדי לשחק יחד במשחקונים — ששניכם תרעננו את הדף.`, 'bad');
+    }
     if (this.on) for (const p of this.peers) this.readChat(p);
     // A player who joins as someone replaces that character's NPC.
     if (this.on && this.peers.map(p => p.who).sort().join() !== before) Game.resetNpcs();
+  },
+
+  // A peer whose game is another build than ours (an older tab, a cached copy).
+  warnedVer: new Set(),
+  otherVer(p) { return typeof NETIBOT_VER !== 'undefined' && !!p && p.ver !== NETIBOT_VER; },
+  // An invite from someone on another build: instead of joining (and hanging), ask to refresh.
+  // The older tab is the one that has to reload. True when it took over the invite.
+  verGate(p, what) {
+    if (!this.otherVer(p)) return false;
+    const mineOld = (p.ver || '') > NETIBOT_VER;
+    Sound.pop();
+    UI.invite(`⚠️ ${p.name || 'מישהו'} ${what} — אבל יש לכם גרסאות שונות של המשחק, וככה זה נתקע. ${mineOld ? 'אצלך הגרסה הישנה: לרענן ואז להזמין שוב.' : 'אצלו הגרסה הישנה: שירענן את הדף ויזמין שוב.'}`, mineOld ? '🔄 לרענן' : '👍 הבנתי', () => { if (!mineOld) return; try { Game.save(); } catch (e) { /* not in a game */ } location.reload(); });
+    return true;
   },
 
   // Cast ids in use by players right now (the local one included).
@@ -102,7 +120,7 @@ const Multi = {
     this.sendT = 0.1;
     const P = G.player;
     const st = {
-      v: 1, who: this.as, name: G.profile.name, site: World.id,
+      v: 1, ver: typeof NETIBOT_VER !== 'undefined' ? NETIBOT_VER : '', who: this.as, name: G.profile.name, site: World.id,
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,

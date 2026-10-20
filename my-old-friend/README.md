@@ -12,7 +12,7 @@
    - hops next to the thing to press and circles it.
 4. They tap **Done, next step**. Moffy looks again and gives the next step, until the task is finished.
 
-The camera fills the whole screen. Four corner marks show what Moffy sees, and the rest is gently darkened. At the top there is a short status line ("Point at what you need help with", "Listening…", "Looking…") and the settings gear. At the bottom there is one pink button whose job changes with the moment (talk, I'm done, Done – next step, ask something else), plus a round button for typing. Moffy's answer appears in a white card only when there is something to say, with **Say again** and a close button. Moffy introduces herself once, on the welcome screen, and never repeats it.
+The camera fills the whole screen. Four corner marks show what Moffy sees, and the rest is gently darkened. At the top there is a short status line ("Point at what needs help", "Listening…", "Looking…") and the settings gear. At the bottom there is one pink button whose job changes with the moment (talk, I'm done, Done – next step, ask something else), plus a round button for typing. Moffy's answer appears in a white card only when there is something to say, with **Say again** and a close button. Moffy introduces herself once, on the welcome screen, and never repeats it.
 
 Moffy is told to give real, specific help: work out the exact device or app in the picture, quote buttons as they are written, give one action at a time, say what will happen next, and say so plainly (or ask one question) when unsure instead of guessing.
 

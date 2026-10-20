@@ -59,7 +59,7 @@ struct StageLayout {
     let topBar: CGFloat = 68
 
     /// The space kept for the answer card above the button.
-    var cardReserve: CGFloat { min(max(size.height * 0.3, 200), 320) }
+    var cardReserve: CGFloat { min(max(size.height * 0.35, 220), 340) }
     private var controlTop: CGFloat { size.height - controlHeight - 8 }
 
     /// The frame while Moffy listens, looks or answers; the card sits below it.
@@ -295,7 +295,7 @@ private struct TopBar: View {
         case .ready:
             if helper.reply != nil { return nil }
             return helper.cameraOn
-                ? settings.t("Point at what you need help with", "כוונו למה שצריך עזרה בו")
+                ? settings.t("Point at what needs help", "כוונו למה שצריך עזרה בו")
                 : settings.t("Tell me what you need", "ספרו לי מה צריך")
         }
     }

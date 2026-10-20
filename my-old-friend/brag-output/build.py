@@ -4,7 +4,7 @@ Same timeline, same audio; only the layout differs. Run: python3 build.py"""
 from pathlib import Path
 
 HERE = Path(__file__).parent
-DURATION = 20.8
+DURATION = 27.2
 
 FONTS = "\n".join(
     f'      @font-face {{ font-family: Rubik; font-weight: {w}; src: url(assets/fonts/rubik-{subset}-{w}-normal.woff2) format("woff2"); unicode-range: {rng}; }}'
@@ -155,7 +155,7 @@ KEYBOARD = "".join(
 PLANE = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M2 21l21-9L2 3v7l15 2-15 2z" transform="scale(-1,1) translate(-24,0)"/></svg>'
 
 SCENES = f"""
-      <section id="s1" class="clip stage" data-start="0" data-duration="4.4" data-track-index="0">
+      <section id="s1" class="clip stage" data-start="0" data-duration="4.6" data-track-index="0">
         <div class="phone"><div class="screen chat">
           <div class="top"><div class="status"><span>9:41</span><span>100%</span></div><div class="island"></div>
             <div class="head"><span class="back">‹</span><div class="avatar">ס</div><div><div class="who">סבתא ❤️</div><div class="online">מחוברת</div></div></div></div>
@@ -170,13 +170,13 @@ SCENES = f"""
         <div class="copy"><div class="eyebrow">מכירים את זה?</div><div class="big">כל יום, אותן שאלות.</div></div>
       </section>
 
-      <section id="s2" class="clip" data-start="4.4" data-duration="1.8" data-track-index="0">
+      <section id="s2" class="clip" data-start="4.6" data-duration="2.6" data-track-index="0">
         {moffy()}
         <div class="brand name">My Old Friend</div>
         <div class="brand tag">בינה מלאכותית לגיל השלישי</div>
       </section>
 
-      <section id="s2b" class="clip stage" data-start="6.2" data-duration="2.1" data-track-index="0">
+      <section id="s2b" class="clip stage" data-start="7.2" data-duration="3.2" data-track-index="0">
         <div class="phone"><div class="screen ask">
           <div class="status"><span>9:41</span><span>100%</span></div><div class="island"></div>
           <div class="nav">כתבו את השאלה<span class="cancel">ביטול</span></div>
@@ -189,17 +189,17 @@ SCENES = f"""
         <div class="copy"><div class="eyebrow">שאלה</div><div class="big">שואלים את מופי,</div><div class="small">במילים שלכם, בקול או בכתב.</div></div>
       </section>
 
-      <section id="s3" class="clip stage" data-start="8.3" data-duration="5.5" data-track-index="0">
+      <section id="s3" class="clip stage" data-start="10.4" data-duration="6.2" data-track-index="0">
         <div class="phone"><div class="screen"><img src="assets/he-pointing-light.png" alt="" /></div></div>
         <div class="copy"><div class="eyebrow">מצלמה</div><div class="big l1">מכוונים את הטלפון.</div><div class="small l2">מופי מראה בדיוק על מה ללחוץ, ואומרת את זה בקול.</div></div>
       </section>
 
-      <section id="s4" class="clip stage" data-start="13.8" data-duration="2.2" data-track-index="0">
+      <section id="s4" class="clip stage" data-start="16.6" data-duration="3.4" data-track-index="0">
         <div class="phone"><div class="screen"><img src="assets/he-photo-light.png" alt="" /></div></div>
         <div class="copy"><div class="eyebrow">צילום מסך</div><div class="big l1">לחיצה אחת על ״תמונה אחרונה״.</div><div class="small l2">צעד אחד בכל פעם, באותיות גדולות.</div></div>
       </section>
 
-      <section id="s5" class="clip" data-start="16" data-duration="2.2" data-track-index="0">
+      <section id="s5" class="clip" data-start="20" data-duration="3.4" data-track-index="0">
         <div class="sms">מזל טוב!! זכית באייפון חדש 🎉 לאישור המשלוח לחץ כאן: <span class="link">doar-prize.top/a7</span></div>
         <div class="stamp">✕</div>
         {moffy("worried")}
@@ -207,7 +207,7 @@ SCENES = f"""
         <div class="copy"><div class="eyebrow">שומרת עליהם</div><div class="big">ומזהירה מעוקצים.</div></div>
       </section>
 
-      <section id="s6" class="clip" data-start="18.2" data-duration="2.6" data-track-index="0">
+      <section id="s6" class="clip" data-start="23.4" data-duration="3.8" data-track-index="0">
         {moffy()}
         <div class="brand name">My Old Friend</div>
         <div class="brand tag">החבר הוותיק שלי, בכל שאלה של טכנולוגיה</div>
@@ -218,16 +218,16 @@ SCENES = f"""
 
 # (sound, start, length, volume)
 CUES = [
-    ("ding", 0.6, 0.9, 0.55), ("ding", 1.6, 0.9, 0.55), ("ding", 2.6, 0.9, 0.55),
-    ("whoosh", 4.1, 0.7, 0.4), ("boing", 4.72, 1.25, 0.6), ("whoosh", 5.95, 0.7, 0.4),
-    ("typing", 6.55, 1.1, 0.6), ("ding", 7.8, 0.9, 0.35), ("whoosh", 8.05, 0.7, 0.4),
-    ("whoosh", 13.55, 0.7, 0.4), ("whoosh", 15.75, 0.7, 0.4), ("buzz", 16.3, 0.55, 0.5),
-    ("whoosh", 17.95, 0.7, 0.4), ("boing", 18.68, 1.25, 0.35), ("chime", 18.8, 0.6, 0.6),
+    ("ding", 0.63, 0.9, 0.55), ("ding", 1.67, 0.9, 0.55), ("ding", 2.72, 0.9, 0.55),
+    ("whoosh", 4.29, 0.7, 0.4), ("boing", 5.06, 1.25, 0.6), ("whoosh", 6.84, 0.7, 0.4),
+    ("typing", 7.73, 1.5, 0.6), ("ding", 9.64, 0.9, 0.35), ("whoosh", 10.02, 0.7, 0.4),
+    ("whoosh", 16.32, 0.7, 0.4), ("whoosh", 19.61, 0.7, 0.4), ("buzz", 20.46, 0.55, 0.5),
+    ("whoosh", 23.01, 0.7, 0.4), ("boing", 24.1, 1.25, 0.35), ("chime", 24.28, 0.6, 0.6),
 ]
 AUDIO = "\n".join(
     [
         f'      <audio id="music" class="clip" src="assets/music-bed.mp3" data-start="0" data-duration="{DURATION}" data-track-index="1" data-volume="1"></audio>',
-        '      <audio id="vo" class="clip" src="assets/yael-fast.mp3" data-start="8.45" data-duration="5.32" data-track-index="2" data-volume="1"></audio>',
+        '      <audio id="vo" class="clip" src="assets/yael-fast.mp3" data-start="10.57" data-duration="5.32" data-track-index="2" data-volume="1"></audio>',
     ]
     + [
         f'      <audio id="sfx{i}" class="clip" src="assets/sfx-{name}.mp3" data-start="{t}" data-duration="{d}" data-track-index="3" data-volume="{v}"></audio>'
@@ -244,66 +244,66 @@ SCRIPT = """
 
       // 1. Grandma's messages arrive in a chat.
       tl.fromTo("#s1 .phone", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 0);
-      rise("#s1 .copy", 0.15);
+      rise("#s1 .copy", 0.16);
       tl.set("#s1 .dots", { opacity: 0 }, 0);
-      tl.fromTo("#s1 .b1", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, transformOrigin: "100% 0%", ...pop }, 0.6);
-      tl.fromTo("#s1 .b2", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, transformOrigin: "100% 0%", ...pop }, 1.6);
-      tl.fromTo("#s1 .b3", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, transformOrigin: "100% 0%", ...pop }, 2.6);
-      tl.fromTo("#s1 .dots", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.25 }, 3.4);
-      tl.to("#s1 .dots i", { y: -6, duration: 0.15, yoyo: true, repeat: 3, stagger: 0.08 }, 3.45);
-      leave("#s1 .phone, #s1 .copy", 4.2);
+      tl.fromTo("#s1 .b1", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, transformOrigin: "100% 0%", ...pop }, 0.63);
+      tl.fromTo("#s1 .b2", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, transformOrigin: "100% 0%", ...pop }, 1.67);
+      tl.fromTo("#s1 .b3", { opacity: 0, scale: 0.85, y: 20 }, { opacity: 1, scale: 1, y: 0, transformOrigin: "100% 0%", ...pop }, 2.72);
+      tl.fromTo("#s1 .dots", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.25 }, 3.55);
+      tl.to("#s1 .dots i", { y: -6, duration: 0.15, yoyo: true, repeat: 3, stagger: 0.08 }, 3.61);
+      leave("#s1 .phone, #s1 .copy", 4.39);
 
       // 2. Moffy drops in; the name lands.
-      tl.fromTo("#s2 .moffy", { y: -500 }, { y: 0, duration: 0.38, ease: "power2.in" }, 4.4);
-      tl.to("#s2 .moffy", { scaleY: 0.86, scaleX: 1.08, transformOrigin: "50% 100%", duration: 0.08 }, 4.78);
-      tl.to("#s2 .moffy", { scaleY: 1, scaleX: 1, duration: 0.3, ease: "back.out(3)" }, 4.86);
-      rise("#s2 .name", 4.9);
-      rise("#s2 .tag", 5.05);
-      tl.to("#s2 .eye", { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 5.5);
-      leave("#s2 .moffy, #s2 .brand", 6);
+      tl.fromTo("#s2 .moffy", { y: -500 }, { y: 0, duration: 0.38, ease: "power2.in" }, 4.6);
+      tl.to("#s2 .moffy", { scaleY: 0.86, scaleX: 1.08, transformOrigin: "50% 100%", duration: 0.08 }, 5.15);
+      tl.to("#s2 .moffy", { scaleY: 1, scaleX: 1, duration: 0.3, ease: "back.out(3)" }, 5.26);
+      rise("#s2 .name", 5.32);
+      rise("#s2 .tag", 5.54);
+      tl.to("#s2 .eye", { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 6.19);
+      leave("#s2 .moffy, #s2 .brand", 6.91);
 
       // 2b. The question is typed into Moffy's box and sent.
-      tl.fromTo("#s2b .phone", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 6.2);
-      rise("#s2b .copy", 6.3);
-      tl.to("#s2b .ph", { opacity: 0, duration: 0.05 }, 6.55);
-      tl.fromTo("#s2b .typed", { width: 0 }, { width: () => document.querySelector("#s2b .typed").scrollWidth + 2, duration: 1.1, ease: "steps(24)" }, 6.55);
-      tl.to("#s2b .caret", { opacity: 0, duration: 0.01, yoyo: true, repeat: 1, repeatDelay: 0.2 }, 7.7);
-      tl.fromTo("#s2b .tap", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.18 }, 7.78);
-      tl.to("#s2b .send", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 7.8);
-      tl.to("#s2b .tap", { opacity: 0, duration: 0.2 }, 8);
-      leave("#s2b .phone, #s2b .copy", 8.1);
+      tl.fromTo("#s2b .phone", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 7.2);
+      rise("#s2b .copy", 7.35);
+      tl.to("#s2b .ph", { opacity: 0, duration: 0.05 }, 7.73);
+      tl.fromTo("#s2b .typed", { width: 0 }, { width: () => document.querySelector("#s2b .typed").scrollWidth + 2, duration: 1.5, ease: "steps(24)" }, 7.73);
+      tl.to("#s2b .caret", { opacity: 0, duration: 0.01, yoyo: true, repeat: 1, repeatDelay: 0.2 }, 9.49);
+      tl.fromTo("#s2b .tap", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.18 }, 9.61);
+      tl.to("#s2b .send", { scale: 0.95, duration: 0.08, yoyo: true, repeat: 1 }, 9.64);
+      tl.to("#s2b .tap", { opacity: 0, duration: 0.2 }, 9.94);
+      leave("#s2b .phone, #s2b .copy", 10.1);
 
       // 3. Camera: Moffy points at the button while Yael says it.
-      tl.fromTo("#s3 .phone", { y: 160, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 8.3);
-      tl.fromTo("#s3 .eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 8.4);
-      rise("#s3 .l1", 8.45);
-      rise("#s3 .l2", 9.05);
-      tl.to("#s3 .phone", { scale: 1.04, duration: 4.5, ease: "none" }, 8.9);
-      leave("#s3 .phone, #s3 .copy", 13.6);
+      tl.fromTo("#s3 .phone", { y: 160, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: "power3.out" }, 10.4);
+      tl.fromTo("#s3 .eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 10.51);
+      rise("#s3 .l1", 10.57);
+      rise("#s3 .l2", 11.25);
+      tl.to("#s3 .phone", { scale: 1.04, duration: 4.5, ease: "none" }, 11.08);
+      leave("#s3 .phone, #s3 .copy", 16.37);
 
       // 4. Screenshot.
-      tl.fromTo("#s4 .phone", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 13.8);
-      tl.fromTo("#s4 .eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 13.85);
-      rise("#s4 .l1", 13.9);
-      rise("#s4 .l2", 14.3);
-      leave("#s4 .phone, #s4 .copy", 15.8);
+      tl.fromTo("#s4 .phone", { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 16.6);
+      tl.fromTo("#s4 .eyebrow", { opacity: 0 }, { opacity: 1, duration: 0.25 }, 16.68);
+      rise("#s4 .l1", 16.75);
+      rise("#s4 .l2", 17.37);
+      leave("#s4 .phone, #s4 .copy", 19.69);
 
       // 5. Scam.
-      rise("#s5 .sms", 16, 0.3);
-      tl.fromTo("#s5 .stamp", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(3)" }, 16.3);
-      tl.fromTo("#s5 .moffy", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.3, ease: "back.out(2)" }, 16.45);
-      rise("#s5 .card", 16.55);
-      rise("#s5 .copy", 16.7);
-      leave("#s5 .sms, #s5 .stamp, #s5 .moffy, #s5 .card, #s5 .copy", 18);
+      rise("#s5 .sms", 20, 0.3);
+      tl.fromTo("#s5 .stamp", { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(3)" }, 20.46);
+      tl.fromTo("#s5 .moffy", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.3, ease: "back.out(2)" }, 20.7);
+      rise("#s5 .card", 20.85);
+      rise("#s5 .copy", 21.08);
+      leave("#s5 .sms, #s5 .stamp, #s5 .moffy, #s5 .card, #s5 .copy", 23.09);
 
       // 6. Outro.
-      tl.fromTo("#s6 .moffy", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "back.out(2.5)" }, 18.2);
-      rise("#s6 .name", 18.3);
-      rise("#s6 .tag", 18.5);
-      tl.to("#s6 .moffy", { y: -26, duration: 0.2, ease: "power2.out", yoyo: true, repeat: 1 }, 18.7);
-      tl.fromTo("#s6 .offer", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, ...pop }, 18.8);
-      tl.fromTo("#s6 .soon", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 19.15);
-      tl.to("#s6 .eye", { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 19.9);
+      tl.fromTo("#s6 .moffy", { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "back.out(2.5)" }, 23.4);
+      rise("#s6 .name", 23.55);
+      rise("#s6 .tag", 23.84);
+      tl.to("#s6 .moffy", { y: -26, duration: 0.2, ease: "power2.out", yoyo: true, repeat: 1 }, 24.13);
+      tl.fromTo("#s6 .offer", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, ...pop }, 24.28);
+      tl.fromTo("#s6 .soon", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 24.79);
+      tl.to("#s6 .eye", { scaleY: 0.1, duration: 0.07, yoyo: true, repeat: 1 }, 25.88);
 
       window.__timelines["main"] = tl;
       tl.seek(0);

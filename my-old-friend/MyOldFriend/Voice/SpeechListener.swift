@@ -86,6 +86,13 @@ final class SpeechListener: ObservableObject {
         tearDown()
     }
 
+    #if DEBUG
+    /// Screenshot scenes: show words as if they had been heard.
+    func showPreview(transcript text: String) {
+        transcript = text
+    }
+    #endif
+
     private func waitForSilence(seconds: TimeInterval) {
         silenceTimer?.invalidate()
         silenceTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in

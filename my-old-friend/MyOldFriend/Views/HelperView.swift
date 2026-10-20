@@ -5,7 +5,7 @@ import SwiftUI
 struct HelperView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
-    @State private var showSettings = false
+    @State private var showSettings = UserDefaults.standard.string(forKey: "screenshotScene") == "settings"
     @State private var showTyping = false
 
     var body: some View {
@@ -63,7 +63,7 @@ private struct StageView: View {
     let size: CGSize
     @Binding var showSettings: Bool
 
-    private var cameraVisible: Bool { helper.cameraOn && helper.camera.isAuthorized }
+    private var cameraVisible: Bool { helper.showsSampleScene || (helper.cameraOn && helper.camera.isAuthorized) }
     private var moffySize: CGFloat { cameraVisible ? 104 : min(200, size.width * 0.45) }
 
     private var target: CGPoint? {
@@ -73,7 +73,9 @@ private struct StageView: View {
 
     var body: some View {
         ZStack {
-            if cameraVisible {
+            if helper.showsSampleScene {
+                SampleSceneView()
+            } else if cameraVisible {
                 CameraPreview(session: helper.camera.session)
                     .transition(.opacity)
             } else {

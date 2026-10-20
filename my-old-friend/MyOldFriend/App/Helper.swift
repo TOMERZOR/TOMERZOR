@@ -14,6 +14,8 @@ final class Helper: ObservableObject {
     @Published private(set) var phase: Phase = .ready
     @Published private(set) var reply: MoffyReply
     var cameraOn: Bool { settings.useCamera }
+    /// Test builds only: shows a drawn TV remote instead of the camera, for simulator screenshots.
+    @Published private(set) var showsSampleScene = false
     /// The size of the camera area on screen, so the snapshot is cut to match what the person sees.
     var stageSize: CGSize = .zero
 
@@ -51,6 +53,12 @@ final class Helper: ObservableObject {
     // MARK: - Screen events
 
     func appeared() {
+        #if DEBUG
+        if let scene = UserDefaults.standard.string(forKey: "screenshotScene") {
+            playScreenshotScene(scene)
+            return
+        }
+        #endif
         AudioSessionSetup.configure()
         if cameraOn { camera.start() }
         if !greeted {
@@ -190,3 +198,65 @@ final class Helper: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+// MARK: - Screenshot scenes (test builds only)
+
+/// Launch with `-screenshotScene <name>` in the simulator to show one moment of the app,
+/// without a camera, microphone or API key. Used by the GitHub workflow that takes screenshots.
+extension Helper {
+    private var sampleReply: MoffyReply {
+        MoffyReply(
+            say: settings.t("To turn on the TV, press the round red button at the top of the remote. Tell me when you've done it.",
+                            "כדי להדליק את הטלוויזיה, לחצו על הכפתור העגול והאדום בחלק העליון של השלט. ספרו לי כשסיימתם."),
+            caption: settings.t("Press the red button", "לחצו על הכפתור האדום"),
+            mood: .talking,
+            point: SampleSceneView.powerButton,
+            pointLabel: settings.t("Power", "הפעלה"))
+    }
+
+    private var sampleQuestion: String {
+        settings.t("How do I turn on the TV?", "איך מדליקים את הטלוויזיה?")
+    }
+
+    func playScreenshotScene(_ scene: String) {
+        greeted = true
+        settings.useCamera = scene != "nocamera"
+        showsSampleScene = scene != "nocamera"
+        switch scene {
+        case "listening":
+            phase = .listening
+            listener.showPreview(transcript: sampleQuestion)
+        case "thinking":
+            phase = .thinking
+        case "pointing":
+            show(sampleReply, speak: false)
+        case "demo":
+            Task { await playDemo() }
+        default:
+            show(greeting, speak: false)
+        }
+    }
+
+    /// About 12 seconds: greeting, the person asks, Moffy thinks, then hops over and points.
+    private func playDemo() async {
+        func wait(_ seconds: Double) async { try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) }
+        show(greeting, speak: true)
+        await wait(3)
+        speaker.stop()
+        phase = .listening
+        var words: [String] = []
+        for word in sampleQuestion.split(separator: " ") {
+            words.append(String(word))
+            listener.showPreview(transcript: words.joined(separator: " "))
+            await wait(0.45)
+        }
+        await wait(0.8)
+        listener.cancel()
+        phase = .thinking
+        await wait(2.2)
+        phase = .ready
+        show(sampleReply, speak: true)
+    }
+}
+#endif

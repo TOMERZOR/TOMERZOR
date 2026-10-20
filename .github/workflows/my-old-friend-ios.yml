@@ -29,3 +29,56 @@ jobs:
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee build.log | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" build.log
+
+      # Screenshots and demo videos from the simulator. Runs when the commit message contains [screens].
+      - name: Take screenshots and record demos
+        if: contains(github.event.head_commit.message, '[screens]') || github.event_name == 'workflow_dispatch'
+        working-directory: my-old-friend
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl create shots com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro)
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$UDID" build/Debug-iphonesimulator/MyOldFriend.app
+          APP=com.tomerzor.myoldfriend
+          mkdir -p ../shots
+
+          shot() { # scene language onboarded appearance
+            xcrun simctl ui "$UDID" appearance "$4"
+            xcrun simctl launch "$UDID" "$APP" -screenshotScene "$1" -language "$2" -hasOnboarded "$3" > /dev/null
+            sleep 5
+            xcrun simctl io "$UDID" screenshot "../shots/$2-$1-$4.png"
+            xcrun simctl terminate "$UDID" "$APP" || true
+            sleep 1
+          }
+
+          for lang in en he; do
+            shot welcome "$lang" NO light
+            shot meet "$lang" NO light
+            for scene in main listening thinking pointing nocamera settings; do
+              shot "$scene" "$lang" YES light
+            done
+            shot pointing "$lang" YES dark
+          done
+
+          xcrun simctl ui "$UDID" appearance light
+          for lang in en he; do
+            xcrun simctl io "$UDID" recordVideo --codec=h264 --force "../shots/$lang-demo.mp4" &
+            REC=$!
+            sleep 2
+            xcrun simctl launch "$UDID" "$APP" -screenshotScene demo -language "$lang" -hasOnboarded YES > /dev/null
+            sleep 14
+            kill -INT "$REC"
+            wait "$REC" || true
+            xcrun simctl terminate "$UDID" "$APP" || true
+            sleep 1
+          done
+          ls -la ../shots
+
+      - name: Upload screenshots
+        if: contains(github.event.head_commit.message, '[screens]') || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-old-friend-screens
+          path: shots/

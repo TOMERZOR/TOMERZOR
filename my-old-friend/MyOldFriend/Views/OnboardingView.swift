@@ -5,7 +5,7 @@ struct OnboardingView: View {
     @EnvironmentObject private var settings: AppSettings
     @EnvironmentObject private var helper: Helper
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var step = 0
+    @State private var step = UserDefaults.standard.string(forKey: "screenshotScene") == "meet" ? 1 : 0
     @State private var asking = false
 
     var body: some View {

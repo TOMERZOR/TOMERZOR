@@ -555,16 +555,17 @@ const Game = {
   // Only the body leaves the ground; the map's walls still hold you in.
   jump() {
     const P = G.player;
-    if (!G.running || !P || P.sit || P.carry || Story.ctl || (P.jz || 0) > 0.02 || P.jv) return;
-    P.jv = P.running ? 4.9 : 4.4;
-    Sound.synth.noise(0.08, 0.06, 900, 'bandpass', 0, null, 1);
+    if (!G.running || !P || P.sit || P.carry || Story.ctl) return;
+    const now = performance.now();
+    if (P.jumpAt && now - P.jumpAt < 1150) return;
+    // The jump clip (Higgsfield mocap, js/scene3d.js), a bit quicker on the run.
+    P.jumpAt = now; P.jumpKind = P.running && P.moving ? 'runJump' : 'jump'; P.jumpSeq = (P.jumpSeq || 0) + 1;
+    const k = P.jumpKind === 'runJump' ? 1 / 1.3 : 1;
+    setTimeout(() => Sound.synth.noise(0.08, 0.06, 900, 'bandpass', 0, null, 1), 330 * k);
+    setTimeout(() => Sound.synth.noise(0.07, 0.07, 500, 'lowpass'), 900 * k);
   },
   update(dt) {
     const S = G.state, P = G.player;
-    if (P.jv || P.jz > 0) {
-      P.jv -= 13 * dt; P.jz = (P.jz || 0) + P.jv * dt;
-      if (P.jz <= 0) { P.jz = 0; P.jv = 0; Sound.synth.noise(0.07, 0.07, 500, 'lowpass'); }
-    }
     // The clock (and the day's events) wait while the controls tutorial is on.
     if (!Tutorial.active) S.clock += dt * DATA.minutesPerSecond;
     // Stuck inside something solid (an old save, a prop that moved onto a spot): after a

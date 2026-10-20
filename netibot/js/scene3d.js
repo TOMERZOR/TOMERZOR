@@ -1114,7 +1114,9 @@ const Scene3D = {
       if (clips && clips.run) parts.acts.run = parts.mixer.clipAction(clips.run);
       if (clips && clips.idle) parts.acts.idle = parts.mixer.clipAction(clips.idle);
       if (clips && clips.dance) parts.acts.dance = parts.mixer.clipAction(clips.dance);
-      parts.w = { walk: 0, run: 0, idle: 1, dance: 0 };
+      // The jumps (Higgsfield mocap): posed by hand from the jump's age, so never looping.
+      if (clips && clips.jump) { const a = parts.mixer.clipAction(clips.jump); a.paused = true; parts.acts.jump = a; }
+      parts.w = { walk: 0, run: 0, idle: 1, dance: 0, jump: 0 };
       for (const k in parts.acts) { parts.acts[k].play(); parts.acts[k].setEffectiveWeight(k === 'idle' ? 1 : 0); }
       // Without an idle clip, standing is the first frame of the walk.
       if (!parts.acts.idle) parts.acts.walk.setEffectiveWeight(1);
@@ -1287,7 +1289,7 @@ const Scene3D = {
       });
     }
     if (m.rigged) {
-      m.root.position.set(ent.x * S3, ent.jz || 0, ent.y * S3);
+      m.root.position.set(ent.x * S3, m.acts && m.acts.jump ? 0 : this.jumpLift(ent), ent.y * S3);
       let d = -ent.angle - m.root.rotation.y;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       // While the game waits on a scene (dt 0) whoever was just placed turns at once.
@@ -1300,9 +1302,17 @@ const Scene3D = {
         const dancing = ent.dancing && m.acts.dance && !moving;
         const want = dancing ? { dance: 1 } : { idle: moving ? 0 : 1, walk: moving && !running ? 1 : 0, run: running ? 1 : 0 };
         const k = Math.min(1, dt * 8);
+        // A jump in the air: its clip at the jump's age, faded in fast and out at the end.
+        const J = this.jumpState(ent, m);
         for (const n in m.acts) {
+          if (n === 'jump') continue;
           m.w[n] += ((want[n] || 0) - m.w[n]) * k;
-          m.acts[n].setEffectiveWeight(m.acts.idle || n !== 'walk' ? m.w[n] : 1);
+          m.acts[n].setEffectiveWeight((m.acts.idle || n !== 'walk' ? m.w[n] : 1) * (1 - (J ? J.w : 0)));
+        }
+        if (m.acts.jump) {
+          const a = m.acts.jump;
+          if (J) { if (!a.isRunning()) a.play(); a.paused = true; a.time = J.age; }
+          a.setEffectiveWeight(J ? J.w : 0);
         }
         m.acts.walk.timeScale = moving ? Math.max(0.5, speed / 90) * 1.15 : (m.acts.idle ? 1 : 0);
         if (m.acts.run) m.acts.run.timeScale = Math.max(0.6, speed / 165) * 1.0;
@@ -1331,7 +1341,23 @@ const Scene3D = {
     m.legR.rotation.z = -s;
     if (m.carry.visible) { m.armL.rotation.z = m.armR.rotation.z = 1.25; }
     else { m.armL.rotation.z = -s * 0.8; m.armR.rotation.z = s * 0.8; }
-    m.root.position.y = Math.abs(Math.sin(ent.walk)) * 0.04 * m.swing + (ent.jz || 0);
+    m.root.position.y = Math.abs(Math.sin(ent.walk)) * 0.04 * m.swing + this.jumpLift(ent);
+  },
+  // Where a jump is: { age (s into the clip), w (blend weight) } while its clip plays, else
+  // null. ent.jumpAt is when it started (performance.now); a running jump ('runJump') plays
+  // the same clip 1.3x faster.
+  jumpState(ent, m) {
+    if (!ent.jumpAt) return null;
+    const a = m && m.acts && m.acts.jump;
+    const dur = a ? a.getClip().duration : 0.75, age = (performance.now() - ent.jumpAt) / 1000 * (ent.jumpKind === 'runJump' ? 1.3 : 1);
+    if (age < 0 || age >= dur) return null;
+    return { age, w: Math.max(0, Math.min(1, age / 0.08, (dur - age) / 0.22)) };
+  },
+  // A model without the clips just hops: a parabola over three quarters of a second.
+  jumpLift(ent) {
+    if (!ent.jumpAt) return 0;
+    const t = (performance.now() - ent.jumpAt) / 1000;
+    return t > 0 && t < 0.75 ? 4.4 * t - 5.9 * t * t : 0;
   },
 
   makeCar(color) {
@@ -1988,7 +2014,7 @@ const Scene3D = {
       this.setBubble(m, m.sayUntil > now ? m.sayText : null);
       // Sitting at a pergola table (their seat rides in presence, see js/sheshbesh.js).
       const sitting = !!(p.ar && p.ar.g === 'shesh' && p.ar.s && p.ar.s.st != null);
-      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r, sitting, jz: p.jz || 0 }, p.m && !sitting, dt);
+      this.animateSoldier(m, { x: p.dx, y: p.dy, angle: p.a, running: p.r, sitting, jumpAt: p.jumpAt, jumpKind: p.jumpKind }, p.m && !sitting, dt);
     }
   },
 

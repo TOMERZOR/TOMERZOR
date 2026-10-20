@@ -43,7 +43,8 @@ const Multi = {
       const s = p.presence;
       const old = this.peers.find(q => q.peer === p.peer);
       return {
-        jz: Math.max(0, Math.min(3, +s.jz || 0)), peer: p.peer, who: String(s.who).slice(0, 40), name: String(s.name || '').slice(0, 24), site: s.site, ver: String(s.ver || '').slice(0, 20),
+        // A new jump number: they just jumped (played here from now).
+        js: +s.js || 0, jumpKind: +s.jk ? 'runJump' : 'jump', jumpAt: old && (+s.js || 0) !== old.js ? performance.now() : old ? old.jumpAt : 0, peer: p.peer, who: String(s.who).slice(0, 40), name: String(s.name || '').slice(0, 24), site: s.site, ver: String(s.ver || '').slice(0, 20),
         x: +s.x || 0, y: +s.y || 0, a: +s.a || 0, m: !!s.m, r: !!s.r, c: s.c ? String(s.c).slice(0, 12) : false,
         say: s.say && typeof s.say.text === 'string' ? { text: s.say.text.slice(0, 80), at: +s.say.at || 0 } : null,
         // Their last few chat messages, sealed: to everyone (to '') or to one player's cast id.
@@ -122,7 +123,7 @@ const Multi = {
     const st = {
       v: 1, ver: typeof NETIBOT_VER !== 'undefined' ? NETIBOT_VER : '', who: this.as, name: G.profile.name, site: World.id,
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
-      m: !!P.moving, r: !!P.running, jz: P.jz > 0.01 ? Math.round(P.jz * 100) / 100 : 0, c: P.carry || false, say: this.say || null, cm: this.outbox,
+      m: !!P.moving, r: !!P.running, js: P.jumpSeq || 0, jk: P.jumpKind === 'runJump' ? 1 : 0, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,
       race: Race.presence(),
       ar: Arcade.presence(),

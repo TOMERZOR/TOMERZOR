@@ -31,7 +31,9 @@ struct ChatTurn {
 }
 
 protocol MoffyBrain {
-    func reply(to question: String, photo: UIImage?, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply
+    /// `fromPhotos` is true when the picture is the newest one from the phone's Photos (usually a
+    /// screenshot) rather than the live camera.
+    func reply(to question: String, photo: UIImage?, fromPhotos: Bool, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply
 }
 
 enum BrainError: Error {

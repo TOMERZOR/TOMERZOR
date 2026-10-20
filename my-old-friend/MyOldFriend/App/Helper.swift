@@ -11,6 +11,7 @@ final class Helper: ObservableObject {
     let listener = SpeechListener()
     let speaker = Speaker()
     let subscription = Subscription()
+    let latestPhoto = LatestPhoto()
 
     @Published private(set) var phase: Phase = .ready
     /// Moffy's latest answer. Nil when there is nothing to show (the camera is all there is).
@@ -20,6 +21,9 @@ final class Helper: ObservableObject {
     var cameraOn: Bool { settings.useCamera }
     /// Test builds only: shows a drawn TV remote instead of the camera, for simulator screenshots.
     @Published private(set) var showsSampleScene = false
+    /// The newest picture from Photos, when the person chose it instead of the camera.
+    @Published private(set) var attachedPhoto: UIImage?
+    private var attachedDate: Date?
 
     /// The whole screen, and the frame Moffy looks through, in screen points. Set by the main screen,
     /// so the snapshot is cut to exactly what is inside the frame.
@@ -33,7 +37,7 @@ final class Helper: ObservableObject {
         self.settings = settings
         // Views watch the helper; pass along changes from its parts.
         for part in [camera.objectWillChange, listener.objectWillChange, speaker.objectWillChange, settings.objectWillChange,
-                     subscription.objectWillChange] {
+                     subscription.objectWillChange, latestPhoto.objectWillChange] {
             part.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         }
         listener.onFinished = { [weak self] heard in self?.heard(heard) }
@@ -68,6 +72,39 @@ final class Helper: ObservableObject {
         #endif
         AudioSessionSetup.configure()
         if cameraOn { camera.start() }
+        Task { await latestPhoto.refreshThumbnail() }
+    }
+
+    /// The shortcut: Moffy looks at the newest screenshot or photo instead of through the camera.
+    func useLatestPhoto() {
+        guard phase == .ready else { return }
+        listener.cancel()
+        speaker.stop()
+        Task {
+            guard let newest = await latestPhoto.newest() else {
+                show(Self.line(latestPhoto.isDenied ? .photosOff : .noPhotos, settings.lang), speak: true)
+                return
+            }
+            attachedPhoto = newest.image
+            attachedDate = newest.date
+            show(Self.line(.gotPhoto, settings.lang), speak: true)
+        }
+    }
+
+    /// Back to the camera.
+    func removePhoto() {
+        speaker.stop()
+        attachedPhoto = nil
+        attachedDate = nil
+        reply = nil
+    }
+
+    /// After doing a step on the phone itself, people usually take a new screenshot: use it.
+    private func refreshAttachedPhoto() async {
+        guard attachedPhoto != nil, latestPhoto.canRead, let newest = await latestPhoto.newest(),
+              let date = newest.date, date > (attachedDate ?? .distantPast) else { return }
+        attachedPhoto = newest.image
+        attachedDate = date
     }
 
     func talkButtonTapped() {
@@ -114,6 +151,8 @@ final class Helper: ObservableObject {
         lastQuestion = ""
         phase = .ready
         reply = nil
+        attachedPhoto = nil
+        attachedDate = nil
     }
 
     func setCamera(on: Bool) {
@@ -149,9 +188,12 @@ final class Helper: ObservableObject {
         lastQuestion = question
         phase = .thinking
         speaker.stop()
-        let photo = cameraOn ? snapshot() : nil
+        await refreshAttachedPhoto()
+        let fromPhotos = attachedPhoto != nil
+        let photo = attachedPhoto ?? (cameraOn ? snapshot() : nil)
         do {
-            let answer = try await brain.reply(to: question, photo: photo, history: history, language: settings.lang)
+            let answer = try await brain.reply(to: question, photo: photo, fromPhotos: fromPhotos,
+                                               history: history, language: settings.lang)
             history.append(ChatTurn(role: .user, text: question))
             history.append(ChatTurn(role: .assistant, text: answer.raw.isEmpty ? answer.say : answer.raw))
             // Keep the last few exchanges; enough for "what's next?" without growing forever.
@@ -181,7 +223,7 @@ final class Helper: ObservableObject {
 
     // MARK: - Fixed lines (the only words Moffy says that don't come from Claude)
 
-    enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other }
+    enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other, gotPhoto, noPhotos, photosOff }
 
     static func line(_ kind: FixedLine, _ language: AppLanguage) -> MoffyReply {
         let he = language == .hebrew
@@ -211,6 +253,18 @@ final class Helper: ObservableObject {
             return MoffyReply(say: t("I'm afraid I can't help with that. You're welcome to ask me something else.",
                                      "בזה לצערי אני לא יכולה לעזור. אפשר לשאול אותי על משהו אחר."),
                               caption: t("Ask something else", "שאלו משהו אחר"), mood: .worried)
+        case .gotPhoto:
+            return MoffyReply(say: t("I have your latest picture. Please tap the button and ask me about it.",
+                                     "קיבלתי את התמונה האחרונה שלכם. לחצו בבקשה על הכפתור ושאלו אותי עליה."),
+                              caption: t("Ask about the picture", "שאלו על התמונה"), mood: .happy)
+        case .noPhotos:
+            return MoffyReply(say: t("I couldn't find a picture. To take a screenshot, press the side button and the volume up button together, then tap here again.",
+                                     "לא מצאתי תמונה. כדי לצלם מסך, לחצו יחד על הכפתור שבצד ועל כפתור הגברת הקול, ואז לחצו כאן שוב."),
+                              caption: t("Take a screenshot first", "צלמו קודם מסך"), mood: .thinking)
+        case .photosOff:
+            return MoffyReply(say: t("I don't have access to your pictures. You can allow it in the phone's Settings, under My Old Friend.",
+                                     "אין לי גישה לתמונות. אפשר לאשר אותה בהגדרות של הטלפון, תחת החבר הוותיק שלי."),
+                              caption: t("Allow Photos in Settings", "לאשר תמונות בהגדרות"), mood: .worried)
         case .other:
             return MoffyReply(say: t("Something went wrong on my side. Please try again.",
                                      "משהו השתבש אצלי. נסו בבקשה שוב."),
@@ -273,6 +327,16 @@ extension Helper {
             Task { await playDemo() }
         case "paywall":
             subscription.showPaywall = true
+        case "photo":
+            let renderer = ImageRenderer(content: SampleScreenshotView(hebrew: settings.lang == .hebrew))
+            renderer.scale = 2
+            attachedPhoto = renderer.uiImage
+            lastQuestion = settings.t("How do I make the letters bigger?", "איך מגדילים את האותיות?")
+            show(MoffyReply(say: settings.t("Please tap \"Display & Brightness\", the third row from the top. A page with the text size will open.",
+                                            "לחצו בבקשה על \"תצוגה ובהירות\", השורה השלישית מלמעלה. ייפתח עמוד עם גודל הטקסט."),
+                            caption: settings.t("Tap Display & Brightness", "לחצו על תצוגה ובהירות"),
+                            mood: .talking, point: SampleScreenshotView.displayRow,
+                            pointLabel: settings.t("Display & Brightness", "תצוגה ובהירות"), step: 1), speak: false)
         default:
             break
         }

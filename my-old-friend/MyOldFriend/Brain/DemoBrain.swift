@@ -4,7 +4,7 @@ import UIKit
 /// Practice mode, used when the app was built without a server (no `Backend.plist`).
 /// Moffy can't really see yet, but everything else (voice, hopping, pointing) works.
 struct DemoBrain: MoffyBrain {
-    func reply(to question: String, photo: UIImage?, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply {
+    func reply(to question: String, photo: UIImage?, fromPhotos: Bool, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply {
         try await Task.sleep(nanoseconds: 1_200_000_000)
         let he = language == .hebrew
         let step = history.count / 2 + 1

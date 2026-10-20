@@ -91,3 +91,54 @@ struct SampleSceneView: View {
 #Preview {
     SampleSceneView(focus: CGRect(x: 16, y: 120, width: 360, height: 420))
 }
+
+#if DEBUG
+/// A drawn iPhone Settings screen, standing in for a screenshot in simulator screenshots.
+struct SampleScreenshotView: View {
+    /// The middle of the "Display & Brightness" row, as a fraction of the picture.
+    static let displayRow = CGPoint(x: 0.5, y: 0.31)
+
+    var hebrew: Bool
+
+    private var rows: [(String, Color)] {
+        [(hebrew ? "כללי" : "General", .gray),
+         (hebrew ? "מרכז הבקרה" : "Control Center", .gray),
+         (hebrew ? "תצוגה ובהירות" : "Display & Brightness", .blue),
+         (hebrew ? "מסך הבית" : "Home Screen", .indigo),
+         (hebrew ? "נגישות" : "Accessibility", .blue),
+         (hebrew ? "רקע" : "Wallpaper", .cyan),
+         (hebrew ? "צלילים" : "Sounds", .red)]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(hebrew ? "הגדרות" : "Settings")
+                .font(.system(size: 34, weight: .bold))
+                .frame(height: 41)
+                .padding(.horizontal, 20)
+                .padding(.top, 70)
+                .padding(.bottom, 16)
+            VStack(spacing: 0) {
+                ForEach(rows.indices, id: \.self) { index in
+                    HStack(spacing: 14) {
+                        RoundedRectangle(cornerRadius: 7).fill(rows[index].1).frame(width: 30, height: 30)
+                        Text(rows[index].0).font(.system(size: 17)).foregroundStyle(.black)
+                        Spacer()
+                        Image(systemName: "chevron.forward").foregroundStyle(.gray)
+                    }
+                    .frame(height: 52)
+                    .padding(.horizontal, 16)
+                    Rectangle().fill(Color(white: 0.88)).frame(height: 1)
+                }
+            }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .padding(.horizontal, 16)
+            Spacer(minLength: 0)
+        }
+        .frame(width: 390, height: 844)
+        .background(Color(white: 0.95))
+        .environment(\.layoutDirection, hebrew ? .rightToLeft : .leftToRight)
+    }
+}
+#endif

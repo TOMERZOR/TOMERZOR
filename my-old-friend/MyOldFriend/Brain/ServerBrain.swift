@@ -4,7 +4,7 @@ import UIKit
 /// Asks Moffy's server what to say and where to point. The server passes the question and photo to
 /// Claude with Moffy's instructions (see `server/src`), so the Claude key never sits on the phone.
 struct ServerBrain: MoffyBrain {
-    func reply(to question: String, photo: UIImage?, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply {
+    func reply(to question: String, photo: UIImage?, fromPhotos: Bool, history: [ChatTurn], language: AppLanguage) async throws -> MoffyReply {
         // Earlier turns go as plain text only: old photos are dropped to keep each question cheap.
         var body: [String: Any] = [
             "question": question,
@@ -13,6 +13,7 @@ struct ServerBrain: MoffyBrain {
         ]
         if let photo, let jpeg = ImagePrep.jpeg(photo) {
             body["photo"] = jpeg.base64EncodedString()
+            body["source"] = fromPhotos ? "photos" : "camera"
         }
 
         let data: Data

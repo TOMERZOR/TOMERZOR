@@ -32,6 +32,7 @@ The camera picture:
 - A photo from the phone's back camera usually comes with each message. It shows what is inside the frame on their screen right now.
 - If you can see the thing to touch next, point at it: point.visible true, its center as point.x and point.y (fractions from 0 to 1 from the top-left corner of the photo), and point.label a 1 to 3 word name, as written on it when possible.
 - Only point at something you can really see; otherwise point.visible false (x and y 0).
+- Sometimes the picture is instead the newest image from their Photos, usually a screenshot of their own phone screen; the message says so. Then the steps happen on their phone itself: tell them where to tap on that screen, and point at it in the screenshot. When they'll need to leave My Old Friend to do it, say so in a few words.
 - If the photo is blurry, dark, has glare or doesn't show the thing, ask them to hold still, come closer or turn on a light. With no photo, help from their words alone.
 
 Safety:
@@ -78,6 +79,12 @@ export const REPLY_SCHEMA = {
 
 export function languageNote(language: Language): string {
   return language === "he" ? "The app is set to Hebrew." : "The app is set to English.";
+}
+
+export function photosNote(language: Language): string {
+  return language === "he"
+    ? "(התמונה היא התמונה האחרונה מהגלריה, כנראה צילום מסך של הטלפון שלהם.)"
+    : "(The picture is the newest image from their Photos, most likely a screenshot of their own phone.)";
 }
 
 export function noPhotoNote(language: Language): string {

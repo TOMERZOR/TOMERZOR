@@ -95,20 +95,47 @@ private struct StageView: View {
     let layout: StageLayout
 
     private var cameraVisible: Bool { helper.showsSampleScene || (helper.cameraOn && helper.camera.isAuthorized) }
-    private var moffySize: CGFloat { cameraVisible ? 83 : 160 }
+    /// A picture is in the frame: the live camera, or the newest picture from Photos.
+    private var pictureVisible: Bool { cameraVisible || helper.attachedPhoto != nil }
+    private var moffySize: CGFloat { pictureVisible ? 83 : 160 }
     private var frame: CGRect { layout.onScreen(helper.showsCard ? layout.compact : layout.expanded) }
     private var answerFrame: CGRect { layout.onScreen(layout.compact) }
 
+    /// Where the picture Moffy answered about is drawn: the whole frame for the camera, or the
+    /// photo fitted inside it.
+    private var pictureRect: CGRect {
+        guard let photo = helper.attachedPhoto else { return answerFrame }
+        return Self.fit(photo.size, in: answerFrame)
+    }
+
     private var target: CGPoint? {
-        guard cameraVisible, helper.phase == .ready, let point = helper.reply?.point else { return nil }
-        return CGPoint(x: answerFrame.minX + point.x * answerFrame.width,
-                       y: answerFrame.minY + point.y * answerFrame.height)
+        guard pictureVisible, helper.phase == .ready, let point = helper.reply?.point else { return nil }
+        return CGPoint(x: pictureRect.minX + point.x * pictureRect.width,
+                       y: pictureRect.minY + point.y * pictureRect.height)
+    }
+
+    static func fit(_ size: CGSize, in rect: CGRect) -> CGRect {
+        guard size.width > 0, size.height > 0 else { return rect }
+        let scale = min(rect.width / size.width, rect.height / size.height)
+        let fitted = CGSize(width: size.width * scale, height: size.height * scale)
+        return CGRect(x: rect.midX - fitted.width / 2, y: rect.midY - fitted.height / 2, width: fitted.width, height: fitted.height)
     }
 
     var body: some View {
         let screen = layout.screenSize
         ZStack {
-            if helper.showsSampleScene {
+            if let photo = helper.attachedPhoto {
+                Theme.surface
+                let shown = Self.fit(photo.size, in: frame)
+                Image(uiImage: photo)
+                    .resizable()
+                    .frame(width: shown.width, height: shown.height)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
+                    .position(x: shown.midX, y: shown.midY)
+                    .accessibilityLabel(settings.t("Your latest picture", "התמונה האחרונה שלכם"))
+                    .transition(.opacity)
+            } else if helper.showsSampleScene {
                 SampleSceneView(focus: answerFrame)
             } else if cameraVisible {
                 CameraPreview(session: helper.camera.session)
@@ -117,7 +144,7 @@ private struct StageView: View {
                 Theme.surface
             }
 
-            if cameraVisible {
+            if pictureVisible {
                 FrameMask(hole: frame)
                     .fill(Color.black.opacity(0.3), style: FillStyle(eoFill: true))
                     .allowsHitTesting(false)
@@ -128,6 +155,18 @@ private struct StageView: View {
                     .allowsHitTesting(false)
             } else {
                 noCameraText
+            }
+
+            if helper.attachedPhoto != nil {
+                if helper.phase == .ready {
+                    GlassCircleButton(systemImage: "camera.fill", label: settings.t("Back to the camera", "חזרה למצלמה"), size: 56) {
+                        helper.removePhoto()
+                    }
+                    .position(x: settings.lang == .hebrew ? frame.minX + 40 : frame.maxX - 40, y: frame.minY + 40)
+                }
+            } else if helper.phase == .ready && helper.reply?.point == nil {
+                LatestPhotoButton()
+                    .position(x: settings.lang == .hebrew ? frame.minX + 58 : frame.maxX - 58, y: frame.maxY - 66)
             }
 
             if let target {
@@ -143,7 +182,7 @@ private struct StageView: View {
         }
         .frame(width: screen.width, height: screen.height)
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.45, dampingFraction: 0.85), value: frame)
-        .animation(.easeInOut(duration: 0.3), value: cameraVisible)
+        .animation(.easeInOut(duration: 0.3), value: pictureVisible)
         // The picture is the real world, so left and right stay as they are in Hebrew too.
         .environment(\.layoutDirection, .leftToRight)
     }
@@ -151,7 +190,7 @@ private struct StageView: View {
     /// Moffy stands in the bottom corner of the frame, or beside the thing he points at.
     private var moffyCenter: CGPoint {
         let half = moffySize / 2
-        if !cameraVisible {
+        if !pictureVisible {
             return CGPoint(x: frame.midX, y: frame.minY + frame.height * 0.4)
         }
         let area = answerFrame.insetBy(dx: half + 8, dy: half * 1.04 + 8)
@@ -203,6 +242,49 @@ private struct StageView: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: frame.width - 32)
         .position(x: frame.midX, y: moffyCenter.y + moffySize * 0.75 + 40)
+    }
+}
+
+/// The shortcut to the newest screenshot or photo: its thumbnail, or a picture icon before Photos
+/// access is given.
+private struct LatestPhotoButton: View {
+    @EnvironmentObject private var settings: AppSettings
+    @EnvironmentObject private var helper: Helper
+
+    var body: some View {
+        Button { helper.useLatestPhoto() } label: {
+            VStack(spacing: 6) {
+                Group {
+                    if let thumbnail = helper.latestPhoto.thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundStyle(Theme.actionText)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Theme.card)
+                    }
+                }
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.white, lineWidth: 3))
+                .shadow(color: .black.opacity(0.3), radius: 6, y: 2)
+                Text(settings.t("Last picture", "תמונה אחרונה"))
+                    .font(.ui(.footnote, .semibold))
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(.ultraThinMaterial))
+            }
+            .frame(width: 100)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableStyle())
+        .accessibilityLabel(settings.t("Ask about my last screenshot or photo", "לשאול על צילום המסך או התמונה האחרונה"))
     }
 }
 
@@ -298,6 +380,7 @@ private struct TopBar: View {
         case .thinking: return settings.t("Looking…", "מסתכלת…")
         case .ready:
             if helper.reply != nil { return nil }
+            if helper.attachedPhoto != nil { return settings.t("Ask about the picture", "שאלו על התמונה") }
             return helper.cameraOn
                 ? settings.t("Point at what needs help", "כוונו למה שצריך עזרה בו")
                 : settings.t("Tell me what you need", "ספרו לי מה צריך")

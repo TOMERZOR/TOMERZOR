@@ -58,7 +58,7 @@ jobs:
           for lang in en he; do
             shot welcome "$lang" NO light
             shot meet "$lang" NO light
-            for scene in main listening thinking pointing nocamera settings paywall; do
+            for scene in main listening thinking pointing photo nocamera settings paywall; do
               shot "$scene" "$lang" YES light
             done
             shot pointing "$lang" YES dark

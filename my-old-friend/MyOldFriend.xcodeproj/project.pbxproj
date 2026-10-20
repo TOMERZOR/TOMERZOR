@@ -187,9 +187,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Old Friend";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Moffy uses the camera to see what you need help with. / מופי משתמש במצלמה כדי לראות במה צריך לעזור.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Moffy listens when you tap the big button and talk. / מופי מקשיב כשלוחצים על הכפתור הגדול ומדברים.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Moffy turns what you say into words so he can help you. / מופי הופך את מה שאומרים למילים כדי שיוכל לעזור.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Moffy uses the camera to see what you need help with. / מופי משתמשת במצלמה כדי לראות במה צריך לעזור.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Moffy listens when you tap the big button and talk. / מופי מקשיבה כשלוחצים על הכפתור הגדול ומדברים.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "When you tap Last picture, Moffy looks at your newest screenshot or photo to help with what is on it. / כשלוחצים על תמונה אחרונה, מופי מסתכלת על צילום המסך או התמונה האחרונה כדי לעזור במה שמופיע בה.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Moffy turns what you say into words so she can help you. / מופי הופכת את מה שאומרים למילים כדי שתוכל לעזור.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -217,9 +218,10 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "My Old Friend";
-				INFOPLIST_KEY_NSCameraUsageDescription = "Moffy uses the camera to see what you need help with. / מופי משתמש במצלמה כדי לראות במה צריך לעזור.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Moffy listens when you tap the big button and talk. / מופי מקשיב כשלוחצים על הכפתור הגדול ומדברים.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Moffy turns what you say into words so he can help you. / מופי הופך את מה שאומרים למילים כדי שיוכל לעזור.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Moffy uses the camera to see what you need help with. / מופי משתמשת במצלמה כדי לראות במה צריך לעזור.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Moffy listens when you tap the big button and talk. / מופי מקשיבה כשלוחצים על הכפתור הגדול ומדברים.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "When you tap Last picture, Moffy looks at your newest screenshot or photo to help with what is on it. / כשלוחצים על תמונה אחרונה, מופי מסתכלת על צילום המסך או התמונה האחרונה כדי לעזור במה שמופיע בה.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Moffy turns what you say into words so she can help you. / מופי הופכת את מה שאומרים למילים כדי שתוכל לעזור.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

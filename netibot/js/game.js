@@ -487,8 +487,10 @@ const Game = {
     Scene3D.build();
     this.resetNpcs();
     miniBase = null;
-    const a = tc(DATA.travelStop[0] + 1, DATA.travelStop[1] + 1);
-    G.player.x = a.x; G.player.y = a.y;
+    // Off the bus beside the stop, on a free spot (the club container stands just south of it).
+    let a = tc(DATA.travelStop[0] + 1, DATA.travelStop[1]);
+    if (World.blocked(a.x, a.y, G.player.r || 13)) a = this.walkableNear(a) || a;
+    G.player.x = a.x; G.player.y = a.y; G.player.vx = G.player.vy = 0;
     Scene3D.yaw = 0;
   },
 
@@ -533,6 +535,12 @@ const Game = {
     const S = G.state, P = G.player;
     // The clock (and the day's events) wait while the controls tutorial is on.
     if (!Tutorial.active) S.clock += dt * DATA.minutesPerSecond;
+    // Stuck inside something solid (an old save, a prop that moved onto a spot): after a
+    // moment there, step out to the nearest free tile.
+    if (!P.sit && !Story.ctl && World.blocked(P.x, P.y, P.r)) {
+      P.stuckT = (P.stuckT || 0) + dt;
+      if (P.stuckT > 1.2) { const q = this.walkableNear(P); if (q) { P.x = q.x; P.y = q.y; P.vx = P.vy = 0; } P.stuckT = 0; }
+    } else P.stuckT = 0;
 
     // Movement relative to the camera: W/up = away from the camera.
     let mx = 0, my = 0;

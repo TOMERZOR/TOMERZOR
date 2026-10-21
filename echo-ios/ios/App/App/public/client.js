@@ -21,7 +21,9 @@ const STR = {
     tagline: "10 שניות. ואז אתה משחק לצד עצמך.",
     play: "שחק", daily: "אתגר יומי", daily_s: "יומי", shop: "חנות", editor: "עורך שלבים", editor_s: "עורך", clubs: "מועדונים", settings: "הגדרות",
     worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות",
-    world_locked: "נפתח עם {n} כוכבים", loop: "סיבוב", level: "שלב", hint: "רמז",
+    world_locked: "נפתח עם {n} כוכבים", redo: "שוב", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט",
+    purchase_q: "לקנות {item} ב-{price}?", buy_for: "קנה ב-{price}", purchase_note: "אב־טיפוס: התשלום מדומה ולא מחויב כסף.",
+    gems: "יהלומים", gems_n: "{n} יהלומים", skin_name: "סקין {n}",
     echoes_used: "הדים", seconds: "שניות", coins: "מטבעות", replay: "שידור חוזר", share: "שיתוף", retry: "שוב",
     next: "השלב הבא", done_title: "שלב הושלם", perfect: "מושלם", first_clear: "בונוס סיום ראשון +50",
     free_coins: "מטבעות חינם", watch_ad: "צפה בסרטון +30", ads_left: "נותרו {n} סרטונים היום", ads_none: "נגמרו הסרטונים להיום. חזור מחר.",
@@ -41,7 +43,7 @@ const STR = {
     bought: "נקנה!", equipped: "מצויד", not_enough: "אין מספיק {c}", owned: "בבעלותך", equip: "צייד", buy: "קנה",
     starter: "חבילת פתיחה", starter_d: "120 יהלומים + 500 מטבעות + סקין זהב", gems_small: "100 יהלומים", gems_big: "600 יהלומים",
     noads: "הסרת פרסומות", noads_d: "בלי סרטונים. רמזים נשארים חינם.", pass: "כרטיס עונה", pass_d: "פותח את כל 10 השלבים",
-    purchase_title: "אישור רכישה (דמו)", purchase_sub: "בגרסה האמיתית כאן נפתח App Store. כאן זה רק מדומה.", confirm: "אשר", cancel: "ביטול",
+    purchase_title: "אישור רכישה", confirm: "אשר", cancel: "ביטול",
     ad_title: "פרסומת לדוגמה", ad_sub: "סרטון ממומן היה מתנגן כאן ({n})", ad_done: "קיבלת +30 מטבעות", hint_title: "רמז",
     clubs_title: "מועדונים", clubs_sub: "אתגרים קבוצתיים שבועיים: 20 שחקנים, חדר משותף, הכי מעט הדים ביחד. בקרוב.", close: "סגור",
     streak: "רצף {n} ימים", bonus_today: "בונוס יומי +{n}", online: "מחובר", offline: "לא מקוון · שמירה במכשיר",
@@ -53,7 +55,9 @@ const STR = {
     tagline: "Ten seconds. Then you play beside yourself.",
     play: "Play", daily: "Daily challenge", daily_s: "Daily", shop: "Shop", editor: "Level editor", editor_s: "Editor", clubs: "Clubs", settings: "Settings",
     worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab",
-    world_locked: "Opens at {n} stars", loop: "Loop", level: "Level", hint: "Hint",
+    world_locked: "Opens at {n} stars", redo: "Redo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback",
+    purchase_q: "Buy {item} for {price}?", buy_for: "Buy for {price}", purchase_note: "Prototype: payments are simulated and nothing is charged.",
+    gems: "gems", gems_n: "{n} gems", skin_name: "the {n} skin",
     echoes_used: "echoes", seconds: "seconds", coins: "coins", replay: "Replay", share: "Share", retry: "Retry",
     next: "Next level", done_title: "Level clear", perfect: "Perfect", first_clear: "First clear bonus +50",
     free_coins: "Free coins", watch_ad: "Watch ad +30", ads_left: "{n} videos left today", ads_none: "No more videos today. Come back tomorrow.",
@@ -73,7 +77,7 @@ const STR = {
     bought: "Bought!", equipped: "Equipped", not_enough: "Not enough {c}", owned: "Owned", equip: "Equip", buy: "Buy",
     starter: "Starter pack", starter_d: "120 gems + 500 coins + gold skin", gems_small: "100 gems", gems_big: "600 gems",
     noads: "Remove ads", noads_d: "No videos. Hints stay free.", pass: "Season pass", pass_d: "Opens all 10 tiers",
-    purchase_title: "Confirm purchase (demo)", purchase_sub: "The real build opens the App Store here. This one only pretends.", confirm: "Confirm", cancel: "Cancel",
+    purchase_title: "Confirm purchase", confirm: "Confirm", cancel: "Cancel",
     ad_title: "Sample ad", ad_sub: "A sponsored video would play here ({n})", ad_done: "You got +30 coins", hint_title: "Hint",
     clubs_title: "Clubs", clubs_sub: "Weekly team challenges: 20 players, one shared room, fewest echoes together. Coming soon.", close: "Close",
     streak: "{n}-day streak", bonus_today: "Daily bonus +{n}", online: "Online", offline: "Offline · saved on device",
@@ -91,7 +95,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("echo:" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("echo:" + k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
-const opts = Object.assign({ music: true, sfx: true, shake: true, lang: "en" }, store.get("opts", {}));
+const opts = Object.assign({ music: true, sfx: true, shake: true, haptics: true, lang: "en" }, store.get("opts", {}));
 lang = opts.lang;
 const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 function playerId() {
@@ -259,6 +263,23 @@ document.addEventListener("visibilitychange", () => {
   (document.hidden ? actx.suspend() : actx.resume()).catch(() => {});
 });
 
+// ── haptics: the Taptic Engine through Capacitor, vibration where a browser has it ──
+
+const Haptics = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.registerPlugin("Haptics") : null;
+/** kind: light | medium | heavy | success | warning | error */
+function buzz(kind = "light") {
+  if (!opts.haptics) return;
+  try {
+    if (Haptics) {
+      if (kind === "success" || kind === "warning" || kind === "error") Haptics.notification({ type: kind.toUpperCase() });
+      else Haptics.impact({ style: kind.toUpperCase() });
+    } else if (navigator.vibrate) {
+      navigator.vibrate(kind === "heavy" || kind === "error" ? 40 : kind === "medium" || kind === "success" ? 18 : 8);
+    }
+  } catch { /* no haptics here */ }
+}
+document.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) buzz("light"); });
+
 // ── DOM helpers ────────────────────────────────────────────────────────────
 
 const $ = (s) => document.querySelector(s);
@@ -386,18 +407,33 @@ function loopEnded() {
   game.rewind = 0.4;
   if (game.logs.length >= L.MAX_ECHOES) {
     banner(T("out_of_echoes"), T("out_sub"), 1400);
-    sfx("fail"); shake(10);
+    sfx("fail"); shake(10); buzz("error");
     later(1300, () => { game.logs = []; startLoop(); });
     return;
   }
   game.logs.push(game.recording);
   banner(T("loop_saved", { n: game.logs.length }), T("loop_sub"), 1300);
-  sfx("chime", 0.6);
+  sfx("chime", 0.6); buzz("medium");
   later(950, startLoop);
+}
+/**
+ * Finish the loop now instead of waiting out the clock: what was recorded so
+ * far becomes the echo, and it simply stands still for the rest of every later
+ * loop. A tap in the first half second is ignored so a stray touch cannot
+ * spend an echo on nothing.
+ */
+function endLoopNow() {
+  const run = game.run;
+  if (!game.playing || !run || run.finished || run.dead || run.tick >= L.LOOP_TICKS) return;
+  if (game.replay && !game.replay.live) return;
+  if (run.tick < L.TPS / 2) return;
+  run.tick = L.LOOP_TICKS;
+  updateTimer(run);
+  loopEnded();
 }
 function loopFailed() {
   banner(T("caught"), T("caught_sub"), 1200);
-  sfx("fail"); shake(14); game.flash = 0.5; game.freeze = 0.09;
+  sfx("fail"); shake(14); game.flash = 0.5; game.freeze = 0.09; buzz("error");
   later(1000, startLoop);
 }
 function levelDone() {
@@ -409,7 +445,7 @@ function levelDone() {
   const v = saveRoom.act(action);
   if (game.levelKey === "daily") dailyRoom.act(action);
   const reward = v.ok ? profile.coins - before : 0;
-  sfx("win"); game.timeScale = 0.22; shake(6);
+  sfx("win"); game.timeScale = 0.22; shake(6); buzz("success");
   const h = game.run.actors[game.run.actors.length - 1];
   game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (h.x - L.COLS / 2) * view.cs * 0.6; game.cam.tfy = (h.y - L.ROWS / 2) * view.cs * 0.6;
   game.replay = { logs, level: game.level, live: true };
@@ -423,7 +459,7 @@ function levelDone() {
       const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       s.setAttribute("class", "ic " + (i < stars ? "on" : "off")); s.style.animationDelay = `${0.15 + i * 0.22}s`;
       s.innerHTML = `<use href="#i-star"/>`; st.appendChild(s);
-      if (i < stars) setTimeout(() => tone(4 + i * 2, 0.3), 150 + i * 220);
+      if (i < stars) setTimeout(() => { tone(4 + i * 2, 0.3); buzz("light"); }, 150 + i * 220);
     }
     $("#r-echoes").textContent = res.echoes; $("#r-time").textContent = (res.exitTick / L.TPS).toFixed(1);
     countUp($("#r-coins"), reward);
@@ -452,7 +488,11 @@ function quit() {
 // ── input ──────────────────────────────────────────────────────────────────
 
 const KEYS = { ArrowUp: "u", KeyW: "u", ArrowDown: "d", KeyS: "d", ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r" };
-window.addEventListener("keydown", (e) => { if (KEYS[e.code]) { game.keys.add(KEYS[e.code]); e.preventDefault(); } if (e.code === "KeyR" && game.playing) startLoop(); });
+window.addEventListener("keydown", (e) => {
+  if (KEYS[e.code]) { game.keys.add(KEYS[e.code]); e.preventDefault(); }
+  if (e.code === "KeyR" && game.playing) startLoop();
+  if ((e.code === "Space" || e.code === "Enter" || e.code === "KeyE") && game.playing && current === "none") { endLoopNow(); e.preventDefault(); }
+});
 window.addEventListener("keyup", (e) => { if (KEYS[e.code]) game.keys.delete(KEYS[e.code]); });
 window.addEventListener("blur", () => game.keys.clear());
 function keyDir() {
@@ -541,9 +581,9 @@ function handleEvents(run) {
   for (const e of run.events) {
     if (e.t === "coin") {
       sfx("chime", 0.5); burst(e.x, e.y, "#ffc93c", 14);
-      if (e.hero) flyCoin(e.x, e.y); else bumpCoins();
-    } else if (e.t === "plate") { sfx("plate", 0.7); game.flash = Math.max(game.flash, 0.1); ring(e); }
-    else if (e.t === "open") { sfx("door", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; }
+      if (e.hero) { flyCoin(e.x, e.y); buzz("light"); } else bumpCoins();
+    } else if (e.t === "plate") { sfx("plate", 0.7); game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
+    else if (e.t === "open") { sfx("door", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
     else if (e.t === "close") { game.doorAnim[e.k] = { t: 0, open: false }; }
     else if (e.t === "dead") burst(e.x, e.y, "#ff4fd8", 26);
     else if (e.t === "exit") { burst(e.x, e.y, "#ffd9a8", 40); burst(e.x, e.y, "#39e6ff", 24); game.flash = 0.45; }
@@ -1051,7 +1091,9 @@ function renderShop() {
     else if (owned) { b.textContent = T("equip"); b.addEventListener("click", () => { saveRoom.act({ t: "equip", skin: id }); renderShop(); }); }
     else {
       b.innerHTML = s.gems ? `<img src="assets/gem.png" alt="" style="width:18px"> ${s.gems}` : `<img src="assets/coin.png" alt="" style="width:18px"> ${s.coins}`;
-      b.addEventListener("click", () => { const v = saveRoom.act({ t: "buy", item: id }); if (v.ok) { toast(T("bought")); sfx("chime"); } else toast(T("not_enough", { c: s.gems ? "💎" : "🪙" })); renderShop(); });
+      const buy = () => { const v = saveRoom.act({ t: "buy", item: id }); if (v.ok) { toast(T("bought")); sfx("chime"); buzz("success"); } else toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); renderShop(); };
+      // Premium currency asks first, like every store does; coins are instant.
+      b.addEventListener("click", () => (s.gems ? confirmBuy(T("skin_name", { n: id }), T("gems_n", { n: s.gems }), buy) : buy()));
     }
     const name = document.createElement("b"); name.textContent = id;
     d.append(cv, name, b); sk.appendChild(d);
@@ -1090,12 +1132,20 @@ function sheet(html, buttons) {
   for (const [label, cls, fn] of buttons) { const b = document.createElement("button"); b.className = "btn " + cls; b.textContent = label; b.addEventListener("click", fn); row.appendChild(b); }
   s.appendChild(row); openSheet();
 }
+/** The standard store question before anything is spent: what, for how much, and a way out. */
+function confirmBuy(item, price, onYes) {
+  sheet(`<div class="eyebrow">${T("purchase_title")}</div><h2>${T("purchase_q", { item, price })}</h2><p>${T("purchase_note")}</p>`, [
+    [T("cancel"), "ghost", closeSheet],
+    [T("buy_for", { price }), "primary", () => { closeSheet(); onYes(); }],
+  ]);
+}
 function purchase(sku) {
   const p = L.IAP[sku];
-  sheet(`<h2>${T("purchase_title")}</h2><p>${T(sku)} · ${p.price}</p><p>${T("purchase_sub")}</p>`, [
-    [T("cancel"), "ghost", closeSheet],
-    [T("confirm"), "primary", () => { const v = saveRoom.act({ t: "iap", sku }); closeSheet(); if (v.ok) { toast(T("bought")); sfx("win", 0.6); } renderShop(); }],
-  ]);
+  confirmBuy(T(sku), p.price, () => {
+    const v = saveRoom.act({ t: "iap", sku });
+    if (v.ok) { toast(T("bought")); sfx("win", 0.6); buzz("success"); }
+    renderShop();
+  });
 }
 function watchAd(onDone) {
   if (profile.noads) { onDone(); return; }
@@ -1158,6 +1208,10 @@ $("#b-settings").addEventListener("click", () => { $("#opt-name").value = profil
 $("#b-clubs").addEventListener("click", () => sheet(`<h2>${T("clubs_title")}</h2><p>${T("clubs_sub")}</p>`, [[T("close"), "ghost", closeSheet]]));
 document.querySelectorAll(".b-back").forEach((b) => b.addEventListener("click", () => show("s-title")));
 $("#b-quit").addEventListener("click", quit);
+$("#b-endloop").addEventListener("click", endLoopNow);
+$("#c-coins").addEventListener("click", () => { renderShop(); show("s-shop"); });
+$("#c-gems").addEventListener("click", () => { renderShop(); show("s-shop"); });
+$("#c-stars").addEventListener("click", () => { renderLevels(); show("s-levels"); });
 $("#b-redo").addEventListener("click", () => { if (game.playing) startLoop(); });
 $("#b-restart").addEventListener("click", () => { if (game.playing) { game.logs = []; startLoop(); } });
 $("#b-hintad").addEventListener("click", () => {
@@ -1204,7 +1258,7 @@ $("#b-adddrone").addEventListener("click", () => {
 });
 $("#b-cleardrones").addEventListener("click", () => { ed.drones = []; renderEditor(); });
 document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { lang = opts.lang = b.dataset.lang; store.set("opts", opts); applyLang(); }));
-for (const k of ["music", "sfx", "shake"]) {
+for (const k of ["music", "sfx", "shake", "haptics"]) {
   const el = $("#opt-" + k); el.checked = opts[k];
   el.addEventListener("change", () => { opts[k] = el.checked; store.set("opts", opts); if (k === "music") musicOn(game.playing); });
 }

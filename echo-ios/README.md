@@ -2,10 +2,16 @@
 
 המשחק עצמו נמצא בתיקייה `../echo` (HTML, CSS ו-JavaScript בלבד). התיקייה הזאת עוטפת אותו באפליקציית iOS אמיתית בעזרת [Capacitor](https://capacitorjs.com), כך שאפשר להתקין אותו על אייפון דרך Xcode.
 
-הפרויקט של Xcode כבר נמצא כאן (`ios/App/App.xcodeproj`) יחד עם עותק של המשחק (`ios/App/App/public`), אז לא צריך להתקין כלום כדי לפתוח אותו.
+הפרויקט של Xcode כבר נמצא כאן (`ios/App/App.xcodeproj`) יחד עם עותק של המשחק (`ios/App/App/public`). הדבר היחיד שצריך להתקין הוא תוסף הרטט (haptics) של Capacitor, שמגיע דרך npm.
 
 ## התקנה על האייפון (צריך מק עם Xcode 15 ומעלה)
 
+0. פעם אחת: מתקינים [Node.js](https://nodejs.org) (או `brew install node`), ואז בטרמינל:
+   ```bash
+   cd echo-ios
+   npm install
+   ```
+   זה מוריד את תוסף הרטט ל-`node_modules`, שפרויקט ה-Xcode מצביע אליו. בלי זה Xcode יתלונן על חבילה חסרה בשם CapacitorHaptics.
 1. פותחים את `echo-ios/ios/App/App.xcodeproj` ב-Xcode (לחיצה כפולה).
 2. בפעם הראשונה Xcode מוריד את חבילת Capacitor דרך Swift Package Manager. זה לוקח דקה או שתיים; מחכים שהסרגל למעלה יסיים.
 3. בעץ הקבצים משמאל בוחרים את `App`, ואז בלשונית **Signing & Capabilities**:

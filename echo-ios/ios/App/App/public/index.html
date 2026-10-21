@@ -140,7 +140,15 @@
       padding: calc(var(--sat) + 10px) max(14px, var(--sar)) calc(var(--sab) + 14px) max(14px, var(--sal)); animation: fade-in .3s both; }
     #hud[hidden] { display: none; }
     .hud-top, .hud-bottom { display: flex; align-items: flex-start; gap: 10px; }
-    .hud-top > *, .hud-bottom > * { pointer-events: auto; }
+    .hud-bottom { align-items: flex-end; justify-content: space-between; }
+    .hud-group { display: flex; gap: 10px; min-width: 110px; }
+    .hud-group:last-child { justify-content: flex-end; }
+    .hud-top > *, .hud-bottom > *, .hud-group > * { pointer-events: auto; }
+    .hbtn.big { width: 76px; }
+    .hbtn.big .disc { width: 64px; height: 64px; }
+    .hbtn.big .disc.accent { background: linear-gradient(180deg, #9af4ff, #27c7e6); color: #052a33; border-color: transparent; box-shadow: 0 10px 26px rgba(57,230,255,.35), inset 0 1px 0 rgba(255,255,255,.6), inset 0 -3px 0 rgba(0,60,80,.3); }
+    .hbtn.big .disc .ic { width: 28px; height: 28px; stroke-width: 2.6; }
+    .hbtn.big small { color: var(--echo); }
     .hud-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
     .hbtn { width: 50px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--fg); transition: transform .12s cubic-bezier(.2,.9,.3,1.4); }
     .hbtn:active { transform: scale(.9); }
@@ -174,7 +182,8 @@
       opacity: 0; transition: opacity .4s;
     }
     #hintbar.show { opacity: 1; }
-    @media (orientation: landscape) { #hintbar { bottom: calc(var(--sab) + 12px); max-width: min(50vw, 56ch); font-size: .82rem; padding: 8px 14px; } }
+    @media (orientation: landscape) { #hintbar { left: auto; right: max(14px, var(--sar)); transform: none; bottom: calc(var(--sab) + 100px); max-width: 28vw; font-size: .82rem; padding: 8px 14px; text-align: start; } }
+    .chip:active { transform: scale(.95); }
     #stick { position: absolute; width: 124px; height: 124px; border-radius: 50%; border: 2px solid rgba(57,230,255,.35); background: radial-gradient(circle, rgba(57,230,255,.12), rgba(57,230,255,.02) 70%); pointer-events: none; display: none; margin: -62px 0 0 -62px; }
     #stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #c9fbff, #39e6ff 60%, #16a8c4); box-shadow: 0 0 22px var(--echo); }
 
@@ -343,6 +352,7 @@
       <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2a4.5 4.5 0 0 1 5 4.8"/></symbol>
       <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
       <symbol id="i-loop" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></symbol>
+      <symbol id="i-skip" viewBox="0 0 24 24"><path d="M6 5.5v13l9.5-6.5z" fill="currentColor" stroke="none"/><path d="M18.5 5.5v13"/></symbol>
       <symbol id="i-level" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/><path d="M12 8v4l3 2"/></symbol>
       <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M8 13a5.5 5.5 0 1 1 8 0c-1 1-1.5 2-1.5 3h-5c0-1-.5-2-1.5-3z"/></symbol>
       <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 13v6h14v-6"/></symbol>
@@ -367,10 +377,14 @@
         <div class="chip" id="hud-coins"><img src="assets/coin.png" alt="" /><b id="h-coins">0</b></div>
       </div>
       <div class="hud-bottom">
-        <button class="hbtn" id="b-redo"><span class="disc"><svg class="ic"><use href="#i-loop"/></svg></span><small data-i18n="loop">Loop</small></button>
-        <button class="hbtn" id="b-restart"><span class="disc"><svg class="ic"><use href="#i-level"/></svg></span><small data-i18n="level">Level</small></button>
-        <span class="grow"></span>
-        <button class="hbtn" id="b-hintad"><span class="disc"><svg class="ic"><use href="#i-bulb"/></svg></span><small data-i18n="hint">Hint</small></button>
+        <div class="hud-group">
+          <button class="hbtn" id="b-redo"><span class="disc"><svg class="ic"><use href="#i-loop"/></svg></span><small data-i18n="redo">Redo</small></button>
+          <button class="hbtn" id="b-restart"><span class="disc"><svg class="ic"><use href="#i-level"/></svg></span><small data-i18n="restart">Restart</small></button>
+        </div>
+        <button class="hbtn big" id="b-endloop"><span class="disc accent"><svg class="ic"><use href="#i-skip"/></svg></span><small data-i18n="end_loop">End loop</small></button>
+        <div class="hud-group">
+          <button class="hbtn" id="b-hintad"><span class="disc"><svg class="ic"><use href="#i-bulb"/></svg></span><small data-i18n="hint">Hint</small></button>
+        </div>
       </div>
     </div>
     <div id="banner"></div>
@@ -392,9 +406,9 @@
         <canvas id="title-fx"></canvas>
       </div>
       <header class="title-top">
-        <span class="chip"><img src="assets/coin.png" alt="" /><span id="t-coins">0</span></span>
-        <span class="chip"><img src="assets/gem.png" alt="" /><span id="t-gems">0</span></span>
-        <span class="chip"><svg class="ic" style="width:16px;height:16px;fill:var(--gold);stroke:none"><use href="#i-star"/></svg><span id="t-stars">0</span></span>
+        <button class="chip" id="c-coins"><img src="assets/coin.png" alt="" /><span id="t-coins">0</span></button>
+        <button class="chip" id="c-gems"><img src="assets/gem.png" alt="" /><span id="t-gems">0</span></button>
+        <button class="chip" id="c-stars"><svg class="ic" style="width:16px;height:16px;fill:var(--gold);stroke:none"><use href="#i-star"/></svg><span id="t-stars">0</span></button>
         <span class="grow"></span>
         <button class="hbtn" id="b-settings" aria-label="settings"><span class="disc"><svg class="ic"><use href="#i-gear"/></svg></span></button>
       </header>
@@ -508,6 +522,7 @@
         <div class="setting"><span data-i18n="music">Music</span><input type="checkbox" id="opt-music" checked /></div>
         <div class="setting"><span data-i18n="sfx">Sound effects</span><input type="checkbox" id="opt-sfx" checked /></div>
         <div class="setting"><span data-i18n="shake">Screen shake</span><input type="checkbox" id="opt-shake" checked /></div>
+        <div class="setting"><span data-i18n="haptics">Haptic feedback</span><input type="checkbox" id="opt-haptics" checked /></div>
         <div class="setting"><span data-i18n="name">Player name</span><input type="text" id="opt-name" maxlength="16" style="width:12em" /></div>
       </div>
       <p id="about" style="font-size:.8rem"></p>

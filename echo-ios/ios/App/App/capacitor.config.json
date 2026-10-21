@@ -9,5 +9,7 @@
 		"preferredContentMode": "mobile",
 		"scrollEnabled": false
 	},
-	"packageClassList": []
+	"packageClassList": [
+		"HapticsPlugin"
+	]
 }

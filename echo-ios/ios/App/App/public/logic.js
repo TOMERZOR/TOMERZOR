@@ -57,8 +57,11 @@ export const WORLDS = [
 
 export const LEVELS = [
   // ── World 1: the lab. Teaches plates, doors and holding a door with an echo.
+  // `par` is the number of echoes a clean solution needs; at or under it is
+  // three stars. Every map here has a recorded solution in solutions.js that
+  // the checks replay through the simulator, so a room never ships unsolvable.
   {
-    id: "1-1", world: 1, par: 1,
+    id: "1-1", world: 1, par: 0,
     map: [
       "###########",
       "#S........#",
@@ -70,7 +73,7 @@ export const LEVELS = [
     ],
   },
   {
-    id: "1-2", world: 1, par: 2,
+    id: "1-2", world: 1, par: 1,
     map: [
       "###########",
       "#S...#....#",
@@ -82,32 +85,34 @@ export const LEVELS = [
     ],
   },
   {
-    id: "1-3", world: 1, par: 3,
+    // Two plates in sequence: the exit chamber only opens from above.
+    id: "1-3", world: 1, par: 2,
     map: [
       "###########",
-      "#S..#..o..#",
+      "#S..#..o.b#",
       "#...#.....#",
-      "#.a.A..#B.#",
+      "#.a.A..#B##",
       "#...#..#.E#",
-      "#.o.#..#b.#",
+      "#.o.#..#..#",
       "###########",
     ],
   },
   {
-    id: "1-4", world: 1, par: 3,
+    // The second plate sits right behind the first door: one echo per gate.
+    id: "1-4", world: 1, par: 2,
     map: [
       "###########",
       "#S.a#.....#",
-      "#...#..b..#",
+      "#...#..o..#",
       "##A##.....#",
-      "#...B..o..#",
-      "#.o.#....E#",
+      "#..bB....E#",
+      "#.o.#.....#",
       "###########",
     ],
   },
   // ── World 2: the observatory. Drones patrol; only the live hero can die.
   {
-    id: "2-1", world: 2, par: 1,
+    id: "2-1", world: 2, par: 0,
     map: [
       "###########",
       "#S........#",
@@ -120,7 +125,7 @@ export const LEVELS = [
     drones: [{ x: 5, y: 1, dx: 0, dy: 1, n: 4, phase: 0 }],
   },
   {
-    id: "2-2", world: 2, par: 2,
+    id: "2-2", world: 2, par: 1,
     map: [
       "###########",
       "#S...#....#",
@@ -133,7 +138,7 @@ export const LEVELS = [
     drones: [{ x: 7, y: 1, dx: 0, dy: 1, n: 4, phase: 2 }],
   },
   {
-    id: "2-3", world: 2, par: 3,
+    id: "2-3", world: 2, par: 2,
     map: [
       "###########",
       "#S..#...o.#",
@@ -149,13 +154,14 @@ export const LEVELS = [
     ],
   },
   {
-    id: "2-4", world: 2, par: 4,
+    // World 2's exam: three gates, two drones, the last plate under a patrol.
+    id: "2-4", world: 2, par: 3,
     map: [
       "###########",
       "#S.#.o#...#",
       "#a.A..B.o.#",
       "#..#..#...#",
-      "#..#b.#.c.#",
+      "#..#b.#c###",
       "#..#..#C.E#",
       "###########",
     ],
@@ -166,31 +172,32 @@ export const LEVELS = [
   },
   // ── World 3: the mirror lab. Echoes move mirrored left/right.
   {
-    id: "3-1", world: 3, par: 2, mirror: true,
+    // Teach the mirror: run right to the coin and your echo lands on the plate.
+    id: "3-1", world: 3, par: 1, mirror: true,
     map: [
       "###########",
       "#....S....#",
       "#.........#",
       "#.a.....o.#",
-      "#.........#",
-      "#....E....#",
+      "#...#A#...#",
+      "#...#E#...#",
       "###########",
     ],
   },
   {
-    id: "3-2", world: 3, par: 2, mirror: true,
+    id: "3-2", world: 3, par: 1, mirror: true,
     map: [
       "###########",
       "#....S....#",
-      "#.o.....a.#",
-      "#....#....#",
-      "#...##A...#",
-      "#....E....#",
+      "#.o..#..a.#",
+      "#.........#",
+      "#####A#####",
+      "#####E#####",
       "###########",
     ],
   },
   {
-    id: "3-3", world: 3, par: 3, mirror: true,
+    id: "3-3", world: 3, par: 1, mirror: true,
     map: [
       "###########",
       "#....S....#",
@@ -203,15 +210,16 @@ export const LEVELS = [
     drones: [{ x: 5, y: 4, dx: 1, dy: 0, n: 3, phase: 0 }],
   },
   {
-    id: "3-4", world: 3, par: 4, mirror: true,
+    // World 3's exam: every plate is reached by its mirror image.
+    id: "3-4", world: 3, par: 3, mirror: true,
     map: [
       "###########",
       "#.a..S..b.#",
       "#.........#",
-      "##A##.##B##",
-      "#.c.....o.#",
-      "#.#C#.#...#",
-      "#.E.......#",
+      "##A#####B##",
+      "#...#.#...#",
+      "#.c.CE#.o.#",
+      "###########",
     ],
     drones: [{ x: 5, y: 2, dx: 1, dy: 0, n: 3, phase: 4 }],
   },

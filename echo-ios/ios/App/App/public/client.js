@@ -187,23 +187,60 @@ const BG = {};
 for (const n of ["bg_lab", "bg_obs", "bg_mirror"]) { const i = new Image(); i.src = `assets/${n}.jpg`; BG[n] = i; }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
 
-const SND = {};
-let actx = null;
+/*
+ * Audio runs entirely through Web Audio; nothing goes through an <audio>
+ * element. On iOS a media element registers the game as a media player (Now
+ * Playing controls in the Dynamic Island and on the lock screen) and pauses
+ * whatever the player was listening to; buffer sources do neither, and they
+ * start without the element's latency.
+ */
+const SOUNDS = { chime: "assets/sfx_chime.mp3", plate: "assets/sfx_plate.mp3", door: "assets/sfx_door.mp3", win: "assets/sfx_win.mp3", fail: "assets/sfx_fail.mp3", music: "assets/music.mp3" };
+const buffers = {}, loading = {};
+let actx = null, busMusic = null, busSfx = null, musicSrc = null;
 function audio() {
-  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* no audio */ } }
+  if (actx) return actx;
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    busMusic = actx.createGain(); busMusic.gain.value = 0.32; busMusic.connect(actx.destination);
+    busSfx = actx.createGain(); busSfx.connect(actx.destination);
+  } catch { actx = null; }
   return actx;
 }
+function loadSound(name) {
+  const c = audio();
+  if (!c) return Promise.resolve(null);
+  if (buffers[name]) return Promise.resolve(buffers[name]);
+  if (!loading[name]) {
+    loading[name] = fetch(SOUNDS[name]).then((r) => r.arrayBuffer())
+      .then((ab) => new Promise((ok, err) => c.decodeAudioData(ab, ok, err)))
+      .then((buf) => { buffers[name] = buf; return buf; })
+      .catch(() => { delete loading[name]; return null; });
+  }
+  return loading[name];
+}
+function preloadAudio() { for (const n in SOUNDS) loadSound(n); }
 /** One-shot effect; the pitch wobbles a little so repeats never sound stamped. */
 function sfx(name, vol = 0.8) {
   if (!opts.sfx) return;
-  let a = SND[name];
-  if (!a) { a = new Audio(`assets/sfx_${name}.mp3`); SND[name] = a; }
-  try { const c = a.cloneNode(); c.volume = vol; c.playbackRate = 0.94 + Math.random() * 0.12; c.play().catch(() => {}); } catch { /* */ }
+  const c = audio(); if (!c) return;
+  const buf = buffers[name];
+  if (!buf) { loadSound(name); return; }
+  const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = 0.94 + Math.random() * 0.12;
+  const g = c.createGain(); g.gain.value = vol;
+  s.connect(g).connect(busSfx); s.start();
 }
-let music = null;
-function musicOn(on) {
-  if (!music) { music = new Audio("assets/music.mp3"); music.loop = true; music.volume = 0.32; }
-  if (on && opts.music) music.play().catch(() => {}); else music.pause();
+async function musicOn(on) {
+  const c = audio(); if (!c) return;
+  if (!on || !opts.music) {
+    if (musicSrc) { try { musicSrc.stop(); } catch { /* already stopped */ } musicSrc = null; }
+    return;
+  }
+  if (musicSrc) return;
+  const buf = await loadSound("music");
+  // The level may have ended while the track was still decoding.
+  if (!buf || musicSrc || !opts.music || !game.playing) return;
+  const s = c.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(busMusic); s.start();
+  musicSrc = s;
 }
 /** A short synth tone; its pitch climbs with every echo that joins the room. */
 function tone(step, dur = 0.18) {
@@ -214,8 +251,13 @@ function tone(step, dur = 0.18) {
   g.gain.setValueAtTime(0.0001, c.currentTime);
   g.gain.exponentialRampToValueAtTime(0.22, c.currentTime + 0.02);
   g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
-  o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + dur + 0.02);
+  o.connect(g).connect(busSfx); o.start(); o.stop(c.currentTime + dur + 0.02);
 }
+// iOS suspends the context when the app leaves the foreground; pick it back up.
+document.addEventListener("visibilitychange", () => {
+  if (!actx) return;
+  (document.hidden ? actx.suspend() : actx.resume()).catch(() => {});
+});
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
 
@@ -1167,7 +1209,9 @@ for (const k of ["music", "sfx", "shake"]) {
   el.addEventListener("change", () => { opts[k] = el.checked; store.set("opts", opts); if (k === "music") musicOn(game.playing); });
 }
 $("#opt-name").addEventListener("change", (e) => saveRoom.act({ t: "name", name: e.target.value.slice(0, 16) }));
-document.addEventListener("pointerdown", () => audio()?.resume?.(), { once: true });
+// The first touch unlocks audio on iOS; decode every clip right then so the
+// first coin and the first door already have their sound.
+document.addEventListener("pointerdown", () => { audio()?.resume?.(); preloadAudio(); }, { once: true });
 for (const img of Object.values(IMG)) img.addEventListener("load", () => { floorCache.key = ""; });
 
 // ── boot ───────────────────────────────────────────────────────────────────

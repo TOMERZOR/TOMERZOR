@@ -527,19 +527,37 @@ export function starsFor(level, echoes) {
 
 // ── economy ────────────────────────────────────────────────────────────────
 
+/**
+ * Robots. The skin is the character you play: the hero wears it, and every
+ * echo is a hologram of it in the skin's own light. `tier` is the rarity shown
+ * in the shop; `sprite` is the asset name.
+ */
 export const SKINS = {
-  cyan: { coins: 0, color: "#39e6ff" },
-  magenta: { coins: 300, color: "#ff4fd8" },
-  lime: { coins: 300, color: "#b6ff3c" },
-  gold: { coins: 800, color: "#ffc93c" },
-  white: { gems: 40, color: "#f4f7ff" },
-  rainbow: { gems: 120, color: "rainbow" },
+  scout: { coins: 0, color: "#7ef0c6", sprite: "hero", tier: 1 },
+  knight: { coins: 400, color: "#9ad7ff", sprite: "bot_knight", tier: 1 },
+  astro: { coins: 600, color: "#ffe08a", sprite: "bot_astro", tier: 1 },
+  mecha: { coins: 900, color: "#b6ff6b", sprite: "bot_mecha", tier: 2 },
+  ninja: { coins: 1200, color: "#ff7a8a", sprite: "bot_ninja", tier: 2 },
+  pirate: { gems: 60, color: "#8fd3ff", sprite: "bot_pirate", tier: 2 },
+  samurai: { gems: 90, color: "#ff9a7a", sprite: "bot_samurai", tier: 3 },
+  wizard: { gems: 120, color: "#d9a6ff", sprite: "bot_wizard", tier: 3 },
+  royal: { gems: 160, color: "#ffd86a", sprite: "bot_royal", tier: 3 },
 };
+/** Skin ids from before the robots existed, so old saves keep a valid skin. */
+const LEGACY_SKINS = { cyan: "scout", magenta: "ninja", lime: "mecha", gold: "royal", white: "astro", rainbow: "wizard" };
+export const skinId = (id) => (SKINS[id] ? id : LEGACY_SKINS[id] || "scout");
+function normalizeSkins(p) {
+  const skins = [...new Set((p.skins || []).map(skinId))];
+  if (!skins.includes("scout")) skins.unshift("scout");
+  const skin = skinId(p.skin);
+  if (skin !== p.skin || skins.length !== (p.skins || []).length || skins.some((k, i) => k !== p.skins[i])) return { ...p, skin: skins.includes(skin) ? skin : "scout", skins };
+  return p;
+}
 
 /** Store-front products. In this prototype a "purchase" is granted on trust;
  *  a shipping build verifies the App Store receipt before applying it. */
 export const IAP = {
-  starter: { price: "$1.99", gems: 120, coins: 500, skin: "gold", once: true },
+  starter: { price: "$1.99", gems: 120, coins: 500, skin: "royal", once: true },
   gems_small: { price: "$0.99", gems: 100 },
   gems_big: { price: "$4.99", gems: 600 },
   noads: { price: "$3.99", noads: true, once: true },
@@ -548,8 +566,8 @@ export const IAP = {
 
 export const PASS_TIERS = [
   { xp: 0, coins: 50 }, { xp: 60, coins: 100 }, { xp: 140, gems: 10 }, { xp: 240, coins: 200 },
-  { xp: 360, skin: "lime" }, { xp: 500, gems: 20 }, { xp: 660, coins: 400 }, { xp: 840, gems: 30 },
-  { xp: 1040, skin: "magenta" }, { xp: 1260, gems: 60, skin: "rainbow" },
+  { xp: 360, skin: "mecha" }, { xp: 500, gems: 20 }, { xp: 660, coins: 400 }, { xp: 840, gems: 30 },
+  { xp: 1040, skin: "ninja" }, { xp: 1260, gems: 60, skin: "wizard" },
 ];
 
 export const AD_COINS = 30;
@@ -557,7 +575,7 @@ export const ADS_PER_DAY = 5;
 
 export function newProfile(pid) {
   return {
-    pid, name: "", coins: 0, gems: 0, stars: {}, best: {}, skin: "cyan", skins: ["cyan"],
+    pid, name: "", coins: 0, gems: 0, stars: {}, best: {}, skin: "scout", skins: ["scout"],
     streak: 0, lastDay: 0, adsDay: 0, adsToday: 0, passXp: 0, pass: false, noads: false,
     claimedTiers: 0, owned: [], clears: 0,
   };
@@ -594,7 +612,7 @@ function levelForAction(action) {
 
 export function validateAction(state, playerId, action) {
   if (!action || typeof action !== "object") return { ok: false, error: "bad action" };
-  const p = state.players[playerId] || newProfile(playerId);
+  const p = normalizeSkins(state.players[playerId] || newProfile(playerId));
   switch (action.t) {
     case "day":
       if (!isInt(action.day) || action.day < p.lastDay) return { ok: false, error: "bad day" };
@@ -661,7 +679,7 @@ function grant(p, reward) {
 }
 
 export function applyAction(state, playerId, action) {
-  const prev = state.players[playerId] || newProfile(playerId);
+  const prev = normalizeSkins(state.players[playerId] || newProfile(playerId));
   const p = { ...prev, stars: { ...prev.stars }, best: { ...prev.best } };
   let daily = state.daily;
 
@@ -749,7 +767,7 @@ export function isGameOver() {
 
 export function viewFor(state, playerId) {
   return {
-    profile: state.players[playerId] || newProfile(playerId),
+    profile: normalizeSkins(state.players[playerId] || newProfile(playerId)),
     daily: state.daily,
   };
 }

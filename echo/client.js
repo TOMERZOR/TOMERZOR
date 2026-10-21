@@ -30,7 +30,12 @@ const STR = {
     echoes_used: "הדים", seconds: "מהלכים", coins: "מטבעות", replay: "שידור חוזר", share: "שיתוף", retry: "שוב",
     next: "השלב הבא", done_title: "שלב הושלם", perfect: "מושלם", first_clear: "בונוס סיום ראשון +50",
     free_coins: "מטבעות חינם", watch_ad: "צפה בסרטון +30", ads_left: "נותרו {n} סרטונים היום", ads_none: "נגמרו הסרטונים להיום. חזור מחר.",
-    echo_skins: "סקינים להדים", skins_sub: "ההדים שלך לובשים אותו בכל שלב, אז כולם רואים אותו בשידורים החוזרים שלך.",
+    robots: "רובוטים", robots_sub: "בחר במי אתה משחק. ההדים שלך הם הולוגרמות של אותו רובוט.", your_robot: "הרובוט שלך",
+    tier1: "רגיל", tier2: "נדיר", tier3: "אפי", sk_scout: "סקאוט", sk_knight: "אביר", sk_astro: "אסטרו", sk_mecha: "מכה", sk_ninja: "נינג'ה", sk_pirate: "פיראט", sk_samurai: "סמוראי", sk_wizard: "קוסם", sk_royal: "מלכותי",
+    fl_scout: "הדגם המקורי. סקרן, מהיר, לעולם לא מתלונן.", fl_knight: "שריון מצוחצח ואומץ שעובד בהילוך חוזר.", fl_astro: "חלומות על הירח, פסים על החליפה.", fl_mecha: "כבד, שקט, פותח דלתות בכתף.", fl_ninja: "שומעים אותו רק כשההד שלו צועד.", fl_pirate: "יש לו מפה. היא של החדר הזה.", fl_samurai: "צעד אחד, פעם אחת, בדיוק.", fl_wizard: "טוען שההדים הם כישוף. לא מוכיח.", fl_royal: "גם ההדים שלו מצדיעים.",
+    pass_track: "כל הפרסים", pass_owned: "הכרטיס פעיל", pass_get: "קנה כרטיס {p}", tier_n: "שלב {n}", xp_to_go: "עוד {n} XP", needs_pass: "דורש כרטיס", claimed: "נאסף", free_lane: "חינם",
+    reward_coins: "+{n} מטבעות", reward_gems: "+{n} יהלומים", reward_robot: "רובוט {n}", season_name: "עונה 1 · המעבדה נפתחת", pass_how: "XP מגיע מסיום חדרים: 10 לכל כוכב ו-2 לכל מטבע.", next_reward: "הפרס הבא",
+    echo_skins: "רובוטים", skins_sub: "בחר במי אתה משחק. ההדים שלך הם הולוגרמות של אותו רובוט.",
     season_pass: "כרטיס עונה", claim: "קבל", pass_sub: "שלבים 1–2 חינם. הכרטיס פותח את שאר המסלול.",
     store: "חנות", store_note: "אב־טיפוס: הרכישות מדומות ולא מחויב כסף.",
     daily_sub: "חדר אחד לכל השחקנים בעולם. הכי מעט הדים מנצח; הזמן שובר שוויון.",
@@ -44,7 +49,7 @@ const STR = {
     hint_drone: "רחפנים זזים צעד רק כשאתה זז, ותופסים רק אותך. הצל הבהיר מראה לאן הרחפן ינחת בצעד הבא.", hint_mirror: "בעולם הזה ההדים זזים הפוך: ימין שלך הוא שמאל שלהם.", hint_mirror_t: "בעולם הזה ההדים זזים הפוך: למעלה שלך הוא למטה שלהם.",
     hint_generic: "אחרי 20 מהלכים הסיבוב נשמר כהד, וההד חוזר על כל צעד שלך. לא חייבים להצליח בסיבוב הראשון.",
     bought: "נקנה!", equipped: "מצויד", not_enough: "אין מספיק {c}", owned: "בבעלותך", equip: "צייד", buy: "קנה",
-    starter: "חבילת פתיחה", starter_d: "120 יהלומים + 500 מטבעות + סקין זהב", gems_small: "100 יהלומים", gems_big: "600 יהלומים",
+    starter: "חבילת פתיחה", starter_d: "120 יהלומים + 500 מטבעות + הרובוט המלכותי", gems_small: "100 יהלומים", gems_big: "600 יהלומים",
     noads: "הסרת פרסומות", noads_d: "בלי סרטונים. רמזים נשארים חינם.", pass: "כרטיס עונה", pass_d: "פותח את כל 10 השלבים",
     purchase_title: "אישור רכישה", confirm: "אשר", cancel: "ביטול",
     ad_title: "פרסומת לדוגמה", ad_sub: "סרטון ממומן היה מתנגן כאן ({n})", ad_done: "קיבלת +30 מטבעות", hint_title: "רמז",
@@ -66,7 +71,12 @@ const STR = {
     echoes_used: "echoes", seconds: "moves", coins: "coins", replay: "Replay", share: "Share", retry: "Retry",
     next: "Next level", done_title: "Level clear", perfect: "Perfect", first_clear: "First clear bonus +50",
     free_coins: "Free coins", watch_ad: "Watch ad +30", ads_left: "{n} videos left today", ads_none: "No more videos today. Come back tomorrow.",
-    echo_skins: "Echo skins", skins_sub: "Your echoes wear it on every level, so everyone sees it in your replays.",
+    robots: "Robots", robots_sub: "Pick who you play as. Your echoes are holograms of the same robot.", your_robot: "Your robot",
+    tier1: "Common", tier2: "Rare", tier3: "Epic", sk_scout: "Scout", sk_knight: "Knight", sk_astro: "Astro", sk_mecha: "Mecha", sk_ninja: "Ninja", sk_pirate: "Pirate", sk_samurai: "Samurai", sk_wizard: "Wizard", sk_royal: "Royal",
+    fl_scout: "The original. Curious, quick, never complains.", fl_knight: "Polished armour and courage that replays.", fl_astro: "Moon dreams, stripes on the suit.", fl_mecha: "Heavy, quiet, opens doors with a shoulder.", fl_ninja: "You only hear it when its echo steps.", fl_pirate: "Has a map. It is of this room.", fl_samurai: "One step, once, exactly.", fl_wizard: "Claims the echoes are a spell. Offers no proof.", fl_royal: "Even its echoes salute.",
+    pass_track: "All rewards", pass_owned: "Pass active", pass_get: "Get the pass {p}", tier_n: "Tier {n}", xp_to_go: "{n} XP to go", needs_pass: "Needs the pass", claimed: "Claimed", free_lane: "Free",
+    reward_coins: "+{n} coins", reward_gems: "+{n} gems", reward_robot: "{n} robot", season_name: "Season 1 · The Lab Opens", pass_how: "XP comes from clearing rooms: 10 per star and 2 per coin.", next_reward: "Next reward",
+    echo_skins: "Robots", skins_sub: "Pick who you play as. Your echoes are holograms of the same robot.",
     season_pass: "Season pass", claim: "Claim", pass_sub: "Tiers 1–2 are free. The pass opens the rest of the track.",
     store: "Store", store_note: "Prototype: purchases are simulated and nothing is charged.",
     daily_sub: "One room for every player in the world. Fewest echoes wins; time breaks ties.",
@@ -80,7 +90,7 @@ const STR = {
     hint_drone: "Drones step only when you do, and catch only you. The faint drone shows where it lands next.", hint_mirror: "In this world echoes move mirrored: your right is their left.", hint_mirror_t: "In this world echoes move mirrored: your up is their down.",
     hint_generic: "After 20 moves the loop is saved as an echo that repeats your every step. You don't have to make it on the first run.",
     bought: "Bought!", equipped: "Equipped", not_enough: "Not enough {c}", owned: "Owned", equip: "Equip", buy: "Buy",
-    starter: "Starter pack", starter_d: "120 gems + 500 coins + gold skin", gems_small: "100 gems", gems_big: "600 gems",
+    starter: "Starter pack", starter_d: "120 gems + 500 coins + the Royal robot", gems_small: "100 gems", gems_big: "600 gems",
     noads: "Remove ads", noads_d: "No videos. Hints stay free.", pass: "Season pass", pass_d: "Opens all 10 tiers",
     purchase_title: "Confirm purchase", confirm: "Confirm", cancel: "Cancel",
     ad_title: "Sample ad", ad_sub: "A sponsored video would play here ({n})", ad_done: "You got +30 coins", hint_title: "Hint",
@@ -192,7 +202,7 @@ function setNet() {
 // ── assets ─────────────────────────────────────────────────────────────────
 
 const IMG = {};
-for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem"]) { const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
+for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem", ...new Set(Object.values(L.SKINS).map((s) => s.sprite))]) { if (IMG[n]) continue; const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
 const BG = {};
 for (const n of ["bg_lab", "bg_obs", "bg_mirror"]) { const i = new Image(); i.src = `assets/${n}.jpg`; BG[n] = i; }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
@@ -293,7 +303,7 @@ document.addEventListener("pointerdown", (e) => { if (e.target.closest("button")
 
 const $ = (s) => document.querySelector(s);
 const screenEl = (id) => document.getElementById(id);
-const SCREENS = ["s-title", "s-levels", "s-result", "s-shop", "s-daily", "s-editor", "s-settings", "s-sheet"];
+const SCREENS = ["s-title", "s-levels", "s-result", "s-shop", "s-pass", "s-daily", "s-editor", "s-settings", "s-sheet"];
 let current = "s-title";
 /** One sheet at a time over the canvas; "none" is the bare playfield + HUD. */
 function show(id) {
@@ -325,6 +335,7 @@ function refreshCurrencies() {
   if (profile.streak) { st.innerHTML = `<svg class="ic"><use href="#i-flame"/></svg>`; st.append(document.createTextNode(T("streak", { n: profile.streak }))); }
   if (!screenEl("s-levels").hidden) renderLevels();
   if (!screenEl("s-shop").hidden) renderShop();
+  if (!screenEl("s-pass").hidden) renderPass();
 }
 
 // ── game state ─────────────────────────────────────────────────────────────
@@ -539,7 +550,7 @@ function levelDone() {
   sfx("win"); shake(6); buzz("success");
   if (stars === 3 || newBest) setTimeout(() => sfx("shimmer", 0.6), 420);
   if (stars === 3 && !reduceMotion) {
-    const colors = ["#ffc93c", "#39e6ff", "#ff4fd8", "#ffffff", "#ff9a3c"];
+    const colors = ["#ffcf5a", "#7ef0c6", "#c08cff", "#ffffff", "#ff8a3d"];
     for (let i = 0; i < 70; i++) game.particles.push({ x: Math.random() * view.cols, y: -0.5 - Math.random() * 2, vx: (Math.random() - 0.5) * 1.5, vy: 1 + Math.random() * 2, life: 2 + Math.random(), color: colors[i % colors.length], r: 3 + Math.random() * 3, conf: true });
   }
   const h = game.run.actors[game.run.actors.length - 1];
@@ -718,20 +729,20 @@ function updateTimer(run) {
 function handleEvents(run) {
   for (const e of run.events) {
     if (e.t === "coin") {
-      sfx("coin", 0.8, 1 + Math.min(6, run.taken - 1) * 0.07); burst(e.x + 0.5, e.y + 0.5, "#ffc93c", 14);
+      sfx("coin", 0.8, 1 + Math.min(6, run.taken - 1) * 0.07); burst(e.x + 0.5, e.y + 0.5, "#ffcf5a", 14);
       if (e.hero) { flyCoin(e.x + 0.5, e.y + 0.5); buzz("light"); } else bumpCoins();
     } else if (e.t === "plate") { sfx("plate", 0.8);
       const h = run.actors[run.actors.length - 1];
       if (!tips.has("plate") && run.level.map[h.y][h.x] === e.k && run.level.drones?.length) { tips.add("plate"); store.set("tips", [...tips]); banner(T("tip"), T("tip_plate"), 4200, true); } game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
     else if (e.t === "open") { sfx("open", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
     else if (e.t === "close") { sfx("close", 0.45); game.doorAnim[e.k] = { t: 0, open: false }; }
-    else if (e.t === "dead") burst(e.x + 0.5, e.y + 0.5, "#ff4fd8", 26);
-    else if (e.t === "exit") { burst(e.x + 0.5, e.y + 0.5, "#ffd9a8", 40); burst(e.x + 0.5, e.y + 0.5, "#39e6ff", 24); game.flash = 0.45; game.exitAnim = { x: e.x + 0.5, y: e.y + 0.5, t: 0, face: game.run.actors[game.run.actors.length - 1].face || 1 }; }
+    else if (e.t === "dead") burst(e.x + 0.5, e.y + 0.5, "#ff5c7a", 26);
+    else if (e.t === "exit") { burst(e.x + 0.5, e.y + 0.5, "#ffd9a8", 40); burst(e.x + 0.5, e.y + 0.5, "#7ef0c6", 24); game.flash = 0.45; game.exitAnim = { x: e.x + 0.5, y: e.y + 0.5, t: 0, face: game.run.actors[game.run.actors.length - 1].face || 1 }; }
   }
 }
 function ring(e) {
   // A plate ripple: one expanding ring particle.
-  game.particles.push({ x: 0, y: 0, ring: true, life: 0.5, max: 0.5, color: "#ff4fd8", k: e.k });
+  game.particles.push({ x: 0, y: 0, ring: true, life: 0.5, max: 0.5, color: "#c08cff", k: e.k });
 }
 function burst(lx, ly, color, n) {
   const { x, y } = R(lx, ly);
@@ -743,7 +754,7 @@ function burst(lx, ly, color, n) {
 function dust(a, p) {
   if (reduceMotion) return;
   const [dx, dy] = L.DIRS[sdirOf(a.dir)];
-  game.particles.push({ x: p.x - dx * 0.15 + (Math.random() - 0.5) * 0.2, y: p.y + 0.28, vx: -dx * 0.6 + (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.4 - dy * 0.3, life: 0.35, color: "rgba(170,180,230,.45)", r: 2.5 + Math.random() * 2, dust: true });
+  game.particles.push({ x: p.x - dx * 0.15 + (Math.random() - 0.5) * 0.2, y: p.y + 0.28, vx: -dx * 0.6 + (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.4 - dy * 0.3, life: 0.35, color: "rgba(210,190,230,.45)", r: 2.5 + Math.random() * 2, dust: true });
 }
 function flyCoin(lx, ly) {
   const r = $("#hud-coins").getBoundingClientRect();
@@ -774,16 +785,16 @@ function backdrop(name) {
   const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
   const bw = img.naturalWidth * s, bh = img.naturalHeight * s;
   const by = Math.min(0, Math.max(H - bh, cy(view.rows / 2) - bh / 2));
-  g.filter = "blur(2px) saturate(.9)"; g.globalAlpha = 0.82; g.drawImage(img, (W - bw) / 2, by, bw, bh);
+  g.filter = "blur(2px) saturate(.75) hue-rotate(55deg)"; g.globalAlpha = 0.82; g.drawImage(img, (W - bw) / 2, by, bw, bh);
   g.filter = "none"; g.globalAlpha = 1;
   const grad = g.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "rgba(7,10,24,.6)"); grad.addColorStop(0.4, "rgba(7,10,24,.22)"); grad.addColorStop(1, "rgba(7,10,24,.9)");
+  grad.addColorStop(0, "rgba(19,14,27,.6)"); grad.addColorStop(0.4, "rgba(19,14,27,.22)"); grad.addColorStop(1, "rgba(19,14,27,.9)");
   g.fillStyle = grad; g.fillRect(0, 0, W, H);
   // A cool overhead light that pools around the room, so it sits in the hall
   // instead of floating on a black field.
   const lx = cx(view.cols / 2) + W * 0.02, ly = cy(view.rows / 2) + H * 0.02, lr = Math.max(W, H) * 0.55;
   const lg = g.createRadialGradient(lx, ly - lr * 0.15, 0, lx, ly, lr);
-  lg.addColorStop(0, "rgba(140,180,255,.16)"); lg.addColorStop(0.5, "rgba(120,160,255,.05)"); lg.addColorStop(1, "rgba(0,0,0,0)");
+  lg.addColorStop(0, "rgba(255,205,165,.15)"); lg.addColorStop(0.5, "rgba(230,180,160,.05)"); lg.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = lg; g.fillRect(0, 0, W, H);
   bgCache = { key, canvas: c };
   return c;
@@ -810,21 +821,21 @@ function floorLayer(level) {
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     if (isWall(x, y)) continue;
     const px = x0 + x * cs, py = y0 + y * cs;
-    g.fillStyle = (x + y) % 2 ? "#2a3166" : "#272d5f"; g.fillRect(px, py, cs, cs);
-    g.fillStyle = `rgba(10,14,32,${rnd() * 0.1})`; g.fillRect(px, py, cs, cs);
+    g.fillStyle = (x + y) % 2 ? "#2f2544" : "#2a213d"; g.fillRect(px, py, cs, cs);
+    g.fillStyle = `rgba(20,14,30,${rnd() * 0.1})`; g.fillRect(px, py, cs, cs);
     g.fillStyle = "rgba(255,255,255,.06)"; g.fillRect(px + 1, py + 1, cs - 2, 1); g.fillRect(px + 1, py + 1, 1, cs - 2);
-    g.fillStyle = "rgba(5,7,20,.5)"; g.fillRect(px, py, cs, 1); g.fillRect(px, py, 1, cs); g.fillRect(px, py + cs - 1, cs, 1); g.fillRect(px + cs - 1, py, 1, cs);
+    g.fillStyle = "rgba(10,6,16,.5)"; g.fillRect(px, py, cs, 1); g.fillRect(px, py, 1, cs); g.fillRect(px, py + cs - 1, cs, 1); g.fillRect(px + cs - 1, py, 1, cs);
     // Ambient occlusion: a soft darkening along every edge that meets a wall.
     const ao = cs * 0.3;
     const edges = [[isWall(x, y - 1), px, py, px, py + ao], [isWall(x, y + 1), px, py + cs, px, py + cs - ao], [isWall(x - 1, y), px, py, px + ao, py], [isWall(x + 1, y), px + cs, py, px + cs - ao, py]];
     for (const [w, ax, ay, bx, by] of edges) {
       if (!w) continue;
-      const gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, "rgba(3,5,14,.5)"); gr.addColorStop(1, "rgba(3,5,14,0)");
+      const gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, "rgba(8,5,14,.5)"); gr.addColorStop(1, "rgba(8,5,14,0)");
       g.fillStyle = gr; g.fillRect(px, py, cs, cs);
     }
   }
   // Wall drop shadows onto the floor (light from the upper left).
-  g.save(); g.filter = `blur(${Math.max(3, cs * 0.12)}px)`; g.fillStyle = "rgba(3,5,14,.5)";
+  g.save(); g.filter = `blur(${Math.max(3, cs * 0.12)}px)`; g.fillStyle = "rgba(8,5,14,.5)";
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     if (!isWall(x, y)) continue;
     g.fillRect(x0 + (x + 0.1) * cs, y0 + (y + 0.16) * cs, cs, cs);
@@ -832,7 +843,7 @@ function floorLayer(level) {
   g.restore();
   // Directional wash and a soft vignette, so the floor reads lit, not flat.
   const lw = g.createLinearGradient(x0, y0, x1, y1);
-  lw.addColorStop(0, "rgba(190,210,255,.11)"); lw.addColorStop(0.5, "rgba(190,210,255,0)"); lw.addColorStop(1, "rgba(0,0,0,.16)");
+  lw.addColorStop(0, "rgba(255,222,200,.10)"); lw.addColorStop(0.5, "rgba(255,222,200,0)"); lw.addColorStop(1, "rgba(0,0,0,.16)");
   g.fillStyle = lw; g.fillRect(x0, y0, cs * cols, cs * rows);
   const vx = (x0 + x1) / 2, vy = (y0 + y1) / 2;
   const vg = g.createRadialGradient(vx, vy, cs * 2.5, vx, vy, cs * Math.max(cols, rows) * 0.7);
@@ -843,19 +854,19 @@ function floorLayer(level) {
 }
 
 const skinCache = {};
-function skinColor(skin) { const c = L.SKINS[skin]?.color || "#39e6ff"; return c === "rainbow" ? "#b06cff" : c; }
+const mySkin = () => L.skinId(profile.skin);
+function skinColor(skin) { return L.SKINS[L.skinId(skin)].color; }
+/** The robot the player walks around as. */
+function heroImg(skin) { return IMG[L.SKINS[L.skinId(skin)].sprite] || IMG.hero; }
+/** The same robot as a hologram: its silhouette washed in the skin's light. */
 function echoSprite(skin) {
+  skin = L.skinId(skin);
   if (skinCache[skin]) return skinCache[skin];
-  const img = IMG.echo; if (!ready(img)) return img;
+  const img = heroImg(skin); if (!ready(img)) return img;
   const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
   const g = c.getContext("2d"); g.drawImage(img, 0, 0);
-  const col = L.SKINS[skin]?.color || "#39e6ff";
-  if (col !== "#39e6ff") {
-    g.globalCompositeOperation = "source-atop";
-    if (col === "rainbow") { const gr = g.createLinearGradient(0, 0, c.width, c.height); ["#ff4fd8", "#ffc93c", "#6cf0a6", "#39e6ff", "#b06cff"].forEach((h, i) => gr.addColorStop(i / 4, h)); g.fillStyle = gr; }
-    else g.fillStyle = col;
-    g.globalAlpha = 0.55; g.fillRect(0, 0, c.width, c.height);
-  }
+  g.globalCompositeOperation = "source-atop"; g.fillStyle = skinColor(skin); g.globalAlpha = 0.72; g.fillRect(0, 0, c.width, c.height);
+  g.globalAlpha = 1; g.globalCompositeOperation = "luminosity"; g.drawImage(img, 0, 0);
   skinCache[skin] = c; return c;
 }
 
@@ -866,13 +877,13 @@ function light(x, y, r, color, alpha, sx = 1, sy = 1) {
   ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.restore();
 }
 function shadow(x, y, w, alpha = 0.4) {
-  ctx.save(); ctx.translate(cx(x), cy(y)); ctx.scale(1, 0.42); ctx.fillStyle = `rgba(3,5,14,${alpha})`;
+  ctx.save(); ctx.translate(cx(x), cy(y)); ctx.scale(1, 0.42); ctx.fillStyle = `rgba(8,5,14,${alpha})`;
   ctx.beginPath(); ctx.arc(0, 0, view.cs * w, 0, 7); ctx.fill(); ctx.restore();
 }
 function sprite(img, x, y, size, alpha = 1, opt = {}) {
   const s = view.cs * size;
   if (!img || (img instanceof HTMLImageElement && !ready(img))) {
-    ctx.save(); ctx.globalAlpha *= alpha; ctx.fillStyle = "#ff9a3c"; ctx.beginPath(); ctx.arc(cx(x), cy(y), s * 0.3, 0, 7); ctx.fill(); ctx.restore(); return;
+    ctx.save(); ctx.globalAlpha *= alpha; ctx.fillStyle = "#ff8a3d"; ctx.beginPath(); ctx.arc(cx(x), cy(y), s * 0.3, 0, 7); ctx.fill(); ctx.restore(); return;
   }
   ctx.save(); ctx.globalAlpha *= alpha; ctx.translate(cx(x), cy(y));
   if (opt.rot) ctx.rotate(opt.rot);
@@ -889,9 +900,9 @@ function wallPaint() {
   if (wallGrad.key === key) return wallGrad;
   const x0 = cx(0), y0 = cy(0), x1 = cx(view.cols), y1 = cy(view.rows);
   const top = ctx.createLinearGradient(x0, y0, x1, y1);
-  top.addColorStop(0, "#5663a8"); top.addColorStop(1, "#3c4688");
+  top.addColorStop(0, "#6e5d8c"); top.addColorStop(1, "#4d4068");
   const front = ctx.createLinearGradient(0, 0, 0, view.cs * WALL_H);
-  front.addColorStop(0, "#2a3270"); front.addColorStop(1, "#121736");
+  front.addColorStop(0, "#3c3052"); front.addColorStop(1, "#171020");
   wallGrad = { key, top, front };
   return wallGrad;
 }
@@ -909,12 +920,12 @@ function drawWall(rm, x, y) {
   ctx.fillStyle = paint.top; ctx.fillRect(px, py - cs * H, cs, cs);
   const n = ((x * 7919 + y * 104729) % 17) / 17;
   ctx.fillStyle = `rgba(255,255,255,${0.01 + n * 0.028})`; ctx.fillRect(px, py - cs * H, cs, cs);
-  if (!isWall(x, y + 1)) { ctx.fillStyle = "rgba(57,230,255,.22)"; ctx.fillRect(px, py + cs - 2, cs, 2); }
+  if (!isWall(x, y + 1)) { ctx.fillStyle = "rgba(126,240,198,.25)"; ctx.fillRect(px, py + cs - 2, cs, 2); }
   // Exposed edges catch the light; merged runs keep no seam.
   ctx.fillStyle = "rgba(255,255,255,.2)";
   if (!isWall(x, y - 1)) ctx.fillRect(px, py - cs * H, cs, 2);
   if (!isWall(x - 1, y)) ctx.fillRect(px, py - cs * H, 2, cs);
-  ctx.fillStyle = "rgba(5,7,18,.4)";
+  ctx.fillStyle = "rgba(12,8,18,.4)";
   if (!isWall(x + 1, y)) ctx.fillRect(px + cs - 2, py - cs * H, 2, cs);
   if (!isWall(x, y + 1)) ctx.fillRect(px, py + cs * (1 - H) - 2, cs, 2);
 }
@@ -930,12 +941,12 @@ function drawDoor(rm, x, y, ch, dt) {
   // the emitters sit on their faces.
   const isWall = (ax, ay) => ax < 0 || ay < 0 || ax >= view.cols || ay >= view.rows || rm[ay][ax] === "#";
   const vertical = isWall(x, y - 1) && isWall(x, y + 1);
-  const lens = vis > 0.01 ? "#ff4fd8" : "#4a3f6b";
+  const lens = vis > 0.01 ? "#c08cff" : "#4a3f6b";
   ctx.fillStyle = lens;
   if (vertical) { ctx.fillRect(px + cs * 0.35, py - 3, cs * 0.3, 3); ctx.fillRect(px + cs * 0.35, py + cs - 3, cs * 0.3, 3); }
   else { ctx.fillRect(px, py + cs * 0.35, 3, cs * 0.3); ctx.fillRect(px + cs - 3, py + cs * 0.35, 3, cs * 0.3); }
   // Floor rail marking the threshold.
-  ctx.fillStyle = "rgba(255,79,216,.22)";
+  ctx.fillStyle = "rgba(192,140,255,.22)";
   if (vertical) ctx.fillRect(px + cs / 2 - 1, py + 2, 2, cs - 4); else ctx.fillRect(px + 2, py + cs / 2 - 1, cs - 4, 2);
   if (vis > 0.01) {
     const span = (cs - 6) * easeOut(vis);
@@ -946,22 +957,22 @@ function drawDoor(rm, x, y, ch, dt) {
       const a = (0.55 + Math.sin(now * 17 + i) * 0.15) * vis;
       if (vertical) {
         const top = py + cs / 2 - span / 2;
-        ctx.globalAlpha = a * 0.35; ctx.fillStyle = "#ff4fd8"; ctx.fillRect(px + off - 3, top, 9, span);
-        ctx.globalAlpha = a; ctx.fillStyle = "#ffb3f0"; ctx.fillRect(px + off, top, 3, span);
+        ctx.globalAlpha = a * 0.35; ctx.fillStyle = "#c08cff"; ctx.fillRect(px + off - 3, top, 9, span);
+        ctx.globalAlpha = a; ctx.fillStyle = "#ead9ff"; ctx.fillRect(px + off, top, 3, span);
       } else {
         const left = px + cs / 2 - span / 2;
-        ctx.globalAlpha = a * 0.35; ctx.fillStyle = "#ff4fd8"; ctx.fillRect(left, py + off - 3, span, 9);
-        ctx.globalAlpha = a; ctx.fillStyle = "#ffb3f0"; ctx.fillRect(left, py + off, span, 3);
+        ctx.globalAlpha = a * 0.35; ctx.fillStyle = "#c08cff"; ctx.fillRect(left, py + off - 3, span, 9);
+        ctx.globalAlpha = a; ctx.fillStyle = "#ead9ff"; ctx.fillRect(left, py + off, span, 3);
       }
     }
     ctx.restore();
     ctx.globalCompositeOperation = "lighter";
-    light(x + 0.5, y + 0.5, cs * 0.9, "rgba(255,79,216,.5)", 0.3 * vis, 1, 0.7);
+    light(x + 0.5, y + 0.5, cs * 0.9, "rgba(192,140,255,.5)", 0.3 * vis, 1, 0.7);
     ctx.globalCompositeOperation = "source-over";
   }
   // The gate's letter on a small dark tag, clear of the bars.
   const tw = cs * 0.34, th = cs * 0.26, tx = px + cs / 2 - tw / 2, ty = vertical ? py + cs * 0.02 : py + cs * 0.04;
-  ctx.fillStyle = "rgba(7,10,24,.8)"; ctx.beginPath();
+  ctx.fillStyle = "rgba(19,14,27,.8)"; ctx.beginPath();
   ctx.moveTo(tx + 4, ty); ctx.arcTo(tx + tw, ty, tx + tw, ty + th, 4); ctx.arcTo(tx + tw, ty + th, tx, ty + th, 4); ctx.arcTo(tx, ty + th, tx, ty, 4); ctx.arcTo(tx, ty, tx + tw, ty, 4); ctx.fill();
   ctx.font = `600 ${Math.round(cs * 0.22)}px Fredoka, Heebo, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = "rgba(255,255,255,.9)"; ctx.fillText(ch, px + cs / 2, ty + th / 2 + 0.5);
@@ -971,14 +982,14 @@ function draw(dt) {
   const { w, h, cs } = view;
   const run = game.run;
   ctx.clearRect(0, 0, w, h);
-  if (!run || (current !== "none" && current !== "s-result")) { ctx.fillStyle = "#070a18"; ctx.fillRect(0, 0, w, h); return; }
+  if (!run || (current !== "none" && current !== "s-result")) { ctx.fillStyle = "#130e1b"; ctx.fillRect(0, 0, w, h); return; }
   const lvl = run.level, rm = rmapFor(lvl), cols = view.cols, rows = view.rows;
   const now = performance.now() / 1000;
 
   // Backdrop with a slow drift.
   const bgc = backdrop(L.WORLDS[(lvl.world || 1) - 1].bg);
   if (bgc) ctx.drawImage(bgc, -w * 0.02 + Math.sin(now * 0.12) * 5, -h * 0.02 + Math.cos(now * 0.09) * 4);
-  else { ctx.fillStyle = "#0e1328"; ctx.fillRect(0, 0, w, h); }
+  else { ctx.fillStyle = "#1e1729"; ctx.fillRect(0, 0, w, h); }
 
   // The room is a rounded window onto the level: the outer wall ring is
   // mostly off screen, and everything inside shakes and zooms behind the frame.
@@ -999,8 +1010,8 @@ function draw(dt) {
   ctx.globalCompositeOperation = "lighter";
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     const ch = rm[y][x];
-    if (ch === "a" || ch === "b" || ch === "c") light(x + 0.5, y + 0.5, cs * 1.1, "rgba(255,79,216,.55)", run.plates[ch] ? 0.55 : 0.2);
-    else if (ch === "E") light(x + 0.5, y + 0.5, cs * 1.4, "rgba(255,201,60,.6)", 0.35 + Math.sin(now * 2.2) * 0.08);
+    if (ch === "a" || ch === "b" || ch === "c") light(x + 0.5, y + 0.5, cs * 1.1, "rgba(192,140,255,.55)", run.plates[ch] ? 0.55 : 0.2);
+    else if (ch === "E") light(x + 0.5, y + 0.5, cs * 1.4, "rgba(255,207,90,.6)", 0.35 + Math.sin(now * 2.2) * 0.08);
   }
   // Everyone hops from where they stood to where they stand over one beat.
   const bk = reduceMotion ? 1 : easeOut(clamp01((performance.now() - game.beatT0) / game.beatMs));
@@ -1008,10 +1019,10 @@ function draw(dt) {
   const tween = (prev, x, y) => (prev ? { x: prev.x + (x - prev.x) * bk + 0.5, y: prev.y + (y - prev.y) * bk + 0.5, moving: prev.x !== x || prev.y !== y } : { x: x + 0.5, y: y + 0.5, moving: false });
   const apos = run.actors.map((a, i) => tween(game.prev?.actors[i], a.x, a.y));
   const dpos = run.drones.map((d, i) => tween(game.prev?.drones[i], d.px, d.py));
-  for (const co of run.coins) if (!co.taken) { const p = R(co.x + 0.5, co.y + 0.5); light(p.x, p.y, cs * 0.5, "rgba(255,201,60,.5)", 0.3); }
-  dpos.forEach((q) => { const p = R(q.x, q.y); light(p.x, p.y + 0.15, cs * 0.95, "rgba(255,79,216,.55)", 0.3, 1, 0.55); });
+  for (const co of run.coins) if (!co.taken) { const p = R(co.x + 0.5, co.y + 0.5); light(p.x, p.y, cs * 0.5, "rgba(255,207,90,.5)", 0.3); }
+  dpos.forEach((q) => { const p = R(q.x, q.y); light(p.x, p.y + 0.15, cs * 0.95, "rgba(255,92,122,.55)", 0.3, 1, 0.55); });
   const last = run.actors.length - 1;
-  for (let i = 0; i < last; i++) { const a = run.actors[i]; if (!a.done) { const p = R(apos[i].x, apos[i].y); light(p.x, p.y + 0.3, cs * 0.8, "rgba(57,230,255,.5)", 0.22, 1, 0.45); } }
+  for (let i = 0; i < last; i++) { const a = run.actors[i]; if (!a.done) { const p = R(apos[i].x, apos[i].y); light(p.x, p.y + 0.3, cs * 0.8, "rgba(126,240,198,.5)", 0.22, 1, 0.45); } }
   ctx.globalCompositeOperation = "source-over";
 
   // Floor decals: plates, exit, drone paths, coins.
@@ -1029,7 +1040,7 @@ function draw(dt) {
   }
   for (const d of run.drones) {
     const a = R(d.x + 0.5, d.y + 0.5), b = R(d.x + 0.5 + d.dx * d.n, d.y + 0.5 + d.dy * d.n);
-    ctx.strokeStyle = "rgba(255,79,216,.18)"; ctx.lineWidth = 2; ctx.setLineDash([5, 9]);
+    ctx.strokeStyle = "rgba(255,92,122,.2)"; ctx.lineWidth = 2; ctx.setLineDash([5, 9]);
     ctx.beginPath(); ctx.moveTo(cx(a.x), cy(a.y)); ctx.lineTo(cx(b.x), cy(b.y)); ctx.stroke(); ctx.setLineDash([]);
   }
   // Assist: where every patrol lands on the next beat, and which of the
@@ -1039,7 +1050,7 @@ function draw(dt) {
     const alive = run.actors[last].alive;
     for (const d of run.drones) {
       const n = L.dronePos(d, run.tick + 1), p = R(n.px + 0.5, n.py + 0.5);
-      ctx.save(); ctx.globalAlpha = 0.28 + Math.sin(now * 5) * 0.08; ctx.strokeStyle = "#ff4fd8"; ctx.lineWidth = 2; ctx.setLineDash([3, 4]);
+      ctx.save(); ctx.globalAlpha = 0.28 + Math.sin(now * 5) * 0.08; ctx.strokeStyle = "#ff5c7a"; ctx.lineWidth = 2; ctx.setLineDash([3, 4]);
       ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y - 0.12), cs * 0.3, 0, 7); ctx.stroke(); ctx.setLineDash([]);
       ctx.globalAlpha *= 0.5; sprite(IMG.drone, p.x, p.y - 0.12, 0.8, 0.45);
       ctx.restore();
@@ -1078,7 +1089,7 @@ function draw(dt) {
     if (ch === "#") items.push({ z: y + 1, f: () => drawWall(rm, x, y) });
     else if (ch === "A" || ch === "B" || ch === "C") items.push({ z: y + 0.2, f: () => drawDoor(rm, x, y, ch, dt) });
   }
-  const esp = echoSprite(profile.skin), ecol = skinColor(profile.skin);
+  const esp = echoSprite(mySkin()), ecol = skinColor(mySkin());
   run.actors.forEach((a, i) => {
     if (a.done || (!a.alive && i === last)) return;
     const isEcho = i < last;
@@ -1095,14 +1106,14 @@ function draw(dt) {
     const ea = game.exitAnim; ea.t += dt;
     const k = clamp01(ea.t / 0.55), p = R(ea.x, ea.y);
     if (k >= 1) game.exitAnim = null;
-    else sprite(IMG.hero, p.x, p.y - 0.14 * (1 - k), 1.2 * (1 - k * 0.92), 1 - k * k, { flip: ea.face < 0, rot: k * k * 7 });
+    else sprite(heroImg(mySkin()), p.x, p.y - 0.14 * (1 - k), 1.2 * (1 - k * 0.92), 1 - k * k, { flip: ea.face < 0, rot: k * k * 7 });
   }
   // A scanline sweeps the room as the walls rise.
   if (!reduceMotion && game.levelT < 0.75) {
     const k = easeOut(game.levelT / 0.75), yy = cy(rows * k);
-    const g = ctx.createLinearGradient(0, yy - cs * 1.6, 0, yy); g.addColorStop(0, "rgba(57,230,255,0)"); g.addColorStop(1, `rgba(57,230,255,${0.32 * (1 - k)})`);
+    const g = ctx.createLinearGradient(0, yy - cs * 1.6, 0, yy); g.addColorStop(0, "rgba(126,240,198,0)"); g.addColorStop(1, `rgba(126,240,198,${0.32 * (1 - k)})`);
     ctx.fillStyle = g; ctx.fillRect(cx(0), yy - cs * 1.6, cs * cols, cs * 1.6);
-    ctx.fillStyle = `rgba(210,250,255,${0.85 * (1 - k)})`; ctx.fillRect(cx(0), yy - 1, cs * cols, 2);
+    ctx.fillStyle = `rgba(220,255,240,${0.85 * (1 - k)})`; ctx.fillRect(cx(0), yy - 1, cs * cols, 2);
   }
 
   drawMotes(dt, cols, rows);
@@ -1150,7 +1161,7 @@ function draw(dt) {
   ctx.fillStyle = vg; ctx.fillRect(0, 0, w, h);
   if (game.rewind > 0 && !reduceMotion) {
     const k = game.rewind / 0.4;
-    ctx.fillStyle = `rgba(57,230,255,${0.08 * k})`;
+    ctx.fillStyle = `rgba(126,240,198,${0.08 * k})`;
     for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 1);
     for (let i = 0; i < 6; i++) {
       const by = Math.random() * h, bh = 6 + Math.random() * 30, off = (Math.random() - 0.5) * 24 * k;
@@ -1168,7 +1179,7 @@ function drawMotes(dt, cols, rows) {
   ctx.save(); ctx.globalCompositeOperation = "lighter";
   for (const m of motes) {
     m.y -= m.v * dt; m.p += dt; if (m.y < 0) { m.y = rows; m.x = Math.random() * cols; }
-    ctx.globalAlpha = 0.16 + Math.sin(m.p * 1.7) * 0.1; ctx.fillStyle = "#39e6ff";
+    ctx.globalAlpha = 0.16 + Math.sin(m.p * 1.7) * 0.1; ctx.fillStyle = "#7ef0c6";
     ctx.beginPath(); ctx.arc(cx(m.x + Math.sin(m.p) * 0.08), cy(m.y), m.r, 0, 7); ctx.fill();
   }
   ctx.restore();
@@ -1202,7 +1213,7 @@ function drawActor(a, p, isEcho, appear, esp, ecol, now, hop = 0, moving = false
     sprite(esp, p.x, p.y - 0.14 - bob, 1.18, flick * appear, { flip, sx, sy: sy * appear, rot: lean });
   } else {
     shadow(p.x, p.y + 0.33, 0.38 * (1 - bob * 2), 0.45);
-    sprite(IMG.hero, p.x, p.y - 0.14 - bob, 1.2, 1, { flip, sx: sx * appear, sy: sy * appear, rot: lean });
+    sprite(heroImg(mySkin()), p.x, p.y - 0.14 - bob, 1.2, 1, { flip, sx: sx * appear, sy: sy * appear, rot: lean });
   }
 }
 function drawDrone(d, p, now) {
@@ -1213,7 +1224,7 @@ function drawDrone(d, p, now) {
   sprite(IMG.drone, p.x, p.y - 0.12 + bob, 0.92, 1, { rot: tilt });
   // Scanning eye: a hard little flare.
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.5 + Math.sin(now * 9) * 0.2;
-  ctx.fillStyle = "#ff4fd8"; ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y - 0.12 + bob), view.cs * 0.07, 0, 7); ctx.fill(); ctx.restore();
+  ctx.fillStyle = "#ff5c7a"; ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y - 0.12 + bob), view.cs * 0.07, 0, 7); ctx.fill(); ctx.restore();
 }
 function hexA(hex, a) {
   const n = parseInt(hex.slice(1), 16);
@@ -1307,22 +1318,35 @@ function drawTrail(svg, path, done) {
 
 // ── screens: shop ──────────────────────────────────────────────────────────
 
-function skinPreview(cv, id) {
-  const S = 64, dpr = Math.min(2, window.devicePixelRatio || 1);
+/** A robot on a little lit stage, with its hologram twin a step behind. */
+function skinPreview(cv, id, S = 96) {
+  id = L.skinId(id);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = S * dpr; cv.height = S * dpr;
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const col = skinColor(id);
-  g.save(); g.translate(S / 2, S * 0.86); g.scale(1, 0.4); g.strokeStyle = col; g.lineWidth = 2.5; g.shadowColor = col; g.shadowBlur = 10;
-  g.beginPath(); g.arc(0, 0, S * 0.3, 0, 7); g.stroke(); g.restore();
-  const img = echoSprite(id);
-  if (ready(IMG.echo)) { g.globalAlpha = 0.9; g.drawImage(img, S * 0.1, S * 0.02, S * 0.8, S * 0.8); }
+  const glow = g.createRadialGradient(S / 2, S * 0.78, 2, S / 2, S * 0.78, S * 0.5);
+  glow.addColorStop(0, hexA(col, 0.35)); glow.addColorStop(1, hexA(col, 0));
+  g.fillStyle = glow; g.fillRect(0, 0, S, S);
+  g.save(); g.translate(S / 2, S * 0.9); g.scale(1, 0.32); g.fillStyle = "rgba(0,0,0,.35)"; g.beginPath(); g.arc(0, 0, S * 0.3, 0, 7); g.fill(); g.restore();
+  const img = heroImg(id);
+  if (!ready(img)) return;
+  const echo = echoSprite(id);
+  g.globalAlpha = 0.5; g.drawImage(echo, S * 0.3, S * 0.02, S * 0.64, S * 0.64);
+  g.globalAlpha = 1; g.drawImage(img, S * 0.08, S * 0.14, S * 0.76, S * 0.76);
 }
+const tierName = (s) => T("tier" + (s.tier || 1));
 function renderShop() {
+  const me = mySkin(), mine = L.SKINS[me];
+  const my = $("#mybot"); my.innerHTML = "";
+  const big = document.createElement("canvas"); skinPreview(big, me, 150);
+  my.innerHTML = `<div class="who"><div class="eyebrow">${T("your_robot")}</div><h2>${T("sk_" + me)}</h2><p>${T("fl_" + me)}</p><span class="rar t${mine.tier}">${tierName(mine)}</span></div>`;
+  my.prepend(big);
   const sk = $("#skins"); sk.innerHTML = "";
   for (const [id, s] of Object.entries(L.SKINS)) {
-    const owned = profile.skins.includes(id), on = profile.skin === id;
-    const d = document.createElement("div"); d.className = "skin glass" + (on ? " on" : "");
-    const cv = document.createElement("canvas"); skinPreview(cv, id);
+    const owned = profile.skins.includes(id), on = me === id;
+    const d = document.createElement("div"); d.className = "skin glass t" + s.tier + (on ? " on" : "") + (owned ? " owned" : "");
+    const cv = document.createElement("canvas"); skinPreview(cv, id, 96);
     const b = document.createElement("button"); b.className = "btn small" + (owned && !on ? " echo" : "");
     if (on) { b.textContent = T("equipped"); b.disabled = true; }
     else if (owned) { b.textContent = T("equip"); b.addEventListener("click", () => { saveRoom.act({ t: "equip", skin: id }); renderShop(); }); }
@@ -1332,27 +1356,24 @@ function renderShop() {
       // Premium currency asks first, like every store does; coins are instant.
       b.addEventListener("click", () => {
         if ((s.gems && profile.gems < s.gems) || (s.coins && profile.coins < s.coins)) { toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); buzz("warning"); return; }
-        if (s.gems) confirmBuy(T("skin_name", { n: id }), T("gems_n", { n: s.gems }), buy); else buy();
+        if (s.gems) confirmBuy(T("sk_" + id), T("gems_n", { n: s.gems }), buy); else buy();
       });
     }
-    const name = document.createElement("b"); name.textContent = id;
-    d.append(cv, name, b); sk.appendChild(d);
+    d.innerHTML = `<span class="rar t${s.tier}">${tierName(s)}</span>`;
+    const name = document.createElement("b"); name.textContent = T("sk_" + id);
+    const fl = document.createElement("small"); fl.textContent = T("fl_" + id);
+    d.append(cv, name, fl, b); sk.appendChild(d);
   }
   const left = profile.adsDay === today() ? L.ADS_PER_DAY - profile.adsToday : L.ADS_PER_DAY;
   $("#ad-left").textContent = left > 0 ? T("ads_left", { n: left }) : T("ads_none");
   $("#b-ad").disabled = left <= 0;
 
-  const tiers = $("#pass"); tiers.innerHTML = "";
-  L.PASS_TIERS.forEach((t, i) => {
-    const d = document.createElement("div");
-    const ok = profile.passXp >= t.xp, claimed = i < profile.claimedTiers, locked = !profile.pass && i >= 2;
-    d.className = "tier" + (claimed ? " claimed" : ok ? " ok" : "") + (locked ? " lock" : "");
-    d.innerHTML = `<b>${i + 1}</b><span>${t.xp} XP</span><span>${t.coins ? "🪙" + t.coins : ""}${t.gems ? " 💎" + t.gems : ""}${t.skin ? " 🎨" : ""}</span>`;
-    tiers.appendChild(d);
-  });
+  // Season pass summary; the full track has its own page.
   const next = L.PASS_TIERS[profile.claimedTiers];
   $("#pass-xp").textContent = `${profile.passXp} XP` + (next && profile.passXp < next.xp ? ` / ${next.xp}` : "");
   $("#xpfill").style.width = next ? `${Math.min(100, profile.passXp / Math.max(1, next.xp) * 100)}%` : "100%";
+  const nr = $("#pass-next"); nr.innerHTML = "";
+  if (next) { nr.append(rewardIcon(next, 28)); const t = document.createElement("span"); t.textContent = `${T("next_reward")}: ${rewardLabel(next)}`; nr.append(t); }
   $("#b-claim").disabled = !next || profile.passXp < next.xp || (!profile.pass && profile.claimedTiers >= 2);
 
   const pr = $("#products"); pr.innerHTML = "";
@@ -1365,6 +1386,52 @@ function renderShop() {
     b.addEventListener("click", () => purchase(sku));
     d.appendChild(b); pr.appendChild(d);
   }
+}
+function rewardLabel(t) {
+  const parts = [];
+  if (t.coins) parts.push(T("reward_coins", { n: t.coins }));
+  if (t.gems) parts.push(T("reward_gems", { n: t.gems }));
+  if (t.skin) parts.push(T("reward_robot", { n: T("sk_" + t.skin) }));
+  return parts.join(" · ");
+}
+function rewardIcon(t, size) {
+  if (t.skin) { const cv = document.createElement("canvas"); cv.className = "ricon"; skinPreview(cv, t.skin, size); return cv; }
+  const img = document.createElement("img"); img.className = "ricon"; img.alt = ""; img.src = t.gems ? "assets/gem.png" : "assets/coin.png"; img.style.width = img.style.height = size + "px"; return img;
+}
+/** The season track: every tier, what it pays, and where the player stands. */
+function renderPass() {
+  const next = L.PASS_TIERS[profile.claimedTiers];
+  $("#ps-season").textContent = T("season_name");
+  $("#ps-xp").textContent = `${profile.passXp} XP`;
+  $("#ps-fill").style.width = next ? `${Math.min(100, profile.passXp / Math.max(1, next.xp) * 100)}%` : "100%";
+  $("#ps-how").textContent = T("pass_how");
+  const cta = $("#b-getpass");
+  cta.hidden = profile.pass; $("#ps-owned").hidden = !profile.pass;
+  cta.textContent = T("pass_get", { p: L.IAP.pass.price });
+  const track = $("#ptrack"); track.innerHTML = "";
+  L.PASS_TIERS.forEach((t, i) => {
+    const reached = profile.passXp >= t.xp, claimed = i < profile.claimedTiers, locked = !profile.pass && i >= 2;
+    const isNext = i === profile.claimedTiers;
+    const d = document.createElement("div");
+    d.className = "ptier glass" + (claimed ? " claimed" : "") + (isNext && reached && !locked ? " ready" : "") + (locked ? " locked" : "") + (t.skin ? " big" : "");
+    d.append(rewardIcon(t, t.skin ? 72 : 40));
+    const body = document.createElement("div"); body.className = "pbody";
+    body.innerHTML = `<div class="eyebrow">${T("tier_n", { n: i + 1 })} · ${t.xp} XP${i < 2 ? ` · ${T("free_lane")}` : ""}</div><b>${rewardLabel(t)}</b>`;
+    d.append(body);
+    const st = document.createElement("div"); st.className = "pstate";
+    if (claimed) st.innerHTML = `<span class="done">✓ ${T("claimed")}</span>`;
+    else if (locked) st.innerHTML = `<span class="lock"><svg class="ic"><use href="#i-lock"/></svg>${T("needs_pass")}</span>`;
+    else if (isNext && reached) { const b = document.createElement("button"); b.className = "btn small primary"; b.textContent = T("claim"); b.addEventListener("click", claimTier); st.append(b); }
+    else st.innerHTML = `<span class="togo">${T("xp_to_go", { n: Math.max(0, t.xp - profile.passXp) })}</span>`;
+    d.append(st); track.appendChild(d);
+  });
+}
+function claimTier() {
+  const v = saveRoom.act({ t: "claim_pass" });
+  if (v.ok) { toast(T("bought")); sfx("buy", 0.7); buzz("success"); } else toast(v.error === "pass required" ? T("tier_locked") : T("need_xp"));
+  if (!screenEl("s-pass").hidden) renderPass();
+  if (!screenEl("s-shop").hidden) renderShop();
+  if (!screenEl("s-pass").hidden) renderPass();
 }
 function sheet(html, buttons) {
   const s = $("#sheet"); s.innerHTML = html;
@@ -1499,7 +1566,10 @@ tap($("#b-hintad"), () => {
   watchAd(() => sheet(`<h2>${T("hint_title")}</h2><p>${hintText}</p>`, [[T("close"), "ghost", closeSheet]]));
 });
 $("#b-ad").addEventListener("click", () => watchAd(() => { const v = saveRoom.act({ t: "ad", day: today() }); if (v.ok) { toast(T("ad_done")); sfx("coin"); } renderShop(); }));
-$("#b-claim").addEventListener("click", () => { const v = saveRoom.act({ t: "claim_pass" }); if (v.ok) { toast(T("bought")); sfx("buy", 0.7); } else toast(v.error === "pass required" ? T("tier_locked") : T("need_xp")); renderShop(); });
+$("#b-claim").addEventListener("click", claimTier);
+$("#b-passpage").addEventListener("click", () => { renderPass(); show("s-pass"); });
+$("#b-passback").addEventListener("click", () => { renderShop(); show("s-shop"); });
+$("#b-getpass").addEventListener("click", () => purchase("pass"));
 $("#b-playdaily").addEventListener("click", () => startLevel(L.dailyLevel(today()), "daily"));
 $("#b-next").addEventListener("click", () => { const k = nextLevelKey(); if (k) startLevel(L.levelById(k), k); });
 $("#b-again").addEventListener("click", () => startLevel(game.level, game.levelKey));

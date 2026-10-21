@@ -38,17 +38,19 @@ export const SOLUTIONS = {
     [["R", 2], ["D", 1]],
     [["R", 2], ["D", 4], ["W", 1], ["D", 4]],
   ],
-  // Drone columns are crossed while the patrol is at the far end of its run.
+  // Patrol lanes are crossed, never walked along; every loop here survives
+  // when played live (tools/check-levels.mjs replays each one as the hero).
   "2-3": [
     [["R", 1], ["D", 1]],
-    [["W", 0.4], ["R", 1], ["D", 4], ["R", 2], ["D", 1]],
-    [["W", 1.0], ["R", 1], ["D", 8], ["R", 3]],
+    [["R", 1], ["D", 5], ["R", 2]],
+    [["R", 1], ["W", 0.2], ["D", 8], ["R", 3]],
   ],
+  // Plates b and c sit inside the patrols: step on, then end the loop at once.
   "2-4": [
     [["R", 1]],
-    [["R", 1], ["D", 3], ["R", 2]],
-    [["W", 1.0], ["R", 1], ["D", 6], ["R", 2]],
-    [["W", 0.3], ["R", 1], ["D", 5], ["W", 0.8], ["D", 2], ["R", 1], ["W", 1.3], ["U", 1], ["R", 2], ["D", 2]],
+    [["R", 1], ["W", 0.1], ["D", 4], ["R", 2], ["U", 1]],
+    [["R", 1], ["D", 4], ["W", 0.8], ["D", 2], ["R", 2]],
+    [["R", 1], ["D", 4], ["W", 2.9], ["D", 2], ["R", 3], ["D", 2]],
   ],
   // Mirror rooms: the hero's recording is replayed with left and right swapped.
   "3-1": [

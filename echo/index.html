@@ -122,7 +122,14 @@
     }
     .screen::-webkit-scrollbar { display: none; }
     .screen[hidden] { display: none; }
-    .screen.over { background: radial-gradient(80% 60% at 50% 45%, rgba(10,14,32,.35), rgba(5,7,18,.86)); backdrop-filter: blur(6px); justify-content: center; align-items: center; animation-name: fade-in; }
+    .screen.over { background: radial-gradient(80% 60% at 50% 45%, rgba(10,14,32,.35), rgba(5,7,18,.86)); backdrop-filter: blur(6px); justify-content: flex-start; align-items: center; animation-name: fade-in; }
+    .screen.over > * { margin: auto; flex-shrink: 0; }
+    /* Right-to-left: arrows flip, numbers stay numbers, the room grid stays a room. */
+    [dir="rtl"] .b-back .ic, [dir="rtl"] #b-quit .ic { transform: scaleX(-1); }
+    .stat b, .chip, #h-coins, .board span:not(.grow) { direction: ltr; unicode-bidi: isolate; }
+    #edgrid { direction: ltr; }
+    .dailyyou { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--gold); font-weight: 800; font-size: .85rem; }
+    .dailyyou .ic { fill: var(--gold); stroke: none; } .dailyyou .ic.off { fill: rgba(142,152,200,.3); }
     @keyframes sheet-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
     @keyframes fade-in { from { opacity: 0; } }
     .topbar { display: flex; align-items: center; gap: 12px; min-height: 48px; }
@@ -505,6 +512,7 @@
         <div class="eyebrow" id="d-title"></div>
         <p data-i18n="daily_sub">One room for every player in the world. Fewest echoes wins; time breaks ties.</p>
         <button class="btn primary" id="b-playdaily" data-i18n="play_daily">Play today's room</button>
+        <p id="d-you" class="dailyyou" hidden></p>
       </div>
       <div class="eyebrow" data-i18n="leaderboard">Leaderboard</div>
       <div class="board" id="board"></div>
@@ -515,11 +523,11 @@
       <div class="topbar"><button class="hbtn b-back"><span class="disc"><svg class="ic"><use href="#i-back"/></svg></span></button><h1 data-i18n="editor">Level editor</h1></div>
       <p data-i18n="editor_sub">Paint a room, test it, then share its code. Rooms need one start and one exit; a door opens while its plate is held.</p>
       <div class="palette" id="palette"></div>
+      <p class="dim small" data-i18n="drone_tool" style="margin:-6px 0 0;font-size:.8rem;color:var(--dim)">◉ = drone: tap a cell to place one, tap again to remove</p>
       <div id="edgrid"></div>
       <div class="row">
         <label class="row"><span data-i18n="mirror">Mirror echoes</span><input type="checkbox" id="ed-mirror" /></label>
         <label class="row"><span data-i18n="par">Par</span><input type="number" id="ed-par" min="1" max="6" value="3" style="width:4.5em" /></label>
-        <button class="btn small" id="b-adddrone" data-i18n="add_drone">+ Drone</button>
         <button class="btn small ghost" id="b-cleardrones" data-i18n="clear_drones">Clear drones</button>
       </div>
       <div class="row">

@@ -33,7 +33,7 @@ const STR = {
     daily_sub: "חדר אחד לכל השחקנים בעולם. הכי מעט הדים מנצח; הזמן שובר שוויון.",
     play_daily: "שחק את החדר של היום", leaderboard: "טבלת מובילים", board_empty: "עדיין אין תוצאות היום. תהיה הראשון.",
     editor_sub: "צייר חדר, בדוק אותו ושתף את הקוד שלו. חדר צריך התחלה אחת ויציאה אחת; דלת נפתחת כל עוד הלוחית שלה לחוצה.",
-    mirror: "הדים במראה", par: "פאר", add_drone: "+ רחפן", clear_drones: "נקה רחפנים", test: "בדיקה", get_code: "קוד שיתוף", load_code: "טען קוד",
+    mirror: "הדים במראה", par: "פאר", drone_tool: "◉ = רחפן: הקש על תא כדי להציב, שוב כדי להסיר", drone_nowhere: "לרחפן אין לאן לטוס מכאן", clear_drones: "נקה רחפנים", daily_you: "הכוכבים שלך היום: {n}", test: "בדיקה", get_code: "קוד שיתוף", load_code: "טען קוד",
     language: "שפה", music: "מוזיקה", sfx: "אפקטים", shake: "רעידת מסך", name: "שם שחקן",
     loop_saved: "הד #{n} נשמר", loop_sub: "עכשיו שחק לצידו", caught: "נתפסת", caught_sub: "רק הסיבוב הזה מתחיל מחדש",
     out_of_echoes: "נגמרו ההדים", out_sub: "השלב מתחיל מחדש", loop_n: "סיבוב {n}",
@@ -67,7 +67,7 @@ const STR = {
     daily_sub: "One room for every player in the world. Fewest echoes wins; time breaks ties.",
     play_daily: "Play today's room", leaderboard: "Leaderboard", board_empty: "No results yet today. Be the first.",
     editor_sub: "Paint a room, test it, then share its code. Rooms need one start and one exit; a door opens while its plate is held.",
-    mirror: "Mirror echoes", par: "Par", add_drone: "+ Drone", clear_drones: "Clear drones", test: "Test", get_code: "Share code", load_code: "Load code",
+    mirror: "Mirror echoes", par: "Par", drone_tool: "◉ = drone: tap a cell to place one, tap again to remove", drone_nowhere: "No room for a patrol there", clear_drones: "Clear drones", daily_you: "Your stars today: {n}", test: "Test", get_code: "Share code", load_code: "Load code",
     language: "Language", music: "Music", sfx: "Sound effects", shake: "Screen shake", name: "Player name",
     loop_saved: "Echo #{n} saved", loop_sub: "Now play beside it", caught: "Caught", caught_sub: "Only this loop restarts",
     out_of_echoes: "Out of echoes", out_sub: "The level restarts", loop_n: "Loop {n}",
@@ -305,6 +305,7 @@ function applyLang() {
   document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = T(el.dataset.i18n); });
   document.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
   $("#about").textContent = T("about");
+  setNet();
   refreshCurrencies();
 }
 function refreshCurrencies() {
@@ -472,8 +473,9 @@ function levelDone() {
   const stars = L.starsFor(game.level, res.echoes);
   const action = { t: "complete", level: game.levelKey, logs, day: today() };
   const bestKey = game.levelKey === "daily" ? `daily-${today()}` : game.levelKey;
+  const custom = game.levelKey.startsWith("custom");
   const prev = profile.best[bestKey];
-  const before = profile.coins, firstClear = !prev;
+  const before = profile.coins, firstClear = !prev && !custom;
   const newBest = !!prev && (res.echoes < prev.echoes || (res.echoes === prev.echoes && res.exitTick < prev.ticks));
   const v = saveRoom.act(action);
   if (game.levelKey === "daily") dailyRoom.act(action);
@@ -488,7 +490,9 @@ function levelDone() {
   game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (hp.x - view.cols / 2) * view.cs * 0.6; game.cam.tfy = (hp.y - view.rows / 2) * view.cs * 0.6;
   game.replay = { logs, level: game.level, live: true };
   game.result = { stars, res, reward, firstClear, newBest };
+  const gen = game.gen;
   setTimeout(() => {
+    if (!game.playing || game.gen !== gen) return;      // the player already left
     game.playing = false; musicOn(false);
     const title = stars === 3 ? T("perfect") : T("done_title");
     const rt = $("#r-title"); rt.textContent = title; rt.dataset.echo = title;
@@ -501,7 +505,7 @@ function levelDone() {
     }
     $("#r-echoes").textContent = res.echoes; $("#r-time").textContent = (res.exitTick / L.TPS).toFixed(1);
     countUp($("#r-coins"), reward);
-    $("#r-sub").textContent = (firstClear ? T("first_clear") + " · " : "") + `${T("par_label")} ${game.level.par}`;
+    $("#r-sub").textContent = (firstClear ? T("first_clear") + " · " : custom ? T("custom") + " · " : "") + `${T("par_label")} ${game.level.par}`;
     $("#r-best").hidden = !newBest; $("#r-best").textContent = T("new_best");
     $("#b-next").hidden = game.levelKey === "daily" || game.levelKey.startsWith("custom") || !nextLevelKey();
     show("s-result");
@@ -522,15 +526,21 @@ function quit() {
   game.playing = false; musicOn(false); game.replay = null;
   show(game.levelKey === "daily" ? "s-daily" : game.levelKey?.startsWith("custom") ? "s-editor" : "s-levels");
   if (current === "s-levels") renderLevels();
+  if (current === "s-daily") renderDaily();
 }
 
 // ── input ──────────────────────────────────────────────────────────────────
 
 const KEYS = { ArrowUp: "u", KeyW: "u", ArrowDown: "d", KeyS: "d", ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r" };
+const typing = (e) => { const t = e.target; return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable); };
+/** Loop controls work only while the hero is really in play: not during the
+ *  exit celebration, a replay, or while a sheet covers the room. */
+const canControl = () => game.playing && current === "none" && screenEl("s-sheet").hidden && !!game.run && !game.run.finished && !(game.replay && !game.replay.live);
 window.addEventListener("keydown", (e) => {
-  if (KEYS[e.code]) { game.keys.add(KEYS[e.code]); e.preventDefault(); }
-  if (e.code === "KeyR" && game.playing) startLoop();
-  if ((e.code === "Space" || e.code === "Enter" || e.code === "KeyE") && game.playing && current === "none") { endLoopNow(); e.preventDefault(); }
+  if (typing(e)) return;
+  if (KEYS[e.code]) { game.keys.add(KEYS[e.code]); if (game.playing) e.preventDefault(); }
+  if (e.code === "KeyR" && canControl()) startLoop();
+  if ((e.code === "Space" || e.code === "Enter" || e.code === "KeyE") && canControl()) { endLoopNow(); e.preventDefault(); }
 });
 window.addEventListener("keyup", (e) => { if (KEYS[e.code]) game.keys.delete(KEYS[e.code]); });
 window.addEventListener("blur", () => game.keys.clear());
@@ -939,7 +949,7 @@ function draw(dt) {
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     const ch = rm[y][x];
     if (ch === "#") items.push({ z: y + 1, f: () => drawWall(rm, x, y) });
-    else if (ch === "A" || ch === "B" || ch === "C") items.push({ z: y + 1, f: () => drawDoor(rm, x, y, ch, dt) });
+    else if (ch === "A" || ch === "B" || ch === "C") items.push({ z: y + 0.2, f: () => drawDoor(rm, x, y, ch, dt) });
   }
   const esp = echoSprite(profile.skin), ecol = skinColor(profile.skin);
   run.actors.forEach((a, i) => {
@@ -1192,7 +1202,10 @@ function renderShop() {
       b.innerHTML = s.gems ? `<img src="assets/gem.png" alt="" style="width:18px"> ${s.gems}` : `<img src="assets/coin.png" alt="" style="width:18px"> ${s.coins}`;
       const buy = () => { const v = saveRoom.act({ t: "buy", item: id }); if (v.ok) { toast(T("bought")); sfx("chime"); buzz("success"); } else toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); renderShop(); };
       // Premium currency asks first, like every store does; coins are instant.
-      b.addEventListener("click", () => (s.gems ? confirmBuy(T("skin_name", { n: id }), T("gems_n", { n: s.gems }), buy) : buy()));
+      b.addEventListener("click", () => {
+        if ((s.gems && profile.gems < s.gems) || (s.coins && profile.coins < s.coins)) { toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); buzz("warning"); return; }
+        if (s.gems) confirmBuy(T("skin_name", { n: id }), T("gems_n", { n: s.gems }), buy); else buy();
+      });
     }
     const name = document.createElement("b"); name.textContent = id;
     d.append(cv, name, b); sk.appendChild(d);
@@ -1261,6 +1274,8 @@ function watchAd(onDone) {
 
 function renderDaily() {
   $("#d-title").textContent = T("daily_name", { d: today() % 1000 });
+  const mine = profile.stars[`daily-${today()}`] || 0;
+  const you = $("#d-you"); you.hidden = !mine; you.innerHTML = mine ? starIcons(mine, 16) + " " + T("daily_you", { n: mine }) : "";
   const b = $("#board"); b.innerHTML = "";
   const board = dailyView.day === today() ? dailyView.board : [];
   if (!board.length) { const p = document.createElement("p"); p.textContent = T("board_empty"); b.appendChild(p); return; }
@@ -1275,7 +1290,13 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 // ── screens: editor ────────────────────────────────────────────────────────
 
 const ed = { map: ["#######", "#S....#", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#....E#", "#######"].map((r) => r.split("")), tool: "#", drones: [] };
-const TOOLS = [["#", "▇"], [".", "·"], ["S", "S"], ["E", "E"], ["a", "a"], ["A", "A"], ["b", "b"], ["B", "B"], ["c", "c"], ["C", "C"], ["o", "o"]];
+const TOOLS = [["#", "▇"], [".", "·"], ["S", "S"], ["E", "E"], ["a", "a"], ["A", "A"], ["b", "b"], ["B", "B"], ["c", "c"], ["C", "C"], ["o", "o"], ["@", "◉"]];
+/** How far a patrol can run from (x,y) in direction (dx,dy) before a wall, at most 4. */
+function droneSpan(map, x, y, dx, dy) {
+  let n = 0;
+  while (n < 4 && map[y + dy * (n + 1)]?.[x + dx * (n + 1)] && map[y + dy * (n + 1)][x + dx * (n + 1)] !== "#") n++;
+  return n;
+}
 function renderEditor() {
   const pal = $("#palette"); pal.innerHTML = "";
   for (const [ch, lab] of TOOLS) { const b = document.createElement("button"); b.textContent = lab; b.className = ed.tool === ch ? "on" : ""; b.addEventListener("click", () => { ed.tool = ch; renderEditor(); }); pal.appendChild(b); }
@@ -1286,7 +1307,20 @@ function renderEditor() {
     b.textContent = ch === "#" || ch === "." ? "" : ch;
     if (ed.drones.some((d) => d.x === x && d.y === y)) b.textContent = "◉";
     const paint = () => {
+      if (ed.tool === "@") {
+        // Tap a floor cell to start a patrol there (it runs along the longer
+        // open stretch, right or down); tap it again to remove it.
+        const i = ed.drones.findIndex((d) => d.x === x && d.y === y);
+        if (i >= 0) ed.drones.splice(i, 1);
+        else if (ed.map[y][x] !== "#" && ed.drones.length < 4) {
+          const h = droneSpan(ed.map, x, y, 1, 0), v = droneSpan(ed.map, x, y, 0, 1);
+          if (h || v) ed.drones.push(h >= v ? { x, y, dx: 1, dy: 0, n: h, phase: ed.drones.length * 2 } : { x, y, dx: 0, dy: 1, n: v, phase: ed.drones.length * 2 });
+          else toast(T("drone_nowhere"));
+        }
+        renderEditor(); return;
+      }
       if (ed.tool === "S" || ed.tool === "E") for (const row of ed.map) for (let i = 0; i < row.length; i++) if (row[i] === ed.tool) row[i] = ".";
+      if (ed.tool === "#") ed.drones = ed.drones.filter((d) => !(d.x === x && d.y === y));
       ed.map[y][x] = ed.tool; renderEditor();
     };
     b.addEventListener("pointerdown", paint); b.addEventListener("pointerenter", (e) => { if (e.buttons) paint(); });
@@ -1294,7 +1328,11 @@ function renderEditor() {
   }
 }
 function editorLevel() {
-  return { id: "custom", world: 1, par: Number($("#ed-par").value) || 3, mirror: $("#ed-mirror").checked, map: ed.map.map((r) => r.join("")), drones: ed.drones };
+  const par = Math.min(6, Math.max(1, Math.round(Number($("#ed-par").value) || 3)));
+  $("#ed-par").value = par;
+  // Patrols shrink to the floor that is still open, and vanish if walled in.
+  const drones = ed.drones.map((d) => ({ ...d, n: Math.min(d.n, droneSpan(ed.map, d.x, d.y, d.dx, d.dy)) })).filter((d) => d.n > 0 && ed.map[d.y][d.x] !== "#");
+  return { id: "custom", world: 1, par, mirror: $("#ed-mirror").checked, map: ed.map.map((r) => r.join("")), drones };
 }
 
 // ── wiring ─────────────────────────────────────────────────────────────────
@@ -1311,8 +1349,8 @@ $("#b-endloop").addEventListener("click", endLoopNow);
 $("#c-coins").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#c-gems").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#c-stars").addEventListener("click", () => { renderLevels(); show("s-levels"); });
-$("#b-redo").addEventListener("click", () => { if (game.playing) startLoop(); });
-$("#b-restart").addEventListener("click", () => { if (game.playing) { game.logs = []; startLoop(); } });
+$("#b-redo").addEventListener("click", () => { if (canControl()) startLoop(); });
+$("#b-restart").addEventListener("click", () => { if (canControl()) { game.logs = []; startLoop(); } });
 $("#b-hintad").addEventListener("click", () => {
   const own = hintFor(game.level, game.levelKey);
   const hintText = own === T("hint_generic") ? own : own + " " + T("hint_generic");
@@ -1349,12 +1387,6 @@ $("#b-load").addEventListener("click", () => {
   const lv = L.decodeLevel($("#ed-code").value.trim());
   if (!lv) { toast(T("bad_code")); return; }
   ed.map = lv.map.map((r) => r.split("")); ed.drones = lv.drones || []; $("#ed-mirror").checked = !!lv.mirror; $("#ed-par").value = lv.par; renderEditor();
-});
-$("#b-adddrone").addEventListener("click", () => {
-  if (ed.drones.length >= 4) return;
-  const horiz = ed.drones.length % 2 === 0;
-  ed.drones.push(horiz ? { x: 1, y: 2 + ed.drones.length * 2, dx: 1, dy: 0, n: 4, phase: ed.drones.length * 2 } : { x: 3, y: 1, dx: 0, dy: 1, n: 8, phase: ed.drones.length * 2 });
-  renderEditor();
 });
 $("#b-cleardrones").addEventListener("click", () => { ed.drones = []; renderEditor(); });
 document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { lang = opts.lang = b.dataset.lang; store.set("opts", opts); applyLang(); }));

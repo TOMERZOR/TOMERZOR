@@ -439,7 +439,8 @@ function loopEnded() {
   if (game.logs.length >= L.MAX_ECHOES) {
     banner(T("out_of_echoes"), T("out_sub"), 1400);
     sfx("fail"); shake(10); buzz("error");
-    later(1300, () => { game.logs = []; startLoop(); });
+    game.logs = []; renderEchoDots();                     // reset now, so Redo cannot skip it
+    later(1300, startLoop);
     return;
   }
   game.logs.push(game.recording);
@@ -619,7 +620,7 @@ function tickReplay() {
   const c = game.replay.logs[game.replay.logs.length - 1].charCodeAt(run.tick) - 48;
   L.stepRun(run, c >= 0 && c <= 8 ? c : 0);
   handleEvents(run); updateTimer(run);
-  if (run.finished) { game.timeScale = 0.3; setTimeout(() => { game.playing = false; show("s-result"); }, 1500); }
+  if (run.finished) { game.timeScale = 0.3; later(1500, () => { game.playing = false; show("s-result"); }); }
 }
 function updateTimer(run) {
   const left = Math.max(0, (L.LOOP_TICKS - run.tick) / L.TPS);
@@ -1345,14 +1346,28 @@ $("#b-editor").addEventListener("click", () => { renderEditor(); show("s-editor"
 $("#b-settings").addEventListener("click", () => { $("#opt-name").value = profile.name; show("s-settings"); });
 $("#b-clubs").addEventListener("click", () => sheet(`<h2>${T("clubs_title")}</h2><p>${T("clubs_sub")}</p>`, [[T("close"), "ghost", closeSheet]]));
 document.querySelectorAll(".b-back").forEach((b) => b.addEventListener("click", () => show("s-title")));
-$("#b-quit").addEventListener("click", quit);
-$("#b-endloop").addEventListener("click", endLoopNow);
+/**
+ * HUD buttons fire on the touch itself. While the thumb steers on the canvas a
+ * second finger's tap is a non-primary touch, and browsers synthesise no click
+ * for those; so a touch pointerup on the button is the tap, and the click that
+ * may follow a primary touch is swallowed instead of firing twice.
+ */
+function tap(el, fn) {
+  let armed = false, fired = 0;
+  el.addEventListener("pointerdown", (e) => { armed = e.pointerType === "touch"; });
+  el.addEventListener("pointerleave", () => { armed = false; });
+  el.addEventListener("pointercancel", () => { armed = false; });
+  el.addEventListener("pointerup", (e) => { if (!armed || e.pointerType !== "touch") return; armed = false; fired = performance.now(); fn(e); });
+  el.addEventListener("click", (e) => { if (performance.now() - fired < 500) return; fn(e); });
+}
+tap($("#b-quit"), quit);
+tap($("#b-endloop"), endLoopNow);
 $("#c-coins").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#c-gems").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#c-stars").addEventListener("click", () => { renderLevels(); show("s-levels"); });
-$("#b-redo").addEventListener("click", () => { if (canControl()) startLoop(); });
-$("#b-restart").addEventListener("click", () => { if (canControl()) { game.logs = []; startLoop(); } });
-$("#b-hintad").addEventListener("click", () => {
+tap($("#b-redo"), () => { if (canControl()) startLoop(); });
+tap($("#b-restart"), () => { if (canControl()) { game.logs = []; startLoop(); } });
+tap($("#b-hintad"), () => {
   const own = hintFor(game.level, game.levelKey);
   const hintText = own === T("hint_generic") ? own : own + " " + T("hint_generic");
   watchAd(() => sheet(`<h2>${T("hint_title")}</h2><p>${hintText}</p>`, [[T("close"), "ghost", closeSheet]]));

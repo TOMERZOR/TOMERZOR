@@ -46,8 +46,8 @@ export const SOLUTIONS = {
   "2-4": [
     [["R", 1]],
     [["R", 1], ["D", 4], ["R", 2], ["U", 1]],
-    [["R", 1], ["D", 4], ["W", 4], ["D", 2], ["R", 2]],
-    [["R", 1], ["D", 4], ["W", 4], ["D", 2], ["R", 3], ["D", 2]],
+    [["R", 1], ["D", 4], ["W", 3], ["D", 2], ["R", 2]],
+    [["R", 1], ["D", 4], ["W", 3], ["D", 2], ["R", 3], ["D", 2]],
   ],
   // Mirror rooms: the hero's recording is replayed with left and right swapped.
   "3-1": [

@@ -13,6 +13,7 @@
  * doors and actors sorted by their base line so the room has depth.
  */
 import * as L from "./logic.js";
+import { SOLUTIONS, logsFor } from "./solutions.js";
 
 // ── strings ────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,9 @@ const STR = {
     tagline: "20 מהלכים. ואז אתה משחק לצד עצמך.",
     play: "שחק", daily: "אתגר יומי", daily_s: "יומי", shop: "חנות", editor: "עורך שלבים", editor_s: "עורך", clubs: "מועדונים", settings: "הגדרות",
     worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות", world_n: "עולם {n}", new_best: "שיא חדש", up_next: "הבא",
-    world_locked: "נפתח עם {n} כוכבים", redo: "שוב", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט",
+    world_locked: "נפתח עם {n} כוכבים", redo: "שוב", undo: "בטל צעד", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט", assist: "סימוני סכנה",
+    tip: "טיפ", tip_plate: "עומד על לוחית? סיים את הסיבוב עכשיו, וההד שלך ימשיך להחזיק אותה.", tip_free: "הרחפנים זזים רק כשאתה זז. הצל הבהיר מראה לאן הרחפן ינחת בצעד הבא; תא אדום = תיתפס שם.",
+    help_title: "רוצה דחיפה קטנה?", help_sub: "המשחק ישחק בשבילך את הסיבוב הראשון, ואתה תמשיך משם. בלי קנס.", help_yes: "הראה לי את הסיבוב הראשון", help_no: "אני אסתדר", help_play: "הסיבוב הראשון משוחק בשבילך",
     purchase_q: "לקנות {item} ב-{price}?", buy_for: "קנה ב-{price}", purchase_note: "אב־טיפוס: התשלום מדומה ולא מחויב כסף.",
     gems: "יהלומים", gems_n: "{n} יהלומים", skin_name: "סקין {n}",
     echoes_used: "הדים", seconds: "מהלכים", coins: "מטבעות", replay: "שידור חוזר", share: "שיתוף", retry: "שוב",
@@ -35,10 +38,10 @@ const STR = {
     editor_sub: "צייר חדר, בדוק אותו ושתף את הקוד שלו. חדר צריך התחלה אחת ויציאה אחת; דלת נפתחת כל עוד הלוחית שלה לחוצה.",
     mirror: "הדים במראה", par: "פאר", drone_tool: "◉ = רחפן: הקש על תא כדי להציב, שוב כדי להסיר", drone_nowhere: "לרחפן אין לאן לטוס מכאן", clear_drones: "נקה רחפנים", daily_you: "הכוכבים שלך היום: {n}", test: "בדיקה", get_code: "קוד שיתוף", load_code: "טען קוד",
     language: "שפה", music: "מוזיקה", sfx: "אפקטים", shake: "רעידת מסך", name: "שם שחקן",
-    loop_saved: "הד #{n} נשמר", loop_sub: "עכשיו שחק לצידו", caught: "נתפסת", caught_sub: "רק הסיבוב הזה מתחיל מחדש",
+    loop_saved: "הד #{n} נשמר", loop_sub: "עכשיו שחק לצידו", caught: "נתפסת", caught_sub: "חזרנו צעד אחד אחורה",
     out_of_echoes: "נגמרו ההדים", out_sub: "השלב מתחיל מחדש", loop_n: "סיבוב {n}",
     hint_move: "החלק כדי לצעוד, הקש כדי לחכות צעד. הגע ליציאה הזהובה.", hint_plate: "דלת נפתחת רק כשמישהו עומד על הלוחית. תן להד שלך לעמוד עליה.",
-    hint_drone: "רחפנים תופסים רק אותך, לא את ההדים.", hint_mirror: "בעולם הזה ההדים זזים הפוך: ימין שלך הוא שמאל שלהם.", hint_mirror_t: "בעולם הזה ההדים זזים הפוך: למעלה שלך הוא למטה שלהם.",
+    hint_drone: "רחפנים זזים צעד רק כשאתה זז, ותופסים רק אותך. הצל הבהיר מראה לאן הרחפן ינחת בצעד הבא.", hint_mirror: "בעולם הזה ההדים זזים הפוך: ימין שלך הוא שמאל שלהם.", hint_mirror_t: "בעולם הזה ההדים זזים הפוך: למעלה שלך הוא למטה שלהם.",
     hint_generic: "אחרי 20 מהלכים הסיבוב נשמר כהד, וההד חוזר על כל צעד שלך. לא חייבים להצליח בסיבוב הראשון.",
     bought: "נקנה!", equipped: "מצויד", not_enough: "אין מספיק {c}", owned: "בבעלותך", equip: "צייד", buy: "קנה",
     starter: "חבילת פתיחה", starter_d: "120 יהלומים + 500 מטבעות + סקין זהב", gems_small: "100 יהלומים", gems_big: "600 יהלומים",
@@ -55,7 +58,9 @@ const STR = {
     tagline: "Twenty moves. Then you play beside yourself.",
     play: "Play", daily: "Daily challenge", daily_s: "Daily", shop: "Shop", editor: "Level editor", editor_s: "Editor", clubs: "Clubs", settings: "Settings",
     worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab", world_n: "World {n}", new_best: "New best", up_next: "Up next",
-    world_locked: "Opens at {n} stars", redo: "Redo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback",
+    world_locked: "Opens at {n} stars", redo: "Redo", undo: "Undo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback", assist: "Danger hints",
+    tip: "Tip", tip_plate: "Standing on a plate? End the loop now and your echo keeps holding it.", tip_free: "Drones step only when you do. The faint drone shows where it lands next; a red cell means you would be caught there.",
+    help_title: "Want a nudge?", help_sub: "The game plays the first loop for you and you take it from there. No penalty.", help_yes: "Show me the first loop", help_no: "I've got this", help_play: "Playing the first loop for you",
     purchase_q: "Buy {item} for {price}?", buy_for: "Buy for {price}", purchase_note: "Prototype: payments are simulated and nothing is charged.",
     gems: "gems", gems_n: "{n} gems", skin_name: "the {n} skin",
     echoes_used: "echoes", seconds: "moves", coins: "coins", replay: "Replay", share: "Share", retry: "Retry",
@@ -69,10 +74,10 @@ const STR = {
     editor_sub: "Paint a room, test it, then share its code. Rooms need one start and one exit; a door opens while its plate is held.",
     mirror: "Mirror echoes", par: "Par", drone_tool: "◉ = drone: tap a cell to place one, tap again to remove", drone_nowhere: "No room for a patrol there", clear_drones: "Clear drones", daily_you: "Your stars today: {n}", test: "Test", get_code: "Share code", load_code: "Load code",
     language: "Language", music: "Music", sfx: "Sound effects", shake: "Screen shake", name: "Player name",
-    loop_saved: "Echo #{n} saved", loop_sub: "Now play beside it", caught: "Caught", caught_sub: "Only this loop restarts",
+    loop_saved: "Echo #{n} saved", loop_sub: "Now play beside it", caught: "Caught", caught_sub: "Rewound one move",
     out_of_echoes: "Out of echoes", out_sub: "The level restarts", loop_n: "Loop {n}",
     hint_move: "Swipe to step, tap to wait a beat. Reach the golden exit.", hint_plate: "A door only opens while someone stands on its plate. Let your echo hold it.",
-    hint_drone: "Drones catch only you, never your echoes.", hint_mirror: "In this world echoes move mirrored: your right is their left.", hint_mirror_t: "In this world echoes move mirrored: your up is their down.",
+    hint_drone: "Drones step only when you do, and catch only you. The faint drone shows where it lands next.", hint_mirror: "In this world echoes move mirrored: your right is their left.", hint_mirror_t: "In this world echoes move mirrored: your up is their down.",
     hint_generic: "After 20 moves the loop is saved as an echo that repeats your every step. You don't have to make it on the first run.",
     bought: "Bought!", equipped: "Equipped", not_enough: "Not enough {c}", owned: "Owned", equip: "Equip", buy: "Buy",
     starter: "Starter pack", starter_d: "120 gems + 500 coins + gold skin", gems_small: "100 gems", gems_big: "600 gems",
@@ -95,7 +100,8 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("echo:" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("echo:" + k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
-const opts = Object.assign({ music: true, sfx: true, shake: true, haptics: true, lang: "en" }, store.get("opts", {}));
+const opts = Object.assign({ music: true, sfx: true, shake: true, haptics: true, assist: true, lang: "en" }, store.get("opts", {}));
+const tips = new Set(store.get("tips", []));
 lang = opts.lang;
 const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 function playerId() {
@@ -330,6 +336,7 @@ const game = {
   // Beats: when the last one landed, how long its hop takes, where everyone
   // stood before it (for the tween), and an input that arrived mid-hop.
   beatT0: -1e9, beatMs: 150, prev: null, queued: null,
+  fails: {}, auto: null, danger: null,
 };
 const REPEAT_MS = 175;                 // a held swipe or key keeps stepping at this pace
 const REPLAY_MS = 260;
@@ -421,7 +428,7 @@ function startLoop() {
   game.recording = "";
   game.run = L.createRun(game.level, [...game.logs, ""]);
   game.acc = 0; game.timeScale = 1; game.particles = []; game.flies = []; game.doorAnim = {}; game.loopT = 0; game.freeze = 0; game.exitAnim = null;
-  game.prev = null; game.queued = null; game.beatT0 = -1e9;
+  game.prev = null; game.queued = null; game.beatT0 = -1e9; game.auto = null; game.danger = null;
   game.cam.zoom = reduceMotion ? 1 : 1.07; game.cam.tz = 1; game.cam.fx = game.cam.fy = game.cam.tfx = game.cam.tfy = 0;
   banner(T("loop_n", { n: game.logs.length + 1 }), game.logs.length ? T("loop_sub") : "", 900);
   tone(game.logs.length, 0.25);
@@ -448,7 +455,7 @@ function loopEnded() {
   game.rewind = 0.4;
   if (game.logs.length >= L.MAX_ECHOES) {
     banner(T("out_of_echoes"), T("out_sub"), 1400);
-    sfx("out"); shake(10); buzz("error");
+    sfx("out"); shake(10); buzz("error"); noteFail();
     game.logs = []; renderEchoDots();                     // reset now, so Redo cannot skip it
     later(1300, startLoop);
     return;
@@ -473,10 +480,48 @@ function endLoopNow() {
   updateTimer(run);
   loopEnded();
 }
+/**
+ * Caught by a drone: the fatal move is taken back instead of the whole loop.
+ * The puzzle stays exactly as hard; only the punishment shrinks. Repeated
+ * failures on a room unlock free help, so nobody has to rage-quit a wall.
+ */
 function loopFailed() {
   banner(T("caught"), T("caught_sub"), 1200);
   sfx("caught"); shake(14); game.flash = 0.5; game.freeze = 0.09; buzz("error");
-  later(1000, startLoop);
+  noteFail();
+  later(700, () => rewind(1));
+}
+/** Rebuild this loop from its recording minus the last `n` moves. */
+function rewind(n) {
+  if (!game.playing || !game.run || game.run.finished) return;
+  const rec = game.recording.slice(0, Math.max(0, game.recording.length - n));
+  const run = L.createRun(game.level, [...game.logs, ""]);
+  for (const ch of rec) L.stepRun(run, ch.charCodeAt(0) - 48);
+  run.events = [];
+  game.run = run; game.recording = rec; game.prev = null; game.queued = null; game.beatT0 = -1e9;
+  game.doorAnim = {}; game.danger = null;
+  updateTimer(run); $("#h-coins").textContent = String(run.taken);
+  sfx("tick", 0.5);
+}
+function noteFail() {
+  const k = game.levelKey; game.fails[k] = (game.fails[k] || 0) + 1;
+  const n = game.fails[k];
+  if (n === 3) later(1500, () => banner(T("tip"), T("tip_free"), 5200, true));
+  if (n === 6 && SOLUTIONS[k]) later(1500, offerHelp);
+}
+/** After enough failures: the game offers to play the first loop itself. */
+function offerHelp() {
+  sheet(`<div class="eyebrow">${T("hint_title")}</div><h2>${T("help_title")}</h2><p>${T("help_sub")}</p>`, [
+    [T("help_no"), "ghost", closeSheet],
+    [T("help_yes"), "primary", () => {
+      closeSheet(); game.logs = []; startLoop();
+      // A whole first loop where the solution has several; half the route where
+      // one loop is the whole solution, so the player still finishes it.
+      const sol = logsFor(SOLUTIONS[game.levelKey]), multi = sol.length > 1;
+      game.auto = { log: multi ? sol[0] : sol[0].slice(0, Math.ceil(sol[0].length / 2)), i: 0, end: multi };
+      banner(T("help_play"), "", 1600);
+    }],
+  ]);
 }
 function levelDone() {
   const logs = [...game.logs, game.recording];
@@ -559,6 +604,7 @@ window.addEventListener("keydown", (e) => {
   if (KEYS[e.code]) { e.preventDefault(); if (!e.repeat) { heldKey = e.code; beatInput(screenToLevel(KEYS[e.code])); } return; }
   if (WAIT_KEYS.has(e.code)) { if (!e.repeat) beatInput(0); return; }
   if (e.code === "KeyR" && canControl()) startLoop();
+  if ((e.code === "KeyZ" || e.code === "Backspace") && canControl() && game.recording.length) { rewind(1); e.preventDefault(); }
   if ((e.code === "Space" || e.code === "Enter" || e.code === "KeyE") && canControl()) { endLoopNow(); e.preventDefault(); }
 });
 window.addEventListener("keyup", (e) => { if (e.code === heldKey) heldKey = null; });
@@ -630,6 +676,13 @@ function frame(now) {
   if (game.playing && screenEl("s-sheet").hidden) {
     if (game.freeze > 0) game.freeze -= dt;
     else if (game.replay && !game.replay.live) { if (now - game.beatT0 >= REPLAY_MS) tickReplay(); }
+    else if (game.auto && canControl()) {
+      if (now - game.beatT0 >= REPLAY_MS) {
+        const a = game.auto;
+        if (a.i < a.log.length) doBeat(a.log.charCodeAt(a.i++) - 48);
+        else { game.auto = null; if (a.end) endLoopNow(); }
+      }
+    }
     else if (canControl()) {
       const since = now - game.beatT0;
       if (game.queued !== null && since >= game.beatMs * 0.55) doBeat(game.queued);
@@ -667,7 +720,9 @@ function handleEvents(run) {
     if (e.t === "coin") {
       sfx("coin", 0.8, 1 + Math.min(6, run.taken - 1) * 0.07); burst(e.x + 0.5, e.y + 0.5, "#ffc93c", 14);
       if (e.hero) { flyCoin(e.x + 0.5, e.y + 0.5); buzz("light"); } else bumpCoins();
-    } else if (e.t === "plate") { sfx("plate", 0.8); game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
+    } else if (e.t === "plate") { sfx("plate", 0.8);
+      const h = run.actors[run.actors.length - 1];
+      if (!tips.has("plate") && run.level.map[h.y][h.x] === e.k && run.level.drones?.length) { tips.add("plate"); store.set("tips", [...tips]); banner(T("tip"), T("tip_plate"), 4200, true); } game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
     else if (e.t === "open") { sfx("open", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
     else if (e.t === "close") { sfx("close", 0.45); game.doorAnim[e.k] = { t: 0, open: false }; }
     else if (e.t === "dead") burst(e.x + 0.5, e.y + 0.5, "#ff4fd8", 26);
@@ -976,6 +1031,37 @@ function draw(dt) {
     const a = R(d.x + 0.5, d.y + 0.5), b = R(d.x + 0.5 + d.dx * d.n, d.y + 0.5 + d.dy * d.n);
     ctx.strokeStyle = "rgba(255,79,216,.18)"; ctx.lineWidth = 2; ctx.setLineDash([5, 9]);
     ctx.beginPath(); ctx.moveTo(cx(a.x), cy(a.y)); ctx.lineTo(cx(b.x), cy(b.y)); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Assist: where every patrol lands on the next beat, and which of the
+  // hero's possible moves would get it caught. Nothing moves until the
+  // player does, so this turns trial-and-error into planning.
+  if (opts.assist && !run.finished && !run.dead && (!game.replay || game.replay.live)) {
+    const alive = run.actors[last].alive;
+    for (const d of run.drones) {
+      const n = L.dronePos(d, run.tick + 1), p = R(n.px + 0.5, n.py + 0.5);
+      ctx.save(); ctx.globalAlpha = 0.28 + Math.sin(now * 5) * 0.08; ctx.strokeStyle = "#ff4fd8"; ctx.lineWidth = 2; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y - 0.12), cs * 0.3, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha *= 0.5; sprite(IMG.drone, p.x, p.y - 0.12, 0.8, 0.45);
+      ctx.restore();
+    }
+    if (alive && run.drones.length) {
+      if (!game.danger || game.danger.tick !== run.tick || game.danger.gen !== game.gen) {
+        const cells = [];
+        for (const dir of [0, 1, 3, 5, 7]) {
+          const c = structuredClone(run); L.stepRun(c, dir);
+          if (c.dead) { const h = c.actors[last]; cells.push({ x: h.x, y: h.y, wait: dir === 0 }); }
+        }
+        game.danger = { tick: run.tick, gen: game.gen, cells };
+      }
+      for (const c of game.danger.cells) {
+        const p = R(c.x + 0.5, c.y + 0.5), pulse = 0.5 + Math.sin(now * 6) * 0.15;
+        ctx.save(); ctx.translate(cx(p.x), cy(p.y)); ctx.globalAlpha = pulse;
+        ctx.strokeStyle = "#ff4f6d"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(255,79,109,.22)";
+        ctx.beginPath(); ctx.roundRect(-cs * 0.38, -cs * 0.38, cs * 0.76, cs * 0.76, cs * 0.16); ctx.fill(); ctx.stroke();
+        ctx.font = `700 ${Math.round(cs * 0.4)}px Fredoka, Heebo, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff"; ctx.fillText("!", 0, 1);
+        ctx.restore();
+      }
+    }
   }
   for (const co of run.coins) {
     if (co.taken) continue;
@@ -1405,7 +1491,7 @@ tap($("#b-endloop"), endLoopNow);
 $("#c-coins").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#c-gems").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#c-stars").addEventListener("click", () => { renderLevels(); show("s-levels"); });
-tap($("#b-redo"), () => { if (canControl()) startLoop(); });
+tap($("#b-undo"), () => { if (canControl() && game.recording.length) rewind(1); });
 tap($("#b-restart"), () => { if (canControl()) { game.logs = []; startLoop(); } });
 tap($("#b-hintad"), () => {
   const own = hintFor(game.level, game.levelKey);
@@ -1446,7 +1532,7 @@ $("#b-load").addEventListener("click", () => {
 });
 $("#b-cleardrones").addEventListener("click", () => { ed.drones = []; renderEditor(); });
 document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { lang = opts.lang = b.dataset.lang; store.set("opts", opts); applyLang(); }));
-for (const k of ["music", "sfx", "shake", "haptics"]) {
+for (const k of ["music", "sfx", "shake", "haptics", "assist"]) {
   const el = $("#opt-" + k); el.checked = opts[k];
   el.addEventListener("change", () => { opts[k] = el.checked; store.set("opts", opts); if (k === "music") musicOn(game.playing); });
 }

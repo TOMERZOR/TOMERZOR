@@ -199,7 +199,7 @@ export const LEVELS = [
     ],
     drones: [
       { x: 1, y: 4, dx: 1, dy: 0, n: 4, phase: 1 },
-      { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 5 },
+      { x: 1, y: 7, dx: 1, dy: 0, n: 2, phase: 2 },
     ],
   },
   // ── World 3: the mirror lab. Echoes move mirrored left/right.
@@ -392,7 +392,7 @@ function blocked(run, x, y) {
 }
 
 /** Where a patrol stands on a given beat: back and forth along its run. */
-function dronePos(d, tick) {
+export function dronePos(d, tick) {
   const p = (tick + d.phase) % (2 * d.n);
   const k = p <= d.n ? p : 2 * d.n - p;
   return { px: d.x + d.dx * k, py: d.y + d.dy * k };

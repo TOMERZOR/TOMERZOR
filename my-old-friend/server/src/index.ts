@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { allowNewClip, checkAccess, type AccessEnv } from "./access";
-import { TERMS_URL, privacyPage } from "./pages";
+import { TERMS_URL, landingPage, privacyPage } from "./pages";
 import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, noPhotoNote, photosNote, type Language } from "./prompt";
 
 /**
@@ -12,6 +12,7 @@ import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, noPhotoNote, photosNote, typ
  *   POST /v1/speak  { text, language }                        ->  audio/mpeg
  *   GET  /privacy                                             ->  the privacy policy
  *   GET  /terms                                               ->  Apple's standard licence agreement
+ *   GET  /go                                                  ->  where printed QR codes point (App Store, or a short page)
  *   GET  /health                                              ->  "ok"
  *
  * Both POST routes need the phone's install ID (header x-install-id). Each phone gets a few free
@@ -19,6 +20,8 @@ import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, noPhotoNote, photosNote, typ
  */
 
 interface Env extends AccessEnv {
+  /** The app's App Store page, once it is live. /go (the QR code in printed ads) redirects there. */
+  APP_STORE_URL?: string;
   ANTHROPIC_API_KEY: string;
   ELEVENLABS_API_KEY: string;
   /** Shared with the app; requests without it are refused. */
@@ -52,6 +55,7 @@ export default {
       if (url.pathname === "/health") return new Response("ok");
       if (url.pathname === "/privacy") return privacyPage();
       if (url.pathname === "/terms") return Response.redirect(TERMS_URL, 302);
+      if (url.pathname === "/go") return env.APP_STORE_URL ? Response.redirect(env.APP_STORE_URL, 302) : landingPage();
       return json({ error: "not_found" }, 404);
     }
     if (request.method !== "POST") return json({ error: "not_found" }, 404);

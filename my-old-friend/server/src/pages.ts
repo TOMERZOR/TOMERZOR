@@ -59,3 +59,44 @@ export function privacyPage(): Response {
 
 /** Apple's standard licence agreement, which the subscription screen links to as Terms of Use. */
 export const TERMS_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+
+/**
+ * Where the QR code in printed ads points (/go). Once the app is on the App Store, set APP_STORE_URL
+ * and the same printed code sends people straight to the download; until then it shows this page.
+ */
+export function landingPage(): Response {
+  const html = `<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>מופי – החבר הוותיק שלי</title>
+<style>
+  body { margin: 0; font: 22px/1.55 -apple-system, system-ui, "Segoe UI", sans-serif; color: #1D1A1C; background: #fff; text-align: center; }
+  main { max-width: 560px; margin: 0 auto; padding: 48px 20px 64px; }
+  .moffy { position: relative; width: 132px; height: 132px; margin: 0 auto 36px; }
+  .moffy .b { position: absolute; inset: 0; border-radius: 30%; background: linear-gradient(180deg, #F283AD, #EC6C9C); box-shadow: 0 10px 0 #B8336A; }
+  .moffy .e { position: absolute; top: 30%; width: 13%; height: 36%; border-radius: 99px; background: #fff; }
+  h1 { font-size: 34px; line-height: 1.25; margin: 0 0 14px; }
+  .lead { color: #6B6268; margin: 0 0 28px; }
+  .soon { display: inline-block; background: #D6336F; color: #fff; font-weight: 700; border-radius: 22px; padding: 16px 28px; box-shadow: 0 6px 0 #A82157; }
+  ul { text-align: right; padding: 0 22px; margin: 36px 0 0; }
+  li { margin-bottom: 10px; }
+  .en { direction: ltr; color: #6B6268; font-size: 17px; margin-top: 44px; }
+</style>
+</head>
+<body><main>
+  <div class="moffy"><div class="b"></div><div class="e" style="left:30%"></div><div class="e" style="right:30%"></div></div>
+  <h1>מופי, עוזרת בינה מלאכותית שבאמת קל להבין</h1>
+  <p class="lead">מכוונים את הטלפון, שואלים במילים שלכם, ומופי מראה בדיוק על מה ללחוץ. צעד אחד בכל פעם, בקול ובאותיות גדולות.</p>
+  <div class="soon">בקרוב באפסטור</div>
+  <ul>
+    <li>עזרה עם הטלפון, הטלוויזיה, הוואטסאפ ועוד</li>
+    <li>אזהרה כשמשהו נראה כמו עוקץ</li>
+    <li>20 שאלות ראשונות חינם</li>
+  </ul>
+  <p class="en">My Old Friend: AI for the third age. Coming soon to iPhone.</p>
+</main></body>
+</html>`;
+  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+}

@@ -17,6 +17,8 @@ compatibility_flags = ["nodejs_compat"]
 TRIAL_QUESTIONS = "20"
 DAILY_LIMIT = "40"
 BUNDLE_ID = "com.tomerzor.myoldfriend"
+# Once the app is live, the QR code in printed ads (/go) redirects here:
+# APP_STORE_URL = "https://apps.apple.com/il/app/..."
 
 # Counts free questions and checks subscriptions. Create it once with
 #   npx wrangler kv namespace create USAGE

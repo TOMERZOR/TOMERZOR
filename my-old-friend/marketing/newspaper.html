@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>מופי – הדמיה בעיתון</title>
+<style>
+  /* Placement mock-up only: the ad on a daily's page, lying on a table. The page around it is
+     placeholder blocks, not real articles, and the masthead is plain type, not the paper's logo. */
+  :root { --paper: #f3efe6; --ink: #1b1a19; --grey: #b9b3a8; --line: #cfc9bd; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1600px; height: 2000px; overflow: hidden; }
+  body { background: radial-gradient(circle at 30% 20%, #8a6a4f, #5b4331 65%, #3a2a1e); display: flex; align-items: center; justify-content: center; }
+  .page { width: 1210px; height: 1660px; background: var(--paper); padding: 46px 48px; transform: rotate(-2.2deg); box-shadow: 0 50px 90px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.05); font-family: "DejaVu Serif", serif; color: var(--ink); position: relative; }
+  .page::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.05), transparent 8%, transparent 92%, rgba(0,0,0,0.04)); pointer-events: none; }
+  .mast { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 6px double var(--ink); padding-bottom: 10px; }
+  .mast .name { font-size: 78px; font-weight: 700; letter-spacing: -1px; }
+  .mast .meta { font-size: 19px; color: #4b4741; text-align: left; line-height: 1.5; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; grid-template-rows: auto 1fr; gap: 26px; margin-top: 24px; height: calc(100% - 136px); }
+  .story { display: flex; flex-direction: column; gap: 11px; }
+  .hl { background: #3d3a36; border-radius: 3px; height: 26px; }
+  .hl.short { width: 70%; }
+  .pic { background: linear-gradient(135deg, #cfc7b8, #b5ab9a); height: 170px; border-radius: 2px; }
+  .ln { height: 9px; background: var(--line); border-radius: 2px; }
+  .ln.s { width: 62%; }
+  .top { grid-column: 1 / span 5; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 26px; border-bottom: 2px solid var(--ink); padding-bottom: 22px; }
+  .lead .hl { height: 40px; }
+  .ad { grid-column: 3 / span 3; grid-row: 2; align-self: end; position: relative; }
+  .ad img { width: 100%; display: block; box-shadow: 0 0 0 1px rgba(0,0,0,0.15); }
+  .ad .tag { position: absolute; top: -26px; left: 0; font: 15px/1 "DejaVu Sans", sans-serif; color: #6b665e; letter-spacing: 1px; }
+  .side { grid-column: 1 / span 2; grid-row: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; align-content: start; }
+  .rule { border-top: 1px solid var(--grey); margin: 6px 0; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="mast">
+      <div class="name">ידיעות אחרונות</div>
+      <div class="meta">יום רביעי, 21 באוקטובר 2026<br>הדמיית מיקום מודעה</div>
+    </div>
+    <div class="grid">
+      <div class="top">
+        <div class="story lead"><div class="hl"></div><div class="hl short"></div><div class="pic"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div></div>
+        <div class="story"><div class="hl"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div></div>
+        <div class="story"><div class="hl"></div><div class="hl short"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div>
+        <div class="story"><div class="hl"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div></div>
+      </div>
+      <div class="side">
+        <div class="story"><div class="hl"></div><div class="hl short"></div><div class="pic" style="height:130px"></div>
+          <div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="rule"></div>
+          <div class="hl"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div></div>
+        <div class="story"><div class="hl"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="rule"></div>
+          <div class="hl"></div><div class="hl short"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div><div class="ln"></div><div class="ln s"></div><div class="ln"></div><div class="ln"></div></div>
+      </div>
+      <div class="ad"><span class="tag">פרסומת</span><img src="ad.png" alt="מודעת מופי"></div>
+    </div>
+  </div>
+</body>
+</html>

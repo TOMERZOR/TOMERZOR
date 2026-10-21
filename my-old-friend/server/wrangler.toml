@@ -9,7 +9,8 @@ compatibility_flags = ["nodejs_compat"]
 enabled = true
 
 # Secrets (set once, never committed):
-#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put ANTHROPIC_API_KEY  # create it inside a workspace in console.anthropic.com
+#   (an organization-wide key also needs: npx wrangler secret put ANTHROPIC_WORKSPACE_ID   # wrkspc_…)
 #   npx wrangler secret put ELEVENLABS_API_KEY
 #   npx wrangler secret put APP_TOKEN        # any long random string; the same one goes in the app
 #   npx wrangler secret put APPLE_ISSUER_ID  # App Store Connect → Users and Access → Integrations →

@@ -63,7 +63,7 @@ People who install the app never see a key or a setting. The app talks to a smal
 
 You need three accounts, all set up by you, once:
 
-1. **Claude:** go to **console.anthropic.com** → **Billing** → add credit → **API Keys** → **Create Key** (it starts with `sk-ant-`).
+1. **Claude:** go to **console.anthropic.com** → **Billing** → add credit → **Settings → Workspaces** → open (or create) a workspace → **API Keys** → **Create Key** inside it (it starts with `sk-ant-`). A key that isn't tied to a workspace is refused with "not scoped to a workspace"; either create it inside one, or also set `ANTHROPIC_WORKSPACE_ID`.
 2. **ElevenLabs:** go to **elevenlabs.io** → your profile → **API keys** → create a key. Using library voices like Yael through the API may need a paid plan.
 3. **Cloudflare:** sign up at **dash.cloudflare.com** (free).
 

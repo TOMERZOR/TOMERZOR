@@ -23,6 +23,9 @@ interface Env extends AccessEnv {
   /** The app's App Store page, once it is live. /go (the QR code in printed ads) redirects there. */
   APP_STORE_URL?: string;
   ANTHROPIC_API_KEY: string;
+  /** Only for an organization-wide Anthropic key: the workspace to bill (wrkspc_…). A key created inside
+   * a workspace doesn't need it. */
+  ANTHROPIC_WORKSPACE_ID?: string;
   ELEVENLABS_API_KEY: string;
   /** Shared with the app; requests without it are refused. */
   APP_TOKEN?: string;
@@ -125,7 +128,10 @@ async function ask(
   content.push({ type: "text", text: `${text}\n\n${question}` });
   messages.push({ role: "user", content });
 
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
+  const client = new Anthropic({
+    apiKey: env.ANTHROPIC_API_KEY,
+    defaultHeaders: env.ANTHROPIC_WORKSPACE_ID ? { "anthropic-workspace-id": env.ANTHROPIC_WORKSPACE_ID } : undefined,
+  });
   const format = { type: "json_schema", schema: REPLY_SCHEMA as unknown as Record<string, unknown> };
   try {
     let response = await client.beta.messages.create({

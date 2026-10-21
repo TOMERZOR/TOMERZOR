@@ -20,7 +20,7 @@ const STR = {
   he: {
     tagline: "10 שניות. ואז אתה משחק לצד עצמך.",
     play: "שחק", daily: "אתגר יומי", daily_s: "יומי", shop: "חנות", editor: "עורך שלבים", editor_s: "עורך", clubs: "מועדונים", settings: "הגדרות",
-    worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות",
+    worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות", world_n: "עולם {n}", new_best: "שיא חדש", up_next: "הבא",
     world_locked: "נפתח עם {n} כוכבים", redo: "שוב", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט",
     purchase_q: "לקנות {item} ב-{price}?", buy_for: "קנה ב-{price}", purchase_note: "אב־טיפוס: התשלום מדומה ולא מחויב כסף.",
     gems: "יהלומים", gems_n: "{n} יהלומים", skin_name: "סקין {n}",
@@ -54,7 +54,7 @@ const STR = {
   en: {
     tagline: "Ten seconds. Then you play beside yourself.",
     play: "Play", daily: "Daily challenge", daily_s: "Daily", shop: "Shop", editor: "Level editor", editor_s: "Editor", clubs: "Clubs", settings: "Settings",
-    worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab",
+    worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab", world_n: "World {n}", new_best: "New best", up_next: "Up next",
     world_locked: "Opens at {n} stars", redo: "Redo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback",
     purchase_q: "Buy {item} for {price}?", buy_for: "Buy for {price}", purchase_note: "Prototype: payments are simulated and nothing is charged.",
     gems: "gems", gems_n: "{n} gems", skin_name: "the {n} skin",
@@ -186,7 +186,7 @@ function setNet() {
 // ── assets ─────────────────────────────────────────────────────────────────
 
 const IMG = {};
-for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem", "floor", "wall"]) { const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
+for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem"]) { const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
 const BG = {};
 for (const n of ["bg_lab", "bg_obs", "bg_mirror"]) { const i = new Image(); i.src = `assets/${n}.jpg`; BG[n] = i; }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
@@ -328,6 +328,10 @@ const canvas = $("#game");
 const ctx = canvas.getContext("2d");
 let view = { ox: 0, oy: 0, cs: 40, w: 0, h: 0 };
 const WALL_H = 0.26;
+/** How much of the outer wall ring stays off screen: the room is a window onto
+ *  the level, so the floor gets the space instead of a thick border. */
+const CROP = 0.5;
+const FRAME_R = 16;
 let bgCache = { key: "", canvas: null };
 let floorCache = { key: "", canvas: null };
 
@@ -344,9 +348,10 @@ function resize() {
   view.cols = view.t ? L.ROWS : L.COLS; view.rows = view.t ? L.COLS : L.ROWS;
   const sat = probe ? probe.offsetHeight : 0, sab = probe ? probe.offsetWidth : 0;
   const top = sat + (view.t ? 72 : 116), bottom = sab + (view.t ? 94 : 112);
-  const cs = Math.floor(Math.min((view.w - 16) / view.cols, (view.h - top - bottom) / (view.rows + WALL_H)));
+  const vc = view.cols - 2 * CROP, vr = view.rows - 2 * CROP;
+  const cs = Math.floor(Math.min((view.w - 12) / vc, (view.h - top - bottom) / vr));
   view.cs = cs; view.ox = Math.round((view.w - cs * view.cols) / 2);
-  view.oy = Math.round(top + (view.h - top - bottom - cs * (view.rows + WALL_H)) / 2 + cs * WALL_H);
+  view.oy = Math.round(top + (view.h - top - bottom - cs * vr) / 2 - cs * CROP);
   bgCache.key = ""; floorCache.key = "";
 }
 window.addEventListener("resize", resize);
@@ -374,7 +379,8 @@ const levelDir = (sdx, sdy) => (view.t ? vecDir(sdy, sdx) : vecDir(sdx, sdy));
 function levelName(key) {
   if (key === "daily") return T("daily_name", { d: today() % 1000 });
   if (key.startsWith("custom")) return T("custom");
-  return `${T("world" + key.split("-")[0])} · ${key.split("-")[1]}`;
+  // The HUD has one line for this, so the article goes.
+  return `${T("world" + key.split("-")[0]).replace(/^The /, "")} · ${key.split("-")[1]}`;
 }
 
 function startLevel(level, key) {
@@ -465,7 +471,10 @@ function levelDone() {
   const res = L.simulate(game.level, logs);
   const stars = L.starsFor(game.level, res.echoes);
   const action = { t: "complete", level: game.levelKey, logs, day: today() };
-  const before = profile.coins, firstClear = !profile.best[game.levelKey === "daily" ? `daily-${today()}` : game.levelKey];
+  const bestKey = game.levelKey === "daily" ? `daily-${today()}` : game.levelKey;
+  const prev = profile.best[bestKey];
+  const before = profile.coins, firstClear = !prev;
+  const newBest = !!prev && (res.echoes < prev.echoes || (res.echoes === prev.echoes && res.exitTick < prev.ticks));
   const v = saveRoom.act(action);
   if (game.levelKey === "daily") dailyRoom.act(action);
   const reward = v.ok ? profile.coins - before : 0;
@@ -478,7 +487,7 @@ function levelDone() {
   const hp = R(h.x, h.y);
   game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (hp.x - view.cols / 2) * view.cs * 0.6; game.cam.tfy = (hp.y - view.rows / 2) * view.cs * 0.6;
   game.replay = { logs, level: game.level, live: true };
-  game.result = { stars, res, reward, firstClear };
+  game.result = { stars, res, reward, firstClear, newBest };
   setTimeout(() => {
     game.playing = false; musicOn(false);
     const title = stars === 3 ? T("perfect") : T("done_title");
@@ -493,6 +502,7 @@ function levelDone() {
     $("#r-echoes").textContent = res.echoes; $("#r-time").textContent = (res.exitTick / L.TPS).toFixed(1);
     countUp($("#r-coins"), reward);
     $("#r-sub").textContent = (firstClear ? T("first_clear") + " · " : "") + `${T("par_label")} ${game.level.par}`;
+    $("#r-best").hidden = !newBest; $("#r-best").textContent = T("new_best");
     $("#b-next").hidden = game.levelKey === "daily" || game.levelKey.startsWith("custom") || !nextLevelKey();
     show("s-result");
   }, 1150);
@@ -561,7 +571,7 @@ canvas.addEventListener("pointerup", stickUp); canvas.addEventListener("pointerc
 function frame(now) {
   const dt = Math.min(0.2, (now - game.last) / 1000); game.last = now;
   game.fps = (game.fps || 60) * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
-  if (game.playing) {
+  if (game.playing && screenEl("s-sheet").hidden) {
     if (game.freeze > 0) game.freeze -= dt;            // hit-stop: the world holds its breath
     else {
       game.acc += dt * game.timeScale;
@@ -686,7 +696,7 @@ function backdrop(name) {
  */
 function floorLayer(level) {
   const rm = rmapFor(level);
-  const key = `${rm.join("")}:${view.w}x${view.h}:${ready(IMG.floor)}`;
+  const key = `${rm.join("")}:${view.w}x${view.h}`;
   if (floorCache.key === key) return floorCache.canvas;
   const c = document.createElement("canvas"); c.width = view.w; c.height = view.h;
   const g = c.getContext("2d");
@@ -694,33 +704,39 @@ function floorLayer(level) {
   const isWall = (x, y) => x < 0 || y < 0 || x >= cols || y >= rows || rm[y][x] === "#";
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const x0 = view.ox, y0 = view.oy, x1 = view.ox + cs * cols, y1 = view.oy + cs * rows;
+  // Lit slate tiles: a quiet checker, a hairline grout, a bevel on the lit
+  // edges, and a wash of light that falls from the upper left.
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     if (isWall(x, y)) continue;
-    const px = view.ox + x * cs, py = view.oy + y * cs;
-    if (ready(IMG.floor)) g.drawImage(IMG.floor, px, py, cs, cs);
-    else { g.fillStyle = "#222a52"; g.fillRect(px, py, cs, cs); }
-    g.fillStyle = `rgba(10,14,32,${0.12 + rnd() * 0.16})`; g.fillRect(px, py, cs, cs);
-    g.strokeStyle = "rgba(5,7,18,.45)"; g.lineWidth = 1; g.strokeRect(px + 0.5, py + 0.5, cs - 1, cs - 1);
+    const px = x0 + x * cs, py = y0 + y * cs;
+    g.fillStyle = (x + y) % 2 ? "#2a3166" : "#272d5f"; g.fillRect(px, py, cs, cs);
+    g.fillStyle = `rgba(10,14,32,${rnd() * 0.1})`; g.fillRect(px, py, cs, cs);
+    g.fillStyle = "rgba(255,255,255,.06)"; g.fillRect(px + 1, py + 1, cs - 2, 1); g.fillRect(px + 1, py + 1, 1, cs - 2);
+    g.fillStyle = "rgba(5,7,20,.5)"; g.fillRect(px, py, cs, 1); g.fillRect(px, py, 1, cs); g.fillRect(px, py + cs - 1, cs, 1); g.fillRect(px + cs - 1, py, 1, cs);
     // Ambient occlusion: a soft darkening along every edge that meets a wall.
-    const ao = cs * 0.34;
+    const ao = cs * 0.3;
     const edges = [[isWall(x, y - 1), px, py, px, py + ao], [isWall(x, y + 1), px, py + cs, px, py + cs - ao], [isWall(x - 1, y), px, py, px + ao, py], [isWall(x + 1, y), px + cs, py, px + cs - ao, py]];
-    for (const [w, x0, y0, x1, y1] of edges) {
+    for (const [w, ax, ay, bx, by] of edges) {
       if (!w) continue;
-      const gr = g.createLinearGradient(x0, y0, x1, y1); gr.addColorStop(0, "rgba(3,5,14,.55)"); gr.addColorStop(1, "rgba(3,5,14,0)");
+      const gr = g.createLinearGradient(ax, ay, bx, by); gr.addColorStop(0, "rgba(3,5,14,.5)"); gr.addColorStop(1, "rgba(3,5,14,0)");
       g.fillStyle = gr; g.fillRect(px, py, cs, cs);
     }
   }
   // Wall drop shadows onto the floor (light from the upper left).
-  g.save(); g.filter = `blur(${Math.max(3, cs * 0.12)}px)`; g.fillStyle = "rgba(3,5,14,.55)";
+  g.save(); g.filter = `blur(${Math.max(3, cs * 0.12)}px)`; g.fillStyle = "rgba(3,5,14,.5)";
   for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     if (!isWall(x, y)) continue;
-    g.fillRect(view.ox + (x + 0.12) * cs, view.oy + (y + 0.18) * cs, cs, cs);
+    g.fillRect(x0 + (x + 0.1) * cs, y0 + (y + 0.16) * cs, cs, cs);
   }
   g.restore();
-  // Vignette over the room so the centre reads brightest.
-  const vx = view.ox + cs * cols / 2, vy = view.oy + cs * rows / 2;
-  const vg = g.createRadialGradient(vx, vy, cs * 2, vx, vy, cs * Math.max(cols, rows) * 0.72);
-  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.42)");
+  // Directional wash and a soft vignette, so the floor reads lit, not flat.
+  const lw = g.createLinearGradient(x0, y0, x1, y1);
+  lw.addColorStop(0, "rgba(190,210,255,.11)"); lw.addColorStop(0.5, "rgba(190,210,255,0)"); lw.addColorStop(1, "rgba(0,0,0,.16)");
+  g.fillStyle = lw; g.fillRect(x0, y0, cs * cols, cs * rows);
+  const vx = (x0 + x1) / 2, vy = (y0 + y1) / 2;
+  const vg = g.createRadialGradient(vx, vy, cs * 2.5, vx, vy, cs * Math.max(cols, rows) * 0.7);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.3)");
   g.fillStyle = vg; g.fillRect(0, 0, view.w, view.h);
   floorCache = { key, canvas: c };
   return c;
@@ -773,9 +789,9 @@ function wallPaint() {
   if (wallGrad.key === key) return wallGrad;
   const x0 = cx(0), y0 = cy(0), x1 = cx(view.cols), y1 = cy(view.rows);
   const top = ctx.createLinearGradient(x0, y0, x1, y1);
-  top.addColorStop(0, "#4b5796"); top.addColorStop(1, "#353f7a");
+  top.addColorStop(0, "#5663a8"); top.addColorStop(1, "#3c4688");
   const front = ctx.createLinearGradient(0, 0, 0, view.cs * WALL_H);
-  front.addColorStop(0, "#2a3268"); front.addColorStop(1, "#141937");
+  front.addColorStop(0, "#2a3270"); front.addColorStop(1, "#121736");
   wallGrad = { key, top, front };
   return wallGrad;
 }
@@ -789,19 +805,18 @@ function drawWall(rm, x, y) {
     ctx.save(); ctx.translate(0, py + cs * (1 - H)); ctx.fillStyle = paint.front; ctx.fillRect(px, 0, cs, cs * H); ctx.restore();
     ctx.fillStyle = "rgba(255,255,255,.1)"; ctx.fillRect(px, py + cs * (1 - H), cs, 1.5);
   }
-  // Top face: slab gradient, the generated panel texture, a whisper of grain.
+  // Top face: one clean slab with a whisper of grain; the edges do the work.
   ctx.fillStyle = paint.top; ctx.fillRect(px, py - cs * H, cs, cs);
-  if (ready(IMG.wall)) { ctx.globalAlpha = 0.42; ctx.drawImage(IMG.wall, px, py - cs * H, cs, cs); ctx.globalAlpha = 1; }
   const n = ((x * 7919 + y * 104729) % 17) / 17;
-  ctx.fillStyle = `rgba(255,255,255,${0.012 + n * 0.03})`; ctx.fillRect(px, py - cs * H, cs, cs);
-  if (!isWall(x, y + 1)) { ctx.fillStyle = "rgba(57,230,255,.2)"; ctx.fillRect(px, py + cs - 2, cs, 2); }
+  ctx.fillStyle = `rgba(255,255,255,${0.01 + n * 0.028})`; ctx.fillRect(px, py - cs * H, cs, cs);
+  if (!isWall(x, y + 1)) { ctx.fillStyle = "rgba(57,230,255,.22)"; ctx.fillRect(px, py + cs - 2, cs, 2); }
   // Exposed edges catch the light; merged runs keep no seam.
-  ctx.fillStyle = "rgba(255,255,255,.16)";
+  ctx.fillStyle = "rgba(255,255,255,.2)";
   if (!isWall(x, y - 1)) ctx.fillRect(px, py - cs * H, cs, 2);
-  if (!isWall(x - 1, y)) ctx.fillRect(px, py - cs * H, 1.5, cs);
-  ctx.fillStyle = "rgba(5,7,18,.35)";
-  if (!isWall(x + 1, y)) ctx.fillRect(px + cs - 1.5, py - cs * H, 1.5, cs);
-  if (!isWall(x, y + 1)) ctx.fillRect(px, py + cs * (1 - H) - 1.5, cs, 1.5);
+  if (!isWall(x - 1, y)) ctx.fillRect(px, py - cs * H, 2, cs);
+  ctx.fillStyle = "rgba(5,7,18,.4)";
+  if (!isWall(x + 1, y)) ctx.fillRect(px + cs - 2, py - cs * H, 2, cs);
+  if (!isWall(x, y + 1)) ctx.fillRect(px, py + cs * (1 - H) - 2, cs, 2);
 }
 function drawDoor(rm, x, y, ch, dt) {
   const cs = view.cs;
@@ -865,6 +880,11 @@ function draw(dt) {
   if (bgc) ctx.drawImage(bgc, -w * 0.02 + Math.sin(now * 0.12) * 5, -h * 0.02 + Math.cos(now * 0.09) * 4);
   else { ctx.fillStyle = "#0e1328"; ctx.fillRect(0, 0, w, h); }
 
+  // The room is a rounded window onto the level: the outer wall ring is
+  // mostly off screen, and everything inside shakes and zooms behind the frame.
+  const fx0 = cx(CROP), fy0 = cy(CROP), fw = cs * (cols - 2 * CROP), fh = cs * (rows - 2 * CROP);
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(fx0, fy0, fw, fh, FRAME_R); ctx.clip();
   // Camera.
   ctx.save();
   const c = game.cam, mx = cx(cols / 2), my = cy(rows / 2);
@@ -970,6 +990,12 @@ function draw(dt) {
     else { ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y), p.r * (p.dust ? 1 + (0.35 - p.life) * 2 : 1), 0, 7); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
+  ctx.restore();
+  ctx.restore();
+  // Frame: a hairline rim and a soft shadow so the window sits in the hall.
+  ctx.save();
+  ctx.strokeStyle = "rgba(0,0,0,.55)"; ctx.lineWidth = 6; ctx.beginPath(); ctx.roundRect(fx0 - 3, fy0 - 3, fw + 6, fh + 6, FRAME_R + 3); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,.12)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(fx0 + 0.5, fy0 + 0.5, fw - 1, fh - 1, FRAME_R); ctx.stroke();
   ctx.restore();
 
   // Coins flying to the HUD (screen space).
@@ -1085,62 +1111,60 @@ function titleFx(on) {
 
 // ── screens: levels ────────────────────────────────────────────────────────
 
-/** A tiny painted plan of the room: enough to recognise it at a glance. */
-function drawMinimap(cv, level) {
-  const W = 84, H = 132, dpr = Math.min(2, window.devicePixelRatio || 1);
-  cv.width = W * dpr; cv.height = H * dpr;
-  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const u = W / L.COLS;
-  g.fillStyle = "#0a0e20"; g.fillRect(0, 0, W, H);
-  for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
-    const ch = level.map[y][x], px = x * u, py = y * u;
-    if (ch === "#") { g.fillStyle = "#4a5796"; g.fillRect(px, py, u, u); g.fillStyle = "rgba(255,255,255,.12)"; g.fillRect(px, py, u, 1.5); continue; }
-    g.fillStyle = (x + y) % 2 ? "#1a2148" : "#1d2550"; g.fillRect(px, py, u, u);
-    g.beginPath();
-    if ("abc".includes(ch)) { g.fillStyle = "#ff4fd8"; g.fillRect(px + 2.5, py + 2.5, u - 5, u - 5); }
-    else if ("ABC".includes(ch)) { g.fillStyle = "#7a2a74"; g.fillRect(px + 1, py + u * 0.3, u - 2, u * 0.4); }
-    else if (ch === "E") { g.fillStyle = "#ffc93c"; g.arc(px + u / 2, py + u / 2, u * 0.36, 0, 7); g.fill(); }
-    else if (ch === "S") { g.fillStyle = "#ff9a3c"; g.arc(px + u / 2, py + u / 2, u * 0.32, 0, 7); g.fill(); }
-    else if (ch === "o") { g.fillStyle = "#ffe08a"; g.arc(px + u / 2, py + u / 2, u * 0.16, 0, 7); g.fill(); }
-  }
-  for (const d of level.drones || []) {
-    g.strokeStyle = "rgba(255,79,216,.6)"; g.lineWidth = 1.5; g.beginPath();
-    g.moveTo((d.x + 0.5) * u, (d.y + 0.5) * u); g.lineTo((d.x + 0.5 + d.dx * d.n) * u, (d.y + 0.5 + d.dy * d.n) * u); g.stroke();
-    g.fillStyle = "#ff4fd8"; g.beginPath(); g.arc((d.x + 0.5) * u, (d.y + 0.5) * u, u * 0.3, 0, 7); g.fill();
-  }
-}
 function starIcons(n, size) {
   let s = "";
   for (let i = 0; i < 3; i++) s += `<svg class="ic ${i < n ? "" : "off"}" style="width:${size}px;height:${size}px"><use href="#i-star"/></svg>`;
   return s;
 }
+const SVGNS = "http://www.w3.org/2000/svg";
+const NODE_ROW = 96;
+const NODE_X = [24, 72, 30, 76];
+/**
+ * The world map: a banner per world and a winding trail of level nodes under
+ * it. The next room to play glows; cleared rooms turn gold and light the trail.
+ */
 function renderLevels() {
   const root = $("#worlds"); root.innerHTML = "";
+  const nextKey = L.LEVELS.find((l) => !profile.stars[l.id] && L.worldUnlocked(profile, l.world))?.id;
+  const star = (px) => `<svg class="ic" style="width:${px}px;height:${px}px;fill:var(--gold);stroke:none"><use href="#i-star"/></svg>`;
   for (const w of L.WORLDS) {
     const unlocked = L.worldUnlocked(profile, w.id);
-    const sec = document.createElement("section"); sec.className = "world glass" + (unlocked ? "" : " locked");
-    sec.style.setProperty("--art", `url(assets/${w.bg}.jpg)`);
     const levels = L.LEVELS.filter((l) => l.world === w.id);
-    const got = levels.reduce((n, l) => n + (profile.stars[l.id] || 0), 0);
-    const head = document.createElement("header");
-    head.innerHTML = `<span class="num">${w.id}</span><h2>${T("world" + w.id)}</h2>` + (unlocked
-      ? `<span class="chip"><svg class="ic" style="width:14px;height:14px;fill:var(--gold);stroke:none"><use href="#i-star"/></svg>${got}/${levels.length * 3}</span>`
-      : `<span class="lockline"><svg class="ic" style="width:16px;height:16px"><use href="#i-lock"/></svg>${T("world_locked", { n: (w.id - 1) * 7 })}</span>`);
-    sec.appendChild(head);
-    const grid = document.createElement("div"); grid.className = "rooms";
-    for (const lv of levels) {
-      const b = document.createElement("button"); b.className = "room";
-      const st = profile.stars[lv.id] || 0;
-      if (st) b.classList.add("done");
-      const cv = document.createElement("canvas"); drawMinimap(cv, lv);
-      b.appendChild(cv);
-      const num = document.createElement("span"); num.className = "num"; num.textContent = lv.id.split("-")[1]; b.appendChild(num);
-      const stars = document.createElement("span"); stars.className = "stars"; stars.innerHTML = starIcons(st, 13); b.appendChild(stars);
+    const got = levels.reduce((n, l) => n + (profile.stars[l.id] || 0), 0), max = levels.length * 3;
+    const need = (w.id - 1) * 7, have = L.totalStars(profile);
+    const sec = document.createElement("section"); sec.className = "wmap" + (unlocked ? "" : " locked");
+    sec.style.setProperty("--art", `url(assets/${w.bg}.jpg)`);
+    const prog = unlocked
+      ? `<span class="chip">${star(14)}${got}/${max}</span><div class="bar"><i style="width:${(got / max) * 100}%"></i></div>`
+      : `<span class="lockline"><svg class="ic" style="width:15px;height:15px"><use href="#i-lock"/></svg>${T("world_locked", { n: need })}</span><div class="bar"><i style="width:${Math.min(100, (have / need) * 100)}%"></i></div>`;
+    sec.innerHTML = `<header class="wbanner"><span class="wnum">${w.id}</span><div class="wtitle"><span class="eyebrow">${T("world_n", { n: w.id })}</span><h2>${T("world" + w.id)}</h2></div><div class="wprog">${prog}</div></header>`;
+    const path = document.createElement("div"); path.className = "path"; path.style.setProperty("--n", levels.length);
+    const svg = document.createElementNS(SVGNS, "svg"); svg.setAttribute("class", "trail"); path.appendChild(svg);
+    levels.forEach((lv, i) => {
+      const st = profile.stars[lv.id] || 0, isNext = lv.id === nextKey;
+      const b = document.createElement("button");
+      b.className = "node" + (st ? " done" : "") + (isNext ? " next" : "") + (unlocked ? "" : " off");
+      b.style.setProperty("--x", NODE_X[i % NODE_X.length] + "%"); b.style.setProperty("--row", i);
+      b.innerHTML = `<span class="disc">${unlocked ? `<b>${i + 1}</b>` : `<svg class="ic"><use href="#i-lock"/></svg>`}</span><span class="stars">${starIcons(st, 13)}</span>`;
+      if (isNext) b.insertAdjacentHTML("afterbegin", `<span class="tag">${T("up_next")}</span>`);
       b.addEventListener("click", () => { if (!unlocked) { toast(T("level_locked")); return; } startLevel(lv, lv.id); });
-      grid.appendChild(b);
-    }
-    sec.appendChild(grid); root.appendChild(sec);
+      path.appendChild(b);
+    });
+    sec.appendChild(path); root.appendChild(sec);
+    const done = levels.map((l) => !!profile.stars[l.id]);
+    requestAnimationFrame(() => drawTrail(svg, path, done));
   }
+}
+/** The dotted trail through the nodes; the stretch behind cleared rooms is lit. */
+function drawTrail(svg, path, done) {
+  const W = path.clientWidth, H = path.clientHeight; if (!W) return;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = "";
+  const pt = (i) => [(NODE_X[i % NODE_X.length] / 100) * W, i * NODE_ROW + NODE_ROW / 2];
+  const seg = (i) => { const [x0, y0] = pt(i), [x1, y1] = pt(i + 1), dy = (y1 - y0) * 0.55; return `M${x0},${y0}C${x0},${y0 + dy} ${x1},${y1 - dy} ${x1},${y1}`; };
+  let lit = 0; while (lit < done.length - 1 && done[lit]) lit++;
+  const add = (d, cls) => { if (!d) return; const e = document.createElementNS(SVGNS, "path"); e.setAttribute("d", d); e.setAttribute("class", cls); svg.appendChild(e); };
+  add(Array.from({ length: done.length - 1 }, (_, i) => seg(i)).join(""), "dim");
+  add(Array.from({ length: lit }, (_, i) => seg(i)).join(""), "lit");
 }
 
 // ── screens: shop ──────────────────────────────────────────────────────────
@@ -1290,7 +1314,8 @@ $("#c-stars").addEventListener("click", () => { renderLevels(); show("s-levels")
 $("#b-redo").addEventListener("click", () => { if (game.playing) startLoop(); });
 $("#b-restart").addEventListener("click", () => { if (game.playing) { game.logs = []; startLoop(); } });
 $("#b-hintad").addEventListener("click", () => {
-  const hintText = hintFor(game.level, game.levelKey) + " " + T("hint_generic");
+  const own = hintFor(game.level, game.levelKey);
+  const hintText = own === T("hint_generic") ? own : own + " " + T("hint_generic");
   watchAd(() => sheet(`<h2>${T("hint_title")}</h2><p>${hintText}</p>`, [[T("close"), "ghost", closeSheet]]));
 });
 $("#b-ad").addEventListener("click", () => watchAd(() => { const v = saveRoom.act({ t: "ad", day: today() }); if (v.ok) { toast(T("ad_done")); sfx("chime"); } renderShop(); }));

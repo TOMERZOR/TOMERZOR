@@ -449,6 +449,7 @@ canvas.addEventListener("pointerup", stickUp); canvas.addEventListener("pointerc
 
 function frame(now) {
   const dt = Math.min(0.2, (now - game.last) / 1000); game.last = now;
+  game.fps = (game.fps || 60) * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
   if (game.playing) {
     if (game.freeze > 0) game.freeze -= dt;            // hit-stop: the world holds its breath
     else {
@@ -1183,3 +1184,5 @@ setNet();
 }
 game.last = performance.now();
 requestAnimationFrame(frame);
+// Debug handle for automated checks and profiling; holds no secrets.
+window.ECHO_DEBUG = game;

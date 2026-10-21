@@ -176,13 +176,11 @@
     }
     #banner.show { opacity: 1; transform: none; }
     #banner small { display: block; font: 700 1rem var(--body); color: var(--echo); margin-top: 8px; letter-spacing: .08em; text-transform: uppercase; }
-    #hintbar {
-      position: absolute; left: 50%; bottom: calc(var(--sab) + 96px); transform: translate(-50%, 0); max-width: min(92vw, 56ch);
-      padding: 10px 16px; font: 700 .9rem var(--body); color: var(--fg); text-align: center; pointer-events: none;
-      opacity: 0; transition: opacity .4s;
+    #banner small.long { text-transform: none; letter-spacing: 0; color: var(--fg); font-size: 1rem; line-height: 1.35; max-width: 26ch; margin: 10px auto 0; padding: 8px 14px; border-radius: 10px; background: rgba(7,10,24,.72); text-shadow: none; }
+    @media (orientation: landscape) {
+      #timer { width: 56px; height: 56px; } #timer b { font-size: 1.2rem; } #timer .track, #timer .arc { stroke-width: 4; }
+      .hud-center { flex-direction: row; align-items: center; gap: 12px; }
     }
-    #hintbar.show { opacity: 1; }
-    @media (orientation: landscape) { #hintbar { left: auto; right: max(14px, var(--sar)); transform: none; bottom: calc(var(--sab) + 100px); max-width: 28vw; font-size: .82rem; padding: 8px 14px; text-align: start; } }
     .chip:active { transform: scale(.95); }
     #stick { position: absolute; width: 124px; height: 124px; border-radius: 50%; border: 2px solid rgba(57,230,255,.35); background: radial-gradient(circle, rgba(57,230,255,.12), rgba(57,230,255,.02) 70%); pointer-events: none; display: none; margin: -62px 0 0 -62px; }
     #stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #c9fbff, #39e6ff 60%, #16a8c4); box-shadow: 0 0 22px var(--echo); }
@@ -258,9 +256,9 @@
     .rooms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .room { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--fg); transition: transform .12s cubic-bezier(.2,.9,.3,1.4); }
     .room:active { transform: scale(.94); }
-    .room canvas { width: 100%; aspect-ratio: 11 / 7; border-radius: 8px; border: 1px solid var(--edge); box-shadow: 0 8px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08); background: #0a0e20; }
+    .room canvas { width: 100%; aspect-ratio: 7 / 11; border-radius: 8px; border: 1px solid var(--edge); box-shadow: 0 8px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08); background: #0a0e20; }
     .room.done canvas { border-color: var(--edge-strong); }
-    .room .num { position: absolute; top: 4px; left: 6px; font: 700 .95rem var(--display); text-shadow: 0 2px 0 rgba(0,0,0,.8); }
+    .room .num { position: absolute; top: 4px; right: 6px; font: 700 .95rem var(--display); text-shadow: 0 2px 0 rgba(0,0,0,.8); }
     .room .stars { display: flex; gap: 2px; }
     .room .stars .ic { width: 13px; height: 13px; fill: var(--gold); stroke: none; filter: drop-shadow(0 0 4px rgba(255,201,60,.6)); }
     .room .stars .ic.off { fill: rgba(142,152,200,.3); filter: none; }
@@ -313,7 +311,7 @@
     .palette { display: flex; gap: 6px; flex-wrap: wrap; }
     .palette button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: rgba(10,14,32,.6); font: 600 1.1rem var(--display); color: var(--fg); }
     .palette button.on { border-color: var(--hero); background: rgba(255,154,60,.15); }
-    #edgrid { display: grid; grid-template-columns: repeat(11, 1fr); gap: 2px; width: 100%; max-width: 560px; }
+    #edgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; width: 100%; max-width: 330px; align-self: center; }
     #edgrid button { aspect-ratio: 1; border-radius: 4px; background: #1a2148; font: 600 .8rem var(--display); color: var(--fg); }
     #edgrid button.w { background: #4a5588; }
     #edgrid button.p { background: #5a2d63; color: var(--signal); }
@@ -364,6 +362,7 @@
     </defs>
   </svg>
 
+  <div id="safe-probe" aria-hidden="true" style="position:fixed;left:0;top:0;height:env(safe-area-inset-top,0px);width:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden"></div>
   <div id="stage">
     <canvas id="game"></canvas>
 
@@ -388,7 +387,6 @@
       </div>
     </div>
     <div id="banner"></div>
-    <div id="hintbar" class="glass"></div>
     <div id="stick"><i></i></div>
 
     <!-- Title -->

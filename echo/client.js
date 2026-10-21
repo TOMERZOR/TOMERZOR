@@ -38,7 +38,7 @@ const STR = {
     loop_saved: "הד #{n} נשמר", loop_sub: "עכשיו שחק לצידו", caught: "נתפסת", caught_sub: "רק הסיבוב הזה מתחיל מחדש",
     out_of_echoes: "נגמרו ההדים", out_sub: "השלב מתחיל מחדש", loop_n: "סיבוב {n}",
     hint_move: "הזז את האגודל כדי לזוז. הגע ליציאה הזהובה.", hint_plate: "דלת נפתחת רק כשמישהו עומד על הלוחית. תן להד שלך לעמוד עליה.",
-    hint_drone: "רחפנים תופסים רק אותך, לא את ההדים.", hint_mirror: "בעולם הזה ההדים זזים הפוך: ימין שלך הוא שמאל שלהם.",
+    hint_drone: "רחפנים תופסים רק אותך, לא את ההדים.", hint_mirror: "בעולם הזה ההדים זזים הפוך: ימין שלך הוא שמאל שלהם.", hint_mirror_t: "בעולם הזה ההדים זזים הפוך: למעלה שלך הוא למטה שלהם.",
     hint_generic: "בסוף 10 שניות הסיבוב נשמר כהד. אתה לא חייב להצליח בסיבוב הראשון.",
     bought: "נקנה!", equipped: "מצויד", not_enough: "אין מספיק {c}", owned: "בבעלותך", equip: "צייד", buy: "קנה",
     starter: "חבילת פתיחה", starter_d: "120 יהלומים + 500 מטבעות + סקין זהב", gems_small: "100 יהלומים", gems_big: "600 יהלומים",
@@ -72,7 +72,7 @@ const STR = {
     loop_saved: "Echo #{n} saved", loop_sub: "Now play beside it", caught: "Caught", caught_sub: "Only this loop restarts",
     out_of_echoes: "Out of echoes", out_sub: "The level restarts", loop_n: "Loop {n}",
     hint_move: "Move your thumb to move. Reach the golden exit.", hint_plate: "A door only opens while someone stands on its plate. Let your echo hold it.",
-    hint_drone: "Drones catch only you, never your echoes.", hint_mirror: "In this world echoes move mirrored: your right is their left.",
+    hint_drone: "Drones catch only you, never your echoes.", hint_mirror: "In this world echoes move mirrored: your right is their left.", hint_mirror_t: "In this world echoes move mirrored: your up is their down.",
     hint_generic: "When the 10 seconds end, the loop is saved as an echo. You don't have to succeed on the first run.",
     bought: "Bought!", equipped: "Equipped", not_enough: "Not enough {c}", owned: "Owned", equip: "Equip", buy: "Buy",
     starter: "Starter pack", starter_d: "120 gems + 500 coins + gold skin", gems_small: "100 gems", gems_big: "600 gems",
@@ -291,7 +291,7 @@ function show(id) {
   current = id;
   for (const s of SCREENS) screenEl(s).hidden = s !== id;
   $("#hud").hidden = id !== "none";
-  if (id !== "none") { $("#hintbar").classList.remove("show"); $("#banner").classList.remove("show"); }
+  if (id !== "none") $("#banner").classList.remove("show");
   if (id === "s-title") titleFx(true); else titleFx(false);
 }
 function openSheet() { screenEl("s-sheet").hidden = false; $("#hud").hidden = true; }
@@ -322,7 +322,7 @@ function refreshCurrencies() {
 const game = {
   level: null, levelKey: null, logs: [], run: null, recording: "", playing: false, replay: null,
   acc: 0, last: 0, timeScale: 1, shake: 0, particles: [], flies: [], flash: 0, doorAnim: {},
-  keys: new Set(), gen: 0, loopT: 0, freeze: 0, rewind: 0, cam: { zoom: 1, fx: 0, fy: 0, tz: 1, tfx: 0, tfy: 0 }, result: null,
+  keys: new Set(), gen: 0, loopT: 0, levelT: 0, freeze: 0, rewind: 0, cam: { zoom: 1, fx: 0, fy: 0, tz: 1, tfx: 0, tfy: 0 }, result: null,
 };
 const canvas = $("#game");
 const ctx = canvas.getContext("2d");
@@ -331,19 +331,45 @@ const WALL_H = 0.26;
 let bgCache = { key: "", canvas: null };
 let floorCache = { key: "", canvas: null };
 
+const probe = document.getElementById("safe-probe");
 function resize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   view.w = window.innerWidth; view.h = window.innerHeight;
   canvas.width = Math.round(view.w * dpr); canvas.height = Math.round(view.h * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const top = 118, bottom = view.h > view.w ? 128 : 86;
-  const cs = Math.floor(Math.min((view.w - 24) / L.COLS, (view.h - top - bottom) / (L.ROWS + WALL_H)));
-  view.cs = cs; view.ox = Math.round((view.w - cs * L.COLS) / 2);
-  view.oy = Math.round(top + (view.h - top - bottom - cs * (L.ROWS + WALL_H)) / 2 + cs * WALL_H);
+  // Rooms are authored portrait (7 wide, 11 tall); a wide screen gets them
+  // transposed so they lie across it. The HUD reserves clear the notch and the
+  // home indicator, read from the safe-area probe element.
+  view.t = view.w > view.h;
+  view.cols = view.t ? L.ROWS : L.COLS; view.rows = view.t ? L.COLS : L.ROWS;
+  const sat = probe ? probe.offsetHeight : 0, sab = probe ? probe.offsetWidth : 0;
+  const top = sat + (view.t ? 72 : 116), bottom = sab + (view.t ? 94 : 112);
+  const cs = Math.floor(Math.min((view.w - 16) / view.cols, (view.h - top - bottom) / (view.rows + WALL_H)));
+  view.cs = cs; view.ox = Math.round((view.w - cs * view.cols) / 2);
+  view.oy = Math.round(top + (view.h - top - bottom - cs * (view.rows + WALL_H)) / 2 + cs * WALL_H);
   bgCache.key = ""; floorCache.key = "";
 }
 window.addEventListener("resize", resize);
 resize();
+
+// ── render space ───────────────────────────────────────────────────────────
+// Every drawing routine works in render space (the grid as it lies on the
+// screen) and converts level coordinates through R().
+const R = (x, y) => (view.t ? { x: y, y: x } : { x, y });
+const rmaps = new Map();
+function rmapFor(level) {
+  const k = level.map.join("") + (view.t ? "T" : "P");
+  let m = rmaps.get(k);
+  if (!m) {
+    m = view.t ? Array.from({ length: L.COLS }, (_, r) => Array.from({ length: L.ROWS }, (_, c) => level.map[c][r]).join("")) : level.map;
+    rmaps.set(k, m);
+  }
+  return m;
+}
+/** The on-screen direction (0-8) of a level direction. */
+const sdirOf = (d) => (view.t ? [0, 7, 6, 5, 4, 3, 2, 1, 8][d] : d);
+/** A screen-space input vector as a level direction. */
+const levelDir = (sdx, sdy) => (view.t ? vecDir(sdy, sdx) : vecDir(sdx, sdy));
 
 function levelName(key) {
   if (key === "daily") return T("daily_name", { d: today() % 1000 });
@@ -353,11 +379,13 @@ function levelName(key) {
 
 function startLevel(level, key) {
   game.level = level; game.levelKey = key; game.logs = [];
-  game.replay = null;
+  game.replay = null; game.levelT = 0; motes.length = 0;
   show("none");
   $("#lvname").textContent = levelName(key);
   startLoop();
-  hint(hintFor(level, key));
+  // The room fills the screen now, so the hint rides the first loop banner
+  // instead of a bar that would cover the floor.
+  banner(T("loop_n", { n: 1 }), hintFor(level, key), 3800, true);
   musicOn(true);
   game.playing = true;
 }
@@ -365,12 +393,8 @@ function hintFor(level, key) {
   if (key === "1-1") return T("hint_move");
   if (key === "1-2") return T("hint_plate");
   if (key === "2-1") return T("hint_drone");
-  if (key === "3-1") return T("hint_mirror");
+  if (key === "3-1") return T(view.t ? "hint_mirror_t" : "hint_mirror");
   return T("hint_generic");
-}
-function hint(text) {
-  const h = $("#hintbar"); h.textContent = text; h.classList.add("show");
-  clearTimeout(hint.tm); hint.tm = setTimeout(() => h.classList.remove("show"), 4500);
 }
 /** Run `fn` after `ms` unless another loop has started in the meantime. */
 function later(ms, fn) {
@@ -396,9 +420,9 @@ function renderEchoDots() {
     el.appendChild(d);
   }
 }
-function banner(title, sub, ms) {
+function banner(title, sub, ms, long = false) {
   const b = $("#banner"); b.innerHTML = ""; b.append(document.createTextNode(title));
-  if (sub) { const s = document.createElement("small"); s.textContent = sub; b.appendChild(s); }
+  if (sub) { const s = document.createElement("small"); s.textContent = sub; s.className = long ? "long" : ""; b.appendChild(s); }
   b.classList.add("show"); clearTimeout(banner.tm); banner.tm = setTimeout(() => b.classList.remove("show"), ms);
 }
 
@@ -447,7 +471,8 @@ function levelDone() {
   const reward = v.ok ? profile.coins - before : 0;
   sfx("win"); game.timeScale = 0.22; shake(6); buzz("success");
   const h = game.run.actors[game.run.actors.length - 1];
-  game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (h.x - L.COLS / 2) * view.cs * 0.6; game.cam.tfy = (h.y - L.ROWS / 2) * view.cs * 0.6;
+  const hp = R(h.x, h.y);
+  game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (hp.x - view.cols / 2) * view.cs * 0.6; game.cam.tfy = (hp.y - view.rows / 2) * view.cs * 0.6;
   game.replay = { logs, level: game.level, live: true };
   game.result = { stars, res, reward, firstClear };
   setTimeout(() => {
@@ -498,7 +523,7 @@ window.addEventListener("blur", () => game.keys.clear());
 function keyDir() {
   const k = game.keys;
   const dx = (k.has("r") ? 1 : 0) - (k.has("l") ? 1 : 0), dy = (k.has("d") ? 1 : 0) - (k.has("u") ? 1 : 0);
-  return vecDir(dx, dy);
+  return levelDir(dx, dy);
 }
 function vecDir(dx, dy) {
   if (!dx && !dy) return 0;
@@ -520,7 +545,7 @@ canvas.addEventListener("pointermove", (e) => {
   if (e.pointerId !== stick.id) return;
   let dx = e.clientX - stick.x, dy = e.clientY - stick.y;
   const d = Math.hypot(dx, dy);
-  stick.dir = d < 12 ? 0 : vecDir(dx, dy);
+  stick.dir = d < 12 ? 0 : levelDir(dx, dy);
   const m = Math.min(d, 48); if (d) { dx = dx / d * m; dy = dy / d * m; }
   stickEl.firstElementChild.style.transform = `translate(${dx}px, ${dy}px)`;
 });
@@ -542,7 +567,7 @@ function frame(now) {
         if (game.replay && !game.replay.live) tickReplay(); else tick();
       }
     }
-    game.loopT += dt;
+    game.loopT += dt; game.levelT += dt;
     if (game.timeScale < 1 && !game.run.finished) game.timeScale = Math.min(1, game.timeScale + dt * 1.5);
   }
   const c = game.cam, k = Math.min(1, dt * 5);
@@ -593,7 +618,8 @@ function ring(e) {
   // A plate ripple: one expanding ring particle.
   game.particles.push({ x: 0, y: 0, ring: true, life: 0.5, max: 0.5, color: "#ff4fd8", k: e.k });
 }
-function burst(x, y, color, n) {
+function burst(lx, ly, color, n) {
+  const { x, y } = R(lx, ly);
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, s = 1.5 + Math.random() * 4;
     game.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.5, color, r: 2 + Math.random() * 4 });
@@ -601,12 +627,14 @@ function burst(x, y, color, n) {
 }
 function dust(a) {
   if (reduceMotion) return;
-  const [dx, dy] = L.DIRS[a.dir];
-  game.particles.push({ x: a.x - dx * 0.15 + (Math.random() - 0.5) * 0.2, y: a.y + 0.28, vx: -dx * 0.6 + (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.4 - dy * 0.3, life: 0.35, color: "rgba(170,180,230,.45)", r: 2.5 + Math.random() * 2, dust: true });
+  const [dx, dy] = L.DIRS[sdirOf(a.dir)];
+  const p = R(a.x, a.y);
+  game.particles.push({ x: p.x - dx * 0.15 + (Math.random() - 0.5) * 0.2, y: p.y + 0.28, vx: -dx * 0.6 + (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.4 - dy * 0.3, life: 0.35, color: "rgba(170,180,230,.45)", r: 2.5 + Math.random() * 2, dust: true });
 }
-function flyCoin(x, y) {
+function flyCoin(lx, ly) {
   const r = $("#hud-coins").getBoundingClientRect();
-  game.flies.push({ x: cx(x), y: cy(y), tx: r.left + r.width / 2, ty: r.top + r.height / 2, t: 0 });
+  const p = R(lx, ly);
+  game.flies.push({ x: cx(p.x), y: cy(p.y), tx: r.left + r.width / 2, ty: r.top + r.height / 2, t: 0 });
 }
 function bumpCoins() {
   const chip = $("#hud-coins"); $("#h-coins").textContent = game.run.taken;
@@ -631,7 +659,7 @@ function backdrop(name) {
   const g = c.getContext("2d");
   const s = Math.max(W / img.naturalWidth, H / img.naturalHeight);
   const bw = img.naturalWidth * s, bh = img.naturalHeight * s;
-  const by = Math.min(0, Math.max(H - bh, cy(L.ROWS / 2) - bh / 2));
+  const by = Math.min(0, Math.max(H - bh, cy(view.rows / 2) - bh / 2));
   g.filter = "blur(2px) saturate(.9)"; g.globalAlpha = 0.82; g.drawImage(img, (W - bw) / 2, by, bw, bh);
   g.filter = "none"; g.globalAlpha = 1;
   const grad = g.createLinearGradient(0, 0, 0, H);
@@ -639,7 +667,7 @@ function backdrop(name) {
   g.fillStyle = grad; g.fillRect(0, 0, W, H);
   // A cool overhead light that pools around the room, so it sits in the hall
   // instead of floating on a black field.
-  const lx = cx(L.COLS / 2) + W * 0.02, ly = cy(L.ROWS / 2) + H * 0.02, lr = Math.max(W, H) * 0.55;
+  const lx = cx(view.cols / 2) + W * 0.02, ly = cy(view.rows / 2) + H * 0.02, lr = Math.max(W, H) * 0.55;
   const lg = g.createRadialGradient(lx, ly - lr * 0.15, 0, lx, ly, lr);
   lg.addColorStop(0, "rgba(140,180,255,.16)"); lg.addColorStop(0.5, "rgba(120,160,255,.05)"); lg.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = lg; g.fillRect(0, 0, W, H);
@@ -653,15 +681,16 @@ function backdrop(name) {
  * keeps the per-frame cost at one drawImage.
  */
 function floorLayer(level) {
-  const key = `${level.map.join("")}:${view.w}x${view.h}:${ready(IMG.floor)}`;
+  const rm = rmapFor(level);
+  const key = `${rm.join("")}:${view.w}x${view.h}:${ready(IMG.floor)}`;
   if (floorCache.key === key) return floorCache.canvas;
   const c = document.createElement("canvas"); c.width = view.w; c.height = view.h;
   const g = c.getContext("2d");
-  const cs = view.cs;
-  const isWall = (x, y) => x < 0 || y < 0 || x >= L.COLS || y >= L.ROWS || level.map[y][x] === "#";
+  const cs = view.cs, cols = view.cols, rows = view.rows;
+  const isWall = (x, y) => x < 0 || y < 0 || x >= cols || y >= rows || rm[y][x] === "#";
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     if (isWall(x, y)) continue;
     const px = view.ox + x * cs, py = view.oy + y * cs;
     if (ready(IMG.floor)) g.drawImage(IMG.floor, px, py, cs, cs);
@@ -679,14 +708,14 @@ function floorLayer(level) {
   }
   // Wall drop shadows onto the floor (light from the upper left).
   g.save(); g.filter = `blur(${Math.max(3, cs * 0.12)}px)`; g.fillStyle = "rgba(3,5,14,.55)";
-  for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
     if (!isWall(x, y)) continue;
     g.fillRect(view.ox + (x + 0.12) * cs, view.oy + (y + 0.18) * cs, cs, cs);
   }
   g.restore();
   // Vignette over the room so the centre reads brightest.
-  const vx = view.ox + cs * L.COLS / 2, vy = view.oy + cs * L.ROWS / 2;
-  const vg = g.createRadialGradient(vx, vy, cs * 2, vx, vy, cs * 7.5);
+  const vx = view.ox + cs * cols / 2, vy = view.oy + cs * rows / 2;
+  const vg = g.createRadialGradient(vx, vy, cs * 2, vx, vy, cs * Math.max(cols, rows) * 0.72);
   vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.42)");
   g.fillStyle = vg; g.fillRect(0, 0, view.w, view.h);
   floorCache = { key, canvas: c };
@@ -731,12 +760,14 @@ function sprite(img, x, y, size, alpha = 1, opt = {}) {
   ctx.drawImage(img, -s / 2, -s / 2 - (opt.lift || 0) * view.cs, s, s); ctx.restore();
 }
 
+/** Walls rise out of the floor over the first half second of a level. */
+const wallH = () => WALL_H * (reduceMotion ? 1 : easeOut(game.levelT / 0.5));
 /** One gradient for the whole room, so adjacent blocks merge into one slab. */
 let wallGrad = { key: "", top: null, front: null };
 function wallPaint() {
-  const key = `${view.ox},${view.oy},${view.cs}`;
+  const key = `${view.ox},${view.oy},${view.cs},${view.t}`;
   if (wallGrad.key === key) return wallGrad;
-  const x0 = cx(0), y0 = cy(0), x1 = cx(L.COLS), y1 = cy(L.ROWS);
+  const x0 = cx(0), y0 = cy(0), x1 = cx(view.cols), y1 = cy(view.rows);
   const top = ctx.createLinearGradient(x0, y0, x1, y1);
   top.addColorStop(0, "#4b5796"); top.addColorStop(1, "#353f7a");
   const front = ctx.createLinearGradient(0, 0, 0, view.cs * WALL_H);
@@ -744,9 +775,9 @@ function wallPaint() {
   wallGrad = { key, top, front };
   return wallGrad;
 }
-function drawWall(level, x, y) {
-  const cs = view.cs, H = WALL_H;
-  const isWall = (ax, ay) => ax < 0 || ay < 0 || ax >= L.COLS || ay >= L.ROWS || level.map[ay][ax] === "#";
+function drawWall(rm, x, y) {
+  const cs = view.cs, H = wallH();
+  const isWall = (ax, ay) => ax < 0 || ay < 0 || ax >= view.cols || ay >= view.rows || rm[ay][ax] === "#";
   const px = cx(x), py = cy(y);
   const paint = wallPaint();
   // Front face, only where the floor continues below.
@@ -766,8 +797,8 @@ function drawWall(level, x, y) {
   if (!isWall(x + 1, y)) ctx.fillRect(px + cs - 1.5, py - cs * H, 1.5, cs);
   if (!isWall(x, y + 1)) ctx.fillRect(px, py + cs * (1 - H) - 1.5, cs, 1.5);
 }
-function drawDoor(level, x, y, ch, dt) {
-  const cs = view.cs, H = WALL_H;
+function drawDoor(rm, x, y, ch, dt) {
+  const cs = view.cs;
   const an = game.doorAnim[ch]; let open = game.run.doors[ch] ? 1 : 0;
   if (an) { an.t = Math.min(1, an.t + dt * 3.2); const e = easeOut(an.t); open = an.open ? e : 1 - e; }
   const px = cx(x), py = cy(y);
@@ -776,7 +807,7 @@ function drawDoor(level, x, y, ch, dt) {
   // The gate spans the gap in the wall: vertical bars when the wall runs up and
   // down, horizontal bars when it runs left and right. The walls are the posts;
   // the emitters sit on their faces.
-  const isWall = (ax, ay) => ax < 0 || ay < 0 || ax >= L.COLS || ay >= L.ROWS || level.map[ay][ax] === "#";
+  const isWall = (ax, ay) => ax < 0 || ay < 0 || ax >= view.cols || ay >= view.rows || rm[ay][ax] === "#";
   const vertical = isWall(x, y - 1) && isWall(x, y + 1);
   const lens = vis > 0.01 ? "#ff4fd8" : "#4a3f6b";
   ctx.fillStyle = lens;
@@ -820,7 +851,7 @@ function draw(dt) {
   const run = game.run;
   ctx.clearRect(0, 0, w, h);
   if (!run || (current !== "none" && current !== "s-result")) { ctx.fillStyle = "#070a18"; ctx.fillRect(0, 0, w, h); return; }
-  const lvl = run.level;
+  const lvl = run.level, rm = rmapFor(lvl), cols = view.cols, rows = view.rows;
   const now = performance.now() / 1000;
 
   // Backdrop with a slow drift.
@@ -830,7 +861,7 @@ function draw(dt) {
 
   // Camera.
   ctx.save();
-  const c = game.cam, mx = cx(L.COLS / 2), my = cy(L.ROWS / 2);
+  const c = game.cam, mx = cx(cols / 2), my = cy(rows / 2);
   let sx = 0, sy = 0;
   if (game.shake > 0) { sx = (Math.random() - 0.5) * game.shake; sy = (Math.random() - 0.5) * game.shake; game.shake = Math.max(0, game.shake - dt * 40); }
   ctx.translate(mx + sx, my + sy); ctx.scale(c.zoom, c.zoom); ctx.translate(-mx - c.fx, -my - c.fy);
@@ -840,20 +871,20 @@ function draw(dt) {
 
   // Light pools, additive.
   ctx.globalCompositeOperation = "lighter";
-  for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
-    const ch = lvl.map[y][x];
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const ch = rm[y][x];
     if (ch === "a" || ch === "b" || ch === "c") light(x + 0.5, y + 0.5, cs * 1.1, "rgba(255,79,216,.55)", run.plates[ch] ? 0.55 : 0.2);
     else if (ch === "E") light(x + 0.5, y + 0.5, cs * 1.4, "rgba(255,201,60,.6)", 0.35 + Math.sin(now * 2.2) * 0.08);
   }
-  for (const co of run.coins) if (!co.taken) light(co.x, co.y, cs * 0.5, "rgba(255,201,60,.5)", 0.3);
-  for (const d of run.drones) light(d.px, d.py + 0.15, cs * 0.95, "rgba(255,79,216,.55)", 0.3, 1, 0.55);
+  for (const co of run.coins) if (!co.taken) { const p = R(co.x, co.y); light(p.x, p.y, cs * 0.5, "rgba(255,201,60,.5)", 0.3); }
+  for (const d of run.drones) { const p = R(d.px, d.py); light(p.x, p.y + 0.15, cs * 0.95, "rgba(255,79,216,.55)", 0.3, 1, 0.55); }
   const last = run.actors.length - 1;
-  for (let i = 0; i < last; i++) { const a = run.actors[i]; if (!a.done) light(a.x, a.y + 0.3, cs * 0.8, "rgba(57,230,255,.5)", 0.22, 1, 0.45); }
+  for (let i = 0; i < last; i++) { const a = run.actors[i]; if (!a.done) { const p = R(a.x, a.y); light(p.x, p.y + 0.3, cs * 0.8, "rgba(57,230,255,.5)", 0.22, 1, 0.45); } }
   ctx.globalCompositeOperation = "source-over";
 
-  // Floor decals: plates, open-door rails, exit, coins, drone paths.
-  for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
-    const ch = lvl.map[y][x];
+  // Floor decals: plates, exit, drone paths, coins.
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const ch = rm[y][x];
     if (ch === "a" || ch === "b" || ch === "c") {
       const on = run.plates[ch];
       sprite(IMG.plate, x + 0.5, y + 0.5, on ? 0.8 : 0.86, on ? 1 : 0.85);
@@ -865,42 +896,47 @@ function draw(dt) {
     }
   }
   for (const d of run.drones) {
+    const a = R(d.x + 0.5, d.y + 0.5), b = R(d.x + 0.5 + d.dx * d.n, d.y + 0.5 + d.dy * d.n);
     ctx.strokeStyle = "rgba(255,79,216,.18)"; ctx.lineWidth = 2; ctx.setLineDash([5, 9]);
-    ctx.beginPath(); ctx.moveTo(cx(d.x + 0.5), cy(d.y + 0.5)); ctx.lineTo(cx(d.x + 0.5 + d.dx * d.n), cy(d.y + 0.5 + d.dy * d.n)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(cx(a.x), cy(a.y)); ctx.lineTo(cx(b.x), cy(b.y)); ctx.stroke(); ctx.setLineDash([]);
   }
   for (const co of run.coins) {
     if (co.taken) continue;
-    const bob = Math.sin(now * 3 + co.x * 2.1) * 0.05;
-    shadow(co.x, co.y + 0.3, 0.16, 0.3);
-    sprite(IMG.coin, co.x, co.y + bob - 0.1, 0.6, 1, { sx: Math.abs(Math.cos(now * 2.4 + co.x)) * 0.75 + 0.25 });
+    const p = R(co.x, co.y);
+    const bob = Math.sin(now * 3 + p.x * 2.1) * 0.05;
+    shadow(p.x, p.y + 0.3, 0.16, 0.3);
+    sprite(IMG.coin, p.x, p.y + bob - 0.1, 0.6, 1, { sx: Math.abs(Math.cos(now * 2.4 + p.x)) * 0.75 + 0.25 });
   }
 
   // Depth-sorted: walls, doors, drones, actors.
   const items = [];
-  for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
-    const ch = lvl.map[y][x];
-    if (ch === "#") items.push({ z: y + 1, f: () => drawWall(lvl, x, y) });
-    else if (ch === "A" || ch === "B" || ch === "C") items.push({ z: y + 1, f: () => drawDoor(lvl, x, y, ch, dt) });
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+    const ch = rm[y][x];
+    if (ch === "#") items.push({ z: y + 1, f: () => drawWall(rm, x, y) });
+    else if (ch === "A" || ch === "B" || ch === "C") items.push({ z: y + 1, f: () => drawDoor(rm, x, y, ch, dt) });
   }
   const esp = echoSprite(profile.skin), ecol = skinColor(profile.skin);
   run.actors.forEach((a, i) => {
     if (a.done || (!a.alive && i === last)) return;
     const isEcho = i < last;
     const appear = reduceMotion ? 1 : easeOut((game.loopT - (isEcho ? 0.1 + i * 0.07 : 0)) / 0.35);
-    items.push({ z: a.y + 0.3, f: () => drawActor(a, isEcho, appear, esp, ecol, now) });
+    const p = R(a.x, a.y);
+    items.push({ z: p.y + 0.3, f: () => drawActor(a, p, isEcho, appear, esp, ecol, now) });
   });
-  for (const d of run.drones) items.push({ z: d.py + 0.35, f: () => drawDrone(d, now) });
+  for (const d of run.drones) { const p = R(d.px, d.py); items.push({ z: p.y + 0.35, f: () => drawDrone(d, p, now) }); }
   items.sort((p, q) => p.z - q.z);
   for (const it of items) it.f();
 
-  // Particles.
+  drawMotes(dt, cols, rows);
+
+  // Particles (already in render space).
   for (let i = game.particles.length - 1; i >= 0; i--) {
     const p = game.particles[i]; p.life -= dt;
     if (p.life <= 0) { game.particles.splice(i, 1); continue; }
     if (p.ring) {
       const k = 1 - p.life / p.max;
       let px = 0, py = 0;
-      for (let y = 0; y < L.ROWS && !px; y++) { const x = lvl.map[y].indexOf(p.k); if (x >= 0) { px = x + 0.5; py = y + 0.5; } }
+      for (let y = 0; y < rows && !px; y++) { const x = rm[y].indexOf(p.k); if (x >= 0) { px = x + 0.5; py = y + 0.5; } }
       ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = p.color; ctx.lineWidth = 3; ctx.translate(cx(px), cy(py)); ctx.scale(1, 0.55);
       ctx.beginPath(); ctx.arc(0, 0, cs * (0.3 + k * 1.1), 0, 7); ctx.stroke(); ctx.restore();
       continue;
@@ -937,44 +973,59 @@ function draw(dt) {
   if (game.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${game.flash * 0.5})`; ctx.fillRect(0, 0, w, h); game.flash = Math.max(0, game.flash - dt * 2); }
 }
 
-function drawActor(a, isEcho, appear, esp, ecol, now) {
+/** Slow cyan motes drifting up through the room: the air of the lab. */
+const motes = [];
+function drawMotes(dt, cols, rows) {
+  if (reduceMotion) return;
+  if (!motes.length) for (let i = 0; i < 26; i++) motes.push({ x: Math.random() * cols, y: Math.random() * rows, v: 0.05 + Math.random() * 0.09, p: Math.random() * 7, r: 0.9 + Math.random() * 1.5 });
+  ctx.save(); ctx.globalCompositeOperation = "lighter";
+  for (const m of motes) {
+    m.y -= m.v * dt; m.p += dt; if (m.y < 0) { m.y = rows; m.x = Math.random() * cols; }
+    ctx.globalAlpha = 0.16 + Math.sin(m.p * 1.7) * 0.1; ctx.fillStyle = "#39e6ff";
+    ctx.beginPath(); ctx.arc(cx(m.x + Math.sin(m.p) * 0.08), cy(m.y), m.r, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawActor(a, p, isEcho, appear, esp, ecol, now) {
   const cs = view.cs;
   if (appear <= 0) return;
-  const moving = a.dir !== 0;
-  if (moving) a.face = a.dir >= 6 ? -1 : a.dir >= 2 && a.dir <= 4 ? 1 : a.face || 1;
+  const moving = a.dir !== 0, sd = sdirOf(a.dir);
+  if (moving) a.face = sd >= 6 ? -1 : sd >= 2 && sd <= 4 ? 1 : a.face || 1;
   const flip = (a.face || 1) < 0;
   const bob = moving ? Math.abs(Math.sin(game.run.tick * 0.55)) * 0.06 : Math.sin(now * 2.4) * 0.012;
   const sx = moving ? 1 + Math.sin(game.run.tick * 0.55) * 0.04 : 1 - bob * 0.5;
   const sy = moving ? 1 - Math.sin(game.run.tick * 0.55) * 0.04 : 1 + bob;
-  const lean = moving ? (flip ? -1 : 1) * 0.09 * (a.dir === 1 || a.dir === 5 ? 0 : 1) : 0;
+  const lean = moving ? (flip ? -1 : 1) * 0.09 * (sd === 1 || sd === 5 ? 0 : 1) : 0;
   if (!isEcho && moving && game.run.tick % 5 === 0 && a.alive) dust(a);
   if (isEcho) {
     // Hologram: projector ring + cone + translucent, faintly flickering copy.
-    const flick = 0.78 + Math.sin(now * 23 + a.x * 7) * 0.05 + Math.sin(now * 61) * 0.03;
-    ctx.save(); ctx.translate(cx(a.x), cy(a.y + 0.32)); ctx.scale(1, 0.4); ctx.strokeStyle = ecol;
+    const flick = 0.78 + Math.sin(now * 23 + p.x * 7) * 0.05 + Math.sin(now * 61) * 0.03;
+    ctx.save(); ctx.translate(cx(p.x), cy(p.y + 0.32)); ctx.scale(1, 0.4); ctx.strokeStyle = ecol;
     ctx.globalAlpha = 0.25 * appear; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(0, 0, cs * 0.34, 0, 7); ctx.stroke();
     ctx.globalAlpha = 0.9 * appear; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(0, 0, cs * 0.34, 0, 7); ctx.stroke(); ctx.restore();
-    const cone = ctx.createLinearGradient(0, cy(a.y + 0.32), 0, cy(a.y - 0.6));
+    const cone = ctx.createLinearGradient(0, cy(p.y + 0.32), 0, cy(p.y - 0.6));
     cone.addColorStop(0, hexA(ecol, 0.28 * appear)); cone.addColorStop(1, hexA(ecol, 0));
     ctx.fillStyle = cone; ctx.beginPath();
-    ctx.moveTo(cx(a.x - 0.3), cy(a.y + 0.32)); ctx.lineTo(cx(a.x + 0.3), cy(a.y + 0.32)); ctx.lineTo(cx(a.x + 0.5), cy(a.y - 0.6)); ctx.lineTo(cx(a.x - 0.5), cy(a.y - 0.6)); ctx.closePath(); ctx.fill();
+    ctx.moveTo(cx(p.x - 0.3), cy(p.y + 0.32)); ctx.lineTo(cx(p.x + 0.3), cy(p.y + 0.32)); ctx.lineTo(cx(p.x + 0.5), cy(p.y - 0.6)); ctx.lineTo(cx(p.x - 0.5), cy(p.y - 0.6)); ctx.closePath(); ctx.fill();
     ctx.globalCompositeOperation = "lighter";
-    sprite(esp, a.x, a.y - 0.14 - bob, 1.18 * 1.06, 0.22 * appear, { flip, sx, sy: sy * appear, rot: lean });
+    sprite(esp, p.x, p.y - 0.14 - bob, 1.18 * 1.06, 0.22 * appear, { flip, sx, sy: sy * appear, rot: lean });
     ctx.globalCompositeOperation = "source-over";
-    sprite(esp, a.x, a.y - 0.14 - bob, 1.18, flick * appear, { flip, sx, sy: sy * appear, rot: lean });
+    sprite(esp, p.x, p.y - 0.14 - bob, 1.18, flick * appear, { flip, sx, sy: sy * appear, rot: lean });
   } else {
-    shadow(a.x, a.y + 0.33, 0.38 * (1 - bob * 2), 0.45);
-    sprite(IMG.hero, a.x, a.y - 0.14 - bob, 1.2, 1, { flip, sx: sx * appear, sy: sy * appear, rot: lean });
+    shadow(p.x, p.y + 0.33, 0.38 * (1 - bob * 2), 0.45);
+    sprite(IMG.hero, p.x, p.y - 0.14 - bob, 1.2, 1, { flip, sx: sx * appear, sy: sy * appear, rot: lean });
   }
 }
-function drawDrone(d, now) {
+function drawDrone(d, p, now) {
   const bob = Math.sin(now * 4 + d.x) * 0.05;
-  const tilt = d.dx ? Math.sin(now * 0.6) * 0.06 : 0;
-  shadow(d.px, d.py + 0.38, 0.3, 0.35);
-  sprite(IMG.drone, d.px, d.py - 0.12 + bob, 0.92, 1, { rot: tilt });
+  const horizontal = view.t ? d.dy : d.dx;
+  const tilt = horizontal ? Math.sin(now * 0.6) * 0.06 : 0;
+  shadow(p.x, p.y + 0.38, 0.3, 0.35);
+  sprite(IMG.drone, p.x, p.y - 0.12 + bob, 0.92, 1, { rot: tilt });
   // Scanning eye: a hard little flare.
   ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.5 + Math.sin(now * 9) * 0.2;
-  ctx.fillStyle = "#ff4fd8"; ctx.beginPath(); ctx.arc(cx(d.px), cy(d.py - 0.12 + bob), view.cs * 0.07, 0, 7); ctx.fill(); ctx.restore();
+  ctx.fillStyle = "#ff4fd8"; ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y - 0.12 + bob), view.cs * 0.07, 0, 7); ctx.fill(); ctx.restore();
 }
 function hexA(hex, a) {
   const n = parseInt(hex.slice(1), 16);
@@ -1012,7 +1063,7 @@ function titleFx(on) {
 
 /** A tiny painted plan of the room: enough to recognise it at a glance. */
 function drawMinimap(cv, level) {
-  const W = 132, H = 84, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = 84, H = 132, dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = W * dpr; cv.height = H * dpr;
   const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
   const u = W / L.COLS;
@@ -1175,7 +1226,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 
 // ── screens: editor ────────────────────────────────────────────────────────
 
-const ed = { map: ["###########", "#S........#", "#.........#", "#.........#", "#.........#", "#........E#", "###########"].map((r) => r.split("")), tool: "#", drones: [] };
+const ed = { map: ["#######", "#S....#", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#.....#", "#....E#", "#######"].map((r) => r.split("")), tool: "#", drones: [] };
 const TOOLS = [["#", "▇"], [".", "·"], ["S", "S"], ["E", "E"], ["a", "a"], ["A", "A"], ["b", "b"], ["B", "B"], ["c", "c"], ["C", "C"], ["o", "o"]];
 function renderEditor() {
   const pal = $("#palette"); pal.innerHTML = "";
@@ -1253,7 +1304,7 @@ $("#b-load").addEventListener("click", () => {
 $("#b-adddrone").addEventListener("click", () => {
   if (ed.drones.length >= 4) return;
   const horiz = ed.drones.length % 2 === 0;
-  ed.drones.push(horiz ? { x: 2 + ed.drones.length, y: 2, dx: 1, dy: 0, n: 4, phase: ed.drones.length * 2 } : { x: 5, y: 1, dx: 0, dy: 1, n: 4, phase: ed.drones.length * 2 });
+  ed.drones.push(horiz ? { x: 1, y: 2 + ed.drones.length * 2, dx: 1, dy: 0, n: 4, phase: ed.drones.length * 2 } : { x: 3, y: 1, dx: 0, dy: 1, n: 8, phase: ed.drones.length * 2 });
   renderEditor();
 });
 $("#b-cleardrones").addEventListener("click", () => { ed.drones = []; renderEditor(); });

@@ -4,6 +4,10 @@ main = "src/index.ts"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Keep the server's log messages (errors from Claude or ElevenLabs) in the Cloudflare dashboard.
+[observability]
+enabled = true
+
 # Secrets (set once, never committed):
 #   npx wrangler secret put ANTHROPIC_API_KEY
 #   npx wrangler secret put ELEVENLABS_API_KEY

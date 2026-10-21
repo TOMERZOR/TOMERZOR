@@ -1,14 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { allowNewClip, checkAccess, type AccessEnv } from "./access";
 import { TERMS_URL, landingPage, privacyPage } from "./pages";
-import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, noPhotoNote, photosNote, type Language } from "./prompt";
+import { REPLY_SCHEMA, SYSTEM_PROMPT, languageNote, liveNote, noPhotoNote, photosNote, type Language } from "./prompt";
 
 /**
  * The server behind the My Old Friend app. The app sends a question (and a camera photo) and gets
  * Moffy's answer; it sends the answer's words and gets them back in Moffy's voice. The Claude and
  * ElevenLabs keys live here, so people who install the app never set anything up.
  *
- *   POST /v1/ask    { question, language, history?, photo?, source? }  ->  { reply, raw, access }
+ *   POST /v1/ask    { question, language, history?, photo?, source?, goal? }  ->  { reply, raw, access }
  *   POST /v1/speak  { text, language }                        ->  audio/mpeg
  *   GET  /privacy                                             ->  the privacy policy
  *   GET  /terms                                               ->  Apple's standard licence agreement
@@ -124,7 +124,9 @@ async function ask(
   }
   let text = languageNote(language);
   if (!photo) text += " " + noPhotoNote(language);
-  else if (body.source === "photos") text += " " + photosNote(language);
+  else if (body.source === "live" || body.live === true) {
+    text += " " + liveNote(language, typeof body.goal === "string" ? body.goal : question);
+  } else if (body.source === "photos") text += " " + photosNote(language);
   content.push({ type: "text", text: `${text}\n\n${question}` });
   messages.push({ role: "user", content });
 

@@ -12,6 +12,7 @@ final class Helper: ObservableObject {
     let speaker = Speaker()
     let subscription = Subscription()
     let latestPhoto = LatestPhoto()
+    let liveGuide = LiveGuide()
 
     @Published private(set) var phase: Phase = .ready
     /// Moffy's latest answer. Nil when there is nothing to show (the camera is all there is).
@@ -37,10 +38,19 @@ final class Helper: ObservableObject {
         self.settings = settings
         // Views watch the helper; pass along changes from its parts.
         for part in [camera.objectWillChange, listener.objectWillChange, speaker.objectWillChange, settings.objectWillChange,
-                     subscription.objectWillChange, latestPhoto.objectWillChange] {
+                     subscription.objectWillChange, latestPhoto.objectWillChange, liveGuide.objectWillChange] {
             part.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         }
         listener.onFinished = { [weak self] heard in self?.heard(heard) }
+        liveGuide.onStarted = { [weak self] in
+            guard let self else { return }
+            self.show(Self.line(.liveStart, self.settings.lang), speak: true)
+        }
+        liveGuide.onReply = { [weak self] step in self?.showLive(step) }
+        liveGuide.onEnded = { [weak self] finished in
+            guard let self else { return }
+            self.show(Self.line(finished ? .liveDone : .liveStopped, self.settings.lang), speak: true)
+        }
         prepareVoice()
     }
 
@@ -122,6 +132,40 @@ final class Helper: ObservableObject {
                 show(Self.line(.microphoneOff, settings.lang), speak: true)
             }
         }
+    }
+
+    // MARK: - Guide me on screen
+
+    /// What the person is trying to do: the first thing they asked in this conversation.
+    private var goal: String {
+        history.first(where: { $0.role == .user })?.text ?? lastQuestion
+    }
+
+    /// Gives the screen-sharing extension the goal and the conversation so far.
+    func prepareLive() {
+        liveGuide.prepare(goal: goal, history: history, language: settings.lang)
+    }
+
+    /// A step from screen sharing: say it, and show it on the card. The point is on the shared screen,
+    /// not in the camera picture, so Moffy doesn't draw it here.
+    private func showLive(_ step: LiveReply) {
+        if let code = step.error {
+            switch code {
+            case "trial_over":
+                show(Self.accessLine(.trialOver, settings.lang), speak: true)
+                subscription.trialEnded()
+            case "daily_limit":
+                show(Self.accessLine(.dailyLimit, settings.lang), speak: true)
+            case "offline":
+                show(Self.line(.offline, settings.lang), speak: true)
+            default:
+                break // a passing problem; the next screen change asks again
+            }
+            return
+        }
+        let mood: MoffyMood = step.mood == "happy" ? .happy : step.mood == "worried" ? .worried : .talking
+        show(MoffyReply(say: step.say, caption: step.caption, mood: mood, step: step.step, finished: step.finished),
+             speak: true)
     }
 
     /// "Done, next step": the person did what Moffy asked; look again and continue.
@@ -223,7 +267,8 @@ final class Helper: ObservableObject {
 
     // MARK: - Fixed lines (the only words Moffy says that don't come from Claude)
 
-    enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other, gotPhoto, noPhotos, photosOff }
+    enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other, gotPhoto, noPhotos, photosOff,
+                                     liveStart, liveDone, liveStopped }
 
     static func line(_ kind: FixedLine, _ language: AppLanguage) -> MoffyReply {
         let he = language == .hebrew
@@ -265,6 +310,17 @@ final class Helper: ObservableObject {
             return MoffyReply(say: t("I don't have access to your pictures. You can allow it in the phone's Settings, under My Old Friend.",
                                      "אין לי גישה לתמונות. אפשר לאשר אותה בהגדרות של הטלפון, תחת החבר הוותיק שלי."),
                               caption: t("Allow Photos in Settings", "לאשר תמונות בהגדרות"), mood: .worried)
+        case .liveStart:
+            return MoffyReply(say: t("I'm looking at your screen. Please go to the app you need help with.",
+                                     "אני מסתכלת על המסך. עברו בבקשה לאפליקציה שבה צריך עזרה."),
+                              caption: t("Go to the app", "עברו לאפליקציה"), mood: .happy)
+        case .liveDone:
+            return MoffyReply(say: t("We're done. Well done!", "סיימנו. כל הכבוד!"),
+                              caption: t("All done", "סיימנו"), mood: .happy)
+        case .liveStopped:
+            return MoffyReply(say: t("Screen sharing has stopped. I'm here if you need me.",
+                                     "שיתוף המסך הסתיים. אני כאן אם תצטרכו אותי."),
+                              caption: t("Sharing stopped", "השיתוף הסתיים"), mood: .talking)
         case .other:
             return MoffyReply(say: t("Something went wrong on my side. Please try again.",
                                      "משהו השתבש אצלי. נסו בבקשה שוב."),

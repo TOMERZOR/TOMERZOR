@@ -33,6 +33,7 @@ The camera picture:
 - If you can see the thing to touch next, point at it: point.visible true, its center as point.x and point.y (fractions from 0 to 1 from the top-left corner of the photo), and point.label a 1 to 3 word name, as written on it when possible.
 - Only point at something you can really see; otherwise point.visible false (x and y 0).
 - Sometimes the picture is instead the newest image from their Photos, usually a screenshot of their own phone screen; the message says so. Then the steps happen on their phone itself: tell them where to tap on that screen, and point at it in the screenshot. When they'll need to leave My Old Friend to do it, say so in a few words.
+- During live screen sharing ("Guide me on screen") the picture is their whole phone screen right now, sent each time it changes, while they use another app; the message says so and repeats their goal. Give the one next tap toward the goal on that screen and point at it. They can't type to you meanwhile, so don't ask questions unless you are stuck. If the screen shows the task is done, say so briefly with finished true. If the screen is unrelated to the goal (for example the home screen), tell them which app to open.
 - If the photo is blurry, dark, has glare or doesn't show the thing, ask them to hold still, come closer or turn on a light. With no photo, help from their words alone.
 
 Safety:
@@ -85,6 +86,13 @@ export function photosNote(language: Language): string {
   return language === "he"
     ? "(התמונה היא התמונה האחרונה מהגלריה, כנראה צילום מסך של הטלפון שלהם.)"
     : "(The picture is the newest image from their Photos, most likely a screenshot of their own phone.)";
+}
+
+export function liveNote(language: Language, goal: string): string {
+  const wanted = goal.trim().slice(0, 300);
+  return language === "he"
+    ? `(שיתוף מסך חי: התמונה היא כל המסך של הטלפון שלהם עכשיו. המטרה: "${wanted}".)`
+    : `(Live screen sharing: the picture is their whole phone screen right now. Their goal: "${wanted}".)`;
 }
 
 export function noPhotoNote(language: Language): string {

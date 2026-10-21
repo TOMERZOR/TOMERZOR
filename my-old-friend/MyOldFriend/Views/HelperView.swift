@@ -7,6 +7,7 @@ struct HelperView: View {
     @EnvironmentObject private var helper: Helper
     @State private var showSettings = UserDefaults.standard.string(forKey: "screenshotScene") == "settings"
     @State private var showTyping = false
+    @State private var showLive = false
     @State private var controlHeight: CGFloat = 77
 
     var body: some View {
@@ -16,7 +17,7 @@ struct HelperView: View {
                 TopBar(showSettings: $showSettings)
                     .frame(height: layout.topBar)
                 Spacer(minLength: 0)
-                BottomPanel(cardHeight: layout.cardReserve, showTyping: $showTyping, controlHeight: $controlHeight)
+                BottomPanel(cardHeight: layout.cardReserve, showTyping: $showTyping, showLive: $showLive, controlHeight: $controlHeight)
             }
             // The picture is a background, so it reaches the screen edges without moving the controls.
             .background(alignment: .topLeading) {
@@ -41,6 +42,9 @@ struct HelperView: View {
         .sheet(isPresented: $showTyping) {
             TypeQuestionView { text in helper.ask(typed: text) }
                 .inheritingAppEnvironment(settings: settings, helper: helper)
+        }
+        .sheet(isPresented: $showLive) {
+            LiveStartSheet().inheritingAppEnvironment(settings: settings, helper: helper)
         }
         .sheet(isPresented: Binding(get: { helper.subscription.showPaywall },
                                     set: { helper.subscription.showPaywall = $0 })) {
@@ -356,6 +360,9 @@ private struct TopBar: View {
                 HStack(spacing: 8) {
                     if helper.phase == .thinking {
                         ProgressView().controlSize(.small)
+                    } else if helper.liveGuide.isLive {
+                        Image(systemName: "rectangle.on.rectangle")
+                            .foregroundStyle(Theme.actionText)
                     } else {
                         Image(systemName: helper.phase == .listening ? "waveform" : "camera.viewfinder")
                             .foregroundStyle(Theme.actionText)
@@ -386,6 +393,9 @@ private struct TopBar: View {
     }
 
     private var status: String? {
+        if helper.liveGuide.isLive && helper.phase != .listening {
+            return settings.t("Moffy is watching your screen", "מופי מסתכלת על המסך שלכם")
+        }
         switch helper.phase {
         case .listening: return settings.t("Listening…", "מקשיבה…")
         case .thinking: return settings.t("Looking…", "מסתכלת…")
@@ -406,7 +416,9 @@ private struct BottomPanel: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let cardHeight: CGFloat
     @Binding var showTyping: Bool
+    @Binding var showLive: Bool
     @Binding var controlHeight: CGFloat
+    @State private var stopPicker = BroadcastPickerHolder()
 
     var body: some View {
         VStack(spacing: 12) {
@@ -427,13 +439,33 @@ private struct BottomPanel: View {
     }
 
     private var controls: some View {
-        HStack(alignment: .top, spacing: 12) {
-            PinkButton(title: primary.title, systemImage: primary.icon, isBusy: helper.phase == .thinking, action: primary.action)
-                .disabled(helper.phase == .thinking)
-                .accessibilityHint(primary.hint)
-            GlassCircleButton(systemImage: secondary.icon, label: secondary.label, size: 72, action: secondary.action)
-                .disabled(helper.phase != .ready)
-                .opacity(helper.phase == .ready ? 1 : 0.5)
+        VStack(spacing: 10) {
+            if helper.liveGuide.isLive {
+                // Tapping iOS's own control again offers "Stop Broadcast".
+                ZStack {
+                    BroadcastPicker(holder: stopPicker)
+                        .frame(width: 44, height: 44)
+                        .opacity(0.02)
+                        .allowsHitTesting(false)
+                    OutlineButton(title: settings.t("Stop sharing the screen", "הפסקת שיתוף המסך"), systemImage: "stop.circle") {
+                        stopPicker.open()
+                    }
+                }
+            } else if helper.phase == .ready && helper.reply != nil && Backend.isConfigured {
+                OutlineButton(title: settings.t("Guide me on screen", "הראו לי על המסך"), systemImage: "rectangle.on.rectangle") {
+                    showLive = true
+                }
+                .accessibilityHint(settings.t("Moffy watches your screen and tells you each step",
+                                              "מופי מסתכלת על המסך ואומרת כל שלב"))
+            }
+            HStack(alignment: .top, spacing: 12) {
+                PinkButton(title: primary.title, systemImage: primary.icon, isBusy: helper.phase == .thinking, action: primary.action)
+                    .disabled(helper.phase == .thinking)
+                    .accessibilityHint(primary.hint)
+                GlassCircleButton(systemImage: secondary.icon, label: secondary.label, size: 72, action: secondary.action)
+                    .disabled(helper.phase != .ready)
+                    .opacity(helper.phase == .ready ? 1 : 0.5)
+            }
         }
     }
 
@@ -461,6 +493,28 @@ private struct BottomPanel: View {
             return ("mic.fill", settings.t("Ask a question instead", "לשאול שאלה במקום"), { helper.talkButtonTapped() })
         }
         return ("keyboard", settings.t("Type instead", "לכתוב במקום"), { showTyping = true })
+    }
+}
+
+/// A white button with a pink outline, for the quieter choice next to the big pink one.
+private struct OutlineButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(.ui(.title3, .semibold))
+                .foregroundStyle(Theme.actionText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(Capsule().fill(Theme.card))
+                .overlay(Capsule().stroke(Theme.action, lineWidth: 2))
+                .shadow(color: .black.opacity(0.1), radius: 8, y: 3)
+        }
+        .buttonStyle(PressableStyle())
     }
 }
 

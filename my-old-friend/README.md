@@ -16,6 +16,36 @@ The camera fills the whole screen. Four corner marks show what Moffy sees, and t
 
 Moffy is told to give real, specific help: work out the exact device or app in the picture, quote buttons as they are written, give one action at a time, say what will happen next, and say so plainly (or ask one question) when unsure instead of guessing.
 
+## Guide me on screen
+
+When the help is on the phone itself (sending a photo on WhatsApp, finding a setting), Moffy can watch the screen while the person uses the other app:
+
+1. After Moffy answers, a white **Guide me on screen** button with a pink outline appears above the pink button.
+2. A short sheet explains it in three big steps, then opens iOS's own **Start Broadcast** screen.
+3. The person goes to the other app. Each time the screen changes and settles, Moffy looks at it and gives the next step toward what they first asked for:
+   - she **says it out loud** in her natural voice (the app keeps running in the background while sharing is on),
+   - the **Lock Screen and Dynamic Island** show Moffy, the step in big letters, and a little drawing of the phone with a **pink dot where to tap**,
+   - if sound is off, a **notification banner** shows the same words.
+4. It ends when Moffy says the task is done, or when the person taps the red bar at the top of the screen (or **Stop sharing the screen** in the app).
+
+iOS doesn't let any app draw on top of another app, so Moffy can't fly over to the button the way she does on the camera picture. The dot on the little phone drawing and the spoken words ("the green button at the bottom right") do that job.
+
+How it's built:
+
+| Part | What it does |
+|---|---|
+| `MoffyBroadcast/` | A screen-broadcast extension. It shrinks each frame, notices when the screen has changed and then stayed still for a moment, and sends that screen (at most 1100 pixels, JPEG) to `/v1/ask` with the goal and the last few turns. Nothing is saved |
+| `MoffyLive/` | The Live Activity (Lock Screen and Dynamic Island) |
+| `Shared/` | What the app and the extensions both use: the message format and the Live Activity's data |
+| `MyOldFriend/Live/` | The app side: starts the session, speaks each step, updates the Live Activity, shows the banner |
+
+**No paid developer account needed.** Extensions normally talk to their app through an App Group, which a free Apple ID can't use. Here the app and the broadcast extension pass small messages through two named pasteboards that only apps from the same developer can see (`com.tomerzor.myoldfriend.live.config` and `.live.reply`), and ping each other with system notifications (`.live.started`, `.live.reply`, `.live.stopped`). The extension gets the server address and token from the app this way, so they aren't built into it.
+
+Things to know:
+- **Every new screen is one question.** A guided session of 6 steps uses 6 of the 20 free questions, or 6 of a subscriber's 40 a day.
+- **Keeping the app awake:** while sharing is on, the app plays silence so iOS lets it keep speaking in the background, and stops as soon as sharing ends. Apple's review may question this use of background audio; if it does, the fallback is to drop the voice in the background and rely on the Live Activity and banners.
+- **Not yet tried on a real iPhone.** It builds, but these need checking on a device: that the extension can read the named pasteboard and its ping reaches the app in the background, that the silent audio keeps the app speaking, that the Live Activity shows with a free Apple ID, that the pink button really opens iOS's broadcast screen, and that the extension stays under iOS's 50 MB limit for broadcast extensions.
+
 ## Design rules (from Apple's Human Interface Guidelines)
 
 - **Surfaces:** white, with the camera as the hero. Only one pink button is on the main screen at a time.
@@ -41,6 +71,7 @@ The App Store texts (English and Hebrew) are in `AppStore.md`.
 | `server/` | Moffy's server (a Cloudflare Worker). It holds the Claude and ElevenLabs keys |
 | `MyOldFriend/Views/` | The screens: welcome (with the agreement to send data to the AI), main helper screen, settings, typing, subscription |
 | `MyOldFriend/Store/` | The subscription (StoreKit 2) and the phone's random install ID |
+| `MyOldFriend/Live/`, `MoffyBroadcast/`, `MoffyLive/`, `Shared/` | **Guide me on screen** (see above) |
 
 ## Running it on an iPhone
 
@@ -49,7 +80,7 @@ On your MacBook:
 1. Install **Xcode** from the Mac App Store (free, about 10 GB). Open it once and let it install its components.
 2. Get the code: in Terminal, `git clone https://github.com/TOMERZOR/TOMERZOR.git`, then `cd TOMERZOR && git checkout claude/my-old-friend-app`. Or download the branch as a ZIP from GitHub.
 3. Open `my-old-friend/MyOldFriend.xcodeproj` in Xcode.
-4. Click the project at the top left → **Signing & Capabilities** → choose your **Team** (your Apple ID works; sign in under Xcode → Settings → Accounts).
+4. Click the project at the top left → **Signing & Capabilities** → choose your **Team** (your Apple ID works; sign in under Xcode → Settings → Accounts). Do this for each of the three targets in the list on the left: **MyOldFriend**, **MoffyBroadcast** and **MoffyLive**.
 5. Plug in the iPhone, pick it at the top of Xcode, and press ▶︎ (Run).
 6. On the iPhone, the first time only: **Settings → General → VPN & Device Management** → trust your developer profile. iOS 16+ also asks you to turn on **Developer Mode**.
 

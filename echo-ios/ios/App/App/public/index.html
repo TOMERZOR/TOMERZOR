@@ -198,10 +198,20 @@
     /* ── title ── */
     #s-title { padding: 0; overflow: hidden; }
     .title-art { position: absolute; inset: 0; overflow: hidden; }
-    .title-art .bg { position: absolute; inset: -6%; background: url("assets/bg_title.jpg") center 35% / cover no-repeat; filter: hue-rotate(55deg) saturate(.75); animation: kenburns 28s ease-in-out infinite alternate; }
+    .title-art .bg { position: absolute; inset: -6%; background: url("assets/bg_title.jpg") center 30% / cover no-repeat; animation: kenburns 28s ease-in-out infinite alternate; }
     @keyframes kenburns { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.1) translate(-1.5%, 1%); } }
     .title-art .fog { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,11,24,.35) 0%, rgba(16,11,24,.1) 35%, rgba(16,11,24,.55) 62%, var(--ink) 100%); }
     .title-art .floor { position: absolute; left: 0; right: 0; bottom: 36%; height: 18%; background: radial-gradient(60% 100% at 50% 100%, rgba(126,240,198,.14), transparent 70%); }
+    /* The portal the hero just stepped out of: a slow golden ring behind the stage. */
+    .portal { position: absolute; left: 50%; bottom: 44%; width: min(62vw, 300px); aspect-ratio: 1; transform: translate(-50%, 40%); pointer-events: none; z-index: 0;
+      background: radial-gradient(circle, rgba(255,207,90,.35) 0%, rgba(255,160,70,.18) 35%, rgba(255,138,61,0) 68%); }
+    .portal i { position: absolute; inset: 14%; border-radius: 50%; border: 3px solid transparent;
+      background: conic-gradient(from 0deg, rgba(255,207,90,0) 0deg, rgba(255,207,90,.9) 90deg, rgba(255,138,61,.1) 180deg, rgba(255,207,90,.8) 270deg, rgba(255,207,90,0) 360deg) border-box;
+      -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: portal-spin 9s linear infinite; opacity: .8; filter: blur(.4px) drop-shadow(0 0 10px rgba(255,207,90,.6)); }
+    @keyframes portal-spin { to { transform: rotate(360deg); } }
+    /* A time sweep crosses the hall every few seconds. */
+    .sweep { position: absolute; left: 0; right: 0; height: 22%; top: -30%; pointer-events: none; background: linear-gradient(180deg, rgba(126,240,198,0), rgba(126,240,198,.14) 70%, rgba(220,255,240,.55) 100%); animation: sweep 7s ease-in 2s infinite; opacity: .9; }
+    @keyframes sweep { 0% { top: -30%; } 22% { top: 105%; } 100% { top: 105%; } }
     .actors { position: absolute; left: 0; right: 0; bottom: 40%; height: 24vh; max-height: 210px; pointer-events: none; }
     .actor { position: absolute; bottom: 0; width: clamp(84px, 15vh, 130px); transform-origin: 50% 100%; }
     .actor img { width: 100%; display: block; }
@@ -209,6 +219,7 @@
     .actor.hero::after { content: ""; position: absolute; left: 15%; right: 15%; bottom: -8px; height: 14px; border-radius: 50%; background: rgba(0,0,0,.45); filter: blur(4px); }
     @keyframes idle { 0%, 100% { transform: translateX(-50%) translateY(0) scaleY(1); } 50% { transform: translateX(-50%) translateY(-4px) scaleY(1.02); } }
     .actor.echo { opacity: 0; animation: materialize 9s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(126,240,198,.55)); }
+    .actor.echo canvas { width: 100%; display: block; opacity: .82; -webkit-mask: repeating-linear-gradient(180deg, #000 0 3px, rgba(0,0,0,.55) 3px 4px); mask: repeating-linear-gradient(180deg, #000 0 3px, rgba(0,0,0,.55) 3px 4px); }
     .actor.echo::before { /* projector cone */
       content: ""; position: absolute; left: 10%; right: 10%; bottom: -6px; height: 110%; clip-path: polygon(30% 100%, 70% 100%, 100% 0, 0 0);
       background: linear-gradient(0deg, rgba(126,240,198,.28), rgba(126,240,198,0) 85%); z-index: -1;
@@ -234,7 +245,8 @@
     .title-head { display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .title-foot { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
     .logo { margin: 0; font: 700 clamp(4.2rem, 19vw, 7rem)/.95 var(--display); letter-spacing: .06em; color: #fff; text-align: center; }
-    .logo span { position: relative; display: inline-block; isolation: isolate; text-shadow: 0 4px 0 rgba(16,11,24,.9), 0 0 36px rgba(126,240,198,.35); }
+    .logo span { position: relative; display: inline-block; isolation: isolate; text-shadow: 0 4px 0 rgba(16,11,24,.9), 0 0 36px rgba(126,240,198,.35);
+      }
     .logo span::before, .logo span::after {
       content: attr(data-echo); position: absolute; inset: 0; z-index: -1; color: var(--echo); text-shadow: none;
       animation: logo-echo 4s ease-in-out infinite;
@@ -243,8 +255,26 @@
     .logo span::after { opacity: .24; --dx: -12px; --dy: 8px; animation-delay: .25s; }
     @keyframes logo-echo { 0%, 100% { transform: translate(var(--dx), var(--dy)); } 50% { transform: translate(calc(var(--dx) * 1.5), calc(var(--dy) * 1.5)); } }
     .tag { font: 800 .74rem var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--echo); text-align: center; text-shadow: 0 2px 0 rgba(16,11,24,.9); max-width: 30ch; }
-    .streak { min-height: 1.4em; color: var(--gold); font: 700 .95rem var(--body); display: flex; align-items: center; gap: 6px; }
-    .streak .ic { width: 18px; height: 18px; }
+    .streak { color: var(--gold); font: 800 .72rem var(--body); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .streak .ic { width: 16px; height: 16px; }
+    .streak:empty { display: none; }
+    /* Today: what there is to do right now, before the big button. */
+    .today { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .tcard { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; color: var(--fg); text-align: start; min-height: 64px; min-width: 0; overflow: hidden; transition: transform .12s cubic-bezier(.2,.9,.3,1.4); }
+    .tcard:active { transform: scale(.96); }
+    .tcard > .ic { width: 26px; height: 26px; color: var(--echo); flex: 0 0 auto; }
+    .tcard .tc { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+    .tcard .tc b { font: 600 .95rem/1.1 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tcard .tc small { font: 700 .7rem var(--body); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tcard .tc-icon { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; }
+    .tcard .tc-icon img, .tcard .tc-icon canvas { width: 34px; height: 34px; }
+    .minibar { display: block; height: 4px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 3px; }
+    .minibar i { display: block; height: 100%; background: linear-gradient(90deg, var(--echo), var(--gem)); }
+    .btn.xl .pl { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; gap: 3px; }
+    .btn.xl .pl small { font: 800 .62rem var(--body); letter-spacing: .14em; opacity: .75; }
+    .btn.xl .pl small:empty { display: none; }
+    #b-play { animation: play-glow 2.4s ease-in-out infinite; }
+    @keyframes play-glow { 0%, 100% { filter: drop-shadow(0 10px 24px rgba(255,138,61,.35)); } 50% { filter: drop-shadow(0 12px 34px rgba(255,160,70,.7)); } }
     .menu { display: flex; flex-direction: column; gap: 12px; width: 100%; align-items: stretch; }
     .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
     .tile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 12px 4px 10px; color: var(--fg); border-radius: 12px; transition: transform .12s cubic-bezier(.2,.9,.3,1.4); }
@@ -451,12 +481,13 @@
         <div class="fog"></div>
         <div class="floor"></div>
         <div class="actors">
-          <div class="actor echo e1"><img src="assets/echo.png" alt="" style="filter:hue-rotate(-32deg)" /></div>
-          <div class="actor echo e3"><img src="assets/echo.png" alt="" style="filter:hue-rotate(-32deg)" /></div>
-          <div class="actor hero"><img src="assets/hero.png" alt="" /></div>
-          <div class="actor echo e2"><img src="assets/echo.png" alt="" style="filter:hue-rotate(-32deg)" /></div>
+          <div class="actor echo e1"><canvas width="256" height="256"></canvas></div>
+          <div class="actor echo e3"><canvas width="256" height="256"></canvas></div>
+          <div class="actor hero"><img src="assets/hero.png" alt="" id="t-hero" /></div>
+          <div class="actor echo e2"><canvas width="256" height="256"></canvas></div>
         </div>
         <canvas id="title-fx"></canvas>
+        <div class="sweep"></div>
       </div>
       <header class="title-top">
         <button class="chip" id="c-coins"><img src="assets/coin.png" alt="" /><span id="t-coins">0</span></button>
@@ -471,9 +502,18 @@
           <div class="tag" data-i18n="tagline">Twenty moves. Then you play beside yourself.</div>
         </div>
         <div class="title-foot">
-        <div class="streak" id="t-streak"></div>
+        <div class="today">
+          <button class="tcard glass" id="t-dailycard">
+            <svg class="ic"><use href="#i-cal"/></svg>
+            <div class="tc"><b id="td-title"></b><small id="td-sub"></small><span class="streak" id="t-streak"></span></div>
+          </button>
+          <button class="tcard glass" id="t-passcard">
+            <span class="tc-icon" id="tp-icon"></span>
+            <div class="tc"><b data-i18n="next_reward">Next reward</b><small id="tp-sub"></small><span class="minibar"><i id="tp-fill"></i></span></div>
+          </button>
+        </div>
         <div class="menu">
-          <button class="btn primary xl" id="b-play"><svg class="ic"><use href="#i-play"/></svg><span data-i18n="play">Play</span></button>
+          <button class="btn primary xl" id="b-play"><svg class="ic"><use href="#i-play"/></svg><span class="pl"><span data-i18n="play">Play</span><small id="play-sub"></small></span></button>
           <nav class="tiles">
             <button class="tile glass" id="b-daily"><svg class="ic"><use href="#i-cal"/></svg><span data-i18n="daily_s">Daily</span></button>
             <button class="tile glass" id="b-shop"><svg class="ic"><use href="#i-bag"/></svg><span data-i18n="shop">Shop</span></button>

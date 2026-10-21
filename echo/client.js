@@ -23,6 +23,7 @@ const STR = {
     play: "שחק", daily: "אתגר יומי", daily_s: "יומי", shop: "חנות", editor: "עורך שלבים", editor_s: "עורך", clubs: "מועדונים", settings: "הגדרות",
     worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות", world_n: "עולם {n}", new_best: "שיא חדש", up_next: "הבא",
     world_locked: "נפתח עם {n} כוכבים", redo: "שוב", undo: "בטל צעד", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט", assist: "סימוני סכנה",
+    daily_open: "עוד לא שיחקת היום", all_claimed: "כל הפרסים נאספו", all_clear: "הכל נוקה",
     tip: "טיפ", tip_plate: "עומד על לוחית? סיים את הסיבוב עכשיו, וההד שלך ימשיך להחזיק אותה.", tip_free: "הרחפנים זזים רק כשאתה זז. הצל הבהיר מראה לאן הרחפן ינחת בצעד הבא; תא אדום = תיתפס שם.",
     help_title: "רוצה דחיפה קטנה?", help_sub: "המשחק ישחק בשבילך את הסיבוב הראשון, ואתה תמשיך משם. בלי קנס.", help_yes: "הראה לי את הסיבוב הראשון", help_no: "אני אסתדר", help_play: "הסיבוב הראשון משוחק בשבילך",
     purchase_q: "לקנות {item} ב-{price}?", buy_for: "קנה ב-{price}", purchase_note: "אב־טיפוס: התשלום מדומה ולא מחויב כסף.",
@@ -64,6 +65,7 @@ const STR = {
     play: "Play", daily: "Daily challenge", daily_s: "Daily", shop: "Shop", editor: "Level editor", editor_s: "Editor", clubs: "Clubs", settings: "Settings",
     worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab", world_n: "World {n}", new_best: "New best", up_next: "Up next",
     world_locked: "Opens at {n} stars", redo: "Redo", undo: "Undo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback", assist: "Danger hints",
+    daily_open: "Not played yet today", all_claimed: "All rewards claimed", all_clear: "All clear",
     tip: "Tip", tip_plate: "Standing on a plate? End the loop now and your echo keeps holding it.", tip_free: "Drones step only when you do. The faint drone shows where it lands next; a red cell means you would be caught there.",
     help_title: "Want a nudge?", help_sub: "The game plays the first loop for you and you take it from there. No penalty.", help_yes: "Show me the first loop", help_no: "I've got this", help_play: "Playing the first loop for you",
     purchase_q: "Buy {item} for {price}?", buy_for: "Buy for {price}", purchase_note: "Prototype: payments are simulated and nothing is charged.",
@@ -311,7 +313,7 @@ function show(id) {
   for (const s of SCREENS) screenEl(s).hidden = s !== id;
   $("#hud").hidden = id !== "none";
   if (id !== "none") $("#banner").classList.remove("show");
-  if (id === "s-title") titleFx(true); else titleFx(false);
+  if (id === "s-title") { titleFx(true); renderTitle(); } else titleFx(false);
 }
 function openSheet() { screenEl("s-sheet").hidden = false; $("#hud").hidden = true; }
 function closeSheet() { screenEl("s-sheet").hidden = true; $("#hud").hidden = current !== "none"; }
@@ -327,12 +329,35 @@ function applyLang() {
   setNet();
   refreshCurrencies();
 }
+/** The home screen: the robot you play as, today's room, the next reward, where Play goes. */
+function renderTitle() {
+  const skin = mySkin();
+  const hero = $("#t-hero"); const src = `assets/${L.SKINS[skin].sprite}.png`; if (!hero.getAttribute("src").endsWith(src)) hero.src = src;
+  const esp = echoSprite(skin);
+  if (esp instanceof HTMLCanvasElement) for (const cv of document.querySelectorAll(".actor.echo canvas")) {
+    const g = cv.getContext("2d"); g.clearRect(0, 0, 256, 256); g.drawImage(esp, 0, 0, 256, 256);
+    // a second wash of the skin's light, so even a red robot reads as a hologram
+    g.globalCompositeOperation = "source-atop"; g.fillStyle = hexA(skinColor(skin), 0.35); g.fillRect(0, 0, 256, 256); g.globalCompositeOperation = "source-over";
+    cv.parentElement.style.filter = `drop-shadow(0 0 14px ${hexA(skinColor(skin), 0.6)})`;
+  }
+  else setTimeout(renderTitle, 300);
+  const dk = `daily-${today()}`, best = profile.best[dk];
+  $("#td-title").textContent = T("daily_name", { d: today() % 1000 });
+  $("#td-sub").textContent = best ? `${"★".repeat(profile.stars[dk] || 1)} · ${best.echoes} ${T("echoes_used")} · ${best.ticks} ${T("seconds")}` : T("daily_open");
+  const next = L.PASS_TIERS[profile.claimedTiers];
+  const ic = $("#tp-icon"); ic.innerHTML = ""; if (next) ic.append(rewardIcon(next, 34));
+  $("#tp-sub").textContent = next ? `${rewardLabel(next)} · ${Math.max(0, next.xp - profile.passXp)} XP` : T("all_claimed");
+  $("#tp-fill").style.width = next ? `${Math.min(100, profile.passXp / Math.max(1, next.xp) * 100)}%` : "100%";
+  const nl = L.LEVELS.find((l) => !profile.stars[l.id] && L.worldUnlocked(profile, l.world));
+  $("#play-sub").textContent = nl ? levelName(nl.id) : T("all_clear");
+}
 function refreshCurrencies() {
   document.querySelectorAll("#t-coins, .t-coins").forEach((e) => { e.textContent = profile.coins; });
   document.querySelectorAll("#t-gems, .t-gems").forEach((e) => { e.textContent = profile.gems; });
   document.querySelectorAll("#t-stars, .t-stars").forEach((e) => { e.textContent = L.totalStars(profile); });
   const st = $("#t-streak"); st.innerHTML = "";
   if (profile.streak) { st.innerHTML = `<svg class="ic"><use href="#i-flame"/></svg>`; st.append(document.createTextNode(T("streak", { n: profile.streak }))); }
+  if (!screenEl("s-title").hidden) renderTitle();
   if (!screenEl("s-levels").hidden) renderLevels();
   if (!screenEl("s-shop").hidden) renderShop();
   if (!screenEl("s-pass").hidden) renderPass();
@@ -1568,6 +1593,14 @@ tap($("#b-hintad"), () => {
 $("#b-ad").addEventListener("click", () => watchAd(() => { const v = saveRoom.act({ t: "ad", day: today() }); if (v.ok) { toast(T("ad_done")); sfx("coin"); } renderShop(); }));
 $("#b-claim").addEventListener("click", claimTier);
 $("#b-passpage").addEventListener("click", () => { renderPass(); show("s-pass"); });
+$("#t-passcard").addEventListener("click", () => { renderPass(); show("s-pass"); });
+$("#t-dailycard").addEventListener("click", () => $("#b-daily").click());
+// Parallax on the home screen: the hall drifts against the pointer.
+$("#s-title").addEventListener("pointermove", (e) => {
+  if (reduceMotion || e.pointerType === "touch") return;
+  const dx = (e.clientX / window.innerWidth - 0.5), dy = (e.clientY / window.innerHeight - 0.5);
+  $(".title-art .bg").style.translate = `${-dx * 14}px ${-dy * 8}px`; $(".actors").style.translate = `${dx * 8}px ${dy * 4}px`;
+});
 $("#b-passback").addEventListener("click", () => { renderShop(); show("s-shop"); });
 $("#b-getpass").addEventListener("click", () => purchase("pass"));
 $("#b-playdaily").addEventListener("click", () => startLevel(L.dailyLevel(today()), "daily"));

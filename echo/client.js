@@ -186,7 +186,7 @@ function setNet() {
 // ── assets ─────────────────────────────────────────────────────────────────
 
 const IMG = {};
-for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem", "floor"]) { const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
+for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem", "floor", "wall"]) { const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
 const BG = {};
 for (const n of ["bg_lab", "bg_obs", "bg_mirror"]) { const i = new Image(); i.src = `assets/${n}.jpg`; BG[n] = i; }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
@@ -405,7 +405,7 @@ function startLoop() {
   game.gen += 1;
   game.recording = "";
   game.run = L.createRun(game.level, [...game.logs, ""]);
-  game.acc = 0; game.timeScale = 1; game.particles = []; game.flies = []; game.doorAnim = {}; game.loopT = 0; game.freeze = 0;
+  game.acc = 0; game.timeScale = 1; game.particles = []; game.flies = []; game.doorAnim = {}; game.loopT = 0; game.freeze = 0; game.exitAnim = null;
   game.cam.zoom = reduceMotion ? 1 : 1.07; game.cam.tz = 1; game.cam.fx = game.cam.fy = game.cam.tfx = game.cam.tfy = 0;
   banner(T("loop_n", { n: game.logs.length + 1 }), game.logs.length ? T("loop_sub") : "", 900);
   tone(game.logs.length, 0.25);
@@ -470,6 +470,10 @@ function levelDone() {
   if (game.levelKey === "daily") dailyRoom.act(action);
   const reward = v.ok ? profile.coins - before : 0;
   sfx("win"); game.timeScale = 0.22; shake(6); buzz("success");
+  if (stars === 3 && !reduceMotion) {
+    const colors = ["#ffc93c", "#39e6ff", "#ff4fd8", "#ffffff", "#ff9a3c"];
+    for (let i = 0; i < 70; i++) game.particles.push({ x: Math.random() * view.cols, y: -0.5 - Math.random() * 2, vx: (Math.random() - 0.5) * 1.5, vy: 1 + Math.random() * 2, life: 2 + Math.random(), color: colors[i % colors.length], r: 3 + Math.random() * 3, conf: true });
+  }
   const h = game.run.actors[game.run.actors.length - 1];
   const hp = R(h.x, h.y);
   game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (hp.x - view.cols / 2) * view.cs * 0.6; game.cam.tfy = (hp.y - view.rows / 2) * view.cs * 0.6;
@@ -611,7 +615,7 @@ function handleEvents(run) {
     else if (e.t === "open") { sfx("door", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
     else if (e.t === "close") { game.doorAnim[e.k] = { t: 0, open: false }; }
     else if (e.t === "dead") burst(e.x, e.y, "#ff4fd8", 26);
-    else if (e.t === "exit") { burst(e.x, e.y, "#ffd9a8", 40); burst(e.x, e.y, "#39e6ff", 24); game.flash = 0.45; }
+    else if (e.t === "exit") { burst(e.x, e.y, "#ffd9a8", 40); burst(e.x, e.y, "#39e6ff", 24); game.flash = 0.45; game.exitAnim = { x: e.x, y: e.y, t: 0, face: game.run.actors[game.run.actors.length - 1].face || 1 }; }
   }
 }
 function ring(e) {
@@ -785,10 +789,12 @@ function drawWall(rm, x, y) {
     ctx.save(); ctx.translate(0, py + cs * (1 - H)); ctx.fillStyle = paint.front; ctx.fillRect(px, 0, cs, cs * H); ctx.restore();
     ctx.fillStyle = "rgba(255,255,255,.1)"; ctx.fillRect(px, py + cs * (1 - H), cs, 1.5);
   }
-  // Top face with a whisper of grain.
+  // Top face: slab gradient, the generated panel texture, a whisper of grain.
   ctx.fillStyle = paint.top; ctx.fillRect(px, py - cs * H, cs, cs);
+  if (ready(IMG.wall)) { ctx.globalAlpha = 0.42; ctx.drawImage(IMG.wall, px, py - cs * H, cs, cs); ctx.globalAlpha = 1; }
   const n = ((x * 7919 + y * 104729) % 17) / 17;
   ctx.fillStyle = `rgba(255,255,255,${0.012 + n * 0.03})`; ctx.fillRect(px, py - cs * H, cs, cs);
+  if (!isWall(x, y + 1)) { ctx.fillStyle = "rgba(57,230,255,.2)"; ctx.fillRect(px, py + cs - 2, cs, 2); }
   // Exposed edges catch the light; merged runs keep no seam.
   ctx.fillStyle = "rgba(255,255,255,.16)";
   if (!isWall(x, y - 1)) ctx.fillRect(px, py - cs * H, cs, 2);
@@ -927,6 +933,21 @@ function draw(dt) {
   items.sort((p, q) => p.z - q.z);
   for (const it of items) it.f();
 
+  // The hero spirals into the portal.
+  if (game.exitAnim) {
+    const ea = game.exitAnim; ea.t += dt;
+    const k = clamp01(ea.t / 0.55), p = R(ea.x, ea.y);
+    if (k >= 1) game.exitAnim = null;
+    else sprite(IMG.hero, p.x, p.y - 0.14 * (1 - k), 1.2 * (1 - k * 0.92), 1 - k * k, { flip: ea.face < 0, rot: k * k * 7 });
+  }
+  // A scanline sweeps the room as the walls rise.
+  if (!reduceMotion && game.levelT < 0.75) {
+    const k = easeOut(game.levelT / 0.75), yy = cy(rows * k);
+    const g = ctx.createLinearGradient(0, yy - cs * 1.6, 0, yy); g.addColorStop(0, "rgba(57,230,255,0)"); g.addColorStop(1, `rgba(57,230,255,${0.32 * (1 - k)})`);
+    ctx.fillStyle = g; ctx.fillRect(cx(0), yy - cs * 1.6, cs * cols, cs * 1.6);
+    ctx.fillStyle = `rgba(210,250,255,${0.85 * (1 - k)})`; ctx.fillRect(cx(0), yy - 1, cs * cols, 2);
+  }
+
   drawMotes(dt, cols, rows);
 
   // Particles (already in render space).
@@ -941,9 +962,12 @@ function draw(dt) {
       ctx.beginPath(); ctx.arc(0, 0, cs * (0.3 + k * 1.1), 0, 7); ctx.stroke(); ctx.restore();
       continue;
     }
-    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92;
+    const damp = p.conf ? 1 : Math.pow(0.006, dt);          // the old per-frame 0.92, made frame-rate independent
+    if (p.conf) p.vy += 4 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= damp; p.vy *= damp;
     ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y), p.r * (p.dust ? 1 + (0.35 - p.life) * 2 : 1), 0, 7); ctx.fill();
+    if (p.conf) { ctx.save(); ctx.translate(cx(p.x), cy(p.y)); ctx.rotate(p.life * 9 + p.x); ctx.fillRect(-p.r, -p.r * 0.5, p.r * 2, p.r); ctx.restore(); }
+    else { ctx.beginPath(); ctx.arc(cx(p.x), cy(p.y), p.r * (p.dust ? 1 + (0.35 - p.life) * 2 : 1), 0, 7); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
   ctx.restore();

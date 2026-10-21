@@ -21,7 +21,7 @@ const STR = {
   he: {
     tagline: "20 מהלכים. ואז אתה משחק לצד עצמך.",
     play: "שחק", daily: "אתגר יומי", daily_s: "יומי", shop: "חנות", editor: "עורך שלבים", editor_s: "עורך", clubs: "מועדונים", settings: "הגדרות",
-    worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות", world_n: "עולם {n}", new_best: "שיא חדש", up_next: "הבא",
+    worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות", world4: "בית היציקה", world5: "הליבה", world_n: "עולם {n}", new_best: "שיא חדש", up_next: "הבא",
     world_locked: "נפתח עם {n} כוכבים", redo: "שוב", undo: "בטל צעד", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט", assist: "סימוני סכנה",
     daily_open: "עוד לא שיחקת היום", all_claimed: "כל הפרסים נאספו", all_clear: "הכל נוקה",
     tip: "טיפ", tip_plate: "עומד על לוחית? סיים את הסיבוב עכשיו, וההד שלך ימשיך להחזיק אותה.", tip_free: "הרחפנים זזים רק כשאתה זז. הצל הבהיר מראה לאן הרחפן ינחת בצעד הבא; תא אדום = תיתפס שם.",
@@ -63,7 +63,7 @@ const STR = {
   en: {
     tagline: "Twenty moves. Then you play beside yourself.",
     play: "Play", daily: "Daily challenge", daily_s: "Daily", shop: "Shop", editor: "Level editor", editor_s: "Editor", clubs: "Clubs", settings: "Settings",
-    worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab", world_n: "World {n}", new_best: "New best", up_next: "Up next",
+    worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab", world4: "The Foundry", world5: "The Core", world_n: "World {n}", new_best: "New best", up_next: "Up next",
     world_locked: "Opens at {n} stars", redo: "Redo", undo: "Undo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback", assist: "Danger hints",
     daily_open: "Not played yet today", all_claimed: "All rewards claimed", all_clear: "All clear",
     tip: "Tip", tip_plate: "Standing on a plate? End the loop now and your echo keeps holding it.", tip_free: "Drones step only when you do. The faint drone shows where it lands next; a red cell means you would be caught there.",
@@ -206,7 +206,7 @@ function setNet() {
 const IMG = {};
 for (const n of ["hero", "echo", "plate", "door", "exit", "coin", "drone", "gem", ...new Set(Object.values(L.SKINS).map((s) => s.sprite))]) { if (IMG[n]) continue; const i = new Image(); i.src = `assets/${n}.png`; IMG[n] = i; }
 const BG = {};
-for (const n of ["bg_lab", "bg_obs", "bg_mirror"]) { const i = new Image(); i.src = `assets/${n}.jpg`; BG[n] = i; }
+for (const n of ["bg_lab", "bg_obs", "bg_mirror", "bg_foundry", "bg_core"]) { const i = new Image(); i.src = `assets/${n}.jpg`; BG[n] = i; }
 const ready = (img) => img && img.complete && img.naturalWidth > 0;
 
 /*
@@ -1305,7 +1305,7 @@ function renderLevels() {
     const unlocked = L.worldUnlocked(profile, w.id);
     const levels = L.LEVELS.filter((l) => l.world === w.id);
     const got = levels.reduce((n, l) => n + (profile.stars[l.id] || 0), 0), max = levels.length * 3;
-    const need = (w.id - 1) * 7, have = L.totalStars(profile);
+    const need = L.WORLD_STARS[w.id - 1], have = L.totalStars(profile);
     const sec = document.createElement("section"); sec.className = "wmap" + (unlocked ? "" : " locked");
     sec.style.setProperty("--art", `url(assets/${w.bg}.jpg)`);
     const prog = unlocked

@@ -46,7 +46,7 @@ export class LevelScene extends Scene {
 
   build() {
     const world = L.WORLDS.find((w) => w.id === this.level.world) ?? L.WORLDS[0]!;
-    this.bg = new Sprite(Texture.from(this.level.mirror ? "bg_mirror" : world.bg)); this.bg.anchor.set(0.5); this.addChild(this.bg);
+    this.bg = new Sprite(Texture.from(world.bg)); this.bg.anchor.set(0.5); this.addChild(this.bg);
     const dark = new Graphics(); dark.rect(-W, -1000, W * 3, 6000).fill({ color: C.ink, alpha: 0.22 }); this.addChild(dark);
     // input surface
     const hit = new Graphics(); hit.rect(-W, -1000, W * 3, 6000).fill({ color: 0xffffff, alpha: 0.001 }); this.addChild(hit);

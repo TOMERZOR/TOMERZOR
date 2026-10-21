@@ -21,6 +21,12 @@ for (const lv of L.LEVELS) {
   // never have been recorded, even if the final composite reaches the exit.
   const live = L.verifyLogs(lv, logs);
   if (!live) console.log(`${lv.id}: a recorded loop dies when played live`);
+  // A door right next to its own plate can be walked through alone (step on
+  // the plate, then into the doorway, which never shuts on an occupant).
+  for (let y = 0; y < lv.map.length; y++) for (let x = 0; x < lv.map[y].length; x++) {
+    const ch = lv.map[y][x]; if (!"abc".includes(ch)) continue;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (lv.map[y + dy]?.[x + dx] === ch.toUpperCase()) { console.log(`${lv.id}: door ${ch.toUpperCase()} touches its plate at (${x},${y}); it can be passed alone`); bad++; }
+  }
   // Patrols must stay on the floor.
   for (const d of lv.drones || []) for (let k = 0; k <= d.n; k++) {
     const x = d.x + d.dx * k, y = d.y + d.dy * k;

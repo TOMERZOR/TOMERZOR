@@ -44,7 +44,7 @@ try { await Promise.all(["700 40px Fredoka", "800 30px Nunito", "700 30px Heebo"
 const ICONS = ["play", "pause", "back", "gear", "bag", "chest", "coin", "gem", "star", "star_off", "lock", "cal", "flame", "trophy", "crown", "ticket", "undo", "restart", "skip", "bulb", "sound", "music", "vibrate", "globe", "share", "replay", "check", "cross", "info", "home"];
 await Assets.load([
   ...ICONS.map((n) => ({ alias: "icon_" + n, src: `assets/icons/${n}.png` })),
-  { alias: "bg_lab", src: "assets/bg_lab.jpg" }, { alias: "bg_obs", src: "assets/bg_obs.jpg" }, { alias: "bg_mirror", src: "assets/bg_mirror.jpg" },
+  { alias: "bg_lab", src: "assets/bg_lab.jpg" }, { alias: "bg_obs", src: "assets/bg_obs.jpg" }, { alias: "bg_mirror", src: "assets/bg_mirror.jpg" }, { alias: "bg_foundry", src: "assets/bg_foundry.jpg" }, { alias: "bg_core", src: "assets/bg_core.jpg" },
   { alias: "bg_title", src: "assets/bg_title.jpg" },
   { alias: "map_bg", src: "assets/map_bg.jpg" },
   ...["hero", "echo", "coin", "gem", "drone", "exit", "plate", "bot_knight", "bot_astro", "bot_mecha", "bot_ninja", "bot_pirate", "bot_samurai", "bot_wizard", "bot_royal"].map((n) => ({ alias: n, src: `assets/${n}.png` })),

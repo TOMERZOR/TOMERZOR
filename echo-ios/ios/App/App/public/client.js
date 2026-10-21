@@ -78,7 +78,7 @@ const STR = {
     about: "ECHO · prototype · art and sound made with Higgsfield", you: "you", unnamed: "Player", menu: "Menu",
   },
 };
-let lang = "he";
+let lang = "en";
 const T = (k, v) => (STR[lang][k] || STR.en[k] || k).replace(/\{(\w+)\}/g, (_, n) => (v && v[n] !== undefined ? v[n] : ""));
 
 // ── settings & identity ────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("echo:" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("echo:" + k, JSON.stringify(v)); } catch { /* private mode */ } },
 };
-const opts = Object.assign({ music: true, sfx: true, shake: true, lang: "he" }, store.get("opts", {}));
+const opts = Object.assign({ music: true, sfx: true, shake: true, lang: "en" }, store.get("opts", {}));
 lang = opts.lang;
 function playerId() {
   let id = store.get("pid", null);

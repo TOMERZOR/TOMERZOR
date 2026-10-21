@@ -494,11 +494,11 @@ export const SKINS = {
 /** Store-front products. In this prototype a "purchase" is granted on trust;
  *  a shipping build verifies the App Store receipt before applying it. */
 export const IAP = {
-  starter: { price: "₪7.90", gems: 120, coins: 500, skin: "gold", once: true },
-  gems_small: { price: "₪3.90", gems: 100 },
-  gems_big: { price: "₪18.90", gems: 600 },
-  noads: { price: "₪14.90", noads: true, once: true },
-  pass: { price: "₪18.90", pass: true, once: true },
+  starter: { price: "$1.99", gems: 120, coins: 500, skin: "gold", once: true },
+  gems_small: { price: "$0.99", gems: 100 },
+  gems_big: { price: "$4.99", gems: 600 },
+  noads: { price: "$3.99", noads: true, once: true },
+  pass: { price: "$4.99", pass: true, once: true },
 };
 
 export const PASS_TIERS = [

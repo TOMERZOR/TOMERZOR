@@ -1,0 +1,19 @@
+id,role,type,description,size/ratio,style line ref,source
+hero,live player sprite,sprite,the small round orange robot hero with one big eye,256x256 / 1:1,STYLE FORMULA v1 (hero block),generate
+echo,recorded echo sprite (tinted per skin),sprite,translucent cyan hologram copy of the hero,256x256 / 1:1,STYLE FORMULA v1 (echo block),generate
+plate,pressure plate tile,sprite,square floor plate with hot-magenta rim,256x256 / 1:1,STYLE FORMULA v1 (hazard/pickup block),generate
+door,energy gate (slides up while plate held),sprite,tall slate door with magenta energy bars,256x256 / 1:1,STYLE FORMULA v1 (hazard/pickup block),generate
+exit,level exit,sprite,golden-white portal ring,256x256 / 1:1,STYLE FORMULA v1,generate
+coin,pickup + soft currency icon,sprite,gold coin with star emblem,256x256 / 1:1,STYLE FORMULA v1 (pickup block),generate
+drone,patrolling hazard,sprite,dark slate sphere drone with magenta eye,256x256 / 1:1,STYLE FORMULA v1 (hazard block),generate
+gem,premium currency icon,sprite,faceted violet gem,256x256 / 1:1,STYLE FORMULA v1,generate
+bg_lab,world 1 + 3 backdrop,background,calm futuristic laboratory interior,1280x720 / 16:9,STYLE FORMULA v1 (environment block),generate
+bg_obs,world 2 backdrop,background,observatory lab with nebula window,1280x720 / 16:9,STYLE FORMULA v1 (environment block),generate
+keyart,title screen + launch cover scene,illustration,hero running while five echoes hold a door and press a plate,1500x1000 / 3:2,STYLE FORMULA v1,generate
+icon,app icon (all iOS sizes) + favicon,illustration,hero in front of three fanned echo copies,1024x1024 / 1:1,STYLE FORMULA v1,generate
+music,looping background track,music,calm playful synthwave puzzle loop with a clock pulse,40 s loop,—,generate (sonilo_music)
+sfx_chime,coin pickup / UI confirm / echo saved,sfx,short bright rising digital chime,1 s,—,generate (mirelo_text_to_audio)
+sfx_plate,plate pressed,sfx,soft mechanical click,1 s,—,generate (mirelo_text_to_audio)
+sfx_door,door opens,sfx,energy door sliding open with a hum,2 s,—,generate (mirelo_text_to_audio)
+sfx_win,level complete,sfx,triumphant sparkling portal whoosh,2 s,—,generate (mirelo_text_to_audio)
+sfx_fail,caught by a drone / out of echoes,sfx,short low electric zap,1 s,—,generate (mirelo_text_to_audio)

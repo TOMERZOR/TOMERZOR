@@ -17,7 +17,16 @@ for (const lv of L.LEVELS) {
   const res = L.simulate(lv, logs);
   const echoes = logs.length - 1;
   const okPar = echoes <= lv.par;
-  if (!res.ok || !okPar) bad++;
+  // Every loop must be playable live: a route that walks into a drone could
+  // never have been recorded, even if the final composite reaches the exit.
+  const live = L.verifyLogs(lv, logs);
+  if (!live) console.log(`${lv.id}: a recorded loop dies when played live`);
+  // Patrols must stay on the floor.
+  for (const d of lv.drones || []) for (let k = 0; k <= d.n; k++) {
+    const x = d.x + d.dx * k, y = d.y + d.dy * k;
+    if (lv.map[y]?.[x] === "#" || lv.map[y]?.[x] === undefined) { console.log(`${lv.id}: drone path enters a wall at (${x},${y})`); bad++; break; }
+  }
+  if (!res.ok || !okPar || !live) bad++;
   let where = "";
   if (!res.ok) {
     const run = L.createRun(lv, logs);

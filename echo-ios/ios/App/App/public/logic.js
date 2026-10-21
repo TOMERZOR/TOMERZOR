@@ -178,7 +178,7 @@ export const LEVELS = [
     ],
     drones: [
       { x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 0 },
-      { x: 2, y: 8, dx: 1, dy: 0, n: 2, phase: 3 },
+      { x: 1, y: 8, dx: 1, dy: 0, n: 2, phase: 3 },
     ],
   },
   {
@@ -530,6 +530,25 @@ export function simulate(level, logs) {
   return { ok: run.finished, exitTick: run.exitTick, coins: run.taken, dead: run.dead, echoes: logs.length - 1 };
 }
 
+/**
+ * True when every loop could really have been recorded: the live hero of loop
+ * i must survive until its own log ends, because a loop that dies is never
+ * saved as an echo. `simulate` only runs the last loop live, so without this a
+ * forged log could walk straight through a drone.
+ */
+export function verifyLogs(level, logs) {
+  for (let i = 0; i < logs.length; i++) {
+    const run = createRun(level, logs.slice(0, i + 1));
+    const log = logs[i];
+    for (let t = 0; t < Math.min(log.length, LOOP_TICKS) && !run.finished; t++) {
+      const c = log.charCodeAt(t) - 48;
+      stepRun(run, c >= 0 && c <= 8 ? c : 0);
+      if (run.dead) return false;
+    }
+  }
+  return true;
+}
+
 export function starsFor(level, echoes) {
   if (echoes <= level.par) return 3;
   if (echoes <= level.par + 1) return 2;
@@ -622,6 +641,7 @@ export function validateAction(state, playerId, action) {
       }
       const res = simulate(level, action.logs);
       if (!res.ok) return { ok: false, error: "the exit was not reached" };
+      if (!verifyLogs(level, action.logs)) return { ok: false, error: "a loop could not have been played" };
       return { ok: true };
     }
     case "buy": {
@@ -688,13 +708,16 @@ export function applyAction(state, playerId, action) {
       const res = simulate(level, action.logs);
       const stars = starsFor(level, res.echoes);
       const key = action.level === "daily" ? `daily-${action.day}` : action.level;
-      const first = !p.best[key];
-      const reward = 20 + res.coins * 10 + (first ? 50 : 0) + (action.level === "daily" ? 40 : 0);
+      const custom = key.startsWith("custom");
+      const first = !custom && !p.best[key];
+      // Editor rooms are a test bench: they pay nothing, or a one-cell room
+      // would be an endless coin and XP farm.
+      const reward = custom ? 0 : 20 + res.coins * 10 + (first ? 50 : 0) + (action.level === "daily" ? 40 : 0);
       p.coins += reward;
       p.lastReward = reward;
-      p.clears += 1;
-      p.passXp += 10 * stars + res.coins * 2;
-      if (!key.startsWith("custom")) {
+      if (!custom) {
+        p.clears += 1;
+        p.passXp += 10 * stars + res.coins * 2;
         p.stars[key] = Math.max(p.stars[key] || 0, stars);
         const b = p.best[key];
         if (!b || res.echoes < b.echoes || (res.echoes === b.echoes && res.exitTick < b.ticks)) {

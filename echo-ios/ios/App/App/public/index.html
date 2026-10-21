@@ -122,7 +122,14 @@
     }
     .screen::-webkit-scrollbar { display: none; }
     .screen[hidden] { display: none; }
-    .screen.over { background: radial-gradient(80% 60% at 50% 45%, rgba(10,14,32,.35), rgba(5,7,18,.86)); backdrop-filter: blur(6px); justify-content: center; align-items: center; animation-name: fade-in; }
+    .screen.over { background: radial-gradient(80% 60% at 50% 45%, rgba(10,14,32,.35), rgba(5,7,18,.86)); backdrop-filter: blur(6px); justify-content: flex-start; align-items: center; animation-name: fade-in; }
+    .screen.over > * { margin: auto; flex-shrink: 0; }
+    /* Right-to-left: arrows flip, numbers stay numbers, the room grid stays a room. */
+    [dir="rtl"] .b-back .ic, [dir="rtl"] #b-quit .ic { transform: scaleX(-1); }
+    .stat b, .chip, #h-coins, .board span:not(.grow) { direction: ltr; unicode-bidi: isolate; }
+    #edgrid { direction: ltr; }
+    .dailyyou { display: flex; align-items: center; gap: 6px; margin: 10px 0 0; color: var(--gold); font-weight: 800; font-size: .85rem; }
+    .dailyyou .ic { fill: var(--gold); stroke: none; } .dailyyou .ic.off { fill: rgba(142,152,200,.3); }
     @keyframes sheet-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
     @keyframes fade-in { from { opacity: 0; } }
     .topbar { display: flex; align-items: center; gap: 12px; min-height: 48px; }
@@ -163,7 +170,8 @@
     @keyframes hot { to { stroke-width: 7; } }
     #timer b { position: absolute; inset: 0; display: grid; place-items: center; font: 600 1.6rem var(--display); font-variant-numeric: tabular-nums; }
     .hud-sub { display: flex; align-items: center; gap: 8px; }
-    #lvname { font: 600 .95rem var(--display); color: var(--dim); letter-spacing: .04em; }
+    #lvname { font: 600 .95rem var(--display); color: var(--dim); letter-spacing: .04em; white-space: nowrap; }
+    .hud-sub { flex-wrap: nowrap; }
     #echoes { display: flex; gap: 5px; align-items: center; }
     #echoes i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid rgba(57,230,255,.45); transition: .3s; }
     #echoes i.on { background: var(--echo); border-color: var(--echo); box-shadow: 0 0 10px var(--echo); }
@@ -244,29 +252,45 @@
     .tile .badge { position: absolute; top: -6px; right: -6px; background: var(--hero); color: var(--hero-ink); font: 800 .65rem var(--body); padding: 2px 6px; border-radius: 999px; }
     .netline { font: 700 .72rem var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
 
-    /* ── worlds ── */
-    .world { position: relative; overflow: hidden; border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
-    .world::before { content: ""; position: absolute; inset: 0; background: var(--art) center / cover; opacity: .32; filter: saturate(.8); z-index: -1; }
-    .world.locked { filter: grayscale(.6); }
-    .world.locked .rooms { opacity: .45; }
-    .world header { display: flex; align-items: center; gap: 10px; }
-    .world header .num { font: 700 2rem/1 var(--display); color: var(--echo); text-shadow: 0 0 16px rgba(57,230,255,.5); }
-    .world header h2 { flex: 1; }
-    .lockline { display: flex; align-items: center; gap: 6px; color: var(--dim); font-weight: 800; font-size: .85rem; }
-    .rooms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    .room { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--fg); transition: transform .12s cubic-bezier(.2,.9,.3,1.4); }
-    .room:active { transform: scale(.94); }
-    .room canvas { width: 100%; aspect-ratio: 7 / 11; border-radius: 8px; border: 1px solid var(--edge); box-shadow: 0 8px 18px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08); background: #0a0e20; }
-    .room.done canvas { border-color: var(--edge-strong); }
-    .room .num { position: absolute; top: 4px; right: 6px; font: 700 .95rem var(--display); text-shadow: 0 2px 0 rgba(0,0,0,.8); }
-    .room .stars { display: flex; gap: 2px; }
-    .room .stars .ic { width: 13px; height: 13px; fill: var(--gold); stroke: none; filter: drop-shadow(0 0 4px rgba(255,201,60,.6)); }
-    .room .stars .ic.off { fill: rgba(142,152,200,.3); filter: none; }
+    /* ── worlds: banner + trail of nodes ── */
+    .wmap { position: relative; display: flex; flex-direction: column; border-radius: 18px; overflow: hidden; background: rgba(10,14,34,.6); border: 1px solid var(--edge); box-shadow: 0 18px 44px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
+    .wbanner { position: relative; display: flex; align-items: flex-end; gap: 12px; min-height: 124px; padding: 14px 16px 12px; isolation: isolate; }
+    .wbanner::before { content: ""; position: absolute; inset: 0; background: var(--art) center 40% / cover; opacity: .8; z-index: -2; }
+    .wbanner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,10,24,.05), rgba(7,10,24,.5) 55%, rgba(10,14,34,.97)); z-index: -1; }
+    .wnum { font: 700 3.2rem/0.9 var(--display); color: #fff; text-shadow: 0 0 26px rgba(57,230,255,.7), 0 4px 0 rgba(7,10,24,.9); }
+    .wtitle { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .wtitle h2 { margin: 0; font-size: 1.45rem; line-height: 1.1; text-shadow: 0 2px 0 rgba(7,10,24,.8); }
+    .wprog { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+    .bar { width: 104px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
+    .bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold), #ffe08a); box-shadow: 0 0 10px rgba(255,201,60,.6); transition: width .5s ease; }
+    .locked .bar i { background: linear-gradient(90deg, var(--echo), #9ff3ff); box-shadow: 0 0 10px rgba(57,230,255,.5); }
+    .lockline { display: flex; align-items: center; gap: 6px; color: var(--fg); font-weight: 800; font-size: .8rem; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
+    .path { position: relative; height: calc(var(--n) * 96px); margin: 2px 0 8px; }
+    .locked .path { opacity: .55; filter: saturate(.5); }
+    .trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+    .trail path { fill: none; stroke-linecap: round; stroke-width: 4; }
+    .trail path.dim { stroke: rgba(142,152,200,.3); stroke-dasharray: 1 11; }
+    .trail path.lit { stroke: var(--gold); stroke-dasharray: 1 11; filter: drop-shadow(0 0 6px rgba(255,201,60,.8)); }
+    .node { position: absolute; left: var(--x); top: calc(var(--row) * 96px + 48px); transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--fg); }
+    .node .disc { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font: 700 1.6rem/1 var(--display); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.5);
+      background: radial-gradient(circle at 36% 28%, #46549a, #1c2254 72%); border: 2px solid rgba(255,255,255,.16);
+      box-shadow: 0 10px 22px rgba(0,0,0,.5), inset 0 2px 0 rgba(255,255,255,.14), inset 0 -8px 14px rgba(0,0,0,.4); transition: transform .12s cubic-bezier(.2,.9,.3,1.4); }
+    .node .disc .ic { width: 22px; height: 22px; color: var(--dim); }
+    .node:active .disc { transform: scale(.92); }
+    .node.done .disc { border-color: #ffd86a; background: radial-gradient(circle at 36% 28%, #7a5d16, #3a2c0a 72%); box-shadow: 0 10px 22px rgba(0,0,0,.5), 0 0 20px rgba(255,201,60,.35), inset 0 2px 0 rgba(255,255,255,.18), inset 0 -8px 14px rgba(0,0,0,.35); }
+    .node.next .disc { border-color: var(--echo); animation: node-pulse 1.6s ease-in-out infinite; }
+    @keyframes node-pulse { 0%, 100% { box-shadow: 0 10px 22px rgba(0,0,0,.5), 0 0 0 0 rgba(57,230,255,.45), 0 0 22px rgba(57,230,255,.45), inset 0 2px 0 rgba(255,255,255,.14); } 50% { box-shadow: 0 10px 22px rgba(0,0,0,.5), 0 0 0 10px rgba(57,230,255,0), 0 0 30px rgba(57,230,255,.7), inset 0 2px 0 rgba(255,255,255,.14); } }
+    .node .tag { font: 800 .6rem/1 var(--body); letter-spacing: .14em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: var(--echo); color: #06202a; box-shadow: 0 4px 12px rgba(57,230,255,.5); margin-bottom: -2px; }
+    .node .stars { display: flex; gap: 2px; }
+    .node .stars .ic { width: 13px; height: 13px; fill: var(--gold); stroke: none; filter: drop-shadow(0 0 4px rgba(255,201,60,.6)); }
+    .node .stars .ic.off { fill: rgba(142,152,200,.3); filter: none; }
+    .node.off .stars { visibility: hidden; }
 
     /* ── result ── */
     .result { width: min(460px, 100%); display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; padding: 26px 20px 22px; }
     .shout { font: 700 clamp(2rem, 9vw, 3rem)/1 var(--display); letter-spacing: .03em; color: #fff; text-shadow: 0 4px 0 rgba(7,10,24,.9), 0 0 36px rgba(57,230,255,.35); position: relative; isolation: isolate; }
     .shout::before { content: attr(data-echo); position: absolute; inset: 0; z-index: -1; color: var(--echo); opacity: .35; transform: translate(-4px, 3px); text-shadow: none; }
+    .pill { font: 800 .68rem/1 var(--body); letter-spacing: .14em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; background: var(--gold); color: #3a2a00; box-shadow: 0 4px 14px rgba(255,201,60,.5); margin-top: -6px; animation: star-in .5s cubic-bezier(.2,1.7,.4,1) both; animation-delay: .5s; }
     .bigstars { display: flex; gap: 10px; min-height: 64px; align-items: center; }
     .bigstars .ic { width: 58px; height: 58px; stroke: none; fill: url(#g-star); filter: drop-shadow(0 0 14px rgba(255,201,60,.65)); transform: scale(0); }
     .bigstars .ic.on { animation: star-in .55s cubic-bezier(.2,1.7,.4,1) forwards; }
@@ -434,13 +458,14 @@
     <!-- Level select -->
     <section class="screen" id="s-levels" hidden>
       <div class="topbar"><button class="hbtn b-back"><span class="disc"><svg class="ic"><use href="#i-back"/></svg></span></button><h1 data-i18n="worlds">Worlds</h1><span class="chip"><svg class="ic" style="width:16px;height:16px;fill:var(--gold);stroke:none"><use href="#i-star"/></svg><span class="t-stars">0</span></span></div>
-      <div id="worlds" style="display:flex;flex-direction:column;gap:14px"></div>
+      <div id="worlds" style="display:flex;flex-direction:column;gap:16px"></div>
     </section>
 
     <!-- Result -->
     <section class="screen over" id="s-result" hidden>
       <div class="result glass">
         <h2 class="shout" id="r-title"></h2>
+        <span class="pill" id="r-best" hidden></span>
         <div class="bigstars" id="r-stars"></div>
         <div class="stats">
           <div class="stat"><b id="r-echoes">0</b><span data-i18n="echoes_used">echoes</span></div>
@@ -487,6 +512,7 @@
         <div class="eyebrow" id="d-title"></div>
         <p data-i18n="daily_sub">One room for every player in the world. Fewest echoes wins; time breaks ties.</p>
         <button class="btn primary" id="b-playdaily" data-i18n="play_daily">Play today's room</button>
+        <p id="d-you" class="dailyyou" hidden></p>
       </div>
       <div class="eyebrow" data-i18n="leaderboard">Leaderboard</div>
       <div class="board" id="board"></div>
@@ -497,11 +523,11 @@
       <div class="topbar"><button class="hbtn b-back"><span class="disc"><svg class="ic"><use href="#i-back"/></svg></span></button><h1 data-i18n="editor">Level editor</h1></div>
       <p data-i18n="editor_sub">Paint a room, test it, then share its code. Rooms need one start and one exit; a door opens while its plate is held.</p>
       <div class="palette" id="palette"></div>
+      <p class="dim small" data-i18n="drone_tool" style="margin:-6px 0 0;font-size:.8rem;color:var(--dim)">◉ = drone: tap a cell to place one, tap again to remove</p>
       <div id="edgrid"></div>
       <div class="row">
         <label class="row"><span data-i18n="mirror">Mirror echoes</span><input type="checkbox" id="ed-mirror" /></label>
         <label class="row"><span data-i18n="par">Par</span><input type="number" id="ed-par" min="1" max="6" value="3" style="width:4.5em" /></label>
-        <button class="btn small" id="b-adddrone" data-i18n="add_drone">+ Drone</button>
         <button class="btn small ghost" id="b-cleardrones" data-i18n="clear_drones">Clear drones</button>
       </div>
       <div class="row">

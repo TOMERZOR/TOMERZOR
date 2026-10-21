@@ -423,6 +423,7 @@ function startLoop() {
   banner(T("loop_n", { n: game.logs.length + 1 }), game.logs.length ? T("loop_sub") : "", 900);
   tone(game.logs.length, 0.25);
   renderEchoDots();
+  updateTimer(game.run);
   $("#h-coins").textContent = "0";
 }
 function renderEchoDots() {

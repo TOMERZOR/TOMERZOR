@@ -122,6 +122,7 @@
     }
     .screen::-webkit-scrollbar { display: none; }
     .screen[hidden] { display: none; }
+    [hidden] { display: none !important; }
     .screen.over { background: radial-gradient(80% 60% at 50% 45%, rgba(10,14,32,.35), rgba(5,7,18,.86)); backdrop-filter: blur(6px); justify-content: flex-start; align-items: center; animation-name: fade-in; }
     .screen.over > * { margin: auto; flex-shrink: 0; }
     /* Right-to-left: arrows flip, numbers stay numbers, the room grid stays a room. */

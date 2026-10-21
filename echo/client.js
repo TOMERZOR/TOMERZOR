@@ -471,7 +471,7 @@ function levelDone() {
   const logs = [...game.logs, game.recording];
   const res = L.simulate(game.level, logs);
   const stars = L.starsFor(game.level, res.echoes);
-  const action = { t: "complete", level: game.levelKey, logs, day: today() };
+  const action = { t: "complete", level: game.levelKey, logs, day: today(), name: profile.name || "" };
   const bestKey = game.levelKey === "daily" ? `daily-${today()}` : game.levelKey;
   const custom = game.levelKey.startsWith("custom");
   const prev = profile.best[bestKey];
@@ -518,6 +518,7 @@ function countUp(el, n) {
 }
 function nextLevelKey() {
   const i = L.LEVELS.findIndex((l) => l.id === game.levelKey);
+  if (i < 0) return null;                                   // daily and editor rooms have no "next"
   const n = L.LEVELS[i + 1];
   return n && L.worldUnlocked(profile, n.world) ? n.id : null;
 }

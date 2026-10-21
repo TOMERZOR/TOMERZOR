@@ -303,7 +303,10 @@ export function dailyLevel(day) {
     phase: (d.phase + Math.floor(r() * 6)) % 8,
   }));
   if (!drones.length) {
-    drones.push({ x: 5, y: 1, dx: 0, dy: 1, n: 4, phase: Math.floor(r() * 6) });
+    // A patrol down the first column that is open from row 1 to row 5.
+    const open = (x) => [1, 2, 3, 4, 5].every((y) => map[y][x] !== "#" && !"SEabcABC".includes(map[y][x]));
+    const x = [5, 1, 3, 2, 4].find(open);
+    if (x !== undefined) drones.push({ x, y: 1, dx: 0, dy: 1, n: 4, phase: Math.floor(r() * 6) });
   }
   return { id: "daily", world: base.world, par: base.par, map, drones, mirror: false, day };
 }
@@ -333,6 +336,10 @@ export function decodeLevel(code) {
       const [x, y, dx, dy, n, phase] = v;
       if (x < 0 || x >= COLS || y < 0 || y >= ROWS || n < 1 || n > 10) return null;
       if (!((Math.abs(dx) === 1 && dy === 0) || (Math.abs(dy) === 1 && dx === 0))) return null;
+      for (let k = 0; k <= n; k++) {
+        const cx = x + dx * k, cy = y + dy * k;
+        if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS || map[cy][cx] === "#") return null;
+      }
       drones.push({ x, y, dx, dy, n, phase: ((phase % 8) + 8) % 8 });
     }
     if (drones.length > 4) return null;
@@ -472,8 +479,15 @@ export function stepRun(run, heroDir) {
   for (const k of ["a", "b", "c"]) {
     if (pressed[k] && !run.plates[k]) ev.push({ t: "plate", k });
     const door = k.toUpperCase();
-    if (pressed[k] !== run.doors[door]) ev.push({ t: pressed[k] ? "open" : "close", k: door });
-    run.doors[door] = pressed[k];
+    let open = pressed[k];
+    // A gate never shuts on someone standing in it: it waits until the doorway is clear.
+    if (!open && run.doors[door]) {
+      for (const a of run.actors) {
+        if (a.alive && !a.done && run.level.map[Math.floor(a.y)][Math.floor(a.x)] === door) { open = true; break; }
+      }
+    }
+    if (open !== run.doors[door]) ev.push({ t: open ? "open" : "close", k: door });
+    run.doors[door] = open;
   }
   run.plates = pressed;
 
@@ -639,6 +653,8 @@ export function validateAction(state, playerId, action) {
       if (action.level === "daily" && (!isInt(action.day) || action.day < state.daily.day)) {
         return { ok: false, error: "stale day" };
       }
+      if (action.name !== undefined && (typeof action.name !== "string" || action.name.length > 16)) return { ok: false, error: "bad name" };
+      if (level.id !== "daily" && level.id !== "custom" && !worldUnlocked(p, level.world)) return { ok: false, error: "world locked" };
       const res = simulate(level, action.logs);
       if (!res.ok) return { ok: false, error: "the exit was not reached" };
       if (!verifyLogs(level, action.logs)) return { ok: false, error: "a loop could not have been played" };
@@ -662,7 +678,7 @@ export function validateAction(state, playerId, action) {
       return { ok: true };
     }
     case "ad":
-      if (!isInt(action.day)) return { ok: false, error: "bad day" };
+      if (!isInt(action.day) || action.day < p.adsDay) return { ok: false, error: "bad day" };
       if (p.adsDay === action.day && p.adsToday >= ADS_PER_DAY) return { ok: false, error: "no more ads today" };
       return { ok: true };
     case "claim_pass": {
@@ -726,7 +742,8 @@ export function applyAction(state, playerId, action) {
       }
       if (action.level === "daily") {
         const board = action.day > daily.day ? [] : [...daily.board];
-        const entry = { pid: playerId, name: p.name || "", echoes: res.echoes, ticks: res.exitTick, coins: res.coins };
+        // The board lives in its own room, which never hears the name action, so the clear carries it.
+        const entry = { pid: playerId, name: (typeof action.name === "string" ? action.name : p.name || "").slice(0, 16), echoes: res.echoes, ticks: res.exitTick, coins: res.coins };
         const i = board.findIndex((e) => e.pid === playerId);
         if (i < 0) board.push(entry);
         else if (entry.echoes < board[i].echoes || (entry.echoes === board[i].echoes && entry.ticks < board[i].ticks)) board[i] = entry;

@@ -42,13 +42,21 @@ final class Helper: ObservableObject {
             part.sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         }
         listener.onFinished = { [weak self] heard in self?.heard(heard) }
+        // The camera and screen sharing never run together: sharing turns the camera off, ending it
+        // turns the camera back on.
         liveGuide.onStarted = { [weak self] in
             guard let self else { return }
+            self.listener.cancel()
+            self.camera.stop()
+            self.attachedPhoto = nil
+            self.attachedDate = nil
+            self.phase = .ready
             self.show(Self.line(.liveStart, self.settings.lang), speak: true)
         }
         liveGuide.onReply = { [weak self] step in self?.showLive(step) }
         liveGuide.onEnded = { [weak self] finished in
             guard let self else { return }
+            if self.cameraOn { self.camera.start() }
             self.show(Self.line(finished ? .liveDone : .liveStopped, self.settings.lang), speak: true)
         }
         prepareVoice()
@@ -81,13 +89,13 @@ final class Helper: ObservableObject {
         }
         #endif
         AudioSessionSetup.configure()
-        if cameraOn { camera.start() }
+        if cameraOn && !liveGuide.isLive { camera.start() }
         Task { await latestPhoto.refreshThumbnail() }
     }
 
     /// The shortcut: Moffy looks at the newest screenshot or photo instead of through the camera.
     func useLatestPhoto() {
-        guard phase == .ready else { return }
+        guard phase == .ready, !liveGuide.isLive else { return }
         listener.cancel()
         speaker.stop()
         Task {
@@ -170,7 +178,7 @@ final class Helper: ObservableObject {
 
     /// "Done, next step": the person did what Moffy asked; look again and continue.
     func stepDone() {
-        guard phase == .ready else { return }
+        guard phase == .ready, !liveGuide.isLive else { return }
         listener.cancel()
         Task { await ask(settings.t("I did that. What's next?", "עשיתי את זה. מה הלאה?")) }
     }
@@ -201,7 +209,7 @@ final class Helper: ObservableObject {
 
     func setCamera(on: Bool) {
         settings.useCamera = on
-        if on { camera.start() } else { camera.stop() }
+        if on && !liveGuide.isLive { camera.start() } else { camera.stop() }
     }
 
     /// Saves the natural voice for the app's fixed lines on the phone, so they play instantly and
@@ -229,6 +237,16 @@ final class Helper: ObservableObject {
     }
 
     private func ask(_ question: String) async {
+        // While the screen is shared, Moffy answers from the screen, never from the camera.
+        if liveGuide.isLive {
+            lastQuestion = question
+            speaker.stop()
+            history.append(ChatTurn(role: .user, text: question))
+            liveGuide.newGoal(question, history: history, language: settings.lang)
+            phase = .ready
+            show(Self.line(.liveAsked, settings.lang), speak: true)
+            return
+        }
         lastQuestion = question
         phase = .thinking
         speaker.stop()
@@ -268,7 +286,7 @@ final class Helper: ObservableObject {
     // MARK: - Fixed lines (the only words Moffy says that don't come from Claude)
 
     enum FixedLine: CaseIterable { case microphoneOff, didNotHear, offline, notSetUp, busy, refused, other, gotPhoto, noPhotos, photosOff,
-                                     liveStart, liveDone, liveStopped }
+                                     liveStart, liveDone, liveStopped, liveAsked }
 
     static func line(_ kind: FixedLine, _ language: AppLanguage) -> MoffyReply {
         let he = language == .hebrew
@@ -310,6 +328,10 @@ final class Helper: ObservableObject {
             return MoffyReply(say: t("I don't have access to your pictures. You can allow it in the phone's Settings, under My Old Friend.",
                                      "אין לי גישה לתמונות. אפשר לאשר אותה בהגדרות של הטלפון, תחת החבר הוותיק שלי."),
                               caption: t("Allow Photos in Settings", "לאשר תמונות בהגדרות"), mood: .worried)
+        case .liveAsked:
+            return MoffyReply(say: t("Got it. I'm looking at your screen and will tell you what to press.",
+                                     "הבנתי. אני מסתכלת על המסך ואגיד לכם על מה ללחוץ."),
+                              caption: t("Looking at your screen", "מסתכלת על המסך"), mood: .thinking)
         case .liveStart:
             return MoffyReply(say: t("I'm looking at your screen. Please go to the app you need help with.",
                                      "אני מסתכלת על המסך. עברו בבקשה לאפליקציה שבה צריך עזרה."),

@@ -98,7 +98,10 @@ private struct StageView: View {
     @Environment(\.openURL) private var openURL
     let layout: StageLayout
 
-    private var cameraVisible: Bool { helper.showsSampleScene || (helper.cameraOn && helper.camera.isAuthorized) }
+    /// The camera shows only when the screen isn't being shared; the two never run together.
+    private var cameraVisible: Bool {
+        !helper.liveGuide.isLive && (helper.showsSampleScene || (helper.cameraOn && helper.camera.isAuthorized))
+    }
     /// A picture is in the frame: the live camera, or the newest picture from Photos.
     private var pictureVisible: Bool { cameraVisible || helper.attachedPhoto != nil }
     private var moffySize: CGFloat { pictureVisible ? 83 : 160 }
@@ -168,7 +171,7 @@ private struct StageView: View {
                     }
                     .position(x: settings.lang == .hebrew ? frame.minX + 40 : frame.maxX - 40, y: frame.minY + 40)
                 }
-            } else if helper.phase == .ready && helper.reply?.point == nil {
+            } else if helper.phase == .ready && helper.reply?.point == nil && !helper.liveGuide.isLive {
                 LatestPhotoButton()
                     .position(x: settings.lang == .hebrew ? frame.minX + 58 : frame.maxX - 58, y: frame.maxY - 66)
             }
@@ -238,7 +241,15 @@ private struct StageView: View {
 
     private var noCameraText: some View {
         VStack(spacing: 8) {
-            if helper.cameraOn && !helper.camera.isAuthorized {
+            if helper.liveGuide.isLive {
+                Text(settings.t("Moffy is watching your screen.", "מופי מסתכלת על המסך שלכם."))
+                    .font(.ui(.title3, .semibold))
+                    .foregroundStyle(Theme.ink)
+                Text(settings.t("Go to the app you need help with. The camera is off while sharing.",
+                                "עברו לאפליקציה שבה צריך עזרה. המצלמה כבויה בזמן שיתוף המסך."))
+                    .font(.ui(.body))
+                    .foregroundStyle(Theme.inkSecondary)
+            } else if helper.cameraOn && !helper.camera.isAuthorized {
                 Text(settings.t("Moffy can't see yet.", "מופי עוד לא רואה."))
                     .font(.ui(.title3, .semibold))
                     .foregroundStyle(Theme.ink)
@@ -477,6 +488,10 @@ private struct BottomPanel: View {
         case .thinking:
             return (t("Looking…", "מסתכלת…"), "", "", {})
         case .ready:
+            // While sharing, Moffy moves on by herself when the screen changes; the button asks something new.
+            if helper.liveGuide.isLive {
+                return (t("Ask something else", "לשאול משהו אחר"), "mic.fill", t("Starts listening", "מתחילה להקשיב"), { helper.talkButtonTapped() })
+            }
             if helper.reply?.isOpenStep == true {
                 return (t("Done, next step", "עשיתי, לשלב הבא"), "checkmark",
                         t("Moffy looks again and gives the next step", "מופי מסתכלת שוב ונותנת את השלב הבא"), { helper.stepDone() })
@@ -489,7 +504,7 @@ private struct BottomPanel: View {
     }
 
     private var secondary: (icon: String, label: String, action: () -> Void) {
-        if helper.reply?.isOpenStep == true {
+        if helper.reply?.isOpenStep == true && !helper.liveGuide.isLive {
             return ("mic.fill", settings.t("Ask a question instead", "לשאול שאלה במקום"), { helper.talkButtonTapped() })
         }
         return ("keyboard", settings.t("Type instead", "לכתוב במקום"), { showTyping = true })

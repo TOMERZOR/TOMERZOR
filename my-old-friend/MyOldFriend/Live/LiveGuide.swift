@@ -44,6 +44,21 @@ final class LiveGuide: ObservableObject {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
+    /// A new question while sharing: the extension starts over from it and looks at the screen again.
+    func newGoal(_ goal: String, history: [ChatTurn], language: AppLanguage) {
+        guard isLive, let server = Backend.baseURL else { return }
+        let config = LiveConfig(
+            serverURL: server.absoluteString,
+            appToken: Backend.appToken,
+            installID: InstallID.value.uuidString.lowercased(),
+            subscriptionID: Backend.subscriptionID,
+            language: language == .hebrew ? "he" : "en",
+            goal: goal,
+            history: history.suffix(8).map { LiveTurn(role: $0.role.rawValue, text: $0.text) })
+        LiveChannel.write(config, to: LiveChannel.configBoard)
+        LiveChannel.post(.goal)
+    }
+
     // MARK: - Signals from the extension
 
     private func started() {

@@ -15,6 +15,8 @@ enum LiveChannel {
         case started = "com.tomerzor.myoldfriend.live.started"
         case reply = "com.tomerzor.myoldfriend.live.reply"
         case stopped = "com.tomerzor.myoldfriend.live.stopped"
+        /// App → extension: the person asked something new while sharing; read the config again.
+        case goal = "com.tomerzor.myoldfriend.live.goal"
     }
 
     static func write<T: Encodable>(_ value: T, to board: String) {

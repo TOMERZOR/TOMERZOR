@@ -20,6 +20,7 @@ final class SampleHandler: RPBroadcastSampleHandler {
     private var inFlight = false
     private var finishing = false
     private var counter = 0
+    private let signals = LiveSignals()
 
     private var hebrew: Bool { config?.language == "he" }
 
@@ -29,6 +30,17 @@ final class SampleHandler: RPBroadcastSampleHandler {
             history = config?.history ?? []
             startedAt = Date()
             counter = Int(Date().timeIntervalSince1970)
+        }
+        // A new question asked in the app while sharing: start over from it and look at the screen now.
+        signals.observe(.goal) { [weak self] in
+            guard let self else { return }
+            self.queue.async {
+                self.config = LiveChannel.read(LiveConfig.self, from: LiveChannel.configBoard)
+                self.history = self.config?.history ?? []
+                self.askedOnce = false
+                self.sentThumb = nil
+                self.startedAt = Date().addingTimeInterval(-2)
+            }
         }
         LiveChannel.post(.started)
     }

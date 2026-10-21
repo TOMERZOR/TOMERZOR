@@ -195,9 +195,21 @@ export class LevelScene extends Scene {
   }
 
   // ── flow ─────────────────────────────────────────────────────────────────
+  private coach: Container | null = null;
+  /** First room only: an arrow that keeps gliding in the direction of the first move until the player makes one. */
+  private showCoach() {
+    if (this.coach || this.key !== "1-1") return;
+    const c = new Container(); const ar = new Sprite(Texture.from("arrow")); ar.anchor.set(0.5); ar.width = ar.height = this.cs * 0.9; ar.rotation = Math.PI / 2; c.addChild(ar);
+    const ring = new Graphics(); ring.circle(0, 0, this.cs * 0.36).stroke({ color: C.cream, alpha: 0.9, width: 6 }); ring.circle(0, 0, this.cs * 0.14).fill({ color: C.cream, alpha: 0.9 }); c.addChild(ring);
+    const start = this.run.actors[this.run.actors.length - 1]!; c.position.set((start.x + 0.5) * this.cs, (start.y + 0.5) * this.cs);
+    this.items.addChild(c); this.coach = c;
+    gsap.timeline({ repeat: -1, repeatDelay: 0.4 }).set(ring, { y: -this.cs * 0.2, alpha: 1 }).set(ar, { alpha: 0 }).to(ring, { y: this.cs * 1.4, duration: 0.7, ease: "power1.inOut" }).to(ar, { alpha: 1, duration: 0.2 }, 0.2).to(ar, { y: this.cs * 0.9, duration: 0.6, ease: "power1.inOut" }, 0.1).to([ring, ar], { alpha: 0, duration: 0.25 });
+  }
+  private hideCoach() { if (!this.coach) return; killTweensDeep(this.coach); this.coach.destroy({ children: true }); this.coach = null; }
   private startLevel() {
     this.logs = []; this.playing = true;
     this.startLoop();
+    this.showCoach();
     this.showBanner(t("loop_n", { n: 1 }), this.hintFor(), 3800);
     audio.musicOn(true);
   }
@@ -304,7 +316,7 @@ export class LevelScene extends Scene {
   replay() { this.gen += 1; this.rebuild(); }
   private rebuild() {
     for (const c of [this.floor, this.items, this.actors, this.fx]) c.removeChildren().forEach((x) => { killTweensDeep(x as Container); x.destroy({ children: true }); });
-    this.frame.clear(); this.plateSps.clear(); this.doorSps.clear(); this.coinSps.clear();
+    this.frame.clear(); this.plateSps.clear(); this.doorSps.clear(); this.coinSps.clear(); this.coach = null;
     this.nameT.text = levelName(this.key); this.buildBoard(); this.relayout(); this.startLevel();
   }
   quit() { this.playing = false; audio.musicOn(false); audio.play("tap", 0.5); if (Scenes.depth > 1) Scenes.pop(); else Scenes.go(new MapScene()); }
@@ -348,7 +360,7 @@ export class LevelScene extends Scene {
   private doBeat(dir: number) {
     const run = this.run; if (!this.canControl() || run.tick >= L.LOOP_TICKS) return;
     this.prev = { actors: run.actors.map((a) => ({ x: a.x, y: a.y })), drones: run.drones.map((d) => ({ x: d.px, y: d.py })) };
-    this.recording += String(dir); L.stepRun(run, dir); this.beatT0 = performance.now(); this.queued = null;
+    this.recording += String(dir); L.stepRun(run, dir); this.beatT0 = performance.now(); this.queued = null; this.hideCoach();
     const hero = run.actors[run.actors.length - 1]!;
     if (hero.moved) { audio.play("step", 0.4, 0.96 + Math.random() * 0.08); buzz("light"); } else if (dir) { this.shake(2); audio.play("tick", 0.3, 0.7); } else audio.play("tick", 0.45);
     if (run.tick > this.hintUntil) this.hintSp.visible = false;

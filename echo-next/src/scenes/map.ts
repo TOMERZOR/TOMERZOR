@@ -29,7 +29,10 @@ export class MapScene extends Scene {
     // only the machinery band of the painting tiles; its smoky sky stays out
     const full = Texture.from("map_bg"); const tex = new Texture({ source: full.source, frame: new Rectangle(0, 700, full.width, full.height - 700) }); const tw = W, th = tex.height * (W / tex.width);
     for (let y = 0, k = 0; y < total + th; y += th, k++) { const s = new Sprite(tex); s.width = tw; s.height = th; s.y = total - y; s.anchor.set(0, 1); if (k % 2) { s.scale.x = -s.scale.x; s.x = W; } c.addChild(s); }
-    const fog = new Graphics(); fog.rect(0, 0, W, total).fill({ color: C.ink, alpha: 0.25 }); c.addChild(fog);
+    const fog = new Graphics(); fog.rect(0, 0, W, total).fill({ color: C.ink, alpha: 0.25 });
+    // soften the seams between painting tiles with a band of fog
+    for (let y = total; y > -th; y -= th) for (let i = 0; i < 12; i++) { const a = 0.5 * (1 - i / 12); fog.rect(0, y - 60 + i * 5, W, 6).fill({ color: C.ink, alpha: a }); fog.rect(0, y + 60 - i * 5 - 6, W, 6).fill({ color: C.ink, alpha: a }); }
+    c.addChild(fog);
     // Node positions, bottom up.
     const nodes: { l: any; x: number; y: number; wi: number }[] = []; let y = total - 160; const heads: { w: any; y: number }[] = [];
     let gi = 0;

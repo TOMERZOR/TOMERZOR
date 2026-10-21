@@ -1,0 +1,17 @@
+{
+  "name": "echo-ios",
+  "private": true,
+  "version": "0.1.0",
+  "description": "ECHO for iPhone: the web game wrapped in a native shell with Capacitor.",
+  "scripts": {
+    "sync": "node sync.mjs && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3"
+  }
+}

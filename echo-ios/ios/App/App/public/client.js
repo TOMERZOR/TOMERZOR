@@ -689,7 +689,7 @@ function renderShop() {
     tiers.appendChild(d);
   });
   const next = L.PASS_TIERS[profile.claimedTiers];
-  $("#pass-xp").textContent = `${profile.passXp} XP` + (next ? ` / ${next.xp}` : "");
+  $("#pass-xp").textContent = `${profile.passXp} XP` + (next && profile.passXp < next.xp ? ` / ${next.xp}` : "");
   $("#xpfill").style.width = next ? `${Math.min(100, profile.passXp / next.xp * 100)}%` : "100%";
   $("#b-claim").disabled = !next || profile.passXp < next.xp || (!profile.pass && profile.claimedTiers >= 2);
 

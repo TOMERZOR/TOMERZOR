@@ -18,13 +18,13 @@ import * as L from "./logic.js";
 
 const STR = {
   he: {
-    tagline: "10 שניות. ואז אתה משחק לצד עצמך.",
+    tagline: "20 מהלכים. ואז אתה משחק לצד עצמך.",
     play: "שחק", daily: "אתגר יומי", daily_s: "יומי", shop: "חנות", editor: "עורך שלבים", editor_s: "עורך", clubs: "מועדונים", settings: "הגדרות",
     worlds: "עולמות", world1: "המעבדה", world2: "המצפה", world3: "מעבדת המראות", world_n: "עולם {n}", new_best: "שיא חדש", up_next: "הבא",
     world_locked: "נפתח עם {n} כוכבים", redo: "שוב", restart: "מחדש", end_loop: "סיים סיבוב", hint: "רמז", haptics: "רטט",
     purchase_q: "לקנות {item} ב-{price}?", buy_for: "קנה ב-{price}", purchase_note: "אב־טיפוס: התשלום מדומה ולא מחויב כסף.",
     gems: "יהלומים", gems_n: "{n} יהלומים", skin_name: "סקין {n}",
-    echoes_used: "הדים", seconds: "שניות", coins: "מטבעות", replay: "שידור חוזר", share: "שיתוף", retry: "שוב",
+    echoes_used: "הדים", seconds: "מהלכים", coins: "מטבעות", replay: "שידור חוזר", share: "שיתוף", retry: "שוב",
     next: "השלב הבא", done_title: "שלב הושלם", perfect: "מושלם", first_clear: "בונוס סיום ראשון +50",
     free_coins: "מטבעות חינם", watch_ad: "צפה בסרטון +30", ads_left: "נותרו {n} סרטונים היום", ads_none: "נגמרו הסרטונים להיום. חזור מחר.",
     echo_skins: "סקינים להדים", skins_sub: "ההדים שלך לובשים אותו בכל שלב, אז כולם רואים אותו בשידורים החוזרים שלך.",
@@ -37,9 +37,9 @@ const STR = {
     language: "שפה", music: "מוזיקה", sfx: "אפקטים", shake: "רעידת מסך", name: "שם שחקן",
     loop_saved: "הד #{n} נשמר", loop_sub: "עכשיו שחק לצידו", caught: "נתפסת", caught_sub: "רק הסיבוב הזה מתחיל מחדש",
     out_of_echoes: "נגמרו ההדים", out_sub: "השלב מתחיל מחדש", loop_n: "סיבוב {n}",
-    hint_move: "הזז את האגודל כדי לזוז. הגע ליציאה הזהובה.", hint_plate: "דלת נפתחת רק כשמישהו עומד על הלוחית. תן להד שלך לעמוד עליה.",
+    hint_move: "החלק כדי לצעוד, הקש כדי לחכות צעד. הגע ליציאה הזהובה.", hint_plate: "דלת נפתחת רק כשמישהו עומד על הלוחית. תן להד שלך לעמוד עליה.",
     hint_drone: "רחפנים תופסים רק אותך, לא את ההדים.", hint_mirror: "בעולם הזה ההדים זזים הפוך: ימין שלך הוא שמאל שלהם.", hint_mirror_t: "בעולם הזה ההדים זזים הפוך: למעלה שלך הוא למטה שלהם.",
-    hint_generic: "בסוף 10 שניות הסיבוב נשמר כהד. אתה לא חייב להצליח בסיבוב הראשון.",
+    hint_generic: "אחרי 20 מהלכים הסיבוב נשמר כהד, וההד חוזר על כל צעד שלך. לא חייבים להצליח בסיבוב הראשון.",
     bought: "נקנה!", equipped: "מצויד", not_enough: "אין מספיק {c}", owned: "בבעלותך", equip: "צייד", buy: "קנה",
     starter: "חבילת פתיחה", starter_d: "120 יהלומים + 500 מטבעות + סקין זהב", gems_small: "100 יהלומים", gems_big: "600 יהלומים",
     noads: "הסרת פרסומות", noads_d: "בלי סרטונים. רמזים נשארים חינם.", pass: "כרטיס עונה", pass_d: "פותח את כל 10 השלבים",
@@ -47,18 +47,18 @@ const STR = {
     ad_title: "פרסומת לדוגמה", ad_sub: "סרטון ממומן היה מתנגן כאן ({n})", ad_done: "קיבלת +30 מטבעות", hint_title: "רמז",
     clubs_title: "מועדונים", clubs_sub: "אתגרים קבוצתיים שבועיים: 20 שחקנים, חדר משותף, הכי מעט הדים ביחד. בקרוב.", close: "סגור",
     streak: "רצף {n} ימים", bonus_today: "בונוס יומי +{n}", online: "מחובר", offline: "לא מקוון · שמירה במכשיר",
-    copied: "הועתק!", share_text: "סיימתי את {lvl} ב-ECHO עם {e} הדים ב-{t} שניות ⭐{s}", custom: "חדר מותאם", daily_name: "יומי #{d}",
+    copied: "הועתק!", share_text: "סיימתי את {lvl} ב-ECHO עם {e} הדים ב-{t} מהלכים ⭐{s}", custom: "חדר מותאם", daily_name: "יומי #{d}",
     level_locked: "השלב נעול", bad_code: "הקוד לא תקין", tier_locked: "צריך כרטיס עונה", need_xp: "צריך עוד XP",
     about: "ECHO · אב־טיפוס · הגרפיקה והסאונד נוצרו ב-Higgsfield", you: "אתה", unnamed: "שחקן", menu: "תפריט", par_label: "פאר",
   },
   en: {
-    tagline: "Ten seconds. Then you play beside yourself.",
+    tagline: "Twenty moves. Then you play beside yourself.",
     play: "Play", daily: "Daily challenge", daily_s: "Daily", shop: "Shop", editor: "Level editor", editor_s: "Editor", clubs: "Clubs", settings: "Settings",
     worlds: "Worlds", world1: "The Lab", world2: "The Observatory", world3: "The Mirror Lab", world_n: "World {n}", new_best: "New best", up_next: "Up next",
     world_locked: "Opens at {n} stars", redo: "Redo", restart: "Restart", end_loop: "End loop", hint: "Hint", haptics: "Haptic feedback",
     purchase_q: "Buy {item} for {price}?", buy_for: "Buy for {price}", purchase_note: "Prototype: payments are simulated and nothing is charged.",
     gems: "gems", gems_n: "{n} gems", skin_name: "the {n} skin",
-    echoes_used: "echoes", seconds: "seconds", coins: "coins", replay: "Replay", share: "Share", retry: "Retry",
+    echoes_used: "echoes", seconds: "moves", coins: "coins", replay: "Replay", share: "Share", retry: "Retry",
     next: "Next level", done_title: "Level clear", perfect: "Perfect", first_clear: "First clear bonus +50",
     free_coins: "Free coins", watch_ad: "Watch ad +30", ads_left: "{n} videos left today", ads_none: "No more videos today. Come back tomorrow.",
     echo_skins: "Echo skins", skins_sub: "Your echoes wear it on every level, so everyone sees it in your replays.",
@@ -71,9 +71,9 @@ const STR = {
     language: "Language", music: "Music", sfx: "Sound effects", shake: "Screen shake", name: "Player name",
     loop_saved: "Echo #{n} saved", loop_sub: "Now play beside it", caught: "Caught", caught_sub: "Only this loop restarts",
     out_of_echoes: "Out of echoes", out_sub: "The level restarts", loop_n: "Loop {n}",
-    hint_move: "Move your thumb to move. Reach the golden exit.", hint_plate: "A door only opens while someone stands on its plate. Let your echo hold it.",
+    hint_move: "Swipe to step, tap to wait a beat. Reach the golden exit.", hint_plate: "A door only opens while someone stands on its plate. Let your echo hold it.",
     hint_drone: "Drones catch only you, never your echoes.", hint_mirror: "In this world echoes move mirrored: your right is their left.", hint_mirror_t: "In this world echoes move mirrored: your up is their down.",
-    hint_generic: "When the 10 seconds end, the loop is saved as an echo. You don't have to succeed on the first run.",
+    hint_generic: "After 20 moves the loop is saved as an echo that repeats your every step. You don't have to make it on the first run.",
     bought: "Bought!", equipped: "Equipped", not_enough: "Not enough {c}", owned: "Owned", equip: "Equip", buy: "Buy",
     starter: "Starter pack", starter_d: "120 gems + 500 coins + gold skin", gems_small: "100 gems", gems_big: "600 gems",
     noads: "Remove ads", noads_d: "No videos. Hints stay free.", pass: "Season pass", pass_d: "Opens all 10 tiers",
@@ -81,7 +81,7 @@ const STR = {
     ad_title: "Sample ad", ad_sub: "A sponsored video would play here ({n})", ad_done: "You got +30 coins", hint_title: "Hint",
     clubs_title: "Clubs", clubs_sub: "Weekly team challenges: 20 players, one shared room, fewest echoes together. Coming soon.", close: "Close",
     streak: "{n}-day streak", bonus_today: "Daily bonus +{n}", online: "Online", offline: "Offline · saved on device",
-    copied: "Copied!", share_text: "I cleared {lvl} in ECHO with {e} echoes in {t}s ⭐{s}", custom: "Custom room", daily_name: "Daily #{d}",
+    copied: "Copied!", share_text: "I cleared {lvl} in ECHO with {e} echoes in {t} moves ⭐{s}", custom: "Custom room", daily_name: "Daily #{d}",
     level_locked: "Level locked", bad_code: "That code is not valid", tier_locked: "Needs the season pass", need_xp: "Needs more XP",
     about: "ECHO · prototype · art and sound made with Higgsfield", you: "you", unnamed: "Player", menu: "Menu", par_label: "Par",
   },
@@ -323,8 +323,13 @@ function refreshCurrencies() {
 const game = {
   level: null, levelKey: null, logs: [], run: null, recording: "", playing: false, replay: null,
   acc: 0, last: 0, timeScale: 1, shake: 0, particles: [], flies: [], flash: 0, doorAnim: {},
-  keys: new Set(), gen: 0, loopT: 0, levelT: 0, freeze: 0, rewind: 0, cam: { zoom: 1, fx: 0, fy: 0, tz: 1, tfx: 0, tfy: 0 }, result: null,
+  gen: 0, loopT: 0, levelT: 0, freeze: 0, rewind: 0, cam: { zoom: 1, fx: 0, fy: 0, tz: 1, tfx: 0, tfy: 0 }, result: null,
+  // Beats: when the last one landed, how long its hop takes, where everyone
+  // stood before it (for the tween), and an input that arrived mid-hop.
+  beatT0: -1e9, beatMs: 150, prev: null, queued: null,
 };
+const REPEAT_MS = 175;                 // a held swipe or key keeps stepping at this pace
+const REPLAY_MS = 260;
 const canvas = $("#game");
 const ctx = canvas.getContext("2d");
 let view = { ox: 0, oy: 0, cs: 40, w: 0, h: 0 };
@@ -413,6 +418,7 @@ function startLoop() {
   game.recording = "";
   game.run = L.createRun(game.level, [...game.logs, ""]);
   game.acc = 0; game.timeScale = 1; game.particles = []; game.flies = []; game.doorAnim = {}; game.loopT = 0; game.freeze = 0; game.exitAnim = null;
+  game.prev = null; game.queued = null; game.beatT0 = -1e9;
   game.cam.zoom = reduceMotion ? 1 : 1.07; game.cam.tz = 1; game.cam.fx = game.cam.fy = game.cam.tfx = game.cam.tfy = 0;
   banner(T("loop_n", { n: game.logs.length + 1 }), game.logs.length ? T("loop_sub") : "", 900);
   tone(game.logs.length, 0.25);
@@ -458,7 +464,7 @@ function endLoopNow() {
   const run = game.run;
   if (!game.playing || !run || run.finished || run.dead || run.tick >= L.LOOP_TICKS) return;
   if (game.replay && !game.replay.live) return;
-  if (run.tick < L.TPS / 2) return;
+  if (run.tick < 1) return;
   run.tick = L.LOOP_TICKS;
   updateTimer(run);
   loopEnded();
@@ -487,7 +493,7 @@ function levelDone() {
     for (let i = 0; i < 70; i++) game.particles.push({ x: Math.random() * view.cols, y: -0.5 - Math.random() * 2, vx: (Math.random() - 0.5) * 1.5, vy: 1 + Math.random() * 2, life: 2 + Math.random(), color: colors[i % colors.length], r: 3 + Math.random() * 3, conf: true });
   }
   const h = game.run.actors[game.run.actors.length - 1];
-  const hp = R(h.x, h.y);
+  const hp = R(h.x + 0.5, h.y + 0.5);
   game.cam.tz = reduceMotion ? 1 : 1.14; game.cam.tfx = (hp.x - view.cols / 2) * view.cs * 0.6; game.cam.tfy = (hp.y - view.rows / 2) * view.cs * 0.6;
   game.replay = { logs, level: game.level, live: true };
   game.result = { stars, res, reward, firstClear, newBest };
@@ -504,7 +510,7 @@ function levelDone() {
       s.innerHTML = `<use href="#i-star"/>`; st.appendChild(s);
       if (i < stars) setTimeout(() => { tone(4 + i * 2, 0.3); buzz("light"); }, 150 + i * 220);
     }
-    $("#r-echoes").textContent = res.echoes; $("#r-time").textContent = (res.exitTick / L.TPS).toFixed(1);
+    $("#r-echoes").textContent = res.echoes; $("#r-time").textContent = res.exitTick;
     countUp($("#r-coins"), reward);
     $("#r-sub").textContent = (firstClear ? T("first_clear") + " · " : custom ? T("custom") + " · " : "") + `${T("par_label")} ${game.level.par}`;
     $("#r-best").hidden = !newBest; $("#r-best").textContent = T("new_best");
@@ -533,50 +539,83 @@ function quit() {
 
 // ── input ──────────────────────────────────────────────────────────────────
 
-const KEYS = { ArrowUp: "u", KeyW: "u", ArrowDown: "d", KeyS: "d", ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r" };
+const KEYS = { ArrowUp: 1, KeyW: 1, ArrowRight: 3, KeyD: 3, ArrowDown: 5, KeyS: 5, ArrowLeft: 7, KeyA: 7 };
+const WAIT_KEYS = new Set(["Period", "KeyX", "KeyQ"]);
+const SDIR = { 1: [0, -1], 3: [1, 0], 5: [0, 1], 7: [-1, 0] };
 const typing = (e) => { const t = e.target; return t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable); };
 /** Loop controls work only while the hero is really in play: not during the
  *  exit celebration, a replay, or while a sheet covers the room. */
-const canControl = () => game.playing && current === "none" && screenEl("s-sheet").hidden && !!game.run && !game.run.finished && !(game.replay && !game.replay.live);
+const canControl = () => game.playing && current === "none" && screenEl("s-sheet").hidden && !!game.run && !game.run.finished && !game.run.dead && !(game.replay && !game.replay.live);
+/** A screen direction (1 up, 3 right, 5 down, 7 left) in level space. */
+const screenToLevel = (sd) => { const [dx, dy] = SDIR[sd]; return levelDir(dx, dy); };
+let heldKey = null;
 window.addEventListener("keydown", (e) => {
   if (typing(e)) return;
-  if (KEYS[e.code]) { game.keys.add(KEYS[e.code]); if (game.playing) e.preventDefault(); }
+  if (KEYS[e.code]) { e.preventDefault(); if (!e.repeat) { heldKey = e.code; beatInput(screenToLevel(KEYS[e.code])); } return; }
+  if (WAIT_KEYS.has(e.code)) { if (!e.repeat) beatInput(0); return; }
   if (e.code === "KeyR" && canControl()) startLoop();
   if ((e.code === "Space" || e.code === "Enter" || e.code === "KeyE") && canControl()) { endLoopNow(); e.preventDefault(); }
 });
-window.addEventListener("keyup", (e) => { if (KEYS[e.code]) game.keys.delete(KEYS[e.code]); });
-window.addEventListener("blur", () => game.keys.clear());
-function keyDir() {
-  const k = game.keys;
-  const dx = (k.has("r") ? 1 : 0) - (k.has("l") ? 1 : 0), dy = (k.has("d") ? 1 : 0) - (k.has("u") ? 1 : 0);
-  return levelDir(dx, dy);
-}
+window.addEventListener("keyup", (e) => { if (e.code === heldKey) heldKey = null; });
+window.addEventListener("blur", () => { heldKey = null; touch.dir = 0; });
 function vecDir(dx, dy) {
   if (!dx && !dy) return 0;
   const a = Math.atan2(dy, dx);           // 0 = right, +π/2 = down (screen y)
   const idx = Math.round(a / (Math.PI / 4));  // -4 (left) .. 0 (right) .. 4 (left)
   return [7, 8, 1, 2, 3, 4, 5, 6, 7][idx + 4];
 }
-const stick = { id: null, x: 0, y: 0, dir: 0 };
-const stickEl = $("#stick");
+/**
+ * Touch: a swipe is one step, right away. Keeping the finger pushed in that
+ * direction keeps stepping on the beat; sliding it elsewhere changes course;
+ * a plain tap waits one beat. No joystick to aim, nothing to hold still.
+ */
+const SWIPE = 20;
+const touch = { id: null, x0: 0, y0: 0, t0: 0, dir: 0, moved: false };
 canvas.addEventListener("pointerdown", (e) => {
-  if (!game.playing || stick.id !== null) return;
+  if (!game.playing || touch.id !== null) return;
   audio()?.resume?.();
-  stick.id = e.pointerId; stick.x = e.clientX; stick.y = e.clientY; stick.dir = 0;
-  stickEl.style.display = "block"; stickEl.style.left = `${stick.x}px`; stickEl.style.top = `${stick.y}px`;
-  stickEl.firstElementChild.style.transform = "";
+  touch.id = e.pointerId; touch.x0 = e.clientX; touch.y0 = e.clientY; touch.t0 = performance.now(); touch.dir = 0; touch.moved = false;
   canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener("pointermove", (e) => {
-  if (e.pointerId !== stick.id) return;
-  let dx = e.clientX - stick.x, dy = e.clientY - stick.y;
-  const d = Math.hypot(dx, dy);
-  stick.dir = d < 12 ? 0 : levelDir(dx, dy);
-  const m = Math.min(d, 48); if (d) { dx = dx / d * m; dy = dy / d * m; }
-  stickEl.firstElementChild.style.transform = `translate(${dx}px, ${dy}px)`;
+  if (e.pointerId !== touch.id) return;
+  const dx = e.clientX - touch.x0, dy = e.clientY - touch.y0;
+  if (Math.hypot(dx, dy) < SWIPE * 0.6) { touch.dir = 0; return; }
+  if (Math.hypot(dx, dy) < SWIPE && !touch.moved) return;
+  const dir = Math.abs(dx) > Math.abs(dy) ? levelDir(Math.sign(dx), 0) : levelDir(0, Math.sign(dy));
+  if (dir !== touch.dir) { touch.dir = dir; touch.moved = true; beatInput(dir); }
 });
-const stickUp = (e) => { if (e.pointerId !== stick.id) return; stick.id = null; stick.dir = 0; stickEl.style.display = "none"; };
-canvas.addEventListener("pointerup", stickUp); canvas.addEventListener("pointercancel", stickUp);
+const touchUp = (e) => {
+  if (e.pointerId !== touch.id) return;
+  if (!touch.moved && performance.now() - touch.t0 < 320) beatInput(0);
+  touch.id = null; touch.dir = 0;
+};
+canvas.addEventListener("pointerup", touchUp); canvas.addEventListener("pointercancel", touchUp);
+
+/** One input: played now, or queued until the current hop has mostly landed. */
+function beatInput(dir) {
+  if (!canControl()) return;
+  if (performance.now() - game.beatT0 < game.beatMs * 0.55) { game.queued = dir; return; }
+  doBeat(dir);
+}
+function snapshotPrev(run) {
+  game.prev = { actors: run.actors.map((a) => ({ x: a.x, y: a.y })), drones: run.drones.map((d) => ({ x: d.px, y: d.py })) };
+}
+/** The whole world takes one step: the hero as told, echoes and drones as scripted. */
+function doBeat(dir) {
+  const run = game.run;
+  if (!canControl() || run.tick >= L.LOOP_TICKS) return;
+  snapshotPrev(run);
+  game.recording += String(dir);
+  L.stepRun(run, dir);
+  game.beatT0 = performance.now(); game.queued = null;
+  const hero = run.actors[run.actors.length - 1];
+  if (hero.moved) tone(-6 + (run.tick % 4), 0.05); else if (dir) { shake(2); } else tone(-12, 0.04);
+  handleEvents(run); updateTimer(run);
+  if (run.finished) { levelDone(); return; }
+  if (run.dead) { loopFailed(); return; }
+  if (run.tick >= L.LOOP_TICKS) loopEnded();
+}
 
 // ── frame loop ─────────────────────────────────────────────────────────────
 
@@ -584,17 +623,17 @@ function frame(now) {
   const dt = Math.min(0.2, (now - game.last) / 1000); game.last = now;
   game.fps = (game.fps || 60) * 0.95 + (dt > 0 ? 1 / dt : 60) * 0.05;
   if (game.playing && screenEl("s-sheet").hidden) {
-    if (game.freeze > 0) game.freeze -= dt;            // hit-stop: the world holds its breath
-    else {
-      game.acc += dt * game.timeScale;
-      const step = 1 / L.TPS;
-      while (game.acc >= step) {
-        game.acc -= step;
-        if (game.replay && !game.replay.live) tickReplay(); else tick();
+    if (game.freeze > 0) game.freeze -= dt;
+    else if (game.replay && !game.replay.live) { if (now - game.beatT0 >= REPLAY_MS) tickReplay(); }
+    else if (canControl()) {
+      const since = now - game.beatT0;
+      if (game.queued !== null && since >= game.beatMs * 0.55) doBeat(game.queued);
+      else {
+        const held = touch.dir || (heldKey && KEYS[heldKey] ? screenToLevel(KEYS[heldKey]) : 0);
+        if (held && since >= REPEAT_MS) doBeat(held);
       }
     }
     game.loopT += dt; game.levelT += dt;
-    if (game.timeScale < 1 && !game.run.finished) game.timeScale = Math.min(1, game.timeScale + dt * 1.5);
   }
   const c = game.cam, k = Math.min(1, dt * 5);
   c.zoom += (c.tz - c.zoom) * k; c.fx += (c.tfx - c.fx) * k; c.fy += (c.tfy - c.fy) * k;
@@ -602,42 +641,32 @@ function frame(now) {
   draw(dt);
   requestAnimationFrame(frame);
 }
-function tick() {
-  const run = game.run;
-  if (run.finished || run.dead || run.tick >= L.LOOP_TICKS) return;
-  const dir = stick.dir || keyDir();
-  game.recording += String(dir);
-  L.stepRun(run, dir);
-  handleEvents(run);
-  updateTimer(run);
-  if (run.finished) { levelDone(); return; }
-  if (run.dead) { loopFailed(); return; }
-  if (run.tick >= L.LOOP_TICKS) loopEnded();
-}
 function tickReplay() {
   const run = game.run;
   if (run.finished || run.dead || run.tick >= L.LOOP_TICKS) { game.replay.live = true; return; }
+  snapshotPrev(run);
   const c = game.replay.logs[game.replay.logs.length - 1].charCodeAt(run.tick) - 48;
   L.stepRun(run, c >= 0 && c <= 8 ? c : 0);
+  game.beatT0 = performance.now();
   handleEvents(run); updateTimer(run);
-  if (run.finished) { game.timeScale = 0.3; later(1500, () => { game.playing = false; show("s-result"); }); }
+  if (run.finished) { later(1500, () => { game.playing = false; show("s-result"); }); }
 }
 function updateTimer(run) {
-  const left = Math.max(0, (L.LOOP_TICKS - run.tick) / L.TPS);
-  $("#t-num").textContent = Math.ceil(left);
+  const left = Math.max(0, L.LOOP_TICKS - run.tick);
+  $("#t-num").textContent = left;
   const arc = $("#timer .arc"); const r = 31, c = 2 * Math.PI * r;
-  arc.style.strokeDasharray = `${c * (left / 10)} ${c}`; arc.classList.toggle("hot", left < 3 && left > 0);
+  arc.style.strokeDasharray = `${c * (left / L.LOOP_TICKS)} ${c}`; arc.classList.toggle("hot", left <= 3 && left > 0);
 }
 function handleEvents(run) {
   for (const e of run.events) {
     if (e.t === "coin") {
-      sfx("chime", 0.5); burst(e.x, e.y, "#ffc93c", 14);
-      if (e.hero) { flyCoin(e.x, e.y); buzz("light"); } else bumpCoins();
+      sfx("chime", 0.5); burst(e.x + 0.5, e.y + 0.5, "#ffc93c", 14);
+      if (e.hero) { flyCoin(e.x + 0.5, e.y + 0.5); buzz("light"); } else bumpCoins();
     } else if (e.t === "plate") { sfx("plate", 0.7); game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
     else if (e.t === "open") { sfx("door", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
     else if (e.t === "close") { game.doorAnim[e.k] = { t: 0, open: false }; }
-    else if (e.t === "dead") burst(e.x, e.y, "#ff4fd8", 26);
-    else if (e.t === "exit") { burst(e.x, e.y, "#ffd9a8", 40); burst(e.x, e.y, "#39e6ff", 24); game.flash = 0.45; game.exitAnim = { x: e.x, y: e.y, t: 0, face: game.run.actors[game.run.actors.length - 1].face || 1 }; }
+    else if (e.t === "dead") burst(e.x + 0.5, e.y + 0.5, "#ff4fd8", 26);
+    else if (e.t === "exit") { burst(e.x + 0.5, e.y + 0.5, "#ffd9a8", 40); burst(e.x + 0.5, e.y + 0.5, "#39e6ff", 24); game.flash = 0.45; game.exitAnim = { x: e.x + 0.5, y: e.y + 0.5, t: 0, face: game.run.actors[game.run.actors.length - 1].face || 1 }; }
   }
 }
 function ring(e) {
@@ -651,10 +680,9 @@ function burst(lx, ly, color, n) {
     game.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.5 + Math.random() * 0.5, color, r: 2 + Math.random() * 4 });
   }
 }
-function dust(a) {
+function dust(a, p) {
   if (reduceMotion) return;
   const [dx, dy] = L.DIRS[sdirOf(a.dir)];
-  const p = R(a.x, a.y);
   game.particles.push({ x: p.x - dx * 0.15 + (Math.random() - 0.5) * 0.2, y: p.y + 0.28, vx: -dx * 0.6 + (Math.random() - 0.5) * 0.4, vy: -0.3 - Math.random() * 0.4 - dy * 0.3, life: 0.35, color: "rgba(170,180,230,.45)", r: 2.5 + Math.random() * 2, dust: true });
 }
 function flyCoin(lx, ly) {
@@ -914,10 +942,16 @@ function draw(dt) {
     if (ch === "a" || ch === "b" || ch === "c") light(x + 0.5, y + 0.5, cs * 1.1, "rgba(255,79,216,.55)", run.plates[ch] ? 0.55 : 0.2);
     else if (ch === "E") light(x + 0.5, y + 0.5, cs * 1.4, "rgba(255,201,60,.6)", 0.35 + Math.sin(now * 2.2) * 0.08);
   }
-  for (const co of run.coins) if (!co.taken) { const p = R(co.x, co.y); light(p.x, p.y, cs * 0.5, "rgba(255,201,60,.5)", 0.3); }
-  for (const d of run.drones) { const p = R(d.px, d.py); light(p.x, p.y + 0.15, cs * 0.95, "rgba(255,79,216,.55)", 0.3, 1, 0.55); }
+  // Everyone hops from where they stood to where they stand over one beat.
+  const bk = reduceMotion ? 1 : easeOut(clamp01((performance.now() - game.beatT0) / game.beatMs));
+  const hop = Math.sin(bk * Math.PI);
+  const tween = (prev, x, y) => (prev ? { x: prev.x + (x - prev.x) * bk + 0.5, y: prev.y + (y - prev.y) * bk + 0.5, moving: prev.x !== x || prev.y !== y } : { x: x + 0.5, y: y + 0.5, moving: false });
+  const apos = run.actors.map((a, i) => tween(game.prev?.actors[i], a.x, a.y));
+  const dpos = run.drones.map((d, i) => tween(game.prev?.drones[i], d.px, d.py));
+  for (const co of run.coins) if (!co.taken) { const p = R(co.x + 0.5, co.y + 0.5); light(p.x, p.y, cs * 0.5, "rgba(255,201,60,.5)", 0.3); }
+  dpos.forEach((q) => { const p = R(q.x, q.y); light(p.x, p.y + 0.15, cs * 0.95, "rgba(255,79,216,.55)", 0.3, 1, 0.55); });
   const last = run.actors.length - 1;
-  for (let i = 0; i < last; i++) { const a = run.actors[i]; if (!a.done) { const p = R(a.x, a.y); light(p.x, p.y + 0.3, cs * 0.8, "rgba(57,230,255,.5)", 0.22, 1, 0.45); } }
+  for (let i = 0; i < last; i++) { const a = run.actors[i]; if (!a.done) { const p = R(apos[i].x, apos[i].y); light(p.x, p.y + 0.3, cs * 0.8, "rgba(57,230,255,.5)", 0.22, 1, 0.45); } }
   ctx.globalCompositeOperation = "source-over";
 
   // Floor decals: plates, exit, drone paths, coins.
@@ -940,7 +974,7 @@ function draw(dt) {
   }
   for (const co of run.coins) {
     if (co.taken) continue;
-    const p = R(co.x, co.y);
+    const p = R(co.x + 0.5, co.y + 0.5);
     const bob = Math.sin(now * 3 + p.x * 2.1) * 0.05;
     shadow(p.x, p.y + 0.3, 0.16, 0.3);
     sprite(IMG.coin, p.x, p.y + bob - 0.1, 0.6, 1, { sx: Math.abs(Math.cos(now * 2.4 + p.x)) * 0.75 + 0.25 });
@@ -958,10 +992,10 @@ function draw(dt) {
     if (a.done || (!a.alive && i === last)) return;
     const isEcho = i < last;
     const appear = reduceMotion ? 1 : easeOut((game.loopT - (isEcho ? 0.1 + i * 0.07 : 0)) / 0.35);
-    const p = R(a.x, a.y);
-    items.push({ z: p.y + 0.3, f: () => drawActor(a, p, isEcho, appear, esp, ecol, now) });
+    const q = apos[i], p = R(q.x, q.y);
+    items.push({ z: p.y + 0.3, f: () => drawActor(a, p, isEcho, appear, esp, ecol, now, q.moving ? hop : 0, q.moving && bk < 1) });
   });
-  for (const d of run.drones) { const p = R(d.px, d.py); items.push({ z: p.y + 0.35, f: () => drawDrone(d, p, now) }); }
+  run.drones.forEach((d, i) => { const q = dpos[i], p = R(q.x, q.y); items.push({ z: p.y + 0.35, f: () => drawDrone(d, p, now) }); });
   items.sort((p, q) => p.z - q.z);
   for (const it of items) it.f();
 
@@ -1049,17 +1083,18 @@ function drawMotes(dt, cols, rows) {
   ctx.restore();
 }
 
-function drawActor(a, p, isEcho, appear, esp, ecol, now) {
+function drawActor(a, p, isEcho, appear, esp, ecol, now, hop = 0, moving = false) {
   const cs = view.cs;
   if (appear <= 0) return;
-  const moving = a.dir !== 0, sd = sdirOf(a.dir);
-  if (moving) a.face = sd >= 6 ? -1 : sd >= 2 && sd <= 4 ? 1 : a.face || 1;
+  const sd = sdirOf(a.dir);
+  if (a.dir) a.face = sd >= 6 ? -1 : sd >= 2 && sd <= 4 ? 1 : a.face || 1;
   const flip = (a.face || 1) < 0;
-  const bob = moving ? Math.abs(Math.sin(game.run.tick * 0.55)) * 0.06 : Math.sin(now * 2.4) * 0.012;
-  const sx = moving ? 1 + Math.sin(game.run.tick * 0.55) * 0.04 : 1 - bob * 0.5;
-  const sy = moving ? 1 - Math.sin(game.run.tick * 0.55) * 0.04 : 1 + bob;
-  const lean = moving ? (flip ? -1 : 1) * 0.09 * (sd === 1 || sd === 5 ? 0 : 1) : 0;
-  if (!isEcho && moving && game.run.tick % 5 === 0 && a.alive) dust(a);
+  // A step is a little hop: up and stretched on the way, squashed on landing.
+  const bob = moving ? hop * 0.16 : Math.sin(now * 2.4) * 0.012;
+  const sx = moving ? 1 - hop * 0.08 : 1 - bob * 0.5;
+  const sy = moving ? 1 + hop * 0.1 : 1 + bob;
+  const lean = moving ? (flip ? -1 : 1) * 0.1 * (sd === 1 || sd === 5 ? 0 : 1) : 0;
+  if (!isEcho && moving && a.alive && a.dusted !== game.beatT0) { a.dusted = game.beatT0; dust(a, p); }
   if (isEcho) {
     // Hologram: projector ring + cone + translucent, faintly flickering copy.
     const flick = 0.78 + Math.sin(now * 23 + p.x * 7) * 0.05 + Math.sin(now * 61) * 0.03;
@@ -1283,7 +1318,7 @@ function renderDaily() {
   if (!board.length) { const p = document.createElement("p"); p.textContent = T("board_empty"); b.appendChild(p); return; }
   board.slice(0, 20).forEach((e, i) => {
     const d = document.createElement("div"); if (e.pid === PID) d.className = "me";
-    d.innerHTML = `<span class="rank">${i + 1}</span><span class="grow">${esc(e.name || (e.pid === PID ? T("you") : T("unnamed")))}</span><span>${e.echoes} ${T("echoes_used")}</span><span>${(e.ticks / L.TPS).toFixed(1)}s</span>`;
+    d.innerHTML = `<span class="rank">${i + 1}</span><span class="grow">${esc(e.name || (e.pid === PID ? T("you") : T("unnamed")))}</span><span>${e.echoes} ${T("echoes_used")}</span><span>${e.ticks} ${T("seconds")}</span>`;
     b.appendChild(d);
   });
 }
@@ -1385,7 +1420,7 @@ $("#b-replay").addEventListener("click", () => {
 });
 $("#b-share").addEventListener("click", async () => {
   const r = game.result; if (!r) return;
-  const text = T("share_text", { lvl: levelName(game.levelKey), e: r.res.echoes, t: (r.res.exitTick / L.TPS).toFixed(1), s: r.stars });
+  const text = T("share_text", { lvl: levelName(game.levelKey), e: r.res.echoes, t: r.res.exitTick, s: r.stars });
   try { if (navigator.share) { await navigator.share({ text }); return; } } catch { /* cancelled */ }
   try { await navigator.clipboard.writeText(text); toast(T("copied")); } catch { toast(text); }
 });

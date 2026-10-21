@@ -23,22 +23,22 @@ export const meta = { game: "ECHO", minPlayers: 1, maxPlayers: 500 };
 
 // ── constants ──────────────────────────────────────────────────────────────
 
-export const TPS = 30;
-export const LOOP_TICKS = 300;         // 10 seconds
+// The game runs in beats: every move the player makes is one beat, and every
+// echo and drone takes its own step on that same beat. Nothing moves between
+// beats, so a loop is a short, fully deterministic plan.
+export const LOOP_TICKS = 20;          // moves per loop
+export const MOVES = LOOP_TICKS;
 export const MAX_ECHOES = 6;           // loops per level, hero included: 7
 export const COLS = 7;
 export const ROWS = 11;
-export const SPEED = 4.6 / TPS;        // cells per tick
-export const HERO_HALF = 0.3;          // collision half-size (smaller than the sprite)
-export const DRONE_SPEED = 2.4 / TPS;
-export const DRONE_RADIUS = 0.62;
 
-/** 0 = still, 1 = up, then clockwise. Diagonals are normalised. */
+/** 0 = wait, 1 = up, 3 = right, 5 = down, 7 = left (the clockwise numbering is
+ *  kept from the analogue days; even digits are treated as a wait). */
 export const DIRS = [
-  [0, 0], [0, -1], [0.7071, -0.7071], [1, 0], [0.7071, 0.7071],
-  [0, 1], [-0.7071, 0.7071], [-1, 0], [-0.7071, -0.7071],
+  [0, 0], [0, -1], [0, 0], [1, 0], [0, 0],
+  [0, 1], [0, 0], [-1, 0], [0, 0],
 ];
-const MIRROR_DIR = [0, 1, 8, 7, 6, 5, 4, 3, 2];
+const MIRROR_DIR = [0, 1, 0, 7, 0, 5, 0, 3, 0];
 
 // ── levels ─────────────────────────────────────────────────────────────────
 //
@@ -353,96 +353,54 @@ export function decodeLevel(code) {
 function findChar(map, ch) {
   for (let y = 0; y < map.length; y++) {
     const x = map[y].indexOf(ch);
-    if (x >= 0) return { x: x + 0.5, y: y + 0.5 };
+    if (x >= 0) return { x, y };
   }
-  return { x: 1.5, y: 1.5 };
+  return { x: 1, y: 1 };
 }
 
 /**
  * Build a run: every log in `logs` becomes an actor; the LAST one is the live
- * hero. A log is a string of digits 0-8, one per tick; a missing tick is 0.
+ * hero. A log is a string of digits, one per beat; a missing beat is a wait.
+ * Positions are whole cells.
  */
 export function createRun(level, logs) {
   const start = findChar(level.map, "S");
   const actors = logs.map((log, i) => ({
-    x: start.x, y: start.y, dir: 0, alive: true, done: false,
-    hero: i === logs.length - 1, log: log || "", trail: [],
+    x: start.x, y: start.y, dir: 0, moved: false, alive: true, done: false,
+    hero: i === logs.length - 1, log: log || "",
   }));
   const coins = [];
   for (let y = 0; y < ROWS; y++) {
-    for (let x = 0; x < COLS; x++) if (level.map[y][x] === "o") coins.push({ x: x + 0.5, y: y + 0.5, taken: false });
+    for (let x = 0; x < COLS; x++) if (level.map[y][x] === "o") coins.push({ x, y, taken: false });
   }
   return {
     level, tick: 0, actors, coins, taken: 0,
     doors: { A: false, B: false, C: false },
     plates: { a: false, b: false, c: false },
-    drones: (level.drones || []).map((d) => ({ ...d, px: d.x + 0.5, py: d.y + 0.5 })),
+    drones: (level.drones || []).map((d) => ({ ...d, ...dronePos(d, 0) })),
     exit: findChar(level.map, "E"),
     events: [], finished: false, exitTick: -1, dead: false, deadTick: -1,
   };
 }
 
-function blockedAt(run, x, y) {
-  const cx = Math.floor(x), cy = Math.floor(y);
-  if (cx < 0 || cy < 0 || cx >= COLS || cy >= ROWS) return true;
-  const ch = run.level.map[cy][cx];
+function blocked(run, x, y) {
+  if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return true;
+  const ch = run.level.map[y][x];
   if (ch === "#") return true;
   if (ch === "A" || ch === "B" || ch === "C") return !run.doors[ch];
   return false;
 }
 
-function boxFree(run, x, y) {
-  const h = HERO_HALF;
-  return !blockedAt(run, x - h, y - h) && !blockedAt(run, x + h, y - h)
-    && !blockedAt(run, x - h, y + h) && !blockedAt(run, x + h, y + h);
-}
-
-const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
-
-/**
- * Axis-separated movement with corner assist: when a step is blocked only
- * because the hero is slightly off the corridor's centre line, it is nudged
- * toward the centre instead of stopping dead. Thumbs on glass are not precise,
- * and a one-cell doorway should not need pixel aim.
- */
-function moveActor(run, a, dirIdx) {
-  a.dir = dirIdx;
-  if (!dirIdx) return;
-  const [dx, dy] = DIRS[dirIdx];
-  if (dx) {
-    const nx = a.x + dx * SPEED;
-    if (boxFree(run, nx, a.y)) a.x = nx;
-    else if (!dy) {
-      const cy = Math.floor(a.y) + 0.5;
-      if (boxFree(run, nx, cy)) {
-        a.y += clamp(cy - a.y, -SPEED, SPEED);
-        if (boxFree(run, nx, a.y)) a.x = nx;
-      }
-    }
-  }
-  if (dy) {
-    const ny = a.y + dy * SPEED;
-    if (boxFree(run, a.x, ny)) a.y = ny;
-    else if (!dx) {
-      const cx = Math.floor(a.x) + 0.5;
-      if (boxFree(run, cx, ny)) {
-        a.x += clamp(cx - a.x, -SPEED, SPEED);
-        if (boxFree(run, a.x, ny)) a.y = ny;
-      }
-    }
-  }
-}
-
+/** Where a patrol stands on a given beat: back and forth along its run. */
 function dronePos(d, tick) {
-  const t = tick * DRONE_SPEED + d.phase;
-  const p = t % (2 * d.n);
+  const p = (tick + d.phase) % (2 * d.n);
   const k = p <= d.n ? p : 2 * d.n - p;
-  return { px: d.x + 0.5 + d.dx * k, py: d.y + 0.5 + d.dy * k };
+  return { px: d.x + d.dx * k, py: d.y + d.dy * k };
 }
 
 /**
- * Advance one tick. `heroDir` is the live input (0-8); echoes read their logs.
- * Events for this tick are left in `run.events` (replaced every tick) so the
+ * Advance one beat. `heroDir` is the live input; echoes read their logs.
+ * Events for this beat are left in `run.events` (replaced every beat) so the
  * client can play sounds and particles.
  */
 export function stepRun(run, heroDir) {
@@ -462,18 +420,18 @@ export function stepRun(run, heroDir) {
       d = c >= 0 && c <= 8 ? c : 0;
       if (mirror) d = MIRROR_DIR[d];
     }
-    moveActor(run, a, d);
-    if (run.tick % 3 === 0) {
-      a.trail.push(a.x, a.y);
-      if (a.trail.length > 24) a.trail.splice(0, 2);
-    }
+    if (d < 0 || d > 8 || d % 2 === 0) d = 0;
+    a.dir = d; a.moved = false;
+    if (!d) continue;
+    const [dx, dy] = DIRS[d];
+    if (!blocked(run, a.x + dx, a.y + dy)) { a.x += dx; a.y += dy; a.moved = true; }
   }
 
   // Plates and doors, from where everyone is standing now.
   const pressed = { a: false, b: false, c: false };
   for (const a of run.actors) {
     if (!a.alive || a.done) continue;
-    const ch = run.level.map[Math.floor(a.y)][Math.floor(a.x)];
+    const ch = run.level.map[a.y][a.x];
     if (pressed[ch] === false) pressed[ch] = true;
   }
   for (const k of ["a", "b", "c"]) {
@@ -483,7 +441,7 @@ export function stepRun(run, heroDir) {
     // A gate never shuts on someone standing in it: it waits until the doorway is clear.
     if (!open && run.doors[door]) {
       for (const a of run.actors) {
-        if (a.alive && !a.done && run.level.map[Math.floor(a.y)][Math.floor(a.x)] === door) { open = true; break; }
+        if (a.alive && !a.done && run.level.map[a.y][a.x] === door) { open = true; break; }
       }
     }
     if (open !== run.doors[door]) ev.push({ t: open ? "open" : "close", k: door });
@@ -496,8 +454,7 @@ export function stepRun(run, heroDir) {
     if (c.taken) continue;
     for (const a of run.actors) {
       if (!a.alive || a.done) continue;
-      const dx = a.x - c.x, dy = a.y - c.y;
-      if (dx * dx + dy * dy < 0.45 * 0.45) {
+      if (a.x === c.x && a.y === c.y) {
         c.taken = true; run.taken++;
         ev.push({ t: "coin", x: c.x, y: c.y, hero: a.hero });
         break;
@@ -505,35 +462,34 @@ export function stepRun(run, heroDir) {
     }
   }
 
-  // Drones: only the live hero can be caught.
+  // Drones take their step; only the live hero can be caught, by landing on
+  // the same cell or by crossing paths with it.
+  const h = run.actors[last];
   for (const d of run.drones) {
-    const p = dronePos(d, run.tick);
+    const from = { x: d.px, y: d.py };
+    const p = dronePos(d, run.tick + 1);
     d.px = p.px; d.py = p.py;
-    const h = run.actors[last];
-    if (h.alive && !h.done) {
-      const dx = h.x - d.px, dy = h.y - d.py;
-      if (dx * dx + dy * dy < DRONE_RADIUS * DRONE_RADIUS) {
-        h.alive = false; run.dead = true; run.deadTick = run.tick;
-        ev.push({ t: "dead", x: h.x, y: h.y });
-      }
+    if (!h.alive || h.done) continue;
+    const prevHero = { x: h.x - (h.moved ? DIRS[h.dir][0] : 0), y: h.y - (h.moved ? DIRS[h.dir][1] : 0) };
+    const landed = d.px === h.x && d.py === h.y;
+    const crossed = h.moved && from.x === h.x && from.y === h.y && d.px === prevHero.x && d.py === prevHero.y;
+    if (landed || crossed) {
+      h.alive = false; run.dead = true; run.deadTick = run.tick;
+      ev.push({ t: "dead", x: h.x, y: h.y });
     }
   }
 
   // Exit: the live hero finishes the level.
-  const h = run.actors[last];
-  if (h.alive && !h.done) {
-    const dx = h.x - run.exit.x, dy = h.y - run.exit.y;
-    if (dx * dx + dy * dy < 0.42 * 0.42) {
-      h.done = true; run.finished = true; run.exitTick = run.tick;
-      ev.push({ t: "exit", x: h.x, y: h.y });
-    }
+  if (h.alive && !h.done && h.x === run.exit.x && h.y === run.exit.y) {
+    h.done = true; run.finished = true; run.exitTick = run.tick + 1;
+    ev.push({ t: "exit", x: h.x, y: h.y });
   }
 
   run.tick++;
   return run;
 }
 
-/** Replay a full set of logs and report whether the last one reaches the exit. */
+/** Replay a whole level: the last log is the hero, the others are echoes. */
 export function simulate(level, logs) {
   const run = createRun(level, logs);
   const hero = logs[logs.length - 1] || "";
@@ -626,7 +582,7 @@ export function setup(players) {
 }
 
 const isInt = (n) => Number.isInteger(n) && n >= 0;
-const LOG_RE = /^[0-8]{0,300}$/;
+const LOG_RE = /^[0-8]{0,20}$/;
 
 function levelForAction(action) {
   if (action.level === "daily") return isInt(action.day) ? dailyLevel(action.day) : null;

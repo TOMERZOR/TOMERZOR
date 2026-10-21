@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <title>ECHO</title>
   <meta property="og:title" content="ECHO" />
-  <meta property="og:description" content="Ten seconds. Then you play beside yourself. A time-loop puzzle where every run becomes a teammate." />
+  <meta property="og:description" content="Twenty moves. Then you play beside yourself. A time-loop puzzle where every run becomes a teammate." />
   <meta name="theme-color" content="#0b0f22" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -122,6 +122,7 @@
     }
     .screen::-webkit-scrollbar { display: none; }
     .screen[hidden] { display: none; }
+    [hidden] { display: none !important; }
     .screen.over { background: radial-gradient(80% 60% at 50% 45%, rgba(10,14,32,.35), rgba(5,7,18,.86)); backdrop-filter: blur(6px); justify-content: flex-start; align-items: center; animation-name: fade-in; }
     .screen.over > * { margin: auto; flex-shrink: 0; }
     /* Right-to-left: arrows flip, numbers stay numbers, the room grid stays a room. */
@@ -190,8 +191,6 @@
       .hud-center { flex-direction: row; align-items: center; gap: 12px; }
     }
     .chip:active { transform: scale(.95); }
-    #stick { position: absolute; width: 124px; height: 124px; border-radius: 50%; border: 2px solid rgba(57,230,255,.35); background: radial-gradient(circle, rgba(57,230,255,.12), rgba(57,230,255,.02) 70%); pointer-events: none; display: none; margin: -62px 0 0 -62px; }
-    #stick i { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #c9fbff, #39e6ff 60%, #16a8c4); box-shadow: 0 0 22px var(--echo); }
 
     /* ── title ── */
     #s-title { padding: 0; overflow: hidden; }
@@ -411,7 +410,6 @@
       </div>
     </div>
     <div id="banner"></div>
-    <div id="stick"><i></i></div>
 
     <!-- Title -->
     <section class="screen" id="s-title">
@@ -437,7 +435,7 @@
       <div class="title-body">
         <div class="title-head">
           <h1 class="logo"><span data-echo="ECHO">ECHO</span></h1>
-          <div class="tag" data-i18n="tagline">Ten seconds. Then you play beside yourself.</div>
+          <div class="tag" data-i18n="tagline">Twenty moves. Then you play beside yourself.</div>
         </div>
         <div class="title-foot">
         <div class="streak" id="t-streak"></div>
@@ -469,7 +467,7 @@
         <div class="bigstars" id="r-stars"></div>
         <div class="stats">
           <div class="stat"><b id="r-echoes">0</b><span data-i18n="echoes_used">echoes</span></div>
-          <div class="stat"><b id="r-time">0.0</b><span data-i18n="seconds">seconds</span></div>
+          <div class="stat"><b id="r-time">0</b><span data-i18n="seconds">moves</span></div>
           <div class="stat"><b id="r-coins">+0</b><span data-i18n="coins">coins</span></div>
         </div>
         <p id="r-sub"></p>

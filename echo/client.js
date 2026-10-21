@@ -198,7 +198,10 @@ const ready = (img) => img && img.complete && img.naturalWidth > 0;
  * whatever the player was listening to; buffer sources do neither, and they
  * start without the element's latency.
  */
-const SOUNDS = { chime: "assets/sfx_chime.mp3", plate: "assets/sfx_plate.mp3", door: "assets/sfx_door.mp3", win: "assets/sfx_win.mp3", fail: "assets/sfx_fail.mp3", music: "assets/music.mp3" };
+// Every cue has its own sample (generated with ElevenLabs SFX and mastered
+// short and clean); the pitch of a few of them climbs with repetition.
+const SOUNDS = Object.fromEntries(["coin", "win", "star", "step", "plate", "open", "close", "saved", "caught", "out", "tap", "buy", "shimmer", "tick"].map((n) => [n, `assets/sfx_${n}.mp3`]));
+SOUNDS.music = "assets/music.mp3";
 const buffers = {}, loading = {};
 let actx = null, busMusic = null, busSfx = null, musicSrc = null;
 function audio() {
@@ -223,13 +226,13 @@ function loadSound(name) {
   return loading[name];
 }
 function preloadAudio() { for (const n in SOUNDS) loadSound(n); }
-/** One-shot effect; the pitch wobbles a little so repeats never sound stamped. */
-function sfx(name, vol = 0.8) {
+/** One-shot effect at an optional pitch; a little wobble so repeats never sound stamped. */
+function sfx(name, vol = 0.8, rate = 1) {
   if (!opts.sfx) return;
   const c = audio(); if (!c) return;
   const buf = buffers[name];
   if (!buf) { loadSound(name); return; }
-  const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = 0.94 + Math.random() * 0.12;
+  const s = c.createBufferSource(); s.buffer = buf; s.playbackRate.value = rate * (0.97 + Math.random() * 0.06);
   const g = c.createGain(); g.gain.value = vol;
   s.connect(g).connect(busSfx); s.start();
 }
@@ -278,7 +281,7 @@ function buzz(kind = "light") {
     }
   } catch { /* no haptics here */ }
 }
-document.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) buzz("light"); });
+document.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) { buzz("light"); sfx("tap", 0.5); } });
 
 // ── DOM helpers ────────────────────────────────────────────────────────────
 
@@ -445,14 +448,14 @@ function loopEnded() {
   game.rewind = 0.4;
   if (game.logs.length >= L.MAX_ECHOES) {
     banner(T("out_of_echoes"), T("out_sub"), 1400);
-    sfx("fail"); shake(10); buzz("error");
+    sfx("out"); shake(10); buzz("error");
     game.logs = []; renderEchoDots();                     // reset now, so Redo cannot skip it
     later(1300, startLoop);
     return;
   }
   game.logs.push(game.recording);
   banner(T("loop_saved", { n: game.logs.length }), T("loop_sub"), 1300);
-  sfx("chime", 0.6); buzz("medium");
+  sfx("saved", 0.7); buzz("medium");
   later(950, startLoop);
 }
 /**
@@ -472,7 +475,7 @@ function endLoopNow() {
 }
 function loopFailed() {
   banner(T("caught"), T("caught_sub"), 1200);
-  sfx("fail"); shake(14); game.flash = 0.5; game.freeze = 0.09; buzz("error");
+  sfx("caught"); shake(14); game.flash = 0.5; game.freeze = 0.09; buzz("error");
   later(1000, startLoop);
 }
 function levelDone() {
@@ -488,7 +491,8 @@ function levelDone() {
   const v = saveRoom.act(action);
   if (game.levelKey === "daily") dailyRoom.act(action);
   const reward = v.ok ? profile.coins - before : 0;
-  sfx("win"); game.timeScale = 0.22; shake(6); buzz("success");
+  sfx("win"); shake(6); buzz("success");
+  if (stars === 3 || newBest) setTimeout(() => sfx("shimmer", 0.6), 420);
   if (stars === 3 && !reduceMotion) {
     const colors = ["#ffc93c", "#39e6ff", "#ff4fd8", "#ffffff", "#ff9a3c"];
     for (let i = 0; i < 70; i++) game.particles.push({ x: Math.random() * view.cols, y: -0.5 - Math.random() * 2, vx: (Math.random() - 0.5) * 1.5, vy: 1 + Math.random() * 2, life: 2 + Math.random(), color: colors[i % colors.length], r: 3 + Math.random() * 3, conf: true });
@@ -509,7 +513,7 @@ function levelDone() {
       const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       s.setAttribute("class", "ic " + (i < stars ? "on" : "off")); s.style.animationDelay = `${0.15 + i * 0.22}s`;
       s.innerHTML = `<use href="#i-star"/>`; st.appendChild(s);
-      if (i < stars) setTimeout(() => { tone(4 + i * 2, 0.3); buzz("light"); }, 150 + i * 220);
+      if (i < stars) setTimeout(() => { sfx("star", 0.8, 1 + i * 0.12); buzz("light"); }, 150 + i * 220);
     }
     $("#r-echoes").textContent = res.echoes; $("#r-time").textContent = res.exitTick;
     countUp($("#r-coins"), reward);
@@ -611,7 +615,7 @@ function doBeat(dir) {
   L.stepRun(run, dir);
   game.beatT0 = performance.now(); game.queued = null;
   const hero = run.actors[run.actors.length - 1];
-  if (hero.moved) tone(-6 + (run.tick % 4), 0.05); else if (dir) { shake(2); } else tone(-12, 0.04);
+  if (hero.moved) sfx("step", 0.4, 0.96 + Math.random() * 0.08); else if (dir) { shake(2); tone(-14, 0.05); } else sfx("tick", 0.45);
   handleEvents(run); updateTimer(run);
   if (run.finished) { levelDone(); return; }
   if (run.dead) { loopFailed(); return; }
@@ -661,11 +665,11 @@ function updateTimer(run) {
 function handleEvents(run) {
   for (const e of run.events) {
     if (e.t === "coin") {
-      sfx("chime", 0.5); burst(e.x + 0.5, e.y + 0.5, "#ffc93c", 14);
+      sfx("coin", 0.8, 1 + Math.min(6, run.taken - 1) * 0.07); burst(e.x + 0.5, e.y + 0.5, "#ffc93c", 14);
       if (e.hero) { flyCoin(e.x + 0.5, e.y + 0.5); buzz("light"); } else bumpCoins();
-    } else if (e.t === "plate") { sfx("plate", 0.7); game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
-    else if (e.t === "open") { sfx("door", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
-    else if (e.t === "close") { game.doorAnim[e.k] = { t: 0, open: false }; }
+    } else if (e.t === "plate") { sfx("plate", 0.8); game.flash = Math.max(game.flash, 0.1); ring(e); buzz("medium"); }
+    else if (e.t === "open") { sfx("open", 0.6); game.doorAnim[e.k] = { t: 0, open: true }; buzz("light"); }
+    else if (e.t === "close") { sfx("close", 0.45); game.doorAnim[e.k] = { t: 0, open: false }; }
     else if (e.t === "dead") burst(e.x + 0.5, e.y + 0.5, "#ff4fd8", 26);
     else if (e.t === "exit") { burst(e.x + 0.5, e.y + 0.5, "#ffd9a8", 40); burst(e.x + 0.5, e.y + 0.5, "#39e6ff", 24); game.flash = 0.45; game.exitAnim = { x: e.x + 0.5, y: e.y + 0.5, t: 0, face: game.run.actors[game.run.actors.length - 1].face || 1 }; }
   }
@@ -1238,7 +1242,7 @@ function renderShop() {
     else if (owned) { b.textContent = T("equip"); b.addEventListener("click", () => { saveRoom.act({ t: "equip", skin: id }); renderShop(); }); }
     else {
       b.innerHTML = s.gems ? `<img src="assets/gem.png" alt="" style="width:18px"> ${s.gems}` : `<img src="assets/coin.png" alt="" style="width:18px"> ${s.coins}`;
-      const buy = () => { const v = saveRoom.act({ t: "buy", item: id }); if (v.ok) { toast(T("bought")); sfx("chime"); buzz("success"); } else toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); renderShop(); };
+      const buy = () => { const v = saveRoom.act({ t: "buy", item: id }); if (v.ok) { toast(T("bought")); sfx("buy"); buzz("success"); } else toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); renderShop(); };
       // Premium currency asks first, like every store does; coins are instant.
       b.addEventListener("click", () => {
         if ((s.gems && profile.gems < s.gems) || (s.coins && profile.coins < s.coins)) { toast(T("not_enough", { c: s.gems ? T("gems") : T("coins") })); buzz("warning"); return; }
@@ -1293,7 +1297,7 @@ function purchase(sku) {
   const p = L.IAP[sku];
   confirmBuy(T(sku), p.price, () => {
     const v = saveRoom.act({ t: "iap", sku });
-    if (v.ok) { toast(T("bought")); sfx("win", 0.6); buzz("success"); }
+    if (v.ok) { toast(T("bought")); sfx("buy"); buzz("success"); }
     renderShop();
   });
 }
@@ -1408,8 +1412,8 @@ tap($("#b-hintad"), () => {
   const hintText = own === T("hint_generic") ? own : own + " " + T("hint_generic");
   watchAd(() => sheet(`<h2>${T("hint_title")}</h2><p>${hintText}</p>`, [[T("close"), "ghost", closeSheet]]));
 });
-$("#b-ad").addEventListener("click", () => watchAd(() => { const v = saveRoom.act({ t: "ad", day: today() }); if (v.ok) { toast(T("ad_done")); sfx("chime"); } renderShop(); }));
-$("#b-claim").addEventListener("click", () => { const v = saveRoom.act({ t: "claim_pass" }); if (v.ok) { toast(T("bought")); sfx("win", 0.5); } else toast(v.error === "pass required" ? T("tier_locked") : T("need_xp")); renderShop(); });
+$("#b-ad").addEventListener("click", () => watchAd(() => { const v = saveRoom.act({ t: "ad", day: today() }); if (v.ok) { toast(T("ad_done")); sfx("coin"); } renderShop(); }));
+$("#b-claim").addEventListener("click", () => { const v = saveRoom.act({ t: "claim_pass" }); if (v.ok) { toast(T("bought")); sfx("buy", 0.7); } else toast(v.error === "pass required" ? T("tier_locked") : T("need_xp")); renderShop(); });
 $("#b-playdaily").addEventListener("click", () => startLevel(L.dailyLevel(today()), "daily"));
 $("#b-next").addEventListener("click", () => { const k = nextLevelKey(); if (k) startLevel(L.levelById(k), k); });
 $("#b-again").addEventListener("click", () => startLevel(game.level, game.levelKey));

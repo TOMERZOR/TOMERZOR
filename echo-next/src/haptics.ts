@@ -31,7 +31,7 @@ function iosSwitch() {
   if (sw) return sw;
   try {
     swLabel = document.createElement("label"); swLabel.style.cssText = "position:fixed;left:-100px;top:-100px;width:1px;height:1px;opacity:0;pointer-events:none";
-    sw = document.createElement("input"); sw.type = "checkbox"; (sw as any).switch = true; sw.setAttribute("switch", "");
+    sw = document.createElement("input"); sw.type = "checkbox"; (sw as any).switch = true; sw.setAttribute("switch", ""); sw.tabIndex = -1; sw.setAttribute("aria-hidden", "true"); sw.style.pointerEvents = "none";
     swLabel.appendChild(sw); document.body.appendChild(swLabel);
   } catch { sw = null; }
   return sw;
@@ -53,7 +53,7 @@ export function buzz(kind: Buzz = "light") {
   if (isIOS()) {
     const s = iosSwitch(); if (!s || !swLabel) return;
     const n = kind === "success" || kind === "error" ? 2 : 1;
-    try { swLabel.click(); if (n > 1) setTimeout(() => swLabel?.click(), 90); } catch { /* not supported */ }
+    try { s.click(); if (n > 1) setTimeout(() => s.click(), 90); } catch { /* not supported */ }
   }
 }
 

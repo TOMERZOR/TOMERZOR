@@ -10,6 +10,7 @@ import { audio, buzz } from "../audio";
 import { t } from "../i18n";
 import { dialog } from "./dialog";
 import { PassScene } from "./pass";
+import { showAd } from "./ads";
 
 const TIER_COLOR = [C.plateLight, C.plateLight, C.violetDark, C.goldDark];
 
@@ -109,9 +110,7 @@ export class ShopScene extends Scene {
     dialog({ eyebrow: t("purchase_title"), title: t("purchase_q", { item: name, price }), text: t("purchase_note"), buttons: [{ label: t("cancel"), kind: "ghost" }, { label: t("confirm"), onTap: () => { const r = state.act({ t: "iap", sku }); if (r.ok) { audio.play("buy"); buzz("success"); toast(t("bought")); } else toast(r.error); } }] });
   }
   private watchAd() {
-    let n = 3; const txt = new Text({ text: t("ad_sub", { n }), style: body(28, C.lilac) }); txt.anchor.set(0.5, 0);
-    const d = dialog({ eyebrow: t("free_coins"), title: t("ad_title"), content: txt, buttons: [{ label: t("close"), kind: "ghost" }], dismiss: false });
-    const iv = setInterval(() => { n--; txt.text = t("ad_sub", { n }); if (n <= 0) { clearInterval(iv); d.close(); const r = state.act({ t: "ad", day: today() }); if (r.ok) { audio.play("coin"); toast(t("ad_done")); } } }, 1000);
+    showAd(() => { const r = state.act({ t: "ad", day: today() }); if (r.ok) { audio.play("coin"); toast(t("ad_done")); } });
   }
   relayout() {
     this.top.relayout(layout.safeTop); this.tabs.relayout(layout.bottom, layout.safeBottom);

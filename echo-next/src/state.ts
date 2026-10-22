@@ -39,7 +39,7 @@ class Room {
   }
 }
 
-type Opts = { music: boolean; sfx: boolean; haptics: boolean; assist: boolean; lang: string };
+type Opts = { music: boolean; sfx: boolean; haptics: boolean; assist: boolean; lang: string; debug?: boolean };
 export const state = {
   pid: "",
   profile: null as unknown as Profile,

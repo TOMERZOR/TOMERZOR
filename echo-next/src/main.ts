@@ -6,14 +6,23 @@
 import { Application, Container, Assets } from "pixi.js";
 import gsap from "gsap";
 import { W, H, C } from "./theme";
-import { Scenes, layout } from "./scenes";
+import { Scenes, layout, report, errors } from "./scenes";
 import { audio } from "./audio";
 import { HomeScene } from "./scenes/home";
 import { state } from "./state";
 
+window.addEventListener("error", (e) => report(e.error ?? e.message));
+window.addEventListener("unhandledrejection", (e) => report((e as PromiseRejectionEvent).reason));
+
 const app = new Application();
-await app.init({ background: C.ink, resizeTo: window, antialias: true, resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true, preference: "webgl" });
+try {
+  await app.init({ background: C.ink, resizeTo: window, antialias: true, resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true, preference: "webgl" });
+} catch (e) {
+  report(e);
+  await app.init({ background: C.ink, resizeTo: window, antialias: false, resolution: 1, autoDensity: true });
+}
 document.body.appendChild(app.canvas);
+(window as any).__echo = { app, Scenes, state, layout, errors };
 
 /** Design-space root: scaled uniformly; `layout` exposes the visible bounds. */
 const root = new Container();
@@ -52,6 +61,14 @@ await Assets.load([
 ]);
 fit();
 audio.preload();
+// Debug overlay (toggled from the profile screen): fps, renderer, last error.
+let dbg: HTMLDivElement | null = null;
+setInterval(() => {
+  if (!state.opts.debug) { if (dbg) dbg.style.display = "none"; return; }
+  if (!dbg) { dbg = document.createElement("div"); dbg.style.cssText = "position:fixed;left:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:98;background:rgba(0,0,0,.7);color:#7ef0c6;font:600 11px/1.3 ui-monospace,monospace;padding:6px 8px;border-radius:8px;pointer-events:none;max-width:70vw;white-space:pre-wrap"; document.body.appendChild(dbg); }
+  dbg.style.display = "block";
+  dbg.textContent = `fps ${app.ticker.FPS.toFixed(0)} · ${app.renderer.name} · ${window.innerWidth}×${window.innerHeight}@${(window.devicePixelRatio || 1).toFixed(1)} · scene ${Scenes.top?.constructor.name ?? "-"}` + (errors.last ? `\nerr(${errors.count}): ${errors.last.slice(0, 160)}` : "");
+}, 500);
 window.addEventListener("pointerdown", () => audio.unlock(), { once: true });
 Scenes.push(new HomeScene());
 gsap.ticker.lagSmoothing(0);

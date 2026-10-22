@@ -6,7 +6,7 @@ import { W, C } from "../theme";
 import { panel, button, display, body, scrim } from "../ui";
 import { buzz } from "../haptics";
 
-export interface DialogOpts { eyebrow?: string; title: string; text?: string; content?: Container; buttons: { label: string; kind?: "primary" | "secondary" | "ghost" | "mint"; onTap?: () => void }[]; dismiss?: boolean }
+export interface DialogOpts { eyebrow?: string; title: string; text?: string; content?: Container; buttons: { label: string; sub?: string; kind?: "primary" | "secondary" | "ghost" | "mint"; onTap?: () => void }[]; dismiss?: boolean }
 
 export class DialogScene extends Scene {
   private box!: Container; private shade!: Graphics;
@@ -21,9 +21,16 @@ export class DialogScene extends Scene {
     if (this.o.text) { const b = new Text({ text: this.o.text, style: body(30, C.lilac, 700) }); b.style.wordWrap = true; b.style.wordWrapWidth = w - pad * 2; b.style.align = "center"; b.anchor.set(0.5, 0); b.position.set(w / 2, y); items.push(b); y += b.height + 24; }
     if (this.o.content) { const c = this.o.content; c.position.set(w / 2, y); items.push(c); y += c.height + 30; }
     y += 10;
-    const n = this.o.buttons.length, bw = n === 1 ? 520 : (w - pad * 2 - 20 * (n - 1)) / n;
-    this.o.buttons.forEach((b, i) => { const bt = button({ w: bw, h: 120, label: b.label, kind: b.kind ?? (i === n - 1 ? "primary" : "ghost"), size: 40, onTap: () => { this.close(); b.onTap?.(); } }); bt.position.set(n === 1 ? w / 2 : pad + bw / 2 + i * (bw + 20), y + 60); items.push(bt); });
-    y += 120 + pad;
+    const n = this.o.buttons.length;
+    if (n >= 3) {
+      // Three or more choices stack, full width, so labels stay readable on a phone.
+      this.o.buttons.forEach((b, i) => { const bt = button({ w: w - pad * 2, h: 112, label: b.label, sub: b.sub, kind: b.kind ?? (i === n - 1 ? "primary" : "ghost"), size: 38, onTap: () => { this.close(); b.onTap?.(); } }); bt.position.set(w / 2, y + 56); items.push(bt); y += 112 + 18; });
+      y += pad - 18;
+    } else {
+      const bw = n === 1 ? 520 : (w - pad * 2 - 20 * (n - 1)) / n;
+      this.o.buttons.forEach((b, i) => { const bt = button({ w: bw, h: 120, label: b.label, sub: b.sub, kind: b.kind ?? (i === n - 1 ? "primary" : "ghost"), size: 40, onTap: () => { this.close(); b.onTap?.(); } }); bt.position.set(n === 1 ? w / 2 : pad + bw / 2 + i * (bw + 20), y + 60); items.push(bt); });
+      y += 120 + pad;
+    }
     this.box.addChild(panel(w, y, { radius: 36 }), ...items);
     this.box.pivot.set(w / 2, y / 2); this.addChild(this.box);
     this.box.scale.set(0.8); this.box.alpha = 0; gsap.to(this.box, { alpha: 1, duration: 0.18 }); gsap.to(this.box.scale, { x: 1, y: 1, duration: 0.35, ease: "back.out(1.8)" });

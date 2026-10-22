@@ -646,6 +646,8 @@ export const PASS_TIERS = [
 
 export const AD_COINS = 30;
 export const ADS_PER_DAY = 5;
+/** What help costs, in coins: a peek at the next moves, a loop played for you, a continue after a drone. */
+export const PRICES = { hint: 40, loop: 120, continue: 25 };
 
 export function newProfile(pid) {
   return {
@@ -739,6 +741,12 @@ export function validateAction(state, playerId, action) {
     case "name":
       if (typeof action.name !== "string" || action.name.length > 16) return { ok: false, error: "bad name" };
       return { ok: true };
+    case "spend": {
+      const price = PRICES[action.what];
+      if (!price) return { ok: false, error: "unknown purchase" };
+      if (p.coins < price) return { ok: false, error: "not enough coins" };
+      return { ok: true };
+    }
     default:
       return { ok: false, error: "unknown action" };
   }
@@ -829,6 +837,10 @@ export function applyAction(state, playerId, action) {
       break;
     case "name":
       p.name = action.name;
+      break;
+    case "spend":
+      p.coins -= PRICES[action.what];
+      p.spent = (p.spent || 0) + PRICES[action.what];
       break;
   }
   return { ...state, players: { ...state.players, [playerId]: p }, daily };

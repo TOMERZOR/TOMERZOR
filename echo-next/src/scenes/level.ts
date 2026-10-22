@@ -15,6 +15,8 @@ import { audio, buzz } from "../audio";
 import { t } from "../i18n";
 import { dialog } from "./dialog";
 import { MapScene } from "./map";
+import { ShopScene } from "./shop";
+import { showAd } from "./ads";
 import { levelName } from "./home";
 
 const REPEAT_MS = 175, REPLAY_MS = 260, BEAT_MS = 150, SWIPE = 20;
@@ -22,6 +24,8 @@ const KEYS: Record<string, number> = { ArrowUp: 1, KeyW: 1, ArrowRight: 3, KeyD:
 const WAIT_KEYS = new Set(["Space", "Period", "KeyX"]);
 const fails: Record<string, number> = {};
 const easeOut = (k: number) => 1 - Math.pow(1 - Math.max(0, Math.min(1, k)), 3);
+/** A cheap deep-enough copy of a run for look-ahead (structuredClone is slow on some phones). */
+const cloneRun = (r: Run): Run => ({ ...r, actors: r.actors.map((a) => ({ ...a })), coins: r.coins.map((c) => ({ ...c })), doors: { ...r.doors }, plates: { ...r.plates }, drones: r.drones.map((d) => ({ ...d })), events: [] });
 
 interface Snap { actors: { x: number; y: number }[]; drones: { x: number; y: number }[] }
 
@@ -98,6 +102,7 @@ export class LevelScene extends Scene {
     mk(120, "undo", t("undo"), () => { if (this.canControl() && this.recording.length) this.rewind(1); });
     mk(290, "restart", t("restart"), () => { if (this.canControl()) { audio.play("tap", 0.5); this.startLoop(); } });
     mk(W - 120, "bulb", t("hint"), () => this.hint());
+    this.hintTag = new Container(); this.hintTag.position.set(W - 120, -78); this.controls.addChild(this.hintTag);
     // the big END LOOP key
     const end = new Container(); const d = 270, g = new Graphics();
     g.circle(0, 12, d / 2).fill({ color: C.mintDark }); g.circle(0, 0, d / 2).fill({ color: C.mint }); g.circle(0, -14, d * 0.4).fill({ color: 0xbdfde6, alpha: 0.7 }); g.ellipse(0, -62, 70, 22).fill({ color: 0xffffff, alpha: 0.45 }); g.circle(0, 0, d / 2).stroke({ color: 0x000000, alpha: 0.2, width: 3 });
@@ -109,17 +114,26 @@ export class LevelScene extends Scene {
     end.on("pointerup", (e) => up(e, true)); end.on("pointerupoutside", (e) => up(e, false));
     end.position.set(W / 2, -10); this.controls.addChild(end);
   }
+  private hintTag!: Container;
+  private freeHelp() { return this.key === "tutorial" || this.key === "1-1" || this.key === "1-2"; }
+  private drawHintTag() {
+    this.hintTag.removeChildren().forEach((c) => c.destroy({ children: true }));
+    const free = this.freeHelp(); const g = new Graphics(); const w = free ? 110 : 120;
+    g.roundRect(-w / 2, -24, w, 48, 24).fill({ color: free ? C.mint : C.gold }); g.roundRect(-w / 2, -24, w, 48, 24).stroke({ color: 0x000000, alpha: 0.25, width: 2 }); this.hintTag.addChild(g);
+    if (free) { const tx = new Text({ text: t("free_tag"), style: display(24, 0x16302a, true, false) }); tx.anchor.set(0.5); this.hintTag.addChild(tx); }
+    else { const ic = iconSprite("coin", 36); ic.x = -30; this.hintTag.addChild(ic); const tx = new Text({ text: String(L.PRICES.hint), style: display(28, 0x3a2400, false, false) }); tx.anchor.set(0, 0.5); tx.x = -8; this.hintTag.addChild(tx); }
+  }
   private buildBanner() {
     this.banner = new Container(); this.banner.alpha = 0; this.addChild(this.banner);
     const bgG = new Graphics(); bgG.label = "bg"; this.banner.addChild(bgG);
-    this.bannerT = new Text({ text: "", style: display(72, C.cream, true) }); this.bannerT.anchor.set(0.5); this.banner.addChild(this.bannerT);
-    this.bannerS = new Text({ text: "", style: body(30, C.mint, 800) }); this.bannerS.anchor.set(0.5, 0); this.bannerS.style.wordWrap = true; this.bannerS.style.wordWrapWidth = 820; this.bannerS.style.align = "center"; this.banner.addChild(this.bannerS);
+    this.bannerT = new Text({ text: "", style: display(60, C.cream, true) }); this.bannerT.anchor.set(0.5); this.banner.addChild(this.bannerT);
+    this.bannerS = new Text({ text: "", style: body(28, C.mint, 800) }); this.bannerS.anchor.set(0.5, 0); this.bannerS.style.wordWrap = true; this.bannerS.style.wordWrapWidth = 880; this.bannerS.style.align = "center"; this.banner.addChild(this.bannerS);
   }
   private bannerTl: gsap.core.Timeline | null = null;
   private showBanner(title: string, sub: string, ms: number) {
-    this.bannerT.text = title; this.bannerS.text = sub; this.bannerS.y = 44;
-    const bgG = this.banner.getChildByLabel("bg") as Graphics; const w = Math.max(this.bannerT.width, sub ? this.bannerS.width : 0) + 120, h = 130 + (sub ? this.bannerS.height + 10 : 0);
-    bgG.clear(); bgG.roundRect(-w / 2, -70, w, h, 34).fill({ color: C.ink, alpha: 0.82 }); bgG.roundRect(-w / 2, -70, w, h, 34).stroke({ color: C.mint, alpha: 0.5, width: 3 });
+    this.bannerT.text = title; this.bannerS.text = sub; this.bannerS.y = 36;
+    const bgG = this.banner.getChildByLabel("bg") as Graphics; const w = Math.max(this.bannerT.width, sub ? this.bannerS.width : 0) + 120, h = 110 + (sub ? this.bannerS.height + 14 : 0);
+    bgG.clear(); bgG.roundRect(-w / 2, -58, w, h, 34).fill({ color: C.ink, alpha: 0.9 }); bgG.roundRect(-w / 2, -58, w, h, 34).stroke({ color: C.mint, alpha: 0.5, width: 3 });
     this.bannerTl?.kill(); this.banner.scale.set(0.8);
     this.bannerTl = gsap.timeline().to(this.banner, { alpha: 1, duration: 0.15 }).to(this.banner.scale, { x: 1, y: 1, duration: 0.35, ease: "back.out(1.8)" }, 0).to(this.banner, { alpha: 0, duration: 0.3, delay: ms / 1000 });
   }
@@ -160,6 +174,10 @@ export class LevelScene extends Scene {
   }
   private syncActors() {
     this.actors.removeChildren().forEach((c) => { killTweensDeep(c as Container); c.destroy(); });
+    // Old forecast ghosts and danger marks go first; the new ones are made below.
+    for (const g of this.ghostSps) if (!g.destroyed) g.destroy();
+    for (const d of this.dangerSps) if (!d.destroyed) d.destroy({ children: true });
+    this.dangerSps = []; this.danger = null;
     this.echoSps = []; this.droneSps = []; this.ghostSps = [];
     const skin = state.skin(), cs = this.cs;
     for (let i = 0; i < this.run.actors.length - 1; i++) { const e = echoSprite(skin); e.width = cs * 0.92; e.scale.y = e.scale.x; e.anchor.set(0.5, 0.92); this.actors.addChild(e); this.echoSps.push(e); }
@@ -167,8 +185,7 @@ export class LevelScene extends Scene {
     this.heroSp = heroSprite(skin); this.heroSp.width = cs * 0.96; this.heroSp.scale.y = this.heroSp.scale.x; this.heroSp.anchor.set(0.5, 0.92); this.actors.addChild(this.heroSp);
     for (const _ of this.run.drones) { const d = new Sprite(Texture.from("drone")); d.anchor.set(0.5, 0.6); d.width = cs * 0.86; d.scale.y = d.scale.x; this.actors.addChild(d); this.droneSps.push(d); }
     // coins
-    for (const s of this.coinSps.values()) { gsap.killTweensOf(s); s.destroy(); } this.coinSps.clear();
-    for (const g of this.ghostSps) g.destroy(); for (const d of this.dangerSps) d.destroy({ children: true }); this.dangerSps = []; this.danger = null;
+    for (const s of this.coinSps.values()) { gsap.killTweensOf(s); if (!s.destroyed) s.destroy(); } this.coinSps.clear();
     for (const c of this.run.coins) { const s = new Sprite(Texture.from("coin_t")); s.anchor.set(0.5); s.width = s.height = cs * 0.62; s.position.set((c.x + 0.5) * cs, (c.y + 0.5) * cs); this.items.addChild(s); this.coinSps.set(`${c.x},${c.y}`, s); gsap.to(s, { y: (c.y + 0.42) * cs, duration: 0.8 + Math.random() * 0.4, yoyo: true, repeat: -1, ease: "sine.inOut" }); }
     this.syncStatic();
   }
@@ -191,7 +208,8 @@ export class LevelScene extends Scene {
     const availH = bottom - boardTop - ctrlH, cell = Math.min((W - 90) / L.COLS, availH / L.ROWS);
     const k = cell / 100; this.board.scale.set(k);
     this.board.position.set((W - L.COLS * cell) / 2, boardTop + (availH - L.ROWS * cell) / 2);
-    this.banner.position.set(W / 2, boardTop + availH * 0.42);
+    // The banner sits over the HUD, never over the room.
+    this.banner.position.set(W / 2, top + 250);
   }
 
   // ── flow ─────────────────────────────────────────────────────────────────
@@ -208,6 +226,7 @@ export class LevelScene extends Scene {
   private hideCoach() { if (!this.coach) return; killTweensDeep(this.coach); this.coach.destroy({ children: true }); this.coach = null; }
   private startLevel() {
     this.logs = []; this.playing = true;
+    this.drawHintTag();
     this.startLoop();
     this.showCoach();
     this.showBanner(t("loop_n", { n: 1 }), this.hintFor(), 3800);
@@ -223,7 +242,7 @@ export class LevelScene extends Scene {
   private later(ms: number, fn: () => void) { const g = this.gen; setTimeout(() => { if (this.playing && this.gen === g && !this.destroyed) fn(); }, ms); }
   private startLoop() {
     this.gen += 1; this.recording = ""; this.run = L.createRun(this.level, [...this.logs, ""]);
-    this.prev = null; this.queued = null; this.beatT0 = -1e9; this.auto = null; this.danger = null; this.hintUntil = -1; this.hintSp.visible = false;
+    this.prev = null; this.queued = null; this.beatT0 = -1e9; this.auto = null; this.danger = null; this.hintUntil = -1; this.hintSp.visible = false; this.clearPeek(true);
     this.syncActors();
     if (this.logs.length) this.showBanner(t("loop_n", { n: this.logs.length + 1 }), t("loop_sub"), 900);
     audio.play("tick", 0.4, 1 + this.logs.length * 0.08);
@@ -247,47 +266,94 @@ export class LevelScene extends Scene {
     this.showBanner(t("caught"), t("caught_sub"), 1200); audio.play("caught"); this.shake(14); buzz("error"); this.noteFail();
     this.flash.alpha = 0.45; gsap.to(this.flash, { alpha: 0, duration: 0.5 }); this.freeze = 0.09;
     gsap.fromTo(this.heroSp, { tint: 0xff6b6b }, { tint: 0xffffff, duration: 0.7 });
-    this.later(700, () => this.rewind(1));
+    this.later(800, () => this.offerContinue());
+  }
+  /** After a drone: pick up from the move before (ad, coins, or free without ads) or restart the loop. */
+  private offerContinue() {
+    if (!this.playing || !this.run?.dead) return;
+    const p = state.profile, price = L.PRICES.continue, free = p.noads || this.key === "tutorial";
+    const buttons: { label: string; sub?: string; kind?: "primary" | "secondary" | "ghost" | "mint"; onTap?: () => void }[] = [];
+    if (free) buttons.push({ label: t("continue_free"), sub: t("free_tag"), kind: "mint", onTap: () => this.rewind(1) });
+    else buttons.push({ label: t("continue_ad"), sub: t("continue_free"), kind: "mint", onTap: () => showAd(() => { if (this.playing && this.run.dead) this.rewind(1); }) });
+    buttons.push({ label: t("continue_coins", { n: price }), sub: t("continue_free"), kind: "primary", onTap: () => { const r = state.act({ t: "spend", what: "continue" }); if (!r.ok) { this.notEnough(() => this.offerContinue()); return; } audio.play("buy", 0.6); buzz("success"); this.rewind(1); } });
+    buttons.push({ label: t("restart_loop"), kind: "ghost", onTap: () => this.startLoop() });
+    dialog({ eyebrow: t("caught"), title: t("continue_q"), text: t("continue_sub"), buttons, dismiss: false });
+  }
+  private notEnough(back?: () => void) {
+    dialog({ title: t("not_enough", { c: t("coins") }), text: t("get_coins_sub"), buttons: [{ label: t("cancel"), kind: "ghost", onTap: back }, { label: t("get_coins"), onTap: () => Scenes.go(new ShopScene()) }] });
   }
   private rewind(n: number) {
     if (!this.playing || !this.run || this.run.finished) return;
     const rec = this.recording.slice(0, Math.max(0, this.recording.length - n));
     const run = L.createRun(this.level, [...this.logs, ""]);
     for (const ch of rec) L.stepRun(run, ch.charCodeAt(0) - 48);
-    run.events = []; this.run = run; this.recording = rec; this.prev = null; this.queued = null; this.beatT0 = -1e9; this.danger = null;
+    run.events = []; this.run = run; this.recording = rec; this.prev = null; this.queued = null; this.beatT0 = -1e9; this.danger = null; this.clearPeek(true);
     this.syncStatic(); audio.play("tick", 0.5, 0.8); buzz("light");
   }
   private noteFail() {
     const n = (fails[this.key] = (fails[this.key] || 0) + 1);
     if (n === 3) this.later(1500, () => this.showBanner(t("tip"), t("tip_free"), 5200));
-    if (n === 6 && S.SOLUTIONS[this.key]) this.later(1500, () => this.offerHelp());
+    if (n === 6 && S.SOLUTIONS[this.key]) this.later(1500, () => { if (this.canControl()) this.hint(); });
   }
-  private offerHelp() {
-    dialog({ eyebrow: t("hint_title"), title: t("help_title"), text: t("help_sub"), buttons: [{ label: t("help_no"), kind: "ghost" }, { label: t("help_yes"), onTap: () => {
-      this.logs = []; this.startLoop();
-      const sol = S.logsFor(S.SOLUTIONS[this.key]!), multi = sol.length > 1, first = sol[0]!;
-      this.auto = { log: multi ? first : first.slice(0, Math.ceil(first.length / 2)), i: 0, end: multi };
-      this.showBanner(t("help_play"), "", 1600);
-    } }] });
-  }
-  /** Hint key: the next move from the recorded solution when the player is on it, else the room tip. */
+  /** Hint key: a peek at the next three moves, or the whole loop played for you. Free in the first rooms, coins after. */
   private hint() {
     audio.play("tap", 0.5);
+    if (!this.canControl()) return;
     const sol = S.SOLUTIONS[this.key] ? S.logsFor(S.SOLUTIONS[this.key]!) : null;
-    if (sol && this.canControl()) {
-      const li = this.logs.length, onTrack = this.logs.every((l, i) => l === sol[i]) && li < sol.length && sol[li]!.startsWith(this.recording);
-      if (onTrack) {
-        const next = sol[li]!.charCodeAt(this.recording.length) - 48;
-        if (Number.isNaN(next)) { this.showBanner(t("hint_title"), t("tip_plate"), 2600); return; }
-        const h = this.run.actors[this.run.actors.length - 1]!, [dx, dy] = L.DIRS[next] ?? [0, 0];
-        this.hintSp.visible = true; this.hintSp.position.set((h.x + dx! + 0.5) * this.cs, (h.y + dy! + 0.5) * this.cs); this.hintSp.rotation = next === 1 ? -Math.PI / 2 : next === 3 ? 0 : next === 5 ? Math.PI / 2 : next === 7 ? Math.PI : 0;
-        this.hintSp.alpha = next ? 1 : 0.6; this.hintUntil = this.run.tick + 1;
-        if (!next) this.showBanner(t("hint_title"), t("tip_plate"), 2200);
-        return;
-      }
+    if (!sol) { this.showBanner(t("hint_title"), this.hintFor(), 3200); return; }
+    const free = this.freeHelp(), p = state.profile;
+    dialog({ eyebrow: t("hint_title"), title: t("help_q"), text: free ? this.hintFor() : t("help_coins", { n: p.coins }), buttons: [
+      { label: t("hint_peek"), sub: free ? t("free_tag") : t("continue_coins", { n: L.PRICES.hint }), kind: "mint", onTap: () => this.buyHelp("hint", sol) },
+      { label: t("hint_auto"), sub: free ? t("free_tag") : t("continue_coins", { n: L.PRICES.loop }), kind: "secondary", onTap: () => this.buyHelp("loop", sol) },
+      { label: t("cancel"), kind: "ghost" },
+    ] });
+  }
+  private trimmed = (l: string) => l.replace(/0+$/, "");
+  /** Where the player stands relative to the recorded solution. */
+  private track(sol: string[]) {
+    const li = this.logs.length;
+    const loopsOk = li < sol.length && this.logs.every((l, i) => this.trimmed(l) === this.trimmed(sol[i]!));
+    const thisOk = loopsOk && sol[li]!.startsWith(this.recording);
+    return { li, loopsOk, thisOk };
+  }
+  private buyHelp(what: "hint" | "loop", sol: string[]) {
+    const run = () => {
+      if (!this.freeHelp()) { const r = state.act({ t: "spend", what }); if (!r.ok) { this.notEnough(); return; } audio.play("buy", 0.6); buzz("success"); }
+      if (what === "hint") this.peek(sol); else this.autoLoop(sol);
+    };
+    const { loopsOk, thisOk } = this.track(sol);
+    if (thisOk) { run(); return; }
+    if (loopsOk) { dialog({ title: t("rewind_loop"), text: t("off_track"), buttons: [{ label: t("cancel"), kind: "ghost" }, { label: t("rewind_loop"), onTap: () => { this.startLoop(); run(); } }] }); return; }
+    dialog({ title: t("restart_room"), text: t("off_track"), buttons: [{ label: t("cancel"), kind: "ghost" }, { label: t("restart_room"), onTap: () => { this.logs = []; this.startLoop(); this.drawDots(); run(); } }] });
+  }
+  private peekSps: Container[] = [];
+  /** Arrows on the next three cells of the recorded route, numbered. */
+  private peek(sol: string[]) {
+    for (const p of this.peekSps) p.destroy({ children: true }); this.peekSps = [];
+    const { li } = this.track(sol); const log = sol[li]!; const h = this.run.actors[this.run.actors.length - 1]!;
+    let x = h.x, y = h.y;
+    for (let k = 0; k < 3 && this.recording.length + k < log.length; k++) {
+      const d = log.charCodeAt(this.recording.length + k) - 48; const [dx, dy] = L.DIRS[d] ?? [0, 0];
+      const c = new Container();
+      if (d) { x += dx!; y += dy!; const ar = new Sprite(Texture.from("arrow")); ar.anchor.set(0.5); ar.width = ar.height = this.cs * 0.7; ar.rotation = d === 1 ? -Math.PI / 2 : d === 3 ? 0 : d === 5 ? Math.PI / 2 : Math.PI; c.addChild(ar); }
+      else { const w = new Graphics(); w.circle(0, 0, this.cs * 0.22).stroke({ color: C.cream, width: 6 }); c.addChild(w); }
+      const n = new Text({ text: String(k + 1), style: display(this.cs * 0.3, C.cream, false, true) }); n.anchor.set(0.5); n.position.set(this.cs * 0.28, -this.cs * 0.28); c.addChild(n);
+      c.position.set((x + 0.5) * this.cs, (y + 0.5) * this.cs); c.alpha = 1 - k * 0.22; this.items.addChild(c); this.peekSps.push(c);
+      gsap.to(c.scale, { x: 1.08, y: 1.08, duration: 0.5, yoyo: true, repeat: -1, ease: "sine.inOut" });
     }
-    this.showBanner(t("hint_title"), this.hintFor(), 3200);
-    if ((fails[this.key] || 0) >= 4 && sol) this.later(3300, () => this.offerHelp());
+    this.hintUntil = this.run.tick + 3;
+    this.showBanner(t("hint_title"), t("peek_shown"), 1600);
+  }
+  private clearPeek(all = false) {
+    if (!this.peekSps.length) return;
+    if (all || this.run.tick > this.hintUntil) { for (const p of this.peekSps) { killTweensDeep(p); p.destroy({ children: true }); } this.peekSps = []; return; }
+    const first = this.peekSps.shift()!; killTweensDeep(first); first.destroy({ children: true });
+  }
+  /** The rest of this loop, played by the game from the recorded route. */
+  private autoLoop(sol: string[]) {
+    const { li } = this.track(sol); const log = sol[li]!;
+    this.auto = { log: log.slice(this.recording.length), i: 0, end: li < sol.length - 1 };
+    this.showBanner(t("help_play"), "", 1600);
   }
   private levelDone() {
     const logs = [...this.logs, this.recording], res = L.simulate(this.level, logs), stars = L.starsFor(this.level, res.echoes);
@@ -316,7 +382,7 @@ export class LevelScene extends Scene {
   replay() { this.gen += 1; this.rebuild(); }
   private rebuild() {
     for (const c of [this.floor, this.items, this.actors, this.fx]) c.removeChildren().forEach((x) => { killTweensDeep(x as Container); x.destroy({ children: true }); });
-    this.frame.clear(); this.plateSps.clear(); this.doorSps.clear(); this.coinSps.clear(); this.coach = null;
+    this.frame.clear(); this.plateSps.clear(); this.doorSps.clear(); this.coinSps.clear(); this.coach = null; this.peekSps = [];
     this.nameT.text = levelName(this.key); this.buildBoard(); this.relayout(); this.startLevel();
   }
   quit() { this.playing = false; audio.musicOn(false); audio.play("tap", 0.5); if (Scenes.depth > 1) Scenes.pop(); else Scenes.go(new MapScene()); }
@@ -365,6 +431,7 @@ export class LevelScene extends Scene {
     if (hero.moved) { audio.play("step", 0.4, 0.96 + Math.random() * 0.08); buzz("light"); } else if (dir) { this.shake(2); audio.play("tick", 0.3, 0.7); buzz("rigid"); } else { audio.play("tick", 0.45); buzz("selection"); }
     if (L.LOOP_TICKS - run.tick <= 3 && L.LOOP_TICKS - run.tick > 0) buzz("warning");
     if (run.tick > this.hintUntil) this.hintSp.visible = false;
+    this.clearPeek();
     this.handleEvents(run); this.drawDial();
     if (run.finished) { this.levelDone(); return; }
     if (run.dead) { this.loopFailed(); return; }
@@ -449,7 +516,7 @@ export class LevelScene extends Scene {
     const run = this.run, alive = this.canControl() && state.opts.assist && run.drones.length > 0;
     if (alive && (!this.danger || this.danger.tick !== run.tick || this.danger.gen !== this.gen)) {
       const cells: { x: number; y: number; wait: boolean }[] = [];
-      for (const dir of [0, 1, 3, 5, 7]) { const c = structuredClone(run); L.stepRun(c, dir); if (c.dead) { const h = c.actors[c.actors.length - 1]!; cells.push({ x: h.x, y: h.y, wait: dir === 0 }); } }
+      for (const dir of [0, 1, 3, 5, 7]) { const c = cloneRun(run); L.stepRun(c, dir); if (c.dead) { const h = c.actors[c.actors.length - 1]!; cells.push({ x: h.x, y: h.y, wait: dir === 0 }); } }
       this.danger = { tick: run.tick, gen: this.gen, cells };
       for (const d of this.dangerSps) d.destroy({ children: true }); this.dangerSps = [];
       for (const c of cells) {

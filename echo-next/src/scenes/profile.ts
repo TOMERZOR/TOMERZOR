@@ -65,7 +65,8 @@ export class ProfileScene extends Scene {
       r.eventMode = "static"; r.cursor = "pointer"; let x0 = 0; r.on("pointerdown", (e) => { x0 = e.global.y; }); r.on("pointerup", (e) => { if (Math.abs(e.global.y - x0) < 14) { audio.play("tap", 0.5); fn(); } });
       c.addChild(r); y += 116;
     }
-    const ver = new Text({ text: t("version"), style: body(22, C.lilac) }); ver.anchor.set(0.5, 0); ver.position.set(W / 2, y + 20); c.addChild(ver); y += 90;
+    const ver = new Text({ text: t("version") + (state.opts.debug ? " · debug" : ""), style: body(22, C.lilac) }); ver.anchor.set(0.5, 0); ver.position.set(W / 2, y + 20); c.addChild(ver); y += 90;
+    let taps = 0; ver.eventMode = "static"; ver.on("pointertap", () => { if (++taps >= 5) { taps = 0; state.setOpts({ debug: !state.opts.debug }); toast(state.opts.debug ? "debug on" : "debug off"); } });
     this.scroll.setContentHeight(y);
   }
   relayout() {

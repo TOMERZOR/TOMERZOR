@@ -58,11 +58,46 @@ The solver part: that simulates the real physics. A level ships only when it has
 - **IAP:** Remove Ads $3.99 · Starter Pack $4.99 (no ads, 1500 coins, Aurora ball, offered once after level 8) · coins $0.99 / $2.99 / $7.99 · Prism ball $1.99.
 - SDKs: AdMob (with UMP consent and ATT) and RevenueCat, behind `monetization.js`. The web build uses test mocks.
 
-## Style bible: premium minimal
-- **Palette per world:** a soft two-stop gradient sky, with objects in muted, low-saturation solids.
-  - Dawn `#F6EFE7 → #F3D9C9`, Mint `#EAF4EF → #CFE6DC`, Lilac `#EEEAF6 → #D8D0EE`, Ember `#F7ECE6 → #F0C7B5`, Night `#1D2233 → #2D3550`
-- **Glass:** translucent cool fill (alpha .32), crisp white edge, one diagonal specular streak, and sparkle on the shards.
-- **Type:** system rounded (SF Pro Rounded or the system UI font), big numbers, small caps labels, lots of space.
-- **Motion:** spring easing on all UI. Hit-stop of 30 ms on big impacts, slow-motion at 0.25× for 0.7 s on the final shatter, subtle screen shake only for bombs.
-- **Sound:** synthesised glass made of a noise burst, 3–7 bell partials and a low thump, randomised so no two shatters sound the same. Combo chimes climb a pentatonic scale.
-- **Haptics:** light on fire, medium on shatter (rate-limited), heavy on bombs and the final shatter.
+## Style bible: premium minimal, luminous (after the masterpiece pass)
+- **Worlds are times of day,** each with a key light from the top left, a shaft of light, a pool where it lands, drifting motes, a vignette and fine grain:
+  - Dawn: peach morning. Mint: greenhouse. Lilac: afternoon haze. Ember: sunset, with rising embers. Night: moonbeam and twinkling stars.
+  - Palettes, light and mote settings live in `shard/js/theme.js`.
+- **Glass is the hero,** baked once per piece into a sprite:
+  - Clear where the light enters and denser away from it.
+  - A saturated edge band where the wall is seen edge-on.
+  - Two reflections and a faint far-side one, a lit rim, and a glint.
+  - A coloured shadow with a bright caustic core; at night, coloured light instead.
+  - Reflections vary per piece.
+- **Shatter:**
+  - A flash and white crack lines, and the piece glows white-hot.
+  - Shards of real glass catch the light on their lit edges and glint as they turn.
+  - Glitter and glass dust follow.
+- **Other materials:** wood grain, speckled stone, lacquered shelves with cast shadows, iron bombs with a glowing core and a sparking fuse, squashy pads with chevrons, movers on a visible rail.
+- **Ball and cannon:**
+  - The ball has bounce light, a comet tail, stretch at speed and a squash on impact.
+  - The cannon has a lit barrel, a ready light, a muzzle flash and a contact shadow.
+  - Shots left are drawn as mini balls in the equipped skin.
+- **Aim guide:** flowing dots and a ghost ball at the first contact. On glass it's marked to break.
+- **Type:** Nunito (SIL OFL), bundled, so every platform, screenshot and the website match. Big numbers, small-caps labels, lots of space.
+- **Motion:** weight follows frequency.
+  - A level start (frequent) is under a second and never blocks: pieces pop in bottom-up while glass notes play.
+  - A win (every level) is quick: stars one by one, coins counting up, confetti on 3 stars.
+  - A new world (rare) is expressive: a title card on frosted light.
+  - Hit-stop is 30–70 ms per break, budgeted at 0.24 s per shot. The camera kicks toward each break and pushes in on the last piece during 0.2× slow motion.
+  - Reduce Motion turns off the camera, shake, hit-stop and decorative loops.
+- **Sound:**
+  - Recorded glass under randomised synthesised bell partials.
+  - Chain notes are FM crystal bells climbing a pentatonic scale, the same scale as the level-intro notes.
+  - The last piece slows time with a falling sigh while the music ducks. The win ends on a bell and a shimmer.
+- **Haptics:** light on fire, then light, medium and heavy as a chain grows (rate-limited); heavy on bombs and the final shatter; success on a win, warning on a loss.
+
+## Retention: the star crystal
+Every 15 stars fills a crystal. Its ring sits next to the star count on the home screen and glows when full. Shattering it pays 100 coins, rising by 25 per crystal up to 400, with a shake, eight flying facets, a chime and confetti. It's a goal that is always one or two levels away, and the reward is smashing glass.
+
+## Rendering architecture
+- Two canvas layers:
+  - Settled layer: the stage plus every body asleep in the physics engine. It redraws only when that set changes.
+  - Live layer: what moves, effects and UI-in-canvas.
+- Camera and shake apply to both.
+- Particles are pooled.
+- **Adaptive quality:** a rolling frame-time average picks one of four tiers (resolution, motes and dust, moving shadows, camera, shard edges, glow size). The tier is saved per device and retried one step higher on each launch.

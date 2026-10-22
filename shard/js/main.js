@@ -69,7 +69,8 @@ function applyPalette(w) {
   root.setProperty('--ink-hi', mixHex(p.ink, '#FFFFFF', 0.92));
   root.setProperty('--ink-lo', mixHex(p.ink, '#000000', 0.7));
   document.documentElement.dataset.dark = p.dark ? '1' : '';
-  document.querySelector('meta[name="theme-color"]').content = p.sky[0];
+  const themeColor = document.querySelector('meta[name="theme-color"]'); // absent when embedded in another page
+  if (themeColor) themeColor.content = p.sky[0];
   renderer.setPalette(p);
   game.setPalette(p);
   return p;

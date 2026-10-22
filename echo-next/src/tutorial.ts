@@ -34,7 +34,7 @@ export interface TutHost {
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
 
 export class Tutorial {
-  step: Step = 0; private pending4 = false; private done = false;
+  step: Step = 0; private pending4 = false; private done = false; private dead = false;
   private veil = new Graphics(); private ring = new Graphics(); private card = new Container(); private pointer!: Sprite; private hole: Rect | null = null; private cardZone: "top" | "bottom" = "bottom";
   private text!: Text; private cardPanel!: Graphics; private skipT!: Text; private nextBtn: Container | null = null;
   private stepTl: gsap.core.Timeline | null = null;
@@ -46,13 +46,15 @@ export class Tutorial {
     this.text = new Text({ text: "", style: body(31, C.cream, 800) }); this.text.style.wordWrap = true; this.text.style.wordWrapWidth = 820; this.text.style.align = "center"; this.text.anchor.set(0.5, 0); this.card.addChild(this.text);
     this.skipT = new Text({ text: t("skip"), style: body(24, C.lilac, 800) }); this.skipT.anchor.set(1, 0); this.skipT.eventMode = "static"; this.skipT.cursor = "pointer"; this.skipT.on("pointertap", () => this.host.skipTutorial()); this.card.addChild(this.skipT);
     L.addChild(this.card);
-    L.eventMode = "none";                 // the veil never swallows swipes
+    // The layer lets taps through to the room (swipes keep working) while Skip and Play stay tappable;
+    // "none" on the layer would prune its whole subtree from hit-testing.
+    L.eventMode = "passive"; this.veil.eventMode = "none"; this.ring.eventMode = "none"; this.pointer.eventMode = "none";
     this.show(0);
   }
 
   /** The room reports what happened; the tutorial decides what comes next. */
   on(ev: "beat" | "loopEnded" | "loopStart" | "exit") {
-    if (this.done) return;
+    if (this.done || this.dead) return;
     if (ev === "beat") {
       if (this.step === 0) { this.show(1); gsap.delayedCall(1.7, () => { if (this.step === 1) this.show(2); }); }
       else if (this.step === 2 && this.onPlate()) this.show(3);
@@ -60,6 +62,7 @@ export class Tutorial {
       if (this.step === 3) this.pending4 = true;
     } else if (ev === "loopStart") {
       if (this.pending4 && this.host.echoCount() === 1) { this.pending4 = false; this.show(4); }
+      else if (this.step === 3) { this.pending4 = false; this.show(2); }   // the loop was restarted instead of ended: back to "walk onto the plate"
     } else if (ev === "exit") { this.show(5); }
   }
   /** A loop may end only from step 3; earlier it means the player ran out of moves, so the room restarts. */
@@ -69,6 +72,8 @@ export class Tutorial {
   private onPlate() { const h = this.host.heroCell(); return TUTORIAL_LEVEL.map[h.y]?.[h.x] === "a"; }
 
   show(step: Step) {
+    if (this.dead) return;
+    if (step === 2 && this.onPlate()) step = 3;   // a quick player is already on the plate when the moves card ends
     this.step = step; this.stepTl?.kill();
     const L = this.host.layer;
     switch (step) {
@@ -90,6 +95,7 @@ export class Tutorial {
   private setText(s: string) { this.text.text = s; }
 
   relayout() {
+    if (this.dead || this.veil.destroyed) return;
     const bottom = layout.bottom, top = layout.safeTop;
     // veil with a hole
     this.veil.clear(); const a = 0.66;
@@ -116,5 +122,5 @@ export class Tutorial {
     const y = this.cardZone === "top" ? top + 150 : bottom - layout.safeBottom - 330 - h;
     this.card.position.set(W / 2, Math.max(top + 100, y));
   }
-  destroy() { this.stepTl?.kill(); killTweensDeep(this.host.layer); }
+  destroy() { this.dead = true; this.stepTl?.kill(); killTweensDeep(this.host.layer); }
 }

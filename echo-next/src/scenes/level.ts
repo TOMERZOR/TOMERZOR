@@ -12,10 +12,10 @@ import { panel, button, roundKey, pill, display, body, scrim, logoStyle } from "
 import { iconSprite, echoTexture } from "../widgets";
 import { Actor } from "../actor";
 import { glow, ring, burst as fxBurst, afterimage } from "../fx";
-import { state, L, S, today } from "../state";
+import { state, L, S, ORDER, today } from "../state";
 import type { Level, Run } from "../logic-types";
 import { audio, buzz } from "../audio";
-import { t, chamberTitle, objectiveFor } from "../i18n";
+import { t, chamberTitle, objectiveFor, rtl } from "../i18n";
 import { dialog } from "./dialog";
 import { MapScene } from "./map";
 import { ShopScene } from "./shop";
@@ -126,7 +126,7 @@ export class LevelScene extends Scene {
     const back = roundKey(84, "ghost", iconSprite("back", 44), () => this.quit()); back.position.set(62, 0); this.hud.addChild(back);
     const mark = new Text({ text: "ECHO", style: logoStyle(28, C.cream) }); mark.anchor.set(0, 0.5); mark.position.set(126, 0); this.hud.addChild(mark);
     this.titleT = new Text({ text: "", style: display(46, C.cream, true) }); this.titleT.anchor.set(0, 0.5); this.titleT.position.set(60, 78); this.hud.addChild(this.titleT);
-    this.objT = new Text({ text: "", style: body(26, C.lilac, 600) }); this.objT.style.wordWrap = true; this.objT.style.wordWrapWidth = 620; this.objT.position.set(60, 110); this.hud.addChild(this.objT);
+    this.objT = new Text({ text: "", style: body(26, C.lilac, 600) }); this.objT.style.wordWrap = true; this.objT.style.wordWrapWidth = 620; this.objT.style.align = rtl() ? "right" : "left"; this.objT.position.set(60, 110); this.hud.addChild(this.objT);
     // the moves ring
     this.dial = new Container(); this.dial.position.set(W - 100, 60);
     const track = new Graphics(); track.circle(0, 0, 62).fill({ color: C.glass, alpha: 0.6 }); track.circle(0, 0, 58).stroke({ color: 0xffffff, alpha: 0.12, width: 6 }); this.dial.addChild(track);
@@ -175,8 +175,8 @@ export class LevelScene extends Scene {
   }
   private buildControls() {
     this.controls = new Container(); this.addChild(this.controls);
-    const undo = roundKey(104, "ghost", iconSprite("undo", 50), () => { if (this.canControl() && this.recording.length) this.rewind(1); }); undo.position.set(92, 0); this.controls.addChild(undo);
-    const recall = button({ w: 230, h: 104, label: t("recall"), kind: "ghost", size: 28, onTap: () => { if (this.canControl()) { audio.play("tap", 0.5); this.startLoop(); } } }); recall.position.set(275, 0); this.controls.addChild(recall);
+    const undo = roundKey(104, "ghost", iconSprite("undo", 50), () => { if (this.canControl() && this.recording.length && this.tutAllows()) this.rewind(1); }); undo.position.set(92, 0); this.controls.addChild(undo);
+    const recall = button({ w: 230, h: 104, label: t("recall"), kind: "ghost", size: 28, onTap: () => { if (this.canControl() && this.tutAllows()) { audio.play("tap", 0.5); this.startLoop(); } } }); recall.position.set(275, 0); this.controls.addChild(recall);
     this.createBtn = button({ w: 440, h: 104, label: t("create_echo"), kind: "primary", size: 36, onTap: () => this.endLoopNow() }); this.createBtn.position.set(700, 0); this.controls.addChild(this.createBtn);
     const hint = roundKey(104, "ghost", iconSprite("bulb", 50), () => this.hint()); hint.position.set(W - 92, 0); this.controls.addChild(hint);
     this.hintTag = new Container(); this.hintTag.position.set(W - 92, -74); this.controls.addChild(this.hintTag);
@@ -302,7 +302,7 @@ export class LevelScene extends Scene {
     for (let i = 0; i < 4; i++) g.roundRect(c[6]! - 10 - i * 14, c[7]! - 60 + i * 10, c[4]! - c[6]! + 20 + i * 28, 110 + i * 10, 60).fill({ color: 0x000000, alpha: 0.1 });
   }
   private syncActors() {
-    this.actors.removeChildren().forEach((c) => { killTweensDeep(c as Container); c.destroy(); });
+    this.actors.removeChildren().forEach((c) => { killTweensDeep(c as Container); c.destroy({ children: true }); });
     // Old forecast ghosts and danger marks go first; the new ones are made below.
     for (const g of this.ghostSps) if (!g.destroyed) g.destroy();
     for (const d of this.dangerSps) if (!d.destroyed) d.destroy({ children: true });
@@ -400,7 +400,7 @@ export class LevelScene extends Scene {
     this.later(950, () => this.startLoop());
   }
   private endLoopNow() {
-    const run = this.run; if (!this.canControl() || run.tick < 1) return;
+    const run = this.run; if (!this.canControl() || run.tick < 1 || run.tick >= L.LOOP_TICKS) return;   // a second tap during the save animation must not save the loop twice
     if (this.tut && !this.tut.allowsEnd()) { buzz("rigid"); return; }
     run.tick = L.LOOP_TICKS; this.drawDial(); audio.play("tap", 0.5); buzz("medium"); this.loopEnded();
   }
@@ -429,7 +429,7 @@ export class LevelScene extends Scene {
     const rec = this.recording.slice(0, Math.max(0, this.recording.length - n));
     const run = L.createRun(this.level, [...this.logs, ""]);
     for (const ch of rec) L.stepRun(run, ch.charCodeAt(0) - 48);
-    run.events = []; this.run = run; this.recording = rec; this.prev = null; this.queued = null; this.beatT0 = -1e9; this.danger = null; this.clearPeek(true);
+    run.events = []; this.run = run; this.recording = rec; this.prev = null; this.queued = null; this.beatT0 = -1e9; this.danger = null; this.auto = null; this.clearPeek(true);
     this.syncStatic(); audio.play("tick", 0.5, 0.8); buzz("light");
   }
   private noteFail() {
@@ -471,7 +471,7 @@ export class LevelScene extends Scene {
   private peekSps: Container[] = [];
   /** Arrows on the next three cells of the recorded route, numbered. */
   private peek(sol: string[]) {
-    for (const p of this.peekSps) p.destroy({ children: true }); this.peekSps = [];
+    for (const p of this.peekSps) { killTweensDeep(p); p.destroy({ children: true }); } this.peekSps = [];
     const { li } = this.track(sol); const log = sol[li]!; const h = this.run.actors[this.run.actors.length - 1]!;
     let x = h.x, y = h.y;
     for (let k = 0; k < 3 && this.recording.length + k < log.length; k++) {
@@ -504,10 +504,11 @@ export class LevelScene extends Scene {
       return;
     }
     const logs = [...this.logs, this.recording], res = L.simulate(this.level, logs), stars = L.starsFor(this.level, res.echoes);
-    const p = state.profile, bestKey = this.key === "daily" ? `daily-${today()}` : this.key, custom = this.key.startsWith("custom");
+    const day = (this.level as { day?: number }).day ?? today();   // the daily keeps the day it was opened on, even across midnight
+    const p = state.profile, bestKey = this.key === "daily" ? `daily-${day}` : this.key, custom = this.key.startsWith("custom");
     const prev = p.best[bestKey], before = p.coins, firstClear = !prev && !custom;
     const newBest = !!prev && (res.echoes < prev.echoes || (res.echoes === prev.echoes && res.exitTick < prev.ticks));
-    const action = { t: "complete", level: this.key, logs, day: today(), name: p.name || "" };
+    const action = { t: "complete", level: this.key, logs, day, name: p.name || "" };
     const v = state.act(action); if (this.key === "daily") state.dailyRoom.act(action);
     const reward = v.ok ? state.profile.coins - before : 0;
     audio.play("win"); this.shake(6); buzz("success");
@@ -549,8 +550,8 @@ export class LevelScene extends Scene {
     gsap.killTweensOf(this.zoom); gsap.to(this.zoom, { k, duration: duration * 0.35, ease: "power2.out" }).then(() => gsap.to(this.zoom, { k: 1, duration: duration * 0.65, ease: "power2.inOut" }));
   }
   private nextLevel(): Level | null {
-    const i = L.LEVELS.findIndex((l) => l.id === this.key); if (i < 0) return null;
-    const n = L.LEVELS[i + 1]; return n && L.worldUnlocked(state.profile, n.world) ? n : null;
+    const i = ORDER.findIndex((l) => l.id === this.key); if (i < 0) return null;
+    const n = ORDER[i + 1]; return n && L.worldUnlocked(state.profile, n.world) ? n : null;
   }
   /** Called by the result sheet. */
   play(level: Level, key: string) { this.level = level; this.key = key; this.gen += 1; this.rebuild(); }
@@ -565,13 +566,16 @@ export class LevelScene extends Scene {
 
   // ── input ────────────────────────────────────────────────────────────────
   private canControl() { return this.playing && Scenes.top === this && !!this.run && !this.run.finished && !this.run.dead && this.freeze <= 0; }
+  /** Undo and recall are locked while a tutorial step needs the player to stay put. */
+  private tutAllows() { if (this.tut && !this.tut.allowsMove()) { buzz("rigid"); return false; } return true; }
   private onKey(e: KeyboardEvent) {
     if (Scenes.top !== this) return;
     const d = KEYS[e.code];
     if (d) { e.preventDefault(); if (!e.repeat) { this.heldKey = e.code; this.beatInput(d); } return; }
     if (WAIT_KEYS.has(e.code)) { e.preventDefault(); if (!e.repeat) this.beatInput(0); return; }
-    if (e.code === "KeyR" && this.canControl()) this.startLoop();
-    if ((e.code === "KeyZ" || e.code === "Backspace") && this.canControl() && this.recording.length) { this.rewind(1); e.preventDefault(); }
+    if (e.repeat) return;
+    if (e.code === "KeyR" && this.canControl() && this.tutAllows()) this.startLoop();
+    if ((e.code === "KeyZ" || e.code === "Backspace") && this.canControl() && this.recording.length && this.tutAllows()) { this.rewind(1); e.preventDefault(); }
     if ((e.code === "Enter" || e.code === "KeyE" || e.code === "KeyQ") && this.canControl()) this.endLoopNow();
     if (e.code === "Escape") this.quit();
   }
@@ -595,7 +599,7 @@ export class LevelScene extends Scene {
     this.touch.id = -1; this.touch.dir = 0;
   }
   private beatInput(dir: number) {
-    if (!this.canControl()) return;
+    if (!this.canControl() || this.auto) return;   // while the game plays a bought loop, the player watches
     if (this.tut && !this.tut.allowsMove()) { buzz("rigid"); return; }
     if (performance.now() - this.beatT0 < BEAT_MS * 0.55) { this.queued = dir; return; }
     this.doBeat(dir);
@@ -758,5 +762,5 @@ export class ResultScene extends Scene {
     this.box.scale.set(0.7); this.box.alpha = 0; gsap.to(this.box, { alpha: 1, duration: 0.2 }); gsap.to(this.box.scale, { x: 1, y: 1, duration: 0.45, ease: "back.out(1.6)" });
   }
   relayout() { this.box.position.set(W / 2, layout.bottom / 2); }
-  private closeThen(fn: () => void) { audio.play("tap", 0.5); if (Scenes.top === this) Scenes.closeOverlay(); fn(); }
+  private closeThen(fn: () => void) { audio.play("tap", 0.5); Scenes.remove(this); fn(); }
 }

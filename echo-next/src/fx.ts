@@ -24,7 +24,7 @@ export function dust(layer: Container, x: number, y: number, size: number, color
   for (let i = 0; i < n; i++) {
     const p = new Graphics(); const r = size * (0.06 + Math.random() * 0.06); p.circle(0, 0, r).fill({ color, alpha: 0.55 }); p.position.set(x + (Math.random() - 0.5) * size * 0.3, y); layer.addChild(p);
     const a = Math.PI + (Math.random() - 0.5) * 2.4;
-    gsap.to(p, { x: p.x + Math.cos(a) * size * 0.45, y: p.y + Math.sin(a) * size * 0.25 - size * 0.1, alpha: 0, duration: 0.35 + Math.random() * 0.2, ease: "power2.out", onComplete: () => p.destroy() });
+    gsap.to(p, { x: p.x + Math.cos(a) * size * 0.45, y: p.y + Math.sin(a) * size * 0.25 - size * 0.1, alpha: 0, duration: 0.35 + Math.random() * 0.2, ease: "power2.out", onComplete: () => { if (!p.destroyed) p.destroy(); } });
     gsap.to(p.scale, { x: 1.8, y: 1.8, duration: 0.45 });
   }
 }
@@ -33,7 +33,8 @@ export function dust(layer: Container, x: number, y: number, size: number, color
 export function ring(layer: Container, x: number, y: number, r0: number, r1: number, color: number, width = 6, duration = 0.5) {
   const g = new Graphics(); g.circle(0, 0, r0).stroke({ color, width, alpha: 0.9 }); g.position.set(x, y); layer.addChild(g);
   const o = { r: r0 };
-  gsap.to(o, { r: r1, duration, ease: "power2.out", onUpdate: () => { g.clear(); g.circle(0, 0, o.r).stroke({ color, width: width * (1 - (o.r - r0) / (r1 - r0) * 0.7), alpha: 0.9 * (1 - (o.r - r0) / (r1 - r0)) }); }, onComplete: () => g.destroy() });
+  // The tween drives a plain object, so it outlives the graphic if the layer is torn down: stop it then.
+  const tw = gsap.to(o, { r: r1, duration, ease: "power2.out", onUpdate: () => { if (g.destroyed) { tw.kill(); return; } g.clear(); g.circle(0, 0, o.r).stroke({ color, width: width * (1 - (o.r - r0) / (r1 - r0) * 0.7), alpha: 0.9 * (1 - (o.r - r0) / (r1 - r0)) }); }, onComplete: () => { if (!g.destroyed) g.destroy(); } });
   return g;
 }
 
@@ -49,15 +50,15 @@ export function lightning(layer: Container, x: number, y: number, size: number, 
       g.stroke({ color, width: 2 + Math.random() * 3, alpha: 0.6 + Math.random() * 0.4 });
     }
   };
-  draw(); const iv = setInterval(draw, 45);
-  gsap.to(g, { alpha: 0, duration, ease: "power1.in", onComplete: () => { clearInterval(iv); g.destroy(); } });
+  draw(); const iv = setInterval(() => { if (g.destroyed) { clearInterval(iv); return; } draw(); }, 45);
+  gsap.to(g, { alpha: 0, duration, ease: "power1.in", onComplete: () => { clearInterval(iv); if (!g.destroyed) g.destroy(); } });
 }
 
 /** A fading copy of a sprite's texture left behind it. */
 export function afterimage(layer: Container, src: Sprite, tint: number, alpha = 0.45, duration = 0.35) {
   const s = new Sprite(src.texture); s.anchor.copyFrom(src.anchor); const g = src.getGlobalPosition(); const l = layer.toLocal(g);
   s.position.set(l.x, l.y); s.scale.set(src.worldTransform.a, src.worldTransform.d); s.tint = tint; s.alpha = alpha; s.blendMode = "add"; layer.addChild(s);
-  gsap.to(s, { alpha: 0, duration, ease: "power1.out", onComplete: () => s.destroy() });
+  gsap.to(s, { alpha: 0, duration, ease: "power1.out", onComplete: () => { if (!s.destroyed) s.destroy(); } });
   return s;
 }
 
@@ -66,6 +67,6 @@ export function burst(layer: Container, x: number, y: number, color: number, n: 
   for (let i = 0; i < n; i++) {
     const p = new Graphics(); p.circle(0, 0, 3 + Math.random() * 4).fill({ color }); p.position.set(x, y); layer.addChild(p);
     const a = Math.random() * Math.PI * 2, r = size * (0.5 + Math.random());
-    gsap.to(p, { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r - size * 0.3, alpha: 0, duration: 0.5 + Math.random() * 0.3, ease: "power2.out", onComplete: () => p.destroy() });
+    gsap.to(p, { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r - size * 0.3, alpha: 0, duration: 0.5 + Math.random() * 0.3, ease: "power2.out", onComplete: () => { if (!p.destroyed) p.destroy(); } });
   }
 }

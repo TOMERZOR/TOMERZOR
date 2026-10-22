@@ -3,7 +3,7 @@ import { Container, Text, Graphics } from "pixi.js";
 import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
-import { panel, button, display, body, ribbon, pill } from "../ui";
+import { panel, button, display, body, ribbon, pill , spacing } from "../ui";
 import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, echoSprite, fitSprite, toast } from "../widgets";
 import { state, L, today } from "../state";
 import { audio, buzz } from "../audio";
@@ -32,7 +32,7 @@ export class ShopScene extends Scene {
     const e = echoSprite(mine); e.position.set(300, hh - 70); fitSprite(e, 150, 230); e.alpha = 0.45; hero.addChild(e);
     const h = heroSprite(mine); h.position.set(200, hh - 60); fitSprite(h, 230, 300); hero.addChild(h);
     gsap.to(h, { y: hh - 72, duration: 1.2, yoyo: true, repeat: -1, ease: "sine.inOut" });
-    const eb = new Text({ text: t("your_robot").toUpperCase(), style: body(24, C.mint, 800) }); eb.style.letterSpacing = 3; eb.position.set(400, 50); hero.addChild(eb);
+    const eb = new Text({ text: t("your_robot").toUpperCase(), style: body(24, C.mint, 800) }); eb.style.letterSpacing = spacing(3); eb.position.set(400, 50); hero.addChild(eb);
     const nm = new Text({ text: t("sk_" + mine), style: display(56) }); nm.position.set(400, 84); hero.addChild(nm);
     const fl = new Text({ text: t("fl_" + mine), style: body(26, C.lilac) }); fl.style.wordWrap = true; fl.style.wordWrapWidth = hw - 440; fl.position.set(400, 160); hero.addChild(fl);
     const sub = new Text({ text: t("robots_sub"), style: body(22, C.lilac) }); sub.style.wordWrap = true; sub.style.wordWrapWidth = hw - 440; sub.position.set(400, 230); hero.addChild(sub);
@@ -84,7 +84,7 @@ export class ShopScene extends Scene {
       const card = new Container(); card.position.set(40 + (i % 2) * (iw + 24), y + Math.floor(i / 2) * 264); card.addChild(panel(iw, 240, { radius: 28, rivets: false }));
       const s = iconSprite(ic, 90); s.position.set(iw / 2, 70); card.addChild(s);
       const n = new Text({ text: name, style: display(30) }); n.anchor.set(0.5); n.position.set(iw / 2, 135); card.addChild(n);
-      const b = button({ w: iw - 80, h: 70, label: price, sub: "", kind: "secondary", size: 28, onTap: fn }); b.position.set(iw / 2, 198); card.addChild(b);
+      const b = button({ w: iw - 80, h: 70, label: price, kind: "secondary", size: 28, onTap: fn }); b.position.set(iw / 2, 198); card.addChild(b);
       void d; c.addChild(card);
     });
     y += Math.ceil(items.length / 2) * 264 + 20;

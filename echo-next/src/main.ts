@@ -3,7 +3,7 @@
  * phone with safe-area aware anchoring, and a scene stack. Rules live in
  * ../../echo/logic.js; this file and the scenes only draw and listen.
  */
-import { Application, Container, Assets } from "pixi.js";
+import { Application, Container, Assets, CanvasTextMetrics } from "pixi.js";
 import gsap from "gsap";
 import { W, H, C } from "./theme";
 import { Scenes, layout, report, errors } from "./scenes";
@@ -14,6 +14,9 @@ import { state, L } from "./state";
 
 window.addEventListener("error", (e) => report(e.error ?? e.message));
 window.addEventListener("unhandledrejection", (e) => report((e as PromiseRejectionEvent).reason));
+
+// Letter spacing through the canvas itself keeps right-to-left text (Hebrew) in order; the per-character fallback reverses it.
+CanvasTextMetrics.experimentalLetterSpacing = true;
 
 const app = new Application();
 try {

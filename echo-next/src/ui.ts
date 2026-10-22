@@ -2,7 +2,7 @@
  * The Sanctuary UI kit: dark glass panels with hairline borders, outlined
  * cyan buttons, thin capitals. Everything is vector so it stays crisp.
  */
-import { Container, Graphics, Text, TextStyle, FederatedPointerEvent } from "pixi.js";
+import { Container, Graphics, Text, TextStyle, FederatedPointerEvent, CanvasTextMetrics, Circle } from "pixi.js";
 import gsap from "gsap";
 import { C, FONT_DISPLAY, FONT_BODY, FONT_LOGO } from "./theme";
 
@@ -69,6 +69,7 @@ export function button(o: ButtonOpts) {
   if (o.icon) { o.icon.x = 0; content.addChild(o.icon); }
   if (o.label) {
     const t = new Text({ text: o.label.toUpperCase(), style: display(o.size ?? Math.round(o.h * 0.36), ink, true, false) });
+    if (t.width > o.w - 28) t.style.fontSize = Math.max(14, Math.floor(t.style.fontSize * ((o.w - 28) / t.width)));   // a long label shrinks instead of spilling out
     t.anchor.set(0.5); t.x = 0; t.y = o.sub !== undefined ? -o.h * 0.12 : 0; content.addChild(t);
     if (o.sub !== undefined) { const s = new Text({ text: o.sub, style: body(Math.round(o.h * 0.19), ink, 500) }); s.anchor.set(0.5); s.y = o.h * 0.2; s.alpha = 0.8; content.addChild(s); }
   }
@@ -96,7 +97,7 @@ export function roundKey(d: number, kind: "mint" | "ghost" | "primary", icon?: C
   g.circle(d / 2, d * 0.38, d * 0.3).fill({ color: 0xffffff, alpha: 0.04 });
   c.addChild(g);
   if (icon) { icon.position.set(d / 2, d / 2); c.addChild(icon); }
-  c.eventMode = "static"; c.cursor = "pointer";
+  c.eventMode = "static"; c.cursor = "pointer"; c.hitArea = new Circle(d / 2, d / 2, Math.max(d / 2, 62));   // at least a fingertip, whatever the key's size
   let dx0 = 0, dy0 = 0;
   c.on("pointerdown", (e) => { dx0 = e.global.x; dy0 = e.global.y; buzzSoft("light"); gsap.to(c.scale, { x: 0.92, y: 0.92, duration: 0.08 }); });
   const up = (fire: boolean, e?: FederatedPointerEvent) => { gsap.to(c.scale, { x: 1, y: 1, duration: 0.25, ease: "back.out(2.2)" }); if (fire && !(e && Math.hypot(e.global.x - dx0, e.global.y - dy0) > DRAG_PX)) onTap?.(); };
@@ -148,12 +149,14 @@ export function ribbon(text: string, color: number, w = 240, h = 48) {
   return c;
 }
 
+/** Spaced capitals are only safe where the canvas spaces letters itself; elsewhere right-to-left text would come out reversed. */
+export const spacing = (px: number) => (CanvasTextMetrics.experimentalLetterSpacingSupported ? px : 0);
 export function display(size: number, color: number = C.cream, upper = false, shadow = true) {
-  return new TextStyle({ fontFamily: FONT_DISPLAY, fontSize: size, fontWeight: "600", fill: color, letterSpacing: upper ? size * 0.1 : size * 0.02,
+  return new TextStyle({ fontFamily: FONT_DISPLAY, fontSize: size, fontWeight: "600", fill: color, letterSpacing: spacing(upper ? size * 0.1 : size * 0.02),
     dropShadow: shadow ? { color: 0x000000, alpha: 0.5, blur: 4, distance: 2, angle: Math.PI / 2 } : false });
 }
 export function logoStyle(size: number, color: number = C.cream) {
-  return new TextStyle({ fontFamily: FONT_LOGO, fontSize: size, fontWeight: "400", fill: color, letterSpacing: size * 0.22 });
+  return new TextStyle({ fontFamily: FONT_LOGO, fontSize: size, fontWeight: "400", fill: color, letterSpacing: spacing(size * 0.22) });
 }
 export function body(size: number, color: number = C.lilac, weight: 400 | 500 | 600 | 700 | 800 = 500) {
   return new TextStyle({ fontFamily: FONT_BODY, fontSize: size, fontWeight: String(Math.min(700, weight)) as "400" | "500" | "600" | "700", fill: color });

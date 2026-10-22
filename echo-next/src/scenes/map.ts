@@ -12,7 +12,7 @@ import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, starRow, toast } 
 import { glow } from "../fx";
 import { state, L } from "../state";
 import { audio, buzz } from "../audio";
-import { t, chamberTitle, objectiveFor } from "../i18n";
+import { t, chamberTitle, objectiveFor, rtl } from "../i18n";
 import { LevelScene } from "./level";
 import type { Level } from "../logic-types";
 
@@ -35,7 +35,7 @@ export class MapScene extends Scene {
     this.info.addChild(panel(w, INFO_H, { radius: 22, glow: C.mint }));
     this.infoEyebrow = new Text({ text: "", style: display(22, C.mint, true, false) }); this.infoEyebrow.position.set(36, 24); this.info.addChild(this.infoEyebrow);
     this.infoTitle = new Text({ text: "", style: display(46, C.cream, true, false) }); this.infoTitle.position.set(36, 54); this.info.addChild(this.infoTitle);
-    this.infoObj = new Text({ text: "", style: body(24, C.lilac, 500) }); this.infoObj.style.wordWrap = true; this.infoObj.style.wordWrapWidth = 560; this.infoObj.position.set(36, 118); this.info.addChild(this.infoObj);
+    this.infoObj = new Text({ text: "", style: body(24, C.lilac, 500) }); this.infoObj.style.wordWrap = true; this.infoObj.style.wordWrapWidth = 560; this.infoObj.style.align = rtl() ? "right" : "left"; this.infoObj.position.set(36, 118); this.info.addChild(this.infoObj);
     const col = (x: number, key: string) => { const l = new Text({ text: t(key).toUpperCase(), style: display(16, C.lilac, true, false) }); l.anchor.set(0, 0); l.position.set(x, 26); this.info.addChild(l); const v = new Text({ text: "", style: display(40, C.cream, false, false) }); v.anchor.set(0, 0); v.position.set(x, 44); this.info.addChild(v); return v; };
     this.infoCap = col(w - 330, "echo_capacity"); this.infoSw = col(w - 130, "switches");
     this.infoBtn = button({ w: 320, h: 92, label: t("resume"), kind: "primary", size: 32, onTap: () => { if (this.infoLevel) { audio.play("tap", 0.6); Scenes.push(new LevelScene(this.infoLevel, this.infoLevel.id)); } } });

@@ -111,6 +111,8 @@ for (const k in EXTRA) Object.assign(STR[k]!, EXTRA[k]);
 
 export const lang = () => (state.opts.lang === "he" ? "he" : "en");
 export const rtl = () => lang() === "he";
+/** A right-to-left mark in front of strings that start with a digit, so "2 echoes · 15 moves" keeps its order in Hebrew. */
+export const bidi = (s: string) => (rtl() ? "\u200F" + s : s);
 /** Translate a key, filling {name} slots from vars. Falls back to English, then the key. */
 export function t(key: string, vars?: Record<string, string | number>) {
   const s = STR[lang()]?.[key] ?? STR.en![key] ?? key;

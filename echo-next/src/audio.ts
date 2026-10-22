@@ -5,7 +5,7 @@ import { state } from "./state";
 const NAMES = ["coin", "win", "star", "step", "plate", "open", "close", "saved", "caught", "out", "tap", "buy", "shimmer", "tick"] as const;
 export type Cue = (typeof NAMES)[number];
 const cues = new Map<Cue, Howl>();
-let music: Howl | null = null;
+let music: Howl | null = null; let stopTimer = 0;
 
 export const audio = {
   preload() {
@@ -17,9 +17,11 @@ export const audio = {
     const id = h.play(); h.volume(vol, id); h.rate(rate * (0.97 + Math.random() * 0.06), id);
   },
   musicOn(on: boolean) {
-    if (!on || !state.opts.music) { music?.fade(music.volume(), 0, 400); setTimeout(() => music?.stop(), 420); return; }
+    if (!on || !state.opts.music) { if (music?.playing()) { music.fade(music.volume(), 0, 400); clearTimeout(stopTimer); stopTimer = window.setTimeout(() => music?.stop(), 420); } return; }
     if (!music) music = new Howl({ src: ["assets/music.mp3"], loop: true, volume: 0 });
-    if (!music.playing()) { music.play(); music.fade(0, 0.28, 800); }
+    clearTimeout(stopTimer);
+    if (!music.playing()) music.play();
+    music.fade(music.volume(), 0.28, 800);
   },
   unlock() { try { (Howler.ctx as AudioContext | undefined)?.resume?.(); } catch { /* no ctx yet */ } },
 };

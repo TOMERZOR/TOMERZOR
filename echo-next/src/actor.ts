@@ -10,6 +10,12 @@ import { glow, ring, lightning, dust } from "./fx";
 export type Kind = "hero" | "echo" | "drone";
 const sm = (a: number, b: number, k: number) => a + (b - a) * (k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k));
 
+/** Tween a sprite's tint per channel; a packed integer would sweep through unrelated colours. */
+function tintTo(sprite: Sprite, from: number, to: number, duration: number, extra: gsap.TweenVars = {}) {
+  const o = { k: 0 }, ch = (c: number, s: number) => (c >> s) & 255;
+  return gsap.to(o, { k: 1, duration, ...extra, onUpdate: () => { if (sprite.destroyed) return; const m = (s: number) => Math.round(ch(from, s) + (ch(to, s) - ch(from, s)) * o.k); sprite.tint = (m(16) << 16) | (m(8) << 8) | m(0); } });
+}
+
 export class Actor extends Container {
   body = new Container(); sprite: Sprite; shadow = new Graphics(); lamp: Sprite | null = null;
   face = 1; private idleT = Math.random() * 10; private lastK = 1; moving = false; dir = 0;
@@ -52,7 +58,7 @@ export class Actor extends Container {
   arrive(fxLayer: Container) {
     this.body.scale.set(0.2 * this.face, 1.6); this.body.alpha = 0;
     const beam = new Graphics(); beam.rect(-this.size * 0.12, -this.size * 2.2, this.size * 0.24, this.size * 2.2).fill({ color: 0xffffff, alpha: 0.9 }); beam.blendMode = "add"; this.addChild(beam);
-    gsap.to(beam, { alpha: 0, duration: 0.35, delay: 0.1, onComplete: () => beam.destroy() });
+    gsap.to(beam, { alpha: 0, duration: 0.35, delay: 0.1, onComplete: () => { if (!beam.destroyed) beam.destroy(); } });
     gsap.to(this.body, { alpha: 1, duration: 0.15, delay: 0.05 });
     gsap.to(this.body.scale, { x: 1 * this.face, y: 1, duration: 0.45, delay: 0.08, ease: "elastic.out(1, 0.5)" });
     gsap.delayedCall(0.12, () => { if (!this.destroyed) ring(fxLayer, this.x, this.y, this.size * 0.15, this.size * 0.7, 0xffffff, 5, 0.45); });
@@ -67,11 +73,11 @@ export class Actor extends Container {
   zap(fxLayer: Container) {
     lightning(fxLayer, this.x, this.y - this.size * 0.1, this.size * 1.2);
     gsap.fromTo(this.body, { x: -this.size * 0.06 }, { x: this.size * 0.06, duration: 0.05, yoyo: true, repeat: 7, onComplete: () => { this.body.x = 0; } });
-    gsap.fromTo(this.sprite, { tint: 0xffffff }, { tint: 0xff7a7a, duration: 0.08, yoyo: true, repeat: 5 });
+    tintTo(this.sprite, 0xffffff, 0xff7a7a, 0.08, { yoyo: true, repeat: 5 });
   }
   /** Loop saved: the hero freezes into light. */
   freeze(color: number) {
-    gsap.to(this.sprite, { tint: color, duration: 0.25 }); gsap.to(this.body, { alpha: 0.6, duration: 0.3 });
+    tintTo(this.sprite, 0xffffff, color, 0.25); gsap.to(this.body, { alpha: 0.6, duration: 0.3 });
   }
   dustAt(fxLayer: Container) { dust(fxLayer, this.x, this.y, this.size); }
 }

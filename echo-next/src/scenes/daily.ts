@@ -6,7 +6,7 @@ import { panel, button, display, body } from "../ui";
 import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, starRow } from "../widgets";
 import { state, L, today } from "../state";
 import { audio } from "../audio";
-import { t } from "../i18n";
+import { t, bidi } from "../i18n";
 import { LevelScene } from "./level";
 
 export class DailyScene extends Scene {
@@ -29,7 +29,7 @@ export class DailyScene extends Scene {
     card.addChild(panel(cw, ch, { radius: 32, glow: C.gold }));
     const ic = iconSprite("cal", 110); ic.position.set(110, 110); card.addChild(ic);
     const name = new Text({ text: t("daily_name", { d: day % 1000 }), style: display(48) }); name.position.set(200, 50); card.addChild(name);
-    const line = new Text({ text: best ? `${best.echoes} ${t("echoes_used")} · ${best.ticks} ${t("seconds")}` : t("daily_open"), style: body(28, C.lilac, 800) }); line.position.set(200, 118); card.addChild(line);
+    const line = new Text({ text: best ? bidi(`${best.echoes} ${t("echoes_used")} · ${best.ticks} ${t("seconds")}`) : t("daily_open"), style: body(28, C.lilac, 800) }); line.position.set(200, 118); card.addChild(line);
     if (best) { const st = starRow(p.stars[key] || 1, 44); st.position.set(cw - 120, 90); card.addChild(st); }
     if (p.streak) { const fl = iconSprite("flame", 44); fl.position.set(220, 180); card.addChild(fl); const s = new Text({ text: t("streak", { n: p.streak }), style: body(26, C.gold, 800) }); s.anchor.set(0, 0.5); s.position.set(250, 180); card.addChild(s); }
     const play = button({ w: cw - 100, h: 110, label: t("play_daily"), kind: "primary", size: 40, onTap: () => { audio.play("tap", 0.6); Scenes.push(new LevelScene(L.dailyLevel(day), "daily")); } });
@@ -47,7 +47,7 @@ export class DailyScene extends Scene {
       if (me) { const hl = new Graphics(); hl.roundRect(16, 0, W - 112, 76, 20).fill({ color: C.mint, alpha: 0.14 }); r.addChild(hl); }
       const rank = new Text({ text: String(i + 1), style: display(36, i < 3 ? C.gold : C.lilac) }); rank.anchor.set(0.5); rank.position.set(70, 38); r.addChild(rank);
       const nm = new Text({ text: (row.name || t("unnamed")) + (me ? ` · ${t("you")}` : ""), style: body(30, me ? C.mint : C.cream, 800) }); nm.anchor.set(0, 0.5); nm.position.set(120, 38); r.addChild(nm);
-      const sc = new Text({ text: `${row.echoes} ${t("echoes_used")} · ${row.ticks}`, style: body(26, C.lilac, 800) }); sc.anchor.set(1, 0.5); sc.position.set(W - 120, 38); r.addChild(sc);
+      const sc = new Text({ text: bidi(`${row.echoes} ${t("echoes_used")} · ${row.ticks}`), style: body(26, C.lilac, 800) }); sc.anchor.set(1, 0.5); sc.position.set(W - 120, 38); r.addChild(sc);
       bp.addChild(r);
     });
     c.addChild(bp); y += bh + 60;

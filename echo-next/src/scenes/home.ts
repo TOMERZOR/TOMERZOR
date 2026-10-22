@@ -11,7 +11,7 @@ import { state, L, today } from "../state";
 import { panel, button, progressBar, display, body, roundKey, logoStyle, tapOnce } from "../ui";
 import { TopBar, TabBar, iconSprite, TOP_H } from "../widgets";
 import { audio, buzz } from "../audio";
-import { t, chamberTitle, objectiveFor } from "../i18n";
+import { t, chamberTitle, objectiveFor, rtl, bidi } from "../i18n";
 import { MapScene } from "./map";
 import { LevelScene } from "./level";
 import { PassScene } from "./pass";
@@ -57,7 +57,7 @@ export class HomeScene extends Scene {
     this.card.addChild(panel(cw, ch, { radius: 22, glow: C.mint }));
     this.cardEyebrow = new Text({ text: "", style: display(22, C.mint, true, false) }); this.cardEyebrow.position.set(36, 26); this.card.addChild(this.cardEyebrow);
     this.cardTitle = new Text({ text: "", style: display(50, C.cream, true, false) }); this.cardTitle.position.set(36, 56); this.card.addChild(this.cardTitle);
-    this.cardObj = new Text({ text: "", style: body(24, C.lilac, 500) }); this.cardObj.style.wordWrap = true; this.cardObj.style.wordWrapWidth = 600; this.cardObj.position.set(36, 128); this.card.addChild(this.cardObj);
+    this.cardObj = new Text({ text: "", style: body(24, C.lilac, 500) }); this.cardObj.style.wordWrap = true; this.cardObj.style.wordWrapWidth = 600; this.cardObj.style.align = rtl() ? "right" : "left"; this.cardObj.position.set(36, 128); this.card.addChild(this.cardObj);
     const col = (y: number, key: string) => { const l = new Text({ text: t(key).toUpperCase(), style: display(16, C.lilac, true, false) }); l.anchor.set(1, 0); l.position.set(cw - 36, y); this.card.addChild(l); const v = new Text({ text: "", style: display(40, C.cream, false, false) }); v.anchor.set(1, 0); v.position.set(cw - 36, y + 18); this.card.addChild(v); return v; };
     this.cardCap = col(28, "echo_capacity"); this.cardSw = col(112, "switches");
     tapOnce(this.card, () => { audio.play("tap", 0.5); Scenes.go(new MapScene()); });
@@ -93,7 +93,7 @@ export class HomeScene extends Scene {
     this.top.refresh();
     const dk = `daily-${today()}`, best = p.best[dk];
     this.dailyTitle.text = t("daily_name", { d: String(today() % 1000) }).toUpperCase();
-    this.dailySub.text = best ? `★${p.stars[dk] || 1} · ${best.echoes} ${t("echoes_used")} · ${best.ticks} ${t("moves")}` : p.streak ? t("streak", { n: String(p.streak) }) : t("daily_open");
+    this.dailySub.text = best ? bidi(`★${p.stars[dk] || 1} · ${best.echoes} ${t("echoes_used")} · ${best.ticks} ${t("moves")}`) : p.streak ? bidi(t("streak", { n: String(p.streak) })) : t("daily_open");
     const next = L.PASS_TIERS[p.claimedTiers];
     this.passSub.text = next ? `${rewardLabel(next)} · ${Math.max(0, next.xp - p.passXp)} XP` : t("all_claimed");
     (this.passBar as any).set(next ? p.passXp / Math.max(1, next.xp) : 1);

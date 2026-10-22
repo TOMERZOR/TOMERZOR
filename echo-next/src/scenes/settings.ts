@@ -24,7 +24,7 @@ export class SettingsScene extends Scene {
       const line = new Graphics(); line.roundRect(50, 0, w - 100, 92, 22).fill({ color: 0x000000, alpha: 0.22 }); row.addChild(line);
       const i = iconSprite(ic, 56); i.position.set(100, 46); row.addChild(i);
       const lb = new Text({ text: t(key), style: body(32, C.cream, 800) }); lb.anchor.set(0, 0.5); lb.position.set(150, 46); row.addChild(lb);
-      const tg = toggle(!!state.opts[opt], (v) => { state.setOpts({ [opt]: v } as any); if (opt === "music") audio.musicOn(v && Scenes.depth > 1); if (opt === "haptics" && v) setTimeout(() => buzz("success"), 60); if (opt === "tilt" && v) { const D = (window as any).DeviceOrientationEvent; if (D?.requestPermission) D.requestPermission().catch(() => {}); } }); tg.position.set(w - 50 - 120 - 24, 14); row.addChild(tg);
+      const tg = toggle(!!state.opts[opt], (v) => { state.setOpts({ [opt]: v } as any); if (opt === "music") audio.musicOn(v && !!(Scenes.under as { run?: unknown } | undefined)?.run); if (opt === "haptics" && v) setTimeout(() => buzz("success"), 60); if (opt === "tilt" && v) { const D = (window as any).DeviceOrientationEvent; if (D?.requestPermission) D.requestPermission().catch(() => {}); } }); tg.position.set(w - 50 - 120 - 24, 14); row.addChild(tg);
       this.box.addChild(row); y += 110;
     }
     // Language: two chips.
@@ -43,5 +43,5 @@ export class SettingsScene extends Scene {
     this.box.scale.set(0.85); this.box.alpha = 0; gsap.to(this.box, { alpha: 1, duration: 0.18 }); gsap.to(this.box.scale, { x: 1, y: 1, duration: 0.3, ease: "back.out(1.6)" });
   }
   relayout() { this.box.position.set(W / 2, layout.bottom / 2); }
-  close() { gsap.to(this, { alpha: 0, duration: 0.15, onComplete: () => { if (Scenes.top === this) Scenes.closeOverlay(); } }); }
+  close() { if ((this as any).closing) return; (this as any).closing = true; Scenes.remove(this, 170); gsap.to(this, { alpha: 0, duration: 0.15 }); }
 }

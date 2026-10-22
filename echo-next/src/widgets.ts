@@ -154,7 +154,7 @@ export function toggle(on: boolean, onChange: (v: boolean) => void) {
 let toastEl: Container | null = null;
 /** A short message that drops in from the top and fades. */
 export function toast(msg: string) {
-  if (toastEl) { Scenes.root.removeChild(toastEl); toastEl.destroy({ children: true }); }
+  if (toastEl) { gsap.killTweensOf(toastEl); Scenes.root.removeChild(toastEl); toastEl.destroy({ children: true }); }
   const c = new Container(); const txt = new Text({ text: msg, style: body(30, C.cream, 800) }); txt.anchor.set(0.5);
   const g = new Graphics(); g.roundRect(-txt.width / 2 - 40, -40, txt.width + 80, 80, 40).fill({ color: C.ink, alpha: 0.92 }); g.roundRect(-txt.width / 2 - 40, -40, txt.width + 80, 80, 40).stroke({ color: C.mint, alpha: 0.6, width: 3 });
   c.addChild(g, txt); c.position.set(W / 2, 260); c.alpha = 0; Scenes.root.addChild(c); toastEl = c;

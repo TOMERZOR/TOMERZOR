@@ -3,7 +3,7 @@ import { Container, Text, Graphics } from "pixi.js";
 import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
-import { panel, button, display, body } from "../ui";
+import { panel, button, display, body, tapOnce } from "../ui";
 import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, echoSprite, fitSprite, toast } from "../widgets";
 import { state, L } from "../state";
 import { audio } from "../audio";
@@ -36,12 +36,12 @@ export class ProfileScene extends Scene {
     const name = new Text({ text: p.name || t("unnamed"), style: display(56) }); name.anchor.set(0.5, 0); name.position.set(W / 2, y); c.addChild(name);
     const edit = new Text({ text: "✎", style: display(40, C.mint) }); edit.anchor.set(0, 0.5); edit.position.set(W / 2 + name.width / 2 + 16, y + 34); c.addChild(edit);
     const tapName = new Graphics(); tapName.rect(W / 2 - 300, y - 10, 600, 90).fill({ color: 0xffffff, alpha: 0.001 }); c.addChild(tapName);
-    tapName.eventMode = "static"; tapName.cursor = "pointer"; tapName.on("pointertap", () => { const v = window.prompt(t("name"), p.name || ""); if (v !== null) { const r = state.act({ t: "name", name: v.trim().slice(0, 16) }); if (!r.ok) toast(r.error); } });
+    tapOnce(tapName, () => { const v = window.prompt(t("name"), p.name || ""); if (v !== null) { const r = state.act({ t: "name", name: v.trim().slice(0, 16) }); if (!r.ok) toast(r.error); } });
     y += 80;
     const robot = new Text({ text: `${t("your_robot")}: ${t("sk_" + L.skinId(p.skin))}`, style: body(28, C.lilac, 800) }); robot.anchor.set(0.5, 0); robot.position.set(W / 2, y); c.addChild(robot); y += 70;
 
     // Stat tiles.
-    const stats: [string, string, string][] = [["star", `${L.totalStars(p)}`, t("stars_total", { n: "" }).trim()], ["trophy", `${p.clears}`, t("done_title")], ["flame", `${p.streak}`, t("streak", { n: "" }).replace(/^[-\s]+|[-\s]+$/g, "")], ["coin", `${p.coins}`, t("coins")]];
+    const stats: [string, string, string][] = [["star", `${L.totalStars(p)}`, t("stars_total", { n: "" }).trim()], ["trophy", `${p.clears}`, t("done_title")], ["flame", `${p.streak}`, t("streak", { n: "" }).replace(/\s+/g, " ").replace(/^[-\s]+|[-\s]+$/g, "")], ["coin", `${p.coins}`, t("coins")]];
     const tw = (W - 80 - 3 * 16) / 4;
     stats.forEach(([ic, v, lb], i) => {
       const tile = new Container(); tile.position.set(40 + i * (tw + 16), y); tile.addChild(panel(tw, 190, { radius: 26, rivets: false, color: C.plate }));

@@ -3,7 +3,7 @@ import { Container, Text, Graphics } from "pixi.js";
 import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
-import { panel, button, display, body, progressBar, ribbon } from "../ui";
+import { panel, button, display, body, progressBar, ribbon , spacing } from "../ui";
 import { TopBar, TOP_H, ScrollView, iconSprite, heroSprite, toast } from "../widgets";
 import { state, L } from "../state";
 import { audio, buzz } from "../audio";
@@ -31,7 +31,7 @@ export class PassScene extends Scene {
     const hw = W - 80; const head = new Container(); head.position.set(40, y); head.addChild(panel(hw, 300, { radius: 32, glow: p.pass ? C.gold : undefined }));
     const chest = iconSprite("chest", 150); chest.position.set(120, 150); head.addChild(chest);
     gsap.to(chest, { y: 140, duration: 1.2, yoyo: true, repeat: -1, ease: "sine.inOut" });
-    const eyebrow = new Text({ text: t("season_pass").toUpperCase(), style: body(24, C.mint, 800) }); eyebrow.style.letterSpacing = 3; eyebrow.position.set(230, 44); head.addChild(eyebrow);
+    const eyebrow = new Text({ text: t("season_pass").toUpperCase(), style: body(24, C.mint, 800) }); eyebrow.style.letterSpacing = spacing(3); eyebrow.position.set(230, 44); head.addChild(eyebrow);
     const title = new Text({ text: t("season_name"), style: display(44) }); title.style.wordWrap = true; title.style.wordWrapWidth = hw - 260; title.position.set(230, 78); head.addChild(title);
     const next = L.PASS_TIERS[p.claimedTiers];
     const xp = new Text({ text: next ? `${p.passXp}${next.xp > p.passXp ? " / " + next.xp : ""} XP · ${t("tier_n", { n: p.claimedTiers + 1 })}` : t("all_claimed"), style: body(26, C.lilac, 800) }); xp.position.set(230, 160); head.addChild(xp);

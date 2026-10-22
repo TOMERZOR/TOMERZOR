@@ -8,6 +8,8 @@ import type { Logic, Profile, Solutions, View, Result } from "./logic-types";
 
 const L = LJ as unknown as Logic;
 export const S = SJ as unknown as Solutions;
+/** Rooms in play order: chapter by chapter, room by room (LEVELS itself groups the first four rooms of each chapter together). */
+export const ORDER = [...L.LEVELS].sort((a, b) => a.world - b.world || Number(a.id.split("-")[1]) - Number(b.id.split("-")[1]));
 
 const KEY = "echo2:";
 const store = {
@@ -62,6 +64,6 @@ export const state = {
   skin() { return L.skinId(this.profile.skin); },
   flag(k: string) { return !!store.get("flag:" + k, false); },
   setFlag(k: string, v: boolean) { store.set("flag:" + k, v); },
-  nextLevel() { return L.LEVELS.find((l) => !this.profile.stars[l.id] && L.worldUnlocked(this.profile, l.world)) ?? null; },
+  nextLevel() { return ORDER.find((l) => !this.profile.stars[l.id] && L.worldUnlocked(this.profile, l.world)) ?? null; },
 };
 export { L };

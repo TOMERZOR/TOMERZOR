@@ -49,6 +49,8 @@ export const Scenes = {
     app.ticker.add((t) => { const dt = Math.min(0.1, t.deltaMS / 1000); const top = stack[stack.length - 1]; if (top) guarded(() => top.tick(dt)); });
   },
   get top() { return stack[stack.length - 1]; },
+  /** The scene under the top one (what an overlay is covering). */
+  get under() { return stack[stack.length - 2]; },
   /** Replace the whole stack with one scene (tab navigation). */
   /** Replace the whole stack with one scene (tab navigation): the new one fades in over the old. */
   go(scene: Scene) {
@@ -59,12 +61,22 @@ export const Scenes = {
   push(scene: Scene) {
     const prev = stack[stack.length - 1];
     stack.push(scene); root.addChild(scene); guarded(() => { scene.build(); scene.relayout(); });
-    scene.alpha = 0; gsap.to(scene, { alpha: 1, duration: 0.22, ease: "power1.out", onComplete: () => { if (prev) prev.visible = false; } });
+    // The scene under it is hidden once the fade is done, unless the new scene was already popped again (a quick back tap).
+    scene.alpha = 0; gsap.to(scene, { alpha: 1, duration: 0.22, ease: "power1.out", onComplete: () => { if (prev && stack.includes(scene)) prev.visible = false; } });
   },
   pop() {
     const s = stack.pop(); const top = stack[stack.length - 1];
+    if (s) gsap.killTweensOf(s);
     if (top) { top.visible = true; top.alpha = 1; guarded(() => { top.resume(); top.relayout(); }); root.addChildAt(top, Math.max(0, root.getChildIndex(s!))); }
     if (s) gsap.to(s, { alpha: 0, duration: 0.2, ease: "power1.in", onComplete: () => guarded(() => s.dispose()) });
+  },
+  /** Take a scene out of the stack wherever it sits (a dialog closing under a newer one) and dispose it after `after` ms. */
+  remove(scene: Scene, after = 0) {
+    const i = stack.indexOf(scene); if (i < 0) return;
+    const wasTop = i === stack.length - 1; stack.splice(i, 1);
+    const fin = () => guarded(() => { if (!scene.destroyed) scene.dispose(); });
+    if (after > 0) setTimeout(fin, after); else fin();
+    const top = stack[stack.length - 1]; if (wasTop && top) guarded(() => top.resume());
   },
   /** Overlay (dialogs) sits on top without a wipe. */
   overlay(scene: Scene) { stack.push(scene); root.addChild(scene); guarded(() => { scene.build(); scene.relayout(); }); },

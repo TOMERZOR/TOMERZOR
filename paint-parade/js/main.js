@@ -2,7 +2,7 @@
 import * as Save from './save.js';
 import { Game } from './game.js';
 import { sfx, unlock as unlockAudio, setSfx, setMusic, suspend, resume } from './audio.js';
-import { Ads, IAP, PRODUCTS, initPlatform, track, haptic, isNative } from './platform.js';
+import { Ads, IAP, PRODUCTS, initPlatform, track, haptic, isNative, requestReview } from './platform.js';
 import { t, setLang, detectLang, artName, albumName, LANGS, getLang } from './i18n.js';
 import { LEVEL_DATA } from './levels-data.js';
 import { decodeLevel, levelSpec, makeLevel } from './levels.js';
@@ -199,8 +199,8 @@ function onWin(st) {
       <div class="win-name">${name}</div>
       <div class="win-sub">${firstTime ? t('winSub') : ''}</div>
       <div class="win-reward">${COIN}<b>+${total}</b>${bonus ? `<small>${t('streakBonus')} +${bonus}</small>` : ''}</div>
-      <button class="btn btn--purple btn--big" data-act="x2"><span class="ad-ico"></span>${t('x2')}</button>
-      <button class="btn btn--green btn--big" data-act="claim">${t('claim')}</button>
+      ${!lv.daily && lv.level < 4 ? '' : `<button class="btn btn--purple btn--big" data-act="x2"><span class="ad-ico"></span>${t('x2')}</button>`}
+      <button class="btn btn--green btn--big" data-act="claim">${!lv.daily && lv.level < 5 ? t('next') : t('claim')}</button>
     </div>`, { noClose: true });
   m.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return;
@@ -223,10 +223,14 @@ async function finishWin(coins, fromAd) {
   const done = album && ART.filter((x) => x.album === album.id).every((x) => S.gallery[x.id]);
   if (!fromAd && !cur.revived && !lv.daily) await Ads.interstitial('level_end', lv.level);
   cur = null;
+  // The first levels chain straight into the next one: momentum beats menus.
+  if (!lv.daily && lv.level < 5) { startLevel(getLevel(S.level)); return; }
   goHome();
-  if (album && done && !S.albumsClaimed[album.id]) setTimeout(() => albumChest(album), 400);
-  else if (lv.level === 8 && !S.starterBought && !S.starterSeenAt) setTimeout(starterOffer, 500);
-  else if (lv.level === 20 || lv.level === 45) setTimeout(() => window.dispatchEvent(new CustomEvent('pp:review')), 500);
+  // Only pop these over an idle home screen (never over a level the player already started).
+  const onHome = (fn) => setTimeout(() => { if (!cur && !$('#home').hidden && $('#modal').hidden) fn(); }, 450);
+  if (album && done && !S.albumsClaimed[album.id]) onHome(() => albumChest(album));
+  else if (lv.level === 8 && !S.starterBought && !S.starterSeenAt) onHome(starterOffer);
+  else if (lv.level === 20 || lv.level === 45) onHome(() => window.dispatchEvent(new CustomEvent('pp:review')));
 }
 
 function onFail() {
@@ -253,7 +257,7 @@ function onFail() {
       if (ok) { cur.revivedAd = true; doRevive(); } else b.disabled = false;
     } else if (b.dataset.act === 'coins') {
       if (Save.spend(REVIVE_PRICE)) { Save.save(); doRevive(); }
-      else { toast(t('needCoins')); openShop(); }
+      else { toast(t('needCoins')); closeModal(); openShop(); }
     } else confirmQuit();
   });
 }
@@ -521,7 +525,6 @@ function openShop(focus) {
   hideAllScreens();
   const sc = $('#shop');
   const free = S.ads.freeCoinsDay === Save.today() ? 3 - S.ads.freeCoinsCount : 3;
-  const p = (id) => PRODUCTS.find((x) => x.id === id);
   const starterAvail = !S.starterBought;
   const coinCards = PRODUCTS.filter((x) => x.kind === 'coins').map((x, i) => `
     <button class="shop-item" data-buy="${x.id}">
@@ -558,7 +561,7 @@ function openShop(focus) {
   sc.hidden = false;
   sc.onclick = async (ev) => {
     const n = ev.target.closest('[data-nav]');
-    if (n) { if (n.dataset.nav === 'resumeGame') { sc.hidden = true; game.paused = false; updateHud(); return; } onNav(n.dataset.nav); return; }
+    if (n) { if (n.dataset.nav === 'resumeGame') { sc.hidden = true; updateHud(); if (game.st && game.st.status === 'fail') onFail(); else game.paused = false; return; } onNav(n.dataset.nav); return; }
     const buy = ev.target.closest('[data-buy]');
     if (buy) { sfx.tap(); const ok = await IAP.buy(buy.dataset.buy); if (ok) { toast('✨ ' + t('purchased')); flyCoins(100); haptic.success(); openShop(); } return; }
     const fr = ev.target.closest('[data-free]');
@@ -703,12 +706,29 @@ function openSettings() {
       ${settingsToggles()}
       <label class="toggle"><span>${t('language')}</span><select data-lang>${LANGS.map((l) => `<option value="${l.id}" ${getLang() === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>
       <button class="btn btn--ghost" data-act="restore">${t('restore')}</button>
-      <div class="links"><a href="privacy.html" target="_blank" rel="noopener">${t('privacy')}</a> · <a href="terms.html" target="_blank" rel="noopener">${t('terms')}</a> · <a href="mailto:support@paintparade.app">${t('support')}</a></div>
+      ${Ads.privacyOptionsAvailable() ? `<button class="btn btn--ghost" data-act="consent">${t('privacyChoices')}</button>` : ''}
+      <div class="links"><a href="privacy.html" data-doc="privacy.html">${t('privacy')}</a> · <a href="terms.html" data-doc="terms.html">${t('terms')}</a> · <a href="mailto:support@paintparade.app">${t('support')}</a></div>
       <small class="muted">${t('version')} ${VERSION}</small>
     </div>`);
   bindToggles(m);
   m.querySelector('[data-lang]').addEventListener('change', (e) => { S.settings.lang = e.target.value; Save.save(); setLang(S.settings.lang); closeModal(); renderHome(); openSettings(); });
-  m.addEventListener('click', async (ev) => { const b = ev.target.closest('[data-act]'); if (!b) return; sfx.tap(); const ok = await IAP.restore(); toast(ok ? '✓' : '—'); });
+  m.addEventListener('click', async (ev) => {
+    const d = ev.target.closest('[data-doc]');
+    if (d) { ev.preventDefault(); showDoc(d.dataset.doc); return; }
+    const b = ev.target.closest('[data-act]'); if (!b) return;
+    sfx.tap();
+    if (b.dataset.act === 'consent') { await Ads.privacyOptions(); return; }
+    const ok = await IAP.restore(); toast(ok ? '✓' : '—');
+  });
+}
+
+// Policies open inside the app so players never get stranded outside the game.
+function showDoc(url) {
+  const el = document.createElement('div');
+  el.className = 'doc-view';
+  el.innerHTML = `<button class="icon-btn doc-view__close" aria-label="Close">✕</button><iframe src="${url}" title="${url}"></iframe>`;
+  document.body.appendChild(el);
+  el.querySelector('button').addEventListener('click', () => { sfx.tap(); el.remove(); });
 }
 
 // ------------------------------------------------------------------ boot
@@ -729,6 +749,7 @@ function boot() {
     if (document.hidden) { suspend(); if (cur && !game.paused && game.st && game.st.status === 'play') openPause(); Save.save(); }
     else resume();
   });
+  window.addEventListener('pp:review', () => { if (S.seen.review >= 2 || S.stats.fails > S.stats.wins) return; S.seen.review = (S.seen.review || 0) + 1; Save.save(); requestReview(); });
   window.addEventListener('pp:pause', () => { if (cur && !game.paused) openPause(); });
   window.addEventListener('pp:back', () => {
     if (!$('#modal').hidden) { const fn = $('#modal')._onClose; closeModal(); fn && fn(); }

@@ -1,0 +1,14 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Feature graphic</title>
+<style>
+@font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-latin.woff2') format('woff2'); font-weight: 300 700; }
+html,body{margin:0}
+body{width:var(--w);height:var(--h);overflow:hidden;position:relative;font-family:Fredoka,sans-serif;background:url(key-art.png) right center/cover no-repeat}
+body::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,236,250,.97) 0%,rgba(255,236,250,.82) 30%,rgba(255,236,250,0) 55%)}
+.t{position:absolute;left:5.5%;top:50%;transform:translateY(-50%);font-weight:700;font-size:calc(var(--h)*.24);line-height:.92}
+.t span{display:block;-webkit-text-stroke:calc(var(--h)*.012) #33264d;paint-order:stroke fill;text-shadow:0 calc(var(--h)*.016) 0 #33264d}
+.t small{display:block;margin-top:calc(var(--h)*.05);font-size:calc(var(--h)*.075);color:#33264d;font-weight:600;letter-spacing:.02em}
+</style></head>
+<body><div class="t"><span style="color:#ff8ac6">Paint</span><span style="color:#5ccfff">Parade</span><small>Splash pixel art to life!</small></div>
+<script>const q=new URLSearchParams(location.search);document.body.style.setProperty('--w',(q.get('w')||1024)+'px');document.body.style.setProperty('--h',(q.get('h')||500)+'px');document.fonts.load('700 40px Fredoka').then(()=>window.__done=true)</script>
+</body></html>

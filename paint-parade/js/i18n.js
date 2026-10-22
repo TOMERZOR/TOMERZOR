@@ -26,10 +26,10 @@ const S = {
     outOfLives: 'Out of lives', nextLife: 'Next life in', refill: 'Refill', plusLife: '+1 Life',
     full: 'Full', unlimited: 'Unlimited', album: 'Album', complete: 'Complete!', openChest: 'Open chest',
     locked: 'Locked', hotStreak: 'Hot Brush!', hotStreakD: 'Win streak bonus: +1 waiting spot',
-    needCoins: 'Not enough coins', getMore: 'Get more', privacy: 'Privacy Policy', terms: 'Terms of Use',
+    needCoins: 'Not enough coins', getMore: 'Get more', privacy: 'Privacy Policy', terms: 'Terms of Use', privacyChoices: 'Privacy choices',
     thanks: 'Thank you!', purchased: 'Purchase complete', grabTap: 'Tap any bucket in a lane',
     lv: 'Lv', of: 'of', remaining: 'left', version: 'Version', support: 'Support', newArt: 'New artwork!',
-    tapToPlay: 'Tap to play', ends: 'Ends in', painting: 'Painting', progress: 'Progress', cancel: 'Cancel',
+    tapToPlay: 'Tap to play', halfway: 'Halfway!', ends: 'Ends in', painting: 'Painting', progress: 'Progress', cancel: 'Cancel',
     reward: 'Reward', dailyReward: 'Daily reward', streakBonus: 'Streak bonus',
   },
   he: {
@@ -58,10 +58,10 @@ const S = {
     outOfLives: 'נגמרו הלבבות', nextLife: 'לב הבא בעוד', refill: 'מלא', plusLife: '+1 לב',
     full: 'מלא', unlimited: 'ללא הגבלה', album: 'אלבום', complete: 'הושלם!', openChest: 'פתח תיבה',
     locked: 'נעול', hotStreak: 'מכחול לוהט!', hotStreakD: 'בונוס רצף ניצחונות: +1 מקום המתנה',
-    needCoins: 'אין מספיק מטבעות', getMore: 'השג עוד', privacy: 'מדיניות פרטיות', terms: 'תנאי שימוש',
+    needCoins: 'אין מספיק מטבעות', getMore: 'השג עוד', privacy: 'מדיניות פרטיות', terms: 'תנאי שימוש', privacyChoices: 'הגדרות פרטיות',
     thanks: 'תודה!', purchased: 'הרכישה הושלמה', grabTap: 'הקש על כל דלי בטורים',
     lv: 'שלב', of: 'מתוך', remaining: 'נשארו', version: 'גרסה', support: 'תמיכה', newArt: 'יצירה חדשה!',
-    tapToPlay: 'הקש לשחק', ends: 'מסתיים בעוד', painting: 'צובעים', progress: 'התקדמות', cancel: 'ביטול',
+    tapToPlay: 'הקש לשחק', halfway: 'חצי דרך!', ends: 'מסתיים בעוד', painting: 'צובעים', progress: 'התקדמות', cancel: 'ביטול',
     reward: 'פרס', dailyReward: 'פרס יומי', streakBonus: 'בונוס רצף',
   },
 };
@@ -76,8 +76,10 @@ const ART_HE = {
   crown: 'כתר מלכותי', diamond: 'יהלום', gamepad: 'שלט משחק', house: 'בית חמים', car: 'מכונית מרוץ', note: 'תו מוזיקלי',
   ball: 'כדור חוף', robot: 'רובוט', teddy: 'דובי', ghost: 'רוח ידידותית', alien: 'חבר מהחלל', star: 'כוכב מזל', castle: 'טירה',
   planet: 'כוכב לכת', butterfly: 'פרפר', rainbow: 'קשת בענן', dino: 'דינוזאור', pizza: 'משולש פיצה', potion: 'שיקוי קסם',
+  burger: 'המבורגר', fries: 'צ׳יפס שמח', taco: 'טאקו', sushi: 'סושי', coffee: 'קפה חמים', avocado: 'אבוקדו', egg: 'ביצת עין', milk: 'חבר חלב', popsicle: 'ארטיק', toast: 'טוסט',
+  snowman: 'איש שלג', xmastree: 'עץ חג', candycane: 'מקל סוכר', snowflake: 'פתית שלג', partyhat: 'כובע מסיבה', firework: 'זיקוקים', bell: 'פעמון', mitten: 'כפפה', gingerbread: 'איש ג׳ינג׳ר', ornament: 'קישוט',
 };
-const ALBUM_HE = { sweets: 'מתוקים', critters: 'חיות חמודות', garden: 'הגן הסודי', sea: 'שמיים וים', toys: 'ארגז צעצועים', wonders: 'פלאים' };
+const ALBUM_HE = { sweets: 'מתוקים', critters: 'חיות חמודות', garden: 'הגן הסודי', sea: 'שמיים וים', toys: 'ארגז צעצועים', wonders: 'פלאים', snacks: 'מזנון', holidays: 'חגים' };
 
 let lang = 'en';
 export function setLang(l) {

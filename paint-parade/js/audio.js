@@ -103,11 +103,10 @@ export const sfx = {
 const CHORDS = [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]]; // C Am F G
 const MELODY = [12, 9, 7, 9, 12, 14, 16, 14, 12, 9, 7, 4, 7, 9, 7, 4];
 
-function musicTick() {
+function musicTick(when = 0.05) {
   if (!ctx || !musicOn) return;
   const beat = 0.32;
   const chord = CHORDS[Math.floor(musicStep / 8) % CHORDS.length];
-  const when = 0.05;
   if (musicStep % 8 === 0) chord.forEach((s) => tone({ f: hz(s - 12, 261.63), type: 'sine', t: beat * 8, v: 0.05, a: 0.4, when, bus: musicBus }));
   if (musicStep % 2 === 0) tone({ f: hz(chord[0] - 24, 261.63), type: 'triangle', t: 0.25, v: 0.08, when, bus: musicBus });
   const m = MELODY[musicStep % MELODY.length];
@@ -126,4 +125,19 @@ function stopMusic() {
   if (!ctx) return;
   musicBus.gain.setTargetAtTime(0, ctx.currentTime, 0.2);
   clearInterval(musicTimer); musicTimer = 0;
+}
+
+// Renders the music loop offline (for trailers and store videos).
+export async function renderMusic(seconds) {
+  const sr = 44100;
+  const off = new OfflineAudioContext(2, Math.ceil(sr * seconds), sr);
+  const saved = [ctx, master, sfxBus, musicBus, musicStep, musicOn];
+  ctx = off; master = off.createGain(); master.connect(off.destination);
+  musicBus = off.createGain(); musicBus.gain.value = 0.9; musicBus.connect(master);
+  sfxBus = off.createGain(); sfxBus.connect(master);
+  musicOn = true; musicStep = 0;
+  for (let t = 0; t < seconds - 0.4; t += 0.32) musicTick(t);
+  const buf = await off.startRendering();
+  [ctx, master, sfxBus, musicBus, musicStep, musicOn] = saved;
+  return buf;
 }

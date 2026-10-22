@@ -54,7 +54,7 @@ export function track(name, params = {}) {
 export function onTrack(fn) { listeners.push(fn); }
 
 // ---------------- ads ----------------
-let AdMob = null, adsReady = false, rewardedLoaded = false, interLoaded = false;
+let AdMob = null, adsReady = false, rewardedLoaded = false, interLoaded = false, privacyRequired = false;
 const platformKey = () => (Cap() && Cap().getPlatform && Cap().getPlatform() === 'android' ? 'android' : 'ios');
 
 export const Ads = {
@@ -70,6 +70,8 @@ export const Ads = {
       try {
         const info = await AdMob.requestConsentInfo();
         if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await AdMob.showConsentForm();
+        const after = await AdMob.requestConsentInfo();
+        privacyRequired = !!(after && after.privacyOptionsRequirementStatus === 'REQUIRED');
       } catch (e) { /* consent not required here */ }
       adsReady = true;
       this.preload();
@@ -81,6 +83,9 @@ export const Ads = {
     try { if (!rewardedLoaded) { await AdMob.prepareRewardVideoAd({ adId: ids.rewarded, isTesting: CONFIG.admob.testing }); rewardedLoaded = true; } } catch (e) { rewardedLoaded = false; }
     try { if (!interLoaded && !Save.get().noAds) { await AdMob.prepareInterstitial({ adId: ids.interstitial, isTesting: CONFIG.admob.testing }); interLoaded = true; } } catch (e) { interLoaded = false; }
   },
+  // GDPR: lets players change their ad consent at any time (Settings).
+  privacyOptionsAvailable() { return isNative() && !!AdMob && privacyRequired; },
+  async privacyOptions() { if (AdMob) { try { await AdMob.showPrivacyOptionsForm(); } catch (e) { /* not required */ } } },
   rewardedReady() { return isNative() ? rewardedLoaded : adsReady; },
   // Resolves true only if the player earned the reward.
   async rewarded(placement) {
@@ -226,6 +231,12 @@ export async function initPlatform() {
     try { const SB = plugin('StatusBar'); SB.setOverlaysWebView({ overlay: true }); SB.setStyle({ style: 'LIGHT' }); } catch (e) { /* optional */ }
     try { const SS = plugin('SplashScreen'); setTimeout(() => SS.hide(), 200); } catch (e) { /* optional */ }
   }
+}
+
+// Native store rating sheet (Apple/Google decide whether it actually shows).
+export async function requestReview() {
+  if (!isNative()) return false;
+  try { await plugin('InAppReview').requestReview(); return true; } catch (e) { return false; }
 }
 
 export { isNative };

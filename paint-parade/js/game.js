@@ -6,6 +6,9 @@ import { sfx } from './audio.js';
 import { haptic, track } from './platform.js';
 import { bestMove } from './bot.js';
 
+// ?speed=4 runs the clock faster for automated playtests.
+const QA_SPEED = Math.max(1, Math.min(8, Number(new URLSearchParams(location.search).get('speed')) || 1));
+
 const THEMES = [
   ['#fbe9ff', '#ffe6d6', '#ff8ac6', '#ffd23f', '#5ccfff'],
   ['#e6f6ff', '#f1e8ff', '#5ccfff', '#9b5cff', '#3fcf6b'],
@@ -35,6 +38,9 @@ export class Game {
     this.maxCoats = this.st.coats.slice();
     this.vis = this.st.coats.slice();
     this.anims = new Map(); // cell -> pop start time
+    this.shotAt = new Map(); // bucket -> last splash time (squash)
+    this.lapShots = new Map(); // bucket -> splashes since launch
+    this.milestone = 0;
     this.proj = [];
     this.fly = [];          // buckets hopping from lane/slot to the belt
     this.pops = [];
@@ -47,7 +53,7 @@ export class Game {
     this.hint = null; this.hintT = 0;
     this.idleT = 0;
     this.theme = THEMES[(level.level || 0) % THEMES.length];
-    this.tickRate = Math.max(10, Math.min(24, this.st.L / 4.2));
+    this.tickRate = Math.max(10, Math.min(24, this.st.L / 4.2)) * QA_SPEED;
     this.blinkSeed = Math.random() * 100;
     this.tutorial = opts.tutorial || null;
     this.resize();
@@ -195,8 +201,12 @@ export class Game {
         const cx = L.bx + (e.cell % this.level.w + 0.5) * L.cs, cy = L.by + (Math.floor(e.cell / this.level.w) + 0.5) * L.cs;
         const d = Math.hypot(cx - from.x, cy - from.y);
         this.proj.push({ x0: from.x, y0: from.y, x1: cx, y1: cy, t: 0, dur: Math.min(0.32, 0.08 + d / 1400), cell: e.cell, col: this.level.colors[e.c] });
+        this.shotAt.set(e.id, this.time);
+        this.lapShots.set(e.id, (this.lapShots.get(e.id) || 0) + 1);
         st.stats && (this.splats = (this.splats || 0) + 1);
-        this.hooks.onProgress && this.hooks.onProgress(progress(st));
+        const pr = progress(st);
+        this.hooks.onProgress && this.hooks.onProgress(pr);
+        if (pr >= 0.5 && this.milestone < 1) { this.milestone = 1; this.fx.text(L.W / 2, L.by + L.bh / 2, this.hooks.t ? this.hooks.t('halfway') : 'Halfway!', '#ffffff', 26); }
       } else if (e.type === 'launch') {
         let from;
         if (e.lane >= 0) from = laneSlotPos(L, e.lane, 0);
@@ -209,6 +219,8 @@ export class Game {
           this.pops.push({ x: s.x, y: s.y, t: 0 });
           this.fx.confetti(s.x, s.y, 14, 2);
           this.fx.ring(s.x, s.y, '#ffffff', 26);
+          const n = this.lapShots.get(e.id) || 0;
+          if (n >= 12) this.fx.text(s.x, s.y - 18, n >= 30 ? 'AMAZING!' : n >= 20 ? 'GREAT!' : 'NICE!', n >= 30 ? '#ffd23f' : '#ffffff', n >= 30 ? 22 : 18);
         }
         sfx.pop(); haptic.light();
       } else if (e.type === 'park') {
@@ -317,7 +329,9 @@ export class Game {
       this.lastPos.set(s.id, pt);
       if (this.isFlying(s.id)) continue;
       const bob = Math.sin(this.time * 10 + s.id) * 1.2;
-      drawBucket(ctx, pt.x, pt.y - size * 0.05 + bob, size, this.colorOf(s), s.n, { blink: this.blink(s.id), look: 0 });
+      const k = this.time - (this.shotAt.get(s.id) || -9);
+      const squash = k < 0.14 ? Math.sin(k / 0.14 * Math.PI) * 0.7 : 0;
+      drawBucket(ctx, pt.x, pt.y - size * 0.05 + bob, size, this.colorOf(s), s.n, { blink: this.blink(s.id), look: 0, squash });
     }
     // waiting to step on: stack them at the entry
     st.pending.forEach((s, k) => {

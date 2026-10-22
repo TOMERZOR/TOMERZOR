@@ -12,9 +12,11 @@ export const ART_ORDER = [
   'gift', 'ghost', 'rose', 'bee', 'cloud', 'teddy', 'puppy', 'tree', 'balloon', 'octopus',
   'frog', 'potion', 'alien', 'castle', 'dino', 'cupcake', 'watermelon', 'ball', 'owl', 'sunflower',
   'pizza', 'gamepad', 'car', 'planet', 'robot', 'donut', 'boat', 'butterfly', 'rainbow', 'cake',
+  'candycane', 'toast', 'egg', 'snowflake', 'milk', 'fries', 'bell', 'partyhat', 'sushi', 'mitten',
+  'avocado', 'ornament', 'coffee', 'popsicle', 'snowman', 'taco', 'gingerbread', 'firework', 'xmastree', 'burger',
 ];
 
-const BG = ['c', 'w', 'l', 'p', 't', 'y', 'e', 'P'];
+const BG = ['c', 'w', 'l', 'p', 't', 'y'];
 
 export function levelTag(i) {
   if (i >= 18 && i % 10 === 8) return 'super';

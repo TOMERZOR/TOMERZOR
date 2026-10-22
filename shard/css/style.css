@@ -74,6 +74,39 @@ svg { width: 24px; height: 24px; flex: none; }
 
 /* pills + buttons */
 .topbar { display: flex; justify-content: space-between; align-items: center; height: 44px; }
+.topleft { display: flex; align-items: center; gap: 8px; }
+/* star crystal: a ring fills with stars; full, it glows and asks to be shattered */
+.gembtn { position: relative; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-a78); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 1px 0 var(--line); transition: transform .18s var(--spring); }
+.gembtn:active { transform: scale(.92); }
+.gembtn .ring { position: absolute; inset: 2px; width: 36px; height: 36px; transform: rotate(-90deg); }
+.gembtn .ring circle { fill: none; stroke-width: 2.6; }
+.gembtn .ring .track { stroke: var(--ink-a12); }
+.gembtn .ring .fill { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 0 97.4; transition: stroke-dasharray .7s var(--ease); }
+.gembtn .ico { width: 19px; height: 19px; color: var(--accent); }
+.gembtn.ready { animation: gemready 1.8s var(--ease) infinite; }
+@keyframes gemready { 0%, 100% { transform: scale(1); box-shadow: 0 1px 0 var(--line), 0 0 0 0 var(--accent-a80); } 50% { transform: scale(1.1); box-shadow: 0 1px 0 var(--line), 0 0 0 9px rgba(0, 0, 0, 0); } }
+/* the crystal in its sheet: eight facets that fly apart when it shatters */
+.crystal { position: relative; width: 132px; height: 132px; margin: 6px auto 4px; }
+.crystal .gem { position: absolute; inset: 0; filter: drop-shadow(0 12px 18px var(--accent-a16)); }
+.crystal.ready .gem { filter: drop-shadow(0 0 16px var(--accent-a80)); animation: gemglow 1.6s var(--ease) infinite; }
+@keyframes gemglow { 50% { transform: scale(1.04); } }
+.crystal .gem i { position: absolute; inset: 0; background: linear-gradient(135deg, #FFFFFF 0%, var(--accent-a16) 26%, var(--accent) 62%, var(--ink) 100%); transition: transform .75s cubic-bezier(.2, .7, .3, 1), opacity .75s ease; }
+.crystal .gem i:nth-child(odd) { filter: brightness(1.12); }
+.crystal .gem i:nth-child(1) { clip-path: polygon(50% 50%, 50% 2%, 75% 26%); --dx: 40px; --dy: -95px; --r: 50deg; }
+.crystal .gem i:nth-child(2) { clip-path: polygon(50% 50%, 75% 26%, 98% 50%); --dx: 95px; --dy: -40px; --r: -40deg; }
+.crystal .gem i:nth-child(3) { clip-path: polygon(50% 50%, 98% 50%, 75% 74%); --dx: 95px; --dy: 40px; --r: 70deg; }
+.crystal .gem i:nth-child(4) { clip-path: polygon(50% 50%, 75% 74%, 50% 98%); --dx: 40px; --dy: 95px; --r: -60deg; }
+.crystal .gem i:nth-child(5) { clip-path: polygon(50% 50%, 50% 98%, 25% 74%); --dx: -40px; --dy: 95px; --r: 45deg; }
+.crystal .gem i:nth-child(6) { clip-path: polygon(50% 50%, 25% 74%, 2% 50%); --dx: -95px; --dy: 40px; --r: -70deg; }
+.crystal .gem i:nth-child(7) { clip-path: polygon(50% 50%, 2% 50%, 25% 26%); --dx: -95px; --dy: -40px; --r: 60deg; }
+.crystal .gem i:nth-child(8) { clip-path: polygon(50% 50%, 25% 26%, 50% 2%); --dx: -40px; --dy: -95px; --r: -50deg; }
+.crystal.shake .gem { animation: gemshake .36s linear; }
+@keyframes gemshake { 20% { transform: translateX(-4px) rotate(-3deg); } 40% { transform: translateX(4px) rotate(3deg); } 60% { transform: translateX(-3px) rotate(-2deg); } 80% { transform: translateX(2px) rotate(1deg); } }
+.crystal.open .gem { animation: none; filter: none; }
+.crystal.open .gem i { transform: translate(var(--dx), var(--dy)) rotate(var(--r)) scale(.6); opacity: 0; }
+.crystal .loot { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 34px; font-weight: 1000; font-variant-numeric: tabular-nums; opacity: 0; transform: scale(.5); }
+.crystal .loot svg { width: 34px; height: 34px; color: #F2A83B; }
+.crystal.open .loot { opacity: 1; transform: scale(1); transition: transform .5s var(--spring) .15s, opacity .3s ease .15s; }
 .pill { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px 0 10px; border-radius: 18px; background: var(--surface-a78); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; box-shadow: 0 1px 0 var(--line); }
 .pill svg { width: 20px; height: 20px; }
 #home-stars svg, #levels-stars svg { color: #F5B83D; }
@@ -266,7 +299,9 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 .fakead .count { position: absolute; top: calc(var(--sat) + 8px); right: 12px; min-width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,.12); display: grid; place-items: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo span, .coach-dot, .coach-line, .coach-arrow, #ball-preview, .lvl.current { animation: none !important; }
+  .logo span, .coach-dot, .coach-line, .coach-arrow, #ball-preview, .lvl.current, .gembtn.ready, .crystal .gem { animation: none !important; }
+  .crystal .gem i { transition: opacity .3s ease; }
+  .crystal.open .gem i { transform: none; }
   .coach-dot { opacity: 1; transform: translateY(58px); } .coach-line { height: 58px; } .coach-arrow { opacity: 1; }
   .screen.on.anim > * { animation: none !important; }
   .worldcard.play { animation-name: worldcardfade; }

@@ -114,7 +114,52 @@ function goHome() {
   loadDemo(w); // after show(): the demo fits itself to the home layout
 }
 
+// ---------- star crystal: fills every CRYSTAL_STARS stars, shattered for coins ----------
+const CRYSTAL_STARS = 15;
+function crystalState() {
+  const st = totalStars(), n = d().crystals, from = n * CRYSTAL_STARS;
+  return { ready: st >= from + CRYSTAL_STARS, k: Math.max(0, Math.min(1, (st - from) / CRYSTAL_STARS)), need: from + CRYSTAL_STARS - st, reward: Math.min(400, 100 + 25 * n) };
+}
+function refreshCrystal() {
+  const c = crystalState(), b = $('#btn-crystal');
+  b.querySelector('.fill').style.strokeDasharray = `${(c.k * 97.4).toFixed(1)} 97.4`;
+  b.classList.toggle('ready', c.ready);
+  b.setAttribute('aria-label', c.ready ? 'Star crystal ready to shatter' : `Star crystal: ${c.need} more stars`);
+}
+function crystalSheet() {
+  const c = crystalState();
+  openSheet(`
+    <div class="crystal ${c.ready ? 'ready' : ''}" id="crystal">
+      <div class="gem">${'<i></i>'.repeat(8)}</div>
+      <div class="loot"><svg><use href="#i-coin"/></svg><b id="loot-n">+0</b></div>
+    </div>
+    <h2>${c.ready ? 'Crystal ready' : 'Star crystal'}</h2>
+    <p class="sub">${c.ready ? 'Shatter it for coins.' : `${c.need} more ${c.need === 1 ? 'star' : 'stars'} and it's full. Every ${CRYSTAL_STARS} stars fills one.`}</p>
+    <div class="actions">${c.ready ? '<button class="btn accent big" data-act="smash">Shatter</button>' : '<button class="btn primary big" data-act="play"><svg><use href="#i-play"/></svg>Play</button>'}</div>`, (act, el) => {
+    if (act === 'play') { closeSheet(); startLevel(progressIndex()); return; }
+    if (act === 'collect') { closeSheet(); refreshHome(); return; }
+    if (act !== 'smash' || !crystalState().ready) return;
+    el.disabled = true;
+    const cr = $('#crystal');
+    d().crystals++; d().coins += c.reward; save.flush();
+    track('crystal_open', { n: d().crystals, coins: c.reward });
+    sfx.resumeAudio(); hap.medium();
+    cr.classList.add('shake');
+    setTimeout(() => {
+      cr.classList.remove('shake', 'ready'); cr.classList.add('open');
+      sfx.shatter(0.5, 0.75, 1, 1); sfx.chime(4); hap.heavy();
+      if (!calmMotion()) renderer.confetti(30);
+      $('#sheet h2').textContent = 'Shattered.';
+      $('#sheet .sub').textContent = 'The next one is already filling.';
+      setTimeout(() => { countUp($('#loot-n'), 0, c.reward); $('#home-coins span').textContent = d().coins.toLocaleString('en-US'); }, 250);
+      el.disabled = false; el.dataset.act = 'collect'; el.textContent = 'Collect';
+    }, calmMotion() ? 0 : 360);
+  });
+}
+$('#btn-crystal').addEventListener('click', () => { sfx.resumeAudio(); sfx.tap(); hap.light(); crystalSheet(); });
+
 function refreshHome() {
+  refreshCrystal();
   $('#home-stars span').textContent = totalStars();
   $('#home-coins span').textContent = d().coins.toLocaleString('en-US');
   const idx = progressIndex();
@@ -199,7 +244,7 @@ function startLevel(index, opts = {}) {
   mode = 'play';
   const p = applyPalette(level.world);
   game.load(level, { palette: p, hint: opts.hint });
-  $('#hud-level').textContent = opts.daily ? 'Daily Smash' : `Level ${index + 1}`;
+  $('#hud-level').textContent = `${opts.daily ? 'Daily Smash' : `Level ${index + 1}`} · Par ${level.par}`;
   updateGlassPips(true);
   updateHint();
   // coach: the three tutorial levels, then one line when a world introduces something new
@@ -299,7 +344,9 @@ function onWin(res) {
     coins = prev === 0 ? 10 + 5 * stars : Math.max(5, (stars - prev) * 5);
     if (res.maxCombo >= 3) coins += Math.min(20, res.maxCombo * 2);
     const before = totalStars();
+    const wasReady = crystalState().ready;
     d().stars[lv.id] = Math.max(prev, stars);
+    if (!wasReady && crystalState().ready) setTimeout(() => toast('Your star crystal is full'), 1600);
     // star milestones unlock balls on their own
     const after = totalStars();
     for (const sk of SKINS) {

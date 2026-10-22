@@ -173,3 +173,14 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - **Win:** the arpeggio ends on a ringing bell with a shimmer of air.
 - **Loss:** a gentle warning haptic.
 - **Can't listen, so measured:** at the highest combos the bell's FM sidebands could have folded past 20 kHz. Capping the modulation depth keeps energy above 16 kHz at or below 1.3% and the peak at 0.075 (no clipping).
+
+## Round 24: retention
+- **Star crystal**, the game's own reward:
+  - Every 15 stars fills one. Its ring sits next to the star count on the home screen; when full it glows and pulses.
+  - Opening it is a moment: the faceted gem shakes, then shatters into eight pieces that fly apart, revealing coins that count up, with a shatter sound, a chime and confetti.
+  - Rewards start at 100 coins and grow 25 per crystal, up to 400.
+  - The toast "Your star crystal is full" appears the moment a win fills it.
+  - It gives a goal that's always one or two levels away, on-brand: you smash glass for the reward.
+- **Par in the HUD** ("Level 12 · Par 2"): perfect is always a visible target.
+- **New scenario `crystal`:** checks the filling state, the ready state, that a shatter pays exactly once (no double collect), and that the next crystal starts filling. Passes.
+- **Found:** the test tool can't click a pulsing button ("not stable"). That's a test limitation, not a player one, so the test forces the click.

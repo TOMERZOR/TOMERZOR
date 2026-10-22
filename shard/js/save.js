@@ -19,6 +19,7 @@ export function defaults() {
     pending: {},          // productId -> time a purchase went pending
     txns: [],             // store transactions already granted
     reviewAsked: false,
+    crystals: 0,          // star crystals shattered (one fills every CRYSTAL_STARS stars)
     reminders: undefined, // undefined = never asked
     created: Date.now(),
   };
@@ -34,6 +35,7 @@ function migrate(d) {
   if (!Number.isFinite(out.coins) || out.coins < 0) out.coins = 0;
   if (!out.pending || typeof out.pending !== 'object' || Array.isArray(out.pending)) out.pending = {};
   if (!Array.isArray(out.txns)) out.txns = [];
+  if (!Number.isInteger(out.crystals) || out.crystals < 0) out.crystals = 0;
   out.v = VERSION;
   return out;
 }

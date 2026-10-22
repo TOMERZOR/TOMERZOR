@@ -197,7 +197,11 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 .bar { flex: 1; height: 10px; background: #efe7f7; border-radius: 6px; overflow: hidden; display: block; }
 .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ff8ac6, #9b5cff); border-radius: 6px; }
 .btn--play { margin-top: min(3vh, 22px); width: min(78vw, 300px); min-height: 76px; border-radius: 26px; font-size: 32px; background: linear-gradient(180deg, #6ef09a, var(--green)); box-shadow: 0 7px 0 var(--green-d), 0 16px 26px rgba(35,160,76,.35); flex-direction: column; gap: 0; animation: breathe 1.6s infinite ease-in-out; }
+.btn--play { position: relative; }
 .btn--play .tag { font-size: 13px; margin-top: 2px; text-shadow: none; }
+.streak-badge { position: absolute; top: -12px; right: -8px; font-style: normal; font-size: 16px; padding: 4px 10px; border-radius: 14px; background: #fff; color: var(--ink); text-shadow: none; box-shadow: 0 3px 0 #ead9f7, 0 6px 14px rgba(51,38,77,.15); }
+.streak-badge.hot { background: linear-gradient(180deg, #ffb35c, #ff5e3a); color: #fff; box-shadow: 0 3px 0 #c43d1f; animation: wob .5s infinite alternate; }
+[dir='rtl'] .streak-badge { right: auto; left: -8px; }
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 .home-row { display: flex; gap: 12px; margin-top: min(2.5vh, 18px); }
 .side-btn { position: relative; width: 92px; padding: 10px 6px 8px; border-radius: 20px; background: #fff; box-shadow: 0 5px 0 #ead9f7, 0 10px 18px rgba(51,38,77,.1); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }

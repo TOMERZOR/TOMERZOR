@@ -491,7 +491,7 @@ function renderHome() {
       <div class="next-art"><img src="${preview}" alt=""><span class="q">?</span></div>
       <div class="album-line"><span>${albumName(album.id, album.name)}</span><span class="bar"><i style="width:${got / inAlbum.length * 100}%"></i></span><b>${got}/${inAlbum.length}</b></div>
     </div>
-    <button class="btn btn--play" data-nav="play"><span>${t('level')} ${lvN}</span>${tag}</button>
+    <button class="btn btn--play" data-nav="play"><span>${t('level')} ${lvN}</span>${tag}${S.streak > 0 ? `<i class="streak-badge ${S.streak >= 3 ? 'hot' : ''}" title="${t('hotStreakD')}">🔥${Math.min(S.streak, 99)}</i>` : ''}</button>
     <div class="home-row">
       <button class="side-btn" data-nav="daily"><span class="cal-ico"><b>${new Date().getDate()}</b></span><span>${t('daily')}</span>${dailyDone ? '<i class="check">✓</i>' : '<i class="dot"></i>'}</button>
       ${starterLeft > 0 ? `<button class="side-btn side-btn--offer" data-nav="starter"><span class="gift-ico"></span><span>${t('starter')}</span><small>${fmtLong(starterLeft)}</small></button>` : ''}

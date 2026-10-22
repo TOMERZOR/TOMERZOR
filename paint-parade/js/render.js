@@ -30,17 +30,23 @@ export function computeLayout(W, H, safe, level, hud) {
   const lanesN = level.lanes.length;
   const slotsN = level.slots;
   const tall = H > 760;
-  // Bucket size in the lanes: as large as fits the width, capped for small screens.
-  const B = Math.round(Math.max(40, Math.min(tall ? 60 : 52, (W - 40) / Math.max(4.4, lanesN * 1.35))));
-  const rowsVisible = H > 900 ? 4 : H > 640 ? 3 : 2;
-  const lanesH = rowsVisible * B * 0.9 + 10;
-  const slotS = Math.round(Math.min(B * 0.9, (W - 32) / (slotsN + 2) * 1.05));
-  const T = Math.round(Math.max(26, Math.min(40, B * 0.66))); // belt thickness
-  const slotsH = slotS + 22 + Math.round(T * 0.35);
+  const Bmax = Math.round(Math.max(40, Math.min(tall ? 60 : 52, (W - 40) / Math.max(4.4, lanesN * 1.35))));
+  const rowsPref = H > 900 ? 4 : H > 740 ? 3 : 2;
+  // Shrink buckets, belt and visible rows until the canvas gets a readable pixel size.
+  const want = Math.min(11, Math.floor(Math.min((W - 90) / level.w, 22)));
+  let best = null;
+  for (let rows = rowsPref; rows >= 2 && !(best && best.ok); rows--) {
+    for (let B = Bmax; B >= 34; B -= 4) {
+      const r = fit(W, H, top, bottom, level, B, rows, slotsN);
+      if (!best || r.cs > best.cs) best = r;
+      if (r.cs >= want) { best = r; best.ok = true; break; }
+    }
+  }
+  const { B, rowsVisible, slotS, T, cs } = best;
   const gap = 4;
-  const availW = W - 24 - 2 * (T + gap);
+  const lanesH = rowsVisible * B * 0.9 + 10;
+  const slotsH = slotS + 22 + Math.round(T * 0.35);
   const availH = bottom - top - lanesH - slotsH - 2 * (T + gap) - 18;
-  const cs = Math.max(6, Math.min(34, Math.floor(Math.min(availW / level.w, availH / level.h) * 4) / 4));
   const bw = cs * level.w, bh = cs * level.h;
   const bx = Math.round((W - bw) / 2);
   const freeV = availH - bh;
@@ -53,6 +59,18 @@ export function computeLayout(W, H, safe, level, hud) {
   const L = { W, H, cs, bx, by, bw, bh, belt, T, gap, B, rowsVisible, slotS, slotsY, lanesTop, laneW, lanesX0, lanesN, slotsN, top, bottom };
   L.track = buildTrack(L, level.w, level.h);
   return L;
+}
+
+function fit(W, H, top, bottom, level, B, rowsVisible, slotsN) {
+  const lanesH = rowsVisible * B * 0.9 + 10;
+  const slotS = Math.round(Math.min(B * 0.9, (W - 32) / (slotsN + 2) * 1.05));
+  const T = Math.round(Math.max(22, Math.min(40, B * 0.66)));
+  const slotsH = slotS + 22 + Math.round(T * 0.35);
+  const gap = 4;
+  const availW = W - 24 - 2 * (T + gap);
+  const availH = bottom - top - lanesH - slotsH - 2 * (T + gap) - 18;
+  const cs = Math.max(4, Math.min(34, Math.floor(Math.min(availW / level.w, availH / level.h) * 4) / 4));
+  return { B, rowsVisible, slotS, T, cs };
 }
 
 function buildTrack(L, w, h) {

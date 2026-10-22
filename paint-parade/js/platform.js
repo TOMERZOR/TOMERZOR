@@ -144,10 +144,10 @@ export const PRODUCTS = [
   { id: 'pp_noads', kind: 'noads', price: '$6.99', title: 'No Ads' },
   { id: 'pp_noads_bundle', kind: 'noads', price: '$9.99', coins: 1500, boosters: 3, title: 'No Ads Bundle', best: true },
   { id: 'pp_coins_1', kind: 'coins', price: '$1.99', coins: 1000, title: 'Handful of Coins' },
-  { id: 'pp_coins_2', kind: 'coins', price: '$4.99', coins: 3000, title: 'Pouch of Coins', tag: '+20%' },
-  { id: 'pp_coins_3', kind: 'coins', price: '$9.99', coins: 7500, title: 'Chest of Coins', tag: 'Popular' },
-  { id: 'pp_coins_4', kind: 'coins', price: '$19.99', coins: 20000, title: 'Treasure of Coins', tag: '+60%' },
-  { id: 'pp_coins_5', kind: 'coins', price: '$49.99', coins: 60000, title: 'Vault of Coins', tag: 'Best value' },
+  { id: 'pp_coins_2', kind: 'coins', price: '$4.99', coins: 3000, title: 'Pouch of Coins', tag: 'tag20' },
+  { id: 'pp_coins_3', kind: 'coins', price: '$9.99', coins: 7500, title: 'Chest of Coins', tag: 'tagPopular' },
+  { id: 'pp_coins_4', kind: 'coins', price: '$19.99', coins: 20000, title: 'Treasure of Coins', tag: 'tag60' },
+  { id: 'pp_coins_5', kind: 'coins', price: '$49.99', coins: 60000, title: 'Vault of Coins', tag: 'bestValue' },
 ];
 
 let Purchases = null, rcOfferings = null;

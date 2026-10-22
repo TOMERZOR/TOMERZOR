@@ -29,7 +29,7 @@ const S = {
     needCoins: 'Not enough coins', getMore: 'Get more', privacy: 'Privacy Policy', terms: 'Terms of Use', privacyChoices: 'Privacy choices',
     thanks: 'Thank you!', purchased: 'Purchase complete', grabTap: 'Tap any bucket in a lane',
     lv: 'Lv', of: 'of', remaining: 'left', version: 'Version', support: 'Support', newArt: 'New artwork!',
-    tapToPlay: 'Tap to play', halfway: 'Halfway!', ends: 'Ends in', painting: 'Painting', progress: 'Progress', cancel: 'Cancel',
+    tapToPlay: 'Tap to play', halfway: 'Halfway!', hourUnlimited: '∞ 60 min', tag20: '+20%', tag60: '+60%', tagPopular: 'Popular', ends: 'Ends in', painting: 'Painting', progress: 'Progress', cancel: 'Cancel',
     reward: 'Reward', dailyReward: 'Daily reward', streakBonus: 'Streak bonus',
   },
   he: {
@@ -61,7 +61,7 @@ const S = {
     needCoins: 'אין מספיק מטבעות', getMore: 'השג עוד', privacy: 'מדיניות פרטיות', terms: 'תנאי שימוש', privacyChoices: 'הגדרות פרטיות',
     thanks: 'תודה!', purchased: 'הרכישה הושלמה', grabTap: 'הקש על כל דלי בטורים',
     lv: 'שלב', of: 'מתוך', remaining: 'נשארו', version: 'גרסה', support: 'תמיכה', newArt: 'יצירה חדשה!',
-    tapToPlay: 'הקש לשחק', halfway: 'חצי דרך!', ends: 'מסתיים בעוד', painting: 'צובעים', progress: 'התקדמות', cancel: 'ביטול',
+    tapToPlay: 'הקש לשחק', halfway: 'חצי דרך!', hourUnlimited: 'שעה ∞', tag20: '+20%', tag60: '+60%', tagPopular: 'פופולרי', ends: 'מסתיים בעוד', painting: 'צובעים', progress: 'התקדמות', cancel: 'ביטול',
     reward: 'פרס', dailyReward: 'פרס יומי', streakBonus: 'בונוס רצף',
   },
 };

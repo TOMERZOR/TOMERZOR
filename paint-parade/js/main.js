@@ -528,7 +528,7 @@ function openShop(focus) {
   const starterAvail = !S.starterBought;
   const coinCards = PRODUCTS.filter((x) => x.kind === 'coins').map((x, i) => `
     <button class="shop-item" data-buy="${x.id}">
-      ${x.tag ? `<span class="ribbon-s">${x.tag}</span>` : ''}
+      ${x.tag ? `<span class="ribbon-s">${t(x.tag)}</span>` : ''}
       <span class="coin-stack s${i}"></span>
       <b>${fmtNum(x.coins)}</b>
       <span class="price">${IAP.price(x.id)}</span>
@@ -538,7 +538,7 @@ function openShop(focus) {
     <div class="scroll">
       ${starterAvail ? `<button class="offer offer--starter" data-buy="pp_starter">
         <div class="offer__l"><span class="offer__tag">${t('starterSub')}</span><h3>${t('starter')}</h3>
-          <ul><li>${COIN} 1,000</li><li>🪣 x2 · 🧲 x2 · 🌈 x2</li><li>${HEART} ∞ 60 min</li></ul></div>
+          <ul><li>${COIN} 1,000</li><li>🪣 x2 · 🧲 x2 · 🌈 x2</li><li>${HEART} ${t('hourUnlimited')}</li></ul></div>
         <div class="offer__r"><span class="gift-big"></span><span class="price price--big">${IAP.price('pp_starter')}</span></div></button>` : ''}
       ${S.noAds ? '' : `<button class="offer offer--noads ${focus === 'noads' ? 'pulse' : ''}" data-buy="pp_noads_bundle">
         <div class="offer__l"><span class="offer__tag">${t('bestValue')}</span><h3>${t('noAds')} +</h3>
@@ -667,7 +667,7 @@ function starterOffer() {
     <div class="card card--offer">
       <div class="ribbon ribbon--gold">${t('starter')}</div>
       <div class="gift-big"></div>
-      <ul class="offer-list"><li>${COIN}<b>1,000</b></li><li>🪣 x2 · 🧲 x2 · 🌈 x2</li><li>${HEART}<b>∞</b> 60 min</li></ul>
+      <ul class="offer-list"><li>${COIN}<b>1,000</b></li><li>🪣 x2 · 🧲 x2 · 🌈 x2</li><li>${HEART}<b>${t('hourUnlimited')}</b></li></ul>
       <button class="btn btn--green btn--big" data-act="buy">${IAP.price('pp_starter')}</button>
       <button class="btn btn--link" data-act="no">${t('cancel')}</button>
     </div>`);
@@ -741,7 +741,14 @@ function boot() {
   game = new Game($('#cv'), {
     onWin, onFail, onEvent: onGameEvent, onProgress: setProgress, t,
     safe: safeInsets,
-    hud: () => ({ top: 78, bottom: 92 }),
+    hud: () => {
+      // Measure the real HUD so the board never slides under it (fonts, notches, small phones).
+      const sf = safeInsets();
+      const h = $('#hud'), b = $('#boosters');
+      const top = h.hidden ? 78 : Math.max(60, h.getBoundingClientRect().bottom - sf.top + 6);
+      const bottom = b.hidden ? 92 : Math.max(60, b.getBoundingClientRect().height - sf.bottom + 4);
+      return { top, bottom };
+    },
   });
   window.addEventListener('resize', () => { if (cur) game.resize(); });
   document.addEventListener('pointerdown', unlockAudio, { once: false, passive: true });

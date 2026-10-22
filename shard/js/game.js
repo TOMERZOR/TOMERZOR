@@ -117,8 +117,8 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
         case 'fire': {
           sfx.fire(); hap.light();
           stopBudget = 0.24;
-          const m = 1.1;
-          renderer.ring(sim.launcherX + Math.cos(ev.angle) * m, 0.42 + Math.sin(ev.angle) * m, 0.7, 'rgba(255,255,255,0.8)', 0.3, 0.07);
+          const m = 1.05;
+          renderer.muzzle(sim.launcherX + Math.cos(ev.angle) * m, 0.42 + Math.sin(ev.angle) * m, ev.angle);
           ev.ball.trail = [];
           break;
         }
@@ -158,7 +158,10 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
         case 'hit': {
           const now = performance.now();
           if (now - lastHitSound > 45) { lastHitSound = now; sfx.hit(ev.a, ev.b, ev.speed, ev.x / W); }
-          if ((ev.a === 'ball' || ev.b === 'ball') && ev.speed > 6) renderer.sparks(ev.x, ev.y, 4 + Math.min(4, (ev.speed - 6) | 0), 2.5 + ev.speed * 0.15);
+          if (ev.a === 'ball' || ev.b === 'ball') {
+            if (ev.speed > 4) renderer.ballHit(ev.x, ev.y, ev.speed);
+            if (ev.speed > 6) renderer.sparks(ev.x, ev.y, 4 + Math.min(4, (ev.speed - 6) | 0), 2.5 + ev.speed * 0.15);
+          }
           if (ev.a === 'pad' || ev.b === 'pad') { renderer.ring(ev.x, ev.y, 0.8, sim.__pal?.accent || '#fff', 0.3, 0.08); renderer.padHit(ev.x, ev.y); hap.light(); }
           break;
         }

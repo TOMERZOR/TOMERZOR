@@ -12,7 +12,7 @@ export function createRenderer(canvas) {
   bgc.id = 'stage-bg'; bgc.setAttribute('aria-hidden', 'true');
   canvas.parentNode.insertBefore(bgc, canvas);
   const bctx = bgc.getContext('2d', { alpha: false });
-  let restKey = -1, shakeCss = '';
+  let restKey = -1, shakeCss = '', accentRGB = [255, 122, 89];
   const stat = document.createElement('canvas');
   const sctx = stat.getContext('2d');
   let cw = 0, ch = 0, dpr = 1, s = 40, ox = 0, oy = 0, pal = null;
@@ -37,12 +37,24 @@ export function createRenderer(canvas) {
       oy = h - bottom - extra * 0.42;
       staticDirty = true;
     },
-    setPalette(p) { pal = p; staticDirty = true; seedMotes(); },
+    setPalette(p) { pal = p; accentRGB = hexRGB(p.accent); staticDirty = true; seedMotes(); },
     setSim(sim) { simRef = sim; staticDirty = true; while (fx.length) recycle(0); texts.length = 0; combo.t = -9; cam.kick = 0; cam.ft = 0; cam.z = 1; },
     invalidate() { staticDirty = true; },
     toScreen(x, y) { return [ox + x * s, oy - y * s]; },
     toWorld(px, py) { return [(px - ox) / s, (oy - py) / s]; },
     floorY: () => oy,
+    // a ball squashes against what it hits
+    ballHit(x, y, speed) {
+      let best = null, bd = Infinity;
+      for (const e of simRef?.ents || []) {
+        if (e.kind !== 'ball' || !e.alive) continue;
+        const p = e.body.getPosition(), d = (p.x - x) ** 2 + (p.y - y) ** 2;
+        if (d < bd) { bd = d; best = e; }
+      }
+      if (!best || bd > 0.5) return;
+      const p = best.body.getPosition();
+      best.sqT = clock; best.sqK = Math.min(1, speed / 14); best.sqA = -Math.atan2(y - p.y, x - p.x);
+    },
     // the pad nearest an impact squashes
     padHit(x, y) {
       let best = null, bd = Infinity;
@@ -53,7 +65,7 @@ export function createRenderer(canvas) {
       }
       if (best) best.hitT = performance.now();
     },
-    burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, punch, focus, combo: comboAt,
+    burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, muzzle, punch, focus, combo: comboAt,
     setQuality: (q) => { quality = q; },
     setFlash: (v) => { flash = v; },
     draw,
@@ -304,7 +316,7 @@ export function createRenderer(canvas) {
         const sq = u < 1 ? Math.sin(u * Math.PI) * (1 - u) * 0.55 : 0;
         c.scale(1 + sq * 0.25, 1 - sq);
         c.save();
-        c.shadowColor = rgba(hexRGB(pal.accent), 0.35 + sq);
+        c.shadowColor = rgba(accentRGB, 0.35 + sq);
         c.shadowBlur = (0.22 + sq * 0.4) * s * dpr; c.shadowOffsetY = 0.04 * s * dpr;
         const g = c.createLinearGradient(0, e.h / 2, 0, -e.h / 2);
         g.addColorStop(0, shadeHex(pal.accent, 0.3)); g.addColorStop(1, shadeHex(pal.accent, -0.12));
@@ -325,14 +337,14 @@ export function createRenderer(canvas) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 5.5 + e.id);
         // live: a warm halo breathes around it
         const halo = c.createRadialGradient(0, 0, r * 0.5, 0, 0, r * (1.6 + pulse * 0.25));
-        halo.addColorStop(0, rgba(hexRGB(pal.accent), 0.28 + pulse * 0.12)); halo.addColorStop(1, rgba(hexRGB(pal.accent), 0));
+        halo.addColorStop(0, rgba(accentRGB, 0.28 + pulse * 0.12)); halo.addColorStop(1, rgba(accentRGB, 0));
         c.fillStyle = halo; c.beginPath(); c.arc(0, 0, r * 1.9, 0, TAU); c.fill();
         // fuse with a spark
         c.strokeStyle = pal.dark ? '#C9CEDF' : '#4A4152'; c.lineWidth = lw * 2.2; c.lineCap = 'round';
         c.beginPath(); c.moveTo(0, r * 0.85); c.quadraticCurveTo(r * 0.05, r * 1.3, r * 0.42, r * 1.38); c.stroke();
         const fl = 0.75 + 0.25 * Math.sin(t * 31 + e.id * 3);
         const sg = c.createRadialGradient(r * 0.42, r * 1.38, 0, r * 0.42, r * 1.38, r * 0.42 * fl);
-        sg.addColorStop(0, 'rgba(255,250,220,1)'); sg.addColorStop(0.35, rgba(hexRGB(pal.accent), 0.9)); sg.addColorStop(1, rgba(hexRGB(pal.accent), 0));
+        sg.addColorStop(0, 'rgba(255,250,220,1)'); sg.addColorStop(0.35, rgba(accentRGB, 0.9)); sg.addColorStop(1, rgba(accentRGB, 0));
         c.fillStyle = sg; c.beginPath(); c.arc(r * 0.42, r * 1.38, r * 0.42 * fl, 0, TAU); c.fill();
         // iron shell
         const gr = c.createRadialGradient(-r * 0.35, r * 0.4, r * 0.05, 0, 0, r);
@@ -568,11 +580,13 @@ export function createRenderer(canvas) {
     c.globalAlpha = 1;
   }
 
-  function drawBall(c, x, y, r, skin, angle = 0) {
+  // st: stretch along `dir` (> 0 at speed, < 0 squashed by an impact)
+  function drawBall(c, x, y, r, skin, angle = 0, st = 0, dir = 0) {
     const [base, light, dark] = skin.c;
     c.save();
     c.translate(x, y);
-    c.fillStyle = 'rgba(0,0,0,0.12)'; c.beginPath(); c.arc(r * 0.18, r * 0.28, r, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(0,0,0,0.1)'; c.beginPath(); c.arc(r * 0.16, r * 0.26, r * 0.98, 0, TAU); c.fill();
+    if (st) { c.rotate(dir); c.scale(1 + st, 1 - st * 0.6); c.rotate(-dir); }
     let gr;
     if (skin.grad) {
       gr = c.createLinearGradient(-r, -r, r, r);
@@ -597,8 +611,15 @@ export function createRenderer(canvas) {
       for (const [cx, cy, cr] of [[-0.3, 0.2, 0.22], [0.35, -0.25, 0.16], [0.2, 0.45, 0.12]]) { c.beginPath(); c.arc(cx * r, cy * r, cr * r, 0, TAU); c.fill(); }
       c.restore();
     }
+    // bounce light from the room on the far side, then a crisp edge and two highlights
+    c.strokeStyle = pal?.dark ? 'rgba(150,190,255,0.4)' : 'rgba(255,236,220,0.5)'; c.lineWidth = r * 0.13; c.lineCap = 'round';
+    c.beginPath(); c.arc(0, 0, r * 0.86, 0.05 * Math.PI, 0.62 * Math.PI); c.stroke();
+    c.strokeStyle = 'rgba(0,0,0,0.16)'; c.lineWidth = Math.max(0.8, r * 0.04);
+    c.beginPath(); c.arc(0, 0, r - c.lineWidth / 2, 0, TAU); c.stroke();
     c.fillStyle = 'rgba(255,255,255,0.75)';
     c.beginPath(); c.ellipse(-r * 0.36, -r * 0.42, r * 0.26, r * 0.16, -0.6, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.95)';
+    c.beginPath(); c.arc(-r * 0.42, -r * 0.46, r * 0.07, 0, TAU); c.fill();
     c.restore();
   }
   R.drawBall = drawBall;
@@ -838,20 +859,29 @@ export function createRenderer(canvas) {
     if (o.hintAngle != null) drawHint(c, sim, o.hintAngle);
     // launcher barrel + loaded ball
     if (!o.hideLauncher) drawLauncher(c, sim, o);
-    // balls + trails
+    // balls: a soft comet tail, a little stretch at speed, a squash on impact
     for (const e of sim.ents) {
       if (!e.alive || e.kind !== 'ball') continue;
       const [p, a] = lerpBody(e, o.alpha);
-      if (e.trail) {
-        c.strokeStyle = o.skin.trail; c.lineCap = 'round'; c.lineJoin = 'round';
-        for (let i = 1; i < e.trail.length; i++) {
-          const [x0, y0] = R.toScreen(e.trail[i - 1][0], e.trail[i - 1][1]), [x1, y1] = R.toScreen(e.trail[i][0], e.trail[i][1]);
-          c.lineWidth = (i / e.trail.length) * BALL_R * s * 1.5;
-          c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+      const r = BALL_R * s;
+      if (e.trail && e.trail.length > 1) {
+        const n = e.trail.length;
+        c.fillStyle = o.skin.trail;
+        for (let i = 0; i < n; i++) {
+          const t = (i + 1) / (n + 1), [tx, ty] = R.toScreen(e.trail[i][0], e.trail[i][1]);
+          c.globalAlpha = t * t * 0.9;
+          c.beginPath(); c.arc(tx, ty, r * (0.3 + 0.62 * t), 0, TAU); c.fill();
         }
+        c.globalAlpha = 1;
+      }
+      const v = e.body.getLinearVelocity(), sp = Math.hypot(v.x, v.y);
+      let st = Math.min(0.14, sp / 160), dir = -Math.atan2(v.y, v.x);
+      if (e.sqT !== undefined) {
+        const u = (clock - e.sqT) / 0.14;
+        if (u < 1) { st = -Math.sin(u * Math.PI) * e.sqK * 0.22; dir = e.sqA; }
       }
       const [sx, sy] = R.toScreen(p.x, p.y);
-      drawBall(c, sx, sy, BALL_R * s, o.skin, -a);
+      drawBall(c, sx, sy, r, o.skin, -a, st, dir);
     }
     // fx
     for (const f of fx) {
@@ -960,47 +990,82 @@ export function createRenderer(canvas) {
     const [fx, fy] = R.toScreen(sim.launcherX, 0);
     const a = o.angle;
     const ready = sim.st.balls > 0 && !sim.st.won;
-    // barrel
+    const k = o.loadK ?? 1;
+    // contact shadow on the floor
+    c.save(); c.translate(fx + 0.04 * s, fy); c.scale(1, 0.22);
+    const cs = c.createRadialGradient(0, 0, 0, 0, 0, DOME_R * s * 1.35);
+    cs.addColorStop(0, pal.dark ? 'rgba(0,0,0,0.45)' : 'rgba(60,35,40,0.3)'); cs.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = cs; c.beginPath(); c.arc(0, 0, DOME_R * s * 1.35, 0, TAU); c.fill();
+    c.restore();
+    // barrel: a lit cylinder with an accent muzzle ring
     c.save();
     c.translate(lx, ly);
     c.rotate(-a);
     c.translate(-(o.recoil || 0) * 0.18 * s, 0);
     const L = 1.0 * s, Wd = 0.56 * s;
-    c.fillStyle = pal.ink;
+    const bg = c.createLinearGradient(0, -Wd / 2, 0, Wd / 2);
+    bg.addColorStop(0, shadeHex(pal.shelf[0], 0.18)); bg.addColorStop(0.35, pal.shelf[0]); bg.addColorStop(1, pal.shelf[1]);
+    c.fillStyle = bg;
     c.beginPath();
     c.moveTo(-0.1 * s, -Wd / 2); c.lineTo(L - Wd * 0.18, -Wd / 2); c.quadraticCurveTo(L, -Wd / 2, L, -Wd / 2 + Wd * 0.18);
     c.lineTo(L, Wd / 2 - Wd * 0.18); c.quadraticCurveTo(L, Wd / 2, L - Wd * 0.18, Wd / 2); c.lineTo(-0.1 * s, Wd / 2); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.14)';
-    c.fillRect(0.1 * s, -Wd / 2 + Wd * 0.14, L - 0.22 * s, Wd * 0.14);
+    c.fillStyle = 'rgba(255,255,255,0.18)';
+    c.fillRect(0.12 * s, -Wd / 2 + Wd * 0.13, L - 0.3 * s, Wd * 0.1);
     c.fillStyle = pal.accent;
-    c.fillRect(L - 0.13 * s, -Wd / 2, 0.06 * s, Wd);
+    c.fillRect(L - 0.15 * s, -Wd / 2, 0.08 * s, Wd);
+    c.fillStyle = 'rgba(255,255,255,0.35)';
+    c.fillRect(L - 0.15 * s, -Wd / 2, 0.08 * s, Wd * 0.25);
     c.restore();
     // loaded ball peeks out of the muzzle
     if (ready) {
-      const k = o.loadK ?? 1;
       const dist = MUZZLE * (0.55 + 0.45 * k);
       drawBall(c, lx + Math.cos(a) * dist, ly - Math.sin(a) * dist, BALL_R * s * (0.7 + 0.3 * k), o.skin, 0);
     }
     // dome
-    c.fillStyle = pal.ink;
-    c.beginPath(); c.arc(fx, fy, DOME_R * s, Math.PI, 0); c.closePath(); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.1)';
-    c.beginPath(); c.arc(fx, fy, DOME_R * s * 0.7, Math.PI, 0); c.closePath(); c.fill();
-    c.fillStyle = pal.accent;
-    c.beginPath(); c.arc(fx, fy - DOME_R * s * 0.42, Math.max(2.5, 0.07 * s), 0, TAU); c.fill();
-    // ball count pips on the floor band
+    const R0 = DOME_R * s;
+    const dg = c.createRadialGradient(fx - R0 * 0.35, fy - R0 * 0.55, R0 * 0.1, fx, fy, R0);
+    dg.addColorStop(0, shadeHex(pal.shelf[0], 0.22)); dg.addColorStop(0.5, pal.shelf[0]); dg.addColorStop(1, pal.shelf[1]);
+    c.fillStyle = dg;
+    c.beginPath(); c.arc(fx, fy, R0, Math.PI, 0); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.3)'; c.lineWidth = Math.max(1, 0.03 * s);
+    c.beginPath(); c.arc(fx, fy, R0 - c.lineWidth, Math.PI * 1.08, Math.PI * 1.55); c.stroke();
+    // ready light: glows when loaded, dim while reloading
+    const lit = ready ? 0.35 + 0.65 * k * (0.85 + 0.15 * Math.sin(performance.now() / 260)) : 0.2;
+    const [rx, ry] = [fx, fy - R0 * 0.45], rr = Math.max(2.5, 0.075 * s);
+    c.globalAlpha = lit * 0.7;
+    const gw = rr * 4.2; c.drawImage(glowSprite(accentRGB), rx - gw, ry - gw, gw * 2, gw * 2);
+    c.globalAlpha = 0.35 + 0.65 * lit;
+    c.fillStyle = pal.accent; c.beginPath(); c.arc(rx, ry, rr, 0, TAU); c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.8)'; c.beginPath(); c.arc(rx - rr * 0.3, ry - rr * 0.3, rr * 0.35, 0, TAU); c.fill();
+    c.globalAlpha = 1;
+    // shots left, as little balls in the equipped skin
     const total = sim.st.balls;
-    const pipR = Math.max(3.2, 0.09 * s), gap = pipR * 3;
-    const py = oy + Math.min(22, (ch - oy) * 0.4);
+    const pr = Math.max(3.4, 0.1 * s), gap = pr * 2.7;
+    const py = oy + Math.min(24, (ch - oy) * 0.42);
     const shown = Math.min(total, 8);
     const startX = lx - ((shown - 1) * gap) / 2;
-    c.fillStyle = pal.ink; c.globalAlpha = 0.85;
-    for (let i = 0; i < shown; i++) { c.beginPath(); c.arc(startX + i * gap, py, pipR, 0, TAU); c.fill(); }
+    for (let i = 0; i < shown; i++) drawBall(c, startX + i * gap, py, pr, o.skin, 0);
     if (total > shown) {
-      c.font = `900 ${Math.round(pipR * 3.2)}px ${FONT}`; c.textAlign = 'left'; c.textBaseline = 'middle';
-      c.fillText('+' + (total - shown), startX + shown * gap - pipR, py + 0.5);
+      c.font = `900 ${Math.round(pr * 3)}px ${FONT}`; c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.fillStyle = pal.ink; c.globalAlpha = 0.85;
+      c.fillText('+' + (total - shown), startX + shown * gap - pr * 0.6, py + 0.5);
+      c.globalAlpha = 1;
     }
-    c.globalAlpha = 1;
+  }
+  // the cannon fires: a flash at the muzzle, a breath of smoke, a few sparks forward
+  function muzzle(x, y, a) {
+    glow(x, y, 0.15, 0.9, 0.16, [255, 236, 200]);
+    for (let i = 0; i < 6 * quality; i++) {
+      const f = spawn('spark', x, y, rnd(0.12, 0.22));
+      const d = a + rnd(-0.35, 0.35), v = rnd(5, 9);
+      f.vx = Math.cos(d) * v; f.vy = Math.sin(d) * v; f.drag = 4; f.size = rnd(0.025, 0.04); f.col = '#FFF4DA';
+    }
+    for (let i = 0; i < 3 * quality; i++) {
+      const f = spawn('dust', x, y, rnd(0.5, 0.8));
+      const d = a + rnd(-0.6, 0.6), v = rnd(0.6, 1.6);
+      f.vx = Math.cos(d) * v; f.vy = Math.sin(d) * v; f.drag = 2.5; f.grav = -0.1; f.size = rnd(0.1, 0.16); f.size2 = f.size * 2.6;
+      f.rgb = pal.dark ? [170, 180, 210] : [205, 195, 200];
+    }
   }
 
   // resample a path into evenly spaced dots
@@ -1023,38 +1088,50 @@ export function createRenderer(canvas) {
   function drawAim(c, sim, o) {
     const pts = o.aim.pts;
     if (!pts || pts.length < 2) return;
-    const dots = dotsAlong(pts, 0.15, 0.42);
+    // dots flow toward the target, larger and stronger near the cannon
+    const gap = 0.42, flow = (performance.now() / 1000 * 1.4) % 1;
+    const dots = dotsAlong(pts, 0.15 + flow * gap, gap);
     const n = dots.length;
-    const phase = (performance.now() / 600) % 1;
     c.fillStyle = pal.ink;
     for (let i = 0; i < n; i++) {
       const [sx, sy] = R.toScreen(dots[i][0], dots[i][1]);
-      const k = 1 - i / (n + 2);
-      c.globalAlpha = 0.25 + 0.6 * k;
-      const pr = (0.055 + 0.03 * k) * s * (1 + 0.25 * Math.max(0, Math.sin((i / 3 - phase) * Math.PI)));
-      c.beginPath(); c.arc(sx, sy, pr, 0, TAU); c.fill();
+      const k = 1 - (i + flow) / (n + 2);
+      c.globalAlpha = (0.22 + 0.63 * k) * Math.min(1, (i + 1 - flow) * 1.5);
+      c.beginPath(); c.arc(sx, sy, (0.045 + 0.035 * k) * s, 0, TAU); c.fill();
     }
     c.globalAlpha = 1;
-    const ring = (h, alpha) => {
+    // where the ball first touches: a ghost ball; on glass it's marked to break
+    const mark = (h, alpha) => {
       const [sx, sy] = R.toScreen(h.x, h.y);
       const glass = h.kind === 'glass' || h.kind === 'bomb';
-      c.strokeStyle = glass ? pal.accent : pal.ink; c.globalAlpha = alpha;
-      c.lineWidth = Math.max(1.5, 0.045 * s);
-      c.beginPath(); c.arc(sx, sy, BALL_R * s, 0, TAU); c.stroke();
+      const col = glass ? pal.accent : pal.ink, r = BALL_R * s;
+      c.globalAlpha = alpha * (glass ? 0.16 : 0.08); c.fillStyle = col;
+      c.beginPath(); c.arc(sx, sy, r, 0, TAU); c.fill();
+      c.globalAlpha = alpha; c.strokeStyle = col; c.lineWidth = Math.max(1.5, 0.045 * s);
+      c.beginPath(); c.arc(sx, sy, r, 0, TAU); c.stroke();
+      if (glass) {
+        const t = performance.now() / 1000, br = 1 + 0.12 * Math.sin(t * 7);
+        c.lineCap = 'round'; c.lineWidth = Math.max(1.2, 0.035 * s); c.beginPath();
+        for (let i = 0; i < 4; i++) {
+          const q = i * Math.PI / 2 + Math.PI / 4;
+          c.moveTo(sx + Math.cos(q) * r * 1.3 * br, sy + Math.sin(q) * r * 1.3 * br); c.lineTo(sx + Math.cos(q) * r * 1.65 * br, sy + Math.sin(q) * r * 1.65 * br);
+        }
+        c.stroke();
+      }
       c.globalAlpha = 1;
     };
-    if (o.aim.hit) ring(o.aim.hit, 0.85);
+    if (o.aim.hit) mark(o.aim.hit, 0.85);
     // after the first bounce: a fainter guide, like a pool cue line
     if (o.aim.pts2 && o.aim.pts2.length > 1) {
-      const d2 = dotsAlong(o.aim.pts2, 0.3, 0.42);
+      const d2 = dotsAlong(o.aim.pts2, 0.3 + flow * gap, gap);
       c.fillStyle = pal.ink;
       for (let i = 0; i < d2.length; i++) {
         const [sx, sy] = R.toScreen(d2[i][0], d2[i][1]);
         c.globalAlpha = 0.32 * (1 - i / (d2.length + 3));
-        c.beginPath(); c.arc(sx, sy, 0.045 * s, 0, TAU); c.fill();
+        c.beginPath(); c.arc(sx, sy, 0.042 * s, 0, TAU); c.fill();
       }
       c.globalAlpha = 1;
-      if (o.aim.hit2) ring(o.aim.hit2, 0.5);
+      if (o.aim.hit2) mark(o.aim.hit2, 0.5);
     }
   }
 

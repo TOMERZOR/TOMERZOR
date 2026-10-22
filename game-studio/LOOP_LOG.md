@@ -125,3 +125,17 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
   - A camera transform covers both canvas layers.
   - If frames stay slow after the resolution drops, effects thin out.
 - **Verified:** proof replay 120/120 and the scenarios pass with no console errors.
+
+## Round 20: ball, cannon, aim guide
+- **Ball:**
+  - Bounce light from the room on its far side, a crisp edge, and a sharp highlight on top of the soft one.
+  - A soft comet tail replaces the grey smear.
+  - Slight stretch at speed, and a squash against whatever it hits (0.14 s).
+- **Cannon:**
+  - A lit cylinder barrel with a bright accent muzzle ring.
+  - A dome with gradient and rim light, and a contact shadow on the floor.
+  - A ready light that glows when loaded and dims while it reloads.
+  - Firing gives a flash at the muzzle, sparks forward and a breath of smoke.
+- **Shots left** are drawn as little balls in the equipped skin, so the ball you bought is visible all game.
+- **Aim guide:** dots flow toward the target and taper with distance. The first contact shows as a ghost ball. On glass it turns to the accent colour with four pulsing ticks, meaning "this breaks".
+- **Verified:** proof replay 120/120, scenarios pass.

@@ -139,3 +139,18 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - **Shots left** are drawn as little balls in the equipped skin, so the ball you bought is visible all game.
 - **Aim guide:** dots flow toward the target and taper with distance. The first contact shows as a ghost ball. On glass it turns to the accent colour with four pulsing ticks, meaning "this breaks".
 - **Verified:** proof replay 120/120, scenarios pass.
+
+## Round 21: level flow
+- **Motion rule (from the design-motion skill):** weight follows frequency.
+  - A level start happens hundreds of times: subtle, under a second, never blocking.
+  - A win happens every level: quick, satisfying, with the Next button live straight away.
+  - A world opening or completing happens five times: expressive.
+  - Every new animation has a reduced-motion answer.
+- **Level intro:** shelves are already there; the glass, wood, stone and bombs pop in from the bottom up with a springy settle (0.32 s each, about 0.6 s in all), while a soft rising run of glass notes plays. The physics is live from the first frame, and pieces join the settled layer all at once when the intro ends, so it redraws once.
+- **New world:** the first time a world opens, a title card ("World 2 · Mint · Stone & timber") rises in on a frosted band of light, holds, and drifts away. It never blocks input.
+- **Wins:**
+  - A 3-star clear brings a gentle shower of tumbling glass confetti.
+  - Completing a world brings two bigger waves.
+  - The scrim behind the win sheet is lighter, so the celebration stays visible.
+- **Found:** a "+0 coins" in an earlier filmstrip was only a capture artifact: the count-up runs on a real-time timer, the film tool on a manual clock. The real flow shows "+35".
+- **Verified:** scenarios pass, proof replay 120/120, no console errors.

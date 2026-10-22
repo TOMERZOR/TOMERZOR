@@ -39,8 +39,10 @@ if (what === 'home') {
     const s = window.__shard;
     if (daily) s.startLevel(0, { daily: true, level: s.DAILY[i], dateKey: 'film' }); else s.startLevel(i);
   }, [idx, daily]);
+  // INTRO=1: film the level assembling itself, then stop
+  if (process.env.INTRO) { for (let i = 0; i < FRAMES; i++) { await snap(); await tick(EVERY); } }
   await tick(20); await snap('start');
-  const proof = await page.evaluate(() => window.__shard.game.level.proof);
+  const proof = process.env.INTRO ? [] : await page.evaluate(() => window.__shard.game.level.proof);
   for (const [k, deg] of proof.entries()) {
     const a = deg * Math.PI / 180;
     for (let i = 0; i < 12; i++) { await page.evaluate(([a, t]) => window.__shard.game.debugAim(a + (1 - t) * 0.3), [a, Math.min(1, (i + 1) / 8)]); await tick(1); }

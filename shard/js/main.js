@@ -11,6 +11,7 @@ import { initMonetization, showRewarded, maybeInterstitial, purchase, restore, P
 import { track } from './analytics.js';
 
 const $ = (s) => document.querySelector(s);
+const calmMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const d = () => save.d;
 const PER_WORLD = 24;
 const HINT_COST = 40, CONTINUE_COST = 60;
@@ -102,6 +103,7 @@ function unlocked(i) { return i <= progressIndex(); }
 
 function goHome() {
   closeSheet(true);
+  $('#worldcard').classList.remove('play');
   mode = 'home';
   const idx = progressIndex();
   const w = LEVELS[idx].world;
@@ -207,6 +209,14 @@ function startLevel(index, opts = {}) {
   $('#coach').classList.toggle('textonly', !tut);
   $('#coach-text').textContent = intro || (index === 0 ? 'Pull back anywhere, then release' : index === 1 ? 'Line them up. The ball goes straight through glass' : 'Knock it down. Falling glass shatters');
   show('hud');
+  // the first time a world opens, it introduces itself
+  if (!opts.daily && fresh && index > 0 && index % PER_WORLD === 0) {
+    const w = WORLDS[level.world], card = $('#worldcard');
+    card.querySelector('small').textContent = `World ${level.world + 1}`;
+    card.querySelector('b').textContent = w.name;
+    card.querySelector('span').textContent = w.sub;
+    card.classList.remove('play'); void card.offsetWidth; card.classList.add('play');
+  }
   d().stats.played++;
   save.touch();
   sfx.startMusic();
@@ -347,7 +357,12 @@ function onWin(res) {
       const ok = await showRewarded('double_coins');
       if (ok) { d().coins += coins; save.flush(); countUp($('#reward-n'), coins, coins * 2); el.disabled = true; el.innerHTML = '<svg><use href="#i-check"/></svg>Doubled'; }
     }
-  });
+  }, null, true);
+  // a shower of glass confetti for a perfect clear; a bigger one when a world is done
+  if (!calmMotion()) {
+    if (worldDone) { renderer.confetti(60); setTimeout(() => renderer.confetti(40), 500); }
+    else if (stars === 3) renderer.confetti(26);
+  }
   // star + coin animation
   const svgs = document.querySelectorAll('#sheet .stars svg');
   svgs.forEach((s, i) => setTimeout(() => { s.classList.add('show'); if (i < stars) { sfx.star(i); hap.light(); } }, 260 + i * 220));
@@ -438,11 +453,12 @@ function starterOffer(after) {
 
 // ---------- sheets ----------
 let sheetOpen = false, sheetHandler = null, sheetDismiss = null;
-function openSheet(html, handler, onDismiss) {
+function openSheet(html, handler, onDismiss, soft = false) {
   const sh = $('#sheet');
   sh.classList.remove('closing');
   sh.innerHTML = html;
   sh.hidden = false; $('#scrim').hidden = false;
+  $('#scrim').classList.toggle('soft', soft); // a win keeps the celebration visible behind the sheet
   sheetOpen = true; sheetHandler = handler; sheetDismiss = onDismiss || null;
   const first = sh.querySelector('[data-act]');
   first?.focus({ preventScroll: true });

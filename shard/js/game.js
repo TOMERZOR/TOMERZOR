@@ -28,7 +28,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
   let paused = false, ended = false, winTimer = -1, loseShown = false;
   let loadK = 1, hintAngle = null, recoil = 0;
   let lastHitSound = 0, lastHap = 0;
-  let fired = 0;
+  let fired = 0, loads = 0;
   let stopT = 0, stopBudget = 0; // hit-stop: a brief freeze that gives impacts weight
 
   function load(lv, opts = {}) {
@@ -36,7 +36,13 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     quiet = !!opts.quiet;
     sim = createSim(planck, lv, { visual: true });
     sim.__pal = opts.palette;
-    renderer.setSim(sim);
+    const intro = renderer.setSim(sim);
+    // a soft run of glass notes as the level assembles
+    const token = ++loads, notes = Math.min(intro.n, 6);
+    if (!quiet && notes && !calm()) for (let j = 0; j < notes; j++) {
+      const at = intro.delay + (notes > 1 ? (j * (intro.n - 1)) / (notes - 1) : 0) * intro.step;
+      setTimeout(() => { if (token === loads) sfx.tink(j); }, at * 1000);
+    }
     angle = (lv.launcher?.x ?? 4.5) < 4.5 ? 60 * DEG : (lv.launcher?.x ?? 4.5) > 4.5 ? 120 * DEG : 80 * DEG;
     aiming = false; aim = null; aimDirty = true;
     acc = 0; timeScale = 1; slowT = 0; shake = 0; flash = 0; stopT = 0; stopBudget = 0;

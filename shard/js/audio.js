@@ -167,6 +167,17 @@ export function chime(combo) {
   tone(t, f * 3.01, 0.16, 0.015, dest, 'triangle', 0.004);
 }
 
+// one note of the level assembling itself: quiet, rising, glassy
+export function tink(i = 0) {
+  if (!ctx || !enabled.sfx) return;
+  const semis = PENTA[i % 5] + 12 * Math.floor(i / 5);
+  const f = 1318.5 * Math.pow(2, semis / 12);
+  const dest = out((i % 2 ? 0.25 : -0.25), 0.5);
+  const t = ctx.currentTime + 0.005;
+  tone(t, f, 0.22, 0.022, dest, 'sine', 0.003);
+  tone(t, f * 2.76, 0.09, 0.007, dest, 'sine', 0.003);
+}
+
 export function fire() {
   if (!ctx || !enabled.sfx) return;
   if (sample('fire', 0.75, 0.94 + Math.random() * 0.12, 0, 0.05)) return;

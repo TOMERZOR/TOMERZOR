@@ -12,7 +12,9 @@ export function createRenderer(canvas) {
   bgc.id = 'stage-bg'; bgc.setAttribute('aria-hidden', 'true');
   canvas.parentNode.insertBefore(bgc, canvas);
   const bctx = bgc.getContext('2d', { alpha: false });
-  let restKey = -1, shakeCss = '', accentRGB = [255, 122, 89];
+  let restKey = -1, shakeCss = '', accentRGB = [255, 122, 89], introEnd = 0;
+  const INTRO_DELAY = 0.1, INTRO_POP = 0.32;
+  const easeOutBack = (u) => 1 + 2.70158 * Math.pow(u - 1, 3) + 1.70158 * Math.pow(u - 1, 2);
   const stat = document.createElement('canvas');
   const sctx = stat.getContext('2d');
   let cw = 0, ch = 0, dpr = 1, s = 40, ox = 0, oy = 0, pal = null;
@@ -38,7 +40,16 @@ export function createRenderer(canvas) {
       staticDirty = true;
     },
     setPalette(p) { pal = p; accentRGB = hexRGB(p.accent); staticDirty = true; seedMotes(); },
-    setSim(sim) { simRef = sim; staticDirty = true; while (fx.length) recycle(0); texts.length = 0; combo.t = -9; cam.kick = 0; cam.ft = 0; cam.z = 1; },
+    setSim(sim) {
+      simRef = sim; staticDirty = true; while (fx.length) recycle(0); texts.length = 0; combo.t = -9; cam.kick = 0; cam.ft = 0; cam.z = 1;
+      // the level assembles itself: pieces pop in from the bottom up
+      const parts = sim.ents.filter((e) => SPRITED[e.kind] === 1 || e.kind === 'bomb');
+      parts.sort((a, b) => a.body.getPosition().y - b.body.getPosition().y || a.body.getPosition().x - b.body.getPosition().x);
+      const step = Math.min(0.035, 0.42 / Math.max(1, parts.length));
+      parts.forEach((e, i) => { e.anim = clock + INTRO_DELAY + i * step; });
+      introEnd = parts.length ? clock + INTRO_DELAY + parts.length * step + INTRO_POP : 0;
+      return { n: parts.length, step, delay: INTRO_DELAY };
+    },
     invalidate() { staticDirty = true; },
     toScreen(x, y) { return [ox + x * s, oy - y * s]; },
     toWorld(px, py) { return [(px - ox) / s, (oy - py) / s]; },
@@ -65,7 +76,7 @@ export function createRenderer(canvas) {
       }
       if (best) best.hitT = performance.now();
     },
-    burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, muzzle, punch, focus, combo: comboAt,
+    burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, muzzle, confetti, punch, focus, combo: comboAt,
     setQuality: (q) => { quality = q; },
     setFlash: (v) => { flash = v; },
     draw,
@@ -280,12 +291,12 @@ export function createRenderer(canvas) {
     c.closePath();
   }
 
-  function drawBody(c, e, p, a) {
+  function drawBody(c, e, p, a, k = 1) {
     const [sx, sy] = R.toScreen(p.x, p.y);
     c.save();
     c.translate(sx, sy);
     c.rotate(-a);
-    c.scale(s, -s);
+    c.scale(s * k, -s * k);
     const lw = 1 / s;
     switch (e.kind) {
       case 'shelf': case 'mover': {
@@ -537,12 +548,12 @@ export function createRenderer(canvas) {
     c.drawImage(sp.cv, -sp.ax, -sp.ay, sp.w, sp.h);
     c.restore();
   }
-  function drawShadow(c, e, p, a) {
+  function drawShadow(c, e, p, a, k = 1) {
     const sp = sprites(e).shadow;
     const [sx, sy] = R.toScreen(p.x + SHADOW[0], p.y + SHADOW[1]);
     // at night, glass throws coloured light instead of shade
     if (pal.dark && e.kind === 'glass') c.globalCompositeOperation = 'lighter';
-    blit(c, sp, sx, sy, a);
+    blit(c, sp, sx, sy, a, k);
     c.globalCompositeOperation = 'source-over';
   }
 
@@ -688,6 +699,15 @@ export function createRenderer(canvas) {
       radial(f, 1.4, 0.5); f.drag = 2.2; f.grav = -0.15; f.size = size * rnd(0.6, 1); f.size2 = f.size * 2.4; f.rgb = rgb;
     }
   }
+  // a gentle shower of glass confetti from the top of the room
+  function confetti(n) {
+    const cols = [...pal.glass.map((g) => `rgb(${g[0]},${g[1]},${g[2]})`), '#FFFFFF', pal.accent];
+    for (let i = 0; i < n * quality; i++) {
+      const f = spawn('conf', rnd(0.3, W - 0.3), CEIL + rnd(0.2, 1.6), rnd(1.6, 2.6));
+      f.vx = rnd(-0.6, 0.6); f.vy = rnd(-2.6, -0.8); f.grav = 0.18; f.drag = 0.5; f.size = rnd(0.07, 0.13);
+      f.col = cols[Math.floor(Math.random() * cols.length)]; f.r = rnd(4, 9); f.age = -Math.random() * 0.35;
+    }
+  }
   function glow(x, y, r0, r1, life, rgb = WHITE) { const f = spawn('glow', x, y, life); f.size = r0; f.size2 = r1; f.rgb = rgb; }
   // a bomb: white-hot core inside an orange fireball, hot sparks, shell fragments, falling embers, smoke
   const FIRE = [255, 168, 82], EMBER = [255, 196, 120];
@@ -775,6 +795,15 @@ export function createRenderer(canvas) {
     return [{ x: e.px + (p.x - e.px) * alpha, y: e.py + (p.y - e.py) * alpha }, e.pa + da * alpha];
   }
 
+  // where a piece is in its pop-in: null when not visible yet
+  const popIn = [1, 1];
+  function introOf(e) {
+    if (!e.anim) { popIn[0] = 1; popIn[1] = 1; return popIn; }
+    const u = (clock - e.anim) / INTRO_POP;
+    if (u <= 0) return null;
+    if (u >= 1) { popIn[0] = 1; popIn[1] = 1; } else { popIn[0] = 0.55 + 0.45 * easeOutBack(u); popIn[1] = Math.min(1, u * 3); }
+    return popIn;
+  }
   // asleep and not animating: drawn once into the settled layer
   const SPRITED = { glass: 1, wood: 1, stone: 1 };
   const settled = (e) => SPRITED[e.kind] === 1 && !e.anim && !e.body.isAwake();
@@ -796,6 +825,7 @@ export function createRenderer(canvas) {
     if (!pal) return;
     if (staticDirty) { renderStatic(); staticDirty = false; restKey = -1; }
     stepFx(o.fxDt || 0);
+    if (introEnd && (clock > introEnd || o.calm) && sim) { for (const e of sim.ents) e.anim = 0; introEnd = 0; }
     // the settled layer changes only when something wakes, sleeps or breaks
     let key = 0;
     if (sim) for (const e of sim.ents) if (e.alive && settled(e)) key = (key * 31 + e.id) | 0;
@@ -835,18 +865,27 @@ export function createRenderer(canvas) {
     for (const e of sim.ents) {
       if (!e.alive) continue;
       const k = e.kind;
-      if ((k === 'glass' || k === 'wood' || k === 'stone' || k === 'bomb') && !settled(e)) { const [p, a] = lerpBody(e, o.alpha); drawShadow(c, e, p, a); }
+      if ((k === 'glass' || k === 'wood' || k === 'stone' || k === 'bomb') && !settled(e)) {
+        const pi = introOf(e);
+        if (!pi) continue;
+        const [p, a] = lerpBody(e, o.alpha);
+        c.globalAlpha = pi[1]; drawShadow(c, e, p, a, pi[0]); c.globalAlpha = 1;
+      }
     }
     for (const e of sim.ents) {
       if (!e.alive || settled(e)) continue;
       const k = e.kind;
       if (k === 'glass' || k === 'wood' || k === 'stone') {
+        const pi = introOf(e);
+        if (!pi) continue;
         const [p, a] = lerpBody(e, o.alpha);
         const [sx, sy] = R.toScreen(p.x, p.y);
-        blit(c, sprites(e).body, sx, sy, a);
+        c.globalAlpha = pi[1]; blit(c, sprites(e).body, sx, sy, a, pi[0]); c.globalAlpha = 1;
       } else if (k === 'mover' || k === 'bomb' || k === 'pad') {
+        const pi = introOf(e);
+        if (!pi) continue;
         const [p, a] = lerpBody(e, o.alpha);
-        drawBody(c, e, p, a);
+        c.globalAlpha = pi[1]; drawBody(c, e, p, a, pi[0]); c.globalAlpha = 1;
       }
     }
     for (const e of sim.shards) {
@@ -932,6 +971,17 @@ export function createRenderer(canvas) {
           c.globalAlpha = Math.min(1, k * 1.5); c.fillStyle = f.col;
           const zz = f.size * s;
           c.fillRect(sx - zz / 2, sy - zz / 2, zz, zz);
+          break;
+        }
+        case 'conf': {
+          // a tumbling diamond: its width flips as it turns
+          const t = f.age * f.r + f.ph, w = Math.cos(t), zz = f.size * s;
+          c.globalAlpha = Math.min(1, k * 3);
+          c.fillStyle = f.col;
+          c.save(); c.translate(sx + Math.sin(t * 0.5) * 0.12 * s, sy); c.rotate(t * 0.3);
+          c.beginPath(); c.moveTo(0, -zz); c.lineTo(zz * 0.6 * w, 0); c.lineTo(0, zz); c.lineTo(-zz * 0.6 * w, 0); c.closePath(); c.fill();
+          if (w > 0.75) { c.fillStyle = 'rgba(255,255,255,0.7)'; c.fill(); }
+          c.restore();
           break;
         }
         case 'ring': {

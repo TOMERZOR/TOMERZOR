@@ -110,6 +110,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
   function shoot() {
     const e = sim.fire(angle);
     if (!e) return;
+    renderer.finishIntro();
     fired++;
     hintAngle = null;
     loadK = 0; recoil = 1;

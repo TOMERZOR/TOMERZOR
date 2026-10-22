@@ -54,6 +54,8 @@ export function createRenderer(canvas) {
     toScreen(x, y) { return [ox + x * s, oy - y * s]; },
     toWorld(px, py) { return [(px - ox) / s, (oy - py) / s]; },
     floorY: () => oy,
+    // a shot during the intro: everything appears at once, nothing is ever hit unseen
+    finishIntro() { if (introEnd) introEnd = clock; },
     // a ball squashes against what it hits
     ballHit(x, y, speed) {
       let best = null, bd = Infinity;

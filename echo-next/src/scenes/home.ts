@@ -7,8 +7,8 @@ import gsap from "gsap";
 import { Scene, Scenes, layout } from "../scenes";
 import { W, H, C } from "../theme";
 import { state, L, today } from "../state";
-import { panel, button, pill, progressBar, display, body, label } from "../ui";
-import { TopBar, TabBar, iconSprite, heroSprite, echoSprite } from "../widgets";
+import { panel, button, pill, progressBar, display, body, label, roundKey } from "../ui";
+import { TopBar, TabBar, iconSprite, heroSprite, echoSprite, TOP_H } from "../widgets";
 import { audio, buzz } from "../audio";
 import { t } from "../i18n";
 import { MapScene } from "./map";
@@ -17,6 +17,7 @@ import { ShopScene } from "./shop";
 import { PassScene } from "./pass";
 import { DailyScene } from "./daily";
 import { ProfileScene } from "./profile";
+import { TUTORIAL_LEVEL } from "../tutorial";
 
 export class HomeScene extends Scene {
   private bg!: Sprite; private fog!: Graphics; private stage!: Container; private ui!: Container;
@@ -48,6 +49,7 @@ export class HomeScene extends Scene {
     gsap.to(this.hero, { y: "-=10", duration: 1.3, yoyo: true, repeat: -1, ease: "sine.inOut" });
     this.echoes.forEach((e, i) => gsap.timeline({ repeat: -1, delay: i * 3 }).to(e, { alpha: 0.78, duration: 0.6 }).to(e, { alpha: 0.5, duration: 0.08, yoyo: true, repeat: 5 }).to(e, { alpha: 0.78, duration: 2.5 }).to(e, { alpha: 0, duration: 0.5 }).to({}, { duration: 2.5 }));
   }
+  private howTo!: Container;
   private logo!: Container; private cards!: Container; private play!: Container; private playSub!: Text; private dailySub!: Text; private passSub!: Text; private passBar!: Container; private streak!: Text;
   private buildUi() {
     // Logo: chunky cream letters with an orange lip and mint echo copies behind.
@@ -79,7 +81,8 @@ export class HomeScene extends Scene {
     this.cards.addChild(pass);
 
     // Play.
-    this.play = button({ w: 960, h: 150, label: t("play"), sub: "", kind: "primary", size: 64, onTap: () => { audio.play("tap", 0.6); buzz("medium"); const n = state.nextLevel(); if (n) Scenes.push(new LevelScene(n, n.id)); else Scenes.go(new MapScene()); } });
+    this.play = button({ w: 960, h: 150, label: t("play"), sub: "", kind: "primary", size: 64, onTap: () => { audio.play("tap", 0.6); buzz("medium"); if (!state.flag("tut")) { Scenes.push(new LevelScene(TUTORIAL_LEVEL, "tutorial")); return; } const n = state.nextLevel(); if (n) Scenes.push(new LevelScene(n, n.id)); else Scenes.go(new MapScene()); } });
+    this.howTo = roundKey(92, "ghost", iconSprite("info", 50), () => { audio.play("tap", 0.5); Scenes.push(new LevelScene(TUTORIAL_LEVEL, "tutorial")); }); this.ui.addChild(this.howTo);
     this.playSub = (this.play.children[1] as Container).children[1] as Text;
     this.ui.addChild(this.play);
     gsap.to(this.play.scale, { x: 1.015, y: 1.015, duration: 1.2, yoyo: true, repeat: -1, ease: "sine.inOut" });
@@ -116,6 +119,7 @@ export class HomeScene extends Scene {
     const tabsTop = this.tabs.y;
     this.play.position.set(W / 2, tabsTop - 130);
     this.cards.position.set((W - 960) / 2, tabsTop - 130 - 75 - 24 - 150);
+    this.howTo.position.set(70, top + TOP_H + 70);
   }
   tick(dt: number) { this.time += dt; this.portalGlow.scale.set(1 + Math.sin(this.time * 2) * 0.05); this.portalGlow.alpha = 0.85 + Math.sin(this.time * 3) * 0.15; }
   dispose() { this.unsub(); super.dispose(); }
@@ -124,6 +128,7 @@ export class HomeScene extends Scene {
 export function levelName(key: string) {
   if (key === "daily") return t("daily_name", { d: String(today() % 1000) });
   if (key.startsWith("custom")) return t("custom");
+  if (key === "tutorial") return t("tutorial");
   const [w, n] = key.split("-");
   return `${t("world" + w).replace(/^The /, "")} · ${n}`;
 }

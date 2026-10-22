@@ -11,6 +11,8 @@ import { t } from "../i18n";
 import { dialog } from "./dialog";
 import { SettingsScene } from "./settings";
 import { ShopScene } from "./shop";
+import { LevelScene } from "./level";
+import { TUTORIAL_LEVEL } from "../tutorial";
 
 export class ProfileScene extends Scene {
   private top!: TopBar; private tabs!: TabBar; private scroll!: ScrollView; private unsub = () => {};
@@ -52,6 +54,7 @@ export class ProfileScene extends Scene {
 
     // Actions.
     const rows: [string, string, () => void][] = [
+      ["info", t("how_to_play"), () => Scenes.push(new LevelScene(TUTORIAL_LEVEL, "tutorial"))],
       ["bag", t("robots"), () => Scenes.go(new ShopScene())],
       ["gear", t("settings"), () => Scenes.overlay(new SettingsScene())],
       ["share", t("share"), () => { const txt = `ECHO · ${L.totalStars(p)} ★`; (navigator as any).share?.({ text: txt }).catch(() => {}) ?? navigator.clipboard?.writeText(txt).then(() => toast(t("copied"))); }],

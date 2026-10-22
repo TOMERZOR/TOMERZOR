@@ -3,12 +3,14 @@
  * tiles, turns swipes and taps into beats, tweens every hop, shows where
  * drones land next, and runs the loop → echo → clear flow.
  */
-import { Container, Sprite, Texture, Text, Graphics, FederatedPointerEvent } from "pixi.js";
+import { Container, Sprite, Texture, Text, Graphics, FederatedPointerEvent, RenderTexture, PerspectiveMesh } from "pixi.js";
 import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
 import { panel, button, roundKey, pill, display, body, scrim } from "../ui";
-import { iconSprite, heroSprite, echoSprite, starRow, toast } from "../widgets";
+import { iconSprite, echoTexture, starRow, toast } from "../widgets";
+import { Actor } from "../actor";
+import { glow, ring, burst as fxBurst, afterimage } from "../fx";
 import { state, L, S, today } from "../state";
 import type { Level, Run } from "../logic-types";
 import { audio, buzz } from "../audio";
@@ -18,8 +20,11 @@ import { MapScene } from "./map";
 import { ShopScene } from "./shop";
 import { showAd } from "./ads";
 import { levelName } from "./home";
+import { Tutorial, type TutHost } from "../tutorial";
 
 const REPEAT_MS = 175, REPLAY_MS = 260, BEAT_MS = 150, SWIPE = 20;
+/** Padding around the room inside its render texture (frame, wall fronts, glow bleed). */
+const BPAD = 40;
 const KEYS: Record<string, number> = { ArrowUp: 1, KeyW: 1, ArrowRight: 3, KeyD: 3, ArrowDown: 5, KeyS: 5, ArrowLeft: 7, KeyA: 7 };
 const WAIT_KEYS = new Set(["Space", "Period", "KeyX"]);
 const fails: Record<string, number> = {};
@@ -37,13 +42,18 @@ export class LevelScene extends Scene {
   private heldKey: string | null = null; private touch = { id: -1, x0: 0, y0: 0, t0: 0, dir: 0, moved: false };
   private time = 0; private shakeN = 0; private hintUntil = -1; private freeze = 0;
   // display
-  private bg!: Sprite; private board!: Container; private frame!: Graphics; private floor!: Container; private items!: Container; private actors!: Container; private fx!: Container; private overlayG!: Graphics;
+  private bg!: Sprite; private board!: Container; private boardRoot!: Container; private frame!: Graphics; private floor!: Container; private lights!: Container; private items!: Container; private actors!: Container; private fx!: Container; private motes!: Container;
+  private boardRT: RenderTexture | null = null; private mesh: PerspectiveMesh | null = null; private boardShadow!: Graphics; private brect = { x: 0, y: 0, w: 1, h: 1 }; private corners = [0, 0, 0, 0, 0, 0, 0, 0];
+  private par = { x: 0, y: 0 }; private parS = { x: 0, y: 0 }; private zoom = { k: 1, fx: 0.5, fy: 0.5 }; private landed = true; private moteList: { g: Graphics; vx: number; vy: number; ph: number }[] = [];
+  private plateGlow = new Map<string, Sprite>(); private doorBeam = new Map<string, Sprite>();
+  private orient = (e: DeviceOrientationEvent) => { if (!state.opts.tilt) return; const g = e.gamma ?? 0, b = e.beta ?? 45; this.par.x = Math.max(-1, Math.min(1, g / 28)); this.par.y = Math.max(-1, Math.min(1, (b - 45) / 28)); };
   private cs = 100; private flash!: Graphics;
-  private heroSp!: Sprite; private echoSps: Sprite[] = []; private droneSps: Sprite[] = []; private ghostSps: Sprite[] = []; private coinSps = new Map<string, Sprite>();
-  private plateSps = new Map<string, Sprite>(); private doorSps = new Map<string, { open: Sprite; closed: Sprite }>(); private exitSp!: Sprite; private exitGlow!: Graphics;
+  private heroSp!: Actor; private echoSps: Actor[] = []; private droneSps: Actor[] = []; private ghostSps: Sprite[] = []; private coinSps = new Map<string, Sprite>();
+  private plateSps = new Map<string, Sprite>(); private doorSps = new Map<string, { open: Sprite; closed: Sprite }>(); private exitSp!: Sprite; private exitGlow!: Sprite;
   private dangerSps: Container[] = []; private hintSp!: Sprite;
   private dial!: Container; private dialArc!: Graphics; private dialNum!: Text; private dots: Graphics[] = []; private coinPill!: Container; private nameT!: Text;
   private banner!: Container; private bannerT!: Text; private bannerS!: Text; private controls!: Container; private hud!: Container;
+  private tut: Tutorial | null = null; private tutLayer = new Container();
   private keyHandler = (e: KeyboardEvent) => this.onKey(e); private keyUp = (e: KeyboardEvent) => { if (e.code === this.heldKey) this.heldKey = null; };
 
   constructor(private level: Level, private key: string) { super(); }
@@ -58,15 +68,32 @@ export class LevelScene extends Scene {
     this.on("pointerdown", (e) => this.onDown(e)); this.on("globalpointermove", (e) => this.onMove(e)); this.on("pointerup", (e) => this.onUp(e)); this.on("pointerupoutside", (e) => this.onUp(e)); this.on("pointercancel", (e) => this.onUp(e));
     window.addEventListener("keydown", this.keyHandler); window.addEventListener("keyup", this.keyUp);
 
-    this.board = new Container(); this.addChild(this.board);
+    // The room is drawn into a texture and shown through a perspective mesh,
+    // so it sits on the screen like a tilted table instead of a flat grid.
+    this.boardShadow = new Graphics(); this.addChild(this.boardShadow);
+    this.boardRoot = new Container(); this.board = new Container(); this.board.position.set(BPAD, BPAD); this.boardRoot.addChild(this.board);
     this.frame = new Graphics(); this.board.addChild(this.frame);
-    this.floor = new Container(); this.items = new Container(); this.actors = new Container(); this.fx = new Container(); this.overlayG = new Graphics();
-    this.board.addChild(this.floor, this.items, this.actors, this.fx);
+    this.floor = new Container(); this.lights = new Container(); this.items = new Container(); this.actors = new Container(); this.fx = new Container(); this.motes = new Container();
+    this.board.addChild(this.floor, this.items, this.lights, this.actors, this.fx, this.motes);
+    this.on("pointermove", (e) => { if (state.opts.tilt) return; this.par.x = (e.global.x / window.innerWidth - 0.5) * 1.2; this.par.y = (e.global.y / window.innerHeight - 0.5) * 1.2; });
+    window.addEventListener("deviceorientation", this.orient);
     this.flash = new Graphics(); this.flash.rect(-W, -1000, W * 3, 6000).fill({ color: C.coral }); this.flash.alpha = 0; this.addChild(this.flash);
     this.buildHud(); this.buildControls(); this.buildBanner();
     this.buildBoard();
+    this.addChild(this.tutLayer);
     this.startLevel();
   }
+  // ── what the tutorial sees ──
+  /** A board cell in scene coordinates. */
+  get layer() { return this.tutLayer; }
+  cellRect(x: number, y: number) { const a = this.boardToScene(x * this.cs, y * this.cs), b = this.boardToScene((x + 1) * this.cs, (y + 1) * this.cs); return { x: Math.min(a.x, b.x), y: a.y, w: Math.abs(b.x - a.x), h: b.y - a.y }; }
+  dialRect() { return { x: W / 2 - 120, y: this.hud.y - 120, w: 240, h: 240 }; }
+  endKeyRect() { return { x: W / 2 - 135, y: this.controls.y - 145, w: 270, h: 270 }; }
+  heroCell() { const h = this.run.actors[this.run.actors.length - 1]!; return { x: h.x, y: h.y }; }
+  echoCount() { return this.logs.length; }
+  restartRoom() { this.logs = []; this.startLoop(); }
+  finishTutorial() { state.setFlag("tut", true); this.tut?.destroy(); this.tut = null; this.tutLayer.removeChildren().forEach((c) => c.destroy({ children: true })); audio.play("tap", 0.5); const first = L.LEVELS[0]!; this.play(first, first.id); }
+  skipTutorial() { state.setFlag("tut", true); this.tut?.destroy(); this.tut = null; this.tutLayer.removeChildren().forEach((c) => c.destroy({ children: true })); this.quit(); }
 
   // ── HUD ──────────────────────────────────────────────────────────────────
   private buildHud() {
@@ -159,10 +186,22 @@ export class LevelScene extends Scene {
     }
     for (let y = 0; y < L.ROWS; y++) for (let x = 0; x < L.COLS; x++) {
       const ch = m[y]![x]!;
-      if (ch === "#") { tile("wall_top", x, y); continue; }
-      if ("abc".includes(ch)) { const s = tile("plate_off", x, y, this.items); this.plateSps.set(ch, s); }
-      if ("ABC".includes(ch)) { const closed = tile("gate_closed", x, y, this.items), open = tile("gate_open", x, y, this.items); open.alpha = 0; this.doorSps.set(ch, { open, closed }); }
-      if (ch === "E") { this.exitGlow = new Graphics(); this.exitGlow.circle(0, 0, cs * 0.62).fill({ color: C.gold, alpha: 0.28 }); this.exitGlow.position.set((x + 0.5) * cs, (y + 0.5) * cs); this.items.addChild(this.exitGlow); this.exitSp = tile("exit_t", x, y, this.items); this.exitSp.anchor.set(0.5); this.exitSp.position.set((x + 0.5) * cs, (y + 0.5) * cs); }
+      if (ch === "#") {
+        tile("wall_top", x, y);
+        // the south face of every wall block that has open floor (or the frame) below it
+        if (y + 1 >= L.ROWS || m[y + 1]![x] !== "#") {
+          const f = new Graphics(); const fh = cs * 0.34;
+          f.rect(x * cs + 1, (y + 1) * cs - 2, cs - 2, fh).fill({ color: 0x4a3860 });
+          f.rect(x * cs + 1, (y + 1) * cs - 2, cs - 2, 6).fill({ color: 0xffffff, alpha: 0.18 });
+          f.rect(x * cs + 1, (y + 1) * cs - 2 + fh - 8, cs - 2, 8).fill({ color: 0x000000, alpha: 0.35 });
+          f.rect(x * cs + 1, (y + 1) * cs - 2 + fh, cs - 2, 10).fill({ color: 0x000000, alpha: 0.2 });
+          this.floor.addChild(f);
+        }
+        continue;
+      }
+      if ("abc".includes(ch)) { const s = tile("plate_off", x, y, this.items); this.plateSps.set(ch, s); const pg = glow("#c08cff", cs * 0.9, 0); pg.position.set((x + 0.5) * cs, (y + 0.5) * cs); this.lights.addChild(pg); this.plateGlow.set(ch, pg); }
+      if ("ABC".includes(ch)) { const closed = tile("gate_closed", x, y, this.items), open = tile("gate_open", x, y, this.items); open.alpha = 0; this.doorSps.set(ch, { open, closed }); const bm = glow("#c08cff", cs * 1.1, 0); bm.position.set((x + 0.5) * cs, (y + 0.5) * cs); bm.scale.y *= 1.6; this.lights.addChild(bm); this.doorBeam.set(ch, bm); }
+      if (ch === "E") { this.exitGlow = glow("#ffcf5a", cs * 1.7, 0.55); this.exitGlow.position.set((x + 0.5) * cs, (y + 0.5) * cs); this.lights.addChild(this.exitGlow); this.exitSp = tile("exit_t", x, y, this.items); this.exitSp.anchor.set(0.5); this.exitSp.position.set((x + 0.5) * cs, (y + 0.5) * cs); }
     }
     // stone frame around the room
     const fw = L.COLS * cs, fh = L.ROWS * cs;
@@ -171,6 +210,37 @@ export class LevelScene extends Scene {
     this.frame.roundRect(-30, -30, fw + 60, (fh + 60) * 0.5, 44).fill({ color: 0xffffff, alpha: 0.08 });
     this.frame.roundRect(-30, -30, fw + 60, fh + 60, 44).stroke({ color: 0x000000, alpha: 0.25, width: 4 });
     this.hintSp = new Sprite(Texture.from("arrow")); this.hintSp.anchor.set(0.5); this.hintSp.width = this.hintSp.height = cs * 0.8; this.hintSp.visible = false; this.items.addChild(this.hintSp);
+    // dust motes drifting through the room
+    this.moteList = [];
+    for (let i = 0; i < 16; i++) { const g = new Graphics(); g.circle(0, 0, 2 + Math.random() * 3).fill({ color: 0xffffff, alpha: 0.35 }); g.blendMode = "add"; g.position.set(Math.random() * fw, Math.random() * fh); this.motes.addChild(g); this.moteList.push({ g, vx: (Math.random() - 0.5) * 6, vy: -8 - Math.random() * 10, ph: Math.random() * 6 }); }
+    // the texture the room is drawn into, and the mesh that shows it in perspective
+    if (!this.boardRT) {
+      this.boardRT = RenderTexture.create({ width: fw + BPAD * 2, height: fh + BPAD + 110, resolution: 1 });
+      this.mesh = new PerspectiveMesh({ texture: this.boardRT, verticesX: 12, verticesY: 18 });
+      this.addChildAt(this.mesh, this.getChildIndex(this.boardShadow) + 1);
+    }
+  }
+  /** Scene coordinates of a point in room space (bilinear over the mesh corners; the tilt is mild). */
+  boardToScene(bx: number, by: number) {
+    const c = this.corners, u = (bx + BPAD) / this.boardRT!.width, v = (by + BPAD) / this.boardRT!.height;
+    const tx = c[0]! + (c[2]! - c[0]!) * u, ty = c[1]! + (c[3]! - c[1]!) * u, bx2 = c[6]! + (c[4]! - c[6]!) * u, by2 = c[7]! + (c[5]! - c[7]!) * u;
+    return { x: tx + (bx2 - tx) * v, y: ty + (by2 - ty) * v };
+  }
+  /** Corners of the mesh: the board rect, narrowed at the top, nudged by parallax, zoom and shake. */
+  private updateCorners() {
+    if (!this.mesh) return;
+    const { x, y, w, h } = this.brect, ins = w * 0.075, px = this.parS.x, py = this.parS.y, sh = this.shakeN;
+    let c = [x + ins - px * ins * 0.6, y + h * 0.025 + py * 10, x + w - ins - px * ins * 0.6, y + h * 0.025 + py * 10, x + w + px * 8, y + h, x + px * 8, y + h];
+    const fx = x + w * this.zoom.fx, fy = y + h * this.zoom.fy, k = this.zoom.k;
+    c = c.map((v, i) => (i % 2 === 0 ? fx + (v - fx) * k : fy + (v - fy) * k));
+    this.corners = c;
+    const jx = sh ? (Math.random() - 0.5) * sh * 1.5 : 0, jy = sh ? (Math.random() - 0.5) * sh * 1.5 : 0;
+    this.mesh.setCorners(c[0]! + jx, c[1]! + jy, c[2]! + jx, c[3]! + jy, c[4]! + jx, c[5]! + jy, c[6]! + jx, c[7]! + jy);
+    // the table's thickness and its shadow on the floor
+    const g = this.boardShadow; g.clear();
+    g.poly([c[6]!, c[7]! - 30, c[4]!, c[5]! - 30, c[4]! + 3, c[5]! + 20, c[6]! - 3, c[7]! + 20]).fill({ color: 0x1b1326 });
+    g.poly([c[6]!, c[7]! - 30, c[4]!, c[5]! - 30, c[4]! + 3, c[5]! + 20, c[6]! - 3, c[7]! + 20]).stroke({ color: 0xffffff, alpha: 0.06, width: 2 });
+    for (let i = 0; i < 4; i++) g.roundRect(c[6]! - 10 - i * 14, c[7]! - 60 + i * 10, c[4]! - c[6]! + 20 + i * 28, 110 + i * 10, 60).fill({ color: 0x000000, alpha: 0.1 });
   }
   private syncActors() {
     this.actors.removeChildren().forEach((c) => { killTweensDeep(c as Container); c.destroy(); });
@@ -179,11 +249,13 @@ export class LevelScene extends Scene {
     for (const d of this.dangerSps) if (!d.destroyed) d.destroy({ children: true });
     this.dangerSps = []; this.danger = null;
     this.echoSps = []; this.droneSps = []; this.ghostSps = [];
-    const skin = state.skin(), cs = this.cs;
-    for (let i = 0; i < this.run.actors.length - 1; i++) { const e = echoSprite(skin); e.width = cs * 0.92; e.scale.y = e.scale.x; e.anchor.set(0.5, 0.92); this.actors.addChild(e); this.echoSps.push(e); }
+    const skin = state.skin(), cs = this.cs, col = L.SKINS[skin]!.color, colN = parseInt(col.slice(1), 16);
+    const start = this.run.actors[0]!;
+    for (let i = 0; i < this.run.actors.length - 1; i++) { const e = new Actor(echoTexture(skin), cs, "echo", col); e.position.set((start.x + 0.5) * cs, (start.y + 0.92) * cs); this.actors.addChild(e); this.echoSps.push(e); gsap.delayedCall(0.06 * i, () => { if (!e.destroyed) e.materialize(this.fx, colN); }); }
     for (const _ of this.run.drones) { const g = new Sprite(Texture.from("drone")); g.anchor.set(0.5, 0.6); g.width = cs * 0.8; g.scale.y = g.scale.x; g.alpha = 0.32; this.items.addChild(g); this.ghostSps.push(g); }
-    this.heroSp = heroSprite(skin); this.heroSp.width = cs * 0.96; this.heroSp.scale.y = this.heroSp.scale.x; this.heroSp.anchor.set(0.5, 0.92); this.actors.addChild(this.heroSp);
-    for (const _ of this.run.drones) { const d = new Sprite(Texture.from("drone")); d.anchor.set(0.5, 0.6); d.width = cs * 0.86; d.scale.y = d.scale.x; this.actors.addChild(d); this.droneSps.push(d); }
+    this.heroSp = new Actor(Texture.from(L.SKINS[skin]!.sprite), cs, "hero", "#ffb86b"); this.heroSp.position.set((start.x + 0.5) * cs, (start.y + 0.92) * cs); this.actors.addChild(this.heroSp); this.heroSp.arrive(this.fx);
+    this.run.drones.forEach((d) => { const a = new Actor(Texture.from("drone"), cs, "drone", "#ff5c7a"); a.position.set((d.px + 0.5) * cs, (d.py + 0.5) * cs); if (d.dx) a.setDir(d.dx > 0 ? 3 : 7); this.actors.addChild(a); this.droneSps.push(a); });
+    this.landed = true;
     // coins
     for (const s of this.coinSps.values()) { gsap.killTweensOf(s); if (!s.destroyed) s.destroy(); } this.coinSps.clear();
     for (const c of this.run.coins) { const s = new Sprite(Texture.from("coin_t")); s.anchor.set(0.5); s.width = s.height = cs * 0.62; s.position.set((c.x + 0.5) * cs, (c.y + 0.5) * cs); this.items.addChild(s); this.coinSps.set(`${c.x},${c.y}`, s); gsap.to(s, { y: (c.y + 0.42) * cs, duration: 0.8 + Math.random() * 0.4, yoyo: true, repeat: -1, ease: "sine.inOut" }); }
@@ -205,18 +277,24 @@ export class LevelScene extends Scene {
     const strip = this.hud.getChildByLabel("strip")!; strip.position.set(W / 2, 230); this.dots.forEach((d, i) => d.position.set(W / 2 + (i - 3) * 80, 230));
     const boardTop = top + 420, ctrlH = 300 + sb;
     this.controls.position.set(0, bottom - sb - 190);
-    const availH = bottom - boardTop - ctrlH, cell = Math.min((W - 90) / L.COLS, availH / L.ROWS);
-    const k = cell / 100; this.board.scale.set(k);
-    this.board.position.set((W - L.COLS * cell) / 2, boardTop + (availH - L.ROWS * cell) / 2);
+    const availH = bottom - boardTop - ctrlH, cell = Math.min((W - 110) / L.COLS, availH / L.ROWS);
+    const k = cell / 100, bx = (W - L.COLS * cell) / 2, by = boardTop + (availH - L.ROWS * cell) / 2;
+    if (this.boardRT) {
+      this.brect = { x: bx - BPAD * k, y: by - BPAD * k, w: this.boardRT.width * k, h: this.boardRT.height * k };
+      const res = Math.min(2, Math.max(0.6, k * layout.scale * Scenes.app.renderer.resolution));
+      if (Math.abs(this.boardRT.source.resolution - res) > 0.08) { this.boardRT.resize(this.boardRT.width, this.boardRT.height, res); if (this.mesh) this.mesh.texture = this.boardRT; }
+      this.updateCorners();
+    }
     // The banner sits over the HUD, never over the room.
     this.banner.position.set(W / 2, top + 250);
+    this.tut?.relayout();
   }
 
   // ── flow ─────────────────────────────────────────────────────────────────
   private coach: Container | null = null;
   /** First room only: an arrow that keeps gliding in the direction of the first move until the player makes one. */
-  private showCoach() {
-    if (this.coach || this.key !== "1-1") return;
+  showCoach() {
+    if (this.coach || (this.key !== "1-1" && this.key !== "tutorial")) return;
     const c = new Container(); const ar = new Sprite(Texture.from("arrow")); ar.anchor.set(0.5); ar.width = ar.height = this.cs * 0.9; ar.rotation = Math.PI / 2; c.addChild(ar);
     const ring = new Graphics(); ring.circle(0, 0, this.cs * 0.36).stroke({ color: C.cream, alpha: 0.9, width: 6 }); ring.circle(0, 0, this.cs * 0.14).fill({ color: C.cream, alpha: 0.9 }); c.addChild(ring);
     const start = this.run.actors[this.run.actors.length - 1]!; c.position.set((start.x + 0.5) * this.cs, (start.y + 0.5) * this.cs);
@@ -228,8 +306,8 @@ export class LevelScene extends Scene {
     this.logs = []; this.playing = true;
     this.drawHintTag();
     this.startLoop();
-    this.showCoach();
-    this.showBanner(t("loop_n", { n: 1 }), this.hintFor(), 3800);
+    if (this.key === "tutorial") { this.relayout(); this.tut = new Tutorial(this as unknown as TutHost); }
+    else { this.showCoach(); this.showBanner(t("loop_n", { n: 1 }), this.hintFor(), 3800); }
     audio.musicOn(true);
   }
   private hintFor() {
@@ -244,10 +322,13 @@ export class LevelScene extends Scene {
     this.gen += 1; this.recording = ""; this.run = L.createRun(this.level, [...this.logs, ""]);
     this.prev = null; this.queued = null; this.beatT0 = -1e9; this.auto = null; this.danger = null; this.hintUntil = -1; this.hintSp.visible = false; this.clearPeek(true);
     this.syncActors();
-    if (this.logs.length) this.showBanner(t("loop_n", { n: this.logs.length + 1 }), t("loop_sub"), 900);
+    if (this.logs.length && !this.tut) this.showBanner(t("loop_n", { n: this.logs.length + 1 }), t("loop_sub"), 900);
     audio.play("tick", 0.4, 1 + this.logs.length * 0.08);
+    this.tut?.on("loopStart");
   }
   private loopEnded() {
+    if (this.tut && !this.tut.acceptLoopEnd()) { this.showBanner(t("retry"), "", 900); this.later(700, () => this.restartRoom()); return; }
+    this.tut?.on("loopEnded");
     if (this.logs.length >= L.MAX_ECHOES) {
       this.showBanner(t("out_of_echoes"), t("out_sub"), 1400); audio.play("out"); this.shake(10); buzz("heavy"); setTimeout(() => buzz("error"), 120); this.noteFail();
       this.logs = []; this.drawDots(); this.later(1300, () => this.startLoop()); return;
@@ -255,17 +336,18 @@ export class LevelScene extends Scene {
     this.logs.push(this.recording);
     this.showBanner(t("loop_saved", { n: this.logs.length }), t("loop_sub"), 1300); audio.play("saved", 0.7); buzz("medium");
     // the hero freezes into a hologram
-    gsap.to(this.heroSp, { alpha: 0.5, duration: 0.4, yoyo: true, repeat: 1 });
+    this.heroSp.freeze(parseInt(L.SKINS[state.skin()]!.color.slice(1), 16)); ring(this.fx, this.heroSp.x, this.heroSp.y, this.cs * 0.2, this.cs * 0.9, C.mint, 5, 0.6);
     this.later(950, () => this.startLoop());
   }
   private endLoopNow() {
     const run = this.run; if (!this.canControl() || run.tick < 1) return;
+    if (this.tut && !this.tut.allowsEnd()) { buzz("rigid"); return; }
     run.tick = L.LOOP_TICKS; this.drawDial(); audio.play("tap", 0.5); buzz("medium"); this.loopEnded();
   }
   private loopFailed() {
     this.showBanner(t("caught"), t("caught_sub"), 1200); audio.play("caught"); this.shake(14); buzz("error"); this.noteFail();
     this.flash.alpha = 0.45; gsap.to(this.flash, { alpha: 0, duration: 0.5 }); this.freeze = 0.09;
-    gsap.fromTo(this.heroSp, { tint: 0xff6b6b }, { tint: 0xffffff, duration: 0.7 });
+    this.heroSp.zap(this.fx); this.pulseZoom(1.06, this.heroSp.x, this.heroSp.y - this.cs * 0.4, 0.7);
     this.later(800, () => this.offerContinue());
   }
   /** After a drone: pick up from the move before (ad, coins, or free without ads) or restart the loop. */
@@ -356,6 +438,11 @@ export class LevelScene extends Scene {
     this.showBanner(t("help_play"), "", 1600);
   }
   private levelDone() {
+    if (this.tut) {
+      audio.play("win"); buzz("success"); this.confetti(); this.exitAnimation();
+      this.later(1000, () => this.tut?.on("exit"));
+      return;
+    }
     const logs = [...this.logs, this.recording], res = L.simulate(this.level, logs), stars = L.starsFor(this.level, res.echoes);
     const p = state.profile, bestKey = this.key === "daily" ? `daily-${today()}` : this.key, custom = this.key.startsWith("custom");
     const prev = p.best[bestKey], before = p.coins, firstClear = !prev && !custom;
@@ -365,13 +452,41 @@ export class LevelScene extends Scene {
     const reward = v.ok ? state.profile.coins - before : 0;
     audio.play("win"); this.shake(6); buzz("success");
     if (stars === 3 || newBest) setTimeout(() => audio.play("shimmer", 0.6), 420);
-    // the hero dives into the portal
-    gsap.to(this.heroSp, { x: this.exitSp.x, y: this.exitSp.y + this.cs * 0.4, duration: 0.5, ease: "power2.in" });
-    gsap.to(this.heroSp.scale, { x: 0, y: 0, duration: 0.6, ease: "power2.in" }); gsap.to(this.heroSp, { rotation: Math.PI * 2, duration: 0.6, ease: "power2.in" });
-    gsap.to(this.exitGlow.scale, { x: 2.2, y: 2.2, duration: 0.6, yoyo: true, repeat: 1 });
+    this.exitAnimation();
     if (stars === 3) this.confetti();
     const gen = this.gen;
     setTimeout(() => { if (this.gen !== gen || this.destroyed) return; this.playing = false; audio.musicOn(false); Scenes.overlay(new ResultScene(this, { stars, echoes: res.echoes, moves: res.exitTick, reward, firstClear, newBest, next: this.nextLevel() })); }, 1150);
+  }
+  /** The hero winds up, leaps in an arc into the portal with a light trail, and the portal answers. */
+  private exitAnimation() {
+    const A = this.heroSp, cs = this.cs, ex = this.exitSp.x, ey = this.exitSp.y + cs * 0.42, f = A.face;
+    killTweensDeep(A);
+    const tl = gsap.timeline();
+    tl.to(A.body.scale, { x: 1.18 * f, y: 0.78, duration: 0.1, ease: "power2.out" })
+      .to(A.body.scale, { x: 0.82 * f, y: 1.3, duration: 0.12 })
+      .to(A, { x: ex, y: ey, duration: 0.46, ease: "power2.in" }, 0.2)
+      .to(A.body, { y: -cs * 1.5, duration: 0.23, ease: "power2.out" }, 0.2)
+      .to(A.body, { y: 0, duration: 0.23, ease: "power2.in" }, 0.43)
+      .to(A.body, { rotation: Math.PI * 2 * f, duration: 0.46, ease: "power1.in" }, 0.2)
+      .to(A.body.scale, { x: 0.06 * f, y: 0.06, duration: 0.26, ease: "power2.in" }, 0.4)
+      .to(A, { alpha: 0, duration: 0.08 }, 0.64);
+    const trail = setInterval(() => { if (!A.destroyed && A.alpha > 0) afterimage(this.fx, A.sprite, 0xffcf5a, 0.45, 0.35); }, 40); setTimeout(() => clearInterval(trail), 680);
+    this.pulseZoom(1.09, ex, ey - cs * 0.4, 1.1);
+    gsap.delayedCall(0.62, () => {
+      if (this.destroyed) return;
+      const fl = new Graphics(); fl.circle(0, 0, cs * 0.5).fill({ color: 0xffffff, alpha: 0.95 }); fl.blendMode = "add"; fl.position.set(ex, ey - cs * 0.42); this.fx.addChild(fl);
+      gsap.to(fl.scale, { x: 3.2, y: 3.2, duration: 0.45, ease: "power2.out" }); gsap.to(fl, { alpha: 0, duration: 0.45, onComplete: () => fl.destroy() });
+      ring(this.fx, ex, ey - cs * 0.42, cs * 0.2, cs * 1.9, C.gold, 10, 0.7); ring(this.fx, ex, ey - cs * 0.42, cs * 0.1, cs * 1.2, 0xffffff, 6, 0.5);
+      fxBurst(this.fx, ex, ey - cs * 0.42, C.gold, 26, cs * 0.9); fxBurst(this.fx, ex, ey - cs * 0.42, 0xffffff, 10, cs * 0.6);
+      gsap.fromTo(this.exitGlow.scale, { x: this.exitGlow.scale.x * 2.4, y: this.exitGlow.scale.y * 2.4 }, { x: this.exitGlow.scale.x, y: this.exitGlow.scale.y, duration: 0.8, ease: "power2.out" });
+      this.shake(5);
+    });
+  }
+  /** A brief camera push toward a point in room space. */
+  private pulseZoom(k: number, bx: number, by: number, duration: number) {
+    if (!this.boardRT) return;
+    this.zoom.fx = (bx + BPAD) / this.boardRT.width; this.zoom.fy = (by + BPAD) / this.boardRT.height;
+    gsap.killTweensOf(this.zoom); gsap.to(this.zoom, { k, duration: duration * 0.35, ease: "power2.out" }).then(() => gsap.to(this.zoom, { k: 1, duration: duration * 0.65, ease: "power2.inOut" }));
   }
   private nextLevel(): Level | null {
     const i = L.LEVELS.findIndex((l) => l.id === this.key); if (i < 0) return null;
@@ -381,9 +496,9 @@ export class LevelScene extends Scene {
   play(level: Level, key: string) { this.level = level; this.key = key; this.gen += 1; this.rebuild(); }
   replay() { this.gen += 1; this.rebuild(); }
   private rebuild() {
-    for (const c of [this.floor, this.items, this.actors, this.fx]) c.removeChildren().forEach((x) => { killTweensDeep(x as Container); x.destroy({ children: true }); });
-    this.frame.clear(); this.plateSps.clear(); this.doorSps.clear(); this.coinSps.clear(); this.coach = null; this.peekSps = [];
-    this.nameT.text = levelName(this.key); this.buildBoard(); this.relayout(); this.startLevel();
+    for (const c of [this.floor, this.lights, this.items, this.actors, this.fx, this.motes]) c.removeChildren().forEach((x) => { killTweensDeep(x as Container); x.destroy({ children: true }); });
+    this.frame.clear(); this.plateSps.clear(); this.doorSps.clear(); this.coinSps.clear(); this.plateGlow.clear(); this.doorBeam.clear(); this.ghostSps = []; this.dangerSps = []; this.coach = null; this.peekSps = []; this.zoom.k = 1;
+    this.nameT.text = levelName(this.key); this.buildBoard(); this.addChild(this.tutLayer); this.relayout(); this.startLevel();
   }
   quit() { this.playing = false; audio.musicOn(false); audio.play("tap", 0.5); if (Scenes.depth > 1) Scenes.pop(); else Scenes.go(new MapScene()); }
 
@@ -420,19 +535,22 @@ export class LevelScene extends Scene {
   }
   private beatInput(dir: number) {
     if (!this.canControl()) return;
+    if (this.tut && !this.tut.allowsMove()) { buzz("rigid"); return; }
     if (performance.now() - this.beatT0 < BEAT_MS * 0.55) { this.queued = dir; return; }
     this.doBeat(dir);
   }
   private doBeat(dir: number) {
     const run = this.run; if (!this.canControl() || run.tick >= L.LOOP_TICKS) return;
+    if (this.tut && !this.tut.allowsMove()) return;              // every input path ends here, so the lock lives here too
     this.prev = { actors: run.actors.map((a) => ({ x: a.x, y: a.y })), drones: run.drones.map((d) => ({ x: d.px, y: d.py })) };
-    this.recording += String(dir); L.stepRun(run, dir); this.beatT0 = performance.now(); this.queued = null; this.hideCoach();
+    this.recording += String(dir); L.stepRun(run, dir); this.beatT0 = performance.now(); this.queued = null; this.hideCoach(); this.landed = false;
     const hero = run.actors[run.actors.length - 1]!;
     if (hero.moved) { audio.play("step", 0.4, 0.96 + Math.random() * 0.08); buzz("light"); } else if (dir) { this.shake(2); audio.play("tick", 0.3, 0.7); buzz("rigid"); } else { audio.play("tick", 0.45); buzz("selection"); }
     if (L.LOOP_TICKS - run.tick <= 3 && L.LOOP_TICKS - run.tick > 0) buzz("warning");
     if (run.tick > this.hintUntil) this.hintSp.visible = false;
     this.clearPeek();
     this.handleEvents(run); this.drawDial();
+    if (!run.finished) this.tut?.on("beat");
     if (run.finished) { this.levelDone(); return; }
     if (run.dead) { this.loopFailed(); return; }
     if (run.tick >= L.LOOP_TICKS) this.loopEnded();
@@ -465,7 +583,7 @@ export class LevelScene extends Scene {
     }
   }
   private flyCoin(x: number, y: number) {
-    const s = new Sprite(Texture.from("coin_t")); s.anchor.set(0.5); s.width = s.height = 70; const g = this.board.toGlobal({ x, y }); const l = this.toLocal(g); s.position.set(l.x, l.y); this.addChild(s);
+    const s = new Sprite(Texture.from("coin_t")); s.anchor.set(0.5); s.width = s.height = 70; const l = this.boardToScene(x, y); s.position.set(l.x, l.y); this.addChild(s);
     const target = { x: this.coinPill.x + 40, y: this.hud.y + this.coinPill.y + 36 };
     gsap.to(s, { x: target.x, y: target.y, duration: 0.55, ease: "power2.in", onComplete: () => { s.destroy(); (this.coinPill as any).setValue(String(this.run.taken)); gsap.fromTo(this.coinPill.scale, { x: 1.15, y: 1.15 }, { x: 1, y: 1, duration: 0.3, ease: "back.out(2)" }); } });
   }
@@ -490,27 +608,41 @@ export class LevelScene extends Scene {
       else { const held = this.touch.dir || (this.heldKey ? KEYS[this.heldKey] ?? 0 : 0); if (held && since >= REPEAT_MS) this.doBeat(held); }
     }
     if (!this.run) return;
-    const cs = this.cs, k = easeOut((now - this.beatT0) / BEAT_MS), hop = Math.sin(Math.PI * Math.min(1, k)) * cs * 0.16;
+    const cs = this.cs, kRaw = (now - this.beatT0) / BEAT_MS, k = easeOut(kRaw), kl = Math.min(1, kRaw);
     const pos = (cur: { x: number; y: number }, prev?: { x: number; y: number }) => prev && k < 1 ? { x: prev.x + (cur.x - prev.x) * k, y: prev.y + (cur.y - prev.y) * k } : cur;
+    const last = this.run.actors.length - 1;
     this.run.actors.forEach((a, i) => {
-      const sp = i === this.run.actors.length - 1 ? this.heroSp : this.echoSps[i]; if (!sp) return;
-      const p = pos(a, this.prev?.actors[i]); const moved = a.moved && k < 1;
-      sp.position.set((p.x + 0.5) * cs, (p.y + 0.92) * cs - (moved ? hop : 0) - (i === this.run.actors.length - 1 ? 0 : Math.sin(this.time * 3 + i) * 2));
-      sp.visible = a.alive && !a.done || (i === this.run.actors.length - 1 && this.run.finished);
-      if (a.dir === 3) sp.scale.x = Math.abs(sp.scale.x); else if (a.dir === 7) sp.scale.x = -Math.abs(sp.scale.x);
-      sp.zIndex = p.y;
+      const A = i === last ? this.heroSp : this.echoSps[i]; if (!A || A.destroyed) return;
+      const p = pos(a, this.prev?.actors[i]);
+      if (!gsap.isTweening(A)) A.position.set((p.x + 0.5) * cs, (p.y + 0.92) * cs);
+      if (a.dir === 3 || a.dir === 7) A.setDir(a.dir); else A.dir = a.dir;
+      A.pose(kl, a.moved, dt);
+      A.visible = (a.alive && !a.done) || (i === last && this.run.finished);
+      A.zIndex = p.y;
     });
+    if (!this.landed && kl >= 1) { this.landed = true; const h = this.run.actors[last]!; if (h.moved && this.heroSp && !this.heroSp.destroyed) this.heroSp.dustAt(this.fx); }
     this.run.drones.forEach((d, i) => {
-      const sp = this.droneSps[i]; if (!sp) return;
+      const A = this.droneSps[i]; if (!A || A.destroyed) return;
       const p = pos({ x: d.px, y: d.py }, this.prev?.drones[i]);
-      sp.position.set((p.x + 0.5) * cs, (p.y + 0.5) * cs + Math.sin(this.time * 4 + i) * 3); sp.zIndex = p.y + 0.5;
-      // forecast ghost
-      const g = this.ghostSps[i]; if (g) { const n = L.dronePos(d, this.run.tick + 1); g.visible = state.opts.assist && !this.run.finished; g.position.set((n.px + 0.5) * cs, (n.py + 0.5) * cs); g.alpha = 0.25 + Math.sin(this.time * 5) * 0.08; }
+      A.position.set((p.x + 0.5) * cs, (p.y + 0.5) * cs); A.pose(1, false, dt); A.zIndex = p.y + 0.5;
+      const g = this.ghostSps[i]; if (g && !g.destroyed) { const n = L.dronePos(d, this.run.tick + 1); g.visible = state.opts.assist && !this.run.finished; g.position.set((n.px + 0.5) * cs, (n.py + 0.5) * cs); g.alpha = 0.25 + Math.sin(this.time * 5) * 0.08; }
     });
     this.actors.sortableChildren = true;
     this.updateDanger();
-    if (this.exitSp) { this.exitSp.rotation += dt * 0.8; this.exitGlow.alpha = 0.8 + Math.sin(this.time * 3) * 0.2; }
-    if (this.shakeN > 0) { this.shakeN = Math.max(0, this.shakeN - dt * 40); this.board.pivot.set((Math.random() - 0.5) * this.shakeN * 1.5, (Math.random() - 0.5) * this.shakeN * 1.5); } else this.board.pivot.set(0, 0);
+    // lights follow the rules: plates pressed, gates open, the portal breathing
+    for (const [kk, pg] of this.plateGlow) { const on = !!this.run.plates[kk]; pg.alpha += ((on ? 0.6 : 0) - pg.alpha) * Math.min(1, dt * 8); }
+    for (const [kk, bm] of this.doorBeam) { const on = !!this.run.doors[kk]; bm.alpha += ((on ? 0.55 : 0) - bm.alpha) * Math.min(1, dt * 8); }
+    if (this.exitSp && !this.exitSp.destroyed) { this.exitSp.rotation += dt * 0.8; this.exitGlow.alpha = 0.5 + Math.sin(this.time * 3) * 0.12; }
+    // motes drift and wrap
+    const fw = L.COLS * cs, fh = L.ROWS * cs;
+    for (const m of this.moteList) { if (m.g.destroyed) continue; m.g.x += (m.vx + Math.sin(this.time * 0.8 + m.ph) * 6) * dt; m.g.y += m.vy * dt; m.g.alpha = 0.18 + Math.sin(this.time * 1.5 + m.ph) * 0.14; if (m.g.y < -10) { m.g.y = fh + 10; m.g.x = Math.random() * fw; } }
+    // parallax, shake, zoom → corners; backdrop drifts the other way
+    this.parS.x += (this.par.x - this.parS.x) * Math.min(1, dt * 4); this.parS.y += (this.par.y - this.parS.y) * Math.min(1, dt * 4);
+    if (this.shakeN > 0) this.shakeN = Math.max(0, this.shakeN - dt * 40);
+    this.updateCorners();
+    this.bg.position.set(W / 2 - this.parS.x * 24, layout.bottom / 2 - this.parS.y * 16);
+    // draw the room into its texture
+    if (this.boardRT) Scenes.app.renderer.render({ container: this.boardRoot, target: this.boardRT, clear: true });
   }
   private updateDanger() {
     const run = this.run, alive = this.canControl() && state.opts.assist && run.drones.length > 0;
@@ -527,7 +659,12 @@ export class LevelScene extends Scene {
     if (!alive && this.dangerSps.length) { for (const d of this.dangerSps) d.destroy({ children: true }); this.dangerSps = []; this.danger = null; }
     for (const d of this.dangerSps) d.alpha = 0.6 + Math.sin(this.time * 6) * 0.25;
   }
-  dispose() { this.playing = false; audio.musicOn(false); window.removeEventListener("keydown", this.keyHandler); window.removeEventListener("keyup", this.keyUp); this.bannerTl?.kill(); super.dispose(); }
+  dispose() {
+    this.playing = false; this.tut?.destroy(); audio.musicOn(false);
+    window.removeEventListener("keydown", this.keyHandler); window.removeEventListener("keyup", this.keyUp); window.removeEventListener("deviceorientation", this.orient); this.bannerTl?.kill();
+    gsap.killTweensOf(this.zoom); killTweensDeep(this.boardRoot); this.boardRoot.destroy({ children: true }); this.boardRT?.destroy(true); this.boardRT = null;
+    super.dispose();
+  }
 }
 
 /** The clear sheet: stars pop in, numbers count up, Next / Replay / Map. */

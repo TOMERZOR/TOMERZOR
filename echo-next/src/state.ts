@@ -39,7 +39,7 @@ class Room {
   }
 }
 
-type Opts = { music: boolean; sfx: boolean; haptics: boolean; assist: boolean; lang: string; debug?: boolean };
+type Opts = { music: boolean; sfx: boolean; haptics: boolean; assist: boolean; lang: string; debug?: boolean; tilt?: boolean };
 export const state = {
   pid: "",
   profile: null as unknown as Profile,
@@ -60,6 +60,8 @@ export const state = {
   on(fn: () => void) { this.listeners.add(fn); return () => this.listeners.delete(fn); },
   emit() { for (const fn of this.listeners) fn(); },
   skin() { return L.skinId(this.profile.skin); },
+  flag(k: string) { return !!store.get("flag:" + k, false); },
+  setFlag(k: string, v: boolean) { store.set("flag:" + k, v); },
   nextLevel() { return L.LEVELS.find((l) => !this.profile.stars[l.id] && L.worldUnlocked(this.profile, l.world)) ?? null; },
 };
 export { L };

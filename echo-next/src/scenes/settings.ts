@@ -14,7 +14,7 @@ export class SettingsScene extends Scene {
   private box!: Container;
   build() {
     const sh = scrim(W * 3, 4000, 0.7, () => this.close()); sh.x = -W; sh.y = -1000; this.addChild(sh);
-    const w = 900, rows: [string, string, keyof typeof state.opts][] = [["music", "music", "music"], ["sound", "sfx", "sfx"], ["vibrate", "haptics", "haptics"], ["bulb", "assist", "assist"]];
+    const w = 900, rows: [string, string, keyof typeof state.opts][] = [["music", "music", "music"], ["sound", "sfx", "sfx"], ["vibrate", "haptics", "haptics"], ["bulb", "assist", "assist"], ["globe", "tilt", "tilt"]];
     const h = 150 + rows.length * 110 + 130 + 140;
     this.box = new Container(); this.box.addChild(panel(w, h, { radius: 36 }));
     const tt = new Text({ text: t("settings"), style: display(54) }); tt.anchor.set(0.5, 0); tt.position.set(w / 2, 44); this.box.addChild(tt);
@@ -24,7 +24,7 @@ export class SettingsScene extends Scene {
       const line = new Graphics(); line.roundRect(50, 0, w - 100, 92, 22).fill({ color: 0x000000, alpha: 0.22 }); row.addChild(line);
       const i = iconSprite(ic, 56); i.position.set(100, 46); row.addChild(i);
       const lb = new Text({ text: t(key), style: body(32, C.cream, 800) }); lb.anchor.set(0, 0.5); lb.position.set(150, 46); row.addChild(lb);
-      const tg = toggle(!!state.opts[opt], (v) => { state.setOpts({ [opt]: v } as any); if (opt === "music") audio.musicOn(v && Scenes.depth > 1); if (opt === "haptics" && v) setTimeout(() => buzz("success"), 60); }); tg.position.set(w - 50 - 120 - 24, 14); row.addChild(tg);
+      const tg = toggle(!!state.opts[opt], (v) => { state.setOpts({ [opt]: v } as any); if (opt === "music") audio.musicOn(v && Scenes.depth > 1); if (opt === "haptics" && v) setTimeout(() => buzz("success"), 60); if (opt === "tilt" && v) { const D = (window as any).DeviceOrientationEvent; if (D?.requestPermission) D.requestPermission().catch(() => {}); } }); tg.position.set(w - 50 - 120 - 24, 14); row.addChild(tg);
       this.box.addChild(row); y += 110;
     }
     // Language: two chips.

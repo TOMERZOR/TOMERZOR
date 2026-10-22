@@ -1,0 +1,32 @@
+export default async ({ page, wait, shot, aimAt }) => {
+  const click = async (sel) => { await page.click(sel); await wait(450); };
+  await wait(500);
+  let p = await aimAt(88.25, 200); await wait(100); await p.release();
+  await wait(3200);
+  await shot('s01-win');
+  await click('#sheet [data-act="next"]');
+  await wait(400);
+  await shot('s02-level2');
+  await click('#btn-pause');
+  await shot('s03-pause');
+  await click('#sheet [data-act="home"]');
+  await wait(1500);
+  await shot('s04-home');
+  await click('#btn-levels'); await shot('s05-levels');
+  await click('#levels [data-back]');
+  await click('#btn-shop'); await shot('s06-shop');
+  await click('#shop [data-back]');
+  await click('#btn-store'); await shot('s07-store');
+  await click('#store [data-back]');
+  await click('#btn-settings'); await shot('s08-settings');
+  await click('#settings [data-back]');
+  await click('#btn-daily'); await wait(300); await shot('s09-daily');
+  await click('#btn-pause'); await click('#sheet [data-act="home"]');
+  await click('#btn-play'); await wait(300);
+  for (let i = 0; i < 4; i++) { p = await aimAt(9, 200); await wait(60); await p.release(); await wait(1600); }
+  await wait(4000);
+  await shot('s10-lose');
+  await click('#sheet [data-act="ad"]');
+  await wait(1200);
+  await shot('s11-fakead');
+};

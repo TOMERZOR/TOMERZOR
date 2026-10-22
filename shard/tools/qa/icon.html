@@ -1,0 +1,132 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>icon</title>
+<style>body{margin:0;background:#888}canvas{display:block}</style></head>
+<body><canvas id="c" width="1024" height="1024"></canvas>
+<script>
+// SHARD app icon: a glass orb bursting into shards as a ball punches through.
+const params = new URLSearchParams(location.search);
+const bgv = params.get('bg') || 'indigo';
+const ballv = params.get('ball') || 'coral';
+const c = document.getElementById('c');
+const S = +(params.get('size') || 1024);
+c.width = c.height = S;
+const x = c.getContext('2d');
+x.scale(S / 1024, S / 1024);
+const TAU = Math.PI * 2;
+let seed = +(params.get('seed') || 7);
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// ---------- background ----------
+const BG = {
+  indigo: ['#3A2E7A', '#2A2160', '#191339'],
+  coral: ['#FF9A6B', '#FF7059', '#E8475E'],
+  ink: ['#4A4560', '#353148', '#211E2E'],
+}[bgv];
+const g0 = x.createLinearGradient(0, 0, 1024, 1024);
+g0.addColorStop(0, BG[0]); g0.addColorStop(0.55, BG[1]); g0.addColorStop(1, BG[2]);
+const transparent = params.get('fg') === '1';
+if (transparent) { x.translate(512, 512); x.scale(0.62, 0.62); x.translate(-540, -500); }
+if (!transparent) { x.fillStyle = g0; x.fillRect(0, 0, 1024, 1024); }
+const halo = x.createRadialGradient(560, 440, 40, 560, 440, 520);
+halo.addColorStop(0, bgv === 'coral' ? 'rgba(255,240,220,0.5)' : 'rgba(140,200,255,0.42)');
+halo.addColorStop(1, 'rgba(140,200,255,0)');
+if (!transparent) { x.fillStyle = halo; x.fillRect(0, 0, 1024, 1024); }
+
+// ---------- fracture (same idea as the game) ----------
+function clip(poly, nx, ny, d) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const da = a[0] * nx + a[1] * ny - d, db = b[0] * nx + b[1] * ny - d;
+    if (da >= 0) out.push(a);
+    if ((da >= 0) !== (db >= 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+  }
+  return out;
+}
+const area = (p) => { let s = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; s += a[0] * b[1] - b[0] * a[1]; } return Math.abs(s / 2); };
+const cent = (p) => [p.reduce((s, q) => s + q[0], 0) / p.length, p.reduce((s, q) => s + q[1], 0) / p.length];
+
+const cx = 560, cy = 440, R = 300;
+const circle = [];
+for (let i = 0; i < 72; i++) { const a = (i / 72) * TAU; circle.push([cx + Math.cos(a) * R, cy + Math.sin(a) * R]); }
+const imp = [cx - 120, cy + 150];
+let pieces = [circle];
+const base = rnd() * Math.PI;
+for (let k = 0; k < 5; k++) {
+  const t = base + (k / 5) * Math.PI + (rnd() - 0.5) * 0.35;
+  const nx = Math.cos(t), ny = Math.sin(t), d = imp[0] * nx + imp[1] * ny;
+  const next = [];
+  for (const p of pieces) { const a = clip(p, nx, ny, d), b = clip(p, -nx, -ny, -d); if (a.length > 2) next.push(a); if (b.length > 2) next.push(b); }
+  pieces = next;
+}
+// secondary cracks on big pieces
+for (let pass = 0; pass < 2; pass++) {
+  const next = [];
+  for (const p of pieces) {
+    if (area(p) > 22000) {
+      const cc = cent(p), t = rnd() * Math.PI, nx = Math.cos(t), ny = Math.sin(t), d = cc[0] * nx + cc[1] * ny;
+      const a = clip(p, nx, ny, d), b = clip(p, -nx, -ny, -d);
+      if (a.length > 2) next.push(a); if (b.length > 2) next.push(b);
+    } else next.push(p);
+  }
+  pieces = next;
+}
+const tints = [[190, 230, 255], [255, 220, 235], [215, 205, 255], [200, 245, 235], [255, 240, 210]];
+pieces.forEach((p, i) => {
+  const cc = cent(p);
+  const dx = cc[0] - imp[0], dy = cc[1] - imp[1], dl = Math.hypot(dx, dy) || 1;
+  const push = 18 + 70 * Math.max(0, 1 - dl / (R * 1.6)) + rnd() * 10;
+  p.ox = dx / dl * push; p.oy = dy / dl * push; p.rot = (rnd() - 0.5) * 0.16; p.tint = tints[i % tints.length]; p.cc = cc;
+});
+function path(p) { x.beginPath(); x.moveTo(p[0][0], p[0][1]); for (const q of p.slice(1)) x.lineTo(q[0], q[1]); x.closePath(); }
+// shadows first
+for (const p of pieces) {
+  x.save(); x.translate(p.cc[0] + p.ox + 12, p.cc[1] + p.oy + 20); x.rotate(p.rot); x.translate(-p.cc[0], -p.cc[1]);
+  path(p); x.fillStyle = bgv === 'coral' ? 'rgba(120,20,40,0.2)' : 'rgba(5,0,30,0.35)'; x.fill(); x.restore();
+}
+for (const p of pieces) {
+  x.save(); x.translate(p.cc[0] + p.ox, p.cc[1] + p.oy); x.rotate(p.rot); x.translate(-p.cc[0], -p.cc[1]);
+  path(p);
+  const [r, g, b] = p.tint;
+  const gr = x.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+  gr.addColorStop(0, `rgba(255,255,255,0.95)`); gr.addColorStop(0.5, `rgba(${r},${g},${b},0.78)`); gr.addColorStop(1, `rgba(${r - 40},${g - 30},${b},0.6)`);
+  x.fillStyle = gr; x.fill();
+  x.lineJoin = 'round';
+  x.lineWidth = 8; x.strokeStyle = 'rgba(255,255,255,0.95)'; x.stroke();
+  x.save(); x.clip();
+  x.fillStyle = 'rgba(255,255,255,0.7)';
+  x.beginPath(); x.ellipse(cx - R * 0.42, cy - R * 0.42, R * 0.36, R * 0.13, -0.75, 0, TAU); x.fill();
+  x.fillStyle = 'rgba(255,255,255,0.35)';
+  x.beginPath(); x.ellipse(cx + R * 0.5, cy + R * 0.1, R * 0.06, R * 0.3, -0.2, 0, TAU); x.fill();
+  x.restore();
+  x.restore();
+}
+// flying chips
+for (let i = 0; i < 12; i++) {
+  const a = -2.4 + i * 0.42 + (rnd() - 0.5) * 0.2, d = R * (1.18 + rnd() * 0.3);
+  const px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d, z = 12 + rnd() * 18;
+  x.save(); x.translate(px, py); x.rotate(rnd() * TAU);
+  x.beginPath(); x.moveTo(-z, -z * 0.45); x.lineTo(z, -z * 0.1); x.lineTo(-z * 0.15, z * 0.85); x.closePath();
+  x.fillStyle = 'rgba(255,255,255,0.9)'; x.fill(); x.restore();
+}
+function sparkle(px, py, z) {
+  x.fillStyle = '#FFFFFF';
+  x.beginPath(); x.moveTo(px, py - z); x.lineTo(px + z * 0.2, py - z * 0.2); x.lineTo(px + z, py); x.lineTo(px + z * 0.2, py + z * 0.2);
+  x.lineTo(px, py + z); x.lineTo(px - z * 0.2, py + z * 0.2); x.lineTo(px - z, py); x.lineTo(px - z * 0.2, py - z * 0.2); x.closePath(); x.fill();
+}
+sparkle(cx + R * 1.02, cy - R * 0.98, 44); sparkle(cx - R * 1.2, cy - R * 0.55, 28); sparkle(cx + R * 1.28, cy + R * 0.25, 22);
+
+// ---------- ball ----------
+const bx = imp[0] - 6, by = imp[1] + 30, br = 112;
+const BALL = { coral: ['#FFD2C2', '#FF6B57', '#9E2A1C'], steel: ['#D4D8E2', '#4A4E5A', '#16181E'], gold: ['#FFF1B8', '#E6B53C', '#7E5508'] }[ballv];
+const st = x.createLinearGradient(bx - 430, by + 390, bx, by);
+st.addColorStop(0, 'rgba(255,255,255,0)'); st.addColorStop(1, bgv === 'coral' ? 'rgba(80,30,60,0.3)' : 'rgba(255,140,120,0.35)');
+x.strokeStyle = st; x.lineCap = 'round'; x.lineWidth = br * 1.55;
+x.beginPath(); x.moveTo(bx - 400, by + 365); x.lineTo(bx - 20, by + 18); x.stroke();
+x.fillStyle = 'rgba(5,0,30,0.3)'; x.beginPath(); x.arc(bx + 14, by + 24, br, 0, TAU); x.fill();
+const bgr = x.createRadialGradient(bx - br * 0.35, by - br * 0.4, br * 0.08, bx, by, br * 1.05);
+bgr.addColorStop(0, BALL[0]); bgr.addColorStop(0.45, BALL[1]); bgr.addColorStop(1, BALL[2]);
+x.fillStyle = bgr; x.beginPath(); x.arc(bx, by, br, 0, TAU); x.fill();
+x.fillStyle = 'rgba(255,255,255,0.85)'; x.beginPath(); x.ellipse(bx - br * 0.36, by - br * 0.42, br * 0.28, br * 0.16, -0.6, 0, TAU); x.fill();
+document.title = 'ready';
+</script></body></html>

@@ -1,0 +1,29 @@
+// Hand-made opening levels: each teaches one idea. Proofs are solved at build time.
+const jar = (x, sy, w = 0.56, h = 0.7, tint = 0) => ({ t: 'glass', s: 'jar', x, y: sy + h / 2 + 0.004, w, h, tint });
+const box = (x, sy, s = 0.66, tint = 2) => ({ t: 'glass', s: 'box', x, y: sy + s / 2 + 0.004, w: s, h: s, tint });
+const shelf = (x, y, w) => ({ t: 'shelf', x, y, w, h: 0.22, round: true });
+const T = 0.11;
+// hanging glass: returns [glass, rope] with the rope pointing at the glass just before it
+function hang(objs, g) { objs.push(g, { t: 'rope', x: g.x, y: 14, to: objs.length }); return objs; }
+const orb = (x, y, r = 0.34, tint = 0) => ({ t: 'glass', s: 'orb', x, y, r, tint });
+const hjar = (x, y, tint = 0) => ({ t: 'glass', s: 'jar', x, y, w: 0.68, h: 0.86, tint });
+
+function line(angleDeg, ds, make) {
+  const objs = [];
+  const a = angleDeg * Math.PI / 180;
+  ds.forEach((d, i) => hang(objs, make(Math.round((4.5 + Math.cos(a) * d) * 100) / 100, Math.round((0.42 + Math.sin(a) * d) * 100) / 100, i)));
+  return objs;
+}
+
+export const TUTORIAL = [
+  // 1: pull back, release. A string of glass beads straight above the cannon.
+  { launcher: { x: 4.5 }, pieces: ['tutorial-aim'], objects: [
+    orb(4.5, 11.3, 0.44, 0), { t: 'rope', x: 4.5, y: 14, to: 0 },
+    orb(4.5, 9.5, 0.44, 1), { t: 'rope', from: 0, to: 2 },
+    orb(4.5, 7.7, 0.44, 2), { t: 'rope', from: 2, to: 4 },
+  ] },
+  // 2: line them up. The ball pierces glass.
+  { launcher: { x: 4.5 }, pieces: ['tutorial-pierce'], objects: line(64, [3.6, 5.0, 6.4, 7.8], (x, y, i) => hjar(x, y, i % 3)) },
+  // 3: knock it off, gravity does the rest
+  { launcher: { x: 4.5 }, pieces: ['tutorial-pyramid'], objects: [shelf(6.75, 5.4, 2.9), box(6.07, 5.4 + T), box(6.75, 5.4 + T), box(7.43, 5.4 + T), box(6.41, 5.4 + T + 0.668, 0.66, 0), box(7.09, 5.4 + T + 0.668, 0.66, 1), box(6.75, 5.4 + T + 1.336, 0.66, 2)] },
+];

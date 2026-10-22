@@ -1,0 +1,29 @@
+{
+  "name": "shard-app",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SHARD for iOS and Android: the web game in a native shell (Capacitor).",
+  "type": "module",
+  "scripts": {
+    "sync": "node sync.mjs && npx cap sync",
+    "sync:ios": "node sync.mjs && npx cap sync ios",
+    "sync:android": "node sync.mjs && npx cap sync android",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "8.2.1",
+    "@capacitor-community/in-app-review": "8.0.0",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/splash-screen": "8.0.2",
+    "@capacitor/status-bar": "8.0.4",
+    "@revenuecat/purchases-capacitor": "13.7.6"
+  }
+}

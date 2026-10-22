@@ -5,3 +5,8 @@ netibot/tools/faces/
 netibot/tools/people/
 netibot/tools/scenes/
 netibot/tools/audio/
+shard/tools/node_modules/
+shard/tools/quick.log
+shard/tools/gen.log
+shard-app/node_modules/
+shard-app/www/

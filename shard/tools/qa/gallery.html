@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>SHARD level gallery</title>
+<style>body{margin:0;background:#222;font:12px system-ui;color:#ddd}.g{display:flex;flex-wrap:wrap;gap:6px;padding:6px}.c{display:flex;flex-direction:column;align-items:center}canvas{border-radius:6px}</style></head>
+<body><div class="g" id="g"></div>
+<script type="module">
+import * as planck from '../../js/vendor/planck.mjs';
+import { createSim } from '../../js/engine.js';
+import { createRenderer } from '../../js/render.js';
+import { WORLDS, SKINS } from '../../js/theme.js';
+const params = new URLSearchParams(location.search);
+const src = params.get('src') || './sample-levels.js';
+const { LEVELS, DAILY } = await import(src);
+const list = params.get('daily') ? DAILY : LEVELS;
+const from = +(params.get('from') || 0), n = +(params.get('n') || 30);
+for (const lv of list.slice(from, from + n)) {
+  const wrap = document.createElement('div'); wrap.className = 'c';
+  const cv = document.createElement('canvas');
+  wrap.appendChild(cv);
+  const lab = document.createElement('div');
+  lab.textContent = `${lv.id} par${lv.par} b${lv.balls} g${lv.objects.filter(o=>o.t==='glass').length} w${Math.round((lv.win||0)*100)}% ${(lv.pieces||[]).join('+')}`;
+  wrap.appendChild(lab);
+  document.getElementById('g').appendChild(wrap);
+  const R = createRenderer(cv);
+  R.resize(180, 390, 1, { top: 0, bottom: 0 });
+  R.setPalette(WORLDS[lv.world]);
+  const sim = createSim(planck, lv, { visual: true });
+  R.setSim(sim);
+  R.draw(sim, { alpha: 1, fxDt: 0, angle: (lv.proof?.[0] ?? 90) * Math.PI / 180, skin: SKINS[0], hintAngle: params.get('proof') ? (lv.proof?.[0] ?? 90) * Math.PI / 180 : null });
+}
+document.title = 'ready';
+</script></body></html>

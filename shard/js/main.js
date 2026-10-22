@@ -368,6 +368,7 @@ function onWin(res) {
   d().coins += coins;
   d().stats.clears++;
   d().stats.glass += res.broken;
+  const bestChain = res.maxCombo >= 4 && res.maxCombo > d().stats.bestCombo; // a personal record worth naming
   d().stats.bestCombo = Math.max(d().stats.bestCombo, res.maxCombo);
   d().stats.shots += res.used;
   save.flush();
@@ -386,7 +387,8 @@ function onWin(res) {
   openSheet(`
     <div class="stars">${[0, 1, 2].map((i) => `<svg class="${i < stars ? 'on' : ''}"><use href="#i-star"/></svg>`).join('')}</div>
     <h2>${title}</h2>
-    <div class="statline"><span>${res.used} ${res.used === 1 ? 'ball' : 'balls'} · par ${lv.par}</span>${res.maxCombo >= 2 ? `<span>×${res.maxCombo} combo</span>` : ''}</div>
+    <div class="statline"><span>${res.used} ${res.used === 1 ? 'ball' : 'balls'} · par ${lv.par}</span>${res.maxCombo >= 2 && !bestChain ? `<span>×${res.maxCombo} combo</span>` : ''}</div>
+    ${bestChain ? `<div class="record">New best chain · ×${res.maxCombo}</div>` : ''}
     ${worldDone && nextWorld ? `<p class="sub">Next up: <b>${nextWorld.name}</b> · ${nextWorld.sub}</p>` : ''}
     <div class="reward"><svg><use href="#i-coin"/></svg><span id="reward-n">+0</span></div>
     <div class="actions">

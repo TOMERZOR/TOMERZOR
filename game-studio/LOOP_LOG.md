@@ -207,3 +207,9 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
   - Mix peak 0.89, no clipping.
 - **Landing page:** a new hero (the chain reaction) and four screenshots, and Nunito bundled on the site and support page.
 - **First-run walkthrough** (`firstrun` scenario): a fresh install, the coached first shot, a ×3 one-shot clear, confetti, then level 2 assembling with its own tip. No console errors.
+
+## Round 27: personal bests, and the native pipeline
+- **New best chain:** when a chain of ×4 or more beats the player's record, the win sheet names it on a small gold ribbon that pops in after the stars. A personal-best hook for "one more go". The `record` scenario checks that the first big chain is named and the same chain again is not.
+- **Native pipeline:** `sync.mjs` copies the whole web build except dev tools, so the bundled font reaches both apps. `npx cap copy` was run and both native projects carry the new build.
+- **iOS 15 audit of the new code:** no `.at()`, `findLast`, `:has()`, `dvh`, `color-mix`, `roundRect`, canvas `filter`, `OffscreenCanvas` or CSS nesting.
+- The playable web link was republished (version 4) with the whole overhaul.

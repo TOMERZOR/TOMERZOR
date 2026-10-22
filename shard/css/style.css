@@ -268,6 +268,9 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 @keyframes starpop { to { transform: scale(1); opacity: 1; } }
 .reward { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .reward svg { width: 28px; height: 28px; color: #F2A83B; }
+/* a new personal-best chain: a small gold ribbon that pops in after the stars */
+.record { display: block; width: max-content; margin: 12px auto 0; padding: 6px 14px; border-radius: 14px; background: linear-gradient(90deg, #FFE6A6, #FFD36E); color: #6B4A00; font-weight: 900; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 6px 16px -8px rgba(245, 184, 61, .9); animation: recordpop .5s var(--spring) .95s both; }
+@keyframes recordpop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 .statline { display: flex; justify-content: center; gap: 18px; margin-top: 8px; color: var(--muted); font-weight: 800; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; }
 .sheet .close { position: absolute; top: 14px; right: 14px; }
 .sheet .bigicon { width: 72px; height: 72px; margin: 0 auto 10px; border-radius: 24px; background: var(--accent-a16); color: var(--accent); display: grid; place-items: center; }
@@ -306,6 +309,7 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
   .coach-dot { opacity: 1; transform: translateY(58px); } .coach-line { height: 58px; } .coach-arrow { opacity: 1; }
   .screen.on.anim > * { animation: none !important; }
   .worldcard.play { animation-name: worldcardfade; }
+  .record { animation: none; }
   .sheet { animation-duration: .01s; }
 }
 /* short phones (iPhone SE, 16:9 Android): logo up top, so the demo scene has room above the buttons */

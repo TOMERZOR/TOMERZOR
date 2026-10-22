@@ -6,7 +6,7 @@ import { W, C } from "../theme";
 import { panel, display, body, ribbon } from "../ui";
 import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, starRow, toast } from "../widgets";
 import { state, L } from "../state";
-import { audio } from "../audio";
+import { audio, buzz } from "../audio";
 import { t } from "../i18n";
 import { LevelScene } from "./level";
 
@@ -77,7 +77,7 @@ export class MapScene extends Scene {
       }
       const hit = new Graphics(); hit.circle(0, 0, 110).fill({ color: 0xffffff, alpha: 0.001 }); d.addChildAt(hit, 0);
       d.eventMode = "static"; d.cursor = "pointer"; let y0 = 0;
-      d.on("pointerdown", (e) => { y0 = e.global.y; gsap.to(d.scale, { x: 0.94, y: 0.94, duration: 0.08 }); });
+      d.on("pointerdown", (e) => { y0 = e.global.y; buzz("light"); gsap.to(d.scale, { x: 0.94, y: 0.94, duration: 0.08 }); });
       const up = (e: any, fire: boolean) => { gsap.to(d.scale, { x: 1, y: 1, duration: 0.25, ease: "back.out(2)" }); if (!fire || Math.abs(e.global.y - y0) > 14) return; if (!unlocked) { toast(t("world_locked", { n: (n.l.world - 1) * 7 })); return; } audio.play("tap", 0.6); Scenes.push(new LevelScene(n.l, n.l.id)); };
       d.on("pointerup", (e) => up(e, true)); d.on("pointerupoutside", (e) => up(e, false));
       c.addChild(d);

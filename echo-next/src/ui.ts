@@ -6,6 +6,7 @@
 import { Container, Graphics, Text, TextStyle, FederatedPointerEvent } from "pixi.js";
 import gsap from "gsap";
 import { C, FONT_DISPLAY, FONT_BODY } from "./theme";
+import { buzz } from "./haptics";
 
 /** Pointer travel (screen px) beyond which a press is a drag, not a tap. */
 export const DRAG_PX = 14;
@@ -78,7 +79,7 @@ export function button(o: ButtonOpts) {
   content.x = cx; content.y = o.h / 2 - 3;
   c.eventMode = "static"; c.cursor = "pointer";
   let dx0 = 0, dy0 = 0;
-  const down = (e: FederatedPointerEvent) => { dx0 = e.global.x; dy0 = e.global.y; gsap.to(c.scale, { x: 0.96, y: 0.94, duration: 0.08 }); c.removeChild(face); c.addChildAt(buttonFace(o.w, o.h, kind, true), 0); };
+  const down = (e: FederatedPointerEvent) => { dx0 = e.global.x; dy0 = e.global.y; buzz(kind === "primary" ? "medium" : "light"); gsap.to(c.scale, { x: 0.96, y: 0.94, duration: 0.08 }); c.removeChild(face); c.addChildAt(buttonFace(o.w, o.h, kind, true), 0); };
   const up = (fire: boolean, e?: FederatedPointerEvent) => { gsap.to(c.scale, { x: 1, y: 1, duration: 0.22, ease: "back.out(2)" }); c.removeChildAt(0); c.addChildAt(buttonFace(o.w, o.h, kind), 0); if (fire && !(e && Math.hypot(e.global.x - dx0, e.global.y - dy0) > DRAG_PX)) o.onTap?.(); };
   c.on("pointerdown", down); c.on("pointerup", (e) => up(true, e)); c.on("pointerupoutside", () => up(false)); c.on("pointercancel", () => up(false));
   c.pivot.set(o.w / 2, o.h / 2); c.position.set(o.w / 2, o.h / 2);
@@ -99,7 +100,7 @@ export function roundKey(d: number, kind: "mint" | "ghost" | "primary", icon?: C
   if (icon) { icon.position.set(d / 2, d / 2 - 2); c.addChild(icon); }
   c.eventMode = "static"; c.cursor = "pointer";
   let dx0 = 0, dy0 = 0;
-  c.on("pointerdown", (e) => { dx0 = e.global.x; dy0 = e.global.y; gsap.to(c.scale, { x: 0.92, y: 0.92, duration: 0.08 }); });
+  c.on("pointerdown", (e) => { dx0 = e.global.x; dy0 = e.global.y; buzz("light"); gsap.to(c.scale, { x: 0.92, y: 0.92, duration: 0.08 }); });
   const up = (fire: boolean, e?: FederatedPointerEvent) => { gsap.to(c.scale, { x: 1, y: 1, duration: 0.25, ease: "back.out(2.2)" }); if (fire && !(e && Math.hypot(e.global.x - dx0, e.global.y - dy0) > DRAG_PX)) onTap?.(); };
   c.on("pointerup", (e) => up(true, e)); c.on("pointerupoutside", () => up(false)); c.on("pointercancel", () => up(false));
   c.pivot.set(d / 2, d / 2); c.position.set(d / 2, d / 2);
@@ -202,5 +203,5 @@ export function scrim(w: number, h: number, alpha = 0.7, onTap?: () => void) {
 export const tapOnce = (c: Container, fn: (e: FederatedPointerEvent) => void) => {
   c.eventMode = "static"; c.cursor = "pointer"; let x0 = 0, y0 = 0;
   c.on("pointerdown", (e) => { x0 = e.global.x; y0 = e.global.y; });
-  c.on("pointerup", (e) => { if (Math.hypot(e.global.x - x0, e.global.y - y0) <= DRAG_PX) fn(e); });
+  c.on("pointerup", (e) => { if (Math.hypot(e.global.x - x0, e.global.y - y0) <= DRAG_PX) { buzz("selection"); fn(e); } });
 };

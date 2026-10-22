@@ -6,7 +6,7 @@ import { W, C } from "../theme";
 import { panel, button, display, body, scrim } from "../ui";
 import { toggle, iconSprite } from "../widgets";
 import { state } from "../state";
-import { audio } from "../audio";
+import { audio, buzz } from "../audio";
 import { t } from "../i18n";
 import { HomeScene } from "./home";
 
@@ -24,7 +24,7 @@ export class SettingsScene extends Scene {
       const line = new Graphics(); line.roundRect(50, 0, w - 100, 92, 22).fill({ color: 0x000000, alpha: 0.22 }); row.addChild(line);
       const i = iconSprite(ic, 56); i.position.set(100, 46); row.addChild(i);
       const lb = new Text({ text: t(key), style: body(32, C.cream, 800) }); lb.anchor.set(0, 0.5); lb.position.set(150, 46); row.addChild(lb);
-      const tg = toggle(!!state.opts[opt], (v) => { state.setOpts({ [opt]: v } as any); if (opt === "music") audio.musicOn(v && Scenes.depth > 1); }); tg.position.set(w - 50 - 120 - 24, 14); row.addChild(tg);
+      const tg = toggle(!!state.opts[opt], (v) => { state.setOpts({ [opt]: v } as any); if (opt === "music") audio.musicOn(v && Scenes.depth > 1); if (opt === "haptics" && v) setTimeout(() => buzz("success"), 60); }); tg.position.set(w - 50 - 120 - 24, 14); row.addChild(tg);
       this.box.addChild(row); y += 110;
     }
     // Language: two chips.

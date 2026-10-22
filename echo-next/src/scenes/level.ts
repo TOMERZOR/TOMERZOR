@@ -230,7 +230,7 @@ export class LevelScene extends Scene {
   }
   private loopEnded() {
     if (this.logs.length >= L.MAX_ECHOES) {
-      this.showBanner(t("out_of_echoes"), t("out_sub"), 1400); audio.play("out"); this.shake(10); buzz("error"); this.noteFail();
+      this.showBanner(t("out_of_echoes"), t("out_sub"), 1400); audio.play("out"); this.shake(10); buzz("heavy"); setTimeout(() => buzz("error"), 120); this.noteFail();
       this.logs = []; this.drawDots(); this.later(1300, () => this.startLoop()); return;
     }
     this.logs.push(this.recording);
@@ -241,7 +241,7 @@ export class LevelScene extends Scene {
   }
   private endLoopNow() {
     const run = this.run; if (!this.canControl() || run.tick < 1) return;
-    run.tick = L.LOOP_TICKS; this.drawDial(); audio.play("tap", 0.5); this.loopEnded();
+    run.tick = L.LOOP_TICKS; this.drawDial(); audio.play("tap", 0.5); buzz("medium"); this.loopEnded();
   }
   private loopFailed() {
     this.showBanner(t("caught"), t("caught_sub"), 1200); audio.play("caught"); this.shake(14); buzz("error"); this.noteFail();
@@ -362,7 +362,8 @@ export class LevelScene extends Scene {
     this.prev = { actors: run.actors.map((a) => ({ x: a.x, y: a.y })), drones: run.drones.map((d) => ({ x: d.px, y: d.py })) };
     this.recording += String(dir); L.stepRun(run, dir); this.beatT0 = performance.now(); this.queued = null; this.hideCoach();
     const hero = run.actors[run.actors.length - 1]!;
-    if (hero.moved) { audio.play("step", 0.4, 0.96 + Math.random() * 0.08); buzz("light"); } else if (dir) { this.shake(2); audio.play("tick", 0.3, 0.7); } else audio.play("tick", 0.45);
+    if (hero.moved) { audio.play("step", 0.4, 0.96 + Math.random() * 0.08); buzz("light"); } else if (dir) { this.shake(2); audio.play("tick", 0.3, 0.7); buzz("rigid"); } else { audio.play("tick", 0.45); buzz("selection"); }
+    if (L.LOOP_TICKS - run.tick <= 3 && L.LOOP_TICKS - run.tick > 0) buzz("warning");
     if (run.tick > this.hintUntil) this.hintSp.visible = false;
     this.handleEvents(run); this.drawDial();
     if (run.finished) { this.levelDone(); return; }
@@ -376,10 +377,11 @@ export class LevelScene extends Scene {
         audio.play("coin", 0.8, 1 + Math.min(6, run.taken - 1) * 0.07);
         const s = this.coinSps.get(`${e.x},${e.y}`); if (s) { s.visible = false; }
         this.burst((e.x + 0.5) * cs, (e.y + 0.5) * cs, C.gold, 14);
+        if (e.hero) buzz("light");
         if (e.hero) this.flyCoin((e.x + 0.5) * cs, (e.y + 0.5) * cs); else (this.coinPill as any).setValue(String(run.taken));
       } else if (e.t === "plate") { audio.play("plate", 0.8); buzz("medium"); const s = this.plateSps.get(e.k); if (s) { s.texture = Texture.from("plate_on"); gsap.fromTo(s.scale, { x: s.scale.x * 1.1, y: s.scale.y * 1.1 }, { x: s.scale.x, y: s.scale.y, duration: 0.3, ease: "back.out(2)" }); } }
       else if (e.t === "open" || e.t === "close") {
-        audio.play(e.t, 0.7); const d = this.doorSps.get(e.k); if (d) { gsap.to(d.open, { alpha: e.t === "open" ? 1 : 0, duration: 0.25 }); gsap.to(d.closed, { alpha: e.t === "open" ? 0 : 1, duration: 0.25 }); }
+        audio.play(e.t, 0.7); buzz("selection"); const d = this.doorSps.get(e.k); if (d) { gsap.to(d.open, { alpha: e.t === "open" ? 1 : 0, duration: 0.25 }); gsap.to(d.closed, { alpha: e.t === "open" ? 0 : 1, duration: 0.25 }); }
         if (e.t === "open") { const k = this.level.map.findIndex((r) => r.includes(e.k)); const x = this.level.map[k]!.indexOf(e.k); this.burst((x + 0.5) * cs, (k + 0.5) * cs, C.violet, 10); }
       }
     }

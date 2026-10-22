@@ -24,16 +24,4 @@ export const audio = {
   unlock() { try { (Howler.ctx as AudioContext | undefined)?.resume?.(); } catch { /* no ctx yet */ } },
 };
 
-export function buzz(kind: "light" | "medium" | "heavy" | "success" | "warning" | "error" = "light") {
-  if (!state.opts.haptics) return;
-  const cap = (window as any).Capacitor;
-  try {
-    if (cap?.isPluginAvailable?.("Haptics")) {
-      const H = cap.registerPlugin("Haptics");
-      if (kind === "success" || kind === "warning" || kind === "error") H.notification({ type: kind.toUpperCase() });
-      else H.impact({ style: kind.toUpperCase() });
-      return;
-    }
-  } catch { /* fall through */ }
-  navigator.vibrate?.(kind === "light" ? 8 : kind === "medium" ? 16 : 28);
-}
+export { buzz } from "./haptics";

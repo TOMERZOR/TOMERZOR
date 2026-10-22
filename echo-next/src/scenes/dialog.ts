@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { Scene, Scenes, layout } from "../scenes";
 import { W, C } from "../theme";
 import { panel, button, display, body, scrim } from "../ui";
+import { buzz } from "../haptics";
 
 export interface DialogOpts { eyebrow?: string; title: string; text?: string; content?: Container; buttons: { label: string; kind?: "primary" | "secondary" | "ghost" | "mint"; onTap?: () => void }[]; dismiss?: boolean }
 
@@ -26,7 +27,7 @@ export class DialogScene extends Scene {
     this.box.addChild(panel(w, y, { radius: 36 }), ...items);
     this.box.pivot.set(w / 2, y / 2); this.addChild(this.box);
     this.box.scale.set(0.8); this.box.alpha = 0; gsap.to(this.box, { alpha: 1, duration: 0.18 }); gsap.to(this.box.scale, { x: 1, y: 1, duration: 0.35, ease: "back.out(1.8)" });
-    this.shade.alpha = 0; gsap.to(this.shade, { alpha: 1, duration: 0.2 });
+    this.shade.alpha = 0; gsap.to(this.shade, { alpha: 1, duration: 0.2 }); buzz("light");
   }
   relayout() { this.box.position.set(W / 2, layout.bottom / 2); }
   close() { if ((this as any).closing) return; (this as any).closing = true; gsap.to(this.box.scale, { x: 0.85, y: 0.85, duration: 0.15 }); gsap.to(this, { alpha: 0, duration: 0.15, onComplete: () => { if (Scenes.top === this) Scenes.closeOverlay(); } }); }

@@ -259,6 +259,8 @@ export function startMusic() {
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200; lp.Q.value = 0.3; lp.connect(musicBus);
   const tick = () => {
     if (!enabled.music) { musicOn = false; return; }
+    // while the app is in the background the clock is frozen: don't stack chords at one instant
+    if (ctx.state !== 'running') { musicTimer = setTimeout(tick, 1000); return; }
     const ch = CHORDS[bar % CHORDS.length];
     const t = ctx.currentTime + 0.1;
     const dur = 8;

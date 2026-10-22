@@ -461,41 +461,58 @@ export function createRenderer(canvas) {
     c.globalAlpha = 1;
   }
 
-  function drawAim(c, sim, o) {
-    const pts = o.aim.pts;
-    if (!pts || pts.length < 2) return;
-    // resample by arc length
+  // resample a path into evenly spaced dots
+  function dotsAlong(pts, first, gap) {
     const dots = [];
-    let acc = 0.0, need = 0.15;
+    let acc = 0, need = first;
     for (let i = 1; i < pts.length; i++) {
       const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
       const L = Math.hypot(x1 - x0, y1 - y0);
       while (acc + L >= need) {
         const t = (need - acc) / L;
         dots.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]);
-        need += 0.42;
+        need += gap;
       }
       acc += L;
     }
+    return dots;
+  }
+
+  function drawAim(c, sim, o) {
+    const pts = o.aim.pts;
+    if (!pts || pts.length < 2) return;
+    const dots = dotsAlong(pts, 0.15, 0.42);
     const n = dots.length;
     const phase = (performance.now() / 600) % 1;
+    c.fillStyle = pal.ink;
     for (let i = 0; i < n; i++) {
       const [sx, sy] = R.toScreen(dots[i][0], dots[i][1]);
       const k = 1 - i / (n + 2);
       c.globalAlpha = 0.25 + 0.6 * k;
-      c.fillStyle = pal.ink;
       const pr = (0.055 + 0.03 * k) * s * (1 + 0.25 * Math.max(0, Math.sin((i / 3 - phase) * Math.PI)));
       c.beginPath(); c.arc(sx, sy, pr, 0, TAU); c.fill();
     }
     c.globalAlpha = 1;
-    if (o.aim.hit) {
-      const last = pts[pts.length - 1];
-      const [sx, sy] = R.toScreen(last[0], last[1]);
-      const glass = o.aim.hit.kind === 'glass' || o.aim.hit.kind === 'bomb';
-      c.strokeStyle = glass ? pal.accent : pal.ink; c.globalAlpha = 0.85;
+    const ring = (h, alpha) => {
+      const [sx, sy] = R.toScreen(h.x, h.y);
+      const glass = h.kind === 'glass' || h.kind === 'bomb';
+      c.strokeStyle = glass ? pal.accent : pal.ink; c.globalAlpha = alpha;
       c.lineWidth = Math.max(1.5, 0.045 * s);
       c.beginPath(); c.arc(sx, sy, BALL_R * s, 0, TAU); c.stroke();
       c.globalAlpha = 1;
+    };
+    if (o.aim.hit) ring(o.aim.hit, 0.85);
+    // after the first bounce: a fainter guide, like a pool cue line
+    if (o.aim.pts2 && o.aim.pts2.length > 1) {
+      const d2 = dotsAlong(o.aim.pts2, 0.3, 0.42);
+      c.fillStyle = pal.ink;
+      for (let i = 0; i < d2.length; i++) {
+        const [sx, sy] = R.toScreen(d2[i][0], d2[i][1]);
+        c.globalAlpha = 0.32 * (1 - i / (d2.length + 3));
+        c.beginPath(); c.arc(sx, sy, 0.045 * s, 0, TAU); c.fill();
+      }
+      c.globalAlpha = 1;
+      if (o.aim.hit2) ring(o.aim.hit2, 0.5);
     }
   }
 

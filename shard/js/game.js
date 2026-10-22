@@ -1,6 +1,6 @@
 // One level session: physics stepping, slingshot input, juice and event fan-out.
-import * as planck from './vendor/planck.mjs';
-import { createSim, previewPath, DT, W, MIN_ANGLE, MAX_ANGLE } from './engine.js';
+import * as planck from './vendor/planck.js';
+import { createSim, ghostPath, DT, W, MIN_ANGLE, MAX_ANGLE } from './engine.js';
 import * as sfxReal from './audio.js';
 import * as hapReal from './haptics.js';
 
@@ -160,10 +160,19 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           if (ev.x != null) renderer.burst(ev.x, ev.y, 6, 'rgba(255,255,255,0.7)', 1.5, 0.05, 0.4);
           break;
         case 'win':
+          if (quiet) break; // the home-screen demo never reports results
           winTimer = 1.25;
+          // glass that kept rolling after a lose can still finish the level: the win replaces the lose
+          if (loseShown) { ended = false; loseShown = false; }
           break;
         case 'lose':
-          if (!loseShown) { loseShown = true; ended = true; setTimeout(() => { sfx.lose(); onLose?.(); }, 250); }
+          if (quiet || loseShown) break;
+          loseShown = true; ended = true;
+          {
+            // the lose sheet belongs to this session only, and only if nothing won in the meantime
+            const s = sim;
+            setTimeout(() => { if (sim !== s || s.st.won || paused) return; sfx.lose(); onLose?.(); }, 250);
+          }
           break;
       }
     }
@@ -188,21 +197,23 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
       if (n === 4) acc = 0;
       if (winTimer > 0) {
         winTimer -= dtReal;
-        if (winTimer <= 0 && !ended) { ended = true; sfx.win(); hap.success(); onWin?.(result()); }
+        if (winTimer <= 0 && !ended && !quiet) { ended = true; sfx.win(); hap.success(); onWin?.(result()); }
       }
-      // trails
+      // trails; premium balls leave a glitter of sparkles while they fly
+      const sparkly = getSkin().sparkle;
       for (const e of sim.ents) {
         if (!e.alive || e.kind !== 'ball' || !e.trail) continue;
         const p = e.body.getPosition();
         e.trail.push([p.x, p.y]);
         if (e.trail.length > 12) e.trail.shift();
+        if (sparkly && Math.random() < 0.3) renderer.sparkle(p.x, p.y, 1);
       }
       if (loadK < 1) loadK = Math.min(1, loadK + dtReal * 3.5);
       recoil = Math.max(0, recoil - dtReal * 6);
     }
     if (shakeT > 0) shakeT -= dtReal; else shake *= 0.85;
     flash = Math.max(0, flash - dtReal * 1.6);
-    if (aiming && aimDirty) { aim = previewPath(planck, sim, angle); aimDirty = false; }
+    if (aiming && aimDirty) { aim = ghostPath(planck, sim, angle, 1); aimDirty = false; }
     const still = calm();
     const sx = !still && shake > 0.001 ? (Math.random() - 0.5) * shake * renderer.scale : 0;
     const sy = !still && shake > 0.001 ? (Math.random() - 0.5) * shake * renderer.scale : 0;
@@ -250,5 +261,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     debugAim(a) { if (a == null) { aiming = false; return; } aiming = true; angle = a; aimDirty = true; },
     debugFire() { aiming = false; shoot(); },
     get fired() { return fired; },
+    // a result is decided (win slow-mo or lose pending): pausing or restarting now would lose it
+    get busy() { return !!sim && (ended || sim.st.won || sim.st.lost || winTimer > 0); },
   };
 }

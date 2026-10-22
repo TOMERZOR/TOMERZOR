@@ -17,8 +17,8 @@ Pull back. Release. Watch it shatter.
 SHARD is a calm, beautifully minimal physics puzzle where every shot ends in a burst of glass. Bank the ball off the walls, knock jars off their shelves, swing chandeliers, set off chain reactions, and clear every last piece with as few balls as you can.
 
 WHY YOU'LL LOVE IT
-• Crisp, synthesized glass sounds and precise haptics. No two shatters sound the same.
-• One-thumb controls: pull back anywhere, release to fire.
+• Crisp recorded glass sounds layered with bell-like sparkle, plus precise haptics. No two shatters sound the same.
+• One-thumb controls: pull back anywhere, release to fire. A pool-style guide line shows your bank shots.
 • 120 levels across 5 worlds: Dawn, Mint, Lilac, Ember and Night.
 • Glass, stone, timber, bouncy pads, bombs, ropes and moving platforms.
 • Every level is verified solvable by a physics solver. Stuck? A hint shows you the first shot.

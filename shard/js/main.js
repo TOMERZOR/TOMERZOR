@@ -51,12 +51,23 @@ function resize() {
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
+const TINTS = { ink: [8, 12, 16, 18, 30, 55, 70, 85], accent: [16, 80], sky0: [30], surface: [60, 72, 78, 80, 82, 86] };
+const hexRgb = (h) => { h = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
+const rgba = (hex, a) => { const [r, g, b] = hexRgb(hex); return `rgba(${r},${g},${b},${a})`; };
+const mixHex = (a, b, t) => { const x = hexRgb(a), y = hexRgb(b); return `rgb(${x.map((v, i) => Math.round(v * t + y[i] * (1 - t))).join(',')})`; };
 function applyPalette(w) {
   const p = WORLDS[w];
   const root = document.documentElement.style;
   root.setProperty('--ink', p.ink); root.setProperty('--ink2', p.ink2); root.setProperty('--accent', p.accent);
   root.setProperty('--text', p.text); root.setProperty('--sky0', p.sky[0]); root.setProperty('--sky1', p.sky[1]);
-  root.setProperty('--muted', p.dark ? 'rgba(231,234,246,0.66)' : `color-mix(in srgb, ${p.text} 66%, transparent)`);
+  root.setProperty('--muted', rgba(p.text, 0.66));
+  // translucent tints (precomputed: color-mix() isn't available on iOS 15)
+  const surface = p.dark ? '#232A45' : '#FFFFFF';
+  for (const [name, hex] of [['ink', p.ink], ['accent', p.accent], ['sky0', p.sky[0]], ['surface', surface]]) {
+    for (const a of TINTS[name]) root.setProperty(`--${name}-a${a}`, rgba(hex, a / 100));
+  }
+  root.setProperty('--ink-hi', mixHex(p.ink, '#FFFFFF', 0.92));
+  root.setProperty('--ink-lo', mixHex(p.ink, '#000000', 0.7));
   document.documentElement.dataset.dark = p.dark ? '1' : '';
   document.querySelector('meta[name="theme-color"]').content = p.sky[0];
   renderer.setPalette(p);
@@ -117,12 +128,12 @@ const DEMO = {
     { t: 'shelf', x: 2.0, y: 7.25, w: 2.8, h: 0.26, round: true },
     { t: 'glass', s: 'orb', x: 1.3, y: 6.0, r: 0.4, tint: 0 }, { t: 'rope', x: 1.3, y: 7.12, to: 1 },
     { t: 'glass', s: 'jar', x: 2.7, y: 5.75, w: 0.68, h: 0.86, tint: 1 }, { t: 'rope', x: 2.7, y: 7.12, to: 3 },
-    { t: 'shelf', x: 6.9, y: 3.5, w: 3.0, h: 0.26, round: true },
-    { t: 'glass', s: 'box', x: 6.2, y: 3.97, w: 0.68, h: 0.68, tint: 1 }, { t: 'glass', s: 'box', x: 6.9, y: 3.97, w: 0.68, h: 0.68, tint: 2 }, { t: 'glass', s: 'box', x: 7.6, y: 3.97, w: 0.68, h: 0.68, tint: 0 },
-    { t: 'glass', s: 'box', x: 6.55, y: 4.66, w: 0.68, h: 0.68, tint: 0 }, { t: 'glass', s: 'box', x: 7.25, y: 4.66, w: 0.68, h: 0.68, tint: 1 },
-    { t: 'glass', s: 'box', x: 6.9, y: 5.35, w: 0.68, h: 0.68, tint: 2 },
-    { t: 'shelf', x: 1.9, y: 3.1, w: 2.6, h: 0.26, round: true },
-    { t: 'glass', s: 'bottle', x: 1.0, y: 3.88, w: 0.5, h: 1.3, tint: 2 }, { t: 'glass', s: 'jar', x: 1.9, y: 3.67, w: 0.68, h: 0.86, tint: 0 }, { t: 'glass', s: 'bottle', x: 2.8, y: 3.88, w: 0.5, h: 1.3, tint: 1 },
+    { t: 'shelf', x: 6.9, y: 3.85, w: 3.0, h: 0.26, round: true },
+    { t: 'glass', s: 'box', x: 6.2, y: 4.32, w: 0.68, h: 0.68, tint: 1 }, { t: 'glass', s: 'box', x: 6.9, y: 4.32, w: 0.68, h: 0.68, tint: 2 }, { t: 'glass', s: 'box', x: 7.6, y: 4.32, w: 0.68, h: 0.68, tint: 0 },
+    { t: 'glass', s: 'box', x: 6.55, y: 5.01, w: 0.68, h: 0.68, tint: 0 }, { t: 'glass', s: 'box', x: 7.25, y: 5.01, w: 0.68, h: 0.68, tint: 1 },
+    { t: 'glass', s: 'box', x: 6.9, y: 5.7, w: 0.68, h: 0.68, tint: 2 },
+    { t: 'shelf', x: 1.9, y: 3.55, w: 2.6, h: 0.26, round: true },
+    { t: 'glass', s: 'bottle', x: 1.0, y: 4.33, w: 0.5, h: 1.3, tint: 2 }, { t: 'glass', s: 'jar', x: 1.9, y: 4.12, w: 0.68, h: 0.86, tint: 0 }, { t: 'glass', s: 'bottle', x: 2.8, y: 4.33, w: 0.5, h: 1.3, tint: 1 },
     { t: 'shelf', x: 6.6, y: 6.6, w: 2.0, h: 0.26, round: true },
     { t: 'glass', s: 'orb', x: 6.1, y: 7.13, r: 0.4, tint: 2 }, { t: 'glass', s: 'jar', x: 7.1, y: 7.17, w: 0.62, h: 0.8, tint: 0 },
   ],
@@ -192,7 +203,7 @@ function updateHint() {
 }
 
 async function useHint() {
-  if (!current) return;
+  if (!current || mode !== 'play' || game.busy) return;
   const lv = current.level;
   if (!lv.proof?.length) return;
   const w = lv.world;
@@ -222,6 +233,7 @@ async function useHint() {
 }
 
 function onWin(res) {
+  if (!current || mode !== 'play') return;
   const lv = current.level;
   const stars = continued ? 1 : res.stars;
   const prev = current.daily ? 0 : (d().stars[lv.id] || 0);
@@ -325,6 +337,7 @@ function countUp(el, from, to) {
 }
 
 function onLose() {
+  if (!current || mode !== 'play') return;
   const sim = game.sim;
   const left = sim.st.glass;
   const canContinue = !continued;
@@ -346,7 +359,7 @@ function onLose() {
 function doContinue() { continued = true; game.addBall(); track('continue', { id: current.level.id }); }
 
 function pauseSheet() {
-  if (mode !== 'play' || sheetOpen) return;
+  if (mode !== 'play' || sheetOpen || game.busy) return;
   game.pause();
   const s = d().settings;
   openSheet(`
@@ -729,9 +742,11 @@ function loop(t) {
     slowFrames = dt > 0.022 ? slowFrames + 1 : Math.max(0, slowFrames - 2);
     if (slowFrames > 90 && dprCap > 1.25) { dprCap = Math.max(1.25, dprCap - 0.5); slowFrames = 0; resize(); }
   }
-  if (mode === 'home') demoTick(dt);
-  game.frame(dt);
   requestAnimationFrame(loop);
+  try {
+    if (mode === 'home') demoTick(dt);
+    game.frame(dt);
+  } catch (e) { console.error(e); }
 }
 
 // ---------- boot ----------

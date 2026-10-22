@@ -1,0 +1,21 @@
+export default async ({ page, wait }) => {
+  await wait(600);
+  await page.evaluate(() => { const s = window.__shard.save; s.d.coins = 50; s.d.stars = { 'w0-1': 3, 'w0-2': 3, 'w0-3': 3 }; s.d.hints = {}; s.flush(); window.__shard.startLevel(3); });
+  await wait(300);
+  const badge1 = await page.textContent('#hint-badge');
+  await page.click('#btn-hint'); await wait(300);
+  const free = await page.evaluate(() => ({ used: !!window.__shard.save.d.hints[0], sheet: !document.getElementById('sheet').hidden, toast: document.getElementById('toast').textContent }));
+  console.log(`${badge1 === '1' && free.used && !free.sheet ? 'PASS' : 'FAIL'} first hint is free (badge "${badge1}", toast "${free.toast}")`);
+  await page.click('#btn-hint'); await wait(400);
+  const paid = await page.evaluate(() => ({ title: document.querySelector('#sheet h2')?.textContent, coinsBtn: !document.querySelector('#sheet [data-act="coins"]').disabled }));
+  console.log(`${paid.title === 'Need a hint?' && paid.coinsBtn ? 'PASS' : 'FAIL'} second hint asks: "${paid.title}", coins button enabled ${paid.coinsBtn}`);
+  await page.click('#sheet [data-act="coins"]'); await wait(300);
+  const coins = await page.evaluate(() => window.__shard.save.d.coins);
+  console.log(`${coins === 10 ? 'PASS' : 'FAIL'} paying 40 coins: 50 -> ${coins}`);
+  await page.click('#btn-hint'); await wait(400);
+  const poor = await page.evaluate(() => document.querySelector('#sheet [data-act="coins"]').disabled);
+  console.log(`${poor ? 'PASS' : 'FAIL'} coins button disabled when you can't afford it`);
+  await page.click('#sheet [data-act="ad"]'); await wait(400);
+  const web = await page.evaluate(() => ({ sheet: !document.getElementById('sheet').hidden, toast: document.getElementById('toast').textContent }));
+  console.log(`${!web.sheet ? 'PASS' : 'FAIL'} web build grants the video hint directly (toast "${web.toast}")`);
+};

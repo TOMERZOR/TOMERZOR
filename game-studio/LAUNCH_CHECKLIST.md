@@ -28,6 +28,7 @@ Create the 6 products exactly as listed in `shard-app/README.md` (IDs `shard_noa
 - Android: `npm run sync:android && npm run open:android` → Build › Generate Signed App Bundle → upload the `.aab`.
 
 ## 5. Store pages
+- Version 1.0 is declared for iPhone only (`TARGETED_DEVICE_FAMILY = 1`), so App Store Connect doesn't require iPad screenshots. iPads still run it in compatibility mode. To support iPad properly later, change it to `1,2` and add 13" screenshots.
 - All the copy (title, subtitle, keywords, description, privacy labels) is in `game-studio/store/STORE_LISTING.md`.
 - Store screenshots: `game-studio/store/screenshots/`.
 - Promo video (App Preview / TikTok): `game-studio/store/trailer.mp4`.

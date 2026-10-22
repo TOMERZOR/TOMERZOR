@@ -16,6 +16,8 @@ export function defaults() {
     ads: { clearsSince: 0, lastAt: 0 },
     starterSeen: false,
     tutorialDone: false,
+    pending: {},          // productId -> time a purchase went pending
+    txns: [],             // store transactions already granted
     reviewAsked: false,
     reminders: undefined, // undefined = never asked
     created: Date.now(),
@@ -30,6 +32,8 @@ function migrate(d) {
   if (!Array.isArray(out.owned)) out.owned = ['steel'];
   if (!out.owned.includes('steel')) out.owned.unshift('steel');
   if (!Number.isFinite(out.coins) || out.coins < 0) out.coins = 0;
+  if (!out.pending || typeof out.pending !== 'object' || Array.isArray(out.pending)) out.pending = {};
+  if (!Array.isArray(out.txns)) out.txns = [];
   out.v = VERSION;
   return out;
 }

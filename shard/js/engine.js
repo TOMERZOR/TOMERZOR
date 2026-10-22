@@ -508,37 +508,106 @@ export function createSim(planck, level, opts = {}) {
   };
 }
 
-// Trajectory preview: march the ballistic path until it meets a non-ball fixture.
-export function previewPath(planck, sim, angle, maxT = 1.6, stepT = 1 / 30) {
+// Trajectory preview: march the ballistic path until it meets a non-ball fixture. With bounces > 0
+// the path carries on off static geometry (walls, ceiling, shelves, pads) like a pool-game guide line.
+const BOUNCE_E = { frame: 0.72, shelf: 0.5, launcher: 0.5, mover: 0.5, pad: 1.15 };
+export function previewPath(planck, sim, angle, maxT = 1.6, stepT = 1 / 30, bounces = 0) {
   const { Vec2 } = planck;
   const dx = Math.cos(angle), dy = Math.sin(angle);
   const m = MUZZLE;
   let x = sim.launcherX + dx * m, y = PIVOT_Y + dy * m;
   let vx = dx * sim.speed, vy = dy * sim.speed;
-  const pts = [[x, y]];
-  let hit = null;
-  for (let t = 0; t < maxT; t += stepT) {
-    const nx = x + vx * stepT, nvy = vy - 10 * stepT, ny = y + vy * stepT - 5 * stepT * stepT;
-    // raycast offset by ball radius along the normal is approximated with three rays
-    let best = null;
-    const len = Math.hypot(nx - x, ny - y) || 1;
-    const ox = -(ny - y) / len * BALL_R * 0.9, oy = (nx - x) / len * BALL_R * 0.9;
-    for (const [sx, sy] of [[0, 0], [ox, oy], [-ox, -oy]]) {
-      sim.world.rayCast(Vec2(x + sx, y + sy), Vec2(nx + sx, ny + sy), (fix, point, normal, fraction) => {
-        const e = fix.getBody().getUserData();
-        if (!e || e.kind === 'shard' || e.kind === 'ball') return -1;
-        if (!best || fraction < best.f) best = { f: fraction, x: point.x - sx, y: point.y - sy, kind: e.kind };
-        return fraction;
-      });
+  const segs = [];
+  let pts = [[x, y]], hit = null;
+  for (let b = 0; b <= bounces; b++) {
+    hit = null;
+    for (let t = 0; t < (b ? maxT * 0.6 : maxT); t += stepT) {
+      const nx = x + vx * stepT, nvy = vy - 10 * stepT, ny = y + vy * stepT - 5 * stepT * stepT;
+      // the ball's width is approximated with three parallel rays
+      let best = null;
+      const len = Math.hypot(nx - x, ny - y) || 1;
+      const ox = -(ny - y) / len * BALL_R * 0.9, oy = (nx - x) / len * BALL_R * 0.9;
+      for (const [sx, sy] of [[0, 0], [ox, oy], [-ox, -oy]]) {
+        sim.world.rayCast(Vec2(x + sx, y + sy), Vec2(nx + sx, ny + sy), (fix, point, normal, fraction) => {
+          const e = fix.getBody().getUserData();
+          if (!e || e.kind === 'shard' || e.kind === 'ball') return -1;
+          if (!best || fraction < best.f) best = { f: fraction, px: point.x, py: point.y, nx: normal.x, ny: normal.y, kind: e.kind, center: sx === 0 && sy === 0 };
+          return fraction;
+        });
+      }
+      if (best) {
+        let hx = x + (nx - x) * best.f, hy = y + (ny - y) * best.f;
+        if (best.center) { hx = best.px + best.nx * BALL_R; hy = best.py + best.ny * BALL_R; }
+        pts.push([hx, hy]);
+        hit = { kind: best.kind, x: hx, y: hy, nx: best.nx, ny: best.ny };
+        vy = vy - 10 * stepT * best.f;
+        x = hx; y = hy;
+        break;
+      }
+      x = nx; y = ny; vy = nvy;
+      pts.push([x, y]);
     }
-    if (best) {
-      const hx = x + (nx - x) * best.f, hy = y + (ny - y) * best.f;
-      pts.push([hx, hy]);
-      hit = best;
-      break;
-    }
-    x = nx; y = ny; vy = nvy; vx = vx;
-    pts.push([x, y]);
+    segs.push({ pts, hit });
+    const e = hit && BOUNCE_E[hit.kind];
+    if (!hit || e === undefined || b === bounces) break;
+    // mirror the velocity about the contact normal and carry on
+    const vn = vx * hit.nx + vy * hit.ny;
+    if (vn >= 0) break;
+    vx -= (1 + e) * vn * hit.nx; vy -= (1 + e) * vn * hit.ny;
+    x += hit.nx * 0.02; y += hit.ny * 0.02;
+    pts = [[x, y]];
   }
-  return { pts, hit };
+  return { pts: segs[0].pts, hit: segs[0].hit, pts2: segs[1]?.pts || null, hit2: segs[1]?.hit || null };
 }
+
+// Exact aim guide: fly a ghost ball through a copy of the static geometry using the same physics,
+// with every movable object as a sensor that ends the path. Stops at the first movable object, or
+// after `bounces` bounces off static geometry.
+export function ghostPath(planck, sim, angle, bounces = 1, maxSteps = 110) {
+  const { World, Vec2, Circle } = planck;
+  const g = new World({ gravity: Vec2(0, -10) });
+  for (const e of sim.ents) {
+    if (!e.alive || e.kind === 'ball') continue;
+    const b = e.body;
+    if (!b.getFixtureList()) continue;
+    const solid = b.getType() !== 'dynamic';
+    const gb = g.createBody({ type: 'static', position: b.getPosition(), angle: b.getAngle() });
+    for (let f = b.getFixtureList(); f; f = f.getNext()) {
+      gb.createFixture(f.getShape(), { density: 0, friction: f.getFriction(), restitution: f.getRestitution(), isSensor: !solid });
+    }
+    gb.setUserData({ kind: e.kind, solid });
+  }
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  const ball = g.createBody({ type: 'dynamic', bullet: true, position: Vec2(sim.launcherX + dx * MUZZLE, PIVOT_Y + dy * MUZZLE), angularDamping: 0.6 });
+  ball.createFixture(Circle(BALL_R), { density: MAT.ball.density, friction: MAT.ball.friction, restitution: MAT.ball.restitution });
+  ball.setLinearVelocity(Vec2(dx * sim.speed, dy * sim.speed));
+  let touch = null;
+  g.on('begin-contact', (c) => {
+    if (touch) return;
+    const a = c.getFixtureA().getBody(), b = c.getFixtureB().getBody();
+    const other = a === ball ? b : b === ball ? a : null;
+    if (!other) return;
+    const ud = other.getUserData();
+    if (!ud) return;
+    const wm = c.getWorldManifold(null);
+    const p = wm && wm.pointCount ? wm.points[0] : ball.getPosition();
+    touch = { kind: ud.kind, solid: ud.solid, px: p.x, py: p.y };
+  });
+  const segs = [[]];
+  let hits = [];
+  const start = ball.getPosition();
+  segs[0].push([start.x, start.y]);
+  for (let i = 0; i < maxSteps; i++) {
+    touch = null;
+    g.step(DT, 8, 3);
+    const p = ball.getPosition();
+    segs[segs.length - 1].push([p.x, p.y]);
+    if (touch) {
+      hits.push({ kind: touch.kind, x: p.x, y: p.y });
+      if (!touch.solid || segs.length > bounces || BOUNCE_KINDS.indexOf(touch.kind) < 0) break;
+      segs.push([[p.x, p.y]]);
+    }
+  }
+  return { pts: segs[0], hit: hits[0] || null, pts2: segs[1] || null, hit2: hits[1] || null };
+}
+const BOUNCE_KINDS = ['frame', 'shelf', 'launcher', 'mover', 'pad'];

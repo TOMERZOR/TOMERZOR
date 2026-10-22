@@ -1,0 +1,23 @@
+export default async ({ page, wait }) => {
+  await wait(600);
+  await page.evaluate(() => { const s = window.__shard.save; s.d.coins = 600; s.d.stars = { 'w0-1': 3 }; s.d.owned = ['steel']; s.d.skin = 'steel'; s.flush(); window.__shard.goHome(); });
+  await wait(400);
+  await page.click('#btn-shop'); await wait(500);
+  await page.click('.skin[data-id="coral"]'); await wait(300);
+  let st = await page.evaluate(() => ({ coins: window.__shard.save.d.coins, skin: window.__shard.save.d.skin, owned: window.__shard.save.d.owned.join(',') }));
+  console.log(`${st.coins === 100 && st.skin === 'coral' ? 'PASS' : 'FAIL'} buy Coral for 500: ${JSON.stringify(st)}`);
+  await page.click('.skin[data-id="jade"]'); await wait(300);
+  st = await page.evaluate(() => ({ coins: window.__shard.save.d.coins, skin: window.__shard.save.d.skin, toast: document.getElementById('toast').textContent }));
+  console.log(`${st.coins === 100 && st.skin === 'coral' && /600 more/.test(st.toast) ? 'PASS' : 'FAIL'} can't afford Jade: ${JSON.stringify(st)}`);
+  await page.click('.skin[data-id="steel"]'); await wait(300);
+  st = await page.evaluate(() => window.__shard.save.d.skin);
+  console.log(`${st === 'steel' ? 'PASS' : 'FAIL'} re-equip an owned ball: ${st}`);
+  await page.click('.skin[data-id="moon"]'); await wait(300);
+  st = await page.evaluate(() => ({ owned: window.__shard.save.d.owned.includes('moon'), toast: document.getElementById('toast').textContent }));
+  console.log(`${!st.owned && /60 stars/.test(st.toast) ? 'PASS' : 'FAIL'} Moon locked behind 60 stars: ${JSON.stringify(st)}`);
+  await page.click('#shop [data-back]'); await wait(400);
+  await page.click('#btn-store'); await wait(400);
+  await page.click('.buy[data-p="shard_noads"]'); await wait(300);
+  st = await page.evaluate(() => ({ noAds: window.__shard.save.d.noAds, toast: document.getElementById('toast').textContent }));
+  console.log(`${!st.noAds && /app/.test(st.toast) ? 'PASS' : 'FAIL'} web purchase points to the app: ${JSON.stringify(st)}`);
+};

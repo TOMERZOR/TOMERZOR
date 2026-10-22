@@ -3,7 +3,7 @@
 export default async ({ page, wait }) => {
   await wait(600);
   const res = await page.evaluate(async () => {
-    const planck = await import('/js/vendor/planck.mjs');
+    const planck = await import('/js/vendor/planck.js');
     const { createSim } = await import('/js/engine.js');
     const which = new URLSearchParams(location.search).get('daily') ? 'DAILY' : 'LEVELS';
     const list = window.__shard[which];

@@ -1,5 +1,6 @@
 // Hand-made opening levels: each teaches one idea. Proofs are solved at build time.
 const jar = (x, sy, w = 0.56, h = 0.7, tint = 0) => ({ t: 'glass', s: 'jar', x, y: sy + h / 2 + 0.004, w, h, tint });
+const big = (x, sy, tint) => ({ t: 'glass', s: 'box', x, y: sy + 0.4 + 0.004, w: 0.8, h: 0.8, tint });
 const box = (x, sy, s = 0.66, tint = 2) => ({ t: 'glass', s: 'box', x, y: sy + s / 2 + 0.004, w: s, h: s, tint });
 const shelf = (x, y, w) => ({ t: 'shelf', x, y, w, h: 0.22, round: true });
 const T = 0.11;
@@ -24,6 +25,8 @@ export const TUTORIAL = [
   ] },
   // 2: line them up. The ball pierces glass.
   { launcher: { x: 4.5 }, pieces: ['tutorial-pierce'], objects: line(64, [3.6, 5.0, 6.4, 7.8], (x, y, i) => hjar(x, y, i % 3)) },
-  // 3: knock it off, gravity does the rest
-  { launcher: { x: 4.5 }, pieces: ['tutorial-pyramid'], objects: [shelf(6.75, 5.4, 2.9), box(6.07, 5.4 + T), box(6.75, 5.4 + T), box(7.43, 5.4 + T), box(6.41, 5.4 + T + 0.668, 0.66, 0), box(7.09, 5.4 + T + 0.668, 0.66, 1), box(6.75, 5.4 + T + 1.336, 0.66, 2)] },
+  // 3: knock it down, falling glass shatters. A low, narrow shelf keeps the pyramid in view of the cannon
+  // (tuned with the average-player bot: 83% clear, two thirds in one shot)
+  { launcher: { x: 4.5 }, pieces: ['tutorial-pyramid'], objects: [shelf(6.4, 3.8, 1.7),
+    big(6.0, 3.8 + T, 0), big(6.82, 3.8 + T, 1), big(6.41, 3.8 + T + 0.808, 2)] },
 ];

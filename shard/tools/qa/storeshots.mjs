@@ -87,22 +87,22 @@ await tick(30);
 await page.waitForTimeout(500);
 shots.push({ img: await raw('raw6'), cap: 'Collect 12 balls', sub: 'From Chalk to Prism', world: 1 });
 
-// frame them
+// frame them: App Store 6.9" (1290x2796) and Google Play (1080x1920, Play caps the aspect ratio at 2:1)
 const WORLDS = await page.evaluate(async () => (await import('/js/theme.js')).WORLDS);
 const comp = await ctx.newPage();
 await comp.setViewportSize({ width: 430, height: 932 });
-for (const [i, s] of shots.entries()) {
-  const w = WORLDS[s.world];
-  const q = new URLSearchParams({ img: `/tools/qa/out/${s.img}.png`, cap: s.cap, sub: s.sub, c0: w.sky[0], c1: w.sky[1], ink: w.dark ? '#E7EAF6' : w.ink, accent: w.accent, w: 1290, h: 2796 });
-  await comp.goto(`http://localhost:8080/tools/qa/storeshot.html?${q}`);
-  await comp.waitForFunction(() => document.title === 'ready' || document.title === 'error');
-  const el = await comp.$('#c');
-  // render the canvas at full resolution via toDataURL to avoid viewport scaling
-  const data = await comp.evaluate(() => document.getElementById('c').toDataURL('image/png'));
-  const buf = Buffer.from(data.split(',')[1], 'base64');
-  const { writeFileSync } = await import('node:fs');
-  writeFileSync(`${FINAL}${String(i + 1).padStart(2, '0')}-${s.cap.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')}.png`, buf);
-  void el;
+const { writeFileSync, mkdirSync: mk } = await import('node:fs');
+const sets = [{ dir: FINAL, w: 1290, h: 2796 }, { dir: FINAL + 'google-play/', w: 1080, h: 1920 }];
+for (const set of sets) {
+  mk(set.dir, { recursive: true });
+  for (const [i, s] of shots.entries()) {
+    const w = WORLDS[s.world];
+    const q = new URLSearchParams({ img: `/tools/qa/out/${s.img}.png`, cap: s.cap, sub: s.sub, c0: w.sky[0], c1: w.sky[1], ink: w.dark ? '#E7EAF6' : w.ink, accent: w.accent, w: set.w, h: set.h });
+    await comp.goto(`http://localhost:8080/tools/qa/storeshot.html?${q}`);
+    await comp.waitForFunction(() => document.title === 'ready' || document.title === 'error');
+    const data = await comp.evaluate(() => document.getElementById('c').toDataURL('image/png'));
+    writeFileSync(`${set.dir}${String(i + 1).padStart(2, '0')}-${s.cap.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '')}.png`, Buffer.from(data.split(',')[1], 'base64'));
+  }
 }
 console.log('store screenshots written to', FINAL);
 await browser.close();

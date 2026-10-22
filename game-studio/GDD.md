@@ -14,7 +14,7 @@
 
 ## Core loop (30 seconds)
 1. A scene of shelves, ledges and contraptions holding **glass**.
-2. **Drag back** anywhere (slingshot) to aim the launcher at the bottom. A dotted line previews the path up to the first contact.
+2. **Drag back** anywhere (slingshot) to aim the launcher at the bottom. A dotted line shows the exact path to the first contact, then a fainter line one bounce further, like a pool guide line. It is computed by a ghost ball in a copy of the static geometry with the same physics, so it doesn't lie.
 3. **Release** to fire a heavy ball. Fast hits **pierce** glass, so the ball smashes through and keeps flying. Glass knocked off a ledge shatters when it lands.
 4. Break **all glass** within the ball budget. Stars depend on balls used against par.
 5. The final shard triggers a slow-motion, a chord, and a big haptic.
@@ -38,7 +38,9 @@
 4. **Ember**: bombs
 5. **Night**: ropes and movers
 
-Every level is **generated and verified by a solver** that simulates the real physics. A level ships only when it has a solution with par balls that still works if the aim is off by ±0.6°. No pixel-perfect or unfair levels.
+Every level is **generated and verified by a solver**, then **calibrated with an average-player bot** that aims with the same guide line: hard levels get spare balls, levels it almost never clears are replaced, and each world is ordered from easy to hard by measured success.
+
+The solver part: that simulates the real physics. A level ships only when it has a solution with par balls that still works if the aim is off by ±0.6°. No pixel-perfect or unfair levels.
 
 ## Return loop
 - **Daily Smash:** one seeded, solver-verified level per day, with a streak counter and a coin reward that grows with the streak.

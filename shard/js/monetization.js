@@ -56,6 +56,7 @@ export async function initMonetization(uiHooks) {
         for (const pr of products || []) { storeProducts[pr.identifier] = pr; prices[pr.identifier] = pr.priceString; }
       } catch (e) {}
       await syncEntitlements();
+      try { await p.addCustomerInfoUpdateListener((info) => applyCustomerInfo(info?.customerInfo || info)); } catch (e) {}
     }
   } catch (e) { console.warn('monetization init', e); }
   ready = true;
@@ -80,23 +81,27 @@ export async function showRewarded(placement) {
   }
   const ad = AdMob();
   if (!ad) return false;
-  let earned = false;
+  // settle on whichever comes first: reward then close, close without reward, or a failure to show
+  let earned = false, done;
+  const finished = new Promise((r) => { done = r; });
   const handles = [];
-  try {
-    handles.push(await ad.addListener('onRewardedVideoAdReward', () => { earned = true; }));
-    const res = await ad.showRewardVideoAd();
-    if (res && res.amount > 0) earned = true;
-  } catch (e) {
-    // not loaded yet: try once to load and show
-    try {
-      await ad.prepareRewardVideoAd({ adId: unit('rewarded') });
-      const res = await ad.showRewardVideoAd();
-      if (res && res.amount > 0) earned = true;
-    } catch (e2) { ui.toast('No video available right now. Try again in a moment.'); }
-  } finally {
-    for (const h of handles) h?.remove?.();
-    preload();
-  }
+  const listen = async (name, fn) => { try { handles.push(await ad.addListener(name, fn)); } catch (e) {} };
+  await listen('onRewardedVideoAdReward', () => { earned = true; });
+  await listen('onRewardedVideoAdDismissed', () => done());
+  await listen('onRewardedVideoAdFailedToShow', () => done('failed'));
+  const show = async () => {
+    try { const res = await ad.showRewardVideoAd(); if (res && res.amount > 0) earned = true; }
+    catch (e) {
+      // not loaded yet: load once and try again
+      try { await ad.prepareRewardVideoAd({ adId: unit('rewarded') }); const res = await ad.showRewardVideoAd(); if (res && res.amount > 0) earned = true; }
+      catch (e2) { done('failed'); }
+    }
+  };
+  show();
+  const outcome = await Promise.race([finished, new Promise((r) => setTimeout(() => r('timeout'), 120000))]);
+  for (const h of handles) { try { h?.remove?.(); } catch (e) {} }
+  preload();
+  if (outcome === 'failed' && !earned) ui.toast('No video available right now. Try again in a moment.');
   if (earned) track('ad_rewarded_earned', { placement });
   return earned;
 }
@@ -134,10 +139,21 @@ export async function purchase(product) {
         sp = products?.[0];
       }
       if (!sp) throw new Error('product not found');
-      await p.purchaseStoreProduct({ product: sp });
+      const result = await p.purchaseStoreProduct({ product: sp });
+      const txn = result?.transaction?.transactionIdentifier;
+      if (txn) { save.d.txns = save.d.txns || []; save.d.txns.push(txn); }
       ok = true;
     } catch (e) {
-      if (!e?.userCancelled && !String(e?.code || e?.message || '').toUpperCase().includes('CANCEL')) ui.toast('Purchase did not go through. You were not charged.');
+      const code = String(e?.code ?? '');
+      if (code === '20' || /pending/i.test(e?.message || '')) {
+        // waiting for approval: it arrives through the customer-info listener when it completes
+        save.d.pending = save.d.pending || {};
+        save.d.pending[product.id] = Date.now();
+        save.flush();
+        ui.toast('Your purchase is waiting for approval. It will arrive automatically.');
+      } else if (!e?.userCancelled && !code.toUpperCase().includes('CANCEL') && !/cancel/i.test(e?.message || '')) {
+        ui.toast('Purchase did not go through. You were not charged.');
+      }
       ok = false;
     }
   }
@@ -154,15 +170,36 @@ export function grant(product) {
   save.flush();
 }
 
+// Apply what the store says we own. Also completes purchases that were pending approval
+// (Ask to Buy, cash payments): only products we marked pending on this device, only transactions
+// made after that moment, and each transaction once, so a reinstall never re-grants coins.
+function applyCustomerInfo(info) {
+  if (!info) return;
+  const d = save.d;
+  const ent = info.entitlements?.active || {};
+  if (ent.no_ads) d.noAds = true;
+  if (ent.prism && !d.owned.includes('prism')) d.owned.push('prism');
+  if (ent.aurora && !d.owned.includes('aurora')) d.owned.push('aurora');
+  d.pending = d.pending || {};
+  d.txns = d.txns || [];
+  for (const [id, since] of Object.entries(d.pending)) {
+    const product = PRODUCTS.find((x) => x.id === id);
+    const t = (info.nonSubscriptionTransactions || []).find((x) => x.productIdentifier === id && !d.txns.includes(x.transactionIdentifier) && Date.parse(x.purchaseDate) >= since - 60000);
+    if (product && t) {
+      d.txns.push(t.transactionIdentifier);
+      delete d.pending[id];
+      grant(product);
+      ui?.toast?.(`${product.title} has arrived. Thank you!`);
+    }
+  }
+  save.flush();
+}
+
 async function syncEntitlements() {
   const p = Purchases(); if (!p) return;
   try {
     const { customerInfo } = await p.getCustomerInfo();
-    const ent = customerInfo?.entitlements?.active || {};
-    if (ent.no_ads) save.d.noAds = true;
-    if (ent.prism && !save.d.owned.includes('prism')) save.d.owned.push('prism');
-    if (ent.aurora && !save.d.owned.includes('aurora')) save.d.owned.push('aurora');
-    save.flush();
+    applyCustomerInfo(customerInfo);
   } catch (e) {}
 }
 

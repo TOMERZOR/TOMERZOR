@@ -20,6 +20,7 @@ export function defaults() {
     txns: [],             // store transactions already granted
     reviewAsked: false,
     crystals: 0,          // star crystals shattered (one fills every CRYSTAL_STARS stars)
+    perfTier: 0,          // adaptive quality tier this device settled on (0 = full)
     reminders: undefined, // undefined = never asked
     created: Date.now(),
   };
@@ -36,6 +37,7 @@ function migrate(d) {
   if (!out.pending || typeof out.pending !== 'object' || Array.isArray(out.pending)) out.pending = {};
   if (!Array.isArray(out.txns)) out.txns = [];
   if (!Number.isInteger(out.crystals) || out.crystals < 0) out.crystals = 0;
+  if (!Number.isInteger(out.perfTier) || out.perfTier < 0 || out.perfTier > 3) out.perfTier = 0;
   out.v = VERSION;
   return out;
 }

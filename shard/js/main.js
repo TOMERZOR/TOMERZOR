@@ -28,7 +28,9 @@ let mode = 'home';           // home | play | page
 let current = null;          // { level, index, daily, dateKey }
 let continued = false;
 let demoTimer = 0;
-let slowFrames = 0, dprCap = 2.5, fxQuality = 1; // adaptive render resolution, then effect density
+// adaptive quality: a rolling frame-time average picks a tier; resolution and effects step down together
+const TIER_DPR = [2.5, 2, 1.5, 1.25];
+let perfTier = 0, dprCap = TIER_DPR[0], emaDt = 1 / 60, tierClock = 0;
 
 const game = createGame({
   canvas, renderer,
@@ -48,6 +50,12 @@ function safeInsets() {
   return r;
 }
 let lastSize = '';
+function setTier(t) {
+  perfTier = t; dprCap = TIER_DPR[t]; emaDt = 1 / 60;
+  renderer.setTier(t);
+  d().perfTier = t; save.touch();
+  resize();
+}
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
   renderer.resize(window.innerWidth, window.innerHeight, dpr, safeInsets());
@@ -839,14 +847,11 @@ function loop(t) {
   const dt = Math.min(0.05, (t - last) / 1000);
   last = t;
   if (manual) { requestAnimationFrame(loop); return; }
-  // adaptive quality: on devices that can't hold ~45 fps, drop resolution first, then thin out effects
+  // a device that can't hold ~50 fps steps down a tier (checked every 1.2 s of play)
   if (!document.hidden && mode === 'play') {
-    slowFrames = dt > 0.022 ? slowFrames + 1 : Math.max(0, slowFrames - 2);
-    if (slowFrames > 90) {
-      if (dprCap > 1.25) { dprCap = Math.max(1.25, dprCap - 0.5); resize(); }
-      else if (fxQuality > 0.5) { fxQuality = 0.5; renderer.setQuality(fxQuality); }
-      slowFrames = 0;
-    }
+    emaDt += (dt - emaDt) * 0.06;
+    tierClock += dt;
+    if (tierClock > 1.2) { if (emaDt > 0.0205 && perfTier < 3) setTier(perfTier + 1); tierClock = 0; }
   }
   requestAnimationFrame(loop);
   try {
@@ -857,7 +862,8 @@ function loop(t) {
 
 // ---------- boot ----------
 window.Capacitor?.Plugins?.StatusBar?.hide?.()?.catch?.(() => {});
-resize();
+// start one tier above the last one measured: a passing hiccup never degrades a device for good
+setTier(Math.max(0, (d().perfTier | 0) - 1));
 sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); hap.setHaptics(d().settings.haptics);
 document.addEventListener('pointerdown', () => { sfx.initAudio(); sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); }, { once: true, capture: true });
 initMonetization({ fakeAd, fakePurchase, toast });

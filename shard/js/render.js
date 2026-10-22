@@ -77,7 +77,7 @@ export function createRenderer(canvas) {
       if (best) best.hitT = performance.now();
     },
     burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, muzzle, confetti, punch, focus, combo: comboAt,
-    setQuality: (q) => { quality = q; },
+    setTier,
     setFlash: (v) => { flash = v; },
     draw,
     bounds: () => ({ ox, oy, s, cw, ch }),
@@ -573,7 +573,7 @@ export function createRenderer(canvas) {
     polyPath(c, pts);
     c.fillStyle = e.fill; c.fill();
     c.lineJoin = 'round'; c.strokeStyle = e.edge; c.lineWidth = lw * 1.1; c.stroke();
-    if (quality < 0.75) { c.globalAlpha = 1; return; } // thinned out on slow devices
+    if (!T.edges) { c.globalAlpha = 1; return; } // thinned out on slow devices
     // edges that face the key light catch it
     const ca = Math.cos(a), sa = Math.sin(a);
     c.beginPath();
@@ -639,6 +639,14 @@ export function createRenderer(canvas) {
   const WHITE = [255, 255, 255];
   const pool = [];
   let clock = 0, quality = 1;
+  // performance tier (0 = everything; each step drops the effects people notice least)
+  let tier = 0;
+  const T = { motes: true, dust: true, liveShadows: true, camera: true, edges: true, glow: 1 };
+  function setTier(t) {
+    tier = t;
+    quality = [1, 0.75, 0.5, 0.35][t];
+    T.motes = t < 1; T.dust = t < 1; T.liveShadows = t < 2; T.camera = t < 2; T.edges = t < 2; T.glow = t < 2 ? 1 : 0.7;
+  }
   function spawn(t, x, y, life) {
     const f = pool.pop() || {};
     f.t = t; f.x = x; f.y = y; f.life = life; f.age = 0;
@@ -832,7 +840,7 @@ export function createRenderer(canvas) {
     if (key !== restKey) { renderRest(sim); restKey = key; }
     // shake and camera move both layers together
     const shx = o.shakeX || 0, shy = o.shakeY || 0;
-    const z = o.calm ? 1 : cam.z + cam.kick * 0.022, zx = cam.cx, zy = cam.cy;
+    const z = o.calm || !T.camera ? 1 : cam.z + cam.kick * 0.022, zx = cam.cx, zy = cam.cy;
     const css = shx || shy || z !== 1 ? `${zx.toFixed(1)}px ${zy.toFixed(1)}px|translate3d(${shx.toFixed(1)}px,${shy.toFixed(1)}px,0) scale(${z.toFixed(4)})` : '';
     if (css !== shakeCss) {
       const [origin, tf] = css ? css.split('|') : ['', ''];
@@ -842,7 +850,7 @@ export function createRenderer(canvas) {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, canvas.width, canvas.height);
     c.setTransform(dpr * z, 0, 0, dpr * z, (shx + zx * (1 - z)) * dpr, (shy + zy * (1 - z)) * dpr);
-    drawMotes(c, o.fxDt || 0);
+    if (T.motes) drawMotes(c, o.fxDt || 0);
     if (!sim) return;
     // ropes
     c.strokeStyle = pal.ink; c.lineWidth = Math.max(1.2, 0.035 * s); c.lineCap = 'round';
@@ -865,7 +873,7 @@ export function createRenderer(canvas) {
     for (const e of sim.ents) {
       if (!e.alive) continue;
       const k = e.kind;
-      if ((k === 'glass' || k === 'wood' || k === 'stone' || k === 'bomb') && !settled(e)) {
+      if (T.liveShadows && (k === 'glass' || k === 'wood' || k === 'stone' || k === 'bomb') && !settled(e)) {
         const pi = introOf(e);
         if (!pi) continue;
         const [p, a] = lerpBody(e, o.alpha);
@@ -929,7 +937,7 @@ export function createRenderer(canvas) {
       const [sx, sy] = R.toScreen(f.x, f.y);
       switch (f.t) {
         case 'glow': {
-          const g = 1 - Math.pow(1 - Math.min(1, u * 1.7), 3), r = (f.size + (f.size2 - f.size) * g) * s;
+          const g = 1 - Math.pow(1 - Math.min(1, u * 1.7), 3), r = (f.size + (f.size2 - f.size) * g) * s * T.glow;
           c.globalAlpha = k * k * 0.95;
           if (pal.dark) c.globalCompositeOperation = 'lighter';
           c.drawImage(glowSprite(f.rgb), sx - r, sy - r, r * 2, r * 2);
@@ -957,6 +965,7 @@ export function createRenderer(canvas) {
           break;
         }
         case 'dust': {
+          if (!T.dust) break;
           const r = (f.size + (f.size2 - f.size) * (1 - k * k)) * s;
           c.globalAlpha = (pal.dark ? 0.22 : 0.32) * k * k;
           c.drawImage(dotSprite(f.rgb), sx - r, sy - r, r * 2, r * 2);

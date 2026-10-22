@@ -184,3 +184,15 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - **Par in the HUD** ("Level 12 · Par 2"): perfect is always a visible target.
 - **New scenario `crystal`:** checks the filling state, the ready state, that a shatter pays exactly once (no double collect), and that the next crystal starts filling. Passes.
 - **Found:** the test tool can't click a pulsing button ("not stable"). That's a test limitation, not a player one, so the test forces the click.
+
+## Round 25: robustness and performance, measured honestly
+- **Soak:** 40 levels back to back, with a forced garbage collection before each sample. The heap holds at 5.0–5.5 MB the whole way, and shard and body counts stay bounded. No leak.
+- **New realistic test (`perfshot`):** one real proof shot at a time on the four heaviest bomb levels, with frames measured from firing until the result. The old volley test fired eight balls at once, which is not how anyone plays.
+- **Found:** at 4× CPU throttle these shots dropped 32–63% of frames, against 7–22% for the pre-overhaul version (checked out separately and measured the same way). Instrumentation showed JavaScript drawing takes only 3.6 ms per frame and physics is unchanged, so the cost is rasterizing many small effects. Switching each one off gives a small gain; switching all off returns to the old baseline. Death by a thousand cuts, in a test where headless Chromium rasterizes on the CPU while real phones use the GPU. Backdrop blur was ruled out by A/B test.
+- **Fix:** an adaptive quality ladder. A rolling frame-time average is checked every 1.2 s of play; a device that can't hold about 50 fps steps down a tier.
+  - Tier 1: lower resolution, no motes or dust.
+  - Tier 2: no moving shadows, camera kicks or shard edge-light; smaller glows.
+  - Tier 3: the minimum.
+  - The device's tier is saved, and each launch retries one tier higher, so a passing hiccup never degrades a device for good. This replaces the old ladder, which needed about 10 s of jank before effects thinned out.
+- **Result:** at 4× throttle the heavy shots now drop 1–7% of frames, better than before the overhaul. At normal speed the game stays at full quality with 0–0.1% slow frames.
+- **Verified:** proof replay 220/220, validate-levels and all scenarios pass, no console errors.

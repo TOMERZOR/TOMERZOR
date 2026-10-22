@@ -7,13 +7,14 @@ mkdirSync(OUT, { recursive: true });
 const URL = process.env.URL || 'http://localhost:8080/index.html';
 const [w, h] = (process.env.SIZE || '390x844').split('x').map(Number);
 
-const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--enable-precise-memory-info', '--js-flags=--expose-gc'] });
 const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: +(process.env.DPR || 2), isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
 if (process.env.THROTTLE) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: +process.env.THROTTLE }); }
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
+if (process.env.CSS) await page.addInitScript((css) => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }); }, process.env.CSS);
 if (process.env.RDBG) await page.addInitScript((v) => { window.__rdbg = JSON.parse(v); }, process.env.RDBG);
 if (process.env.FRESH !== '0') await page.addInitScript(() => { if (!sessionStorage.getItem('qa')) { localStorage.clear(); sessionStorage.setItem('qa', '1'); } });
 await page.goto(URL);

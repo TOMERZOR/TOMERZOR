@@ -33,7 +33,12 @@ Create the 6 products exactly as listed in `shard-app/README.md` (IDs `shard_noa
 - Store screenshots: `game-studio/store/screenshots/`.
 - Promo video (App Preview / TikTok): `game-studio/store/trailer.mp4`.
 - Icon: `game-studio/store/icon-1024.png`.
-- Privacy policy URL: host `shard/privacy.html` (or the whole `shard-site/` folder) on any static host, for example GitHub Pages, Netlify or Cloudflare Pages.
+- Website: host the repository root on any static host (GitHub Pages, Netlify, Cloudflare Pages); the repo already has `.nojekyll` for GitHub Pages. Keep `shard/` and `shard-site/` side by side, because the site links to the game and the legal pages with relative links. Then:
+  - Marketing URL: `<your site>/shard-site/`
+  - Support URL: `<your site>/shard-site/support.html`
+  - Privacy policy URL (required by both stores): `<your site>/shard/privacy.html`
+  - Play in the browser: `<your site>/shard/`
+- `app-ads.txt` only counts at the root of the domain you list as your developer website (for example `https://yourdomain.com/app-ads.txt`), so this one needs a custom domain or your own `username.github.io` site.
 
 ## 6. Recommended soft launch (2–4 weeks)
 1. Release in 2–3 small English-speaking markets first (for example Canada, Australia, New Zealand).

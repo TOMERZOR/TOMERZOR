@@ -2,6 +2,8 @@ import { LEVELS, DAILY } from './levels.js';
 import { WORLDS, SKINS } from './theme.js';
 import { createRenderer } from './render.js';
 import { createGame } from './game.js';
+import * as planck from './vendor/planck.js';
+import { ghostPath, MIN_ANGLE, MAX_ANGLE } from './engine.js';
 import { save, totalStars, worldStars } from './save.js';
 import * as sfx from './audio.js';
 import * as hap from './haptics.js';
@@ -44,9 +46,13 @@ function safeInsets() {
   probe.remove();
   return r;
 }
+let lastSize = '';
 function resize() {
   const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
   renderer.resize(window.innerWidth, window.innerHeight, dpr, safeInsets());
+  const size = window.innerWidth + 'x' + window.innerHeight;
+  if (size !== lastSize && mode === 'home' && game.sim) loadDemo(game.sim.level.world); // refit to the new layout
+  lastSize = size;
 }
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -100,9 +106,9 @@ function goHome() {
   const idx = progressIndex();
   const w = LEVELS[idx].world;
   applyPalette(w);
-  loadDemo(w);
   refreshHome();
   show('home');
+  loadDemo(w); // after show(): the demo fits itself to the home layout
 }
 
 function refreshHome() {
@@ -139,8 +145,28 @@ const DEMO = {
     { t: 'glass', s: 'orb', x: 6.1, y: 7.13, r: 0.4, tint: 2 }, { t: 'glass', s: 'jar', x: 7.1, y: 7.17, w: 0.62, h: 0.8, tint: 0 },
   ],
 };
+const demoExt = (o) => o.r ?? (o.h || 0) / 2;
+const DEMO_BOX = DEMO.objects.filter((o) => o.t !== 'rope').reduce(([lo, hi], o) => [Math.min(lo, o.y - demoExt(o)), Math.max(hi, o.y + demoExt(o))], [Infinity, -Infinity]);
+// Short phones leave less room between the tagline and the Daily card than tall ones:
+// center the scene in that gap, and shrink it when it doesn't fit.
+// layout position within #home; the entry animation's transforms make offsetTop relative to the animated parent
+const homeTop = (el) => { let y = 0; for (; el && el.id !== 'home'; el = el.offsetParent) y += el.offsetTop; return y; };
+function fitDemo() {
+  const tag = $('#home .tagline'), daily = $('#btn-daily');
+  if (!$('#home').classList.contains('on')) return DEMO.objects;
+  const top = renderer.toWorld(0, homeTop(tag) + tag.offsetHeight + 10)[1];
+  const bottom = renderer.toWorld(0, homeTop(daily) - 8)[1];
+  const [lo, hi] = DEMO_BOX, mid = (lo + hi) / 2;
+  const k = Math.max(0.6, Math.min(1, (top - bottom) / (hi - lo)));
+  const cy = (top + bottom) / 2;
+  return DEMO.objects.map((o) => {
+    const n = { ...o, x: 4.5 + (o.x - 4.5) * k, y: cy + (o.y - mid) * k };
+    for (const key of ['w', 'h', 'r']) if (o[key] != null) n[key] = o[key] * k;
+    return n;
+  });
+}
 function loadDemo(w) {
-  game.load({ ...DEMO, world: w }, { palette: WORLDS[w], quiet: true });
+  game.load({ ...DEMO, world: w, objects: fitDemo() }, { palette: WORLDS[w], quiet: true });
   demoTimer = 1.6;
 }
 function demoTick(dt) {
@@ -150,8 +176,14 @@ function demoTick(dt) {
   if (sim.st.won || sim.st.used >= 6) { if (demoTimer < -2.2) loadDemo(current?.level?.world ?? LEVELS[progressIndex()].world); return; }
   if (demoTimer <= 0) {
     demoTimer = 1.9 + Math.random() * 1.2;
-    const a = [58, 64, 70, 76, 104, 110, 116, 122][Math.floor(Math.random() * 8)] + (Math.random() - 0.5) * 6;
-    sim.fire(a * Math.PI / 180);
+    // like a player: try a few angles and take one the aim guide says reaches glass
+    let a = 0;
+    for (let i = 0; i < 6; i++) {
+      a = MIN_ANGLE + Math.random() * (MAX_ANGLE - MIN_ANGLE);
+      const g = ghostPath(planck, sim, a, 1);
+      if (g.hit?.kind === 'glass' || g.hit2?.kind === 'glass') break;
+    }
+    sim.fire(a);
   }
 }
 

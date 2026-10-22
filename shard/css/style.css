@@ -200,6 +200,7 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 .sheet .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
 .sheet .actions .btn { width: 100%; }
 .sheet .rowbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sheet .rowbtns .btn { padding: 0 12px; gap: 8px; white-space: nowrap; }
 .stars { display: flex; justify-content: center; gap: 8px; margin: 18px 0 6px; }
 .stars svg { width: 58px; height: 58px; color: var(--ink-a12); transform: scale(.4); opacity: 0; }
 .stars svg.show { animation: starpop .5s var(--spring) forwards; }
@@ -232,6 +233,15 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
   .coach-dot { opacity: 1; transform: translateY(58px); } .coach-line { height: 58px; } .coach-arrow { opacity: 1; }
   .screen.on.anim > * { animation: none !important; }
   .sheet { animation-duration: .01s; }
+}
+/* short phones (iPhone SE, 16:9 Android): logo up top, so the demo scene has room above the buttons */
+@media (max-height: 760px) {
+  #home { justify-content: flex-start; }
+  #home .brand { margin-top: 22px; } /* clears the room's top band */
+  #home .home-bottom { margin-top: auto; }
+}
+@media (max-width: 340px) {
+  .sheet .rowbtns .btn { font-size: 16px; }
 }
 @media (min-width: 600px) {
   .level-grid { grid-template-columns: repeat(6, 1fr); }

@@ -154,3 +154,15 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
   - The scrim behind the win sheet is lighter, so the celebration stays visible.
 - **Found:** a "+0 coins" in an earlier filmstrip was only a capture artifact: the count-up runs on a real-time timer, the film tool on a manual clock. The real flow shows "+35".
 - **Verified:** scenarios pass, proof replay 120/120, no console errors.
+
+## Round 22: screens
+- **Method:** the UI-craft skill's rules: refine, don't replace; these are tool screens, so scanability comes first and the brand lives in the details; one batched pass, then confirm.
+- **Levels:**
+  - Was a wall of identical locked boxes.
+  - Now: a gold star progress bar and "n / 24 cleared" under the world name; perfect levels get a gold edge; the current level breathes an accent ring; locked levels are quiet outlined tiles with faint numbers and a small lock, so the path ahead is visible.
+- **HUD:** the glass counter is tiny gems in the world's three glass colours, emptying as glass breaks.
+- **Home:** a band of light sweeps across the logo, letter by letter, every seven seconds.
+- **Balls:** the preview floats and pops when you pick a skin.
+- **Store:** "No more interstitials" (jargon) became "No ads between levels. Ever."
+- **Found:** the tutorial coach covered the cannon. It now positions itself from the cannon's real height on any screen.
+- **Reduced Motion:** stops the sheen, the hover and the pulse.

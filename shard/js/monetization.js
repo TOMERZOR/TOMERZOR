@@ -15,7 +15,7 @@ export const CONFIG = {
 };
 
 export const PRODUCTS = [
-  { id: 'shard_noads', kind: 'noads', title: 'Remove Ads', desc: 'No more interstitials. Ever.', price: '$3.99' },
+  { id: 'shard_noads', kind: 'noads', title: 'Remove Ads', desc: 'No ads between levels. Ever.', price: '$3.99' },
   { id: 'shard_starter', kind: 'starter', title: 'Starter Pack', desc: 'No ads + 1,500 coins + Aurora ball', price: '$4.99', best: true },
   { id: 'shard_prism', kind: 'skin', skin: 'prism', title: 'Prism Ball', desc: 'Splits light into every color', price: '$1.99' },
   { id: 'shard_coins_s', kind: 'coins', coins: 600, title: 'Pouch', desc: '600 coins', price: '$0.99' },

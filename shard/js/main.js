@@ -68,6 +68,7 @@ function applyPalette(w) {
   root.setProperty('--ink', p.ink); root.setProperty('--ink2', p.ink2); root.setProperty('--accent', p.accent);
   root.setProperty('--text', p.text); root.setProperty('--sky0', p.sky[0]); root.setProperty('--sky1', p.sky[1]);
   root.setProperty('--muted', rgba(p.text, 0.66));
+  p.glass.forEach((g, i) => root.setProperty(`--g${i}`, `rgb(${g[0]},${g[1]},${g[2]})`));
   // translucent tints (precomputed: color-mix() isn't available on iOS 15)
   const surface = p.dark ? '#232A45' : '#FFFFFF';
   for (const [name, hex] of [['ink', p.ink], ['accent', p.accent], ['sky0', p.sky[0]], ['surface', surface]]) {
@@ -206,6 +207,8 @@ function startLevel(index, opts = {}) {
   const intro = fresh && index > 0 && index % PER_WORLD === 0 ? WORLD_INTRO[level.world] : null;
   const tut = fresh && index < 3;
   $('#coach').hidden = !(tut || intro);
+  // the coach floats just above the cannon, whatever the screen's shape
+  $('#coach').style.bottom = `${Math.round(window.innerHeight - renderer.floorY() + renderer.scale * 1.75)}px`;
   $('#coach').classList.toggle('textonly', !tut);
   $('#coach-text').textContent = intro || (index === 0 ? 'Pull back anywhere, then release' : index === 1 ? 'Line them up. The ball goes straight through glass' : 'Knock it down. Falling glass shatters');
   show('hud');
@@ -508,7 +511,9 @@ function renderLevels() {
   }).join('');
   const w = WORLDS[viewWorld];
   const ws = worldStars(LEVELS, viewWorld);
-  $('#world-head').innerHTML = `<div><h3>${w.name}</h3><p>${w.sub}</p></div><span class="ws"><svg><use href="#i-star"/></svg>${ws} / ${PER_WORLD * 3}</span>`;
+  const cleared = LEVELS.filter((l) => l.world === viewWorld && d().stars[l.id]).length;
+  $('#world-head').innerHTML = `<div class="wh-top"><div><h3>${w.name}</h3><p>${w.sub} · ${cleared} / ${PER_WORLD} cleared</p></div><span class="ws"><svg><use href="#i-star"/></svg>${ws} / ${PER_WORLD * 3}</span></div>
+    <div class="wh-bar" role="progressbar" aria-label="Stars in ${w.name}" aria-valuemin="0" aria-valuemax="${PER_WORLD * 3}" aria-valuenow="${ws}"><i style="width:${(ws / (PER_WORLD * 3) * 100).toFixed(1)}%"></i></div>`;
   const cur = progressIndex();
   const grid = $('#level-grid');
   let html = '';
@@ -518,8 +523,8 @@ function renderLevels() {
     if (!lv) break;
     const st = d().stars[lv.id] || 0;
     const open = unlocked(i);
-    const cls = !open ? 'locked' : i === cur && !st ? 'current' : '';
-    html += `<button class="lvl ${cls}" data-i="${i}" aria-label="Level ${i + 1}${open ? `, ${st} stars` : ', locked'}">${open ? `${i + 1}<span class="st">${[0, 1, 2].map((j) => `<svg class="${j < st ? 'on' : ''}"><use href="#i-star"/></svg>`).join('')}</span>` : '<svg><use href="#i-lock"/></svg>'}</button>`;
+    const cls = !open ? 'locked' : i === cur && !st ? 'current' : st === 3 ? 'perfect' : '';
+    html += `<button class="lvl ${cls}" data-i="${i}" aria-label="Level ${i + 1}${open ? `, ${st} stars` : ', locked'}">${i + 1}${open ? `<span class="st">${[0, 1, 2].map((j) => `<svg class="${j < st ? 'on' : ''}"><use href="#i-star"/></svg>`).join('')}</span>` : '<svg class="lk"><use href="#i-lock"/></svg>'}</button>`;
   }
   grid.innerHTML = html;
 }
@@ -557,6 +562,7 @@ function renderShop(previewId) {
   const px = pc.getContext('2d');
   px.setTransform(1, 0, 0, 1, 0, 0); px.clearRect(0, 0, 240, 240);
   renderer.drawBall(px, 120, 116, 82, sel, 0.4);
+  if (previewId) { pc.classList.remove('pop'); void pc.offsetWidth; pc.classList.add('pop'); }
   $('#ball-name').textContent = sel.name;
   const grid = $('#skin-grid');
   grid.innerHTML = '';

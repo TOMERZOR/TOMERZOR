@@ -196,3 +196,14 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
   - The device's tier is saved, and each launch retries one tier higher, so a passing hiccup never degrades a device for good. This replaces the old ladder, which needed about 10 s of jank before effects thinned out.
 - **Result:** at 4× throttle the heavy shots now drop 1–7% of frames, better than before the overhaul. At normal speed the game stays at full quality with 0–0.1% slow frames.
 - **Verified:** proof replay 220/220, validate-levels and all scenarios pass, no console errors.
+
+## Round 26: marketing regenerated from the new game
+- **Store screenshots** (6 for the App Store at 1290×2796, 6 for Google Play at 1080×1920): the ×10 chain glowing white, the bank-shot guide, bombs with lit fuses mid-chain, the Night moonbeam with bottles throwing coloured light, the home screen with a full crystal, and the ball shop.
+  - Captures now wait for the level intro to finish.
+  - Home and shop are framed in the Lilac palette they actually show; before, they were framed in Mint, a mismatch.
+  - Captions use Nunito.
+- **Trailer:** 18.4 s at 1080×1920, captured frame by frame; each level assembles on camera.
+  - The mixer was taught the new sound design: crystal bells on chains, the intro notes, the slow-motion sigh with music ducking, and the win shimmer.
+  - Mix peak 0.89, no clipping.
+- **Landing page:** a new hero (the chain reaction) and four screenshots, and Nunito bundled on the site and support page.
+- **First-run walkthrough** (`firstrun` scenario): a fresh install, the coached first shot, a ×3 one-shot clear, confetti, then level 2 assembling with its own tip. No console errors.

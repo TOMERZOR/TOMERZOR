@@ -80,12 +80,12 @@ shots.push({ img: await raw('raw4'), cap: '5 worlds. 120 levels.', sub: 'Plus a 
 await page.evaluate(() => { document.body.classList.remove('nosheet'); window.__shard.goHome(); });
 await tick(90);
 await page.waitForTimeout(900);
-shots.push({ img: await raw('raw5'), cap: 'A new puzzle daily', sub: 'Keep your streak alive', world: 1 });
+shots.push({ img: await raw('raw5'), cap: 'A new puzzle daily', sub: 'Keep your streak alive', world: 2 });
 // 6: shop
 await page.evaluate(() => document.getElementById('btn-shop').click());
 await tick(30);
 await page.waitForTimeout(500);
-shots.push({ img: await raw('raw6'), cap: 'Collect 12 balls', sub: 'From Chalk to Prism', world: 1 });
+shots.push({ img: await raw('raw6'), cap: 'Collect 12 balls', sub: 'From Chalk to Prism', world: 2 });
 
 // frame them: App Store 6.9" (1290x2796) and Google Play (1080x1920, Play caps the aspect ratio at 2:1)
 const WORLDS = await page.evaluate(async () => (await import('/js/theme.js')).WORLDS);

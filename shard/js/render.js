@@ -193,7 +193,7 @@ export function createRenderer(canvas) {
     // static bodies
     for (const e of simRef.ents) {
       if (!e.alive) continue;
-      if (e.kind === 'shelf') drawBody(c, e, e.body.getPosition(), e.body.getAngle());
+      if (e.kind === 'shelf') drawBody(c, e, e.body.getPosition(), e.body.getAngle(), 1, true);
     }
     // a mover's rail shows where it travels
     for (const e of simRef.ents) {
@@ -290,7 +290,7 @@ export function createRenderer(canvas) {
     c.closePath();
   }
 
-  function drawBody(c, e, p, a, k = 1) {
+  function drawBody(c, e, p, a, k = 1, isStatic = false) {
     const [sx, sy] = R.toScreen(p.x, p.y);
     c.save();
     c.translate(sx, sy);
@@ -302,8 +302,10 @@ export function createRenderer(canvas) {
         const rr = Math.min(e.w, e.h) * 0.5;
         // lacquered bar: soft cast shadow, lit top, darker underside
         c.save();
-        c.shadowColor = pal.dark ? 'rgba(0,0,0,0.55)' : 'rgba(60,35,35,0.3)';
-        c.shadowBlur = 0.16 * s * dpr; c.shadowOffsetX = 0.05 * s * dpr; c.shadowOffsetY = 0.1 * s * dpr;
+        if (isStatic || T.liveShadows) {
+          c.shadowColor = pal.dark ? 'rgba(0,0,0,0.55)' : 'rgba(60,35,35,0.3)';
+          c.shadowBlur = 0.16 * s * dpr; c.shadowOffsetX = 0.05 * s * dpr; c.shadowOffsetY = 0.1 * s * dpr;
+        }
         const g = c.createLinearGradient(0, e.h / 2, 0, -e.h / 2);
         const [top, bottom] = e.kind === 'mover' ? [shadeHex(pal.shelf[0], 0.12), pal.shelf[0]] : pal.shelf;
         g.addColorStop(0, top); g.addColorStop(1, bottom);
@@ -326,8 +328,10 @@ export function createRenderer(canvas) {
         const sq = u < 1 ? Math.sin(u * Math.PI) * (1 - u) * 0.55 : 0;
         c.scale(1 + sq * 0.25, 1 - sq);
         c.save();
-        c.shadowColor = rgba(accentRGB, 0.35 + sq);
-        c.shadowBlur = (0.22 + sq * 0.4) * s * dpr; c.shadowOffsetY = 0.04 * s * dpr;
+        if (T.liveShadows) {
+          c.shadowColor = rgba(accentRGB, 0.35 + sq);
+          c.shadowBlur = (0.22 + sq * 0.4) * s * dpr; c.shadowOffsetY = 0.04 * s * dpr;
+        }
         const g = c.createLinearGradient(0, e.h / 2, 0, -e.h / 2);
         g.addColorStop(0, shadeHex(pal.accent, 0.3)); g.addColorStop(1, shadeHex(pal.accent, -0.12));
         c.fillStyle = g; roundedRect(c, e.w, e.h, e.h / 2); c.fill();
@@ -650,8 +654,12 @@ export function createRenderer(canvas) {
     const f = pool.pop() || {};
     f.t = t; f.x = x; f.y = y; f.life = life; f.age = 0;
     f.vx = 0; f.vy = 0; f.grav = 0; f.drag = 0; f.size = 0.06; f.size2 = 0; f.rgb = WHITE; f.ph = Math.random() * TAU; f.col = null; f.width = 0; f.r = 0; f.data = null;
+    if (fx.length >= 480) {
+      let oldest = 0, most = -1;
+      for (let i = 0; i < fx.length; i++) { const k = fx[i].age / fx[i].life; if (k > most) { most = k; oldest = i; } }
+      recycle(oldest);
+    }
     fx.push(f);
-    if (fx.length > 480) recycle(0);
     return f;
   }
   function recycle(i) { const f = fx[i]; fx[i] = fx[fx.length - 1]; fx.pop(); pool.push(f); }
@@ -673,7 +681,8 @@ export function createRenderer(canvas) {
   const dotSprite = (rgb) => dotSpr[rgb] || (dotSpr[rgb] = softDot(rgb, 0.4));
 
   // the moment glass breaks: a flash, a star of cracks, glitter and a puff of glass dust
-  function shatter(x, y, rgb, power = 0.6, big = false) {
+  // skin: the equipped ball's glitter colours (a ball you bought leaves its own sparkle in every break)
+  function shatter(x, y, rgb, power = 0.6, big = false, skin = null) {
     let f = spawn('glow', x, y, big ? 0.45 : 0.26);
     f.size = 0.2; f.size2 = big ? 2.6 : 1.1 + power * 0.5;
     f = spawn('crack', x, y, 0.22);
@@ -684,7 +693,8 @@ export function createRenderer(canvas) {
     for (let i = 0; i < ng; i++) {
       f = spawn('glit', x + rnd(-0.15, 0.15), y + rnd(-0.15, 0.15), rnd(0.55, 1.25));
       radial(f, 2.2 + power * 3.2, 1.2); f.grav = 0.35; f.drag = 1.6; f.size = rnd(0.045, 0.11);
-      f.col = Math.random() < 0.6 ? '#FFFFFF' : `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+      const roll = Math.random();
+      f.col = skin && roll < 0.4 ? skin[Math.floor(Math.random() * skin.length)] : roll < 0.7 ? '#FFFFFF' : `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     }
     const nd = Math.round(5 * quality);
     for (let i = 0; i < nd; i++) {
@@ -845,7 +855,7 @@ export function createRenderer(canvas) {
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, canvas.width, canvas.height);
     c.setTransform(dpr * z, 0, 0, dpr * z, (shx + zx * (1 - z)) * dpr, (shy + zy * (1 - z)) * dpr);
-    if (T.motes) drawMotes(c, o.fxDt || 0);
+    if (T.motes && !o.calm) drawMotes(c, o.fxDt || 0);
     if (!sim) return;
     // ropes
     c.strokeStyle = pal.ink; c.lineWidth = Math.max(1.2, 0.035 * s); c.lineCap = 'round';

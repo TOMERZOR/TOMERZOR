@@ -213,3 +213,20 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - **Native pipeline:** `sync.mjs` copies the whole web build except dev tools, so the bundled font reaches both apps. `npx cap copy` was run and both native projects carry the new build.
 - **iOS 15 audit of the new code:** no `.at()`, `findLast`, `:has()`, `dvh`, `color-mix`, `roundRect`, canvas `filter`, `OffscreenCanvas` or CSS nesting.
 - The playable web link was republished (version 4) with the whole overhaul.
+
+## Round 28: independent code review (a separate agent, given only the diff and the platform rules)
+Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: the settled-layer logic (the hash can't collide in practice, and bodies can't wake and sleep between frames), the camera matching across both layers, per-level state resets, pause and slow-motion interplay, the crystal's pay-once guard, and the audio ducking.
+
+| # | Severity | Finding | Fix | Verified |
+|---|---|---|---|---|
+| 1 | Medium | The star crystal sheet trapped the player when the crystal wasn't full (no scrim or back dismissal, only "Play") | "Not now" button; scrim and Android back close it | the reviewer's repro: closes both ways |
+| 2 | Low-medium | Moon/Sunset unlocks share multiples of 15 with the crystal, so "Your star crystal is full" overwrote "New ball unlocked" after 200 ms | background news queues; replies to taps still show at once | repro: Moon at 5.2 s, crystal at 7.9 s; shop test passes |
+| 3 | Low | At the particle cap, swap-removal evicted the newest particle, not the oldest | evict the most-aged particle | heaviest level peaks at 379 of 480 |
+| 4 | Low | Shake uncovered a 5 px strip of page background | the page wears the floor colour, so the strip matches the frame | repro: the gap is the floor colour |
+| 5 | Low | Motes and star twinkles ignored Reduce Motion; the crystal reward still sprang | gated by Reduce Motion; the reward fades | `calm` scenario |
+| 6 | Low | A delayed world-complete confetti wave could land in the next level | the callback checks it's still the same level | by code |
+| 7 | Low | The world title card replayed on every restart of a world's first level and drew above sheets | played once per world (saved); sheets and toasts layered above it | by code |
+| 8 | Low | A save from before crystals existed got a backlog (300 stars = 20 crystals, about 6,000 coins) | such saves start with one full crystal | by code |
+| 9 | Low | Pads and movers blurred their glow every frame on every tier | the blur only runs on the top tiers | by code |
+
+**Also this round:** each ball you own sprinkles its own glitter into every break: gold for Gold, coral for Coral, rainbow for the Prism ball. The design document had promised balls with their own impact colour, and it gives a reason to buy one.

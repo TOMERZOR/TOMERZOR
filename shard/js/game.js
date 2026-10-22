@@ -20,6 +20,15 @@ const mute = (m) => new Proxy(m, {
 const sfx = mute(sfxReal), hap = mute(hapReal);
 const calm = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+// the glitter a ball adds to every break: rainbow for Prism, its own light tone for other bought balls
+const RAINBOW = ['#FF7A7A', '#FFD36E', '#7CF29C', '#6EC8FF', '#B48CFF'];
+const glitterCache = new Map();
+function skinGlitter(skin) {
+  if (!skin || skin.id === 'steel') return null;
+  if (!glitterCache.has(skin.id)) glitterCache.set(skin.id, skin.prism ? RAINBOW : skin.grad ? skin.grad : [skin.c[1], skin.c[0]]);
+  return glitterCache.get(skin.id);
+}
+
 export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstShot, onBreak }) {
   let sim = null, level = null;
   let angle = 70 * DEG, aiming = false, aim = null, aimDirty = true;
@@ -134,7 +143,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           const power = Math.min(1, ev.speed / 14);
           sfx.shatter(ev.cx / W, size, power, ev.combo);
           const rgb = sim.__pal?.glass?.[(ev.tint || 0) % 3] || [200, 230, 255];
-          renderer.shatter(ev.x, ev.y, rgb, power, ev.last);
+          renderer.shatter(ev.x, ev.y, rgb, power, ev.last, skinGlitter(getSkin()));
           renderer.combo(ev.combo, ev.cx, ev.cy);
           renderer.punch(ev.cx, ev.cy, Math.min(1, 0.35 + power * 0.3 + ev.combo * 0.08));
           // touch escalates with the chain, without buzzing on every piece of a collapse

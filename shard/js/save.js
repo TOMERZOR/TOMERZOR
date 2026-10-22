@@ -21,6 +21,7 @@ export function defaults() {
     reviewAsked: false,
     crystals: 0,          // star crystals shattered (one fills every CRYSTAL_STARS stars)
     perfTier: 0,          // adaptive quality tier this device settled on (0 = full)
+    worldsSeen: [],       // worlds whose title card has played
     reminders: undefined, // undefined = never asked
     created: Date.now(),
   };
@@ -36,7 +37,13 @@ function migrate(d) {
   if (!Number.isFinite(out.coins) || out.coins < 0) out.coins = 0;
   if (!out.pending || typeof out.pending !== 'object' || Array.isArray(out.pending)) out.pending = {};
   if (!Array.isArray(out.txns)) out.txns = [];
+  // (8) a save from before crystals existed starts with one full crystal, not a backlog of them
+  if (d.crystals === undefined && out.stars && typeof out.stars === 'object') {
+    const total = Object.values(out.stars).reduce((a, v) => a + (+v || 0), 0);
+    out.crystals = Math.max(0, Math.floor(total / 15) - 1);
+  }
   if (!Number.isInteger(out.crystals) || out.crystals < 0) out.crystals = 0;
+  if (!Array.isArray(out.worldsSeen)) out.worldsSeen = [];
   if (!Number.isInteger(out.perfTier) || out.perfTier < 0 || out.perfTier > 3) out.perfTier = 0;
   out.v = VERSION;
   return out;

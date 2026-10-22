@@ -75,6 +75,7 @@ function applyPalette(w) {
   const root = document.documentElement.style;
   root.setProperty('--ink', p.ink); root.setProperty('--ink2', p.ink2); root.setProperty('--accent', p.accent);
   root.setProperty('--text', p.text); root.setProperty('--sky0', p.sky[0]); root.setProperty('--sky1', p.sky[1]);
+  root.setProperty('--floor', p.floor);
   root.setProperty('--muted', rgba(p.text, 0.66));
   p.glass.forEach((g, i) => root.setProperty(`--g${i}`, `rgb(${g[0]},${g[1]},${g[2]})`));
   // translucent tints (precomputed: color-mix() isn't available on iOS 15)
@@ -143,7 +144,9 @@ function crystalSheet() {
     </div>
     <h2>${c.ready ? 'Crystal ready' : 'Star crystal'}</h2>
     <p class="sub">${c.ready ? 'Shatter it for coins.' : `${c.need} more ${c.need === 1 ? 'star' : 'stars'} and it's full. Every ${CRYSTAL_STARS} stars fills one.`}</p>
-    <div class="actions">${c.ready ? '<button class="btn accent big" data-act="smash">Shatter</button>' : '<button class="btn primary big" data-act="play"><svg><use href="#i-play"/></svg>Play</button>'}</div>`, (act, el) => {
+    <div class="actions">${c.ready ? '<button class="btn accent big" data-act="smash">Shatter</button>' : '<button class="btn primary big" data-act="play"><svg><use href="#i-play"/></svg>Play</button>'}
+      <button class="btn ghost" data-act="close">Not now</button></div>`, (act, el) => {
+    if (act === 'close') { closeSheet(); refreshHome(); return; }
     if (act === 'play') { closeSheet(); startLevel(progressIndex()); return; }
     if (act === 'collect') { closeSheet(); refreshHome(); return; }
     if (act !== 'smash' || !crystalState().ready) return;
@@ -161,8 +164,9 @@ function crystalSheet() {
       $('#sheet .sub').textContent = 'The next one is already filling.';
       setTimeout(() => { countUp($('#loot-n'), 0, c.reward); $('#home-coins span').textContent = d().coins.toLocaleString('en-US'); }, 250);
       el.disabled = false; el.dataset.act = 'collect'; el.textContent = 'Collect';
+      $('#sheet [data-act="close"]')?.remove();
     }, calmMotion() ? 0 : 360);
-  });
+  }, refreshHome);
 }
 $('#btn-crystal').addEventListener('click', () => { sfx.resumeAudio(); sfx.tap(); hap.light(); crystalSheet(); });
 
@@ -266,7 +270,8 @@ function startLevel(index, opts = {}) {
   $('#coach-text').textContent = intro || (index === 0 ? 'Pull back anywhere, then release' : index === 1 ? 'Line them up. The ball goes straight through glass' : 'Knock it down. Falling glass shatters');
   show('hud');
   // the first time a world opens, it introduces itself
-  if (!opts.daily && fresh && index > 0 && index % PER_WORLD === 0) {
+  if (!opts.daily && fresh && index > 0 && index % PER_WORLD === 0 && !d().worldsSeen.includes(level.world)) {
+    d().worldsSeen.push(level.world);
     const w = WORLDS[level.world], card = $('#worldcard');
     card.querySelector('small').textContent = `World ${level.world + 1}`;
     card.querySelector('b').textContent = w.name;
@@ -354,13 +359,13 @@ function onWin(res) {
     const before = totalStars();
     const wasReady = crystalState().ready;
     d().stars[lv.id] = Math.max(prev, stars);
-    if (!wasReady && crystalState().ready) setTimeout(() => toast('Your star crystal is full'), 1600);
+    if (!wasReady && crystalState().ready) setTimeout(() => toast('Your star crystal is full', true), 1600);
     // star milestones unlock balls on their own
     const after = totalStars();
     for (const sk of SKINS) {
       if (sk.stars && before < sk.stars && after >= sk.stars && !d().owned.includes(sk.id)) {
         d().owned.push(sk.id);
-        setTimeout(() => toast(`New ball unlocked: ${sk.name}`), 1400);
+        setTimeout(() => toast(`New ball unlocked: ${sk.name}`, true), 1400);
       }
     }
   }
@@ -420,7 +425,7 @@ function onWin(res) {
   }, null, true);
   // a shower of glass confetti for a perfect clear; a bigger one when a world is done
   if (!calmMotion()) {
-    if (worldDone) { renderer.confetti(60); setTimeout(() => renderer.confetti(40), 500); }
+    if (worldDone) { const s = game.sim; renderer.confetti(60); setTimeout(() => { if (game.sim === s) renderer.confetti(40); }, 500); }
     else if (stars === 3) renderer.confetti(26);
   }
   // star + coin animation
@@ -545,11 +550,19 @@ $('#scrim').addEventListener('click', () => {
   const f = sheetDismiss; closeSheet(); f();
 });
 
-function toast(msg) {
+// a reply to a tap shows at once; background news (unlocks, a full crystal) queues so both are read
+const toastQueue = [];
+function toast(msg, queue = false) {
+  if (queue && toast.busy) { if (!toastQueue.includes(msg)) toastQueue.push(msg); return; }
   const t = $('#toast');
+  toast.busy = true;
   t.hidden = true; void t.offsetWidth;
   t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2500);
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => {
+    t.hidden = true; toast.busy = false;
+    if (toastQueue.length) setTimeout(() => toast(toastQueue.shift(), true), 180);
+  }, 2500);
 }
 
 // ---------- levels page ----------

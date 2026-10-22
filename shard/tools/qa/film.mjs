@@ -21,7 +21,7 @@ const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-await page.addInitScript(() => { if (!sessionStorage.getItem('film')) { localStorage.clear(); localStorage.setItem('shard.save', JSON.stringify({ v: 1, stars: { 'w0-1': 3, 'w0-2': 3, 'w0-3': 3 }, coins: 240, tutorialDone: true, settings: { sfx: true, music: false, haptics: false } })); sessionStorage.setItem('film', '1'); } });
+await page.addInitScript((SKIN) => { if (!sessionStorage.getItem('film')) { localStorage.clear(); localStorage.setItem('shard.save', JSON.stringify({ v: 1, stars: { 'w0-1': 3, 'w0-2': 3, 'w0-3': 3 }, coins: 240, tutorialDone: true, skin: SKIN, owned: ['steel', SKIN], settings: { sfx: true, music: false, haptics: false } })); sessionStorage.setItem('film', '1'); } }, process.env.SKIN || 'steel');
 await page.goto(process.env.URL || 'http://localhost:8080/index.html');
 await page.waitForTimeout(700);
 await page.evaluate(() => window.__shard.setManual(true));

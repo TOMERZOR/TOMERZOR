@@ -27,3 +27,9 @@ export function selection() {
   const h = cap();
   if (h) { h.selectionChanged?.().catch?.(() => {}); }
 }
+export function warning() {
+  if (!on) return;
+  const h = cap();
+  if (h) { h.notification({ type: 'WARNING' }).catch(() => {}); return; }
+  if (navigator.vibrate) try { navigator.vibrate([10, 60, 10]); } catch (e) {}
+}

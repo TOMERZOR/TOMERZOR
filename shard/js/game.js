@@ -144,7 +144,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           onBreak?.(ev);
           if (ev.last) {
             slowT = 1.0; timeScale = 0.2; flash = 0.22;
-            hap.heavy();
+            hap.heavy(); sfx.slowmo();
             renderer.focus(ev.cx, ev.cy, 1.06, 1.05);
             renderer.ring(ev.cx, ev.cy, 3.2, sim.__pal?.accent || '#fff', 0.9, 0.12);
             renderer.sparkle(ev.cx, ev.cy, 14);
@@ -186,7 +186,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           {
             // the lose sheet belongs to this session only, and only if nothing won in the meantime
             const s = sim;
-            setTimeout(() => { if (sim !== s || s.st.won || paused) return; sfx.lose(); onLose?.(); }, 250);
+            setTimeout(() => { if (sim !== s || s.st.won || paused) return; sfx.lose(); hap.warning(); onLose?.(); }, 250);
           }
           break;
       }

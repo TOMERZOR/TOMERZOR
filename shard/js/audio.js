@@ -155,6 +155,19 @@ export function shatter(x = 0.5, size = 0.6, power = 0.6, combo = 1) {
   if (combo > 1) chime(combo);
 }
 
+// a struck crystal bell: FM keeps the overtones bright and a little inharmonic
+function bell(t, f, dur, gain, dest) {
+  const car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
+  car.frequency.value = f; mod.frequency.value = f * 3.5;
+  const depth = Math.min(f * 2.4, 2600); // high notes ring purer, so the sidebands never fold over
+  mg.gain.setValueAtTime(depth, t); mg.gain.exponentialRampToValueAtTime(depth * 0.02, t + dur * 0.8);
+  mod.connect(mg); mg.connect(car.frequency);
+  env(g, t, 0.003, gain, dur);
+  car.connect(g); g.connect(dest);
+  car.start(t); mod.start(t); car.stop(t + dur + 0.05); mod.stop(t + dur + 0.05);
+}
+
+// each link of a chain climbs the pentatonic scale
 export function chime(combo) {
   if (!ctx || !enabled.sfx) return;
   const step = Math.min(combo - 2, 11);
@@ -162,9 +175,22 @@ export function chime(combo) {
   const f = 659.25 * Math.pow(2, semis / 12);
   const dest = out(0, 0.6);
   const t = ctx.currentTime + 0.03;
-  tone(t, f, 0.5, 0.11, dest, 'sine', 0.004);
-  tone(t, f * 2, 0.3, 0.035, dest, 'sine', 0.004);
-  tone(t, f * 3.01, 0.16, 0.015, dest, 'triangle', 0.004);
+  bell(t, f, 0.9, 0.075, dest);
+  tone(t, f, 0.5, 0.05, dest, 'sine', 0.004);
+  tone(t, f * 2, 0.3, 0.02, dest, 'sine', 0.004);
+}
+
+// the last piece: time slows. A deep falling sigh, air drawn out, the music steps back
+export function slowmo() {
+  if (!ctx || !enabled.sfx) return;
+  const t = ctx.currentTime + 0.01, dest = out(0, 0.7);
+  tone(t, 170, 1.1, 0.13, dest, 'sine', 0.04, 68);
+  noise(t, 0.95, 'bandpass', 5600, 1.4, 0.05, dest, 1700);
+  if (musicBus && enabled.music) {
+    musicBus.gain.cancelScheduledValues(t);
+    musicBus.gain.setTargetAtTime(0.08, t, 0.06);
+    musicBus.gain.setTargetAtTime(0.32, t + 1.4, 0.6);
+  }
 }
 
 // one note of the level assembling itself: quiet, rising, glassy
@@ -217,9 +243,12 @@ export function win() {
   const dest = out(0, 0.7);
   const t = ctx.currentTime + 0.05;
   [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
-    tone(t + i * 0.085, f, 0.9 - i * 0.08, 0.09, dest, 'sine', 0.005);
-    tone(t + i * 0.085, f * 2.0, 0.4, 0.025, dest, 'sine', 0.005);
+    tone(t + i * 0.085, f, 0.9 - i * 0.08, 0.08, dest, 'sine', 0.005);
+    tone(t + i * 0.085, f * 2.0, 0.4, 0.022, dest, 'sine', 0.005);
   });
+  // the top note rings out as a bell, with a shimmer of air
+  bell(t + 0.36, 1568, 1.6, 0.05, dest);
+  noise(t + 0.34, 0.7, 'highpass', 7500, 0.7, 0.03, dest);
 }
 export function lose() {
   if (!ctx || !enabled.sfx) return;

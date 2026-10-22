@@ -166,3 +166,10 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - **Store:** "No more interstitials" (jargon) became "No ads between levels. Ever."
 - **Found:** the tutorial coach covered the cannon. It now positions itself from the cannon's real height on any screen.
 - **Reduced Motion:** stops the sheen, the hover and the pulse.
+
+## Round 23: sound and haptics
+- **Combos:** each link now rings a struck crystal bell (FM synthesis) climbing the pentatonic scale, under a soft sine. The same scale as the level-intro notes, so the game has one musical language.
+- **Last piece:** time audibly slows: a deep falling sigh, air drawn out, and the music ducks for 1.4 s, then swells back.
+- **Win:** the arpeggio ends on a ringing bell with a shimmer of air.
+- **Loss:** a gentle warning haptic.
+- **Can't listen, so measured:** at the highest combos the bell's FM sidebands could have folded past 20 kHz. Capping the modulation depth keeps energy above 16 kHz at or below 1.3% and the peak at 0.075 (no clipping).

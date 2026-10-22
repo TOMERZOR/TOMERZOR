@@ -154,7 +154,7 @@ export function createSim(planck, level, opts = {}) {
         const b = world.createBody({ type: 'kinematic', position: pos, angle: ang });
         const poly = chamferPoly(o.w, o.h, o.h * 0.45);
         b.createFixture(Polygon(poly.map(([x, y]) => Vec2(x, y))), fixtureDef('shelf', CAT_STATIC, MASK.static));
-        const e = addEnt({ kind: 'mover', body: b, polys: [poly], w: o.w, h: o.h });
+        const e = addEnt({ kind: 'mover', body: b, polys: [poly], w: o.w, h: o.h, track: { x0: o.x, y0: o.y, dx: o.dx || 0, dy: o.dy || 0, spin: !!o.spin } });
         movers.push({ e, o, x0: o.x, y0: o.y, a0: ang });
         return e;
       }

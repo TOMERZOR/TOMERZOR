@@ -56,7 +56,9 @@ a { color: inherit; text-decoration: none; }
 svg { width: 24px; height: 24px; flex: none; }
 [hidden] { display: none !important; }
 
-#stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#stage, #stage-bg { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#stage { touch-action: none; }
+#stage-bg { pointer-events: none; }
 
 .screen { position: fixed; inset: 0; display: none; pointer-events: none; padding: calc(var(--sat) + 10px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px); }
 .screen.on { display: flex; flex-direction: column; }

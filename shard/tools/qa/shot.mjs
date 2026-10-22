@@ -14,6 +14,7 @@ if (process.env.THROTTLE) { const cdp = await ctx.newCDPSession(page); await cdp
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
+if (process.env.RDBG) await page.addInitScript((v) => { window.__rdbg = JSON.parse(v); }, process.env.RDBG);
 if (process.env.FRESH !== '0') await page.addInitScript(() => { if (!sessionStorage.getItem('qa')) { localStorage.clear(); sessionStorage.setItem('qa', '1'); } });
 await page.goto(URL);
 await page.waitForTimeout(800);

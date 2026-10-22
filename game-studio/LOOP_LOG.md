@@ -78,3 +78,30 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - **Found:** (1) the shareable web build crashed at start because the page wrapper has no `theme-color` tag; (2) on 16:9 phones the home-screen glass scene sat behind the Daily card, and on tablets it overlapped the tagline; (3) at 360 px the "×2 coins" button wrapped onto two lines.
 - **Fix:** (1) the tag is optional; (2) the scene now measures the gap between the tagline and the Daily card and centers itself there (shrinking only when the gap is too small), the logo moves up on short screens, and the demo picks its shots with the same aim guide players use, so every shot reaches glass; (3) tighter padding and no wrapping on the small buttons.
 - **Verified:** no glass moves before the first shot on any size, the regression suite passes (hint, shop, streak, economy, audio), and all 220 proofs replay in the browser.
+
+## Round 16: the masterpiece pass begins
+- Standing orders written to `game-studio/MASTERPIECE_COMMAND.md`: five pillars (satisfying, luminous, calm, rewarding, fair), guardrails, art direction, 12 work areas and the loop.
+- **Typography:** Nunito (SIL OFL) is bundled. Until now the iPhone showed SF Pro Rounded, Android showed Roboto and the store screenshots showed Inter; now all of them match.
+- **New tools:** `qa/film.mjs` films a shot frame by frame into a contact sheet; the `perfprobe` scenario measures frame times on the heaviest real levels, with `THROTTLE=4` to imitate a mid-range phone.
+
+## Rounds 17–18: light and materials
+- **Stage:**
+  - Each world is now a time of day with its own key light: a soft shaft from the top left, a pool of light where it lands, dust drifting through the beam, a vignette, fine grain, and shade where the walls meet the floor and ceiling.
+  - Ember became a sunset so it no longer looks like Dawn, with embers rising.
+  - Night got a moonbeam and twinkling stars.
+- **Glass:**
+  - Each piece is baked once into a sprite: clear where the light enters and denser away from it, a saturated band where the wall is seen edge-on, two reflections plus a faint one on the far side, a rim catching the light, and a glint.
+  - Every piece casts a coloured shadow with a bright caustic core; at night it throws coloured light instead.
+  - Reflections and glints vary per piece, so stacks don't repeat.
+- **Other materials:**
+  - Wood: grain and a knot.
+  - Stone: speckles.
+  - Shelves: lacquered, with soft cast shadows.
+  - Bombs: an iron shell, a glowing core, a breathing halo and a sparking fuse.
+  - Pads: glossy, with chevrons, and they squash when hit.
+  - Movers: a machined hub and a dotted rail that shows where they travel.
+- **Found:**
+  - At 4× CPU throttle, shadows took the heaviest level from 12% to 34–45% slow frames.
+  - An earlier "0% slow frames" reading was false: a debug hook threw every frame, so nothing was drawn. Lesson: never trust a perf number without checking that the frame actually rendered.
+- **Fix:** two canvas layers. Everything asleep in the physics engine (nearly all glass, nearly all the time) is drawn once into a settled layer that redraws only when something wakes, sleeps or breaks. The live layer draws only what moves.
+- **Result:** 1–11% slow frames at 4× throttle, better than before the overhaul, with far richer visuals. Proof replay 220/220, validate-levels passes, and the scenarios pass with no console errors.

@@ -153,7 +153,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           const now = performance.now();
           if (now - lastHitSound > 45) { lastHitSound = now; sfx.hit(ev.a, ev.b, ev.speed, ev.x / W); }
           if ((ev.a === 'ball' || ev.b === 'ball') && ev.speed > 6) renderer.burst(ev.x, ev.y, 3, 'rgba(255,255,255,0.8)', 2, 0.04, 0.3);
-          if (ev.a === 'pad' || ev.b === 'pad') { renderer.ring(ev.x, ev.y, 0.8, sim.__pal?.accent || '#fff', 0.3, 0.08); hap.light(); }
+          if (ev.a === 'pad' || ev.b === 'pad') { renderer.ring(ev.x, ev.y, 0.8, sim.__pal?.accent || '#fff', 0.3, 0.08); renderer.padHit(ev.x, ev.y); hap.light(); }
           break;
         }
         case 'ballGone':

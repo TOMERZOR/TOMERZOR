@@ -5,7 +5,14 @@ const TAU = Math.PI * 2;
 const FONT = '"Nunito", ui-rounded, system-ui, sans-serif';
 
 export function createRenderer(canvas) {
-  const ctx = canvas.getContext('2d', { alpha: false });
+  // two layers: the settled layer (stage plus everything at rest) redraws only when that set changes;
+  // the live canvas above it is cleared and redrawn every frame with what moves
+  const ctx = canvas.getContext('2d');
+  const bgc = document.createElement('canvas');
+  bgc.id = 'stage-bg'; bgc.setAttribute('aria-hidden', 'true');
+  canvas.parentNode.insertBefore(bgc, canvas);
+  const bctx = bgc.getContext('2d', { alpha: false });
+  let restKey = -1, shakeCss = '';
   const stat = document.createElement('canvas');
   const sctx = stat.getContext('2d');
   let cw = 0, ch = 0, dpr = 1, s = 40, ox = 0, oy = 0, pal = null;
@@ -20,6 +27,8 @@ export function createRenderer(canvas) {
       cw = w; ch = h; dpr = ratio;
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+      bgc.width = canvas.width; bgc.height = canvas.height;
+      bgc.style.width = w + 'px'; bgc.style.height = h + 'px';
       stat.width = canvas.width; stat.height = canvas.height;
       const top = safe.top + 66, bottom = Math.max(safe.bottom + 30, 46);
       s = Math.min(w / W, (h - top - bottom) / CEIL);
@@ -28,61 +37,151 @@ export function createRenderer(canvas) {
       oy = h - bottom - extra * 0.42;
       staticDirty = true;
     },
-    setPalette(p) { pal = p; staticDirty = true; },
+    setPalette(p) { pal = p; staticDirty = true; seedMotes(); },
     setSim(sim) { simRef = sim; staticDirty = true; fx.length = 0; texts.length = 0; },
     invalidate() { staticDirty = true; },
     toScreen(x, y) { return [ox + x * s, oy - y * s]; },
     toWorld(px, py) { return [(px - ox) / s, (oy - py) / s]; },
     floorY: () => oy,
+    // the pad nearest an impact squashes
+    padHit(x, y) {
+      let best = null, bd = Infinity;
+      for (const e of simRef?.ents || []) {
+        if (e.kind !== 'pad') continue;
+        const p = e.body.getPosition(), d = (p.x - x) ** 2 + (p.y - y) ** 2;
+        if (d < bd) { bd = d; best = e; }
+      }
+      if (best) best.hitT = performance.now();
+    },
     burst, ring, text, sparkle, setFlash: (v) => { flash = v; },
     draw,
     bounds: () => ({ ox, oy, s, cw, ch }),
   };
 
-  // ---------- static layer ----------
+  // ---------- stage: wall, light and framing (cached; redrawn on resize, palette or level change) ----------
+  const rgba = (rgb, a) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+  let grain = null;
+  const stars = [];
+  function grainCanvas() {
+    if (grain) return grain;
+    grain = document.createElement('canvas'); grain.width = grain.height = 160;
+    const g = grain.getContext('2d'), img = g.createImageData(160, 160);
+    let seed = 90217;
+    for (let i = 0; i < img.data.length; i += 4) {
+      seed = (seed * 16807) % 2147483647;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = seed & 1 ? 255 : 0;
+      img.data[i + 3] = (seed >> 7) % 30;
+    }
+    g.putImageData(img, 0, 0);
+    return grain;
+  }
+  // the key light falls from the top left; the beam's axis in world units (y up), shared with the motes
+  const BEAM = { x0: W * 0.1, y0: CEIL + 1.2, x1: W * 0.64, y1: -0.5, w0: 1.1, w1: 3.6 };
+  function beamBand(c, k, alpha) {
+    const [x0, y0] = R.toScreen(BEAM.x0, BEAM.y0), [x1, y1] = R.toScreen(BEAM.x1, BEAM.y1);
+    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy), nx = -dy / L, ny = dx / L;
+    const a = BEAM.w0 * s * k / 2, b = BEAM.w1 * s * k / 2;
+    const g = c.createRadialGradient(x0, y0, 0, x0, y0, L * 1.05);
+    g.addColorStop(0, rgba(pal.light, alpha)); g.addColorStop(0.55, rgba(pal.light, alpha * 0.55)); g.addColorStop(1, rgba(pal.light, 0));
+    c.fillStyle = g;
+    c.beginPath();
+    c.moveTo(x0 + nx * a, y0 + ny * a); c.lineTo(x1 + nx * b, y1 + ny * b);
+    c.lineTo(x1 - nx * b, y1 - ny * b); c.lineTo(x0 - nx * a, y0 - ny * a);
+    c.closePath(); c.fill();
+  }
   function renderStatic() {
     const c = sctx;
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // sky
-    const g = c.createLinearGradient(0, 0, 0, ch);
+    c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+    const top = oy - CEIL * s, left = ox, RW = W * s, RH = CEIL * s;
+    // wall
+    const g = c.createLinearGradient(0, top, 0, oy);
     g.addColorStop(0, pal.sky[0]); g.addColorStop(1, pal.sky[1]);
     c.fillStyle = g; c.fillRect(0, 0, cw, ch);
-    // soft orbs for depth
-    for (const [fx_, fy, fr, a] of [[0.15, 0.18, 0.55, pal.dark ? 0.05 : 0.35], [0.9, 0.45, 0.45, pal.dark ? 0.04 : 0.25], [0.4, 0.8, 0.5, pal.dark ? 0.03 : 0.18]]) {
-      const rg = c.createRadialGradient(cw * fx_, ch * fy, 0, cw * fx_, ch * fy, cw * fr);
-      rg.addColorStop(0, pal.dark ? `rgba(140,170,255,${a})` : `rgba(255,255,255,${a})`);
-      rg.addColorStop(1, 'rgba(255,255,255,0)');
-      c.fillStyle = rg; c.fillRect(0, 0, cw, ch);
-    }
+    // warm pool of light where the key light enters
+    const gl = c.createRadialGradient(left + RW * 0.08, top, 0, left + RW * 0.08, top, RW * 1.05);
+    gl.addColorStop(0, rgba(pal.light, pal.dark ? 0.16 : 0.75)); gl.addColorStop(1, rgba(pal.light, 0));
+    c.fillStyle = gl; c.fillRect(0, 0, cw, ch);
+    // stars (night): fixed sky, a few of them twinkle in the live layer
+    stars.length = 0;
     if (pal.dark) {
       let seed = 7;
       const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-      for (let i = 0; i < 70; i++) {
-        c.fillStyle = `rgba(230,238,255,${0.15 + rnd() * 0.5})`;
-        c.beginPath(); c.arc(rnd() * cw, rnd() * (oy - 40), rnd() * 1.3 + 0.3, 0, TAU); c.fill();
+      for (let i = 0; i < 90; i++) {
+        const x = rnd() * W, y = 1.2 + rnd() * (CEIL - 1.2), r = rnd() * 0.035 + 0.008, a = 0.18 + rnd() * 0.5;
+        const [sx, sy] = R.toScreen(x, y);
+        c.fillStyle = `rgba(230,238,255,${a})`;
+        c.beginPath(); c.arc(sx, sy, Math.max(0.5, r * s), 0, TAU); c.fill();
+        if (i % 9 === 0) stars.push({ x, y, ph: rnd() * TAU, sp: 0.6 + rnd() * 0.9 });
       }
     }
-    const cy = oy - CEIL * s;
-    // margins beyond walls (wide screens)
+    // shafts of light: nested bands give soft edges
+    c.save();
+    c.beginPath(); c.rect(left, top, RW, RH); c.clip();
+    c.globalCompositeOperation = pal.dark ? 'lighter' : 'source-over';
+    const B = pal.beam;
+    beamBand(c, 1.0, B * 0.3); beamBand(c, 0.62, B * 0.34); beamBand(c, 0.3, B * 0.32);
+    // where the beam lands: a soft pool of light on the wall above the floor
+    const [px, py] = R.toScreen(BEAM.x0 + (BEAM.x1 - BEAM.x0) * 0.93, 0.15);
+    c.save(); c.translate(px, py); c.scale(1, 0.32);
+    const pool = c.createRadialGradient(0, 0, 0, 0, 0, BEAM.w1 * s * 0.75);
+    pool.addColorStop(0, rgba(pal.light, B * 0.55)); pool.addColorStop(1, rgba(pal.light, 0));
+    c.fillStyle = pool; c.beginPath(); c.arc(0, 0, BEAM.w1 * s * 0.75, 0, TAU); c.fill();
+    c.restore();
+    c.restore();
+    // the room: walls beyond the play area on wide screens, then ceiling and floor
     if (ox > 1) {
       c.fillStyle = pal.floor;
-      c.fillRect(0, 0, ox, ch); c.fillRect(ox + W * s, 0, ox + 1, ch);
+      c.fillRect(0, 0, ox, ch); c.fillRect(ox + RW, 0, ox + 1, ch);
       c.fillStyle = pal.floorEdge;
-      c.fillRect(ox - 2, cy, 2, oy - cy); c.fillRect(ox + W * s, cy, 2, oy - cy);
+      c.fillRect(ox - 2, top, 2, RH); c.fillRect(ox + RW, top, 2, RH);
     }
+    // ambient occlusion where the wall meets ceiling and floor
+    const shade = pal.dark ? 'rgba(0,0,0,0.3)' : 'rgba(90,55,45,0.09)';
+    let ao = c.createLinearGradient(0, top, 0, top + 26);
+    ao.addColorStop(0, shade); ao.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = ao; c.fillRect(left, top, RW, 26);
+    ao = c.createLinearGradient(0, oy - 20, 0, oy);
+    ao.addColorStop(0, 'rgba(0,0,0,0)'); ao.addColorStop(1, shade);
+    c.fillStyle = ao; c.fillRect(left, oy - 20, RW, 20);
+    // vignette
+    const vx = left + RW / 2, vy = (top + oy) / 2, vr = Math.hypot(RW, RH) / 2;
+    const vg = c.createRadialGradient(vx, vy, vr * 0.55, vx, vy, vr * 1.05);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, pal.dark ? 'rgba(0,0,0,0.32)' : 'rgba(80,45,40,0.1)');
+    c.fillStyle = vg; c.fillRect(left, top, RW, RH);
     // ceiling and floor bands frame the room
-    c.fillStyle = pal.floor; c.fillRect(0, 0, cw, cy);
-    c.fillRect(0, oy, cw, ch - oy);
-    c.fillStyle = pal.floorEdge; c.fillRect(0, oy, cw, 2); c.fillRect(0, cy - 2, cw, 2);
-    // a soft inner shade under the ceiling
-    const sg = c.createLinearGradient(0, cy, 0, cy + 18);
-    sg.addColorStop(0, pal.dark ? 'rgba(0,0,0,0.25)' : 'rgba(80,50,40,0.07)'); sg.addColorStop(1, 'rgba(0,0,0,0)');
-    c.fillStyle = sg; c.fillRect(ox, cy, W * s, 18);
+    let fb = c.createLinearGradient(0, 0, 0, top);
+    fb.addColorStop(0, pal.floor); fb.addColorStop(1, pal.floor);
+    c.fillStyle = fb; c.fillRect(0, 0, cw, top);
+    fb = c.createLinearGradient(0, oy, 0, ch);
+    fb.addColorStop(0, pal.floor); fb.addColorStop(1, pal.dark ? '#171C31' : shadeHex(pal.floor, -0.06));
+    c.fillStyle = fb; c.fillRect(0, oy, cw, ch - oy);
+    c.fillStyle = pal.floorEdge; c.fillRect(0, oy, cw, 2); c.fillRect(0, top - 2, cw, 2);
+    c.fillStyle = pal.dark ? 'rgba(0,0,0,0.25)' : 'rgba(90,55,45,0.08)'; c.fillRect(0, oy + 2, cw, 1);
+    // fine grain so flat colour reads as a surface
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalAlpha = pal.dark ? 0.55 : 0.4;
+    c.fillStyle = c.createPattern(grainCanvas(), 'repeat');
+    c.fillRect(0, 0, stat.width, stat.height);
+    c.globalAlpha = 1;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (!simRef) return;
     // static bodies
     for (const e of simRef.ents) {
       if (!e.alive) continue;
-      if (e.kind === 'shelf' || e.kind === 'pad') drawBody(c, e, e.body.getPosition(), e.body.getAngle(), true);
+      if (e.kind === 'shelf') drawBody(c, e, e.body.getPosition(), e.body.getAngle());
+    }
+    // a mover's rail shows where it travels
+    for (const e of simRef.ents) {
+      const t = e.track;
+      if (e.kind !== 'mover' || !t || t.spin || (!t.dx && !t.dy)) continue;
+      const [ax, ay] = R.toScreen(t.x0 - t.dx, t.y0 - t.dy), [bx, by] = R.toScreen(t.x0 + t.dx, t.y0 + t.dy);
+      c.strokeStyle = pal.ink; c.globalAlpha = 0.16; c.lineWidth = 0.05 * s; c.lineCap = 'round';
+      c.setLineDash([0.02 * s, 0.14 * s]);
+      c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
+      c.setLineDash([]); c.globalAlpha = 0.3; c.fillStyle = pal.ink;
+      for (const [x, y] of [[ax, ay], [bx, by]]) { c.beginPath(); c.arc(x, y, 0.06 * s, 0, TAU); c.fill(); }
+      c.globalAlpha = 1;
     }
     for (const rp of simRef.ropes) {
       if (rp.A) continue;
@@ -91,6 +190,62 @@ export function createRenderer(canvas) {
       c.beginPath(); c.arc(ax, ay, 0.11 * s, 0, TAU); c.fill();
       c.fillRect(ax - 0.32 * s, ay - 0.16 * s, 0.64 * s, 0.07 * s);
     }
+  }
+  // lighten (k > 0) or darken (k < 0) a #RRGGBB colour
+  function shadeHex(hex, k) {
+    const n = parseInt(hex.slice(1), 16), t = k < 0 ? 0 : 255, f = Math.abs(k);
+    const ch_ = (v) => Math.round(v + (t - v) * f);
+    return `rgb(${ch_(n >> 16)},${ch_((n >> 8) & 255)},${ch_(n & 255)})`;
+  }
+
+  // ---------- ambient motes: dust in the light, pollen, rising embers, starlight ----------
+  const motes = [];
+  let moteSprite = null;
+  function seedMotes() {
+    motes.length = 0;
+    const m = pal.motes;
+    if (!m) return;
+    for (let i = 0; i < m.n; i++) motes.push({ x: Math.random() * W, y: Math.random() * CEIL, r: 0.025 + Math.random() * 0.05, ph: Math.random() * TAU, sp: 0.4 + Math.random() * 0.8 });
+    moteSprite = document.createElement('canvas'); moteSprite.width = moteSprite.height = 32;
+    const g = moteSprite.getContext('2d'), rg = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+    rg.addColorStop(0, rgba(m.rgb, 1)); rg.addColorStop(0.35, rgba(m.rgb, 0.55)); rg.addColorStop(1, rgba(m.rgb, 0));
+    g.fillStyle = rg; g.fillRect(0, 0, 32, 32);
+  }
+  // 0..1: how deep inside the shaft of light a world point is
+  function inBeam(x, y) {
+    const dx = BEAM.x1 - BEAM.x0, dy = BEAM.y1 - BEAM.y0, L2 = dx * dx + dy * dy;
+    const t = Math.max(0, Math.min(1, ((x - BEAM.x0) * dx + (y - BEAM.y0) * dy) / L2));
+    const d = Math.abs((x - BEAM.x0) * dy - (y - BEAM.y0) * dx) / Math.sqrt(L2);
+    const hw = (BEAM.w0 + (BEAM.w1 - BEAM.w0) * t) * 0.5;
+    return Math.max(0, 1 - d / hw);
+  }
+  function drawMotes(c, dt) {
+    const m = pal.motes;
+    if (!m || !moteSprite) return;
+    const t = performance.now() / 1000;
+    for (const p of motes) {
+      p.x += Math.sin(t * 0.4 + p.ph) * 0.04 * dt * p.sp;
+      p.y += (m.rise + Math.sin(t * 0.3 + p.ph * 2) * 0.04) * dt * p.sp;
+      if (p.y > CEIL) { p.y = 0.2; p.x = Math.random() * W; }
+      if (p.y < 0) { p.y = CEIL - 0.2; p.x = Math.random() * W; }
+      if (p.x < 0) p.x += W; else if (p.x > W) p.x -= W;
+      let a;
+      if (m.ember) a = (0.25 + 0.75 * Math.max(0, 1 - p.y / CEIL)) * (0.55 + 0.45 * Math.sin(t * 6 * p.sp + p.ph));
+      else a = (pal.dark ? 0.35 : 0.12) + (pal.dark ? 0.5 : 0.85) * Math.pow(inBeam(p.x, p.y), 1.2);
+      const [sx, sy] = R.toScreen(p.x, p.y), z = p.r * s * (m.ember ? 2.2 : 3);
+      c.globalAlpha = a * (0.75 + 0.25 * Math.sin(t * 1.3 * p.sp + p.ph));
+      c.drawImage(moteSprite, sx - z, sy - z, z * 2, z * 2);
+    }
+    // a few stars twinkle
+    for (const st of stars) {
+      const k = Math.pow(Math.max(0, Math.sin(t * st.sp + st.ph)), 18);
+      if (k < 0.02) continue;
+      const [sx, sy] = R.toScreen(st.x, st.y), z = 0.16 * s * k;
+      c.globalAlpha = k * 0.9; c.fillStyle = '#FFFFFF';
+      c.beginPath(); c.moveTo(sx, sy - z); c.lineTo(sx + z * 0.16, sy - z * 0.16); c.lineTo(sx + z, sy); c.lineTo(sx + z * 0.16, sy + z * 0.16);
+      c.lineTo(sx, sy + z); c.lineTo(sx - z * 0.16, sy + z * 0.16); c.lineTo(sx - z, sy); c.lineTo(sx - z * 0.16, sy - z * 0.16); c.closePath(); c.fill();
+    }
+    c.globalAlpha = 1;
   }
 
   // ---------- shapes ----------
@@ -111,7 +266,7 @@ export function createRenderer(canvas) {
     c.closePath();
   }
 
-  function drawBody(c, e, p, a, isStatic) {
+  function drawBody(c, e, p, a) {
     const [sx, sy] = R.toScreen(p.x, p.y);
     c.save();
     c.translate(sx, sy);
@@ -120,112 +275,261 @@ export function createRenderer(canvas) {
     const lw = 1 / s;
     switch (e.kind) {
       case 'shelf': case 'mover': {
-        c.fillStyle = 'rgba(0,0,0,0.07)';
-        c.save(); c.translate(0.04, -0.07); roundedRect(c, e.w, e.h, Math.min(e.w, e.h) * 0.5); c.fill(); c.restore();
-        c.fillStyle = e.kind === 'mover' ? pal.ink2 : pal.ink;
-        roundedRect(c, e.w, e.h, Math.min(e.w, e.h) * 0.5); c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.14)';
-        roundedRect(c, e.w - 0.06, Math.max(0.02, e.h * 0.28), 0.03); c.save(); c.translate(0, e.h * 0.22); c.fill(); c.restore();
+        const rr = Math.min(e.w, e.h) * 0.5;
+        // lacquered bar: soft cast shadow, lit top, darker underside
+        c.save();
+        c.shadowColor = pal.dark ? 'rgba(0,0,0,0.55)' : 'rgba(60,35,35,0.3)';
+        c.shadowBlur = 0.16 * s * dpr; c.shadowOffsetX = 0.05 * s * dpr; c.shadowOffsetY = 0.1 * s * dpr;
+        const g = c.createLinearGradient(0, e.h / 2, 0, -e.h / 2);
+        const [top, bottom] = e.kind === 'mover' ? [shadeHex(pal.shelf[0], 0.12), pal.shelf[0]] : pal.shelf;
+        g.addColorStop(0, top); g.addColorStop(1, bottom);
+        c.fillStyle = g; roundedRect(c, e.w, e.h, rr); c.fill();
+        c.restore();
+        c.strokeStyle = pal.dark ? 'rgba(235,242,255,0.55)' : 'rgba(255,255,255,0.32)'; c.lineWidth = lw * 1.2; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(-e.w / 2 + rr, e.h / 2 - lw * 1.2); c.lineTo(e.w / 2 - rr, e.h / 2 - lw * 1.2); c.stroke();
         if (e.kind === 'mover') {
-          c.fillStyle = pal.accent; c.globalAlpha = 0.9;
-          c.beginPath(); c.arc(0, 0, Math.min(0.06, e.h * 0.3), 0, TAU); c.fill(); c.globalAlpha = 1;
+          // a machined hub marks the moving part
+          c.fillStyle = pal.accent;
+          c.beginPath(); c.arc(0, 0, Math.min(0.075, e.h * 0.34), 0, TAU); c.fill();
+          c.fillStyle = 'rgba(255,255,255,0.7)';
+          c.beginPath(); c.arc(-0.012, 0.012, Math.min(0.025, e.h * 0.12), 0, TAU); c.fill();
         }
         break;
       }
       case 'pad': {
-        c.fillStyle = 'rgba(0,0,0,0.07)';
-        c.save(); c.translate(0.04, -0.07); roundedRect(c, e.w, e.h, e.h / 2); c.fill(); c.restore();
-        c.fillStyle = pal.accent;
-        roundedRect(c, e.w, e.h, e.h / 2); c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.55)';
-        for (let i = -2; i <= 2; i++) { c.beginPath(); c.arc(i * e.w / 6, 0, e.h * 0.16, 0, TAU); c.fill(); }
+        // springy: squashes for a moment when the ball lands
+        const u = e.hitT ? (performance.now() - e.hitT) / 300 : 1;
+        const sq = u < 1 ? Math.sin(u * Math.PI) * (1 - u) * 0.55 : 0;
+        c.scale(1 + sq * 0.25, 1 - sq);
+        c.save();
+        c.shadowColor = rgba(hexRGB(pal.accent), 0.35 + sq);
+        c.shadowBlur = (0.22 + sq * 0.4) * s * dpr; c.shadowOffsetY = 0.04 * s * dpr;
+        const g = c.createLinearGradient(0, e.h / 2, 0, -e.h / 2);
+        g.addColorStop(0, shadeHex(pal.accent, 0.3)); g.addColorStop(1, shadeHex(pal.accent, -0.12));
+        c.fillStyle = g; roundedRect(c, e.w, e.h, e.h / 2); c.fill();
+        c.restore();
+        c.fillStyle = 'rgba(255,255,255,0.4)';
+        roundedRect(c, e.w - e.h * 0.6, e.h * 0.22, e.h * 0.11); c.save(); c.translate(0, e.h * 0.2); c.fill(); c.restore();
+        // chevrons say "bounce"
+        c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = lw * 1.6; c.lineCap = 'round'; c.lineJoin = 'round';
+        const ch_ = e.h * 0.2;
+        for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(i * e.w / 4 - ch_, -ch_ * 0.55); c.lineTo(i * e.w / 4, ch_ * 0.45); c.lineTo(i * e.w / 4 + ch_, -ch_ * 0.55); c.stroke(); }
         break;
       }
-      case 'glass': drawGlass(c, e, lw); break;
       case 'shard': drawShard(c, e, lw); break;
-      case 'stone': {
-        c.fillStyle = 'rgba(0,0,0,0.1)';
-        c.save(); c.translate(0.05, -0.08);
-        if (e.circle) { c.beginPath(); c.arc(0, 0, e.circle, 0, TAU); } else polyPath(c, e.outline);
-        c.fill(); c.restore();
-        const gr = c.createLinearGradient(0, (e.h || e.circle * 2) / 2, 0, -(e.h || e.circle * 2) / 2);
-        gr.addColorStop(0, pal.dark ? '#8A90A8' : '#6E6A78'); gr.addColorStop(1, pal.dark ? '#5C627A' : '#4A4654');
-        c.fillStyle = gr;
-        if (e.circle) { c.beginPath(); c.arc(0, 0, e.circle, 0, TAU); } else polyPath(c, e.outline);
-        c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.12)';
-        c.beginPath(); c.arc(-(e.w || 0.5) * 0.18, (e.h || 0.5) * 0.18, Math.min(e.w || 0.5, e.h || 0.5) * 0.14, 0, TAU); c.fill();
-        c.fillStyle = 'rgba(0,0,0,0.12)';
-        c.beginPath(); c.arc((e.w || 0.5) * 0.2, -(e.h || 0.5) * 0.12, Math.min(e.w || 0.5, e.h || 0.5) * 0.09, 0, TAU); c.fill();
-        break;
-      }
-      case 'wood': {
-        c.fillStyle = 'rgba(0,0,0,0.08)';
-        c.save(); c.translate(0.04, -0.06); roundedRect(c, e.w, e.h, 0.035); c.fill(); c.restore();
-        c.fillStyle = '#E2B47A';
-        roundedRect(c, e.w, e.h, 0.035); c.fill();
-        c.strokeStyle = 'rgba(140,85,35,0.35)'; c.lineWidth = lw * 1.2;
-        const long = e.w > e.h;
-        c.beginPath();
-        for (let i = -1; i <= 1; i += 2) {
-          if (long) { c.moveTo(-e.w / 2 + 0.08, i * e.h * 0.18); c.lineTo(e.w / 2 - 0.08, i * e.h * 0.18); }
-          else { c.moveTo(i * e.w * 0.18, -e.h / 2 + 0.08); c.lineTo(i * e.w * 0.18, e.h / 2 - 0.08); }
-        }
-        c.stroke();
-        c.fillStyle = 'rgba(255,255,255,0.22)';
-        if (long) c.fillRect(-e.w / 2 + 0.03, e.h / 2 - 0.045, e.w - 0.06, 0.025);
-        else c.fillRect(-e.w / 2 + 0.025, -e.h / 2 + 0.03, 0.025, e.h - 0.06);
-        break;
-      }
       case 'bomb': {
         const r = e.circle;
         const t = performance.now() / 1000;
-        c.fillStyle = 'rgba(0,0,0,0.1)'; c.beginPath(); c.arc(0.04, -0.07, r, 0, TAU); c.fill();
-        const pulse = 0.5 + 0.5 * Math.sin(t * 5 + e.id);
-        c.fillStyle = pal.accent;
-        c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
-        c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = lw * 2.4;
-        c.beginPath(); c.arc(0, 0, r * 0.62, 0, TAU); c.stroke();
-        c.fillStyle = 'rgba(255,255,255,0.95)';
-        c.beginPath(); c.arc(0, 0, r * (0.18 + pulse * 0.08), 0, TAU); c.fill();
-        c.fillStyle = 'rgba(255,255,255,0.3)';
-        c.beginPath(); c.arc(-r * 0.35, r * 0.4, r * 0.18, 0, TAU); c.fill();
+        const pulse = 0.5 + 0.5 * Math.sin(t * 5.5 + e.id);
+        // live: a warm halo breathes around it
+        const halo = c.createRadialGradient(0, 0, r * 0.5, 0, 0, r * (1.6 + pulse * 0.25));
+        halo.addColorStop(0, rgba(hexRGB(pal.accent), 0.28 + pulse * 0.12)); halo.addColorStop(1, rgba(hexRGB(pal.accent), 0));
+        c.fillStyle = halo; c.beginPath(); c.arc(0, 0, r * 1.9, 0, TAU); c.fill();
+        // fuse with a spark
+        c.strokeStyle = pal.dark ? '#C9CEDF' : '#4A4152'; c.lineWidth = lw * 2.2; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(0, r * 0.85); c.quadraticCurveTo(r * 0.05, r * 1.3, r * 0.42, r * 1.38); c.stroke();
+        const fl = 0.75 + 0.25 * Math.sin(t * 31 + e.id * 3);
+        const sg = c.createRadialGradient(r * 0.42, r * 1.38, 0, r * 0.42, r * 1.38, r * 0.42 * fl);
+        sg.addColorStop(0, 'rgba(255,250,220,1)'); sg.addColorStop(0.35, rgba(hexRGB(pal.accent), 0.9)); sg.addColorStop(1, rgba(hexRGB(pal.accent), 0));
+        c.fillStyle = sg; c.beginPath(); c.arc(r * 0.42, r * 1.38, r * 0.42 * fl, 0, TAU); c.fill();
+        // iron shell
+        const gr = c.createRadialGradient(-r * 0.35, r * 0.4, r * 0.05, 0, 0, r);
+        gr.addColorStop(0, '#6E647E'); gr.addColorStop(0.55, '#2E2838'); gr.addColorStop(1, '#16121C');
+        c.fillStyle = gr; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+        c.fillStyle = '#3A3346'; c.fillRect(-r * 0.22, r * 0.78, r * 0.44, r * 0.18);
+        // glowing core
+        const cr = r * (0.36 + pulse * 0.05);
+        const cg = c.createRadialGradient(0, 0, 0, 0, 0, cr);
+        cg.addColorStop(0, '#FFF3D6'); cg.addColorStop(0.45, shadeHex(pal.accent, 0.25)); cg.addColorStop(1, pal.accent);
+        c.fillStyle = cg; c.beginPath(); c.arc(0, 0, cr, 0, TAU); c.fill();
+        c.strokeStyle = 'rgba(255,255,255,0.18)'; c.lineWidth = lw * 1.4; c.beginPath(); c.arc(0, 0, cr + lw * 2, 0, TAU); c.stroke();
+        c.fillStyle = 'rgba(255,255,255,0.55)';
+        c.beginPath(); c.ellipse(-r * 0.42, r * 0.44, r * 0.2, r * 0.11, 0.7, 0, TAU); c.fill();
         break;
       }
     }
     c.restore();
   }
+  const hexRGB = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+  const hashId = (e) => (((e.id || 1) * 2654435761) >>> 0) / 4294967296;
 
   function glassRGB(e) { return pal.glass[(e.tint || 0) % pal.glass.length]; }
 
-  function drawGlass(c, e, lw) {
-    const [r, g, b] = glassRGB(e);
-    const path = () => { if (e.circle) { c.beginPath(); c.arc(0, 0, e.circle, 0, TAU); } else polyPath(c, e.outline); };
-    // soft shadow
-    c.fillStyle = pal.dark ? 'rgba(0,0,0,0.18)' : 'rgba(40,40,80,0.06)';
-    c.save(); c.translate(0.04, -0.07); path(); c.fill(); c.restore();
-    // body
-    const hh = e.circle || (e.h || 0.6) / 2;
-    const gr = c.createLinearGradient(-hh, hh, hh, -hh);
-    const a0 = pal.dark ? 0.32 : 0.5, a1 = pal.dark ? 0.16 : 0.26;
-    gr.addColorStop(0, `rgba(${r},${g},${b},${a0})`);
-    gr.addColorStop(1, `rgba(${Math.min(255, r + 40)},${Math.min(255, g + 30)},${Math.min(255, b + 20)},${a1})`);
-    c.fillStyle = gr; path(); c.fill();
-    // edge
-    c.strokeStyle = pal.glassEdge; c.lineWidth = lw * 1.6; c.lineJoin = 'round';
-    path(); c.stroke();
-    c.strokeStyle = 'rgba(255,255,255,0.85)'; c.lineWidth = lw * 1.1;
-    c.save(); c.translate(-0.012, 0.012); path(); c.stroke(); c.restore();
-    // specular streaks
-    c.save(); path(); c.clip();
-    c.fillStyle = 'rgba(255,255,255,0.55)';
-    c.beginPath();
-    const w = (e.w || e.circle * 2), h = (e.h || e.circle * 2);
-    c.moveTo(-w * 0.5, h * 0.1); c.lineTo(-w * 0.5 + w * 0.16, h * 0.1 + w * 0.16 + h * 0.3); c.lineTo(-w * 0.5 + w * 0.26, h * 0.4 + w * 0.2); c.lineTo(-w * 0.5 + w * 0.1, h * -0.05);
-    c.closePath(); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.3)';
-    c.fillRect(w * 0.18, -h * 0.4, Math.max(0.03, w * 0.07), h * 0.55);
+  // ---------- glass: each piece is baked into a sprite (rebuilt when scale, palette or tint change) ----------
+  const LIGHT = [-0.6, 0.8]; // toward the key light (top left), world units, y up
+  const SHADOW = [0.1, -0.14]; // where shadows fall, world units
+  function shapePath(c, e) { if (e.circle) { c.beginPath(); c.arc(0, 0, e.circle, 0, TAU); } else polyPath(c, e.outline); }
+  function shapeBounds(e) {
+    if (e.circle) return [-e.circle, -e.circle, e.circle, e.circle];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of e.outline) { if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; }
+    return [x0, y0, x1, y1];
+  }
+  // paint(c) draws in the body's local units (y up); returns the sprite and its anchor in CSS px
+  function bake(e, m, paint) {
+    const [x0, y0, x1, y1] = shapeBounds(e), k = s * dpr;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil((x1 - x0 + 2 * m) * k)); cv.height = Math.max(1, Math.ceil((y1 - y0 + 2 * m) * k));
+    const c = cv.getContext('2d');
+    c.setTransform(k, 0, 0, -k, (m - x0) * k, (y1 + m) * k);
+    paint(c, x0, y0, x1, y1);
+    return { cv, ax: (m - x0) * s, ay: (y1 + m) * s, w: cv.width / dpr, h: cv.height / dpr };
+  }
+  // a band across the shape, perpendicular to the light: offsets d0..d1 from the centre along LIGHT
+  function lightBand(c, R0, d0, d1, alpha, fade = true) {
+    c.save();
+    c.rotate(Math.atan2(LIGHT[1], LIGHT[0]) - Math.PI / 2);
+    if (fade) {
+      const g = c.createLinearGradient(-R0 * 1.2, 0, R0 * 1.2, 0);
+      g.addColorStop(0, `rgba(255,255,255,${alpha})`); g.addColorStop(0.55, `rgba(255,255,255,${alpha * 0.8})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g;
+    } else c.fillStyle = `rgba(255,255,255,${alpha})`;
+    c.fillRect(-R0 * 1.4, d0 * R0, R0 * 2.8, (d1 - d0) * R0);
     c.restore();
+  }
+  function star4(c, x, y, z, alpha) {
+    c.fillStyle = `rgba(255,255,255,${alpha})`;
+    c.beginPath(); c.moveTo(x, y + z); c.lineTo(x + z * 0.18, y + z * 0.18); c.lineTo(x + z, y); c.lineTo(x + z * 0.18, y - z * 0.18);
+    c.lineTo(x, y - z); c.lineTo(x - z * 0.18, y - z * 0.18); c.lineTo(x - z, y); c.lineTo(x - z * 0.18, y + z * 0.18); c.closePath(); c.fill();
+  }
+  function paintGlass(c, e, x0, y0, x1, y1) {
+    const [r, g, b] = glassRGB(e);
+    const lw = 1 / s, dark = pal.dark;
+    const R0 = Math.max(x1 - x0, y1 - y0) / 2;
+    const tint = (a) => `rgba(${r},${g},${b},${a})`;
+    // body: clear where the light enters, denser away from it
+    let gr;
+    if (e.circle) {
+      gr = c.createRadialGradient(-R0 * 0.32, R0 * 0.36, R0 * 0.05, 0, 0, R0);
+      gr.addColorStop(0, tint(dark ? 0.1 : 0.08)); gr.addColorStop(0.68, tint(dark ? 0.26 : 0.3)); gr.addColorStop(1, tint(dark ? 0.62 : 0.68));
+    } else {
+      gr = c.createLinearGradient(x0, y1, x1, y0);
+      gr.addColorStop(0, tint(dark ? 0.14 : 0.16)); gr.addColorStop(1, tint(dark ? 0.42 : 0.5));
+    }
+    c.fillStyle = gr; shapePath(c, e); c.fill();
+    c.save(); shapePath(c, e); c.clip();
+    c.lineJoin = 'round';
+    // the glass wall seen edge-on: a saturated band just inside the outline
+    c.strokeStyle = tint(dark ? 0.55 : 0.62); c.lineWidth = 0.13; shapePath(c, e); c.stroke();
+    // reflections: a soft wide streak and a crisp thin one across the lit side, a faint one on the far side
+    const v = hashId(e) - 0.5;
+    lightBand(c, R0, 0.18 + v * 0.16, 0.46 + v * 0.1, dark ? 0.16 : 0.26);
+    lightBand(c, R0, 0.56 + v * 0.12, 0.63 + v * 0.12, dark ? 0.5 : 0.7);
+    lightBand(c, R0, -0.86, -0.8, dark ? 0.18 : 0.3, false);
+    c.restore();
+    // crisp outline, then the rim catching the light on the top-left edges
+    c.strokeStyle = pal.glassEdge; c.lineWidth = lw * 1.25; shapePath(c, e); c.stroke();
+    c.save();
+    c.rotate(Math.atan2(LIGHT[1], LIGHT[0]) - Math.PI / 2);
+    c.beginPath(); c.rect(-R0 * 3, -R0 * 0.15, R0 * 6, R0 * 4); c.clip(); // the half facing the light
+    c.rotate(-(Math.atan2(LIGHT[1], LIGHT[0]) - Math.PI / 2));
+    c.translate(lw * 0.6, -lw * 0.6);
+    c.strokeStyle = dark ? 'rgba(220,240,255,0.8)' : 'rgba(255,255,255,0.95)'; c.lineWidth = lw * 1.5; shapePath(c, e); c.stroke();
+    c.restore();
+    // a point of light where the rim meets the key light
+    let gx = 0, gy = 0, best = -Infinity;
+    if (e.circle) { gx = LIGHT[0] * R0 * 0.62; gy = LIGHT[1] * R0 * 0.62; }
+    else for (const [x, y] of e.outline) { const d = x * LIGHT[0] + y * LIGHT[1]; if (d > best) { best = d; gx = x * 0.82; gy = y * 0.82; } }
+    if (e.circle || hashId(e) < 0.45) star4(c, gx, gy, Math.min(0.14, R0 * 0.32), dark ? 0.75 : 0.95);
+  }
+  function paintShadow(c, e) {
+    const [r, g, b] = glassRGB(e);
+    const BIG = 1000, k = s * dpr;
+    c.save();
+    // the silhouette is drawn far away; only its blurred shadow lands in the sprite
+    c.shadowColor = pal.dark ? `rgba(${r},${g},${b},0.3)` : `rgba(${r * 0.72 | 0},${g * 0.66 | 0},${b * 0.8 | 0},0.3)`;
+    c.shadowBlur = 0.16 * k; c.shadowOffsetX = BIG * k;
+    c.translate(-BIG, 0);
+    c.fillStyle = '#000'; shapePath(c, e); c.fill();
+    c.restore();
+    // light focused through the glass: a brighter core inside the shadow
+    const [x0, y0, x1, y1] = shapeBounds(e), R0 = Math.max(x1 - x0, y1 - y0) / 2;
+    const cg = c.createRadialGradient(0, 0, 0, 0, 0, R0 * 0.6);
+    cg.addColorStop(0, `rgba(${Math.min(255, r + 40)},${Math.min(255, g + 40)},${Math.min(255, b + 40)},${pal.dark ? 0.28 : 0.4})`);
+    cg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    c.fillStyle = cg; c.beginPath(); c.arc(0, 0, R0 * 0.6, 0, TAU); c.fill();
+  }
+  function paintWood(c, e, x0, y0, x1, y1) {
+    const lw = 1 / s, w = x1 - x0, h = y1 - y0, long = w >= h, v = hashId(e);
+    const g = long ? c.createLinearGradient(0, y1, 0, y0) : c.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0, '#F5D3A0'); g.addColorStop(0.45, '#E4B073'); g.addColorStop(1, '#C88D50');
+    c.fillStyle = g; shapePath(c, e); c.fill();
+    c.save(); shapePath(c, e); c.clip();
+    // grain runs along the plank
+    const L = long ? w : h, T = long ? h : w;
+    c.strokeStyle = 'rgba(128,72,28,0.3)'; c.lineWidth = lw * 1.1;
+    for (let i = 0; i < 3; i++) {
+      const off = (-0.28 + i * 0.28 + v * 0.1) * T;
+      c.beginPath();
+      for (let j = 0; j <= 12; j++) {
+        const u = -L / 2 + (j / 12) * L, q = off + Math.sin(j * 0.7 + v * 20 + i * 2) * T * 0.05;
+        if (long) { if (j) c.lineTo(u, q); else c.moveTo(u, q); } else { if (j) c.lineTo(q, u); else c.moveTo(q, u); }
+      }
+      c.stroke();
+    }
+    // a small knot on longer planks
+    if (L > 0.9) {
+      const kx = (v - 0.5) * L * 0.5, ky = (v - 0.5) * T * 0.3;
+      c.fillStyle = 'rgba(120,66,26,0.32)'; c.beginPath();
+      if (long) c.ellipse(kx, ky, T * 0.16, T * 0.1, 0, 0, TAU); else c.ellipse(ky, kx, T * 0.1, T * 0.16, 0, 0, TAU);
+      c.fill();
+    }
+    c.restore();
+    c.strokeStyle = 'rgba(122,70,30,0.55)'; c.lineWidth = lw * 1.1; shapePath(c, e); c.stroke();
+    c.strokeStyle = 'rgba(255,244,222,0.75)'; c.lineWidth = lw * 1.2;
+    c.beginPath(); c.moveTo(x0 + lw, y0 + lw * 2); c.lineTo(x0 + lw, y1 - lw); c.lineTo(x1 - lw * 2, y1 - lw); c.stroke();
+  }
+  function paintStone(c, e, x0, y0, x1, y1) {
+    const lw = 1 / s, dark = pal.dark, v = hashId(e);
+    const R0 = Math.max(x1 - x0, y1 - y0) / 2;
+    const g = c.createLinearGradient(x0, y1, x1, y0);
+    g.addColorStop(0, dark ? '#A4AAC2' : '#9A95A6'); g.addColorStop(1, dark ? '#565C78' : '#57525F');
+    c.fillStyle = g; shapePath(c, e); c.fill();
+    c.save(); shapePath(c, e); c.clip();
+    // speckles give it grit and weight
+    let seed = Math.floor(v * 1e6) + 7;
+    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 26; i++) {
+      c.fillStyle = i % 2 ? 'rgba(255,255,255,0.16)' : 'rgba(30,25,40,0.18)';
+      c.beginPath(); c.arc(x0 + rnd() * (x1 - x0), y0 + rnd() * (y1 - y0), (0.012 + rnd() * 0.028), 0, TAU); c.fill();
+    }
+    lightBand(c, R0, 0.55, 0.95, 0.12, false);
+    c.restore();
+    c.strokeStyle = dark ? 'rgba(20,24,40,0.6)' : 'rgba(40,34,48,0.45)'; c.lineWidth = lw * 1.2; shapePath(c, e); c.stroke();
+  }
+  // a soft, neutral contact shadow for opaque things
+  function paintShade(c, e) {
+    const BIG = 1000, k = s * dpr;
+    c.shadowColor = pal.dark ? 'rgba(0,0,0,0.42)' : 'rgba(60,35,40,0.24)';
+    c.shadowBlur = 0.14 * k; c.shadowOffsetX = BIG * k;
+    c.translate(-BIG, 0);
+    c.fillStyle = '#000'; shapePath(c, e); c.fill();
+  }
+  const PAINT = { glass: paintGlass, wood: paintWood, stone: paintStone };
+  function sprites(e) {
+    const key = s * dpr + '|' + pal.id + '|' + (e.tint || 0);
+    if (e.spr?.key !== key) {
+      const glass = e.kind === 'glass';
+      e.spr = {
+        key,
+        body: e.kind === 'bomb' ? null : bake(e, 0.08, (c, ...b) => PAINT[e.kind](c, e, ...b)),
+        shadow: bake(e, 0.4, (c) => (glass ? paintShadow(c, e) : paintShade(c, e))),
+      };
+    }
+    return e.spr;
+  }
+  function blit(c, sp, x, y, a, k = 1) {
+    c.save(); c.translate(x, y); c.rotate(-a); if (k !== 1) c.scale(k, k);
+    c.drawImage(sp.cv, -sp.ax, -sp.ay, sp.w, sp.h);
+    c.restore();
+  }
+  function drawShadow(c, e, p, a) {
+    const sp = sprites(e).shadow;
+    const [sx, sy] = R.toScreen(p.x + SHADOW[0], p.y + SHADOW[1]);
+    // at night, glass throws coloured light instead of shade
+    if (pal.dark && e.kind === 'glass') c.globalCompositeOperation = 'lighter';
+    blit(c, sp, sx, sy, a);
+    c.globalCompositeOperation = 'source-over';
   }
 
   function drawShard(c, e, lw) {
@@ -312,14 +616,39 @@ export function createRenderer(canvas) {
     return [{ x: e.px + (p.x - e.px) * alpha, y: e.py + (p.y - e.py) * alpha }, e.pa + da * alpha];
   }
 
-  function draw(sim, o) {
-    if (!pal) return;
-    if (staticDirty) { renderStatic(); staticDirty = false; }
-    stepFx(o.fxDt || 0);
-    const c = ctx;
+  // asleep and not animating: drawn once into the settled layer
+  const SPRITED = { glass: 1, wood: 1, stone: 1 };
+  const settled = (e) => SPRITED[e.kind] === 1 && !e.anim && !e.body.isAwake();
+  function renderRest(sim) {
+    const c = bctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.drawImage(stat, 0, 0);
-    c.setTransform(dpr, 0, 0, dpr, (o.shakeX || 0) * dpr, (o.shakeY || 0) * dpr);
+    if (!sim) return;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (const e of sim.ents) if (e.alive && settled(e)) drawShadow(c, e, e.body.getPosition(), e.body.getAngle());
+    for (const e of sim.ents) {
+      if (!e.alive || !settled(e)) continue;
+      const [sx, sy] = R.toScreen(e.body.getPosition().x, e.body.getPosition().y);
+      blit(c, sprites(e).body, sx, sy, e.body.getAngle());
+    }
+  }
+
+  function draw(sim, o) {
+    if (!pal) return;
+    if (staticDirty) { renderStatic(); staticDirty = false; restKey = -1; }
+    stepFx(o.fxDt || 0);
+    // the settled layer changes only when something wakes, sleeps or breaks
+    let key = 0;
+    if (sim) for (const e of sim.ents) if (e.alive && settled(e)) key = (key * 31 + e.id) | 0;
+    if (key !== restKey) { renderRest(sim); restKey = key; }
+    const shx = o.shakeX || 0, shy = o.shakeY || 0;
+    const css = shx || shy ? `translate3d(${shx.toFixed(1)}px,${shy.toFixed(1)}px,0)` : '';
+    if (css !== shakeCss) { bgc.style.transform = css; shakeCss = css; }
+    const c = ctx;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, canvas.width, canvas.height);
+    c.setTransform(dpr, 0, 0, dpr, shx * dpr, shy * dpr);
+    drawMotes(c, o.fxDt || 0);
     if (!sim) return;
     // ropes
     c.strokeStyle = pal.ink; c.lineWidth = Math.max(1.2, 0.035 * s); c.lineCap = 'round';
@@ -338,18 +667,28 @@ export function createRenderer(canvas) {
       const [ax, ay] = R.toScreen(sx0, sy0), [bx, by] = R.toScreen(wx, wy);
       c.beginPath(); c.moveTo(ax, ay); c.lineTo(bx, by); c.stroke();
     }
-    // movers, dynamic bodies
+    // shadows fall on the wall and shelves behind everything
     for (const e of sim.ents) {
       if (!e.alive) continue;
-      if (e.kind === 'mover' || e.kind === 'glass' || e.kind === 'stone' || e.kind === 'wood' || e.kind === 'bomb') {
+      const k = e.kind;
+      if ((k === 'glass' || k === 'wood' || k === 'stone' || k === 'bomb') && !settled(e)) { const [p, a] = lerpBody(e, o.alpha); drawShadow(c, e, p, a); }
+    }
+    for (const e of sim.ents) {
+      if (!e.alive || settled(e)) continue;
+      const k = e.kind;
+      if (k === 'glass' || k === 'wood' || k === 'stone') {
         const [p, a] = lerpBody(e, o.alpha);
-        drawBody(c, e, p, a, false);
+        const [sx, sy] = R.toScreen(p.x, p.y);
+        blit(c, sprites(e).body, sx, sy, a);
+      } else if (k === 'mover' || k === 'bomb' || k === 'pad') {
+        const [p, a] = lerpBody(e, o.alpha);
+        drawBody(c, e, p, a);
       }
     }
     for (const e of sim.shards) {
       if (!e.alive) continue;
       const [p, a] = lerpBody(e, o.alpha);
-      drawBody(c, e, p, a, false);
+      drawBody(c, e, p, a);
     }
     // aim
     if (o.aim) drawAim(c, sim, o);

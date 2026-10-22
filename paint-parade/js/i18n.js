@@ -2,8 +2,8 @@
 const S = {
   en: {
     level: 'Level', hard: 'HARD', super: 'SUPER HARD', play: 'Play', next: 'Next',
-    tapBucket: 'Tap a bucket!', tipPaints: 'Buckets splash every matching pixel they can see!',
-    tipSpots: 'Paint left over? The bucket waits here. Tap it to send it again!',
+    tapBucket: 'Tap a bucket!', tipPaints: 'It splashes every red pixel it can see from the belt. Bright pixels = reachable now!',
+    tipSpots: "Oops! That bucket couldn't use all its paint, so it waits in a spot. Tap it later to send it again. Fill every spot and you lose!",
     tipMystery: 'Mystery bucket! Its color shows when it reaches the front.',
     tipCoat: 'Striped pixels need two coats of paint.',
     tipTwins: 'Twin buckets march together. Both must be at the front.',
@@ -29,13 +29,14 @@ const S = {
     needCoins: 'Not enough coins', getMore: 'Get more', privacy: 'Privacy Policy', terms: 'Terms of Use', privacyChoices: 'Privacy choices',
     thanks: 'Thank you!', purchased: 'Purchase complete', grabTap: 'Tap any bucket in a lane',
     lv: 'Lv', of: 'of', remaining: 'left', version: 'Version', support: 'Support', newArt: 'New artwork!',
-    tapToPlay: 'Tap to play', halfway: 'Halfway!', hourUnlimited: '∞ 60 min', tag20: '+20%', tag60: '+60%', tagPopular: 'Popular', ends: 'Ends in', painting: 'Painting', progress: 'Progress', cancel: 'Cancel',
+    tapToPlay: 'Tap to play', halfway: 'Halfway!', oops: 'Oops!', belt: 'Belt', goalTitle: 'Paint the whole picture!', goalSpots: "Don't fill all {n} waiting spots", perfect: 'Perfect!', perfectD: 'No bucket had to wait',
+    tipSleepy: '😴 Sleepy bucket = its color is buried inside. Send an awake bucket first: its color is shining on the edge!', hourUnlimited: '∞ 60 min', tag20: '+20%', tag60: '+60%', tagPopular: 'Popular', ends: 'Ends in', painting: 'Painting', progress: 'Progress', cancel: 'Cancel',
     reward: 'Reward', dailyReward: 'Daily reward', streakBonus: 'Streak bonus',
   },
   he: {
     level: 'שלב', hard: 'קשה', super: 'קשה מאוד', play: 'שחק', next: 'הבא',
-    tapBucket: 'הקש על דלי!', tipPaints: 'הדליים מתיזים צבע על כל פיקסל תואם שהם רואים!',
-    tipSpots: 'נשאר צבע? הדלי מחכה כאן. הקש עליו כדי לשלוח אותו שוב!',
+    tapBucket: 'הקש על דלי!', tipPaints: 'הדלי מתיז על כל פיקסל אדום שהוא רואה מהמסוע. פיקסלים בוהקים = אפשר לצבוע עכשיו!',
+    tipSpots: 'אופס! לדלי נשאר צבע, אז הוא מחכה במקום המתנה. הקישו עליו אחר כך כדי לשלוח שוב. כל המקומות התמלאו? הפסדתם!',
     tipMystery: 'דלי מסתורין! הצבע שלו מתגלה כשהוא מגיע לקדמת הטור.',
     tipCoat: 'פיקסלים מפוספסים צריכים שתי שכבות צבע.',
     tipTwins: 'דליים תאומים צועדים יחד. שניהם צריכים להיות בקדמה.',
@@ -61,7 +62,8 @@ const S = {
     needCoins: 'אין מספיק מטבעות', getMore: 'השג עוד', privacy: 'מדיניות פרטיות', terms: 'תנאי שימוש', privacyChoices: 'הגדרות פרטיות',
     thanks: 'תודה!', purchased: 'הרכישה הושלמה', grabTap: 'הקש על כל דלי בטורים',
     lv: 'שלב', of: 'מתוך', remaining: 'נשארו', version: 'גרסה', support: 'תמיכה', newArt: 'יצירה חדשה!',
-    tapToPlay: 'הקש לשחק', halfway: 'חצי דרך!', hourUnlimited: 'שעה ∞', tag20: '+20%', tag60: '+60%', tagPopular: 'פופולרי', ends: 'מסתיים בעוד', painting: 'צובעים', progress: 'התקדמות', cancel: 'ביטול',
+    tapToPlay: 'הקש לשחק', halfway: 'חצי דרך!', oops: 'אופס!', belt: 'מסוע', goalTitle: 'צבעו את כל התמונה!', goalSpots: 'אל תמלאו את כל {n} מקומות ההמתנה', perfect: 'מושלם!', perfectD: 'אף דלי לא חיכה',
+    tipSleepy: '😴 דלי ישנוני = הצבע שלו קבור בפנים. שלחו קודם דלי ער — הצבע שלו בוהק בשוליים!', hourUnlimited: 'שעה ∞', tag20: '+20%', tag60: '+60%', tagPopular: 'פופולרי', ends: 'מסתיים בעוד', painting: 'צובעים', progress: 'התקדמות', cancel: 'ביטול',
     reward: 'פרס', dailyReward: 'פרס יומי', streakBonus: 'בונוס רצף',
   },
 };

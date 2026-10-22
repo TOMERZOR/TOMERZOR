@@ -1,6 +1,6 @@
 // The play screen: runs the engine on a fixed clock, turns engine events into
 // juice (projectiles, splats, pops, sounds, haptics) and handles taps.
-import { createGame, step, launchLane, launchSlot, laneBlock, beltLoad, addSlot, addRainbow, revive, progress, WILD, freeSlots } from './engine.js';
+import { createGame, step, launchLane, launchSlot, laneBlock, beltLoad, addSlot, addRainbow, revive, progress, WILD, freeSlots, exposure, exposedColors } from './engine.js';
 import { computeLayout, trackPoint, laneSlotPos, slotPos, drawBackground, drawBoardFrame, drawBelt, drawBucket, makeBoardCache, paintCell, FX, rr, mix } from './render.js';
 import { sfx } from './audio.js';
 import { haptic, track } from './platform.js';
@@ -37,6 +37,11 @@ export class Game {
     if (opts.extraSlots) addSlot(this.st, opts.extraSlots);
     this.maxCoats = this.st.coats.slice();
     this.vis = this.st.coats.slice();
+    this.exp = exposure(level.w, level.h, level.cells, this.vis);
+    this.awakeKey = -1;
+    this.parksShown = 0;
+    this.sleepyTold = false;
+    this.heartT = 0;
     this.anims = new Map(); // cell -> pop start time
     this.shotAt = new Map(); // bucket -> last splash time (squash)
     this.lapShots = new Map(); // bucket -> splashes since launch
@@ -73,7 +78,7 @@ export class Game {
     if (!this.level) return;
     this.L = computeLayout(W, H, this.hooks.safe(), this.level, this.hooks.hud());
     this.cache = makeBoardCache(this.level, this.L, dpr);
-    for (let i = 0; i < this.level.cells.length; i++) paintCell(this.cache, this.level, this.L, i, this.vis, this.maxCoats);
+    for (let i = 0; i < this.level.cells.length; i++) paintCell(this.cache, this.level, this.L, i, this.vis, this.maxCoats, this.exp);
   }
 
   // ------------------------------------------------------------ input
@@ -160,6 +165,8 @@ export class Game {
         if (st.status !== 'play') { this.acc = 0; break; }
       }
       this.phase += dt * this.tickRate;
+      if (st.slots.length && freeSlots(st) <= 1 && this.time - this.heartT > 1.1) { this.heartT = this.time; sfx.heart(); }
+      if (!this.sleepyTold && st.lanes.some((l) => l[0] && !l[0].hidden && !this.awake(l[0]))) { this.sleepyTold = true; this.hooks.onEvent && this.hooks.onEvent({ type: 'sleepyFront' }); }
       // tutorial / stuck hints
       if (st.belt.length === 0 && st.pending.length === 0) this.idleT += dt; else this.idleT = 0;
       if (this.tutorial && this.tutorial.hint && !this.hint && this.idleT > 0.6) this.showHint();
@@ -170,7 +177,10 @@ export class Game {
       if (p.t >= p.dur && !p.landed) {
         p.landed = true;
         this.vis[p.cell]--;
-        paintCell(this.cache, this.level, this.L, p.cell, this.vis, this.maxCoats);
+        // repaint the splashed pixel and every pixel whose reachability changed
+        const exp = exposure(this.level.w, this.level.h, this.level.cells, this.vis);
+        for (let i = 0; i < exp.length; i++) if (exp[i] !== this.exp[i]) { this.exp[i] = exp[i]; if (i !== p.cell) paintCell(this.cache, this.level, this.L, i, this.vis, this.maxCoats, this.exp); }
+        paintCell(this.cache, this.level, this.L, p.cell, this.vis, this.maxCoats, this.exp);
         this.anims.set(p.cell, this.time);
         const cx = this.L.bx + (p.cell % this.level.w + 0.5) * this.L.cs, cy = this.L.by + (Math.floor(p.cell / this.level.w) + 0.5) * this.L.cs;
         this.fx.splat(cx, cy, p.col, this.L.cs > 14 ? 6 : 4);
@@ -225,7 +235,9 @@ export class Game {
         sfx.pop(); haptic.light();
       } else if (e.type === 'park') {
         sfx.park();
-        if (freeSlots(st) <= 1) { sfx.warn(); this.dangerT = this.time; }
+        const sp = slotPos(L, e.slot);
+        if (this.parksShown++ < 4) this.fx.text(sp.x, sp.y - L.slotS * 0.7, this.hooks.t ? this.hooks.t('oops') : 'Oops!', '#ff4b5c', 18);
+        if (freeSlots(st) <= 1) { sfx.warn(); haptic.medium(); this.dangerT = this.time; }
         this.hooks.onEvent && this.hooks.onEvent({ type: 'park', free: freeSlots(st) });
       } else if (e.type === 'reveal') {
         const p = laneSlotPos(L, e.lane, 0);
@@ -318,6 +330,12 @@ export class Game {
 
   colorOf(s) { return s.c === WILD ? WILD : this.level.colors[s.c]; }
 
+  // Which colors the belt can reach right now (cached until a pixel gets painted).
+  awake(s) {
+    if (this.awakeKey !== this.st.left) { this.awakeKey = this.st.left; this.awakeSet = exposedColors(this.st); }
+    return s.c === WILD || this.awakeSet.has(s.c);
+  }
+
   drawBeltBuckets(ctx) {
     const L = this.L, st = this.st;
     const size = L.T * 1.05;
@@ -331,14 +349,14 @@ export class Game {
       const bob = Math.sin(this.time * 10 + s.id) * 1.2;
       const k = this.time - (this.shotAt.get(s.id) || -9);
       const squash = k < 0.14 ? Math.sin(k / 0.14 * Math.PI) * 0.7 : 0;
-      drawBucket(ctx, pt.x, pt.y - size * 0.05 + bob, size, this.colorOf(s), s.n, { blink: this.blink(s.id), look: 0, squash });
+      drawBucket(ctx, pt.x, pt.y - size * 0.05 + bob, size, this.colorOf(s), s.n, { blink: this.blink(s.id), look: 0, squash, sleepy: !this.awake(s), t: this.time + s.id });
     }
     // waiting to step on: stack them at the entry
     st.pending.forEach((s, k) => {
       if (this.isFlying(s.id)) return;
       const e = L.track[0];
       this.lastPos.set(s.id, e);
-      drawBucket(ctx, e.x - k * 4, e.y - k * 6, size, this.colorOf(s), s.n, { blink: this.blink(s.id) });
+      drawBucket(ctx, e.x - k * 4, e.y - k * 6, size, this.colorOf(s), s.n, { blink: this.blink(s.id), sleepy: !this.awake(s), t: this.time + s.id });
     });
     for (const p of this.pops) {
       const k = p.t / 0.5;
@@ -377,7 +395,10 @@ export class Game {
       rr(ctx, p.x - s / 2 + 1, p.y - s / 2 + 1, s - 2, s - 2, s * 0.28); ctx.stroke();
       ctx.setLineDash([]);
       const b = st.slots[i];
-      if (b && !this.isFlying(b.id)) drawBucket(ctx, p.x, p.y + s * 0.04, s * 0.92, this.colorOf(b), b.n, { blink: this.blink(b.id) });
+      if (b && !this.isFlying(b.id)) {
+        const aw = this.awake(b);
+        drawBucket(ctx, p.x, p.y + s * 0.04 + (aw ? Math.sin(this.time * 4 + i) * 1.2 : 0), s * 0.92, this.colorOf(b), b.n, { blink: this.blink(b.id), sleepy: !aw, t: this.time + b.id });
+      }
     }
   }
 
@@ -397,8 +418,14 @@ export class Game {
         const front = d === 0;
         const why = front ? laneBlock(st, li) : 'x';
         const size = L.B * (front ? 1 : 0.9);
-        const bob = front && !why ? Math.sin(this.time * 4 + li) * 1.5 : 0;
-        drawBucket(ctx, p.x + (front && blockedHere ? shake : 0), p.y + bob, size, this.colorOf(s), s.n, { hidden: s.hidden, alpha: front ? 1 : 0.92 - d * 0.08, blink: this.blink(s.id) });
+        const aw = s.hidden || this.awake(s);
+        const bob = front && !why && aw ? Math.abs(Math.sin(this.time * 5 + li)) * -3 : 0;
+        if (front && aw && !s.hidden && !why) {
+          // soft glow under a bucket that can paint right now
+          ctx.fillStyle = 'rgba(255,255,255,0.75)';
+          ctx.beginPath(); ctx.ellipse(p.x, p.y + size * 0.42, size * 0.42, size * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+        }
+        drawBucket(ctx, p.x + (front && blockedHere ? shake : 0), p.y + bob, size, this.colorOf(s), s.n, { hidden: s.hidden, alpha: front ? 1 : 0.92 - d * 0.08, blink: this.blink(s.id), sleepy: !aw, t: this.time + s.id });
         if (s.twin) this.drawTwinLink(ctx, li, d, s);
         if (this.grab) {
           ctx.strokeStyle = `rgba(255,210,63,${0.6 + 0.4 * Math.sin(this.time * 8)})`; ctx.lineWidth = 3;
@@ -433,8 +460,8 @@ export class Game {
     const full = used >= st.beltCap;
     const flash = this.blockedT && this.time - this.blockedT < 0.8 && this.blockedWhy === 'full';
     const r = L.T * 0.42;
-    const w = Math.max(r * 2.6, 34), h = r * 1.5;
-    const x = e.x - w * 0.15, y = e.y + L.T * 0.5 + h * 0.75 + 4;
+    const w = Math.max(r * 4.6, 64), h = r * 1.5;
+    const x = Math.max(w / 2 + 4, e.x + w * 0.2), y = e.y + L.T * 0.5 + h * 0.75 + 4;
     ctx.save();
     ctx.fillStyle = flash ? '#ff4b5c' : full ? '#6f39d6' : '#ffffff';
     rr(ctx, x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
@@ -442,7 +469,7 @@ export class Game {
     ctx.font = `700 ${Math.round(h * 0.62)}px Fredoka, system-ui, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillStyle = flash || full ? '#fff' : '#43356e';
-    ctx.fillText(`${used}/${st.beltCap}`, x, y + 1);
+    ctx.fillText(`${this.hooks.t ? this.hooks.t('belt') : 'Belt'} ${used}/${st.beltCap}`, x, y + 1);
     if (flash) {
       ctx.textAlign = 'left'; ctx.fillStyle = '#ff4b5c';
       ctx.fillText(this.hooks.t ? this.hooks.t('beltFull') : 'Belt full!', x + w / 2 + 6, y + 1);

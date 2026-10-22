@@ -118,7 +118,7 @@ function startLevel(lv, opts = {}) {
   let extra = opts.extra || 0;
   if (!lv.daily && failsInRow >= 2) extra += START_ASSIST - 1;
   if (!lv.daily && S.streak >= 3) { extra += 1; setTimeout(() => toast('🔥 ' + t('hotStreak') + ' ' + t('hotStreakD'), 2200), 400); }
-  const tutorial = !lv.daily && lv.level === 1 ? { pointLane: 0, hint: true } : !lv.daily && lv.level <= 3 ? { hint: true } : null;
+  const tutorial = !lv.daily && lv.level === 1 ? { pointLane: 0, hint: true } : !lv.daily && lv.level === 2 ? { hint: true } : null;
   showHud(true);
   updateHud();
   setProgress(0);
@@ -131,8 +131,28 @@ function startLevel(lv, opts = {}) {
 }
 
 const TIP_AT = { 1: 'tipPaints', 9: 'tipMystery', 15: 'tipCoat', 22: 'tipTwins' };
+// Goal banner: states the challenge in one line before the parade starts.
+function showBanner(lv) {
+  const tagTxt = lv.tag === 'super' ? t('super') : lv.tag === 'hard' ? t('hard') : '';
+  const b = $('#banner');
+  const spots = Array.from({ length: game.st.slots.length }, () => '<i></i>').join('');
+  b.innerHTML = `<div class="banner__card ${lv.tag === 'super' ? 'is-super' : lv.tag === 'hard' ? 'is-hard' : ''}">
+    ${tagTxt ? `<span class="tag ${lv.tag === 'super' ? 'tag--super' : 'tag--hard'}">${tagTxt}</span>` : ''}
+    <b>${t('goalTitle')}</b>
+    <span class="banner__spots">${spots}</span>
+    <small>${t('goalSpots').replace('{n}', game.st.slots.length)}</small></div>`;
+  b.hidden = false;
+  b.classList.remove('out');
+  clearTimeout(showBanner.tm);
+  const close = () => { b.classList.add('out'); setTimeout(() => { b.hidden = true; }, 260); };
+  showBanner.tm = setTimeout(close, lv.tag === 'normal' ? 1700 : 2300);
+  b.onclick = close;
+}
+
 function levelTips(lv) {
   if (lv.daily) return;
+  if (lv.level >= 2 && (lv.level <= 6 || lv.tag === 'hard' || lv.tag === 'super')) showBanner(lv);
+
   const key = TIP_AT[lv.level];
   if (lv.level === 1) { tip(t('tapBucket'), 'bottom', 0); return; }
   if (key && !S.seen[key]) {
@@ -159,6 +179,9 @@ function onGameEvent(e) {
   } else if (e.type === 'park') {
     if (!S.seen.tipSpots) { S.seen.tipSpots = 1; Save.save(); tip(t('tipSpots'), 'mid', 4200); }
     else if (e.free <= 1 && !S.seen.tipFull) { S.seen.tipFull = 1; Save.save(); tip(t('tipFull'), 'mid', 4200); }
+  } else if (e.type === 'sleepyFront') {
+    // Teach the core rule the first time a bucket at the front can't paint.
+    if (!S.seen.tipSleepy && cur && cur.level.level >= 2) { S.seen.tipSleepy = 1; Save.save(); setTimeout(() => tip(t('tipSleepy'), 'mid', 5600), cur.level.level <= 6 ? 1900 : 300); }
   } else if (e.type === 'blocked') {
     if (e.why === 'twin') toast(t('twinWait'));
   } else if (e.type === 'grabUsed') {
@@ -189,7 +212,11 @@ function onWin(st) {
   showHud(false);
   hideTip();
   const bonus = lv.daily ? Math.min(100, (S.daily.days - 1) * 20) : 0;
-  const total = reward + bonus;
+  // Thinking is rewarded: no bucket ever had to wait = Perfect.
+  const perfect = st.stats.parks === 0 && lv.level !== 1;
+  const perfectBonus = perfect ? Math.max(10, Math.round(reward / 2)) : 0;
+  if (perfect) { S.stats.perfects = (S.stats.perfects || 0) + 1; track('perfect', { level: lv.level }); }
+  const total = reward + bonus + perfectBonus;
   const thumb = artThumb(lv, 180, true).toDataURL();
   const name = artName(lv.art, lv.name);
   const m = openModal(`
@@ -198,6 +225,7 @@ function onWin(st) {
       <div class="win-art"><img src="${thumb}" alt=""><div class="win-shine"></div></div>
       <div class="win-name">${name}</div>
       <div class="win-sub">${firstTime ? t('winSub') : ''}</div>
+      ${perfect ? `<div class="perfect">⭐ ${t('perfect')} <small>${t('perfectD')} +${perfectBonus}</small></div>` : ''}
       <div class="win-reward">${COIN}<b>+${total}</b>${bonus ? `<small>${t('streakBonus')} +${bonus}</small>` : ''}</div>
       ${!lv.daily && lv.level < 4 ? '' : `<button class="btn btn--purple btn--big" data-act="x2"><span class="ad-ico"></span>${t('x2')}</button>`}
       <button class="btn btn--green btn--big" data-act="claim">${!lv.daily && lv.level < 5 ? t('next') : t('claim')}</button>

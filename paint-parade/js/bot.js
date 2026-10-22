@@ -1,6 +1,6 @@
 // Bots that play Paint Parade through the real engine. Used to verify that every
 // level is solvable, to measure difficulty, and in-game for the tutorial hint.
-import { createGame, step, launchLane, launchSlot, laneBlock, beltLoad, freeSlots } from './engine.js';
+import { createGame, step, launchLane, launchSlot, laneBlock, beltLoad, freeSlots, exposedColors, exposure, WILD } from './engine.js';
 
 export function cloneState(st) {
   const c = {
@@ -57,6 +57,7 @@ function scoreMove(st, m) {
   let score = shots * 10 + (before - c.left);
   if (popped) score += 40 + ammo;
   if (m.kind === 'slot') score += 25; // frees a spot
+  if (shots === 0) score -= 150;        // a move that paints nothing only shuffles buckets around
   if (parked) score -= free <= 1 ? 400 : free <= 2 ? 120 : 30;
   return { score, shots, popped, parked };
 }
@@ -73,10 +74,18 @@ export function bestMove(st) {
 
 // Smart greedy player. Launches only when a move is useful, or when nothing is
 // moving and something has to go.
+// Nothing painted for four laps = this player is going in circles: count it as a loss.
+function stalled(st, mem) {
+  if (st.left !== mem.left) { mem.left = st.left; mem.t = st.tick; return false; }
+  return st.tick - mem.t > st.L * 4 + 40;
+}
+
 export function playSmart(level, { maxTicks = 20000, revives = 0 } = {}) {
   const st = createGame(level);
   let revivesLeft = revives;
+  const mem = { left: -1, t: 0 };
   for (let t = 0; t < maxTicks; t++) {
+    if (stalled(st, mem)) break;
     if (st.status === 'fail') {
       if (revivesLeft-- > 0) { reviveState(st); continue; }
       break;
@@ -109,11 +118,47 @@ export function playRandom(level, seed = 1, { maxTicks = 20000, tapChance = 0.12
   const st = createGame(level);
   let r = seed >>> 0 || 1;
   const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const mem = { left: -1, t: 0 };
   for (let t = 0; t < maxTicks && st.status === 'play'; t++) {
+    if (stalled(st, mem)) break;
     const idle = st.belt.length === 0 && st.pending.length === 0;
     if (idle || rnd() < tapChance) {
       const moves = legalMoves(st);
       if (moves.length) applyMove(st, moves[Math.floor(rnd() * moves.length)]);
+    }
+    step(st);
+    st.events.length = 0;
+  }
+  return { win: st.status === 'win', st };
+}
+
+// A casual player who reads the board: sends awake buckets (color reachable),
+// usually the one whose color shows the most pixels for its number, and only
+// sends a sleepy one when nothing is moving.
+export function playAwake(level, seed = 1, { maxTicks = 20000, tapChance = 0.1, focus = 0.7 } = {}) {
+  const st = createGame(level);
+  let r = seed >>> 0 || 1;
+  const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const mem = { left: -1, t: 0 };
+  for (let t = 0; t < maxTicks && st.status === 'play'; t++) {
+    if (stalled(st, mem)) break;
+    const idle = st.belt.length === 0 && st.pending.length === 0;
+    if (idle || rnd() < tapChance) {
+      const moves = legalMoves(st);
+      if (moves.length) {
+        const exp = exposure(st.w, st.h, st.cells, st.coats);
+        const seen = {};
+        for (let i = 0; i < exp.length; i++) if (exp[i]) seen[st.cells[i]] = (seen[st.cells[i]] || 0) + 1;
+        const bucket = (m) => (m.kind === 'lane' ? st.lanes[m.i][0] : st.slots[m.i]);
+        const value = (m) => { const b = bucket(m); return b.c === WILD ? 99 : (seen[b.c] || 0) / Math.max(1, b.n); };
+        const awake = moves.filter((m) => value(m) > 0);
+        let pick = null;
+        if (awake.length) {
+          if (rnd() < focus) pick = awake.reduce((a, b) => (value(b) > value(a) ? b : a));
+          else pick = awake[Math.floor(rnd() * awake.length)];
+        } else if (idle) pick = moves[Math.floor(rnd() * moves.length)];
+        if (pick) applyMove(st, pick);
+      }
     }
     step(st);
     st.events.length = 0;

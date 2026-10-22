@@ -272,6 +272,32 @@ export function coatsByColor(st) {
   return m;
 }
 
+// Pixels the belt can reach right now: the first still-grey pixel of every row and
+// column, seen from each side. Everything else is buried behind another color.
+export function exposure(w, h, cells, coats) {
+  const exp = new Uint8Array(w * h);
+  const look = (x, y, dx, dy) => {
+    while (x >= 0 && y >= 0 && x < w && y < h) {
+      const i = y * w + x;
+      if (cells[i] >= 0 && coats[i] > 0) { exp[i] = 1; return; }
+      x += dx; y += dy;
+    }
+  };
+  for (let x = 0; x < w; x++) { look(x, h - 1, 0, -1); look(x, 0, 0, 1); }
+  for (let y = 0; y < h; y++) { look(w - 1, y, -1, 0); look(0, y, 1, 0); }
+  return exp;
+}
+
+export function exposedColors(st) {
+  const e = exposure(st.w, st.h, st.cells, st.coats);
+  const out = new Set();
+  for (let i = 0; i < e.length; i++) if (e[i]) out.add(st.cells[i]);
+  return out;
+}
+
+// A bucket is awake when some pixel of its color is reachable (rainbow always is).
+export function isAwake(st, s, exposed = exposedColors(st)) { return s.c === WILD || exposed.has(s.c); }
+
 export function isIdle(st) {
   return st.belt.length === 0 && st.pending.length === 0;
 }

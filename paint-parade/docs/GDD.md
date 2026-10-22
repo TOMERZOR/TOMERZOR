@@ -9,10 +9,12 @@
 - A **parade belt** runs around the canvas, counter-clockwise: along the bottom (looking up), up the right side (looking left), along the top (looking down), down the left side (looking right).
 - **Buckets** wait in 2–4 **lanes** below the canvas. Tap the bucket at the front of a lane to put it on the belt.
 - Each bucket has a **color** and a number = **paint shots**. At every step it looks straight into the canvas. If the first still-grey pixel in that line has the bucket's color, it splashes it (one shot). Grey pixels of other colors block the view; colored pixels and background don't.
-- A bucket whose shots reach 0 pops (done!). A bucket that completes a full lap with paint left jumps into one of the **waiting spots** (5 by default). Tap a waiting bucket to send it around again.
+- A bucket whose shots reach 0 pops (done!). A bucket that completes a full lap with paint left jumps into one of the **waiting spots** (only **3**). Tap a waiting bucket to send it around again.
 - **Win:** every pixel is colored → the artwork comes alive and goes into your **Gallery**.
 - **Lose:** a bucket finishes its lap and every waiting spot is full.
-- The belt holds a limited number of buckets at once (shown as dots).
+- The belt holds **3** buckets at once (2 on SUPER HARD), so you can't dump everything; order matters.
+- **Readability (v1.1):** pixels the belt can reach right now glow (bright tint + white border); buried pixels fade back. A bucket whose color is fully buried is **asleep** (closed eyes, floating "z"). Awake front buckets hop and get a soft glow. Pictures after level 3 have a filled background, so every canvas is a set of layers that must be peeled in the right order.
+- **Perfect:** win without any bucket waiting → +50% coins.
 - By construction, the total shots of each color equals the pixels of that color (×2 for double-coat pixels). The level generator + a bot solver guarantee every shipped level is solvable.
 
 ## 2. Mechanics introduced over time (freshness)
@@ -51,8 +53,20 @@ Unlocked at levels 7, 12 and 18 with a free sample each.
 ## 6. Feel ("juice") checklist
 Bucket hop with squash & stretch · paint projectile arc · splat burst + droplet particles · pixel pop-in scale · combo pitch rising on consecutive splashes · bucket "empty" confetti pop · belt rolling texture · picture "comes alive" sweep + sparkle on win · coin fly-to-counter · gentle screen shake on fail · haptic tick on every splash (rate-limited) · sound for every action · mute / vibration toggles.
 
-## 7. Difficulty curve
-Saw-tooth: every 5th–6th level is HARD, every ~15th SUPER HARD, followed by 2 easy "breathers". Measured by bot simulation: solvable with the configured spots, peak spot usage and number of "wasted laps".
+## 7. Difficulty curve (v1.1 — "thinking wins, spamming loses")
+Playtest feedback on v1.0: *too easy, felt like just tapping.* Data agreed: a random tapper won 100% of early levels. The level builder now measures every level with three simulated players on the real engine:
+- **smart** (lookahead) — must win, so every level is solvable;
+- **thinker** — sends awake buckets, usually the one whose color shows the most pixels for its number (a casual human);
+- **spammer** — taps anything tappable.
+
+| Tag | Thinker wins (target / shipped) | Spammer wins (target) |
+|---|---|---|
+| normal | ≥ 85% / ~92% | ~30% |
+| HARD (every 5th) | ≥ 60% / ~79% | ~10% |
+| SUPER HARD (every 10th) | ≥ 40% | ~0% |
+| breather (after SUPER) | ~100% | ~100% |
+
+v1.0 had a 0-point gap between the two on most levels; v1.1 ships a 50+ point gap.
 
 ## 8. KPI targets (soft launch)
 D1 ≥ 40% · D7 ≥ 15% · avg session ≥ 8 min · levels/day/DAU ≥ 12 · rewarded views/DAU ≥ 2 · ARPDAU ≥ $0.15 · IAP conversion ≥ 2%.

@@ -96,6 +96,7 @@ export const sfx = {
   fail() { if (!sfxOn || !ensure()) return; [7, 4, 0, -5].forEach((s, i) => tone({ f: hz(s, 392), type: 'triangle', t: 0.3, v: 0.14, when: i * 0.13 })); },
   whoosh() { if (!sfxOn || !ensure()) return; noise({ t: 0.25, v: 0.12, f: 400, f2: 2400, q: 1.2 }); },
   unlock() { if (!sfxOn || !ensure()) return; [0, 7, 12, 19].forEach((s, i) => tone({ f: hz(s), type: 'sine', t: 0.25, v: 0.12, when: i * 0.07 })); },
+  heart() { if (!sfxOn || !ensure()) return; tone({ f: 70, f2: 50, type: 'sine', t: 0.14, v: 0.35 }); tone({ f: 66, f2: 46, type: 'sine', t: 0.16, v: 0.28, when: 0.2 }); },
   reveal() { if (!sfxOn || !ensure()) return; tone({ f: 700, f2: 1200, type: 'sine', t: 0.12, v: 0.12 }); },
 };
 

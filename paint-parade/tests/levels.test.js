@@ -41,3 +41,16 @@ test('every shipped level is solvable by the bot without revives', () => {
     assert.ok(r.win, 'level ' + (i + 1) + ' not solved');
   });
 });
+
+test('thinking beats spamming: stored difficulty shows a real gap', () => {
+  const by = {};
+  LEVEL_DATA.forEach((d) => { (by[d.t] = by[d.t] || []).push(d); });
+  const avg = (xs, k) => xs.reduce((s, d) => s + d[k], 0) / xs.length;
+  for (const tag of ['normal', 'hard', 'super']) {
+    const xs = by[tag];
+    assert.ok(xs && xs.length, tag);
+    const gap = avg(xs, 'aw') - avg(xs, 'r');
+    assert.ok(gap >= 30, `${tag}: awake ${avg(xs, 'aw').toFixed(0)} vs random ${avg(xs, 'r').toFixed(0)}`);
+  }
+  assert.ok(avg(by.normal, 'aw') >= 80, 'normal levels must be fair for a thinking player');
+});

@@ -19,8 +19,9 @@
 > **HOW TO PLAY**
 > 🎨 Tap a bucket to send it onto the parade belt.
 > 💦 It splashes every pixel of its color that it can see.
-> 🪣 Paint left over? It waits in a spot — tap it to go again.
-> ⚠️ Fill every waiting spot and the level is lost. Plan ahead!
+> 😴 Sleepy bucket? Its color is buried inside — peel the outer layers first!
+> 🪣 Paint left over? It waits in one of only 3 spots.
+> ⚠️ Fill every spot and the level is lost. Think before you tap!
 >
 > **WHY YOU'LL LOVE IT**
 > ✨ Insanely satisfying — grey pixels burst into color with every splash
@@ -67,8 +68,9 @@
 > **איך משחקים**
 > 🎨 מקישים על דלי כדי לשלוח אותו למסוע.
 > 💦 הוא מתיז צבע על כל פיקסל בצבע שלו שהוא רואה.
-> 🪣 נשאר צבע? הדלי מחכה במקום המתנה — הקישו עליו כדי לשלוח אותו שוב.
-> ⚠️ כל מקומות ההמתנה התמלאו? השלב אבוד. תכננו מראש!
+> 😴 דלי ישנוני? הצבע שלו קבור בפנים — קלפו קודם את השכבות החיצוניות!
+> 🪣 נשאר צבע? הדלי מחכה באחד מ-3 מקומות בלבד.
+> ⚠️ כל המקומות התמלאו? השלב אבוד. תחשבו לפני שאתם מקישים!
 >
 > **למה תתמכרו**
 > ✨ מספק בטירוף — פיקסלים אפורים מתפוצצים בצבע

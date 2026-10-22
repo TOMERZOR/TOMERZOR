@@ -135,7 +135,7 @@ export function makeBoardCache(level, L, dpr) {
   return { canvas: c, ctx, dpr };
 }
 
-export function paintCell(cache, level, L, i, vis, maxCoats) {
+export function paintCell(cache, level, L, i, vis, maxCoats, exp) {
   const ctx = cache.ctx, cs = L.cs;
   const x = (i % level.w) * cs, y = Math.floor(i / level.w) * cs;
   const c = level.cells[i];
@@ -155,11 +155,19 @@ export function paintCell(cache, level, L, i, vis, maxCoats) {
     return;
   }
   const partial = maxCoats[i] > 1 && left < maxCoats[i];
-  ctx.fillStyle = mix(col, PAPER, partial ? 0.45 : 0.76);
+  // Reachable pixels (the belt can see them) are bright; buried ones fade back.
+  const ready = !exp || exp[i];
+  ctx.fillStyle = mix(col, PAPER, partial ? 0.4 : ready ? 0.58 : 0.86);
   ctx.fillRect(x, y, cs, cs);
-  ctx.strokeStyle = 'rgba(51,38,77,0.10)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+  if (ready && cs >= 6) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = Math.max(1, cs * 0.08);
+    ctx.strokeRect(x + ctx.lineWidth, y + ctx.lineWidth, cs - ctx.lineWidth * 2, cs - ctx.lineWidth * 2);
+  } else {
+    ctx.strokeStyle = 'rgba(51,38,77,0.06)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, cs - 1, cs - 1);
+  }
   if (maxCoats[i] > 1 && !partial) {
     ctx.save();
     ctx.beginPath(); ctx.rect(x, y, cs, cs); ctx.clip();
@@ -169,8 +177,8 @@ export function paintCell(cache, level, L, i, vis, maxCoats) {
     ctx.restore();
   }
   if (cs >= 7) {
-    ctx.fillStyle = col;
-    ctx.beginPath(); ctx.arc(x + cs / 2, y + cs / 2, Math.max(1.4, cs * 0.17), 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = ready ? col : mix(col, PAPER, 0.55);
+    ctx.beginPath(); ctx.arc(x + cs / 2, y + cs / 2, Math.max(1.4, cs * (ready ? 0.2 : 0.12)), 0, Math.PI * 2); ctx.fill();
   }
 }
 
@@ -298,10 +306,25 @@ export function drawBucket(ctx, x, y, s, col, n, o = {}) {
   }
   // face
   const ey = top + s * 0.24, ex = s * 0.13;
-  const blink = o.blink ? 0.15 : 1;
+  if (o.sleepy && !hidden) {
+    // closed eyes + floating z: "my color is buried, I can't paint yet"
+    ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1.5, s * 0.04); ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(-ex, ey - s * 0.02, s * 0.06, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(ex, ey - s * 0.02, s * 0.06, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    const zt = ((o.t || 0) * 0.8) % 1;
+    ctx.globalAlpha *= 1 - zt * 0.6;
+    ctx.fillStyle = INK;
+    ctx.font = `700 ${Math.round(s * (0.2 + zt * 0.08))}px Fredoka, system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('z', wTop * 0.42 + zt * s * 0.1, top - s * 0.05 - zt * s * 0.22);
+    ctx.globalAlpha = o.alpha !== undefined ? o.alpha : 1;
+  }
+  const blink = o.sleepy && !hidden ? 0 : o.blink ? 0.15 : 1;
   ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.ellipse(-ex, ey, s * 0.075, s * 0.09 * blink, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(ex, ey, s * 0.075, s * 0.09 * blink, 0, 0, Math.PI * 2); ctx.fill();
+  if (blink > 0) {
+    ctx.beginPath(); ctx.ellipse(-ex, ey, s * 0.075, s * 0.09 * blink, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ex, ey, s * 0.075, s * 0.09 * blink, 0, 0, Math.PI * 2); ctx.fill();
+  }
   if (blink > 0.5) {
     ctx.fillStyle = INK;
     const lx = (o.look || 0) * s * 0.025;

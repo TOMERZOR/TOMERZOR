@@ -112,3 +112,15 @@ test('smart bot solves a small layered picture', () => {
   const r = playSmart(lv);
   assert.ok(r.win, 'bot should win');
 });
+
+test('exposure marks only the first grey pixel from each side', async () => {
+  const { exposure } = await import('../js/engine.js');
+  // 3x3, ring color 0 around a center of color 1
+  const cells = [0, 0, 0, 0, 1, 0, 0, 0, 0];
+  const coats = new Uint8Array(9).fill(1);
+  const e = exposure(3, 3, cells, coats);
+  assert.equal(e[4], 0, 'center is buried');
+  assert.equal(e[1], 1);
+  coats[1] = 0; // paint the top-middle: center becomes visible from above
+  assert.equal(exposure(3, 3, cells, coats)[4], 1);
+});

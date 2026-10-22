@@ -339,7 +339,11 @@ export class FX {
     }
   }
   ring(x, y, col, r = 30) { this.parts.push({ x, y, col, life: 0.4, t: 0, kind: 'ring', r }); }
-  text(x, y, s, col = '#fff', size = 18) { this.texts.push({ x, y, s, col, size, t: 0, life: 0.9 }); }
+  text(x, y, s, col = '#fff', size = 18) {
+    const half = s.length * size * 0.32 + 6;
+    x = Math.max(half, Math.min(window.innerWidth - half, x));
+    this.texts.push({ x, y, s, col, size, t: 0, life: 0.9 });
+  }
   update(dt) {
     for (const p of this.parts) {
       p.t += dt;

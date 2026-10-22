@@ -1,0 +1,23 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Video card</title>
+<style>
+@font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-latin.woff2') format('woff2'); font-weight: 300 700; }
+html,body{margin:0}
+body{width:1080px;height:1920px;overflow:hidden;font-family:Fredoka,sans-serif;color:#33264d;background:linear-gradient(170deg,#ffd1ec,#c8b6ff 55%,#a9dcff);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.art{width:1080px;height:640px;background:url(key-art.png) 72% center/cover;margin-bottom:60px;-webkit-mask:linear-gradient(transparent,#000 10%,#000 85%,transparent)}
+.logo{font-weight:700;font-size:190px;line-height:.9}
+.logo span{display:block;-webkit-text-stroke:9px #33264d;paint-order:stroke fill;text-shadow:0 14px 0 #33264d}
+.tag{margin-top:60px;font-size:66px;font-weight:600}
+.icon{width:300px;height:300px;border-radius:68px;box-shadow:0 30px 70px rgba(51,38,77,.35);margin-bottom:60px}
+.cta{margin-top:70px;display:inline-block;padding:32px 70px;border-radius:50px;background:linear-gradient(180deg,#6ef09a,#3fcf6b);box-shadow:0 14px 0 #23a04c;color:#fff;font-size:70px;font-weight:700;text-shadow:0 4px 0 rgba(0,0,0,.18)}
+.small{margin-top:46px;font-size:44px;color:#5a4d7a}
+</style></head>
+<body>
+<script>
+const end = new URLSearchParams(location.search).get('end');
+document.body.innerHTML = end
+  ? `<img class="icon" src="../icons/icon-512.png" alt=""><div class="logo"><span style="color:#ff8ac6">Paint</span><span style="color:#5ccfff">Parade</span></div><div class="cta">Play free now</div><div class="small">iPhone · Android</div>`
+  : `<div class="art"></div><div class="logo"><span style="color:#ff8ac6">Paint</span><span style="color:#5ccfff">Parade</span></div><div class="tag">Splash pixel art to life!</div>`;
+Promise.all([document.fonts.load('700 80px Fredoka'), ...[...document.images].map((i) => i.decode())]).then(() => setTimeout(() => (window.__done = true), 300));
+</script>
+</body></html>

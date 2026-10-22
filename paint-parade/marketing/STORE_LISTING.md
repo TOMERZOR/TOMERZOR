@@ -5,7 +5,7 @@
 **App name (30):** `Paint Parade: Color Puzzle`
 **Subtitle — iOS (30):** `Splash pixel art to life!`
 **Short description — Google Play (80):** `Tap cute paint buckets, color the pixel art and fill your gallery. Relaxing & fun!`
-**Promotional text — iOS (170):** `New: the Daily Canvas! A fresh painting every day, a streak to keep and bonus coins to grab. Can you color all 60 masterpieces?`
+**Promotional text — iOS (170):** `New: the Daily Canvas! A fresh painting every day, a streak to keep and bonus coins to grab. Can you color all 80 masterpieces?`
 
 **Keywords — iOS (100, comma-separated, no spaces):**
 `color,sort,pixel,art,coloring,puzzle,paint,bucket,shooter,match,relaxing,brain,logic,casual,offline`
@@ -24,8 +24,8 @@
 >
 > **WHY YOU'LL LOVE IT**
 > ✨ Insanely satisfying — grey pixels burst into color with every splash
-> 🧠 Easy to learn, hard to master — 180+ hand-tuned levels, HARD and SUPER HARD challenges
-> 🖼️ Collect 60 adorable artworks in 6 albums: Sweet Treats, Cute Critters, Secret Garden, Sky & Sea, Toy Box and Wonders
+> 🧠 Easy to learn, hard to master — 200 hand-tuned levels, HARD and SUPER HARD challenges
+> 🖼️ Collect 80 adorable artworks in 8 albums: Sweet Treats, Cute Critters, Secret Garden, Sky & Sea, Toy Box, Wonders, Snack Bar and Holidays
 > 📅 Daily Canvas — a new painting every day with streak rewards
 > 🧲 Fun boosters: +Spot, Grabber and the magical Rainbow bucket
 > 🔥 Hot Brush win streaks for bonus spots
@@ -44,7 +44,7 @@
 ### Screenshot captions (in order)
 1. **Splash pixel art to life!**
 2. **Tap the right bucket at the right time**
-3. **Collect 60 adorable masterpieces**
+3. **Collect 80 adorable masterpieces**
 4. **Can you beat SUPER HARD?**
 5. **A new Daily Canvas every day**
 6. **Boosters for tricky moments**
@@ -72,8 +72,8 @@
 >
 > **למה תתמכרו**
 > ✨ מספק בטירוף — פיקסלים אפורים מתפוצצים בצבע
-> 🧠 קל ללמוד, קשה לשלוט — 180+ שלבים, כולל שלבים קשים וקשים מאוד
-> 🖼️ אספו 60 יצירות חמודות ב-6 אלבומים
+> 🧠 קל ללמוד, קשה לשלוט — 200 שלבים, כולל שלבים קשים וקשים מאוד
+> 🖼️ אספו 80 יצירות חמודות ב-8 אלבומים
 > 📅 הציור היומי — ציור חדש בכל יום עם פרסי רצף
 > 🧲 בוסטרים: +מקום, תפסן ודלי הקשת הקסום
 > ✈️ משחקים בלי אינטרנט, בכל מקום

@@ -1,5 +1,15 @@
 // Synthesized sound: every shatter is generated on the fly so no two sound alike.
 let ctx = null, master, sfxBus, musicBus, comp, noiseBuf, reverb, reverbSend;
+// Recorded effects (ElevenLabs SFX, trimmed and loudness-matched). Synthesis is the fallback.
+const SAMPLES = {
+  glassS: ['glass_s1', 'glass_s2', 'glass_s3', 'glass_s4'],
+  glassB: ['glass_b1', 'glass_b2', 'glass_b3', 'glass_b4'],
+  boom: ['boom1', 'boom2', 'boom3'],
+  fire: ['fire1', 'fire2', 'fire3'],
+};
+const buffers = {};
+const lastPick = {};
+let loading = null;
 let enabled = { sfx: true, music: true };
 let lastShatter = 0, shatterVoices = 0;
 const PENTA = [0, 2, 4, 7, 9];
@@ -26,7 +36,39 @@ export function initAudio() {
   reverb.buffer = ir;
   reverbSend = ctx.createGain(); reverbSend.gain.value = 0.22;
   reverbSend.connect(reverb); reverb.connect(sfxBus);
+  loadSamples();
   return ctx;
+}
+
+function loadSamples() {
+  if (loading || !ctx) return loading;
+  const base = new URL('../assets/sfx/', import.meta.url).href;
+  loading = Promise.all(Object.values(SAMPLES).flat().map(async (n) => {
+    try {
+      const res = await fetch(base + n + '.mp3');
+      if (!res.ok) return;
+      const arr = await res.arrayBuffer();
+      buffers[n] = await new Promise((ok, err) => ctx.decodeAudioData(arr, ok, err));
+    } catch (e) { /* keep the synthesized fallback */ }
+  }));
+  return loading;
+}
+
+// play one variant from a set, never the same one twice in a row
+function sample(set, gain, rate, pan = 0, wet = 0) {
+  const list = SAMPLES[set].filter((n) => buffers[n]);
+  if (!list.length) return false;
+  let name = list[Math.floor(Math.random() * list.length)];
+  if (list.length > 1 && name === lastPick[set]) name = list[(list.indexOf(name) + 1) % list.length];
+  lastPick[set] = name;
+  const src = ctx.createBufferSource();
+  src.buffer = buffers[name];
+  src.playbackRate.value = rate;
+  const g = out(pan, wet);
+  g.gain.value = gain;
+  src.connect(g);
+  src.start();
+  return true;
 }
 
 export function resumeAudio() {
@@ -84,28 +126,32 @@ export function shatter(x = 0.5, size = 0.6, power = 0.6, combo = 1) {
   shatterVoices++;
   setTimeout(() => shatterVoices--, 300);
   const pan = (x - 0.5) * 1.4;
-  const dest = out(pan, 0.5);
-  dest.gain.value = 0.9;
-  const t = now + 0.005;
   const big = Math.min(1, size);
-  // the crack
-  noise(t, 0.05 + 0.04 * big, 'highpass', 2500, 0.7, 0.55 * (0.6 + power * 0.5), dest);
-  // the scatter: a dense hail of tiny noise grains
-  const grains = 6 + Math.floor(power * 8);
-  for (let i = 0; i < grains; i++) {
-    const tt = t + 0.01 + Math.pow(Math.random(), 1.6) * (0.18 + big * 0.2);
-    noise(tt, 0.012 + Math.random() * 0.03, 'bandpass', 3500 + Math.random() * 6000, 4 + Math.random() * 6, 0.12 + Math.random() * 0.16, dest);
+  const crowd = shatterVoices > 3 ? 0.65 : 1;
+  const rate = (0.9 + Math.random() * 0.24) * (1 + (0.62 - big) * 0.35);
+  const played = sample(big >= 0.62 ? 'glassB' : 'glassS', (0.5 + power * 0.5) * crowd, rate, pan, 0.25);
+  const dest = out(pan, 0.5);
+  dest.gain.value = played ? 0.45 : 0.9;
+  const t = now + 0.005;
+  if (!played) {
+    // the crack
+    noise(t, 0.05 + 0.04 * big, 'highpass', 2500, 0.7, 0.55 * (0.6 + power * 0.5), dest);
+    // the scatter: a dense hail of tiny noise grains
+    const grains = 6 + Math.floor(power * 8);
+    for (let i = 0; i < grains; i++) {
+      const tt = t + 0.01 + Math.pow(Math.random(), 1.6) * (0.18 + big * 0.2);
+      noise(tt, 0.012 + Math.random() * 0.03, 'bandpass', 3500 + Math.random() * 6000, 4 + Math.random() * 6, 0.12 + Math.random() * 0.16, dest);
+    }
+    tone(t, 210 - big * 80, 0.09, 0.22 * (0.4 + big), dest, 'sine', 0.002, 70);
   }
-  // tinkles: inharmonic bell partials
+  // tinkles: inharmonic bell partials keep every shatter unique
   const base = 1700 + Math.random() * 1600 - big * 500;
-  const n = 4 + Math.floor(Math.random() * 4);
+  const n = (played ? 2 : 4) + Math.floor(Math.random() * 3);
   for (let i = 0; i < n; i++) {
     const tt = t + Math.random() * 0.22;
     const f = base * [1, 1.51, 2.37, 2.76, 3.9, 5.4][i % 6] * (0.97 + Math.random() * 0.06);
     tone(tt, f, 0.06 + Math.random() * 0.22, 0.035 + Math.random() * 0.04, dest, 'sine');
   }
-  // body thunk
-  tone(t, 210 - big * 80, 0.09, 0.22 * (0.4 + big), dest, 'sine', 0.002, 70);
   if (combo > 1) chime(combo);
 }
 
@@ -123,6 +169,7 @@ export function chime(combo) {
 
 export function fire() {
   if (!ctx || !enabled.sfx) return;
+  if (sample('fire', 0.75, 0.94 + Math.random() * 0.12, 0, 0.05)) return;
   const t = ctx.currentTime + 0.002;
   const dest = out(0, 0.1);
   tone(t, 180, 0.14, 0.4, dest, 'sine', 0.002, 55);
@@ -146,6 +193,7 @@ export function hit(kindA, kindB, speed, x = 0.5) {
 
 export function boom(x = 0.5) {
   if (!ctx || !enabled.sfx) return;
+  if (sample('boom', 0.95, 0.92 + Math.random() * 0.14, (x - 0.5), 0.3)) return;
   const t = ctx.currentTime + 0.002;
   const dest = out((x - 0.5), 0.35);
   tone(t, 90, 0.7, 0.9, dest, 'sine', 0.003, 32);
@@ -241,3 +289,5 @@ export function startMusic() {
   };
   tick();
 }
+
+export const audioStatus = () => ({ state: ctx?.state, samples: Object.keys(buffers).length });

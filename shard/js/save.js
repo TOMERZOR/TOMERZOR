@@ -17,6 +17,7 @@ export function defaults() {
     starterSeen: false,
     tutorialDone: false,
     reviewAsked: false,
+    reminders: undefined, // undefined = never asked
     created: Date.now(),
   };
 }

@@ -6,8 +6,19 @@ import * as hapReal from './haptics.js';
 
 const DEG = Math.PI / 180;
 let quiet = false; // home-screen demo plays silently
-const mute = (m) => new Proxy(m, { get: (t, k) => (quiet && typeof t[k] === 'function' ? () => {} : t[k]) });
+// sounds can be silenced (home demo) and logged (trailer capture: window.__sfxLog)
+const mute = (m) => new Proxy(m, {
+  get: (t, k) => {
+    const fn = t[k];
+    if (typeof fn !== 'function') return fn;
+    return (...a) => {
+      if (window.__sfxLog && !quiet) window.__sfxLog.push({ k, a, t: window.__simClock || 0 });
+      return quiet ? undefined : fn(...a);
+    };
+  },
+});
 const sfx = mute(sfxReal), hap = mute(hapReal);
+const calm = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstShot, onBreak }) {
   let sim = null, level = null;
@@ -61,6 +72,11 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
       let a = Math.atan2(dy, dx);
       if (a < 0) a = a < -Math.PI / 2 ? MAX_ANGLE : MIN_ANGLE;
       a = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, a));
+      // a hint line is magnetic: close enough snaps exactly onto the proven angle
+      if (hintAngle != null && Math.abs(a - hintAngle) < 1.5 * DEG) {
+        if (angle !== hintAngle) hap.light();
+        a = hintAngle;
+      }
       if (Math.abs(a - angle) > 0.0005) {
         if (Math.floor(a / (2 * DEG)) !== Math.floor(angle / (2 * DEG))) hap.selection();
         angle = a; aimDirty = true;
@@ -187,9 +203,10 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     if (shakeT > 0) shakeT -= dtReal; else shake *= 0.85;
     flash = Math.max(0, flash - dtReal * 1.6);
     if (aiming && aimDirty) { aim = previewPath(planck, sim, angle); aimDirty = false; }
-    const sx = shake > 0.001 ? (Math.random() - 0.5) * shake * renderer.scale : 0;
-    const sy = shake > 0.001 ? (Math.random() - 0.5) * shake * renderer.scale : 0;
-    renderer.setFlash(flash);
+    const still = calm();
+    const sx = !still && shake > 0.001 ? (Math.random() - 0.5) * shake * renderer.scale : 0;
+    const sy = !still && shake > 0.001 ? (Math.random() - 0.5) * shake * renderer.scale : 0;
+    renderer.setFlash(still ? flash * 0.3 : flash);
     renderer.draw(sim, {
       alpha: paused ? 1 : acc / DT, fxDt: paused ? 0 : dtReal * Math.max(timeScale, 0.35),
       aim: aiming ? aim : null, angle, skin: getSkin(), loadK, hintAngle,
@@ -229,6 +246,9 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     get paused() { return paused; },
     addBall() { sim.addBall(); ended = false; loseShown = false; },
     showHint(a) { hintAngle = a; angle = a; aimDirty = true; },
+    // capture tooling: show the aim line without a finger, then fire
+    debugAim(a) { if (a == null) { aiming = false; return; } aiming = true; angle = a; aimDirty = true; },
+    debugFire() { aiming = false; shoot(); },
     get fired() { return fired; },
   };
 }

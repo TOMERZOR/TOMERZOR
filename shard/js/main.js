@@ -12,6 +12,11 @@ const $ = (s) => document.querySelector(s);
 const d = () => save.d;
 const PER_WORLD = 24;
 const HINT_COST = 40, CONTINUE_COST = 60;
+const WORLD_INTRO = [null,
+  'Stone and timber never break. Use them to crush the glass',
+  'Bounce pads fling the ball. Bank your shots off the walls',
+  'Bombs blow up everything nearby',
+  'Glass swings on ropes and rides moving platforms'];
 
 // ---------- stage ----------
 const canvas = $('#stage');
@@ -20,6 +25,7 @@ let mode = 'home';           // home | play | page
 let current = null;          // { level, index, daily, dateKey }
 let continued = false;
 let demoTimer = 0;
+let slowFrames = 0, dprCap = 2.5; // adaptive render resolution
 
 const game = createGame({
   canvas, renderer,
@@ -39,7 +45,7 @@ function safeInsets() {
   return r;
 }
 function resize() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
   renderer.resize(window.innerWidth, window.innerHeight, dpr, safeInsets());
 }
 window.addEventListener('resize', resize);
@@ -149,9 +155,13 @@ function startLevel(index, opts = {}) {
   $('#hud-level').textContent = opts.daily ? 'Daily Smash' : `Level ${index + 1}`;
   updateGlassPips(true);
   updateHint();
-  const tut = !opts.daily && index < 3 && !d().stars[level.id];
-  $('#coach').hidden = !tut;
-  $('#coach-text').textContent = index === 0 ? 'Pull back anywhere, then release' : index === 1 ? 'Line them up. The ball goes straight through glass' : 'Knock it down. Falling glass shatters';
+  // coach: the three tutorial levels, then one line when a world introduces something new
+  const fresh = !opts.daily && !d().stars[level.id];
+  const intro = fresh && index > 0 && index % PER_WORLD === 0 ? WORLD_INTRO[level.world] : null;
+  const tut = fresh && index < 3;
+  $('#coach').hidden = !(tut || intro);
+  $('#coach').classList.toggle('textonly', !tut);
+  $('#coach-text').textContent = intro || (index === 0 ? 'Pull back anywhere, then release' : index === 1 ? 'Line them up. The ball goes straight through glass' : 'Knock it down. Falling glass shatters');
   show('hud');
   d().stats.played++;
   save.touch();
@@ -221,7 +231,8 @@ function onWin(res) {
     const first = !d().daily.done[key];
     if (first) {
       d().daily.done[key] = stars;
-      d().daily.streak = d().daily.last === yesterdayKey() ? d().daily.streak + 1 : (d().daily.last === key ? d().daily.streak : 1);
+      // the streak continues from the day before this puzzle's date, even if it ends after midnight
+      d().daily.streak = d().daily.last === prevDayKey(key) ? d().daily.streak + 1 : 1;
       d().daily.last = key;
       d().daily.best = Math.max(d().daily.best, d().daily.streak);
     }
@@ -229,8 +240,18 @@ function onWin(res) {
   } else {
     coins = prev === 0 ? 10 + 5 * stars : Math.max(5, (stars - prev) * 5);
     if (res.maxCombo >= 3) coins += Math.min(20, res.maxCombo * 2);
+    const before = totalStars();
     d().stars[lv.id] = Math.max(prev, stars);
+    // star milestones unlock balls on their own
+    const after = totalStars();
+    for (const sk of SKINS) {
+      if (sk.stars && before < sk.stars && after >= sk.stars && !d().owned.includes(sk.id)) {
+        d().owned.push(sk.id);
+        setTimeout(() => toast(`New ball unlocked: ${sk.name}`), 1400);
+      }
+    }
   }
+  const worldDone = !current.daily && prev === 0 && (current.index + 1) % PER_WORLD === 0;
   d().coins += coins;
   d().stats.clears++;
   d().stats.glass += res.broken;
@@ -246,11 +267,14 @@ function onWin(res) {
 
   const isLast = !current.daily && current.index === LEVELS.length - 1;
   const titles = ['Shattered.', 'Clean break.', 'Smashing.', 'Crystal clear.', 'Flawless.'];
-  const title = stars === 3 ? (res.used === 1 && lv.par === 1 ? 'One shot.' : titles[Math.floor(Math.random() * titles.length)]) : stars === 2 ? 'Nice.' : 'Cleared.';
+  let title = stars === 3 ? (res.used === 1 && lv.par === 1 ? 'One shot.' : titles[Math.floor(Math.random() * titles.length)]) : stars === 2 ? 'Nice.' : 'Cleared.';
+  const nextWorld = WORLDS[lv.world + 1];
+  if (worldDone) title = `${WORLDS[lv.world].name} complete.`;
   openSheet(`
     <div class="stars">${[0, 1, 2].map((i) => `<svg class="${i < stars ? 'on' : ''}"><use href="#i-star"/></svg>`).join('')}</div>
     <h2>${title}</h2>
     <div class="statline"><span>${res.used} ${res.used === 1 ? 'ball' : 'balls'} · par ${lv.par}</span>${res.maxCombo >= 2 ? `<span>×${res.maxCombo} combo</span>` : ''}</div>
+    ${worldDone && nextWorld ? `<p class="sub">Next up: <b>${nextWorld.name}</b> · ${nextWorld.sub}</p>` : ''}
     <div class="reward"><svg><use href="#i-coin"/></svg><span id="reward-n">+0</span></div>
     <div class="actions">
       ${current.daily ? '' : `<button class="btn primary big" data-act="next">${isLast ? 'Finish' : 'Next'}<svg><use href="#i-play"/></svg></button>`}
@@ -267,7 +291,12 @@ function onWin(res) {
       if (isLast) { goHome(); toast('You cleared every level. New worlds are coming soon.'); return; }
       startLevel(current.index + 1);
     }
-    if (act === 'home') { closeSheet(); goHome(); }
+    if (act === 'home') {
+      closeSheet();
+      if (current.daily && isNative() && d().reminders === undefined && LN()) { reminderOffer(goHome); return; }
+      if (current.daily) scheduleReminders();
+      goHome();
+    }
     if (act === 'retry') { startLevel(current.index, { daily: current.daily, level: lv, dateKey: current.dateKey }); }
     if (act === 'double') {
       const ok = await showRewarded('double_coins');
@@ -554,10 +583,16 @@ function setSetting(k, v) {
 }
 function openSettings() {
   mode = 'page';
+  $('#row-reminders').hidden = !LN();
+  $('#set-reminders').checked = !!d().reminders;
   document.querySelectorAll('[data-setting]').forEach((el) => { el.checked = !!d().settings[el.dataset.setting]; });
   show('settings');
 }
 document.querySelectorAll('[data-setting]').forEach((el) => el.addEventListener('change', () => { setSetting(el.dataset.setting, el.checked); hap.light(); }));
+$('#set-reminders').addEventListener('change', async (e) => {
+  if (e.target.checked) { const ok = await enableReminders(); e.target.checked = ok; }
+  else { d().reminders = false; save.flush(); try { await LN()?.cancel({ notifications: [101, 102, 103, 104, 105, 106, 107].map((id) => ({ id })) }); } catch (err) {} }
+});
 $('#btn-reset').addEventListener('click', () => {
   openSheet(`<h2>Reset progress?</h2><p class="sub">Stars, coins and balls you earned with coins will be cleared. Purchases stay.</p>
     <div class="actions"><button class="btn primary big" data-act="cancel">Keep my progress</button><button class="btn ghost danger" data-act="reset">Reset</button></div>`, (act) => {
@@ -574,10 +609,62 @@ function dayIndex(date = new Date()) { return Math.floor((Date.UTC(date.getFullY
 function keyOf(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 function todayKey() { return keyOf(new Date()); }
 function yesterdayKey() { const t = new Date(); t.setDate(t.getDate() - 1); return keyOf(t); }
+function prevDayKey(key) { const [y, m, dd] = key.split('-').map(Number); return keyOf(new Date(y, m - 1, dd - 1)); }
 function startDaily() {
   const n = ((dayIndex() % DAILY.length) + DAILY.length) % DAILY.length;
   const lv = { ...DAILY[n], id: 'daily-' + todayKey() };
   startLevel(-1, { daily: true, level: lv, dateKey: todayKey() });
+}
+
+// ---------- daily reminder (local notification at 18:00, only on days not yet played) ----------
+const LN = () => window.Capacitor?.Plugins?.LocalNotifications;
+async function scheduleReminders() {
+  const ln = LN();
+  if (!ln || !d().reminders) return;
+  try {
+    await ln.cancel({ notifications: [101, 102, 103, 104, 105, 106, 107].map((id) => ({ id })) });
+    const now = new Date();
+    const streak = d().daily.streak;
+    const notes = [];
+    for (let i = 0; i < 7; i++) {
+      const at = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, 18, 0, 0);
+      if (i === 0 && (d().daily.done[todayKey()] || at <= now)) continue;
+      notes.push({
+        id: 101 + i,
+        title: 'Your Daily Smash is ready',
+        body: streak > 1 && i <= 1 ? `Keep your ${streak}-day streak alive. One fresh puzzle is waiting.` : 'A fresh glass puzzle is waiting. Go break something.',
+        schedule: { at, allowWhileIdle: true },
+        isExactNotification: false,
+      });
+    }
+    if (notes.length) await ln.schedule({ notifications: notes });
+  } catch (e) { /* reminders are a nice-to-have */ }
+}
+async function enableReminders() {
+  const ln = LN();
+  if (!ln) return false;
+  try {
+    const st = await ln.requestPermissions();
+    if (st?.display !== 'granted') { toast('Notifications are off in your settings'); return false; }
+    d().reminders = true; save.flush();
+    await scheduleReminders();
+    return true;
+  } catch (e) { return false; }
+}
+function reminderOffer(after) {
+  openSheet(`
+    <div class="bigicon"><svg><use href="#i-cal"/></svg></div>
+    <h2>Never miss a day</h2>
+    <p class="sub">Get one gentle reminder at 6 PM, only on days you haven't played.</p>
+    <div class="actions">
+      <button class="btn primary big" data-act="yes">Remind me</button>
+      <button class="btn ghost" data-act="no">Not now</button>
+    </div>`, async (act) => {
+    closeSheet();
+    if (act === 'yes') { const ok = await enableReminders(); if (ok) toast('See you tomorrow'); }
+    else { d().reminders = false; save.flush(); }
+    after?.();
+  }, () => { d().reminders = false; save.flush(); after?.(); });
 }
 
 // ---------- fake ads/purchases for the web build ----------
@@ -627,9 +714,21 @@ window.Capacitor?.Plugins?.App?.addListener?.('backButton', () => {
 
 // ---------- loop ----------
 let last = performance.now();
+let manual = false; // trailer capture drives frames by hand
+function tick(dt) {
+  window.__simClock = (window.__simClock || 0) + dt;
+  if (mode === 'home') demoTick(dt);
+  game.frame(dt);
+}
 function loop(t) {
   const dt = Math.min(0.05, (t - last) / 1000);
   last = t;
+  if (manual) { requestAnimationFrame(loop); return; }
+  // adaptive quality: drop resolution on devices that can't hold ~45 fps
+  if (!document.hidden && mode === 'play') {
+    slowFrames = dt > 0.022 ? slowFrames + 1 : Math.max(0, slowFrames - 2);
+    if (slowFrames > 90 && dprCap > 1.25) { dprCap = Math.max(1.25, dprCap - 0.5); slowFrames = 0; resize(); }
+  }
   if (mode === 'home') demoTick(dt);
   game.frame(dt);
   requestAnimationFrame(loop);
@@ -641,10 +740,11 @@ resize();
 sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); hap.setHaptics(d().settings.haptics);
 document.addEventListener('pointerdown', () => { sfx.initAudio(); sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); }, { once: true, capture: true });
 initMonetization({ fakeAd, fakePurchase, toast });
+scheduleReminders();
 $('#version').textContent = `SHARD 1.0 · ${LEVELS.length} levels`;
 if (!d().stars[LEVELS[0].id]) {
   // first launch goes straight into the first level: no menus before the fun
   startLevel(0);
 } else goHome();
 requestAnimationFrame(loop);
-window.__shard = { game, save, startLevel, goHome, LEVELS, DAILY, get mode() { return mode; } };
+window.__shard = { game, save, startLevel, goHome, LEVELS, DAILY, get mode() { return mode; }, tick, setManual: (v) => { manual = v; } };

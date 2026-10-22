@@ -1,0 +1,66 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>storeshot</title>
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script>
+// Composes an App Store / Play screenshot: caption on top, the real game capture below.
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') || 1290), H = +(q.get('h') || 2796);
+const img = q.get('img'), cap = q.get('cap') || '', sub = q.get('sub') || '';
+const c0 = q.get('c0') || '#FBF5EE', c1 = q.get('c1') || '#F3D8C6', ink = q.get('ink') || '#3E3A4F', accent = q.get('accent') || '#FF7A59';
+const c = document.getElementById('c');
+c.width = W; c.height = H;
+const x = c.getContext('2d');
+const g = x.createLinearGradient(0, 0, 0, H);
+g.addColorStop(0, c0); g.addColorStop(1, c1);
+x.fillStyle = g; x.fillRect(0, 0, W, H);
+// soft light
+const r = x.createRadialGradient(W * 0.2, H * 0.08, 0, W * 0.2, H * 0.08, W * 0.9);
+r.addColorStop(0, 'rgba(255,255,255,0.35)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+x.fillStyle = r; x.fillRect(0, 0, W, H);
+const font = 'ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+function wrap(text, maxW, size, weight) {
+  x.font = `${weight} ${size}px ${font}`;
+  const words = text.split(' '), lines = [];
+  let line = '';
+  for (const w of words) { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t; }
+  if (line) lines.push(line);
+  return lines;
+}
+const topPad = H * 0.055;
+const capSize = Math.round(W * 0.078);
+const lines = wrap(cap, W * 0.86, capSize, 900);
+x.fillStyle = ink; x.textAlign = 'center'; x.textBaseline = 'top';
+x.font = `900 ${capSize}px ${font}`;
+lines.forEach((l, i) => x.fillText(l, W / 2, topPad + i * capSize * 1.08));
+let y = topPad + lines.length * capSize * 1.08 + W * 0.015;
+if (sub) {
+  const ss = Math.round(W * 0.038);
+  x.font = `700 ${ss}px ${font}`; x.globalAlpha = 0.66;
+  x.fillText(sub, W / 2, y); x.globalAlpha = 1;
+  y += ss * 1.5;
+}
+y += W * 0.03;
+const im = new Image();
+im.onload = () => {
+  // fit the capture into the space left under the caption
+  const ratio = im.height / im.width;
+  const avail = H - y - W * 0.05;
+  let fw = W * 0.86, fh = fw * ratio;
+  if (fh > avail) { fh = avail; fw = fh / ratio; }
+  const fx = (W - fw) / 2, fy = y;
+  const rad = W * 0.07;
+  x.save();
+  x.shadowColor = 'rgba(30,20,50,0.28)'; x.shadowBlur = W * 0.06; x.shadowOffsetY = W * 0.025;
+  x.beginPath(); x.roundRect(fx, fy, fw, fh, rad); x.fillStyle = '#fff'; x.fill();
+  x.restore();
+  x.save(); x.beginPath(); x.roundRect(fx, fy, fw, fh, rad); x.clip();
+  x.drawImage(im, fx, fy, fw, fh);
+  x.restore();
+  x.lineWidth = W * 0.006; x.strokeStyle = 'rgba(255,255,255,0.9)';
+  x.beginPath(); x.roundRect(fx, fy, fw, fh, rad); x.stroke();
+  document.title = 'ready';
+};
+im.onerror = () => { document.title = 'error'; };
+im.src = img;
+</script></body></html>

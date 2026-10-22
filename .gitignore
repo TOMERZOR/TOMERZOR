@@ -10,3 +10,4 @@ shard/tools/quick.log
 shard/tools/gen.log
 shard-app/node_modules/
 shard-app/www/
+shard/tools/qa/out/

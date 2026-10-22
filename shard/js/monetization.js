@@ -30,6 +30,9 @@ const AdMob = () => cap()?.Plugins?.AdMob;
 const Purchases = () => cap()?.Plugins?.Purchases;
 
 let ready = false, ui = null, prices = {}, storeProducts = {};
+// Web build: rewards are granted straight away and purchases point to the app.
+// Add ?test to the URL to walk through simulated ads and purchases instead.
+const webTest = (() => { try { return new URLSearchParams(location.search).has('test'); } catch (e) { return false; } })();
 
 export async function initMonetization(uiHooks) {
   ui = uiHooks;
@@ -71,7 +74,7 @@ async function preload() {
 export async function showRewarded(placement) {
   track('ad_rewarded_request', { placement });
   if (!native()) {
-    const ok = await ui.fakeAd('rewarded');
+    const ok = webTest ? await ui.fakeAd('rewarded') : true;
     if (ok) track('ad_rewarded_earned', { placement });
     return ok;
   }
@@ -110,7 +113,7 @@ export async function maybeInterstitial(levelIndex) {
   if (Date.now() - a.lastAt < c.minGapMs) return;
   a.clearsSince = 0; a.lastAt = Date.now(); save.touch();
   track('ad_interstitial', { level: levelIndex + 1 });
-  if (!native()) { await ui.fakeAd('interstitial'); return; }
+  if (!native()) { if (webTest) await ui.fakeAd('interstitial'); return; }
   try { await AdMob()?.showInterstitial(); } catch (e) {}
   preload();
 }
@@ -118,7 +121,10 @@ export async function maybeInterstitial(levelIndex) {
 export async function purchase(product) {
   track('iap_start', { id: product.id });
   let ok = false;
-  if (!native()) ok = await ui.fakePurchase(product);
+  if (!native()) {
+    if (!webTest) { ui.toast('Purchases are available in the SHARD app for iPhone and Android'); return false; }
+    ok = await ui.fakePurchase(product);
+  }
   else {
     try {
       const p = Purchases();
@@ -161,7 +167,7 @@ async function syncEntitlements() {
 }
 
 export async function restore() {
-  if (!native()) { ui.toast('Purchases restored.'); return; }
+  if (!native()) { ui.toast(webTest ? 'Purchases restored.' : 'Purchases are available in the SHARD app for iPhone and Android'); return; }
   try { await Purchases()?.restorePurchases(); await syncEntitlements(); ui.toast('Purchases restored.'); }
   catch (e) { ui.toast('Could not restore purchases.'); }
 }

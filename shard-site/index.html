@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SHARD: Satisfying Glass Smash</title>
+<meta name="description" content="Aim, fire, and watch glass explode. 120 physics puzzles, a new Daily Smash every day, and the most satisfying sound on your phone.">
+<meta property="og:title" content="SHARD: Satisfying Glass Smash">
+<meta property="og:description" content="Aim. Fire. Shatter. A premium physics puzzle for iPhone and Android.">
+<meta property="og:image" content="assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="apple-itunes-app" content="app-id=REPLACE_WITH_APP_STORE_ID">
+<link rel="icon" href="assets/icon-32.png">
+<style>
+  :root {
+    --bg0: #FBF5EE; --bg1: #F3D8C6; --ink: #3E3A4F; --muted: #6E6980; --accent: #E5533D; --card: rgba(255,255,255,0.72);
+    --indigo: #2A2160;
+    --font: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg0: #161B2E; --bg1: #232A45; --ink: #E7EAF6; --muted: #B9C0DC; --accent: #FF7A59; --card: rgba(255,255,255,0.06); }
+  }
+  :root[data-theme="dark"] { --bg0: #161B2E; --bg1: #232A45; --ink: #E7EAF6; --muted: #B9C0DC; --accent: #FF7A59; --card: rgba(255,255,255,0.06); }
+  * { box-sizing: border-box; }
+  html { background: var(--bg0); }
+  body { margin: 0; color: var(--ink); background: linear-gradient(180deg, var(--bg0), var(--bg1)) fixed; font-family: var(--font); -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: calc(env(safe-area-inset-top) + 18px) 0 8px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: .04em; font-size: 20px; text-decoration: none; }
+  .brand img { width: 36px; height: 36px; border-radius: 9px; }
+  nav a { font-weight: 700; color: var(--muted); text-decoration: none; margin-left: 18px; }
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center; padding: 48px 0 24px; }
+  h1 { font-size: clamp(46px, 8vw, 88px); line-height: .98; margin: 0; font-weight: 900; letter-spacing: -.02em; }
+  h1 span { color: var(--accent); }
+  .lede { font-size: 20px; color: var(--muted); font-weight: 600; margin: 20px 0 28px; max-width: 30ch; }
+  .badges { display: flex; gap: 12px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; gap: 10px; min-height: 56px; padding: 0 20px; border-radius: 16px; background: var(--ink); color: var(--bg0); font-weight: 800; text-decoration: none; }
+  .badge small { display: block; font-size: 11px; font-weight: 700; opacity: .7; letter-spacing: .04em; }
+  .badge.web { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+  .phone { justify-self: center; width: min(340px, 80vw); aspect-ratio: 390 / 844; border-radius: 44px; overflow: hidden; box-shadow: 0 40px 80px -30px rgba(40, 20, 60, .45), 0 0 0 8px rgba(255,255,255,.6); background: #fff; }
+  .phone img, .phone video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 40px 0; }
+  .card { background: var(--card); border-radius: 24px; padding: 24px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  .card h3 { margin: 10px 0 6px; font-size: 21px; font-weight: 900; }
+  .card p { margin: 0; color: var(--muted); font-weight: 600; }
+  .dot { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 900; }
+  .shots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 8px 0 40px; }
+  .shots img { width: 100%; border-radius: 22px; box-shadow: 0 20px 40px -24px rgba(40, 20, 60, .5); }
+  .faq { padding: 8px 0 40px; max-width: 760px; }
+  .faq h2 { font-size: 34px; font-weight: 900; margin: 0 0 12px; }
+  details { background: var(--card); border-radius: 18px; padding: 16px 20px; margin-bottom: 10px; }
+  summary { font-weight: 800; cursor: pointer; font-size: 18px; }
+  details p { color: var(--muted); font-weight: 600; margin: 10px 0 0; }
+  footer { padding: 32px 0 calc(env(safe-area-inset-bottom) + 40px); color: var(--muted); font-weight: 600; display: flex; gap: 18px; flex-wrap: wrap; }
+  footer a { text-decoration: none; font-weight: 800; }
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; padding-top: 24px; text-align: center; }
+    .lede { margin-left: auto; margin-right: auto; }
+    .badges { justify-content: center; }
+    .features { grid-template-columns: 1fr; }
+    .shots { grid-template-columns: repeat(2, 1fr); }
+    nav { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="#"><img src="assets/icon-192.png" alt="">SHARD</a>
+    <nav><a href="#features">Features</a><a href="#faq">FAQ</a><a href="support.html">Support</a></nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Aim. Fire.<br><span>Shatter.</span></h1>
+      <p class="lede">A calm, beautifully minimal physics puzzle where every shot ends in a burst of glass.</p>
+      <div class="badges">
+        <a class="badge" href="#" aria-label="Download on the App Store"><span><small>Download on the</small>App Store</span></a>
+        <a class="badge" href="#" aria-label="Get it on Google Play"><span><small>Get it on</small>Google Play</span></a>
+        <a class="badge web" href="../shard/index.html"><span><small>No install</small>Play in browser</span></a>
+      </div>
+    </div>
+    <div class="phone"><img src="assets/hero.png" alt="SHARD gameplay: a glass chandelier shattering"></div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="card"><div class="dot">1</div><h3>Satisfying by design</h3><p>Crisp glass sounds, precise haptics, slow-motion finishes and chain reactions. No two shatters sound alike.</p></div>
+    <div class="card"><div class="dot">2</div><h3>Fair, always</h3><p>Every one of the 120 levels is proven solvable by a physics solver. No forced ads in your first 12 levels.</p></div>
+    <div class="card"><div class="dot">3</div><h3>A new puzzle daily</h3><p>The Daily Smash keeps your streak alive. Collect 12 balls, from Chalk to Prism.</p></div>
+  </section>
+
+  <section class="shots" aria-label="Screenshots">
+    <img src="assets/shot1.png" alt="Aim and fire">
+    <img src="assets/shot2.png" alt="Bank shots off the walls">
+    <img src="assets/shot3.png" alt="Bombs and chain reactions">
+    <img src="assets/shot4.png" alt="Five worlds">
+  </section>
+
+  <section class="faq" id="faq">
+    <h2>Questions</h2>
+    <details><summary>Is SHARD free?</summary><p>Yes. The game is free with optional ads. A single "Remove Ads" purchase turns off interstitial ads for good.</p></details>
+    <details><summary>Does it work offline?</summary><p>Yes. Everything runs on your device. Ads and purchases need a connection, the game does not.</p></details>
+    <details><summary>I'm stuck on a level.</summary><p>Tap the light bulb. A hint shows the first shot of a proven solution. Your first hint in each world is free.</p></details>
+    <details><summary>I changed phones. How do I get my purchases back?</summary><p>Open Settings or the Store and tap "Restore purchases". Remove Ads, the Starter Pack and the Prism ball come back.</p></details>
+  </section>
+
+  <footer>
+    <span>© 2026 SHARD</span>
+    <a href="support.html">Support</a>
+    <a href="../shard/privacy.html">Privacy</a>
+    <a href="../shard/terms.html">Terms</a>
+  </footer>
+</div>
+</body>
+</html>

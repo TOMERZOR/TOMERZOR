@@ -70,7 +70,7 @@ export class LevelScene extends Scene {
   private cs = 100; private flash!: Graphics; private bannerY = 0;
   private heroSp!: Actor; private echoSps: Actor[] = []; private droneSps: Actor[] = []; private ghostSps: Sprite[] = []; private coinSps = new Map<string, Sprite>();
   private plateSps = new Map<string, Sprite>(); private doorSps = new Map<string, { open: Sprite; closed: Sprite }>(); private exitSp!: Sprite; private exitGlow!: Sprite;
-  private dangerSps: Container[] = []; private hintSp!: Sprite;
+  private dangerSps: Container[] = []; private hintSp!: Sprite; private mirrorGhost: Sprite | null = null;
   // hud
   private hud!: Container; private dial!: Container; private dialArc!: Graphics; private dialNum!: Text; private titleT!: Text; private objT!: Text; private syncT!: Text; private coinPill!: Container;
   private strip!: Container; private chips: Container[] = []; private capT!: Text;
@@ -315,13 +315,28 @@ export class LevelScene extends Scene {
     this.heroSp = new Actor(Texture.from(L.SKINS[skin]!.sprite), cs, "hero", col); this.heroSp.position.set((start.x + 0.5) * cs, (start.y + 0.92) * cs); this.actors.addChild(this.heroSp); this.heroSp.arrive(this.fx);
     this.run.drones.forEach((d) => { const a = new Actor(Texture.from("s_sentinel"), cs, "drone", "#ff5c5c"); a.position.set((d.px + 0.5) * cs, (d.py + 0.5) * cs); if (d.dx) a.setDir(d.dx > 0 ? 3 : 7); this.actors.addChild(a); this.droneSps.push(a); });
     this.landed = true;
+    // Mirror rooms: a faint hologram walks the mirrored path, so the player sees where this loop's echo will stand.
+    if (this.mirrorGhost && !this.mirrorGhost.destroyed) this.mirrorGhost.destroy(); this.mirrorGhost = null;
+    if (this.level.mirror) {
+      const g = new Sprite(echoTexture(skin)); g.anchor.set(0.5, 1); g.scale.set(Math.min((cs * 0.96) / g.texture.width, (cs * 1.3) / g.texture.height)); g.alpha = 0.3; g.tint = 0xbff2ff;
+      g.position.set((start.x + 0.5) * cs, (start.y + 0.92) * cs); this.items.addChild(g); this.mirrorGhost = g;
+    }
     // coins
     for (const s of this.coinSps.values()) { gsap.killTweensOf(s); if (!s.destroyed) s.destroy(); } this.coinSps.clear();
     for (const c of this.run.coins) { const s = new Sprite(Texture.from("s_coin")); s.anchor.set(0.5); s.height = cs * 0.62; s.scale.x = s.scale.y; s.position.set((c.x + 0.5) * cs, (c.y + 0.5) * cs); this.items.addChild(s); this.coinSps.set(`${c.x},${c.y}`, s); gsap.to(s, { y: (c.y + 0.42) * cs, duration: 0.8 + Math.random() * 0.4, yoyo: true, repeat: -1, ease: "sine.inOut" }); }
     this.syncStatic();
   }
+  /** Where the echo recorded this loop will be after the moves made so far: replay the recording as an echo with the hero standing still. */
+  private updateMirrorGhost() {
+    const g = this.mirrorGhost; if (!g || g.destroyed || !this.run) return;
+    const r = L.createRun(this.level, [...this.logs, this.recording, ""]);
+    for (let i = 0; i < this.recording.length && !r.dead; i++) L.stepRun(r, 0);
+    const e = r.actors[r.actors.length - 2]; if (!e) return;
+    g.visible = !this.run.finished; gsap.killTweensOf(g); gsap.to(g, { x: (e.x + 0.5) * this.cs, y: (e.y + 0.92) * this.cs, duration: 0.12, ease: "power2.out" });
+  }
   /** Switches, gates, coins to the run's truth (after a rewind or a restart). */
   private syncStatic() {
+    this.updateMirrorGhost();
     for (const [k, s] of this.plateSps) s.texture = Texture.from(this.run.plates[k] ? "s_switch_on" : "s_switch_off");
     for (const [k, d] of this.doorSps) { const open = !!this.run.doors[k]; d.open.alpha = open ? 1 : 0; d.closed.alpha = open ? 0 : 1; }
     for (const c of this.run.coins) { const s = this.coinSps.get(`${c.x},${c.y}`); if (s) s.visible = !c.taken; }
@@ -614,7 +629,7 @@ export class LevelScene extends Scene {
     if (L.LOOP_TICKS - run.tick <= 3 && L.LOOP_TICKS - run.tick > 0) buzz("warning");
     if (run.tick > this.hintUntil) this.hintSp.visible = false;
     this.clearPeek();
-    this.handleEvents(run); this.drawDial(); this.drawSync();
+    this.handleEvents(run); this.drawDial(); this.drawSync(); this.updateMirrorGhost();
     if (!run.finished) this.tut?.on("beat");
     if (run.finished) { this.levelDone(); return; }
     if (run.dead) { this.loopFailed(); return; }

@@ -109,7 +109,10 @@ const EXTRA: Record<string, Table> = {
 };
 for (const k in EXTRA) Object.assign(STR[k]!, EXTRA[k]);
 
-export const lang = () => (state.opts.lang === "he" ? "he" : "en");
+/** Hebrew is switched off until the screens are laid out right-to-left; the strings stay for that day. */
+export const HEBREW = false;
+export const LANGS: readonly (readonly [string, string])[] = HEBREW ? [["en", "English"], ["he", "עברית"]] : [["en", "English"]];
+export const lang = () => (HEBREW && state.opts.lang === "he" ? "he" : "en");
 export const rtl = () => lang() === "he";
 /** A right-to-left mark in front of strings that start with a digit, so "2 echoes · 15 moves" keeps its order in Hebrew. */
 export const bidi = (s: string) => (rtl() ? "\u200F" + s : s);

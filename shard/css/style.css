@@ -1,3 +1,11 @@
+/* one rounded face on every platform (Nunito, SIL OFL 1.1: assets/fonts/OFL.txt) */
+@font-face {
+  font-family: "Nunito";
+  src: url("../assets/fonts/nunito.woff2") format("woff2");
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: block;
+}
 :root {
   --ink: #3E3A4F; --ink2: #5B5670; --accent: #FF7A59; --text: #3E3A4F;
   --sky0: #FBF5EE; --sky1: #F3D8C6;
@@ -6,7 +14,7 @@
   --on-accent: #FFFFFF;
   --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
   --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
-  --font: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --spring: cubic-bezier(.2, 1.3, .35, 1);
   --ease: cubic-bezier(.22, .8, .2, 1);
   color-scheme: light;

@@ -2,6 +2,7 @@
 import { W, PIVOT_Y, BALL_R, CEIL, DOME_R, MUZZLE } from './engine.js';
 
 const TAU = Math.PI * 2;
+const FONT = '"Nunito", ui-rounded, system-ui, sans-serif';
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d', { alpha: false });
@@ -401,7 +402,7 @@ export function createRenderer(canvas) {
       const pop = k < 0.15 ? 0.6 + (k / 0.15) * 0.55 : 1.15 - Math.min(0.15, (k - 0.15) * 0.6);
       const [sx, sy] = R.toScreen(t.x, t.y + k * 0.7);
       c.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
-      c.font = `800 ${Math.round(t.size * s * pop)}px ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif`;
+      c.font = `900 ${Math.round(t.size * s * pop)}px ${FONT}`;
       c.lineWidth = Math.max(2, t.size * s * 0.16); c.strokeStyle = pal.dark ? 'rgba(10,14,30,0.6)' : 'rgba(255,255,255,0.9)';
       c.strokeText(t.str, sx, sy);
       c.fillStyle = t.col; c.fillText(t.str, sx, sy);
@@ -455,7 +456,7 @@ export function createRenderer(canvas) {
     c.fillStyle = pal.ink; c.globalAlpha = 0.85;
     for (let i = 0; i < shown; i++) { c.beginPath(); c.arc(startX + i * gap, py, pipR, 0, TAU); c.fill(); }
     if (total > shown) {
-      c.font = `800 ${Math.round(pipR * 3.2)}px ui-rounded, system-ui, sans-serif`; c.textAlign = 'left'; c.textBaseline = 'middle';
+      c.font = `900 ${Math.round(pipR * 3.2)}px ${FONT}`; c.textAlign = 'left'; c.textBaseline = 'middle';
       c.fillText('+' + (total - shown), startX + shown * gap - pipR, py + 0.5);
     }
     c.globalAlpha = 1;

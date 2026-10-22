@@ -10,6 +10,7 @@ const [w, h] = (process.env.SIZE || '390x844').split('x').map(Number);
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
 const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: +(process.env.DPR || 2), isMobile: true, hasTouch: true });
 const page = await ctx.newPage();
+if (process.env.THROTTLE) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: +process.env.THROTTLE }); }
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));

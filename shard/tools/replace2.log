@@ -1,0 +1,54 @@
+replacing 6 levels; per world 2 2 1 0 1 | new daily needed 42
+[34s] attempts 10 found 1/0/0/0/0 daily 0/42
+[51s] attempts 20 found 2/0/0/0/0 daily 0/42
+[75s] attempts 30 found 2/2/0/0/0 daily 0/42
+[76s] attempts 40 found 2/2/0/0/0 daily 0/42
+[82s] attempts 50 found 2/2/0/0/0 daily 0/42
+[83s] attempts 60 found 2/2/0/0/0 daily 0/42
+[83s] attempts 70 found 2/2/0/0/0 daily 0/42
+[92s] attempts 80 found 2/2/1/0/0 daily 0/42
+[100s] attempts 90 found 2/2/1/0/0 daily 0/42
+[106s] attempts 100 found 2/2/1/0/0 daily 0/42
+[108s] attempts 110 found 2/2/1/0/0 daily 0/42
+[108s] attempts 120 found 2/2/1/0/0 daily 0/42
+[115s] attempts 130 found 2/2/1/0/0 daily 0/42
+[118s] attempts 140 found 2/2/1/0/0 daily 0/42
+[121s] attempts 150 found 2/2/1/0/1 daily 0/42
+[127s] attempts 160 found 2/2/1/0/1 daily 1/42
+[151s] attempts 170 found 2/2/1/0/1 daily 5/42
+[172s] attempts 180 found 2/2/1/0/1 daily 6/42
+[193s] attempts 190 found 2/2/1/0/1 daily 10/42
+[207s] attempts 200 found 2/2/1/0/1 daily 13/42
+[233s] attempts 210 found 2/2/1/0/1 daily 14/42
+[241s] attempts 220 found 2/2/1/0/1 daily 15/42
+[262s] attempts 230 found 2/2/1/0/1 daily 18/42
+[272s] attempts 240 found 2/2/1/0/1 daily 20/42
+[287s] attempts 250 found 2/2/1/0/1 daily 20/42
+[296s] attempts 260 found 2/2/1/0/1 daily 21/42
+[307s] attempts 270 found 2/2/1/0/1 daily 22/42
+[319s] attempts 280 found 2/2/1/0/1 daily 23/42
+[345s] attempts 290 found 2/2/1/0/1 daily 24/42
+[360s] attempts 300 found 2/2/1/0/1 daily 25/42
+[377s] attempts 310 found 2/2/1/0/1 daily 28/42
+[394s] attempts 320 found 2/2/1/0/1 daily 29/42
+[399s] attempts 330 found 2/2/1/0/1 daily 31/42
+[418s] attempts 340 found 2/2/1/0/1 daily 32/42
+[434s] attempts 350 found 2/2/1/0/1 daily 32/42
+[445s] attempts 360 found 2/2/1/0/1 daily 32/42
+[456s] attempts 370 found 2/2/1/0/1 daily 32/42
+[473s] attempts 380 found 2/2/1/0/1 daily 33/42
+[484s] attempts 390 found 2/2/1/0/1 daily 35/42
+[499s] attempts 400 found 2/2/1/0/1 daily 37/42
+[507s] attempts 410 found 2/2/1/0/1 daily 38/42
+[527s] attempts 420 found 2/2/1/0/1 daily 41/42
+added 42 daily levels
+replaced 6 levels in 538s (425 attempts)
+round 1: +1 ball on 40 levels
+round 2: +1 ball on 12 levels
+world 1: average-player clear 79% | first five 100 100 67 100 92 | last five 58 58 58 50 42 | balls par+8/12/4
+world 2: average-player clear 63% | first five 92 83 83 83 75 | last five 42 42 42 42 33 | balls par+18/5/1
+world 3: average-player clear 61% | first five 100 100 92 83 83 | last five 42 33 25 25 17 | balls par+13/6/5
+world 4: average-player clear 70% | first five 100 100 100 100 83 | last five 50 42 42 42 42 | balls par+21/3/0
+world 5: average-player clear 65% | first five 100 100 92 92 83 | last five 42 42 42 33 17 | balls par+12/10/2
+levels.js updated: tuned ball counts and difficulty order
+120 campaign + 100 daily: all checks pass

@@ -15,6 +15,10 @@ const config: CapacitorConfig = {
     backgroundColor: "#FBF5EE",
   },
   plugins: {
+    LocalNotifications: {
+      smallIcon: "ic_stat_shard",
+      iconColor: "#FF6B57",
+    },
     SplashScreen: {
       launchShowDuration: 600,
       launchAutoHide: true,

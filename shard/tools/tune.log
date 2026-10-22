@@ -1,0 +1,10 @@
+round 1: +1 ball on 32 levels
+round 2: +1 ball on 12 levels
+world 1: average-player clear 72% | first five 100 100 75 100 100 | last five 50 50 50 13 0 | balls par+12/10/2
+world 2: average-player clear 61% | first five 88 88 88 88 75 | last five 50 38 38 13 0 | balls par+18/2/4
+world 3: average-player clear 61% | first five 100 100 88 88 75 | last five 38 38 38 38 0 | balls par+16/4/4
+world 4: average-player clear 71% | first five 100 100 100 100 88 | last five 50 38 38 38 38 | balls par+22/2/0
+world 5: average-player clear 61% | first five 100 88 88 88 75 | last five 38 38 38 38 13 | balls par+12/10/2
+levels.js updated: tuned ball counts and difficulty order
+daily: kept 58/100, average-player clear 67%, balls par+33/14/11
+120 campaign + 58 daily: all checks pass

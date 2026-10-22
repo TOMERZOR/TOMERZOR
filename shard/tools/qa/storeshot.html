@@ -1,8 +1,10 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>storeshot</title>
-<style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<style>@font-face{font-family:"Nunito";src:url("/assets/fonts/nunito.woff2") format("woff2");font-weight:200 1000}html,body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c"></canvas>
 <script>
+(async () => {
+await Promise.all([document.fonts.load('900 40px Nunito'), document.fonts.load('700 40px Nunito')]);
 // Composes an App Store / Play screenshot: caption on top, the real game capture below.
 const q = new URLSearchParams(location.search);
 const W = +(q.get('w') || 1290), H = +(q.get('h') || 2796);
@@ -18,7 +20,7 @@ x.fillStyle = g; x.fillRect(0, 0, W, H);
 const r = x.createRadialGradient(W * 0.2, H * 0.08, 0, W * 0.2, H * 0.08, W * 0.9);
 r.addColorStop(0, 'rgba(255,255,255,0.35)'); r.addColorStop(1, 'rgba(255,255,255,0)');
 x.fillStyle = r; x.fillRect(0, 0, W, H);
-const font = 'ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+const font = '"Nunito", ui-rounded, system-ui, sans-serif';
 function wrap(text, maxW, size, weight) {
   x.font = `${weight} ${size}px ${font}`;
   const words = text.split(' '), lines = [];
@@ -63,4 +65,5 @@ im.onload = () => {
 };
 im.onerror = () => { document.title = 'error'; };
 im.src = img;
+})();
 </script></body></html>

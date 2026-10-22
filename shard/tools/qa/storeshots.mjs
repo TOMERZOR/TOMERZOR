@@ -24,7 +24,7 @@ await page.addInitScript(() => {
 });
 await page.goto('http://localhost:8080/index.html');
 await page.waitForTimeout(900);
-await page.addStyleTag({ content: '.coach, .toast { display: none !important; } body.nosheet #sheet, body.nosheet #scrim { display: none !important; }' });
+await page.addStyleTag({ content: '.coach, .toast, #worldcard { display: none !important; } body.nosheet #sheet, body.nosheet #scrim { display: none !important; }' });
 await page.evaluate(() => document.body.classList.add('nosheet'));
 await page.evaluate(() => window.__shard.setManual(true));
 const tick = (n = 1, dt = 1 / 60) => page.evaluate(([n, dt]) => { for (let i = 0; i < n; i++) window.__shard.tick(dt); }, [n, dt]);
@@ -45,7 +45,7 @@ console.log('levels', L);
 
 async function playUntil(index, stopWhen, maxFrames = 400) {
   await page.evaluate((i) => window.__shard.startLevel(i), index);
-  await tick(20);
+  await tick(60);
   const a = await page.evaluate(() => window.__shard.game.level.proof[0] * Math.PI / 180);
   await page.evaluate((a) => { window.__shard.game.debugAim(a); }, a);
   await tick(2);
@@ -64,7 +64,7 @@ await tick(10);
 shots.push({ img: await raw('raw1'), cap: 'Aim. Fire. Shatter.', sub: 'The most satisfying sound on your phone', world: 0 });
 // 2: aiming with the trajectory preview
 await page.evaluate((i) => window.__shard.startLevel(i), L.lilac);
-await tick(20);
+await tick(70); // let the level finish assembling
 await page.evaluate(() => { const g = window.__shard.game; g.debugAim(g.level.proof[0] * Math.PI / 180 + 0.05); });
 await tick(2);
 shots.push({ img: await raw('raw2'), cap: 'Bank it off the walls', sub: 'Every level is proven solvable', world: 2 });
@@ -74,7 +74,7 @@ await tick(3);
 shots.push({ img: await raw('raw3'), cap: 'Chain reactions', sub: 'Bombs, stone, timber, glass', world: 3 });
 // 4: night chandeliers at rest
 await page.evaluate((i) => window.__shard.startLevel(i), L.night);
-await tick(30);
+await tick(80);
 shots.push({ img: await raw('raw4'), cap: '5 worlds. 120 levels.', sub: 'Plus a new puzzle every day', world: 4 });
 // 5: home with the daily card
 await page.evaluate(() => { document.body.classList.remove('nosheet'); window.__shard.goHome(); });

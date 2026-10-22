@@ -20,7 +20,6 @@ export function createRenderer(canvas) {
   let cw = 0, ch = 0, dpr = 1, s = 40, ox = 0, oy = 0, pal = null;
   let staticDirty = true, simRef = null;
   const fx = [];
-  const texts = [];
   let flash = 0;
 
   const R = {
@@ -41,7 +40,7 @@ export function createRenderer(canvas) {
     },
     setPalette(p) { pal = p; accentRGB = hexRGB(p.accent); staticDirty = true; seedMotes(); },
     setSim(sim) {
-      simRef = sim; staticDirty = true; while (fx.length) recycle(0); texts.length = 0; combo.t = -9; cam.kick = 0; cam.ft = 0; cam.z = 1;
+      simRef = sim; staticDirty = true; while (fx.length) recycle(0); combo.t = -9; cam.kick = 0; cam.ft = 0; cam.z = 1;
       // the level assembles itself: pieces pop in from the bottom up
       const parts = sim.ents.filter((e) => SPRITED[e.kind] === 1 || e.kind === 'bomb');
       parts.sort((a, b) => a.body.getPosition().y - b.body.getPosition().y || a.body.getPosition().x - b.body.getPosition().x);
@@ -50,7 +49,6 @@ export function createRenderer(canvas) {
       introEnd = parts.length ? clock + INTRO_DELAY + parts.length * step + INTRO_POP : 0;
       return { n: parts.length, step, delay: INTRO_DELAY };
     },
-    invalidate() { staticDirty = true; },
     toScreen(x, y) { return [ox + x * s, oy - y * s]; },
     toWorld(px, py) { return [(px - ox) / s, (oy - py) / s]; },
     floorY: () => oy,
@@ -78,11 +76,10 @@ export function createRenderer(canvas) {
       }
       if (best) best.hitT = performance.now();
     },
-    burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, muzzle, confetti, punch, focus, combo: comboAt,
+    burst, ring, sparkle, shatter, sparks, puff, glow, explosion, muzzle, confetti, punch, focus, combo: comboAt,
     setTier,
     setFlash: (v) => { flash = v; },
     draw,
-    bounds: () => ({ ox, oy, s, cw, ch }),
   };
 
   // ---------- stage: wall, light and framing (cached; redrawn on resize, palette or level change) ----------
@@ -753,9 +750,6 @@ export function createRenderer(canvas) {
   function ring(x, y, r, col = 'rgba(255,255,255,0.9)', life = 0.45, width = 0.08) {
     const f = spawn('ring', x, y, life); f.r = r; f.col = col; f.width = width;
   }
-  function text(x, y, str, col, size = 0.55, life = 0.9) {
-    texts.push({ x, y, str, col, size, life, age: 0 });
-  }
   // one counter per chain: it pops bigger with every link
   const combo = { n: 0, x: 0, y: 0, tx: 0, ty: 0, t: -9 };
   function comboAt(n, x, y) {
@@ -777,7 +771,6 @@ export function createRenderer(canvas) {
       f.vy -= 10 * f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt;
       if (f.t === 'chip' && f.y < 0.03) { f.y = 0.03; f.vy *= -0.3; f.vx *= 0.6; }
     }
-    for (let i = texts.length - 1; i >= 0; i--) { const t = texts[i]; t.age += dt; if (t.age > t.life) texts.splice(i, 1); }
     stepCamera(dt);
   }
 
@@ -1027,19 +1020,6 @@ export function createRenderer(canvas) {
       c.fillText('\u00d7' + n, sx, sy);
       c.globalAlpha = 1;
     }
-    // texts
-    c.textAlign = 'center'; c.textBaseline = 'middle';
-    for (const t of texts) {
-      const k = t.age / t.life;
-      const pop = k < 0.15 ? 0.6 + (k / 0.15) * 0.55 : 1.15 - Math.min(0.15, (k - 0.15) * 0.6);
-      const [sx, sy] = R.toScreen(t.x, t.y + k * 0.7);
-      c.globalAlpha = k > 0.7 ? (1 - k) / 0.3 : 1;
-      c.font = `900 ${Math.round(t.size * s * pop)}px ${FONT}`;
-      c.lineWidth = Math.max(2, t.size * s * 0.16); c.strokeStyle = pal.dark ? 'rgba(10,14,30,0.6)' : 'rgba(255,255,255,0.9)';
-      c.strokeText(t.str, sx, sy);
-      c.fillStyle = t.col; c.fillText(t.str, sx, sy);
-    }
-    c.globalAlpha = 1;
     if (flash > 0) {
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.fillStyle = `rgba(255,255,255,${flash})`; c.fillRect(0, 0, canvas.width, canvas.height);

@@ -46,6 +46,17 @@ if (what === 'home') {
     for (let i = 0; i < 12; i++) { await page.evaluate(([a, t]) => window.__shard.game.debugAim(a + (1 - t) * 0.3), [a, Math.min(1, (i + 1) / 8)]); await tick(1); }
     await snap('aim' + k);
     await page.evaluate(() => window.__shard.game.debugFire());
+    // BREAK=1: fast-forward to the first piece of glass breaking, then film it closely
+    if (process.env.BOMB) {
+      const bombs = () => page.evaluate(() => window.__shard.game.sim.ents.filter((e) => e.alive && e.kind === 'bomb').length);
+      const n0 = await bombs();
+      await page.evaluate(([n0, dt]) => { const S = window.__shard; for (let i = 0; i < 900 && S.game.sim.ents.filter((e) => e.alive && e.kind === 'bomb').length === n0; i++) S.tick(dt); }, [n0, 1 / FPS]);
+      await snap('boom');
+    } else if (process.env.BREAK) {
+      const b0 = await page.evaluate(() => window.__shard.game.sim.st.broken);
+      await page.evaluate(([b0, dt]) => { for (let i = 0; i < 600 && window.__shard.game.sim.st.broken === b0; i++) window.__shard.tick(dt); }, [b0, 1 / FPS]);
+      await snap('break');
+    }
     for (let i = 0; i < FRAMES; i++) { await tick(EVERY); await snap(); if (await page.evaluate(() => window.__shard.game.sim.st.won)) { for (let j = 0; j < 6; j++) { await tick(EVERY * 3); await snap('end'); } break; } }
     if (await page.evaluate(() => window.__shard.game.sim.st.won)) break;
     await tick(90);

@@ -27,8 +27,9 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
   let acc = 0, timeScale = 1, slowT = 0, shake = 0, shakeT = 0, flash = 0;
   let paused = false, ended = false, winTimer = -1, loseShown = false;
   let loadK = 1, hintAngle = null, recoil = 0;
-  let lastHitSound = 0;
+  let lastHitSound = 0, lastHap = 0;
   let fired = 0;
+  let stopT = 0, stopBudget = 0; // hit-stop: a brief freeze that gives impacts weight
 
   function load(lv, opts = {}) {
     level = lv;
@@ -38,7 +39,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     renderer.setSim(sim);
     angle = (lv.launcher?.x ?? 4.5) < 4.5 ? 60 * DEG : (lv.launcher?.x ?? 4.5) > 4.5 ? 120 * DEG : 80 * DEG;
     aiming = false; aim = null; aimDirty = true;
-    acc = 0; timeScale = 1; slowT = 0; shake = 0; flash = 0;
+    acc = 0; timeScale = 1; slowT = 0; shake = 0; flash = 0; stopT = 0; stopBudget = 0;
     paused = false; ended = false; winTimer = -1; loseShown = false;
     hintAngle = opts.hint != null ? opts.hint : null;
     fired = 0; recoil = 0; loadK = 1;
@@ -115,6 +116,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
       switch (ev.type) {
         case 'fire': {
           sfx.fire(); hap.light();
+          stopBudget = 0.24;
           const m = 1.1;
           renderer.ring(sim.launcherX + Math.cos(ev.angle) * m, 0.42 + Math.sin(ev.angle) * m, 0.7, 'rgba(255,255,255,0.8)', 0.3, 0.07);
           ev.ball.trail = [];
@@ -122,19 +124,22 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
         }
         case 'break': {
           const size = ev.sub === 'orb' ? 0.55 : ev.sub === 'pane' ? 0.5 : ev.sub === 'bottle' ? 0.7 : 0.65;
-          sfx.shatter(ev.cx / W, size, Math.min(1, ev.speed / 14), ev.combo);
-          hap.medium();
+          const power = Math.min(1, ev.speed / 14);
+          sfx.shatter(ev.cx / W, size, power, ev.combo);
           const rgb = sim.__pal?.glass?.[(ev.tint || 0) % 3] || [200, 230, 255];
-          renderer.burst(ev.cx, ev.cy, 14, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.9)`, 4.5, 0.07, 0.8);
-          renderer.burst(ev.cx, ev.cy, 6, 'rgba(255,255,255,0.95)', 3, 0.05, 0.6);
-          renderer.sparkle(ev.cx, ev.cy, 5);
-          renderer.ring(ev.cx, ev.cy, 0.9, 'rgba(255,255,255,0.85)', 0.35, 0.06);
-          if (ev.combo >= 2) renderer.text(ev.cx, ev.cy + 0.6, '×' + ev.combo, sim.__pal?.accent || '#FF7A59', 0.42 + Math.min(0.35, ev.combo * 0.04), 0.9);
-          if (ev.combo >= 3) { shake = Math.max(shake, 0.05 + ev.combo * 0.01); shakeT = 0.18; }
+          renderer.shatter(ev.x, ev.y, rgb, power, ev.last);
+          renderer.combo(ev.combo, ev.cx, ev.cy);
+          renderer.punch(ev.cx, ev.cy, Math.min(1, 0.35 + power * 0.3 + ev.combo * 0.08));
+          // touch escalates with the chain, without buzzing on every piece of a collapse
+          const now = performance.now();
+          if (now - lastHap > 55) { lastHap = now; if (ev.combo >= 6) hap.heavy(); else if (ev.combo >= 3 || power > 0.6) hap.medium(); else hap.light(); }
+          if (ev.combo >= 3) { shake = Math.max(shake, 0.04 + Math.min(0.06, ev.combo * 0.008)); shakeT = 0.16; }
+          if (!ev.last && (ev.combo >= 3 || power > 0.75)) hitStop(0.03 + Math.min(0.04, ev.combo * 0.006));
           onBreak?.(ev);
           if (ev.last) {
-            slowT = 1.0; timeScale = 0.2; flash = 0.35;
+            slowT = 1.0; timeScale = 0.2; flash = 0.22;
             hap.heavy();
+            renderer.focus(ev.cx, ev.cy, 1.06, 1.05);
             renderer.ring(ev.cx, ev.cy, 3.2, sim.__pal?.accent || '#fff', 0.9, 0.12);
             renderer.sparkle(ev.cx, ev.cy, 14);
           }
@@ -142,17 +147,18 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
         }
         case 'explode': {
           sfx.boom(ev.x / W); hap.heavy();
-          shake = 0.28; shakeT = 0.4; flash = Math.max(flash, 0.2);
+          shake = 0.28; shakeT = 0.4; flash = Math.max(flash, 0.16);
+          hitStop(0.06);
+          renderer.explosion(ev.x, ev.y, ev.r, !!sim.__pal?.dark);
           renderer.ring(ev.x, ev.y, ev.r, sim.__pal?.accent || '#FF4D3D', 0.5, 0.25);
           renderer.ring(ev.x, ev.y, ev.r * 0.7, 'rgba(255,255,255,0.9)', 0.35, 0.12);
-          renderer.burst(ev.x, ev.y, 26, sim.__pal?.accent || '#FF4D3D', 7, 0.1, 0.7, 0.4);
-          renderer.burst(ev.x, ev.y, 16, 'rgba(60,50,60,0.35)', 3, 0.18, 1.0, -0.05);
+          renderer.punch(ev.x, ev.y, 1);
           break;
         }
         case 'hit': {
           const now = performance.now();
           if (now - lastHitSound > 45) { lastHitSound = now; sfx.hit(ev.a, ev.b, ev.speed, ev.x / W); }
-          if ((ev.a === 'ball' || ev.b === 'ball') && ev.speed > 6) renderer.burst(ev.x, ev.y, 3, 'rgba(255,255,255,0.8)', 2, 0.04, 0.3);
+          if ((ev.a === 'ball' || ev.b === 'ball') && ev.speed > 6) renderer.sparks(ev.x, ev.y, 4 + Math.min(4, (ev.speed - 6) | 0), 2.5 + ev.speed * 0.15);
           if (ev.a === 'pad' || ev.b === 'pad') { renderer.ring(ev.x, ev.y, 0.8, sim.__pal?.accent || '#fff', 0.3, 0.08); renderer.padHit(ev.x, ev.y); hap.light(); }
           break;
         }
@@ -187,7 +193,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
         timeScale = slowT > 0.35 ? 0.2 : 0.2 + (1 - slowT / 0.35) * 0.8;
         if (slowT <= 0) timeScale = 1;
       }
-      acc += dtReal * timeScale;
+      if (stopT > 0) stopT -= dtReal; else acc += dtReal * timeScale;
       let n = 0;
       while (acc >= DT && n < 4) {
         snapshot();
@@ -221,8 +227,15 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     renderer.draw(sim, {
       alpha: paused ? 1 : acc / DT, fxDt: paused ? 0 : dtReal * Math.max(timeScale, 0.35),
       aim: aiming ? aim : null, angle, skin: getSkin(), loadK, hintAngle,
-      shakeX: sx, shakeY: sy, recoil, hideLauncher: quiet,
+      shakeX: sx, shakeY: sy, recoil, hideLauncher: quiet, calm: still,
     });
+  }
+
+  function hitStop(d) {
+    if (quiet || calm()) return;
+    d = Math.min(d, stopBudget);
+    if (d <= 0) return;
+    stopT = Math.max(stopT, d); stopBudget -= d;
   }
 
   function snapshot() {

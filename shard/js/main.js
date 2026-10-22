@@ -27,7 +27,7 @@ let mode = 'home';           // home | play | page
 let current = null;          // { level, index, daily, dateKey }
 let continued = false;
 let demoTimer = 0;
-let slowFrames = 0, dprCap = 2.5; // adaptive render resolution
+let slowFrames = 0, dprCap = 2.5, fxQuality = 1; // adaptive render resolution, then effect density
 
 const game = createGame({
   canvas, renderer,
@@ -770,10 +770,14 @@ function loop(t) {
   const dt = Math.min(0.05, (t - last) / 1000);
   last = t;
   if (manual) { requestAnimationFrame(loop); return; }
-  // adaptive quality: drop resolution on devices that can't hold ~45 fps
+  // adaptive quality: on devices that can't hold ~45 fps, drop resolution first, then thin out effects
   if (!document.hidden && mode === 'play') {
     slowFrames = dt > 0.022 ? slowFrames + 1 : Math.max(0, slowFrames - 2);
-    if (slowFrames > 90 && dprCap > 1.25) { dprCap = Math.max(1.25, dprCap - 0.5); slowFrames = 0; resize(); }
+    if (slowFrames > 90) {
+      if (dprCap > 1.25) { dprCap = Math.max(1.25, dprCap - 0.5); resize(); }
+      else if (fxQuality > 0.5) { fxQuality = 0.5; renderer.setQuality(fxQuality); }
+      slowFrames = 0;
+    }
   }
   requestAnimationFrame(loop);
   try {

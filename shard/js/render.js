@@ -38,7 +38,7 @@ export function createRenderer(canvas) {
       staticDirty = true;
     },
     setPalette(p) { pal = p; staticDirty = true; seedMotes(); },
-    setSim(sim) { simRef = sim; staticDirty = true; fx.length = 0; texts.length = 0; },
+    setSim(sim) { simRef = sim; staticDirty = true; while (fx.length) recycle(0); texts.length = 0; combo.t = -9; cam.kick = 0; cam.ft = 0; cam.z = 1; },
     invalidate() { staticDirty = true; },
     toScreen(x, y) { return [ox + x * s, oy - y * s]; },
     toWorld(px, py) { return [(px - ox) / s, (oy - py) / s]; },
@@ -53,7 +53,9 @@ export function createRenderer(canvas) {
       }
       if (best) best.hitT = performance.now();
     },
-    burst, ring, text, sparkle, setFlash: (v) => { flash = v; },
+    burst, ring, text, sparkle, shatter, sparks, puff, glow, explosion, punch, focus, combo: comboAt,
+    setQuality: (q) => { quality = q; },
+    setFlash: (v) => { flash = v; },
     draw,
     bounds: () => ({ ox, oy, s, cw, ch }),
   };
@@ -316,7 +318,7 @@ export function createRenderer(canvas) {
         for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(i * e.w / 4 - ch_, -ch_ * 0.55); c.lineTo(i * e.w / 4, ch_ * 0.45); c.lineTo(i * e.w / 4 + ch_, -ch_ * 0.55); c.stroke(); }
         break;
       }
-      case 'shard': drawShard(c, e, lw); break;
+      case 'shard': drawShard(c, e, a, lw); break;
       case 'bomb': {
         const r = e.circle;
         const t = performance.now() / 1000;
@@ -532,16 +534,37 @@ export function createRenderer(canvas) {
     c.globalCompositeOperation = 'source-over';
   }
 
-  function drawShard(c, e, lw) {
+  function drawShard(c, e, a, lw) {
     const k = Math.max(0, Math.min(1, (e.life - e.age) / 0.45));
     if (k <= 0) return;
-    const [r, g, b] = glassRGB(e);
+    const pts = e.polys[0];
+    if (e.fill === undefined) {
+      const [r, g, b] = glassRGB(e);
+      e.fill = `rgba(${r},${g},${b},${pal.dark ? 0.45 : 0.42})`;
+      e.edge = `rgba(${Math.max(0, r - 45)},${Math.max(0, g - 45)},${Math.max(0, b - 30)},0.8)`;
+      let A = 0;
+      for (let i = 0; i < pts.length; i++) { const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % pts.length]; A += x0 * y1 - x1 * y0; }
+      e.ccw = A > 0; e.ph = Math.random() * TAU;
+    }
     c.globalAlpha = k;
-    c.fillStyle = `rgba(${r},${g},${b},${pal.dark ? 0.45 : 0.6})`;
-    polyPath(c, e.polys[0]); c.fill();
-    c.strokeStyle = 'rgba(255,255,255,0.9)'; c.lineWidth = lw * 1.1; c.stroke();
-    c.strokeStyle = pal.glassEdge; c.lineWidth = lw * 0.8;
-    c.save(); c.translate(0.008, -0.008); c.stroke(); c.restore();
+    polyPath(c, pts);
+    c.fillStyle = e.fill; c.fill();
+    c.lineJoin = 'round'; c.strokeStyle = e.edge; c.lineWidth = lw * 1.1; c.stroke();
+    if (quality < 0.75) { c.globalAlpha = 1; return; } // thinned out on slow devices
+    // edges that face the key light catch it
+    const ca = Math.cos(a), sa = Math.sin(a);
+    c.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % pts.length];
+      let nx = y1 - y0, ny = x0 - x1;
+      if (!e.ccw) { nx = -nx; ny = -ny; }
+      const wx = nx * ca - ny * sa, wy = nx * sa + ny * ca;
+      if ((wx * LIGHT[0] + wy * LIGHT[1]) / (Math.hypot(wx, wy) || 1) > 0.3) { c.moveTo(x0, y0); c.lineTo(x1, y1); }
+    }
+    c.strokeStyle = pal.dark ? 'rgba(225,240,255,0.9)' : 'rgba(255,255,255,0.95)'; c.lineWidth = lw * 1.4; c.stroke();
+    // a glint as the shard turns toward the light, and a flash of heat as it breaks away
+    const gl = Math.pow(Math.max(0, Math.sin(a * 2 + e.ph)), 14) * 0.75 + (e.age < 0.14 ? (1 - e.age / 0.14) * 0.7 : 0);
+    if (gl > 0.04) { polyPath(c, pts); c.fillStyle = `rgba(255,255,255,${Math.min(0.9, gl).toFixed(2)})`; c.fill(); }
     c.globalAlpha = 1;
   }
 
@@ -580,32 +603,147 @@ export function createRenderer(canvas) {
   }
   R.drawBall = drawBall;
 
-  // ---------- fx ----------
+  // ---------- fx: pooled particles, so effects never churn garbage ----------
+  const WHITE = [255, 255, 255];
+  const pool = [];
+  let clock = 0, quality = 1;
+  function spawn(t, x, y, life) {
+    const f = pool.pop() || {};
+    f.t = t; f.x = x; f.y = y; f.life = life; f.age = 0;
+    f.vx = 0; f.vy = 0; f.grav = 0; f.drag = 0; f.size = 0.06; f.size2 = 0; f.rgb = WHITE; f.ph = Math.random() * TAU; f.col = null; f.width = 0; f.r = 0; f.data = null;
+    fx.push(f);
+    if (fx.length > 480) recycle(0);
+    return f;
+  }
+  function recycle(i) { const f = fx[i]; fx[i] = fx[fx.length - 1]; fx.pop(); pool.push(f); }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  function radial(f, speed, up = 0) { const a = Math.random() * TAU, v = speed * rnd(0.35, 1); f.vx = Math.cos(a) * v; f.vy = Math.sin(a) * v + up; }
+
+  // soft sprites: a white glow and tinted dust dots
+  let glowSpr = null;
+  const dotSpr = {};
+  function softDot(rgb, core) {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const g = cv.getContext('2d'), rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    rg.addColorStop(0, rgba(rgb, 1)); rg.addColorStop(core, rgba(rgb, 0.55)); rg.addColorStop(1, rgba(rgb, 0));
+    g.fillStyle = rg; g.fillRect(0, 0, 64, 64);
+    return cv;
+  }
+  const glowSpr2 = {};
+  const glowSprite = (rgb) => (!rgb || rgb === WHITE ? glowSpr || (glowSpr = softDot(WHITE, 0.22)) : glowSpr2[rgb] || (glowSpr2[rgb] = softDot(rgb, 0.3)));
+  const dotSprite = (rgb) => dotSpr[rgb] || (dotSpr[rgb] = softDot(rgb, 0.4));
+
+  // the moment glass breaks: a flash, a star of cracks, glitter and a puff of glass dust
+  function shatter(x, y, rgb, power = 0.6, big = false) {
+    let f = spawn('glow', x, y, big ? 0.45 : 0.26);
+    f.size = 0.2; f.size2 = big ? 2.6 : 1.1 + power * 0.5;
+    f = spawn('crack', x, y, 0.22);
+    const n = 6 + Math.floor(Math.random() * 3);
+    f.data = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) { f.data[i * 2] = (i / n) * TAU + rnd(-0.25, 0.25); f.data[i * 2 + 1] = rnd(0.35, 0.95) * (0.8 + power * 0.4); }
+    const ng = Math.round(((big ? 22 : 11) + power * 7) * quality);
+    for (let i = 0; i < ng; i++) {
+      f = spawn('glit', x + rnd(-0.15, 0.15), y + rnd(-0.15, 0.15), rnd(0.55, 1.25));
+      radial(f, 2.2 + power * 3.2, 1.2); f.grav = 0.35; f.drag = 1.6; f.size = rnd(0.045, 0.11);
+      f.col = Math.random() < 0.6 ? '#FFFFFF' : `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+    const nd = Math.round(5 * quality);
+    for (let i = 0; i < nd; i++) {
+      f = spawn('dust', x + rnd(-0.2, 0.2), y + rnd(-0.2, 0.2), rnd(0.5, 0.9));
+      radial(f, 1.1, 0.25); f.drag = 2.6; f.grav = -0.08; f.size = rnd(0.12, 0.2); f.size2 = f.size * rnd(2, 2.8); f.rgb = rgb;
+    }
+  }
+  // a hot, quick spray (ball impacts, bombs)
+  function sparks(x, y, n, speed, rgb = WHITE, life = 0.4) {
+    for (let i = 0; i < n * quality; i++) {
+      const f = spawn('spark', x, y, rnd(life * 0.6, life));
+      radial(f, speed, speed * 0.2); f.grav = 0.8; f.drag = 1.2; f.size = rnd(0.02, 0.035);
+      f.col = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+    }
+  }
+  function puff(x, y, n, rgb, size = 0.25, life = 0.9) {
+    for (let i = 0; i < n * quality; i++) {
+      const f = spawn('dust', x + rnd(-0.3, 0.3), y + rnd(-0.3, 0.3), rnd(life * 0.7, life));
+      radial(f, 1.4, 0.5); f.drag = 2.2; f.grav = -0.15; f.size = size * rnd(0.6, 1); f.size2 = f.size * 2.4; f.rgb = rgb;
+    }
+  }
+  function glow(x, y, r0, r1, life, rgb = WHITE) { const f = spawn('glow', x, y, life); f.size = r0; f.size2 = r1; f.rgb = rgb; }
+  // a bomb: white-hot core inside an orange fireball, hot sparks, shell fragments, falling embers, smoke
+  const FIRE = [255, 168, 82], EMBER = [255, 196, 120];
+  function explosion(x, y, r, dark) {
+    glow(x, y, 0.2, 1.3, 0.2);
+    glow(x, y, 0.5, r * 1.15, 0.6, FIRE);
+    for (let i = 0; i < 24 * quality; i++) {
+      const f = spawn('spark', x, y, rnd(0.35, 0.6));
+      radial(f, 11, 2); f.grav = 0.7; f.drag = 1.4; f.size = rnd(0.035, 0.06); f.col = Math.random() < 0.5 ? '#FFF6DC' : 'rgb(255,190,110)';
+    }
+    for (let i = 0; i < 10 * quality; i++) {
+      const f = spawn('chip', x, y, rnd(0.6, 1.0));
+      radial(f, 6, 1.5); f.grav = 1; f.size = rnd(0.06, 0.12); f.col = dark ? '#5E6584' : '#3B3343';
+    }
+    for (let i = 0; i < 12 * quality; i++) {
+      const f = spawn('glit', x + rnd(-0.4, 0.4), y + rnd(-0.4, 0.4), rnd(0.8, 1.6));
+      radial(f, 3, 1.8); f.grav = 0.22; f.drag = 1.2; f.size = rnd(0.04, 0.08); f.col = Math.random() < 0.5 ? 'rgb(255,214,140)' : 'rgb(255,150,80)';
+    }
+    puff(x, y, 9, dark ? [120, 125, 150] : [120, 100, 105], r * 0.16, 1.2);
+  }
   function burst(x, y, n, col, speed = 4, size = 0.06, life = 0.7, grav = 1) {
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * TAU, v = speed * (0.3 + Math.random() * 0.7);
-      fx.push({ t: 'p', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + speed * 0.25, life: life * (0.6 + Math.random() * 0.6), age: 0, size: size * (0.5 + Math.random()), col, grav });
+    for (let i = 0; i < n * quality; i++) {
+      const f = spawn('chip', x, y, life * rnd(0.6, 1.2));
+      radial(f, speed, speed * 0.25); f.grav = grav; f.size = size * rnd(0.5, 1.5); f.col = col;
     }
   }
   function sparkle(x, y, n = 6) {
-    for (let i = 0; i < n; i++) fx.push({ t: 's', x: x + (Math.random() - 0.5) * 0.8, y: y + (Math.random() - 0.5) * 0.8, life: 0.4 + Math.random() * 0.5, age: -Math.random() * 0.25, size: 0.07 + Math.random() * 0.09 });
+    for (let i = 0; i < n; i++) {
+      const f = spawn('star', x + rnd(-0.4, 0.4), y + rnd(-0.4, 0.4), rnd(0.4, 0.9));
+      f.age = -Math.random() * 0.25; f.size = rnd(0.07, 0.16);
+    }
   }
   function ring(x, y, r, col = 'rgba(255,255,255,0.9)', life = 0.45, width = 0.08) {
-    fx.push({ t: 'r', x, y, r, col, life, age: 0, width });
+    const f = spawn('ring', x, y, life); f.r = r; f.col = col; f.width = width;
   }
   function text(x, y, str, col, size = 0.55, life = 0.9) {
     texts.push({ x, y, str, col, size, life, age: 0 });
   }
+  // one counter per chain: it pops bigger with every link
+  const combo = { n: 0, x: 0, y: 0, tx: 0, ty: 0, t: -9 };
+  function comboAt(n, x, y) {
+    if (n < 2) return;
+    // above the break and drawn toward the open middle of the room, clear of the glass it came from
+    const tx = x + (W / 2 - x) * 0.35, ty = Math.min(CEIL - 1, y + 1.15);
+    if (clock - combo.t > 1.1) { combo.x = tx; combo.y = ty; }
+    combo.n = n; combo.tx = tx; combo.ty = ty; combo.t = clock;
+  }
 
   function stepFx(dt) {
+    clock += dt;
     for (let i = fx.length - 1; i >= 0; i--) {
       const f = fx[i];
       f.age += dt;
-      if (f.age > f.life) { fx.splice(i, 1); continue; }
-      if (f.t === 'p') { f.vy -= 10 * f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt; if (f.y < 0.03) { f.y = 0.03; f.vy *= -0.3; f.vx *= 0.6; } }
+      if (f.age > f.life) { recycle(i); continue; }
+      if (f.age < 0) continue;
+      if (f.drag) { const d = Math.exp(-f.drag * dt); f.vx *= d; f.vy *= d; }
+      f.vy -= 10 * f.grav * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+      if (f.t === 'chip' && f.y < 0.03) { f.y = 0.03; f.vy *= -0.3; f.vx *= 0.6; }
     }
     for (let i = texts.length - 1; i >= 0; i--) { const t = texts[i]; t.age += dt; if (t.age > t.life) texts.splice(i, 1); }
-    if (fx.length > 500) fx.splice(0, fx.length - 500);
+    stepCamera(dt);
+  }
+
+  // ---------- camera: impact kicks and a slow push-in on the last piece ----------
+  const cam = { z: 1, kick: 0, kx: 0, ky: 0, fz: 1, fx: 0, fy: 0, ft: 0, cx: 0, cy: 0 };
+  function punch(x, y, k) {
+    if (k > cam.kick) { cam.kick = k; const [sx, sy] = R.toScreen(x, y); cam.kx = sx; cam.ky = sy; }
+  }
+  function focus(x, y, z, hold) { const [sx, sy] = R.toScreen(x, y); cam.fx = sx; cam.fy = sy; cam.fz = z; cam.ft = hold; }
+  function stepCamera(dt) {
+    cam.kick *= Math.exp(-dt * 11);
+    if (cam.ft > 0) cam.ft -= dt;
+    const target = cam.ft > 0 ? cam.fz : 1;
+    cam.z += (target - cam.z) * (1 - Math.exp(-dt * (cam.ft > 0 ? 3 : 4.5)));
+    if (Math.abs(cam.z - 1) < 0.0005 && cam.ft <= 0) cam.z = 1;
+    const w = cam.z > 1.001 ? 1 : 0;
+    cam.cx = w ? cam.fx : cam.kx; cam.cy = w ? cam.fy : cam.ky;
   }
 
   // ---------- frame ----------
@@ -641,13 +779,18 @@ export function createRenderer(canvas) {
     let key = 0;
     if (sim) for (const e of sim.ents) if (e.alive && settled(e)) key = (key * 31 + e.id) | 0;
     if (key !== restKey) { renderRest(sim); restKey = key; }
+    // shake and camera move both layers together
     const shx = o.shakeX || 0, shy = o.shakeY || 0;
-    const css = shx || shy ? `translate3d(${shx.toFixed(1)}px,${shy.toFixed(1)}px,0)` : '';
-    if (css !== shakeCss) { bgc.style.transform = css; shakeCss = css; }
+    const z = o.calm ? 1 : cam.z + cam.kick * 0.022, zx = cam.cx, zy = cam.cy;
+    const css = shx || shy || z !== 1 ? `${zx.toFixed(1)}px ${zy.toFixed(1)}px|translate3d(${shx.toFixed(1)}px,${shy.toFixed(1)}px,0) scale(${z.toFixed(4)})` : '';
+    if (css !== shakeCss) {
+      const [origin, tf] = css ? css.split('|') : ['', ''];
+      bgc.style.transformOrigin = origin; bgc.style.transform = tf; shakeCss = css;
+    }
     const c = ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, canvas.width, canvas.height);
-    c.setTransform(dpr, 0, 0, dpr, shx * dpr, shy * dpr);
+    c.setTransform(dpr * z, 0, 0, dpr * z, (shx + zx * (1 - z)) * dpr, (shy + zy * (1 - z)) * dpr);
     drawMotes(c, o.fxDt || 0);
     if (!sim) return;
     // ropes
@@ -713,27 +856,86 @@ export function createRenderer(canvas) {
     // fx
     for (const f of fx) {
       if (f.age < 0) continue;
-      const k = 1 - f.age / f.life;
+      const u = f.age / f.life, k = 1 - u;
       const [sx, sy] = R.toScreen(f.x, f.y);
-      if (f.t === 'p') {
-        c.globalAlpha = Math.min(1, k * 1.5);
-        c.fillStyle = f.col;
-        const z = f.size * s;
-        c.fillRect(sx - z / 2, sy - z / 2, z, z);
-      } else if (f.t === 's') {
-        c.globalAlpha = Math.sin(k * Math.PI);
-        c.fillStyle = '#FFFFFF';
-        const z = f.size * s * (0.5 + Math.sin(k * Math.PI) * 0.7);
-        c.beginPath(); c.moveTo(sx, sy - z); c.lineTo(sx + z * 0.22, sy - z * 0.22); c.lineTo(sx + z, sy); c.lineTo(sx + z * 0.22, sy + z * 0.22);
-        c.lineTo(sx, sy + z); c.lineTo(sx - z * 0.22, sy + z * 0.22); c.lineTo(sx - z, sy); c.lineTo(sx - z * 0.22, sy - z * 0.22); c.closePath(); c.fill();
-      } else if (f.t === 'r') {
-        const e2 = 1 - Math.pow(k, 2.2);
-        c.globalAlpha = k;
-        c.strokeStyle = f.col; c.lineWidth = f.width * s * k + 1;
-        c.beginPath(); c.arc(sx, sy, f.r * s * (0.25 + e2 * 0.75), 0, TAU); c.stroke();
+      switch (f.t) {
+        case 'glow': {
+          const g = 1 - Math.pow(1 - Math.min(1, u * 1.7), 3), r = (f.size + (f.size2 - f.size) * g) * s;
+          c.globalAlpha = k * k * 0.95;
+          if (pal.dark) c.globalCompositeOperation = 'lighter';
+          c.drawImage(glowSprite(f.rgb), sx - r, sy - r, r * 2, r * 2);
+          c.globalCompositeOperation = 'source-over';
+          break;
+        }
+        case 'crack': {
+          const grow = Math.min(1, f.age / 0.05);
+          c.globalAlpha = k; c.strokeStyle = '#FFFFFF'; c.lineWidth = Math.max(1, 0.026 * s); c.lineCap = 'round';
+          c.beginPath();
+          for (let i = 0; i < f.data.length; i += 2) {
+            const a = f.data[i], L = f.data[i + 1] * grow * s, ca = Math.cos(a), sa = Math.sin(a);
+            c.moveTo(sx + ca * 0.1 * s, sy - sa * 0.1 * s); c.lineTo(sx + ca * L, sy - sa * L);
+          }
+          c.stroke();
+          break;
+        }
+        case 'glit': case 'star': {
+          const tw = f.t === 'glit' ? 0.55 + 0.45 * Math.sin(f.age * 28 + f.ph) : Math.sin(k * Math.PI);
+          c.globalAlpha = (f.t === 'glit' ? Math.min(1, k * 1.8) : 1) * tw;
+          c.fillStyle = f.col || '#FFFFFF';
+          const zz = f.size * s * (f.t === 'glit' ? 0.7 + 0.3 * tw : 0.5 + tw * 0.7);
+          c.beginPath(); c.moveTo(sx, sy - zz); c.lineTo(sx + zz * 0.2, sy - zz * 0.2); c.lineTo(sx + zz, sy); c.lineTo(sx + zz * 0.2, sy + zz * 0.2);
+          c.lineTo(sx, sy + zz); c.lineTo(sx - zz * 0.2, sy + zz * 0.2); c.lineTo(sx - zz, sy); c.lineTo(sx - zz * 0.2, sy - zz * 0.2); c.closePath(); c.fill();
+          break;
+        }
+        case 'dust': {
+          const r = (f.size + (f.size2 - f.size) * (1 - k * k)) * s;
+          c.globalAlpha = (pal.dark ? 0.22 : 0.32) * k * k;
+          c.drawImage(dotSprite(f.rgb), sx - r, sy - r, r * 2, r * 2);
+          break;
+        }
+        case 'spark': {
+          c.globalAlpha = Math.min(1, k * 1.5); c.strokeStyle = f.col || '#FFFFFF'; c.lineWidth = Math.max(1, f.size * s); c.lineCap = 'round';
+          c.beginPath(); c.moveTo(sx, sy); c.lineTo(sx - f.vx * 0.035 * s, sy + f.vy * 0.035 * s); c.stroke();
+          break;
+        }
+        case 'chip': {
+          c.globalAlpha = Math.min(1, k * 1.5); c.fillStyle = f.col;
+          const zz = f.size * s;
+          c.fillRect(sx - zz / 2, sy - zz / 2, zz, zz);
+          break;
+        }
+        case 'ring': {
+          const e2 = 1 - Math.pow(k, 2.2);
+          c.globalAlpha = k; c.strokeStyle = f.col; c.lineWidth = f.width * s * k + 1;
+          c.beginPath(); c.arc(sx, sy, f.r * s * (0.25 + e2 * 0.75), 0, TAU); c.stroke();
+          break;
+        }
       }
     }
     c.globalAlpha = 1;
+    // the chain counter
+    if (combo.n >= 2 && clock - combo.t < 1.05) {
+      const age = clock - combo.t, n = combo.n;
+      combo.x += (combo.tx - combo.x) * 0.2; combo.y += (combo.ty - combo.y) * 0.2;
+      const pop = 1 + 0.55 * Math.exp(-age * 13);
+      const size = (0.42 + Math.min(0.55, (n - 2) * 0.06)) * s * pop;
+      const [sx, sy] = R.toScreen(combo.x, combo.y + age * 0.35);
+      const a = age > 0.72 ? Math.max(0, 1 - (age - 0.72) / 0.33) : 1;
+      if (n >= 5) {
+        c.globalAlpha = a * 0.55; const r = size * 1.3;
+        if (pal.dark) c.globalCompositeOperation = 'lighter';
+        c.drawImage(glowSprite(), sx - r, sy - r, r * 2, r * 2);
+        c.globalCompositeOperation = 'source-over';
+      }
+      c.globalAlpha = a;
+      c.font = `900 ${Math.round(size)}px ${FONT}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.lineJoin = 'round'; c.lineWidth = Math.max(3, size * 0.17);
+      c.strokeStyle = n >= 8 ? pal.accent : pal.dark ? 'rgba(10,14,30,0.65)' : 'rgba(255,255,255,0.95)';
+      c.strokeText('\u00d7' + n, sx, sy);
+      c.fillStyle = n >= 8 ? '#FFFFFF' : n >= 5 ? '#FFB534' : pal.accent;
+      c.fillText('\u00d7' + n, sx, sy);
+      c.globalAlpha = 1;
+    }
     // texts
     c.textAlign = 'center'; c.textBaseline = 'middle';
     for (const t of texts) {

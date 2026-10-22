@@ -105,3 +105,23 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
   - An earlier "0% slow frames" reading was false: a debug hook threw every frame, so nothing was drawn. Lesson: never trust a perf number without checking that the frame actually rendered.
 - **Fix:** two canvas layers. Everything asleep in the physics engine (nearly all glass, nearly all the time) is drawn once into a settled layer that redraws only when something wakes, sleeps or breaks. The live layer draws only what moves.
 - **Result:** 1–11% slow frames at 4× throttle, better than before the overhaul, with far richer visuals. Proof replay 220/220, validate-levels passes, and the scenarios pass with no console errors.
+
+## Round 19: the shatter
+- **Tool:** `film.mjs` gained `BREAK=1` and `BOMB=1`, which fast-forward to the first break or explosion and film it frame by frame. The previous strips had skipped the very moment that matters.
+- **Shatter, frame by frame:**
+  - A flash of light and a star of white crack lines bloom at the impact.
+  - The broken piece glows white-hot for 0.14 s.
+  - The shards are real glass: tinted body, darker rim, white edges on whichever side faces the light (recomputed as they spin), and a glint each time they turn toward it.
+  - Glitter twinkles and falls slowly, and a puff of tinted glass dust drifts.
+- **Weight:**
+  - Hit-stop: a 30–70 ms freeze on strong or chained breaks, capped at 0.24 s per shot so chains never drag.
+  - A camera kick toward each break, and a slow push-in on the last piece during the slow motion.
+  - Shake only on chains.
+  - All of it is off under Reduce Motion.
+- **Combos:** one counter per chain instead of a stack of texts. It pops with every link, grows, turns gold at ×5 and white with a glow at ×8, and sits above and toward the middle so it never covers the glass. Haptics escalate with the chain (light, then medium, then heavy) and are rate-limited.
+- **Bombs:** a white-hot core inside an orange fireball, a shockwave, hot sparks, dark shell fragments, embers drifting down, and smoke.
+- **Engineering:**
+  - Particles are pooled and swap-removed: no garbage per frame.
+  - A camera transform covers both canvas layers.
+  - If frames stay slow after the resolution drops, effects thin out.
+- **Verified:** proof replay 120/120 and the scenarios pass with no console errors.

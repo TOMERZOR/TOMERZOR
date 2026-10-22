@@ -50,10 +50,14 @@ const MIRROR_DIR = [0, 1, 0, 7, 0, 5, 0, 3, 0];
 // Drones patrol back and forth: from (x,y) along (dx,dy) for n cells.
 
 export const WORLDS = [
-  { id: 1, key: "lab", bg: "bg_lab" },
-  { id: 2, key: "observatory", bg: "bg_obs" },
-  { id: 3, key: "mirror", bg: "bg_lab", mirror: true },
+  { id: 1, key: "sanctuary", bg: "chapter1" },
+  { id: 2, key: "observatory", bg: "chapter2" },
+  { id: 3, key: "mirror", bg: "chapter3", mirror: true },
+  { id: 4, key: "foundry", bg: "chapter4" },
+  { id: 5, key: "core", bg: "chapter5", mirror: true },
 ];
+/** Stars needed to open each world (index = world id - 1). */
+export const WORLD_STARS = [0, 12, 34, 58, 84];
 
 export const LEVELS = [
   // ── World 1: the lab. Teaches plates, doors and holding a door with an echo.
@@ -116,7 +120,7 @@ export const LEVELS = [
       "#######",
       "#S.#..#",
       "#..A.o#",
-      "#a.#b.#",
+      "#a.#.b#",
       "####B##",
       "#.....#",
       "#.....#",
@@ -192,8 +196,8 @@ export const LEVELS = [
       "#...b.#",
       "#o....#",
       "##B####",
-      "#...cC#",
-      "#.o.#.#",
+      "#...c.#",
+      "#.o.#C#",
       "#...#E#",
       "#######",
     ],
@@ -242,8 +246,8 @@ export const LEVELS = [
       "#######",
       "#..S..#",
       "#a...b#",
+      "#.###.#",
       "#A###B#",
-      "#.....#",
       "#.....#",
       "#..o..#",
       "#.....#",
@@ -255,7 +259,7 @@ export const LEVELS = [
   },
   {
     // World 3's exam: every plate is reached by its mirror image.
-    id: "3-4", world: 3, par: 3, mirror: true,
+    id: "3-4", world: 3, par: 2, mirror: true,
     map: [
       "#######",
       "#a.S.b#",
@@ -271,6 +275,76 @@ export const LEVELS = [
     ],
     drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 4 }],
   },
+  // ── World 1, continued: longer holds, chains of gates, the lab exam.
+  { id: "1-5", world: 1, par: 1, map: ["#######", "#S..#.#", "#.#.#.#", "#.#.#o#", "#.#a#.#", "#.###.#", "#.....#", "####A##", "#..o..#", "#....E#", "#######"] },
+  { id: "1-6", world: 1, par: 2, map: ["#######", "#S.#..#", "#..#.b#", "#a.#..#", "#..A..#", "#.#####", "#.....#", "####B##", "#.o...#", "#...E.#", "#######"] },
+  { id: "1-7", world: 1, par: 1, map: ["#######", "#S....#", "#.o...#", "#.....#", "#....a#", "#.....#", "#o....#", "###A###", "#.....#", "#..E.o#", "#######"] },
+  { id: "1-8", world: 1, par: 2, map: ["#######", "#S....#", "#.....#", "#..a..#", "#####A#", "#.....#", "#b....#", "###B###", "#.....#", "#E....#", "#######"] },
+  { id: "1-9", world: 1, par: 3, map: ["#######", "#S.a..#", "#.....#", "#A#####", "#..b..#", "#.....#", "####B##", "#...c.#", "##....#", "#EC...#", "#######"] },
+  { id: "1-10", world: 1, par: 3, map: ["#######", "#S.#.o#", "#..#..#", "#a.A.b#", "#####.#", "#...B.#", "#.#####", "#.o..c#", "###.#.#", "#.EC..#", "#######"] },
+  // ── World 2, continued: more patrols, crossings, the observatory exam.
+  { id: "2-5", world: 2, par: 1, map: ["#######", "#S....#", "#.....#", "#.....#", "#....a#", "#.....#", "#.....#", "###A###", "#.o...#", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 3, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 3 }] },
+  { id: "2-6", world: 2, par: 1, map: ["#######", "#S.#..#", "#..#..#", "#..#.a#", "#..#..#", "#.....#", "#..#..#", "#..#..#", "##A####", "#..E..#", "#######"],
+    drones: [{ x: 4, y: 1, dx: 0, dy: 1, n: 6, phase: 0 }] },
+  { id: "2-7", world: 2, par: 1, map: ["#######", "#S....#", "#.###.#", "#.#o#.#", "#.#.#a#", "#.#.#.#", "#.....#", "#.....#", "###A###", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 1 }, { x: 5, y: 1, dx: 0, dy: 1, n: 2, phase: 0 }] },
+  { id: "2-8", world: 2, par: 1, map: ["#######", "#S....#", "#.....#", "#..#..#", "#a.#.b#", "#..#..#", "#.....#", "#.....#", "#A###B#", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 4 }] },
+  { id: "2-9", world: 2, par: 2, map: ["#######", "#S.o..#", "#.....#", "#a....#", "####A##", "#....b#", "#o....#", "#.....#", "##B####", "#...oE#", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 2 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }] },
+  { id: "2-10", world: 2, par: 3, map: ["#######", "#S..#.#", "#.a.#b#", "#.....#", "##A####", "#...c.#", "#.....#", "###B###", "###.###", "#...CE#", "#######"],
+    drones: [{ x: 1, y: 3, dx: 1, dy: 0, n: 4, phase: 1 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }] },
+  // ── World 3, continued: mirrored echoes, walls to bump, the mirror exam.
+  { id: "3-5", world: 3, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#.#.#.#", "#.#.#a#", "#.#.#.#", "#.....#", "#..o..#", "###A###", "#..E..#", "#######"] },
+  { id: "3-6", world: 3, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#a...b#", "#.....#", "#A###B#", "#.....#", "#.....#", "#..o..#", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }] },
+  { id: "3-7", world: 3, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#.###.#", "#.#a#.#", "#.#.#.#", "#.#.#.#", "#.....#", "###A###", "#..oE.#", "#######"] },
+  { id: "3-8", world: 3, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#.....#", "#a...b#", "#.....#", "#.....#", "#A###B#", "#.....#", "#.oE..#", "#######"],
+    drones: [{ x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 2 }] },
+  { id: "3-9", world: 3, par: 2, mirror: true, map: ["#######", "#..S..#", "#.....#", "#a....#", "#.....#", "#A#####", "#....b#", "#.....#", "#####B#", "#...E.#", "#######"] },
+  { id: "3-10", world: 3, par: 1, mirror: true, map: ["#######", "#a.S.b#", "#.....#", "#.....#", "#A###B#", "#.....#", "#.o.o.#", "#.....#", "#.....#", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 3 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 1 }] },
+  // ── World 4: the foundry. Patrols in every direction, gates between them.
+  { id: "4-1", world: 4, par: 0, map: ["#######", "#S....#", "#.....#", "#..o..#", "#.....#", "#..o..#", "#.....#", "#..o..#", "#.....#", "#....E#", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 4, dx: 1, dy: 0, n: 4, phase: 2 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 4 }, { x: 1, y: 8, dx: 1, dy: 0, n: 4, phase: 6 }] },
+  { id: "4-2", world: 4, par: 1, map: ["#######", "#S.#..#", "#..#..#", "#..#.a#", "#..#..#", "#..#..#", "#..#..#", "#.....#", "####A##", "#...E.#", "#######"],
+    drones: [{ x: 4, y: 1, dx: 0, dy: 1, n: 5, phase: 0 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 1 }] },
+  { id: "4-3", world: 4, par: 2, map: ["#######", "#S....#", "#..a..#", "#.....#", "###A###", "#.....#", "#..b..#", "#.....#", "###B###", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 3, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 2 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 4 }] },
+  { id: "4-4", world: 4, par: 1, map: ["#######", "#S.#..#", "#.....#", "#.#.#.#", "#a#.#.#", "#.#.#o#", "#.....#", "#.###.#", "#..A..#", "###E###", "#######"],
+    drones: [{ x: 3, y: 2, dx: 0, dy: 1, n: 4, phase: 0 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 3 }] },
+  { id: "4-5", world: 4, par: 2, map: ["#######", "#S....#", "#.....#", "#....a#", "#.....#", "##A####", "#.....#", "#b....#", "#...###", "###B.E#", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 1 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 8, dx: 1, dy: 0, n: 2, phase: 2 }] },
+  { id: "4-6", world: 4, par: 1, map: ["#######", "#S#.a.#", "#.#.#.#", "#.#.#.#", "#.#.#.#", "#.#.#o#", "#.#.#.#", "#.#.#.#", "#...#.#", "###AE##", "#######"],
+    drones: [{ x: 5, y: 2, dx: 0, dy: 1, n: 5, phase: 1 }] },
+  { id: "4-7", world: 4, par: 3, map: ["#######", "#S.a..#", "#.....#", "##A####", "#..b..#", "#.....#", "####B##", "#c....#", "#...###", "#..C.E#", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 2 }, { x: 1, y: 8, dx: 1, dy: 0, n: 2, phase: 1 }] },
+  { id: "4-8", world: 4, par: 1, map: ["#######", "#S....#", "#....o#", "#.....#", "#.....#", "#.....#", "#.o...#", "#a....#", "#####A#", "#....E#", "#######"],
+    drones: [{ x: 3, y: 1, dx: 0, dy: 1, n: 6, phase: 0 }, { x: 1, y: 4, dx: 1, dy: 0, n: 4, phase: 3 }] },
+  { id: "4-9", world: 4, par: 2, map: ["#######", "#S....#", "#.....#", "#.a...#", "#.....#", "#####A#", "#...b.#", "#.....#", "#B#####", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 4, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 2 }] },
+  { id: "4-10", world: 4, par: 3, map: ["#######", "#S..#b#", "#...#.#", "#.a.A.#", "#....##", "##B####", "#.....#", "#....c#", "#...###", "###CE##", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 2, phase: 1 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 8, dx: 1, dy: 0, n: 2, phase: 3 }] },
+  // ── World 5: the core. Mirrored echoes among patrols; three plates at the end.
+  { id: "5-1", world: 5, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#.....#", "#a....#", "#.....#", "#.....#", "###A###", "#.....#", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 0 }] },
+  { id: "5-2", world: 5, par: 1, mirror: true, map: ["#######", "#..S..#", "#.#.#.#", "#.#.#.#", "#a#.#.#", "#.#.#.#", "#.....#", "#.....#", "###A###", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 1 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 5 }] },
+  { id: "5-3", world: 5, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#.....#", "#a...##", "#.....#", "#.....#", "###A###", "#.....#", "#..E..#", "#######"] },
+  { id: "5-4", world: 5, par: 2, mirror: true, map: ["#######", "#..S..#", "#a....#", "#.....#", "#A#####", "#.....#", "#....b#", "#.....#", "#####B#", "#....E#", "#######"],
+    drones: [{ x: 1, y: 3, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 2 }] },
+  { id: "5-5", world: 5, par: 2, mirror: true, map: ["#######", "#a.S.b#", "#.....#", "#A###B#", "#.....#", "#..c..#", "#.....#", "###C###", "#.....#", "#..E..#", "#######"] },
+  { id: "5-6", world: 5, par: 1, mirror: true, map: ["#######", "#..S..#", "#.....#", "#.#.#.#", "#a#.#.#", "#.#.#.#", "#.....#", "#A#####", "#.....#", "#....E#", "#######"],
+    drones: [{ x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 8, dx: 1, dy: 0, n: 4, phase: 2 }, { x: 3, y: 2, dx: 0, dy: 1, n: 3, phase: 1 }] },
+  { id: "5-7", world: 5, par: 2, mirror: true, map: ["#######", "#..S..#", "#.....#", "#a....#", "#....##", "#A###b#", "#.....#", "#.....#", "####B##", "#...E.#", "#######"],
+    drones: [{ x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 3 }] },
+  { id: "5-8", world: 5, par: 1, mirror: true, map: ["#######", "#..S..#", "#.#.#.#", "#.#a#.#", "#.#.#.#", "#.....#", "#.#.#.#", "#.#.#.#", "#o#A#o#", "###E###", "#######"],
+    drones: [{ x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 5, dx: 0, dy: 1, n: 3, phase: 1 }] },
+  { id: "5-9", world: 5, par: 2, mirror: true, map: ["#######", "#..S..#", "#a...b#", "#.....#", "#A###B#", "#.....#", "#..c..#", "#.....#", "###C###", "#..E..#", "#######"],
+    drones: [{ x: 1, y: 3, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 5, dx: 1, dy: 0, n: 4, phase: 2 }, { x: 1, y: 7, dx: 1, dy: 0, n: 4, phase: 4 }] },
+  { id: "5-10", world: 5, par: 3, mirror: true, map: ["#######", "#a.S..#", "#.....#", "#A###.#", "#....##", "#.b...#", "#.....#", "#B#####", "#..c.##", "#..#CE#", "#######"],
+    drones: [{ x: 1, y: 2, dx: 1, dy: 0, n: 4, phase: 0 }, { x: 1, y: 6, dx: 1, dy: 0, n: 4, phase: 3 }] },
 ];
 
 export function levelById(id) {
@@ -293,7 +367,7 @@ export function rng(seed) {
  *  days, with drones shifted so the timing feels new. */
 export function dailyLevel(day) {
   const r = rng(day * 2654435761 + 7);
-  const pool = LEVELS.filter((l) => l.world !== 3);
+  const pool = LEVELS.filter((l) => !l.mirror);
   const base = pool[Math.floor(r() * pool.length)];
   const flip = day % 2 === 1;
   const map = base.map.map((row) => (flip ? row.split("").reverse().join("") : row));
@@ -533,6 +607,7 @@ export function starsFor(level, echoes) {
  * in the shop; `sprite` is the asset name.
  */
 export const SKINS = {
+  halo: { coins: 0, color: "#49d7ff", sprite: "halo", tier: 1 },
   scout: { coins: 0, color: "#7ef0c6", sprite: "hero", tier: 1 },
   knight: { coins: 400, color: "#9ad7ff", sprite: "bot_knight", tier: 1 },
   astro: { coins: 600, color: "#ffe08a", sprite: "bot_astro", tier: 1 },
@@ -545,12 +620,13 @@ export const SKINS = {
 };
 /** Skin ids from before the robots existed, so old saves keep a valid skin. */
 const LEGACY_SKINS = { cyan: "scout", magenta: "ninja", lime: "mecha", gold: "royal", white: "astro", rainbow: "wizard" };
-export const skinId = (id) => (SKINS[id] ? id : LEGACY_SKINS[id] || "scout");
+export const skinId = (id) => (SKINS[id] ? id : LEGACY_SKINS[id] || "halo");
 function normalizeSkins(p) {
   const skins = [...new Set((p.skins || []).map(skinId))];
   if (!skins.includes("scout")) skins.unshift("scout");
+  if (!skins.includes("halo")) skins.unshift("halo");
   const skin = skinId(p.skin);
-  if (skin !== p.skin || skins.length !== (p.skins || []).length || skins.some((k, i) => k !== p.skins[i])) return { ...p, skin: skins.includes(skin) ? skin : "scout", skins };
+  if (skin !== p.skin || skins.length !== (p.skins || []).length || skins.some((k, i) => k !== p.skins[i])) return { ...p, skin: skins.includes(skin) ? skin : "halo", skins };
   return p;
 }
 
@@ -572,10 +648,12 @@ export const PASS_TIERS = [
 
 export const AD_COINS = 30;
 export const ADS_PER_DAY = 5;
+/** What help costs, in coins: a peek at the next moves, a loop played for you, a continue after a drone. */
+export const PRICES = { hint: 40, loop: 120, continue: 25 };
 
 export function newProfile(pid) {
   return {
-    pid, name: "", coins: 0, gems: 0, stars: {}, best: {}, skin: "scout", skins: ["scout"],
+    pid, name: "", coins: 0, gems: 0, stars: {}, best: {}, skin: "halo", skins: ["halo", "scout"],
     streak: 0, lastDay: 0, adsDay: 0, adsToday: 0, passXp: 0, pass: false, noads: false,
     claimedTiers: 0, owned: [], clears: 0,
   };
@@ -590,7 +668,7 @@ export function totalStars(profile) {
 /** A world opens once the previous one has enough stars. */
 export function worldUnlocked(profile, worldId) {
   if (worldId === 1) return true;
-  return totalStars(profile) >= (worldId - 1) * 7;
+  return totalStars(profile) >= (WORLD_STARS[worldId - 1] ?? Infinity);
 }
 
 // ── meta game contract ─────────────────────────────────────────────────────
@@ -665,6 +743,12 @@ export function validateAction(state, playerId, action) {
     case "name":
       if (typeof action.name !== "string" || action.name.length > 16) return { ok: false, error: "bad name" };
       return { ok: true };
+    case "spend": {
+      const price = PRICES[action.what];
+      if (!price) return { ok: false, error: "unknown purchase" };
+      if (p.coins < price) return { ok: false, error: "not enough coins" };
+      return { ok: true };
+    }
     default:
       return { ok: false, error: "unknown action" };
   }
@@ -755,6 +839,10 @@ export function applyAction(state, playerId, action) {
       break;
     case "name":
       p.name = action.name;
+      break;
+    case "spend":
+      p.coins -= PRICES[action.what];
+      p.spent = (p.spent || 0) + PRICES[action.what];
       break;
   }
   return { ...state, players: { ...state.players, [playerId]: p }, daily };

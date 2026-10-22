@@ -517,6 +517,7 @@ function openSheet(html, handler, onDismiss, soft = false) {
   sh.innerHTML = html;
   sh.hidden = false; $('#scrim').hidden = false;
   $('#scrim').classList.toggle('soft', soft); // a win keeps the celebration visible behind the sheet
+  document.body.classList.add('sheet-open');
   sheetOpen = true; sheetHandler = handler; sheetDismiss = onDismiss || null;
   const first = sh.querySelector('[data-act]');
   first?.focus({ preventScroll: true });
@@ -524,6 +525,7 @@ function openSheet(html, handler, onDismiss, soft = false) {
 function closeSheet(instant) {
   if (!sheetOpen) return;
   sheetOpen = false; sheetHandler = null; sheetDismiss = null;
+  document.body.classList.remove('sheet-open');
   const sh = $('#sheet');
   $('#scrim').hidden = true;
   if (instant) { sh.hidden = true; return; }

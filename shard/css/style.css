@@ -168,6 +168,7 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 .coach { position: absolute; left: 0; right: 0; bottom: calc(var(--sab) + 120px); display: flex; flex-direction: column; align-items: center; pointer-events: none !important; }
 .coach p { margin: 0; padding: 10px 16px; border-radius: 16px; background: var(--ink); color: var(--sky0); font-weight: 800; font-size: 16px; box-shadow: 0 10px 30px -12px rgba(0,0,0,.4); }
 .coach.textonly .coach-track { display: none; }
+.sheet-open .coach { visibility: hidden; } /* the tutorial hint waits behind sheets */
 .coach-track { position: relative; width: 60px; height: 120px; margin-bottom: 14px; }
 .coach-dot { position: absolute; left: 50%; top: 40px; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; background: var(--ink-a85); box-shadow: 0 0 0 6px var(--ink-a16); animation: coachdot 2.2s var(--ease) infinite; }
 .coach-line { position: absolute; left: 50%; top: 57px; width: 0; height: 0; margin-left: -1.5px; border-left: 3px dotted var(--ink-a55); animation: coachline 2.2s var(--ease) infinite; }

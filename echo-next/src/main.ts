@@ -9,7 +9,8 @@ import { W, H, C } from "./theme";
 import { Scenes, layout, report, errors } from "./scenes";
 import { audio } from "./audio";
 import { HomeScene } from "./scenes/home";
-import { state } from "./state";
+import { LevelScene } from "./scenes/level";
+import { state, L } from "./state";
 
 window.addEventListener("error", (e) => report(e.error ?? e.message));
 window.addEventListener("unhandledrejection", (e) => report((e as PromiseRejectionEvent).reason));
@@ -22,7 +23,7 @@ try {
   await app.init({ background: C.ink, resizeTo: window, antialias: false, resolution: 1, autoDensity: true });
 }
 document.body.appendChild(app.canvas);
-(window as any).__echo = { app, Scenes, state, layout, errors };
+(window as any).__echo = { app, Scenes, state, layout, errors, play: (id: string) => { const lvl = L.levelById(id); if (lvl) Scenes.push(new LevelScene(lvl, id)); } };
 
 /** Design-space root: scaled uniformly; `layout` exposes the visible bounds. */
 const root = new Container();
@@ -49,15 +50,14 @@ window.addEventListener("resize", fit);
 
 Scenes.init(root, app);
 await state.load();
-try { await Promise.all(["700 40px Fredoka", "800 30px Nunito", "700 30px Heebo"].map((f) => document.fonts.load(f))); } catch { /* fallback fonts */ }
+try { await Promise.all(["400 40px Michroma", "600 40px Rajdhani", "500 30px Inter", "500 30px Heebo"].map((f) => document.fonts.load(f))); } catch { /* fallback fonts */ }
 const ICONS = ["play", "pause", "back", "gear", "bag", "chest", "coin", "gem", "star", "star_off", "lock", "cal", "flame", "trophy", "crown", "ticket", "undo", "restart", "skip", "bulb", "sound", "music", "vibrate", "globe", "share", "replay", "check", "cross", "info", "home"];
 await Assets.load([
   ...ICONS.map((n) => ({ alias: "icon_" + n, src: `assets/icons/${n}.png` })),
-  { alias: "bg_lab", src: "assets/bg_lab.jpg" }, { alias: "bg_obs", src: "assets/bg_obs.jpg" }, { alias: "bg_mirror", src: "assets/bg_mirror.jpg" }, { alias: "bg_foundry", src: "assets/bg_foundry.jpg" }, { alias: "bg_core", src: "assets/bg_core.jpg" },
   { alias: "bg_title", src: "assets/bg_title.jpg" },
-  ...[1, 2, 3, 4, 5].map((i) => ({ alias: "map_w" + i, src: `assets/map_w${i}.jpg` })),
+  ...[1, 2, 3, 4, 5].map((i) => ({ alias: "chapter" + i, src: `assets/chapter${i}.jpg` })),
   ...["hero", "echo", "coin", "gem", "drone", "exit", "plate", "bot_knight", "bot_astro", "bot_mecha", "bot_ninja", "bot_pirate", "bot_samurai", "bot_wizard", "bot_royal"].map((n) => ({ alias: n, src: `assets/${n}.png` })),
-  ...["floor_a", "floor_b", "floor_c", "wall_top", "wall_front", "plate_off", "plate_on", "gate_closed", "gate_open", "exit_t", "coin_t", "drone_t", "danger", "pad", "arrow", "void"].map((n) => ({ alias: n, src: `assets/tiles/${n.replace(/_t$/, "")}.png` })),
+  ...["halo", "sentinel", "floor", "wall_block", "switch_off", "switch_on", "gate_closed", "gate_open", "portal", "coin", "gem", "danger", "arrow", "pad", "line", "star", "lock"].map((n) => ({ alias: n === "halo" ? "halo" : "s_" + n, src: `assets/sanct/${n}.png` })),
 ]);
 fit();
 audio.preload();

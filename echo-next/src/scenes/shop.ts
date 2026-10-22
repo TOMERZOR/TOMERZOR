@@ -4,7 +4,7 @@ import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
 import { panel, button, display, body, ribbon, pill } from "../ui";
-import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, echoSprite, toast } from "../widgets";
+import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, echoSprite, fitSprite, toast } from "../widgets";
 import { state, L, today } from "../state";
 import { audio, buzz } from "../audio";
 import { t } from "../i18n";
@@ -29,8 +29,8 @@ export class ShopScene extends Scene {
     const hero = new Container(); hero.position.set(40, y); const hw = W - 80, hh = 360;
     hero.addChild(panel(hw, hh, { radius: 32, color: C.plate, glow: C.mint }));
     const pad = new Graphics(); pad.ellipse(0, 0, 150, 44).fill({ color: C.mint, alpha: 0.18 }); pad.ellipse(0, 0, 150, 44).stroke({ color: C.mint, alpha: 0.8, width: 5 }); pad.position.set(200, hh - 60); hero.addChild(pad);
-    const e = echoSprite(mine); e.position.set(300, hh - 70); e.width = 150; e.scale.y = e.scale.x; e.alpha = 0.45; hero.addChild(e);
-    const h = heroSprite(mine); h.position.set(200, hh - 60); h.width = 230; h.scale.y = h.scale.x; hero.addChild(h);
+    const e = echoSprite(mine); e.position.set(300, hh - 70); fitSprite(e, 150, 230); e.alpha = 0.45; hero.addChild(e);
+    const h = heroSprite(mine); h.position.set(200, hh - 60); fitSprite(h, 230, 300); hero.addChild(h);
     gsap.to(h, { y: hh - 72, duration: 1.2, yoyo: true, repeat: -1, ease: "sine.inOut" });
     const eb = new Text({ text: t("your_robot").toUpperCase(), style: body(24, C.mint, 800) }); eb.style.letterSpacing = 3; eb.position.set(400, 50); hero.addChild(eb);
     const nm = new Text({ text: t("sk_" + mine), style: display(56) }); nm.position.set(400, 84); hero.addChild(nm);
@@ -45,7 +45,7 @@ export class ShopScene extends Scene {
       const card = new Container(); card.position.set(40 + (i % 2) * (cw + 24), y + Math.floor(i / 2) * (ch + 24));
       card.addChild(panel(cw, ch, { radius: 30, color: on ? C.plate : C.wall, glow: on ? C.mint : undefined }));
       const glow = new Graphics(); glow.circle(0, 0, 110).fill({ color: parseInt(s.color.slice(1), 16), alpha: 0.18 }); glow.position.set(cw / 2, 170); card.addChild(glow);
-      const sp = heroSprite(id); sp.position.set(cw / 2, 270); sp.width = 200; sp.scale.y = sp.scale.x; if (!owned) sp.alpha = 0.92; card.addChild(sp);
+      const sp = heroSprite(id); sp.position.set(cw / 2, 270); fitSprite(sp, 200, 240); if (!owned) sp.alpha = 0.92; card.addChild(sp);
       const rb = ribbon(t("tier" + s.tier), TIER_COLOR[s.tier] ?? C.plateLight, 180, 42); rb.position.set(cw / 2 - 90, 22); card.addChild(rb);
       const name = new Text({ text: t("sk_" + id), style: display(36) }); name.anchor.set(0.5); name.position.set(cw / 2, 300); card.addChild(name);
       let foot: Container;
@@ -67,7 +67,7 @@ export class ShopScene extends Scene {
     if (!p.owned.includes("starter")) {
       const card = new Container(); card.position.set(40, y); card.addChild(panel(sw, 260, { radius: 32, color: C.plate, glow: C.gold }));
       const rb = ribbon(t("premium").toUpperCase(), C.coral, 200, 44); rb.position.set(30, -10); card.addChild(rb);
-      const ro = heroSprite("royal"); ro.position.set(150, 240); ro.width = 200; ro.scale.y = ro.scale.x; card.addChild(ro);
+      const ro = heroSprite("royal"); ro.position.set(150, 240); fitSprite(ro, 200, 220); card.addChild(ro);
       const tt = new Text({ text: t("starter"), style: display(44) }); tt.position.set(290, 50); card.addChild(tt);
       const d = new Text({ text: t("starter_d"), style: body(26, C.lilac, 800) }); d.style.wordWrap = true; d.style.wordWrapWidth = sw - 560; d.position.set(290, 110); card.addChild(d);
       const b = button({ w: 220, h: 96, label: L.IAP.starter.price, kind: "primary", size: 36, onTap: () => this.confirmIap("starter", t("starter"), L.IAP.starter.price) }); b.position.set(sw - 140, 130); card.addChild(b);
@@ -103,7 +103,7 @@ export class ShopScene extends Scene {
   }
   private confirmBuy(id: string) {
     const s = (L.SKINS as any)[id], price = s.coins ? `${s.coins} ${t("coins")}` : t("gems_n", { n: s.gems });
-    dialog({ eyebrow: t("purchase_title"), title: t("purchase_q", { item: t("sk_" + id), price }), content: (() => { const h = heroSprite(id); h.anchor.set(0.5, 0); h.width = 200; h.scale.y = h.scale.x; return h; })(),
+    dialog({ eyebrow: t("purchase_title"), title: t("purchase_q", { item: t("sk_" + id), price }), content: (() => { const h = heroSprite(id); h.anchor.set(0.5, 0); fitSprite(h, 200, 220); return h; })(),
       buttons: [{ label: t("cancel"), kind: "ghost" }, { label: t("buy"), onTap: () => { const r = state.act({ t: "buy", item: id }); if (r.ok) { audio.play("buy"); buzz("success"); toast(t("bought")); } else toast(r.error === "not enough coins" ? t("not_enough", { c: t("coins") }) : r.error === "not enough gems" ? t("not_enough", { c: t("gems") }) : r.error); } }] });
   }
   private confirmIap(sku: string, name: string, price: string) {

@@ -18,7 +18,8 @@ export class Actor extends Container {
     this.shadow.ellipse(0, 0, size * 0.3, size * 0.11).fill({ color: 0x000000, alpha: kind === "echo" ? 0.18 : 0.32 }); this.addChild(this.shadow);
     if (lampColor) { this.lamp = glow(lampColor, size * (kind === "hero" ? 1.3 : 0.9), kind === "hero" ? 0.5 : 0.32); this.lamp.y = -size * 0.35; this.addChild(this.lamp); }
     this.sprite = new Sprite(texture); this.sprite.anchor.set(0.5, 1);
-    const sc = (size * (kind === "drone" ? 0.86 : 0.96)) / this.sprite.texture.width; this.sprite.scale.set(sc);
+    const tw = this.sprite.texture.width, th = this.sprite.texture.height;
+    const sc = kind === "drone" ? (size * 0.84) / tw : Math.min((size * 0.96) / tw, (size * 1.3) / th); this.sprite.scale.set(sc);
     if (kind === "drone") this.sprite.y = size * 0.22;
     this.body.addChild(this.sprite); this.addChild(this.body);
     if (kind === "echo") this.sprite.alpha = 0.84;

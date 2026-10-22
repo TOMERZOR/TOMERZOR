@@ -24,7 +24,7 @@ export type Result = { ok: true } | { ok: false; error: string };
 
 export interface Logic {
   LOOP_TICKS: number; MAX_ECHOES: number; COLS: number; ROWS: number; DIRS: number[][];
-  WORLDS: { id: number; key: string; bg: string; mirror?: boolean }[]; LEVELS: Level[];
+  WORLDS: { id: number; key: string; bg: string; mirror?: boolean }[]; WORLD_STARS: number[]; LEVELS: Level[];
   SKINS: Record<string, Skin>; IAP: Record<"starter" | "gems_small" | "gems_big" | "noads" | "pass", Sku>; PASS_TIERS: Tier[]; AD_COINS: number; ADS_PER_DAY: number; PRICES: Record<"hint" | "loop" | "continue", number>;
   levelById(id: string): Level | null; dailyLevel(day: number): Level; encodeLevel(l: Level): string; decodeLevel(code: string): Level | null;
   createRun(level: Level, logs: string[]): Run; stepRun(run: Run, dir: number): Run; dronePos(d: Omit<Drone, "px" | "py">, tick: number): { px: number; py: number };

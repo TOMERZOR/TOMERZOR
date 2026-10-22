@@ -41,7 +41,7 @@ export class Tutorial {
 
   constructor(private host: TutHost) {
     const L = host.layer; L.addChild(this.veil, this.ring);
-    this.pointer = new Sprite(Texture.from("arrow")); this.pointer.anchor.set(0.5); this.pointer.width = this.pointer.height = 110; this.pointer.rotation = -Math.PI / 2; this.pointer.tint = C.gold; L.addChild(this.pointer);
+    this.pointer = new Sprite(Texture.from("s_arrow")); this.pointer.anchor.set(0.5); this.pointer.width = 110; this.pointer.scale.y = this.pointer.scale.x; this.pointer.rotation = -Math.PI / 2; this.pointer.tint = C.gold; L.addChild(this.pointer);
     this.cardPanel = panel(940, 200, { radius: 34, glow: C.mint }); this.card.addChild(this.cardPanel);
     this.text = new Text({ text: "", style: body(31, C.cream, 800) }); this.text.style.wordWrap = true; this.text.style.wordWrapWidth = 820; this.text.style.align = "center"; this.text.anchor.set(0.5, 0); this.card.addChild(this.text);
     this.skipT = new Text({ text: t("skip"), style: body(24, C.lilac, 800) }); this.skipT.anchor.set(1, 0); this.skipT.eventMode = "static"; this.skipT.cursor = "pointer"; this.skipT.on("pointertap", () => this.host.skipTutorial()); this.card.addChild(this.skipT);

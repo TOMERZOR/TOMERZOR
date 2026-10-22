@@ -7,7 +7,9 @@ import gsap from "gsap";
 import { W, C } from "./theme";
 import { Scenes } from "./scenes";
 import { state, L } from "./state";
-import { metalBar, pill, roundKey, display, body, DRAG_PX, tapOnce } from "./ui";
+import { metalBar, pill, roundKey, display, body, DRAG_PX, tapOnce, icon, logoStyle, setButtonBuzz } from "./ui";
+import { buzz } from "./haptics";
+setButtonBuzz((k) => buzz(k));
 import { audio } from "./audio";
 import { t } from "./i18n";
 import { HomeScene } from "./scenes/home";
@@ -16,13 +18,11 @@ import { ShopScene } from "./scenes/shop";
 import { DailyScene } from "./scenes/daily";
 import { ProfileScene } from "./scenes/profile";
 
-export const TOP_H = 120;
-export const TAB_H = 200;
+export const TOP_H = 110;
+export const TAB_H = 170;
 
-/** A painted icon from the sliced sheet, centred, `size` tall. */
-export function iconSprite(name: string, size = 64) {
-  const s = new Sprite(Texture.from("icon_" + name)); s.anchor.set(0.5); s.height = size; s.scale.x = s.scale.y; return s;
-}
+/** A thin line icon, centred, `size` tall (vector; `iconSprite` keeps its old name for callers). */
+export function iconSprite(name: string, size = 64) { return icon(name, size * 0.78); }
 
 const skinOf = (skin: string) => L.SKINS[L.skinId(skin)]!;
 export function heroSprite(skin: string) {
@@ -46,21 +46,23 @@ export function echoTexture(skin: string) {
   }
   return tx;
 }
+/** Scale a sprite to fit inside w×h, keeping its aspect (tall robots stay tall). */
+export function fitSprite<T extends Sprite>(s: T, w: number, h: number) { const k = Math.min(w / s.texture.width, h / s.texture.height); s.scale.set(k); return s; }
 export function echoSprite(skin: string) { const s = new Sprite(echoTexture(skin)); s.anchor.set(0.5, 1); s.alpha = 0.82; return s; }
 
-/** Currencies and settings along the top. Pass `back` for a back key instead of the gear. */
+/** The wordmark, currencies and settings along the top. Pass `back` for a back key. */
 export class TopBar extends Container {
-  private bar = metalBar(W, TOP_H + 200); private coins: Container; private gems: Container; private stars: Container; private key: Container;
-  private safe = 0;
+  private bar = metalBar(W, TOP_H + 200); private coins: Container; private gems: Container; private stars: Container; private key: Container; private mark: Text;
   constructor(private opts: { back?: () => void; title?: string } = {}) {
     super();
     this.bar.y = -200; this.addChild(this.bar);
-    this.coins = pill(250, 72, "0", iconSprite("coin", 60), () => Scenes.go(new ShopScene()));
-    this.gems = pill(220, 72, "0", iconSprite("gem", 60), () => Scenes.go(new ShopScene()));
-    this.stars = pill(230, 72, "0", iconSprite("star", 60), () => Scenes.go(new MapScene()));
-    this.key = opts.back ? roundKey(92, "ghost", iconSprite("back", 48), () => { audio.play("tap", 0.5); opts.back!(); }) : roundKey(92, "ghost", iconSprite("gear", 52), () => { audio.play("tap", 0.5); openSettings(); });
+    this.mark = new Text({ text: "ECHO", style: logoStyle(34, C.cream) }); this.mark.anchor.set(0, 0.5); this.addChild(this.mark);
+    this.coins = pill(200, 60, "0", iconSprite("coin", 44), () => Scenes.go(new ShopScene()));
+    this.gems = pill(180, 60, "0", iconSprite("gem", 44), () => Scenes.go(new ShopScene()));
+    this.stars = pill(210, 60, "0", iconSprite("star", 44), () => Scenes.go(new MapScene()));
+    this.key = opts.back ? roundKey(84, "ghost", iconSprite("back", 44), () => { audio.play("tap", 0.5); opts.back!(); }) : roundKey(84, "ghost", iconSprite("gear", 46), () => { audio.play("tap", 0.5); openSettings(); });
     this.addChild(this.coins, this.gems, this.stars, this.key);
-    if (opts.title) { const tt = new Text({ text: opts.title, style: display(40, C.cream, true) }); tt.anchor.set(0.5); tt.label = "title"; this.addChild(tt); }
+    if (opts.title) { const tt = new Text({ text: opts.title.toUpperCase(), style: display(34, C.cream, true, false) }); tt.anchor.set(0.5); tt.label = "title"; this.addChild(tt); }
     this.refresh();
   }
   refresh() {
@@ -69,26 +71,26 @@ export class TopBar extends Container {
     (this.stars as any).setValue(`${L.totalStars(p)}/${L.LEVELS.length * 3}`);
   }
   relayout(safeTop: number) {
-    this.safe = safeTop; this.y = safeTop; this.bar.height = TOP_H + 200 + safeTop; this.bar.y = -200 - safeTop;
-    const y = TOP_H / 2 - 4;
-    if (this.opts.back) { this.key.position.set(70, y); } else { this.key.position.set(W - 70, y); }
+    this.y = safeTop; this.bar.height = TOP_H + 200 + safeTop; this.bar.y = -200 - safeTop;
+    const y = TOP_H / 2;
+    this.mark.visible = !this.opts.back; this.mark.position.set(36, y);
+    this.key.position.set(this.opts.back ? 66 : W - 66, y);
     const title = this.getChildByLabel("title") as Text | null;
     if (title) { title.position.set(W / 2, y); this.coins.visible = this.gems.visible = this.stars.visible = false; return; }
-    const x0 = this.opts.back ? 140 : 24, x1 = this.opts.back ? W - 24 : W - 140, gap = 14;
-    const total = 250 + 220 + 230 + gap * 2, start = x0 + (x1 - x0 - total) / 2;
-    this.coins.position.set(start, y - 36); this.gems.position.set(start + 250 + gap, y - 36); this.stars.position.set(start + 250 + 220 + gap * 2, y - 36);
+    const gap = 12, total = 200 + 180 + 210 + gap * 2, x1 = this.opts.back ? W - 30 : W - 130, start = x1 - total;
+    this.coins.position.set(start, y - 30); this.gems.position.set(start + 200 + gap, y - 30); this.stars.position.set(start + 200 + 180 + gap * 2, y - 30);
   }
 }
 
 export type Tab = "home" | "levels" | "shop" | "daily" | "profile";
 const TABS: { id: Tab; icon: string; key: string; make: () => any }[] = [
-  { id: "home", icon: "home", key: "home", make: () => new HomeScene() },
-  { id: "levels", icon: "trophy", key: "levels", make: () => new MapScene() },
+  { id: "home", icon: "play", key: "play", make: () => new HomeScene() },
+  { id: "levels", icon: "map", key: "map_tab", make: () => new MapScene() },
   { id: "shop", icon: "bag", key: "shop", make: () => new ShopScene() },
   { id: "daily", icon: "cal", key: "daily_s", make: () => new DailyScene() },
-  { id: "profile", icon: "crown", key: "profile", make: () => new ProfileScene() },
+  { id: "profile", icon: "user", key: "profile", make: () => new ProfileScene() },
 ];
-/** Five plastic keys on a brushed bar; the live one glows mint. */
+/** Five text tabs on a glass strip; the live one is cyan with an underline. */
 export class TabBar extends Container {
   private bar = metalBar(W, TAB_H + 300); height_ = TAB_H;
   constructor(active: Tab) {
@@ -96,13 +98,10 @@ export class TabBar extends Container {
     const slot = (W - 40) / TABS.length;
     TABS.forEach((tab, i) => {
       const c = new Container(); c.x = 20 + slot * i; const on = tab.id === active;
-      const g = new Graphics();
-      g.roundRect(8, 16, slot - 16, TAB_H - 32, 26).fill({ color: on ? C.mint : 0x000000, alpha: on ? 0.9 : 0.28 });
-      if (on) { g.roundRect(8, 16, slot - 16, (TAB_H - 32) * 0.45, 26).fill({ color: 0xffffff, alpha: 0.25 }); g.roundRect(8, 16, slot - 16, TAB_H - 32, 26).stroke({ color: 0xffffff, alpha: 0.35, width: 3 }); }
-      else g.roundRect(8, 16, slot - 16, TAB_H - 32, 26).stroke({ color: 0xffffff, alpha: 0.08, width: 2 });
-      c.addChild(g);
-      const ic = iconSprite(tab.icon, 78); ic.position.set(slot / 2, TAB_H / 2 - 22); if (!on) ic.alpha = 0.8; c.addChild(ic);
-      const lb = new Text({ text: t(tab.key).toUpperCase(), style: display(26, on ? 0x16302a : C.lilac, true, !on) }); lb.anchor.set(0.5); lb.position.set(slot / 2, TAB_H - 42); c.addChild(lb);
+      const ic = icon(tab.icon, 46, on ? C.mint : C.lilac); ic.position.set(slot / 2, TAB_H / 2 - 30); c.addChild(ic);
+      const lb = new Text({ text: t(tab.key).toUpperCase(), style: display(24, on ? C.mint : C.lilac, true, false) }); lb.anchor.set(0.5); lb.position.set(slot / 2, TAB_H / 2 + 34); c.addChild(lb);
+      if (on) { const u = new Graphics(); u.roundRect(slot / 2 - 28, TAB_H / 2 + 58, 56, 3, 2).fill({ color: C.mint }); u.roundRect(slot / 2 - 28, TAB_H / 2 + 56, 56, 7, 3).fill({ color: C.mint, alpha: 0.25 }); c.addChild(u); }
+      const hit = new Graphics(); hit.rect(0, 0, slot, TAB_H).fill({ color: 0xffffff, alpha: 0.001 }); c.addChildAt(hit, 0);
       if (!on) tapOnce(c, () => { audio.play("tap", 0.5); Scenes.go(tab.make()); });
       this.addChild(c);
     });

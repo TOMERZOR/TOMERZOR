@@ -4,7 +4,7 @@ import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
 import { panel, button, display, body } from "../ui";
-import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, echoSprite, toast } from "../widgets";
+import { TopBar, TabBar, TOP_H, TAB_H, ScrollView, iconSprite, heroSprite, echoSprite, fitSprite, toast } from "../widgets";
 import { state, L } from "../state";
 import { audio } from "../audio";
 import { t } from "../i18n";
@@ -28,9 +28,9 @@ export class ProfileScene extends Scene {
     // Robot on its pad with the name.
     const hero = new Container(); hero.position.set(W / 2, y + 300);
     const pad = new Graphics(); pad.ellipse(0, 0, 200, 60).fill({ color: C.mint, alpha: 0.18 }); pad.ellipse(0, 0, 200, 60).stroke({ color: C.mint, alpha: 0.8, width: 6 }); hero.addChild(pad);
-    const e1 = echoSprite(p.skin); e1.position.set(-190, -10); e1.width = 170; e1.scale.y = e1.scale.x; e1.alpha = 0.5; hero.addChild(e1);
-    const e2 = echoSprite(p.skin); e2.position.set(190, -10); e2.width = 170; e2.scale.y = e2.scale.x; e2.alpha = 0.5; hero.addChild(e2);
-    const h = heroSprite(p.skin); h.width = 260; h.scale.y = h.scale.x; hero.addChild(h);
+    const e1 = echoSprite(p.skin); e1.position.set(-190, -10); fitSprite(e1, 170, 230); e1.alpha = 0.5; hero.addChild(e1);
+    const e2 = echoSprite(p.skin); e2.position.set(190, -10); fitSprite(e2, 170, 230); e2.alpha = 0.5; hero.addChild(e2);
+    const h = heroSprite(p.skin); fitSprite(h, 260, 320); hero.addChild(h);
     gsap.to(h, { y: -12, duration: 1.3, yoyo: true, repeat: -1, ease: "sine.inOut" });
     c.addChild(hero); y += 340;
     const name = new Text({ text: p.name || t("unnamed"), style: display(56) }); name.anchor.set(0.5, 0); name.position.set(W / 2, y); c.addChild(name);

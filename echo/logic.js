@@ -50,11 +50,11 @@ const MIRROR_DIR = [0, 1, 0, 7, 0, 5, 0, 3, 0];
 // Drones patrol back and forth: from (x,y) along (dx,dy) for n cells.
 
 export const WORLDS = [
-  { id: 1, key: "lab", bg: "bg_lab" },
-  { id: 2, key: "observatory", bg: "bg_obs" },
-  { id: 3, key: "mirror", bg: "bg_mirror", mirror: true },
-  { id: 4, key: "foundry", bg: "bg_foundry" },
-  { id: 5, key: "core", bg: "bg_core", mirror: true },
+  { id: 1, key: "sanctuary", bg: "chapter1" },
+  { id: 2, key: "observatory", bg: "chapter2" },
+  { id: 3, key: "mirror", bg: "chapter3", mirror: true },
+  { id: 4, key: "foundry", bg: "chapter4" },
+  { id: 5, key: "core", bg: "chapter5", mirror: true },
 ];
 /** Stars needed to open each world (index = world id - 1). */
 export const WORLD_STARS = [0, 12, 34, 58, 84];
@@ -607,6 +607,7 @@ export function starsFor(level, echoes) {
  * in the shop; `sprite` is the asset name.
  */
 export const SKINS = {
+  halo: { coins: 0, color: "#49d7ff", sprite: "halo", tier: 1 },
   scout: { coins: 0, color: "#7ef0c6", sprite: "hero", tier: 1 },
   knight: { coins: 400, color: "#9ad7ff", sprite: "bot_knight", tier: 1 },
   astro: { coins: 600, color: "#ffe08a", sprite: "bot_astro", tier: 1 },
@@ -619,12 +620,13 @@ export const SKINS = {
 };
 /** Skin ids from before the robots existed, so old saves keep a valid skin. */
 const LEGACY_SKINS = { cyan: "scout", magenta: "ninja", lime: "mecha", gold: "royal", white: "astro", rainbow: "wizard" };
-export const skinId = (id) => (SKINS[id] ? id : LEGACY_SKINS[id] || "scout");
+export const skinId = (id) => (SKINS[id] ? id : LEGACY_SKINS[id] || "halo");
 function normalizeSkins(p) {
   const skins = [...new Set((p.skins || []).map(skinId))];
   if (!skins.includes("scout")) skins.unshift("scout");
+  if (!skins.includes("halo")) skins.unshift("halo");
   const skin = skinId(p.skin);
-  if (skin !== p.skin || skins.length !== (p.skins || []).length || skins.some((k, i) => k !== p.skins[i])) return { ...p, skin: skins.includes(skin) ? skin : "scout", skins };
+  if (skin !== p.skin || skins.length !== (p.skins || []).length || skins.some((k, i) => k !== p.skins[i])) return { ...p, skin: skins.includes(skin) ? skin : "halo", skins };
   return p;
 }
 
@@ -651,7 +653,7 @@ export const PRICES = { hint: 40, loop: 120, continue: 25 };
 
 export function newProfile(pid) {
   return {
-    pid, name: "", coins: 0, gems: 0, stars: {}, best: {}, skin: "scout", skins: ["scout"],
+    pid, name: "", coins: 0, gems: 0, stars: {}, best: {}, skin: "halo", skins: ["halo", "scout"],
     streak: 0, lastDay: 0, adsDay: 0, adsToday: 0, passXp: 0, pass: false, noads: false,
     claimedTiers: 0, owned: [], clears: 0,
   };

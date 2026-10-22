@@ -46,7 +46,7 @@ await Assets.load([
   ...ICONS.map((n) => ({ alias: "icon_" + n, src: `assets/icons/${n}.png` })),
   { alias: "bg_lab", src: "assets/bg_lab.jpg" }, { alias: "bg_obs", src: "assets/bg_obs.jpg" }, { alias: "bg_mirror", src: "assets/bg_mirror.jpg" }, { alias: "bg_foundry", src: "assets/bg_foundry.jpg" }, { alias: "bg_core", src: "assets/bg_core.jpg" },
   { alias: "bg_title", src: "assets/bg_title.jpg" },
-  { alias: "map_bg", src: "assets/map_bg.jpg" },
+  ...[1, 2, 3, 4, 5].map((i) => ({ alias: "map_w" + i, src: `assets/map_w${i}.jpg` })),
   ...["hero", "echo", "coin", "gem", "drone", "exit", "plate", "bot_knight", "bot_astro", "bot_mecha", "bot_ninja", "bot_pirate", "bot_samurai", "bot_wizard", "bot_royal"].map((n) => ({ alias: n, src: `assets/${n}.png` })),
   ...["floor_a", "floor_b", "floor_c", "wall_top", "wall_front", "plate_off", "plate_on", "gate_closed", "gate_open", "exit_t", "coin_t", "drone_t", "danger", "pad", "arrow", "void"].map((n) => ({ alias: n, src: `assets/tiles/${n.replace(/_t$/, "")}.png` })),
 ]);

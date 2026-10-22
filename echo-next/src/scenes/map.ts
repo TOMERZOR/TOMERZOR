@@ -1,5 +1,5 @@
 /** The world map: a winding golden path up through the lab with a disc per room. */
-import { Container, Sprite, Texture, Text, Graphics, Rectangle } from "pixi.js";
+import { Container, Sprite, Texture, Text, Graphics } from "pixi.js";
 import gsap from "gsap";
 import { Scene, Scenes, layout, killTweensDeep } from "../scenes";
 import { W, C } from "../theme";
@@ -25,18 +25,23 @@ export class MapScene extends Scene {
     const p = state.profile, current = state.nextLevel();
     const worlds = L.WORLDS.map((w) => ({ w, levels: L.LEVELS.filter((l) => l.world === w.id) }));
     const total = worlds.reduce((n, g) => n + HEAD + g.levels.length * STEP, 0) + 200;
-    // Backdrop: the painted hall, tiled up the whole path.
-    // only the machinery band of the painting tiles; its smoky sky stays out
-    const full = Texture.from("map_bg"); const tex = new Texture({ source: full.source, frame: new Rectangle(0, 700, full.width, full.height - 700) }); const tw = W, th = tex.height * (W / tex.width);
-    for (let y = 0, k = 0; y < total + th; y += th, k++) { const s = new Sprite(tex); s.width = tw; s.height = th; s.y = total - y; s.anchor.set(0, 1); if (k % 2) { s.scale.x = -s.scale.x; s.x = W; } c.addChild(s); }
-    const fog = new Graphics(); fog.rect(0, 0, W, total).fill({ color: C.ink, alpha: 0.25 });
-    // soften the seams between painting tiles with a band of fog
-    for (let y = total; y > -th; y -= th) for (let i = 0; i < 12; i++) { const a = 0.5 * (1 - i / 12); fog.rect(0, y - 60 + i * 5, W, 6).fill({ color: C.ink, alpha: a }); fog.rect(0, y + 60 - i * 5 - 6, W, 6).fill({ color: C.ink, alpha: a }); }
-    c.addChild(fog);
-    // Node positions, bottom up.
+    // Node positions, bottom up; each world keeps the span it covers.
     const nodes: { l: any; x: number; y: number; wi: number }[] = []; let y = total - 160; const heads: { w: any; y: number }[] = [];
+    const spans: { w: any; y0: number; y1: number }[] = [];
     let gi = 0;
-    worlds.forEach(({ w, levels }, wi) => { levels.forEach((l) => { nodes.push({ l, x: XS[gi % XS.length]!, y, wi }); y -= STEP; gi++; }); heads.push({ w, y: y - 40 }); y -= HEAD; });
+    worlds.forEach(({ w, levels }, wi) => { const y1 = y + 160; levels.forEach((l) => { nodes.push({ l, x: XS[gi % XS.length]!, y, wi: w.id - 1 }); y -= STEP; gi++; }); heads.push({ w, y: y - 40 }); y -= HEAD; spans.push({ w, y0: wi === worlds.length - 1 ? -200 : y + 40, y1 }); });
+    // Backdrop: every world has its own painting, tiled up its own span and tinted.
+    const TINT: Record<number, [number, number]> = { 1: [C.ink, 0.2], 2: [0x14245a, 0.3], 3: [0x1c5a48, 0.26], 4: [0x6a2a10, 0.26], 5: [0x3a1a6a, 0.3] };
+    for (const sp of spans) {
+      const tex = Texture.from("map_w" + sp.w.id); const th = tex.height * (W / tex.width);
+      const sec = new Container(); const m = new Graphics(); m.rect(0, sp.y0, W, sp.y1 - sp.y0).fill({ color: 0xffffff }); sec.addChild(m); sec.mask = m;
+      for (let yy = sp.y1, k = 0; yy > sp.y0 - th; yy -= th, k++) { const s = new Sprite(tex); s.width = W; s.height = th; s.anchor.set(0, 1); s.y = yy; if (k % 2) { s.scale.x = -s.scale.x; s.x = W; } sec.addChild(s); }
+      const [tc, ta] = TINT[sp.w.id] ?? [C.ink, 0.2]; const tint = new Graphics(); tint.rect(0, sp.y0, W, sp.y1 - sp.y0).fill({ color: tc, alpha: ta }); sec.addChild(tint);
+      // fog at the seams between tiles and at the world border
+      for (let yy = sp.y1 - th; yy > sp.y0; yy -= th) for (let i = 0; i < 20; i++) { const a = 0.9 * Math.pow(1 - i / 20, 1.4); tint.rect(0, yy - 140 + i * 7, W, 8).fill({ color: C.ink, alpha: a }); tint.rect(0, yy + 140 - i * 7 - 8, W, 8).fill({ color: C.ink, alpha: a }); }
+      for (let i = 0; i < 16; i++) { const a = 0.7 * (1 - i / 16); tint.rect(0, sp.y0 + i * 8, W, 9).fill({ color: C.ink, alpha: a }); }
+      c.addChild(sec);
+    }
     // Path.
     const path = new Graphics();
     const stroke = (width: number, color: number, alpha = 1) => { path.moveTo(nodes[0]!.x, nodes[0]!.y + 120); for (let i = 0; i < nodes.length; i++) { const a = nodes[i]!, b = nodes[i + 1]; if (b) path.quadraticCurveTo(a.x, (a.y + b.y) / 2 - 40, (a.x + b.x) / 2, (a.y + b.y) / 2), path.quadraticCurveTo(b.x, (a.y + b.y) / 2 + 40, b.x, b.y); else path.lineTo(a.x, a.y - 140); } path.stroke({ width, color, alpha, cap: "round", join: "round" }); };

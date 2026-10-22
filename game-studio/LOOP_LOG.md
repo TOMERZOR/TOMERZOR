@@ -54,7 +54,7 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 - Tutorial level 3 (the pyramid) was cleared by the average player only 20% of the time; the shelf hid the pyramid from the cannon. 15 variants tested; the winner (a low, narrow shelf with big boxes) reaches **85%**.
 - Calibration: extra balls only where the average player fell short of the target; 34 "wall" levels the average player almost never cleared were replaced with new ones that pass both the solver and the bot; each world is ordered easy to hard by measured success, with a breather level every few levels.
 - Daily levels: a fairness bar of 50% for the average player (a daily that's too hard breaks the streak). The ones that failed were replaced with new ones.
-- **Final result:** 61–72% per world, from about 100% at the start of a world to about 38% at its end.
+- **Final result:** 61–79% per world for the average player, from about 100% on a world's first levels to 17–58% on its last ones (the world finales, where a hint or an extra-balls continue helps). 120 campaign and 100 daily levels, all solver-proven and replayed in the browser.
 
 ## Round 13: independent code review (a separate agent)
 | # | Severity | Bug | Fix | Verified |
@@ -67,3 +67,8 @@ Every round asks: Are there bugs? Does it look good? Is it fun? Does it make mon
 | 6 | Low | A rewarded video closed early never settled | settle on close or failure, with a timeout | per AdMob API |
 | 7 | Low | Coin packs bought with pending approval were lost | a pending marker plus a listener that grants on completion, without double grants | per RevenueCat API |
 | ? | Risk | `.mjs` might not load on iOS 15/16 (blank screen) | renamed to `.js` | n/a |
+
+## Round 14: launch assets, final pass
+- **Store screenshots:** 6 for the App Store at 1290×2796 and 6 for Google Play at 1080×1920 (Play rejects screenshots taller than 2:1). One caption wrapped onto two lines at full size; it was shortened to "A new puzzle daily".
+- **Trailer:** 15.4 s at 1080×1920, captured frame by frame from the real game and mixed from the logged sound events. The opening caption now leads with the hook: "The most satisfying sound on your phone".
+- **Landing page** (`shard-site/`): checked at 1280 px and at 390 px (phone). The numbered badges 1/2/3 on the feature cards suggested a sequence that isn't there, so they became icons (sparkle, shield, calendar). No console errors.

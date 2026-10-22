@@ -41,13 +41,14 @@ No forced ads in your first 12 levels, and never after a failed attempt. Videos 
 **Content rating:** Everyone. Ads: Yes. In-app purchases: Yes.
 **Target audience:** 13+ (not designed for children; this keeps AdMob in the general-audience setting).
 
-## Screenshots (6.9" iPhone 1320×2868 and 6.5" 1284×2778, Google Play 1080×1920+)
+## Screenshots (ready in `game-studio/store/screenshots/`)
+App Store: 1290×2796, an accepted size for the 6.9" iPhone slot; App Store Connect scales them down for smaller iPhones. Google Play: 1080×1920 in `screenshots/google-play/`.
 Captions, in order:
 1. **Aim. Fire. Shatter.** (a mid-air explosion of glass)
 2. **Bank it off the walls** (aim line plus a ricochet)
 3. **Chain reactions** (a bomb blowing up a shelf of glass)
-4. **5 worlds · 120 levels** (the Night world with chandeliers)
-5. **A new puzzle every day** (Daily Smash)
+4. **5 worlds. 120 levels.** (the Night world with chandeliers)
+5. **A new puzzle daily** (Daily Smash)
 6. **Collect 12 balls** (the ball shop)
 
 ## App privacy (App Store "nutrition label")

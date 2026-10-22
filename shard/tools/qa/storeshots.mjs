@@ -80,7 +80,7 @@ shots.push({ img: await raw('raw4'), cap: '5 worlds. 120 levels.', sub: 'Plus a 
 await page.evaluate(() => { document.body.classList.remove('nosheet'); window.__shard.goHome(); });
 await tick(90);
 await page.waitForTimeout(900);
-shots.push({ img: await raw('raw5'), cap: 'A new puzzle every day', sub: 'Keep your streak alive', world: 1 });
+shots.push({ img: await raw('raw5'), cap: 'A new puzzle daily', sub: 'Keep your streak alive', world: 1 });
 // 6: shop
 await page.evaluate(() => document.getElementById('btn-shop').click());
 await tick(30);

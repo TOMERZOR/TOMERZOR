@@ -44,7 +44,8 @@
   .card { background: var(--card); border-radius: 24px; padding: 24px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
   .card h3 { margin: 10px 0 6px; font-size: 21px; font-weight: 900; }
   .card p { margin: 0; color: var(--muted); font-weight: 600; }
-  .dot { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 900; }
+  .dot { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: var(--accent); color: #fff; }
+  .dot svg { width: 24px; height: 24px; }
   .shots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 8px 0 40px; }
   .shots img { width: 100%; border-radius: 22px; box-shadow: 0 20px 40px -24px rgba(40, 20, 60, .5); }
   .faq { padding: 8px 0 40px; max-width: 760px; }
@@ -85,9 +86,9 @@
   </section>
 
   <section class="features" id="features">
-    <div class="card"><div class="dot">1</div><h3>Satisfying by design</h3><p>Crisp glass sounds, precise haptics, slow-motion finishes and chain reactions. No two shatters sound alike.</p></div>
-    <div class="card"><div class="dot">2</div><h3>Fair, always</h3><p>Every one of the 120 levels is proven solvable by a physics solver. No forced ads in your first 12 levels.</p></div>
-    <div class="card"><div class="dot">3</div><h3>A new puzzle daily</h3><p>The Daily Smash keeps your streak alive. Collect 12 balls, from Chalk to Prism.</p></div>
+    <div class="card"><div class="dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3c.7 4.6 3.4 7.3 8 8-4.6.7-7.3 3.4-8 8-.7-4.6-3.4-7.3-8-8 4.6-.7 7.3-3.4 8-8z" fill="currentColor"/><path d="M18.5 2.5c.3 1.9 1.1 2.7 3 3-1.9.3-2.7 1.1-3 3-.3-1.9-1.1-2.7-3-3 1.9-.3 2.7-1.1 3-3z" fill="currentColor"/></svg></div><h3>Satisfying by design</h3><p>Crisp glass sounds, precise haptics, slow-motion finishes and chain reactions. No two shatters sound alike.</p></div>
+    <div class="card"><div class="dot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l7.5 3v6c0 4.6-3.1 8.6-7.5 10-4.4-1.4-7.5-5.4-7.5-10v-6z" fill="currentColor"/><path d="M8.3 12.2l2.6 2.6 4.9-5.1" fill="none" style="stroke: var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h3>Fair, always</h3><p>Every one of the 120 levels is proven solvable by a physics solver. No forced ads in your first 12 levels.</p></div>
+    <div class="card"><div class="dot"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3.5" fill="currentColor"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="7" y="11" width="4" height="4" rx="1.2" style="fill: var(--accent)"/></svg></div><h3>A new puzzle daily</h3><p>The Daily Smash keeps your streak alive. Collect 12 balls, from Chalk to Prism.</p></div>
   </section>
 
   <section class="shots" aria-label="Screenshots">

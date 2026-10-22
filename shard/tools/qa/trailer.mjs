@@ -76,7 +76,7 @@ async function shotSegment(index, cap, holdAim = 14, after = 70) {
   await run(after);
 }
 
-await shotSegment(0, 'The most satisfying sound<br>on your phone<small>Sound on</small>', 12, 62);
+await shotSegment(0, 'The most satisfying<br>sound on your phone<small>Sound on</small>', 12, 62);
 await shotSegment(pick.dawn, 'One shot. Every piece.', 14, 80);
 await shotSegment(pick.ember, 'Chain reactions', 14, 80);
 await shotSegment(pick.night, '120 levels · 5 worlds', 14, 80);

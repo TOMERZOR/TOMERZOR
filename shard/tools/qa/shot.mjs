@@ -8,7 +8,7 @@ const URL = process.env.URL || 'http://localhost:8080/index.html';
 const [w, h] = (process.env.SIZE || '390x844').split('x').map(Number);
 
 const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--enable-precise-memory-info', '--js-flags=--expose-gc'] });
-const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: +(process.env.DPR || 2), isMobile: true, hasTouch: true });
+const ctx = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: +(process.env.DPR || 2), isMobile: true, hasTouch: true, reducedMotion: process.env.REDUCED ? 'reduce' : 'no-preference' });
 const page = await ctx.newPage();
 if (process.env.THROTTLE) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: +process.env.THROTTLE }); }
 const errors = [];

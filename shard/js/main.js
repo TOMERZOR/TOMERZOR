@@ -5,6 +5,7 @@ import { createGame } from './game.js';
 import * as planck from './vendor/planck.js';
 import { ghostPath, MIN_ANGLE, MAX_ANGLE } from './engine.js';
 import { save, totalStars, worldStars } from './save.js';
+import { buildMap } from './map.js';
 import * as sfx from './audio.js';
 import * as hap from './haptics.js';
 import { initMonetization, showRewarded, maybeInterstitial, purchase, restore, PRODUCTS, priceOf, isNative } from './monetization.js';
@@ -61,6 +62,7 @@ function resize() {
   renderer.resize(window.innerWidth, window.innerHeight, dpr, safeInsets());
   const size = window.innerWidth + 'x' + window.innerHeight;
   if (size !== lastSize && mode === 'home' && game.sim) loadDemo(game.sim.level.world); // refit to the new layout
+  if (mode === 'page' && $('#levels').classList.contains('on') && levelMap && levelMap.width !== $('#map-scroll').clientWidth) renderLevels(true); // the trail fits the new width
   lastSize = size;
 }
 window.addEventListener('resize', resize);
@@ -70,8 +72,11 @@ const TINTS = { ink: [8, 12, 16, 18, 30, 55, 70, 85], accent: [16, 80], sky0: [3
 const hexRgb = (h) => { h = h.replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
 const rgba = (hex, a) => { const [r, g, b] = hexRgb(hex); return `rgba(${r},${g},${b},${a})`; };
 const mixHex = (a, b, t) => { const x = hexRgb(a), y = hexRgb(b); return `rgb(${x.map((v, i) => Math.round(v * t + y[i] * (1 - t))).join(',')})`; };
+let paletteNow = -1;
 function applyPalette(w) {
   const p = WORLDS[w];
+  if (w === paletteNow) return p; // unchanged: re-setting every token would restyle the whole page
+  paletteNow = w;
   const root = document.documentElement.style;
   root.setProperty('--ink', p.ink); root.setProperty('--ink2', p.ink2); root.setProperty('--accent', p.accent);
   root.setProperty('--text', p.text); root.setProperty('--sky0', p.sky[0]); root.setProperty('--sky1', p.sky[1]);
@@ -96,6 +101,8 @@ function applyPalette(w) {
 // ---------- screens ----------
 const screens = ['home', 'hud', 'levels', 'shop', 'store', 'settings'];
 function show(name) {
+  // pages are opaque: the stage behind them leaves the compositor, or it costs every animated frame
+  document.body.classList.toggle('paged', !['home', 'hud'].includes(name));
   for (const s of screens) {
     const el = document.getElementById(s);
     const on = s === name;
@@ -565,49 +572,88 @@ function toast(msg, queue = false) {
   }, 2500);
 }
 
-// ---------- levels page ----------
-let viewWorld = 0;
+// ---------- levels page: each world is a map, its levels gems on a trail ----------
+let viewWorld = 0, levelMap = null, mapKey = '';
+// the level to play next, or -1 once every level is cleared
+const nextIndex = () => { const i = progressIndex(); return d().stars[LEVELS[i].id] ? -1 : i; };
 function openLevels() {
   mode = 'page';
+  const next = nextIndex(), from = d().mapAt;
   viewWorld = LEVELS[progressIndex()].world;
+  show('levels'); // first: the map measures its view
   renderLevels();
-  show('levels');
+  if (next < 0) return;
+  d().mapAt = next; save.touch();
+  // progress since the last visit: the ball hops on from where the map last left it
+  if (from !== undefined && from < next && !calmMotion()) {
+    levelMap.travel(from, { land: (n, last) => { sfx.tink(last ? n + 2 : n); if (last) hap.light(); else hap.selection(); } });
+  }
 }
-function renderLevels() {
+function renderLevels(keepScroll) {
   applyPalette(viewWorld);
   $('#levels-stars span').textContent = totalStars();
   const tabs = $('#world-tabs');
   tabs.innerHTML = WORLDS.map((w, i) => {
     const open = unlocked(i * PER_WORLD);
-    return `<button class="wtab" role="tab" aria-selected="${i === viewWorld}" data-w="${i}">${open ? '' : '<svg><use href="#i-lock"/></svg>'}${w.name}</button>`;
+    return `<button class="wtab${open ? '' : ' locked'}" role="tab" aria-selected="${i === viewWorld}" data-w="${i}">${open ? `<i style="background:${w.accent}"></i>` : '<svg><use href="#i-lock"/></svg>'}${w.name}</button>`;
   }).join('');
-  const w = WORLDS[viewWorld];
-  const ws = worldStars(LEVELS, viewWorld);
-  const cleared = LEVELS.filter((l) => l.world === viewWorld && d().stars[l.id]).length;
-  $('#world-head').innerHTML = `<div class="wh-top"><div><h3>${w.name}</h3><p>${w.sub} · ${cleared} / ${PER_WORLD} cleared</p></div><span class="ws"><svg><use href="#i-star"/></svg>${ws} / ${PER_WORLD * 3}</span></div>
-    <div class="wh-bar" role="progressbar" aria-label="Stars in ${w.name}" aria-valuemin="0" aria-valuemax="${PER_WORLD * 3}" aria-valuenow="${ws}"><i style="width:${(ws / (PER_WORLD * 3) * 100).toFixed(1)}%"></i></div>`;
-  const cur = progressIndex();
-  const grid = $('#level-grid');
-  let html = '';
-  for (let k = 0; k < PER_WORLD; k++) {
-    const i = viewWorld * PER_WORLD + k;
-    const lv = LEVELS[i];
-    if (!lv) break;
-    const st = d().stars[lv.id] || 0;
-    const open = unlocked(i);
-    const cls = !open ? 'locked' : i === cur && !st ? 'current' : st === 3 ? 'perfect' : '';
-    html += `<button class="lvl ${cls}" data-i="${i}" aria-label="Level ${i + 1}${open ? `, ${st} stars` : ', locked'}">${i + 1}${open ? `<span class="st">${[0, 1, 2].map((j) => `<svg class="${j < st ? 'on' : ''}"><use href="#i-star"/></svg>`).join('')}</span>` : '<svg class="lk"><use href="#i-lock"/></svg>'}</button>`;
+  // the chosen world's tab stays in view (by hand: scrollIntoView would also move the page)
+  const tab = tabs.children[viewWorld];
+  tabs.scrollLeft = Math.max(0, tab.offsetLeft - (tabs.clientWidth - tab.offsetWidth) / 2);
+  const scroller = $('#map-scroll'), y = scroller.scrollTop;
+  scroller.setAttribute('aria-label', `${WORLDS[viewWorld].name} map`);
+  const first = viewWorld * PER_WORLD;
+  const levels = LEVELS.slice(first, first + PER_WORLD).map((lv, k) => ({ index: first + k, stars: d().stars[lv.id] || 0, open: unlocked(first + k) }));
+  // the same world, progress, ball and width as last time: the map already on the page is the one to show
+  const key = JSON.stringify([viewWorld, levels, nextIndex(), d().skin, scroller.clientWidth, calmMotion()]);
+  if (key !== mapKey) {
+    mapKey = key;
+    levelMap = buildMap(scroller, {
+      world: viewWorld, worlds: WORLDS, levels, current: nextIndex(),
+      ball: mapBall,
+      stars: worldStars(LEVELS, viewWorld), nextOpen: unlocked(first + PER_WORLD), calm: calmMotion(),
+    });
   }
-  grid.innerHTML = html;
+  if (keepScroll) scroller.scrollTop = y; else levelMap.scrollToCurrent();
+}
+// the map's ball: drawn once per skin, then shown as an image (no new canvas to upload on every visit)
+const ballImages = {};
+function mapBall(size) {
+  const skin = SKINS.find((s) => s.id === d().skin) || SKINS[0];
+  const key = `${skin.id}/${size}`;
+  if (!ballImages[key]) ballImages[key] = skinCanvas(skin, size, 3).toDataURL();
+  const img = new Image(size, size);
+  img.alt = ''; img.src = ballImages[key];
+  return img;
+}
+function switchWorld(w) {
+  if (w === viewWorld) return;
+  viewWorld = w;
+  renderLevels();
+  if (!calmMotion()) { const m = $('#map-scroll .map'); m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter'); }
 }
 $('#world-tabs').addEventListener('click', (e) => {
   const b = e.target.closest('[data-w]'); if (!b) return;
-  sfx.tap(); viewWorld = +b.dataset.w; renderLevels();
+  sfx.tap(); hap.selection(); switchWorld(+b.dataset.w);
 });
-$('#level-grid').addEventListener('click', (e) => {
+$('#map-scroll').addEventListener('click', (e) => {
+  if (mode !== 'page') return;
+  const g = e.target.closest('[data-gate]');
+  if (g) {
+    const w = +g.dataset.gate;
+    if (!unlocked(w * PER_WORLD)) { hap.warning(); toast(`Clear level ${w * PER_WORLD} to open ${WORLDS[w].name}`); return; }
+    sfx.tap(); hap.light(); switchWorld(w);
+    return;
+  }
   const b = e.target.closest('[data-i]'); if (!b) return;
   const i = +b.dataset.i;
-  if (!unlocked(i)) { hap.light(); toast('Clear the previous level to unlock'); return; }
+  if (!unlocked(i)) {
+    hap.warning(); toast(`Clear level ${progressIndex() + 1} first`);
+    // the level to play answers with a hop
+    const c = $('#map-scroll .node.current');
+    if (c) { c.classList.remove('nudge'); void c.offsetWidth; c.classList.add('nudge'); }
+    return;
+  }
   sfx.tap(); hap.light();
   startLevel(i);
 });
@@ -618,9 +664,9 @@ function openShop() {
   renderShop();
   show('shop');
 }
-function skinCanvas(skin, size) {
+function skinCanvas(skin, size, maxDpr = 2) {
   const c = document.createElement('canvas');
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const dpr = Math.min(maxDpr, window.devicePixelRatio || 1);
   c.width = c.height = size * dpr;
   const x = c.getContext('2d');
   x.scale(dpr, dpr);
@@ -871,6 +917,7 @@ function loop(t) {
     if (tierClock > 1.2) { if (emaDt > 0.0205 && perfTier < 3) setTier(perfTier + 1); tierClock = 0; }
   }
   requestAnimationFrame(loop);
+  if (mode === 'page') return; // pages are opaque: the scene behind them holds still
   try {
     if (mode === 'home') demoTick(dt);
     game.frame(dt);

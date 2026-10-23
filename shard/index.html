@@ -42,7 +42,7 @@
       </button>
       <button class="btn primary big" id="btn-play"><svg><use href="#i-play"/></svg><span id="play-label">Play</span></button>
       <nav class="home-nav">
-        <button class="navbtn" id="btn-levels"><svg><use href="#i-grid"/></svg><span>Levels</span></button>
+        <button class="navbtn" id="btn-levels"><svg><use href="#i-map"/></svg><span>Levels</span></button>
         <button class="navbtn" id="btn-shop"><svg><use href="#i-ball"/></svg><span>Balls</span></button>
         <button class="navbtn" id="btn-store"><svg><use href="#i-bag"/></svg><span>Store</span></button>
         <button class="navbtn" id="btn-settings"><svg><use href="#i-gear"/></svg><span>Settings</span></button>
@@ -76,9 +76,8 @@
       <h2>Levels</h2>
       <div class="pill" id="levels-stars"><svg><use href="#i-star"/></svg><span>0</span></div>
     </header>
-    <div class="world-tabs" id="world-tabs" role="tablist"></div>
-    <div class="world-head" id="world-head"></div>
-    <div class="level-grid" id="level-grid"></div>
+    <div class="world-tabs" id="world-tabs" role="tablist" aria-label="Worlds"></div>
+    <div class="map-scroll" id="map-scroll" role="tabpanel"></div>
   </section>
 
   <!-- SHOP (balls) -->
@@ -139,7 +138,7 @@
       <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
       <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1.6" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.6" fill="currentColor"/></symbol>
       <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M12 3a6.5 6.5 0 0 0-3.9 11.7c.6.5.9 1.1.9 1.8V17h6v-.5c0-.7.3-1.3.9-1.8A6.5 6.5 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 20.5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
-      <symbol id="i-grid" viewBox="0 0 24 24"><g fill="currentColor"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></g></symbol>
+      <symbol id="i-map" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M2.5 6.2l6.3-2.4 6.4 2.4 6.3-2.4v14l-6.3 2.4-6.4-2.4-6.3 2.4zM4.40 16.6a1.0 1.0 0 1 0 2.00 0a1.0 1.0 0 1 0 -2.00 0zM7.30 16.0a1.0 1.0 0 1 0 2.00 0a1.0 1.0 0 1 0 -2.00 0zM9.40 13.9a1.0 1.0 0 1 0 2.00 0a1.0 1.0 0 1 0 -2.00 0zM10.90 11.2a1.0 1.0 0 1 0 2.00 0a1.0 1.0 0 1 0 -2.00 0zM13.30 9.4a1.0 1.0 0 1 0 2.00 0a1.0 1.0 0 1 0 -2.00 0zM15.75 8.4a1.75 1.75 0 1 0 3.50 0a1.75 1.75 0 1 0 -3.50 0z" fill="currentColor"/></symbol>
       <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="currentColor"/><ellipse cx="9.2" cy="8.8" rx="2.6" ry="1.6" fill="#fff" opacity=".6" transform="rotate(-35 9.2 8.8)"/></symbol>
       <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z" fill="currentColor"/><path d="M9 8V7a3 3 0 0 1 6 0v1" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
       <symbol id="i-gear" viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5l1.6 1.2-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.6-1.2a7 7 0 0 1 0-2L3.2 9.3l2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.6 1.2a7 7 0 0 1 0 2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>

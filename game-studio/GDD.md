@@ -91,6 +91,24 @@ The solver part: that simulates the real physics. A level ships only when it has
   - The last piece slows time with a falling sigh while the music ducks. The win ends on a bell and a shimmer.
 - **Haptics:** light on fire, then light, medium and heavy as a chain grows (rate-limited); heavy on bombs and the final shatter; success on a win, warning on a loss.
 
+## The level map
+Each world is a place, and its 24 levels are glass gems on a trail that climbs it, from the world's sign at the bottom to a glass gate at the top (in the next world's colours, lit once it's open). The worlds stay as tabs above the map.
+- **Scenery per world, low contrast so the trail leads:**
+  - Dawn: a rising sun, terraces of peach dunes, glassware set out to catch the light.
+  - Mint: greenhouse ribs, leaves, stone and timber.
+  - Lilac: glass bubbles in a haze.
+  - Ember: a furnace sunset, sparks, bombs beside bottles.
+  - Night: a crescent moon, stars, lanterns.
+- **Gems:** lit from the top left like the game's glass. Cleared levels carry their stars; perfect ones glint; locked ones are dim glass in the world's tint.
+- **The next level:** your own ball rests on it, a ring breathes out from it, and a "Play" label sits under it.
+- **Coming back after progress:** the ball hops gem to gem along the trail, lighting it. Each landing plays a rising glass note, and the stars of the levels you just cleared land as it leaves them. A new world's first level gets the ball dropped onto it instead.
+- **The last world** ends at a summit crystal that lights up when every level is cleared.
+- **Motion rules:**
+  - Ambient motion is compositor-only (transform and opacity): the ring, the ball's bob, the glints.
+  - No parallax: it cost a fifth of frames while scrolling and jitters on iOS.
+  - The game's canvases leave the page while a menu page covers them.
+  - Reduce Motion: no hops, bob, ring or glints.
+
 ## Retention: the star crystal
 Every 15 stars fills a crystal. Its ring sits next to the star count on the home screen and glows when full. Shattering it pays 100 coins, rising by 25 per crystal up to 400, with a shake, eight flying facets, a chime and confetti. It's a goal that is always one or two levels away, and the reward is smashing glass.
 

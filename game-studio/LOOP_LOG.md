@@ -230,3 +230,54 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
 | 9 | Low | Pads and movers blurred their glow every frame on every tier | the blur only runs on the top tiers | by code |
 
 **Also this round:** each ball you own sprinkles its own glitter into every break: gold for Gold, coral for Coral, rainbow for the Prism ball. The design document had promised balls with their own impact colour, and it gives a reason to buy one.
+
+## Round 29: the level map
+**Found** (the player's own words): the Levels screen, a grid of rounded tiles, "is very banal and looks very AI".
+
+**Changed:**
+- **The grid became a map** (`js/map.js`). Each world is a place: 24 glass gems on a winding trail, a sign where it begins, and a glass gate to the next world where it ends. The trail's wander is different in every world.
+  - **Scenery:** terraces of hills, each crest catching the light, with props set beside the trail: glassware in Dawn, leaves and stone in Mint, bubbles in Lilac, bombs in Ember, lanterns in Night. Plus each world's sky: sun, greenhouse ribs, bubbles, sparks, a crescent moon and stars.
+  - **The world tabs stay on top.** They run edge to edge and centre the chosen world. Tapping an open gate goes to the next world.
+- **Progress feels like a journey:**
+  - Your ball waits on the next level.
+  - Coming back after clearing levels, it hops gem to gem with a rising glass note per landing. The trail lights behind it, the stars land on the levels it leaves, and the view follows.
+  - A new world opens with the ball dropping onto its first level.
+  - The final world ends at a summit crystal that lights up once everything is cleared.
+- **Taps:**
+  - A locked level answers "Clear level N first" and the next level nudges.
+  - A locked gate names what opens it.
+- **Home:** the Levels button's icon is now a folded map with a trail (the dots are cut out, so it works on Night's light icons too).
+
+**Performance, measured at 4× CPU throttle and 3× pixel density:**
+- First version: 60% slow frames at idle, 80% while scrolling.
+- Causes, each isolated with an on/off test:
+  - The home scene kept simulating and drawing behind every opaque menu page. Now it stops.
+  - The two stage canvases still cost about 30% of frames whenever a page animated. Pages now take them out of the compositor.
+  - JS parallax cost about 20% of frames while scrolling. It was removed.
+  - Ambient loops that repainted every frame (a flowing trail, a box-shadow pulse, SVG glints) were rebuilt as transform and opacity only.
+- Also:
+  - The palette isn't re-applied when the world hasn't changed.
+  - The map's ball is a cached image rather than a new canvas per visit.
+  - A map with nothing new is reused, not rebuilt.
+- **Result:** 0% slow frames at idle and while scrolling, about 10% during the hop sequence (mostly the frame that opens the screen). Reopening costs about 25 ms at 4× throttle.
+
+**Robustness:**
+- Leaving the map mid-hop settles it silently.
+- A long frame can't skip a landing.
+- A rebuild cancels the hop.
+- The map rebuilds only when the width changes.
+- A save field `mapAt` remembers where the map last left the ball; old saves start without a hop.
+
+**Verified:**
+- New `map` scenario with checks, in three states (fresh, mid-game, everything cleared):
+  - 24 levels, none under 44 px.
+  - The current level is in view, and the page itself never scrolls.
+  - No sideways scroll.
+  - Locked-level and locked-gate toasts.
+  - Tabs, and the open gate.
+  - The current level starts once on a double tap.
+- New `mapperf` scenario for frame pacing.
+- Reduce Motion: a still map.
+- Phones from 320 to 430 wide, and tablet.
+- The full suite, proof replay 120/120 and 100/100, and validate-levels pass, with no console errors.
+

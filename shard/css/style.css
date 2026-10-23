@@ -59,6 +59,7 @@ svg { width: 24px; height: 24px; flex: none; }
 #stage, #stage-bg { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 #stage { touch-action: none; }
 #stage-bg { pointer-events: none; }
+.paged #stage, .paged #stage-bg { display: none; }
 
 .screen { position: fixed; inset: 0; display: none; pointer-events: none; padding: calc(var(--sat) + 10px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px); }
 .screen.on { display: flex; flex-direction: column; }
@@ -180,32 +181,119 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 /* pages */
 .pagebar { display: flex; align-items: center; justify-content: space-between; height: 48px; margin-bottom: 8px; flex: none; }
 .pagebar h2 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: .02em; }
-.world-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: none; flex: none; }
+/* levels: the page holds still, and each world's map scrolls beneath its tabs */
+#levels { overflow: hidden; padding-bottom: 0; }
+.world-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: none; position: relative; z-index: 2; scroll-behavior: smooth;
+  /* edge to edge, so chips slide off the screen's edge rather than being cut short of it */
+  margin: 0 calc(-16px - var(--sar)) 0 calc(-16px - var(--sal)); padding: 2px calc(16px + var(--sar)) 6px calc(16px + var(--sal)); }
+.world-tabs::after { content: ""; flex: none; width: 1px; } /* keeps the end padding when scrolled fully right */
 .world-tabs::-webkit-scrollbar { display: none; }
-.wtab { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; font-weight: 800; font-size: 15px; background: var(--surface-a60); display: inline-flex; align-items: center; gap: 6px; }
+.wtab { flex: none; min-height: 44px; padding: 0 16px 0 14px; border-radius: 22px; font-weight: 800; font-size: 15px; background: var(--surface-a60); display: inline-flex; align-items: center; gap: 8px; transition: background .2s, color .2s, transform .18s var(--spring); }
+.wtab:active { transform: scale(.95); }
+.wtab i { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 2px var(--surface-a60); }
+.wtab svg { width: 15px; height: 15px; opacity: .6; }
+.wtab.locked { color: var(--ink-a70); }
 .wtab[aria-selected="true"] { background: var(--ink); color: var(--sky0); }
-.wtab svg { width: 16px; height: 16px; }
-.world-head { margin: 6px 4px 14px; flex: none; }
-.wh-top { display: flex; justify-content: space-between; align-items: baseline; }
-.wh-bar { height: 6px; margin-top: 10px; border-radius: 3px; background: var(--ink-a8); overflow: hidden; }
-.wh-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #F5B83D, #FFD36E); box-shadow: 0 0 10px rgba(245, 184, 61, .45); transition: width .6s var(--ease); }
-.world-head h3 { margin: 0; font-size: 28px; font-weight: 900; }
-.world-head p { margin: 2px 0 0; color: var(--muted); font-weight: 700; font-size: 14px; }
-.world-head .ws { font-weight: 800; font-size: 15px; display: inline-flex; gap: 4px; align-items: center; }
-.world-head .ws svg { width: 18px; height: 18px; color: #F5B83D; }
-.level-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding-bottom: 20px; }
-.lvl { aspect-ratio: 1 / 1.08; border-radius: 20px; background: var(--surface-a82); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; transition: transform .18s var(--spring); position: relative; }
-.lvl:active { transform: scale(.93); }
-.lvl .st { display: flex; gap: 1px; }
-.lvl .st svg { width: 14px; height: 14px; color: var(--ink-a18); }
-.lvl .st svg.on { color: #F5B83D; }
-/* the path ahead stays readable: faint numbers on quiet outlined tiles */
-.lvl.locked { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink-a12); color: var(--ink-a30); font-size: 19px; }
-.lvl.locked .lk { position: absolute; top: 8px; right: 8px; width: 12px; height: 12px; color: var(--ink-a30); }
-.lvl.perfect { box-shadow: inset 0 0 0 1.5px rgba(245, 184, 61, .55), 0 8px 18px -14px rgba(245, 184, 61, .9); }
-.lvl.current { background: var(--ink); color: var(--sky0); box-shadow: 0 10px 22px -12px var(--ink), 0 0 0 0 var(--accent-a80); animation: lvlpulse 2.4s var(--ease) infinite; }
-.lvl.current .st svg { color: var(--sky0-a30); }
-@keyframes lvlpulse { 0% { box-shadow: 0 10px 22px -12px var(--ink), 0 0 0 0 var(--accent-a80); } 70%, 100% { box-shadow: 0 10px 22px -12px var(--ink), 0 0 0 9px rgba(0, 0, 0, 0); } }
+.wtab[aria-selected="true"] svg { opacity: .8; }
+.map-scroll { position: relative; flex: 1; min-height: 0; overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: none; margin: 0 calc(-16px - var(--sar)) 0 calc(-16px - var(--sal));
+  /* the trail fades in under the tabs instead of being cut by them */
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 28px); mask-image: linear-gradient(180deg, transparent, #000 28px); }
+.map-scroll::-webkit-scrollbar { display: none; }
+.map-scroll::after { content: ""; display: block; height: var(--sab); }
+.map { position: relative; overflow: hidden; }
+.map.enter { animation: mapin .42s var(--ease) both; }
+@keyframes mapin { from { opacity: 0; transform: translateY(16px); } }
+.map-art, .map-lit { position: absolute; left: 0; top: 0; display: block; }
+.map-lit { will-change: transform; } /* its own layer: lighting the trail never repaints the scenery */
+/* the trail: a soft bed, dotted ahead, lit in the world's colour as far as the next level */
+.trail-bed { fill: none; stroke: var(--bed); stroke-width: 24; stroke-linecap: round; stroke-linejoin: round; }
+.trail-dots { fill: none; stroke: var(--ink-a18); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 0 15; }
+.trail-glow { fill: none; stroke: var(--accent-a16); stroke-width: 20; stroke-linecap: round; }
+.trail-lit { fill: none; stroke: url(#litg); stroke-width: 6; stroke-linecap: round; }
+.trail-flow { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: 0 22; opacity: .85; transition: opacity .3s; }
+/* levels are glass gems: lit from the top left like the game's glass, numbers in the gem's ink */
+.node { position: absolute; z-index: 1; width: 60px; height: 60px; margin: -30px 0 0 -30px; display: grid; place-items: center; transition: transform .2s var(--spring); }
+.node::before { content: ""; position: absolute; left: 6px; right: 6px; bottom: -8px; height: 14px; border-radius: 50%; background: radial-gradient(closest-side, var(--ink-a18), rgba(0, 0, 0, 0)); }
+.node .gem { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 4px 5px var(--ink-a12)); }
+.node b { position: relative; font-size: 20px; font-weight: 900; color: var(--gem-ink); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.node:active { transform: scale(.9); }
+.node .st { position: absolute; left: 50%; top: 100%; display: flex; gap: 1px; padding: 2px 5px; border-radius: 9px; background: var(--surface-a86); box-shadow: 0 3px 8px -4px var(--ink-a30); transform: translate(-50%, -7px); transition: opacity .3s, transform .4s var(--spring); }
+.node .st svg { width: 12px; height: 12px; color: var(--ink-a18); }
+.node .st svg.on { color: #F5B83D; }
+.node.perfect .gem { filter: drop-shadow(0 4px 5px var(--ink-a12)) drop-shadow(0 0 5px rgba(255, 205, 100, .75)); }
+/* a perfect level glints: its own small layer, so the twinkle never repaints the map */
+.spark { position: absolute; left: 3px; top: 1px; width: 15px; height: 15px; animation: spark 3s ease-in-out infinite; }
+.spark svg { display: block; width: 100%; height: 100%; }
+.node:nth-child(3n) .spark { animation-delay: -1s; }
+.node:nth-child(3n + 1) .spark { animation-delay: -2s; }
+@keyframes spark { 0%, 100% { transform: scale(.45) rotate(0deg); opacity: .35; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+.node.locked { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
+.node.locked::before { opacity: .5; }
+.node.locked .gem { filter: none; opacity: .85; }
+.node.locked b { font-size: 17px; color: var(--lock-ink); }
+.node.current { z-index: 2; width: 74px; height: 74px; margin: -37px 0 0 -37px; }
+.node.current b { font-size: 24px; }
+.node.current .gem { filter: drop-shadow(0 6px 10px var(--accent-a16)) drop-shadow(0 2px 3px var(--ink-a16)); }
+/* the next level breathes out a ring (transform and opacity only: it runs on the compositor) */
+.node.current::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; border: 3px solid var(--accent-a80); opacity: 0; animation: nodepulse 2.4s var(--ease) infinite; }
+@keyframes nodepulse { 0% { transform: scale(.92); opacity: .9; } 70%, 100% { transform: scale(1.45); opacity: 0; } }
+.node .go { position: absolute; left: 50%; top: 100%; padding: 4px 12px 5px; border-radius: 12px; background: var(--ink); color: var(--sky0); font-size: 12px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; box-shadow: 0 6px 14px -6px var(--ink-a70); transform: translate(-50%, -2px); transition: opacity .3s .1s, transform .45s var(--spring) .1s; }
+.node.waiting::after { animation: none; }
+.node.waiting .go { opacity: 0; transform: translate(-50%, 6px) scale(.8); transition: none; }
+.node.arrived { animation: nodepop .5s var(--spring); }
+@keyframes nodepop { 40% { transform: scale(1.14); } }
+.node.nudge { animation: nodenudge .5s var(--spring); }
+@keyframes nodenudge { 35% { transform: translateY(-9px) scale(1.06); } }
+.node.pending .st { opacity: 0; transform: translate(-50%, -7px) scale(.4); }
+.node.fresh .st { animation: stpop .5s var(--spring) both; }
+@keyframes stpop { from { opacity: 0; transform: translate(-50%, -7px) scale(.4); } }
+/* the ball you play with, waiting on the next level */
+.map-ball { position: absolute; left: 0; top: 0; z-index: 3; width: 34px; height: 34px; pointer-events: none; will-change: transform; }
+.map-ball .in { position: absolute; inset: 0; }
+.map-ball img { display: block; width: 34px; height: 34px; transform-origin: 50% 100%; animation: mapbob 2.2s ease-in-out infinite; }
+.map-ball .sh { position: absolute; left: 6px; right: 6px; top: 38px; height: 8px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .3), rgba(0, 0, 0, 0)); animation: mapbobsh 2.2s ease-in-out infinite; }
+@keyframes mapbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes mapbobsh { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.82); opacity: .7; } }
+.map-ball.moving img, .map-ball.moving .sh { animation: none; }
+.map-ball.moving img.squash { animation: mapsquash .24s var(--ease); }
+@keyframes mapsquash { from { transform: scale(1.16, .8); } }
+.map-ball.drop .in { animation: mapdrop .7s both; }
+.map-ball.drop .sh { animation: mapdropsh .7s both; }
+@keyframes mapdrop { 0% { transform: translateY(-220px); opacity: 0; animation-timing-function: cubic-bezier(.55, 0, 1, .45); } 12% { opacity: 1; } 57% { transform: translateY(0) scale(1.14, .84); animation-timing-function: cubic-bezier(0, .55, .45, 1); } 78% { transform: translateY(-18px); animation-timing-function: cubic-bezier(.55, 0, 1, .45); } 100% { transform: none; } }
+@keyframes mapdropsh { 0% { transform: scale(.2); opacity: 0; } 57% { transform: scale(1.12); opacity: 1; } 78% { transform: scale(.8); opacity: .75; } 100% { transform: none; opacity: 1; } }
+/* the world's sign where the trail begins, and the gate to the next world where it ends */
+.sign { position: absolute; z-index: 1; left: 50%; width: 236px; margin-left: -118px; padding: 13px 18px 12px; border-radius: 24px; background: var(--surface-a86); box-shadow: 0 16px 30px -20px var(--ink-a55), inset 0 0 0 1.5px var(--surface-a60); text-align: center; }
+/* two posts plant the sign where the trail begins */
+.sign::before, .sign::after { content: ""; position: absolute; z-index: -1; top: 100%; width: 7px; height: 30px; margin-top: -4px; border-radius: 0 0 3px 3px; background: linear-gradient(90deg, var(--ink-a30), var(--ink-a18)); }
+.sign::before { left: 46px; }
+.sign::after { right: 46px; }
+.sign small { display: block; font-size: 11px; font-weight: 900; letter-spacing: .28em; padding-left: .28em; text-transform: uppercase; color: var(--muted); }
+.sign b { display: block; margin-top: 2px; font-size: 30px; line-height: 1.05; font-weight: 1000; }
+.sign span { display: block; margin-top: 2px; font-size: 14px; font-weight: 700; color: var(--muted); }
+.sign-bar { display: block; height: 6px; margin: 11px 8px 0; border-radius: 3px; background: var(--ink-a8); overflow: hidden; }
+.sign-bar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #F5B83D, #FFD36E); }
+.sign em { display: inline-flex; align-items: center; gap: 4px; margin-top: 7px; font-style: normal; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; }
+.sign em svg { width: 15px; height: 15px; color: #F5B83D; }
+.gate { position: absolute; z-index: 1; left: 50%; width: 160px; height: 150px; margin-left: -80px; color: var(--gate-ink); transition: transform .2s var(--spring); }
+.gate:active { transform: scale(.96); }
+.gate > svg { position: absolute; inset: 0; width: 160px; height: 150px; }
+.gate-label { position: absolute; left: 0; right: 0; top: 70px; text-align: center; }
+.gate-label small { display: block; font-size: 10px; font-weight: 900; letter-spacing: .22em; padding-left: .22em; text-transform: uppercase; opacity: .7; }
+.gate-label b { display: inline-flex; align-items: center; gap: 4px; margin-top: 1px; font-size: 22px; font-weight: 1000; }
+.gate-label b svg { width: 16px; height: 16px; }
+.gate.open > svg { filter: drop-shadow(0 0 14px var(--accent-a80)); }
+.gate.end { width: 200px; height: 170px; margin-left: -100px; color: var(--text); }
+.gate.end .gate-label { top: 0; }
+/* the summit: a crystal at the trail's end, lit once every level is cleared */
+.summit { position: absolute; left: 50%; top: 80px; width: 80px; height: 80px; margin-left: -40px; }
+.summit::before { content: ""; position: absolute; inset: -36px; border-radius: 50%; background: repeating-conic-gradient(from 0deg, var(--accent-a16) 0deg 6deg, rgba(0, 0, 0, 0) 6deg 30deg); -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent); mask-image: radial-gradient(closest-side, #000 40%, transparent); opacity: 0; }
+.summit.lit::before { opacity: 1; animation: rays 40s linear infinite; }
+@keyframes rays { to { transform: rotate(360deg); } }
+.summit .gem { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 8px 14px var(--ink-a16)); }
+.summit .spark { left: 6px; top: 4px; width: 20px; height: 20px; }
+.summit.lit .gem { filter: drop-shadow(0 0 16px var(--accent-a80)); }
+.node.finale:not(.current) { width: 68px; height: 68px; margin: -34px 0 0 -34px; }
+.node.finale b { font-size: 22px; }
 
 .ball-preview { display: flex; flex-direction: column; align-items: center; margin: 4px 0 12px; flex: none; }
 #ball-preview { width: 150px; height: 150px; animation: hover 4.2s ease-in-out infinite; }
@@ -303,7 +391,8 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 .fakead .count { position: absolute; top: calc(var(--sat) + 8px); right: 12px; min-width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,.12); display: grid; place-items: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo span, .coach-dot, .coach-line, .coach-arrow, #ball-preview, .lvl.current, .gembtn.ready, .crystal .gem { animation: none !important; }
+  .logo span, .coach-dot, .coach-line, .coach-arrow, #ball-preview, .gembtn.ready, .crystal .gem { animation: none !important; }
+  .trail-flow, .node, .node::after, .spark, .node .st, .map, .map-ball .in, .map-ball img, .map-ball .sh, .summit::before { animation: none !important; }
   .crystal .gem i { transition: opacity .3s ease; }
   .crystal.open .gem i { transform: none; }
   .crystal .loot, .crystal.open .loot { transform: none; transition: opacity .3s ease; }
@@ -323,6 +412,6 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
   .sheet .rowbtns .btn { font-size: 16px; }
 }
 @media (min-width: 600px) {
-  .level-grid { grid-template-columns: repeat(6, 1fr); }
-  .home-bottom, .pagebar, .world-tabs, .level-grid, .world-head, .skin-grid, .store-list, .list, .ball-preview { width: 100%; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .home-bottom, .pagebar, .skin-grid, .store-list, .list, .ball-preview { width: 100%; max-width: 520px; margin-left: auto; margin-right: auto; }
+  .world-tabs { justify-content: center; }
 }

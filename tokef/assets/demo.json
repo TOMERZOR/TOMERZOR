@@ -1,0 +1,1559 @@
+{
+ "projects": [
+  {
+   "id": "pdemo1",
+   "name": "מתחם הדקלים, בניין 3",
+   "client": "א.ב. בנייה ופיתוח בע״מ",
+   "clientId": "514000001",
+   "address": "רחוב הדקל 12, חדרה",
+   "warnDays": 30,
+   "cover": "day",
+   "createdAt": 1772863200000,
+   "demo": true
+  }
+ ],
+ "profiles": [
+  {
+   "id": "rdemo-exec",
+   "key": "exec",
+   "name": "קבלני ביצוע",
+   "cancelDays": 30,
+   "requester": true,
+   "order": 0,
+   "lines": {
+    "tpl": {
+     "on": true,
+     "min": 5000000,
+     "codes": [
+      302,
+      304,
+      309,
+      315,
+      321,
+      322,
+      328,
+      329
+     ]
+    },
+    "el": {
+     "on": true,
+     "min": 20000000,
+     "codes": [
+      304,
+      309,
+      319,
+      328
+     ]
+    },
+    "car": {
+     "on": false,
+     "min": 0,
+     "codes": [
+      309,
+      313,
+      314,
+      316,
+      318,
+      328
+     ]
+    },
+    "pl": {
+     "on": false,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "prod": {
+     "on": false,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "cme": {
+     "on": false,
+     "min": 1000000,
+     "codes": [
+      309,
+      312,
+      328
+     ]
+    }
+   },
+   "pid": "pdemo1",
+   "createdAt": 1772863200000
+  },
+  {
+   "id": "rdemo-heavy",
+   "key": "heavy",
+   "name": "עבודות עפר, מנופים וצמ״ה",
+   "cancelDays": 30,
+   "requester": true,
+   "order": 1,
+   "lines": {
+    "tpl": {
+     "on": true,
+     "min": 5000000,
+     "codes": [
+      302,
+      304,
+      309,
+      312,
+      315,
+      321,
+      322,
+      328,
+      329
+     ]
+    },
+    "el": {
+     "on": true,
+     "min": 20000000,
+     "codes": [
+      304,
+      309,
+      319,
+      328
+     ]
+    },
+    "car": {
+     "on": false,
+     "min": 0,
+     "codes": [
+      309,
+      313,
+      314,
+      316,
+      318,
+      328
+     ]
+    },
+    "pl": {
+     "on": false,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "prod": {
+     "on": false,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "cme": {
+     "on": true,
+     "min": 1000000,
+     "codes": [
+      309,
+      312,
+      328
+     ]
+    }
+   },
+   "pid": "pdemo1",
+   "createdAt": 1772863200000
+  },
+  {
+   "id": "rdemo-design",
+   "key": "design",
+   "name": "מתכננים ויועצים",
+   "cancelDays": 30,
+   "requester": true,
+   "order": 2,
+   "lines": {
+    "tpl": {
+     "on": true,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      322,
+      328
+     ]
+    },
+    "el": {
+     "on": true,
+     "min": 20000000,
+     "codes": [
+      304,
+      309,
+      319,
+      328
+     ]
+    },
+    "car": {
+     "on": false,
+     "min": 0,
+     "codes": [
+      309,
+      313,
+      314,
+      316,
+      318,
+      328
+     ]
+    },
+    "pl": {
+     "on": true,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "prod": {
+     "on": false,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "cme": {
+     "on": false,
+     "min": 1000000,
+     "codes": [
+      309,
+      312,
+      328
+     ]
+    }
+   },
+   "pid": "pdemo1",
+   "createdAt": 1772863200000
+  },
+  {
+   "id": "rdemo-supply",
+   "key": "supply",
+   "name": "ספקים והתקנות",
+   "cancelDays": 30,
+   "requester": true,
+   "order": 3,
+   "lines": {
+    "tpl": {
+     "on": true,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      322,
+      328
+     ]
+    },
+    "el": {
+     "on": true,
+     "min": 20000000,
+     "codes": [
+      304,
+      309,
+      319,
+      328
+     ]
+    },
+    "car": {
+     "on": false,
+     "min": 0,
+     "codes": [
+      309,
+      313,
+      314,
+      316,
+      318,
+      328
+     ]
+    },
+    "pl": {
+     "on": false,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "prod": {
+     "on": true,
+     "min": 2000000,
+     "codes": [
+      302,
+      304,
+      309,
+      321,
+      328,
+      332
+     ]
+    },
+    "cme": {
+     "on": false,
+     "min": 1000000,
+     "codes": [
+      309,
+      312,
+      328
+     ]
+    }
+   },
+   "pid": "pdemo1",
+   "createdAt": 1772863200000
+  }
+ ],
+ "subs": [
+  {
+   "id": "sdemo01",
+   "pid": "pdemo1",
+   "name": "ש.מ. חשמל בע״מ",
+   "companyId": "515123456",
+   "trade": "חשמל",
+   "profile": "rdemo-exec",
+   "contact": "שמעון מזרחי",
+   "phone": "",
+   "email": "office@sm-electric.example",
+   "agent": "אבי לוי",
+   "agentEmail": "agent@sm-electric-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1773727200000,
+   "demo": true
+  },
+  {
+   "id": "sdemo02",
+   "pid": "pdemo1",
+   "name": "א.ד. טפסנות בע״מ",
+   "companyId": "515234561",
+   "trade": "טפסנות",
+   "profile": "rdemo-exec",
+   "contact": "אחמד דיאב",
+   "phone": "",
+   "email": "office@ad-formwork.example",
+   "agent": "דנה מור",
+   "agentEmail": "agent@ad-formwork-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1773813600000,
+   "demo": true
+  },
+  {
+   "id": "sdemo03",
+   "pid": "pdemo1",
+   "name": "ר.ג. אינסטלציה",
+   "companyId": "515345612",
+   "trade": "אינסטלציה",
+   "profile": "rdemo-exec",
+   "contact": "רמי גבאי",
+   "phone": "",
+   "email": "office@rg-plumbing.example",
+   "agent": "יוסי אופק",
+   "agentEmail": "agent@rg-plumbing-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1773900000000,
+   "demo": true
+  },
+  {
+   "id": "sdemo04",
+   "pid": "pdemo1",
+   "name": "מ.ל. שלד ובנייה בע״מ",
+   "companyId": "515456123",
+   "trade": "שלד",
+   "profile": "rdemo-exec",
+   "contact": "משה לוי",
+   "phone": "",
+   "email": "office@ml-frame.example",
+   "agent": "אבי לוי",
+   "agentEmail": "agent@ml-frame-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1773986400000,
+   "demo": true
+  },
+  {
+   "id": "sdemo05",
+   "pid": "pdemo1",
+   "name": "ב.ש. פיגומים",
+   "companyId": "515561234",
+   "trade": "פיגומים",
+   "profile": "rdemo-exec",
+   "contact": "בני שטרן",
+   "phone": "",
+   "email": "office@bs-scaffold.example",
+   "agent": "שירה רז",
+   "agentEmail": "agent@bs-scaffold-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774072800000,
+   "demo": true
+  },
+  {
+   "id": "sdemo06",
+   "pid": "pdemo1",
+   "name": "י.ח. איטום",
+   "companyId": "515612345",
+   "trade": "איטום",
+   "profile": "rdemo-exec",
+   "contact": "יעקב חדד",
+   "phone": "",
+   "email": "office@yh-sealing.example",
+   "agent": "דנה מור",
+   "agentEmail": "agent@yh-sealing-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774159200000,
+   "demo": true
+  },
+  {
+   "id": "sdemo07",
+   "pid": "pdemo1",
+   "name": "ע.נ. מעליות בע״מ",
+   "companyId": "515723456",
+   "trade": "מעליות",
+   "profile": "rdemo-supply",
+   "contact": "עדי נחום",
+   "phone": "",
+   "email": "office@an-elevators.example",
+   "agent": "יוסי אופק",
+   "agentEmail": "agent@an-elevators-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774245600000,
+   "demo": true
+  },
+  {
+   "id": "sdemo08",
+   "pid": "pdemo1",
+   "name": "ד.א. ריצוף",
+   "companyId": "515834567",
+   "trade": "ריצוף",
+   "profile": "rdemo-exec",
+   "contact": "דוד אזולאי",
+   "phone": "",
+   "email": "office@da-tiles.example",
+   "agent": "שירה רז",
+   "agentEmail": "agent@da-tiles-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774332000000,
+   "demo": true
+  },
+  {
+   "id": "sdemo09",
+   "pid": "pdemo1",
+   "name": "ק.ב. גבס ותקרות",
+   "companyId": "515945678",
+   "trade": "גבס ותקרות",
+   "profile": "rdemo-exec",
+   "contact": "קובי ברק",
+   "phone": "",
+   "email": "office@kb-drywall.example",
+   "agent": "אבי לוי",
+   "agentEmail": "agent@kb-drywall-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774418400000,
+   "demo": true
+  },
+  {
+   "id": "sdemo10",
+   "pid": "pdemo1",
+   "name": "ה.ת. מיזוג אוויר",
+   "companyId": "516056789",
+   "trade": "מיזוג אוויר",
+   "profile": "rdemo-exec",
+   "contact": "הדס תמיר",
+   "phone": "",
+   "email": "office@ht-hvac.example",
+   "agent": "דנה מור",
+   "agentEmail": "agent@ht-hvac-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774504800000,
+   "demo": true
+  },
+  {
+   "id": "sdemo11",
+   "pid": "pdemo1",
+   "name": "נ.ר. אלומיניום",
+   "companyId": "516167890",
+   "trade": "אלומיניום",
+   "profile": "rdemo-supply",
+   "contact": "ניר רוזן",
+   "phone": "",
+   "email": "office@nr-aluminum.example",
+   "agent": "יוסי אופק",
+   "agentEmail": "agent@nr-aluminum-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774591200000,
+   "demo": true
+  },
+  {
+   "id": "sdemo12",
+   "pid": "pdemo1",
+   "name": "ג.פ. עבודות עפר בע״מ",
+   "companyId": "516278901",
+   "trade": "עבודות עפר",
+   "profile": "rdemo-heavy",
+   "contact": "גיא פרץ",
+   "phone": "",
+   "email": "office@gp-earthworks.example",
+   "agent": "שירה רז",
+   "agentEmail": "agent@gp-earthworks-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774677600000,
+   "demo": true
+  },
+  {
+   "id": "sdemo13",
+   "pid": "pdemo1",
+   "name": "ס.מ. צבע",
+   "companyId": "516389012",
+   "trade": "צבע",
+   "profile": "rdemo-exec",
+   "contact": "סאמר מנסור",
+   "phone": "",
+   "email": "office@sm-paint.example",
+   "agent": "אבי לוי",
+   "agentEmail": "agent@sm-paint-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774764000000,
+   "demo": true
+  },
+  {
+   "id": "sdemo14",
+   "pid": "pdemo1",
+   "name": "ת.א. נגרות",
+   "companyId": "516490123",
+   "trade": "נגרות",
+   "profile": "rdemo-exec",
+   "contact": "תומר אלון",
+   "phone": "",
+   "email": "office@ta-carpentry.example",
+   "agent": "",
+   "agentEmail": "",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-09-30",
+   "notes": "",
+   "createdAt": 1774850400000,
+   "demo": true
+  },
+  {
+   "id": "sdemo15",
+   "pid": "pdemo1",
+   "name": "י.ל. הנדסת מבנים",
+   "companyId": "516501234",
+   "trade": "תכנון",
+   "profile": "rdemo-design",
+   "contact": "יעל לנדאו",
+   "phone": "",
+   "email": "office@yl-engineering.example",
+   "agent": "יוסי אופק",
+   "agentEmail": "agent@yl-engineering-ins.example",
+   "agentPhone": "",
+   "workFrom": "2026-03-01",
+   "workTo": "2027-12-31",
+   "notes": "",
+   "createdAt": 1774936800000,
+   "demo": true
+  }
+ ],
+ "certs": [
+  {
+   "id": "cdemo01",
+   "pid": "pdemo1",
+   "sid": "sdemo01",
+   "createdAt": 1778907600000,
+   "by": null,
+   "source": "manual",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ש.מ. חשמל בע״מ",
+    "insuredId": "515123456",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "ארז חברה לביטוח בע״מ",
+    "agent": "סוכנות לוי ביטוחים",
+    "issueDate": "2025-10-20",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "10-1000000",
+      "start": "2025-10-23",
+      "end": "2026-10-22",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "10-1000031",
+      "start": "2025-10-23",
+      "end": "2026-10-22",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo02",
+   "pid": "pdemo1",
+   "sid": "sdemo02",
+   "createdAt": 1792562820000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "א.ד. טפסנות בע״מ",
+    "insuredId": "515234561",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "גליל ביטוח בע״מ",
+    "agent": "מ.ד. סוכנות לביטוח",
+    "issueDate": "2026-02-26",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "11-1007919",
+      "start": "2026-03-01",
+      "end": "2027-02-28",
+      "limit": 2000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "11-1007950",
+      "start": "2026-03-01",
+      "end": "2027-02-28",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo03",
+   "pid": "pdemo1",
+   "sid": "sdemo03",
+   "createdAt": 1782371640000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ר.ג. אינסטלציה",
+    "insuredId": "515345612",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "שקד חברה לביטוח בע״מ",
+    "agent": "אופק סוכנות לביטוח",
+    "issueDate": "2025-11-04",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "12-1015838",
+      "start": "2025-11-07",
+      "end": "2026-11-06",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "12-1015869",
+      "start": "2025-11-07",
+      "end": "2026-11-06",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo04",
+   "pid": "pdemo1",
+   "sid": "sdemo04",
+   "createdAt": 1789287660000,
+   "by": null,
+   "source": "manual",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "מ.ל. שלד ובנייה בע״מ",
+    "insuredId": "515456123",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "תבור ביטוח בע״מ",
+    "agent": "ש.ר. ביטוחים",
+    "issueDate": "2026-05-29",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "13-1023757",
+      "start": "2026-06-01",
+      "end": "2027-05-31",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "13-1023788",
+      "start": "2026-06-01",
+      "end": "2027-05-31",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo05",
+   "pid": "pdemo1",
+   "sid": "sdemo05",
+   "createdAt": 1789896480000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ב.ש. פיגומים",
+    "insuredId": "515561234",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "ארז חברה לביטוח בע״מ",
+    "agent": "סוכנות לוי ביטוחים",
+    "issueDate": "2026-03-12",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "14-1031676",
+      "start": "2026-03-15",
+      "end": "2027-03-14",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "14-1031707",
+      "start": "2026-03-15",
+      "end": "2027-03-14",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo06",
+   "pid": "pdemo1",
+   "sid": "sdemo06",
+   "createdAt": 1787481300000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "י.ח. איטום",
+    "insuredId": "515612345",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "גליל ביטוח בע״מ",
+    "agent": "מ.ד. סוכנות לביטוח",
+    "issueDate": "2026-01-07",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "15-1039595",
+      "start": "2026-01-10",
+      "end": "2027-01-09",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "15-1039626",
+      "start": "2026-01-10",
+      "end": "2027-01-09",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo07",
+   "pid": "pdemo1",
+   "sid": "sdemo07",
+   "createdAt": 1791718920000,
+   "by": null,
+   "source": "manual",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ע.נ. מעליות בע״מ",
+    "insuredId": "515723456",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "שקד חברה לביטוח בע״מ",
+    "agent": "אופק סוכנות לביטוח",
+    "issueDate": "2026-06-28",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "16-1047514",
+      "start": "2026-07-01",
+      "end": "2027-06-30",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       321,
+       322,
+       328
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "16-1047545",
+      "start": "2026-07-01",
+      "end": "2027-06-30",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     },
+     {
+      "type": "prod",
+      "label": "ביטוח חבות המוצר",
+      "policyNo": "16-1047576",
+      "start": "2026-07-01",
+      "end": "2027-06-30",
+      "limit": 2000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       321,
+       328,
+       332
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo08",
+   "pid": "pdemo1",
+   "sid": "sdemo08",
+   "createdAt": 1791982140000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": {
+    "note": "אושר על ידי מנהלת הביטוח עד החידוש באפריל",
+    "by": null,
+    "at": 1792052400000
+   },
+   "demo": true,
+   "fields": {
+    "insuredName": "ד.א. ריצוף",
+    "insuredId": "515834567",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "תבור ביטוח בע״מ",
+    "agent": "ש.ר. ביטוחים",
+    "issueDate": "2026-04-17",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "17-1055433",
+      "start": "2026-04-20",
+      "end": "2027-04-19",
+      "limit": 4000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "17-1055464",
+      "start": "2026-04-20",
+      "end": "2027-04-19",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo09",
+   "pid": "pdemo1",
+   "sid": "sdemo09",
+   "createdAt": 1784555760000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ק.ב. גבס ותקרות",
+    "insuredId": "515945678",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "ארז חברה לביטוח בע״מ",
+    "agent": "סוכנות לוי ביטוחים",
+    "issueDate": "2025-11-19",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "18-1063352",
+      "start": "2025-11-22",
+      "end": "2026-11-21",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "18-1063383",
+      "start": "2025-11-22",
+      "end": "2026-11-21",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo10",
+   "pid": "pdemo1",
+   "sid": "sdemo10",
+   "createdAt": 1791176580000,
+   "by": null,
+   "source": "manual",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ה.ת. מיזוג אוויר",
+    "insuredId": "516056789",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "גליל ביטוח בע״מ",
+    "agent": "מ.ד. סוכנות לביטוח",
+    "issueDate": "2026-07-31",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "19-1071271",
+      "start": "2026-08-03",
+      "end": "2027-08-02",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "19-1071302",
+      "start": "2026-08-03",
+      "end": "2027-08-02",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo11",
+   "pid": "pdemo1",
+   "sid": "sdemo11",
+   "createdAt": 1790403000000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "נ.ר. אלומיניום",
+    "insuredId": "516167890",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "שקד חברה לביטוח בע״מ",
+    "agent": "אופק סוכנות לביטוח",
+    "issueDate": "2026-02-13",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "20-1079190",
+      "start": "2026-02-16",
+      "end": "2027-02-15",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       321,
+       322,
+       328
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "20-1079221",
+      "start": "2026-02-16",
+      "end": "2027-02-15",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     },
+     {
+      "type": "prod",
+      "label": "ביטוח חבות המוצר",
+      "policyNo": "20-1079252",
+      "start": "2026-02-16",
+      "end": "2027-02-15",
+      "limit": 2000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       321,
+       328,
+       332
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo12",
+   "pid": "pdemo1",
+   "sid": "sdemo12",
+   "createdAt": 1786691820000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ג.פ. עבודות עפר בע״מ",
+    "insuredId": "516278901",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "תבור ביטוח בע״מ",
+    "agent": "ש.ר. ביטוחים",
+    "issueDate": "2025-12-09",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "21-1087109",
+      "start": "2025-12-12",
+      "end": "2026-12-11",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       312,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "21-1087140",
+      "start": "2025-12-12",
+      "end": "2026-12-11",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     },
+     {
+      "type": "cme",
+      "label": "ביטוח צמ״ה",
+      "policyNo": "21-1087171",
+      "start": "2025-12-12",
+      "end": "2026-12-11",
+      "limit": 1000000,
+      "currency": "ILS",
+      "codes": [
+       309,
+       312,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo13",
+   "pid": "pdemo1",
+   "sid": "sdemo13",
+   "createdAt": 1790843040000,
+   "by": null,
+   "source": "manual",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "ס.מ. צבע",
+    "insuredId": "516389012",
+    "requester": "א.ב. בנייה ופיתוח בע״מ",
+    "requesterId": "514000001",
+    "insurer": "ארז חברה לביטוח בע״מ",
+    "agent": "סוכנות לוי ביטוחים",
+    "issueDate": "2026-03-25",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "22-1095028",
+      "start": "2026-03-28",
+      "end": "2027-03-27",
+      "limit": 5000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       315,
+       321,
+       322,
+       328,
+       329
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "22-1095059",
+      "start": "2026-03-28",
+      "end": "2027-03-27",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": "cdemo15",
+   "pid": "pdemo1",
+   "sid": "sdemo15",
+   "createdAt": 1792406280000,
+   "by": null,
+   "source": "ai",
+   "file": null,
+   "exception": null,
+   "demo": true,
+   "fields": {
+    "insuredName": "י.ל. הנדסת מבנים",
+    "insuredId": "516501234",
+    "requester": "מגדלי הדקלים בע״מ",
+    "requesterId": "516999990",
+    "insurer": "שקד חברה לביטוח בע״מ",
+    "agent": "אופק סוכנות לביטוח",
+    "issueDate": "2026-07-29",
+    "cancelDays": 30,
+    "policies": [
+     {
+      "type": "tpl",
+      "label": "ביטוח אחריות כלפי צד שלישי",
+      "policyNo": "24-1110866",
+      "start": "2026-08-01",
+      "end": "2027-07-31",
+      "limit": 2000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       321,
+       322,
+       328
+      ]
+     },
+     {
+      "type": "el",
+      "label": "ביטוח חבות מעבידים",
+      "policyNo": "24-1110897",
+      "start": "2026-08-01",
+      "end": "2027-07-31",
+      "limit": 20000000,
+      "currency": "ILS",
+      "codes": [
+       304,
+       309,
+       319,
+       328
+      ]
+     },
+     {
+      "type": "pl",
+      "label": "ביטוח אחריות מקצועית",
+      "policyNo": "24-1110928",
+      "start": "2026-08-01",
+      "end": "2027-07-31",
+      "limit": 2000000,
+      "currency": "ILS",
+      "codes": [
+       302,
+       304,
+       309,
+       321,
+       328,
+       332
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "logs": [
+  {
+   "id": "pdemo1",
+   "pid": "pdemo1",
+   "items": [
+    {
+     "at": 1792729860000,
+     "by": null,
+     "kind": "request",
+     "text": "הוכנה בקשה בוואטסאפ לש.מ. חשמל בע״מ",
+     "sid": "sdemo01"
+    },
+    {
+     "at": 1792566720000,
+     "by": null,
+     "kind": "cert",
+     "text": "נבדק אישור של א.ד. טפסנות בע״מ: דורש תיקון",
+     "sid": "sdemo02"
+    },
+    {
+     "at": 1792566900000,
+     "by": null,
+     "kind": "request",
+     "text": "הוכן מייל תיקון לסוכן של א.ד. טפסנות בע״מ",
+     "sid": "sdemo02"
+    },
+    {
+     "at": 1792407720000,
+     "by": null,
+     "kind": "cert",
+     "text": "נבדק אישור של י.ל. הנדסת מבנים: דורש תיקון",
+     "sid": "sdemo15"
+    },
+    {
+     "at": 1792052400000,
+     "by": null,
+     "kind": "exception",
+     "text": "אושרה חריגה לד.א. ריצוף: אושר על ידי מנהלת הביטוח עד החידוש באפריל",
+     "sid": "sdemo08"
+    },
+    {
+     "at": 1791957900000,
+     "by": null,
+     "kind": "cert",
+     "text": "נבדק אישור של ד.א. ריצוף: דורש תיקון",
+     "sid": "sdemo08"
+    },
+    {
+     "at": 1791715200000,
+     "by": null,
+     "kind": "cert",
+     "text": "נבדק אישור של ע.נ. מעליות בע״מ: תקין",
+     "sid": "sdemo07"
+    },
+    {
+     "at": 1790139600000,
+     "by": null,
+     "kind": "sub",
+     "text": "ת.א. נגרות נוסף לפרויקט",
+     "sid": "sdemo14"
+    },
+    {
+     "at": 1772863200000,
+     "by": null,
+     "kind": "project",
+     "text": "הפרויקט נוצר",
+     "sid": null
+    }
+   ]
+  }
+ ]
+}

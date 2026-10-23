@@ -1,0 +1,23 @@
+// First pass: welcome screen, demo load, dashboard. node tokef/test/smoke.mjs <outdir>
+import { startServer, launch, newContext, watch } from './harness.mjs';
+import fs from 'fs';
+const out = process.argv[2] || '/tmp/tokef-shots';
+fs.mkdirSync(out, { recursive: true });
+const PORT = 8791;
+const srv = await startServer(PORT);
+const browser = await launch();
+const errors = [];
+const ctx = await newContext(browser, PORT, {});
+const page = await ctx.newPage();
+watch(page, errors);
+await page.goto(`http://127.0.0.1:${PORT}/`);
+await page.waitForSelector('.welcome, .shell', { timeout: 15000 });
+await page.waitForTimeout(800);
+await page.screenshot({ path: out + '/01-welcome.png' });
+await page.getByRole('button', { name: 'פרויקט הדגמה' }).click();
+await page.waitForSelector('.kpis', { timeout: 15000 });
+await page.waitForTimeout(1200);
+await page.screenshot({ path: out + '/02-dashboard.png', fullPage: true });
+console.log('errors:', errors.length ? errors : 'none');
+await browser.close();
+srv.close();

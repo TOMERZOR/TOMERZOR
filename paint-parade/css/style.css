@@ -397,8 +397,8 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 .side-btn--offer { background: linear-gradient(180deg, #fff6cf, #ffe39a); }
 .cal-ico { width: 44px; height: 44px; border: 0; border-radius: 0; background: url('../img/calendar.webp') center / contain no-repeat; display: grid; place-items: center; padding-top: 8px; font-size: 15px; color: var(--ink); }
 .gift-ico, .noads-ico { width: 44px; height: 44px; }
-.noads-ico { background-image: url('../img/tv.webp'); position: relative; }
-.noads-ico::after { content: ''; position: absolute; inset: 2px; border: 4px solid #ff3e55; border-radius: 50%; background: linear-gradient(45deg, transparent 45%, #ff3e55 45% 55%, transparent 55%); }
+.noads-ico, .noads-big { background-image: url('../img/tv.webp'); position: relative; }
+.noads-ico::after, .noads-big::after { content: ''; position: absolute; inset: 2px; border: 4px solid #ff3e55; border-radius: 50%; background: linear-gradient(45deg, transparent 45%, #ff3e55 45% 55%, transparent 55%); }
 .tabbar { border: 3px solid var(--outline); background: linear-gradient(180deg, #ffffff, #f1e9fd); box-shadow: 0 6px 0 var(--outline), 0 14px 30px rgba(58,31,99,.25); }
 .tab-ico { width: 38px; height: 38px; }
 .tabbar button.on { background: linear-gradient(180deg, #efe4ff, #dccbff); box-shadow: inset 0 2px 0 rgba(255,255,255,.8); }
@@ -423,3 +423,6 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 .lvl-pill, .lvl-pill span { white-space: nowrap; }
 .lvl-pill .tag { font-size: 11px; padding: 3px 6px; letter-spacing: .02em; }
 @media (max-width: 360px) { .lvl-pill { font-size: 15px; gap: 4px; } .lvl-pill .tag { font-size: 9.5px; padding: 2px 5px; } }
+.ico-inline { width: 1.5em !important; height: 1.5em !important; margin: -0.3em 0.1em 0 0; }
+.star-ico { display: inline-block; background: url('../img/star.webp') center / contain no-repeat; vertical-align: middle; }
+.noads-big::after { border-width: 6px; inset: 4px; }

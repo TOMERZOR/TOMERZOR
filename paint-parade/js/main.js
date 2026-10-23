@@ -49,6 +49,8 @@ function bucketImg(col, n = '', size = 64, opts = {}) {
 }
 const COIN = '<span class="coin-ico"></span>';
 const HEART = '<span class="heart-ico"></span>';
+const BI = (k) => `<i class="booster-ico booster-ico--${k} ico-inline"></i>`;
+const BOOSTERS = (n, sep = ' x') => ['slot', 'grab', 'rainbow'].map((k) => BI(k) + sep + n).join(' · ');
 
 function toast(msg, ms = 1600) {
   const tEl = $('#toast');
@@ -248,7 +250,7 @@ function onWin(st) {
       <div class="stars s${stars}"><i></i><i></i><i></i></div>
       <div class="win-name">${name}</div>
       <div class="win-sub">${firstTime ? t('winSub') : ''}</div>
-      ${perfect ? `<div class="perfect">⭐ ${t('perfect')} <small>${t('perfectD')} +${perfectBonus}</small></div>` : ''}
+      ${perfect ? `<div class="perfect"><i class="star-ico ico-inline"></i> ${t('perfect')} <small>${t('perfectD')} +${perfectBonus}</small></div>` : ''}
       <div class="win-reward">${COIN}<b id="winCoins">+0</b>${bonus ? `<small>${t('streakBonus')} +${bonus}</small>` : ''}</div>
       ${!lv.daily && lv.level < 4 ? '' : `<button class="btn btn--purple btn--big" data-act="x2"><span class="ad-ico"></span>${t('x2')}</button>`}
       <button class="btn btn--green btn--big" data-act="claim">${!lv.daily && lv.level < 5 ? t('next') : t('claim')}</button>
@@ -376,7 +378,7 @@ function endFail() {
     const m = openModal(`
       <div class="card">
         <h2>${again.daily ? t('daily') : t('level') + ' ' + again.level}</h2>
-        ${failsInRow >= 2 && !again.daily ? `<p class="assist">🎁 ${t('bSlotD')}</p>` : ''}
+        ${failsInRow >= 2 && !again.daily ? `<p class="assist"><i class="gift-ico ico-inline"></i> ${t('bSlotD')}</p>` : ''}
         <button class="btn btn--green btn--big" data-act="retry">${t('retry')}</button>
         <button class="btn btn--link" data-act="home">${t('home')}</button>
       </div>`, { noClose: true });
@@ -397,7 +399,7 @@ function onBooster(b) {
   if (b === 'grab' && game.grab) { game.setGrab(false); hideTip(); updateBoosters(); return; }
   if (S.boosters[b] <= 0) { buyBooster(b); return; }
   sfx.tap();
-  if (b === 'slot') { S.boosters.slot--; game.useSlot(); toast('+1 🪣'); }
+  if (b === 'slot') { S.boosters.slot--; game.useSlot(); toast(t('bSlot')); }
   else if (b === 'rainbow') { S.boosters.rainbow--; game.useRainbow(); }
   else if (b === 'grab') { game.setGrab(true); tip(t('grabTap'), 'top', 0); }
   if (b !== 'grab') track('booster_use', { b });
@@ -609,11 +611,11 @@ function openShop(focus) {
     <div class="scroll">
       ${starterAvail ? `<button class="offer offer--starter" data-buy="pp_starter">
         <div class="offer__l"><span class="offer__tag">${t('starterSub')}</span><h3>${t('starter')}</h3>
-          <ul><li>${COIN} 1,000</li><li>🪣 x2 · 🧲 x2 · 🌈 x2</li><li>${HEART} ${t('hourUnlimited')}</li></ul></div>
+          <ul><li>${COIN} 1,000</li><li>${BOOSTERS(2)}</li><li>${HEART} ${t('hourUnlimited')}</li></ul></div>
         <div class="offer__r"><span class="gift-big"></span><span class="price price--big">${IAP.price('pp_starter')}</span></div></button>` : ''}
       ${S.noAds ? '' : `<button class="offer offer--noads ${focus === 'noads' ? 'pulse' : ''}" data-buy="pp_noads_bundle">
         <div class="offer__l"><span class="offer__tag">${t('bestValue')}</span><h3>${t('noAds')} +</h3>
-          <ul><li>🚫 ${t('noAdsSub')}</li><li>${COIN} 1,500</li><li>🪣 x3 · 🧲 x3 · 🌈 x3</li></ul></div>
+          <ul><li><i class="noads-ico ico-inline"></i> ${t('noAdsSub')}</li><li>${COIN} 1,500</li><li>${BOOSTERS(3)}</li></ul></div>
         <div class="offer__r"><span class="noads-big"></span><span class="price price--big">${IAP.price('pp_noads_bundle')}</span></div></button>
       <button class="offer offer--slim" data-buy="pp_noads"><h3>🚫 ${t('noAds')}</h3><span class="price">${IAP.price('pp_noads')}</span></button>`}
       <h4>${t('coinsTitle')}</h4>
@@ -671,7 +673,7 @@ function openGallery() {
             const img = artThumb(g, 72, has).toDataURL();
             return `<figure class="${has ? 'got' : 'lock'}"><img src="${img}" alt=""><figcaption>${has ? artName(a.id, a.name) : '?'}</figcaption></figure>`;
           }).join('')}</div>
-          ${claim ? `<button class="btn btn--green" data-chest="${al.id}">🎁 ${t('openChest')}</button>` : S.albumsClaimed[al.id] ? `<div class="done">✓ ${t('complete')}</div>` : ''}
+          ${claim ? `<button class="btn btn--green" data-chest="${al.id}"><i class="gift-ico ico-inline"></i> ${t('openChest')}</button>` : S.albumsClaimed[al.id] ? `<div class="done">✓ ${t('complete')}</div>` : ''}
         </section>`;
       }).join('')}
     </div>`;
@@ -690,7 +692,7 @@ function albumChest(album) {
       <div class="ribbon">${albumName(album.id, album.name)} · ${t('complete')}</div>
       <div class="chest"></div>
       <div class="win-reward">${COIN}<b>+300</b></div>
-      <p>🪣 +1 · 🧲 +1 · 🌈 +1</p>
+      <p>${BOOSTERS(1, ' +')}</p>
       <button class="btn btn--green btn--big" data-act="ok">${t('claim')}</button>
     </div>`, { noClose: true });
   m.addEventListener('click', (ev) => {
@@ -738,7 +740,7 @@ function starterOffer() {
     <div class="card card--offer">
       <div class="ribbon ribbon--gold">${t('starter')}</div>
       <div class="gift-big"></div>
-      <ul class="offer-list"><li>${COIN}<b>1,000</b></li><li>🪣 x2 · 🧲 x2 · 🌈 x2</li><li>${HEART}<b>${t('hourUnlimited')}</b></li></ul>
+      <ul class="offer-list"><li>${COIN}<b>1,000</b></li><li>${BOOSTERS(2)}</li><li>${HEART}<b>${t('hourUnlimited')}</b></li></ul>
       <button class="btn btn--green btn--big" data-act="buy">${IAP.price('pp_starter')}</button>
       <button class="btn btn--link" data-act="no">${t('cancel')}</button>
     </div>`);

@@ -94,7 +94,7 @@ test("parseMeta reads Open Graph and microdata", () => {
 
 test("isSafePublicUrl blocks local and odd targets", () => {
   assert.equal(isSafePublicUrl("https://www.ssense.com/en-us/men/product/x/123"), true);
-  for (const bad of ["http://localhost:8787", "http://127.0.0.1/x", "ftp://a.com/x", "https://user:pw@a.com", "https://intranet/x", "javascript:alert(1)", "http://[::1]/", "https://box.internal/x"]) {
+  for (const bad of ["http://localhost:8787", "http://localhost./x", "http://metadata.google.internal./x", "http://127.0.0.1.nip.io/x", "https://10-0-0-1.sslip.io/", "https://shop.example.com:8443/x", "http://127.0.0.1/x", "ftp://a.com/x", "https://user:pw@a.com", "https://intranet/x", "javascript:alert(1)", "http://[::1]/", "https://box.internal/x"]) {
     assert.equal(isSafePublicUrl(bad), false, bad);
   }
 });
@@ -110,6 +110,20 @@ function fakeFetch(routes) {
     });
   };
 }
+
+test("checkStock refuses redirects to private addresses", async () => {
+  const fetchImpl = async (url) => {
+    if (url === "https://r.example.com/item") return new Response("", { status: 302, headers: { location: "http://localhost./admin" } });
+    if (url === "https://ok.example.com/a") return new Response("", { status: 301, headers: { location: "/b" } });
+    if (url === "https://ok.example.com/b") return new Response(`<meta property="og:availability" content="instock">`, { headers: { "content-type": "text/html" } });
+    return new Response("nope", { status: 404 });
+  };
+  const r = await checkStock("https://r.example.com/item", { fetchImpl });
+  assert.equal(r.availability, "unknown");
+  assert.equal(r.error, "fetch_failed");
+  const ok = await checkStock("https://ok.example.com/a", { fetchImpl });
+  assert.equal(ok.availability, "in_stock");
+});
 
 test("checkStock tries Shopify JSON first, then the page", async () => {
   const fetchImpl = fakeFetch({

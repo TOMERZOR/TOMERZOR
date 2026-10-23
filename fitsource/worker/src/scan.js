@@ -119,7 +119,7 @@ function describeTool(name, input) {
 /**
  * Run a scan. `image` is { media_type, data } (base64). Returns sanitized results.
  */
-export async function runScan({ image, focus = null, hint = null, env = {}, emit = () => {}, fetchImpl, client: injected }) {
+export async function runScan({ image, focus = null, hint = null, env = {}, emit = () => {}, signal, client: injected }) {
   const client =
     injected ||
     new Anthropic({
@@ -148,6 +148,7 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
   const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, web_search_requests: 0 };
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
+    if (signal && signal.aborted) throw new ScanError("cancelled", "The scan was cancelled.");
     const stream = client.beta.messages.stream({
       model,
       max_tokens: 32000,
@@ -157,7 +158,7 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
       output_config: { effort },
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-    });
+    }, signal ? { signal } : undefined);
 
     const pending = new Map(); // block index -> { name, json }
     for await (const ev of stream) {

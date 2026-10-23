@@ -202,6 +202,8 @@ test("refusal and API errors come back as error events", async () => {
 test("bad requests are rejected before calling Claude", async () => {
   let r = await scan({ image: "data:text/plain;base64,AAAA" });
   assert.equal(r.res.status, 400);
+  const plain = await worker.fetch(new Request("https://api.example.com/api/scan", { method: "POST", headers: { "content-type": "text/plain" }, body: JSON.stringify({ image: TINY_JPEG }) }), env(), {});
+  assert.equal(plain.status, 415);
   r = await scan({ image: TINY_JPEG }, {});
   assert.equal(r.res.status, 503);
 });
@@ -215,6 +217,11 @@ test("KV cache answers repeat scans and the daily limit applies", async () => {
   assert.equal(first.events.at(-1).t, "result");
   const again = await scan({ image: TINY_JPEG }, e); // cached, no quota used, no Claude call
   assert.equal(again.events.at(-1).cached, true);
+  // stock is re-checked on a cache hit, not replayed from the cache
+  const jacket = again.events.at(-1).data.items[0].matches[0];
+  assert.equal(jacket.availability, "sold_out");
+  assert.equal(jacket.verified, true);
+  assert.ok(jacket.checked_at);
   const other = await scan({ image: TINY_JPEG, hint: "shoes" }, e); // new scan, over the limit
   assert.equal(other.res.status, 429);
 });
@@ -228,7 +235,13 @@ test("health, stock and CORS routes", async () => {
   assert.equal(bad.status, 400);
   const pre = await worker.fetch(new Request("https://api.example.com/api/scan", { method: "OPTIONS", headers: { origin: "https://evil.example" } }), { ALLOWED_ORIGINS: "https://good.example" }, {});
   assert.equal(pre.status, 204);
-  assert.equal(pre.headers.get("access-control-allow-origin"), "null");
+  assert.equal(pre.headers.get("access-control-allow-origin"), null);
+  const evil = await worker.fetch(new Request("https://api.example.com/api/scan", { method: "POST", headers: { origin: "https://evil.example", "content-type": "application/json" }, body: "{}" }), { ...env(), ALLOWED_ORIGINS: "https://good.example" }, {});
+  assert.equal(evil.status, 403);
+  const sandboxed = await worker.fetch(new Request("https://api.example.com/api/stock?url=https://a.example.com/p", { headers: { origin: "null" } }), { ALLOWED_ORIGINS: "https://good.example" }, {});
+  assert.equal(sandboxed.status, 403);
+  const good = await worker.fetch(new Request("https://api.example.com/api/health", { headers: { origin: "https://good.example" } }), { ALLOWED_ORIGINS: "https://good.example" }, {});
+  assert.equal(good.headers.get("access-control-allow-origin"), "https://good.example");
   const nf = await worker.fetch(new Request("https://api.example.com/nope"), env(), {});
   assert.equal(nf.status, 404);
 });

@@ -6,6 +6,7 @@ import { deepScanStatus } from "../scan/engine.js";
 import { recheckWatches } from "../watch.js";
 
 let checkNote = ""; // survives re-renders while a check runs
+let checking = false;
 
 const TABS = [
   ["saved", "Saved", "heart"],
@@ -56,7 +57,7 @@ function panel(tab) {
       ? empty("bell", "No restock alerts", "When a piece you scan is sold out, tap Alert me. FitSource checks the shop and flags it here when it's back.")
       : empty("heart", "Your closet is empty", "Tap the heart on any piece in the feed or in your scans to keep it here.");
   }
-  return html`${tab === "watching" ? html`<div class="toolbar" style="margin-bottom:16px"><button type="button" class="btn btn--sm btn--ghost" data-check>${icon("arrows-clockwise")}Check now</button><span class="muted" data-check-note style="font-size:.88rem">${checkNote}</span></div>` : ""}
+  return html`${tab === "watching" ? html`<div class="toolbar" style="margin-bottom:16px"><button type="button" class="btn btn--sm btn--ghost" data-check ${checking ? "disabled" : ""}>${icon("arrows-clockwise")}Check now</button><span class="muted" data-check-note style="font-size:.88rem">${checkNote}</span></div>` : ""}
     <div class="closet-grid">${items.map(closetTag)}</div>`;
 }
 
@@ -131,9 +132,16 @@ function mount(root, [tab = "saved"]) {
         const el = area.querySelector("[data-check-note]");
         if (el) el.textContent = t;
       };
+      if (checking) return;
+      checking = true;
       btn.disabled = true;
       setNote("Checking shops...");
-      const backs = await recheckWatches({ force: true });
+      let backs = [];
+      try {
+        backs = await recheckWatches({ force: true });
+      } finally {
+        checking = false;
+      }
       const flagged = store.closet().filter((i) => i.watch && i.backInStock).length;
       setNote(backs.length ? `${backs.length} back in stock` : flagged ? `${flagged} back in stock` : "Nothing new yet. We'll keep checking.");
       const b = area.querySelector("[data-check]");

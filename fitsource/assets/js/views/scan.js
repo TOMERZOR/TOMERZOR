@@ -33,10 +33,10 @@ function primaryMatch(item) {
   return m.find((x) => isOriginal(x) && okStock(x)) || m.find(isOriginal) || m[0] || null;
 }
 
-/** Where to buy it right now: in stock first, original before resale. */
-function bestMatch(item) {
-  const m = item.matches || [];
-  return m.find((x) => isOriginal(x) && okStock(x)) || m.find(okStock) || primaryMatch(item);
+/** Cheapest place to buy this exact piece right now (new or resale), if any. Lookalikes don't count. */
+function buyNow(item) {
+  const options = (item.matches || []).filter((x) => okStock(x) && x.price != null && ["original", "exact", "close", "resale"].includes(x.match));
+  return options.sort((a, b) => a.price - b.price)[0] || null;
 }
 
 /** Where to put each item's dot: the box centre, nudged apart when two collide. */
@@ -52,9 +52,11 @@ function spotPositions(items) {
   return out;
 }
 
-function storeItem(item) {
+function storeItem(item, scan) {
   const m = primaryMatch(item);
   return {
+    // Fixed key, so editing the search words doesn't turn a saved piece into a new one.
+    key: m && m.url ? m.url : `scan:${scan.id}:${item.id}`,
     name: item.productName || item.name,
     brand: item.brand || (m && m.brand) || null,
     shop: m ? m.shop : null,
@@ -75,9 +77,9 @@ function confidenceText(p) {
 
 function resultTag(item, i, scan) {
   const m = primaryMatch(item);
-  const alt = m && !okStock(m) ? bestMatch(item) : null;
-  const elsewhere = alt && alt !== m && okStock(alt) && alt.price != null ? `elsewhere from ${money(alt.price, alt.currency || "USD")}` : "";
-  const key = store.itemKey(storeItem(item));
+  const alt = m && !okStock(m) ? buyNow(item) : null;
+  const elsewhere = alt ? `elsewhere from ${money(alt.price, alt.currency || "USD")}` : "";
+  const key = store.itemKey(storeItem(item, scan));
   const saved = store.isSaved(key);
   const watching = store.isWatching(key);
   const deep = scan.engine === "deep";
@@ -154,7 +156,7 @@ function resultView(scan) {
   const items = scan.items;
   const pos = spotPositions(items);
   const deep = scan.engine === "deep";
-  const priced = deep ? items.map(bestMatch).filter((m) => m && m.price != null) : [];
+  const priced = deep ? items.map(buyNow).filter(Boolean) : [];
   const totals = {};
   for (const m of priced) totals[m.currency || "USD"] = (totals[m.currency || "USD"] || 0) + m.price;
   const soldCount = deep ? items.filter((it) => (primaryMatch(it) || {}).availability === "sold_out").length : 0;
@@ -190,7 +192,7 @@ function resultView(scan) {
       ${items.length
         ? html`<div class="tags" data-tags>${items.map((it, i) => html`<div style="--i:${i}">${resultTag(it, i, scan)}</div>`)}</div>`
         : html`<div class="empty" style="margin-bottom:0">${icon("t-shirt")}<p>We couldn't make out any clothes. Try a photo where the outfit fills more of the frame, or draw a box around a piece.</p><button type="button" class="btn btn--sm" data-draw-cta>${icon("selection-plus")}Draw a box</button></div>`}
-      ${Object.keys(totals).length ? html`<div class="total"><span class="total__label">The whole fit</span><span class="total__value">${Object.entries(totals).map(([c, v]) => money(v, c)).join(" + ")}<small>best price for ${priced.length} of ${items.length} pieces</small></span></div>` : ""}
+      ${Object.keys(totals).length ? html`<div class="total"><span class="total__label">The whole fit</span><span class="total__value">${Object.entries(totals).map(([c, v]) => money(v, c)).join(" + ")}<small>lowest in-stock price for ${priced.length} of ${items.length} pieces</small></span></div>` : ""}
     </div>
   </div>`;
 }
@@ -272,18 +274,23 @@ function mount(root, [id]) {
     abort && abort.abort();
     abort = new AbortController();
     const myAbort = abort;
+    // A newer photo or a page change makes this run stale; it must not touch the page.
+    const stale = () => !alive || myAbort.signal.aborted;
+    let prep;
     try {
-      prepared = await prepareImage(file);
+      prep = await prepareImage(file);
     } catch (err) {
-      if (!alive) return;
+      if (stale()) return;
       host.innerHTML = errorView(null, err instanceof ImageError ? err.message : "That image could not be read.").s;
       wireError(file);
       return;
     }
-    if (!alive) return;
-    host.innerHTML = scanningView(prepared.photo).s;
+    if (stale()) return;
+    prepared = prep;
+    host.innerHTML = scanningView(prep.photo).s;
     const shotEl = host.querySelector("[data-results-shot]");
     await waitForImage(shotEl.querySelector("img"));
+    if (stale()) return;
     setLaserTravel();
     const ro = new ResizeObserver(setLaserTravel);
     ro.observe(shotEl);
@@ -295,10 +302,10 @@ function mount(root, [id]) {
     const winEl = host.querySelector(".scanfx__win");
     let loadingLine = null;
     let shownScanning = false;
-    addLine("photo", `${prepared.width} x ${prepared.height}`);
+    addLine("photo", `${prep.width} x ${prep.height}`);
 
     const onProgress = (ev) => {
-      if (!alive) return;
+      if (stale()) return;
       if (ev.engine === "deep") {
         engineLabel.textContent = "Deep scan";
         if (ev.t === "status") {
@@ -332,24 +339,25 @@ function mount(root, [id]) {
     };
 
     try {
-      const result = await runScan(prepared, { onProgress, signal: myAbort.signal });
-      if (!alive || myAbort.signal.aborted) return;
+      const result = await runScan(prep, { onProgress, signal: myAbort.signal });
+      if (stale()) return;
       bar.classList.remove("is-indeterminate");
       bar.style.setProperty("--p", "1");
       addLine("done", `${result.items.length} piece${result.items.length === 1 ? "" : "s"}`);
-      scan = { ...result, upload: prepared.upload, blob: prepared.blob };
+      scan = { ...result, upload: prep.upload, blob: prep.blob };
       addThumbs(shotEl.querySelector("img"));
       setCurrent(scan);
-      await new Promise((r) => setTimeout(r, reduceMotion() ? 0 : 450));
-      if (!alive) return;
-      showResult();
+      // Save first: leaving during the short reveal below must not lose the result.
       persist(scan).catch(() => {});
       history.replaceState(null, "", "#/scan/" + scan.id);
       window.dispatchEvent(new Event("fs:pathsync"));
+      await new Promise((r) => setTimeout(r, reduceMotion() ? 0 : 450));
+      if (stale()) return;
+      showResult();
     } catch (err) {
-      if (!alive || (err && err.name === "AbortError")) return;
+      if (stale() || (err && err.name === "AbortError")) return;
       console.error(err);
-      host.innerHTML = errorView(prepared.photo, (err && err.message) || "The scan failed.").s;
+      host.innerHTML = errorView(prep.photo, (err && err.message) || "The scan failed.").s;
       wireError(file);
     }
   }
@@ -371,7 +379,7 @@ function mount(root, [id]) {
 
   function itemFromTag(el) {
     const it = scan.items.find((x) => x.id === el.dataset.item);
-    return it ? storeItem(it) : null;
+    return it ? storeItem(it, scan) : null;
   }
 
   function wireResult() {
@@ -488,7 +496,7 @@ function mount(root, [id]) {
       by: `${scan.items.length} piece${scan.items.length === 1 ? "" : "s"}, sourced`,
       photo: scan.photo,
       items: scan.items.map((it, i) => {
-        const m = bestMatch(it);
+        const m = primaryMatch(it);
         return { name: it.productName || it.name, brand: it.brand || (m && m.shop) || it.color, price: m ? m.price : null, currency: m ? m.currency : null, status: m ? m.availability : null, x: pos[i].x, y: pos[i].y };
       }),
     }).catch(() => toast("Couldn't make the receipt. Try again."));

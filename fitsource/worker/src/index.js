@@ -15,17 +15,30 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const SCAN_CACHE_TTL = 60 * 60 * 24; // a viral fit scanned 1,000 times costs one scan
 const STOCK_CACHE_TTL = 60 * 20;
 
+function allowedOrigins(env) {
+  return (env.ALLOWED_ORIGINS || "*").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+/** Browsers always send Origin on cross-site requests; a disallowed one is refused outright. */
+function originAllowed(request, env) {
+  const origin = request.headers.get("origin");
+  const allowed = allowedOrigins(env);
+  if (allowed.includes("*") || origin === null) return true;
+  return origin !== "null" && allowed.includes(origin);
+}
+
 function corsHeaders(request, env) {
   const origin = request.headers.get("origin") || "";
-  const allowed = (env.ALLOWED_ORIGINS || "*").split(",").map((s) => s.trim()).filter(Boolean);
-  const ok = allowed.includes("*") || allowed.includes(origin);
-  return {
-    "access-control-allow-origin": ok ? (allowed.includes("*") ? "*" : origin) : "null",
+  const allowed = allowedOrigins(env);
+  const headers = {
     "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-headers": "content-type",
     "access-control-max-age": "86400",
     vary: "origin",
   };
+  if (allowed.includes("*")) headers["access-control-allow-origin"] = "*";
+  else if (origin && origin !== "null" && allowed.includes(origin)) headers["access-control-allow-origin"] = origin;
+  return headers;
 }
 
 function json(data, status, cors) {
@@ -44,7 +57,11 @@ function clientIp(request) {
   return request.headers.get("cf-connecting-ip") || request.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local";
 }
 
-/** Daily per-IP quota kept in KV. Returns false when the visitor is over the limit. */
+/**
+ * Daily per-IP quota kept in KV. Returns false when the visitor is over the limit.
+ * KV is not atomic, so a burst of parallel requests can slip a few past the
+ * limit; add a Cloudflare rate-limiting rule on /api/scan for a hard cap.
+ */
 async function takeQuota(env, request) {
   const limit = parseInt(env.DAILY_SCAN_LIMIT || "0", 10);
   if (!env.FITSOURCE_KV || !limit) return true;
@@ -77,6 +94,10 @@ export function parseFocus(f) {
 
 async function handleScan(request, env, ctx, cors) {
   if (!env.ANTHROPIC_API_KEY) return json({ error: "not_configured", message: "Deep scan is not set up on this server." }, 503, cors);
+  // JSON only: a text/plain body would skip the browser's CORS preflight.
+  if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
+    return json({ error: "bad_request", message: "Send JSON." }, 415, cors);
+  }
   let body;
   try {
     body = await request.json();
@@ -99,21 +120,27 @@ async function handleScan(request, env, ctx, cors) {
   const writer = writable.getWriter();
   const enc = new TextEncoder();
   let open = true;
+  const stop = new AbortController();
   const emit = (event) => {
     if (!open) return;
     writer.write(enc.encode(JSON.stringify(event) + "\n")).catch(() => {
-      open = false; // the visitor closed the tab
+      open = false; // the visitor closed the tab: stop paying for the scan
+      stop.abort();
     });
   };
 
   const work = (async () => {
     try {
       if (cached) {
-        emit({ t: "status", msg: "Found in recent scans" });
-        emit({ t: "result", data: JSON.parse(cached), cached: true });
+        // The pieces and shops are reused; stock is checked again now.
+        emit({ t: "status", msg: "Found in recent scans, checking stock" });
+        const data = JSON.parse(cached);
+        for (const item of data.items) for (const m of item.matches) m.verified = false;
+        await verifyStock(data);
+        emit({ t: "result", data, cached: true });
         return;
       }
-      const { results, model, usage } = await runScan({ image, focus, hint, env, emit });
+      const { results, model, usage } = await runScan({ image, focus, hint, env, emit, signal: stop.signal });
       // One line per scan for cost tracking (wrangler tail / Workers logs).
       console.log(JSON.stringify({ event: "scan", model, items: results.items.length, input_tokens: usage?.input_tokens, output_tokens: usage?.output_tokens, cache_read: usage?.cache_read_input_tokens, searches: usage?.web_search_requests }));
       emit({ t: "status", msg: "Checking stock at each shop" });
@@ -126,8 +153,10 @@ async function handleScan(request, env, ctx, cors) {
     } catch (err) {
       const code = err instanceof ScanError ? err.code : "scan_failed";
       const message = err instanceof ScanError ? err.message : "Something went wrong while scanning. Try again in a minute.";
-      console.error("scan failed", code, err && err.message);
-      emit({ t: "error", code, message });
+      if (!stop.signal.aborted) {
+        console.error("scan failed", code, err && err.message);
+        emit({ t: "error", code, message });
+      }
     } finally {
       open = false;
       await writer.close().catch(() => {});
@@ -160,6 +189,7 @@ export default {
   async fetch(request, env, ctx) {
     const cors = corsHeaders(request, env);
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+    if (!originAllowed(request, env)) return json({ error: "forbidden_origin" }, 403, cors);
     const { pathname } = new URL(request.url);
     try {
       if (pathname === "/api/health" && request.method === "GET") {

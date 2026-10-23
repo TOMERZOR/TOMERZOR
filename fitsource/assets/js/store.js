@@ -32,7 +32,7 @@ export const onChange = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 
 /** Stable key for an item: its product URL when known, else its name + query. */
 export function itemKey(item) {
-  return item.url || `${item.brand || ""}|${item.name}|${item.query || ""}`.toLowerCase();
+  return item.key || item.url || `${item.brand || ""}|${item.name}|${item.query || ""}`.toLowerCase();
 }
 
 export const closet = () => read(KEYS.closet, []);

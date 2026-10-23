@@ -13,7 +13,14 @@ let healthPromise = null;
 export function deepScanStatus() {
   if (!healthPromise) {
     // With no API configured, only a local preview (tools/serve.mjs) can have one.
-    healthPromise = !apiBase() && !isLocal() ? Promise.resolve(null) : fetchHealth(apiBase()).then((h) => (h && h.deep_scan ? h : null));
+    if (!apiBase() && !isLocal()) healthPromise = Promise.resolve(null);
+    else
+      healthPromise = fetchHealth(apiBase()).then((h) => {
+        const ok = h && h.deep_scan ? h : null;
+        // A blip shouldn't switch deep scan off for the whole visit: ask again in 30 s.
+        if (!ok) setTimeout(() => (healthPromise = null), 30000);
+        return ok;
+      });
   }
   return healthPromise;
 }
@@ -150,7 +157,7 @@ export async function runScan(prepared, { onProgress = () => {}, signal } = {}) 
       notice = err instanceof ApiError && err.code === "daily_limit" ? err.message + " This one ran on your device instead." : "Deep scan was unavailable, so this ran on your device.";
     }
   }
-  const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }) });
+  const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }), signal });
   return { ...base, engine: "device", device: out.device, ms: out.ms, notice, vibe: "", summary: "", items: out.items.map(fromDevice) };
 }
 

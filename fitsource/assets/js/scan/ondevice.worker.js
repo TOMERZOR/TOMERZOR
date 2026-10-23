@@ -115,6 +115,7 @@ async function scan(msg, post) {
   const wins = makeWindows();
   const scored = [];
   for (let i = 0; i < wins.length; i += BATCH) {
+    if (cancelled.has(msg.id)) throw new Error("cancelled");
     const chunk = wins.slice(i, i + BATCH);
     post({ type: "status", stage: "scanning", progress: i / wins.length, win: chunk[0] });
     const embeds = await embed(state, chunk.map((w) => cropRaw(raw, w)));
@@ -133,9 +134,23 @@ async function region(msg, post) {
   return { item: classifyRegion(scoreEmbedding(e, state.emb), state.emb, pixels, msg.region), device: state.device };
 }
 
-self.onmessage = async (event) => {
+// Jobs run one at a time on the single model session; a cancelled job stops
+// at its next batch.
+const cancelled = new Set();
+let queue = Promise.resolve();
+
+self.onmessage = (event) => {
   const msg = event.data;
+  if (msg.type === "cancel") {
+    cancelled.add(msg.id);
+    return;
+  }
+  queue = queue.then(() => handle(msg));
+};
+
+async function handle(msg) {
   const post = (data) => self.postMessage({ ...data, id: msg.id });
+  if (cancelled.has(msg.id)) return;
   try {
     if (msg.type === "warmup") {
       await load(post);
@@ -147,5 +162,7 @@ self.onmessage = async (event) => {
     }
   } catch (err) {
     post({ type: "error", message: (err && err.message) || "The on-device scanner failed." });
+  } finally {
+    cancelled.delete(msg.id);
   }
-};
+}

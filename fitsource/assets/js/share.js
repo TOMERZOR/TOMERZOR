@@ -221,12 +221,15 @@ export async function openReceipt(data) {
   </div>`.s;
   const prevFocus = document.activeElement;
   const close = () => {
+    if (!modal.isConnected) return;
     modal.remove();
     URL.revokeObjectURL(url);
     document.removeEventListener("keydown", onKey);
-    prevFocus && prevFocus.focus && prevFocus.focus();
+    window.removeEventListener("hashchange", close);
+    prevFocus && prevFocus.isConnected && prevFocus.focus && prevFocus.focus();
   };
   const onKey = (e) => e.key === "Escape" && close();
+  window.addEventListener("hashchange", close); // Back button closes it too
   modal.addEventListener("click", (e) => {
     if (e.target === modal || e.target.closest("[data-close]")) close();
   });

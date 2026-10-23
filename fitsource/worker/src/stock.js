@@ -220,6 +220,9 @@ const BROWSER_HEADERS = {
   "accept-language": "en-US,en;q=0.8",
 };
 
+// Wildcard DNS services that map any name to any IP (e.g. 127.0.0.1.nip.io).
+const WILDCARD_DNS = ["nip.io", "sslip.io", "xip.io", "localtest.me", "lvh.me", "traefik.me", "localhost.run"];
+
 /** Only public http(s) hosts; no localhost, IP literals or internal names. */
 export function isSafePublicUrl(url) {
   let u;
@@ -230,18 +233,30 @@ export function isSafePublicUrl(url) {
   }
   if (u.protocol !== "https:" && u.protocol !== "http:") return false;
   if (u.username || u.password) return false;
-  const host = u.hostname.toLowerCase();
+  if (u.port && !["80", "443"].includes(u.port)) return false;
+  const host = u.hostname.toLowerCase().replace(/\.+$/, ""); // "localhost." is localhost
   if (!host.includes(".")) return false;
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return false;
+  if (host === "localhost" || /\.(localhost|local|internal|lan|home|corp|intranet)$/.test(host)) return false;
   if (/^\d+\.\d+\.\d+\.\d+$/.test(host) || host.startsWith("[") || host.includes(":")) return false;
+  if (/(^|\.)\d+[.-]\d+[.-]\d+[.-]\d+\./.test(host) || WILDCARD_DNS.some((d) => host === d || host.endsWith("." + d))) return false;
   return true;
 }
 
+/** Fetch with a timeout, following at most 4 redirects and re-checking every hop. */
 async function fetchWithTimeout(fetchImpl, url, ms) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
-    return await fetchImpl(url, { headers: BROWSER_HEADERS, redirect: "follow", signal: ctrl.signal });
+    let current = url;
+    for (let hop = 0; hop < 5; hop++) {
+      const res = await fetchImpl(current, { headers: BROWSER_HEADERS, redirect: "manual", signal: ctrl.signal });
+      const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+      if (!location) return res;
+      const next = new URL(location, current).href;
+      if (!isSafePublicUrl(next)) throw new TypeError("redirect to a disallowed address");
+      current = next;
+    }
+    throw new TypeError("too many redirects");
   } finally {
     clearTimeout(timer);
   }

@@ -193,6 +193,21 @@ if (run("quick")) {
   const names2 = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
   check(names2.some((n) => /skirt/i.test(n)), `second scan should find the skirt: ${names2}`);
 
+  // a second photo dropped while the first is still loading wins
+  await page.goto("http://127.0.0.1:8741/fitsource/");
+  await page.setInputFiles("[data-file]", path.join(FITSOURCE, "assets/img/fits/null-signal.jpg"));
+  await page.evaluate(async () => {
+    const blob = await (await fetch("assets/img/fits/mall-rat.jpg")).blob();
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], "mall-rat.jpg", { type: "image/jpeg" }));
+    window.dispatchEvent(new DragEvent("drop", { dataTransfer: dt, bubbles: true, cancelable: true }));
+  });
+  await page.waitForSelector(".tags .tag", { timeout: 120000 });
+  await page.waitForTimeout(1500);
+  const raced = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
+  check(raced.some((n) => /flare|crop top/i.test(n)) && !raced.some((n) => /cargo/i.test(n)), `dropped photo should win the race: ${raced}`);
+  check((await page.locator(".notice:has-text('stopped')").count()) === 0, "race left an error view");
+
   // a non-image file
   await page.goto("http://127.0.0.1:8741/fitsource/");
   await page.setInputFiles("[data-file]", { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });

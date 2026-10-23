@@ -65,7 +65,7 @@ After deploying, set `og:image` in `index.html` to the full address of `assets/i
    ```
 
 3. Put the address it prints (e.g. `https://fitsource-api.<you>.workers.dev`) in `assets/js/config.js` as `apiBase`.
-4. In `wrangler.toml`, set `ALLOWED_ORIGINS` to your site's address so other sites can't spend your credits, and `wrangler deploy` again.
+4. In `wrangler.toml`, set `ALLOWED_ORIGINS` to your site's address (comma-separated if several) and `wrangler deploy` again. Requests from other websites are then refused, so they can't spend your credits from a visitor's browser. Scripts outside a browser can still call the API, so keep the daily limit on and, for a hard cap, add a Cloudflare rate-limiting rule for `/api/scan` in the dashboard.
 
 Settings in `wrangler.toml`: `DAILY_SCAN_LIMIT` (free deep scans per visitor per day), `FITSOURCE_MODEL`, `FITSOURCE_EFFORT`, `MAX_SEARCHES`, `MAX_FETCHES`. Requests use Anthropic's server-side fallback (`fallbacks: "default"`) so a declined request is retried on a fallback model.
 

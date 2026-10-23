@@ -31,10 +31,23 @@ function getWorker() {
   return worker;
 }
 
-function run(message, transfer, onStatus) {
+function run(message, transfer, onStatus, signal) {
   return new Promise((resolve, reject) => {
+    if (signal && signal.aborted) return reject(new DOMException("Scan cancelled", "AbortError"));
     const id = ++seq;
     pending.set(id, { resolve, reject, onStatus });
+    if (signal) {
+      signal.addEventListener(
+        "abort",
+        () => {
+          if (!pending.has(id)) return;
+          pending.delete(id);
+          worker && worker.postMessage({ type: "cancel", id });
+          reject(new DOMException("Scan cancelled", "AbortError"));
+        },
+        { once: true },
+      );
+    }
     try {
       getWorker().postMessage({ ...message, id }, transfer);
     } catch (err) {
@@ -45,9 +58,9 @@ function run(message, transfer, onStatus) {
 }
 
 /** Detect the garments in an image (Blob or ImageBitmap). */
-export async function scanOnDevice(source, { onStatus } = {}) {
+export async function scanOnDevice(source, { onStatus, signal } = {}) {
   const bitmap = source instanceof ImageBitmap ? source : await createImageBitmap(source);
-  return run({ type: "scan", bitmap }, [bitmap], onStatus);
+  return run({ type: "scan", bitmap }, [bitmap], onStatus, signal);
 }
 
 /** Name the single garment inside `region` ({x,y,w,h} as fractions). */

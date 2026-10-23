@@ -286,3 +286,14 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
 - The Night chandeliers shot is now captioned for what it shows: "Swing and slide".
 - The landing page's fourth image is the map.
 - The web build is republished (version 6).
+
+## Round 30: first impressions and a haptics bug
+- **A new player's first visit to the map** now shows the ball hopping from level 1 to where they are. New saves start the map at level 1; saves from before the map still open without a hop.
+- **The hops wait** for the screen's entrance (380 ms), so the first one isn't lost in the fade. The drop into a new world waits the same way.
+- **Bug, found while auditing iOS:** selection haptics never fired on either platform. Capacitor drops `selectionChanged` until `selectionStart` has run, so the game's aim detents (a tick every 2° of aim) were silent on phones, along with the map's new ticks. The generator is now started once, on first use. Verified against the plugin's iOS and Android sources and with a unit check of the calls.
+- **Special balls on the map:** checked Prism, Moon, Marble, Aurora and Gold. Each is drawn once into a cached image.
+- **Verified:**
+  - Map checks pass in four states (fresh, 3 cleared, mid-game, everything cleared).
+  - The hop sequence runs at 5–7% slow frames at 4× throttle, mostly the frame that opens the screen.
+  - The regression subset passes.
+

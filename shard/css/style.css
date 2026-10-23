@@ -257,8 +257,8 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 .map-ball.moving img, .map-ball.moving .sh { animation: none; }
 .map-ball.moving img.squash { animation: mapsquash .24s var(--ease); }
 @keyframes mapsquash { from { transform: scale(1.16, .8); } }
-.map-ball.drop .in { animation: mapdrop .7s both; }
-.map-ball.drop .sh { animation: mapdropsh .7s both; }
+.map-ball.drop .in { animation: mapdrop .7s var(--drop-delay, 0s) both; }
+.map-ball.drop .sh { animation: mapdropsh .7s var(--drop-delay, 0s) both; }
 @keyframes mapdrop { 0% { transform: translateY(-220px); opacity: 0; animation-timing-function: cubic-bezier(.55, 0, 1, .45); } 12% { opacity: 1; } 57% { transform: translateY(0) scale(1.14, .84); animation-timing-function: cubic-bezier(0, .55, .45, 1); } 78% { transform: translateY(-18px); animation-timing-function: cubic-bezier(.55, 0, 1, .45); } 100% { transform: none; } }
 @keyframes mapdropsh { 0% { transform: scale(.2); opacity: 0; } 57% { transform: scale(1.12); opacity: 1; } 78% { transform: scale(.8); opacity: .75; } 100% { transform: none; opacity: 1; } }
 /* the world's sign where the trail begins, and the gate to the next world where it ends */

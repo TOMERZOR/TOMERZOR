@@ -22,10 +22,14 @@ export function success() {
   if (h) { h.notification({ type: 'SUCCESS' }).catch(() => {}); return; }
   if (navigator.vibrate) try { navigator.vibrate([12, 40, 22]); } catch (e) {}
 }
+let selecting = false;
 export function selection() {
   if (!on) return;
   const h = cap();
-  if (h) { h.selectionChanged?.().catch?.(() => {}); }
+  if (!h) return;
+  // Capacitor drops selectionChanged on both platforms until selectionStart has run
+  if (!selecting) { selecting = true; h.selectionStart?.()?.catch?.(() => {}); }
+  h.selectionChanged?.()?.catch?.(() => {});
 }
 export function warning() {
   if (!on) return;

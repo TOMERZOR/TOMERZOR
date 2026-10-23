@@ -23,7 +23,7 @@ export default async ({ page, wait, shot }) => {
   if (process.env.TRAVEL) {
     for (let i = 0; i < 14; i++) { await shot(`map-${tag}-t${String(i).padStart(2, '0')}`); await wait(90); }
   }
-  await wait(1900);
+  await wait(2600); // the ball's hops, if any, have landed
   await shot(`map-${tag}`);
 
   if (process.env.CHECK) {

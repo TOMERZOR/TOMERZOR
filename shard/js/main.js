@@ -586,7 +586,8 @@ function openLevels() {
   d().mapAt = next; save.touch();
   // progress since the last visit: the ball hops on from where the map last left it
   if (from !== undefined && from < next && !calmMotion()) {
-    levelMap.travel(from, { land: (n, last) => { sfx.tink(last ? n + 2 : n); if (last) hap.light(); else hap.selection(); } });
+    // after the screen's entrance, so the first hop isn't lost in the fade
+    levelMap.travel(from, { delay: 380, land: (n, last) => { sfx.tink(last ? n + 2 : n); if (last) hap.light(); else hap.selection(); } });
   }
 }
 function renderLevels(keepScroll) {

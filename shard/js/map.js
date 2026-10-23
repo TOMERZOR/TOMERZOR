@@ -273,15 +273,16 @@ export function buildMap(scroller, opts) {
       scroller.scrollTop = curK >= 0 ? viewTop(pts[curK][1]) : lit === all.length - 1 ? 0 : H - vh;
     },
     // progress since the last visit: the ball hops along the trail, gem to gem, lighting it as it goes
-    travel(fromIndex, { land, done } = {}) {
+    travel(fromIndex, { land, done, delay = 160 } = {}) {
       if (!ballEl || !Number.isInteger(fromIndex) || fromIndex >= current) { done?.(); return false; }
       const node = nodeAt(curK);
       let fromK = levels.findIndex((l) => l.index === fromIndex);
       if (fromK < 0) { // last seen in an earlier world
         if (curK === 0) { // this world has just opened: the ball drops in onto its first level
           ballEl.classList.add('drop');
-          setTimeout(() => { if (ballEl.isConnected && scroller.offsetParent) { node.classList.add('arrived'); land?.(0, true); } }, 400);
-          setTimeout(() => { ballEl.classList.remove('drop'); done?.(); }, 760);
+          ballEl.style.setProperty('--drop-delay', `${delay}ms`);
+          setTimeout(() => { if (ballEl.isConnected && scroller.offsetParent) { node.classList.add('arrived'); land?.(0, true); } }, delay + 400);
+          setTimeout(() => { ballEl.classList.remove('drop'); done?.(); }, delay + 760);
           return true;
         }
         fromK = 0;
@@ -311,7 +312,7 @@ export function buildMap(scroller, opts) {
       scroller.addEventListener('wheel', stop, { once: true, passive: true });
       scroller.scrollTop = camFrom;
       place(...pts[fromK]);
-      const t0 = performance.now() + 160;
+      const t0 = performance.now() + delay;
       let hop = -1;
       const finish = (quiet) => {
         scroller.removeEventListener('touchstart', stop);

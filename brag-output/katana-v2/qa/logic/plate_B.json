@@ -1,0 +1,47 @@
+{
+ "clip": "gen/plate_B.mp4",
+ "name": "plate_B",
+ "sha": "db0fb459e3fa47ad",
+ "fps": "24/1",
+ "frames": 121,
+ "every": 0.5,
+ "width": 960,
+ "times": [
+  0.0,
+  0.5,
+  1.0,
+  1.5,
+  2.0,
+  2.5,
+  3.0,
+  3.5,
+  4.0,
+  4.5,
+  5.0
+ ],
+ "pages": [
+  "qa/logic/plate_B_p01.jpg",
+  "qa/logic/plate_B_p02.jpg",
+  "qa/logic/plate_B_p03.jpg",
+  "qa/logic/plate_B_p04.jpg",
+  "qa/logic/plate_B_p05.jpg",
+  "qa/logic/plate_B_p06.jpg"
+ ],
+ "checklist": [
+  "hands and finger count",
+  "props obey physics (held, not glued)",
+  "objects merging or popping",
+  "identity drift vs the identity reference",
+  "stray text, logos, UI",
+  "the reference's role: hero present where needed"
+ ],
+ "bad_ranges": [
+  [
+   3.9,
+   5.04,
+   "haze swallows the pillars; the scene loses its subject and a dark stump at the left horizon can read as a distant figure"
+  ]
+ ],
+ "verdict": "partial",
+ "note": "Dawn pillar field; the blue pillar tilts and bursts at 1.2 s, then the pillars crumble into glittering glass from left to right (chain reaction). No people, hands or text in 0-3.9 s."
+}

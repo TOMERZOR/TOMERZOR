@@ -1,0 +1,50 @@
+{
+ "clip": "gen/plate_A2.mp4",
+ "name": "plate_A2",
+ "sha": "4a6668c02b8e3cde",
+ "fps": "24/1",
+ "frames": 145,
+ "every": 0.5,
+ "width": 960,
+ "times": [
+  0.0,
+  0.5,
+  1.0,
+  1.5,
+  2.0,
+  2.5,
+  3.0,
+  3.5,
+  4.0,
+  4.5,
+  5.0,
+  5.5,
+  6.0
+ ],
+ "pages": [
+  "qa/logic/plate_A2_p01.jpg",
+  "qa/logic/plate_A2_p02.jpg",
+  "qa/logic/plate_A2_p03.jpg",
+  "qa/logic/plate_A2_p04.jpg",
+  "qa/logic/plate_A2_p05.jpg",
+  "qa/logic/plate_A2_p06.jpg",
+  "qa/logic/plate_A2_p07.jpg"
+ ],
+ "checklist": [
+  "hands and finger count",
+  "props obey physics (held, not glued)",
+  "objects merging or popping",
+  "identity drift vs the identity reference",
+  "stray text, logos, UI",
+  "the reference's role: hero present where needed"
+ ],
+ "bad_ranges": [
+  [
+   3.85,
+   4.3,
+   "the steel ball reads as a flat black disc turning edge-on (identity drift)"
+  ]
+ ],
+ "verdict": "partial",
+ "note": "Chrome ball flies in from the left and hits the glass needle at F27 (1.125 s); ultra slow-motion burst of pastel shards toward camera, ball exits toward camera by 5.0 s. No people, hands or text. Physics plausible; only the edge-on disc frames are unusable."
+}

@@ -1,0 +1,49 @@
+SFX used in this edit - all CC0 1.0 (no attribution required; credited as a courtesy)
+
+boom/kdig__lowDown.ogg  |  Digital Audio  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/digital-audio  |  CC0 1.0
+boom/kimp__impactPunch_heavy_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+boom/kimp__impactPunch_heavy_002.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+boom/ksci__explosionCrunch_000.ogg  |  Sci-fi Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/sci-fi-sounds  |  CC0 1.0
+boom/ksci__lowFrequency_explosion_000.ogg  |  Sci-fi Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/sci-fi-sounds  |  CC0 1.0
+boom/ksci__lowFrequency_explosion_001.ogg  |  Sci-fi Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/sci-fi-sounds  |  CC0 1.0
+crack/kimp__impactGlass_heavy_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_heavy_001.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_heavy_002.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_heavy_003.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_heavy_004.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_medium_001.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_medium_002.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kimp__impactGlass_medium_004.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+crack/kint__glass_001.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
+crack/kint__glass_003.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
+crack/kint__glass_005.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
+dataswish/kdig__phaserDown3.ogg  |  Digital Audio  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/digital-audio  |  CC0 1.0
+dataswish/kdig__phaserUp7.ogg  |  Digital Audio  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/digital-audio  |  CC0 1.0
+flash/kimp__impactGlass_light_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+flash/kint__glass_004.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
+hit/kimp__impactMetal_heavy_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+hit/kimp__impactMetal_heavy_004.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+hit/kimp__impactMetal_light_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+hit/kimp__impactMetal_light_003.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+hit/kimp__impactPlate_heavy_001.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+hit/kimp__impactPlate_heavy_003.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
+longwhoosh/swish__swosh-31.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+longwhoosh/swish__swosh-35.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+longwhoosh/swish__swosh-38.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+longwhoosh/swish__swosh-41.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+riser/rs50__synth_misc_12.ogg  |  50 CC0 retro / synth SFX  |  rubberduck  |  https://opengameart.org/content/50-cc0-retro-synth-sfx  |  CC0 1.0
+scan/sf50__terminal_09.ogg  |  50 CC0 Sci-Fi SFX  |  rubberduck  |  https://opengameart.org/content/50-cc0-sci-fi-sfx  |  CC0 1.0
+scan/sf60__sfx_08a.ogg  |  60 CC0 Sci-Fi SFX  |  rubberduck  |  https://opengameart.org/content/60-cc0-sci-fi-sfx  |  CC0 1.0
+scan/sf60__sfx_08b.ogg  |  60 CC0 Sci-Fi SFX  |  rubberduck  |  https://opengameart.org/content/60-cc0-sci-fi-sfx  |  CC0 1.0
+type/key__keypress-006.ogg  |  Keyboard Soundpack #1 [Typing and Single Keystrokes]  |  unicaegames  |  https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes  |  CC0 1.0
+ui_blip/kui__rollover3.ogg  |  UI Audio  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/ui-audio  |  CC0 1.0
+ui_blip/kui__rollover4.ogg  |  UI Audio  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/ui-audio  |  CC0 1.0
+ui_blip/kui__switch1.ogg  |  UI Audio  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/ui-audio  |  CC0 1.0
+whoosh/swish__swosh-01.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-03.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-05.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-06.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-12.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-13.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-14.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
+whoosh/swish__swosh-20.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0

@@ -1,0 +1,174 @@
+{
+ "output": "out/katana-shard-v2_v1.mp4",
+ "revision": "v1",
+ "decoded_frames": 987,
+ "fps": "30/1",
+ "pts": {
+  "first": 0.0,
+  "last": 32.866667,
+  "step": 0.03333333333333333
+ },
+ "viewed_ranges": [
+  [
+   0,
+   48
+  ],
+  [
+   48,
+   96
+  ],
+  [
+   96,
+   144
+  ],
+  [
+   144,
+   192
+  ],
+  [
+   192,
+   240
+  ],
+  [
+   240,
+   288
+  ],
+  [
+   288,
+   336
+  ],
+  [
+   336,
+   384
+  ],
+  [
+   384,
+   432
+  ],
+  [
+   432,
+   480
+  ],
+  [
+   480,
+   528
+  ],
+  [
+   528,
+   576
+  ],
+  [
+   576,
+   624
+  ],
+  [
+   624,
+   672
+  ],
+  [
+   672,
+   720
+  ],
+  [
+   720,
+   768
+  ],
+  [
+   768,
+   816
+  ],
+  [
+   816,
+   864
+  ],
+  [
+   864,
+   912
+  ],
+  [
+   912,
+   960
+  ],
+  [
+   960,
+   987
+  ]
+ ],
+ "union": [
+  0,
+  987
+ ],
+ "seconds_covered": [
+  0,
+  32.9
+ ],
+ "sheets": [
+  "qa/v1/sheet_00.jpg",
+  "qa/v1/sheet_01.jpg",
+  "qa/v1/sheet_02.jpg",
+  "qa/v1/sheet_03.jpg",
+  "qa/v1/sheet_04.jpg",
+  "qa/v1/sheet_05.jpg",
+  "qa/v1/sheet_06.jpg",
+  "qa/v1/sheet_07.jpg",
+  "qa/v1/sheet_08.jpg",
+  "qa/v1/sheet_09.jpg",
+  "qa/v1/sheet_10.jpg",
+  "qa/v1/sheet_11.jpg",
+  "qa/v1/sheet_12.jpg",
+  "qa/v1/sheet_13.jpg",
+  "qa/v1/sheet_14.jpg",
+  "qa/v1/sheet_15.jpg",
+  "qa/v1/sheet_16.jpg",
+  "qa/v1/sheet_17.jpg",
+  "qa/v1/sheet_18.jpg",
+  "qa/v1/sheet_19.jpg",
+  "qa/v1/sheet_20.jpg"
+ ],
+ "crops": [
+  "qa/v1/crops/f0.jpg",
+  "qa/v1/crops/f44.jpg",
+  "qa/v1/crops/f120.jpg",
+  "qa/v1/crops/f180.jpg",
+  "qa/v1/crops/f250.jpg",
+  "qa/v1/crops/f320.jpg",
+  "qa/v1/crops/f372.jpg",
+  "qa/v1/crops/f545.jpg",
+  "qa/v1/crops/f625.jpg",
+  "qa/v1/crops/f660.jpg",
+  "qa/v1/crops/f930.jpg"
+ ],
+ "events": {
+  "drop": 233,
+  "slam": 240,
+  "explode": 262,
+  "word_lock": 291,
+  "crack": 342,
+  "break": 349,
+  "zoom_cuts": [
+   407,
+   465,
+   523
+  ],
+  "whips": [
+   436,
+   494,
+   581
+  ],
+  "climax": [
+   697,
+   712,
+   726,
+   741,
+   755,
+   770,
+   784,
+   799,
+   813
+  ],
+  "white": 820,
+  "logo": 871
+ },
+ "findings": [],
+ "gaps": []
+}

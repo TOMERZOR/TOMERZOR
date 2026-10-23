@@ -1,0 +1,234 @@
+[
+ {
+  "clip": "gen/plate_A1.mp4",
+  "f0": 2,
+  "f1": 31,
+  "label": "A1 glide a",
+  "frames": 30,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A1.mp4",
+  "f0": 37,
+  "f1": 60,
+  "label": "A1 glide b",
+  "frames": 24,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A1.mp4",
+  "f0": 65,
+  "f1": 87,
+  "label": "A1 glide c",
+  "frames": 23,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A1.mp4",
+  "f0": 100,
+  "f1": 197,
+  "label": "A1 roll",
+  "frames": 98,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A2.mp4",
+  "f0": 15,
+  "f1": 26,
+  "label": "A2 approach",
+  "frames": 12,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A2.mp4",
+  "f0": 27,
+  "f1": 72,
+  "label": "A2 shatter",
+  "frames": 46,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/hero.mp4",
+  "f0": 71,
+  "f1": 135,
+  "label": "hero phone",
+  "frames": 58,
+  "contiguous": false
+ },
+ {
+  "clip": "gen/plate_B.mp4",
+  "f0": 23,
+  "f1": 46,
+  "label": "B dawn",
+  "frames": 24,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/ember.mp4",
+  "f0": 89,
+  "f1": 117,
+  "label": "ember phone",
+  "frames": 29,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_C.mp4",
+  "f0": 30,
+  "f1": 52,
+  "label": "C ember",
+  "frames": 23,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/night.mp4",
+  "f0": 96,
+  "f1": 124,
+  "label": "night phone",
+  "frames": 29,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_D.mp4",
+  "f0": 35,
+  "f1": 80,
+  "label": "D night",
+  "frames": 46,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/map0.mp4",
+  "f0": 0,
+  "f1": 23,
+  "label": "map 0",
+  "frames": 24,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/map1.mp4",
+  "f0": 0,
+  "f1": 23,
+  "label": "map 1",
+  "frames": 24,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/map2.mp4",
+  "f0": 0,
+  "f1": 23,
+  "label": "map 2",
+  "frames": 24,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/map3.mp4",
+  "f0": 0,
+  "f1": 23,
+  "label": "map 3",
+  "frames": 24,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/map4.mp4",
+  "f0": 40,
+  "f1": 74,
+  "label": "map 4",
+  "frames": 35,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_B.mp4",
+  "f0": 50,
+  "f1": 61,
+  "label": "climax b48",
+  "frames": 12,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/ember.mp4",
+  "f0": 63,
+  "f1": 76,
+  "label": "climax b49",
+  "frames": 14,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_C.mp4",
+  "f0": 58,
+  "f1": 70,
+  "label": "climax b50",
+  "frames": 13,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/night.mp4",
+  "f0": 65,
+  "f1": 78,
+  "label": "climax b51",
+  "frames": 14,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A2.mp4",
+  "f0": 76,
+  "f1": 88,
+  "label": "climax b52",
+  "frames": 13,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/hero.mp4",
+  "f0": 137,
+  "f1": 150,
+  "label": "climax b53",
+  "frames": 14,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_D.mp4",
+  "f0": 82,
+  "f1": 93,
+  "label": "climax b54",
+  "frames": 12,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game/clips/ember.mp4",
+  "f0": 141,
+  "f1": 154,
+  "label": "climax b55",
+  "frames": 14,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_B.mp4",
+  "f0": 64,
+  "f1": 70,
+  "label": "climax b56",
+  "frames": 7,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A2.mp4",
+  "f0": 105,
+  "f1": 144,
+  "label": "A2 rewind",
+  "frames": 39,
+  "contiguous": false
+ },
+ {
+  "clip": "gen/plate_A2.mp4",
+  "f0": 0,
+  "f1": 11,
+  "label": "A2 whole",
+  "frames": 12,
+  "contiguous": true
+ },
+ {
+  "clip": "gen/plate_A2.mp4",
+  "f0": 90,
+  "f1": 90,
+  "label": "A2 poster",
+  "frames": 1,
+  "contiguous": true
+ }
+]

@@ -1,0 +1,38 @@
+{
+ "clip": "gen/plate_C.mp4",
+ "name": "plate_C",
+ "sha": "8c3c277330a939c0",
+ "fps": "24/1",
+ "frames": 97,
+ "every": 0.5,
+ "width": 960,
+ "times": [
+  0.0,
+  0.5,
+  1.0,
+  1.5,
+  2.0,
+  2.5,
+  3.0,
+  3.5,
+  4.0
+ ],
+ "pages": [
+  "qa/logic/plate_C_p01.jpg",
+  "qa/logic/plate_C_p02.jpg",
+  "qa/logic/plate_C_p03.jpg",
+  "qa/logic/plate_C_p04.jpg",
+  "qa/logic/plate_C_p05.jpg"
+ ],
+ "checklist": [
+  "hands and finger count",
+  "props obey physics (held, not glued)",
+  "objects merging or popping",
+  "identity drift vs the identity reference",
+  "stray text, logos, UI",
+  "the reference's role: hero present where needed"
+ ],
+ "bad_ranges": [],
+ "verdict": "ok",
+ "note": "Ember courtyard: spark bursts and fire flashes pop between the glass stacks (0.5-2.0 s), cracks run through the rose tower and the amber cubes are blown apart and tumble (1.5-4.0 s). The small red object on the tower is a bottle. No people, hands or text."
+}

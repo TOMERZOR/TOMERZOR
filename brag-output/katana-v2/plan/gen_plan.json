@@ -1,0 +1,216 @@
+{
+ "look": "photoreal",
+ "lines": [
+  {
+   "id": "loc_studio",
+   "tool": "generate_image",
+   "model": "soul_cinematic",
+   "stage": "keyframe",
+   "count": 1,
+   "takes": 2,
+   "take_reason": "people check: Soul Cinema drew a person into 6 of 8 measured plates",
+   "quality": "2k",
+   "aspect_ratio": "16:9",
+   "medias": [],
+   "prompt_file": "plan/prompts/loc_studio.txt",
+   "still": "gen/loc_studio.png",
+   "serves_cuts": [
+    "o01",
+    "o02",
+    "o03",
+    "o12",
+    "o13"
+   ]
+  },
+  {
+   "id": "loc_dawn",
+   "tool": "generate_image",
+   "model": "soul_cinematic",
+   "stage": "keyframe",
+   "count": 1,
+   "takes": 2,
+   "take_reason": "people check: Soul Cinema drew a person into 6 of 8 measured plates",
+   "quality": "2k",
+   "aspect_ratio": "16:9",
+   "medias": [],
+   "prompt_file": "plan/prompts/loc_dawn.txt",
+   "still": "gen/loc_dawn.png",
+   "serves_cuts": [
+    "o05",
+    "o12"
+   ]
+  },
+  {
+   "id": "loc_ember",
+   "tool": "generate_image",
+   "model": "soul_cinematic",
+   "stage": "keyframe",
+   "count": 1,
+   "takes": 2,
+   "take_reason": "people check: Soul Cinema drew a person into 6 of 8 measured plates",
+   "quality": "2k",
+   "aspect_ratio": "16:9",
+   "medias": [],
+   "prompt_file": "plan/prompts/loc_ember.txt",
+   "still": "gen/loc_ember.png",
+   "serves_cuts": [
+    "o07",
+    "o12"
+   ]
+  },
+  {
+   "id": "loc_night",
+   "tool": "generate_image",
+   "model": "soul_cinematic",
+   "stage": "keyframe",
+   "count": 1,
+   "takes": 2,
+   "take_reason": "people check: Soul Cinema drew a person into 6 of 8 measured plates",
+   "quality": "2k",
+   "aspect_ratio": "16:9",
+   "medias": [],
+   "prompt_file": "plan/prompts/loc_night.txt",
+   "still": "gen/loc_night.png",
+   "serves_cuts": [
+    "o09",
+    "o12"
+   ]
+  },
+  {
+   "id": "plate_A2",
+   "tool": "generate_video",
+   "model": "seedance_2_5",
+   "mode": "omni_reference",
+   "resolution": "1080p",
+   "duration": 6,
+   "aspect_ratio": "16:9",
+   "count": 1,
+   "generate_audio": false,
+   "bitrate_mode": "high",
+   "look": "photoreal",
+   "location_line": "loc_studio",
+   "medias": [
+    {
+     "role": "image",
+     "value": "cd027d86-ae1e-40a8-b902-714ca1750191"
+    }
+   ],
+   "prompt_file": "plan/prompts/plate_A2.txt",
+   "serves_cuts": [
+    "o03",
+    "o12",
+    "o13"
+   ],
+   "screen_seconds": 6.0,
+   "stage": "canary"
+  },
+  {
+   "id": "plate_A1",
+   "tool": "generate_video",
+   "model": "seedance_2_5",
+   "mode": "omni_reference",
+   "resolution": "1080p",
+   "duration": 10,
+   "aspect_ratio": "16:9",
+   "count": 1,
+   "generate_audio": false,
+   "bitrate_mode": "high",
+   "look": "photoreal",
+   "location_line": "loc_studio",
+   "medias": [
+    {
+     "role": "image",
+     "value": "cd027d86-ae1e-40a8-b902-714ca1750191"
+    }
+   ],
+   "prompt_file": "plan/prompts/plate_A1.txt",
+   "serves_cuts": [
+    "o01",
+    "o02"
+   ],
+   "screen_seconds": 7.7
+  },
+  {
+   "id": "plate_B",
+   "tool": "generate_video",
+   "model": "seedance_2_5",
+   "mode": "omni_reference",
+   "resolution": "1080p",
+   "duration": 5,
+   "aspect_ratio": "16:9",
+   "count": 1,
+   "generate_audio": false,
+   "bitrate_mode": "high",
+   "look": "photoreal",
+   "location_line": "loc_dawn",
+   "medias": [
+    {
+     "role": "image",
+     "value": "3b35d06e-626d-4690-9e2c-c70e9f2db0a8"
+    }
+   ],
+   "prompt_file": "plan/prompts/plate_B.txt",
+   "serves_cuts": [
+    "o05",
+    "o12"
+   ],
+   "screen_seconds": 1.5,
+   "stage": "canary"
+  },
+  {
+   "id": "plate_C",
+   "tool": "generate_video",
+   "model": "seedance_2_5",
+   "mode": "omni_reference",
+   "resolution": "1080p",
+   "duration": 4,
+   "aspect_ratio": "16:9",
+   "count": 1,
+   "generate_audio": false,
+   "bitrate_mode": "high",
+   "look": "photoreal",
+   "location_line": "loc_ember",
+   "medias": [
+    {
+     "role": "image",
+     "value": "fcddc59f-fa7e-46ca-887f-e2458cb783a5"
+    }
+   ],
+   "prompt_file": "plan/prompts/plate_C.txt",
+   "serves_cuts": [
+    "o07",
+    "o12"
+   ],
+   "screen_seconds": 1.5,
+   "stage": "canary",
+   "prompt": "@image1 is the location: a warm coral and peach courtyard with rose-pink walls, a tall stepped tower of frosted rose glass blocks on the left, and smaller stacks of translucent frosted glass cubes and bottles tinted peach, orange and amber on white plinths and low dark shelves; keep its geometry, light and palette. Photoreal, slow motion, high-speed camera look.\nShot 1 (0-4s): medium shot: bursts of golden sparks and bright fire flashes pop between the glass stacks in quick succession, blowing the orange, peach and rose glass cubes and bottles apart into spinning shards and glowing fragments that scatter through the warm haze; the camera holds steady with a slight shake on each burst.\nNo people, no hands, no text, no lettering, no logos."
+  },
+  {
+   "id": "plate_D",
+   "tool": "generate_video",
+   "model": "seedance_2_5",
+   "mode": "omni_reference",
+   "resolution": "1080p",
+   "duration": 4,
+   "aspect_ratio": "16:9",
+   "count": 1,
+   "generate_audio": false,
+   "bitrate_mode": "high",
+   "look": "photoreal",
+   "location_line": "loc_night",
+   "medias": [
+    {
+     "role": "image",
+     "value": "0dfb3354-579c-4026-8f5d-048f4c58b1e3"
+    }
+   ],
+   "prompt_file": "plan/prompts/plate_D.txt",
+   "serves_cuts": [
+    "o09",
+    "o12"
+   ],
+   "screen_seconds": 2.4,
+   "stage": "canary"
+  }
+ ]
+}

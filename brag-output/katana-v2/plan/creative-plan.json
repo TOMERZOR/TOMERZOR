@@ -1,0 +1,206 @@
+{
+ "concept": "Everything here is glass. A photoreal pastel-glass world is introduced in silence, a steel ball rolls in (Aim. Fire.), and on the music's drop it smashes the glass in ultra slow motion. The shards become the game: SHARD on a floating phone, then a beat-cut montage where each real level rhymes with the same world made real (dawn towers in a chain reaction, ember blasts, night pendants falling through a moonbeam), the five worlds, the twelve balls, a one-cut-per-beat climax, the shatter rewinding in the break, and the logo landing on the second drop.",
+ "logline": "The glass game, made real, then put in your pocket.",
+ "output_target": {
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "frames": 987,
+  "duration_s": 32.9,
+  "aspect": "16:9",
+  "pix_fmt": "yuv420p",
+  "color": "bt709",
+  "audio": "Take this Higher (Mixkit asset 1012) from 0 to 32.9 s at its own 124 BPM; recorded SFX; master about -12.5 LUFS, true peak <= -1 dBTP"
+ },
+ "look": "photoreal generated worlds in the game's pastel glass palettes (sky blue #96CDFF, blush #FFBEC8, lilac #BEAFFF; Dawn peach, Ember coral, Night navy) + clean Apple-like motion graphics in Nunito 900/800",
+ "beat": "t(b) = b * 0.48388 s (124 BPM, downbeats every 4 beats; drop b16 = 7.74 s, break b56.5 = 27.34 s, second drop b60 = 29.03 s, end b68 = 32.90 s)",
+ "shots": [
+  {
+   "id": "o01",
+   "t": [
+    0.0,
+    3.15
+   ],
+   "role": "introduction: the glass world in near silence, three cuts on the track's stabs (0, 1.21, 2.18)",
+   "route": "GENERATE plate_A1 shot 1",
+   "text": "Everything here (0.3) / is glass. (1.3)"
+  },
+  {
+   "id": "o02",
+   "t": [
+    3.15,
+    7.74
+   ],
+   "role": "setup: the steel ball at rest, then rolling and accelerating toward the tallest tower",
+   "route": "GENERATE plate_A1 shot 2",
+   "text": "Aim. (b8 3.87) / Fire. (b12 5.81)"
+  },
+  {
+   "id": "o03",
+   "t": [
+    7.74,
+    11.61
+   ],
+   "role": "climax 1, the wow: impact on the drop, ultra slow-motion shatter toward camera; SHARD wordmark assembles among the shards at b20",
+   "route": "GENERATE plate_A2 + CODE type, flash, shake",
+   "text": "SHATTER. (b16.5) then the SHARD wordmark (b20)"
+  },
+  {
+   "id": "o04",
+   "t": [
+    11.61,
+    13.55
+   ],
+   "role": "the product: floating phone, real Dawn level, x10 chain",
+   "route": "USER-FOOTAGE hero.mp4 in a code phone",
+   "text": "Chain reactions."
+  },
+  {
+   "id": "o05",
+   "t": [
+    13.55,
+    14.52
+   ],
+   "role": "rhyme: the Dawn world made real, towers falling in a chain",
+   "route": "GENERATE plate_B"
+  },
+  {
+   "id": "o06",
+   "t": [
+    14.52,
+    15.48
+   ],
+   "role": "the product: Ember level, bombs",
+   "route": "USER-FOOTAGE ember.mp4"
+  },
+  {
+   "id": "o07",
+   "t": [
+    15.48,
+    16.45
+   ],
+   "role": "rhyme: Ember made real, glass blasts",
+   "route": "GENERATE plate_C"
+  },
+  {
+   "id": "o08",
+   "t": [
+    16.45,
+    17.42
+   ],
+   "role": "the product: Night level, slow-motion finish",
+   "route": "USER-FOOTAGE night.mp4"
+  },
+  {
+   "id": "o09",
+   "t": [
+    17.42,
+    19.36
+   ],
+   "role": "rhyme: Night made real, glass pendants falling through the moonbeam",
+   "route": "GENERATE plate_D",
+   "text": "One perfect shot."
+  },
+  {
+   "id": "o10",
+   "t": [
+    19.36,
+    21.29
+   ],
+   "role": "scope: five worlds as a 3D carousel of map screens",
+   "route": "USER-FOOTAGE map0-4 in code",
+   "text": "5 worlds. 120 levels."
+  },
+  {
+   "id": "o11",
+   "t": [
+    21.29,
+    23.23
+   ],
+   "role": "collection: twelve balls orbiting",
+   "route": "USER renders in code",
+   "text": "12 balls."
+  },
+  {
+   "id": "o12",
+   "t": [
+    23.23,
+    27.34
+   ],
+   "role": "escalation: one cut per beat between generated worlds and gameplay",
+   "route": "GENERATE re-use + USER-FOOTAGE"
+  },
+  {
+   "id": "o13",
+   "t": [
+    27.34,
+    29.03
+   ],
+   "role": "pause: the shatter rewinds, glass reassembling in the music's break",
+   "route": "GENERATE plate_A2 reversed (code)"
+  },
+  {
+   "id": "o14",
+   "t": [
+    29.03,
+    32.9
+   ],
+   "role": "payoff: logo slam on the second drop, icon + SHARD + Coming soon to iPhone & Android.",
+   "route": "CODE + icon",
+   "text": "SHARD / Coming soon to iPhone & Android."
+  }
+ ],
+ "locations": [
+  {
+   "location_id": "loc_studio",
+   "plate": "soul_cinematic 2k 16:9",
+   "serves": [
+    "o01",
+    "o02",
+    "o03",
+    "o12",
+    "o13"
+   ],
+   "jobs": [
+    "plate_A1",
+    "plate_A2"
+   ]
+  },
+  {
+   "location_id": "loc_dawn",
+   "plate": "soul_cinematic 2k 16:9",
+   "serves": [
+    "o05",
+    "o12"
+   ],
+   "jobs": [
+    "plate_B"
+   ]
+  },
+  {
+   "location_id": "loc_ember",
+   "plate": "soul_cinematic 2k 16:9",
+   "serves": [
+    "o07",
+    "o12"
+   ],
+   "jobs": [
+    "plate_C"
+   ]
+  },
+  {
+   "location_id": "loc_night",
+   "plate": "soul_cinematic 2k 16:9",
+   "serves": [
+    "o09",
+    "o12"
+   ],
+   "jobs": [
+    "plate_D"
+   ]
+  }
+ ],
+ "hero": "The game itself. The steel ball appears in generated shots described in text: the game's 2D ball render has a stylised curved rim highlight that a photoreal model would copy as a painted stripe, so it is not sent as a reference.",
+ "sound_plan": "Music: 'Take this Higher' by Michael Ramir C. (Mixkit Stock Music Free License) from 0 s, fading over the last bar to 32.9 s. SFX: the game's own glass, cannon and bomb recordings, Katana's CC0 library (hits, whooshes, risers) and the Pixabay library effects already licensed in this project; aligned to impacts, type slams and cuts.",
+ "energy": "Authored, no reference: a near-still, silent opening; accelerating build; a hard impact with flash and shake on the drop; one cut per bar in the montage, one per beat in the climax; a slow rewind in the break; a single slam on the second drop."
+}

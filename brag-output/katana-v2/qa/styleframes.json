@@ -1,0 +1,140 @@
+{
+ "pages": [
+  "qa/styleframes_01.jpg",
+  "qa/styleframes_02.jpg",
+  "qa/styleframes_03.jpg"
+ ],
+ "pairs": [
+  {
+   "label": "loc_studio",
+   "still": "gen/loc_studio.png",
+   "ref": "ref/world_night.jpg",
+   "t": 0.0,
+   "sha": "f9d1293ae64ea70d",
+   "still_stats": {
+    "luma": 8.3,
+    "contrast": 17.0,
+    "sat": 59.7,
+    "lab": [
+     8.7,
+     -0.2,
+     -2.9
+    ]
+   },
+   "ref_stats": {
+    "luma": 20.0,
+    "contrast": 9.9,
+    "sat": 47.0,
+    "lab": [
+     21.3,
+     5.1,
+     -17.8
+    ]
+   },
+   "flags": [
+    "light key: still luma 8.3 vs ref 20.0",
+    "saturation: still 59.7 vs ref 47.0",
+    "palette: mean-Lab dE 20.2"
+   ],
+   "verdict": "match",
+   "note": "Glass palette matches the game (sky blue, blush, lilac frosted towers); the darker void is the authored opening look; medium is photoreal by plan. No people."
+  },
+  {
+   "label": "loc_dawn",
+   "still": "gen/loc_dawn.png",
+   "ref": "ref/world_dawn.jpg",
+   "t": 0.0,
+   "sha": "4d14a0c83fcb726a",
+   "still_stats": {
+    "luma": 83.3,
+    "contrast": 7.0,
+    "sat": 19.3,
+    "lab": [
+     85.2,
+     5.2,
+     12.7
+    ]
+   },
+   "ref_stats": {
+    "luma": 84.7,
+    "contrast": 9.3,
+    "sat": 17.0,
+    "lab": [
+     86.4,
+     5.8,
+     10.1
+    ]
+   },
+   "flags": [],
+   "verdict": "match",
+   "note": "Peach sunrise and pastel blue/pink/lilac pillars match the Dawn world palette and light key; photoreal by plan. No people."
+  },
+  {
+   "label": "loc_night",
+   "still": "gen/loc_night.png",
+   "ref": "ref/world_night.jpg",
+   "t": 0.0,
+   "sha": "fecf54c83d2bacb9",
+   "still_stats": {
+    "luma": 4.1,
+    "contrast": 7.5,
+    "sat": 96.8,
+    "lab": [
+     4.2,
+     4.0,
+     -13.9
+    ]
+   },
+   "ref_stats": {
+    "luma": 20.0,
+    "contrast": 9.9,
+    "sat": 47.0,
+    "lab": [
+     21.3,
+     5.1,
+     -17.8
+    ]
+   },
+   "flags": [
+    "light key: still luma 4.1 vs ref 20.0",
+    "saturation: still 96.8 vs ref 47.0"
+   ],
+   "verdict": "match",
+   "note": "Navy hall, moonbeam from the upper left and hanging glass bottles on cords match the Night world; darker by design. No people."
+  },
+  {
+   "label": "loc_ember",
+   "still": "gen/loc_ember.png",
+   "ref": "ref/world_ember.jpg",
+   "t": 0.0,
+   "sha": "6d376134bbdad2f3",
+   "still_stats": {
+    "luma": 55.1,
+    "contrast": 13.5,
+    "sat": 59.4,
+    "lab": [
+     61.1,
+     30.3,
+     35.1
+    ]
+   },
+   "ref_stats": {
+    "luma": 74.0,
+    "contrast": 13.1,
+    "sat": 34.4,
+    "lab": [
+     77.1,
+     14.2,
+     21.5
+    ]
+   },
+   "flags": [
+    "light key: still luma 55.1 vs ref 74.0",
+    "saturation: still 59.4 vs ref 34.4",
+    "palette: mean-Lab dE 26.5"
+   ],
+   "verdict": "match",
+   "note": "Take 3: coral/peach courtyard with rose, peach and amber frosted glass stacks, the Ember world palette; richer saturation and a deeper key are the photoreal medium by plan. No people, no text."
+  }
+ ]
+}

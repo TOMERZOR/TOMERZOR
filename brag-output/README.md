@@ -1,4 +1,39 @@
-# SHARD — the brag film
+# SHARD — the brag films
+
+## The second film: `brag-katana-v2.mp4`
+
+A 32.9-second launch film made in Higgsfield Katana: photoreal glass worlds generated for the game, cut on the beat with the real gameplay and code-drawn motion graphics.
+
+- `brag-katana-v2.mp4`: **the film** (1920×1080, 30 fps, 987 frames, −13.0 LUFS, true peak −1.5 dBTP). Frame 0 is the poster.
+- `brag-katana-v2.jpg`: the poster.
+- `katana-v2/`: everything needed to re-render it, with the QA record (`qa/gate_v1.md`), the prompts and job ids (`PROMPTS.md`) and the handoff (`HANDOFF.md`).
+
+**What is generated and what is code.**
+- Generated with Higgsfield: four location stills (Soul Cinematic), then five shots animated from them with Seedance 2.5:
+  - the glass city and the rolling ball;
+  - the impact;
+  - the dawn chain;
+  - the ember blasts;
+  - the night pendants.
+- Real game: the gameplay, level maps, balls and icon.
+- Code (`katana-v2/motion/`, one page drawn frame by frame):
+  - the type;
+  - the 3D phones;
+  - the glass fracture of words and frames;
+  - the zoom-through and whip transitions;
+  - the flashes and shakes.
+
+**Sound.**
+- Music: "Take this Higher" by Michael Ramir C. (Mixkit, same licence as below; terms in `katana-v2/src/mixkit-music-license.txt`). It plays from 0 s at its own 124 BPM; the drop lands on the impact and the second drop on the logo.
+- Effects:
+  - CC0 library recordings (listed in `katana-v2/audio/sfx_licenses.txt`);
+  - the game's own glass, cannon and bomb sounds, synced to the gameplay on screen.
+
+**Credits.** 465.08 Higgsfield credits (reconciled with the account's transactions): 464 for the five Seedance shots, 1.08 for nine stills.
+
+**Re-render** (in the Higgsfield sandbox; see `katana-v2/HANDOFF.md` §6). Text, timing and sound changes cost no credits.
+
+## The first film: `brag-katana.mp4`
 
 A 22.5-second launch film for SHARD, built with HyperFrames from the real game and finished with music in Higgsfield Katana.
 
@@ -8,14 +43,14 @@ A 22.5-second launch film for SHARD, built with HyperFrames from the real game a
 - `share-copy.txt`: post copy and alt text.
 - `brag-plan.md`: the angle, storyboard and sound plan.
 
-## Music
+### Music
 
 "Golden Storm" by Diego Nava, from Mixkit, under the [Mixkit Stock Music Free License](https://mixkit.co/license/#musicFree). The terms are saved in `katana/research/mixkit-music-license.txt`.
 
 - **Allowed:** social media posts, online marketing ads and YouTube. No credit is required.
 - **Not allowed:** using the track inside the game, TV or radio broadcast, CDs or DVDs, or a music-only remix.
 
-## How it's made
+### How it's made
 
 | Step | File | What it does |
 |---|---|---|
@@ -25,7 +60,7 @@ A 22.5-second launch film for SHARD, built with HyperFrames from the real game a
 | 4 | `finish.mjs` | Renders at full quality, normalises the mix to −14 LUFS and bakes in the poster (`brag.mp4`). |
 | 5 | `katana/` | The Katana finish, run in Higgsfield's sandbox (see below). |
 
-## The Katana finish
+### The Katana finish
 
 The picture is `brag.mp4`'s, stream-copied unchanged. Only the sound was rebuilt:
 
@@ -40,7 +75,7 @@ Files in `katana/`:
 
 The scripts expect the Katana sandbox layout (`src/`, `audio/`, `out/`).
 
-## Re-cutting to another track
+### Re-cutting to another track
 
 The HyperFrames cut sits on a 128 BPM grid, and the reveal (beat 8) is where the music should drop.
 

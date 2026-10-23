@@ -1,0 +1,337 @@
+[
+ {
+  "t": 0.03,
+  "file": "crack/kint__glass_005.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 1.21,
+  "file": "flash/kint__glass_004.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 2.18,
+  "file": "crack/kint__glass_003.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 3.12,
+  "file": "whoosh/swish__swosh-03.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 3.87,
+  "file": "scan/sf50__terminal_09.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 4.32,
+  "file": "ui_blip/kui__switch1.ogg",
+  "gain_db": 0
+ },
+ {
+  "t": 5.81,
+  "file": "boom/kimp__impactPunch_heavy_000.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 7.2,
+  "file": "whoosh/swish__swosh-13.ogg",
+  "gain_db": 0
+ },
+ {
+  "t": 7.7405,
+  "file": "boom/ksci__lowFrequency_explosion_000.ogg",
+  "gain_db": 0
+ },
+ {
+  "t": 7.7405,
+  "file": "crack/kimp__impactGlass_heavy_000.ogg",
+  "gain_db": 2
+ },
+ {
+  "t": 7.9824,
+  "file": "hit/kimp__impactPlate_heavy_003.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 8.52,
+  "file": "crack/kint__glass_001.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 8.6,
+  "file": "crack/kint__glass_005.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 8.66,
+  "file": "crack/kint__glass_003.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 8.7082,
+  "file": "crack/kimp__impactGlass_heavy_002.ogg",
+  "gain_db": 2
+ },
+ {
+  "t": 9.676,
+  "file": "hit/kimp__impactMetal_light_003.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 9.78,
+  "file": "scan/sf60__sfx_08a.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 11.37,
+  "file": "crack/kimp__impactGlass_medium_001.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 11.46,
+  "file": "flash/kimp__impactGlass_light_000.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 11.53,
+  "file": "crack/kint__glass_003.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 11.6115,
+  "file": "crack/kimp__impactGlass_heavy_003.ogg",
+  "gain_db": 3
+ },
+ {
+  "t": 11.6115,
+  "file": "boom/ksci__explosionCrunch_000.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 11.6315,
+  "file": "whoosh/swish__swosh-06.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 12.978,
+  "file": "longwhoosh/swish__swosh-38.ogg",
+  "gain_db": -1
+ },
+ {
+  "t": 13.547,
+  "file": "flash/kimp__impactGlass_light_000.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 14.4148,
+  "file": "whoosh/swish__swosh-01.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 14.8736,
+  "file": "longwhoosh/swish__swosh-35.ogg",
+  "gain_db": -1
+ },
+ {
+  "t": 15.4826,
+  "file": "boom/kimp__impactPunch_heavy_002.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 16.3503,
+  "file": "whoosh/swish__swosh-06.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 16.7401,
+  "file": "longwhoosh/swish__swosh-41.ogg",
+  "gain_db": -1
+ },
+ {
+  "t": 17.4181,
+  "file": "flash/kint__glass_004.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 18.4,
+  "file": "crack/kimp__impactGlass_medium_004.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 18.47,
+  "file": "crack/kint__glass_001.ogg",
+  "gain_db": -5
+ },
+ {
+  "t": 19.2536,
+  "file": "whoosh/swish__swosh-12.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 19.38,
+  "file": "ui_blip/kui__rollover3.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 19.43,
+  "file": "ui_blip/kui__rollover3.ogg",
+  "gain_db": -5
+ },
+ {
+  "t": 19.48,
+  "file": "ui_blip/kui__rollover3.ogg",
+  "gain_db": -6
+ },
+ {
+  "t": 20.3214,
+  "file": "type/key__keypress-006.ogg",
+  "gain_db": 6
+ },
+ {
+  "t": 20.4214,
+  "file": "type/key__keypress-006.ogg",
+  "gain_db": 6
+ },
+ {
+  "t": 20.5214,
+  "file": "type/key__keypress-006.ogg",
+  "gain_db": 6
+ },
+ {
+  "t": 20.6214,
+  "file": "type/key__keypress-006.ogg",
+  "gain_db": 6
+ },
+ {
+  "t": 20.7214,
+  "file": "type/key__keypress-006.ogg",
+  "gain_db": 6
+ },
+ {
+  "t": 20.8214,
+  "file": "type/key__keypress-006.ogg",
+  "gain_db": 6
+ },
+ {
+  "t": 21.0891,
+  "file": "whoosh/swish__swosh-14.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 21.2891,
+  "file": "whoosh/swish__swosh-20.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 21.36,
+  "file": "ui_blip/kui__rollover4.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 21.46,
+  "file": "ui_blip/kui__rollover4.ogg",
+  "gain_db": -5
+ },
+ {
+  "t": 23.0546,
+  "file": "dataswish/kdig__phaserUp7.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 23.2246,
+  "file": "boom/kdig__lowDown.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 23.2246,
+  "file": "crack/kimp__impactGlass_heavy_001.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 23.7085,
+  "file": "hit/kimp__impactPlate_heavy_001.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 24.1924,
+  "file": "boom/kimp__impactPunch_heavy_000.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 24.6763,
+  "file": "hit/kimp__impactMetal_heavy_004.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 25.1602,
+  "file": "crack/kimp__impactGlass_heavy_004.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 25.644,
+  "file": "hit/kimp__impactPlate_heavy_003.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 26.1279,
+  "file": "flash/kint__glass_004.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 26.6118,
+  "file": "hit/kimp__impactMetal_heavy_000.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 27.0957,
+  "file": "crack/kimp__impactGlass_medium_002.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 27.1086,
+  "file": "riser/rs50__synth_misc_12.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 27.3376,
+  "file": "dataswish/kdig__phaserDown3.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 27.4,
+  "file": "longwhoosh/swish__swosh-31.ogg",
+  "gain_db": -6
+ },
+ {
+  "t": 28.4505,
+  "file": "flash/kint__glass_004.ogg",
+  "gain_db": -3
+ },
+ {
+  "t": 29.0312,
+  "file": "boom/ksci__lowFrequency_explosion_001.ogg",
+  "gain_db": 0
+ },
+ {
+  "t": 29.0312,
+  "file": "crack/kimp__impactGlass_heavy_000.ogg",
+  "gain_db": 1
+ },
+ {
+  "t": 29.0512,
+  "file": "whoosh/swish__swosh-05.ogg",
+  "gain_db": -2
+ },
+ {
+  "t": 29.7086,
+  "file": "hit/kimp__impactMetal_light_000.ogg",
+  "gain_db": -4
+ },
+ {
+  "t": 29.82,
+  "file": "scan/sf60__sfx_08b.ogg",
+  "gain_db": -5
+ }
+]

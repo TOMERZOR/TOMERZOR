@@ -1,0 +1,14 @@
+{
+ "task": "A totally new SHARD launch film made with Katana, using credits: amazing motion graphics and a wow effect on people",
+ "mode": "creative edit of supplied material plus newly generated scenes (no reference video)",
+ "explicit_locks": [
+  {"attribute": "production route", "scope": "whole film", "value": "Higgsfield Katana, paid generation allowed", "instruction": "Make a totally new one with katana use credits"},
+  {"attribute": "content", "scope": "whole film", "value": "a new edit, not a re-cut of the previous film", "instruction": "Make a totally new one"},
+  {"attribute": "impact", "scope": "whole film", "value": "amazing motion graphics and a wow effect", "instruction": "do amazing motion graphics and a wow effect on people"},
+  {"attribute": "format", "scope": "whole film", "value": "landscape 16:9", "instruction": "earlier explicit choice in this conversation: Landscape 16:9"},
+  {"attribute": "style", "scope": "whole film", "value": "clean, Apple-like design language", "instruction": "earlier brief: Clean and in apple's design rules"}
+ ],
+ "creative_freedoms": ["story, scenes, camera and shot order", "generated photoreal worlds", "music choice and cut", "copy and typography", "duration within an ad-length film"],
+ "references": [],
+ "no_reference_reason": "The user supplied the product (the SHARD game: its gameplay captures, ball renders, icon, font and sounds) and a creative brief; the film is authored from that material and newly generated scenes, so no reference edit is adapted."
+}

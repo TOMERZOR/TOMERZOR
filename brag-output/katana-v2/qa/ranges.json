@@ -1,0 +1,336 @@
+{
+ "placements": [
+  {
+   "label": "A1 glide a",
+   "src": "gen/plate_A1.mp4",
+   "runs": [
+    [
+     2,
+     31
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A1 glide b",
+   "src": "gen/plate_A1.mp4",
+   "runs": [
+    [
+     37,
+     60
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A1 glide c",
+   "src": "gen/plate_A1.mp4",
+   "runs": [
+    [
+     65,
+     87
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A1 roll",
+   "src": "gen/plate_A1.mp4",
+   "runs": [
+    [
+     100,
+     197
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A2 approach",
+   "src": "gen/plate_A2.mp4",
+   "runs": [
+    [
+     15,
+     26
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A2 shatter",
+   "src": "gen/plate_A2.mp4",
+   "runs": [
+    [
+     27,
+     72
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "hero phone",
+   "src": "src/game/clips/hero.mp4",
+   "runs": [
+    [
+     71,
+     135
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "B dawn",
+   "src": "gen/plate_B.mp4",
+   "runs": [
+    [
+     23,
+     46
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "ember phone",
+   "src": "src/game/clips/ember.mp4",
+   "runs": [
+    [
+     89,
+     117
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "C ember",
+   "src": "gen/plate_C.mp4",
+   "runs": [
+    [
+     30,
+     52
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "night phone",
+   "src": "src/game/clips/night.mp4",
+   "runs": [
+    [
+     96,
+     124
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "D night",
+   "src": "gen/plate_D.mp4",
+   "runs": [
+    [
+     35,
+     80
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "map 0",
+   "src": "src/game/clips/map0.mp4",
+   "runs": [
+    [
+     0,
+     23
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "map 1",
+   "src": "src/game/clips/map1.mp4",
+   "runs": [
+    [
+     0,
+     23
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "map 2",
+   "src": "src/game/clips/map2.mp4",
+   "runs": [
+    [
+     0,
+     23
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "map 3",
+   "src": "src/game/clips/map3.mp4",
+   "runs": [
+    [
+     0,
+     23
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "map 4",
+   "src": "src/game/clips/map4.mp4",
+   "runs": [
+    [
+     40,
+     74
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b48",
+   "src": "gen/plate_B.mp4",
+   "runs": [
+    [
+     50,
+     61
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b49",
+   "src": "src/game/clips/ember.mp4",
+   "runs": [
+    [
+     63,
+     76
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b50",
+   "src": "gen/plate_C.mp4",
+   "runs": [
+    [
+     58,
+     70
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b51",
+   "src": "src/game/clips/night.mp4",
+   "runs": [
+    [
+     65,
+     78
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b52",
+   "src": "gen/plate_A2.mp4",
+   "runs": [
+    [
+     76,
+     88
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b53",
+   "src": "src/game/clips/hero.mp4",
+   "runs": [
+    [
+     137,
+     150
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b54",
+   "src": "gen/plate_D.mp4",
+   "runs": [
+    [
+     82,
+     93
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b55",
+   "src": "src/game/clips/ember.mp4",
+   "runs": [
+    [
+     141,
+     154
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "climax b56",
+   "src": "gen/plate_B.mp4",
+   "runs": [
+    [
+     64,
+     70
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A2 rewind",
+   "src": "gen/plate_A2.mp4",
+   "runs": [
+    [
+     105,
+     144
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A2 whole",
+   "src": "gen/plate_A2.mp4",
+   "runs": [
+    [
+     0,
+     11
+    ]
+   ],
+   "repeat": false
+  },
+  {
+   "label": "A2 poster",
+   "src": "gen/plate_A2.mp4",
+   "runs": [
+    [
+     90,
+     90
+    ]
+   ],
+   "repeat": false
+  }
+ ],
+ "fails": [],
+ "warnings": [
+  "src/game/clips/hero.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/hero.mp4) - fine for user footage",
+  "src/game/clips/ember.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/ember.mp4) - fine for user footage",
+  "src/game/clips/night.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/night.mp4) - fine for user footage",
+  "src/game/clips/map0.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map0.mp4) - fine for user footage",
+  "src/game/clips/map1.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map1.mp4) - fine for user footage",
+  "src/game/clips/map2.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map2.mp4) - fine for user footage",
+  "src/game/clips/map3.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map3.mp4) - fine for user footage",
+  "src/game/clips/map4.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map4.mp4) - fine for user footage"
+ ],
+ "ok": true,
+ "info_stale": false
+}

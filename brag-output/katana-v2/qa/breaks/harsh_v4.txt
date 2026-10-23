@@ -1,0 +1,18 @@
+{"label": "v4", "median_mix_2_6k": 31.9, "p99_mix_2_6k": 40.8, "p99_mix_6_14k": 39.5}
+{"event": "open tink 0.03", "mix_2_6k_peak": 28.8, "mix_2_6k_jump": 12.1, "mix_6_14k_jump": 13.5, "fx_2_6k_peak": 8.3}
+{"event": "open ting 1.21", "mix_2_6k_peak": 29.7, "mix_2_6k_jump": 13.7, "mix_6_14k_jump": 15.4, "fx_2_6k_peak": -22.5}
+{"event": "open tink 2.18", "mix_2_6k_peak": 29.2, "mix_2_6k_jump": 12.5, "mix_6_14k_jump": 14.4, "fx_2_6k_peak": -3.8}
+{"event": "drop 7.74", "mix_2_6k_peak": 35.9, "mix_2_6k_jump": 5.7, "mix_6_14k_jump": 9.9, "fx_2_6k_peak": 15.6}
+{"event": "tink trio 8.5", "mix_2_6k_peak": 37.5, "mix_2_6k_jump": 6.2, "mix_6_14k_jump": 6.7, "fx_2_6k_peak": 19.5}
+{"event": "explode 8.71", "mix_2_6k_peak": 40.4, "mix_2_6k_jump": 7.6, "mix_6_14k_jump": 6.3, "fx_2_6k_peak": 19.5}
+{"event": "cracks 11.4", "mix_2_6k_peak": 38.3, "mix_2_6k_jump": 3.9, "mix_6_14k_jump": 10.5, "fx_2_6k_peak": 19.2}
+{"event": "frame break 11.61", "mix_2_6k_peak": 37.0, "mix_2_6k_jump": 3.1, "mix_6_14k_jump": 6.9, "fx_2_6k_peak": 19.6}
+{"event": "hero chain 15.4-16.9", "mix_2_6k_peak": 39.1, "mix_2_6k_jump": 13.0, "mix_6_14k_jump": 16.3, "fx_2_6k_peak": 26.9}
+{"event": "arrival 19.84", "mix_2_6k_peak": 41.1, "mix_2_6k_jump": 7.6, "mix_6_14k_jump": 8.4, "fx_2_6k_peak": 19.3}
+{"event": "ember chain 23.3", "mix_2_6k_peak": 42.7, "mix_2_6k_jump": 8.8, "mix_6_14k_jump": 14.2, "fx_2_6k_peak": 31.5}
+{"event": "night 28.2", "mix_2_6k_peak": 39.2, "mix_2_6k_jump": 9.2, "mix_6_14k_jump": -2.2, "fx_2_6k_peak": 21.4}
+{"event": "night last 30.06", "mix_2_6k_peak": 36.4, "mix_2_6k_jump": 2.2, "mix_6_14k_jump": 4.2, "fx_2_6k_peak": 26.5}
+{"event": "arrival ting 30.97", "mix_2_6k_peak": 36.9, "mix_2_6k_jump": 2.5, "mix_6_14k_jump": 2.6, "fx_2_6k_peak": 7.6}
+{"event": "D burst 31.77", "mix_2_6k_peak": 38.0, "mix_2_6k_jump": 3.4, "mix_6_14k_jump": 2.8, "fx_2_6k_peak": 18.7}
+{"event": "rewind ting 41.81", "mix_2_6k_peak": 35.5, "mix_2_6k_jump": 4.8, "mix_6_14k_jump": 6.5, "fx_2_6k_peak": 20.4}
+{"event": "logo 42.58", "mix_2_6k_peak": 32.8, "mix_2_6k_jump": 0.3, "mix_6_14k_jump": 1.3, "fx_2_6k_peak": 23.8}

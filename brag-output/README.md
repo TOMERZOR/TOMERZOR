@@ -4,9 +4,9 @@
 
 A 48.4-second launch film made in Higgsfield Katana: photoreal glass worlds generated for the game, the real gameplay shown large with a how-to-play walkthrough, and code-drawn motion graphics, cut to the music.
 
-- `brag-katana-v2.mp4`: **the film** (1920×1080, 30 fps, 1452 frames, −12.6 LUFS, true peak −1.7 dBTP). Frame 0 is the poster.
+- `brag-katana-v2.mp4`: **the film** (1920×1080, 30 fps, 1452 frames, −12.9 LUFS, true peak −1.9 dBTP). Frame 0 is the poster.
 - `brag-katana-v2.jpg`: the poster.
-- `katana-v2/`: everything needed to re-render it, with the QA record (`qa/gate_v2.md`; the first cut's is `qa/gate_v1.md`), the prompts and job ids (`PROMPTS.md`) and the handoff (`HANDOFF.md`).
+- `katana-v2/`: everything needed to re-render it, with the QA record (`qa/gate_v2.md` for the picture, `qa/gate_v4.md` for the sound; the first cut's is `qa/gate_v1.md`), the prompts and job ids (`PROMPTS.md`) and the handoff (`HANDOFF.md`).
 
 **This cut.** The first cut (33 s) moved too fast to follow the game. This one runs 48 s and shows how the game is played:
 - How to play, on the real level 4 seen close up:
@@ -37,12 +37,12 @@ A 48.4-second launch film made in Higgsfield Katana: photoreal glass worlds gene
 - Music: "Take this Higher" by Michael Ramir C. (Mixkit, same licence as below; terms in `katana-v2/src/mixkit-music-license.txt`). It plays from 0 s at its own 124 BPM; the drop lands on the impact, the second drop on the ball's wall bounce in the night level, and "Coming soon" on the last big hit.
 - Effects:
   - CC0 library recordings (listed in `katana-v2/audio/sfx_licenses.txt`);
-  - the game's own glass, cannon, bomb and level-clear sounds, rebuilt from each capture's sound log by `capture/stems.py` with the game's own rules (quieter breaks when they pile up, a soft tap on wall bounces, the slow-motion sigh) and synced to the gameplay on screen.
-- Glass: every glass break goes through one softened chain (a dip in the sharpest frequencies and the game's own small room), with one or two layers per moment and none boosted, so the breaks sit under the music instead of cutting over it (`katana-v2/qa/gate_v3.md` has the before/after measurements).
+  - the game's own cannon, bomb and level-clear sounds and its chain bells, rebuilt from each capture's sound log by `capture/stems.py` with the game's own rules (quieter breaks when they pile up, a soft tap on wall bounces, the slow-motion sigh) and synced to the gameplay on screen. For the film the bells and the level-clear chime play in the music's key, D minor.
+- Breaks: no glass. Every break is a soft round pop, and a big one adds a bell ping tuned to a note the music is playing at that moment; the sparkles are quick D-F-A pings and the rewind is the same sounds reversed. The pops and pings were made for the film with ElevenLabs sound effects (`capture/sfx/`; prompts, takes and terms in its `CREDITS.md`). They sit under 2 kHz, below the sharp range the glass used to fill (`katana-v2/qa/gate_v4.md` has the measurements).
 
-**Credits.** 465.08 Higgsfield credits, all spent on the first cut (reconciled with the account's transactions): 464 for the five Seedance shots, 1.08 for nine stills. This cut spent none.
+**Credits.** 465.08 Higgsfield credits, all spent on the first cut (reconciled with the account's transactions): 464 for the five Seedance shots, 1.08 for nine stills. The later cuts spent none; the break sounds used 45 ElevenLabs credits.
 
-**Re-render** (in the Higgsfield sandbox; see `katana-v2/HANDOFF.md` §6). Text, timing and sound changes cost no credits.
+**Re-render** (in the Higgsfield sandbox; see `katana-v2/HANDOFF.md` §6). Text, timing and mix changes cost no Higgsfield credits.
 
 ## The first film: `brag-katana.mp4`
 

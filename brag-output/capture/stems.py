@@ -1,8 +1,9 @@
 # One sound stem per gameplay clip, rebuilt from the sound events the game logged while it was captured, through the
-# game's own chain (js/audio.js): recorded glass, cannon and bombs from its samples, the crystal bells that climb with
-# a chain, soft thuds when the ball meets a wall, the slow-motion sigh, quieter glass when breaks pile up, a small room,
-# and one fixed output level for every level's stem. For the film the glass recordings also lose their sting (a presence
-# dip and a gentler top) and sit a little under the bells. No music here; the film's bed comes separately.
+# game's own chain (js/audio.js): the cannon and bombs from its samples, the crystal bells that climb with a chain, soft
+# thuds when the ball meets a wall, the slow-motion sigh, quieter breaks when they pile up, a small room, and one fixed
+# output level for every level's stem. For the film each break is a satisfying pop instead of breaking glass (sfx/:
+# soft pops for small pieces, a pop with a bell ping for big ones), and the bells, pings and level-clear chime are in
+# the film music's key, D minor. No music here; the film's bed comes separately.
 # usage: python3 capture/stems.py hero2 ember2 night2
 import json, os, subprocess, sys, wave, random
 import numpy as np
@@ -12,18 +13,19 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SFX = os.path.join(HERE, '../../shard/assets/sfx')
 OUT = os.path.join(HERE, '../composition/assets/audio')
 os.makedirs(OUT, exist_ok=True)
-PENTA = [0, 2, 4, 7, 9]
-SOFT = 'equalizer=f=3400:t=q:w=0.9:g=-5,highshelf=f=7000:g=-5,lowpass=f=12000'  # the film's glass: less bite, same body
-GLASS_DB = -4  # the glass under the bells, so a chain reads as rising notes rather than a wall of breaks
-STEM_GAIN = 0.6  # one level for every stem (not each normalised to its own loudest break), so GLASS_DB really lowers the glass
+FILM = os.path.join(HERE, 'sfx')  # the film's break sounds (sfx/CREDITS.md)
+KEY_ROOT, KEY_STEPS = 587.33, [0, 3, 5, 7, 10]  # D minor pentatonic from D5: the chain climbs it, as the game climbs its own scale
+PING_HZ = {'ping1': 1744.9, 'ping2': 1761.2}  # where each recorded ping rings (A6; katana-v2/qa/breaks/track.py)
+PING_LO = 1046.5  # a big piece's ping lands in C6-C7, under the 2-5 kHz band where the ear is sharpest
+BREAK_DB = -8  # the breaks against the bells
+STEM_GAIN = 0.5  # one level for every stem (not each normalised to its own loudest break), so BREAK_DB really sets the breaks
 
-def load(n, af=None):
-    cmd = ['ffmpeg', '-v', 'quiet', '-i', f'{SFX}/{n}.mp3', '-ac', '1', '-ar', str(SR)] + (['-af', af] if af else []) + ['-f', 'f32le', '-']
-    raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+def load(path):
+    raw = subprocess.run(['ffmpeg', '-v', 'quiet', '-i', path, '-ac', '1', '-ar', str(SR), '-f', 'f32le', '-'], capture_output=True, check=True).stdout
     return np.frombuffer(raw, dtype=np.float32).astype(np.float64)
 
-S = {n: load(n, SOFT if n.startswith('glass') else None)
-     for n in [f'{p}{i}' for p in ('glass_s', 'glass_b') for i in range(1, 5)] + [f'boom{i}' for i in range(1, 4)] + [f'fire{i}' for i in range(1, 4)]}
+S = {n: load(f'{SFX}/{n}.mp3') for n in [f'boom{i}' for i in range(1, 4)] + [f'fire{i}' for i in range(1, 4)]}
+S.update({n: load(f'{FILM}/break_{n}.wav') for n in ['pop1', 'pop2', 'pop3', 'pop4', 'ping1', 'ping2']})
 
 def rate(sig, r):
     n = int(len(sig) / r)
@@ -75,20 +77,26 @@ def air(d, gain, cutoff):
     return x * gain * np.minimum(1, t / 0.002) * (1e-4 / gain) ** np.minimum(1, t / d) * 0.6
 
 def win_chime():
-    # the game's win(): a rising C-major arpeggio, its top note rung out as a crystal bell, a shimmer of air
+    # the game's win(): a rising arpeggio, its top note rung out as a crystal bell, a shimmer of air (the game's is
+    # C major; here F major, C-F-A, which sits inside the film's D minor)
     out = np.zeros(int(SR * 2.4))
     def put(sig, at):
         s = int(at * SR); e = min(len(out), s + len(sig)); out[s:e] += sig[:e - s]
-    for i, f in enumerate([523.25, 659.25, 783.99, 1046.5, 1318.5]):
+    for i, f in enumerate([523.25, 698.46, 880.0, 1046.5, 1396.91]):
         put(tone(f, 0.9 - i * 0.08, 0.08, 0.005), 0.05 + i * 0.085)
         put(tone(f * 2, 0.4, 0.022, 0.005), 0.05 + i * 0.085)
-    put(bell(1568, 1.6, 0.05), 0.41)
+    put(bell(1760, 1.6, 0.05), 0.41)
     put(air(0.7, 0.03, 7500), 0.39)
     return out
 
+def note(combo):
+    # the note of a chain's link: each link climbs the film's scale, as the game climbs its own
+    step = min(combo - 2, 11)
+    return KEY_ROOT * 2 ** ((KEY_STEPS[step % 5] + 12 * (step // 5)) / 12)
+
 def chime(combo):
-    # the game's chime(): each link of a chain climbs the pentatonic scale
-    step = min(combo - 2, 11); f = 659.25 * 2 ** ((PENTA[step % 5] + 12 * (step // 5)) / 12)
+    # the game's chime(): a crystal bell on the link's note
+    f = note(combo)
     b, a, c = bell(f, 0.9, 0.075), tone(f, 0.5, 0.05, 0.004), tone(f * 2, 0.3, 0.02, 0.004)
     out = np.zeros(max(len(b), len(a), len(c))); out[:len(b)] += b; out[:len(a)] += a; out[:len(c)] += c
     return out
@@ -143,10 +151,15 @@ def stem(name):
             if t - last < 0.02 and len(voices) > 5: continue  # the game drops a break that lands on five others
             last = t; voices.append(t)
             crowd = 0.65 if len(voices) > 3 else 1.0
-            big = min(1, size)
-            r = (0.9 + random.random() * 0.24) * (1 + (0.62 - big) * 0.35)
-            g = (0.5 + power * 0.5) * crowd * 10 ** (GLASS_DB / 20)
-            add(rate(S[pick('glass_b' if big >= 0.62 else 'glass_s', 4)], r), t + 0.005, g, (x - 0.5) * 1.4, 0.5)
+            g = (0.5 + power * 0.5) * crowd * 10 ** (BREAK_DB / 20)
+            if min(1, size) >= 0.62:
+                # a big piece: a pop with a bell ping, its ping moved to the chain's note (folded into C6-C7)
+                f = note(combo) if combo and combo > 1 else 1760.0
+                p = pick('ping', 2)
+                sig = rate(S[p], f * 2 ** np.ceil(np.log2(PING_LO / f)) / PING_HZ[p])
+            else:
+                sig = rate(S[pick('pop', 4)], 0.94 + random.random() * 0.14)
+            add(sig, t + 0.005, g, (x - 0.5) * 1.4, 0.5)
             if combo and combo > 1:
                 add(chime(combo), t + 0.03, 1.0, 0, 0.8)
         elif k == 'boom':

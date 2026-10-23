@@ -2,7 +2,7 @@
 
 > For Claude in a new chat: read this file fully, then PROMPTS.md. Resume the workspace with
 > `source "$HF_WORKFLOWS/katana/scripts/rr.sh"` and `rr_restore katana-shard-v2 '<state url>'` (the URL is in the
-> chat message that delivered the latest cut; the archive is katana-shard-v2_v3_state.tar.gz). Talk to the user in English, briefly.
+> chat message that delivered the latest cut; the archive is katana-shard-v2_v4_state.tar.gz). Talk to the user in English, briefly.
 
 ## 1. What this is
 No reference video. The user asked: "Make a totally new one with katana use credits and do amazing motion graphics and a
@@ -11,6 +11,7 @@ puzzle game (gameplay captures, level maps, 12 ball skins and the app icon are i
 carried over: high energy, music, sharp quick motion graphics, sound effects, clean and in Apple's design style, landscape 16:9.
 Feedback on v1: "It runs too fast and i can't quite understand what happens in the game itself. Fix that" (answered by v2).
 Feedback on v2 (in Hebrew): the glass-breaking sound effect is a bit harsh and annoying (answered by v3, sound only).
+Feedback on v3: "Mabye switch the glass sound to a satisfying other sound?" (answered by v4, sound only).
 
 ## 2. Current state
 | Version | File | Frames · fps · size | Audio | What changed |
@@ -18,12 +19,14 @@ Feedback on v2 (in Hebrew): the glass-breaking sound effect is a bit harsh and a
 | v1 | out/katana-shard-v2_v1.mp4 (22.7 MB) | 987 · 30 · 1920x1080 | Take this Higher + effects, -13.0 LUFS, -1.5 dBTP | first cut |
 | v2 | out/katana-shard-v2_v2.mp4 (27.2 MB) | 1452 · 30 · 1920x1080 | same track, 48.4 s of it, -12.6 LUFS, -1.7 dBTP | slower: how to play on the real level 4, two more levels with captions, the per-beat climax removed |
 | v3 | out/katana-shard-v2_v3.mp4 (27.2 MB) | v2's picture, stream-copied | -12.9 LUFS, -1.9 dBTP | softer glass: one softened glass bus, fewer and lower glass layers, the levels' sound rebuilt with the game's own rules (qa/gate_v3.md) |
-Feedback status: v3 delivered 2026-10-23, no feedback yet.
+| v4 | out/katana-shard-v2_v4.mp4 (27.2 MB) | v2's picture, stream-copied | -12.9 LUFS, -1.9 dBTP | no glass: every break is a soft pop or a pop with a bell ping made for the film (ElevenLabs), the pings tuned to the music, the sparkles and the rewind made of the same sounds (qa/gate_v4.md) |
+Feedback status: v4 delivered 2026-10-23, no feedback yet.
 
 ## 3. Decisions
 - User: Katana with paid generation; a new film; amazing motion graphics and wow; landscape 16:9; Apple-clean.
 - User (on v1): slower, and make what happens in the game understandable.
 - User (on v2): the glass-breaking sound is harsh and annoying.
+- User (on v3): switch the glass sound to a satisfying other sound.
 - Authored (not user decisions): v1 32.9 s; v2 48.4 s at 30 fps (longer than the usual 15-25 s because the user asked for
   slower and clearer); photoreal generated glass worlds rhyming with the real game; Nunito type; music "Take this Higher"
   (Mixkit, asset 1012) from 0 s at its own 124 BPM; spending cap 640 credits (internal). v2 spent no credits.
@@ -57,10 +60,14 @@ cracks and breaks away to the phone (b24, 11.61). New in v2:
   with `comp/page_render.py`. Footage comes from plates/<id>/ frame folders (render.py prep). v1's page is kept in
   motion_v1/, with tools/build_mix_v1.py and tools/uses_v1.js.
 - Sound: tools/build_mix.py (music edit, CC0 library effects via sfx.py bed, the game's own sounds synced to the gameplay on
-  screen, every glass break on one softened bus with the game's small room -> audio/glass_bed.wav, ducking, limiter)
-  -> audio/mix.m4a. Glass rules since v3: one or two glass layers per moment, never boosted, all through the bus; the
-  level stems come from capture/stems.py at one fixed level (STEM_GAIN) and their mix gains are matched on the cannon shot. Licences: audio/sfx_licenses.txt, src/mixkit-music-license.txt,
-  src/sfx/assets/sfx/CREDITS.md.
+  screen, every break and sparkle on one bus of pops and pings made for the film, src/sfx/film/, in the game's small room
+  -> audio/breaks_bed.wav, ducking, limiter) -> audio/mix.m4a. Break rules since v4: no glass anywhere (the Pixabay sparkle
+  and the reversed glass are gone too); a big break is the deep pop plus a ping on a note the music holds there
+  (qa/breaks/notes.py); each moment's level is set against the music inside the sound's own band (qa/breaks/bands.py,
+  calib.py: big breaks about +8 dB, small pops about +3 dB). The level stems come from capture/stems.py (pops and pings,
+  chain bells in D minor) at one fixed level (STEM_GAIN) and their mix gains are matched on the cannon shot.
+  Licences: audio/sfx_licenses.txt, src/mixkit-music-license.txt, src/sfx/assets/sfx/CREDITS.md and, for the break
+  sounds, the repo's brag-output/capture/sfx/CREDITS.md.
 
 ## 6. How to resume and re-render
 ```
@@ -72,11 +79,13 @@ for c in hero2 ember2 night2; do python3 $RR/comp/render.py prep . src/game2/$c.
 python3 tools/build_mix.py                          # sound
 node tools/uses.js && python3 $RR/prodcheck.py ranges . --uses qa/uses.json
 python3 $RR/comp/page_render.py render . --jobs $(nproc)   # out/comp.mp4 (use an XL sandbox: ~4 min)
-python3 $RR/deliver.py out/comp.mp4 out/katana-shard-v2_v4.mp4
-# sound-only change: keep the picture and swap the audio (no render):
-# ffmpeg -i out/katana-shard-v2_v3.mp4 -i audio/mix.m4a -map 0:v -map 1:a -c copy -movflags +faststart out/comp.mp4
+python3 $RR/deliver.py out/comp.mp4 out/katana-shard-v2_v5.mp4
+# sound-only change: keep the picture and swap the audio (no render), then deliver.py as above:
+# ffmpeg -i out/katana-shard-v2_v4.mp4 -i audio/mix.m4a -map 0:v -map 1:a -c copy -movflags +faststart out/comp.mp4
 ```
-Text, timing, colour and sound changes need no new generation (0 credits). If src/game2 is missing, the captures are in
+Text, timing, colour and mix changes need no new generation (0 credits). The saved state leaves out audio/*.wav and
+out/comp.mp4 (tools/build_mix.py rebuilds the WAVs exactly; run it before the qa/breaks scripts) and keeps the v2 and v3
+comparison beds as FLAC (qa/glass/old/, qa/breaks/v3/). If src/game2 is missing, the captures are in
 the user's repo (brag-output/composition/assets/clips/*2.mp4 are git-ignored; re-run capture.mjs hero2 ember2 night2 with
 shard/ served on port 8080, then stems.py hero2 ember2 night2).
 
@@ -85,7 +94,9 @@ analysis/task-contract.json, plan/creative-plan.json, plan/gen_plan.json, plan/p
 plan/ledger_summary.md, plan/transactions.json, qa/styleframes.json, qa/logic/, qa/uses.json, qa/ranges.json,
 qa/gate_v1.md, qa/inspection_v1.json, qa/v1/ (sheets, crops), qa/gate_v2.md, qa/inspection_v2.json, qa/v2/ (sheets, crops,
 the per-frame comparison of the night retime), qa/gate_v3.md, qa/glass/ (harshness measurements, the v2 mix and stems
-for comparison, spectrograms), motion/, motion_v1/, tools/, comp/sfx_cues.json, audio/, src/game2/.
+for comparison, spectrograms), qa/gate_v4.md, qa/breaks/ (the music's notes, the break sounds' pitch, per-moment
+calibration against v3 and the music, harshness v3 vs v4, spectrograms; v3/ holds v3's beds and mix), src/sfx/film/,
+motion/, motion_v1/, tools/, comp/sfx_cues.json, audio/, src/game2/.
 
 ## 8. Higgsfield ids
 | What | Job / media id | Result | On screen in v2 |
@@ -122,6 +133,16 @@ first bomb 4.63, chain 4.8-5.0, slow motion 6.5, win 7.73; night2 (level 112) fi
   stems are written at one fixed level since v3.
 - In this mix the Kenney impactGlass files are dull clunks (spectral centre 0.6-1.4 kHz); the harsh part was the game's
   own glass samples at 0 dB and the bright kint glass tings.
+- Higgsfield generate_audio does not make sound effects; the break sounds came from ElevenLabs (flow uj9NsU96K2WOcd3agfhJ).
+  The burst take's two channels cancel when summed (use one channel); each pop take holds several pops (cut single ones).
+- Pings folded into the octave around A6 put their top notes at 2.1-2.4 kHz, 7-10 dB up in that band in the chains;
+  stems.py folds them into C6-C7 so they stay under 2 kHz.
+- The game's own chain bells climb E major pentatonic, which clashes with this D minor track; stems.py climbs D minor
+  pentatonic for the film (and plays the level-clear chime in F major).
+- The state upload (rr_save) failed with HTTP 400 at 433 MB and went through at 365 MB: clear big rebuildable files
+  (audio/*.wav, out/comp.mp4) before saving.
+- Old glass sat 7-14 dB under the music by loudness yet cut through above 6 kHz; the mellow new sounds live at
+  0.3-2.5 kHz with the music, so levels were set by the band each sound is loudest in, not by overall loudness.
 
 ## 11. Authored adaptations and limitations
 Authored: new story, 48.4 s (v2), new text, music from the Mixkit library, the drawn finger (a circle, not a hand) driven by
@@ -131,7 +152,8 @@ the logged aim angles. No open production defects in the v2 gate. Audio was meas
 v1: quoted 465.08 · charged 465.08 (reconciled with transactions, 14 jobs matched, no refunds) · 464.48 in the film · 0.6 on
 five unused still takes. Balance 945.44 before, 466.36 after (14 credits of other image jobs on the account at 07:32-07:34
 belong to another chat). Full table: plan/ledger_summary.md. v2: 0 credits (a re-cut of the same shots plus new captures from
-the game). Seedance on-screen use in v2: 19.5 s of 29 s generated (67 %). v3: 0 credits (sound only).
+the game). Seedance on-screen use in v2: 19.5 s of 29 s generated (67 %). v3: 0 credits (sound only). v4: 0 Higgsfield
+credits; 45.3 ElevenLabs credits on the user's ElevenLabs account for the break sounds (12 takes, 6 used).
 
 ## 13. Remaining limitations
 None recorded.

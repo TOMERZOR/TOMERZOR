@@ -30,14 +30,10 @@ whoosh/swish__swosh-12.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup 
 whoosh/swish__swosh-13.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
 whoosh/swish__swosh-14.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
 whoosh/swish__swosh-20.ogg  |  Swish - bamboo stick weapon swhoshes  |  qubodup (Iwan Gabovitch)  |  https://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes  |  CC0 1.0
-crack/kimp__impactGlass_heavy_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-crack/kimp__impactGlass_heavy_002.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-crack/kimp__impactGlass_heavy_003.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-crack/kimp__impactGlass_medium_001.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-crack/kimp__impactGlass_medium_004.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-crack/kint__glass_001.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
-crack/kint__glass_003.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
-crack/kint__glass_005.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
-flash/kimp__impactGlass_light_000.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-flash/kimp__impactGlass_light_002.ogg  |  Impact Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/impact-sounds  |  CC0 1.0
-flash/kint__glass_004.ogg  |  Interface Sounds  |  Kenney (kenney.nl)  |  https://kenney.nl/assets/interface-sounds  |  CC0 1.0
+
+Made for this film with ElevenLabs sound effects (not CC0; prompts and terms in capture/sfx/CREDITS.md):
+film/break_deep.mp3  |  SHARD film  |  ElevenLabs sound effects (eleven_text_to_sound_v2)  |  https://elevenlabs.io  |  ElevenLabs terms
+film/break_ping1.mp3  |  SHARD film  |  ElevenLabs sound effects (eleven_text_to_sound_v2)  |  https://elevenlabs.io  |  ElevenLabs terms
+film/break_ping2.mp3  |  SHARD film  |  ElevenLabs sound effects (eleven_text_to_sound_v2)  |  https://elevenlabs.io  |  ElevenLabs terms
+film/break_pop1.mp3  |  SHARD film  |  ElevenLabs sound effects (eleven_text_to_sound_v2)  |  https://elevenlabs.io  |  ElevenLabs terms
+film/break_pop2.mp3  |  SHARD film  |  ElevenLabs sound effects (eleven_text_to_sound_v2)  |  https://elevenlabs.io  |  ElevenLabs terms

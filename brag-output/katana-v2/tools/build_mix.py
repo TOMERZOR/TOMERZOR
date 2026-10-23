@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The SHARD film soundtrack (v2, 48.4 s): Take this Higher (Mixkit 1012) from 0 s with a closing fade, a bed of recorded
-CC0 library effects (sfx.py bed), a bed of the game's own sounds synced to the picture, and every glass break on one
-softened bus (a presence dip, a gentler top and the game's small room). Writes
+CC0 library effects (sfx.py bed), a bed of the game's own sounds synced to the picture, and every break on one bus of
+soft pops and bell pings made for the film (no glass), tuned to the music and in the game's small room. Writes
 audio/mix.wav (48 kHz stereo, exactly the film length) and audio/mix.m4a (AAC 256k) and prints the encoded
 loudness. Run from the workspace: python3 tools/build_mix.py"""
 import json, os, subprocess, sys
@@ -49,18 +49,16 @@ subprocess.run([sys.executable, f'{RR}/sfx.py', 'bed', W, '--cues', 'comp/sfx_cu
 
 # ---- the game's own sounds: (file, at, gain dB, source in-point, source length, tempo, fade-out s)
 G = [
-    (GS + 'game-fire1.mp3', 5.80, -4), (GS + 'impact-1.mp3', tb(16), -3), (GS + 'sparkle.mp3', tb(20) + 0.02, -8),
-    # the three levels' own sound, from their capture logs (capture/stems.py: the game's chain with softened glass, all
-    # three at one fixed level; these gains keep the cannon, bombs and bells where they were and let the glass drop);
+    (GS + 'game-fire1.mp3', 5.80, -4), (GS + 'impact-1.mp3', tb(16), -3),
+    # the three levels' own sound, from their capture logs (capture/stems.py: the game's chain with the film's pops and
+    # pings for its breaks, all three at one fixed level; these gains keep the cannon, bombs and bells where they were);
     # the level-clear chime of level 4 lifted so it is heard
-    (ST2 + 'game-hero2.mp3', tb(24), 0.7, 0.75, 6.35, 1.0, 0.12),
-    (ST2 + 'game-hero2.mp3', tb(24) + 6.35, 9.7, 7.1, tb(41) - tb(24) - 6.35, 1.0, 0.3),
-    (GS + 'sparkle.mp3', tb(41) + 0.02, -10),
-    (ST2 + 'game-ember2.mp3', tb(44), -2.6, 2.3, tb(53) - tb(44), 1.0, 0.25),
+    (ST2 + 'game-hero2.mp3', tb(24), 2.3, 0.75, 6.35, 1.0, 0.12),
+    (ST2 + 'game-hero2.mp3', tb(24) + 6.35, 11.3, 7.1, tb(41) - tb(24) - 6.35, 1.0, 0.3),
+    (ST2 + 'game-ember2.mp3', tb(44), -1.0, 2.3, tb(53) - tb(44), 1.0, 0.25),
     (GS + 'game-boom1.mp3', tb(53), -6),
-    (ST2 + 'game-night2.mp3', tb(56.5), 4.1, 2.708, tb(64) - tb(56.5), 1.0, 0.25),
+    (ST2 + 'game-night2.mp3', tb(56.5), 5.7, 2.708, tb(64) - tb(56.5), 1.0, 0.25),
     (GS + 'impact-2.mp3', tb(88), -2), (GS + 'game-boom1.mp3', tb(88), -8),
-    (GS + 'sparkle.mp3', tb(89.4), -9),
 ]
 ins, fc, labels = [], [], []
 for i, g in enumerate(G):
@@ -77,41 +75,52 @@ for i, g in enumerate(G):
 fc.append(''.join(labels) + f'amix=inputs={len(G)}:normalize=0:dropout_transition=0,atrim=end={DUR:.4f},apad=whole_dur={DUR:.4f}[out]')
 subprocess.run(['ffmpeg', '-v', 'error', '-y', *ins, '-filter_complex', ';'.join(fc), '-map', '[out]', '-ar', '48000', '-c:a', 'pcm_s24le', 'audio/game_bed.wav'], check=True)
 
-# ---- every glass break on one bus: one or two layers per moment, well under the hits' booms, the same softening as
-# capture/stems.py (a presence dip and a gentler top) and the game's small room. (file, onset time, gain dB on the raw file)
+# ---- every break and sparkle on one bus, no glass: the film's own pops and pings (capture/sfx, made for this film with
+# ElevenLabs sound effects). A big break is a deep soft pop with a bell ping tuned to a note the music holds there
+# (qa/breaks/notes.py), a small one a pop, a sparkle a quick D-F-A of pings; the swells into SHATTER. and the rewind are
+# the same sounds reversed. Each moment matches the old glass's loudness (qa/breaks/calib.py); all in the game's small room.
+# (sound, time, gain dB on the file, note, reversed length s, pan): a reversed sound ends on its attack at the time
 import numpy as np
 SR = 48000
-LIB = f'{RR}/sfx_lib/'
-SOFT = 'equalizer=f=3400:t=q:w=0.9:g=-5,highshelf=f=7000:g=-5,lowpass=f=12000'
-GLASS = [
-    (LIB + 'crack/kint__glass_005.ogg', 0.03, -22), (LIB + 'flash/kint__glass_004.ogg', 1.21, -27), (LIB + 'crack/kint__glass_003.ogg', 2.18, -24),
-    (LIB + 'crack/kimp__impactGlass_heavy_000.ogg', tb(16), -12.5), (GS + 'game-glass_b1.mp3', tb(16), -6),
-    (LIB + 'crack/kint__glass_001.ogg', 8.52, -20),
-    (LIB + 'crack/kimp__impactGlass_heavy_002.ogg', tb(18), -12.5), (GS + 'game-glass_b2.mp3', tb(18), -9),
-    (GS + 'game-glass-rev.mp3', tb(20) - 0.731, -5),
-    (LIB + 'crack/kimp__impactGlass_medium_001.ogg', 11.37, -12),
-    (LIB + 'crack/kimp__impactGlass_heavy_003.ogg', tb(24), -10.5), (GS + 'game-glass_b3.mp3', tb(24), -6),
-    (LIB + 'flash/kimp__impactGlass_light_000.ogg', tb(41), -19),
-    (LIB + 'flash/kimp__impactGlass_light_002.ogg', tb(64), -19),
-    (LIB + 'crack/kimp__impactGlass_medium_004.ogg', tb(64) + 0.8, -13), (GS + 'game-glass_s2.mp3', tb(64) + 0.8, -9),
-    (GS + 'game-glass-rev.mp3', tb(84), -5), (GS + 'game-glass-rev.mp3', tb(84) + 0.5, -7),
-    (LIB + 'flash/kimp__impactGlass_light_002.ogg', tb(86.4), -19),
-    (LIB + 'crack/kimp__impactGlass_heavy_000.ogg', tb(88), -9), (GS + 'game-glass_b1.mp3', tb(88), -8),
+BRK = 'src/sfx/film/break_'
+PING_HZ = {'ping1': 1744.9, 'ping2': 1761.2}  # where each recorded ping rings (qa/breaks/track.py)
+NOTE = {'D6': 1174.66, 'F6': 1396.91, 'G6': 1567.98, 'A6': 1760.0}
+K = lambda s, t, g, note=None, rev=0, pan=0: (s, round(t, 4), g, note, rev, pan)
+sparkle = lambda t, g: [K('ping2', t, g, 'D6', pan=-0.35), K('ping1', t + 0.07, g - 3, 'F6'), K('ping2', t + 0.14, g - 6, 'A6', pan=0.35)]
+BREAKS = [
+    K('ping2', 0.03, -32, 'D6', pan=-0.3), K('ping1', 1.21, -32, 'F6'), K('ping2', 2.18, -32, 'A6', pan=0.3),  # the glass city
+    K('deep', tb(16), -13), K('ping1', tb(16), -16, 'G6'),                 # the impact on the drop
+    K('pop2', 8.52, -21),
+    K('deep', tb(18), -18), K('ping2', tb(18), -21, 'F6'),                 # the tower bursts
+    K('deep', tb(20) - 0.099, -12, rev=0.9),                               # the swell into SHATTER.
+    *sparkle(tb(20) + 0.02, -17.5),
+    K('pop1', 11.37, -22.5),
+    K('deep', tb(24), -10), K('ping1', tb(24), -13, 'A6'),                 # the frame breaks to the game
+    *sparkle(tb(41) + 0.02, -21),                                          # arrival in the dawn world
+    K('ping2', tb(64), -21, 'A6'),                                         # arrival in the night world
+    K('deep', tb(64) + 0.8, -10), K('ping1', tb(64) + 0.8, -13, 'D6'),     # the pendants burst
+    K('deep', tb(84) + 0.632, -10, rev=0.6),                               # the rewind: a swell, then a bell swelling into its ring
+    K('ping2', tb(86.4), -20, 'F6', rev=0.8), K('ping2', tb(86.4), -20, 'F6'),
+    K('deep', tb(88), -12), K('ping1', tb(88), -15, 'D6'), K('ping2', tb(88), -17, 'A6'),  # the logo: D and A together
+    *sparkle(tb(89.4), -19),
 ]
-cat = {s['file']: s for s in json.load(open(LIB + 'catalog.json'))['sounds']}
-with open('audio/sfx_licenses.txt', 'a', encoding='utf-8') as fh:  # sfx.py lists its own bed; the glass bus's library files join it
-    for rel in sorted({f[len(LIB):] for f, _, _ in GLASS if f.startswith(LIB)}):
-        s = cat[rel]; fh.write(f"{rel}  |  {s.get('pack')}  |  {s.get('author')}  |  {s.get('page')}  |  {s.get('license')}\n")
+with open('audio/sfx_licenses.txt', 'a', encoding='utf-8') as fh:  # sfx.py lists its own bed; the break sounds join it
+    fh.write('\nMade for this film with ElevenLabs sound effects (not CC0; prompts and terms in capture/sfx/CREDITS.md):\n')
+    for s in sorted({b[0] for b in BREAKS}):
+        fh.write(f'film/break_{s}.mp3  |  SHARD film  |  ElevenLabs sound effects (eleven_text_to_sound_v2)  |  https://elevenlabs.io  |  ElevenLabs terms\n')
 bus = np.zeros((int(DUR * SR) + 2 * SR, 2))
-for f, t, g in GLASS:
-    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', f, '-af', f'aresample={SR},aformat=channel_layouts=stereo,{SOFT}', '-f', 'f32le', '-'],
-                         capture_output=True, check=True).stdout
-    x = np.frombuffer(raw, np.float32).reshape(-1, 2).astype(np.float64)
-    env = np.ones(len(x)); fi, fo = min(len(x), int(0.004 * SR)), min(len(x), int(0.02 * SR))
+for s, t, g, note, rev, pan in BREAKS:
+    af = f'aresample={SR},aformat=channel_layouts=mono'
+    if note: af += f',asetrate={round(SR * NOTE[note] / PING_HZ[s])},aresample={SR}'  # a ping retuned by speed, like a tape
+    if rev: af += f',atrim=end={rev},areverse'
+    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', f'{BRK}{s}.mp3', '-af', af, '-f', 'f32le', '-'], capture_output=True, check=True).stdout
+    x = np.frombuffer(raw, np.float32).astype(np.float64)
+    env = np.ones(len(x)); fi, fo = [min(len(x), int(d * SR)) for d in ((0.06, 0.003) if rev else (0.004, 0.02))]
     env[:fi] = np.linspace(0, 1, fi); env[len(x) - fo:] *= np.linspace(1, 0, fo)
-    a = max(0, int(round((t - cat.get(f[len(LIB):], {}).get('onset', 0.0)) * SR)))  # library sounds land on their onset
+    th = (pan + 1) * np.pi / 4  # equal-power pan, centre = both channels at full level
+    a = max(0, int(round(t * SR)) - (len(x) if rev else 0))
     n = min(len(x), len(bus) - a)
-    bus[a:a + n] += (x * env[:, None] * 10 ** (g / 20))[:n]
+    bus[a:a + n] += ((x * env * 10 ** (g / 20))[:, None] * (np.sqrt(2) * np.array([np.cos(th), np.sin(th)])))[:n]
 # the game's small room (js/audio.js): 1.6 s of decaying stereo noise, scaled the way a Web Audio ConvolverNode normalises it
 rng = np.random.default_rng(11); n = int(SR * 1.6)
 ir = rng.uniform(-1, 1, (2, n)) * (1 - np.arange(n) / n) ** 3.2
@@ -119,7 +128,7 @@ ir *= 0.00125 / np.sqrt((ir ** 2).mean()) * 44100 / SR
 m = 1 << (len(bus) + n - 2).bit_length()
 wet = np.stack([np.fft.irfft(np.fft.rfft(bus[:, c] * 0.5, m) * np.fft.rfft(ir[c], m), m)[:len(bus)] for c in range(2)], 1)
 bus = (bus + wet)[:int(DUR * SR)]
-subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-', '-c:a', 'pcm_s24le', 'audio/glass_bed.wav'],
+subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-', '-c:a', 'pcm_s24le', 'audio/breaks_bed.wav'],
                input=bus.astype(np.float32).tobytes(), check=True)
 
 # ---- the mix: music ducked a little under the effects, a last-bar fade, a true-peak-safe limiter
@@ -129,11 +138,11 @@ mix = (f'[0:a]aresample=48000,aformat=channel_layouts=stereo,atrim=end={DUR:.4f}
        '[1:a][2:a][3:a]amix=inputs=3:normalize=0[fx];[fx]asplit=2[fxk][fxo];'
        '[m][fxk]sidechaincompress=threshold=0.08:ratio=3:attack=5:release=240:makeup=1[md];'
        f'[md][fxo]amix=inputs=2:normalize=0,volume=3.5dB,alimiter=limit=0.75:attack=4:release=60:level=disabled,atrim=end={DUR:.4f},apad=whole_dur={DUR:.4f}[out]')
-subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', 'music/1012.mp3', '-i', 'audio/sfx_bed.wav', '-i', 'audio/game_bed.wav', '-i', 'audio/glass_bed.wav', '-filter_complex', mix,
+subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', 'music/1012.mp3', '-i', 'audio/sfx_bed.wav', '-i', 'audio/game_bed.wav', '-i', 'audio/breaks_bed.wav', '-filter_complex', mix,
                 '-map', '[out]', '-ar', '48000', '-c:a', 'pcm_s24le', 'audio/mix.wav'], check=True)
 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', 'audio/mix.wav', '-c:a', 'aac', '-b:a', '256k', '-ar', '48000', 'audio/mix.m4a'], check=True)
 log = subprocess.run(['ffmpeg', '-hide_banner', '-nostats', '-i', 'audio/mix.m4a', '-af', 'ebur128=peak=true', '-f', 'null', '-'], capture_output=True, text=True).stderr
 import re
 I = re.findall(r'I:\s+(-?[\d.]+) LUFS', log)[-1]; TP = re.findall(r'Peak:\s+(-?[\d.]+|-inf) dBFS', log)[-1]
 dur = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', 'audio/mix.m4a'], capture_output=True, text=True).stdout.strip()
-print(json.dumps({'mix': 'audio/mix.m4a', 'integrated_lufs': float(I), 'true_peak_dbtp': float(TP), 'duration': float(dur), 'library_cues': len(lib), 'game_cues': len(G), 'glass_cues': len(GLASS)}))
+print(json.dumps({'mix': 'audio/mix.m4a', 'integrated_lufs': float(I), 'true_peak_dbtp': float(TP), 'duration': float(dur), 'library_cues': len(lib), 'game_cues': len(G), 'break_cues': len(BREAKS)}))

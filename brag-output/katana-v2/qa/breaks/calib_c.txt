@@ -1,0 +1,17 @@
+{"moment": "city D 0.03", "old_lufs": -46.8, "new_lufs": -35.6, "new_minus_old": 11.2, "around_lufs": -24.2, "old_vs_around": -19.1, "new_vs_around": -7.9}
+{"moment": "city F 1.21", "old_lufs": -40.3, "new_lufs": -39.7, "new_minus_old": 0.6, "around_lufs": -25.0, "old_vs_around": -11.8, "new_vs_around": -11.2}
+{"moment": "city A 2.18", "old_lufs": -41.6, "new_lufs": -34.7, "new_minus_old": 6.9, "around_lufs": -24.7, "old_vs_around": -13.4, "new_vs_around": -6.6}
+{"moment": "drop 7.74", "old_lufs": -21.2, "new_lufs": -21.6, "new_minus_old": -0.5, "around_lufs": -10.8, "old_vs_around": -6.9, "new_vs_around": -7.3}
+{"moment": "pop 8.52", "old_lufs": -38.2, "new_lufs": -31.7, "new_minus_old": 6.5, "around_lufs": -15.2, "old_vs_around": -19.5, "new_vs_around": -12.9}
+{"moment": "burst 8.71", "old_lufs": -26.2, "new_lufs": -23.4, "new_minus_old": 2.8, "around_lufs": -12.9, "old_vs_around": -9.8, "new_vs_around": -6.9}
+{"moment": "swell 9.58", "old_lufs": -23.6, "new_lufs": -25.4, "new_minus_old": -1.8, "around_lufs": -13.0, "old_vs_around": -7.1, "new_vs_around": -8.9}
+{"moment": "sparkle 9.70", "old_lufs": -14.1, "new_lufs": -20.2, "new_minus_old": -6.1, "around_lufs": -12.5, "old_vs_around": 1.9, "new_vs_around": -4.2}
+{"moment": "pop 11.37", "old_lufs": -33.0, "new_lufs": -34.0, "new_minus_old": -1.1, "around_lufs": -13.8, "old_vs_around": -15.6, "new_vs_around": -16.7}
+{"moment": "frame 11.61", "old_lufs": -22.3, "new_lufs": -18.9, "new_minus_old": 3.4, "around_lufs": -8.0, "old_vs_around": -10.8, "new_vs_around": -7.4}
+{"moment": "sparkle 19.86", "old_lufs": -16.1, "new_lufs": -23.7, "new_minus_old": -7.6, "around_lufs": -7.8, "old_vs_around": -4.8, "new_vs_around": -12.4}
+{"moment": "night 30.97", "old_lufs": -36.0, "new_lufs": -23.8, "new_minus_old": 12.2, "around_lufs": -7.8, "old_vs_around": -24.6, "new_vs_around": -12.4}
+{"moment": "pendants 31.77", "old_lufs": -27.6, "new_lufs": -19.2, "new_minus_old": 8.3, "around_lufs": -7.0, "old_vs_around": -17.1, "new_vs_around": -8.7}
+{"moment": "rewind 41.28", "old_lufs": -24.0, "new_lufs": -23.4, "new_minus_old": 0.6, "around_lufs": -7.9, "old_vs_around": -12.6, "new_vs_around": -12.0}
+{"moment": "rewind 41.81", "old_lufs": -24.8, "new_lufs": -22.6, "new_minus_old": 2.2, "around_lufs": -7.8, "old_vs_around": -13.5, "new_vs_around": -11.3}
+{"moment": "logo 42.58", "old_lufs": -22.9, "new_lufs": -17.4, "new_minus_old": 5.5, "around_lufs": -5.8, "old_vs_around": -13.6, "new_vs_around": -8.1}
+{"moment": "sparkle 43.26", "old_lufs": -15.1, "new_lufs": -21.7, "new_minus_old": -6.6, "around_lufs": -8.2, "old_vs_around": -3.4, "new_vs_around": -9.9}

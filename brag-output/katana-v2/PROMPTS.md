@@ -140,3 +140,17 @@ The new gameplay (levels 4, 82 and 112) was captured from the game itself (brag-
 ## v3 (softer glass)
 
 No new paid jobs. v3 changes the sound only (qa/gate_v3.md); the picture is v2's.
+
+## v4 (pops and pings instead of glass)
+
+No new Higgsfield jobs (0 credits). v4 changes the sound only (qa/gate_v4.md); the picture is v2's. The break sounds were
+made with ElevenLabs sound effects (model eleven_text_to_sound_v2, prompt influence 0.5, four takes per prompt) in the
+ElevenLabs flow uj9NsU96K2WOcd3agfhJ, 45.3 ElevenLabs credits for the 12 takes:
+- node AC8NdjHiJtNcswlKhZA9, 1.0 s: "Satisfying soft crystal pop, a round bubbly pop with a clean bell-like ping, close-mic"
+  -> used: u8ehIWj18ouhq72PQzpJ (break_ping1), cRBBzSELHnpiVxeE1RSU (break_ping2)
+- node j8hKf8F2pPMUbb19kRSh, 1.8 s: "Satisfying crystal burst, a deep soft pop that scatters into gentle sparkling chimes, close-mic"
+  -> used: BQgbZ5s0cmhV0FiApoop (break_deep, left channel)
+- node yVp3w3zlSk2R4DILZCZM, 0.6 s: "Short round bubble pop, soft and satisfying, close-mic"
+  -> used: QyiU43nacMInCUfoagrb (break_pop1), XzIOzi7DdUvA2P9RogcF (break_pop2, break_pop3), ISWfE46GzFQSFijExNRw (break_pop4)
+The cut files, their sources and the terms are in the repo's brag-output/capture/sfx/ (CREDITS.md); here they are
+src/sfx/film/break_*.mp3.

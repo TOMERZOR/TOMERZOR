@@ -1,0 +1,11 @@
+frames 1452
+stream|codec_name=h264|profile=High|width=1920|height=1080|sample_aspect_ratio=1:1|pix_fmt=yuv420p|color_range=tv|color_space=bt709|color_transfer=bt709|color_primaries=bt709|r_frame_rate=30/1|avg_frame_rate=30/1|start_time=0.000000|duration=48.400000
+stream|codec_name=aac|profile=LC|sample_rate=48000|channels=2|r_frame_rate=0/0|avg_frame_rate=0/0|start_time=0.000000|duration=48.400000
+format|duration=48.400000|size=27172116|bit_rate=4491258
+video md5 MD5=69ed2f14959b5b1aa53350c3d6c82c32 v3 MD5=69ed2f14959b5b1aa53350c3d6c82c32
+audio md5 MD5=e37df53e3be17cba2d411d9d22846666 mix.m4a MD5=e37df53e3be17cba2d411d9d22846666
+    I:         -12.9 LUFS
+    LRA:         6.1 LU
+    Peak:       -1.9 dBFS
+last pts 48.366667
+1460dae4ad51779b6092c83b147785e2  out/katana-shard-v2_v4.mp4

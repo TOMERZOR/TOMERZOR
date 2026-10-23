@@ -228,6 +228,39 @@ export function hit(kindA, kindB, speed, x = 0.5) {
   else { tone(t, 240 + Math.random() * 60, 0.07, 0.32 * v, dest, 'sine', 0.002, 140); noise(t, 0.03, 'lowpass', 900, 1, 0.2 * v, dest); }
 }
 
+// frosted glass takes a hit and holds: a dry snap, the split running through it, a short ring
+export function crack(x = 0.5, power = 0.6) {
+  if (!ctx || !enabled.sfx) return;
+  const t = ctx.currentTime + 0.003;
+  const dest = out((x - 0.5) * 1.2, 0.3);
+  noise(t, 0.035, 'highpass', 3200, 0.8, 0.3 * (0.6 + power * 0.5), dest);
+  noise(t + 0.004, 0.09, 'bandpass', 1900, 2.5, 0.12, dest, 1100);
+  tone(t, 2350 + Math.random() * 300, 0.12, 0.045, dest, 'sine');
+  tone(t, 190, 0.06, 0.18, dest, 'sine', 0.002, 90);
+}
+
+// a locked piece shrugs off a hit: a muffled clunk and the small tick of its padlock
+export function locked(x = 0.5, speed = 6) {
+  if (!ctx || !enabled.sfx) return;
+  const v = Math.min(1, speed / 12);
+  if (v < 0.1) return;
+  const t = ctx.currentTime + 0.002;
+  const dest = out((x - 0.5) * 1.2, 0.12);
+  tone(t, 150, 0.09, 0.3 * v, dest, 'triangle', 0.002, 110);
+  noise(t, 0.04, 'lowpass', 700, 1, 0.2 * v, dest);
+  tone(t + 0.012, 1180, 0.05, 0.03 * v, dest, 'sine');
+}
+
+// the key breaks and the locks open: two rising bell notes in the game's scale, a breath of air
+export function unlock() {
+  if (!ctx || !enabled.sfx) return;
+  const t = ctx.currentTime + 0.06;
+  const dest = out(0, 0.6);
+  bell(t, 987.77, 0.6, 0.06, dest);
+  bell(t + 0.09, 1318.5, 0.85, 0.06, dest);
+  noise(t, 0.3, 'bandpass', 6000, 1.5, 0.03, dest, 9000);
+}
+
 export function boom(x = 0.5) {
   if (!ctx || !enabled.sfx) return;
   if (sample('boom', 0.95, 0.92 + Math.random() * 0.14, (x - 0.5), 0.3)) return;

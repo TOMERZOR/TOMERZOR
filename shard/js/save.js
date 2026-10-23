@@ -22,6 +22,7 @@ export function defaults() {
     crystals: 0,          // star crystals shattered (one fills every CRYSTAL_STARS stars)
     perfTier: 0,          // adaptive quality tier this device settled on (0 = full)
     worldsSeen: [],       // worlds whose title card has played
+    tipsSeen: [],         // new glass types already explained by the coach (frost, lock)
     mapAt: 0,             // the level the map last showed as next (the ball hops on from there)
     reminders: undefined, // undefined = never asked
     created: Date.now(),
@@ -45,6 +46,7 @@ function migrate(d) {
   }
   if (!Number.isInteger(out.crystals) || out.crystals < 0) out.crystals = 0;
   if (!Array.isArray(out.worldsSeen)) out.worldsSeen = [];
+  if (!Array.isArray(out.tipsSeen)) out.tipsSeen = [];
   // a save from before the map has no idea where the ball was: its first visit shows it in place, without a hop
   if (d.mapAt === undefined || !Number.isInteger(out.mapAt) || out.mapAt < 0) out.mapAt = undefined;
   if (!Number.isInteger(out.perfTier) || out.perfTier < 0 || out.perfTier > 3) out.perfTier = 0;

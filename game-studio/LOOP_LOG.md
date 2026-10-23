@@ -297,3 +297,17 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
   - The hop sequence runs at 5–7% slow frames at 4× throttle, mostly the frame that opens the screen.
   - The regression subset passes.
 
+## Round 31: harder levels, with two new kinds of glass
+- **Why:** the levels felt too easy. A new skilled-player bot (it weighs three of the shots the aim guide offers by playing each out, then fires the best with ±1° of hand error) cleared 86–91% of the first halves of Dawn, Mint, Lilac and Ember on its first try. The old calibration used a naive bot, which made levels look harder than they are and gave 39 of them two or three spare balls.
+- **Frosted glass:** milky, thicker glass with an inner wall. The first hit cracks it (a star of splits stays on the pane, with a dry snap and a short ring) and the ball bounces off instead of piercing; the second hit breaks it. It is 2.6 times heavier, anything but the ball needs 6 m/s to crack it, and a bomb still breaks it outright.
+- **Locked glass and the gold key:** padlocked glass shrugs off every hit, with a muffled clunk, until the gold key glass breaks. Then light runs from the key to each lock, a two-note chime plays, and they break like any glass. The aim guide marks locked glass like a wall; a bomb only throws it.
+- **A coach line** the first time each appears: "Frosted glass takes two hits" (Dawn 15) and "Break the gold glass to open the locks" (Lilac 8).
+- **Hardening without new layouts** (`tools/harden-levels.mjs`): each level tries up to eight variants (single frosted pieces, pairs, lock sets, one spare ball fewer) and keeps the one the skilled bot clears closest to its slot's target, from 85% to 62% across Dawn's second half and down to 68% to 42% across Night, with every fifth level a breather. Every variant must stand still at rest and is solved again for its par and a robust proof; a frosted piece can cost a shot, so the solver searches up to four. Five levels that were far harder than their slot were offered a spare ball back, and three took it. Dawn 1–12 and every world's first level are untouched; of the film's levels, 4 and 82 are unchanged and 112 has one frosted pane.
+- **Result:** 64 levels have new glass (68 frosted pieces, 25 locked behind 12 keys), 16 have one spare ball fewer and 3 one more. Measured again on fresh seeds, the skilled bot's first-try clear rate fell from 79% to 71%: Dawn 88% to 86% (its second half 83% to 79%), Mint 77% to 72%, Lilac 73% to 64%, Ember 82% to 72%, Night 74% to 63%.
+- **Fixed on the way:** the level gallery drew a single frame before the pop-in, so it showed shelves without glass, and its two canvas layers sat one under the other.
+- **Verified:**
+  - validate-levels passes, with new checks: every lock group has its key, every key opens a lock, and only glass is frosted, locked or a key.
+  - Proofs replay 120/120 in Node and in the browser, and the dailies 100/100.
+  - Every layout is identical to the base apart from the glass flags, and every changed level is stable at rest.
+  - No console errors in basic, level1, firstrun, flow, hint, worlds, guide, audio, economy, calm and map, nor in the new `newglass` (a crack, a break and an unlock on a phone) and `levelshots`.
+  - The new sounds were measured and reviewed in code, not listened to.

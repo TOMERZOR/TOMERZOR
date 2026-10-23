@@ -1,6 +1,6 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>SHARD level gallery</title>
-<style>body{margin:0;background:#222;font:12px system-ui;color:#ddd}.g{display:flex;flex-wrap:wrap;gap:6px;padding:6px}.c{display:flex;flex-direction:column;align-items:center}canvas{border-radius:6px}</style></head>
+<style>body{margin:0;background:#222;font:12px system-ui;color:#ddd}.g{display:flex;flex-wrap:wrap;gap:6px;padding:6px}.c{display:flex;flex-direction:column;align-items:center}canvas{border-radius:6px}.s{position:relative;width:180px;height:390px}.s canvas{position:absolute;left:0;top:0}</style></head>
 <body><div class="g" id="g"></div>
 <script type="module">
 import * as planck from '../../js/vendor/planck.js';
@@ -14,10 +14,12 @@ const list = params.get('daily') ? DAILY : LEVELS;
 const from = +(params.get('from') || 0), n = +(params.get('n') || 30);
 for (const lv of list.slice(from, from + n)) {
   const wrap = document.createElement('div'); wrap.className = 'c';
-  const cv = document.createElement('canvas');
-  wrap.appendChild(cv);
+  // the renderer adds its settled layer under the live canvas: both stack in one box
+  const cv = document.createElement('canvas'), st = document.createElement('div');
+  st.className = 's'; st.appendChild(cv); wrap.appendChild(st);
   const lab = document.createElement('div');
-  lab.textContent = `${lv.id} par${lv.par} b${lv.balls} g${lv.objects.filter(o=>o.t==='glass').length} w${Math.round((lv.win||0)*100)}% ${(lv.pieces||[]).join('+')}`;
+  const fr = lv.objects.filter(o=>o.hp>1).length, lk = lv.objects.filter(o=>o.lock).length;
+  lab.textContent = `${lv.id} par${lv.par} b${lv.balls} g${lv.objects.filter(o=>o.t==='glass').length}${fr ? ' f' + fr : ''}${lk ? ' l' + lk : ''} w${Math.round((lv.win||0)*100)}% ${(lv.pieces||[]).join('+')}`;
   wrap.appendChild(lab);
   document.getElementById('g').appendChild(wrap);
   const R = createRenderer(cv);
@@ -25,7 +27,8 @@ for (const lv of list.slice(from, from + n)) {
   R.setPalette(WORLDS[lv.world]);
   const sim = createSim(planck, lv, { visual: true });
   R.setSim(sim);
-  R.draw(sim, { alpha: 1, fxDt: 0, angle: (lv.proof?.[0] ?? 90) * Math.PI / 180, skin: SKINS[0], hintAngle: params.get('proof') ? (lv.proof?.[0] ?? 90) * Math.PI / 180 : null });
+  // calm: skip the pop-in, so every piece is drawn in this one frame
+  R.draw(sim, { alpha: 1, fxDt: 0, calm: true, angle: (lv.proof?.[0] ?? 90) * Math.PI / 180, skin: SKINS[0], hintAngle: params.get('proof') ? (lv.proof?.[0] ?? 90) * Math.PI / 180 : null });
 }
 document.title = 'ready';
 </script></body></html>

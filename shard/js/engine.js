@@ -11,6 +11,7 @@ export const BALL_R = 0.3;
 export const SPEED = 19;
 export const MUZZLE = 0.7 + 0.3 + 0.08; // ball spawn distance from the pivot
 export const BREAK_SPEED = 4.2;     // glass vs anything but the ball
+export const FROST_BREAK = 6.0;     // frosted glass vs anything but the ball: thick glass needs a real knock
 export const BALL_BREAK = 1.6;      // the steel ball cracks glass at almost any speed
 export const BOMB_SPEED = 2.0;
 export const PIERCE_KEEP = 0.88;
@@ -27,6 +28,7 @@ const MASK = {
 
 const MAT = {
   glass: { density: 1.0, friction: 0.45, restitution: 0.1 },
+  frosted: { density: 2.6, friction: 0.5, restitution: 0.1 },
   stone: { density: 4.0, friction: 0.7, restitution: 0.05 },
   wood: { density: 0.6, friction: 0.6, restitution: 0.15 },
   bomb: { density: 1.2, friction: 0.5, restitution: 0.2 },
@@ -167,11 +169,17 @@ export function createSim(planck, level, opts = {}) {
           const p = o.t === 'stone' ? chamferPoly(o.w, o.h, Math.min(o.w, o.h) * 0.12) : boxPoly(o.w, o.h);
           shape = { polys: [p], outline: p };
         }
-        const fd = fixtureDef(o.t, CAT_DYN, MASK.dyn);
+        const fd = fixtureDef(o.t === 'glass' && o.hp > 1 ? 'frosted' : o.t, CAT_DYN, MASK.dyn);
         if (shape.circle) b.createFixture(Circle(shape.circle), fd);
         else for (const p of shape.polys) b.createFixture(Polygon(p.map(([x, y]) => Vec2(x, y))), fd);
         const e = addEnt({ kind: o.t, sub: o.s || 'box', body: b, polys: shape.polys, outline: shape.outline, circle: shape.circle, w: o.w, h: o.h });
-        if (o.t === 'glass') { st.glass++; e.tint = o.tint || 0; }
+        if (o.t === 'glass') {
+          st.glass++; e.tint = o.tint || 0;
+          e.hp = o.hp || 1;            // frosted glass (hp 2) cracks on the first hit, breaks on the second
+          e.frost = e.hp > 1;
+          if (o.lock) e.lock = o.lock; // locked glass shrugs off every hit until the key glass of its group breaks
+          if (o.key) e.key = o.key;
+        }
         return e;
       }
       case 'bomb': {
@@ -227,10 +235,20 @@ export function createSim(planck, level, opts = {}) {
     const rvx = vb.x - va.x, rvy = vb.y - va.y;
     const approach = -(rvx * wm.normal.x + rvy * wm.normal.y);
     if (approach <= 0.3) return;
-    let broke = false;
+    let broke = false, held = false;
     for (const [e, other] of [[ea, eb], [eb, ea]]) {
       if (!e.alive) continue;
-      if (e.kind === 'glass' && approach > (other.kind === 'ball' ? BALL_BREAK : BREAK_SPEED)) {
+      if (e.kind === 'glass' && approach > (other.kind === 'ball' ? BALL_BREAK : e.hp > 1 ? FROST_BREAK : BREAK_SPEED)) {
+        // locked or still-whole frosted glass holds: the contact stays solid, so the ball bounces off
+        if (e.lock || e.hp > 1) {
+          held = true;
+          if (st.step - (e.hitStep ?? -99) > 6) {
+            e.hitStep = st.step;
+            if (e.lock) events.push({ type: 'locked', x: px, y: py, speed: approach, by: other.kind, id: e.id });
+            else { e.hp--; events.push({ type: 'crack', x: px, y: py, speed: approach, by: other.kind, id: e.id, sub: e.sub, tint: e.tint }); }
+          }
+          continue;
+        }
         if (!pendingBreak.has(e)) {
           const ov = other.body.getLinearVelocity();
           pendingBreak.set(e, { x: px, y: py, vx: ov.x, vy: ov.y, speed: approach, by: other.kind });
@@ -242,7 +260,7 @@ export function createSim(planck, level, opts = {}) {
       }
     }
     if (broke) contact.setEnabled(false);
-    else if (approach > 1.2 && oldManifold && oldManifold.pointCount === 0) {
+    else if (!held && approach > 1.2 && oldManifold && oldManifold.pointCount === 0) {
       events.push({ type: 'hit', x: px, y: py, speed: approach, a: ea.kind, b: eb.kind });
     }
   });
@@ -253,7 +271,7 @@ export function createSim(planck, level, opts = {}) {
     const b = e.body;
     const c = b.getWorldCenter();
     const v = b.getLinearVelocity();
-    const ev = { type: 'break', x: info.x ?? c.x, y: info.y ?? c.y, cx: c.x, cy: c.y, speed: info.speed || 6, by: info.by, sub: e.sub, tint: e.tint };
+    const ev = { type: 'break', x: info.x ?? c.x, y: info.y ?? c.y, cx: c.x, cy: c.y, speed: info.speed || 6, by: info.by, sub: e.sub, tint: e.tint, key: e.key || 0 };
     if (visual) ev.shards = spawnShards(e, info, v);
     removeEnt(e);
     st.glass--;
@@ -264,7 +282,18 @@ export function createSim(planck, level, opts = {}) {
     ev.combo = st.combo;
     ev.last = st.glass === 0;
     events.push(ev);
+    if (e.key) unlock(e.key, { x: ev.cx, y: ev.cy });
     if (st.glass === 0 && !st.won) { st.won = true; events.push({ type: 'win' }); }
+  }
+
+  // the key glass broke: every lock of its group opens and that glass breaks like any other from now on
+  function unlock(k, from) {
+    for (const o of ents) {
+      if (!o.alive || o.kind !== 'glass' || o.lock !== k) continue;
+      o.lock = 0;
+      const p = o.body.getWorldCenter();
+      events.push({ type: 'unlock', x: p.x, y: p.y, fx: from.x, fy: from.y, id: o.id });
+    }
   }
 
   function explode(e) {
@@ -282,7 +311,8 @@ export function createSim(planck, level, opts = {}) {
       const d = Math.hypot(dx, dy);
       if (d > R) continue;
       if (o.kind === 'bomb') { if (!pendingBomb.has(o)) pendingBomb.set(o, 6); continue; }
-      if (o.kind === 'glass' && d < R * 0.62) { pendingBreak.set(o, { x: oc.x, y: oc.y, vx: dx * 3, vy: dy * 3, speed: 9, by: 'bomb' }); continue; }
+      // a blast breaks glass outright, frosted or not; locked glass only gets thrown
+      if (o.kind === 'glass' && !o.lock && d < R * 0.62) { pendingBreak.set(o, { x: oc.x, y: oc.y, vx: dx * 3, vy: dy * 3, speed: 9, by: 'bomb' }); continue; }
       const k = d < 1e-3 ? 0 : 1 / d;
       const dv = 2 + 10 * (1 - d / R);
       const m = b.getMass();
@@ -394,7 +424,7 @@ export function createSim(planck, level, opts = {}) {
       const carry = info.by === 'ball' ? 0.28 : 0.1;
       sb.setLinearVelocity(Vec2(v.x * 0.6 + (dx / dl) * burst + (info.vx || 0) * carry, v.y * 0.6 + (dy / dl) * burst + (info.vy || 0) * carry + 1.2));
       sb.setAngularVelocity((rand() - 0.5) * 18);
-      const sh = { kind: 'shard', body: sb, polys: [lp], life: 1.6 + rand() * 1.4, age: 0, tint: e.tint, alive: true };
+      const sh = { kind: 'shard', body: sb, polys: [lp], life: 1.6 + rand() * 1.4, age: 0, tint: e.tint, key: e.key, alive: true };
       sb.setUserData(sh);
       shards.push(sh);
       res.push(sh);
@@ -575,7 +605,7 @@ export function ghostPath(planck, sim, angle, bounces = 1, maxSteps = 110) {
     for (let f = b.getFixtureList(); f; f = f.getNext()) {
       gb.createFixture(f.getShape(), { density: 0, friction: f.getFriction(), restitution: f.getRestitution(), isSensor: !solid });
     }
-    gb.setUserData({ kind: e.kind, solid });
+    gb.setUserData({ kind: e.kind, solid, id: e.id, lock: !!e.lock, key: !!e.key });
   }
   const dx = Math.cos(angle), dy = Math.sin(angle);
   const ball = g.createBody({ type: 'dynamic', bullet: true, position: Vec2(sim.launcherX + dx * MUZZLE, PIVOT_Y + dy * MUZZLE), angularDamping: 0.6 });
@@ -591,7 +621,7 @@ export function ghostPath(planck, sim, angle, bounces = 1, maxSteps = 110) {
     if (!ud) return;
     const wm = c.getWorldManifold(null);
     const p = wm && wm.pointCount ? wm.points[0] : ball.getPosition();
-    touch = { kind: ud.kind, solid: ud.solid, px: p.x, py: p.y };
+    touch = { kind: ud.kind, solid: ud.solid, px: p.x, py: p.y, id: ud.id, lock: ud.lock, key: ud.key };
   });
   const segs = [[]];
   let hits = [];
@@ -603,7 +633,7 @@ export function ghostPath(planck, sim, angle, bounces = 1, maxSteps = 110) {
     const p = ball.getPosition();
     segs[segs.length - 1].push([p.x, p.y]);
     if (touch) {
-      hits.push({ kind: touch.kind, x: p.x, y: p.y });
+      hits.push({ kind: touch.kind, x: p.x, y: p.y, id: touch.id, lock: touch.lock, key: touch.key });
       if (!touch.solid || segs.length > bounces || BOUNCE_KINDS.indexOf(touch.kind) < 0) break;
       segs.push([[p.x, p.y]]);
     }

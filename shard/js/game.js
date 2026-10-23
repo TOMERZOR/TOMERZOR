@@ -19,6 +19,7 @@ const mute = (m) => new Proxy(m, {
 });
 const sfx = mute(sfxReal), hap = mute(hapReal);
 const calm = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const GOLD = [255, 192, 72]; // the key glass
 
 // the glitter a ball adds to every break: rainbow for Prism, its own light tone for other bought balls
 const RAINBOW = ['#FF7A7A', '#FFD36E', '#7CF29C', '#6EC8FF', '#B48CFF'];
@@ -36,7 +37,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
   let acc = 0, timeScale = 1, slowT = 0, shake = 0, shakeT = 0, flash = 0;
   let paused = false, ended = false, winTimer = -1, loseShown = false;
   let loadK = 1, hintAngle = null, recoil = 0;
-  let lastHitSound = 0, lastHap = 0;
+  let lastHitSound = 0, lastHap = 0, lastUnlock = -1;
   let fired = 0, loads = 0;
   let stopT = 0, stopBudget = 0; // hit-stop: a brief freeze that gives impacts weight
 
@@ -142,7 +143,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           const size = ev.sub === 'orb' ? 0.55 : ev.sub === 'pane' ? 0.5 : ev.sub === 'bottle' ? 0.7 : 0.65;
           const power = Math.min(1, ev.speed / 14);
           sfx.shatter(ev.cx / W, size, power, ev.combo);
-          const rgb = sim.__pal?.glass?.[(ev.tint || 0) % 3] || [200, 230, 255];
+          const rgb = ev.key ? GOLD : sim.__pal?.glass?.[(ev.tint || 0) % 3] || [200, 230, 255];
           renderer.shatter(ev.x, ev.y, rgb, power, ev.last, skinGlitter(getSkin()));
           renderer.combo(ev.combo, ev.cx, ev.cy);
           renderer.punch(ev.cx, ev.cy, Math.min(1, 0.35 + power * 0.3 + ev.combo * 0.08));
@@ -159,6 +160,29 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
             renderer.ring(ev.cx, ev.cy, 3.2, sim.__pal?.accent || '#fff', 0.9, 0.12);
             renderer.sparkle(ev.cx, ev.cy, 14);
           }
+          break;
+        }
+        case 'crack': {
+          // frosted glass holds: the ball bounces off and the pane keeps the crack where it was hit
+          const e = sim.ents.find((o) => o.id === ev.id);
+          if (e?.alive) { const lp = e.body.getLocalPoint(planck.Vec2(ev.x, ev.y)); e.crack = [lp.x, lp.y]; }
+          const power = Math.min(1, ev.speed / 14);
+          sfx.crack(ev.x / W, power);
+          renderer.frostHit(ev.x, ev.y, power);
+          if (ev.by === 'ball') { renderer.ballHit(ev.x, ev.y, ev.speed); hitStop(0.025); }
+          hap.medium();
+          break;
+        }
+        case 'locked': {
+          const now = performance.now();
+          if (now - lastHitSound > 45) { lastHitSound = now; sfx.locked(ev.x / W, ev.speed); }
+          if (ev.by === 'ball') { renderer.lockHit(ev.x, ev.y); renderer.ballHit(ev.x, ev.y, ev.speed); hap.light(); }
+          break;
+        }
+        case 'unlock': {
+          renderer.unlock(ev.fx, ev.fy, ev.x, ev.y);
+          // one chime however many locks open at once
+          if (sim.st.step !== lastUnlock) { lastUnlock = sim.st.step; sfx.unlock(); hap.medium(); }
           break;
         }
         case 'explode': {

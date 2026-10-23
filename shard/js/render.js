@@ -77,6 +77,7 @@ export function createRenderer(canvas) {
       if (best) best.hitT = performance.now();
     },
     burst, ring, sparkle, shatter, sparks, puff, glow, explosion, muzzle, confetti, punch, focus, combo: comboAt,
+    frostHit, lockHit, unlock: unlockFx,
     setTier,
     setFlash: (v) => { flash = v; },
     draw,
@@ -381,7 +382,8 @@ export function createRenderer(canvas) {
   const hexRGB = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
   const hashId = (e) => (((e.id || 1) * 2654435761) >>> 0) / 4294967296;
 
-  function glassRGB(e) { return pal.glass[(e.tint || 0) % pal.glass.length]; }
+  const GOLD = [255, 192, 72];
+  function glassRGB(e) { return e.key ? GOLD : pal.glass[(e.tint || 0) % pal.glass.length]; }
 
   // ---------- glass: each piece is baked into a sprite (rebuilt when scale, palette or tint change) ----------
   const LIGHT = [-0.6, 0.8]; // toward the key light (top left), world units, y up
@@ -459,6 +461,92 @@ export function createRenderer(canvas) {
     if (e.circle) { gx = LIGHT[0] * R0 * 0.62; gy = LIGHT[1] * R0 * 0.62; }
     else for (const [x, y] of e.outline) { const d = x * LIGHT[0] + y * LIGHT[1]; if (d > best) { best = d; gx = x * 0.82; gy = y * 0.82; } }
     if (e.circle || hashId(e) < 0.45) star4(c, gx, gy, Math.min(0.14, R0 * 0.32), dark ? 0.75 : 0.95);
+    if (e.frost) paintFrost(c, e, x0, y0, x1, y1, R0);
+    if (e.lock) paintLock(c, R0);
+    else if (e.key) paintKey(c, e, R0);
+  }
+  // frosted glass: thick and milky, with a second wall inside the first; once hit, it carries the crack
+  function paintFrost(c, e, x0, y0, x1, y1, R0) {
+    const lw = 1 / s, dark = pal.dark;
+    c.save(); shapePath(c, e); c.clip();
+    c.fillStyle = dark ? 'rgba(220,235,255,0.2)' : 'rgba(255,255,255,0.42)'; shapePath(c, e); c.fill();
+    // frost: a fixed stipple, the same every time this piece is drawn
+    let seed = Math.floor(hashId(e) * 233280);
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    const n = Math.min(70, Math.round((x1 - x0) * (y1 - y0) * 90));
+    c.fillStyle = dark ? 'rgba(230,240,255,0.4)' : 'rgba(255,255,255,0.8)';
+    for (let i = 0; i < n; i++) { c.beginPath(); c.arc(x0 + rnd() * (x1 - x0), y0 + rnd() * (y1 - y0), 0.008 + rnd() * 0.018, 0, TAU); c.fill(); }
+    const [r, g, b] = glassRGB(e);
+    c.strokeStyle = `rgba(${r},${g},${b},${dark ? 0.7 : 0.78})`; c.lineWidth = 0.24; shapePath(c, e); c.stroke();
+    c.restore();
+    // the inner wall
+    c.save(); c.scale(0.74, 0.74);
+    c.strokeStyle = dark ? 'rgba(225,240,255,0.65)' : 'rgba(255,255,255,0.95)'; c.lineWidth = lw * 2 / 0.74; shapePath(c, e); c.stroke();
+    c.restore();
+    if (e.hp > 1) return;
+    // cracked: a star of splits from where it was hit, jagged, with a dark edge so it reads on any tint
+    // the star starts between the hit and the middle, so it spreads across the pane
+    const cx = (e.crack?.[0] || 0) * 0.45, cy = (e.crack?.[1] || 0) * 0.45;
+    c.save(); shapePath(c, e); c.clip();
+    let sd = Math.floor(hashId(e) * 233280 + 7919) % 233280;
+    const rr = () => (sd = (sd * 9301 + 49297) % 233280) / 233280;
+    const path = () => {
+      c.beginPath();
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * TAU + (rr() - 0.5) * 0.6, L = R0 * (1.0 + rr() * 0.9);
+        let px = cx, py = cy;
+        c.moveTo(px, py);
+        for (let j = 1; j <= 3; j++) {
+          const t = (L * j) / 3, ja = a + (rr() - 0.5) * 0.5;
+          px = cx + Math.cos(ja) * t; py = cy + Math.sin(ja) * t; c.lineTo(px, py);
+        }
+      }
+      c.moveTo(cx + R0 * 0.22, cy); c.arc(cx, cy, R0 * 0.22, 0, TAU);
+    };
+    const seed0 = sd;
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    c.strokeStyle = dark ? 'rgba(10,14,30,0.5)' : 'rgba(40,48,70,0.35)'; c.lineWidth = lw * 2.6; path(); c.stroke();
+    sd = seed0;
+    c.strokeStyle = 'rgba(255,255,255,0.95)'; c.lineWidth = lw * 1.2; path(); c.stroke();
+    c.restore();
+  }
+  // a padlock: this piece shrugs off every hit until the gold glass breaks
+  function paintLock(c, R0) {
+    const z = Math.min(0.3, R0 * 0.62), dark = pal.dark;
+    c.save();
+    c.fillStyle = dark ? 'rgba(10,14,30,0.45)' : 'rgba(255,255,255,0.7)';
+    c.beginPath(); c.arc(0, 0, z * 0.95, 0, TAU); c.fill();
+    const bw = z * 1.0, bh = z * 0.78, by = -z * 0.52;
+    c.strokeStyle = pal.ink; c.lineWidth = z * 0.17; c.lineCap = 'round';
+    c.beginPath(); c.arc(0, by + bh, z * 0.3, 0, Math.PI); c.stroke();
+    c.fillStyle = pal.ink;
+    c.beginPath(); c.roundRect ? c.roundRect(-bw / 2, by, bw, bh, z * 0.14) : c.rect(-bw / 2, by, bw, bh); c.fill();
+    c.fillStyle = dark ? '#141A2E' : '#FFFFFF';
+    c.beginPath(); c.arc(0, by + bh * 0.58, z * 0.11, 0, TAU); c.fill();
+    c.fillRect(-z * 0.04, by + bh * 0.18, z * 0.08, bh * 0.4);
+    c.restore();
+  }
+  // the key: gold glass marked with a key, the one piece that opens the locks
+  function paintKey(c, e, R0) {
+    const z = Math.min(0.28, R0 * 0.58);
+    c.save();
+    // at night the gold glows from inside, so it reads as gold and not as dim brass
+    if (pal.dark) {
+      const g = c.createRadialGradient(0, 0, 0, 0, 0, R0);
+      g.addColorStop(0, 'rgba(255,214,120,0.5)'); g.addColorStop(1, 'rgba(255,190,80,0.12)');
+      c.fillStyle = g; shapePath(c, e); c.fill();
+    }
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    const path = () => {
+      c.beginPath();
+      c.arc(-z * 0.42, 0, z * 0.26, 0, TAU);
+      c.moveTo(-z * 0.16, 0); c.lineTo(z * 0.62, 0);
+      c.moveTo(z * 0.36, 0); c.lineTo(z * 0.36, -z * 0.24);
+      c.moveTo(z * 0.58, 0); c.lineTo(z * 0.58, -z * 0.18);
+    };
+    c.strokeStyle = 'rgba(150,92,10,0.55)'; c.lineWidth = z * 0.3; path(); c.stroke();
+    c.strokeStyle = '#FFFFFF'; c.lineWidth = z * 0.15; path(); c.stroke();
+    c.restore();
   }
   function paintShadow(c, e) {
     const [r, g, b] = glassRGB(e);
@@ -535,7 +623,7 @@ export function createRenderer(canvas) {
   }
   const PAINT = { glass: paintGlass, wood: paintWood, stone: paintStone };
   function sprites(e) {
-    const key = s * dpr + '|' + pal.id + '|' + (e.tint || 0);
+    const key = s * dpr + '|' + pal.id + '|' + (e.tint || 0) + '|' + (e.hp || 1) + '|' + (e.lock || 0) + '|' + (e.key || 0);
     if (e.spr?.key !== key) {
       const glass = e.kind === 'glass';
       e.spr = {
@@ -760,6 +848,23 @@ export function createRenderer(canvas) {
   function ring(x, y, r, col = 'rgba(255,255,255,0.9)', life = 0.45, width = 0.08) {
     const f = spawn('ring', x, y, life); f.r = r; f.col = col; f.width = width;
   }
+  // frosted glass takes a hit and holds: a short star of white splits, chips and a small ring
+  function frostHit(x, y, power = 0.6) {
+    const f = spawn('crack', x, y, 0.2);
+    const n = 5;
+    f.data = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) { f.data[i * 2] = (i / n) * TAU + rnd(-0.3, 0.3); f.data[i * 2 + 1] = rnd(0.25, 0.5) * (0.8 + power * 0.4); }
+    sparks(x, y, 6, 2.6);
+    ring(x, y, 0.5, 'rgba(255,255,255,0.85)', 0.28, 0.06);
+  }
+  // a locked piece shrugs off a hit
+  function lockHit(x, y) { ring(x, y, 0.42, pal.dark ? 'rgba(231,234,246,0.6)' : 'rgba(62,58,79,0.45)', 0.24, 0.05); sparks(x, y, 3, 1.8); }
+  // the key broke: light runs from it to each lock, which opens with a ring and a few stars
+  function unlockFx(fx0, fy0, x, y) {
+    let f = spawn('beam', x, y, 0.55); f.data = [fx0, fy0]; f.col = 'rgb(255,200,90)';
+    f = spawn('ring', x, y, 0.5); f.age = -0.18; f.r = 0.75; f.col = 'rgba(255,206,110,0.95)'; f.width = 0.09;
+    sparkle(x, y, 5);
+  }
   // one counter per chain: it pops bigger with every link
   const combo = { n: 0, x: 0, y: 0, tx: 0, ty: 0, t: -9 };
   function comboAt(n, x, y) {
@@ -841,7 +946,7 @@ export function createRenderer(canvas) {
     if (introEnd && (clock > introEnd || o.calm) && sim) { for (const e of sim.ents) e.anim = 0; introEnd = 0; }
     // the settled layer changes only when something wakes, sleeps or breaks
     let key = 0;
-    if (sim) for (const e of sim.ents) if (e.alive && settled(e)) key = (key * 31 + e.id) | 0;
+    if (sim) for (const e of sim.ents) if (e.alive && settled(e)) key = (key * 31 + e.id * 4 + (e.lock ? 1 : 0) + (e.hp > 1 ? 2 : 0)) | 0;
     if (key !== restKey) { renderRest(sim); restKey = key; }
     // shake and camera move both layers together
     const shx = o.shakeX || 0, shy = o.shakeY || 0;
@@ -996,6 +1101,14 @@ export function createRenderer(canvas) {
           c.beginPath(); c.moveTo(0, -zz); c.lineTo(zz * 0.6 * w, 0); c.lineTo(0, zz); c.lineTo(-zz * 0.6 * w, 0); c.closePath(); c.fill();
           if (w > 0.75) { c.fillStyle = 'rgba(255,255,255,0.7)'; c.fill(); }
           c.restore();
+          break;
+        }
+        case 'beam': {
+          // a streak from the key to a lock: the head runs ahead, the tail follows
+          const [bx, by] = R.toScreen(f.data[0], f.data[1]);
+          const h = Math.min(1, u / 0.4), t0 = Math.max(0, (u - 0.2) / 0.8);
+          c.globalAlpha = Math.min(1, k * 2); c.strokeStyle = f.col; c.lineWidth = Math.max(1.5, 0.06 * s); c.lineCap = 'round';
+          c.beginPath(); c.moveTo(bx + (sx - bx) * t0, by + (sy - by) * t0); c.lineTo(bx + (sx - bx) * h, by + (sy - by) * h); c.stroke();
           break;
         }
         case 'ring': {
@@ -1154,7 +1267,8 @@ export function createRenderer(canvas) {
     // where the ball first touches: a ghost ball; on glass it's marked to break
     const mark = (h, alpha) => {
       const [sx, sy] = R.toScreen(h.x, h.y);
-      const glass = h.kind === 'glass' || h.kind === 'bomb';
+      // locked glass won't break yet, so the guide marks it like a wall
+      const glass = (h.kind === 'glass' && !h.lock) || h.kind === 'bomb';
       const col = glass ? pal.accent : pal.ink, r = BALL_R * s;
       c.globalAlpha = alpha * (glass ? 0.16 : 0.08); c.fillStyle = col;
       c.beginPath(); c.arc(sx, sy, r, 0, TAU); c.fill();

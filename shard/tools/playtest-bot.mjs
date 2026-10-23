@@ -5,8 +5,14 @@ import * as planck from 'planck';
 import { createSim, previewPath, ghostPath } from '../js/engine.js';
 import { LEVELS } from '../js/levels.js';
 import { rng } from './pieces.mjs';
+import { runShots } from './solver.mjs';
 
-const TRIALS = +(process.argv[2] || 6);
+// usage: node playtest-bot.mjs [trials=6] [--look 3] [--range 0:120]
+const argv = process.argv.slice(2);
+const flag = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; };
+const TRIALS = +(argv[0] && !argv[0].startsWith('--') ? argv[0] : 6);
+const LOOK = +flag('look', 1);
+const [R0, R1] = flag('range', '0:' + LEVELS.length).split(':').map(Number);
 const DEG = Math.PI / 180;
 
 // Trace a shot like a player imagines it: ballistic flight to the first contact and, when that is
@@ -40,25 +46,47 @@ function trace(sim, angle, bounces) {
   return null;
 }
 
+// look > 1: a thoughtful player. Before each shot it weighs `look` of the shots the guide offers, plays each out
+// in its head (the real engine, from the shots taken so far) and takes the one that leaves the least glass, then
+// fires it with the same hand error
 export function playOnce(level, r, opts = {}) {
   const bounces = opts.bounces ?? 1;
+  const look = opts.look ?? 1;
+  const history = [];
   const sim = createSim(planck, level);
   for (let i = 0; i < 12; i++) sim.step();
   for (let guard = 0; guard < 6000; guard++) {
     if (sim.st.won) return { won: true, used: sim.st.used };
     if (sim.st.lost) return { won: false, used: sim.st.used };
     if (sim.st.balls > 0 && sim.st.live === 0 && sim.st.quietSteps > 15) {
-      // aim where the on-screen guide shows glass: direct hits first, then one-bounce shots
-      let good = [], bank = [];
+      // aim where the on-screen guide shows glass: direct hits first, then one-bounce shots. Locked glass
+      // is no target; while a key glass stands, a shot at it comes first, as the coach line says
+      let good = [], bank = [], key = [], keyBank = [];
+      const target = (h) => h && (h.kind === 'bomb' || (h.kind === 'glass' && !h.lock));
       for (let a = 8; a <= 172; a += 2) {
         const p = ghostPath(planck, sim, a * DEG, bounces);
-        const k1 = p.hit?.kind, k2 = p.hit2?.kind;
-        if (k1 === 'glass' || k1 === 'bomb') good.push(a);
-        else if (k2 === 'glass' || k2 === 'bomb') bank.push(a);
+        if (p.hit?.key) key.push(a);
+        else if (target(p.hit)) good.push(a);
+        else if (p.hit2?.key) keyBank.push(a);
+        else if (target(p.hit2)) bank.push(a);
       }
-      if (!good.length) good = bank;
-      const pickA = good.length ? good[Math.floor(r() * good.length)] : 20 + r() * 140;
-      sim.fire((pickA + (r() - 0.5) * 2) * DEG);
+      if (key.length) good = key;
+      else if (keyBank.length) good = keyBank;
+      else if (!good.length) good = bank;
+      let pickA = good.length ? good[Math.floor(r() * good.length)] : 20 + r() * 140;
+      if (look > 1 && good.length > 1) {
+        const pool = good.slice(), seen = [];
+        while (seen.length < look && pool.length) seen.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+        let best = Infinity;
+        for (const a of seen) {
+          const res = runShots(level, [...history, { a: a * DEG }]);
+          const left = res.won ? -1 : res.glass;
+          if (left < best) { best = left; pickA = a; }
+        }
+      }
+      const fired = (pickA + (r() - 0.5) * 2) * DEG;
+      history.push({ a: fired });
+      sim.fire(fired);
     }
     sim.step();
   }
@@ -67,10 +95,11 @@ export function playOnce(level, r, opts = {}) {
 
 const rows = [];
 if (process.argv[1].endsWith('playtest-bot.mjs')) for (const [i, lv] of LEVELS.entries()) {
+  if (i < R0 || i >= R1) continue;
   let wins = 0, stars3 = 0;
   for (let t = 0; t < TRIALS; t++) {
     const r = rng(1000 + i * 97 + t);
-    const res = playOnce(lv, r);
+    const res = playOnce(lv, r, { look: LOOK });
     if (res.won) { wins++; if (res.used <= lv.par) stars3++; }
   }
   rows.push({ id: lv.id, world: lv.world, par: lv.par, balls: lv.balls, clear: wins / TRIALS, three: stars3 / TRIALS });

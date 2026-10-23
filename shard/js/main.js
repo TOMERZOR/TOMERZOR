@@ -16,6 +16,11 @@ const calmMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')
 const d = () => save.d;
 const PER_WORLD = 24;
 const HINT_COST = 40, CONTINUE_COST = 60;
+// the first level that holds a new kind of glass explains it in one line
+const GLASS_TIPS = [
+  ['frost', (lv) => lv.objects.some((o) => o.hp > 1), 'Frosted glass takes two hits'],
+  ['lock', (lv) => lv.objects.some((o) => o.lock), 'Break the gold glass to open the locks'],
+];
 const WORLD_INTRO = [null,
   'Stone and timber never break. Use them to crush the glass',
   'Bounce pads fling the ball. Bank your shots off the walls',
@@ -268,7 +273,9 @@ function startLevel(index, opts = {}) {
   updateHint();
   // coach: the three tutorial levels, then one line when a world introduces something new
   const fresh = !opts.daily && !d().stars[level.id];
-  const intro = fresh && index > 0 && index % PER_WORLD === 0 ? WORLD_INTRO[level.world] : null;
+  const tip = fresh && !opts.daily ? GLASS_TIPS.find(([id, has]) => has(level) && !d().tipsSeen.includes(id)) : null;
+  if (tip) d().tipsSeen.push(tip[0]);
+  const intro = tip ? tip[2] : fresh && index > 0 && index % PER_WORLD === 0 ? WORLD_INTRO[level.world] : null;
   const tut = fresh && index < 3;
   $('#coach').hidden = !(tut || intro);
   // the coach floats just above the cannon, whatever the screen's shape

@@ -30,6 +30,8 @@
 | Bomb | Explodes on any hit faster than 2 m/s: radial impulse, chains. |
 | Rope (pendulum) | Glass hangs and swings. |
 | Mover (kinematic) | Platforms that slide or spin. Timing. |
+| Frosted glass | Milky, thicker glass. The first hit cracks it and the ball bounces off; the second breaks it. Anything but the ball needs 6 m/s to crack it; a bomb breaks it outright. From the second half of Dawn. |
+| Locked glass and its gold key | Locked glass carries a padlock and shrugs off every hit (the ball bounces off; the aim guide marks it like a wall) until the gold key glass breaks; then light runs from the key to each lock and they break like any glass. From Lilac's seventh level. |
 
 ## Worlds (24 levels each, 120 at launch)
 1. **Dawn**: glass and shelves (tutorial in levels 1–3)
@@ -39,6 +41,8 @@
 5. **Night**: ropes and movers
 
 Every level is **generated and verified by a solver**, then **calibrated with an average-player bot** that aims with the same guide line: hard levels get spare balls, levels it almost never clears are replaced, and each world is ordered from easy to hard by measured success.
+
+**Hardening pass:** a skilled-player bot (it weighs three of the shots the guide offers by playing each out, then fires the best with hand error) cleared 86–91% of the first halves of Dawn, Mint, Lilac and Ember, so the campaign was too easy. Without changing any layout, each level then gets the frosted and locked glass that brings it closest to a first-try clear rate for its place: from 85% to 62% across the second half of Dawn, down to 68% to 42% across Night, every fifth level a breather. Dawn's first twelve levels and each world's first level are untouched. Each new kind of glass is explained by a one-line coach the first time it appears. Measured again on fresh seeds, the skilled bot's first-try clear rate went from 79% to 71% over the campaign, about ten points in Lilac, Ember and Night.
 
 The solver part: that simulates the real physics. A level ships only when it has a solution with par balls that still works if the aim is off by ±0.6°. No pixel-perfect or unfair levels.
 

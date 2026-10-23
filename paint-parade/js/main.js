@@ -5,11 +5,12 @@ import { sfx, unlock as unlockAudio, setSfx, setMusic, suspend, resume } from '.
 import { Ads, IAP, PRODUCTS, initPlatform, track, haptic, isNative, requestReview } from './platform.js';
 import { t, setLang, detectLang, artName, albumName, LANGS, getLang } from './i18n.js';
 import { LEVEL_DATA } from './levels-data.js';
-import { decodeLevel, levelSpec, makeLevel } from './levels.js';
+import { decodeLevel, levelSpec, makeLevel, bgFor } from './levels.js';
 import { ART, ALBUMS, PALETTE, artToGrid } from './art.js';
 import { buildLevel, hashStr } from './levelgen.js';
 import { drawBucket, artThumb, mix, laneSlotPos, slotPos } from './render.js';
 import { bestMove } from './bot.js';
+import { loadAssets } from './assets.js';
 
 const VERSION = '1.0.0';
 const $ = (s, el = document) => el.querySelector(s);
@@ -68,13 +69,17 @@ function getLevel(i) {
 }
 function rewardFor(lv) { return lv.daily ? 100 : lv.tag === 'super' ? 60 : lv.tag === 'hard' ? 40 : 20; }
 
+const dailyCache = new Map();
 function dailyLevel(day) {
+  if (dailyCache.has(day)) return { ...dailyCache.get(day) };
   const h = hashStr('daily:' + day);
   const art = ART[h % ART.length];
-  const spec = { i: 40 + (h % 30), tag: 'normal', art: art.id, seed: h, lanes: 3, slots: 5, beltCap: 5, noise: 1.6, scale: 2, bg: ['c', 'w', 'l', 'p', 't'][h % 5], hidden: 0.15, coat: h % 3 === 0 ? 0.12 : 0, twins: h % 2, target: 0.6 };
-  const lv = makeLevel(spec, { candidates: 2, games: 6 });
+  // same rules and difficulty goal as a normal mid-game level
+  const spec = { ...levelSpec(40 + (h % 30)), tag: 'normal', art: art.id, seed: h, noise: 1.6, scale: Math.max(...art.rows.map((r) => r.length)) <= 16 ? 2 : 1, bg: bgFor(art, h), coat: h % 3 === 0 ? 0.12 : 0, twins: h % 2 };
+  const lv = makeLevel(spec, { candidates: 2, games: 4 });
   lv.daily = true; lv.level = 0; lv.name = art.name;
-  return lv;
+  dailyCache.set(day, lv);
+  return { ...lv };
 }
 
 // ------------------------------------------------------------------ HUD
@@ -89,6 +94,16 @@ function updateHud() {
   tag.className = 'tag ' + (lv.tag === 'super' ? 'tag--super' : 'tag--hard');
   $('#hudCoins').innerHTML = COIN + fmtNum(S.coins);
   updateBoosters();
+}
+function updateTaps(bump) {
+  if (!game.st) return;
+  const n = game.st.taps;
+  const el = $('#hudTaps');
+  el.textContent = Number.isFinite(n) ? n : '∞';
+  $('#hudTapsLbl').textContent = t('taps');
+  const box = $('#hudTapsBox');
+  box.classList.toggle('low', Number.isFinite(n) && n <= 3);
+  if (bump) { box.classList.remove('bump'); void box.offsetWidth; box.classList.add('bump'); }
 }
 function setProgress(p) { $('#hudProg').style.width = (p * 100).toFixed(1) + '%'; }
 
@@ -123,6 +138,7 @@ function startLevel(lv, opts = {}) {
   updateHud();
   setProgress(0);
   game.start(lv, { extraSlots: extra, tutorial });
+  updateTaps();
   S.stats.played++;
   Save.save();
   track('level_start', { level: lv.level, daily: !!lv.daily, tag: lv.tag });
@@ -140,7 +156,8 @@ function showBanner(lv) {
     ${tagTxt ? `<span class="tag ${lv.tag === 'super' ? 'tag--super' : 'tag--hard'}">${tagTxt}</span>` : ''}
     <b>${t('goalTitle')}</b>
     <span class="banner__spots">${spots}</span>
-    <small>${t('goalSpots').replace('{n}', game.st.slots.length)}</small></div>`;
+    <small>${t('goalSpots').replace('{n}', game.st.slots.length)}</small>
+    ${Number.isFinite(game.st.taps) ? `<span class="banner__taps"><b>${game.st.taps}</b> ${t('goalTaps')}</span>` : ''}</div>`;
   b.hidden = false;
   b.classList.remove('out');
   clearTimeout(showBanner.tm);
@@ -175,13 +192,15 @@ function hideTip() { $('#tip').classList.remove('show'); }
 
 function onGameEvent(e) {
   if (e.type === 'launch') {
+    updateTaps(true);
+    if (game.st.taps === 3 && !cur.warnedTaps) { cur.warnedTaps = true; toast(t('tapsLow')); }
     if (cur && cur.level.level === 1 && !cur.tippedPaint) { cur.tippedPaint = true; tip(t('tipPaints'), 'top', 3800); }
   } else if (e.type === 'park') {
-    if (!S.seen.tipSpots) { S.seen.tipSpots = 1; Save.save(); tip(t('tipSpots'), 'mid', 4200); }
-    else if (e.free <= 1 && !S.seen.tipFull) { S.seen.tipFull = 1; Save.save(); tip(t('tipFull'), 'mid', 4200); }
+    if (!S.seen.tipSpots) { S.seen.tipSpots = 1; Save.save(); tip(t('tipSpots'), 'top', 4200); }
+    else if (e.free <= 1 && !S.seen.tipFull) { S.seen.tipFull = 1; Save.save(); tip(t('tipFull'), 'top', 4200); }
   } else if (e.type === 'sleepyFront') {
     // Teach the core rule the first time a bucket at the front can't paint.
-    if (!S.seen.tipSleepy && cur && cur.level.level >= 2) { S.seen.tipSleepy = 1; Save.save(); setTimeout(() => tip(t('tipSleepy'), 'mid', 5600), cur.level.level <= 6 ? 1900 : 300); }
+    if (!S.seen.tipSleepy && cur && cur.level.level >= 2) { S.seen.tipSleepy = 1; Save.save(); setTimeout(() => tip(t('tipSleepy'), 'top', 5600), cur.level.level <= 6 ? 1900 : 300); }
   } else if (e.type === 'blocked') {
     if (e.why === 'twin') toast(t('twinWait'));
   } else if (e.type === 'grabUsed') {
@@ -213,6 +232,9 @@ function onWin(st) {
   hideTip();
   const bonus = lv.daily ? Math.min(100, (S.daily.days - 1) * 20) : 0;
   // Thinking is rewarded: no bucket ever had to wait = Perfect.
+  const par = lv.par || st.tapsUsed;
+  const stars = st.tapsUsed <= par ? 3 : st.tapsUsed <= par + Math.max(1, Math.ceil(((lv.taps || par) - par) / 2)) ? 2 : 1;
+  if (!lv.daily) { S.stars = S.stars || {}; S.stars[lv.level] = Math.max(S.stars[lv.level] || 0, stars); }
   const perfect = st.stats.parks === 0 && lv.level !== 1;
   const perfectBonus = perfect ? Math.max(10, Math.round(reward / 2)) : 0;
   if (perfect) { S.stats.perfects = (S.stats.perfects || 0) + 1; track('perfect', { level: lv.level }); }
@@ -223,13 +245,16 @@ function onWin(st) {
     <div class="card card--win">
       <div class="ribbon">${t('winTitle')}</div>
       <div class="win-art"><img src="${thumb}" alt=""><div class="win-shine"></div></div>
+      <div class="stars s${stars}"><i></i><i></i><i></i></div>
       <div class="win-name">${name}</div>
       <div class="win-sub">${firstTime ? t('winSub') : ''}</div>
       ${perfect ? `<div class="perfect">⭐ ${t('perfect')} <small>${t('perfectD')} +${perfectBonus}</small></div>` : ''}
-      <div class="win-reward">${COIN}<b>+${total}</b>${bonus ? `<small>${t('streakBonus')} +${bonus}</small>` : ''}</div>
+      <div class="win-reward">${COIN}<b id="winCoins">+0</b>${bonus ? `<small>${t('streakBonus')} +${bonus}</small>` : ''}</div>
       ${!lv.daily && lv.level < 4 ? '' : `<button class="btn btn--purple btn--big" data-act="x2"><span class="ad-ico"></span>${t('x2')}</button>`}
       <button class="btn btn--green btn--big" data-act="claim">${!lv.daily && lv.level < 5 ? t('next') : t('claim')}</button>
     </div>`, { noClose: true });
+  countUp(m.querySelector('#winCoins'), total, 1000);
+  [0.35, 0.6, 0.85].slice(0, stars).forEach((d, i) => setTimeout(() => sfx.coin(i * 4), d * 1000 + 120));
   m.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return;
     sfx.tap();
@@ -239,6 +264,23 @@ function onWin(st) {
       if (ok) { finishWin(total * 2, true); } else b.disabled = false;
     } else finishWin(total, false);
   });
+}
+
+// Rolls a number up from 0 with little coin ticks.
+function countUp(el, to, delay = 0, dur = 650) {
+  if (!el) return;
+  const t0 = performance.now() + delay;
+  let lastTick = -1;
+  const frame = (now) => {
+    const k = Math.max(0, Math.min(1, (now - t0) / dur));
+    const v = Math.round(to * (1 - Math.pow(1 - k, 3)));
+    el.textContent = '+' + v;
+    const tick = Math.floor(k * 8);
+    if (k > 0 && tick !== lastTick && k < 1) { lastTick = tick; sfx.coin(tick); }
+    if (k < 1) requestAnimationFrame(frame);
+    else { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  };
+  requestAnimationFrame(frame);
 }
 
 async function finishWin(coins, fromAd) {
@@ -261,7 +303,8 @@ async function finishWin(coins, fromAd) {
   else if (lv.level === 20 || lv.level === 45) onHome(() => window.dispatchEvent(new CustomEvent('pp:review')));
 }
 
-function onFail() {
+function onFail(reason = cur.failReason) {
+  cur.failReason = reason;
   const lv = cur.level;
   showHud(false);
   hideTip();
@@ -269,11 +312,11 @@ function onFail() {
   const pct = Math.round((1 - game.st.left / game.st.total) * 100);
   const m = openModal(`
     <div class="card card--fail">
-      <div class="ribbon ribbon--red">${t('failTitle')}</div>
+      <div class="ribbon ribbon--red">${reason === 'taps' ? t('failTapsTitle') : t('failTitle')}</div>
       <div class="fail-prog"><div class="ring" style="--p:${pct}"><span>${pct}%</span></div></div>
-      <p class="muted">${t('failSub')}</p>
-      ${cur.revivedAd ? '' : `<button class="btn btn--purple btn--big" data-act="ad"><span class="ad-ico"></span>${t('revive')} · ${t('reviveAd')}</button>`}
-      <button class="btn btn--green btn--big" data-act="coins">${t('revive')} · ${COIN}${REVIVE_PRICE}</button>
+      <p class="muted">${reason === 'taps' ? t('failTapsSub') : t('failSub')}</p>
+      ${cur.revivedAd ? '' : `<button class="btn btn--purple btn--big" data-act="ad"><span class="ad-ico"></span>${reason === 'taps' ? t('reviveTaps') : t('revive')} · ${t('reviveAd')}</button>`}
+      <button class="btn btn--green btn--big" data-act="coins">${reason === 'taps' ? t('reviveTaps') : t('revive')} · ${COIN}${REVIVE_PRICE}</button>
       <button class="btn btn--link" data-act="quit">${t('giveUp')}</button>
     </div>`, { noClose: true });
   m.addEventListener('click', async (ev) => {
@@ -296,7 +339,7 @@ function doRevive() {
   S.stats.revives++; Save.save();
   track('revive', { level: cur.level.level });
   game.doRevive();
-  showHud(true); updateHud();
+  showHud(true); updateHud(); updateTaps(true);
 }
 
 function confirmQuit() {
@@ -356,7 +399,7 @@ function onBooster(b) {
   sfx.tap();
   if (b === 'slot') { S.boosters.slot--; game.useSlot(); toast('+1 🪣'); }
   else if (b === 'rainbow') { S.boosters.rainbow--; game.useRainbow(); }
-  else if (b === 'grab') { game.setGrab(true); tip(t('grabTap'), 'mid', 0); }
+  else if (b === 'grab') { game.setGrab(true); tip(t('grabTap'), 'top', 0); }
   if (b !== 'grab') track('booster_use', { b });
   cur.boostersUsed++;
   Save.save(); updateBoosters();
@@ -513,7 +556,7 @@ function renderHome() {
       <div class="pill pill--coins" id="homeCoins" data-nav="shop">${COIN}<b>${fmtNum(S.coins)}</b><i class="plus">+</i></div>
       <button class="icon-btn" data-nav="settings" aria-label="${t('settings')}"><span class="gear-ico"></span></button>
     </div>
-    <h1 class="logo">${title}</h1>
+    <h1 class="logo"><img src="img/logo.webp" alt="Paint Parade"></h1>
     <div class="parade">${['#ff4b5c', '#ffd23f', '#3fcf6b', '#5ccfff', '#9b5cff'].map((c, i) => `<img src="${bucketImg(c, '', 56)}" style="--i:${i}" alt="">`).join('')}</div>
     <div class="next-card" data-nav="play">
       <div class="next-art"><img src="${preview}" alt=""><span class="q">?</span></div>
@@ -802,12 +845,13 @@ function boot() {
   // First session: straight into level 1, no menus.
   if (S.level === 1 && S.stats.wins === 0) startLevel(getLevel(1));
   else goHome();
+  // build today's Daily Canvas while the player looks at the home screen
+  setTimeout(() => { if (!cur) dailyLevel(Save.today()); }, 2500);
   window.__pp = { S, game, getLevel, startLevel, goHome, Save, openShop, openGallery, bestMove, laneSlotPos, slotPos };
 }
 
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !isNative()) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-document.fonts && document.fonts.load('700 20px Fredoka').finally(boot);
-if (!document.fonts) boot();
+Promise.all([document.fonts ? document.fonts.load('700 20px Fredoka').catch(() => {}) : null, loadAssets()]).finally(boot);
 void mix; void buildLevel;

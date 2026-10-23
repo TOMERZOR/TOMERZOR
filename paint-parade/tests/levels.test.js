@@ -4,7 +4,7 @@ import { LEVEL_DATA } from '../js/levels-data.js';
 import { decodeLevel, levelSpec } from '../js/levels.js';
 import { PALETTE, ART, ALBUMS, artToGrid } from '../js/art.js';
 import { createGame, ammoByColor, coatsByColor } from '../js/engine.js';
-import { playSmart } from '../js/bot.js';
+import { playSmart, playSpam } from '../js/bot.js';
 
 test('every artwork is rectangular, uses known colors and belongs to an album', () => {
   const ids = new Set();
@@ -35,11 +35,24 @@ test('shipped levels match the current schedule (art + tag)', () => {
   });
 });
 
-test('every shipped level is solvable by the bot without revives', () => {
+test('every shipped level is solvable within its tap budget, without revives', () => {
   LEVEL_DATA.forEach((d, i) => {
-    const r = playSmart(decodeLevel(d, PALETTE));
-    assert.ok(r.win, 'level ' + (i + 1) + ' not solved');
+    const lv = decodeLevel(d, PALETTE);
+    assert.ok(Number.isFinite(lv.taps) && lv.taps >= lv.par, 'level ' + (i + 1) + ' has a tap budget');
+    const win = playSmart(lv).win || playSmart(lv, { frugal: true }).win;
+    assert.ok(win, 'level ' + (i + 1) + ' not solved in ' + lv.taps + ' taps');
   });
+});
+
+test('button mashing loses: a spam bot rarely beats normal/hard/super levels', () => {
+  let games = 0, wins = 0;
+  LEVEL_DATA.forEach((d, i) => {
+    if (i < 6 || i % 7 || d.t === 'breather') return;
+    const lv = decodeLevel(d, PALETTE);
+    for (let s = 1; s <= 4; s++) { games++; if (playSpam(lv, s * 7777).win) wins++; }
+  });
+  assert.ok(games >= 80);
+  assert.ok(wins / games <= 0.1, `spam won ${wins}/${games}`);
 });
 
 test('thinking beats spamming: stored difficulty shows a real gap', () => {
@@ -53,4 +66,5 @@ test('thinking beats spamming: stored difficulty shows a real gap', () => {
     assert.ok(gap >= 30, `${tag}: awake ${avg(xs, 'aw').toFixed(0)} vs random ${avg(xs, 'r').toFixed(0)}`);
   }
   assert.ok(avg(by.normal, 'aw') >= 80, 'normal levels must be fair for a thinking player');
+  for (const tag of ['normal', 'hard', 'super']) assert.ok(avg(by[tag], 'sp') <= 10, `${tag}: spam wins ${avg(by[tag], 'sp').toFixed(0)}%`);
 });

@@ -2,7 +2,7 @@
 // the candidate selection that keeps every level solvable and on-target.
 import { ART } from './art.js';
 import { buildLevel, hashStr } from './levelgen.js';
-import { playSmart, playRandom, playAwake } from './bot.js';
+import { playSmart, playRandom, playAwake, playSpam } from './bot.js';
 
 // Artwork order for the first pass through the library (easy → rich).
 export const ART_ORDER = [
@@ -25,22 +25,23 @@ export function levelTag(i) {
   return 'normal';
 }
 
-// Difficulty is measured with two simulated players on the real engine:
-//  - "awake": reads the board and only sends buckets whose color is reachable
-//    (a casual thinking player, a lower bound for a real human)
-//  - "random": taps whatever is tappable (a spammer)
-// Every level must be solved by the smart bot; then we pick the version where
-// thinking pays off: awake wins at least `awake`, random lands near `random`.
+// Difficulty is measured with simulated players on the real engine, under the
+// level's tap budget (par = fewest taps the smart bot needed, plus a little slack):
+//  - "thinker": waits for awake buckets that can do real work (a casual human)
+//  - "random": taps something every now and then
+//  - "spam": taps everything as fast as it can
+// Every level must be solvable; then we keep the version where thinking wins and
+// mashing loses.
 const GOALS = {
-  tutorial: { awake: 1, random: 1 },
-  intro: { awake: 0.95, random: 0.55 },
-  normal: { awake: 0.85, random: 0.3 },
-  breather: { awake: 0.95, random: 0.6 },
-  hard: { awake: 0.6, random: 0.1 },
-  super: { awake: 0.4, random: 0.02 },
+  tutorial: { think: 1, spam: 1, random: 1, slack: 6 },
+  intro: { think: 0.95, spam: 0.6, random: 0.5, slack: 4 },
+  normal: { think: 0.85, spam: 0.05, random: 0.15, slack: 3 },
+  breather: { think: 0.95, spam: 0.1, random: 0.4, slack: 3 },
+  hard: { think: 0.65, spam: 0, random: 0.05, slack: 2 },
+  super: { think: 0.45, spam: 0, random: 0, slack: 2 },
 };
 
-function bgFor(art, i) {
+export function bgFor(art, i) {
   const used = new Set(art.rows.join(''));
   for (let k = 0; k < BG.length; k++) { const c = BG[(i + k) % BG.length]; if (!used.has(c)) return c; }
   return null;
@@ -70,6 +71,7 @@ export function levelSpec(i) {
   if (i >= 22 && i % 2 === 1) spec.twins = 1 + (i % 5 === 1 ? 1 : 0);
   if (pass > 0 && tag !== 'breather') spec.noise += 0.5;
   spec.goal = GOALS[tag];
+  if (i === 3) spec.goal = { ...GOALS.intro, spam: 0.35 };
   return spec;
 }
 
@@ -78,27 +80,39 @@ function shooterTarget(px, spec) {
   return Math.max(3, Math.round(px / chunk));
 }
 
-export function evaluate(level, games = 10) {
-  const smart = playSmart(level);
-  if (!smart.win) return { ok: false };
-  let aw = 0, rw = 0;
+export function evaluate(level, goal, games = 12) {
+  const runs = [playSmart(level), playSmart(level, { frugal: true })].filter((r) => r.win);
+  if (!runs.length) return { ok: false };
+  const par = Math.min(...runs.map((r) => r.st.stats.launches));
+  const taps = par + goal.slack;
+  const lv = { ...level, taps };
+  let tw = 0, rw = 0, sw = 0;
   for (let s = 1; s <= games; s++) {
-    if (playAwake(level, s * 7919).win) aw++;
-    if (playRandom(level, s * 104729).win) rw++;
+    if (playAwake(lv, s * 7919).win) tw++;
+    if (playRandom(lv, s * 104729).win) rw++;
+    if (playSpam(lv, s * 15485863).win) sw++;
   }
-  return { ok: true, awake: aw / games, rand: rw / games, ticks: smart.st.tick };
+  return { ok: true, par, taps, think: tw / games, rand: rw / games, spam: sw / games, ticks: runs[0].st.tick };
 }
 
 function score(ev, goal) {
-  // Unfair (thinking doesn't win) is the worst; then spamming must not pay; then hit the target.
-  const gap = ev.awake - ev.rand;
-  const wantGap = Math.min(0.35, goal.awake - goal.random);
-  return Math.max(0, goal.awake - ev.awake) * 3 + Math.max(0, wantGap - gap) * 2 + Math.abs(ev.rand - goal.random);
+  // Unfair (thinking doesn't win) and mashable (spam wins) are the two sins.
+  return Math.max(0, goal.think - ev.think) * 3 + Math.max(0, ev.spam - goal.spam) * 3 + Math.abs(ev.rand - goal.random);
 }
 
-// Builds the level for a spec: tries noise/seed variants and keeps the one that
-// best rewards thinking while staying fair.
-export function makeLevel(spec, { candidates = 24, games = 16 } = {}) {
+// Builds the level for a spec: tries noise/size/seed variants and keeps the one
+// that best rewards thinking while staying fair.
+export function makeLevel(spec, opts = {}) {
+  let made = makeLevelOnce(spec, opts);
+  // Still mashable? Tighten the budget by one tap and search again.
+  for (let slack = spec.goal.slack - 1; made.spam > spec.goal.spam + 0.05 && slack >= 1; slack--) {
+    const again = makeLevelOnce({ ...spec, goal: { ...spec.goal, slack } }, { ...opts, candidates: 16 });
+    if (again.think >= spec.goal.think - 0.1 && again.spam < made.spam) made = again;
+  }
+  return made;
+}
+
+function makeLevelOnce(spec, { candidates = 24, games = 12 } = {}) {
   let best = null;
   const noises = [spec.noise, spec.noise + 1, Math.max(0, spec.noise - 1), spec.noise + 2];
   const sizes = spec.tag === 'tutorial' || spec.tag === 'breather' ? [1] : [1, 1.4, 1.8];
@@ -109,17 +123,18 @@ export function makeLevel(spec, { candidates = 24, games = 16 } = {}) {
     // Bigger buckets (fewer, larger numbers) can't finish early, so order matters more.
     opts.shooters = Math.max(3, Math.round(shooterTarget(px, spec) / sizes[Math.floor(k / noises.length) % sizes.length]));
     const lv = buildLevel(opts);
-    const ev = evaluate(lv, games);
+    const ev = evaluate(lv, spec.goal, games);
     if (!ev.ok) continue;
     const sc = score(ev, spec.goal);
     if (!best || sc < best.sc) best = { sc, lv, ev };
+    if (sc === 0 && k >= 7) break;
   }
   if (!best) {
-    // Last resort: calm order and an extra spot.
     const lv = buildLevel({ ...spec, noise: 0, slots: spec.slots + 1, shooters: 8 });
-    best = { lv, ev: evaluate(lv, games) };
+    best = { lv, ev: evaluate(lv, { ...spec.goal, slack: spec.goal.slack + 3 }, games) };
   }
-  return { ...best.lv, tag: spec.tag, level: spec.i, rand: best.ev.rand ?? 1, awake: best.ev.awake ?? 1, ticks: best.ev.ticks };
+  const ev = best.ev;
+  return { ...best.lv, tag: spec.tag, level: spec.i, par: ev.par, taps: ev.taps, think: ev.think ?? 1, rand: ev.rand ?? 1, spam: ev.spam ?? 1, ticks: ev.ticks };
 }
 
 // ---- compact encoding for the shipped data file ----
@@ -130,7 +145,7 @@ export function encodeLevel(lv) {
     g: lv.cells.map((c) => (c < 0 ? '.' : DIG[c])).join(''),
     ...(lv.coats ? { o: lv.coats.map((c) => c).join('') } : {}),
     l: lv.lanes.map((lane) => lane.map((s) => [s.c, s.n, (s.hidden ? 1 : 0) | (s.twin ? s.twin << 1 : 0)])),
-    s: lv.slots, b: lv.beltCap, p: lv.spacing, r: Math.round(lv.rand * 100), aw: Math.round((lv.awake ?? 1) * 100),
+    s: lv.slots, b: lv.beltCap, p: lv.spacing, r: Math.round(lv.rand * 100), aw: Math.round((lv.think ?? 1) * 100), sp: Math.round((lv.spam ?? 1) * 100), pr: lv.par, tp: lv.taps,
   };
 }
 
@@ -143,6 +158,6 @@ export function decodeLevel(d, PALETTE) {
     w: d.w, h: d.h, cells, keys, colors: keys.map((k) => PALETTE[k].hex),
     coats: d.o ? [...d.o].map(Number) : undefined,
     lanes: d.l.map((lane) => lane.map(([c, n, f]) => ({ c, n, hidden: !!(f & 1), twin: f >> 1 }))),
-    slots: d.s, beltCap: d.b, spacing: d.p || 2, rand: d.r / 100, awake: (d.aw ?? 100) / 100,
+    slots: d.s, beltCap: d.b, spacing: d.p || 2, rand: d.r / 100, awake: (d.aw ?? 100) / 100, spam: (d.sp ?? 100) / 100, par: d.pr, taps: d.tp,
   };
 }

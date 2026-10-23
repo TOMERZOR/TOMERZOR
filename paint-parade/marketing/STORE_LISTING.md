@@ -21,7 +21,8 @@
 > 💦 It splashes every pixel of its color that it can see.
 > 😴 Sleepy bucket? Its color is buried inside — peel the outer layers first!
 > 🪣 Paint left over? It waits in one of only 3 spots.
-> ⚠️ Fill every spot and the level is lost. Think before you tap!
+> 👆 Every level has a limited number of taps — solve it in the fewest for 3 stars.
+> ⚠️ Fill every spot or run out of taps and the level is lost. Think before you tap!
 >
 > **WHY YOU'LL LOVE IT**
 > ✨ Insanely satisfying — grey pixels burst into color with every splash
@@ -70,7 +71,8 @@
 > 💦 הוא מתיז צבע על כל פיקסל בצבע שלו שהוא רואה.
 > 😴 דלי ישנוני? הצבע שלו קבור בפנים — קלפו קודם את השכבות החיצוניות!
 > 🪣 נשאר צבע? הדלי מחכה באחד מ-3 מקומות בלבד.
-> ⚠️ כל המקומות התמלאו? השלב אבוד. תחשבו לפני שאתם מקישים!
+> 👆 לכל שלב מספר הקשות מוגבל — פתרו בכמה שפחות כדי לקבל 3 כוכבים.
+> ⚠️ כל המקומות התמלאו או שנגמרו ההקשות? השלב אבוד. תחשבו לפני שאתם מקישים!
 >
 > **למה תתמכרו**
 > ✨ מספק בטירוף — פיקסלים אפורים מתפוצצים בצבע

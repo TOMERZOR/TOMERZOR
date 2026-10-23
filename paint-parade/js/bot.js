@@ -23,7 +23,7 @@ export function legalMoves(st) {
   const out = [];
   if (st.status !== 'play') return out;
   st.lanes.forEach((lane, i) => { if (!laneBlock(st, i)) out.push({ kind: 'lane', i }); });
-  if (beltLoad(st) < st.beltCap) st.slots.forEach((s, i) => { if (s) out.push({ kind: 'slot', i }); });
+  if (beltLoad(st) < st.beltCap && st.taps > 0) st.slots.forEach((s, i) => { if (s) out.push({ kind: 'slot', i }); });
   return out;
 }
 
@@ -80,7 +80,8 @@ function stalled(st, mem) {
   return st.tick - mem.t > st.L * 4 + 40;
 }
 
-export function playSmart(level, { maxTicks = 20000, revives = 0 } = {}) {
+// frugal: only spend a tap on a bucket that will empty in this lap (unless nothing moves).
+export function playSmart(level, { maxTicks = 20000, revives = 0, frugal = false } = {}) {
   const st = createGame(level);
   let revivesLeft = revives;
   const mem = { left: -1, t: 0 };
@@ -96,7 +97,7 @@ export function playSmart(level, { maxTicks = 20000, revives = 0 } = {}) {
       const b = bestMove(st);
       if (!b) break;
       const idle = st.belt.length === 0 && st.pending.length === 0;
-      if (b.r.shots > 0 || idle) applyMove(st, b.m); else break;
+      if (frugal ? (b.r.popped || idle) : (b.r.shots > 0 || idle)) applyMove(st, b.m); else break;
     }
     step(st);
     st.events.length = 0;
@@ -132,6 +133,26 @@ export function playRandom(level, seed = 1, { maxTicks = 20000, tapChance = 0.12
   return { win: st.status === 'win', st };
 }
 
+// A button masher: taps whatever can be tapped, as fast as the game allows.
+export function playSpam(level, seed = 1, { maxTicks = 20000 } = {}) {
+  const st = createGame(level);
+  let r = seed >>> 0 || 1;
+  const rnd = () => ((r = (r * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const mem = { left: -1, t: 0 };
+  for (let t = 0; t < maxTicks && st.status === 'play'; t++) {
+    if (stalled(st, mem)) break;
+    const moves = legalMoves(st);
+    if (moves.length) {
+      const lanes = moves.filter((m) => m.kind === 'lane');
+      const pool = lanes.length && rnd() < 0.75 ? lanes : moves;
+      applyMove(st, pool[Math.floor(rnd() * pool.length)]);
+    }
+    step(st);
+    st.events.length = 0;
+  }
+  return { win: st.status === 'win', st };
+}
+
 // A casual player who reads the board: sends awake buckets (color reachable),
 // usually the one whose color shows the most pixels for its number, and only
 // sends a sleepy one when nothing is moving.
@@ -156,6 +177,8 @@ export function playAwake(level, seed = 1, { maxTicks = 20000, tapChance = 0.1, 
         if (awake.length) {
           if (rnd() < focus) pick = awake.reduce((a, b) => (value(b) > value(a) ? b : a));
           else pick = awake[Math.floor(rnd() * awake.length)];
+          // with a tap budget, a thinking player waits until a bucket can do real work
+          if (Number.isFinite(st.taps) && !idle && value(pick) < 0.6) pick = null;
         } else if (idle) pick = moves[Math.floor(rnd() * moves.length)];
         if (pick) applyMove(st, pick);
       }

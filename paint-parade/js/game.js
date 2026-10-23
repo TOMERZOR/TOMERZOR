@@ -49,6 +49,9 @@ export class Game {
     this.proj = [];
     this.fly = [];          // buckets hopping from lane/slot to the belt
     this.pops = [];
+    this.parking = [];      // buckets sliding from the belt into a waiting spot
+    this.slide = new Map(); // bucket -> drawn lane depth (eases toward the real one)
+    this.winT = 0;
     this.combo = 0; this.lastSplat = 0;
     this.acc = 0;
     this.phase = 0;
@@ -154,6 +157,7 @@ export class Game {
 
   update(dt) {
     this.time += dt;
+    this.dt = dt;
     const st = this.st;
     if (st.status === 'play') {
       this.acc += dt * this.tickRate;
@@ -184,6 +188,7 @@ export class Game {
         this.anims.set(p.cell, this.time);
         const cx = this.L.bx + (p.cell % this.level.w + 0.5) * this.L.cs, cy = this.L.by + (Math.floor(p.cell / this.level.w) + 0.5) * this.L.cs;
         this.fx.splat(cx, cy, p.col, this.L.cs > 14 ? 6 : 4);
+        if (this.L.cs >= 9) this.fx.ripple(cx, cy, p.col, this.L.cs * 1.1);
         if (this.time - this.lastSplat < 0.4) this.combo++; else this.combo = 0;
         this.lastSplat = this.time;
         sfx.splat(this.combo); haptic.tick();
@@ -193,7 +198,13 @@ export class Game {
     for (const f of this.fly) f.t += dt;
     this.fly = this.fly.filter((f) => f.t < f.dur);
     for (const p of this.pops) p.t += dt;
-    this.pops = this.pops.filter((p) => p.t < 0.5);
+    this.pops = this.pops.filter((p) => p.t < 0.6);
+    for (const p of this.parking) p.t += dt;
+    this.parking = this.parking.filter((p) => p.t < p.dur);
+    if (this.fireworks) {
+      for (const f of this.fireworks) if (!f.done && this.time >= f.at) { f.done = true; this.fx.burst(f.x, f.y, f.cols, 30, 200 + Math.random() * 80); sfx.pop(); }
+      this.fireworks = this.fireworks.filter((f) => !f.done);
+    }
     for (const [i, t0] of this.anims) if (this.time - t0 > 0.25) this.anims.delete(i);
     this.fx.update(dt);
     // end of level once the last splash has landed
@@ -226,16 +237,19 @@ export class Game {
       } else if (e.type === 'pop') {
         const s = this.findShooterPos(e.id);
         if (s) {
-          this.pops.push({ x: s.x, y: s.y, t: 0 });
-          this.fx.confetti(s.x, s.y, 14, 2);
-          this.fx.ring(s.x, s.y, '#ffffff', 26);
+          const b = this.lastBucket && this.lastBucket.get(e.id);
+          this.pops.push({ x: s.x, y: s.y, t: 0, col: b ? this.colorOf(b) : '#ffffff', dir: Math.random() < 0.5 ? -1 : 1 });
+          this.fx.sparkle(s.x, s.y - L.T * 0.3, 9, 70);
+          this.fx.ring(s.x, s.y, '#ffffff', L.T * 0.9);
           const n = this.lapShots.get(e.id) || 0;
-          if (n >= 12) this.fx.text(s.x, s.y - 18, n >= 30 ? 'AMAZING!' : n >= 20 ? 'GREAT!' : 'NICE!', n >= 30 ? '#ffd23f' : '#ffffff', n >= 30 ? 22 : 18);
+          if (n >= 12) this.fx.text(s.x, Math.max(L.top + 30, s.y - 18), n >= 30 ? 'AMAZING!' : n >= 20 ? 'GREAT!' : 'NICE!', n >= 30 ? '#ffd23f' : '#ffffff', n >= 30 ? 22 : 18);
         }
         sfx.pop(); haptic.light();
       } else if (e.type === 'park') {
         sfx.park();
         const sp = slotPos(L, e.slot);
+        const from = this.lastPos && this.lastPos.get(e.id);
+        if (from) this.parking.push({ id: e.id, x0: from.x, y0: from.y, slot: e.slot, t: 0, dur: 0.32 });
         if (this.parksShown++ < 4) this.fx.text(sp.x, sp.y - L.slotS * 0.7, this.hooks.t ? this.hooks.t('oops') : 'Oops!', '#ff4b5c', 18);
         if (freeSlots(st) <= 1) { sfx.warn(); haptic.medium(); this.dangerT = this.time; }
         this.hooks.onEvent && this.hooks.onEvent({ type: 'park', free: freeSlots(st) });
@@ -244,7 +258,7 @@ export class Game {
         this.fx.ring(p.x, p.y, '#ffd23f', 30); sfx.reveal();
       } else if (e.type === 'fail') {
         sfx.fail(); haptic.heavy(); this.fx.shake = 10;
-        setTimeout(() => this.hooks.onFail && this.hooks.onFail(), 650);
+        setTimeout(() => this.hooks.onFail && this.hooks.onFail(e.reason || this.st.failReason), 650);
       } else if (e.type === 'win') {
         this.hooks.onProgress && this.hooks.onProgress(1);
       }
@@ -263,9 +277,13 @@ export class Game {
     sfx.win(); haptic.success();
     this.fx.confetti(L.W * 0.25, L.by + L.bh * 0.6, 50, 1.2);
     this.fx.confetti(L.W * 0.75, L.by + L.bh * 0.6, 50, 1.2);
+    this.fx.sparkle(L.bx + L.bw / 2, L.by + L.bh / 2, 16, Math.min(L.bw, L.bh) * 0.6);
+    // three fireworks in the artwork's own colors
+    const cols = this.level.colors.concat(['#ffffff']);
+    this.fireworks = [0.15, 0.4, 0.65].map((dt, k) => ({ at: this.time + dt, x: L.bx + L.bw * (0.22 + 0.28 * k) + (Math.random() - 0.5) * 30, y: L.by + L.bh * (0.15 + Math.random() * 0.3), cols }));
     this.winT = this.time;
     track('level_win', { level: this.level.level, ticks: this.st.tick });
-    setTimeout(() => this.hooks.onWin && this.hooks.onWin(this.st), 1100);
+    setTimeout(() => this.hooks.onWin && this.hooks.onWin(this.st), 1500);
   }
 
   // ------------------------------------------------------------ draw
@@ -278,6 +296,15 @@ export class Game {
     if (this.fx.shake > 0) ctx.translate((Math.random() - 0.5) * this.fx.shake, (Math.random() - 0.5) * this.fx.shake);
     const danger = st.status === 'play' && freeSlots(st) <= 1 && st.slots.length > 0;
     drawBelt(ctx, L, this.phase, danger && Math.sin(this.time * 8) > 0);
+    ctx.save();
+    if (this.winT) {
+      const k = (this.time - this.winT) / 0.55;
+      if (k < 1) {
+        const z = 1 + Math.sin(k * Math.PI) * 0.06 * (1 - k * 0.5);
+        const cx = L.bx + L.bw / 2, cy = L.by + L.bh / 2;
+        ctx.translate(cx, cy); ctx.scale(z, z); ctx.translate(-cx, -cy);
+      }
+    }
     drawBoardFrame(ctx, L);
     ctx.drawImage(this.cache.canvas, L.bx, L.by, L.bw, L.bh);
     // pop-in animation on freshly painted pixels
@@ -305,10 +332,12 @@ export class Game {
         ctx.restore();
       }
     }
+    ctx.restore();
     this.drawProjectiles(ctx);
     this.drawBeltBuckets(ctx);
     this.drawSlots(ctx);
     this.drawLanes(ctx);
+    this.drawParking(ctx);
     this.drawFly(ctx);
     this.drawCapacity(ctx);
     ctx.restore();
@@ -317,14 +346,30 @@ export class Game {
   }
 
   drawProjectiles(ctx) {
+    const r = Math.max(2.5, this.L.cs * 0.34);
+    const at = (p, k) => ({ x: p.x0 + (p.x1 - p.x0) * k, y: p.y0 + (p.y1 - p.y0) * k - Math.sin(k * Math.PI) * 12 });
+    ctx.lineCap = 'round';
     for (const p of this.proj) {
       const k = Math.min(1, p.t / p.dur);
-      const x = p.x0 + (p.x1 - p.x0) * k, y = p.y0 + (p.y1 - p.y0) * k - Math.sin(k * Math.PI) * 10;
-      const r = Math.max(2.5, this.L.cs * 0.32);
+      const h = at(p, k);
+      // trail: three shrinking strokes behind the blob
+      for (let j = 3; j >= 1; j--) {
+        const t = at(p, Math.max(0, k - j * 0.09));
+        ctx.globalAlpha = 0.55 - j * 0.13;
+        ctx.strokeStyle = p.col; ctx.lineWidth = r * (2 - j * 0.42);
+        ctx.beginPath(); ctx.moveTo(t.x, t.y); ctx.lineTo(h.x, h.y); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      // blob stretched along its flight
+      const t = at(p, Math.max(0, k - 0.05));
+      const ang = Math.atan2(h.y - t.y, h.x - t.x);
+      const st = 1 + Math.min(0.6, Math.hypot(h.x - t.x, h.y - t.y) / (r * 3));
+      ctx.save(); ctx.translate(h.x, h.y); ctx.rotate(ang);
       ctx.fillStyle = p.col;
-      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.35, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 0, r * st, r / Math.sqrt(st), 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.beginPath(); ctx.ellipse(r * 0.2, -r * 0.35, r * 0.4, r * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
     }
   }
 
@@ -340,11 +385,13 @@ export class Game {
     const L = this.L, st = this.st;
     const size = L.T * 1.05;
     this.lastPos = this.lastPos || new Map();
+    this.lastBucket = this.lastBucket || new Map();
     const alpha = st.status === 'play' ? this.acc : 0;
     for (const s of st.belt) {
       const f = s.steps === 0 ? 0 : s.p - 1 + alpha;
       const pt = trackPoint(L, f);
       this.lastPos.set(s.id, pt);
+      this.lastBucket.set(s.id, s);
       if (this.isFlying(s.id)) continue;
       const bob = Math.sin(this.time * 10 + s.id) * 1.2;
       const k = this.time - (this.shotAt.get(s.id) || -9);
@@ -358,12 +405,19 @@ export class Game {
       this.lastPos.set(s.id, e);
       drawBucket(ctx, e.x - k * 4, e.y - k * 6, size, this.colorOf(s), s.n, { blink: this.blink(s.id), sleepy: !this.awake(s), t: this.time + s.id });
     });
+    // an emptied bucket hops off the belt, spins and vanishes in a puff
     for (const p of this.pops) {
-      const k = p.t / 0.5;
-      ctx.globalAlpha = 1 - k;
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.arc(p.x, p.y, L.T * (0.4 + k), 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
+      const k = p.t / 0.6;
+      const x = p.x + p.dir * k * L.T * 0.9;
+      const y = p.y - Math.sin(Math.min(1, k * 1.4) * Math.PI) * L.T * 1.3 + k * k * L.T * 0.6;
+      const sz = size * (k < 0.15 ? 1 + k * 1.6 : 1.24 * (1 - (k - 0.15) / 0.85 * 0.8));
+      drawBucket(ctx, x, y, sz, p.col, '', { rot: p.dir * k * Math.PI * 1.6, alpha: Math.min(1, (1 - k) * 2.2), blink: true });
+      if (k < 0.35) {
+        const a = 1 - k / 0.35;
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, L.T * (0.5 + k * 2));
+        g.addColorStop(0, `rgba(255,255,255,${0.85 * a})`); g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, L.T * (0.5 + k * 2), 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
 
@@ -388,17 +442,40 @@ export class Game {
     for (let i = 0; i < st.slots.length; i++) {
       const p = slotPos(L, i);
       const s = L.slotS;
-      ctx.fillStyle = 'rgba(67,53,110,0.14)';
-      rr(ctx, p.x - s / 2, p.y - s / 2, s, s, s * 0.28); ctx.fill();
-      ctx.strokeStyle = danger && !st.slots[i] ? `rgba(255,75,92,${0.5 + 0.5 * Math.sin(this.time * 16)})` : 'rgba(67,53,110,0.22)';
-      ctx.lineWidth = 2; ctx.setLineDash([5, 4]);
-      rr(ctx, p.x - s / 2 + 1, p.y - s / 2 + 1, s - 2, s - 2, s * 0.28); ctx.stroke();
-      ctx.setLineDash([]);
+      // a recessed socket: dark inside, lit bottom rim
+      const x0 = p.x - s / 2, y0 = p.y - s / 2, rad = s * 0.26;
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      rr(ctx, x0 - 2, y0 - 1, s + 4, s + 5, rad + 2); ctx.fill();
+      const g = ctx.createLinearGradient(0, y0, 0, y0 + s);
+      g.addColorStop(0, 'rgba(52,30,96,0.42)'); g.addColorStop(0.35, 'rgba(70,44,120,0.24)'); g.addColorStop(1, 'rgba(90,60,150,0.14)');
+      ctx.fillStyle = g; rr(ctx, x0, y0, s, s, rad); ctx.fill();
+      ctx.save(); rr(ctx, x0, y0, s, s, rad); ctx.clip();
+      ctx.strokeStyle = 'rgba(30,15,60,0.28)'; ctx.lineWidth = 6;
+      rr(ctx, x0 - 2, y0 + 1, s + 4, s + 6, rad); ctx.stroke();
+      ctx.restore();
+      if (danger && !st.slots[i]) {
+        ctx.strokeStyle = `rgba(255,75,92,${0.55 + 0.45 * Math.sin(this.time * 16)})`; ctx.lineWidth = 3;
+        rr(ctx, x0, y0, s, s, rad); ctx.stroke();
+      }
       const b = st.slots[i];
-      if (b && !this.isFlying(b.id)) {
+      if (b && !this.isFlying(b.id) && !this.parking.some((q) => q.id === b.id)) {
         const aw = this.awake(b);
         drawBucket(ctx, p.x, p.y + s * 0.04 + (aw ? Math.sin(this.time * 4 + i) * 1.2 : 0), s * 0.92, this.colorOf(b), b.n, { blink: this.blink(b.id), sleepy: !aw, t: this.time + b.id });
       }
+    }
+  }
+
+  drawParking(ctx) {
+    const L = this.L, st = this.st;
+    for (const q of this.parking) {
+      const b = st.slots[q.slot];
+      if (!b || b.id !== q.id) continue;
+      const k = Math.min(1, q.t / q.dur), e = 1 - Math.pow(1 - k, 3);
+      const to = slotPos(L, q.slot);
+      const x = q.x0 + (to.x - q.x0) * e, y = q.y0 + (to.y - q.y0) * e - Math.sin(k * Math.PI) * 30;
+      const size = L.T * 1.05 + (L.slotS * 0.92 - L.T * 1.05) * e;
+      const land = k > 0.8 ? Math.sin((k - 0.8) / 0.2 * Math.PI) * 0.6 : 0;
+      drawBucket(ctx, x, y, size, this.colorOf(b), b.n, { squash: land, sleepy: !this.awake(b), t: this.time + b.id });
     }
   }
 
@@ -409,12 +486,18 @@ export class Game {
       const lane = st.lanes[li];
       const x = L.lanesX0 + L.laneW * (li + 0.5);
       // lane track
-      ctx.fillStyle = 'rgba(67,53,110,0.08)';
-      rr(ctx, x - L.laneW * 0.42, L.lanesTop - 6, L.laneW * 0.84, L.rowsVisible * L.B * 0.9 + 8, 16); ctx.fill();
+      const tw = L.laneW * 0.84, th = L.rowsVisible * L.B * 0.9 + 8, tx = x - tw / 2, ty = L.lanesTop - 6;
+      const g = ctx.createLinearGradient(0, ty, 0, ty + th);
+      g.addColorStop(0, 'rgba(60,36,110,0.2)'); g.addColorStop(1, 'rgba(60,36,110,0.04)');
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; rr(ctx, tx - 1.5, ty, tw + 3, th + 3, 18); ctx.fill();
+      ctx.fillStyle = g; rr(ctx, tx, ty, tw, th, 16); ctx.fill();
       const blockedHere = this.blockedLane === li && shake;
       for (let d = Math.min(lane.length, L.rowsVisible) - 1; d >= 0; d--) {
         const s = lane[d];
-        const p = laneSlotPos(L, li, d);
+        let dd = this.slide.has(s.id) ? this.slide.get(s.id) : d;
+        dd = Math.abs(dd - d) < 0.01 ? d : dd + (d - dd) * (1 - Math.exp(-(this.dt || 0.016) * 16));
+        this.slide.set(s.id, dd);
+        const p = laneSlotPos(L, li, dd);
         const front = d === 0;
         const why = front ? laneBlock(st, li) : 'x';
         const size = L.B * (front ? 1 : 0.9);
@@ -422,8 +505,12 @@ export class Game {
         const bob = front && !why && aw ? Math.abs(Math.sin(this.time * 5 + li)) * -3 : 0;
         if (front && aw && !s.hidden && !why) {
           // soft glow under a bucket that can paint right now
-          ctx.fillStyle = 'rgba(255,255,255,0.75)';
-          ctx.beginPath(); ctx.ellipse(p.x, p.y + size * 0.42, size * 0.42, size * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+          const gy = p.y + size * 0.4, pulse = 0.75 + 0.25 * Math.sin(this.time * 5 + li);
+          const g = ctx.createRadialGradient(p.x, gy, 0, p.x, gy, size * 0.6);
+          g.addColorStop(0, `rgba(255,248,200,${0.9 * pulse})`); g.addColorStop(1, 'rgba(255,248,200,0)');
+          ctx.save(); ctx.translate(p.x, gy); ctx.scale(1, 0.3); ctx.translate(-p.x, -gy);
+          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, gy, size * 0.6, 0, Math.PI * 2); ctx.fill();
+          ctx.restore();
         }
         drawBucket(ctx, p.x + (front && blockedHere ? shake : 0), p.y + bob, size, this.colorOf(s), s.n, { hidden: s.hidden, alpha: front ? 1 : 0.92 - d * 0.08, blink: this.blink(s.id), sleepy: !aw, t: this.time + s.id });
         if (s.twin) this.drawTwinLink(ctx, li, d, s);
@@ -434,9 +521,12 @@ export class Game {
       }
       if (lane.length > L.rowsVisible) {
         const p = laneSlotPos(L, li, L.rowsVisible - 1);
-        ctx.font = `700 ${Math.round(L.B * 0.24)}px Fredoka, system-ui, sans-serif`;
-        ctx.fillStyle = 'rgba(51,38,77,0.55)'; ctx.textAlign = 'center';
-        ctx.fillText('+' + (lane.length - L.rowsVisible), p.x, p.y + L.B * 0.62);
+        const fs = Math.round(L.B * 0.22), y = p.y + L.B * 0.62, w = fs * 2.6, h = fs * 1.35;
+        ctx.fillStyle = 'rgba(58,31,99,0.78)';
+        rr(ctx, p.x - w / 2, y - h / 2, w, h, h / 2); ctx.fill();
+        ctx.font = `700 ${fs}px Fredoka, system-ui, sans-serif`;
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('+' + (lane.length - L.rowsVisible), p.x, y + 1);
       }
     }
   }

@@ -52,6 +52,9 @@ export function createGame(level) {
     belt: [],          // shooters on the belt, oldest first
     pending: [],       // shooters waiting to step onto the belt
     beltCap: level.beltCap ?? 5,
+    taps: level.taps ?? Infinity, // launches left (each tap on a lane or a waiting spot costs one)
+    tapsUsed: 0,
+    failReason: '',
     spacing: level.spacing ?? 2,
     tick: 0,
     status: 'play',    // play | win | fail
@@ -97,6 +100,7 @@ function findInLanes(st, id) {
 export function laneBlock(st, li) {
   const lane = st.lanes[li];
   if (!lane || !lane.length) return 'empty';
+  if (st.taps <= 0) return 'taps';
   const s = lane[0];
   let need = 1;
   if (s.twin) {
@@ -117,10 +121,12 @@ export function launchLane(st, li, grabIndex = 0) {
   if (st.status !== 'play') return false;
   const lane = st.lanes[li];
   if (!lane || !lane[grabIndex]) return false;
+  if (st.taps <= 0) return false;
   if (grabIndex > 0) {
     // Grabber booster: pull any bucket (twins come along with their partner).
     const s = lane[grabIndex];
     if (beltLoad(st) + (s.twin ? 2 : 1) > st.beltCap) return false;
+    spendTap(st);
     lane.splice(grabIndex, 1);
     s.hidden = false;
     queueLaunch(st, s, li);
@@ -132,6 +138,7 @@ export function launchLane(st, li, grabIndex = 0) {
     return true;
   }
   if (laneBlock(st, li)) return false;
+  spendTap(st);
   const s = lane.shift();
   queueLaunch(st, s, li);
   if (s.twin) {
@@ -145,11 +152,14 @@ export function launchLane(st, li, grabIndex = 0) {
 export function launchSlot(st, si) {
   if (st.status !== 'play') return false;
   const s = st.slots[si];
-  if (!s || beltLoad(st) + 1 > st.beltCap) return false;
+  if (!s || beltLoad(st) + 1 > st.beltCap || st.taps <= 0) return false;
+  spendTap(st);
   st.slots[si] = null;
   queueLaunch(st, s, -1, si);
   return true;
 }
+
+function spendTap(st) { st.taps--; st.tapsUsed++; }
 
 function queueLaunch(st, s, lane, slot = -1) {
   s.p = 0; s.steps = 0; s.shotThisLap = 0;
@@ -169,12 +179,17 @@ export function addRainbow(st, shots = 12) {
 export function addSlot(st, k = 1) { for (let i = 0; i < k; i++) st.slots.push(null); }
 
 // Revive after a fail: two more spots, the stuck bucket parks in one.
+export function addTaps(st, k) { st.taps += k; }
+
+// Revive after a fail: out of taps → +5 taps; out of spots → two more spots.
 export function revive(st) {
   if (st.status !== 'fail') return false;
-  addSlot(st, 2);
+  if (st.failReason === 'taps') addTaps(st, 5);
+  else addSlot(st, 2);
   const s = st.stuck;
   st.stuck = null;
   if (s) park(st, s);
+  st.failReason = '';
   st.status = 'play';
   st.stats.revives++;
   emit(st, { type: 'revive' });
@@ -222,6 +237,7 @@ export function step(st) {
       if (s.n <= 0) { emit(st, { type: 'pop', id: s.id }); continue; }
       if (!park(st, s)) {
         st.status = 'fail';
+        st.failReason = 'spots';
         st.stuck = s;
         st.belt = still.concat(st.belt.slice(st.belt.indexOf(s) + 1));
         emit(st, { type: 'fail', id: s.id });
@@ -249,8 +265,14 @@ export function step(st) {
       s.p = 0; s.steps = 0;
       st.belt.push(s);
       fire(st, s);
-      if (st.left === 0) { st.status = 'win'; emit(st, { type: 'win' }); }
+      if (st.left === 0) { st.status = 'win'; emit(st, { type: 'win' }); return; }
     }
+  }
+  // Out of taps with nothing left moving and paint still missing: the level is lost.
+  if (st.taps <= 0 && st.belt.length === 0 && st.pending.length === 0 && st.left > 0) {
+    st.status = 'fail';
+    st.failReason = 'taps';
+    emit(st, { type: 'fail', reason: 'taps' });
   }
 }
 

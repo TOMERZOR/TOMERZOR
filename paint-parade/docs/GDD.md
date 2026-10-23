@@ -14,6 +14,7 @@
 - **Lose:** a bucket finishes its lap and every waiting spot is full.
 - The belt holds **3** buckets at once (2 on SUPER HARD), so you can't dump everything; order matters.
 - **Readability (v1.1):** pixels the belt can reach right now glow (bright tint + white border); buried pixels fade back. A bucket whose color is fully buried is **asleep** (closed eyes, floating "z"). Awake front buckets hop and get a soft glow. Pictures after level 3 have a filled background, so every canvas is a set of layers that must be peeled in the right order.
+- **Tap budget (v1.2):** every level has a limited number of taps = the shortest solution the solver found + a small slack (6 on level 1, 3 on normal, 2 on HARD/SUPER). Out of taps with paint still grey → lose ("Out of taps", revive = +5 taps). **Stars:** 3 = solved in par taps, 2 = within half the slack, 1 = anything else. Mashing burns the budget, so every tap is a decision.
 - **Perfect:** win without any bucket waiting → +50% coins.
 - By construction, the total shots of each color equals the pixels of that color (×2 for double-coat pixels). The level generator + a bot solver guarantee every shipped level is solvable.
 
@@ -51,7 +52,7 @@ Unlocked at levels 7, 12 and 18 with a free sample each.
 - Ads and IAP sit behind `Ads` / `IAP` interfaces. Web build uses a mock; native build plugs AdMob (or AppLovin MAX) and RevenueCat / StoreKit / Play Billing.
 
 ## 6. Feel ("juice") checklist
-Bucket hop with squash & stretch · paint projectile arc · splat burst + droplet particles · pixel pop-in scale · combo pitch rising on consecutive splashes · bucket "empty" confetti pop · belt rolling texture · picture "comes alive" sweep + sparkle on win · coin fly-to-counter · gentle screen shake on fail · haptic tick on every splash (rate-limited) · sound for every action · mute / vibration toggles.
+Bucket hop with squash & stretch · liquid paint projectile with tapered trail and stretch · landing ripple in the paint color · splat burst + droplet particles · pixel pop-in scale · combo pitch rising on consecutive splashes · emptied bucket jumps off the belt, spins and vanishes with sparkles · parked bucket flies into its spot and lands with a squash · lane buckets slide up smoothly · belt rolling texture · win: board pulse + shine sweep + three fireworks in the artwork's colors + confetti · stars land one by one with chimes · coin total counts up and punches · elastic pop-in floating text · coin fly-to-counter · gentle screen shake on fail · haptic tick on every splash (rate-limited) · sound for every action · mute / vibration toggles.
 
 ## 7. Difficulty curve (v1.1 — "thinking wins, spamming loses")
 Playtest feedback on v1.0: *too easy, felt like just tapping.* Data agreed: a random tapper won 100% of early levels. The level builder now measures every level with three simulated players on the real engine:
@@ -67,6 +68,15 @@ Playtest feedback on v1.0: *too easy, felt like just tapping.* Data agreed: a ra
 | breather (after SUPER) | ~100% | ~100% |
 
 v1.0 had a 0-point gap between the two on most levels; v1.1 ships a 50+ point gap.
+
+**v1.2 — the tap budget.** Feedback on v1.1: *"if you spam the buckets you can still win every level."* With the tap budget the spammer is measured under the same limit as everyone else:
+
+| Tag | Thinker | Random | Spammer |
+|---|---|---|---|
+| normal | 94% | 15% | 0% |
+| HARD | 86% | 11% | 4% |
+| SUPER HARD | 67% | 0% | 0% |
+| breather | 99% | 48% | 25% |
 
 ## 8. KPI targets (soft launch)
 D1 ≥ 40% · D7 ≥ 15% · avg session ≥ 8 min · levels/day/DAU ≥ 12 · rewarded views/DAU ≥ 2 · ARPDAU ≥ $0.15 · IAP conversion ≥ 2%.

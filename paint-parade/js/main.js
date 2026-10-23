@@ -255,7 +255,7 @@ function onWin(st) {
       ${!lv.daily && lv.level < 4 ? '' : `<button class="btn btn--purple btn--big" data-act="x2"><span class="ad-ico"></span>${t('x2')}</button>`}
       <button class="btn btn--green btn--big" data-act="claim">${!lv.daily && lv.level < 5 ? t('next') : t('claim')}</button>
     </div>`, { noClose: true });
-  countUp(m.querySelector('#winCoins'), total, 1000);
+  countUp(m.querySelector('#winCoins'), total, 500);
   [0.35, 0.6, 0.85].slice(0, stars).forEach((d, i) => setTimeout(() => sfx.coin(i * 4), d * 1000 + 120));
   m.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-act]'); if (!b || b.disabled) return;

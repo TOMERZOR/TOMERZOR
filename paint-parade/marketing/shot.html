@@ -22,6 +22,7 @@
 <script type="module">
 // Renders one store screenshot: caption + real gameplay capture + bucket buddies.
 import { drawBucket } from '../js/render.js';
+import { loadAssets } from '../js/assets.js';
 const q = new URLSearchParams(location.search);
 const W = Number(q.get('w') || 1290), H = Number(q.get('h') || 2796);
 document.body.style.setProperty('--w', W + 'px');
@@ -37,6 +38,7 @@ await img.decode();
 const ph = document.querySelector('.phone');
 ph.style.width = Math.min(W * 0.78, H * 0.775 * img.naturalWidth / img.naturalHeight) + 'px';
 await document.fonts.load('700 80px Fredoka');
+await loadAssets('../img/');
 const cv = document.getElementById('deco');
 cv.width = W; cv.height = H;
 const ctx = cv.getContext('2d');

@@ -2,7 +2,7 @@
 
 > For Claude in a new chat: read this file fully, then PROMPTS.md. Resume the workspace with
 > `source "$HF_WORKFLOWS/katana/scripts/rr.sh"` and `rr_restore katana-shard-v2 '<state url>'` (the URL is in the
-> chat message that delivered the latest cut; the archive is katana-shard-v2_v2_state.tar.gz). Talk to the user in English, briefly.
+> chat message that delivered the latest cut; the archive is katana-shard-v2_v3_state.tar.gz). Talk to the user in English, briefly.
 
 ## 1. What this is
 No reference video. The user asked: "Make a totally new one with katana use credits and do amazing motion graphics and a
@@ -10,17 +10,20 @@ wow effect on people. Plan yourself first then get to work". The subject is SHAR
 puzzle game (gameplay captures, level maps, 12 ball skins and the app icon are in src/game/ and src/game2/). Earlier request
 carried over: high energy, music, sharp quick motion graphics, sound effects, clean and in Apple's design style, landscape 16:9.
 Feedback on v1: "It runs too fast and i can't quite understand what happens in the game itself. Fix that" (answered by v2).
+Feedback on v2 (in Hebrew): the glass-breaking sound effect is a bit harsh and annoying (answered by v3, sound only).
 
 ## 2. Current state
 | Version | File | Frames · fps · size | Audio | What changed |
 |---|---|---|---|---|
 | v1 | out/katana-shard-v2_v1.mp4 (22.7 MB) | 987 · 30 · 1920x1080 | Take this Higher + effects, -13.0 LUFS, -1.5 dBTP | first cut |
 | v2 | out/katana-shard-v2_v2.mp4 (27.2 MB) | 1452 · 30 · 1920x1080 | same track, 48.4 s of it, -12.6 LUFS, -1.7 dBTP | slower: how to play on the real level 4, two more levels with captions, the per-beat climax removed |
-Feedback status: v2 delivered 2026-10-23, no feedback yet.
+| v3 | out/katana-shard-v2_v3.mp4 (27.2 MB) | v2's picture, stream-copied | -12.9 LUFS, -1.9 dBTP | softer glass: one softened glass bus, fewer and lower glass layers, the levels' sound rebuilt with the game's own rules (qa/gate_v3.md) |
+Feedback status: v3 delivered 2026-10-23, no feedback yet.
 
 ## 3. Decisions
 - User: Katana with paid generation; a new film; amazing motion graphics and wow; landscape 16:9; Apple-clean.
 - User (on v1): slower, and make what happens in the game understandable.
+- User (on v2): the glass-breaking sound is harsh and annoying.
 - Authored (not user decisions): v1 32.9 s; v2 48.4 s at 30 fps (longer than the usual 15-25 s because the user asked for
   slower and clearer); photoreal generated glass worlds rhyming with the real game; Nunito type; music "Take this Higher"
   (Mixkit, asset 1012) from 0 s at its own 124 BPM; spending cap 640 credits (internal). v2 spent no credits.
@@ -54,7 +57,9 @@ cracks and breaks away to the phone (b24, 11.61). New in v2:
   with `comp/page_render.py`. Footage comes from plates/<id>/ frame folders (render.py prep). v1's page is kept in
   motion_v1/, with tools/build_mix_v1.py and tools/uses_v1.js.
 - Sound: tools/build_mix.py (music edit, CC0 library effects via sfx.py bed, the game's own sounds synced to the gameplay on
-  screen, ducking, limiter) -> audio/mix.m4a. Licences: audio/sfx_licenses.txt, src/mixkit-music-license.txt,
+  screen, every glass break on one softened bus with the game's small room -> audio/glass_bed.wav, ducking, limiter)
+  -> audio/mix.m4a. Glass rules since v3: one or two glass layers per moment, never boosted, all through the bus; the
+  level stems come from capture/stems.py at one fixed level (STEM_GAIN) and their mix gains are matched on the cannon shot. Licences: audio/sfx_licenses.txt, src/mixkit-music-license.txt,
   src/sfx/assets/sfx/CREDITS.md.
 
 ## 6. How to resume and re-render
@@ -67,7 +72,9 @@ for c in hero2 ember2 night2; do python3 $RR/comp/render.py prep . src/game2/$c.
 python3 tools/build_mix.py                          # sound
 node tools/uses.js && python3 $RR/prodcheck.py ranges . --uses qa/uses.json
 python3 $RR/comp/page_render.py render . --jobs $(nproc)   # out/comp.mp4 (use an XL sandbox: ~4 min)
-python3 $RR/deliver.py out/comp.mp4 out/katana-shard-v2_v3.mp4
+python3 $RR/deliver.py out/comp.mp4 out/katana-shard-v2_v4.mp4
+# sound-only change: keep the picture and swap the audio (no render):
+# ffmpeg -i out/katana-shard-v2_v3.mp4 -i audio/mix.m4a -map 0:v -map 1:a -c copy -movflags +faststart out/comp.mp4
 ```
 Text, timing, colour and sound changes need no new generation (0 credits). If src/game2 is missing, the captures are in
 the user's repo (brag-output/composition/assets/clips/*2.mp4 are git-ignored; re-run capture.mjs hero2 ember2 night2 with
@@ -77,7 +84,8 @@ shard/ served on port 8080, then stems.py hero2 ember2 night2).
 analysis/task-contract.json, plan/creative-plan.json, plan/gen_plan.json, plan/prompts/, plan/ledger.json,
 plan/ledger_summary.md, plan/transactions.json, qa/styleframes.json, qa/logic/, qa/uses.json, qa/ranges.json,
 qa/gate_v1.md, qa/inspection_v1.json, qa/v1/ (sheets, crops), qa/gate_v2.md, qa/inspection_v2.json, qa/v2/ (sheets, crops,
-the per-frame comparison of the night retime), motion/, motion_v1/, tools/, comp/sfx_cues.json, audio/, src/game2/.
+the per-frame comparison of the night retime), qa/gate_v3.md, qa/glass/ (harshness measurements, the v2 mix and stems
+for comparison, spectrograms), motion/, motion_v1/, tools/, comp/sfx_cues.json, audio/, src/game2/.
 
 ## 8. Higgsfield ids
 | What | Job / media id | Result | On screen in v2 |
@@ -110,6 +118,10 @@ first bomb 4.63, chain 4.8-5.0, slow motion 6.5, win 7.73; night2 (level 112) fi
 - A sandbox call returns a timeout after about 60 s whatever timeout_seconds says; poll background work with short sleeps.
 - The game's assembly "tink" sounds run on wall-clock timers during capture, so their logged times are not the picture's;
   stems.py leaves them out.
+- Normalising each level stem to its own peak undoes any glass reduction inside it (the loudest break sets the peak);
+  stems are written at one fixed level since v3.
+- In this mix the Kenney impactGlass files are dull clunks (spectral centre 0.6-1.4 kHz); the harsh part was the game's
+  own glass samples at 0 dB and the bright kint glass tings.
 
 ## 11. Authored adaptations and limitations
 Authored: new story, 48.4 s (v2), new text, music from the Mixkit library, the drawn finger (a circle, not a hand) driven by
@@ -119,7 +131,7 @@ the logged aim angles. No open production defects in the v2 gate. Audio was meas
 v1: quoted 465.08 · charged 465.08 (reconciled with transactions, 14 jobs matched, no refunds) · 464.48 in the film · 0.6 on
 five unused still takes. Balance 945.44 before, 466.36 after (14 credits of other image jobs on the account at 07:32-07:34
 belong to another chat). Full table: plan/ledger_summary.md. v2: 0 credits (a re-cut of the same shots plus new captures from
-the game). Seedance on-screen use in v2: 19.5 s of 29 s generated (67 %).
+the game). Seedance on-screen use in v2: 19.5 s of 29 s generated (67 %). v3: 0 credits (sound only).
 
 ## 13. Remaining limitations
 None recorded.

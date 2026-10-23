@@ -5,36 +5,6 @@
  "music": "music/1012.mp3",
  "placed": [
   {
-   "t": 0.03,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_005.ogg",
-   "start": 0.03,
-   "len": 0.132,
-   "gain_db": -17.97,
-   "src": null
-  },
-  {
-   "t": 1.21,
-   "k": null,
-   "cat": "flash",
-   "file": "flash/kint__glass_004.ogg",
-   "start": 1.21,
-   "len": 0.692,
-   "gain_db": -21.07,
-   "src": null
-  },
-  {
-   "t": 2.18,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_003.ogg",
-   "start": 2.164,
-   "len": 0.121,
-   "gain_db": -20.17,
-   "src": null
-  },
-  {
    "t": 3.12,
    "k": null,
    "cat": "whoosh",
@@ -95,16 +65,6 @@
    "src": null
   },
   {
-   "t": 7.7405,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kimp__impactGlass_heavy_000.ogg",
-   "start": 7.7405,
-   "len": 0.238,
-   "gain_db": -6.65,
-   "src": null
-  },
-  {
    "t": 7.9824,
    "k": null,
    "cat": "hit",
@@ -112,46 +72,6 @@
    "start": 7.9824,
    "len": 0.344,
    "gain_db": -19.65,
-   "src": null
-  },
-  {
-   "t": 8.52,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_001.ogg",
-   "start": 8.52,
-   "len": 0.276,
-   "gain_db": -12.53,
-   "src": null
-  },
-  {
-   "t": 8.6,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_005.ogg",
-   "start": 8.6,
-   "len": 0.132,
-   "gain_db": -15.23,
-   "src": null
-  },
-  {
-   "t": 8.66,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_003.ogg",
-   "start": 8.644,
-   "len": 0.121,
-   "gain_db": -15.43,
-   "src": null
-  },
-  {
-   "t": 8.7082,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kimp__impactGlass_heavy_002.ogg",
-   "start": 8.7082,
-   "len": 0.244,
-   "gain_db": -6.73,
    "src": null
   },
   {
@@ -172,46 +92,6 @@
    "start": 9.75,
    "len": 0.693,
    "gain_db": -21.93,
-   "src": null
-  },
-  {
-   "t": 11.37,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kimp__impactGlass_medium_001.ogg",
-   "start": 11.37,
-   "len": 0.54,
-   "gain_db": -7.03,
-   "src": null
-  },
-  {
-   "t": 11.46,
-   "k": null,
-   "cat": "flash",
-   "file": "flash/kimp__impactGlass_light_000.ogg",
-   "start": 11.46,
-   "len": 0.231,
-   "gain_db": -13.69,
-   "src": null
-  },
-  {
-   "t": 11.53,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_003.ogg",
-   "start": 11.514,
-   "len": 0.121,
-   "gain_db": -11.49,
-   "src": null
-  },
-  {
-   "t": 11.6115,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kimp__impactGlass_heavy_003.ogg",
-   "start": 11.6115,
-   "len": 0.169,
-   "gain_db": -4.49,
    "src": null
   },
   {
@@ -272,16 +152,6 @@
    "start": 19.2385,
    "len": 0.925,
    "gain_db": -14.1,
-   "src": null
-  },
-  {
-   "t": 19.8375,
-   "k": null,
-   "cat": "flash",
-   "file": "flash/kimp__impactGlass_light_000.ogg",
-   "start": 19.8375,
-   "len": 0.231,
-   "gain_db": -13.7,
    "src": null
   },
   {
@@ -362,36 +232,6 @@
    "start": 30.2387,
    "len": 1.429,
    "gain_db": -12.35,
-   "src": null
-  },
-  {
-   "t": 30.9667,
-   "k": null,
-   "cat": "flash",
-   "file": "flash/kint__glass_004.ogg",
-   "start": 30.9667,
-   "len": 0.692,
-   "gain_db": -12.67,
-   "src": null
-  },
-  {
-   "t": 31.7667,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kimp__impactGlass_medium_004.ogg",
-   "start": 31.7667,
-   "len": 0.54,
-   "gain_db": -8.26,
-   "src": null
-  },
-  {
-   "t": 31.8367,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kint__glass_001.ogg",
-   "start": 31.8367,
-   "len": 0.276,
-   "gain_db": -10.26,
    "src": null
   },
   {
@@ -565,16 +405,6 @@
    "src": null
   },
   {
-   "t": 41.8056,
-   "k": null,
-   "cat": "flash",
-   "file": "flash/kint__glass_004.ogg",
-   "start": 41.8056,
-   "len": 0.692,
-   "gain_db": -13.35,
-   "src": null
-  },
-  {
    "t": 42.5798,
    "k": null,
    "cat": "boom",
@@ -582,16 +412,6 @@
    "start": 42.5598,
    "len": 1.0,
    "gain_db": -12.32,
-   "src": null
-  },
-  {
-   "t": 42.5798,
-   "k": null,
-   "cat": "crack",
-   "file": "crack/kimp__impactGlass_heavy_000.ogg",
-   "start": 42.5798,
-   "len": 0.238,
-   "gain_db": -2.82,
    "src": null
   },
   {

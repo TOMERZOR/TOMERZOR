@@ -1,20 +1,5 @@
 [
  {
-  "t": 0.03,
-  "file": "crack/kint__glass_005.ogg",
-  "gain_db": -2
- },
- {
-  "t": 1.21,
-  "file": "flash/kint__glass_004.ogg",
-  "gain_db": -3
- },
- {
-  "t": 2.18,
-  "file": "crack/kint__glass_003.ogg",
-  "gain_db": -4
- },
- {
   "t": 3.12,
   "file": "whoosh/swish__swosh-03.ogg",
   "gain_db": -2
@@ -45,34 +30,9 @@
   "gain_db": 0
  },
  {
-  "t": 7.7405,
-  "file": "crack/kimp__impactGlass_heavy_000.ogg",
-  "gain_db": 2
- },
- {
   "t": 7.9824,
   "file": "hit/kimp__impactPlate_heavy_003.ogg",
   "gain_db": -3
- },
- {
-  "t": 8.52,
-  "file": "crack/kint__glass_001.ogg",
-  "gain_db": -2
- },
- {
-  "t": 8.6,
-  "file": "crack/kint__glass_005.ogg",
-  "gain_db": -2
- },
- {
-  "t": 8.66,
-  "file": "crack/kint__glass_003.ogg",
-  "gain_db": -2
- },
- {
-  "t": 8.7082,
-  "file": "crack/kimp__impactGlass_heavy_002.ogg",
-  "gain_db": 2
  },
  {
   "t": 9.676,
@@ -83,26 +43,6 @@
   "t": 9.78,
   "file": "scan/sf60__sfx_08a.ogg",
   "gain_db": -3
- },
- {
-  "t": 11.37,
-  "file": "crack/kimp__impactGlass_medium_001.ogg",
-  "gain_db": -2
- },
- {
-  "t": 11.46,
-  "file": "flash/kimp__impactGlass_light_000.ogg",
-  "gain_db": -3
- },
- {
-  "t": 11.53,
-  "file": "crack/kint__glass_003.ogg",
-  "gain_db": -3
- },
- {
-  "t": 11.6115,
-  "file": "crack/kimp__impactGlass_heavy_003.ogg",
-  "gain_db": 3
  },
  {
   "t": 11.6115,
@@ -150,11 +90,6 @@
   "gain_db": -1
  },
  {
-  "t": 19.8375,
-  "file": "flash/kimp__impactGlass_light_000.ogg",
-  "gain_db": -2
- },
- {
   "t": 21.1891,
   "file": "whoosh/swish__swosh-01.ogg",
   "gain_db": -2
@@ -178,21 +113,6 @@
   "t": 30.2887,
   "file": "longwhoosh/swish__swosh-41.ogg",
   "gain_db": -1
- },
- {
-  "t": 30.9667,
-  "file": "flash/kint__glass_004.ogg",
-  "gain_db": -4
- },
- {
-  "t": 31.7667,
-  "file": "crack/kimp__impactGlass_medium_004.ogg",
-  "gain_db": -3
- },
- {
-  "t": 31.8367,
-  "file": "crack/kint__glass_001.ogg",
-  "gain_db": -5
  },
  {
   "t": 32.8022,
@@ -280,19 +200,9 @@
   "gain_db": -6
  },
  {
-  "t": 41.8056,
-  "file": "flash/kint__glass_004.ogg",
-  "gain_db": -3
- },
- {
   "t": 42.5798,
   "file": "boom/ksci__lowFrequency_explosion_001.ogg",
   "gain_db": 0
- },
- {
-  "t": 42.5798,
-  "file": "crack/kimp__impactGlass_heavy_000.ogg",
-  "gain_db": 1
  },
  {
   "t": 42.5998,

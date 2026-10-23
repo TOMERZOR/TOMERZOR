@@ -136,3 +136,7 @@ No people, no text, no lettering.
 No new paid jobs. v2 re-uses the stills and Seedance shots above. On screen in v2: plate_A1 7.26 s; plate_A2 about 7.1 s
 (the impact and burst 7.26-12.46 s, the rewind 40.65-42.58 s, the poster frame); plate_B 1.45 s; plate_C 1.69 s; plate_D 1.94 s.
 The new gameplay (levels 4, 82 and 112) was captured from the game itself (brag-output/capture/capture.mjs in the repo), at no cost.
+
+## v3 (softer glass)
+
+No new paid jobs. v3 changes the sound only (qa/gate_v3.md); the picture is v2's.

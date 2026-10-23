@@ -37,7 +37,8 @@ A 48.4-second launch film made in Higgsfield Katana: photoreal glass worlds gene
 - Music: "Take this Higher" by Michael Ramir C. (Mixkit, same licence as below; terms in `katana-v2/src/mixkit-music-license.txt`). It plays from 0 s at its own 124 BPM; the drop lands on the impact, the second drop on the ball's wall bounce in the night level, and "Coming soon" on the last big hit.
 - Effects:
   - CC0 library recordings (listed in `katana-v2/audio/sfx_licenses.txt`);
-  - the game's own glass, cannon, bomb and level-clear sounds, rebuilt from each capture's sound log by `capture/stems.py` and synced to the gameplay on screen.
+  - the game's own glass, cannon, bomb and level-clear sounds, rebuilt from each capture's sound log by `capture/stems.py` with the game's own rules (quieter breaks when they pile up, a soft tap on wall bounces, the slow-motion sigh) and synced to the gameplay on screen.
+- Glass: every glass break goes through one softened chain (a dip in the sharpest frequencies and the game's own small room), with one or two layers per moment and none boosted, so the breaks sit under the music instead of cutting over it (`katana-v2/qa/gate_v3.md` has the before/after measurements).
 
 **Credits.** 465.08 Higgsfield credits, all spent on the first cut (reconciled with the account's transactions): 464 for the five Seedance shots, 1.08 for nine stills. This cut spent none.
 

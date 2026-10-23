@@ -1,0 +1,84 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    #mk-lockup { position: absolute; left: 50%; top: 360px; width: 1200px; height: 260px; margin-left: -600px; }
+    #mk-icon { position: absolute; left: 0; top: 14px; width: 232px; height: 232px; border-radius: 52px; box-shadow: 0 30px 60px -24px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .08); }
+    #mk-word { position: absolute; left: 290px; top: 0; width: 910px; height: 260px; }
+    .shard { position: absolute; inset: 0; color: #fff; }
+    .shard span { position: absolute; inset: 0; display: flex; align-items: center; font-size: 236px; font-weight: 900; letter-spacing: 0.01em; line-height: 1; }
+    #mk-solid { position: absolute; inset: 0; display: flex; align-items: center; font-size: 236px; font-weight: 900; letter-spacing: 0.01em; line-height: 1; background: linear-gradient(105deg, #FFFFFF 0%, #FFFFFF 42%, #96CDFF 50%, #FFFFFF 58%, #FFFFFF 100%); background-size: 320% 100%; background-position: 100% 0; -webkit-background-clip: text; background-clip: text; color: transparent; }
+    #mk-burst { position: absolute; left: 50%; top: 490px; width: 1600px; height: 1600px; margin: -800px 0 0 -800px; border-radius: 50%; background: radial-gradient(closest-side, rgba(214, 235, 255, .55), rgba(190, 175, 255, .2) 40%, rgba(0, 0, 0, 0)); opacity: 0; }
+    #mk-cta { position: absolute; left: 0; right: 0; top: 700px; text-align: center; font-size: 46px; font-weight: 800; letter-spacing: -0.01em; color: rgba(255, 255, 255, .78); }
+    .w { display: inline-block; }
+  
+  </style>
+  <div id="root" data-composition-id="mark" data-width="1920" data-height="1080">
+
+    <div id="mk-burst"></div>
+    <div id="mk-lockup" data-layout-allow-overflow>
+      <img id="mk-icon" src="assets/img/icon.png" alt="SHARD app icon">
+      <div id="mk-word" data-layout-allow-overflow aria-label="SHARD">
+        <div id="mk-shards" data-layout-ignore>
+        <div class="shard" id="mk-s0" style="clip-path: polygon(0% 0%, 11.392% 0%, 12.508% 27.436%, 0% 30.021%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s1" style="clip-path: polygon(11.392% 0%, 25.074% 0%, 23.931% 36.81%, 12.508% 27.436%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s2" style="clip-path: polygon(25.074% 0%, 40.991% 0%, 37.907% 35.946%, 23.931% 36.81%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s3" style="clip-path: polygon(40.991% 0%, 54.635% 0%, 59.542% 44.175%, 37.907% 35.946%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s4" style="clip-path: polygon(54.635% 0%, 70.3% 0%, 71.28% 37.906%, 59.542% 44.175%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s5" style="clip-path: polygon(70.3% 0%, 84.174% 0%, 81.269% 43.209%, 71.28% 37.906%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s6" style="clip-path: polygon(84.174% 0%, 100% 0%, 100% 41.338%, 81.269% 43.209%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s7" style="clip-path: polygon(0% 30.021%, 12.508% 27.436%, 12.029% 68.36%, 0% 72.6%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s8" style="clip-path: polygon(12.508% 27.436%, 23.931% 36.81%, 24.563% 61.643%, 12.029% 68.36%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s9" style="clip-path: polygon(23.931% 36.81%, 37.907% 35.946%, 38.714% 56.685%, 24.563% 61.643%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s10" style="clip-path: polygon(37.907% 35.946%, 59.542% 44.175%, 58.274% 60.949%, 38.714% 56.685%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s11" style="clip-path: polygon(59.542% 44.175%, 71.28% 37.906%, 69.901% 58.623%, 58.274% 60.949%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s12" style="clip-path: polygon(71.28% 37.906%, 81.269% 43.209%, 83.846% 69.586%, 69.901% 58.623%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s13" style="clip-path: polygon(81.269% 43.209%, 100% 41.338%, 100% 62.292%, 83.846% 69.586%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s14" style="clip-path: polygon(0% 72.6%, 12.029% 68.36%, 18.099% 100%, 0% 100%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s15" style="clip-path: polygon(12.029% 68.36%, 24.563% 61.643%, 31.006% 100%, 18.099% 100%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s16" style="clip-path: polygon(24.563% 61.643%, 38.714% 56.685%, 44.052% 100%, 31.006% 100%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s17" style="clip-path: polygon(38.714% 56.685%, 58.274% 60.949%, 55.428% 100%, 44.052% 100%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s18" style="clip-path: polygon(58.274% 60.949%, 69.901% 58.623%, 74.725% 100%, 55.428% 100%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s19" style="clip-path: polygon(69.901% 58.623%, 83.846% 69.586%, 86.03% 100%, 74.725% 100%)"><span>SHARD</span></div>
+        <div class="shard" id="mk-s20" style="clip-path: polygon(83.846% 69.586%, 100% 62.292%, 100% 100%, 86.03% 100%)"><span>SHARD</span></div>
+        </div>
+        <div id="mk-solid">SHARD</div>
+      </div>
+    </div>
+    <div id="mk-cta"><span class="w " id="mk-w0">Coming</span> <span class="w " id="mk-w1">soon</span> <span class="w " id="mk-w2">to</span> <span class="w " id="mk-w3">iPhone</span> <span class="w " id="mk-w4">&</span> <span class="w " id="mk-w5">Android.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    tl.fromTo('#mk-s0', { x: -1217.113, y: -607.102, rotation: -66.866, scale: 1.719, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.663, ease: 'expo.out' }, B(0.05) + 0.008);
+    tl.fromTo('#mk-s1', { x: -1195.237, y: -587.304, rotation: -33.454, scale: 1.651, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.656, ease: 'expo.out' }, B(0.05) + 0.029);
+    tl.fromTo('#mk-s2', { x: -1054.104, y: -703.582, rotation: -11.122, scale: 1.888, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.65, ease: 'expo.out' }, B(0.05) + 0.043);
+    tl.fromTo('#mk-s3', { x: -427.418, y: -585.695, rotation: 17.127, scale: 1.914, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.533, ease: 'expo.out' }, B(0.05) + 0.061);
+    tl.fromTo('#mk-s4', { x: 709.567, y: -475.529, rotation: 22.146, scale: 2.424, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.55, ease: 'expo.out' }, B(0.05) + 0.064);
+    tl.fromTo('#mk-s5', { x: 750.27, y: -229.785, rotation: 37.864, scale: 2.372, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.523, ease: 'expo.out' }, B(0.05) + 0.074);
+    tl.fromTo('#mk-s6', { x: 985.421, y: -434.02, rotation: -7.301, scale: 1.885, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.594, ease: 'expo.out' }, B(0.05) + 0.045);
+    tl.fromTo('#mk-s7', { x: -1417.751, y: -372.544, rotation: -57.858, scale: 2.866, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.676, ease: 'expo.out' }, B(0.05) + 0.014);
+    tl.fromTo('#mk-s8', { x: -936.174, y: 206.664, rotation: 59.27, scale: 1.997, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.56, ease: 'expo.out' }, B(0.05) + 0.087);
+    tl.fromTo('#mk-s9', { x: -1290.785, y: 453.543, rotation: 57.663, scale: 2.14, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.658, ease: 'expo.out' }, B(0.05) + 0.086);
+    tl.fromTo('#mk-s10', { x: 1089.47, y: -207.277, rotation: -8.916, scale: 2.851, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.593, ease: 'expo.out' }, B(0.05) + 0.044);
+    tl.fromTo('#mk-s11', { x: 920.246, y: -132.699, rotation: -8.146, scale: 1.872, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.552, ease: 'expo.out' }, B(0.05) + 0.045);
+    tl.fromTo('#mk-s12', { x: 971.838, y: 270.798, rotation: 62.216, scale: 2.912, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.573, ease: 'expo.out' }, B(0.05) + 0.089);
+    tl.fromTo('#mk-s13', { x: 1154.124, y: -28.443, rotation: -18.083, scale: 1.673, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.601, ease: 'expo.out' }, B(0.05) + 0.039);
+    tl.fromTo('#mk-s14', { x: -710.117, y: 268.043, rotation: -11.684, scale: 2.429, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.519, ease: 'expo.out' }, B(0.05) + 0.043);
+    tl.fromTo('#mk-s15', { x: -938.443, y: 458.928, rotation: 11.651, scale: 1.914, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.589, ease: 'expo.out' }, B(0.05) + 0.057);
+    tl.fromTo('#mk-s16', { x: -319.446, y: 673.763, rotation: 79.557, scale: 2.469, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.545, ease: 'expo.out' }, B(0.05) + 0.1);
+    tl.fromTo('#mk-s17', { x: -116.665, y: 680.519, rotation: 25.493, scale: 2.177, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.535, ease: 'expo.out' }, B(0.05) + 0.066);
+    tl.fromTo('#mk-s18', { x: 769.715, y: 627.825, rotation: 28.218, scale: 2.759, opacity: 0, color: '#96CDFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.589, ease: 'expo.out' }, B(0.05) + 0.068);
+    tl.fromTo('#mk-s19', { x: 815.913, y: 735.939, rotation: 65.202, scale: 2.259, opacity: 0, color: '#FFBEC8' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.618, ease: 'expo.out' }, B(0.05) + 0.091);
+    tl.fromTo('#mk-s20', { x: 1036.097, y: 699.104, rotation: 57.609, scale: 1.952, opacity: 0, color: '#BEAFFF' }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, color: '#FFFFFF', duration: 0.646, ease: 'expo.out' }, B(0.05) + 0.086);
+    tl.fromTo('#mk-burst', { opacity: 0, scale: 0.3 }, { keyframes: [{ opacity: 1, scale: 0.75, duration: 0.08 }, { opacity: 0, scale: 1.2, duration: 0.6 }], ease: 'none' }, B(1));
+    tl.fromTo('#mk-solid', { opacity: 0 }, { opacity: 1, duration: 0.1, ease: 'none' }, B(1.75));
+    tl.to('.shard', { opacity: 0, duration: 0.1, ease: 'none' }, B(1.8));
+    tl.fromTo('#mk-icon', { opacity: 0, scale: 0.6, rotation: -8 }, { opacity: 1, scale: 1, rotation: 0, duration: 0.55, ease: 'back.out(1.6)' }, B(1));
+    tl.fromTo('#mk-cta .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.18, ease: 'power4.out', stagger: 0.07 }, B(2));
+    tl.fromTo('#mk-solid', { backgroundPosition: '100% 0' }, { backgroundPosition: '0% 0', duration: 1.1, ease: 'power2.inOut' }, B(4));
+    window.__timelines["mark"] = tl;
+  </script>
+</template>

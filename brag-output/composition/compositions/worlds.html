@@ -1,0 +1,31 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    .wd { position: absolute; top: 470px; font-size: 96px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; color: #3E3A4F; }
+    #wd-a { right: 1265px; text-align: right; }
+    #wd-b { left: 1265px; }
+    .w { display: inline-block; }
+  
+  </style>
+  <div id="root" data-composition-id="worlds" data-width="1920" data-height="1080">
+
+    <div class="wd" id="wd-a"><span class="w " id="wda-w0">5</span> <span class="w " id="wda-w1">worlds.</span></div>
+    <div class="wd" id="wd-b"><span class="w " id="wdb-w0">120</span> <span class="w " id="wdb-w1">levels.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    tl.fromTo('#wd-a .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.18, ease: 'power4.out', stagger: 0.09 }, B(0));
+    tl.fromTo('#wd-b .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.18, ease: 'power4.out', stagger: 0.09 }, B(3));
+    tl.set('.wd', { color: '#3E3A4F' }, B(0));
+    tl.set('.wd', { color: '#2E4A44' }, B(1));
+    tl.set('.wd', { color: '#383063' }, B(2));
+    tl.set('.wd', { color: '#4A2D2A' }, B(3));
+    tl.set('.wd', { color: '#E7EAF6' }, B(4));
+    tl.to('#wd-a .w, #wd-b .w', { opacity: 0, filter: 'blur(10px)', duration: 0.13, ease: 'power2.in', stagger: 0.03 }, B(5.6));
+    window.__timelines["worlds"] = tl;
+  </script>
+</template>

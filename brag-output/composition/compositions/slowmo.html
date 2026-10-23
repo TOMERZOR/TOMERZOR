@@ -1,0 +1,22 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    #sm-title { position: absolute; left: 96px; top: 330px; font-size: 140px; font-weight: 900; line-height: 0.95; letter-spacing: -0.03em; color: #fff; }
+    .w { display: inline-block; }
+  
+  </style>
+  <div id="root" data-composition-id="slowmo" data-width="1920" data-height="1080">
+
+    <div id="sm-title"><span class="w " id="sm-w0">One</span><br><span class="w " id="sm2-w0">shot.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    tl.fromTo('#sm-title .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.18, ease: 'power4.out', stagger: 0.1 }, B(2));
+    tl.to('#sm-title .w', { opacity: 0, filter: 'blur(10px)', duration: 0.13, ease: 'power2.in', stagger: 0.04 }, B(5.6));
+    window.__timelines["slowmo"] = tl;
+  </script>
+</template>

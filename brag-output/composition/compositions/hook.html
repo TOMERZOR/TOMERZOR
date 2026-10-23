@@ -1,0 +1,259 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    .hk-word { position: absolute; left: 0; right: 0; top: 50%; text-align: center; color: #fff; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+    #hk-aim, #hk-fire { font-size: 200px; margin-top: -100px; opacity: 0; }
+    #hk-shatter { font-size: 250px; margin-top: -125px; opacity: 0; }
+    #hk-shards { position: absolute; left: 50%; top: 50%; width: 1100px; height: 280px; margin: -140px 0 0 -550px; opacity: 0; }
+    .shard { position: absolute; inset: 0; color: #fff; }
+    .shard span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 250px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; }
+    #hk-burst { position: absolute; left: 50%; top: 50%; width: 1400px; height: 1400px; margin: -700px 0 0 -700px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, .95), rgba(214, 235, 255, .5) 35%, rgba(0, 0, 0, 0)); opacity: 0; }
+    #hk-light { position: absolute; left: 50%; top: 50%; width: 1000px; height: 1000px; margin: -500px 0 0 -500px; border-radius: 50%; background: radial-gradient(closest-side, #FFFFFF 0%, #FFF8F1 14%, rgba(255, 228, 208, .55) 32%, rgba(244, 214, 195, .16) 58%, rgba(0, 0, 0, 0) 78%); opacity: 0; }
+    #hk-guide { position: absolute; left: 120px; top: 360px; width: 820px; height: 600px; }
+    #hk-guide path { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 0.01 30; }
+    #hk-trail { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+    .hk-tr { fill: none; stroke: #EAF4FF; stroke-linecap: round; }
+    #hk-shot { position: absolute; left: 70px; top: 890px; width: 120px; height: 120px; }
+    #hk-ball { position: absolute; inset: 0; width: 120px; height: 120px; opacity: 0; }
+  
+  </style>
+  <div id="root" data-composition-id="hook" data-width="1920" data-height="1080">
+
+    <div id="hk-light"></div>
+    <div id="hk-burst"></div>
+    <svg id="hk-guide" viewBox="120 360 820 600" aria-hidden="true"><path id="hk-path" d="M130 950 Q525 496.848 920 434.089"/></svg>
+    <svg id="hk-trail" viewBox="0 0 1920 1080" aria-hidden="true" data-layout-allow-overflow><path class="hk-tr" data-l="760" style="stroke-width: 1.5px; opacity: 0.17; stroke-dasharray: 760px 3741px; stroke-dashoffset: 760px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="684" style="stroke-width: 2.251px; opacity: 0.17; stroke-dasharray: 684px 3741px; stroke-dashoffset: 684px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="610" style="stroke-width: 3.11px; opacity: 0.17; stroke-dasharray: 610px 3741px; stroke-dashoffset: 610px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="538" style="stroke-width: 4.015px; opacity: 0.17; stroke-dasharray: 538px 3741px; stroke-dashoffset: 538px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="467" style="stroke-width: 4.951px; opacity: 0.17; stroke-dasharray: 467px 3741px; stroke-dashoffset: 467px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="398" style="stroke-width: 5.911px; opacity: 0.17; stroke-dasharray: 398px 3741px; stroke-dashoffset: 398px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="332" style="stroke-width: 6.89px; opacity: 0.17; stroke-dasharray: 332px 3741px; stroke-dashoffset: 332px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="268" style="stroke-width: 7.887px; opacity: 0.17; stroke-dasharray: 268px 3741px; stroke-dashoffset: 268px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="207" style="stroke-width: 8.897px; opacity: 0.17; stroke-dasharray: 207px 3741px; stroke-dashoffset: 207px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="151" style="stroke-width: 9.92px; opacity: 0.17; stroke-dasharray: 151px 3741px; stroke-dashoffset: 151px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="99" style="stroke-width: 10.955px; opacity: 0.17; stroke-dasharray: 99px 3741px; stroke-dashoffset: 99px" d="M130 950 Q1060 -116.914 1990 980.251"/><path class="hk-tr" data-l="60" style="stroke-width: 12px; opacity: 0.17; stroke-dasharray: 60px 3741px; stroke-dashoffset: 60px" d="M130 950 Q1060 -116.914 1990 980.251"/></svg>
+    <div id="hk-shot" data-layout-allow-overflow><img id="hk-ball" src="assets/img/balls/steel.png" alt=""></div>
+    <div class="hk-word" id="hk-aim">Aim.</div>
+    <div class="hk-word" id="hk-fire">Fire.</div>
+    <div class="hk-word" id="hk-shatter">Shatter.</div>
+    <div id="hk-shards" data-layout-allow-overflow data-layout-ignore>
+      <div class="shard" id="hk-s0" style="clip-path: polygon(0% 0%, 12.601% 0%, 13.443% 32.174%, 0% 34.045%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s1" style="clip-path: polygon(12.601% 0%, 25.262% 0%, 24.825% 41.349%, 13.443% 32.174%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s2" style="clip-path: polygon(25.262% 0%, 38.446% 0%, 36.8% 37.305%, 24.825% 41.349%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s3" style="clip-path: polygon(38.446% 0%, 50.789% 0%, 51.588% 25.419%, 36.8% 37.305%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s4" style="clip-path: polygon(50.789% 0%, 65.569% 0%, 59.687% 28.109%, 51.588% 25.419%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s5" style="clip-path: polygon(65.569% 0%, 75.333% 0%, 74.089% 30.462%, 59.687% 28.109%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s6" style="clip-path: polygon(75.333% 0%, 83.825% 0%, 88.222% 24.641%, 74.089% 30.462%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s7" style="clip-path: polygon(83.825% 0%, 100% 0%, 100% 35.599%, 88.222% 24.641%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s8" style="clip-path: polygon(0% 34.045%, 13.443% 32.174%, 11.786% 74.699%, 0% 68.453%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s9" style="clip-path: polygon(13.443% 32.174%, 24.825% 41.349%, 27.672% 72.939%, 11.786% 74.699%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s10" style="clip-path: polygon(24.825% 41.349%, 36.8% 37.305%, 35.904% 69.539%, 27.672% 72.939%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s11" style="clip-path: polygon(36.8% 37.305%, 51.588% 25.419%, 47.827% 56.312%, 35.904% 69.539%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s12" style="clip-path: polygon(51.588% 25.419%, 59.687% 28.109%, 64.608% 77.812%, 47.827% 56.312%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s13" style="clip-path: polygon(59.687% 28.109%, 74.089% 30.462%, 73.222% 58.419%, 64.608% 77.812%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s14" style="clip-path: polygon(74.089% 30.462%, 88.222% 24.641%, 89.631% 63.102%, 73.222% 58.419%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s15" style="clip-path: polygon(88.222% 24.641%, 100% 35.599%, 100% 67.914%, 89.631% 63.102%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s16" style="clip-path: polygon(0% 68.453%, 11.786% 74.699%, 13.171% 100%, 0% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s17" style="clip-path: polygon(11.786% 74.699%, 27.672% 72.939%, 28.023% 100%, 13.171% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s18" style="clip-path: polygon(27.672% 72.939%, 35.904% 69.539%, 34.378% 100%, 28.023% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s19" style="clip-path: polygon(35.904% 69.539%, 47.827% 56.312%, 53.06% 100%, 34.378% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s20" style="clip-path: polygon(47.827% 56.312%, 64.608% 77.812%, 65.303% 100%, 53.06% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s21" style="clip-path: polygon(64.608% 77.812%, 73.222% 58.419%, 73.991% 100%, 65.303% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s22" style="clip-path: polygon(73.222% 58.419%, 89.631% 63.102%, 83.347% 100%, 73.991% 100%)"><span>Shatter.</span></div>
+      <div class="shard" id="hk-s23" style="clip-path: polygon(89.631% 63.102%, 100% 67.914%, 100% 100%, 83.347% 100%)"><span>Shatter.</span></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    // Aim: the ball sits ready, the game's dotted guide reaches out from it, the word arrives
+    tl.fromTo('#hk-ball', { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'back.out(2)' }, B(0));
+    tl.fromTo('#hk-guide', { clipPath: 'inset(0% 100% 0% 0%)', opacity: 1 }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.45, ease: 'power3.out' }, B(0) + 0.05);
+    tl.fromTo('#hk-aim', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.2, ease: 'power4.out', stagger: 0.07 }, B(0) + 0.1);
+    tl.to('#hk-guide', { opacity: 0, duration: 0.15, ease: 'power2.in' }, B(2) - 0.12);
+    tl.to('#hk-aim', { opacity: 0, filter: 'blur(10px)', duration: 0.12, ease: 'power2.in', stagger: 0.04 }, B(2) - 0.12);
+    // Fire: the ball flies the line it was aimed along, over and behind the word, and out of frame
+    tl.fromTo('#hk-fire', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.14, ease: 'power4.out', stagger: 0.07 }, B(2));
+    tl.fromTo('#hk-shot', { x: 0, y: 0 }, { x: 132.857, y: -141.375, duration: 1 / 30, ease: 'none' }, B(2) + 0 / 30);
+    tl.fromTo('.hk-tr', { strokeDashoffset: (j, el) => +el.dataset.l }, { strokeDashoffset: (j, el) => el.dataset.l - 194.054, duration: 1 / 30, ease: 'none' }, B(2) + 0 / 30);
+    tl.to('#hk-shot', { x: 265.714, y: -260.668, duration: 1 / 30, ease: 'none' }, B(2) + 1 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 372.672, duration: 1 / 30, ease: 'none' }, B(2) + 1 / 30);
+    tl.to('#hk-shot', { x: 398.571, y: -357.878, duration: 1 / 30, ease: 'none' }, B(2) + 2 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 537.376, duration: 1 / 30, ease: 'none' }, B(2) + 2 / 30);
+    tl.to('#hk-shot', { x: 531.429, y: -433.006, duration: 1 / 30, ease: 'none' }, B(2) + 3 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 690.104, duration: 1 / 30, ease: 'none' }, B(2) + 3 / 30);
+    tl.to('#hk-shot', { x: 664.286, y: -486.051, duration: 1 / 30, ease: 'none' }, B(2) + 4 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 833.282, duration: 1 / 30, ease: 'none' }, B(2) + 4 / 30);
+    tl.to('#hk-shot', { x: 797.143, y: -517.014, duration: 1 / 30, ease: 'none' }, B(2) + 5 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 969.84, duration: 1 / 30, ease: 'none' }, B(2) + 5 / 30);
+    tl.to('#hk-shot', { x: 930, y: -525.894, duration: 1 / 30, ease: 'none' }, B(2) + 6 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 1103.146, duration: 1 / 30, ease: 'none' }, B(2) + 6 / 30);
+    tl.to('#hk-shot', { x: 1062.857, y: -512.692, duration: 1 / 30, ease: 'none' }, B(2) + 7 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 1236.808, duration: 1 / 30, ease: 'none' }, B(2) + 7 / 30);
+    tl.to('#hk-shot', { x: 1195.714, y: -477.408, duration: 1 / 30, ease: 'none' }, B(2) + 8 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 1374.408, duration: 1 / 30, ease: 'none' }, B(2) + 8 / 30);
+    tl.to('#hk-shot', { x: 1328.571, y: -420.041, duration: 1 / 30, ease: 'none' }, B(2) + 9 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 1519.24, duration: 1 / 30, ease: 'none' }, B(2) + 9 / 30);
+    tl.to('#hk-shot', { x: 1461.429, y: -340.592, duration: 1 / 30, ease: 'none' }, B(2) + 10 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 1674.137, duration: 1 / 30, ease: 'none' }, B(2) + 10 / 30);
+    tl.to('#hk-shot', { x: 1594.286, y: -239.06, duration: 1 / 30, ease: 'none' }, B(2) + 11 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 1841.425, duration: 1 / 30, ease: 'none' }, B(2) + 11 / 30);
+    tl.to('#hk-shot', { x: 1727.143, y: -115.446, duration: 1 / 30, ease: 'none' }, B(2) + 12 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 2022.955, duration: 1 / 30, ease: 'none' }, B(2) + 12 / 30);
+    tl.to('#hk-shot', { x: 1860, y: 30.251, duration: 1 / 30, ease: 'none' }, B(2) + 13 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 2220.178, duration: 1 / 30, ease: 'none' }, B(2) + 13 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 2417.401, duration: 1 / 30, ease: 'none' }, B(2) + 14 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 2614.623, duration: 1 / 30, ease: 'none' }, B(2) + 15 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 2811.846, duration: 1 / 30, ease: 'none' }, B(2) + 16 / 30);
+    tl.to('.hk-tr', { strokeDashoffset: (j, el) => el.dataset.l - 3009.069, duration: 1 / 30, ease: 'none' }, B(2) + 17 / 30);
+    tl.set('#hk-shot', { autoAlpha: 0 }, B(2) + 15 / 30);
+    tl.to('#hk-fire', { opacity: 0, filter: 'blur(10px)', duration: 0.1, ease: 'power2.in', stagger: 0.04 }, B(4) - 0.1);
+    // Shatter: the word slams in, holds a beat, and breaks
+    tl.fromTo('#hk-shatter', { opacity: 0, scale: 1.3, filter: 'blur(14px)' }, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 0.24, ease: 'expo.out' }, B(4));
+    tl.set('#hk-shatter', { opacity: 0 }, B(5));
+    tl.set('#hk-shards', { opacity: 1 }, B(5));
+    tl.fromTo('#hk-burst', { opacity: 0, scale: 0.25 }, { keyframes: [{ opacity: 1, scale: 0.7, duration: 0.06 }, { opacity: 0, scale: 1.25, duration: 0.42 }], ease: 'none' }, B(5));
+    // a warm light gathers at the centre and the new world opens out of it
+    tl.fromTo('#hk-light', { opacity: 0, scale: 0.12 }, { opacity: 1, scale: 0.85, duration: B(7.7) - B(5.6), ease: 'power2.in' }, B(5.6));
+    tl.fromTo('#hk-s0', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -4.5, y: -1.019, rotation: 1.365, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s0', { x: -265.038, y: -48.022, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s0', { xPercent: 0, yPercent: 0 }, { xPercent: -41.971, yPercent: -29.876, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s0', { rotation: 57.34, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s0', { scale: 1 }, { scale: 3.323, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s0', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.126);
+    tl.fromTo('#hk-s1', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -6.574, y: -4.916, rotation: -0.918, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s1', { x: -387.196, y: -231.662, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s1', { xPercent: 0, yPercent: 0 }, { xPercent: -61.315, yPercent: -144.121, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s1', { rotation: -38.567, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s1', { scale: 1 }, { scale: 3.335, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s1', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.041);
+    tl.fromTo('#hk-s2', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -4.988, y: -8.521, rotation: -1.644, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s2', { x: -293.819, y: -401.508, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s2', { xPercent: 0, yPercent: 0 }, { xPercent: -46.528, yPercent: -249.786, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s2', { rotation: -69.065, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s2', { scale: 1 }, { scale: 3.719, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s2', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.013);
+    tl.fromTo('#hk-s3', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -0.618, y: -4.317, rotation: -0.222, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s3', { x: -36.371, y: -203.411, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s3', { xPercent: 0, yPercent: 0 }, { xPercent: -5.76, yPercent: -126.546, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s3', { rotation: -9.317, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s3', { scale: 1 }, { scale: 3.694, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s3', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.067);
+    tl.fromTo('#hk-s4', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 3.245, y: -11.423, rotation: -0.287, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s4', { x: 191.148, y: -538.249, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s4', { xPercent: 0, yPercent: 0 }, { xPercent: 30.27, yPercent: -334.855, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s4', { rotation: -12.064, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s4', { scale: 1 }, { scale: 3.238, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s4', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.064);
+    tl.fromTo('#hk-s5', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 4.126, y: -5.435, rotation: -1.807, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s5', { x: 243.018, y: -256.075, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s5', { xPercent: 0, yPercent: 0 }, { xPercent: 38.484, yPercent: -159.309, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s5', { rotation: -75.89, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s5', { scale: 1 }, { scale: 3.96, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s5', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.007);
+    tl.fromTo('#hk-s6', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 6.554, y: -3.339, rotation: 1.038, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s6', { x: 386.028, y: -157.329, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s6', { xPercent: 0, yPercent: 0 }, { xPercent: 61.13, yPercent: -97.878, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s6', { rotation: 43.589, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s6', { scale: 1 }, { scale: 2.792, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s6', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.114);
+    tl.fromTo('#hk-s7', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 7.661, y: -3.537, rotation: -0.609, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s7', { x: 451.242, y: -166.679, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s7', { xPercent: 0, yPercent: 0 }, { xPercent: 71.458, yPercent: -103.694, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s7', { rotation: -25.565, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s7', { scale: 1 }, { scale: 4.255, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s7', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.052);
+    tl.fromTo('#hk-s8', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -5.178, y: -1.039, rotation: -1.526, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s8', { x: -304.991, y: -48.973, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s8', { xPercent: 0, yPercent: 0 }, { xPercent: -48.298, yPercent: -30.467, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s8', { rotation: -64.079, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s8', { scale: 1 }, { scale: 3.681, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s8', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.018);
+    tl.fromTo('#hk-s9', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -8.824, y: -1.716, rotation: -1.498, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s9', { x: -519.721, y: -80.855, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s9', { xPercent: 0, yPercent: 0 }, { xPercent: -82.302, yPercent: -50.301, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s9', { rotation: -62.919, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s9', { scale: 1 }, { scale: 2.977, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s9', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.019);
+    tl.fromTo('#hk-s10', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -4.52, y: 5.373, rotation: 1.749, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s10', { x: -266.214, y: 253.16, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s10', { xPercent: 0, yPercent: 0 }, { xPercent: -42.157, yPercent: 157.496, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s10', { rotation: 73.466, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s10', { scale: 1 }, { scale: 4.282, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s10', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.141);
+    tl.fromTo('#hk-s11', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 3.136, y: -8.478, rotation: -0.356, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s11', { x: 184.729, y: -399.465, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s11', { xPercent: 0, yPercent: 0 }, { xPercent: 29.253, yPercent: -248.515, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s11', { rotation: -14.973, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s11', { scale: 1 }, { scale: 4.46, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s11', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.062);
+    tl.fromTo('#hk-s12', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 4.619, y: -7.369, rotation: -0.261, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s12', { x: 272.05, y: -347.248, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s12', { xPercent: 0, yPercent: 0 }, { xPercent: 43.081, yPercent: -216.03, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s12', { rotation: -10.944, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s12', { scale: 1 }, { scale: 2.812, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s12', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.065);
+    tl.fromTo('#hk-s13', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 7.232, y: -3.684, rotation: -1.966, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s13', { x: 425.941, y: -173.606, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s13', { xPercent: 0, yPercent: 0 }, { xPercent: 67.451, yPercent: -108.003, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s13', { rotation: -82.557, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s13', { scale: 1 }, { scale: 4.358, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s13', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.001);
+    tl.fromTo('#hk-s14', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 6.247, y: -1.449, rotation: -0.367, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s14', { x: 367.946, y: -68.266, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s14', { xPercent: 0, yPercent: 0 }, { xPercent: 58.267, yPercent: -42.47, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s14', { rotation: -15.432, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s14', { scale: 1 }, { scale: 2.313, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s14', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.061);
+    tl.fromTo('#hk-s15', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 4.611, y: 0.501, rotation: 0.98, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s15', { x: 271.587, y: 23.594, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s15', { xPercent: 0, yPercent: 0 }, { xPercent: 43.008, yPercent: 14.678, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s15', { rotation: 41.177, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s15', { scale: 1 }, { scale: 3.451, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s15', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.112);
+    tl.fromTo('#hk-s16', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -7.907, y: 1.814, rotation: -1.587, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s16', { x: -465.734, y: 85.494, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s16', { xPercent: 0, yPercent: 0 }, { xPercent: -73.753, yPercent: 53.187, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s16', { rotation: -66.634, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s16', { scale: 1 }, { scale: 3.492, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s16', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.016);
+    tl.fromTo('#hk-s17', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -5.093, y: 7.392, rotation: 1.538, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s17', { x: -299.983, y: 348.289, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s17', { xPercent: 0, yPercent: 0 }, { xPercent: -47.505, yPercent: 216.678, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s17', { rotation: 64.581, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s17', { scale: 1 }, { scale: 4.576, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s17', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.133);
+    tl.fromTo('#hk-s18', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -5.352, y: 6.967, rotation: 0.415, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s18', { x: -315.238, y: 328.29, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s18', { xPercent: 0, yPercent: 0 }, { xPercent: -49.92, yPercent: 204.236, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s18', { rotation: 17.429, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s18', { scale: 1 }, { scale: 3.528, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s18', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.091);
+    tl.fromTo('#hk-s19', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: -3.974, y: 6.823, rotation: -1.622, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s19', { x: -234.053, y: 321.523, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s19', { xPercent: 0, yPercent: 0 }, { xPercent: -37.064, yPercent: 200.026, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s19', { rotation: -68.135, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s19', { scale: 1 }, { scale: 3.74, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s19', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.014);
+    tl.fromTo('#hk-s20', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 3.318, y: 8.588, rotation: 1.982, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s20', { x: 195.423, y: 404.659, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s20', { xPercent: 0, yPercent: 0 }, { xPercent: 30.947, yPercent: 251.746, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s20', { rotation: 83.231, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s20', { scale: 1 }, { scale: 3.899, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s20', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.149);
+    tl.fromTo('#hk-s21', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 4.659, y: 2.027, rotation: -1.45, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s21', { x: 274.391, y: 95.528, color: '#D6EBFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s21', { xPercent: 0, yPercent: 0 }, { xPercent: 43.452, yPercent: 59.43, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s21', { rotation: -60.899, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s21', { scale: 1 }, { scale: 3.726, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s21', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.021);
+    tl.fromTo('#hk-s22', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 11.177, y: 3.709, rotation: -0.626, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s22', { x: 658.341, y: 174.784, color: '#FFDDE3', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s22', { xPercent: 0, yPercent: 0 }, { xPercent: 104.253, yPercent: 108.736, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s22', { rotation: -26.296, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s22', { scale: 1 }, { scale: 4.478, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s22', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.052);
+    tl.fromTo('#hk-s23', { x: 0, y: 0, rotation: 0, color: '#FFFFFF' }, { x: 6.197, y: 3.282, rotation: 1.043, duration: 0.12, ease: 'power2.out' }, B(5));
+    tl.to('#hk-s23', { x: 364.992, y: 154.64, color: '#E2DAFF', duration: 0.6, ease: 'power2.out' }, B(5) + 0.12);
+    tl.fromTo('#hk-s23', { xPercent: 0, yPercent: 0 }, { xPercent: 57.799, yPercent: 96.205, duration: 1.133, ease: 'power1.in' }, B(5) + 0.3);
+    tl.to('#hk-s23', { rotation: 43.795, duration: 1.313, ease: 'sine.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s23', { scale: 1 }, { scale: 3.746, duration: 1.313, ease: 'power2.in' }, B(5) + 0.12);
+    tl.fromTo('#hk-s23', { opacity: 1 }, { opacity: 0, duration: 0.3, ease: 'power2.in' }, B(7.6) + 0.114);
+    tl.set('#hk-shards', { opacity: 0 }, B(8) - 0.05);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>

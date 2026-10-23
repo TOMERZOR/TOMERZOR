@@ -1,0 +1,54 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    #bl-title { position: absolute; left: 0; right: 0; top: 300px; text-align: center; font-size: 120px; font-weight: 900; letter-spacing: -0.03em; color: #3E3A4F; }
+    #bl-row { position: absolute; left: 164px; top: 560px; width: 1592px; height: 118px; }
+    .ball { position: absolute; top: 0; width: 118px; height: 118px; }
+    .ball img { position: absolute; inset: -8%; width: 116%; height: 116%; }
+    .w { display: inline-block; }
+  
+  </style>
+  <div id="root" data-composition-id="balls" data-width="1920" data-height="1080">
+
+    <div id="bl-title"><span class="w " id="bl-w0">Collect</span> <span class="w " id="bl-w1">12</span> <span class="w " id="bl-w2">balls.</span></div>
+    <div id="bl-row" data-layout-allow-overflow>
+      <div class="ball" id="bl-b0" style="left: 0px"><img src="assets/img/balls/steel.png" alt=""></div>
+      <div class="ball" id="bl-b1" style="left: 134px"><img src="assets/img/balls/chalk.png" alt=""></div>
+      <div class="ball" id="bl-b2" style="left: 268px"><img src="assets/img/balls/coral.png" alt=""></div>
+      <div class="ball" id="bl-b3" style="left: 402px"><img src="assets/img/balls/jade.png" alt=""></div>
+      <div class="ball" id="bl-b4" style="left: 536px"><img src="assets/img/balls/cobalt.png" alt=""></div>
+      <div class="ball" id="bl-b5" style="left: 670px"><img src="assets/img/balls/marble.png" alt=""></div>
+      <div class="ball" id="bl-b6" style="left: 804px"><img src="assets/img/balls/gold.png" alt=""></div>
+      <div class="ball" id="bl-b7" style="left: 938px"><img src="assets/img/balls/obsidian.png" alt=""></div>
+      <div class="ball" id="bl-b8" style="left: 1072px"><img src="assets/img/balls/moon.png" alt=""></div>
+      <div class="ball" id="bl-b9" style="left: 1206px"><img src="assets/img/balls/sunset.png" alt=""></div>
+      <div class="ball" id="bl-b10" style="left: 1340px"><img src="assets/img/balls/aurora.png" alt=""></div>
+      <div class="ball" id="bl-b11" style="left: 1474px"><img src="assets/img/balls/prism.png" alt=""></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    tl.fromTo('#bl-title .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.16, ease: 'power4.out', stagger: 0.08 }, B(0.5));
+    tl.fromTo('#bl-b0', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 0 * B(0.25));
+    tl.fromTo('#bl-b1', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 1 * B(0.25));
+    tl.fromTo('#bl-b2', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 2 * B(0.25));
+    tl.fromTo('#bl-b3', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 3 * B(0.25));
+    tl.fromTo('#bl-b4', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 4 * B(0.25));
+    tl.fromTo('#bl-b5', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 5 * B(0.25));
+    tl.fromTo('#bl-b6', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 6 * B(0.25));
+    tl.fromTo('#bl-b7', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 7 * B(0.25));
+    tl.fromTo('#bl-b8', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 8 * B(0.25));
+    tl.fromTo('#bl-b9', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 9 * B(0.25));
+    tl.fromTo('#bl-b10', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 10 * B(0.25));
+    tl.fromTo('#bl-b11', { y: -760, scaleY: 1.12, scaleX: 0.92 }, { keyframes: [{ y: 0, scaleY: 1, scaleX: 1, duration: 0.3, ease: 'power2.in' }, { scaleY: 0.82, scaleX: 1.12, duration: 0.05, ease: 'power1.out' }, { scaleY: 1, scaleX: 1, duration: 0.16, ease: 'back.out(2)' }] }, B(0.25) + 11 * B(0.25));
+    // the row gathers into one point and bursts into the mark
+    tl.to('.ball', { x: (i) => 960 - (164 + i * 134 + 59), y: -60, scale: 0.4, duration: 0.34, ease: 'power3.in', stagger: 0.008 }, B(3.55));
+    tl.to('.ball', { opacity: 0, duration: 0.06 }, B(4) - 0.02);
+    tl.to('#bl-title .w', { opacity: 0, filter: 'blur(10px)', duration: 0.13, ease: 'power2.in', stagger: 0.03 }, B(3.5));
+    window.__timelines["balls"] = tl;
+  </script>
+</template>

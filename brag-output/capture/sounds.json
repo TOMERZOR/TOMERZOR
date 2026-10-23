@@ -1,0 +1,94 @@
+{
+ "game-ember": {
+  "peak": 0,
+  "dur": 8.233
+ },
+ "game-hero": {
+  "peak": 0,
+  "dur": 8.467
+ },
+ "game-night": {
+  "peak": 0,
+  "dur": 8.4
+ },
+ "click-soft": {
+  "peak": 0.073,
+  "dur": 0.366
+ },
+ "game-boom1": {
+  "peak": 0.186,
+  "dur": 1.437
+ },
+ "game-fire1": {
+  "peak": 0.068,
+  "dur": 0.392
+ },
+ "game-fire2": {
+  "peak": 0.065,
+  "dur": 0.549
+ },
+ "game-glass-rev": {
+  "peak": 0.674,
+  "dur": 0.731
+ },
+ "game-glass_b1": {
+  "peak": 0.02,
+  "dur": 1.071
+ },
+ "game-glass_b2": {
+  "peak": 0.01,
+  "dur": 0.705
+ },
+ "game-glass_b3": {
+  "peak": 0.009,
+  "dur": 0.731
+ },
+ "game-glass_s2": {
+  "peak": 0.103,
+  "dur": 0.601
+ },
+ "impact-bass-1": {
+  "peak": 0.073,
+  "dur": 2.116
+ },
+ "impact-bass-2": {
+  "peak": 1.986,
+  "dur": 2.592
+ },
+ "pop": {
+  "peak": 0.12,
+  "dur": 0.72
+ },
+ "riser": {
+  "peak": 3.472,
+  "dur": 10.056
+ },
+ "sparkle": {
+  "peak": 0.027,
+  "dur": 1.829
+ },
+ "whoosh-short": {
+  "peak": 0.162,
+  "dur": 0.575
+ },
+ "whoosh": {
+  "peak": 0.162,
+  "dur": 0.575
+ },
+ "impact-1": {
+  "peak": 0.115,
+  "dur": 1.296
+ },
+ "impact-2": {
+  "peak": 0.295,
+  "dur": 1.536
+ },
+ "whoosh-lo": {
+  "peak": 0.185,
+  "dur": 0.672
+ },
+ "whoosh-hi": {
+  "peak": 0.145,
+  "dur": 0.552
+ }
+}

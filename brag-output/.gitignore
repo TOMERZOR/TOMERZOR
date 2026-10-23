@@ -1,0 +1,7 @@
+# regenerable working files: capture frames (node capture/capture.mjs), drafts and render temp dirs
+capture/frames-*/
+draft-*.mp4
+brag-raw.mp4
+work-*/
+composition/node_modules/
+composition/.hyperframes/

@@ -1,0 +1,23 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    #ch-title { position: absolute; left: 1060px; top: 350px; font-size: 140px; font-weight: 900; line-height: 0.95; letter-spacing: -0.03em; color: #4A2D2A; }
+    #ch-title .acc { color: #FF4D3D; }
+    .w { display: inline-block; }
+  
+  </style>
+  <div id="root" data-composition-id="chains" data-width="1920" data-height="1080">
+
+    <div id="ch-title"><span class="w " id="ch-w0">Chain</span><br><span class="w acc" id="cha-w0">reactions.</span></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    tl.fromTo('#ch-title .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.18, ease: 'power4.out', stagger: 0.09 }, B(1));
+    tl.to('#ch-title .w', { opacity: 0, filter: 'blur(10px)', duration: 0.13, ease: 'power2.in', stagger: 0.03 }, B(7.6));
+    window.__timelines["chains"] = tl;
+  </script>
+</template>

@@ -1,0 +1,31 @@
+<template>
+  <style>
+    @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+    #root { position: absolute; inset: 0; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+    
+    #rv-block { position: absolute; left: 150px; top: 330px; width: 800px; }
+    #rv-logo { display: flex; gap: 2px; font-size: 220px; font-weight: 900; letter-spacing: 0.01em; line-height: 0.9; color: #3E3A4F; }
+    #rv-logo span { display: inline-block; background: linear-gradient(105deg, #3E3A4F 0%, #3E3A4F 40%, #FFFFFF 50%, #3E3A4F 60%, #3E3A4F 100%); background-size: 320% 100%; background-position: 100% 0; -webkit-background-clip: text; background-clip: text; color: transparent; }
+    #rv-logo span:nth-child(3) { clip-path: polygon(0 0, 100% 0, 100% 46%, 58% 54%, 100% 62%, 100% 100%, 0 100%, 0 58%, 38% 50%, 0 40%); }
+    #rv-line { margin-top: 34px; font-size: 52px; font-weight: 800; color: #5B5670; letter-spacing: -0.01em; }
+    .w { display: inline-block; }
+  
+  </style>
+  <div id="root" data-composition-id="reveal" data-width="1920" data-height="1080">
+
+    <div id="rv-block">
+      <div id="rv-logo" aria-label="SHARD"><span id="rv-l0">S</span><span id="rv-l1">H</span><span id="rv-l2">A</span><span id="rv-l3">R</span><span id="rv-l4">D</span></div>
+      <div id="rv-line"><span class="w " id="rv-w0">Satisfying</span> <span class="w " id="rv-w1">physics</span> <span class="w " id="rv-w2">puzzles.</span></div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+
+    tl.fromTo('#rv-logo span', { opacity: 0, y: 40, filter: 'blur(10px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.42, ease: 'expo.out', stagger: 0.06 }, B(2));
+    tl.fromTo('#rv-logo span', { backgroundPosition: '100% 0' }, { backgroundPosition: '0% 0', duration: 0.9, ease: 'power2.inOut', stagger: 0.05 }, B(3));
+    tl.fromTo('#rv-line .w', { opacity: 0, filter: 'blur(10px)', y: 0 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.16, ease: 'power4.out', stagger: 0.07 }, B(4));
+    tl.to('#rv-logo span, #rv-line .w', { opacity: 0, filter: 'blur(10px)', duration: 0.14, ease: 'power2.in', stagger: 0.02 }, B(7.6));
+    window.__timelines["reveal"] = tl;
+  </script>
+</template>

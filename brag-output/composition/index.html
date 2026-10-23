@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: 'SHARD Nunito'; src: url('assets/fonts/nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: block; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: 'SHARD Nunito', 'Nunito', sans-serif; }
+      /* the ground: a solid fill, a soft glow, and a flood that sweeps each new world in */
+      #ground { position: absolute; inset: 0; background: #000; }
+      #glow { position: absolute; left: 50%; top: 50%; width: 1700px; height: 1700px; margin: -850px 0 0 -850px; border-radius: 50%; background: radial-gradient(closest-side, var(--glow), rgba(0, 0, 0, 0)); opacity: 0; --glow: #F4D6C3; }
+      #flood { position: absolute; inset: 0; background: #FFF8F1; clip-path: circle(0% at 50% 50%); }
+      /* the phone: a generic modern handset, its screen showing the real game */
+      #rig { position: absolute; left: 50%; top: 50%; width: 418px; height: 870px; margin: -435px 0 0 -209px; }
+      #shake { position: absolute; inset: 0; }
+      #phone { position: absolute; inset: 0; border-radius: 70px; padding: 3px; background: linear-gradient(140deg, #8A8A93 0%, #2A2A31 18%, #1B1B21 50%, #3A3A43 82%, #9A9AA3 100%); box-shadow: 0 60px 120px -40px rgba(20, 16, 40, .55), 0 26px 50px -24px rgba(20, 16, 40, .45); }
+      #phone::before, #phone::after { content: ""; position: absolute; width: 4px; border-radius: 2px; background: #2A2A31; }
+      #phone::before { left: -4px; top: 190px; height: 70px; box-shadow: 0 90px 0 #2A2A31; }
+      #phone::after { right: -4px; top: 250px; height: 110px; }
+      #bezel { position: absolute; inset: 3px; border-radius: 67px; background: #050507; padding: 10px; }
+      #screen { position: relative; width: 392px; height: 844px; border-radius: 57px; overflow: hidden; background: #FFF8F1; }
+      .screen-media { position: absolute; left: 0; top: 0; width: 392px; height: 844px; object-fit: cover; }
+      #island { position: absolute; left: 50%; top: 11px; width: 118px; height: 35px; margin-left: -59px; border-radius: 18px; background: #000; z-index: 3; }
+      #homebar { position: absolute; left: 50%; bottom: 9px; width: 136px; height: 5px; margin-left: -68px; border-radius: 3px; background: currentColor; color: #3E3A4F; opacity: .55; z-index: 2; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="22.5" data-width="1920" data-height="1080" data-motion-blur="on">
+      <div id="ground"></div>
+      <div id="flood"></div>
+      <div id="glow"></div>
+      <div id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="3.767" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 6"></div>
+      <div id="rig" data-layout-allow-overflow>
+        <div id="shake">
+          <div id="phone">
+            <div id="bezel">
+              <div id="screen">
+          <video id="v-hero" class="clip screen-media" src="assets/clips/hero.mp4" muted playsinline data-start="3.7666666666666666" data-duration="3.733" data-media-start="1.067" data-track-index="2"></video>
+          <video id="v-ember" class="clip screen-media" src="assets/clips/ember.mp4" muted playsinline data-start="7.5" data-duration="3.767" data-media-start="1.3" data-track-index="3"></video>
+          <video id="v-night" class="clip screen-media" src="assets/clips/night.mp4" muted playsinline data-start="11.266666666666667" data-duration="2.8" data-media-start="3.233" data-track-index="2"></video>
+          <video id="v-map0" class="clip screen-media" src="assets/clips/map0.mp4" muted playsinline data-start="14.066666666666666" data-duration="0.467" data-media-start="0" data-track-index="3"></video>
+          <video id="v-map1" class="clip screen-media" src="assets/clips/map1.mp4" muted playsinline data-start="14.533333333333333" data-duration="0.467" data-media-start="0" data-track-index="2"></video>
+          <video id="v-map2" class="clip screen-media" src="assets/clips/map2.mp4" muted playsinline data-start="15" data-duration="0.467" data-media-start="0" data-track-index="3"></video>
+          <video id="v-map3" class="clip screen-media" src="assets/clips/map3.mp4" muted playsinline data-start="15.466666666666667" data-duration="0.467" data-media-start="0" data-track-index="2"></video>
+          <video id="v-map4" class="clip screen-media" src="assets/clips/map4.mp4" muted playsinline data-start="15.933333333333334" data-duration="1.267" data-media-start="0" data-track-index="3"></video>
+                <div id="island"></div>
+                <div id="homebar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="reveal" data-composition-id="reveal" data-composition-src="compositions/reveal.html" data-start="3.7666666666666666" data-duration="3.733" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 5"></div>
+      <div id="chains" data-composition-id="chains" data-composition-src="compositions/chains.html" data-start="7.5" data-duration="3.767" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 5"></div>
+      <div id="slowmo" data-composition-id="slowmo" data-composition-src="compositions/slowmo.html" data-start="11.266666666666667" data-duration="2.8" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 7"></div>
+      <div id="worlds" data-composition-id="worlds" data-composition-src="compositions/worlds.html" data-start="14.066666666666666" data-duration="2.8" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 5"></div>
+      <div id="balls" data-composition-id="balls" data-composition-src="compositions/balls.html" data-start="16.866666666666667" data-duration="2.133" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 7"></div>
+      <div id="mark" data-composition-id="mark" data-composition-src="compositions/mark.html" data-start="18.766666666666666" data-duration="3.733" data-track-kind="graphics" data-track-index="1" data-width="1920" data-height="1080" style="z-index: 7"></div>
+    <audio id="a0-click-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="0.06" data-duration="0.306" data-volume="0.55" data-track-index="11"></audio>
+    <audio id="a1-game-fire1" class="clip" src="assets/sfx/game-fire1.mp3" data-start="0.899" data-duration="0.332" data-volume="0.9" data-track-index="12"></audio>
+    <audio id="a2-whoosh-hi" class="clip" src="assets/sfx/whoosh-hi.mp3" data-start="0.872" data-duration="0.492" data-volume="0.5" data-track-index="11"></audio>
+    <audio id="a3-impact-1" class="clip" src="assets/sfx/impact-1.mp3" data-start="1.785" data-duration="1.236" data-volume="0.85" data-track-index="12"></audio>
+    <audio id="a4-game-boom1" class="clip" src="assets/sfx/game-boom1.mp3" data-start="1.714" data-duration="1.377" data-volume="0.4" data-track-index="11"></audio>
+    <audio id="a5-game-glass_b1" class="clip" src="assets/sfx/game-glass_b1.mp3" data-start="2.347" data-duration="1.011" data-volume="1" data-track-index="13"></audio>
+    <audio id="a6-game-glass_b2" class="clip" src="assets/sfx/game-glass_b2.mp3" data-start="2.397" data-duration="0.645" data-volume="0.8" data-track-index="14"></audio>
+    <audio id="a7-sparkle" class="clip" src="assets/sfx/sparkle.mp3" data-start="2.49" data-duration="1.769" data-volume="0.4" data-track-index="15"></audio>
+    <audio id="a8-whoosh-lo" class="clip" src="assets/sfx/whoosh-lo.mp3" data-start="3.415" data-duration="0.612" data-volume="0.45" data-track-index="11"></audio>
+    <audio id="a9-whoosh" class="clip" src="assets/sfx/whoosh.mp3" data-start="3.671" data-duration="0.515" data-volume="0.4" data-track-index="12"></audio>
+    <audio id="a10-game-hero" class="clip" src="assets/audio/game-hero.wav" data-start="3.767" data-duration="3.733" data-media-start="1.067" data-volume="0.62" data-track-index="13"></audio>
+    <audio id="a11-whoosh-hi" class="clip" src="assets/sfx/whoosh-hi.mp3" data-start="7.255" data-duration="0.492" data-volume="0.45" data-track-index="11"></audio>
+    <audio id="a12-game-ember" class="clip" src="assets/audio/game-ember.wav" data-start="7.5" data-duration="3.767" data-media-start="1.3" data-volume="0.62" data-track-index="12"></audio>
+    <audio id="a13-whoosh-lo" class="clip" src="assets/sfx/whoosh-lo.mp3" data-start="10.948" data-duration="0.612" data-volume="0.5" data-track-index="11"></audio>
+    <audio id="a14-game-night" class="clip" src="assets/audio/game-night.wav" data-start="11.267" data-duration="2.8" data-media-start="3.233" data-volume="0.72" data-track-index="12"></audio>
+    <audio id="a15-whoosh" class="clip" src="assets/sfx/whoosh.mp3" data-start="13.805" data-duration="0.515" data-volume="0.4" data-track-index="11"></audio>
+    <audio id="a16-click-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="14.027" data-duration="0.306" data-volume="0.3" data-track-index="13"></audio>
+    <audio id="a17-click-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="14.494" data-duration="0.306" data-volume="0.35" data-track-index="11"></audio>
+    <audio id="a18-click-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="14.96" data-duration="0.306" data-volume="0.3" data-track-index="11"></audio>
+    <audio id="a19-click-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="15.427" data-duration="0.306" data-volume="0.35" data-track-index="11"></audio>
+    <audio id="a20-click-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="15.894" data-duration="0.306" data-volume="0.3" data-track-index="11"></audio>
+    <audio id="a21-whoosh-hi" class="clip" src="assets/sfx/whoosh-hi.mp3" data-start="16.655" data-duration="0.492" data-volume="0.4" data-track-index="12"></audio>
+    <audio id="a22-pop" class="clip" src="assets/sfx/pop.mp3" data-start="16.913" data-duration="0.66" data-volume="0.32" data-track-index="13"></audio>
+    <audio id="a23-pop" class="clip" src="assets/sfx/pop.mp3" data-start="17.313" data-duration="0.66" data-volume="0.36" data-track-index="12"></audio>
+    <audio id="a24-pop" class="clip" src="assets/sfx/pop.mp3" data-start="17.713" data-duration="0.66" data-volume="0.4" data-track-index="13"></audio>
+    <audio id="a25-pop" class="clip" src="assets/sfx/pop.mp3" data-start="18.113" data-duration="0.66" data-volume="0.32" data-track-index="12"></audio>
+    <audio id="a26-pop" class="clip" src="assets/sfx/pop.mp3" data-start="18.38" data-duration="0.66" data-volume="0.36" data-track-index="13"></audio>
+    <audio id="a27-riser" class="clip" src="assets/sfx/riser.mp3" data-start="16.2" data-duration="2.9" data-media-start="0.872" data-volume="0.5" data-track-index="11"></audio>
+    <audio id="a28-game-glass-rev" class="clip" src="assets/sfx/game-glass-rev.mp3" data-start="18.526" data-duration="0.671" data-volume="0.65" data-track-index="14"></audio>
+    <audio id="a29-impact-2" class="clip" src="assets/sfx/impact-2.mp3" data-start="18.972" data-duration="1.476" data-volume="0.75" data-track-index="12"></audio>
+    <audio id="a30-sparkle" class="clip" src="assets/sfx/sparkle.mp3" data-start="19.306" data-duration="1.769" data-volume="0.45" data-track-index="11"></audio>
+    <audio id="a31-sparkle" class="clip" src="assets/sfx/sparkle.mp3" data-start="20.64" data-duration="1.769" data-volume="0.3" data-track-index="12"></audio>
+    </div>
+    <script>
+      // the root timeline moves only what persists across scenes: the ground, the glow and the phone
+      const tl = gsap.timeline({ paused: true });
+      const B = (n) => Math.round((n * 60) / 128 * 30) / 30;
+      const flood = (b, colour, glow, glowOpacity = 0.85, at = '50% 50%', dur = 0.38) => {
+        tl.set('#flood', { background: colour, clipPath: 'circle(0% at ' + at + ')' }, B(b) - 0.001);
+        tl.to('#flood', { clipPath: 'circle(125% at ' + at + ')', duration: dur, ease: 'power2.inOut' }, B(b));
+        tl.set('#ground', { background: colour }, B(b) + dur);
+        tl.to('#glow', { '--glow': glow, opacity: glowOpacity, duration: dur, ease: 'power2.inOut' }, B(b));
+      };
+      // the home indicator follows the screen: dark over light worlds, light over Night (the game hides the status bar)
+      const bar = (b, ink, home = ink) => tl.set('#homebar', { color: home }, B(b));
+
+      // the hook plays on black; the phone waits below the frame
+      tl.set('#rig', { x: 330, y: 1150, rotation: -6, scale: 1, opacity: 1 }, 0);
+      tl.set('#shake', { x: 0, y: 0 }, 0);
+      tl.set('#glow', { scale: 1 }, 0);
+
+      // reveal: the shards' light floods to Dawn and the phone rises into it
+      flood(7.55, '#FFF8F1', '#F4D6C3', 0.9, '50% 50%', 0.42);
+      tl.to('#rig', { y: 0, rotation: 0, duration: 0.62, ease: 'expo.out' }, B(8));
+      bar(8, '#3E3A4F');
+
+      // chains: Ember sweeps in from the phone as it whips left
+      tl.to('#rig', { x: -330, duration: 0.42, ease: 'power3.inOut' }, B(15.72));
+      flood(15.9, '#FFEBD3', '#F3AE90', 0.9, '33% 50%');
+      bar(16, '#4A2D2A');
+      tl.fromTo('#shake', { x: 0, y: 0 }, { keyframes: [{ x: -7, y: 5, duration: 0.04 }, { x: 5, y: -4, duration: 0.05 }, { x: -2, y: 2, duration: 0.06 }, { x: 0, y: 0, duration: 0.08 }], ease: 'none' }, 9.567);
+      tl.fromTo('#glow', { scale: 1.08 }, { scale: 1, duration: 0.35, ease: 'power3.out' }, 9.567);
+      tl.fromTo('#shake', { x: 0, y: 0 }, { keyframes: [{ x: -7, y: 5, duration: 0.04 }, { x: 5, y: -4, duration: 0.05 }, { x: -2, y: 2, duration: 0.06 }, { x: 0, y: 0, duration: 0.08 }], ease: 'none' }, 9.933);
+      tl.fromTo('#glow', { scale: 1.08 }, { scale: 1, duration: 0.35, ease: 'power3.out' }, 9.933);
+
+      // slow motion: zoom through the screen into Night, framed on the shelf where the last piece breaks
+      tl.to('#rig', { x: -46.55, y: -359.1, scale: 2.45, duration: 0.46, ease: 'power3.in' }, B(23.55));
+      tl.set('#ground, #flood', { background: '#141A2E' }, B(24));
+      tl.set('#glow', { '--glow': '#2B3558', opacity: 0.7 }, B(24));
+      bar(24, '#E7EAF6', '#E7EAF6');
+      tl.to('#rig', { x: -47.88, y: -367.36, scale: 2.52, duration: B(29.6) - B(24), ease: 'none' }, B(24));
+
+      // worlds: pull back to the whole phone, centred, and step through the five worlds on the beat
+      tl.to('#rig', { y: 18, scale: 0.94, duration: 0.5, ease: 'expo.out' }, B(29.75));
+      flood(30, '#FFF8F1', '#F4D6C3', 0.9);
+      bar(30, '#3E3A4F');
+      flood(31, '#F2FAF5', '#C5E3D3', 0.9);
+      bar(31, '#2E4A44');
+      flood(32, '#F6F2FC', '#D2C6EE', 0.9);
+      bar(32, '#383063');
+      flood(33, '#FFEBD3', '#F3AE90', 0.9);
+      bar(33, '#4A2D2A');
+      flood(34, '#141A2E', '#2B3558', 0.75);
+      bar(34, '#E7EAF6');
+
+      // balls: the phone drops away and the ground clears to warm white
+      tl.to('#rig', { y: 1250, rotation: 4, duration: 0.42, ease: 'power3.in' }, B(35.7));
+      flood(35.85, '#FBF7F2', '#F4D6C3', 0.55);
+
+      // the mark: deep indigo, the icon's own ground
+      flood(39.9, '#120F2B', '#2E2A6E', 0.9, '50% 50%', 0.3);
+
+      tl.to({}, { duration: 0.01 }, 22.49);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

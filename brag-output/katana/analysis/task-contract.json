@@ -1,0 +1,12 @@
+{
+ "task": "Finish the SHARD launch film with Katana: a high-energy hype edit with music, sharp quick motion graphics and sound effects, clean and in Apple's design language",
+ "mode": "creative edit of supplied material (no reference video)",
+ "explicit_locks": [
+  {"attribute": "picture", "scope": "whole film", "value": "the supplied SHARD film's picture, unchanged (already designed to the brief; frame 0 is its poster)", "instruction": "make this edit with higgsfield katana"},
+  {"attribute": "style", "scope": "whole film", "value": "clean, Apple design language; no added glitch, flash or shake effects", "instruction": "Clean and in apple's design rules"},
+  {"attribute": "sound", "scope": "whole film", "value": "music plus sound effects, high energy", "instruction": "high energy with music ... with sound effects"}
+ ],
+ "creative_freedoms": ["choice of recorded stock music", "music edit points, tempo alignment and fades", "sound-effect balance against the music"],
+ "references": [],
+ "no_reference_reason": "The user supplied the finished picture to be completed; the brief needs a soundtrack, not a reference edit to adapt."
+}

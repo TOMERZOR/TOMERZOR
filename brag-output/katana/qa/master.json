@@ -1,0 +1,9 @@
+{
+ "music_gain_db": -7.5,
+ "target_lufs": -12.0,
+ "mix_raw_lufs": -16.2,
+ "gain_db": 4.2,
+ "limiter": 0.75,
+ "lufs": -12.8,
+ "true_peak_dbtp": -1.5
+}

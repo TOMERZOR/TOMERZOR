@@ -1,0 +1,20 @@
+{
+ "concept": "Every beat breaks: the SHARD launch film, now cut to a recorded EDM track whose structure matches the edit. The groove carries the cold open, the music drops out on the instant 'Shatter.' breaks into glass, the drop lands with the reveal on beat 8, and the track eases down a gear exactly as the logo assembles.",
+ "output_target": {"width": 1920, "height": 1080, "fps": "30/1", "frames": 675, "duration_s": 22.5, "pix_fmt": "yuv420p", "color": "bt709", "audio": "AAC-LC 256k 48 kHz stereo", "loudness_target_lufs": -12, "true_peak_max_dbtp": -1.0},
+ "picture": "the supplied film, stream-copied unchanged (frame 0 is its poster)",
+ "shot_roles": [
+  {"t": [0.0, 3.75], "role": "introduction: Aim. Fire. Shatter. (cold open on the track's groove; the drop-out begins with the glass break at 2.46 s)"},
+  {"t": [3.75, 7.5], "role": "reveal: the drop; SHARD wordmark and live gameplay"},
+  {"t": [7.5, 11.25], "role": "escalation: chain reactions"},
+  {"t": [11.25, 14.06], "role": "climax: one shot, slow motion"},
+  {"t": [14.06, 16.88], "role": "contrast: five worlds"},
+  {"t": [16.88, 18.75], "role": "payoff detail: twelve balls"},
+  {"t": [18.75, 22.5], "role": "payoff: logo and call to action; the music steps down a gear and fades on the final bar"}
+ ],
+ "sound_plan": {
+  "music": "Golden Storm (Mixkit 470), tempo 127 -> 128 BPM (x1.007851, pitch kept), track window from beat 24 so its first drop (beat 32) lands on film beat 8; 0.25 s fade in, 1.5 s fade out ending on the bar line at 22.5 s; -7.5 dB under the effects, ducked about 3 dB by each hit",
+  "sfx": "the film's own cue list rebuilt from the original recordings; the synthetic riser removed (the track builds by itself); ball pops, world ticks, whooshes, reverse glass and game stems raised so they cut through the music"
+ },
+ "energy": "no reference video; the energy comes from the edit's own cuts and the track's drop structure",
+ "text": "unchanged, already in the picture"
+}

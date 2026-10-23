@@ -1,0 +1,11 @@
+{
+ "music": {
+  "title": "Golden Storm", "artist": "Diego Nava", "source": "Mixkit", "asset_id": "470",
+  "url": "https://assets.mixkit.co/music/470/470.mp3", "license": "Mixkit Stock Music Free License",
+  "license_terms_file": "research/mixkit-music-license.txt",
+  "use_conditions": "Allowed: social media video posts, online marketing ads, YouTube. Not allowed: inside video games, TV/radio broadcast, CDs/DVDs, music-only remixes, rights-management registration.",
+  "selection": "49 Mixkit electronic/EDM/pop candidates measured with audio.py beats; chosen for 127 BPM (0.8% from the film's 128 BPM grid), a +10.8 dB drop on beat 32 preceded by a 2.75-beat drop-out, and 33 beats of full energy after it",
+  "audition": "measured only: this environment has no listening operation, so the choice rests on tempo, structure and loudness measurements plus the genre"
+ },
+ "sfx": "the film's own effects (SHARD's game sounds and Pixabay-licensed library effects, see src/sfx/assets/sfx/CREDITS.md), rebuilt from the film's cue list"
+}

@@ -1,6 +1,6 @@
 // lib.js: timing, easing, seeded noise, frame loading, drawing helpers, glass fracture and the 3D phone.
 'use strict';
-const W = 1920, H = 1080, FPS = 30, FRAMES = 987;
+const W = 1920, H = 1080, FPS = 30, FRAMES = 1452;
 const BEAT = 0.48388, B0 = -0.0016;
 const tb = (b) => B0 + b * BEAT; // music beat -> seconds (Take this Higher, 124 BPM)
 
@@ -187,7 +187,7 @@ function drawShard(c, src, sh, dx, dy, rot, s, a, e = 0.3, blur = 0) {
 
 // ---------------------------------------------------------------- the phone
 // Flat front view: titanium body, rim, the screen (game frame), Dynamic Island and a moving glare.
-const PB = { w: 640, scr: 0.034, rad: 0.165 };
+const PB = { w: 960, scr: 0.034, rad: 0.165 };
 PB.sw = PB.w - 2 * Math.round(PB.w * PB.scr);
 PB.sh = Math.round((PB.sw * 1600) / 744);
 PB.h = PB.sh + (PB.w - PB.sw);

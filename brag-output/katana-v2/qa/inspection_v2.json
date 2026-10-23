@@ -1,0 +1,286 @@
+{
+ "output": "out/katana-shard-v2_v2.mp4",
+ "revision": "v2",
+ "decoded_frames": 1452,
+ "fps": "30/1",
+ "pts": {
+  "first": 0.0,
+  "last": 48.366667,
+  "step": 0.03333333333333333
+ },
+ "viewed_ranges": [
+  [
+   0,
+   48
+  ],
+  [
+   48,
+   96
+  ],
+  [
+   96,
+   144
+  ],
+  [
+   144,
+   192
+  ],
+  [
+   192,
+   240
+  ],
+  [
+   240,
+   288
+  ],
+  [
+   288,
+   336
+  ],
+  [
+   336,
+   384
+  ],
+  [
+   384,
+   432
+  ],
+  [
+   432,
+   480
+  ],
+  [
+   480,
+   528
+  ],
+  [
+   528,
+   576
+  ],
+  [
+   576,
+   624
+  ],
+  [
+   624,
+   672
+  ],
+  [
+   672,
+   720
+  ],
+  [
+   720,
+   768
+  ],
+  [
+   768,
+   816
+  ],
+  [
+   816,
+   864
+  ],
+  [
+   864,
+   912
+  ],
+  [
+   912,
+   960
+  ],
+  [
+   960,
+   1008
+  ],
+  [
+   1008,
+   1056
+  ],
+  [
+   1056,
+   1104
+  ],
+  [
+   1104,
+   1152
+  ],
+  [
+   1152,
+   1200
+  ],
+  [
+   1200,
+   1248
+  ],
+  [
+   1248,
+   1296
+  ],
+  [
+   1296,
+   1344
+  ],
+  [
+   1344,
+   1392
+  ],
+  [
+   1392,
+   1440
+  ],
+  [
+   1440,
+   1452
+  ]
+ ],
+ "union": [
+  0,
+  1452
+ ],
+ "seconds_covered": [
+  0,
+  48.4
+ ],
+ "sheets": [
+  "qa/v2/sheet_00.jpg",
+  "qa/v2/sheet_01.jpg",
+  "qa/v2/sheet_02.jpg",
+  "qa/v2/sheet_03.jpg",
+  "qa/v2/sheet_04.jpg",
+  "qa/v2/sheet_05.jpg",
+  "qa/v2/sheet_06.jpg",
+  "qa/v2/sheet_07.jpg",
+  "qa/v2/sheet_08.jpg",
+  "qa/v2/sheet_09.jpg",
+  "qa/v2/sheet_10.jpg",
+  "qa/v2/sheet_11.jpg",
+  "qa/v2/sheet_12.jpg",
+  "qa/v2/sheet_13.jpg",
+  "qa/v2/sheet_14.jpg",
+  "qa/v2/sheet_15.jpg",
+  "qa/v2/sheet_16.jpg",
+  "qa/v2/sheet_17.jpg",
+  "qa/v2/sheet_18.jpg",
+  "qa/v2/sheet_19.jpg",
+  "qa/v2/sheet_20.jpg",
+  "qa/v2/sheet_21.jpg",
+  "qa/v2/sheet_22.jpg",
+  "qa/v2/sheet_23.jpg",
+  "qa/v2/sheet_24.jpg",
+  "qa/v2/sheet_25.jpg",
+  "qa/v2/sheet_26.jpg",
+  "qa/v2/sheet_27.jpg",
+  "qa/v2/sheet_28.jpg",
+  "qa/v2/sheet_29.jpg",
+  "qa/v2/sheet_30.jpg"
+ ],
+ "sheet_note": "a first pass of sheets 00-03 used an exclusive end and missed f47, f95, f143, f191; those four were viewed in qa/v2/gap_viewed.jpg and all 31 sheets were regenerated with full coverage",
+ "extra_views": [
+  "qa/v2/gap_viewed.jpg"
+ ],
+ "crops": [
+  "qa/v2/crops/f0.jpg",
+  "qa/v2/crops/f370.jpg",
+  "qa/v2/crops/f395.jpg",
+  "qa/v2/crops/f410.jpg",
+  "qa/v2/crops/f420.jpg",
+  "qa/v2/crops/f425.jpg",
+  "qa/v2/crops/f440.jpg",
+  "qa/v2/crops/f470.jpg",
+  "qa/v2/crops/f500.jpg",
+  "qa/v2/crops/f545.jpg",
+  "qa/v2/crops/f560.jpg",
+  "qa/v2/crops/f575.jpg",
+  "qa/v2/crops/f615.jpg",
+  "qa/v2/crops/f700.jpg",
+  "qa/v2/crops/f715.jpg",
+  "qa/v2/crops/f835.jpg",
+  "qa/v2/crops/f845.jpg",
+  "qa/v2/crops/f905.jpg",
+  "qa/v2/crops/f960.jpg",
+  "qa/v2/crops/f1050.jpg",
+  "qa/v2/crops/f1150.jpg",
+  "qa/v2/crops/f1400.jpg",
+  "qa/v2/crops/f826.jpg",
+  "qa/v2/crops/f832.jpg",
+  "qa/v2/crops/f871.jpg",
+  "qa/v2/crops/f910.jpg"
+ ],
+ "events": {
+  "drop": 233,
+  "slam": 240,
+  "explode": 262,
+  "word_lock": 291,
+  "crack": 342,
+  "break_to_game": 349,
+  "captions": {
+   "Pull back to aim.": 360,
+   "Let go.": 422,
+   "Break all the glass.": 452,
+   "Clear it in one shot.": 512,
+   "Bombs set off chain reactions.": 648,
+   "Bounce shots off the walls.": 824,
+   "Last piece? Slow motion.": 878,
+   "One perfect shot.": 936,
+   "5 worlds.": 991,
+   "120 levels.": 1016,
+   "12 balls.": 1110,
+   "Coming soon to iPhone & Android.": 1336
+  },
+  "finger": {
+   "visible": [
+    352,
+    431
+   ],
+   "release": 422
+  },
+  "level_clear_sheet": 541,
+  "zoom_through": [
+   595,
+   769,
+   929
+  ],
+  "whips": [
+   639,
+   820
+  ],
+  "vwhip_worlds": 988,
+  "push_balls": 1104,
+  "bombs": 709,
+  "wall_bounce": [
+   832,
+   871
+  ],
+  "slow_motion": [
+   902,
+   928
+  ],
+  "white": 1219,
+  "rewind": 1220,
+  "flash": 1254,
+  "logo": 1278,
+  "fade": [
+   1427,
+   1451
+  ],
+  "night_fire": 823,
+  "second_drop": 871,
+  "last_piece": 902
+ },
+ "findings": [],
+ "gaps": [],
+ "retime": {
+  "what": "night level starts 0.4 s later in its capture (2.708 s); captions and its sound moved to match",
+  "changed_frames": [
+   823,
+   929
+  ],
+  "evidence": "qa/v2/psnr_v2a_vs_v2.log",
+  "resheeted": [
+   "qa/v2/sheet_17.jpg",
+   "qa/v2/sheet_18.jpg",
+   "qa/v2/sheet_19.jpg"
+  ]
+ }
+}

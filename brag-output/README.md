@@ -2,34 +2,44 @@
 
 ## The second film: `brag-katana-v2.mp4`
 
-A 32.9-second launch film made in Higgsfield Katana: photoreal glass worlds generated for the game, cut on the beat with the real gameplay and code-drawn motion graphics.
+A 48.4-second launch film made in Higgsfield Katana: photoreal glass worlds generated for the game, the real gameplay shown large with a how-to-play walkthrough, and code-drawn motion graphics, cut to the music.
 
-- `brag-katana-v2.mp4`: **the film** (1920×1080, 30 fps, 987 frames, −13.0 LUFS, true peak −1.5 dBTP). Frame 0 is the poster.
+- `brag-katana-v2.mp4`: **the film** (1920×1080, 30 fps, 1452 frames, −12.6 LUFS, true peak −1.7 dBTP). Frame 0 is the poster.
 - `brag-katana-v2.jpg`: the poster.
-- `katana-v2/`: everything needed to re-render it, with the QA record (`qa/gate_v1.md`), the prompts and job ids (`PROMPTS.md`) and the handoff (`HANDOFF.md`).
+- `katana-v2/`: everything needed to re-render it, with the QA record (`qa/gate_v2.md`; the first cut's is `qa/gate_v1.md`), the prompts and job ids (`PROMPTS.md`) and the handoff (`HANDOFF.md`).
+
+**This cut.** The first cut (33 s) moved too fast to follow the game. This one runs 48 s and shows how the game is played:
+- How to play, on the real level 4 seen close up:
+  - a finger pulls back over the game's own dotted aim line ("Pull back to aim.") and lets go;
+  - the ball breaks every glass block in one chained shot ("Break all the glass.");
+  - the game's level-clear screen gives three stars ("Clear it in one shot.").
+- Two more real levels, each with a caption:
+  - World 4, Ember: bombs set off chain reactions;
+  - World 5, Night: the shot bounces off the walls, with slow motion on the last piece.
+- Longer holds on the worlds, the balls and the logo, and no more one-cut-per-beat montage.
 
 **What is generated and what is code.**
-- Generated with Higgsfield: four location stills (Soul Cinematic), then five shots animated from them with Seedance 2.5:
+- Generated with Higgsfield for the first cut and reused here: four location stills (Soul Cinematic), then five shots animated from them with Seedance 2.5:
   - the glass city and the rolling ball;
   - the impact;
   - the dawn chain;
   - the ember blasts;
   - the night pendants.
-- Real game: the gameplay, level maps, balls and icon.
+- Real game: the gameplay, level maps, balls and icon. Levels 4, 82 and 112 were captured frame by frame with `capture/capture.mjs hero2 ember2 night2`.
 - Code (`katana-v2/motion/`, one page drawn frame by frame):
-  - the type;
-  - the 3D phones;
+  - the type and captions;
+  - the 3D phones and the finger, which follows the aim angles the game logged during capture;
   - the glass fracture of words and frames;
   - the zoom-through and whip transitions;
   - the flashes and shakes.
 
 **Sound.**
-- Music: "Take this Higher" by Michael Ramir C. (Mixkit, same licence as below; terms in `katana-v2/src/mixkit-music-license.txt`). It plays from 0 s at its own 124 BPM; the drop lands on the impact and the second drop on the logo.
+- Music: "Take this Higher" by Michael Ramir C. (Mixkit, same licence as below; terms in `katana-v2/src/mixkit-music-license.txt`). It plays from 0 s at its own 124 BPM; the drop lands on the impact, the second drop on the ball's wall bounce in the night level, and "Coming soon" on the last big hit.
 - Effects:
   - CC0 library recordings (listed in `katana-v2/audio/sfx_licenses.txt`);
-  - the game's own glass, cannon and bomb sounds, synced to the gameplay on screen.
+  - the game's own glass, cannon, bomb and level-clear sounds, rebuilt from each capture's sound log by `capture/stems.py` and synced to the gameplay on screen.
 
-**Credits.** 465.08 Higgsfield credits (reconciled with the account's transactions): 464 for the five Seedance shots, 1.08 for nine stills.
+**Credits.** 465.08 Higgsfield credits, all spent on the first cut (reconciled with the account's transactions): 464 for the five Seedance shots, 1.08 for nine stills. This cut spent none.
 
 **Re-render** (in the Higgsfield sandbox; see `katana-v2/HANDOFF.md` §6). Text, timing and sound changes cost no credits.
 

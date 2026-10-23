@@ -5,3 +5,5 @@ brag-raw.mp4
 work-*/
 composition/node_modules/
 composition/.hyperframes/
+# the slower cut's level captures (node capture/capture.mjs hero2 ember2 night2): 66 MB, rebuilt from the game; also kept in the film's Higgsfield project archive
+composition/assets/clips/*2.mp4

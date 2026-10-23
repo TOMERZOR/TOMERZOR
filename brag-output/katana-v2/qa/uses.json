@@ -48,49 +48,49 @@
   "contiguous": true
  },
  {
-  "clip": "src/game/clips/hero.mp4",
-  "f0": 71,
-  "f1": 135,
-  "label": "hero phone",
-  "frames": 58,
-  "contiguous": false
- },
- {
-  "clip": "gen/plate_B.mp4",
+  "clip": "src/game2/hero2.mp4",
   "f0": 23,
-  "f1": 46,
-  "label": "B dawn",
-  "frames": 24,
+  "f1": 269,
+  "label": "level 4 (dawn)",
+  "frames": 247,
   "contiguous": true
  },
  {
-  "clip": "src/game/clips/ember.mp4",
-  "f0": 89,
-  "f1": 117,
-  "label": "ember phone",
-  "frames": 29,
+  "clip": "gen/plate_B.mp4",
+  "f0": 24,
+  "f1": 57,
+  "label": "B dawn",
+  "frames": 34,
+  "contiguous": true
+ },
+ {
+  "clip": "src/game2/ember2.mp4",
+  "f0": 69,
+  "f1": 199,
+  "label": "level 82 (ember)",
+  "frames": 131,
   "contiguous": true
  },
  {
   "clip": "gen/plate_C.mp4",
   "f0": 30,
-  "f1": 52,
+  "f1": 70,
   "label": "C ember",
-  "frames": 23,
+  "frames": 41,
   "contiguous": true
  },
  {
-  "clip": "src/game/clips/night.mp4",
-  "f0": 96,
-  "f1": 124,
-  "label": "night phone",
-  "frames": 29,
+  "clip": "src/game2/night2.mp4",
+  "f0": 82,
+  "f1": 190,
+  "label": "level 112 (night)",
+  "frames": 109,
   "contiguous": true
  },
  {
   "clip": "gen/plate_D.mp4",
-  "f0": 35,
-  "f1": 80,
+  "f0": 39,
+  "f1": 84,
   "label": "D night",
   "frames": 46,
   "contiguous": true
@@ -136,83 +136,11 @@
   "contiguous": true
  },
  {
-  "clip": "gen/plate_B.mp4",
-  "f0": 50,
-  "f1": 61,
-  "label": "climax b48",
-  "frames": 12,
-  "contiguous": true
- },
- {
-  "clip": "src/game/clips/ember.mp4",
-  "f0": 63,
-  "f1": 76,
-  "label": "climax b49",
-  "frames": 14,
-  "contiguous": true
- },
- {
-  "clip": "gen/plate_C.mp4",
-  "f0": 58,
-  "f1": 70,
-  "label": "climax b50",
-  "frames": 13,
-  "contiguous": true
- },
- {
-  "clip": "src/game/clips/night.mp4",
-  "f0": 65,
-  "f1": 78,
-  "label": "climax b51",
-  "frames": 14,
-  "contiguous": true
- },
- {
   "clip": "gen/plate_A2.mp4",
-  "f0": 76,
-  "f1": 88,
-  "label": "climax b52",
-  "frames": 13,
-  "contiguous": true
- },
- {
-  "clip": "src/game/clips/hero.mp4",
-  "f0": 137,
-  "f1": 150,
-  "label": "climax b53",
-  "frames": 14,
-  "contiguous": true
- },
- {
-  "clip": "gen/plate_D.mp4",
-  "f0": 82,
-  "f1": 93,
-  "label": "climax b54",
-  "frames": 12,
-  "contiguous": true
- },
- {
-  "clip": "src/game/clips/ember.mp4",
-  "f0": 141,
-  "f1": 154,
-  "label": "climax b55",
-  "frames": 14,
-  "contiguous": true
- },
- {
-  "clip": "gen/plate_B.mp4",
-  "f0": 64,
-  "f1": 70,
-  "label": "climax b56",
-  "frames": 7,
-  "contiguous": true
- },
- {
-  "clip": "gen/plate_A2.mp4",
-  "f0": 105,
+  "f0": 104,
   "f1": 144,
   "label": "A2 rewind",
-  "frames": 39,
+  "frames": 40,
   "contiguous": false
  },
  {

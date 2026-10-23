@@ -72,6 +72,61 @@ async function gameClip(name, pickLevel, { dpr = 3, aimFrames = 16, after = 120 
   console.log(name, { level: level + 1, frames: f, fireAt: +(fire / FPS).toFixed(3), won, events: log.length });
 }
 
+// the slower cut's take of a level: the aim is held long enough to read (the aim line swings in from a pulled-back
+// angle, overshoots a little and settles on the proof), the shot plays out, and with `sheet` the game's own
+// level-clear sheet slides in. Writes <name>-aim.json (the aim angle per frame, for the film's touch overlay).
+async function gameClip2(name, pickLevel, { dpr = 3, settle = 30, aimFrames = 66, after = 150, sheet = false, tail = 70 } = {}) {
+  const { browser, page } = await open(dpr, SAVE_PLAY);
+  if (sheet) await page.addStyleTag({ content: '#sheet, #scrim { display: revert !important; } #sheet[hidden], #scrim[hidden] { display: none !important; }' });
+  const level = await page.evaluate(pickLevel);
+  await page.evaluate(() => { window.__sfxLog = []; window.__simClock = 0; window.__shard.setManual(true); });
+  await page.evaluate((i) => window.__shard.startLevel(i), level);
+  // the sheet's CSS animations run on the film's clock, like the level map's
+  await page.evaluate(() => {
+    window.__drive = (t) => {
+      for (const a of document.getAnimations()) {
+        if (a.__t0 === undefined) a.__t0 = t;
+        a.pause(); a.currentTime = Math.max(0, (t - a.__t0) * 1000);
+      }
+    };
+  });
+  const dir = `${HERE}frames-${name}`;
+  rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
+  let f = 0;
+  const step = async (per) => {
+    if (per) await per();
+    await page.evaluate((dt) => window.__shard.tick(dt), 1 / FPS);
+    await page.evaluate((t) => window.__drive(t), f / FPS);
+    await page.screenshot({ path: `${dir}/f${pad(f++)}.jpg`, type: 'jpeg', quality: 93 });
+  };
+  const a = await page.evaluate(() => window.__shard.game.level.proof[0] * Math.PI / 180);
+  const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  // pulled back off-line, swept past the solution, settled on it, held
+  const aimAt = (i) => {
+    const k = i / (aimFrames - 1);
+    if (k < 0.55) return a + 0.36 - 0.46 * ease(k / 0.55);
+    if (k < 0.8) return a - 0.1 + 0.1 * ease((k - 0.55) / 0.25);
+    return a;
+  };
+  const aims = [];
+  for (let i = 0; i < settle; i++) await step();
+  for (let i = 0; i < aimFrames; i++) { const ai = aimAt(i); aims.push({ f, a: ai }); await step(() => page.evaluate((x) => window.__shard.game.debugAim(x), ai)); }
+  const fire = f;
+  await page.evaluate(() => window.__shard.game.debugFire());
+  let wonAt = -1;
+  for (let i = 0; i < after + tail && (wonAt < 0 || f < wonAt + tail); i++) {
+    await step();
+    if (wonAt < 0 && await page.evaluate(() => !!document.querySelector('#sheet:not([hidden])') || window.__sfxLog.some((e) => e.k === 'win'))) wonAt = f;
+  }
+  const log = await page.evaluate(() => window.__sfxLog);
+  const won = await page.evaluate(() => window.__shard.game.sim.st.won);
+  await browser.close();
+  encode(dir, `${ASSETS}clips/${name}.mp4`);
+  writeFileSync(`${HERE}${name}-sfx.json`, JSON.stringify(log.map((e) => ({ ...e, t: Math.max(0, e.t - 1 / FPS) }))));
+  writeFileSync(`${HERE}${name}-aim.json`, JSON.stringify({ fps: FPS, view: VIEW, proof: a, settle, fire, wonAt, aims }));
+  console.log(name, { level: level + 1, frames: f, fireAt: +(fire / FPS).toFixed(3), wonAt: +(wonAt / FPS).toFixed(3), won, events: log.length });
+}
+
 // the best one-shot levels of a world: lots of glass, cleared often by the average-player bot
 const best = (w, need) => `(() => {
   const L = window.__shard.LEVELS, glass = (l) => l.objects.filter((o) => o.t === 'glass').length;
@@ -135,5 +190,8 @@ async function balls() {
 if (want('hero')) await gameClip('hero', best(0, '(l) => glass(l) >= 6'), { after: 130 });
 if (want('ember')) await gameClip('ember', best(3, "(l) => l.objects.some((o) => o.t === 'bomb')"), { after: 120 });
 if (want('night')) await gameClip('night', best(4, "(l) => l.objects.some((o) => o.t === 'rope')"), { dpr: 5, after: 130 });
+if (only.includes('hero2')) await gameClip2('hero2', best(0, '(l) => glass(l) >= 6'), { sheet: true });
+if (only.includes('ember2')) await gameClip2('ember2', best(3, "(l) => l.objects.some((o) => o.t === 'bomb')"), { aimFrames: 54, tail: 30 });
+if (only.includes('night2')) await gameClip2('night2', best(4, "(l) => l.objects.some((o) => o.t === 'rope')"), { aimFrames: 54, tail: 30 });
 if (want('map')) await mapClips(3);
 if (want('balls')) await balls();

@@ -67,12 +67,12 @@
    "repeat": false
   },
   {
-   "label": "hero phone",
-   "src": "src/game/clips/hero.mp4",
+   "label": "level 4 (dawn)",
+   "src": "src/game2/hero2.mp4",
    "runs": [
     [
-     71,
-     135
+     23,
+     269
     ]
    ],
    "repeat": false
@@ -82,19 +82,19 @@
    "src": "gen/plate_B.mp4",
    "runs": [
     [
-     23,
-     46
+     24,
+     57
     ]
    ],
    "repeat": false
   },
   {
-   "label": "ember phone",
-   "src": "src/game/clips/ember.mp4",
+   "label": "level 82 (ember)",
+   "src": "src/game2/ember2.mp4",
    "runs": [
     [
-     89,
-     117
+     69,
+     199
     ]
    ],
    "repeat": false
@@ -105,18 +105,18 @@
    "runs": [
     [
      30,
-     52
+     70
     ]
    ],
    "repeat": false
   },
   {
-   "label": "night phone",
-   "src": "src/game/clips/night.mp4",
+   "label": "level 112 (night)",
+   "src": "src/game2/night2.mp4",
    "runs": [
     [
-     96,
-     124
+     82,
+     190
     ]
    ],
    "repeat": false
@@ -126,8 +126,8 @@
    "src": "gen/plate_D.mp4",
    "runs": [
     [
-     35,
-     80
+     39,
+     84
     ]
    ],
    "repeat": false
@@ -188,110 +188,11 @@
    "repeat": false
   },
   {
-   "label": "climax b48",
-   "src": "gen/plate_B.mp4",
-   "runs": [
-    [
-     50,
-     61
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b49",
-   "src": "src/game/clips/ember.mp4",
-   "runs": [
-    [
-     63,
-     76
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b50",
-   "src": "gen/plate_C.mp4",
-   "runs": [
-    [
-     58,
-     70
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b51",
-   "src": "src/game/clips/night.mp4",
-   "runs": [
-    [
-     65,
-     78
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b52",
-   "src": "gen/plate_A2.mp4",
-   "runs": [
-    [
-     76,
-     88
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b53",
-   "src": "src/game/clips/hero.mp4",
-   "runs": [
-    [
-     137,
-     150
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b54",
-   "src": "gen/plate_D.mp4",
-   "runs": [
-    [
-     82,
-     93
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b55",
-   "src": "src/game/clips/ember.mp4",
-   "runs": [
-    [
-     141,
-     154
-    ]
-   ],
-   "repeat": false
-  },
-  {
-   "label": "climax b56",
-   "src": "gen/plate_B.mp4",
-   "runs": [
-    [
-     64,
-     70
-    ]
-   ],
-   "repeat": false
-  },
-  {
    "label": "A2 rewind",
    "src": "gen/plate_A2.mp4",
    "runs": [
     [
-     105,
+     104,
      144
     ]
    ],
@@ -322,9 +223,9 @@
  ],
  "fails": [],
  "warnings": [
-  "src/game/clips/hero.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/hero.mp4) - fine for user footage",
-  "src/game/clips/ember.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/ember.mp4) - fine for user footage",
-  "src/game/clips/night.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/night.mp4) - fine for user footage",
+  "src/game2/hero2.mp4: no logic check (prodcheck.py logic W --clip src/game2/hero2.mp4) - fine for user footage",
+  "src/game2/ember2.mp4: no logic check (prodcheck.py logic W --clip src/game2/ember2.mp4) - fine for user footage",
+  "src/game2/night2.mp4: no logic check (prodcheck.py logic W --clip src/game2/night2.mp4) - fine for user footage",
   "src/game/clips/map0.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map0.mp4) - fine for user footage",
   "src/game/clips/map1.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map1.mp4) - fine for user footage",
   "src/game/clips/map2.mp4: no logic check (prodcheck.py logic W --clip src/game/clips/map2.mp4) - fine for user footage",

@@ -1,10 +1,11 @@
 // edit.js: when each piece of footage plays (screen time -> source seconds). Shared by film.js and the uses report.
+// v2: slower. The gameplay gets its own section: three real levels played in full, large, with captions.
 'use strict';
 const T = {
   s2: tb(6.5), aim: tb(8), fire: tb(12), a2in: tb(15), drop: tb(16),
   slam: tb(16.5), explode: tb(18), wordIn: tb(19.1), word: tb(20), crack: tb(23.5),
-  s4: tb(24), s5: tb(28), s6: tb(30), s7: tb(32), s8: tb(34), s9: tb(36),
-  s10: tb(40), s11: tb(44), s12: tb(48), s13: tb(56.5), s14: tb(60), end: FRAMES / FPS,
+  play: tb(24), dawn: tb(41), ember: tb(44), emberW: tb(53), night: tb(56.5), nightW: tb(64),
+  worlds: tb(68), balls: tb(76), rewind: tb(84), logo: tb(88), sub: tb(92), end: FRAMES / FPS,
 };
 const ZOOM_IN = 0.27; // phone -> world zoom-through, seconds before the cut
 const PL = [];
@@ -20,26 +21,20 @@ const P = {
   ],
   s2: place('A1 roll', 'p_A1', T.s2, T.a2in, (t) => 4.15 + (t - T.s2)),
   s2b: place('A2 approach', 'p_A2', T.a2in, T.drop, (t) => 1.125 - (T.drop - t)),
-  s3: place('A2 shatter', 'p_A2', T.drop, T.s4 + 0.85, (t) => a2slow(Math.min(t, T.s4)), { blend: true }), // held while it breaks away
-  s4: place('hero phone', 'g_hero', T.s4, T.s5, (t) => 2.35 + (t - T.s4) * 1.12),
-  s5: place('B dawn', 'p_B', T.s5, T.s6, (t) => 0.98 + (t - T.s5)),
-  s6: place('ember phone', 'g_ember', T.s6, T.s7, (t) => 2.95 + (t - T.s6)),
-  s7: place('C ember', 'p_C', T.s7, T.s8, (t) => 1.25 + (t - T.s7)),
-  s8: place('night phone', 'g_night', T.s8, T.s9, (t) => 3.2 + (t - T.s8)),
-  s9: place('D night', 'p_D', T.s9, T.s10, (t) => 1.45 + (t - T.s9)),
-  s10: [0, 1, 2, 3, 4].map((i) => place('map ' + i, 'g_map' + i, T.s10, T.s11, (t) => (i === 4 ? 40 / 30 : 0) + Math.max(0, t - T.s10 - 0.05 * i), { hold: true })),
-  // the climax: one shot per beat, b48..b56 (the last one runs half a beat into the white-out)
-  s12: [
-    ['p_B', 2.1, 'world'], ['g_ember', 2.1, 'phone', 'ember', 0.3], ['p_C', 2.45, 'world'], ['g_night', 2.15, 'phone', 'night', -0.3],
-    ['p_A2', 3.2, 'world'], ['g_hero', 4.55, 'phone', 'dawn', 0.26], ['p_D', 3.42, 'world'], ['g_ember', 4.7, 'phone', 'ember', -0.26],
-    ['p_B', 2.68, 'world'],
-  ].map(([clip, s0, kind, col, rot], i) => {
-    const t0 = tb(48 + i), t1 = i === 8 ? T.s13 : tb(49 + i);
-    return place(`climax b${48 + i}`, clip, t0, t1, (t) => s0 + (t - t0), { kind, col, rot, i });
-  }),
-  // the break: the shatter rewinds (late shards fly back in), a flash, then the whole glass city and the ball leaving
-  s13a: place('A2 rewind', 'p_A2', T.s13, tb(58.8), (t) => 6.0 - 1.66 * E.inQuad(inv(T.s13, tb(58.8), t)), { blend: true }),
-  s13b: place('A2 whole', 'p_A2', tb(58.8), T.s14, (t) => 0.45 - (t - tb(58.8)) * 0.78, { blend: true }),
+  s3: place('A2 shatter', 'p_A2', T.drop, T.play + 0.85, (t) => a2slow(Math.min(t, T.play)), { blend: true }), // held while it breaks away
+  // how to play: level 4 (Dawn) from the last pieces landing, through the aim, the shot and the chain, to the level-clear sheet
+  play1: place('level 4 (dawn)', 'g_hero2', T.play, T.dawn, (t) => 0.75 + (t - T.play)),
+  dawn: place('B dawn', 'p_B', T.dawn, T.ember, (t) => 0.98 + (t - T.dawn)),
+  // level 82 (Ember): the aim settles, the shot, the bombs, the last pieces
+  play2: place('level 82 (ember)', 'g_ember2', T.ember, T.emberW, (t) => 2.3 + (t - T.ember)),
+  emberW: place('C ember', 'p_C', T.emberW, T.night, (t) => 1.25 + (t - T.emberW)),
+  // level 112 (Night): the third pendant breaks on the second drop
+  play3: place('level 112 (night)', 'g_night2', T.night, T.nightW, (t) => 2.708 + (t - T.night)),
+  nightW: place('D night', 'p_D', T.nightW, T.worlds, (t) => 1.6 + (t - T.nightW)),
+  maps: [0, 1, 2, 3, 4].map((i) => place('map ' + i, 'g_map' + i, T.worlds, T.balls, (t) => (i === 4 ? 40 / 30 : 0) + Math.max(0, t - T.worlds - 0.05 * i), { hold: true })),
+  // the shatter rewinds (late shards fly back in), a flash, then the whole glass city and the ball leaving
+  rw1: place('A2 rewind', 'p_A2', T.rewind, tb(86.4), (t) => 6.0 - 1.66 * E.inQuad(inv(T.rewind, tb(86.4), t)), { blend: true }),
+  rw2: place('A2 whole', 'p_A2', tb(86.4), T.logo, (t) => 0.45 - (t - tb(86.4)) * 0.58, { blend: true }),
   // frame 0 is the poster (players show it before playback): the wordmark over shatter frames used nowhere else
   poster: place('A2 poster', 'p_A2', 0, 1 / FPS, () => 3.75),
 };

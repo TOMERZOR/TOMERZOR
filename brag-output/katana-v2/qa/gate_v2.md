@@ -1,0 +1,29 @@
+# QA gate: out/katana-shard-v2_v2.mp4 (v2, the slower cut)
+
+Why v2: the viewer said v1 ran too fast and the game itself was hard to follow. v2 keeps v1's opening (glass city, Aim/Fire, the impact on the drop, SHATTER. > SHARD) and rebuilds the rest around three real levels shown large, with a finger, step captions and the game's own level-clear sheet. No new generations: v2 re-uses v1's stills and Seedance shots; the new gameplay was captured from the game.
+
+Delivered file: H.264 High, 27.17 MB, 4.49 Mb/s (deliver.py remux of out/comp.mp4: already under the 12 Mb/s cap).
+
+| # | Check | Result | Evidence |
+|---|---|---|---|
+| 1 | Frame count | PASS | ffprobe -count_frames: 1452 = output_target.frames 1452 |
+| 2 | Presentation timing | PASS | r_frame_rate = avg_frame_rate = 30/1; video PTS 0.000 .. 48.3667 (CFR) |
+| 3 | Duration and ending | PASS | format 48.400 s; audio 48.400 s; the end card holds to f1426, fades to black f1427-1451 with the music's fade |
+| 4 | Format and color | PASS | 1920x1080, SAR 1:1, yuv420p, tv range, bt709 primaries / transfer / matrix |
+| 5 | Audio | PASS | AAC-LC 48 kHz stereo, -12.6 LUFS integrated, true peak -1.7 dBTP on the encoded file; mux is a stream copy (audio packet md5 9747b21f... equal to audio/mix.m4a). Measured, not listened |
+| 6 | Complete visual coverage | PASS | qa/v2/sheet_00..30.jpg cover f0-1451 (48 frames each, all viewed; a first pass of sheets 00-03 missed f47/95/143/191, viewed in qa/v2/gap_viewed.jpg, then every sheet was regenerated). The night level was then retimed and re-rendered: a per-frame PSNR of the final file against the earlier render (qa/v2/psnr_v2a_vs_v2.log) puts every frame outside f823-929 above 45 dB, and sheets 17-19 were regenerated from the final file and viewed + native frames qa/v2/crops f0, f370, f395, f410, f420, f425, f440, f470, f500, f545, f560, f575, f615, f700, f715, f835, f845, f905, f960, f1050, f1150, f1400, and from the final render f826, f832, f871, f910 |
+| 7 | Story | PASS | glass world (f1-94) > Aim/Fire (f95-217) > impact on the drop (f233) > SHATTER. breaks (f240-281) > SHARD + The physics puzzle game. (f282-348) > frame breaks into the phone (f349-361) > HOW TO PLAY: Pull back to aim. (f360-421: finger pulls back, the game's own dotted aim line and target, close-up from f388) > Let go. (f422-451: ball fires) > Break all the glass. (f452-511: x2..x10 chain) > Clear it in one shot. (f512-594: the game's level-clear sheet, 3 stars, One shot., NEW BEST CHAIN x10) > dawn world (f595-638) > WORLD 4 EMBER: Bombs set off chain reactions. (f639-768, bombs f709-730) > ember world (f769-820) > WORLD 5 NIGHT: Bounce shots off the walls. (f821-879: the shot fires f823, left-wall bounce f832, pendants f845-859, right-wall bounce on the second drop f871) > Last piece? Slow motion. (f877-928: the last piece breaks f902, slow motion to the cut) > night world, One perfect shot. (f929-987) > 5 worlds. 120 levels. (f988-1103) > 12 balls. (f1104-1218) > rewind (f1219-1277) > logo and Coming soon (f1278-1451) |
+| 8 | Identity and cast | N/A | no people anywhere (unchanged generated shots; the finger is a drawn circle) |
+| 9 | Text, logos and marks | PASS | all words as authored, Nunito 900/800: Everything here / is glass. / Aim. / Fire. / SHATTER. / SHARD / The physics puzzle game. / HOW TO PLAY / Pull back / to aim. / Let go. / Break all / the glass. / Clear it in / one shot. / WORLD 4 · EMBER / Bombs set off / chain reactions. / WORLD 5 · NIGHT / Bounce shots / off the walls. / Last piece? / Slow motion. / One perfect shot. / 5 worlds. 120 levels. / 12 balls. / Coming soon to iPhone & Android.; game UI text is the game's own (LEVEL 4 · PAR 1, One shot., 1 BALL · PAR 1, NEW BEST CHAIN · x10, Next, Replay, level maps); the app icon is the game's own |
+| 10 | Mask edges | N/A | no mattes |
+| 11 | Bars and edges | PASS | no bars; shakes are zoom-compensated (f233-245, f349-356, f709-716, f1278-1290 inspected); whips and zoom-throughs smear by design |
+| 12 | Cadence | PASS | the three new game captures play 1:1 at their native 30 fps (one source frame per output frame); 24 fps Seedance shots at 1x use the nearest frame; the 0.45x slow motion and the rewind blend neighbouring frames |
+| 13 | Text placement | PASS | no clipping; settled holds: Pull back to aim. 2.0 s, Let go. 0.9 s (two words), Break all the glass. 1.9 s, Clear it in one shot. 2.5 s, Bombs set off chain reactions. 3.8 s, Bounce shots off the walls. 1.5 s, Last piece? Slow motion. 1.2 s, One perfect shot. 1.5 s, 5 worlds. 3.4 s and 120 levels. 2.3 s after its count, 12 balls. 3.2 s, Coming soon 3.0 s; caption changes blur across each other for at most 4 frames (by design) |
+| 14 | Look | PASS | one light stage for how-to-play, coral and navy stages matching the ember and night worlds; one type family; the finger matches the game's own aim guide (dashed pull line, anchor ring) |
+| 15 | Declared source reuse | N/A | none |
+| 16 | Cut/event positions | PASS | on the beat grid t(b) = -0.0016 + 0.48388 b: f233 drop (b16), f240 (b16.5), f262 (b18), f291 (b20), f349 game (b24), f595 dawn (b41), f639 ember (b44), f769 (b53), f820 night (b56.5), f871 second drop on the ball's wall bounce (b60), f929 (b64), f988 worlds (b68), f1104 balls (b76), f1220 rewind (b84), f1254 (b86.4), f1278 logo (b88), f1336 subline (b92) |
+| 17 | Source frames used once | PASS | prodcheck.py ranges --uses qa/uses.json: RANGES OK, 20 placements from 13 sources (hero2 23-269, ember2 69-199, night2 82-190; frame 0 is the poster from A2 frame 90, used nowhere else) |
+| 18 | Generation logic | PASS | qa/logic unchanged from v1 (no new generations): plate_A1 ok, plate_A2 partial (3.85-4.30 s avoided), plate_B partial (3.9-5.04 s avoided), plate_C ok, plate_D ok |
+| 19 | Energy vs reference | N/A | no reference video (authored film) |
+
+No BLOCK or FIX items open. Fresh-eyes review: not run (optional).

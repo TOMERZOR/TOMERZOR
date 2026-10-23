@@ -29,6 +29,39 @@ def bell(f, d, gain):
     env = np.minimum(1, t / 0.003) * np.exp(-t / (d / 4.5))
     return gain * np.sin(2 * np.pi * f * t + 2 * np.pi * pm) * env
 
+def tone(f, d, gain, a=0.002, glide=None):
+    # the game's tone(): a sine whose gain ramps exponentially up over `a`, then down over `d`, optionally gliding in pitch
+    t = np.arange(int(SR * (a + d + 0.05))) / SR
+    lo = 1e-4 / gain
+    env = np.where(t < a, lo ** np.clip(1 - t / a, 0, 1), lo ** np.clip((t - a) / d, 0, 1)) * gain
+    if glide:
+        fr = f * (glide / f) ** np.minimum(1, t / d)
+        ph = 2 * np.pi * np.cumsum(fr) / SR
+    else:
+        ph = 2 * np.pi * f * t
+    return np.sin(ph) * env
+
+def air(d, gain, cutoff):
+    # a breath of high-passed noise (the game's noise() through a highpass), shaped like its envelope
+    rng = np.random.default_rng(3)
+    n = int(SR * (d + 0.05)); x = rng.standard_normal(n)
+    X = np.fft.rfft(x); fr = np.fft.rfftfreq(n, 1 / SR); X[fr < cutoff] *= 0.05
+    x = np.fft.irfft(X, n); x /= np.max(np.abs(x)) + 1e-9
+    t = np.arange(n) / SR
+    return x * gain * np.minimum(1, t / 0.002) * (1e-4 / gain) ** np.minimum(1, t / d) * 0.6
+
+def win_chime():
+    # the game's win(): a rising C-major arpeggio, its top note rung out as a crystal bell, a shimmer of air
+    out = np.zeros(int(SR * 2.4))
+    def put(sig, at):
+        s = int(at * SR); e = min(len(out), s + len(sig)); out[s:e] += sig[:e - s]
+    for i, f in enumerate([523.25, 659.25, 783.99, 1046.5, 1318.5]):
+        put(tone(f, 0.9 - i * 0.08, 0.08, 0.005), 0.05 + i * 0.085)
+        put(tone(f * 2, 0.4, 0.022, 0.005), 0.05 + i * 0.085)
+    put(bell(1568, 1.6, 0.05), 0.41)
+    put(air(0.7, 0.03, 7500), 0.39)
+    return out
+
 def stem(name):
     log = json.load(open(os.path.join(HERE, f'{name}-sfx.json')))
     dur = max(e['t'] for e in log) + 3.0
@@ -56,6 +89,9 @@ def stem(name):
                 add(bell(659.25 * 2 ** (semis / 12), 0.9, 0.09), t + 0.03)
         elif k == 'boom':
             add(S[pick('boom', 3)], t, 0.95, (a[0] - 0.5) if a else 0)
+        elif k == 'win':
+            add(win_chime(), t, 1.6)
+        # tink: the assembly notes run on wall-clock timers during capture, so their logged times are not the picture's; left out
     mix = np.stack([L, R], 1)
     peak = np.max(np.abs(mix)) + 1e-9
     mix = mix / peak * 0.89  # -1 dBFS peak; the composition sets each stem's level

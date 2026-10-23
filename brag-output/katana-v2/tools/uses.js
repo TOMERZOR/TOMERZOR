@@ -3,10 +3,10 @@
 const fs = require('fs');
 const stub = new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => 0 : stub), apply: () => stub, set: () => true });
 global.document = { createElement: () => ({ width: 0, height: 0, getContext: () => stub }) };
-const code = ['clips.js', 'lib.js', 'edit.js'].map((f) => fs.readFileSync('motion/' + f, 'utf8')).join('\n');
+const code = ['clips.js', 'aims.js', 'lib.js', 'edit.js'].map((f) => fs.readFileSync('motion/' + f, 'utf8')).join('\n');
 const { PL, CLIPS, FPS } = new Function(code + '\nreturn { PL, CLIPS, FPS };')();
 const SRC = { p_A1: 'gen/plate_A1.mp4', p_A2: 'gen/plate_A2.mp4', p_B: 'gen/plate_B.mp4', p_C: 'gen/plate_C.mp4', p_D: 'gen/plate_D.mp4' };
-const src = (id) => SRC[id] || `src/game/clips/${id.replace(/^g_/, '')}.mp4`;
+const src = (id) => SRC[id] || (/^g_(hero2|ember2|night2)$/.test(id) ? `src/game2/${id.slice(2)}.mp4` : `src/game/clips/${id.replace(/^g_/, '')}.mp4`);
 const out = PL.map((p) => {
   const c = CLIPS[p.clip], seen = new Set();
   for (let f = Math.ceil(p.t0 * FPS - 1e-9); f < Math.ceil(p.t1 * FPS - 1e-9); f++) {

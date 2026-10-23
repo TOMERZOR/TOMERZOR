@@ -181,7 +181,7 @@ function wordmark(c, t, x = WM.x, y = WM.y, t0 = T.wordIn, t1 = T.word, scale = 
 async function sc3(c, t) { // impact on the drop, slow-motion shatter, SHATTER. breaks, SHARD assembles
   const dof = tw(t, T.wordIn - 0.2, T.word, 0, 7, E.inOutCubic);
   c.save(); if (dof > 0.2) c.filter = `blur(${dof.toFixed(2)}px)`;
-  await footage(c, 'p_A2', P.s3.src(t), { blend: true, z: 1 + 0.05 * E.outCubic(inv(T.drop, T.s4, t)) + (dof > 0.2 ? 0.02 : 0) });
+  await footage(c, 'p_A2', P.s3.src(t), { blend: true, z: 1 + 0.05 * E.outCubic(inv(T.drop, T.play, t)) + (dof > 0.2 ? 0.02 : 0) });
   c.restore();
   if (dof > 0) { c.fillStyle = `rgba(0,0,0,${((0.3 * dof) / 7).toFixed(3)})`; c.fillRect(0, 0, W, H); }
   vignette(c, 0.5);
@@ -190,14 +190,14 @@ async function sc3(c, t) { // impact on the drop, slow-motion shatter, SHATTER. 
   headline(c, 'The physics puzzle game.', W / 2, 712, { t, t0: tb(20.6), size: 46, weight: 800, color: 'rgba(255,255,255,0.82)', track: 0.01, out: T.crack - 0.06, outDur: 0.18 });
 }
 function cracks(c, t) { // the whole frame cracks from the centre before it breaks away
-  const r = 2300 * E.outCubic(inv(T.crack, T.s4 - 0.03, t));
+  const r = 2300 * E.outCubic(inv(T.crack, T.play - 0.03, t));
   c.save(); c.globalCompositeOperation = 'lighter'; c.lineWidth = 1.7;
   for (const sh of FR.frame) { const a = clamp((r - sh.d) / 140) * 0.75; if (a > 0.01) { c.strokeStyle = `rgba(210,232,255,${a.toFixed(3)})`; polyPath(c, sh.p); c.stroke(); } }
   c.restore();
 }
 function shatterOut(c, src, t) {
   for (const sh of FR.frameSorted) {
-    const q = clamp((t - T.s4 - sh.d / 4200) / 0.42);
+    const q = clamp((t - T.play - sh.d / 4200) / 0.42);
     if (q >= 1) continue;
     const dir = Math.atan2(sh.c[1] - 520, sh.c[0] - 960) + (sh.r1 - 0.5) * 0.5, dist = (140 + sh.d * 1.25) * E.outCubic(q);
     drawShard(c, src, sh, Math.cos(dir) * dist, Math.sin(dir) * dist + 200 * q * q, (sh.r3 - 0.5) * 2.4 * q,
@@ -222,80 +222,132 @@ function stage(c, cols, cx = W / 2, cy = H * 0.42) {
   const g = c.createRadialGradient(cx, cy, 0, cx, cy, W * 0.72);
   g.addColorStop(0, cols[0]); g.addColorStop(1, cols[1]); c.fillStyle = g; c.fillRect(0, 0, W, H);
 }
-// a phone on a stage; in its last ZOOM_IN seconds it squares up and flies at the camera (zoom-through to the next shot)
-async function phoneShot(c, t, o) {
-  stage(c, COL[o.col]);
-  const im = await frame(o.p.clip, o.p.src(t)), sp = spring(t - o.p.t0, o.f || 1.7, 0.72);
-  let x = o.x, y = lerp(o.y0 ?? 1450, o.y, sp), h = o.h, rotY = lerp(o.r0, o.r1, sp) + (o.drift || 0) * (t - o.p.t0), roll = lerp(o.l0 || 0, o.l1 || 0, sp);
-  const zk = o.zoom ? E.inExpo(inv(o.p.t1 - ZOOM_IN, o.p.t1, t)) : 0;
-  if (zk > 0) { x = lerp(x, W / 2, zk); y = lerp(y, H / 2, zk); rotY *= 1 - zk; roll *= 1 - zk; h = lerp(h, 4500, zk); }
-  bokeh(c, t, o.col, false);
-  phone(c, im, { x, y, h, rotY, roll, shadow: o.col === 'night' ? 0 : 0.2 * (1 - zk) });
-  bokeh(c, t, o.col, true);
-  if (o.text) headline(c, o.text, 1060, 600, { t, t0: o.textAt, size: 100, color: COL.ink, align: 'left', out: o.p.t1 - ZOOM_IN - 0.12 });
+// a pose track: keys [[t, {x, y, h, r, l}], ...], eased between neighbours
+function track(keys, t) {
+  if (t <= keys[0][0]) return { ...keys[0][1] };
+  for (let i = 0; i < keys.length - 1; i++) {
+    const [t0, a] = keys[i], [t1, b] = keys[i + 1];
+    if (t < t1) { const k = E.inOutCubic(inv(t0, t1, t)), o = {}; for (const key in a) o[key] = lerp(a[key], b[key] ?? a[key], k); return o; }
+  }
+  return { ...keys[keys.length - 1][1] };
 }
-const sc4 = (c, t) => phoneShot(c, t, { p: P.s4, col: 'light', x: 720, y: 545, h: 900, r0: -0.95, r1: -0.32, l0: 0.14, l1: 0.02, drift: 0.04, zoom: true, text: 'Chain reactions.', textAt: tb(24.6) });
+// the player's finger, drawn on the phone screen: it presses, pulls back against the aim (the game is a slingshot:
+// pulling down-left aims up-right) while the game's own aim line swings, and lifts on the shot
+function finger(c, clip, src, x0, y0, w, h) {
+  const A = AIMS[clip]; if (!A) return;
+  const fr = src * FPS, down = A.a0 - 4, up = A.fire;
+  if (fr < down || fr > up + 10) return;
+  const s = w / 392, i = Math.round(fr) - A.a0, ang = A.a[Math.max(0, Math.min(A.a.length - 1, i))];
+  const L = 112 * E.outCubic(clamp((fr - A.a0) / 14)) * s;
+  const px = x0 + 0.6 * w, py = y0 + 0.6 * h, fx = px - Math.cos(ang) * L, fy = py + Math.sin(ang) * L;
+  const press = E.outBack(clamp((fr - down) / 6)), rel = clamp((fr - up) / 10), r = 25 * s;
+  c.save();
+  if (rel <= 0) {
+    c.globalAlpha = 0.55; c.setLineDash([5 * s, 6 * s]); c.lineWidth = 3 * s; c.strokeStyle = '#ffffff';
+    c.beginPath(); c.moveTo(px, py); c.lineTo(fx, fy); c.stroke(); c.setLineDash([]);
+    c.globalAlpha = 0.7; c.lineWidth = 2.5 * s; c.beginPath(); c.arc(px, py, 7 * s, 0, Math.PI * 2); c.stroke();
+  }
+  c.globalAlpha = (1 - rel) * clamp(press);
+  c.shadowColor = 'rgba(0,0,0,0.25)'; c.shadowBlur = 14 * s; c.shadowOffsetY = 3 * s;
+  c.beginPath(); c.arc(fx, fy, r * press * (1 + 0.7 * E.outCubic(rel)), 0, Math.PI * 2);
+  c.fillStyle = 'rgba(255,255,255,0.55)'; c.fill(); c.shadowColor = 'transparent';
+  c.lineWidth = 5 * s; c.strokeStyle = 'rgba(40,40,60,0.18)'; c.stroke();
+  c.lineWidth = 3 * s; c.strokeStyle = 'rgba(255,255,255,0.98)'; c.stroke();
+  c.restore();
+}
+// a caption block: a small eyebrow over one or two lines, each line rising in from its own mask
+function caption(c, t, o) {
+  const x = o.x ?? 1100, y = o.y ?? 560, size = o.size ?? 90, color = o.color ?? COL.ink;
+  if (o.eyebrow) headline(c, o.eyebrow, x, y - size * 1.25, { t, t0: o.t0, size: 28, weight: 800, track: 0.16, color: o.eyeColor ?? '#86868b', align: 'left', out: o.t1, outDur: 0.25 });
+  for (const [i, line] of o.text.split('\n').entries())
+    headline(c, line, x, y + i * size * 1.06, { t, t0: o.t0 + 0.07 * i, size, color, align: 'left', out: o.t1, outDur: 0.25 });
+}
+// a real level on a phone: the camera follows a pose track, the screen carries the finger, captions sit beside it,
+// and in the last ZOOM_IN seconds the phone squares up and flies at the camera (zoom-through to the world it rhymes with)
+async function gameShot(c, t, o) {
+  stage(c, COL[o.col]); bokeh(c, t, o.col, false);
+  const p = o.p, src = p.src(t), im = await frame(p.clip, src);
+  let { x, y, h, r } = track(o.keys, t);
+  const zk = E.inExpo(inv(p.t1 - ZOOM_IN, p.t1, t));
+  if (zk > 0) { x = lerp(x, W / 2, zk); y = lerp(y, H / 2, zk); r *= 1 - zk; h = lerp(h, 4500, zk); }
+  const screen = (sc, x0, y0, w, hh) => { sc.drawImage(im, x0, y0, w, hh); finger(sc, p.clip, src, x0, y0, w, hh); };
+  phone(c, screen, { x, y, h, rotY: r, shadow: o.col === 'night' ? 0 : 0.18 * (1 - zk) });
+  for (const cap of o.caps) caption(c, t, { color: o.ink, eyeColor: o.eye, ...cap });
+}
+const PLAY1 = {
+  p: P.play1, col: 'light', keys: [
+    [T.play, { x: 700, y: 610, h: 930, r: -0.34 }], [T.play + 0.6, { x: 700, y: 545, h: 980, r: -0.12 }], [12.25, { x: 700, y: 545, h: 980, r: -0.1 }],
+    [12.95, { x: 640, y: 350, h: 1590, r: -0.05 }], [17.8, { x: 640, y: 345, h: 1640, r: -0.04 }], [18.5, { x: 700, y: 545, h: 1000, r: -0.1 }], [T.dawn, { x: 700, y: 545, h: 1010, r: -0.08 }],
+  ],
+  caps: [
+    { eyebrow: 'HOW TO PLAY', text: 'Pull back\nto aim.', t0: 12.0, t1: 14.0 },
+    { text: 'Let go.', t0: 14.06, t1: 15.0 },
+    { text: 'Break all\nthe glass.', t0: 15.05, t1: 17.0 },
+    { text: 'Clear it in\none shot.', t0: 17.05, t1: T.dawn - ZOOM_IN - 0.1 },
+  ],
+};
+PLAY1.caps[0].eyebrowOut = true;
+const PLAY2 = {
+  p: P.play2, col: 'ember', keys: [[T.ember, { x: 640, y: 500, h: 1250, r: 0.22 }], [T.ember + 0.55, { x: 640, y: 478, h: 1290, r: 0.06 }], [T.emberW - ZOOM_IN, { x: 640, y: 478, h: 1330, r: 0.04 }]],
+  caps: [{ eyebrow: 'WORLD 4 · EMBER', text: 'Bombs set off\nchain reactions.', t0: T.ember + 0.3, t1: T.emberW - ZOOM_IN - 0.1 }],
+};
+const PLAY3 = {
+  p: P.play3, col: 'night', ink: '#ffffff', eye: '#a1a8c3', keys: [[T.night, { x: 640, y: 460, h: 1340, r: -0.22 }], [T.night + 0.55, { x: 640, y: 440, h: 1380, r: -0.06 }], [T.nightW - ZOOM_IN, { x: 640, y: 440, h: 1420, r: -0.04 }]],
+  caps: [
+    { eyebrow: 'WORLD 5 · NIGHT', text: 'Bounce shots\noff the walls.', t0: T.night + 0.12, t1: 29.2 },
+    { text: 'Last piece?\nSlow motion.', t0: 29.25, t1: T.nightW - ZOOM_IN - 0.1 },
+  ],
+};
+// the eyebrow stays up through every caption of a level
+for (const S of [PLAY1, PLAY3]) { const first = S.caps[0], last = S.caps[S.caps.length - 1]; S.caps = [{ eyebrow: first.eyebrow, text: '', t0: first.t0, t1: last.t1 }, ...S.caps.map((q) => ({ ...q, eyebrow: undefined }))]; }
+const scPlay1 = (c, t) => gameShot(c, t, PLAY1);
+const scPlay2 = (c, t) => gameShot(c, t, PLAY2);
+const scPlay3 = (c, t) => gameShot(c, t, PLAY3);
 async function world(c, t, p, o = {}) { // a generated world arriving from a zoom-through (decelerating zoom-out)
   const zin = o.zoomIn ? 0.3 * (1 - E.outExpo(inv(p.t0, p.t0 + 0.55, t))) : 0;
   await footage(c, p.clip, p.src(t), { z: (1 + zin) * (1.02 + 0.025 * (t - p.t0)), ph: o.ph || '#334', blend: p.blend });
   vignette(c, 0.42);
 }
-const sc5 = (c, t) => world(c, t, P.s5, { zoomIn: true });
-const sc6 = (c, t) => phoneShot(c, t, { p: P.s6, col: 'ember', x: 960, y: 545, h: 960, y0: 760, r0: 0.6, r1: 0.26, l0: -0.05, l1: 0.03, drift: -0.05, f: 2.4, zoom: true });
-const sc7 = (c, t) => world(c, t, P.s7, { zoomIn: true, ph: '#c96' });
-const sc8 = (c, t) => phoneShot(c, t, { p: P.s8, col: 'night', x: 960, y: 545, h: 960, y0: 760, r0: -0.6, r1: -0.26, l0: 0.05, l1: -0.03, drift: 0.05, f: 2.4, zoom: true });
-async function sc9(c, t) {
-  await world(c, t, P.s9, { zoomIn: true });
-  headline(c, 'One perfect shot.', W / 2, 940, { t, t0: tb(36.6), size: 100, out: T.s10 - 0.2, shadow: 'rgba(0,0,0,0.45)' });
+const scDawn = (c, t) => world(c, t, P.dawn, { zoomIn: true });
+const scEmberW = (c, t) => world(c, t, P.emberW, { zoomIn: true, ph: '#c96' });
+async function scNightW(c, t) {
+  await world(c, t, P.nightW, { zoomIn: true });
+  headline(c, 'One perfect shot.', W / 2, 940, { t, t0: tb(64.5), size: 100, out: T.worlds - 0.2, shadow: 'rgba(0,0,0,0.45)' });
 }
-async function sc10(c, t) { // five worlds, 120 levels
+async function scWorlds(c, t) { // five worlds, 120 levels
   stage(c, COL.light, W / 2, H * 0.6);
-  const ims = await Promise.all(P.s10.map((p) => frame(p.clip, p.src(t))));
-  const order = [0, 4, 1, 3, 2];
-  for (const i of order) {
-    const d = i - 2, sp = spring(t - T.s10 - 0.045 * Math.abs(d) - 0.02, 1.9, 0.68);
+  const ims = await Promise.all(P.maps.map((p) => frame(p.clip, p.src(t))));
+  const drift = 1 + 0.035 * E.inOutSine(inv(T.worlds, T.balls, t));
+  c.save(); c.translate(W / 2, H / 2 + 60); c.scale(drift, drift); c.translate(-W / 2, -H / 2 - 60);
+  for (const i of [0, 4, 1, 3, 2]) {
+    const d = i - 2, sp = spring(t - T.worlds - 0.045 * Math.abs(d) - 0.02, 1.9, 0.68);
     phone(c, ims[i], { x: 960 + d * 330, y: lerp(1500, 655 + Math.abs(d) * 14, sp), h: 610, rotY: -d * 0.2, roll: d * 0.02, shadow: 0.16 });
   }
+  c.restore();
   const size = 92, yT = 205;
   font(c, size, 900); c.letterSpacing = `${(-0.015 * size).toFixed(2)}px`;
   const wa = c.measureText('5 worlds.').width, wb = c.measureText('120 levels.').width, gap = size * 0.32, total = wa + gap + wb;
   c.letterSpacing = '0px';
-  const ks = E.inOutCubic(inv(tb(41.75), tb(42.2), t)), xa = lerp(W / 2, W / 2 - total / 2 + wa / 2, ks);
-  headline(c, '5 worlds.', xa, yT, { t, t0: tb(40.3), size, color: COL.ink });
-  const n = Math.round(120 * E.outCubic(inv(tb(42), tb(42) + 0.55, t)));
-  headline(c, `${n} levels.`, W / 2 - total / 2 + wa + gap, yT, { t, t0: tb(42), size, color: COL.ink, align: 'left' });
+  const ks = E.inOutCubic(inv(tb(69.75), tb(70.2), t)), xa = lerp(W / 2, W / 2 - total / 2 + wa / 2, ks);
+  headline(c, '5 worlds.', xa, yT, { t, t0: tb(68.3), size, color: COL.ink });
+  const n = Math.round(120 * E.outCubic(inv(tb(70), tb(70) + 0.55, t)));
+  headline(c, `${n} levels.`, W / 2 - total / 2 + wa + gap, yT, { t, t0: tb(70), size, color: COL.ink, align: 'left' });
 }
-async function sc11(c, t) { // twelve balls in orbit
+async function scBalls(c, t) { // twelve balls in orbit, collapsing into a flash at the end
   c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
   const g = c.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, 760); g.addColorStop(0, 'rgba(70,88,150,0.42)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, W, H);
-  const dt = t - T.s11, arrive = E.outExpo(inv(0, 0.75, dt)), implode = E.inExpo(inv(T.s12 - 0.32, T.s12, t));
+  const dt = t - T.balls, arrive = E.outExpo(inv(0, 0.75, dt)), implode = E.inExpo(inv(T.rewind - 0.32, T.rewind, t));
   const items = IMG.balls.map((im, i) => {
-    const th = (i / 12) * Math.PI * 2 + dt * 0.85 + (1 - arrive) * 2.2, R = lerp(2.2, 1, arrive) * (1 - implode), z = Math.sin(th);
+    const th = (i / 12) * Math.PI * 2 + dt * 0.7 + (1 - arrive) * 2.2, R = lerp(2.2, 1, arrive) * (1 - implode), z = Math.sin(th);
     return { im, x: W / 2 + Math.cos(th) * 720 * R, y: H / 2 + 30 + z * 225 * R, z, s: (0.72 + 0.4 * (z + 1) / 2) * lerp(0.5, 1, arrive) };
   }).sort((a, b) => a.z - b.z);
   const draw = (b) => { const s = 190 * b.s; c.save(); c.globalAlpha = 0.5 + 0.5 * (b.z + 1) / 2; if (b.z < -0.2) c.filter = `blur(${((-b.z - 0.2) * 3).toFixed(1)}px)`; c.drawImage(b.im, b.x - s / 2, b.y - s / 2, s, s); c.restore(); };
   items.filter((b) => b.z < 0).forEach(draw);
-  headline(c, '12 balls.', W / 2, H / 2 + 52, { t, t0: tb(44.5), size: 136, out: T.s12 - 0.3 });
+  headline(c, '12 balls.', W / 2, H / 2 + 52, { t, t0: tb(76.5), size: 136, out: T.rewind - 0.35 });
   items.filter((b) => b.z >= 0).forEach(draw);
 }
-const CLIMAX_POSE = {
-  1: { h: 1650, y: 610, r0: 0.55, r1: 0.18, l: -0.05 }, // ember, large and cropped
-  3: { h: 1000, x0: 700, x1: 1200, r0: -0.5, r1: -0.22, l: 0.07 }, // night, sliding across
-  5: { h: 2300, y: 470, r0: 0.28, r1: 0.08 }, // hero, close on the chain
-  7: { h: 1150, r0: -1.15, r1: -0.15, l: -0.04, f: 3.2 }, // ember, spinning in
-};
-async function sc12(c, t) { // the climax: one shot per beat
-  const p = P.s12.find((q) => t >= q.t0 && t < q.t1) || P.s12[P.s12.length - 1], dt = t - p.t0, punch = 1 + 0.1 * Math.exp(-dt / 0.09);
-  if (p.kind === 'world') { await footage(c, p.clip, p.src(t), { z: punch * (1.02 + 0.05 * dt), ph: '#433' }); vignette(c, 0.45); }
-  else {
-    stage(c, COL[p.col]); bokeh(c, t, p.col, false);
-    const q = CLIMAX_POSE[p.i], im = await frame(p.clip, p.src(t)), sp = spring(dt, q.f || 2.6, 0.6);
-    phone(c, im, { x: lerp(q.x0 ?? 960, q.x1 ?? q.x0 ?? 960, E.outCubic(inv(0, BEAT, dt))), y: (q.y ?? 545) + (1 - sp) * 60, h: q.h * punch, rotY: lerp(q.r0, q.r1, sp), roll: q.l || 0, shadow: p.col === 'night' || q.h > 1400 ? 0 : 0.18 });
-    bokeh(c, t, p.col, true);
-  }
-}
-async function sc13(c, t) { // the break: the shatter rewinds
-  const p = t < P.s13b.t0 ? P.s13a : P.s13b;
+async function scRewind(c, t) { // the shatter rewinds into the whole glass city
+  const p = t < P.rw2.t0 ? P.rw1 : P.rw2;
   await footage(c, 'p_A2', p.src(t), { blend: true, z: 1.03 });
   vignette(c, 0.5);
 }
@@ -306,8 +358,8 @@ function iconAt(c, x, y, size, a = 1) {
   c.lineWidth = 2; c.strokeStyle = 'rgba(255,255,255,0.18)'; c.stroke();
   c.restore();
 }
-async function sc14(c, t) { // the logo lands on the second drop
-  const dt = t - T.s14;
+async function scLogo(c, t) { // the logo lands; the subline comes in on the music's last hit
+  const dt = t - T.logo;
   c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
   const blobs = [['150,205,255', 560, 470], ['255,190,200', 1360, 520], ['190,175,255', 960, 300]];
   blobs.forEach(([rgb, bx, by], i) => {
@@ -315,7 +367,6 @@ async function sc14(c, t) { // the logo lands on the second drop
     g.addColorStop(0, `rgba(${rgb},${(0.2 * clamp(dt / 0.6)).toFixed(3)})`); g.addColorStop(1, `rgba(${rgb},0)`); c.fillStyle = g; c.fillRect(0, 0, W, H);
   });
   const IX = W / 2, IY = 395;
-  // shockwave and glass burst behind the icon
   const kw = inv(0, 0.8, dt);
   if (kw < 1) { c.save(); c.lineWidth = lerp(12, 1, kw); c.strokeStyle = `rgba(200,225,255,${(0.6 * (1 - kw)).toFixed(3)})`; c.beginPath(); c.arc(IX, IY, 150 + 950 * E.outCubic(kw), 0, Math.PI * 2); c.stroke(); c.restore(); }
   const kb = E.outExpo(inv(0, 1.6, dt));
@@ -328,18 +379,19 @@ async function sc14(c, t) { // the logo lands on the second drop
   }
   const s = 1 + 1.3 * (1 - spring(dt, 2.3, 0.6));
   iconAt(c, IX, IY, 260 * s, clamp(dt / 0.04));
-  wordmark(c, t, W / 2, 700, tb(60.4), tb(61.4), 0.62);
-  headline(c, 'Coming soon to iPhone & Android.', W / 2, 838, { t, t0: tb(62), size: 46, weight: 800, color: COL.gray, track: 0 });
-  const fo = inv(32.25, T.end, t); if (fo > 0) { c.fillStyle = `rgba(0,0,0,${fo.toFixed(3)})`; c.fillRect(0, 0, W, H); }
+  wordmark(c, t, W / 2, 700, tb(88.4), tb(89.4), 0.62);
+  headline(c, 'Coming soon to iPhone & Android.', W / 2, 838, { t, t0: T.sub, size: 46, weight: 800, color: COL.gray, track: 0 });
+  const fo = inv(T.end - 0.85, T.end, t); if (fo > 0) { c.fillStyle = `rgba(0,0,0,${fo.toFixed(3)})`; c.fillRect(0, 0, W, H); }
 }
 
 // ---------------------------------------------------------------- transitions and the frame
-const SCENES = [[0, sc1], [T.s2, sc2], [T.a2in, sc2b], [T.drop, sc3], [T.s4, sc4], [T.s5, sc5], [T.s6, sc6], [T.s7, sc7], [T.s8, sc8], [T.s9, sc9], [T.s10, sc10], [T.s11, sc11], [T.s12, sc12], [T.s13, sc13], [T.s14, sc14]];
+const SCENES = [[0, sc1], [T.s2, sc2], [T.a2in, sc2b], [T.drop, sc3], [T.play, scPlay1], [T.dawn, scDawn], [T.ember, scPlay2], [T.emberW, scEmberW],
+  [T.night, scPlay3], [T.nightW, scNightW], [T.worlds, scWorlds], [T.balls, scBalls], [T.rewind, scRewind], [T.logo, scLogo]];
 const TRANS = new Map([
-  [T.s5, { kind: 'zoom', pre: ZOOM_IN }], [T.s6, { kind: 'whip', pre: 0.11, post: 0.15, dir: 1 }],
-  [T.s7, { kind: 'zoom', pre: ZOOM_IN }], [T.s8, { kind: 'whip', pre: 0.11, post: 0.15, dir: -1 }],
-  [T.s9, { kind: 'zoom', pre: ZOOM_IN }], [T.s10, { kind: 'vwhip', pre: 0.11, post: 0.16, dir: 1 }],
-  [T.s11, { kind: 'push', pre: 0.22 }],
+  [T.dawn, { kind: 'zoom', pre: ZOOM_IN }], [T.ember, { kind: 'whip', pre: 0.11, post: 0.15, dir: 1 }],
+  [T.emberW, { kind: 'zoom', pre: ZOOM_IN }], [T.night, { kind: 'whip', pre: 0.11, post: 0.15, dir: -1 }],
+  [T.nightW, { kind: 'zoom', pre: ZOOM_IN }], [T.worlds, { kind: 'vwhip', pre: 0.11, post: 0.16, dir: 1 }],
+  [T.balls, { kind: 'push', pre: 0.22 }],
 ]);
 function smear(c, src, n, at) { for (let i = 0; i < n; i++) { c.save(); c.globalAlpha = i === 0 ? 1 : 1 / (i + 1); at(c, i / (n - 1)); c.drawImage(src, 0, 0); c.restore(); } }
 const wrapX = (c, src, ox) => { ox = ((ox % W) + W) % W; c.drawImage(src, ox - W, 0); c.drawImage(src, ox, 0); };
@@ -354,8 +406,8 @@ async function compose(t) {
   let i = 0; while (i + 1 < SCENES.length && t >= SCENES[i + 1][0]) i++;
   const start = SCENES[i][0], next = SCENES[i + 1] ? SCENES[i + 1][0] : Infinity;
   const tin = TRANS.get(start), tout = TRANS.get(next);
-  if (t >= T.crack && t < T.s4) { await scene(i, fx, t); cracks(fx, t); return; }
-  if (t >= T.s4 && t < T.s4 + 0.85) { clear(xx); await scene(i - 1, xx, t); await scene(i, fx, t); shatterOut(fx, X, t); return; }
+  if (t >= T.crack && t < T.play) { await scene(i, fx, t); cracks(fx, t); return; }
+  if (t >= T.play && t < T.play + 0.85) { clear(xx); await scene(i - 1, xx, t); await scene(i, fx, t); shatterOut(fx, X, t); return; }
   if (tout && t >= next - tout.pre) {
     const k = inv(next - tout.pre, next, t);
     clear(xx); await scene(i, xx, t);
@@ -379,13 +431,13 @@ function postFx(t) {
   shake(T.slam, 10, 0.14, 22, 5);
   shake(T.explode, 11, 0.2, 22, 7); ca += 7 * decay(t, T.explode, 0.15);
   z += 0.03 * decay(t, T.word, 0.18);
-  shake(T.s4, 13, 0.2, 22, 9); ca += 8 * decay(t, T.s4, 0.14); fl += 0.22 * decay(t, T.s4, 0.06);
-  for (const tn of [T.s5, T.s7, T.s9]) fl += 0.5 * decay(t, tn, 0.07);
-  for (let b = 48; b <= 56; b++) { fl += 0.22 * decay(t, tb(b), 0.05); shake(tb(b), 6, 0.1, 24, 20 + b); }
-  fl += 0.15 * decay(t, T.s12, 0.1) + 0.6 * decay(t, T.s12, 0.05);
-  fl += t < T.s13 ? E.inQuad(inv(T.s13 - 0.24, T.s13, t)) : decay(t, T.s13, 0.12);
-  const tf = tb(58.8); fl += t < tf ? 0.85 * E.inQuad(inv(tf - 0.1, tf, t)) : 0.85 * decay(t, tf, 0.09);
-  fl += 0.6 * decay(t, T.s14, 0.12); shake(T.s14, 24, 0.26, 24, 11); ca += 9 * decay(t, T.s14, 0.2);
+  shake(T.play, 13, 0.2, 22, 9); ca += 8 * decay(t, T.play, 0.14); fl += 0.22 * decay(t, T.play, 0.06);
+  for (const tn of [T.dawn, T.emberW, T.nightW]) fl += 0.5 * decay(t, tn, 0.07);
+  shake(23.62, 7, 0.18, 24, 31); // the bombs go off in level 82
+  z += 0.025 * decay(t, tb(60), 0.2); // the second drop lands on the ball's second wall bounce
+  fl += t < T.rewind ? 0.9 * E.inQuad(inv(T.rewind - 0.2, T.rewind, t)) : 0.9 * decay(t, T.rewind, 0.12);
+  const tf = tb(86.4); fl += t < tf ? 0.85 * E.inQuad(inv(tf - 0.1, tf, t)) : 0.85 * decay(t, tf, 0.09);
+  fl += 0.6 * decay(t, T.logo, 0.12); shake(T.logo, 24, 0.26, 24, 11); ca += 9 * decay(t, T.logo, 0.2);
   z += (Math.abs(sx) + Math.abs(sy)) * 2.4 / W;
   return { sx, sy, z, ca, fl: clamp(fl), bl: 1 - E.outCubic(inv(0, 0.4, t)) };
 }

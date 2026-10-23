@@ -49,6 +49,9 @@ function setPressed(btn, on, iconName) {
   btn.setAttribute("aria-pressed", String(on));
   const use = btn.querySelector("use");
   if (use) use.setAttribute("href", `#i-${iconName}`);
+  const label = btn.querySelector("[data-label]");
+  if (label && btn.dataset.on) label.textContent = on ? btn.dataset.on : btn.dataset.off;
+  if (btn.classList.contains("btn") && btn.dataset.on) btn.classList.toggle("btn--ghost", !on);
 }
 
 /** Clicking a dot highlights its tag; hovering a tag highlights its dot (and box). */

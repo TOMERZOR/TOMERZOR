@@ -34,34 +34,43 @@ async function pickDevice() {
 function load(post) {
   if (loading) return loading;
   loading = (async () => {
-    const res = await fetch(new URL("./embeddings.json", import.meta.url));
-    if (!res.ok) throw new Error("Could not load the garment list.");
-    const emb = decodeEmbeddings(await res.json(), decodeBase64);
-    const files = {};
-    const progress_callback = (p) => {
-      if (p.status !== "progress" || !p.file) return;
-      files[p.file] = { loaded: p.loaded || 0, total: p.total || 0 };
-      let loaded = 0, total = 0;
-      for (const f of Object.values(files)) { loaded += f.loaded; total += f.total; }
-      if (total) post({ type: "status", stage: "loading", progress: loaded / total });
-    };
-    const processor = await AutoProcessor.from_pretrained(MODEL);
-    let { device, dtype } = await pickDevice();
-    let model;
     try {
-      model = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { device, dtype, progress_callback });
+      return await loadModel(post);
     } catch (err) {
-      if (device === "wasm") throw err;
-      device = "wasm";
-      dtype = "fp16";
-      model = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { device, dtype, progress_callback });
+      console.error(err);
+      throw new Error("The scanner couldn't be downloaded. Check your connection and try again.");
     }
-    return { processor, model, emb, device };
   })();
   loading.catch(() => {
     loading = null; // allow a retry after a network failure
   });
   return loading;
+}
+
+async function loadModel(post) {
+  const res = await fetch(new URL("./embeddings.json", import.meta.url));
+  if (!res.ok) throw new Error("Could not load the garment list.");
+  const emb = decodeEmbeddings(await res.json(), decodeBase64);
+  const files = {};
+  const progress_callback = (p) => {
+    if (p.status !== "progress" || !p.file) return;
+    files[p.file] = { loaded: p.loaded || 0, total: p.total || 0 };
+    let loaded = 0, total = 0;
+    for (const f of Object.values(files)) { loaded += f.loaded; total += f.total; }
+    if (total) post({ type: "status", stage: "loading", progress: loaded / total });
+  };
+  const processor = await AutoProcessor.from_pretrained(MODEL);
+  let { device, dtype } = await pickDevice();
+  let model;
+  try {
+    model = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { device, dtype, progress_callback });
+  } catch (err) {
+    if (device === "wasm") throw err;
+    device = "wasm";
+    dtype = "fp16";
+    model = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { device, dtype, progress_callback });
+  }
+  return { processor, model, emb, device };
 }
 
 /** Copy a sub-rectangle (fractions) of RGBA pixels into a new RawImage. */

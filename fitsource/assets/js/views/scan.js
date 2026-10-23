@@ -81,7 +81,9 @@ function resultTag(item, i, scan) {
   const saved = store.isSaved(key);
   const watching = store.isWatching(key);
   const deep = scan.engine === "deep";
-  return html`<article class="tag" data-item="${item.id}">
+  const canWatch = deep && m && m.availability === "sold_out" && m.url;
+  return html`<article class="tag tag--result" data-item="${item.id}">
+    <button type="button" class="iconbtn iconbtn--like tag__like" data-action="save" aria-pressed="${saved}" aria-label="${saved ? "Remove from closet" : "Save to closet"}">${icon(saved ? "heart-fill" : "heart")}</button>
     <div class="tag__img">${item.thumb ? html`<img src="${item.thumb}" alt="">` : ""}<span class="tag__num">${i + 1}</span></div>
     <div class="tag__body">
       <span class="tag__brand">${item.brand || CATEGORY_NAME[item.category] || item.category}</span>
@@ -90,14 +92,9 @@ function resultTag(item, i, scan) {
         ${item.color ? html`<span class="swatch">${item.hex ? html`<i style="--c:${item.hex}"></i>` : ""}${item.color}</span>` : ""}
         ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "USD")}</span>` : ""}
         ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "checked at shop" : "")) : ""}
-        ${deep ? html`<span class="label">${CONF[item.confidence] || ""}</span>` : ""}
+        <span class="label">${deep ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
       </div>
-      <div class="tag__actions">
-        ${deep && m && m.availability === "sold_out" && m.url ? html`<button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${watching}">${icon(watching ? "bell-ringing-fill" : "bell")}${watching ? "Watching" : "Alert me"}</button>` : ""}
-        ${deep ? "" : html`<span class="label">${confidenceText(item.confidence)}</span>`}
-        <span class="spacer"></span>
-        <button type="button" class="iconbtn iconbtn--like" data-action="save" aria-pressed="${saved}" aria-label="${saved ? "Remove from closet" : "Save to closet"}">${icon(saved ? "heart-fill" : "heart")}</button>
-      </div>
+      ${canWatch ? html`<div class="tag__actions"><button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${watching}" data-on="Watching" data-off="Alert me when it's back">${icon(watching ? "bell-ringing-fill" : "bell")}<span data-label>${watching ? "Watching" : "Alert me when it's back"}</span></button></div>` : ""}
     </div>
     ${deep && item.matches.length
       ? html`<div class="matches">

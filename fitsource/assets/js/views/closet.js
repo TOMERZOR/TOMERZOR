@@ -19,7 +19,7 @@ function closetTag(it) {
     <div class="tag__img">${it.img ? html`<img src="${productImg(it)}" alt="" loading="lazy">` : ""}</div>
     <div class="tag__body">
       <span class="tag__brand">${it.brand || it.shop || "Saved piece"}</span>
-      <h3 class="tag__name">${it.name}</h3>
+      <h2 class="tag__name">${it.name}</h2>
       <div class="tag__meta">
         ${it.price != null ? html`<span class="price">${money(it.price, it.currency || "USD")}</span>` : ""}
         ${it.backInStock ? html`<span class="flag">${icon("bell-ringing-fill")}Back in stock</span>` : statusChip(it.status)}

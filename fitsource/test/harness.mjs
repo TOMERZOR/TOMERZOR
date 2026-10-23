@@ -12,7 +12,7 @@ export const FITSOURCE = path.resolve(here, "..");
 export const ROOT = path.resolve(FITSOURCE, "..");
 const NM = path.join(FITSOURCE, "node_modules");
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".png": "image/png", ".woff2": "font/woff2", ".txt": "text/plain" };
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".png": "image/png", ".woff2": "font/woff2", ".txt": "text/plain", ".webmanifest": "application/manifest+json" };
 
 /** Serve the repository root. `api` (optional) handles /api/* like the worker. */
 export function startServer(port, { api } = {}) {

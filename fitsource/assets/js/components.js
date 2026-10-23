@@ -53,7 +53,7 @@ export function feedTag(item, i, { fitId, mini = false } = {}) {
     <div class="tag__img">${productImg(item) ? html`<img src="${productImg(item)}" alt="" loading="lazy" decoding="async">` : ""}<span class="tag__num">${i + 1}</span></div>
     <div class="tag__body">
       <span class="tag__brand">${item.brand || item.category}</span>
-      <h3 class="tag__name">${item.name}</h3>
+      ${mini ? html`<p class="tag__name">${item.name}</p>` : html`<h2 class="tag__name">${item.name}</h2>`}
       <div class="tag__meta">
         ${item.price != null ? html`<span class="price">${money(item.price, item.currency)}</span>` : ""}
         ${statusChip(item.status, stockExtra(item))}

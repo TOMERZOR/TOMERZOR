@@ -87,7 +87,7 @@ function resultTag(item, i, scan) {
     <div class="tag__img">${item.thumb ? html`<img src="${item.thumb}" alt="">` : ""}<span class="tag__num">${i + 1}</span></div>
     <div class="tag__body">
       <span class="tag__brand">${item.brand || CATEGORY_NAME[item.category] || item.category}</span>
-      <h3 class="tag__name">${item.productName || item.name}</h3>
+      <h2 class="tag__name">${item.productName || item.name}</h2>
       <div class="tag__meta">
         ${item.color ? html`<span class="swatch">${item.hex ? html`<i style="--c:${item.hex}"></i>` : ""}${item.color}</span>` : ""}
         ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "USD")}</span>` : ""}

@@ -40,7 +40,7 @@ export async function drawReceipt({ title, by, photo, items }) {
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
-  const ink = "#121214", paper = "#f1f1ee", grey = "#66666d", volt = "#c9f23a", red = "#d63d22";
+  const ink = "#121214", paper = "#f1f1ee", grey = "#66666d", volt = "#c9f23a", red = "#bf3319";
 
   ctx.fillStyle = paper;
   ctx.fillRect(0, 0, W, H);

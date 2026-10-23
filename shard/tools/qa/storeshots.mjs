@@ -75,13 +75,20 @@ shots.push({ img: await raw('raw3'), cap: 'Chain reactions', sub: 'Bombs, stone,
 // 4: night chandeliers at rest
 await page.evaluate((i) => window.__shard.startLevel(i), L.night);
 await tick(80);
-shots.push({ img: await raw('raw4'), cap: '5 worlds. 120 levels.', sub: 'Plus a new puzzle every day', world: 4 });
-// 5: home with the daily card
+shots.push({ img: await raw('raw4'), cap: 'Swing and slide', sub: 'Chandeliers on ropes, glass on the move', world: 4 });
+// 5: the level map: a finished world, its trail lit, the gate to the next one glowing
+await page.evaluate(() => window.__shard.goHome());
+await page.evaluate(() => document.getElementById('btn-levels').click());
+await page.waitForTimeout(700);
+await page.evaluate(() => document.querySelector('.wtab[data-w="1"]').click());
+await page.waitForTimeout(900);
+shots.push({ img: await raw('rawmap'), cap: '5 worlds. 120 levels.', sub: 'Climb a trail of glass', world: 1 });
+// 6: home with the daily card
 await page.evaluate(() => { document.body.classList.remove('nosheet'); window.__shard.goHome(); });
 await tick(90);
 await page.waitForTimeout(900);
 shots.push({ img: await raw('raw5'), cap: 'A new puzzle daily', sub: 'Keep your streak alive', world: 2 });
-// 6: shop
+// 7: shop
 await page.evaluate(() => document.getElementById('btn-shop').click());
 await tick(30);
 await page.waitForTimeout(500);

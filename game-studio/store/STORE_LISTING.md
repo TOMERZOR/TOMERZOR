@@ -47,9 +47,10 @@ Captions, in order:
 1. **Aim. Fire. Shatter.** (a mid-air explosion of glass)
 2. **Bank it off the walls** (aim line plus a ricochet)
 3. **Chain reactions** (a bomb blowing up a shelf of glass)
-4. **5 worlds. 120 levels.** (the Night world with chandeliers)
-5. **A new puzzle daily** (Daily Smash)
-6. **Collect 12 balls** (the ball shop)
+4. **Swing and slide** (the Night world with chandeliers)
+5. **5 worlds. 120 levels.** (the level map: Mint finished, its gate to Lilac glowing)
+6. **A new puzzle daily** (Daily Smash)
+7. **Collect 12 balls** (the ball shop)
 
 ## App privacy (App Store "nutrition label")
 - **Data used to track you:** Identifiers › Device ID (Google AdMob, only if the user allows tracking).

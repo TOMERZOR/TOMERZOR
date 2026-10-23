@@ -281,3 +281,8 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
 - Phones from 320 to 430 wide, and tablet.
 - The full suite, proof replay 120/120 and 100/100, and validate-levels pass, with no console errors.
 
+**Marketing:**
+- A seventh store screenshot, "5 worlds. 120 levels.": Mint finished, its trail lit, the gate to Lilac glowing. It's framed in Mint, the one world the set didn't show.
+- The Night chandeliers shot is now captioned for what it shows: "Swing and slide".
+- The landing page's fourth image is the map.
+- The web build is republished (version 6).

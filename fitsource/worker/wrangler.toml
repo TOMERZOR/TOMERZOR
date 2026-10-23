@@ -1,0 +1,26 @@
+# FitSource API. Deploy with `npx wrangler deploy` after the steps in ../README.md.
+name = "fitsource-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Comma-separated list of sites allowed to call the API, e.g.
+# "https://tomerzor.github.io,http://localhost:8080". "*" allows any site.
+ALLOWED_ORIGINS = "*"
+# Deep scans per visitor per day (needs the KV namespace below). 0 = no limit.
+DAILY_SCAN_LIMIT = "8"
+FITSOURCE_MODEL = "claude-opus-5-5"
+FITSOURCE_EFFORT = "medium"
+MAX_SEARCHES = "10"
+MAX_FETCHES = "8"
+
+# Optional but recommended: caches scans for 24 h and enforces the daily limit.
+# Create it with `npx wrangler kv namespace create FITSOURCE_KV`, then uncomment
+# and paste the id it prints.
+# [[kv_namespaces]]
+# binding = "FITSOURCE_KV"
+# id = "paste-the-id-here"
+
+# The API key is a secret, never put it in this file:
+#   npx wrangler secret put ANTHROPIC_API_KEY

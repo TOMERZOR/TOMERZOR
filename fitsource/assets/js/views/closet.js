@@ -5,7 +5,8 @@ import { aAttrs, productImg, breadcrumbs } from "../components.js";
 import { pageMeta } from "../seo.js";
 import { NEW_SHOPS } from "../shop.js";
 import { deepScanStatus } from "../scan/engine.js";
-import { recheckWatches } from "../watch.js";
+import { recheckWatches, summarize } from "../watch.js";
+import { waBar, wishlistMessage } from "../whatsapp.js";
 
 let checkNote = ""; // survives re-renders while a check runs
 let checking = false;
@@ -16,6 +17,16 @@ const TABS = [
   ["scans", "סריקות", "clock"],
 ];
 
+/** Restock alert for one size: the shop's sizes come with the first check. */
+function sizePicker(it) {
+  if (!it.sizes || !it.sizes.length) return "";
+  const chip = (label, value, extra = "") => html`<button type="button" class="size size--pick ${extra}" data-act="size" data-size="${value}" aria-pressed="${String((it.watchSize || "") === value)}">${label}</button>`;
+  return html`<div class="size-pick" role="group" aria-label="התראה למידה">
+    <span class="label">${icon("ruler")}התראה למידה</span>
+    <div class="sizes">${chip("כל מידה", "")}${it.sizes.map((z) => chip(z.label, z.label, z.available ? "" : "is-out"))}</div>
+  </div>`;
+}
+
 function closetTag(it) {
   const url = it.url || NEW_SHOPS[0].url(it.query);
   return html`<article class="tag" data-key="${it.key}">
@@ -25,14 +36,16 @@ function closetTag(it) {
       <h2 class="tag__name"><bdi>${it.name}</bdi></h2>
       <div class="tag__meta">
         ${it.price != null ? html`<span class="price">${money(it.price, it.currency || "ILS")}</span>` : ""}
-        ${it.backInStock ? html`<span class="flag">${icon("bell-ringing-fill")}חזר למלאי</span>` : statusChip(it.status)}
+        ${it.backInStock ? html`<span class="flag">${icon("bell-ringing-fill")}${it.watchSize ? `מידה ${it.watchSize} חזרה` : "חזר למלאי"}</span>` : statusChip(it.status)}
+        ${it.priceDrop ? html`<span class="flag flag--drop">${icon("trend-down")}ירד מ־${money(it.priceDrop.from, it.currency || "ILS")}</span>` : ""}
       </div>
+      ${it.watch ? sizePicker(it) : ""}
       ${it.watch ? html`<span class="label">${it.checkedAt ? `נבדק ${timeAgo(it.checkedAt)}` : "עוד לא נבדק"}</span>` : ""}
       <div class="tag__actions">
-        <a class="btn btn--xs" ${aAttrs(url)}>${icon("arrow-up-right")}${it.url ? (it.shop ? `לקנייה ב־${it.shop}` : "לקנייה") : "דומים בחנויות"}</a>
+        <a class="btn btn--xs" ${aAttrs(url)}>${icon("arrow-up-right")}<span class="btn__text">${it.url ? "לחנות" : "דומים בחנויות"}</span></a>
         ${it.fitId ? html`<a class="btn btn--xs btn--ghost" href="${href(`fit/${it.fitId}`)}">ללוק</a>` : ""}
         <span class="spacer"></span>
-        ${it.url ? html`<button type="button" class="iconbtn" data-act="watch" aria-pressed="${it.watch}" aria-label="${it.watch ? "ביטול התראת מלאי" : "עדכנו אותי כשיחזור למלאי"}">${icon(it.watch ? "bell-ringing-fill" : "bell")}</button>` : ""}
+        ${it.url ? html`<button type="button" class="iconbtn" data-act="watch" aria-pressed="${String(it.watch)}" aria-label="${it.watch ? "ביטול ההתראה" : "התראה על מחיר ומלאי"}">${icon(it.watch ? "bell-ringing-fill" : "bell")}</button>` : ""}
         <button type="button" class="iconbtn" data-act="remove" aria-label="הסרת ${it.name}">${icon("trash")}</button>
       </div>
     </div>
@@ -56,10 +69,10 @@ function panel(tab) {
   const items = store.closet().filter((i) => (tab === "watching" ? i.watch : true));
   if (!items.length) {
     return tab === "watching"
-      ? empty("bell", "אין התראות מלאי", "כשפריט שסרקתם אזל, לחצו על \"עדכנו אותי\". FitSource בודק את החנות ומסמן אותו כאן כשהוא חוזר.")
+      ? empty("bell", "אין התראות", "לחצו על הפעמון בפריט שסרקתם. FitSource בודק את החנות ומעדכן כשפריט חוזר למלאי, כשהמידה שלכם חוזרת או כשהמחיר יורד.")
       : empty("heart", "הארון ריק", "לחצו על הלב בכל פריט בפיד או בסריקות שלכם כדי לשמור אותו כאן.");
   }
-  return html`${tab === "watching" ? html`<div class="toolbar" style="margin-bottom:16px"><button type="button" class="btn btn--sm btn--ghost" data-check ${checking ? "disabled" : ""}>${icon("arrows-clockwise")}בדיקה עכשיו</button><span class="muted" data-check-note style="font-size:.88rem">${checkNote}</span></div>` : ""}
+  return html`${tab === "saved" ? html`<div class="toolbar wish" style="margin-bottom:16px">${waBar(wishlistMessage(items), null, { sendLabel: "שליחת רשימת משאלות" })}<span class="muted" style="font-size:.88rem">${icon("gift")} רמז ליום הולדת? שלחו את הרשימה בוואטסאפ.</span></div>` : ""}${tab === "watching" ? html`<div class="toolbar" style="margin-bottom:16px"><button type="button" class="btn btn--sm btn--ghost" data-check ${checking ? "disabled" : ""}>${icon("arrows-clockwise")}בדיקה עכשיו</button><span class="muted" data-check-note style="font-size:.88rem">${checkNote}</span></div>` : ""}
     <div class="closet-grid">${items.map(closetTag)}</div>`;
 }
 
@@ -82,7 +95,7 @@ function render([tab = "saved"]) {
   </section>
   <div class="wrap">
     <div class="tabs" role="tablist">
-      ${TABS.map(([id, label, ic]) => html`<a class="tab" role="tab" href="${href(`closet/${id}`)}" aria-selected="${id === tab}">${icon(ic)}${label}<span class="count">${n[id]}</span></a>`)}
+      ${TABS.map(([id, label, ic]) => html`<a class="tab" role="tab" href="${href(`closet/${id}`)}" aria-selected="${String(id === tab)}">${icon(ic)}${label}<span class="count">${n[id]}</span></a>`)}
     </div>
     <div data-panel role="tabpanel">${panel(tab)}</div>
   </div>`;
@@ -115,7 +128,12 @@ function mount(root, [tab = "saved"]) {
       toast("הוסר", { action: "ביטול", onAction: () => store.saveItem(item, { watch: item.watch }) });
     } else if (btn.dataset.act === "watch") {
       store.setWatch(key, !item.watch);
-      toast(item.watch ? "התראת המלאי בוטלה" : "התראת המלאי הופעלה");
+      toast(item.watch ? "ההתראה בוטלה" : "ההתראה הופעלה: מחיר ומלאי");
+      if (!item.watch) recheckWatches({ force: true, only: key });
+    } else if (btn.dataset.act === "size") {
+      const size = btn.dataset.size || null;
+      store.updateItem(key, { watchSize: size, backInStock: false });
+      toast(size ? `נעדכן כשמידה ${size} תחזור למלאי` : "נעדכן כשהפריט יחזור, בכל מידה");
     }
   });
 
@@ -139,15 +157,14 @@ function mount(root, [tab = "saved"]) {
       checking = true;
       btn.disabled = true;
       setNote("בודקים בחנויות...");
-      let backs = [];
+      let events = [];
       try {
-        backs = await recheckWatches({ force: true });
+        events = await recheckWatches({ force: true });
       } finally {
         checking = false;
       }
-      const flagged = store.closet().filter((i) => i.watch && i.backInStock).length;
-      const back = backs.length || flagged;
-      setNote(back ? (back === 1 ? "פריט אחד חזר למלאי" : `${back} פריטים חזרו למלאי`) : "עוד אין חדש. נמשיך לבדוק.");
+      const flagged = store.closet().filter((i) => i.watch && (i.backInStock || i.priceDrop)).length;
+      setNote(events.length ? summarize(events) : flagged ? (flagged === 1 ? "יש עדכון על פריט אחד" : `יש עדכונים על ${flagged} פריטים`) : "עוד אין חדש. נמשיך לבדוק.");
       const b = area.querySelector("[data-check]");
       if (b) b.disabled = false;
     });
@@ -156,8 +173,8 @@ function mount(root, [tab = "saved"]) {
   return () => {
     off();
     checkNote = "";
-    // Leaving the closet clears the "back in stock" flags you have now seen.
-    store.closet().filter((i) => i.backInStock).forEach((i) => store.updateItem(i.key, { backInStock: false }));
+    // Leaving the closet clears the "back in stock" and "price dropped" flags you have now seen.
+    store.closet().filter((i) => i.backInStock || i.priceDrop).forEach((i) => store.updateItem(i.key, { backInStock: false, priceDrop: null }));
   };
 }
 

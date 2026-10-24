@@ -13,6 +13,7 @@ const ICONS = [
   "storefront", "recycle", "clock", "trash", "sun", "moon", "info", "warning", "lightning", "link", "copy", "squares-four",
   "t-shirt", "receipt", "arrows-clockwise", "caret-down", "plus", "selection-plus", "shopping-bag", "seal-check", "fire",
   "trend-up", "globe", "lock-simple", "hand-tap", "cpu", "eye", "chart-line-up", "users-three", "megaphone",
+  "whatsapp-logo", "coat-hanger", "trend-down", "chat-circle-dots", "gift", "ruler", "check-circle:fill",
 ];
 
 let symbols = "";

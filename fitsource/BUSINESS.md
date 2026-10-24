@@ -6,6 +6,15 @@ FitSource is a Hebrew, right-to-left site for Israeli shoppers. It is free to us
 
 Apps that source outfits from screenshots already exist abroad, but none is built for Israel. Here, people find fits on Instagram and TikTok, then buy from local chains (Terminal X, Castro, Fox, Factory 54, Next) or order from abroad (AliExpress, Shein, ASOS). FitSource covers both: it searches in Hebrew at Israeli shops and in English at the international ones, and its deep scan prefers stores that sell in Israel or ship there.
 
+## How it differs from the others
+
+StyleLens AI, Google Lens, Outfit Lens and FashionLens AI find similar clothes from a photo. Going by their listings, StyleLens AI is credit-based ($4.99 to $39.99 a month, one or two free scans) and also does beauty and colour analysis, and none of them is in Hebrew or built around Israeli shops. FitSource is free with no account, and adds what they don't have:
+
+- Hebrew, shekels, and Israeli shops first (Terminal X, Castro, Next, Yad2, Marketplace), then shops that ship to Israel.
+- Stock checked at the shop, with alerts when a price drops or when your size comes back.
+- "יש לי כבר": the total counts only what you still need to buy.
+- WhatsApp built in: send a fit or a scan, ask friends whether to buy, send a wish list.
+
 ## Who pays
 
 | Stream | Who pays | How | When it starts |
@@ -39,7 +48,7 @@ Creators get a share (30 to 50%) of what their posted fits earn. That keeps the 
 
 ## Growth in Israel
 
-1. **WhatsApp.** Israelis share everything on WhatsApp. The fit receipt (a story-sized image with every piece, price and "sold out" stamp) is made to be forwarded. A one-tap WhatsApp share is the next thing to build.
+1. **WhatsApp.** Israelis share everything on WhatsApp. Fits, scan results and wish lists go there in one tap, with every shop link, and "שאלו חברים" asks friends whether to buy. Every forwarded message carries the FitSource address.
 2. **Israeli fashion creators.** Invite Instagram and TikTok creators to post fits with sourced pieces and a commission share. They bring their audience, and a code-based deal is a model they already know.
 3. **Hebrew "where to buy" pages.** Each sourced product can become a public page ("איפה קונים את ז'קט הבומבר מהסרטון"). There is little Hebrew content for these searches.
 4. **Sold-out moments.** Restock alerts bring people back when they are most likely to buy.
@@ -47,11 +56,9 @@ Creators get a share (30 to 50%) of what their posted fits earn. That keeps the 
 
 ## Features to build next
 
-- Share to WhatsApp from the receipt and fit pages.
 - Share target (PWA share target on Android, an iOS shortcut): send a screenshot straight from Instagram or TikTok.
 - Paste an Instagram or TikTok link; the worker fetches the image.
-- Restock and price-drop alerts by push, WhatsApp or email (needs accounts and a scheduled worker).
-- Size-aware alerts ("tell me when the M is back").
+- Deliver the price-drop and size alerts by push, WhatsApp or email, not only on the next visit (needs accounts, opt-in and a scheduled worker).
 - Israeli shop coverage: confirm Yad2 Market's search URL (it currently opens the clothing section) and add Factory 54, Fox, Adika and H&M Israel once their search links are checked in a browser.
 - English or Arabic as a second language. The layout is already direction-aware.
 

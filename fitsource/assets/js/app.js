@@ -4,7 +4,7 @@ import { html, icon, toast, observeReveals, animateCounts } from "./ui.js";
 import { card } from "./components.js";
 import * as store from "./store.js";
 import { startScan } from "./state.js";
-import { recheckWatches } from "./watch.js";
+import { recheckWatches, summarize } from "./watch.js";
 import home from "./views/home.js";
 import feed from "./views/feed.js";
 import fit from "./views/fit.js";
@@ -206,7 +206,7 @@ route();
 
 // Check watched items once per visit, quietly, a moment after load.
 setTimeout(() => {
-  recheckWatches().then((backs) => {
-    if (backs.length) toast(backs.length === 1 ? `${backs[0].name} חזר למלאי` : `${backs.length} פריטים שעקבתם אחריהם חזרו למלאי`, { action: "לצפייה", onAction: () => go("closet/watching") });
+  recheckWatches().then((events) => {
+    if (events.length) toast(summarize(events), { action: "לצפייה", onAction: () => go("closet/watching") });
   });
 }, 2500);

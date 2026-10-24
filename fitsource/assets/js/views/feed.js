@@ -44,9 +44,9 @@ function render() {
   </section>
   <div class="filters">
     <div class="wrap filters__in" role="toolbar" aria-label="סינון הפיד">
-      ${VIBES.map((v) => html`<button type="button" class="chip" data-vibe="${v}" aria-pressed="${v === vibe}">${v}</button>`)}
+      ${VIBES.map((v) => html`<button type="button" class="chip" data-vibe="${v}" aria-pressed="${String(v === vibe)}">${v}</button>`)}
       <span class="filters__sep" aria-hidden="true"></span>
-      <span class="filters__sorts">${SORTS.map(([k, label]) => html`<button type="button" class="chip" data-sort="${k}" aria-pressed="${k === sort}">${k === "trending" ? icon("trend-up") : k === "new" ? icon("clock") : icon("fire")}${label}</button>`)}</span>
+      <span class="filters__sorts">${SORTS.map(([k, label]) => html`<button type="button" class="chip" data-sort="${k}" aria-pressed="${String(k === sort)}">${k === "trending" ? icon("trend-up") : k === "new" ? icon("clock") : icon("fire")}${label}</button>`)}</span>
     </div>
   </div>
   <section class="wrap" data-grid>${grid(vibe, sort)}</section>`;

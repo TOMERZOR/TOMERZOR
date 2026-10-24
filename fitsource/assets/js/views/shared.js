@@ -2,14 +2,25 @@
 import { toast } from "../ui.js";
 import { go } from "../router.js";
 import * as store from "../store.js";
+import { recheckWatches, describe } from "../watch.js";
 
 /**
- * Save / watch buttons inside tags. `resolve(tagEl)` returns the item data for a tag.
+ * Save / watch / "יש לי" buttons inside tags. `resolve(tagEl)` returns the item
+ * data for a tag; `onOwned()` runs after a piece is marked or unmarked as owned.
  */
-export function bindTagActions(root, resolve) {
+export function bindTagActions(root, resolve, { onOwned } = {}) {
   const onClick = (e) => {
     const btn = e.target.closest("[data-action]");
     if (!btn || !root.contains(btn)) return;
+    if (btn.dataset.action === "own") {
+      const on = store.toggleOwned(btn.dataset.own);
+      setPressed(btn, on, "coat-hanger");
+      const tag = btn.closest(".tag");
+      if (tag) tag.classList.toggle("is-owned", on);
+      toast(on ? "סימנתם שיש לכם את הפריט. הסכום מראה רק מה שחסר." : "הסימון בוטל");
+      if (onOwned) onOwned();
+      return;
+    }
     const tag = btn.closest("[data-item]");
     const item = tag && resolve(tag);
     if (!item) return;
@@ -27,18 +38,21 @@ export function bindTagActions(root, resolve) {
         toast("נשמר בארון", { action: "לצפייה", onAction: () => go("closet") });
       }
     } else if (btn.dataset.action === "watch") {
+      const sold = btn.dataset.sold === "true";
       if (store.isWatching(key)) {
         store.setWatch(key, false);
         setPressed(btn, false, "bell");
-        btn.setAttribute("aria-label", "עדכנו אותי כשיחזור למלאי");
-        toast("התראת המלאי בוטלה");
+        btn.setAttribute("aria-label", sold ? "עדכנו אותי כשיחזור למלאי" : "עדכנו אותי אם המחיר יורד");
+        toast("ההתראה בוטלה");
       } else {
         store.saveItem(item, { watch: true });
         setPressed(btn, true, "bell-ringing-fill");
-        btn.setAttribute("aria-label", "ביטול התראת מלאי");
+        btn.setAttribute("aria-label", "ביטול ההתראה");
         const like = tag.querySelector('[data-action="save"]');
         if (like) setPressed(like, true, "heart-fill");
-        toast("נבדוק בחנות ונעדכן אתכם כשהפריט יחזור");
+        toast(sold ? "נבדוק בחנות ונעדכן כשיחזור. בארון אפשר לבחור מידה." : "נעדכן אתכם אם המחיר יורד או אם הפריט אוזל");
+        // a first check right away: it brings the shop's sizes, so a size can be picked in the closet
+        recheckWatches({ force: true, only: key }).then((events) => events.length && toast(describe(events[0])));
       }
     }
   };

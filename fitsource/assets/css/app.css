@@ -2096,7 +2096,8 @@ main:focus {
   border-top: 1.5px solid var(--ink);
 }
 .offer {
-  padding: 28px 28px 32px 0;
+  padding: 28px 0 32px;
+  padding-inline-end: 28px;
   border-bottom: 1px solid var(--line);
   display: grid;
   gap: 10px;
@@ -2597,4 +2598,86 @@ main:focus {
 .label,
 .tag__brand {
   letter-spacing: 0.02em;
+}
+
+/* ---------- WhatsApp, owned pieces, smarter alerts ---------- */
+.wa-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.btn--wa {
+  --b-bg: #25d366; /* WhatsApp green, so the button is recognised at a glance */
+  --b-fg: #08210f;
+}
+.btn--wa:hover {
+  --b-bg: #1fbd5b;
+}
+.toolbar.wish .wa-bar {
+  margin-top: 0;
+}
+.toolbar.wish .muted .i {
+  vertical-align: -0.2em;
+}
+.tag.is-owned .tag__img img {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+.tag.is-owned .price {
+  text-decoration: line-through;
+  text-decoration-color: var(--ink-3);
+  color: var(--ink-3);
+}
+.total--owned .total__label {
+  color: var(--accent-text);
+}
+.flag--drop {
+  background: var(--ink);
+  color: var(--bg);
+}
+.size-pick {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+.size-pick .label .i {
+  margin-inline-end: 4px;
+  vertical-align: -0.2em;
+}
+.size--pick {
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}
+.size--pick:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.size--pick[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  border-style: solid;
+  color: var(--bg);
+}
+.size--pick.is-out[aria-pressed="true"] {
+  opacity: 1;
+  text-decoration: none;
+}
+/* closet cards keep their buttons on one line; a long shop name shortens instead */
+.closet-grid .tag__actions {
+  flex-wrap: nowrap;
+  min-width: 0; /* a grid item would otherwise grow to fit the whole row */
+}
+.closet-grid .tag__actions .btn {
+  min-width: 0;
+  flex-shrink: 1;
+}
+.btn__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

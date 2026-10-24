@@ -1,7 +1,7 @@
 // Everything a visitor saves lives in their own browser (localStorage).
 // Every read and write is guarded: private windows and full storage must not break the page.
 
-const KEYS = { closet: "fs.closet.v1", scans: "fs.scans.v1", prefs: "fs.prefs.v1", likes: "fs.likes.v1" };
+const KEYS = { closet: "fs.closet.v1", scans: "fs.scans.v1", prefs: "fs.prefs.v1", likes: "fs.likes.v1", owned: "fs.owned.v1" };
 const MAX_SCANS = 8;
 const listeners = new Set();
 
@@ -106,6 +106,20 @@ export function saveScan(scan) {
 export function deleteScan(id) {
   write(KEYS.scans, scans().filter((s) => s.id !== id));
   emit();
+}
+
+// ---------- pieces you already own ("יש לי כבר") ----------
+
+/** Key for a piece of a fit or a scan: "fit:<fitId>:<itemId>" or "scan:<scanId>:<itemId>". */
+export const ownKey = (kind, id, itemId) => `${kind}:${id}:${itemId}`;
+const ownedSet = () => new Set(read(KEYS.owned, []));
+export const isOwned = (key) => ownedSet().has(key);
+export function toggleOwned(key) {
+  const set = ownedSet();
+  set.has(key) ? set.delete(key) : set.add(key);
+  write(KEYS.owned, [...set].slice(-500));
+  emit();
+  return set.has(key);
 }
 
 // ---------- likes and preferences ----------

@@ -94,6 +94,19 @@ function render() {
     </div>
   </section>
 
+  <section class="section only">
+    <div class="wrap">
+      <div class="section__head"><h2 class="h2" data-reveal>רק ב־FitSource</h2></div>
+      <p class="lede" data-reveal style="margin-bottom:24px">מה שלא תמצאו באפליקציות אחרות לזיהוי בגדים.</p>
+      <div class="offers">
+        <div class="offer" data-reveal>${icon("storefront")}<h3 class="h3">בעברית, בשקלים, בחנויות שלנו</h3><p>טרמינל איקס, קסטרו, Next, יד2 ומרקטפלייס. חנויות בישראל וחנויות ששולחות לכאן, לפני כל השאר.</p></div>
+        <div class="offer" data-reveal style="--d:1">${icon("ruler")}<h3 class="h3">התראה כשהמידה שלכם חוזרת</h3><p>לא סתם "חזר למלאי": בוחרים מידה ומקבלים עדכון רק כשהיא חוזרת. וגם כשהמחיר יורד.</p></div>
+        <div class="offer" data-reveal style="--d:2">${icon("coat-hanger")}<h3 class="h3">יש לי כבר</h3><p>מסמנים פריטים שכבר יש לכם בארון, ורואים כמה עולה רק מה שחסר כדי להשלים את הלוק.</p></div>
+        <div class="offer" data-reveal style="--d:3">${icon("whatsapp-logo")}<h3 class="h3">שאלו את החברים בוואטסאפ</h3><p>שולחים לוק, או שואלים "לקנות או לא?" בלחיצה אחת. וגם רשימת משאלות, למקרה שמישהו שואל מה לקנות לכם ליום הולדת.</p></div>
+      </div>
+    </div>
+  </section>
+
   <section class="section">
     <div class="wrap split">
       <div class="split__visual" data-reveal>

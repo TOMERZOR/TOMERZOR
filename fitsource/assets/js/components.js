@@ -1,8 +1,8 @@
 // Building blocks used across views: the shoppable photo, swing tags, feed cards.
 import { html, icon, money, statusChip, compact, count, esc, CATEGORY_NAME } from "./ui.js";
 import { href } from "./router.js";
-import { linkAttrs, queryFor, NEW_SHOPS, RESALE_SHOPS } from "./shop.js";
-import { itemKey, isSaved, isWatching, likes } from "./store.js";
+import { linkAttrs, queryFor, isExternal, NEW_SHOPS, RESALE_SHOPS } from "./shop.js";
+import { itemKey, isSaved, isWatching, isOwned, ownKey, likes } from "./store.js";
 
 /** Where this page sits: home / feed / this fit. The last crumb is the current page. */
 export function breadcrumbs(list) {
@@ -50,15 +50,46 @@ function stockExtra(item) {
   return "";
 }
 
+/** "יש לי" toggle: mark a piece you already own, so the total shows only what's left to buy. */
+export function ownButton(key) {
+  const owned = isOwned(key);
+  return html`<button type="button" class="btn btn--xs ${owned ? "" : "btn--ghost"}" data-action="own" data-own="${key}" aria-pressed="${String(owned)}" data-on="יש לי ✓" data-off="יש לי כבר" title="יש לכם כבר את הפריט? סמנו, והסכום יראה רק מה שחסר">${icon("coat-hanger")}<span data-label>${owned ? "יש לי ✓" : "יש לי כבר"}</span></button>`;
+}
+
+/** Restock and price-drop alerts: for sold-out pieces, and for any piece with a shop page to check. */
+export function watchButton(item, watching) {
+  const sold = item.status === "sold_out" || item.availability === "sold_out";
+  const label = watching ? "ביטול ההתראה" : sold ? "עדכנו אותי כשיחזור למלאי" : "עדכנו אותי אם המחיר יורד";
+  return html`<button type="button" class="iconbtn" data-action="watch" aria-pressed="${String(watching)}" data-sold="${sold}" aria-label="${label}" title="${label}">${icon(watching ? "bell-ringing-fill" : "bell")}</button>`;
+}
+
+/**
+ * The fit's total. `priced` is [{ price, currency, owned }]; once some pieces
+ * are marked as owned, it shows what's left to buy.
+ */
+export function totalBlock(priced, note) {
+  if (!priced.length) return "";
+  const sum = (list) =>
+    Object.entries(list.reduce((t, p) => ((t[p.currency || "ILS"] = (t[p.currency || "ILS"] || 0) + p.price), t), {}))
+      .map(([c, v]) => money(v, c))
+      .join(" + ");
+  const owned = priced.filter((p) => p.owned);
+  if (!owned.length) return html`<div class="total"><span class="total__label">כל הלוק</span><span class="total__value">${sum(priced)}<small>${note}</small></span></div>`;
+  const left = priced.filter((p) => !p.owned);
+  return html`<div class="total total--owned"><span class="total__label">להשלמת הלוק</span><span class="total__value">${left.length ? sum(left) : money(0, "ILS")}<small>${owned.length === 1 ? "בלי פריט אחד שכבר יש לכם" : `בלי ${owned.length} פריטים שכבר יש לכם`} · כל הלוק ${sum(priced)}</small></span></div>`;
+}
+
 /** Swing tag for a curated feed item. */
 export function feedTag(item, i, { fitId, mini = false } = {}) {
   const key = itemKey(item);
   const saved = isSaved(key);
   const watching = isWatching(key);
+  const own = fitId && !mini ? ownKey("fit", fitId, item.id) : null;
+  const canWatch = item.status === "sold_out" || (item.url && isExternal(item.url));
   const shopUrl = item.url || NEW_SHOPS[0].url(item.query);
   const shopLabel = item.url ? (item.shop ? `לקנייה ב־${item.shop}` : "לקנייה") : "דומים בחנויות";
   const a = aAttrs(shopUrl);
-  return html`<article class="tag ${mini ? "tag--mini" : ""}" data-item="${item.id}" data-fit="${fitId || ""}">
+  return html`<article class="tag ${mini ? "tag--mini" : ""} ${own && isOwned(own) ? "is-owned" : ""}" data-item="${item.id}" data-fit="${fitId || ""}">
     <div class="tag__img">${productImg(item) ? html`<img src="${productImg(item)}" alt="" loading="lazy" decoding="async">` : ""}<span class="tag__num">${i + 1}</span></div>
     <div class="tag__body">
       <span class="tag__brand"><bdi>${item.brand || CATEGORY_NAME[item.category] || item.category}</bdi></span>
@@ -73,11 +104,14 @@ export function feedTag(item, i, { fitId, mini = false } = {}) {
         : html`<div class="tag__actions">
             ${a ? html`<a class="btn btn--xs ${item.status === "sold_out" ? "btn--ghost" : ""}" ${a}>${icon("arrow-up-right")}${shopLabel}</a>` : ""}
             ${item.status === "sold_out" ? html`<a class="btn btn--xs btn--ghost" ${aAttrs(RESALE_SHOPS[0].url(item.query))}>${icon("recycle")}יד שנייה</a>` : ""}
+            ${own ? ownButton(own) : ""}
             <span class="spacer"></span>
-            ${item.status === "sold_out"
-              ? html`<button type="button" class="iconbtn" data-action="watch" aria-pressed="${watching}" ${item.url ? "" : html`disabled title="התראת מלאי צריכה קישור לחנות"`} aria-label="${watching ? "ביטול התראת מלאי" : "עדכנו אותי כשיחזור למלאי"}">${icon(watching ? "bell-ringing-fill" : "bell")}</button>`
+            ${canWatch
+              ? item.url
+                ? watchButton(item, watching)
+                : html`<button type="button" class="iconbtn" disabled title="התראת מלאי צריכה קישור לחנות" aria-label="התראת מלאי צריכה קישור לחנות">${icon("bell")}</button>`
               : ""}
-            <button type="button" class="iconbtn iconbtn--like" data-action="save" aria-pressed="${saved}" aria-label="${saved ? "הסרה מהארון" : "שמירה בארון"}">${icon(saved ? "heart-fill" : "heart")}</button>
+            <button type="button" class="iconbtn iconbtn--like" data-action="save" aria-pressed="${String(saved)}" aria-label="${saved ? "הסרה מהארון" : "שמירה בארון"}">${icon(saved ? "heart-fill" : "heart")}</button>
           </div>`}
     </div>
   </article>`;
@@ -112,12 +146,6 @@ export function updateShopLinks(root, id, query) {
   });
 }
 
-/** Price of the whole fit, per currency, ignoring unpriced items. */
-export function fitTotal(items) {
-  const sums = {};
-  for (const it of items) if (it.price != null) sums[it.currency || "ILS"] = (sums[it.currency || "ILS"] || 0) + it.price;
-  return sums;
-}
 
 /** Feed card. */
 export function card(fit, { feature = false, delay = 0 } = {}) {

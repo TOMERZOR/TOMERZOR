@@ -71,15 +71,16 @@ async function startFakeClaude(port) {
   return server;
 }
 let jacketInStock = false;
+let jeansPrice = 59000;
 function installFakeShops() {
   const real = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input.url;
     if (url === "https://harrow.example.com/products/chore-jacket.js") {
-      return new Response(JSON.stringify({ available: jacketInStock, price: 65900, variants: [{ title: "M", available: jacketInStock }] }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ available: jacketInStock, price: 65900, variants: [{ title: "S", available: false }, { title: "M", available: jacketInStock }] }), { headers: { "content-type": "application/json" } });
     }
     if (url === "https://harrow.example.com/products/1951.js") {
-      return new Response(JSON.stringify({ available: true, price: 59000, variants: [{ title: "30", available: true }, { title: "32", available: false }] }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ available: true, price: jeansPrice, variants: [{ title: "30", available: true }, { title: "32", available: false }] }), { headers: { "content-type": "application/json" } });
     }
     if (url.startsWith("https://") && !url.includes("127.0.0.1")) return new Response("blocked", { status: 403 });
     return real(input, init);
@@ -254,9 +255,10 @@ if (run("deep")) {
   check(tape === 3, `deep: expected 3 shop matches, got ${tape}`);
   const label = await page.locator(".detail__head .label").first().textContent();
   check(/סריקה מעמיקה/.test(label), `deep: header label "${label}"`);
-  // jacket was in stock per the model, but the shop says sold out -> watch button
+  // alerts on both pieces with a shop page: the jacket (the shop says sold out) and the jeans (price)
   const watchBtn = page.locator('.tags .tag [data-action="watch"]');
-  check((await watchBtn.count()) === 1, `deep: expected one Alert me button, got ${await watchBtn.count()}`);
+  check((await watchBtn.count()) === 2, `deep: expected two alert buttons, got ${await watchBtn.count()}`);
+  check((await watchBtn.nth(1).textContent()).includes("התראת מחיר"), "deep: the in-stock jeans offer a price alert");
   const firstStatus = await page.locator(".tags .tag").first().locator(".tag__meta .status").textContent();
   check(/אזל/.test(firstStatus), `deep: jacket should be verified sold out, got "${firstStatus}"`);
   const total = await page.locator(".total__value").textContent();
@@ -264,17 +266,36 @@ if (run("deep")) {
   const shopHref = await page.locator(".match").first().getAttribute("href");
   check(shopHref === "https://harrow.example.com/products/chore-jacket", `deep: shop link ${shopHref}`);
   check((await page.locator(".match").first().getAttribute("rel")) === "sponsored noopener noreferrer", "deep: outbound links need rel=sponsored");
-  await watchBtn.click();
-  await page.waitForTimeout(200);
-  // the jacket comes back in stock; "Check now" in the closet finds it
-  jacketInStock = true;
+  // WhatsApp: the message lists each piece with the shop link FitSource found
+  const waSend = decodeURIComponent((await page.locator('.wa-bar [data-wa="send"]').getAttribute("href")).split("text=")[1]);
+  check(waSend.includes("https://harrow.example.com/products/chore-jacket") && waSend.includes("1951 Raw Selvedge"), `deep: WhatsApp message ${waSend}`);
+  check(/לקנות/.test(decodeURIComponent(await page.locator('.wa-bar [data-wa="ask"]').getAttribute("href"))), "deep: ask-friends message");
+  // "יש לי": marking the jeans as owned leaves only the jacket (resale 449) to buy
+  await page.locator('.tags .tag [data-action="own"]').nth(1).click();
+  const owned = await page.locator("[data-total-slot]").innerText();
+  check(/להשלמת הלוק/.test(owned) && /449/.test(owned) && /1,039/.test(owned), `deep: total with owned jeans "${owned}"`);
+  await page.locator('.tags .tag [data-action="own"]').nth(1).click();
+  // turning an alert on checks the shop at once, which brings its sizes
+  const savedItem = (part) => page.evaluate((p) => (JSON.parse(localStorage.getItem("fs.closet.v1") || "[]").find((i) => i.url && i.url.includes(p)) || null), part);
+  await watchBtn.first().click();
+  await page.waitForFunction(() => (JSON.parse(localStorage.getItem("fs.closet.v1") || "[]").find((i) => i.url && i.url.includes("chore-jacket")) || {}).sizes, null, { timeout: 10000 }).catch(() => failures.push("deep: first check did not bring the jacket's sizes"));
+  await watchBtn.nth(1).click();
+  await page.waitForFunction(() => (JSON.parse(localStorage.getItem("fs.closet.v1") || "[]").find((i) => i.url && i.url.includes("1951")) || {}).checkedAt, null, { timeout: 10000 }).catch(() => failures.push("deep: first check of the jeans did not run"));
+  // in the closet, watch only size M of the jacket
   await page.goto("http://127.0.0.1:8742/fitsource/closet?tab=watching");
   await page.waitForSelector("[data-check]");
+  const jacketTag = page.locator('.closet-grid .tag', { hasText: "Chore Jacket" });
+  await jacketTag.locator('[data-act="size"][data-size="M"]').click();
+  check((await savedItem("chore-jacket")).watchSize === "M", "deep: size M not saved");
+  // the M comes back and the jeans get cheaper; "Check now" reports both
+  jacketInStock = true;
+  jeansPrice = 49000;
   await page.waitForTimeout(3000); // let the visit's background check (rate-limited) run first
   await page.locator("[data-check]").click();
-  await page.waitForFunction(() => /חזר למלאי/.test(document.querySelector("[data-check-note]").textContent), null, { timeout: 15000 }).catch(async () => failures.push("deep: Check now did not report the jacket back: " + (await page.locator("[data-check-note]").textContent())));
-  await page.waitForSelector(".flag", { timeout: 5000 }).catch(() => failures.push("deep: back-in-stock flag missing"));
-  check(/במלאי|חזר למלאי/.test(await page.locator(".closet-grid .tag").first().textContent()), "deep: watched item not updated");
+  await page.waitForFunction(() => /2 עדכונים/.test(document.querySelector("[data-check-note]").textContent), null, { timeout: 15000 }).catch(async () => failures.push("deep: Check now did not report the size and the price drop: " + (await page.locator("[data-check-note]").textContent())));
+  check(/מידה M חזרה/.test(await jacketTag.textContent()), "deep: size flag missing on the jacket");
+  const jeansTag = page.locator('.closet-grid .tag', { hasText: "1951" });
+  check(/ירד מ־/.test(await jeansTag.textContent()) && /490/.test(await jeansTag.textContent()), `deep: price drop not shown: ${await jeansTag.textContent()}`);
   await shot(page, "deep-3-restock");
   for (const p of problems) failures.push("deep: " + p);
   await ctx.close();
@@ -324,6 +345,16 @@ if (run("feed")) {
   await page.waitForURL(/product\.html#circle-logo-tee/);
   await page.goto("http://127.0.0.1:8744/fitsource/fit-night-shift");
   await page.waitForSelector("[data-receipt]");
+  // WhatsApp: send the fit with its address, or ask friends
+  const waFit = decodeURIComponent((await page.locator('[data-wa="send"]').getAttribute("href")).split("text=")[1]);
+  check(waFit.startsWith("משמרת לילה") && waFit.endsWith("/fitsource/fit-night-shift") && /359/.test(waFit) && /אזל/.test(waFit), `fit WhatsApp message: ${waFit}`);
+  check((await page.locator('[data-wa="send"]').getAttribute("target")) === "_blank", "WhatsApp opens in a new tab");
+  // "יש לי": the total turns into what's left to buy, and survives a reload
+  await page.locator('.tags .tag [data-action="own"]').first().tap();
+  check(/להשלמת הלוק/.test(await page.locator("[data-total-slot]").innerText()), "owned piece should change the total");
+  await page.reload();
+  await page.waitForSelector("[data-receipt]");
+  check((await page.locator(".tag.is-owned").count()) === 1 && (await page.locator('.tags .tag [data-action="own"]').first().getAttribute("aria-pressed")) === "true", "owned piece should be remembered");
   await page.locator("[data-receipt]").tap();
   await page.waitForSelector(".modal img");
   await shot(page, "feed-receipt-phone");

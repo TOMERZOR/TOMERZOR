@@ -1,7 +1,8 @@
 // Scan page: runs the scan with live progress, then shows what was found.
 import { html, icon, money, statusChip, toast, reduceMotion, count, CATEGORY_NAME } from "../ui.js";
 import { href, setAddress } from "../router.js";
-import { shot, shopSearch, updateShopLinks, aAttrs } from "../components.js";
+import { shot, shopSearch, updateShopLinks, aAttrs, ownButton, totalBlock } from "../components.js";
+import { waBar, scanMessage, askScanMessage } from "../whatsapp.js";
 import { takePending, hasPending, getCurrent, setCurrent, startScan } from "../state.js";
 import { prepareImage, runScan, runRegion, cropThumb, ImageError } from "../scan/engine.js";
 import * as store from "../store.js";
@@ -83,9 +84,13 @@ function resultTag(item, i, scan) {
   const saved = store.isSaved(key);
   const watching = store.isWatching(key);
   const deep = scan.engine === "deep";
-  const canWatch = deep && m && m.availability === "sold_out" && m.url;
-  return html`<article class="tag tag--result" data-item="${item.id}">
-    <button type="button" class="iconbtn iconbtn--like tag__like" data-action="save" aria-pressed="${saved}" aria-label="${saved ? "הסרה מהארון" : "שמירה בארון"}">${icon(saved ? "heart-fill" : "heart")}</button>
+  // alerts for any piece with a shop page: restock when sold out, price drops otherwise
+  const canWatch = deep && m && m.url;
+  const sold = Boolean(m && m.availability === "sold_out");
+  const watchOff = sold ? "עדכנו אותי כשיחזור" : "התראת מחיר";
+  const own = store.ownKey("scan", scan.id, item.id);
+  return html`<article class="tag tag--result ${store.isOwned(own) ? "is-owned" : ""}" data-item="${item.id}">
+    <button type="button" class="iconbtn iconbtn--like tag__like" data-action="save" aria-pressed="${String(saved)}" aria-label="${saved ? "הסרה מהארון" : "שמירה בארון"}">${icon(saved ? "heart-fill" : "heart")}</button>
     <div class="tag__img">${item.thumb ? html`<img src="${item.thumb}" alt="">` : ""}<span class="tag__num">${i + 1}</span></div>
     <div class="tag__body">
       <span class="tag__brand"><bdi>${item.brand || CATEGORY_NAME[item.category] || item.category}</bdi></span>
@@ -96,7 +101,10 @@ function resultTag(item, i, scan) {
         ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "נבדק בחנות" : "")) : ""}
         <span class="label">${deep ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
       </div>
-      ${canWatch ? html`<div class="tag__actions"><button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${watching}" data-on="במעקב" data-off="עדכנו אותי כשיחזור">${icon(watching ? "bell-ringing-fill" : "bell")}<span data-label>${watching ? "במעקב" : "עדכנו אותי כשיחזור"}</span></button></div>` : ""}
+      <div class="tag__actions">
+        ${canWatch ? html`<button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${String(watching)}" data-sold="${sold}" data-on="במעקב" data-off="${watchOff}">${icon(watching ? "bell-ringing-fill" : "bell")}<span data-label>${watching ? "במעקב" : watchOff}</span></button>` : ""}
+        ${ownButton(own)}
+      </div>
     </div>
     ${deep && item.matches.length
       ? html`<div class="matches">
@@ -152,13 +160,20 @@ function errorView(photo, message) {
   </div>`;
 }
 
+/** Lowest in-stock price for each piece (deep scans), minus the pieces you already own. */
+function scanTotal(scan) {
+  if (scan.engine !== "deep") return "";
+  const priced = scan.items
+    .map((it) => ({ m: buyNow(it), owned: store.isOwned(store.ownKey("scan", scan.id, it.id)) }))
+    .filter((x) => x.m)
+    .map((x) => ({ price: x.m.price, currency: x.m.currency, owned: x.owned }));
+  return totalBlock(priced, `המחיר הנמוך במלאי עבור ${priced.length} מתוך ${scan.items.length} פריטים`);
+}
+
 function resultView(scan) {
   const items = scan.items;
   const pos = spotPositions(items);
   const deep = scan.engine === "deep";
-  const priced = deep ? items.map(buyNow).filter(Boolean) : [];
-  const totals = {};
-  for (const m of priced) totals[m.currency || "ILS"] = (totals[m.currency || "ILS"] || 0) + m.price;
   const soldCount = deep ? items.filter((it) => (primaryMatch(it) || {}).availability === "sold_out").length : 0;
   return html`<div class="detail">
     <div class="detail__media">
@@ -178,6 +193,7 @@ function resultView(scan) {
         <span class="spacer"></span>
         <label class="btn btn--sm">${icon("scan")}סריקה חדשה<input type="file" accept="image/*" class="sr-only" data-newfile></label>
       </div>
+      ${items.length ? waBar(scanMessage(scan, (it) => primaryMatch(it) || buyNow(it)), askScanMessage(scan), { sendLabel: "שליחת הפריטים" }) : ""}
       <p class="muted" data-draw-hint hidden style="font-size:.88rem">סמנו מלבן סביב פריט כדי לחפש אותו.</p>
     </div>
     <div>
@@ -192,7 +208,7 @@ function resultView(scan) {
       ${items.length
         ? html`<div class="tags" data-tags>${items.map((it, i) => html`<div style="--i:${i}">${resultTag(it, i, scan)}</div>`)}</div>`
         : html`<div class="empty" style="margin-bottom:0">${icon("t-shirt")}<p>לא הצלחנו לזהות בגדים. נסו תמונה שבה הלוק ממלא יותר מהמסגרת, או סמנו מלבן סביב פריט.</p><button type="button" class="btn btn--sm" data-draw-cta>${icon("selection-plus")}סמנו מלבן</button></div>`}
-      ${Object.keys(totals).length ? html`<div class="total"><span class="total__label">כל הלוק</span><span class="total__value">${Object.entries(totals).map(([c, v]) => money(v, c)).join(" + ")}<small>המחיר הנמוך במלאי עבור ${priced.length} מתוך ${items.length} פריטים</small></span></div>` : ""}
+      <div data-total-slot>${scanTotal(scan)}</div>
     </div>
   </div>`;
 }
@@ -473,7 +489,7 @@ function mount(root, [id]) {
 
   // Listeners on the host survive re-renders, so they are bound once here.
   offs.push(linkSpotsAndTags(host));
-  offs.push(bindTagActions(host, itemFromTag));
+  offs.push(bindTagActions(host, itemFromTag, { onOwned: () => scan && (host.querySelector("[data-total-slot]").innerHTML = String(scanTotal(scan))) }));
   host.addEventListener("input", (e) => {
     const input = e.target.closest && e.target.closest("[data-query]");
     if (!input || !scan) return;

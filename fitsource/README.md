@@ -25,7 +25,13 @@ The deep scan sends the photo to Claude (`claude-opus-5-5` by default) with web 
 
 Shop links search in Hebrew at Israeli shops and in English at shops with English catalogues (`en: true` in `shop.js`), so every piece carries both a Hebrew `query` and an English `queryEn`. Yad2 Market has no public search link, so its button opens the clothing section. Vinted is left out because it doesn't operate in Israel.
 
-Other features: shoppable feed with vibe filters, dots on every photo, draw a box to look up one piece, saved closet, restock alerts (checked each visit through the API), scan history, a shareable "fit receipt" image, light and dark themes, drag-and-drop and paste.
+Features the other outfit finders don't have (shown on the home page as "רק ב־FitSource"):
+
+- **WhatsApp:** send a fit or your scan results with every shop link, ask friends "לקנות או לא?", or send your saved pieces as a wish list (`assets/js/whatsapp.js`, wa.me links).
+- **"יש לי כבר":** mark pieces you already own; the total shows only what's left to buy (stored in this browser).
+- **Price-drop and size alerts:** the bell works on any piece with a shop page. Each check compares price and per-size stock (`compareStock` in `watch.js`), so you hear when the price drops, or when your size (picked in the closet) is back, not just "back in stock". Checked on each visit and with "בדיקה עכשיו", through the API's `/api/stock`.
+
+Also: shoppable feed with vibe filters, dots on every photo, draw a box to look up one piece, saved closet, scan history, a shareable "fit receipt" image, light and dark themes, drag-and-drop and paste.
 
 **The feed is sample content.** Its people and brands are invented and the photos are AI-generated (Higgsfield), except "Created By God", which is the real Dream Studios photo linking to the store in this repo. Replace it with real creator posts in `assets/js/data/fits.js`.
 

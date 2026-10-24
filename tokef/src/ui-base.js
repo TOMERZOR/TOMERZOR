@@ -305,7 +305,7 @@ function Shell({ children }) {
     <main class="main" id="main">
       ${S.readOnly && S.mode === 'db' ? html`<div class="banner" style=${{ marginBottom: '16px' }}><${Icon} n="visibility" /><span style=${{ flex: 1 }}>יש לך הרשאת צפייה בלבד. אפשר לראות הכול ולבדוק אישורים, אבל שמירת שינויים דורשת הרשאת עריכה מבעל העמוד.</span></div>` : null}
       ${S.problem ? html`<div class="banner" style=${{ marginBottom: '16px' }}><${Icon} n="warning" /><span style=${{ flex: 1 }}>${S.problem === 'revoked' ? 'הגישה לנתונים הופסקה בעמוד הזה.' : 'החיבור לנתונים נקטע. רעננו את העמוד כדי לראות עדכונים.'}</span><button type="button" class="btn sm" onClick=${() => location.reload()}>רענון</button></div>` : null}
-      ${S.mode === 'local' && !hideLocal ? html`<div class="banner" style=${{ marginBottom: '16px' }}><${Icon} n="info" /><span style=${{ flex: 1 }}>הנתונים נשמרים בדפדפן הזה בלבד. כשהעמוד פתוח ב-Claude הם נשמרים ומשותפים לכל הצוות.</span><button type="button" class="iconbtn" aria-label="הסתרה" onClick=${() => { safeSet('tokef.hideLocal', '1'); setHideLocal(true); }}><${Icon} n="close" /></button></div>` : null}
+      ${S.mode === 'local' && !hideLocal ? html`<div class="banner" style=${{ marginBottom: '16px' }}><${Icon} n="info" /><span style=${{ flex: 1 }}>גרסת הדגמה: הנתונים נשמרים רק בדפדפן הזה ולא נשלחים לשום מקום.</span><button type="button" class="iconbtn" aria-label="הסתרה" onClick=${() => { safeSet('tokef.hideLocal', '1'); setHideLocal(true); }}><${Icon} n="close" /></button></div>` : null}
       ${children}
     </main>
 

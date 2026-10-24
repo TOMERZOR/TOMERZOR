@@ -382,7 +382,7 @@ await run('local', async (page) => {
   await page.locator('.drop input[type=file]').setInputFiles(path.join(FIX, 'cert.png'));
   await page.waitForSelector('#ck-in', { timeout: 15000 });
   await settle(page, 400);
-  check((await page.locator('.notice').first().innerText()).includes('קריאה אוטומטית זמינה'), 'without Claude the page should explain manual entry');
+  check((await page.locator('.notice').first().innerText()).includes('מזינים את פרטי האישור ידנית'), 'without Claude the page should explain manual entry');
   check((await page.locator('.pol').count()) === 2, 'manual form should prefill the 2 required policies');
   await page.locator('#ck-in').fill('ת.א. נגרות');
   await page.locator('#ck-rq').fill('א.ב. בנייה ופיתוח בע״מ');

@@ -1,5 +1,7 @@
 import { html } from "../ui.js";
 import { CONFIG } from "../config.js";
+import { breadcrumbs } from "../components.js";
+import { pageMeta } from "../seo.js";
 
 // Updated whenever this page's substance changes (shown in the accessibility statement).
 const UPDATED = "24.10.2026";
@@ -8,6 +10,7 @@ function render() {
   const mail = CONFIG.contactEmail;
   return html`
   <div class="wrap">
+    ${breadcrumbs(pageMeta("legal").breadcrumbs)}
     <article class="prose">
       <h1 class="display" style="font-size:clamp(2.2rem,4.6vw,3.6rem)">פרטיות, גילוי ונגישות</h1>
 

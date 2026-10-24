@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- page:head (written per page by tools/build-pages.mjs) -->
+<title>הארון שלכם | FitSource</title>
+<meta name="description" content="פריטים שמורים, התראות מלאי וסריקות קודמות. הכל נשמר בדפדפן שלכם.">
+<meta name="robots" content="noindex, follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FitSource">
+<meta property="og:locale" content="he_IL">
+<meta property="og:title" content="הארון שלכם | FitSource">
+<meta property="og:description" content="פריטים שמורים, התראות מלאי וסריקות קודמות. הכל נשמר בדפדפן שלכם.">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/fitsource/closet">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/fitsource/assets/img/og/home.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="FitSource: מוצאים את החנות מאחורי כל לוק">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="הארון שלכם | FitSource">
+<meta name="twitter:description" content="פריטים שמורים, התראות מלאי וסריקות קודמות. הכל נשמר בדפדפן שלכם.">
+<meta name="twitter:image" content="https://tomerzor.github.io/TOMERZOR/fitsource/assets/img/og/home.jpg">
+<!-- /page:head -->
+<meta name="theme-color" content="#f1f1ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preload" href="assets/fonts/archivo.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/heebo-hebrew.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/app.css">
+<script>
+  // Apply a saved theme before first paint to avoid a flash.
+  try {
+    var t = JSON.parse(localStorage.getItem("fs.prefs.v1") || "{}").theme;
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+<script type="module" src="assets/js/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">דלגו לתוכן</a>
+<header class="nav" id="nav">
+  <div class="wrap nav__in">
+    <a class="logo" href="./" aria-label="FitSource, דף הבית">
+      <svg class="logo__mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M2 9V4a2 2 0 0 1 2-2h5M19 2h5a2 2 0 0 1 2 2v5M26 19v5a2 2 0 0 1-2 2h-5M9 26H4a2 2 0 0 1-2-2v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle class="dot" cx="14" cy="14" r="5"/></svg>
+      <span>FitSource</span>
+    </a>
+    <nav class="nav__links" aria-label="ראשי">
+      <a class="nav__link" href="feed" data-nav="feed">פיד</a>
+      <a class="nav__link" href="closet" data-nav="closet">הארון <span class="badge" data-closet-count></span></a>
+      <a class="nav__link" href="brands" data-nav="brands">למותגים</a>
+    </nav>
+    <a class="btn btn--accent btn--sm nav__cta" href="./" data-scan-cta><svg class="i" aria-hidden="true"><use href="#i-scan"></use></svg>סרקו לוק</a>
+    <button class="iconbtn" type="button" data-theme-toggle aria-label="החלפת מצב תצוגה"><svg class="i" aria-hidden="true"><use href="#i-moon"></use></svg></button>
+  </div>
+</header>
+<main id="main" tabindex="-1" data-prerendered><div class="view is-static">
+  <section class="wrap pagehead">
+    <nav class="crumbs" aria-label="מיקום באתר"><ol><li><a href="./">דף הבית</a></li><li><span aria-current="page">הארון</span></li></ol></nav>
+    <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">הארון שלכם</h1>
+    <p class="lede">פריטים שמורים, התראות מלאי וסריקות קודמות. הכל נשאר בדפדפן הזה.</p>
+  </section>
+  <div class="wrap">
+    <div class="tabs" role="tablist">
+      <a class="tab" role="tab" href="closet?tab=saved" aria-selected="true"><svg class="i " aria-hidden="true" focusable="false"><use href="#i-heart"></use></svg>שמורים<span class="count">0</span></a><a class="tab" role="tab" href="closet?tab=watching" aria-selected=""><svg class="i " aria-hidden="true" focusable="false"><use href="#i-bell"></use></svg>התראות<span class="count">0</span></a><a class="tab" role="tab" href="closet?tab=scans" aria-selected=""><svg class="i " aria-hidden="true" focusable="false"><use href="#i-clock"></use></svg>סריקות<span class="count">0</span></a>
+    </div>
+    <div data-panel="" role="tabpanel"><div class="empty"><svg class="i " aria-hidden="true" focusable="false"><use href="#i-heart"></use></svg><h2 class="h3">הארון ריק</h2><p>לחצו על הלב בכל פריט בפיד או בסריקות שלכם כדי לשמור אותו כאן.</p><a class="btn btn--sm" href="./"><svg class="i " aria-hidden="true" focusable="false"><use href="#i-scan"></use></svg>סרקו לוק</a></div></div>
+  </div></div></main>
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__grid">
+      <div>
+        <a class="logo" href="./" aria-label="FitSource, דף הבית">
+          <svg class="logo__mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M2 9V4a2 2 0 0 1 2-2h5M19 2h5a2 2 0 0 1 2 2v5M26 19v5a2 2 0 0 1-2 2h-5M9 26H4a2 2 0 0 1-2-2v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle class="dot" cx="14" cy="14" r="5"/></svg>
+          <span>FitSource</span>
+        </a>
+        <p class="foot__note">השימוש חינם. כשקונים דרך חלק מהקישורים לחנויות, FitSource עשויה לקבל עמלה מהחנות. זה אף פעם לא משנה אילו תוצאות תראו או את הסדר שלהן.</p>
+      </div>
+      <nav class="foot__links" aria-label="גלו">
+        <span class="label">גלו</span>
+        <a href="./">סרקו לוק</a>
+        <a href="feed">פיד</a>
+        <a href="closet">הארון</a>
+      </nav>
+      <nav class="foot__links" aria-label="החברה">
+        <span class="label">החברה</span>
+        <a href="brands">למותגים</a>
+        <a href="legal">פרטיות ונגישות</a>
+        <a href="../index.html">Dream Studios</a>
+      </nav>
+    </div>
+    <div class="foot__word" aria-hidden="true">FitSource</div>
+  </div>
+</footer>
+<nav class="tabbar" aria-label="ראשי">
+  <a href="./" data-nav="home"><svg class="i" aria-hidden="true"><use href="#i-scan"></use></svg>סריקה</a>
+  <a href="feed" data-nav="feed"><svg class="i" aria-hidden="true"><use href="#i-squares-four"></use></svg>פיד</a>
+  <a href="closet" data-nav="closet"><svg class="i" aria-hidden="true"><use href="#i-heart"></use></svg>הארון<span class="badge" data-closet-count></span></a>
+</nav>
+<div class="dropveil" id="dropveil" aria-hidden="true"><div class="dropveil__box"><p class="h2">שחררו כדי לסרוק</p></div></div>
+<noscript><p style="padding:24px">כדי לסרוק תמונות, FitSource צריך JavaScript.</p></noscript>
+</body>
+</html>

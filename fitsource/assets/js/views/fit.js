@@ -1,19 +1,22 @@
 import { html, icon, money, compact, count, postedAgo, toast, reduceMotion } from "../ui.js";
+import { href } from "../router.js";
 import { FITS, findFit } from "../data/fits.js";
-import { shot, feedTag, card, fitImg, fitTotal } from "../components.js";
+import { pageMeta } from "../seo.js";
+import { shot, feedTag, card, fitImg, fitTotal, breadcrumbs } from "../components.js";
 import * as store from "../store.js";
 import { openReceipt } from "../share.js";
 import { bindTagActions, linkSpotsAndTags } from "./shared.js";
 
 function render([id]) {
   const fit = findFit(id);
-  if (!fit) return html`<section class="wrap pagehead"><h1 class="h2">הלוק לא נמצא</h1><p class="lede">ייתכן שהוא הוסר.</p><p><a class="btn" href="#/feed">חזרה לפיד</a></p></section>`;
+  if (!fit) return html`<section class="wrap pagehead"><h1 class="h2">הלוק לא נמצא</h1><p class="lede">ייתכן שהוא הוסר.</p><p><a class="btn" href="${href("feed")}">חזרה לפיד</a></p></section>`;
   const liked = store.likes().has(fit.id);
   const totals = fitTotal(fit.items);
   const more = FITS.filter((f) => f.id !== fit.id).sort((a, b) => (b.vibe === fit.vibe) - (a.vibe === fit.vibe) || b.scans - a.scans).slice(0, 6);
   const sold = fit.items.filter((i) => i.status === "sold_out").length;
   return html`
   <div class="wrap">
+    ${breadcrumbs(pageMeta(`fit/${fit.id}`).breadcrumbs)}
     <div class="detail">
       <div class="detail__media">
         ${shot({
@@ -27,7 +30,7 @@ function render([id]) {
           <button type="button" class="btn btn--sm btn--ghost" data-like aria-pressed="${liked}">${icon(liked ? "heart-fill" : "heart")}<span data-like-count>${compact(fit.likes + (liked ? 1 : 0))}</span></button>
           <button type="button" class="btn btn--sm btn--ghost" data-receipt>${icon("receipt")}קבלה לשיתוף</button>
           <span class="spacer"></span>
-          <a class="btn btn--sm" href="#/">${icon("scan")}סרקו לוק משלכם</a>
+          <a class="btn btn--sm" href="${href("")}">${icon("scan")}סרקו לוק משלכם</a>
         </div>
       </div>
       <div>
@@ -44,7 +47,7 @@ function render([id]) {
       </div>
     </div>
     <section class="section" style="padding-top:24px">
-      <div class="section__head"><h2 class="h2" data-reveal>עוד בסגנון</h2><a class="link-arrow" href="#/feed">כל הלוקים ${icon("arrow-right")}</a></div>
+      <div class="section__head"><h2 class="h2" data-reveal>עוד בסגנון</h2><a class="link-arrow" href="${href("feed")}">כל הלוקים ${icon("arrow-right")}</a></div>
       <div class="rail">${more.map((f, i) => card(f, { delay: i }))}</div>
     </section>
   </div>`;
@@ -80,4 +83,4 @@ function mount(root, [id]) {
   return () => offs.forEach((f) => f && f());
 }
 
-export default { render, mount, title: ([id]) => (findFit(id) ? `${findFit(id).title} | FitSource` : "לוק | FitSource") };
+export default { render, mount };

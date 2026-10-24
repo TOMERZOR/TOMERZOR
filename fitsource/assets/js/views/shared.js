@@ -1,5 +1,6 @@
 // Behaviour shared by the fit page and the scan results.
 import { toast } from "../ui.js";
+import { go } from "../router.js";
 import * as store from "../store.js";
 
 /**
@@ -23,7 +24,7 @@ export function bindTagActions(root, resolve) {
         store.saveItem(item);
         setPressed(btn, true, "heart-fill");
         btn.setAttribute("aria-label", "הסרה מהארון");
-        toast("נשמר בארון", { action: "לצפייה", onAction: () => (location.hash = "#/closet") });
+        toast("נשמר בארון", { action: "לצפייה", onAction: () => go("closet") });
       }
     } else if (btn.dataset.action === "watch") {
       if (store.isWatching(key)) {

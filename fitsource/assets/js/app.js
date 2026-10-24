@@ -1,6 +1,7 @@
 // Boot: icons, router, nav state, theme, global drop/paste, restock checks.
 import { SPRITE } from "./icons.js";
-import { html, toast, observeReveals, animateCounts } from "./ui.js";
+import { html, icon, toast, observeReveals, animateCounts } from "./ui.js";
+import { card } from "./components.js";
 import * as store from "./store.js";
 import { startScan } from "./state.js";
 import { recheckWatches } from "./watch.js";
@@ -11,39 +12,54 @@ import scan from "./views/scan.js";
 import closet from "./views/closet.js";
 import brands from "./views/brands.js";
 import legal from "./views/legal.js";
+import { FITS, findFit } from "./data/fits.js";
+import { hashMode, href, routeOf, pathRouteOf, currentRoute, go, setAddress } from "./router.js";
+import { pageMeta, notFoundMeta, applyMeta } from "./seo.js";
 
 document.body.insertAdjacentHTML("afterbegin", SPRITE);
 
 const ROUTES = [
-  { re: /^\/?$/, view: home, nav: "home", title: "FitSource: מוצאים את החנות מאחורי כל לוק" },
-  { re: /^\/feed\/?$/, view: feed, nav: "feed", title: "פיד | FitSource" },
-  { re: /^\/fit\/([\w-]+)\/?$/, view: fit, nav: "feed", title: "לוק | FitSource" },
-  { re: /^\/scan(?:\/([\w-]+))?\/?$/, view: scan, nav: "home", title: "סריקה | FitSource" },
-  { re: /^\/closet(?:\/(saved|watching|scans))?\/?$/, view: closet, nav: "closet", title: "הארון | FitSource" },
-  { re: /^\/brands\/?$/, view: brands, nav: "brands", title: "למותגים | FitSource" },
-  { re: /^\/legal\/?$/, view: legal, nav: "", title: "פרטיות ונגישות | FitSource" },
+  { re: /^$/, view: home, nav: "home" },
+  { re: /^feed$/, view: feed, nav: "feed" },
+  { re: /^fit\/([\w-]+)$/, view: fit, nav: "feed" },
+  { re: /^scan(?:\/([\w-]+))?$/, view: scan, nav: "home" },
+  { re: /^closet(?:\/(saved|watching|scans))?$/, view: closet, nav: "closet" },
+  { re: /^brands$/, view: brands, nav: "brands" },
+  { re: /^legal$/, view: legal, nav: "" },
 ];
 
 const notFound = {
-  render: () => html`<section class="wrap pagehead view"><h1 class="h2">אין כאן כלום</h1><p class="lede">העמוד הזה לא קיים. אולי תסרקו לוק במקום?</p><p><a class="btn" href="#/">לדף הבית</a></p></section>`,
+  render: () => html`<section class="wrap pagehead notfound">
+      <span class="label">שגיאה 404</span>
+      <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">אין כאן כלום</h1>
+      <p class="lede">העמוד הזה לא קיים, או שהקישור השתנה. אולי תסרקו לוק במקום, או תציצו במה שאחרים סורקים עכשיו.</p>
+      <div class="toolbar"><a class="btn btn--accent" href="${href("")}">${icon("scan")}סרקו לוק</a><a class="btn btn--ghost" href="${href("feed")}">${icon("squares-four")}לפיד</a></div>
+    </section>
+    <section class="section" style="padding-top:8px">
+      <div class="wrap">
+        <div class="section__head"><h2 class="h2">חם עכשיו</h2></div>
+        <div class="rail">${[...FITS].sort((a, b) => b.scans - a.scans).slice(0, 4).map((f, i) => card(f, { delay: i }))}</div>
+      </div>
+    </section>`,
 };
 
 const main = document.getElementById("main");
+// Pages arrive already rendered (tools/build-pages.mjs); the first render replaces it without the entrance animation.
+let first = main.hasAttribute("data-prerendered");
 let cleanup = null;
 let lastPath = null;
 
-function currentPath() {
-  const h = location.hash.replace(/^#/, "");
-  return h.startsWith("/") ? h : "/" + h;
-}
-
 async function route() {
-  const path = currentPath().split("?")[0];
+  // An old "#/feed" link on the real site: move to the page's own address.
+  if (!hashMode() && location.hash.startsWith("#/")) setAddress(currentRoute());
+  const path = currentRoute();
   if (path === lastPath) return;
   lastPath = path;
   let match = null;
   let entry = ROUTES.find((r) => (match = path.match(r.re)));
-  if (!entry) entry = { view: notFound, nav: "", title: "לא נמצא | FitSource" };
+  const params = entry && match ? match.slice(1) : [];
+  if (entry === ROUTES.find((r) => r.view === fit) && !findFit(params[0])) entry = null;
+  if (!entry) entry = { view: notFound, nav: "" };
   if (cleanup) {
     try {
       cleanup();
@@ -52,20 +68,21 @@ async function route() {
     }
     cleanup = null;
   }
-  const params = match ? match.slice(1) : [];
   const out = entry.view.render(params);
-  if (out && out.redirect) {
-    location.replace(out.redirect);
+  if (out && out.redirect != null) {
+    go(out.redirect, { replace: true });
     return;
   }
-  main.innerHTML = `<div class="view">${out}</div>`;
-  document.title = (entry.view.title && entry.view.title(params)) || entry.title;
+  main.innerHTML = `<div class="view${first ? " is-static" : ""}">${out}</div>`;
+  main.removeAttribute("data-prerendered");
+  applyMeta(entry.view === notFound ? notFoundMeta() : pageMeta(path), path);
   setNav(entry.nav);
-  window.scrollTo(0, 0);
+  if (!first) window.scrollTo(0, 0);
   if (entry.view.mount) cleanup = entry.view.mount(main.firstElementChild, params) || null;
   observeReveals(main);
   animateCounts(main);
-  main.focus({ preventScroll: true });
+  if (!first) main.focus({ preventScroll: true });
+  first = false;
 }
 
 function setNav(nav) {
@@ -142,10 +159,47 @@ window.addEventListener("paste", (e) => {
   }
 });
 
+// ---------- links ----------
+// On the real site, links between pages render in place instead of reloading,
+// so a photo being scanned and the open view survive. In-page anchors
+// ("#main") scroll without changing the page, even under a <base> (404.html).
+document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest("a[href]");
+  if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  if (a.target && a.target !== "_self") return;
+  if (a.hasAttribute("download")) return;
+  const raw = a.getAttribute("href");
+  if (raw.startsWith("#") && !raw.startsWith("#/")) {
+    const target = document.getElementById(raw.slice(1));
+    if (target) {
+      e.preventDefault();
+      target.focus({ preventScroll: true });
+      target.scrollIntoView();
+    }
+    return;
+  }
+  if (hashMode()) return; // "#/..." links navigate on their own
+  const r = routeOf(a.href);
+  if (r == null) return;
+  e.preventDefault();
+  if (r !== currentRoute()) go(r);
+});
+
+// In the preview the shell's links are written for the real site; point them at "#/" routes.
+if (hashMode()) {
+  document.querySelectorAll("header a[href], footer a[href], .tabbar a[href]").forEach((a) => {
+    const raw = a.getAttribute("href");
+    if (raw.startsWith("#") || raw.startsWith("..")) return;
+    const r = pathRouteOf(raw);
+    if (r != null) a.setAttribute("href", href(r));
+  });
+}
+
 store.onChange(updateBadges);
-window.addEventListener("hashchange", route);
-// A view replaced the URL without navigating (e.g. #/scan to #/scan/<id>).
-window.addEventListener("fs:pathsync", () => (lastPath = currentPath().split("?")[0]));
+window.addEventListener(hashMode() ? "hashchange" : "popstate", route);
+window.addEventListener("fs:navigate", route);
+// A view replaced the address without navigating (e.g. scan to scan/<id>).
+window.addEventListener("fs:pathsync", () => (lastPath = currentRoute()));
 applyThemeIcon();
 updateBadges();
 route();
@@ -153,6 +207,6 @@ route();
 // Check watched items once per visit, quietly, a moment after load.
 setTimeout(() => {
   recheckWatches().then((backs) => {
-    if (backs.length) toast(backs.length === 1 ? `${backs[0].name} חזר למלאי` : `${backs.length} פריטים שעקבתם אחריהם חזרו למלאי`, { action: "לצפייה", onAction: () => (location.hash = "#/closet/watching") });
+    if (backs.length) toast(backs.length === 1 ? `${backs[0].name} חזר למלאי` : `${backs.length} פריטים שעקבתם אחריהם חזרו למלאי`, { action: "לצפייה", onAction: () => go("closet/watching") });
   });
 }, 2500);

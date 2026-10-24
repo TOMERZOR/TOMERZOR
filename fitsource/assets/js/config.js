@@ -1,5 +1,14 @@
 // Site settings. Edit these, nothing else needs to change.
 export const CONFIG = {
+  // The site's public address, ending in "/". Used for canonical links, the
+  // sitemap and share images. Change it when you move to your own domain,
+  // then run: node tools/build-pages.mjs
+  siteUrl: "https://tomerzor.github.io/TOMERZOR/fitsource/",
+
+  // Use "#/feed"-style addresses instead of real pages. Only for hosts where a
+  // page can't change its own address (the sandboxed preview).
+  hashRouting: false,
+
   // Where the FitSource API (worker/) is deployed, e.g.
   // "https://fitsource-api.your-name.workers.dev". Leave empty to use the
   // same site's /api when it exists (local preview), otherwise scans run

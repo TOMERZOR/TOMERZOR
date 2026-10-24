@@ -1,4 +1,5 @@
 import { html, icon, reduceMotion } from "../ui.js";
+import { href } from "../router.js";
 import { FITS, findFit } from "../data/fits.js";
 import { shot, feedTag, card, fitImg } from "../components.js";
 import { startScan } from "../state.js";
@@ -51,7 +52,7 @@ function render() {
           cls: "demo__shot",
         })}
         <div class="demo__tag" data-demo-tag>${feedTag(demo.items[0], 0, { fitId: demo.id, mini: true })}</div>
-        <div class="demo__caption"><span>${demo.title} של <bdi>@${demo.handle}</bdi></span><a href="#/fit/${demo.id}">לפתיחת הלוק ${icon("arrow-right")}</a></div>
+        <div class="demo__caption"><span>${demo.title} של <bdi>@${demo.handle}</bdi></span><a href="${href(`fit/${demo.id}`)}">לפתיחת הלוק ${icon("arrow-right")}</a></div>
       </div>
     </div>
   </section>
@@ -60,7 +61,7 @@ function render() {
     <div class="wrap">
       <div class="section__head">
         <h2 class="h2" data-reveal>חם עכשיו</h2>
-        <a class="link-arrow" href="#/feed" data-reveal>לפיד המלא ${icon("arrow-right")}</a>
+        <a class="link-arrow" href="${href("feed")}" data-reveal>לפיד המלא ${icon("arrow-right")}</a>
       </div>
       <div class="rail">${trending.map((f, i) => card(f, { delay: i }))}</div>
     </div>
@@ -120,8 +121,8 @@ function render() {
         <div>
           <p>חנויות משלמות ל־FitSource עמלה קטנה כשקונים דרך חלק מהקישורים שלנו. אתם משלמים אותו מחיר, וזה אף פעם לא משנה מה אנחנו מראים לכם. מותגים יכולים גם לנהל את המוצרים שלהם ולראות מה אנשים מחפשים.</p>
           <div class="band__actions">
-            <a class="btn btn--accent" href="#/feed">${icon("squares-four")}לפיד</a>
-            <a class="btn btn--ghost" href="#/brands">למותגים</a>
+            <a class="btn btn--accent" href="${href("feed")}">${icon("squares-four")}לפיד</a>
+            <a class="btn btn--ghost" href="${href("brands")}">למותגים</a>
           </div>
         </div>
       </div>
@@ -133,9 +134,9 @@ const LOG_LINES = [
   ["קורא", "4 פריטים בתמונה"],
   ["מחפש", "מעיל של 3 שכבות בצבע זית"],
   ["פותח", "northpine.com"],
-  ["מלאי", "Ridge 3L Shell: במלאי"],
+  ["מלאי", "במלאי: Ridge 3L Shell"],
   ["מחפש", "מכנסי דגמ\"ח ניילון בז'"],
-  ["מלאי", "Trail Cargo: אזל"],
+  ["מלאי", "אזל: Trail Cargo"],
   ["יד 2", "נמצא ב־eBay מ־₪290"],
 ];
 

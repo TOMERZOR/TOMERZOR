@@ -1,12 +1,15 @@
 import { html, icon } from "../ui.js";
+import { href } from "../router.js";
 import { CONFIG } from "../config.js";
 import { findFit } from "../data/fits.js";
-import { shot, fitImg } from "../components.js";
+import { shot, fitImg, breadcrumbs } from "../components.js";
+import { pageMeta } from "../seo.js";
 
 function render() {
   const contact = CONFIG.contactEmail ? `mailto:${CONFIG.contactEmail}?subject=${encodeURIComponent("שיתוף פעולה עם FitSource")}` : null;
   return html`
   <div class="wrap">
+    ${breadcrumbs(pageMeta("brands").breadcrumbs)}
     <section class="brand-hero">
       <div>
         <h1 class="display" style="font-size:clamp(2.2rem,4.4vw,3.9rem)">כל סריקה היא מישהו שמחפש את המוצר שלכם</h1>
@@ -20,7 +23,7 @@ function render() {
     <section class="brand-strip" aria-label="לוקים ששולחים קונים למותגים">
       ${["created-by-god", "shop-floor", "butter-hour"].map((id, i) => {
         const f = findFit(id);
-        return html`<a href="#/fit/${id}" class="brand-strip__item" data-reveal style="--d:${i}">${shot({ src: fitImg(f, true), alt: `${f.title}: ${f.items.map((x) => x.name).join(", ")}`, spots: f.items.map((x) => ({ x: x.x, y: x.y, label: x.brand ? `${x.brand}: ${x.name}` : x.name })) })}</a>`;
+        return html`<a href="${href(`fit/${id}`)}" class="brand-strip__item" data-reveal style="--d:${i}">${shot({ src: fitImg(f, true), alt: `${f.title}: ${f.items.map((x) => x.name).join(", ")}`, spots: f.items.map((x) => ({ x: x.x, y: x.y, label: x.brand ? `${x.brand}: ${x.name}` : x.name })) })}</a>`;
       })}
     </section>
 

@@ -1,0 +1,27 @@
+# FitSource
+
+> FitSource is a free Hebrew website for shoppers in Israel. Upload a photo or screenshot of an outfit (a "fit") and it names every piece, finds the shop that sells it (Israeli shops first, then international ones that ship to Israel), shows the price in shekels and says whether it is sold out. It also offers restock alerts, second-hand options and lookalikes.
+
+The site is in Hebrew (right to left). Quick scans run in the visitor's browser and photos are not uploaded; deep scans use Claude with web search and check stock at each shop. Shop links may be affiliate links; that never changes which results are shown.
+
+## Pages
+
+- [Home](https://tomerzor.github.io/TOMERZOR/fitsource/): upload a photo of an outfit to find where to buy each piece
+- [Feed](https://tomerzor.github.io/TOMERZOR/fitsource/feed): outfits people are scanning, with the shop, price and stock of every piece (sample content for now)
+- [For brands](https://tomerzor.github.io/TOMERZOR/fitsource/brands): verified product sources, demand data, creator matches and sponsored lookalikes for brands
+- [Privacy, disclosure and accessibility](https://tomerzor.github.io/TOMERZOR/fitsource/legal): what happens to photos, how FitSource earns, and the accessibility statement
+
+## Outfits in the feed
+
+- [Created By God](https://tomerzor.github.io/TOMERZOR/fitsource/fit-created-by-god): Circle Logo Tee Navy, Created By God Denim Shorts, גרבי קרו מצולעות, נעלי דרבי מעור
+- [משמרת לילה](https://tomerzor.github.io/TOMERZOR/fitsource/fit-night-shift): ז'קט בומבר קצר מעור, גופיית ריב, ג'ינס Arc רחב, סניקרס V-90 Chunk
+- [שביל ישראל](https://tomerzor.github.io/TOMERZOR/fitsource/fit-trail-mix): מעיל Ridge של 3 שכבות, מכנסי דגמ"ח Trail, נעלי שטח Skree, תיק צד מיני
+- [כסף שקט](https://tomerzor.github.io/TOMERZOR/fitsource/fit-quiet-money): מעיל ארוך בעל דש כפול, סוודר צמה, מכנסיים רחבים עם קפלים, תיק טוט מעור רך
+- [ילדת קניון](https://tomerzor.github.io/TOMERZOR/fitsource/fit-mall-rat): בייבי טי, ג'ינס מתרחב בגזרה נמוכה, תיק באגט כסוף, משקפי שמש אובליים
+- [יום בסדנה](https://tomerzor.github.io/TOMERZOR/fitsource/fit-shop-floor): ז'קט עבודה מקנבס, ג'ינס 1951 Raw Selvedge, מגפי סרוויס, כובע גרב
+- [עונת הפשתן](https://tomerzor.github.io/TOMERZOR/fitsource/fit-linen-season): חולצת פשתן אוברסייז, מכנסי פשתן עם שרוך, סל שוק, כפכפי אצבע מעור
+- [אין קליטה](https://tomerzor.github.io/TOMERZOR/fitsource/fit-null-signal): מעיל הארדשל עם קפוצ'ון, מכנסי דגמ"ח עם רצועות, תיק חזה, נעלי Mesh Trail Mid
+- [חזרה לקולג'](https://tomerzor.github.io/TOMERZOR/fitsource/fit-varsity-rewind): ז'קט קולג' מצמר, קפוצ'ון כבד, ג'ינס ישר קצר, סניקרס Terrace 74
+- [חייטות רכה](https://tomerzor.github.io/TOMERZOR/fitsource/fit-soft-tailoring): בלייזר כפול רך, טי עבה, מכנסיים רחבים עם קפלים, נעלי פני לופר
+- [יום בסקייטפארק](https://tomerzor.github.io/TOMERZOR/fitsource/fit-slab-day): חולצת Melt, ג'ורטס רחב, נעלי סקייט מזמש, כובע 6 פאנלים
+- [שעת חמאה](https://tomerzor.github.io/TOMERZOR/fitsource/fit-butter-hour): קרדיגן קצר עם צווארון, חצאית סאטן, בובות מרי ג'יין, תיק כתף מיני

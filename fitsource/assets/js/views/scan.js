@@ -1,5 +1,6 @@
 // Scan page: runs the scan with live progress, then shows what was found.
 import { html, icon, money, statusChip, toast, reduceMotion, count, CATEGORY_NAME } from "../ui.js";
+import { href, setAddress } from "../router.js";
 import { shot, shopSearch, updateShopLinks, aAttrs } from "../components.js";
 import { takePending, hasPending, getCurrent, setCurrent, startScan } from "../state.js";
 import { prepareImage, runScan, runRegion, cropThumb, ImageError } from "../scan/engine.js";
@@ -13,10 +14,10 @@ const CONF = { exact: "נמצא המוצר המדויק", likely: "כנראה ז
 function render([id]) {
   if (id) {
     if (!store.getScan(id) && !(getCurrent() && getCurrent().id === id)) {
-      return html`<section class="wrap pagehead"><h1 class="h2">הסריקה לא נמצאה</h1><p class="lede">סריקות נשמרות רק בדפדפן הזה, וסריקות ישנות נמחקות כדי לפנות מקום.</p><p><a class="btn" href="#/">סרקו לוק</a></p></section>`;
+      return html`<section class="wrap pagehead"><h1 class="h2">הסריקה לא נמצאה</h1><p class="lede">סריקות נשמרות רק בדפדפן הזה, וסריקות ישנות נמחקות כדי לפנות מקום.</p><p><a class="btn" href="${href("")}">סרקו לוק</a></p></section>`;
     }
   } else if (!hasPending() && !getCurrent()) {
-    return { redirect: "#/" };
+    return { redirect: "" };
   }
   return html`<div class="wrap"><div data-scan-root></div></div>`;
 }
@@ -348,9 +349,7 @@ function mount(root, [id]) {
       setCurrent(scan);
       // Save first: leaving during the short reveal below must not lose the result.
       persist(scan).catch(() => {});
-      try {
-        history.replaceState(null, "", "#/scan/" + scan.id);
-      } catch {} // some sandboxed frames refuse it; the scan still shows
+      setAddress("scan/" + scan.id);
       window.dispatchEvent(new Event("fs:pathsync"));
       await new Promise((r) => setTimeout(r, reduceMotion() ? 0 : 450));
       if (stale()) return;

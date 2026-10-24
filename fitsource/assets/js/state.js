@@ -1,5 +1,6 @@
 // The photo being scanned right now (kept in memory, not in the URL).
 import { CONFIG } from "./config.js";
+import { currentRoute, go } from "./router.js";
 import { toast } from "./ui.js";
 
 let pending = null;
@@ -10,10 +11,10 @@ export function startScan(file) {
   if (CONFIG.scanDisabledMessage) return toast(CONFIG.scanDisabledMessage);
   pending = file;
   current = null;
-  if (location.hash === "#/scan") {
+  if (currentRoute() === "scan") {
     window.dispatchEvent(new CustomEvent("fs:newscan"));
   } else {
-    location.hash = "#/scan";
+    go("scan");
   }
 }
 

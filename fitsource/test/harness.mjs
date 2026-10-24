@@ -12,7 +12,26 @@ export const FITSOURCE = path.resolve(here, "..");
 export const ROOT = path.resolve(FITSOURCE, "..");
 const NM = path.join(FITSOURCE, "node_modules");
 
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".png": "image/png", ".woff2": "font/woff2", ".txt": "text/plain", ".webmanifest": "application/manifest+json" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".xml": "application/xml", ".ico": "image/x-icon", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".jpg": "image/jpeg", ".png": "image/png", ".woff2": "font/woff2", ".txt": "text/plain; charset=utf-8", ".webmanifest": "application/manifest+json" };
+
+/**
+ * Find what a static host would send for a path: the file, folder/index.html,
+ * or name.html for /name (pretty URLs). Unknown paths under /fitsource/ get
+ * its 404.html, with the <base> pointed at where FitSource is served here.
+ */
+export function resolveFile(pathname) {
+  let file = path.join(ROOT, decodeURIComponent(pathname));
+  if (!file.startsWith(ROOT)) return null;
+  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
+  else if (!fs.existsSync(file) && fs.existsSync(file + ".html")) file += ".html";
+  if (fs.existsSync(file) && fs.statSync(file).isFile()) return { status: 200, file, data: fs.readFileSync(file) };
+  const notFound = path.join(FITSOURCE, "404.html");
+  if (pathname.startsWith("/fitsource/") && fs.existsSync(notFound)) {
+    const data = fs.readFileSync(notFound, "utf8").replace(/<base href="[^"]*">/, '<base href="/fitsource/">');
+    return { status: 404, file: notFound, data };
+  }
+  return { status: 404, file: "x.txt", data: "not found" };
+}
 
 /** Serve the repository root. `api` (optional) handles /api/* like the worker. */
 export function startServer(port, { api } = {}) {
@@ -25,14 +44,10 @@ export function startServer(port, { api } = {}) {
       }
       return api(req, res);
     }
-    let file = path.join(ROOT, decodeURIComponent(url.pathname));
-    if (!file.startsWith(ROOT)) return res.writeHead(403).end();
-    if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
-    fs.readFile(file, (err, data) => {
-      if (err) return res.writeHead(404).end("not found");
-      res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" });
-      res.end(data);
-    });
+    const found = resolveFile(url.pathname);
+    if (!found) return res.writeHead(403).end();
+    res.writeHead(found.status, { "content-type": TYPES[path.extname(found.file)] || "application/octet-stream" });
+    res.end(found.data);
   });
   return new Promise((resolve) => server.listen(port, "127.0.0.1", () => resolve(server)));
 }

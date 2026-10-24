@@ -1,0 +1,5 @@
+# FitSource
+User-agent: *
+Allow: /
+
+Sitemap: https://tomerzor.github.io/TOMERZOR/fitsource/sitemap.xml

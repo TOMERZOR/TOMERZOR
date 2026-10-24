@@ -1,7 +1,16 @@
 // Building blocks used across views: the shoppable photo, swing tags, feed cards.
 import { html, icon, money, statusChip, compact, count, esc, CATEGORY_NAME } from "./ui.js";
+import { href } from "./router.js";
 import { linkAttrs, queryFor, NEW_SHOPS, RESALE_SHOPS } from "./shop.js";
 import { itemKey, isSaved, isWatching, likes } from "./store.js";
+
+/** Where this page sits: home / feed / this fit. The last crumb is the current page. */
+export function breadcrumbs(list) {
+  if (!list || list.length < 2) return "";
+  return html`<nav class="crumbs" aria-label="מיקום באתר"><ol>${list.map((c, i) =>
+    i === list.length - 1 ? html`<li><span aria-current="page">${c.name}</span></li>` : html`<li><a href="${href(c.route)}">${c.name}</a></li>`,
+  )}</ol></nav>`;
+}
 
 export const fitImg = (fit, small = false) => `assets/img/fits/${fit.img}${small ? "-sm" : ""}.jpg`;
 export const productImg = (item) => (item.img ? (item.img.startsWith("data:") ? item.img : `assets/img/products/${item.img}.jpg`) : null);
@@ -114,7 +123,7 @@ export function fitTotal(items) {
 export function card(fit, { feature = false, delay = 0 } = {}) {
   const liked = likes().has(fit.id);
   const sold = fit.items.filter((i) => i.status === "sold_out").length;
-  return html`<a class="card ${feature ? "card--feature" : ""}" href="#/fit/${fit.id}" data-reveal style="--d:${delay}" aria-label="${fit.title} של ‎@${fit.handle}, ${count(fit.items.length, "פריט אחד", "פריטים")}">
+  return html`<a class="card ${feature ? "card--feature" : ""}" href="${href(`fit/${fit.id}`)}" data-reveal style="--d:${delay}" aria-label="${fit.title} של ‎@${fit.handle}, ${count(fit.items.length, "פריט אחד", "פריטים")}">
     ${shot({
       src: fitImg(fit, !feature),
       srcset: feature ? null : `${fitImg(fit, true)} 480w, ${fitImg(fit)} 900w`,

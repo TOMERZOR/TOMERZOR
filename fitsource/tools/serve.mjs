@@ -14,7 +14,7 @@ const TYPES = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml",
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".woff2": "font/woff2",
-  ".txt": "text/plain; charset=utf-8", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json",
+  ".txt": "text/plain; charset=utf-8", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json", ".xml": "application/xml; charset=utf-8",
 };
 
 let api = null;
@@ -47,19 +47,23 @@ const server = http.createServer(async (req, res) => {
     res.end();
     return;
   }
+  // Like the static hosts: /feed serves feed.html, unknown pages get 404.html.
   let file = path.join(ROOT, decodeURIComponent(url.pathname));
   if (!file.startsWith(ROOT)) {
     res.writeHead(403).end();
     return;
   }
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
-  fs.readFile(file, (err, data) => {
-    if (err) {
-      res.writeHead(404, { "content-type": "text/plain" }).end("Not found");
-      return;
-    }
-    res.writeHead(200, { "content-type": TYPES[path.extname(file).toLowerCase()] || "application/octet-stream", "cache-control": "no-cache" });
-    res.end(data);
-  });
+  else if (!fs.existsSync(file) && fs.existsSync(file + ".html")) file += ".html";
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    const notFound = path.join(ROOT, "fitsource/404.html");
+    if (url.pathname.startsWith("/fitsource/") && fs.existsSync(notFound)) {
+      res.writeHead(404, { "content-type": TYPES[".html"] });
+      res.end(fs.readFileSync(notFound, "utf8").replace(/<base href="[^"]*">/, '<base href="/fitsource/">'));
+    } else res.writeHead(404, { "content-type": "text/plain" }).end("Not found");
+    return;
+  }
+  res.writeHead(200, { "content-type": TYPES[path.extname(file).toLowerCase()] || "application/octet-stream", "cache-control": "no-cache" });
+  res.end(fs.readFileSync(file));
 });
 server.listen(PORT, () => console.log(`FitSource preview: http://localhost:${PORT}/fitsource/`));

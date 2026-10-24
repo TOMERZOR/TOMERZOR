@@ -119,7 +119,7 @@ if (run("quick")) {
   const names = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
   check(names.length >= 3, `quick scan found only ${names.length} pieces: ${names}`);
   check(names.some((n) => /ז'קט|מעיל/.test(n)), `quick scan missed the jacket: ${names}`);
-  check(/#\/scan\/[\w]+$/.test(page.url()), `url not updated to the scan id: ${page.url()}`);
+  check(/\/fitsource\/scan\?id=[\w]+$/.test(page.url()), `url not updated to the scan id: ${page.url()}`);
   const spots = await page.$$eval(".detail__media .hotspot", (els) => els.length);
   check(spots === names.length, `hotspots ${spots} != items ${names.length}`);
 
@@ -182,15 +182,15 @@ if (run("quick")) {
   await page.reload();
   await page.waitForSelector(".tags .tag", { timeout: 15000 });
   check((await page.locator(".tags .tag").count()) === before + 1, "scan after reload has a different number of pieces");
-  await page.goto("http://127.0.0.1:8741/fitsource/#/closet/scans");
+  await page.goto("http://127.0.0.1:8741/fitsource/closet?tab=scans");
   await page.waitForSelector(".scan-grid .card");
   check((await page.locator(".scan-grid .card").count()) === 1, "closet scans tab should list 1 scan");
-  await page.goto("http://127.0.0.1:8741/fitsource/#/closet");
+  await page.goto("http://127.0.0.1:8741/fitsource/closet");
   await page.waitForSelector(".closet-grid .tag");
   await shot(page, "quick-5-closet");
 
   // a second scan from the scan page
-  await page.goto("http://127.0.0.1:8741/fitsource/#/scan/" + (await page.evaluate(() => JSON.parse(localStorage.getItem("fs.scans.v1"))[0].id)));
+  await page.goto("http://127.0.0.1:8741/fitsource/scan?id=" + (await page.evaluate(() => JSON.parse(localStorage.getItem("fs.scans.v1"))[0].id)));
   await page.waitForSelector("[data-newfile]");
   await page.setInputFiles("[data-newfile]", path.join(FITSOURCE, "assets/img/fits/butter-hour.jpg"));
   await page.waitForSelector("[data-tape]");
@@ -268,7 +268,7 @@ if (run("deep")) {
   await page.waitForTimeout(200);
   // the jacket comes back in stock; "Check now" in the closet finds it
   jacketInStock = true;
-  await page.goto("http://127.0.0.1:8742/fitsource/#/closet/watching");
+  await page.goto("http://127.0.0.1:8742/fitsource/closet?tab=watching");
   await page.waitForSelector("[data-check]");
   await page.waitForTimeout(3000); // let the visit's background check (rate-limited) run first
   await page.locator("[data-check]").click();
@@ -288,7 +288,7 @@ if (run("feed")) {
   const ctx = await newContext(browser, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
   const page = await ctx.newPage();
   const problems = watch(page);
-  await page.goto("http://127.0.0.1:8744/fitsource/#/feed");
+  await page.goto("http://127.0.0.1:8744/fitsource/feed");
   await page.waitForSelector(".grid .card");
   const all = await page.locator(".grid .card").count();
   await page.locator('[data-vibe="טקוור"]').tap();
@@ -299,7 +299,15 @@ if (run("feed")) {
   check((await page.locator(".grid .card .card__title").first().textContent()) === "ילדת קניון", "Newest should start with the 3h-old fit");
   await page.locator(".grid .card").first().tap();
   await page.waitForSelector(".detail .tags .tag");
-  check(/#\/fit\/mall-rat$/.test(page.url()), "tapping a card opens its fit");
+  check(/\/fitsource\/fit-mall-rat$/.test(page.url()), "tapping a card opens its fit");
+  check((await page.title()).startsWith("ילדת קניון"), `fit page title: ${await page.title()}`);
+  // Back returns to the feed, Forward to the fit, without reloading
+  await page.goBack();
+  await page.waitForSelector(".grid .card");
+  check(/\/fitsource\/feed$/.test(page.url()) && (await page.title()).startsWith("פיד"), `back should show the feed: ${page.url()}`);
+  await page.goForward();
+  await page.waitForSelector(".detail .tags .tag");
+  check(/\/fitsource\/fit-mall-rat$/.test(page.url()), "forward should show the fit again");
   await page.locator(".detail__media .hotspot").nth(2).tap();
   check(await page.locator(".tags .tag").nth(2).evaluate((e) => e.classList.contains("is-active")), "tapping a dot highlights the tag");
   await page.locator("[data-like]").tap();
@@ -307,14 +315,14 @@ if (run("feed")) {
   await page.locator('.tags .tag [data-action="save"]').first().tap();
   await page.waitForTimeout(200);
   check((await page.locator(".tabbar [data-closet-count]").textContent()) === "1", "tab bar badge should be 1 after saving");
-  await page.goto("http://127.0.0.1:8744/fitsource/#/fit/created-by-god");
+  await page.goto("http://127.0.0.1:8744/fitsource/fit-created-by-god");
   await page.waitForSelector(".tags .tag");
   const dsHref = await page.locator(".tags .tag a.btn").first().getAttribute("href");
   check(dsHref === "../product.html#circle-logo-tee", `Dream Studios link: ${dsHref}`);
   check((await page.locator(".tags .tag a.btn").first().getAttribute("target")) === null, "store link should open in the same tab");
   await page.locator(".tags .tag a.btn").first().tap();
   await page.waitForURL(/product\.html#circle-logo-tee/);
-  await page.goto("http://127.0.0.1:8744/fitsource/#/fit/night-shift");
+  await page.goto("http://127.0.0.1:8744/fitsource/fit-night-shift");
   await page.waitForSelector("[data-receipt]");
   await page.locator("[data-receipt]").tap();
   await page.waitForSelector(".modal img");

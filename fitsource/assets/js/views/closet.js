@@ -1,6 +1,8 @@
 import { html, icon, money, statusChip, toast, timeAgo, count } from "../ui.js";
+import { href } from "../router.js";
 import * as store from "../store.js";
-import { aAttrs, productImg } from "../components.js";
+import { aAttrs, productImg, breadcrumbs } from "../components.js";
+import { pageMeta } from "../seo.js";
 import { NEW_SHOPS } from "../shop.js";
 import { deepScanStatus } from "../scan/engine.js";
 import { recheckWatches } from "../watch.js";
@@ -28,7 +30,7 @@ function closetTag(it) {
       ${it.watch ? html`<span class="label">${it.checkedAt ? `נבדק ${timeAgo(it.checkedAt)}` : "עוד לא נבדק"}</span>` : ""}
       <div class="tag__actions">
         <a class="btn btn--xs" ${aAttrs(url)}>${icon("arrow-up-right")}${it.url ? (it.shop ? `לקנייה ב־${it.shop}` : "לקנייה") : "דומים בחנויות"}</a>
-        ${it.fitId ? html`<a class="btn btn--xs btn--ghost" href="#/fit/${it.fitId}">ללוק</a>` : ""}
+        ${it.fitId ? html`<a class="btn btn--xs btn--ghost" href="${href(`fit/${it.fitId}`)}">ללוק</a>` : ""}
         <span class="spacer"></span>
         ${it.url ? html`<button type="button" class="iconbtn" data-act="watch" aria-pressed="${it.watch}" aria-label="${it.watch ? "ביטול התראת מלאי" : "עדכנו אותי כשיחזור למלאי"}">${icon(it.watch ? "bell-ringing-fill" : "bell")}</button>` : ""}
         <button type="button" class="iconbtn" data-act="remove" aria-label="הסרת ${it.name}">${icon("trash")}</button>
@@ -43,7 +45,7 @@ function panel(tab) {
     if (!list.length) return empty("clock", "עוד אין סריקות", "הסריקות שלכם נשמרות כאן, בדפדפן הזה, כדי שתוכלו לחזור אליהן.");
     return html`<div class="scan-grid">${list.map(
       (s) => html`<div class="card" data-scan="${s.id}">
-        <a href="#/scan/${s.id}" class="shot shot--frame" aria-label="פתיחת הסריקה מ${timeAgo(s.createdAt)}"><img src="${s.photo}" alt="" loading="lazy"></a>
+        <a href="${href(`scan/${s.id}`)}" class="shot shot--frame" aria-label="פתיחת הסריקה מ${timeAgo(s.createdAt)}"><img src="${s.photo}" alt="" loading="lazy"></a>
         <div class="card__meta">
           <div><div class="card__title">${count(s.items.length, "פריט אחד", "פריטים")}</div><div class="card__by">${s.engine === "deep" ? "סריקה מעמיקה" : "סריקה מהירה"}, ${timeAgo(s.createdAt)}</div></div>
           <button type="button" class="iconbtn" data-del-scan="${s.id}" aria-label="מחיקת הסריקה">${icon("trash")}</button>
@@ -62,7 +64,7 @@ function panel(tab) {
 }
 
 function empty(ic, title, text) {
-  return html`<div class="empty">${icon(ic)}<h2 class="h3">${title}</h2><p>${text}</p><a class="btn btn--sm" href="#/">${icon("scan")}סרקו לוק</a></div>`;
+  return html`<div class="empty">${icon(ic)}<h2 class="h3">${title}</h2><p>${text}</p><a class="btn btn--sm" href="${href("")}">${icon("scan")}סרקו לוק</a></div>`;
 }
 
 function counts() {
@@ -74,12 +76,13 @@ function render([tab = "saved"]) {
   const n = counts();
   return html`
   <section class="wrap pagehead">
+    ${breadcrumbs(pageMeta("closet").breadcrumbs)}
     <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">הארון שלכם</h1>
     <p class="lede">פריטים שמורים, התראות מלאי וסריקות קודמות. הכל נשאר בדפדפן הזה.</p>
   </section>
   <div class="wrap">
     <div class="tabs" role="tablist">
-      ${TABS.map(([id, label, ic]) => html`<a class="tab" role="tab" href="#/closet/${id}" aria-selected="${id === tab}">${icon(ic)}${label}<span class="count">${n[id]}</span></a>`)}
+      ${TABS.map(([id, label, ic]) => html`<a class="tab" role="tab" href="${href(`closet/${id}`)}" aria-selected="${id === tab}">${icon(ic)}${label}<span class="count">${n[id]}</span></a>`)}
     </div>
     <div data-panel role="tabpanel">${panel(tab)}</div>
   </div>`;

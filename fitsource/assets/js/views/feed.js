@@ -1,6 +1,8 @@
 import { html, icon, observeReveals } from "../ui.js";
+import { href } from "../router.js";
 import { FITS, VIBES, ALL } from "../data/fits.js";
-import { card } from "../components.js";
+import { card, breadcrumbs } from "../components.js";
+import { pageMeta } from "../seo.js";
 import { prefs, setPref } from "../store.js";
 
 const SORTS = [
@@ -25,7 +27,7 @@ function sorted(list, sort) {
 function grid(vibe, sort) {
   const list = sorted(FITS.filter((f) => vibe === ALL || f.vibe === vibe), sort);
   if (!list.length) return html`<div class="empty">${icon("squares-four")}<p>עוד אין לוקים בסגנון הזה.</p></div>`;
-  const cta = html`<a class="card card--cta" href="#/" data-reveal style="--d:3"><span class="cta-tile">${icon("scan")}<span class="cell__big">ראיתם לוק שאהבתם?</span><span>סרקו אותו וקבלו כל פריט.</span><span class="btn btn--sm">${icon("upload-simple")}סרקו לוק</span></span></a>`;
+  const cta = html`<a class="card card--cta" href="${href("")}" data-reveal style="--d:3"><span class="cta-tile">${icon("scan")}<span class="cell__big">ראיתם לוק שאהבתם?</span><span>סרקו אותו וקבלו כל פריט.</span><span class="btn btn--sm">${icon("upload-simple")}סרקו לוק</span></span></a>`;
   return html`<div class="grid">${list.map((f, i) => card(f, { feature: i === 0 && vibe === ALL, delay: i % 4 }))}${vibe === ALL ? cta : ""}</div>`;
 }
 
@@ -35,6 +37,7 @@ function render() {
   const sort = SORTS.some(([k]) => k === p.sort) ? p.sort : "trending";
   return html`
   <section class="wrap pagehead">
+    ${breadcrumbs(pageMeta("feed").breadcrumbs)}
     <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">הפיד</h1>
     <p class="lede">הלוקים שסורקים עכשיו, עם המקור של כל פריט ובדיקת מלאי.</p>
     <span class="sample-note">${icon("info")}פיד לדוגמה: לוקים ומותגים להמחשה, ולוק אמיתי אחד של Dream Studios.</span>

@@ -56,6 +56,7 @@
   --accent: #c9f23a;
   --accent-ink: #121214;
   --accent-text: #4f6900;
+  --accent-on-ink: #c9f23a; /* accent text on an --ink background (inverted cards) */
   --sold: #bf3319;
   --low: #995a00;
   --scrim: rgba(12, 12, 14, 0.5);
@@ -87,6 +88,7 @@
     --line: #2a2a30;
     --line-2: #3a3a41;
     --accent-text: #c9f23a;
+    --accent-on-ink: #4f6900;
     --sold: #ff6247;
     --low: #f2a93b;
     --scrim: rgba(0, 0, 0, 0.6);
@@ -106,6 +108,7 @@
   --line: #2a2a30;
   --line-2: #3a3a41;
   --accent-text: #c9f23a;
+  --accent-on-ink: #4f6900;
   --sold: #ff6247;
   --low: #f2a93b;
   --scrim: rgba(0, 0, 0, 0.6);
@@ -1541,7 +1544,7 @@ main:focus {
   text-overflow: ellipsis;
 }
 .log__line .k {
-  color: var(--accent);
+  color: var(--accent-on-ink);
   flex: none;
 }
 .log--light .log__line .k {
@@ -1644,6 +1647,42 @@ main:focus {
   padding-bottom: clamp(20px, 3vw, 28px);
   display: grid;
   gap: 14px;
+}
+.crumbs {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--ink-3);
+  padding-top: clamp(16px, 2.4vw, 24px);
+}
+.pagehead .crumbs {
+  padding-top: 0;
+}
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crumbs li + li::before {
+  content: "/";
+  margin-inline-end: 6px;
+  color: var(--line-2);
+}
+.crumbs a {
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.crumbs a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.crumbs [aria-current] {
+  color: var(--ink);
+}
+.view.is-static {
+  animation: none;
 }
 .pagehead .lede {
   max-width: 56ch;

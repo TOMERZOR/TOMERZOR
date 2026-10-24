@@ -2,7 +2,9 @@
 
 A premium-minimal physics puzzle: pull back, release, and shatter every piece of glass with as few balls as possible. Plain HTML, CSS and JavaScript modules (no build step), with [planck.js](https://github.com/piqnt/planck.js) for physics. The iOS and Android apps wrap this folder with Capacitor (see `../shard-app`).
 
-Run locally: `python3 -m http.server 8080` in this folder, then open http://localhost:8080. Add `?test` to the URL to walk through simulated ads and purchases.
+Run locally: `python3 -m http.server 8080` in this folder, then open http://localhost:8080. Add `?test` to the URL to walk through simulated ads and purchases, or `?dev` to open every level and world.
+
+`node tools/build-artifact.mjs <folder>` writes the game as one web page plus the list of files to publish next to it; add `--dev` for the developer build with every level open.
 
 ## Code map
 | File | What it does |

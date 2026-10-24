@@ -16,6 +16,8 @@ const calmMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)')
 const d = () => save.d;
 const PER_WORLD = 24;
 const HINT_COST = 40, CONTINUE_COST = 60;
+// the developer build (?dev, or the page tools/build-artifact.mjs --dev writes) opens every level and world
+const DEV = (() => { try { return !!window.__SHARD_DEV || new URLSearchParams(location.search).has('dev'); } catch (e) { return false; } })();
 // the first level that holds a new kind of glass explains it in one line
 const GLASS_TIPS = [
   ['frost', (lv) => lv.objects.some((o) => o.hp > 1), 'Frosted glass takes two hits'],
@@ -121,7 +123,7 @@ function progressIndex() {
   for (let i = 0; i < LEVELS.length; i++) if (!d().stars[LEVELS[i].id]) return i;
   return LEVELS.length - 1;
 }
-function unlocked(i) { return i <= progressIndex(); }
+function unlocked(i) { return DEV || i <= progressIndex(); }
 
 function goHome() {
   closeSheet(true);
@@ -219,14 +221,14 @@ const DEMO = {
 };
 const demoExt = (o) => o.r ?? (o.h || 0) / 2;
 const DEMO_BOX = DEMO.objects.filter((o) => o.t !== 'rope').reduce(([lo, hi], o) => [Math.min(lo, o.y - demoExt(o)), Math.max(hi, o.y + demoExt(o))], [Infinity, -Infinity]);
-// Short phones leave less room between the tagline and the Daily card than tall ones:
+// Short phones leave less room between the logo block and the Daily card than tall ones:
 // center the scene in that gap, and shrink it when it doesn't fit.
 // layout position within #home; the entry animation's transforms make offsetTop relative to the animated parent
 const homeTop = (el) => { let y = 0; for (; el && el.id !== 'home'; el = el.offsetParent) y += el.offsetTop; return y; };
 function fitDemo() {
-  const tag = $('#home .tagline'), daily = $('#btn-daily');
+  const brand = $('#home .brand'), daily = $('#btn-daily'); // the brand block ends at the tagline (or the dev build's label)
   if (!$('#home').classList.contains('on')) return DEMO.objects;
-  const top = renderer.toWorld(0, homeTop(tag) + tag.offsetHeight + 10)[1];
+  const top = renderer.toWorld(0, homeTop(brand) + brand.offsetHeight + 10)[1];
   const bottom = renderer.toWorld(0, homeTop(daily) - 8)[1];
   const [lo, hi] = DEMO_BOX, mid = (lo + hi) / 2;
   const k = Math.max(0.6, Math.min(1, (top - bottom) / (hi - lo)));
@@ -940,9 +942,10 @@ sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); hap.setHaptics(d
 document.addEventListener('pointerdown', () => { sfx.initAudio(); sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); }, { once: true, capture: true });
 initMonetization({ fakeAd, fakePurchase, toast });
 scheduleReminders();
-$('#version').textContent = `SHARD 1.0 · ${LEVELS.length} levels`;
-if (!d().stars[LEVELS[0].id]) {
-  // first launch goes straight into the first level: no menus before the fun
+$('#version').textContent = `SHARD 1.0 · ${LEVELS.length} levels${DEV ? ' · dev build' : ''}`;
+if (DEV) $('#home .brand').insertAdjacentHTML('beforeend', '<p class="devchip">Dev build · every level open</p>');
+if (!DEV && !d().stars[LEVELS[0].id]) {
+  // first launch goes straight into the first level: no menus before the fun (the dev build opens on home, a tap from the map)
   startLevel(0);
 } else goHome();
 requestAnimationFrame(loop);

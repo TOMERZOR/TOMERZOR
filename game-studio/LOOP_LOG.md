@@ -311,3 +311,8 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
   - Every layout is identical to the base apart from the glass flags, and every changed level is stable at rest.
   - No console errors in basic, level1, firstrun, flow, hint, worlds, guide, audio, economy, calm and map, nor in the new `newglass` (a crack, a break and an unlock on a phone) and `levelshots`.
   - The new sounds were measured and reviewed in code, not listened to.
+
+## Round 32: a developer build with every level open
+- **Why:** to play any level, the new hard ones included, without clearing everything before it.
+- **What:** `?dev` on the URL, or the page `tools/build-artifact.mjs <folder> --dev` writes (a published page's address can't carry `?dev`), opens every level and world gate. That build opens on the home screen instead of level 1, and a label under the tagline says so; the home demo now fits below the whole logo block, so the label never covers it. The normal game is unchanged.
+- **Verified:** on a phone, the dev page opens on home with every world tab, level and gate open, starts level 120 and level 56 (with its lock coach line) from the map, and fits the label on 375×667, 390×844 and 430×932. The normal page still starts in level 1, keeps 23 of Dawn's 24 levels and four worlds locked, and answers a locked level with "Clear level 1 first". No console errors there or in basic, firstrun, map and flow.

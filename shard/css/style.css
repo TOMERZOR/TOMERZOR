@@ -141,6 +141,8 @@ button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px soli
 .logo span:nth-child(3) { clip-path: polygon(0 0, 100% 0, 100% 46%, 58% 54%, 100% 62%, 100% 100%, 0 100%, 0 58%, 38% 50%, 0 40%); }
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-1.2deg); } }
 .tagline { margin: 10px 0 0; font-size: 15px; font-weight: 800; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); padding-left: .32em; }
+/* the developer build says so under the logo */
+.devchip { display: inline-block; margin: 14px 0 0; padding: 6px 12px; border-radius: 14px; background: var(--accent-a16); font-size: 13px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .home-bottom { display: flex; flex-direction: column; gap: 12px; }
 .home-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .navbtn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; border-radius: 20px; background: var(--surface-a72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 13px; font-weight: 800; transition: transform .18s var(--spring); }

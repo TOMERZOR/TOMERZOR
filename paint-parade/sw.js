@@ -9,8 +9,9 @@ const CORE = [
   './img/bg_home.webp', './img/bg_play.webp', './img/bucket.webp', './img/calendar.webp', './img/chest.webp', './img/coin.webp', './img/gallery.webp', './img/gear.webp', './img/gift.webp', './img/grab.webp', './img/hand.webp', './img/heart.webp', './img/home.webp', './img/lock.webp', './img/logo.webp', './img/rainbow.webp', './img/shop.webp', './img/slot.webp', './img/star.webp', './img/tv.webp',
 ];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting())); });
+// Only our own old caches: other apps on the same site (github.io origin) keep theirs.
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('paintparade-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;

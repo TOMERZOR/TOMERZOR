@@ -102,11 +102,11 @@ img { -webkit-user-drag: none; user-select: none; }
 .muted { margin: 0 0 6px; color: #d7e7ff; font-size: 15px; font-weight: 500; text-align: center; }
 
 /* ---------- logo ---------- */
-.logo { position: relative; display: grid; place-items: center; width: min(92vw, 470px); aspect-ratio: 16 / 9; }
+.logo { position: relative; display: grid; place-items: center; width: min(92vw, 470px); aspect-ratio: 16 / 9; container-type: inline-size; }
 .logo-plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 12px 16px rgba(0,0,0,.45)); }
-.logo-main { position: relative; font-size: clamp(46px, 13vw, 82px); font-weight: 700; line-height: 1; margin-top: 6%; transform: rotate(-3deg); letter-spacing: -.01em; }
+.logo-main { position: relative; font-size: clamp(46px, 13vw, 82px); font-size: 14cqi; font-weight: 700; line-height: 1; margin-top: 6%; transform: rotate(-3deg); letter-spacing: -.01em; }
 .logo-main { -webkit-text-stroke-width: .17em; }
-.logo-top { position: absolute; top: 26%; font-size: clamp(15px, 4.2vw, 22px); font-weight: 700; color: #fff; background: linear-gradient(180deg, #ff5a5a, #d81f33); padding: 3px 14px 5px; border-radius: 10px; transform: rotate(-3deg); border: 2px solid #7d0610; box-shadow: 0 3px 0 #7d0610; z-index: 1; }
+.logo-top { position: absolute; top: 26%; font-size: clamp(15px, 4.2vw, 22px); font-size: 4.4cqi; font-weight: 700; color: #fff; background: linear-gradient(180deg, #ff5a5a, #d81f33); padding: 3px 14px 5px; border-radius: 10px; transform: rotate(-3deg); border: 2px solid #7d0610; box-shadow: 0 3px 0 #7d0610; z-index: 1; }
 .logo.big { width: min(96vw, 560px); }
 
 /* ---------- loading ---------- */
@@ -315,7 +315,9 @@ img { -webkit-user-drag: none; user-select: none; }
 @media (orientation: landscape) and (max-height: 500px) {
   #menu.show ~ .rotate-note { display: block; position: fixed; bottom: calc(1px + var(--safe-b)); left: 50%; transform: translateX(-50%); color: #fff; font-size: 11px; pointer-events: none; z-index: 5; white-space: nowrap; -webkit-text-stroke: .14em var(--ink); paint-order: stroke fill; }
   .menu-title { top: calc(2px + var(--safe-t)); }
-  .menu-title .logo { width: 250px; }
+  .menu-title .logo { width: 210px; }
+  .logo.big { width: min(56vw, 52vh * 1.78, 400px); }
+  .loading-inner { gap: 8px; padding-bottom: calc(14px + var(--safe-b)); }
   .level-chip, .char-ribbon, .swipe-note { display: none; }
   .menu-bottom { padding-top: 20px; gap: 6px; padding-bottom: calc(16px + var(--safe-b)); }
   .gbtn.huge { --h: 66px; font-size: 30px; }

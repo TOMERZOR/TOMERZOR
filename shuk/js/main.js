@@ -44,16 +44,17 @@ scene.environmentIntensity = 0.55;
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 260);
 const look = new Look(renderer, scene, camera);
 
-const quality = { ratio: 1, shadows: true, slowFrames: 0, fastFrames: 0, samples: 0 };
+const quality = { ratio: 1, shadows: true, frames: [] };
 function applyQuality(reset = true) {
   const q = Save.get().settings.quality;
   if (reset) {
-    quality.ratio = q === 'high' ? Math.min(dpr, 2) : q === 'low' ? Math.min(dpr, 1) * 0.85 : Math.min(dpr, 1.6);
+    // phones are 2-3x screens: render at (close to) their real resolution or everything looks soft
+    quality.ratio = q === 'high' ? Math.min(dpr, 2.5) : q === 'low' ? Math.min(dpr, 1.25) : Math.min(dpr, 2);
     quality.shadows = q !== 'low';
     quality.post = q === 'high' ? 'high' : q === 'low' ? 'low' : 'mid';
   }
   renderer.setPixelRatio(quality.ratio);
-  if (world) world.setShadows(quality.shadows, quality.post === 'high');
+  if (world) world.setShadows(quality.shadows, quality.post !== 'low', quality.post === 'low' ? 1024 : 2048);
   look.setMode(quality.post, window.innerWidth, window.innerHeight, quality.ratio);
   resize();
 }
@@ -144,7 +145,7 @@ async function boot() {
   try {
     await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
     tick();
-    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.jpg', 'img/paving.jpg', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).catch(e => { if (u.includes('decals')) return null; throw e; }).finally(() => tick())));
+    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).catch(e => { if (u.includes('decals')) return null; throw e; }).finally(() => tick())));
     await assets.loadAnims('models/anims.glb'); tick(2);
     fx = new FX(scene);
     world = new World(scene, renderer, { facade, paving, decals, murals: [m1, m2, m3] });
@@ -156,7 +157,10 @@ async function boot() {
     world.setVendorTemplates([assets.npcs.vendor?.scene, assets.npcs.chabad?.scene]);
     // generated set pieces and obstacles; anything that fails to load falls back to procedural geometry
     const props = {};
-    await Promise.all(['fruit', 'spice', 'sweets', 'truck'].map(n => assets.prop('st_' + n).then(p => { props[n] = p; }, () => {}).finally(() => tick())));
+    await Promise.all(['fruit', 'spice', 'sweets', 'truck'].map(n => assets.prop('st_' + n).then(async p => {
+      p.lo = await assets.prop(`st_${n}_lo`).catch(() => null); // optional far-distance version
+      props[n] = p;
+    }, () => {}).finally(() => tick())));
     await Promise.all(['crates', 'melons'].map(n => assets.prop('ob_' + n).then(p => { MODEL_PROPS[n] = p; }, () => {})));
     world.setPropModels(props);
     for (const _ of world.buildSteps()) { tick(0.6); await frame(); }
@@ -297,23 +301,23 @@ function loop(now) {
   adaptQuality(dt);
 }
 
-// lower the resolution on slow devices (auto quality only)
+// Auto quality: step down only when a device really can't keep up. The first seconds of a run (shader
+// compiles, uploads) don't count, and the median frame time is used so a 30 Hz-capped phone (low power
+// mode) or the odd hitch doesn't blur the picture for nothing.
+const RATIO_FLOOR = Math.min(dpr, dpr >= 2 ? 1.25 : 0.85);
 function adaptQuality(dt) {
-  if (Save.get().settings.quality !== 'auto' || !game || game.state !== 'playing') return;
-  quality.samples++;
-  if (dt > 1 / 40) quality.slowFrames++;
-  if (quality.samples >= 120) {
-    if (quality.slowFrames > 40) {
-      // step down: post effects first, then resolution, then shadows (nothing left to drop: leave it alone)
-      let changed = true;
-      if (quality.post !== 'low') quality.post = 'low';
-      else if (quality.ratio > 0.75) quality.ratio = Math.max(0.75, quality.ratio - 0.25);
-      else if (quality.shadows) quality.shadows = false;
-      else changed = false;
-      if (changed) applyQuality(false);
-    }
-    quality.samples = 0; quality.slowFrames = 0;
-  }
+  if (Save.get().settings.quality !== 'auto' || !game || game.state !== 'playing' || !game.run || game.run.time < 3) { quality.frames.length = 0; return; }
+  quality.frames.push(dt);
+  if (quality.frames.length < 150) return;
+  const median = quality.frames.sort((a, b) => a - b)[75];
+  quality.frames.length = 0;
+  if (median < 1 / 26) return;
+  // resolution first (down to a floor that still looks sharp), then the post chain, then shadows
+  if (quality.ratio > RATIO_FLOOR) quality.ratio = Math.max(RATIO_FLOOR, quality.ratio - 0.25);
+  else if (quality.post !== 'low') quality.post = 'low';
+  else if (quality.shadows) quality.shadows = false;
+  else return;
+  applyQuality(false);
 }
 
 boot();

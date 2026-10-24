@@ -28,9 +28,31 @@ export function loadImage(url) {
   });
 }
 
+// a reduced copy of a material's colour map, for models that only ever appear small on screen
+const smallMaps = new WeakMap();
+function smallMaterial(m, size) {
+  const c = m.clone();
+  const src = m.map;
+  if (src && src.image && src.image.width > size) {
+    let t = smallMaps.get(src);
+    if (!t) {
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      cv.getContext('2d').drawImage(src.image, 0, 0, size, size);
+      t = new THREE.CanvasTexture(cv);
+      t.flipY = src.flipY; t.colorSpace = src.colorSpace; t.channel = src.channel;
+      t.wrapS = src.wrapS; t.wrapT = src.wrapT; t.anisotropy = src.anisotropy;
+      smallMaps.set(src, t);
+    }
+    c.map = t;
+  }
+  return c;
+}
+
 function prepScene(scene, { shadows = true, skinned = false } = {}) {
   scene.traverse(o => {
     if (o.isMesh) {
+      if (o.material && o.material.map) o.material.map.anisotropy = 8;
       o.castShadow = shadows;
       o.receiveShadow = false;
       if (o.isSkinnedMesh) o.frustumCulled = false; // animated poses leave the bind-pose bounds
@@ -110,6 +132,26 @@ export class Assets {
     return tpl;
   }
 
+  // Pedestrians reuse the playable characters, but at a fraction of the screen size: they get a 1024 copy of the
+  // texture so only the runner keeps the full-resolution one on the GPU.
+  pedTemplate(id) {
+    const tpl = this.chars[id];
+    if (!tpl) return null;
+    if (!tpl.ped) {
+      const scene = SkeletonUtils.clone(tpl.scene);
+      scene.traverse(o => { if (o.isMesh && o.material) o.material = smallMaterial(o.material, 1024); });
+      tpl.ped = { ...tpl, scene };
+    }
+    return tpl.ped;
+  }
+
+  // free the GPU copy of a character's full-resolution texture once the runner stops wearing it
+  releaseCharacter(id) {
+    const tpl = this.chars[id];
+    if (!tpl) return;
+    tpl.scene.traverse(o => { if (o.isMesh && o.material && o.material.map) o.material.map.dispose(); });
+  }
+
   instanceCharacter(tpl) {
     const root = SkeletonUtils.clone(tpl.scene);
     const mixer = new THREE.AnimationMixer(root);
@@ -137,6 +179,7 @@ export class Assets {
     const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
     geometry.computeBoundingBox();
     const material = mesh.material;
+    if (material.map) material.map.anisotropy = 8;
     if (material.isMeshStandardMaterial) { material.roughness = Math.max(0.6, material.roughness ?? 1); material.metalness = Math.min(0.05, material.metalness ?? 0); }
     return { geometry, material, size: geometry.boundingBox.getSize(new THREE.Vector3()) };
   }

@@ -10,6 +10,7 @@ const STALL_X = 4.25;   // street edge of the stalls
 const FACADE_X = 6.9;   // building line
 const N_VARIANTS = 3;
 const PROP_CAP = 16;     // generated models of one type per chunk
+const LOD_DIST = 75;     // chunks starting further ahead than this use the low-detail stalls
 
 // ---------- themes ----------
 export const THEMES = {
@@ -234,10 +235,13 @@ function propMatrix(x, z, yaw, scale) {
 // models: generated stall/truck meshes ({ name: { size } }); fronts face +x, the long side runs along z
 function buildVariant(theme, atlas, models = {}, decals = true) {
   const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag(), decal = new Bag(true);
+  // building-top trim never casts: the walls under it are flat cards, so its shadow would float alone in the street
+  const trim = new Bag();
   const glow = [];
   const placed = [];
   if (decals) scatterDecals(decal, theme);
   const stallModels = ['fruit', 'spice', 'sweets'].filter(n => models[n]);
+  const lastModel = { [-1]: null, [1]: null };
   const vendorSpots = [];
   const night = theme === 'night', covered = theme === 'covered';
 
@@ -279,12 +283,17 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
         addMural(facade, side, v, len);
         const ni = atlas.neonStart + Math.floor(Math.random() * (atlas.uv.length - atlas.neonStart - 8));
         addSign(sign, atlas, ni, side * (FACADE_X - 0.05), 3.0, -(v + len / 2), side, 2.2, 0.55);
-      } else if (stallModels.length && Math.random() < 0.5) {
-        // generated 3D stall, front facing the street
-        const name = pick(stallModels), sz = models[name].size;
-        const k = Math.min((len - 0.3) / sz.z, 2.55 / sz.x, 3.3 / sz.y);
+      } else if (stallModels.length && Math.random() < 0.85) {
+        // generated 3D stall, front facing the street; never the same model twice in a row
+        let name = pick(stallModels);
+        if (name === lastModel[side] && stallModels.length > 1) name = pick(stallModels.filter(n => n !== name));
+        lastModel[side] = name;
+        const sz = models[name].size;
+        const k = Math.min((len - 0.3) / sz.z, 2.55 / sz.x, 3.3 / sz.y) * rnd(0.94, 1);
         placed.push([name, propMatrix(side * (STALL_X - 0.15 + sz.x * k / 2), -(v + len / 2), side < 0 ? 0 : Math.PI, k)]);
         addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (FACADE_X - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
+        // the stall keeper hawks from in front of the counter, off to one end of it
+        if (Math.random() < 0.22) vendorSpots.push([side * (STALL_X - 0.45), -(v + len * pick([0.22, 0.78]))]);
       } else {
         const type = pick(STALL_TYPES);
         STALLS[type](vc, side, v + 0.2, len - 0.4);
@@ -325,7 +334,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
     for (let i = 0; i < fuv.count; i++) fuv.setXY(i, off + fuv.getX(i) * CHUNK / repeatW, 0.255 + fuv.getY(i) * 0.74);
     facade.add(fg, null, side * FACADE_X, 3.58 + fh / 2, -CHUNK / 2, 0, -side * Math.PI / 2, 0);
     // cornice
-    vc.add(box(0.35, 0.3, CHUNK), '#cdb48a', side * (FACADE_X - 0.15), 3.6 + fh, -CHUNK / 2);
+    trim.add(box(0.35, 0.3, CHUNK), '#cdb48a', side * (FACADE_X - 0.15), 3.6 + fh, -CHUNK / 2);
   }
 
   // overhead: string lights and bunting zig-zagging across the street
@@ -376,7 +385,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
   glowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glow), 3));
   glowGeo.computeBoundingSphere();
   return {
-    vc: vc.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(), decal: decal.build(),
+    vc: vc.build(), trim: trim.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(), decal: decal.build(),
     ground, glowGeo, vendorSpots, theme, placed,
   };
 }
@@ -455,7 +464,7 @@ export class World {
     this.vendorTemplates = [];
     this.propModels = {};
 
-    const facadeTex = buildFacadeTexture(images);
+    const facadeTex = buildFacadeTexture(images, renderer.capabilities.getMaxAnisotropy());
     const pave = new THREE.Texture(images.paving); pave.needsUpdate = true;
     // ground litter is optional: without its atlas the street simply has none
     let decalTex = null;
@@ -542,10 +551,10 @@ export class World {
     const mk = (mat, shadow) => { const m = new THREE.Mesh(undefined, mat); m.receiveShadow = shadow; m.matrixAutoUpdate = false; m.frustumCulled = true; g.add(m); return m; };
     const slot = {
       group: g, startD: 0, variant: null,
-      ground: mk(this.mats.ground, true), decal: mk(this.mats.decal, true), vc: mk(this.mats.vc, true), sign: mk(this.mats.sign, false),
-      // vc casts shadows only on high quality (set in setShadows)
+      ground: mk(this.mats.ground, true), decal: mk(this.mats.decal, true), vc: mk(this.mats.vc, true), trim: mk(this.mats.vc, false), sign: mk(this.mats.sign, false),
+      // vc casts shadows unless quality is on battery saver (set in setShadows)
       facade: mk(this.mats.facade, false), bulbs: mk(this.mats.bulbs, false), roof: mk(this.mats.roof, false),
-      glow: new THREE.Points(EMPTY_GEO, this.mats.glow), vendors: [], props: {},
+      glow: new THREE.Points(EMPTY_GEO, this.mats.glow), vendors: [], props: {}, propsLo: {}, far: null,
     };
     slot.glow.frustumCulled = false; slot.glow.matrixAutoUpdate = false;
     g.add(slot.glow);
@@ -558,34 +567,39 @@ export class World {
     const list = this.variants[zone.theme];
     const v = list[Math.floor(Math.random() * list.length)];
     slot.startD = startD; slot.variant = v;
-    for (const k of ['ground', 'decal', 'vc', 'sign', 'facade', 'bulbs', 'roof']) {
+    for (const k of ['ground', 'decal', 'vc', 'trim', 'sign', 'facade', 'bulbs', 'roof']) {
       const geo = v[k];
       slot[k].geometry = geo || EMPTY_GEO;
       slot[k].visible = !!geo;
     }
     slot.glow.geometry = v.glowGeo;
-    // generated stall models, one instanced mesh per model type in each slot
+    // generated stall models: one instanced mesh per model type in each slot, plus a low-detail twin
+    // (vertex colours, ~1k triangles) that stands in while the slot is far away
     const counts = {};
+    const mk = (geometry, material, shadow) => {
+      const im = new THREE.InstancedMesh(geometry, material, PROP_CAP);
+      im.receiveShadow = shadow; im.castShadow = shadow && !!this.worldShadows; im.matrixAutoUpdate = false;
+      slot.group.add(im);
+      return im;
+    };
     for (const [name, m] of v.placed) {
-      let im = slot.props[name];
-      if (!im) {
+      if (!slot.props[name]) {
         const pm = this.propModels[name];
-        im = new THREE.InstancedMesh(pm.geometry, pm.material, PROP_CAP);
-        im.receiveShadow = true; im.castShadow = !!this.worldShadows; im.matrixAutoUpdate = false;
-        slot.group.add(im);
-        slot.props[name] = im;
+        slot.props[name] = mk(pm.geometry, pm.material, true);
+        if (pm.lo) slot.propsLo[name] = mk(pm.lo.geometry, pm.lo.material, false);
       }
       const i = counts[name] || 0;
       if (i >= PROP_CAP) continue;
-      im.setMatrixAt(i, m);
+      slot.props[name].setMatrixAt(i, m);
+      if (slot.propsLo[name]) slot.propsLo[name].setMatrixAt(i, m);
       counts[name] = i + 1;
     }
-    for (const [name, im] of Object.entries(slot.props)) {
+    for (const set of [slot.props, slot.propsLo]) for (const [name, im] of Object.entries(set)) {
       im.count = counts[name] || 0;
-      im.visible = im.count > 0;
       im.instanceMatrix.needsUpdate = true;
       if (im.count) im.computeBoundingSphere();
     }
+    slot.far = null; // let update() pick the detail level
     // vendors standing behind some counters
     for (const vd of slot.vendors) { vd.visible = false; this.vendorPool.push(vd); }
     slot.vendors.length = 0;
@@ -618,9 +632,18 @@ export class World {
       }
       s.group.position.z = -(s.startD - runD);
       s.group.updateMatrixWorld();
-      for (const m of s.vendors) {
-        m.position.y = Math.abs(Math.sin(time * 2 + m.userData.phase)) * 0.04;
+      // distant chunks: low-detail stalls and no stall keepers (they would be a few pixels tall)
+      const far = s.startD - runD > LOD_DIST;
+      if (far !== s.far) {
+        s.far = far;
+        for (const [name, im] of Object.entries(s.props)) {
+          const lo = s.propsLo[name];
+          im.visible = im.count > 0 && !(far && lo);
+          if (lo) lo.visible = lo.count > 0 && far;
+        }
+        for (const m of s.vendors) m.visible = !far;
       }
+      if (!far) for (const m of s.vendors) m.position.y = Math.abs(Math.sin(time * 2 + m.userData.phase)) * 0.04;
     }
     // theme blending by distance
     const { zone } = zoneAt(runD);
@@ -668,8 +691,12 @@ export class World {
     this.playerLight.intensity = c.playerLight * 6;
   }
 
-  setShadows(on, world = false) {
+  setShadows(on, world = false, size = 1024) {
     this.sun.castShadow = on;
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
+    }
     this.worldShadows = on && world;
     for (const s of this.slots) {
       s.vc.castShadow = this.worldShadows;
@@ -683,8 +710,8 @@ const COLOR_KEYS = ['skyTop', 'skyMid', 'skyBot', 'fog', 'hemiSky', 'hemiGround'
 const NUM_KEYS = ['fogNear', 'fogFar', 'hemi', 'sunI', 'glow', 'exposure', 'playerLight', 'clouds', 'stars', 'rim'];
 
 // Facade texture: stone photo on top 3/4, three shutter murals across the bottom 1/4.
-function buildFacadeTexture(images) {
-  const W = 1024, H = 1024;
+function buildFacadeTexture(images, maxAniso) {
+  const W = 2048, H = 2048;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d');
   g.drawImage(images.facade, 0, 0, W, H * 0.75);
@@ -702,9 +729,9 @@ function buildFacadeTexture(images) {
       g.fillStyle = ['#2a9d8f', '#e76f51', '#9b5de5'][k]; g.fillRect(x, y, w, h);
     }
     g.fillStyle = 'rgba(0,0,0,.18)';
-    for (let s = 0; s < h; s += 8) g.fillRect(x, y + s, w, 2);
+    for (let s = 0; s < h; s += 16) g.fillRect(x, y + s, w, 4);
   }
   const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+  t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = maxAniso;
   return t;
 }

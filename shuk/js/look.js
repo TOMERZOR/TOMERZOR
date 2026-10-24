@@ -75,7 +75,8 @@ export class Look {
     this.composer = null;
   }
 
-  // mode: 'high' (MSAA + bloom + grade), 'mid' (bloom at lower res + grade + FXAA), 'low' (direct render)
+  // mode: 'high' (4x MSAA + bloom + grade), 'mid' (2x MSAA, or FXAA without WebGL2, + cheaper bloom + grade),
+  // 'low' (direct render with the canvas' own antialiasing)
   setMode(mode, width, height, ratio) {
     this.mode = mode;
     if (this.composer) {
@@ -86,7 +87,7 @@ export class Look {
     }
     if (mode === 'low') return;
     const isWebGL2 = this.renderer.capabilities.isWebGL2;
-    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: mode === 'high' && isWebGL2 ? 4 : 0 });
+    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: isWebGL2 ? (mode === 'high' ? 4 : 2) : 0 });
     const c = new EffectComposer(this.renderer, rt);
     c.setPixelRatio(ratio);
     c.setSize(width, height);
@@ -97,7 +98,7 @@ export class Look {
     c.addPass(new OutputPass());
     this.grade = new ShaderPass(GradeShader);
     c.addPass(this.grade);
-    if (mode !== 'high') {
+    if (!isWebGL2) {
       this.fxaa = new ShaderPass(FXAAShader);
       this.fxaa.material.uniforms.resolution.value.set(1 / (width * ratio), 1 / (height * ratio));
       c.addPass(this.fxaa);

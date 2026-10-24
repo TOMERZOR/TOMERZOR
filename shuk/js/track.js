@@ -123,7 +123,7 @@ export class Track {
       }
       obj.userData.body = inst.root;
     } else if (type.startsWith('ped:')) {
-      const tpl = this.assets.chars[type.slice(4)];
+      const tpl = this.assets.pedTemplate(type.slice(4));
       const inst = this.assets.instanceCharacter(tpl);
       obj = new THREE.Group(); obj.add(inst.root);
       mixer = inst.mixer;

@@ -3,7 +3,7 @@ import * as Save from './save.js';
 import { Game } from './game.js';
 import { sfx, unlock as unlockAudio, setSfx, setMusic, suspend, resume } from './audio.js';
 import { Ads, IAP, PRODUCTS, initPlatform, track, haptic, isNative, requestReview } from './platform.js';
-import { t, setLang, detectLang, artName, albumName, LANGS, getLang } from './i18n.js';
+import { t } from './i18n.js';
 import { LEVEL_DATA } from './levels-data.js';
 import { decodeLevel, levelSpec, makeLevel, bgFor } from './levels.js';
 import { ART, ALBUMS, PALETTE, artToGrid } from './art.js';
@@ -242,7 +242,7 @@ function onWin(st) {
   if (perfect) { S.stats.perfects = (S.stats.perfects || 0) + 1; track('perfect', { level: lv.level }); }
   const total = reward + bonus + perfectBonus;
   const thumb = artThumb(lv, 180, true).toDataURL();
-  const name = artName(lv.art, lv.name);
+  const name = lv.name;
   const m = openModal(`
     <div class="card card--win">
       <div class="ribbon">${t('winTitle')}</div>
@@ -562,7 +562,7 @@ function renderHome() {
     <div class="parade">${['#ff4b5c', '#ffd23f', '#3fcf6b', '#5ccfff', '#9b5cff'].map((c, i) => `<img src="${bucketImg(c, '', 56)}" style="--i:${i}" alt="">`).join('')}</div>
     <div class="next-card" data-nav="play">
       <div class="next-art"><img src="${preview}" alt=""><span class="q">?</span></div>
-      <div class="album-line"><span>${albumName(album.id, album.name)}</span><span class="bar"><i style="width:${got / inAlbum.length * 100}%"></i></span><b>${got}/${inAlbum.length}</b></div>
+      <div class="album-line"><span>${album.name}</span><span class="bar"><i style="width:${got / inAlbum.length * 100}%"></i></span><b>${got}/${inAlbum.length}</b></div>
     </div>
     <button class="btn btn--play" data-nav="play"><span>${t('level')} ${lvN}</span>${tag}${S.streak > 0 ? `<i class="streak-badge ${S.streak >= 3 ? 'hot' : ''}" title="${t('hotStreakD')}">🔥${Math.min(S.streak, 99)}</i>` : ''}</button>
     <div class="home-row">
@@ -666,12 +666,12 @@ function openGallery() {
         const n = arts.filter((a) => S.gallery[a.id]).length;
         const claim = n === arts.length && !S.albumsClaimed[al.id];
         return `<section class="album">
-          <header><h3>${albumName(al.id, al.name)}</h3><span class="bar"><i style="width:${n / arts.length * 100}%"></i></span><b>${n}/${arts.length}</b></header>
+          <header><h3>${al.name}</h3><span class="bar"><i style="width:${n / arts.length * 100}%"></i></span><b>${n}/${arts.length}</b></header>
           <div class="album-grid">${arts.map((a) => {
             const g = artToGrid(a);
             const has = !!S.gallery[a.id];
             const img = artThumb(g, 72, has).toDataURL();
-            return `<figure class="${has ? 'got' : 'lock'}"><img src="${img}" alt=""><figcaption>${has ? artName(a.id, a.name) : '?'}</figcaption></figure>`;
+            return `<figure class="${has ? 'got' : 'lock'}"><img src="${img}" alt=""><figcaption>${has ? a.name : '?'}</figcaption></figure>`;
           }).join('')}</div>
           ${claim ? `<button class="btn btn--green" data-chest="${al.id}"><i class="gift-ico ico-inline"></i> ${t('openChest')}</button>` : S.albumsClaimed[al.id] ? `<div class="done">✓ ${t('complete')}</div>` : ''}
         </section>`;
@@ -689,7 +689,7 @@ function albumChest(album) {
   sfx.unlock();
   const m = openModal(`
     <div class="card">
-      <div class="ribbon">${albumName(album.id, album.name)} · ${t('complete')}</div>
+      <div class="ribbon">${album.name} · ${t('complete')}</div>
       <div class="chest"></div>
       <div class="win-reward">${COIN}<b>+300</b></div>
       <p>${BOOSTERS(1, ' +')}</p>
@@ -713,7 +713,7 @@ function openDaily() {
   for (let i = -3; i <= 3; i++) {
     const d = new Date(Date.now() + i * 86400000);
     const k = Save.today(d);
-    week.push(`<div class="day ${S.daily.done[k] ? 'done' : ''} ${i === 0 ? 'today' : ''}"><small>${d.toLocaleDateString(getLang() === 'he' ? 'he-IL' : 'en-US', { weekday: 'short' })}</small><b>${d.getDate()}</b></div>`);
+    week.push(`<div class="day ${S.daily.done[k] ? 'done' : ''} ${i === 0 ? 'today' : ''}"><small>${d.toLocaleDateString('en-US', { weekday: 'short' })}</small><b>${d.getDate()}</b></div>`);
   }
   const m = openModal(`
     <div class="card">
@@ -777,14 +777,12 @@ function openSettings() {
     <div class="card">
       <h2>${t('settings')}</h2>
       ${settingsToggles()}
-      <label class="toggle"><span>${t('language')}</span><select data-lang>${LANGS.map((l) => `<option value="${l.id}" ${getLang() === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>
       <button class="btn btn--ghost" data-act="restore">${t('restore')}</button>
       ${Ads.privacyOptionsAvailable() ? `<button class="btn btn--ghost" data-act="consent">${t('privacyChoices')}</button>` : ''}
       <div class="links"><a href="privacy.html" data-doc="privacy.html">${t('privacy')}</a> · <a href="terms.html" data-doc="terms.html">${t('terms')}</a> · <a href="mailto:support@paintparade.app">${t('support')}</a></div>
       <small class="muted">${t('version')} ${VERSION}</small>
     </div>`);
   bindToggles(m);
-  m.querySelector('[data-lang]').addEventListener('change', (e) => { S.settings.lang = e.target.value; Save.save(); setLang(S.settings.lang); closeModal(); renderHome(); openSettings(); });
   m.addEventListener('click', async (ev) => {
     const d = ev.target.closest('[data-doc]');
     if (d) { ev.preventDefault(); showDoc(d.dataset.doc); return; }
@@ -808,7 +806,6 @@ function showDoc(url) {
 function boot() {
   S = Save.load();
   S.stats.sessions++;
-  setLang(S.settings.lang || detectLang());
   applySettings();
   Save.save();
   game = new Game($('#cv'), {

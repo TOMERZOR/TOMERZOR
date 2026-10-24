@@ -19,7 +19,7 @@ function fresh() {
     streak: 0,            // wins in a row
     bestStreak: 0,
     daily: { last: '', days: 0, done: {} },
-    settings: { sound: true, music: true, haptics: true, lang: '' },
+    settings: { sound: true, music: true, haptics: true },
     noAds: false,
     purchases: {},
     starterSeenAt: 0,
@@ -45,6 +45,7 @@ export function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) state = merge(fresh(), JSON.parse(raw));
   } catch (e) { state = fresh(); }
+  delete state.settings.lang; // older saves stored a language choice; the game is English-only now
   state.v = VERSION;
   tickLives();
   return state;

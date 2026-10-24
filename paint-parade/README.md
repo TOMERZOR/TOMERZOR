@@ -15,7 +15,7 @@
 | `js/levels-data.js` | 200 שלבים מוכנים ומאומתים (נוצר ע"י `tools/build-levels.mjs`) |
 | `js/platform.js` | פרסומות (AdMob), רכישות (RevenueCat), רטט, אנליטיקס — מדומים בדפדפן, אמיתיים באפליקציה |
 | `app/` | אפליקציית iOS + Android (Capacitor). הוראות: [`app/README.md`](app/README.md) |
-| `marketing/` | אייקון, Key art, צילומי מסך לחנויות, טריילר, טקסטים לחנויות (EN/HE), תוכנית השקה |
+| `marketing/` | אייקון, Key art, צילומי מסך לחנויות, טריילר, טקסטים לחנויות (EN), תוכנית השקה |
 | `landing/` | דף נחיתה |
 | `privacy.html`, `terms.html` | מדיניות פרטיות ותנאי שימוש (חובה לחנויות ול-AdMob) |
 | `docs/` | המשימה, מחקר שוק, מסמך עיצוב (GDD), יומן QA |

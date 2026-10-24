@@ -5,7 +5,6 @@
 <title>Store screenshot</title>
 <style>
   @font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-latin.woff2') format('woff2'); font-weight: 300 700; }
-  @font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-hebrew.woff2') format('woff2'); font-weight: 300 700; unicode-range: U+0590-05FF; }
   html, body { margin: 0; }
   body { width: var(--w); height: var(--h); overflow: hidden; font-family: 'Fredoka', system-ui, sans-serif; color: #33264d; position: relative; background: linear-gradient(170deg, var(--c1), var(--c2)); }
   .cap { position: absolute; left: 13%; right: 13%; top: 4.2%; text-align: center; font-weight: 700; font-size: calc(var(--w) * 0.074); line-height: 1.05; letter-spacing: .005em; color: #fff; -webkit-text-stroke: calc(var(--w) * 0.006) #33264d; paint-order: stroke fill; text-shadow: 0 calc(var(--w) * 0.008) 0 #33264d; }
@@ -30,7 +29,6 @@ document.body.style.setProperty('--h', H + 'px');
 document.body.style.setProperty('--c1', q.get('c1') || '#ffd1ec');
 document.body.style.setProperty('--c2', q.get('c2') || '#b9a6ff');
 document.body.style.setProperty('--hl', q.get('hl') || '#ffd23f');
-if (q.get('rtl')) document.body.dir = 'rtl';
 document.getElementById('cap').innerHTML = q.get('cap') || '';
 const img = document.getElementById('img');
 img.src = q.get('img');

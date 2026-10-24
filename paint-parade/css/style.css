@@ -5,13 +5,6 @@
   font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
-@font-face {
-  font-family: 'Fredoka';
-  src: url('../fonts/fredoka-hebrew.woff2') format('woff2');
-  font-weight: 300 700;
-  font-display: swap;
-  unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
-}
 
 :root {
   --ink: #33264d;
@@ -190,7 +183,7 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 .screen > .scroll { flex-shrink: 1; min-height: 0; }
 .topbar { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .topbar h2 { margin: 0; font-size: 26px; }
-.logo { direction: ltr; margin: min(4vh, 26px) 0 0; font-size: clamp(40px, 12vw, 58px); line-height: .95; text-align: center; letter-spacing: .02em; font-weight: 700; }
+.logo { margin: min(4vh, 26px) 0 0; font-size: clamp(40px, 12vw, 58px); line-height: .95; text-align: center; letter-spacing: .02em; font-weight: 700; }
 .logo span { display: inline-block; color: var(--c); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); animation: bounce 2.4s var(--d) infinite ease-in-out; }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .parade { position: relative; height: 54px; width: 100%; max-width: 380px; margin-top: 6px; overflow: hidden; }
@@ -209,7 +202,6 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 .btn--play .tag { font-size: 13px; margin-top: 2px; text-shadow: none; }
 .streak-badge { position: absolute; top: -12px; right: -8px; font-style: normal; font-size: 16px; padding: 4px 10px; border-radius: 14px; background: #fff; color: var(--ink); text-shadow: none; box-shadow: 0 3px 0 #ead9f7, 0 6px 14px rgba(51,38,77,.15); }
 .streak-badge.hot { background: linear-gradient(180deg, #ffb35c, #ff5e3a); color: #fff; box-shadow: 0 3px 0 #c43d1f; animation: wob .5s infinite alternate; }
-[dir='rtl'] .streak-badge { right: auto; left: -8px; }
 @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 .home-row { display: flex; gap: 12px; margin-top: min(2.5vh, 18px); }
 .side-btn { position: relative; width: 92px; padding: 10px 6px 8px; border-radius: 20px; background: #fff; box-shadow: 0 5px 0 #ead9f7, 0 10px 18px rgba(51,38,77,.1); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; }
@@ -269,14 +261,13 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 3px solid
 /* ---------------- boot ---------------- */
 .boot { position: fixed; inset: 0; z-index: 200; display: grid; place-content: center; gap: 18px; background: linear-gradient(180deg, var(--bg1), var(--bg2)); transition: opacity .5s; }
 .boot.gone { opacity: 0; pointer-events: none; }
-.boot__logo { direction: ltr; display: flex; flex-direction: column; align-items: center; font-size: 52px; font-weight: 700; line-height: .95; color: #ff8ac6; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
+.boot__logo { display: flex; flex-direction: column; align-items: center; font-size: 52px; font-weight: 700; line-height: .95; color: #ff8ac6; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
 .boot__logo span + span { color: #5ccfff; }
 .boot__dots { display: flex; gap: 8px; justify-content: center; }
 .boot__dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--purple); animation: bounce .9s infinite; }
 .boot__dots i:nth-child(2) { animation-delay: .15s; background: var(--gold); }
 .boot__dots i:nth-child(3) { animation-delay: .3s; background: var(--green); }
 
-[dir='rtl'] .ribbon-s { right: auto; left: -28px; transform: rotate(-35deg); }
 @media (max-height: 700px) {
   .logo { font-size: 36px; margin-top: 4px; }
   .next-art { height: clamp(100px, 24vh, 200px); }

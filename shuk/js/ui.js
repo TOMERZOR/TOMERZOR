@@ -129,15 +129,19 @@ export class UI {
   }
   updateHUD(r, powers) {
     const c = this.hudCache;
+    // score and distance tick every frame; repainting outlined gradient text that often costs real time on
+    // phones, so they refresh ten times a second (coins and the multiplier still update instantly)
+    const now = performance.now(), tick = now - (c.t || 0) >= 100;
+    if (tick) c.t = now;
     const score = Math.floor(r.score);
-    if (c.score !== score) { setText($('hud-score'), fmt(score)); c.score = score; }
+    if (tick && c.score !== score) { setText($('hud-score'), fmt(score)); c.score = score; }
     const coins = r.coins * 10;
     if (c.coins !== coins) { $('hud-coins').textContent = fmt(coins); c.coins = coins; }
     const x2 = r.powers.x2 > 0;
     const mult = r.mult * (x2 ? 2 : 1);
     if (c.mult !== mult) { const el = $('hud-mult'); el.textContent = '×' + mult; el.classList.toggle('x2', x2); c.mult = mult; }
     const dist = Math.floor(r.d);
-    if (c.dist !== dist) { $('hud-dist').textContent = fmt(dist); c.dist = dist; }
+    if (tick && c.dist !== dist) { $('hud-dist').textContent = fmt(dist); c.dist = dist; }
     // power-up timers: a ring that drains around the 3D icon
     const box = $('powers');
     const live = new Set(powers.map(p => p.k));
@@ -152,8 +156,10 @@ export class UI {
         box.appendChild(el);
         this.powerEls[p.k] = el;
       }
-      el.style.setProperty('--p', Math.max(0, Math.min(100, p.t / p.max * 100)).toFixed(1));
-      el.classList.toggle('ending', p.t < 2);
+      const pct = Math.round(Math.max(0, Math.min(100, p.t / p.max * 100)));
+      if (el._pct !== pct) { el._pct = pct; el.style.setProperty('--p', pct); }
+      const ending = p.t < 2;
+      if (el._ending !== ending) { el._ending = ending; el.classList.toggle('ending', ending); }
     }
   }
   flyCoin(sx, sy) {

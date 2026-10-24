@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CHARACTERS, NPC_TYPES, UPGRADE_COST } from './config.js';
 import * as Save from './save.js';
-import { Assets, loadImage } from './assets.js';
+import { Assets, loadImage, loadGLTF } from './assets.js';
 import { World } from './world.js';
 import { Track } from './track.js';
 import { Player } from './player.js';
@@ -13,11 +13,13 @@ import { UI } from './ui.js';
 import { createInput } from './input.js';
 import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx, loadVoices } from './audio.js';
 import { haptic, setHaptics } from './haptics.js';
-import { Look, patchCurvedWorld } from './look.js';
+import { Look, patchCurvedWorld, patchToneMapping } from './look.js';
 import { T } from './i18n.js';
 import { MODEL_PROPS } from './props.js';
+import { setBubbleImage } from './textures.js';
 
 patchCurvedWorld();
+patchToneMapping();
 
 const save = Save.load();
 const canvas = document.getElementById('game');
@@ -26,13 +28,14 @@ const canvas = document.getElementById('game');
 const dpr = window.devicePixelRatio || 1;
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: save.settings.quality !== 'low' && dpr < 2.5, powerPreference: 'high-performance', stencil: false });
+  // the canvas' own MSAA is what Auto and Battery saver use (they render straight to the screen)
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
 } catch (e) {
   document.getElementById('load-tip').textContent = T.noWebGL;
   throw e;
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMapping = THREE.CustomToneMapping; // ACES + the colour grade (see look.js)
 renderer.toneMappingExposure = 1;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -51,10 +54,21 @@ function applyQuality(reset = true) {
     // phones are 2-3x screens: render at (close to) their real resolution or everything looks soft
     quality.ratio = q === 'high' ? Math.min(dpr, 2.5) : q === 'low' ? Math.min(dpr, 1.25) : Math.min(dpr, 2);
     quality.shadows = q !== 'low';
-    quality.post = q === 'high' ? 'high' : q === 'low' ? 'low' : 'mid';
+    quality.post = q === 'high' ? 'high' : 'direct';
+  }
+  // High: soft 2048 shadows from everything. Otherwise hardware-PCF 1024 shadows from what moves only.
+  const type = quality.post === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+  if (renderer.shadowMap.type !== type) {
+    renderer.shadowMap.type = type;
+    scene.traverse(o => { if (o.material) for (const m of [].concat(o.material)) m.needsUpdate = true; });
+    if (world && world.sun.shadow.map) { world.sun.shadow.map.dispose(); world.sun.shadow.map = null; }
   }
   renderer.setPixelRatio(quality.ratio);
-  if (world) world.setShadows(quality.shadows, quality.post !== 'low', quality.post === 'low' ? 1024 : 2048);
+  if (world) {
+    world.setShadows(quality.shadows, quality.post === 'high', quality.post === 'high' ? 2048 : 1024);
+    // the baked street shadows stay on at every level: they cost a texture lookup, not a shadow pass
+    if (reset) world.setBake(q === 'high' ? 768 : q === 'low' ? 384 : 512);
+  }
   look.setMode(quality.post, window.innerWidth, window.innerHeight, quality.ratio);
   resize();
 }
@@ -143,18 +157,24 @@ async function boot() {
   let done = 0; const steps = 34;
   const tick = (n = 1) => { done += n; ui.setLoading(Math.min(1, done / steps), TIPS[(tipOffset + Math.floor(done / 5)) % TIPS.length]); };
   try {
-    await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
+    // UI font, plus the Hebrew sign-painter faces the street signs are lettered in (see textures.js)
+    const fonts = ['700 40px Fredoka', '600 20px Fredoka', '500 20px Fredoka', '40px "Suez One"', '700 40px Karantina', '700 40px "Amatic SC"', '40px "Secular One"', '700 40px Rubik'];
+    await Promise.race([Promise.all(fonts.map(f => document.fonts.load(f, 'אבג abc ₪'))), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
     tick();
-    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).catch(e => { if (u.includes('decals')) return null; throw e; }).finally(() => tick())));
+    const [facade, paving, m1, m2, m3, decals, bubble, signs] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp', 'img/ui/bubble.webp', 'img/signs.webp']
+      .map(u => loadImage(u).catch(e => { if (/decals|bubble|signs/.test(u)) return null; throw e; }).finally(() => tick())));
+    setBubbleImage(bubble); // optional: bubbles fall back to a drawn frame
     await assets.loadAnims('models/anims.glb'); tick(2);
     fx = new FX(scene);
-    world = new World(scene, renderer, { facade, paving, decals, murals: [m1, m2, m3] });
+    world = new World(scene, renderer, { facade, paving, decals, signs, murals: [m1, m2, m3] });
     player = new Player(scene, assets);
     track = new Track(scene, assets, fx);
     await player.setCharacter(Save.get().selected).catch(() => player.setCharacter('tzabar')); tick(3);
     previewId = Save.get().selected;
     await Promise.all(Object.keys(NPC_TYPES).map(t => assets.npc(t).then(() => tick())));
-    world.setVendorTemplates([assets.npcs.vendor?.scene, assets.npcs.chabad?.scene]);
+    // stall keepers are scenery: light (~3k triangle) copies, falling back to the full NPC models
+    const deco = await Promise.all(['vendor', 'chabad'].map(n => loadGLTF(`models/deco_${n}.glb`).then(g => g.scene, () => assets.npcs[n]?.scene)));
+    world.setVendorTemplates(deco);
     // generated set pieces and obstacles; anything that fails to load falls back to procedural geometry
     const props = {};
     await Promise.all(['fruit', 'spice', 'sweets', 'truck'].map(n => assets.prop('st_' + n).then(async p => {
@@ -186,7 +206,7 @@ const frame = () => new Promise(r => requestAnimationFrame(() => r()));
 // compile shaders and upload textures for everything that can appear in a run
 async function warmup() {
   const tmp = [];
-  const types = ['crates', 'melons', 'sacks', 'barrier', 'tefillin', 'banner', 'rugs', 'bannerWide', 'truck', 'truckR', 'van',
+  const types = ['crates', 'melons', 'sacks', 'barrier', 'tefillin', 'banner', 'rugs', 'bannerWide', 'truck', 'truckR', 'van', 'melonRoll', 'pow:carpet', 'pow:bag',
     'pow:magnet', 'pow:x2', 'pow:sneakers', 'pow:hamsa', ...Object.keys(NPC_TYPES).map(t => 'npc:' + t)];
   for (const t of types) { const o = track.acquireSync(t); o.visible = true; o.position.set((tmp.length % 5 - 2) * 2, 0, -6 - Math.floor(tmp.length / 5) * 3); tmp.push([t, o]); }
   camera.position.set(0, 3, 6); camera.lookAt(0, 1, -8);
@@ -248,7 +268,7 @@ function startRun() {
 function pause(on) {
   if (!game) return;
   if (on && game.state === 'playing') { game.state = 'paused'; ui.pause(true); duckMusic(true); }
-  else if (!on && game.state === 'paused') { game.state = 'playing'; ui.pause(false); duckMusic(false); game.run.acc = 0; }
+  else if (!on && game.state === 'paused') { game.state = 'playing'; ui.pause(false); duckMusic(false); }
 }
 
 function goHome() {
@@ -299,11 +319,33 @@ function loop(now) {
   const sp = game.state === 'playing' && game.run ? THREE.MathUtils.clamp((game.run.speed - 21) / 13, 0, 1) : 0;
   look.render(game.time, sp);
   adaptQuality(dt);
+  if (fpsMeter) fpsMeter(now);
 }
 
-// Auto quality: step down only when a device really can't keep up. The first seconds of a run (shader
-// compiles, uploads) don't count, and the median frame time is used so a 30 Hz-capped phone (low power
-// mode) or the odd hitch doesn't blur the picture for nothing.
+// ?fps in the address shows a frame-rate readout (measured on the device itself)
+const fpsMeter = /[?&#]fps\b/.test(location.search + location.hash) ? (() => {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:9;padding:4px 8px;border-radius:8px;background:rgba(0,0,0,.7);color:#7CFC9B;font:600 11px/1.35 ui-monospace,monospace;white-space:pre;pointer-events:none;direction:ltr';
+  document.body.appendChild(el);
+  renderer.info.autoReset = false; // count every pass of a frame (post passes included), averaged below
+  let frames = 0, sum = 0, worst = 0, t0 = 0, prev = 0;
+  return now => {
+    const ms = prev ? now - prev : 0;
+    prev = now;
+    if (!t0) t0 = now;
+    if (ms > 0) { frames++; sum += ms; worst = Math.max(worst, ms); }
+    if (now - t0 < 500 || !frames) return;
+    const info = renderer.info.render;
+    el.textContent = `${(1000 * frames / (now - t0)).toFixed(0)} fps  avg ${(sum / frames).toFixed(1)} ms  worst ${worst.toFixed(0)} ms\n` +
+      `${quality.post} x${quality.ratio.toFixed(2)} shadows ${quality.shadows ? 'on' : 'off'}  ${renderer.domElement.width}x${renderer.domElement.height}\n` +
+      `${Math.round(info.calls / frames)} draws  ${(info.triangles / frames / 1000).toFixed(0)}k tris per frame`;
+    renderer.info.reset();
+    frames = 0; sum = 0; worst = 0; t0 = now;
+  };
+})() : null;
+
+// Auto quality: step down when the median frame time over ~2.5 s is under 45 fps. The first seconds of a
+// run (shader compiles, uploads) don't count, and the median ignores the odd hitch.
 const RATIO_FLOOR = Math.min(dpr, dpr >= 2 ? 1.25 : 0.85);
 function adaptQuality(dt) {
   if (Save.get().settings.quality !== 'auto' || !game || game.state !== 'playing' || !game.run || game.run.time < 3) { quality.frames.length = 0; return; }
@@ -311,10 +353,9 @@ function adaptQuality(dt) {
   if (quality.frames.length < 150) return;
   const median = quality.frames.sort((a, b) => a - b)[75];
   quality.frames.length = 0;
-  if (median < 1 / 26) return;
-  // resolution first (down to a floor that still looks sharp), then the post chain, then shadows
+  if (median < 1 / 45) return;
+  // resolution first (down to a floor that still looks sharp), then shadows
   if (quality.ratio > RATIO_FLOOR) quality.ratio = Math.max(RATIO_FLOOR, quality.ratio - 0.25);
-  else if (quality.post !== 'low') quality.post = 'low';
   else if (quality.shadows) quality.shadows = false;
   else return;
   applyQuality(false);

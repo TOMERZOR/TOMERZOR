@@ -1,7 +1,8 @@
 // One run: physics stepping, scoring, power-ups, stumbles and the chaser, missions, camera.
 import * as THREE from 'three';
-import { PHYS, POWERUPS, MISSIONS, REVIVE_COST, MAX_MULT, ZONES, LEVEL_REWARD } from './config.js';
+import { PHYS, POWERUPS, MISSIONS, REVIVE_COST, MAX_MULT, ZONES, LEVEL_REWARD, FLY_Y } from './config.js';
 import { speedAt } from './track.js';
+import * as P from './props.js';
 import { zoneAt } from './world.js';
 import { sfx, setMusicIntensity, voice } from './audio.js';
 import { haptic } from './haptics.js';
@@ -32,13 +33,14 @@ export class Game {
     const inst = this.assets.instanceNpc(tpl);
     const g = new THREE.Group();
     g.add(inst.root);
+    g.add(P.makeContactShadow(0.95, 0.75));
     inst.root.rotation.y = Math.PI;
     g.visible = false;
     this.scene.add(g);
     const run = inst.mixer.clipAction(tpl.clips.run);
     run.play();
     const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.track.bubble(T.chaserSay), transparent: true, depthWrite: false, toneMapped: false }));
-    bubble.scale.set(1.35, 0.42, 1);
+    bubble.scale.set(0.5 * bubble.material.map.userData.aspect, 0.5, 1);
     bubble.position.set(0, 1.9, 0);
     bubble.renderOrder = 9;
     g.add(bubble);
@@ -51,8 +53,8 @@ export class Game {
     const tutorial = !s.tutorialDone;
     this.run = {
       d: 0, prevD: 0, speed: tutorial ? 11.5 : speedAt(0), score: 0, coins: 0, combo: 0, comboT: 0,
-      mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2, acc: 0,
-      powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0 },
+      mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2,
+      powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0, carpet: 0 }, streak: 0,
       stats: { coins: 0, dist: 0, jumps: 0, rolls: 0, score: 0, powerups: 0, dodgeNpc: 0, roofs: 0, zones: 1, magnetCoins: 0, nearMiss: 0, runs: 1 },
       zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0,
     };
@@ -119,14 +121,14 @@ export class Game {
       r.time += dt;
       const target = r.tutorial ? 11.5 : speedAt(r.d);
       r.speed += (target - r.speed) * Math.min(1, dt * 1.5);
-      r.acc += dt;
-      let steps = 0;
-      while (r.acc >= STEP && steps < 12) {
-        r.acc -= STEP; steps++;
-        this.physicsStep(STEP);
+      // split the frame into equal substeps of at most STEP: every frame advances by exactly its own
+      // duration, so motion stays even (a fixed-step accumulator without interpolation alternates 2 and 3
+      // steps per frame whenever frame times wobble, which reads as stutter)
+      const n = Math.min(12, Math.max(1, Math.ceil(dt / STEP - 1e-6)));
+      for (let i = 0; i < n; i++) {
+        this.physicsStep(dt / n);
         if (this.state !== 'playing') break;
       }
-      if (steps >= 12) r.acc = 0;
       this.processTimers(dt);
       this.tutorialHints();
     } else {
@@ -172,15 +174,18 @@ export class Game {
         sfx.coin(r.combo); haptic('coin');
         this.fx.coinBurst(ev.x, ev.y, 0.1);
         this.flyCoin(ev.x, ev.y);
+        // a streak of coins without tripping pays out every 50
+        if (++r.streak % 50 === 0) {
+          r.score += Math.min(r.streak, 200) * 5 * mul;
+          sfx.mission(); haptic('power');
+          this.fx.popup(T.streak(r.streak), p.x, p.y + 2.9, -1.2, '#7df9ff', 0.9);
+        }
         break;
       case 'power': {
         const type = ev.power;
-        r.powers[type] = this.powerDuration(type);
         r.stats.powerups++;
-        sfx.powerup(); haptic('power');
-        this.fx.sparkle(ev.x, ev.y, 0, POWERUPS[type].color);
-        this.fx.popup(POWERUPS[type].name, p.x, 3.2, -1.5, POWERUPS[type].color, 1);
-        this.ui.toast(POWERUPS[type].name + '!', POWERUPS[type].desc);
+        if (type === 'bag') { this.openBag(ev, mul); break; }
+        this.activatePower(type, ev);
         break;
       }
       case 'climb':
@@ -207,6 +212,61 @@ export class Game {
         break;
       }
     }
+  }
+
+  activatePower(type, ev) {
+    const r = this.run, p = this.player;
+    r.powers[type] = this.powerDuration(type);
+    sfx.powerup(); haptic('power');
+    this.fx.sparkle(ev.x, ev.y, 0, POWERUPS[type].color);
+    this.fx.popup(POWERUPS[type].name, p.x, 3.2, -1.5, POWERUPS[type].color, 1);
+    this.ui.toast(POWERUPS[type].name + '!', POWERUPS[type].desc);
+    if (type === 'carpet') this.startFlight();
+  }
+
+  // magic carpet: up above the stalls for a few seconds, a trail of coins in the air, the grandma gives up
+  startFlight() {
+    const r = this.run, p = this.player;
+    if (!p.flying) { p.fly(true); sfx.superJump(); this.fx.dust(p.x, p.y, 0, 12); }
+    r.chaserT = 0;
+    r.invuln = Math.max(r.invuln, 0.8); // covers the climb past anything right ahead
+    this.track.skyCoins(r.d + 12, r.d + r.speed * r.powers.carpet - 6, FLY_Y + 0.95, p.lane);
+  }
+  endFlight() {
+    const r = this.run, p = this.player;
+    if (!p.flying) return;
+    p.fly(false);
+    // a fair landing: a moment of grace and a clear patch of street
+    r.invuln = Math.max(r.invuln, 1.3);
+    this.track.clearAround(r.d, 22);
+    this.ui.toast(T.landing, '');
+  }
+
+  // mystery bag: one of four prizes
+  openBag(ev, mul) {
+    const r = this.run, p = this.player;
+    const roll = Math.random();
+    let text;
+    sfx.mission(); haptic('power');
+    this.fx.confetti(p.x, p.y + 1.6, -0.5);
+    if (roll < 0.35) {
+      const n = [20, 30, 50, 80][Math.floor(Math.random() * 4)];
+      r.coins += n; r.stats.coins += n;
+      text = T.bag.coins((n * 10).toLocaleString());
+    } else if (roll < 0.65) {
+      const k = ['magnet', 'x2', 'sneakers', 'hamsa', 'carpet'][Math.floor(Math.random() * 5)];
+      this.activatePower(k, ev);
+      text = T.bag.power(POWERUPS[k].name);
+    } else if (roll < 0.85) {
+      const pts = 500 * mul;
+      r.score += pts;
+      text = T.bag.score(pts.toLocaleString());
+    } else {
+      this.track.coinRain(r.d);
+      text = T.bag.rain;
+    }
+    this.fx.popup(T.bag.name, p.x, p.y + 3.2, -1.5, '#ffd23f', 1);
+    this.ui.toast(T.bag.name, text);
   }
 
   onHit(e, how) {
@@ -237,6 +297,7 @@ export class Game {
 
   stumble(e) {
     const r = this.run, p = this.player;
+    r.streak = 0;
     sfx.stumble(); haptic('stumble');
     this.fx.shake(0.18, 0.3);
     if (r.chaserT > 0) { this.crash(e, true); return; }
@@ -336,7 +397,7 @@ export class Game {
     for (const k of Object.keys(r.powers)) {
       if (r.powers[k] > 0) {
         r.powers[k] -= dt;
-        if (r.powers[k] <= 0) { r.powers[k] = 0; sfx.powerEnd(); }
+        if (r.powers[k] <= 0) { r.powers[k] = 0; sfx.powerEnd(); if (k === 'carpet') this.endFlight(); }
       }
     }
     if (r.comboT > 0) { r.comboT -= dt; if (r.comboT <= 0) r.combo = 0; }
@@ -452,6 +513,9 @@ export class Game {
     const p = this.player;
     p.update(dt, 0, this.time);
     this.world.update(dt, 0, p.root.position, this.time);
+    // a soft key light on the hero, whatever shade the street throws on the start line
+    const fill = this.world.playerLight;
+    fill.intensity = Math.max(fill.intensity, 7);
     // slow orbit in front of the character
     const a = Math.sin(this.menuT * 0.25) * 0.35;
     const cam = this.camera;

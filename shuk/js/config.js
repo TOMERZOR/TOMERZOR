@@ -56,7 +56,10 @@ export const POWERUPS = {
   x2:       { base: 10, step: 2.5, color: '#c47a2c' },
   sneakers: { base: 9, step: 2.5, color: '#2a9df4' },
   hamsa:    { base: 12, step: 3, color: '#1d6fd8' },
+  carpet:   { base: 6, step: 1.2, color: '#c0392b' },
 };
+// height the magic carpet flies at: above every obstacle, under the bunting
+export const FLY_Y = 3.2;
 // prices are in shekels; every coin you pick up is worth ₪10
 for (const [k, p] of Object.entries(POWERUPS)) [p.name, p.desc] = T.powers[k];
 export const UPGRADE_COST = [5000, 12000, 25000, 50000, 90000];

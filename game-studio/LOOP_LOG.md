@@ -341,3 +341,20 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
   - With `IOS=1`, every button (16 at start, 52 across screens) carries its switch, and each tap acts exactly once on home, map, world tabs, level gems and the pause sheet. Haptics off disables every switch. Every button's position is identical with and without the switches on five screens.
   - No console errors in basic, level1, firstrun, flow, hint, worlds, guide, audio, economy, calm, map, newglass, crystal, homenav and screens.
   - The iPhone tick itself needs a real iPhone; the game's physics costs 68 µs a step against 72 before.
+
+## Round 34: a bolder typeface
+- **Why:** Nunito's rounded letters read soft and generic; the game wanted something bolder and sharper, everywhere.
+- **Choice:** Archivo (SIL OFL), compared in the game's own look against Anybody, Bricolage Grotesque, Unbounded and Syne. Its expanded black weight gives the logo, titles and numbers real punch, and it stays readable at small sizes. The wider faces ran the logo off a 300 px card, and Bricolage read cramped.
+- **How:** two cuts from the variable font, weight still variable: `archivo.woff2` at 104% width for text and `archivo-expanded.woff2` at 125% for the logo, sheet titles, page titles, world names, map gems, rewards and the big buttons, plus the canvas's combo numbers. Fixed widths keep the canvas text identical on Safari, which can't change a font's width on the fly. 35 KB each; Nunito was 39 KB.
+- **Fitting:**
+  - The logo is sized to the screen (17vw, 48–88 px).
+  - The coach line keeps a 16 px margin.
+  - Below 340 px, the HUD label, the daily card and the store cards tighten.
+  - Store captions now break into balanced lines.
+- **Everywhere:**
+  - The game and the app copies.
+  - The website, with its share image redrawn by `qa/feature.html` (now laid out to fit any size).
+  - The Google Play feature graphic.
+  - All 14 store screenshots and the website's five images, regenerated.
+  - The trailer tool's captions. The finished trailer and brag films still show the old face until they are rendered again.
+- **Verified:** no text is clipped or runs off screen on home, levels, balls, store and settings at 320, 375, 390 and 430 px wide; screenshots of every screen, sheet, world card, crystal and the map read cleanly. No console errors.

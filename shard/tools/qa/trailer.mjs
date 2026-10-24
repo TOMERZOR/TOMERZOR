@@ -18,10 +18,10 @@ await page.goto('http://localhost:8080/index.html');
 await page.waitForTimeout(800);
 await page.addStyleTag({ content: `
   #hud, #home, .toast, #sheet, #scrim, #worldcard { display: none !important; }
-  #cap { position: fixed; left: 50%; top: 4.2%; transform: translateX(-50%); width: max-content; max-width: 86%; text-align: center; font: 900 23px/1.15 "Nunito", ui-rounded, system-ui, sans-serif; color: var(--sky0); background: color-mix(in srgb, var(--ink) 90%, transparent); padding: 12px 20px; border-radius: 22px; letter-spacing: -.005em; box-shadow: 0 10px 30px -12px rgba(0,0,0,.45); }
+  #cap { position: fixed; left: 50%; top: 4.2%; transform: translateX(-50%); width: max-content; max-width: 86%; text-align: center; font: 900 23px/1.15 "Archivo Expanded", "Archivo", system-ui, sans-serif; color: var(--sky0); background: color-mix(in srgb, var(--ink) 90%, transparent); padding: 12px 20px; border-radius: 22px; letter-spacing: -.005em; box-shadow: 0 10px 30px -12px rgba(0,0,0,.45); }
   #cap:empty { display: none; }
   #cap small { display: block; font-size: 13px; font-weight: 800; opacity: .75; margin-top: 4px; letter-spacing: .06em; text-transform: uppercase; }
-  #end { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: linear-gradient(160deg, #3A2E7A, #191339); color: #fff; text-align: center; font-family: "Nunito", ui-rounded, system-ui, sans-serif; }
+  #end { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: linear-gradient(160deg, #3A2E7A, #191339); color: #fff; text-align: center; font-family: "Archivo Expanded", "Archivo", system-ui, sans-serif; }
   #end img { width: 132px; height: 132px; border-radius: 30px; box-shadow: 0 20px 50px -10px rgba(0,0,0,.5); }
   #end h1 { margin: 0; font-size: 64px; font-weight: 900; letter-spacing: .04em; }
   #end p { margin: 0; font-size: 22px; font-weight: 800; opacity: .8; }

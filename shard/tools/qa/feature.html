@@ -1,32 +1,46 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>feature</title><style>html,body{margin:0}canvas{display:block}</style></head>
-<body><canvas id="c" width="1024" height="500"></canvas>
+<html><head><meta charset="utf-8"><title>feature</title><style>html,body{margin:0}canvas{display:block}
+@font-face{font-family:"Archivo";src:url("/assets/fonts/archivo.woff2") format("woff2");font-weight:100 900}
+@font-face{font-family:"Archivo Expanded";src:url("/assets/fonts/archivo-expanded.woff2") format("woff2");font-weight:100 900}</style></head>
+<body><canvas id="c"></canvas>
 <script>
-// Google Play feature graphic (1024x500): the icon artwork beside the wordmark.
+// Google Play feature graphic (1024x500) and, with ?w=1200&h=630, the landing page's share image:
+// the icon artwork beside the wordmark, laid out at 1024x500 and fitted to the canvas.
+const q = new URLSearchParams(location.search), W = +(q.get('w') || 1024), H = +(q.get('h') || 500);
 const c = document.getElementById('c'), x = c.getContext('2d');
-const g = x.createLinearGradient(0, 0, 1024, 500);
+c.width = W; c.height = H;
+const k = Math.min(W / 1024, H / 500), w = W / k, h = H / k; // design units: the 1024x500 layout fits inside
+const g = x.createLinearGradient(0, 0, W, H);
 g.addColorStop(0, '#3A2E7A'); g.addColorStop(0.6, '#2A2160'); g.addColorStop(1, '#191339');
-x.fillStyle = g; x.fillRect(0, 0, 1024, 500);
-const halo = x.createRadialGradient(250, 250, 20, 250, 250, 330);
+x.fillStyle = g; x.fillRect(0, 0, W, H);
+x.scale(k, k);
+x.translate((w - 1024) / 2, (h - 500) / 2); // centred in a frame of another shape
+const ox = 0;
+const halo = x.createRadialGradient(ox + 250, 250, 20, ox + 250, 250, 330);
 halo.addColorStop(0, 'rgba(140,200,255,0.35)'); halo.addColorStop(1, 'rgba(140,200,255,0)');
-x.fillStyle = halo; x.fillRect(0, 0, 1024, 500);
+x.fillStyle = halo; x.fillRect(-w, -h, 3 * w, 3 * h);
 const im = new Image();
-im.onload = () => {
+im.onload = async () => {
+  await Promise.all([document.fonts.load('900 100px "Archivo Expanded"'), document.fonts.load('700 38px Archivo')]);
   // the icon art without its square: clip a circle around the orb
-  x.save(); x.beginPath(); x.arc(250, 250, 225, 0, Math.PI * 2); x.clip();
-  x.drawImage(im, 250 - 270, 250 - 260, 540, 540);
+  x.save(); x.beginPath(); x.arc(ox + 250, 250, 225, 0, Math.PI * 2); x.clip();
+  x.drawImage(im, ox + 250 - 270, 250 - 260, 540, 540);
   x.restore();
+  const L = ox + 504, room = 1024 - 504 - 56; // text column
+  const fit = (font, size, text) => { let s = size; do { x.font = `${font.replace('$', s)}`; } while (x.measureText(text).width > room && --s > 10); return s; };
   x.fillStyle = '#FFFFFF'; x.textBaseline = 'alphabetic';
-  x.font = '900 128px ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-  x.fillText('SHARD', 500, 260);
-  x.font = '800 38px ui-rounded, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  fit('900 $px "Archivo Expanded"', 112, 'SHARD');
+  x.fillText('SHARD', L, 255);
+  fit('700 $px Archivo', 38, 'Aim. Fire. Shatter.');
   x.fillStyle = 'rgba(255,255,255,0.78)';
-  x.fillText('Aim. Fire. Shatter.', 506, 322);
+  x.fillText('Aim. Fire. Shatter.', L + 3, 318);
+  x.font = '900 21px "Archivo Expanded"';
+  const label = '120 levels · Daily puzzle', lw = x.measureText(label).width;
   x.fillStyle = '#FF6B57';
-  x.beginPath(); x.roundRect(506, 352, 330, 54, 27); x.fill();
-  x.fillStyle = '#FFFFFF'; x.font = '900 24px ui-rounded, system-ui, sans-serif';
-  x.fillText('120 levels · Daily puzzle', 530, 387);
+  x.beginPath(); x.roundRect(L + 3, 350, lw + 48, 54, 27); x.fill();
+  x.fillStyle = '#FFFFFF';
+  x.fillText(label, L + 27, 384);
   document.title = 'ready';
 };
-im.src = '/tools/qa/icon.html' ? '/assets/icon-512.png' : '';
+im.src = '/assets/icon-512.png';
 </script></body></html>

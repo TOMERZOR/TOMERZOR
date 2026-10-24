@@ -2,7 +2,7 @@
 import { W, PIVOT_Y, BALL_R, CEIL, DOME_R, MUZZLE } from './engine.js';
 
 const TAU = Math.PI * 2;
-const FONT = '"Nunito", ui-rounded, system-ui, sans-serif';
+const FONT = '"Archivo Expanded", "Archivo", system-ui, sans-serif';
 
 export function createRenderer(canvas) {
   // two layers: the settled layer (stage plus everything at rest) redraws only when that set changes;

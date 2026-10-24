@@ -82,7 +82,7 @@ The solver part: that simulates the real physics. A level ships only when it has
   - The cannon has a lit barrel, a ready light, a muzzle flash and a contact shadow.
   - Shots left are drawn as mini balls in the equipped skin.
 - **Aim guide:** flowing dots and a ghost ball at the first contact. On glass it's marked to break.
-- **Type:** Nunito (SIL OFL), bundled, so every platform, screenshot and the website match. Big numbers, small-caps labels, lots of space.
+- **Type:** Archivo (SIL OFL), bundled in two cuts so every platform, screenshot and the website match: a little wide (104%) for text, fully expanded (125%) and heavy for the logo, titles, world names, big numbers and the main buttons. Sharp, not rounded; big numbers, small-caps labels, lots of space.
 - **Motion:** weight follows frequency.
   - A level start (frequent) is under a second and never blocks: pieces pop in bottom-up while glass notes play.
   - A win (every level) is quick: stars one by one, coins counting up, confetti on 3 stars.

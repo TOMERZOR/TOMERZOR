@@ -6,14 +6,15 @@
 <title>SHARD Support</title>
 <link rel="icon" href="assets/icon-32.png">
 <style>
-  @font-face { font-family: "Nunito"; src: url("assets/nunito.woff2") format("woff2"); font-weight: 200 1000; font-display: swap; }
+  @font-face { font-family: "Archivo"; src: url("assets/archivo.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: "Archivo Expanded"; src: url("assets/archivo-expanded.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
   :root { --bg: #FBF5EE; --ink: #3E3A4F; --muted: #6E6980; --accent: #E5533D; --card: #FFFFFF; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161B2E; --ink: #E7EAF6; --muted: #B9C0DC; --accent: #FF7A59; --card: #232A45; } }
   :root[data-theme="dark"] { --bg: #161B2E; --ink: #E7EAF6; --muted: #B9C0DC; --accent: #FF7A59; --card: #232A45; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
   main { max-width: 680px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 32px) 16px calc(env(safe-area-inset-bottom) + 48px); }
-  h1 { font-size: 36px; margin: 0 0 8px; font-weight: 900; }
+  h1 { font-family: "Archivo Expanded", "Archivo", system-ui, sans-serif; font-size: 36px; margin: 0 0 8px; font-weight: 900; }
   .card { background: var(--card); border-radius: 20px; padding: 18px 20px; margin: 14px 0; }
   .card b { display: block; font-size: 18px; }
   .card p { margin: 6px 0 0; color: var(--muted); font-weight: 600; }

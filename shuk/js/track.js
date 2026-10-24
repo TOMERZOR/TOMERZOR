@@ -446,7 +446,10 @@ export class Track {
       if (!prevDOver) how = 'front';          // ran into it
       else if (!prevXOver) how = 'side';      // steered into it
       else if (!prevYOver) how = 'top';       // dropped onto it / rose into it
-      else continue;                          // already inside it (e.g. after a grace period): no new hit
+      // still inside after a grace period (steered back in during a side bump, or slipped off a roof edge):
+      // trucks and vans bump you out again rather than letting you run through them; small props stay passable
+      else if (e.kind === 'platform' || e.kind === 'wall') how = 'side';
+      else continue;
       if (e.kind === 'platform') {
         const centred = Math.abs(px - e.x) < e.w / 2 + 0.1;
         if (how === 'top' && ply >= top - 0.05) { if (centred && player.vy <= 0) this.events.push({ t: 'climb', e, y: top }); continue; }

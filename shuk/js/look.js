@@ -78,7 +78,12 @@ export class Look {
   // mode: 'high' (MSAA + bloom + grade), 'mid' (bloom at lower res + grade + FXAA), 'low' (direct render)
   setMode(mode, width, height, ratio) {
     this.mode = mode;
-    if (this.composer) { this.composer.dispose(); this.composer = null; }
+    if (this.composer) {
+      // the composer only frees its own targets; every pass holds render targets and materials too
+      for (const p of this.composer.passes) p.dispose?.();
+      this.composer.dispose();
+      this.composer = null; this.bloom = null; this.grade = null; this.fxaa = null;
+    }
     if (mode === 'low') return;
     const isWebGL2 = this.renderer.capabilities.isWebGL2;
     const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: mode === 'high' && isWebGL2 ? 4 : 0 });
@@ -86,8 +91,8 @@ export class Look {
     c.setPixelRatio(ratio);
     c.setSize(width, height);
     c.addPass(new RenderPass(this.scene, this.camera));
-    const bloomRes = new THREE.Vector2(width, height).multiplyScalar(mode === 'high' ? 0.5 : 0.35);
-    this.bloom = new UnrealBloomPass(bloomRes, 0.42, 0.55, 0.82);
+    this.bloomScale = mode === 'high' ? 0.5 : 0.35;
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.42, 0.55, 0.82);
     c.addPass(this.bloom);
     c.addPass(new OutputPass());
     this.grade = new ShaderPass(GradeShader);
@@ -98,12 +103,15 @@ export class Look {
       c.addPass(this.fxaa);
     } else this.fxaa = null;
     this.composer = c;
+    this.resize(width, height, ratio);
   }
 
   resize(width, height, ratio) {
     if (!this.composer) return;
     this.composer.setPixelRatio(ratio);
     this.composer.setSize(width, height);
+    // the composer sizes every pass to the full buffer; bloom runs cheaper at a fraction of it
+    this.bloom.setSize(Math.round(width * ratio * this.bloomScale), Math.round(height * ratio * this.bloomScale));
     if (this.fxaa) this.fxaa.material.uniforms.resolution.value.set(1 / (width * ratio), 1 / (height * ratio));
     if (this.grade) this.grade.uniforms.aspect.value = width / height;
   }

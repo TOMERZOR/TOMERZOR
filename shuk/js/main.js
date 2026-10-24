@@ -63,7 +63,10 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   // keep the three lanes and some stalls in view on narrow portrait screens
-  camera.fov = camera.userData.baseFov = camera.aspect < 0.62 ? 70 : camera.aspect < 1 ? 64 : 56;
+  // keep any running FOV kick on top of the new base instead of snapping it away
+  const base = camera.aspect < 0.62 ? 70 : camera.aspect < 1 ? 64 : 56;
+  camera.fov += base - (camera.userData.baseFov ?? camera.fov);
+  camera.userData.baseFov = base;
   camera.updateProjectionMatrix();
   look.resize(w, h, quality.ratio);
   if (fx) fx.setScale(h * quality.ratio);
@@ -141,7 +144,7 @@ async function boot() {
   try {
     await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
     tick();
-    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.jpg', 'img/paving.jpg', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).finally(() => tick())));
+    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.jpg', 'img/paving.jpg', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).catch(e => { if (u.includes('decals')) return null; throw e; }).finally(() => tick())));
     await assets.loadAnims('models/anims.glb'); tick(2);
     fx = new FX(scene);
     world = new World(scene, renderer, { facade, paving, decals, murals: [m1, m2, m3] });
@@ -183,8 +186,8 @@ async function warmup() {
     'pow:magnet', 'pow:x2', 'pow:sneakers', 'pow:hamsa', ...Object.keys(NPC_TYPES).map(t => 'npc:' + t)];
   for (const t of types) { const o = track.acquireSync(t); o.visible = true; o.position.set((tmp.length % 5 - 2) * 2, 0, -6 - Math.floor(tmp.length / 5) * 3); tmp.push([t, o]); }
   camera.position.set(0, 3, 6); camera.lookAt(0, 1, -8);
-  renderer.compile(scene, camera);
-  renderer.render(scene, camera);
+  // render through the post chain so the programs compiled are the ones real frames use
+  look.render(0, 0);
   await frame();
   for (const [t, o] of tmp) track.recycle(t, o);
 }
@@ -301,11 +304,13 @@ function adaptQuality(dt) {
   if (dt > 1 / 40) quality.slowFrames++;
   if (quality.samples >= 120) {
     if (quality.slowFrames > 40) {
-      // step down: post effects first, then resolution, then shadows
+      // step down: post effects first, then resolution, then shadows (nothing left to drop: leave it alone)
+      let changed = true;
       if (quality.post !== 'low') quality.post = 'low';
       else if (quality.ratio > 0.75) quality.ratio = Math.max(0.75, quality.ratio - 0.25);
       else if (quality.shadows) quality.shadows = false;
-      applyQuality(false);
+      else changed = false;
+      if (changed) applyQuality(false);
     }
     quality.samples = 0; quality.slowFrames = 0;
   }

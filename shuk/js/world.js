@@ -232,11 +232,11 @@ function propMatrix(x, z, yaw, scale) {
 }
 
 // models: generated stall/truck meshes ({ name: { size } }); fronts face +x, the long side runs along z
-function buildVariant(theme, atlas, models = {}) {
+function buildVariant(theme, atlas, models = {}, decals = true) {
   const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag(), decal = new Bag(true);
   const glow = [];
   const placed = [];
-  scatterDecals(decal, theme);
+  if (decals) scatterDecals(decal, theme);
   const stallModels = ['fruit', 'spice', 'sweets'].filter(n => models[n]);
   const vendorSpots = [];
   const night = theme === 'night', covered = theme === 'covered';
@@ -457,8 +457,12 @@ export class World {
 
     const facadeTex = buildFacadeTexture(images);
     const pave = new THREE.Texture(images.paving); pave.needsUpdate = true;
-    const decalTex = new THREE.Texture(images.decals); decalTex.needsUpdate = true;
-    decalTex.colorSpace = THREE.SRGBColorSpace; decalTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    // ground litter is optional: without its atlas the street simply has none
+    let decalTex = null;
+    if (images.decals) {
+      decalTex = new THREE.Texture(images.decals); decalTex.needsUpdate = true;
+      decalTex.colorSpace = THREE.SRGBColorSpace; decalTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    }
     pave.colorSpace = THREE.SRGBColorSpace; pave.wrapS = pave.wrapT = THREE.RepeatWrapping; pave.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
     this.mats = {
@@ -525,7 +529,7 @@ export class World {
   *buildSteps() {
     for (const theme of THEME_ORDER) {
       this.variants[theme] = [];
-      for (let i = 0; i < N_VARIANTS; i++) { this.variants[theme].push(buildVariant(theme, this.atlas, this.propModels)); yield; }
+      for (let i = 0; i < N_VARIANTS; i++) { this.variants[theme].push(buildVariant(theme, this.atlas, this.propModels, !!this.mats.decal.map)); yield; }
     }
   }
 

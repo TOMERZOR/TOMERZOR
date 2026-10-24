@@ -171,6 +171,7 @@ export class UI {
       { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.55)`, opacity: 0.9 },
     ], { duration: 520, easing: 'cubic-bezier(.4,0,.7,1)' });
     anim.onfinish = anim.oncancel = () => {
+      if (!img.isConnected) return; // already swept away by showHUD(), which reset the count
       img.remove(); this.flying--;
       const cap = $('hud-coins').parentElement;
       cap.classList.remove('bump'); void cap.offsetWidth; cap.classList.add('bump');

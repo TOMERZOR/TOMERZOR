@@ -604,7 +604,7 @@ function CheckView({ sid0 }) {
             : html`<div class="reading-note" style=${{ flex: 1 }}><span class="dot-pulse"></span><span style=${{ flex: 1 }}>${streamed ? 'מסיים לקרוא…' : 'קורא את האישור'} <span class="num muted">${elapsed}s</span></span><button type="button" class="btn sm" onClick=${() => ctl.current && ctl.current.abort()}><${Icon} n="stop_circle" />עצירה</button></div>`}
           </div>` : null}
           ${file && phase === 'ready' && Caps.ai ? html`<p class="muted" style=${{ fontSize: '12.5px' }}>הקריאה נעשית בחשבון ה-Claude שלכם ולוקחת בדרך כלל עד דקה. בפעם הראשונה תתבקשו לאשר.</p>` : null}
-          ${!Caps.ai && file ? html`<div class="notice"><${Icon} n="info" /><span>קריאה אוטומטית זמינה כשהעמוד פתוח ב-Claude. כאן מזינים את הפרטים ידנית, והבדיקה מול הדרישות מתבצעת מיד.</span></div>` : null}
+          ${!Caps.ai && file ? html`<div class="notice"><${Icon} n="info" /><span>בגרסת ההדגמה מזינים את פרטי האישור ידנית, והבדיקה מול הדרישות מתבצעת מיד. קריאה אוטומטית של האישור זמינה בגרסה המלאה.</span></div>` : null}
         </div></section>
 
         ${fields ? html`<section class="card step"><div class="body step">

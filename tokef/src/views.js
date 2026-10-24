@@ -23,7 +23,7 @@ function Welcome() {
         <button type="button" class="btn primary lg" onClick=${() => setNewOpen(true)}><${Icon} n="add" />יצירת פרויקט</button>
         <button type="button" class="btn lg" disabled=${busy} onClick=${demo}>${busy ? 'טוען…' : 'פרויקט הדגמה'}</button>
       </div>`}
-      ${S.mode === 'local' ? html`<p class="muted" style=${{ fontSize: '13px' }}>העמוד פתוח מחוץ ל-Claude, ולכן הנתונים יישמרו בדפדפן הזה בלבד.</p>` : null}
+      ${S.mode === 'local' ? html`<p class="muted" style=${{ fontSize: '13px' }}>בגרסת ההדגמה הנתונים נשמרים רק בדפדפן הזה.</p>` : null}
     </div>
     <div class="pic"><img src="img/office.jpg" alt="שולחן במשרד אתר בנייה עם קסדה, קלסרים ומחשב נייד" /></div>
     ${newOpen ? html`<${ProjectModal} onClose=${() => setNewOpen(false)} />` : null}
@@ -265,7 +265,7 @@ function ProjectSettings() {
 
     <section class="card"><div class="body" style=${{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <h2 class="h2">הנתונים</h2>
-      <p class="soft">${S.mode === 'db' ? 'הנתונים נשמרים בעמוד הזה ומשותפים לכל מי שיש לו גישה אליו. שינוי שעושה חבר צוות מופיע אצל כולם מיד.' : 'העמוד פתוח מחוץ ל-Claude, ולכן הנתונים נשמרים בדפדפן הזה בלבד ולא משותפים.'}</p>
+      <p class="soft">${S.mode === 'db' ? 'הנתונים נשמרים בעמוד הזה ומשותפים לכל מי שיש לו גישה אליו. שינוי שעושה חבר צוות מופיע אצל כולם מיד.' : 'בגרסת ההדגמה הנתונים נשמרים רק בדפדפן הזה ולא משותפים עם הצוות.'}</p>
       ${S.readOnly ? null : html`<div class="row">
         <button type="button" class="btn" onClick=${() => setNewOpen(true)}><${Icon} n="add" />פרויקט חדש</button>
         <span class="spacer"></span>

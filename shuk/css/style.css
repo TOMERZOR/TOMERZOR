@@ -57,6 +57,7 @@ body.css-finish #speedlines.on { display: block; animation: speedlines .28s line
 .gt::after { content: attr(data-text); position: absolute; inset: 0; color: transparent; -webkit-text-stroke: 0; text-shadow: none; pointer-events: none;
   background: linear-gradient(180deg, #fffef2 0%, var(--gold-1) 18%, var(--gold-2) 55%, var(--gold-3) 100%);
   -webkit-background-clip: text; background-clip: text; }
+.gt.gt-sync::after { background-position: 0 .01px; } /* any paint change: see syncGold() in ui.js */
 
 /* ---------- buttons ---------- */
 .gbtn {

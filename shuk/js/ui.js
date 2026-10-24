@@ -9,10 +9,17 @@ const fmt = n => Math.floor(n).toLocaleString(LOCALE);
 const ICON = k => `img/ui/ico_${k}.webp`;
 const COIN = '<img src="img/ui/ico_coin.webp" alt="">';
 
-// gradient title text draws its outline from data-text, so both must change together
+// gradient title text draws its gold fill from data-text, so both must change together
 function setText(el, text) {
   el.textContent = text;
-  if (el.classList.contains('gt')) el.dataset.text = text;
+  if (el.classList.contains('gt')) syncGold(el, text);
+}
+// Safari kept painting the old gold fill when only the attribute behind the ::after attr() content changed
+// (every character card said the first name). Flipping a class whose rule changes how the pseudo-element
+// paints makes it restyle with the new text and repaint.
+function syncGold(el, text) {
+  el.dataset.text = text;
+  el.classList.toggle('gt-sync');
 }
 
 export class UI {
@@ -314,7 +321,10 @@ export class UI {
   renderChar() {
     const s = Save.get();
     const c = CHARACTERS[this.charIndex];
-    setText($('char-name'), c.name);
+    // a fresh element per card: nothing of the previous name's painted fill can survive
+    const old = $('char-name'), name = old.cloneNode(false);
+    old.replaceWith(name);
+    setText(name, c.name);
     $('char-title').textContent = c.title;
     $('char-bio').textContent = c.bio;
     const owned = s.owned.includes(c.id);
@@ -399,7 +409,7 @@ export class UI {
     $('mis-explain').textContent = s.level >= MAX_MULT ? T.levelMax
       : T.levelExplain(s.level + 1, Math.min(MAX_MULT, s.level + 1), fmt(LEVEL_REWARD * s.level));
     const big = document.querySelector('.big-level');
-    big.dataset.text = big.textContent;
+    syncGold(big, big.textContent);
     const list = $('mission-list');
     list.innerHTML = '';
     for (const m of s.missions) list.appendChild(this.missionEl(m));

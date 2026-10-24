@@ -1,0 +1,17 @@
+{
+  "name": "Paint Parade — Color Puzzle",
+  "short_name": "Paint Parade",
+  "description": "Tap cute paint buckets onto the parade belt and bring pixel art to life.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#fbe9ff",
+  "theme_color": "#f6e8ff",
+  "categories": ["games", "puzzle", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

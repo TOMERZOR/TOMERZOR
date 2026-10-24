@@ -12,6 +12,7 @@ import { T } from './i18n.js';
 const AHEAD = 170;
 const BEHIND = 16;
 const COIN_CAP = 420;
+const BUBBLE_H = 0.74;   // world height of a speech bubble; the width follows the text
 
 const PROPS = {
   crates:   { kind: 'low', w: 1.95, front: 0.5, back: 0.5, h: 0.85, make: P.makeCrates },
@@ -25,10 +26,11 @@ const PROPS = {
   truck:    { kind: 'platform', w: 2.15, front: 4.25, back: 6.15, h: 2.35, make: () => P.makeTruck(false) },
   truckR:   { kind: 'platform', w: 2.15, front: 4.25, back: 6.15, h: 2.35, ramp: 4.2, make: () => P.makeTruck(true) },
   van:      { kind: 'wall', w: 2.0, front: 2.55, back: 2.5, h: 2.6, make: P.makeVan, speed: 2.2 },
+  melonRoll: { kind: 'low', w: 0.95, front: 0.5, back: 0.5, h: 0.8, make: P.makeRollingMelon, speed: 6 },
 };
 const LOWS = ['crates', 'melons', 'sacks', 'barrier'];
 const HIGHS = ['banner', 'rugs'];
-const POWER_TYPES = [['magnet', 0.34], ['x2', 0.26], ['sneakers', 0.2], ['hamsa', 0.2]];
+const POWER_TYPES = [['magnet', 0.3], ['x2', 0.22], ['sneakers', 0.17], ['hamsa', 0.17], ['carpet', 0.14], ['bag', 0.18]];
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -133,6 +135,13 @@ export class Track {
     } else if (type.startsWith('pow:')) {
       obj = P.makePowerup(type.slice(4));
     }
+    // contact shadow under everything that stands on the street
+    if (!type.startsWith('pow:')) {
+      let w = 0.95, d = 0.75, square = false;
+      if (PROPS[type]) { const p = PROPS[type]; w = p.w * 1.08; d = (p.front + p.back) * 1.05; square = true; if (p.y0) { w = 0; } }
+      else if (type.startsWith('npc:')) { const n = NPC_TYPES[type.slice(4)]; w = Math.max(0.95, n.w * 1.1); d = Math.max(0.75, n.d * 1.1); }
+      if (w) { const b = P.makeContactShadow(w, d, { square, opacity: square ? 0.42 : 0.5 }); obj.add(b); obj.userData.blob = b; }
+    }
     // speech bubble sprite (shared by every use of this object)
     if (type.startsWith('npc:') || type.startsWith('ped:') || type === 'van') {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, toneMapped: false }));
@@ -157,9 +166,15 @@ export class Track {
     e.obj = null;
   }
 
+  // speech bubble textures, most recently used kept (a sprite still showing an evicted one simply re-uploads it)
   bubble(text) {
     let t = this.bubbleTex.get(text);
-    if (!t) { t = bubbleTexture(text); this.bubbleTex.set(text, t); }
+    if (t) this.bubbleTex.delete(text);
+    else {
+      t = bubbleTexture(text);
+      if (this.bubbleTex.size >= 16) { const [k, old] = this.bubbleTex.entries().next().value; this.bubbleTex.delete(k); old.dispose(); }
+    }
+    this.bubbleTex.set(text, t);
     return t;
   }
 
@@ -174,6 +189,7 @@ export class Track {
     if (type.startsWith('ped:') && !this.assets.chars[type.slice(4)]) return null;
     const obj = this.acquireSync(type);
     obj.visible = true;
+    if (obj.userData.blob) obj.userData.blob.visible = true;
     const x = lane === -1 ? 0 : LANE_X[lane];
     const e = {
       type, kind: def.kind, lane, x, d, w: def.w, front: def.front, back: def.back, y0: def.y0 || 0, h: def.h,
@@ -197,7 +213,11 @@ export class Track {
     }
     if (ud.bubble) {
       ud.bubble.visible = false;
-      if (e.sayText) { ud.bubble.material.map = this.bubble(e.sayText); ud.bubble.material.needsUpdate = true; }
+      if (e.sayText) {
+        const t = this.bubble(e.sayText);
+        ud.bubble.material.map = t; ud.bubble.material.needsUpdate = true;
+        ud.bubble.scale.set(BUBBLE_H * t.userData.aspect, BUBBLE_H, 1);
+      }
       ud.bubble.position.set(0, (type === 'van' ? 4.6 : def.h + 0.55), 0);
     }
     if (ud.cloth) ud.cloth.rotation.x = 0;
@@ -217,6 +237,18 @@ export class Track {
   coinLine(lane, d0, d1, y = 0.75) {
     if (d1 - d0 < 2) return;
     for (let d = d0; d <= d1; d += 2.2) this.addCoin(lane, d, y);
+  }
+  // a trail of coins in the air for the magic carpet, weaving between lanes
+  skyCoins(d0, d1, y, lane = 1) {
+    let L = lane, next = d0 + rnd(12, 20);
+    for (let d = d0; d < d1; d += 2.0) {
+      if (d > next) { L = clamp(L + pick([-1, 1]), 0, 2); next = d + rnd(12, 20); }
+      this.addCoin(L, d, y + Math.sin(d * 0.35) * 0.25);
+    }
+  }
+  // the mystery bag's shower: arcs of coins in every lane just ahead
+  coinRain(runD) {
+    for (const L of [0, 1, 2]) for (let k = 0; k < 4; k++) this.coinArc(L, runD + 18 + k * 12 + L * 2, 4, 2.6);
   }
   coinArc(lane, center, half = 5.2, peak = 2.2, base = 0.75) {
     for (let k = -half; k <= half + 0.01; k += 1.3) {
@@ -285,9 +317,9 @@ export class Track {
     let pattern = 'basic';
     const can = name => ({
       jumpAll: D > 300, rollAll: D > 380, trucks: D > 230 && zone.id !== 'covered', van: D > 650 && zone.id !== 'covered',
-      chabad: D > 150, crowd: D > 180,
+      chabad: D > 150, crowd: D > 180, rollers: D > 420,
     })[name];
-    const weights = [['jumpAll', 0.07 + 0.06 * diff], ['rollAll', 0.06 + 0.06 * diff], ['trucks', 0.12], ['van', 0.06], ['chabad', 0.06], ['crowd', 0.08]];
+    const weights = [['jumpAll', 0.07 + 0.06 * diff], ['rollAll', 0.06 + 0.06 * diff], ['trucks', 0.12], ['van', 0.06], ['chabad', 0.06], ['crowd', 0.08], ['rollers', 0.06 + 0.04 * diff]];
     let acc = 0;
     for (const [name, w] of weights) { acc += w; if (roll < acc) { if (can(name)) pattern = name; break; } }
 
@@ -330,6 +362,15 @@ export class Track {
         this.add('npc:chabad', L2, D + 0.2); lanesContent[L2] = 'wall';
         coinsPlan.mode = 'arc';
       }
+    } else if (pattern === 'rollers') {
+      // watermelons escaped from a pile, rolling down the lanes at you: jump them or step aside
+      for (const L of [0, 1, 2]) {
+        if (!this.laneFree(L, D) || (L === safe && Math.random() < 0.55)) continue;
+        this.add('melonRoll', L, D + rnd(-2, 6), { meetAt, playerSpeed: pSpeed });
+        lanesContent[L] = 'low';
+      }
+      if (lanesContent[safe]) coinsPlan.mode = 'arc';
+      extraLen = 8;
     } else if (pattern === 'crowd') {
       const lanes = [0, 1, 2].filter(L => L !== safe && this.laneFree(L, D));
       lanes.forEach((L, i) => { this.pickWall(D + i * rnd(3, 7), zone.id, L, meetAt, pSpeed); lanesContent[L] = 'wall'; });
@@ -509,6 +550,7 @@ export class Track {
       }
       if (e.dead) {
         // knocked aside by the hamsa shield
+        if (ud.blob) ud.blob.visible = false;
         e.flyT = (e.flyT || 0) + dt;
         o.position.x = e.x + e.flyDir * e.flyT * 9;
         o.position.y = e.flyT * 7 - e.flyT * e.flyT * 14;
@@ -517,6 +559,7 @@ export class Track {
         continue;
       }
       if (ud.mixer && ahead < 90 && ahead > -10) ud.mixer.update(dt);
+      if (ud.roll) ud.roll.rotation.x += e.speed * dt / 0.42;
       if (ud.dancers && ahead < 90) for (const m of ud.dancers) m.update(dt);
       const body = ud.body;
       if (body && e.bob) {

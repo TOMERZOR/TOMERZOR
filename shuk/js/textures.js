@@ -79,78 +79,217 @@ export function coinTextures() {
   return { face, edge };
 }
 
-// ---- shop signs atlas ----
+// ---- street signs atlas ----
+// Sign-painter lettering in real Hebrew faces over generated weathered blanks (img/signs.webp: eight boards,
+// no text), so the street reads like the shuk's own hand-painted, taped-up and enamelled signage.
+export const FONT_SUEZ = '"Suez One", "Frank Ruhl Libre", serif';
+export const FONT_PAINT = 'Karantina, "Secular One", sans-serif';
+export const FONT_HAND = '"Amatic SC", Karantina, cursive';
+export const FONT_BOX = '"Secular One", Rubik, sans-serif';
+export const FONT_STREET = 'Rubik, "Arial Hebrew", sans-serif';
+
+// source rectangles of the blanks (x, y, w, h) and their corner inset
+const BOARDS = {
+  yellow: [10, 87, 239, 187, 26], cream: [265, 87, 238, 186, 24], green: [520, 86, 239, 188, 22], red: [777, 86, 238, 187, 26],
+  chalk: [10, 357, 239, 216, 24], card: [265, 354, 237, 220, 30], blue: [520, 361, 238, 209, 24], light: [777, 361, 238, 212, 26],
+};
+const BOARD_FALLBACK = { yellow: '#f2c230', cream: '#f1ebdc', green: '#3d5a40', red: '#b8312b', chalk: '#2a2d2b', card: '#b98f5d', blue: '#1f3fa0', light: '#f4f6f4' };
+// lettering per board: font, colour, weight
+const INK = {
+  yellow: [FONT_SUEZ, '#b3141c', 400], cream: [FONT_SUEZ, '#1f4d9c', 400], green: [FONT_PAINT, '#f3ead0', 700], red: [FONT_PAINT, '#fff6e6', 700],
+  light: [FONT_BOX, '#1d3550', 400], rent: [FONT_PAINT, '#d0121b', 700],
+};
+
+// [name, board, small second line]
 export const SHOP_SIGNS = [
-  ['פירות וירקות', '#1f7a3a', '#fff'], ['תבלינים ותה', '#b5401c', '#ffe9b0'], ['חלבה וממתקים', '#6b2b7a', '#fff'],
-  ['פיצוחים', '#8a5a14', '#fff6d6'], ['מאפיית השוק', '#c98a2b', '#3a1d00'], ['דגים טריים', '#1c5d8f', '#fff'],
-  ['גבינות וזיתים', '#e7c44b', '#3b2a00'], ['מיץ טבעי', '#d1314b', '#fff'], ['פרחים', '#d45d9a', '#fff'],
-  ['בורקס', '#e58a1f', '#2b1400'], ['קפה שחור', '#3b2418', '#f5d7a1'], ['ירקות טריים', '#2f8f3a', '#fffbe0'],
-  ['פירות יבשים', '#a2482b', '#fff'], ['חומוס פול', '#c7a24a', '#2a1a00'], ['כל הקילו ב־10!', '#ffd23f', '#c1121f'],
-  ['אגוזים וקלויים', '#5a3a1a', '#ffd88a'], ['מעדניית השוק', '#264653', '#e9c46a'], ['תה ונענע', '#2a9d8f', '#fff'],
-  ['קונדיטוריה', '#f4a6b8', '#5b1530'], ['סחלב חם', '#7d5ba6', '#fff'],
+  ['פירות וירקות', 'green', 'סיטונאות וקמעונאות'], ['תבלינים ותה', 'yellow', 'מאז 1958'], ['חלבה וממתקים', 'red', 'חלבה טרייה כל בוקר'],
+  ['פיצוחים', 'yellow', 'קלוי במקום'], ['מאפיית השוק', 'cream', 'חלות • בורקס • רוגלך'], ['דגים טריים', 'light', 'ישר מהים'],
+  ['גבינות וזיתים', 'cream', 'מעדנייה'], ['מיץ טבעי', 'light', 'סחוט מול העיניים'], ['פרחים', 'green', 'לשבת ולחג'],
+  ['בורקס', 'yellow', 'של סבתא (לא שלך)'], ['קפה שחור', 'red', 'טחון עם הל'], ['ירקות טריים', 'green', 'ישר מהמושב'],
+  ['פירות יבשים', 'yellow', ''], ['חומוס פול', 'cream', 'מאז שזה היה זול'], ['כל הקילו בעשרה!', 'yellow', 'רק היום (כמו אתמול)'],
+  ['אגוזים וקלויים', 'red', ''], ['מעדניית השוק', 'light', 'סלטים • כבושים'], ['תה ונענע', 'green', ''],
+  ['קונדיטוריה', 'cream', ''], ['סחלב חם', 'red', 'בחורף בלבד'], ['פיצוחי אבו שאול', 'yellow', 'עסק משפחתי'],
+  ['הכי זול בשוק', 'red', 'לפי הסקר שלנו'], ['תבליני המלך', 'yellow', 'סיטונאות'], ['משה ובניו', 'green', 'פירות • ירקות'],
+  ['כאן לא מתמקחים', 'cream', '(טוב, קצת)'],
 ];
+const RENT_SIGNS = [['להשכרה', 'לפרטים: לצעוק למעלה'], ['דירה להשכרה', '3 חדרים, נוף לשוק'], ['למכירה', 'כולל השכנים']];
 export const NEON_SIGNS = [
   ['בירה קרה', '#ff3d7f'], ['השוק בלילה', '#3df2ff'], ['ערק', '#ffe14d'], ['מוזיקה חיה', '#8cff4d'],
   ['פתוח עד מאוחר', '#ff8a3d'], ['בר', '#ff4df2'], ['שווארמה', '#ffd23f'], ['ריקודים', '#4dd2ff'],
 ];
-export const PRICE_TAGS = ['₪10', '3 ב־10', '₪5', '₪12', '₪8', 'מבצע', '₪20', '2 ב־15'];
+export const PRICE_TAGS = ['₪10', '3 ב־10', '₪5 לק״ג', '₪12', '₪8', 'מבצע!', '₪20', '2 ב־15'];
+const STREETS = [['מחנה יהודה', 'MAHANE YEHUDA ST.'], ['עץ החיים', 'ETS HAYIM ST.'], ['האגס', "HA-AGAS ST."], ['השקד', 'HA-SHAKED ST.'],
+  ['התפוח', 'HA-TAPUAH ST.'], ['האפרסק', 'HA-AFARSEK ST.'], ['השזיף', 'HA-SHEZIF ST.'], ['האגוז', 'HA-EGOZ ST.']];
+const CHALK = [
+  ['היום בבר', 'בירה מהחבית 24', 'ערק לימונענע 15', 'צ׳ייסר על הבית*', '*לא באמת'],
+  ['קפה', 'הפוך 12', 'שחור עם הל 9', 'תה נענע 8', 'עצה – חינם'],
+  ['מבצע!', '3 אבוקדו', 'בעשר שקל', 'בשלים מחר'],
+  ['שקשוקה 38', 'סביח 28', 'מלאווח 25', 'חומוס 30'],
+  ['מיץ סחוט', 'תפוז 15', 'רימון 20', 'גזר 12', 'באהבה'],
+  ['אוכל של אמא', 'קובה 32', 'מג׳דרה 25', 'אין משלוחים', 'רק חיבוקים'],
+];
+const CARDS = [['עגבניות', '5 שקל לקילו'], ['אבטיח מתוק', 'או שאני אוכל אותו'], ['לא לגעת!', '(טוב, תגעו)'], ['מנגו', 'מלך הקיץ'],
+  ['טעים? תקנה!', ''], ['אין הנחות', 'לנכדים'], ['ישר מהשדה', '(של השכן)'], ['אורגני*', '*כמעט']];
 
-// canvas text direction from the text itself, so English lines keep their punctuation where it belongs
-export const dirOf = text => /[\u0590-\u05FF]/.test(text) ? 'rtl' : 'ltr';
+// dirOf: canvas text direction from the text itself, so English lines keep their punctuation where it belongs
+export const dirOf = text => /[֐-׿]/.test(text) ? 'rtl' : 'ltr';
 
-export function signAtlas() {
-  const W = 1024, CELL_W = 256, CELL_H = 64, COLS = 4;
-  const total = SHOP_SIGNS.length + NEON_SIGNS.length + PRICE_TAGS.length;
-  const rows = Math.ceil(total / COLS);
-  const H = THREE.MathUtils.ceilPowerOfTwo(rows * CELL_H);
+// a board scaled into a rectangle with its corners (screws, tape, frame joints) kept undistorted
+function board(g, img, name, x, y, w, h) {
+  const b = BOARDS[name];
+  if (!img || !b) { g.fillStyle = BOARD_FALLBACK[name] || '#ddd'; roundRect(g, x, y, w, h, 4); g.fill(); return; }
+  const [sx, sy, sw, sh, c] = b;
+  const k = Math.min(w / sw, h / sh) * 1.7, d = Math.min(c * k, h * 0.3, w * 0.3);
+  const xs = [sx, sx + c, sx + sw - c, sx + sw], ys = [sy, sy + c, sy + sh - c, sy + sh];
+  const xd = [x, x + d, x + w - d, x + w], yd = [y, y + d, y + h - d, y + h];
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    // overlap the slices slightly so no seams show
+    g.drawImage(img, xs[i], ys[j], xs[i + 1] - xs[i], ys[j + 1] - ys[j], xd[i] - 0.3, yd[j] - 0.3, xd[i + 1] - xd[i] + 0.6, yd[j + 1] - yd[j] + 0.6);
+  }
+}
+
+function letter(g, text, x, y, maxW, size, font, color, weight = 700) {
+  g.direction = dirOf(text);
+  let s = size;
+  g.font = `${weight} ${s}px ${font}`;
+  while (g.measureText(text).width > maxW && s > 6) { s -= 1; g.font = `${weight} ${s}px ${font}`; }
+  g.fillStyle = color;
+  g.fillText(text, x, y);
+  return s;
+}
+
+export function signAtlas(blanks = null) {
+  const W = 1024, CW = 256, CH = 64;
+  const H = 1100;
   const [c, g] = canvas(W, H, 2);
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  const uv = [];
-  let i = 0;
-  const cell = () => { const x = (i % COLS) * CELL_W, y = Math.floor(i / COLS) * CELL_H; i++; return [x, y]; };
-  const rec = (x, y) => uv.push([x / W, 1 - (y + CELL_H) / H, CELL_W / W, CELL_H / H]);
-  for (const [text, bg, fg] of SHOP_SIGNS) {
-    const [x, y] = cell();
-    g.fillStyle = bg; roundRect(g, x + 3, y + 3, CELL_W - 6, CELL_H - 6, 8); g.fill();
-    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 3; roundRect(g, x + 8, y + 8, CELL_W - 16, CELL_H - 16, 6); g.stroke();
-    g.direction = dirOf(text);
-    g.fillStyle = fg; fitText(g, text, CELL_W - 30, 34, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
-    rec(x, y);
+  const uv = [], groups = { shop: [], rent: [], neon: [], price: [], street: [], chalk: [], card: [] };
+  let cx = 0, cy = 0, rowH = 0;
+  // shelf packing, one record per cell (u0, v0, du, dv with v up)
+  const cell = (group, w, h) => {
+    if (cx + w > W) { cx = 0; cy += rowH; rowH = 0; }
+    const at = [cx, cy];
+    cx += w; rowH = Math.max(rowH, h);
+    groups[group].push(uv.length);
+    uv.push([at[0] / W, 1 - (at[1] + h) / H, w / W, h / H]);
+    return at;
+  };
+  for (const [text, b, sub] of SHOP_SIGNS) {
+    const [x, y] = cell('shop', CW, CH);
+    board(g, blanks, b, x + 2, y + 2, CW - 4, CH - 4);
+    const [font, col, wt] = INK[b];
+    const top = b === 'light' ? 8 : 0;   // below the lightbox's coloured stripe
+    if (sub) {
+      letter(g, text, x + CW / 2, y + 26 + top * 0.6, CW - 44, 30 - top * 0.5, font, col, wt);
+      letter(g, sub, x + CW / 2, y + 50, CW - 70, 11, b === 'light' ? FONT_BOX : FONT_STREET, col, b === 'light' ? 400 : 700);
+    } else {
+      letter(g, text, x + CW / 2, y + CH / 2 + 2 + top * 0.5, CW - 44, 36 - top * 0.6, font, col, wt);
+    }
+  }
+  for (const [text, sub] of RENT_SIGNS) {
+    const [x, y] = cell('rent', CW, CH);
+    board(g, blanks, 'cream', x + 2, y + 2, CW - 4, CH - 4);
+    letter(g, text, x + CW / 2, y + 26, CW - 40, 32, FONT_PAINT, '#c8121b', 700);
+    letter(g, sub, x + CW / 2, y + 50, CW - 60, 12, FONT_STREET, '#2b2b2b', 700);
   }
   for (const [text, col] of NEON_SIGNS) {
-    const [x, y] = cell();
-    g.fillStyle = '#120a1c'; roundRect(g, x + 2, y + 2, CELL_W - 4, CELL_H - 4, 10); g.fill();
-    g.direction = dirOf(text);
-    g.shadowColor = col; g.shadowBlur = 28; // shadowBlur ignores the canvas scale g.fillStyle = col; g.strokeStyle = '#fff';
-    fitText(g, text, CELL_W - 30, 36, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
-    g.shadowBlur = 0; g.lineWidth = 1; g.strokeText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
-    rec(x, y);
+    const [x, y] = cell('neon', CW, CH);
+    g.fillStyle = '#120a1c'; roundRect(g, x + 2, y + 2, CW - 4, CH - 4, 10); g.fill();
+    g.shadowColor = col; g.shadowBlur = 28; // shadowBlur ignores the canvas scale
+    const s = letter(g, text, x + CW / 2, y + CH / 2 + 2, CW - 30, 40, FONT_PAINT, col, 700);
+    g.shadowBlur = 0; g.lineWidth = 1; g.strokeStyle = '#fff';
+    g.font = `700 ${s}px ${FONT_PAINT}`; g.strokeText(text, x + CW / 2, y + CH / 2 + 2);
   }
+  // marker on a white card (the geometry shows the middle 70% of the cell); Karantina has a proper shekel sign
   for (const text of PRICE_TAGS) {
-    const [x, y] = cell();
-    g.fillStyle = '#fffdf3'; roundRect(g, x + 40, y + 4, CELL_W - 80, CELL_H - 8, 6); g.fill();
-    g.strokeStyle = '#222'; g.lineWidth = 2; g.stroke();
-    g.direction = dirOf(text);
-    g.fillStyle = '#d0021b'; fitText(g, text, CELL_W - 100, 40, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
-    rec(x, y);
+    const [x, y] = cell('price', CW, CH);
+    g.save(); g.translate(x + CW / 2, y + CH / 2); g.rotate((Math.random() - 0.5) * 0.06);
+    g.fillStyle = '#fbf8ee'; g.fillRect(-CW * 0.34, -CH / 2 + 4, CW * 0.68, CH - 8);
+    g.fillStyle = 'rgba(120,90,40,.18)'; g.fillRect(-CW * 0.34, CH / 2 - 10, CW * 0.68, 6);
+    letter(g, text, 0, 3, CW * 0.6, 50, FONT_PAINT, Math.random() < 0.6 ? '#141414' : '#c1121f', 700);
+    g.restore();
   }
-  const t = tex(c);
-  return { texture: t, uv, shopCount: SHOP_SIGNS.length, neonStart: SHOP_SIGNS.length, priceStart: SHOP_SIGNS.length + NEON_SIGNS.length };
+  for (const [he, en] of STREETS) {
+    const [x, y] = cell('street', CW, CH);
+    board(g, blanks, 'blue', x + 2, y + 2, CW - 4, CH - 4);
+    letter(g, 'רח׳ ' + he, x + CW / 2, y + 27, CW - 50, 26, FONT_STREET, '#ffffff', 700);
+    letter(g, en, x + CW / 2, y + 49, CW - 70, 12, FONT_STREET, '#ffffff', 700);
+  }
+  // chalkboards (portrait) and cardboard signs
+  for (const lines of CHALK) {
+    const [x, y] = cell('chalk', 128, 168);
+    board(g, blanks, 'chalk', x + 2, y + 2, 124, 164);
+    const head = ['#ffd84d', '#ff9fb2', '#9fe7ff'][Math.floor(Math.random() * 3)];
+    g.shadowColor = 'rgba(255,255,255,.5)'; g.shadowBlur = 2;
+    lines.forEach((l, i) => letter(g, l, x + 64, y + 30 + i * (110 / Math.max(1, lines.length - 1)), 96, i ? 19 : 25,
+      FONT_HAND, i ? 'rgba(240,240,232,.92)' : head, 700));
+    g.shadowBlur = 0;
+  }
+  cx = W; // new row
+  for (const [a, b] of CARDS) {
+    const [x, y] = cell('card', 128, 96);
+    board(g, blanks, 'card', x + 3, y + 3, 122, 90);
+    letter(g, a, x + 64, y + (b ? 38 : 49), 96, 28, FONT_HAND, '#151515', 700);
+    if (b) letter(g, b, x + 64, y + 66, 100, 20, FONT_HAND, '#a3121b', 700);
+  }
+  const t = tex(c, { aniso: 8 });
+  const pickIn = name => groups[name][Math.floor(Math.random() * groups[name].length)];
+  return { texture: t, uv, groups, pick: pickIn };
 }
 
 // ---- speech bubble sprite texture ----
+// The bubble frame is generated art (img/ui/bubble.webp, 968x514): drawn as five slices so the round caps and
+// the tail keep their shape while the straight middle stretches around the text (one or two lines).
+let bubbleImg = null;
+export function setBubbleImage(img) { bubbleImg = img; }
+const BUB = { W: 968, H: 514, cap: 232, tailL: 404, tailR: 564, bodyTop: 6, bodyBot: 420 };
+
+function wrapLines(g, text, maxW) {
+  if (g.measureText(text).width <= maxW) return [text];
+  const words = text.split(' ');
+  let best = [text], bestW = Infinity;
+  for (let i = 1; i < words.length; i++) {           // the most balanced two-line split
+    const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+    const w = Math.max(g.measureText(a).width, g.measureText(b).width);
+    if (w < bestW) { bestW = w; best = [a, b]; }
+  }
+  return best;
+}
+
 export function bubbleTexture(text) {
-  const [c, g] = canvas(512, 160);
+  const Hc = 200, s = Hc / BUB.H, FS = 40;
+  const probe = canvas(8, 8)[1];
+  probe.font = `700 ${FS}px ${FONT_HEAD}`;
+  let lines = wrapLines(probe, text, 470);
+  let size = FS;
+  const widest = () => Math.max(...lines.map(l => probe.measureText(l).width));
+  while (widest() > 520 && size > 22) { size -= 2; probe.font = `700 ${size}px ${FONT_HEAD}`; }
+  const tw = widest();
+  const capW = BUB.cap * s, tailW = (BUB.tailR - BUB.tailL) * s;
+  const Wc = Math.ceil(Math.max(capW * 2 + tailW + 20, tw + 2 * capW * 0.62));
+  const [c, g] = canvas(Wc, Hc, 1.25);
+  if (bubbleImg) {
+    const stretch = (Wc - 2 * capW - tailW) / 2;
+    const slices = [
+      [0, BUB.cap, 0, capW],
+      [BUB.cap, BUB.tailL, capW, stretch],
+      [BUB.tailL, BUB.tailR, capW + stretch, tailW],
+      [BUB.tailR, BUB.W - BUB.cap, capW + stretch + tailW, stretch],
+      [BUB.W - BUB.cap, BUB.W, Wc - capW, capW],
+    ];
+    // overlap each slice by a pixel so no seams show between them
+    for (const [sx0, sx1, dx, dw] of slices) if (dw > 0) g.drawImage(bubbleImg, sx0, 0, sx1 - sx0, BUB.H, dx - 0.5, 0, dw + 1, Hc);
+  } else {
+    g.fillStyle = '#fff8e8'; roundRect(g, 4, 4, Wc - 8, Hc * 0.78, Hc * 0.38); g.fill();
+    g.strokeStyle = '#4a2a16'; g.lineWidth = 8; g.stroke();
+  }
   g.direction = dirOf(text); g.textAlign = 'center'; g.textBaseline = 'middle';
-  const size = fitText(g, text, 440, 52, FONT_HEAD);
-  const w = Math.min(500, g.measureText(text).width + 60);
-  const x = (512 - w) / 2;
-  g.fillStyle = 'rgba(0,0,0,.18)'; roundRect(g, x + 4, 14, w, 104, 40); g.fill();
-  g.fillStyle = '#fffef7'; roundRect(g, x, 8, w, 104, 40); g.fill();
-  g.beginPath(); g.moveTo(256 - 18, 108); g.lineTo(256 + 6, 150); g.lineTo(256 + 22, 108); g.closePath(); g.fill();
-  g.strokeStyle = '#2b2118'; g.lineWidth = 5; roundRect(g, x, 8, w, 104, 40); g.stroke();
-  g.fillStyle = '#2b2118'; g.font = `700 ${size}px ${FONT_HEAD}`; g.fillText(text, 256, 62);
+  g.font = `700 ${size}px ${FONT_HEAD}`;
+  g.fillStyle = '#3d2414';
+  const cy = (BUB.bodyTop + BUB.bodyBot) / 2 * s + 2, lh = size * 1.08;
+  lines.forEach((l, i) => g.fillText(l, Wc / 2, cy + (i - (lines.length - 1) / 2) * lh));
   const t = tex(c); t.anisotropy = 1;
+  t.userData.aspect = Wc / Hc;
   return t;
 }
 
@@ -216,6 +355,78 @@ export function truckTexture() {
   g.fillStyle = '#1f5f2a'; fitText(g, 'פירות וירקות עזרא ובניו', 940, 84, FONT_HEAD); g.fillText('פירות וירקות עזרא ובניו', 512, 96);
   g.fillStyle = '#fff'; g.font = `700 44px ${FONT_HEAD}`; g.fillText('הובלות מחנה יהודה · 02-5555555', 512, 342);
   return tex(c);
+}
+
+// Persian rug for the magic carpet: red field, gold borders, a medallion and a scatter of motifs
+export function rugTexture() {
+  const [c, g] = canvas(256, 160, 2);
+  g.fillStyle = '#8f1d1d'; g.fillRect(0, 0, 256, 160);
+  g.fillStyle = '#e2a93b'; g.fillRect(6, 6, 244, 148);
+  g.fillStyle = '#b3261e'; g.fillRect(14, 14, 228, 132);
+  g.strokeStyle = '#f2cf6a'; g.lineWidth = 3; g.strokeRect(22, 22, 212, 116);
+  g.fillStyle = '#f2cf6a';
+  g.beginPath(); g.moveTo(128, 46); g.lineTo(170, 80); g.lineTo(128, 114); g.lineTo(86, 80); g.closePath(); g.fill();
+  g.fillStyle = '#1d3557'; g.beginPath(); g.moveTo(128, 60); g.lineTo(152, 80); g.lineTo(128, 100); g.lineTo(104, 80); g.closePath(); g.fill();
+  g.fillStyle = '#f2cf6a';
+  for (const [x, y] of [[48, 44], [208, 44], [48, 116], [208, 116]]) { g.beginPath(); g.arc(x, y, 9, 0, 7); g.fill(); }
+  for (let x = 30; x < 230; x += 16) { g.fillRect(x, 28, 6, 4); g.fillRect(x, 128, 6, 4); }
+  return tex(c);
+}
+
+// watermelon rind stripes for the rolling melons
+export function melonTexture() {
+  const [c, g] = canvas(256, 128);
+  g.fillStyle = '#3f8f3a'; g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#1f5f22';
+  for (let i = 0; i < 12; i++) {
+    const x0 = i * 256 / 12;
+    g.beginPath(); g.moveTo(x0, 0);
+    for (let y = 0; y <= 128; y += 8) g.lineTo(x0 + 6 + Math.sin(y * 0.22 + i) * 4, y);
+    for (let y = 128; y >= 0; y -= 8) g.lineTo(x0 + 13 + Math.sin(y * 0.22 + i + 1) * 4, y);
+    g.closePath(); g.fill();
+  }
+  return tex(c);
+}
+
+// round soft blob (white, alpha fades out from the centre) for contact shadows under characters
+export function blobTexture() {
+  const S = 64, [c, g] = canvas(S, S);
+  const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.45, 'rgba(255,255,255,.75)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+  return tex(c, { srgb: false });
+}
+
+// soft-edged rectangle (white, alpha falls off toward the border) for baked contact shadows
+export function softRectTexture() {
+  const S = 64, [c, g] = canvas(S, S);
+  const img = g.createImageData(S, S);
+  const f = t => { const d = Math.min(t, 1 - t) / 0.32; return d >= 1 ? 1 : d * d * (3 - 2 * d); };
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const o = (y * S + x) * 4;
+    img.data[o] = img.data[o + 1] = img.data[o + 2] = 255;
+    img.data[o + 3] = Math.round(255 * f((x + 0.5) / S) * f((y + 0.5) / S));
+  }
+  g.putImageData(img, 0, 0);
+  return tex(c, { srgb: false });
+}
+
+// a shaft of sunlight through dusty air: bright where it enters, fading toward the floor, soft at the sides,
+// with a few faint streaks along its length
+export function shaftTexture() {
+  const W = 64, H = 256, [c, g] = canvas(W, H);
+  const img = g.createImageData(W, H);
+  const streak = Array.from({ length: W }, (_, x) => 0.75 + 0.25 * Math.sin(x * 0.9) * Math.sin(x * 0.37 + 1.3));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const t = (x + 0.5) / W, v = (y + 0.5) / H;
+    const across = Math.exp(-Math.pow((t - 0.5) / 0.24, 2));
+    const along = Math.pow(1 - v, 1.4) * Math.min(1, v * 14);
+    const o = (y * W + x) * 4;
+    img.data[o] = img.data[o + 1] = img.data[o + 2] = 255;
+    img.data[o + 3] = Math.round(255 * across * along * streak[x]);
+  }
+  g.putImageData(img, 0, 0);
+  return tex(c, { srgb: false });
 }
 
 export function glowTexture() {

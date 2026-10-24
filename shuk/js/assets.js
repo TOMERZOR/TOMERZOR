@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { CHARACTERS, NPC_TYPES } from './config.js';
+import { shukLit } from './light.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -46,7 +47,7 @@ function smallMaterial(m, size) {
     }
     c.map = t;
   }
-  return c;
+  return shukLit(c);
 }
 
 function prepScene(scene, { shadows = true, skinned = false } = {}) {
@@ -62,6 +63,7 @@ function prepScene(scene, { shadows = true, skinned = false } = {}) {
         m.metalness = Math.min(0.1, m.metalness ?? 0);
         m.envMapIntensity = 0.6;
       }
+      shukLit(m); // characters step into the shade of the street like everything else
     }
   });
   return scene;
@@ -178,9 +180,11 @@ export class Assets {
     g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
     geometry.computeBoundingBox();
-    const material = mesh.material;
+    // these props are matte and cover a lot of the screen: plain diffuse shading costs a fraction of PBR
+    const src = mesh.material;
+    const material = shukLit(new THREE.MeshLambertMaterial({ map: src.map, color: src.color, vertexColors: src.vertexColors }));
     if (material.map) material.map.anisotropy = 8;
-    if (material.isMeshStandardMaterial) { material.roughness = Math.max(0.6, material.roughness ?? 1); material.metalness = Math.min(0.05, material.metalness ?? 0); }
+    src.dispose();
     return { geometry, material, size: geometry.boundingBox.getSize(new THREE.Vector3()) };
   }
 

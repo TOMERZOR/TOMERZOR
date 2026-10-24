@@ -28,12 +28,27 @@ export function patchCurvedWorld() {
     `${BEND_GLSL}\n\tgl_Position = projectionMatrix * mvPosition;`);
 }
 
-const GradeShader = {
+// Colour grade folded into tone mapping: every material applies it as it writes its pixel, so the direct
+// render path needs no extra full-screen pass. ACES first, then saturation/contrast/warmth in display space.
+export function patchToneMapping() {
+  const chunk = THREE.ShaderChunk.tonemapping_pars_fragment;
+  if (chunk.includes('SHUK_GRADE')) return;
+  THREE.ShaderChunk.tonemapping_pars_fragment = chunk.replace(
+    'vec3 CustomToneMapping( vec3 color ) { return color; }',
+    `vec3 CustomToneMapping( vec3 color ) { // SHUK_GRADE
+	color = ACESFilmicToneMapping( color );
+	vec3 s = pow( max( color, vec3( 0.0 ) ), vec3( 1.0 / 2.2 ) );
+	float l = dot( s, vec3( 0.2126, 0.7152, 0.0722 ) );
+	s = mix( vec3( l ), s, 1.18 );
+	s = ( s - 0.5 ) * 1.06 + 0.5 + vec3( 0.03, 0.0105, -0.018 );
+	return pow( clamp( s, 0.0, 1.0 ), vec3( 2.2 ) );
+}`);
+}
+
+// High quality only: vignette and speed lines as a final pass (the direct path does both in CSS).
+const FinishShader = {
   uniforms: {
     tDiffuse: { value: null },
-    saturation: { value: 1.18 },
-    contrast: { value: 1.06 },
-    warmth: { value: 0.03 },
     vignette: { value: 0.32 },
     speed: { value: 0 },
     time: { value: 0 },
@@ -41,16 +56,12 @@ const GradeShader = {
   },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float saturation, contrast, warmth, vignette, speed, time, aspect;
+    uniform sampler2D tDiffuse; uniform float vignette, speed, time, aspect;
     varying vec2 vUv;
     float hash(float n){ return fract(sin(n) * 43758.5453); }
     void main(){
       vec4 c = texture2D(tDiffuse, vUv);
       vec3 col = c.rgb;
-      float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      col = mix(vec3(l), col, saturation);
-      col = (col - 0.5) * contrast + 0.5;
-      col += vec3(warmth, warmth * 0.35, -warmth * 0.6);
       // speed lines: thin radial streaks toward the screen edges
       if (speed > 0.01) {
         vec2 p = (vUv - vec2(0.5, 0.56)) * vec2(aspect, 1.0);
@@ -75,8 +86,9 @@ export class Look {
     this.composer = null;
   }
 
-  // mode: 'high' (4x MSAA + bloom + grade), 'mid' (2x MSAA, or FXAA without WebGL2, + cheaper bloom + grade),
-  // 'low' (direct render with the canvas' own antialiasing)
+  // mode: 'high' (4x MSAA render target + bloom + tone-mapping pass + vignette/speed-line pass)
+  //       'direct' (straight to the screen with the canvas' own MSAA; grade happens in tone mapping,
+  //                 vignette and speed lines are CSS overlays) - no full-screen passes at all
   setMode(mode, width, height, ratio) {
     this.mode = mode;
     if (this.composer) {
@@ -85,18 +97,19 @@ export class Look {
       this.composer.dispose();
       this.composer = null; this.bloom = null; this.grade = null; this.fxaa = null;
     }
-    if (mode === 'low') return;
+    document.body.classList.toggle('css-finish', mode !== 'high');
+    if (mode !== 'high') return;
     const isWebGL2 = this.renderer.capabilities.isWebGL2;
-    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: isWebGL2 ? (mode === 'high' ? 4 : 2) : 0 });
+    const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: isWebGL2 ? 4 : 0 });
     const c = new EffectComposer(this.renderer, rt);
     c.setPixelRatio(ratio);
     c.setSize(width, height);
     c.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomScale = mode === 'high' ? 0.5 : 0.35;
+    this.bloomScale = 0.5;
     this.bloom = new UnrealBloomPass(new THREE.Vector2(width, height), 0.42, 0.55, 0.82);
     c.addPass(this.bloom);
     c.addPass(new OutputPass());
-    this.grade = new ShaderPass(GradeShader);
+    this.grade = new ShaderPass(FinishShader);
     c.addPass(this.grade);
     if (!isWebGL2) {
       this.fxaa = new ShaderPass(FXAAShader);
@@ -117,6 +130,15 @@ export class Look {
     if (this.grade) this.grade.uniforms.aspect.value = width / height;
   }
 
+  // direct mode: the speed-line overlay is a CSS layer (compositor-only animation), shown only when fast
+  cssSpeedLines(v) {
+    const el = this.speedEl || (this.speedEl = document.getElementById('speedlines'));
+    if (!el) return;
+    const on = v > 0.02;
+    if (on !== this.speedOn) { this.speedOn = on; el.classList.toggle('on', on); }
+    if (on && Math.abs(v - (this.speedV || 0)) > 0.04) { this.speedV = v; el.style.setProperty('--sl', (v * 0.7).toFixed(2)); }
+  }
+
   // per-zone tuning: bloom gets stronger at night
   setZone(glow) {
     if (!this.bloom) return;
@@ -125,7 +147,11 @@ export class Look {
   }
 
   render(time, speedFx) {
-    if (!this.composer) { this.renderer.render(this.scene, this.camera); return; }
+    if (!this.composer) {
+      this.cssSpeedLines(speedFx);
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
     this.grade.uniforms.time.value = time;
     this.grade.uniforms.speed.value = speedFx;
     this.composer.render();

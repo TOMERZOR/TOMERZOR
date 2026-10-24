@@ -1,0 +1,1460 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lading Order Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2316181D' d='M5 4h4v19h12v4H5z'/%3E%3Crect fill='%232340D8' x='23' y='21' width='8' height='8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<script>
+  // Apply saved language and theme before first paint, so the page never flashes the wrong direction.
+  (function () {
+    try {
+      var l = localStorage.getItem("lading-lang"), t = localStorage.getItem("lading-theme");
+      if (l === "he") { document.documentElement.lang = "he"; document.documentElement.dir = "rtl"; }
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+/* Layout: one working desk. A sticky header with three views (Review, Orders, Client updates);
+   each view is a list at the start edge and the thing you act on beside it, stacking on phones.
+   All spacing uses logical properties, so Hebrew mirrors the whole desk, timelines included. */
+:root {
+  --paper: #F3F4F6;
+  --sheet: #FCFCFD;
+  --ink: #16181D;
+  --ink-2: #596070;
+  --rule: #D9DCE2;
+  --rule-2: #C4C8D0;
+  --carbon: #2340D8;
+  --carbon-ink: #FCFCFD;
+  --carbon-wash: #E5E9FB;
+  --late: #A8500C;
+  --late-wash: #FAEBD9;
+  --risk: #BF2630;
+  --risk-wash: #FBE3E4;
+  --ok: #1D7549;
+  --ok-wash: #DFF1E6;
+  --shadow: 0 1px 2px rgb(22 24 29 / .06), 0 12px 32px rgb(22 24 29 / .12);
+
+  --f-stencil: "Big Shoulders Stencil Display", "IBM Plex Sans Hebrew", "Arial Narrow", Impact, sans-serif;
+  --f-text: "Schibsted Grotesk", "IBM Plex Sans Hebrew", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --track: 0.06em;
+
+  --r: 3px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --head-h: 56px;
+  color-scheme: light;
+}
+:root[lang="he"] {
+  --f-text: "IBM Plex Sans Hebrew", "Schibsted Grotesk", Arial, system-ui, sans-serif;
+  --track: 0;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3;
+    --rule: #2A2E36; --rule-2: #3A3F49; --carbon: #8EA1FF; --carbon-ink: #101216; --carbon-wash: #1C2442;
+    --late: #F0A35C; --late-wash: #36260F; --risk: #FF8B8F; --risk-wash: #3A1C1F; --ok: #6FD39C; --ok-wash: #13301F;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 16px 40px rgb(0 0 0 / .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3;
+  --rule: #2A2E36; --rule-2: #3A3F49; --carbon: #8EA1FF; --carbon-ink: #101216; --carbon-wash: #1C2442;
+  --late: #F0A35C; --late-wash: #36260F; --risk: #FF8B8F; --risk-wash: #3A1C1F; --ok: #6FD39C; --ok-wash: #13301F;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 16px 40px rgb(0 0 0 / .5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--f-text);
+  -webkit-font-smoothing: antialiased;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--sheet); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
+.icon { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.15em; }
+[dir="rtl"] .icon.dir { transform: scaleX(-1); }
+.mono { font-family: var(--f-data); font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.muted { color: var(--ink-2); }
+/* Plex Mono has no Hebrew letters: Hebrew dates use the text face with tabular figures. Codes stay mono. */
+:root[lang="he"] .mono:not([dir="ltr"]) { font-family: var(--f-text); letter-spacing: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 600; }
+p { margin: 0; }
+.cap { font-size: 13px; text-transform: uppercase; letter-spacing: var(--track); color: var(--ink-2); font-weight: 500; }
+
+.wrap {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- Logo ---------- */
+.logo { display: block; flex: none; }
+.logo .ink { fill: var(--ink); }
+.logo .eta { fill: var(--carbon); }
+
+/* ---------- Header ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+}
+.top .wrap { display: flex; align-items: center; gap: 24px; min-height: var(--head-h); }
+.mark {
+  display: inline-flex; align-items: center; gap: 9px;
+  color: var(--ink); text-decoration: none;
+}
+.mark .lockup { display: inline-flex; align-items: center; gap: 9px; }
+.mark .word { font: 700 26px/1 "Big Shoulders Stencil Display", "Arial Narrow", sans-serif; letter-spacing: 0.02em; text-transform: uppercase; }
+.mark small { font: 500 12px/1 var(--f-text); color: var(--ink-2); align-self: flex-end; padding-bottom: 3px; }
+nav.views { display: flex; gap: 4px; align-self: stretch; }
+nav.views a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 0 12px;
+  color: var(--ink-2); text-decoration: none; font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: color .16s var(--ease), border-color .16s var(--ease);
+}
+nav.views a:hover { color: var(--ink); }
+nav.views a .lbl-short { display: none; }
+nav.views a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--carbon); }
+.count {
+  font: 700 17px/1 var(--f-stencil);
+  min-width: 20px; padding: 3px 5px 2px;
+  text-align: center;
+  border-radius: var(--r);
+  background: var(--carbon); color: var(--carbon-ink);
+}
+.count[data-n="0"] { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.studio { margin-inline-start: auto; display: flex; align-items: center; gap: 12px; color: var(--ink-2); font-size: 13px; }
+.studio strong { color: var(--ink); font-weight: 500; }
+.sample {
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px; color: var(--ink-2);
+}
+.sample .wrap { display: flex; gap: 12px; align-items: center; min-height: 32px; flex-wrap: wrap; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--carbon); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- Settings ---------- */
+.settings { position: relative; }
+.pop {
+  position: absolute; inset-inline-end: 0; top: calc(100% + 8px); z-index: 25;
+  width: 260px; padding: 16px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow);
+  display: grid; gap: 16px;
+  animation: pop .16s var(--ease);
+}
+@keyframes pop { from { opacity: 0; transform: translateY(-4px); } }
+.pop h2 { font-size: 15px; color: var(--ink); }
+.pop fieldset { margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.pop legend { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.seg { display: grid; grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); border: 1px solid var(--rule-2); border-radius: var(--r); overflow: hidden; }
+.seg label { position: relative; text-align: center; padding: 7px 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); cursor: pointer; }
+.seg label + label { border-inline-start: 1px solid var(--rule-2); }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg label:has(input:checked) { background: var(--ink); color: var(--paper); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--carbon); outline-offset: -2px; }
+.seg .he { font-family: "IBM Plex Sans Hebrew", sans-serif; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 38px; padding: 0 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--rule-2);
+  background: var(--sheet); color: var(--ink);
+  font-weight: 500; white-space: nowrap; text-decoration: none;
+  transition: background .16s var(--ease), border-color .16s var(--ease), transform .16s var(--ease);
+}
+.btn:hover { border-color: var(--ink-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--carbon); border-color: var(--carbon); color: var(--carbon-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--ink-2); }
+.btn.quiet:hover { color: var(--ink); background: var(--paper); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.iconbtn { width: 38px; height: 38px; display: grid; place-items: center; border-radius: var(--r); border: 1px solid var(--rule); background: transparent; color: var(--ink-2); flex: none; }
+.iconbtn:hover, .iconbtn[aria-expanded="true"] { color: var(--ink); border-color: var(--rule-2); }
+
+/* ---------- Hang tag (status chip). The pointed end and hole sit on the start side. ---------- */
+.tag {
+  --tag-bg: var(--paper); --tag-fg: var(--ink-2); --tag-edge: var(--rule-2);
+  --cut: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+  --cut-in: polygon(7.5px 0, 100% 0, 100% 100%, 7.5px 100%, 0 50%);
+  display: inline-flex; align-items: center;
+  position: relative;
+  height: 22px; padding-inline: 17px 9px;
+  font: 500 12px/1 var(--f-text); letter-spacing: 0.01em; white-space: nowrap;
+  color: var(--tag-fg);
+  background: var(--tag-edge);
+  clip-path: var(--cut);
+}
+[dir="rtl"] .tag {
+  --cut: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+  --cut-in: polygon(0 0, calc(100% - 7.5px) 0, 100% 50%, calc(100% - 7.5px) 100%, 0 100%);
+  letter-spacing: 0;
+}
+.tag::after { content: ""; position: absolute; inset: 1px; background: var(--tag-bg); clip-path: var(--cut-in); }
+.tag::before {
+  content: ""; position: absolute; inset-inline-start: 7px; top: 50%; z-index: 1;
+  width: 4px; height: 4px; margin-top: -2px; border-radius: 50%;
+  background: var(--tag-edge);
+}
+.tag > span { position: relative; z-index: 1; }
+.t-c { --tag-bg: var(--carbon-wash); --tag-fg: var(--carbon); --tag-edge: var(--carbon); }
+.t-ok { --tag-bg: var(--ok-wash); --tag-fg: var(--ok); --tag-edge: var(--ok); }
+.t-late { --tag-bg: var(--late-wash); --tag-fg: var(--late); --tag-edge: var(--late); }
+.t-risk { --tag-bg: var(--risk-wash); --tag-fg: var(--risk); --tag-edge: var(--risk); }
+
+/* ---------- Page heads ---------- */
+.view { padding-block: 28px 64px; }
+.view-head { display: grid; gap: 6px; margin-bottom: 20px; }
+.view-head h1 { font-size: 24px; letter-spacing: -0.015em; }
+.view-head p { color: var(--ink-2); max-width: 64ch; }
+
+/* ---------- Review ---------- */
+.review { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
+.queue { display: grid; gap: 16px; position: sticky; top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + 16px); }
+.queue ol { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.q-row {
+  width: 100%; text-align: start;
+  display: grid; gap: 3px;
+  padding-block: 12px; padding-inline: 14px 12px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  border-inline-start: 2px solid transparent;
+  transition: background .16s var(--ease), border-color .16s var(--ease);
+}
+.q-row:hover { background: var(--sheet); }
+.q-row[aria-selected="true"] { background: var(--carbon-wash); border-inline-start-color: var(--carbon); }
+.q-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.q-vendor { font-weight: 600; }
+.q-subj { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-match { font-size: 13px; color: var(--ink); }
+.q-match .mono { color: var(--ink-2); font-size: 12px; }
+.done-list summary { cursor: pointer; color: var(--ink-2); font-size: 13px; padding: 4px 0; }
+.done-list ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.done-list li { display: flex; gap: 8px; align-items: baseline; color: var(--ink-2); }
+.done-list li .icon { color: var(--ok); }
+
+.detail { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.back { display: none; }
+.sheet {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+}
+.email { padding: 20px 22px 24px; min-width: 0; }
+.email-meta { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 12px; font-size: 13px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); margin: 0; }
+.email-meta dt { color: var(--ink-2); }
+.email-meta dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.email-subj { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 16px 0 12px; text-wrap: balance; }
+.attach { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.attach span { display: inline-flex; gap: 6px; align-items: center; font: 400 12px/1 var(--f-data); padding: 6px 8px; border: 1px solid var(--rule); border-radius: var(--r); color: var(--ink-2); direction: ltr; }
+.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.65; }
+mark.src {
+  background: transparent; color: inherit;
+  text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: 1.5px; text-underline-offset: 3px;
+  border-radius: 2px;
+  transition: background .16s var(--ease), box-shadow .16s var(--ease);
+}
+mark.src.lit { background: var(--carbon-wash); box-shadow: 0 0 0 3px var(--carbon-wash); }
+
+.reading { display: grid; gap: 16px; min-width: 0; }
+.kind-line { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.conf { font-size: 13px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.conf.check { color: var(--late); }
+.match { padding: 14px 16px; display: grid; gap: 4px; }
+.match .lbl { font-size: 12px; color: var(--ink-2); }
+.match strong { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.match .why { font-size: 13px; color: var(--ink-2); }
+.fields { margin: 0; display: grid; border-top: 1px solid var(--rule); }
+.field {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px;
+  padding: 10px 4px; border-bottom: 1px solid var(--rule);
+  border-radius: var(--r);
+  cursor: default;
+  transition: background .16s var(--ease);
+}
+.field:hover, .field:focus-visible { background: var(--carbon-wash); }
+.field dt { color: var(--ink-2); font-size: 13px; padding-top: 1px; }
+.field dd { margin: 0; min-width: 0; }
+.field .val { text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.field .from { color: var(--ink-2); text-decoration: line-through; text-decoration-thickness: 1px; margin-inline-end: 6px; }
+.field .explain { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.note { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--r); font-size: 14px; background: var(--late-wash); color: var(--ink); }
+.note .icon { color: var(--late); margin-top: 2px; }
+.impact { display: grid; gap: 10px; padding: 14px 16px; }
+.impact p { font-size: 14px; }
+.impact.risk { border-color: var(--risk); }
+.impact.risk p strong { color: var(--risk); }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg { display: inline-block; flex: none; }
+.lg.promise { width: 2px; height: 12px; background: var(--ink-2); }
+.lg.eta { width: 8px; height: 8px; background: var(--ink); }
+.lg.ghost { width: 8px; height: 8px; border: 1.5px dashed var(--ink-2); }
+.lg.install { width: 0; height: 12px; border-inline-start: 1.5px dashed var(--carbon); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pick { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.pick legend { font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+.pick label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r); background: var(--sheet); cursor: pointer; }
+.pick label:has(input:checked) { border-color: var(--carbon); background: var(--carbon-wash); }
+.pick input { margin-top: 4px; accent-color: var(--carbon); }
+.pick small { display: block; color: var(--ink-2); font-size: 13px; }
+.other { display: grid; gap: 6px; }
+.other label { font-size: 13px; color: var(--ink-2); }
+.other select { min-height: 38px; padding: 0 10px; border: 1px solid var(--rule-2); border-radius: var(--r); background: var(--sheet); max-width: 100%; }
+.caught { padding: 48px 28px; display: grid; gap: 8px; justify-items: start; grid-column: 1 / -1; }
+.caught .icon { width: 28px; height: 28px; color: var(--ok); }
+.caught h2 { font-size: 18px; }
+.caught p { color: var(--ink-2); max-width: 52ch; }
+
+/* ---------- Drift line. Positions use inset-inline-start, so time runs right to left in Hebrew. ---------- */
+.track { position: relative; display: block; height: 22px; }
+.track::before { content: ""; position: absolute; inset-inline: 0; top: 50%; border-top: 1px solid var(--rule); }
+.track .tick { position: absolute; top: 4px; bottom: 4px; border-inline-start: 1px solid var(--rule); }
+.track .today { position: absolute; top: 0; bottom: 0; border-inline-start: 1px solid var(--ink-2); opacity: .5; }
+.track .install { position: absolute; top: -6px; bottom: -6px; border-inline-start: 1.5px dashed var(--carbon); }
+.track .gap { position: absolute; top: 6px; height: 10px; transform-origin: left center; }
+[dir="rtl"] .track .gap { transform-origin: right center; }
+.track .gap.late { background: repeating-linear-gradient(-45deg, var(--late) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 1px 0 var(--late), inset 0 -1px 0 var(--late); }
+.track .gap.early { background: repeating-linear-gradient(-45deg, var(--ok) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 1px 0 var(--ok), inset 0 -1px 0 var(--ok); }
+.track .promise { position: absolute; top: 3px; height: 16px; width: 2px; margin-inline-start: -1px; background: var(--ink-2); }
+.track .eta { position: absolute; top: 5px; width: 12px; height: 12px; margin-inline-start: -6px; background: var(--ink); border-radius: 1px; }
+.track .eta.done { background: var(--ok); border-radius: 50%; width: 10px; height: 10px; top: 6px; margin-inline-start: -5px; }
+.track .eta.bad { background: var(--risk); }
+.track .ghost { position: absolute; top: 5px; width: 12px; height: 12px; margin-inline-start: -6px; border: 1.5px dashed var(--ink-2); border-radius: 1px; }
+.moved .eta { animation: slide .9s var(--ease) both; }
+.moved .gap { animation: grow .9s var(--ease) both; }
+@keyframes slide { from { inset-inline-start: var(--from); } }
+@keyframes grow { from { transform: scaleX(0); } }
+
+/* ---------- Orders ---------- */
+.o-head { display: grid; gap: 16px; margin-bottom: 8px; }
+.o-head h1 { font-size: 24px; letter-spacing: -0.015em; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: baseline; }
+.summary div { display: flex; align-items: baseline; gap: 8px; color: var(--ink-2); }
+.summary b { font: 700 40px/0.9 var(--f-stencil); color: var(--ink); letter-spacing: 0.01em; }
+.summary .late b:not([data-n="0"]) { color: var(--late); }
+.summary .risk b:not([data-n="0"]) { color: var(--risk); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button {
+  min-height: 34px; padding: 0 12px;
+  border: 1px solid var(--rule-2); border-radius: var(--r);
+  background: var(--sheet); color: var(--ink-2); font-size: 14px; font-weight: 500;
+  display: inline-flex; gap: 8px; align-items: center;
+}
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.filters button span { font-family: var(--f-data); font-size: 12px; opacity: .8; }
+
+.grid-row {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1.25fr) minmax(220px, 2fr) 72px 64px;
+  gap: 16px; align-items: center;
+}
+.axis { position: sticky; top: calc(var(--head-h) + env(safe-area-inset-top, 0px)); z-index: 5; background: var(--paper); padding: 10px 0 8px; border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); }
+.axis-scale { display: block; position: relative; height: 32px; }
+.axis-scale span { position: absolute; top: 0; padding-inline-start: 4px; border-inline-start: 1px solid var(--rule-2); line-height: 16px; white-space: nowrap; }
+.axis-scale span.today-lbl { top: 16px; border-inline-start-color: var(--ink-2); color: var(--ink); font-weight: 500; }
+.axis .r { text-align: end; }
+
+.proj { padding-top: 28px; }
+.proj > header { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding-bottom: 6px; }
+.proj > header h2 { font-size: 18px; letter-spacing: -0.01em; }
+.proj > header span { color: var(--ink-2); font-size: 14px; }
+.room { margin-top: 10px; }
+.room-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 10px 0 8px; border-bottom: 1px solid var(--rule); }
+.room-head h3 { font-size: 15px; font-weight: 600; }
+.ready { font-size: 14px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: baseline; }
+.ready.risk { color: var(--risk); }
+.ready .icon { align-self: center; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row {
+  width: 100%; text-align: start;
+  padding: 10px 0; background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  transition: background .16s var(--ease);
+}
+.row:hover { background: var(--sheet); }
+.row .name { display: grid; min-width: 0; }
+.row .name b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .name small { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .arr { text-align: end; }
+.drift { text-align: end; font: 700 20px/1 var(--f-stencil); letter-spacing: 0.01em; white-space: nowrap; }
+.drift .u { font: 500 12px/1 var(--f-text); margin-inline-start: 2px; }
+.drift.late { color: var(--late); }
+.drift.early { color: var(--ok); }
+.drift.zero { color: var(--ink-2); font: 400 12px/1 var(--f-text); }
+.drift.bad { color: var(--risk); font: 500 12px/1 var(--f-text); }
+.empty-orders { padding: 48px 0; color: var(--ink-2); }
+
+/* ---------- Drawer ---------- */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgb(16 18 22 / .32); animation: fade .24s var(--ease); }
+.drawer {
+  position: fixed; z-index: 41; top: 0; bottom: 0; inset-inline-end: 0;
+  width: min(480px, 100%);
+  background: var(--sheet); border-inline-start: 1px solid var(--rule); box-shadow: var(--shadow);
+  overflow-y: auto;
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 20px; align-content: start;
+  animation: drawer .24s var(--ease);
+}
+[dir="rtl"] .drawer { animation-name: drawer-rtl; }
+@keyframes drawer { from { transform: translateX(24px); opacity: 0; } }
+@keyframes drawer-rtl { from { transform: translateX(-24px); opacity: 0; } }
+@keyframes fade { from { opacity: 0; } }
+.drawer-top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.drawer h2 { font-size: 24px; letter-spacing: -0.015em; }
+.drawer .sub { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0; }
+.facts div { padding: 12px 0; display: grid; gap: 2px; }
+.facts div + div { padding-inline-start: 14px; border-inline-start: 1px solid var(--rule); }
+.facts dt { font-size: 12px; color: var(--ink-2); }
+.facts dd { margin: 0; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; }
+.history li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.history .when { color: var(--ink-2); padding-top: 2px; }
+.history .src { display: block; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.history .src q { color: var(--ink); text-decoration: underline; text-decoration-color: var(--carbon); text-underline-offset: 3px; }
+
+/* ---------- Updates ---------- */
+.updates { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 28px; align-items: start; }
+.plist { display: grid; gap: 16px; }
+.plist ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.p-row { width: 100%; text-align: start; display: grid; gap: 2px; padding-block: 12px; padding-inline: 14px 12px; border: 0; border-bottom: 1px solid var(--rule); border-inline-start: 2px solid transparent; background: transparent; }
+.p-row:hover { background: var(--sheet); }
+.p-row[aria-current="true"] { background: var(--carbon-wash); border-inline-start-color: var(--carbon); }
+.p-row b { font-weight: 600; }
+.p-row small { color: var(--ink-2); font-size: 13px; }
+.p-row .pending { color: var(--carbon); font-weight: 500; }
+.composer { padding: 22px 24px 24px; display: grid; gap: 18px; min-width: 0; }
+.composer header { display: grid; gap: 2px; }
+.composer header h2 { font-size: 18px; letter-spacing: -0.01em; }
+.composer header p { color: var(--ink-2); font-size: 14px; }
+.included { margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.included legend { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+.included label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; padding: 8px 10px; border-radius: var(--r); border: 1px solid var(--rule); }
+.included input { margin-top: 4px; accent-color: var(--carbon); }
+.included small { display: block; color: var(--ink-2); font-size: 12px; }
+.draft-wrap { display: grid; gap: 6px; }
+.draft-wrap label { font-size: 13px; color: var(--ink-2); }
+.draft-wrap textarea {
+  width: 100%; min-height: 240px; resize: vertical; overflow: hidden;
+  padding: 16px 18px; border: 1px solid var(--rule-2); border-radius: var(--r);
+  background: var(--paper); line-height: 1.6; font-size: 15px;
+}
+.draft-wrap textarea:focus-visible { outline: 2px solid var(--carbon); outline-offset: 0; border-color: var(--carbon); }
+.edited { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 13px; color: var(--ink-2); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; z-index: 50;
+  left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex; gap: 14px; align-items: center;
+  max-width: calc(100% - 32px);
+  padding-block: 10px; padding-inline: 16px 10px;
+  background: var(--ink); color: var(--paper);
+  border-radius: var(--r); box-shadow: var(--shadow);
+  font-size: 14px;
+  animation: toast .24s var(--ease);
+}
+.toast button { background: transparent; border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent); color: var(--paper); border-radius: var(--r); min-height: 30px; padding: 0 10px; font-weight: 500; }
+@keyframes toast { from { transform: translate(-50%, 8px); opacity: 0; } }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .detail { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .top .wrap { gap: 12px; }
+  .studio > span, .studio > strong { display: none; }
+  .review, .updates { grid-template-columns: minmax(0, 1fr); }
+  .queue { position: static; }
+  .review.has-sel .queue { display: none; }
+  .review:not(.has-sel) .detail { display: none; }
+  .back { display: flex; grid-column: 1 / -1; }
+  .grid-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name drift" "track track" "tag arr"; gap: 8px 12px; }
+  .grid-row > .c-tag { grid-area: tag; }
+  .grid-row > .name { grid-area: name; }
+  .grid-row > .c-track { grid-area: track; }
+  .grid-row > .arr { grid-area: arr; }
+  .grid-row > .drift { grid-area: drift; }
+  .axis .c-tag, .axis .name, .axis .arr, .axis .drift-h { display: none; }
+  .axis .grid-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "track"; }
+}
+@media (max-width: 560px) {
+  .mark small, .mark .word { display: none; }
+  nav.views a { padding: 0 8px; font-size: 14px; }
+  nav.views a .lbl-long { display: none; }
+  nav.views a .lbl-short { display: inline; }
+  .email { padding: 16px; }
+  .field { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .facts div + div { padding-inline-start: 0; border-inline-start: 0; border-top: 1px solid var(--rule); }
+  .composer { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+<symbol id="i-package" viewBox="0 0 256 256" fill="currentColor"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"/></symbol>
+<symbol id="i-paper-plane-tilt" viewBox="0 0 256 256" fill="currentColor"><path d="M227.32,28.68a16,16,0,0,0-15.66-4.08l-.15,0L19.57,82.84a16,16,0,0,0-2.49,29.8L102,154l41.3,84.87A15.86,15.86,0,0,0,157.74,248q.69,0,1.38-.06a15.88,15.88,0,0,0,14-11.51l58.2-191.94c0-.05,0-.1,0-.15A16,16,0,0,0,227.32,28.68ZM157.83,231.85l-.05.14,0-.07-40.06-82.3,48-48a8,8,0,0,0-11.31-11.31l-48,48L24.08,98.25l-.07,0,.14,0L216,40Z"/></symbol>
+<symbol id="i-check" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+<symbol id="i-x" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+<symbol id="i-warning" viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol>
+<symbol id="i-file-pdf" viewBox="0 0 256 256" fill="currentColor"><path d="M224,152a8,8,0,0,1-8,8H192v16h16a8,8,0,0,1,0,16H192v16a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8h32A8,8,0,0,1,224,152ZM92,172a28,28,0,0,1-28,28H56v8a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8H64A28,28,0,0,1,92,172Zm-16,0a12,12,0,0,0-12-12H56v24h8A12,12,0,0,0,76,172Zm88,8a36,36,0,0,1-36,36H112a8,8,0,0,1-8-8V152a8,8,0,0,1,8-8h16A36,36,0,0,1,164,180Zm-16,0a20,20,0,0,0-20-20h-8v40h8A20,20,0,0,0,148,180ZM40,112V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.66,2.34l56,56A8,8,0,0,1,216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,0,1-16,0ZM160,80h28.69L160,51.31Z"/></symbol>
+<symbol id="i-copy" viewBox="0 0 256 256" fill="currentColor"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 256 256" fill="currentColor"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></symbol>
+<symbol id="i-eye" viewBox="0 0 256 256" fill="currentColor"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></symbol>
+<symbol id="i-gear-six" viewBox="0 0 256 256" fill="currentColor"><path d="M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap" id="head"></div>
+</header>
+<div class="sample">
+  <div class="wrap" id="sample"></div>
+</div>
+<main id="app" class="wrap"></main>
+<div id="layer"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ================= Language ================= */
+  let LANG = document.documentElement.lang === "he" ? "he" : "en";
+  const LOCALE = () => (LANG === "he" ? "he-IL" : "en-US");
+
+  /* ================= Dates ================= */
+  const TODAY = "2026-10-24";
+  const AX0 = "2026-10-01", AX1 = "2027-02-28";
+  const D = (s) => new Date(s + "T00:00:00Z");
+  const daysBetween = (a, b) => Math.round((D(b) - D(a)) / 86400000);
+  const addDays = (s, n) => { const d = D(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const fmt = (s, o) => new Intl.DateTimeFormat(LOCALE(), Object.assign({ month: "short", day: "numeric", timeZone: "UTC" }, o)).format(D(s));
+  const fmtLong = (s) => fmt(s, { weekday: "short" });
+  const fmtMonth = (s) => new Intl.DateTimeFormat(LOCALE(), { month: "short", timeZone: "UTC" }).format(D(s));
+  const pct = (s) => Math.max(0, Math.min(100, daysBetween(AX0, s) / daysBetween(AX0, AX1) * 100));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const icon = (id, cls) => `<svg class="icon${cls ? " " + cls : ""}" aria-hidden="true"><use href="#i-${id}"></use></svg>`;
+  const ltr = (s) => `<span dir="ltr">${s}</span>`;
+  const LOGO = `<svg class="logo" width="26" height="26" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg>`;
+
+  /* ================= Interface text ================= */
+  const heDays = (n) => (n === 1 ? "יום אחד" : n === 2 ? "יומיים" : `${n} ימים`);
+  const T = {
+    en: {
+      title: "Lading Order Desk", sub: "order desk",
+      studio: "Adler Lind Interiors", designer: "Noa Adler", sign: "Noa",
+      nav: { review: ["Review", "Review"], orders: ["Orders", "Orders"], updates: ["Client updates", "Updates"] },
+      waiting: "waiting",
+      sample: "Sample studio and sample vendor emails. This is a design prototype, so no inbox is connected.",
+      reset: "Reset sample data", resetDone: "Sample data reset",
+      settings: "Settings", language: "Language", theme: "Theme", system: "System", light: "Light", dark: "Dark",
+      reviewH: "Review",
+      reviewP: (n, k) => n ? `Lading read ${n} vendor email${n === 1 ? "" : "s"} for you. ${k ? `${k} need${k === 1 ? "s" : ""} a decision from you.` : "All matched with high confidence."}` : "Nothing waiting.",
+      emails: "Vendor emails", possible: (n) => `${n} possible orders`,
+      doneToday: (n) => `Done today (${n})`, verb: { applied: "Applied", dismissed: "Dismissed", answered: "Answered" },
+      caughtH: "You're caught up",
+      caughtP: "New vendor emails appear here as they arrive. Every change you applied is on the Orders page, and the client drafts are ready under Client updates.",
+      openUpdates: "Open client updates", seeOrders: "See orders",
+      conf: { high: "Matched with high confidence", check: "Check one detail before applying", pick: "Pick the orders this applies to" },
+      read: "What Lading read", matched: "Matched to", chose: "You chose", noMatch: "No single match", useFabric: (n) => `${n} orders use this fabric`,
+      from: "From", to: "To", received: "Received", allEmails: "All emails", original: "Original email",
+      impLate: (inst, room, item, eta, d) => `<strong>${room} install is ${inst}.</strong> ${item} would now arrive about ${eta}, ${d} day${d === 1 ? "" : "s"} after it.`,
+      impEarly: (item, n, room, inst) => `${item} arrives ${n} days earlier than expected. ${room} install is ${inst}.`,
+      impStill: (item, room, inst) => `${item} still arrives before the ${room.toLowerCase()} install on ${inst}.`,
+      actSoon: "Act soon.",
+      lg: { promised: "Promised", before: "Before this email", now: "Now", install: "Install" },
+      addNoteTo: "Add the note to", addNote: (n) => n === 1 ? "Add note to order" : `Add note to ${n} orders`,
+      answered: "Mark as answered", dismiss: "Dismiss", apply: "Apply to order", notThis: "Not this order", otherOrder: "Apply to a different order",
+      ordersH: "Orders", openItems: (n) => `open items in ${n} projects`, late: "running late", atRisk: (n) => `room${n === 1 ? "" : "s"} at risk for install`,
+      filters: { all: "All", attention: "Needs attention", slipped: "Slipped", ontrack: "On track", arrived: "Arrived" },
+      filterLabel: "Filter orders",
+      ax: { status: "Status", item: "Item", arrives: "Arrives", drift: "Drift", today: "Today" },
+      noRows: "No orders match this filter. Choose All to see every order.",
+      ready: {
+        all: (inst) => `Everything is on site. Install ${inst}.`,
+        short: (eta, inst, d, item) => `Everything on site about ${eta}. Install is ${inst}, ${d} day${d === 1 ? "" : "s"} short. Held by ${item}.`,
+        bad: (item, eta) => `${item} has damage noted. Everything else on site by ${eta}.`,
+        ok: (eta, inst, d) => `Everything on site about ${eta}. Install ${inst}, ${d} day${d === 1 ? "" : "s"} to spare.`
+      },
+      drift: { arrived: "arrived", on: "on time", damage: "damage", unit: "d", lateT: (d) => `${d} days later than promised`, earlyT: (d) => `${d} days earlier than promised` },
+      rowLabel: (n, s, d) => `${n}, ${s}, arrives ${d}`,
+      ordered: "Ordered", promised: "Promised", arrivesEst: "Arrives (est.)", arrivedL: "Arrived", history: "History", srcFrom: "From", close: "Close",
+      updatesH: "Client updates",
+      updatesP: "Drafts are written from the order changes you applied. Edit them, copy them into your email, then mark them sent.",
+      toShare: (n) => `${n} change${n === 1 ? "" : "s"} to share`, upToDate: (d) => `Up to date, last sent ${d}`, nothingYet: "Nothing to share yet",
+      nothingNew: (g) => `Nothing new for ${g}`, lastWent: (d) => `Your last update went out ${d}. `,
+      whenApply: "When you apply a vendor change to one of their orders, it shows up here as a ready-to-edit draft.", goReview: "Go to review",
+      toClient: (cl) => `To ${cl}`, lastSent: (d) => `Last update sent ${d}.`, noneSent: "No update sent yet.",
+      inDraft: "Changes in this draft", appliedOn: (d) => `Applied ${d}`, message: "Message",
+      edited: "You edited this draft, so ticking changes above won't rewrite it.", rebuild: "Rebuild from changes",
+      copy: "Copy text", sent: "Mark as sent", copied: "Copied. Paste it into your email.", selected: "Text selected. Press Ctrl+C or Cmd+C to copy.",
+      sentTo: (g) => `Marked as sent to ${g}`, appliedTo: (n) => `Applied to ${n}`, noteAdded: (n) => `Note added to ${n} orders`,
+      dismissed: "Email dismissed. No order changed.", answeredT: "Marked as answered", undo: "Undo",
+      draft: (greet, lines, sign) => `Hi ${greet},\n\nHere's this week's update on your order.\n\n${lines}\n\nEverything else is on track. I'll write again next week, or sooner if anything changes.\n\n${sign}`,
+      client: {
+        late: (n, v, eta, before, reason, late, roomL, inst, sugg) => `${n}: ${v} moved its delivery to about ${eta} (it was ${before}) because ${reason}.${late ? ` That's just after the ${roomL} install on ${inst}, so I suggest we move the install to ${sugg}. I'll confirm with the installers.` : ` It still arrives before the install on ${inst}.`}`,
+        backorder: (n, phrase, roomL) => `${n}: the maker has them on backorder until ${phrase}, which is after the ${roomL} install. I'll send you two or three in-stock options this week so we can decide together.`,
+        early: (n, eta) => `${n}: good news, it arrives at our receiving warehouse on ${eta}, a few days early.`,
+        damaged: (n) => `${n}: part of the shipment arrived damaged and one carton is missing. I'm sorting it out with the vendor and the freight company. There's nothing you need to do, and the January install isn't affected yet.`
+      },
+      answeredHist: "You answered Arden about slab A17."
+    },
+    he: {
+      title: "Lading, דסק הזמנות", sub: "דסק הזמנות",
+      studio: "אדלר לינד עיצוב פנים", designer: "נועה אדלר", sign: "נועה",
+      nav: { review: ["סקירה", "סקירה"], orders: ["הזמנות", "הזמנות"], updates: ["עדכונים ללקוחות", "עדכונים"] },
+      waiting: "ממתינים",
+      sample: "סטודיו לדוגמה ומיילים לדוגמה מספקים. זהו אב טיפוס לעיצוב, ולכן לא מחוברת תיבת דואר.",
+      reset: "איפוס נתוני הדוגמה", resetDone: "נתוני הדוגמה אופסו",
+      settings: "הגדרות", language: "שפה", theme: "מראה", system: "אוטומטי", light: "בהיר", dark: "כהה",
+      reviewH: "סקירה",
+      reviewP: (n, k) => n ? `Lading קרא בשבילך ${n === 1 ? "מייל אחד" : `${n} מיילים`} מספקים. ${k ? (k === 1 ? "אחד מהם מחכה להחלטה שלך." : `${k} מהם מחכים להחלטה שלך.`) : "כולם הותאמו בביטחון גבוה."}` : "אין מה לסקור.",
+      emails: "מיילים מספקים", possible: (n) => `${n} הזמנות אפשריות`,
+      doneToday: (n) => `טופלו היום (${n})`, verb: { applied: "הוחל", dismissed: "הוסר", answered: "נענה" },
+      caughtH: "הכול מטופל",
+      caughtP: "מיילים חדשים מספקים יופיעו כאן כשיגיעו. כל שינוי שהחלת מופיע בעמוד ההזמנות, והטיוטות ללקוחות מחכות בעדכונים ללקוחות.",
+      openUpdates: "לעדכונים ללקוחות", seeOrders: "להזמנות",
+      conf: { high: "הותאם בביטחון גבוה", check: "כדאי לבדוק פרט אחד לפני ההחלה", pick: "יש לבחור לאילו הזמנות זה שייך" },
+      read: "מה Lading קרא", matched: "הותאם ל־", chose: "נבחר ידנית", noMatch: "אין התאמה יחידה", useFabric: (n) => `${n} הזמנות משתמשות בבד הזה`,
+      from: "מאת", to: "אל", received: "התקבל", allEmails: "כל המיילים", original: "המייל המקורי",
+      impLate: (inst, roomIn, item, eta, d) => `<strong>ההתקנה ${roomIn} מתוכננת ל־${inst}.</strong> מועד ההגעה של ${item} זז לסביבות ${eta}, ${heDays(d)} אחריה.`,
+      impEarly: (item, n, roomIn, inst) => `מועד ההגעה של ${item} הוקדם ב־${heDays(n)}. ההתקנה ${roomIn} מתוכננת ל־${inst}.`,
+      impStill: (item, roomIn, inst) => `גם במועד החדש, ${item} מגיע לפני ההתקנה ${roomIn} ב־${inst}.`,
+      actSoon: "כדאי לטפל בקרוב.",
+      lg: { promised: "מובטח", before: "לפני המייל הזה", now: "עכשיו", install: "התקנה" },
+      addNoteTo: "להוסיף את ההערה ל־", addNote: (n) => n === 1 ? "הוספת הערה להזמנה" : `הוספת הערה ל־${n} הזמנות`,
+      answered: "סימון כנענה", dismiss: "הסרה", apply: "החלה על ההזמנה", notThis: "זו לא ההזמנה", otherOrder: "החלה על הזמנה אחרת",
+      ordersH: "הזמנות", openItems: (n) => `פריטים פתוחים ב־${n} פרויקטים`, late: "באיחור", atRisk: (n) => n === 1 ? "חדר בסיכון למועד ההתקנה" : "חדרים בסיכון למועד ההתקנה",
+      filters: { all: "הכול", attention: "דורש טיפול", slipped: "נדחו", ontrack: "בזמן", arrived: "הגיעו" },
+      filterLabel: "סינון הזמנות",
+      ax: { status: "סטטוס", item: "פריט", arrives: "הגעה", drift: "סטייה", today: "היום" },
+      noRows: "אין הזמנות שמתאימות לסינון הזה. אפשר לבחור ״הכול״ כדי לראות את כל ההזמנות.",
+      ready: {
+        all: (inst) => `הכול הגיע. ההתקנה ב־${inst}.`,
+        short: (eta, inst, d, item) => `הכול יגיע בסביבות ${eta}. ההתקנה ב־${inst}, חסרים ${heDays(d)}. מעכב: ${item}.`,
+        bad: (item, eta) => `${item}: נרשם נזק. כל השאר יגיע עד ${eta}.`,
+        ok: (eta, inst, d) => `הכול יגיע בסביבות ${eta}. ההתקנה ב־${inst}, עם מרווח של ${heDays(d)}.`
+      },
+      drift: { arrived: "הגיע", on: "בזמן", damage: "נזק", unit: "ימים", lateT: (d) => `${heDays(d)} אחרי המועד המובטח`, earlyT: (d) => `${heDays(d)} לפני המועד המובטח` },
+      rowLabel: (n, s, d) => `${n}, ${s}, הגעה ${d}`,
+      ordered: "הוזמן", promised: "מובטח", arrivesEst: "הגעה משוערת", arrivedL: "הגיע", history: "היסטוריה", srcFrom: "מקור:", close: "סגירה",
+      updatesH: "עדכונים ללקוחות",
+      updatesP: "הטיוטות נכתבות מתוך השינויים שהחלת בהזמנות. אפשר לערוך אותן, להעתיק למייל ולסמן כנשלח.",
+      toShare: (n) => n === 1 ? "שינוי אחד לשיתוף" : `${n} שינויים לשיתוף`, upToDate: (d) => `מעודכן, נשלח לאחרונה ב־${d}`, nothingYet: "אין עדיין מה לשתף",
+      nothingNew: (g) => `אין חדש עבור ${g}`, lastWent: (d) => `העדכון האחרון יצא ב־${d}. `,
+      whenApply: "כשמחילים שינוי מספק על אחת ההזמנות שלהם, הוא יופיע כאן כטיוטה מוכנה לעריכה.", goReview: "לסקירה",
+      toClient: (cl) => `אל ${cl}`, lastSent: (d) => `העדכון האחרון נשלח ב־${d}.`, noneSent: "עוד לא נשלח עדכון.",
+      inDraft: "השינויים בטיוטה", appliedOn: (d) => `הוחל ב־${d}`, message: "ההודעה",
+      edited: "ערכת את הטיוטה, ולכן סימון שינויים למעלה לא ישכתב אותה.", rebuild: "בנייה מחדש מהשינויים",
+      copy: "העתקת הטקסט", sent: "סימון כנשלח", copied: "הועתק. אפשר להדביק במייל.", selected: "הטקסט מסומן. אפשר להעתיק עם Ctrl+C או Cmd+C.",
+      sentTo: (g) => `סומן כנשלח אל ${g}`, appliedTo: (n) => `הוחל על ${n}`, noteAdded: (n) => `ההערה נוספה ל־${n} הזמנות`,
+      dismissed: "המייל הוסר. אף הזמנה לא השתנתה.", answeredT: "סומן כנענה", undo: "ביטול",
+      draft: (greet, lines, sign) => `היי ${greet},\n\nהנה העדכון השבועי על ההזמנה שלכם.\n\n${lines}\n\nכל השאר מתקדם כמתוכנן. אכתוב שוב בשבוע הבא, או קודם אם משהו ישתנה.\n\n${sign}`,
+      client: {
+        late: (n, v, eta, before, reason, late, roomIn, inst, sugg) => `${n}: ${v} דחו את המסירה לסביבות ${eta} (במקום ${before}), כי ${reason}.${late ? ` זה יוצא ממש אחרי ההתקנה ${roomIn} ב־${inst}, אז אני מציעה להזיז את ההתקנה ל${sugg}. אתאם עם המתקינים.` : ` זה עדיין לפני ההתקנה ב־${inst}.`}`,
+        backorder: (n, phrase, roomIn) => `${n}: יש חוסר במלאי אצל היצרן עד ${phrase}, כלומר אחרי ההתקנה ${roomIn}. אשלח לכם השבוע שתיים או שלוש חלופות מהמלאי ונחליט יחד.`,
+        early: (n, eta) => `${n}: חדשות טובות, המשלוח מגיע למחסן הקבלה שלנו ב־${eta}, כמה ימים לפני הזמן.`,
+        damaged: (n) => `${n}: חלק מהמשלוח הגיע פגום וקרטון אחד חסר. אני מטפלת בזה מול הספק וחברת ההובלה. אין צורך שתעשו משהו, ומועד ההתקנה בינואר לא מושפע בינתיים.`
+      },
+      answeredHist: "השבת לאבני ארדן לגבי לוח A17."
+    }
+  };
+  const t = () => T[LANG];
+
+  /* ================= Sample data: structure (shared by both languages) ================= */
+  const PROJECTS = [
+    { id: "p1", rooms: [{ id: "living", install: "2026-12-14" }, { id: "bed", install: "2026-12-14" }] },
+    { id: "p2", rooms: [{ id: "main", install: "2027-01-18" }, { id: "kitchen", install: "2027-01-18" }] },
+    { id: "p3", rooms: [{ id: "great", install: "2027-02-08" }, { id: "dining", install: "2027-02-08" }] }
+  ];
+  const H = (...dates) => dates.map((date, i) => ({ date, k: "seed", i }));
+  const SEED_ITEMS = [
+    { id: "i1", p: "p1", room: "living", po: "HR-1021", ordered: "2026-08-19", promised: "2026-11-23", eta: "2026-11-23", status: "production", history: H("2026-08-21") },
+    { id: "i2", p: "p1", room: "living", po: "HR-1024", ordered: "2026-09-02", promised: "2026-11-30", eta: "2026-11-30", status: "confirmed", history: H("2026-09-03") },
+    { id: "i3", p: "p1", room: "living", po: "HR-1020", ordered: "2026-08-12", promised: "2026-09-20", eta: "2026-09-18", status: "delivered", history: H("2026-09-18") },
+    { id: "i4", p: "p1", room: "living", po: "HR-1025", ordered: "2026-09-05", promised: "2026-12-04", eta: "2026-12-04", status: "production", history: H("2026-09-08") },
+    { id: "i5", p: "p1", room: "bed", po: "HR-1030", ordered: "2026-08-25", promised: "2026-11-09", eta: "2026-11-02", status: "shipped", history: H("2026-10-21") },
+    { id: "i6", p: "p1", room: "bed", po: "HR-1031", ordered: "2026-08-25", promised: "2026-11-09", eta: "2026-10-21", status: "receiver", history: H("2026-10-21") },
+    { id: "i7", p: "p1", room: "bed", po: "HR-1032", ordered: "2026-09-02", promised: "2026-11-16", eta: "2026-11-16", status: "confirmed", history: H("2026-09-03") },
+    { id: "i8", p: "p2", room: "main", po: "WL-2203", ordered: "2026-09-14", promised: "2026-10-24", eta: "2026-10-23", status: "receiver", history: H("2026-10-19") },
+    { id: "i9", p: "p2", room: "main", po: "WL-2201", ordered: "2026-09-10", promised: "2026-12-28", eta: "2026-12-28", status: "production", history: H("2026-09-12") },
+    { id: "i10", p: "p2", room: "main", po: "WL-2207", ordered: "2026-09-20", promised: "2026-11-10", eta: "2026-11-10", status: "confirmed", history: H("2026-09-22") },
+    { id: "i11", p: "p2", room: "kitchen", po: "WL-2210", ordered: "2026-09-22", promised: "2026-12-07", eta: "2026-12-07", status: "confirmed", history: H("2026-10-20") },
+    { id: "i12", p: "p2", room: "kitchen", po: "WL-2212", ordered: "2026-09-22", promised: "2026-12-14", eta: "2026-12-14", status: "confirmed", history: H("2026-09-24") },
+    { id: "i13", p: "p3", room: "dining", po: "CB-3008", ordered: "2026-08-30", promised: "2026-10-30", eta: "2026-10-30", status: "shipped", history: H("2026-10-22") },
+    { id: "i14", p: "p3", room: "dining", po: "CB-3009", ordered: "2026-08-30", promised: "2027-01-11", eta: "2027-01-11", status: "production", history: H("2026-09-01") },
+    { id: "i15", p: "p3", room: "great", po: "CB-3012", ordered: "2026-09-12", promised: "2027-01-25", eta: "2027-01-25", status: "production", history: H("2026-09-15") },
+    { id: "i16", p: "p3", room: "great", po: "CB-3004", ordered: "2026-08-28", promised: "2026-12-21", eta: "2027-01-04", status: "production", history: H("2026-08-31", "2026-10-12") }
+  ];
+  const SEED_EVENTS = [
+    { id: "e1", p: "p1", item: "i6", date: "2026-10-21", on: true, k: "seed" },
+    { id: "e2", p: "p2", item: "i11", date: "2026-10-20", on: true, k: "seed" },
+    { id: "e3", p: "p3", item: "i16", date: "2026-10-12", on: true, k: "seed", sent: "2026-10-12" }
+  ];
+  const STATUS_CLS = { ordered: "", confirmed: "", production: "", shipped: "t-c", out: "t-c", receiver: "t-ok", delivered: "t-ok", backorder: "t-late", damaged: "t-risk" };
+  const ARRIVED = new Set(["receiver", "delivered"]);
+
+  /* Vendor emails. [[id|text]] in a body marks the span a field came from; each field names its span. */
+  const MSGS = [
+    { id: "m1", from: "orders@baxterpine.example", received: "2026-10-24", time: "08:12", attachments: ["SO-44817_ack_rev2.pdf"], kind: "late", conf: "high", item: "i1",
+      fields: [{ src: "ship" }, { src: "ship", from: "2026-11-23", to: "2026-12-15" }, { src: "why" }], set: { eta: "2026-12-15" }, clientKind: "late" },
+    { id: "m2", from: "care@mirelle.example", received: "2026-10-23", time: "16:40", attachments: [], kind: "backorder", conf: "check", item: "i2",
+      fields: [{ src: "qty" }, { src: "date", from: "2026-11-30", to: "2027-01-29" }, { src: "cancel" }], set: { eta: "2027-01-29", status: "backorder" }, clientKind: "backorder" },
+    { id: "m3", from: "tracking@coastlinefreight.example", received: "2026-10-24", time: "06:05", attachments: [], kind: "tracking", conf: "high", item: "i13",
+      fields: [{ src: "status" }, { src: "date", from: "2026-10-30", to: "2026-10-27" }, { src: "pcs" }], set: { eta: "2026-10-27", status: "out" }, clientKind: "early" },
+    { id: "m4", from: "dock@northgate-receiving.example", received: "2026-10-23", time: "14:22", attachments: ["IMG_2231.jpg", "IMG_2232.jpg"], kind: "receiving", conf: "high", item: "i8",
+      fields: [{ src: "count" }, { src: "dmg" }, { src: "miss" }, { src: "bol" }, { src: "inspect" }], set: { status: "damaged" }, clientKind: "damaged", act: true },
+    { id: "m5", from: "tomas@ardenstone.example", received: "2026-10-22", time: "11:03", attachments: ["slab_A17_front.jpg", "slab_A17_edge.jpg"], kind: "reply", conf: "high", item: "i4", reply: true,
+      fields: [{ src: "ask" }, { src: "due" }] },
+    { id: "m6", from: "trade@holmtextiles.example", received: "2026-10-21", time: "09:30", attachments: [], kind: "discontinued", conf: "pick", candidates: ["i10", "i3"],
+      fields: [{ src: "disc" }, { src: "fill" }, { src: "alt" }] }
+  ];
+  const MSG = Object.fromEntries(MSGS.map((m) => [m.id, m]));
+  const KIND_CLS = { late: "t-late", backorder: "t-late", tracking: "t-c", receiving: "t-risk", reply: "t-c", discontinued: "t-late" };
+
+  /* ================= Sample data: words ================= */
+  const C = {
+    en: {
+      projects: {
+        p1: { name: "Hartley Residence", client: "Dana and Ruth Hartley", greet: "Dana and Ruth" },
+        p2: { name: "Wen Loft", client: "Marcus Wen", greet: "Marcus" },
+        p3: { name: "Calder Bay House", client: "Ada and Femi Okonkwo", greet: "Ada and Femi" }
+      },
+      rooms: {
+        living: ["Living room", "living room"], bed: ["Primary bedroom", "primary bedroom"], main: ["Main room", "main room"],
+        kitchen: ["Kitchen", "kitchen"], great: ["Great room", "great room"], dining: ["Dining room", "dining room"]
+      },
+      status: { ordered: "Ordered", confirmed: "Confirmed", production: "In production", shipped: "Shipped", out: "Out for delivery", receiver: "At receiver", delivered: "Delivered", backorder: "Backordered", damaged: "Damage noted" },
+      kinds: { late: "Ship date changed", backorder: "Backorder", tracking: "Tracking update", receiving: "Receiving report", reply: "Needs your reply", discontinued: "Discontinued" },
+      items: {
+        i1: { name: "Ellis sofa, 96 in", short: "Ellis sofa", vendor: "Baxter & Pine Upholstery", v: "Baxter & Pine", h: [["Acknowledgment received. Ships week of Nov 16.", "Baxter & Pine"]] },
+        i2: { name: "Orla pendants, aged brass (2)", short: "Orla pendants", vendor: "Mirelle Lighting", v: "Mirelle", h: [["Order confirmed, ML-90331.", "Mirelle Lighting"]] },
+        i3: { name: "Fennel bouclé 04, COM 14 yd", short: "Fennel bouclé", vendor: "Holm Textiles", v: "Holm", h: [["Delivered to Baxter & Pine for the Ellis sofa.", "Holm Textiles"]] },
+        i4: { name: "Marlow coffee table, travertine", short: "Marlow coffee table", vendor: "Arden Stone Works", v: "Arden", h: [["Order confirmed. Ready Dec 4.", "Arden Stone Works"]] },
+        i5: { name: "Linden bed, queen", short: "Linden bed", vendor: "Kettle & Oak Furniture", v: "Kettle & Oak", h: [["Shipped early. Arrives about Nov 2.", "Kettle & Oak"]] },
+        i6: { name: "Linden nightstands (2)", short: "Linden nightstands", vendor: "Kettle & Oak Furniture", v: "Kettle & Oak", h: [["Received in good condition at Northgate.", "Northgate Receiving"]] },
+        i7: { name: "Arc sconces (2)", short: "Arc sconces", vendor: "Mirelle Lighting", v: "Mirelle", h: [["Order confirmed, ML-90332.", "Mirelle Lighting"]] },
+        i8: { name: "Salt linen drapery, 38 yd", short: "Salt linen drapery", vendor: "Holm Textiles", v: "Holm", h: [["Shipped in 3 cartons.", "Holm Textiles"]] },
+        i9: { name: "Ames sectional", short: "Ames sectional", vendor: "Baxter & Pine Upholstery", v: "Baxter & Pine", h: [["Acknowledgment received. Ships week of Dec 21.", "Baxter & Pine"]] },
+        i10: { name: "Pillows in Fennel bouclé 04 (6)", short: "Fennel pillows", vendor: "Holm Textiles", v: "Holm", h: [["Order confirmed.", "Holm Textiles"]] },
+        i11: { name: "Pell counter stools (3)", short: "Pell counter stools", vendor: "Kettle & Oak Furniture", v: "Kettle & Oak", h: [["Ship date confirmed for Dec 7.", "Kettle & Oak"]] },
+        i12: { name: "Trio pendant, smoked glass", short: "Trio pendant", vendor: "Mirelle Lighting", v: "Mirelle", h: [["Order confirmed, ML-90410.", "Mirelle Lighting"]] },
+        i13: { name: "Torrey dining table, 108 in", short: "Torrey dining table", vendor: "Kettle & Oak Furniture", v: "Kettle & Oak", h: [["Shipped with Coastline Freight.", "Kettle & Oak"]] },
+        i14: { name: "Torrey dining chairs (8)", short: "Torrey dining chairs", vendor: "Kettle & Oak Furniture", v: "Kettle & Oak", h: [["Acknowledgment received. Ships Jan 4.", "Kettle & Oak"]] },
+        i15: { name: "Hand-knotted rug, 12 x 15 ft", short: "Hand-knotted rug", vendor: "Sora Rug Atelier", v: "Sora", h: [["Loom date set. Ready Jan 18.", "Sora Rug Atelier"]] },
+        i16: { name: "Rook lounge chairs (2)", short: "Rook lounge chairs", vendor: "Baxter & Pine Upholstery", v: "Baxter & Pine", h: [["Acknowledgment received. Ships week of Dec 14.", "Baxter & Pine"], ["Ship date moved two weeks, to week of Dec 28.", "Baxter & Pine", "Revised ship: week of 12/28/26"]] }
+      },
+      events: {
+        e1: "Linden nightstands: they arrived at our receiving warehouse in good condition. The bed shipped early too and should reach the warehouse around Nov 2.",
+        e2: "Pell counter stools: Kettle & Oak confirmed they ship Dec 7, well ahead of the January install.",
+        e3: "Rook lounge chairs: Baxter & Pine moved them two weeks, to about Jan 4. That still leaves a month before the install."
+      },
+      msgs: {
+        m1: {
+          fromName: "Baxter & Pine Upholstery", subject: "Revised acknowledgment SO-44817 / your PO HR-1021 / sidemark HARTLEY",
+          body: "Hello Noa,\n\nPlease find our revised acknowledgment attached.\n\nCustomer PO: [[po|HR-1021]]    Sidemark: [[mark|HARTLEY]]\nItem: [[item|Ellis Sofa 96\"]] / COM: Holm Fennel 04\nRevised estimated ship: [[ship|week of 12/7/26]]\nFreight: LTL to Northgate Receiving\n\n[[why|The frame shop is running behind on 96\" frames.]] We apologize for the delay.\n\nThank you,\nGail Moreno\nCustomer Service, Baxter & Pine",
+          why: "PO HR-1021 and sidemark HARTLEY both match this order.",
+          fields: [["Ships", "Week of Dec 7"], ["Arrives (est.)", null, "Ship week of Dec 7 plus 8 days of freight, the average on your last five Baxter & Pine orders."], ["Reason given", "Frame shop is behind on 96 in frames"]],
+          summary: "Ship date moved to week of Dec 7. Arrival now about Dec 15.", quote: "Revised estimated ship: week of 12/7/26",
+          reason: "their frame shop is running behind"
+        },
+        m2: {
+          fromName: "Mirelle Lighting", subject: "Backorder notice for your order ML-90331",
+          body: "Dear Customer,\n\nThe following item on your order is on backorder.\n\nOrder #: ML-90331    Your ref: [[po|HR-1024]]\n[[item|Orla Pendant 18in, Aged Brass]]    Qty [[qty|2]]\nNew availability: [[date|late January]]\n\nWe will ship as soon as stock arrives. [[cancel|Reply to this email to cancel without a fee.]]\n\nMirelle Lighting Customer Care",
+          why: "Your reference HR-1024 matches this order.",
+          note: "Mirelle wrote “late January”, not a date. Lading set Jan 29 as a working estimate. Change it if you hear otherwise.",
+          fields: [["Status", "Backordered, quantity 2"], ["Arrives (est.)", null, "Estimated from “late January”."], ["Your options", "Cancel without a fee by replying"]],
+          summary: "Backordered. Vendor expects stock in late January.", quote: "New availability: late January", phrase: "late January"
+        },
+        m3: {
+          fromName: "Coastline Freight", subject: "Out for delivery: PRO 7730-118-42",
+          body: "Shipment update\n\nPRO: 7730-118-42\nShipper: Kettle & Oak Furniture\nConsignee: Northgate Receiving, Unit 4\nReference: [[po|CB-3008]] / [[mark|OKONKWO]]\nStatus: [[status|Out for delivery]]. Scheduled [[date|10/27/2026, 8am to 12pm]].\nPieces: [[pcs|3]]    Weight: 412 lb",
+          why: "Reference CB-3008 and sidemark OKONKWO match this order.",
+          fields: [["Status", "Out for delivery"], ["Arrives", null, "Delivery window 8am to 12pm at Northgate Receiving."], ["Pieces", "3 pieces, matches the order"]],
+          summary: "Out for delivery to Northgate on Oct 27, 3 days early.", quote: "Scheduled 10/27/2026, 8am to 12pm"
+        },
+        m4: {
+          fromName: "Northgate Receiving", subject: "Receiving report: WEN / WL-2203 (partial, damage noted)",
+          body: "Received today for WEN / [[po|WL-2203]], shipper Holm Textiles.\n\n[[count|Expected 3 cartons. Received 2.]]\n[[dmg|Carton 1: corner crushed, outer wrap torn.]] Photos attached. Contents not yet inspected.\nCarton 2: good condition.\n[[miss|Carton 3: not received.]]\n\n[[bol|Noted on bill of lading: 2 of 3, carton 1 damaged.]]\n\n[[inspect|Let us know if you want us to open and inspect carton 1. Inspection is $35.]]\n\nNorthgate Receiving, Unit 4",
+          why: "PO WL-2203 and sidemark WEN match this order.",
+          fields: [["Received", "2 of 3 cartons"], ["Damage", "Carton 1 crushed, not yet opened"], ["Missing", "Carton 3"], ["Paperwork", "Damage and shortage noted on the bill of lading", "This notation supports a freight claim."], ["Decision", "Pay $35 to inspect carton 1?"]],
+          summary: "2 of 3 cartons received. Carton 1 damaged, carton 3 missing.", quote: "Noted on bill of lading: 2 of 3, carton 1 damaged.",
+          impactText: "Next steps: ask Holm Textiles where carton 3 is, and tell Northgate whether to inspect carton 1."
+        },
+        m5: {
+          fromName: "Arden Stone Works", subject: "Slab photos for HR-1025, approval needed",
+          body: "Hi Noa,\n\nSlab A17 for the [[item|Marlow coffee table]] ([[po|HR-1025]]) is pulled. Photos attached.\n\n[[ask|Please approve the slab or ask us to pull another before we cut.]] [[due|We need your answer by 10/28 to hold the 12/4 date.]]\n\nThanks,\nTomas\nArden Stone Works",
+          why: "PO HR-1025 and the item name match this order.",
+          fields: [["They need", "Your approval of slab A17, or a request for another"], ["Reply by", "Wed, Oct 28", "A late answer puts the Dec 4 date at risk."]],
+          summary: "Arden asked you to approve slab A17 by Oct 28.", quote: "We need your answer by 10/28 to hold the 12/4 date."
+        },
+        m6: {
+          fromName: "Holm Textiles", subject: "Discontinuation notice: Fennel bouclé, colorway 04",
+          body: "To our trade partners,\n\n[[disc|Fennel bouclé in colorway 04 (Oat) is discontinued]], effective immediately.\nRemaining stock: 11 yards at our New Jersey warehouse.\n\n[[fill|Open orders already confirmed will be filled.]]\n\n[[alt|Colorway 06 (Flax) is the closest match.]] Memo samples are available on request.\n\nHolm Textiles",
+          why: "This notice has no PO number. Two of your orders use Fennel bouclé 04.",
+          note: "Both orders are already confirmed or delivered, and Holm says confirmed orders will be filled. Nothing slips. Lading will add a note so nobody reorders colorway 04.",
+          fields: [["Discontinued", "Fennel bouclé, colorway 04 (Oat)"], ["Open orders", "Confirmed orders will be filled"], ["Replacement", "Colorway 06 (Flax)"]],
+          summary: "Fennel 04 is discontinued. Confirmed orders will be filled; reorders need colorway 06.", quote: "Open orders already confirmed will be filled."
+        }
+      }
+    },
+    he: {
+      projects: {
+        p1: { name: "בית הרצוג", client: "דנה ורות הרצוג", greet: "דנה ורות" },
+        p2: { name: "לופט וייס", client: "מיכאל וייס", greet: "מיכאל" },
+        p3: { name: "בית בקיסריה", client: "עדה ויואב בן־דוד", greet: "עדה ויואב" }
+      },
+      rooms: {
+        living: ["סלון", "בסלון"], bed: ["חדר שינה הורים", "בחדר השינה"], main: ["חלל מרכזי", "בחלל המרכזי"],
+        kitchen: ["מטבח", "במטבח"], great: ["חלל מגורים", "בחלל המגורים"], dining: ["פינת אוכל", "בפינת האוכל"]
+      },
+      status: { ordered: "הוזמן", confirmed: "אושר", production: "בייצור", shipped: "נשלח", out: "בדרך למסירה", receiver: "במחסן הקבלה", delivered: "נמסר", backorder: "חוסר במלאי", damaged: "נרשם נזק" },
+      kinds: { late: "מועד משלוח השתנה", backorder: "חוסר במלאי", tracking: "עדכון משלוח", receiving: "דוח קבלה", reply: "מחכה לתשובה", discontinued: "הופסק ייצור" },
+      items: {
+        i1: { name: "ספת אליס, 240 ס״מ", short: "ספת אליס", vendor: "ריפודי בקסטר", v: "ריפודי בקסטר", h: [["אישור הזמנה התקבל. משלוח בשבוע של 16 בנובמבר.", "ריפודי בקסטר"]] },
+        i2: { name: "מנורות תלייה אורלה, פליז מיושן (2)", short: "מנורות אורלה", vendor: "מירל תאורה", v: "מירל", h: [["ההזמנה אושרה, ML-90331.", "מירל תאורה"]] },
+        i3: { name: "בד בוקלה פנל 04, 13 מ׳ לריפוד", short: "בד פנל 04", vendor: "הולם טקסטיל", v: "הולם", h: [["נמסר לריפודי בקסטר עבור ספת אליס.", "הולם טקסטיל"]] },
+        i4: { name: "שולחן קפה מרלו, טרוורטין", short: "שולחן הקפה מרלו", vendor: "אבני ארדן", v: "אבני ארדן", h: [["ההזמנה אושרה. מוכן ב־4 בדצמבר.", "אבני ארדן"]] },
+        i5: { name: "מיטת לינדן, זוגית", short: "מיטת לינדן", vendor: "נגריית אלון", v: "נגריית אלון", h: [["נשלח מוקדם. הגעה בסביבות 2 בנובמבר.", "נגריית אלון"]] },
+        i6: { name: "שידות לילה לינדן (2)", short: "שידות הלילה לינדן", vendor: "נגריית אלון", v: "נגריית אלון", h: [["התקבל במצב תקין במחסני הצפון.", "מחסני הצפון"]] },
+        i7: { name: "מנורות קיר ארק (2)", short: "מנורות הקיר ארק", vendor: "מירל תאורה", v: "מירל", h: [["ההזמנה אושרה, ML-90332.", "מירל תאורה"]] },
+        i8: { name: "וילון פשתן סולט, 35 מ׳", short: "וילון הפשתן", vendor: "הולם טקסטיל", v: "הולם", h: [["נשלח ב־3 קרטונים.", "הולם טקסטיל"]] },
+        i9: { name: "ספה פינתית איימס", short: "הספה הפינתית איימס", vendor: "ריפודי בקסטר", v: "ריפודי בקסטר", h: [["אישור הזמנה התקבל. משלוח בשבוע של 21 בדצמבר.", "ריפודי בקסטר"]] },
+        i10: { name: "כריות בבד פנל 04 (6)", short: "כריות פנל", vendor: "הולם טקסטיל", v: "הולם", h: [["ההזמנה אושרה.", "הולם טקסטיל"]] },
+        i11: { name: "כסאות בר פל (3)", short: "כסאות הבר פל", vendor: "נגריית אלון", v: "נגריית אלון", h: [["מועד המשלוח אושר ל־7 בדצמבר.", "נגריית אלון"]] },
+        i12: { name: "גוף תאורה טריו, זכוכית מעושנת", short: "גוף התאורה טריו", vendor: "מירל תאורה", v: "מירל", h: [["ההזמנה אושרה, ML-90410.", "מירל תאורה"]] },
+        i13: { name: "שולחן אוכל טורי, 275 ס״מ", short: "שולחן האוכל טורי", vendor: "נגריית אלון", v: "נגריית אלון", h: [["נשלח עם קו החוף הובלות.", "נגריית אלון"]] },
+        i14: { name: "כסאות אוכל טורי (8)", short: "כסאות האוכל טורי", vendor: "נגריית אלון", v: "נגריית אלון", h: [["אישור הזמנה התקבל. משלוח ב־4 בינואר.", "נגריית אלון"]] },
+        i15: { name: "שטיח קשרים ביד, 3.6 על 4.5 מ׳", short: "שטיח הקשרים", vendor: "סורה שטיחים", v: "סורה", h: [["נקבע מועד לנול. מוכן ב־18 בינואר.", "סורה שטיחים"]] },
+        i16: { name: "כורסאות רוק (2)", short: "כורסאות רוק", vendor: "ריפודי בקסטר", v: "ריפודי בקסטר", h: [["אישור הזמנה התקבל. משלוח בשבוע של 14 בדצמבר.", "ריפודי בקסטר"], ["מועד המשלוח נדחה בשבועיים, לשבוע של 28 בדצמבר.", "ריפודי בקסטר", "מועד משלוח מעודכן: שבוע של 28/12/26"]] }
+      },
+      events: {
+        e1: "שידות הלילה לינדן: הגיעו למחסן הקבלה שלנו במצב תקין. גם המיטה נשלחה מוקדם ואמורה להגיע למחסן בסביבות 2 בנובמבר.",
+        e2: "כסאות הבר פל: נגריית אלון אישרה שהם יוצאים ב־7 בדצמבר, הרבה לפני ההתקנה בינואר.",
+        e3: "כורסאות רוק: ריפודי בקסטר דחו אותן בשבועיים, לסביבות 4 בינואר. עדיין נשאר חודש עד ההתקנה."
+      },
+      msgs: {
+        m1: {
+          fromName: "ריפודי בקסטר", subject: "אישור הזמנה מעודכן SO-44817 / הזמנת רכש HR-1021 / סימון הרצוג",
+          body: "שלום נועה,\n\nמצורף אישור ההזמנה המעודכן.\n\nהזמנת רכש: [[po|HR-1021]]    סימון: [[mark|הרצוג]]\nפריט: [[item|ספת אליס 240 ס״מ]] / בד לקוח: הולם פנל 04\nמועד משלוח משוער מעודכן: [[ship|שבוע של 7/12/26]]\nהובלה: משטחים למחסני הצפון\n\n[[why|הנגרייה מפגרת בייצור שלדות של 240 ס״מ.]] מתנצלים על העיכוב.\n\nתודה,\nגאיה מורנו\nשירות לקוחות, ריפודי בקסטר",
+          why: "הזמנת הרכש HR-1021 והסימון ״הרצוג״ תואמים להזמנה הזו.",
+          fields: [["משלוח", "בשבוע של 7 בדצמבר"], ["הגעה משוערת", null, "שבוע המשלוח של 7 בדצמבר ועוד 8 ימי הובלה, הממוצע בחמש ההזמנות האחרונות שלך מריפודי בקסטר."], ["הסיבה שנמסרה", "עיכוב בייצור שלדות 240 ס״מ"]],
+          summary: "מועד המשלוח נדחה לשבוע של 7 בדצמבר. הגעה עכשיו בסביבות 15 בדצמבר.", quote: "מועד משלוח משוער מעודכן: שבוע של 7/12/26",
+          reason: "הנגרייה שלהם מפגרת בייצור השלדות"
+        },
+        m2: {
+          fromName: "מירל תאורה", subject: "הודעה על חוסר במלאי להזמנה ML-90331",
+          body: "לקוח יקר,\n\nהפריט הבא בהזמנה שלך חסר כרגע במלאי.\n\nהזמנה מס׳: ML-90331    האסמכתא שלך: [[po|HR-1024]]\n[[item|מנורת תלייה אורלה 45 ס״מ, פליז מיושן]]    כמות [[qty|2]]\nזמינות חדשה: [[date|סוף ינואר]]\n\nנשלח מיד כשהמלאי יגיע. [[cancel|אפשר להשיב למייל הזה כדי לבטל ללא עלות.]]\n\nשירות הלקוחות של מירל תאורה",
+          why: "האסמכתא HR-1024 תואמת להזמנה הזו.",
+          note: "מירל כתבו ״סוף ינואר״, לא תאריך. Lading קבע 29 בינואר כהערכת עבודה. אפשר לשנות אם יגיע מידע אחר.",
+          fields: [["סטטוס", "חוסר במלאי, כמות 2"], ["הגעה משוערת", null, "הערכה לפי ״סוף ינואר״."], ["האפשרויות שלך", "ביטול ללא עלות בהשבה למייל"]],
+          summary: "חוסר במלאי. הספק צופה מלאי בסוף ינואר.", quote: "זמינות חדשה: סוף ינואר", phrase: "סוף ינואר"
+        },
+        m3: {
+          fromName: "קו החוף הובלות", subject: "יצא למסירה: משלוח 7730-118-42",
+          body: "עדכון משלוח\n\nמס׳ משלוח: 7730-118-42\nשולח: נגריית אלון\nנמען: מחסני הצפון, יחידה 4\nאסמכתא: [[po|CB-3008]] / [[mark|בן דוד]]\nסטטוס: [[status|יצא למסירה]]. מתוכנן ל־[[date|27/10/2026, בין 8:00 ל־12:00]].\nחלקים: [[pcs|3]]    משקל: 187 ק״ג",
+          why: "האסמכתא CB-3008 והסימון ״בן דוד״ תואמים להזמנה הזו.",
+          fields: [["סטטוס", "יצא למסירה"], ["הגעה", null, "חלון מסירה בין 8:00 ל־12:00 במחסני הצפון."], ["חלקים", "3 חלקים, תואם להזמנה"]],
+          summary: "יצא למסירה למחסני הצפון ב־27 באוקטובר, 3 ימים מוקדם.", quote: "מתוכנן ל־27/10/2026, בין 8:00 ל־12:00"
+        },
+        m4: {
+          fromName: "מחסני הצפון", subject: "דוח קבלה: וייס / WL-2203 (חלקי, נרשם נזק)",
+          body: "התקבל היום עבור וייס / [[po|WL-2203]], שולח: הולם טקסטיל.\n\n[[count|צפויים 3 קרטונים. התקבלו 2.]]\n[[dmg|קרטון 1: פינה מעוכה, העטיפה החיצונית קרועה.]] תמונות מצורפות. התכולה עוד לא נבדקה.\nקרטון 2: במצב תקין.\n[[miss|קרטון 3: לא התקבל.]]\n\n[[bol|נרשם בתעודת המשלוח: 2 מתוך 3, קרטון 1 פגום.]]\n\n[[inspect|עדכנו אותנו אם לפתוח ולבדוק את קרטון 1. הבדיקה עולה 120 ש״ח.]]\n\nמחסני הצפון, יחידה 4",
+          why: "הזמנת הרכש WL-2203 והסימון ״וייס״ תואמים להזמנה הזו.",
+          fields: [["התקבלו", "2 מתוך 3 קרטונים"], ["נזק", "קרטון 1 מעוך, עוד לא נפתח"], ["חסר", "קרטון 3"], ["מסמכים", "הנזק והחוסר נרשמו בתעודת המשלוח", "הרישום הזה תומך בתביעה מול חברת ההובלה."], ["החלטה", "לשלם 120 ש״ח על בדיקת קרטון 1?"]],
+          summary: "התקבלו 2 מתוך 3 קרטונים. קרטון 1 פגום, קרטון 3 חסר.", quote: "נרשם בתעודת המשלוח: 2 מתוך 3, קרטון 1 פגום.",
+          impactText: "הצעדים הבאים: לברר עם הולם טקסטיל איפה קרטון 3, ולהודיע למחסני הצפון אם לבדוק את קרטון 1."
+        },
+        m5: {
+          fromName: "אבני ארדן", subject: "תמונות לוח אבן עבור HR-1025, נדרש אישור",
+          body: "היי נועה,\n\nלוח A17 עבור [[item|שולחן הקפה מרלו]] ([[po|HR-1025]]) נשלף. תמונות מצורפות.\n\n[[ask|נשמח לאישור הלוח, או לבקשה לשלוף לוח אחר, לפני שנחתוך.]] [[due|אנחנו צריכים תשובה עד 28/10 כדי לשמור על מועד 4/12.]]\n\nתודה,\nתומס\nאבני ארדן",
+          why: "הזמנת הרכש HR-1025 ושם הפריט תואמים להזמנה הזו.",
+          fields: [["מה הם צריכים", "אישור של לוח A17, או בקשה ללוח אחר"], ["תשובה עד", "יום ד׳, 28 באוקטובר", "תשובה מאוחרת מסכנת את מועד 4 בדצמבר."]],
+          summary: "אבני ארדן ביקשו אישור ללוח A17 עד 28 באוקטובר.", quote: "אנחנו צריכים תשובה עד 28/10 כדי לשמור על מועד 4/12."
+        },
+        m6: {
+          fromName: "הולם טקסטיל", subject: "הודעה על הפסקת ייצור: בוקלה פנל, גוון 04",
+          body: "לשותפינו במקצוע,\n\n[[disc|ייצור הבוקלה פנל בגוון 04 (שיבולת) הופסק]], בתוקף מיידי.\nמלאי שנותר: 10 מטר במחסן שלנו בקיסריה.\n\n[[fill|הזמנות פתוחות שכבר אושרו יסופקו.]]\n\n[[alt|גוון 06 (פשתן) הוא החלופה הקרובה ביותר.]] דוגמיות זמינות לפי בקשה.\n\nהולם טקסטיל",
+          why: "בהודעה אין מספר הזמנה. שתיים מההזמנות שלך משתמשות בבוקלה פנל 04.",
+          note: "שתי ההזמנות כבר אושרו או נמסרו, והולם כותבים שהזמנות מאושרות יסופקו. שום דבר לא נדחה. Lading יוסיף הערה כדי שאף אחד לא יזמין שוב את גוון 04.",
+          fields: [["הופסק", "בוקלה פנל, גוון 04 (שיבולת)"], ["הזמנות פתוחות", "הזמנות מאושרות יסופקו"], ["חלופה", "גוון 06 (פשתן)"]],
+          summary: "בד פנל 04 הופסק. הזמנות מאושרות יסופקו; הזמנות חוזרות צריכות את גוון 06.", quote: "הזמנות פתוחות שכבר אושרו יסופקו."
+        }
+      }
+    }
+  };
+  const c = () => C[LANG];
+
+  /* ================= State (language-free, so switching language keeps your work) ================= */
+  const KEY = "lading-demo-v2";
+  const fresh = () => ({
+    items: JSON.parse(JSON.stringify(SEED_ITEMS)),
+    msgs: {},
+    events: JSON.parse(JSON.stringify(SEED_EVENTS)),
+    drafts: {},
+    sent: { p3: "2026-10-12" }
+  });
+  let state = fresh();
+  try { const raw = localStorage.getItem(KEY); if (raw) state = Object.assign(fresh(), JSON.parse(raw)); } catch (e) { /* storage unavailable: keep sample data */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } };
+  const pref = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+  const readPref = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+
+  const ui = { view: "review", sel: null, filter: "all", project: "p1", pick: {}, other: null, drawer: null, moved: null, toast: null, settings: false };
+  const narrow = () => window.matchMedia("(max-width: 900px)").matches;
+
+  const item = (id) => state.items.find((i) => i.id === id);
+  const proj = (id) => PROJECTS.find((p) => p.id === id);
+  const room = (it) => proj(it.p).rooms.find((r) => r.id === it.room);
+  const iw = (it) => c().items[it.id];
+  const pw = (pid) => c().projects[pid];
+  const rw = (rid) => c().rooms[rid];
+  const mw = (m) => c().msgs[m.id];
+  const pending = () => MSGS.filter((m) => !state.msgs[m.id]);
+  const pendingEvents = (pid) => state.events.filter((e) => e.p === pid && !e.sent);
+
+  /* ================= Order logic ================= */
+  const slip = (it) => daysBetween(it.promised, it.eta);
+  const arrived = (it) => ARRIVED.has(it.status) && it.eta <= TODAY;
+  const pastInstall = (it) => !arrived(it) && it.eta > room(it).install;
+  const attention = (it) => it.status === "backorder" || it.status === "damaged" || pastInstall(it);
+  const FILTERS = [
+    ["all", () => true],
+    ["attention", attention],
+    ["slipped", (it) => slip(it) > 0],
+    ["ontrack", (it) => !attention(it) && slip(it) <= 0 && !arrived(it)],
+    ["arrived", arrived]
+  ];
+
+  function readiness(pid, r) {
+    const its = state.items.filter((i) => i.p === pid && i.room === r.id);
+    const open = its.filter((i) => !arrived(i));
+    const R = t().ready;
+    if (!open.length) return { cls: "", text: R.all(fmt(r.install)) };
+    const last = open.reduce((a, b) => (b.eta > a.eta ? b : a));
+    const gap = daysBetween(last.eta, r.install);
+    const bad = open.find((i) => i.status === "damaged");
+    if (gap < 0) return { cls: "risk", icon: "warning", text: R.short(fmt(last.eta), fmt(r.install), -gap, iw(last).short) };
+    if (bad) return { cls: "risk", icon: "warning", text: R.bad(iw(bad).short, fmt(last.eta)) };
+    return { cls: "", text: R.ok(fmt(last.eta), fmt(r.install), gap) };
+  }
+
+  /* ================= Drift line ================= */
+  function track(it, opts = {}) {
+    const eta = opts.eta || it.eta;
+    const install = opts.install || room(it).install;
+    const p = pct(it.promised), e = pct(eta);
+    const isDone = !opts.eta && arrived(it);
+    const lo = Math.min(p, e), w = Math.abs(e - p);
+    const gapCls = e > p ? "late" : "early";
+    const moved = opts.from ? ` moved" style="--from:${pct(opts.from)}%` : "";
+    const ticks = ["2026-11-01", "2026-12-01", "2027-01-01", "2027-02-01"].map((m) => `<span class="tick" style="inset-inline-start:${pct(m)}%"></span>`).join("");
+    return `<span class="track${moved}" aria-hidden="true">
+      ${ticks}
+      <span class="today" style="inset-inline-start:${pct(TODAY)}%"></span>
+      <span class="install" style="inset-inline-start:${pct(install)}%"></span>
+      ${w > 0.05 ? `<span class="gap ${gapCls}" style="inset-inline-start:${lo}%;width:${w}%"></span>` : ""}
+      <span class="promise" style="inset-inline-start:${p}%"></span>
+      ${opts.ghost ? `<span class="ghost" style="inset-inline-start:${pct(opts.ghost)}%"></span>` : ""}
+      <span class="eta${isDone ? " done" : ""}${it.status === "damaged" && !opts.eta ? " bad" : ""}" style="inset-inline-start:${e}%"></span>
+    </span>`;
+  }
+  function driftFig(it) {
+    const DR = t().drift;
+    if (it.status === "damaged") return `<span class="drift bad">${DR.damage}</span>`;
+    if (arrived(it)) return `<span class="drift zero">${DR.arrived}</span>`;
+    const d = slip(it);
+    if (d > 0) return `<span class="drift late" title="${esc(DR.lateT(d))}">${ltr("+" + d)}<span class="u">${DR.unit}</span></span>`;
+    if (d < 0) return `<span class="drift early" title="${esc(DR.earlyT(-d))}">${ltr("−" + -d)}<span class="u">${DR.unit}</span></span>`;
+    return `<span class="drift zero">${DR.on}</span>`;
+  }
+  const tag = (label, cls) => `<span class="tag ${cls || ""}"><span>${esc(label)}</span></span>`;
+  const statusTag = (it) => tag(c().status[it.status], STATUS_CLS[it.status]);
+  const kindTag = (m) => tag(c().kinds[m.kind], KIND_CLS[m.kind]);
+
+  /* ================= Header ================= */
+  function renderHead() {
+    const n1 = pending().length;
+    const n3 = PROJECTS.reduce((a, p) => a + pendingEvents(p.id).filter((e) => e.on !== false).length, 0);
+    const views = [["review", n1], ["orders", null], ["updates", n3]];
+    const theme = readPref("lading-theme") || "system";
+    document.getElementById("head").innerHTML = `
+      <a class="mark" href="#review" aria-label="Lading"><span class="lockup" dir="ltr">${LOGO}<span class="word" aria-hidden="true">Lading</span></span><small>${esc(t().sub)}</small></a>
+      <nav class="views" aria-label="${LANG === "he" ? "תצוגות" : "Views"}">${views.map(([id, n]) => {
+        const [long, short] = t().nav[id];
+        return `<a href="#${id}" ${ui.view === id ? 'aria-current="page"' : ""}><span class="lbl-long">${long}</span><span class="lbl-short">${short}</span>${n !== null ? `<span class="count" data-n="${n}"><span class="sr">, </span>${n}<span class="sr"> ${t().waiting}</span></span>` : ""}</a>`;
+      }).join("")}</nav>
+      <div class="studio"><span>${esc(t().studio)}</span><strong>${esc(t().designer)}</strong>
+        <div class="settings">
+          <button class="iconbtn" type="button" data-action="settings" aria-expanded="${ui.settings}" aria-controls="settings-pop" title="${t().settings}">${icon("gear-six")}<span class="sr">${t().settings}</span></button>
+          ${ui.settings ? `<div class="pop" id="settings-pop" role="dialog" aria-labelledby="settings-h">
+            <h2 id="settings-h">${t().settings}</h2>
+            <fieldset><legend>${t().language}</legend>
+              <div class="seg" style="--n:2">
+                <label lang="en"><input type="radio" name="lang" value="en" data-action="lang" ${LANG === "en" ? "checked" : ""}>English</label>
+                <label class="he" lang="he"><input type="radio" name="lang" value="he" data-action="lang" ${LANG === "he" ? "checked" : ""}>עברית</label>
+              </div>
+            </fieldset>
+            <fieldset><legend>${t().theme}</legend>
+              <div class="seg" style="--n:3">
+                ${["system", "light", "dark"].map((v) => `<label><input type="radio" name="theme" value="${v}" data-action="theme" ${theme === v ? "checked" : ""}>${t()[v]}</label>`).join("")}
+              </div>
+            </fieldset>
+          </div>` : ""}
+        </div>
+      </div>`;
+    document.getElementById("sample").innerHTML = `<span>${esc(t().sample)}</span><button class="linkbtn" type="button" data-action="reset">${esc(t().reset)}</button>`;
+  }
+
+  /* ---------- Review ---------- */
+  function renderReview() {
+    const list = pending();
+    if (ui.sel && state.msgs[ui.sel]) ui.sel = null;
+    if (!ui.sel && list.length && !narrow()) ui.sel = list[0].id;
+    const done = MSGS.filter((m) => state.msgs[m.id]);
+    const needDecision = list.filter((m) => m.conf !== "high" || m.reply).length;
+
+    const queue = `<aside class="queue">
+      <div class="view-head"><h1>${t().reviewH}</h1><p>${esc(t().reviewP(list.length, needDecision))}</p></div>
+      ${list.length ? `<ol role="listbox" aria-label="${t().emails}" id="queue">${list.map((m) => {
+        const it = m.item ? item(m.item) : null;
+        const matchTxt = it ? `${esc(pw(it.p).name)}, ${esc(iw(it).short)} <span class="mono" dir="ltr">${it.po}</span>` : esc(t().possible(m.candidates.length));
+        return `<li><button class="q-row" role="option" type="button" data-action="select" data-id="${m.id}" aria-selected="${ui.sel === m.id}">
+          <span class="q-top">${kindTag(m)}<span class="mono muted">${m.received === TODAY ? m.time : fmt(m.received)}</span></span>
+          <span class="q-vendor">${esc(mw(m).fromName)}</span>
+          <span class="q-subj">${esc(mw(m).subject)}</span>
+          <span class="q-match">${matchTxt}</span>
+        </button></li>`;
+      }).join("")}</ol>` : ""}
+      ${done.length ? `<details class="done-list" ${list.length ? "" : "open"}><summary>${t().doneToday(done.length)}</summary><ul>${done.map((m) => {
+        const s = state.msgs[m.id];
+        return `<li>${icon(s.status === "dismissed" ? "x" : "check")}<span>${t().verb[s.status]}: ${esc(mw(m).fromName)}, ${esc(c().kinds[m.kind])}</span></li>`;
+      }).join("")}</ul></details>` : ""}
+    </aside>`;
+
+    let detail;
+    if (!list.length) {
+      detail = `<div class="detail"><div class="sheet caught">${icon("check")}<h2>${t().caughtH}</h2><p>${t().caughtP}</p><div class="actions"><a class="btn primary" href="#updates">${t().openUpdates} ${icon("arrow-right", "dir")}</a><a class="btn" href="#orders">${t().seeOrders}</a></div></div></div>`;
+    } else if (!ui.sel) {
+      detail = `<div class="detail"></div>`;
+    } else {
+      detail = renderDetail(MSG[ui.sel]);
+    }
+    return `<section class="view review ${ui.sel ? "has-sel" : ""}">${queue}${detail}</section>`;
+  }
+
+  function renderBody(m) {
+    return esc(mw(m).body).replace(/\[\[(\w+)\|([\s\S]+?)\]\]/g, (_, id, txt) => `<mark class="src" data-src="${id}" id="src-${m.id}-${id}">${txt}</mark>`);
+  }
+
+  function renderDetail(m) {
+    const W = mw(m);
+    const choosing = ui.other && ui.other.msg === m.id;
+    const targetId = choosing ? ui.other.to : m.item;
+    const target = targetId ? item(targetId) : null;
+    const confTxt = `${icon(m.conf === "high" ? "check" : "warning")} ${t().conf[m.conf]}`;
+
+    const fields = m.fields.map((f, i) => {
+      const [label, value, explain] = W.fields[i];
+      return `<div class="field" tabindex="0" data-src="${f.src}" data-msg="${m.id}">
+        <dt>${esc(label)}</dt>
+        <dd>${f.to ? `<span class="from mono">${fmt(f.from)}</span><span class="val mono">${fmtLong(f.to)}</span>` : `<span class="val">${esc(value)}</span>`}${explain ? `<span class="explain">${esc(explain)}</span>` : ""}</dd>
+      </div>`;
+    }).join("");
+
+    let impact = "";
+    if (target && m.set && m.set.eta) {
+      const r = room(target);
+      const late = m.set.eta > r.install;
+      const d = daysBetween(r.install, m.set.eta);
+      const R = rw(r.id), name = esc(iw(target).short);
+      const where = LANG === "he" ? R[1] : R[0];
+      const msg = late ? t().impLate(fmt(r.install), where, name, fmt(m.set.eta), d)
+        : m.set.eta < target.eta ? t().impEarly(name, daysBetween(m.set.eta, target.eta), where, fmt(r.install))
+        : t().impStill(name, where, fmt(r.install));
+      const L = t().lg;
+      impact = `<div class="sheet impact ${late ? "risk" : ""}">
+        <p>${msg}</p>
+        ${track(target, { eta: m.set.eta, ghost: target.eta })}
+        <div class="legend"><span><i class="lg promise"></i>${L.promised}</span><span><i class="lg ghost"></i>${L.before}</span><span><i class="lg eta"></i>${L.now}</span><span><i class="lg install"></i>${L.install}</span></div>
+      </div>`;
+    } else if (m.act) {
+      impact = `<div class="sheet impact risk"><p><strong>${t().actSoon}</strong> ${esc(W.impactText)}</p></div>`;
+    }
+
+    let actions;
+    if (m.conf === "pick") {
+      const chosen = ui.pick[m.id] || m.candidates;
+      actions = `<fieldset class="pick"><legend>${t().addNoteTo}</legend>${m.candidates.map((cid) => {
+        const x = item(cid);
+        return `<label><input type="checkbox" data-action="pick" data-msg="${m.id}" value="${cid}" ${chosen.includes(cid) ? "checked" : ""}><span>${esc(iw(x).name)} <span class="mono muted" dir="ltr">${x.po}</span><small>${esc(pw(x.p).name)}, ${esc(c().status[x.status])}</small></span></label>`;
+      }).join("")}</fieldset>
+      <div class="actions"><button class="btn primary" type="button" data-action="apply" data-id="${m.id}" ${chosen.length ? "" : "disabled"}>${icon("check")}${t().addNote(chosen.length)}</button><button class="btn quiet" type="button" data-action="dismiss" data-id="${m.id}">${t().dismiss}</button></div>`;
+    } else if (m.reply) {
+      actions = `<div class="actions"><button class="btn primary" type="button" data-action="answered" data-id="${m.id}">${icon("check")}${t().answered}</button><button class="btn quiet" type="button" data-action="dismiss" data-id="${m.id}">${t().dismiss}</button></div>`;
+    } else {
+      const opts = state.items.map((x) => `<option value="${x.id}" ${x.id === targetId ? "selected" : ""}>${esc(pw(x.p).name)}: ${esc(iw(x).name)} (${x.po})</option>`).join("");
+      actions = `${choosing ? `<div class="other"><label for="other-${m.id}">${t().otherOrder}</label><select id="other-${m.id}" data-action="other" data-msg="${m.id}">${opts}</select></div>` : ""}
+        <div class="actions">
+          <button class="btn primary" type="button" data-action="apply" data-id="${m.id}">${icon("check")}${t().apply}</button>
+          ${choosing ? "" : `<button class="btn" type="button" data-action="choose" data-id="${m.id}">${t().notThis}</button>`}
+          <button class="btn quiet" type="button" data-action="dismiss" data-id="${m.id}">${t().dismiss}</button>
+        </div>`;
+    }
+
+    const matchBlock = target
+      ? `<div class="sheet match"><span class="lbl">${choosing ? t().chose : t().matched}</span><strong>${esc(iw(target).name)}</strong><span>${esc(pw(target.p).name)}, ${esc(rw(target.room)[0])} <span class="mono muted" dir="ltr">${target.po}</span> ${statusTag(target)}</span>${choosing ? "" : `<span class="why">${esc(W.why)}</span>`}</div>`
+      : `<div class="sheet match"><span class="lbl">${t().noMatch}</span><strong>${t().useFabric(m.candidates.length)}</strong><span class="why">${esc(W.why)}</span></div>`;
+
+    return `<div class="detail">
+      <div class="back"><button class="btn quiet" type="button" data-action="back">${icon("arrow-left", "dir")}${t().allEmails}</button></div>
+      <article class="sheet email" aria-label="${t().original}">
+        <dl class="email-meta">
+          <dt>${t().from}</dt><dd>${esc(W.fromName)} <span class="mono muted" dir="ltr">&lt;${esc(m.from)}&gt;</span></dd>
+          <dt>${t().to}</dt><dd><span class="mono" dir="ltr">orders@adlerlind.studio</span></dd>
+          <dt>${t().received}</dt><dd>${fmtLong(m.received)}, <span dir="ltr">${m.time}</span></dd>
+        </dl>
+        <h2 class="email-subj">${esc(W.subject)}</h2>
+        ${m.attachments.length ? `<div class="attach">${m.attachments.map((a) => `<span>${icon(a.endsWith(".pdf") ? "file-pdf" : "eye")}${esc(a)}</span>`).join("")}</div>` : ""}
+        <div class="email-body">${renderBody(m)}</div>
+      </article>
+      <section class="reading" aria-labelledby="read-h">
+        <h2 id="read-h" class="cap">${t().read}</h2>
+        <div class="kind-line">${kindTag(m)}<span class="conf ${m.conf === "high" ? "" : "check"}">${confTxt}</span></div>
+        ${matchBlock}
+        <dl class="fields">${fields}</dl>
+        ${W.note ? `<p class="note">${icon("warning")}<span>${esc(W.note)}</span></p>` : ""}
+        ${impact}
+        ${actions}
+      </section>
+    </div>`;
+  }
+
+  /* ---------- Orders ---------- */
+  function renderOrders() {
+    const f = FILTERS.find((x) => x[0] === ui.filter);
+    const open = state.items.filter((i) => !arrived(i));
+    const slipped = state.items.filter((i) => slip(i) > 0 && !arrived(i));
+    const roomsAtRisk = PROJECTS.flatMap((p) => p.rooms.map((r) => readiness(p.id, r))).filter((x) => x.cls === "risk").length;
+    const A = t().ax;
+
+    const months = ["2026-10-01", "2026-11-01", "2026-12-01", "2027-01-01", "2027-02-01"];
+    const axis = `<div class="axis" aria-hidden="true"><div class="grid-row">
+      <span class="c-tag">${A.status}</span><span class="name">${A.item}</span>
+      <span class="c-track"><span class="axis-scale">${months.map((d) => `<span style="inset-inline-start:${pct(d)}%">${fmtMonth(d)}</span>`).join("")}<span class="today-lbl" style="inset-inline-start:${pct(TODAY)}%">${A.today}</span></span></span>
+      <span class="arr r">${A.arrives}</span><span class="r drift-h">${A.drift}</span>
+    </div></div>`;
+
+    let any = false;
+    const body = PROJECTS.map((p) => {
+      const rooms = p.rooms.map((r) => {
+        const rows = state.items.filter((i) => i.p === p.id && i.room === r.id && f[1](i)).sort((a, b) => (a.eta < b.eta ? -1 : 1));
+        if (!rows.length) return "";
+        any = true;
+        const rd = readiness(p.id, r);
+        return `<div class="room">
+          <div class="room-head"><h3>${esc(rw(r.id)[0])}</h3><p class="ready ${rd.cls}">${rd.icon ? icon(rd.icon) : ""}${esc(rd.text)}</p></div>
+          <ul class="rows">${rows.map((it) => {
+            const mv = ui.moved && ui.moved.id === it.id ? ui.moved.from : null;
+            return `<li><button class="row grid-row" type="button" data-action="open" data-id="${it.id}" aria-label="${esc(t().rowLabel(iw(it).name, c().status[it.status], fmt(it.eta)))}">
+              <span class="c-tag">${statusTag(it)}</span>
+              <span class="name"><b>${esc(iw(it).name)}</b><small>${esc(iw(it).vendor)} <span class="mono" dir="ltr">${it.po}</span></small></span>
+              <span class="c-track">${track(it, mv ? { from: mv } : {})}</span>
+              <span class="arr mono">${fmt(it.eta)}</span>
+              ${driftFig(it)}
+            </button></li>`;
+          }).join("")}</ul>
+        </div>`;
+      }).join("");
+      if (!rooms) return "";
+      return `<section class="proj"><header><h2>${esc(pw(p.id).name)}</h2><span>${esc(pw(p.id).client)}</span></header>${rooms}</section>`;
+    }).join("");
+
+    return `<section class="view">
+      <div class="o-head">
+        <h1>${t().ordersH}</h1>
+        <div class="summary">
+          <div><b>${open.length}</b>${t().openItems(PROJECTS.length)}</div>
+          <div class="late"><b data-n="${slipped.length}">${slipped.length}</b>${t().late}</div>
+          <div class="risk"><b data-n="${roomsAtRisk}">${roomsAtRisk}</b>${t().atRisk(roomsAtRisk)}</div>
+        </div>
+        <div class="filters" role="group" aria-label="${t().filterLabel}">${FILTERS.map(([id, fn]) => `<button type="button" data-action="filter" data-id="${id}" aria-pressed="${ui.filter === id}">${t().filters[id]}<span>${state.items.filter(fn).length}</span></button>`).join("")}</div>
+      </div>
+      ${axis}
+      ${any ? body : `<p class="empty-orders">${t().noRows}</p>`}
+    </section>`;
+  }
+
+  function histText(it, h) {
+    if (h.k === "seed") { const [tx, src, q] = iw(it).h[h.i]; return { tx, src: `${src}, ${fmt(h.date)}`, q }; }
+    const m = MSG[h.msg], W = c().msgs[h.msg];
+    return { tx: h.k === "answered" ? t().answeredHist : W.summary, src: `${W.fromName}, ${fmt(m.received)}`, q: W.quote };
+  }
+
+  function renderDrawer() {
+    const it = item(ui.drawer);
+    if (!it) return "";
+    const r = room(it), L = t().lg;
+    return `<div class="scrim" data-action="close"></div>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-h" id="drawer">
+      <div class="drawer-top">
+        <div><h2 id="dr-h">${esc(iw(it).name)}</h2><p class="sub">${esc(pw(it.p).name)}, ${esc(rw(it.room)[0])}</p></div>
+        <button class="iconbtn" type="button" data-action="close" aria-label="${t().close}">${icon("x")}</button>
+      </div>
+      <div class="kind-line">${statusTag(it)}<span class="mono muted" dir="ltr">${it.po}</span><span class="muted">${esc(iw(it).vendor)}</span></div>
+      <dl class="facts">
+        <div><dt>${t().ordered}</dt><dd class="mono">${fmt(it.ordered)}</dd></div>
+        <div><dt>${t().promised}</dt><dd class="mono">${fmt(it.promised)}</dd></div>
+        <div><dt>${arrived(it) ? t().arrivedL : t().arrivesEst}</dt><dd class="mono">${fmt(it.eta)}</dd></div>
+      </dl>
+      <div>${track(it)}<div class="legend" style="margin-top:8px"><span><i class="lg promise"></i>${L.promised}</span><span><i class="lg eta"></i>${L.now}</span><span><i class="lg install"></i>${L.install} ${fmt(r.install)}</span></div></div>
+      <div>
+        <h3 class="cap" style="margin-bottom:6px">${t().history}</h3>
+        <ol class="history">${it.history.slice().reverse().map((h) => {
+          const x = histText(it, h);
+          return `<li><span class="when mono">${fmt(h.date)}</span><span>${esc(x.tx)}<span class="src">${t().srcFrom} ${esc(x.src)}${x.q ? `: <q>${esc(x.q)}</q>` : ""}</span></span></li>`;
+        }).join("")}</ol>
+      </div>
+    </aside>`;
+  }
+
+  /* ---------- Client updates ---------- */
+  function eventText(e) {
+    if (e.k === "seed") return c().events[e.id];
+    const m = MSG[e.msg], W = c().msgs[e.msg], it = item(e.item), r = room(it), roomRef = rw(r.id)[1], CL = t().client, n = iw(it).short;
+    if (m.clientKind === "late") return CL.late(n, iw(it).v, fmt(e.eta), fmt(e.before), W.reason, e.eta > r.install, roomRef, fmt(r.install), fmtLong(addDays(e.eta, 2)));
+    if (m.clientKind === "backorder") return CL.backorder(n, W.phrase, roomRef);
+    if (m.clientKind === "early") return CL.early(n, fmt(e.eta));
+    if (m.clientKind === "damaged") return CL.damaged(n);
+    return "";
+  }
+  function buildDraft(pid) {
+    const evs = pendingEvents(pid).filter((e) => e.on !== false);
+    if (!evs.length) return "";
+    return t().draft(pw(pid).greet, evs.map(eventText).join("\n\n"), t().sign);
+  }
+  function draftFor(pid) {
+    const d = state.drafts[pid];
+    return d && d.edited ? d.text : buildDraft(pid);
+  }
+
+  function renderUpdates() {
+    const pid = ui.project, P = pw(pid);
+    const evs = pendingEvents(pid);
+    const list = `<aside class="plist">
+      <div class="view-head"><h1>${t().updatesH}</h1><p>${t().updatesP}</p></div>
+      <ul>${PROJECTS.map((q) => {
+        const n = pendingEvents(q.id).filter((e) => e.on !== false).length;
+        return `<li><button class="p-row" type="button" data-action="project" data-id="${q.id}" aria-current="${q.id === pid}"><b>${esc(pw(q.id).name)}</b><small>${esc(pw(q.id).client)}</small><small class="${n ? "pending" : ""}">${n ? t().toShare(n) : state.sent[q.id] ? t().upToDate(fmt(state.sent[q.id])) : t().nothingYet}</small></button></li>`;
+      }).join("")}</ul>
+    </aside>`;
+
+    let comp;
+    if (!evs.length) {
+      comp = `<div class="sheet caught">${icon("check")}<h2>${esc(t().nothingNew(P.greet))}</h2><p>${state.sent[pid] ? t().lastWent(fmtLong(state.sent[pid])) : ""}${t().whenApply}</p><div class="actions"><a class="btn" href="#review">${t().goReview}</a></div></div>`;
+    } else {
+      const d = state.drafts[pid];
+      comp = `<div class="sheet composer">
+        <header><h2>${esc(t().toClient(P.client))}</h2><p>${esc(P.name)}. ${state.sent[pid] ? t().lastSent(fmtLong(state.sent[pid])) : t().noneSent}</p></header>
+        <fieldset class="included"><legend>${t().inDraft}</legend>${evs.map((e) => `<label><input type="checkbox" data-action="toggle-ev" data-id="${e.id}" ${e.on !== false ? "checked" : ""}><span>${esc(iw(item(e.item)).name)}<small>${t().appliedOn(fmt(e.date))}</small></span></label>`).join("")}</fieldset>
+        <div class="draft-wrap"><label for="draft-${pid}">${t().message}</label><textarea id="draft-${pid}" data-action="draft" data-id="${pid}" dir="auto" spellcheck="true">${esc(draftFor(pid))}</textarea></div>
+        ${d && d.edited ? `<p class="edited">${icon("warning")}<span>${t().edited}</span><button class="linkbtn" type="button" data-action="rebuild" data-id="${pid}">${t().rebuild}</button></p>` : ""}
+        <div class="actions">
+          <button class="btn primary" type="button" data-action="copy" data-id="${pid}">${icon("copy")}${t().copy}</button>
+          <button class="btn" type="button" data-action="sent" data-id="${pid}">${icon("paper-plane-tilt", "dir")}${t().sent}</button>
+        </div>
+      </div>`;
+    }
+    return `<section class="view updates">${list}${comp}</section>`;
+  }
+
+  /* ================= Render ================= */
+  const app = document.getElementById("app");
+  const layer = document.getElementById("layer");
+  function fit(ta) { ta.style.height = "auto"; ta.style.height = Math.max(240, ta.scrollHeight + 2) + "px"; }
+  function render(focusSel) {
+    document.title = t().title;
+    renderHead();
+    app.innerHTML = ui.view === "orders" ? renderOrders() : ui.view === "updates" ? renderUpdates() : renderReview();
+    layer.innerHTML = (ui.drawer ? renderDrawer() : "") + (ui.toast ? `<div class="toast" role="status"><span>${esc(ui.toast.text)}</span>${ui.toast.undo ? `<button type="button" data-action="undo">${t().undo}</button>` : ""}</div>` : "");
+    document.querySelectorAll("textarea[data-action=draft]").forEach(fit);
+    if (focusSel) { const el = document.querySelector(focusSel); if (el) el.focus(); }
+    ui.moved = null;
+  }
+
+  let toastTimer;
+  function toast(text, undo) {
+    ui.toast = { text, undo };
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { ui.toast = null; ui.undo = null; const el = layer.querySelector(".toast"); if (el) el.remove(); }, undo ? 7000 : 3200);
+  }
+
+  function setLang(l) {
+    LANG = l === "he" ? "he" : "en";
+    document.documentElement.lang = LANG;
+    document.documentElement.dir = LANG === "he" ? "rtl" : "ltr";
+    pref("lading-lang", LANG);
+    render(`input[name=lang][value=${LANG}]`);
+  }
+  function setTheme(v) {
+    if (v === "light" || v === "dark") document.documentElement.setAttribute("data-theme", v);
+    else document.documentElement.removeAttribute("data-theme");
+    pref("lading-theme", v === "system" ? null : v);
+    render(`input[name=theme][value=${v}]`);
+  }
+
+  /* ================= Actions ================= */
+  function applyMsg(m) {
+    ui.undo = JSON.stringify(state);
+    const targets = m.conf === "pick" ? (ui.pick[m.id] || m.candidates) : [ui.other && ui.other.msg === m.id ? ui.other.to : m.item];
+    targets.forEach((tid) => {
+      const it = item(tid);
+      const before = it.eta;
+      if (m.set) {
+        if (m.set.eta) it.eta = m.set.eta;
+        if (m.set.status) it.status = m.set.status;
+      }
+      it.history.push({ date: TODAY, k: "msg", msg: m.id });
+      if (m.clientKind) state.events.push({ id: "e" + Date.now() + tid, p: it.p, item: it.id, date: TODAY, on: true, k: "msg", msg: m.id, before, eta: it.eta });
+      if (m.set && m.set.eta && m.set.eta !== before) ui.moved = { id: it.id, from: before };
+      if (state.drafts[it.p] && !state.drafts[it.p].edited) delete state.drafts[it.p];
+    });
+    state.msgs[m.id] = { status: "applied", to: targets };
+    ui.other = null;
+    save();
+    toast(targets.length > 1 ? t().noteAdded(targets.length) : t().appliedTo(iw(item(targets[0])).short), true);
+  }
+
+  function route() {
+    const h = (location.hash || "").replace("#", "");
+    ui.view = ["review", "orders", "updates"].includes(h) ? h : "review";
+    ui.drawer = null;
+    render();
+  }
+
+  document.addEventListener("click", (ev) => {
+    if (ui.settings && !ev.target.closest(".settings")) { ui.settings = false; render(); }
+    const el = ev.target.closest("[data-action]");
+    if (!el) return;
+    const a = el.dataset.action, id = el.dataset.id;
+    if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return;
+    if (a === "settings") { ui.settings = !ui.settings; render(ui.settings ? "input[name=lang]:checked" : "[data-action=settings]"); }
+    else if (a === "select") { ui.sel = id; ui.other = null; render(); if (narrow()) window.scrollTo(0, 0); else document.querySelector(`.q-row[data-id="${id}"]`)?.focus(); }
+    else if (a === "back") { ui.sel = null; render(); }
+    else if (a === "apply") { applyMsg(MSG[id]); ui.sel = null; render(narrow() ? null : ".q-row[aria-selected=true]"); }
+    else if (a === "dismiss") { ui.undo = JSON.stringify(state); state.msgs[id] = { status: "dismissed" }; save(); ui.sel = null; toast(t().dismissed, true); render(); }
+    else if (a === "answered") {
+      ui.undo = JSON.stringify(state);
+      const it = item(MSG[id].item);
+      it.history.push({ date: TODAY, k: "answered", msg: id });
+      state.msgs[id] = { status: "answered", to: [it.id] }; save(); ui.sel = null; toast(t().answeredT, true); render();
+    }
+    else if (a === "choose") { ui.other = { msg: id, to: MSG[id].item }; render(`#other-${id}`); }
+    else if (a === "undo") { if (ui.undo) { state = JSON.parse(ui.undo); save(); } ui.undo = null; ui.toast = null; render(); }
+    else if (a === "filter") { ui.filter = id; render(); }
+    else if (a === "open") { ui.drawer = id; ui.lastFocus = id; render("#drawer .iconbtn"); }
+    else if (a === "close") { ui.drawer = null; render(); document.querySelector(`.row[data-id="${ui.lastFocus}"]`)?.focus(); }
+    else if (a === "project") { ui.project = id; render(); }
+    else if (a === "rebuild") { delete state.drafts[id]; save(); render(); }
+    else if (a === "copy") {
+      const ta = document.getElementById(`draft-${id}`);
+      const done = () => { toast(t().copied); render(); };
+      const fallback = () => { ta.focus(); ta.select(); toast(t().selected); layer.innerHTML = `<div class="toast" role="status"><span>${esc(ui.toast.text)}</span></div>`; };
+      try { navigator.clipboard.writeText(ta.value).then(done, fallback); } catch (e) { fallback(); }
+    }
+    else if (a === "sent") {
+      ui.undo = JSON.stringify(state);
+      pendingEvents(id).filter((e) => e.on !== false).forEach((e) => { e.sent = TODAY; });
+      state.sent[id] = TODAY; delete state.drafts[id]; save();
+      toast(t().sentTo(pw(id).greet), true); render();
+    }
+    else if (a === "reset") { state = fresh(); save(); ui.sel = null; ui.other = null; ui.pick = {}; toast(t().resetDone); render(); }
+  });
+
+  document.addEventListener("change", (ev) => {
+    const el = ev.target;
+    const a = el.dataset.action;
+    if (a === "lang") setLang(el.value);
+    else if (a === "theme") setTheme(el.value);
+    else if (a === "pick") {
+      const m = MSG[el.dataset.msg];
+      const cur = new Set(ui.pick[m.id] || m.candidates);
+      el.checked ? cur.add(el.value) : cur.delete(el.value);
+      ui.pick[m.id] = m.candidates.filter((x) => cur.has(x));
+      render(`input[data-action=pick][value="${el.value}"]`);
+    } else if (a === "other") {
+      ui.other = { msg: el.dataset.msg, to: el.value }; render(`#other-${el.dataset.msg}`);
+    } else if (a === "toggle-ev") {
+      const e = state.events.find((x) => x.id === el.dataset.id); e.on = el.checked; save(); render(`input[data-id="${e.id}"]`);
+    }
+  });
+
+  document.addEventListener("input", (ev) => {
+    const el = ev.target;
+    if (el.dataset.action === "draft") { fit(el); state.drafts[el.dataset.id] = { text: el.value, edited: true }; save(); }
+  });
+  document.addEventListener("focusout", (ev) => {
+    const el = ev.target;
+    if (el.dataset && el.dataset.action === "draft" && state.drafts[el.dataset.id]?.edited && !document.querySelector(".edited")) {
+      const pos = window.scrollY; render(); window.scrollTo(0, pos);
+    }
+  });
+
+  /* Source highlighting: field -> the email line it came from */
+  const lit = (el, on) => {
+    const mark = document.getElementById(`src-${el.dataset.msg}-${el.dataset.src}`);
+    if (!mark) return;
+    mark.classList.toggle("lit", on);
+    if (on && !narrow()) { const r = mark.getBoundingClientRect(); if (r.top < 80 || r.bottom > innerHeight) mark.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  };
+  ["mouseover", "focusin"].forEach((ty) => document.addEventListener(ty, (ev) => { const f = ev.target.closest?.(".field"); if (f) lit(f, true); }));
+  ["mouseout", "focusout"].forEach((ty) => document.addEventListener(ty, (ev) => { const f = ev.target.closest?.(".field"); if (f) lit(f, false); }));
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && ui.settings) { ui.settings = false; render("[data-action=settings]"); return; }
+    if (ev.key === "Escape" && ui.drawer) { ui.drawer = null; render(); return; }
+    if (ui.drawer && ev.key === "Tab") {
+      const f = [...document.querySelectorAll("#drawer button")];
+      if (f.length && !document.getElementById("drawer").contains(document.activeElement)) { ev.preventDefault(); f[0].focus(); }
+    }
+    const row = ev.target.closest?.(".q-row");
+    if (row && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+      ev.preventDefault();
+      const rows = [...document.querySelectorAll(".q-row")];
+      const next = rows[rows.indexOf(row) + (ev.key === "ArrowDown" ? 1 : -1)];
+      if (next) { ui.sel = next.dataset.id; ui.other = null; render(`.q-row[data-id="${next.dataset.id}"]`); }
+    }
+  });
+
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+</body>
+</html>

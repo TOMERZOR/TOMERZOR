@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Lading Banners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap">
+<style>
+/* Source for the Hebrew marketing images. Each .slide is rendered to its own PNG by render.js.
+   Carbon Copy language: cool paper, graphite ink, one carbon blue, real product screenshots. */
+:root {
+  --paper: #F3F4F6; --sheet: #FCFCFD; --ink: #16181D; --ink-2: #596070; --rule: #D9DCE2;
+  --carbon: #2340D8; --carbon-wash: #E5E9FB; --late: #A8500C; --risk: #BF2630;
+  --he: "IBM Plex Sans Hebrew", Arial, sans-serif;
+  --stencil: "Big Shoulders Stencil Display", "Arial Narrow", sans-serif;
+  --mono: "IBM Plex Mono", monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 40px; background: #D5D8DE; font-family: var(--he); color: var(--ink); display: grid; gap: 40px; justify-items: start; -webkit-font-smoothing: antialiased; }
+h1, h2, p { margin: 0; }
+
+.slide { position: relative; overflow: hidden; background: var(--paper); flex: none; }
+.post { width: 1080px; height: 1350px; padding: 72px 76px; }
+.wide { width: 1200px; height: 628px; padding: 56px 64px; }
+.story { width: 1080px; height: 1920px; padding: 96px 76px; }
+
+/* Brand row */
+.brand { display: flex; justify-content: space-between; align-items: center; }
+.lockup { display: inline-flex; align-items: center; gap: 12px; direction: ltr; }
+.lockup svg { width: 40px; height: 40px; }
+.lockup .ink { fill: var(--ink); }
+.lockup .eta { fill: var(--carbon); }
+.lockup span { font: 700 40px/1 var(--stencil); text-transform: uppercase; letter-spacing: .02em; }
+.count { font: 500 22px/1 var(--mono); color: var(--ink-2); direction: ltr; }
+
+/* Type */
+.h { font-weight: 700; font-size: 76px; line-height: 1.1; letter-spacing: -0.01em; margin-top: 64px; max-width: 920px; text-wrap: balance; }
+.h em { font-style: normal; text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: 7px; text-underline-offset: 14px; }
+.sub { font-size: 34px; line-height: 1.45; color: var(--ink-2); margin-top: 28px; max-width: 860px; text-wrap: pretty; }
+.sub b { color: var(--ink); font-weight: 600; }
+
+/* Product screenshots */
+.shot { position: absolute; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden;
+  box-shadow: 0 2px 4px rgb(22 24 29 / .06), 0 40px 80px -30px rgb(22 24 29 / .35); }
+.shot img { display: block; width: 100%; height: auto; }
+.shot.pad { padding: 28px 32px; }
+
+/* Hang-tag annotation, the system's own label shape */
+.note-tag { position: absolute; display: inline-flex; align-items: center; height: 52px; padding-inline: 34px 20px;
+  font: 600 24px/1 var(--he); color: #FCFCFD; background: var(--carbon);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%); }
+.note-tag::before { content: ""; position: absolute; inset-inline-start: 14px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--paper); }
+.note-tag.late { background: var(--late); }
+
+/* Slide 6 */
+.cta-slide { display: flex; flex-direction: column; }
+.big-mark { width: 300px; height: 300px; margin-top: 90px; }
+.big-mark .ink { fill: var(--ink); }
+.big-mark .eta { fill: var(--carbon); }
+.button { display: inline-flex; align-items: center; height: 96px; padding: 0 44px; margin-top: auto; align-self: flex-start;
+  background: var(--carbon); color: #FCFCFD; font: 600 36px/1 var(--he); border-radius: 6px; }
+.fine { font-size: 24px; color: var(--ink-2); margin-top: 22px; }
+
+/* Wide */
+.wide .h { font-size: 58px; margin-top: 44px; max-width: 560px; }
+.wide .sub { font-size: 26px; max-width: 520px; margin-top: 20px; }
+.wide .lockup svg { width: 34px; height: 34px; }
+.wide .lockup span { font-size: 34px; }
+
+/* Story */
+.story .h { font-size: 88px; margin-top: 72px; }
+.steps { list-style: none; margin: 56px 0 0; padding: 0; display: grid; gap: 0; border-top: 2px solid var(--rule); }
+.steps li { display: grid; gap: 22px; padding: 34px 0; border-bottom: 2px solid var(--rule); }
+.steps b { display: block; font-size: 58px; line-height: 1.05; }
+.steps p { font-size: 30px; line-height: 1.4; color: var(--ink-2); margin-top: 8px; }
+.steps .frame { height: 236px; overflow: hidden; background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; box-shadow: 0 30px 60px -30px rgb(22 24 29 / .3); }
+.steps .frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.steps .frame img { -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent); mask-image: linear-gradient(to bottom, #000 78%, transparent); }
+.story .button { margin-top: 56px; }
+</style>
+</head>
+<body>
+
+<!-- 1. The problem -->
+<section class="slide post" id="post-1">
+  <div class="brand"><div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div><span class="count">1/6</span></div>
+  <h1 class="h">עשרים הזמנות לחדר. <em>עשרות מיילים</em> מספקים.</h1>
+  <p class="sub">אישורי הזמנה, חוסרים במלאי, עדכוני הובלה ודוחות קבלה. כל ספק כותב אחרת, ומישהו צריך לקרוא את כולם.</p>
+  <div class="shot" style="width:928px; inset-inline-start:76px; top:640px;"><img src="shots/queue3.png" alt=""></div>
+</section>
+
+<!-- 2. What it does -->
+<section class="slide post" id="post-2">
+  <div class="brand"><div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div><span class="count">2/6</span></div>
+  <h1 class="h">Lading קורא כל מייל ומתייק אותו <em>בהזמנה הנכונה</em>.</h1>
+  <p class="sub">הוא מזהה את מספר ההזמנה והסימון, מוצא את הפריט ומעדכן את מועד ההגעה.</p>
+  <span class="note-tag" style="inset-inline-start:76px; top:548px;">המייל מהספק</span>
+  <div class="shot pad" style="width:928px; inset-inline-start:76px; top:616px;"><img src="shots/m1-lines.png" alt=""></div>
+  <span class="note-tag" style="inset-inline-start:76px; top:868px;">מה Lading הבין ממנו</span>
+  <div class="shot" style="width:928px; inset-inline-start:76px; top:936px;"><img src="shots/m1-fields.png" alt=""></div>
+</section>
+
+<!-- 3. Trust -->
+<section class="slide post" id="post-3">
+  <div class="brand"><div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div><span class="count">3/6</span></div>
+  <h1 class="h">כשספק מעורפל, Lading <em>שואל</em> במקום לנחש.</h1>
+  <p class="sub">הספק כתב ״סוף ינואר״, לא תאריך. כל ערך מסומן בקו כחול ומקושר לשורה שממנה הגיע, ושום דבר לא משתנה בלי האישור שלך.</p>
+  <span class="note-tag late" style="inset-inline-start:76px; top:700px;">מחכה לבדיקה שלך</span>
+  <div class="shot" style="width:928px; inset-inline-start:76px; top:768px;"><img src="shots/m2-note.png" alt=""></div>
+</section>
+
+<!-- 4. Timeline -->
+<section class="slide post" id="post-4">
+  <div class="brand"><div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div><span class="count">4/6</span></div>
+  <h1 class="h">רואים מיד איזה חדר <em>לא יהיה מוכן</em> להתקנה.</h1>
+  <p class="sub">כל ההזמנות על ציר זמן אחד. העיכוב מסומן בקווקוו, ומועד ההתקנה בקו כחול. פריט שחוצה אותו בולט מיד.</p>
+  <div class="shot pad" style="width:928px; inset-inline-start:76px; top:640px;"><img src="shots/room2.png" alt=""></div>
+</section>
+
+<!-- 5. Client update -->
+<section class="slide post" id="post-5">
+  <div class="brand"><div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div><span class="count">5/6</span></div>
+  <h1 class="h">והעדכון ללקוח <em>כבר כתוב</em>.</h1>
+  <p class="sub">טיוטה ברורה ורגועה לכל פרויקט: מה השתנה ומה הלאה. עורכים, מעתיקים ושולחים מהמייל שלכם.</p>
+  <div class="shot" style="width:928px; height:705px; inset-inline-start:76px; top:580px;"><img src="shots/draft.png" alt=""></div>
+</section>
+
+<!-- 6. Call to action -->
+<section class="slide post cta-slide" id="post-6">
+  <div class="brand"><div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div><span class="count">6/6</span></div>
+  <svg class="big-mark" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg>
+  <h1 class="h">פחות רדיפה אחרי ספקים. <em>יותר זמן לעצב</em>.</h1>
+  <p class="sub">אנחנו מחפשים <b>עשרה סטודיואים</b> לעיצוב פנים למגורים לפיילוט של שבועיים, בחינם.</p>
+  <span class="button">הצטרפות לפיילוט</span>
+  <p class="fine">Lading לא שולח מיילים ללקוחות שלכם ולא צריך את תיבת הדואר האישית שלכם.</p>
+</section>
+
+<!-- Wide banner -->
+<section class="slide wide" id="wide">
+  <div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div>
+  <h1 class="h">כל מייל מספק, מתויק <em>בהזמנה הנכונה</em>.</h1>
+  <p class="sub">Lading קורא את המיילים מהספקים, מעדכן את ההזמנות ומנסח את ההודעה ללקוח.</p>
+  <div class="shot" style="width:500px; inset-inline-start:636px; top:56px;"><img src="shots/m1-fields.png" alt=""></div>
+  <div class="shot" style="width:500px; inset-inline-start:636px; top:340px;"><img src="shots/m1-impact.png" alt=""></div>
+</section>
+
+<!-- Story -->
+<section class="slide story" id="story">
+  <div class="lockup"><svg viewBox="0 0 32 32"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span>Lading</span></div>
+  <h1 class="h">ככה זה <em>עובד</em>.</h1>
+  <ol class="steps">
+    <li><div><b>מעבירים</b><p>המיילים מהספקים מגיעים לכתובת אחת.</p></div><div class="frame"><img src="shots/queue3.png" alt="" style="object-position: top"></div></li>
+    <li><div><b>מאשרים</b><p>בודקים מה Lading הבין, עם המקור מול העיניים.</p></div><div class="frame"><img src="shots/m1-fields.png" alt="" style="object-position: center 84%"></div></li>
+    <li><div><b>שולחים</b><p>הטיוטה ללקוח כבר מוכנה לעריכה.</p></div><div class="frame"><img src="shots/draft.png" alt="" style="object-position: center 62%"></div></li>
+  </ol>
+  <span class="button">הצטרפות לפיילוט</span>
+</section>
+
+</body>
+</html>

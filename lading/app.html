@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lading Order Desk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700&family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: one working desk. A sticky header with three views (Review, Orders, Client updates);
+   each view is a list on the left and the thing you act on to its right, stacking on phones. */
+:root {
+  --paper: #F3F4F6;
+  --sheet: #FCFCFD;
+  --ink: #16181D;
+  --ink-2: #596070;
+  --rule: #D9DCE2;
+  --rule-2: #C4C8D0;
+  --carbon: #2340D8;
+  --carbon-ink: #FCFCFD;
+  --carbon-wash: #E5E9FB;
+  --late: #A8500C;
+  --late-wash: #FAEBD9;
+  --risk: #BF2630;
+  --risk-wash: #FBE3E4;
+  --ok: #1D7549;
+  --ok-wash: #DFF1E6;
+  --shadow: 0 1px 2px rgb(22 24 29 / .06), 0 12px 32px rgb(22 24 29 / .12);
+
+  --f-stencil: "Big Shoulders Stencil Display", "Oswald", "Arial Narrow", Impact, sans-serif;
+  --f-text: "Schibsted Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --r: 3px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --head-h: 56px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3;
+    --rule: #2A2E36; --rule-2: #3A3F49; --carbon: #8EA1FF; --carbon-ink: #101216; --carbon-wash: #1C2442;
+    --late: #F0A35C; --late-wash: #36260F; --risk: #FF8B8F; --risk-wash: #3A1C1F; --ok: #6FD39C; --ok-wash: #13301F;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 16px 40px rgb(0 0 0 / .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3;
+  --rule: #2A2E36; --rule-2: #3A3F49; --carbon: #8EA1FF; --carbon-ink: #101216; --carbon-wash: #1C2442;
+  --late: #F0A35C; --late-wash: #36260F; --risk: #FF8B8F; --risk-wash: #3A1C1F; --ok: #6FD39C; --ok-wash: #13301F;
+  --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 16px 40px rgb(0 0 0 / .5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 15px/1.5 var(--f-text);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01";
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--sheet); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--carbon); outline-offset: 2px; }
+.icon { width: 1.1em; height: 1.1em; flex: none; vertical-align: -0.15em; }
+.mono { font-family: var(--f-data); font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.muted { color: var(--ink-2); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 600; }
+p { margin: 0; }
+
+.wrap {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- Header ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--sheet);
+  border-bottom: 1px solid var(--rule);
+}
+.top .wrap { display: flex; align-items: center; gap: 24px; min-height: var(--head-h); }
+.mark {
+  font: 700 28px/1 var(--f-stencil);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+  display: inline-flex; align-items: baseline; gap: 8px;
+}
+.mark small { font: 500 12px/1 var(--f-data); letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+nav.views { display: flex; gap: 4px; align-self: stretch; }
+nav.views a {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 0 12px;
+  color: var(--ink-2); text-decoration: none; font-weight: 500;
+  border-bottom: 2px solid transparent;
+  transition: color .16s var(--ease), border-color .16s var(--ease);
+}
+nav.views a:hover { color: var(--ink); }
+nav.views a .lbl-short { display: none; }
+nav.views a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--carbon); }
+.count {
+  font: 700 17px/1 var(--f-stencil);
+  min-width: 20px; padding: 3px 5px 2px;
+  text-align: center;
+  border-radius: var(--r);
+  background: var(--carbon); color: var(--carbon-ink);
+}
+.count[data-n="0"] { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--rule-2); }
+.studio { margin-left: auto; display: flex; align-items: center; gap: 12px; color: var(--ink-2); font-size: 13px; }
+.studio strong { color: var(--ink); font-weight: 500; }
+.sample {
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px; color: var(--ink-2);
+}
+.sample .wrap { display: flex; gap: 12px; align-items: center; min-height: 32px; flex-wrap: wrap; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--carbon); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 38px; padding: 0 14px;
+  border-radius: var(--r);
+  border: 1px solid var(--rule-2);
+  background: var(--sheet); color: var(--ink);
+  font-weight: 500; white-space: nowrap;
+  transition: background .16s var(--ease), border-color .16s var(--ease), transform .16s var(--ease);
+}
+.btn:hover { border-color: var(--ink-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--carbon); border-color: var(--carbon); color: var(--carbon-ink); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--ink-2); }
+.btn.quiet:hover { color: var(--ink); background: var(--paper); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Hang tag (status chip) ---------- */
+.tag {
+  --tag-bg: var(--paper); --tag-fg: var(--ink-2); --tag-edge: var(--rule-2);
+  display: inline-flex; align-items: center;
+  position: relative;
+  height: 22px; padding: 0 9px 0 17px;
+  font: 500 12px/1 var(--f-text); letter-spacing: 0.01em; white-space: nowrap;
+  color: var(--tag-fg);
+  background: var(--tag-edge);
+  clip-path: polygon(8px 0, 100% 0, 100% 100%, 8px 100%, 0 50%);
+}
+.tag::after { /* inner fill, leaves a 1px edge */
+  content: ""; position: absolute; inset: 1px;
+  background: var(--tag-bg);
+  clip-path: polygon(7.5px 0, 100% 0, 100% 100%, 7.5px 100%, 0 50%);
+}
+.tag::before { /* the punched hole */
+  content: ""; position: absolute; left: 7px; top: 50%; z-index: 1;
+  width: 4px; height: 4px; margin-top: -2px; border-radius: 50%;
+  background: var(--tag-edge);
+}
+.tag > span { position: relative; z-index: 1; }
+.t-c { --tag-bg: var(--carbon-wash); --tag-fg: var(--carbon); --tag-edge: var(--carbon); }
+.t-ok { --tag-bg: var(--ok-wash); --tag-fg: var(--ok); --tag-edge: var(--ok); }
+.t-late { --tag-bg: var(--late-wash); --tag-fg: var(--late); --tag-edge: var(--late); }
+.t-risk { --tag-bg: var(--risk-wash); --tag-fg: var(--risk); --tag-edge: var(--risk); }
+
+/* ---------- Page heads ---------- */
+.view { padding-block: 28px 64px; }
+.view-head { display: grid; gap: 6px; margin-bottom: 20px; }
+.view-head h1 { font-size: 24px; letter-spacing: -0.015em; }
+.view-head p { color: var(--ink-2); max-width: 64ch; }
+
+/* ---------- Review ---------- */
+.review { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 28px; align-items: start; }
+.queue { display: grid; gap: 16px; position: sticky; top: calc(var(--head-h) + env(safe-area-inset-top, 0px) + 16px); }
+.queue ol { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.q-row {
+  width: 100%; text-align: left;
+  display: grid; gap: 3px;
+  padding: 12px 12px 12px 14px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  box-shadow: inset 2px 0 0 transparent;
+  transition: background .16s var(--ease), box-shadow .16s var(--ease);
+}
+.q-row:hover { background: var(--sheet); }
+.q-row[aria-selected="true"] { background: var(--carbon-wash); box-shadow: inset 2px 0 0 var(--carbon); }
+.q-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.q-vendor { font-weight: 600; }
+.q-subj { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.q-match { font-size: 13px; color: var(--ink); }
+.q-match .mono { color: var(--ink-2); font-size: 12px; }
+.done-list summary { cursor: pointer; color: var(--ink-2); font-size: 13px; padding: 4px 0; }
+.done-list ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.done-list li { display: flex; gap: 8px; align-items: baseline; color: var(--ink-2); }
+.done-list li .icon { color: var(--ok); }
+
+.detail { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.back { display: none; }
+.sheet {
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  border-radius: var(--r);
+}
+.email { padding: 20px 22px 24px; min-width: 0; }
+.email-meta { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 4px 12px; font-size: 13px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+.email-meta dt { color: var(--ink-2); }
+.email-meta dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.email-subj { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 16px 0 12px; text-wrap: balance; }
+.attach { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.attach span { display: inline-flex; gap: 6px; align-items: center; font: 400 12px/1 var(--f-data); padding: 6px 8px; border: 1px solid var(--rule); border-radius: var(--r); color: var(--ink-2); }
+.email-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.65; }
+mark.src {
+  background: transparent; color: inherit;
+  text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: 1.5px; text-underline-offset: 3px;
+  border-radius: 2px;
+  transition: background .16s var(--ease), box-shadow .16s var(--ease);
+}
+mark.src.lit { background: var(--carbon-wash); box-shadow: 0 0 0 3px var(--carbon-wash); }
+
+.reading { display: grid; gap: 16px; min-width: 0; }
+.reading h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); font-weight: 500; }
+.kind-line { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.conf { font-size: 13px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; }
+.conf.check { color: var(--late); }
+.match { padding: 14px 16px; display: grid; gap: 4px; }
+.match .lbl { font-size: 12px; color: var(--ink-2); }
+.match strong { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.match .why { font-size: 13px; color: var(--ink-2); }
+.fields { margin: 0; display: grid; border-top: 1px solid var(--rule); }
+.field {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px;
+  padding: 10px 4px; border-bottom: 1px solid var(--rule);
+  border-radius: var(--r);
+  cursor: default;
+  transition: background .16s var(--ease);
+}
+.field:hover, .field:focus-visible { background: var(--carbon-wash); }
+.field dt { color: var(--ink-2); font-size: 13px; padding-top: 1px; }
+.field dd { margin: 0; min-width: 0; }
+.field .val { text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.field .from { color: var(--ink-2); text-decoration: line-through; text-decoration-thickness: 1px; margin-right: 6px; }
+.field .explain { display: block; font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+.note { display: flex; gap: 10px; padding: 12px 14px; border-radius: var(--r); font-size: 14px; background: var(--late-wash); color: var(--ink); }
+.note .icon { color: var(--late); margin-top: 2px; }
+.impact { display: grid; gap: 10px; padding: 14px 16px; }
+.impact p { font-size: 14px; }
+.impact.risk { border-color: var(--risk); }
+.impact.risk p strong { color: var(--risk); }
+.impact .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--ink-2); }
+.impact .legend span { display: inline-flex; align-items: center; gap: 6px; }
+.lg { display: inline-block; width: 14px; height: 8px; }
+.lg.promise { width: 2px; height: 12px; background: var(--ink-2); }
+.lg.eta { width: 8px; height: 8px; background: var(--ink); }
+.lg.hatch { background: repeating-linear-gradient(-45deg, var(--late) 0 1.5px, transparent 1.5px 4px); }
+.lg.install { width: 0; height: 12px; border-left: 1.5px dashed var(--carbon); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pick { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.pick legend { font-size: 13px; color: var(--ink-2); margin-bottom: 4px; }
+.pick label { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r); background: var(--sheet); cursor: pointer; }
+.pick label:has(input:checked) { border-color: var(--carbon); background: var(--carbon-wash); }
+.pick input { margin-top: 4px; accent-color: var(--carbon); }
+.pick small { display: block; color: var(--ink-2); font-size: 13px; }
+.other { display: grid; gap: 6px; }
+.other label { font-size: 13px; color: var(--ink-2); }
+.other select { min-height: 38px; padding: 0 10px; border: 1px solid var(--rule-2); border-radius: var(--r); background: var(--sheet); max-width: 100%; }
+.caught { padding: 48px 28px; display: grid; gap: 8px; justify-items: start; grid-column: 1 / -1; }
+.caught .icon { width: 28px; height: 28px; color: var(--ok); }
+.caught h2 { font-size: 18px; }
+.caught p { color: var(--ink-2); max-width: 52ch; }
+
+/* ---------- Drift line ---------- */
+.track { position: relative; display: block; height: 22px; }
+.track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--rule); }
+.track .tick { position: absolute; top: 4px; bottom: 4px; border-left: 1px solid var(--rule); }
+.track .today { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--ink-2); opacity: .5; }
+.track .install { position: absolute; top: -6px; bottom: -6px; border-left: 1.5px dashed var(--carbon); }
+.track .gap { position: absolute; top: 6px; height: 10px; transform-origin: left center; }
+.track .gap.late { background: repeating-linear-gradient(-45deg, var(--late) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 1px 0 var(--late), inset 0 -1px 0 var(--late); }
+.track .gap.early { background: repeating-linear-gradient(-45deg, var(--ok) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 1px 0 var(--ok), inset 0 -1px 0 var(--ok); }
+.track .promise { position: absolute; top: 3px; height: 16px; width: 2px; margin-left: -1px; background: var(--ink-2); }
+.track .eta { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; background: var(--ink); border-radius: 1px; }
+.track .eta.done { background: var(--ok); border-radius: 50%; width: 10px; height: 10px; top: 6px; margin-left: -5px; }
+.track .eta.bad { background: var(--risk); }
+.track .ghost { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; border: 1.5px dashed var(--ink-2); border-radius: 1px; }
+.moved .eta { animation: slide .9s var(--ease) both; }
+.moved .gap { animation: grow .9s var(--ease) both; }
+@keyframes slide { from { left: var(--from); } }
+@keyframes grow { from { transform: scaleX(0); } }
+
+/* ---------- Orders ---------- */
+.o-head { display: grid; gap: 16px; margin-bottom: 8px; }
+.o-head h1 { font-size: 24px; letter-spacing: -0.015em; }
+.summary { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: baseline; }
+.summary div { display: flex; align-items: baseline; gap: 8px; color: var(--ink-2); }
+.summary b { font: 700 40px/0.9 var(--f-stencil); color: var(--ink); letter-spacing: 0.01em; }
+.summary .late b:not([data-n="0"]) { color: var(--late); }
+.summary .risk b:not([data-n="0"]) { color: var(--risk); }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button {
+  min-height: 34px; padding: 0 12px;
+  border: 1px solid var(--rule-2); border-radius: var(--r);
+  background: var(--sheet); color: var(--ink-2); font-size: 14px; font-weight: 500;
+  display: inline-flex; gap: 8px; align-items: center;
+}
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.filters button span { font-family: var(--f-data); font-size: 12px; opacity: .8; }
+
+.grid-row {
+  display: grid;
+  grid-template-columns: 136px minmax(0, 1.25fr) minmax(220px, 2fr) 72px 56px;
+  gap: 16px; align-items: center;
+}
+.axis { position: sticky; top: calc(var(--head-h) + env(safe-area-inset-top, 0px)); z-index: 5; background: var(--paper); padding: 10px 0 8px; border-bottom: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); }
+.axis-scale { display: block; position: relative; height: 32px; }
+.axis-scale span { position: absolute; top: 0; transform: translateX(-1px); padding-left: 4px; border-left: 1px solid var(--rule-2); line-height: 16px; white-space: nowrap; }
+.axis-scale span.today-lbl { top: 16px; border-left-color: var(--ink-2); color: var(--ink); font-weight: 500; }
+.axis .r { text-align: right; }
+
+.proj { padding-top: 28px; }
+.proj > header { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding-bottom: 6px; }
+.proj > header h2 { font-size: 18px; letter-spacing: -0.01em; }
+.proj > header span { color: var(--ink-2); font-size: 14px; }
+.room { margin-top: 10px; }
+.room-head { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 10px 0 8px; border-bottom: 1px solid var(--rule); }
+.room-head h3 { font-size: 15px; font-weight: 600; }
+.ready { font-size: 14px; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: baseline; }
+.ready.risk { color: var(--risk); }
+.ready.ok { color: var(--ok); }
+.ready .icon { align-self: center; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.row {
+  width: 100%; text-align: left;
+  padding: 10px 0; background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  transition: background .16s var(--ease);
+}
+.row:hover { background: var(--sheet); }
+.row .name { display: grid; min-width: 0; }
+.row .name b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .name small { color: var(--ink-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .arr { text-align: right; }
+.row .drift { text-align: right; font: 700 20px/1 var(--f-stencil); letter-spacing: 0.01em; }
+.drift.late { color: var(--late); }
+.drift.early { color: var(--ok); }
+.drift.zero { color: var(--ink-2); font: 400 12px/1 var(--f-data); }
+.empty-orders { padding: 48px 0; color: var(--ink-2); }
+
+/* ---------- Drawer ---------- */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgb(16 18 22 / .32); animation: fade .24s var(--ease); }
+.drawer {
+  position: fixed; z-index: 41; top: 0; right: 0; bottom: 0;
+  width: min(480px, 100%);
+  background: var(--sheet); border-left: 1px solid var(--rule); box-shadow: var(--shadow);
+  overflow-y: auto;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)) 24px;
+  display: grid; gap: 20px; align-content: start;
+  animation: drawer .24s var(--ease);
+}
+@keyframes drawer { from { transform: translateX(24px); opacity: 0; } }
+@keyframes fade { from { opacity: 0; } }
+.drawer-top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.drawer h2 { font-size: 24px; letter-spacing: -0.015em; }
+.drawer .sub { color: var(--ink-2); font-size: 14px; margin-top: 4px; }
+.iconbtn { width: 38px; height: 38px; display: grid; place-items: center; border-radius: var(--r); border: 1px solid var(--rule); background: transparent; color: var(--ink-2); flex: none; }
+.iconbtn:hover { color: var(--ink); border-color: var(--rule-2); }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 0; }
+.facts div { padding: 12px 0; display: grid; gap: 2px; }
+.facts div + div { padding-left: 14px; border-left: 1px solid var(--rule); }
+.facts dt { font-size: 12px; color: var(--ink-2); }
+.facts dd { margin: 0; }
+.history { list-style: none; margin: 0; padding: 0; display: grid; }
+.history li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); }
+.history .when { color: var(--ink-2); padding-top: 2px; }
+.history .src { display: block; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.history .src q { color: var(--ink); text-decoration: underline; text-decoration-color: var(--carbon); text-underline-offset: 3px; quotes: "\201C" "\201D"; }
+
+/* ---------- Updates ---------- */
+.updates { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 28px; align-items: start; }
+.plist { display: grid; gap: 16px; }
+.plist ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.p-row { width: 100%; text-align: left; display: grid; gap: 2px; padding: 12px 12px 12px 14px; border: 0; border-bottom: 1px solid var(--rule); background: transparent; box-shadow: inset 2px 0 0 transparent; }
+.p-row:hover { background: var(--sheet); }
+.p-row[aria-current="true"] { background: var(--carbon-wash); box-shadow: inset 2px 0 0 var(--carbon); }
+.p-row b { font-weight: 600; }
+.p-row small { color: var(--ink-2); font-size: 13px; }
+.p-row .pending { color: var(--carbon); font-weight: 500; }
+.composer { padding: 22px 24px 24px; display: grid; gap: 18px; min-width: 0; }
+.composer header { display: grid; gap: 2px; }
+.composer header h2 { font-size: 18px; letter-spacing: -0.01em; }
+.composer header p { color: var(--ink-2); font-size: 14px; }
+.included { margin: 0; padding: 0; border: 0; display: grid; gap: 6px; }
+.included legend { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+.included label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; padding: 8px 10px; border-radius: var(--r); border: 1px solid var(--rule); }
+.included input { margin-top: 4px; accent-color: var(--carbon); }
+.included small { display: block; color: var(--ink-2); font-size: 12px; }
+.draft-wrap { display: grid; gap: 6px; }
+.draft-wrap label { font-size: 13px; color: var(--ink-2); }
+.draft-wrap textarea {
+  width: 100%; min-height: 240px; resize: vertical; overflow: hidden;
+  padding: 16px 18px; border: 1px solid var(--rule-2); border-radius: var(--r);
+  background: var(--paper); line-height: 1.6; font-size: 15px;
+}
+.draft-wrap textarea:focus-visible { outline: 2px solid var(--carbon); outline-offset: 0; border-color: var(--carbon); }
+.edited { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-size: 13px; color: var(--ink-2); }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; z-index: 50;
+  left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex; gap: 14px; align-items: center;
+  max-width: calc(100% - 32px);
+  padding: 10px 10px 10px 16px;
+  background: var(--ink); color: var(--paper);
+  border-radius: var(--r); box-shadow: var(--shadow);
+  font-size: 14px;
+  animation: toast .24s var(--ease);
+}
+.toast button { background: transparent; border: 1px solid color-mix(in srgb, var(--paper) 35%, transparent); color: var(--paper); border-radius: var(--r); min-height: 30px; padding: 0 10px; font-weight: 500; }
+@keyframes toast { from { transform: translate(-50%, 8px); opacity: 0; } }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1180px) {
+  .detail { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .top .wrap { gap: 12px; }
+  .studio { display: none; }
+  .review, .updates { grid-template-columns: minmax(0, 1fr); }
+  .queue { position: static; }
+  .review.has-sel .queue { display: none; }
+  .review:not(.has-sel) .detail { display: none; }
+  .back { display: flex; grid-column: 1 / -1; }
+  .grid-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name drift" "track track" "tag arr"; gap: 8px 12px; }
+  .grid-row > .c-tag { grid-area: tag; }
+  .grid-row > .name { grid-area: name; }
+  .grid-row > .c-track { grid-area: track; }
+  .grid-row > .arr { grid-area: arr; }
+  .grid-row > .drift { grid-area: drift; }
+  .axis .c-tag, .axis .name, .axis .arr, .axis .drift { display: none; }
+  .axis .grid-row { grid-template-columns: minmax(0, 1fr); grid-template-areas: "track"; }
+}
+@media (max-width: 560px) {
+  .mark small { display: none; }
+  nav.views a { padding: 0 8px; font-size: 14px; }
+  nav.views a .lbl-long { display: none; }
+  nav.views a .lbl-short { display: inline; }
+  .email { padding: 16px; }
+  .field { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .facts { grid-template-columns: minmax(0, 1fr); }
+  .facts div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--rule); }
+  .composer { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+<symbol id="i-tray" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,16V152h-28.7A15.86,15.86,0,0,0,168,156.69L148.69,176H107.31L88,156.69A15.86,15.86,0,0,0,76.69,152H48V48Zm0,160H48V168H76.69L96,187.31A15.86,15.86,0,0,0,107.31,192h41.38A15.86,15.86,0,0,0,160,187.31L179.31,168H208v40Z"/></symbol>
+<symbol id="i-package" viewBox="0 0 256 256" fill="currentColor"><path d="M223.68,66.15,135.68,18a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32l80.34,44-29.77,16.3-80.35-44ZM128,120,47.66,76l33.9-18.56,80.34,44ZM40,90l80,43.78v85.79L40,175.82Zm176,85.78h0l-80,43.79V133.82l32-17.51V152a8,8,0,0,0,16,0V107.55L216,90v85.77Z"/></symbol>
+<symbol id="i-paper-plane-tilt" viewBox="0 0 256 256" fill="currentColor"><path d="M227.32,28.68a16,16,0,0,0-15.66-4.08l-.15,0L19.57,82.84a16,16,0,0,0-2.49,29.8L102,154l41.3,84.87A15.86,15.86,0,0,0,157.74,248q.69,0,1.38-.06a15.88,15.88,0,0,0,14-11.51l58.2-191.94c0-.05,0-.1,0-.15A16,16,0,0,0,227.32,28.68ZM157.83,231.85l-.05.14,0-.07-40.06-82.3,48-48a8,8,0,0,0-11.31-11.31l-48,48L24.08,98.25l-.07,0,.14,0L216,40Z"/></symbol>
+<symbol id="i-check" viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z"/></symbol>
+<symbol id="i-x" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></symbol>
+<symbol id="i-warning" viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z"/></symbol>
+<symbol id="i-truck" viewBox="0 0 256 256" fill="currentColor"><path d="M255.42,117l-14-35A15.93,15.93,0,0,0,226.58,72H192V64a8,8,0,0,0-8-8H32A16,16,0,0,0,16,72V184a16,16,0,0,0,16,16H49a32,32,0,0,0,62,0h50a32,32,0,0,0,62,0h17a16,16,0,0,0,16-16V120A7.94,7.94,0,0,0,255.42,117ZM192,88h34.58l9.6,24H192ZM32,72H176v64H32ZM80,208a16,16,0,1,1,16-16A16,16,0,0,1,80,208Zm81-24H111a32,32,0,0,0-62,0H32V152H176v12.31A32.11,32.11,0,0,0,161,184Zm31,24a16,16,0,1,1,16-16A16,16,0,0,1,192,208Zm48-24H223a32.06,32.06,0,0,0-31-24V128h48Z"/></symbol>
+<symbol id="i-file-pdf" viewBox="0 0 256 256" fill="currentColor"><path d="M224,152a8,8,0,0,1-8,8H192v16h16a8,8,0,0,1,0,16H192v16a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8h32A8,8,0,0,1,224,152ZM92,172a28,28,0,0,1-28,28H56v8a8,8,0,0,1-16,0V152a8,8,0,0,1,8-8H64A28,28,0,0,1,92,172Zm-16,0a12,12,0,0,0-12-12H56v24h8A12,12,0,0,0,76,172Zm88,8a36,36,0,0,1-36,36H112a8,8,0,0,1-8-8V152a8,8,0,0,1,8-8h16A36,36,0,0,1,164,180Zm-16,0a20,20,0,0,0-20-20h-8v40h8A20,20,0,0,0,148,180ZM40,112V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.66,2.34l56,56A8,8,0,0,1,216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,0,1-16,0ZM160,80h28.69L160,51.31Z"/></symbol>
+<symbol id="i-copy" viewBox="0 0 256 256" fill="currentColor"><path d="M216,32H88a8,8,0,0,0-8,8V80H40a8,8,0,0,0-8,8V216a8,8,0,0,0,8,8H168a8,8,0,0,0,8-8V176h40a8,8,0,0,0,8-8V40A8,8,0,0,0,216,32ZM160,208H48V96H160Zm48-48H176V88a8,8,0,0,0-8-8H96V48H208Z"/></symbol>
+<symbol id="i-arrow-counter-clockwise" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a96,96,0,0,1-94.71,96H128A95.38,95.38,0,0,1,62.1,197.8a8,8,0,0,1,11-11.63A80,80,0,1,0,71.43,71.39a3.07,3.07,0,0,1-.26.25L44.59,96H72a8,8,0,0,1,0,16H24a8,8,0,0,1-8-8V56a8,8,0,0,1,16,0V85.8L60.25,60A96,96,0,0,1,224,128Z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm64-88a8,8,0,0,1-8,8H128a8,8,0,0,1-8-8V72a8,8,0,0,1,16,0v48h48A8,8,0,0,1,192,128Z"/></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 256 256" fill="currentColor"><path d="M221.66,133.66l-72,72a8,8,0,0,1-11.32-11.32L196.69,136H40a8,8,0,0,1,0-16H196.69L138.34,61.66a8,8,0,0,1,11.32-11.32l72,72A8,8,0,0,1,221.66,133.66Z"/></symbol>
+<symbol id="i-envelope-simple" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48ZM203.43,64,128,133.15,52.57,64ZM216,192H40V74.19l82.59,75.71a8,8,0,0,0,10.82,0L216,74.19V192Z"/></symbol>
+<symbol id="i-link-simple" viewBox="0 0 256 256" fill="currentColor"><path d="M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56,56,0,0,0-79.2,0L106.34,70.45a8,8,0,0,0,11.32,11.32l30.06-30a40,40,0,0,1,56.57,56.56l-30.07,30.06a8,8,0,0,0,11.31,11.32L215.6,119.6a56,56,0,0,0,0-79.2ZM138.34,174.22l-30.06,30.06a40,40,0,1,1-56.56-56.57l30.05-30.05a8,8,0,0,0-11.32-11.32L40.4,136.4a56,56,0,0,0,79.2,79.2l30.06-30.07a8,8,0,0,0-11.32-11.31Z"/></symbol>
+<symbol id="i-eye" viewBox="0 0 256 256" fill="currentColor"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></symbol>
+<symbol id="i-caret-down" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H59.31l58.35,58.34a8,8,0,0,1-11.32,11.32l-72-72a8,8,0,0,1,0-11.32l72-72a8,8,0,0,1,11.32,11.32L59.31,120H216A8,8,0,0,1,224,128Z"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="mark" href="#review">Lading <small>order desk</small></a>
+    <nav class="views" aria-label="Views" id="nav"></nav>
+    <div class="studio"><span>Adler Lind Interiors</span><strong>Noa Adler</strong></div>
+  </div>
+</header>
+<div class="sample">
+  <div class="wrap">
+    <span>Sample studio and sample vendor emails. This is a design prototype, so no inbox is connected.</span>
+    <button class="linkbtn" type="button" data-action="reset">Reset sample data</button>
+  </div>
+</div>
+<main id="app" class="wrap"></main>
+<div id="layer"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ================= Dates ================= */
+  const TODAY = "2026-10-24";
+  const AX0 = "2026-10-01", AX1 = "2027-02-28";
+  const D = (s) => new Date(s + "T00:00:00Z");
+  const daysBetween = (a, b) => Math.round((D(b) - D(a)) / 86400000);
+  const addDays = (s, n) => { const d = D(s); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const fmt = (s, o) => new Intl.DateTimeFormat("en-US", Object.assign({ month: "short", day: "numeric", timeZone: "UTC" }, o)).format(D(s));
+  const fmtLong = (s) => fmt(s, { weekday: "short" });
+  const pct = (s) => Math.max(0, Math.min(100, daysBetween(AX0, s) / daysBetween(AX0, AX1) * 100));
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const icon = (id, label) => `<svg class="icon" ${label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true"'}><use href="#i-${id}"></use></svg>`;
+
+  /* ================= Sample data ================= */
+  const PROJECTS = [
+    { id: "p1", name: "Hartley Residence", client: "Dana and Ruth Hartley", greet: "Dana and Ruth",
+      rooms: [{ id: "living", name: "Living room", install: "2026-12-14" }, { id: "bed", name: "Primary bedroom", install: "2026-12-14" }] },
+    { id: "p2", name: "Wen Loft", client: "Marcus Wen", greet: "Marcus",
+      rooms: [{ id: "main", name: "Main room", install: "2027-01-18" }, { id: "kitchen", name: "Kitchen", install: "2027-01-18" }] },
+    { id: "p3", name: "Calder Bay House", client: "Ada and Femi Okonkwo", greet: "Ada and Femi",
+      rooms: [{ id: "great", name: "Great room", install: "2027-02-08" }, { id: "dining", name: "Dining room", install: "2027-02-08" }] }
+  ];
+
+  const SEED_ITEMS = [
+    { id: "i1", p: "p1", room: "living", name: "Ellis sofa, 96 in", vendor: "Baxter & Pine Upholstery", po: "HR-1021", ordered: "2026-08-19", promised: "2026-11-23", eta: "2026-11-23", status: "production",
+      history: [{ date: "2026-08-21", text: "Acknowledgment received. Ships week of Nov 16.", src: "Baxter & Pine, Aug 21" }] },
+    { id: "i2", p: "p1", room: "living", name: "Orla pendants, aged brass (2)", vendor: "Mirelle Lighting", po: "HR-1024", ordered: "2026-09-02", promised: "2026-11-30", eta: "2026-11-30", status: "confirmed",
+      history: [{ date: "2026-09-03", text: "Order confirmed, ML-90331.", src: "Mirelle Lighting, Sep 3" }] },
+    { id: "i3", p: "p1", room: "living", name: "Fennel bouclé 04, COM 14 yd", vendor: "Holm Textiles", po: "HR-1020", ordered: "2026-08-12", promised: "2026-09-20", eta: "2026-09-18", status: "delivered",
+      history: [{ date: "2026-09-18", text: "Delivered to Baxter & Pine for the Ellis sofa.", src: "Holm Textiles, Sep 18" }] },
+    { id: "i4", p: "p1", room: "living", name: "Marlow coffee table, travertine", vendor: "Arden Stone Works", po: "HR-1025", ordered: "2026-09-05", promised: "2026-12-04", eta: "2026-12-04", status: "production",
+      history: [{ date: "2026-09-08", text: "Order confirmed. Ready Dec 4.", src: "Arden Stone Works, Sep 8" }] },
+    { id: "i5", p: "p1", room: "bed", name: "Linden bed, queen", vendor: "Kettle & Oak Furniture", po: "HR-1030", ordered: "2026-08-25", promised: "2026-11-09", eta: "2026-11-02", status: "shipped",
+      history: [{ date: "2026-10-21", text: "Shipped early. Arrives about Nov 2.", src: "Kettle & Oak, Oct 21" }] },
+    { id: "i6", p: "p1", room: "bed", name: "Linden nightstands (2)", vendor: "Kettle & Oak Furniture", po: "HR-1031", ordered: "2026-08-25", promised: "2026-11-09", eta: "2026-10-21", status: "receiver",
+      history: [{ date: "2026-10-21", text: "Received in good condition at Northgate.", src: "Northgate Receiving, Oct 21" }] },
+    { id: "i7", p: "p1", room: "bed", name: "Arc sconces (2)", vendor: "Mirelle Lighting", po: "HR-1032", ordered: "2026-09-02", promised: "2026-11-16", eta: "2026-11-16", status: "confirmed",
+      history: [{ date: "2026-09-03", text: "Order confirmed, ML-90332.", src: "Mirelle Lighting, Sep 3" }] },
+
+    { id: "i8", p: "p2", room: "main", name: "Salt linen drapery, 38 yd", vendor: "Holm Textiles", po: "WL-2203", ordered: "2026-09-14", promised: "2026-10-24", eta: "2026-10-23", status: "receiver",
+      history: [{ date: "2026-10-19", text: "Shipped in 3 cartons.", src: "Holm Textiles, Oct 19" }] },
+    { id: "i9", p: "p2", room: "main", name: "Ames sectional", vendor: "Baxter & Pine Upholstery", po: "WL-2201", ordered: "2026-09-10", promised: "2026-12-28", eta: "2026-12-28", status: "production",
+      history: [{ date: "2026-09-12", text: "Acknowledgment received. Ships week of Dec 21.", src: "Baxter & Pine, Sep 12" }] },
+    { id: "i10", p: "p2", room: "main", name: "Pillows in Fennel bouclé 04 (6)", vendor: "Holm Textiles", po: "WL-2207", ordered: "2026-09-20", promised: "2026-11-10", eta: "2026-11-10", status: "confirmed",
+      history: [{ date: "2026-09-22", text: "Order confirmed.", src: "Holm Textiles, Sep 22" }] },
+    { id: "i11", p: "p2", room: "kitchen", name: "Pell counter stools (3)", vendor: "Kettle & Oak Furniture", po: "WL-2210", ordered: "2026-09-22", promised: "2026-12-07", eta: "2026-12-07", status: "confirmed",
+      history: [{ date: "2026-10-20", text: "Ship date confirmed for Dec 7.", src: "Kettle & Oak, Oct 20" }] },
+    { id: "i12", p: "p2", room: "kitchen", name: "Trio pendant, smoked glass", vendor: "Mirelle Lighting", po: "WL-2212", ordered: "2026-09-22", promised: "2026-12-14", eta: "2026-12-14", status: "confirmed",
+      history: [{ date: "2026-09-24", text: "Order confirmed, ML-90410.", src: "Mirelle Lighting, Sep 24" }] },
+
+    { id: "i13", p: "p3", room: "dining", name: "Torrey dining table, 108 in", vendor: "Kettle & Oak Furniture", po: "CB-3008", ordered: "2026-08-30", promised: "2026-10-30", eta: "2026-10-30", status: "shipped",
+      history: [{ date: "2026-10-22", text: "Shipped with Coastline Freight.", src: "Kettle & Oak, Oct 22" }] },
+    { id: "i14", p: "p3", room: "dining", name: "Torrey dining chairs (8)", vendor: "Kettle & Oak Furniture", po: "CB-3009", ordered: "2026-08-30", promised: "2027-01-11", eta: "2027-01-11", status: "production",
+      history: [{ date: "2026-09-01", text: "Acknowledgment received. Ships Jan 4.", src: "Kettle & Oak, Sep 1" }] },
+    { id: "i15", p: "p3", room: "great", name: "Hand-knotted rug, 12 x 15 ft", vendor: "Sora Rug Atelier", po: "CB-3012", ordered: "2026-09-12", promised: "2027-01-25", eta: "2027-01-25", status: "production",
+      history: [{ date: "2026-09-15", text: "Loom date set. Ready Jan 18.", src: "Sora Rug Atelier, Sep 15" }] },
+    { id: "i16", p: "p3", room: "great", name: "Rook lounge chairs (2)", vendor: "Baxter & Pine Upholstery", po: "CB-3004", ordered: "2026-08-28", promised: "2026-12-21", eta: "2027-01-04", status: "production",
+      history: [
+        { date: "2026-08-31", text: "Acknowledgment received. Ships week of Dec 14.", src: "Baxter & Pine, Aug 31" },
+        { date: "2026-10-12", text: "Ship date moved two weeks, to week of Dec 28.", src: "Baxter & Pine, Oct 12", quote: "Revised ship: week of 12/28/26" }
+      ] }
+  ];
+
+  const SEED_EVENTS = [
+    { id: "e1", p: "p1", item: "i6", date: "2026-10-21", on: true, client: "Linden nightstands: they arrived at our receiving warehouse in good condition. The bed shipped early too and should reach the warehouse around Nov 2." },
+    { id: "e2", p: "p2", item: "i11", date: "2026-10-20", on: true, client: "Pell counter stools: Kettle & Oak confirmed they ship Dec 7, well ahead of the January install." },
+    { id: "e3", p: "p3", item: "i16", date: "2026-10-12", on: true, sent: "2026-10-12", client: "Rook lounge chairs: Baxter & Pine moved them two weeks, to about Jan 4. That still leaves a month before the install." }
+  ];
+
+  const STATUS = {
+    ordered: ["Ordered", ""], confirmed: ["Confirmed", ""], production: ["In production", ""],
+    shipped: ["Shipped", "t-c"], out: ["Out for delivery", "t-c"], receiver: ["At receiver", "t-ok"], delivered: ["Delivered", "t-ok"],
+    backorder: ["Backordered", "t-late"], damaged: ["Damage noted", "t-risk"]
+  };
+  const ARRIVED = new Set(["receiver", "delivered"]);
+
+  /* Vendor emails, as Lading read them. [[id|text]] marks the span a field came from. */
+  const MSGS = [
+    {
+      id: "m1", fromName: "Baxter & Pine Upholstery", from: "orders@baxterpine.example", received: "2026-10-24", time: "8:12 AM",
+      subject: "Revised acknowledgment SO-44817 / your PO HR-1021 / sidemark HARTLEY",
+      attachments: ["SO-44817_ack_rev2.pdf"],
+      body: "Hello Noa,\n\nPlease find our revised acknowledgment attached.\n\nCustomer PO: [[po|HR-1021]]    Sidemark: [[mark|HARTLEY]]\nItem: [[item|Ellis Sofa 96\"]] / COM: Holm Fennel 04\nRevised estimated ship: [[ship|week of 12/7/26]]\nFreight: LTL to Northgate Receiving\n\n[[why|The frame shop is running behind on 96\" frames.]] We apologize for the delay.\n\nThank you,\nGail Moreno\nCustomer Service, Baxter & Pine",
+      kind: ["Ship date changed", "t-late"], conf: "high", item: "i1",
+      why: "PO HR-1021 and sidemark HARTLEY both match this order.",
+      fields: [
+        { label: "Ships", value: "Week of Dec 7", src: "ship" },
+        { label: "Arrives (est.)", from: "2026-11-23", to: "2026-12-15", src: "ship", explain: "Ship week of Dec 7 plus 8 days of freight, the average on your last five Baxter & Pine orders." },
+        { label: "Reason given", value: "Frame shop is behind on 96 in frames", src: "why" }
+      ],
+      set: { eta: "2026-12-15" },
+      summary: "Ship date moved to week of Dec 7. Arrival now about Dec 15.",
+      quote: "Revised estimated ship: week of 12/7/26",
+      clientKind: "late", reason: "their frame shop is running behind"
+    },
+    {
+      id: "m2", fromName: "Mirelle Lighting", from: "care@mirelle.example", received: "2026-10-23", time: "4:40 PM",
+      subject: "Backorder notice for your order ML-90331",
+      attachments: [],
+      body: "Dear Customer,\n\nThe following item on your order is on backorder.\n\nOrder #: ML-90331    Your ref: [[po|HR-1024]]\n[[item|Orla Pendant 18in, Aged Brass]]    Qty [[qty|2]]\nNew availability: [[date|late January]]\n\nWe will ship as soon as stock arrives. [[cancel|Reply to this email to cancel without a fee.]]\n\nMirelle Lighting Customer Care",
+      kind: ["Backorder", "t-late"], conf: "check", item: "i2",
+      why: "Your reference HR-1024 matches this order.",
+      note: "Mirelle wrote “late January”, not a date. Lading set Jan 29 as a working estimate. Change it if you hear otherwise.",
+      fields: [
+        { label: "Status", value: "Backordered, quantity 2", src: "qty" },
+        { label: "Arrives (est.)", from: "2026-11-30", to: "2027-01-29", src: "date", explain: "Estimated from “late January”." },
+        { label: "Your options", value: "Cancel without a fee by replying", src: "cancel" }
+      ],
+      set: { eta: "2027-01-29", status: "backorder" },
+      summary: "Backordered. Vendor expects stock in late January.",
+      quote: "New availability: late January",
+      clientKind: "backorder", phrase: "in late January"
+    },
+    {
+      id: "m3", fromName: "Coastline Freight", from: "tracking@coastlinefreight.example", received: "2026-10-24", time: "6:05 AM",
+      subject: "Out for delivery: PRO 7730-118-42",
+      attachments: [],
+      body: "Shipment update\n\nPRO: 7730-118-42\nShipper: Kettle & Oak Furniture\nConsignee: Northgate Receiving, Unit 4\nReference: [[po|CB-3008]] / [[mark|OKONKWO]]\nStatus: [[status|Out for delivery]]. Scheduled [[date|10/27/2026, 8am to 12pm]].\nPieces: [[pcs|3]]    Weight: 412 lb",
+      kind: ["Tracking update", "t-c"], conf: "high", item: "i13",
+      why: "Reference CB-3008 and sidemark OKONKWO match this order.",
+      fields: [
+        { label: "Status", value: "Out for delivery", src: "status" },
+        { label: "Arrives", from: "2026-10-30", to: "2026-10-27", src: "date", explain: "Delivery window 8am to 12pm at Northgate Receiving." },
+        { label: "Pieces", value: "3 pieces, matches the order", src: "pcs" }
+      ],
+      set: { eta: "2026-10-27", status: "out" },
+      summary: "Out for delivery to Northgate on Oct 27, 3 days early.",
+      quote: "Scheduled 10/27/2026, 8am to 12pm",
+      clientKind: "early"
+    },
+    {
+      id: "m4", fromName: "Northgate Receiving", from: "dock@northgate-receiving.example", received: "2026-10-23", time: "2:22 PM",
+      subject: "Receiving report: WEN / WL-2203 (partial, damage noted)",
+      attachments: ["IMG_2231.jpg", "IMG_2232.jpg"],
+      body: "Received today for WEN / [[po|WL-2203]], shipper Holm Textiles.\n\n[[count|Expected 3 cartons. Received 2.]]\n[[dmg|Carton 1: corner crushed, outer wrap torn.]] Photos attached. Contents not yet inspected.\nCarton 2: good condition.\n[[miss|Carton 3: not received.]]\n\n[[bol|Noted on bill of lading: 2 of 3, carton 1 damaged.]]\n\n[[inspect|Let us know if you want us to open and inspect carton 1. Inspection is $35.]]\n\nNorthgate Receiving, Unit 4",
+      kind: ["Receiving report", "t-risk"], conf: "high", item: "i8",
+      why: "PO WL-2203 and sidemark WEN match this order.",
+      fields: [
+        { label: "Received", value: "2 of 3 cartons", src: "count" },
+        { label: "Damage", value: "Carton 1 crushed, not yet opened", src: "dmg" },
+        { label: "Missing", value: "Carton 3", src: "miss" },
+        { label: "Paperwork", value: "Damage and shortage noted on the bill of lading", src: "bol", explain: "This notation supports a freight claim." },
+        { label: "Decision", value: "Pay $35 to inspect carton 1?", src: "inspect" }
+      ],
+      set: { status: "damaged" },
+      summary: "2 of 3 cartons received. Carton 1 damaged, carton 3 missing.",
+      quote: "Noted on bill of lading: 2 of 3, carton 1 damaged.",
+      clientKind: "damaged",
+      impactText: "Next steps: ask Holm Textiles where carton 3 is, and tell Northgate whether to inspect carton 1."
+    },
+    {
+      id: "m5", fromName: "Arden Stone Works", from: "tomas@ardenstone.example", received: "2026-10-22", time: "11:03 AM",
+      subject: "Slab photos for HR-1025, approval needed",
+      attachments: ["slab_A17_front.jpg", "slab_A17_edge.jpg"],
+      body: "Hi Noa,\n\nSlab A17 for the [[item|Marlow coffee table]] ([[po|HR-1025]]) is pulled. Photos attached.\n\n[[ask|Please approve the slab or ask us to pull another before we cut.]] [[due|We need your answer by 10/28 to hold the 12/4 date.]]\n\nThanks,\nTomas\nArden Stone Works",
+      kind: ["Needs your reply", "t-c"], conf: "high", item: "i4", reply: true,
+      why: "PO HR-1025 and the item name match this order.",
+      fields: [
+        { label: "They need", value: "Your approval of slab A17, or a request for another", src: "ask" },
+        { label: "Reply by", value: "Wed, Oct 28", src: "due", explain: "A late answer puts the Dec 4 date at risk." }
+      ],
+      summary: "Arden asked you to approve slab A17 by Oct 28.",
+      quote: "We need your answer by 10/28 to hold the 12/4 date."
+    },
+    {
+      id: "m6", fromName: "Holm Textiles", from: "trade@holmtextiles.example", received: "2026-10-21", time: "9:30 AM",
+      subject: "Discontinuation notice: Fennel bouclé, colorway 04",
+      attachments: [],
+      body: "To our trade partners,\n\n[[disc|Fennel bouclé in colorway 04 (Oat) is discontinued]], effective immediately.\nRemaining stock: 11 yards at our New Jersey warehouse.\n\n[[fill|Open orders already confirmed will be filled.]]\n\n[[alt|Colorway 06 (Flax) is the closest match.]] Memo samples are available on request.\n\nHolm Textiles",
+      kind: ["Discontinued", "t-late"], conf: "pick", candidates: ["i10", "i3"],
+      why: "This notice has no PO number. Two of your orders use Fennel bouclé 04.",
+      note: "Both orders are already confirmed or delivered, and Holm says confirmed orders will be filled. Nothing slips. Lading will add a note so nobody reorders colorway 04.",
+      fields: [
+        { label: "Discontinued", value: "Fennel bouclé, colorway 04 (Oat)", src: "disc" },
+        { label: "Open orders", value: "Confirmed orders will be filled", src: "fill" },
+        { label: "Replacement", value: "Colorway 06 (Flax)", src: "alt" }
+      ],
+      summary: "Fennel 04 is discontinued. Confirmed orders will be filled; reorders need colorway 06.",
+      quote: "Open orders already confirmed will be filled."
+    }
+  ];
+  const MSG = Object.fromEntries(MSGS.map((m) => [m.id, m]));
+
+  /* ================= State ================= */
+  const KEY = "lading-demo-v1";
+  const fresh = () => ({
+    items: JSON.parse(JSON.stringify(SEED_ITEMS)),
+    msgs: {},           // id -> { status: "applied" | "dismissed" | "answered", to: [itemIds] }
+    events: JSON.parse(JSON.stringify(SEED_EVENTS)),
+    drafts: {},         // projectId -> { text, edited }
+    sent: { p3: "2026-10-12" }
+  });
+  let state = fresh();
+  try { const raw = localStorage.getItem(KEY); if (raw) state = Object.assign(fresh(), JSON.parse(raw)); } catch (e) { /* storage unavailable: keep sample data */ }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } };
+
+  const ui = {
+    view: "review",
+    sel: null,
+    filter: "all",
+    project: "p1",
+    pick: {},
+    other: null,
+    drawer: null,
+    moved: null,
+    toast: null
+  };
+  const narrow = () => window.matchMedia("(max-width: 900px)").matches;
+
+  const item = (id) => state.items.find((i) => i.id === id);
+  const proj = (id) => PROJECTS.find((p) => p.id === id);
+  const room = (it) => proj(it.p).rooms.find((r) => r.id === it.room);
+  const pending = () => MSGS.filter((m) => !state.msgs[m.id]);
+  const pendingEvents = (pid) => state.events.filter((e) => e.p === pid && !e.sent && e.client);
+
+  /* ================= Order logic ================= */
+  const slip = (it) => daysBetween(it.promised, it.eta);
+  const arrived = (it) => ARRIVED.has(it.status) && it.eta <= TODAY;
+  const pastInstall = (it) => !arrived(it) && it.eta > room(it).install;
+  const attention = (it) => it.status === "backorder" || it.status === "damaged" || pastInstall(it);
+  const FILTERS = [
+    ["all", "All", () => true],
+    ["attention", "Needs attention", attention],
+    ["slipped", "Slipped", (it) => slip(it) > 0],
+    ["ontrack", "On track", (it) => !attention(it) && slip(it) <= 0 && !arrived(it)],
+    ["arrived", "Arrived", arrived]
+  ];
+
+  function readiness(pid, r) {
+    const its = state.items.filter((i) => i.p === pid && i.room === r.id);
+    const open = its.filter((i) => !arrived(i));
+    if (!open.length) return { cls: "ok", text: `Everything is on site. Install ${fmt(r.install)}.` };
+    const last = open.reduce((a, b) => (b.eta > a.eta ? b : a));
+    const gap = daysBetween(last.eta, r.install);
+    const bad = open.find((i) => i.status === "damaged");
+    if (gap < 0) return { cls: "risk", icon: "warning", text: `Everything on site about ${fmt(last.eta)}. Install is ${fmt(r.install)}, ${-gap} day${gap === -1 ? "" : "s"} short. Held by ${shortName(last)}.` };
+    if (bad) return { cls: "risk", icon: "warning", text: `${shortName(bad)} has damage noted. Everything else on site by ${fmt(last.eta)}.` };
+    return { cls: "", text: `Everything on site about ${fmt(last.eta)}. Install ${fmt(r.install)}, ${gap} day${gap === 1 ? "" : "s"} to spare.` };
+  }
+  const shortName = (it) => it.name.replace(/,.*$/, "").replace(/\s*\(\d+\)$/, "");
+
+  /* ================= Drift line ================= */
+  function track(it, opts = {}) {
+    const eta = opts.eta || it.eta;
+    const install = opts.install || room(it).install;
+    const p = pct(it.promised), e = pct(eta);
+    const isDone = !opts.eta && arrived(it);
+    const lo = Math.min(p, e), w = Math.abs(e - p);
+    const gapCls = e > p ? "late" : "early";
+    const moved = opts.from ? ` moved" style="--from:${pct(opts.from)}%` : "";
+    const ticks = ["2026-11-01", "2026-12-01", "2027-01-01", "2027-02-01"].map((m) => `<span class="tick" style="left:${pct(m)}%"></span>`).join("");
+    return `<span class="track${moved}" aria-hidden="true">
+      ${ticks}
+      <span class="today" style="left:${pct(TODAY)}%"></span>
+      <span class="install" style="left:${pct(install)}%"></span>
+      ${w > 0.05 ? `<span class="gap ${gapCls}" style="left:${lo}%;width:${w}%"></span>` : ""}
+      <span class="promise" style="left:${p}%"></span>
+      ${opts.ghost ? `<span class="ghost" style="left:${pct(opts.ghost)}%"></span>` : ""}
+      <span class="eta${isDone ? " done" : ""}${it.status === "damaged" && !opts.eta ? " bad" : ""}" style="left:${e}%"></span>
+    </span>`;
+  }
+  function driftFig(it) {
+    if (it.status === "damaged") return `<span class="drift zero" style="color:var(--risk)">damage</span>`;
+    if (arrived(it)) return `<span class="drift zero">arrived</span>`;
+    const d = slip(it);
+    if (d > 0) return `<span class="drift late" title="${d} days later than promised">+${d}d</span>`;
+    if (d < 0) return `<span class="drift early" title="${-d} days earlier than promised">−${-d}d</span>`;
+    return `<span class="drift zero">on time</span>`;
+  }
+  const tag = (label, cls) => `<span class="tag ${cls || ""}"><span>${esc(label)}</span></span>`;
+  const statusTag = (it) => tag(STATUS[it.status][0], STATUS[it.status][1]);
+
+  /* ================= Views ================= */
+  function renderNav() {
+    const n1 = pending().length;
+    const n3 = PROJECTS.reduce((a, p) => a + pendingEvents(p.id).filter((e) => e.on !== false).length, 0);
+    const views = [
+      ["review", "Review", n1, "Review"],
+      ["orders", "Orders", null, "Orders"],
+      ["updates", "Client updates", n3, "Updates"]
+    ];
+    document.getElementById("nav").innerHTML = views.map(([id, long, n, short]) =>
+      `<a href="#${id}" ${ui.view === id ? 'aria-current="page"' : ""}><span class="lbl-long">${long}</span><span class="lbl-short">${short}</span>${n !== null ? `<span class="count" data-n="${n}"><span class="sr">, </span>${n}<span class="sr"> waiting</span></span>` : ""}</a>`
+    ).join("");
+  }
+
+  /* ---------- Review ---------- */
+  function renderReview() {
+    const list = pending();
+    if (ui.sel && state.msgs[ui.sel]) ui.sel = null;
+    if (!ui.sel && list.length && !narrow()) ui.sel = list[0].id;
+    const done = MSGS.filter((m) => state.msgs[m.id]);
+    const needDecision = list.filter((m) => m.conf !== "high" || m.reply).length;
+
+    const queue = `<aside class="queue">
+      <div class="view-head">
+        <h1>Review</h1>
+        <p>${list.length ? `Lading read ${list.length} vendor email${list.length === 1 ? "" : "s"} for you. ${needDecision ? `${needDecision} need${needDecision === 1 ? "s" : ""} a decision from you.` : "All matched with high confidence."}` : "Nothing waiting."}</p>
+      </div>
+      ${list.length ? `<ol role="listbox" aria-label="Vendor emails" id="queue">${list.map((m) => {
+        const it = m.item ? item(m.item) : null;
+        const matchTxt = it ? `${esc(proj(it.p).name)}, ${esc(shortName(it))} <span class="mono">${it.po}</span>` : `${m.candidates.length} possible orders`;
+        return `<li><button class="q-row" role="option" type="button" data-action="select" data-id="${m.id}" aria-selected="${ui.sel === m.id}">
+          <span class="q-top">${tag(m.kind[0], m.kind[1])}<span class="mono muted">${m.received === TODAY ? m.time : fmt(m.received)}</span></span>
+          <span class="q-vendor">${esc(m.fromName)}</span>
+          <span class="q-subj">${esc(m.subject)}</span>
+          <span class="q-match">${matchTxt}</span>
+        </button></li>`;
+      }).join("")}</ol>` : ""}
+      ${done.length ? `<details class="done-list" ${list.length ? "" : "open"}><summary>Done today (${done.length})</summary><ul>${done.map((m) => {
+        const s = state.msgs[m.id];
+        const verb = s.status === "dismissed" ? "Dismissed" : s.status === "answered" ? "Answered" : "Applied";
+        return `<li>${icon(s.status === "dismissed" ? "x" : "check")}<span>${verb}: ${esc(m.fromName)}, ${esc(m.kind[0].toLowerCase())}</span></li>`;
+      }).join("")}</ul></details>` : ""}
+    </aside>`;
+
+    let detail;
+    if (!list.length) {
+      detail = `<div class="detail"><div class="sheet caught">${icon("check")}<h2>You're caught up</h2><p>New vendor emails appear here as they arrive. Every change you applied is on the Orders page, and the client drafts are ready under Client updates.</p><div class="actions"><a class="btn primary" href="#updates">Open client updates ${icon("arrow-right")}</a><a class="btn" href="#orders">See orders</a></div></div></div>`;
+    } else if (!ui.sel) {
+      detail = `<div class="detail"></div>`;
+    } else {
+      detail = renderDetail(MSG[ui.sel]);
+    }
+    return `<section class="view review ${ui.sel ? "has-sel" : ""}">${queue}${detail}</section>`;
+  }
+
+  function renderBody(m) {
+    return esc(m.body).replace(/\[\[(\w+)\|([\s\S]+?)\]\]/g, (_, id, txt) => `<mark class="src" data-src="${id}" id="src-${m.id}-${id}">${txt}</mark>`);
+  }
+
+  function renderDetail(m) {
+    const it = m.item ? item(m.item) : null;
+    const targetId = ui.other && ui.other.msg === m.id ? ui.other.to : m.item;
+    const target = targetId ? item(targetId) : null;
+    const confTxt = {
+      high: `${icon("check")} Matched with high confidence`,
+      check: `${icon("warning")} Check one detail before applying`,
+      pick: `${icon("warning")} Pick the orders this applies to`
+    }[m.conf];
+
+    const fields = m.fields.map((f) => `<div class="field" tabindex="0" data-src="${f.src}" data-msg="${m.id}">
+        <dt>${esc(f.label)}</dt>
+        <dd>${f.to ? `<span class="from mono">${fmt(f.from)}</span><span class="val mono">${fmtLong(f.to)}</span>` : `<span class="val">${esc(f.value)}</span>`}${f.explain ? `<span class="explain">${esc(f.explain)}</span>` : ""}</dd>
+      </div>`).join("");
+
+    let impact = "";
+    if (target && m.set && m.set.eta) {
+      const r = room(target);
+      const late = m.set.eta > r.install;
+      const d = daysBetween(r.install, m.set.eta);
+      const msg = late
+        ? `<strong>${esc(r.name)} install is ${fmt(r.install)}.</strong> ${esc(shortName(target))} would now arrive about ${fmt(m.set.eta)}, ${d} day${d === 1 ? "" : "s"} after it.`
+        : m.set.eta < target.eta
+          ? `${esc(shortName(target))} arrives ${daysBetween(m.set.eta, target.eta)} days earlier than expected. ${esc(r.name)} install is ${fmt(r.install)}.`
+          : `${esc(shortName(target))} still arrives before the ${esc(r.name.toLowerCase())} install on ${fmt(r.install)}.`;
+      impact = `<div class="sheet impact ${late ? "risk" : ""}">
+        <p>${msg}</p>
+        ${track(target, { eta: m.set.eta, ghost: target.eta })}
+        <div class="legend"><span><i class="lg promise"></i>Promised</span><span><i class="lg ghost" style="width:8px;height:8px;border:1.5px dashed var(--ink-2)"></i>Before this email</span><span><i class="lg eta"></i>Now</span><span><i class="lg install"></i>Install</span></div>
+      </div>`;
+    } else if (m.impactText) {
+      impact = `<div class="sheet impact risk"><p><strong>Act soon.</strong> ${esc(m.impactText)}</p></div>`;
+    }
+
+    let actions;
+    if (m.conf === "pick") {
+      const chosen = ui.pick[m.id] || m.candidates;
+      actions = `<fieldset class="pick"><legend>Add the note to</legend>${m.candidates.map((cid) => {
+        const c = item(cid);
+        return `<label><input type="checkbox" data-action="pick" data-msg="${m.id}" value="${cid}" ${chosen.includes(cid) ? "checked" : ""}><span>${esc(c.name)} <span class="mono muted">${c.po}</span><small>${esc(proj(c.p).name)}, ${STATUS[c.status][0].toLowerCase()}</small></span></label>`;
+      }).join("")}</fieldset>
+      <div class="actions"><button class="btn primary" type="button" data-action="apply" data-id="${m.id}" ${chosen.length ? "" : "disabled"}>${icon("check")}Add note to ${chosen.length === 1 ? "order" : `${chosen.length} orders`}</button><button class="btn quiet" type="button" data-action="dismiss" data-id="${m.id}">Dismiss</button></div>`;
+    } else if (m.reply) {
+      actions = `<div class="actions"><button class="btn primary" type="button" data-action="answered" data-id="${m.id}">${icon("check")}Mark as answered</button><button class="btn quiet" type="button" data-action="dismiss" data-id="${m.id}">Dismiss</button></div>`;
+    } else {
+      const choosing = ui.other && ui.other.msg === m.id;
+      const opts = state.items.map((c) => `<option value="${c.id}" ${c.id === targetId ? "selected" : ""}>${esc(proj(c.p).name)}: ${esc(c.name)} (${c.po})</option>`).join("");
+      actions = `${choosing ? `<div class="other"><label for="other-${m.id}">Apply to a different order</label><select id="other-${m.id}" data-action="other" data-msg="${m.id}">${opts}</select></div>` : ""}
+        <div class="actions">
+          <button class="btn primary" type="button" data-action="apply" data-id="${m.id}">${icon("check")}Apply to order</button>
+          ${choosing ? "" : `<button class="btn" type="button" data-action="choose" data-id="${m.id}">Not this order</button>`}
+          <button class="btn quiet" type="button" data-action="dismiss" data-id="${m.id}">Dismiss</button>
+        </div>`;
+    }
+
+    const matchBlock = target
+      ? `<div class="sheet match"><span class="lbl">${ui.other && ui.other.msg === m.id ? "You chose" : "Matched to"}</span><strong>${esc(target.name)}</strong><span>${esc(proj(target.p).name)}, ${esc(room(target).name)} <span class="mono muted">${target.po}</span> ${statusTag(target)}</span>${ui.other && ui.other.msg === m.id ? "" : `<span class="why">${esc(m.why)}</span>`}</div>`
+      : `<div class="sheet match"><span class="lbl">No single match</span><strong>${m.candidates.length} orders use this fabric</strong><span class="why">${esc(m.why)}</span></div>`;
+
+    return `<div class="detail">
+      <div class="back"><button class="btn quiet" type="button" data-action="back">${icon("arrow-left")}All emails</button></div>
+      <article class="sheet email" aria-label="Original email">
+        <dl class="email-meta">
+          <dt>From</dt><dd>${esc(m.fromName)} <span class="mono muted">&lt;${esc(m.from)}&gt;</span></dd>
+          <dt>To</dt><dd class="mono">orders@adlerlind.studio</dd>
+          <dt>Received</dt><dd>${fmtLong(m.received)}, ${m.time}</dd>
+        </dl>
+        <h2 class="email-subj">${esc(m.subject)}</h2>
+        ${m.attachments.length ? `<div class="attach">${m.attachments.map((a) => `<span>${icon(a.endsWith(".pdf") ? "file-pdf" : "eye")}${esc(a)}</span>`).join("")}</div>` : ""}
+        <div class="email-body">${renderBody(m)}</div>
+      </article>
+      <section class="reading" aria-labelledby="read-h">
+        <h2 id="read-h">What Lading read</h2>
+        <div class="kind-line">${tag(m.kind[0], m.kind[1])}<span class="conf ${m.conf === "high" ? "" : "check"}">${confTxt}</span></div>
+        ${matchBlock}
+        <dl class="fields">${fields}</dl>
+        ${m.note ? `<p class="note">${icon("warning")}<span>${esc(m.note)}</span></p>` : ""}
+        ${impact}
+        ${actions}
+      </section>
+    </div>`;
+  }
+
+  /* ---------- Orders ---------- */
+  function renderOrders() {
+    const f = FILTERS.find((x) => x[0] === ui.filter);
+    const open = state.items.filter((i) => !arrived(i));
+    const slipped = state.items.filter((i) => slip(i) > 0 && !arrived(i));
+    const roomsAtRisk = PROJECTS.flatMap((p) => p.rooms.map((r) => readiness(p.id, r))).filter((x) => x.cls === "risk").length;
+
+    const months = [["2026-10-01", "Oct"], ["2026-11-01", "Nov"], ["2026-12-01", "Dec"], ["2027-01-01", "Jan"], ["2027-02-01", "Feb"]];
+    const axis = `<div class="axis" aria-hidden="true"><div class="grid-row">
+      <span class="c-tag">Status</span><span class="name">Item</span>
+      <span class="c-track"><span class="axis-scale">${months.map(([d, l]) => `<span style="left:${pct(d)}%">${l}</span>`).join("")}<span class="today-lbl" style="left:${pct(TODAY)}%">Today</span></span></span>
+      <span class="arr r">Arrives</span><span class="drift r">Drift</span>
+    </div></div>`;
+
+    let any = false;
+    const body = PROJECTS.map((p) => {
+      const rooms = p.rooms.map((r) => {
+        const rows = state.items.filter((i) => i.p === p.id && i.room === r.id && f[2](i))
+          .sort((a, b) => (a.eta < b.eta ? -1 : 1));
+        if (!rows.length) return "";
+        any = true;
+        const rd = readiness(p.id, r);
+        return `<div class="room">
+          <div class="room-head"><h3>${esc(r.name)}</h3><p class="ready ${rd.cls}">${rd.icon ? icon(rd.icon) : ""}${esc(rd.text)}</p></div>
+          <ul class="rows">${rows.map((it) => {
+            const mv = ui.moved && ui.moved.id === it.id ? ui.moved.from : null;
+            return `<li><button class="row grid-row" type="button" data-action="open" data-id="${it.id}" aria-label="${esc(it.name)}, ${STATUS[it.status][0]}, arrives ${fmt(it.eta)}">
+              <span class="c-tag">${statusTag(it)}</span>
+              <span class="name"><b>${esc(it.name)}</b><small>${esc(it.vendor)} <span class="mono">${it.po}</span></small></span>
+              <span class="c-track">${track(it, mv ? { from: mv } : {})}</span>
+              <span class="arr mono">${fmt(it.eta)}</span>
+              ${driftFig(it)}
+            </button></li>`;
+          }).join("")}</ul>
+        </div>`;
+      }).join("");
+      if (!rooms) return "";
+      return `<section class="proj"><header><h2>${esc(p.name)}</h2><span>${esc(p.client)}</span></header>${rooms}</section>`;
+    }).join("");
+
+    return `<section class="view">
+      <div class="o-head">
+        <h1>Orders</h1>
+        <div class="summary">
+          <div><b>${open.length}</b>open items in ${PROJECTS.length} projects</div>
+          <div class="late"><b data-n="${slipped.length}">${slipped.length}</b>running late</div>
+          <div class="risk"><b data-n="${roomsAtRisk}">${roomsAtRisk}</b>room${roomsAtRisk === 1 ? "" : "s"} at risk for install</div>
+        </div>
+        <div class="filters" role="group" aria-label="Filter orders">${FILTERS.map(([id, label, fn]) => `<button type="button" data-action="filter" data-id="${id}" aria-pressed="${ui.filter === id}">${label}<span>${state.items.filter(fn).length}</span></button>`).join("")}</div>
+      </div>
+      ${axis}
+      ${any ? body : `<p class="empty-orders">No orders match this filter. Choose All to see every order.</p>`}
+    </section>`;
+  }
+
+  function renderDrawer() {
+    const it = item(ui.drawer);
+    if (!it) return "";
+    const r = room(it), p = proj(it.p);
+    return `<div class="scrim" data-action="close"></div>
+    <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-h" id="drawer">
+      <div class="drawer-top">
+        <div><h2 id="dr-h">${esc(it.name)}</h2><p class="sub">${esc(p.name)}, ${esc(r.name)}</p></div>
+        <button class="iconbtn" type="button" data-action="close" aria-label="Close">${icon("x")}</button>
+      </div>
+      <div class="kind-line">${statusTag(it)}<span class="mono muted">${it.po}</span><span class="muted">${esc(it.vendor)}</span></div>
+      <dl class="facts">
+        <div><dt>Ordered</dt><dd class="mono">${fmt(it.ordered)}</dd></div>
+        <div><dt>Promised</dt><dd class="mono">${fmt(it.promised)}</dd></div>
+        <div><dt>${arrived(it) ? "Arrived" : "Arrives (est.)"}</dt><dd class="mono">${fmt(it.eta)}</dd></div>
+      </dl>
+      <div>${track(it)}<div class="legend impact" style="padding:8px 0 0;border:0"><div class="legend"><span><i class="lg promise"></i>Promised</span><span><i class="lg eta"></i>Now</span><span><i class="lg install"></i>Install ${fmt(r.install)}</span></div></div></div>
+      <div>
+        <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);font-weight:500;margin-bottom:6px">History</h3>
+        <ol class="history">${it.history.slice().reverse().map((h) => `<li><span class="when mono">${fmt(h.date)}</span><span>${esc(h.text)}<span class="src">From ${esc(h.src)}${h.quote ? `: <q>${esc(h.quote)}</q>` : ""}</span></span></li>`).join("")}</ol>
+      </div>
+    </aside>`;
+  }
+
+  /* ---------- Client updates ---------- */
+  function buildDraft(p) {
+    const evs = pendingEvents(p.id).filter((e) => e.on !== false);
+    if (!evs.length) return "";
+    return `Hi ${p.greet},\n\nHere's this week's update on your order.\n\n${evs.map((e) => e.client).join("\n\n")}\n\nEverything else is on track. I'll write again next week, or sooner if anything changes.\n\nNoa`;
+  }
+  function draftFor(p) {
+    const d = state.drafts[p.id];
+    if (d && d.edited) return d.text;
+    return buildDraft(p);
+  }
+
+  function renderUpdates() {
+    const p = proj(ui.project);
+    const evs = pendingEvents(p.id);
+    const list = `<aside class="plist">
+      <div class="view-head"><h1>Client updates</h1><p>Drafts are written from the order changes you applied. Edit them, copy them into your email, then mark them sent.</p></div>
+      <ul>${PROJECTS.map((q) => {
+        const n = pendingEvents(q.id).filter((e) => e.on !== false).length;
+        return `<li><button class="p-row" type="button" data-action="project" data-id="${q.id}" aria-current="${q.id === p.id}"><b>${esc(q.name)}</b><small>${esc(q.client)}</small><small class="${n ? "pending" : ""}">${n ? `${n} change${n === 1 ? "" : "s"} to share` : state.sent[q.id] ? `Up to date, last sent ${fmt(state.sent[q.id])}` : "Nothing to share yet"}</small></button></li>`;
+      }).join("")}</ul>
+    </aside>`;
+
+    let comp;
+    if (!evs.length) {
+      comp = `<div class="sheet caught">${icon("check")}<h2>Nothing new for ${esc(p.greet)}</h2><p>${state.sent[p.id] ? `Your last update went out ${fmtLong(state.sent[p.id])}. ` : ""}When you apply a vendor change to one of their orders, it shows up here as a ready-to-edit draft.</p><div class="actions"><a class="btn" href="#review">Go to review</a></div></div>`;
+    } else {
+      const d = state.drafts[p.id];
+      comp = `<div class="sheet composer">
+        <header><h2>To ${esc(p.client)}</h2><p>${esc(p.name)}. ${state.sent[p.id] ? `Last update sent ${fmtLong(state.sent[p.id])}.` : "No update sent yet."}</p></header>
+        <fieldset class="included"><legend>Changes in this draft</legend>${evs.map((e) => {
+          const it = item(e.item);
+          return `<label><input type="checkbox" data-action="toggle-ev" data-id="${e.id}" ${e.on !== false ? "checked" : ""}><span>${esc(it.name)}<small>Applied ${fmt(e.date)}</small></span></label>`;
+        }).join("")}</fieldset>
+        <div class="draft-wrap"><label for="draft-${p.id}">Message</label><textarea id="draft-${p.id}" data-action="draft" data-id="${p.id}" spellcheck="true">${esc(draftFor(p))}</textarea></div>
+        ${d && d.edited ? `<p class="edited">${icon("warning")}<span>You edited this draft, so ticking changes above won't rewrite it.</span><button class="linkbtn" type="button" data-action="rebuild" data-id="${p.id}">Rebuild from changes</button></p>` : ""}
+        <div class="actions">
+          <button class="btn primary" type="button" data-action="copy" data-id="${p.id}">${icon("copy")}Copy text</button>
+          <button class="btn" type="button" data-action="sent" data-id="${p.id}">${icon("paper-plane-tilt")}Mark as sent</button>
+        </div>
+      </div>`;
+    }
+    return `<section class="view updates">${list}${comp}</section>`;
+  }
+
+  /* ================= Render ================= */
+  const app = document.getElementById("app");
+  const layer = document.getElementById("layer");
+  function render(focusSel) {
+    renderNav();
+    app.innerHTML = ui.view === "orders" ? renderOrders() : ui.view === "updates" ? renderUpdates() : renderReview();
+    layer.innerHTML = (ui.drawer ? renderDrawer() : "") + (ui.toast ? `<div class="toast" role="status"><span>${esc(ui.toast.text)}</span>${ui.toast.undo ? `<button type="button" data-action="undo">Undo</button>` : ""}</div>` : "");
+    document.querySelectorAll("textarea[data-action=draft]").forEach(fit);
+    if (focusSel) { const el = document.querySelector(focusSel); if (el) el.focus({ preventScroll: false }); }
+    ui.moved = null;
+  }
+
+  function fit(ta) { ta.style.height = "auto"; ta.style.height = Math.max(240, ta.scrollHeight + 2) + "px"; }
+
+  let toastTimer;
+  function toast(text, undo) {
+    ui.toast = { text, undo };
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { ui.toast = null; ui.undo = null; const t = layer.querySelector(".toast"); if (t) t.remove(); }, undo ? 7000 : 3200);
+  }
+
+  /* ================= Actions ================= */
+  function applyMsg(m) {
+    ui.undo = JSON.stringify(state);
+    const targets = m.conf === "pick" ? (ui.pick[m.id] || m.candidates) : [ui.other && ui.other.msg === m.id ? ui.other.to : m.item];
+    targets.forEach((tid) => {
+      const it = item(tid);
+      const before = it.eta;
+      if (m.set) {
+        if (m.set.eta) it.eta = m.set.eta;
+        if (m.set.status) it.status = m.set.status;
+      }
+      it.history.push({ date: TODAY, text: m.summary, src: `${m.fromName}, ${fmt(m.received)}`, quote: m.quote });
+      const text = clientLine(m, it, before);
+      if (text) state.events.push({ id: "e" + Date.now() + tid, p: it.p, item: it.id, date: TODAY, on: true, client: text });
+      if (m.set && m.set.eta && m.set.eta !== before) ui.moved = { id: it.id, from: before };
+      if (state.drafts[it.p] && !state.drafts[it.p].edited) delete state.drafts[it.p];
+    });
+    state.msgs[m.id] = { status: "applied", to: targets };
+    ui.other = null;
+    save();
+    const t = item(targets[0]);
+    toast(targets.length > 1 ? `Note added to ${targets.length} orders` : `Applied to ${shortName(t)}`, true);
+  }
+
+  function clientLine(m, it, before) {
+    const r = room(it);
+    const n = shortName(it);
+    if (m.clientKind === "late") {
+      const late = it.eta > r.install;
+      const suggest = addDays(it.eta, 2);
+      return `${n}: ${it.vendor.replace(/ Upholstery| Furniture| Lighting| Textiles/, "")} moved its delivery to about ${fmt(it.eta)} (it was ${fmt(before)}) because ${m.reason}.${late ? ` That's just after the ${r.name.toLowerCase()} install on ${fmt(r.install)}, so I suggest we move the install to ${fmtLong(suggest)}. I'll confirm with the installers.` : ` It still arrives before the install on ${fmt(r.install)}.`}`;
+    }
+    if (m.clientKind === "backorder") return `${n}: the maker has them on backorder until ${m.phrase}, which is after the ${r.name.toLowerCase()} install. I'll send you two or three in-stock options this week so we can decide together.`;
+    if (m.clientKind === "early") return `${n}: good news, it arrives at our receiving warehouse on ${fmt(it.eta)}, a few days early.`;
+    if (m.clientKind === "damaged") return `${n}: part of the shipment arrived damaged and one carton is missing. I'm sorting it out with the vendor and the freight company. There's nothing you need to do, and the January install isn't affected yet.`;
+    return null;
+  }
+
+  function route() {
+    const h = (location.hash || "").replace("#", "");
+    ui.view = ["review", "orders", "updates"].includes(h) ? h : "review";
+    ui.drawer = null;
+    render();
+  }
+
+  document.addEventListener("click", (ev) => {
+    const el = ev.target.closest("[data-action]");
+    if (!el) return;
+    const a = el.dataset.action, id = el.dataset.id;
+    if (el.tagName === "INPUT" || el.tagName === "SELECT" || el.tagName === "TEXTAREA") return;
+    if (a === "select") { ui.sel = id; ui.other = null; render(); if (narrow()) window.scrollTo(0, 0); else document.querySelector(`.q-row[data-id="${id}"]`)?.focus(); }
+    else if (a === "back") { ui.sel = null; render(); }
+    else if (a === "apply") { applyMsg(MSG[id]); ui.sel = null; if (narrow()) { render(); } else render(".q-row[aria-selected=true]"); }
+    else if (a === "dismiss") { ui.undo = JSON.stringify(state); state.msgs[id] = { status: "dismissed" }; save(); ui.sel = null; toast("Email dismissed. No order changed.", true); render(); }
+    else if (a === "answered") {
+      ui.undo = JSON.stringify(state);
+      const m = MSG[id], it = item(m.item);
+      it.history.push({ date: TODAY, text: "You answered Arden about slab A17.", src: `${m.fromName}, ${fmt(m.received)}`, quote: m.quote });
+      state.msgs[id] = { status: "answered", to: [it.id] }; save(); ui.sel = null; toast("Marked as answered", true); render();
+    }
+    else if (a === "choose") { ui.other = { msg: id, to: MSG[id].item }; render(`#other-${id}`); }
+    else if (a === "undo") { if (ui.undo) { state = JSON.parse(ui.undo); save(); } ui.undo = null; ui.toast = null; render(); }
+    else if (a === "filter") { ui.filter = id; render(); }
+    else if (a === "open") { ui.drawer = id; ui.lastFocus = el; render("#drawer .iconbtn"); }
+    else if (a === "close") { ui.drawer = null; render(); const back = document.querySelector(`.row[data-id="${ui.lastFocus?.dataset.id}"]`); back?.focus(); }
+    else if (a === "project") { ui.project = id; render(); }
+    else if (a === "rebuild") { delete state.drafts[id]; save(); render(); }
+    else if (a === "copy") {
+      const ta = document.getElementById(`draft-${id}`);
+      const done = () => { toast("Copied. Paste it into your email."); render(); };
+      const fallback = () => { ta.focus(); ta.select(); toast("Text selected. Press Ctrl+C or Cmd+C to copy."); layer.innerHTML = `<div class="toast" role="status"><span>${esc(ui.toast.text)}</span></div>`; };
+      try { navigator.clipboard.writeText(ta.value).then(done, fallback); } catch (e) { fallback(); }
+    }
+    else if (a === "sent") {
+      ui.undo = JSON.stringify(state);
+      pendingEvents(id).filter((e) => e.on !== false).forEach((e) => { e.sent = TODAY; });
+      state.sent[id] = TODAY; delete state.drafts[id]; save();
+      toast(`Marked as sent to ${proj(id).greet}`, true); render();
+    }
+    else if (a === "reset") { state = fresh(); save(); ui.sel = null; ui.other = null; ui.pick = {}; toast("Sample data reset"); render(); }
+  });
+
+  document.addEventListener("change", (ev) => {
+    const el = ev.target;
+    const a = el.dataset.action;
+    if (a === "pick") {
+      const m = MSG[el.dataset.msg];
+      const cur = new Set(ui.pick[m.id] || m.candidates);
+      el.checked ? cur.add(el.value) : cur.delete(el.value);
+      ui.pick[m.id] = m.candidates.filter((c) => cur.has(c));
+      render(`input[data-action=pick][value="${el.value}"]`);
+    } else if (a === "other") {
+      ui.other = { msg: el.dataset.msg, to: el.value }; render(`#other-${el.dataset.msg}`);
+    } else if (a === "toggle-ev") {
+      const e = state.events.find((x) => x.id === el.dataset.id); e.on = el.checked; save(); render(`input[data-id="${e.id}"]`);
+    }
+  });
+
+  document.addEventListener("input", (ev) => {
+    const el = ev.target;
+    if (el.dataset.action === "draft") { fit(el); state.drafts[el.dataset.id] = { text: el.value, edited: true }; save(); }
+  });
+  document.addEventListener("focusout", (ev) => {
+    const el = ev.target;
+    if (el.dataset && el.dataset.action === "draft" && state.drafts[el.dataset.id]?.edited && !document.querySelector(".edited")) {
+      // show the "edited" notice once the person leaves the field, without stealing focus while typing
+      const pos = window.scrollY; render(); window.scrollTo(0, pos);
+    }
+  });
+
+  /* Source highlighting: field -> the email line it came from */
+  const lit = (el, on) => {
+    const mark = document.getElementById(`src-${el.dataset.msg}-${el.dataset.src}`);
+    if (!mark) return;
+    mark.classList.toggle("lit", on);
+    if (on && !narrow()) { const r = mark.getBoundingClientRect(); if (r.top < 80 || r.bottom > innerHeight) mark.scrollIntoView({ block: "center", behavior: "smooth" }); }
+  };
+  ["mouseover", "focusin"].forEach((t) => document.addEventListener(t, (ev) => { const f = ev.target.closest?.(".field"); if (f) lit(f, true); }));
+  ["mouseout", "focusout"].forEach((t) => document.addEventListener(t, (ev) => { const f = ev.target.closest?.(".field"); if (f) lit(f, false); }));
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && ui.drawer) { ui.drawer = null; render(); return; }
+    if (ui.drawer && ev.key === "Tab") { // keep focus inside the drawer
+      const f = [...document.querySelectorAll("#drawer button")];
+      if (f.length && !document.getElementById("drawer").contains(document.activeElement)) { ev.preventDefault(); f[0].focus(); }
+    }
+    const row = ev.target.closest?.(".q-row");
+    if (row && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+      ev.preventDefault();
+      const rows = [...document.querySelectorAll(".q-row")];
+      const next = rows[rows.indexOf(row) + (ev.key === "ArrowDown" ? 1 : -1)];
+      if (next) { ui.sel = next.dataset.id; ui.other = null; render(`.q-row[data-id="${next.dataset.id}"]`); }
+    }
+  });
+
+  window.addEventListener("hashchange", route);
+  route();
+})();
+</script>
+</body>
+</html>

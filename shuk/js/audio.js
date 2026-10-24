@@ -1,6 +1,5 @@
-// All sound is synthesized with WebAudio: no audio files to download.
-// Music is a Middle-Eastern groove (darbuka maqsum rhythm, bass, plucked oud in
-// the Hijaz scale) generated live, so its tempo can follow the run speed.
+// Music and sound effects are synthesized live with WebAudio (no files to download); only the market people's
+// voice lines are recordings (audio/*.mp3).
 
 let ctx = null, master, sfxBus, musicBus, noiseBuf, comp;
 const settings = { music: true, sfx: true };
@@ -63,20 +62,83 @@ function noise(t, dur, vol, ftype, f0, f1, q = 1, dest = sfxBus, attack = 0.004)
   s.start(t, Math.random() * 0.5); s.stop(t + attack + dur + 0.05);
 }
 
+function panned(pan) {
+  if (!ctx.createStereoPanner) return sfxBus;
+  const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(sfxBus);
+  return p;
+}
+
 // ---------- sound effects ----------
 let lastCoin = 0;
+// coins picked up in the air climb this scale (major pentatonic, two octaves), one note per coin
+const AIR_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+let wind = null;
 export const sfx = {
-  coin(combo = 0) {
+  // On the ground every coin is the same bright ding. Strung together in one jump (or a carpet ride)
+  // they climb a scale: pass air = how many coins this jump has already collected.
+  coin(air = -1) {
     if (!ok()) return;
     const t = ctx.currentTime;
     if (t - lastCoin < 0.035) return; // avoid machine-gun stacking with the magnet
     lastCoin = t;
-    const step = [0, 2, 4, 5, 7, 9, 11, 12][combo % 8];
-    const f = 1318.5 * Math.pow(2, step / 12);
-    tone('sine', f, f, t, 0.16, 0.18);
-    tone('sine', f * 2.01, f * 2.01, t + 0.005, 0.09, 0.06);
-    tone('triangle', f * 1.5, f * 1.5, t + 0.045, 0.14, 0.08);
+    const f = 1318.5 * Math.pow(2, (air < 0 ? 0 : AIR_STEPS[air % AIR_STEPS.length]) / 12);
+    tone('sine', f, f, t, 0.15, 0.18);
+    tone('sine', f * 2, f * 2, t, 0.07, 0.045);
+    if (air >= 0) tone('triangle', f * 3, f * 3, t, 0.05, 0.025); // a little extra sparkle up there
   },
+  // soft footfalls, alternating feet
+  step(side = 1, v = 1) { if (!ok()) return; const t = ctx.currentTime, out = panned(side * 0.25);
+    noise(t, 0.045, 0.07 * v, 'lowpass', 1100, 320, 0.8, out, 0.002); tone('sine', 95, 55, t, 0.05, 0.05 * v, out); },
+  // air rushing past when a walker or a van just misses you
+  whoosh(pan = 0) { if (!ok()) return; const t = ctx.currentTime;
+    noise(t, 0.3, 0.2, 'bandpass', 2600, 500, 1.3, panned(pan), 0.06); },
+  // a streak of coins pays out: a quick shower of coin notes
+  streak() { if (!ok()) return; const t = ctx.currentTime;
+    [0, 4, 7, 12, 16, 19, 24].forEach((st, i) => { const f = 1318.5 * Math.pow(2, st / 12); tone('sine', f, f, t + i * 0.045, 0.16, 0.12); });
+    noise(t, 0.5, 0.06, 'highpass', 6000, 9000, 0.7); },
+  // the mystery bag: paper rustle, a pop, a little fanfare
+  bag() { if (!ok()) return; const t = ctx.currentTime;
+    for (let i = 0; i < 5; i++) noise(t + i * 0.035 + Math.random() * 0.01, 0.04, 0.12, 'bandpass', 2500 + Math.random() * 2000, 3000, 0.8);
+    tone('sine', 900, 180, t + 0.19, 0.08, 0.2); noise(t + 0.19, 0.06, 0.2, 'lowpass', 2000, 400, 0.7);
+    [0, 4, 7, 12].forEach((st, i) => tone('triangle', 659.25 * Math.pow(2, st / 12), 659.25 * Math.pow(2, st / 12), t + 0.26 + i * 0.06, 0.25, 0.1)); },
+  // the magic carpet: lift-off with a harp run, wind while flying, a swoop down to land
+  carpetUp() { if (!ok()) return; const t = ctx.currentTime;
+    noise(t, 0.7, 0.2, 'bandpass', 300, 4000, 1.2, sfxBus, 0.25);
+    [0, 2, 4, 7, 9, 12, 14, 16].forEach((st, i) => tone('triangle', 587.33 * Math.pow(2, st / 12), 587.33 * Math.pow(2, st / 12), t + i * 0.04, 0.35, 0.07)); },
+  carpetDown() { if (!ok()) return; const t = ctx.currentTime; noise(t, 0.5, 0.18, 'bandpass', 3000, 350, 1.2, sfxBus, 0.05); },
+  wind(on) {
+    if (!ctx) return;
+    if (on && !wind && ok()) {
+      const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 700; f.Q.value = 0.7;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.5);
+      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 0.35; lg.gain.value = 260;
+      lfo.connect(lg); lg.connect(f.frequency);
+      s.connect(f); f.connect(g); g.connect(sfxBus); s.start(); lfo.start();
+      wind = { s, g, lfo };
+    } else if (!on && wind) {
+      const w = wind, t = ctx.currentTime; wind = null;
+      w.g.gain.cancelScheduledValues(t); w.g.gain.setTargetAtTime(0.0001, t, 0.15);
+      w.s.stop(t + 0.8); w.lfo.stop(t + 0.8);
+    }
+  },
+  // a power-up is about to run out
+  tick() { if (!ok()) return; const t = ctx.currentTime; tone('square', 1760, 1760, t, 0.04, 0.035); },
+  revive() { if (!ok()) return; const t = ctx.currentTime;
+    noise(t, 0.6, 0.16, 'bandpass', 400, 5000, 1.4, sfxBus, 0.3);
+    [0, 7, 12, 19].forEach((st, i) => tone('sine', 523.25 * Math.pow(2, st / 12), 523.25 * Math.pow(2, st / 12), t + 0.3 + i * 0.07, 0.45, 0.12)); },
+  // the run is over: a sad trombone, or a fanfare for a new best
+  gameOver(best = false) { if (!ok()) return; const t = ctx.currentTime;
+    if (best) { [0, 4, 7, 12, 7, 12, 16].forEach((st, i) => tone('triangle', 523.25 * Math.pow(2, st / 12), 523.25 * Math.pow(2, st / 12), t + i * 0.09, i === 6 ? 0.7 : 0.25, 0.13)); return; }
+    [[0, 0.32], [-1, 0.32], [-2, 0.32], [-3, 0.9]].forEach(([st, d], i) => {
+      const at = t + i * 0.36, f = 233.08 * Math.pow(2, st / 12);
+      const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(f * 1.02, at); o.frequency.exponentialRampToValueAtTime(f, at + 0.08);
+      if (i === 3) { const l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = 6; lg.gain.value = f * 0.03; l.connect(lg); lg.connect(o.frequency); l.start(at + 0.15); l.stop(at + d + 0.1); }
+      lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, at); lp.frequency.linearRampToValueAtTime(1300, at + 0.1); lp.frequency.linearRampToValueAtTime(600, at + d);
+      env(g, at, 0.03, 0.09, d); o.connect(lp); lp.connect(g); g.connect(sfxBus); o.start(at); o.stop(at + d + 0.1);
+    }); },
+  swish() { if (!ok()) return; const t = ctx.currentTime; noise(t, 0.16, 0.08, 'bandpass', 1200, 3200, 1.2, sfxBus, 0.04); },
   jump() { if (!ok()) return; const t = ctx.currentTime;
     noise(t, 0.22, 0.22, 'bandpass', 600, 2400, 1.2); tone('sine', 260, 520, t, 0.14, 0.12); },
   superJump() { if (!ok()) return; const t = ctx.currentTime;
@@ -157,9 +219,38 @@ export function voice(name, pan = 0, vol = 1, force = false) {
 }
 
 // ---------- music ----------
+// A Mizrahi dance-pop groove in Hijaz on D: four-on-the-floor kick under a darbuka maqsum, claps on the
+// backbeat, riq and hats, a syncopated 3-3-2 bass, offbeat keyboard stabs that duck under the kick, and a
+// written two-phrase hook on a zurna-like lead (the oud plays it in the menu). Tempo follows the run speed.
 // Hijaz on D: D Eb F# G A Bb C
 const HIJAZ = [0, 1, 4, 5, 7, 8, 10];
 const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+const deg = (d, base = 62) => base + Math.floor(d / 7) * 12 + HIJAZ[((d % 7) + 7) % 7];
+
+// one chord per bar over 8 bars: D  Eb  D  Cm  D  Gm  Eb  D  (bass root midi, triad)
+const PROG = [[38, [0, 4, 7]], [39, [0, 4, 7]], [38, [0, 4, 7]], [36, [0, 3, 7]], [38, [0, 4, 7]], [43, [0, 3, 7]], [39, [0, 4, 7]], [38, [0, 4, 7]]];
+// the hook: [16th step within a 2-bar phrase, scale degree]
+const HOOK = {
+  A: [[0, 4], [2, 4], [3, 5], [4, 4], [6, 3], [8, 2], [10, 3], [11, 2], [12, 1], [14, 0], [18, 2], [20, 3], [22, 4], [24, 5], [26, 4], [28, 3], [30, 4]],
+  B: [[0, 7], [2, 6], [3, 7], [4, 5], [6, 4], [8, 5], [10, 4], [11, 3], [12, 4], [16, 3], [18, 2], [19, 3], [20, 4], [22, 2], [24, 1], [26, 2], [28, 0]],
+};
+// 16-bar song form, one entry per 2-bar phrase: which hook (null = darbuka break)
+const FORM = ['A', 'A', 'B', 'A', 'B', 'A', null, 'A'];
+// bass 3-3-2 with a pickup, in 16ths: [step, octave up?]
+const BASS = [[0, 0], [3, 1], [6, 0], [8, 0], [11, 1], [14, 0]];
+// darbuka maqsum on 16ths: D . . . T . T . D . . . T . . .
+const MAQSUM = { 0: 'D', 4: 'T', 6: 'T', 8: 'D', 12: 'T' };
+
+let synthBus = null, leadBus = null, delay = null;
+function musicNodes() {
+  if (synthBus) return;
+  synthBus = ctx.createGain(); synthBus.connect(musicBus);
+  leadBus = ctx.createGain(); leadBus.gain.value = 1; leadBus.connect(synthBus);
+  // a dotted-eighth echo on the lead: space without a reverb's cost
+  delay = ctx.createDelay(1); const fb = ctx.createGain(), lp = ctx.createBiquadFilter(), wet = ctx.createGain();
+  fb.gain.value = 0.3; lp.type = 'lowpass'; lp.frequency.value = 2600; wet.gain.value = 0.22;
+  leadBus.connect(delay); delay.connect(lp); lp.connect(fb); fb.connect(delay); lp.connect(wet); wet.connect(musicBus);
+}
 
 function oudBuffer(midi) {
   if (oudCache.has(midi)) return oudCache.get(midi);
@@ -174,42 +265,93 @@ function oudBuffer(midi) {
   for (let i = 0; i < n; i++) {
     const cur = ring[idx];
     const next = ring[(idx + 1) % period];
-    const v = decay * 0.5 * (cur + next);
-    ring[idx] = v;
+    ring[idx] = decay * 0.5 * (cur + next);
     out[i] = cur * 0.7 + prev * 0.3; prev = cur;
     idx = (idx + 1) % period;
   }
-  // gentle fade to avoid clicks
-  for (let i = n - 2000; i < n; i++) out[i] *= (n - i) / 2000;
+  for (let i = n - 2000; i < n; i++) out[i] *= (n - i) / 2000; // fade to avoid clicks
   oudCache.set(midi, buf);
   return buf;
 }
-
 function pluck(t, midi, vol) {
   const s = ctx.createBufferSource(); s.buffer = oudBuffer(midi);
   const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 3200; f.Q.value = 0.6;
   const g = ctx.createGain(); g.gain.value = vol;
-  s.connect(f); f.connect(g); g.connect(musicBus);
+  s.connect(f); f.connect(g); g.connect(synthBus);
   s.start(t); s.stop(t + 1.1);
 }
 
+// ---- drums ----
+function kick(t, v) {
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(155, t); o.frequency.exponentialRampToValueAtTime(46, t + 0.11);
+  env(g, t, 0.002, 0.95 * v, 0.3); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.36);
+  noise(t, 0.012, 0.18 * v, 'highpass', 3000, 3000, 0.7, musicBus, 0.001);
+  // the stabs and lead breathe with the kick
+  synthBus.gain.cancelScheduledValues(t);
+  synthBus.gain.setValueAtTime(0.45, t); synthBus.gain.linearRampToValueAtTime(1, t + 0.16);
+}
+function clap(t, v) {
+  for (let i = 0; i < 3; i++) noise(t + i * 0.011, 0.02, 0.22 * v, 'bandpass', 1300, 1100, 0.9, musicBus, 0.001);
+  noise(t + 0.03, 0.14, 0.16 * v, 'bandpass', 1500, 900, 0.8, musicBus, 0.002);
+}
+function hat(t, v, open = false) { noise(t, open ? 0.13 : 0.035, (open ? 0.07 : 0.085) * v, 'highpass', 7500, 9000, 0.8, musicBus, 0.001); }
+function riq(t, v) { noise(t, 0.07, 0.07 * v, 'bandpass', 8500, 7000, 5, musicBus, 0.001); }
 function dum(t, v) {
   const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'sine'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(52, t + 0.18);
-  env(g, t, 0.004, 0.55 * v, 0.32); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.4);
-  noise(t, 0.05, 0.12 * v, 'lowpass', 400, 200, 0.7, musicBus);
+  o.type = 'sine'; o.frequency.setValueAtTime(115, t); o.frequency.exponentialRampToValueAtTime(58, t + 0.16);
+  env(g, t, 0.003, 0.38 * v, 0.24); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.3);
 }
 function tek(t, v) {
-  noise(t, 0.045, 0.26 * v, 'bandpass', 3800, 3000, 1.6, musicBus, 0.002);
+  noise(t, 0.04, 0.24 * v, 'bandpass', 3900, 3100, 1.6, musicBus, 0.001);
   const o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = 'triangle'; o.frequency.value = 1900; env(g, t, 0.002, 0.05 * v, 0.03); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.06);
+  o.type = 'triangle'; o.frequency.value = 1950; env(g, t, 0.001, 0.05 * v, 0.03); o.connect(g); g.connect(musicBus); o.start(t); o.stop(t + 0.06);
 }
-function ka(t, v) { noise(t, 0.035, 0.16 * v, 'bandpass', 2600, 2200, 1.5, musicBus, 0.002); }
+function ka(t, v) { noise(t, 0.03, 0.14 * v, 'bandpass', 2700, 2300, 1.5, musicBus, 0.001); }
+function riser(t, dur, v) { noise(t, dur, 0.1 * v, 'bandpass', 500, 7000, 2.5, musicBus, dur * 0.95); }
+function cymbal(t, v) { noise(t, 1.1, 0.07 * v, 'highpass', 5000, 9000, 0.6, musicBus, 0.002); }
+
+// ---- pitched parts ----
 function bass(t, midi, dur, v) {
-  const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  const o = ctx.createOscillator(), s = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
   o.type = 'sawtooth'; o.frequency.value = midiHz(midi);
-  f.type = 'lowpass'; f.frequency.setValueAtTime(700, t); f.frequency.exponentialRampToValueAtTime(180, t + dur); f.Q.value = 3;
-  env(g, t, 0.01, 0.2 * v, dur); o.connect(f); f.connect(g); g.connect(musicBus); o.start(t); o.stop(t + dur + 0.05);
+  s.type = 'sine'; s.frequency.value = midiHz(midi);
+  f.type = 'lowpass'; f.Q.value = 4; f.frequency.setValueAtTime(1100, t); f.frequency.exponentialRampToValueAtTime(220, t + dur * 0.9);
+  env(g, t, 0.006, 0.24 * v, dur);
+  o.connect(f); s.connect(g); f.connect(g); g.connect(musicBus);
+  o.start(t); s.start(t); o.stop(t + dur + 0.05); s.stop(t + dur + 0.05);
+}
+function stab(t, midis, v) {
+  for (const m of midis) for (const det of [-9, 9]) {
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.value = midiHz(m); o.detune.value = det;
+    f.type = 'lowpass'; f.frequency.setValueAtTime(3200, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.16);
+    env(g, t, 0.003, 0.028 * v, 0.17);
+    o.connect(f); f.connect(g); g.connect(synthBus); o.start(t); o.stop(t + 0.24);
+  }
+}
+let lastLead = 0;
+function lead(t, midi, dur, v) {
+  const f0 = midiHz(midi), from = lastLead ? midiHz(lastLead) : f0; lastLead = midi;
+  const g = ctx.createGain(), bp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter();
+  bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 0.9;
+  lp.type = 'lowpass'; lp.frequency.value = 3600;
+  const lfo = ctx.createOscillator(), lg = ctx.createGain();
+  lfo.frequency.value = 5.6; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f0 * 0.012, t + Math.min(0.25, dur));
+  lfo.connect(lg);
+  for (const [type, mul, vol] of [['sawtooth', 1, 1], ['square', 0.5, 0.35]]) {
+    const o = ctx.createOscillator();
+    o.type = type;
+    // a quick slide from the previous note: the ornament that makes it sing like a zurna
+    o.frequency.setValueAtTime(from * mul, t); o.frequency.exponentialRampToValueAtTime(f0 * mul, t + 0.035);
+    lg.connect(o.frequency);
+    const og = ctx.createGain(); og.gain.value = vol;
+    o.connect(og); og.connect(bp); o.start(t); o.stop(t + dur + 0.12);
+  }
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.1 * v, t + 0.012);
+  g.gain.setValueAtTime(0.1 * v, t + Math.max(0.02, dur - 0.04)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.1);
+  bp.connect(lp); lp.connect(g); g.connect(leadBus);
+  lfo.start(t); lfo.stop(t + dur + 0.12);
 }
 function pad(t, midis, dur, v) {
   for (const m of midis) {
@@ -217,97 +359,84 @@ function pad(t, midis, dur, v) {
     o.type = 'triangle'; o.frequency.value = midiHz(m); o.detune.value = (Math.random() - 0.5) * 12;
     f.type = 'lowpass'; f.frequency.value = 1200;
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.03 * v, t + 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f); f.connect(g); g.connect(musicBus); o.start(t); o.stop(t + dur + 0.1);
+    o.connect(f); f.connect(g); g.connect(synthBus); o.start(t); o.stop(t + dur + 0.1);
   }
 }
 
-const music = {
-  on: false, mode: 'menu', bpm: 96, nextTime: 0, step: 0, timer: null, intensity: 0,
-  melody: [], rnd: 1,
-};
-
-function scaleNote(deg, base = 62) { // base D4
-  const oct = Math.floor(deg / 7), i = ((deg % 7) + 7) % 7;
-  return base + oct * 12 + HIJAZ[i];
-}
-
-function makeMelody() {
-  // 16-step phrase over 2 bars, call-and-response shaped
-  const m = []; let deg = 4;
-  for (let i = 0; i < 32; i++) {
-    const strong = i % 4 === 0;
-    if (Math.random() < (strong ? 0.85 : 0.45)) {
-      deg += [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)];
-      deg = Math.max(0, Math.min(10, deg));
-      m.push(deg);
-    } else m.push(null);
-  }
-  // resolve phrase ends on the tonic / dominant
-  m[15] = 4; m[31] = 0; m[30] = null;
-  return m;
-}
-
-// maqsum: D T - T D - T -  (8 eighths per bar)
-const MAQSUM = ['D', 'T', '', 'T', 'D', '', 'T', ''];
-const CHORDS = [0, 0, -2, -2, -4, -4, -5, -3]; // per half-bar scale degree of the bass
+const music = { on: false, mode: 'menu', bpm: 104, nextTime: 0, step: 0, timer: null, intensity: 0 };
 
 function schedule() {
   if (!ctx || !music.on) return;
-  const ahead = 0.15;
-  while (music.nextTime < ctx.currentTime + ahead) {
+  while (music.nextTime < ctx.currentTime + 0.12) {
     playStep(music.nextTime, music.step);
-    const sixteenth = 60 / music.bpm / 4;
-    music.nextTime += sixteenth;
-    music.step = (music.step + 1) % 64;
+    music.nextTime += 60 / music.bpm / 4;
+    music.step = (music.step + 1) % 256; // 16 bars of 16ths
   }
 }
 
 function playStep(t, step) {
-  const inten = music.mode === 'run' ? 1 : 0.55;
-  const s16 = step % 16; // one bar = 16 sixteenths
-  const eighth = s16 / 2;
-  // drums
-  if (s16 % 2 === 0) {
-    const hit = MAQSUM[eighth];
-    if (hit === 'D') dum(t, inten);
-    else if (hit === 'T') tek(t, inten);
-    else if (music.mode === 'run' && Math.random() < 0.5) ka(t, 0.6);
-  } else if (music.mode === 'run' && Math.random() < 0.28 + music.intensity * 0.3) ka(t, 0.45);
-  // bass on beats 1 and 3
-  const bar = Math.floor(step / 16) % 4;
-  if (s16 === 0 || s16 === 8) {
-    const deg = CHORDS[(bar * 2 + (s16 === 8 ? 1 : 0)) % CHORDS.length];
-    bass(t, scaleNote(deg, 38), 60 / music.bpm * 0.9, inten);
+  const run = music.mode === 'run', x = music.intensity;
+  const s = step % 16, bar = Math.floor(step / 16), phrase = Math.floor(bar / 2) % FORM.length;
+  const hook = FORM[phrase], breakBar = hook === null;
+  const [root, triad] = PROG[bar % PROG.length];
+  const sixteenth = 60 / music.bpm / 4;
+  // ---- drums ----
+  if (run) {
+    if (s % 4 === 0 && !(breakBar && bar % 2 === 1 && s >= 8)) kick(t, 1);
+    if ((s === 4 || s === 12) && !breakBar) clap(t, 0.9);
+    if (s % 2 === 1 || x > 0.45) hat(t, s % 4 === 2 ? 1 : 0.55, s === 14);
+  } else {
+    if (s === 0 || s === 8 || s === 11) kick(t, s === 11 ? 0.55 : 0.85);
+    if (s % 4 === 2) riq(t, 1);
   }
-  if (s16 === 0 && bar % 2 === 0) {
-    const root = scaleNote(CHORDS[bar * 2], 50);
-    pad(t, [root, root + 7, root + 12], 60 / music.bpm * 8, music.mode === 'menu' ? 1.2 : 0.8);
-  }
-  // melody on eighths (and some sixteenth ornaments in the run)
-  if (s16 % 2 === 0) {
-    const mi = (Math.floor(step / 2)) % 32;
-    if (mi === 0 && Math.random() < 0.35) music.melody = makeMelody();
-    const deg = music.melody[mi];
-    if (deg !== null && deg !== undefined) {
-      pluck(t, scaleNote(deg, 62), 0.5 * inten + 0.1);
-      if (music.mode === 'run' && Math.random() < 0.25) pluck(t + 60 / music.bpm / 4, scaleNote(deg + 1, 62), 0.25);
+  const hit = MAQSUM[s];
+  if (hit === 'D') dum(t, run ? 0.9 : 1);
+  else if (hit === 'T') tek(t, run ? 0.9 : 1);
+  else if (run && Math.random() < 0.25 + x * 0.35) ka(t, 0.6);
+  // darbuka roll into every fourth bar, and through the break
+  if ((bar % 4 === 3 || breakBar) && s >= 12) { tek(t, 0.7); ka(t + sixteenth / 2, 0.55); }
+  if (run && bar % 16 === 15 && s === 0) riser(t, sixteenth * 16, 1);
+  if (run && bar % 16 === 0 && s === 0) cymbal(t, 1);
+  // ---- bass and stabs ----
+  for (const [bs, up] of BASS) if (bs === s && (run || bs % 4 !== 3)) bass(t, root + (up ? 12 : 0), sixteenth * (up ? 1.6 : 2.6), run ? 1 : 0.8);
+  if (s % 4 === 2 && !(breakBar && run)) stab(t, triad.map(i => root + 24 + i), run ? 1 : 0.6);
+  if (!run && s === 0 && bar % 2 === 0) pad(t, triad.map(i => root + 24 + i).concat(root + 36), sixteenth * 32, 1.1);
+  // ---- the hook ----
+  if (hook) {
+    const notes = HOOK[hook], ps = (bar % 2) * 16 + s;
+    const k = notes.findIndex(n => n[0] === ps);
+    if (k >= 0) {
+      const next = notes[k + 1] ? notes[k + 1][0] : 32;
+      const len = Math.min(4, next - ps) * sixteenth;
+      const up = run && x > 0.55 && phrase >= 4 ? 12 : 0;   // an octave higher once the run is flying
+      const m = deg(notes[k][1]) + up;
+      if (run) lead(t, m, len * 0.92, 0.85 + x * 0.3);
+      else { pluck(t, m, 0.5); if (Math.random() < 0.3) pluck(t + sixteenth, deg(notes[k][1] + 1), 0.22); }
     }
   }
 }
 
 export function startMusic(mode = 'menu') {
   if (!ctx) return;
-  music.mode = mode;
-  music.bpm = mode === 'run' ? 112 : 92;
-  if (!music.melody.length) music.melody = makeMelody();
+  musicNodes();
+  setMusicMode(mode);
   if (music.on) return;
   music.on = true; music.step = 0; music.nextTime = ctx.currentTime + 0.08;
   music.timer = setInterval(schedule, 25);
 }
-export function setMusicMode(mode) { if (!ctx) return; music.mode = mode; if (mode === 'menu') music.bpm = 92; }
+export function setMusicMode(mode) {
+  if (!ctx) return;
+  musicNodes();
+  if (mode !== music.mode) { music.step = 0; lastLead = 0; } // each mode starts from the top of the song
+  music.mode = mode;
+  music.bpm = mode === 'run' ? 126 + music.intensity * 22 : 104;
+  delay.delayTime.setTargetAtTime(60 / music.bpm * 0.75, ctx.currentTime, 0.05);
+}
 export function setMusicIntensity(x) { // 0..1 with run speed
   music.intensity = x;
-  if (music.mode === 'run') music.bpm = 112 + x * 30;
+  if (music.mode !== 'run' || !ctx) return;
+  music.bpm = 126 + x * 22;
+  if (delay) delay.delayTime.setTargetAtTime(60 / music.bpm * 0.75, ctx.currentTime, 0.2);
 }
 export function stopMusic() { music.on = false; if (music.timer) clearInterval(music.timer); music.timer = null; }
 export function duckMusic(on) { if (!ctx) return; musicBus.gain.setTargetAtTime(settings.music ? (on ? 0.12 : 0.42) : 0, ctx.currentTime, 0.15); }

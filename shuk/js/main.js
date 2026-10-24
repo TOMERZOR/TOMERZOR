@@ -104,6 +104,7 @@ const ui = new UI({
   restart: () => { if (game && game.state === 'paused') game.bankRun(); ui.overlay('pause', false); ui.overlay('over', false); startRun(); },
   home: () => goHome(),
   sheet: id => {
+    if (id) sfx.swish();
     if (id === 'chars') { player.setMode('dance'); }
     else if (!id) { player.setMode('menu'); }
   },
@@ -267,8 +268,8 @@ function startRun() {
 
 function pause(on) {
   if (!game) return;
-  if (on && game.state === 'playing') { game.state = 'paused'; ui.pause(true); duckMusic(true); }
-  else if (!on && game.state === 'paused') { game.state = 'playing'; ui.pause(false); duckMusic(false); }
+  if (on && game.state === 'playing') { game.state = 'paused'; ui.pause(true); duckMusic(true); sfx.wind(false); }
+  else if (!on && game.state === 'paused') { game.state = 'playing'; ui.pause(false); duckMusic(false); if (player.flying) sfx.wind(true); }
 }
 
 function goHome() {

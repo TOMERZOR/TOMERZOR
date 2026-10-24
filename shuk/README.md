@@ -56,6 +56,12 @@ The HUD and menus are built from generated art: glossy buttons, 3D icons, an awn
 
 Progress is stored in the browser (localStorage).
 
+## Sound
+
+The music is a Mizrahi dance-pop groove in Hijaz on D, generated live: four-on-the-floor kick under a darbuka maqsum, claps on the backbeat, riq and hats, a 3-3-2 bass, offbeat keyboard stabs that duck under the kick and a written two-phrase hook on a zurna-like lead with slides and vibrato (the oud plays it in the menu), in a 16-bar form with a darbuka break and a riser. It starts at 126 BPM and speeds up to about 148 with the run.
+
+Coins on the street all give the same ding; coins strung together in one jump (or a carpet ride) climb a scale, and the next landing resets it. There are footfalls at a running cadence, a whoosh on near misses, a coin shower for streaks, paper and a pop for the mystery bag, lift-off, wind and a swoop for the carpet, three ticks as a power-up runs out, a revive sweep, a sad trombone at game over (a fanfare for a new best), and a swish on menu sheets. Vendors, the Breslov, the Chabad guy, the grandpa, the delivery guys and the chasing grandma each have their own voice.
+
 ## Code
 
 | File | What it does |
@@ -70,10 +76,10 @@ Progress is stored in the browser (localStorage).
 | `js/light.js` | Baked sun-shadow atlas, sky occlusion and bounce light patched into the materials |
 | `js/i18n.js` | All player-facing text in Hebrew and English |
 | `js/assets.js` | GLB loading and the shared animation library |
-| `js/audio.js` | Synthesized sound effects and the darbuka/oud music, recorded voice lines |
+| `js/audio.js` | Synthesized music and sound effects, recorded voice lines |
 | `js/ui.js`, `css/style.css` | Interface, right-to-left in Hebrew and left-to-right in English |
 | `js/config.js` | Characters, prices, power-ups, zones, missions |
 
 ## Assets
 
-Characters, market people, key art, the facade and paving textures and the shutter murals were generated with Higgsfield (image → Tripo 3D mesh → auto-rig). All characters share one animation set (`models/anims.glb`: run, jump, roll, stumble, fall, idle, dance, walk), retargeted by bone name. The art student's auto-rig had bound her tote bag to her right arm and thigh and part of that forearm to the thigh, so raising the arm dragged them into a wedge: her right side now takes its weights from the mirrored left side, the bag rides on the spine, and the triangles fusing the bag to her hand and leg are cut. Voice lines were generated with ElevenLabs through Higgsfield. The fruit, spice and sweets stalls, the parked supplier truck, the crate and watermelon obstacles, the ground litter decals, the 10-shekel coin face and all UI art were generated the same way (image → Tripo mesh, simplified and compressed with gltf-transform/meshopt). The remaining stalls, produce, signs and props are built procedurally in code. Music and sound effects are synthesized live with WebAudio.
+Characters, market people, key art, the facade and paving textures and the shutter murals were generated with Higgsfield (image → Tripo 3D mesh → auto-rig). All characters share one animation set (`models/anims.glb`: run, jump, roll, stumble, fall, idle, dance, walk), retargeted by bone name. The art student's auto-rig had bound her tote bag to her right arm and thigh and part of that forearm to the thigh, so raising the arm dragged them into a wedge: her right side now takes its weights from the mirrored left side, the bag rides on the spine, and the triangles fusing the bag to her hand and leg are cut. Voice lines are ElevenLabs v4 performances by native Hebrew voices directed with tags (shouting, raspy, elderly, singing), checked by transcribing them back, then trimmed, levelled and given a short street echo; the grandma's take is pitched down to sound her age. The fruit, spice and sweets stalls, the parked supplier truck, the crate and watermelon obstacles, the ground litter decals, the 10-shekel coin face and all UI art were generated the same way (image → Tripo mesh, simplified and compressed with gltf-transform/meshopt). The remaining stalls, produce, signs and props are built procedurally in code. Music and sound effects are synthesized live with WebAudio (see Sound).

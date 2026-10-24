@@ -11,9 +11,10 @@ import { T } from './i18n.js';
 
 const STEP = 1 / 120;
 const VOICE_LINES = {
-  'npc:vendor': ['vendor1', 'vendor2'], 'npc:breslov': ['breslov'], van: ['breslov'], 'npc:chabad': ['chabad'], 'npc:grandpa': ['grandpa'],
+  'npc:vendor': ['vendor1', 'vendor2', 'vendor3', 'vendor4'], 'npc:breslov': ['breslov'], van: ['breslov'], 'npc:chabad': ['chabad'],
+  'npc:grandpa': ['grandpa'], 'npc:jack': ['delivery'], 'npc:scooter': ['delivery'],
 };
-export const VOICE_FILES = ['vendor1', 'vendor2', 'breslov', 'chabad', 'grandpa', 'grandma_stop', 'grandma_caught'];
+export const VOICE_FILES = ['vendor1', 'vendor2', 'vendor3', 'vendor4', 'breslov', 'chabad', 'grandpa', 'delivery', 'grandma_stop', 'grandma_caught'];
 
 export class Game {
   constructor(ctx) {
@@ -54,7 +55,7 @@ export class Game {
     this.run = {
       d: 0, prevD: 0, speed: tutorial ? 11.5 : speedAt(0), score: 0, coins: 0, combo: 0, comboT: 0,
       mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2,
-      powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0, carpet: 0 }, streak: 0,
+      powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0, carpet: 0 }, streak: 0, airCoins: 0, stepT: 0,
       stats: { coins: 0, dist: 0, jumps: 0, rolls: 0, score: 0, powerups: 0, dodgeNpc: 0, roofs: 0, zones: 1, magnetCoins: 0, nearMiss: 0, runs: 1 },
       zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0,
     };
@@ -131,6 +132,11 @@ export class Game {
       }
       this.processTimers(dt);
       this.tutorialHints();
+      // footfalls at a running cadence that quickens with speed
+      if (p.grounded && !p.flying && p.rollT <= 0 && !p.dead) {
+        r.stepT += dt * (2.9 + (r.speed - 11) * 0.07);
+        if (r.stepT >= 1) { r.stepT -= 1; r.stepSide = -(r.stepSide || 1); sfx.step(r.stepSide, p.onPlatform ? 1.3 : 1); }
+      } else r.stepT = 0.6;
     } else {
       // dying: world stops, death animation plays
       p.step(dt, this.gravity(), () => p.groundY);
@@ -155,7 +161,7 @@ export class Game {
     r.d += r.speed * dt;
     const grav = this.gravity();
     p.step(dt, grav, x => this.track.groundAt(x, r.d, p.y));
-    if (p.landed) { p.landed = false; sfx.land(); haptic('land'); this.fx.dust(p.x, p.y, 0, 7); }
+    if (p.landed) { p.landed = false; r.airCoins = 0; sfx.land(); haptic('land'); this.fx.dust(p.x, p.y, 0, 7); }
     this.track.step(dt, r.d, r.prevD, p, { magnet: r.powers.magnet > 0 });
     const mul = r.mult * (r.powers.x2 > 0 ? 2 : 1);
     r.score += r.speed * dt * 0.5 * mul;
@@ -171,13 +177,13 @@ export class Game {
         r.coins++; r.stats.coins++; r.combo++; r.comboT = 0.6;
         if (ev.magnet) r.stats.magnetCoins++;
         r.score += 5 * mul;
-        sfx.coin(r.combo); haptic('coin');
+        sfx.coin(p.grounded ? -1 : r.airCoins++); haptic('coin');
         this.fx.coinBurst(ev.x, ev.y, 0.1);
         this.flyCoin(ev.x, ev.y);
         // a streak of coins without tripping pays out every 50
         if (++r.streak % 50 === 0) {
           r.score += Math.min(r.streak, 200) * 5 * mul;
-          sfx.mission(); haptic('power');
+          sfx.streak(); haptic('power');
           this.fx.popup(T.streak(r.streak), p.x, p.y + 2.9, -1.2, '#7df9ff', 0.9);
         }
         break;
@@ -201,6 +207,7 @@ export class Game {
           if (ev.near) {
             r.stats.nearMiss++;
             r.score += 25 * mul;
+            sfx.whoosh((ev.e.x - p.x) / 3);
             this.fx.popup(T.nearMiss, p.x, 2.6, -1, '#7df9ff', 0.8);
           }
         }
@@ -227,7 +234,7 @@ export class Game {
   // magic carpet: up above the stalls for a few seconds, a trail of coins in the air, the grandma gives up
   startFlight() {
     const r = this.run, p = this.player;
-    if (!p.flying) { p.fly(true); sfx.superJump(); this.fx.dust(p.x, p.y, 0, 12); }
+    if (!p.flying) { p.fly(true); sfx.carpetUp(); sfx.wind(true); this.fx.dust(p.x, p.y, 0, 12); }
     r.chaserT = 0;
     r.invuln = Math.max(r.invuln, 0.8); // covers the climb past anything right ahead
     this.track.skyCoins(r.d + 12, r.d + r.speed * r.powers.carpet - 6, FLY_Y + 0.95, p.lane);
@@ -236,6 +243,7 @@ export class Game {
     const r = this.run, p = this.player;
     if (!p.flying) return;
     p.fly(false);
+    sfx.carpetDown(); sfx.wind(false);
     // a fair landing: a moment of grace and a clear patch of street
     r.invuln = Math.max(r.invuln, 1.3);
     this.track.clearAround(r.d, 22);
@@ -247,7 +255,7 @@ export class Game {
     const r = this.run, p = this.player;
     const roll = Math.random();
     let text;
-    sfx.mission(); haptic('power');
+    sfx.bag(); haptic('power');
     this.fx.confetti(p.x, p.y + 1.6, -0.5);
     if (roll < 0.35) {
       const n = [20, 30, 50, 80][Math.floor(Math.random() * 4)];
@@ -311,7 +319,7 @@ export class Game {
   crash(e, caught = false) {
     const r = this.run, p = this.player;
     p.die();
-    sfx.crash(); haptic('crash');
+    sfx.crash(); sfx.wind(false); haptic('crash');
     this.fx.shake(0.45, 0.55);
     this.fx.splat(p.x, 1, -0.6);
     this.state = 'dying';
@@ -340,7 +348,7 @@ export class Game {
     r.chaserT = 0; r.invuln = 2.0;
     r.speed = Math.max(13, r.speed * 0.75);
     this.state = 'playing';
-    sfx.powerup(); haptic('power');
+    sfx.revive(); haptic('power');
     this.ui.showHUD(r);
   }
 
@@ -364,7 +372,10 @@ export class Game {
     if (newBest) s.best = Math.floor(r.score);
     const missionNews = this.applyMissions(r.stats);
     Save.save();
+    sfx.wind(false);
     if (silent) return;
+    sfx.gameOver(newBest);
+    if (missionNews.leveled) setTimeout(() => sfx.levelUp(), 1400);
     this.ui.gameOver({ score: Math.floor(r.score), dist: Math.floor(r.d), coins: r.coins, earned, newBest, best: s.best, missions: missionNews, cause: r.deathCause });
   }
 
@@ -396,7 +407,10 @@ export class Game {
     const r = this.run;
     for (const k of Object.keys(r.powers)) {
       if (r.powers[k] > 0) {
+        const before = r.powers[k];
         r.powers[k] -= dt;
+        // three ticks as a power runs out
+        if ([1.5, 1, 0.5].some(th => before > th && r.powers[k] <= th)) sfx.tick();
         if (r.powers[k] <= 0) { r.powers[k] = 0; sfx.powerEnd(); if (k === 'carpet') this.endFlight(); }
       }
     }

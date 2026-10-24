@@ -1,6 +1,8 @@
 # FitSource
 
-Upload a photo of an outfit you found online. FitSource names every piece, finds the shop that sells it, and tells you when it's sold out. Free for shoppers; it earns affiliate commission (see [BUSINESS.md](BUSINESS.md)).
+Upload a photo of an outfit you found online. FitSource names every piece, finds the shop that sells it, and tells you when it's sold out. Free for shoppers; it earns affiliate commission and brand fees (see [BUSINESS.md](BUSINESS.md)).
+
+Built for Israel: the whole site is in Hebrew and laid out right to left, prices are in shekels, and the shop links point at shops Israelis use. The name stays FitSource.
 
 A static site (HTML, CSS, vanilla JS modules, no build step) plus an optional API on Cloudflare Workers.
 
@@ -14,16 +16,20 @@ There are two scanners. The site picks the best one available.
 | Needs | Nothing | An Anthropic API key and a deployed worker |
 | Finds | Each piece (jacket, jeans, sneakers...), its colour and where it is in the photo | The exact product and brand when the photo shows it, the original shop, other shops, resale listings and lookalikes |
 | Stock | No (it doesn't know the exact product) | Yes: Claude reads the product pages, then the worker re-checks each shop itself (Shopify product data, schema.org markup) and trusts the shop over the model |
-| Shopping | Search links per piece: Google Shopping, ASOS, Amazon, Depop, Vinted, eBay, Grailed (the search words can be edited) | Direct product links with price, stock and sizes, plus the search links |
+| Shopping | Search links per piece (the search words can be edited): new at Google Shopping Israel, Terminal X, Castro, Next, ASOS, AliExpress; second-hand at Facebook Marketplace, Yad2, eBay, Depop | Direct product links with price, stock and sizes, Israeli shops first, plus the search links |
 | Cost | Free | Roughly $0.15 to $0.40 per scan (see BUSINESS.md) |
 
-The quick scan uses MobileCLIP (Apple, via Transformers.js): the photo is looked at through 29 overlapping windows, each compared with precomputed descriptions of 56 garment types; the colour comes from the pixels, with the background and skin filtered out. The model (23 MB) downloads once from Hugging Face and is cached. Photos are not uploaded.
+The quick scan uses MobileCLIP (Apple, via Transformers.js): the photo is looked at through 29 overlapping windows, each compared with precomputed descriptions of 56 garment types; the colour comes from the pixels, with the background and skin filtered out. The model (23 MB) downloads once from Hugging Face and is cached. Photos are not uploaded. The detector works in English; each piece is shown in Hebrew (`HE` in `vocab.js`), with the colour agreeing with the garment's gender and number (`colorHe` in `color.js`: "חולצה שחורה", "מכנסיים שחורים").
 
-The deep scan sends the photo to Claude (`claude-opus-5-5` by default) with web search, web fetch and a structured `submit_results` tool, streams progress to the page ("searching...", "opening ssense.com"), then verifies stock at each shop.
+The deep scan sends the photo to Claude (`claude-opus-5-5` by default) with web search, web fetch and a structured `submit_results` tool, streams progress to the page, then verifies stock at each shop. It is told to report the original source, then favour shops that sell in Israel or ship there, to search in Hebrew and English, and to answer in Hebrew (brand, product and shop names stay as the store writes them).
+
+Shop links search in Hebrew at Israeli shops and in English at shops with English catalogues (`en: true` in `shop.js`), so every piece carries both a Hebrew `query` and an English `queryEn`. Yad2 Market has no public search link, so its button opens the clothing section. Vinted is left out because it doesn't operate in Israel.
 
 Other features: shoppable feed with vibe filters, dots on every photo, draw a box to look up one piece, saved closet, restock alerts (checked each visit through the API), scan history, a shareable "fit receipt" image, light and dark themes, drag-and-drop and paste.
 
 **The feed is sample content.** Its people and brands are invented and the photos are AI-generated (Higgsfield), except "Created By God", which is the real Dream Studios photo linking to the store in this repo. Replace it with real creator posts in `assets/js/data/fits.js`.
+
+**Hebrew and right to left.** `index.html` sets `lang="he" dir="rtl"`. The CSS uses logical properties (`margin-inline-start`, `inset-inline-end`...), so the layout mirrors itself; dots on photos stay where the garment is. Arrows are flipped in `icon()`. Product and brand names sit in `<bdi>` so a Latin name like "1951 Raw Selvedge" keeps its order. Archivo and Geist Mono have no Hebrew letters, so Hebrew falls through to Heebo (self-hosted, Hebrew subset only). Money, dates and "5 hours ago" use `he-IL` formatting.
 
 ## Run it locally
 
@@ -73,9 +79,12 @@ Settings in `wrangler.toml`: `DAILY_SCAN_LIMIT` (free deep scans per visitor per
 
 In `assets/js/config.js`:
 
-- `affiliate.skimlinksId` or `affiliate.sovrnKey`: wraps every outbound shop link (sign up at skimlinks.com or sovrn.com).
+- `affiliate.deeplinks`: per-shop deep-link templates, keyed by domain, for example AliExpress through Admitad or ASOS through Awin. `{url}` is replaced with the encoded shop link. These are checked first.
+- `affiliate.skimlinksId` or `affiliate.sovrnKey`: wraps every other outbound shop link. Note that Skimlinks only pays on traffic from North America, Europe and APAC, not Israel.
 - `affiliate.amazonTag`: your Amazon Associates tag, added to Amazon links.
-- `contactEmail`: shows a "Partner with us" button on the For brands page.
+- `contactEmail`: shows a "Partner with us" button on the For brands page, and is the contact in the accessibility statement. Israeli regulations require a real contact there before launch.
+
+The Israeli chains have no public affiliate programmes on the networks; BUSINESS.md describes the direct deals to make instead.
 
 ## Tests
 
@@ -102,4 +111,4 @@ The browser tests use the Chromium that Playwright finds, serve the CDN files fr
 
 ## Credits
 
-MobileCLIP by Apple (Apple sample code licence). Transformers.js by Hugging Face. Claude by Anthropic. Archivo and Geist Mono fonts (SIL OFL, self-hosted). Phosphor Icons (MIT).
+MobileCLIP by Apple (Apple sample code licence). Transformers.js by Hugging Face. Claude by Anthropic. Archivo, Geist Mono and Heebo fonts (SIL OFL, self-hosted). Phosphor Icons (MIT).

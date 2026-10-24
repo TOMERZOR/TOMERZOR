@@ -2,12 +2,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { nameColor, kmeans, dominantColor, denimWash, deltaE, isSkin } from "../assets/js/scan/color.js";
+import { nameColor, kmeans, dominantColor, denimWash, deltaE, isSkin, colorHe, PALETTE } from "../assets/js/scan/color.js";
 import { makeWindows, decodeEmbeddings, scoreEmbedding, pickItems, classifyRegion, THRESHOLD } from "../assets/js/scan/detect.js";
-import { allLabels } from "../assets/js/scan/vocab.js";
+import { allLabels, GROUPS, HE } from "../assets/js/scan/vocab.js";
 
 globalThis.location = new URL("https://tomerzor.github.io/TOMERZOR/fitsource/");
-const { outbound, NEW_SHOPS, RESALE_SHOPS, isExternal } = await import("../assets/js/shop.js");
+const { outbound, queryFor, NEW_SHOPS, RESALE_SHOPS, isExternal } = await import("../assets/js/shop.js");
 const { CONFIG } = await import("../assets/js/config.js");
 
 const b64 = (s) => Buffer.from(s, "base64");
@@ -96,8 +96,15 @@ test("scoreEmbedding returns a probability distribution", () => {
 });
 
 test("shop links and affiliate wrapping", () => {
-  assert.equal(NEW_SHOPS[0].url("black cargo pants"), "https://www.google.com/search?udm=28&q=black%20cargo%20pants");
+  assert.equal(NEW_SHOPS[0].url("ג'ינס"), "https://www.google.co.il/search?udm=28&hl=iw&gl=il&q=%D7%92'%D7%99%D7%A0%D7%A1");
   assert.equal(RESALE_SHOPS.find((s) => s.id === "depop").url("x & y"), "https://www.depop.com/search/?q=x%20%26%20y");
+  // English-catalogue shops get the English words, Israeli shops the Hebrew ones
+  const asos = NEW_SHOPS.find((s) => s.id === "asos");
+  const tx = NEW_SHOPS.find((s) => s.id === "terminalx");
+  assert.equal(queryFor(asos, "ג'ינס רחב", "baggy jeans"), "baggy jeans");
+  assert.equal(queryFor(tx, "ג'ינס רחב", "baggy jeans"), "ג'ינס רחב");
+  assert.equal(queryFor(asos, "ג'ינס רחב", ""), "ג'ינס רחב");
+  assert.ok(!RESALE_SHOPS.some((s) => s.id === "vinted"), "Vinted doesn't operate in Israel");
   assert.equal(outbound("javascript:alert(1)"), null);
   assert.equal(outbound("../product.html#circle-logo-tee"), "../product.html#circle-logo-tee"); // same site: left as is
   assert.equal(isExternal("../product.html"), false);
@@ -106,6 +113,20 @@ test("shop links and affiliate wrapping", () => {
   assert.equal(outbound("https://shop.example.com/p/1"), "https://go.skimresources.com/?id=123X456&xs=1&url=https%3A%2F%2Fshop.example.com%2Fp%2F1");
   CONFIG.affiliate.amazonTag = "fit-20";
   assert.equal(outbound("https://www.amazon.com/s?k=tee"), "https://www.amazon.com/s?k=tee&tag=fit-20");
+  // a per-shop deep link wins over network-wide wrapping
+  CONFIG.affiliate.deeplinks = { "aliexpress.com": "https://ad.admitad.com/g/abc/?ulp={url}" };
+  assert.equal(outbound("https://www.aliexpress.com/wholesale?SearchText=tee"), "https://ad.admitad.com/g/abc/?ulp=https%3A%2F%2Fwww.aliexpress.com%2Fwholesale%3FSearchText%3Dtee");
+  assert.equal(outbound("https://shop.example.com/p/1"), "https://go.skimresources.com/?id=123X456&xs=1&url=https%3A%2F%2Fshop.example.com%2Fp%2F1");
+  CONFIG.affiliate.deeplinks = {};
   CONFIG.affiliate.skimlinksId = "";
   CONFIG.affiliate.amazonTag = "";
+});
+
+test("Hebrew names and colours agree with the garment", () => {
+  assert.equal(colorHe("black", "f"), "שחורה");
+  assert.equal(colorHe("black", "mp"), "שחורים");
+  assert.equal(colorHe("light wash", "m"), "בהיר");
+  assert.equal(colorHe("beige", "fp"), "בז'");
+  for (const list of Object.values(GROUPS)) for (const [, name] of list) assert.ok(HE[name], `Hebrew name for ${name}`);
+  for (const [name] of PALETTE) assert.notEqual(colorHe(name), name, `Hebrew colour for ${name}`);
 });

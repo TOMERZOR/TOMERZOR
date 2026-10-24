@@ -1,4 +1,4 @@
-import { html, icon, money, statusChip, toast, timeAgo } from "../ui.js";
+import { html, icon, money, statusChip, toast, timeAgo, count } from "../ui.js";
 import * as store from "../store.js";
 import { aAttrs, productImg } from "../components.js";
 import { NEW_SHOPS } from "../shop.js";
@@ -9,9 +9,9 @@ let checkNote = ""; // survives re-renders while a check runs
 let checking = false;
 
 const TABS = [
-  ["saved", "Saved", "heart"],
-  ["watching", "Restock alerts", "bell"],
-  ["scans", "Scans", "clock"],
+  ["saved", "שמורים", "heart"],
+  ["watching", "התראות", "bell"],
+  ["scans", "סריקות", "clock"],
 ];
 
 function closetTag(it) {
@@ -19,19 +19,19 @@ function closetTag(it) {
   return html`<article class="tag" data-key="${it.key}">
     <div class="tag__img">${it.img ? html`<img src="${productImg(it)}" alt="" loading="lazy">` : ""}</div>
     <div class="tag__body">
-      <span class="tag__brand">${it.brand || it.shop || "Saved piece"}</span>
-      <h2 class="tag__name">${it.name}</h2>
+      <span class="tag__brand"><bdi>${it.brand || it.shop || "פריט שמור"}</bdi></span>
+      <h2 class="tag__name"><bdi>${it.name}</bdi></h2>
       <div class="tag__meta">
-        ${it.price != null ? html`<span class="price">${money(it.price, it.currency || "USD")}</span>` : ""}
-        ${it.backInStock ? html`<span class="flag">${icon("bell-ringing-fill")}Back in stock</span>` : statusChip(it.status)}
+        ${it.price != null ? html`<span class="price">${money(it.price, it.currency || "ILS")}</span>` : ""}
+        ${it.backInStock ? html`<span class="flag">${icon("bell-ringing-fill")}חזר למלאי</span>` : statusChip(it.status)}
       </div>
-      ${it.watch ? html`<span class="label">${it.checkedAt ? `checked ${timeAgo(it.checkedAt)}` : "not checked yet"}</span>` : ""}
+      ${it.watch ? html`<span class="label">${it.checkedAt ? `נבדק ${timeAgo(it.checkedAt)}` : "עוד לא נבדק"}</span>` : ""}
       <div class="tag__actions">
-        <a class="btn btn--xs" ${aAttrs(url)}>${icon("arrow-up-right")}${it.url ? (it.shop ? `Shop at ${it.shop}` : "Shop") : "Shop similar"}</a>
-        ${it.fitId ? html`<a class="btn btn--xs btn--ghost" href="#/fit/${it.fitId}">View fit</a>` : ""}
+        <a class="btn btn--xs" ${aAttrs(url)}>${icon("arrow-up-right")}${it.url ? (it.shop ? `לקנייה ב־${it.shop}` : "לקנייה") : "דומים בחנויות"}</a>
+        ${it.fitId ? html`<a class="btn btn--xs btn--ghost" href="#/fit/${it.fitId}">ללוק</a>` : ""}
         <span class="spacer"></span>
-        ${it.url ? html`<button type="button" class="iconbtn" data-act="watch" aria-pressed="${it.watch}" aria-label="${it.watch ? "Stop restock alert" : "Alert me when it's back"}">${icon(it.watch ? "bell-ringing-fill" : "bell")}</button>` : ""}
-        <button type="button" class="iconbtn" data-act="remove" aria-label="Remove ${it.name}">${icon("trash")}</button>
+        ${it.url ? html`<button type="button" class="iconbtn" data-act="watch" aria-pressed="${it.watch}" aria-label="${it.watch ? "ביטול התראת מלאי" : "עדכנו אותי כשיחזור למלאי"}">${icon(it.watch ? "bell-ringing-fill" : "bell")}</button>` : ""}
+        <button type="button" class="iconbtn" data-act="remove" aria-label="הסרת ${it.name}">${icon("trash")}</button>
       </div>
     </div>
   </article>`;
@@ -40,13 +40,13 @@ function closetTag(it) {
 function panel(tab) {
   if (tab === "scans") {
     const list = store.scans();
-    if (!list.length) return empty("clock", "No scans yet", "Scans you run are kept here, in this browser, so you can come back to them.");
+    if (!list.length) return empty("clock", "עוד אין סריקות", "הסריקות שלכם נשמרות כאן, בדפדפן הזה, כדי שתוכלו לחזור אליהן.");
     return html`<div class="scan-grid">${list.map(
       (s) => html`<div class="card" data-scan="${s.id}">
-        <a href="#/scan/${s.id}" class="shot shot--frame" aria-label="Open scan from ${timeAgo(s.createdAt)}"><img src="${s.photo}" alt="" loading="lazy"></a>
+        <a href="#/scan/${s.id}" class="shot shot--frame" aria-label="פתיחת הסריקה מ${timeAgo(s.createdAt)}"><img src="${s.photo}" alt="" loading="lazy"></a>
         <div class="card__meta">
-          <div><div class="card__title">${s.items.length} piece${s.items.length === 1 ? "" : "s"}</div><div class="card__by">${s.engine === "deep" ? "Deep scan" : "Quick scan"}, ${timeAgo(s.createdAt)}</div></div>
-          <button type="button" class="iconbtn" data-del-scan="${s.id}" aria-label="Delete this scan">${icon("trash")}</button>
+          <div><div class="card__title">${count(s.items.length, "פריט אחד", "פריטים")}</div><div class="card__by">${s.engine === "deep" ? "סריקה מעמיקה" : "סריקה מהירה"}, ${timeAgo(s.createdAt)}</div></div>
+          <button type="button" class="iconbtn" data-del-scan="${s.id}" aria-label="מחיקת הסריקה">${icon("trash")}</button>
         </div>
       </div>`,
     )}</div>`;
@@ -54,15 +54,15 @@ function panel(tab) {
   const items = store.closet().filter((i) => (tab === "watching" ? i.watch : true));
   if (!items.length) {
     return tab === "watching"
-      ? empty("bell", "No restock alerts", "When a piece you scan is sold out, tap Alert me. FitSource checks the shop and flags it here when it's back.")
-      : empty("heart", "Your closet is empty", "Tap the heart on any piece in the feed or in your scans to keep it here.");
+      ? empty("bell", "אין התראות מלאי", "כשפריט שסרקתם אזל, לחצו על \"עדכנו אותי\". FitSource בודק את החנות ומסמן אותו כאן כשהוא חוזר.")
+      : empty("heart", "הארון ריק", "לחצו על הלב בכל פריט בפיד או בסריקות שלכם כדי לשמור אותו כאן.");
   }
-  return html`${tab === "watching" ? html`<div class="toolbar" style="margin-bottom:16px"><button type="button" class="btn btn--sm btn--ghost" data-check ${checking ? "disabled" : ""}>${icon("arrows-clockwise")}Check now</button><span class="muted" data-check-note style="font-size:.88rem">${checkNote}</span></div>` : ""}
+  return html`${tab === "watching" ? html`<div class="toolbar" style="margin-bottom:16px"><button type="button" class="btn btn--sm btn--ghost" data-check ${checking ? "disabled" : ""}>${icon("arrows-clockwise")}בדיקה עכשיו</button><span class="muted" data-check-note style="font-size:.88rem">${checkNote}</span></div>` : ""}
     <div class="closet-grid">${items.map(closetTag)}</div>`;
 }
 
 function empty(ic, title, text) {
-  return html`<div class="empty">${icon(ic)}<h2 class="h3">${title}</h2><p>${text}</p><a class="btn btn--sm" href="#/">${icon("scan")}Scan a fit</a></div>`;
+  return html`<div class="empty">${icon(ic)}<h2 class="h3">${title}</h2><p>${text}</p><a class="btn btn--sm" href="#/">${icon("scan")}סרקו לוק</a></div>`;
 }
 
 function counts() {
@@ -74,8 +74,8 @@ function render([tab = "saved"]) {
   const n = counts();
   return html`
   <section class="wrap pagehead">
-    <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">Your closet</h1>
-    <p class="lede">Saved pieces, restock alerts and past scans. Everything stays in this browser.</p>
+    <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">הארון שלכם</h1>
+    <p class="lede">פריטים שמורים, התראות מלאי וסריקות קודמות. הכל נשאר בדפדפן הזה.</p>
   </section>
   <div class="wrap">
     <div class="tabs" role="tablist">
@@ -99,7 +99,7 @@ function mount(root, [tab = "saved"]) {
     const del = e.target.closest("[data-del-scan]");
     if (del) {
       store.deleteScan(del.dataset.delScan);
-      toast("Scan deleted");
+      toast("הסריקה נמחקה");
       return;
     }
     const btn = e.target.closest("[data-act]");
@@ -109,10 +109,10 @@ function mount(root, [tab = "saved"]) {
     if (!item) return;
     if (btn.dataset.act === "remove") {
       store.removeItem(key);
-      toast("Removed", { action: "Undo", onAction: () => store.saveItem(item, { watch: item.watch }) });
+      toast("הוסר", { action: "ביטול", onAction: () => store.saveItem(item, { watch: item.watch }) });
     } else if (btn.dataset.act === "watch") {
       store.setWatch(key, !item.watch);
-      toast(item.watch ? "Restock alert off" : "Restock alert on");
+      toast(item.watch ? "התראת המלאי בוטלה" : "התראת המלאי הופעלה");
     }
   });
 
@@ -123,7 +123,7 @@ function mount(root, [tab = "saved"]) {
     deepScanStatus().then((on) => {
       if (!on && note) {
         btn.disabled = true;
-        note.textContent = "Live stock checks need the FitSource API, which isn't connected on this site.";
+        note.textContent = "בדיקת מלאי חיה צריכה את שרת FitSource, שלא מחובר באתר הזה.";
       }
     });
     btn.addEventListener("click", async () => {
@@ -135,7 +135,7 @@ function mount(root, [tab = "saved"]) {
       if (checking) return;
       checking = true;
       btn.disabled = true;
-      setNote("Checking shops...");
+      setNote("בודקים בחנויות...");
       let backs = [];
       try {
         backs = await recheckWatches({ force: true });
@@ -143,7 +143,8 @@ function mount(root, [tab = "saved"]) {
         checking = false;
       }
       const flagged = store.closet().filter((i) => i.watch && i.backInStock).length;
-      setNote(backs.length ? `${backs.length} back in stock` : flagged ? `${flagged} back in stock` : "Nothing new yet. We'll keep checking.");
+      const back = backs.length || flagged;
+      setNote(back ? (back === 1 ? "פריט אחד חזר למלאי" : `${back} פריטים חזרו למלאי`) : "עוד אין חדש. נמשיך לבדוק.");
       const b = area.querySelector("[data-check]");
       if (b) b.disabled = false;
     });

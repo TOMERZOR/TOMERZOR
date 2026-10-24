@@ -34,7 +34,7 @@ export async function deepScan(apiBase, { image, focus = null, hint = null }, { 
     });
   } catch (err) {
     if (err.name === "AbortError") throw err;
-    throw new ApiError("network", "Could not reach the scan server.");
+    throw new ApiError("network", "לא הצלחנו להתחבר לשרת הסריקה.");
   }
   if (!res.ok) {
     let body = {};
@@ -43,9 +43,9 @@ export async function deepScan(apiBase, { image, focus = null, hint = null }, { 
     } catch {
       // not JSON
     }
-    throw new ApiError(body.error || `http_${res.status}`, body.message || "The scan server returned an error.");
+    throw new ApiError(body.error || `http_${res.status}`, body.message || "שרת הסריקה החזיר שגיאה.");
   }
-  if (!res.body || !res.body.getReader) throw new ApiError("stream", "This browser cannot read the scan stream.");
+  if (!res.body || !res.body.getReader) throw new ApiError("stream", "הדפדפן הזה לא יכול לקרוא את תוצאות הסריקה.");
 
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
@@ -60,7 +60,7 @@ export async function deepScan(apiBase, { image, focus = null, hint = null }, { 
       return;
     }
     if (ev.t === "result") result = ev;
-    else if (ev.t === "error") throw new ApiError(ev.code || "scan_failed", ev.message || "The scan failed.");
+    else if (ev.t === "error") throw new ApiError(ev.code || "scan_failed", ev.message || "הסריקה נכשלה.");
     else onEvent(ev);
   };
   for (;;) {
@@ -74,6 +74,6 @@ export async function deepScan(apiBase, { image, focus = null, hint = null }, { 
     }
   }
   handle(buffer + decoder.decode());
-  if (!result) throw new ApiError("incomplete", "The scan stopped before it finished. Try again.");
+  if (!result) throw new ApiError("incomplete", "הסריקה נעצרה לפני שהסתיימה. נסו שוב.");
   return { ...result.data, cached: Boolean(result.cached) };
 }

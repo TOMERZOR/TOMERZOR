@@ -1,6 +1,6 @@
 // "Fit receipt": a story-sized image listing every piece, made on a canvas
-// so people can post it. Nothing is uploaded.
-import { html, icon, money, STATUS_TEXT } from "./ui.js";
+// so people can post it. Nothing is uploaded. Laid out right to left.
+import { html, icon, money, STATUS_TEXT, LOCALE } from "./ui.js";
 
 const W = 1080;
 const H = 1920;
@@ -32,10 +32,19 @@ function fit(ctx, text, maxWidth) {
   return t.trimEnd() + "...";
 }
 
-const font = (weight, size, family = "Archivo") => `${weight} ${size}px "${family}", system-ui, sans-serif`;
+// Hebrew text runs right to left; a Latin product name like "1951 Raw Selvedge" keeps its own order.
+const dirOf = (text) => (/[\u0590-\u05FF]/.test(text) ? "rtl" : "ltr");
+function fillDir(ctx, text, x, y) {
+  const prev = ctx.direction;
+  ctx.direction = dirOf(text);
+  ctx.fillText(text, x, y);
+  ctx.direction = prev;
+}
+
+const font = (weight, size, family = "Archivo") => `${weight} ${size}px "${family}", "Heebo", system-ui, sans-serif`;
 
 export async function drawReceipt({ title, by, photo, items }) {
-  await Promise.all([document.fonts.load(font(800, 60)), document.fonts.load(font(600, 34)), document.fonts.load(font(500, 26, "Geist Mono"))]).catch(() => {});
+  await Promise.all([document.fonts.load(font(800, 60)), document.fonts.load(font(600, 34)), document.fonts.load(font(500, 26, "Geist Mono")), document.fonts.load(font(700, 34, "Heebo"), "אבג")]).catch(() => {});
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
@@ -44,12 +53,13 @@ export async function drawReceipt({ title, by, photo, items }) {
 
   ctx.fillStyle = paper;
   ctx.fillRect(0, 0, W, H);
+  ctx.direction = "rtl";
 
-  // header: mark + wordmark, receipt label
+  // header: mark + wordmark on the right, receipt label on the left
   ctx.strokeStyle = ink;
   ctx.lineWidth = 5;
   ctx.lineCap = "round";
-  const mx = M, my = 60, s = 52;
+  const s = 52, mx = W - M - s, my = 60;
   ctx.beginPath();
   ctx.moveTo(mx, my + 16); ctx.lineTo(mx, my); ctx.lineTo(mx + 16, my);
   ctx.moveTo(mx + s - 16, my); ctx.lineTo(mx + s, my); ctx.lineTo(mx + s, my + 16);
@@ -66,14 +76,18 @@ export async function drawReceipt({ title, by, photo, items }) {
   ctx.fillStyle = ink;
   ctx.font = font(850, 44);
   ctx.textBaseline = "middle";
-  ctx.fillText("FITSOURCE", mx + s + 20, my + s / 2 + 2);
-  if ("fontStretch" in ctx) ctx.fontStretch = "normal";
-  ctx.font = font(600, 24, "Geist Mono");
   ctx.textAlign = "right";
-  ctx.fillText("FIT RECEIPT", W - M, my + 14);
-  ctx.fillStyle = grey;
-  ctx.fillText(new Date().toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }).toUpperCase(), W - M, my + 44);
+  ctx.direction = "ltr";
+  ctx.fillText("FITSOURCE", mx - 20, my + s / 2 + 2);
+  ctx.direction = "rtl";
+  if ("fontStretch" in ctx) ctx.fontStretch = "normal";
+  ctx.font = font(700, 26, "Geist Mono");
   ctx.textAlign = "left";
+  ctx.fillText("קבלה ללוק", M, my + 14);
+  ctx.fillStyle = grey;
+  ctx.font = font(600, 24, "Geist Mono");
+  ctx.fillText(new Date().toLocaleDateString(LOCALE, { day: "2-digit", month: "short", year: "numeric" }), M, my + 44);
+  ctx.textAlign = "right";
 
   // photo, fitted whole inside the frame so every dot is visible
   const fx = M, fy = 150, fw = W - 2 * M, fh = 960;
@@ -102,7 +116,7 @@ export async function drawReceipt({ title, by, photo, items }) {
     ctx.font = font(700, 24, "Geist Mono");
     ctx.textAlign = "center";
     ctx.fillText(String(i + 1), ix, iy + 1);
-    ctx.textAlign = "left";
+    ctx.textAlign = "right";
   });
 
   // title
@@ -110,12 +124,12 @@ export async function drawReceipt({ title, by, photo, items }) {
   if ("fontStretch" in ctx) ctx.fontStretch = "ultra-expanded";
   ctx.fillStyle = ink;
   ctx.font = font(850, 54);
-  ctx.fillText(fit(ctx, (title || "My fit").toUpperCase(), W - 2 * M), M, y);
+  fillDir(ctx, fit(ctx, (title || "הלוק שלי").toUpperCase(), W - 2 * M), W - M, y);
   if ("fontStretch" in ctx) ctx.fontStretch = "normal";
   y += 48;
   ctx.fillStyle = grey;
   ctx.font = font(500, 26, "Geist Mono");
-  ctx.fillText(fit(ctx, by || "", W - 2 * M), M, y);
+  fillDir(ctx, fit(ctx, by || "", W - 2 * M), W - M, y);
 
   // item lines
   y += 46;
@@ -136,34 +150,34 @@ export async function drawReceipt({ title, by, photo, items }) {
     const cy = y + rowH / 2 + 2;
     ctx.fillStyle = grey;
     ctx.font = font(600, 24, "Geist Mono");
-    ctx.fillText(String(i + 1).padStart(2, "0"), M, cy - 14);
-    const priceText = it.price != null ? money(it.price, it.currency || "USD") : "";
+    ctx.fillText(String(i + 1).padStart(2, "0"), W - M, cy - 14);
+    const priceText = it.price != null ? money(it.price, it.currency || "ILS").replace(/\u200f/g, "") : "";
     const statusText = it.status ? STATUS_TEXT[it.status] || "" : "";
     ctx.font = font(600, 28, "Geist Mono");
     const rightW = Math.max(ctx.measureText(priceText).width, 160);
     ctx.fillStyle = ink;
     ctx.font = font(650, 33);
-    ctx.fillText(fit(ctx, it.name, W - 2 * M - 70 - rightW - 24), M + 70, cy - 14);
+    fillDir(ctx, fit(ctx, it.name, W - 2 * M - 70 - rightW - 24), W - M - 70, cy - 14);
     ctx.fillStyle = grey;
     ctx.font = font(500, 23, "Geist Mono");
-    ctx.fillText(fit(ctx, (it.brand || "").toUpperCase(), W - 2 * M - 70 - rightW - 24), M + 70, cy + 22);
-    ctx.textAlign = "right";
+    fillDir(ctx, fit(ctx, (it.brand || "").toUpperCase(), W - 2 * M - 70 - rightW - 24), W - M - 70, cy + 22);
+    ctx.textAlign = "left";
     ctx.fillStyle = ink;
     ctx.font = font(600, 30, "Geist Mono");
-    ctx.fillText(priceText, W - M, cy - 14);
+    ctx.fillText(priceText, M, cy - 14);
     if (statusText) {
       ctx.font = font(700, 20, "Geist Mono");
       ctx.fillStyle = it.status === "sold_out" ? red : it.status === "low_stock" ? "#a05f00" : grey;
-      ctx.fillText(statusText.toUpperCase(), W - M, cy + 22);
+      ctx.fillText(statusText, M, cy + 22);
     }
-    ctx.textAlign = "left";
-    if (it.price != null) totals[it.currency || "USD"] = (totals[it.currency || "USD"] || 0) + it.price;
+    ctx.textAlign = "right";
+    if (it.price != null) totals[it.currency || "ILS"] = (totals[it.currency || "ILS"] || 0) + it.price;
     y += rowH;
   });
   if (items.length > shown.length) {
     ctx.fillStyle = grey;
     ctx.font = font(500, 24, "Geist Mono");
-    ctx.fillText(`+ ${items.length - shown.length} more`, M + 70, y + 10);
+    ctx.fillText(`ועוד ${items.length - shown.length}`, W - M - 70, y + 10);
     y += 34;
   }
   dash();
@@ -171,31 +185,32 @@ export async function drawReceipt({ title, by, photo, items }) {
     y += 52;
     ctx.fillStyle = ink;
     ctx.font = font(750, 32);
-    ctx.fillText("TOTAL", M, y);
-    ctx.textAlign = "right";
-    ctx.font = font(650, 34, "Geist Mono");
-    ctx.fillText(Object.entries(totals).map(([c, v]) => money(v, c)).join(" + "), W - M, y);
+    ctx.fillText("סה״כ", W - M, y);
     ctx.textAlign = "left";
+    ctx.font = font(650, 34, "Geist Mono");
+    ctx.fillText(Object.entries(totals).map(([c, v]) => money(v, c).replace(/\u200f/g, "")).join(" + "), M, y);
+    ctx.textAlign = "right";
   }
 
-  // footer: barcode and where to scan
+  // footer: barcode on the right, where to scan on the left
   const by0 = H - 150;
-  let bx = M;
+  let bx = W - M;
   const seed = [...(title || "fit")].reduce((a, c) => a + c.charCodeAt(0), 7);
-  for (let k = 0; bx < M + 360; k++) {
+  for (let k = 0; bx > W - M - 360; k++) {
     const w = 3 + ((seed * (k + 3)) % 7);
     ctx.fillStyle = k % 2 ? paper : ink;
-    ctx.fillRect(bx, by0, w, 70);
-    bx += w;
+    ctx.fillRect(bx - w, by0, w, 70);
+    bx -= w;
   }
   ctx.fillStyle = ink;
-  ctx.font = font(600, 26, "Geist Mono");
-  ctx.textAlign = "right";
-  ctx.fillText("SCAN ANY FIT", W - M, by0 + 22);
+  ctx.font = font(700, 28, "Geist Mono");
+  ctx.textAlign = "left";
+  ctx.fillText("סרקו כל לוק", M, by0 + 22);
   ctx.fillStyle = grey;
   ctx.font = font(500, 24, "Geist Mono");
-  ctx.fillText(fit(ctx, (location.host + location.pathname).replace(/index\.html$/, "").replace(/\/$/, ""), 560), W - M, by0 + 58);
-  ctx.textAlign = "left";
+  ctx.direction = "ltr";
+  ctx.fillText(fit(ctx, (location.host + location.pathname).replace(/index\.html$/, "").replace(/\/$/, ""), 560), M, by0 + 58);
+  ctx.direction = "rtl";
 
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png"));
 }
@@ -210,13 +225,13 @@ export async function openReceipt(data) {
   modal.className = "modal";
   modal.setAttribute("role", "dialog");
   modal.setAttribute("aria-modal", "true");
-  modal.setAttribute("aria-label", "Fit receipt");
+  modal.setAttribute("aria-label", "קבלה ללוק");
   modal.innerHTML = html`<div class="modal__card">
-    <div class="modal__head"><h2 class="h3">Your fit receipt</h2><button type="button" class="iconbtn" data-close aria-label="Close">${icon("x")}</button></div>
-    <img src="${url}" alt="Fit receipt listing every piece">
+    <div class="modal__head"><h2 class="h3">הקבלה של הלוק</h2><button type="button" class="iconbtn" data-close aria-label="סגירה">${icon("x")}</button></div>
+    <img src="${url}" alt="קבלה עם כל הפריטים בלוק">
     <div class="modal__actions">
-      <a class="btn" href="${url}" download="fitsource-receipt.png">${icon("download-simple")}Download</a>
-      ${canShare ? html`<button type="button" class="btn btn--accent" data-share>${icon("share-network")}Share</button>` : ""}
+      <a class="btn" href="${url}" download="fitsource-receipt.png">${icon("download-simple")}הורדה</a>
+      ${canShare ? html`<button type="button" class="btn btn--accent" data-share>${icon("share-network")}שיתוף</button>` : ""}
     </div>
   </div>`.s;
   const prevFocus = document.activeElement;
@@ -239,6 +254,6 @@ export async function openReceipt(data) {
   const shareBtn = modal.querySelector("[data-share]");
   shareBtn &&
     shareBtn.addEventListener("click", () => {
-      navigator.share({ files: [file], title: "My fit, sourced", text: "Every piece and where to buy it, via FitSource" }).catch(() => {});
+      navigator.share({ files: [file], title: "הלוק שלי, עם מקור", text: "כל פריט ואיפה לקנות אותו, דרך FitSource" }).catch(() => {});
     });
 }

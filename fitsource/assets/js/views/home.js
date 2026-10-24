@@ -19,26 +19,26 @@ function render() {
     <div class="wrap hero__grid">
       <div>
         <h1 class="display hero__title">
-          <span class="line"><span style="--d:0">Find the shop</span></span>
-          <span class="line"><span style="--d:1">behind <span class="hl">any fit</span></span></span>
+          <span class="line"><span style="--d:0">מוצאים את החנות</span></span>
+          <span class="line"><span style="--d:1">מאחורי <span class="hl">כל לוק</span></span></span>
         </h1>
-        <p class="lede">Drop a screenshot from anywhere. We name every piece, find where it's sold, and flag what's sold out.</p>
+        <p class="lede">צילום מסך מכל מקום מספיק. אנחנו מזהים כל פריט, מוצאים איפה הוא נמכר ומסמנים מה אזל מהמלאי.</p>
         <div class="drop" data-drop>
           <div class="drop__row">
             <label class="btn btn--accent">
-              ${icon("upload-simple")}Choose a photo
+              ${icon("upload-simple")}בחרו תמונה
               <input type="file" accept="image/*" class="sr-only" data-file>
             </label>
-            <span class="drop__hint">or drag it in, or paste with <kbd>Ctrl</kbd> <kbd>V</kbd></span>
+            <span class="drop__hint">או גררו לכאן, או הדביקו עם <kbd dir="ltr">Ctrl V</kbd></span>
           </div>
           <p class="drop__error" role="alert" data-error></p>
           <div class="drop__samples">
-            <span>No photo handy? Try one:</span>
+            <span>אין תמונה? נסו דוגמה:</span>
             ${SAMPLES.map((id) => {
               const f = findFit(id);
-              return html`<button type="button" class="sample" data-sample="${id}" aria-label="Scan the ${f.title} sample photo"><img src="${fitImg(f, true)}" alt="" loading="lazy"></button>`;
+              return html`<button type="button" class="sample" data-sample="${id}" aria-label="סריקת תמונת הדוגמה ${f.title}"><img src="${fitImg(f, true)}" alt="" loading="lazy"></button>`;
             })}
-            <span class="engine-note" data-engine>${icon("lock-simple")}<span>Quick scans run on your device. Your photo isn't uploaded.</span></span>
+            <span class="engine-note" data-engine>${icon("lock-simple")}<span>סריקה מהירה רצה על המכשיר שלכם. התמונה לא עולה לשום מקום.</span></span>
           </div>
         </div>
       </div>
@@ -51,7 +51,7 @@ function render() {
           cls: "demo__shot",
         })}
         <div class="demo__tag" data-demo-tag>${feedTag(demo.items[0], 0, { fitId: demo.id, mini: true })}</div>
-        <div class="demo__caption"><span>${demo.title} by @${demo.handle}</span><a href="#/fit/${demo.id}">Open fit ${icon("arrow-right")}</a></div>
+        <div class="demo__caption"><span>${demo.title} של <bdi>@${demo.handle}</bdi></span><a href="#/fit/${demo.id}">לפתיחת הלוק ${icon("arrow-right")}</a></div>
       </div>
     </div>
   </section>
@@ -59,8 +59,8 @@ function render() {
   <section class="section" style="padding-top:0">
     <div class="wrap">
       <div class="section__head">
-        <h2 class="h2" data-reveal>Trending now</h2>
-        <a class="link-arrow" href="#/feed" data-reveal>See the feed ${icon("arrow-right")}</a>
+        <h2 class="h2" data-reveal>חם עכשיו</h2>
+        <a class="link-arrow" href="#/feed" data-reveal>לפיד המלא ${icon("arrow-right")}</a>
       </div>
       <div class="rail">${trending.map((f, i) => card(f, { delay: i }))}</div>
     </div>
@@ -68,26 +68,26 @@ function render() {
 
   <section class="section">
     <div class="wrap">
-      <div class="section__head"><h2 class="h2" data-reveal>From screenshot<br>to checkout</h2></div>
+      <div class="section__head"><h2 class="h2" data-reveal>מצילום מסך<br>עד לקופה</h2></div>
       <div class="bento">
         <div class="cell cell--a" data-reveal>
-          <h3 class="cell__big">Every piece, sourced</h3>
-          <p>FitSource reads the photo, names each piece, and searches shops for the original. Deep scans check the stock at every shop it finds.</p>
+          <h3 class="cell__big">כל פריט, עם מקור</h3>
+          <p>FitSource קורא את התמונה, מזהה כל פריט ומחפש את המקור בחנויות. סריקה מעמיקה גם בודקת את המלאי בכל חנות שהיא מוצאת.</p>
           <div class="cell__visual">
-            ${shot({ src: fitImg(tm, true), alt: `${tm.title} being scanned`, spots: tm.items.map((i) => ({ x: i.x, y: i.y, label: i.name, sold: i.status === "sold_out" })) })}
+            ${shot({ src: fitImg(tm, true), alt: `${tm.title} בסריקה`, spots: tm.items.map((i) => ({ x: i.x, y: i.y, label: i.name, sold: i.status === "sold_out" })) })}
             <div class="log" data-demo-log aria-hidden="true"></div>
           </div>
         </div>
         <div class="cell cell--b" data-reveal style="--d:1">
-          <h3 class="cell__big">Any screenshot works</h3>
-          <p>TikTok, Instagram, Pinterest, a friend's story. If you can see the fit, you can scan it.</p>
+          <h3 class="cell__big">כל צילום מסך עובד</h3>
+          <p>טיקטוק, אינסטגרם, פינטרסט, סטורי של חברה. אם רואים את הלוק, אפשר לסרוק אותו.</p>
           <div class="shots-row" aria-hidden="true">${["varsity-rewind", "linen-season", "shop-floor"].map((id) => html`<img src="${fitImg(findFit(id), true)}" alt="" loading="lazy">`)}</div>
         </div>
         <div class="cell cell--c" data-reveal style="--d:2">
           ${icon("lock-simple")}
-          <h3 class="h3">Your photo stays yours</h3>
-          <p>Quick scans run right in your browser. Nothing is uploaded, nothing is kept.</p>
-          <div class="ledger" aria-hidden="true"><div>photo uploaded<b>never</b></div><div>runs on<b>your device</b></div><div>account needed<b>no</b></div></div>
+          <h3 class="h3">התמונה נשארת שלכם</h3>
+          <p>סריקה מהירה רצה ישירות בדפדפן. שום דבר לא עולה ושום דבר לא נשמר.</p>
+          <div class="ledger" aria-hidden="true"><div>העלאת התמונה<b>אף פעם</b></div><div>רץ על<b>המכשיר שלכם</b></div><div>צריך חשבון<b>לא</b></div></div>
         </div>
       </div>
     </div>
@@ -97,15 +97,15 @@ function render() {
     <div class="wrap split">
       <div class="split__visual" data-reveal>
         ${feedTag(soldItem, 0, { fitId: demo.id, mini: true })}
-        ${feedTag({ ...soldItem, id: "demo-resale", brand: "Resale listing", name: soldItem.name + ", worn twice", price: soldItem.resale, status: "in_stock" }, 1, { mini: true })}
+        ${feedTag({ ...soldItem, id: "demo-resale", brand: "מודעת יד שנייה", name: soldItem.name + ", נלבש פעמיים", price: soldItem.resale, status: "in_stock" }, 1, { mini: true })}
         ${feedTag(findFit("null-signal").items[0], 2, { mini: true })}
       </div>
       <div>
-        <h2 class="h2" data-reveal>Sold out isn't<br>the end</h2>
+        <h2 class="h2" data-reveal>אזל מהמלאי?<br>זה לא הסוף</h2>
         <ul class="points">
-          <li data-reveal style="--d:1"><span class="ico">${icon("bell")}</span><div><strong>Restock alerts</strong><span>Watch a sold-out piece. FitSource checks the shop and tells you when it's back.</span></div></li>
-          <li data-reveal style="--d:2"><span class="ico">${icon("recycle")}</span><div><strong>Resale, one tap away</strong><span>Jump straight to the same piece on Depop, Vinted, eBay and Grailed.</span></div></li>
-          <li data-reveal style="--d:3"><span class="ico">${icon("tag")}</span><div><strong>Lookalikes in stock</strong><span>Close matches at other price points, so the fit is never out of reach.</span></div></li>
+          <li data-reveal style="--d:1"><span class="ico">${icon("bell")}</span><div><strong>התראות חזרה למלאי</strong><span>עקבו אחרי פריט שאזל. FitSource בודק את החנות ומעדכן אתכם כשהוא חוזר.</span></div></li>
+          <li data-reveal style="--d:2"><span class="ico">${icon("recycle")}</span><div><strong>יד שנייה, בלחיצה אחת</strong><span>קפיצה ישירה לאותו פריט באתרי יד שנייה, בארץ ובעולם.</span></div></li>
+          <li data-reveal style="--d:3"><span class="ico">${icon("tag")}</span><div><strong>דומים שיש במלאי</strong><span>התאמות קרובות בטווחי מחיר אחרים, כך שהלוק תמיד בהישג יד.</span></div></li>
         </ul>
       </div>
     </div>
@@ -115,13 +115,13 @@ function render() {
     <div class="wrap">
       <div class="band" data-reveal>
         <div>
-          <h2 class="h2">Free for you.<br>Here's the deal.</h2>
+          <h2 class="h2">בחינם בשבילכם.<br>וזה הדיל.</h2>
         </div>
         <div>
-          <p>Shops pay FitSource a small commission when you buy through some of our links. You pay the same price, and it never changes what we show you. Brands can also claim their products and see what people are hunting for.</p>
+          <p>חנויות משלמות ל־FitSource עמלה קטנה כשקונים דרך חלק מהקישורים שלנו. אתם משלמים אותו מחיר, וזה אף פעם לא משנה מה אנחנו מראים לכם. מותגים יכולים גם לנהל את המוצרים שלהם ולראות מה אנשים מחפשים.</p>
           <div class="band__actions">
-            <a class="btn btn--accent" href="#/feed">${icon("squares-four")}Browse the feed</a>
-            <a class="btn btn--ghost" href="#/brands">For brands</a>
+            <a class="btn btn--accent" href="#/feed">${icon("squares-four")}לפיד</a>
+            <a class="btn btn--ghost" href="#/brands">למותגים</a>
           </div>
         </div>
       </div>
@@ -130,13 +130,13 @@ function render() {
 }
 
 const LOG_LINES = [
-  ["read", "4 pieces in the photo"],
-  ["search", "olive 3-layer shell jacket"],
-  ["open", "northpine.com"],
-  ["stock", "Ridge 3L Shell: in stock"],
-  ["search", "beige nylon cargo pant cuffed"],
-  ["stock", "Trail Cargo: sold out"],
-  ["resale", "found on Grailed from $85"],
+  ["קורא", "4 פריטים בתמונה"],
+  ["מחפש", "מעיל של 3 שכבות בצבע זית"],
+  ["פותח", "northpine.com"],
+  ["מלאי", "Ridge 3L Shell: במלאי"],
+  ["מחפש", "מכנסי דגמ\"ח ניילון בז'"],
+  ["מלאי", "Trail Cargo: אזל"],
+  ["יד 2", "נמצא ב־eBay מ־₪290"],
 ];
 
 function mount(root) {
@@ -167,7 +167,7 @@ function mount(root) {
         const blob = await res.blob();
         startScan(new File([blob], `${fit.id}.jpg`, { type: "image/jpeg" }));
       } catch {
-        errorEl.textContent = "Couldn't load that sample. Check your connection and try again.";
+        errorEl.textContent = "לא הצלחנו לטעון את הדוגמה. בדקו את החיבור ונסו שוב.";
       }
     }),
   );
@@ -175,7 +175,7 @@ function mount(root) {
   deepScanStatus().then((deep) => {
     const note = root.querySelector("[data-engine] span");
     if (CONFIG.scanDisabledMessage && note) note.textContent = CONFIG.scanDisabledMessage;
-    else if (deep && note) note.textContent = "Deep scan is on: exact shops and live stock.";
+    else if (deep && note) note.textContent = "סריקה מעמיקה פעילה: חנויות מדויקות ומלאי בזמן אמת.";
   });
 
   // ---- hero demo: walk through the pieces one by one ----
@@ -219,7 +219,7 @@ function mount(root) {
     const [k, v] = LOG_LINES[n % LOG_LINES.length];
     const line = document.createElement("div");
     line.className = "log__line";
-    line.innerHTML = html`<span class="k">${k}</span><span>${v}</span>`.s;
+    line.innerHTML = html`<span class="k">${k}</span><bdi>${v}</bdi>`.s;
     log.appendChild(line);
     while (log.children.length > 6) log.firstElementChild.remove();
     n++;

@@ -1,5 +1,5 @@
 // Scan page: runs the scan with live progress, then shows what was found.
-import { html, icon, money, statusChip, toast, reduceMotion } from "../ui.js";
+import { html, icon, money, statusChip, toast, reduceMotion, count, CATEGORY_NAME } from "../ui.js";
 import { shot, shopSearch, updateShopLinks, aAttrs } from "../components.js";
 import { takePending, hasPending, getCurrent, setCurrent, startScan } from "../state.js";
 import { prepareImage, runScan, runRegion, cropThumb, ImageError } from "../scan/engine.js";
@@ -7,14 +7,13 @@ import * as store from "../store.js";
 import { openReceipt } from "../share.js";
 import { bindTagActions, linkSpotsAndTags } from "./shared.js";
 
-const CATEGORY_NAME = { outerwear: "Outerwear", top: "Top", bottom: "Bottoms", dress: "Dress", footwear: "Shoes", bag: "Bag", headwear: "Hat", eyewear: "Eyewear", jewelry: "Jewellery", accessory: "Accessory" };
-const KIND = { original: "Original", exact: "Exact", close: "Close", similar: "Similar", resale: "Resale" };
-const CONF = { exact: "Exact product found", likely: "Probably this one", similar: "Lookalikes" };
+const KIND = { original: "המקור", exact: "זהה", close: "כמעט זהה", similar: "דומה", resale: "יד שנייה" };
+const CONF = { exact: "נמצא המוצר המדויק", likely: "כנראה זה", similar: "דומים" };
 
 function render([id]) {
   if (id) {
     if (!store.getScan(id) && !(getCurrent() && getCurrent().id === id)) {
-      return html`<section class="wrap pagehead"><h1 class="h2">Scan not found</h1><p class="lede">Scans are kept in this browser only, and older ones are cleared to save space.</p><p><a class="btn" href="#/">Scan a fit</a></p></section>`;
+      return html`<section class="wrap pagehead"><h1 class="h2">הסריקה לא נמצאה</h1><p class="lede">סריקות נשמרות רק בדפדפן הזה, וסריקות ישנות נמחקות כדי לפנות מקום.</p><p><a class="btn" href="#/">סרקו לוק</a></p></section>`;
     }
   } else if (!hasPending() && !getCurrent()) {
     return { redirect: "#/" };
@@ -72,44 +71,44 @@ function storeItem(item, scan) {
 /** On-device confidence is a probability; say it in words. */
 function confidenceText(p) {
   if (typeof p !== "number") return "";
-  return p >= 0.8 ? "Clear match" : p >= 0.5 ? "Good guess" : "Best guess";
+  return p >= 0.8 ? "זיהוי ברור" : p >= 0.5 ? "ניחוש טוב" : "הניחוש הכי טוב";
 }
 
 function resultTag(item, i, scan) {
   const m = primaryMatch(item);
   const alt = m && !okStock(m) ? buyNow(item) : null;
-  const elsewhere = alt ? `elsewhere from ${money(alt.price, alt.currency || "USD")}` : "";
+  const elsewhere = alt ? `במקום אחר מ־${money(alt.price, alt.currency || "ILS")}` : "";
   const key = store.itemKey(storeItem(item, scan));
   const saved = store.isSaved(key);
   const watching = store.isWatching(key);
   const deep = scan.engine === "deep";
   const canWatch = deep && m && m.availability === "sold_out" && m.url;
   return html`<article class="tag tag--result" data-item="${item.id}">
-    <button type="button" class="iconbtn iconbtn--like tag__like" data-action="save" aria-pressed="${saved}" aria-label="${saved ? "Remove from closet" : "Save to closet"}">${icon(saved ? "heart-fill" : "heart")}</button>
+    <button type="button" class="iconbtn iconbtn--like tag__like" data-action="save" aria-pressed="${saved}" aria-label="${saved ? "הסרה מהארון" : "שמירה בארון"}">${icon(saved ? "heart-fill" : "heart")}</button>
     <div class="tag__img">${item.thumb ? html`<img src="${item.thumb}" alt="">` : ""}<span class="tag__num">${i + 1}</span></div>
     <div class="tag__body">
-      <span class="tag__brand">${item.brand || CATEGORY_NAME[item.category] || item.category}</span>
-      <h2 class="tag__name">${item.productName || item.name}</h2>
+      <span class="tag__brand"><bdi>${item.brand || CATEGORY_NAME[item.category] || item.category}</bdi></span>
+      <h2 class="tag__name"><bdi>${item.productName || item.name}</bdi></h2>
       <div class="tag__meta">
         ${item.color ? html`<span class="swatch">${item.hex ? html`<i style="--c:${item.hex}"></i>` : ""}${item.color}</span>` : ""}
-        ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "USD")}</span>` : ""}
-        ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "checked at shop" : "")) : ""}
+        ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "ILS")}</span>` : ""}
+        ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "נבדק בחנות" : "")) : ""}
         <span class="label">${deep ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
       </div>
-      ${canWatch ? html`<div class="tag__actions"><button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${watching}" data-on="Watching" data-off="Alert me when it's back">${icon(watching ? "bell-ringing-fill" : "bell")}<span data-label>${watching ? "Watching" : "Alert me when it's back"}</span></button></div>` : ""}
+      ${canWatch ? html`<div class="tag__actions"><button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${watching}" data-on="במעקב" data-off="עדכנו אותי כשיחזור">${icon(watching ? "bell-ringing-fill" : "bell")}<span data-label>${watching ? "במעקב" : "עדכנו אותי כשיחזור"}</span></button></div>` : ""}
     </div>
     ${deep && item.matches.length
       ? html`<div class="matches">
           ${item.matches.map(
             (x) => html`<a class="match" ${aAttrs(x.url)}>
-              <span class="match__shop">${x.shop}<span class="match__kind ${x.match === "original" ? "match__kind--original" : ""}">${KIND[x.match] || x.match}</span><span class="match__title">${x.title}</span></span>
-              <span class="price">${x.price != null ? money(x.price, x.currency || "USD") : ""}</span>
+              <span class="match__shop"><bdi>${x.shop}</bdi><span class="match__kind ${x.match === "original" ? "match__kind--original" : ""}">${KIND[x.match] || x.match}</span><span class="match__title"><bdi>${x.title}</bdi></span></span>
+              <span class="price">${x.price != null ? money(x.price, x.currency || "ILS") : ""}</span>
               ${statusChip(x.availability)}
             </a>`,
           )}
-          <details><summary class="label" style="cursor:pointer;padding:6px 10px">Search other shops</summary>${shopSearch(item.query, item.id)}</details>
+          <details><summary class="label" style="cursor:pointer;padding:6px 10px">חיפוש בחנויות נוספות</summary>${shopSearch(item.query, item.id, item.queryEn)}</details>
         </div>`
-      : shopSearch(item.query, item.id)}
+      : shopSearch(item.query, item.id, item.queryEn)}
   </article>`;
 }
 
@@ -117,15 +116,15 @@ function scanningView(photo) {
   return html`<div class="detail">
     <div class="detail__media">
       <div class="shot" data-results-shot>
-        <img src="${photo}" alt="Your photo, being scanned" draggable="false">
+        <img src="${photo}" alt="התמונה שלכם, בסריקה" draggable="false">
         <div class="corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
         <div class="scanfx" aria-hidden="true"><div class="scanfx__tint"></div><div class="scanfx__grid"></div><div class="scanfx__laser"></div><div class="scanfx__win" hidden></div></div>
       </div>
     </div>
     <div>
       <div class="detail__head">
-        <span class="label" data-engine-label>Scanning</span>
-        <h1 class="h2" data-phase>Reading the fit</h1>
+        <span class="label" data-engine-label>סורקים</span>
+        <h1 class="h2" data-phase>קוראים את הלוק</h1>
       </div>
       <div class="progress">
         <div class="progress__bar is-indeterminate" data-bar><span></span></div>
@@ -140,13 +139,13 @@ function scanningView(photo) {
 
 function errorView(photo, message) {
   return html`<div class="detail">
-    <div class="detail__media">${photo ? html`<div class="shot"><img src="${photo}" alt="Your photo"></div>` : ""}</div>
+    <div class="detail__media">${photo ? html`<div class="shot"><img src="${photo}" alt="התמונה שלכם"></div>` : ""}</div>
     <div>
-      <div class="detail__head"><span class="label">Scan stopped</span><h1 class="h2">That didn't work</h1></div>
+      <div class="detail__head"><span class="label">הסריקה נעצרה</span><h1 class="h2">זה לא הצליח</h1></div>
       <p class="notice">${icon("warning")}<span>${message}</span></p>
       <div class="toolbar">
-        <button type="button" class="btn" data-retry>${icon("arrows-clockwise")}Try again</button>
-        <label class="btn btn--ghost">${icon("upload-simple")}Pick another photo<input type="file" accept="image/*" class="sr-only" data-newfile></label>
+        <button type="button" class="btn" data-retry>${icon("arrows-clockwise")}נסו שוב</button>
+        <label class="btn btn--ghost">${icon("upload-simple")}בחרו תמונה אחרת<input type="file" accept="image/*" class="sr-only" data-newfile></label>
       </div>
     </div>
   </div>`;
@@ -158,14 +157,14 @@ function resultView(scan) {
   const deep = scan.engine === "deep";
   const priced = deep ? items.map(buyNow).filter(Boolean) : [];
   const totals = {};
-  for (const m of priced) totals[m.currency || "USD"] = (totals[m.currency || "USD"] || 0) + m.price;
+  for (const m of priced) totals[m.currency || "ILS"] = (totals[m.currency || "ILS"] || 0) + m.price;
   const soldCount = deep ? items.filter((it) => (primaryMatch(it) || {}).availability === "sold_out").length : 0;
   return html`<div class="detail">
     <div class="detail__media">
       <div data-results-shot>
         ${shot({
           src: scan.photo,
-          alt: "Your photo",
+          alt: "התמונה שלכם",
           frame: false,
           eager: true,
           spots: items.map((it, i) => ({ ...pos[i], label: it.productName || it.name, sold: deep && (primaryMatch(it) || {}).availability === "sold_out" })),
@@ -173,26 +172,26 @@ function resultView(scan) {
         })}
       </div>
       <div class="toolbar">
-        <button type="button" class="btn btn--sm btn--ghost" data-draw aria-pressed="false">${icon("selection-plus")}<span>Draw to search</span></button>
-        <button type="button" class="btn btn--sm btn--ghost" data-receipt ${items.length ? "" : "disabled"}>${icon("receipt")}Share receipt</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-draw aria-pressed="false">${icon("selection-plus")}<span>סמנו לחיפוש</span></button>
+        <button type="button" class="btn btn--sm btn--ghost" data-receipt ${items.length ? "" : "disabled"}>${icon("receipt")}קבלה לשיתוף</button>
         <span class="spacer"></span>
-        <label class="btn btn--sm">${icon("scan")}New scan<input type="file" accept="image/*" class="sr-only" data-newfile></label>
+        <label class="btn btn--sm">${icon("scan")}סריקה חדשה<input type="file" accept="image/*" class="sr-only" data-newfile></label>
       </div>
-      <p class="muted" data-draw-hint hidden style="font-size:.88rem">Drag a box around any piece to look it up.</p>
+      <p class="muted" data-draw-hint hidden style="font-size:.88rem">סמנו מלבן סביב פריט כדי לחפש אותו.</p>
     </div>
     <div>
       <div class="detail__head">
-        <span class="label">${deep ? (scan.cached ? "Deep scan, from recent scans" : "Deep scan") : "Quick scan, on your device"}</span>
-        <h1 class="h2" data-count-title>${items.length ? `${items.length} piece${items.length > 1 ? "s" : ""} found` : "No clothes spotted"}</h1>
+        <span class="label">${deep ? (scan.cached ? "סריקה מעמיקה, מסריקות אחרונות" : "סריקה מעמיקה") : "סריקה מהירה, על המכשיר שלכם"}</span>
+        <h1 class="h2" data-count-title>${items.length ? (items.length === 1 ? "נמצא פריט אחד" : `נמצאו ${items.length} פריטים`) : "לא זיהינו בגדים"}</h1>
         ${scan.vibe || scan.summary ? html`<div class="byline">${scan.vibe ? html`<span class="vibe">${scan.vibe}</span>` : ""}<span>${scan.summary}</span></div>` : ""}
-        ${soldCount ? html`<div class="byline"><span>${soldCount} sold out. Turn on alerts and we'll tell you when ${soldCount > 1 ? "they're" : "it's"} back.</span></div>` : ""}
+        ${soldCount ? html`<div class="byline"><span>${soldCount === 1 ? "פריט אחד אזל. הפעילו התראה ונעדכן כשהוא חוזר." : `${soldCount} פריטים אזלו. הפעילו התראות ונעדכן כשהם חוזרים.`}</span></div>` : ""}
       </div>
       ${scan.notice ? html`<p class="notice">${icon("info")}<span>${scan.notice}</span></p>` : ""}
-      ${!deep ? html`<p class="notice">${icon("lightning")}<span>Each piece is named from the photo. Tap a shop to see matching products, and edit the search words if the colour or style is off.</span></p>` : ""}
+      ${!deep ? html`<p class="notice">${icon("lightning")}<span>כל פריט זוהה מתוך התמונה. לחצו על חנות כדי לראות מוצרים מתאימים, ותקנו את מילות החיפוש אם הצבע או הסגנון לא מדויקים.</span></p>` : ""}
       ${items.length
         ? html`<div class="tags" data-tags>${items.map((it, i) => html`<div style="--i:${i}">${resultTag(it, i, scan)}</div>`)}</div>`
-        : html`<div class="empty" style="margin-bottom:0">${icon("t-shirt")}<p>We couldn't make out any clothes. Try a photo where the outfit fills more of the frame, or draw a box around a piece.</p><button type="button" class="btn btn--sm" data-draw-cta>${icon("selection-plus")}Draw a box</button></div>`}
-      ${Object.keys(totals).length ? html`<div class="total"><span class="total__label">The whole fit</span><span class="total__value">${Object.entries(totals).map(([c, v]) => money(v, c)).join(" + ")}<small>lowest in-stock price for ${priced.length} of ${items.length} pieces</small></span></div>` : ""}
+        : html`<div class="empty" style="margin-bottom:0">${icon("t-shirt")}<p>לא הצלחנו לזהות בגדים. נסו תמונה שבה הלוק ממלא יותר מהמסגרת, או סמנו מלבן סביב פריט.</p><button type="button" class="btn btn--sm" data-draw-cta>${icon("selection-plus")}סמנו מלבן</button></div>`}
+      ${Object.keys(totals).length ? html`<div class="total"><span class="total__label">כל הלוק</span><span class="total__value">${Object.entries(totals).map(([c, v]) => money(v, c)).join(" + ")}<small>המחיר הנמוך במלאי עבור ${priced.length} מתוך ${items.length} פריטים</small></span></div>` : ""}
     </div>
   </div>`;
 }
@@ -247,7 +246,7 @@ function mount(root, [id]) {
     if (!t) return null;
     const line = document.createElement("div");
     line.className = "log__line";
-    line.innerHTML = html`<span class="k">${k}</span><span>${v}</span>`.s;
+    line.innerHTML = html`<span class="k">${k}</span><bdi>${v}</bdi>`.s;
     t.appendChild(line);
     while (t.children.length > 9) t.firstElementChild.remove();
     return line;
@@ -281,7 +280,7 @@ function mount(root, [id]) {
       prep = await prepareImage(file);
     } catch (err) {
       if (stale()) return;
-      host.innerHTML = errorView(null, err instanceof ImageError ? err.message : "That image could not be read.").s;
+      host.innerHTML = errorView(null, err instanceof ImageError ? err.message : "לא הצלחנו לקרוא את התמונה.").s;
       wireError(file);
       return;
     }
@@ -302,32 +301,32 @@ function mount(root, [id]) {
     const winEl = host.querySelector(".scanfx__win");
     let loadingLine = null;
     let shownScanning = false;
-    addLine("photo", `${prep.width} x ${prep.height}`);
+    addLine("תמונה", `${prep.width}×${prep.height}`);
 
     const onProgress = (ev) => {
       if (stale()) return;
       if (ev.engine === "deep") {
-        engineLabel.textContent = "Deep scan";
+        engineLabel.textContent = "סריקה מעמיקה";
         if (ev.t === "status") {
           phase.textContent = ev.msg;
-          addLine("step", ev.msg);
-        } else if (ev.t === "search") addLine("search", `"${ev.q}"`);
-        else if (ev.t === "fetch") addLine("open", ev.host);
-        else if (ev.t === "found") addLine("found", `${ev.n} results`);
+          addLine("שלב", ev.msg);
+        } else if (ev.t === "search") addLine("חיפוש", `"${ev.q}"`);
+        else if (ev.t === "fetch") addLine("פותח", ev.host);
+        else if (ev.t === "found") addLine("נמצאו", count(ev.n, "תוצאה אחת", "תוצאות"));
       } else if (ev.stage === "loading") {
-        engineLabel.textContent = "Quick scan, on your device";
-        phase.textContent = "Loading the scanner";
+        engineLabel.textContent = "סריקה מהירה, על המכשיר שלכם";
+        phase.textContent = "טוענים את הסורק";
         bar.classList.remove("is-indeterminate");
         bar.style.setProperty("--p", ev.progress.toFixed(3));
-        const txt = `downloading ${Math.round(ev.progress * 100)}% (first scan only)`;
-        if (!loadingLine) loadingLine = addLine("model", txt);
+        const txt = `מוריד ${Math.round(ev.progress * 100)}% (רק בסריקה הראשונה)`;
+        if (!loadingLine) loadingLine = addLine("מודל", txt);
         else loadingLine.lastElementChild.textContent = txt;
       } else if (ev.stage === "scanning") {
-        engineLabel.textContent = "Quick scan, on your device";
+        engineLabel.textContent = "סריקה מהירה, על המכשיר שלכם";
         if (!shownScanning) {
           shownScanning = true;
-          phase.textContent = "Looking for clothes";
-          addLine("scan", "checking every part of the photo");
+          phase.textContent = "מחפשים בגדים";
+          addLine("סורק", "בודק כל חלק בתמונה");
         }
         bar.classList.remove("is-indeterminate");
         bar.style.setProperty("--p", ev.progress.toFixed(3));
@@ -343,7 +342,7 @@ function mount(root, [id]) {
       if (stale()) return;
       bar.classList.remove("is-indeterminate");
       bar.style.setProperty("--p", "1");
-      addLine("done", `${result.items.length} piece${result.items.length === 1 ? "" : "s"}`);
+      addLine("סיום", count(result.items.length, "פריט אחד", "פריטים"));
       scan = { ...result, upload: prep.upload, blob: prep.blob };
       addThumbs(shotEl.querySelector("img"));
       setCurrent(scan);
@@ -359,7 +358,7 @@ function mount(root, [id]) {
     } catch (err) {
       if (stale() || (err && err.name === "AbortError")) return;
       console.error(err);
-      host.innerHTML = errorView(prep.photo, (err && err.message) || "The scan failed.").s;
+      host.innerHTML = errorView(prep.photo, (err && err.message) || "הסריקה נכשלה.").s;
       wireError(file);
     }
   }
@@ -397,7 +396,7 @@ function mount(root, [id]) {
       drawing = on;
       frame.classList.toggle("is-drawing", on);
       drawBtn.setAttribute("aria-pressed", String(on));
-      drawBtn.querySelector("span").textContent = on ? "Cancel" : "Draw to search";
+      drawBtn.querySelector("span").textContent = on ? "ביטול" : "סמנו לחיפוש";
       hint.hidden = !on;
     };
     drawBtn.addEventListener("click", () => setDrawing(!drawing));
@@ -440,14 +439,14 @@ function mount(root, [id]) {
       if (region.w < 0.05 || region.h < 0.04) {
         box && box.remove();
         box = null;
-        toast("Drag a bigger box around the piece");
+        toast("סמנו מלבן גדול יותר סביב הפריט");
         return;
       }
       setDrawing(false);
       const pendingBox = box;
       box = null;
       pendingBox.classList.add("is-pending");
-      toast("Looking it up...");
+      toast("מחפשים...");
       try {
         const blob = scan.blob || (await (await fetch(scan.photo)).blob());
         const item = await runRegion(scan, region, blob);
@@ -459,10 +458,10 @@ function mount(root, [id]) {
         persist(scan).catch(() => {});
         const firstTag = host.querySelector(".tags .tag");
         firstTag && firstTag.classList.add("is-active");
-        toast(`Found: ${item.name}`);
+        toast(`נמצא: ${item.name}`);
       } catch (err) {
         pendingBox.remove();
-        toast((err && err.message) || "Couldn't identify that piece.");
+        toast((err && err.message) || "לא הצלחנו לזהות את הפריט.");
       }
     };
     frame.addEventListener("pointerup", finish);
@@ -494,14 +493,14 @@ function mount(root, [id]) {
     if (!e.target.closest("[data-receipt]") || !scan) return;
     const pos = spotPositions(scan.items);
     openReceipt({
-      title: scan.vibe || "My fit",
-      by: `${scan.items.length} piece${scan.items.length === 1 ? "" : "s"}, sourced`,
+      title: scan.vibe || "הלוק שלי",
+      by: count(scan.items.length, "פריט אחד, עם מקור", "פריטים, עם מקור"),
       photo: scan.photo,
       items: scan.items.map((it, i) => {
         const m = primaryMatch(it);
         return { name: it.productName || it.name, brand: it.brand || (m && m.shop) || it.color, price: m ? m.price : null, currency: m ? m.currency : null, status: m ? m.availability : null, x: pos[i].x, y: pos[i].y };
       }),
-    }).catch(() => toast("Couldn't make the receipt. Try again."));
+    }).catch(() => toast("לא הצלחנו ליצור את הקבלה. נסו שוב."));
   });
 
   // ---- decide what to show ----

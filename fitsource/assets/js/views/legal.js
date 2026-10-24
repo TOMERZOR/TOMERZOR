@@ -1,31 +1,51 @@
 import { html } from "../ui.js";
+import { CONFIG } from "../config.js";
+
+// Updated whenever this page's substance changes (shown in the accessibility statement).
+const UPDATED = "24.10.2026";
 
 function render() {
+  const mail = CONFIG.contactEmail;
   return html`
   <div class="wrap">
     <article class="prose">
-      <h1 class="display" style="font-size:clamp(2.2rem,4.6vw,3.6rem)">Privacy and disclosure</h1>
+      <h1 class="display" style="font-size:clamp(2.2rem,4.6vw,3.6rem)">פרטיות, גילוי ונגישות</h1>
 
-      <h2>Your photos</h2>
-      <p>A quick scan runs entirely in your browser. The photo is not uploaded anywhere. The scanning model is downloaded once from Hugging Face and cached by your browser.</p>
-      <p>A deep scan, when it is switched on, sends the photo to the FitSource server, which passes it to Anthropic's Claude to identify the pieces and search shops. The photo is not stored. To save cost, the results (not the photo) of a scan may be kept for up to 24 hours, keyed by a fingerprint of the image, so the same viral photo is not searched twice.</p>
+      <h2>התמונות שלכם</h2>
+      <p>סריקה מהירה רצה כולה בדפדפן שלכם. התמונה לא עולה לשום מקום. מודל הסריקה יורד פעם אחת מ־Hugging Face ונשמר במטמון של הדפדפן.</p>
+      <p>סריקה מעמיקה, כשהיא פעילה, שולחת את התמונה לשרת של FitSource, שמעביר אותה ל־Claude של Anthropic כדי לזהות את הפריטים ולחפש בחנויות. התמונה לא נשמרת. כדי לחסוך בעלויות, התוצאות של סריקה (לא התמונה) עשויות להישמר עד 24 שעות לפי טביעת אצבע של התמונה, כדי שאותה תמונה ויראלית לא תיסרק פעמיים.</p>
 
-      <h2>What stays on your device</h2>
-      <p>Your closet, restock alerts, likes and recent scans are saved in your browser's local storage. They never leave your device unless you share a receipt yourself. Clearing your browser data removes them.</p>
-      <p>Restock alerts ask the FitSource server to read the shop's product page. Only the product link is sent.</p>
+      <h2>מה נשאר אצלכם במכשיר</h2>
+      <p>הארון, התראות המלאי, הלייקים והסריקות האחרונות נשמרים באחסון המקומי של הדפדפן. הם לא יוצאים מהמכשיר, אלא אם תשתפו קבלה בעצמכם. מחיקת נתוני הגלישה מוחקת אותם.</p>
+      <p>התראות מלאי מבקשות מהשרת של FitSource לקרוא את דף המוצר בחנות. רק הקישור למוצר נשלח.</p>
+      <p>אנחנו לא מבקשים שם, טלפון או כתובת מייל, לא מנהלים חשבונות משתמש ולא משתמשים בעוגיות פרסום. האתר פועל בהתאם לחוק הגנת הפרטיות, התשמ"א־1981.</p>
 
-      <h2>How FitSource makes money</h2>
-      <p>Some links to shops are affiliate links: if you buy something, the shop may pay FitSource a commission. You pay the same price. Commissions never decide which products we show or their order. Sponsored placements, if any, are always labelled.</p>
+      <h2>איך FitSource מרוויח</h2>
+      <p>חלק מהקישורים לחנויות הם קישורי שותפים: אם תקנו משהו, החנות עשויה לשלם ל־FitSource עמלה. אתם משלמים אותו מחיר. העמלות אף פעם לא קובעות אילו מוצרים נציג או באיזה סדר. חשיפה ממומנת, אם תהיה, תמיד תסומן ככזו.</p>
+      <p>מחירים ומלאי מגיעים מהחנויות ועשויים להשתנות. המחיר והזמינות הקובעים הם אלה שמופיעים בחנות ברגע הקנייה.</p>
 
-      <h2>The feed</h2>
-      <p>The feed is a preview. Its people and brands are invented and the photos are AI-generated, except the Created By God fit, which is a real Dream Studios photo linking to the real store. Shop buttons on sample pieces search real shops for similar items.</p>
+      <h2>הפיד</h2>
+      <p>הפיד הוא תצוגה מקדימה. האנשים והמותגים בו בדויים והתמונות נוצרו בבינה מלאכותית, חוץ מהלוק Created By God, שהוא תמונה אמיתית של Dream Studios עם קישור לחנות האמיתית. כפתורי הקנייה בפריטים לדוגמה מחפשים פריטים דומים בחנויות אמיתיות.</p>
 
-      <h2>Credits</h2>
+      <h2 id="accessibility">הצהרת נגישות</h2>
+      <p>אנחנו רוצים שכל אחד ואחת יוכלו להשתמש ב־FitSource. האתר נבנה בהתאם לתקן הישראלי ת"י 5568 (המבוסס על הנחיות WCAG 2.0 ברמה AA) ולתקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע"ג־2013.</p>
       <ul>
-        <li>Garment recognition: MobileCLIP by Apple, run with Transformers.js.</li>
-        <li>Deep scan: Claude by Anthropic, with web search.</li>
-        <li>Type: Archivo and Geist Mono, under the SIL Open Font License.</li>
-        <li>Icons: Phosphor Icons, MIT licence.</li>
+        <li>אפשר להשתמש באתר כולו במקלדת, עם סימון פוקוס ברור וקישור "דלגו לתוכן" בראש כל עמוד.</li>
+        <li>תמונות, כפתורים ונקודות על התמונות מתוארים לקוראי מסך, וסטטוס המלאי מופיע במילים ולא רק בצבע.</li>
+        <li>האתר נבדק עם axe לניגודיות צבעים, לסדר כותרות ולתוויות.</li>
+        <li>אם ביקשתם במערכת ההפעלה להפחית תנועה, האנימציות נעצרות.</li>
+        <li>יש מצב בהיר ומצב כהה, והטקסט מתאים את עצמו להגדלה בדפדפן.</li>
+      </ul>
+      <p>מגבלות ידועות: סימון מלבן על תמונה לחיפוש פריט דורש עכבר או מגע. אפשר להגיע לכל הפריטים שנמצאו גם בלעדיו, דרך הרשימה שליד התמונה.</p>
+      <p>נתקלתם בבעיית נגישות? ${mail ? html`כתבו לנו ל־<a href="mailto:${mail}?subject=${encodeURIComponent("נגישות באתר FitSource")}">${mail}</a>` : "פרטי הקשר של רכז הנגישות יפורסמו כאן עם ההשקה הרשמית"} ונטפל בזה בהקדם.</p>
+      <p class="muted">ההצהרה עודכנה בתאריך ${UPDATED}.</p>
+
+      <h2>קרדיטים</h2>
+      <ul>
+        <li>זיהוי בגדים: MobileCLIP של Apple, עם Transformers.js.</li>
+        <li>סריקה מעמיקה: Claude של Anthropic, עם חיפוש ברשת.</li>
+        <li>גופנים: Archivo, Geist Mono ו־Heebo, ברישיון SIL Open Font License.</li>
+        <li>אייקונים: Phosphor Icons, ברישיון MIT.</li>
       </ul>
     </article>
   </div>`;

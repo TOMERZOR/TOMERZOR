@@ -1,12 +1,12 @@
 import { html, icon, observeReveals } from "../ui.js";
-import { FITS, VIBES } from "../data/fits.js";
+import { FITS, VIBES, ALL } from "../data/fits.js";
 import { card } from "../components.js";
 import { prefs, setPref } from "../store.js";
 
 const SORTS = [
-  ["trending", "Trending"],
-  ["new", "Newest"],
-  ["sold", "Most sold out"],
+  ["trending", "פופולרי"],
+  ["new", "הכי חדש"],
+  ["sold", "הכי הרבה אזל"],
 ];
 
 const hoursAgo = (s) => {
@@ -23,27 +23,27 @@ function sorted(list, sort) {
 }
 
 function grid(vibe, sort) {
-  const list = sorted(FITS.filter((f) => vibe === "All" || f.vibe === vibe), sort);
-  if (!list.length) return html`<div class="empty">${icon("squares-four")}<p>No fits in this style yet.</p></div>`;
-  const cta = html`<a class="card card--cta" href="#/" data-reveal style="--d:3"><span class="cta-tile">${icon("scan")}<span class="cell__big">Seen a fit you love?</span><span>Scan it and get every piece.</span><span class="btn btn--sm">${icon("upload-simple")}Scan a fit</span></span></a>`;
-  return html`<div class="grid">${list.map((f, i) => card(f, { feature: i === 0 && vibe === "All", delay: i % 4 }))}${vibe === "All" ? cta : ""}</div>`;
+  const list = sorted(FITS.filter((f) => vibe === ALL || f.vibe === vibe), sort);
+  if (!list.length) return html`<div class="empty">${icon("squares-four")}<p>עוד אין לוקים בסגנון הזה.</p></div>`;
+  const cta = html`<a class="card card--cta" href="#/" data-reveal style="--d:3"><span class="cta-tile">${icon("scan")}<span class="cell__big">ראיתם לוק שאהבתם?</span><span>סרקו אותו וקבלו כל פריט.</span><span class="btn btn--sm">${icon("upload-simple")}סרקו לוק</span></span></a>`;
+  return html`<div class="grid">${list.map((f, i) => card(f, { feature: i === 0 && vibe === ALL, delay: i % 4 }))}${vibe === ALL ? cta : ""}</div>`;
 }
 
 function render() {
   const p = prefs();
-  const vibe = VIBES.includes(p.vibe) ? p.vibe : "All";
+  const vibe = VIBES.includes(p.vibe) ? p.vibe : ALL;
   const sort = SORTS.some(([k]) => k === p.sort) ? p.sort : "trending";
   return html`
   <section class="wrap pagehead">
-    <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">The feed</h1>
-    <p class="lede">Fits people are scanning right now, with every piece sourced and its stock checked.</p>
-    <span class="sample-note">${icon("info")}Preview feed: sample fits and brands, plus one real Dream Studios fit.</span>
+    <h1 class="display" style="font-size:clamp(2.4rem,5vw,4.2rem)">הפיד</h1>
+    <p class="lede">הלוקים שסורקים עכשיו, עם המקור של כל פריט ובדיקת מלאי.</p>
+    <span class="sample-note">${icon("info")}פיד לדוגמה: לוקים ומותגים להמחשה, ולוק אמיתי אחד של Dream Studios.</span>
   </section>
   <div class="filters">
-    <div class="wrap filters__in" role="toolbar" aria-label="Filter the feed">
+    <div class="wrap filters__in" role="toolbar" aria-label="סינון הפיד">
       ${VIBES.map((v) => html`<button type="button" class="chip" data-vibe="${v}" aria-pressed="${v === vibe}">${v}</button>`)}
       <span class="filters__sep" aria-hidden="true"></span>
-      ${SORTS.map(([k, label]) => html`<button type="button" class="chip" data-sort="${k}" aria-pressed="${k === sort}">${k === "trending" ? icon("trend-up") : k === "new" ? icon("clock") : icon("fire")}${label}</button>`)}
+      <span class="filters__sorts">${SORTS.map(([k, label]) => html`<button type="button" class="chip" data-sort="${k}" aria-pressed="${k === sort}">${k === "trending" ? icon("trend-up") : k === "new" ? icon("clock") : icon("fire")}${label}</button>`)}</span>
     </div>
   </div>
   <section class="wrap" data-grid>${grid(vibe, sort)}</section>`;
@@ -51,8 +51,8 @@ function render() {
 
 function mount(root) {
   const area = root.querySelector("[data-grid]");
-  let { vibe = "All", sort = "trending" } = prefs();
-  if (!VIBES.includes(vibe)) vibe = "All";
+  let { vibe = ALL, sort = "trending" } = prefs();
+  if (!VIBES.includes(vibe)) vibe = ALL;
   const redraw = () => {
     area.innerHTML = grid(vibe, sort).s;
     observeReveals(area);

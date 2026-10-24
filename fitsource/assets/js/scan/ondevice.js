@@ -22,7 +22,7 @@ function getWorker() {
   };
   worker.onerror = (e) => {
     e.preventDefault();
-    const err = new Error("The on-device scanner could not start in this browser.");
+    const err = new Error("הסורק לא הצליח לפעול בדפדפן הזה.");
     for (const job of pending.values()) job.reject(err);
     pending.clear();
     worker.terminate();

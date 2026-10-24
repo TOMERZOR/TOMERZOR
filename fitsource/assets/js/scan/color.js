@@ -185,3 +185,44 @@ export function regionsInWindow(win, group) {
   const rel = COLOR_REGIONS[group] || COLOR_REGIONS.default;
   return rel.map((r) => ({ x: win.x + r.x * win.w, y: win.y + r.y * win.h, w: r.w * win.w, h: r.h * win.h }));
 }
+
+// Hebrew colour words as [m, f, mp, fp]; one word means it doesn't change.
+const HE_COLOR = {
+  black: ["שחור", "שחורה", "שחורים", "שחורות"],
+  charcoal: ["אפור כהה", "אפורה כהה", "אפורים כהים", "אפורות כהות"],
+  grey: ["אפור", "אפורה", "אפורים", "אפורות"],
+  "light grey": ["אפור בהיר", "אפורה בהירה", "אפורים בהירים", "אפורות בהירות"],
+  white: ["לבן", "לבנה", "לבנים", "לבנות"],
+  cream: ["שמנת"],
+  beige: ["בז'"],
+  camel: ["קאמל"],
+  brown: ["חום", "חומה", "חומים", "חומות"],
+  olive: ["ירוק זית", "ירוקה זית", "ירוקים זית", "ירוקות זית"],
+  khaki: ["חאקי"],
+  green: ["ירוק", "ירוקה", "ירוקים", "ירוקות"],
+  "forest green": ["ירוק כהה", "ירוקה כהה", "ירוקים כהים", "ירוקות כהות"],
+  navy: ["כחול כהה", "כחולה כהה", "כחולים כהים", "כחולות כהות"],
+  blue: ["כחול", "כחולה", "כחולים", "כחולות"],
+  "denim blue": ["כחול", "כחולה", "כחולים", "כחולות"],
+  "light blue": ["תכלת"],
+  red: ["אדום", "אדומה", "אדומים", "אדומות"],
+  burgundy: ["בורדו"],
+  pink: ["ורוד", "ורודה", "ורודים", "ורודות"],
+  purple: ["סגול", "סגולה", "סגולים", "סגולות"],
+  lavender: ["לבנדר"],
+  yellow: ["צהוב", "צהובה", "צהובים", "צהובות"],
+  "butter yellow": ["צהוב חמאה", "צהובה חמאה", "צהובים חמאה", "צהובות חמאה"],
+  orange: ["כתום", "כתומה", "כתומים", "כתומות"],
+  // denim washes
+  "light wash": ["בהיר", "בהירה", "בהירים", "בהירות"],
+  "mid wash": ["בשטיפה בינונית"],
+  "dark wash": ["כהה", "כהה", "כהים", "כהות"],
+};
+const FORM = { m: 0, f: 1, mp: 2, fp: 3 };
+
+/** A colour name in Hebrew, agreeing with a noun of gender/number `g` (m, f, mp, fp). */
+export function colorHe(name, g = "m") {
+  const forms = HE_COLOR[name];
+  if (!forms) return name;
+  return forms[forms.length === 1 ? 0 : FORM[g] || 0];
+}

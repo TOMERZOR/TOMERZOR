@@ -17,27 +17,27 @@ export function bindTagActions(root, resolve) {
       if (store.isSaved(key)) {
         store.removeItem(key);
         setPressed(btn, false, "heart");
-        btn.setAttribute("aria-label", "Save to closet");
-        toast("Removed from your closet");
+        btn.setAttribute("aria-label", "שמירה בארון");
+        toast("הוסר מהארון");
       } else {
         store.saveItem(item);
         setPressed(btn, true, "heart-fill");
-        btn.setAttribute("aria-label", "Remove from closet");
-        toast("Saved to your closet", { action: "View", onAction: () => (location.hash = "#/closet") });
+        btn.setAttribute("aria-label", "הסרה מהארון");
+        toast("נשמר בארון", { action: "לצפייה", onAction: () => (location.hash = "#/closet") });
       }
     } else if (btn.dataset.action === "watch") {
       if (store.isWatching(key)) {
         store.setWatch(key, false);
         setPressed(btn, false, "bell");
-        btn.setAttribute("aria-label", "Alert me when it's back");
-        toast("Restock alert off");
+        btn.setAttribute("aria-label", "עדכנו אותי כשיחזור למלאי");
+        toast("התראת המלאי בוטלה");
       } else {
         store.saveItem(item, { watch: true });
         setPressed(btn, true, "bell-ringing-fill");
-        btn.setAttribute("aria-label", "Stop restock alert");
+        btn.setAttribute("aria-label", "ביטול התראת מלאי");
         const like = tag.querySelector('[data-action="save"]');
         if (like) setPressed(like, true, "heart-fill");
-        toast("We'll check the shop and tell you when it's back");
+        toast("נבדוק בחנות ונעדכן אתכם כשהפריט יחזור");
       }
     }
   };

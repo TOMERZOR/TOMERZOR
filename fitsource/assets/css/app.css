@@ -20,10 +20,27 @@
   font-display: swap;
 }
 @font-face {
+  /* Hebrew letters: Archivo and Geist Mono have none, so Hebrew falls through to Heebo */
+  font-family: "Heebo";
+  src: url("../fonts/heebo-hebrew.woff2") format("woff2-variations"), url("../fonts/heebo-hebrew.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F;
+}
+@font-face {
   font-family: "Geist Mono";
   src: url("../fonts/geist-mono.woff2") format("woff2-variations"), url("../fonts/geist-mono.woff2") format("woff2");
   font-weight: 100 900;
   font-display: swap;
+}
+@font-face {
+  /* In the mono labels, Hebrew words need Heebo's narrow space and comma, not
+     Geist Mono's full-width ones (later faces win for the characters they cover) */
+  font-family: "Geist Mono";
+  src: url("../fonts/heebo-hebrew.woff2") format("woff2-variations"), url("../fonts/heebo-hebrew.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0020, U+002C, U+0590-05FF, U+FB1D-FB4F;
 }
 
 :root {
@@ -45,8 +62,8 @@
   --shadow: 0 1px 0 rgba(18, 18, 20, 0.04), 0 18px 40px -22px rgba(30, 32, 20, 0.35);
   --shadow-lift: 0 2px 0 rgba(18, 18, 20, 0.04), 0 26px 50px -24px rgba(30, 32, 20, 0.45);
 
-  --font: "Archivo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font: "Archivo", "Heebo", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", "Heebo", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --r-card: 14px;
   --r-tag: 10px;
   --r-pill: 999px;
@@ -152,6 +169,11 @@ p {
   outline-offset: 3px;
   border-radius: 4px;
 }
+.i--flip {
+  /* arrows point the way Hebrew reads */
+  --flip: -1;
+  transform: scaleX(-1);
+}
 .i {
   width: 1.15em;
   height: 1.15em;
@@ -172,7 +194,7 @@ p {
 }
 .skip {
   position: absolute;
-  left: 12px;
+  inset-inline-start: 12px;
   top: -60px;
   z-index: 100;
   background: var(--ink);
@@ -401,7 +423,7 @@ p {
 .nav__links {
   display: flex;
   gap: 4px;
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .nav__link {
   position: relative;
@@ -451,7 +473,7 @@ p {
   display: none;
 }
 .nav__cta {
-  margin-left: 6px;
+  margin-inline-start: 6px;
 }
 .tabbar {
   display: none;
@@ -497,6 +519,8 @@ main:focus {
 }
 .hero__title {
   margin-bottom: 22px;
+  /* Hebrew in Heebo runs wider than Archivo caps; keep each line on one line */
+  font-size: clamp(2.5rem, 5.2vw, 4.4rem);
 }
 .hero__title .line,
 .hero__title .line > span {
@@ -869,7 +893,7 @@ main:focus {
 .demo__tag {
   position: absolute;
   z-index: 6;
-  left: -44px;
+  inset-inline-start: -44px;
   bottom: 44px;
   width: min(300px, 78%);
   transition: opacity 0.35s, transform 0.5s var(--ease);
@@ -913,7 +937,7 @@ main:focus {
   content: "";
   position: absolute;
   top: 12px;
-  right: 12px;
+  inset-inline-end: 12px;
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -936,7 +960,7 @@ main:focus {
 .tag__num {
   position: absolute;
   top: 5px;
-  left: 5px;
+  inset-inline-start: 5px;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -960,7 +984,7 @@ main:focus {
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-3);
-  padding-right: 18px;
+  padding-inline-end: 18px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1061,19 +1085,19 @@ main:focus {
 }
 .tag.is-active {
   border-color: var(--ink);
-  transform: translateX(4px);
+  transform: translateX(-4px);
 }
 .tag--result::before {
   display: none;
 }
 .tag--result .tag__brand,
 .tag--result .tag__name {
-  padding-right: 44px;
+  padding-inline-end: 44px;
 }
 .tag__like {
   position: absolute;
   top: 10px;
-  right: 10px;
+  inset-inline-end: 10px;
   width: 38px;
   height: 38px;
 }
@@ -1161,7 +1185,7 @@ main:focus {
   border-radius: 4px;
   background: var(--bg-2);
   color: var(--ink-2);
-  margin-left: 6px;
+  margin-inline-start: 6px;
   vertical-align: 1px;
 }
 .match__kind--original {
@@ -1214,10 +1238,10 @@ main:focus {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
-    margin-right: -12px;
-    padding-right: 12px;
-    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
-    mask-image: linear-gradient(90deg, #000 88%, transparent);
+    margin-inline-end: -12px;
+    padding-inline-end: 12px;
+    -webkit-mask-image: linear-gradient(270deg, #000 88%, transparent);
+    mask-image: linear-gradient(270deg, #000 88%, transparent);
   }
   .shoprow::-webkit-scrollbar {
     display: none;
@@ -1273,7 +1297,7 @@ main:focus {
   transition: transform 0.25s var(--ease);
 }
 .link-arrow:hover .i {
-  transform: translateX(4px);
+  transform: translateX(-4px) scaleX(var(--flip, 1));
 }
 
 /* rail */
@@ -1360,7 +1384,7 @@ main:focus {
   color: var(--accent-text);
 }
 .card__right {
-  text-align: right;
+  text-align: end;
   font-family: var(--mono);
   font-size: 0.74rem;
   color: var(--ink-3);
@@ -1458,12 +1482,12 @@ main:focus {
   transform: rotate(-6deg) translateY(6px);
 }
 .shots-row img:nth-child(2) {
-  margin-left: -6%;
+  margin-inline-start: -6%;
   transform: rotate(2deg);
   z-index: 1;
 }
 .shots-row img:nth-child(3) {
-  margin-left: -6%;
+  margin-inline-start: -6%;
   transform: rotate(8deg) translateY(10px);
 }
 .cell--b:hover .shots-row img:nth-child(1) {
@@ -1547,11 +1571,11 @@ main:focus {
   transform: rotate(-2deg);
 }
 .split__visual .tag:nth-child(2) {
-  margin-left: 40px;
+  margin-inline-start: 40px;
   transform: rotate(1.2deg);
 }
 .split__visual .tag:nth-child(3) {
-  margin-left: 12px;
+  margin-inline-start: 12px;
   transform: rotate(-0.6deg);
 }
 .points {
@@ -1644,10 +1668,19 @@ main:focus {
 .filters__in::-webkit-scrollbar {
   display: none;
 }
+.filters__sorts {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
 @media (min-width: 900px) {
   .filters__in {
     flex-wrap: wrap;
     overflow: visible;
+  }
+  /* the sort chips stay together, at the end of the row */
+  .filters__sorts {
+    margin-inline-start: auto;
   }
 }
 .filters__sep {
@@ -1815,7 +1848,7 @@ main:focus {
   font-size: 0.8rem;
   font-weight: 400;
   color: var(--ink-3);
-  text-align: right;
+  text-align: end;
 }
 .notice {
   display: flex;
@@ -1857,10 +1890,10 @@ main:focus {
 }
 @keyframes indet {
   from {
-    transform: translateX(-110%);
+    transform: translateX(110%);
   }
   to {
-    transform: translateX(290%);
+    transform: translateX(-290%);
   }
 }
 .tape {
@@ -1980,7 +2013,7 @@ main:focus {
   border-radius: var(--r-card);
   margin-bottom: 80px;
 }
-.empty .i {
+.empty > .i {
   width: 34px;
   height: 34px;
   color: var(--ink-3);
@@ -2027,8 +2060,8 @@ main:focus {
   align-content: start;
 }
 .offer:nth-child(even) {
-  padding-left: 28px;
-  border-left: 1px solid var(--line);
+  padding-inline-start: 28px;
+  border-inline-start: 1px solid var(--line);
 }
 .offer .i {
   width: 28px;
@@ -2103,7 +2136,7 @@ main:focus {
   margin-bottom: 10px;
 }
 .prose ul {
-  padding-left: 1.2em;
+  padding-inline-start: 1.2em;
 }
 
 /* ---------- footer ---------- */
@@ -2300,7 +2333,7 @@ main:focus {
     max-width: 440px;
   }
   .demo__tag {
-    left: -12px;
+    inset-inline-start: -12px;
   }
   .detail {
     grid-template-columns: 1fr;
@@ -2408,7 +2441,7 @@ main:focus {
   .offer,
   .offer:nth-child(even) {
     padding: 22px 0;
-    border-left: 0;
+    border-inline-start: 0;
   }
   .brand-strip {
   display: grid;
@@ -2439,7 +2472,7 @@ main:focus {
     align-items: flex-start;
   }
   .split__visual .tag:nth-child(2) {
-    margin-left: 18px;
+    margin-inline-start: 18px;
   }
   .cell--a .cell__visual {
     grid-template-columns: 1fr;
@@ -2452,7 +2485,7 @@ main:focus {
   }
   .demo__tag {
     position: relative;
-    left: 0;
+    inset-inline-start: 0;
     bottom: 0;
     width: 100%;
     margin-top: -36px;
@@ -2504,4 +2537,21 @@ main:focus {
   .scanfx__laser {
     display: none;
   }
+}
+
+/* ---------- Hebrew type ---------- */
+/* Heebo has no width axis and Hebrew has no capitals, so the display sizes
+   get a touch more line height and less negative tracking than Latin needs. */
+.display {
+  line-height: 1;
+  letter-spacing: -0.015em;
+}
+.h2,
+.cell__big {
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+}
+.label,
+.tag__brand {
+  letter-spacing: 0.02em;
 }

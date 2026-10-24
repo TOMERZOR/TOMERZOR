@@ -4,6 +4,8 @@
 import { CONFIG } from "../config.js";
 import { fetchHealth, deepScan, ApiError } from "./remote.js";
 import { scanOnDevice, classifyOnDevice } from "./ondevice.js";
+import { HE } from "./vocab.js";
+import { colorHe } from "./color.js";
 
 export const apiBase = () => (CONFIG.apiBase || "").replace(/\/+$/, "");
 const isLocal = () => ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
@@ -36,7 +38,7 @@ function loadImage(blob) {
     img.onload = () => resolve({ img, url });
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new ImageError("That file could not be opened as an image. Try a JPEG, PNG or WebP screenshot."));
+      reject(new ImageError("לא הצלחנו לפתוח את הקובץ כתמונה. נסו צילום מסך בפורמט JPEG, PNG או WebP."));
     };
     img.src = url;
   });
@@ -60,12 +62,12 @@ function drawScaled(source, maxSide, type = "image/jpeg", quality = 0.86) {
 
 /** Read a file into the sizes the app needs. */
 export async function prepareImage(file) {
-  if (!file || !/^image\//.test(file.type || "image/")) throw new ImageError("Pick an image file (JPEG, PNG or WebP).");
-  if (file.size > 25 * 1024 * 1024) throw new ImageError("That image is over 25 MB. Try a screenshot instead.");
+  if (!file || !/^image\//.test(file.type || "image/")) throw new ImageError("בחרו קובץ תמונה (JPEG, PNG או WebP).");
+  if (file.size > 25 * 1024 * 1024) throw new ImageError("התמונה גדולה מ־25MB. נסו צילום מסך במקום.");
   const { img, url } = await loadImage(file);
   try {
     const w = img.naturalWidth, h = img.naturalHeight;
-    if (w < 120 || h < 120) throw new ImageError("That image is too small to scan. Use one at least 300 pixels wide.");
+    if (w < 120 || h < 120) throw new ImageError("התמונה קטנה מדי לסריקה. השתמשו בתמונה ברוחב 300 פיקסלים לפחות.");
     const display = drawScaled(img, 1080, "image/jpeg", 0.82);
     const upload = drawScaled(img, 1568, "image/jpeg", 0.86);
     const blob = await new Promise((r) => display.canvas.toBlob(r, "image/jpeg", 0.9));
@@ -102,18 +104,21 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 const GROUP_TO_CATEGORY = { outerwear: "outerwear", top: "top", bottom: "bottom", dress: "dress", footwear: "footwear", bag: "bag", headwear: "headwear", eyewear: "eyewear" };
 
 function fromDevice(it) {
+  // The detector works in English; people see Hebrew. The colour agrees with the garment.
+  const [name, g] = HE[it.name] || [it.name, "m"];
+  const color = it.color ? it.color.name : "";
   return {
     id: newId(),
-    name: it.name,
+    name,
     category: GROUP_TO_CATEGORY[it.group] || "accessory",
-    color: it.color ? it.color.name : "",
+    color: color ? colorHe(color) : "",
     hex: it.color ? it.color.hex : null,
     brand: null,
     confidence: it.confidence,
     box: it.box,
-    query: it.query,
+    query: color ? `${name} ${colorHe(color, g)}` : name,
+    queryEn: it.query,
     matches: [],
-    alternatives: it.alternatives || [],
   };
 }
 
@@ -129,6 +134,7 @@ function fromDeep(it) {
     confidence: it.confidence,
     box: it.box,
     query: it.search_query,
+    queryEn: it.search_query_en || "",
     matches: it.matches || [],
   };
 }
@@ -149,12 +155,12 @@ export async function runScan(prepared, { onProgress = () => {}, signal } = {}) 
   let notice = null;
   if (deep) {
     try {
-      onProgress({ engine: "deep", t: "status", msg: "Uploading the photo" });
+      onProgress({ engine: "deep", t: "status", msg: "מעלים את התמונה" });
       const data = await deepScan(apiBase(), { image: prepared.upload }, { onEvent: (ev) => onProgress({ engine: "deep", ...ev }), signal });
       return { ...base, engine: "deep", vibe: data.vibe, summary: data.summary, cached: data.cached, items: data.items.map(fromDeep) };
     } catch (err) {
       if (err.name === "AbortError") throw err;
-      notice = err instanceof ApiError && err.code === "daily_limit" ? err.message + " This one ran on your device instead." : "Deep scan was unavailable, so this ran on your device.";
+      notice = err instanceof ApiError && err.code === "daily_limit" ? err.message + " הפעם הסריקה רצה על המכשיר שלכם." : "הסריקה המעמיקה לא הייתה זמינה, אז הסריקה רצה על המכשיר שלכם.";
     }
   }
   const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }), signal });

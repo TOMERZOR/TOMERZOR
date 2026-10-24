@@ -93,27 +93,27 @@ export function parseFocus(f) {
 }
 
 async function handleScan(request, env, ctx, cors) {
-  if (!env.ANTHROPIC_API_KEY) return json({ error: "not_configured", message: "Deep scan is not set up on this server." }, 503, cors);
+  if (!env.ANTHROPIC_API_KEY) return json({ error: "not_configured", message: "סריקה מעמיקה לא מוגדרת בשרת הזה." }, 503, cors);
   // JSON only: a text/plain body would skip the browser's CORS preflight.
   if (!(request.headers.get("content-type") || "").toLowerCase().startsWith("application/json")) {
-    return json({ error: "bad_request", message: "Send JSON." }, 415, cors);
+    return json({ error: "bad_request", message: "יש לשלוח JSON." }, 415, cors);
   }
   let body;
   try {
     body = await request.json();
   } catch {
-    return json({ error: "bad_request", message: "Send JSON." }, 400, cors);
+    return json({ error: "bad_request", message: "יש לשלוח JSON." }, 400, cors);
   }
   const image = parseImage(body && body.image);
-  if (!image) return json({ error: "bad_image", message: "Upload a JPEG, PNG or WebP under 4.5 MB." }, 400, cors);
+  if (!image) return json({ error: "bad_image", message: "העלו תמונת JPEG, PNG או WebP עד 4.5MB." }, 400, cors);
   const focus = parseFocus(body.focus);
   const hint = typeof body.hint === "string" ? body.hint.replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 200) || null : null;
 
-  const cacheKey = env.FITSOURCE_KV ? `scan:${await sha256(image.data + JSON.stringify(focus) + (hint || ""))}` : null;
+  const cacheKey = env.FITSOURCE_KV ? `scan:he:${await sha256(image.data + JSON.stringify(focus) + (hint || ""))}` : null;
   const cached = cacheKey ? await env.FITSOURCE_KV.get(cacheKey) : null;
 
   if (!cached && !(await takeQuota(env, request))) {
-    return json({ error: "daily_limit", message: "You've used today's free deep scans. Come back tomorrow." }, 429, cors);
+    return json({ error: "daily_limit", message: "ניצלתם את הסריקות המעמיקות החינמיות של היום. חזרו מחר." }, 429, cors);
   }
 
   const { readable, writable } = new TransformStream();
@@ -133,7 +133,7 @@ async function handleScan(request, env, ctx, cors) {
     try {
       if (cached) {
         // The pieces and shops are reused; stock is checked again now.
-        emit({ t: "status", msg: "Found in recent scans, checking stock" });
+        emit({ t: "status", msg: "נמצא בסריקות אחרונות, בודקים מלאי" });
         const data = JSON.parse(cached);
         for (const item of data.items) for (const m of item.matches) m.verified = false;
         await verifyStock(data);
@@ -143,7 +143,7 @@ async function handleScan(request, env, ctx, cors) {
       const { results, model, usage } = await runScan({ image, focus, hint, env, emit, signal: stop.signal });
       // One line per scan for cost tracking (wrangler tail / Workers logs).
       console.log(JSON.stringify({ event: "scan", model, items: results.items.length, input_tokens: usage?.input_tokens, output_tokens: usage?.output_tokens, cache_read: usage?.cache_read_input_tokens, searches: usage?.web_search_requests }));
-      emit({ t: "status", msg: "Checking stock at each shop" });
+      emit({ t: "status", msg: "בודקים מלאי בכל חנות" });
       await verifyStock(results);
       const payload = { ...results, model, scanned_at: new Date().toISOString() };
       if (cacheKey && results.items.length) {
@@ -152,7 +152,7 @@ async function handleScan(request, env, ctx, cors) {
       emit({ t: "result", data: payload });
     } catch (err) {
       const code = err instanceof ScanError ? err.code : "scan_failed";
-      const message = err instanceof ScanError ? err.message : "Something went wrong while scanning. Try again in a minute.";
+      const message = err instanceof ScanError ? err.message : "משהו השתבש בסריקה. נסו שוב בעוד דקה.";
       if (!stop.signal.aborted) {
         console.error("scan failed", code, err && err.message);
         emit({ t: "error", code, message });

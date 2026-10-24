@@ -15,17 +15,17 @@ import legal from "./views/legal.js";
 document.body.insertAdjacentHTML("afterbegin", SPRITE);
 
 const ROUTES = [
-  { re: /^\/?$/, view: home, nav: "home", title: "FitSource: find the shop behind any fit" },
-  { re: /^\/feed\/?$/, view: feed, nav: "feed", title: "Feed | FitSource" },
-  { re: /^\/fit\/([\w-]+)\/?$/, view: fit, nav: "feed", title: "Fit | FitSource" },
-  { re: /^\/scan(?:\/([\w-]+))?\/?$/, view: scan, nav: "home", title: "Scan | FitSource" },
-  { re: /^\/closet(?:\/(saved|watching|scans))?\/?$/, view: closet, nav: "closet", title: "Closet | FitSource" },
-  { re: /^\/brands\/?$/, view: brands, nav: "brands", title: "For brands | FitSource" },
-  { re: /^\/legal\/?$/, view: legal, nav: "", title: "Privacy and disclosure | FitSource" },
+  { re: /^\/?$/, view: home, nav: "home", title: "FitSource: מוצאים את החנות מאחורי כל לוק" },
+  { re: /^\/feed\/?$/, view: feed, nav: "feed", title: "פיד | FitSource" },
+  { re: /^\/fit\/([\w-]+)\/?$/, view: fit, nav: "feed", title: "לוק | FitSource" },
+  { re: /^\/scan(?:\/([\w-]+))?\/?$/, view: scan, nav: "home", title: "סריקה | FitSource" },
+  { re: /^\/closet(?:\/(saved|watching|scans))?\/?$/, view: closet, nav: "closet", title: "הארון | FitSource" },
+  { re: /^\/brands\/?$/, view: brands, nav: "brands", title: "למותגים | FitSource" },
+  { re: /^\/legal\/?$/, view: legal, nav: "", title: "פרטיות ונגישות | FitSource" },
 ];
 
 const notFound = {
-  render: () => html`<section class="wrap pagehead view"><h1 class="h2">Nothing here</h1><p class="lede">That page doesn't exist. Try scanning a fit instead.</p><p><a class="btn" href="#/">Go home</a></p></section>`,
+  render: () => html`<section class="wrap pagehead view"><h1 class="h2">אין כאן כלום</h1><p class="lede">העמוד הזה לא קיים. אולי תסרקו לוק במקום?</p><p><a class="btn" href="#/">לדף הבית</a></p></section>`,
 };
 
 const main = document.getElementById("main");
@@ -43,7 +43,7 @@ async function route() {
   lastPath = path;
   let match = null;
   let entry = ROUTES.find((r) => (match = path.match(r.re)));
-  if (!entry) entry = { view: notFound, nav: "", title: "Not found | FitSource" };
+  if (!entry) entry = { view: notFound, nav: "", title: "לא נמצא | FitSource" };
   if (cleanup) {
     try {
       cleanup();
@@ -88,7 +88,7 @@ function updateBadges() {
 function applyThemeIcon() {
   const dark = document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelectorAll("[data-theme-toggle] use").forEach((u) => u.setAttribute("href", dark ? "#i-sun" : "#i-moon"));
-  document.querySelectorAll("[data-theme-toggle]").forEach((b) => b.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme"));
+  document.querySelectorAll("[data-theme-toggle]").forEach((b) => b.setAttribute("aria-label", dark ? "מעבר למצב בהיר" : "מעבר למצב כהה"));
 }
 document.addEventListener("click", (e) => {
   if (!e.target.closest("[data-theme-toggle]")) return;
@@ -131,7 +131,7 @@ window.addEventListener("drop", (e) => {
   veil.classList.remove("is-on");
   const file = [...e.dataTransfer.files].find((f) => f.type.startsWith("image/"));
   if (file) startScan(file);
-  else toast("That isn't an image. Drop a JPEG, PNG or WebP.");
+  else toast("זו לא תמונה. אפשר לגרור JPEG, PNG או WebP.");
 });
 window.addEventListener("paste", (e) => {
   if (e.target.closest && e.target.closest("input, textarea, [contenteditable]")) return;
@@ -153,6 +153,6 @@ route();
 // Check watched items once per visit, quietly, a moment after load.
 setTimeout(() => {
   recheckWatches().then((backs) => {
-    if (backs.length) toast(backs.length === 1 ? `${backs[0].name} is back in stock` : `${backs.length} watched items are back in stock`, { action: "View", onAction: () => (location.hash = "#/closet/watching") });
+    if (backs.length) toast(backs.length === 1 ? `${backs[0].name} חזר למלאי` : `${backs.length} פריטים שעקבתם אחריהם חזרו למלאי`, { action: "לצפייה", onAction: () => (location.hash = "#/closet/watching") });
   });
 }, 2500);

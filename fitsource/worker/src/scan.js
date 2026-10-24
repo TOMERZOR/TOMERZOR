@@ -71,6 +71,7 @@ export function sanitizeResults(input) {
       confidence: ["exact", "likely", "similar"].includes(raw.confidence) ? raw.confidence : "similar",
       box: { x, y, w: clampInt(box.w, 10, 1000 - x), h: clampInt(box.h, 10, 1000 - y) },
       search_query: cleanText(raw.search_query, 120) || label,
+      search_query_en: cleanText(raw.search_query_en, 120) || "",
       matches,
     });
   }
@@ -144,11 +145,11 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
     },
   ];
 
-  emit({ t: "status", msg: "Reading the fit" });
+  emit({ t: "status", msg: "קוראים את הלוק" });
   const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, web_search_requests: 0 };
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    if (signal && signal.aborted) throw new ScanError("cancelled", "The scan was cancelled.");
+    if (signal && signal.aborted) throw new ScanError("cancelled", "הסריקה בוטלה.");
     const stream = client.beta.messages.stream({
       model,
       max_tokens: 32000,
@@ -165,7 +166,7 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
       if (ev.type === "content_block_start") {
         const b = ev.content_block;
         if (b.type === "server_tool_use") pending.set(ev.index, { name: b.name, json: "" });
-        else if (b.type === "tool_use" && b.name === SUBMIT_TOOL.name) emit({ t: "status", msg: "Putting the results together" });
+        else if (b.type === "tool_use" && b.name === SUBMIT_TOOL.name) emit({ t: "status", msg: "מסדרים את התוצאות" });
         else if (b.type === "web_search_tool_result" && Array.isArray(b.content)) emit({ t: "found", n: b.content.length });
       } else if (ev.type === "content_block_delta" && ev.delta.type === "input_json_delta") {
         const p = pending.get(ev.index);
@@ -192,7 +193,7 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
     usage.cache_read_input_tokens += u.cache_read_input_tokens || 0;
     usage.web_search_requests += (u.server_tool_use && u.server_tool_use.web_search_requests) || 0;
 
-    if (msg.stop_reason === "refusal") throw new ScanError("refused", "This photo could not be scanned.");
+    if (msg.stop_reason === "refusal") throw new ScanError("refused", "לא ניתן לסרוק את התמונה הזו.");
 
     const submit = msg.content.find((b) => b.type === "tool_use" && b.name === SUBMIT_TOOL.name);
     if (submit) {
@@ -209,10 +210,10 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
 
     messages.push({ role: "assistant", content: msg.content });
     if (msg.stop_reason === "pause_turn") continue; // server tools hit their loop limit; resume as is
-    if (msg.stop_reason === "max_tokens") throw new ScanError("too_long", "The scan ran out of room. Try a tighter crop.");
+    if (msg.stop_reason === "max_tokens") throw new ScanError("too_long", "לסריקה לא הספיק מקום. נסו לחתוך את התמונה קרוב יותר.");
     // Finished talking without submitting.
     messages.push({ role: "user", content: "Call submit_results now with what you found." });
   }
-  throw new ScanError("no_results", "The scan did not finish. Try again.");
+  throw new ScanError("no_results", "הסריקה לא הסתיימה. נסו שוב.");
 }
 

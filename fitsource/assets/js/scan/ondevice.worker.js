@@ -38,7 +38,7 @@ function load(post) {
       return await loadModel(post);
     } catch (err) {
       console.error(err);
-      throw new Error("The scanner couldn't be downloaded. Check your connection and try again.");
+      throw new Error("לא הצלחנו להוריד את הסורק. בדקו את החיבור ונסו שוב.");
     }
   })();
   loading.catch(() => {
@@ -49,7 +49,7 @@ function load(post) {
 
 async function loadModel(post) {
   const res = await fetch(new URL("./embeddings.json", import.meta.url));
-  if (!res.ok) throw new Error("Could not load the garment list.");
+  if (!res.ok) throw new Error("לא הצלחנו לטעון את רשימת הבגדים.");
   const emb = decodeEmbeddings(await res.json(), decodeBase64);
   const files = {};
   const progress_callback = (p) => {
@@ -161,7 +161,7 @@ async function handle(msg) {
       post({ type: "result", ...(await region(msg, post)) });
     }
   } catch (err) {
-    post({ type: "error", message: (err && err.message) || "The on-device scanner failed." });
+    post({ type: "error", message: (err && err.message) || "הסורק במכשיר נכשל." });
   } finally {
     cancelled.delete(msg.id);
   }

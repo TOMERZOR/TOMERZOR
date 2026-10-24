@@ -22,16 +22,16 @@ const FIT_PHOTO = path.join(FITSOURCE, "assets/img/fits/shop-floor.jpg");
 
 // ---------- fake Claude + fake shops for the deep scan ----------
 const DEEP_RESULTS = {
-  vibe: "Workwear",
-  summary: "Brown chore jacket over a white tee with raw denim and black boots.",
+  vibe: "וורקוור",
+  summary: "ז'קט עבודה חום מעל טי לבנה, ג'ינס כהה ומגפיים שחורים.",
   items: [
-    { label: "Duck canvas chore jacket", category: "outerwear", color: "brown", brand: "Harrow Supply", product_name: "Chore Jacket", confidence: "exact", box: { x: 150, y: 160, w: 700, h: 330 }, search_query: "brown duck canvas chore jacket",
+    { label: "ז'קט עבודה מקנבס", category: "outerwear", color: "חום", brand: "Harrow Supply", product_name: "Chore Jacket", confidence: "exact", box: { x: 150, y: 160, w: 700, h: 330 }, search_query: "ז'קט עבודה חום מקנבס", search_query_en: "brown duck canvas chore jacket",
       matches: [
-        { title: "Chore Jacket Duck Canvas", brand: "Harrow Supply", shop: "Harrow Supply", url: "https://harrow.example.com/products/chore-jacket", price: 178, currency: "USD", availability: "in_stock", sizes_in_stock: [], match: "original", note: null },
-        { title: "Chore Jacket, worn", brand: "Harrow Supply", shop: "Grailed", url: "https://www.grailed.example.com/listings/1", price: 120, currency: "USD", availability: "in_stock", sizes_in_stock: ["M"], match: "resale", note: null },
+        { title: "Chore Jacket Duck Canvas", brand: "Harrow Supply", shop: "Harrow Supply", url: "https://harrow.example.com/products/chore-jacket", price: 659, currency: "ILS", availability: "in_stock", sizes_in_stock: [], match: "original", note: null },
+        { title: "Chore Jacket, worn", brand: "Harrow Supply", shop: "Grailed", url: "https://www.grailed.example.com/listings/1", price: 449, currency: "ILS", availability: "in_stock", sizes_in_stock: ["M"], match: "resale", note: null },
       ] },
-    { label: "Raw selvedge jeans", category: "bottom", color: "raw indigo", brand: "Harrow Supply", product_name: "1951 Raw Selvedge", confidence: "likely", box: { x: 300, y: 520, w: 400, h: 380 }, search_query: "raw selvedge straight jeans",
-      matches: [{ title: "1951 Raw Selvedge", brand: "Harrow Supply", shop: "Harrow Supply", url: "https://harrow.example.com/products/1951", price: 160, currency: "USD", availability: "in_stock", sizes_in_stock: [], match: "original", note: null }] },
+    { label: "ג'ינס סלבג' כהה", category: "bottom", color: "אינדיגו כהה", brand: "Harrow Supply", product_name: "1951 Raw Selvedge", confidence: "likely", box: { x: 300, y: 520, w: 400, h: 380 }, search_query: "ג'ינס סלבג' כהה ישר", search_query_en: "raw selvedge straight jeans",
+      matches: [{ title: "1951 Raw Selvedge", brand: "Harrow Supply", shop: "Harrow Supply", url: "https://harrow.example.com/products/1951", price: 590, currency: "ILS", availability: "in_stock", sizes_in_stock: [], match: "original", note: null }] },
   ],
 };
 function sseMessage(blocks, stop) {
@@ -76,10 +76,10 @@ function installFakeShops() {
   globalThis.fetch = async (input, init) => {
     const url = typeof input === "string" ? input : input.url;
     if (url === "https://harrow.example.com/products/chore-jacket.js") {
-      return new Response(JSON.stringify({ available: jacketInStock, price: 17800, variants: [{ title: "M", available: jacketInStock }] }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ available: jacketInStock, price: 65900, variants: [{ title: "M", available: jacketInStock }] }), { headers: { "content-type": "application/json" } });
     }
     if (url === "https://harrow.example.com/products/1951.js") {
-      return new Response(JSON.stringify({ available: true, price: 16000, variants: [{ title: "30", available: true }, { title: "32", available: false }] }), { headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ available: true, price: 59000, variants: [{ title: "30", available: true }, { title: "32", available: false }] }), { headers: { "content-type": "application/json" } });
     }
     if (url.startsWith("https://") && !url.includes("127.0.0.1")) return new Response("blocked", { status: 403 });
     return real(input, init);
@@ -118,18 +118,23 @@ if (run("quick")) {
   await shot(page, "quick-2-results");
   const names = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
   check(names.length >= 3, `quick scan found only ${names.length} pieces: ${names}`);
-  check(names.some((n) => /jacket/i.test(n)), `quick scan missed the jacket: ${names}`);
+  check(names.some((n) => /ז'קט|מעיל/.test(n)), `quick scan missed the jacket: ${names}`);
   check(/#\/scan\/[\w]+$/.test(page.url()), `url not updated to the scan id: ${page.url()}`);
   const spots = await page.$$eval(".detail__media .hotspot", (els) => els.length);
   check(spots === names.length, `hotspots ${spots} != items ${names.length}`);
 
   // shop links follow the search words
   const input = page.locator("[data-query]").first();
-  await input.fill("brown chore jacket corduroy collar");
+  // before editing: Israeli shops search in Hebrew, English-catalogue shops in English
+  const tx0 = await page.locator('.shoprow a[data-shop="terminalx"]').first().getAttribute("href");
+  check(tx0 && tx0.startsWith("https://www.terminalx.com/catalogsearch/result/?q=%D7"), `terminal x should get Hebrew words: ${tx0}`);
+  const asos0 = await page.locator('.shoprow a[data-shop="asos"]').first().getAttribute("href");
+  check(asos0 && /^https:\/\/www\.asos\.com\/search\/\?q=[a-z]/.test(asos0), `asos should get English words: ${asos0}`);
+  await input.fill("ז'קט עבודה חום");
   const href = await page.locator('.shoprow a[data-shop="google"]').first().getAttribute("href");
-  check(href && href.includes("brown%20chore%20jacket%20corduroy%20collar"), `google link not updated: ${href}`);
+  check(href && href.startsWith("https://www.google.co.il/search?") && decodeURIComponent(href).includes("ז'קט עבודה חום"), `google link not updated: ${href}`);
   const asos = await page.locator('.shoprow a[data-shop="asos"]').first().getAttribute("href");
-  check(asos && asos.startsWith("https://www.asos.com/search/?q=brown"), `asos link wrong: ${asos}`);
+  check(asos && decodeURIComponent(asos).includes("ז'קט"), `edited words go to every shop: ${asos}`);
 
   // hotspot -> tag highlight
   await page.locator(".detail__media .hotspot").nth(1).click();
@@ -152,7 +157,7 @@ if (run("quick")) {
   await page.mouse.up();
   await page.waitForFunction((n) => document.querySelectorAll(".tags .tag").length > n, before, { timeout: 60000 });
   const drawn = await page.locator(".tags .tag__name").first().textContent();
-  check(/boot|shoe|sneaker|loafer|sandal|flat/i.test(drawn), `drawn box over the shoes found: ${drawn}`);
+  check(/נעלי|מגפי|סניקרס|סנדלים/.test(drawn), `drawn box over the shoes found: ${drawn}`);
   await page.waitForTimeout(500);
   await shot(page, "quick-3-drawn");
 
@@ -191,7 +196,7 @@ if (run("quick")) {
   await page.waitForSelector("[data-tape]");
   await page.waitForSelector(".tags .tag", { timeout: 120000 });
   const names2 = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
-  check(names2.some((n) => /skirt/i.test(n)), `second scan should find the skirt: ${names2}`);
+  check(names2.some((n) => /חצאית/.test(n)), `second scan should find the skirt: ${names2}`);
 
   // a second photo dropped while the first is still loading wins
   await page.goto("http://127.0.0.1:8741/fitsource/");
@@ -205,14 +210,14 @@ if (run("quick")) {
   await page.waitForSelector(".tags .tag", { timeout: 120000 });
   await page.waitForTimeout(1500);
   const raced = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
-  check(raced.some((n) => /flare|crop top/i.test(n)) && !raced.some((n) => /cargo/i.test(n)), `dropped photo should win the race: ${raced}`);
-  check((await page.locator(".notice:has-text('stopped')").count()) === 0, "race left an error view");
+  check(raced.some((n) => /מתרחב|קרופ/.test(n)) && !raced.some((n) => /דגמ"ח/.test(n)), `dropped photo should win the race: ${raced}`);
+  check((await page.locator(".notice:has-text('נעצרה')").count()) === 0, "race left an error view");
 
   // a non-image file
   await page.goto("http://127.0.0.1:8741/fitsource/");
   await page.setInputFiles("[data-file]", { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await page.waitForSelector(".notice", { timeout: 10000 });
-  check(/image/i.test(await page.locator(".notice").textContent()), "non-image upload should explain what to pick");
+  check(/תמונה/.test(await page.locator(".notice").textContent()), "non-image upload should explain what to pick");
 
   for (const p of problems) failures.push("quick: " + p);
   await ctx.close();
@@ -238,7 +243,7 @@ if (run("deep")) {
     page.on("framenavigated", (f) => f === page.mainFrame() && console.log(Date.now() % 100000, "NAV", f.url().slice(22)));
   }
   await page.goto("http://127.0.0.1:8742/fitsource/");
-  await page.waitForFunction(() => /Deep scan is on/.test(document.querySelector("[data-engine]").textContent), null, { timeout: 8000 }).catch(() => failures.push("deep: home did not report deep scan"));
+  await page.waitForFunction(() => /סריקה מעמיקה פעילה/.test(document.querySelector("[data-engine]").textContent), null, { timeout: 8000 }).catch(() => failures.push("deep: home did not report deep scan"));
   await page.setInputFiles("[data-file]", FIT_PHOTO);
   await page.waitForSelector("[data-tape] .log__line:nth-child(3)", { timeout: 15000 });
   await shot(page, "deep-1-scanning");
@@ -248,14 +253,14 @@ if (run("deep")) {
   const tape = await page.evaluate(() => document.querySelectorAll(".match").length);
   check(tape === 3, `deep: expected 3 shop matches, got ${tape}`);
   const label = await page.locator(".detail__head .label").first().textContent();
-  check(/Deep scan/.test(label), `deep: header label "${label}"`);
+  check(/סריקה מעמיקה/.test(label), `deep: header label "${label}"`);
   // jacket was in stock per the model, but the shop says sold out -> watch button
   const watchBtn = page.locator('.tags .tag [data-action="watch"]');
   check((await watchBtn.count()) === 1, `deep: expected one Alert me button, got ${await watchBtn.count()}`);
   const firstStatus = await page.locator(".tags .tag").first().locator(".tag__meta .status").textContent();
-  check(/Sold out/i.test(firstStatus), `deep: jacket should be verified sold out, got "${firstStatus}"`);
+  check(/אזל/.test(firstStatus), `deep: jacket should be verified sold out, got "${firstStatus}"`);
   const total = await page.locator(".total__value").textContent();
-  check(/^\$280/.test(total), `deep: total "${total}" (in-stock resale $120 + jeans $160)`);
+  check(/1,039\s*\u200f?₪/.test(total), `deep: total "${total}" (in-stock resale 449 + jeans 590)`);
   const shopHref = await page.locator(".match").first().getAttribute("href");
   check(shopHref === "https://harrow.example.com/products/chore-jacket", `deep: shop link ${shopHref}`);
   check((await page.locator(".match").first().getAttribute("rel")) === "sponsored noopener noreferrer", "deep: outbound links need rel=sponsored");
@@ -267,9 +272,9 @@ if (run("deep")) {
   await page.waitForSelector("[data-check]");
   await page.waitForTimeout(3000); // let the visit's background check (rate-limited) run first
   await page.locator("[data-check]").click();
-  await page.waitForFunction(() => /back in stock/i.test(document.querySelector("[data-check-note]").textContent), null, { timeout: 15000 }).catch(async () => failures.push("deep: Check now did not report the jacket back: " + (await page.locator("[data-check-note]").textContent())));
+  await page.waitForFunction(() => /חזר למלאי/.test(document.querySelector("[data-check-note]").textContent), null, { timeout: 15000 }).catch(async () => failures.push("deep: Check now did not report the jacket back: " + (await page.locator("[data-check-note]").textContent())));
   await page.waitForSelector(".flag", { timeout: 5000 }).catch(() => failures.push("deep: back-in-stock flag missing"));
-  check(/In stock|Back in stock/i.test(await page.locator(".closet-grid .tag").first().textContent()), "deep: watched item not updated");
+  check(/במלאי|חזר למלאי/.test(await page.locator(".closet-grid .tag").first().textContent()), "deep: watched item not updated");
   await shot(page, "deep-3-restock");
   for (const p of problems) failures.push("deep: " + p);
   await ctx.close();
@@ -286,12 +291,12 @@ if (run("feed")) {
   await page.goto("http://127.0.0.1:8744/fitsource/#/feed");
   await page.waitForSelector(".grid .card");
   const all = await page.locator(".grid .card").count();
-  await page.locator('[data-vibe="Techwear"]').tap();
+  await page.locator('[data-vibe="טקוור"]').tap();
   check((await page.locator(".grid .card").count()) === 1, "Techwear filter should show 1 fit");
-  await page.locator('[data-vibe="All"]').tap();
+  await page.locator('[data-vibe="הכל"]').tap();
   check((await page.locator(".grid .card").count()) === all, "All should show every fit again");
   await page.locator('[data-sort="new"]').tap();
-  check((await page.locator(".grid .card .card__title").first().textContent()) === "Mall Rat", "Newest should start with the 3h-old fit");
+  check((await page.locator(".grid .card .card__title").first().textContent()) === "ילדת קניון", "Newest should start with the 3h-old fit");
   await page.locator(".grid .card").first().tap();
   await page.waitForSelector(".detail .tags .tag");
   check(/#\/fit\/mall-rat$/.test(page.url()), "tapping a card opens its fit");

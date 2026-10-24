@@ -191,7 +191,7 @@ test("a text answer without submit gets one nudge", async () => {
 test("refusal and API errors come back as error events", async () => {
   script = [message([], "refusal")];
   let { events } = await scan({ image: TINY_JPEG });
-  assert.deepEqual(events.at(-1), { t: "error", code: "refused", message: "This photo could not be scanned." });
+  assert.deepEqual(events.at(-1), { t: "error", code: "refused", message: "לא ניתן לסרוק את התמונה הזו." });
 
   script = []; // fake server answers 500
   ({ events } = await scan({ image: TINY_JPEG }));

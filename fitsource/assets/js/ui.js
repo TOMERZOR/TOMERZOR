@@ -28,36 +28,53 @@ export function html(strings, ...values) {
   return new Raw(out);
 }
 
-export const icon = (name, cls = "") => raw(`<svg class="i ${cls}" aria-hidden="true" focusable="false"><use href="#i-${name}"></use></svg>`);
+// Direction arrows are drawn for left-to-right; the site reads right to left.
+const FLIP = new Set(["arrow-right", "arrow-left", "arrow-up-right"]);
+export const icon = (name, cls = "") =>
+  raw(`<svg class="i${FLIP.has(name) ? " i--flip" : ""} ${cls}" aria-hidden="true" focusable="false"><use href="#i-${name}"></use></svg>`);
 
 export const reduceMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const CURRENCY_SYMBOL = { USD: "$", EUR: "€", GBP: "£", ILS: "₪", JPY: "¥", CAD: "CA$", AUD: "A$" };
 
-export function money(amount, currency = "USD") {
+export const LOCALE = "he-IL";
+
+export function money(amount, currency = "ILS") {
   if (amount == null || !Number.isFinite(Number(amount))) return "";
   const n = Number(amount);
   try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency, maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
+    return new Intl.NumberFormat(LOCALE, { style: "currency", currency, maximumFractionDigits: n % 1 ? 2 : 0 }).format(n);
   } catch {
     return `${CURRENCY_SYMBOL[currency] || ""}${n.toFixed(n % 1 ? 2 : 0)}`;
   }
 }
 
+/** "פריט אחד" / "3 פריטים": Hebrew puts the word "one" after the noun. */
+export const count = (n, one, many) => (n === 1 ? one : `${n} ${many}`);
+
 export function compact(n) {
   try {
-    return new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+    return new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 }).format(n);
   } catch {
     return String(n);
   }
 }
 
+export const CATEGORY_NAME = { outerwear: "עליונית", top: "חולצה", bottom: "מכנסיים", dress: "שמלה", footwear: "נעליים", bag: "תיק", headwear: "כובע", eyewear: "משקפיים", jewelry: "תכשיט", accessory: "אקססורי" };
+
+/** "5h" / "2d" / "1w" (how the feed stores post age) as "לפני 5 שעות". */
+export function postedAgo(s) {
+  const n = parseFloat(s);
+  const unit = s.endsWith("w") ? "week" : s.endsWith("d") ? "day" : "hour";
+  return new Intl.RelativeTimeFormat("he", { numeric: "auto" }).format(-n, unit);
+}
+
 export const STATUS_TEXT = {
-  in_stock: "In stock",
-  low_stock: "Low stock",
-  sold_out: "Sold out",
-  preorder: "Pre-order",
-  unknown: "Check stock",
+  in_stock: "במלאי",
+  low_stock: "מלאי אחרון",
+  sold_out: "אזל",
+  preorder: "בהזמנה מוקדמת",
+  unknown: "בדקו מלאי",
 };
 
 /** Stock chip. Sold out renders as a rubber stamp. */
@@ -149,8 +166,9 @@ export function copyText(text) {
 
 export function timeAgo(iso) {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  const rtf = new Intl.RelativeTimeFormat("he", { numeric: "auto" });
+  if (s < 60) return "עכשיו";
+  if (s < 3600) return rtf.format(-Math.floor(s / 60), "minute");
+  if (s < 86400) return rtf.format(-Math.floor(s / 3600), "hour");
+  return rtf.format(-Math.floor(s / 86400), "day");
 }

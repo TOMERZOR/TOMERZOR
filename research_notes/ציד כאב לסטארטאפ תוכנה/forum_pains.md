@@ -1,254 +1,254 @@
-# Forum Pains: Recurring Operational Problems Voiced by SMBs and Professionals (2024–2026)
+# כאבים מהפורומים: בעיות תפעוליות חוזרות שמעלים עסקים קטנים ובינוניים ואנשי מקצוע (2024–2026)
 
-> **How this was gathered, and its limits (read first).** In this research environment, Reddit (reddit.com, old.reddit.com, the Reddit JSON API, pullpush) was **blocked**, both from the search index and for direct fetches. Hacker News pages and the HN Algolia/Firebase APIs also could not be fetched directly, and neither could most forum pages (WebFetch DNS failures). Every quote below therefore comes from **search-engine excerpts** of pages on professional forums: TheTruckersReport, BiggerPockets, ContractorTalk, ElectricianTalk, HVAC-Talk, Dentaltown, allnurses, AccountingWEB, Shopify Community, Indie Hackers and news.ycombinator.com. Text in quotation marks is the excerpt as the search tool returned it. It is very likely verbatim, but I could not check it against the full page. Many "Reddit" claims online reach us only through vendor blogs. Where that happens it is labelled **secondhand/vendor**. **There are no first-hand Reddit quotes in these notes.** The report writer should not present any finding as "from Reddit" unless a vendor blog attributes it there, and then must label it secondhand.
+> **איך המידע נאסף, ומה מגבלותיו (לקרוא קודם).** בסביבת המחקר הזו Reddit (reddit.com, old.reddit.com, ה-API של Reddit ב-JSON, pullpush) היה **חסום**, גם באינדקס החיפוש וגם בגישה ישירה. גם דפי Hacker News וממשקי ה-API של HN Algolia/Firebase לא נטענו ישירות, וכך גם רוב דפי הפורומים (כשלי DNS ב-WebFetch). לכן כל ציטוט שלהלן מגיע מ**קטעי תקציר של מנועי חיפוש** מדפים בפורומים מקצועיים: TheTruckersReport, BiggerPockets, ContractorTalk, ElectricianTalk, HVAC-Talk, Dentaltown, allnurses, AccountingWEB, Shopify Community, Indie Hackers ו-news.ycombinator.com. טקסט במירכאות הוא הקטע כפי שכלי החיפוש החזיר אותו. סביר מאוד שהוא מילה במילה, אבל לא יכולתי לבדוק אותו מול הדף המלא. טענות "מ-Reddit" רבות ברשת מגיעות אלינו רק דרך בלוגים של ספקים. במקרים כאלה הן מסומנות **יד שנייה/ספק**. **אין ברשימות האלה ציטוטים ממקור ראשון מ-Reddit.** כותב הדוח לא צריך להציג שום ממצא כ"מ-Reddit" אלא אם בלוג של ספק מייחס אותו לשם, וגם אז חובה לסמן אותו כיד שנייה.
 
-## Key Question 1: What operational problems do people in these professions complain about again and again, and what workarounds do they use (spreadsheets, WhatsApp, paper, hiring a person)?
+## שאלת מפתח 1: על אילו בעיות תפעוליות אנשים במקצועות האלה מתלוננים שוב ושוב, ובאילו פתרונות עוקפים הם משתמשים (גיליונות אלקטרוניים, WhatsApp, נייר, גיוס אדם)?
 
-### Takeaway
-The pains that recur most across trades, real estate, trucking, dental/PT, accounting and e-commerce share one shape: **chasing a third party for a document or proof, then tracking whether it has expired**. Examples are subcontractor COIs, lien waivers, client receipts and bank statements, detention timestamps, move-in/move-out photos, prior authorizations and licenses. The usual workarounds are a spreadsheet, a shared Drive folder, calendar reminders, WhatsApp groups and "lots of nagging". A second cluster is **re-keying the same data into many portals**: insurance carrier portals, dental insurer portals and delivery-platform dashboards.
+### השורה התחתונה
+הכאבים החוזרים ביותר בקרב בעלי מקצוע בענפי הבנייה והשירותים הטכניים, נדל"ן, הובלות, רפואת שיניים/פיזיותרפיה, ראיית חשבון ומסחר מקוון חולקים מבנה אחד: **רדיפה אחרי צד שלישי לקבלת מסמך או הוכחה, ואחר כך מעקב אחרי פקיעת התוקף שלו**. דוגמאות: אישורי ביטוח (COI) של קבלני משנה, ויתורי שעבוד (lien waivers), קבלות ודפי בנק של לקוחות, חותמות זמן של המתנה (detention), תמונות כניסה/יציאה מדירה, אישורים מוקדמים (prior authorizations) ורישיונות. הפתרונות העוקפים הנפוצים הם גיליון אלקטרוני, תיקייה משותפת ב-Drive, תזכורות ביומן, קבוצות WhatsApp ו"הרבה נדנודים". אשכול שני הוא **הקלדה חוזרת של אותם נתונים לפורטלים רבים**: פורטלים של חברות ביטוח, פורטלים של מבטחי שיניים ולוחות בקרה של פלטפורמות משלוחים.
 
-### Cited Findings
+### ממצאים עם מקורות
 
-**P1. Subcontractor certificate-of-insurance (COI) tracking (GCs, property managers)**
-- Secondhand/vendor account of a r/ConstructionManagers thread: a project coordinator who inherited a subcontractor compliance spreadsheet spends the day chasing subs for renewed certificates. Experienced managers replied "yes, this is how most companies do it — and yes, it is a nightmare." They added: "When you have ten subcontractors, it works. At thirty or forty, it becomes the bottleneck." — [imagetotable.ai (vendor, quoting thread)](https://imagetotable.ai/blog/construction-coi-tracking-email-spreadsheet-problem)
-- ContractorTalk: third-party compliance services such as ISN and PICS "manually check the certificates using humans", and their "software doesn't really do what you're talking about. Their employees do the checks and you pay for the centralized database." DIY workarounds named in the thread: Google Drive/Dropbox plus a checklist, and QuickBooks reminders for expiring policies. — [ContractorTalk thread](https://www.contractortalk.com/threads/software-for-managing-subcontractor-certs-of-insurance-associated-sub-data.264865/)
-- Free Excel COI trackers are widely distributed, which shows the spreadsheet is the default workaround. — [Billy free template](https://billyforinsurance.com/certificate-of-insurance-tracking-template-excel/)
+**P1. מעקב אחרי אישורי ביטוח (COI) של קבלני משנה (קבלנים ראשיים, מנהלי נכסים)**
+- דיווח יד שנייה/ספק על שרשור ב-r/ConstructionManagers: רכזת פרויקטים שירשה גיליון ציות של קבלני משנה מבלה את היום ברדיפה אחרי קבלני המשנה לקבלת אישורים מחודשים. מנהלים ותיקים השיבו: "כן, ככה רוב החברות עושות את זה — וכן, זה סיוט." והוסיפו: "כשיש לך עשרה קבלני משנה, זה עובד. בשלושים או ארבעים, זה הופך לצוואר הבקבוק." — [imagetotable.ai (ספק, מצטט את השרשור)](https://imagetotable.ai/blog/construction-coi-tracking-email-spreadsheet-problem)
+- ContractorTalk: שירותי ציות של צד שלישי כמו ISN ו-PICS "בודקים את האישורים ידנית באמצעות בני אדם", וה"תוכנה שלהם לא באמת עושה את מה שאתה מדבר עליו. העובדים שלהם עושים את הבדיקות ואתה משלם על מסד הנתונים המרכזי." פתרונות עשה-זאת-בעצמך שהוזכרו בשרשור: Google Drive/Dropbox יחד עם רשימת תיוג, ותזכורות ב-QuickBooks לפוליסות שעומדות לפקוע. — [שרשור ב-ContractorTalk](https://www.contractortalk.com/threads/software-for-managing-subcontractor-certs-of-insurance-associated-sub-data.264865/)
+- תבניות Excel חינמיות למעקב אחרי COI מופצות באופן נרחב, מה שמראה שהגיליון האלקטרוני הוא פתרון ברירת המחדל. — [תבנית חינמית של Billy](https://billyforinsurance.com/certificate-of-insurance-tracking-template-excel/)
 
-**P2. Bookkeepers/accountants chasing clients for receipts, statements and documents every month**
-- AccountingWEB: practitioners say they "rarely get the information throughout the month, and it is usually a week or so after month end"; "there's no magic software that will make clients provide records, just education and lots of nagging"; one bookkeeper estimates "3-4 hours per client, per annum in 'client queries'" on top of chasing records. — [AccountingWEB: hours chasing documents](https://www.accountingweb.co.uk/community/industry-insights/how-many-hours-did-your-firm-spend-last-month-chasing-documents); [AccountingWEB: sole traders per bookkeeper](https://www.accountingweb.co.uk/any-answers/how-many-sole-traders-can-a-bookkeeper-manage)
-- A Receipt Bank (now Dext) executive: "The major pain point for our partners is going back and forth on email chasing clients." — [AccountingWEB](https://www.accountingweb.co.uk/node/232293)
-- An Indie Hackers founder building a document-collection tool reports that chasing client replies and missing receipts were the main complaints in customer interviews. — [Indie Hackers](https://www.indiehackers.com/post/i-thought-bookkeeping-software-problems-were-accounting-problems-i-was-wrong-25854191c9)
-- The DocChase founder (Product Hunt) calls the worst part "the monthly ritual of asking every client 'can you send me your bank statement?'" — [hunted.space / DocChase](https://www.hunted.space/dashboard/docchase)
-- An r/Bookkeeping post (Jul 2024, seen via a mirror) asks how others get receipts from clients and match them, calling it very time-consuming. — [r/Bookkeeping mirror](https://pol1.lr.ggtyler.dev/r/Bookkeeping)
+**P2. מנהלי חשבונות ורואי חשבון שרודפים אחרי לקוחות כל חודש לקבלת קבלות, דפי חשבון ומסמכים**
+- AccountingWEB: אנשי מקצוע מספרים שהם "כמעט אף פעם לא מקבלים את המידע במהלך החודש, ובדרך כלל זה מגיע שבוע בערך אחרי סוף החודש"; "אין תוכנת קסם שתגרום ללקוחות לספק רשומות, רק חינוך והרבה נדנודים"; מנהלת חשבונות אחת מעריכה "3-4 שעות ללקוח, לשנה, ב'שאלות לקוח'" מעבר לרדיפה אחרי הרשומות. — [AccountingWEB: שעות של רדיפה אחרי מסמכים](https://www.accountingweb.co.uk/community/industry-insights/how-many-hours-did-your-firm-spend-last-month-chasing-documents); [AccountingWEB: עוסקים יחידים לכל מנהל חשבונות](https://www.accountingweb.co.uk/any-answers/how-many-sole-traders-can-a-bookkeeper-manage)
+- בכיר ב-Receipt Bank (כיום Dext): "נקודת הכאב העיקרית של השותפים שלנו היא ההתכתבות הלוך ושוב במייל ברדיפה אחרי לקוחות." — [AccountingWEB](https://www.accountingweb.co.uk/node/232293)
+- מייסד ב-Indie Hackers שבונה כלי לאיסוף מסמכים מדווח שרדיפה אחרי תשובות של לקוחות וקבלות חסרות היו התלונות המרכזיות בראיונות עם לקוחות. — [Indie Hackers](https://www.indiehackers.com/post/i-thought-bookkeeping-software-problems-were-accounting-problems-i-was-wrong-25854191c9)
+- מייסד DocChase (ב-Product Hunt) מכנה את החלק הגרוע ביותר "הטקס החודשי של לשאול כל לקוח 'אתה יכול לשלוח לי את דף הבנק שלך?'" — [hunted.space / DocChase](https://www.hunted.space/dashboard/docchase)
+- פוסט ב-r/Bookkeeping (יולי 2024, נצפה דרך אתר מראה) שואל איך אחרים מקבלים קבלות מלקוחות ומתאימים אותן, ומתאר זאת כגוזל זמן רב מאוד. — [מראה של r/Bookkeeping](https://pol1.lr.ggtyler.dev/r/Bookkeeping)
 
-**P3. Dental front desk verifying insurance eligibility and benefits**
-- A Dentaltown column says checking eligibility before appointments "takes an average of two hours a day", and says eligibility "is almost always going to be last, but it is also one of the most important because it heavily impacts your collections." — [Dentaltown](https://www.dentaltown.com/channel/post/7458/is-dental-insurance-eligibility-taking-too-much-time)
-- Vendor estimates run 10–15 minutes per patient by phone or portal, and 15–30 minutes with hold times. At 25 patients/day, one vendor puts it at about 4–5.5 hours/day, "nearly one full-time employee" (vendor, treat as directional). — [Solutionreach](https://www.solutionreach.com/blog/faster-verifications-fewer-denials-why-real-time-eligibility-is-a-2026-must-have); [Dentalbase](https://www.dentalbase.ai/blogs/practice-management/dental-insurance-verification-process-step-by-step-front-desk)
-- Workarounds: a dedicated staff owner, protected batching blocks, outsourced verification BPOs. — [Dentaltown front office](https://www.dentaltown.com/channel/post/25995/front-office-systems-that-fix-chaos)
+**P3. דלפק קבלה במרפאות שיניים שמאמת זכאות וכיסוי ביטוחי**
+- טור ב-Dentaltown אומר שבדיקת זכאות לפני תורים "לוקחת בממוצע שעתיים ביום", ושהזכאות "כמעט תמיד תהיה אחרונה בתור, אבל היא גם אחת החשובות ביותר כי היא משפיעה מאוד על הגבייה שלך." — [Dentaltown](https://www.dentaltown.com/channel/post/7458/is-dental-insurance-eligibility-taking-too-much-time)
+- הערכות של ספקים נעות בין 10–15 דקות למטופל בטלפון או בפורטל, ו-15–30 דקות כולל זמני המתנה. ב-25 מטופלים ליום, ספק אחד מעריך זאת בכ-4–5.5 שעות ביום, "כמעט משרה מלאה אחת" (ספק, להתייחס כהערכת כיוון). — [Solutionreach](https://www.solutionreach.com/blog/faster-verifications-fewer-denials-why-real-time-eligibility-is-a-2026-must-have); [Dentalbase](https://www.dentalbase.ai/blogs/practice-management/dental-insurance-verification-process-step-by-step-front-desk)
+- פתרונות עוקפים: איש צוות ייעודי שאחראי על הנושא, בלוקי זמן מוגנים לטיפול מרוכז, ומיקור חוץ של האימות לחברות BPO. — [Dentaltown: הקבלה](https://www.dentaltown.com/channel/post/25995/front-office-systems-that-fix-chaos)
 
-**P4. Truckers and small carriers losing detention pay for lack of proof**
-- A TheTruckersReport thread is titled "Lost detention pay again because broker said 'no proof' — how do you guys document it". In other threads, a driver lost detention because the only proof was a handwritten note on the BOL, and "some shipper and receiver clerks won't initial in and out times". Workarounds: phone logs, ELD entries, GPS apps, emailing the broker before free time ends, small-claims court. — [TheTruckersReport: "no proof"](https://thetruckersreport.com/truckingindustryforum/threads/lost-detention-pay-again-because-broker-said-no-proof-%E2%80%94-how-do-you-guys-document-it.2540236); [How to get brokers to ACTUALLY PAY DETENTION?](https://www.thetruckersreport.com/truckingindustryforum/threads/how-to-get-brokers-to-actually-pay-detention.2145331/page-2); [What would you do if a broker doesn't pay detention](https://www.thetruckersreport.com/truckingindustryforum/threads/what-would-you-do-if-a-broker-doesnt-pay-detention.1275590/)
-- A broker rate-con template: "Detention will be paid ONLY if the broker is notified ONE HOUR PRIOR to detention occurring and times are clearly marked on BOLs." — [Scribd sample](https://www.scribd.com/document/613150220/semail)
-- A Senate Commerce document cites an FMCSA estimate that detention costs the industry more than $3B. — [commerce.senate.gov](https://www.commerce.senate.gov/index.php/services/files/BAE24B91-2539-4DFA-B966-9E5491826733)
+**P4. נהגי משאיות ומובילים קטנים שמפסידים תשלום על המתנה (detention) בגלל היעדר הוכחה**
+- שרשור ב-TheTruckersReport נקרא "שוב הפסדתי תשלום המתנה כי הברוקר אמר 'אין הוכחה' — איך אתם מתעדים את זה". בשרשורים אחרים, נהג הפסיד תשלום המתנה כי ההוכחה היחידה הייתה הערה בכתב יד על שטר המטען (BOL), ו"חלק מהפקידים אצל השולחים והמקבלים לא מוכנים לחתום בראשי תיבות על שעות הכניסה והיציאה". פתרונות עוקפים: יומני טלפון, רישומי ELD, אפליקציות GPS, שליחת מייל לברוקר לפני שתם הזמן החופשי, תביעות קטנות. — [TheTruckersReport: "אין הוכחה"](https://thetruckersreport.com/truckingindustryforum/threads/lost-detention-pay-again-because-broker-said-no-proof-%E2%80%94-how-do-you-guys-document-it.2540236); [איך לגרום לברוקרים לשלם באמת על המתנה?](https://www.thetruckersreport.com/truckingindustryforum/threads/how-to-get-brokers-to-actually-pay-detention.2145331/page-2); [מה הייתם עושים אם ברוקר לא משלם על המתנה](https://www.thetruckersreport.com/truckingindustryforum/threads/what-would-you-do-if-a-broker-doesnt-pay-detention.1275590/)
+- תבנית אישור תעריף (rate-con) של ברוקר: "תשלום על המתנה יבוצע אך ורק אם הברוקר קיבל הודעה שעה אחת לפני תחילת ההמתנה והשעות מסומנות בבירור על שטרי המטען." — [דוגמה ב-Scribd](https://www.scribd.com/document/613150220/semail)
+- מסמך של ועדת המסחר של הסנאט מצטט הערכה של FMCSA שלפיה ההמתנה עולה לענף יותר מ-$3B. — [commerce.senate.gov](https://www.commerce.senate.gov/index.php/services/files/BAE24B91-2539-4DFA-B966-9E5491826733)
 
-**P5. California small landlords facing new regulatory paperwork: AB 2801 deposit photos and AB 1482 rent caps**
-- BiggerPockets, 2025 threads: AB 2801 requires photos before move-in, at move-out before repairs, and after repairs. Per one poster, "most landlords get tripped up because they can't connect photos to line items" on the itemized statement. Missing the 21-day window "means forfeiting deductions entirely". Workarounds: "a simple naming convention (unit number + room + date) in a shared Drive folder per property"; "a calendar entry the moment a tenant moves out, and block day 18 as the hard 'write it up' deadline"; narrated video walkthroughs. — [BiggerPockets: how small landlords handle AB 1482/AB 2801 paperwork](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork); [BiggerPockets: move-out checklist after AB 2801](https://www.biggerpockets.com/forums/52/topics/1290993-my-move-out-checklist-after-ab-2801-what-california-landlords-need-to-document-now)
-- On AB 1482, landlords track each unit in a spreadsheet and check the cap "before you send the increase notice, not after". Local ordinances layer on top, the CPI cap changes every August, and "one incorrect increase can mean a rent rollback and penalties." — [BiggerPockets AB 1482/2801 thread](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork)
-- General deposit disputes: "Sending the tenant copies of move-in and move-out pictures greatly reduces protests against deposit charges." — [BiggerPockets deposit threads](https://www.biggerpockets.com/forums/52/topics/1045109-move-out-condition-and-disposition-of-security-deposit)
-- Sources conflict on AB 2801 effective dates (Jan 2025 vs. tenancies from Jul 1, 2025, with pre/post-repair photos from Apr 1, 2025). — [same BiggerPockets threads](https://www.biggerpockets.com/forums/109/topics/1212272-new-california-law-requires-photo-documentation-for-security-deposit-deductions)
+**P5. משכירים קטנים בקליפורניה מול ניירת רגולטורית חדשה: תמונות פיקדון לפי AB 2801 ותקרות שכר דירה לפי AB 1482**
+- BiggerPockets, שרשורים מ-2025: AB 2801 מחייב תמונות לפני הכניסה לדירה, ביציאה לפני תיקונים, ואחרי התיקונים. לדברי אחד המשתתפים, "רוב המשכירים נתקעים כי הם לא מצליחים לקשר בין תמונות לשורות" בדוח המפורט. החמצת חלון 21 הימים "פירושה ויתור מוחלט על הניכויים". פתרונות עוקפים: "מוסכמת שמות פשוטה (מספר יחידה + חדר + תאריך) בתיקייה משותפת ב-Drive לכל נכס"; "רשומה ביומן ברגע שהשוכר יוצא, ולחסום את היום ה-18 כמועד האחרון הקשיח 'לכתוב את זה'"; סיורי וידאו עם קריינות. — [BiggerPockets: איך משכירים קטנים מתמודדים עם הניירת של AB 1482/AB 2801](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork); [BiggerPockets: רשימת התיוג שלי ליציאה מדירה אחרי AB 2801](https://www.biggerpockets.com/forums/52/topics/1290993-my-move-out-checklist-after-ab-2801-what-california-landlords-need-to-document-now)
+- לגבי AB 1482, משכירים עוקבים אחרי כל יחידה בגיליון אלקטרוני ובודקים את התקרה "לפני ששולחים את הודעת ההעלאה, לא אחרי". פקודות עזר מקומיות מתווספות מעל, תקרת ה-CPI משתנה בכל אוגוסט, ו"העלאה שגויה אחת יכולה להוביל להחזרת שכר הדירה לאחור ולקנסות." — [שרשור AB 1482/2801 ב-BiggerPockets](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork)
+- מחלוקות כלליות על פיקדונות: "שליחת עותקים של תמונות הכניסה והיציאה לשוכר מפחיתה מאוד את ההתנגדויות לחיובים מהפיקדון." — [שרשורי פיקדון ב-BiggerPockets](https://www.biggerpockets.com/forums/52/topics/1045109-move-out-condition-and-disposition-of-security-deposit)
+- המקורות סותרים זה את זה לגבי מועדי התחולה של AB 2801 (ינואר 2025 לעומת שכירויות החל מ-1 ביולי 2025, עם תמונות לפני/אחרי תיקון החל מ-1 באפריל 2025). — [אותם שרשורים ב-BiggerPockets](https://www.biggerpockets.com/forums/109/topics/1212272-new-california-law-requires-photo-documentation-for-security-deposit-deductions)
 
-**P6. Independent insurance agents re-entering the same data into multiple carrier portals**
-- "Independent agents spend upwards of two hours a day on manual data entry." 55% of agents quote commercial lines through carrier portals, but only 32% prefer to. Entering the same data across portals was "frustrating and time-consuming for all parties." — [Insurance Business](https://www.insurancebusinessmag.com/us/news/technology/why-more-tools-are-making-independent-agents-less-productive-592341.aspx); [IVANS case study](https://www.ivans.com/resources/reports-research/insurance-carrier-journey-digital-connectivity/); [Insurance Journal](https://www.insurancejournal.com/magazines/mag-features/2023/10/16/743907.htm)
+**P6. סוכני ביטוח עצמאיים שמזינים מחדש את אותם נתונים לפורטלים של כמה חברות ביטוח**
+- "סוכנים עצמאיים מבלים יותר משעתיים ביום בהזנת נתונים ידנית." 55% מהסוכנים מפיקים הצעות מחיר לביטוח עסקי דרך פורטלים של חברות הביטוח, אבל רק 32% מעדיפים לעשות זאת. הזנת אותם נתונים בפורטלים שונים הייתה "מתסכלת וגוזלת זמן לכל הצדדים." — [Insurance Business](https://www.insurancebusinessmag.com/us/news/technology/why-more-tools-are-making-independent-agents-less-productive-592341.aspx); [מקרה בוחן של IVANS](https://www.ivans.com/resources/reports-research/insurance-carrier-journey-digital-connectivity/); [Insurance Journal](https://www.insurancejournal.com/magazines/mag-features/2023/10/16/743907.htm)
 
-**P7. Insurance agency commission reconciliation**
-- Carriers don't standardize statements. One example: Progressive's CSV uses "Pol #" and "Comm Amt" while other carriers use different headers. The spreadsheet workaround is subtraction formulas plus green/yellow color-coding. "If no one is comparing against last month, a vanished policy looks like silence rather than a problem." — [Commissions Wizard guide (vendor)](https://commissionswizard.com/blog/insurance-commission-reconciliation-guide); [Commission Tracker guide (vendor)](https://commission-tracker.com/insurance-commission-reconciliation/)
+**P7. התאמת עמלות בסוכנויות ביטוח**
+- חברות הביטוח לא מתקננות את הדוחות שלהן. דוגמה אחת: קובץ ה-CSV של Progressive משתמש ב-"Pol #" וב-"Comm Amt", בעוד חברות אחרות משתמשות בכותרות שונות. הפתרון העוקף בגיליון הוא נוסחאות חיסור יחד עם צביעה בירוק/צהוב. "אם אף אחד לא משווה מול החודש הקודם, פוליסה שנעלמה נראית כמו שקט ולא כמו בעיה." — [המדריך של Commissions Wizard (ספק)](https://commissionswizard.com/blog/insurance-commission-reconciliation-guide); [המדריך של Commission Tracker (ספק)](https://commission-tracker.com/insurance-commission-reconciliation/)
 
-**P8. Restaurants losing money on third-party delivery error charges and adjustments**
-- At the Food On Demand conference (May 2024), a Freddy's executive called DSP chargebacks "really just theft". Freddy's partner Loop AI is "helping recoup more than $1 million a year." — [Food On Demand](https://foodondemand.com/05172024/its-really-just-theft-freddys-exec-says-of-chargebacks-at-fodc/)
-- Dispute windows (vendor claim): DoorDash about 14 days, Uber Eats about 30 days with weekly caps. Uber's official policy allows payout adjustments "up to the full cost of the affected items, including tax." — [KoreFi (vendor)](https://www.korefi.ai/blog/uber-eats-fees-for-restaurants); [Uber Eats merchant page](https://merchants.ubereats.com/gb/en/resources/learning-center/order-errors)
+**P8. מסעדות שמפסידות כסף על חיובי טעויות והתאמות של פלטפורמות משלוחים חיצוניות**
+- בכנס Food On Demand (מאי 2024), בכיר ב-Freddy's כינה את החיובים החוזרים של פלטפורמות המשלוחים (DSP) "בעצם גניבה". השותפה של Freddy's, Loop AI, "עוזרת להחזיר יותר ממיליון דולר בשנה." — [Food On Demand](https://foodondemand.com/05172024/its-really-just-theft-freddys-exec-says-of-chargebacks-at-fodc/)
+- חלונות זמן לערעור (טענת ספק): DoorDash כ-14 ימים, Uber Eats כ-30 ימים עם תקרות שבועיות. המדיניות הרשמית של Uber מתירה התאמות בתשלום "עד מלוא העלות של הפריטים שנפגעו, כולל מס." — [KoreFi (ספק)](https://www.korefi.ai/blog/uber-eats-fees-for-restaurants); [דף הסוחרים של Uber Eats](https://merchants.ubereats.com/gb/en/resources/learning-center/order-errors)
 
-**P9. E-commerce: multichannel inventory sync and overselling**
-- Shopify Community: polling tools sync "every 10 to 15 minutes", which opens an oversell window at peak. "Shopify doesn't handle that part natively." — [Shopify Community: how often do you sync](https://community.shopify.com/t/how-often-do-you-sync-inventory-across-sales-channels/684825); [Best inventory sync tool](https://community.shopify.com/t/best-inventory-sync-tool-for-shopify/672498)
+**P9. מסחר מקוון: סנכרון מלאי רב-ערוצי ומכירת יתר**
+- Shopify Community: כלים מבוססי תשאול מסנכרנים "כל 10 עד 15 דקות", מה שפותח חלון למכירת יתר בשעות שיא. "Shopify לא מטפלת בחלק הזה באופן מובנה." — [Shopify Community: באיזו תדירות אתם מסנכרנים](https://community.shopify.com/t/how-often-do-you-sync-inventory-across-sales-channels/684825); [כלי סנכרון המלאי הטוב ביותר](https://community.shopify.com/t/best-inventory-sync-tool-for-shopify/672498)
 
-**P10. E-commerce: chargebacks and friendly fraud lost despite proof of delivery**
-- A Shopify Community thread title: "Shopify Merchants Are Being Penalised for Chargeback Evidence We Literally Cannot Provide on Any Other Plan Other Than Plus". The claim is that non-Plus merchants can't customise checkout to capture terms acceptance. Other merchants lost disputes even with tracking, because tracking only answers the "not received" reason code. — [Shopify Community thread](https://community.shopify.com/t/shopify-merchants-are-being-penalised-for-chargeback-evidence-we-literally-cannot-provide-on-any-other-plan-other-than-plus/622590); [Charge back on item delivered with tracking](https://community.shopify.com/t/charge-back-on-an-item-successfully-delivered-with-tracking-evidence/347448)
+**P10. מסחר מקוון: חיובים חוזרים (chargebacks) והונאה "ידידותית" שאובדים למרות הוכחת מסירה**
+- כותרת של שרשור ב-Shopify Community: "סוחרי Shopify נענשים על ראיות לחיוב חוזר שאנחנו ממש לא יכולים לספק בשום מסלול חוץ מ-Plus". הטענה היא שסוחרים שאינם במסלול Plus לא יכולים להתאים את עמוד התשלום כדי לתעד הסכמה לתנאים. סוחרים אחרים הפסידו בערעורים גם כשהיה להם מעקב משלוח, כי מעקב עונה רק על קוד הסיבה "לא התקבל". — [שרשור ב-Shopify Community](https://community.shopify.com/t/shopify-merchants-are-being-penalised-for-chargeback-evidence-we-literally-cannot-provide-on-any-other-plan-other-than-plus/622590); [חיוב חוזר על פריט שנמסר עם מעקב](https://community.shopify.com/t/charge-back-on-an-item-successfully-delivered-with-tracking-evidence/347448)
 
-**P11. Physical therapists documenting off the clock**
-- The WebPT 2024 State of Rehab Therapy report is cited as finding that 85% of PTs take documentation home and 36% name it a leading cause of burnout (cited by a vendor, not verified against WebPT directly). — [Physitrack (vendor)](https://www.physitrack.com/insights/documentation-burden-pt-ot-burnout)
+**P11. פיזיותרפיסטים שמתעדים מחוץ לשעות העבודה**
+- דוח WebPT 2024 State of Rehab Therapy מצוטט כמי שמצא ש-85% מהפיזיותרפיסטים לוקחים את התיעוד הביתה ו-36% מציינים אותו כגורם מוביל לשחיקה (מצוטט על ידי ספק, לא אומת ישירות מול WebPT). — [Physitrack (ספק)](https://www.physitrack.com/insights/documentation-burden-pt-ot-burnout)
 
-**P12. PT/outpatient clinics losing claims to missing or expired prior authorizations and visit limits**
-- "Insurance companies do not usually send expiration reminders", so clinics track dates themselves. Vendors cite PT denial rates of about 11% and "missing OK causes 25% of PT claim denials" (vendor figures that conflict with each other). — [rcmworkshop](https://rcmworkshop.com/insights/blogs/physical-therapy-prior-authorization-handling-visit-limits-and-payer-restrictions/); [SPRY](https://www.sprypt.com/blog/effective-strategies-to-reduce-claim-denials-for-your-pt-clinic)
+**P12. מרפאות פיזיותרפיה/אמבולטוריות שמאבדות תביעות בגלל אישורים מוקדמים חסרים או שפג תוקפם ומגבלות ביקורים**
+- "חברות ביטוח בדרך כלל לא שולחות תזכורות על פקיעת תוקף", ולכן המרפאות עוקבות אחרי התאריכים בעצמן. ספקים מצטטים שיעורי דחייה בפיזיותרפיה של כ-11% ו"אישור חסר גורם ל-25% מדחיות התביעות בפיזיותרפיה" (נתוני ספקים שסותרים זה את זה). — [rcmworkshop](https://rcmworkshop.com/insights/blogs/physical-therapy-prior-authorization-handling-visit-limits-and-payer-restrictions/); [SPRY](https://www.sprypt.com/blog/effective-strategies-to-reduce-claim-denials-for-your-pt-clinic)
 
-**P13. Veterinary clinics: client communication and reminder tools that don't sync with the PIMS**
-- Review roundups: Weave "expensive, with frequent price increases and add-on fees"; PetDesk "PIMS sync is the recurring sore spot... manual entry that was supposed to disappear"; Vello "only exists inside IDEXX's world". — [Tailwerks roundup](https://tailwerks.com/best-veterinary-client-communication-software/); [Owner Exchange](https://ownerexchange.com/veterinary-client-communication-software/)
+**P13. מרפאות וטרינריות: כלי תקשורת ותזכורות ללקוחות שלא מסתנכרנים עם מערכת ניהול המרפאה (PIMS)**
+- סקירות מרוכזות: Weave "יקרה, עם העלאות מחיר תכופות ותוספות בתשלום"; PetDesk "הסנכרון עם ה-PIMS הוא נקודת הכאב החוזרת... הזנה ידנית שהייתה אמורה להיעלם"; Vello "קיימת רק בתוך העולם של IDEXX". — [הסקירה של Tailwerks](https://tailwerks.com/best-veterinary-client-communication-software/); [Owner Exchange](https://ownerexchange.com/veterinary-client-communication-software/)
 
-**P14. Small law firms running conflict checks in spreadsheets or email**
-- Clio's own guide calls spreadsheet checks "the most common method". A vendor says Clio's checker searches only Clio records, so legacy spreadsheet data is missed. — [Clio blog](https://www.clio.com/au/blog/conflict-check-how-to/); [ustechautomations (vendor)](https://ustechautomations.com/resources/blog/legal-build-a-conflict-check-workflow-for-small-law-2026)
+**P14. משרדי עורכי דין קטנים שמבצעים בדיקות ניגוד עניינים בגיליונות אלקטרוניים או במייל**
+- המדריך של Clio עצמה מכנה בדיקות בגיליון "השיטה הנפוצה ביותר". ספק אחד אומר שכלי הבדיקה של Clio מחפש רק ברשומות של Clio, כך שנתונים ישנים מגיליונות מתפספסים. — [הבלוג של Clio](https://www.clio.com/au/blog/conflict-check-how-to/); [ustechautomations (ספק)](https://ustechautomations.com/resources/blog/legal-build-a-conflict-check-workflow-for-small-law-2026)
 
-**P15. Lien waivers per pay application (GCs and subs)**
-- Spreadsheet trackers use "one row per subcontractor per pay-app cycle" with a payment-hold flag. A vendor claims spreadsheets work "up to about five active jobs". — [invoicedataextraction](https://invoicedataextraction.com/blog/subcontractor-lien-waiver-tracker-gc-ap); [LienDone](https://www.liendone.com/blog/lien-waiver-tracking-spreadsheet)
+**P15. ויתורי שעבוד (lien waivers) לכל בקשת תשלום (קבלנים ראשיים וקבלני משנה)**
+- גיליונות מעקב משתמשים ב"שורה אחת לכל קבלן משנה לכל מחזור בקשת תשלום" עם דגל של עיכוב תשלום. ספק אחד טוען שגיליונות עובדים "עד בערך חמישה פרויקטים פעילים". — [invoicedataextraction](https://invoicedataextraction.com/blog/subcontractor-lien-waiver-tracker-gc-ap); [LienDone](https://www.liendone.com/blog/lien-waiver-tracking-spreadsheet)
 
-**P16. Subcontractors not getting paid for extra work (unsigned change orders and T&M tickets)**
-- ContractorTalk/ElectricianTalk: one sub did extra work without a signed change order, so the owner refused to pay ("He was correct, we did do the extra work without getting an additional signed change order"). The sub filed a lien and was offered partial payment only if the lien was removed first. Thread advice: get daily T&M tickets signed by someone with authority. — [ContractorTalk: break out change orders on extras](https://www.contractortalk.com/threads/do-you-break-out-a-change-order-on-extras-on-small-jobs.344569/); [ElectricianTalk: change orders](https://www.electriciantalk.com/threads/change-orders.13692/)
-- California home-improvement law: a change order "shall become part of the contract only if it is in writing and signed by the parties prior to the commencement of any work". — (excerpt surfaced in the same search; statute text not fetched)
+**P16. קבלני משנה שלא מקבלים תשלום על עבודה נוספת (פקודות שינוי וכרטיסי עבודה לפי זמן וחומרים (T&M) לא חתומים)**
+- ContractorTalk/ElectricianTalk: קבלן משנה אחד ביצע עבודה נוספת בלי פקודת שינוי חתומה, ולכן הבעלים סירב לשלם ("הוא צדק, באמת עשינו את העבודה הנוספת בלי לקבל פקודת שינוי חתומה נוספת"). קבלן המשנה רשם שעבוד והוצע לו תשלום חלקי רק אם יסיר קודם את השעבוד. העצה בשרשור: להחתים כרטיסי T&M יומיים אצל מישהו בעל סמכות. — [ContractorTalk: האם לפצל פקודת שינוי על תוספות](https://www.contractortalk.com/threads/do-you-break-out-a-change-order-on-extras-on-small-jobs.344569/); [ElectricianTalk: פקודות שינוי](https://www.electriciantalk.com/threads/change-orders.13692/)
+- חוק שיפוצי הבית של קליפורניה: פקודת שינוי "תהפוך לחלק מהחוזה רק אם היא בכתב ונחתמה על ידי הצדדים לפני תחילת כל עבודה". — (קטע שעלה באותו חיפוש; נוסח החוק לא נשלף)
 
-**P17. Field-service software too expensive for small trades shops (HVAC, electrical, plumbing)**
-- Vendor-reported r/HVAC sentiment: ServiceTitan costs roughly $500–$700/month at the floor plus $5k–$10k implementation, and about $3.5–4k/month for 10 techs (secondhand, competitor blogs). — [FieldProxy (vendor)](https://www.fieldproxy.ai/resources/blog/best-servicetitan-alternatives-for-small-hvac-companies-under-50-techs)
-- HVAC-Talk: Jobber is "not very expensive, easy to use and does what we need it to do". One poster wanted software that can "assign a work order directly to a piece of equipment and also keep track of the maintenance agreements". — [HVAC-Talk: software to run business](https://www.hvac-talk.com/threads/hvac-software-to-run-business.2226005/); [HVAC-Talk: PM software](https://www.hvac-talk.com/threads/preventative-maintenance-software.1974241/)
+**P17. תוכנות לניהול שירות שטח (FSM) יקרות מדי לעסקי שירות קטנים (מיזוג אוויר, חשמל, אינסטלציה)**
+- סנטימנט ב-r/HVAC כפי שדווח על ידי ספקים: ServiceTitan עולה בערך $500–$700 לחודש ברף התחתון, ועוד $5k–$10k להטמעה, וכ-$3.5–4k לחודש עבור 10 טכנאים (יד שנייה, בלוגים של מתחרים). — [FieldProxy (ספק)](https://www.fieldproxy.ai/resources/blog/best-servicetitan-alternatives-for-small-hvac-companies-under-50-techs)
+- HVAC-Talk: Jobber "לא יקרה במיוחד, קלה לשימוש ועושה מה שאנחנו צריכים". משתתף אחד רצה תוכנה שיכולה "לשייך הזמנת עבודה ישירות לפריט ציוד ספציפי וגם לעקוב אחרי הסכמי התחזוקה". — [HVAC-Talk: תוכנה לניהול העסק](https://www.hvac-talk.com/threads/hvac-software-to-run-business.2226005/); [HVAC-Talk: תוכנת תחזוקה מונעת](https://www.hvac-talk.com/threads/preventative-maintenance-software.1974241/)
 
-**P18. Field crews coordinating over WhatsApp groups (photos and decisions get lost)**
-- Vendor accounts: "40 progress photos being buried under 800 unrelated messages within two days"; "WhatsApp also strips most photo metadata during compression"; when staff leave, history leaves with them. Crews keep using WhatsApp because it is "simple, universal, and trusted"; ease of use is the top adoption driver (68%, vendor-cited survey). — [Banamind](https://banamind.ai/blog/why-construction-teams-use-whatsapp); [Valoon](https://valoon.chat/en/blog/whatsapp-groups-in-construction/); [SymTerra](https://www.symterra.co.uk/blog/construction-site-communication-app-uk); [Buildove](https://buildove.com/2025/09/13/the-whatsapp-trap-managing-construction-projects-on-whatsapp-is-costing-you-more-money/)
+**P18. צוותי שטח שמתאמים דרך קבוצות WhatsApp (תמונות והחלטות הולכות לאיבוד)**
+- דיווחי ספקים: "40 תמונות התקדמות נקברות תחת 800 הודעות לא קשורות תוך יומיים"; "WhatsApp גם מסירה את רוב המטא-דאטה של התמונות בזמן הדחיסה"; כשעובדים עוזבים, ההיסטוריה עוזבת איתם. הצוותים ממשיכים להשתמש ב-WhatsApp כי היא "פשוטה, אוניברסלית ואמינה"; קלות השימוש היא המניע המרכזי לאימוץ (68%, סקר שמצוטט על ידי ספק). — [Banamind](https://banamind.ai/blog/why-construction-teams-use-whatsapp); [Valoon](https://valoon.chat/en/blog/whatsapp-groups-in-construction/); [SymTerra](https://www.symterra.co.uk/blog/construction-site-communication-app-uk); [Buildove](https://buildove.com/2025/09/13/the-whatsapp-trap-managing-construction-projects-on-whatsapp-is-costing-you-more-money/)
 
-**P19. Nurse units still filling shifts with paper "short sheets"**
-- allnurses: units post a paper "short" sheet; one manager kept a manual sheet for fear an app would lower pay; others found API and ShiftWizard frustrating. Most threads are several years old. — [allnurses: Bid Shift](https://allnurses.com/anyone-using-bid-shift-filling-t191785/); [allnurses: what scheduling do you use](https://allnurses.com/what-kind-scheduling-use-work-t622583/)
+**P19. מחלקות סיעוד שעדיין מאיישות משמרות באמצעות "דפי חוסרים" מנייר**
+- allnurses: מחלקות תולות דף "חוסרים" מנייר; מנהלת אחת שמרה דף ידני מחשש שאפליקציה תוריד את השכר; אחרים מצאו את API ואת ShiftWizard מתסכלות. רוב השרשורים בני כמה שנים. — [allnurses: Bid Shift](https://allnurses.com/anyone-using-bid-shift-filling-t191785/); [allnurses: באיזו מערכת שיבוץ אתם משתמשים](https://allnurses.com/what-kind-scheduling-use-work-t622583/)
 
-**P20. Freelancers and agencies chasing late B2B invoices**
-- Ask HN, about April 2026: "How do you handle clients who don't pay on time?" The consensus is deposits, stopping work, and late fees. One commenter says "there aren't any worthwhile legal resources for freelancers." — [Ask HN 47638685](https://news.ycombinator.com/item?id=47638685); [Indie Hackers thread](https://www.indiehackers.com/post/freelancers-of-ih-how-do-you-actually-deal-with-a-client-paying-late-or-never-55972ef40e)
+**P20. פרילנסרים וסוכנויות שרודפים אחרי חשבוניות B2B שמשולמות באיחור**
+- Ask HN, בערך אפריל 2026: "איך אתם מתמודדים עם לקוחות שלא משלמים בזמן?" הקונצנזוס הוא מקדמות, הפסקת עבודה ודמי איחור. מגיב אחד אומר ש"אין משאבים משפטיים ששווים משהו לפרילנסרים." — [Ask HN 47638685](https://news.ycombinator.com/item?id=47638685); [שרשור ב-Indie Hackers](https://www.indiehackers.com/post/freelancers-of-ih-how-do-you-actually-deal-with-a-client-paying-late-or-never-55972ef40e)
 
-**P21. Trades: tracking employee licenses and CE across states**
-- Spreadsheet templates sell to track license, state, board and expiry with 30/60/90-day colour flags. Guides concede "a spreadsheet is fine for a single-state shop". — [LicensedTrades](https://licensedtrades.com/blog/how-to-track-contractor-license-renewals-multi-state); [ContractorComply](https://contractorcomply.us/resources/contractor-license-expiration-tracking)
+**P21. בעלי מקצוע: מעקב אחרי רישיונות והשתלמויות חובה (CE) של עובדים במדינות שונות**
+- נמכרות תבניות גיליון למעקב אחרי רישיון, מדינה, גוף מסדיר ותאריך פקיעה, עם סימון צבעוני של 30/60/90 יום. מדריכים מודים ש"גיליון אלקטרוני מספיק לעסק שפועל במדינה אחת". — [LicensedTrades](https://licensedtrades.com/blog/how-to-track-contractor-license-renewals-multi-state); [ContractorComply](https://contractorcomply.us/resources/contractor-license-expiration-tracking)
 
-**P22. Self-managed HOAs tracking dues in spreadsheets**
-- Many free or cheap tools exist: KindHOA $0/$29 flat, HomeHerald free up to 50 homes, AffordableHOA $49 flat. — [KindHOA](https://kindhoa.com/alternatives/best-self-managed-hoa-software); [AffordableHOA](https://affordablehoa.com/hoa-management-software)
+**P22. ועדי בתים (HOA) בניהול עצמי שעוקבים אחרי דמי ועד בגיליונות אלקטרוניים**
+- קיימים כלים רבים בחינם או בזול: KindHOA ב-$0/$29 קבוע, HomeHerald בחינם עד 50 בתים, AffordableHOA ב-$49 קבוע. — [KindHOA](https://kindhoa.com/alternatives/best-self-managed-hoa-software); [AffordableHOA](https://affordablehoa.com/hoa-management-software)
 
-### Inferences
-- The strongest recurring pattern is **"evidence capture plus deadline"**: COI expiry, detention timestamps, deposit photos tied to deduction lines, signed T&M tickets, prior-auth expiry. Money is lost not because the work is hard but because proof was not captured at the moment it happened, or a date was missed.
-- Workarounds cluster as: spreadsheet (COI, lien waivers, commissions, rent caps, licenses), shared Drive plus naming conventions (landlords), calendar reminders (landlords, COIs), WhatsApp (field crews), paper (nurse short sheets, BOL notes), and **hiring a person or BPO** (dental verification, COI human checkers, outsourced RCM). Hiring a person is the strongest willingness-to-pay signal.
+### מסקנות
+- הדפוס החוזר החזק ביותר הוא **"תיעוד ראיה בתוספת מועד אחרון"**: פקיעת COI, חותמות זמן של המתנה, תמונות פיקדון שמקושרות לשורות ניכוי, כרטיסי T&M חתומים, פקיעת אישור מוקדם. הכסף אובד לא כי העבודה קשה, אלא כי ההוכחה לא נאספה ברגע שהדבר קרה, או שתאריך הוחמץ.
+- הפתרונות העוקפים מתקבצים כך: גיליון אלקטרוני (COI, ויתורי שעבוד, עמלות, תקרות שכר דירה, רישיונות), Drive משותף יחד עם מוסכמות שמות (משכירים), תזכורות ביומן (משכירים, COI), WhatsApp (צוותי שטח), נייר (דפי חוסרים בסיעוד, הערות על BOL), ו**גיוס אדם או חברת BPO** (אימות זכאות בשיניים, בודקי COI אנושיים, מיקור חוץ של מחזור ההכנסות (RCM)). גיוס אדם הוא האות החזק ביותר לנכונות לשלם.
 
-### Gaps
-- **No first-hand Reddit content could be retrieved** (blocked), so the subreddits named in the brief (r/smallbusiness, r/sysadmin, r/Accounting, r/landlord, r/PropertyManagement, r/HVAC, r/electricians, r/Plumbing, r/nursing, r/physicaltherapy, r/dentistry, r/Teachers, r/freelance, r/ecommerce, r/restaurateur, r/Truckers, r/Insurance, r/LawFirm, r/paralegal, r/vet) are **not directly represented**. A human should spot-check them manually.
-- Two searches for sysadmin pains (SaaS offboarding, license sprawl on Spiceworks) returned no results. I found nothing on teachers or paralegals.
-- I could not open full forum pages, so post dates for several forum threads are unknown. Some ContractorTalk/HVAC-Talk/allnurses threads are clearly older than 2024.
+### פערים
+- **לא ניתן היה לשלוף שום תוכן ממקור ראשון מ-Reddit** (חסום), ולכן תתי-הפורומים שנזכרו בתדריך (r/smallbusiness, r/sysadmin, r/Accounting, r/landlord, r/PropertyManagement, r/HVAC, r/electricians, r/Plumbing, r/nursing, r/physicaltherapy, r/dentistry, r/Teachers, r/freelance, r/ecommerce, r/restaurateur, r/Truckers, r/Insurance, r/LawFirm, r/paralegal, r/vet) **אינם מיוצגים ישירות**. אדם צריך לבצע בהם בדיקות מדגמיות ידנית.
+- שני חיפושים על כאבים של מנהלי מערכות (הסרת גישה ל-SaaS בעזיבת עובדים, התפשטות רישיונות ב-Spiceworks) לא החזירו תוצאות. לא מצאתי דבר על מורים או על עוזרים משפטיים.
+- לא יכולתי לפתוח דפי פורום מלאים, ולכן תאריכי הפרסום של כמה שרשורים אינם ידועים. חלק מהשרשורים ב-ContractorTalk/HVAC-Talk/allnurses ישנים בבירור מ-2024.
 
-## Key Question 2: What do Hacker News "Ask HN: what tool do you wish existed / what would you pay to solve" threads from 2024–2026 say?
+## שאלת מפתח 2: מה אומרים שרשורי "Ask HN: איזה כלי הייתם רוצים שיהיה קיים / על מה הייתם משלמים כדי לפתור" ב-Hacker News מהשנים 2024–2026?
 
-### Takeaway
-I found relevant 2024–2026 HN threads, but I could not read their comment bodies. Only search-summary snippets were available, so HN contributes little verifiable B2B pain. The useful HN signal comes from 2026 "Who is hiring" posts, where funded startups describe industries "still running on spreadsheets and phone calls (and faxes!)". That is a **saturation signal**: VC-backed teams are already attacking those niches.
+### השורה התחתונה
+מצאתי שרשורי HN רלוונטיים מ-2024–2026, אבל לא יכולתי לקרוא את תוכן התגובות בהם. היו זמינים רק קטעי תקציר מהחיפוש, ולכן HN תורם מעט כאב B2B שניתן לאמת. האות השימושי מ-HN מגיע מפוסטי "Who is hiring" של 2026, שבהם סטארטאפים שגייסו כסף מתארים ענפים ש"עדיין רצים על גיליונות אלקטרוניים ושיחות טלפון (ופקסים!)". זהו **אות רוויה**: צוותים בגיבוי הון סיכון כבר תוקפים את הנישות האלה.
 
-### Cited Findings
-- "Ask HN: What work problems would your company pay to solve?" exists. The OP asks about manual workflows, reporting pain and compliance hassles. The item id suggests late 2025; the date is unconfirmed. The comment contents could not be retrieved. — [HN 46041165](https://news.ycombinator.com/item?id=46041165)
-- Snippets from related HN threads (dates unclear): a sysadmin says upgrading a server fleet at end-of-life is painful and worth paying to solve. A trading group would pay for an upload-positions, get-margin-reports service because the CME tool's factors change intraday. Another commenter says firms in international trade pay to avoid customs delays rather than to cut compliance cost. — [HN search summary pointing to 46041165 and related threads](https://news.ycombinator.com/item?id=46041165)
-- "Ask HN: What Problem Would You Solve with Unlimited Time and Money? [Apr 2025]" and "[May 2025]" are mostly consumer and moonshot wishes. — [HN 43670167](https://news.ycombinator.com/item?id=43670167); [HN 43883335](https://news.ycombinator.com/item?id=43883335)
-- "Ask HN: What are the 'boring' businesses for hackers these days?" (Jan 2024). Its advice: look for "a MS Excel spreadsheet that gets mailed back and forth and edited" in niche non-technical industries, priced around $50–$250/month. — [HN 38882314](https://news.ycombinator.com/item?id=38882314)
-- 2026 HN "Who is hiring" posts: hotel procurement is "a $400B industry still running on spreadsheets and phone calls (and faxes!)" (Feb 2026); contractors "still run payroll, compliance, and job costing across spreadsheets and legacy software" (Mar 2026); hardware supply chains "run on spreadsheets, email, and PDFs" (Jun 2026). — [Feb 2026](https://news.ycombinator.com/item?id=46857488); [Mar 2026](https://news.ycombinator.com/item?id=47219668); [Jun 2026](https://news.ycombinator.com/item?id=48357725)
-- Healthcare fax persists. Commenters say records for out-of-network providers usually move by fax, and that fax is "not considered 'electronic media' under HIPAA". — [Ask HN: who still uses faxes (2022)](https://news.ycombinator.com/item?id=29517259)
-- Ask HN (about April 2026) on late-paying clients. Consensus: deposits of 20–50%, stop work, late fees of "5-10% each month". — [HN 47638685](https://news.ycombinator.com/item?id=47638685)
+### ממצאים עם מקורות
+- השרשור "Ask HN: What work problems would your company pay to solve?" ("אילו בעיות בעבודה החברה שלכם הייתה משלמת כדי לפתור?") קיים. כותב הפוסט שואל על תהליכי עבודה ידניים, כאבי דיווח וטרחת ציות לרגולציה. מזהה הפריט מרמז על סוף 2025; התאריך לא אומת. לא ניתן היה לשלוף את תוכן התגובות. — [HN 46041165](https://news.ycombinator.com/item?id=46041165)
+- קטעים משרשורי HN קשורים (תאריכים לא ברורים): מנהל מערכות אומר ששדרוג צי שרתים בסוף חייו הוא כואב ושווה תשלום כדי לפתור. קבוצת מסחר הייתה משלמת על שירות של העלאת פוזיציות וקבלת דוחות בטחונות (margin), כי המקדמים בכלי של CME משתנים במהלך היום. מגיב אחר אומר שחברות בסחר בינלאומי משלמות כדי להימנע מעיכובים במכס ולא כדי לקצץ בעלויות הציות. — [תקציר חיפוש ב-HN שמפנה ל-46041165 ולשרשורים קשורים](https://news.ycombinator.com/item?id=46041165)
+- השרשורים "Ask HN: What Problem Would You Solve with Unlimited Time and Money? [Apr 2025]" ו-"[May 2025]" ("איזו בעיה הייתם פותרים עם זמן וכסף בלתי מוגבלים?") הם ברובם משאלות צרכניות ושאפתניות במיוחד. — [HN 43670167](https://news.ycombinator.com/item?id=43670167); [HN 43883335](https://news.ycombinator.com/item?id=43883335)
+- "Ask HN: What are the 'boring' businesses for hackers these days?" ("מהם העסקים ה'משעממים' להאקרים בימינו?", ינואר 2024). העצה שם: לחפש "גיליון MS Excel שנשלח הלוך ושוב במייל ונערך" בענפי נישה לא טכנולוגיים, בתמחור של כ-$50–$250 לחודש. — [HN 38882314](https://news.ycombinator.com/item?id=38882314)
+- פוסטי "Who is hiring" ב-HN מ-2026: רכש במלונאות הוא "ענף של $400B שעדיין רץ על גיליונות אלקטרוניים ושיחות טלפון (ופקסים!)" (פברואר 2026); קבלנים "עדיין מנהלים שכר, ציות ותמחיר עבודות על פני גיליונות אלקטרוניים ותוכנות מיושנות" (מרץ 2026); שרשראות אספקה של חומרה "רצות על גיליונות אלקטרוניים, מייל ו-PDF" (יוני 2026). — [פברואר 2026](https://news.ycombinator.com/item?id=46857488); [מרץ 2026](https://news.ycombinator.com/item?id=47219668); [יוני 2026](https://news.ycombinator.com/item?id=48357725)
+- הפקס עדיין שורד בבריאות. מגיבים אומרים שרשומות של ספקים מחוץ לרשת עוברות בדרך כלל בפקס, ושפקס "אינו נחשב 'מדיה אלקטרונית' לפי HIPAA". — [Ask HN: מי עדיין משתמש בפקס (2022)](https://news.ycombinator.com/item?id=29517259)
+- Ask HN (בערך אפריל 2026) על לקוחות שמשלמים באיחור. הקונצנזוס: מקדמות של 20–50%, הפסקת עבודה, דמי איחור של "5-10% בכל חודש". — [HN 47638685](https://news.ycombinator.com/item?id=47638685)
 
-### Inferences
-- HN wish threads skew toward developer and consumer wishes. For B2B vertical pain they are weaker than trade forums.
-- The "Who is hiring" evidence means construction compliance, hotel procurement and supply chains already have funded startups hiring engineers in 2026.
+### מסקנות
+- שרשורי המשאלות ב-HN נוטים לכיוון משאלות של מפתחים וצרכנים. ככלי לזיהוי כאב ורטיקלי ב-B2B הם חלשים יותר מפורומים מקצועיים.
+- הראיות מ-"Who is hiring" מראות שבתחומי ציות בבנייה, רכש במלונאות ושרשראות אספקה כבר יש ב-2026 סטארטאפים ממומנים שמגייסים מהנדסים.
 
-### Gaps
-- Comment-level content from HN 46041165 (the most on-target thread) could not be read. A human should read it directly.
-- HN Algolia queries for 2024–2026 "Ask HN" threads were not possible (host blocked).
+### פערים
+- לא ניתן היה לקרוא תוכן ברמת התגובות מ-HN 46041165 (השרשור הרלוונטי ביותר). אדם צריך לקרוא אותו ישירות.
+- לא ניתן היה להריץ שאילתות HN Algolia על שרשורי "Ask HN" מ-2024–2026 (השרת חסום).
 
-## Key Question 3: For each pain, who suffers, how often, what does it cost, who already serves it (names, pricing, funding), why do people still complain, what is the devil's-advocate case, and what is the verdict?
+## שאלת מפתח 3: לכל כאב — מי סובל, באיזו תדירות, כמה זה עולה, מי כבר משרת אותו (שמות, תמחור, מימון), למה אנשים עדיין מתלוננים, מה טיעון פרקליט השטן, ומה פסק הדין?
 
-### Takeaway
-Under aggressive checking, **almost every pain already has several funded or cheap products**, often a dozen or more SEO-driven niche tools, which is itself evidence of saturation. **No pain cleanly passes "critical + underserved".** Three survive only conditionally, as narrow wedges:
-- **(A) Evidence capture for subcontractor extra work (T&M/change-order sign-off) for small specialty subs.** Clearstory serves the top GCs; small subs are underserved.
-- **(B) California small-landlord compliance documentation (AB 2801 photo-to-deduction linkage plus AB 1482/local rent-cap tracking).** It is new, regulation-driven, has penalties, and its tools are fragmented and immature.
-- **(C) Detention proof and collection for owner-operators.** Real money is lost and the tools are tiny and fragmented, but the root cause is leverage.
+### השורה התחתונה
+תחת בדיקה אגרסיבית, **כמעט לכל כאב כבר יש כמה מוצרים ממומנים או זולים**, ולעיתים קרובות תריסר או יותר כלי נישה מונעי SEO, מה שכשלעצמו מעיד על רוויה. **אף כאב לא עובר בצורה נקייה את המבחן "קריטי + לא מקבל מענה מספק".** שלושה שורדים רק בתנאים, כנקודות כניסה (wedges) צרות:
+- **(A) תיעוד ראיות לעבודה נוספת של קבלני משנה (אישור T&M/פקודת שינוי) עבור קבלני משנה קטנים ומתמחים.** Clearstory משרתת את הקבלנים הראשיים הגדולים; קבלני משנה קטנים לא מקבלים מענה מספק.
+- **(B) תיעוד ציות למשכירים קטנים בקליפורניה (קישור תמונה-לניכוי לפי AB 2801 בתוספת מעקב אחרי תקרת שכר דירה לפי AB 1482/פקודות מקומיות).** הוא חדש, מונע רגולציה, כרוך בקנסות, והכלים בתחום מפוצלים ולא בשלים.
+- **(C) הוכחת המתנה וגבייה עבור נהגים-בעלי משאית (owner-operators).** כסף אמיתי אובד והכלים קטנטנים ומפוצלים, אבל שורש הבעיה הוא כוח מיקוח.
 
-The other 19 are DROPPED.
+19 האחרים **נפסלו**.
 
-### Cited Findings
+### ממצאים עם מקורות
 
-#### Scoreboard
-| # | Pain | Who pays | Verdict |
+#### לוח תוצאות
+| # | כאב | מי משלם | פסק דין |
 |---|---|---|---|
-| P1 | Sub COI tracking | GCs, PMs | DROPPED (crowded down to $39/mo) |
-| P2 | Bookkeeper document chasing | Bookkeepers/CPAs | DROPPED (crowded; behavioral root cause) |
-| P3 | Dental insurance verification | Dental practices | DROPPED (well-funded AI rush) |
-| P4 | Detention proof/collection | Owner-operators, small fleets | SURVIVES (conditional, weak) |
-| P5 | CA landlord AB 2801/AB 1482 compliance | 1–50 unit CA landlords | SURVIVES (conditional, small TAM) |
-| P6 | Carrier-portal re-entry | Independent agencies | DROPPED (raters/incumbents/RPA) |
-| P7 | Commission reconciliation | Agencies | DROPPED (served from $67/mo) |
-| P8 | Delivery-platform disputes | Restaurants | DROPPED (Loop AI $20M raised, Voosh) |
-| P9 | Multichannel inventory sync | E-com sellers | DROPPED (saturated) |
-| P10 | Chargebacks | E-com | DROPPED (saturated; network-rule constrained) |
-| P11 | PT documentation | PTs/clinics | DROPPED (AI-scribe flood) |
-| P12 | PT prior-auth tracking | Clinics | DROPPED (EMR feature; US-healthcare burden) |
-| P13 | Vet comms/PIMS sync | Vet clinics | DROPPED (PIMS lock-in, incumbents) |
-| P14 | Law conflict checks | Small firms | DROPPED (in Clio et al.) |
-| P15 | Lien waivers | GCs/subs | DROPPED (Levelset/Procore, Siteline) |
-| P16 | Unsigned extra work / T&M | Specialty subs | SURVIVES (conditional) |
-| P17 | FSM too expensive | Small trades | DROPPED (Jobber/HCP etc.) |
-| P18 | WhatsApp crews lose info | Field SMBs | DROPPED as standalone (many WhatsApp-native tools), but a key design insight |
-| P19 | Nurse shift sheets | Hospitals | DROPPED (enterprise buyer) |
-| P20 | Freelancer late payment | Freelancers | DROPPED (low WTP, contract problem) |
-| P21 | Trade license/CE tracking | Multi-state contractors | DROPPED (small, served) |
-| P22 | HOA dues | Volunteer boards | DROPPED (free tools) |
+| P1 | מעקב COI של קבלני משנה | קבלנים ראשיים, מנהלי נכסים | נפסל (צפוף, עד $39 לחודש) |
+| P2 | רדיפה אחרי מסמכים אצל מנהלי חשבונות | מנהלי חשבונות/רואי חשבון | נפסל (צפוף; שורש התנהגותי) |
+| P3 | אימות ביטוח שיניים | מרפאות שיניים | נפסל (בהלת AI ממומנת היטב) |
+| P4 | הוכחת המתנה/גבייה | נהגים-בעלי משאית, ציים קטנים | שורד (בתנאים, חלש) |
+| P5 | ציות ל-AB 2801/AB 1482 למשכירים בקליפורניה | משכירים בקליפורניה עם 1–50 יחידות | שורד (בתנאים, שוק כולל (TAM) קטן) |
+| P6 | הזנה חוזרת בפורטלים של חברות ביטוח | סוכנויות עצמאיות | נפסל (מנועי השוואה/שחקנים ותיקים/RPA) |
+| P7 | התאמת עמלות | סוכנויות | נפסל (מקבל מענה החל מ-$67 לחודש) |
+| P8 | ערעורים מול פלטפורמות משלוחים | מסעדות | נפסל (Loop AI גייסה $20M, Voosh) |
+| P9 | סנכרון מלאי רב-ערוצי | מוכרים במסחר מקוון | נפסל (רווי) |
+| P10 | חיובים חוזרים | מסחר מקוון | נפסל (רווי; מוגבל בכללי רשתות הכרטיסים) |
+| P11 | תיעוד בפיזיותרפיה | פיזיותרפיסטים/מרפאות | נפסל (מבול של כלי AI לתיעוד) |
+| P12 | מעקב אישורים מוקדמים בפיזיותרפיה | מרפאות | נפסל (פיצ'ר של מערכות EMR; נטל של מערכת הבריאות האמריקאית) |
+| P13 | תקשורת במרפאות וטרינריות/סנכרון PIMS | מרפאות וטרינריות | נפסל (נעילה ב-PIMS, שחקנים ותיקים) |
+| P14 | בדיקות ניגוד עניינים במשפטים | משרדים קטנים | נפסל (קיים ב-Clio ודומיה) |
+| P15 | ויתורי שעבוד | קבלנים ראשיים/קבלני משנה | נפסל (Levelset/Procore, Siteline) |
+| P16 | עבודה נוספת לא חתומה / T&M | קבלני משנה מתמחים | שורד (בתנאים) |
+| P17 | FSM יקר מדי | עסקי שירות קטנים | נפסל (Jobber/HCP ודומיהן) |
+| P18 | צוותי WhatsApp מאבדים מידע | עסקי שטח קטנים | נפסל כמוצר עצמאי (כלים רבים מבוססי WhatsApp), אבל תובנת עיצוב מרכזית |
+| P19 | דפי משמרות בסיעוד | בתי חולים | נפסל (רוכש ארגוני) |
+| P20 | איחורי תשלום לפרילנסרים | פרילנסרים | נפסל (נכונות נמוכה לשלם, בעיה חוזית) |
+| P21 | מעקב רישיונות/השתלמויות לבעלי מקצוע | קבלנים במספר מדינות | נפסל (קטן, מקבל מענה) |
+| P22 | דמי ועד בית | ועדים מתנדבים | נפסל (כלים חינמיים) |
 
-#### P1 Subcontractor COI tracking: DROPPED
-- **Who/cost:** GC project coordinators and AP. The pain scales with the number of subs ("at thirty or forty, it becomes the bottleneck"). — [imagetotable (secondhand)](https://imagetotable.ai/blog/construction-coi-tracking-email-spreadsheet-problem)
-- **Existing:** myCOI (no public price, estimated $500–2,000+/mo, enterprise); Billy (around $600/mo for 100–300 subs per one estimate); TrustLayer (free Starter up to 50 vendors, +$10/vendor/mo per one source); COI File $39–$199/mo. — [subdoc.io](https://subdoc.io/blog/affordable-coi-tracking-software); [trackmyvendor](https://trackmyvendor.com/mycoi-alternatives); [coifile](https://coifile.com/coi-tracking/best-software-for-contractors/)
-- **Why complaints persist:** enterprise pricing for small GCs, and human-checker services (ISN/PICS) that don't automate. — [ContractorTalk](https://www.contractortalk.com/threads/software-for-managing-subcontractor-certs-of-insurance-associated-sub-data.264865/)
-- **Devil's advocate:** a free tier (TrustLayer) plus a dozen AI-extraction entrants (subdoc, coipulse, coifile, trackmyvendor, imagetotable, an Apify actor) already compete for the low end. Search results for this query are dominated by them. — [Apify actor](https://apify.com/armourylabs/subcontractor-certificate-expiry-checker); [coipulse](https://coipulse.com/blog/mycoi-alternatives)
+#### P1 מעקב COI של קבלני משנה: נפסל
+- **מי/עלות:** רכזי פרויקטים ומחלקת תשלומים (AP) אצל הקבלן הראשי. הכאב גדל עם מספר קבלני המשנה ("בשלושים או ארבעים, זה הופך לצוואר הבקבוק"). — [imagetotable (יד שנייה)](https://imagetotable.ai/blog/construction-coi-tracking-email-spreadsheet-problem)
+- **קיים:** myCOI (ללא מחיר פומבי, הערכה של $500–2,000+ לחודש, ארגוני); Billy (בסביבות $600 לחודש עבור 100–300 קבלני משנה לפי הערכה אחת); TrustLayer (מסלול Starter חינמי עד 50 ספקים, ‎+$10 לספק לחודש לפי מקור אחד); COI File ב-$39–$199 לחודש. — [subdoc.io](https://subdoc.io/blog/affordable-coi-tracking-software); [trackmyvendor](https://trackmyvendor.com/mycoi-alternatives); [coifile](https://coifile.com/coi-tracking/best-software-for-contractors/)
+- **למה התלונות נמשכות:** תמחור ארגוני לקבלנים ראשיים קטנים, ושירותי בדיקה אנושיים (ISN/PICS) שלא מבצעים אוטומציה. — [ContractorTalk](https://www.contractortalk.com/threads/software-for-managing-subcontractor-certs-of-insurance-associated-sub-data.264865/)
+- **פרקליט השטן:** מסלול חינמי (TrustLayer) ועוד תריסר מתחרים חדשים מבוססי חילוץ נתונים ב-AI (subdoc, coipulse, coifile, trackmyvendor, imagetotable, ו-Apify actor) כבר מתחרים על הקצה הזול. תוצאות החיפוש לשאילתה הזו נשלטות על ידיהם. — [Apify actor](https://apify.com/armourylabs/subcontractor-certificate-expiry-checker); [coipulse](https://coipulse.com/blog/mycoi-alternatives)
 
-#### P2 Bookkeeper document chasing: DROPPED
-- **Who/cost:** bookkeepers and small accounting firms, monthly. Around 3–4 hours per client per year in queries plus chasing (one practitioner's estimate). — [AccountingWEB](https://www.accountingweb.co.uk/any-answers/how-many-sole-traders-can-a-bookkeeper-manage)
-- **Existing:** Content Snare (from about $29–35/mo); TaxDome (about $800–1,200/user/yr); Financial Cents, Karbon, Uku, DocChase, Dext/Hubdoc. — [Capterra Content Snare](https://www.capterra.com/p/167019/Content-Snare/); [Capterra TaxDome](https://www.capterra.com/p/186749/TaxDome/); [getuku](https://getuku.com/articles/taxdome-pricing/)
-- **Devil's advocate:** practitioners themselves say "there's no magic software that will make clients provide records". The bottleneck is client behaviour, and many cheap tools already automate reminders. — [AccountingWEB](https://www.accountingweb.co.uk/any-answers/how-many-sole-traders-can-a-bookkeeper-manage)
+#### P2 רדיפה אחרי מסמכים אצל מנהלי חשבונות: נפסל
+- **מי/עלות:** מנהלי חשבונות ומשרדי ראיית חשבון קטנים, מדי חודש. בסביבות 3–4 שעות ללקוח בשנה על שאלות ורדיפה אחרי מסמכים (הערכה של איש מקצוע אחד). — [AccountingWEB](https://www.accountingweb.co.uk/any-answers/how-many-sole-traders-can-a-bookkeeper-manage)
+- **קיים:** Content Snare (החל מכ-$29–35 לחודש); TaxDome (כ-$800–1,200 למשתמש לשנה); Financial Cents, Karbon, Uku, DocChase, Dext/Hubdoc. — [Content Snare ב-Capterra](https://www.capterra.com/p/167019/Content-Snare/); [TaxDome ב-Capterra](https://www.capterra.com/p/186749/TaxDome/); [getuku](https://getuku.com/articles/taxdome-pricing/)
+- **פרקליט השטן:** אנשי המקצוע עצמם אומרים ש"אין תוכנת קסם שתגרום ללקוחות לספק רשומות". צוואר הבקבוק הוא התנהגות הלקוח, וכלים זולים רבים כבר מבצעים אוטומציה של תזכורות. — [AccountingWEB](https://www.accountingweb.co.uk/any-answers/how-many-sole-traders-can-a-bookkeeper-manage)
 
-#### P3 Dental insurance verification: DROPPED
-- **Who/cost:** front desk, daily, about 2 hours/day (Dentaltown) up to roughly 1 FTE (vendor estimate). Practices already pay BPOs, which shows willingness to pay. — [Dentaltown](https://www.dentaltown.com/channel/post/7458/is-dental-insurance-eligibility-taking-too-much-time)
-- **Existing/funding:** Patientdesk AI ($1M pre-seed, YC, live in 60+ clinics, Feb 2026); Toothy AI (YC W25, $5.4M, Accel); LightSpun ($13M Series A, about Sep 2025); Trust AI ($6M seed, Aug 2025); Zentist; plus Vyne/Onederful-type clearinghouses. — [Dealroom/Patientdesk](https://app.dealroom.co/news/feed/patientdesk-ai-raises-1m-pre-seed-from-y-combinator-to-automate-dental-front-desks-with-real-time-insurance-verification); [Dental Tribune/Trust AI](https://www.dental-tribune.com/news/trust-ai-the-chatgpt-for-dentists-raises-us6-million-in-seed-funding/); [vcbacked dental directory](https://www.vcbacked.co/directory/industries/dental)
-- **Devil's advocate:** a critical pain, but a crowded 2025–26 AI-agent gold rush. US payer integrations and HIPAA add cost, and it is hard for an Israel-based solo founder to sell to US dental offices.
+#### P3 אימות ביטוח שיניים: נפסל
+- **מי/עלות:** דלפק הקבלה, מדי יום, כשעתיים ביום (Dentaltown) ועד כמשרה מלאה אחת (הערכת ספק). מרפאות כבר משלמות לחברות BPO, מה שמראה נכונות לשלם. — [Dentaltown](https://www.dentaltown.com/channel/post/7458/is-dental-insurance-eligibility-taking-too-much-time)
+- **קיים/מימון:** Patientdesk AI (‏$1M טרום-סיד, YC, פעילה ביותר מ-60 מרפאות, פברואר 2026); Toothy AI (‏YC W25, ‏$5.4M, ‏Accel); LightSpun (‏$13M סבב A, בערך ספטמבר 2025); Trust AI (‏$6M סיד, אוגוסט 2025); Zentist; וכן מסלקות מסוג Vyne/Onederful. — [Dealroom/Patientdesk](https://app.dealroom.co/news/feed/patientdesk-ai-raises-1m-pre-seed-from-y-combinator-to-automate-dental-front-desks-with-real-time-insurance-verification); [Dental Tribune/Trust AI](https://www.dental-tribune.com/news/trust-ai-the-chatgpt-for-dentists-raises-us6-million-in-seed-funding/); [מדריך החברות של vcbacked בתחום השיניים](https://www.vcbacked.co/directory/industries/dental)
+- **פרקליט השטן:** כאב קריטי, אבל בהלת זהב צפופה של סוכני AI ב-2025–26. אינטגרציות עם משלמים אמריקאים ו-HIPAA מוסיפות עלות, וקשה למייסד יחיד שמבוסס בישראל למכור למרפאות שיניים בארה"ב.
 
-#### P4 Detention proof and collection for owner-operators: SURVIVES (conditional, weak)
-- **Who/cost:** owner-operators and small fleets, on every load with dwell time. An FMCSA figure puts the industry cost above $3B. A vendor attributes to ATRI (Sep 2024) the finding that carriers invoice detention about 75% of the time and are paid on about 55% of those invoices (unverified against ATRI). — [Senate Commerce doc](https://www.commerce.senate.gov/index.php/services/files/BAE24B91-2539-4DFA-B966-9E5491826733); [dockclaim (vendor)](https://dockclaim.com/compare/detention-tracking-software)
-- **Existing:** DockClaim $49/mo; DockClock free plus 10% of collected claims; Detention Defender $20/mo (pre-launch); Detention Source and Detention Gun (iOS); DetentionIQ (fleet, integrates with Samsara/Motive); TMS modules. — [dockclaim](https://dockclaim.com/compare/detention-tracking-software); [DockClock](https://dockclock.app/); [DetentionIQ](https://www.detentioniq.com/); [Detention Source](https://apps.apple.com/us/app/detention-source/id6444958697)
-- **Why still complaining:** the proof has to satisfy rate-con terms (notice before free time, BOL in/out signed), and receivers refuse to sign times. That is a workflow and contract problem, not just GPS. — [TheTruckersReport](https://www.thetruckersreport.com/truckingindustryforum/threads/how-to-get-brokers-to-actually-pay-detention.2145331/page-2)
-- **Devil's advocate:** brokers often pay detention only if they collect from the shipper, so better proof doesn't create leverage. The market is already full of tiny apps, which suggests low ARPU and a fragmented audience reachable only through trucker channels. ELD giants (Motive/Samsara) can add it as a feature.
+#### P4 הוכחת המתנה וגבייה עבור נהגים-בעלי משאית: שורד (בתנאים, חלש)
+- **מי/עלות:** נהגים-בעלי משאית וציים קטנים, בכל מטען שיש בו זמן שהייה. נתון של FMCSA מעמיד את העלות לענף על יותר מ-$3B. ספק אחד מייחס ל-ATRI (ספטמבר 2024) את הממצא שמובילים מגישים חשבונית על המתנה בכ-75% מהמקרים ומקבלים תשלום על כ-55% מהחשבוניות האלה (לא אומת מול ATRI). — [מסמך ועדת המסחר של הסנאט](https://www.commerce.senate.gov/index.php/services/files/BAE24B91-2539-4DFA-B966-9E5491826733); [dockclaim (ספק)](https://dockclaim.com/compare/detention-tracking-software)
+- **קיים:** DockClaim ב-$49 לחודש; DockClock בחינם ועוד 10% מהתביעות שנגבו; Detention Defender ב-$20 לחודש (לפני השקה); Detention Source ו-Detention Gun (iOS); DetentionIQ (לציים, משתלב עם Samsara/Motive); מודולים במערכות TMS. — [dockclaim](https://dockclaim.com/compare/detention-tracking-software); [DockClock](https://dockclock.app/); [DetentionIQ](https://www.detentioniq.com/); [Detention Source](https://apps.apple.com/us/app/detention-source/id6444958697)
+- **למה עדיין מתלוננים:** ההוכחה צריכה לעמוד בתנאי אישור התעריף (הודעה לפני תום הזמן החופשי, שעות כניסה/יציאה חתומות על ה-BOL), והמקבלים מסרבים לחתום על השעות. זו בעיה של תהליך עבודה ושל חוזה, לא רק של GPS. — [TheTruckersReport](https://www.thetruckersreport.com/truckingindustryforum/threads/how-to-get-brokers-to-actually-pay-detention.2145331/page-2)
+- **פרקליט השטן:** ברוקרים משלמים לעיתים קרובות על המתנה רק אם הם גובים מהשולח, כך שהוכחה טובה יותר לא יוצרת כוח מיקוח. השוק כבר מלא באפליקציות קטנטנות, מה שמרמז על הכנסה נמוכה למשתמש (ARPU) ועל קהל מפוצל שניתן להגיע אליו רק דרך ערוצים של נהגי משאיות. ענקיות ה-ELD (Motive/Samsara) יכולות להוסיף את זה כפיצ'ר.
 
-#### P5 California small-landlord compliance (AB 2801 + AB 1482 + local ordinances): SURVIVES (conditional, small TAM)
-- **Who/cost:** individual and small CA landlords at every turnover (deposit) and every rent increase. Penalties: deduction forfeiture after the 21 days, and rent rollback plus penalties for an over-cap increase (per forum posters). — [BiggerPockets](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork)
-- **Existing:** inspection apps RentCheck (about $1–1.25/unit/mo per Buildium) and zInspector (free up to about 5 units, paid from about $22/mo); rent-cap tools such as the CAA members-only CPI calculator, LeaseBase (claims per-property AB 1482 tracking including local ordinances), RentGuard (free tier plus paid reminders of the 12-month rule), RentCeiling and Keywise; full PM suites (Buildium/AppFolio) for larger owners. — [Buildium roundup](https://www.buildium.com/blog/best-property-management-inspection-software/); [CAA](https://caanet.org/caa-updates-cpi-calculator-for-rent-increases-under-ab-1482-2026/); [LeaseBase](https://leasebase.ai/ab1482-calculator/); [RentGuard](https://rentguardca.com/); [Keywise](https://www.keywise.app/blog/california-ab-1482-explained-2026)
-- **Why still complaining:** the specific gap voiced is linking each deduction line to specific photos and invoices and hitting the deadline ("can't connect photos to line items"). Calculators even disagree on the numbers: LA at 8.7% (LeaseBase) vs. 6.0% local (RentCeiling). — [BiggerPockets](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork); [RentCeiling](https://rentceiling.com/california)
-- **Devil's advocate:** small landlords are price-sensitive and act almost like consumers. The market is California-only, and several 2025–26 entrants appeared at once. TurboTenant/Avail/RentCheck can add an "AB 2801 itemization" feature cheaply. US legal-compliance liability is another hurdle, and the founder has to reach US landlords from Israel.
+#### P5 ציות למשכירים קטנים בקליפורניה (AB 2801 + AB 1482 + פקודות מקומיות): שורד (בתנאים, TAM קטן)
+- **מי/עלות:** משכירים פרטיים וקטנים בקליפורניה, בכל החלפת שוכר (פיקדון) ובכל העלאת שכר דירה. קנסות: אובדן הזכות לניכויים אחרי 21 הימים, והחזרת שכר הדירה לאחור יחד עם קנסות על העלאה מעל התקרה (לפי משתתפים בפורום). — [BiggerPockets](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork)
+- **קיים:** אפליקציות ביקורת נכסים RentCheck (כ-$1–1.25 ליחידה לחודש לפי Buildium) ו-zInspector (בחינם עד כ-5 יחידות, בתשלום החל מכ-$22 לחודש); כלים לתקרת שכר דירה כמו מחשבון ה-CPI של CAA (לחברים בלבד), LeaseBase (טוענת למעקב AB 1482 ברמת הנכס כולל פקודות מקומיות), RentGuard (מסלול חינמי ועוד תזכורות בתשלום על כלל 12 החודשים), RentCeiling ו-Keywise; וחבילות ניהול נכסים מלאות (Buildium/AppFolio) לבעלים גדולים יותר. — [הסקירה של Buildium](https://www.buildium.com/blog/best-property-management-inspection-software/); [CAA](https://caanet.org/caa-updates-cpi-calculator-for-rent-increases-under-ab-1482-2026/); [LeaseBase](https://leasebase.ai/ab1482-calculator/); [RentGuard](https://rentguardca.com/); [Keywise](https://www.keywise.app/blog/california-ab-1482-explained-2026)
+- **למה עדיין מתלוננים:** הפער הספציפי שעולה הוא קישור כל שורת ניכוי לתמונות ולחשבוניות ספציפיות ועמידה במועד האחרון ("לא מצליחים לקשר בין תמונות לשורות"). המחשבונים אפילו חלוקים על המספרים: לוס אנג'לס ב-8.7% (LeaseBase) לעומת 6.0% מקומי (RentCeiling). — [BiggerPockets](https://www.biggerpockets.com/forums/899/topics/1288628-landlords-in-ca-how-are-small-landlords-handling-ab-1482-and-ab-2801-paperwork); [RentCeiling](https://rentceiling.com/california)
+- **פרקליט השטן:** משכירים קטנים רגישים למחיר ומתנהגים כמעט כמו צרכנים. השוק הוא קליפורניה בלבד, וכמה מתחרים חדשים הופיעו בבת אחת ב-2025–26. TurboTenant/Avail/RentCheck יכולות להוסיף בזול פיצ'ר של "פירוט ניכויים לפי AB 2801". אחריות משפטית לציות בארה"ב היא מכשול נוסף, והמייסד צריך להגיע למשכירים אמריקאים מישראל.
 
-#### P6 Carrier-portal re-entry (insurance agents): DROPPED
-- **Existing:** comparative raters (EZLynx, PL Rating, and similar), Bolt, Relay, browser-automation vendors (Skyvern, Autonoly), and the IVANS connectivity network. — [Relay](https://relayins.com/blog/carrier-portal-automation); [Skyvern](https://www.skyvern.com/blog/automate-insurance-carrier-portal-workflows/); [FirstConnect](https://www.firstconnectinsurance.com/blog/insurance-quoting-software/)
-- **Devil's advocate:** it depends on carrier cooperation and portals that break RPA, and incumbents own the agency management system.
+#### P6 הזנה חוזרת בפורטלים של חברות ביטוח (סוכני ביטוח): נפסל
+- **קיים:** מנועי השוואת הצעות (EZLynx, PL Rating ודומיהם), Bolt, Relay, ספקי אוטומציית דפדפן (Skyvern, Autonoly), ורשת הקישוריות של IVANS. — [Relay](https://relayins.com/blog/carrier-portal-automation); [Skyvern](https://www.skyvern.com/blog/automate-insurance-carrier-portal-workflows/); [FirstConnect](https://www.firstconnectinsurance.com/blog/insurance-quoting-software/)
+- **פרקליט השטן:** זה תלוי בשיתוף פעולה של חברות הביטוח ובפורטלים ששוברים RPA, והשחקנים הוותיקים שולטים במערכת ניהול הסוכנות.
 
-#### P7 Commission reconciliation: DROPPED
-- **Existing:** Commission Tracker ($67–72/mo flat plus a $120 sign-up fee; done-for-you processing $187/mo); AgencyBloc (about $59–109/user/mo plus a commissions module); AgencyComp; Commissions Wizard; Insurstein. — [commission-tracker pricing](https://commission-tracker.com/pricing/); [GetApp](https://www.getapp.com/sales-software/a/commission-tracker-for-insurance/); [AgencyComp](https://agencycomp.com/)
-- **Devil's advocate:** already served cheaply, and AMS vendors (Applied, HawkSoft) bundle it.
+#### P7 התאמת עמלות: נפסל
+- **קיים:** Commission Tracker (‏$67–72 לחודש קבוע ועוד דמי הרשמה של $120; עיבוד כשירות מלא ב-$187 לחודש); AgencyBloc (כ-$59–109 למשתמש לחודש ועוד מודול עמלות); AgencyComp; Commissions Wizard; Insurstein. — [התמחור של commission-tracker](https://commission-tracker.com/pricing/); [GetApp](https://www.getapp.com/sales-software/a/commission-tracker-for-insurance/); [AgencyComp](https://agencycomp.com/)
+- **פרקליט השטן:** כבר מקבל מענה זול, וספקי AMS (‏Applied, ‏HawkSoft) כוללים את זה בחבילה.
 
-#### P8 Delivery-platform error charges (restaurants): DROPPED
-- **Existing/funding:** Loop AI ($6M in 2024 led by Base10, then a $14M Series A in Feb 2026 led by Nyca); Voosh (claims 80–90% dispute win rate); KoreFi. — [Restaurant Business](https://www.restaurantbusinessonline.com/technology/loopai-raises-6m-app-automates-third-party-delivery-bookkeeping); [Verdict Foodservice](https://www.verdictfoodservice.com/news/loop-ai-secures-funding-to/); [Food On Demand](https://foodondemand.com/05172024/its-really-just-theft-freddys-exec-says-of-chargebacks-at-fodc/)
-- **Devil's advocate:** funded leaders exist, and it depends on platform data access.
+#### P8 חיובי טעויות של פלטפורמות משלוחים (מסעדות): נפסל
+- **קיים/מימון:** Loop AI (‏$6M ב-2024 בהובלת Base10, ואחר כך סבב A של $14M בפברואר 2026 בהובלת Nyca); Voosh (טוענת לשיעור הצלחה של 80–90% בערעורים); KoreFi. — [Restaurant Business](https://www.restaurantbusinessonline.com/technology/loopai-raises-6m-app-automates-third-party-delivery-bookkeeping); [Verdict Foodservice](https://www.verdictfoodservice.com/news/loop-ai-secures-funding-to/); [Food On Demand](https://foodondemand.com/05172024/its-really-just-theft-freddys-exec-says-of-chargebacks-at-fodc/)
+- **פרקליט השטן:** קיימות מובילות ממומנות, והתחום תלוי בגישה לנתוני הפלטפורמות.
 
-#### P9 Inventory sync: DROPPED
-- **Existing:** Sellbrite, Trunk, Sumtracker, Linnworks, Cin7 Core and others. — [Shopify Community](https://community.shopify.com/t/best-inventory-sync-tool-for-shopify/672498)
+#### P9 סנכרון מלאי: נפסל
+- **קיים:** Sellbrite, Trunk, Sumtracker, Linnworks, Cin7 Core ואחרים. — [Shopify Community](https://community.shopify.com/t/best-inventory-sync-tool-for-shopify/672498)
 
-#### P10 Chargebacks: DROPPED
-- **Existing:** many chargeback-automation vendors. Outcomes are decided by card networks and banks ("the bank... makes the decision"). — [Shopify Community](https://community.shopify.com/t/chargebacks-friendly-fraud-and-arbitrations/339868)
+#### P10 חיובים חוזרים: נפסל
+- **קיים:** ספקים רבים לאוטומציה של חיובים חוזרים. התוצאות נקבעות על ידי רשתות הכרטיסים והבנקים ("הבנק... מקבל את ההחלטה"). — [Shopify Community](https://community.shopify.com/t/chargebacks-friendly-fraud-and-arbitrations/339868)
 
-#### P11 PT documentation: DROPPED
-- **Existing:** a flood of AI documentation tools (SPRY, Chartnote, EZPT, Physitrack, WebPT features). Even vendors concede "faster notes don't automatically reduce burnout". — [Physitrack](https://www.physitrack.com/insights/ai-documentation-pt-burnout); [EZPT](https://www.ezpttech.com/); [Chartnote](https://blog.chartnote.com/ai-documentation-for-physical-therapy-reclaiming-the-most-expensive-hour-of-the-day/)
+#### P11 תיעוד בפיזיותרפיה: נפסל
+- **קיים:** מבול של כלי תיעוד מבוססי AI (‏SPRY, ‏Chartnote, ‏EZPT, ‏Physitrack, פיצ'רים של WebPT). אפילו ספקים מודים ש"רשומות מהירות יותר לא מפחיתות אוטומטית את השחיקה". — [Physitrack](https://www.physitrack.com/insights/ai-documentation-pt-burnout); [EZPT](https://www.ezpttech.com/); [Chartnote](https://blog.chartnote.com/ai-documentation-for-physical-therapy-reclaiming-the-most-expensive-hour-of-the-day/)
 
-#### P12 PT prior-auth tracking: DROPPED
-- **Existing:** EMR auth-tracking modules, heno.io, and outsourced RCM. — [heno.io](https://www.heno.io/prior-authorizations/); [rcmworkshop](https://rcmworkshop.com/insights/blogs/physical-therapy-prior-authorization-handling-visit-limits-and-payer-restrictions/)
-- **Devil's advocate:** it is an EMR feature, and selling it means HIPAA work and US payer complexity.
+#### P12 מעקב אישורים מוקדמים בפיזיותרפיה: נפסל
+- **קיים:** מודולי מעקב אישורים במערכות EMR, ‏heno.io, ומיקור חוץ של RCM. — [heno.io](https://www.heno.io/prior-authorizations/); [rcmworkshop](https://rcmworkshop.com/insights/blogs/physical-therapy-prior-authorization-handling-visit-limits-and-payer-restrictions/)
+- **פרקליט השטן:** זה פיצ'ר של מערכות EMR, ומכירתו פירושה עבודת HIPAA ומורכבות של משלמים אמריקאים.
 
-#### P13 Vet communications: DROPPED
-- **Existing:** Weave, PetDesk, Vello/IDEXX, Shepherd and others. The core complaint is PIMS integration, which the PIMS vendors control. — [Tailwerks](https://tailwerks.com/best-veterinary-client-communication-software/)
+#### P13 תקשורת במרפאות וטרינריות: נפסל
+- **קיים:** Weave, PetDesk, Vello/IDEXX, Shepherd ואחרים. התלונה המרכזית היא האינטגרציה עם ה-PIMS, שבה שולטים ספקי ה-PIMS. — [Tailwerks](https://tailwerks.com/best-veterinary-client-communication-software/)
 
-#### P14 Law conflict checks: DROPPED
-- **Existing:** Clio Grow and the conflict modules in most practice-management suites. — [Clio Grow](https://www.clio.com/grow/); [Guideflow list](https://www.guideflow.com/blog/conflict-check-software)
+#### P14 בדיקות ניגוד עניינים במשפטים: נפסל
+- **קיים:** Clio Grow ומודולי ניגוד העניינים ברוב חבילות ניהול המשרד. — [Clio Grow](https://www.clio.com/grow/); [הרשימה של Guideflow](https://www.guideflow.com/blog/conflict-check-software)
 
-#### P15 Lien waivers: DROPPED
-- **Existing:** Levelset (Procore), Siteline, LienDone, Brixx's list of 8 options. — [Siteline](https://www.siteline.com/blog/best-lien-waiver-management-software-for-subcontractors); [Levelset](https://www.levelset.com/lien-waivers/lien-waiver-software/); [Brixx](https://brixxdigital.com/blog/lien-waiver-software)
+#### P15 ויתורי שעבוד: נפסל
+- **קיים:** Levelset (‏Procore), ‏Siteline, ‏LienDone, והרשימה של Brixx עם 8 אפשרויות. — [Siteline](https://www.siteline.com/blog/best-lien-waiver-management-software-for-subcontractors); [Levelset](https://www.levelset.com/lien-waivers/lien-waiver-software/); [Brixx](https://brixxdigital.com/blog/lien-waiver-software)
 
-#### P16 Unsigned extra work / T&M tickets for small specialty subs: SURVIVES (conditional)
-- **Who/cost:** electrical, plumbing and drywall subs on GC jobs, on every scope change. Unpaid extras lead to liens and partial settlements. — [ContractorTalk](https://www.contractortalk.com/threads/do-you-break-out-a-change-order-on-extras-on-small-jobs.344569/)
-- **Existing:** Clearstory ($16M Series B in Jun 2024, about $35M total). It is aimed at large GCs: 13 of the 25 largest North American GCs, and 19,000 change orders worth over $850M a month on its network. Residential/FSM suites (Jobber, Buildertrend, JobTread) include change orders. Procore/Fieldwire/Raken cover T&M on the GC side. — [BusinessWire/Clearstory](https://www.businesswire.com/news/home/20240627887251/en); [Commercial Observer](https://commercialobserver.com/2024/06/proptech-startup-clearstory-series-b/)
-- **Why still complaining:** the failure happens in the field. The foreman doesn't capture a signed, priced ticket before the work starts, and the GC super won't sign. Tools sold to the GC don't fix the sub's incentive.
-- **Devil's advocate:** this is a power and contract problem; GCs can simply refuse to sign. Clearstory can move downmarket. Subs already use generic apps (photos, e-sign, DocuSign). Construction sales cycles are long and need deep local knowledge, which is harder from Israel. It is unclear whether small subs pay.
+#### P16 עבודה נוספת לא חתומה / כרטיסי T&M עבור קבלני משנה קטנים ומתמחים: שורד (בתנאים)
+- **מי/עלות:** קבלני משנה לחשמל, אינסטלציה וגבס בפרויקטים של קבלנים ראשיים, בכל שינוי בהיקף העבודה. תוספות שלא שולמו מובילות לשעבודים ולפשרות חלקיות. — [ContractorTalk](https://www.contractortalk.com/threads/do-you-break-out-a-change-order-on-extras-on-small-jobs.344569/)
+- **קיים:** Clearstory (סבב B של $16M ביוני 2024, כ-$35M בסך הכול). היא מכוונת לקבלנים ראשיים גדולים: 13 מתוך 25 הקבלנים הראשיים הגדולים בצפון אמריקה, ו-19,000 פקודות שינוי בשווי של יותר מ-$850M בחודש ברשת שלה. חבילות למגורים/FSM (‏Jobber, ‏Buildertrend, ‏JobTread) כוללות פקודות שינוי. Procore/Fieldwire/Raken מכסות T&M בצד הקבלן הראשי. — [BusinessWire/Clearstory](https://www.businesswire.com/news/home/20240627887251/en); [Commercial Observer](https://commercialobserver.com/2024/06/proptech-startup-clearstory-series-b/)
+- **למה עדיין מתלוננים:** הכשל קורה בשטח. מנהל העבודה לא מקבל כרטיס חתום ומתומחר לפני תחילת העבודה, ומנהל העבודה של הקבלן הראשי מסרב לחתום. כלים שנמכרים לקבלן הראשי לא מתקנים את התמריץ של קבלן המשנה.
+- **פרקליט השטן:** זו בעיה של כוח ושל חוזה; קבלנים ראשיים יכולים פשוט לסרב לחתום. Clearstory יכולה לרדת לשוק הנמוך. קבלני משנה כבר משתמשים באפליקציות כלליות (תמונות, חתימה אלקטרונית, DocuSign). מחזורי המכירה בבנייה ארוכים ודורשים היכרות מקומית עמוקה, מה שקשה יותר מישראל. לא ברור אם קבלני משנה קטנים ישלמו.
 
-#### P17 FSM too expensive: DROPPED
-- **Existing:** Jobber (from about $39/mo), Housecall Pro, Workiz, Service Fusion, FieldEdge and others. — [ContractorTalk mention of Jobber price](https://www.contractortalk.com/threads/need-recommendation-for-job-costing-software.457514/); [Jobber](https://getjobber.com/academy/servicetitan-competitors/)
+#### P17 FSM יקר מדי: נפסל
+- **קיים:** Jobber (החל מכ-$39 לחודש), Housecall Pro, Workiz, Service Fusion, FieldEdge ואחרים. — [אזכור המחיר של Jobber ב-ContractorTalk](https://www.contractortalk.com/threads/need-recommendation-for-job-costing-software.457514/); [Jobber](https://getjobber.com/academy/servicetitan-competitors/)
 
-#### P18 WhatsApp-run field crews: DROPPED as a standalone (design insight retained)
-- **Existing:** Valoon (WhatsApp-like construction chat), Banamind (WhatsApp capture), Zenzap, SymTerra, Site Setu, Convoe. — [Valoon](https://valoon.chat/en/blog/whatsapp-groups-in-construction/); [Zenzap](https://www.zenzap.co/blog-posts/5-best-work-chat-apps-for-construction/); [Banamind](https://banamind.ai/blog/whatsapp-groups-construction-teams-best-practices)
-- **Devil's advocate:** many entrants, and Meta's WhatsApp Business API rules and costs limit what can be built.
+#### P18 צוותי שטח שמנוהלים ב-WhatsApp: נפסל כמוצר עצמאי (תובנת העיצוב נשמרת)
+- **קיים:** Valoon (צ'אט בנייה בסגנון WhatsApp), ‏Banamind (תיעוד מתוך WhatsApp), ‏Zenzap, ‏SymTerra, ‏Site Setu, ‏Convoe. — [Valoon](https://valoon.chat/en/blog/whatsapp-groups-in-construction/); [Zenzap](https://www.zenzap.co/blog-posts/5-best-work-chat-apps-for-construction/); [Banamind](https://banamind.ai/blog/whatsapp-groups-construction-teams-best-practices)
+- **פרקליט השטן:** מתחרים חדשים רבים, והכללים והעלויות של ה-API של WhatsApp Business של Meta מגבילים את מה שאפשר לבנות.
 
-#### P19–P22: DROPPED
-- Nurse scheduling: an enterprise hospital buyer, with incumbents (API, ShiftWizard, Bid Shift). — [allnurses](https://allnurses.com/what-kind-scheduling-use-work-t622583/)
-- Freelancer late pay: low willingness to pay; the HN consensus fix is contractual (deposits, stop-work). — [HN 47638685](https://news.ycombinator.com/item?id=47638685)
-- License tracking: served by ContractorComply, TrackMyVendor, AceWatt and spreadsheet templates. — [TrackMyVendor](https://trackmyvendor.com/); [AceWatt](https://acewatt.com/blog/electrical-contractor-certification-tracking-software)
-- HOA: free and flat-fee tools. — [KindHOA](https://kindhoa.com/alternatives/best-self-managed-hoa-software)
+#### P19–P22: נפסלו
+- שיבוץ אחיות: רוכש ארגוני (בית חולים), עם שחקנים ותיקים (‏API, ‏ShiftWizard, ‏Bid Shift). — [allnurses](https://allnurses.com/what-kind-scheduling-use-work-t622583/)
+- איחורי תשלום לפרילנסרים: נכונות נמוכה לשלם; הפתרון שבקונצנזוס ב-HN הוא חוזי (מקדמות, הפסקת עבודה). — [HN 47638685](https://news.ycombinator.com/item?id=47638685)
+- מעקב רישיונות: מקבל מענה מ-ContractorComply, ‏TrackMyVendor, ‏AceWatt ומתבניות גיליון. — [TrackMyVendor](https://trackmyvendor.com/); [AceWatt](https://acewatt.com/blog/electrical-contractor-certification-tracking-software)
+- ועדי בתים: כלים חינמיים ובתעריף קבוע. — [KindHOA](https://kindhoa.com/alternatives/best-self-managed-hoa-software)
 
-### Inferences
-- **Meta-finding:** in 2025–26, AI-extraction and agent startups plus SEO "alternatives" blogs have flooded nearly every "chase a document / track an expiry" niche (COI, lien waivers, licenses, detention, rent caps). Pain alone no longer separates opportunities. **Distribution and a specific wedge** (a sub-segment the leaders ignore, a new regulation, a non-US geography) matter more.
-- For an Israeli solo or small-team founder, the three conditional survivors are all **US-specific** (California law, US trucking, US construction contracts). One unexplored option is to transpose a proven pattern (e.g., COI/vendor-compliance tracking, the bookkeeper document-chase portal, WhatsApp-native field capture) into **Israel/Hebrew or other non-US markets**, where vendors like TrustLayer, Content Snare or Clearstory may not localize. This is untested: no evidence was gathered on Israeli market gaps.
-- Pains where buyers **already pay a human** (dental verification BPOs, ISN/PICS COI checkers, outsourced auth tracking, commission-processing services at $187/mo) show the clearest willingness to pay, but they are also where funded AI startups are concentrating.
+### מסקנות
+- **ממצא-על:** ב-2025–26, סטארטאפים של חילוץ נתונים וסוכני AI, יחד עם בלוגי "חלופות" מונעי SEO, הציפו כמעט כל נישה של "לרדוף אחרי מסמך / לעקוב אחרי פקיעת תוקף" (‏COI, ויתורי שעבוד, רישיונות, המתנה, תקרות שכר דירה). כאב לבדו כבר לא מבדיל בין הזדמנויות. **הפצה ונקודת כניסה ספציפית** (תת-פלח שהמובילים מתעלמים ממנו, רגולציה חדשה, גאוגרפיה שאינה ארה"ב) חשובות יותר.
+- עבור מייסד ישראלי יחיד או צוות קטן, שלושת השורדים בתנאים כולם **ספציפיים לארה"ב** (חוק קליפורניה, הובלות בארה"ב, חוזי בנייה בארה"ב). אפשרות אחת שלא נבדקה היא להעתיק דפוס מוכח (למשל מעקב COI/ציות ספקים, פורטל רדיפת מסמכים למנהלי חשבונות, תיעוד שטח מבוסס WhatsApp) אל **ישראל/עברית או שווקים אחרים מחוץ לארה"ב**, שבהם ספקים כמו TrustLayer, ‏Content Snare או Clearstory אולי לא יבצעו לוקליזציה. זה לא נבדק: לא נאספו ראיות על פערים בשוק הישראלי.
+- כאבים שבהם הקונים **כבר משלמים לאדם** (חברות BPO לאימות זכאות בשיניים, בודקי COI של ISN/PICS, מיקור חוץ של מעקב אישורים, שירותי עיבוד עמלות ב-$187 לחודש) מראים את הנכונות הברורה ביותר לשלם, אבל הם גם המקום שבו מתרכזים סטארטאפי AI ממומנים.
 
-### Gaps
-- Funding for many named vendors (TrustLayer, myCOI, Billy, Valoon, DockClaim, LeaseBase, Voosh) was not verified.
-- The ATRI detention-payment statistic and the WebPT 2024 survey figures were seen only through vendor citations.
-- Effective dates for AB 2801 conflict between sources. The statute (Civ. Code §1950.5) was not checked.
-- There is no quantitative sizing of the conditional survivors (number of CA small landlords, owner-operators, specialty subs).
-- Israeli/localized versions of these pains were not researched; outside scope as searched.
+### פערים
+- המימון של רבים מהספקים שהוזכרו (‏TrustLayer, ‏myCOI, ‏Billy, ‏Valoon, ‏DockClaim, ‏LeaseBase, ‏Voosh) לא אומת.
+- נתון תשלומי ההמתנה של ATRI ונתוני סקר WebPT 2024 נצפו רק דרך ציטוטים של ספקים.
+- מועדי התחולה של AB 2801 סותרים בין המקורות. החוק עצמו (Civ. Code §1950.5) לא נבדק.
+- אין הערכת גודל כמותית לשורדים בתנאים (מספר המשכירים הקטנים בקליפורניה, הנהגים-בעלי משאית, קבלני המשנה המתמחים).
+- גרסאות ישראליות/מקומיות של הכאבים האלה לא נחקרו; מחוץ להיקף כפי שנבדק.

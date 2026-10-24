@@ -29,7 +29,18 @@ Running into someone head-on ends the run. Brushing past from the side, or tripp
 
 ## Look
 
-The street bends away toward the horizon (curved-world vertex shader), and the frame goes through bloom, a colour grade with vignette and speed lines, and FXAA (`js/look.js`). Quality is High (up to 2.5x resolution, 4x MSAA), Auto (2x resolution with 2x MSAA, stepping down only if the median frame rate stays under ~26 fps) or Battery saver. Distant chunks swap the generated stalls for vertex-coloured low-detail versions and drop the stall keepers; pedestrians use reduced textures so only the runner keeps its full 2048 texture. The HUD and menus are built from generated art: glossy buttons, 3D icons, an awning panel header and the logo plate (`img/ui/`), set in the Fredoka display font with outlined gold titles. Coins fly to the counter, the runner squashes on landing and the lens widens with speed. See `ART_DIRECTION.md` for the brief.
+The street bends away toward the horizon (curved-world vertex shader). The colour grade (saturation, contrast, warmth) is folded into a custom tone-mapping function, so every material applies it as it writes its pixels (`js/look.js`).
+
+Quality levels:
+- **Auto** (default): renders straight to the screen at 2x with the canvas' MSAA, no full-screen passes; vignette and speed lines are CSS layers; hardware-PCF shadows from things that move, baked contact shadows under stalls. It lowers the resolution (then drops shadows) only if the median frame rate over ~2.5 s stays under 45 fps.
+- **High**: up to 2.5x, a 4x MSAA half-float target, bloom, soft 2048 shadows from the whole street.
+- **Battery saver**: Auto at 1.25x without shadows.
+
+Add `?fps` to the address to show the measured frame rate, frame times, resolution, draw calls and triangles.
+
+Depth comes from geometry rather than post effects: raised curbs and basalt bands that converge on the horizon, balconies, sills and AC units lined up with the painted windows, contact shadows, and distance haze. Distant chunks swap the generated stalls for vertex-coloured low-detail versions and hide the stall keepers; pedestrians use reduced textures so only the runner keeps its full 2048 texture. Physics advances in equal substeps per frame, so motion stays even when frame times wobble.
+
+The HUD and menus are built from generated art: glossy buttons, 3D icons, an awning panel header and the logo plate (`img/ui/`), set in the Fredoka display font with outlined gold titles. Coins fly to the counter, the runner squashes on landing and the lens widens with speed. See `ART_DIRECTION.md` for the brief.
 
 Progress is stored in the browser (localStorage).
 

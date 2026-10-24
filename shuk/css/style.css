@@ -34,6 +34,15 @@ img { -webkit-user-drag: none; user-select: none; }
 .hidden { display: none !important; }
 
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+/* direct-render finish (Auto/Battery saver): vignette and speed lines as cheap compositor layers */
+#vignette, #speedlines { position: fixed; inset: 0; pointer-events: none; z-index: 1; display: none; }
+body.css-finish #vignette { display: block; background: radial-gradient(ellipse 80% 72% at 50% 52%, transparent 58%, rgba(12, 8, 24, .34) 100%); }
+#speedlines { --sl: 0; opacity: var(--sl);
+  background: repeating-conic-gradient(from 2deg at 50% 56%, transparent 0deg 5deg, rgba(255,255,255,.5) 5deg 5.5deg, transparent 5.5deg 11deg),
+              repeating-conic-gradient(from 0deg at 50% 56%, transparent 0deg 13deg, rgba(255,255,255,.35) 13deg 13.4deg, transparent 13.4deg 17deg);
+  -webkit-mask: radial-gradient(ellipse 70% 60% at 50% 56%, transparent 45%, #000 100%); mask: radial-gradient(ellipse 70% 60% at 50% 56%, transparent 45%, #000 100%); }
+body.css-finish #speedlines.on { display: block; animation: speedlines .28s linear infinite; }
+@keyframes speedlines { from { transform: scale(1); opacity: var(--sl); } to { transform: scale(1.22); opacity: 0; } }
 .screen { position: absolute; inset: 0; display: none; pointer-events: none; }
 .screen.show { display: block; }
 .screen.show > * { pointer-events: auto; }
@@ -331,5 +340,5 @@ img { -webkit-user-drag: none; user-select: none; }
   .modal .panel { max-height: calc(100vh - 40px); overflow-y: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .newbest, .power.ending, .gbtn.pulse, #loading .keyart { animation: none; }
+  .newbest, .power.ending, .gbtn.pulse, #loading .keyart, body.css-finish #speedlines.on { animation: none; }
 }

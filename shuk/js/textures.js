@@ -218,6 +218,20 @@ export function truckTexture() {
   return tex(c);
 }
 
+// soft-edged rectangle (white, alpha falls off toward the border) for baked contact shadows
+export function softRectTexture() {
+  const S = 64, [c, g] = canvas(S, S);
+  const img = g.createImageData(S, S);
+  const f = t => { const d = Math.min(t, 1 - t) / 0.32; return d >= 1 ? 1 : d * d * (3 - 2 * d); };
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const o = (y * S + x) * 4;
+    img.data[o] = img.data[o + 1] = img.data[o + 2] = 255;
+    img.data[o + 3] = Math.round(255 * f((x + 0.5) / S) * f((y + 0.5) / S));
+  }
+  g.putImageData(img, 0, 0);
+  return tex(c, { srgb: false });
+}
+
 export function glowTexture() {
   const [c, g] = canvas(128, 128);
   const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);

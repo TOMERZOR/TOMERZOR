@@ -178,9 +178,11 @@ export class Assets {
     g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
     const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
     geometry.computeBoundingBox();
-    const material = mesh.material;
+    // these props are matte and cover a lot of the screen: plain diffuse shading costs a fraction of PBR
+    const src = mesh.material;
+    const material = new THREE.MeshLambertMaterial({ map: src.map, color: src.color, vertexColors: src.vertexColors });
     if (material.map) material.map.anisotropy = 8;
-    if (material.isMeshStandardMaterial) { material.roughness = Math.max(0.6, material.roughness ?? 1); material.metalness = Math.min(0.05, material.metalness ?? 0); }
+    src.dispose();
     return { geometry, material, size: geometry.boundingBox.getSize(new THREE.Vector3()) };
   }
 

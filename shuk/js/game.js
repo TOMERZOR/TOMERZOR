@@ -51,7 +51,7 @@ export class Game {
     const tutorial = !s.tutorialDone;
     this.run = {
       d: 0, prevD: 0, speed: tutorial ? 11.5 : speedAt(0), score: 0, coins: 0, combo: 0, comboT: 0,
-      mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2, acc: 0,
+      mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2,
       powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0 },
       stats: { coins: 0, dist: 0, jumps: 0, rolls: 0, score: 0, powerups: 0, dodgeNpc: 0, roofs: 0, zones: 1, magnetCoins: 0, nearMiss: 0, runs: 1 },
       zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0,
@@ -119,14 +119,14 @@ export class Game {
       r.time += dt;
       const target = r.tutorial ? 11.5 : speedAt(r.d);
       r.speed += (target - r.speed) * Math.min(1, dt * 1.5);
-      r.acc += dt;
-      let steps = 0;
-      while (r.acc >= STEP && steps < 12) {
-        r.acc -= STEP; steps++;
-        this.physicsStep(STEP);
+      // split the frame into equal substeps of at most STEP: every frame advances by exactly its own
+      // duration, so motion stays even (a fixed-step accumulator without interpolation alternates 2 and 3
+      // steps per frame whenever frame times wobble, which reads as stutter)
+      const n = Math.min(12, Math.max(1, Math.ceil(dt / STEP - 1e-6)));
+      for (let i = 0; i < n; i++) {
+        this.physicsStep(dt / n);
         if (this.state !== 'playing') break;
       }
-      if (steps >= 12) r.acc = 0;
       this.processTimers(dt);
       this.tutorialHints();
     } else {

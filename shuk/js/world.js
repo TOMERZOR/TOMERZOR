@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { Bag, rnd, pick, box, sph, cyl, cone } from './geo.js';
 import { ZONES, ZONE_LENGTH } from './config.js';
-import { signAtlas, glowTexture } from './textures.js';
+import { signAtlas, glowTexture, softRectTexture } from './textures.js';
 
 export const CHUNK = 30;
 const STALL_X = 4.25;   // street edge of the stalls
@@ -14,16 +14,16 @@ const LOD_DIST = 75;     // chunks starting further ahead than this use the low-
 
 // ---------- themes ----------
 export const THEMES = {
-  day:     { skyTop: '#5aa9f0', skyMid: '#a9d4f5', skyBot: '#f3e6cf', fog: '#e6dccb', fogNear: 45, fogFar: 165,
+  day:     { skyTop: '#5aa9f0', skyMid: '#a9d4f5', skyBot: '#f3e6cf', fog: '#e6dccb', fogNear: 30, fogFar: 158,
              hemiSky: '#ffffff', hemiGround: '#b59a75', hemi: 1.15, sun: '#fff0d4', sunI: 2.7, sunDir: [-0.55, 1, 0.35],
              facade: '#ffffff', glow: 0.0, bulbs: '#fff1c2', exposure: 1.0, playerLight: 0, clouds: 1, stars: 0, rim: 1.2 },
-  covered: { skyTop: '#d7b98a', skyMid: '#e8cfa2', skyBot: '#f0dcb5', fog: '#d6bb8e', fogNear: 30, fogFar: 135,
+  covered: { skyTop: '#d7b98a', skyMid: '#e8cfa2', skyBot: '#f0dcb5', fog: '#d6bb8e', fogNear: 24, fogFar: 128,
              hemiSky: '#ffe9c4', hemiGround: '#9a7a52', hemi: 1.0, sun: '#ffe1b0', sunI: 1.5, sunDir: [-0.3, 1, 0.2],
              facade: '#e9d8bd', glow: 0.55, bulbs: '#ffd98a', exposure: 1.05, playerLight: 0.6, clouds: 0.3, stars: 0, rim: 0.9 },
-  sunset:  { skyTop: '#3f4d9a', skyMid: '#ef8a63', skyBot: '#ffd08a', fog: '#e9a07a', fogNear: 38, fogFar: 150,
+  sunset:  { skyTop: '#3f4d9a', skyMid: '#ef8a63', skyBot: '#ffd08a', fog: '#e9a07a', fogNear: 28, fogFar: 142,
              hemiSky: '#ffd7b5', hemiGround: '#6d4b5c', hemi: 0.95, sun: '#ffab66', sunI: 2.5, sunDir: [-1, 0.42, -0.55],
              facade: '#ffd2ad', glow: 0.5, bulbs: '#ffcf7a', exposure: 1.02, playerLight: 0.5, clouds: 0.8, stars: 0.15, rim: 2.2 },
-  night:   { skyTop: '#070a22', skyMid: '#1a1f4a', skyBot: '#43305e', fog: '#1d1a36', fogNear: 30, fogFar: 125,
+  night:   { skyTop: '#070a22', skyMid: '#1a1f4a', skyBot: '#43305e', fog: '#1d1a36', fogNear: 24, fogFar: 120,
              hemiSky: '#8a96ff', hemiGround: '#3a2a3a', hemi: 0.7, sun: '#9fb2ff', sunI: 0.75, sunDir: [0.4, 1, 0.3],
              facade: '#5a5f8a', glow: 1.0, bulbs: '#ffe2a0', exposure: 1.1, playerLight: 1.6, clouds: 0.15, stars: 1, rim: 1.6 },
 };
@@ -237,6 +237,9 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
   const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag(), decal = new Bag(true);
   // building-top trim never casts: the walls under it are flat cards, so its shadow would float alone in the street
   const trim = new Bag();
+  // soft baked contact shadows (ground under stalls, foot of the walls) - cheap depth on every quality level
+  const blob = new Bag(true);
+  const addBlob = (x, z, w, d, rot = 0) => { const g = new THREE.PlaneGeometry(w, d); g.rotateX(-Math.PI / 2); blob.add(g, null, x, 0.008, z, 0, rot, 0); };
   const glow = [];
   const placed = [];
   if (decals) scatterDecals(decal, theme);
@@ -250,8 +253,13 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
   ground.rotateX(-Math.PI / 2); ground.translate(0, 0, -CHUNK / 2);
   const uv = ground.attributes.uv;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * (FACADE_X * 2 + 1) / 3.0, uv.getY(i) * CHUNK / 3.0);
-  // darker gutter strips along the stalls
-  for (const side of [-1, 1]) vc.add(box(0.5, 0.012, CHUNK), '#8d7a5e', side * (STALL_X - 0.3), 0.006, -CHUNK / 2);
+  // raised stone curbs in front of the stalls with a darker gutter, and basalt bands between the lanes:
+  // long lines converging on the horizon are the strongest depth cue a runner has
+  for (const side of [-1, 1]) {
+    vc.add(box(0.32, 0.14, CHUNK), '#e0d0ac', side * (STALL_X - 0.31), 0.07, -CHUNK / 2, 0, 0, 0, 1, 1, 1, 0);
+    vc.add(box(0.22, 0.01, CHUNK), '#8f7f63', side * (STALL_X - 0.58), 0.005, -CHUNK / 2);
+    vc.add(box(0.15, 0.008, CHUNK), '#a3927a', side * 1.2, 0.004, -CHUNK / 2);
+  }
 
   for (const side of [-1, 1]) {
     let v = 0;
@@ -263,6 +271,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
         // a supplier's truck parked between the stalls, cab toward the runner
         const sz = models.truck.size, k = Math.min(2.1 / sz.z, (len - 0.5) / sz.x);
         placed.push(['truck', propMatrix(side * (STALL_X + 0.15 + sz.z * k / 2), -(v + len / 2), Math.PI / 2, k)]);
+        addBlob(side * (STALL_X + 0.15 + sz.z * k / 2), -(v + len / 2), sz.z * k + 0.6, sz.x * k + 0.4);
       } else if (gap) {
         // alley / doorway between stalls with crates and sacks
         for (let i = 0; i < 3; i++) addCrate(vc, side, rnd(0.4, 1.4), i * 0.17, v, rnd(0.4, len - 0.4), 0.5, 0.4, pick(Object.keys(PRODUCE)));
@@ -291,9 +300,10 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
         const sz = models[name].size;
         const k = Math.min((len - 0.3) / sz.z, 2.55 / sz.x, 3.3 / sz.y) * rnd(0.94, 1);
         placed.push([name, propMatrix(side * (STALL_X - 0.15 + sz.x * k / 2), -(v + len / 2), side < 0 ? 0 : Math.PI, k)]);
+        addBlob(side * (STALL_X - 0.15 + sz.x * k / 2), -(v + len / 2), sz.x * k + 0.7, sz.z * k + 0.5);
         addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (FACADE_X - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
-        // the stall keeper hawks from in front of the counter, off to one end of it
-        if (Math.random() < 0.22) vendorSpots.push([side * (STALL_X - 0.45), -(v + len * pick([0.22, 0.78]))]);
+        // the stall keeper hawks from the curb in front of the counter, off to one end of it
+        if (Math.random() < 0.22) vendorSpots.push([side * (STALL_X - 0.3), -(v + len * pick([0.22, 0.78])), 0.14]);
       } else {
         const type = pick(STALL_TYPES);
         STALLS[type](vc, side, v + 0.2, len - 0.4);
@@ -333,6 +343,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
     const repeatW = fh * 1.79;
     for (let i = 0; i < fuv.count; i++) fuv.setXY(i, off + fuv.getX(i) * CHUNK / repeatW, 0.255 + fuv.getY(i) * 0.74);
     facade.add(fg, null, side * FACADE_X, 3.58 + fh / 2, -CHUNK / 2, 0, -side * Math.PI / 2, 0);
+    addFacadeRelief(vc, side, fh, off, repeatW, covered);
     // cornice
     trim.add(box(0.35, 0.3, CHUNK), '#cdb48a', side * (FACADE_X - 0.15), 3.6 + fh, -CHUNK / 2);
   }
@@ -385,7 +396,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
   glowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glow), 3));
   glowGeo.computeBoundingSphere();
   return {
-    vc: vc.build(), trim: trim.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(), decal: decal.build(),
+    vc: vc.build(), trim: trim.build(), blob: blob.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(), decal: decal.build(),
     ground, glowGeo, vendorSpots, theme, placed,
   };
 }
@@ -414,6 +425,50 @@ function scatterDecals(bag, theme) {
     const edge = Math.random() < 0.7;
     const x = edge ? pick([-1, 1]) * rnd(3.1, 4.0) : rnd(-3.2, 3.2);
     addDecal(bag, name, x, -rnd(1, CHUNK - 1), rnd(0, 6), rnd(0.85, 1.15));
+  }
+}
+
+// 3D relief on the photo facades, lined up with the painted windows (5 columns per texture repeat; the
+// lower row's sills sit ~9% and the upper row's ~63% of the way up the stone): balconies, AC units, sills.
+// It is the parallax of these against the flat wall that makes the street read as deep.
+const WIN_COLS = [0.107, 0.30, 0.50, 0.70, 0.90];
+function addFacadeRelief(bag, side, fh, off, repeatW, covered) {
+  const wx = side * FACADE_X;
+  const rows = [3.58 + 0.0946 * fh, 3.58 + 0.627 * fh];
+  for (let n = -1; n <= Math.ceil(CHUNK / repeatW) + 1; n++) for (let k = 0; k < WIN_COLS.length; k++) {
+    const dist = (WIN_COLS[k] + n - off) * repeatW;
+    if (dist < 1.3 || dist > CHUNK - 1.3) continue;
+    const z = side < 0 ? -dist : -(CHUNK - dist);
+    rows.forEach((y, row) => {
+      if (covered && row === 1) return;                 // hidden behind the market roof
+      if (row === 1 && k === 3) return;                 // this window already has a painted balcony
+      // stone sill under every window
+      bag.add(box(0.22, 0.09, 1.7), '#e4d3ae', wx - side * 0.11, y - 0.05, z);
+      const r = Math.random();
+      if (r < 0.32) balcony(bag, side, wx, y - 0.12, z, row);
+      else if (r < 0.42) {
+        // AC unit with a dark grille, beside the window
+        const az = z + pick([-1, 1]) * 1.25;
+        bag.add(box(0.36, 0.5, 0.78), '#eceae4', wx - side * 0.18, y + 0.9, az, 0, 0, 0, 1, 1, 1, 0.05);
+        bag.add(box(0.02, 0.36, 0.6), '#5f646b', wx - side * 0.365, y + 0.9, az);
+      }
+    });
+  }
+}
+function balcony(bag, side, wx, y, z, row) {
+  const d = 0.72, L = row ? 2.1 : 2.3;
+  bag.add(box(d, 0.13, L), '#e6d4ab', wx - side * d / 2, y, z, 0, 0, 0, 1, 1, 1, 0.04);
+  for (const o of [-L * 0.32, L * 0.32]) bag.add(box(0.5, 0.22, 0.14), '#cdb68a', wx - side * 0.25, y - 0.17, z + o); // corbels
+  const rail = '#2d2b2e', fx = wx - side * (d - 0.03);
+  bag.add(box(0.04, 0.05, L), rail, fx, y + 0.95, z);
+  for (const e of [-L / 2, L / 2]) bag.add(box(d, 0.05, 0.04), rail, wx - side * d / 2, y + 0.95, z + e);
+  for (let i = 0; i <= 8; i++) bag.add(box(0.025, 0.88, 0.025), rail, fx, y + 0.5, z - L / 2 + 0.05 + i * (L - 0.1) / 8);
+  if (Math.random() < 0.6) {
+    // a geranium in a terracotta pot
+    const pz = z + rnd(-0.7, 0.7);
+    bag.add(cyl(0.13, 0.1, 0.22, 8), '#b5562e', wx - side * 0.35, y + 0.18, pz);
+    bag.add(sph(0.2, 6, 4), pick(['#3f8f3a', '#2f7d32']), wx - side * 0.35, y + 0.42, pz);
+    bag.add(sph(0.08, 5, 3), pick(['#e63946', '#f15bb5', '#ffd23f']), wx - side * 0.35, y + 0.55, pz + 0.05);
   }
 }
 
@@ -450,6 +505,29 @@ function addMural(bag, side, v, len) {
   bag.add(g, null, side * (FACADE_X - 0.08), 1.6, -(v + len / 2), 0, -side * Math.PI / 2, 0);
 }
 
+// Tileable fractal value noise for the sky's clouds, generated once.
+function cloudTexture() {
+  const S = 256, data = new Uint8Array(S * S * 4);
+  const grid = (n, seed) => { const g = new Float32Array(n * n); let s = seed; for (let i = 0; i < g.length; i++) { s = (s * 16807) % 2147483647; g[i] = s / 2147483647; } return g; };
+  const octaves = [4, 8, 16, 32, 64].map((n, i) => ({ n, g: grid(n, 1234 + i * 77), a: 0.5 / (1 << i) }));
+  const sm = t => t * t * (3 - 2 * t);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    let v = 0;
+    for (const { n, g, a } of octaves) {
+      const fx = x / S * n, fy = y / S * n, ix = Math.floor(fx), iy = Math.floor(fy), tx = sm(fx - ix), ty = sm(fy - iy);
+      const at = (cx, cy) => g[((cy % n) * n) + (cx % n)];
+      const top = at(ix, iy) + (at(ix + 1, iy) - at(ix, iy)) * tx, bot = at(ix, iy + 1) + (at(ix + 1, iy + 1) - at(ix, iy + 1)) * tx;
+      v += a * (top + (bot - top) * ty);
+    }
+    const o = (y * S + x) * 4, b = Math.round(Math.min(1, v / 0.97) * 255);
+    data[o] = data[o + 1] = data[o + 2] = b; data[o + 3] = 255;
+  }
+  const t = new THREE.DataTexture(data, S, S);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true;
+  t.needsUpdate = true;
+  return t;
+}
+
 // ---------- the World ----------
 export class World {
   constructor(scene, renderer, images) {
@@ -482,29 +560,33 @@ export class World {
       roof: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false }),
       ground: new THREE.MeshLambertMaterial({ map: pave }),
       decal: new THREE.MeshLambertMaterial({ map: decalTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
-      glow: new THREE.PointsMaterial({ size: 1.6, map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: '#ffd28a', opacity: 0, sizeAttenuation: true, toneMapped: false }),
+      blob: new THREE.MeshBasicMaterial({ map: softRectTexture(), color: '#1d1408', transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+      glow: new THREE.PointsMaterial({ size: 1.15, map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: '#ffd28a', opacity: 0, sizeAttenuation: true, toneMapped: false }),
     };
 
     // sky dome with a 3-colour gradient
-    this.skyUniforms = { top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, clouds: { value: 1 }, stars: { value: 0 }, time: { value: 0 } };
+    this.skyUniforms = { top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, clouds: { value: 1 }, stars: { value: 0 }, time: { value: 0 }, cloudTex: { value: cloudTexture() } };
     const sky = new THREE.Mesh(new THREE.SphereGeometry(190, 24, 12), new THREE.ShaderMaterial({
       uniforms: this.skyUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
-      fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform float clouds; uniform float stars; uniform float time; varying vec3 vP;
+      fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform float clouds; uniform float stars; uniform float time; uniform sampler2D cloudTex; varying vec3 vP;
         float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-        float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
-        float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++) { v += a * n2(p); p *= 2.03; a *= .5; } return v; }
         void main(){
           float h = vP.y;
           vec3 c = h > 0.08 ? mix(mid, top, smoothstep(0.08, 0.6, h)) : mix(bot, mid, smoothstep(-0.05, 0.08, h));
           vec2 uv = vP.xz / max(0.12, vP.y + 0.25) * 1.6 + vec2(time * 0.01, 0.);
-          float cl = smoothstep(0.52, 0.78, fbm(uv)) * smoothstep(0.02, 0.2, h) * clouds;
+          // precomputed tileable fbm (two lookups) instead of five octaves of procedural noise per pixel
+          float n = texture2D(cloudTex, uv * 0.25).r * 0.75 + texture2D(cloudTex, uv * 0.53 + 0.37).r * 0.25;
+          float cl = smoothstep(0.52, 0.78, n) * smoothstep(0.02, 0.2, h) * clouds;
           vec3 cloudCol = mix(vec3(1.0, 0.97, 0.92), mid * 1.25, 0.25);
           c = mix(c, cloudCol, cl * 0.85);
           vec2 sp = floor(vP.xz / max(0.05, vP.y) * 90.);
           float st = step(0.996, h21(sp)) * smoothstep(0.15, 0.5, h) * stars * (0.6 + 0.4 * sin(time * 3. + h21(sp + 3.) * 20.));
           c += vec3(st);
           gl_FragColor = vec4(c, 1.);
+          // same output transform as built-in materials (a no-op into the High path's linear target)
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
         }`,
     }));
     sky.renderOrder = -1;
@@ -551,7 +633,7 @@ export class World {
     const mk = (mat, shadow) => { const m = new THREE.Mesh(undefined, mat); m.receiveShadow = shadow; m.matrixAutoUpdate = false; m.frustumCulled = true; g.add(m); return m; };
     const slot = {
       group: g, startD: 0, variant: null,
-      ground: mk(this.mats.ground, true), decal: mk(this.mats.decal, true), vc: mk(this.mats.vc, true), trim: mk(this.mats.vc, false), sign: mk(this.mats.sign, false),
+      ground: mk(this.mats.ground, true), decal: mk(this.mats.decal, true), blob: mk(this.mats.blob, false), vc: mk(this.mats.vc, !!this.worldShadows), trim: mk(this.mats.vc, false), sign: mk(this.mats.sign, false),
       // vc casts shadows unless quality is on battery saver (set in setShadows)
       facade: mk(this.mats.facade, false), bulbs: mk(this.mats.bulbs, false), roof: mk(this.mats.roof, false),
       glow: new THREE.Points(EMPTY_GEO, this.mats.glow), vendors: [], props: {}, propsLo: {}, far: null,
@@ -567,7 +649,7 @@ export class World {
     const list = this.variants[zone.theme];
     const v = list[Math.floor(Math.random() * list.length)];
     slot.startD = startD; slot.variant = v;
-    for (const k of ['ground', 'decal', 'vc', 'trim', 'sign', 'facade', 'bulbs', 'roof']) {
+    for (const k of ['ground', 'blob', 'decal', 'vc', 'trim', 'sign', 'facade', 'bulbs', 'roof']) {
       const geo = v[k];
       slot[k].geometry = geo || EMPTY_GEO;
       slot[k].visible = !!geo;
@@ -578,7 +660,7 @@ export class World {
     const counts = {};
     const mk = (geometry, material, shadow) => {
       const im = new THREE.InstancedMesh(geometry, material, PROP_CAP);
-      im.receiveShadow = shadow; im.castShadow = shadow && !!this.worldShadows; im.matrixAutoUpdate = false;
+      im.receiveShadow = im.castShadow = shadow && !!this.worldShadows; im.matrixAutoUpdate = false;
       slot.group.add(im);
       return im;
     };
@@ -604,11 +686,12 @@ export class World {
     for (const vd of slot.vendors) { vd.visible = false; this.vendorPool.push(vd); }
     slot.vendors.length = 0;
     if (this.vendorTemplates.length) {
-      for (const [x, z] of v.vendorSpots) {
+      for (const [x, z, y = 0] of v.vendorSpots) {
         let m = this.vendorPool.pop();
         if (!m) { m = pick(this.vendorTemplates).clone(); m.traverse(o => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } }); }
         m.visible = true;
-        m.position.set(x, 0.0, z);
+        m.position.set(x, y, z);
+        m.userData.y0 = y;
         m.rotation.y = x > 0 ? -Math.PI / 2 : Math.PI / 2;
         m.userData.phase = Math.random() * 6;
         slot.group.add(m);
@@ -643,7 +726,7 @@ export class World {
         }
         for (const m of s.vendors) m.visible = !far;
       }
-      if (!far) for (const m of s.vendors) m.position.y = Math.abs(Math.sin(time * 2 + m.userData.phase)) * 0.04;
+      if (!far) for (const m of s.vendors) m.position.y = m.userData.y0 + Math.abs(Math.sin(time * 2 + m.userData.phase)) * 0.04;
     }
     // theme blending by distance
     const { zone } = zoneAt(runD);
@@ -697,10 +780,12 @@ export class World {
       this.sun.shadow.mapSize.set(size, size);
       if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; }
     }
+    // world geometry casts (and receives) only on High; otherwise just the street receives the
+    // runner's, walkers' and obstacles' shadows
     this.worldShadows = on && world;
     for (const s of this.slots) {
-      s.vc.castShadow = this.worldShadows;
-      for (const im of Object.values(s.props)) im.castShadow = this.worldShadows;
+      s.vc.castShadow = s.vc.receiveShadow = this.worldShadows;
+      for (const im of Object.values(s.props)) im.castShadow = im.receiveShadow = this.worldShadows;
     }
   }
 }

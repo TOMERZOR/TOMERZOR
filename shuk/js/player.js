@@ -23,7 +23,8 @@ export class Player {
     this.shieldMat = new THREE.ShaderMaterial({
       uniforms: { t: { value: 0 }, op: { value: 0 } },
       vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }',
-      fragmentShader: 'uniform float t; uniform float op; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); float band = 0.5 + 0.5*sin(t*4.0 + vN.y*8.0); gl_FragColor = vec4(mix(vec3(0.2,0.55,1.0), vec3(0.85,0.95,1.0), f*0.5), (f*0.6 + band*0.04) * op); }',
+      fragmentShader: 'uniform float t; uniform float op; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); float band = 0.5 + 0.5*sin(t*4.0 + vN.y*8.0); gl_FragColor = vec4(mix(vec3(0.2,0.55,1.0), vec3(0.85,0.95,1.0), f*0.5), (f*0.6 + band*0.04) * op);' +
+        '\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     });
     this.shield = new THREE.Mesh(sg, this.shieldMat);

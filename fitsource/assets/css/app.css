@@ -1240,6 +1240,7 @@ main:focus {
   .shoprow {
     flex-wrap: nowrap;
     overflow-x: auto;
+    overflow-y: hidden; /* sideways only */
     scrollbar-width: none;
     margin-inline-end: -12px;
     padding-inline-end: 12px;
@@ -1310,6 +1311,7 @@ main:focus {
   grid-auto-columns: minmax(240px, 22%);
   gap: 18px;
   overflow-x: auto;
+  overflow-y: hidden; /* sideways only */
   scroll-snap-type: x mandatory;
   padding-bottom: 12px;
   scrollbar-width: thin;
@@ -1701,6 +1703,7 @@ main:focus {
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  overflow-y: hidden; /* sideways only */
   scrollbar-width: none;
   align-items: center;
 }
@@ -1995,6 +1998,7 @@ main:focus {
   border-bottom: 1px solid var(--line);
   margin-bottom: 24px;
   overflow-x: auto;
+  overflow-y: hidden; /* sideways only */
   scrollbar-width: none;
 }
 .tab {

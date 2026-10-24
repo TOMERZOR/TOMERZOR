@@ -1,8 +1,8 @@
 // Canvas-drawn textures: coin faces, Hebrew signs, speech bubbles, banners, vehicle art.
 import * as THREE from 'three';
 
-export const FONT_HEAD = '"Secular One", "Rubik", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif';
-export const FONT_BODY = '"Rubik", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif';
+export const FONT_HEAD = '"Fredoka", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif';
+export const FONT_BODY = FONT_HEAD;
 
 function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -27,8 +27,8 @@ function roundRect(g, x, y, w, h, r) {
 
 function fitText(g, text, maxW, size, font) {
   let s = size;
-  g.font = `${s}px ${font}`;
-  while (g.measureText(text).width > maxW && s > 8) { s -= 2; g.font = `${s}px ${font}`; }
+  g.font = `700 ${s}px ${font}`;
+  while (g.measureText(text).width > maxW && s > 8) { s -= 2; g.font = `700 ${s}px ${font}`; }
   return s;
 }
 
@@ -62,7 +62,7 @@ export function coinTextures() {
   g.fillStyle = '#6b4c04';
   g.font = `bold 38px ${FONT_HEAD}`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('10', cx - 46, cx - 2);
-  g.font = `bold 30px ${FONT_BODY}`;
+  g.font = `600 30px ${FONT_BODY}`;
   g.fillText('₪', cx + 48, cx - 2);
   // ring text dots
   g.fillStyle = 'rgba(70,80,90,.55)';
@@ -140,7 +140,7 @@ export function bubbleTexture(text) {
   g.fillStyle = '#fffef7'; roundRect(g, x, 8, w, 104, 40); g.fill();
   g.beginPath(); g.moveTo(256 - 18, 108); g.lineTo(256 + 6, 150); g.lineTo(256 + 22, 108); g.closePath(); g.fill();
   g.strokeStyle = '#2b2118'; g.lineWidth = 5; roundRect(g, x, 8, w, 104, 40); g.stroke();
-  g.fillStyle = '#2b2118'; g.font = `${size}px ${FONT_HEAD}`; g.fillText(text, 256, 62);
+  g.fillStyle = '#2b2118'; g.font = `700 ${size}px ${FONT_HEAD}`; g.fillText(text, 256, 62);
   const t = tex(c); t.anisotropy = 1;
   return t;
 }
@@ -150,7 +150,7 @@ export function popupTexture(text, color = '#ffd23f') {
   const [c, g] = canvas(512, 128);
   g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
   const size = fitText(g, text, 480, 76, FONT_HEAD);
-  g.font = `${size}px ${FONT_HEAD}`;
+  g.font = `700 ${size}px ${FONT_HEAD}`;
   g.lineWidth = 12; g.strokeStyle = '#2b1606'; g.lineJoin = 'round'; g.strokeText(text, 256, 66);
   g.fillStyle = color; g.fillText(text, 256, 66);
   return tex(c);
@@ -164,7 +164,7 @@ export function bannerTexture(text, bg = '#d62828', fg = '#fff3b0') {
   g.fillStyle = '#ffd23f'; g.fillRect(0, 0, 512, 14); g.fillRect(0, 178, 512, 14);
   g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
   const size = fitText(g, text, 470, 92, FONT_HEAD);
-  g.font = `${size}px ${FONT_HEAD}`;
+  g.font = `700 ${size}px ${FONT_HEAD}`;
   g.lineWidth = 10; g.strokeStyle = 'rgba(0,0,0,.35)'; g.strokeText(text, 256, 100);
   g.fillStyle = fg; g.fillText(text, 256, 100);
   return tex(c);
@@ -181,13 +181,13 @@ export function vanTexture() {
   }
   g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
   const text = 'נ נח נחמ נחמן מאומן';
-  g.font = `110px ${FONT_HEAD}`;
+  g.font = `700 110px ${FONT_HEAD}`;
   fitText(g, text, 960, 120, FONT_HEAD);
   g.lineWidth = 16; g.strokeStyle = '#1d1d1d'; g.strokeText(text, 512, 190);
   const grd = g.createLinearGradient(0, 120, 1024, 260);
   cols.forEach((col, k) => grd.addColorStop(k / (cols.length - 1), col));
   g.fillStyle = grd; g.fillText(text, 512, 190);
-  g.font = `40px ${FONT_HEAD}`; g.fillStyle = '#1d1d1d'; g.fillText('אין שום ייאוש בעולם כלל!', 512, 320);
+  g.font = `700 40px ${FONT_HEAD}`; g.fillStyle = '#1d1d1d'; g.fillText('אין שום ייאוש בעולם כלל!', 512, 320);
   return tex(c);
 }
 
@@ -205,7 +205,7 @@ export function truckTexture() {
     g.fillStyle = 'rgba(255,255,255,.35)'; g.beginPath(); g.arc(70 + i * 110, 218, r * 0.22, 0, 7); g.fill(); }
   g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = '#1f5f2a'; fitText(g, 'פירות וירקות עזרא ובניו', 940, 84, FONT_HEAD); g.fillText('פירות וירקות עזרא ובניו', 512, 96);
-  g.fillStyle = '#fff'; g.font = `44px ${FONT_HEAD}`; g.fillText('הובלות מחנה יהודה · 02-5555555', 512, 342);
+  g.fillStyle = '#fff'; g.font = `700 44px ${FONT_HEAD}`; g.fillText('הובלות מחנה יהודה · 02-5555555', 512, 342);
   return tex(c);
 }
 

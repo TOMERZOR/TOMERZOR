@@ -33,7 +33,8 @@ export function load() {
       state.level = Math.max(1, Math.floor(+state.level || 1));
     }
   } catch (e) { state = defaults(); }
-  if (!state.missions || !Array.isArray(state.missions) || state.missions.length !== 3) newMissionSet();
+  const valid = m => m && Number.isInteger(m.i) && MISSIONS[m.i] && Number.isFinite(m.target) && m.target > 0 && Number.isFinite(m.progress);
+  if (!Array.isArray(state.missions) || state.missions.length !== 3 || !state.missions.every(valid)) newMissionSet();
   return state;
 }
 
@@ -52,7 +53,7 @@ export function newMissionSet() {
   const picks = [];
   // deterministic-ish shuffle seeded by level so a set feels stable
   let seed = lvl * 9301 + 49297;
-  const rnd = () => (seed = (seed * 233280 + 49297) % 233280) / 233280;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
   while (picks.length < 3 && pool.length) {
     const j = Math.floor(rnd() * pool.length);
     picks.push(pool.splice(j, 1)[0]);
@@ -61,6 +62,7 @@ export function newMissionSet() {
     const m = MISSIONS[i];
     let target = Math.round(m.base * Math.pow(m.grow, lvl - 1));
     if (m.cap) target = Math.min(m.cap, Math.max(m.base, Math.round(m.base + (lvl - 1) / 3)));
+    if (m.max) target = Math.min(m.max, target);
     if (target > 50) target = Math.round(target / 10) * 10;
     return { i, target, progress: 0, done: false };
   });

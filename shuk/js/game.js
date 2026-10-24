@@ -6,6 +6,7 @@ import { zoneAt } from './world.js';
 import { sfx, setMusicIntensity, voice } from './audio.js';
 import { haptic } from './haptics.js';
 import * as Save from './save.js';
+import { T } from './i18n.js';
 
 const STEP = 1 / 120;
 const VOICE_LINES = {
@@ -36,7 +37,7 @@ export class Game {
     this.scene.add(g);
     const run = inst.mixer.clipAction(tpl.clips.run);
     run.play();
-    const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.track.bubble('עצור! העגבניות שלי!'), transparent: true, depthWrite: false, toneMapped: false }));
+    const bubble = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.track.bubble(T.chaserSay), transparent: true, depthWrite: false, toneMapped: false }));
     bubble.scale.set(1.35, 0.42, 1);
     bubble.position.set(0, 1.9, 0);
     bubble.renderOrder = 9;
@@ -156,7 +157,7 @@ export class Game {
     this.track.step(dt, r.d, r.prevD, p, { magnet: r.powers.magnet > 0 });
     const mul = r.mult * (r.powers.x2 > 0 ? 2 : 1);
     r.score += r.speed * dt * 0.5 * mul;
-    for (const ev of this.track.events) this.handleEvent(ev, mul);
+    for (const ev of this.track.events) { if (this.state !== 'playing') break; this.handleEvent(ev, mul); }
     this.track.events.length = 0;
     if (r.invuln > 0) r.invuln -= dt;
   }
@@ -194,7 +195,7 @@ export class Game {
           if (ev.near) {
             r.stats.nearMiss++;
             r.score += 25 * mul;
-            this.fx.popup('כמעט!', p.x, 2.6, -1, '#7df9ff', 0.8);
+            this.fx.popup(T.nearMiss, p.x, 2.6, -1, '#7df9ff', 0.8);
           }
         }
         break;
@@ -209,6 +210,7 @@ export class Game {
 
   onHit(e, how) {
     const r = this.run, p = this.player;
+    if (p.dead || this.state !== 'playing') return;
     if (r.invuln > 0 || e.hit) { if (e.kind !== 'platform') e.grace = 0.3; return; }
     // the hamsa protects from anything once
     if (r.powers.hamsa > 0) {
@@ -219,7 +221,7 @@ export class Game {
       r.invuln = 0.8;
       if (e.kind === 'platform') { p.y = e.h; p.vy = 0; p.grounded = true; }
       else { this.track.knockAway(e, p.x); this.fx.splat(e.x, 0.8, -0.5); }
-      this.ui.toast('החמסה שמרה עליך!', '');
+      this.ui.toast(T.hamsaSaved, '');
       return;
     }
     e.hit = true;
@@ -241,7 +243,7 @@ export class Game {
     r.chaserT = 7;
     r.invuln = 0.5;
     if (!voice('grandma_stop', 0.3, 1, true)) sfx.whistle();
-    this.ui.toast('אוי! סבתא רודפת אחריך!', 'עוד מכה אחת והיא תופסת אותך');
+    this.ui.toast(...T.chased);
   }
 
   crash(e, caught = false) {
@@ -280,8 +282,16 @@ export class Game {
     this.ui.showHUD(r);
   }
 
-  finishRun() {
+  // leaving a run from the pause menu still keeps the coins and progress
+  bankRun() {
+    if (!this.run || this.run.banked) return;
+    this.finishRun(true);
+  }
+
+  finishRun(silent = false) {
     const r = this.run, s = Save.get();
+    if (!r || r.banked) return;
+    r.banked = true;
     this.state = 'over';
     r.stats.dist = Math.floor(r.d);
     r.stats.score = Math.floor(r.score);
@@ -292,6 +302,7 @@ export class Game {
     if (newBest) s.best = Math.floor(r.score);
     const missionNews = this.applyMissions(r.stats);
     Save.save();
+    if (silent) return;
     this.ui.gameOver({ score: Math.floor(r.score), dist: Math.floor(r.d), coins: r.coins, earned, newBest, best: s.best, missions: missionNews, cause: r.deathCause });
   }
 
@@ -334,7 +345,7 @@ export class Game {
     if (z.index !== r.zoneIndex) {
       r.zoneIndex = z.index;
       r.stats.zones = Math.max(r.stats.zones, z.index + 1);
-      const loop = z.loop > 0 ? ` · סיבוב ${z.loop + 1}` : '';
+      const loop = z.loop > 0 ? T.loop(z.loop + 1) : '';
       this.ui.zoneBanner(z.zone.name, z.zone.sub + loop);
       sfx.zone(); haptic('power');
     }
@@ -346,7 +357,7 @@ export class Game {
       const def = MISSIONS[m.i];
       const val = r.stats[def.stat] || 0;
       const prog = def.single ? Math.max(m.progress, val) : m.progress + val;
-      if (prog >= m.target) { r.missionFlags.add(m); sfx.mission(); haptic('power'); this.ui.toast('משימה הושלמה!', def.text(m.target)); }
+      if (prog >= m.target) { r.missionFlags.add(m); sfx.mission(); haptic('power'); this.ui.toast(T.missionDone, def.text(m.target)); }
     }
   }
 
@@ -364,7 +375,7 @@ export class Game {
     if (i === -1) {
       // passed every tutorial row
       this.ui.hint(null); r.slow = 0; r.tutorial = false;
-      if (!Save.get().tutorialDone) { Save.get().tutorialDone = true; Save.save(); this.ui.toast('מעולה!', 'עכשיו זה אמיתי. בהצלחה!'); }
+      if (!Save.get().tutorialDone) { Save.get().tutorialDone = true; Save.save(); this.ui.toast(...T.tutorialDone); }
       return;
     }
     const [d, a] = rows[i];

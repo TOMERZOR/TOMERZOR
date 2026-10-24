@@ -7,6 +7,7 @@ import { LANE_X, NPC_TYPES, CHARACTERS, PEDESTRIAN_SAY, SPEED, PLAYER_BOX } from
 import * as P from './props.js';
 import { bubbleTexture } from './textures.js';
 import { zoneAt } from './world.js';
+import { T } from './i18n.js';
 
 const AHEAD = 170;
 const BEHIND = 16;
@@ -187,7 +188,7 @@ export class Track {
       this.reserved[lane] = Math.max(this.reserved[lane], e.d + e.back + 2);
     }
     if (def.say && Math.random() < (type === 'npc:breslov' || type === 'van' ? 0.9 : 0.5)) e.sayText = pick(def.say);
-    if (type === 'van') e.sayText = 'נ נח נחמ נחמן מאומן!';
+    if (type === 'van') e.sayText = T.vanLine;
     const ud = obj.userData;
     if (ud.walk) {
       const walking = e.speed > 0;
@@ -370,8 +371,7 @@ export class Track {
       else if (coinsPlan.mode === 'under') { this.coinLine(cl, coinStart, D + 3, 0.55); }
       else if (coinsPlan.mode === 'roof') {
         const def = PROPS.truck;
-        this.coinLine(cl, D - 4, D - 0.8, 0.0); // on the ramp (y fixed below)
-        for (const c of this.coins.slice(-3)) c.y = 0.75 + PROPS.truckR.h * Math.max(0, (c.d - (D - 4.2)) / 4.2);
+        for (const d of [D - 3.6, D - 2.2, D - 0.8]) this.addCoin(cl, d, 0.75 + PROPS.truckR.h * (d - (D - 4.2)) / 4.2);
         this.coinLine(cl, D + 0.6, D + def.front + def.back - 0.6, def.h + 0.75);
       } else if (Math.random() < 0.8) this.coinLine(cl, coinStart, D - 3);
     }
@@ -441,12 +441,18 @@ export class Track {
       const pd0 = prevD - e.front, pd1 = prevD + e.back;
       const prevDOver = prevRunD + PLAYER_BOX.halfD > pd0 && prevRunD - PLAYER_BOX.halfD < pd1;
       const prevXOver = Math.abs(plx - e.x) < e.w / 2 + PLAYER_BOX.halfW;
-      let how = 'front';
-      if (prevDOver && !prevXOver) how = 'side';
-      else if (prevDOver && prevXOver) how = ply >= top - 0.05 ? 'top' : 'front';
+      const prevYOver = ply < top && ply + ph > e.y0;
+      let how;
+      if (!prevDOver) how = 'front';          // ran into it
+      else if (!prevXOver) how = 'side';      // steered into it
+      else if (!prevYOver) how = 'top';       // dropped onto it / rose into it
+      else continue;                          // already inside it (e.g. after a grace period): no new hit
       if (e.kind === 'platform') {
-        if (how === 'top' || py >= top - 0.5) { this.events.push({ t: 'climb', e, y: top }); continue; }
+        const centred = Math.abs(px - e.x) < e.w / 2 + 0.1;
+        if (how === 'top' && ply >= top - 0.05) { if (centred && player.vy <= 0) this.events.push({ t: 'climb', e, y: top }); continue; }
+        if (py >= top - 0.5 && (how === 'front' || centred)) { this.events.push({ t: 'climb', e, y: top }); continue; }
       }
+      if (how === 'top' && ply >= top - 0.05 && e.kind !== 'high') how = 'front'; // landing on someone counts as running into them
       this.events.push({ t: 'hit', e, how });
     }
     // coins
@@ -493,7 +499,8 @@ export class Track {
       const ud = o.userData;
       if (e.kind === 'power') {
         o.position.y = 1.1 + Math.sin(time * 3 + e.phase) * 0.12;
-        ud.inner.rotation.y = time * 2.2;
+        const flip = Math.cos(time * 2.6 + e.phase);
+        ud.inner.scale.set(1.25 * (Math.abs(flip) * 0.8 + 0.2) * Math.sign(flip || 1), 1.25, 1);
         ud.glow.material.opacity = 0.55 + Math.sin(time * 5) * 0.2;
         continue;
       }

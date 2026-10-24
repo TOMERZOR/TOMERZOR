@@ -128,6 +128,19 @@ export class Assets {
     return tpl;
   }
 
+  // Static set-dressing models (stalls, parked truck): one mesh each, transform baked into the geometry.
+  async prop(name) {
+    const g = await loadGLTF(`models/st_${name}.glb`);
+    g.scene.updateMatrixWorld(true);
+    let mesh = null;
+    g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });
+    const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld);
+    geometry.computeBoundingBox();
+    const material = mesh.material;
+    if (material.isMeshStandardMaterial) { material.roughness = Math.max(0.6, material.roughness ?? 1); material.metalness = Math.min(0.05, material.metalness ?? 0); }
+    return { geometry, material, size: geometry.boundingBox.getSize(new THREE.Vector3()) };
+  }
+
   instanceNpc(tpl) {
     if (tpl.rigged) {
       const root = SkeletonUtils.clone(tpl.scene);

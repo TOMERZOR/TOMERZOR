@@ -218,7 +218,7 @@ export class Player {
 
   setPowerFx(magnet, sneakers, time) {
     this.magnetIcon.visible = magnet;
-    if (magnet) { this.magnetIcon.userData.inner.rotation.y = time * 4; this.magnetIcon.position.y = 2.25 + Math.sin(time * 5) * 0.06 + (this.rollT > 0 ? -0.8 : 0); }
+    if (magnet) { const f = Math.cos(time * 4); this.magnetIcon.userData.inner.scale.set(1.25 * (Math.abs(f) * 0.8 + 0.2), 1.25, 1); this.magnetIcon.position.y = 2.25 + Math.sin(time * 5) * 0.06 + (this.rollT > 0 ? -0.8 : 0); }
     this.feetGlow.visible = sneakers;
     if (sneakers) { this.feetGlow.material.opacity = 0.55 + Math.sin(time * 9) * 0.25; this.feetGlow.position.y = 0.04 - this.y + this.groundY; }
   }

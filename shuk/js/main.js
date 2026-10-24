@@ -13,6 +13,10 @@ import { UI } from './ui.js';
 import { createInput } from './input.js';
 import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx, loadVoices } from './audio.js';
 import { haptic, setHaptics } from './haptics.js';
+import { Look, patchCurvedWorld } from './look.js';
+import { T } from './i18n.js';
+
+patchCurvedWorld();
 
 const save = Save.load();
 const canvas = document.getElementById('game');
@@ -23,7 +27,7 @@ let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ canvas, antialias: save.settings.quality !== 'low' && dpr < 2.5, powerPreference: 'high-performance', stencil: false });
 } catch (e) {
-  document.getElementById('load-tip').textContent = 'הדפדפן הזה לא תומך בתלת־ממד (WebGL). נסו דפדפן אחר.';
+  document.getElementById('load-tip').textContent = T.noWebGL;
   throw e;
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -37,16 +41,19 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = 0.55;
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 260);
+const look = new Look(renderer, scene, camera);
 
 const quality = { ratio: 1, shadows: true, slowFrames: 0, fastFrames: 0, samples: 0 };
 function applyQuality(reset = true) {
   const q = Save.get().settings.quality;
   if (reset) {
-    quality.ratio = q === 'high' ? Math.min(dpr, 2) : q === 'low' ? Math.min(dpr, 1) * 0.85 : Math.min(dpr, 1.75);
+    quality.ratio = q === 'high' ? Math.min(dpr, 2) : q === 'low' ? Math.min(dpr, 1) * 0.85 : Math.min(dpr, 1.6);
     quality.shadows = q !== 'low';
+    quality.post = q === 'high' ? 'high' : q === 'low' ? 'low' : 'mid';
   }
   renderer.setPixelRatio(quality.ratio);
-  if (world) world.setShadows(quality.shadows);
+  if (world) world.setShadows(quality.shadows, quality.post === 'high');
+  look.setMode(quality.post, window.innerWidth, window.innerHeight, quality.ratio);
   resize();
 }
 
@@ -57,6 +64,7 @@ function resize() {
   // keep the three lanes and some stalls in view on narrow portrait screens
   camera.fov = camera.aspect < 0.62 ? 70 : camera.aspect < 1 ? 64 : 56;
   camera.updateProjectionMatrix();
+  look.resize(w, h, quality.ratio);
   if (fx) fx.setScale(h * quality.ratio);
 }
 window.addEventListener('resize', resize);
@@ -74,7 +82,7 @@ const ui = new UI({
   play: () => startRun(),
   pause: () => pause(true),
   resume: () => pause(false),
-  restart: () => { ui.overlay('pause', false); ui.overlay('over', false); startRun(); },
+  restart: () => { if (game && game.state === 'paused') game.bankRun(); ui.overlay('pause', false); ui.overlay('over', false); startRun(); },
   home: () => goHome(),
   sheet: id => {
     if (id === 'chars') { player.setMode('dance'); }
@@ -86,8 +94,9 @@ const ui = new UI({
     previewId = want;
     ui.setCharLoading(true);
     try { await player.setCharacter(want); } catch (e) { /* keep the current model */ }
-    if (previewId === want) ui.setCharLoading(false);
-    player.setMode(id ? 'dance' : 'menu');
+    if (previewId !== want) return; // a newer preview replaced this one
+    ui.setCharLoading(false);
+    if (game && game.state === 'menu') player.setMode(id && ui.current === 'chars' ? 'dance' : 'menu');
   },
   selectChar: id => {
     const s = Save.get(); s.selected = id; Save.save();
@@ -122,13 +131,14 @@ setAudioSettings(save.settings);
 setHaptics(save.settings.haptics);
 
 // ---------- loading ----------
-const TIPS = ['מסדרים את הדוכנים…', 'סופרים מטבעות של 10…', 'מחממים את הרוגלך…', 'מכוונים את הדרבוקה…', 'סבא מחפש חניה לעגלה…', 'הנחמנים מנפחים את הרמקולים…'];
+const TIPS = T.tips;
+const tipOffset = Math.floor(Math.random() * TIPS.length);
 
 async function boot() {
-  let done = 0; const steps = 30;
-  const tick = (n = 1) => { done += n; ui.setLoading(Math.min(1, done / steps), TIPS[Math.floor(done / 5) % TIPS.length]); };
+  let done = 0; const steps = 34;
+  const tick = (n = 1) => { done += n; ui.setLoading(Math.min(1, done / steps), TIPS[(tipOffset + Math.floor(done / 5)) % TIPS.length]); };
   try {
-    await Promise.race([Promise.all([document.fonts.load('40px "Secular One"'), document.fonts.load('400 20px Rubik'), document.fonts.load('700 20px Rubik')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
+    await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
     tick();
     const [facade, paving, m1, m2, m3] = await Promise.all(['img/facade.jpg', 'img/paving.jpg', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg'].map(u => loadImage(u).finally(() => tick())));
     await assets.loadAnims('models/anims.glb'); tick(2);
@@ -140,6 +150,9 @@ async function boot() {
     previewId = Save.get().selected;
     await Promise.all(Object.keys(NPC_TYPES).map(t => assets.npc(t).then(() => tick())));
     world.setVendorTemplates([assets.npcs.vendor?.scene, assets.npcs.chabad?.scene]);
+    const props = {};
+    await Promise.all(['fruit', 'spice', 'sweets', 'truck'].map(n => assets.prop(n).then(p => { props[n] = p; }, () => {}).finally(() => tick())));
+    world.setPropModels(props);
     for (const _ of world.buildSteps()) { tick(0.6); await frame(); }
     game = new Game({ scene, camera, world, track, player, fx, ui, assets });
     window.__shuk = { game, renderer, scene, camera, Save };
@@ -155,7 +168,7 @@ async function boot() {
     requestAnimationFrame(loop);
   } catch (e) {
     console.error(e);
-    ui.loadError('משהו השתבש בטעינה. בדקו את החיבור ונסו לרענן.');
+    ui.loadError(T.loadError);
   }
 }
 const frame = () => new Promise(r => requestAnimationFrame(() => r()));
@@ -199,19 +212,27 @@ function enter() {
 }
 
 // ---------- flow ----------
+let starting = false;
 function startRun() {
-  if (!game) return;
+  if (!game || starting) return;
   initAudio();
   previewId = Save.get().selected;
   const startIt = () => {
+    starting = false;
     ui.overlay('over', false); ui.overlay('pause', false);
     game.startRun();
     setMusicMode('run'); duckMusic(false);
     startMusic('run');
     quality.samples = 0; quality.slowFrames = 0;
   };
-  if (player.charId !== Save.get().selected) player.setCharacter(Save.get().selected).then(startIt);
-  else startIt();
+  if (player.charId !== Save.get().selected) {
+    starting = true;
+    player.setCharacter(Save.get().selected).then(startIt).catch(() => {
+      // the selected model failed to load: fall back to the free character
+      const s = Save.get(); s.selected = 'tzabar'; Save.save(); previewId = 'tzabar';
+      player.setCharacter('tzabar').then(startIt).catch(() => { starting = false; ui.toast(...T.connection); });
+    });
+  } else startIt();
 }
 
 function pause(on) {
@@ -222,6 +243,7 @@ function pause(on) {
 
 function goHome() {
   if (!game) return;
+  if (game.state === 'paused') game.bankRun();
   ui.overlay('over', false); ui.overlay('pause', false); ui.overlay('revive', false);
   game.state = 'menu';
   game.run = null;
@@ -263,7 +285,9 @@ function loop(now) {
   dt = Math.min(dt, 1 / 20);
   if (game.state !== 'paused') { const reps = (window.__shuk && window.__shuk.speedup) || 1; for (let i = 0; i < reps; i++) game.update(dt); }
   else game.updateCamera(0);
-  renderer.render(scene, camera);
+  look.setZone(world.cur.glow);
+  const sp = game.state === 'playing' && game.run ? THREE.MathUtils.clamp((game.run.speed - 21) / 13, 0, 1) : 0;
+  look.render(game.time, sp);
   adaptQuality(dt);
 }
 
@@ -273,9 +297,11 @@ function adaptQuality(dt) {
   quality.samples++;
   if (dt > 1 / 40) quality.slowFrames++;
   if (quality.samples >= 120) {
-    if (quality.slowFrames > 40 && quality.ratio > 0.75) {
-      quality.ratio = Math.max(0.75, quality.ratio - 0.25);
-      if (quality.ratio <= 1 && quality.shadows && quality.slowFrames > 70) quality.shadows = false;
+    if (quality.slowFrames > 40) {
+      // step down: post effects first, then resolution, then shadows
+      if (quality.post !== 'low') quality.post = 'low';
+      else if (quality.ratio > 0.75) quality.ratio = Math.max(0.75, quality.ratio - 0.25);
+      else if (quality.shadows) quality.shadows = false;
       applyQuality(false);
     }
     quality.samples = 0; quality.slowFrames = 0;

@@ -1,16 +1,19 @@
-// DOM user interface: screens, HUD and menus. All text is Hebrew, layout is RTL.
+// DOM user interface: screens, HUD and menus. Text comes from i18n.js; Hebrew is RTL, English LTR.
 import { CHARACTERS, POWERUPS, UPGRADE_COST, MAX_UPGRADE, MISSIONS, MAX_MULT, LEVEL_REWARD } from './config.js';
 import * as Save from './save.js';
+import { T, getLang, setLang, isRTL } from './i18n.js';
 
 const $ = id => document.getElementById(id);
-const fmt = n => Math.floor(n).toLocaleString('he-IL');
-const POWER_ICON = { magnet: '🧲', x2: '🥐', sneakers: '👟', hamsa: '🪬' };
-const CAUSES = {
-  'npc:grandpa': 'נתקעת בסבא עם העגלה', 'npc:moroccan': 'התנגשת בסבתא עם הצמידים', 'npc:breslov': 'נכנסת בנחמן הרוקד',
-  'npc:chabad': 'עצרת להניח תפילין', 'npc:vendor': 'התנגשת במוכר העגבניות', 'npc:jack': 'עלית על הג׳ק של הספק',
-  'npc:scooter': 'השליח על הקטנוע הפיל אותך', van: 'הטנדר של הנחמנים עצר אותך', truck: 'נכנסת במשאית הירקות', truckR: 'נכנסת במשאית הירקות',
-  caught: 'סבתא תפסה אותך!',
-};
+const LOCALE = isRTL() ? 'he-IL' : 'en-US';
+const fmt = n => Math.floor(n).toLocaleString(LOCALE);
+const ICON = k => `img/ui/ico_${k}.webp`;
+const COIN = '<img src="img/ui/ico_coin.webp" alt="">';
+
+// gradient title text draws its outline from data-text, so both must change together
+function setText(el, text) {
+  el.textContent = text;
+  if (el.classList.contains('gt')) el.dataset.text = text;
+}
 
 export class UI {
   constructor(h) {
@@ -18,8 +21,21 @@ export class UI {
     this.current = 'loading';
     this.hintShown = null;
     this.hudCache = {};
+    this.powerEls = {};
     this.charIndex = 0;
+    this.applyText();
     this.bind();
+  }
+
+  applyText() {
+    const root = document.documentElement;
+    root.lang = getLang();
+    root.dir = isRTL() ? 'rtl' : 'ltr';
+    document.title = `${T.title} · ${T.titleTop}`;
+    for (const el of document.querySelectorAll('[data-t]')) {
+      const v = T[el.dataset.t];
+      if (typeof v === 'string') setText(el, v);
+    }
   }
 
   bind() {
@@ -40,14 +56,25 @@ export class UI {
     click('char-prev', () => this.stepChar(-1));
     click('char-next', () => this.stepChar(1));
     click('char-action', () => this.charAction());
-    click('btn-reset', () => this.confirm('למחוק את כל ההתקדמות?', () => this.h.resetProgress()));
+    click('btn-reset', () => this.confirm(T.resetQ, () => this.h.resetProgress()));
     for (const b of document.querySelectorAll('[data-close]')) b.addEventListener('click', e => { e.stopPropagation(); this.h.click(); this.closeSheet(); });
     for (const b of $('quality-seg').querySelectorAll('button')) b.addEventListener('click', () => { this.h.click(); this.h.setting('quality', b.dataset.q); this.renderSettings(); });
-    // swipe between characters on the picker
+    for (const b of $('lang-seg').querySelectorAll('button')) b.addEventListener('click', () => {
+      this.h.click();
+      if (b.dataset.l === getLang()) return;
+      setLang(b.dataset.l);
+      location.reload();
+    });
+    // swipe between characters on the picker (a swipe toward the start edge shows the next one)
     let sx = null;
     const card = document.querySelector('.char-picker');
     card.addEventListener('touchstart', e => { sx = e.changedTouches[0].clientX; }, { passive: true });
-    card.addEventListener('touchend', e => { if (sx === null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) this.stepChar(dx > 0 ? 1 : -1); sx = null; }, { passive: true });
+    card.addEventListener('touchend', e => {
+      if (sx === null) return;
+      const dx = e.changedTouches[0].clientX - sx;
+      if (Math.abs(dx) > 50) this.stepChar((dx > 0) === isRTL() ? 1 : -1);
+      sx = null;
+    }, { passive: true });
   }
 
   show(id) {
@@ -62,15 +89,13 @@ export class UI {
     if (tip) $('load-tip').textContent = tip;
   }
   showEnter(cb) {
-    $('load-tip').textContent = 'הכל מוכן. השוק מחכה!';
+    $('load-tip').textContent = T.ready;
     const b = $('btn-enter');
     b.classList.remove('hidden');
     b.addEventListener('click', () => cb(), { once: true });
     b.focus({ preventScroll: true });
   }
-  loadError(msg) {
-    $('load-tip').textContent = msg;
-  }
+  loadError(msg) { $('load-tip').textContent = msg; }
 
   // ---------- menu ----------
   menu() {
@@ -82,11 +107,15 @@ export class UI {
     $('menu-mult').textContent = Math.min(MAX_MULT, s.level);
     const done = s.missions.filter(m => m.done).length;
     $('menu-mprog').style.width = (done / 3 * 100) + '%';
-    $('menu-mtext').textContent = `${done}/3 משימות לרמה הבאה`;
+    $('menu-mtext').textContent = T.missionsToNext(done);
     const c = CHARACTERS.find(x => x.id === s.selected) || CHARACTERS[0];
     $('menu-char').textContent = c.name;
     $('menu-char-title').textContent = c.title;
-    for (const el of document.querySelectorAll('[data-coins]')) el.textContent = fmt(s.coins);
+    this.syncCoins();
+  }
+  syncCoins() {
+    const c = fmt(Save.get().coins);
+    for (const el of document.querySelectorAll('[data-coins]')) el.textContent = c;
   }
 
   // ---------- HUD ----------
@@ -99,7 +128,7 @@ export class UI {
   updateHUD(r, powers) {
     const c = this.hudCache;
     const score = Math.floor(r.score);
-    if (c.score !== score) { $('hud-score').textContent = fmt(score); c.score = score; }
+    if (c.score !== score) { setText($('hud-score'), fmt(score)); c.score = score; }
     const coins = r.coins * 10;
     if (c.coins !== coins) { $('hud-coins').textContent = fmt(coins); c.coins = coins; }
     const x2 = r.powers.x2 > 0;
@@ -107,7 +136,7 @@ export class UI {
     if (c.mult !== mult) { const el = $('hud-mult'); el.textContent = '×' + mult; el.classList.toggle('x2', x2); c.mult = mult; }
     const dist = Math.floor(r.d);
     if (c.dist !== dist) { $('hud-dist').textContent = fmt(dist); c.dist = dist; }
-    // power-up timers
+    // power-up timers: a ring that drains around the 3D icon
     const box = $('powers');
     const live = new Set(powers.map(p => p.k));
     for (const k of Object.keys(this.powerEls)) if (!live.has(k)) { this.powerEls[k].remove(); delete this.powerEls[k]; }
@@ -116,17 +145,18 @@ export class UI {
       if (!el) {
         el = document.createElement('div');
         el.className = 'power';
-        el.innerHTML = `<span class="pico" style="background:${POWERUPS[p.k].color}">${POWER_ICON[p.k]}</span><span class="pbar"><i style="background:${POWERUPS[p.k].color}"></i></span>`;
+        el.style.setProperty('--c', POWERUPS[p.k].color);
+        el.innerHTML = `<img src="${ICON(p.k)}" alt="">`;
         box.appendChild(el);
         this.powerEls[p.k] = el;
       }
-      el.querySelector('.pbar i').style.width = Math.max(0, p.t / p.max * 100) + '%';
+      el.style.setProperty('--p', Math.max(0, Math.min(100, p.t / p.max * 100)).toFixed(1));
       el.classList.toggle('ending', p.t < 2);
     }
   }
   zoneBanner(name, sub) {
     const z = $('zone-banner');
-    z.querySelector('b').textContent = name;
+    setText(z.querySelector('b'), name);
     z.querySelector('span').textContent = sub;
     z.classList.remove('show'); void z.offsetWidth; z.classList.add('show');
   }
@@ -145,21 +175,20 @@ export class UI {
     const h = $('hint');
     this.hintShown = dir;
     if (!dir) { h.classList.remove('show'); return; }
-    const text = { up: 'החליקו למעלה כדי לקפוץ', down: 'החליקו למטה כדי להתגלגל', left: 'החליקו שמאלה', right: 'החליקו ימינה' }[dir];
     h.dataset.dir = dir;
-    h.querySelector('b').textContent = text;
+    h.querySelector('b').textContent = T.hints[dir];
     h.classList.add('show');
   }
 
   // ---------- pause / revive / over ----------
   pause(on) {
-    if (on) { this.overlay('pause', true); this.renderToggles(); }
-    else this.overlay('pause', false);
+    this.overlay('pause', on);
+    if (on) this.renderToggles();
   }
   reviveOffer(cost, cb) {
     this.overlay('revive', true);
     $('revive-cost').textContent = fmt(cost);
-    const prog = $('revive-prog');
+    const prog = $('revive-prog'), count = $('revive-count');
     const total = 5;
     let left = total, done = false;
     const finish = ok => {
@@ -168,13 +197,14 @@ export class UI {
       this.overlay('revive', false);
       cb(ok);
     };
-    $('revive-count').textContent = total;
+    setText(count, String(total));
     prog.style.transition = 'none';
-    prog.setAttribute('stroke-dashoffset', '0'); prog.style.strokeDashoffset = '0';
+    prog.style.strokeDashoffset = '0';
     void prog.getBoundingClientRect();
     prog.style.transition = '';
     const timer = setInterval(() => {
-      left--; $('revive-count').textContent = Math.max(0, left);
+      if (document.hidden) return; // don't burn the offer while the app is in the background
+      left--; setText(count, String(Math.max(0, left)));
       prog.style.strokeDashoffset = String(276.5 * (1 - left / total));
       if (left > 0) this.h.tick(); else finish(false);
     }, 1000);
@@ -183,14 +213,19 @@ export class UI {
   }
   gameOver(d) {
     this.overlay('over', true);
-    $('over-cause').textContent = CAUSES[d.cause] || (d.cause && d.cause.startsWith('ped:') ? 'התנגשת בעובר אורח' : 'אופס!');
+    const cause = d.cause || '';
+    $('over-cause').textContent = T.causes[cause] || (cause.startsWith('ped:') ? T.causes.ped : T.causes.other);
     $('over-newbest').classList.toggle('hidden', !d.newBest);
-    $('over-dist').textContent = fmt(d.dist) + ' מ׳';
+    $('over-dist').textContent = `${fmt(d.dist)} ${T.meters}`;
     $('over-earned').textContent = fmt(d.earned);
     $('over-best').textContent = fmt(d.best);
     // count-up score
     const el = $('over-score'), t0 = performance.now(), dur = 900;
-    const tick = () => { const k = Math.min(1, (performance.now() - t0) / dur); el.textContent = fmt(d.score * (1 - Math.pow(1 - k, 3))); if (k < 1 && this.current !== 'menu') requestAnimationFrame(tick); };
+    const tick = () => {
+      const k = Math.min(1, (performance.now() - t0) / dur);
+      setText(el, fmt(d.score * (1 - Math.pow(1 - k, 3))));
+      if (k < 1 && this.current !== 'menu') requestAnimationFrame(tick);
+    };
     tick();
     const s = Save.get();
     const list = $('over-missions');
@@ -200,8 +235,12 @@ export class UI {
     for (const m of shown) list.appendChild(this.missionEl(m, fresh.has(m.i)));
     const lu = $('over-levelup');
     if (d.missions.leveled) {
+      const l = d.missions.leveled.level;
       lu.classList.remove('hidden');
-      lu.innerHTML = `עליתם לרמה ${d.missions.leveled.level}! מכפיל ×${Math.min(MAX_MULT, d.missions.leveled.level)}<small>בונוס: ₪${fmt(d.missions.leveled.reward)}</small>`;
+      lu.textContent = T.levelUp(l, Math.min(MAX_MULT, l));
+      const sm = document.createElement('small');
+      sm.textContent = T.bonus(fmt(d.missions.leveled.reward));
+      lu.appendChild(sm);
     } else lu.classList.add('hidden');
     setTimeout(() => $('btn-again').focus({ preventScroll: true }), 50);
   }
@@ -213,7 +252,7 @@ export class UI {
     el.className = 'mission' + (done ? ' done' : '') + (fresh ? ' fresh' : '');
     const pct = Math.min(100, m.progress / m.target * 100);
     el.innerHTML = `<span class="check"></span><div class="mtxt"><div></div><div class="mbar"><i style="width:${done ? 100 : pct}%"></i></div></div><span class="mnum">${fmt(Math.min(m.progress, m.target))}/${fmt(m.target)}</span>`;
-    el.querySelector('.mtxt > div').textContent = def.text(m.target);
+    el.querySelector('.mtxt > div').textContent = def.text(fmt(m.target));
     return el;
   }
 
@@ -222,9 +261,11 @@ export class UI {
     for (const s of ['chars', 'upgrades', 'missions', 'settings']) $(s).classList.toggle('show', s === id);
     $('menu').classList.remove('show');
     this.current = id;
+    this.syncCoins();
     this.h.sheet(id);
   }
   closeSheet() {
+    clearTimeout(this.sheetTimer);
     if (this.current === 'chars') this.h.previewChar(null);
     this.menu();
     this.h.sheet(null);
@@ -237,23 +278,31 @@ export class UI {
     this.renderChar();
   }
   stepChar(d) {
+    clearTimeout(this.sheetTimer);
     this.charIndex = (this.charIndex + d + CHARACTERS.length) % CHARACTERS.length;
     this.renderChar();
   }
   renderChar() {
     const s = Save.get();
     const c = CHARACTERS[this.charIndex];
-    $('char-name').textContent = c.name;
+    setText($('char-name'), c.name);
     $('char-title').textContent = c.title;
     $('char-bio').textContent = c.bio;
     const owned = s.owned.includes(c.id);
     const btn = $('char-action');
-    if (s.selected === c.id) { btn.textContent = 'נבחר ✓'; btn.disabled = true; }
-    else if (owned) { btn.textContent = 'בחרו'; btn.disabled = false; }
-    else { btn.innerHTML = `קנו ב־<span class="coin-ico"></span>${fmt(c.price)}`; btn.disabled = false; }
+    btn.style.fontSize = '';
+    btn.classList.toggle('teal', owned && s.selected !== c.id);
+    if (s.selected === c.id) { btn.textContent = T.selected; btn.disabled = true; }
+    else if (owned) { btn.textContent = T.choose; btn.disabled = false; }
+    else {
+      btn.innerHTML = `<span></span>${COIN.replace('<img', '<img class="ico"')}<b class="num"></b>`;
+      btn.querySelector('span').textContent = T.buyFor.trim();
+      btn.querySelector('b').textContent = fmt(c.price);
+      btn.disabled = false;
+    }
     const dots = $('char-dots'); dots.innerHTML = '';
     CHARACTERS.forEach((ch, i) => { const d = document.createElement('i'); if (s.owned.includes(ch.id)) d.classList.add('owned'); if (i === this.charIndex) d.classList.add('cur'); dots.appendChild(d); });
-    for (const el of document.querySelectorAll('[data-coins]')) el.textContent = fmt(s.coins);
+    this.syncCoins();
     this.h.previewChar(c.id);
   }
   setCharLoading(on) { $('char-loading').classList.toggle('hidden', !on); }
@@ -262,13 +311,15 @@ export class UI {
     const c = CHARACTERS[this.charIndex];
     if (s.owned.includes(c.id)) { this.h.selectChar(c.id); }
     else if (s.coins >= c.price) { this.h.buyChar(c.id); }
-    else { this.h.denied(); this.toastSheet(`חסרים עוד ₪${fmt(c.price - s.coins)}`); }
+    else { this.h.denied(); this.toastSheet(T.missing(fmt(c.price - s.coins))); return; }
     this.renderChar();
   }
   toastSheet(text) {
     const b = $('char-action');
     b.textContent = text; b.disabled = true;
-    setTimeout(() => { b.disabled = false; this.renderChar(); }, 1300);
+    b.style.fontSize = '20px';
+    clearTimeout(this.sheetTimer);
+    this.sheetTimer = setTimeout(() => { b.disabled = false; if (this.current === 'chars') this.renderChar(); }, 1300);
   }
 
   openUpgrades() { this.openSheet('upgrades'); this.renderUpgrades(); }
@@ -276,39 +327,50 @@ export class UI {
     const s = Save.get();
     const list = $('upgrade-list');
     list.innerHTML = '';
+    const dur = (p, l) => (p.base + p.step * l).toLocaleString(LOCALE, { maximumFractionDigits: 1 });
     for (const [k, p] of Object.entries(POWERUPS)) {
       const lvl = s.upgrades[k] || 0;
-      const el = document.createElement('div');
-      el.className = 'upgrade';
-      const dur = (l) => (p.base + p.step * l).toLocaleString('he-IL', { maximumFractionDigits: 1 });
       const maxed = lvl >= MAX_UPGRADE;
       const cost = maxed ? 0 : UPGRADE_COST[lvl];
-      el.innerHTML = `<div class="uico" style="background:${p.color}">${POWER_ICON[k]}</div>
-        <h3></h3><p class="udesc"></p><p class="udur"></p>
+      const el = document.createElement('div');
+      el.className = 'upgrade';
+      el.innerHTML = `<img class="uico" src="${ICON(k)}" alt=""><h3></h3><p class="udesc"></p><p class="udur"></p>
         <div class="pips">${Array.from({ length: MAX_UPGRADE }, (_, i) => `<i class="${i < lvl ? 'on' : ''}"></i>`).join('')}</div>
-        <button class="btn ${maxed ? 'btn-soft' : 'btn-primary'}" ${maxed ? 'disabled' : ''}>${maxed ? 'מקסימום' : `שדרגו<small><span class="coin-ico"></span>${fmt(cost)}</small>`}</button>`;
+        <button class="gbtn ${maxed ? 'teal' : 'yellow'}" ${maxed ? 'disabled' : ''}></button>`;
       el.querySelector('h3').textContent = p.name;
       el.querySelector('.udesc').textContent = p.desc;
-      el.querySelector('.udur').textContent = maxed ? `${dur(lvl)} שניות` : `${dur(lvl)} ← ${dur(lvl + 1)} שניות`;
-      el.querySelector('.pips').style.gridColumn = '2';
+      // numbers read left to right in both languages: isolate them so the arrow keeps pointing at the new value
+      el.querySelector('.udur').textContent = maxed ? `${dur(p, lvl)} ${T.seconds}` : `\u2066${dur(p, lvl)} → ${dur(p, lvl + 1)}\u2069 ${T.seconds}`;
       const btn = el.querySelector('button');
+      const label = () => {
+        if (maxed) { btn.textContent = T.max; return; }
+        btn.innerHTML = `<span></span><small>${COIN}<b class="num"></b></small>`;
+        btn.querySelector('span').textContent = T.upgrade;
+        btn.querySelector('b').textContent = fmt(cost);
+      };
+      label();
       if (!maxed) btn.addEventListener('click', e => {
         e.stopPropagation();
-        if (Save.get().coins >= cost) { this.h.upgrade(k, cost); this.renderUpgrades(); }
-        else { this.h.denied(); btn.innerHTML = `חסרים ₪${fmt(cost - Save.get().coins)}`; setTimeout(() => this.renderUpgrades(), 1200); }
+        if (Save.get().coins >= cost) { this.h.upgrade(k, cost); this.renderUpgrades(); return; }
+        this.h.denied();
+        btn.textContent = T.missing(fmt(cost - Save.get().coins));
+        btn.style.fontSize = '13px';
+        clearTimeout(btn._t);
+        btn._t = setTimeout(() => { btn.style.fontSize = ''; label(); }, 1300);
       });
       list.appendChild(el);
     }
-    for (const el of document.querySelectorAll('[data-coins]')) el.textContent = fmt(s.coins);
+    this.syncCoins();
   }
 
   openMissions() { this.openSheet('missions'); this.renderMissions(); }
   renderMissions() {
     const s = Save.get();
     $('mis-level').textContent = s.level;
-    const next = Math.min(MAX_MULT, s.level + 1);
-    $('mis-explain').textContent = s.level >= MAX_MULT ? 'הגעתם למכפיל המקסימלי! המשיכו להשלים משימות בשביל בונוסים.'
-      : `השלימו את שלוש המשימות כדי לעלות לרמה ${s.level + 1}: מכפיל הנקודות יעלה ל־×${next} ותקבלו ₪${fmt(LEVEL_REWARD * s.level)}.`;
+    $('mis-explain').textContent = s.level >= MAX_MULT ? T.levelMax
+      : T.levelExplain(s.level + 1, Math.min(MAX_MULT, s.level + 1), fmt(LEVEL_REWARD * s.level));
+    const big = document.querySelector('.big-level');
+    big.dataset.text = big.textContent;
     const list = $('mission-list');
     list.innerHTML = '';
     for (const m of s.missions) list.appendChild(this.missionEl(m));
@@ -319,27 +381,29 @@ export class UI {
     this.renderToggles();
     const q = Save.get().settings.quality;
     for (const b of $('quality-seg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.q === q);
+    for (const b of $('lang-seg').querySelectorAll('button')) b.classList.toggle('on', b.dataset.l === getLang());
   }
   renderToggles() {
     const s = Save.get().settings;
-    const items = [['music', 'מוזיקה'], ['sfx', 'צלילים'], ['haptics', 'רטט']];
     for (const box of document.querySelectorAll('[data-toggles]')) {
       box.innerHTML = '';
-      for (const [k, label] of items) {
+      for (const k of ['music', 'sfx', 'haptics']) {
         const row = document.createElement('div');
         row.className = 'toggle';
-        row.innerHTML = `<span></span><button class="switch" role="switch" aria-checked="${!!s[k]}" aria-label="${label}"></button>`;
-        row.querySelector('span').textContent = label;
-        row.querySelector('button').addEventListener('click', e => { e.stopPropagation(); this.h.setting(k, !Save.get().settings[k]); this.h.click(); this.renderToggles(); });
+        row.innerHTML = `<span></span><button class="switch" role="switch" aria-checked="${!!s[k]}"></button>`;
+        row.querySelector('span').textContent = T[k];
+        const sw = row.querySelector('button');
+        sw.setAttribute('aria-label', T[k]);
+        sw.addEventListener('click', e => { e.stopPropagation(); this.h.setting(k, !Save.get().settings[k]); this.h.click(); this.renderToggles(); });
         box.appendChild(row);
       }
     }
   }
 
   confirm(text, yes) {
-    $('confirm-text').textContent = text;
+    setText($('confirm-text'), text);
     this.overlay('confirm', true);
-    $('confirm-yes').onclick = e => { e.stopPropagation(); this.overlay('confirm', false); yes(); };
-    $('confirm-no').onclick = e => { e.stopPropagation(); this.overlay('confirm', false); };
+    $('confirm-yes').onclick = e => { e.stopPropagation(); this.h.click(); this.overlay('confirm', false); yes(); };
+    $('confirm-no').onclick = e => { e.stopPropagation(); this.h.click(); this.overlay('confirm', false); };
   }
 }

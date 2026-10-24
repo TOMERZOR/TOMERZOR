@@ -1,6 +1,7 @@
 // Procedural obstacle props, power-up pickups and the 10-shekel coin.
 import * as THREE from 'three';
 import { Bag, rnd, pick, box, sph, cyl, cone } from './geo.js';
+import { T } from './i18n.js';
 import { bannerTexture, vanTexture, truckTexture, coinTextures, glowTexture, FONT_HEAD } from './textures.js';
 
 let M = null; // shared materials
@@ -8,7 +9,6 @@ function mats() {
   if (M) return M;
   M = {
     vc: new THREE.MeshLambertMaterial({ vertexColors: true }),
-    vcShiny: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.35, metalness: 0.2 }),
     glow: new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
   };
   return M;
@@ -90,7 +90,7 @@ export function makeTefillinTable() {
   const c = document.createElement('canvas'); c.width = 256; c.height = 96;
   const x = c.getContext('2d');
   x.fillStyle = '#ffd23f'; x.fillRect(0, 0, 256, 96); x.fillStyle = '#1e3a8a'; x.fillRect(6, 6, 244, 84);
-  x.fillStyle = '#ffd23f'; x.font = `56px ${FONT_HEAD}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+  x.fillStyle = '#ffd23f'; x.font = `700 56px ${FONT_HEAD}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
   x.fillText('תפילין', 128, 52);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.34), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
@@ -100,8 +100,7 @@ export function makeTefillinTable() {
 }
 
 // ---------- high obstacles (roll under) ----------
-const BANNERS = [['!מבצע! 3 ב־10', '#d62828', '#fff3b0'], ['כל הקילו ב־10!', '#ffd23f', '#9d0208'], ['חלבה ב־20!', '#6b2b7a', '#ffe9b0'], ['שבת שלום!', '#1d4ed8', '#ffffff'],
-  ['תותים מתוקים!', '#e63946', '#ffffff'], ['רק היום!', '#2a9d8f', '#fff3b0']];
+const BANNERS = T.banners;
 let bannerTexCache = null;
 export function makeBanner(width = 2.3) {
   if (!bannerTexCache) bannerTexCache = BANNERS.map(([t, bg, fg]) => bannerTexture(t, bg, fg));
@@ -224,95 +223,45 @@ export function makeVan() {
 }
 
 // ---------- power-ups ----------
+// The pickups are the rendered 3D icons from the UI kit, shown as glowing billboards that flip like coins.
+const iconTex = {};
+export function powerIconTexture(type) {
+  if (!iconTex[type]) {
+    const t = new THREE.TextureLoader().load(`img/ui/ico_${type}.webp`);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    iconTex[type] = t;
+  }
+  return iconTex[type];
+}
+const GLOW_COL = { magnet: '#ff6b6b', x2: '#ffb347', sneakers: '#4fc3ff', hamsa: '#5aa9ff' };
 export function makePowerup(type) {
   const g = new THREE.Group();
-  const inner = new THREE.Group();
-  g.add(inner);
   const glow = new THREE.Sprite(mats().glow.clone());
-  glow.scale.set(1.9, 1.9, 1);
+  glow.material.color.set(GLOW_COL[type] || '#fff');
+  glow.scale.set(2.3, 2.3, 1);
   g.add(glow);
-  const b = new Bag();
-  if (type === 'magnet') {
-    b.add(new THREE.TorusGeometry(0.3, 0.11, 8, 18, Math.PI), '#e63946', 0, 0.06, 0, 0, 0, Math.PI);
-    for (const x of [-0.3, 0.3]) { b.add(cyl(0.11, 0.11, 0.18, 10), '#e63946', x, 0.06 - 0.09, 0); b.add(cyl(0.112, 0.112, 0.16, 10), '#e8edf2', x, -0.17, 0); }
-    glow.material.color.set('#ff6b6b');
-  } else if (type === 'x2') {
-    // rugelach: crescent of rolled dough with chocolate swirl
-    for (let i = 0; i < 7; i++) {
-      const a = Math.PI * (0.15 + i * 0.7 / 6), r = 0.28;
-      const s = 1 - Math.abs(i - 3) * 0.13;
-      b.add(sph(0.13 * s, 10, 7), i % 2 ? '#7b3f12' : '#d08a3c', Math.cos(a) * r, Math.sin(a) * r - 0.1, 0, 0, 0, a, 1.2, 1, 1);
-    }
-    glow.material.color.set('#ffb347');
-    const tag = textSprite('×2', '#ffd23f');
-    tag.position.set(0, 0.52, 0); tag.scale.set(0.7, 0.35, 1);
-    g.add(tag);
-  } else if (type === 'sneakers') {
-    for (const x of [-0.17, 0.17]) {
-      b.add(box(0.2, 0.16, 0.48), '#2a9df4', x, 0.06, 0);
-      b.add(box(0.22, 0.06, 0.5), '#ffffff', x, -0.04, 0.01);
-      b.add(sph(0.1, 8, 6).scale(1, 0.8, 1.2), '#2a9df4', x, 0.1, 0.18);
-      for (let k = 0; k < 3; k++) b.add(new THREE.TorusGeometry(0.07, 0.018, 5, 10), '#d0d5da', x, -0.12 - k * 0.06, 0, Math.PI / 2, 0, 0);
-      b.add(box(0.21, 0.03, 0.05), '#ffd23f', x, 0.15, 0.05);
-    }
-    glow.material.color.set('#4fc3ff');
-  } else if (type === 'hamsa') {
-    const shape = hamsaShape();
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.025, bevelSize: 0.02, bevelSegments: 2 });
-    geo.translate(0, 0, -0.04);
-    b.add(geo, '#1d6fd8', 0, -0.05, 0, 0, 0, 0, 0.9, 0.9, 1);
-    b.add(cyl(0.11, 0.11, 0.03, 16), '#ffffff', 0, -0.05, 0.065, Math.PI / 2, 0, 0);
-    b.add(cyl(0.065, 0.065, 0.035, 16), '#3fa7ff', 0, -0.05, 0.07, Math.PI / 2, 0, 0);
-    b.add(cyl(0.03, 0.03, 0.04, 12), '#0b1d3a', 0, -0.05, 0.075, Math.PI / 2, 0, 0);
-    glow.material.color.set('#5aa9ff');
-  }
-  const m = new THREE.Mesh(b.build(), mats().vcShiny);
-  m.castShadow = true;
-  inner.add(m);
-  g.userData.inner = inner;
+  const icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: powerIconTexture(type), transparent: true, alphaTest: 0.02, toneMapped: false }));
+  icon.scale.set(1.25, 1.25, 1);
+  icon.renderOrder = 3;
+  g.add(icon);
+  g.userData.inner = icon;
   g.userData.glow = glow;
   return g;
 }
 
-function hamsaShape() {
-  const s = new THREE.Shape();
-  // symmetric hamsa: wrist at bottom, three middle fingers, two outward-curling thumbs
-  s.moveTo(-0.16, -0.42);
-  s.quadraticCurveTo(-0.3, -0.3, -0.36, -0.1);
-  s.quadraticCurveTo(-0.46, 0.0, -0.42, 0.1);
-  s.quadraticCurveTo(-0.34, 0.12, -0.27, 0.02);
-  s.lineTo(-0.25, 0.32); s.quadraticCurveTo(-0.2, 0.42, -0.14, 0.32);
-  s.lineTo(-0.1, 0.06);
-  s.lineTo(-0.08, 0.42); s.quadraticCurveTo(0, 0.52, 0.08, 0.42);
-  s.lineTo(0.1, 0.06);
-  s.lineTo(0.14, 0.32); s.quadraticCurveTo(0.2, 0.42, 0.25, 0.32);
-  s.lineTo(0.27, 0.02);
-  s.quadraticCurveTo(0.34, 0.12, 0.42, 0.1);
-  s.quadraticCurveTo(0.46, 0.0, 0.36, -0.1);
-  s.quadraticCurveTo(0.3, -0.3, 0.16, -0.42);
-  s.closePath();
-  return s;
-}
-
-export function textSprite(text, color = '#fff', stroke = '#2b1606') {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
-  const x = c.getContext('2d');
-  x.font = `96px ${FONT_HEAD}`; x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.lineWidth = 14; x.strokeStyle = stroke; x.lineJoin = 'round'; x.strokeText(text, 128, 68);
-  x.fillStyle = color; x.fillText(text, 128, 68);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }));
-}
-
 // ---------- coin ----------
 export function makeCoinMesh(capacity) {
-  const { face, edge } = coinTextures();
-  // the cylinder cap's UVs come out a quarter turn off once the coin is stood up
+  const { edge } = coinTextures();
+  // generated 10-shekel face; the cylinder cap's UVs come out a quarter turn off once the coin is stood up
+  const face = new THREE.TextureLoader().load('img/coin_face.webp');
+  face.colorSpace = THREE.SRGBColorSpace;
+  face.anisotropy = 4;
   face.center.set(0.5, 0.5);
   face.rotation = Math.PI / 2;
   const geo = new THREE.CylinderGeometry(0.4, 0.4, 0.07, 28, 1);
   geo.rotateX(Math.PI / 2);
-  const faceMat = new THREE.MeshStandardMaterial({ map: face, metalness: 0.55, roughness: 0.32, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: 0.28 });
+  // a warm tint keeps the silver ring reading as treasure at running speed
+  const faceMat = new THREE.MeshStandardMaterial({ map: face, color: '#fff0c4', metalness: 0.55, roughness: 0.32, emissive: '#ffe9b0', emissiveMap: face, emissiveIntensity: 0.24 });
   const edgeMat = new THREE.MeshStandardMaterial({ map: edge, metalness: 0.7, roughness: 0.3, emissive: '#b9c2c9', emissiveIntensity: 0.15 });
   const mesh = new THREE.InstancedMesh(geo, [edgeMat, faceMat, faceMat], capacity);
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

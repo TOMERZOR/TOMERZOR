@@ -1,6 +1,7 @@
 // Particles (one draw call), floating score popups and camera shake.
 import * as THREE from 'three';
 import { particleTexture, popupTexture } from './textures.js';
+import { BEND } from './look.js';
 
 const MAX = 700;
 
@@ -21,7 +22,7 @@ export class FX {
       uniforms: { map: { value: particleTexture() }, scale: { value: 400 } },
       vertexShader: `attribute float size; attribute float alpha; attribute vec3 color; varying vec3 vC; varying float vA;
         uniform float scale;
-        void main(){ vC = color; vA = alpha; vec4 mv = modelViewMatrix * vec4(position,1.); gl_PointSize = size * scale / -mv.z; gl_Position = projectionMatrix * mv; }`,
+        void main(){ vC = color; vA = alpha; vec4 mv = modelViewMatrix * vec4(position,1.); mv.y -= ${BEND.toFixed(5)} * mv.z * mv.z; gl_PointSize = size * scale / -mv.z; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform sampler2D map; varying vec3 vC; varying float vA;
         void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(vC, t.a * vA); if (gl_FragColor.a < 0.01) discard; }`,
       transparent: true, depthWrite: false,

@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>רצים בשוק · מחנה יהודה</title>
+<title>רצים בשוק · Shuk Rush</title>
 <meta name="description" content="משחק ריצה תלת־ממדי בשוק מחנה יהודה: מתחמקים מסבא עם העגלה, מהנחמנים ומהספק עם הג׳ק, ואוספים מטבעות של 10 שקל.">
-<meta name="theme-color" content="#2b1606">
+<meta name="theme-color" content="#0e2f73">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta property="og:title" content="רצים בשוק · מחנה יהודה">
+<meta property="og:title" content="רצים בשוק · Shuk Rush">
 <meta property="og:description" content="כמה רחוק תגיעו בשוק ביום שישי?">
 <meta property="og:image" content="img/keyart.jpg">
 <link rel="icon" href="img/icon.svg" type="image/svg+xml">
@@ -17,48 +17,52 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Secular+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="preload" href="models/anims.glb" as="fetch" crossorigin>
-<link rel="preload" href="models/ch_tzabar.glb" as="fetch" crossorigin>
+<link rel="preload" href="img/ui/btn_yellow.webp" as="image">
 <link rel="stylesheet" href="css/style.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
 </script>
 </head>
 <body>
-<canvas id="game" aria-label="משחק רצים בשוק"></canvas>
+<canvas id="game" aria-label="Shuk Rush"></canvas>
 
 <div id="ui">
   <!-- loading -->
   <section id="loading" class="screen show" aria-live="polite">
     <div class="keyart"></div>
     <div class="loading-inner">
-      <div class="logo"><span class="logo-top">מחנה יהודה</span><span class="logo-main">רצים בשוק</span></div>
+      <div class="logo big"><img class="logo-plate" src="img/ui/logo_plate.webp" alt=""><span class="logo-top" data-t="titleTop"></span><span class="logo-main gt" data-t="title"></span></div>
       <div class="bar"><i id="load-bar"></i></div>
-      <p id="load-tip">מסדרים את הדוכנים…</p>
-      <button id="btn-enter" class="btn btn-primary big hidden">יאללה, לשוק!</button>
+      <p id="load-tip" class="tip"></p>
+      <button id="btn-enter" class="gbtn yellow big hidden" data-t="enter"></button>
     </div>
   </section>
 
   <!-- main menu -->
   <section id="menu" class="screen">
     <header class="topbar">
-      <div class="pill wallet"><span class="coin-ico"></span><b id="menu-coins">0</b></div>
-      <div class="pill best"><span class="ico-star"></span><b id="menu-best">0</b></div>
-      <button class="icon-btn" id="btn-settings" aria-label="הגדרות"><svg viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+      <button class="rbtn" id="btn-settings" aria-label="settings"><img src="img/ui/rb_gear.webp" alt=""></button>
+      <div class="capsule"><img src="img/ui/ico_trophy.webp" alt=""><b id="menu-best">0</b></div>
+      <div class="capsule gold"><img src="img/ui/ico_coin.webp" alt=""><b id="menu-coins">0</b></div>
     </header>
     <div class="menu-title">
-      <div class="logo small"><span class="logo-top">מחנה יהודה</span><span class="logo-main">רצים בשוק</span></div>
+      <div class="logo"><img class="logo-plate" src="img/ui/logo_plate.webp" alt=""><span class="logo-top" data-t="titleTop"></span><span class="logo-main gt" data-t="title"></span></div>
     </div>
     <div class="menu-bottom">
-      <button class="level-badge" id="btn-missions"><span class="lvl">רמה <b id="menu-level">1</b></span><span class="mult">×<b id="menu-mult">1</b></span><span class="mprog"><i id="menu-mprog"></i></span><span class="mtext" id="menu-mtext">0/3 משימות</span></button>
-      <div class="char-name"><b id="menu-char">יוני</b><span id="menu-char-title">הצבר מנחלאות</span></div>
-      <button id="btn-play" class="btn btn-primary huge">רוצו!</button>
-      <p class="swipe-note">החליקו ימינה, שמאלה, למעלה ולמטה</p>
+      <button class="level-chip" id="btn-missions">
+        <span class="lvl-num"><small data-t="level"></small><b id="menu-level">1</b></span>
+        <span class="lvl-info"><span class="lvl-bar"><i id="menu-mprog"></i></span><span id="menu-mtext" class="lvl-text"></span></span>
+        <span class="lvl-mult">×<b id="menu-mult">1</b></span>
+      </button>
+      <div class="char-ribbon"><b id="menu-char"></b><span id="menu-char-title"></span></div>
+      <button id="btn-play" class="gbtn yellow huge pulse" data-t="play"></button>
+      <p class="swipe-note" data-t="swipeNote"></p>
       <nav class="menu-nav">
-        <button class="btn btn-soft" id="btn-chars"><span class="nav-ico ico-people"></span>דמויות</button>
-        <button class="btn btn-soft" id="btn-upgrades"><span class="nav-ico ico-bolt"></span>שדרוגים</button>
-        <button class="btn btn-soft" id="btn-missions2"><span class="nav-ico ico-flag"></span>משימות</button>
+        <button class="tile" id="btn-chars"><img src="img/ui/ico_chars.webp" alt=""><span data-t="charsTitle"></span></button>
+        <button class="tile" id="btn-upgrades"><img src="img/ui/ico_upgrades.webp" alt=""><span data-t="upgrades"></span></button>
+        <button class="tile" id="btn-missions2"><img src="img/ui/ico_missions.webp" alt=""><span data-t="missions"></span></button>
       </nav>
     </div>
   </section>
@@ -67,27 +71,31 @@
   <section id="hud" class="screen">
     <div class="hud-top">
       <div class="hud-score">
-        <b id="hud-score">0</b>
-        <div class="hud-sub"><span class="hud-coins"><span class="coin-ico"></span><b id="hud-coins">0</b></span><span class="hud-mult" id="hud-mult">×1</span></div>
+        <b id="hud-score" class="gt num" data-text="0">0</b>
+        <div class="hud-sub">
+          <span class="capsule gold small"><img src="img/ui/ico_coin.webp" alt=""><b id="hud-coins">0</b></span>
+          <span class="mult-badge" id="hud-mult">×1</span>
+        </div>
+        <div class="hud-dist"><b id="hud-dist">0</b> <span data-t="meters"></span></div>
       </div>
-      <button class="icon-btn pause-btn" id="btn-pause" aria-label="הפסקה"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg></button>
+      <button class="rbtn" id="btn-pause" aria-label="pause"><img src="img/ui/rb_pause.webp" alt=""></button>
     </div>
-    <div class="hud-dist"><b id="hud-dist">0</b> מ׳</div>
     <div id="powers" class="powers"></div>
-    <div id="zone-banner" class="zone-banner"><b></b><span></span></div>
+    <div id="zone-banner" class="zone-banner"><b class="gt"></b><span></span></div>
     <div id="toasts" class="toasts"></div>
-    <div id="hint" class="hint"><div class="hint-hand"></div><b></b></div>
+    <div id="hint" class="hint"><div class="hint-hand"></div><b class="hint-text"></b></div>
   </section>
 
   <!-- pause -->
   <section id="pause" class="screen modal">
-    <div class="card">
-      <h2>הפסקה קטנה</h2>
-      <p class="muted">גם בשוק צריך לנשום לפעמים</p>
-      <button class="btn btn-primary big" id="btn-resume">ממשיכים</button>
+    <div class="panel">
+      <div class="awning"></div>
+      <h2 class="panel-title gt" data-t="pause"></h2>
+      <p class="muted" data-t="pauseSub"></p>
+      <button class="gbtn yellow big" id="btn-resume" data-t="resume"></button>
       <div class="row">
-        <button class="btn btn-soft" id="btn-restart">מההתחלה</button>
-        <button class="btn btn-soft" id="btn-home">לתפריט</button>
+        <button class="gbtn teal" id="btn-restart" data-t="restart"></button>
+        <button class="gbtn teal" id="btn-home" data-t="home"></button>
       </div>
       <div class="toggles" data-toggles></div>
     </div>
@@ -95,32 +103,34 @@
 
   <!-- revive -->
   <section id="revive" class="screen modal">
-    <div class="card">
-      <h2>להמשיך לרוץ?</h2>
-      <div class="revive-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="track"/><circle cx="50" cy="50" r="44" class="prog" id="revive-prog"/></svg><b id="revive-count">5</b></div>
-      <button class="btn btn-primary big" id="btn-revive">המשך <span class="coin-ico"></span><b id="revive-cost">0</b></button>
-      <button class="btn btn-ghost" id="btn-norevive">לא תודה</button>
+    <div class="panel">
+      <div class="awning"></div>
+      <h2 class="panel-title gt" data-t="reviveTitle"></h2>
+      <div class="revive-ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" class="track"/><circle cx="50" cy="50" r="44" class="prog" id="revive-prog"/></svg><img src="img/ui/ico_hamsa.webp" alt=""><b id="revive-count" class="gt">5</b></div>
+      <button class="gbtn yellow big" id="btn-revive"><span data-t="reviveBtn"></span><img class="ico" src="img/ui/ico_coin.webp" alt=""><b id="revive-cost">0</b></button>
+      <button class="link" id="btn-norevive" data-t="noThanks"></button>
     </div>
   </section>
 
   <!-- game over -->
   <section id="over" class="screen modal">
-    <div class="card over-card">
+    <div class="panel over-panel">
+      <div class="awning"></div>
+      <h2 class="panel-title gt" data-t="overTitle"></h2>
       <div class="over-cause" id="over-cause"></div>
-      <h2 class="over-title">נגמרה הריצה!</h2>
-      <div class="newbest hidden" id="over-newbest">שיא חדש!</div>
-      <div class="over-score" id="over-score">0</div>
+      <div class="newbest hidden" id="over-newbest" data-t="newBest"></div>
+      <div class="over-score gt num" id="over-score" data-text="0">0</div>
       <div class="over-stats">
-        <div><span>מרחק</span><b id="over-dist">0</b></div>
-        <div><span>הרווחתם</span><b><span class="coin-ico"></span><span id="over-earned">0</span></b></div>
-        <div><span>שיא</span><b id="over-best">0</b></div>
+        <div><img src="img/ui/ico_trophy.webp" alt=""><span data-t="best"></span><b id="over-best">0</b></div>
+        <div><img src="img/ui/ico_coin.webp" alt=""><span data-t="earned"></span><b id="over-earned">0</b></div>
+        <div><img src="img/ui/ico_sneakers.webp" alt=""><span data-t="dist"></span><b id="over-dist">0</b></div>
       </div>
       <div class="over-missions" id="over-missions"></div>
       <div class="levelup hidden" id="over-levelup"></div>
-      <button class="btn btn-primary big" id="btn-again">עוד ריצה!</button>
+      <button class="gbtn yellow big" id="btn-again" data-t="again"></button>
       <div class="row">
-        <button class="btn btn-soft" id="btn-over-home">לתפריט</button>
-        <button class="btn btn-soft" id="btn-over-shop">חנות</button>
+        <button class="gbtn teal" id="btn-over-home" data-t="home"></button>
+        <button class="gbtn red" id="btn-over-shop" data-t="shop"></button>
       </div>
     </div>
   </section>
@@ -128,78 +138,83 @@
   <!-- characters -->
   <section id="chars" class="screen sheet">
     <header class="sheet-head">
-      <button class="icon-btn" data-close aria-label="חזרה"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2>דמויות</h2>
-      <div class="pill wallet"><span class="coin-ico"></span><b data-coins>0</b></div>
+      <button class="rbtn" data-close aria-label="close"><img src="img/ui/rb_close.webp" alt=""></button>
+      <h2 class="gt" data-t="charsTitle"></h2>
+      <div class="capsule gold"><img src="img/ui/ico_coin.webp" alt=""><b data-coins>0</b></div>
     </header>
     <div class="char-picker">
-      <button class="icon-btn arrow" id="char-prev" aria-label="הדמות הקודמת"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <div class="char-card">
-        <div class="char-loading hidden" id="char-loading">טוען…</div>
-        <h3 id="char-name">יוני</h3>
+      <button class="arrow" id="char-prev" aria-label="previous"></button>
+      <div class="panel char-panel">
+        <div class="char-loading hidden" id="char-loading" data-t="loading"></div>
+        <h3 id="char-name" class="gt"></h3>
         <p class="char-title" id="char-title"></p>
         <p class="char-bio" id="char-bio"></p>
         <div class="char-dots" id="char-dots"></div>
-        <button class="btn btn-primary big" id="char-action">נבחר</button>
+        <button class="gbtn yellow big" id="char-action"></button>
       </div>
-      <button class="icon-btn arrow" id="char-next" aria-label="הדמות הבאה"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="arrow next" id="char-next" aria-label="next"></button>
     </div>
   </section>
 
   <!-- upgrades -->
-  <section id="upgrades" class="screen sheet">
+  <section id="upgrades" class="screen sheet dim">
     <header class="sheet-head">
-      <button class="icon-btn" data-close aria-label="חזרה"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2>שדרוגים</h2>
-      <div class="pill wallet"><span class="coin-ico"></span><b data-coins>0</b></div>
+      <button class="rbtn" data-close aria-label="close"><img src="img/ui/rb_close.webp" alt=""></button>
+      <h2 class="gt" data-t="upgrades"></h2>
+      <div class="capsule gold"><img src="img/ui/ico_coin.webp" alt=""><b data-coins>0</b></div>
     </header>
     <div class="list" id="upgrade-list"></div>
   </section>
 
   <!-- missions -->
-  <section id="missions" class="screen sheet">
+  <section id="missions" class="screen sheet dim">
     <header class="sheet-head">
-      <button class="icon-btn" data-close aria-label="חזרה"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2>משימות</h2>
-      <div class="pill wallet"><span class="coin-ico"></span><b data-coins>0</b></div>
+      <button class="rbtn" data-close aria-label="close"><img src="img/ui/rb_close.webp" alt=""></button>
+      <h2 class="gt" data-t="missions"></h2>
+      <div class="capsule gold"><img src="img/ui/ico_coin.webp" alt=""><b data-coins>0</b></div>
     </header>
-    <div class="missions-head">
-      <div class="big-level">רמה <b id="mis-level">1</b></div>
-      <p id="mis-explain"></p>
+    <div class="list">
+      <div class="panel mis-head">
+        <img src="img/ui/ico_missions.webp" alt="">
+        <div><div class="big-level gt"><span data-t="level"></span> <span id="mis-level">1</span></div><p id="mis-explain"></p></div>
+      </div>
+      <div id="mission-list" class="mission-list"></div>
     </div>
-    <div class="list" id="mission-list"></div>
   </section>
 
   <!-- settings -->
-  <section id="settings" class="screen sheet">
+  <section id="settings" class="screen sheet dim">
     <header class="sheet-head">
-      <button class="icon-btn" data-close aria-label="חזרה"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <h2>הגדרות</h2>
+      <button class="rbtn" data-close aria-label="close"><img src="img/ui/rb_close.webp" alt=""></button>
+      <h2 class="gt" data-t="settings"></h2>
       <span></span>
     </header>
     <div class="list">
-      <div class="toggles" data-toggles></div>
-      <div class="setting-row"><span>איכות גרפיקה</span>
-        <div class="seg" id="quality-seg"><button data-q="high">גבוהה</button><button data-q="auto">אוטומטית</button><button data-q="low">חסכונית</button></div>
+      <div class="panel settings-panel">
+        <div class="toggles" data-toggles></div>
+        <div class="setting-row"><span data-t="quality"></span>
+          <div class="seg" id="quality-seg"><button data-q="high" data-t="qHigh"></button><button data-q="auto" data-t="qAuto"></button><button data-q="low" data-t="qLow"></button></div>
+        </div>
+        <div class="setting-row"><span data-t="language"></span>
+          <div class="seg" id="lang-seg"><button data-l="he">עברית</button><button data-l="en">English</button></div>
+        </div>
       </div>
-      <div class="howto">
-        <h3>איך משחקים</h3>
-        <p><b>החלקה ימינה/שמאלה</b> – מעבר נתיב · <b>למעלה</b> – קפיצה · <b>למטה</b> – גלגול (באוויר: נחיתה מהירה)</p>
-        <p>מתנגשים במישהו מקדימה? נגמר. מתחככים מהצד או נתקלים בארגזים? סבתא מתחילה לרדוף. פעמיים – והיא תופסת.</p>
-        <p>במקלדת: חיצים או WASD, רווח לקפיצה, P להפסקה.</p>
+      <div class="panel howto">
+        <h3 class="gt" data-t="howTitle"></h3>
+        <p data-t="how1"></p><p data-t="how2"></p><p data-t="how3"></p>
       </div>
-      <button class="btn btn-ghost danger" id="btn-reset">איפוס התקדמות</button>
-      <p class="credits">דמויות ואמנות: Higgsfield · מנוע: three.js · נבנה באהבה לשוק</p>
+      <button class="link danger" id="btn-reset" data-t="reset"></button>
+      <p class="credits" data-t="credits"></p>
     </div>
   </section>
 
   <div id="confirm" class="screen modal">
-    <div class="card"><h2 id="confirm-text"></h2><div class="row"><button class="btn btn-primary" id="confirm-yes">כן</button><button class="btn btn-soft" id="confirm-no">ביטול</button></div></div>
+    <div class="panel"><div class="awning"></div><h2 class="panel-title gt" id="confirm-text"></h2><div class="row"><button class="gbtn red" id="confirm-yes" data-t="yes"></button><button class="gbtn teal" id="confirm-no" data-t="cancel"></button></div></div>
   </div>
-  <div id="rotate-note" class="rotate-note">סובבו את המכשיר לאורך בשביל החוויה הכי טובה</div>
+  <div id="rotate-note" class="rotate-note" data-t="rotate"></div>
 </div>
 
-<noscript><p style="padding:2em;font-family:sans-serif">המשחק צריך JavaScript.</p></noscript>
+<noscript><p style="padding:2em;font-family:sans-serif">Shuk Rush needs JavaScript.</p></noscript>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

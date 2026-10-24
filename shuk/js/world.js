@@ -9,21 +9,22 @@ export const CHUNK = 30;
 const STALL_X = 4.25;   // street edge of the stalls
 const FACADE_X = 6.9;   // building line
 const N_VARIANTS = 3;
+const PROP_CAP = 16;     // generated models of one type per chunk
 
 // ---------- themes ----------
 export const THEMES = {
   day:     { skyTop: '#5aa9f0', skyMid: '#a9d4f5', skyBot: '#f3e6cf', fog: '#e6dccb', fogNear: 45, fogFar: 165,
              hemiSky: '#ffffff', hemiGround: '#b59a75', hemi: 1.15, sun: '#fff0d4', sunI: 2.7, sunDir: [-0.55, 1, 0.35],
-             facade: '#ffffff', glow: 0.0, bulbs: '#fff1c2', exposure: 1.0, playerLight: 0 },
+             facade: '#ffffff', glow: 0.0, bulbs: '#fff1c2', exposure: 1.0, playerLight: 0, clouds: 1, stars: 0, rim: 1.2 },
   covered: { skyTop: '#d7b98a', skyMid: '#e8cfa2', skyBot: '#f0dcb5', fog: '#d6bb8e', fogNear: 30, fogFar: 135,
              hemiSky: '#ffe9c4', hemiGround: '#9a7a52', hemi: 1.0, sun: '#ffe1b0', sunI: 1.5, sunDir: [-0.3, 1, 0.2],
-             facade: '#e9d8bd', glow: 0.55, bulbs: '#ffd98a', exposure: 1.05, playerLight: 0.6 },
+             facade: '#e9d8bd', glow: 0.55, bulbs: '#ffd98a', exposure: 1.05, playerLight: 0.6, clouds: 0.3, stars: 0, rim: 0.9 },
   sunset:  { skyTop: '#3f4d9a', skyMid: '#ef8a63', skyBot: '#ffd08a', fog: '#e9a07a', fogNear: 38, fogFar: 150,
              hemiSky: '#ffd7b5', hemiGround: '#6d4b5c', hemi: 0.95, sun: '#ffab66', sunI: 2.5, sunDir: [-1, 0.42, -0.55],
-             facade: '#ffd2ad', glow: 0.5, bulbs: '#ffcf7a', exposure: 1.02, playerLight: 0.5 },
+             facade: '#ffd2ad', glow: 0.5, bulbs: '#ffcf7a', exposure: 1.02, playerLight: 0.5, clouds: 0.8, stars: 0.15, rim: 2.2 },
   night:   { skyTop: '#070a22', skyMid: '#1a1f4a', skyBot: '#43305e', fog: '#1d1a36', fogNear: 30, fogFar: 125,
              hemiSky: '#8a96ff', hemiGround: '#3a2a3a', hemi: 0.7, sun: '#9fb2ff', sunI: 0.75, sunDir: [0.4, 1, 0.3],
-             facade: '#5a5f8a', glow: 1.0, bulbs: '#ffe2a0', exposure: 1.1, playerLight: 1.6 },
+             facade: '#5a5f8a', glow: 1.0, bulbs: '#ffe2a0', exposure: 1.1, playerLight: 1.6, clouds: 0.15, stars: 1, rim: 1.6 },
 };
 const THEME_ORDER = ZONES.map(z => z.theme);
 
@@ -225,9 +226,17 @@ const AWNINGS = [['#d62828', '#fff3e0'], ['#2a9d8f', '#fff3e0'], ['#f4a261', '#2
   ['#6a994e', '#f2e8cf'], ['#9b2226', '#ee9b00'], ['#3a86ff', '#ffffff'], ['#8338ec', '#ffbe0b']];
 
 // ---------- chunk variant builder ----------
-function buildVariant(theme, atlas) {
+const _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+function propMatrix(x, z, yaw, scale) {
+  return new THREE.Matrix4().compose(_p.set(x, 0, z), _q.setFromAxisAngle(_up, yaw), _s.setScalar(scale));
+}
+
+// models: generated stall/truck meshes ({ name: { size } }); fronts face +x, the long side runs along z
+function buildVariant(theme, atlas, models = {}) {
   const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag();
   const glow = [];
+  const placed = [];
+  const stallModels = ['fruit', 'spice', 'sweets'].filter(n => models[n]);
   const vendorSpots = [];
   const night = theme === 'night', covered = theme === 'covered';
 
@@ -245,7 +254,11 @@ function buildVariant(theme, atlas) {
       const len = Math.min(CHUNK - v, pick([4.2, 4.6, 5.0]));
       const nightShut = night && Math.random() < 0.45;
       const gap = Math.random() < 0.18 && !nightShut;
-      if (gap) {
+      if (gap && models.truck && Math.random() < 0.55) {
+        // a supplier's truck parked between the stalls, cab toward the runner
+        const sz = models.truck.size, k = Math.min(2.1 / sz.z, (len - 0.5) / sz.x);
+        placed.push(['truck', propMatrix(side * (STALL_X + 0.15 + sz.z * k / 2), -(v + len / 2), Math.PI / 2, k)]);
+      } else if (gap) {
         // alley / doorway between stalls with crates and sacks
         for (let i = 0; i < 3; i++) addCrate(vc, side, rnd(0.4, 1.4), i * 0.17, v, rnd(0.4, len - 0.4), 0.5, 0.4, pick(Object.keys(PRODUCE)));
         vc.add(sph(0.3, 7, 5).scale(1, 0.8, 0.8), '#b08968', side * (STALL_X + 1.6), 0.25, -(v + len / 2), 0, 0, 0, 1, 1, 1, 0.1);
@@ -265,6 +278,12 @@ function buildVariant(theme, atlas) {
         addMural(facade, side, v, len);
         const ni = atlas.neonStart + Math.floor(Math.random() * (atlas.uv.length - atlas.neonStart - 8));
         addSign(sign, atlas, ni, side * (FACADE_X - 0.05), 3.0, -(v + len / 2), side, 2.2, 0.55);
+      } else if (stallModels.length && Math.random() < 0.5) {
+        // generated 3D stall, front facing the street
+        const name = pick(stallModels), sz = models[name].size;
+        const k = Math.min((len - 0.3) / sz.z, 2.55 / sz.x, 3.3 / sz.y);
+        placed.push([name, propMatrix(side * (STALL_X - 0.15 + sz.x * k / 2), -(v + len / 2), side < 0 ? 0 : Math.PI, k)]);
+        addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (FACADE_X - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
       } else {
         const type = pick(STALL_TYPES);
         STALLS[type](vc, side, v + 0.2, len - 0.4);
@@ -357,7 +376,7 @@ function buildVariant(theme, atlas) {
   glowGeo.computeBoundingSphere();
   return {
     vc: vc.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(),
-    ground, glowGeo, vendorSpots, theme,
+    ground, glowGeo, vendorSpots, theme, placed,
   };
 }
 
@@ -406,6 +425,7 @@ export class World {
     this.slots = [];
     this.vendorPool = [];
     this.vendorTemplates = [];
+    this.propModels = {};
 
     const facadeTex = buildFacadeTexture(images);
     const pave = new THREE.Texture(images.paving); pave.needsUpdate = true;
@@ -422,11 +442,26 @@ export class World {
     };
 
     // sky dome with a 3-colour gradient
-    this.skyUniforms = { top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, bot: { value: new THREE.Color() } };
+    this.skyUniforms = { top: { value: new THREE.Color() }, mid: { value: new THREE.Color() }, bot: { value: new THREE.Color() }, clouds: { value: 1 }, stars: { value: 0 }, time: { value: 0 } };
     const sky = new THREE.Mesh(new THREE.SphereGeometry(190, 24, 12), new THREE.ShaderMaterial({
       uniforms: this.skyUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
       vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
-      fragmentShader: 'uniform vec3 top; uniform vec3 mid; uniform vec3 bot; varying vec3 vP; void main(){ float h = vP.y; vec3 c = h > 0.08 ? mix(mid, top, smoothstep(0.08, 0.6, h)) : mix(bot, mid, smoothstep(-0.05, 0.08, h)); gl_FragColor = vec4(c,1.); }',
+      fragmentShader: `uniform vec3 top; uniform vec3 mid; uniform vec3 bot; uniform float clouds; uniform float stars; uniform float time; varying vec3 vP;
+        float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f); return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
+        float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 5; i++) { v += a * n2(p); p *= 2.03; a *= .5; } return v; }
+        void main(){
+          float h = vP.y;
+          vec3 c = h > 0.08 ? mix(mid, top, smoothstep(0.08, 0.6, h)) : mix(bot, mid, smoothstep(-0.05, 0.08, h));
+          vec2 uv = vP.xz / max(0.12, vP.y + 0.25) * 1.6 + vec2(time * 0.01, 0.);
+          float cl = smoothstep(0.52, 0.78, fbm(uv)) * smoothstep(0.02, 0.2, h) * clouds;
+          vec3 cloudCol = mix(vec3(1.0, 0.97, 0.92), mid * 1.25, 0.25);
+          c = mix(c, cloudCol, cl * 0.85);
+          vec2 sp = floor(vP.xz / max(0.05, vP.y) * 90.);
+          float st = step(0.996, h21(sp)) * smoothstep(0.15, 0.5, h) * stars * (0.6 + 0.4 * sin(time * 3. + h21(sp + 3.) * 20.));
+          c += vec3(st);
+          gl_FragColor = vec4(c, 1.);
+        }`,
     }));
     sky.renderOrder = -1;
     this.sky = sky;
@@ -441,6 +476,9 @@ export class World {
     sc.left = -9; sc.right = 9; sc.top = 14; sc.bottom = -10; sc.near = 1; sc.far = 60;
     this.sun.shadow.bias = -0.0006; this.sun.shadow.normalBias = 0.03;
     scene.add(this.sun); scene.add(this.sun.target);
+    // warm back light that outlines the runner and the people coming at you
+    this.rim = new THREE.DirectionalLight('#ffd9a0', 1.2);
+    scene.add(this.rim); scene.add(this.rim.target);
     this.playerLight = new THREE.PointLight('#ffcf8a', 0, 14, 1.6);
     scene.add(this.playerLight);
 
@@ -456,11 +494,13 @@ export class World {
   *buildSteps() {
     for (const theme of THEME_ORDER) {
       this.variants[theme] = [];
-      for (let i = 0; i < N_VARIANTS; i++) { this.variants[theme].push(buildVariant(theme, this.atlas)); yield; }
+      for (let i = 0; i < N_VARIANTS; i++) { this.variants[theme].push(buildVariant(theme, this.atlas, this.propModels)); yield; }
     }
   }
 
   setVendorTemplates(list) { this.vendorTemplates = list.filter(Boolean); }
+  // call before buildSteps(); missing models simply fall back to the procedural stalls
+  setPropModels(map) { this.propModels = map; }
 
   makeSlot() {
     const g = new THREE.Group();
@@ -468,8 +508,9 @@ export class World {
     const slot = {
       group: g, startD: 0, variant: null,
       ground: mk(this.mats.ground, true), vc: mk(this.mats.vc, true), sign: mk(this.mats.sign, false),
+      // vc casts shadows only on high quality (set in setShadows)
       facade: mk(this.mats.facade, false), bulbs: mk(this.mats.bulbs, false), roof: mk(this.mats.roof, false),
-      glow: new THREE.Points(EMPTY_GEO, this.mats.glow), vendors: [],
+      glow: new THREE.Points(EMPTY_GEO, this.mats.glow), vendors: [], props: {},
     };
     slot.glow.frustumCulled = false; slot.glow.matrixAutoUpdate = false;
     g.add(slot.glow);
@@ -488,6 +529,28 @@ export class World {
       slot[k].visible = !!geo;
     }
     slot.glow.geometry = v.glowGeo;
+    // generated stall models, one instanced mesh per model type in each slot
+    const counts = {};
+    for (const [name, m] of v.placed) {
+      let im = slot.props[name];
+      if (!im) {
+        const pm = this.propModels[name];
+        im = new THREE.InstancedMesh(pm.geometry, pm.material, PROP_CAP);
+        im.receiveShadow = true; im.castShadow = !!this.worldShadows; im.matrixAutoUpdate = false;
+        slot.group.add(im);
+        slot.props[name] = im;
+      }
+      const i = counts[name] || 0;
+      if (i >= PROP_CAP) continue;
+      im.setMatrixAt(i, m);
+      counts[name] = i + 1;
+    }
+    for (const [name, im] of Object.entries(slot.props)) {
+      im.count = counts[name] || 0;
+      im.visible = im.count > 0;
+      im.instanceMatrix.needsUpdate = true;
+      if (im.count) im.computeBoundingSphere();
+    }
     // vendors standing behind some counters
     for (const vd of slot.vendors) { vd.visible = false; this.vendorPool.push(vd); }
     slot.vendors.length = 0;
@@ -533,6 +596,9 @@ export class World {
     this.sun.position.set(playerPos.x + sd[0] * 20, sd[1] * 20, playerPos.z + sd[2] * 20 - 6);
     this.sun.target.position.set(playerPos.x, 0, playerPos.z - 6);
     this.sky.position.set(0, 0, playerPos.z);
+    this.skyUniforms.time.value = time;
+    this.rim.position.set(playerPos.x - 2, 6, playerPos.z - 14);
+    this.rim.target.position.set(playerPos.x, 1, playerPos.z);
     this.playerLight.position.set(playerPos.x, playerPos.y + 3.2, playerPos.z + 1.5);
   }
 
@@ -555,6 +621,8 @@ export class World {
 
   applyTheme(c) {
     this.skyUniforms.top.value.copy(c.skyTop); this.skyUniforms.mid.value.copy(c.skyMid); this.skyUniforms.bot.value.copy(c.skyBot);
+    this.skyUniforms.clouds.value = c.clouds; this.skyUniforms.stars.value = c.stars;
+    this.rim.intensity = c.rim;
     this.scene.fog.color.copy(c.fog); this.scene.fog.near = c.fogNear; this.scene.fog.far = c.fogFar;
     this.hemi.color.copy(c.hemiSky); this.hemi.groundColor.copy(c.hemiGround); this.hemi.intensity = c.hemi;
     this.sun.color.copy(c.sun); this.sun.intensity = c.sunI;
@@ -565,12 +633,19 @@ export class World {
     this.playerLight.intensity = c.playerLight * 6;
   }
 
-  setShadows(on) { this.sun.castShadow = on; }
+  setShadows(on, world = false) {
+    this.sun.castShadow = on;
+    this.worldShadows = on && world;
+    for (const s of this.slots) {
+      s.vc.castShadow = this.worldShadows;
+      for (const im of Object.values(s.props)) im.castShadow = this.worldShadows;
+    }
+  }
 }
 
 const EMPTY_GEO = new THREE.BufferGeometry();
 const COLOR_KEYS = ['skyTop', 'skyMid', 'skyBot', 'fog', 'hemiSky', 'hemiGround', 'sun', 'facade', 'bulbs'];
-const NUM_KEYS = ['fogNear', 'fogFar', 'hemi', 'sunI', 'glow', 'exposure', 'playerLight'];
+const NUM_KEYS = ['fogNear', 'fogFar', 'hemi', 'sunI', 'glow', 'exposure', 'playerLight', 'clouds', 'stars', 'rim'];
 
 // Facade texture: stone photo on top 3/4, three shutter murals across the bottom 1/4.
 function buildFacadeTexture(images) {

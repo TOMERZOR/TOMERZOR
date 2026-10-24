@@ -1,6 +1,7 @@
 // Procedural obstacle props, power-up pickups and the 10-shekel coin.
 import * as THREE from 'three';
 import { Bag, rnd, pick, box, sph, cyl, cone } from './geo.js';
+import { shukLit } from './light.js';
 import { T } from './i18n.js';
 import { bannerTexture, vanTexture, truckTexture, coinTextures, glowTexture, blobTexture, softRectTexture, melonTexture, rugTexture, FONT_HEAD } from './textures.js';
 
@@ -24,7 +25,7 @@ let M = null; // shared materials
 function mats() {
   if (M) return M;
   M = {
-    vc: new THREE.MeshLambertMaterial({ vertexColors: true }),
+    vc: shukLit(new THREE.MeshLambertMaterial({ vertexColors: true })),
     glow: new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
   };
   return M;
@@ -73,7 +74,7 @@ export function makeCrates() {
 // a watermelon that has escaped the pile and is rolling down the lane at you
 let melonMat = null;
 export function makeRollingMelon() {
-  if (!melonMat) melonMat = new THREE.MeshLambertMaterial({ map: melonTexture() });
+  if (!melonMat) melonMat = shukLit(new THREE.MeshLambertMaterial({ map: melonTexture() }));
   const g = new THREE.Group();
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), melonMat);
   ball.scale.set(1, 0.92, 1.18);
@@ -87,7 +88,7 @@ export function makeRollingMelon() {
 export function makeCarpet() {
   const geo = new THREE.PlaneGeometry(1.15, 1.75, 8, 12);
   geo.rotateX(-Math.PI / 2);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: rugTexture(), side: THREE.DoubleSide }));
+  const mesh = new THREE.Mesh(geo, shukLit(new THREE.MeshLambertMaterial({ map: rugTexture(), side: THREE.DoubleSide })));
   mesh.userData.base = Float32Array.from(geo.attributes.position.array);
   mesh.castShadow = true;
   return mesh;
@@ -156,7 +157,7 @@ export function makeTefillinTable() {
   x.fillStyle = '#ffd23f'; x.font = `700 56px ${FONT_HEAD}`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
   x.fillText('תפילין', 128, 52);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.34), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.34), shukLit(new THREE.MeshBasicMaterial({ map: t, toneMapped: false })));
   sign.position.set(0, 0.68, 0.395);
   g.add(sign);
   return g;
@@ -176,7 +177,7 @@ export function makeBanner(width = 2.3) {
   b.add(box(width, 0.05, 0.05), '#5b5f63', 0, 2.7, 0);
   g.add(meshFrom(b, mats().vc));
   const tex = pick(bannerTexCache);
-  const cloth = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.12, 1.25, 8, 1), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+  const cloth = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.12, 1.25, 8, 1), shukLit(new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide })));
   cloth.position.set(0, 1.86, 0); cloth.castShadow = true;
   // bunting triangles under the cloth
   const bt = new Bag();
@@ -203,7 +204,7 @@ export function makeRugs() {
   for (let i = 0; i < 5; i++) { x.save(); x.translate(40 + i * 44, 64); x.rotate(Math.PI / 4); x.fillRect(-14, -14, 28, 28); x.restore(); }
   x.fillStyle = pal[1]; for (let i = 0; i < 26; i++) x.fillRect(4 + i * 9.6, 120, 4, 8);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6, 6, 1), new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide }));
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6, 6, 1), shukLit(new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide })));
   rug.position.set(0, 1.98, 0); rug.castShadow = true;
   g.add(rug);
   g.userData.cloth = rug;
@@ -241,7 +242,7 @@ export function makeTruck(withRamp, rampLen = 4.2) {
   const body = meshFrom(b, mats().vc);
   g.add(body);
   // painted sides
-  const sideMat = new THREE.MeshLambertMaterial({ map: truckTex });
+  const sideMat = shukLit(new THREE.MeshLambertMaterial({ map: truckTex }));
   for (const s of [-1, 1]) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(L - 0.2, H - 0.75), sideMat);
     p.position.set(s * (W / 2 + 0.01), 0.62 + (H - 0.62) / 2, 0); p.rotation.y = s * Math.PI / 2;
@@ -275,7 +276,7 @@ export function makeVan() {
   // roof rack
   b.add(box(W - 0.2, 0.06, L - 1.6), '#444', 0, H + 0.02, -0.9);
   g.add(meshFrom(b, mats().vc));
-  const sideMat = new THREE.MeshLambertMaterial({ map: vanTex });
+  const sideMat = shukLit(new THREE.MeshLambertMaterial({ map: vanTex }));
   for (const s of [-1, 1]) {
     const p = new THREE.Mesh(new THREE.PlaneGeometry(L - 1.2, H - 0.7), sideMat);
     p.position.set(s * (W / 2 + 0.01), 0.5 + (H - 0.5) / 2, -0.45); p.rotation.y = s * Math.PI / 2;

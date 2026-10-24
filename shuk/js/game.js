@@ -513,6 +513,9 @@ export class Game {
     const p = this.player;
     p.update(dt, 0, this.time);
     this.world.update(dt, 0, p.root.position, this.time);
+    // a soft key light on the hero, whatever shade the street throws on the start line
+    const fill = this.world.playerLight;
+    fill.intensity = Math.max(fill.intensity, 7);
     // slow orbit in front of the character
     const a = Math.sin(this.menuT * 0.25) * 0.35;
     const cam = this.camera;

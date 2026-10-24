@@ -34,14 +34,21 @@ Running into someone head-on ends the run. Brushing past from the side, or tripp
 
 The street bends away toward the horizon (curved-world vertex shader). The colour grade (saturation, contrast, warmth) is folded into a custom tone-mapping function, so every material applies it as it writes its pixels (`js/look.js`).
 
+Light (`js/light.js`):
+- **Baked sun shadows for the whole street.** Each 30 m chunk gets a tile in a 4x2 depth atlas, rendered from that zone's sun direction only when the chunk is placed (one tile per frame, back faces only so lit surfaces never shadow themselves). Buildings throw jagged shade across the street, awnings, tarps, balconies, arches and AC units shade what is under them, at any distance, for one hardware-filtered texture lookup per pixel. Characters, walkers and obstacles darken when they step into it.
+- **Sky occlusion and bounce.** Ambient light falls off toward the bottom of the street canyon, under the awnings and on walls facing a tall opposite wall; sunlit stone throws warm light back onto faces turned from the sun. Shade is lit by a cool sky, sun by a warm sun.
+- The per-frame shadow map only holds what moves (runner, walkers, obstacles); the two multiply, so nothing is darkened twice. Light shafts slant through the covered market's roof.
+
 Quality levels:
-- **Auto** (default): renders straight to the screen at 2x with the canvas' MSAA, no full-screen passes; vignette and speed lines are CSS layers; hardware-PCF shadows from things that move, baked contact shadows under stalls. It lowers the resolution (then drops shadows) only if the median frame rate over ~2.5 s stays under 45 fps.
-- **High**: up to 2.5x, a 4x MSAA half-float target, bloom, soft 2048 shadows from the whole street.
-- **Battery saver**: Auto at 1.25x without shadows.
+- **Auto** (default): renders straight to the screen at 2x with the canvas' MSAA, no full-screen passes; vignette and speed lines are CSS layers; baked street shadows (512 texels per tile, one tap) plus hardware-PCF shadows from things that move. It lowers the resolution (then drops the moving shadows) only if the median frame rate over ~2.5 s stays under 45 fps.
+- **High**: up to 2.5x, a 4x MSAA half-float target, bloom, sharper baked shadows (768 per tile, four filtered taps), soft 2048 shadows from moving things that also fall on the stalls.
+- **Battery saver**: Auto at 1.25x with baked shadows only (384 per tile).
 
 Add `?fps` to the address to show the measured frame rate, frame times, resolution, draw calls and triangles.
 
 The street is a row of separate buildings on each side, each with its own width, height (stepped rooflines), setback or overhang, stone tint and shutter colour (the photo's green shutters are recoloured in the facade shader), with real side walls, parapets, solar water heaters, dishes and antennas on the roofs, enclosed and open balconies, laundry lines, sills and AC units lined up with the painted windows. Speech bubbles are a generated frame drawn in five slices around one or two lines of text. Every character, walker and obstacle stands on a soft contact shadow as well as casting a sun shadow.
+
+Street furniture follows photos of the real market: patchwork tarp and corrugated-tin canopies on pipe frames over the stalls (with shop names hung under the front beam), bar counters with high stools on the curb and chalkboard menus, chalkboard A-frames on the pavement, open burlap sacks of nuts and spices with price cards stuck in them, spice mounds in white bowls, halva blocks with cut faces, brass coffee pots, rolls of plastic bags, and in the covered market ceiling fans and bare bulbs. Signs are lettered in Hebrew sign-painter faces (Suez One, Karantina, Amatic SC, Secular One, Rubik) over generated weathered blanks (`img/signs.webp`: painted tin, enamel, wood, chalkboard, cardboard, lightbox, the blue street-name plate): shop boards, "for rent" boards on balconies, street names, handwritten cardboard and price cards.
 
 Depth comes from geometry rather than post effects: raised curbs and basalt bands that converge on the horizon, balconies, sills and AC units lined up with the painted windows, contact shadows, and distance haze. Distant chunks swap the generated stalls for vertex-coloured low-detail versions and hide the stall keepers; pedestrians use reduced textures so only the runner keeps its full 2048 texture. Physics advances in equal substeps per frame, so motion stays even when frame times wobble.
 
@@ -60,6 +67,7 @@ Progress is stored in the browser (localStorage).
 | `js/world.js` | Street chunks (stalls, awnings, facades, lights), sky, fog and lighting per zone |
 | `js/props.js` | Obstacles (generated crate and watermelon models, procedural sacks, barriers, banners, the produce truck, the Na Nach van), power-ups, the coin |
 | `js/look.js` | Curved-world shader patch and the post-processing chain |
+| `js/light.js` | Baked sun-shadow atlas, sky occlusion and bounce light patched into the materials |
 | `js/i18n.js` | All player-facing text in Hebrew and English |
 | `js/assets.js` | GLB loading and the shared animation library |
 | `js/audio.js` | Synthesized sound effects and the darbuka/oud music, recorded voice lines |

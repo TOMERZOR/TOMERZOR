@@ -64,7 +64,11 @@ function applyQuality(reset = true) {
     if (world && world.sun.shadow.map) { world.sun.shadow.map.dispose(); world.sun.shadow.map = null; }
   }
   renderer.setPixelRatio(quality.ratio);
-  if (world) world.setShadows(quality.shadows, quality.post === 'high', quality.post === 'high' ? 2048 : 1024);
+  if (world) {
+    world.setShadows(quality.shadows, quality.post === 'high', quality.post === 'high' ? 2048 : 1024);
+    // the baked street shadows stay on at every level: they cost a texture lookup, not a shadow pass
+    if (reset) world.setBake(q === 'high' ? 768 : q === 'low' ? 384 : 512);
+  }
   look.setMode(quality.post, window.innerWidth, window.innerHeight, quality.ratio);
   resize();
 }
@@ -153,14 +157,16 @@ async function boot() {
   let done = 0; const steps = 34;
   const tick = (n = 1) => { done += n; ui.setLoading(Math.min(1, done / steps), TIPS[(tipOffset + Math.floor(done / 5)) % TIPS.length]); };
   try {
-    await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
+    // UI font, plus the Hebrew sign-painter faces the street signs are lettered in (see textures.js)
+    const fonts = ['700 40px Fredoka', '600 20px Fredoka', '500 20px Fredoka', '40px "Suez One"', '700 40px Karantina', '700 40px "Amatic SC"', '40px "Secular One"', '700 40px Rubik'];
+    await Promise.race([Promise.all(fonts.map(f => document.fonts.load(f, 'אבג abc ₪'))), new Promise(r => setTimeout(r, 3000))]).catch(() => {});
     tick();
-    const [facade, paving, m1, m2, m3, decals, bubble] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp', 'img/ui/bubble.webp']
-      .map(u => loadImage(u).catch(e => { if (/decals|bubble/.test(u)) return null; throw e; }).finally(() => tick())));
+    const [facade, paving, m1, m2, m3, decals, bubble, signs] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp', 'img/ui/bubble.webp', 'img/signs.webp']
+      .map(u => loadImage(u).catch(e => { if (/decals|bubble|signs/.test(u)) return null; throw e; }).finally(() => tick())));
     setBubbleImage(bubble); // optional: bubbles fall back to a drawn frame
     await assets.loadAnims('models/anims.glb'); tick(2);
     fx = new FX(scene);
-    world = new World(scene, renderer, { facade, paving, decals, murals: [m1, m2, m3] });
+    world = new World(scene, renderer, { facade, paving, decals, signs, murals: [m1, m2, m3] });
     player = new Player(scene, assets);
     track = new Track(scene, assets, fx);
     await player.setCharacter(Save.get().selected).catch(() => player.setCharacter('tzabar')); tick(3);

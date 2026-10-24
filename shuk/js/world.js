@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Bag, rnd, pick, box, sph, cyl, cone } from './geo.js';
 import { ZONES, ZONE_LENGTH } from './config.js';
 import { signAtlas, glowTexture, softRectTexture } from './textures.js';
+import { makeContactShadow } from './props.js';
 
 export const CHUNK = 30;
 const STALL_X = 4.25;   // street edge of the stalls
@@ -15,10 +16,10 @@ const LOD_DIST = 75;     // chunks starting further ahead than this use the low-
 // ---------- themes ----------
 export const THEMES = {
   day:     { skyTop: '#5aa9f0', skyMid: '#a9d4f5', skyBot: '#f3e6cf', fog: '#e6dccb', fogNear: 30, fogFar: 158,
-             hemiSky: '#ffffff', hemiGround: '#b59a75', hemi: 1.15, sun: '#fff0d4', sunI: 2.7, sunDir: [-0.55, 1, 0.35],
+             hemiSky: '#ffffff', hemiGround: '#b59a75', hemi: 0.98, sun: '#fff0d4', sunI: 3.0, sunDir: [-0.62, 0.9, 0.5],
              facade: '#ffffff', glow: 0.0, bulbs: '#fff1c2', exposure: 1.0, playerLight: 0, clouds: 1, stars: 0, rim: 1.2 },
   covered: { skyTop: '#d7b98a', skyMid: '#e8cfa2', skyBot: '#f0dcb5', fog: '#d6bb8e', fogNear: 24, fogFar: 128,
-             hemiSky: '#ffe9c4', hemiGround: '#9a7a52', hemi: 1.0, sun: '#ffe1b0', sunI: 1.5, sunDir: [-0.3, 1, 0.2],
+             hemiSky: '#ffe9c4', hemiGround: '#9a7a52', hemi: 0.92, sun: '#ffe1b0', sunI: 1.7, sunDir: [-0.4, 0.95, 0.35],
              facade: '#e9d8bd', glow: 0.55, bulbs: '#ffd98a', exposure: 1.05, playerLight: 0.6, clouds: 0.3, stars: 0, rim: 0.9 },
   sunset:  { skyTop: '#3f4d9a', skyMid: '#ef8a63', skyBot: '#ffd08a', fog: '#e9a07a', fogNear: 28, fogFar: 142,
              hemiSky: '#ffd7b5', hemiGround: '#6d4b5c', hemi: 0.95, sun: '#ffab66', sunI: 2.5, sunDir: [-1, 0.42, -0.55],
@@ -234,7 +235,7 @@ function propMatrix(x, z, yaw, scale) {
 
 // models: generated stall/truck meshes ({ name: { size } }); fronts face +x, the long side runs along z
 function buildVariant(theme, atlas, models = {}, decals = true) {
-  const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag(), decal = new Bag(true);
+  const vc = new Bag(), sign = new Bag(true), facade = new Bag(true, 0.16), bulbs = new Bag(), roof = new Bag(), decal = new Bag(true);
   // building-top trim never casts: the walls under it are flat cards, so its shadow would float alone in the street
   const trim = new Bag();
   // soft baked contact shadows (ground under stalls, foot of the walls) - cheap depth on every quality level
@@ -261,6 +262,9 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
     vc.add(box(0.15, 0.008, CHUNK), '#a3927a', side * 1.2, 0.004, -CHUNK / 2);
   }
 
+  // the buildings above the shops: laid out first so the shop signs can sit on each building's own face
+  const blocks = { [-1]: layoutBuildings(covered), [1]: layoutBuildings(covered) };
+  const frontAt = (side, d) => (blocks[side].find(b => d >= b.z0 && d < b.z0 + b.w) || blocks[side][0]).front;
   for (const side of [-1, 1]) {
     let v = 0;
     while (v < CHUNK - 0.5) {
@@ -301,7 +305,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
         const k = Math.min((len - 0.3) / sz.z, 2.55 / sz.x, 3.3 / sz.y) * rnd(0.94, 1);
         placed.push([name, propMatrix(side * (STALL_X - 0.15 + sz.x * k / 2), -(v + len / 2), side < 0 ? 0 : Math.PI, k)]);
         addBlob(side * (STALL_X - 0.15 + sz.x * k / 2), -(v + len / 2), sz.x * k + 0.7, sz.z * k + 0.5);
-        addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (FACADE_X - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
+        addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (frontAt(side, v + len / 2) - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
         // the stall keeper hawks from the curb in front of the counter, off to one end of it
         if (Math.random() < 0.22) vendorSpots.push([side * (STALL_X - 0.3), -(v + len * pick([0.22, 0.78])), 0.14]);
       } else {
@@ -310,7 +314,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
         const [a, b] = pick(AWNINGS);
         awning(vc, side, v + 0.2, len - 0.4, a, b);
         // shop sign above the awning on the building line
-        addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (FACADE_X - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
+        addSign(sign, atlas, Math.floor(Math.random() * atlas.shopCount), side * (frontAt(side, v + len / 2) - 0.05), 3.75, -(v + len / 2), side, 2.4, 0.6);
         // price tags on the counter
         for (let i = 0; i < 2; i++) addPriceTag(sign, atlas, side, v + rnd(0.6, len - 0.6));
         // hanging bulbs under the awning
@@ -334,18 +338,7 @@ function buildVariant(theme, atlas, models = {}, decals = true) {
       if (!nightShut && Math.random() < 0.6) vc.add(cyl(0.18, 0.18, len * 0.95, 10), '#8a9096', side * (FACADE_X - 0.15), 3.15, -(v + len / 2), Math.PI / 2, 0, 0);
       v += len;
     }
-    // upper facade (Jerusalem stone, photo texture)
-    const fh = covered ? 6.5 : 9.5;
-    const fg = new THREE.PlaneGeometry(CHUNK, fh);
-    const off = Math.random();
-    const fuv = fg.attributes.uv;
-    // stone occupies v in [0.25, 1]; keep the photo's aspect by stretching the horizontal repeat with the height
-    const repeatW = fh * 1.79;
-    for (let i = 0; i < fuv.count; i++) fuv.setXY(i, off + fuv.getX(i) * CHUNK / repeatW, 0.255 + fuv.getY(i) * 0.74);
-    facade.add(fg, null, side * FACADE_X, 3.58 + fh / 2, -CHUNK / 2, 0, -side * Math.PI / 2, 0);
-    addFacadeRelief(vc, side, fh, off, repeatW, covered);
-    // cornice
-    trim.add(box(0.35, 0.3, CHUNK), '#cdb48a', side * (FACADE_X - 0.15), 3.6 + fh, -CHUNK / 2);
+    for (const b of blocks[side]) building({ facade, trim }, side, b, covered);
   }
 
   // overhead: string lights and bunting zig-zagging across the street
@@ -428,31 +421,134 @@ function scatterDecals(bag, theme) {
   }
 }
 
-// 3D relief on the photo facades, lined up with the painted windows (5 columns per texture repeat; the
-// lower row's sills sit ~9% and the upper row's ~63% of the way up the stone): balconies, AC units, sills.
-// It is the parallax of these against the flat wall that makes the street read as deep.
+// ---------- buildings ----------
+// Each side of a chunk is a row of separate buildings: own width, height (stepped rooflines), setback or
+// overhang, stone tint and shutter colour, with real side walls, parapets, rooftop clutter and 3D relief
+// lined up with the painted windows (5 columns per texture repeat; sills ~9% and ~63% up the stone).
 const WIN_COLS = [0.107, 0.30, 0.50, 0.70, 0.90];
-function addFacadeRelief(bag, side, fh, off, repeatW, covered) {
-  const wx = side * FACADE_X;
-  const rows = [3.58 + 0.0946 * fh, 3.58 + 0.627 * fh];
-  for (let n = -1; n <= Math.ceil(CHUNK / repeatW) + 1; n++) for (let k = 0; k < WIN_COLS.length; k++) {
-    const dist = (WIN_COLS[k] + n - off) * repeatW;
-    if (dist < 1.3 || dist > CHUNK - 1.3) continue;
-    const z = side < 0 ? -dist : -(CHUNK - dist);
+const STONE_TINTS = ['#ffffff', '#fff3df', '#f6e6cc', '#fde8da', '#ece6da', '#fff8ec', '#f2dcc0'];
+const SHUTTERS = [null, null, '#3d72b0', '#2e8079', '#7d4a2a', '#a8392b', '#dcd6c8', '#56693d', '#3a4f7a'];
+const GROUND_TOP = 3.58;
+
+function layoutBuildings(covered) {
+  const list = [];
+  let z0 = 0;
+  while (z0 < CHUNK - 0.01) {
+    let w = rnd(6.5, 12.5);
+    if (CHUNK - z0 - w < 4.5) w = CHUNK - z0;              // no slivers at the chunk end
+    const fh = covered ? 6.5 : pick([7.8, 9.0, 9.5, 10.6, 11.6]);
+    const set = covered ? 0 : pick([0, 0, 0.5, 0.95, -0.32]); // + set back, - overhangs the street
+    list.push({ z0, w, fh, set, front: FACADE_X + set, tint: pick(STONE_TINTS), shutter: pick(SHUTTERS), off: Math.random() });
+    z0 += w;
+  }
+  return list;
+}
+
+// per-vertex shutter recolour for the facade shader: rgb target, a = strength (0 keeps the painted green)
+function shutterAttr(geo, color) {
+  const n = geo.attributes.position.count, a = new Float32Array(n * 4);
+  if (color) { const c = new THREE.Color(color); for (let i = 0; i < n; i++) a.set([c.r, c.g, c.b, 1], i * 4); }
+  geo.setAttribute('shutter', new THREE.BufferAttribute(a, 4));
+  return geo;
+}
+
+function building({ facade, trim }, side, b, covered) {
+  const { z0, w, fh, front, tint, shutter, off } = b;
+  const zc = -(z0 + w / 2), top = GROUND_TOP + fh, wx = side * front;
+  const repeatW = fh * 1.79;                              // keeps the photo's aspect at any height
+  // the face
+  const fg = new THREE.PlaneGeometry(w, fh);
+  setUV(fg, [off, 0.255, w / repeatW, 0.74]);
+  facade.add(shutterAttr(fg, shutter), tint, wx, GROUND_TOP + fh / 2, zc, 0, -side * Math.PI / 2, 0);
+  // the side wall facing the runner: shows wherever this building sticks out past, or rises above, the one before
+  const sw = new THREE.PlaneGeometry(4.5, fh);
+  setUV(sw, [0.004, 0.255, 0.045, 0.74]);
+  facade.add(shutterAttr(sw, null), tint, side * (front + 2.25), GROUND_TOP + fh / 2, -z0 - 0.002, 0, 0, 0);
+  // overhang soffit, or a first-floor terrace with a railing in front of a set-back building
+  if (b.set < 0) trim.add(box(-b.set + 0.1, 0.2, w), '#d9c7a1', side * (FACADE_X + b.set / 2 - 0.05), GROUND_TOP + 0.1, zc);
+  else if (b.set > 0.3) {
+    trim.add(box(b.set, 0.14, w), '#dccaa4', side * (FACADE_X + b.set / 2), GROUND_TOP + 0.07, zc);
+    const rx = side * (FACADE_X + 0.06);
+    trim.add(box(0.05, 0.05, w), '#2d2b2e', rx, GROUND_TOP + 1.05, zc);
+    for (let z = 0.15; z < w; z += 0.32) trim.add(box(0.03, 0.95, 0.03), '#2d2b2e', rx, GROUND_TOP + 0.55, -(z0 + z));
+  }
+  // pilaster at the near corner, cornice and parapet along the top
+  trim.add(box(0.16, fh, 0.42), '#e4d3ae', side * (front - 0.08), GROUND_TOP + fh / 2, -(z0 + 0.21), 0, 0, 0, 1, 1, 1, 0.05);
+  trim.add(box(0.42, 0.28, w + 0.1), '#d8c39a', side * (front - 0.15), top + 0.02, zc);
+  trim.add(box(0.26, 0.62, w), '#e2d0a8', side * (front + 0.13), top + 0.45, zc, 0, 0, 0, 1, 1, 1, 0.06);
+  if (!covered) rooftop(trim, side, b, top);
+  // relief under/around the painted windows
+  const rows = [GROUND_TOP + 0.0946 * fh, GROUND_TOP + 0.627 * fh];
+  const winZ = [];
+  for (let n = -1; n <= Math.ceil(w / repeatW) + 1; n++) for (let k = 0; k < WIN_COLS.length; k++) {
+    const u = (WIN_COLS[k] + n - off) * repeatW;          // distance from this face's left edge
+    if (u < 0.9 || u > w - 0.9) continue;
+    const z = -(z0 + (side < 0 ? u : w - u));
+    winZ.push(z);
     rows.forEach((y, row) => {
-      if (covered && row === 1) return;                 // hidden behind the market roof
-      if (row === 1 && k === 3) return;                 // this window already has a painted balcony
-      // stone sill under every window
-      bag.add(box(0.22, 0.09, 1.7), '#e4d3ae', wx - side * 0.11, y - 0.05, z);
+      if (covered && row === 1) return;                   // hidden behind the market roof
+      if (row === 1 && k === 3) return;                   // this window already has a painted balcony
+      trim.add(box(0.22, 0.09, 1.7), '#e4d3ae', wx - side * 0.11, y - 0.05, z);   // stone sill
       const r = Math.random();
-      if (r < 0.32) balcony(bag, side, wx, y - 0.12, z, row);
-      else if (r < 0.42) {
+      if (r < 0.26) balcony(trim, side, wx, y - 0.12, z, row);
+      else if (r < 0.36 && row === 0) closedBalcony(trim, side, wx, y - 0.12, z);
+      else if (r < 0.46) {
         // AC unit with a dark grille, beside the window
         const az = z + pick([-1, 1]) * 1.25;
-        bag.add(box(0.36, 0.5, 0.78), '#eceae4', wx - side * 0.18, y + 0.9, az, 0, 0, 0, 1, 1, 1, 0.05);
-        bag.add(box(0.02, 0.36, 0.6), '#5f646b', wx - side * 0.365, y + 0.9, az);
+        trim.add(box(0.36, 0.5, 0.78), '#eceae4', wx - side * 0.18, y + 0.9, az, 0, 0, 0, 1, 1, 1, 0.05);
+        trim.add(box(0.02, 0.36, 0.6), '#5f646b', wx - side * 0.365, y + 0.9, az);
       }
     });
+  }
+  // a washing line strung between two windows
+  if (winZ.length > 1 && Math.random() < 0.35) laundry(trim, side, wx, rows[Math.random() < 0.5 || covered ? 0 : 1] + 2.05, winZ[0], winZ[1]);
+}
+
+// solar water heaters (a tank on a frame with a tilted collector) - the Israeli roofline - plus dishes and antennas;
+// they stand close to the parapet and tall enough to clear it in the runner's view
+function rooftop(bag, side, b, top) {
+  const n = b.w > 9 ? 2 : 1;
+  for (let i = 0; i < n; i++) {
+    const z = -(b.z0 + b.w * (n === 1 ? rnd(0.3, 0.7) : i ? rnd(0.6, 0.85) : rnd(0.15, 0.4)));
+    const x = side * (b.front + 0.75);
+    if (Math.random() < 0.8) {
+      for (const dz of [-0.55, 0.55]) bag.add(box(0.06, 1.9, 0.06), '#8d8f92', x, top + 0.95, z + dz);
+      bag.add(cyl(0.34, 0.34, 1.5, 10), '#f2f1ec', x, top + 2.15, z, Math.PI / 2, 0, 0);
+      bag.add(box(1.0, 0.07, 1.5), '#1f3554', side * (b.front + 1.35), top + 1.45, z, 0, 0, side * 0.55);
+    }
+    if (Math.random() < 0.45) {
+      const dz = z + pick([-1.4, 1.4]);
+      bag.add(box(0.05, 1.4, 0.05), '#8d8f92', x, top + 1.3, dz);
+      bag.add(cyl(0.42, 0.3, 0.12, 12), '#e9e7e2', x - side * 0.1, top + 2.05, dz, 0, 0, side * 1.05);
+    }
+    if (Math.random() < 0.4) {
+      const dz = z + rnd(-1.8, 1.8);
+      bag.add(box(0.04, 2.6, 0.04), '#55585c', x + side * 0.4, top + 1.9, dz);
+      for (const h of [2.6, 2.95]) bag.add(box(0.03, 0.03, 0.9), '#55585c', x + side * 0.4, top + h, dz);
+    }
+  }
+}
+
+// an enclosed ("closed") balcony: a glazed box hung on the facade
+function closedBalcony(bag, side, wx, y, z) {
+  const d = 0.78, L = 2.2, H = 2.35;
+  bag.add(box(d, 0.14, L), '#e6d4ab', wx - side * d / 2, y, z, 0, 0, 0, 1, 1, 1, 0.04);
+  bag.add(box(d + 0.06, 0.14, L + 0.06), '#e6d4ab', wx - side * d / 2, y + H, z);
+  bag.add(box(0.06, 0.9, L), '#efe7d6', wx - side * (d - 0.03), y + 0.5, z);
+  bag.add(box(0.03, H - 1.0, L - 0.08), '#4f6f8f', wx - side * (d - 0.05), y + 0.95 + (H - 1.0) / 2, z);
+  for (let i = 0; i <= 3; i++) bag.add(box(0.06, H - 0.95, 0.06), '#f4f1ea', wx - side * (d - 0.02), y + 0.95 + (H - 0.95) / 2, z - L / 2 + i * L / 3);
+  for (const e of [-L / 2, L / 2]) bag.add(box(d, H, 0.05), '#efe7d6', wx - side * d / 2, y + H / 2, z + e);
+}
+
+// clothes pegged on a line between two windows
+function laundry(bag, side, wx, y, za, zb) {
+  const x = wx - side * 0.45, len = Math.abs(zb - za), zm = (za + zb) / 2;
+  bag.add(box(0.015, 0.015, len), '#3b3b3b', x, y, zm);
+  for (const z of [za, zb]) bag.add(box(0.45, 0.04, 0.04), '#6b6e72', wx - side * 0.22, y, z);
+  const cols = ['#e63946', '#f1faee', '#457b9d', '#ffd23f', '#2a9d8f', '#f4a261', '#ffffff', '#6d597a'];
+  for (let t = 0.12; t < 0.9; t += rnd(0.14, 0.22)) {
+    const h = rnd(0.35, 0.7), wd = rnd(0.28, 0.5);
+    bag.add(box(0.02, h, wd), pick(cols), x, y - h / 2 - 0.02, Math.min(za, zb) + len * t);
   }
 }
 function balcony(bag, side, wx, y, z, row) {
@@ -502,7 +598,29 @@ function addMural(bag, side, v, len) {
   const uv = g.attributes.uv;
   // facade texture: top 75% stone, bottom 25% three murals side by side
   for (let i = 0; i < uv.count; i++) uv.setXY(i, (k + 0.02 + uv.getX(i) * 0.96) / 3, 0.005 + uv.getY(i) * 0.24);
-  bag.add(g, null, side * (FACADE_X - 0.08), 1.6, -(v + len / 2), 0, -side * Math.PI / 2, 0);
+  shutterAttr(g, null);
+  bag.add(g, '#ffffff', side * (FACADE_X - 0.08), 1.6, -(v + len / 2), 0, -side * Math.PI / 2, 0);
+}
+
+// Facade material: the photo texture tinted per building (vertex colours), with the painted green shutters
+// recoloured per building from the 'shutter' attribute.
+function facadeMaterial(map) {
+  const m = new THREE.MeshLambertMaterial({ map, vertexColors: true });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec4 shutter;\nvarying vec4 vShutter;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvShutter = shutter;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec4 vShutter;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        {
+          vec3 tx = sampledDiffuseColor.rgb;
+          float gm = smoothstep(0.012, 0.05, tx.g - max(tx.r, tx.b)) * vShutter.a;
+          float lum = dot(tx, vec3(0.299, 0.587, 0.114));
+          diffuseColor.rgb = mix(diffuseColor.rgb, diffuse * vShutter.rgb * clamp(lum / 0.11, 0.35, 1.6), gm);
+        }`);
+  };
+  return m;
 }
 
 // Tileable fractal value noise for the sky's clouds, generated once.
@@ -555,7 +673,7 @@ export class World {
     this.mats = {
       vc: new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }),
       sign: new THREE.MeshBasicMaterial({ map: this.atlas.texture, side: THREE.DoubleSide, toneMapped: false }),
-      facade: new THREE.MeshLambertMaterial({ map: facadeTex }),
+      facade: facadeMaterial(facadeTex),
       bulbs: new THREE.MeshBasicMaterial({ color: '#fff1c2', toneMapped: false }),
       roof: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false }),
       ground: new THREE.MeshLambertMaterial({ map: pave }),
@@ -599,7 +717,7 @@ export class World {
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(1024, 1024);
     const sc = this.sun.shadow.camera;
-    sc.left = -9; sc.right = 9; sc.top = 14; sc.bottom = -10; sc.near = 1; sc.far = 60;
+    sc.left = -7; sc.right = 7; sc.top = 12; sc.bottom = -8; sc.near = 1; sc.far = 60;
     this.sun.shadow.bias = -0.0006; this.sun.shadow.normalBias = 0.03;
     scene.add(this.sun); scene.add(this.sun.target);
     // warm back light that outlines the runner and the people coming at you
@@ -624,7 +742,10 @@ export class World {
     }
   }
 
-  setVendorTemplates(list) { this.vendorTemplates = list.filter(Boolean); }
+  setVendorTemplates(list) {
+    this.vendorTemplates = list.filter(Boolean);
+    for (const t of this.vendorTemplates) if (!t.userData.blob) { t.userData.blob = true; t.add(makeContactShadow(0.95, 0.75)); }
+  }
   // call before buildSteps(); missing models simply fall back to the procedural stalls
   setPropModels(map) { this.propModels = map; }
 

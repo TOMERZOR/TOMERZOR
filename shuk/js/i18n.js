@@ -59,7 +59,16 @@ const he = {
     x2: ['רוגלך כפול', 'רוגלך חם של שישי: כל נקודה פעמיים'],
     sneakers: ['נעלי קפיצה', 'קפיצות ענק מעל כל הבלגן'],
     hamsa: ['חמסה', 'חמסה חמסה! שומרת מעין הרע ומהתנגשות אחת'],
+    carpet: ['שטיח מעופף', 'מהדוכן של השטיחים ישר לשמיים: עפים מעל כל הבלגן ואוספים מטבעות באוויר'],
   },
+  bag: {
+    name: 'שקית הפתעה!',
+    coins: n => `₪${n} בשקית! מישהו שכח את העודף`,
+    power: n => `${n} במתנה מהמוכר`,
+    score: n => `+${n} נקודות. המוכר עשה לך הנחה`,
+    rain: 'גשם של מטבעות! מישהו הפיל את הקופה',
+  },
+  streak: n => `רצף ${n}!`, landing: 'נחיתה!',
   zones: {
     open: ['רחוב מחנה יהודה', 'בוקר של יום שישי. כל העיר פה.'],
     covered: ['השוק המקורה', 'רחוב עץ החיים. צפוף כמו באוטובוס 18.'],
@@ -149,7 +158,16 @@ const en = {
     x2: ['Double Rugelach', 'Hot Friday rugelach: every point counts twice'],
     sneakers: ['Jump Sneakers', 'Giant leaps over the whole mess'],
     hamsa: ['Hamsa', 'Protects from the evil eye and one crash'],
+    carpet: ['Magic Carpet', 'Straight off the rug stall and into the sky: fly over the mess, grabbing coins in the air'],
   },
+  bag: {
+    name: 'Mystery bag!',
+    coins: n => `₪${n} in the bag! Someone forgot their change`,
+    power: n => `A free ${n} from the vendor`,
+    score: n => `+${n} points. The vendor gave you a discount`,
+    rain: 'Coin shower! Someone dropped the till',
+  },
+  streak: n => `${n} streak!`, landing: 'Landing!',
   zones: {
     open: ['Mahane Yehuda Street', 'Friday morning. The whole city is here.'],
     covered: ['The Covered Market', 'Etz Chaim Street. Packed like bus 18.'],

@@ -1,7 +1,7 @@
 // The runner: lane movement, jumping, rolling, platforms and the animation state machine.
 import * as THREE from 'three';
-import { LANE_X, PHYS, PLAYER_BOX } from './config.js';
-import { makePowerup } from './props.js';
+import { LANE_X, PHYS, PLAYER_BOX, FLY_Y } from './config.js';
+import { makePowerup, makeContactShadow, makeCarpet, waveCarpet } from './props.js';
 import { glowTexture } from './textures.js';
 
 const SQUASH_T = 0.24;
@@ -43,6 +43,15 @@ export class Player {
     this.feetGlow.position.y = 0.04;
     this.feetGlow.visible = false;
     this.root.add(this.feetGlow);
+    // the magic carpet, under the feet while flying
+    this.carpet = makeCarpet();
+    this.carpet.position.y = 0.05;
+    this.carpet.visible = false;
+    this.root.add(this.carpet);
+    // contact shadow: stays on the ground under the runner, shrinking and fading with height
+    this.blob = makeContactShadow(1, 1);
+    this.blob.material = this.blob.material.clone();
+    this.root.add(this.blob);
     this.reset();
   }
 
@@ -72,6 +81,7 @@ export class Player {
     this.dead = false; this.airT = 0; this.coyote = 0; this.laneChangeT = 10;
     this.groundY = 0; this.onPlatform = false; this.superJump = false;
     this.jumpVisual = false; this.leanV = 0;
+    this.flying = false; this.carpet.visible = false;
     this.root.position.set(this.x, 0, 0);
     this.pivot.rotation.set(0, 0, 0);
     this.pivot.scale.set(1, 1, 1); this.squashT = 0; this.squashAmp = 0;
@@ -104,8 +114,19 @@ export class Player {
     return true;
   }
 
+  // take off on / step off the magic carpet (landing is ordinary gravity from cruising height)
+  fly(on) {
+    if (this.dead) return;
+    this.flying = on;
+    this.carpet.visible = on;
+    this.vy = 0; this.grounded = false;
+    this.rollT = 0; this.rollQueued = false;
+    if (on) this.play('idle', 0.25);
+    else this.play('jump', 0.15, { from: 0.85, rate: 0.6, endAt: 1.05 });
+  }
+
   roll() {
-    if (this.dead) return false;
+    if (this.dead || this.flying) return false;
     if (!this.grounded) { this.vy = Math.min(this.vy, -PHYS.fastFall); this.rollQueued = true; return 'fall'; }
     this.rollT = PHYS.rollTime;
     this.play('roll', 0.06, { from: 0.22, dur: PHYS.rollTime, endAt: 1.62 });
@@ -147,6 +168,14 @@ export class Player {
     if (Math.abs(tx - nx) < 0.01) nx = tx;
     this.x = nx;
     this.laneChangeT += dt;
+
+    // flying on the carpet: glide up to cruising height, ignore the ground (the shadow stays on the street)
+    if (this.flying) {
+      this.groundY = 0;
+      this.y += (FLY_Y - this.y) * (1 - Math.exp(-dt * 3.5));
+      this.vy = 0; this.grounded = false; this.airT = 0; this.coyote = 0;
+      return;
+    }
 
     // vertical
     const g = groundAt(this.x);
@@ -228,6 +257,12 @@ export class Player {
     } else if (!this.grounded && this.vy > 0) sy = 1 + Math.min(0.07, this.vy * 0.005);
     const sxz = 1 / Math.sqrt(sy);
     this.pivot.scale.set(sxz, sy, sxz);
+    const h = Math.max(0, this.y - (this.groundY || 0));
+    const k = 1 / (1 + h * 0.5), roll = this.rollT > 0 ? 1.25 : 1;
+    this.blob.position.y = (this.groundY || 0) - this.y + 0.02;
+    this.blob.scale.set(0.95 * k, 1, 0.78 * k * roll);
+    this.blob.material.opacity = 0.55 * k;
+    if (this.flying) waveCarpet(this.carpet, time);
     // shield
     if (this.shield.visible) { this.shieldMat.uniforms.t.value = time; this.shield.rotation.y = time; }
   }

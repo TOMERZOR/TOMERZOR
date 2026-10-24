@@ -20,7 +20,10 @@ Running into someone head-on ends the run. Brushing past from the side, or tripp
 
 - **Zones** that change every 900 m: the open street (morning), the covered market (Etz Chaim street), Shabbat-eve sunset, and the night market with painted shutters and bars. Speed keeps rising.
 - **Coins**: each 10₪ coin adds ₪10 to your wallet.
-- **Power-ups**: magnet, double rugelach (×2 score), jump sneakers, and the hamsa that absorbs one hit. Each can be upgraded five times in the shop.
+- **Power-ups**: magnet, double rugelach (×2 score), jump sneakers, the hamsa that absorbs one hit, and the magic carpet that flies you over the market along a trail of coins in the air (and lands you on a cleared patch of street). Each can be upgraded five times in the shop.
+- **Mystery bags**: a random prize: a pile of coins, a free power-up, bonus points, or a shower of coins across all three lanes.
+- **Rolling watermelons** escape their piles and roll down the lanes at you: jump them or step aside.
+- **Coin streaks**: every 50 coins without tripping pays a bonus.
 - **Characters**: nine playable runners, from Yoni the Nachlaot local to Ginger the market cat. Characters you don't play appear as pedestrians.
 - **Missions and levels**: three missions at a time; finishing all three raises your level, which is your permanent score multiplier, and pays a bonus.
 - **Trucks with ramps** you can run up and along the roof of.
@@ -37,6 +40,8 @@ Quality levels:
 - **Battery saver**: Auto at 1.25x without shadows.
 
 Add `?fps` to the address to show the measured frame rate, frame times, resolution, draw calls and triangles.
+
+The street is a row of separate buildings on each side, each with its own width, height (stepped rooflines), setback or overhang, stone tint and shutter colour (the photo's green shutters are recoloured in the facade shader), with real side walls, parapets, solar water heaters, dishes and antennas on the roofs, enclosed and open balconies, laundry lines, sills and AC units lined up with the painted windows. Speech bubbles are a generated frame drawn in five slices around one or two lines of text. Every character, walker and obstacle stands on a soft contact shadow as well as casting a sun shadow.
 
 Depth comes from geometry rather than post effects: raised curbs and basalt bands that converge on the horizon, balconies, sills and AC units lined up with the painted windows, contact shadows, and distance haze. Distant chunks swap the generated stalls for vertex-coloured low-detail versions and hide the stall keepers; pedestrians use reduced textures so only the runner keeps its full 2048 texture. Physics advances in equal substeps per frame, so motion stays even when frame times wobble.
 

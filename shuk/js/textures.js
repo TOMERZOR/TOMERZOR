@@ -139,18 +139,58 @@ export function signAtlas() {
 }
 
 // ---- speech bubble sprite texture ----
+// The bubble frame is generated art (img/ui/bubble.webp, 968x514): drawn as five slices so the round caps and
+// the tail keep their shape while the straight middle stretches around the text (one or two lines).
+let bubbleImg = null;
+export function setBubbleImage(img) { bubbleImg = img; }
+const BUB = { W: 968, H: 514, cap: 232, tailL: 404, tailR: 564, bodyTop: 6, bodyBot: 420 };
+
+function wrapLines(g, text, maxW) {
+  if (g.measureText(text).width <= maxW) return [text];
+  const words = text.split(' ');
+  let best = [text], bestW = Infinity;
+  for (let i = 1; i < words.length; i++) {           // the most balanced two-line split
+    const a = words.slice(0, i).join(' '), b = words.slice(i).join(' ');
+    const w = Math.max(g.measureText(a).width, g.measureText(b).width);
+    if (w < bestW) { bestW = w; best = [a, b]; }
+  }
+  return best;
+}
+
 export function bubbleTexture(text) {
-  const [c, g] = canvas(512, 160);
+  const Hc = 200, s = Hc / BUB.H, FS = 40;
+  const probe = canvas(8, 8)[1];
+  probe.font = `700 ${FS}px ${FONT_HEAD}`;
+  let lines = wrapLines(probe, text, 470);
+  let size = FS;
+  const widest = () => Math.max(...lines.map(l => probe.measureText(l).width));
+  while (widest() > 520 && size > 22) { size -= 2; probe.font = `700 ${size}px ${FONT_HEAD}`; }
+  const tw = widest();
+  const capW = BUB.cap * s, tailW = (BUB.tailR - BUB.tailL) * s;
+  const Wc = Math.ceil(Math.max(capW * 2 + tailW + 20, tw + 2 * capW * 0.62));
+  const [c, g] = canvas(Wc, Hc, 1.25);
+  if (bubbleImg) {
+    const stretch = (Wc - 2 * capW - tailW) / 2;
+    const slices = [
+      [0, BUB.cap, 0, capW],
+      [BUB.cap, BUB.tailL, capW, stretch],
+      [BUB.tailL, BUB.tailR, capW + stretch, tailW],
+      [BUB.tailR, BUB.W - BUB.cap, capW + stretch + tailW, stretch],
+      [BUB.W - BUB.cap, BUB.W, Wc - capW, capW],
+    ];
+    // overlap each slice by a pixel so no seams show between them
+    for (const [sx0, sx1, dx, dw] of slices) if (dw > 0) g.drawImage(bubbleImg, sx0, 0, sx1 - sx0, BUB.H, dx - 0.5, 0, dw + 1, Hc);
+  } else {
+    g.fillStyle = '#fff8e8'; roundRect(g, 4, 4, Wc - 8, Hc * 0.78, Hc * 0.38); g.fill();
+    g.strokeStyle = '#4a2a16'; g.lineWidth = 8; g.stroke();
+  }
   g.direction = dirOf(text); g.textAlign = 'center'; g.textBaseline = 'middle';
-  const size = fitText(g, text, 440, 52, FONT_HEAD);
-  const w = Math.min(500, g.measureText(text).width + 60);
-  const x = (512 - w) / 2;
-  g.fillStyle = 'rgba(0,0,0,.18)'; roundRect(g, x + 4, 14, w, 104, 40); g.fill();
-  g.fillStyle = '#fffef7'; roundRect(g, x, 8, w, 104, 40); g.fill();
-  g.beginPath(); g.moveTo(256 - 18, 108); g.lineTo(256 + 6, 150); g.lineTo(256 + 22, 108); g.closePath(); g.fill();
-  g.strokeStyle = '#2b2118'; g.lineWidth = 5; roundRect(g, x, 8, w, 104, 40); g.stroke();
-  g.fillStyle = '#2b2118'; g.font = `700 ${size}px ${FONT_HEAD}`; g.fillText(text, 256, 62);
+  g.font = `700 ${size}px ${FONT_HEAD}`;
+  g.fillStyle = '#3d2414';
+  const cy = (BUB.bodyTop + BUB.bodyBot) / 2 * s + 2, lh = size * 1.08;
+  lines.forEach((l, i) => g.fillText(l, Wc / 2, cy + (i - (lines.length - 1) / 2) * lh));
   const t = tex(c); t.anisotropy = 1;
+  t.userData.aspect = Wc / Hc;
   return t;
 }
 
@@ -216,6 +256,46 @@ export function truckTexture() {
   g.fillStyle = '#1f5f2a'; fitText(g, 'פירות וירקות עזרא ובניו', 940, 84, FONT_HEAD); g.fillText('פירות וירקות עזרא ובניו', 512, 96);
   g.fillStyle = '#fff'; g.font = `700 44px ${FONT_HEAD}`; g.fillText('הובלות מחנה יהודה · 02-5555555', 512, 342);
   return tex(c);
+}
+
+// Persian rug for the magic carpet: red field, gold borders, a medallion and a scatter of motifs
+export function rugTexture() {
+  const [c, g] = canvas(256, 160, 2);
+  g.fillStyle = '#8f1d1d'; g.fillRect(0, 0, 256, 160);
+  g.fillStyle = '#e2a93b'; g.fillRect(6, 6, 244, 148);
+  g.fillStyle = '#b3261e'; g.fillRect(14, 14, 228, 132);
+  g.strokeStyle = '#f2cf6a'; g.lineWidth = 3; g.strokeRect(22, 22, 212, 116);
+  g.fillStyle = '#f2cf6a';
+  g.beginPath(); g.moveTo(128, 46); g.lineTo(170, 80); g.lineTo(128, 114); g.lineTo(86, 80); g.closePath(); g.fill();
+  g.fillStyle = '#1d3557'; g.beginPath(); g.moveTo(128, 60); g.lineTo(152, 80); g.lineTo(128, 100); g.lineTo(104, 80); g.closePath(); g.fill();
+  g.fillStyle = '#f2cf6a';
+  for (const [x, y] of [[48, 44], [208, 44], [48, 116], [208, 116]]) { g.beginPath(); g.arc(x, y, 9, 0, 7); g.fill(); }
+  for (let x = 30; x < 230; x += 16) { g.fillRect(x, 28, 6, 4); g.fillRect(x, 128, 6, 4); }
+  return tex(c);
+}
+
+// watermelon rind stripes for the rolling melons
+export function melonTexture() {
+  const [c, g] = canvas(256, 128);
+  g.fillStyle = '#3f8f3a'; g.fillRect(0, 0, 256, 128);
+  g.fillStyle = '#1f5f22';
+  for (let i = 0; i < 12; i++) {
+    const x0 = i * 256 / 12;
+    g.beginPath(); g.moveTo(x0, 0);
+    for (let y = 0; y <= 128; y += 8) g.lineTo(x0 + 6 + Math.sin(y * 0.22 + i) * 4, y);
+    for (let y = 128; y >= 0; y -= 8) g.lineTo(x0 + 13 + Math.sin(y * 0.22 + i + 1) * 4, y);
+    g.closePath(); g.fill();
+  }
+  return tex(c);
+}
+
+// round soft blob (white, alpha fades out from the centre) for contact shadows under characters
+export function blobTexture() {
+  const S = 64, [c, g] = canvas(S, S);
+  const grd = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  grd.addColorStop(0, 'rgba(255,255,255,1)'); grd.addColorStop(0.45, 'rgba(255,255,255,.75)'); grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+  return tex(c, { srgb: false });
 }
 
 // soft-edged rectangle (white, alpha falls off toward the border) for baked contact shadows

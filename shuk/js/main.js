@@ -16,6 +16,7 @@ import { haptic, setHaptics } from './haptics.js';
 import { Look, patchCurvedWorld, patchToneMapping } from './look.js';
 import { T } from './i18n.js';
 import { MODEL_PROPS } from './props.js';
+import { setBubbleImage } from './textures.js';
 
 patchCurvedWorld();
 patchToneMapping();
@@ -154,7 +155,9 @@ async function boot() {
   try {
     await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
     tick();
-    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).catch(e => { if (u.includes('decals')) return null; throw e; }).finally(() => tick())));
+    const [facade, paving, m1, m2, m3, decals, bubble] = await Promise.all(['img/facade.webp', 'img/paving.webp', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp', 'img/ui/bubble.webp']
+      .map(u => loadImage(u).catch(e => { if (/decals|bubble/.test(u)) return null; throw e; }).finally(() => tick())));
+    setBubbleImage(bubble); // optional: bubbles fall back to a drawn frame
     await assets.loadAnims('models/anims.glb'); tick(2);
     fx = new FX(scene);
     world = new World(scene, renderer, { facade, paving, decals, murals: [m1, m2, m3] });
@@ -197,7 +200,7 @@ const frame = () => new Promise(r => requestAnimationFrame(() => r()));
 // compile shaders and upload textures for everything that can appear in a run
 async function warmup() {
   const tmp = [];
-  const types = ['crates', 'melons', 'sacks', 'barrier', 'tefillin', 'banner', 'rugs', 'bannerWide', 'truck', 'truckR', 'van',
+  const types = ['crates', 'melons', 'sacks', 'barrier', 'tefillin', 'banner', 'rugs', 'bannerWide', 'truck', 'truckR', 'van', 'melonRoll', 'pow:carpet', 'pow:bag',
     'pow:magnet', 'pow:x2', 'pow:sneakers', 'pow:hamsa', ...Object.keys(NPC_TYPES).map(t => 'npc:' + t)];
   for (const t of types) { const o = track.acquireSync(t); o.visible = true; o.position.set((tmp.length % 5 - 2) * 2, 0, -6 - Math.floor(tmp.length / 5) * 3); tmp.push([t, o]); }
   camera.position.set(0, 3, 6); camera.lookAt(0, 1, -8);

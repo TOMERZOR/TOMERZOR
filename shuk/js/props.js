@@ -2,7 +2,23 @@
 import * as THREE from 'three';
 import { Bag, rnd, pick, box, sph, cyl, cone } from './geo.js';
 import { T } from './i18n.js';
-import { bannerTexture, vanTexture, truckTexture, coinTextures, glowTexture, FONT_HEAD } from './textures.js';
+import { bannerTexture, vanTexture, truckTexture, coinTextures, glowTexture, blobTexture, softRectTexture, melonTexture, rugTexture, FONT_HEAD } from './textures.js';
+
+// Contact shadows: a soft dark patch on the ground under anything standing on it. Unlike the sun's shadow
+// map these never switch off and never miss the feet, which is what makes characters feel grounded.
+let blobGeo = null;
+const blobMats = {};
+export function makeContactShadow(w, d, { square = false, opacity = 0.5 } = {}) {
+  if (!blobGeo) { blobGeo = new THREE.PlaneGeometry(1, 1); blobGeo.rotateX(-Math.PI / 2); }
+  const key = (square ? 's' : 'r') + opacity;
+  if (!blobMats[key]) blobMats[key] = new THREE.MeshBasicMaterial({ map: square ? softRectTexture() : blobTexture(), color: '#1a1208', transparent: true, opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+  const m = new THREE.Mesh(blobGeo, blobMats[key]);
+  m.scale.set(w, 1, d);
+  m.position.y = 0.015;
+  m.renderOrder = 1;
+  m.castShadow = false; m.receiveShadow = false;
+  return m;
+}
 
 let M = null; // shared materials
 function mats() {
@@ -52,6 +68,38 @@ export function makeCrates() {
     }
   }
   return meshFrom(b, mats().vc);
+}
+
+// a watermelon that has escaped the pile and is rolling down the lane at you
+let melonMat = null;
+export function makeRollingMelon() {
+  if (!melonMat) melonMat = new THREE.MeshLambertMaterial({ map: melonTexture() });
+  const g = new THREE.Group();
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), melonMat);
+  ball.scale.set(1, 0.92, 1.18);
+  ball.position.y = 0.4;
+  g.add(ball);
+  g.userData.roll = ball;
+  return g;
+}
+
+// the flying rug under the runner: a subdivided plane whose cloth ripples every frame
+export function makeCarpet() {
+  const geo = new THREE.PlaneGeometry(1.15, 1.75, 8, 12);
+  geo.rotateX(-Math.PI / 2);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: rugTexture(), side: THREE.DoubleSide }));
+  mesh.userData.base = Float32Array.from(geo.attributes.position.array);
+  mesh.castShadow = true;
+  return mesh;
+}
+export function waveCarpet(mesh, t) {
+  const pos = mesh.geometry.attributes.position, base = mesh.userData.base;
+  for (let i = 0; i < pos.count; i++) {
+    const x = base[i * 3], z = base[i * 3 + 2];
+    pos.array[i * 3 + 1] = Math.sin(z * 3.2 + t * 9) * 0.06 + Math.sin(x * 5 + t * 6) * 0.02 + (z > 0.7 ? (z - 0.7) * 0.35 : 0);
+  }
+  pos.needsUpdate = true;
+  mesh.geometry.computeVertexNormals();
 }
 
 export function makeMelons() {
@@ -248,7 +296,7 @@ export function powerIconTexture(type) {
   }
   return iconTex[type];
 }
-const GLOW_COL = { magnet: '#ff6b6b', x2: '#ffb347', sneakers: '#4fc3ff', hamsa: '#5aa9ff' };
+const GLOW_COL = { magnet: '#ff6b6b', x2: '#ffb347', sneakers: '#4fc3ff', hamsa: '#5aa9ff', carpet: '#ff7a59', bag: '#ffd23f' };
 export function makePowerup(type) {
   const g = new THREE.Group();
   const glow = new THREE.Sprite(mats().glow.clone());

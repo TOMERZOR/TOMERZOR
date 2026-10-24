@@ -6,6 +6,8 @@ Run locally: `python3 -m http.server 8080` in this folder, then open http://loca
 
 `node tools/build-artifact.mjs <folder>` writes the game as one web page plus the list of files to publish next to it; add `--dev` for the developer build with every level open.
 
+`node tools/build-pages.mjs <folder> <public URL>` builds it for a static host with a link preview. The public copy lives in `shard/` on the repository's default branch, which GitHub Pages serves at https://tomerzor.github.io/TOMERZOR/shard/.
+
 ## Code map
 | File | What it does |
 |---|---|

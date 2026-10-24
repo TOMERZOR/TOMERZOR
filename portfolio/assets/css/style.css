@@ -172,6 +172,15 @@ button { font: inherit; color: inherit; }
   .nav .btn--line { margin-top: 20px; height: 50px; font-size: 16px; background: var(--fg); color: var(--bg); border-color: var(--fg); }
 }
 
+/* Without JS the header scrolls away with the hero and the phone menu shows only the contact button. */
+.no-js .site-header { position: absolute; }
+.no-js .menu-toggle { display: none; }
+@media (max-width: 720px) {
+  .no-js .nav { position: static; flex-direction: row; padding: 0; background: none; border: 0; color: inherit; opacity: 1; visibility: visible; transform: none; }
+  .no-js .nav__link { display: none; }
+  .no-js .nav .btn--line { margin-top: 0; height: 38px; font-size: 14px; background: transparent; color: inherit; border-color: currentColor; }
+}
+
 /* ---------- Hero ---------- */
 .hero {
   position: relative; isolation: isolate; overflow: hidden;

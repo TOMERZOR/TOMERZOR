@@ -128,9 +128,9 @@ export class Assets {
     return tpl;
   }
 
-  // Static set-dressing models (stalls, parked truck): one mesh each, transform baked into the geometry.
-  async prop(name) {
-    const g = await loadGLTF(`models/st_${name}.glb`);
+  // Static models (stalls, parked truck, obstacles): one mesh each, transform baked into the geometry.
+  async prop(file) {
+    const g = await loadGLTF(`models/${file}.glb`);
     g.scene.updateMatrixWorld(true);
     let mesh = null;
     g.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; });

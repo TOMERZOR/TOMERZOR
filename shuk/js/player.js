@@ -4,6 +4,8 @@ import { LANE_X, PHYS, PLAYER_BOX } from './config.js';
 import { makePowerup } from './props.js';
 import { glowTexture } from './textures.js';
 
+const SQUASH_T = 0.24;
+
 export class Player {
   constructor(scene, assets) {
     this.scene = scene;
@@ -70,6 +72,7 @@ export class Player {
     this.jumpVisual = false; this.leanV = 0;
     this.root.position.set(this.x, 0, 0);
     this.pivot.rotation.set(0, 0, 0);
+    this.pivot.scale.set(1, 1, 1); this.squashT = 0; this.squashAmp = 0;
     this.lastX = this.x; this.lastY = 0;
     this.setPowerFx(false, false, 0);
     this.setShield(0);
@@ -157,6 +160,8 @@ export class Player {
       this.vy -= gravity * dt;
       this.y += this.vy * dt;
       if (this.y <= g && this.vy <= 0) {
+        // squash harder the faster we come down
+        this.squashT = SQUASH_T; this.squashAmp = THREE.MathUtils.clamp(-this.vy * 0.011, 0.05, 0.16);
         this.y = g; this.vy = 0; this.grounded = true; this.onPlatform = g > 0.05;
         this.landed = true;
         if (this.rollQueued) { this.rollQueued = false; this.rollT = PHYS.rollTime; this.play('roll', 0.05, { from: 0.4, dur: PHYS.rollTime * 0.85, endAt: 1.62 }); }
@@ -212,6 +217,15 @@ export class Player {
     const lean = THREE.MathUtils.clamp(-dx * 0.22, -0.3, 0.3);
     this.pivot.rotation.z += (lean - this.pivot.rotation.z) * Math.min(1, dt * 14);
     this.pivot.rotation.y += ((-dx * 0.18) - this.pivot.rotation.y) * Math.min(1, dt * 12);
+    // squash on landing, a little stretch while rising
+    let sy = 1;
+    if (this.squashT > 0) {
+      this.squashT = Math.max(0, this.squashT - dt);
+      const t = 1 - this.squashT / SQUASH_T;
+      sy = 1 - Math.sin(t * Math.PI) * (1 - t * 0.4) * this.squashAmp;
+    } else if (!this.grounded && this.vy > 0) sy = 1 + Math.min(0.07, this.vy * 0.005);
+    const sxz = 1 / Math.sqrt(sy);
+    this.pivot.scale.set(sxz, sy, sxz);
     // shield
     if (this.shield.visible) { this.shieldMat.uniforms.t.value = time; this.shield.rotation.y = time; }
   }

@@ -121,6 +121,8 @@ export class UI {
   // ---------- HUD ----------
   showHUD() {
     this.show('hud');
+    for (const el of document.querySelectorAll('.fly-coin')) el.remove();
+    this.flying = 0;
     this.hudCache = {};
     $('powers').innerHTML = '';
     this.powerEls = {};
@@ -153,6 +155,26 @@ export class UI {
       el.style.setProperty('--p', Math.max(0, Math.min(100, p.t / p.max * 100)).toFixed(1));
       el.classList.toggle('ending', p.t < 2);
     }
+  }
+  flyCoin(sx, sy) {
+    if (this.flying >= 10 || document.hidden) return;
+    const target = $('hud-coins').parentElement.querySelector('img').getBoundingClientRect();
+    const img = document.createElement('img');
+    img.src = 'img/ui/ico_coin.webp'; img.alt = ''; img.className = 'fly-coin';
+    img.style.left = sx + 'px'; img.style.top = sy + 'px';
+    $('hud').appendChild(img);
+    this.flying = (this.flying || 0) + 1;
+    const dx = target.left + target.width / 2 - sx, dy = target.top + target.height / 2 - sy;
+    const anim = img.animate([
+      { transform: 'translate(-50%, -50%) scale(.7)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx * 0.35}px), calc(-50% + ${dy * 0.2 - 40}px)) scale(1)`, opacity: 1, offset: 0.35 },
+      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.55)`, opacity: 0.9 },
+    ], { duration: 520, easing: 'cubic-bezier(.4,0,.7,1)' });
+    anim.onfinish = anim.oncancel = () => {
+      img.remove(); this.flying--;
+      const cap = $('hud-coins').parentElement;
+      cap.classList.remove('bump'); void cap.offsetWidth; cap.classList.add('bump');
+    };
   }
   zoneBanner(name, sub) {
     const z = $('zone-banner');

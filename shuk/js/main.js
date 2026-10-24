@@ -15,6 +15,7 @@ import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx, 
 import { haptic, setHaptics } from './haptics.js';
 import { Look, patchCurvedWorld } from './look.js';
 import { T } from './i18n.js';
+import { MODEL_PROPS } from './props.js';
 
 patchCurvedWorld();
 
@@ -62,7 +63,7 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   // keep the three lanes and some stalls in view on narrow portrait screens
-  camera.fov = camera.aspect < 0.62 ? 70 : camera.aspect < 1 ? 64 : 56;
+  camera.fov = camera.userData.baseFov = camera.aspect < 0.62 ? 70 : camera.aspect < 1 ? 64 : 56;
   camera.updateProjectionMatrix();
   look.resize(w, h, quality.ratio);
   if (fx) fx.setScale(h * quality.ratio);
@@ -140,18 +141,20 @@ async function boot() {
   try {
     await Promise.race([Promise.all([document.fonts.load('700 40px Fredoka', 'אבג abc'), document.fonts.load('600 20px Fredoka', 'אבג abc'), document.fonts.load('500 20px Fredoka', 'אבג abc')]), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
     tick();
-    const [facade, paving, m1, m2, m3] = await Promise.all(['img/facade.jpg', 'img/paving.jpg', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg'].map(u => loadImage(u).finally(() => tick())));
+    const [facade, paving, m1, m2, m3, decals] = await Promise.all(['img/facade.jpg', 'img/paving.jpg', 'img/mural1.jpg', 'img/mural2.jpg', 'img/mural3.jpg', 'img/decals.webp'].map(u => loadImage(u).finally(() => tick())));
     await assets.loadAnims('models/anims.glb'); tick(2);
     fx = new FX(scene);
-    world = new World(scene, renderer, { facade, paving, murals: [m1, m2, m3] });
+    world = new World(scene, renderer, { facade, paving, decals, murals: [m1, m2, m3] });
     player = new Player(scene, assets);
     track = new Track(scene, assets, fx);
     await player.setCharacter(Save.get().selected).catch(() => player.setCharacter('tzabar')); tick(3);
     previewId = Save.get().selected;
     await Promise.all(Object.keys(NPC_TYPES).map(t => assets.npc(t).then(() => tick())));
     world.setVendorTemplates([assets.npcs.vendor?.scene, assets.npcs.chabad?.scene]);
+    // generated set pieces and obstacles; anything that fails to load falls back to procedural geometry
     const props = {};
-    await Promise.all(['fruit', 'spice', 'sweets', 'truck'].map(n => assets.prop(n).then(p => { props[n] = p; }, () => {}).finally(() => tick())));
+    await Promise.all(['fruit', 'spice', 'sweets', 'truck'].map(n => assets.prop('st_' + n).then(p => { props[n] = p; }, () => {}).finally(() => tick())));
+    await Promise.all(['crates', 'melons'].map(n => assets.prop('ob_' + n).then(p => { MODEL_PROPS[n] = p; }, () => {})));
     world.setPropModels(props);
     for (const _ of world.buildSteps()) { tick(0.6); await frame(); }
     game = new Game({ scene, camera, world, track, player, fx, ui, assets });

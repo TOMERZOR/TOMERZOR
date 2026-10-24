@@ -233,9 +233,10 @@ function propMatrix(x, z, yaw, scale) {
 
 // models: generated stall/truck meshes ({ name: { size } }); fronts face +x, the long side runs along z
 function buildVariant(theme, atlas, models = {}) {
-  const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag();
+  const vc = new Bag(), sign = new Bag(true), facade = new Bag(true), bulbs = new Bag(), roof = new Bag(), decal = new Bag(true);
   const glow = [];
   const placed = [];
+  scatterDecals(decal, theme);
   const stallModels = ['fruit', 'spice', 'sweets'].filter(n => models[n]);
   const vendorSpots = [];
   const night = theme === 'night', covered = theme === 'covered';
@@ -254,7 +255,7 @@ function buildVariant(theme, atlas, models = {}) {
       const len = Math.min(CHUNK - v, pick([4.2, 4.6, 5.0]));
       const nightShut = night && Math.random() < 0.45;
       const gap = Math.random() < 0.18 && !nightShut;
-      if (gap && models.truck && Math.random() < 0.55) {
+      if (gap && models.truck && Math.random() < 0.4) {
         // a supplier's truck parked between the stalls, cab toward the runner
         const sz = models.truck.size, k = Math.min(2.1 / sz.z, (len - 0.5) / sz.x);
         placed.push(['truck', propMatrix(side * (STALL_X + 0.15 + sz.z * k / 2), -(v + len / 2), Math.PI / 2, k)]);
@@ -375,9 +376,36 @@ function buildVariant(theme, atlas, models = {}) {
   glowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glow), 3));
   glowGeo.computeBoundingSphere();
   return {
-    vc: vc.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(),
+    vc: vc.build(), sign: sign.build(), facade: facade.build(), bulbs: bulbs.build(), roof: roof.build(), decal: decal.build(),
     ground, glowGeo, vendorSpots, theme, placed,
   };
+}
+
+// ground litter from the generated 3x3 decal atlas (img/decals.webp), read left-to-right, top-to-bottom
+const DECALS = {
+  manhole: [0, 0.95], grate: [1, 1.0], cardboard: [2, 1.15], cabbage: [3, 0.85], tomato: [4, 0.6],
+  puddle: [5, 1.5], peels: [6, 0.75], slats: [7, 1.1], seeds: [8, 0.55],
+};
+function addDecal(bag, name, x, z, rot, scale = 1) {
+  const [k, size] = DECALS[name];
+  const c = k % 3, r = Math.floor(k / 3), m = 0.006;
+  const g = new THREE.PlaneGeometry(size * scale, size * scale);
+  setUV(g, [c / 3 + m, 1 - (r + 1) / 3 + m, 1 / 3 - 2 * m, 1 / 3 - 2 * m]);
+  g.rotateX(-Math.PI / 2);
+  bag.add(g, null, x, 0.004, z, 0, rot, 0);
+}
+function scatterDecals(bag, theme) {
+  // a manhole or drain in a lane now and then, and market debris near the stalls
+  if (Math.random() < 0.7) addDecal(bag, 'manhole', pick([-2.4, 0, 2.4]) + rnd(-0.3, 0.3), -rnd(3, CHUNK - 3), rnd(0, 6));
+  for (const side of [-1, 1]) if (Math.random() < 0.6) addDecal(bag, 'grate', side * 3.75, -rnd(2, CHUNK - 2), Math.PI / 2);
+  const litter = theme === 'night' ? ['cardboard', 'seeds', 'slats', 'puddle', 'peels', 'cabbage'] : ['cabbage', 'tomato', 'peels', 'cardboard', 'slats', 'seeds', 'puddle'];
+  const n = 5 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < n; i++) {
+    const name = pick(litter);
+    const edge = Math.random() < 0.7;
+    const x = edge ? pick([-1, 1]) * rnd(3.1, 4.0) : rnd(-3.2, 3.2);
+    addDecal(bag, name, x, -rnd(1, CHUNK - 1), rnd(0, 6), rnd(0.85, 1.15));
+  }
 }
 
 function addSign(bag, atlas, idx, x, y, z, side, w, h) {
@@ -429,6 +457,8 @@ export class World {
 
     const facadeTex = buildFacadeTexture(images);
     const pave = new THREE.Texture(images.paving); pave.needsUpdate = true;
+    const decalTex = new THREE.Texture(images.decals); decalTex.needsUpdate = true;
+    decalTex.colorSpace = THREE.SRGBColorSpace; decalTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     pave.colorSpace = THREE.SRGBColorSpace; pave.wrapS = pave.wrapT = THREE.RepeatWrapping; pave.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
     this.mats = {
@@ -438,6 +468,7 @@ export class World {
       bulbs: new THREE.MeshBasicMaterial({ color: '#fff1c2', toneMapped: false }),
       roof: new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.32, side: THREE.DoubleSide, depthWrite: false }),
       ground: new THREE.MeshLambertMaterial({ map: pave }),
+      decal: new THREE.MeshLambertMaterial({ map: decalTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
       glow: new THREE.PointsMaterial({ size: 1.6, map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: '#ffd28a', opacity: 0, sizeAttenuation: true, toneMapped: false }),
     };
 
@@ -507,7 +538,7 @@ export class World {
     const mk = (mat, shadow) => { const m = new THREE.Mesh(undefined, mat); m.receiveShadow = shadow; m.matrixAutoUpdate = false; m.frustumCulled = true; g.add(m); return m; };
     const slot = {
       group: g, startD: 0, variant: null,
-      ground: mk(this.mats.ground, true), vc: mk(this.mats.vc, true), sign: mk(this.mats.sign, false),
+      ground: mk(this.mats.ground, true), decal: mk(this.mats.decal, true), vc: mk(this.mats.vc, true), sign: mk(this.mats.sign, false),
       // vc casts shadows only on high quality (set in setShadows)
       facade: mk(this.mats.facade, false), bulbs: mk(this.mats.bulbs, false), roof: mk(this.mats.roof, false),
       glow: new THREE.Points(EMPTY_GEO, this.mats.glow), vendors: [], props: {},
@@ -523,7 +554,7 @@ export class World {
     const list = this.variants[zone.theme];
     const v = list[Math.floor(Math.random() * list.length)];
     slot.startD = startD; slot.variant = v;
-    for (const k of ['ground', 'vc', 'sign', 'facade', 'bulbs', 'roof']) {
+    for (const k of ['ground', 'decal', 'vc', 'sign', 'facade', 'bulbs', 'roof']) {
       const geo = v[k];
       slot[k].geometry = geo || EMPTY_GEO;
       slot[k].visible = !!geo;

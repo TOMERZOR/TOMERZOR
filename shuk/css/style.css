@@ -165,6 +165,9 @@ img { -webkit-user-drag: none; user-select: none; }
 .mult-badge { font-size: 19px; font-weight: 700; padding: 3px 10px 5px; border-radius: 12px; background: linear-gradient(180deg, #ff6b6b, #d81f33); border: 2px solid #7d0610; direction: ltr; unicode-bidi: isolate; transition: transform .2s; -webkit-text-stroke-color: #7d0610; }
 .mult-badge.x2 { background: linear-gradient(180deg, #ffd27a, #e8891b); border-color: #8a4f12; -webkit-text-stroke-color: #8a4f12; transform: scale(1.15); }
 .hud-dist { font-size: 15px; color: #fff; }
+.fly-coin { position: fixed; width: 34px; height: 34px; pointer-events: none !important; z-index: 3; filter: drop-shadow(0 2px 3px rgba(0,0,0,.35)); will-change: transform; }
+.capsule.bump img { animation: bump .22s ease-out; }
+@keyframes bump { 50% { transform: translateY(-50%) scale(1.25); } }
 .hud-dist b { font-size: 18px; direction: ltr; unicode-bidi: isolate; display: inline-block; }
 .powers { position: absolute; inset-inline-end: calc(10px + var(--safe-l)); top: calc(76px + var(--safe-t)); display: flex; flex-direction: column; gap: 10px; }
 .power { position: relative; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;

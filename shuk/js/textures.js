@@ -92,13 +92,16 @@ export const NEON_SIGNS = [
 ];
 export const PRICE_TAGS = ['₪10', '3 ב־10', '₪5', '₪12', '₪8', 'מבצע', '₪20', '2 ב־15'];
 
+// canvas text direction from the text itself, so English lines keep their punctuation where it belongs
+export const dirOf = text => /[\u0590-\u05FF]/.test(text) ? 'rtl' : 'ltr';
+
 export function signAtlas() {
   const W = 1024, CELL_W = 256, CELL_H = 64, COLS = 4;
   const total = SHOP_SIGNS.length + NEON_SIGNS.length + PRICE_TAGS.length;
   const rows = Math.ceil(total / COLS);
   const H = THREE.MathUtils.ceilPowerOfTwo(rows * CELL_H);
   const [c, g] = canvas(W, H);
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.direction = 'rtl';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
   const uv = [];
   let i = 0;
   const cell = () => { const x = (i % COLS) * CELL_W, y = Math.floor(i / COLS) * CELL_H; i++; return [x, y]; };
@@ -107,12 +110,14 @@ export function signAtlas() {
     const [x, y] = cell();
     g.fillStyle = bg; roundRect(g, x + 3, y + 3, CELL_W - 6, CELL_H - 6, 8); g.fill();
     g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 3; roundRect(g, x + 8, y + 8, CELL_W - 16, CELL_H - 16, 6); g.stroke();
+    g.direction = dirOf(text);
     g.fillStyle = fg; fitText(g, text, CELL_W - 30, 34, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
     rec(x, y);
   }
   for (const [text, col] of NEON_SIGNS) {
     const [x, y] = cell();
     g.fillStyle = '#120a1c'; roundRect(g, x + 2, y + 2, CELL_W - 4, CELL_H - 4, 10); g.fill();
+    g.direction = dirOf(text);
     g.shadowColor = col; g.shadowBlur = 14; g.fillStyle = col; g.strokeStyle = '#fff';
     fitText(g, text, CELL_W - 30, 36, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
     g.shadowBlur = 0; g.lineWidth = 1; g.strokeText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
@@ -122,6 +127,7 @@ export function signAtlas() {
     const [x, y] = cell();
     g.fillStyle = '#fffdf3'; roundRect(g, x + 40, y + 4, CELL_W - 80, CELL_H - 8, 6); g.fill();
     g.strokeStyle = '#222'; g.lineWidth = 2; g.stroke();
+    g.direction = dirOf(text);
     g.fillStyle = '#d0021b'; fitText(g, text, CELL_W - 100, 40, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
     rec(x, y);
   }
@@ -132,7 +138,7 @@ export function signAtlas() {
 // ---- speech bubble sprite texture ----
 export function bubbleTexture(text) {
   const [c, g] = canvas(512, 160);
-  g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.direction = dirOf(text); g.textAlign = 'center'; g.textBaseline = 'middle';
   const size = fitText(g, text, 440, 52, FONT_HEAD);
   const w = Math.min(500, g.measureText(text).width + 60);
   const x = (512 - w) / 2;
@@ -148,7 +154,7 @@ export function bubbleTexture(text) {
 // ---- floating text (score popups) ----
 export function popupTexture(text, color = '#ffd23f') {
   const [c, g] = canvas(512, 128);
-  g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.direction = dirOf(text); g.textAlign = 'center'; g.textBaseline = 'middle';
   const size = fitText(g, text, 480, 76, FONT_HEAD);
   g.font = `700 ${size}px ${FONT_HEAD}`;
   g.lineWidth = 12; g.strokeStyle = '#2b1606'; g.lineJoin = 'round'; g.strokeText(text, 256, 66);
@@ -162,7 +168,7 @@ export function bannerTexture(text, bg = '#d62828', fg = '#fff3b0') {
   g.fillStyle = bg; g.fillRect(0, 0, 512, 192);
   for (let x = -40; x < 552; x += 48) { g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 24, 0); g.lineTo(x - 26, 192); g.lineTo(x - 50, 192); g.fill(); }
   g.fillStyle = '#ffd23f'; g.fillRect(0, 0, 512, 14); g.fillRect(0, 178, 512, 14);
-  g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.direction = dirOf(text); g.textAlign = 'center'; g.textBaseline = 'middle';
   const size = fitText(g, text, 470, 92, FONT_HEAD);
   g.font = `700 ${size}px ${FONT_HEAD}`;
   g.lineWidth = 10; g.strokeStyle = 'rgba(0,0,0,.35)'; g.strokeText(text, 256, 100);

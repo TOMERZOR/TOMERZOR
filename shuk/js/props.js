@@ -23,7 +23,21 @@ function meshFrom(bag, mat, shadow = true) {
 const PRODUCE_COLS = [['#d62828', '#e63946'], ['#f77f00', '#fb8b24'], ['#ffd23f', '#f6e05e'], ['#2d6a4f', '#40916c'], ['#9d0208', '#ae2012'], ['#5a189a', '#3c096c']];
 
 // ---------- low obstacles (jump over) ----------
+// Generated obstacle models, filled in by main.js once loaded. Their fronts face +x with the width along z,
+// so they are turned to face the runner and stretched to the obstacle's collision box.
+export const MODEL_PROPS = {};
+function modelProp(name, w, h, d) {
+  const m = MODEL_PROPS[name];
+  const mesh = new THREE.Mesh(m.geometry, m.material);
+  mesh.rotation.y = -Math.PI / 2;
+  mesh.scale.set(d / m.size.x, h / m.size.y, w / m.size.z);
+  const g = new THREE.Group();
+  g.add(mesh);
+  return g;
+}
+
 export function makeCrates() {
+  if (MODEL_PROPS.crates) return modelProp('crates', 1.95, 0.85, 1.0);
   const b = new Bag();
   const cols = 3, w = 0.62;
   for (let layer = 0; layer < 2; layer++) {
@@ -41,6 +55,7 @@ export function makeCrates() {
 }
 
 export function makeMelons() {
+  if (MODEL_PROPS.melons) return modelProp('melons', 1.75, 1.15, 1.2);
   const b = new Bag();
   b.add(box(1.8, 0.14, 1.15), '#c19a6b', 0, 0.07, 0);
   for (const x of [-0.75, 0, 0.75]) b.add(box(0.12, 0.1, 1.15), '#8a6a45', x, 0.05, 0);

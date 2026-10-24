@@ -171,6 +171,7 @@ export class Game {
         r.score += 5 * mul;
         sfx.coin(r.combo); haptic('coin');
         this.fx.coinBurst(ev.x, ev.y, 0.1);
+        this.flyCoin(ev.x, ev.y);
         break;
       case 'power': {
         const type = ev.power;
@@ -404,6 +405,15 @@ export class Game {
     c.mixer.update(dt * (this.state === 'playing' ? 1.25 : 0.6));
   }
 
+  // a coin icon flies from the pickup to the HUD counter (throttled so magnet streaks stay cheap)
+  flyCoin(x, y) {
+    if (this.time - (this._lastFly || 0) < 0.07) return;
+    this._lastFly = this.time;
+    const v = this._flyV || (this._flyV = new THREE.Vector3());
+    v.set(x, y, 0).project(this.camera);
+    this.ui.flyCoin((v.x + 1) / 2 * innerWidth, (1 - v.y) / 2 * innerHeight);
+  }
+
   // ---------- camera ----------
   updateCamera(dt) {
     const p = this.player;
@@ -421,6 +431,12 @@ export class Game {
     this.fx.shakeOffset(this._shake);
     cam.position.copy(this.camPos).add(this._shake);
     cam.lookAt(this.camLook);
+    // widen the lens with speed and kick it out during a super jump
+    const r = this.run, base = cam.userData.baseFov || cam.fov;
+    let fov = base;
+    if (r && this.state === 'playing') fov += THREE.MathUtils.clamp((r.speed - 14) / 20, 0, 1) * 4 + (p.superJump && !p.grounded ? 5 : 0);
+    const nf = cam.fov + (fov - cam.fov) * (1 - Math.exp(-dt * 4));
+    if (Math.abs(nf - cam.fov) > 0.01) { cam.fov = nf; cam.updateProjectionMatrix(); }
   }
 
   // after a crash: the street stays put while menus are shown over it
@@ -443,6 +459,8 @@ export class Game {
     const dist = portrait ? 4.6 : 3.9;
     cam.position.set(p.x + Math.sin(a) * dist, 1.45, Math.cos(a) * dist);
     cam.lookAt(p.x, portrait ? 1.15 : 1.05, 0);
+    const base = cam.userData.baseFov;
+    if (base && cam.fov !== base) { cam.fov = base; cam.updateProjectionMatrix(); }
     if (this.chaser) this.chaser.obj.visible = false;
   }
 }

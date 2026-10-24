@@ -14,8 +14,8 @@ const BEHIND = 16;
 const COIN_CAP = 420;
 
 const PROPS = {
-  crates:   { kind: 'low', w: 2.0, front: 0.42, back: 0.42, h: 0.88, make: P.makeCrates },
-  melons:   { kind: 'low', w: 1.85, front: 0.6, back: 0.6, h: 0.95, make: P.makeMelons },
+  crates:   { kind: 'low', w: 1.95, front: 0.5, back: 0.5, h: 0.85, make: P.makeCrates },
+  melons:   { kind: 'low', w: 1.75, front: 0.6, back: 0.6, h: 1.15, make: P.makeMelons },
   sacks:    { kind: 'low', w: 1.9, front: 0.36, back: 0.36, h: 0.85, make: P.makeSacks },
   barrier:  { kind: 'low', w: 1.95, front: 0.2, back: 0.2, h: 0.97, make: P.makeBarrier },
   tefillin: { kind: 'low', w: 1.55, front: 0.4, back: 0.4, h: 0.98, make: P.makeTefillinTable },

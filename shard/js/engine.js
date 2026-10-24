@@ -91,6 +91,9 @@ export function createSim(planck, level, opts = {}) {
   const { World, Vec2, Box, Circle, Polygon, Edge, RopeJoint } = planck;
   const world = new World({ gravity: Vec2(0, -10) });
   const visual = !!opts.visual;          // browser: spawn shards
+  // Shards live in a world of their own, with a copy of everything fixed. In the game's world their bodies would
+  // reorder its contacts, and the game would drift from the solver (and from a replay of the same shots).
+  const shardWorld = visual ? new World({ gravity: Vec2(0, -10) }) : null;
   const rand = opts.random || Math.random;
   const startAwake = !!opts.awake;    // solver stability test wakes everything
 
@@ -141,6 +144,13 @@ export function createSim(planck, level, opts = {}) {
   const byIndex = [];
   for (const o of level.objects) byIndex.push(build(o));
   for (const o of level.objects) if (o.t === 'rope') buildRope(o);
+  const twins = []; // [mover, its copy in the shard world]
+  if (shardWorld) for (let b = world.getBodyList(); b; b = b.getNext()) {
+    if (b.isDynamic() || !b.getFixtureList()) continue;
+    const c = shardWorld.createBody({ type: b.getType(), position: b.getPosition(), angle: b.getAngle() });
+    for (let f = b.getFixtureList(); f; f = f.getNext()) c.createFixture(f.getShape(), { friction: f.getFriction(), restitution: f.getRestitution() });
+    if (b.isKinematic()) twins.push([b, c]);
+  }
 
   function build(o) {
     const pos = Vec2(o.x, o.y);
@@ -415,10 +425,10 @@ export function createSim(planck, level, opts = {}) {
       const cc = centroid(p);
       const lp = p.map(([x, y]) => [x - cc[0], y - cc[1]]);
       const wx = bp.x + cc[0] * ca - cc[1] * sa, wy = bp.y + cc[0] * sa + cc[1] * ca;
-      const sb = world.createBody({ type: 'dynamic', position: Vec2(wx, wy), angle: ang, angularDamping: 0.3, linearDamping: 0.05 });
+      const sb = shardWorld.createBody({ type: 'dynamic', position: Vec2(wx, wy), angle: ang, angularDamping: 0.3, linearDamping: 0.05 });
       try {
         sb.createFixture(Polygon(lp.map(([x, y]) => Vec2(x, y))), { density: 1, friction: 0.5, restitution: 0.25, filterCategoryBits: CAT_SHARD, filterMaskBits: MASK.shard });
-      } catch (err) { world.destroyBody(sb); continue; }
+      } catch (err) { shardWorld.destroyBody(sb); continue; }
       const dx = wx - info.x, dy = wy - info.y, dl = Math.hypot(dx, dy) || 1;
       const burst = 1.2 + rand() * 2.2 + Math.min(info.speed, 14) * 0.12;
       const carry = info.by === 'ball' ? 0.28 : 0.1;
@@ -430,7 +440,7 @@ export function createSim(planck, level, opts = {}) {
       res.push(sh);
     }
     // global cap
-    while (shards.length > 160) { const s = shards.shift(); if (s.alive) { s.alive = false; world.destroyBody(s.body); } }
+    while (shards.length > 160) { const s = shards.shift(); if (s.alive) { s.alive = false; shardWorld.destroyBody(s.body); } }
     return res;
   }
 
@@ -468,7 +478,10 @@ export function createSim(planck, level, opts = {}) {
         b.setLinearVelocity(Vec2((tx - p.x) / dt, (ty - p.y) / dt));
       }
     }
+    // the shard world's copies of the movers ride along: same place, same speed
+    for (const [b, c] of twins) { c.setTransform(b.getPosition(), b.getAngle()); c.setLinearVelocity(b.getLinearVelocity()); c.setAngularVelocity(b.getAngularVelocity()); }
     world.step(dt, 8, 3);
+    if (shardWorld) shardWorld.step(dt, 4, 2);
     // resolve breaks and bombs
     if (pendingBreak.size) {
       for (const [e, info] of pendingBreak) breakGlass(e, info);
@@ -522,7 +535,7 @@ export function createSim(planck, level, opts = {}) {
       const s = shards[i];
       s.age += dt;
       if (s.age > s.life || !s.alive) {
-        if (s.alive) { s.alive = false; world.destroyBody(s.body); }
+        if (s.alive) { s.alive = false; shardWorld.destroyBody(s.body); }
         shards.splice(i, 1);
       }
     }

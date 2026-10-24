@@ -20,6 +20,8 @@ const mute = (m) => new Proxy(m, {
 const sfx = mute(sfxReal), hap = mute(hapReal);
 const calm = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const GOLD = [255, 192, 72]; // the key glass
+// out of balls: "Out of balls" comes this many steps after the last shot, or after the last glass it changed
+const LOSE_AFTER_SHOT = 60, LOSE_AFTER_GLASS = 45;
 
 // the glitter a ball adds to every break: rainbow for Prism, its own light tone for other bought balls
 const RAINBOW = ['#FF7A7A', '#FFD36E', '#7CF29C', '#6EC8FF', '#B48CFF'];
@@ -40,11 +42,14 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
   let lastHitSound = 0, lastHap = 0, lastUnlock = -1;
   let fired = 0, loads = 0;
   let stopT = 0, stopBudget = 0; // hit-stop: a brief freeze that gives impacts weight
+  let log = [], ahead = null, lastShot = -1; // the session's shots, for the replay that runs ahead
 
   function load(lv, opts = {}) {
     level = lv;
     quiet = !!opts.quiet;
     sim = createSim(planck, lv, { visual: true });
+    log = []; ahead = null; lastShot = -1;
+    planAhead();
     sim.__pal = opts.palette;
     const intro = renderer.setSim(sim);
     // a soft run of glass notes as the level assembles
@@ -120,6 +125,8 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
   function shoot() {
     const e = sim.fire(angle);
     if (!e) return;
+    log.push([sim.st.step, angle]); lastShot = sim.st.step;
+    planAhead();
     renderer.finishIntro();
     fired++;
     hintAngle = null;
@@ -132,7 +139,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     for (const ev of events) {
       switch (ev.type) {
         case 'fire': {
-          sfx.fire(); hap.light();
+          sfx.fire(); hap.medium();
           stopBudget = 0.24;
           const m = 1.05;
           renderer.muzzle(sim.launcherX + Math.cos(ev.angle) * m, 0.42 + Math.sin(ev.angle) * m, ev.angle);
@@ -147,15 +154,15 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           renderer.shatter(ev.x, ev.y, rgb, power, ev.last, skinGlitter(getSkin()));
           renderer.combo(ev.combo, ev.cx, ev.cy);
           renderer.punch(ev.cx, ev.cy, Math.min(1, 0.35 + power * 0.3 + ev.combo * 0.08));
-          // touch escalates with the chain, without buzzing on every piece of a collapse
+          // touch escalates with the chain, without buzzing on every piece of a collapse; the last piece always lands
           const now = performance.now();
-          if (now - lastHap > 55) { lastHap = now; if (ev.combo >= 6) hap.heavy(); else if (ev.combo >= 3 || power > 0.6) hap.medium(); else hap.light(); }
+          if (ev.last || now - lastHap > 55) { lastHap = now; hap.crunch(ev.last || ev.combo >= 6 ? 'HEAVY' : ev.combo >= 3 || power > 0.6 ? 'MEDIUM' : 'LIGHT', ev.last); }
           if (ev.combo >= 3) { shake = Math.max(shake, 0.04 + Math.min(0.06, ev.combo * 0.008)); shakeT = 0.16; }
           if (!ev.last && (ev.combo >= 3 || power > 0.75)) hitStop(0.03 + Math.min(0.04, ev.combo * 0.006));
           onBreak?.(ev);
           if (ev.last) {
             slowT = 1.0; timeScale = 0.2; flash = 0.22;
-            hap.heavy(); sfx.slowmo();
+            sfx.slowmo();
             renderer.focus(ev.cx, ev.cy, 1.06, 1.05);
             renderer.ring(ev.cx, ev.cy, 3.2, sim.__pal?.accent || '#fff', 0.9, 0.12);
             renderer.sparkle(ev.cx, ev.cy, 14);
@@ -203,6 +210,8 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
             if (ev.speed > 6) renderer.sparks(ev.x, ev.y, 4 + Math.min(4, (ev.speed - 6) | 0), 2.5 + ev.speed * 0.15);
           }
           if (ev.a === 'pad' || ev.b === 'pad') { renderer.ring(ev.x, ev.y, 0.8, sim.__pal?.accent || '#fff', 0.3, 0.08); renderer.padHit(ev.x, ev.y); hap.light(); }
+          // the steel ball's hard knocks land in the hand too
+          else if (ev.speed > 8 && (ev.a === 'ball' || ev.b === 'ball')) hap.light();
           break;
         }
         case 'ballGone':
@@ -215,15 +224,39 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
           if (loseShown) { ended = false; loseShown = false; }
           break;
         case 'lose':
-          if (quiet || loseShown) break;
-          loseShown = true; ended = true;
-          {
-            // the lose sheet belongs to this session only, and only if nothing won in the meantime
-            const s = sim;
-            setTimeout(() => { if (sim !== s || s.st.won || paused) return; sfx.lose(); hap.warning(); onLose?.(); }, 250);
-          }
+          lose();
           break;
       }
+    }
+  }
+
+  function lose() {
+    if (quiet || loseShown) return;
+    loseShown = true; ended = true;
+    // the lose sheet belongs to this session only, and only if nothing won in the meantime
+    const s = sim;
+    setTimeout(() => { if (sim !== s || s.st.won || paused) return; sfx.lose(); hap.warning(); onLose?.(); }, 250);
+  }
+
+  // ---------- the last ball, played ahead ----------
+  // The game steps its physics in fixed steps and the shards keep to a world of their own, so a second sim fed
+  // the logged shots replays a session exactly, without shards to pay for. It starts when one ball is left and
+  // follows the game; after the last shot it runs on to the end, so the game knows when no glass can change any
+  // more and needn't wait for the ball to stop bouncing.
+  function planAhead() {
+    if (quiet || ahead || sim.st.balls > 1) return;
+    ahead = { sim: createSim(planck, level), i: 0, last: -1, won: false, done: false };
+  }
+  function runAhead(ms) {
+    const a = ahead;
+    if (a.done) return;
+    const r = a.sim, t0 = performance.now();
+    const free = sim.st.balls <= 0; // no shot can come any more (a continue starts a new replay)
+    while (free || r.st.step < sim.st.step) {
+      while (a.i < log.length && log[a.i][0] === r.st.step) { const s = log[a.i++][1]; if (s == null) r.addBall(); else r.fire(s); }
+      for (const ev of r.step()) if (ev.type === 'break' || ev.type === 'crack' || ev.type === 'unlock') a.last = r.st.step;
+      if (r.st.won || r.st.lost || (free && r.st.step - lastShot > 1800)) { a.won = r.st.won; a.done = true; a.sim = null; return; }
+      if (performance.now() - t0 > ms) return;
     }
   }
 
@@ -244,6 +277,12 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
         acc -= DT; n++;
       }
       if (n === 4) acc = 0;
+      if (ahead) {
+        runAhead(2.5);
+        // out of balls and nothing left to break: the lose comes now, not when the ball stops bouncing
+        if (ahead.done && !ahead.won && sim.st.balls <= 0 && !loseShown && !sim.st.won
+          && sim.st.step >= Math.max(ahead.last + LOSE_AFTER_GLASS, lastShot + LOSE_AFTER_SHOT)) lose();
+      }
       if (winTimer > 0) {
         winTimer -= dtReal;
         if (winTimer <= 0 && !ended && !quiet) { ended = true; sfx.win(); hap.success(); onWin?.(result()); }
@@ -311,7 +350,7 @@ export function createGame({ canvas, renderer, getSkin, onWin, onLose, onFirstSh
     pause() { paused = true; aiming = false; pointerId = null; },
     resume() { paused = false; },
     get paused() { return paused; },
-    addBall() { sim.addBall(); ended = false; loseShown = false; },
+    addBall() { sim.addBall(); log.push([sim.st.step, null]); ahead = null; planAhead(); ended = false; loseShown = false; },
     showHint(a) { hintAngle = a; angle = a; aimDirty = true; },
     // capture tooling: show the aim line without a finger, then fire
     debugAim(a) { if (a == null) { aiming = false; return; } aiming = true; angle = a; aimDirty = true; },

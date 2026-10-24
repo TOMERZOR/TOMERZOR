@@ -9,11 +9,12 @@ Run locally: `python3 -m http.server 8080` in this folder, then open http://loca
 ## Code map
 | File | What it does |
 |---|---|
-| `js/engine.js` | Physics world built from level JSON: breakable glass (pierce, shards), frosted glass (cracks on the first hit, breaks on the second; the ball bounces off it), locked glass that only breaks once its gold key glass has, stone, wood, bounce pads, bombs, ropes, moving platforms; win and lose detection. Shared with the Node solver, so it takes planck as a parameter. |
-| `js/game.js` | One level session: slingshot input, fixed 60 Hz stepping with interpolation, slow motion, screen shake, sound and haptic events. |
+| `js/engine.js` | Physics world built from level JSON: breakable glass (pierce, shards), frosted glass (cracks on the first hit, breaks on the second; the ball bounces off it), locked glass that only breaks once its gold key glass has, stone, wood, bounce pads, bombs, ropes, moving platforms; win and lose detection. Shards fly in a physics world of their own, so the game's physics matches the solver's step for step. Shared with the Node solver, so it takes planck as a parameter. |
+| `js/game.js` | One level session: slingshot input, fixed 60 Hz stepping with interpolation, slow motion, screen shake, sound and haptic events. With one ball left, a replay of the session follows the game; after the last shot it runs ahead, so "Out of balls" comes as soon as no glass can change any more instead of when the ball stops bouncing. |
 | `js/render.js` | Canvas renderer: cached static layer, glass with specular streaks (frosted glass milky with an inner wall and its crack, padlocks, the gold key), shards, particles, aim preview (it marks locked glass like a wall), the cannon. |
 | `js/main.js` | Screens and flows: home (with a live demo), levels, HUD, win/lose/pause sheets, hints, continues, a coach line the first time each new kind of glass appears, daily puzzle and streak, ball shop, store, settings, reminders. |
 | `js/audio.js` | Recorded glass, explosion and cannon sounds (assets/sfx) layered with synthesized bell tinkles, the crack of frosted glass, the clunk of a lock and the chime of locks opening; a generative ambient pad. Falls back to pure synthesis. |
+| `js/haptics.js` | Capacitor impacts in the app, `navigator.vibrate` on Android web. An iPhone web page can't vibrate: every button there carries an invisible switch, since a tap on a switch is the one touch Safari lets a page feel. |
 | `js/monetization.js` | AdMob (rewarded and interstitial) and RevenueCat purchases behind one interface. Interstitial pacing: from level 12, every 3 clears, at least 150 s apart. |
 | `js/save.js` | Versioned localStorage save with a backup copy. |
 | `js/levels.js` | **Generated.** 120 campaign levels (made harder by `tools/harden-levels.mjs`) and 100 daily levels, each with a solver proof. |
@@ -36,6 +37,8 @@ node playtest-bot.mjs 16 --look 3                                # how often a s
 - `gallery.html`: every level at a glance.
 - `scenarios/proofs.mjs`: replays each level's proof in the browser.
 - `scenarios/newglass.mjs`: frosted glass cracking and breaking, and locks opening when the gold key breaks, on a phone.
+- `scenarios/losewait.mjs`: how soon "Out of balls" follows the last shot, and what the replay costs (`THROTTLE=4` for a phone). `../lose-wait.mjs` measures the same over every level in Node.
+- `scenarios/haptics.mjs`: what a level sends to the vibration motor on Android, and with `IOS=1` that every button carries its switch and a tap still acts once.
 - `trailer.mjs` + `mix.py`: frame-perfect 1080×1920 trailer with a soundtrack built from the game's sounds.
 - `storeshots.mjs`: App Store screenshots from real game moments.
 - `icon.html`: the app icon, drawn in code.

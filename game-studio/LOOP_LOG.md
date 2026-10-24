@@ -316,3 +316,28 @@ Verdict: no crashes, no physics changes, no iOS 15 problems. Confirmed sound: th
 - **Why:** to play any level, the new hard ones included, without clearing everything before it.
 - **What:** `?dev` on the URL, or the page `tools/build-artifact.mjs <folder> --dev` writes (a published page's address can't carry `?dev`), opens every level and world gate. That build opens on the home screen instead of level 1, and a label under the tagline says so; the home demo now fits below the whole logo block, so the label never covers it. The normal game is unchanged.
 - **Verified:** on a phone, the dev page opens on home with every world tab, level and gate open, starts level 120 and level 56 (with its lock coach line) from the map, and fits the label on 375×667, 390×844 and 430×932. The normal page still starts in level 1, keeps 23 of Dawn's 24 levels and four worlds locked, and answers a locked level with "Clear level 1 first". No console errors there or in basic, firstrun, map and flow.
+
+## Round 33: no wait after the last ball, and haptics that land
+- **Why:** after the last ball, "Out of balls" took too long to come, and the game should feel better in the hand, in the web page too.
+- **The wait:** the engine calls a loss once the ball has stopped and everything is still, and the ball bounced around the closed room for 4.6 s on average (up to 9 s) after it could no longer change anything. Now, with one ball left, a replay of the session follows the game. After the last shot it runs ahead to the end, a few hundred steps per frame within 2.5 ms. When it shows that no glass will break, crack or unlock any more, "Out of balls" comes 1 s after the shot, or 0.75 s after the last glass that changed, while the ball may still be rolling.
+- **Exact replay:** the replay is exact because the game steps its physics in fixed steps, and because shards now live in a physics world of their own with copies of the walls, shelves and movers. In the game's world, shards had reordered its contacts, so 3% of plays broke different glass than a run without shards. The game's physics now matches the solver's step for step: 480 of 480 plays are identical to the last decimal, and the replay costs 18 µs a step (88 µs at a phone's speed) because it has no shards.
+- **Result:** over every level (592 losses with misses and near misses), the last shot to "Out of balls" went from 5.1 s to 1.0 s at the median, from 7.5 s to 2.5 s at p90, and from 13.2 s to 7.1 s at the worst, where glass keeps breaking that long.
+- **Haptics:**
+  - The shot is a medium kick, and a hard knock of the ball against a wall or a shelf is a light thud.
+  - Each break is a crunch: the hit, then a lighter tick 50 ms later, dropped if another touch comes first.
+  - The last piece always lands heavy. Before, its heavy pulse fell inside the 35 ms rate limit right after the break's own pulse.
+  - The last star on the win sheet is firmer.
+  - Android web pulses are longer (10, 18 and 30 ms), so slow motors feel them.
+- **iPhone web:** a web page can't vibrate on an iPhone, and since iOS 26.5 WebKit no longer lets a script tick a switch either: only a finger's own tap on a switch's label does. So on iPhone web every button carries an invisible label holding a switch. The tap lands on the label and reaches the button once; the switch it passes the tap to ticks. The settings toggles became switches. Shots and breaks can't vibrate in a web page on an iPhone; in the app they do.
+- **Verified:**
+  - Proofs replay 120/120 and dailies 100/100 in the browser; validate-levels passes; shards never fall through anything (4,568 made over every level's proof).
+  - The `losewait` scenario shows "Out of balls" 1.26 s after a missed last shot (1.85 s where glass changed late), at full speed and at 4× CPU throttle, with no long frames from the replay.
+  - The `haptics` scenario on Android shows:
+    - the shot's 18 ms kick;
+    - break crunches;
+    - the heavy last piece and the success pattern;
+    - pulses never closer than 52 ms;
+    - nothing at all with Haptics off.
+  - With `IOS=1`, every button (16 at start, 52 across screens) carries its switch, and each tap acts exactly once on home, map, world tabs, level gems and the pause sheet. Haptics off disables every switch. Every button's position is identical with and without the switches on five screens.
+  - No console errors in basic, level1, firstrun, flow, hint, worlds, guide, audio, economy, calm, map, newglass, crystal, homenav and screens.
+  - The iPhone tick itself needs a real iPhone; the game's physics costs 68 µs a step against 72 before.

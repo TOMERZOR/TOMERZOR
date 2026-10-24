@@ -88,12 +88,17 @@ The solver part: that simulates the real physics. A level ships only when it has
   - A win (every level) is quick: stars one by one, coins counting up, confetti on 3 stars.
   - A new world (rare) is expressive: a title card on frosted light.
   - Hit-stop is 30–70 ms per break, budgeted at 0.24 s per shot. The camera kicks toward each break and pushes in on the last piece during 0.2× slow motion.
+  - A loss (frequent) never waits for the last ball to stop bouncing. A replay of the shot runs ahead, so "Out of balls" comes 1 s after the last shot, or 0.75 s after the last glass it broke or cracked.
   - Reduce Motion turns off the camera, shake, hit-stop and decorative loops.
 - **Sound:**
   - Recorded glass under randomised synthesised bell partials.
   - Chain notes are FM crystal bells climbing a pentatonic scale, the same scale as the level-intro notes.
   - The last piece slows time with a falling sigh while the music ducks. The win ends on a bell and a shimmer.
-- **Haptics:** light on fire, then light, medium and heavy as a chain grows (rate-limited); heavy on bombs and the final shatter; success on a win, warning on a loss.
+- **Haptics:**
+  - A medium kick on fire, and a light thud when the ball knocks hard into a wall or a shelf.
+  - Each break is a crunch: the hit, then a lighter tick as the pieces fly. It grows from light to heavy as a chain grows (rate-limited), and the last piece always lands heavy.
+  - Heavy on bombs; success on a win, warning on a loss; a tick per star on the win sheet, the last one firmer.
+  - On the web, Android vibrates the same moments. An iPhone web page can't vibrate; the one touch Safari allows is the tick of a switch, so there every button tap ticks.
 
 ## The level map
 Each world is a place, and its 24 levels are glass gems on a trail that climbs it, from the world's sign at the bottom to a glass gate at the top (in the next world's colours, lit once it's open). The worlds stay as tabs above the map.

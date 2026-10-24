@@ -116,6 +116,10 @@ svg { width: 24px; height: 24px; flex: none; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 24px; border-radius: 26px; font-weight: 800; font-size: 18px; letter-spacing: .01em; transition: transform .18s var(--spring), filter .2s; }
 .btn:active { transform: scale(.96); }
 button:focus { outline: none; }
+/* iPhone web: the invisible label and switch that let a tap on a button tick (haptics.js) */
+.hx { position: absolute; inset: 0; border-radius: inherit; -webkit-tap-highlight-color: transparent; }
+.hx input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+button:disabled > .hx { display: none; }
 button:focus-visible, a:focus-visible, .toggle:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .btn.primary { background: var(--ink); color: var(--sky0); box-shadow: 0 10px 24px -10px var(--ink-a70); }
 .btn.accent { background: var(--accent); color: var(--on-accent); box-shadow: 0 10px 24px -10px var(--accent-a80); }

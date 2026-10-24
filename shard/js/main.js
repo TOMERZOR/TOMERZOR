@@ -446,7 +446,7 @@ function onWin(res) {
   }
   // star + coin animation
   const svgs = document.querySelectorAll('#sheet .stars svg');
-  svgs.forEach((s, i) => setTimeout(() => { s.classList.add('show'); if (i < stars) { sfx.star(i); hap.light(); } }, 260 + i * 220));
+  svgs.forEach((s, i) => setTimeout(() => { s.classList.add('show'); if (i < stars) { sfx.star(i); if (i === stars - 1) hap.medium(); else hap.light(); } }, 260 + i * 220));
   setTimeout(() => countUp($('#reward-n'), 0, coins), 900);
 }
 
@@ -938,7 +938,7 @@ function loop(t) {
 window.Capacitor?.Plugins?.StatusBar?.hide?.()?.catch?.(() => {});
 // start one tier above the last one measured: a passing hiccup never degrades a device for good
 setTier(Math.max(0, (d().perfTier | 0) - 1));
-sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); hap.setHaptics(d().settings.haptics);
+sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); hap.setHaptics(d().settings.haptics); hap.armTapTicks();
 document.addEventListener('pointerdown', () => { sfx.initAudio(); sfx.setSfx(d().settings.sfx); sfx.setMusic(d().settings.music); }, { once: true, capture: true });
 initMonetization({ fakeAd, fakePurchase, toast });
 scheduleReminders();

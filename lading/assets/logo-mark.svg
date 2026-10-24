@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Lading</title>
+  <style>
+    .ink { fill: #16181D; }
+    .eta { fill: #2340D8; }
+    @media (prefers-color-scheme: dark) { .ink { fill: #E8EAEE; } .eta { fill: #8EA1FF; } }
+  </style>
+  <!-- The L is a drift line: the upright is the promised date, the baseline is time,
+       and the block is where the order really is. The gap is the drift. -->
+  <path class="ink" d="M5 4h4v19h12v4H5z"/>
+  <rect class="eta" x="23" y="21" width="8" height="8"/>
+</svg>

@@ -50,6 +50,27 @@ Scale: 12, 13, 15, 18, 24, 40, 64 px. Interface text is 15 px. Uppercase labels 
 - **Source underline:** extracted values link to their source span in the email. Hover, focus or tap to highlight it.
 - **Room readiness line:** each room states when everything should be on site and how that compares with the install date, in one sentence.
 
+## Logo
+
+The L is the drift line. The mark is the app's own timeline drawn as the first letter of its name:
+
+- **The upright** is the promised date, the tick every order starts from.
+- **The baseline** is time moving forward.
+- **The block** is where the order really is. It is the only carbon-blue part, because it is the thing Lading keeps true.
+- **The gap** between the baseline and the block is the drift. Small, but always visible.
+
+Built on a 32-unit grid: upright 4 x 23, baseline 16 x 4, block 8 x 8, gap 2. Clear space equals the block on every side. Smallest size 16 px. The mark never mirrors, not even in Hebrew. Files: `assets/logo-mark.svg`, `assets/logo.svg`, and the full sheet in `logo.html`.
+
+## Hebrew and right-to-left
+
+- Language is a setting (gear icon in the app header, a button on the landing page). The choice is saved and shared by all pages.
+- Hebrew sets `dir="rtl"` on the page. Layout uses logical properties only (`inset-inline-start`, `padding-inline`, `border-inline-start`), so everything mirrors, including the drift line: in Hebrew, time runs right to left.
+- Hang tags flip so the pointed end and hole stay on the reading start side. Arrows flip; the logo does not.
+- Hebrew text uses IBM Plex Sans Hebrew. Codes that stay Latin (PO numbers, email addresses, file names) are wrapped in `dir="ltr"` and stay in Plex Mono. Hebrew dates use the text face with tabular figures, because Plex Mono has no Hebrew letters.
+- No letter-spacing on Hebrew, and no uppercase labels, since Hebrew has no case.
+- Hebrew copy avoids gendered commands: buttons are nouns ("החלה על ההזמנה", "העתקת הטקסט"), instructions use "אפשר" or "יש ל".
+- Sample data is localized, not translated word for word: Israeli studio and clients, Hebrew vendor emails, metric sizes, shekels, DD/MM dates.
+
 ## Motion
 
 - 160 ms for hover and focus, 240 ms for state changes, easing `cubic-bezier(.2,.7,.2,1)`.

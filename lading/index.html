@@ -1,17 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lading for Interior Designers</title>
 <meta name="description" content="Lading reads vendor acknowledgments, backorder notices and freight updates, updates each order, and drafts the note to your client.">
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2316181D' d='M5 4h4v19h12v4H5z'/%3E%3Crect fill='%232340D8' x='23' y='21' width='8' height='8'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700&family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<script>
+  (function () {
+    try {
+      var l = localStorage.getItem("lading-lang"), t = localStorage.getItem("lading-theme");
+      if (l === "he") { document.documentElement.lang = "he"; document.documentElement.dir = "rtl"; }
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
 <style>
-/* Layout: an asymmetric split hero (claim left, the product working right), then a single column
-   of plain sections, each built from a different form: a statement, a verb ladder, a live demo, Q&A, a form. */
+/* Layout: an asymmetric split hero (claim at the start edge, the product working beside it), then a single column
+   of plain sections, each built from a different form: a statement, a verb ladder, a live demo, Q&A, a form.
+   Logical properties throughout, so the Hebrew version mirrors cleanly. */
 :root {
   --paper: #F3F4F6;
   --sheet: #FCFCFD;
@@ -27,13 +38,15 @@
   --risk: #BF2630;
   --ok: #1D7549;
 
-  --f-stencil: "Big Shoulders Stencil Display", "Oswald", "Arial Narrow", Impact, sans-serif;
-  --f-text: "Schibsted Grotesk", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --f-stencil: "Big Shoulders Stencil Display", "IBM Plex Sans Hebrew", "Arial Narrow", Impact, sans-serif;
+  --f-text: "Schibsted Grotesk", "IBM Plex Sans Hebrew", "Helvetica Neue", Arial, system-ui, sans-serif;
   --f-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --track: .06em;
   --r: 3px;
   --ease: cubic-bezier(.2, .7, .2, 1);
   color-scheme: light;
 }
+:root[lang="he"] { --f-text: "IBM Plex Sans Hebrew", "Schibsted Grotesk", Arial, system-ui, sans-serif; --track: 0; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3; --rule: #2A2E36; --rule-2: #3A3F49;
@@ -54,16 +67,24 @@ a { color: inherit; }
 h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 600; }
 p { margin: 0; }
 .mono { font-family: var(--f-data); font-size: 13px; font-variant-numeric: tabular-nums; }
-.muted { color: var(--ink-2); }
 .wrap { max-width: 1200px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Logo */
+.logo .ink { fill: var(--ink); }
+.logo .eta { fill: var(--carbon); }
+.mark { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+.mark .word { font: 700 30px/1 "Big Shoulders Stencil Display", "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: .02em; }
 
 /* Header */
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--rule); }
 .top .wrap { display: flex; align-items: center; gap: 28px; min-height: 64px; }
-.mark { font: 700 30px/1 var(--f-stencil); text-transform: uppercase; letter-spacing: .02em; text-decoration: none; }
-.top nav { display: flex; gap: 22px; margin-left: auto; align-items: center; font-weight: 500; }
+.top nav { display: flex; gap: 22px; margin-inline-start: auto; align-items: center; font-weight: 500; }
 .top nav a:not(.btn) { text-decoration: none; color: var(--ink-2); }
 .top nav a:not(.btn):hover { color: var(--ink); }
+.langbtn { background: none; border: 1px solid var(--rule-2); border-radius: var(--r); color: var(--ink); min-height: 38px; padding: 0 12px; font: 500 15px/1 var(--f-text); cursor: pointer; }
+.langbtn:hover { border-color: var(--ink-2); }
+.langbtn[lang="he"] { font-family: "IBM Plex Sans Hebrew", sans-serif; }
+.langbtn[lang="en"] { font-family: "Schibsted Grotesk", sans-serif; }
 
 .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: var(--r); border: 1px solid var(--rule-2); background: var(--sheet); color: var(--ink); font: 500 16px/1 var(--f-text); text-decoration: none; white-space: nowrap; cursor: pointer; transition: border-color .16s var(--ease), transform .16s var(--ease), filter .16s var(--ease); }
 .btn:hover { border-color: var(--ink-2); }
@@ -75,12 +96,13 @@ p { margin: 0; }
 /* Hero */
 .hero { padding-block: 72px 88px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr); gap: 56px; align-items: center; }
 .hero h1 { font-size: clamp(38px, 5.2vw, 62px); line-height: 1.03; letter-spacing: -0.03em; max-width: 13ch; }
+:root[lang="he"] .hero h1 { letter-spacing: -0.01em; line-height: 1.1; }
 .hero h1 em { font-style: normal; text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: .07em; text-underline-offset: .12em; }
 .hero > div > p { font-size: 19px; color: var(--ink-2); max-width: 40ch; margin-top: 22px; }
 .hero .ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; }
 
 /* The live copy: email in, order out, client note drafted */
-.copy { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: 0 1px 2px rgb(22 24 29 / .05), 0 24px 48px -24px rgb(22 24 29 / .22); overflow: hidden; }
+.copy { margin: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); box-shadow: 0 1px 2px rgb(22 24 29 / .05), 0 24px 48px -24px rgb(22 24 29 / .22); overflow: hidden; }
 .copy section { padding: 18px 22px; }
 .copy section + section { border-top: 1px dashed var(--rule-2); }
 .copy .lbl { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--ink-2); margin-bottom: 10px; }
@@ -93,20 +115,22 @@ p { margin: 0; }
 .orow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; align-items: baseline; }
 .orow b { font-weight: 600; font-size: 17px; }
 .orow small { grid-column: 1; color: var(--ink-2); font-size: 13px; }
-.fig { grid-row: 1 / span 2; grid-column: 2; font: 700 44px/0.9 var(--f-stencil); color: var(--late); letter-spacing: .01em; align-self: center; }
+.fig { grid-row: 1 / span 2; grid-column: 2; font: 700 44px/0.9 var(--f-stencil); color: var(--late); letter-spacing: .01em; align-self: center; white-space: nowrap; }
+.fig .u { font: 500 16px/1 var(--f-text); margin-inline-start: 2px; }
 .track { position: relative; height: 26px; margin: 16px 0 6px; }
-.track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--rule); }
-.track .tick { position: absolute; top: 6px; bottom: 6px; border-left: 1px solid var(--rule); }
-.track .install { position: absolute; top: -4px; bottom: -4px; border-left: 1.5px dashed var(--carbon); }
-.track .promise { position: absolute; top: 4px; height: 18px; width: 2px; margin-left: -1px; background: var(--ink-2); }
+.track::before { content: ""; position: absolute; inset-inline: 0; top: 50%; border-top: 1px solid var(--rule); }
+.track .tick { position: absolute; top: 6px; bottom: 6px; border-inline-start: 1px solid var(--rule); }
+.track .install { position: absolute; top: -4px; bottom: -4px; border-inline-start: 1.5px dashed var(--carbon); }
+.track .promise { position: absolute; top: 4px; height: 18px; width: 2px; margin-inline-start: -1px; background: var(--ink-2); }
 .track .gap { position: absolute; top: 7px; height: 12px; background: repeating-linear-gradient(-45deg, var(--late) 0 1.5px, transparent 1.5px 4px); box-shadow: inset 0 1px 0 var(--late), inset 0 -1px 0 var(--late); transform-origin: left center; }
-.track .eta { position: absolute; top: 6px; width: 14px; height: 14px; margin-left: -7px; background: var(--ink); border-radius: 1px; }
+[dir="rtl"] .track .gap { transform-origin: right center; }
+.track .eta { position: absolute; top: 6px; width: 14px; height: 14px; margin-inline-start: -7px; background: var(--ink); border-radius: 1px; }
 .play .track .eta { animation: slide 1s var(--ease) 1.4s both; }
 .play .track .gap { animation: grow 1s var(--ease) 1.4s both; }
-@keyframes slide { from { left: var(--from); } }
+@keyframes slide { from { inset-inline-start: var(--from); } }
 @keyframes grow { from { transform: scaleX(0); } }
-.axis { position: relative; height: 12px; font: 400 11px/1 var(--f-data); color: var(--ink-2); }
-.axis span { position: absolute; top: 0; padding-left: 4px; border-left: 1px solid var(--rule); }
+.axis { position: relative; height: 12px; font: 400 11px/1 var(--f-text); color: var(--ink-2); }
+.axis span { position: absolute; top: 0; padding-inline-start: 4px; border-inline-start: 1px solid var(--rule); }
 .ready { margin-top: 12px; font-size: 14px; color: var(--risk); }
 .ready b { font-weight: 600; }
 .play .ready, .play .fig { animation: appear .5s var(--ease) 2.3s both; }
@@ -118,25 +142,27 @@ p { margin: 0; }
 /* Sections */
 .band { padding-block: 96px; border-top: 1px solid var(--rule); }
 .band h2 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; letter-spacing: -0.02em; max-width: 22ch; }
+:root[lang="he"] .band h2 { letter-spacing: 0; line-height: 1.2; }
 .lede { font-size: 18px; color: var(--ink-2); max-width: 58ch; margin-top: 16px; }
 
 .problem { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; }
-.problem ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--rule); }
+.problem ul { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
 .problem li { padding: 18px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 4px; }
-.problem li a { font-size: 13px; color: var(--ink-2); text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.problem li a { font-size: 13px; color: var(--ink-2); text-decoration-color: var(--rule-2); text-underline-offset: 3px; justify-self: start; }
 .problem li a:hover { color: var(--carbon); }
 
 .verbs { list-style: none; margin: 48px 0 0; padding: 0; display: grid; }
 .verbs li { display: grid; grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr); gap: 32px; padding: 28px 0; border-top: 1px solid var(--rule); align-items: start; }
 .verbs li:last-child { border-bottom: 1px solid var(--rule); }
 .verbs .v { font: 700 64px/0.85 var(--f-stencil); text-transform: uppercase; letter-spacing: .01em; }
+:root[lang="he"] .verbs .v { font-size: 48px; line-height: 1; }
 .verbs h3 { font-size: 19px; letter-spacing: -0.01em; }
 .verbs p { color: var(--ink-2); }
 
 /* Source demo */
 .source { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-top: 40px; }
 .panel { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 20px 22px; min-width: 0; }
-.panel h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); font-weight: 500; margin-bottom: 14px; }
+.panel h3 { font-size: 12px; text-transform: uppercase; letter-spacing: var(--track); color: var(--ink-2); font-weight: 500; margin-bottom: 14px; }
 .panel .body { white-space: pre-wrap; font-size: 15px; line-height: 1.7; overflow-wrap: anywhere; }
 .panel mark { background: transparent; color: inherit; text-decoration: underline; text-decoration-color: var(--carbon); text-decoration-thickness: 1.5px; text-underline-offset: 3px; border-radius: 2px; transition: background .16s var(--ease), box-shadow .16s var(--ease); }
 .panel mark.lit { background: var(--carbon-wash); box-shadow: 0 0 0 3px var(--carbon-wash); }
@@ -166,13 +192,13 @@ form { background: var(--sheet); border: 1px solid var(--rule); border-radius: v
 .f .help { font-size: 13px; color: var(--ink-2); }
 .f .err { font-size: 13px; color: var(--risk); }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
-.thanks { display: grid; gap: 8px; }
+.thanks { display: grid; gap: 8px; justify-items: start; }
 .thanks h3 { font-size: 20px; }
 .thanks p { color: var(--ink-2); }
 
 footer { border-top: 1px solid var(--rule); padding-block: 32px 48px; color: var(--ink-2); font-size: 14px; }
-footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: baseline; }
-footer .mark { font-size: 22px; color: var(--ink); }
+footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+footer .mark .word { font-size: 22px; }
 
 @media (max-width: 960px) {
   .hero, .problem, .faq, .pilot, .source { grid-template-columns: minmax(0, 1fr); gap: 36px; }
@@ -182,6 +208,8 @@ footer .mark { font-size: 22px; color: var(--ink); }
   .band { padding-block: 64px; }
 }
 @media (max-width: 560px) {
+  .top .wrap { gap: 12px; }
+  .top nav { gap: 10px; }
   .top nav a:not(.btn) { display: none; }
   .two { grid-template-columns: minmax(0, 1fr); }
   .copy section { padding: 16px; }
@@ -197,11 +225,15 @@ footer .mark { font-size: 22px; color: var(--ink); }
 
 <header class="top">
   <div class="wrap">
-    <a class="mark" href="#">Lading</a>
-    <nav aria-label="Main">
-      <a href="#how">How it works</a>
-      <a href="app.html">Demo</a>
-      <a class="btn primary small" href="#pilot">Join the pilot</a>
+    <a class="mark" href="#" aria-label="Lading" dir="ltr">
+      <svg class="logo" width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg>
+      <span class="word" aria-hidden="true">Lading</span>
+    </a>
+    <nav aria-label="Main" data-i-aria="navLabel">
+      <a href="#how" data-i="navHow">How it works</a>
+      <a href="app.html" data-i="navDemo">Demo</a>
+      <button class="langbtn" type="button" id="lang" lang="he">עברית</button>
+      <a class="btn primary small" href="#pilot" data-i="cta">Join the pilot</a>
     </nav>
   </div>
 </header>
@@ -209,38 +241,38 @@ footer .mark { font-size: 22px; color: var(--ink); }
 <main>
   <div class="wrap hero">
     <div>
-      <h1>Every vendor email, filed to the <em>right order</em>.</h1>
-      <p>Lading reads acknowledgments, backorders and freight updates, changes the order, and drafts the note to your client.</p>
+      <h1 data-i="h1">Every vendor email, filed to the <em>right order</em>.</h1>
+      <p data-i="sub">Lading reads acknowledgments, backorders and freight updates, changes the order, and drafts the note to your client.</p>
       <div class="ctas">
-        <a class="btn primary" href="#pilot">Join the pilot</a>
-        <a class="btn" href="app.html">Try the demo</a>
+        <a class="btn primary" href="#pilot" data-i="cta">Join the pilot</a>
+        <a class="btn" href="app.html" data-i="tryDemo">Try the demo</a>
       </div>
     </div>
 
-    <figure class="copy play" id="copy" aria-label="Example: a vendor email changes an order and a client note is drafted" style="margin:0">
+    <figure class="copy play" id="copy" aria-label="Example: a vendor email changes an order and a client note is drafted" data-i-aria="copyLabel">
       <section>
-        <div class="lbl"><span><b>Baxter &amp; Pine Upholstery</b>, revised acknowledgment</span><span class="mono">8:12 AM</span></div>
-        <p class="email-lines">Customer PO: <span class="src">HR-1021</span>&nbsp;&nbsp; Sidemark: <span class="src">HARTLEY</span><br>Revised estimated ship: <span class="src key">week of 12/7/26</span></p>
+        <div class="lbl"><span data-i="cVendor"><b>Baxter &amp; Pine Upholstery</b>, revised acknowledgment</span><span class="mono">8:12</span></div>
+        <p class="email-lines" data-i="cEmail">Customer PO: <span class="src">HR-1021</span>&nbsp;&nbsp; Sidemark: <span class="src">HARTLEY</span><br>Revised estimated ship: <span class="src key">week of 12/7/26</span></p>
       </section>
       <section>
         <div class="orow">
-          <b>Ellis sofa, 96 in</b>
-          <small>Hartley Residence, living room <span class="mono">HR-1021</span></small>
-          <span class="fig">+22d</span>
+          <b data-i="cItem">Ellis sofa, 96 in</b>
+          <small data-i="cWhere">Hartley Residence, living room <span class="mono">HR-1021</span></small>
+          <span class="fig"><span dir="ltr">+22</span><span class="u" data-i="cUnit">d</span></span>
         </div>
         <div class="track" aria-hidden="true">
-          <span class="tick" style="left:25.2%"></span><span class="tick" style="left:49.6%"></span><span class="tick" style="left:74.8%"></span>
-          <span class="install" style="left:60.2%"></span>
-          <span class="gap" style="left:43.1%;width:17.9%"></span>
-          <span class="promise" style="left:43.1%"></span>
-          <span class="eta" style="left:61%;--from:43.1%"></span>
+          <span class="tick" style="inset-inline-start:25.2%"></span><span class="tick" style="inset-inline-start:49.6%"></span><span class="tick" style="inset-inline-start:74.8%"></span>
+          <span class="install" style="inset-inline-start:60.2%"></span>
+          <span class="gap" style="inset-inline-start:43.1%;width:17.9%"></span>
+          <span class="promise" style="inset-inline-start:43.1%"></span>
+          <span class="eta" style="inset-inline-start:61%;--from:43.1%"></span>
         </div>
-        <div class="axis" aria-hidden="true"><span style="left:0">Oct</span><span style="left:25.2%">Nov</span><span style="left:49.6%">Dec</span><span style="left:74.8%">Jan</span></div>
-        <p class="ready"><b>Arrives Dec 15.</b> Living room install is Dec 14, one day short.</p>
+        <div class="axis" aria-hidden="true"><span style="inset-inline-start:0" data-i="mOct">Oct</span><span style="inset-inline-start:25.2%" data-i="mNov">Nov</span><span style="inset-inline-start:49.6%" data-i="mDec">Dec</span><span style="inset-inline-start:74.8%" data-i="mJan">Jan</span></div>
+        <p class="ready" data-i="cReady"><b>Arrives Dec 15.</b> Living room install is Dec 14, one day short.</p>
       </section>
       <section>
-        <div class="lbl"><span><b>Draft to Dana and Ruth</b></span><button class="replay" type="button" id="replay">Replay</button></div>
-        <p class="note">Ellis sofa: Baxter &amp; Pine moved its delivery to about Dec 15 because their frame shop is running behind. I suggest we move the install to Thursday, Dec 17.</p>
+        <div class="lbl"><span><b data-i="cDraft">Draft to Dana and Ruth</b></span><button class="replay" type="button" id="replay" data-i="replay">Replay</button></div>
+        <p class="note" data-i="cNote">Ellis sofa: Baxter &amp; Pine moved its delivery to about Dec 15 because their frame shop is running behind. I suggest we move the install to Thursday, Dec 17.</p>
       </section>
     </figure>
   </div>
@@ -248,36 +280,36 @@ footer .mark { font-size: 22px; color: var(--ink); }
   <section class="band">
     <div class="wrap problem">
       <div>
-        <h2>Designing is the job. Chasing orders takes the day.</h2>
-        <p class="lede">A single room can mean twenty orders from a dozen vendors, and each one sends its news as a PDF, a portal notice or a three-line email. Someone has to read every one, update the tracker and explain the delay to the client.</p>
+        <h2 data-i="pH">Designing is the job. Chasing orders takes the day.</h2>
+        <p class="lede" data-i="pLede">A single room can mean twenty orders from a dozen vendors, and each one sends its news as a PDF, a portal notice or a three-line email. Someone has to read every one, update the tracker and explain the delay to the client.</p>
       </div>
       <ul>
-        <li><span>Designers say they spend more time confirming that products are still available, and following up on backorders, than designing.</span><a href="https://poshsurfside.com/a-day-in-the-life-of-an-interior-designer" target="_blank" rel="noopener">A day in the life of an interior designer</a></li>
-        <li><span>Clients have no picture of what procurement involves, so every delay arrives as a surprise.</span><a href="https://interiordesigncommunity.com/client-expectations-product-delays/" target="_blank" rel="noopener">Interior Design Community</a></li>
-        <li><span>Damaged and lost deliveries are rising, and carrier inboxes often lead nowhere.</span><a href="https://businessofhome.com/articles/why-designers-are-taking-shipping-and-receiving-into-their-own-hands" target="_blank" rel="noopener">Business of Home, Aug 2026</a></li>
+        <li><span data-i="p1">Designers say they spend more time confirming that products are still available, and following up on backorders, than designing.</span><a href="https://poshsurfside.com/a-day-in-the-life-of-an-interior-designer" target="_blank" rel="noopener" lang="en" dir="ltr">A day in the life of an interior designer</a></li>
+        <li><span data-i="p2">Clients have no picture of what procurement involves, so every delay arrives as a surprise.</span><a href="https://interiordesigncommunity.com/client-expectations-product-delays/" target="_blank" rel="noopener" lang="en" dir="ltr">Interior Design Community</a></li>
+        <li><span data-i="p3">Damaged and lost deliveries are rising, and carrier inboxes often lead nowhere.</span><a href="https://businessofhome.com/articles/why-designers-are-taking-shipping-and-receiving-into-their-own-hands" target="_blank" rel="noopener" lang="en" dir="ltr">Business of Home, Aug 2026</a></li>
       </ul>
     </div>
   </section>
 
   <section class="band" id="how">
     <div class="wrap">
-      <h2>Three things you do. Lading does the rest.</h2>
+      <h2 data-i="hH">Three things you do. Lading does the rest.</h2>
       <ol class="verbs">
-        <li><span class="v">Forward</span><h3>Send vendor mail to one address</h3><p>Copy your studio's orders inbox to Lading, or forward emails as they come. Lading never needs your personal inbox.</p></li>
-        <li><span class="v">Confirm</span><h3>Check what it read, in one look</h3><p>Each change shows the order it matched, the new date, and the exact line it came from. Anything uncertain waits for you.</p></li>
-        <li><span class="v">Send</span><h3>Share a clear update with the client</h3><p>Lading drafts a plain note per project with what changed and what happens next. You edit it and send it from your own email.</p></li>
+        <li><span class="v" data-i="v1">Forward</span><h3 data-i="v1h">Send vendor mail to one address</h3><p data-i="v1p">Copy your studio's orders inbox to Lading, or forward emails as they come. Lading never needs your personal inbox.</p></li>
+        <li><span class="v" data-i="v2">Confirm</span><h3 data-i="v2h">Check what it read, in one look</h3><p data-i="v2p">Each change shows the order it matched, the new date, and the exact line it came from. Anything uncertain waits for you.</p></li>
+        <li><span class="v" data-i="v3">Send</span><h3 data-i="v3h">Share a clear update with the client</h3><p data-i="v3p">Lading drafts a plain note per project with what changed and what happens next. You edit it and send it from your own email.</p></li>
       </ol>
     </div>
   </section>
 
   <section class="band">
     <div class="wrap">
-      <h2>Nothing changes without its source.</h2>
-      <p class="lede">Hover a value on the right to see the line it came from. When a vendor is vague, Lading says so instead of guessing.</p>
+      <h2 data-i="sH">Nothing changes without its source.</h2>
+      <p class="lede" data-i="sLede">Hover a value on the right to see the line it came from. When a vendor is vague, Lading says so instead of guessing.</p>
       <div class="source">
         <div class="panel">
-          <h3>Mirelle Lighting, backorder notice</h3>
-          <div class="body">The following item on your order is on backorder.
+          <h3 data-i="sMail">Mirelle Lighting, backorder notice</h3>
+          <div class="body" data-i="sBody">The following item on your order is on backorder.
 
 Order #: ML-90331    Your ref: <mark id="s-ref">HR-1024</mark>
 <mark id="s-item">Orla Pendant 18in, Aged Brass</mark>    Qty <mark id="s-qty">2</mark>
@@ -286,16 +318,16 @@ New availability: <mark id="s-date">late January</mark>
 We will ship as soon as stock arrives. <mark id="s-cancel">Reply to this email to cancel without a fee.</mark></div>
         </div>
         <div class="panel">
-          <h3>What Lading read</h3>
+          <h3 data-i="sRead">What Lading read</h3>
           <dl class="fields" id="fields">
-            <div tabindex="0" data-src="s-ref"><dt>Order</dt><dd>Hartley Residence, HR-1024</dd></div>
-            <div tabindex="0" data-src="s-item"><dt>Item</dt><dd>Orla pendants, aged brass</dd></div>
-            <div tabindex="0" data-src="s-qty"><dt>Status</dt><dd>Backordered, quantity 2</dd></div>
-            <div tabindex="0" data-src="s-date"><dt>Arrives (est.)</dt><dd>About Jan 29</dd></div>
-            <div tabindex="0" data-src="s-cancel"><dt>Your options</dt><dd>Cancel without a fee</dd></div>
-            <div class="warn">Mirelle wrote “late January”, not a date. Check it before applying.</div>
+            <div tabindex="0" data-src="s-ref"><dt data-i="f1">Order</dt><dd data-i="f1v">Hartley Residence, HR-1024</dd></div>
+            <div tabindex="0" data-src="s-item"><dt data-i="f2">Item</dt><dd data-i="f2v">Orla pendants, aged brass</dd></div>
+            <div tabindex="0" data-src="s-qty"><dt data-i="f3">Status</dt><dd data-i="f3v">Backordered, quantity 2</dd></div>
+            <div tabindex="0" data-src="s-date"><dt data-i="f4">Arrives (est.)</dt><dd data-i="f4v">About Jan 29</dd></div>
+            <div tabindex="0" data-src="s-cancel"><dt data-i="f5">Your options</dt><dd data-i="f5v">Cancel without a fee</dd></div>
+            <div class="warn" data-i="warn">Mirelle wrote “late January”, not a date. Check it before applying.</div>
           </dl>
-          <p class="hint">On a phone, tap a value.</p>
+          <p class="hint" data-i="hint">On a phone, tap a value.</p>
         </div>
       </div>
     </div>
@@ -303,13 +335,13 @@ We will ship as soon as stock arrives. <mark id="s-cancel">Reply to this email t
 
   <section class="band">
     <div class="wrap faq">
-      <h2>Questions designers ask first</h2>
+      <h2 data-i="qH">Questions designers ask first</h2>
       <dl>
-        <div><dt>Does Lading email my clients?</dt><dd>No. It writes the draft. You read it, change it if you want, and send it yourself.</dd></div>
-        <div><dt>Do I have to give it my inbox?</dt><dd>No. Most studios already have an orders@ address that vendors write to. You copy that address to Lading, or forward single emails.</dd></div>
-        <div><dt>What if it reads something wrong?</dt><dd>Every change links to the line it came from, and you can undo it. Vague dates, missing PO numbers and orders that match more than one item always wait for your decision.</dd></div>
-        <div><dt>Will it replace Studio Designer, Programa or Houzz Pro?</dt><dd>No. Lading is built to sit next to the tool you already use. Keeping it in sync with those tools is the first thing the pilot will test.</dd></div>
-        <div><dt>What does it cost?</dt><dd>The pilot is free. In return we ask for a short call every two weeks about what worked and what didn't.</dd></div>
+        <div><dt data-i="q1">Does Lading email my clients?</dt><dd data-i="a1">No. It writes the draft. You read it, change it if you want, and send it yourself.</dd></div>
+        <div><dt data-i="q2">Do I have to give it my inbox?</dt><dd data-i="a2">No. Most studios already have an orders@ address that vendors write to. You copy that address to Lading, or forward single emails.</dd></div>
+        <div><dt data-i="q3">What if it reads something wrong?</dt><dd data-i="a3">Every change links to the line it came from, and you can undo it. Vague dates, missing PO numbers and orders that match more than one item always wait for your decision.</dd></div>
+        <div><dt data-i="q4">Will it replace Studio Designer, Programa or Houzz Pro?</dt><dd data-i="a4">No. Lading is built to sit next to the tool you already use. Keeping it in sync with those tools is the first thing the pilot will test.</dd></div>
+        <div><dt data-i="q5">What does it cost?</dt><dd data-i="a5">The pilot is free. In return we ask for a short call every two weeks about what worked and what didn't.</dd></div>
       </dl>
     </div>
   </section>
@@ -317,35 +349,35 @@ We will ship as soon as stock arrives. <mark id="s-cancel">Reply to this email t
   <section class="band" id="pilot">
     <div class="wrap pilot">
       <div>
-        <h2>Join the pilot</h2>
-        <p class="lede">We're looking for ten residential studios that place at least twenty orders a month. For the first two weeks, you forward vendor emails and we keep your tracker updated by hand, so you can judge the result before any software touches your orders.</p>
+        <h2 data-i="cta">Join the pilot</h2>
+        <p class="lede" data-i="jLede">We're looking for ten residential studios that place at least twenty orders a month. For the first two weeks, you forward vendor emails and we keep your tracker updated by hand, so you can judge the result before any software touches your orders.</p>
       </div>
       <form id="form" novalidate>
         <div class="two">
-          <div class="f"><label for="name">Your name</label><input id="name" name="name" autocomplete="name" required></div>
-          <div class="f"><label for="studio">Studio</label><input id="studio" name="studio" autocomplete="organization" required></div>
+          <div class="f"><label for="name" data-i="lName">Your name</label><input id="name" name="name" autocomplete="name" required></div>
+          <div class="f"><label for="studio" data-i="lStudio">Studio</label><input id="studio" name="studio" autocomplete="organization" required></div>
         </div>
-        <div class="f"><label for="email">Work email</label><input id="email" name="email" type="email" autocomplete="email" required><span class="err" id="email-err" hidden>Enter an email address like name@studio.com.</span></div>
-        <div class="f"><label for="orders">Orders placed in a typical month</label>
+        <div class="f"><label for="email" data-i="lEmail">Work email</label><input id="email" name="email" type="email" autocomplete="email" dir="ltr" required><span class="err" id="email-err" hidden data-i="err">Enter an email address like name@studio.com.</span></div>
+        <div class="f"><label for="orders" data-i="lOrders">Orders placed in a typical month</label>
           <select id="orders" name="orders">
-            <option>Fewer than 20</option>
-            <option selected>20 to 50</option>
-            <option>50 to 150</option>
-            <option>More than 150</option>
+            <option value="lt20" data-i="o1">Fewer than 20</option>
+            <option value="20-50" selected data-i="o2">20 to 50</option>
+            <option value="50-150" data-i="o3">50 to 150</option>
+            <option value="gt150" data-i="o4">More than 150</option>
           </select>
-          <span class="help">Count each item on a purchase order once.</span>
+          <span class="help" data-i="help">Count each item on a purchase order once.</span>
         </div>
-        <div class="f"><label for="tool">Where you track orders today</label>
+        <div class="f"><label for="tool" data-i="lTool">Where you track orders today</label>
           <select id="tool" name="tool">
-            <option>Studio Designer</option>
-            <option>Programa</option>
-            <option>Houzz Pro</option>
-            <option>DesignFiles</option>
-            <option selected>A spreadsheet</option>
-            <option>Something else</option>
+            <option value="studio-designer">Studio Designer</option>
+            <option value="programa">Programa</option>
+            <option value="houzz">Houzz Pro</option>
+            <option value="designfiles">DesignFiles</option>
+            <option value="sheet" selected data-i="t5">A spreadsheet</option>
+            <option value="other" data-i="t6">Something else</option>
           </select>
         </div>
-        <button class="btn primary" type="submit">Join the pilot</button>
+        <button class="btn primary" type="submit" data-i="cta">Join the pilot</button>
       </form>
     </div>
   </section>
@@ -353,25 +385,103 @@ We will ship as soon as stock arrives. <mark id="s-cancel">Reply to this email t
 
 <footer>
   <div class="wrap">
-    <span class="mark">Lading</span>
-    <span>A design prototype. The studio, vendors and orders on this page are examples.</span>
+    <a class="mark" href="#" aria-label="Lading" dir="ltr">
+      <svg class="logo" width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg>
+      <span class="word" aria-hidden="true">Lading</span>
+    </a>
+    <span data-i="foot">A design prototype. The studio, vendors and orders on this page are examples.</span>
+    <a href="logo.html" data-i="logoLink">About the logo</a>
   </div>
 </footer>
 
 <script>
 (() => {
+  /* Hebrew strings. English lives in the markup and is read from it on load. */
+  const HE = {
+    title: "Lading למעצבי פנים",
+    navLabel: "ראשי", navHow: "איך זה עובד", navDemo: "דמו", cta: "הצטרפות לפיילוט", tryDemo: "לנסות את הדמו",
+    h1: "כל מייל מספק, מתויק <em>בהזמנה הנכונה</em>.",
+    sub: "Lading קורא אישורי הזמנה, הודעות על חוסרים ועדכוני הובלה, מעדכן את ההזמנה ומנסח את ההודעה ללקוח.",
+    copyLabel: "דוגמה: מייל מספק משנה הזמנה ונוצרת טיוטה ללקוח",
+    cVendor: "<b>ריפודי בקסטר</b>, אישור הזמנה מעודכן",
+    cEmail: "הזמנת רכש: <span class=\"src\">HR-1021</span>&nbsp;&nbsp; סימון: <span class=\"src\">הרצוג</span><br>מועד משלוח משוער מעודכן: <span class=\"src key\">שבוע של 7/12/26</span>",
+    cItem: "ספת אליס, 240 ס״מ", cWhere: "בית הרצוג, סלון <span class=\"mono\" dir=\"ltr\">HR-1021</span>", cUnit: "י׳",
+    mOct: "אוק׳", mNov: "נוב׳", mDec: "דצמ׳", mJan: "ינו׳",
+    cReady: "<b>מגיעה ב־15 בדצמבר.</b> ההתקנה בסלון ב־14 בדצמבר, חסר יום אחד.",
+    cDraft: "טיוטה לדנה ורות", replay: "הפעלה חוזרת",
+    cNote: "ספת אליס: ריפודי בקסטר דחו את המסירה לסביבות 15 בדצמבר, כי הנגרייה שלהם מפגרת בייצור. אני מציעה להזיז את ההתקנה ליום ה׳, 17 בדצמבר.",
+    pH: "העיצוב הוא העבודה. המרדף אחרי הזמנות לוקח את היום.",
+    pLede: "חדר אחד יכול להיות עשרים הזמנות מתריסר ספקים, וכל אחד שולח את העדכונים שלו כ־PDF, כהודעה בפורטל או כמייל של שלוש שורות. מישהו צריך לקרוא כל אחד מהם, לעדכן את הטבלה ולהסביר ללקוח את העיכוב.",
+    p1: "מעצבות ומעצבים מספרים שהם מקדישים יותר זמן לוודא שמוצרים עדיין זמינים ולרדוף אחרי חוסרים מאשר לעצב.",
+    p2: "ללקוחות אין מושג מה כרוך ברכש, ולכן כל עיכוב מגיע כהפתעה.",
+    p3: "משלוחים פגומים ואבודים בעלייה, ותיבות השירות של חברות ההובלה מובילות לעיתים קרובות לשום מקום.",
+    hH: "שלושה דברים עושים אתם. את השאר עושה Lading.",
+    v1: "מעבירים", v1h: "שולחים את המיילים מהספקים לכתובת אחת", v1p: "מעבירים עותק מתיבת ההזמנות של הסטודיו ל־Lading, או מעבירים מיילים בודדים. Lading אף פעם לא צריך את תיבת הדואר האישית שלכם.",
+    v2: "מאשרים", v2h: "בודקים מה הוא קרא, במבט אחד", v2p: "כל שינוי מציג את ההזמנה שהותאמה, את התאריך החדש ואת השורה המדויקת שממנה הגיע. כל דבר לא ודאי מחכה לכם.",
+    v3: "שולחים", v3h: "משתפים את הלקוח בעדכון ברור", v3p: "Lading מנסח הודעה פשוטה לכל פרויקט: מה השתנה ומה הלאה. אתם עורכים ושולחים מהמייל שלכם.",
+    sH: "שום דבר לא משתנה בלי המקור שלו.",
+    sLede: "העבירו את העכבר מעל ערך בצד שמאל כדי לראות את השורה שממנה הוא הגיע. כשספק מעורפל, Lading אומר את זה במקום לנחש.",
+    sMail: "מירל תאורה, הודעה על חוסר במלאי",
+    sBody: "הפריט הבא בהזמנה שלך חסר כרגע במלאי.\n\nהזמנה מס׳: ML-90331    האסמכתא שלך: <mark id=\"s-ref\">HR-1024</mark>\n<mark id=\"s-item\">מנורת תלייה אורלה 45 ס״מ, פליז מיושן</mark>    כמות <mark id=\"s-qty\">2</mark>\nזמינות חדשה: <mark id=\"s-date\">סוף ינואר</mark>\n\nנשלח מיד כשהמלאי יגיע. <mark id=\"s-cancel\">אפשר להשיב למייל הזה כדי לבטל ללא עלות.</mark>",
+    sRead: "מה Lading קרא",
+    f1: "הזמנה", f1v: "בית הרצוג, HR-1024", f2: "פריט", f2v: "מנורות תלייה אורלה, פליז מיושן", f3: "סטטוס", f3v: "חוסר במלאי, כמות 2",
+    f4: "הגעה משוערת", f4v: "בסביבות 29 בינואר", f5: "האפשרויות שלך", f5v: "ביטול ללא עלות",
+    warn: "מירל כתבו ״סוף ינואר״, לא תאריך. כדאי לבדוק לפני ההחלה.", hint: "בטלפון, הקישו על ערך.",
+    qH: "השאלות שמעצבים שואלים קודם",
+    q1: "האם Lading שולח מיילים ללקוחות שלי?", a1: "לא. הוא כותב את הטיוטה. אתם קוראים, משנים אם רוצים, ושולחים בעצמכם.",
+    q2: "צריך לתת לו גישה לתיבת הדואר שלי?", a2: "לא. לרוב הסטודיואים כבר יש כתובת הזמנות שהספקים כותבים אליה. מעבירים עותק ממנה ל־Lading, או מעבירים מיילים בודדים.",
+    q3: "ומה אם הוא קורא משהו לא נכון?", a3: "כל שינוי מקושר לשורה שממנה הגיע, ואפשר לבטל אותו. תאריכים מעורפלים, הזמנות בלי מספר והתאמות לכמה פריטים תמיד מחכים להחלטה שלכם.",
+    q4: "הוא יחליף את Studio Designer, ‏Programa או Houzz Pro?", a4: "לא. Lading בנוי לעבוד לצד הכלי שאתם כבר משתמשים בו. הסנכרון עם הכלים האלה הוא הדבר הראשון שהפיילוט יבדוק.",
+    q5: "כמה זה עולה?", a5: "הפיילוט בחינם. בתמורה נבקש שיחה קצרה כל שבועיים על מה עבד ומה לא.",
+    jLede: "אנחנו מחפשים עשרה סטודיואים לעיצוב פנים למגורים שמבצעים לפחות עשרים הזמנות בחודש. בשבועיים הראשונים אתם מעבירים מיילים מספקים ואנחנו מעדכנים את הטבלה שלכם ידנית, כך שתוכלו לשפוט את התוצאה לפני שתוכנה כלשהי נוגעת בהזמנות.",
+    lName: "שם", lStudio: "סטודיו", lEmail: "מייל עבודה", err: "יש להזין כתובת מייל, למשל name@studio.co.il.",
+    lOrders: "כמה הזמנות בחודש רגיל", o1: "פחות מ־20", o2: "20 עד 50", o3: "50 עד 150", o4: "יותר מ־150",
+    help: "כל פריט בהזמנת רכש נספר פעם אחת.", lTool: "איפה אתם עוקבים אחרי הזמנות היום", t5: "גיליון אלקטרוני", t6: "משהו אחר",
+    foot: "אב טיפוס לעיצוב. הסטודיו, הספקים וההזמנות בעמוד הם דוגמאות.",
+    logoLink: "על הלוגו",
+    thanksH: (n) => `תודה, ${n}.`, thanksP: "העמוד הזה הוא תצוגת עיצוב, ולכן הפרטים שלך לא נשלחו לשום מקום. כשהפיילוט ייפתח, הטופס יגיע ישירות לצוות.", thanksBtn: "לנסות את הדמו בינתיים", there: "",
+    langBtn: "English", langBtnLang: "en"
+  };
+  const EN = {
+    title: document.title,
+    thanksH: (n) => `Thanks, ${n}.`, thanksP: "This page is a design preview, so your details were not sent anywhere. When the pilot opens, this form will reach the team directly.", thanksBtn: "Try the demo meanwhile", there: "there",
+    langBtn: "עברית", langBtnLang: "he"
+  };
+  document.querySelectorAll("[data-i]").forEach((el) => { EN[el.dataset.i] = el.innerHTML; });
+  document.querySelectorAll("[data-i-aria]").forEach((el) => { EN[el.dataset.iAria] = el.getAttribute("aria-label"); });
+
+  let lang = document.documentElement.lang === "he" ? "he" : "en";
+  const S = () => (lang === "he" ? HE : EN);
+  const btn = document.getElementById("lang");
+  function apply() {
+    const d = S();
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+    document.title = d.title;
+    document.querySelectorAll("[data-i]").forEach((el) => { if (d[el.dataset.i] != null) el.innerHTML = d[el.dataset.i]; });
+    document.querySelectorAll("[data-i-aria]").forEach((el) => { if (d[el.dataset.iAria] != null) el.setAttribute("aria-label", d[el.dataset.iAria]); });
+    btn.textContent = d.langBtn;
+    btn.setAttribute("lang", d.langBtnLang);
+    btn.setAttribute("aria-label", d.langBtnLang === "he" ? "Switch to Hebrew" : "החלפה לאנגלית");
+    replay();
+  }
+  btn.addEventListener("click", () => {
+    lang = lang === "he" ? "en" : "he";
+    try { localStorage.setItem("lading-lang", lang); } catch (e) {}
+    apply();
+  });
+
   // Replay the hero sequence
   const copy = document.getElementById("copy");
-  document.getElementById("replay").addEventListener("click", () => {
-    copy.classList.remove("play"); void copy.offsetWidth; copy.classList.add("play");
-  });
+  function replay() { copy.classList.remove("play"); void copy.offsetWidth; copy.classList.add("play"); }
+  copy.addEventListener("click", (e) => { if (e.target.closest("#replay")) replay(); });
 
   // Source highlighting: field -> line in the email
   const fields = document.getElementById("fields");
   const set = (row, on) => { const m = row && document.getElementById(row.dataset.src); if (m) m.classList.toggle("lit", on); };
-  ["mouseover", "focusin"].forEach((t) => fields.addEventListener(t, (e) => set(e.target.closest("[data-src]"), true)));
-  ["mouseout", "focusout"].forEach((t) => fields.addEventListener(t, (e) => set(e.target.closest("[data-src]"), false)));
-  fields.addEventListener("click", (e) => { const r = e.target.closest("[data-src]"); if (r) { fields.querySelectorAll(".lit").forEach((x) => x.classList.remove("lit")); r.focus(); } });
+  ["mouseover", "focusin"].forEach((ty) => fields.addEventListener(ty, (e) => set(e.target.closest("[data-src]"), true)));
+  ["mouseout", "focusout"].forEach((ty) => fields.addEventListener(ty, (e) => set(e.target.closest("[data-src]"), false)));
+  fields.addEventListener("click", (e) => { const r = e.target.closest("[data-src]"); if (r) r.focus(); });
 
   // Pilot form: validated in the page; this preview has nowhere to send it
   const form = document.getElementById("form");
@@ -382,9 +492,12 @@ We will ship as soon as stock arrives. <mark id="s-cancel">Reply to this email t
     err.hidden = okEmail;
     email.setAttribute("aria-invalid", String(!okEmail));
     if (!okEmail) { email.setAttribute("aria-describedby", "email-err"); email.focus(); return; }
-    const name = (form.name.value.trim().split(" ")[0]) || "there";
-    form.innerHTML = `<div class="thanks" role="status"><h3>Thanks, ${name.replace(/[<>&"]/g, "")}.</h3><p>This page is a design preview, so your details were not sent anywhere. When the pilot opens, this form will reach the team directly.</p><a class="btn" href="app.html">Try the demo meanwhile</a></div>`;
+    const d = S();
+    const name = (form.name.value.trim().split(" ")[0] || d.there).replace(/[<>&"]/g, "");
+    form.innerHTML = `<div class="thanks" role="status"><h3>${d.thanksH(name).replace(/, \.$/, ".")}</h3><p>${d.thanksP}</p><a class="btn" href="app.html">${d.thanksBtn}</a></div>`;
   });
+
+  if (lang === "he") apply();
 })();
 </script>
 </body>

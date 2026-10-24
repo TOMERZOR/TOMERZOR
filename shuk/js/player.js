@@ -50,6 +50,7 @@ export class Player {
     const tpl = await this.assets.character(id);
     if (token !== this.loadToken) return; // a newer request superseded this one
     if (this.model) { this.pivot.remove(this.model); this.mixer.stopAllAction(); }
+    if (this.charId && this.charId !== id) this.assets.releaseCharacter(this.charId);
     const inst = this.assets.instanceCharacter(tpl);
     this.model = inst.root;
     this.model.rotation.y = Math.PI;       // models face +z; the runner faces down the street (-z)

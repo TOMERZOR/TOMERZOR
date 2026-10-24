@@ -29,7 +29,7 @@ Running into someone head-on ends the run. Brushing past from the side, or tripp
 
 ## Look
 
-The street bends away toward the horizon (curved-world vertex shader), and the frame goes through bloom, a colour grade with vignette and speed lines, and FXAA (`js/look.js`). Quality is High (full post chain and world shadows), Auto (lighter post, adapts resolution and effects to the frame rate) or Battery saver. The HUD and menus are built from generated art: glossy buttons, 3D icons, an awning panel header and the logo plate (`img/ui/`), set in the Fredoka display font with outlined gold titles. Coins fly to the counter, the runner squashes on landing and the lens widens with speed. See `ART_DIRECTION.md` for the brief.
+The street bends away toward the horizon (curved-world vertex shader), and the frame goes through bloom, a colour grade with vignette and speed lines, and FXAA (`js/look.js`). Quality is High (up to 2.5x resolution, 4x MSAA), Auto (2x resolution with 2x MSAA, stepping down only if the median frame rate stays under ~26 fps) or Battery saver. Distant chunks swap the generated stalls for vertex-coloured low-detail versions and drop the stall keepers; pedestrians use reduced textures so only the runner keeps its full 2048 texture. The HUD and menus are built from generated art: glossy buttons, 3D icons, an awning panel header and the logo plate (`img/ui/`), set in the Fredoka display font with outlined gold titles. Coins fly to the counter, the runner squashes on landing and the lens widens with speed. See `ART_DIRECTION.md` for the brief.
 
 Progress is stored in the browser (localStorage).
 

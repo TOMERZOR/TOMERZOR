@@ -4,10 +4,13 @@ import * as THREE from 'three';
 export const FONT_HEAD = '"Fredoka", "Arial Hebrew", "Noto Sans Hebrew", Arial, sans-serif';
 export const FONT_BODY = FONT_HEAD;
 
-function canvas(w, h) {
+// draw in logical units on a canvas `scale` times larger, so big on-screen text stays sharp on 3x phones
+function canvas(w, h, scale = 1) {
   const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  return [c, c.getContext('2d')];
+  c.width = w * scale; c.height = h * scale;
+  const g = c.getContext('2d');
+  if (scale !== 1) g.scale(scale, scale);
+  return [c, g];
 }
 
 function tex(c, { repeat = false, aniso = 4, srgb = true } = {}) {
@@ -100,7 +103,7 @@ export function signAtlas() {
   const total = SHOP_SIGNS.length + NEON_SIGNS.length + PRICE_TAGS.length;
   const rows = Math.ceil(total / COLS);
   const H = THREE.MathUtils.ceilPowerOfTwo(rows * CELL_H);
-  const [c, g] = canvas(W, H);
+  const [c, g] = canvas(W, H, 2);
   g.textAlign = 'center'; g.textBaseline = 'middle';
   const uv = [];
   let i = 0;
@@ -118,7 +121,7 @@ export function signAtlas() {
     const [x, y] = cell();
     g.fillStyle = '#120a1c'; roundRect(g, x + 2, y + 2, CELL_W - 4, CELL_H - 4, 10); g.fill();
     g.direction = dirOf(text);
-    g.shadowColor = col; g.shadowBlur = 14; g.fillStyle = col; g.strokeStyle = '#fff';
+    g.shadowColor = col; g.shadowBlur = 28; // shadowBlur ignores the canvas scale g.fillStyle = col; g.strokeStyle = '#fff';
     fitText(g, text, CELL_W - 30, 36, FONT_HEAD); g.fillText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
     g.shadowBlur = 0; g.lineWidth = 1; g.strokeText(text, x + CELL_W / 2, y + CELL_H / 2 + 2);
     rec(x, y);
@@ -153,7 +156,7 @@ export function bubbleTexture(text) {
 
 // ---- floating text (score popups) ----
 export function popupTexture(text, color = '#ffd23f') {
-  const [c, g] = canvas(512, 128);
+  const [c, g] = canvas(512, 128, 2);
   g.direction = dirOf(text); g.textAlign = 'center'; g.textBaseline = 'middle';
   const size = fitText(g, text, 480, 76, FONT_HEAD);
   g.font = `700 ${size}px ${FONT_HEAD}`;
@@ -164,7 +167,7 @@ export function popupTexture(text, color = '#ffd23f') {
 
 // ---- banner for the roll-under obstacle ----
 export function bannerTexture(text, bg = '#d62828', fg = '#fff3b0') {
-  const [c, g] = canvas(512, 192);
+  const [c, g] = canvas(512, 192, 2);
   g.fillStyle = bg; g.fillRect(0, 0, 512, 192);
   for (let x = -40; x < 552; x += 48) { g.fillStyle = 'rgba(255,255,255,.12)'; g.beginPath(); g.moveTo(x, 0); g.lineTo(x + 24, 0); g.lineTo(x - 26, 192); g.lineTo(x - 50, 192); g.fill(); }
   g.fillStyle = '#ffd23f'; g.fillRect(0, 0, 512, 14); g.fillRect(0, 178, 512, 14);
@@ -178,7 +181,7 @@ export function bannerTexture(text, bg = '#d62828', fg = '#fff3b0') {
 
 // ---- Na Nach van side art ----
 export function vanTexture() {
-  const [c, g] = canvas(1024, 384);
+  const [c, g] = canvas(1024, 384, 2);
   g.fillStyle = '#f7f7f2'; g.fillRect(0, 0, 1024, 384);
   const cols = ['#e63946', '#f4a261', '#2a9d8f', '#457b9d', '#9b5de5', '#f15bb5', '#00bbf9', '#fee440'];
   for (let i = 0; i < 26; i++) {
@@ -199,7 +202,7 @@ export function vanTexture() {
 
 // ---- produce truck side art ----
 export function truckTexture() {
-  const [c, g] = canvas(1024, 384);
+  const [c, g] = canvas(1024, 384, 2);
   const grd = g.createLinearGradient(0, 0, 0, 384);
   grd.addColorStop(0, '#fdfdfd'); grd.addColorStop(1, '#e3e6e8');
   g.fillStyle = grd; g.fillRect(0, 0, 1024, 384);

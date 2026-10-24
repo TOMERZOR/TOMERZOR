@@ -4,6 +4,7 @@ import { shot, feedTag, card, fitImg } from "../components.js";
 import { startScan } from "../state.js";
 import { deepScanStatus } from "../scan/engine.js";
 import { warmUp } from "../scan/ondevice.js";
+import { CONFIG } from "../config.js";
 
 const DEMO_FIT = "night-shift";
 const SAMPLES = ["slab-day", "butter-hour", "trail-mix"];
@@ -155,7 +156,7 @@ function mount(root) {
   drop.addEventListener("dragleave", () => drop.classList.remove("is-over"));
   drop.addEventListener("drop", () => drop.classList.remove("is-over"));
   // The model is fetched only once someone shows intent to scan.
-  drop.addEventListener("pointerdown", () => deepScanStatus().then((d) => d || warmUp()), { once: true });
+  if (!CONFIG.scanDisabledMessage) drop.addEventListener("pointerdown", () => deepScanStatus().then((d) => d || warmUp()), { once: true });
 
   root.querySelectorAll("[data-sample]").forEach((b) =>
     b.addEventListener("click", async () => {
@@ -173,7 +174,8 @@ function mount(root) {
 
   deepScanStatus().then((deep) => {
     const note = root.querySelector("[data-engine] span");
-    if (deep && note) note.textContent = "Deep scan is on: exact shops and live stock.";
+    if (CONFIG.scanDisabledMessage && note) note.textContent = CONFIG.scanDisabledMessage;
+    else if (deep && note) note.textContent = "Deep scan is on: exact shops and live stock.";
   });
 
   // ---- hero demo: walk through the pieces one by one ----

@@ -16,4 +16,8 @@ export const CONFIG = {
 
   // Shown on the For brands page as the partnership contact. Leave empty to hide the button.
   contactEmail: "",
+
+  // When set, scanning is switched off and this message is shown instead
+  // (for previews hosted where the scanner can't be downloaded).
+  scanDisabledMessage: "",
 };

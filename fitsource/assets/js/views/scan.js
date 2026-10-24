@@ -349,7 +349,9 @@ function mount(root, [id]) {
       setCurrent(scan);
       // Save first: leaving during the short reveal below must not lose the result.
       persist(scan).catch(() => {});
-      history.replaceState(null, "", "#/scan/" + scan.id);
+      try {
+        history.replaceState(null, "", "#/scan/" + scan.id);
+      } catch {} // some sandboxed frames refuse it; the scan still shows
       window.dispatchEvent(new Event("fs:pathsync"));
       await new Promise((r) => setTimeout(r, reduceMotion() ? 0 : 450));
       if (stale()) return;

@@ -661,7 +661,7 @@ mark.src.lit { background: var(--carbon-wash); box-shadow: 0 0 0 3px var(--carbo
         bad: (item, eta) => `${item}: נרשם נזק. כל השאר יגיע עד ${eta}.`,
         ok: (eta, inst, d) => `הכול יגיע בסביבות ${eta}. ההתקנה ב־${inst}, עם מרווח של ${heDays(d)}.`
       },
-      drift: { arrived: "הגיע", on: "בזמן", damage: "נזק", unit: "י׳", lateT: (d) => `${heDays(d)} אחרי המועד המובטח`, earlyT: (d) => `${heDays(d)} לפני המועד המובטח` },
+      drift: { arrived: "הגיע", on: "בזמן", damage: "נזק", unit: "ימים", lateT: (d) => `${heDays(d)} אחרי המועד המובטח`, earlyT: (d) => `${heDays(d)} לפני המועד המובטח` },
       rowLabel: (n, s, d) => `${n}, ${s}, הגעה ${d}`,
       ordered: "הוזמן", promised: "מובטח", arrivesEst: "הגעה משוערת", arrivedL: "הגיע", history: "היסטוריה", srcFrom: "מקור:", close: "סגירה",
       updatesH: "עדכונים ללקוחות",

@@ -5,6 +5,7 @@ An order desk for interior designers: it reads vendor emails, updates each order
 - `index.html`: landing page. The pilot form validates input but does not send anywhere yet.
 - `app.html`: clickable prototype of the product with sample data (Review, Orders, Client updates). Changes you make are kept in your browser; use "Reset sample data" to start over.
 - `logo.html`: the logo sheet (concept, sizes, app icons, lockups, rules). SVG files are in `assets/`.
+- `marketing/`: Hebrew marketing images in `png/` (a 6-slide 1080x1350 carousel, a 1200x628 banner and a 1080x1920 story). They are built from `banners.html` and real screenshots of the prototype in `shots/`; run `node lading/marketing/render.js` to re-render.
 - `DESIGN.md`: the Carbon Copy design language (logo, tokens, type, components, Hebrew and RTL, motion, writing).
 - `PRODUCT.md`: the problem, evidence, competition, risks and how to test demand.
 

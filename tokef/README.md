@@ -9,6 +9,12 @@ certificates are kept with `assets`, certificates are read with `sample`, and
 reports are saved with `downloads`. Opened anywhere else, the same page runs
 on a store in the browser and asks for details by hand.
 
+## The page to send
+
+https://tomerzor.github.io/TOMERZOR/tokef/ is one link for people outside the
+team: the promo video (`media/`), the deck (`deck/`, slide images rendered at
+1920x1080 plus `Tokef-deck.pdf`) and the app demo (`app/`).
+
 ## The web version
 
 `app/` is the same page as a complete web document, built by `tools/build.py`

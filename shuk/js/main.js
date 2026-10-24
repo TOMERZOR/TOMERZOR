@@ -8,10 +8,10 @@ import { World } from './world.js';
 import { Track } from './track.js';
 import { Player } from './player.js';
 import { FX } from './fx.js';
-import { Game } from './game.js';
+import { Game, VOICE_FILES } from './game.js';
 import { UI } from './ui.js';
 import { createInput } from './input.js';
-import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx } from './audio.js';
+import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx, loadVoices } from './audio.js';
 import { haptic, setHaptics } from './haptics.js';
 
 const save = Save.load();
@@ -192,6 +192,7 @@ function enter() {
   entered = true;
   initAudio();
   setAudioSettings(Save.get().settings);
+  loadVoices(VOICE_FILES);
   startMusic('menu');
   haptic('tap');
   ui.menu();
@@ -247,6 +248,8 @@ createInput(canvas, (a, fromKey) => {
 });
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
+// iOS can suspend/interrupt audio (calls, background); any touch brings it back
+document.addEventListener('pointerdown', () => { if (entered) initAudio(); }, { passive: true });
 window.addEventListener('blur', () => pause(true));
 
 // ---------- loop ----------

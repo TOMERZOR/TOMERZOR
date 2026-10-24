@@ -250,7 +250,7 @@ export class UI {
     const btn = $('char-action');
     if (s.selected === c.id) { btn.textContent = 'נבחר ✓'; btn.disabled = true; }
     else if (owned) { btn.textContent = 'בחרו'; btn.disabled = false; }
-    else { btn.innerHTML = `קנו ב־<span class="coin-ico"></span>${fmt(c.price)}`; btn.disabled = false; btn.classList.toggle('cant', s.coins < c.price); }
+    else { btn.innerHTML = `קנו ב־<span class="coin-ico"></span>${fmt(c.price)}`; btn.disabled = false; }
     const dots = $('char-dots'); dots.innerHTML = '';
     CHARACTERS.forEach((ch, i) => { const d = document.createElement('i'); if (s.owned.includes(ch.id)) d.classList.add('owned'); if (i === this.charIndex) d.classList.add('cur'); dots.appendChild(d); });
     for (const el of document.querySelectorAll('[data-coins]')) el.textContent = fmt(s.coins);
@@ -267,10 +267,8 @@ export class UI {
   }
   toastSheet(text) {
     const b = $('char-action');
-    const old = b.innerHTML;
     b.textContent = text; b.disabled = true;
     setTimeout(() => { b.disabled = false; this.renderChar(); }, 1300);
-    void old;
   }
 
   openUpgrades() { this.openSheet('upgrades'); this.renderUpgrades(); }

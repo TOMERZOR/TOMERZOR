@@ -11,7 +11,6 @@ const defaults = () => ({
   upgrades: Object.fromEntries(Object.keys(POWERUPS).map(k => [k, 0])),
   level: 1, // mission level; score multiplier = level
   missions: null,
-  missionProgress: {},
   settings: { music: true, sfx: true, haptics: true, quality: 'auto' },
   stats: { runs: 0, coins: 0, dist: 0 },
   tutorialDone: false,

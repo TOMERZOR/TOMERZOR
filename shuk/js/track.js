@@ -430,7 +430,6 @@ export class Track {
         if (!e.passed && d1 < runD - PLAYER_BOX.halfD) {
           e.passed = true;
           if (e.kind === 'wall' && !e.hit) this.events.push({ t: 'passed', e, near: Math.abs(e.x - px) < 2.7 && player.laneChangeT < 0.55 && Math.abs(e.x - px) > 1.2 });
-          if (e.tutorial) this.events.push({ t: 'tutorialDone', step: e.tutorial });
         }
         continue;
       }
@@ -525,6 +524,7 @@ export class Track {
         const show = ahead > 7 && ahead < 48;
         b.visible = show;
         if (show) b.material.opacity = Math.min(1, (48 - ahead) / 8, (ahead - 7) / 4);
+        if (show && !e.voiced && ahead < 30) { e.voiced = true; this.events.push({ t: 'voice', type: e.type, x: e.x }); }
       }
       if (e.horn && !e.honked && ahead < 30) { e.honked = true; this.events.push({ t: 'horn' }); }
     }

@@ -52,7 +52,7 @@ function cleanClip(clip, name) {
   const hips = c.tracks.find(t => t.name === 'Hips.position');
   if (hips) {
     const v = hips.values, n = v.length / 3;
-    const x0 = v[0], y0 = v[1], z0 = v[2];
+    const x0 = v[0], z0 = v[2];
     for (let i = 0; i < n; i++) {
       const k = i * 3;
       switch (name) {
@@ -63,7 +63,6 @@ function cleanClip(clip, name) {
         default: break;
       }
     }
-    void y0;
   }
   return c;
 }

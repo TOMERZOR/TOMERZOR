@@ -307,6 +307,9 @@ export function textSprite(text, color = '#fff', stroke = '#2b1606') {
 // ---------- coin ----------
 export function makeCoinMesh(capacity) {
   const { face, edge } = coinTextures();
+  // the cylinder cap's UVs come out a quarter turn off once the coin is stood up
+  face.center.set(0.5, 0.5);
+  face.rotation = Math.PI / 2;
   const geo = new THREE.CylinderGeometry(0.4, 0.4, 0.07, 28, 1);
   geo.rotateX(Math.PI / 2);
   const faceMat = new THREE.MeshStandardMaterial({ map: face, metalness: 0.55, roughness: 0.32, emissive: '#ffffff', emissiveMap: face, emissiveIntensity: 0.28 });

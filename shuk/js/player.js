@@ -1,6 +1,8 @@
 // The runner: lane movement, jumping, rolling, platforms and the animation state machine.
 import * as THREE from 'three';
 import { LANE_X, PHYS, PLAYER_BOX } from './config.js';
+import { makePowerup } from './props.js';
+import { glowTexture } from './textures.js';
 
 export class Player {
   constructor(scene, assets) {
@@ -19,13 +21,25 @@ export class Player {
     this.shieldMat = new THREE.ShaderMaterial({
       uniforms: { t: { value: 0 }, op: { value: 0 } },
       vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }',
-      fragmentShader: 'uniform float t; uniform float op; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); float band = 0.5 + 0.5*sin(t*4.0 + vN.y*8.0); gl_FragColor = vec4(mix(vec3(0.25,0.6,1.0), vec3(1.0), f*0.6), (f*0.85 + band*0.08) * op); }',
+      fragmentShader: 'uniform float t; uniform float op; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); float band = 0.5 + 0.5*sin(t*4.0 + vN.y*8.0); gl_FragColor = vec4(mix(vec3(0.2,0.55,1.0), vec3(0.85,0.95,1.0), f*0.5), (f*0.6 + band*0.04) * op); }',
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     });
     this.shield = new THREE.Mesh(sg, this.shieldMat);
     this.shield.position.y = 0.9; this.shield.scale.set(0.8, 1.05, 0.8);
     this.shield.visible = false;
     this.root.add(this.shield);
+    // power-up indicators: a magnet spinning over the head, a glow under the feet for the sneakers
+    this.magnetIcon = makePowerup('magnet');
+    this.magnetIcon.userData.glow.visible = false;
+    this.magnetIcon.scale.setScalar(0.55);
+    this.magnetIcon.position.set(0, 2.25, 0);
+    this.magnetIcon.visible = false;
+    this.root.add(this.magnetIcon);
+    this.feetGlow = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), new THREE.MeshBasicMaterial({ map: glowTexture(), color: '#4fc3ff', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    this.feetGlow.rotation.x = -Math.PI / 2;
+    this.feetGlow.position.y = 0.04;
+    this.feetGlow.visible = false;
+    this.root.add(this.feetGlow);
     this.reset();
   }
 
@@ -57,6 +71,8 @@ export class Player {
     this.root.position.set(this.x, 0, 0);
     this.pivot.rotation.set(0, 0, 0);
     this.lastX = this.x; this.lastY = 0;
+    this.setPowerFx(false, false, 0);
+    this.setShield(0);
   }
 
   get height() { return this.rollT > 0 ? PLAYER_BOX.rollHeight : PLAYER_BOX.height; }
@@ -198,6 +214,13 @@ export class Player {
     this.pivot.rotation.y += ((-dx * 0.18) - this.pivot.rotation.y) * Math.min(1, dt * 12);
     // shield
     if (this.shield.visible) { this.shieldMat.uniforms.t.value = time; this.shield.rotation.y = time; }
+  }
+
+  setPowerFx(magnet, sneakers, time) {
+    this.magnetIcon.visible = magnet;
+    if (magnet) { this.magnetIcon.userData.inner.rotation.y = time * 4; this.magnetIcon.position.y = 2.25 + Math.sin(time * 5) * 0.06 + (this.rollT > 0 ? -0.8 : 0); }
+    this.feetGlow.visible = sneakers;
+    if (sneakers) { this.feetGlow.material.opacity = 0.55 + Math.sin(time * 9) * 0.25; this.feetGlow.position.y = 0.04 - this.y + this.groundY; }
   }
 
   setShield(opacity) {

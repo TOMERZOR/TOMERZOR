@@ -3,11 +3,15 @@ import * as THREE from 'three';
 import { PHYS, POWERUPS, MISSIONS, REVIVE_COST, MAX_MULT, ZONES, LEVEL_REWARD } from './config.js';
 import { speedAt } from './track.js';
 import { zoneAt } from './world.js';
-import { sfx, setMusicIntensity } from './audio.js';
+import { sfx, setMusicIntensity, voice } from './audio.js';
 import { haptic } from './haptics.js';
 import * as Save from './save.js';
 
 const STEP = 1 / 120;
+const VOICE_LINES = {
+  'npc:vendor': ['vendor1', 'vendor2'], 'npc:breslov': ['breslov'], van: ['breslov'], 'npc:chabad': ['chabad'], 'npc:grandpa': ['grandpa'],
+};
+export const VOICE_FILES = ['vendor1', 'vendor2', 'breslov', 'chabad', 'grandpa', 'grandma_stop', 'grandma_caught'];
 
 export class Game {
   constructor(ctx) {
@@ -88,7 +92,7 @@ export class Game {
       const res = p.roll();
       if (res) { r.stats.rolls += res === true ? 1 : 0; sfx.roll(); haptic('roll'); if (res === true) this.fx.dust(p.x, p.y, 0.3, 8); }
     }
-    if (r.tutorial && this.ui.hintShown === a) { this.ui.hint(null); r.slow = 0; }
+    if (r.tutorial && this.ui.hintShown === a) { this.ui.hint(null); r.slow = 0; r.hintDone = true; }
   }
 
   gravity() {
@@ -137,6 +141,7 @@ export class Game {
     // shield visual
     const hamsa = r.powers.hamsa;
     p.setShield(hamsa > 0 ? (hamsa < 2 ? 0.5 + 0.5 * Math.sin(this.time * 18) : 1) : 0);
+    p.setPowerFx(r.powers.magnet > 0, r.powers.sneakers > 0, this.time);
     setMusicIntensity(THREE.MathUtils.clamp((r.speed - 13) / 21, 0, 1));
     this.ui.updateHUD(r, this.powerList());
   }
@@ -194,10 +199,11 @@ export class Game {
         }
         break;
       case 'horn': sfx.horn(); break;
-      case 'tutorialDone':
-        if (ev.step > r.tutorialStep) r.tutorialStep = ev.step;
-        if (ev.step >= 4 && !Save.get().tutorialDone) { Save.get().tutorialDone = true; Save.save(); r.tutorial = false; this.ui.hint(null); this.ui.toast('מעולה!', 'עכשיו זה אמיתי. בהצלחה!'); }
+      case 'voice': {
+        const lines = VOICE_LINES[ev.type];
+        if (lines && Math.random() < 0.7) voice(lines[Math.floor(Math.random() * lines.length)], ev.x / 4, 0.85);
         break;
+      }
     }
   }
 
@@ -234,7 +240,7 @@ export class Game {
     p.stumble();
     r.chaserT = 7;
     r.invuln = 0.5;
-    sfx.whistle();
+    if (!voice('grandma_stop', 0.3, 1, true)) sfx.whistle();
     this.ui.toast('אוי! סבתא רודפת אחריך!', 'עוד מכה אחת והיא תופסת אותך');
   }
 
@@ -246,7 +252,7 @@ export class Game {
     this.fx.splat(p.x, 1, -0.6);
     this.state = 'dying';
     r.deathCause = caught ? 'caught' : (e && e.type) || 'wall';
-    if (caught && this.chaser) r.chaserT = 3; // keep her on screen
+    if (caught && this.chaser) { r.chaserT = 3; voice('grandma_caught', 0.3, 1, true); } // keep her on screen
     setTimeout(() => this.afterDeath(), 1300);
   }
 
@@ -351,15 +357,21 @@ export class Game {
 
   tutorialHints() {
     const r = this.run;
-    if (!r.tutorial || !this.track.tutorialRows) return;
-    for (let i = 0; i < this.track.tutorialRows.length; i++) {
-      const [d, a] = this.track.tutorialRows[i];
-      if (r.tutorialStep > i) continue;
-      const ahead = d - r.d;
-      if (ahead < 16 && ahead > 2 && !this.ui.hintShown && r.tutorialStep === i) { this.ui.hint(a); r.slow = 1; }
-      if (ahead <= 0.5 && this.ui.hintShown === a) { this.ui.hint(null); r.slow = 0; }
-      break;
+    const rows = this.track.tutorialRows;
+    if (!r.tutorial || !rows) return;
+    // the next tutorial row still ahead of the player
+    const i = rows.findIndex(([d]) => d > r.d - 0.5);
+    if (i === -1) {
+      // passed every tutorial row
+      this.ui.hint(null); r.slow = 0; r.tutorial = false;
+      if (!Save.get().tutorialDone) { Save.get().tutorialDone = true; Save.save(); this.ui.toast('מעולה!', 'עכשיו זה אמיתי. בהצלחה!'); }
+      return;
     }
+    const [d, a] = rows[i];
+    const ahead = d - r.d;
+    if (i !== r.tutorialStep) { r.tutorialStep = i; r.hintDone = false; }
+    if (ahead < 16 && ahead > 1 && !r.hintDone && this.ui.hintShown !== a) { this.ui.hint(a); r.slow = 1; }
+    if (ahead <= 1 && this.ui.hintShown) { this.ui.hint(null); r.slow = 0; }
   }
 
   // ---------- chaser (the grandma whose tomatoes you knocked over) ----------

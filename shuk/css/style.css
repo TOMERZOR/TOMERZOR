@@ -275,7 +275,12 @@ button:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
 
 .rotate-note { display: none; }
 @media (orientation: landscape) and (max-height: 500px) {
-  .rotate-note { display: block; position: fixed; bottom: calc(6px + var(--safe-b)); left: 50%; transform: translateX(-50%); background: rgba(43,22,6,.8); color: #fff; padding: 6px 12px; border-radius: 999px; font-size: 12px; pointer-events: none; z-index: 5; }
+  #menu.show ~ .rotate-note { display: block; position: fixed; bottom: calc(1px + var(--safe-b)); left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.85); padding: 1px 10px; font-size: 11px; pointer-events: none; z-index: 5; white-space: nowrap; text-shadow: 0 1px 3px #000; }
+  .level-badge { display: none; }
+  .menu-nav { width: min(520px, 100%); }
+  .menu-nav .btn { flex-direction: row; padding: 9px 6px; }
+  .menu-nav .nav-ico { width: 20px; height: 20px; }
+  .menu-bottom { background: linear-gradient(180deg, transparent, rgba(43,22,6,.6) 60%); }
   .menu-title { top: calc(8px + var(--safe-t)); }
   .logo.small .logo-main { font-size: 36px; }
   .menu-bottom { padding-top: 20px; gap: 6px; }

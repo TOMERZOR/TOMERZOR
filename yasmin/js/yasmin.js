@@ -5,6 +5,8 @@ import { CELL, W, toCell, cellCenter, findPath, walkable, lineOfSight, opaque, c
 import { collide, clearLine } from './world.js';
 
 const tmp = new THREE.Vector3();
+// she is taller than anyone on the base: about two metres
+export const HEIGHT_K = 1.22;
 
 export class Yasmin {
   constructor(scene, gltf, world, audio, tex) {
@@ -40,6 +42,7 @@ export class Yasmin {
     const toe = this.bones.LeftToeBase || this.bones.LeftFoot;
     if (toe) { toe.getWorldPosition(tmp); this.model.position.y = -tmp.y + 0.04; }
     this.attachProps(tex);
+    this.group.scale.setScalar(HEIGHT_K);
     // eye-shine: barely visible until the flashlight hits her in the dark
     this.eyes = [];
     if (this.bones.Head) {
@@ -195,7 +198,7 @@ export class Yasmin {
     if (this.voiceCd > 0 && !opts.force) return;
     this.voiceCd = opts.cd ?? 7;
     if (this.voice) this.voice.stop(0.1);
-    tmp.set(this.position.x, 1.6, this.position.z);
+    tmp.set(this.position.x, 1.6 * HEIGHT_K, this.position.z);
     this.voice = this.audio.play(name, { pos: tmp.clone(), volume: opts.volume ?? 1.3, verb: 0.45, ref: 3 });
   }
 
@@ -357,8 +360,8 @@ export class Yasmin {
     }
     this.group.rotation.y = this.dir;
     // animation speed follows movement
-    if (this.curName === 'walk') this.cur.timeScale = Math.max(0.3, this.speed / 1.25);
-    if (this.curName === 'run') this.cur.timeScale = Math.max(0.5, this.speed / 4.0);
+    if (this.curName === 'walk') this.cur.timeScale = Math.max(0.3, this.speed / (1.25 * HEIGHT_K));
+    if (this.curName === 'run') this.cur.timeScale = Math.max(0.5, this.speed / (4.0 * HEIGHT_K));
     if (this.speed < 0.2 && (this.curName === 'walk' || this.curName === 'run') && this.state !== 'chase') this.play('idle', 0.4);
     if (this.speed > 0.4 && this.curName === 'idle' && this.state !== 'scripted' && !(this.windup > 0)) this.play(this.state === 'chase' ? 'run' : 'walk', 0.3);
     this.mixer.update(dt);
@@ -382,7 +385,7 @@ export class Yasmin {
       let k = 0;
       if (player.lightOn && dist < 16) {
         const f = player.flashDir;
-        tmp.set(this.position.x - player.cam.position.x, 1.55 - player.cam.position.y, this.position.z - player.cam.position.z).normalize();
+        tmp.set(this.position.x - player.cam.position.x, 1.55 * HEIGHT_K - player.cam.position.y, this.position.z - player.cam.position.z).normalize();
         const dot = tmp.dot(f);
         if (dot > 0.9 && !this.litAt(this.position.x, this.position.z)) k = (dot - 0.9) * 10 * 0.8;
       }

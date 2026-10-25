@@ -118,7 +118,7 @@ export function feedTag(item, i, { fitId, mini = false } = {}) {
 }
 
 /** Search-the-shops block (used when we know what an item is, but not which exact product). */
-export function shopSearch(query, id, queryEn = "") {
+export function shopSearch(query, id, queryEn = "", named = false) {
   return html`<div class="search-shops">
     <label class="query">
       <span class="sr-only">מילות חיפוש</span>
@@ -127,7 +127,7 @@ export function shopSearch(query, id, queryEn = "") {
     </label>
     <div class="shoprow" data-shops="${id}">
       <span class="label">חדש</span>
-      ${NEW_SHOPS.map((s) => html`<a class="shoplink" data-shop="${s.id}" ${aAttrs(s.url(queryFor(s, query, queryEn)))}>${s.name}${icon("arrow-up-right")}</a>`)}
+      ${NEW_SHOPS.map((s) => html`<a class="shoplink" data-shop="${s.id}" ${aAttrs(s.url(queryFor(s, query, queryEn, named)))}>${s.name}${icon("arrow-up-right")}</a>`)}
     </div>
     <div class="shoprow" data-shops="${id}">
       <span class="label">יד שנייה</span>

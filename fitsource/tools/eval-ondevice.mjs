@@ -25,5 +25,5 @@ for (const file of process.argv.slice(2)) {
     scored.push({ win, probs: scoreEmbedding(image_embeds.data, emb) });
   }
   const items = pickItems(scored, emb, { data: img.data, width: img.width, height: img.height });
-  console.log(path.basename(file).padEnd(24), items.map((i) => `${i.query} (${i.confidence.toFixed(2)}) y${i.box.y}`).join(" | "));
+  console.log(path.basename(file).padEnd(24), items.map((i) => `${i.query} (${i.confidence.toFixed(2)}) y${i.box.y}+${i.box.h}`).join(" | "));
 }

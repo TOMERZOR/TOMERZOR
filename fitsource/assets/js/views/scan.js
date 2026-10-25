@@ -97,6 +97,7 @@ function resultTag(item, i, scan) {
       <h2 class="tag__name"><bdi>${item.productName || item.name}</bdi></h2>
       <div class="tag__meta">
         ${item.color ? html`<span class="swatch">${item.hex ? html`<i style="--c:${item.hex}"></i>` : ""}${item.color}</span>` : ""}
+        ${!deep && item.printed ? html`<span class="printed" title="הטקסט שקראנו על הבגד">${icon("magnifying-glass")}<bdi dir="ltr">${item.printed}</bdi></span>` : ""}
         ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "ILS")}</span>` : ""}
         ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "נבדק בחנות" : "")) : ""}
         <span class="label">${deep ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
@@ -115,9 +116,9 @@ function resultTag(item, i, scan) {
               ${statusChip(x.availability)}
             </a>`,
           )}
-          <details><summary class="label" style="cursor:pointer;padding:6px 10px">חיפוש בחנויות נוספות</summary>${shopSearch(item.query, item.id, item.queryEn)}</details>
+          <details><summary class="label" style="cursor:pointer;padding:6px 10px">חיפוש בחנויות נוספות</summary>${shopSearch(item.query, item.id, item.queryEn, Boolean(item.printed || item.brand))}</details>
         </div>`
-      : shopSearch(item.query, item.id, item.queryEn)}
+      : shopSearch(item.query, item.id, item.queryEn, Boolean(item.printed || item.brand))}
   </article>`;
 }
 
@@ -204,7 +205,7 @@ function resultView(scan) {
         ${soldCount ? html`<div class="byline"><span>${soldCount === 1 ? "פריט אחד אזל. הפעילו התראה ונעדכן כשהוא חוזר." : `${soldCount} פריטים אזלו. הפעילו התראות ונעדכן כשהם חוזרים.`}</span></div>` : ""}
       </div>
       ${scan.notice ? html`<p class="notice">${icon("info")}<span>${scan.notice}</span></p>` : ""}
-      ${!deep ? html`<p class="notice">${icon("lightning")}<span>כל פריט זוהה מתוך התמונה. לחצו על חנות כדי לראות מוצרים מתאימים, ותקנו את מילות החיפוש אם הצבע או הסגנון לא מדויקים.</span></p>` : ""}
+      ${!deep ? html`<p class="notice">${icon("lightning")}<span>${items.some((it) => it.printed || it.brand) ? "קראנו את מה שכתוב על הבגד והוספנו אותו לחיפוש. " : ""}לחצו על חנות כדי לראות מוצרים מתאימים, ותקנו את מילות החיפוש אם משהו לא מדויק. יודעים מה המותג? הוסיפו אותו למילות החיפוש.</span></p>` : ""}
       ${items.length
         ? html`<div class="tags" data-tags>${items.map((it, i) => html`<div style="--i:${i}">${resultTag(it, i, scan)}</div>`)}</div>`
         : html`<div class="empty" style="margin-bottom:0">${icon("t-shirt")}<p>לא הצלחנו לזהות בגדים. נסו תמונה שבה הלוק ממלא יותר מהמסגרת, או סמנו מלבן סביב פריט.</p><button type="button" class="btn btn--sm" data-draw-cta>${icon("selection-plus")}סמנו מלבן</button></div>`}
@@ -351,6 +352,10 @@ function mount(root, [id]) {
           winEl.hidden = false;
           Object.assign(winEl.style, { left: ev.win.x * 100 + "%", top: ev.win.y * 100 + "%", width: ev.win.w * 100 + "%", height: ev.win.h * 100 + "%" });
         }
+      } else if (ev.stage === "reading") {
+        phase.textContent = "קוראים טקסט על הבגדים";
+        addLine("טקסט", "מחפש מותג או הדפס");
+        winEl.hidden = true;
       }
     };
 

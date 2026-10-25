@@ -14,12 +14,14 @@ There are two scanners. The site picks the best one available.
 |---|---|---|
 | Runs | In the visitor's browser | On the FitSource API (`worker/`) |
 | Needs | Nothing | An Anthropic API key and a deployed worker |
-| Finds | Each piece (jacket, jeans, sneakers...), its colour and where it is in the photo | The exact product and brand when the photo shows it, the original shop, other shops, resale listings and lookalikes |
+| Finds | Each piece (jacket, jeans, sneakers...), its colour, where it is in the photo, and text printed on it (a brand or collection name) | The exact product and brand when the photo shows it, the original shop, other shops, resale listings and lookalikes |
 | Stock | No (it doesn't know the exact product) | Yes: Claude reads the product pages, then the worker re-checks each shop itself (Shopify product data, schema.org markup) and trusts the shop over the model |
-| Shopping | Search links per piece (the search words can be edited): new at Google Shopping Israel, Terminal X, Castro, Next, ASOS, AliExpress; second-hand at Facebook Marketplace, Yad2, eBay, Depop | Direct product links with price, stock and sizes, Israeli shops first, plus the search links |
+| Shopping | Search links per piece (the search words can be edited, and start with the brand and print when one was read): new at Google Shopping Israel, Terminal X, Castro, Next, ASOS, AliExpress; second-hand at Facebook Marketplace, Yad2, eBay, Depop | Direct product links with price, stock and sizes, Israeli shops first, plus the search links |
 | Cost | Free | Roughly $0.15 to $0.40 per scan (see BUSINESS.md) |
 
-The quick scan uses MobileCLIP (Apple, via Transformers.js): the photo is looked at through 29 overlapping windows, each compared with precomputed descriptions of 56 garment types; the colour comes from the pixels, with the background and skin filtered out. The model (23 MB) downloads once from Hugging Face and is cached. Photos are not uploaded. The detector works in English; each piece is shown in Hebrew (`HE` in `vocab.js`), with the colour agreeing with the garment's gender and number (`colorHe` in `color.js`: "חולצה שחורה", "מכנסיים שחורים").
+The quick scan uses MobileCLIP (Apple, via Transformers.js): the photo is looked at through 29 overlapping windows, each compared with precomputed descriptions of 56 garment types; the colour comes from the pixels, with the background and skin filtered out. The model (23 MB) downloads once from Hugging Face and is cached. Photos are not uploaded.
+
+The quick scan also reads text printed on the clothes (`scan/ocr.js`): PaddleOCR (PP-OCRv3 text detection and PP-OCRv5 English recognition, about 10 MB, from Hugging Face at a pinned revision, cached) runs on the body column of the photo at up to 1568 px, keeps the largest confident lettering, and recognises brand names from a short list (`BRANDS`). The words go to the garment they are printed on and to the front of its search words, so a "NUDE MANSION" tee searches for "Nude Project NUDE MANSION"; Google gets them in English. Curved lettering (text around a circle) is not read. Try it with `node tools/eval-ocr.mjs photo.jpg`. The detector works in English; each piece is shown in Hebrew (`HE` in `vocab.js`), with the colour agreeing with the garment's gender and number (`colorHe` in `color.js`: "חולצה שחורה", "מכנסיים שחורים").
 
 The deep scan sends the photo to Claude (`claude-opus-5-5` by default) with web search, web fetch and a structured `submit_results` tool, streams progress to the page, then verifies stock at each shop. It is told to report the original source, then favour shops that sell in Israel or ship there, to search in Hebrew and English, and to answer in Hebrew (brand, product and shop names stay as the store writes them).
 
@@ -130,8 +132,8 @@ The browser tests use the Chromium that Playwright finds, serve the CDN files fr
 - `assets/js/store.js`: closet, scans and preferences (browser storage).
 - `assets/js/share.js`: the fit receipt.
 - `worker/`: the API. `src/scan.js` (Claude), `src/stock.js` (stock checker), `src/prompt.js` (instructions and result schema), `src/index.js` (routes, cache, limits, CORS).
-- `tools/`: `serve.mjs` (local preview, with the same clean addresses and 404 page as the hosts), `build-pages.mjs` (static pages, sitemap and share images), `build-embeddings.mjs` (after editing `vocab.js`), `build-icons.mjs` (after adding an icon), `eval-ondevice.mjs` (try the detector on photos from the command line).
+- `tools/`: `serve.mjs` (local preview, with the same clean addresses and 404 page as the hosts), `build-pages.mjs` (static pages, sitemap and share images), `build-embeddings.mjs` (after editing `vocab.js`), `build-icons.mjs` (after adding an icon), `eval-ondevice.mjs` (try the detector on photos from the command line), `eval-ocr.mjs` (read the text on clothes in a photo).
 
 ## Credits
 
-MobileCLIP by Apple (Apple sample code licence). Transformers.js by Hugging Face. Claude by Anthropic. Archivo, Geist Mono and Heebo fonts (SIL OFL, self-hosted). Phosphor Icons (MIT).
+MobileCLIP by Apple (Apple sample code licence). PaddleOCR models by PaddlePaddle (Apache 2.0), ONNX Runtime by Microsoft (MIT). Transformers.js by Hugging Face. Claude by Anthropic. Archivo, Geist Mono and Heebo fonts (SIL OFL, self-hosted). Phosphor Icons (MIT).

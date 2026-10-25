@@ -133,6 +133,7 @@ export class Mechanics {
       if (w.age > 100) { w.mesh.material.opacity = Math.max(0, 1 - (w.age - 100) / 10); if (w.age > 110) this.removeWet(w); }
     }
     this.splashCd -= dt;
+    if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) P.slow = 1; }
     P.wetFeet = Math.max(P.wetFeet || 0, 0);
     if (!P.hidden && P.moving > 0.5 && this.onWet(P.pos.x, P.pos.z)) {
       P.wetFeet = 4;
@@ -141,7 +142,7 @@ export class Mechanics {
         const loud = P.running ? 1 : 0.4;
         g.audio.noise(0.25, { type: 'bandpass', f: 1300, q: 1.2, vol: 0.35 * loud, a: 0.005, f2: 500, verb: 0.4 });
         g.audio.noise(0.12, { type: 'highpass', f: 3500, vol: 0.15 * loud, verb: 0.3 });
-        if (P.running) { P.noise = Math.max(P.noise, 20); P.slow = 0.75; setTimeout(() => P.slow = 1, 400); if (!this.warned) { this.warned = true; g.ui.toast('אל תרוץ על הרטוב!'); } }
+        if (P.running) { P.noise = Math.max(P.noise, 20); P.slow = 0.75; this.slowT = 0.4; if (!this.warned) { this.warned = true; g.ui.toast('אל תרוץ על הרטוב!'); } }
         else P.noise = Math.max(P.noise, 5);
       }
     }

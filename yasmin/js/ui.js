@@ -6,6 +6,7 @@ export class UI {
     this.screens = ['loading', 'menu', 'howto', 'settings', 'card', 'note', 'pause', 'over', 'end'];
     this.subT = 0; this.toastT = 0;
     this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    if (this.isTouch) document.body.classList.add('touch');
   }
   show(id, on = true) { $(id).classList.toggle('show', on); }
   only(id) { for (const s of this.screens) this.show(s, s === id); }

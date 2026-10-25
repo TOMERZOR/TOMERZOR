@@ -61,7 +61,7 @@ Progress and settings are saved in the browser (localStorage).
 ## How it works
 
 - `js/sensors.js`: tracks the "up" direction in the phone's axes. The gyroscope rotates it every motion event and the accelerometer slowly corrects drift, so the tilt is smooth and doesn't shake when your hand moves. Tilt is measured along the screen's left-right axis, so holding the phone flat or upright both work. Sign differences between browsers are detected live.
-- `js/sim.js`: the walker is an inverted pendulum (lean grows on its own, your tilt pushes back). It also lays out what's on each rope (coins, drops, knots, hurdles, ibex, rain), keeps the score and multiplier, and holds each liquid's slosh frequency, damping, container shape and spill rate. The liquid surface is a damped pendulum driven by the bucket's sideways acceleration and by how fast you rotate the phone. Water pours out when the surface tilts past the rim relative to the bucket; the rim angle grows as the bucket empties.
+- `js/sim.js`: the walker is a slightly unstable, heavily damped pendulum: a lean drifts away on its own over a few seconds, and the phone's tilt sets how fast he leans back. (An earlier version had your tilt push him directly; people with a normal 0.3 s reaction time kept overcorrecting and swinging, so the damping was raised until simulated ordinary players found it steady.) It also lays out what's on each rope (coins, drops, knots, hurdles, ibex, rain), keeps the score and multiplier, and holds each liquid's slosh frequency, damping, container shape and spill rate. The liquid surface is a damped pendulum driven by the bucket's sideways acceleration and by how fast you rotate the phone. Water pours out when the surface tilts past the rim relative to the bucket; the rim angle grows as the bucket empties.
 - `js/render.js`: a 2D canvas with a simple perspective camera behind the walker. The painted backdrop fills the screen and sets the horizon; the far cliff is a sprite whose ledge post is pinned to the rope's far anchor, so it grows as you approach and fades into the haze when far. The walker sprite's legs are drawn as two halves so each foot lifts on its step; the water, droplets, rope, ribbon, wind and snow are drawn live on top.
 - `js/assets.js`: image paths and the measured anchor points in each painting (feet, pole, bucket rim, cliff ledge).
 - `js/audio.js`: wind, pouring water, rope creaks, birds and stings, all synthesised with Web Audio.
@@ -73,7 +73,10 @@ The paintings in `img/` were generated with Higgsfield (GPT Image 2.5): a backdr
 ## Tests
 
 ```
-node tightrope/test/balance.mjs   # simulated players: a steady one clears every level, a jerky one fails the late ones, hands-off never wins
+node tightrope/test/balance.mjs   # difficulty check with simulated ordinary players (below); also: hands-off never wins, perfect play always can
+node tightrope/test/human.mjs     # just the per-level report for ordinary players
 node tightrope/test/play.cjs <outDir> [level]   # plays in a phone-sized browser with fake motion sensors and saves screenshots (needs the local server on :8091)
 node tightrope/test/features.cjs <outDir>       # plays a late level, buys a character in the shop, and runs endless mode across a rope change
 ```
+
+`test/human.mjs` simulates a population of ordinary players, each with their own traits: about 0.3 s between seeing a lean and the hand moving, corrections made in separate moves every 0.2-0.45 s, small leans (under ~1.5°) going unnoticed, a poor sense of how fast the lean is changing, a personal and imperfect correction strength, hand overshoot, tremor and a slowly drifting grip, jumps timed by eye, and many of them chasing coins. The current targets: levels 1-3 cleared 85-100% of the time, then a gradual drop to about half on level 8, almost no falls, and a typical endless run of 4-14 ropes.

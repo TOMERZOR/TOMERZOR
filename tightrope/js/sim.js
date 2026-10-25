@@ -12,8 +12,18 @@
 
 export const GRAV = 9.81;
 export const HEAD = 1.8;            // container height above the rope (m)
-export const CONTROL = 5;           // rad/s² of lean per radian of phone tilt
-export const DAMP = 1.6;            // the walker's own steadiness
+// Tunables (exported so the tests can try alternatives).
+// Tuned against a population of simulated ordinary players (test/human.mjs):
+// strong damping makes the phone steer how fast he leans rather than how hard
+// he is pushed, which people with a 0.3 s reaction time handle well, and a lean
+// drifts away on its own over a few seconds instead of one.
+export const TUNE = {
+  control: 8,       // rad/s² of lean per radian of phone tilt
+  damp: 5,          // the walker's own steadiness
+  freeboard: 0.02,  // extra room above the liquid (m)
+  dist: 1.2,        // scale on wind, birds and other pushes
+  instab: 1.2,      // scale on how fast a lean grows on its own
+};
 export const MAX_TILT = 0.6;        // input is clamped to about 34°
 export const FALL_ANGLE = 0.95;     // past ~54° he is gone
 const SLOSH_LEVER = 1.0;            // how much of the head's swing reaches the liquid
@@ -35,7 +45,7 @@ export const LIQUIDS = {
 };
 
 export function rimAngle(fill, liq = LIQUIDS.water) {
-  return Math.atan2(liq.freeboard + (1 - fill) * liq.depth, liq.radius);
+  return Math.atan2(liq.freeboard + TUNE.freeboard + (1 - fill) * liq.depth, liq.radius);
 }
 
 export function rng(seed) {
@@ -200,8 +210,8 @@ export function stepSim(s, dt, u, uRate, input = {}) {
 
   const bird = birdLoad(s) * (s.bird ? s.bird.side : 0) * 0.75;
 
-  s.alpha = L.instab * liq.instab * Math.sin(s.theta) + CONTROL * u - DAMP * s.omega
-    + s.wind + bird - ropeAcc / HEAD;
+  s.alpha = L.instab * liq.instab * TUNE.instab * Math.sin(s.theta) + TUNE.control * u - TUNE.damp * s.omega
+    + (s.wind + bird) * TUNE.dist - ropeAcc / HEAD;
   s.omega += s.alpha * dt;
   s.theta += s.omega * dt;
   s.maxLean = Math.max(s.maxLean, Math.abs(s.theta));

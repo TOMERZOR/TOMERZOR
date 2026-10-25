@@ -617,6 +617,6 @@ $('set-difficulty').onchange = () => { settings.difficulty = $('set-difficulty')
 $('set-quality').value = settings.quality;
 $('set-quality').onchange = () => { settings.quality = $('set-quality').value; store.set('settings', settings); };
 
-game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l) };
+game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l), render: () => S_render(), post, renderer, clock: () => clockT };
 load().catch(e => { console.error(e); ui.progress(1, 'שגיאה בטעינה: ' + e.message); });
 frame();

@@ -93,6 +93,8 @@ async function load() {
   game.tex = tex; game.models = models;
   ui.progress(1, 'בונה את הבסיס...');
   await new Promise(r => setTimeout(r, 30));
+  // signs, posters and scrawls are drawn into textures with the web fonts: make sure they are in (but don't wait forever)
+  try { await Promise.race([Promise.all(['800 40px Heebo', '700 40px Karantina', '700 40px "Amatic SC"', '700 40px "Frank Ruhl Libre"'].map(f => document.fonts.load(f, 'א'))), new Promise(r => setTimeout(r, 2500))]); } catch (e) { }
   build();
 }
 
@@ -122,6 +124,8 @@ function build() {
     audio.stinger('peek'); audio.play('sfx_behind', { volume: 1.2, muffle: false, sub: false }); player.shake = 0.4;
   };
   yasmin.onLockerLeave = () => { $('scare').classList.remove('push'); ui.scare(null, 0); audio.heartbeat(1); };
+  // out of air: the phone's hold-breath toggle lets go with you
+  player.onGasp = () => { player.touch.runLock = false; $('t-run').classList.remove('on'); };
   yasmin.onSpot = () => { player.shake = Math.max(player.shake, 0.4); audio.stinger('peek'); };
   game.onLostPlayer = () => { };
   // warm up every shader, including objects that start hidden (tapes, ghost, bottles, signs), so nothing hitches later
@@ -156,6 +160,8 @@ function enter() {
 }
 function menu() {
   game.state = 'menu';
+  clearOverlays();
+  if (radio) { radio.stop(0.1); radio = null; }
   ui.only('menu'); ui.hud(false);
   const best = store.get('night', 1);
   $('btn-play').textContent = best > 1 ? `המשך — לילה ${best}` : 'התחל משמרת';
@@ -178,8 +184,16 @@ function menu() {
 }
 
 let radio = null;
+function lockerDoors() { for (const L of game.world.lockers) L.hinge.visible = true; }
+// anything that could still be covering the screen from the last night: the locker vents, her face at the vents
+function clearOverlays() {
+  lockerDoors();
+  ui.lockerView(false);
+  $('scare').classList.remove('push'); ui.scare(null, 0);
+}
 function startNight(n, fromCheckpoint = false) {
-  behind = null; glimpse = null; cutDone = false; glimpseT = 25 + Math.random() * 35;
+  behind = null; glimpse = null; cutDone = false; glimpseT = 25 + Math.random() * 35; scareT = 40;
+  clearOverlays();
   if (!fromCheckpoint || n !== game.night) game.caughtCount = 0;
   if (!fromCheckpoint || !game.checkpoint || game.checkpoint.night !== n) game.checkpoint = null;
   game.night = n;
@@ -270,7 +284,8 @@ game.enterLocker = (L) => {
     P.hidden = L; P.enabled = true;
     // on a phone the run button becomes "hold breath" inside: start with it released
     P.touch.runLock = false; P.touch.run = false; $('t-run').classList.remove('on');
-    P.yaw = L.ry; P.pitch = 0; P.lightOn = false;
+    P.yaw = L.ry + Math.PI; P.pitch = 0; P.lightOn = false; // facing out through the vents
+    L.hinge.visible = false; // the vent overlay is the door; you see the room through its slats
     L.target = 0;
     ui.lockerView(true);
     if (seen) Y.sawHide = L; else if (Y.sawHide !== L) Y.sawHide = null;
@@ -285,7 +300,8 @@ function exitLocker() {
   game.yasmin.noiseAt(L.x, L.z, 7);
   P.hidden = null;
   P.pos.set(L.x + L.fwd.x * 0.75, 0, L.z + L.fwd.z * 0.75);
-  ui.lockerView(false);
+  ui.lockerView(false); lockerDoors();
+  $('scare').classList.remove('push'); ui.scare(null, 0);
   game.story.after(0.6, () => L.target = 0);
 }
 
@@ -347,13 +363,14 @@ game.flashBlackout = (dur) => {
 let caughtT = 0;
 function caught(fromLocker) {
   if (game.state !== 'play') return;
-  game.state = 'caught'; caughtT = 0; behind = null; glimpse = null; cutDone = false;
+  game.state = 'caught'; caughtT = 0; if (radio) { radio.stop(0.1); radio = null; } behind = null; glimpse = null; cutDone = false;
   game.caughtCount = (game.caughtCount || 0) + 1;
   ui.scare(null, 0);
   stopTape();
   const P = game.player, Y = game.yasmin;
   P.enabled = false;
   if (P.hidden) { ui.lockerView(false); P.hidden = null; }
+  lockerDoors();
   // she is right in your face
   const f = P.forward(new THREE.Vector3()); f.y = 0; f.normalize();
   if (fromLocker) { f.set(-Math.sin(P.yaw), 0, -Math.cos(P.yaw)); }
@@ -427,6 +444,9 @@ game.endNight = () => {
   const n = game.night;
   game.state = 'sleep';
   game.player.enabled = false;
+  stopTape();
+  if (radio) { radio.stop(0.5); radio = null; }
+  game.yasmin.hide();
   ui.hud(false);
   ui.blackout(1);
   audio.fanfare();
@@ -535,7 +555,7 @@ function tryBehind() {
   if (!walkable(toCell(x), toCell(z)) || !lineOfSight(P.pos.x, P.pos.z, x, z, opaque)) return false;
   _v2.set(x, 0, z); collide(game.world, _v2, 0.25);
   if (Math.hypot(_v2.x - x, _v2.z - z) > 0.03) return false;
-  behind = { t: 0, hit: 0, saved: { visible: Y.visible, x: Y.position.x, z: Y.position.z, dir: Y.dir } };
+  behind = { t: 0, hit: 0, x, z, saved: { visible: Y.visible, x: Y.position.x, z: Y.position.z, dir: Y.dir } };
   Y.spawn(x, z, 'scripted', Math.atan2(P.pos.x - x, P.pos.z - z)); Y.script = null; Y.scriptMove = 0; Y.play('idle', 0.01);
   audio.play('sfx_behind', { pos: new THREE.Vector3(x, 1.6, z), volume: 1.5, sub: false, ref: 1, verb: 0.1 });
   return true;
@@ -544,7 +564,8 @@ function updateBehind(dt) {
   if (!behind) return;
   const Y = game.yasmin, P = game.player;
   behind.t += dt;
-  if (Y.state !== 'scripted' || P.hidden) { behind = null; return; }
+  if (Y.state !== 'scripted' || Math.hypot(Y.position.x - behind.x, Y.position.z - behind.z) > 0.3) { behind = null; return; }
+  if (P.hidden) { const sv = behind.saved; behind = null; if (sv.visible) Y.spawn(sv.x, sv.z, 'patrol', sv.dir); else Y.hide(); return; }
   Y.faceTo(P.pos.x, P.pos.z, dt * 6); Y.group.rotation.y = Y.dir;
   const f = P.forward(_v1); f.y = 0; f.normalize();
   _v2.set(Y.position.x - P.pos.x, 0, Y.position.z - P.pos.z).normalize();
@@ -577,6 +598,7 @@ function inView(x, z) {
 }
 function tryGlimpse() {
   const Y = game.yasmin, P = game.player;
+  if (game.night === 1 && !game.story.flags.key1) return false;
   if (glimpse || behind || P.hidden || game.finale || ['chase', 'locker', 'scripted', 'mop'].includes(Y.state)) return false;
   if (Y.visible && Math.hypot(Y.position.x - P.pos.x, Y.position.z - P.pos.z) < 20) return false;
   const f = P.forward(_v1); f.y = 0; f.normalize();
@@ -711,7 +733,7 @@ function tick(dt) {
     scene.fog.density += ((out ? 0.032 : 0.058) - scene.fog.density) * Math.min(1, dt * 2);
     scene.fog.color.setHex(out ? 0x0a0d10 : 0x070909);
     hemi.intensity = out ? 0.22 : W.power ? 0.1 : 0.05;
-    audio.update(dt, { fear, chase, outdoor: out, power: W.power, stamina: P.stamina, hidden: !!P.hidden, alarm: W.alarm });
+    audio.update(dt, { fear, chase, outdoor: out, power: W.power, stamina: P.stamina, hidden: !!P.hidden, alarm: W.alarm, holding: P.holdingBreath });
     post.u.fear.value = fear;
   } else if (st === 'caught') {
     updateCaught(dt);

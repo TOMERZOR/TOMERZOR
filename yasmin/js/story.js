@@ -470,7 +470,9 @@ export class Story {
     // reset world state
     for (const k of Object.keys(locks)) locks[k] = true;
     locks.P = false; gateClosed.v = true;
-    for (const k in W.doors) { W.doors[k].target = 0; W.doors[k].open = 0; W.doors[k].led.material.color.set(0xff2020); }
+    for (const k in W.doors) { const o = locks[k] ? 0 : 1; W.doors[k].target = W.doors[k].open = o; W.doors[k].led.material.color.set(o ? 0x20ff40 : 0xff2020); }
+    // tubes the last night broke (random scares, the store going dark) are back to how the base was built
+    for (const f of W.fixtures) { f.mode = f.mode0; f.on = true; }
     W.gate.target = 0; W.gate.open = 0;
     W.power = true; W.alarm = 0;
     this.candles = true; this.screensOn = true;
@@ -486,7 +488,7 @@ export class Story {
     P.hasLight = n > 1; P.lightOn = false; P.battery = 1; P.drain = n === 3 ? 1 / 200 : 1 / 900;
     P.hidden = null; P.stamina = 1; P.slow = 1;
     Y.hide(); Y.setNight(n, g.settings.difficulty);
-    Y.footprints.forEach(f => f.mesh.material.opacity = 0);
+    Y.footprints.forEach(f => { f.mesh.material.opacity = 0; f.age = 1e9; });
     this.carryMop = false;
     const it = (o) => { this.inter.push(o); return o; };
     const show = (id) => { const p = this.items[id]; p.mesh.visible = p.glint.visible = true; };
@@ -567,7 +569,7 @@ export class Story {
         this.flags.rollArmed = true;
       });
       // first sight of her: standing at the far end of the corridor
-      this.when(() => P.pos.z > 9.6 && P.hasLight, () => this.peek(26.5, 11, -Math.PI / 2, 4, 'y_intro'));
+      this.when(() => P.pos.z > 9.6 && P.hasLight && !this.flags.key1, () => this.peek(26.5, 11, -Math.PI / 2, 4, 'y_intro'));
       this.when(() => this.flags.rollArmed && P.pos.x > 30 && P.pos.x < 41 && P.pos.z > 9.5 && P.pos.z < 12, () => this.rollTheBucket());
     }
     if (n === 2) {
@@ -816,7 +818,7 @@ export class Story {
       this.flags.key3 = true; g.audio.keys(); g.audio.pickup(); g.ui.toast('מפתח שער 3/4'); this.done('key3');
       this.flags.canSleep = true; this.obj('bed').hidden = false; this.refresh();
       // she looks in from the wing's door, then goes back to her rounds
-      this.after(1.5, () => { if (g.yasmin.state !== 'chase') { this.peek(57, 27.4, 0, 3, 'y_hear'); this.after(4, () => { if (!g.yasmin.visible) g.yasmin.spawn(6, 27, 'patrol', Math.PI / 2); }); } });
+      this.after(1.5, () => { if (g.yasmin.state !== 'chase') { this.peek(57, 27.4, 0, 3, 'y_hear'); this.after(4, () => { if (['gone', 'scripted'].includes(g.yasmin.state)) g.yasmin.spawn(6, 27, 'patrol', Math.PI / 2); }); } });
     };
     this.inter.push({ label: 'פתח את הארון וקח מפתח', pos: () => this.items.key3.mesh.position, range: 1.8, enabled: () => this.items.key3.mesh.visible, use: take });
   }
@@ -842,7 +844,7 @@ export class Story {
         g.audio.static_(1.5, 0.3);
         g.audio.stinger('peek');
         Y.speak('y_hear', { force: true });
-        this.after(1.2, () => { Y.setState('patrol'); Y.startChase(P, g); });
+        this.after(1.2, () => { if (Y.visible && Y.state === 'scripted') { Y.setState('patrol'); Y.startChase(P, g); } });
         this.after(3, () => { for (const s of this.screens) s.mat.uniforms.noise.value = 0.15; });
       });
     });

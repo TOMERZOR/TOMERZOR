@@ -159,7 +159,7 @@ export class Audio {
     if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
     const g = c.createGain(); this.env(g, t, a, vol, dur);
     s.connect(fl); fl.connect(g); this.out(g, pos, verb);
-    s.start(t, Math.random() * 1.5); s.stop(t + a + dur + 0.05);
+    s.loop = true; s.start(t, Math.random() * 1.5); s.stop(t + a + dur + 0.05);
   }
   tone(freq, dur, { type = 'sine', vol = 0.2, a = 0.005, pos = null, verb = 0.3, f2 = null, delay = 0 } = {}) {
     const c = this.ctx, t = c.currentTime + delay;
@@ -230,8 +230,8 @@ export class Audio {
     this.nextDrip = 2; this.nextCreak = 8; this.nextBeat = 0; this.nextPerc = 0; this.breathT = 0;
   }
 
-  update(dt, { fear = 0, chase = 0, outdoor = false, power = true, stamina = 1, hidden = false, alarm = 0 }) {
-    if (!this.ambOn) return;
+  update(dt, { fear = 0, chase = 0, outdoor = false, power = true, stamina = 1, hidden = false, alarm = 0, holding = false }) {
+    if (!this.ambOn || this.ctx.state !== 'running') return;
     const c = this.ctx, t = c.currentTime;
     this.hum.gain.setTargetAtTime(power && !outdoor ? 0.012 : 0, t, 0.3);
     this.drone.gain.setTargetAtTime((outdoor ? 0.03 : 0.05) + fear * 0.05, t, 0.5);
@@ -270,7 +270,7 @@ export class Audio {
     }
     // breathing when out of breath
     this.breathT -= dt;
-    if (stamina < 0.45 && this.breathT < 0) {
+    if (stamina < 0.45 && this.breathT < 0 && !holding) {
       this.breathT = 0.55 + stamina * 0.6;
       const v = (0.45 - stamina) * 0.35;
       this.noise(0.28, { type: 'bandpass', f: 900, q: 0.8, vol: v, verb: 0.05, a: 0.04 });

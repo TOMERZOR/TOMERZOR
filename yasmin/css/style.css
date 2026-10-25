@@ -20,7 +20,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050605; c
 #locker-view.on { opacity: 1; }
 
 #ui { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
-.screen { position: absolute; inset: 0; display: none; pointer-events: auto; align-items: center; justify-content: center; }
+.screen { position: absolute; inset: 0; display: none; pointer-events: auto; align-items: center; justify-content: center; z-index: 2; }
+#settings { z-index: 3; }
 .screen.show { display: flex; }
 .keyart { position: absolute; inset: 0; background: url(../img/keyart.jpg) center / cover no-repeat; filter: brightness(0.55) contrast(1.1); animation: drift 30s ease-in-out infinite alternate; }
 .keyart.dim { filter: brightness(0.35) contrast(1.1) saturate(0.8); }
@@ -47,7 +48,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050605; c
 .nights .btn { min-width: 0; padding: 10px 18px; }
 
 .panel { background: rgba(0,0,0,0.8); }
-.sheet { background: #11130f; border: 1px solid #3c3e36; padding: 28px 32px; max-width: 760px; width: calc(100% - 32px); max-height: 90vh; overflow: auto; }
+.sheet { background: #11130f; border: 1px solid #3c3e36; padding: 28px 32px; max-width: 760px; width: calc(100% - 32px); max-height: 90vh; overflow: auto; touch-action: pan-y; -webkit-overflow-scrolling: touch; }
 .sheet.center { text-align: center; }
 .sheet h2 { font-family: Karantina, sans-serif; font-size: 52px; color: #e5ddc8; margin-bottom: 14px; }
 .sheet h3 { color: #c9a75a; margin: 10px 0 6px; font-size: 18px; }
@@ -104,7 +105,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050605; c
 #hint-lock { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-size: 20px; color: #ddd; background: rgba(0,0,0,0.6); padding: 12px 22px; pointer-events: none; }
 
 #note { background: rgba(0,0,0,0.75); }
-.paper { position: relative; width: min(560px, 92vw); max-height: 86vh; overflow: auto; padding: 38px 40px 26px; background: #e9e2cf url() ; color: #1d1d27; box-shadow: 0 20px 60px #000; transform: rotate(-1.2deg);
+.paper { position: relative; width: min(560px, 92vw); max-height: 86vh; overflow: auto; touch-action: pan-y; padding: 38px 40px 26px; background: #e9e2cf url() ; color: #1d1d27; box-shadow: 0 20px 60px #000; transform: rotate(-1.2deg);
   background-image: repeating-linear-gradient(180deg, transparent 0 33px, rgba(70,100,160,0.25) 33px 34px), radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.4), transparent 60%), radial-gradient(ellipse at 80% 90%, rgba(120,90,40,0.25), transparent 50%); }
 #note-body { font-family: "Amatic SC", "Frank Ruhl Libre", serif; font-size: 30px; line-height: 34px; white-space: pre-line; }
 #note-body h3 { font-family: "Frank Ruhl Libre", serif; font-size: 24px; margin-bottom: 10px; }
@@ -169,10 +170,10 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050605; c
   .inner { padding: 8px 16px; }
   .stats { margin-top: 8px; font-size: 13px; }
   .nights { margin-top: 8px; }
-  .sheet { padding: 14px 18px; }
-  .sheet h2 { font-size: 36px; margin-bottom: 6px; }
+  .sheet { padding: 10px 18px; max-height: 94vh; }
+  .sheet h2 { font-size: 30px; margin-bottom: 2px; }
   .sheet ul { line-height: 1.5; font-size: 14px; }
-  .sheet label { padding: 6px 0; font-size: 15px; }
+  .sheet label { padding: 3px 0; font-size: 14px; }
   .card-n { font-size: 72px; }
   .card-t { font-size: 24px; }
   .card-x { font-size: 15px; line-height: 1.6; margin-top: 10px; min-height: 0; }

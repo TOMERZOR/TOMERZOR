@@ -106,7 +106,7 @@ export class UI {
     pad.addEventListener('pointerup', pend); pad.addEventListener('pointercancel', pend);
     const btn = (id, down, up) => {
       const b = $(id);
-      b.addEventListener('pointerdown', e => { e.preventDefault(); down(b); });
+      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) { } down(b); });
       if (up) { b.addEventListener('pointerup', () => up(b)); b.addEventListener('pointercancel', () => up(b)); }
     };
     btn('t-use', () => actions.useDown(), () => actions.useUp());

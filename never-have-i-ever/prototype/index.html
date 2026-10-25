@@ -18,6 +18,7 @@
   --sun: #FFC53D;
   --sun-ink: #2E2200;
   --scrim: rgb(12 11 30 / .5);
+  --live: #D93A3F;
   --font-display: "Secular One", "Assistant", system-ui, sans-serif;
   --font-body: "Assistant", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --r: 14px;
@@ -27,13 +28,13 @@
   :root:not([data-theme="light"]) {
     --bg: #100F1F; --surface: #1C1B31; --ink: #EEEDF8; --muted: #A3A1BE; --line: #2F2D4A;
     --stamp: #93A0FF; --on-stamp: #0E1130; --stamp-soft: #262B57; --sun: #FFC53D; --sun-ink: #2E2200;
-    --scrim: rgb(0 0 0 / .6); color-scheme: dark;
+    --scrim: rgb(0 0 0 / .6); --live: #FF7A7F; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #100F1F; --surface: #1C1B31; --ink: #EEEDF8; --muted: #A3A1BE; --line: #2F2D4A;
   --stamp: #93A0FF; --on-stamp: #0E1130; --stamp-soft: #262B57; --sun: #FFC53D; --sun-ink: #2E2200;
-  --scrim: rgb(0 0 0 / .6); color-scheme: dark;
+  --scrim: rgb(0 0 0 / .6); --live: #FF7A7F; color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -207,6 +208,38 @@ textarea, input[type="text"] {
 }
 .empty { text-align: center; padding: 28px 12px; color: var(--muted); }
 
+/* Feed post types */
+.kicker { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--stamp); }
+.who { display: inline-flex; align-items: center; gap: 8px; }
+.av { width: 30px; height: 30px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; font-weight: 800; font-size: 14px; background: hsl(var(--h) 75% 80%); color: #1B1A2E; }
+.avs { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.avs .av { border: 2px solid var(--surface); margin-inline-start: -10px; }
+.avs .av:first-child { margin-inline-start: 0; }
+.avs .small { margin-inline-start: 6px; }
+.confess { font-family: var(--font-display); font-size: 24px; line-height: 1.2; text-wrap: balance; }
+.reacts { display: flex; flex-wrap: wrap; gap: 8px; }
+.comment { font-size: 15px; border-inline-start: 3px solid var(--line); padding-inline-start: 10px; }
+.game { background: var(--ink); color: var(--bg); gap: 10px; }
+.game .kicker { color: var(--sun); }
+.game-pre { font-weight: 700; opacity: .75; }
+.game-q { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1.15; margin-top: -6px; }
+.btn-inv { background: transparent; color: var(--bg); border: 1.5px solid var(--bg); }
+.big-num { display: flex; align-items: baseline; gap: 8px; }
+.big-num b { font-family: var(--font-display); font-weight: 400; font-size: 46px; line-height: 1; color: var(--stamp); font-variant-numeric: tabular-nums; }
+.live-tag { color: var(--live); font-size: 13px; font-weight: 800; }
+.timeline { list-style: none; margin: 0; padding: 0 12px 0 0; padding-inline-start: 12px; border-inline-start: 2px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.timeline li { display: flex; gap: 10px; }
+.timeline time { flex: none; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; padding-top: 1px; }
+.timeline li:last-child span { font-weight: 800; }
+.betbar { display: flex; border-radius: 999px; overflow: hidden; font-size: 13px; font-weight: 800; }
+.betbar span { padding: 6px 12px; white-space: nowrap; }
+.betbar .y { background: var(--stamp); color: var(--on-stamp); }
+.betbar .n { background: var(--line); color: var(--ink); text-align: end; }
+.expect { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; margin: 0; }
+.expect dt { font-weight: 800; color: var(--muted); }
+.expect dd { margin: 0; }
+.stamp.fail { color: var(--live); border-color: var(--live); outline-color: var(--live); border-style: dashed; }
+
 @media (prefers-reduced-motion: reduce) { .stamp.anim { animation: none; } }
 </style>
 
@@ -271,11 +304,18 @@ const NUDGES = {
   'גלשתי על גלשן': [{ by: 'איתי', text: 'אני בא איתך לשיעור ביום שישי 🏄' }],
   'טסתי לבד': [{ by: 'נועה', text: 'אם זה ליסבון, יש לי רשימה של מקומות בשבילך' }],
 };
-const FEED = [
-  { who: 'נועה', cat: 'travel', never: 'ישנתי בשטח במדבר', caption: 'מכתש רמון, 3 בלילה, אינסוף כוכבים. היה קר יותר ממה שאמרו לי.', helpers: ['עומר'], date: 'אתמול', cheers: 24 },
-  { who: 'עומר', cat: 'food', never: 'אפיתי לחם מחמצת', caption: 'ניסיון שלישי. השניים הראשונים יצאו לבנים, הפעם יצא לחם.', helpers: ['מאיה', 'סבתא רחל'], date: 'לפני 3 ימים', cheers: 41 },
-  { who: 'שירה', cat: 'life', never: 'הלכתי לסרט לבד', caption: 'חשבתי שיסתכלו עליי מוזר. אף אחד לא שם לב, והיה לי את כל משענת היד.', helpers: [], date: 'השבוע', cheers: 57 },
-];
+// The sample feed: one example of every post type
+const FUN = {
+  question: { text: 'נרדמתי בסרט בקולנוע', answered: 9, total: 14 },
+  reveal: { text: 'ראיתי את "טיטאניק"', never: ['עומר', 'שירה', 'דניאל', 'מאיה', 'יונתן'], total: 14, shock: 'עומר', shockNote: 'הוא מצטט את הסרט כל שבוע.', comment: { by: 'נועה', text: 'עומר. אנחנו צריכים לדבר על זה.' } },
+  confession: { who: 'יונתן', text: 'אכלתי שווארמה', meta: '31, תל אביב', comments: [{ by: 'איתי', text: '31 שנה בארץ?? אני בדרך אליך.' }, { by: 'דניאל', text: 'מחר ב-13:00 בלוינסקי. לא מקבל סירוב.' }] },
+  live: { who: 'איתי', text: 'גלשתי על גלשן', where: 'חוף בת ים', updates: [['08:12', 'החליפה הזאת לא תוכננה לבני אדם'], ['08:40', 'נפלתי 11 פעמים. המדריך אומר "כמעט"'], ['09:05', 'עמדתי!!! שלוש שניות. זה נחשב.']] },
+  first: { who: 'שירה', cat: 'life', never: 'הלכתי להופעה לבד', expect: 'כולם יסתכלו עליי כמו על מסכנה.', real: 'רקדתי בשורה הראשונה עם זוג מחיפה, ויש לי שני חברים חדשים.', helpers: ['נועה'], date: 'אתמול' },
+  bet: { who: 'מאיה', promise: 'לבקש העלאה במשכורת עד יום חמישי', yes: 9, no: 4, stake: 'דניאל הימר שלא. אם היא מצליחה, הוא קונה לה קפה כל השבוע.' },
+  fail: { who: 'עומר', cat: 'food', never: 'אפיתי לחם מחמצת', caption: 'יצאה לבנה. כרגע היא מחזיקה את הדלת פתוחה.' },
+  group: { never: 'ראיתי זריחה מהמצדה', who: ['נועה', 'שירה', 'יונתן', 'מאיה'], when: 'חמישי, יציאה ב-02:30 מתל אביב' },
+  chain: { who: 'נועה', never: 'ישנתי בשטח במדבר', quote: 'מכתש רמון, 3 בלילה, אינסוף כוכבים. היה קר יותר ממה שאמרו לי.', added: ['רון', 'ליה', 'עדי', 'מאיה'] },
+};
 const HELP = [
   { who: 'עדי', never: 'רצתי 10 ק"מ', note: 'נרשמתי למרוץ תל אביב ואני בלחץ. הכי רחוק שרצתי זה 5.', waiting: 4105 },
   { who: 'רון', never: 'גרתי לבד', note: 'עובר דירה בחודש הבא. מה הכי חשוב לדעת?', waiting: 2450 },
@@ -284,12 +324,12 @@ const HELP = [
 const LEARNED = [{ name: 'מיכל', what: 'רצתי 10 ק"מ' }, { name: 'אבא', what: 'גרתי לבד' }];
 
 // ---------- State ----------
-const KEY = 'ever-proto-v1';
+const KEY = 'ever-proto-v2';
 function fresh() {
   return {
     onboarded: false, tab: 'home', seg: 'friends', listSeg: 'open', view: null,
     picked: ['c3', 'c7', 'c14'], mine: [], veteran: ['רצתי 10 ק"מ', 'גרתי לבד'],
-    feed: FEED.map((p, i) => ({ ...p, id: 'f' + i, cheered: false })),
+    feed: [], fun: { q: null, r: {}, bet: null, joined: false },
     help: HELP.map((h, i) => ({ ...h, id: 'h' + i, open: false, sent: false })),
     taughtBase: 5, tipsSent: 0, nid: 1,
   };
@@ -361,6 +401,7 @@ function viewOnboard() {
     <div class="hero">
       <h1>Never have<br>I ever<span>…</span></h1>
       <p>מה עוד אף פעם לא עשית? אפשר לבחור כמה דברים. אנשים שכבר עשו אותם יעזרו לך לעשות אותם בפעם הראשונה.</p>
+      <div><button class="btn-link" data-a="skip">רק להציץ בפיד ←</button></div>
     </div>
     ${groups}
     <p class="small muted">כל Never נשמר כברירת מחדל לחברים בלבד. אפשר לשנות אחר כך.</p>`;
@@ -378,24 +419,7 @@ function viewHome() {
     <button data-a="seg" data-seg="friends" aria-pressed="${S.seg === 'friends'}">חברים</button>
     <button data-a="seg" data-seg="help" aria-pressed="${S.seg === 'help'}">אפשר לעזור${open ? `<span class="count">${open}</span>` : ''}</button>
   </div>`;
-  if (S.seg === 'friends') {
-    return seg + S.feed.map(p => `
-      <article class="post">
-        <div class="ph" style="background:${CATS[p.cat].grad}">
-          ${p.photo ? `<img src="${p.photo}" alt="">` : `<span aria-hidden="true">${CATS[p.cat].emoji}</span>`}
-          ${stamp(p.date)}
-        </div>
-        <div class="post-body">
-          <p class="post-head"><b>${esc(p.who)}</b> · פעם ראשונה ש<em>${esc(p.never)}</em></p>
-          ${p.caption ? `<p>${esc(p.caption)}</p>` : ''}
-          ${p.helpers.length ? `<p class="small muted">בזכות ${p.helpers.map(esc).join(', ')}</p>` : ''}
-          <div class="post-foot">
-            <button class="cheer" data-a="cheer" data-id="${p.id}" aria-pressed="${p.cheered}">כל הכבוד · ${fmt(p.cheers + (p.cheered ? 1 : 0))}</button>
-            ${p.who === 'אני' ? '<span class="small muted">הפוסט שלך</span>' : ''}
-          </div>
-        </div>
-      </article>`).join('');
-  }
+  if (S.seg === 'friends') return seg + friendsFeed();
   if (!S.help.length) return seg + `<p class="empty">כשמישהו יפתח Never שיש לך בו ניסיון, הוא יופיע כאן.</p>`;
   return seg + `<p class="small muted">אנשים שעוד לא עשו דברים שכבר עשית.</p>` + S.help.map(h => `
     <div class="card">
@@ -407,6 +431,106 @@ function viewHome() {
             <div class="row"><button class="btn btn-ink" data-a="tipSend" data-id="${h.id}">לשלוח</button></div>`
         : `<div class="row"><button class="btn btn-ghost" data-a="tipOpen" data-id="${h.id}">לשלוח טיפ</button></div>`}
     </div>`).join('');
+}
+
+const av = name => `<span class="av" style="--h:${[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % 360}" aria-hidden="true">${esc(name[0])}</span>`;
+function react(key, label, base) {
+  const on = !!S.fun.r[key];
+  return `<button class="cheer" data-a="react" data-k="${key}" aria-pressed="${on}">${label} · ${fmt(base + (on ? 1 : 0))}</button>`;
+}
+function addBtn(text, label) {
+  const has = S.mine.some(n => n.text === text);
+  return `<button class="btn-link" data-a="addFromFeed" data-text="${esc(text)}" ${has ? 'disabled' : ''}>${has ? 'ברשימה שלך ✓' : label}</button>`;
+}
+function firstPost(p) {
+  return `<article class="post">
+    <div class="ph" style="background:${CATS[p.cat].grad}">
+      ${p.photo ? `<img src="${p.photo}" alt="">` : `<span aria-hidden="true">${CATS[p.cat].emoji}</span>`}
+      ${stamp(p.date)}
+    </div>
+    <div class="post-body">
+      <p class="post-head"><b>${esc(p.who)}</b> · פעם ראשונה ש<em>${esc(p.never)}</em></p>
+      ${p.expect ? `<dl class="expect"><dt>ציפיתי</dt><dd>${esc(p.expect)}</dd><dt>בפועל</dt><dd>${esc(p.real)}</dd></dl>` : ''}
+      ${p.caption ? `<p>${esc(p.caption)}</p>` : ''}
+      ${p.helpers.length ? `<p class="small muted">בזכות ${p.helpers.map(esc).join(', ')}</p>` : ''}
+      <div class="post-foot">
+        ${p.id ? `<button class="cheer" data-a="cheer" data-id="${p.id}" aria-pressed="${p.cheered}">כל הכבוד · ${fmt(p.cheers + (p.cheered ? 1 : 0))}</button>` : react('first', '👏 כל הכבוד', 57)}
+        ${p.who === 'אני' ? '<span class="small muted">הפוסט שלך</span>' : addBtn(p.never, 'גם אני רוצה')}
+      </div>
+    </div>
+  </article>`;
+}
+function friendsFeed() {
+  const F = FUN, f = S.fun;
+  const Q = F.question, R = F.reveal, C = F.confession, L = F.live, B = F.bet, X = F.fail, G = F.group, K = F.chain;
+  const betTotal = B.yes + B.no + (f.bet ? 1 : 0);
+  const items = [
+    `<article class="card game">
+      <span class="kicker">שאלת הערב · התוצאות נחשפות ב-21:00</span>
+      <p class="game-pre">אף פעם לא…</p>
+      <h3 class="game-q">${esc(Q.text)}</h3>
+      ${f.q ? `<p>ענית <b>${f.q === 'never' ? 'אף פעם לא' : 'כבר עשיתי'}</b>. ${Q.answered + 1} מתוך ${Q.total} חברים ענו. בערב נראה מי עוד.</p>`
+        : `<div class="row"><button class="btn btn-sun" data-a="answer" data-v="did">כבר עשיתי</button><button class="btn btn-inv" data-a="answer" data-v="never">אף פעם לא</button></div>
+           <p class="small">${Q.answered} מתוך ${Q.total} חברים כבר ענו. אף אחד לא רואה את התשובות עד החשיפה.</p>`}
+    </article>`,
+    ...S.feed.map(firstPost),
+    `<article class="card">
+      <div class="card-head"><span class="who">${av(C.who)}<span><b>${esc(C.who)}</b> הודה</span></span><span class="kicker">וידוי</span></div>
+      <p class="confess">אף פעם לא ${esc(C.text)}</p>
+      <p class="small muted">${esc(C.who)}, ${esc(C.meta)}</p>
+      <div class="reacts">${react('c-shock', '😱 מה?!', 48)}${react('c-same', '🙋 גם אני', 2)}${react('c-take', '🚗 אני לוקח/ת אותו', 6)}</div>
+      ${C.comments.map(c => `<p class="comment"><b>${esc(c.by)}:</b> ${esc(c.text)}</p>`).join('')}
+    </article>`,
+    `<article class="card">
+      <div class="card-head"><span class="who">${av(L.who)}<b>${esc(L.who)}</b></span><span class="live-tag">● עכשיו</span></div>
+      <p>פעם ראשונה ש<b>${esc(L.text)}</b>. עדכונים חיים מ${esc(L.where)}.</p>
+      <ol class="timeline">${L.updates.map(([t, x]) => `<li><time>${t}</time><span>${esc(x)}</span></li>`).join('')}</ol>
+      <div class="reacts">${react('l-go', '🌊 קדימה ' + L.who, 31)}</div>
+    </article>`,
+    `<article class="card">
+      <span class="kicker">החשיפה של אתמול</span>
+      <p class="small muted">אף פעם לא… ${esc(R.text)}</p>
+      <div class="big-num"><b>${R.never.length}</b><span>מתוך ${R.total} החברים שלך</span></div>
+      <div class="avs">${R.never.map(av).join('')}<span class="small">${R.never.map(esc).join(', ')}</span></div>
+      <p class="small"><b>הכי מפתיע:</b> ${esc(R.shock)}. ${esc(R.shockNote)}</p>
+      <p class="comment"><b>${esc(R.comment.by)}:</b> ${esc(R.comment.text)}</p>
+      <div class="row">${react('rv', '😱 לא יכול להיות', 22)}<button class="btn-link" data-a="toast" data-msg="נשלחה הזמנה לחמישה חברים: ערב טיטאניק, שישי ב-20:00">לארגן ערב טיטאניק</button></div>
+    </article>`,
+    firstPost(F.first),
+    `<article class="card">
+      <div class="card-head"><span class="who">${av(B.who)}<span><b>${esc(B.who)}</b> הבטיחה</span></span><span class="kicker">הימור</span></div>
+      <p class="confess">${esc(B.promise)}</p>
+      <div class="betbar"><span class="y" style="flex:${B.yes + (f.bet === 'yes' ? 1 : 0)}">תעשה · ${B.yes + (f.bet === 'yes' ? 1 : 0)}</span><span class="n" style="flex:${B.no + (f.bet === 'no' ? 1 : 0)}">לא תעשה · ${B.no + (f.bet === 'no' ? 1 : 0)}</span></div>
+      <p class="small">${esc(B.stake)}</p>
+      ${f.bet ? `<p class="small muted">הימרת ש${f.bet === 'yes' ? 'היא תעשה את זה' : 'אין סיכוי'}. ${betTotal} חברים הימרו.</p>`
+        : `<div class="row"><button class="btn btn-ink" data-a="bet" data-v="yes">היא תעשה את זה</button><button class="btn btn-ghost" data-a="bet" data-v="no">אין סיכוי</button></div>`}
+    </article>`,
+    `<article class="post">
+      <div class="ph" style="background:${CATS[X.cat].grad}"><span aria-hidden="true">🧱</span>
+        <span class="stamp-at"><span class="stamp fail"><span>ניסיון 1</span><b>נכשל</b></span></span></div>
+      <div class="post-body">
+        <p class="post-head"><b>${esc(X.who)}</b> · ניסיון ראשון, עוד לא <em>${esc(X.never)}</em></p>
+        <p>${esc(X.caption)}</p>
+        <div class="reacts">${react('x-brick', '🧱 לבנה', 73)}${react('x-again', '💪 ניסיון 2', 18)}</div>
+        <div><button class="btn-link" data-a="toast" data-msg="הטיפ שלך יגיע לעומר לפני הניסיון השני">לשלוח לו טיפ לניסיון השני</button></div>
+      </div>
+    </article>`,
+    `<article class="card">
+      <span class="kicker">פעם ראשונה ביחד</span>
+      <p class="confess">${esc(G.never.replace('ראיתי ', ''))}</p>
+      <p>${G.who.length} חברים שאף פעם לא ראו זריחה מהמצדה יוצאים יחד. ${esc(G.when)}.</p>
+      <div class="avs">${G.who.map(av).join('')}${f.joined ? av('אני') : ''}<span class="small">${f.joined ? 'האוטו מלא' : '<b>נשאר מקום אחד באוטו</b>'}</span></div>
+      <div class="row">${f.joined ? '<p class="small muted">שמרו לך מקום ✓ זה נוסף גם לרשימה שלך.</p>' : '<button class="btn btn-sun" data-a="join">אני בפנים</button>'}</div>
+    </article>`,
+    `<article class="card">
+      <span class="kicker">שרשרת</span>
+      <p>אחרי ש<b>${esc(K.who)}</b> ישנה בשטח במדבר, ${K.added.length} חברים הוסיפו את זה לרשימה שלהם.</p>
+      <p class="comment"><b>${esc(K.who)}:</b> ${esc(K.quote)}</p>
+      <div class="avs">${K.added.map(av).join('')}<span class="small">${K.added.map(esc).join(', ')}</span></div>
+      <div>${addBtn(K.never, 'להצטרף לשרשרת')}</div>
+    </article>`,
+  ];
+  return items.join('');
 }
 
 function viewList() {
@@ -546,7 +670,21 @@ function addSubmit() {
 const go = (patch) => { Object.assign(S, patch); save(); render(); scrollTo(0, 0); };
 const H = {
   pick: el => { const id = el.dataset.id; S.picked = S.picked.includes(id) ? S.picked.filter(x => x !== id) : [...S.picked, id]; el.setAttribute('aria-pressed', S.picked.includes(id)); save(); renderDock(); },
-  finish: () => { S.mine = S.picked.map(id => CATALOG.find(c => c.id === id)).map(c => makeNever(c.text, c.cat, c.count)); go({ onboarded: true, tab: 'list', listSeg: 'open' }); toast('הרשימה מוכנה. אפשר להיכנס לכל כרטיס'); },
+  finish: () => { S.mine = S.picked.map(id => CATALOG.find(c => c.id === id)).map(c => makeNever(c.text, c.cat, c.count)); go({ onboarded: true, tab: 'home', seg: 'friends', view: null }); toast('הרשימה שלך מחכה בלשונית "הרשימה שלי"'); },
+  skip: () => { if (!S.picked.length) S.picked = fresh().picked; H.finish(); },
+  answer: el => { S.fun.q = el.dataset.v; save(); render(); toast('התשובה נשמרה. החשיפה ב-21:00'); },
+  react: el => { const k = el.dataset.k; S.fun.r[k] = !S.fun.r[k]; save(); render(); },
+  bet: el => { S.fun.bet = el.dataset.v; save(); render(); },
+  join: () => {
+    S.fun.joined = true;
+    if (!S.mine.some(n => n.text === FUN.group.never)) { const c = CATALOG.find(i => i.text === FUN.group.never); S.mine.unshift(makeNever(c.text, c.cat, c.count)); }
+    save(); render(); toast('שמרו לך מקום. יציאה בחמישי ב-02:30');
+  },
+  addFromFeed: el => {
+    const text = el.dataset.text, c = CATALOG.find(i => i.text === text);
+    S.mine.unshift(makeNever(text, c ? c.cat : 'life', c ? c.count : 0)); save(); render(); toast('נוסף לרשימה שלך');
+  },
+  toast: el => toast(el.dataset.msg),
   tab: el => go({ tab: el.dataset.tab, view: null }),
   seg: el => go({ seg: el.dataset.seg }),
   lseg: el => go({ listSeg: el.dataset.seg }),
@@ -589,5 +727,5 @@ document.addEventListener('change', e => {
   r.readAsDataURL(e.target.files[0]);
 });
 
-render();
+if (location.hash === '#feed' && !S.onboarded) H.skip(); else render();
 </script>

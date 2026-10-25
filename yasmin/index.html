@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>5 לילות אצל יסמין</title>
+<meta name="description" content="משחק אימה בגוף ראשון: לברוח מהבסיס בחמישה לילות בלי שיסמין, תורנית הניקיון, תתפוס אותך עם הדלי והמגב.">
+<meta name="theme-color" content="#050605">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="5 לילות אצל יסמין">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/yasmin/">
+<meta property="og:title" content="5 לילות אצל יסמין · משחק אימה">
+<meta property="og:description" content="נשארת לבד בבסיס לסופ״ש. יסמין, תורנית הניקיון, מסתובבת במסדרונות עם דלי ומגב. חמישה לילות. ארבעה מפתחות. היא שומעת הכל.">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/yasmin/img/og.jpg?v=1">
+<meta property="og:image:secure_url" content="https://tomerzor.github.io/TOMERZOR/yasmin/img/og.jpg?v=1">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="יסמין עם מגב ודלי בקצה מסדרון חשוך">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="5 לילות אצל יסמין · משחק אימה">
+<meta name="twitter:description" content="היא שומעת הכל. אל תרוץ על הרטוב.">
+<meta name="twitter:image" content="https://tomerzor.github.io/TOMERZOR/yasmin/img/og.jpg?v=1">
+<link rel="icon" href="img/icon.png" type="image/png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Karantina:wght@400;700&family=Amatic+SC:wght@700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=2">
+<script type="importmap">
+{
+ "imports": {
+  "three": "./vendor/three.module.min.js",
+  "three/addons/": "./vendor/addons/",
+  "./js/audio.js": "./js/audio.js?v=2",
+  "./js/main.js": "./js/main.js?v=2",
+  "./js/map.js": "./js/map.js?v=2",
+  "./js/mechanics.js": "./js/mechanics.js?v=2",
+  "./js/player.js": "./js/player.js?v=2",
+  "./js/post.js": "./js/post.js?v=2",
+  "./js/ruth.js": "./js/ruth.js?v=2",
+  "./js/story.js": "./js/story.js?v=2",
+  "./js/textures.js": "./js/textures.js?v=2",
+  "./js/ui.js": "./js/ui.js?v=2",
+  "./js/world.js": "./js/world.js?v=2",
+  "./js/yasmin.js": "./js/yasmin.js?v=2"
+ }
+}
+</script>
+</head>
+<body>
+<canvas id="game" aria-label="5 לילות אצל יסמין"></canvas>
+<img id="scare" alt="" aria-hidden="true">
+<div id="locker-view" aria-hidden="true"></div>
+<div id="blackout" aria-hidden="true"></div>
+
+<div id="ui">
+  <section id="loading" class="screen show">
+    <div class="keyart"></div>
+    <div class="inner">
+      <h1 class="title"><span class="five">5</span> לילות אצל <span class="name">יסמין</span></h1>
+      <div class="bar"><i id="load-bar"></i></div>
+      <p id="load-tip" class="tip">טוען את המסדרון...</p>
+      <button id="btn-enter" class="btn big hidden">היכנס</button>
+      <p class="warn">מומלץ לשחק עם אוזניות, בחושך.<br>המשחק מכיל קפיצות פתע, צעקות ודם (מזויף. כנראה).</p>
+    </div>
+  </section>
+
+  <section id="menu" class="screen">
+    <div class="keyart dim"></div>
+    <div class="inner">
+      <h1 class="title"><span class="five">5</span> לילות אצל <span class="name">יסמין</span></h1>
+      <p class="sub">היא שומעת הכל. אל תרוץ על הרטוב.</p>
+      <div class="col">
+        <button id="btn-play" class="btn big">התחל משמרת</button>
+        <button id="btn-nights" class="btn">בחר לילה</button>
+        <button id="btn-howto" class="btn">איך משחקים</button>
+        <button id="btn-settings" class="btn">הגדרות</button>
+      </div>
+      <div id="nights" class="nights hidden"></div>
+      <p id="menu-stats" class="stats"></p>
+    </div>
+  </section>
+
+  <section id="howto" class="screen panel">
+    <div class="sheet">
+      <h2>איך משחקים</h2>
+      <div class="cols">
+        <div>
+          <h3>מחשב</h3>
+          <ul>
+            <li><b>W A S D</b> — הליכה</li>
+            <li><b>עכבר</b> — הסתכלות</li>
+            <li><b>Shift</b> — ריצה (נגמר האוויר)</li>
+            <li><b>C / Ctrl</b> — התכופפות (שקט יותר)</li>
+            <li><b>E</b> — פעולה / להתחבא בארון</li>
+            <li><b>F</b> — פנס</li>
+            <li><b>G</b> / קליק ימני — זריקת בקבוק (מסיח אותה)</li>
+            <li><b>J</b> — יומן וקלטות</li>
+            <li><b>Tab</b> — הסתרת משימות</li>
+            <li><b>Esc</b> — עצירה</li>
+          </ul>
+        </div>
+        <div>
+          <h3>טלפון</h3>
+          <ul>
+            <li>ג׳ויסטיק שמאלי — הליכה</li>
+            <li>גרירה בצד ימין — הסתכלות</li>
+            <li>כפתורים: פעולה, ריצה, התכופפות, פנס</li>
+          </ul>
+          <h3>טיפים</h3>
+          <ul>
+            <li>יסמין שומעת ריצה מרחוק. היא שומעת גם דלתות.</li>
+            <li>פנס דולק = היא רואה אותך מרחוק.</li>
+            <li>אם היא רדפה אחריך — תשבור קו ראייה ותתחבא בארון.</li>
+            <li>אם היא ראתה אותך נכנס לארון... בהצלחה.</li>
+            <li>עקבות רטובות על הרצפה = היא הייתה פה לא מזמן.</li>
+            <li>שלט צהוב = רצפה רטובה. ריצה עליה נשמעת בכל הבסיס.</li>
+            <li>בקבוק שנזרק רחוק מושך אותה לשם.</li>
+            <li>יש בבסיס חמש קלטות של רות. תמצא את כולן.</li>
+          </ul>
+        </div>
+      </div>
+      <button class="btn back">חזרה</button>
+    </div>
+  </section>
+
+  <section id="settings" class="screen panel">
+    <div class="sheet">
+      <h2>הגדרות</h2>
+      <label>רגישות עכבר <input id="set-sens" type="range" min="0.3" max="2.5" step="0.05" value="1"></label>
+      <label>עוצמת קול <input id="set-vol" type="range" min="0" max="1" step="0.05" value="0.9"></label>
+      <label>מוזיקה <input id="set-music" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+      <label>בהירות <input id="set-bright" type="range" min="0.6" max="1.8" step="0.05" value="1"></label>
+      <label>רמת קושי
+        <select id="set-difficulty"><option value="easy">קל — היא איטית יותר</option><option value="normal">רגיל</option><option value="hard">קשה — היא לא מוותרת</option></select>
+      </label>
+      <label>איכות גרפיקה
+        <select id="set-quality"><option value="auto">אוטומטי</option><option value="high">גבוהה</option><option value="low">נמוכה (טלפון)</option></select>
+      </label>
+      <p class="small">שינוי איכות נכנס לתוקף אחרי רענון.</p>
+      <button class="btn back">חזרה</button>
+    </div>
+  </section>
+
+  <section id="card" class="screen">
+    <div class="inner">
+      <p id="card-n" class="card-n"></p>
+      <h2 id="card-t" class="card-t"></h2>
+      <p id="card-x" class="card-x"></p>
+      <p class="card-go">לחץ כדי להתחיל</p>
+    </div>
+  </section>
+
+  <section id="hud">
+    <div id="clock">00:00</div>
+    <div id="objectives"><h4 id="obj-night"></h4><ul id="obj-list"></ul></div>
+    <div id="eye" aria-hidden="true"><i></i></div>
+    <div id="dot"></div>
+    <div id="prompt"></div>
+    <div id="subs"></div>
+    <div id="toast"></div>
+    <div id="tape" class="hidden"><span>▶</span> <b id="tape-t"></b><i><em id="tape-bar"></em></i></div>
+    <div id="bottles"></div>
+    <div id="meters">
+      <div class="meter"><span>אוויר</span><b><i id="stamina"></i></b></div>
+      <div class="meter" id="battery-m"><span>סוללה</span><b><i id="battery"></i></b></div>
+    </div>
+    <div id="hint-lock" class="hidden">לחץ על המסך כדי להמשיך</div>
+  </section>
+
+  <section id="note" class="screen">
+    <div class="paper"><div id="note-body"></div><p class="close">[E] סגור</p></div>
+  </section>
+
+  <section id="pause" class="screen panel">
+    <div class="sheet center">
+      <h2>עצירה</h2>
+      <ul id="pause-obj"></ul>
+      <div class="col">
+        <button id="btn-resume" class="btn big">המשך</button>
+        <button id="btn-journal" class="btn">יומן וקלטות</button>
+        <button id="btn-restart" class="btn">התחל את הלילה מחדש</button>
+        <button id="btn-pset" class="btn">הגדרות</button>
+        <button id="btn-quit" class="btn">לתפריט</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="over" class="screen">
+    <div class="inner">
+      <h2 class="caught">נתפסת.</h2>
+      <p id="over-line" class="over-line"></p>
+      <div class="col">
+        <button id="btn-retry" class="btn big">נסה שוב את הלילה</button>
+        <button id="btn-over-menu" class="btn">לתפריט</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="end" class="screen">
+    <div class="inner credits" id="end-body"></div>
+  </section>
+
+  <div id="phone" class="hidden">
+    <div class="ph-top"><span class="ph-name">יסמין 🧽</span><span class="ph-st">מקלידה...</span></div>
+    <div class="ph-body" id="ph-body"></div>
+  </div>
+
+  <div id="touch" class="hidden">
+    <div id="stick"><i></i></div>
+    <div id="lookpad"></div>
+    <div class="tbtns">
+      <button id="t-use">פעולה</button>
+      <button id="t-run">ריצה</button>
+      <button id="t-crouch">כופף</button>
+      <button id="t-light">פנס</button>
+      <button id="t-throw">זרוק</button>
+      <button id="t-pause">||</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/main.js?v=2"></script>
+</body>
+</html>

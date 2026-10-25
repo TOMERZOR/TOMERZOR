@@ -4,17 +4,12 @@ import { PHYS, POWERUPS, MISSIONS, REVIVE_COST, MAX_MULT, ZONES, LEVEL_REWARD, F
 import { speedAt } from './track.js';
 import * as P from './props.js';
 import { zoneAt } from './world.js';
-import { sfx, setMusicIntensity, voice } from './audio.js';
+import { sfx, setMusicIntensity } from './audio.js';
 import { haptic } from './haptics.js';
 import * as Save from './save.js';
 import { T } from './i18n.js';
 
 const STEP = 1 / 120;
-const VOICE_LINES = {
-  'npc:vendor': ['vendor1', 'vendor2', 'vendor3', 'vendor4'], 'npc:breslov': ['breslov'], van: ['breslov'], 'npc:chabad': ['chabad'],
-  'npc:grandpa': ['grandpa'], 'npc:jack': ['delivery'], 'npc:scooter': ['delivery'],
-};
-export const VOICE_FILES = ['vendor1', 'vendor2', 'vendor3', 'vendor4', 'breslov', 'chabad', 'grandpa', 'delivery', 'grandma_stop', 'grandma_caught'];
 
 export class Game {
   constructor(ctx) {
@@ -222,11 +217,6 @@ export class Game {
       case 'horn':
         if (ev.vehicle) sfx.carHorn((ev.x - p.x) / 4, ev.long); else sfx.horn();
         break;
-      case 'voice': {
-        const lines = VOICE_LINES[ev.type];
-        if (lines && Math.random() < 0.7) voice(lines[Math.floor(Math.random() * lines.length)], ev.x / 4, 0.85);
-        break;
-      }
     }
   }
 
@@ -355,7 +345,7 @@ export class Game {
     p.stumble();
     r.chaserT = 7;
     r.invuln = 0.5;
-    if (!voice('grandma_stop', 0.3, 1, true)) sfx.whistle();
+    sfx.whistle();
     this.ui.toast(...T.chased);
   }
 
@@ -367,7 +357,7 @@ export class Game {
     this.fx.splat(p.x, 1, -0.6);
     this.state = 'dying';
     r.deathCause = caught ? 'caught' : (e && e.type) || 'wall';
-    if (caught && this.chaser) { r.chaserT = 3; voice('grandma_caught', 0.3, 1, true); } // keep her on screen
+    if (caught && this.chaser) r.chaserT = 3; // keep her on screen
     setTimeout(() => this.afterDeath(), 1300);
   }
 

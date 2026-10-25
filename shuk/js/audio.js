@@ -1,5 +1,4 @@
-// Music and sound effects are synthesized live with WebAudio (no files to download); only the market people's
-// voice lines are recordings (audio/*.mp3).
+// Music and sound effects are synthesized live with WebAudio (no files to download).
 
 let ctx = null, master, sfxBus, musicBus, noiseBuf, comp;
 const settings = { music: true, sfx: true };
@@ -231,33 +230,6 @@ export const sfx = {
 
 function crateBreak(t, amt) {
   for (let i = 0; i < 4; i++) noise(t + i * 0.03 + Math.random() * 0.02, 0.07, 0.2 * amt, 'bandpass', 700 + Math.random() * 900, 400, 3);
-}
-
-// ---------- recorded voice lines (Hebrew shouts) ----------
-const voices = {};
-let lastVoice = -10;
-export function loadVoices(names) {
-  if (!ctx) return;
-  for (const n of names) {
-    if (voices[n]) continue;
-    fetch(`audio/${n}.mp3`).then(r => { if (!r.ok) throw new Error(n); return r.arrayBuffer(); })
-      .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
-      .then(buf => { voices[n] = buf; }).catch(() => { /* optional asset */ });
-  }
-}
-// returns true if the line was played; lines don't overlap each other
-export function voice(name, pan = 0, vol = 1, force = false) {
-  if (!ok() || !voices[name]) return false;
-  const t = ctx.currentTime;
-  if (!force && t - lastVoice < 2.8) return false;
-  lastVoice = t;
-  const s = ctx.createBufferSource(); s.buffer = voices[name];
-  const g = ctx.createGain(); g.gain.value = 0.9 * vol;
-  let out = g;
-  if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); g.connect(p); out = p; }
-  s.connect(g); out.connect(sfxBus);
-  s.start(t);
-  return true;
 }
 
 // ---------- music ----------

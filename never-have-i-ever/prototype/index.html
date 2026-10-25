@@ -1,0 +1,593 @@
+<title>Never Have I Ever</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Secular+One&display=swap">
+<style>
+/* Layout: one phone-width column. Sticky brand bar on top, fixed tab bar below.
+   Every "never" is a ticket with a tear-off stub; doing it stamps the ticket. */
+:root {
+  --bg: #ECEBF4;
+  --surface: #FFFFFF;
+  --ink: #19182C;
+  --muted: #67657F;
+  --line: #D9D7E6;
+  --stamp: #2B44E8;
+  --on-stamp: #FFFFFF;
+  --stamp-soft: #E2E5FD;
+  --sun: #FFC53D;
+  --sun-ink: #2E2200;
+  --scrim: rgb(12 11 30 / .5);
+  --font-display: "Secular One", "Assistant", system-ui, sans-serif;
+  --font-body: "Assistant", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --r: 14px;
+  --col: 440px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #100F1F; --surface: #1C1B31; --ink: #EEEDF8; --muted: #A3A1BE; --line: #2F2D4A;
+    --stamp: #93A0FF; --on-stamp: #0E1130; --stamp-soft: #262B57; --sun: #FFC53D; --sun-ink: #2E2200;
+    --scrim: rgb(0 0 0 / .6); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #100F1F; --surface: #1C1B31; --ink: #EEEDF8; --muted: #A3A1BE; --line: #2F2D4A;
+  --stamp: #93A0FF; --on-stamp: #0E1130; --stamp-soft: #262B57; --sun: #FFC53D; --sun-ink: #2E2200;
+  --scrim: rgb(0 0 0 / .6); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+
+.app {
+  max-width: var(--col); margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 120px;
+}
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-block: 14px 10px;
+}
+.logo { font-family: var(--font-display); font-size: 28px; line-height: 1; letter-spacing: -.5px; direction: ltr; }
+.logo s { color: var(--muted); text-decoration-color: var(--stamp); text-decoration-thickness: 3px; }
+.tagline { font-size: 13px; color: var(--muted); direction: ltr; font-style: italic; }
+
+.view { display: flex; flex-direction: column; gap: 16px; }
+.section { display: flex; flex-direction: column; gap: 10px; }
+.label { font-size: 12px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+
+/* Tab bar */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tabs-inner { max-width: var(--col); margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; }
+.tab { background: none; border: 0; color: var(--muted); font-size: 13px; font-weight: 700; padding: 10px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tab svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.tab[aria-current="page"] { color: var(--ink); }
+.tab-add { justify-self: center; width: 48px; height: 48px; border-radius: 50%; border: 0; background: var(--sun); color: var(--sun-ink); font-size: 28px; line-height: 1; font-weight: 700; }
+
+/* Segmented */
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--line); }
+.seg button { flex: 1; border: 0; background: transparent; border-radius: 999px; padding: 8px 10px; font-size: 15px; font-weight: 700; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); }
+.seg .count { display: inline-block; min-width: 20px; margin-inline-start: 4px; padding: 0 6px; border-radius: 999px; background: var(--sun); color: var(--sun-ink); font-size: 12px; }
+
+/* Buttons and chips */
+.btn { border: 0; border-radius: 999px; padding: 12px 18px; font-size: 16px; font-weight: 800; }
+.btn-ink { background: var(--ink); color: var(--bg); }
+.btn-sun { background: var(--sun); color: var(--sun-ink); }
+.btn-ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.btn-link { background: none; border: 0; color: var(--stamp); font-weight: 700; padding: 6px 0; }
+.btn[disabled] { opacity: .45; cursor: default; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row > .btn { flex: 1; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 13px; font-size: 15px; font-weight: 600; }
+.chip[aria-pressed="true"] { background: var(--stamp); border-color: var(--stamp); color: var(--on-stamp); }
+
+/* Ticket */
+.ticket {
+  --stub: 92px;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) var(--stub);
+  width: 100%; padding: 0; border: 0; border-radius: var(--r); background: var(--surface); text-align: start;
+  -webkit-mask: radial-gradient(circle 9px at var(--stub) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 9px at var(--stub) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+          mask: radial-gradient(circle 9px at var(--stub) 0, #0000 97%, #000) top / 100% 51% no-repeat,
+                radial-gradient(circle 9px at var(--stub) 100%, #0000 97%, #000) bottom / 100% 51% no-repeat;
+}
+.ticket.big { --stub: 108px; }
+.t-main { padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.t-pre { font-size: 13px; font-weight: 700; color: var(--muted); }
+.t-text { font-family: var(--font-display); font-size: 21px; line-height: 1.2; text-wrap: balance; overflow-wrap: anywhere; }
+.ticket.big .t-text { font-size: 28px; }
+.t-meta { font-size: 14px; color: var(--muted); }
+.t-stub { border-inline-start: 2px dashed var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 12px 6px; text-align: center; }
+.t-stub b { font-family: var(--font-display); font-size: 19px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.t-stub small { font-size: 12px; color: var(--muted); line-height: 1.2; }
+.ticket.done .t-text { color: var(--muted); }
+.t-priv { align-self: flex-start; font-size: 12px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; }
+
+/* Stamp */
+.stamp-at { position: absolute; pointer-events: none; }
+.ticket .stamp-at { left: calc(var(--stub) + 14px); top: 50%; translate: 0 -50%; }
+.stamp {
+  display: block; transform: rotate(-10deg); color: var(--stamp); text-align: center; line-height: 1.1;
+  border: 3px solid var(--stamp); outline: 1.5px solid var(--stamp); outline-offset: 2px; border-radius: 9px; padding: 5px 11px;
+  font-family: var(--font-display);
+}
+.stamp span { display: block; font-size: 15px; }
+.stamp b { display: block; font-family: var(--font-body); font-size: 12px; font-weight: 800; letter-spacing: .1em; font-variant-numeric: tabular-nums; }
+.stamp.big span { font-size: 22px; }
+.stamp.anim { animation: stamp .5s cubic-bezier(.2, 1.5, .4, 1) .15s both; }
+@keyframes stamp { from { transform: rotate(-26deg) scale(2.4); opacity: 0; } to { transform: rotate(-10deg) scale(1); opacity: 1; } }
+
+/* Posts */
+.post { background: var(--surface); border-radius: var(--r); overflow: hidden; }
+.ph { position: relative; aspect-ratio: 4 / 3; max-width: 100%; display: grid; place-items: center; font-size: 68px; }
+.ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ph .stamp-at { left: 14px; bottom: 14px; }
+.ph .stamp { background: var(--surface); }
+.post-body { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 6px; }
+.post-head { font-size: 15px; }
+.post-head b { font-weight: 800; }
+.post-head em { font-style: normal; font-family: var(--font-display); font-size: 18px; display: block; line-height: 1.25; }
+.post-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 4px; }
+.cheer { border: 1.5px solid var(--line); background: transparent; border-radius: 999px; padding: 5px 12px; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cheer[aria-pressed="true"] { background: var(--sun); border-color: var(--sun); color: var(--sun-ink); }
+
+/* Cards */
+.card { background: var(--surface); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pill { font-size: 12px; font-weight: 800; color: var(--stamp); background: var(--stamp-soft); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.quote { font-size: 16px; }
+textarea, input[type="text"] {
+  width: 100%; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink);
+  font: inherit; padding: 10px 12px; resize: vertical;
+}
+.bubble { background: var(--stamp-soft); border-radius: 14px 14px 14px 4px; padding: 10px 14px; font-size: 15px; }
+.bubble b { font-weight: 800; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border-radius: var(--r); padding: 12px; text-align: center; }
+.stat b { display: block; font-family: var(--font-display); font-size: 28px; font-weight: 400; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; color: var(--muted); }
+.facts { display: flex; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.facts b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Onboarding */
+.hero { display: flex; flex-direction: column; gap: 8px; padding-block: 8px 4px; }
+.hero h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(36px, 11vw, 46px); line-height: 1; direction: ltr; text-align: left; }
+.hero h1 span { color: var(--stamp); }
+.hero p { font-size: 17px; }
+.dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--bg); border-top: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.dock-inner { max-width: var(--col); margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+.dock-inner .btn { flex: 1; }
+
+/* Detail */
+.back { align-self: flex-start; background: none; border: 0; padding: 4px 0; font-weight: 700; color: var(--muted); }
+.actions { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; padding-block: 8px; }
+.actions .btn { flex: 1; }
+
+/* Sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; background: var(--scrim); display: flex; align-items: flex-end; justify-content: center; }
+.panel {
+  width: min(100%, var(--col)); max-height: 92vh; overflow: auto; background: var(--bg); border-radius: 22px 22px 0 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 16px;
+}
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.panel-head h2 { font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.2; }
+.x { border: 0; background: var(--line); width: 34px; height: 34px; border-radius: 50%; font-size: 18px; flex: none; }
+.photo-pick { display: grid; place-items: center; aspect-ratio: 4 / 3; max-width: 100%; border: 2px dashed var(--line); border-radius: var(--r); background: var(--surface); color: var(--muted); font-weight: 700; position: relative; overflow: hidden; cursor: pointer; }
+.photo-pick img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.photo-pick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.celebrate { text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: stretch; }
+.celebrate h2 { font-family: var(--font-display); font-weight: 400; font-size: 26px; }
+
+.toast {
+  position: fixed; z-index: 30; left: 50%; translate: -50% 0; bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-weight: 700; font-size: 15px;
+  max-width: calc(100% - 32px); text-align: center;
+}
+.empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { .stamp.anim { animation: none; } }
+</style>
+
+<div class="app" dir="rtl" lang="he">
+  <header class="top">
+    <span class="logo" aria-label="Ever"><s>N</s>ever</span>
+    <span class="tagline">Never have I ever… until now</span>
+  </header>
+  <main id="view" class="view"></main>
+</div>
+
+<nav class="tabs" id="tabs" dir="rtl" hidden>
+  <div class="tabs-inner">
+    <button class="tab" data-a="tab" data-tab="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>בית</button>
+    <button class="tab" data-a="tab" data-tab="list"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z"/><path d="M15 5v14" stroke-dasharray="2 2.5"/></svg>הרשימה שלי</button>
+    <button class="tab-add" data-a="add" aria-label="להוסיף Never">+</button>
+    <button class="tab" data-a="tab" data-tab="profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>פרופיל</button>
+  </div>
+</nav>
+
+<div id="dock" class="dock" dir="rtl" hidden></div>
+<div id="sheet" class="sheet" dir="rtl" hidden></div>
+<div id="toast" class="toast" dir="rtl" role="status" hidden></div>
+
+<script>
+// ---------- Sample content (prototype only) ----------
+const CATS = {
+  food:   { label: 'אוכל',    emoji: '🍣', grad: 'linear-gradient(135deg,#FFB8A8,#FFE1A8)' },
+  travel: { label: 'טיולים',  emoji: '🧭', grad: 'linear-gradient(135deg,#A8D8FF,#C9B8FF)' },
+  body:   { label: 'גוף',     emoji: '🏄', grad: 'linear-gradient(135deg,#9FE8D2,#A8D8FF)' },
+  create: { label: 'יצירה',   emoji: '🎸', grad: 'linear-gradient(135deg,#FFC4E1,#C9B8FF)' },
+  life:   { label: 'חיים',    emoji: '🏠', grad: 'linear-gradient(135deg,#FFE08A,#FFC4A8)' },
+};
+const CATALOG = [
+  ['food', 'אכלתי סושי', 2140], ['food', 'בישלתי ארוחה לשמונה אנשים', 3870], ['food', 'אפיתי לחם מחמצת', 5210],
+  ['travel', 'טסתי לבד', 4312], ['travel', 'ישנתי בשטח במדבר', 2988], ['travel', 'ראיתי זריחה מהמצדה', 6120], ['travel', 'טסתי לחו"ל בלי לתכנן כלום', 7040],
+  ['body', 'גלשתי על גלשן', 5530], ['body', 'רצתי 10 ק"מ', 4105], ['body', 'טיפסתי על קיר', 3320],
+  ['create', 'הופעתי מול קהל', 6680], ['create', 'ניגנתי בכלי נגינה', 2870], ['create', 'ציירתי על קנבס', 3990],
+  ['life', 'גרתי לבד', 2450], ['life', 'ביקשתי העלאה במשכורת', 5870], ['life', 'הלכתי להופעה לבד', 4760], ['life', 'הלכתי לסרט לבד', 3150], ['life', 'התנדבתי באופן קבוע', 4420],
+].map(([cat, text, count], i) => ({ id: 'c' + i, cat, text, count }));
+
+const TIPS = {
+  'טסתי לבד': [
+    { by: 'נועה', since: 'טסה לבד מאז 2023', text: 'לטיסה הראשונה כדאי עיר עם תחבורה ציבורית טובה. ליסבון או אמסטרדם.' },
+    { by: 'עומר', since: 'עשה את זה 4 פעמים', text: 'להזמין הוסטל עם סיור ערב חינם. ככה לא אוכלים לבד בלילה הראשון.' },
+    { by: 'שירה', since: 'עשתה את זה ב-2024', text: 'השעה הראשונה אחרי הנחיתה הכי מלחיצה. אחרי זה זה עובר.' },
+  ],
+  'גלשתי על גלשן': [
+    { by: 'איתי', since: 'גולש מאז 2022', text: 'שיעור ראשון בבוקר, כשהים שטוח. בבת ים יש בתי ספר עם שיעור ניסיון.' },
+    { by: 'מאיה', since: 'עשתה את זה בקיץ', text: 'לקחת חליפה גם באוגוסט. נוח יותר ממה שחושבים, ופחות שפשופים.' },
+  ],
+  'ביקשתי העלאה במשכורת': [
+    { by: 'דניאל', since: 'ביקש וקיבל ב-2025', text: 'להגיע עם מספר ועם שלוש דוגמאות למה שעשית השנה.' },
+    { by: 'יונתן', since: 'עשה את זה פעמיים', text: 'לקבוע פגישה מראש ולא לתפוס את המנהל במסדרון.' },
+  ],
+  'הופעתי מול קהל': [
+    { by: 'שירה', since: 'מופיעה מאז 2023', text: 'בערבי סטנדאפ פתוחים בתל אביב מקבלים מתחילים. חמש דקות וזהו.' },
+  ],
+};
+const DEFAULT_TIP = { by: 'גל', since: 'עשה את זה בשנה שעברה', text: 'להתחיל בגרסה הכי קטנה של זה. הפעם הראשונה לא צריכה להיות מושלמת.' };
+const NUDGES = {
+  'גלשתי על גלשן': [{ by: 'איתי', text: 'אני בא איתך לשיעור ביום שישי 🏄' }],
+  'טסתי לבד': [{ by: 'נועה', text: 'אם זה ליסבון, יש לי רשימה של מקומות בשבילך' }],
+};
+const FEED = [
+  { who: 'נועה', cat: 'travel', never: 'ישנתי בשטח במדבר', caption: 'מכתש רמון, 3 בלילה, אינסוף כוכבים. היה קר יותר ממה שאמרו לי.', helpers: ['עומר'], date: 'אתמול', cheers: 24 },
+  { who: 'עומר', cat: 'food', never: 'אפיתי לחם מחמצת', caption: 'ניסיון שלישי. השניים הראשונים יצאו לבנים, הפעם יצא לחם.', helpers: ['מאיה', 'סבתא רחל'], date: 'לפני 3 ימים', cheers: 41 },
+  { who: 'שירה', cat: 'life', never: 'הלכתי לסרט לבד', caption: 'חשבתי שיסתכלו עליי מוזר. אף אחד לא שם לב, והיה לי את כל משענת היד.', helpers: [], date: 'השבוע', cheers: 57 },
+];
+const HELP = [
+  { who: 'עדי', never: 'רצתי 10 ק"מ', note: 'נרשמתי למרוץ תל אביב ואני בלחץ. הכי רחוק שרצתי זה 5.', waiting: 4105 },
+  { who: 'רון', never: 'גרתי לבד', note: 'עובר דירה בחודש הבא. מה הכי חשוב לדעת?', waiting: 2450 },
+  { who: 'ליה', never: 'רצתי 10 ק"מ', note: 'איך מתאמנים לזה בלי להיפצע?', waiting: 4105 },
+];
+const LEARNED = [{ name: 'מיכל', what: 'רצתי 10 ק"מ' }, { name: 'אבא', what: 'גרתי לבד' }];
+
+// ---------- State ----------
+const KEY = 'ever-proto-v1';
+function fresh() {
+  return {
+    onboarded: false, tab: 'home', seg: 'friends', listSeg: 'open', view: null,
+    picked: ['c3', 'c7', 'c14'], mine: [], veteran: ['רצתי 10 ק"מ', 'גרתי לבד'],
+    feed: FEED.map((p, i) => ({ ...p, id: 'f' + i, cheered: false })),
+    help: HELP.map((h, i) => ({ ...h, id: 'h' + i, open: false, sent: false })),
+    taughtBase: 5, tipsSent: 0, nid: 1,
+  };
+}
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) || fresh(); } catch { S = fresh(); }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+// ---------- Helpers ----------
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = n => Number(n).toLocaleString('he-IL');
+const today = () => new Date().toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+const PRIV = { me: 'רק אני', friends: 'חברים', all: 'כולם' };
+let toastT;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 2200);
+}
+function makeNever(text, cat, count, privacy = 'friends') {
+  return {
+    id: 'n' + S.nid++, text, cat, count, privacy,
+    tips: (TIPS[text] || (count ? [DEFAULT_TIP] : [])).map(t => ({ ...t, thanked: false })),
+    nudges: NUDGES[text] ? NUDGES[text].map(n => ({ ...n })) : [],
+    done: null,
+  };
+}
+const findNever = id => S.mine.find(n => n.id === id);
+
+function stamp(date, { anim = false, big = false } = {}) {
+  return `<span class="stamp-at"><span class="stamp${anim ? ' anim' : ''}${big ? ' big' : ''}"><span>פעם ראשונה</span><b>${esc(date)}</b></span></span>`;
+}
+function ticket(n, { big = false, anim = false, asButton = true } = {}) {
+  const tag = asButton ? 'button' : 'div';
+  const meta = n.done
+    ? (n.done.helpers.length ? `בזכות ${n.done.helpers.map(esc).join(', ')}` : 'לבד לגמרי')
+    : [n.tips.length ? `${n.tips.length} טיפים` : 'עוד אין טיפים', n.nudges.length ? `${esc(n.nudges[0].by)} דוחף/ת` : ''].filter(Boolean).join(' · ');
+  return `<${tag} class="ticket${big ? ' big' : ''}${n.done ? ' done' : ''}" ${asButton ? `data-a="open" data-id="${n.id}"` : ''}>
+    <span class="t-main">
+      <span class="t-pre">${n.done ? 'פעם ראשונה ש…' : 'אף פעם לא…'}</span>
+      <span class="t-text">${esc(n.text)}</span>
+      <span class="t-meta">${meta}</span>
+      ${!n.done && n.privacy !== 'friends' ? `<span class="t-priv">${PRIV[n.privacy]}</span>` : ''}
+    </span>
+    <span class="t-stub">${n.count ? `<b>${fmt(n.count)}</b><small>עוד לא עשו</small>` : `<b>חדש</b><small>אין ותיקים עדיין</small>`}</span>
+    ${n.done ? stamp(n.done.date, { anim, big }) : ''}
+  </${tag}>`;
+}
+
+// ---------- Views ----------
+function render() {
+  const v = $('#view');
+  $('#tabs').hidden = !S.onboarded;
+  $('#dock').hidden = S.onboarded;
+  document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-current', !S.view && b.dataset.tab === S.tab ? 'page' : 'false'));
+  if (!S.onboarded) { v.innerHTML = viewOnboard(); renderDock(); return; }
+  if (S.view) { v.innerHTML = viewNever(findNever(S.view)); return; }
+  v.innerHTML = S.tab === 'home' ? viewHome() : S.tab === 'list' ? viewList() : viewProfile();
+}
+
+function viewOnboard() {
+  const groups = Object.entries(CATS).map(([k, c]) => `
+    <div class="section">
+      <span class="label">${c.label}</span>
+      <div class="chips">${CATALOG.filter(i => i.cat === k).map(i =>
+        `<button class="chip" data-a="pick" data-id="${i.id}" aria-pressed="${S.picked.includes(i.id)}">${esc(i.text)}</button>`).join('')}</div>
+    </div>`).join('');
+  return `
+    <div class="hero">
+      <h1>Never have<br>I ever<span>…</span></h1>
+      <p>מה עוד אף פעם לא עשית? אפשר לבחור כמה דברים. אנשים שכבר עשו אותם יעזרו לך לעשות אותם בפעם הראשונה.</p>
+    </div>
+    ${groups}
+    <p class="small muted">כל Never נשמר כברירת מחדל לחברים בלבד. אפשר לשנות אחר כך.</p>`;
+}
+function renderDock() {
+  const n = S.picked.length;
+  $('#dock').innerHTML = `<div class="dock-inner">
+    <span class="small muted">נבחרו ${n}</span>
+    <button class="btn btn-ink" data-a="finish" ${n ? '' : 'disabled'}>זו הרשימה שלי</button></div>`;
+}
+
+function viewHome() {
+  const open = S.help.filter(h => !h.sent).length;
+  const seg = `<div class="seg" role="group">
+    <button data-a="seg" data-seg="friends" aria-pressed="${S.seg === 'friends'}">חברים</button>
+    <button data-a="seg" data-seg="help" aria-pressed="${S.seg === 'help'}">אפשר לעזור${open ? `<span class="count">${open}</span>` : ''}</button>
+  </div>`;
+  if (S.seg === 'friends') {
+    return seg + S.feed.map(p => `
+      <article class="post">
+        <div class="ph" style="background:${CATS[p.cat].grad}">
+          ${p.photo ? `<img src="${p.photo}" alt="">` : `<span aria-hidden="true">${CATS[p.cat].emoji}</span>`}
+          ${stamp(p.date)}
+        </div>
+        <div class="post-body">
+          <p class="post-head"><b>${esc(p.who)}</b> · פעם ראשונה ש<em>${esc(p.never)}</em></p>
+          ${p.caption ? `<p>${esc(p.caption)}</p>` : ''}
+          ${p.helpers.length ? `<p class="small muted">בזכות ${p.helpers.map(esc).join(', ')}</p>` : ''}
+          <div class="post-foot">
+            <button class="cheer" data-a="cheer" data-id="${p.id}" aria-pressed="${p.cheered}">כל הכבוד · ${fmt(p.cheers + (p.cheered ? 1 : 0))}</button>
+            ${p.who === 'אני' ? '<span class="small muted">הפוסט שלך</span>' : ''}
+          </div>
+        </div>
+      </article>`).join('');
+  }
+  if (!S.help.length) return seg + `<p class="empty">כשמישהו יפתח Never שיש לך בו ניסיון, הוא יופיע כאן.</p>`;
+  return seg + `<p class="small muted">אנשים שעוד לא עשו דברים שכבר עשית.</p>` + S.help.map(h => `
+    <div class="card">
+      <div class="card-head"><span><b>${esc(h.who)}</b> · אף פעם לא ${esc(h.never)}</span><span class="pill">יש לך ניסיון</span></div>
+      <p class="quote">"${esc(h.note)}"</p>
+      ${h.sent ? `<p class="small muted">הטיפ שלך נשלח ✓</p>`
+        : h.open ? `<label class="label" for="tip-${h.id}">הטיפ שלך</label>
+            <textarea id="tip-${h.id}" rows="3" placeholder="מה היית רוצה שמישהו יגיד לך לפני הפעם הראשונה?"></textarea>
+            <div class="row"><button class="btn btn-ink" data-a="tipSend" data-id="${h.id}">לשלוח</button></div>`
+        : `<div class="row"><button class="btn btn-ghost" data-a="tipOpen" data-id="${h.id}">לשלוח טיפ</button></div>`}
+    </div>`).join('');
+}
+
+function viewList() {
+  const open = S.mine.filter(n => !n.done), done = S.mine.filter(n => n.done);
+  const list = S.listSeg === 'open' ? open : done;
+  return `<div class="seg" role="group">
+      <button data-a="lseg" data-seg="open" aria-pressed="${S.listSeg === 'open'}">עוד לא (${open.length})</button>
+      <button data-a="lseg" data-seg="done" aria-pressed="${S.listSeg === 'done'}">פעם ראשונה (${done.length})</button>
+    </div>
+    ${list.length ? list.map(n => ticket(n)).join('')
+      : `<p class="empty">${S.listSeg === 'open' ? 'הרשימה ריקה. אפשר להוסיף Never בכפתור +' : 'עוד לא נסגר אף Never. הראשון הוא תמיד הכי מרגש.'}</p>`}`;
+}
+
+function viewNever(n) {
+  if (!n) { S.view = null; return viewList(); }
+  const head = `<button class="back" data-a="back">→ חזרה</button>${ticket(n, { big: true, asButton: false })}`;
+  if (n.done) {
+    const waiting = S.help.filter(h => h.never === n.text && !h.sent).length;
+    return head + `
+      ${n.done.photo ? `<div class="ph post"><img src="${n.done.photo}" alt=""></div>` : ''}
+      ${n.done.feeling ? `<div class="card"><span class="label">איך היה</span><p>${esc(n.done.feeling)}</p></div>` : ''}
+      <div class="card">
+        <span class="label">עכשיו יש לך ניסיון בזה</span>
+        <p>${fmt(n.count || 0)} אנשים עוד לא עשו את זה.${waiting ? ` ${waiting} מהם שאלו שאלה השבוע.` : ''}</p>
+        ${waiting ? `<div class="row"><button class="btn btn-sun" data-a="goHelp">לעזור למישהו</button></div>` : ''}
+      </div>`;
+  }
+  return head + `
+    <div class="facts">
+      <span><b>${fmt(n.count || 0)}</b> עוד לא עשו</span>
+      <span><b>${fmt(Math.round((n.count || 0) * 0.07))}</b> עשו את זה החודש</span>
+      <span>מוצג ל: <b>${PRIV[n.privacy]}</b></span>
+    </div>
+    <div class="section">
+      <span class="label">טיפים מאנשים שכבר עשו את זה</span>
+      ${n.tips.length ? n.tips.map((t, i) => `
+        <div class="card">
+          <div class="card-head"><b>${esc(t.by)}</b><span class="small muted">${esc(t.since)}</span></div>
+          <p>${esc(t.text)}</p>
+          <div><button class="btn-link" data-a="thank" data-id="${n.id}" data-i="${i}" ${t.thanked ? 'disabled' : ''}>${t.thanked ? 'התודה נשלחה ✓' : 'תודה'}</button></div>
+        </div>`).join('') : `<p class="empty">עוד אין טיפים. נודיע כשמישהו עם ניסיון יענה.</p>`}
+    </div>
+    ${n.nudges.length ? `<div class="section"><span class="label">חברים דוחפים</span>
+      ${n.nudges.map(x => `<p class="bubble"><b>${esc(x.by)}:</b> ${esc(x.text)}</p>`).join('')}</div>` : ''}
+    <div class="actions">
+      <button class="btn btn-ghost" data-a="nudge" data-id="${n.id}" style="background:var(--surface)">לבקש דחיפה</button>
+      <button class="btn btn-sun" data-a="done" data-id="${n.id}">עשיתי! ✦</button>
+    </div>`;
+}
+
+function viewProfile() {
+  const done = S.mine.filter(n => n.done);
+  const learned = [...LEARNED, ...done.flatMap(n => n.done.helpers.map(h => ({ name: h, what: n.text })))];
+  return `
+    <div class="section"><h2 style="font-family:var(--font-display);font-weight:400;font-size:26px">הפרופיל שלי</h2></div>
+    <div class="stats">
+      <div class="stat"><b>${S.mine.length - done.length}</b><span>עוד לא</span></div>
+      <div class="stat"><b>${done.length}</b><span>פעם ראשונה</span></div>
+      <div class="stat"><b>${S.veteran.length}</b><span>נושאים עם ניסיון</span></div>
+    </div>
+    <div class="section"><span class="label">יש לי ניסיון ב</span>
+      <div class="chips">${S.veteran.map(v => `<span class="chip">${esc(v)}</span>`).join('')}</div></div>
+    <div class="section"><span class="label">השושלת שלי</span>
+      <div class="card">
+        <p><b>למדתי מ:</b> ${learned.map(l => `${esc(l.name)} <span class="muted">(${esc(l.what)})</span>`).join(', ')}</p>
+        <p><b>למדו ממני:</b> ${S.taughtBase + S.tipsSent} אנשים</p>
+      </div></div>
+    ${done.length ? `<div class="section"><span class="label">הפעמים הראשונות שלי</span>${done.map(n => ticket(n)).join('')}</div>` : ''}
+    <div><button class="btn-link" data-a="reset">להתחיל את אב-הטיפוס מההתחלה</button></div>`;
+}
+
+// ---------- Sheets ----------
+let comp = null, addPriv = 'friends';
+function openSheet(html) { $('#toast').hidden = true; const s = $('#sheet'); s.innerHTML = `<div class="panel" role="dialog" aria-modal="true">${html}</div>`; s.hidden = false; }
+function closeSheet() { $('#sheet').hidden = true; $('#sheet').innerHTML = ''; comp = null; }
+
+function openComposer(id) {
+  const n = findNever(id);
+  comp = { id, photo: null, helpers: new Set() };
+  const people = [...new Set([...n.tips.map(t => t.by), ...n.nudges.map(x => x.by)])];
+  openSheet(`
+    <div class="panel-head"><h2>פעם ראשונה ש${esc(n.text)}</h2><button class="x" data-a="close" aria-label="סגירה">✕</button></div>
+    <label class="photo-pick" for="c-photo" id="c-photo-box"><span>להוסיף תמונה מהרגע</span><input type="file" id="c-photo" accept="image/*"></label>
+    <div class="section"><label class="label" for="c-feel">איך היה?</label>
+      <textarea id="c-feel" rows="3" placeholder="מה הפתיע? מה היית אומר/ת למי שעוד לא עשה?"></textarea></div>
+    ${people.length ? `<div class="section"><span class="label">מי עזר לי</span>
+      <div class="chips">${people.map(p => `<button class="chip" data-a="helper" data-name="${esc(p)}" aria-pressed="false">${esc(p)}</button>`).join('')}</div></div>` : ''}
+    <button class="btn btn-sun" data-a="publish">לחתום ולפרסם ✦</button>`);
+}
+function publish() {
+  const n = findNever(comp.id);
+  n.done = { date: today(), photo: comp.photo, feeling: $('#c-feel').value.trim(), helpers: [...comp.helpers] };
+  if (!S.veteran.includes(n.text)) S.veteran.push(n.text);
+  S.feed.unshift({ id: 'f' + S.nid++, who: 'אני', cat: n.cat, never: n.text, caption: n.done.feeling, helpers: n.done.helpers, date: 'עכשיו', cheers: 0, cheered: false, photo: n.done.photo });
+  if (n.count) S.help.unshift({ id: 'h' + S.nid++, who: 'גל', never: n.text, note: 'רוצה לעשות את זה כבר שנה ולא מעז. איך מתחילים?', waiting: n.count, open: false, sent: false });
+  save();
+  openSheet(`
+    <div class="celebrate">
+      ${ticket(n, { big: true, anim: true, asButton: false })}
+      <h2>ברוך הבא לוותיקים</h2>
+      <p>${n.count ? `${fmt(n.count)} אנשים עוד לא עשו את זה. מישהו מהם כבר שאל שאלה, ועכשיו יש לך מה לענות.` : 'זה Never חדש, ויש לך ניסיון בו לפני כולם.'}</p>
+      ${n.done.helpers.length ? `<p class="small muted">${n.done.helpers.map(esc).join(', ')} יקבלו הודעה שעזרו לך.</p>` : ''}
+      <div class="row">
+        <button class="btn btn-ghost" data-a="closeToList">לרשימה</button>
+        ${n.count ? `<button class="btn btn-sun" data-a="goHelp">לעזור למישהו</button>` : ''}
+      </div>
+    </div>`);
+}
+
+function openAdd() {
+  addPriv = 'friends';
+  const mineTexts = S.mine.map(n => n.text);
+  const sugg = CATALOG.filter(i => !mineTexts.includes(i.text)).slice(0, 8);
+  openSheet(`
+    <div class="panel-head"><h2>Never חדש</h2><button class="x" data-a="close" aria-label="סגירה">✕</button></div>
+    <div class="section"><label class="label" for="add-text">אף פעם לא…</label>
+      <input type="text" id="add-text" placeholder="למשל: צללתי עם בלון" maxlength="60" autocomplete="off"></div>
+    <div class="section"><span class="label">רעיונות</span>
+      <div class="chips">${sugg.map(i => `<button class="chip" data-a="sugg" data-text="${esc(i.text)}">${esc(i.text)}</button>`).join('')}</div></div>
+    <div class="section"><span class="label">מי יראה את זה</span>
+      <div class="seg" role="group" id="add-priv">${Object.entries(PRIV).map(([k, l]) => `<button data-a="priv" data-p="${k}" aria-pressed="${k === addPriv}">${l}</button>`).join('')}</div></div>
+    <button class="btn btn-ink" data-a="addSubmit">להוסיף לרשימה</button>`);
+  $('#add-text').focus();
+}
+function addSubmit() {
+  const text = $('#add-text').value.trim();
+  if (!text) { toast('צריך לכתוב מה עוד לא עשית'); return; }
+  if (S.mine.some(n => n.text === text)) { toast('זה כבר ברשימה'); return; }
+  const c = CATALOG.find(i => i.text === text);
+  S.mine.unshift(makeNever(text, c ? c.cat : 'life', c ? c.count : 0, addPriv));
+  S.tab = 'list'; S.listSeg = 'open'; S.view = null;
+  closeSheet(); save(); render(); scrollTo(0, 0);
+  toast(c ? `נוסף. ${fmt(c.count)} אנשים איתך בזה` : 'נוסף. נודיע כשיגיעו ותיקים');
+}
+
+// ---------- Events ----------
+const go = (patch) => { Object.assign(S, patch); save(); render(); scrollTo(0, 0); };
+const H = {
+  pick: el => { const id = el.dataset.id; S.picked = S.picked.includes(id) ? S.picked.filter(x => x !== id) : [...S.picked, id]; el.setAttribute('aria-pressed', S.picked.includes(id)); save(); renderDock(); },
+  finish: () => { S.mine = S.picked.map(id => CATALOG.find(c => c.id === id)).map(c => makeNever(c.text, c.cat, c.count)); go({ onboarded: true, tab: 'list', listSeg: 'open' }); toast('הרשימה מוכנה. אפשר להיכנס לכל כרטיס'); },
+  tab: el => go({ tab: el.dataset.tab, view: null }),
+  seg: el => go({ seg: el.dataset.seg }),
+  lseg: el => go({ listSeg: el.dataset.seg }),
+  open: el => go({ view: el.dataset.id }),
+  back: () => go({ view: null }),
+  thank: el => { findNever(el.dataset.id).tips[+el.dataset.i].thanked = true; save(); render(); },
+  nudge: el => { const n = findNever(el.dataset.id); n.nudges.push({ by: 'מאיה', text: 'יאללה, אני איתך בזה 💪' }); save(); render(); toast('ביקשת דחיפה. מאיה כבר ענתה'); },
+  done: el => openComposer(el.dataset.id),
+  helper: el => { const p = el.dataset.name; comp.helpers.has(p) ? comp.helpers.delete(p) : comp.helpers.add(p); el.setAttribute('aria-pressed', comp.helpers.has(p)); },
+  publish: () => publish(),
+  close: () => closeSheet(),
+  closeToList: () => { closeSheet(); go({ tab: 'list', listSeg: 'done', view: null }); },
+  goHelp: () => { closeSheet(); go({ tab: 'home', seg: 'help', view: null }); },
+  cheer: el => { const p = S.feed.find(x => x.id === el.dataset.id); p.cheered = !p.cheered; save(); render(); },
+  tipOpen: el => { S.help.forEach(h => (h.open = h.id === el.dataset.id)); render(); $(`#tip-${el.dataset.id}`)?.focus(); },
+  tipSend: el => {
+    const h = S.help.find(x => x.id === el.dataset.id), t = $(`#tip-${h.id}`).value.trim();
+    if (!t) { toast('הטיפ ריק'); return; }
+    h.sent = true; h.open = false; S.tipsSent++; save(); render(); toast(`${h.who} קיבל/ה את הטיפ שלך`);
+  },
+  add: () => openAdd(),
+  sugg: el => { $('#add-text').value = el.dataset.text; },
+  priv: el => { addPriv = el.dataset.p; document.querySelectorAll('#add-priv button').forEach(b => b.setAttribute('aria-pressed', b.dataset.p === addPriv)); },
+  addSubmit: () => addSubmit(),
+  reset: () => { S = fresh(); save(); render(); scrollTo(0, 0); },
+};
+document.addEventListener('click', e => {
+  if (e.target.id === 'sheet') { closeSheet(); return; }
+  const el = e.target.closest('[data-a]');
+  if (el && !el.disabled && H[el.dataset.a]) H[el.dataset.a](el, e);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet();
+  if (e.key === 'Enter' && e.target.id === 'add-text') addSubmit();
+});
+document.addEventListener('change', e => {
+  if (e.target.id !== 'c-photo' || !e.target.files[0] || !comp) return;
+  const r = new FileReader();
+  r.onload = () => { comp.photo = r.result; $('#c-photo-box').insertAdjacentHTML('beforeend', `<img src="${r.result}" alt="">`); };
+  r.readAsDataURL(e.target.files[0]);
+});
+
+render();
+</script>

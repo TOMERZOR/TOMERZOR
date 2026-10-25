@@ -528,14 +528,15 @@ export class Game {
     const cam = this.camera;
     const aspect = cam.aspect;
     const portrait = aspect < 1;
-    const back = portrait ? 4.9 : 5.0;
-    const height = portrait ? 3.05 : 2.85;
+    // high enough to look down the street over the obstacles at what is coming
+    const back = portrait ? 5.5 : 5.6;
+    const height = portrait ? 4.2 : 3.9;
     const tx = p.x * 0.82, ty = height + p.y * 0.62, tz = back;
     const k = 1 - Math.exp(-dt * 9);
     this.camPos.x += (tx - this.camPos.x) * k;
     this.camPos.y += (ty - this.camPos.y) * (1 - Math.exp(-dt * 5));
     this.camPos.z += (tz - this.camPos.z) * k;
-    this.camLook.set(p.x * 0.9, 1.15 + p.y * 0.62, -10);
+    this.camLook.set(p.x * 0.9, 0.85 + p.y * 0.62, -11);
     this.fx.shakeOffset(this._shake);
     cam.position.copy(this.camPos).add(this._shake);
     cam.lookAt(this.camLook);

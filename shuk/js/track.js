@@ -649,7 +649,8 @@ export class Track {
     for (const c of this.coins) {
       if (!c.alive) continue;
       const z = -(c.d - runD);
-      if (z < -AHEAD - 10) continue;
+      // gone once past the runner: a missed coin would fill the screen on its way to the camera
+      if (z < -AHEAD - 10 || z > 0.6) continue;
       eu.set(0, time * 3.2 + c.d * 0.35, 0); q.setFromEuler(eu);
       p.set(c.x, c.y + Math.sin(time * 4 + c.d) * 0.06, z);
       m.compose(p, q, s);

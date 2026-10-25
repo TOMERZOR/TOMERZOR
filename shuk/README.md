@@ -65,6 +65,14 @@ The arcade moments use retro game samples (supplied by the user as one compilati
 
 Coins on the street all give the same ding; coins strung together in one jump (or a carpet ride) climb a scale, and the next landing resets it. There are footfalls at a running cadence, a whoosh on near misses, engines that rise in pitch as traffic comes at you and drop as it passes, car horns, a close-call sting, a coin shower for streaks, paper and a pop for the mystery bag, lift-off, wind and a swoop for the carpet, three ticks as a power-up runs out, a revive sweep, a sad trombone at game over (a fanfare for a new best), and a swish on menu sheets. There is no narration or recorded speech: the market people talk in speech bubbles.
 
+## Haptics
+
+On Android every button press and game moment vibrates (lane changes, jumps, rolls, landings, coins, power-ups, stumbles, crashes). iPhones have no vibration API for websites, but toggling a native switch plays a system tick, so every button carries an invisible switch the finger's tap toggles: that gives button presses a tick on any iOS from 17.4. Game moments toggle a hidden switch from script, which iOS 17.4 to 26.4 turn into ticks (two or three for the big moments); newer iOS ignores switches toggled from script and swipes never toggle one, so an iPhone on iOS 26.5 or later only feels the buttons. The Vibration toggle in Settings turns all of it off.
+
+## Home screen
+
+Installed to the Home Screen on iOS 26, WebKit sizes the app's viewport short by the status bar's height while the page is shorter than the screen, which left a strip of background colour at the bottom. In standalone mode the page is made as tall as the screen, which gets it the full viewport, and the renderer re-checks the window size every frame.
+
 ## Code
 
 | File | What it does |
@@ -80,6 +88,7 @@ Coins on the street all give the same ding; coins strung together in one jump (o
 | `js/i18n.js` | All player-facing text in Hebrew and English |
 | `js/assets.js` | GLB loading and the shared animation library |
 | `js/audio.js` | Synthesized music and sound effects, the retro sample sprite |
+| `js/haptics.js` | Vibration patterns, and the native-switch ticks for iPhone |
 | `js/ui.js`, `css/style.css` | Interface, right-to-left in Hebrew and left-to-right in English |
 | `js/config.js` | Characters, prices, power-ups, zones, missions |
 

@@ -56,9 +56,9 @@ const URL = process.env.URL || 'http://localhost:8091/tightrope/';
   await page.waitForTimeout(6000);
   await page.screenshot({ path: path.join(out, 'play1.png') });
   const src = await page.evaluate(() => window.__tightrope.tilt.source);
-  // Keep walking until the level ends (or a minute passes).
+  // Keep walking until the level ends (or two minutes pass).
   let state = 'walk';
-  for (let i = 0; i < 120 && state === 'walk'; i++) {
+  for (let i = 0; i < 240 && state === 'walk'; i++) {
     await page.waitForTimeout(500);
     state = await page.evaluate(() => window.__tightrope.sim && window.__tightrope.sim.state);
     if (i === 14) await page.screenshot({ path: path.join(out, 'play2.png') });

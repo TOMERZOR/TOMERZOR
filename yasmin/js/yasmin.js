@@ -5,8 +5,13 @@ import { CELL, W, toCell, cellCenter, findPath, walkable, lineOfSight, opaque, c
 import { collide, clearLine } from './world.js';
 
 const tmp = new THREE.Vector3();
+const _p = new THREE.Vector3(), _q = new THREE.Vector3(), _r = new THREE.Vector3(), _s = new THREE.Vector3();
+const _m = new THREE.Matrix4(), _qq = new THREE.Quaternion(), _gq = new THREE.Quaternion(), _p2 = new THREE.Vector3(), _p3 = new THREE.Vector3();
 // she is taller than anyone on the base: about two metres
 export const HEIGHT_K = 1.22;
+// The ground speed each clip's feet move at (m/s at scale 1), measured from the planted foot:
+// animation speed = movement speed / natural speed, so her feet stay planted instead of sliding.
+const NATURAL = { walk: 1.1, run: 3.2 };
 
 export class Yasmin {
   constructor(scene, gltf, world, audio, tex) {
@@ -28,12 +33,14 @@ export class Yasmin {
     // strip root motion so the AI drives position
     this.mixer = new THREE.AnimationMixer(this.model);
     this.actions = {};
+    const clips = {};
     for (const clip of gltf.animations) {
-      const c = clip.clone();
+      let c = clip.clone();
       const hips = c.tracks.find(t => t.name.endsWith('Hips.position'));
       if (hips) { const v = hips.values; const x0 = v[0], z0 = v[2]; for (let i = 0; i < v.length; i += 3) { v[i] = x0; v[i + 2] = z0; } }
-      this.actions[c.name] = this.mixer.clipAction(c);
+      clips[c.name] = c;
     }
+    for (const n in clips) this.actions[n] = this.mixer.clipAction(clips[n]);
     this.cur = null;
     this.play('idle', 0);
     this.mixer.update(0.01);
@@ -99,17 +106,70 @@ export class Yasmin {
     water.rotation.x = -Math.PI / 2; water.position.y = -0.21; bucket.add(water);
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.006, 4, 20, Math.PI), M.chrome); handle.position.y = -0.16; bucket.add(handle);
     bucket.traverse(o => { if (o.isMesh) o.castShadow = true; });
-    const s = 100; // bones live under an armature scaled by 0.01
-    if (this.bones.RightHand) {
-      mop.scale.setScalar(s); mop.rotation.set(Math.PI + 0.15, 0, 0.1); mop.position.set(0, 7, 2);
-      this.bones.RightHand.add(mop);
-    }
-    if (this.bones.LeftHand) {
-      bucket.scale.setScalar(s); bucket.rotation.set(Math.PI, 0, 0); bucket.position.set(0, 9, 0);
-      this.bones.LeftHand.add(bucket);
-    }
+    // the mop is held near the top of the stick; its head hangs and drags on the floor (see updateProps)
+    this.group.add(mop);
+    // The bucket is not bolted to the wrist: it hangs from her hand by its handle and swings (see updateProps).
+    this.group.add(bucket);
     this.mop = mop; this.bucket = bucket;
+    this.grip = new THREE.Vector3(0, 8, 1); // where the handle sits, in the hand bone's space
+    this.mopGrip = new THREE.Vector3(0, 8, 2);
+    this.bob = null; this.mopHead = null;
   }
+
+  // one hanging prop: a point mass on a rigid link from the hand, under gravity, kept above the floor
+  swing(state, pivot, L, dt, floorFriction) {
+    const b = state, h = Math.min(dt, 1 / 30);
+    _q.copy(b.p).sub(b.prev).multiplyScalar(Math.pow(0.9, h * 30));
+    b.prev.copy(b.p);
+    b.p.add(_q).y -= 9.8 * h * h;
+    _q.copy(b.p).sub(pivot); const d = _q.length() || 1;
+    b.p.copy(pivot).addScaledVector(_q, L / d);
+    if (b.p.y < b.floor) {
+      b.p.y = b.floor;
+      // dragging on the floor: friction eats the sliding speed
+      b.prev.x += (b.p.x - b.prev.x) * floorFriction; b.prev.z += (b.p.z - b.prev.z) * floorFriction; b.prev.y = b.p.y;
+      _q.copy(b.p).sub(pivot); const d2 = _q.length() || 1; b.p.copy(pivot).addScaledVector(_q, L / d2);
+    }
+  }
+  // turn a prop so its up axis runs from the hanging end to the hand, its front the way she faces
+  hang(obj, pivot, end) {
+    const up = _q.copy(pivot).sub(end).normalize();
+    const fwd = _r.set(Math.sin(this.dir), 0, Math.cos(this.dir)); fwd.addScaledVector(up, -fwd.dot(up)).normalize();
+    const side = _s.crossVectors(up, fwd);
+    _m.makeBasis(side, up, fwd);
+    _qq.setFromRotationMatrix(_m);
+    this.group.getWorldQuaternion(_gq).invert();
+    obj.quaternion.copy(_gq.multiply(_qq));
+    obj.position.copy(this.group.worldToLocal(_p2.copy(pivot)));
+  }
+
+  // The bucket as a damped pendulum: the handle follows her hand, the bucket falls under gravity and is kept at the
+  // length of the handle (Verlet integration with a distance constraint), then is turned to hang along the handle.
+  updateProps(dt) {
+    const lh = this.bones.LeftHand, rh = this.bones.RightHand;
+    if (!lh || !rh || !this.group.visible) { this.bob = this.mopHead = null; return; }
+    this.group.updateMatrixWorld(true);
+    // the bucket: hangs by its handle and swings
+    const pivot = lh.localToWorld(_p.copy(this.grip));
+    const L = 0.3 * HEIGHT_K;
+    if (!this.bob || this.bob.p.distanceTo(pivot) > L * 3) this.bob = { p: pivot.clone().setY(pivot.y - L), prev: pivot.clone().setY(pivot.y - L), floor: 0.17 };
+    this.swing(this.bob, pivot, L, dt, 0.5);
+    this.hang(this.bucket, pivot, this.bob.p);
+    // the mop: the head trails and drags along the floor behind her
+    const mp = rh.localToWorld(_p3.copy(this.mopGrip));
+    const Lm = 1.08 * HEIGHT_K;
+    if (!this.mopHead || this.mopHead.p.distanceTo(mp) > Lm * 2) {
+      const back = _r.set(-Math.sin(this.dir), 0, -Math.cos(this.dir));
+      const start = mp.clone().addScaledVector(back, 0.6).setY(0.03);
+      this.mopHead = { p: start.clone(), prev: start.clone(), floor: 0.03 };
+    }
+    this.swing(this.mopHead, mp, Lm, dt, 0.35);
+    this.hang(this.mop, mp, this.mopHead.p);
+    // scraping when the head drags fast
+    const v = Math.hypot(this.mopHead.p.x - this.mopHead.prev.x, this.mopHead.p.z - this.mopHead.prev.z) / Math.max(dt, 1e-3);
+    this.mopDrag = this.mopHead.p.y < 0.05 ? v : 0;
+  }
+
 
   play(name, fade = 0.35, speed = 1) {
     const a = this.actions[name];
@@ -360,11 +420,12 @@ export class Yasmin {
     }
     this.group.rotation.y = this.dir;
     // animation speed follows movement
-    if (this.curName === 'walk') this.cur.timeScale = Math.max(0.3, this.speed / (1.25 * HEIGHT_K));
-    if (this.curName === 'run') this.cur.timeScale = Math.max(0.5, this.speed / (4.0 * HEIGHT_K));
+    if (this.curName === 'walk') this.cur.timeScale = Math.max(0.25, this.speed / (NATURAL.walk * HEIGHT_K));
+    if (this.curName === 'run') this.cur.timeScale = Math.max(0.3, this.speed / (NATURAL.run * HEIGHT_K));
     if (this.speed < 0.2 && (this.curName === 'walk' || this.curName === 'run') && this.state !== 'chase') this.play('idle', 0.4);
     if (this.speed > 0.4 && this.curName === 'idle' && this.state !== 'scripted' && !(this.windup > 0)) this.play(this.state === 'chase' ? 'run' : 'walk', 0.3);
     this.mixer.update(dt);
+    this.updateProps(dt);
 
     // footsteps, the squeaky bucket, wet prints
     if (this.speed > 0.3) {

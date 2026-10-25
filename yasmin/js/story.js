@@ -895,9 +895,10 @@ export class Story {
     }
     if (this.nevoState === 'rush') {
       this.rushT += dt;
-      const k = Math.min(1, this.rushT / 0.45);
-      this.nevo.position.z = 39.5 - k * 5.0;
-      if (this.rushT > 0.45 && !this.flags.thud) { this.flags.thud = true; g.audio.tone(70, 0.4, { vol: 0.8, pos: v3(53, 1.4, 33.6) }); g.audio.noise(0.2, { type: 'lowpass', f: 900, vol: 0.5, pos: v3(53, 1.4, 33.6) }); g.player.shake = 0.7; }
+      // he throws himself across the cell and slams into the glass (which stands at z = 31)
+      const k = Math.min(1, this.rushT / 0.55);
+      this.nevo.position.z = 39.5 - k * k * 8.1;
+      if (this.rushT > 0.55 && !this.flags.thud) { this.flags.thud = true; g.audio.tone(70, 0.4, { vol: 0.9, pos: v3(53, 1.4, 31.2) }); g.audio.noise(0.25, { type: 'lowpass', f: 900, vol: 0.7, pos: v3(53, 1.4, 31.2) }); g.audio.noise(0.12, { type: 'highpass', f: 2500, vol: 0.25, pos: v3(53, 1.6, 31.2) }); g.player.shake = 0.9; }
       if (this.rushT > 4) this.nevoState = 'glass';
     }
     if (this.nevoState !== 'rock' && dn < 9) {

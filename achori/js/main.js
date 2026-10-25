@@ -51,7 +51,7 @@ async function load() {
   const tex = {};
   let done = 0;
   const all = [...IMAGES];
-  const extra = ['keyart', 'ofek', 'shalev', 'slipper'];
+  const extra = ['keyart', 'ofek', 'shalev', 'shaked', 'slipper'];
   const total = all.length + extra.length;
   const tick = () => { done++; $('load-fill').style.width = (100 * done / total) + '%'; };
   await Promise.all([
@@ -198,6 +198,7 @@ function prepareLevel(i) {
   $('row-action').hidden = true;
   $('ab-shalev').hidden = !lv.shalev;
   $('ab-ofek').hidden = !lv.ofek;
+  $('ab-shaked').hidden = !lv.shaked;
   $('boss').hidden = true;
   renderHud();
   audio.stopMusic();
@@ -212,6 +213,7 @@ function beginPlan() {
   if (lv.hint && !save.hints[lv.hint]) hintQueue.push(HINTS[lv.hint]);
   if (lv.tutorial) save.hints.tutorial = true;
   if (lv.hint) save.hints[lv.hint] = true;
+  if (lv.hint2 && !save.hints[lv.hint2]) { hintQueue.push(HINTS[lv.hint2]); save.hints[lv.hint2] = true; }
   persist();
   nextHint();
 }
@@ -273,6 +275,8 @@ function renderHud() {
   $('ab-shalev-n').textContent = game.abilities.shalev;
   $('ab-ofek').disabled = !(game.abilities.ofek > 0);
   $('ab-shalev').disabled = !(game.abilities.shalev > 0);
+  $('ab-shaked-n').textContent = game.abilities.shaked;
+  $('ab-shaked').disabled = !(game.abilities.shaked > 0);
   const lior = game.mice.find((m) => m.type === 'lior');
   if (lior) {
     $('boss').hidden = false;
@@ -447,7 +451,8 @@ function handleEvents() {
       case 'steal':
         audio.sfx.steal();
         if (m && m.type === 'lior') say(m, pick('liorSteal'));
-        toast('אופק: ' + pick('ofekPanic'), 'bad', 1600);
+        if (Math.random() < 0.5 || !game.level.shaked) toast('אופק: ' + pick('ofekPanic'), 'bad', 1600);
+        else toast('שקד: ' + pick('shakedRant'), 'bad', 1600);
         renderHud();
         bumpPitas();
         break;
@@ -487,6 +492,11 @@ function handleEvents() {
           flash();
           scene.shake = 1;
           for (const q of game.liveMice()) if (q.type === 'lior') say(q, pick('liorStunned'));
+        } else if (ev.name === 'shaked') {
+          audio.sfx.ring();
+          callout('img/shaked.webp', 'אני מתלוננת!');
+          setTimeout(() => { audio.sfx.recovered(); toast('סוללת אידו נשברו מהתלונות של שקד והחזירו ₪3', 'ido', 2600); }, 700);
+          const mn = $('money'); mn.classList.remove('flash'); void mn.offsetWidth;
         } else {
           audio.sfx.disconnect();
           callout('img/shalev.webp', 'לא מתחבר.');
@@ -806,6 +816,7 @@ function wire() {
   $('ido-title').addEventListener('click', idoCall);
   $('ab-ofek').addEventListener('click', () => { if (game.useAbility('ofek')) handleEvents(); });
   $('ab-shalev').addEventListener('click', () => { if (game.useAbility('shalev')) handleEvents(); });
+  $('ab-shaked').addEventListener('click', () => { if (game.useAbility('shaked')) handleEvents(); });
   $('pause-btn').addEventListener('click', () => { audio.sfx.tap(); pause(); });
   $('resume-btn').addEventListener('click', () => { audio.sfx.tap(); resume(); });
   $('restart-btn').addEventListener('click', () => { audio.sfx.tap(); paused = false; prepareLevel(levelIndex); beginPlan(); });

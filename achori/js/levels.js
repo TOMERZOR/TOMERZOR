@@ -21,7 +21,7 @@ function parse(map) {
 }
 
 const L = (def) => ({
-  food: 3, ofek: 1, shalev: 0, snapHold: 3.2, glueHold: 2.3, cheeseHold: 2.4, liorReturn: 2.5,
+  food: 3, ofek: 1, shalev: 0, shaked: 1, snapHold: 3.2, glueHold: 2.3, cheeseHold: 2.4, liorReturn: 2.5,
   minion: { hp: 3, speed: 2.0 },
   ...def,
   ...parse(def.map),
@@ -46,7 +46,7 @@ export const LEVELS = [
       .#...#.
       .......
       ...G...`,
-    budget: 4, tools: ['snap', 'block'], snapHold: 4.0,
+    budget: 4, tools: ['snap', 'block'], snapHold: 4.0, shaked: 0,
     lior: { hp: 14, speed: 1.5 },
     waves: [{ t: 1, type: 'lior', hole: 0 }],
     tutorial: true,
@@ -72,10 +72,12 @@ export const LEVELS = [
     lior: { hp: 24, speed: 1.6 },
     waves: [{ t: 1, type: 'lior', hole: 0 }],
     hint: 'cheese',
+    hint2: 'shaked',
     intro: [
       ['lior', 'חזרתי, מותק. והבאתי תיאבון.'],
       ['ofek', 'גבינה! הוא לא עומד בפני גבינה. שים אחת ליד המלכודת, הוא ייעצר לאכול.'],
       ['shalev', 'דיווחתי לסוללת אידו. אמרו שזה "בטיפול".'],
+      ['shaked', 'יש עכברים באחורי! אני אומרת את זה כבר חודשיים ואף אחד לא מקשיב לי!'],
     ],
   }),
   L({
@@ -143,6 +145,7 @@ export const LEVELS = [
     intro: [
       ['ofek', 'הם מתרבים! יש פה יותר עכברים מעובדים!'],
       ['lior', 'העכברים משתלטים על האתר. תתרגלו.'],
+      ['shaked', 'אמרתי לכם! אמרתי! עכברים באחורי! עכשיו יש חמולה!'],
       ['shalev', 'תגיד לסוללת אידו שאני לא מתחבר גם אליהם.'],
     ],
   }),
@@ -209,6 +212,7 @@ export const LEVELS = [
     intro: [
       ['ofek', 'שלוש מחילות. שלוש! אני מגיש מכתב התפטרות לסוללת אידו.'],
       ['shalev', 'הם לא יקראו אותו. הם לא מתחברים למכתבים.'],
+      ['shaked', 'אני כבר כתבתי להם תלונה. ועוד אחת. ועוד שלושים.'],
       ['lior', 'באומונים, להסתער! החומוס של אופק שלנו!'],
     ],
   }),
@@ -249,7 +253,7 @@ export const LEVELS = [
       .##.##.
       .......
       ...G...`,
-    budget: 17, tools: ['snap', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, food: 4, snapHold: 2.9, glueHold: 2.0,
+    budget: 17, tools: ['snap', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, shaked: 2, food: 4, snapHold: 2.9, glueHold: 2.0,
     lior: { hp: 70, speed: 2.0 }, liorReturn: 2.0,
     minion: { hp: 4, speed: 2.2 },
     waves: [
@@ -261,6 +265,7 @@ export const LEVELS = [
       ['lior', 'זהו. האתר שלי. מהיום אני מנהל העבודה, והחומוס עובר אליי.'],
       ['ofek', 'זה הקרב האחרון. אני יורד מהכיסא. ...טוב, לא. אבל אני צורח מאוד חזק.'],
       ['shalev', 'אני עדיין לא מתחבר אליו. אבל אני מתחבר לרעיון שהוא ייעלם.'],
+      ['shaked', 'ואם עוד עכבר אחד מופיע באחורי, אני מתלוננת עד שסוללת אידו סוגרים את האתר.'],
     ],
   }),
 ];

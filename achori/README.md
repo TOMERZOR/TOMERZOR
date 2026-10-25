@@ -18,6 +18,7 @@ When you change a file, run `python3 achori/tools/version.py` so phones load the
   - **Block** (₪1): it has to go around.
 - **Combo.** Twelve hits in a row without a pause or a miss doubles the damage.
 - **Ofek's scream** freezes every mouse for a moment (and adds time to the ones already caught). **Shalev disconnects** sends them wandering away from the food.
+- **Shaked complains** to Ido's battalion so loudly that they refund ₪3 in the middle of the round, so you can buy another trap (from level 2).
 - When a mouse reaches the food it grabs a pita and runs for the nearest burrow. Kill it on the way and the pita comes back. If it gets away, the pita is gone. Lior always comes back from another burrow, having healed half his wounds.
 - Lose every pita and the mice win. Stars: 3 for keeping every pita, 2 for losing one, 1 otherwise.
 - From level 4 Lior is smart: he sees traps and glue and goes around them, so you have to block every other way.
@@ -40,7 +41,7 @@ Ten levels in three parts of the site (the site manager's caravan, the storeroom
 
 ## Art
 
-All the art was generated with Higgsfield (GPT Image 2.5) in a flat adult-sitcom cartoon style: Lior in seven poses (standing, running, caught in a trap, glued, eating, knocked out, ghost; made from the first one as a reference so they match), the henchman mouse, Ofek on his chair, Shalev, the trap, glue, cheese, blocks, toolbox, burrow, the hummus plate, the flip-flop, the floor, three back walls and the key art. `tools/sprite.py` trims them and saves WebP.
+All the art was generated with Higgsfield (GPT Image 2.5) in a flat adult-sitcom cartoon style: Lior in seven poses (standing, running, caught in a trap, glued, eating, knocked out, ghost; made from the first one as a reference so they match), the henchman mouse, Ofek on his chair, Shalev and Shaked (caricatures drawn from photos of the real people, with the old drawings as a style reference), the trap, glue, cheese, blocks, toolbox, burrow, the hummus plate, the flip-flop, the floor, three back walls and the key art. `tools/sprite.py` trims them and saves WebP.
 
 ## Tests
 

@@ -54,7 +54,7 @@ export class Game {
     this.mice = [];
     this.spawnQueue = level.waves.map((w, n) => ({ ...w, n })).sort((a, b) => a.t - b.t);
     this.nextId = 1;
-    this.abilities = { ofek: level.ofek || 0, shalev: level.shalev || 0 };
+    this.abilities = { ofek: level.ofek || 0, shalev: level.shalev || 0, shaked: level.shaked || 0 };
     this.combo = 0;
     this.comboT = 0;
     this.stats = { hits: 0, misses: 0, kills: 0, bestCombo: 0, stolen: 0, recovered: 0 };
@@ -510,6 +510,9 @@ export class Game {
         if (m.state === 'caught' || m.state === 'glued') m.t += 1.2;
         else this.hold(m, 'stunned', 1.5, m.trapCell);
       }
+    } else if (name === 'shaked') {
+      // she complains to Ido's battalion until they refund something
+      this.budget += 3;
     } else if (name === 'shalev') {
       for (const m of live) {
         if (this.isHeld(m)) continue;

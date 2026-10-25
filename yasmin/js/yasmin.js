@@ -2,7 +2,7 @@
 // States: idle, patrol, investigate, chase, search, locker (pulling you out), scripted, gone.
 import * as THREE from 'three';
 import { CELL, W, toCell, cellCenter, findPath, walkable, lineOfSight, opaque, cellsOf, roomAt, isOutdoor } from './map.js';
-import { collide } from './world.js';
+import { collide, clearLine } from './world.js';
 
 const tmp = new THREE.Vector3();
 
@@ -122,8 +122,8 @@ export class Yasmin {
   setNight(n, difficulty = 'normal') {
     this.night = n;
     const k = { easy: 0.85, normal: 1, hard: 1.08 }[difficulty] || 1;
-    this.walkSpeed = [0, 1.2, 1.3, 1.4, 1.5, 1.7][n] * k;
-    this.runSpeed = [0, 3.6, 3.9, 4.1, 4.35, 4.7][n] * k;
+    this.walkSpeed = [0, 1.2, 1.3, 1.4, 1.5, 1.6][n] * k;
+    this.runSpeed = [0, 3.5, 3.7, 3.9, 4.1, 4.3][n] * k;
     this.aggro = Math.min(1.2, [0, 0.35, 0.5, 0.65, 0.8, 1][n] * (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.25 : 1));
     this.senseK = difficulty === 'easy' ? 0.75 : difficulty === 'hard' ? 1.2 : 1;
     this.group.userData.aggro = this.aggro;
@@ -135,7 +135,7 @@ export class Yasmin {
     this.visible = true; this.group.visible = true;
     this.setState(state);
     this.awareness = 0;
-    this.path = null;
+    this.path = null; this.sidePath = null;
   }
   hide() {
     this.visible = false; this.group.visible = false; this.state = 'gone';
@@ -214,8 +214,8 @@ export class Yasmin {
         if (!this.path || this.wp >= this.path.length) {
           // director: drift toward the player when she has been far away
           let target;
-          if (dist > 18 && Math.random() < 0.35 + this.aggro * 0.4) {
-            const near = this.patrolCells.filter(([x, z]) => { const c = cellCenter(x, z); const d = Math.hypot(c.x - pp.x, c.z - pp.z); return d > 6 && d < 14; });
+          if (dist > 22 && Math.random() < 0.2 + this.aggro * 0.3) {
+            const near = this.patrolCells.filter(([x, z]) => { const c = cellCenter(x, z); const d = Math.hypot(c.x - pp.x, c.z - pp.z); return d > 10 && d < 20; });
             target = near[Math.floor(Math.random() * near.length)];
           }
           if (!target) target = this.patrolCells[Math.floor(Math.random() * this.patrolCells.length)];
@@ -266,6 +266,8 @@ export class Yasmin {
       }
       case 'chase': {
         move = this.runSpeed * (this.night === 5 && game && game.finale ? 1.05 : 1);
+        // the moment she spots you she freezes and stares for a beat before she runs
+        if (this.windup > 0) { this.windup -= dt; move = 0; this.faceTo(pp.x, pp.z, dt * 10); if (this.windup <= 0) this.play('run', 0.15); }
         if (see > 0) { this.lastSeen.set(pp.x, 0, pp.z); this.lostT = 0; }
         else this.lostT += dt;
         if (player.hidden) {
@@ -279,7 +281,7 @@ export class Yasmin {
           this.goTo(tgt.x, tgt.z);
         }
         // direct run when in sight and close
-        if (see > 0 && dist < 6) this.path = [{ x: pp.x, z: pp.z }], this.wp = 0;
+        if (see > 0 && dist < 6 && !this.sidePath && clearLine(this.world, this.position.x, this.position.z, pp.x, pp.z, 0.24)) this.path = [{ x: pp.x, z: pp.z }], this.wp = 0;
         if (dist < 1.05 && see > 0) { this.catch(player, game); return; }
         const giveUp = (game && game.finale) ? 99 : 3.2 + this.aggro * 2.5;
         if (this.lostT > giveUp) { this.setState('search'); this.searchT = 6 + this.aggro * 6; this.path = null; this.goTo(this.lastSeen.x, this.lastSeen.z); }
@@ -293,9 +295,13 @@ export class Yasmin {
         if (Math.hypot(dx, dz) < 0.45) {
           move = 0;
           this.dir = Math.atan2(-L.fwd.x, -L.fwd.z);
-          if (!this.lockerBeat) { this.lockerBeat = 1; this.speak('y_locker', { force: true, cd: 10 }); this.play('idle', 0.3); }
-          if (this.stateT > 2.8) {
-            if (player.hidden === L) { L.target = 1; this.audio.play('sfx_locker', { pos: new THREE.Vector3(L.x, 1, L.z), volume: 1.2 }); this.catch(player, game, true); return; }
+          if (!this.lockerBeat) { this.lockerBeat = 1; this.speak('y_locker', { force: true, cd: 10 }); this.play('idle', 0.3); if (player.hidden === L && this.onLockerStare) this.onLockerStare(); }
+          // she listens at the vents; if she saw you get in, or hears you breathe, she opens it
+          if (player.hidden === L && this.stateT > 1.2 && player.breathOut) this.heardBreath = true;
+          if (this.stateT > (this.sawHide === L ? 2.8 : 3.6)) {
+            if (player.hidden === L && (this.sawHide === L || this.heardBreath || !player.holdingBreath)) { L.target = 1; this.audio.play('sfx_locker', { pos: new THREE.Vector3(L.x, 1, L.z), volume: 1.2 }); this.catch(player, game, true); return; }
+            this.heardBreath = false; this.sawHide = null;
+            if (this.onLockerLeave) this.onLockerLeave();
             this.setState('patrol'); this.path = null;
           }
         }
@@ -311,7 +317,8 @@ export class Yasmin {
     // noticing the player
     if (['patrol', 'idle', 'investigate', 'search', 'mop'].includes(this.state)) {
       if (see > 0) {
-        this.awareness += dt * (0.8 + see * 3.5) * (0.7 + this.aggro * 0.6);
+        // far away it takes a couple of seconds to be sure it's you; close up, almost none
+        this.awareness += dt * (0.22 + see * see * 4.2) * (0.7 + this.aggro * 0.6);
         // turn toward
         if (this.awareness > 0.4) this.faceTo(pp.x, pp.z, dt * 3);
         if (this.awareness >= 1) this.startChase(player, game);
@@ -326,17 +333,26 @@ export class Yasmin {
     this.speed += (move - this.speed) * Math.min(1, dt * 4);
     if (this.path && this.wp < this.path.length && this.speed > 0.05) {
       // skip ahead to the furthest waypoint in a straight line
-      while (this.wp + 1 < this.path.length && lineOfSight(this.position.x, this.position.z, this.path[this.wp + 1].x, this.path[this.wp + 1].z, (x, z) => !this.canWalk(x, z))) this.wp++;
-      const w = this.path[this.wp];
+      while (this.wp + 1 < this.path.length && lineOfSight(this.position.x, this.position.z, this.path[this.wp + 1].x, this.path[this.wp + 1].z, (x, z) => !this.canWalk(x, z))
+        && clearLine(this.world, this.position.x, this.position.z, this.path[this.wp + 1].x, this.path[this.wp + 1].z, 0.24)) this.wp++;
+      const w = this.sidePath ? this.sidePath[0] : this.path[this.wp];
       const dx = w.x - this.position.x, dz = w.z - this.position.z;
       const d = Math.hypot(dx, dz);
-      if (d < 0.35) this.wp++;
+      if (d < (this.sidePath ? 0.12 : 0.35)) { if (this.sidePath) { this.sidePath.shift(); if (!this.sidePath.length) this.sidePath = null; } else this.wp++; }
       else {
         this.faceTo(w.x, w.z, dt * (this.state === 'chase' ? 9 : 4));
         const step = Math.min(d, this.speed * dt);
         // move toward facing (slightly) and waypoint (mostly)
+        const ox = this.position.x, oz = this.position.z;
         this.position.x += dx / d * step; this.position.z += dz / d * step;
         collide(this.world, this.position, 0.26);
+        // wedged on a door jamb or an open door: step aside, and follow the grid path for a moment instead of cutting corners
+        const moved = Math.hypot(this.position.x - ox, this.position.z - oz);
+        this.stuckT = step > 0.01 && moved < step * 0.3 ? (this.stuckT || 0) + dt : 0;
+        if (this.stuckT > 0.3) {
+          this.stuckT = 0;
+          this.sidePath = this.localPath(this.path[Math.min(this.wp, this.path.length - 1)]);
+        }
       }
     }
     this.group.rotation.y = this.dir;
@@ -344,7 +360,7 @@ export class Yasmin {
     if (this.curName === 'walk') this.cur.timeScale = Math.max(0.3, this.speed / 1.25);
     if (this.curName === 'run') this.cur.timeScale = Math.max(0.5, this.speed / 4.0);
     if (this.speed < 0.2 && (this.curName === 'walk' || this.curName === 'run') && this.state !== 'chase') this.play('idle', 0.4);
-    if (this.speed > 0.4 && this.curName === 'idle' && this.state !== 'scripted') this.play(this.state === 'chase' ? 'run' : 'walk', 0.3);
+    if (this.speed > 0.4 && this.curName === 'idle' && this.state !== 'scripted' && !(this.windup > 0)) this.play(this.state === 'chase' ? 'run' : 'walk', 0.3);
     this.mixer.update(dt);
 
     // footsteps, the squeaky bucket, wet prints
@@ -374,6 +390,45 @@ export class Yasmin {
     }
     // footprints dry out
     for (const fp of this.footprints) { fp.age += dt; fp.mesh.material.opacity = Math.max(0, 0.85 - fp.age / 40); }
+  }
+
+  // When wedged (behind an open door, against a door frame): a short path on a fine 25 cm grid around her
+  // to the waypoint she is heading for, clear of every collider.
+  localPath(goal) {
+    const p = this.position, S = 0.25, N = 40, r = 0.27;
+    const gd = Math.hypot(goal.x - p.x, goal.z - p.z);
+    if (gd > 4) goal = { x: p.x + (goal.x - p.x) * 4 / gd, z: p.z + (goal.z - p.z) * 4 / gd };
+    const ox = (p.x + goal.x) / 2 - N * S / 2, oz = (p.z + goal.z) / 2 - N * S / 2;
+    const cols = this.world.colliders.filter(b => b.maxX > ox - 1 && b.minX < ox + N * S + 1 && b.maxZ > oz - 1 && b.minZ < oz + N * S + 1);
+    const free = new Uint8Array(N * N);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const x = ox + (i + 0.5) * S, z = oz + (j + 0.5) * S;
+      let ok = this.canWalk(toCell(x), toCell(z));
+      if (ok) for (const [ddx, ddz] of [[r, 0], [-r, 0], [0, r], [0, -r]]) if (!walkable(toCell(x + ddx), toCell(z + ddz))) { ok = false; break; }
+      if (ok) for (const b of cols) if (x > b.minX - r && x < b.maxX + r && z > b.minZ - r && z < b.maxZ + r) { ok = false; break; }
+      free[j * N + i] = ok;
+    }
+    const idx = (x, z) => { const i = Math.floor((x - ox) / S), j = Math.floor((z - oz) / S); return i < 0 || j < 0 || i >= N || j >= N ? -1 : j * N + i; };
+    // start from the nearest free cell (she may be touching something)
+    let s0 = idx(p.x, p.z), g0 = idx(goal.x, goal.z);
+    if (s0 < 0 || g0 < 0) return null;
+    const nearestFree = (k) => { if (free[k]) return k; let best = -1, bd = 1e9; const ki = k % N, kj = (k / N) | 0; for (let j = Math.max(0, kj - 3); j <= Math.min(N - 1, kj + 3); j++) for (let i = Math.max(0, ki - 3); i <= Math.min(N - 1, ki + 3); i++) if (free[j * N + i]) { const d = (i - ki) ** 2 + (j - kj) ** 2; if (d < bd) { bd = d; best = j * N + i; } } return best; };
+    s0 = nearestFree(s0); g0 = nearestFree(g0);
+    if (s0 < 0 || g0 < 0) return null;
+    const prev = new Int32Array(N * N).fill(-2); prev[s0] = -1; const q = [s0];
+    for (let h = 0; h < q.length && prev[g0] === -2; h++) {
+      const k = q[h], i = k % N, j = (k / N) | 0;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const ni = i + di, nj = j + dj; if (ni < 0 || nj < 0 || ni >= N || nj >= N) continue;
+        const nk = nj * N + ni; if (prev[nk] !== -2 || !free[nk]) continue;
+        if (di && dj && (!free[j * N + ni] || !free[nj * N + i])) continue;
+        prev[nk] = k; q.push(nk);
+      }
+    }
+    if (prev[g0] === -2) return null;
+    const pts = []; for (let k = g0; k !== -1; k = prev[k]) pts.push({ x: ox + (k % N + 0.5) * S, z: oz + (((k / N) | 0) + 0.5) * S });
+    pts.reverse();
+    return pts.filter((_, i) => i % 2 === 1 || i === pts.length - 1);
   }
 
   faceTo(x, z, k) {
@@ -407,11 +462,13 @@ export class Yasmin {
     this.setState('chase');
     this.awareness = 1; this.lostT = 0; this.sawHide = null;
     this.lastSeen.set(player.pos.x, 0, player.pos.z);
+    this.windup = game && game.finale ? 0 : 0.65;
+    if (this.windup) this.play('idle', 0.1);
     this.speak(Math.random() < 0.6 ? 'y_spot' : 'y_chase', { force: true, cd: 6 });
     if (this.onSpot) this.onSpot();
   }
   checkLocker(L) {
-    this.lockerTarget = L; this.lockerBeat = 0;
+    this.lockerTarget = L; this.lockerBeat = 0; this.heardBreath = false;
     this.setState('locker');
     this.goTo(L.x + L.fwd.x * 0.75, L.z + L.fwd.z * 0.75);
   }

@@ -109,11 +109,19 @@ function build() {
   story.setup();
   game.story = story;
   yasmin.onCaught = (fromLocker) => caught(fromLocker);
+  // she presses her face to the vents of your locker before she opens it
+  yasmin.onLockerStare = () => { ui.scare(`img/scare3.jpg?v=${V}`, 0.97); audio.stinger('peek'); player.shake = 0.3; };
+  yasmin.onLockerLeave = () => { ui.scare(null, 0); audio.heartbeat(1); };
   yasmin.onSpot = () => { player.shake = Math.max(player.shake, 0.4); audio.stinger('peek'); };
   game.onLostPlayer = () => { };
-  // warm up shaders so the first frames don't hitch
+  // warm up every shader, including objects that start hidden (tapes, ghost, bottles, signs), so nothing hitches later
   camera.position.set(3, 1.6, 5);
+  const hidden = [];
+  scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  game.mech.mopPatch(30, 11);
   renderer.compile(scene, camera);
+  for (const o of hidden) o.visible = false;
+  game.mech.clear();
   player.onKey = onKey;
   player.onLockChange = (locked) => {
     if (!locked && game.state === 'play' && !isTouch) pause(true);
@@ -147,15 +155,22 @@ function menu() {
     b.onclick = () => startNight(n);
     nights.appendChild(b);
   }
-  game.yasmin && game.yasmin.hide();
   if (document.pointerLockElement) document.exitPointerLock();
   stopTape();
+  // the live background: the north corridor, and her, walking toward you
+  const W = game.world, Y = game.yasmin;
+  W.power = true; W.alarm = 0; game.finale = false;
+  game.mech.clear(); game.story.ghost && game.story.ghost.hide(true);
+  Y.spawn(62, 11, 'scripted', -Math.PI / 2); Y.play('walk', 0); Y.cur.timeScale = 0.55;
   const tapes = loadTapes(), found = store.get('found', []);
   const won = store.get('won', false);
   $('menu-stats').innerHTML = `קלטות של רות: <b>${tapes.size}/5</b> · גילויים: <b>${found.length}/6</b>${won ? ' · <b>ברחת</b>' + (store.get('ruthFree', false) ? ' · <b>רות חופשייה</b>' : '') : ''}`;
 }
 
-function startNight(n) {
+let radio = null;
+function startNight(n, fromCheckpoint = false) {
+  if (!fromCheckpoint || n !== game.night) game.caughtCount = 0;
+  if (!fromCheckpoint || !game.checkpoint || game.checkpoint.night !== n) game.checkpoint = null;
   game.night = n;
   game.state = 'card';
   game.clockMin = 0;
@@ -163,8 +178,12 @@ function startNight(n) {
   game.mech.clear();
   ui.hud(false);
   game.story.start(n);
+  if (game.checkpoint) { game.checkpoint.apply(); ui.toast('נקודת שמירה', 2); }
   ui.card(`לילה ${n}`, NIGHTS[n].title, NIGHTS[n].text);
   audio.static_(0.4, 0.05);
+  // night 1 opens with the sergeant major on the radio
+  if (radio) { radio.stop(0.1); radio = null; }
+  if (n === 1 && !fromCheckpoint) setTimeout(() => { if (game.state === 'card' || game.state === 'play') { audio.static_(0.3, 0.1); radio = audio.play('radio1', { volume: 1.0, verb: 0.15, muffle: false, sub: false }); } }, 1400);
 }
 
 function play() {
@@ -172,11 +191,12 @@ function play() {
   ui.only(null); ui.hud(true);
   game.player.enabled = true;
   lockPointer();
-  if (game.night === 1 && !game.story.flags.introLine) { game.story.flags.introLine = true; ui.sub('לחץ E כדי לקרוא את הפתק על המיטה', 4); }
+  if (game.night === 1 && !game.story.flags.introLine) { game.story.flags.introLine = true; ui.sub(isTouch ? 'הסתכל על הפתק על המיטה ולחץ "פעולה"' : 'לחץ E כדי לקרוא את הפתק על המיטה · Shift לריצה · F פנס', 5); }
 }
 function lockPointer() {
   if (isTouch) return;
-  try { const p = canvas.requestPointerLock({ unadjustedMovement: true }); if (p && p.catch) p.catch(() => canvas.requestPointerLock()); } catch (e) { canvas.requestPointerLock(); }
+  const plain = () => { try { const q = canvas.requestPointerLock(); if (q && q.catch) q.catch(() => ui.lockHint(true)); } catch (e) { ui.lockHint(true); } };
+  try { const p = canvas.requestPointerLock({ unadjustedMovement: true }); if (p && p.catch) p.catch(plain); } catch (e) { plain(); }
 }
 
 function pause(on) {
@@ -234,14 +254,17 @@ game.enterLocker = (L) => {
   audio.play('sfx_locker', { pos: new THREE.Vector3(L.x, 1, L.z), volume: 1 });
   const seen = Y.visible && (Y.sees(P) > 0 || (Y.state === 'chase' && Y.lostT < 0.5));
   P.enabled = false;
-  setTimeout(() => {
+  game.story.after(0.38, () => {
+    if (game.state !== 'play') { P.enabled = true; return; }
     P.hidden = L; P.enabled = true;
+    // on a phone the run button becomes "hold breath" inside: start with it released
+    P.touch.runLock = false; P.touch.run = false; $('t-run').classList.remove('on');
     P.yaw = L.ry; P.pitch = 0; P.lightOn = false;
     L.target = 0;
     ui.lockerView(true);
     if (seen) Y.sawHide = L; else if (Y.sawHide !== L) Y.sawHide = null;
     Y.noiseAt(L.x, L.z, 7);
-  }, 380);
+  });
 };
 function exitLocker() {
   const P = game.player, L = P.hidden;
@@ -252,33 +275,35 @@ function exitLocker() {
   P.hidden = null;
   P.pos.set(L.x + L.fwd.x * 0.75, 0, L.z + L.fwd.z * 0.75);
   ui.lockerView(false);
-  setTimeout(() => L.target = 0, 600);
+  game.story.after(0.6, () => L.target = 0);
 }
 
 // ---------- Ruth's tapes ----------
 let tape = null;
-function stopTape() { if (tape) { tape.h && tape.h.stop(0.2); tape.timers.forEach(clearTimeout); tape = null; $('tape').classList.add('hidden'); } }
+function stopTape() { if (tape) { tape.h && tape.h.stop(0.2); tape = null; $('tape').classList.add('hidden'); } }
 game.playTape = (n) => {
   stopTape();
   const t = TAPES[n];
   const h = audio.play('r_tape' + n, { volume: 1.15, verb: 0.05, muffle: false, sub: false });
   const dur = audio.buffers['r_tape' + n] ? audio.buffers['r_tape' + n].duration : 12;
+  // subtitle cues spread over the recording by line length; driven by game time so pausing keeps them in sync
   const total = t.lines.reduce((a, l) => a + l.length, 0);
-  let at = 0.3;
-  const timers = [];
+  let at = 0.3; const cues = [];
+  for (const line of t.lines) { const d = (dur - 0.6) * line.length / total; cues.push({ at, d, line }); at += d; }
   audio.click();
-  for (const line of t.lines) {
-    const d = (dur - 0.6) * line.length / total;
-    timers.push(setTimeout(() => ui.sub('רות (קלטת): ' + line, d + 0.3), at * 1000));
-    at += d;
-  }
-  timers.push(setTimeout(() => { stopTape(); audio.click(); game.story.onTapeEnd(n); }, (dur + 0.4) * 1000));
-  tape = { h, timers, n, start: performance.now(), dur };
+  tape = { h, n, t: 0, dur, cues, next: 0 };
   $('tape').classList.remove('hidden'); $('tape-t').textContent = t.title;
   const set = loadTapes(); const isNew = !set.has(n); set.add(n); saveTapes(set);
   if (isNew) ui.toast(`קלטת של רות · ${set.size}/5`, 2.5);
   game.discovered('ruth');
 };
+function updateTape(dt) {
+  if (!tape) return;
+  tape.t += dt;
+  while (tape.next < tape.cues.length && tape.t >= tape.cues[tape.next].at) { const c = tape.cues[tape.next++]; ui.sub('רות (קלטת): ' + c.line, c.d + 0.3); }
+  $('tape-bar').style.width = Math.min(100, tape.t / tape.dur * 100) + '%';
+  if (tape.t > tape.dur + 0.4) { const n = tape.n; stopTape(); audio.click(); game.story.onTapeEnd(n); }
+}
 
 function openJournal() {
   if (game.state !== 'play' && game.state !== 'pause') return;
@@ -304,17 +329,16 @@ game.discovered = (id) => {
   const found = new Set(store.get('found', [])); found.add(id); store.set('found', [...found]);
 };
 game.flashBlackout = (dur) => {
-  const W = game.world;
-  const was = W.power;
-  W.power = false; game.player.flicker = dur;
+  game.world.blackoutT = dur; game.player.flicker = dur;
   audio.buzz(camera.position.clone());
-  setTimeout(() => { W.power = was || W.power; if (game.night !== 3 || game.story.obj('lever')?.done) W.power = true; }, dur * 1000);
 };
 
 let caughtT = 0;
 function caught(fromLocker) {
   if (game.state !== 'play') return;
   game.state = 'caught'; caughtT = 0;
+  game.caughtCount = (game.caughtCount || 0) + 1;
+  ui.scare(null, 0);
   stopTape();
   const P = game.player, Y = game.yasmin;
   P.enabled = false;
@@ -338,7 +362,7 @@ function updateCaught(dt) {
   u.vhs.value = Math.min(1, k * 2);
   u.flashColor.value.setRGB(0.6, 0, 0);
   u.flash.value = k < 0.08 ? 0.5 : 0;
-  ui.scare('img/scare1.jpg', (k > 0.25 && k < 0.42) || (k > 0.95 && k < 1.08) ? 1 : 0);
+  ui.scare(`img/scare1.jpg?v=${V}`, (k > 0.25 && k < 0.42) || (k > 0.95 && k < 1.08) ? 1 : 0);
   game.yasmin.mixer.update(dt);
   game.player.update(dt, clockT);
   if (k > 1.5) ui.blackout(1);
@@ -348,6 +372,8 @@ function updateCaught(dt) {
     u.vhs.value = 0; u.warp.value = 0;
     game.player.lookAt = null;
     $('over-line').textContent = overLine();
+    $('btn-retry').textContent = game.checkpoint ? 'נסה שוב מנקודת השמירה' : 'נסה שוב את הלילה';
+    $('over-tip').classList.toggle('hidden', !((game.caughtCount || 0) >= 3 && settings.difficulty !== 'easy'));
     ui.only('over');
     ui.blackout(0);
     if (document.pointerLockElement) document.exitPointerLock();
@@ -364,7 +390,9 @@ game.endNight = () => {
   store.set('night', Math.max(store.get('night', 1), n + 1));
   setTimeout(() => {
     ui.blackout(0, true);
-    ui.card('06:00', `שרדת את לילה ${n}.`, n === 4 ? 'יש לך את כל המפתחות.\nמחר בלילה — בורחים.' : 'השמש עולה. היא נעלמה.\nבינתיים.');
+    const tapes = loadTapes().size;
+    const stats = `\n\nקלטות של רות: ${tapes}/5 · נתפסת הלילה: ${game.caughtCount || 0}`;
+    ui.card('06:00', `שרדת את לילה ${n}.`, (n === 4 ? 'יש לך את כל המפתחות.\nמחר בלילה — בורחים.' : 'השמש עולה. היא נעלמה.\nבינתיים.') + stats);
     game.state = 'between';
   }, 1400);
 };
@@ -441,7 +469,7 @@ function director(dt) {
     setTimeout(() => audio.play(Math.random() < 0.5 ? 'y_hear' : 'y_where', { volume: 0.45, verb: 1, muffle: false }), 500);
   } else if (r < 0.9 && game.night >= 3) {
     // subliminal flash
-    ui.scare('img/scare2.jpg', 0.35);
+    ui.scare(`img/scare2.jpg?v=${V}`, 0.35);
     setTimeout(() => ui.scare(null, 0), 70);
     audio.noise(0.15, { type: 'highpass', f: 3000, vol: 0.3 });
   } else if (Y.visible && Y.state !== 'scripted') {
@@ -450,15 +478,40 @@ function director(dt) {
 }
 
 // ---------- main loop ----------
+const runBtn = $('t-run');
 const clock = new THREE.Clock();
 let clockT = 0;
 let fear = 0, chase = 0;
+// Adaptive resolution: drop the pixel ratio when frames run long, raise it again when there's headroom.
+const PR_MAX = pr, PR_MIN = Math.min(pr, quality === 'low' ? 0.6 : 0.8);
+let ftAvg = 16, ftT = 0;
+function adapt(raw) {
+  if (game.state !== 'play' || document.hidden) return;
+  ftAvg += (Math.min(raw, 0.1) * 1000 - ftAvg) * 0.05;
+  ftT += raw;
+  if (ftT < 2) return;
+  if (ftAvg > 24 && pr > PR_MIN) { pr = Math.max(PR_MIN, pr - 0.15); resize(); ftT = 0; }
+  else if (ftAvg < 13 && pr < PR_MAX) { pr = Math.min(PR_MAX, pr + 0.1); resize(); ftT = -2; }
+  else ftT = 0;
+}
 function frame() {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, clock.getDelta());
+  const raw = clock.getDelta();
+  const dt = Math.min(0.05, raw);
+  if (!game.world || game.paused) return;
+  tick(dt);
+  S_render();
+  if (!params.has('fixedres')) adapt(raw);
+}
+function S_render() {
+  game.story.renderCCTV(renderer, scene, clockT);
+  post.render(clockT);
+}
+// One step of game logic (no rendering) — also driven directly by the automated tests.
+function tick(dt) {
   clockT += dt;
   const st = game.state;
-  if (!game.world) { return; }
+  if (st === 'play' || st === 'note') updateTape(dt);
   const P = game.player, Y = game.yasmin, W = game.world, S = game.story;
   if (st === 'play') {
     P.update(dt, clockT);
@@ -470,7 +523,10 @@ function frame() {
     W.clockMinutes = game.clockMin;
     // interaction
     current = P.hidden ? null : P.pick(S.inter);
-    if (P.hidden) ui.prompt('צא מהארון');
+    if (P.hidden) {
+      const near = Y.visible && Math.hypot(Y.position.x - P.pos.x, Y.position.z - P.pos.z) < 6;
+      ui.prompt(P.holdingBreath ? 'עוצר נשימה...' : near ? (isTouch ? 'החזק "ריצה" — עצור נשימה!' : 'החזק רווח — עצור נשימה!') : 'צא מהארון', near && !P.holdingBreath && !isTouch ? 'Space' : 'E');
+    }
     else if (current) {
       if (current.hold) {
         if (useHeld && holdTarget === current) {
@@ -493,9 +549,9 @@ function frame() {
     fear += (f - fear) * Math.min(1, dt * 2);
     chase += ((Y.state === 'chase' ? 1 : 0) - chase) * Math.min(1, dt * (Y.state === 'chase' ? 3 : 0.5));
     game.mech.update(dt);
+    if (isTouch) { const lbl = P.hidden ? 'נשימה' : 'ריצה'; if (runBtn.textContent !== lbl) runBtn.textContent = lbl; }
     ui.meters(P.stamina, P.battery, P.hasLight);
     $('bottles').textContent = P.bottles ? `בקבוקים: ${P.bottles}` : '';
-    if (tape) $('tape-bar').style.width = Math.min(100, (performance.now() - tape.start) / 10 / tape.dur) + '%';
     ui.eye(Y.awareness, Y.state === 'chase');
     // fog thins outside
     const out = isOutdoor(roomAt(P.pos.x, P.pos.z)) || P.pos.z > 50;
@@ -508,9 +564,16 @@ function frame() {
     updateCaught(dt);
   } else {
     // menus: a slow look down the corridor behind the UI
-    if (st === 'menu' || st === 'card' || st === 'between' || st === 'ready') {
-      camera.position.set(20 + Math.sin(clockT * 0.05) * 2, 1.6, 11);
-      camera.rotation.set(0, -Math.PI / 2 + Math.sin(clockT * 0.1) * 0.15, 0);
+    if (st === 'menu') {
+      camera.position.set(5.2 + Math.sin(clockT * 0.13) * 0.15, 1.58 + Math.sin(clockT * 0.9) * 0.01, 11 + Math.sin(clockT * 0.07) * 0.2);
+      camera.rotation.set(0.02, -Math.PI / 2 + Math.sin(clockT * 0.11) * 0.05, 0);
+      if (Y.visible) {
+        Y.position.x -= 0.5 * dt; Y.dir = -Math.PI / 2; Y.group.rotation.y = Y.dir;
+        Y.mixer.update(dt);
+        if (Y.position.x < 15) { game.flashBlackout(0.4); Y.position.x = 62; }
+      }
+    } else if (st === 'card' || st === 'between' || st === 'ready') {
+      camera.position.set(20, 1.6, 11); camera.rotation.set(0, -Math.PI / 2, 0);
     }
     audio.update(dt, { fear: 0, chase: 0, outdoor: false, power: true, stamina: 1, hidden: false, alarm: 0 });
   }
@@ -518,8 +581,6 @@ function frame() {
   if (Y.visible) Y.group.userData.aggro = Y.aggro * (Y.state === 'chase' ? 1.4 : 1);
   audio.setListener(camera);
   ui.update(dt);
-  S.renderCCTV(renderer, scene, clockT);
-  post.render(clockT);
 }
 
 // ---------- buttons ----------
@@ -535,8 +596,9 @@ $('btn-restart').onclick = () => { ui.show('pause', false); audio.resume(); star
 $('btn-pset').onclick = () => ui.show('settings', true);
 $('btn-journal').onclick = () => { ui.show('pause', false); audio.resume(); game.state = 'play'; game.player.enabled = true; openJournal(); };
 $('btn-quit').onclick = () => { ui.show('pause', false); audio.resume(); menu(); };
-$('btn-retry').onclick = () => startNight(game.night);
+$('btn-retry').onclick = () => startNight(game.night, true);
 $('btn-over-menu').onclick = () => menu();
+$('btn-easy').onclick = () => { settings.difficulty = 'easy'; store.set('settings', settings); $('set-difficulty').value = 'easy'; $('over-tip').classList.add('hidden'); ui.toast('מצב קל', 1.5); };
 addEventListener('keydown', e => {
   if (e.code === 'Enter' || e.code === 'Space') {
     if (game.state === 'card') play();
@@ -555,6 +617,6 @@ $('set-difficulty').onchange = () => { settings.difficulty = $('set-difficulty')
 $('set-quality').value = settings.quality;
 $('set-quality').onchange = () => { settings.quality = $('set-quality').value; store.set('settings', settings); };
 
-game.dbg = { startNight: (n) => startNight(n), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l) };
+game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l) };
 load().catch(e => { console.error(e); ui.progress(1, 'שגיאה בטעינה: ' + e.message); });
 frame();

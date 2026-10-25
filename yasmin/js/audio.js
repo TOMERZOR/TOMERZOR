@@ -2,7 +2,7 @@
 // the corridor drone, fluorescent hum, drips, heartbeat, breathing, footsteps, stingers and the chase score.
 const FILES = ['y_where', 'y_misdar', 'y_hear', 'y_spot', 'y_chase', 'y_lost', 'y_caught', 'y_intro', 'y_locker', 'y_hum',
   'n_laugh', 'n_whisper', 'n_cry', 'n_count', 'sfx_scream', 'sfx_bucket', 'sfx_mop', 'sfx_gate', 'sfx_door', 'sfx_distant', 'sfx_locker', 'sfx_power',
-  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle'];
+  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle', 'radio1'];
 
 export const SUBS = {
   y_where: 'יסמין: איפה אתה... הרצפה עוד רטובה...',
@@ -101,6 +101,7 @@ export class Audio {
   setListener(cam) {
     if (!this.ready) return;
     const l = this.ctx.listener, p = cam.position;
+    this.lp = p;
     const f = cam.getWorldDirection(this._f || (this._f = new cam.position.constructor()));
     const t = this.ctx.currentTime;
     if (l.positionX) {
@@ -132,7 +133,8 @@ export class Audio {
     if (pos) { p = this.panner(pos, ref); g.connect(p); p.connect(muffle ? this.muffle : this.sfx); if (verb) { const s = c.createGain(); s.gain.value = verb; p.connect(s); s.connect(this.verbIn); } }
     else { g.connect(muffle ? this.muffle : this.sfx); if (verb) { const s = c.createGain(); s.gain.value = verb; g.connect(s); s.connect(this.verbIn); } }
     src.start(c.currentTime, offset);
-    if (sub && SUBS[name] && this.onSub) this.onSub(SUBS[name], this.buffers[name].duration / rate + 0.6);
+    const audible = !pos || !this.lp || Math.hypot(pos.x - this.lp.x, pos.z - this.lp.z) < 24 * Math.sqrt(volume);
+    if (sub && audible && SUBS[name] && this.onSub) this.onSub(SUBS[name], this.buffers[name].duration / rate + 0.6);
     return { src, gain: g, panner: p, stop: (f = 0.05) => { try { g.gain.setTargetAtTime(0, c.currentTime, f); src.stop(c.currentTime + f * 6); } catch (e) { } } };
   }
 

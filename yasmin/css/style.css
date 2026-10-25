@@ -152,3 +152,44 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #050605; c
 .tapes .btn { min-width: 0; font-size: 14px; padding: 8px 12px; color: #1d1d27; background: rgba(0,0,0,0.08); border-color: #777; }
 .tapes .btn:hover { color: #fff; }
 #note-body ul.type { list-style: none; }
+
+/* short screens (phones in landscape) */
+@media (max-height: 520px) {
+  .title { font-size: clamp(44px, 9vh + 4vw, 84px); }
+  .sub { font-size: 15px; margin-top: 4px; }
+  .col { margin-top: 12px; gap: 7px; }
+  .btn { padding: 7px 20px; font-size: 15px; min-width: 200px; }
+  .btn.big { font-size: 18px; padding: 9px 28px; }
+  .bar { margin: 12px auto 6px; }
+  .warn { margin-top: 8px; font-size: 12px; }
+  .inner { padding: 8px 16px; }
+  .stats { margin-top: 8px; font-size: 13px; }
+  .nights { margin-top: 8px; }
+  .sheet { padding: 14px 18px; }
+  .sheet h2 { font-size: 36px; margin-bottom: 6px; }
+  .sheet ul { line-height: 1.5; font-size: 14px; }
+  .sheet label { padding: 6px 0; font-size: 15px; }
+  .card-n { font-size: 72px; }
+  .card-t { font-size: 24px; }
+  .card-x { font-size: 15px; line-height: 1.6; margin-top: 10px; min-height: 0; }
+  .card-go { margin-top: 12px; }
+  .caught { font-size: 90px; }
+  .over-line { font-size: 17px; }
+  .credits { font-size: 16px; line-height: 1.6; }
+  .credits h2 { font-size: 60px; }
+  .paper { padding: 22px 24px 16px; }
+  #note-body { font-size: 24px; line-height: 28px; }
+  #objectives h4 { font-size: 22px; }
+  #objectives ul { font-size: 13px; }
+}
+/* touch: keep the meters clear of the stick */
+body.touch #meters { bottom: auto; top: max(48px, calc(env(safe-area-inset-top) + 40px)); width: 140px; }
+body.touch #bottles { bottom: auto; top: max(96px, calc(env(safe-area-inset-top) + 88px)); }
+body.touch #prompt { top: 62%; font-size: 16px; }
+body.touch #subs { bottom: 30%; font-size: 16px; max-width: 60vw; }
+body.touch #tape { bottom: 40%; }
+
+.shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.92) 100%), linear-gradient(90deg, rgba(0,0,0,0.5), transparent 30%, transparent 70%, rgba(0,0,0,0.5)); }
+
+.over-tip { margin-top: 10px; font-size: 15px; color: #a9a291; }
+.link { background: none; border: none; color: #e3c983; text-decoration: underline; font: inherit; cursor: pointer; pointer-events: auto; }

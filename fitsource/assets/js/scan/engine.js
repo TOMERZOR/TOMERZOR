@@ -4,6 +4,7 @@
 import { CONFIG } from "../config.js";
 import { fetchHealth, deepScan, ApiError } from "./remote.js";
 import { scanOnDevice, classifyOnDevice } from "./ondevice.js";
+import { viewerClaude, claudeScan, claudeRegion } from "./claude.js";
 import { HE } from "./vocab.js";
 import { colorHe } from "./color.js";
 
@@ -156,8 +157,9 @@ function fromDeep(it) {
 }
 
 /**
- * Scan a prepared image. Tries deep scan first when available; on failure it
- * falls back to the on-device scanner and says why in `result.notice`.
+ * Scan a prepared image. Tries deep scan first when available, then the
+ * viewer's Claude (when the site runs as a claude.ai artifact), then the
+ * on-device scanner, and says in `result.notice` why it fell back.
  */
 export async function runScan(prepared, { onProgress = () => {}, signal } = {}) {
   const base = {
@@ -179,8 +181,32 @@ export async function runScan(prepared, { onProgress = () => {}, signal } = {}) 
       notice = err instanceof ApiError && err.code === "daily_limit" ? err.message + " הפעם הסריקה רצה על המכשיר שלכם." : "הסריקה המעמיקה לא הייתה זמינה, אז הסריקה רצה על המכשיר שלכם.";
     }
   }
+  const sample = await viewerClaude();
+  if (sample) {
+    try {
+      const data = await claudeScan(sample, prepared.blob, { onProgress: (ev) => onProgress({ engine: "claude", ...ev }), signal });
+      return { ...base, engine: "claude", vibe: data.vibe, summary: data.summary, items: data.items.map(fromDeep) };
+    } catch (err) {
+      // Where the on-device scanner can't run either (the artifact preview), say why Claude failed.
+      if (err.name === "AbortError" || CONFIG.scanDisabledMessage) throw err;
+      notice = `${err.message} הפעם הסריקה רצה על המכשיר שלכם.`;
+    }
+  }
   const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }), signal, textSource: prepared.text });
   return { ...base, engine: "device", device: out.device, ms: out.ms, notice, vibe: "", summary: "", items: out.items.map(fromDevice) };
+}
+
+/** The part of an image inside `region` (fractions), as a JPEG. */
+async function cropBlob(blob, region) {
+  const bmp = await createImageBitmap(blob);
+  const sx = Math.round(region.x * bmp.width), sy = Math.round(region.y * bmp.height);
+  const w = Math.max(1, Math.round(region.w * bmp.width)), h = Math.max(1, Math.round(region.h * bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d").drawImage(bmp, sx, sy, w, h, 0, 0, w, h);
+  bmp.close();
+  return new Promise((r) => canvas.toBlob(r, "image/jpeg", 0.9));
 }
 
 /** Identify one region the user drew ({x,y,w,h} as fractions). */
@@ -192,6 +218,14 @@ export async function runRegion(scan, region, blob, { onProgress = () => {} } = 
       if (data.items.length) return { ...fromDeep(data.items[0]), box };
     } catch {
       // fall through to on-device
+    }
+  }
+  if (scan.engine === "claude") {
+    const sample = await viewerClaude();
+    if (sample) {
+      const item = await claudeRegion(sample, await cropBlob(blob, region));
+      if (item) return { ...fromDeep(item), box };
+      throw new Error("Claude לא זיהה פריט בסימון. נסו לסמן קרוב יותר.");
     }
   }
   const out = await classifyOnDevice(blob, region, { onStatus: (s) => onProgress({ engine: "device", ...s }) });

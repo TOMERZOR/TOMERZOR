@@ -160,7 +160,7 @@ export function puddleTex(red = false) {
 
 export function chainLinkTex() {
   const [c, g] = canvas(256, 256);
-  g.strokeStyle = '#9aa0a3'; g.lineWidth = 5;
+  g.strokeStyle = '#9aa0a3'; g.lineWidth = 11;
   const s = 64;
   for (let i = -4; i < 8; i++) {
     g.beginPath(); g.moveTo(i * s, 0); g.lineTo(i * s + 256, 256); g.stroke();
@@ -321,4 +321,29 @@ export function crossOut(texture) {
   g.strokeStyle = 'rgba(170,0,0,0.85)'; g.lineWidth = 16; g.lineCap = 'round';
   g.beginPath(); g.moveTo(30, 30); g.lineTo(img.width - 30, img.height - 70); g.moveTo(img.width - 30, 30); g.lineTo(30, img.height - 70); g.stroke();
   return tex(c);
+}
+
+// Hills and a tree line on the horizon (alpha silhouette for a ring around the base).
+export function hillsTex() {
+  const [c, g] = canvas(2048, 256);
+  let seedH = 3;
+  const r = () => { seedH = (seedH * 16807) % 2147483647; return (seedH - 1) / 2147483646; };
+  g.fillStyle = '#0b0d10';
+  g.beginPath(); g.moveTo(0, 256);
+  for (let x = 0; x <= 2048; x += 8) {
+    const y = 150 - Math.sin(x / 2048 * Math.PI * 6) * 40 - Math.sin(x / 2048 * Math.PI * 17 + 1) * 14 - r() * 6;
+    g.lineTo(x, y);
+  }
+  g.lineTo(2048, 256); g.closePath(); g.fill();
+  // pines
+  g.fillStyle = '#07080a';
+  for (let i = 0; i < 260; i++) {
+    const x = r() * 2048, h = 20 + r() * 40, y = 175 + r() * 30;
+    g.beginPath(); g.moveTo(x, y - h); g.lineTo(x - h * 0.22, y); g.lineTo(x + h * 0.22, y); g.closePath(); g.fill();
+  }
+  g.fillRect(0, 195, 2048, 61);
+  // a few far lights of a town
+  for (let i = 0; i < 40; i++) { g.fillStyle = `rgba(255,200,120,${0.4 + r() * 0.5})`; g.fillRect(r() * 2048, 185 + r() * 20, 2, 2); }
+  const t = tex(c); t.wrapS = THREE.RepeatWrapping;
+  return t;
 }

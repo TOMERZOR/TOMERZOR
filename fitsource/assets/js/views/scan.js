@@ -5,6 +5,7 @@ import { shot, shopSearch, updateShopLinks, aAttrs, ownButton, totalBlock } from
 import { waBar, scanMessage, askScanMessage } from "../whatsapp.js";
 import { takePending, hasPending, getCurrent, setCurrent, startScan } from "../state.js";
 import { prepareImage, runScan, runRegion, cropThumb, ImageError } from "../scan/engine.js";
+import { ClaudeScanError } from "../scan/claude.js";
 import * as store from "../store.js";
 import { openReceipt } from "../share.js";
 import { bindTagActions, linkSpotsAndTags } from "./shared.js";
@@ -100,7 +101,7 @@ function resultTag(item, i, scan) {
         ${!deep && item.printed ? html`<span class="printed" title="הטקסט שקראנו על הבגד">${icon("magnifying-glass")}<bdi dir="ltr">${item.printed}</bdi></span>` : ""}
         ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "ILS")}</span>` : ""}
         ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "נבדק בחנות" : "")) : ""}
-        <span class="label">${deep ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
+        <span class="label">${typeof item.confidence === "string" ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
       </div>
       <div class="tag__actions">
         ${canWatch ? html`<button type="button" class="btn btn--xs ${watching ? "" : "btn--ghost"}" data-action="watch" aria-pressed="${String(watching)}" data-sold="${sold}" data-on="במעקב" data-off="${watchOff}">${icon(watching ? "bell-ringing-fill" : "bell")}<span data-label>${watching ? "במעקב" : watchOff}</span></button>` : ""}
@@ -199,13 +200,14 @@ function resultView(scan) {
     </div>
     <div>
       <div class="detail__head">
-        <span class="label">${deep ? (scan.cached ? "סריקה מעמיקה, מסריקות אחרונות" : "סריקה מעמיקה") : "סריקה מהירה, על המכשיר שלכם"}</span>
+        <span class="label">${deep ? (scan.cached ? "סריקה מעמיקה, מסריקות אחרונות" : "סריקה מעמיקה") : scan.engine === "claude" ? "זיהוי עם Claude" : "סריקה מהירה, על המכשיר שלכם"}</span>
         <h1 class="h2" data-count-title>${items.length ? (items.length === 1 ? "נמצא פריט אחד" : `נמצאו ${items.length} פריטים`) : "לא זיהינו בגדים"}</h1>
         ${scan.vibe || scan.summary ? html`<div class="byline">${scan.vibe ? html`<span class="vibe">${scan.vibe}</span>` : ""}<span>${scan.summary}</span></div>` : ""}
         ${soldCount ? html`<div class="byline"><span>${soldCount === 1 ? "פריט אחד אזל. הפעילו התראה ונעדכן כשהוא חוזר." : `${soldCount} פריטים אזלו. הפעילו התראות ונעדכן כשהם חוזרים.`}</span></div>` : ""}
       </div>
       ${scan.notice ? html`<p class="notice">${icon("info")}<span>${scan.notice}</span></p>` : ""}
-      ${!deep ? html`<p class="notice">${icon("lightning")}<span>${items.some((it) => it.printed || it.brand) ? "קראנו את מה שכתוב על הבגד והוספנו אותו לחיפוש. " : ""}לחצו על חנות כדי לראות מוצרים מתאימים, ותקנו את מילות החיפוש אם משהו לא מדויק. יודעים מה המותג? הוסיפו אותו למילות החיפוש.</span></p>` : ""}
+      ${scan.engine === "claude" ? html`<p class="notice">${icon("lightning")}<span>Claude זיהה את הפריטים מהתמונה. החיפוש בחנויות כבר כולל מותג ודגם כשהם ידועים; תקנו את מילות החיפוש אם משהו לא מדויק.</span></p>` : ""}
+      ${!deep && scan.engine !== "claude" ? html`<p class="notice">${icon("lightning")}<span>${items.some((it) => it.printed || it.brand) ? "קראנו את מה שכתוב על הבגד והוספנו אותו לחיפוש. " : ""}לחצו על חנות כדי לראות מוצרים מתאימים, ותקנו את מילות החיפוש אם משהו לא מדויק. יודעים מה המותג? הוסיפו אותו למילות החיפוש.</span></p>` : ""}
       ${items.length
         ? html`<div class="tags" data-tags>${items.map((it, i) => html`<div style="--i:${i}">${resultTag(it, i, scan)}</div>`)}</div>`
         : html`<div class="empty" style="margin-bottom:0">${icon("t-shirt")}<p>לא הצלחנו לזהות בגדים. נסו תמונה שבה הלוק ממלא יותר מהמסגרת, או סמנו מלבן סביב פריט.</p><button type="button" class="btn btn--sm" data-draw-cta>${icon("selection-plus")}סמנו מלבן</button></div>`}
@@ -323,7 +325,13 @@ function mount(root, [id]) {
 
     const onProgress = (ev) => {
       if (stale()) return;
-      if (ev.engine === "deep") {
+      if (ev.engine === "claude") {
+        engineLabel.textContent = "זיהוי עם Claude";
+        if (ev.t === "status") {
+          phase.textContent = ev.msg;
+          addLine("שלב", ev.msg);
+        } else if (ev.t === "found") addLine("זוהו", count(ev.n, "פריט אחד", "פריטים"));
+      } else if (ev.engine === "deep") {
         engineLabel.textContent = "סריקה מעמיקה";
         if (ev.t === "status") {
           phase.textContent = ev.msg;
@@ -377,7 +385,7 @@ function mount(root, [id]) {
       showResult();
     } catch (err) {
       if (stale() || (err && err.name === "AbortError")) return;
-      console.error(err);
+      if (!(err instanceof ImageError || err instanceof ClaudeScanError)) console.error(err); // those two explain themselves on the page
       host.innerHTML = errorView(prep.photo, (err && err.message) || "הסריקה נכשלה.").s;
       wireError(file);
     }

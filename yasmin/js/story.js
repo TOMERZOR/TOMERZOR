@@ -15,6 +15,31 @@ export const NIGHTS = [
   { title: 'הבריחה', text: 'יש לך ארבעה מפתחות.\nהיציאה בסוף המבוך — באותו מקום שבו רות נעלמה.\nהיא יודעת שאתה בא.\nהפעם היא לא תוותר.' },
 ];
 
+// Shown when the player has been stuck on an objective for a while.
+const HINTS = {
+  note: 'הפתק מונח על המיטה שלך, בפינה של חדר 1.',
+  light: 'הלוקר שלך בקיר המערבי של חדר 1.',
+  key1: 'המטבחון — הדלת השלישית במסדרון הצפוני. תבדוק במקרר.',
+  clip: 'המשרד של הרס״פ — במסדרון הצפוני, אחרי המטבחון. הטופס על השולחן.',
+  zalam: 'מחסן הצל״ם — הדלת באמצע המסדרון הצפוני. חפש את התוויות הלבנות על המדפים.',
+  tray: 'המגש על השולחן במשרד הרס״פ.',
+  fuses: 'נתיך במקלחות (על הכיור), נתיך בחדר 4 (על מיטה), ונתיך בתוך המבוך (בפינה בלי מוצא).',
+  power: 'חדר הגנרטור — מהמסדרון האמצעי. הלוח על הקיר הרחוק.',
+  lever: 'הידית הצהובה, ליד לוח החשמל.',
+  cctv: 'חדר המצלמות — במסדרון הצפוני, ליד הקצה המזרחי.',
+  iso: 'אגף הבידוד — הדלת עם השלט האדום במסדרון הדרומי.',
+  file: 'התיק הרפואי על השולחן בקצה האגף.',
+  key3: 'ארון התרופות הלבן באגף הבידוד.',
+  mop: 'המגב במקלחות, ליד הכיורים.',
+  clean: 'השלוליות האדומות: במסדרון הצפוני, בדרומי, ובשני המסדרונות האמצעיים.',
+  store: 'המחסן של יסמין — הדלת בקצה המזרחי של המסדרון הצפוני.',
+  key4: 'בדלי הגדול במחסן של יסמין.',
+  bed: 'המיטה שלך — בפינה של חדר 1.',
+  exit: 'הכניסה למבוך — הדלת עם "???" במסדרון הדרומי. אולי מישהי תראה לך את הדרך.',
+  gate: 'המנעול בצד של השער.',
+  run: 'צא מהשער!',
+};
+
 const OVER_LINES = [
   'יסמין שלחה אותך לנקות את כל הבסיס עם מברשת שיניים.',
   'עכשיו אתה בתורנות ניקיון. לנצח.',
@@ -79,6 +104,20 @@ const NOTES = {
 בפנים, בעט: <b>רות ל.</b>
 הן נקיות. נקיות מדי.
 <span class="blood">על הסוליה מישהו כתב בטוש: "לכלכה".</span>`,
+  daniel: `<h3>פתק מתחת למזרן — חדר 4</h3>שמעתי אותה הלילה מחוץ לדלת.
+היא מגבה את אותו מקום כבר שעה.
+הלוך. חזור. הלוך. חזור.
+כאילו היא מנסה לנקות משהו שלא יורד.
+בבוקר ראיתי את המקום. הרצפה שם בהירה יותר.
+<span class="blood">בצורה של אדם.</span>
+— דניאל`,
+  camlog: `<div class="type"><h3>יומן מצלמות — משמרת לילה</h3>02:58 — שקט.
+03:12 — תורנית במסדרון הצפוני.
+03:13 — תורנית במסדרון הצפוני.
+03:14 — תורנית במסדרון הצפוני. עומדת. לא זזה.
+03:15 — תורנית מול המצלמה.
+03:16 — <span class="blood">אין תמונה.</span>
+03:17 — יש מישהו בחדר מצלמות.</div>`,
   board: `<h3>הלוח של יסמין</h3><img src="img/photo_yasmin.jpg" alt="">
 מתחת לתמונה, בטוש אדום:
 <span class="blood">"עובדת החודש. כל חודש."</span>`,
@@ -136,22 +175,22 @@ export class Story {
 
     // --- buckets
     this.rollBucket = place(this.bucketModel, 43, 0, 6.5, 0, 1);
-    place(this.bucketModel, 61.4, 0, 6.9, 0.4, 1);
+    place(this.bucketModel, 69.0, 0, 4.4, 0.4, 1);
     this.keyBucket = place(this.bucketModel, 68.3, 0, 6.6, -0.6, 1);
     place(this.bucketModel, 31.5, 0, 34.6, 2, 1);
-    W.addBox(60.9, 61.9, 6.5, 7.3); W.addBox(67.8, 68.8, 6.2, 7.0);
+    W.addBox(68.5, 69.5, 4.0, 4.8); W.addBox(67.8, 68.8, 6.2, 7.0);
 
     // --- Yasmin's store: shrine with candles, photo board, diary
     const J = W.bounds.J;
     for (let i = 0; i < 7; i++) {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.08 + Math.random() * 0.12, 8), M.white);
-      c.position.set(J.X0 + 4.2 + i * 0.27, 0.8, J.Z1 - 1.0 + (i % 2) * 0.15); root.add(c);
+      c.position.set(J.X0 + 1.2 + i * 0.27, 0.8, J.Z1 - 1.4 + (i % 2) * 0.15); root.add(c);
       const fl = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffa040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
       fl.scale.set(0.05, 0.09, 1); fl.position.set(c.position.x, c.position.y + c.geometry.parameters.height / 2 + 0.04, c.position.z); root.add(fl);
       W.dynamic.push({ update: (dt, t) => { fl.scale.y = 0.08 + Math.sin(t * 13 + i) * 0.015; fl.visible = this.candles; } });
     }
     this.candles = true;
-    W.addEmitter({ x: J.X0 + 5, y: 1.1, z: J.Z1 - 1.1, color: 0xff8a3a, power: 3, dist: 6, flicker: 'candle', on: () => this.candles });
+    W.addEmitter({ x: J.X0 + 2, y: 1.1, z: J.Z1 - 1.5, color: 0xff8a3a, power: 3, dist: 6, flicker: 'candle', on: () => this.candles });
     const loadImg = (src) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = src; });
     Promise.all(['img/photo_yasmin.jpg', 'img/photo_nevo.jpg', 'img/photo_labubu.jpg', 'img/photo_squash.jpg'].map(loadImg)).then(([py, pn, pl, ps]) => {
       const pin = (tex, x, y, z, ry, rz) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.36), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 })); m.position.set(x, y, z); m.rotation.set(0, ry, rz); root.add(m); return m; };
@@ -163,7 +202,7 @@ export class Story {
       pin(T.photoFrameTex(pn, 'נבו ה. — בידוד'), 47.98, 1.6, 6.2, -Math.PI / 2, 0.03);
     });
     W.wallDecal(T.scrawlTex('עובדת החודש', { color: 'rgba(150,10,10,0.9)', size: 90 }), J.X0 + 0.03, 2.1, 4.8, Math.PI / 2, 1.4, 0.35);
-    const diary = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.3), M.red); diary.position.set(J.X0 + 5.6, 0.775, J.Z1 - 0.95); root.add(diary);
+    const diary = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.3), M.red); diary.position.set(J.X0 + 2.7, 0.775, J.Z1 - 1.3); root.add(diary);
     W.decal(T.bloodTex('smear'), J.X0 + 3, J.Z0 + 4, 2.5, 1.0, 0.3);
 
     // --- office: clipboard, tray, paper
@@ -185,6 +224,9 @@ export class Story {
     this.paperFuse = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.28), new THREE.MeshStandardMaterial({ map: T.paperTex(), roughness: 0.85 }));
     this.paperFuse.position.set(W.fusePanel.x - 0.12, 1.45, W.fusePanel.z + 0.6); this.paperFuse.rotation.y = -Math.PI / 2; root.add(this.paperFuse);
     this.paperNevo = this.notePaper(64.2, 0.785, 43.1, 2.9);
+    this.paperDaniel = this.notePaper(3.25, 0.535, 40.4, 1.2);
+    this.paperCam = this.notePaper(51.6, 0.785, 3.1, 0.4);
+    W.wallDecal(T.scrawlTex('היא מאחוריך', { color: 'rgba(140,10,10,0.85)', size: 110 }), 8.5, 1.58, 14.06, 0, 0.9, 0.22);
 
     // --- generic pickups
     const keyMesh = () => {
@@ -375,7 +417,7 @@ export class Story {
   // ---------- objectives ----------
   setObjectives(list) { this.objs = list; this.refresh(); }
   obj(id) { return this.objs.find(o => o.id === id); }
-  done(id) { const o = this.obj(id); if (o && !o.done) { o.done = true; this.refresh(); this.g.audio.pickup(); } }
+  done(id) { const o = this.obj(id); if (o && !o.done) { o.done = true; this.refresh(); this.g.audio.pickup(); this.stuckT = 0; } }
   add(o) { if (!this.obj(o.id)) { this.objs.push(o); this.refresh(); } }
   refresh() { this.g.ui.objectives(`לילה ${this.night} · ${NIGHTS[this.night].title}`, this.objs); }
 
@@ -383,6 +425,7 @@ export class Story {
   start(n) {
     const g = this.g, W = g.world, Y = g.yasmin, P = g.player;
     this.night = n;
+    this.stuckT = 0;
     this.flags = {};
     this.events = [];
     this.timers = [];
@@ -423,11 +466,13 @@ export class Story {
     it({ label: 'קרא פתק', pos: () => this.paperFridge.getWorldPosition(v3(0, 0, 0)), use: () => { this.read('roi'); this.discover('squash'); } });
     it({ label: 'קרא פתק', pos: () => this.paperMaya.position, use: () => { this.read('maya'); this.discover('labubu'); } });
     it({ label: 'קרא', pos: () => this.paperFuse.position, use: () => { this.read('fuses'); } });
+    it({ label: 'קרא פתק', pos: () => this.paperDaniel.position, use: () => { this.read('daniel'); } });
+    it({ label: 'קרא יומן מצלמות', pos: () => this.paperCam.position, use: () => { this.read('camlog'); } });
     it({ label: 'קרא תיק רפואי', pos: () => this.paperNevo.position, enabled: () => !locks.I, use: () => {
       this.read('nevo'); this.discover('nevo'); if (n === 3) this.done('file');
       if (!this.flags.ghostCell) { this.flags.ghostCell = true; this.when(() => g.state === 'play' && P.pos.x < 59 && P.pos.z < 33, () => { this.apparition(49.6, 37, 5, true); this.after(0.6, () => g.audio.play('n_ruth', { pos: v3(this.nevo.position.x, 1.6, this.nevo.position.z), volume: 1.3 })); }); }
     } });
-    it({ label: 'קרא יומן', pos: () => v3(65.6, 0.8, 7.05), enabled: () => !locks.J, use: () => { this.read('diary'); } });
+    it({ label: 'קרא יומן', pos: () => v3(62.7, 0.8, 6.7), enabled: () => !locks.J, use: () => { this.read('diary'); } });
     it({ label: 'הסתכל על התמונות', pos: () => v3(60.1, 1.5, 4.8), enabled: () => !locks.J, use: () => { this.read('board'); } });
     it({ label: 'הסתכל', pos: () => this.labubu.position, range: 1.8, use: () => { this.discover('labubu'); g.ui.toast('הראש של הלבובו...'); } });
     // lockers: hide (and the flashlight one)
@@ -446,7 +491,8 @@ export class Story {
     for (let i = 1; i <= 5; i++) { const tp = this.tapeMeshes[i]; tp.mesh.visible = tp.glint.visible = i === n; }
     const tp = this.tapeMeshes[n];
     const heard = loadTapes();
-    it({ label: heard.has(n) ? 'האזן שוב לקלטת של רות' : 'קח קלטת', pos: () => tp.mesh.position, range: 1.8, enabled: () => tp.mesh.visible,
+    const tapeRoom = [null, null, 'E', 'I', 'J', null][n];
+    it({ label: heard.has(n) ? 'האזן שוב לקלטת של רות' : 'קח קלטת', pos: () => tp.mesh.position, range: 1.8, enabled: () => tp.mesh.visible && (!tapeRoom || !locks[tapeRoom]),
       use: () => { tp.mesh.visible = tp.glint.visible = false; g.playTape(n); } });
     it({ label: 'קרא מודעה', pos: () => this.posterPos, range: 2.2, use: () => { this.read('missing'); this.discover('ruth'); } });
     it({ label: 'הסתכל על הנעליים', pos: () => v3(60.85, 0.15, 2.75), range: 1.7, enabled: () => !locks.J, use: () => { this.read('boots'); this.discover('ruth'); } });
@@ -502,7 +548,7 @@ export class Story {
         this.obj('zalam').hidden = false; this.refresh();
         W.openDoor('E'); g.audio.play('sfx_locker', { pos: v3(33, 1, 13), rate: 0.6, volume: 1.4 });
         g.ui.toast('מחסן הצל״ם נפתח');
-        Y.noiseAt(33, 13, 40);
+        Y.noiseAt(33, 13, 14);
       } });
       for (const z of this.zalamItems) {
         z.glint.visible = true;
@@ -563,12 +609,23 @@ export class Story {
         const p = { mesh: m, x, z, clean: false };
         this.puddles.push(p);
         it({ label: 'נקה (החזק)', pos: () => v3(x, 0.4, z), range: 2.2, hold: 2.6, enabled: () => this.carryMop && !p.clean,
-          onHold: () => { if (Math.random() < 0.06) g.audio.mopSwish(); Y.noiseAt(x, z, 14); },
+          onHold: () => { if (Math.random() < 0.06) g.audio.mopSwish(); if (!p.heard) { p.heard = true; Y.noiseAt(x, z, 12); } },
           use: () => {
             p.clean = true; W.decals.remove(m);
             const o = this.obj('clean'); o.have++; this.refresh();
             g.audio.play('sfx_mop', { pos: v3(x, 0.2, z), volume: 1.2 });
-            if (o.have >= 4) { this.done('clean'); this.openStore(); }
+            if (o.have >= 4) {
+              this.done('clean'); this.openStore();
+              // checkpoint: getting caught after this point restarts at the open store
+              g.checkpoint = { night: 4, apply: () => {
+                const mi = this.items.mop; mi.taken = true; mi.mesh.visible = mi.glint.visible = false;
+                this.carryMop = true; this.done('mop'); this.obj('clean').hidden = false;
+                for (const q of this.puddles) { q.clean = true; W.decals.remove(q.mesh); }
+                const c = this.obj('clean'); c.have = 4; this.done('clean');
+                P.pos.set(64, 0, 11); P.yaw = 0;
+                this.openStore();
+              } };
+            }
           } });
       }
       this.after(2, () => { g.audio.static_(0.6, 0.18); g.audio.play('y_misdar', { volume: 1.1, verb: 1, muffle: false }); g.ui.toast('מסדר ניקיון!'); });
@@ -590,10 +647,13 @@ export class Story {
       ];
       it({ label: 'פתח את דלת היציאה (4 מפתחות)', pos: () => v3(35, 1.1, 43.8), range: 2.0, hold: 2.2, enabled: () => locks.X,
         onHold: () => { if (Math.random() < 0.08) g.audio.keys(); },
-        use: () => { W.openDoor('X'); g.audio.play('sfx_door', { pos: v3(35, 1, 45), volume: 1.4 }); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); this.finale(); } });
-      it({ label: 'פתח את המנעול בשער (החזק)', pos: () => v3(39.5, 1.1, 64.5), range: 2.2, hold: 4.5, enabled: () => !locks.X && gateClosed.v,
-        onHold: () => { if (Math.random() < 0.05) g.audio.keys(); if (Math.random() < 0.03) g.audio.play('sfx_gate', { pos: v3(39, 1, 65), volume: 0.6, sub: false }); },
-        use: () => { gateClosed.v = false; W.gate.target = 1; g.audio.play('sfx_gate', { pos: v3(38, 1, 65), volume: 1.5 }); g.audio.grind(4.5); this.done('gate'); this.obj('run').hidden = false; this.refresh(); } });
+        use: () => {
+          W.openDoor('X'); g.audio.play('sfx_door', { pos: v3(35, 1, 45), volume: 1.4 }); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); this.finale();
+          g.checkpoint = { night: 5, apply: () => { W.openDoor('X'); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); P.pos.set(35, 0, 46.5); P.yaw = Math.PI; this.mazeGuide = -1; this.finale(); } };
+        } });
+      it({ label: 'פתח את המנעול בשער (החזק)', pos: () => v3(37.4, 1.1, 64.3), range: 2.4, hold: 4.0, enabled: () => !locks.X && gateClosed.v,
+        onHold: () => { if (Math.random() < 0.05) g.audio.keys(); if (Math.random() < 0.03) g.audio.play('sfx_gate', { pos: v3(37, 1, 65), volume: 0.6, sub: false }); },
+        use: () => { gateClosed.v = false; W.gate.target = 1; g.audio.play('sfx_gate', { pos: v3(36, 1, 65), volume: 1.5 }); g.audio.grind(4.5); this.done('gate'); this.obj('run').hidden = false; this.refresh(); } });
       this.when(() => P.pos.z > 67, () => g.escape());
       this.after(1.5, () => this.pa('y_pa5'));
       this.after(6, () => { Y.spawn(52, 27, 'patrol', -Math.PI / 2); });
@@ -689,16 +749,22 @@ export class Story {
     const g = this.g, W = g.world;
     const inE = W.fixtures.filter(f => f.room === 'e');
     inE.forEach((f, i) => this.after(0.4 + i * 0.35, () => { f.on = false; g.audio.bulbPop(v3(f.x, f.y, f.z)); }));
-    this.after(2.5, () => { if (g.yasmin.state !== 'chase') { g.yasmin.spawn(33, 7, 'investigate', 0); g.yasmin.goTo(33, 18); g.yasmin.speak('y_where', { force: true }); } });
+    this.after(1.6, () => g.ui.toast('היא שמעה. כבה את הפנס ותתחבא!', 3.5));
+    this.after(4.5, () => { const Y = g.yasmin; if (Y.state !== 'chase') { Y.spawn(33, 7, 'investigate', 0); Y.lastSeen.set(33, 0, 16); Y.goTo(33, 18); Y.speak('y_where', { force: true }); } });
     this.after(30, () => inE.forEach(f => f.on = true));
   }
 
-  powerOn() {
+  powerOn(silent = false) {
     const g = this.g, W = g.world;
     this.done('lever');
-    g.audio.lever();
-    g.audio.play('sfx_power', { volume: 1.3 });
-    g.audio.grind(1.5);
+    if (!silent) { g.audio.lever(); g.audio.play('sfx_power', { volume: 1.3 }); g.audio.grind(1.5); }
+    // checkpoint: getting caught after this point restarts here
+    g.checkpoint = { night: 3, apply: () => {
+      for (const f of ['fuse1', 'fuse2', 'fuse3']) { const p = this.items[f]; p.taken = true; p.mesh.visible = p.glint.visible = false; }
+      const o = this.obj('fuses'); o.have = 3; o.done = true; this.obj('power').hidden = false; this.obj('power').done = true; this.obj('lever').hidden = false;
+      g.player.pos.set(62.5, 0, 17.4); g.player.yaw = Math.PI / 2;
+      this.powerOn(true);
+    } };
     // lights return in a wave, closest first
     W.power = true;
     const P = g.player.pos;
@@ -713,8 +779,8 @@ export class Story {
       const p = this.items.key3; p.taken = true; p.mesh.visible = p.glint.visible = false;
       this.flags.key3 = true; g.audio.keys(); g.audio.pickup(); g.ui.toast('מפתח שער 3/4'); this.done('key3');
       this.flags.canSleep = true; this.obj('bed').hidden = false; this.refresh();
-      // she waits for you in the wing's corridor
-      this.after(1.5, () => { if (g.yasmin.state !== 'chase') { g.yasmin.spawn(47, 31, 'patrol', Math.PI / 2); g.yasmin.goTo(60, 31); } });
+      // she looks in from the wing's door, then goes back to her rounds
+      this.after(1.5, () => { if (g.yasmin.state !== 'chase') { this.peek(57, 27.4, 0, 3, 'y_hear'); this.after(4, () => { if (!g.yasmin.visible) g.yasmin.spawn(6, 27, 'patrol', Math.PI / 2); }); } });
     };
     this.inter.push({ label: 'פתח את הארון וקח מפתח', pos: () => this.items.key3.mesh.position, range: 1.8, enabled: () => this.items.key3.mesh.visible, use: take });
   }
@@ -759,8 +825,12 @@ export class Story {
     const g = this.g, Y = g.yasmin;
     this.candles = false;
     g.audio.play('y_hear', { pos: v3(65, 1.6, 9.5), volume: 1.4 });
+    // she screams in the doorway, the lights cut out, and when they come back she is gone —
+    // then she comes running from the far end of the base, so there is a way out
     this.after(0.4, () => { Y.spawn(65, 11, 'scripted', Math.PI); Y.play('scream', 0.1); g.audio.stinger('peek'); });
-    this.after(2.2, () => { Y.setState('patrol'); Y.startChase(g.player, g); });
+    this.after(2.0, () => { g.flashBlackout(0.5); this.after(0.25, () => Y.hide()); });
+    this.after(4.5, () => { Y.spawn(69, 27, 'patrol', Math.PI); Y.startChase(g.player, g); Y.lostT = 0.7; });
+    this.after(3.0, () => g.ui.toast('ברח! תמצא איפה להתחבא'));
   }
 
   finale() {
@@ -785,6 +855,13 @@ export class Story {
     for (let i = this.events.length - 1; i >= 0; i--) {
       const e = this.events[i];
       if (e.test()) { this.events.splice(i, 1); e.fn(); }
+    }
+    // gentle hints when stuck
+    this.stuckT += dt;
+    if (this.stuckT > 150) {
+      this.stuckT = 0;
+      const o = this.objs.find(o => !o.done && !o.hidden && HINTS[o.id]);
+      if (o) { g.ui.sub('רמז: ' + HINTS[o.id], 7); g.audio.click(); }
     }
     // Ruth's ghost; on the last night she shows the way through the maze
     this.ghost.update(dt, t, g.player.cam);

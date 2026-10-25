@@ -4,6 +4,7 @@ import { FITS, findFit } from "../data/fits.js";
 import { shot, feedTag, card, fitImg } from "../components.js";
 import { startScan } from "../state.js";
 import { deepScanStatus } from "../scan/engine.js";
+import { viewerClaude } from "../scan/claude.js";
 import { warmUp } from "../scan/ondevice.js";
 import { CONFIG } from "../config.js";
 
@@ -186,10 +187,12 @@ function mount(root) {
     }),
   );
 
-  deepScanStatus().then((deep) => {
+  Promise.all([deepScanStatus(), viewerClaude()]).then(([deep, viewer]) => {
     const note = root.querySelector("[data-engine] span");
-    if (CONFIG.scanDisabledMessage && note) note.textContent = CONFIG.scanDisabledMessage;
-    else if (deep && note) note.textContent = "סריקה מעמיקה פעילה: חנויות מדויקות ומלאי בזמן אמת.";
+    if (!note) return;
+    if (deep) note.textContent = "סריקה מעמיקה פעילה: חנויות מדויקות ומלאי בזמן אמת.";
+    else if (viewer) note.textContent = "Claude מזהה כאן את הפריטים: מותג ודגם כשרואים אותם, וחיפוש בחנויות.";
+    else if (CONFIG.scanDisabledMessage) note.textContent = CONFIG.scanDisabledMessage;
   });
 
   // ---- hero demo: walk through the pieces one by one ----

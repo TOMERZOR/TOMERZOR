@@ -126,7 +126,7 @@ export class World {
     M.cardboard = std({ color: 0x8e6c45, roughness: 0.95 });
     M.tile = std({ color: 0xdfe3e0, roughness: 0.25, metalness: 0.05 });
     M.curtain = std({ color: 0x6f8f8a, roughness: 0.9, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
-    M.fence = new THREE.MeshStandardMaterial({ map: T.chainLinkTex(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.8, color: 0xb0b4b4 });
+    M.fence = new THREE.MeshStandardMaterial({ map: T.chainLinkTex(), alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.8, color: 0xb0b4b4 });
     M.post = std({ color: 0x5c605c, roughness: 0.5, metalness: 0.7 });
     this.M = M;
     return M;
@@ -276,19 +276,16 @@ export class World {
     const M = this.M;
     const housing = new THREE.BoxGeometry(0.22, 0.07, 1.3);
     const tubeG = new THREE.CylinderGeometry(0.025, 0.025, 1.2, 8); tubeG.rotateX(Math.PI / 2);
+    // housings are merged into one mesh; tubes are one instanced mesh whose per-instance colour is the brightness
+    const hb = new Batcher();
     const add = (x, z, along = 'z', room) => {
-      const g = new THREE.Group();
-      g.position.set(x, H - 0.04, z);
-      if (along === 'x') g.rotation.y = Math.PI / 2;
-      const h = new THREE.Mesh(housing, M.tubeHousing); g.add(h);
-      const tm = M.tube.clone();
-      const t1 = new THREE.Mesh(tubeG, tm); t1.position.set(-0.05, -0.05, 0); g.add(t1);
-      const t2 = new THREE.Mesh(tubeG, tm); t2.position.set(0.05, -0.05, 0); g.add(t2);
-      this.root.add(g);
-      const f = { x, z, y: H - 0.15, group: g, mat: tm, room, mode: 0, phase: Math.random() * 100, level: 1, on: true, emergency: false, base: 1 };
+      const ry = along === 'x' ? Math.PI / 2 : 0;
+      hb.add(housing, M.tubeHousing, x, H - 0.04, z, ry);
+      const f = { x, z, y: H - 0.15, ry, room, mode: 0, phase: Math.random() * 100, level: 1, on: true, emergency: false, base: 1 };
       const r = Math.random();
       f.mode = r < 0.12 ? 1 : r < 0.16 ? 2 : r < 0.2 ? 3 : 0; // flicker, strobe, dead
       if (room === 'm') f.mode = r < 0.5 ? 1 : 0;
+      f.i = this.fixtures.length;
       this.fixtures.push(f);
       return f;
     };
@@ -305,6 +302,22 @@ export class World {
     }
     // the room with the cameras is dim: monitors light it
     for (const f of this.fixtures) if (f.room === 'c') f.mode = 3;
+    hb.build(this.root, { cast: false, receive: false });
+    const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true });
+    this.tubes = new THREE.InstancedMesh(tubeG, tubeMat, this.fixtures.length * 2);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
+    this.fixtures.forEach((f, i) => {
+      q.setFromEuler(e.set(0, f.ry, 0));
+      for (const k of [0, 1]) {
+        const off = (k ? 0.05 : -0.05);
+        m4.compose(new THREE.Vector3(f.x + Math.cos(f.ry) * off, H - 0.09, f.z - Math.sin(f.ry) * off), q, one);
+        this.tubes.setMatrixAt(i * 2 + k, m4);
+        this.tubes.setColorAt(i * 2 + k, new THREE.Color(1, 1, 1));
+      }
+    });
+    this.tubes.frustumCulled = false;
+    this.root.add(this.tubes);
+    this._tc = new THREE.Color();
     // emergency red lights near key spots (used when the power is out)
     this.emergency = [];
     for (const [x, z] of [[3, 5], [16, 5], [30, 5], [2, 13], [17, 13], [30, 13], [28, 9], [17, 23], [10, 9]]) {
@@ -346,18 +359,21 @@ export class World {
   }
 
   updateLights(dt, t, pp, yasmin) {
+    if (this.blackoutT > 0) this.blackoutT -= dt;
     // fixture emissive and visibility
     const cand = [];
+    this.tubes.instanceColor.needsUpdate = true;
     for (const f of this.fixtures) {
       let threat = 0;
       if (yasmin && yasmin.visible) {
         const d = Math.hypot(f.x - yasmin.position.x, f.z - yasmin.position.z);
         if (d < 7) threat = (1 - d / 7) * (yasmin.userData.aggro || 0.5);
       }
-      const lv = this.power ? this.fixtureLevel(f, t, threat) : 0;
+      const lv = this.power && !(this.blackoutT > 0) ? this.fixtureLevel(f, t, threat) : 0;
       f.level = lv;
-      f.mat.emissiveIntensity = 0.15 + lv * 5;
-      f.mat.emissive.setHex(this.alarm > 0 ? 0xffb0a0 : 0xe8f4ff);
+      const b = 0.06 + lv * 4.2;
+      if (this.alarm > 0) this._tc.setRGB(b, b * 0.68, b * 0.62); else this._tc.setRGB(b * 0.92, b * 0.97, b);
+      this.tubes.setColorAt(f.i * 2, this._tc); this.tubes.setColorAt(f.i * 2 + 1, this._tc);
       const d = Math.hypot(f.x - pp.x, f.z - pp.z);
       if (d < 22) cand.push([d - lv * 2, f]);
     }
@@ -365,10 +381,10 @@ export class World {
       let lv = e.onFn && !e.onFn() ? 0 : 1;
       if (e.flicker === 'candle') lv *= 0.75 + 0.25 * Math.sin(t * 11 + e.phase) * Math.sin(t * 7.3);
       if (e.flicker === 'bad') lv *= Math.sin(t * 9 + e.phase) * Math.sin(t * 2.1) > 0.75 ? 0.1 : 1;
-      if (e.color !== 0xff8a3a && e.flicker !== 'candle' && !this.power && e.color !== 0x9fc4c8) lv = 0;
+      if (!e.outdoor && e.color !== 0xff8a3a && e.flicker !== 'candle' && !this.power && e.color !== 0x9fc4c8) lv = 0;
       e.level = lv;
       const d = Math.hypot(e.x - pp.x, e.z - pp.z);
-      if (d < 16 && lv > 0) cand.push([d - 4, e]);
+      if (d < (e.outdoor ? 40 : 16) && lv > 0) cand.push([e.outdoor ? d - 30 : d - 4, e]);
     }
     const emerg = !this.power || this.alarm > 0;
     for (const e of this.emergency) {
@@ -559,7 +575,7 @@ export class World {
       const pz = along ? J.Z0 + 0.25 : J.Z0 + 0.8 + (i - 13) * 0.38;
       this.mop(b, px, pz, along ? 0.25 : 0, along ? 0 : -0.25);
     }
-    this.table(b, J.X0 + 5, J.Z1 - 1.0, 2.2, 0.8);
+    this.table(b, J.X0 + 2.0, J.Z1 - 1.4, 2.2, 0.8);
     this.addBox(J.X0 + 0.2, J.X1 - 0.2, J.Z0, J.Z0 + 0.5);
 
     // Corridors: a few lockers to hide in, a bench, a fire extinguisher, a drinking fountain
@@ -568,6 +584,10 @@ export class World {
       b.add(new THREE.CylinderGeometry(0.09, 0.09, 0.5, 12), M.red, x, 0.85, z, 0, 1, 1, 1);
       b.add(box, M.darkMetal, x, 1.15, z, 0, 0.08, 0.1, 0.08);
     }
+    // hiding places in the dead-end rooms
+    this.lockerRow(37, 14.32, 2, 'z+', true);          // equipment store, north wall
+    this.lockerRow(60.32, 39.5, 2, 'x+', true);        // isolation wing office, west wall
+    this.lockerRow(48.32, 21.4, 1, 'x+', true);        // generator room
     // a bench in the north corridor
     b.add(box, M.wood, 48, 0.45, 10.35, 0, 1.6, 0.06, 0.4);
     for (const dx of [-0.7, 0.7]) b.add(box, M.metal, 48 + dx, 0.22, 10.35, 0, 0.05, 0.44, 0.35);
@@ -578,7 +598,55 @@ export class World {
     b.add(box, M.cardboard, 27.0, 0.85, 30.8, 0.1, 0.5, 0.5, 0.5);
     this.chair(b, 37.2, 42.6, 2.2);
 
+    this.details(b);
     b.build(this.root);
+  }
+
+  // Pipes and a cable tray under the corridor ceilings, open door leaves, switches and boxes by the doors.
+  details(b) {
+    const M = this.M, box = this.box;
+    const pipe = new THREE.CylinderGeometry(0.045, 0.045, CELL, 8); pipe.rotateZ(Math.PI / 2);
+    const thin = new THREE.CylinderGeometry(0.025, 0.025, CELL, 6); thin.rotateZ(Math.PI / 2);
+    for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+      if (ch(x, z) !== '.') continue;
+      const cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL;
+      const horiz = !walkable(x, z - 1) && !walkable(x, z + 1);
+      const vert = !walkable(x - 1, z) && !walkable(x + 1, z);
+      if (horiz) {
+        b.add(pipe, M.darkMetal, cx, H - 0.14, z * CELL + 0.16, 0);
+        b.add(thin, M.post, cx, H - 0.3, z * CELL + 0.12, 0);
+        b.add(box, M.metal, cx, H - 0.1, (z + 1) * CELL - 0.25, 0, CELL, 0.03, 0.3);          // cable tray
+        if (x % 2 === 0) b.add(box, M.darkMetal, cx, H - 0.06, z * CELL + 0.16, 0, 0.04, 0.12, 0.04); // clamp
+      } else if (vert) {
+        b.add(pipe, M.darkMetal, x * CELL + 0.16, H - 0.14, cz, Math.PI / 2);
+        b.add(thin, M.post, x * CELL + 0.12, H - 0.3, cz, Math.PI / 2);
+        b.add(box, M.metal, (x + 1) * CELL - 0.25, H - 0.1, cz, 0, 0.3, 0.03, CELL);
+      }
+    }
+    // open door leaves and switches at the ordinary doorways
+    for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+      if (ch(x, z) !== '+') continue;
+      const cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL;
+      const alongZ = solidC(ch(x - 1, z)) && solidC(ch(x + 1, z));
+      if (alongZ) {
+        // which side is the room?
+        const roomS = !'.+'.includes(ch(x, z + 1)) ? 1 : -1;
+        const fz = roomS > 0 ? (z + 1) * CELL : z * CELL; // the room-side face of the wall
+        b.add(box, M.metal, cx - 0.575 - 0.03, 1.07, fz + roomS * 0.56, 0, 0.04, 2.1, 1.08, 0, 0);
+        this.addBox(cx - 0.63, cx - 0.57, Math.min(fz, fz + roomS * 1.1), Math.max(fz, fz + roomS * 1.1));
+        // light switch on the corridor side
+        const cside = roomS > 0 ? z * CELL - 0.012 : (z + 1) * CELL + 0.012;
+        b.add(box, M.white, cx + 0.85, 1.25, cside, 0, 0.08, 0.12, 0.02);
+        b.add(box, M.darkMetal, cx - 0.95, 2.3, cside, 0, 0.3, 0.22, 0.06);
+      } else {
+        const roomE = !'.+'.includes(ch(x + 1, z)) ? 1 : -1;
+        const fx = roomE > 0 ? (x + 1) * CELL : x * CELL;
+        b.add(box, M.metal, fx + roomE * 0.56, 1.07, cz - 0.575 - 0.03, 0, 1.08, 2.1, 0.04);
+        this.addBox(Math.min(fx, fx + roomE * 1.1), Math.max(fx, fx + roomE * 1.1), cz - 0.63, cz - 0.57);
+        const cside = roomE > 0 ? x * CELL - 0.012 : (x + 1) * CELL + 0.012;
+        b.add(box, M.white, cside, 1.25, cz + 0.85, 0, 0.02, 0.12, 0.08);
+      }
+    }
   }
 
   bunk(b, x, z, rot, long = false) {
@@ -616,6 +684,7 @@ export class World {
       if (dir === 'x+') { pz = z + i * w; ry = Math.PI / 2; px = x + d / 2 - 0.32; }
       if (dir === 'x-') { pz = z + i * w; ry = -Math.PI / 2; px = x - d / 2 + 0.32; }
       if (dir === 'z-') { px = x + i * w; ry = Math.PI; pz = z - d / 2 + 0.32; }
+      if (dir === 'z+') { px = x + i * w; ry = 0; pz = z + d / 2 - 0.32; }
       const g = new THREE.Group();
       g.position.set(px, 0, pz); g.rotation.y = ry;
       const body = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, h, d), M.metal);
@@ -628,7 +697,8 @@ export class World {
       const L = { group: g, hinge, open: 0, target: 0, x: px, z: pz, fwd, hide: hideAll || i % 2 === 1, ry };
       this.lockers.push(L);
       this.dynamic.push({ update: (dt) => { L.open += (L.target - L.open) * Math.min(1, dt * 7); L.hinge.rotation.y = -L.open * 1.9; } });
-      const hw = (dir === 'z-' ? w : d) / 2, hd = (dir === 'z-' ? d : w) / 2;
+      const zd = dir === 'z-' || dir === 'z+';
+      const hw = (zd ? w : d) / 2, hd = (zd ? d : w) / 2;
       this.addBox(px - hw, px + hw, pz - hd, pz + hd, true);
     }
   }
@@ -729,13 +799,8 @@ export class World {
     for (const [x, z, lit] of [[10, 53, 0], [62, 53, 0], [26, 63, 1], [48, 63, 1]]) {
       b.add(new THREE.CylinderGeometry(0.07, 0.1, 6, 8), M.post, x, 3, z);
       b.add(box, M.darkMetal, x, 6, z + 0.2, 0, 0.6, 0.3, 0.4);
-      let s = null;
-      if (lit) {
-        s = new THREE.SpotLight(0xffe2b0, 0, 32, 0.75, 0.6, 1.2);
-        s.position.set(x, 5.9, z + 0.3);
-        s.target.position.set(x + (36 - x) * 0.3, 0, z - 6);
-        this.scene.add(s); this.scene.add(s.target);
-      }
+      const s = null;
+      this.addEmitter({ x, y: 5.6, z: z + 0.4, color: 0xffe2b0, power: 70, dist: 30, outdoor: true, on: () => this.floodOn });
       const lamp = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25), new THREE.MeshBasicMaterial({ color: 0xffe9c0 }));
       lamp.position.set(x, 5.84, z + 0.41); lamp.rotation.x = 0.4; this.root.add(lamp);
       this.flood.push({ s, lamp, x, z });
@@ -751,7 +816,7 @@ export class World {
     for (let k = 0; k <= 4; k++) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, fenceH, 0.06), M.post); r.position.set(-gw / 2 + k * gw / 4, fenceH / 2, 0); gate.add(r); }
     const chain = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.015, 6, 12), M.chrome); chain.position.set(gw / 2 - 0.1, 1.1, 0.05); gate.add(chain);
     const pad = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.05), M.yellow); pad.position.set(gw / 2 - 0.1, 0.98, 0.07); gate.add(pad);
-    gate.position.set(16 * CELL + gw / 2, 0, 32 * CELL + CELL / 2);
+    gate.position.set(15 * CELL + gw / 2, 0, 32 * CELL + CELL / 2);
     gate.traverse(o => { if (o.isMesh) o.castShadow = true; });
     this.root.add(gate);
     this.gate = { group: gate, open: 0, target: 0, x0: gate.position.x };
@@ -782,6 +847,10 @@ export class World {
     sky.position.set(36, 0, 36);
     this.sky = sky;
     this.root.add(sky);
+    const hills = new THREE.Mesh(new THREE.CylinderGeometry(150, 150, 30, 64, 1, true), new THREE.MeshBasicMaterial({ map: T.hillsTex(), transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+    hills.material.map.repeat.set(3, 1);
+    hills.position.set(36, 12, 50); hills.renderOrder = -1;
+    this.root.add(hills);
   }
 
   // Room plates, exit signs, posters and wall scrawls.
@@ -850,16 +919,28 @@ export class World {
     }
     const outside = pp.z > 50;
     this.moon.intensity += ((outside ? 0.35 : 0) - this.moon.intensity) * Math.min(1, dt * 2);
-    for (const f of this.flood) {
-      if (!f.s) continue;
-      const lv = outside ? (this.alarm ? 0.5 + 0.5 * Math.sin(t * 9 + f.x) : 1) : 0;
-      f.s.intensity = lv * 420;
-      f.s.color.setHex(this.alarm ? 0xff6050 : 0xffe2b0);
-    }
+    this.floodOn = outside;
   }
 }
 
 // Collision: push a circle out of walls and boxes.
+// Is a straight walk from (x0,z0) to (x1,z1) clear of furniture, door frames and open doors for a body of radius r?
+// (Slab test of the segment against every collider grown by r.)
+export function clearLine(world, x0, z0, x1, z1, r) {
+  const dx = x1 - x0, dz = z1 - z0;
+  for (const b of world.colliders) {
+    const minX = b.minX - r, maxX = b.maxX + r, minZ = b.minZ - r, maxZ = b.maxZ + r;
+    if (Math.max(x0, x1) < minX || Math.min(x0, x1) > maxX || Math.max(z0, z1) < minZ || Math.min(z0, z1) > maxZ) continue;
+    let t0 = 0, t1 = 1;
+    if (Math.abs(dx) < 1e-9) { if (x0 < minX || x0 > maxX) continue; }
+    else { let a = (minX - x0) / dx, c = (maxX - x0) / dx; if (a > c) [a, c] = [c, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, c); }
+    if (Math.abs(dz) < 1e-9) { if (z0 < minZ || z0 > maxZ) continue; }
+    else { let a = (minZ - z0) / dz, c = (maxZ - z0) / dz; if (a > c) [a, c] = [c, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, c); }
+    if (t0 <= t1) return false;
+  }
+  return true;
+}
+
 export function collide(world, p, r) {
   const cx = Math.floor(p.x / CELL), cz = Math.floor(p.z / CELL);
   for (let i = 0; i < 2; i++) {

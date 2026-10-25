@@ -12,7 +12,7 @@ import { Game } from './game.js';
 import { UI } from './ui.js';
 import { createInput } from './input.js';
 import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx, loadRetro } from './audio.js';
-import { haptic, setHaptics } from './haptics.js';
+import { haptic, setHaptics, armButtonHaptics } from './haptics.js';
 import { Look, patchCurvedWorld, patchToneMapping } from './look.js';
 import { T } from './i18n.js';
 import { MODEL_PROPS } from './props.js';
@@ -73,8 +73,13 @@ function applyQuality(reset = true) {
   resize();
 }
 
+// iOS home-screen app: the stylesheet stretches the page past WebKit's short viewport (see style.css)
+if (navigator.standalone) document.documentElement.classList.add('standalone');
+
+let sizeW = 0, sizeH = 0;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
+  sizeW = w; sizeH = h;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   // keep the three lanes and some stalls in view on narrow portrait screens
@@ -149,6 +154,7 @@ const ui = new UI({
 
 setAudioSettings(save.settings);
 setHaptics(save.settings.haptics);
+armButtonHaptics();
 
 // ---------- loading ----------
 const TIPS = T.tips;
@@ -315,6 +321,8 @@ function loop(now) {
   last = now;
   if (!(dt > 0)) return;
   dt = Math.min(dt, 1 / 20);
+  // iOS can change the viewport without a resize event (home-screen app settling, toolbars)
+  if (window.innerWidth !== sizeW || window.innerHeight !== sizeH) resize();
   if (game.state !== 'paused') { const reps = (window.__shuk && window.__shuk.speedup) || 1; for (let i = 0; i < reps; i++) game.update(dt); }
   else game.updateCamera(0);
   look.setZone(world.cur.glow);

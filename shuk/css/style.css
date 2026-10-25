@@ -34,6 +34,17 @@ img { -webkit-user-drag: none; user-select: none; }
 .hidden { display: none !important; }
 
 #ui { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+/* iOS haptics: an invisible native switch over each button (js/haptics.js). The finger's tap toggles it,
+   which plays a system haptic tick, and the click carries on to the button underneath. */
+input.hx { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; z-index: 5; cursor: inherit; }
+button:disabled > input.hx, html.no-haptics input.hx { display: none; }
+/* Home-screen app on iOS 26 (black-translucent status bar): WebKit sizes the viewport short by the status
+   bar's height while the page is shorter than the screen, leaving a strip of page colour at the bottom
+   (WebKit bug 301108). A page as tall as the screen gets the full viewport. */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top, 0px))); }
+}
+html.standalone { min-height: min(100lvh, calc(100% + env(safe-area-inset-top, 0px))); }
 /* direct-render finish (Auto/Battery saver): vignette and speed lines as cheap compositor layers */
 #vignette, #speedlines { position: fixed; inset: 0; pointer-events: none; z-index: 1; display: none; }
 body.css-finish #vignette { display: block; background: radial-gradient(ellipse 80% 72% at 50% 52%, transparent 58%, rgba(12, 8, 24, .34) 100%); }

@@ -2,6 +2,7 @@
 //  1. quick scan (on-device model) from an uploaded photo, edit search, save, draw a box, receipt, history
 //  2. deep scan against the real worker code with a fake Claude API and fake shops, restock alert
 //  3. feed and fit page interactions
+//  4. as a claude.ai artifact: the viewer's Claude identifies the pieces (window.claude faked)
 //   node test/e2e.mjs [outdir] [flow...]
 import fs from "node:fs";
 import path from "node:path";
@@ -379,6 +380,74 @@ if (run("feed")) {
   await page.reload();
   check((await page.evaluate(() => document.documentElement.dataset.theme)) === theme, "theme choice should persist");
   for (const p of problems.filter((p) => !/product\.html|\/assets\/(js|css|img)\/[^ ]*\b(404)/.test(p))) failures.push("feed: " + p);
+  await ctx.close();
+  server.close();
+}
+
+// ---------- 4. as a claude.ai artifact: the viewer's Claude identifies the pieces ----------
+// The artifact preview can't download the on-device model, so its config turns
+// the device scanner off; window.claude.use("sample") is faked the way the
+// viewer provides it.
+if (run("claude")) {
+  const server = await startServer(8744);
+  const ctx = await newContext(browser, { cdn: false });
+  await ctx.route("**/fitsource/assets/js/config.js", async (route) => {
+    const src = fs.readFileSync(path.join(FITSOURCE, "assets/js/config.js"), "utf8")
+      .replace("hashRouting: false", "hashRouting: true")
+      .replace('scanDisabledMessage: ""', 'scanDisabledMessage: "הסריקה כבויה בתצוגה המקדימה."');
+    await route.fulfill({ body: src, contentType: "text/javascript" });
+  });
+  await ctx.addInitScript(() => {
+    const answer = {
+      vibe: "סטריט נקי",
+      summary: "טישרט עם הדפס גדול וג'ינס רחב.",
+      items: [
+        { label: "טישרט אוברסייז עם הדפס", category: "top", color: "שמנת", brand: "Nude Project", product_name: "Nude Mansion Tee", confidence: "likely", box: { x: 250, y: 200, w: 500, h: 400 }, search_query: "Nude Project Nude Mansion טישרט", search_query_en: "Nude Project Nude Mansion tee" },
+        { label: "ג'ינס רחב בהיר", category: "bottom", color: "ג'ינס בהיר", brand: null, product_name: null, confidence: "similar", box: { x: 300, y: 550, w: 400, h: 450 }, search_query: "ג'ינס רחב בהיר", search_query_en: "light wash baggy jeans" },
+        { label: "", category: "nonsense" }, // unusable: dropped
+      ],
+    };
+    window.__sampleCalls = [];
+    window.__sampleMode = "ok";
+    const sample = async () => ({ text: JSON.stringify(answer), truncated: false });
+    sample.limits = async () => ({ maxPromptBytes: 262144, images: { maxCount: 5, maxInputBytes: 20e6, mediaTypes: ["image/jpeg", "image/png"] } });
+    sample.json = async (input, opts = {}) => {
+      window.__sampleCalls.push({ input, images: opts.images ? [].concat(opts.images).length : 0 });
+      if (window.__sampleMode === "declined") throw { code: "not_granted", message: "declined" };
+      await new Promise((r) => setTimeout(r, 300));
+      opts.onText && opts.onText({ text: JSON.stringify(answer), delta: "" });
+      return JSON.parse(JSON.stringify(answer));
+    };
+    window.claude = { use: async (name) => (name === "sample" ? sample : null) };
+  });
+  const page = await ctx.newPage();
+  const problems = watch(page);
+  await page.goto("http://127.0.0.1:8744/fitsource/");
+  await page.waitForFunction(() => /Claude מזהה/.test(document.querySelector("[data-engine]").textContent), null, { timeout: 8000 }).catch(() => failures.push("claude: home does not say Claude identifies the pieces"));
+  await page.setInputFiles("[data-file]", FIT_PHOTO);
+  await page.waitForSelector(".tags .tag", { timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(900);
+  await shot(page, "claude-1-results");
+  const tags = await page.$$eval(".tags .tag", (els) => els.map((e) => ({ brand: e.querySelector(".tag__brand").textContent, name: e.querySelector(".tag__name").textContent, label: e.querySelector(".tag__meta .label")?.textContent, google: e.querySelector('[data-shop="google"]')?.href, tx: e.querySelector('[data-shop="terminalx"]')?.href })));
+  check(tags.length === 2, `claude: expected 2 pieces, got ${JSON.stringify(tags)}`);
+  if (tags[0]) {
+    check(tags[0].brand === "Nude Project" && tags[0].name === "Nude Mansion Tee", `claude: brand and product not shown: ${JSON.stringify(tags[0])}`);
+    check(tags[0].label === "כנראה זה", `claude: confidence label: ${tags[0].label}`);
+    check(/q=Nude%20Project%20Nude%20Mansion%20tee$/.test(tags[0].google), `claude: Google should get the English query: ${tags[0].google}`);
+    check(/Nude%20Project%20Nude%20Mansion%20%D7%98%D7%99%D7%A9%D7%A8%D7%98$/.test(tags[0].tx), `claude: Terminal X should get the Hebrew query: ${tags[0].tx}`);
+  }
+  check(/זיהוי עם Claude/.test(await page.locator(".detail__head .label").first().textContent()), "claude: results don't say Claude identified them");
+  const calls = await page.evaluate(() => window.__sampleCalls);
+  check(calls.length === 1 && calls[0].images === 1 && /outfit photo/.test(calls[0].input), `claude: expected one call with the photo: ${JSON.stringify(calls).slice(0, 200)}`);
+  // reload: the scan is saved
+  await page.reload();
+  await page.waitForSelector(".tags .tag", { timeout: 10000 }).catch(() => failures.push("claude: scan lost on reload"));
+  // a viewer who doesn't allow Claude gets told why, not a dead end
+  await page.evaluate(() => (window.__sampleMode = "declined"));
+  await page.setInputFiles("[data-newfile]", path.join(FITSOURCE, "assets/img/fits/butter-hour.jpg"));
+  await page.waitForSelector(".notice", { timeout: 10000 }).catch(() => {});
+  check(/לאשר ל־FitSource להשתמש ב־Claude/.test(await page.locator(".detail").first().textContent()), "claude: a declined permission should explain itself");
+  for (const p of problems) failures.push("claude: " + p);
   await ctx.close();
   server.close();
 }

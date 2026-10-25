@@ -1,6 +1,6 @@
 // All sound is synthesised with Web Audio, so there are no files to load.
 let ctx = null, master = null, noiseBuf = null;
-let windSrc, windFilter, windGain, pourSrc, pourFilter, pourGain;
+let windSrc, windFilter, windGain, pourSrc, pourFilter, pourGain, rainSrc, rainFilter, rainGain;
 let enabled = true;
 
 function noise(seconds) {
@@ -45,6 +45,7 @@ export function initAudio() {
   noiseBuf = noise(3);
   [windSrc, windFilter, windGain] = loop('bandpass', 500, 0.7);
   [pourSrc, pourFilter, pourGain] = loop('bandpass', 1400, 1.2);
+  [rainSrc, rainFilter, rainGain] = loop('highpass', 2500, 0.5);
 }
 
 export function setSound(on) {
@@ -58,7 +59,7 @@ export function suspendAudio(yes) {
 }
 
 // Continuous layers, updated every frame.
-export function ambience(wind, spillRate, playing) {
+export function ambience(wind, spillRate, playing, rain = 0) {
   if (!ctx) return;
   const t = ctx.currentTime;
   const w = Math.min(1.5, Math.abs(wind));
@@ -66,6 +67,7 @@ export function ambience(wind, spillRate, playing) {
   windFilter.frequency.setTargetAtTime(380 + w * 700, t, 0.2);
   pourGain.gain.setTargetAtTime(playing ? Math.min(0.5, spillRate * 0.9) : 0, t, 0.04);
   pourFilter.frequency.setTargetAtTime(900 + Math.random() * 900, t, 0.03);
+  rainGain.gain.setTargetAtTime(playing ? rain * 0.35 : 0, t, 0.2);
 }
 
 function env(node, t, a, peak, d) {
@@ -128,4 +130,51 @@ export const sfx = {
     burst(400, 0.5, 1.2, 0.2, 2000);
   },
   click() { tone('sine', 700, 500, 0.06, 0.06); },
+  coin() {
+    tone('square', 1320, 1320, 0.06, 0.05);
+    tone('square', 1760, 1760, 0.12, 0.05, 0.06);
+  },
+  orb() {
+    tone('sine', 500, 1100, 0.18, 0.12);
+    tone('sine', 700, 1500, 0.18, 0.08, 0.08);
+  },
+  mult(n) {
+    for (let i = 0; i < n; i++) tone('triangle', 520 * Math.pow(1.26, i), 520 * Math.pow(1.26, i), 0.12, 0.09, i * 0.06);
+  },
+  multLost() { tone('triangle', 440, 260, 0.25, 0.06); },
+  jump() { burst(500, 1.2, 0.25, 0.18, 1600); },
+  land() { tone('sine', 140, 70, 0.15, 0.15); },
+  knot() { tone('triangle', 160, 90, 0.18, 0.1); },
+  trip() {
+    tone('sine', 180, 60, 0.3, 0.2);
+    burst(1200, 0.8, 0.3, 0.3, 500);
+  },
+  // An ibex's "meh": a buzzy tone with a fast wobble.
+  bleat() {
+    if (!ctx) return;
+    const t0 = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(520, t0);
+    o.frequency.linearRampToValueAtTime(430, t0 + 0.5);
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 22;
+    const lg = ctx.createGain();
+    lg.gain.value = 40;
+    lfo.connect(lg).connect(o.frequency);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 1200;
+    f.Q.value = 2;
+    const g = ctx.createGain();
+    env(g, t0, 0.04, 0.12, 0.5);
+    o.connect(f).connect(g).connect(master);
+    o.start(t0);
+    lfo.start(t0);
+    o.stop(t0 + 0.6);
+    lfo.stop(t0 + 0.6);
+  },
+  cheer() { [784, 988, 1175].forEach((f, i) => tone('triangle', f, f, 0.14, 0.08, i * 0.07)); },
+  fish() { tone('sine', 900, 1400, 0.06, 0.06); },
+  buy() { [523, 784, 1047, 1568].forEach((f, i) => tone('square', f, f, 0.12, 0.05, i * 0.07)); },
 };

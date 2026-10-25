@@ -179,7 +179,7 @@ function menu() {
 
 let radio = null;
 function startNight(n, fromCheckpoint = false) {
-  behind = null; cutDone = false;
+  behind = null; glimpse = null; cutDone = false; glimpseT = 25 + Math.random() * 35;
   if (!fromCheckpoint || n !== game.night) game.caughtCount = 0;
   if (!fromCheckpoint || !game.checkpoint || game.checkpoint.night !== n) game.checkpoint = null;
   game.night = n;
@@ -347,7 +347,7 @@ game.flashBlackout = (dur) => {
 let caughtT = 0;
 function caught(fromLocker) {
   if (game.state !== 'play') return;
-  game.state = 'caught'; caughtT = 0; behind = null; cutDone = false;
+  game.state = 'caught'; caughtT = 0; behind = null; glimpse = null; cutDone = false;
   game.caughtCount = (game.caughtCount || 0) + 1;
   ui.scare(null, 0);
   stopTape();
@@ -528,7 +528,7 @@ let behind = null;
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3();
 function tryBehind() {
   const Y = game.yasmin, P = game.player;
-  if (behind || P.hidden || ['chase', 'locker', 'scripted', 'mop'].includes(Y.state)) return false;
+  if (behind || glimpse || P.hidden || ['chase', 'locker', 'scripted', 'mop'].includes(Y.state)) return false;
   if (Y.visible && Math.hypot(Y.position.x - P.pos.x, Y.position.z - P.pos.z) < 18) return false;
   const f = P.forward(_v1); f.y = 0; f.normalize();
   const x = P.pos.x - f.x * 1.45, z = P.pos.z - f.z * 1.45;
@@ -561,6 +561,69 @@ function updateBehind(dt) {
     // gone, as if she was never there
     game.flashBlackout(behind.hit ? 0.35 : 0.15);
     const sv = behind.saved; behind = null;
+    if (sv.visible) Y.spawn(sv.x, sv.z, 'patrol', sv.dir); else Y.hide();
+  }
+}
+
+// ---------- a glimpse: she is standing down the corridor — and when you look away, she was never there ----------
+let glimpse = null, glimpseT = 40;
+const _frustum = new THREE.Frustum(), _pm = new THREE.Matrix4(), _v3 = new THREE.Vector3();
+function inView(x, z) {
+  camera.updateMatrixWorld();
+  _pm.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse); _frustum.setFromProjectionMatrix(_pm);
+  const P = game.player;
+  if (!lineOfSight(P.pos.x, P.pos.z, x, z, opaque)) return false;
+  return _frustum.containsPoint(_v3.set(x, 1.9, z)) || _frustum.containsPoint(_v3.set(x, 1.1, z));
+}
+function tryGlimpse() {
+  const Y = game.yasmin, P = game.player;
+  if (glimpse || behind || P.hidden || game.finale || ['chase', 'locker', 'scripted', 'mop'].includes(Y.state)) return false;
+  if (Y.visible && Math.hypot(Y.position.x - P.pos.x, Y.position.z - P.pos.z) < 20) return false;
+  const f = P.forward(_v1); f.y = 0; f.normalize();
+  const tries = [];
+  for (let d = 4; d <= 8.5; d += 0.5) tries.push(d);
+  tries.sort(() => Math.random() - 0.5);
+  for (const d of tries) {
+    const side = (Math.random() - 0.5) * 0.8;
+    const x = P.pos.x + f.x * d - f.z * side, z = P.pos.z + f.z * d + f.x * side;
+    if (!walkable(toCell(x), toCell(z)) || !inView(x, z)) continue;
+    _v2.set(x, 0, z); collide(game.world, _v2, 0.3);
+    if (Math.hypot(_v2.x - x, _v2.z - z) > 0.03) continue;
+    glimpse = { t: 0, shown: false, away: 0, x, z, saved: { visible: Y.visible, x: Y.position.x, z: Y.position.z, dir: Y.dir } };
+    // the lights stutter; when they come back she is there
+    game.flashBlackout(0.14);
+    Y.spawn(x, z, 'scripted', Math.atan2(P.pos.x - x, P.pos.z - z)); Y.script = null; Y.scriptMove = 0; Y.play('idle', 0.01);
+    return true;
+  }
+  return false;
+}
+function updateGlimpse(dt) {
+  const Y = game.yasmin, P = game.player;
+  if (!glimpse) {
+    glimpseT -= dt;
+    if (glimpseT <= 0) glimpseT = tryGlimpse() ? 55 + Math.random() * 60 - game.night * 6 : 2;
+    return;
+  }
+  const g = glimpse;
+  g.t += dt;
+  // something else took her (a scripted scene, a chase) — let it
+  if (Y.state !== 'scripted' || Math.hypot(Y.position.x - g.x, Y.position.z - g.z) > 0.3) { glimpse = null; return; }
+  Y.faceTo(P.pos.x, P.pos.z, dt * 4); Y.group.rotation.y = Y.dir;
+  if (!g.shown && g.t > 0.12) {
+    g.shown = true;
+    audio.play('sfx_jump1', { volume: 1.3, verb: 0.25, muffle: false, sub: false });
+    audio.stinger('peek');
+    P.shake = Math.max(P.shake, 0.8);
+  }
+  if (!g.shown) return;
+  const seen = inView(g.x, g.z);
+  g.away = seen ? 0 : g.away + dt;
+  const close = Math.hypot(P.pos.x - g.x, P.pos.z - g.z) < 2.2;
+  let gone = g.away > 0.08;
+  // stare too long or walk up to her and the lights take her instead
+  if (!gone && (close || g.t > 3.5)) { game.flashBlackout(0.2); gone = true; }
+  if (gone) {
+    const sv = g.saved; glimpse = null;
     if (sv.visible) Y.spawn(sv.x, sv.z, 'patrol', sv.dir); else Y.hide();
   }
 }
@@ -607,6 +670,7 @@ function tick(dt) {
     S.update(dt, clockT);
     director(dt);
     updateBehind(dt);
+    updateGlimpse(dt);
     game.clockMin = Math.min(359, game.clockMin + dt * 0.5);
     ui.clock(game.clockMin);
     W.clockMinutes = game.clockMin;
@@ -706,6 +770,6 @@ $('set-difficulty').onchange = () => { settings.difficulty = $('set-difficulty')
 $('set-quality').value = settings.quality;
 $('set-quality').onchange = () => { settings.quality = $('set-quality').value; store.set('settings', settings); };
 
-game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l), render: () => S_render(), post, renderer, behind: () => tryBehind(), behindState: () => behind, clock: () => clockT };
+game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l), render: () => S_render(), post, renderer, behind: () => tryBehind(), behindState: () => behind, glimpse: () => tryGlimpse(), glimpseState: () => glimpse, clock: () => clockT };
 load().catch(e => { console.error(e); ui.progress(1, 'שגיאה בטעינה: ' + e.message); });
 frame();

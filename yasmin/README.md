@@ -23,7 +23,7 @@ Settings: mouse sensitivity, volume, music, brightness, difficulty (easy / norma
 
 ## The nights
 
-1. **הלילה הראשון** — read the note on your bed, take the flashlight from your locker, find the first gate key in the kitchenette (the fridge is full of Roi's "squash"), get back to bed. She shows herself at the end of the corridor first, then starts patrolling; a mop bucket rolls out of the office on its own.
+1. **הלילה הראשון** — read the note on your bed, take the flashlight from your locker, find the first gate key in the kitchenette (the fridge is full of Roi's squishies — kawaii dumpling and butter-stick stress toys, torn open and refilled with blood), get back to bed. She shows herself at the end of the corridor first, then starts patrolling; a mop bucket rolls out of the office on its own.
 2. **דוח צל״ם** — take the form from the office, inspect four items in the equipment store (its lights die one by one and she comes to look), return the report and take the key that falls out. Maya's beheaded Labubu is on a bed in room 2.
 3. **הפסקת חשמל** — the power is out (red emergency lights, the flashlight battery drains). Find three fuses, restore power in the generator room, check the camera room (live CCTV feeds: she appears behind you on CAM 4) and enter the isolation wing: Nevo, in a padded cell after 47 cleaning inspections, rushes the glass and mutters. His medical file and the third key are in the wing.
 4. **מסדר ניקיון** — she announces an inspection over the speakers. Take a mop from the showers and clean four blood puddles (cleaning is loud), which opens her store: mops, buckets, a candle shrine, her diary and a board of crossed-out photos. The last key is in the bucket; she screams in the doorway, the lights cut out, and she comes running from the far end of the base.
@@ -55,7 +55,7 @@ Grid A* (binary heap) with path smoothing that only cuts a corner when the strai
 
 ## Assets
 
-Yasmin and Nevo were generated as images from reference photos, turned into rigged, animated 3D models (Meshy image-to-3D with auto-rig; Yasmin's walk-with-bucket, run, scream and idle clips merged onto one skeleton); the mop bucket, the Labubu and the squash bottle are image-to-3D (Tripo) models; the wall/floor/ceiling textures, the jumpscare frames, the CCTV still and the key art were generated with GPT Image, and the jumpscare clip with Grok Imagine Video (image-to-video); all via Higgsfield. Voice lines are ElevenLabs v4 performances (library voices), effects are ElevenLabs sound effects. Models are compressed with gltf-transform (WebP textures, meshopt). Everything else (furniture, signage, posters, blood, the fence, the yard) is built in code.
+Yasmin and Nevo were generated as images from reference photos, turned into rigged, animated 3D models (Meshy image-to-3D with auto-rig; Yasmin's walk-with-bucket, run, scream and idle clips merged onto one skeleton); the mop bucket, the Labubu and Roi's squishies (generated as product photos first) are image-to-3D (Tripo) models; the wall/floor/ceiling textures, the jumpscare frames, the CCTV still and the key art were generated with GPT Image, and the jumpscare clip with Grok Imagine Video (image-to-video); all via Higgsfield. Voice lines are ElevenLabs v4 performances (library voices), effects are ElevenLabs sound effects. Models are compressed with gltf-transform (WebP textures, meshopt). Everything else (furniture, signage, posters, blood, the fence, the yard) is built in code.
 
 ## Code
 

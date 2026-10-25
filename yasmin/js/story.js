@@ -48,7 +48,7 @@ const OVER_LINES = [
   'הרצפה הייתה רטובה. אתה ידעת.',
   '47 מסדרים. אתה תעשה 48.',
   'היא אמרה שאתה מלכלך. היא צדקה.',
-  'הסקווש הבא — בטעם שלך.',
+  'הסקוויש הבא — ממולא בך.',
 ];
 export function overLine() { return OVER_LINES[Math.floor(Math.random() * OVER_LINES.length)]; }
 
@@ -61,11 +61,11 @@ const NOTES = {
 הפנס בלוקר שלך.
 — הרס״פ`,
   roi: `<h3>פתק מודבק על המקרר</h3>אם מישהו מוצא את זה:
-שפכתי סקווש פטל על המסדרון. רק טיפה.
+הסקוויש שלי נקרע על המסדרון. נזל ממנו קצת ג'ל אדום. רק טיפה.
 יסמין ראתה.
 היא אמרה שהיא תדאג שזה "יתנקה עד הסוף".
-אחר כך היא מילאה לי את כל הבקבוקים מחדש.
-<span class="blood">זה לא פטל.</span>
+בבוקר מצאתי את כל הסקווישים שלי במקרר. קרועים. ממולאים מחדש.
+<span class="blood">זה לא ג'ל.</span>
 — רועי`,
   maya: `<h3>פתק ליד הלבובו</h3>השארתי את הלבובו על המיטה ולא סידרתי אותה למסדר.
 יסמין לקחה אותו "לחקירה".
@@ -91,7 +91,7 @@ const NOTES = {
   diary: `<h3>יומן תורנות — יסמין</h3>יום 1: המסדרון מלוכלך.
 יום 12: הם מלכלכים בכוונה.
 יום 30: נבו סיים 47 מסדרים. עדיין לא מבריק.
-יום 31: רועי שפך סקווש. ניקיתי אותו.
+יום 31: הסקוויש של רועי נקרע על הרצפה. ניקיתי אותו.
 יום 33: מאיה לא סידרה מיטה. ניקיתי גם אותה.
 יום 35: רות ניסתה לברוח דרך המבוך. ניקיתי גם אותה.
 יום 40: יש חדש. הוא הולך עם נעליים על הרטוב.
@@ -148,26 +148,61 @@ export class Story {
       return g2;
     };
     this.bucketModel = norm(models.bucket.scene, 0.82);
-    this.squashModel = norm(models.squash.scene, 0.3);
+    // Roi's squishies: kawaii dumpling stress toys and a butter stick, torn open and refilled with blood
+    this.squishyModel = norm(models.squishy.scene, 0.16);
+    this.squishyTornModel = norm(models.squishy_torn.scene, 0.16);
+    this.butterModel = norm(models.squishy_butter.scene, 0.09);
+    // soft foam, not metal (the generated materials come out fully metallic)
+    for (const m of [this.squishyModel, this.squishyTornModel, this.butterModel]) m.traverse(o => {
+      if (o.isMesh) { o.material.metalness = 0; o.material.metalnessMap = null; o.material.roughness = 0.55; o.material.envMapIntensity = 0.5; o.material.needsUpdate = true; }
+    });
     this.labubuModel = norm(models.labubu.scene, 0.26);
 
-    // --- kitchen: open fridge full of "squash", more on the table, a red puddle
+    // --- kitchen: open fridge full of Roi's squishies, torn and refilled with blood; more on the table
     const K = W.bounds.K;
     const fr = W.fridgePos;
     const pivot = new THREE.Group(); pivot.position.set(fr.x - 0.35, 0, fr.z + 0.375); pivot.rotation.y = 1.75; root.add(pivot);
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.85, 0.74), M.white);
     door.position.set(0, 0.95, -0.37); door.castShadow = true; pivot.add(door);
     for (const y of [0.5, 1.0, 1.45]) { const sh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.04, 0.6), M.white); sh.position.set(-0.06, y, -0.37); pivot.add(sh); }
-    const inner = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 1.7), new THREE.MeshStandardMaterial({ color: 0xf2f5f5, emissive: 0xdde8ff, emissiveIntensity: 0.9 }));
+    const inner = new THREE.Mesh(new THREE.PlaneGeometry(0.64, 1.7), new THREE.MeshStandardMaterial({ color: 0xf2f5f5, emissive: 0xdde8ff, emissiveIntensity: 0.25 }));
     inner.position.set(fr.x + 0.37, 0.95, fr.z); inner.rotation.y = -Math.PI / 2; root.add(inner);
     for (const y of [0.45, 0.95, 1.4]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.02, 0.66), M.glass); s.position.set(fr.x + 0.02, y, fr.z); root.add(s); }
-    for (const [dy, dz] of [[0.47, -0.2], [0.47, 0.05], [0.47, 0.25], [0.97, -0.15], [0.97, 0.18], [1.42, 0.12]]) place(this.squashModel, fr.x + 0.05, dy, fr.z + dz, Math.random() * 6, 1);
-    place(this.squashModel, K.X0 + 4.7, 0.76, K.Z0 + 3.5, 0.4, 1);
-    const fallen = place(this.squashModel, K.X0 + 5.4, 0.85, K.Z0 + 3.7, 0, 1); fallen.rotation.z = Math.PI / 2;
+    const goo = new THREE.MeshPhysicalMaterial({ color: 0x4a0306, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.1 });
+    const tint = (m, hex) => { m.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.setHex(hex); } }); return m; };
+    // a pool of blood under a torn one, and drips running off the edge of the glass shelf
+    const pool = (x, y, z, r) => {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 1.1, 0.008, 18), goo); p.position.set(x, y + 0.004, z); p.scale.z = 0.8 + Math.random() * 0.5; root.add(p);
+    };
+    const drip = (x, y, z, len) => {
+      const d = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.003, len, 6), goo); d.position.set(x, y - len / 2, z); root.add(d);
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), goo); b.position.set(x, y - len, z); root.add(b);
+    };
+    const shelf = [
+      [0.47, -0.2, 'torn', 0], [0.47, 0.04, 'clean', 0xff9cc4], [0.47, 0.24, 'butter', 0],
+      [0.97, -0.18, 'clean', 0x9be89a], [0.97, 0.05, 'torn', 0], [0.97, 0.22, 'clean', 0xffe070],
+      [1.42, -0.1, 'butter', 0], [1.42, 0.14, 'torn', 0],
+    ];
+    for (const [dy, dz, kind, col] of shelf) {
+      const x = fr.x + 0.02 + (Math.random() - 0.5) * 0.12, z = fr.z + dz;
+      const model = kind === 'torn' ? this.squishyTornModel : kind === 'butter' ? this.butterModel : this.squishyModel;
+      const m = place(model, x, dy, z, -Math.PI / 2 + (Math.random() - 0.5) * 0.9, 1);
+      tint(m, col || (kind === 'torn' ? 0x7fb0ff : 0xfff2b0));
+      if (kind !== 'clean' || Math.random() < 0.5) {
+        pool(x + 0.03, dy, z, kind === 'butter' ? 0.07 : 0.055);
+        if (kind === 'torn' && dy > 0.6) drip(fr.x - 0.3, dy, z + 0.03, 0.03 + Math.random() * 0.05);
+      }
+    }
+    // on the table: one torn open in a puddle, a butter stick squeezed flat
+    tint(place(this.squishyTornModel, K.X0 + 4.7, 0.76, K.Z0 + 3.5, 0.6, 1.3), 0x7fb0ff);
+    pool(K.X0 + 4.75, 0.76, K.Z0 + 3.55, 0.12);
+    const flat = place(this.butterModel, K.X0 + 5.4, 0.76, K.Z0 + 3.7, 1.1, 1.2); flat.scale.y *= 0.6;
+    pool(K.X0 + 5.45, 0.76, K.Z0 + 3.72, 0.09);
+    tint(place(this.squishyModel, K.X0 + 5.05, 0.76, K.Z0 + 3.15, 2.2, 1.1), 0xff9cc4);
     W.decal(T.bloodTex('splat'), K.X0 + 5.6, K.Z0 + 4.1, 1.3, 1.3, 0.4);
     W.decal(T.puddleTex(true), fr.x - 1.0, fr.z + 0.3, 1.6, 1.4, 1);
     W.wallDecal(T.bloodTex('hand'), fr.x + 0.36, 1.2, fr.z + 0.1, -Math.PI / 2, 0.3, 0.3);
-    W.addEmitter({ x: fr.x - 0.6, y: 1.1, z: fr.z, color: 0xd8e6ff, power: 2.2, dist: 4.5 });
+    W.addEmitter({ x: fr.x - 0.6, y: 1.1, z: fr.z, color: 0xd8e6ff, power: 1.5, dist: 4.5 });
 
     // --- room 2: the beheaded Labubu on a bed
     const B = W.bounds.B;

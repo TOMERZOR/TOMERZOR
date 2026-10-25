@@ -360,7 +360,7 @@ function caught(fromLocker) {
   Y.position.set(P.pos.x + f.x * 0.7, 0, P.pos.z + f.z * 0.7);
   Y.dir = Math.atan2(-f.x, -f.z); Y.group.rotation.y = Y.dir;
   Y.state = 'caught'; Y.play('scream', 0.05); Y.speed = 0;
-  P.lookAt = new THREE.Vector3(Y.position.x, 1.5, Y.position.z);
+  P.lookAt = new THREE.Vector3(Y.position.x, 1.85, Y.position.z); // she looms over you
   P.shake = 2.2;
   audio.jumpscare();
   ui.hud(false);

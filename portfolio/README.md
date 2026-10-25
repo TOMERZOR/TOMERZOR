@@ -1,23 +1,27 @@
 # Tomer Zoref portfolio
 
-Hebrew (RTL) photography and video portfolio. Static HTML, CSS and vanilla JS with no build step, like the rest of this repo.
+Hebrew (RTL) photography and video portfolio built around a camera: the page opens with an iris, the hero is a viewfinder that fires a burst of frames as you scroll, the gallery is filtered with a mode dial, and photos open in a playback screen. Static HTML, CSS and vanilla JS with no build step, like the rest of this repo.
 
-- `index.html`: the whole page (hero, filterable photo gallery, video, about, contact)
-- `assets/css/style.css`: design tokens at the top (colors for light and dark, spacing, type)
-- `assets/js/app.js`: header state, hero slideshow, masonry gallery and filters, lightbox, video previews and player
+- `index.html`: the whole page (viewfinder hero, gallery with mode dial, video, about, contact, playback and video dialogs)
+- `assets/css/style.css`: design tokens at the top (dark palette, accent and focus colors, spacing, type)
+- `assets/js/app.js`: iris, viewfinder burst, focus cursor, mode dial and gallery, playback, video previews and player, WhatsApp messages, optional shutter sound
 - `assets/img/`: photos as WebP at 480, 960 and 1600px wide (plus 2400px for the desktop hero)
 - `assets/video/`: each video as a 720p MP4, a 5-second muted preview loop (`-preview.mp4`) and a poster (`.webp`)
-- `assets/fonts/`: Noto Sans Hebrew (variable weight and width), self-hosted under the SIL Open Font License
+- `assets/fonts/`: Noto Sans Hebrew (variable weight and width) and Geist Mono, self-hosted under the SIL Open Font License
 
 Preview locally: `npx http-server portfolio` (or `python3 -m http.server` inside this folder) and open the printed address.
 
+Everything works without JavaScript (the first hero frame, the full gallery and the contact links stay usable), and visitors who ask for reduced motion get no iris, burst or focus cursor.
+
 ## Editing
 
-**Add a photo.** Export three WebP files named `<category>-<nn>-480.webp`, `-960.webp` and `-1600.webp` into `assets/img/`, then copy any `<figure class="tile">` block in `index.html` and update its `data-cat` (`sport`, `party`, `event`, `portrait` or `street`), `data-w`/`data-h` (original pixel size), file names and `alt` text. Update the count in the matching filter chip.
+**Add a photo.** Export three WebP files named `<category>-<nn>-480.webp`, `-960.webp` and `-1600.webp` into `assets/img/`, then copy any `<figure class="tile">` block in `index.html` and update its `data-cat` (`sport`, `party`, `event`, `portrait` or `street`), `data-w`/`data-h` (original pixel size), `data-full`, file names and `alt` text. The dial counts the photos itself; only the starting text of `.dial__count` ("59 תמונות") needs the new total.
 
-**Add a video.** Put `<slug>.mp4`, `<slug>-preview.mp4` and `<slug>.webp` in `assets/video/` and copy a `<figure class="vcard">` block. Vertical reels go in `.reels` with the `vtile--v` class, horizontal videos in `.vgrid`.
+**Change the hero burst.** Each `<figure class="vf__frame">` is one frame, with a landscape image for desktop and a portrait one for phones. Keep `--frames` on the `.vf` section equal to the number of frames, since it sets how long the burst stays pinned.
 
-**Contact.** The contact section links to Instagram (@tomerphotos_). A commented-out block right under that link adds WhatsApp and email buttons; fill in the number and address and remove the comment markers.
+**Add a video.** Put `<slug>.mp4`, `<slug>-preview.mp4` and `<slug>.webp` in `assets/video/` and copy a `<figure class="vcard">` block. Vertical reels go in `.reels`, horizontal videos in `.vgrid`.
+
+**Contact.** WhatsApp messages are set at the WhatsApp section of `app.js`: `PHONE` (international format, no plus sign), the opening sentence in `base` and one ending per subject chip in `subjects`. If the number changes, also update the `tel:` link, the two `wa.me` links and `telephone` in the JSON-LD block of `index.html`, which are what visitors without JavaScript get. Email and Instagram are plain links in the contact section and in the JSON-LD `sameAs` list.
 
 ## Launch checklist
 

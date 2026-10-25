@@ -5,7 +5,8 @@ Hebrew (RTL) photography and video portfolio built around a camera: the page ope
 - `index.html`: the whole page (viewfinder hero, gallery with mode dial, video, about, contact, playback and video dialogs)
 - `accessibility.html`: the accessibility statement (הצהרת נגישות), linked from every footer
 - `404.html`: the page GitHub Pages and most static hosts show for a missing address. Its links and asset paths start with `/`, so it only works when the site sits at the root of its domain
-- `robots.txt`, `llms.txt`, `favicon.ico`: for search engines, AI assistants and browsers that look for these files at the root
+- `robots.txt`, `sitemap.xml`, `llms.txt`, `favicon.ico`: for search engines, AI assistants and browsers that look for these files at the root
+- `CNAME`: tells GitHub Pages to serve the site at tomerzoref.com
 - `assets/css/style.css`: design tokens at the top (dark palette, accent and focus colors, spacing, type)
 - `assets/js/app.js`: iris, viewfinder burst, focus cursor, mode dial and gallery, playback, video previews and player, WhatsApp messages, optional shutter sound
 - `assets/img/`: photos as WebP at 480, 960 and 1600px wide (plus 2400px for the desktop hero)
@@ -38,5 +39,5 @@ The site has no server code, forms, logins or database, and loads nothing from o
 ## Launch checklist
 
 - Host the contents of `portfolio/` at the root of a domain on a static host such as GitHub Pages. The main page and the accessibility statement use relative paths and work from a subfolder too; only `404.html` needs the domain root. Cloudflare Pages rejects files over 25MB, and two of the videos are larger.
-- Once the final address is known, add it to the pages: `og:image` and `og:url` as full URLs (WhatsApp and Instagram need them for the preview image), a `<link rel="canonical">` on `index.html` and `accessibility.html`, a `sitemap.xml` listing both pages, a `Sitemap:` line in `robots.txt`, full URLs in `llms.txt` and in the JSON-LD blocks.
+- The site lives at https://tomerzoref.com. The address also appears in `CNAME`, the canonical, `og:url` and `og:image` tags of `index.html` and `accessibility.html`, their JSON-LD blocks, `sitemap.xml`, `robots.txt` and `llms.txt`. Update `<lastmod>` in `sitemap.xml` when a page changes.
 - Videos total about 170MB. The largest file is 44MB, under GitHub's 50MB warning.

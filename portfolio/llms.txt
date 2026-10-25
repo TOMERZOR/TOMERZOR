@@ -4,8 +4,8 @@
 
 ## Pages
 
-- [Home](/): photo gallery (sports, parties, events, portraits, street), videos (reels, brand films, event recaps), about and contact
-- [Accessibility statement](/accessibility.html): accessibility features, known limitations and how to report an accessibility issue
+- [Home](https://tomerzoref.com/): photo gallery (sports, parties, events, portraits, street), videos (reels, brand films, event recaps), about and contact
+- [Accessibility statement](https://tomerzoref.com/accessibility.html): accessibility features, known limitations and how to report an accessibility issue
 
 ## Services
 

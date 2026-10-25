@@ -169,7 +169,7 @@ function lobbyRoom(base, me) {
     // An empty message: they left (or only lost that one broker; then their next message on
     // another one, within three seconds, keeps them).
     if (!buf.length) { const p = peers.get(id); if (p) p.t = Math.min(p.t, Date.now() - 9000); return; }
-    if (buf.length > 3000) return;
+    if (buf.length > 6000) return;
     try {
       const pr = JSON.parse(buf.toString());
       if (!pr || typeof pr !== 'object' || Array.isArray(pr)) return;

@@ -90,7 +90,7 @@ const Heist = {
     document.body.classList.remove('hs-noctl');
     if (this.scene) Arcade.dispose(this.scene);
     this.scene = null; this.cam = null; this.shot = null;
-    this.k = k; this.n = n; this.opt = opt; this.evOut = [];
+    this.k = k; this.n = n; this.opt = opt; this.evOut = []; this.cineDone = [];
     this.cur = this.stages[k];
     this.cur.enter(opt);
   },
@@ -103,7 +103,7 @@ const Heist = {
       if (h) { this.lostT = 0; if (h.n !== this.n && this.stages[h.k]) this.start(h.k, h.n, h.o || {}); }
       else if ((this.lostT += dt) > 8) { UI.toast('המארח/ת יצא/ה מהשוד', 'bad'); Arcade.exit(); return; }
     } else if (!this.ctx.solo) this.pollEv();
-    if (this.cine) this.cineUpdate(dt);
+    if (this.cine) { this.cineFollow(dt); if (this.cine) this.cineUpdate(dt); }
     if (this.cur) this.cur.update(dt, t);
     if (this.shot && this.cam) this.shotCam();
     if (this.keysDown) this.keysDown.clear();
@@ -153,7 +153,7 @@ const Heist = {
   presence() {
     const s = { n: this.n, ev: this.evOut };
     if (this.cur && this.cur.mine) Object.assign(s, this.cur.mine());
-    if (this.host) s.h = { k: this.k, n: this.n, o: this.opt, pg: this.pgShort(), st: this.cur && this.cur.hostOut ? this.cur.hostOut() : null };
+    if (this.host) s.h = { k: this.k, n: this.n, o: this.opt, pg: this.pgShort(), st: this.cur && this.cur.hostOut ? this.cur.hostOut() : null, cn: this.cine ? [this.cine.key, this.cine.i] : null, ce: (this.cineDone || []).slice(-4) };
     return s;
   },
 
@@ -404,7 +404,8 @@ const Heist = {
 
   // ---------- cinema: letterbox, stills and camera shots, a line at a time ----------
   // seq: [{ img, shot: { from, to, at, atEnd, dur }, who (cast id | 'player' | ''), name, text, ms }]
-  // Lines go on by themselves (online everyone keeps the same pace); a tap goes on sooner.
+  // Lines go on by themselves; a tap goes on sooner. Online the host's phone leads: a guest's
+  // scene follows the host's line by line and ends when the host's does (cineFollow).
   play(seq, { skip = true } = {}) {
     return new Promise(done => {
       this.endCine();
@@ -414,18 +415,22 @@ const Heist = {
       a.classList.add('hs-cinema');
       const box = document.createElement('div');
       box.className = 'hs-cine';
-      box.innerHTML = `<div class="hs-still"><img alt=""></div><div class="dialog hs-cap"><div class="hs-face"></div><div class="body"><div class="who"></div><div class="txt"></div><div class="hint">${G.touch ? 'הקש להמשך' : 'רווח / E / לחיצה להמשך'}</div></div></div>${skip ? '<button class="hs-skip">⏭ דילוג</button>' : ''}`;
+      box.innerHTML = `<div class="hs-still"><img alt=""></div><div class="dialog hs-cap"><div class="hs-face"></div><div class="body"><div class="who"></div><div class="txt"></div><div class="hint">${this.guest() ? '⏳ ממשיכים יחד עם המארח/ת' : G.touch ? 'הקש להמשך' : 'רווח / E / לחיצה להמשך'}</div></div></div>${skip && !this.guest() ? '<button class="hs-skip">⏭ דילוג</button>' : ''}`;
       a.appendChild(box);
       box.addEventListener('click', (e) => { if (e.target.closest('.hs-skip')) { Sound.click(); this.endCine(true); return; } this.cineNext(); });
-      this.cine = { seq: seq.filter(Boolean), i: -1, box, done, t: 0, ms: 0, full: '' };
-      this.cineNext();
+      const list = seq.filter(Boolean), first = list[0] || {};
+      // The same scene has the same key on every phone: stage, length, its first still and words.
+      const key = `${this.n}|${list.length}|${first.img || ''}|${String(first.text || '').slice(0, 24)}`;
+      this.cine = { seq: list, i: -1, box, done, t: 0, ms: 0, full: '', key, alone: 0 };
+      this.cineNext(true);
     });
   },
-  cineNext() {
+  cineNext(force = false) {
     const c = this.cine;
     if (!c) return;
     // Mid-typing, the first tap shows the whole line.
     if (c.i >= 0 && c.shown < c.full.length) { c.shown = c.full.length; c.box.querySelector('.txt').textContent = c.full; c.t = Math.max(c.t, c.ms - 1500); return; }
+    if (!force && this.guest() && !c.solo) return; // the host turns the page for everyone
     c.i++;
     if (c.i >= c.seq.length) { this.endCine(true); return; }
     if (c.i > 0) Sound.click();
@@ -457,10 +462,24 @@ const Heist = {
     }
     if (c.t >= c.ms) this.cineNext();
   },
+  // Online, a guest's scene keeps to the host's: on to the host's line, and over when the host's
+  // is over. If the host isn't in this scene at all (it's only ours), it runs at its own pace.
+  guest() { return !this.host && this.ctx && !this.ctx.solo; },
+  cineFollow(dt) {
+    const c = this.cine;
+    if (!this.guest() || c.solo) return;
+    const h = this.hostS();
+    if (h && h.n === this.n && Array.isArray(h.ce) && h.ce.includes(c.key)) { this.endCine(true); return; }
+    const cn = h && h.n === this.n && Array.isArray(h.cn) && h.cn[0] === c.key ? h.cn : null;
+    if (!cn) { if ((c.alone += dt) > 2.5) c.solo = true; return; }
+    c.alone = 0;
+    while (this.cine === c && c.i < cn[1]) this.cineNext(true);
+  },
   endCine(finished = false) {
     const c = this.cine;
     if (!c) return;
     this.cine = null;
+    if (this.host) (this.cineDone = this.cineDone || []).push(c.key);
     c.box.remove();
     UI.cinema(false);
     const a = $('#arcade'); if (a) a.classList.remove('hs-cinema');

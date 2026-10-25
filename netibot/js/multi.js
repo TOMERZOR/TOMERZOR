@@ -60,7 +60,7 @@ const Multi = {
           map: String(s.race.map || '').slice(0, 12), lv: Math.max(0, Math.min(2, +s.race.lv | 0)), sh: s.race.sh ? 1 : 0, bo: s.race.bo ? 1 : 0,
           ev: Array.isArray(s.race.ev) ? s.race.ev.slice(-4).filter(e => e && typeof e === 'object').map(e => ({ id: +e.id || 0, k: String(e.k || '').slice(0, 8), x: +e.x || 0, z: +e.z || 0, a: +e.a || 0, w: String(e.w || '').slice(0, 40) })) : [] } : null,
         // An arcade game they're in or hosting; s is the game's own small state (checked by size).
-        ar: s.ar && +s.ar.id && typeof s.ar.g === 'string' ? { id: +s.ar.id, g: s.ar.g.slice(0, 12), host: !!s.ar.host, cd: Math.max(0, Math.min(60, +s.ar.cd || 0)), to: Array.isArray(s.ar.to) ? s.ar.to.slice(0, 12).map(x => String(x).slice(0, 40)) : null, s: s.ar.s && typeof s.ar.s === 'object' && JSON.stringify(s.ar.s).length < 1600 ? s.ar.s : null } : null,
+        ar: s.ar && +s.ar.id && typeof s.ar.g === 'string' ? { id: +s.ar.id, g: s.ar.g.slice(0, 12), host: !!s.ar.host, cd: Math.max(0, Math.min(60, +s.ar.cd || 0)), to: Array.isArray(s.ar.to) ? s.ar.to.slice(0, 12).map(x => String(x).slice(0, 40)) : null, s: s.ar.s && typeof s.ar.s === 'object' && JSON.stringify(s.ar.s).length < 3500 ? s.ar.s : null } : null,
         // A red alert this player is in: everyone online at that site gets it too.
         sl: !!s.sl,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,

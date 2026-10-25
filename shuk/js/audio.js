@@ -1,7 +1,7 @@
 // Music and sound effects are synthesized live with WebAudio (no files to download); only the market people's
 // voice lines are recordings (audio/*.mp3).
 
-let ctx = null, master, sfxBus, musicBus, musicLP, noiseBuf, comp;
+let ctx = null, master, sfxBus, musicBus, noiseBuf, comp;
 const settings = { music: true, sfx: true };
 const oudCache = new Map();
 
@@ -15,8 +15,7 @@ export function initAudio() {
   master = ctx.createGain(); master.gain.value = 0.9;
   sfxBus = ctx.createGain(); sfxBus.gain.value = settings.sfx ? 0.8 : 0;
   musicBus = ctx.createGain(); musicBus.gain.value = settings.music ? 0.42 : 0;
-  musicLP = ctx.createBiquadFilter(); musicLP.type = 'lowpass'; musicLP.frequency.value = 20000; musicLP.Q.value = 0.6;
-  sfxBus.connect(comp); musicBus.connect(musicLP); musicLP.connect(comp); comp.connect(master); master.connect(ctx.destination);
+  sfxBus.connect(comp); musicBus.connect(comp); comp.connect(master); master.connect(ctx.destination);
   const len = ctx.sampleRate * 1.5;
   noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
@@ -480,14 +479,6 @@ export function setMusicIntensity(x) { // 0..1 with run speed
   if (music.mode !== 'run' || !ctx) return;
   music.bpm = 126 + x * 22;
   if (delay) delay.delayTime.setTargetAtTime(60 / music.bpm * 0.75, ctx.currentTime, 0.2);
-}
-// slow-motion moments: the music drops under water for a beat
-export function muffleMusic(sec) {
-  if (!ctx) return;
-  const t = ctx.currentTime, f = musicLP.frequency;
-  f.cancelScheduledValues(t); f.setValueAtTime(f.value, t);
-  f.exponentialRampToValueAtTime(520, t + 0.06);
-  f.setValueAtTime(520, t + sec * 0.6); f.exponentialRampToValueAtTime(20000, t + sec);
 }
 export function stopMusic() { music.on = false; if (music.timer) clearInterval(music.timer); music.timer = null; }
 export function duckMusic(on) { if (!ctx) return; musicBus.gain.setTargetAtTime(settings.music ? (on ? 0.12 : 0.42) : 0, ctx.currentTime, 0.15); }

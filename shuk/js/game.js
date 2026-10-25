@@ -4,7 +4,7 @@ import { PHYS, POWERUPS, MISSIONS, REVIVE_COST, MAX_MULT, ZONES, LEVEL_REWARD, F
 import { speedAt } from './track.js';
 import * as P from './props.js';
 import { zoneAt } from './world.js';
-import { sfx, setMusicIntensity, voice, muffleMusic } from './audio.js';
+import { sfx, setMusicIntensity, voice } from './audio.js';
 import { haptic } from './haptics.js';
 import * as Save from './save.js';
 import { T } from './i18n.js';
@@ -59,7 +59,7 @@ export class Game {
       mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2,
       powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0, carpet: 0 }, streak: 0, airCoins: 0, stepT: 0,
       stats: { coins: 0, dist: 0, jumps: 0, rolls: 0, score: 0, powerups: 0, dodgeNpc: 0, roofs: 0, zones: 1, magnetCoins: 0, nearMiss: 0, runs: 1 },
-      zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0, slowMo: 0,
+      zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0,
     };
     this.fx.clear();
     this.player.reset();
@@ -115,19 +115,11 @@ export class Game {
     this.fx.update(dt, this.state === 'playing' ? (this.run ? this.run.speed * dt * this.timeScale() : 0) : 0);
   }
 
-  // tutorial hints hold the street in slow motion; a close call with traffic drops into it for a beat
-  timeScale() {
-    const r = this.run;
-    if (!r) return 1;
-    if (r.slow > 0) return 0.35;
-    if (r.slowMo > 0) { const k = Math.min(1, r.slowMo / 0.3); return 1 - 0.7 * k * k * (3 - 2 * k); }
-    return 1;
-  }
+  timeScale() { return this.run && this.run.slow > 0 ? 0.35 : 1; }
 
   updateRun(dtReal) {
     const r = this.run, p = this.player;
     const dt = dtReal * (this.state === 'playing' ? this.timeScale() : 1);
-    if (r.slowMo > 0) r.slowMo -= dtReal;
     if (this.state === 'playing') {
       r.time += dt;
       const target = r.tutorial ? 11.5 : speedAt(r.d);
@@ -154,7 +146,7 @@ export class Game {
     p.superJump = r.powers.sneakers > 0;
     this.track.update(dt, r.d, r.speed, this.time, p);
     this.updateEngine();
-    p.update(r.slowMo > 0 ? dt : dtReal, this.state === 'playing' ? r.speed : 0, this.time); // the runner slows with a close call too
+    p.update(dtReal, this.state === 'playing' ? r.speed : 0, this.time);
     this.world.update(dt, r.d, p.root.position, this.time);
     this.updateChaser(dtReal);
     this.updateCamera(dtReal);
@@ -239,7 +231,7 @@ export class Game {
   }
 
   // Oncoming traffic just drew level with the player. The later the dodge (time to impact when they left
-  // its lane), the bigger the moment: slow motion, a lens kick, a sting and points.
+  // its lane), the bigger the moment: a lens kick, an edge flash, a sting and points. The run never slows.
   vehiclePassing(e, tti, mul) {
     const r = this.run, p = this.player;
     const pan = (e.x - p.x) / 3;
@@ -248,9 +240,8 @@ export class Game {
     const pts = (hair ? 300 : 150) * mul;
     r.score += pts;
     r.stats.nearMiss++;
-    r.slowMo = hair ? 0.75 : 0.55;
     this.fovKick = hair ? 9 : 6;
-    sfx.closeCall(pan, hair); muffleMusic(r.slowMo + 0.2); haptic('power');
+    sfx.closeCall(pan, hair); haptic('power');
     this.fx.shake(0.14, 0.3);
     this.ui.closeCall(hair);
     const lines = hair ? T.closeCall.hair : T.closeCall.close;
@@ -372,7 +363,6 @@ export class Game {
     const r = this.run, p = this.player;
     p.die();
     sfx.crash(); sfx.wind(false); haptic('crash');
-    r.slowMo = 0;
     this.fx.shake(0.45, 0.55);
     this.fx.splat(p.x, 1, -0.6);
     this.state = 'dying';

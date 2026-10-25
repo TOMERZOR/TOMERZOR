@@ -1,0 +1,54 @@
+# Rebuilds FitSource's brand catalogs every night (fitsource/tools/crawl-catalog.mjs)
+# and publishes them to the fitsource-catalog branch, which the site reads.
+# The branch is replaced each time, so the data never piles up in history.
+# Add a brand in fitsource/catalog/brands.json; run this from the Actions tab
+# to rebuild now.
+name: FitSource brand catalogs
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *" # 02:17 UTC, nightly
+  push:
+    branches: [claude/playwright-mcp-add-8e6qct]
+    paths: ["fitsource/catalog/brands.json", "fitsource/tools/crawl-catalog.mjs", ".github/workflows/fitsource-catalog.yml"]
+
+concurrency:
+  group: fitsource-catalog
+  cancel-in-progress: true
+
+permissions:
+  contents: write # to replace the fitsource-catalog branch
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Crawl brand stores
+        run: node fitsource/tools/crawl-catalog.mjs --out catalog-out | tee crawl.log
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### Brand catalogs'
+            echo '```'
+            cat crawl.log || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to the fitsource-catalog branch
+        working-directory: catalog-out
+        run: |
+          git init -q
+          git checkout -q -b fitsource-catalog
+          git add .
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Brand catalogs $(date -u +%F)"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" fitsource-catalog

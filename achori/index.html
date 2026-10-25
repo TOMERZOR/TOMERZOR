@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>הרוג את העכבר באחורי</title>
+<meta name="description" content="משחק טלפון: ליאור באום, העכבר שהשתלט על האתר, גונב את החומוס של אופק. טמנו מלכודות, תכננו לו את הדרך, ותכסחו אותו בכפכף.">
+<meta name="theme-color" content="#1c140e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="הרוג את העכבר">
+<meta property="og:title" content="הרוג את העכבר באחורי">
+<meta property="og:description" content="ליאור באום השתלט על האתר. סוללת אידו לא מטפלים. רק אתה והכפכף.">
+<meta property="og:image" content="img/og.jpg">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karantina:wght@700&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=2">
+<script type="importmap">
+{
+ "imports": {
+  "three": "./vendor/three.module.min.js",
+  "./js/audio.js": "./js/audio.js?v=2",
+  "./js/game.js": "./js/game.js?v=2",
+  "./js/levels.js": "./js/levels.js?v=2",
+  "./js/main.js": "./js/main.js?v=2",
+  "./js/scene.js": "./js/scene.js?v=2",
+  "./js/text.js": "./js/text.js?v=2"
+ }
+}
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <canvas id="fx"></canvas>
+  <div id="float"></div>
+</div>
+
+<div id="hud" hidden>
+  <div class="hud-top">
+    <button class="icon-btn" id="pause-btn" type="button" aria-label="השהה">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>
+    </button>
+    <div class="hud-mid">
+      <div class="hud-level" id="hud-level"></div>
+      <div class="hud-row">
+        <div class="pitas" id="pitas" aria-label="פיתות"></div>
+        <div class="boss" id="boss" hidden>
+          <img src="img/lior.webp" alt="">
+          <div class="boss-bar"><i id="boss-fill"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="money" id="money" aria-label="תקציב"><b id="money-n">0</b><span>₪</span></div>
+  </div>
+  <div class="ticker"><div class="ticker-in" id="ticker"></div></div>
+</div>
+
+<div id="tray" hidden>
+  <div class="tools" id="tools"></div>
+  <div class="tray-row" id="row-plan">
+    <button class="phone-btn" id="ido-btn" type="button" aria-label="התלונן לסוללת אידו">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.2 15.2 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>
+      <span>סוללת אידו</span>
+    </button>
+    <button class="go-btn" id="go-btn" type="button">שחרר את העכבר!</button>
+  </div>
+  <div class="tray-row" id="row-action" hidden>
+    <button class="ability" id="ab-ofek" type="button"><img src="img/ofek.webp" alt=""><span>צעקת אופק</span><b id="ab-ofek-n"></b></button>
+    <button class="ability" id="ab-shalev" type="button"><img src="img/shalev.webp" alt=""><span>שליו מתנתק</span><b id="ab-shalev-n"></b></button>
+  </div>
+</div>
+
+<div id="hint" class="hint" hidden><p id="hint-text"></p><button id="hint-ok" type="button">הבנתי</button></div>
+<div id="toast" class="toast" hidden></div>
+<div id="flash" class="flash" hidden></div>
+<div id="callout" class="callout" hidden><img id="callout-img" alt=""><div class="callout-text" id="callout-text"></div></div>
+
+<section id="loading" class="screen show">
+  <div class="load-box">
+    <div class="load-title">הרוג את העכבר באחורי</div>
+    <div class="load-bar"><i id="load-fill"></i></div>
+    <div class="load-msg" id="load-msg">טוען עכברים...</div>
+  </div>
+</section>
+
+<section id="title" class="screen">
+  <img class="title-art" src="img/keyart.webp" alt="">
+  <div class="title-shade"></div>
+  <div class="title-top">
+    <h1><span>הרוג את</span><span class="big">העכבר</span><span>באחורי</span></h1>
+    <p class="tagline">ליאור באום השתלט על האתר. סוללת אידו לא מטפלים.<br>רק אתה, כמה מלכודות, וכפכף.</p>
+  </div>
+  <div class="title-btns">
+    <button class="btn primary" id="play-btn" type="button">שחק</button>
+    <button class="btn" id="levels-btn" type="button">שלבים</button>
+    <div class="small-row">
+      <button class="btn small" id="sound-btn" type="button">צליל: פועל</button>
+      <button class="btn small" id="ido-title" type="button">התלונן לסוללת אידו</button>
+    </div>
+  </div>
+</section>
+
+<section id="levels" class="screen">
+  <div class="levels-head">
+    <button class="icon-btn" id="levels-back" type="button" aria-label="חזרה">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <h2>מפת האתר</h2>
+  </div>
+  <div class="takeover"><span id="takeover-text"></span><div class="take-bar"><i id="take-fill"></i></div></div>
+  <div class="levels-list" id="levels-list"></div>
+</section>
+
+<section id="dialog" class="screen dialog">
+  <div class="dlg-bg"></div>
+  <div class="dlg-title" id="dlg-title"></div>
+  <div class="dlg-panel" id="dlg-panel">
+    <img class="dlg-who" id="dlg-who" alt="">
+    <div class="dlg-bubble"><b id="dlg-name"></b><p id="dlg-line"></p><span class="dlg-next">לחץ להמשך</span></div>
+  </div>
+  <button class="dlg-skip" id="dlg-skip" type="button">דלג</button>
+</section>
+
+<section id="pause" class="screen modal">
+  <div class="card">
+    <h2>הפסקת קפה</h2>
+    <p class="muted" id="pause-quote"></p>
+    <button class="btn primary" id="resume-btn" type="button">המשך</button>
+    <button class="btn" id="restart-btn" type="button">התחל מחדש</button>
+    <button class="btn" id="pause-levels" type="button">מפת האתר</button>
+    <button class="btn small" id="pause-sound" type="button">צליל: פועל</button>
+  </div>
+</section>
+
+<section id="result" class="screen modal">
+  <div class="card result">
+    <img class="res-img" id="res-img" alt="">
+    <h2 id="res-title"></h2>
+    <div class="stars" id="res-stars"><i></i><i></i><i></i></div>
+    <p class="res-line" id="res-line"></p>
+    <div class="res-stats" id="res-stats"></div>
+    <button class="btn primary" id="res-next" type="button">לשלב הבא</button>
+    <button class="btn" id="res-retry" type="button">שוב</button>
+    <button class="btn small" id="res-levels" type="button">מפת האתר</button>
+  </div>
+</section>
+
+<section id="ending" class="screen ending">
+  <img class="title-art" src="img/keyart.webp" alt="">
+  <div class="title-shade"></div>
+  <div class="card end-card">
+    <h2>האתר שוחרר!</h2>
+    <p>ליאור באום חוסל. העכברים נסוגו. אופק ירד מהכיסא (לשנייה).<br>שליו עדיין לא מתחבר, אבל הוא מרוצה.</p>
+    <p class="muted">סוללת אידו פרסמו הודעה: "בזכות הטיפול המסור שלנו, הבעיה נפתרה."</p>
+    <button class="btn primary" id="end-btn" type="button">חזרה למפת האתר</button>
+  </div>
+</section>
+
+<script type="module" src="js/main.js?v=2"></script>
+</body>
+</html>

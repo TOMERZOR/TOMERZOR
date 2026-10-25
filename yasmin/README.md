@@ -26,7 +26,7 @@ Settings: mouse sensitivity, volume, music, brightness, difficulty (easy / norma
 1. **הלילה הראשון** — read the note on your bed, take the flashlight from your locker, find the first gate key in the kitchenette (the fridge is full of Roi's "squash"), get back to bed. She shows herself at the end of the corridor first, then starts patrolling; a mop bucket rolls out of the office on its own.
 2. **דוח צל״ם** — take the form from the office, inspect four items in the equipment store (its lights die one by one and she comes to look), return the report and take the key that falls out. Maya's beheaded Labubu is on a bed in room 2.
 3. **הפסקת חשמל** — the power is out (red emergency lights, the flashlight battery drains). Find three fuses, restore power in the generator room, check the camera room (live CCTV feeds: she appears behind you on CAM 4) and enter the isolation wing: Nevo, in a padded cell after 47 cleaning inspections, rushes the glass and mutters. His medical file and the third key are in the wing.
-4. **מסדר ניקיון** — she announces an inspection over the speakers. Take a mop from the showers and clean four blood puddles (cleaning is loud), which opens her store: mops, buckets, a candle shrine, her diary and a board of crossed-out photos. The last key is in the bucket; she is waiting at the door.
+4. **מסדר ניקיון** — she announces an inspection over the speakers. Take a mop from the showers and clean four blood puddles (cleaning is loud), which opens her store: mops, buckets, a candle shrine, her diary and a board of crossed-out photos. The last key is in the bucket; she screams in the doorway, the lights cut out, and she comes running from the far end of the base.
 5. **הבריחה** — red alarm. Unlock the exit at the end of the maze with the four keys, then hold E on the gate's padlock while she chases you without giving up, and run.
 
 ### Ruth
@@ -39,13 +39,13 @@ Three months before you, Ruth was "the new one". She tried to escape through the
 - **Wet floor**: she stops to mop, leaving a shiny patch and a yellow "זהירות! רצפה רטובה" sign. Running across it splashes loudly and slows you.
 - **Lockers**: hide; if she saw you get in, she opens it.
 - **Hints**: stuck on an objective for a few minutes, a hint appears.
-- **Checkpoints**: on night 3 after the generator is back on, and on night 5 after the exit door is open, getting caught restarts there.
+- **Checkpoints**: on night 3 after the generator is back on, on night 4 once her store is open, and on night 5 after the exit door is open, getting caught restarts there. After three catches the game-over screen offers easy mode.
 
 Getting caught is a jumpscare and a retry. Progress (the furthest night), found tapes and discoveries are saved in the browser. The menu shows the live corridor with Yasmin walking toward you.
 
 ## Yasmin's AI (`js/yasmin.js`)
 
-Grid A* (binary heap) with line-of-sight path smoothing. She patrols (drifting toward the player when she has been far away for a while), investigates noises (running is heard from far, crouching barely; doors, lockers and mopping make noise), notices the player with a sight cone whose range depends on light (flashlight on: very far; lit area; dark) — at a distance it takes her a couple of seconds to be sure (the eye at the top of the screen fills up), up close almost none — chases at night-dependent speeds slightly below the player's sprint, searches the last known position and gives up. If she sees you enter a locker she opens it. Fixtures near her flicker; she leaves wet footprints that dry out; her bucket squeaks positionally; her eyes catch the flashlight in the dark.
+Grid A* (binary heap) with path smoothing that only cuts a corner when the straight line is clear of furniture, door frames and open doors; if she is still wedged somewhere she finds a short way out on a 25 cm grid. She patrols (drifting toward the player when she has been far away for a while), investigates noises (running is heard from far, crouching barely; doors, lockers and mopping make noise), notices the player with a sight cone whose range depends on light (flashlight on: very far; lit area; dark) — at a distance it takes her a couple of seconds to be sure (the eye at the top of the screen fills up), up close almost none — freezes and stares for a beat when she spots you, then chases at night-dependent speeds slightly below the player's sprint, searches the last known position and gives up. If she sees you enter a locker she opens it. Fixtures near her flicker; she leaves wet footprints that dry out; her bucket squeaks positionally; her eyes catch the flashlight in the dark.
 
 ## Look and sound
 

@@ -190,3 +190,6 @@ body.touch #subs { bottom: 30%; font-size: 16px; max-width: 60vw; }
 body.touch #tape { bottom: 40%; }
 
 .shade { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 55%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.92) 100%), linear-gradient(90deg, rgba(0,0,0,0.5), transparent 30%, transparent 70%, rgba(0,0,0,0.5)); }
+
+.over-tip { margin-top: 10px; font-size: 15px; color: #a9a291; }
+.link { background: none; border: none; color: #e3c983; text-decoration: underline; font: inherit; cursor: pointer; pointer-events: auto; }

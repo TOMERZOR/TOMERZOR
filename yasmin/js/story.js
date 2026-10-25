@@ -614,7 +614,18 @@ export class Story {
             p.clean = true; W.decals.remove(m);
             const o = this.obj('clean'); o.have++; this.refresh();
             g.audio.play('sfx_mop', { pos: v3(x, 0.2, z), volume: 1.2 });
-            if (o.have >= 4) { this.done('clean'); this.openStore(); }
+            if (o.have >= 4) {
+              this.done('clean'); this.openStore();
+              // checkpoint: getting caught after this point restarts at the open store
+              g.checkpoint = { night: 4, apply: () => {
+                const mi = this.items.mop; mi.taken = true; mi.mesh.visible = mi.glint.visible = false;
+                this.carryMop = true; this.done('mop'); this.obj('clean').hidden = false;
+                for (const q of this.puddles) { q.clean = true; W.decals.remove(q.mesh); }
+                const c = this.obj('clean'); c.have = 4; this.done('clean');
+                P.pos.set(64, 0, 11); P.yaw = 0;
+                this.openStore();
+              } };
+            }
           } });
       }
       this.after(2, () => { g.audio.static_(0.6, 0.18); g.audio.play('y_misdar', { volume: 1.1, verb: 1, muffle: false }); g.ui.toast('מסדר ניקיון!'); });
@@ -738,7 +749,8 @@ export class Story {
     const g = this.g, W = g.world;
     const inE = W.fixtures.filter(f => f.room === 'e');
     inE.forEach((f, i) => this.after(0.4 + i * 0.35, () => { f.on = false; g.audio.bulbPop(v3(f.x, f.y, f.z)); }));
-    this.after(2.5, () => { if (g.yasmin.state !== 'chase') { g.yasmin.spawn(33, 7, 'investigate', 0); g.yasmin.goTo(33, 18); g.yasmin.speak('y_where', { force: true }); } });
+    this.after(1.6, () => g.ui.toast('היא שמעה. כבה את הפנס ותתחבא!', 3.5));
+    this.after(4.5, () => { const Y = g.yasmin; if (Y.state !== 'chase') { Y.spawn(33, 7, 'investigate', 0); Y.lastSeen.set(33, 0, 16); Y.goTo(33, 18); Y.speak('y_where', { force: true }); } });
     this.after(30, () => inE.forEach(f => f.on = true));
   }
 
@@ -813,8 +825,12 @@ export class Story {
     const g = this.g, Y = g.yasmin;
     this.candles = false;
     g.audio.play('y_hear', { pos: v3(65, 1.6, 9.5), volume: 1.4 });
+    // she screams in the doorway, the lights cut out, and when they come back she is gone —
+    // then she comes running from the far end of the base, so there is a way out
     this.after(0.4, () => { Y.spawn(65, 11, 'scripted', Math.PI); Y.play('scream', 0.1); g.audio.stinger('peek'); });
-    this.after(2.2, () => { Y.setState('patrol'); Y.startChase(g.player, g); });
+    this.after(2.0, () => { g.flashBlackout(0.5); this.after(0.25, () => Y.hide()); });
+    this.after(4.5, () => { Y.spawn(69, 27, 'patrol', Math.PI); Y.startChase(g.player, g); Y.lostT = 0.7; });
+    this.after(3.0, () => g.ui.toast('ברח! תמצא איפה להתחבא'));
   }
 
   finale() {

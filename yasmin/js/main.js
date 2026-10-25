@@ -280,28 +280,30 @@ function exitLocker() {
 
 // ---------- Ruth's tapes ----------
 let tape = null;
-function stopTape() { if (tape) { tape.h && tape.h.stop(0.2); tape.timers.forEach(clearTimeout); tape = null; $('tape').classList.add('hidden'); } }
+function stopTape() { if (tape) { tape.h && tape.h.stop(0.2); tape = null; $('tape').classList.add('hidden'); } }
 game.playTape = (n) => {
   stopTape();
   const t = TAPES[n];
   const h = audio.play('r_tape' + n, { volume: 1.15, verb: 0.05, muffle: false, sub: false });
   const dur = audio.buffers['r_tape' + n] ? audio.buffers['r_tape' + n].duration : 12;
+  // subtitle cues spread over the recording by line length; driven by game time so pausing keeps them in sync
   const total = t.lines.reduce((a, l) => a + l.length, 0);
-  let at = 0.3;
-  const timers = [];
+  let at = 0.3; const cues = [];
+  for (const line of t.lines) { const d = (dur - 0.6) * line.length / total; cues.push({ at, d, line }); at += d; }
   audio.click();
-  for (const line of t.lines) {
-    const d = (dur - 0.6) * line.length / total;
-    timers.push(setTimeout(() => ui.sub('רות (קלטת): ' + line, d + 0.3), at * 1000));
-    at += d;
-  }
-  timers.push(setTimeout(() => { stopTape(); audio.click(); game.story.onTapeEnd(n); }, (dur + 0.4) * 1000));
-  tape = { h, timers, n, start: performance.now(), dur };
+  tape = { h, n, t: 0, dur, cues, next: 0 };
   $('tape').classList.remove('hidden'); $('tape-t').textContent = t.title;
   const set = loadTapes(); const isNew = !set.has(n); set.add(n); saveTapes(set);
   if (isNew) ui.toast(`קלטת של רות · ${set.size}/5`, 2.5);
   game.discovered('ruth');
 };
+function updateTape(dt) {
+  if (!tape) return;
+  tape.t += dt;
+  while (tape.next < tape.cues.length && tape.t >= tape.cues[tape.next].at) { const c = tape.cues[tape.next++]; ui.sub('רות (קלטת): ' + c.line, c.d + 0.3); }
+  $('tape-bar').style.width = Math.min(100, tape.t / tape.dur * 100) + '%';
+  if (tape.t > tape.dur + 0.4) { const n = tape.n; stopTape(); audio.click(); game.story.onTapeEnd(n); }
+}
 
 function openJournal() {
   if (game.state !== 'play' && game.state !== 'pause') return;
@@ -371,6 +373,7 @@ function updateCaught(dt) {
     game.player.lookAt = null;
     $('over-line').textContent = overLine();
     $('btn-retry').textContent = game.checkpoint ? 'נסה שוב מנקודת השמירה' : 'נסה שוב את הלילה';
+    $('over-tip').classList.toggle('hidden', !((game.caughtCount || 0) >= 3 && settings.difficulty !== 'easy'));
     ui.only('over');
     ui.blackout(0);
     if (document.pointerLockElement) document.exitPointerLock();
@@ -508,6 +511,7 @@ function S_render() {
 function tick(dt) {
   clockT += dt;
   const st = game.state;
+  if (st === 'play' || st === 'note') updateTape(dt);
   const P = game.player, Y = game.yasmin, W = game.world, S = game.story;
   if (st === 'play') {
     P.update(dt, clockT);
@@ -548,7 +552,6 @@ function tick(dt) {
     if (isTouch) { const lbl = P.hidden ? 'נשימה' : 'ריצה'; if (runBtn.textContent !== lbl) runBtn.textContent = lbl; }
     ui.meters(P.stamina, P.battery, P.hasLight);
     $('bottles').textContent = P.bottles ? `בקבוקים: ${P.bottles}` : '';
-    if (tape) $('tape-bar').style.width = Math.min(100, (performance.now() - tape.start) / 10 / tape.dur) + '%';
     ui.eye(Y.awareness, Y.state === 'chase');
     // fog thins outside
     const out = isOutdoor(roomAt(P.pos.x, P.pos.z)) || P.pos.z > 50;
@@ -595,6 +598,7 @@ $('btn-journal').onclick = () => { ui.show('pause', false); audio.resume(); game
 $('btn-quit').onclick = () => { ui.show('pause', false); audio.resume(); menu(); };
 $('btn-retry').onclick = () => startNight(game.night, true);
 $('btn-over-menu').onclick = () => menu();
+$('btn-easy').onclick = () => { settings.difficulty = 'easy'; store.set('settings', settings); $('set-difficulty').value = 'easy'; $('over-tip').classList.add('hidden'); ui.toast('מצב קל', 1.5); };
 addEventListener('keydown', e => {
   if (e.code === 'Enter' || e.code === 'Space') {
     if (game.state === 'card') play();
@@ -613,6 +617,6 @@ $('set-difficulty').onchange = () => { settings.difficulty = $('set-difficulty')
 $('set-quality').value = settings.quality;
 $('set-quality').onchange = () => { settings.quality = $('set-quality').value; store.set('settings', settings); };
 
-game.dbg = { tick: (dt) => tick(dt), startNight: (n) => startNight(n), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l) };
+game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l) };
 load().catch(e => { console.error(e); ui.progress(1, 'שגיאה בטעינה: ' + e.message); });
 frame();

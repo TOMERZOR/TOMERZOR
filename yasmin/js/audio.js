@@ -101,6 +101,7 @@ export class Audio {
   setListener(cam) {
     if (!this.ready) return;
     const l = this.ctx.listener, p = cam.position;
+    this.lp = p;
     const f = cam.getWorldDirection(this._f || (this._f = new cam.position.constructor()));
     const t = this.ctx.currentTime;
     if (l.positionX) {
@@ -132,7 +133,8 @@ export class Audio {
     if (pos) { p = this.panner(pos, ref); g.connect(p); p.connect(muffle ? this.muffle : this.sfx); if (verb) { const s = c.createGain(); s.gain.value = verb; p.connect(s); s.connect(this.verbIn); } }
     else { g.connect(muffle ? this.muffle : this.sfx); if (verb) { const s = c.createGain(); s.gain.value = verb; g.connect(s); s.connect(this.verbIn); } }
     src.start(c.currentTime, offset);
-    if (sub && SUBS[name] && this.onSub) this.onSub(SUBS[name], this.buffers[name].duration / rate + 0.6);
+    const audible = !pos || !this.lp || Math.hypot(pos.x - this.lp.x, pos.z - this.lp.z) < 24 * Math.sqrt(volume);
+    if (sub && audible && SUBS[name] && this.onSub) this.onSub(SUBS[name], this.buffers[name].duration / rate + 0.6);
     return { src, gain: g, panner: p, stop: (f = 0.05) => { try { g.gain.setTargetAtTime(0, c.currentTime, f); src.stop(c.currentTime + f * 6); } catch (e) { } } };
   }
 

@@ -1,0 +1,15 @@
+{
+	"appId": "com.tomerzor.echo",
+	"appName": "ECHO",
+	"webDir": "www",
+	"backgroundColor": "#141a33",
+	"ios": {
+		"contentInset": "never",
+		"backgroundColor": "#141a33",
+		"preferredContentMode": "mobile",
+		"scrollEnabled": false
+	},
+	"packageClassList": [
+		"HapticsPlugin"
+	]
+}

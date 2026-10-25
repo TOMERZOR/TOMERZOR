@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lading Logo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2316181D' d='M5 4h4v19h12v4H5z'/%3E%3Crect fill='%232340D8' x='23' y='21' width='8' height='8'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700&family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<script>
+  (function () {
+    try {
+      var l = localStorage.getItem("lading-lang"), t = localStorage.getItem("lading-theme");
+      if (l === "he") { document.documentElement.lang = "he"; document.documentElement.dir = "rtl"; }
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+/* Layout: a single sheet. The mark large at the start, its four parts explained beside it,
+   then rows of real use: sizes, app icons, lockups, clear space. */
+:root {
+  --paper: #F3F4F6; --sheet: #FCFCFD; --ink: #16181D; --ink-2: #596070; --rule: #D9DCE2; --carbon: #2340D8; --late: #A8500C;
+  --f-text: "Schibsted Grotesk", "IBM Plex Sans Hebrew", Arial, system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --r: 3px;
+  color-scheme: light;
+}
+:root[lang="he"] { --f-text: "IBM Plex Sans Hebrew", "Schibsted Grotesk", Arial, sans-serif; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3; --rule: #2A2E36; --carbon: #8EA1FF; --late: #F0A35C; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --paper: #101216; --sheet: #171A1F; --ink: #E8EAEE; --ink-2: #A0A7B3; --rule: #2A2E36; --carbon: #8EA1FF; --late: #F0A35C; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 16px/1.55 var(--f-text); -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { margin: 0; font-weight: 600; text-wrap: balance; }
+p { margin: 0; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 48px 80px; display: grid; gap: 72px; }
+.top { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.top a { color: var(--ink-2); font-size: 14px; }
+.langbtn { background: none; border: 1px solid var(--rule); border-radius: var(--r); color: var(--ink); min-height: 36px; padding: 0 12px; font: 500 14px/1 var(--f-text); cursor: pointer; }
+.langbtn[lang="he"] { font-family: "IBM Plex Sans Hebrew", sans-serif; }
+.langbtn[lang="en"] { font-family: "Schibsted Grotesk", sans-serif; }
+
+.ink { fill: var(--ink); }
+.eta { fill: var(--carbon); }
+.dim { fill: var(--ink); opacity: .14; }
+.hl { fill: var(--carbon); }
+.word { font: 700 1em/1 "Big Shoulders Stencil Display", "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: .02em; }
+
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: center; }
+.big { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; position: relative; overflow: hidden; }
+.big svg { position: relative; width: 100%; height: auto; }
+.grid-bg { position: absolute; inset: 0; background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px); background-size: calc(100% / 32) calc(100% / 32); opacity: .45; }
+.hero h1 { font-size: clamp(30px, 4vw, 44px); line-height: 1.1; letter-spacing: -0.02em; }
+:root[lang="he"] .hero h1 { letter-spacing: 0; line-height: 1.2; }
+.hero .lede { color: var(--ink-2); font-size: 18px; margin-top: 14px; max-width: 46ch; }
+.parts { list-style: none; margin: 28px 0 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.parts li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.parts svg { width: 48px; height: 48px; }
+.parts b { font-weight: 600; display: block; }
+.parts span { color: var(--ink-2); font-size: 15px; }
+
+section > h2 { font-size: 13px; font-weight: 500; color: var(--ink-2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 18px; }
+:root[lang="he"] section > h2 { letter-spacing: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; }
+.cell { display: grid; gap: 10px; justify-items: center; }
+.cell small { font: 400 12px/1 var(--f-data); color: var(--ink-2); }
+.tile { background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r); padding: 28px; display: grid; place-items: center; }
+
+.icon-app { width: 120px; height: 120px; border-radius: 27px; display: grid; place-items: center; }
+.icon-app svg { width: 64px; height: 64px; }
+.icon-app.dark { background: #16181D; }
+.icon-app.dark .ink { fill: #F3F4F6; }
+.icon-app.dark .eta { fill: #8EA1FF; }
+.icon-app.light { background: #FCFCFD; box-shadow: inset 0 0 0 1px #D9DCE2; }
+.icon-app.light .ink { fill: #16181D; }
+.icon-app.light .eta { fill: #2340D8; }
+.icon-app.blue { background: #2340D8; }
+.icon-app.blue .ink { fill: #FCFCFD; }
+.icon-app.blue .eta { fill: #FCFCFD; opacity: .55; }
+
+.lockups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.lock { display: inline-flex; align-items: center; gap: 12px; font-size: 40px; color: var(--ink); }
+.lock svg { width: 42px; height: 42px; }
+.lock.sub { font-size: 32px; gap: 10px; }
+.lock.sub svg { width: 34px; height: 34px; }
+.lock.sub small { font: 500 15px/1 var(--f-text); color: var(--ink-2); align-self: flex-end; padding-bottom: 4px; }
+:root[lang="he"] .lock.sub small, .lock.sub small[lang="he"] { font-family: "IBM Plex Sans Hebrew", sans-serif; }
+
+.space { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.space .tile { gap: 14px; }
+.space p { color: var(--ink-2); font-size: 15px; max-width: 44ch; text-align: center; }
+.clear { padding: 24px; outline: 1px dashed var(--carbon); outline-offset: -1px; background: repeating-linear-gradient(-45deg, color-mix(in srgb, var(--carbon) 16%, transparent) 0 1px, transparent 1px 6px); }
+.clear svg { background: var(--sheet); }
+.clear svg { display: block; width: 96px; height: 96px; }
+
+@media (max-width: 860px) {
+  .hero, .lockups, .space { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .big { max-width: 420px; }
+}
+@media (max-width: 480px) {
+  .lock { font-size: 32px; }
+  .lock svg { width: 34px; height: 34px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a href="index.html" data-i="back">Back to Lading</a>
+    <button class="langbtn" type="button" id="lang" lang="he">עברית</button>
+  </div>
+
+  <div class="hero">
+    <div class="big">
+      <div class="grid-bg" aria-hidden="true"></div>
+      <svg viewBox="0 0 32 32" role="img" aria-label="Lading logo"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg>
+    </div>
+    <div>
+      <h1 data-i="h1">The L is the drift line.</h1>
+      <p class="lede" data-i="lede">The mark is the app's own timeline, drawn as the first letter of its name. Read it like a row on the Orders page.</p>
+      <ol class="parts">
+        <li>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect class="hl" x="5" y="4" width="4" height="23"/><rect class="dim" x="9" y="23" width="12" height="4"/><rect class="dim" x="23" y="21" width="8" height="8"/></svg>
+          <p><b data-i="p1">The upright</b><span data-i="p1d">The promised date, the tick every order starts from.</span></p>
+        </li>
+        <li>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect class="dim" x="5" y="4" width="4" height="19"/><rect class="hl" x="5" y="23" width="16" height="4"/><rect class="dim" x="23" y="21" width="8" height="8"/></svg>
+          <p><b data-i="p2">The baseline</b><span data-i="p2d">Time moving forward.</span></p>
+        </li>
+        <li>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect class="dim" x="5" y="4" width="4" height="19"/><rect class="dim" x="5" y="23" width="16" height="4"/><rect class="hl" x="23" y="21" width="8" height="8"/></svg>
+          <p><b data-i="p3">The block</b><span data-i="p3d">Where the order really is. It is the one blue part, because it is the thing Lading keeps true.</span></p>
+        </li>
+        <li>
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect class="dim" x="5" y="4" width="4" height="19"/><rect class="dim" x="5" y="23" width="16" height="4"/><rect class="dim" x="23" y="21" width="8" height="8"/><rect x="21" y="23" width="2" height="4" style="fill:var(--late)"/></svg>
+          <p><b data-i="p4">The gap</b><span data-i="p4d">The drift between the line and the block. Small, but always visible.</span></p>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <section>
+    <h2 data-i="sizes">Sizes</h2>
+    <div class="row">
+      <div class="cell"><div class="tile"><svg width="64" height="64" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div><small>64</small></div>
+      <div class="cell"><div class="tile"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div><small>32</small></div>
+      <div class="cell"><div class="tile"><svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div><small>24</small></div>
+      <div class="cell"><div class="tile"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div><small>16</small></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-i="icons">App icons</h2>
+    <div class="row">
+      <div class="icon-app dark"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div>
+      <div class="icon-app light"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div>
+      <div class="icon-app blue"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-i="lockups">Lockups</h2>
+    <div class="lockups">
+      <div class="tile"><span class="lock" dir="ltr"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span class="word">Lading</span></span></div>
+      <div class="tile"><span class="lock sub" dir="ltr"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg><span class="word">Lading</span><small lang="he" dir="rtl">דסק הזמנות</small></span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-i="rules">Rules</h2>
+    <div class="space">
+      <div class="tile"><div class="clear"><svg viewBox="0 0 32 32" aria-hidden="true"><path class="ink" d="M5 4h4v19h12v4H5z"/><rect class="eta" x="23" y="21" width="8" height="8"/></svg></div><p data-i="r1">Keep clear space equal to the block on every side.</p></div>
+      <div class="tile"><p data-i="r2">The mark never mirrors, not even in Hebrew. Time in the app runs right to left in Hebrew, but the logo is a name, so it stays as drawn. Smallest size: 16 px.</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const HE = {
+    title: "הלוגו של Lading", back: "חזרה ל־Lading",
+    h1: "ה־L הוא קו הסטייה.",
+    lede: "הסימן הוא ציר הזמן של האפליקציה עצמה, משורטט כאות הראשונה של השם. קוראים אותו כמו שורה בעמוד ההזמנות.",
+    p1: "הקו העומד", p1d: "התאריך המובטח, הנקודה שממנה כל הזמנה מתחילה.",
+    p2: "קו הבסיס", p2d: "הזמן שמתקדם.",
+    p3: "הריבוע", p3d: "איפה ההזמנה באמת נמצאת. זה החלק הכחול היחיד, כי זה מה ש־Lading שומר מדויק.",
+    p4: "הרווח", p4d: "הסטייה בין הקו לריבוע. קטנה, אבל תמיד גלויה.",
+    sizes: "גדלים", icons: "אייקון אפליקציה", lockups: "צירופים", rules: "כללים",
+    r1: "יש להשאיר סביב הסימן מרווח בגודל הריבוע מכל צד.",
+    r2: "הסימן אף פעם לא מתהפך, גם לא בעברית. ציר הזמן באפליקציה זורם מימין לשמאל בעברית, אבל הלוגו הוא שם, ולכן הוא נשאר כפי ששורטט. גודל מינימלי: 16 פיקסלים.",
+    langBtn: "English", langBtnLang: "en"
+  };
+  const EN = { title: document.title, langBtn: "עברית", langBtnLang: "he" };
+  document.querySelectorAll("[data-i]").forEach((el) => { EN[el.dataset.i] = el.innerHTML; });
+  let lang = document.documentElement.lang === "he" ? "he" : "en";
+  const btn = document.getElementById("lang");
+  function apply() {
+    const d = lang === "he" ? HE : EN;
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+    document.title = d.title;
+    document.querySelectorAll("[data-i]").forEach((el) => { if (d[el.dataset.i] != null) el.innerHTML = d[el.dataset.i]; });
+    btn.textContent = d.langBtn; btn.setAttribute("lang", d.langBtnLang);
+  }
+  btn.addEventListener("click", () => { lang = lang === "he" ? "en" : "he"; try { localStorage.setItem("lading-lang", lang); } catch (e) {} apply(); });
+  if (lang === "he") apply();
+})();
+</script>
+</body>
+</html>

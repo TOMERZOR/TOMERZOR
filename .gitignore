@@ -5,3 +5,10 @@ netibot/tools/faces/
 netibot/tools/people/
 netibot/tools/scenes/
 netibot/tools/audio/
+
+# FitSource
+fitsource/node_modules/
+fitsource/worker/node_modules/
+fitsource/worker/.wrangler/
+fitsource/test/out/
+fitsource/worker/.dev.vars

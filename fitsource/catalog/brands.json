@@ -1,0 +1,27 @@
+{
+  "about": "Brand stores whose catalogs FitSource indexes, so a scan can link to the exact product page. Each must be a Shopify store (it publishes /products.json). domains are tried in order; the nightly crawl reports which worked. Add a brand by adding a line.",
+  "brands": [
+    { "id": "stussy", "name": "Stüssy", "domains": ["www.stussy.com", "stussy.com"], "aliases": ["stussy"] },
+    { "id": "nude-project", "name": "Nude Project", "domains": ["nude-project.com", "www.nude-project.com"], "aliases": ["nude project", "nude"] },
+    { "id": "scuffers", "name": "Scuffers", "domains": ["scuffers.com", "www.scuffers.com"], "aliases": ["withlove"] },
+    { "id": "represent", "name": "Represent", "domains": ["representclo.com", "www.representclo.com"], "aliases": ["represent clo", "represent 247"] },
+    { "id": "carhartt-wip", "name": "Carhartt WIP", "domains": ["us.carhartt-wip.com", "www.carhartt-wip.com", "carhartt-wip.com"], "aliases": ["carhartt", "carhartt work in progress"] },
+    { "id": "kith", "name": "Kith", "domains": ["kith.com", "eu.kith.com"], "aliases": [] },
+    { "id": "aime-leon-dore", "name": "Aimé Leon Dore", "domains": ["www.aimeleondore.com", "aimeleondore.com"], "aliases": ["aime leon dore", "ald"] },
+    { "id": "fear-of-god", "name": "Fear of God", "domains": ["fearofgod.com", "www.fearofgod.com"], "aliases": ["essentials", "fear of god essentials"] },
+    { "id": "cole-buxton", "name": "Cole Buxton", "domains": ["colebuxton.com", "www.colebuxton.com"], "aliases": [] },
+    { "id": "broken-planet", "name": "Broken Planet", "domains": ["brokenplanetmarket.com", "www.brokenplanetmarket.com"], "aliases": ["broken planet market"] },
+    { "id": "hellstar", "name": "Hellstar", "domains": ["hellstar.com", "www.hellstar.com"], "aliases": [] },
+    { "id": "gallery-dept", "name": "Gallery Dept.", "domains": ["gallerydept.com", "www.gallerydept.com"], "aliases": ["gallery dept", "gallery department"] },
+    { "id": "corteiz", "name": "Corteiz", "domains": ["www.crtz.xyz", "crtz.xyz"], "aliases": ["crtz"] },
+    { "id": "trapstar", "name": "Trapstar", "domains": ["uk.trapstarlondon.com", "trapstarlondon.com", "www.trapstarlondon.com"], "aliases": ["trapstar london"] },
+    { "id": "daily-paper", "name": "Daily Paper", "domains": ["www.dailypaperclothing.com", "dailypaperclothing.com"], "aliases": [] },
+    { "id": "palace", "name": "Palace", "domains": ["shop.palaceskateboards.com", "shop-usa.palaceskateboards.com"], "aliases": ["palace skateboards"] },
+    { "id": "rhude", "name": "Rhude", "domains": ["rhude.com", "www.rhude.com"], "aliases": [] },
+    { "id": "obey", "name": "Obey", "domains": ["obeyclothing.com", "www.obeyclothing.com"], "aliases": ["obey clothing"] },
+    { "id": "huf", "name": "HUF", "domains": ["hufworldwide.com", "www.hufworldwide.com"], "aliases": ["huf worldwide"] },
+    { "id": "sporty-and-rich", "name": "Sporty & Rich", "domains": ["sportyandrich.com", "www.sportyandrich.com"], "aliases": ["sporty and rich", "sporty rich"] },
+    { "id": "axel-arigato", "name": "Axel Arigato", "domains": ["axelarigato.com", "www.axelarigato.com"], "aliases": [] },
+    { "id": "gymshark", "name": "Gymshark", "domains": ["www.gymshark.com", "gymshark.com"], "aliases": [] }
+  ]
+}

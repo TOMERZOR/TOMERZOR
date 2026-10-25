@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Store screenshot</title>
+<style>
+  @font-face { font-family: 'Fredoka'; src: url('../fonts/fredoka-latin.woff2') format('woff2'); font-weight: 300 700; }
+  html, body { margin: 0; }
+  body { width: var(--w); height: var(--h); overflow: hidden; font-family: 'Fredoka', system-ui, sans-serif; color: #33264d; position: relative; background: linear-gradient(170deg, var(--c1), var(--c2)); }
+  .cap { position: absolute; left: 13%; right: 13%; top: 4.2%; text-align: center; font-weight: 700; font-size: calc(var(--w) * 0.074); line-height: 1.05; letter-spacing: .005em; color: #fff; -webkit-text-stroke: calc(var(--w) * 0.006) #33264d; paint-order: stroke fill; text-shadow: 0 calc(var(--w) * 0.008) 0 #33264d; }
+  .cap em { font-style: normal; color: var(--hl); }
+  .phone { position: absolute; left: 50%; top: 20%; width: 78%; transform: translateX(-50%); border-radius: calc(var(--w) * 0.075); overflow: hidden; box-shadow: 0 calc(var(--w) * 0.03) calc(var(--w) * 0.08) rgba(51, 38, 77, .35), 0 0 0 calc(var(--w) * 0.018) #fff; }
+  .phone img { display: block; width: 100%; }
+  canvas { position: absolute; inset: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="cap" id="cap"></div>
+<div class="phone"><img id="img" alt=""></div>
+<canvas id="deco"></canvas>
+<script type="module">
+// Renders one store screenshot: caption + real gameplay capture + bucket buddies.
+import { drawBucket } from '../js/render.js';
+import { loadAssets } from '../js/assets.js';
+const q = new URLSearchParams(location.search);
+const W = Number(q.get('w') || 1290), H = Number(q.get('h') || 2796);
+document.body.style.setProperty('--w', W + 'px');
+document.body.style.setProperty('--h', H + 'px');
+document.body.style.setProperty('--c1', q.get('c1') || '#ffd1ec');
+document.body.style.setProperty('--c2', q.get('c2') || '#b9a6ff');
+document.body.style.setProperty('--hl', q.get('hl') || '#ffd23f');
+document.getElementById('cap').innerHTML = q.get('cap') || '';
+const img = document.getElementById('img');
+img.src = q.get('img');
+await img.decode();
+const ph = document.querySelector('.phone');
+ph.style.width = Math.min(W * 0.78, H * 0.775 * img.naturalWidth / img.naturalHeight) + 'px';
+await document.fonts.load('700 80px Fredoka');
+await loadAssets('../img/');
+const cv = document.getElementById('deco');
+cv.width = W; cv.height = H;
+const ctx = cv.getContext('2d');
+const cols = (q.get('buckets') || '#ff4b5c,#5ccfff').split(',');
+const s = W * 0.2;
+if (cols[0]) drawBucket(ctx, W * 0.085, H * 0.045, s * 0.62, cols[0], '', { rot: -0.25, look: 1 });
+if (cols[1]) drawBucket(ctx, W * 0.9, H * 0.94, s * 1.1, cols[1], '', { rot: 0.2, look: -1 });
+window.__done = true;
+</script>
+</body>
+</html>

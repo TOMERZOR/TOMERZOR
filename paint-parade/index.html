@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Paint Parade</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Paint Parade — tap cute paint buckets onto the parade belt and bring pixel art to life. A relaxing, addictive color puzzle.">
+<meta name="theme-color" content="#f6e8ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Paint Parade">
+<meta property="og:title" content="Paint Parade — Color Puzzle">
+<meta property="og:description" content="Cute paint buckets march around a grey canvas and splash it to life. Can you paint them all?">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/paint-parade/">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/paint-parade/icons/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preload" href="fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="safeProbe" aria-hidden="true"></div>
+<canvas id="cv" aria-label="Paint Parade game board"></canvas>
+
+<div id="hud" class="hud" hidden>
+  <div class="hud__top">
+    <button id="btnPause" class="icon-btn" aria-label="Pause"><span class="pause-ico"></span></button>
+    <div class="lvl-pill"><span id="hudLevel">Level 1</span><span id="hudTag" class="tag" hidden></span></div>
+    <button class="pill pill--coins" id="hudCoins" aria-label="Coins"></button>
+  </div>
+  <div class="hud__row2"><div class="taps" id="hudTapsBox"><b id="hudTaps">0</b><small id="hudTapsLbl">taps</small></div><div class="progress"><div id="hudProg"></div></div></div>
+</div>
+
+<div id="boosters" class="boosters" hidden>
+  <button data-booster="slot" aria-label="Extra spot"><span class="booster-ico booster-ico--slot"></span><span class="bcount">0</span></button>
+  <button data-booster="grab" aria-label="Grabber"><span class="booster-ico booster-ico--grab"></span><span class="bcount">0</span></button>
+  <button data-booster="rainbow" aria-label="Rainbow bucket"><span class="booster-ico booster-ico--rainbow"></span><span class="bcount">0</span></button>
+</div>
+
+<main id="home" class="screen" hidden></main>
+<section id="shop" class="screen screen--page" hidden></section>
+<section id="gallery" class="screen screen--page" hidden></section>
+
+<div id="banner" class="banner" hidden></div>
+<div id="tip" class="tip" role="status"></div>
+<div id="modal" class="modal" hidden></div>
+<div id="toast" class="toast" role="status"></div>
+
+<div id="boot" class="boot"><img class="boot__img" src="img/logo.webp" alt="Paint Parade"><div class="boot__dots"><i></i><i></i><i></i></div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

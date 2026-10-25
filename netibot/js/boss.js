@@ -106,8 +106,11 @@ const Boss = {
   },
   hpOf(kind) { return Math.round((BOSSES[kind].hp || 100) * BOSS_TIERS[this.tierOf(kind)].hp); },
 
-  // coop: { id, max } when the fight is shared with the other players in the lobby.
+  // coop: { id, max } when the fight is shared with the other players in the lobby. Online every
+  // boss is everyone's: one started alone (a story arc, a dare) becomes a shared fight.
   start(coop = null, kind = 'burger') {
+    const own = !coop;
+    if (!coop && Multi.on && Multi.peers.length) coop = { id: Date.now(), max: this.hpOf(kind) + 90 * Multi.peers.length };
     const cfg = this.cfg = BOSSES[kind];
     this.kind = kind;
     this.arena = cfg.arena;
@@ -158,7 +161,7 @@ const Boss = {
     this.lastPick = cfg.ammo()[0].id;
     if (coop) { this.taken = new Set(); this.myTaken = []; this.pickCache = {}; this.coopPickups(); }
     else for (let i = 0; i < Boss.PICKUPS; i++) this.spawnPickup();
-    if (!coop) BossArcs.apply(kind);
+    if (own) BossArcs.apply(kind);
     G.player.x = this.cx;
     G.player.y = cfg.arena.y1 - 0.5 * TS;
     G.player.carry = false;
@@ -514,9 +517,11 @@ const Boss = {
     this.inviteCoop(kind);
     return true;
   },
-  // Called every frame in multiplayer: join a fight someone started here, or hear about it.
+  // Called every frame in multiplayer: a fight anyone started is everyone's. At its site you're
+  // in it; elsewhere you're brought there (a talk, a mini-game, an alert or the deploy controls
+  // hold it a moment).
   watchCoop() {
-    if (!Multi.on || this.active || UI.busy || Mini.active || G.alert || Game.engaged()) return;
+    if (!Multi.on || this.active || UI.busy || Mini.active || G.alert || Story.ctl || Arcade.active || Race.active || Tutorial.active) return;
     const now = Date.now();
     this.doneIds = this.doneIds || new Set();
     this.heard = this.heard || new Set();
@@ -533,7 +538,8 @@ const Boss = {
     } else if (!this.heard.has(id)) {
       this.heard.add(id);
       Sound.horn();
-      UI.invite(`${cfg.icon} ${p.name}: קרב בוס נגד ${name} ב${siteName(cfg.map)}! בואו ביחד`, '⚔️ להצטרף עכשיו', () => this.joinCoop(id, p.boss.max, kind));
+      UI.toast(`${cfg.icon} ${p.name}: קרב בוס נגד ${name}! כולם ל${siteName(cfg.map)}`, 'bad');
+      this.joinCoop(id, p.boss.max, kind);
     }
   },
   // Accepting an invite: straight to the arena (free) and into the same fight.

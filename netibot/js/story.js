@@ -398,15 +398,18 @@ const Story = {
   // ---------- per-frame ----------
   update(dt) {
     const S = G.state;
-    // Scheduled alerts wait for the player to be free.
+    // Scheduled alerts wait for the player to be free. Online only the world's leader has
+    // them (js/worldsync.js) and they spread to everyone; the others' times just go by.
+    if (!WorldSync.lead()) while (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0]) this.pendingAlerts.shift();
     if (this.pendingAlerts.length && S.clock >= this.pendingAlerts[0] && !G.alert && !Mini.active && !UI.busy && !Boss.active && !Game.engaged() && World.id !== 'field') {
       this.pendingAlerts.shift();
       this.alert(false);
     }
-    // A friend online at this site set off a red alert: it's everyone's.
+    // A friend online set off a red alert: it's everyone's, whatever they're doing (only a
+    // mini-game, a talk, a boss fight or the deploy controls hold it a moment).
     const ra = this.remoteAlert;
     if (ra && Date.now() - ra.at > 20000) this.remoteAlert = null;
-    else if (ra && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.ctl && World.id !== 'field' && !Game.engaged()) {
+    else if (ra && !G.alert && !Mini.active && !UI.busy && !Boss.active && !this.ctl && World.id !== 'field') {
       this.remoteAlert = null;
       this.alert(false, 'real', ra.id);
       UI.toast(`🚨 ${ra.from}: אזעקה! כולם למיגונית!`, 'bad');
@@ -456,7 +459,8 @@ const Story = {
     await UI.talk(lines);
     Game.addScore(late ? -5 : 4 + bonus, late ? 'איחור למסדר' : 'מסדר בוקר בזמן');
     if (this.has('y_room')) await Events.yasminIntro();
-    if (this.has('baum')) Events.startBaum();
+    // Online the commander's visit is everyone's at once: the leader calls it, the rest join it.
+    if (this.has('baum')) { if (!Multi.on) Events.startBaum(); else if (WorldSync.lead()) Events.startBaumCoop(); }
     if (this.has('find_lock')) {
       await UI.talk([
         { who: 'commander', text: 'יום אחרון לפני יציאה הביתה. רק בעיה אחת: המנעול של השער נשבר. {@p_hila} ניסתה לפתוח אותו עם שיר.' },

@@ -63,6 +63,9 @@ const Multi = {
         ar: s.ar && +s.ar.id && typeof s.ar.g === 'string' ? { id: +s.ar.id, g: s.ar.g.slice(0, 12), host: !!s.ar.host, cd: Math.max(0, Math.min(60, +s.ar.cd || 0)), to: Array.isArray(s.ar.to) ? s.ar.to.slice(0, 12).map(x => String(x).slice(0, 40)) : null, s: s.ar.s && typeof s.ar.s === 'object' && JSON.stringify(s.ar.s).length < 3500 ? s.ar.s : null } : null,
         // A red alert this player is in: everyone online at that site gets it too.
         sl: !!s.sl,
+        // The shared world: when they came online (the earliest leads), their day, clock and events.
+        jt: +s.jt || 0,
+        w: s.w && typeof s.w === 'object' ? { d: +s.w.d || 0, c: +s.w.c || 0, ev: Array.isArray(s.w.ev) ? s.w.ev.slice(-6).filter(e => Array.isArray(e) && +e[0]).map(e => [+e[0], String(e[1] || '').slice(0, 12), String(e[2] || '').slice(0, 40), +e[3] || 0]) : [] } : null,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
         boss: s.boss && +s.boss.id ? { id: +s.boss.id, k: String(s.boss.k || 'burger').slice(0, 12), max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)), tk: Array.isArray(s.boss.tk) ? s.boss.tk.slice(-40).map(n => Math.floor(+n)).filter(n => n >= 0 && n < 5000) : [] } : null,
         // Smoothed position for drawing.
@@ -105,6 +108,7 @@ const Multi = {
   start(personId) {
     this.on = true;
     this.as = personId;
+    WorldSync.start();
     this.update(1);
     UI.chatRefresh();
   },
@@ -125,6 +129,7 @@ const Multi = {
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, js: P.jumpSeq || 0, jk: P.jumpKind === 'runJump' ? 1 : 0, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,
+      jt: WorldSync.joinT, w: WorldSync.out(),
       race: Race.presence(),
       ar: Arcade.presence(),
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,
@@ -138,13 +143,14 @@ const Multi = {
     this.room.presence(st).catch(() => {});
   },
 
-  // Red alerts are shared: when a friend's siren goes off at your site, yours does too.
-  // Each alert has an id, so it spreads once and doesn't bounce back and forth.
+  // Red alerts are shared: when a friend's siren goes off, everyone's does, at every site (out
+  // in the field deploying, just a word). Each alert has an id, so it spreads once and doesn't
+  // bounce back and forth.
   seenAlerts: new Set(),
   alertFrom(p) {
     if (this.seenAlerts.has(p.al.id)) return;
     this.seenAlerts.add(p.al.id);
-    if (p.al.site !== World.id) { UI.toast(`🚨 צבע אדום ב${siteName(p.al.site)} — ${p.name} במיגונית`, 'bad'); return; }
+    if (World.id === 'field') { UI.toast(`🚨 צבע אדום ב${siteName(p.al.site)} — ${p.name} במיגונית`, 'bad'); return; }
     Story.remoteAlert = { id: p.al.id, from: p.name, at: Date.now() };
   },
   newAlertId() {

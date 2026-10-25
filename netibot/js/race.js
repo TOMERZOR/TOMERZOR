@@ -1353,7 +1353,6 @@ const Race = {
 
   // ---------- each frame ----------
   frame(dt, t) {
-    Multi.update(dt);
     if (!this.W) return;
     // R: race again right away (alone).
     const r = G.keys.has('KeyR');

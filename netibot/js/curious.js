@@ -49,16 +49,20 @@ const Curious = {
     if (!S.dayFlags.curiousPlan) this.plan(S);
     const next = S.dayFlags.curiousPlan[0];
     if (next === undefined || S.clock < next) return;
+    // Online the leader's phone sends them, to everyone (js/worldsync.js).
+    if (!WorldSync.lead()) { S.dayFlags.curiousPlan.shift(); return; }
     if (G.alert || Mini.active || UI.busy || Boss.active || Story.ctl || Story.run || S.clock > 21 * 60 || !Game.calm()) return;
     S.dayFlags.curiousPlan.shift();
     this.arrive();
   },
-  arrive(kind) {
+  // id: who (online, the leader's).
+  arrive(kind, id = null) {
     const S = G.state;
     this.register();
     // Not the same person twice in a row.
     const pool = CURIOUS.filter(c => (kind ? c.kind === kind : c.id !== S.flags.lastCurious));
-    const c = pick(pool.length ? pool : CURIOUS);
+    const c = CURIOUS.find(x => x.id === id) || pick(pool.length ? pool : CURIOUS);
+    WorldSync.started('cur', c.id);
     S.flags.lastCurious = c.id;
     const start = { x: 22 * TS, y: 43.4 * TS };
     Assets.loadPublicPerson(c.id);

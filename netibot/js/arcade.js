@@ -133,7 +133,6 @@ const Arcade = {
 
   // ---------- each frame ----------
   frame(dt, t) {
-    Multi.update(dt);
     if (this.phase === 'lobby') this.updateLobby();
     else if (this.active) this.active.update(dt, t);
     if (this.cdAt) this.updateCountdown();

@@ -531,6 +531,9 @@ const Game = {
       this.fpsN = (this.fpsN || 0) + 1;
       if (t - (this.fpsT || 0) > 1000) { const f = $('#fps'); if (f) f.textContent = `${Math.round(this.fpsN * 1000 / (t - (this.fpsT || t - 1000)))} FPS`; this.fpsN = 0; this.fpsT = t; }
     }
+    // Online: the shared world, and where I am for the others, every frame, whatever is on the
+    // screen (a talk, a menu, the club, a race), so nobody sees me freeze mid-conversation.
+    if (G.running) { WorldSync.update(dt); Multi.update(dt); }
     // The race is a world of its own: while it's on, only it updates and draws.
     if (G.running && Race.active) {
       Race.frame(dt, t);
@@ -572,7 +575,8 @@ const Game = {
     const S = G.state, P = G.player;
     // The clock (and the day's events) wait while the controls tutorial is on, and through a
     // boss fight (no alerts, shifts or errands start mid-fight; the day picks up after).
-    if (!Tutorial.active && !Boss.active) S.clock += dt * DATA.minutesPerSecond;
+    // (Online the shared clock runs in WorldSync.update, through talks and menus too.)
+    if (!Tutorial.active && !Boss.active && !Multi.on) S.clock += dt * DATA.minutesPerSecond;
     // Stuck inside something solid (an old save, a prop that moved onto a spot): after a
     // moment there, step out to the nearest free tile.
     if (!P.sit && !Story.ctl && World.blocked(P.x, P.y, P.r)) {
@@ -681,7 +685,6 @@ const Game = {
 
     this.updateNpcs(dt);
     if (!Tutorial.active) Story.update(dt);
-    Multi.update(dt);
     if (P.bubble) { P.bubble.t -= dt; if (P.bubble.t <= 0) P.bubble = null; }
 
     if (G.shake > 0) G.shake = Math.max(0, G.shake - dt * 1.2);

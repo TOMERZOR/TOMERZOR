@@ -62,9 +62,11 @@ const Events = {
     if (S.shchora > this.base()) S.shchora = Math.max(this.base(), S.shchora - mins * 0.02);
     if (S.shchora >= 85) S.morale = Math.max(0, S.morale - mins * 0.01);
 
-    if (S.clock >= 11 * 60 && !S.dayFlags.rafael && free) this.startRafael();
+    // Online the leader's phone starts these for everyone (js/worldsync.js).
+    const mine = WorldSync.lead();
+    if (S.clock >= 11 * 60 && !S.dayFlags.rafael && free && mine) this.startRafael();
     if (this.rafael) this.updateRafael(dt);
-    if (S.dayFlags.techAt && S.clock >= S.dayFlags.techAt && !S.dayFlags.tech && free && World.id === 'netivot') this.startTech();
+    if (S.dayFlags.techAt && S.clock >= S.dayFlags.techAt && !S.dayFlags.tech && free && World.id === 'netivot' && mine) this.startTech();
     if (this.tech) this.updateTech(dt);
     if (S.dayFlags.ofekAt && S.clock >= S.dayFlags.ofekAt && !S.dayFlags.ofek && free && World.id === 'netivot') this.ofekCalls();
     this.updateSummons(free);
@@ -453,6 +455,7 @@ const Events = {
   startRafael() {
     const S = G.state;
     S.dayFlags.rafael = true;
+    WorldSync.started('rafael');
     if (World.id !== 'netivot') { UI.toast('🚚 רפאל קייטרינג הגיעו לנתיבות. {@p_liran} סחב הכל במקומך. אוגה בוגה.'); return; }
     this.rafael = { x: 30.5 * TS, y: 46 * TS, angle: -Math.PI / 2, state: 'arriving', left: ['crate', 'crate', 'water'], delivered: 0 };
     World.gateTarget = 1;
@@ -510,10 +513,12 @@ const Events = {
   },
 
   // ---------- technician inspection ----------
-  startTech() {
+  // id: the technician (online, the leader's).
+  startTech(id = null) {
     const S = G.state;
     S.dayFlags.tech = true;
-    const id = pick(['tech_launch', 'tech_ground', 'tech_comms']);
+    if (!TECH_LINES[id]) id = pick(['tech_launch', 'tech_ground', 'tech_comms']);
+    WorldSync.started('tech', id);
     this.tech = { id, step: 0, errors: 0 };
     Game.addVisitor(id, SPOTS.gate);
     Game.setNpcSpot(id, SPOTS.parade);
@@ -769,7 +774,8 @@ const Events = {
     this.baumHeard = this.baumHeard || new Set();
     const p = Multi.peers.find(q => q.baum && !this.baumDone.has(q.baum.id) && Date.now() - q.baum.id < 118000);
     if (!p) return;
-    if (Game.engaged() || UI.busy) {
+    // It's everyone's at Netivot: only a talk, a mini-game, an alert or the deploy controls hold it.
+    if (UI.busy || Mini.active || G.alert || Story.ctl || Arcade.active || Race.active) {
       if (!this.baumHeard.has(p.baum.id)) { this.baumHeard.add(p.baum.id); UI.toast(fmt(`🍕 ${p.name}: נוהל אנה פרנק בנתיבות — כשתסיים[/י] מה שאת[ה/] עושה, אפשר להצטרף`)); }
       return;
     }

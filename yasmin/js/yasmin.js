@@ -196,6 +196,8 @@ export class Yasmin {
     this.position.set(x, 0, z);
     this.dir = dir; this.group.rotation.y = dir;
     this.visible = true; this.group.visible = true;
+    if (this.bucketLoop) { this.bucketLoop.stop(0.1); this.bucketLoop = null; }
+    this.speed = 0;
     this.setState(state);
     this.awareness = 0;
     this.path = null; this.sidePath = null;
@@ -249,8 +251,11 @@ export class Yasmin {
     if (!lineOfSight(this.position.x, this.position.z, pp.x, pp.z, opaque)) return 0;
     return 1 - d / range * 0.7;
   }
+  // standing under a working light (the fixtures themselves, not the pooled real lights, so it doesn't depend on quality)
   litAt(x, z) {
-    for (const l of this.world.pool) if (l.intensity > 2 && Math.hypot(l.position.x - x, l.position.z - z) < 3.5) return true;
+    for (const f of this.world.fixtures) if (f.level > 0.18 && Math.abs(f.x - x) < 3.5 && Math.abs(f.z - z) < 3.5 && Math.hypot(f.x - x, f.z - z) < 3.5 && lineOfSight(f.x, f.z, x, z, opaque)) return true;
+    for (const e of this.world.emitters || []) if (e.level * e.power > 0.67 && Math.hypot(e.x - x, e.z - z) < 3.5 && lineOfSight(e.x, e.z, x, z, opaque)) return true;
+    for (const e of this.world.emergency || []) if (e.level > 0.3 && Math.hypot(e.x - x, e.z - z) < 3.5 && lineOfSight(e.x, e.z, x, z, opaque)) return true;
     return false;
   }
 
@@ -345,7 +350,7 @@ export class Yasmin {
         }
         // direct run when in sight and close
         if (see > 0 && dist < 6 && !this.sidePath && clearLine(this.world, this.position.x, this.position.z, pp.x, pp.z, 0.24)) this.path = [{ x: pp.x, z: pp.z }], this.wp = 0;
-        if (dist < 1.05 && see > 0) { this.catch(player, game); return; }
+        if (dist < 1.05 && see > 0 && clearLine(this.world, this.position.x, this.position.z, pp.x, pp.z, 0)) { this.catch(player, game); return; }
         const giveUp = (game && game.finale) ? 99 : 3.2 + this.aggro * 2.5;
         if (this.lostT > giveUp) { this.setState('search'); this.searchT = 6 + this.aggro * 6; this.path = null; this.goTo(this.lastSeen.x, this.lastSeen.z); }
         if (this.voiceCd < 0 && Math.random() < 0.02) this.speak('y_chase', { cd: 8 });
@@ -354,6 +359,12 @@ export class Yasmin {
       case 'locker': {
         move = this.walkSpeed * 1.6;
         const L = this.lockerTarget;
+        if (player.hidden !== L && !this.lockerBeat) {
+          const s2 = this.sees(player);
+          if (s2 > 0) { this.startChase(player, game); break; }
+        }
+        // couldn't get there: give up
+        if (this.stateT > 12 && !this.lockerBeat) { this.setState('patrol'); this.path = null; break; }
         const dx = L.x + L.fwd.x * 0.75 - this.position.x, dz = L.z + L.fwd.z * 0.75 - this.position.z;
         if (Math.hypot(dx, dz) < 0.45) {
           move = 0;

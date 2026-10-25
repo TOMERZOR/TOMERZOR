@@ -302,6 +302,7 @@ export class World {
     }
     // the room with the cameras is dim: monitors light it
     for (const f of this.fixtures) if (f.room === 'c') f.mode = 3;
+    for (const f of this.fixtures) f.mode0 = f.mode;
     hb.build(this.root, { cast: false, receive: false });
     const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true });
     this.tubes = new THREE.InstancedMesh(tubeG, tubeMat, this.fixtures.length * 2);

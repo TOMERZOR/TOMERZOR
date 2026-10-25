@@ -73,7 +73,7 @@ export class Post {
     this.composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: quality === 'low' ? 0 : 4 }));
     this.composer.addPass(new RenderPass(scene, camera));
     if (quality !== 'low') {
-      this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.6, 0.82);
+      this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.25, 0.15, 2.5);
       this.composer.addPass(this.bloom);
     }
     this.composer.addPass(new OutputPass());

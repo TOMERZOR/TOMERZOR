@@ -2,7 +2,8 @@
 // the corridor drone, fluorescent hum, drips, heartbeat, breathing, footsteps, stingers and the chase score.
 const FILES = ['y_where', 'y_misdar', 'y_hear', 'y_spot', 'y_chase', 'y_lost', 'y_caught', 'y_intro', 'y_locker', 'y_hum',
   'n_laugh', 'n_whisper', 'n_cry', 'n_count', 'sfx_scream', 'sfx_bucket', 'sfx_mop', 'sfx_gate', 'sfx_door', 'sfx_distant', 'sfx_locker', 'sfx_power',
-  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle', 'radio1'];
+  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle', 'radio1',
+  'sfx_jump1', 'sfx_jump2', 'sfx_ring', 'sfx_behind'];
 
 export const SUBS = {
   y_where: 'יסמין: איפה אתה... הרצפה עוד רטובה...',
@@ -58,6 +59,8 @@ export class Audio {
     this.master = c.createGain(); this.master.gain.value = this.vol.master;
     const comp = c.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 4;
     this.master.connect(comp); comp.connect(c.destination);
+    // a bus that skips the master gain, so the ringing in your ears survives the hard cut after a jumpscare
+    this.direct = c.createGain(); this.direct.gain.value = this.vol.master; this.direct.connect(comp);
     this.sfx = c.createGain(); this.sfx.connect(this.master);
     this.music = c.createGain(); this.music.gain.value = this.vol.music; this.music.connect(this.master);
     this.amb = c.createGain(); this.amb.gain.value = 0; this.amb.connect(this.master);
@@ -123,7 +126,7 @@ export class Audio {
   }
 
   // Play a recorded sample. Returns a handle {src, gain, panner, stop()}.
-  play(name, { pos = null, volume = 1, rate = 1, loop = false, verb = 0.35, sub = true, ref = 2, offset = 0, muffle = true } = {}) {
+  play(name, { pos = null, volume = 1, rate = 1, loop = false, verb = 0.35, sub = true, ref = 2, offset = 0, muffle = true, bus = null } = {}) {
     if (!this.ready || !this.buffers[name]) return null;
     const c = this.ctx;
     const src = c.createBufferSource(); src.buffer = this.buffers[name]; src.loop = loop; src.playbackRate.value = rate;
@@ -131,6 +134,7 @@ export class Audio {
     src.connect(g);
     let p = null;
     if (pos) { p = this.panner(pos, ref); g.connect(p); p.connect(muffle ? this.muffle : this.sfx); if (verb) { const s = c.createGain(); s.gain.value = verb; p.connect(s); s.connect(this.verbIn); } }
+    else if (bus) g.connect(bus);
     else { g.connect(muffle ? this.muffle : this.sfx); if (verb) { const s = c.createGain(); s.gain.value = verb; g.connect(s); s.connect(this.verbIn); } }
     src.start(c.currentTime, offset);
     const audible = !pos || !this.lp || Math.hypot(pos.x - this.lp.x, pos.z - this.lp.z) < 24 * Math.sqrt(volume);
@@ -301,11 +305,25 @@ export class Audio {
   }
   jumpscare() {
     if (!this.ready) return;
+    // everything at once: two recorded stingers, her scream and her line, a white-noise slam, a sub drop and a dissonant cluster
+    this.master.gain.cancelScheduledValues(this.ctx.currentTime); this.master.gain.value = this.vol.master;
+    this.play('sfx_jump1', { volume: 1.6, verb: 0.2, muffle: false, sub: false });
+    this.play('sfx_jump2', { volume: 1.4, verb: 0.3, muffle: false, sub: false, rate: 0.92 + Math.random() * 0.16 });
     this.play('sfx_scream', { volume: 1.3, verb: 0.3, muffle: false });
-    this.play('y_caught', { volume: 1.4, verb: 0.4, muffle: false, rate: 0.95 });
-    this.noise(1.2, { type: 'lowpass', f: 8000, vol: 0.7, a: 0.002, verb: 0.2 });
-    this.tone(38, 1.6, { vol: 0.9, a: 0.003, f2: 25 });
-    for (const f of [311, 330, 466, 494, 622]) this.tone(f, 1.4, { type: 'sawtooth', vol: 0.09, a: 0.003 });
+    this.play('y_caught', { volume: 1.5, verb: 0.5, muffle: false, rate: 0.9 });
+    this.noise(0.35, { type: 'highpass', f: 1500, vol: 0.9, a: 0.001, verb: 0.1 });
+    this.noise(1.2, { type: 'lowpass', f: 8000, vol: 0.6, a: 0.002, verb: 0.2 });
+    this.tone(55, 1.6, { vol: 1.0, a: 0.002, f2: 22 });
+    for (const f of [311, 330, 466, 494, 622, 740]) this.tone(f * (0.98 + Math.random() * 0.04), 1.3, { type: 'sawtooth', vol: 0.08, a: 0.002, f2: f * 0.7 });
+  }
+  // Hard cut to silence (the world is gone), leaving only a ringing in the ears; sound comes back slowly.
+  cut(hold = 1.4) {
+    if (!this.ready) return;
+    const g = this.master.gain, t = this.ctx.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0, t + 0.03);
+    g.setValueAtTime(0, t + hold); g.linearRampToValueAtTime(this.vol.master, t + hold + 1.5);
+    this.direct.gain.value = this.vol.master;
+    this.play('sfx_ring', { volume: 0.55, bus: this.direct, sub: false });
   }
   pickup() { this.tone(1320, 0.12, { vol: 0.06, verb: 0.4 }); this.tone(1980, 0.18, { vol: 0.04, delay: 0.06, verb: 0.5 }); this.noise(0.08, { type: 'highpass', f: 3000, vol: 0.05 }); }
   keys() { for (let i = 0; i < 6; i++) this.tone(2800 + Math.random() * 2400, 0.09, { type: 'triangle', vol: 0.05, delay: i * 0.05 + Math.random() * 0.03, verb: 0.3 }); }

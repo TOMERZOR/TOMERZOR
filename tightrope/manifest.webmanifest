@@ -1,0 +1,12 @@
+{
+  "name": "על החבל · Full Bucket",
+  "short_name": "על החבל",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#14213d",
+  "theme_color": "#14213d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

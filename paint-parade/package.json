@@ -1,0 +1,11 @@
+{
+  "name": "paint-parade",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Paint Parade: a color-shooter puzzle where cute paint buckets march around a grey canvas and bring pixel art to life.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "serve": "python3 -m http.server 8080"
+  }
+}

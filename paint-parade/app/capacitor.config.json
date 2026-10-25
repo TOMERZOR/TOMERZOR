@@ -1,0 +1,27 @@
+{
+  "appId": "com.tomerzor.paintparade",
+  "appName": "Paint Parade",
+  "webDir": "www",
+  "backgroundColor": "#fbe9ff",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#fbe9ff",
+    "preferredContentMode": "mobile",
+    "scrollEnabled": false
+  },
+  "android": {
+    "backgroundColor": "#fbe9ff"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": false,
+      "backgroundColor": "#fbe9ff",
+      "showSpinner": false
+    },
+    "AdMob": {
+      "appIdIos": "ca-app-pub-3940256099942544~1458002511",
+      "appIdAndroid": "ca-app-pub-3940256099942544~3347511713"
+    }
+  }
+}

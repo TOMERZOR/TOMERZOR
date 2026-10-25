@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Paint Parade icon</title>
+<style>body{margin:0;background:#222}canvas{display:block}</style>
+<link rel="preload" href="../fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:Fredoka;src:url(../fonts/fredoka-latin.woff2) format('woff2');font-weight:300 700}</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<script type="module">
+// Renders the app icon with the game's own drawing code (1024×1024, no transparency).
+import { drawBucket, mix } from '../js/render.js';
+const mode = new URLSearchParams(location.search).get('mode') || 'icon';
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const S = 1024;
+await document.fonts.load('700 40px Fredoka');
+
+function bg() {
+  const g = ctx.createLinearGradient(0, 0, S, S);
+  g.addColorStop(0, '#ffd1ec'); g.addColorStop(0.55, '#e6b8ff'); g.addColorStop(1, '#9fd8ff');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+  // soft glow
+  const r = ctx.createRadialGradient(S * 0.5, S * 0.38, 40, S * 0.5, S * 0.38, S * 0.6);
+  r.addColorStop(0, 'rgba(255,255,255,0.65)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = r; ctx.fillRect(0, 0, S, S);
+}
+
+const HEART = ['.rr...rr.', 'rwrr.rrrr', 'rwrrrrrrr', 'rrrrrrrrr', '.rrrrrrr.', '..rrrrr..', '...rrr...', '....r....'];
+const COL = { r: '#ff4b5c', w: '#fdfbff' };
+function heart(x0, y0, cs, split) {
+  for (let y = 0; y < HEART.length; y++) for (let x = 0; x < HEART[y].length; x++) {
+    const ch = HEART[y][x];
+    if (ch === '.') continue;
+    const painted = x + y * 0.35 > split;
+    const col = COL[ch];
+    const px = x0 + x * cs, py = y0 + y * cs;
+    ctx.fillStyle = painted ? col : mix(col, '#f4f0fa', 0.74);
+    ctx.fillRect(px, py, cs - 3, cs - 3);
+    if (painted) {
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(px, py, cs - 3, cs * 0.14);
+      ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(px, py + cs * 0.84, cs - 3, cs * 0.13);
+    } else {
+      ctx.fillStyle = col === '#fdfbff' ? '#d9cfe8' : col;
+      ctx.beginPath(); ctx.arc(px + cs / 2 - 1.5, py + cs / 2 - 1.5, cs * 0.16, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+function blob(x, y, r, col) {
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.32, 0, Math.PI * 2); ctx.fill();
+}
+
+bg();
+if (mode === 'icon') {
+  const cs = 78;
+  ctx.save();
+  ctx.shadowColor = 'rgba(70,30,110,0.25)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12;
+  ctx.fillStyle = '#ffffff';
+  const hx = (S - 9 * cs) / 2, hy = 92;
+  ctx.beginPath(); ctx.roundRect(hx - 34, hy - 34, 9 * cs + 65, 8 * cs + 65, 48); ctx.fill();
+  ctx.restore();
+  heart(hx, hy, cs, 4.2);
+  // splash arc from the bucket to the heart
+  blob(560, 610, 30, '#ff4b5c'); blob(610, 560, 20, '#ff4b5c'); blob(650, 520, 13, '#ff4b5c');
+  drawBucket(ctx, S * 0.42, S * 0.73, 470, '#ff4b5c', '', { look: 1, rot: -0.12 });
+  // little buddies marching
+  drawBucket(ctx, S * 0.83, S * 0.86, 230, '#5ccfff', '', { rot: 0.1 });
+} else {
+  // store feature graphic / OG image variant
+  heart(80, 80, 60, 4);
+  drawBucket(ctx, S * 0.7, S * 0.6, 480, '#ff4b5c', '', { look: -1 });
+}
+window.__done = true;
+</script>
+</body>
+</html>

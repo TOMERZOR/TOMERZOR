@@ -20,17 +20,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Karantina:wght@700&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 <script type="importmap">
 {
  "imports": {
   "three": "./vendor/three.module.min.js",
-  "./js/audio.js": "./js/audio.js?v=3",
-  "./js/game.js": "./js/game.js?v=3",
-  "./js/levels.js": "./js/levels.js?v=3",
-  "./js/main.js": "./js/main.js?v=3",
-  "./js/scene.js": "./js/scene.js?v=3",
-  "./js/text.js": "./js/text.js?v=3"
+  "./js/audio.js": "./js/audio.js?v=4",
+  "./js/game.js": "./js/game.js?v=4",
+  "./js/levels.js": "./js/levels.js?v=4",
+  "./js/main.js": "./js/main.js?v=4",
+  "./js/scene.js": "./js/scene.js?v=4",
+  "./js/text.js": "./js/text.js?v=4"
  }
 }
 </script>
@@ -51,6 +51,7 @@
       <div class="hud-level" id="hud-level"></div>
       <div class="hud-row">
         <div class="pitas" id="pitas" aria-label="פיתות"></div>
+        <div class="left-mice" id="left-mice" hidden aria-label="עכברים שנשארו"><img src="img/minion_run.webp" alt=""><b id="left-n"></b></div>
         <div class="boss" id="boss" hidden>
           <img src="img/lior.webp" alt="">
           <div class="boss-bar"><i id="boss-fill"></i></div>
@@ -80,6 +81,7 @@
 
 <div id="hint" class="hint" hidden><p id="hint-text"></p><button id="hint-ok" type="button">הבנתי</button></div>
 <div id="toast" class="toast" hidden></div>
+<div id="kill" class="kill" hidden><img id="kill-img" alt=""><div class="kill-stamp"><b id="kill-title"></b><span id="kill-sub"></span></div></div>
 <div id="flash" class="flash" hidden></div>
 <div id="callout" class="callout" hidden><img id="callout-img" alt=""><div class="callout-text" id="callout-text"></div></div>
 
@@ -164,6 +166,6 @@
   </div>
 </section>
 
-<script type="module" src="js/main.js?v=3"></script>
+<script type="module" src="js/main.js?v=4"></script>
 </body>
 </html>

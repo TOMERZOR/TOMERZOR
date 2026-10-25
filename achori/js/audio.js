@@ -92,10 +92,39 @@ export const sfx = {
   chomp() { for (let i = 0; i < 3; i++) burst(0.05, 0.35, 1800, 3, i * 0.12); },
   steal() { tone('sawtooth', 600, 300, 0.25, 0.12); this.squeak(1.2); },
   recovered() { [660, 880, 1320].forEach((f, i) => tone('triangle', f, f, 0.12, 0.2, i * 0.07)); },
-  kill() {
-    burst(0.3, 0.8, 500, 0.7, 0, 'lowpass');
-    tone('sine', 1800, 3000, 0.15, 0.16, 0.05);
-    [523, 659, 784, 1047].forEach((f, i) => tone('square', f, f, 0.12, 0.08, 0.25 + i * 0.09));
+  // A mouse dies: a squeak that falls away, a splat, a boxing-ring bell, and for Lior the crowd goes wild
+  kill(big = false) {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(2700, t);
+    o.frequency.exponentialRampToValueAtTime(380, t + 0.55);
+    lfo.frequency.value = 16; lg.gain.value = 120;
+    lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.32, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g).connect(sfxGain);
+    o.start(t); lfo.start(t); o.stop(t + 0.65); lfo.stop(t + 0.65);
+    // splat
+    burst(0.22, 1.0, 420, 0.6, 0.05, 'lowpass');
+    tone('sine', 110, 38, 0.25, 0.8, 0.05);
+    burst(0.08, 0.4, 2600, 2, 0.06);
+    // ding ding
+    const bell = (w) => { tone('triangle', 1568, 1560, 0.7, 0.22, w); tone('sine', 2350, 2340, 0.5, 0.1, w); tone('sine', 3136, 3130, 0.3, 0.05, w); };
+    bell(0.42);
+    if (big) {
+      bell(0.62); bell(0.82);
+      // crowd cheer: swelling filtered noise with a few whistles
+      burst(1.3, 0.35, 1100, 0.45, 0.5, 'bandpass');
+      burst(1.0, 0.2, 2400, 0.8, 0.7, 'bandpass');
+      tone('sine', 1900, 2600, 0.25, 0.08, 0.9);
+      tone('sine', 2600, 1700, 0.35, 0.07, 1.15);
+      [523, 659, 784, 1047].forEach((f, i) => tone('square', f, f, 0.14, 0.07, 0.6 + i * 0.1));
+    } else {
+      [784, 1047].forEach((f, i) => tone('square', f, f, 0.1, 0.06, 0.55 + i * 0.08));
+    }
   },
   free() { this.squeak(1.4); tone('triangle', 400, 900, 0.18, 0.16); },
   scream() {

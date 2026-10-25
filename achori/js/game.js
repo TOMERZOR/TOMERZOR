@@ -61,7 +61,7 @@ export class Game {
     this.liorRespawns = 0;
   }
 
-  emit(type, data = {}) { this.events.push({ type, ...data }); }
+  emit(type, data = {}) { this.events.push({ ...data, type }); }
   drain() { const e = this.events; this.events = []; return e; }
 
   makeItem(kind, fixed = false) {
@@ -234,7 +234,7 @@ export class Game {
     const p = cellOf(hole);
     m.x = p.c; m.z = p.r;
     this.mice.push(m);
-    this.emit('spawn', { id: m.id, type: m.type, hole });
+    this.emit('spawn', { id: m.id, mouse: m.type, hole });
     return m;
   }
 
@@ -421,7 +421,7 @@ export class Game {
 
   escape(m) {
     m.alive = false;
-    if (m.carrying) this.emit('escaped', { id: m.id, type: m.type });
+    if (m.carrying) this.emit('escaped', { id: m.id, mouse: m.type });
     m.carrying = false;
     this.emit('left', { id: m.id });
     if (m.type === 'lior') {
@@ -445,7 +445,7 @@ export class Game {
     });
     const p = cellOf(hole);
     m.x = p.c; m.z = p.r;
-    this.emit('spawn', { id: m.id, type: m.type, hole, back: true });
+    this.emit('spawn', { id: m.id, mouse: m.type, hole, back: true });
   }
 
   // ---------- the player's hand ----------
@@ -498,7 +498,7 @@ export class Game {
       this.stats.recovered += 1;
       this.emit('recovered', { id: m.id, food: this.food });
     }
-    this.emit('kill', { id: m.id, type: m.type });
+    this.emit('kill', { id: m.id, mouse: m.type });
   }
 
   useAbility(name) {

@@ -33,6 +33,8 @@ let particles = [];
 let fxCtx = null;
 let comboEl = null;
 let tickerX = 0, tickerW = 0;
+let slowT = 0; // real seconds of slow motion left after a kill
+let killT = 0;
 
 // ---------- screens ----------
 const SCREENS = ['loading', 'title', 'levels', 'dialog', 'pause', 'result', 'ending'];
@@ -277,6 +279,9 @@ function renderHud() {
   $('ab-shalev').disabled = !(game.abilities.shalev > 0);
   $('ab-shaked-n').textContent = game.abilities.shaked;
   $('ab-shaked').disabled = !(game.abilities.shaked > 0);
+  const total = game.level.waves.length;
+  $('left-mice').hidden = game.phase === 'plan' || total < 2;
+  $('left-n').textContent = '×' + miceLeft();
   const lior = game.mice.find((m) => m.type === 'lior');
   if (lior) {
     $('boss').hidden = false;
@@ -471,13 +476,18 @@ function handleEvents() {
         renderHud();
         break;
       case 'kill': {
-        audio.sfx.kill();
+        const lior = m && m.type === 'lior';
+        audio.sfx.kill(lior);
         scene.shake = 1;
-        navigator.vibrate?.([40, 40, 80]);
+        flash();
+        navigator.vibrate?.(lior ? [60, 40, 60, 40, 120] : [40, 30, 70]);
+        slowT = lior ? 0.8 : 0.35;
+        killStamp(lior);
         if (at) {
-          pop(at.x, at.y - 80, m && m.type === 'lior' ? 'חוסל!' : 'באומון חוסל!', 'big');
-          burstAt(at, 26, '#ffd23f', 8, 'star');
+          pop(at.x, at.y - 20, '✖', 'red big');
+          burstAt(at, lior ? 40 : 24, '#ffd23f', 8, 'star');
           burstAt(at, 16, '#9a9aa2', 6, 'fur');
+          burstAt(at, 12, '#e8392f', 5);
         }
         if (m && m.type === 'lior') { toast('אופק: ' + pick('ofekHappy'), '', 1600); }
         dropView(ev.id, true);
@@ -513,6 +523,26 @@ function handleEvents() {
       default:
     }
   }
+}
+
+function miceLeft() {
+  return game.spawnQueue.length + game.mice.filter((q) => q.alive || q.respawnIn > 0).length;
+}
+
+function killStamp(lior) {
+  const el = $('kill');
+  const left = miceLeft();
+  $('kill-img').src = lior ? 'img/lior_ko.webp' : 'img/minion_run.webp';
+  $('kill-img').classList.toggle('flat', !lior);
+  $('kill-title').textContent = lior ? 'ליאור באום חוסל!' : 'באומון חוסל!';
+  $('kill-sub').textContent = left > 0 ? `נשארו עוד ${left} ${left === 1 ? 'עכבר' : 'עכברים'}` : 'האתר נקי!';
+  el.classList.toggle('big', lior);
+  el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  for (const c of el.children) { c.style.animation = 'none'; void c.offsetWidth; c.style.animation = ''; }
+  killT = lior ? 1.7 : 1.1;
+  const chip = $('left-mice');
+  chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump');
 }
 
 function bumpPitas() {
@@ -724,6 +754,9 @@ function updateTicker(dt) {
 // ---------- end of a level ----------
 function finish() {
   audio.stopMusic();
+  $('kill').hidden = true;
+  killT = 0;
+  slowT = 0;
   clearViews();
   const won = game.phase === 'won';
   playing(false);
@@ -778,9 +811,13 @@ function resume() {
 // ---------- the loop ----------
 function frame(now) {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000 || 0);
+  const real = Math.min(0.05, (now - last) / 1000 || 0);
   last = now;
   if (!scene) return;
+  // slow motion for a moment after a kill, so you see it land
+  let dt = real;
+  if (slowT > 0 && !paused) { slowT -= real; dt = real * 0.3; }
+  if (killT > 0) { killT -= real; if (killT <= 0) $('kill').hidden = true; }
   if (game && !paused) {
     if (game.phase === 'action') {
       acc += dt;

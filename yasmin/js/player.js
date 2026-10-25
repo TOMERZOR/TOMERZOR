@@ -52,6 +52,32 @@ export class Player {
     scene.add(s); scene.add(s.target);
     this.flash = s;
     this.flashDir = new THREE.Vector3(0, 0, -1);
+    // dust floating in the air, visible only inside the flashlight beam
+    const N = quality === 'low' ? 220 : 500;
+    const pos = new Float32Array(N * 3), seed = new Float32Array(N);
+    for (let i = 0; i < N; i++) { pos[i * 3] = (Math.random() - 0.5) * 10; pos[i * 3 + 1] = Math.random() * 2.6; pos[i * 3 + 2] = (Math.random() - 0.5) * 10; seed[i] = Math.random() * 100; }
+    const dg = new THREE.BufferGeometry();
+    dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    dg.setAttribute('seed', new THREE.BufferAttribute(seed, 1));
+    this.dustU = { time: { value: 0 }, origin: { value: new THREE.Vector3() }, dir: { value: new THREE.Vector3(0, 0, -1) }, on: { value: 0 }, center: { value: new THREE.Vector3() } };
+    this.dust = new THREE.Points(dg, new THREE.ShaderMaterial({
+      uniforms: this.dustU, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      vertexShader: `attribute float seed; uniform float time; uniform vec3 origin, dir, center; uniform float on; varying float vA;
+        void main(){
+          vec3 p = position + vec3(sin(time * 0.2 + seed) * 0.4, sin(time * 0.13 + seed * 1.7) * 0.3, cos(time * 0.17 + seed) * 0.4);
+          // wrap around the camera so the dust always surrounds you
+          p.xz = center.xz + mod(p.xz - center.xz + 5.0, 10.0) - 5.0;
+          vec3 d = p - origin; float dist = length(d);
+          float c = dot(d / max(dist, 0.001), dir);
+          vA = on * smoothstep(0.88, 0.97, c) * smoothstep(9.0, 1.0, dist) * smoothstep(0.2, 0.6, dist);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mv;
+          gl_PointSize = (1.6 + fract(seed) * 2.2) * (300.0 / -mv.z) * 0.02;
+        }`,
+      fragmentShader: `varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float a = smoothstep(0.5, 0.0, length(c)) * vA; if (a < 0.01) discard; gl_FragColor = vec4(vec3(1.0, 0.95, 0.85) * a * 0.9, a); }`,
+    }));
+    this.dust.frustumCulled = false;
+    scene.add(this.dust);
     this.bindInput();
   }
 
@@ -84,6 +110,13 @@ export class Player {
     }
   }
 
+  gasp() {
+    this.breathOut = true;
+    this.audio.noise(0.7, { type: 'bandpass', f: 1000, q: 0.8, vol: 0.45, a: 0.01, verb: 0.1, f2: 500 });
+    this.audio.noise(0.5, { type: 'bandpass', f: 1500, q: 0.8, vol: 0.3, a: 0.05, verb: 0.1, f2: 700 });
+    this.noise = Math.max(this.noise, 6);
+  }
+
   setLight(on) {
     if (!this.hasLight) return;
     this.lightOn = on && this.battery > 0.01;
@@ -112,6 +145,15 @@ export class Player {
     }
     const len = Math.hypot(mx, mz);
     if (len > 1) { mx /= len; mz /= len; }
+    // holding your breath in a locker: Space (or the run button on a phone); the air runs out
+    this.breathOut = false;
+    const holdKey = this.hidden && (k.Space || this.touch.runLock || this.touch.run);
+    if (holdKey && this.stamina > 0.02 && this.staminaLock <= 0) {
+      if (!this.holdingBreath) this.audio.noise(0.25, { type: 'bandpass', f: 900, vol: 0.12, a: 0.03, verb: 0 });
+      this.holdingBreath = true; this.stamina -= dt / 7;
+      if (this.stamina <= 0.02) { this.stamina = 0; this.staminaLock = 2; this.holdingBreath = false; this.gasp(); }
+    } else if (this.holdingBreath) { this.holdingBreath = false; this.audio.noise(0.4, { type: 'bandpass', f: 1100, vol: 0.18, a: 0.02, verb: 0, f2: 600 }); }
+    if (!this.hidden) this.holdingBreath = false;
     const wantCrouch = this.enabled && !this.hidden && (k.KeyC || k.ControlLeft || this.touch.crouch);
     this.crouch += ((wantCrouch ? 1 : 0) - this.crouch) * Math.min(1, dt * 8);
     const wantRun = this.enabled && (k.ShiftLeft || k.ShiftRight || this.touch.run) && mz > 0.2 && !wantCrouch;
@@ -121,7 +163,7 @@ export class Player {
     if (this.slow) speed *= this.slow;
     // stamina
     if (this.running && len > 0.1) { this.stamina -= dt / 6; if (this.stamina <= 0) { this.stamina = 0; this.staminaLock = 1.6; } }
-    else { this.staminaLock -= dt; if (this.staminaLock <= 0) this.stamina = Math.min(1, this.stamina + dt / (this.moving > 0.1 ? 9 : 5)); }
+    else if (!this.holdingBreath) { this.staminaLock -= dt; if (this.staminaLock <= 0) this.stamina = Math.min(1, this.stamina + dt / (this.moving > 0.1 ? 9 : 5)); }
     // velocity with a little inertia
     const sy = Math.sin(this.yaw), cy = Math.cos(this.yaw);
     const tx = (mx * cy - mz * sy) * speed, tz = (-mx * sy - mz * cy) * speed;
@@ -189,6 +231,10 @@ export class Player {
     if (this.lightOn && this.battery < 0.2 && Math.sin(t * 37) * Math.sin(t * 5.3) > 0.6) li *= 0.15;
     if (this.flicker > 0) { this.flicker -= dt; if (Math.random() < 0.5) li *= 0.05; }
     s.intensity += (li - s.intensity) * Math.min(1, dt * 25);
+    const du = this.dustU;
+    du.time.value = t; du.origin.value.copy(s.position); du.dir.value.copy(this.flashDir); du.on.value = s.intensity / 34;
+    du.center.value.set(this.pos.x, 0, this.pos.z);
+    this.dust.position.set(0, 0, 0);
     this.noise *= Math.pow(0.02, dt);
   }
 

@@ -15,6 +15,31 @@ export const NIGHTS = [
   { title: 'הבריחה', text: 'יש לך ארבעה מפתחות.\nהיציאה בסוף המבוך — באותו מקום שבו רות נעלמה.\nהיא יודעת שאתה בא.\nהפעם היא לא תוותר.' },
 ];
 
+// Shown when the player has been stuck on an objective for a while.
+const HINTS = {
+  note: 'הפתק מונח על המיטה שלך, בפינה של חדר 1.',
+  light: 'הלוקר שלך בקיר המערבי של חדר 1.',
+  key1: 'המטבחון — הדלת השלישית במסדרון הצפוני. תבדוק במקרר.',
+  clip: 'המשרד של הרס״פ — במסדרון הצפוני, אחרי המטבחון. הטופס על השולחן.',
+  zalam: 'מחסן הצל״ם — הדלת באמצע המסדרון הצפוני. חפש את התוויות הלבנות על המדפים.',
+  tray: 'המגש על השולחן במשרד הרס״פ.',
+  fuses: 'נתיך במקלחות (על הכיור), נתיך בחדר 4 (על מיטה), ונתיך בתוך המבוך (בפינה בלי מוצא).',
+  power: 'חדר הגנרטור — מהמסדרון האמצעי. הלוח על הקיר הרחוק.',
+  lever: 'הידית הצהובה, ליד לוח החשמל.',
+  cctv: 'חדר המצלמות — במסדרון הצפוני, ליד הקצה המזרחי.',
+  iso: 'אגף הבידוד — הדלת עם השלט האדום במסדרון הדרומי.',
+  file: 'התיק הרפואי על השולחן בקצה האגף.',
+  key3: 'ארון התרופות הלבן באגף הבידוד.',
+  mop: 'המגב במקלחות, ליד הכיורים.',
+  clean: 'השלוליות האדומות: במסדרון הצפוני, בדרומי, ובשני המסדרונות האמצעיים.',
+  store: 'המחסן של יסמין — הדלת בקצה המזרחי של המסדרון הצפוני.',
+  key4: 'בדלי הגדול במחסן של יסמין.',
+  bed: 'המיטה שלך — בפינה של חדר 1.',
+  exit: 'הכניסה למבוך — הדלת עם "???" במסדרון הדרומי. אולי מישהי תראה לך את הדרך.',
+  gate: 'המנעול בצד של השער.',
+  run: 'צא מהשער!',
+};
+
 const OVER_LINES = [
   'יסמין שלחה אותך לנקות את כל הבסיס עם מברשת שיניים.',
   'עכשיו אתה בתורנות ניקיון. לנצח.',
@@ -375,7 +400,7 @@ export class Story {
   // ---------- objectives ----------
   setObjectives(list) { this.objs = list; this.refresh(); }
   obj(id) { return this.objs.find(o => o.id === id); }
-  done(id) { const o = this.obj(id); if (o && !o.done) { o.done = true; this.refresh(); this.g.audio.pickup(); } }
+  done(id) { const o = this.obj(id); if (o && !o.done) { o.done = true; this.refresh(); this.g.audio.pickup(); this.stuckT = 0; } }
   add(o) { if (!this.obj(o.id)) { this.objs.push(o); this.refresh(); } }
   refresh() { this.g.ui.objectives(`לילה ${this.night} · ${NIGHTS[this.night].title}`, this.objs); }
 
@@ -383,6 +408,7 @@ export class Story {
   start(n) {
     const g = this.g, W = g.world, Y = g.yasmin, P = g.player;
     this.night = n;
+    this.stuckT = 0;
     this.flags = {};
     this.events = [];
     this.timers = [];
@@ -446,7 +472,8 @@ export class Story {
     for (let i = 1; i <= 5; i++) { const tp = this.tapeMeshes[i]; tp.mesh.visible = tp.glint.visible = i === n; }
     const tp = this.tapeMeshes[n];
     const heard = loadTapes();
-    it({ label: heard.has(n) ? 'האזן שוב לקלטת של רות' : 'קח קלטת', pos: () => tp.mesh.position, range: 1.8, enabled: () => tp.mesh.visible,
+    const tapeRoom = [null, null, 'E', 'I', 'J', null][n];
+    it({ label: heard.has(n) ? 'האזן שוב לקלטת של רות' : 'קח קלטת', pos: () => tp.mesh.position, range: 1.8, enabled: () => tp.mesh.visible && (!tapeRoom || !locks[tapeRoom]),
       use: () => { tp.mesh.visible = tp.glint.visible = false; g.playTape(n); } });
     it({ label: 'קרא מודעה', pos: () => this.posterPos, range: 2.2, use: () => { this.read('missing'); this.discover('ruth'); } });
     it({ label: 'הסתכל על הנעליים', pos: () => v3(60.85, 0.15, 2.75), range: 1.7, enabled: () => !locks.J, use: () => { this.read('boots'); this.discover('ruth'); } });
@@ -502,7 +529,7 @@ export class Story {
         this.obj('zalam').hidden = false; this.refresh();
         W.openDoor('E'); g.audio.play('sfx_locker', { pos: v3(33, 1, 13), rate: 0.6, volume: 1.4 });
         g.ui.toast('מחסן הצל״ם נפתח');
-        Y.noiseAt(33, 13, 40);
+        Y.noiseAt(33, 13, 14);
       } });
       for (const z of this.zalamItems) {
         z.glint.visible = true;
@@ -590,8 +617,11 @@ export class Story {
       ];
       it({ label: 'פתח את דלת היציאה (4 מפתחות)', pos: () => v3(35, 1.1, 43.8), range: 2.0, hold: 2.2, enabled: () => locks.X,
         onHold: () => { if (Math.random() < 0.08) g.audio.keys(); },
-        use: () => { W.openDoor('X'); g.audio.play('sfx_door', { pos: v3(35, 1, 45), volume: 1.4 }); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); this.finale(); } });
-      it({ label: 'פתח את המנעול בשער (החזק)', pos: () => v3(37.4, 1.1, 64.3), range: 2.4, hold: 4.5, enabled: () => !locks.X && gateClosed.v,
+        use: () => {
+          W.openDoor('X'); g.audio.play('sfx_door', { pos: v3(35, 1, 45), volume: 1.4 }); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); this.finale();
+          g.checkpoint = { night: 5, apply: () => { W.openDoor('X'); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); P.pos.set(35, 0, 46.5); P.yaw = Math.PI; this.mazeGuide = -1; this.finale(); } };
+        } });
+      it({ label: 'פתח את המנעול בשער (החזק)', pos: () => v3(37.4, 1.1, 64.3), range: 2.4, hold: 4.0, enabled: () => !locks.X && gateClosed.v,
         onHold: () => { if (Math.random() < 0.05) g.audio.keys(); if (Math.random() < 0.03) g.audio.play('sfx_gate', { pos: v3(37, 1, 65), volume: 0.6, sub: false }); },
         use: () => { gateClosed.v = false; W.gate.target = 1; g.audio.play('sfx_gate', { pos: v3(36, 1, 65), volume: 1.5 }); g.audio.grind(4.5); this.done('gate'); this.obj('run').hidden = false; this.refresh(); } });
       this.when(() => P.pos.z > 67, () => g.escape());
@@ -693,12 +723,17 @@ export class Story {
     this.after(30, () => inE.forEach(f => f.on = true));
   }
 
-  powerOn() {
+  powerOn(silent = false) {
     const g = this.g, W = g.world;
     this.done('lever');
-    g.audio.lever();
-    g.audio.play('sfx_power', { volume: 1.3 });
-    g.audio.grind(1.5);
+    if (!silent) { g.audio.lever(); g.audio.play('sfx_power', { volume: 1.3 }); g.audio.grind(1.5); }
+    // checkpoint: getting caught after this point restarts here
+    g.checkpoint = { night: 3, apply: () => {
+      for (const f of ['fuse1', 'fuse2', 'fuse3']) { const p = this.items[f]; p.taken = true; p.mesh.visible = p.glint.visible = false; }
+      const o = this.obj('fuses'); o.have = 3; o.done = true; this.obj('power').hidden = false; this.obj('power').done = true; this.obj('lever').hidden = false;
+      g.player.pos.set(62.5, 0, 17.4); g.player.yaw = Math.PI / 2;
+      this.powerOn(true);
+    } };
     // lights return in a wave, closest first
     W.power = true;
     const P = g.player.pos;
@@ -713,8 +748,8 @@ export class Story {
       const p = this.items.key3; p.taken = true; p.mesh.visible = p.glint.visible = false;
       this.flags.key3 = true; g.audio.keys(); g.audio.pickup(); g.ui.toast('מפתח שער 3/4'); this.done('key3');
       this.flags.canSleep = true; this.obj('bed').hidden = false; this.refresh();
-      // she waits for you in the wing's corridor
-      this.after(1.5, () => { if (g.yasmin.state !== 'chase') { g.yasmin.spawn(47, 31, 'patrol', Math.PI / 2); g.yasmin.goTo(60, 31); } });
+      // she looks in from the wing's door, then goes back to her rounds
+      this.after(1.5, () => { if (g.yasmin.state !== 'chase') { this.peek(57, 27.4, 0, 3, 'y_hear'); this.after(4, () => { if (!g.yasmin.visible) g.yasmin.spawn(6, 27, 'patrol', Math.PI / 2); }); } });
     };
     this.inter.push({ label: 'פתח את הארון וקח מפתח', pos: () => this.items.key3.mesh.position, range: 1.8, enabled: () => this.items.key3.mesh.visible, use: take });
   }
@@ -785,6 +820,13 @@ export class Story {
     for (let i = this.events.length - 1; i >= 0; i--) {
       const e = this.events[i];
       if (e.test()) { this.events.splice(i, 1); e.fn(); }
+    }
+    // gentle hints when stuck
+    this.stuckT += dt;
+    if (this.stuckT > 150) {
+      this.stuckT = 0;
+      const o = this.objs.find(o => !o.done && !o.hidden && HINTS[o.id]);
+      if (o) { g.ui.sub('רמז: ' + HINTS[o.id], 7); g.audio.click(); }
     }
     // Ruth's ghost; on the last night she shows the way through the maze
     this.ghost.update(dt, t, g.player.cam);

@@ -359,6 +359,7 @@ export class World {
   }
 
   updateLights(dt, t, pp, yasmin) {
+    if (this.blackoutT > 0) this.blackoutT -= dt;
     // fixture emissive and visibility
     const cand = [];
     this.tubes.instanceColor.needsUpdate = true;
@@ -368,7 +369,7 @@ export class World {
         const d = Math.hypot(f.x - yasmin.position.x, f.z - yasmin.position.z);
         if (d < 7) threat = (1 - d / 7) * (yasmin.userData.aggro || 0.5);
       }
-      const lv = this.power ? this.fixtureLevel(f, t, threat) : 0;
+      const lv = this.power && !(this.blackoutT > 0) ? this.fixtureLevel(f, t, threat) : 0;
       f.level = lv;
       const b = 0.06 + lv * 4.2;
       if (this.alarm > 0) this._tc.setRGB(b, b * 0.68, b * 0.62); else this._tc.setRGB(b * 0.92, b * 0.97, b);
@@ -583,6 +584,10 @@ export class World {
       b.add(new THREE.CylinderGeometry(0.09, 0.09, 0.5, 12), M.red, x, 0.85, z, 0, 1, 1, 1);
       b.add(box, M.darkMetal, x, 1.15, z, 0, 0.08, 0.1, 0.08);
     }
+    // hiding places in the dead-end rooms
+    this.lockerRow(37, 14.32, 2, 'z+', true);          // equipment store, north wall
+    this.lockerRow(60.32, 39.5, 2, 'x+', true);        // isolation wing office, west wall
+    this.lockerRow(48.32, 21.4, 1, 'x+', true);        // generator room
     // a bench in the north corridor
     b.add(box, M.wood, 48, 0.45, 10.35, 0, 1.6, 0.06, 0.4);
     for (const dx of [-0.7, 0.7]) b.add(box, M.metal, 48 + dx, 0.22, 10.35, 0, 0.05, 0.44, 0.35);
@@ -593,7 +598,55 @@ export class World {
     b.add(box, M.cardboard, 27.0, 0.85, 30.8, 0.1, 0.5, 0.5, 0.5);
     this.chair(b, 37.2, 42.6, 2.2);
 
+    this.details(b);
     b.build(this.root);
+  }
+
+  // Pipes and a cable tray under the corridor ceilings, open door leaves, switches and boxes by the doors.
+  details(b) {
+    const M = this.M, box = this.box;
+    const pipe = new THREE.CylinderGeometry(0.045, 0.045, CELL, 8); pipe.rotateZ(Math.PI / 2);
+    const thin = new THREE.CylinderGeometry(0.025, 0.025, CELL, 6); thin.rotateZ(Math.PI / 2);
+    for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+      if (ch(x, z) !== '.') continue;
+      const cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL;
+      const horiz = !walkable(x, z - 1) && !walkable(x, z + 1);
+      const vert = !walkable(x - 1, z) && !walkable(x + 1, z);
+      if (horiz) {
+        b.add(pipe, M.darkMetal, cx, H - 0.14, z * CELL + 0.16, 0);
+        b.add(thin, M.post, cx, H - 0.3, z * CELL + 0.12, 0);
+        b.add(box, M.metal, cx, H - 0.1, (z + 1) * CELL - 0.25, 0, CELL, 0.03, 0.3);          // cable tray
+        if (x % 2 === 0) b.add(box, M.darkMetal, cx, H - 0.06, z * CELL + 0.16, 0, 0.04, 0.12, 0.04); // clamp
+      } else if (vert) {
+        b.add(pipe, M.darkMetal, x * CELL + 0.16, H - 0.14, cz, Math.PI / 2);
+        b.add(thin, M.post, x * CELL + 0.12, H - 0.3, cz, Math.PI / 2);
+        b.add(box, M.metal, (x + 1) * CELL - 0.25, H - 0.1, cz, 0, 0.3, 0.03, CELL);
+      }
+    }
+    // open door leaves and switches at the ordinary doorways
+    for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+      if (ch(x, z) !== '+') continue;
+      const cx = (x + 0.5) * CELL, cz = (z + 0.5) * CELL;
+      const alongZ = solidC(ch(x - 1, z)) && solidC(ch(x + 1, z));
+      if (alongZ) {
+        // which side is the room?
+        const roomS = !'.+'.includes(ch(x, z + 1)) ? 1 : -1;
+        const fz = roomS > 0 ? (z + 1) * CELL : z * CELL; // the room-side face of the wall
+        b.add(box, M.metal, cx - 0.575 - 0.03, 1.07, fz + roomS * 0.56, 0, 0.04, 2.1, 1.08, 0, 0);
+        this.addBox(cx - 0.63, cx - 0.57, Math.min(fz, fz + roomS * 1.1), Math.max(fz, fz + roomS * 1.1));
+        // light switch on the corridor side
+        const cside = roomS > 0 ? z * CELL - 0.012 : (z + 1) * CELL + 0.012;
+        b.add(box, M.white, cx + 0.85, 1.25, cside, 0, 0.08, 0.12, 0.02);
+        b.add(box, M.darkMetal, cx - 0.95, 2.3, cside, 0, 0.3, 0.22, 0.06);
+      } else {
+        const roomE = !'.+'.includes(ch(x + 1, z)) ? 1 : -1;
+        const fx = roomE > 0 ? (x + 1) * CELL : x * CELL;
+        b.add(box, M.metal, fx + roomE * 0.56, 1.07, cz - 0.575 - 0.03, 0, 1.08, 2.1, 0.04);
+        this.addBox(Math.min(fx, fx + roomE * 1.1), Math.max(fx, fx + roomE * 1.1), cz - 0.63, cz - 0.57);
+        const cside = roomE > 0 ? x * CELL - 0.012 : (x + 1) * CELL + 0.012;
+        b.add(box, M.white, cside, 1.25, cz + 0.85, 0, 0.02, 0.12, 0.08);
+      }
+    }
   }
 
   bunk(b, x, z, rot, long = false) {
@@ -631,6 +684,7 @@ export class World {
       if (dir === 'x+') { pz = z + i * w; ry = Math.PI / 2; px = x + d / 2 - 0.32; }
       if (dir === 'x-') { pz = z + i * w; ry = -Math.PI / 2; px = x - d / 2 + 0.32; }
       if (dir === 'z-') { px = x + i * w; ry = Math.PI; pz = z - d / 2 + 0.32; }
+      if (dir === 'z+') { px = x + i * w; ry = 0; pz = z + d / 2 - 0.32; }
       const g = new THREE.Group();
       g.position.set(px, 0, pz); g.rotation.y = ry;
       const body = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, h, d), M.metal);
@@ -643,7 +697,8 @@ export class World {
       const L = { group: g, hinge, open: 0, target: 0, x: px, z: pz, fwd, hide: hideAll || i % 2 === 1, ry };
       this.lockers.push(L);
       this.dynamic.push({ update: (dt) => { L.open += (L.target - L.open) * Math.min(1, dt * 7); L.hinge.rotation.y = -L.open * 1.9; } });
-      const hw = (dir === 'z-' ? w : d) / 2, hd = (dir === 'z-' ? d : w) / 2;
+      const zd = dir === 'z-' || dir === 'z+';
+      const hw = (zd ? w : d) / 2, hd = (zd ? d : w) / 2;
       this.addBox(px - hw, px + hw, pz - hd, pz + hd, true);
     }
   }

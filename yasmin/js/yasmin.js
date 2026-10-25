@@ -266,6 +266,8 @@ export class Yasmin {
       }
       case 'chase': {
         move = this.runSpeed * (this.night === 5 && game && game.finale ? 1.05 : 1);
+        // the moment she spots you she freezes and stares for a beat before she runs
+        if (this.windup > 0) { this.windup -= dt; move = 0; this.faceTo(pp.x, pp.z, dt * 10); if (this.windup <= 0) this.play('run', 0.15); }
         if (see > 0) { this.lastSeen.set(pp.x, 0, pp.z); this.lostT = 0; }
         else this.lostT += dt;
         if (player.hidden) {
@@ -358,7 +360,7 @@ export class Yasmin {
     if (this.curName === 'walk') this.cur.timeScale = Math.max(0.3, this.speed / 1.25);
     if (this.curName === 'run') this.cur.timeScale = Math.max(0.5, this.speed / 4.0);
     if (this.speed < 0.2 && (this.curName === 'walk' || this.curName === 'run') && this.state !== 'chase') this.play('idle', 0.4);
-    if (this.speed > 0.4 && this.curName === 'idle' && this.state !== 'scripted') this.play(this.state === 'chase' ? 'run' : 'walk', 0.3);
+    if (this.speed > 0.4 && this.curName === 'idle' && this.state !== 'scripted' && !(this.windup > 0)) this.play(this.state === 'chase' ? 'run' : 'walk', 0.3);
     this.mixer.update(dt);
 
     // footsteps, the squeaky bucket, wet prints
@@ -460,6 +462,8 @@ export class Yasmin {
     this.setState('chase');
     this.awareness = 1; this.lostT = 0; this.sawHide = null;
     this.lastSeen.set(player.pos.x, 0, player.pos.z);
+    this.windup = game && game.finale ? 0 : 0.65;
+    if (this.windup) this.play('idle', 0.1);
     this.speak(Math.random() < 0.6 ? 'y_spot' : 'y_chase', { force: true, cd: 6 });
     if (this.onSpot) this.onSpot();
   }

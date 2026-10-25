@@ -9,15 +9,47 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta property="og:title" content="5 לילות אצל יסמין">
-<meta property="og:description" content="היא שומעת הכל. אל תרוץ על הרטוב.">
-<meta property="og:image" content="img/keyart.jpg">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="5 לילות אצל יסמין">
+<meta property="og:locale" content="he_IL">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/yasmin/">
+<meta property="og:title" content="5 לילות אצל יסמין · משחק אימה">
+<meta property="og:description" content="נשארת לבד בבסיס לסופ״ש. יסמין, תורנית הניקיון, מסתובבת במסדרונות עם דלי ומגב. חמישה לילות. ארבעה מפתחות. היא שומעת הכל.">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/yasmin/img/og.jpg?v=1">
+<meta property="og:image:secure_url" content="https://tomerzor.github.io/TOMERZOR/yasmin/img/og.jpg?v=1">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="יסמין עם מגב ודלי בקצה מסדרון חשוך">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="5 לילות אצל יסמין · משחק אימה">
+<meta name="twitter:description" content="היא שומעת הכל. אל תרוץ על הרטוב.">
+<meta name="twitter:image" content="https://tomerzor.github.io/TOMERZOR/yasmin/img/og.jpg?v=1">
+<link rel="icon" href="img/icon.png" type="image/png">
+<link rel="apple-touch-icon" href="img/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Karantina:wght@400;700&family=Amatic+SC:wght@700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=2">
 <script type="importmap">
-{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/addons/" } }
+{
+ "imports": {
+  "three": "./vendor/three.module.min.js",
+  "three/addons/": "./vendor/addons/",
+  "./js/audio.js": "./js/audio.js?v=2",
+  "./js/main.js": "./js/main.js?v=2",
+  "./js/map.js": "./js/map.js?v=2",
+  "./js/mechanics.js": "./js/mechanics.js?v=2",
+  "./js/player.js": "./js/player.js?v=2",
+  "./js/post.js": "./js/post.js?v=2",
+  "./js/ruth.js": "./js/ruth.js?v=2",
+  "./js/story.js": "./js/story.js?v=2",
+  "./js/textures.js": "./js/textures.js?v=2",
+  "./js/ui.js": "./js/ui.js?v=2",
+  "./js/world.js": "./js/world.js?v=2",
+  "./js/yasmin.js": "./js/yasmin.js?v=2"
+ }
+}
 </script>
 </head>
 <body>
@@ -50,6 +82,7 @@
         <button id="btn-settings" class="btn">הגדרות</button>
       </div>
       <div id="nights" class="nights hidden"></div>
+      <p id="menu-stats" class="stats"></p>
     </div>
   </section>
 
@@ -66,7 +99,9 @@
             <li><b>C / Ctrl</b> — התכופפות (שקט יותר)</li>
             <li><b>E</b> — פעולה / להתחבא בארון</li>
             <li><b>F</b> — פנס</li>
-            <li><b>Tab</b> — משימות</li>
+            <li><b>G</b> / קליק ימני — זריקת בקבוק (מסיח אותה)</li>
+            <li><b>J</b> — יומן וקלטות</li>
+            <li><b>Tab</b> — הסתרת משימות</li>
             <li><b>Esc</b> — עצירה</li>
           </ul>
         </div>
@@ -84,6 +119,9 @@
             <li>אם היא רדפה אחריך — תשבור קו ראייה ותתחבא בארון.</li>
             <li>אם היא ראתה אותך נכנס לארון... בהצלחה.</li>
             <li>עקבות רטובות על הרצפה = היא הייתה פה לא מזמן.</li>
+            <li>שלט צהוב = רצפה רטובה. ריצה עליה נשמעת בכל הבסיס.</li>
+            <li>בקבוק שנזרק רחוק מושך אותה לשם.</li>
+            <li>יש בבסיס חמש קלטות של רות. תמצא את כולן.</li>
           </ul>
         </div>
       </div>
@@ -98,6 +136,9 @@
       <label>עוצמת קול <input id="set-vol" type="range" min="0" max="1" step="0.05" value="0.9"></label>
       <label>מוזיקה <input id="set-music" type="range" min="0" max="1" step="0.05" value="0.8"></label>
       <label>בהירות <input id="set-bright" type="range" min="0.6" max="1.8" step="0.05" value="1"></label>
+      <label>רמת קושי
+        <select id="set-difficulty"><option value="easy">קל — היא איטית יותר</option><option value="normal">רגיל</option><option value="hard">קשה — היא לא מוותרת</option></select>
+      </label>
       <label>איכות גרפיקה
         <select id="set-quality"><option value="auto">אוטומטי</option><option value="high">גבוהה</option><option value="low">נמוכה (טלפון)</option></select>
       </label>
@@ -123,6 +164,8 @@
     <div id="prompt"></div>
     <div id="subs"></div>
     <div id="toast"></div>
+    <div id="tape" class="hidden"><span>▶</span> <b id="tape-t"></b><i><em id="tape-bar"></em></i></div>
+    <div id="bottles"></div>
     <div id="meters">
       <div class="meter"><span>אוויר</span><b><i id="stamina"></i></b></div>
       <div class="meter" id="battery-m"><span>סוללה</span><b><i id="battery"></i></b></div>
@@ -140,6 +183,7 @@
       <ul id="pause-obj"></ul>
       <div class="col">
         <button id="btn-resume" class="btn big">המשך</button>
+        <button id="btn-journal" class="btn">יומן וקלטות</button>
         <button id="btn-restart" class="btn">התחל את הלילה מחדש</button>
         <button id="btn-pset" class="btn">הגדרות</button>
         <button id="btn-quit" class="btn">לתפריט</button>
@@ -175,10 +219,11 @@
       <button id="t-run">ריצה</button>
       <button id="t-crouch">כופף</button>
       <button id="t-light">פנס</button>
+      <button id="t-throw">זרוק</button>
       <button id="t-pause">||</button>
     </div>
   </div>
 </div>
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
 // Sound: recorded voice lines and effects, plus everything synthesized live with WebAudio:
 // the corridor drone, fluorescent hum, drips, heartbeat, breathing, footsteps, stingers and the chase score.
 const FILES = ['y_where', 'y_misdar', 'y_hear', 'y_spot', 'y_chase', 'y_lost', 'y_caught', 'y_intro', 'y_locker', 'y_hum',
-  'n_laugh', 'n_whisper', 'n_cry', 'n_count', 'sfx_scream', 'sfx_bucket', 'sfx_mop', 'sfx_gate', 'sfx_door', 'sfx_distant', 'sfx_locker', 'sfx_power'];
+  'n_laugh', 'n_whisper', 'n_cry', 'n_count', 'sfx_scream', 'sfx_bucket', 'sfx_mop', 'sfx_gate', 'sfx_door', 'sfx_distant', 'sfx_locker', 'sfx_power',
+  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle'];
 
 export const SUBS = {
   y_where: 'יסמין: איפה אתה... הרצפה עוד רטובה...',
@@ -18,6 +19,12 @@ export const SUBS = {
   n_whisper: 'נבו: היא באה... שמעת את הדלי? שמעת את הגלגלים?',
   n_cry: 'נבו: תוציאו אותי מפה... אני לא רוצה לראות מגב יותר בחיים...',
   n_count: 'נבו: ארבעים ושבעה מסדרים... ארבעים ושמונה... ארבעים ותשע...',
+  n_ruth: 'נבו: רות... רות הייתה פה. היא אמרה שהיא תחזור בשבילי. היא לא חזרה.',
+  y_pa2: 'רמקול: הודעה לכל החיילים. כלומר... לחייל. דוח צל״ם עד הבוקר. מי שלא מגיש — נשאר.',
+  y_pa3: 'רמקול: מישהו השאיר אור דולק... אז כיביתי הכל.',
+  y_pa5: 'רמקול: שמעתי שאתה רוצה הביתה... גם רות רצתה.',
+  y_ruth: 'יסמין: גם רות חשבה שהיא תצליח!',
+  y_sing: 'יסמין (שרה): נקי, נקי, הכל נקי... מי שמלכלך — הולך לישון...',
 };
 
 export class Audio {
@@ -30,14 +37,14 @@ export class Audio {
     this.fear = 0; this.chase = 0; this.dread = 0;
   }
 
-  async load(base, progress) {
+  async load(base, ver = '0', progress) {
     // decode with a temporary context; buffers are reusable across contexts
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AC();
     let done = 0;
     await Promise.all(FILES.map(async n => {
       try {
-        const r = await fetch(`${base}${n}.mp3`);
+        const r = await fetch(`${base}${n}.mp3?v=${ver}`);
         const ab = await r.arrayBuffer();
         this.buffers[n] = await new Promise((res, rej) => this.ctx.decodeAudioData(ab, res, rej));
       } catch (e) { console.warn('audio', n, e); }

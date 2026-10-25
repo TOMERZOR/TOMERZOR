@@ -112,6 +112,7 @@ export class UI {
     btn('t-run', b => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); actions.setRun(on); });
     btn('t-crouch', b => { const on = !b.classList.contains('on'); b.classList.toggle('on', on); player.touch.crouch = on; });
     btn('t-light', () => actions.light());
+    btn('t-throw', () => actions.throw());
     btn('t-pause', () => actions.pause());
   }
 }

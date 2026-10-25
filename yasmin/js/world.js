@@ -542,7 +542,7 @@ export class World {
     b.add(box, M.yellow, Gr.X1 - 0.12, 1.3, Gr.Z0 + 3.4, 0, 0.18, 0.6, 0.35);
 
     // Isolation wing: medical desk + cabinet
-    const I = { X0: 62, X1: 70, Z0: 30, Z1: 44 }; this.bounds.I = I;
+    const I = { X0: 60, X1: 68, Z0: 30, Z1: 44 }; this.bounds.I = I;
     this.desk(b, I.X0 + 4, I.Z1 - 0.9, Math.PI);
     b.add(box, M.white, I.X1 - 0.35, 1.0, I.Z0 + 4.5, 0, 0.6, 2.0, 1.2);
     this.addBox(I.X1 - 0.7, I.X1, I.Z0 + 3.9, I.Z0 + 5.1);
@@ -821,10 +821,10 @@ export class World {
     };
     scrawl('נקי. נקי. נקי. נקי.', 63, 1.5, 2.02, 0, 3);
     scrawl('אל תרוץ על הרטוב', 69.98, 1.4, 20, -Math.PI / 2, 2.4);
-    scrawl('היא שומעת', 26.02, 1.3, 36, Math.PI / 2, 1.8);
+    scrawl('היא שומעת', 26.02, 1.3, 34, Math.PI / 2, 1.8);
     scrawl('47', 49.02, 1.6, 22, Math.PI / 2, 1.2, { size: 200 });
     scrawl('עוד מסדר', 41.98, 1.2, 38, -Math.PI / 2, 2.0);
-    scrawl('תברח', 36.02, 1.5, 47, Math.PI / 2, 1.2, { color: 'rgba(20,20,20,0.85)' });
+    scrawl('תברח', 32.02, 1.5, 47, Math.PI / 2, 1.2, { color: 'rgba(20,20,20,0.85)' });
   }
 
   // Floor decals: blood, puddles and wet footprints.

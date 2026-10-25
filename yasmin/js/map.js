@@ -25,13 +25,13 @@ export const MAP = [
   '#.########.###########.###########.#',
   '#..................................#',
   '###+#####+#######+##########I######',
-  '#ddddd#ddddd#mmm#mmmm#iiiiiiiiiiii#',
-  '#ddddd#ddddd#m#m#m##m#i#WWWWW#iiii#',
-  '#ddddd#ddddd#m#mmm#mm#i#nnnnn#iiii#',
-  '#ddddd#ddddd#m###m#m##i#nnnnn#iiii#',
+  '#ddddd#ddddd#mmmmm#mm#iiiiiiiiiiii#',
+  '#ddddd#ddddd#m#####m##i#WWWWW#iiii#',
   '#ddddd#ddddd#mmm#mmmm#i#nnnnn#iiii#',
-  '#ddddd#ddddd###m##m#m#i#nnnnn#iiii#',
-  '#ddddd#ddddd#mmmmmm#m#iiiiiiiiiiii#',
+  '#ddddd#ddddd###m#m##m#i#nnnnn#iiii#',
+  '#ddddd#ddddd#mmmmmm#m#i#nnnnn#iiii#',
+  '#ddddd#ddddd#m####m#m#i#nnnnn#iiii#',
+  '#ddddd#ddddd#mmm#mmmm#iiiiiiiiiiii#',
   '#################X##################',
   '################xxx#################',
   '################xxx#################',
@@ -113,35 +113,59 @@ export function lineOfSight(ax, az, bx, bz, solid = opaque) {
   return true;
 }
 
-// A* over walkable cells, 8-way without cutting corners.
+// A* over walkable cells, 8-way without cutting corners. Binary heap open set.
+const gScore = new Float32Array(W * D), came = new Int32Array(W * D), stamp = new Int32Array(W * D), closed = new Int32Array(W * D);
+let run = 0;
 export function findPath(sx, sz, tx, tz, canWalk = walkable) {
   if (!canWalk(tx, tz)) return null;
-  const key = (x, z) => z * W + x;
-  const open = new Map(), came = new Map(), g = new Map();
-  const h = (x, z) => Math.hypot(x - tx, z - tz);
-  const start = key(sx, sz);
-  g.set(start, 0); open.set(start, h(sx, sz));
+  run++;
+  const heap = [], fs = [];
+  const push = (k, f) => {
+    let i = heap.length; heap.push(k); fs.push(f);
+    while (i > 0) { const p = (i - 1) >> 1; if (fs[p] <= f) break; heap[i] = heap[p]; fs[i] = fs[p]; i = p; }
+    heap[i] = k; fs[i] = f;
+  };
+  const pop = () => {
+    const top = heap[0], lk = heap.pop(), lf = fs.pop();
+    if (heap.length) {
+      let i = 0; const n = heap.length;
+      for (;;) {
+        let c = 2 * i + 1; if (c >= n) break;
+        if (c + 1 < n && fs[c + 1] < fs[c]) c++;
+        if (fs[c] >= lf) break;
+        heap[i] = heap[c]; fs[i] = fs[c]; i = c;
+      }
+      heap[i] = lk; fs[i] = lf;
+    }
+    return top;
+  };
+  const h = (x, z) => { const dx = Math.abs(x - tx), dz = Math.abs(z - tz); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  const start = sz * W + sx;
+  stamp[start] = run; gScore[start] = 0; came[start] = -1;
+  push(start, h(sx, sz));
   let guard = 0;
-  while (open.size && guard++ < 4000) {
-    let cur = -1, best = Infinity;
-    for (const [k, f] of open) if (f < best) { best = f; cur = k; }
-    open.delete(cur);
+  while (heap.length && guard++ < 6000) {
+    const cur = pop();
+    if (closed[cur] === run) continue;
+    closed[cur] = run;
     const cx = cur % W, cz = (cur / W) | 0;
     if (cx === tx && cz === tz) {
-      const path = [[cx, cz]];
-      let k = cur;
-      while (came.has(k)) { k = came.get(k); path.push([k % W, (k / W) | 0]); }
+      const path = [];
+      for (let k = cur; k !== -1; k = came[k]) path.push([k % W, (k / W) | 0]);
       return path.reverse();
     }
+    const gc = gScore[cur];
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
       if (!dx && !dz) continue;
       const nx = cx + dx, nz = cz + dz;
       if (!canWalk(nx, nz)) continue;
       if (dx && dz && (!canWalk(cx + dx, cz) || !canWalk(cx, cz + dz))) continue;
-      const nk = key(nx, nz);
-      const ng = g.get(cur) + (dx && dz ? 1.414 : 1);
-      if (ng < (g.get(nk) ?? Infinity)) {
-        g.set(nk, ng); came.set(nk, cur); open.set(nk, ng + h(nx, nz));
+      const nk = nz * W + nx;
+      if (closed[nk] === run) continue;
+      const ng = gc + (dx && dz ? 1.414 : 1);
+      if (stamp[nk] !== run || ng < gScore[nk]) {
+        stamp[nk] = run; gScore[nk] = ng; came[nk] = cur;
+        push(nk, ng + h(nx, nz));
       }
     }
   }

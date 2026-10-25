@@ -2,16 +2,17 @@
 import * as THREE from 'three';
 import { locks, gateClosed, roomAt, toCell, lineOfSight, opaque } from './map.js';
 import * as T from './textures.js';
+import { TAPE_SPOTS, MAZE_GUIDE, tapeMesh, Ghost, missingPosterTex, loadTapes } from './ruth.js';
 
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
 export const NIGHTS = [
   null,
-  { title: 'הלילה הראשון', text: 'יום חמישי, 23:57.\nכולם יצאו הביתה לסופ״ש. רק אתה נשארת בבסיס.\nאתה ו... תורנית הניקיון.\nהמפתחות של השער אצלה.' },
-  { title: 'דוח צל״ם', text: 'שרדת לילה אחד.\nבבוקר מצאת על המיטה פתק: "בלי דוח צל״ם — אין יציאה הביתה".\nהחתימה: יסמין, ממלאת מקום רס״פ.' },
-  { title: 'הפסקת חשמל', text: 'מישהו הוציא את הנתיכים מלוח החשמל.\nבחושך שומעים רק את הגלגלים של הדלי.\nומישהו... צוחק באגף הבידוד.' },
-  { title: 'מסדר ניקיון', text: '"מסדר ניקיון! כל המסדרון מבריק עד ארבע!"\nהקול מגיע מהרמקולים.\nהיא בטוחה שאתה כבר בתורנות.' },
-  { title: 'הבריחה', text: 'יש לך ארבעה מפתחות.\nהשער בסוף המבוך.\nהיא יודעת.' },
+  { title: 'הלילה הראשון', text: 'יום חמישי, 23:57.\nכולם יצאו הביתה לסופ״ש. רק אתה נשארת לשמור על הבסיס.\nאתה ו... יסמין, תורנית הניקיון.\nהמפתחות של השער אצלה.\nעל הקיר במסדרון תלויה מודעה ישנה: "נעדרת — רות".' },
+  { title: 'דוח צל״ם', text: 'שרדת לילה אחד.\nבבוקר מצאת על המיטה פתק: "בלי דוח צל״ם — אין יציאה הביתה."\nהחתימה: יסמין, ממלאת מקום רס״פ.\nבלילה שמעת מישהי בוכה בתוך הקירות. זה לא היה הקול של יסמין.' },
+  { title: 'הפסקת חשמל', text: 'מישהו הוציא את הנתיכים מלוח החשמל.\nבחושך שומעים רק את הגלגלים של הדלי.\nבאגף הבידוד מישהו צוחק, ומישהו סופר.\nרות הייתה שם לפניך. היא השאירה קלטת.' },
+  { title: 'מסדר ניקיון', text: '"מסדר ניקיון! כל המסדרון מבריק עד ארבע!"\nהקול מגיע מהרמקולים.\nהיא בטוחה שאתה כבר בתורנות.\nהמפתח האחרון אצלה. בדלי.' },
+  { title: 'הבריחה', text: 'יש לך ארבעה מפתחות.\nהיציאה בסוף המבוך — באותו מקום שבו רות נעלמה.\nהיא יודעת שאתה בא.\nהפעם היא לא תוותר.' },
 ];
 
 const OVER_LINES = [
@@ -66,8 +67,18 @@ const NOTES = {
 יום 30: נבו סיים 47 מסדרים. עדיין לא מבריק.
 יום 31: רועי שפך סקווש. ניקיתי אותו.
 יום 33: מאיה לא סידרה מיטה. ניקיתי גם אותה.
+יום 35: רות ניסתה לברוח דרך המבוך. ניקיתי גם אותה.
 יום 40: יש חדש. הוא הולך עם נעליים על הרטוב.
 <span class="blood">הלילה אני מנקה אותו.</span>`,
+  missing: `<h3>מודעה על הקיר</h3><img src="img/ruth_photo.jpg" alt="">
+<b>נעדרת: רות ל.</b>
+נראתה לאחרונה במשמרת לילה, ליד המבוך, לפני שלושה חודשים.
+ממישהו שראה אותה בלילה ההוא נשאר רק פתק: "היא הלכה יחפה".
+<span class="blood">מי שראה — שלא יחפש.</span>`,
+  boots: `<h3>נעליים צבאיות</h3>זוג נעליים, מסודרות בקפידה.
+בפנים, בעט: <b>רות ל.</b>
+הן נקיות. נקיות מדי.
+<span class="blood">על הסוליה מישהו כתב בטוש: "לכלכה".</span>`,
   board: `<h3>הלוח של יסמין</h3><img src="img/photo_yasmin.jpg" alt="">
 מתחת לתמונה, בטוש אדום:
 <span class="blood">"עובדת החודש. כל חודש."</span>`,
@@ -173,7 +184,7 @@ export class Story {
     this.paperMaya = this.notePaper(B.X1 - 1.9, 0.52, B.Z0 + 1.25, -0.4);
     this.paperFuse = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.28), new THREE.MeshStandardMaterial({ map: T.paperTex(), roughness: 0.85 }));
     this.paperFuse.position.set(W.fusePanel.x - 0.12, 1.45, W.fusePanel.z + 0.6); this.paperFuse.rotation.y = -Math.PI / 2; root.add(this.paperFuse);
-    this.paperNevo = this.notePaper(66.2, 0.785, 43.1, 2.9);
+    this.paperNevo = this.notePaper(64.2, 0.785, 43.1, 2.9);
 
     // --- generic pickups
     const keyMesh = () => {
@@ -196,7 +207,7 @@ export class Story {
     };
     pickup('key1', keyMesh(), fr.x - 0.05, 1.43, fr.z - 0.18);
     pickup('key2', keyMesh(), O.X0 + 5.5, 0.84, O.Z0 + 0.9);
-    pickup('key3', keyMesh(), 69.55, 1.25, 34.5);
+    pickup('key3', keyMesh(), 67.28, 1.05, 34.5);
     pickup('key4', keyMesh(), 68.3, 0.62, 6.6);
     const fuse = () => { const f = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.09, 10), new THREE.MeshStandardMaterial({ color: 0xd6d0c0, roughness: 0.4 })); f.rotation.z = Math.PI / 2; return f; };
     pickup('fuse1', fuse(), 8.5, 0.92, 14.35);
@@ -229,7 +240,7 @@ export class Story {
     // --- Nevo in his padded cell
     const nv = models.nevo;
     this.nevo = nv.scene;
-    this.nevo.position.set(55, 0, 39.5); this.nevo.rotation.y = Math.PI;
+    this.nevo.position.set(53, 0, 39.5); this.nevo.rotation.y = Math.PI;
     this.nevo.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; o.material.roughness = 0.8; } });
     root.add(this.nevo);
     this.nevoMixer = new THREE.AnimationMixer(this.nevo);
@@ -239,21 +250,53 @@ export class Story {
     this.nevoMixer.clipAction(clip).play();
     this.nevoState = 'rock'; this.nevoVoiceT = 2; this.nevoLine = 0;
     // lying mops inside the cell
-    for (const [x, z, r] of [[52, 41, 0.4], [58.5, 36, -1.1]]) {
+    for (const [x, z, r] of [[50, 41, 0.4], [56.5, 36, -1.1]]) {
       const m = mopItem.clone(); m.position.set(x, 0.03, z); m.rotation.set(Math.PI / 2, 0, r); root.add(m);
     }
-    place(this.bucketModel, 58.6, 0, 41.2, 1, 0.7).rotation.z = 1.4;
-    W.decal(T.puddleTex(false), 56, 40, 2, 1.6, 0);
-    W.addEmitter({ x: 55, y: 2.5, z: 38, color: 0xeef6ff, power: 4, dist: 7, flicker: 'bad' });
+    place(this.bucketModel, 56.6, 0, 41.2, 1, 0.7).rotation.z = 1.4;
+    W.decal(T.puddleTex(false), 54, 40, 2, 1.6, 0);
+    W.addEmitter({ x: 53, y: 2.5, z: 38, color: 0xeef6ff, power: 4, dist: 7, flicker: 'bad' });
 
     // --- Blood and wet trails around the base
     W.decal(T.bloodTex('smear'), 20, 11, 2.6, 0.9, 0.1);
     W.decal(T.bloodTex('splat'), 46, 26.8, 0.8, 0.8);
     W.decal(T.puddleTex(false), 9, 11, 2.2, 1.6);
     W.decal(T.puddleTex(false), 34, 27, 2.6, 1.6);
-    W.decal(T.puddleTex(false), 33, 40, 2, 1.5);
+    W.decal(T.puddleTex(false), 35, 39, 1.6, 1.4);
     W.wallDecal(T.bloodTex('hand'), 41.98, 1.2, 36.5, -Math.PI / 2, 0.4, 0.4);
     W.wallDecal(T.bloodTex('hand'), 2.02, 1.4, 22, Math.PI / 2, 0.35, 0.35);
+
+    // --- Ruth: the missing poster, her photo on Yasmin's board, her boots, the tapes, her ghost
+    this.tapeMeshes = [null];
+    for (let i = 1; i <= 5; i++) {
+      const [x, y, z] = TAPE_SPOTS[i];
+      const m = tapeMesh(M); m.position.set(x, y, z); m.rotation.y = i * 1.3; m.visible = false; root.add(m);
+      const gl = glint(); gl.position.set(x, y + 0.05, z); gl.visible = false; root.add(gl);
+      this.tapeMeshes.push({ mesh: m, glint: gl });
+    }
+    this.ghost = new Ghost(W.scene, g.tex.ruth_ghost);
+    this.posterPos = v3(10.6, 1.5, 10.05);
+    loadImg('img/ruth_photo.jpg').then(im => {
+      const poster = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.77), new THREE.MeshStandardMaterial({ map: missingPosterTex(im), roughness: 0.8 }));
+      poster.position.set(10.6, 1.55, 10.01); root.add(poster);
+      const p2 = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.36), new THREE.MeshStandardMaterial({ map: T.crossOut(T.photoFrameTex(im, 'רות')), roughness: 0.6 }));
+      p2.position.set(J.X0 + 0.02, 1.95, 4.6); p2.rotation.set(0, Math.PI / 2, 0.06); root.add(p2);
+    });
+    for (const dx of [0, 0.16]) {
+      const boot = new THREE.Group();
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.04, 0.3), M.rubber); sole.position.y = 0.02; boot.add(sole);
+      const top = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.13), new THREE.MeshStandardMaterial({ color: 0x1b1a18, roughness: 0.5 })); top.position.set(0, 0.13, -0.08); boot.add(top);
+      const toe = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.18), top.material); toe.position.set(0, 0.06, 0.06); boot.add(toe);
+      boot.position.set(60.75 + dx, 0, 2.75); boot.rotation.y = Math.PI / 2 + 0.1; boot.traverse(o => { if (o.isMesh) o.castShadow = true; });
+      root.add(boot);
+    }
+    // empty bottles to throw (shown per night)
+    this.bottleSpots = [[29.2, 0.95, 2.35], [48.6, 0.5, 10.35], [9.8, 0.92, 14.35], [7, 0.02, 37.5], [31, 0.02, 31], [61.5, 0.02, 41], [21, 0.02, 4.5], [50.5, 0.78, 3.1]];
+    this.bottleMeshes = this.bottleSpots.map(([x, y, z]) => {
+      const b = this.g.mech.bottleMesh(); b.position.set(x, y, z); b.visible = false; root.add(b);
+      const gl = glint(); gl.position.set(x, y + 0.12, z); gl.visible = false; root.add(gl);
+      return { mesh: b, glint: gl };
+    });
 
     // CCTV monitors
     this.setupCCTV();
@@ -359,11 +402,11 @@ export class Story {
     for (const L of W.lockers) { L.target = 0; }
     this.trayPaper.visible = false; this.clip.visible = true;
     this.rollBucket.position.set(43, 0, 6.5);
-    this.nevo.position.set(55, 0, 39.5); this.nevoState = 'rock';
+    this.nevo.position.set(53, 0, 39.5); this.nevoState = 'rock';
     P.pos.set(3.2, 0, 5.6); P.yaw = -Math.PI / 2 + 0.3; P.pitch = -0.05;
     P.hasLight = n > 1; P.lightOn = false; P.battery = 1; P.drain = n === 3 ? 1 / 200 : 1 / 900;
     P.hidden = null; P.stamina = 1; P.slow = 1;
-    Y.hide(); Y.setNight(n);
+    Y.hide(); Y.setNight(n, g.settings.difficulty);
     Y.footprints.forEach(f => f.mesh.material.opacity = 0);
     this.carryMop = false;
     const it = (o) => { this.inter.push(o); return o; };
@@ -380,7 +423,10 @@ export class Story {
     it({ label: 'קרא פתק', pos: () => this.paperFridge.getWorldPosition(v3(0, 0, 0)), use: () => { this.read('roi'); this.discover('squash'); } });
     it({ label: 'קרא פתק', pos: () => this.paperMaya.position, use: () => { this.read('maya'); this.discover('labubu'); } });
     it({ label: 'קרא', pos: () => this.paperFuse.position, use: () => { this.read('fuses'); } });
-    it({ label: 'קרא תיק רפואי', pos: () => this.paperNevo.position, enabled: () => !locks.I, use: () => { this.read('nevo'); this.discover('nevo'); if (n === 3) this.done('file'); } });
+    it({ label: 'קרא תיק רפואי', pos: () => this.paperNevo.position, enabled: () => !locks.I, use: () => {
+      this.read('nevo'); this.discover('nevo'); if (n === 3) this.done('file');
+      if (!this.flags.ghostCell) { this.flags.ghostCell = true; this.when(() => g.state === 'play' && P.pos.x < 59 && P.pos.z < 33, () => { this.apparition(49.6, 37, 5, true); this.after(0.6, () => g.audio.play('n_ruth', { pos: v3(this.nevo.position.x, 1.6, this.nevo.position.z), volume: 1.3 })); }); }
+    } });
     it({ label: 'קרא יומן', pos: () => v3(65.6, 0.8, 7.05), enabled: () => !locks.J, use: () => { this.read('diary'); } });
     it({ label: 'הסתכל על התמונות', pos: () => v3(60.1, 1.5, 4.8), enabled: () => !locks.J, use: () => { this.read('board'); } });
     it({ label: 'הסתכל', pos: () => this.labubu.position, range: 1.8, use: () => { this.discover('labubu'); g.ui.toast('הראש של הלבובו...'); } });
@@ -395,6 +441,25 @@ export class Story {
       use: () => { myLocker.target = 1; g.audio.play('sfx_locker', { pos: v3(myLocker.x, 1, myLocker.z) }); P.hasLight = true; P.setLight(true); g.ui.toast('לקחת פנס  ·  [F] להדליק/לכבות'); this.done('light'); if (g.ui.isTouch) g.ui.toast('לקחת פנס'); this.after(1.5, () => myLocker.target = 0); } });
     // batteries every night (more useful on night 3)
     for (const b of ['bat1', 'bat2', 'bat3']) { if (n >= 2) show(b); pickupIt(b, 'קח סוללה', () => { P.battery = 1; g.ui.toast('סוללה חדשה'); }); }
+    // Ruth's tape for tonight, the missing poster, her boots
+    this.ghost.hide(true);
+    for (let i = 1; i <= 5; i++) { const tp = this.tapeMeshes[i]; tp.mesh.visible = tp.glint.visible = i === n; }
+    const tp = this.tapeMeshes[n];
+    const heard = loadTapes();
+    it({ label: heard.has(n) ? 'האזן שוב לקלטת של רות' : 'קח קלטת', pos: () => tp.mesh.position, range: 1.8, enabled: () => tp.mesh.visible,
+      use: () => { tp.mesh.visible = tp.glint.visible = false; g.playTape(n); } });
+    it({ label: 'קרא מודעה', pos: () => this.posterPos, range: 2.2, use: () => { this.read('missing'); this.discover('ruth'); } });
+    it({ label: 'הסתכל על הנעליים', pos: () => v3(60.85, 0.15, 2.75), range: 1.7, enabled: () => !locks.J, use: () => { this.read('boots'); this.discover('ruth'); } });
+    // bottles to throw: a few each night
+    const bottleSet = [[0, 1, 6], [0, 2, 7], [1, 3, 4, 5], [0, 2, 3, 6], [1, 4, 6, 7]][n - 1];
+    this.bottleMeshes.forEach((b, i) => {
+      b.mesh.visible = b.glint.visible = bottleSet.includes(i);
+      it({ label: 'קח בקבוק ריק (לזריקה)', pos: () => b.mesh.position, range: 1.8, enabled: () => b.mesh.visible && P.bottles < 3,
+        use: () => { b.mesh.visible = b.glint.visible = false; P.bottles++; g.audio.pickup(); g.ui.toast(g.ui.isTouch ? 'בקבוק · כפתור "זרוק" כדי להסיח אותה' : 'בקבוק · [G] זרוק כדי להסיח אותה'); } });
+    });
+    P.bottles = 0;
+    this.mazeGuide = n === 5 ? 0 : -1;
+    g.mech.clear();
     // the bed ends the night once the night's work is done
     it({ label: 'לך לישון (סיים את הלילה)', pos: () => v3(3.2, 0.6, 7.0), range: 1.8, enabled: () => this.flags.canSleep && n < 5, use: () => g.endNight() });
 
@@ -457,6 +522,9 @@ export class Story {
       } });
       pickupIt('key2', 'קח מפתח', () => { this.flags.key2 = true; g.audio.keys(); g.ui.toast('מפתח שער 2/4'); this.flags.canSleep = true; this.obj('bed').hidden = false; this.refresh(); this.after(3, () => g.audio.play('y_hum', { volume: 0.6, verb: 0.9 })); });
       this.after(4, () => Y.spawn(66, 27, 'patrol', -Math.PI / 2));
+      this.after(2.5, () => this.pa('y_pa2'));
+      // a girl in a wet uniform at the end of the corridor, once the report is done
+      this.when(() => this.obj('zalam').done && P.pos.x > 19.5 && P.pos.x < 22.5 && P.pos.z < 13, () => this.apparition(21, 23.2, 4));
       this.when(() => roomAt(P.pos.x, P.pos.z) === 'b', () => { g.audio.stinger('discover'); });
     }
     if (n === 3) {
@@ -476,7 +544,8 @@ export class Story {
       it({ label: 'הכנס נתיכים', pos: () => v3(W.fusePanel.x - 0.1, 1.45, W.fusePanel.z), enabled: () => this.obj('fuses').done && !this.obj('power').done, hold: 1.5, use: () => { this.done('power'); this.obj('lever').hidden = false; this.refresh(); g.audio.click(); } });
       it({ label: 'משוך את הידית', pos: () => v3(W.leverPos.x - 0.1, 1.3, W.leverPos.z), enabled: () => this.obj('power').done && !this.obj('lever').done, use: () => this.powerOn() });
       this.after(3, () => Y.spawn(10, 27, 'patrol', Math.PI / 2));
-      this.after(1, () => g.audio.play('n_laugh', { pos: v3(55, 1.5, 39), volume: 0.8, sub: false }));
+      this.after(5, () => this.pa('y_pa3'));
+      this.after(1, () => g.audio.play('n_laugh', { pos: v3(53, 1.5, 39), volume: 0.8, sub: false }));
     }
     if (n === 4) {
       P.hasLight = true;
@@ -526,7 +595,10 @@ export class Story {
         onHold: () => { if (Math.random() < 0.05) g.audio.keys(); if (Math.random() < 0.03) g.audio.play('sfx_gate', { pos: v3(39, 1, 65), volume: 0.6, sub: false }); },
         use: () => { gateClosed.v = false; W.gate.target = 1; g.audio.play('sfx_gate', { pos: v3(38, 1, 65), volume: 1.5 }); g.audio.grind(4.5); this.done('gate'); this.obj('run').hidden = false; this.refresh(); } });
       this.when(() => P.pos.z > 67, () => g.escape());
-      this.after(2, () => { Y.spawn(36, 27, 'patrol', 0); g.audio.play('y_intro', { pos: v3(36, 1.6, 27), volume: 1.2 }); });
+      this.after(1.5, () => this.pa('y_pa5'));
+      this.after(6, () => { Y.spawn(52, 27, 'patrol', -Math.PI / 2); });
+      // in the yard she reminds you of Ruth
+      this.when(() => g.finale && P.pos.z > 52 && Y.state === 'chase', () => Y.speak('y_ruth', { force: true }));
     }
     this.setObjectives(list);
   }
@@ -534,6 +606,36 @@ export class Story {
   // ---------- scripted bits ----------
   after(t, fn) { this.timers.push({ t, fn }); }
   when(test, fn) { this.events.push({ test, fn }); }
+
+  // Yasmin over the loudspeakers: everywhere at once.
+  pa(name) {
+    const g = this.g;
+    g.audio.static_(0.5, 0.12);
+    this.after(0.35, () => g.audio.play(name, { volume: 1.0, verb: 0.9, muffle: false }));
+    g.ui.toast('📢', 1.5);
+  }
+
+  // Ruth's ghost stands somewhere for a moment, then she is gone.
+  apparition(x, z, dur = 4, quiet = false) {
+    const g = this.g;
+    this.ghost.show(x, z, 0.8);
+    if (!quiet) g.audio.stinger('peek');
+    g.audio.noise(2.5, { type: 'bandpass', f: 600, q: 4, vol: 0.06, f2: 300, verb: 1 });
+    let gone = false;
+    const vanish = () => { if (gone) return; gone = true; this.ghost.hide(); g.player.flicker = 0.25; };
+    this.after(dur, vanish);
+    this.when(() => Math.hypot(g.player.pos.x - x, g.player.pos.z - z) < 4.5, vanish);
+  }
+
+  onTapeEnd(n) {
+    const g = this.g, P = g.player;
+    if (n === 1 && !this.flags.ghost1) {
+      // she was standing in your doorway the whole time
+      this.flags.ghost1 = true;
+      const f = P.forward(v3(0, 0, 0));
+      if (P.pos.z < 8.5) this.apparition(7, 9.2, 3);
+    }
+  }
 
   read(id) { this.g.audio.paper(); this.g.ui.note(NOTES[id]); this.g.state = 'note'; }
   discover(id) {
@@ -603,7 +705,7 @@ export class Story {
     for (const f of W.fixtures) { const d = Math.hypot(f.x - P.x, f.z - P.z); f.on = false; this.after(0.3 + d * 0.04 + Math.random() * 0.2, () => { f.on = true; }); }
     W.openDoor('I');
     this.obj('cctv').hidden = false; this.refresh();
-    this.after(2.5, () => { g.audio.play('sfx_distant', { pos: v3(55, 1, 40), volume: 1.2 }); g.ui.toast('הדלת של אגף הבידוד נפתחה'); });
+    this.after(2.5, () => { g.audio.play('sfx_distant', { pos: v3(53, 1, 40), volume: 1.2 }); g.ui.toast('הדלת של אגף הבידוד נפתחה'); });
     // the camera room scare
     this.when(() => roomAt(P.x, P.z) === 'c', () => this.cctvScare());
     this.when(() => roomAt(P.x, P.z) === 'i' && !this.obj('iso').done, () => { this.done('iso'); this.obj('file').hidden = false; this.obj('key3').hidden = false; this.refresh(); this.items.key3.mesh.visible = this.items.key3.glint.visible = true; });
@@ -668,7 +770,7 @@ export class Story {
     g.audio.stinger('riser');
     this.after(1.5, () => {
       Y.spawn(27, 31, 'patrol', Math.PI / 2);
-      Y.setNight(5);
+      Y.setNight(5, g.settings.difficulty);
       Y.startChase(g.player, g);
       Y.speak('y_chase', { force: true });
     });
@@ -684,18 +786,32 @@ export class Story {
       const e = this.events[i];
       if (e.test()) { this.events.splice(i, 1); e.fn(); }
     }
+    // Ruth's ghost; on the last night she shows the way through the maze
+    this.ghost.update(dt, t, g.player.cam);
+    if (this.mazeGuide >= 0 && this.mazeGuide < MAZE_GUIDE.length && !g.finale) {
+      const [gx, gz] = MAZE_GUIDE[this.mazeGuide];
+      const P0 = g.player.pos;
+      const d = Math.hypot(P0.x - gx, P0.z - gz);
+      if (!this.ghost.shown && d < 9 && d > 4 && lineOfSight(P0.x, P0.z, gx, gz, opaque) && roomAt(P0.x, P0.z) === 'm') {
+        this.ghost.show(gx, gz, 0.7);
+        g.audio.noise(1.6, { type: 'bandpass', f: 500, q: 5, vol: 0.05, f2: 260, verb: 1 });
+      }
+      if (this.ghost.shown && d < 3.2) { this.ghost.hide(); this.mazeGuide++; g.player.flicker = 0.15; }
+    }
     // glints pulse
     const pulse = 0.25 + 0.25 * Math.sin(t * 3);
     for (const p of this.pickups) if (p.glint.visible) p.glint.material.opacity = pulse;
     for (const z of this.zalamItems) if (z.glint.visible) z.glint.material.opacity = pulse;
+    for (const tp of this.tapeMeshes) if (tp && tp.glint.visible) tp.glint.material.opacity = pulse;
+    for (const b of this.bottleMeshes) if (b.glint.visible) b.glint.material.opacity = pulse * 0.7;
     // Nevo: holds his head and mutters; rushes to the glass the first time you come close
     this.nevoMixer.update(dt);
     const P = g.player.pos;
-    const dn = Math.hypot(P.x - 55, P.z - 31.5);
-    if (!locks.I && P.z > 29.5 && P.z < 33 && P.x > 49 && P.x < 61) {
+    const dn = Math.hypot(P.x - 53, P.z - 31.5);
+    if (!locks.I && P.z > 29.5 && P.z < 33 && P.x > 47 && P.x < 59) {
       if (this.nevoState === 'rock' && dn < 6) {
         this.nevoState = 'rush'; this.rushT = 0;
-        g.audio.play('n_whisper', { pos: v3(55, 1.6, 34.5), volume: 1.5 });
+        g.audio.play('n_whisper', { pos: v3(53, 1.6, 34.5), volume: 1.5 });
         g.audio.stinger('peek');
       }
     }
@@ -703,15 +819,15 @@ export class Story {
       this.rushT += dt;
       const k = Math.min(1, this.rushT / 0.45);
       this.nevo.position.z = 39.5 - k * 5.0;
-      if (this.rushT > 0.45 && !this.flags.thud) { this.flags.thud = true; g.audio.tone(70, 0.4, { vol: 0.8, pos: v3(55, 1.4, 33.6) }); g.audio.noise(0.2, { type: 'lowpass', f: 900, vol: 0.5, pos: v3(55, 1.4, 33.6) }); g.player.shake = 0.7; }
+      if (this.rushT > 0.45 && !this.flags.thud) { this.flags.thud = true; g.audio.tone(70, 0.4, { vol: 0.8, pos: v3(53, 1.4, 33.6) }); g.audio.noise(0.2, { type: 'lowpass', f: 900, vol: 0.5, pos: v3(53, 1.4, 33.6) }); g.player.shake = 0.7; }
       if (this.rushT > 4) this.nevoState = 'glass';
     }
     if (this.nevoState !== 'rock' && dn < 9) {
       this.nevoVoiceT -= dt;
       if (this.nevoVoiceT < 0) {
-        const lines = ['n_count', 'n_cry', 'n_laugh', 'n_whisper'];
+        const lines = ['n_count', 'n_cry', 'n_ruth', 'n_laugh', 'n_whisper'];
         this.nevoVoiceT = 9 + Math.random() * 4;
-        g.audio.play(lines[this.nevoLine++ % 4], { pos: v3(this.nevo.position.x, 1.6, this.nevo.position.z), volume: 1.2 });
+        g.audio.play(lines[this.nevoLine++ % lines.length], { pos: v3(this.nevo.position.x, 1.6, this.nevo.position.z), volume: 1.2 });
       }
     }
   }

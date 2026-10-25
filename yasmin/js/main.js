@@ -10,17 +10,21 @@ import { Audio } from './audio.js';
 import { Post } from './post.js';
 import { UI } from './ui.js';
 import { Story, NIGHTS, overLine } from './story.js';
+import { Mechanics } from './mechanics.js';
+import { TAPES, loadTapes, saveTapes } from './ruth.js';
 import { opaque, roomAt, isOutdoor, lineOfSight, cellsOf, cellCenter } from './map.js';
 import * as T from './textures.js';
 
 const $ = (id) => document.getElementById(id);
+// release version (from the ?v= on this module's URL) so asset updates bypass the browser cache
+const V = new URL(import.meta.url).searchParams.get('v') || '0';
 const store = {
   get(k, d) { try { const v = localStorage.getItem('yasmin5.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('yasmin5.' + k, JSON.stringify(v)); } catch (e) { } },
 };
 
 const ui = new UI();
-const settings = Object.assign({ sens: 1, vol: 0.9, music: 0.8, bright: 1, quality: 'auto' }, store.get('settings', {}));
+const settings = Object.assign({ sens: 1, vol: 0.9, music: 0.8, bright: 1, quality: 'auto', difficulty: 'normal' }, store.get('settings', {}));
 const isTouch = ui.isTouch;
 const params0 = new URLSearchParams(location.search);
 const quality = params0.get('q') || (settings.quality === 'auto' ? (isTouch || (navigator.deviceMemory && navigator.deviceMemory < 4) ? 'low' : 'high') : settings.quality);
@@ -59,7 +63,7 @@ addEventListener('resize', resize); resize();
 const audio = new Audio();
 audio.vol.master = settings.vol; audio.vol.music = settings.music;
 audio.onSub = (text, dur) => ui.sub(text, dur);
-const game = { ui, audio, quality, state: 'loading', night: 1, clockMin: 0, finale: false };
+const game = { ui, audio, quality, state: 'loading', night: 1, clockMin: 0, finale: false, settings };
 window.__game = game;
 game.dbg = {};
 
@@ -72,14 +76,15 @@ async function load() {
   const texList = ['wall', 'wall_n', 'floor', 'floor_n', 'floor_r', 'ceiling', 'ceiling_n'];
   let tdone = 0;
   const texP = Promise.all([
-    ...texList.map(n => T.loadTex(`img/${n}.webp`, { srgb: !/_n|_r/.test(n) }).then(t => { tdone++; parts.tex = tdone / (texList.length + 1); upd(); return [n, t]; })),
-    T.loadTex('img/nevo_cctv.jpg', { repeat: false }).then(t => ['nevo_cctv', t]),
+    ...texList.map(n => T.loadTex(`img/${n}.webp?v=${V}`, { srgb: !/_n|_r/.test(n) }).then(t => { tdone++; parts.tex = tdone / (texList.length + 1); upd(); return [n, t]; })),
+    T.loadTex(`img/nevo_cctv.jpg?v=${V}`, { repeat: false }).then(t => ['nevo_cctv', t]),
+    T.loadTex(`img/ruth_ghost.webp?v=${V}`, { repeat: false }).then(t => ['ruth_ghost', t]),
   ]).then(list => Object.fromEntries(list));
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
   const modelList = ['yasmin', 'nevo', 'bucket', 'labubu', 'squash'];
   let mdone = 0;
-  const modP = Promise.all(modelList.map(n => new Promise((res, rej) => loader.load(`models/${n}.glb`, g => { mdone++; parts.models = mdone / modelList.length; upd(); res([n, g]); }, undefined, rej)))).then(l => Object.fromEntries(l));
-  const audP = audio.load('audio/', p => { parts.audio = p; upd(); });
+  const modP = Promise.all(modelList.map(n => new Promise((res, rej) => loader.load(`models/${n}.glb?v=${V}`, g => { mdone++; parts.models = mdone / modelList.length; upd(); res([n, g]); }, undefined, rej)))).then(l => Object.fromEntries(l));
+  const audP = audio.load('audio/', V, p => { parts.audio = p; upd(); });
   const [tex, models] = await Promise.all([texP, modP, audP]);
   game.tex = tex; game.models = models;
   ui.progress(1, 'בונה את הבסיס...');
@@ -95,6 +100,8 @@ function build() {
   const player = new Player(camera, scene, world, audio, quality);
   player.sens = settings.sens;
   game.player = player;
+  game.mech = new Mechanics(game);
+  game.mech.init();
   const yasmin = new Yasmin(scene, game.models.yasmin, world, audio);
   yasmin.printTex = T.footprintTex();
   game.yasmin = yasmin;
@@ -116,6 +123,7 @@ function build() {
     useDown: () => { useHeld = true; useDown(); }, useUp: () => { useHeld = false; },
     setRun: (on) => { player.touch.runLock = on; }, runToggle: () => player.touch.runLock,
     light: () => player.setLight(!player.lightOn), pause: () => pause(true),
+    throw: () => throwBottle(),
   });
   $('btn-enter').classList.remove('hidden');
   $('load-tip').textContent = 'מוכן.';
@@ -141,12 +149,18 @@ function menu() {
   }
   game.yasmin && game.yasmin.hide();
   if (document.pointerLockElement) document.exitPointerLock();
+  stopTape();
+  const tapes = loadTapes(), found = store.get('found', []);
+  const won = store.get('won', false);
+  $('menu-stats').innerHTML = `קלטות של רות: <b>${tapes.size}/5</b> · גילויים: <b>${found.length}/6</b>${won ? ' · <b>ברחת</b>' + (store.get('ruthFree', false) ? ' · <b>רות חופשייה</b>' : '') : ''}`;
 }
 
 function startNight(n) {
   game.night = n;
   game.state = 'card';
   game.clockMin = 0;
+  stopTape();
+  game.mech.clear();
   ui.hud(false);
   game.story.start(n);
   ui.card(`לילה ${n}`, NIGHTS[n].title, NIGHTS[n].text);
@@ -188,7 +202,15 @@ function onKey(code) {
   if (code === 'KeyF') game.player.setLight(!game.player.lightOn);
   if (code === 'Tab') { const o = $('objectives'); o.style.opacity = o.style.opacity === '0' ? 1 : 0; }
   if (code === 'KeyP') pause(true);
+  if (code === 'KeyG' || code === 'KeyQ') throwBottle();
+  if (code === 'KeyJ') openJournal();
 }
+function throwBottle() {
+  if (game.state !== 'play') return;
+  if (!game.mech.throwBottle()) ui.toast(game.player.bottles ? '' : 'אין לך בקבוקים', 1.2);
+}
+canvas.addEventListener('mousedown', e => { if (e.button === 2 && game.state === 'play') throwBottle(); });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('keyup', e => { if (e.code === 'KeyE') useHeld = false; });
 addEventListener('keydown', e => { if (e.code === 'Tab') e.preventDefault(); if (e.code === 'Escape' && game.state === 'note') closeNote(); });
 function useDown() {
@@ -233,6 +255,48 @@ function exitLocker() {
   setTimeout(() => L.target = 0, 600);
 }
 
+// ---------- Ruth's tapes ----------
+let tape = null;
+function stopTape() { if (tape) { tape.h && tape.h.stop(0.2); tape.timers.forEach(clearTimeout); tape = null; $('tape').classList.add('hidden'); } }
+game.playTape = (n) => {
+  stopTape();
+  const t = TAPES[n];
+  const h = audio.play('r_tape' + n, { volume: 1.15, verb: 0.05, muffle: false, sub: false });
+  const dur = audio.buffers['r_tape' + n] ? audio.buffers['r_tape' + n].duration : 12;
+  const total = t.lines.reduce((a, l) => a + l.length, 0);
+  let at = 0.3;
+  const timers = [];
+  audio.click();
+  for (const line of t.lines) {
+    const d = (dur - 0.6) * line.length / total;
+    timers.push(setTimeout(() => ui.sub('רות (קלטת): ' + line, d + 0.3), at * 1000));
+    at += d;
+  }
+  timers.push(setTimeout(() => { stopTape(); audio.click(); game.story.onTapeEnd(n); }, (dur + 0.4) * 1000));
+  tape = { h, timers, n, start: performance.now(), dur };
+  $('tape').classList.remove('hidden'); $('tape-t').textContent = t.title;
+  const set = loadTapes(); const isNew = !set.has(n); set.add(n); saveTapes(set);
+  if (isNew) ui.toast(`קלטת של רות · ${set.size}/5`, 2.5);
+  game.discovered('ruth');
+};
+
+function openJournal() {
+  if (game.state !== 'play' && game.state !== 'pause') return;
+  const S = game.story, P = game.player;
+  const tapes = loadTapes();
+  const found = new Set(store.get('found', []));
+  const keys = ['key1', 'key2', 'key3', 'key4'].filter(k => S.flags[k]).length;
+  const disc = [['squash', 'הסקווש של רועי'], ['labubu', 'הלבובו של מאיה'], ['nevo', 'מה קרה לנבו'], ['store', 'המחסן של יסמין'], ['ruth', 'רות'], ['ending', 'הבריחה']];
+  let h = `<h3>יומן</h3><p class="type">מפתחות שער: <b>${keys}/4</b> · בקבוקים: <b>${P.bottles || 0}/3</b> · סוללה: <b>${Math.round(P.battery * 100)}%</b></p>`;
+  h += `<p class="type"><b>קלטות של רות</b> (${tapes.size}/5)</p><div class="tapes">`;
+  for (let i = 1; i <= 5; i++) h += tapes.has(i) ? `<button class="btn tape-btn" data-tape="${i}">▶ קלטת ${i}</button>` : `<button class="btn tape-btn" disabled>קלטת ${i} · לא נמצאה</button>`;
+  h += `</div><p class="type"><b>גילויים</b></p><ul class="type">${disc.map(([k, t]) => `<li>${found.has(k) ? '✓ ' + t : '— ???'}</li>`).join('')}</ul>`;
+  h += `<p class="type"><b>המשימות הלילה</b></p><ul class="type">${S.objs.filter(o => !o.hidden).map(o => `<li>${o.done ? '✓' : '□'} ${o.text}</li>`).join('')}</ul>`;
+  ui.note(h);
+  if (game.state === 'play') { game.state = 'note'; if (document.pointerLockElement) document.exitPointerLock(); }
+  for (const b of document.querySelectorAll('.tape-btn[data-tape]')) b.onclick = (e) => { e.stopPropagation(); closeNote(); game.playTape(+b.dataset.tape); };
+}
+
 // ---------- events from the story ----------
 game.discovered = (id) => {
   const t = { squash: 'גילית: הסקווש של רועי', labubu: 'גילית: הלבובו של מאיה', nevo: 'גילית: מה קרה לנבו', store: 'גילית: המחסן של יסמין' }[id];
@@ -251,6 +315,7 @@ let caughtT = 0;
 function caught(fromLocker) {
   if (game.state !== 'play') return;
   game.state = 'caught'; caughtT = 0;
+  stopTape();
   const P = game.player, Y = game.yasmin;
   P.enabled = false;
   if (P.hidden) { ui.lockerView(false); P.hidden = null; }
@@ -308,6 +373,7 @@ game.escape = () => {
   if (game.state !== 'play') return;
   game.state = 'ending';
   game.player.enabled = false;
+  stopTape();
   ui.hud(false);
   game.yasmin.hide();
   audio.fanfare();
@@ -317,6 +383,9 @@ game.escape = () => {
 };
 function credits() {
   ui.only('end'); ui.blackout(0, true);
+  const ruth = loadTapes().size >= 5;
+  if (ruth) store.set('ruthFree', true);
+  game.discovered('ending');
   const lines = [
     '<h2>ברחת.</h2>',
     '<p class="big">06:00. השמש עולה מעל הבסיס.</p>',
@@ -324,6 +393,7 @@ function credits() {
     '<p>את נבו העבירו לבית מנוחה. הוא עדיין סופר משבצות.</p>',
     '<p>את הלבובו של מאיה תפרו. בערך.</p>',
     '<p>את הסקווש של רועי — אף אחד לא שתה.</p>',
+    ...(ruth ? ['<p class="big">ומישהי יצאה איתך מהשער.</p>', '<p>יחפה. רטובה. אחרי שלושה חודשים.</p>', '<p>רות חזרה הביתה.</p>'] : ['<p>על השער מצאו זוג עקבות יחפות שלא היו שלך.</p>', '<p class="small">(מצא את כל חמש הקלטות של רות כדי לשחרר אותה)</p>']),
     '<p class="big">ויסמין?</p>',
     '<p>יסמין קיבלה צל״ש על ניקיון.</p>',
     '<p class="small" style="margin-top:30px">5 לילות אצל יסמין · בכיכוב יסמין (בתפקיד עצמה) ונבו (בתפקיד נבו)<br>אף מגב לא נפגע במהלך הצילומים.</p>',
@@ -336,6 +406,7 @@ function phone() {
   const ph = $('phone'), b = $('ph-body');
   ph.classList.remove('hidden'); b.innerHTML = '';
   const msgs = ['ראיתי שיצאת 🙂', 'שכחת לנגב את הרגליים.', '<img src="img/scare2.jpg" alt="">', 'נתראה במשמרת הבאה 🧽'];
+  if (loadTapes().size >= 5) msgs.push('<i>מספר לא מזוהה:</i> תודה. — ר.');
   audio.tone(880, 0.12, { vol: 0.08 });
   msgs.forEach((m, i) => setTimeout(() => {
     const d = document.createElement('div'); d.className = 'msg'; d.innerHTML = m; b.appendChild(d);
@@ -421,7 +492,10 @@ function frame() {
     }
     fear += (f - fear) * Math.min(1, dt * 2);
     chase += ((Y.state === 'chase' ? 1 : 0) - chase) * Math.min(1, dt * (Y.state === 'chase' ? 3 : 0.5));
+    game.mech.update(dt);
     ui.meters(P.stamina, P.battery, P.hasLight);
+    $('bottles').textContent = P.bottles ? `בקבוקים: ${P.bottles}` : '';
+    if (tape) $('tape-bar').style.width = Math.min(100, (performance.now() - tape.start) / 10 / tape.dur) + '%';
     ui.eye(Y.awareness, Y.state === 'chase');
     // fog thins outside
     const out = isOutdoor(roomAt(P.pos.x, P.pos.z)) || P.pos.z > 50;
@@ -459,6 +533,7 @@ $('card').onclick = () => { if (game.state === 'card') play(); else if (game.sta
 $('btn-resume').onclick = () => pause(false);
 $('btn-restart').onclick = () => { ui.show('pause', false); audio.resume(); startNight(game.night); };
 $('btn-pset').onclick = () => ui.show('settings', true);
+$('btn-journal').onclick = () => { ui.show('pause', false); audio.resume(); game.state = 'play'; game.player.enabled = true; openJournal(); };
 $('btn-quit').onclick = () => { ui.show('pause', false); audio.resume(); menu(); };
 $('btn-retry').onclick = () => startNight(game.night);
 $('btn-over-menu').onclick = () => menu();
@@ -475,6 +550,8 @@ bindRange('set-sens', 'sens', v => { if (game.player) game.player.sens = v; });
 bindRange('set-vol', 'vol', v => { audio.vol.master = v; if (audio.master) audio.master.gain.value = v; });
 bindRange('set-music', 'music', v => { audio.vol.music = v; if (audio.music) audio.music.gain.value = v; });
 bindRange('set-bright', 'bright', v => { renderer.toneMappingExposure = 1.05 * v; });
+$('set-difficulty').value = settings.difficulty;
+$('set-difficulty').onchange = () => { settings.difficulty = $('set-difficulty').value; store.set('settings', settings); };
 $('set-quality').value = settings.quality;
 $('set-quality').onchange = () => { settings.quality = $('set-quality').value; store.set('settings', settings); };
 

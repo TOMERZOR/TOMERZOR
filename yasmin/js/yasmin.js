@@ -119,11 +119,13 @@ export class Yasmin {
     this.cur = a; this.curName = name;
   }
 
-  setNight(n) {
+  setNight(n, difficulty = 'normal') {
     this.night = n;
-    this.walkSpeed = [0, 1.2, 1.3, 1.4, 1.5, 1.7][n];
-    this.runSpeed = [0, 3.6, 3.9, 4.1, 4.35, 4.7][n];
-    this.aggro = [0, 0.35, 0.5, 0.65, 0.8, 1][n];
+    const k = { easy: 0.85, normal: 1, hard: 1.08 }[difficulty] || 1;
+    this.walkSpeed = [0, 1.2, 1.3, 1.4, 1.5, 1.7][n] * k;
+    this.runSpeed = [0, 3.6, 3.9, 4.1, 4.35, 4.7][n] * k;
+    this.aggro = Math.min(1.2, [0, 0.35, 0.5, 0.65, 0.8, 1][n] * (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.25 : 1));
+    this.senseK = difficulty === 'easy' ? 0.75 : difficulty === 'hard' ? 1.2 : 1;
     this.group.userData.aggro = this.aggro;
   }
 
@@ -144,7 +146,7 @@ export class Yasmin {
     this.state = s; this.stateT = 0;
     if (s === 'chase') { this.play('run', 0.25); }
     else if (s === 'patrol' || s === 'investigate' || s === 'search' || s === 'locker') this.play('walk', 0.4);
-    else if (s === 'idle' || s === 'scripted') this.play('idle', 0.4);
+    else if (s === 'idle' || s === 'scripted' || s === 'mop') this.play('idle', 0.4);
   }
 
   goTo(x, z) {
@@ -176,7 +178,7 @@ export class Yasmin {
     if (player.lightOn) range = 22;
     else if (this.litAt(pp.x, pp.z)) range = 16;
     if (isOutdoor(roomAt(pp.x, pp.z))) range = Math.max(range, 18);
-    range *= 1 - player.crouch * 0.35;
+    range *= (1 - player.crouch * 0.35) * (this.senseK || 1);
     if (d > range) return 0;
     const fx = Math.sin(this.dir), fz = Math.cos(this.dir);
     const dot = (dx * fx + dz * fz) / (d || 1);
@@ -220,8 +222,17 @@ export class Yasmin {
           const c = cellCenter(target[0], target[1]);
           if (!this.goTo(c.x, c.z)) this.path = null;
           if (Math.random() < 0.3) { this.setState('idle'); this.idleFor = 2 + Math.random() * 3; }
+          else if (game && game.mech && Math.random() < 0.35 && this.stateT > 1) { this.setState('mop'); }
         }
-        if (this.humCd < 0 && Math.random() < 0.01) { this.humCd = 25; this.speak(Math.random() < 0.5 ? 'y_hum' : Math.random() < 0.5 ? 'y_misdar' : 'y_where', { cd: 9 }); }
+        if (this.humCd < 0 && Math.random() < 0.01) { this.humCd = 25; this.speak(['y_hum', 'y_sing', 'y_misdar', 'y_where', 'y_sing'][Math.floor(Math.random() * 5)], { cd: 9 }); }
+        this.hear(player);
+        break;
+      }
+      case 'mop': {
+        // she stops and mops: two wet slaps, then a wet patch with a yellow sign
+        if (this.stateT > 0.6 && !this.mopA) { this.mopA = 1; this.audio.play('sfx_mop', { pos: this.position.clone().setY(0.3), volume: 1.1 }); }
+        if (this.stateT > 1.8 && this.mopA === 1) { this.mopA = 2; this.audio.play('sfx_mop', { pos: this.position.clone().setY(0.3), volume: 1.1, rate: 0.9 }); }
+        if (this.stateT > 3) { this.mopA = 0; game.mech.mopPatch(this.position.x, this.position.z); this.setState('patrol'); this.path = null; }
         this.hear(player);
         break;
       }
@@ -298,7 +309,7 @@ export class Yasmin {
     }
 
     // noticing the player
-    if (['patrol', 'idle', 'investigate', 'search'].includes(this.state)) {
+    if (['patrol', 'idle', 'investigate', 'search', 'mop'].includes(this.state)) {
       if (see > 0) {
         this.awareness += dt * (0.8 + see * 3.5) * (0.7 + this.aggro * 0.6);
         // turn toward

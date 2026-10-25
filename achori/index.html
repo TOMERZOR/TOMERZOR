@@ -20,17 +20,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Karantina:wght@700&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=6">
 <script type="importmap">
 {
  "imports": {
   "three": "./vendor/three.module.min.js",
-  "./js/audio.js": "./js/audio.js?v=5",
-  "./js/game.js": "./js/game.js?v=5",
-  "./js/levels.js": "./js/levels.js?v=5",
-  "./js/main.js": "./js/main.js?v=5",
-  "./js/scene.js": "./js/scene.js?v=5",
-  "./js/text.js": "./js/text.js?v=5"
+  "./js/audio.js": "./js/audio.js?v=6",
+  "./js/game.js": "./js/game.js?v=6",
+  "./js/haptics.js": "./js/haptics.js?v=6",
+  "./js/levels.js": "./js/levels.js?v=6",
+  "./js/main.js": "./js/main.js?v=6",
+  "./js/scene.js": "./js/scene.js?v=6",
+  "./js/text.js": "./js/text.js?v=6"
  }
 }
 </script>
@@ -105,6 +106,9 @@
     <button class="btn" id="levels-btn" type="button">שלבים</button>
     <div class="small-row">
       <button class="btn small" id="sound-btn" type="button">צליל: פועל</button>
+      <button class="btn small" id="haptic-btn" type="button">רטט: פועל</button>
+    </div>
+    <div class="small-row">
       <button class="btn small" id="ido-title" type="button">התלונן לסוללת אידו</button>
     </div>
   </div>
@@ -138,7 +142,10 @@
     <button class="btn primary" id="resume-btn" type="button">המשך</button>
     <button class="btn" id="restart-btn" type="button">התחל מחדש</button>
     <button class="btn" id="pause-levels" type="button">מפת האתר</button>
-    <button class="btn small" id="pause-sound" type="button">צליל: פועל</button>
+    <div class="small-row">
+      <button class="btn small" id="pause-sound" type="button">צליל: פועל</button>
+      <button class="btn small" id="pause-haptic" type="button">רטט: פועל</button>
+    </div>
   </div>
 </section>
 
@@ -166,6 +173,6 @@
   </div>
 </section>
 
-<script type="module" src="js/main.js?v=5"></script>
+<script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>

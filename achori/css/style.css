@@ -362,3 +362,5 @@ h1 .big { font-size: clamp(84px, 27vw, 150px); color: var(--yellow); transform: 
   background: radial-gradient(circle at 50% 40%, #ffe27a, var(--yellow) 60%, #e0a800); border: var(--line); border-radius: 26px; box-shadow: 0 6px 0 var(--ink);
   filter: none; bottom: 4%;
 }
+.card .small-row { width: 100%; }
+.card .small-row .btn.small { flex: 1; width: auto; }

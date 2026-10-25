@@ -4,6 +4,7 @@ import { LEVELS, AREAS } from './levels.js';
 import { Scene, IMAGES, wx, wz } from './scene.js';
 import { LINES, pick, WHO, TOOL_INFO, HINTS } from './text.js';
 import * as audio from './audio.js';
+import * as haptics from './haptics.js';
 
 const $ = (id) => document.getElementById(id);
 const STEP = 1 / 120;
@@ -91,6 +92,19 @@ function soundLabel() {
   $('sound-btn').textContent = t;
   $('pause-sound').textContent = t;
 }
+function hapticLabel() {
+  const t = haptics.isEnabled() ? 'רטט: פועל' : 'רטט: כבוי';
+  $('haptic-btn').textContent = t;
+  $('pause-haptic').textContent = t;
+  $('haptic-btn').hidden = $('pause-haptic').hidden = !haptics.supported;
+}
+function toggleHaptics() {
+  haptics.setEnabled(!haptics.isEnabled());
+  save.haptics = haptics.isEnabled();
+  persist();
+  hapticLabel();
+  haptics.buzz('place');
+}
 function toggleSound() {
   audio.unlock();
   audio.setMuted(!audio.isMuted());
@@ -139,7 +153,7 @@ function renderLevels() {
     b.addEventListener('click', () => {
       audio.unlock();
       if (locked) { audio.sfx.error(); toast('קודם תשחרר את השלב הקודם', 'bad'); return; }
-      audio.sfx.tap();
+      audio.sfx.tap(); haptics.buzz('ui');
       openLevel(i);
     });
     list.appendChild(b);
@@ -178,7 +192,7 @@ function nextLine() {
   $('dlg-line').textContent = text;
   // restart the entry animations
   for (const el of [img, panel.querySelector('.dlg-bubble')]) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
-  if (who === 'lior') audio.sfx.squeak(); else audio.sfx.tap();
+  if (who === 'lior') audio.sfx.squeak(); else audio.sfx.tap(); haptics.buzz('ui');
 }
 
 // ---------- a level ----------
@@ -243,7 +257,7 @@ function buildTools() {
     b.addEventListener('click', (e) => {
       e.stopPropagation();
       audio.unlock();
-      audio.sfx.tap();
+      audio.sfx.tap(); haptics.buzz('ui');
       tool = tool === k && game.phase === 'action' ? null : k;
       if (game.phase === 'plan') tool = k;
       toast(`${TOOL_INFO[k].name}: ${TOOL_INFO[k].desc}`, '', 1500);
@@ -305,6 +319,7 @@ function startAction() {
   requestAnimationFrame(layout);
   audio.startMusic();
   pop(window.innerWidth / 2, window.innerHeight * 0.42, 'יאללה!', 'big');
+  haptics.buzz('start');
   audio.sfx.whoosh();
 }
 
@@ -326,6 +341,7 @@ function planTap(x, y) {
   if (it && !it.fixed) {
     game.remove(c, r);
     audio.sfx.remove();
+    haptics.buzz('remove');
     afterChange();
     return;
   }
@@ -333,6 +349,7 @@ function planTap(x, y) {
   const why = game.place(tool, c, r);
   if (why) return refuse(why, cell);
   audio.sfx.place();
+  haptics.buzz('place');
   burstAt(scene.project(wx(c), 0.1, wz(r)), 10, '#c8b9a0', 3);
   afterChange();
   if (LEVELS[levelIndex].tutorial && tool === 'snap' && hintQueue.length) nextHint();
@@ -340,6 +357,7 @@ function planTap(x, y) {
 
 function refuse(why, cell) {
   audio.sfx.error();
+  haptics.buzz('refuse');
   const msg = LINES.errors[why];
   if (msg) toast(msg, 'bad');
   if (why === 'money') { const m = $('money'); m.classList.remove('flash'); void m.offsetWidth; m.classList.add('flash'); }
@@ -378,6 +396,8 @@ function actionTap(x, y) {
       const why = game.place(tool, c, r);
       if (why) { refuse(why, cell); return; }
       audio.sfx.place();
+      haptics.buzz('place');
+  haptics.buzz('place');
       tool = null;
       afterChange();
       return;
@@ -393,7 +413,7 @@ function onHit(m, x, y) {
   audio.sfx.whack(game.combo >= 12 ? 1.3 : 1);
   scene.hitFlash(m.id);
   scene.shake = Math.min(1, scene.shake + 0.35);
-  navigator.vibrate?.(14);
+  haptics.buzz(game.combo >= 12 ? 'hitHard' : 'hit');
   const words = ['באם!', 'טראח!', 'בום!', 'פאק!', 'בננה!', 'קבום!', 'טוש!'];
   if (Math.random() < 0.5) pop(x + (Math.random() - 0.5) * 60, y - 60, words[Math.floor(Math.random() * words.length)], Math.random() < 0.5 ? 'red' : '');
   burstAt({ x, y }, 7, m.type === 'lior' ? '#9a9aa2' : '#8a5a36', 4, 'fur');
@@ -416,18 +436,20 @@ function handleEvents() {
         audio.heat(true);
         scene.shake = 1;
         flash();
-        navigator.vibrate?.([30, 30, 40]);
+        haptics.buzz('snap');
         if (at) { pop(at.x, at.y - 70, 'נתפס!', 'big'); burstAt(at, 14, '#e0c08a', 6); }
         if (m && m.type === 'lior') say(m, pick('liorCaught'));
         break;
       case 'glued':
         audio.sfx.glue();
+        haptics.buzz('glue');
         audio.heat(true);
         if (at) pop(at.x, at.y - 60, 'נדבק!', 'green');
         if (m && m.type === 'lior') say(m, pick('liorGlued'));
         break;
       case 'eat':
         audio.sfx.chomp();
+        haptics.buzz('eat');
         audio.heat(true);
         if (at) pop(at.x, at.y - 60, 'נעצר לאכול!', '');
         if (m && m.type === 'lior') say(m, pick('liorEat'));
@@ -447,6 +469,7 @@ function handleEvents() {
         break;
       case 'free':
         audio.sfx.free();
+        haptics.buzz('free');
         if (at) pop(at.x, at.y - 60, 'ברח!', 'red');
         if (m && m.type === 'lior') say(m, pick('liorFree'));
         scene.syncItems();
@@ -456,6 +479,7 @@ function handleEvents() {
         break;
       case 'steal':
         audio.sfx.steal();
+        haptics.buzz('steal');
         if (m && m.type === 'lior') say(m, pick('liorSteal'));
         if (Math.random() < 0.5 || !game.level.shaked) toast('אופק: ' + pick('ofekPanic'), 'bad', 1600);
         else toast('שקד: ' + pick('shakedRant'), 'bad', 1600);
@@ -464,6 +488,7 @@ function handleEvents() {
         break;
       case 'recovered':
         audio.sfx.recovered();
+        haptics.buzz('recovered');
         if (at) pop(at.x, at.y - 90, 'הפיתה חזרה!', 'green');
         renderHud();
         bumpPitas();
@@ -481,7 +506,7 @@ function handleEvents() {
         audio.sfx.kill(lior);
         scene.shake = 1;
         flash();
-        navigator.vibrate?.(lior ? [60, 40, 60, 40, 120] : [40, 30, 70]);
+        haptics.buzz(lior ? 'killLior' : 'kill');
         slowT = lior ? 0.8 : 0.35;
         killStamp(lior);
         if (at) {
@@ -499,17 +524,20 @@ function handleEvents() {
       case 'ability':
         if (ev.name === 'ofek') {
           audio.sfx.scream();
+          haptics.buzz('scream');
           callout('img/ofek.webp', 'אייייייי!');
           flash();
           scene.shake = 1;
           for (const q of game.liveMice()) if (q.type === 'lior') say(q, pick('liorStunned'));
         } else if (ev.name === 'shaked') {
           audio.sfx.ring();
+          haptics.buzz('refund');
           callout('img/shaked.webp', 'אני מתלוננת!');
           setTimeout(() => { audio.sfx.recovered(); toast('סוללת אידו נשברו מהתלונות של שקד והחזירו ₪3', 'ido', 2600); }, 700);
           const mn = $('money'); mn.classList.remove('flash'); void mn.offsetWidth;
         } else {
           audio.sfx.disconnect();
+          haptics.buzz('disconnect');
           callout('img/shalev.webp', 'לא מתחבר.');
           for (const q of game.liveMice()) if (q.type === 'lior') say(q, pick('liorConfused'));
         }
@@ -626,6 +654,10 @@ function updateViews(dt) {
       const size = px * 1.9;
       v.mash.style.width = v.mash.style.height = size + 'px';
       const k = Math.max(0, m.t / m.heldMax);
+      if (m.t < 0.8 && m.state !== 'stunned') {
+        v.tick = (v.tick || 0) - dt;
+        if (v.tick <= 0) { haptics.buzz('escaping'); v.tick = 0.08 + m.t * 0.25; }
+      }
       v.mash.querySelector('.ring').setAttribute('stroke-dasharray', `${(k * 100).toFixed(1)} 100`);
       v.mash.querySelector('.label').textContent = m.state === 'stunned' ? 'עכשיו!' : 'תכסח אותו!';
     }
@@ -768,8 +800,10 @@ function finish() {
     save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length - 1, levelIndex + 1));
     persist();
     audio.sfx.win();
+    haptics.buzz('win');
   } else {
     audio.sfx.lose();
+    haptics.buzz('lose');
   }
   $('res-img').src = won ? 'img/lior_ko.webp' : 'img/lior_eat.webp';
   $('res-title').textContent = won ? 'ליאור חוסל!' : 'העכברים ניצחו';
@@ -855,30 +889,32 @@ function wire() {
   $('ab-ofek').addEventListener('click', () => { if (game.useAbility('ofek')) handleEvents(); });
   $('ab-shalev').addEventListener('click', () => { if (game.useAbility('shalev')) handleEvents(); });
   $('ab-shaked').addEventListener('click', () => { if (game.useAbility('shaked')) handleEvents(); });
-  $('pause-btn').addEventListener('click', () => { audio.sfx.tap(); pause(); });
-  $('resume-btn').addEventListener('click', () => { audio.sfx.tap(); resume(); });
-  $('restart-btn').addEventListener('click', () => { audio.sfx.tap(); paused = false; prepareLevel(levelIndex); beginPlan(); });
-  $('pause-levels').addEventListener('click', () => { audio.sfx.tap(); paused = false; toLevels(); });
+  $('pause-btn').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); pause(); });
+  $('resume-btn').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); resume(); });
+  $('restart-btn').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); paused = false; prepareLevel(levelIndex); beginPlan(); });
+  $('pause-levels').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); paused = false; toLevels(); });
   $('pause-sound').addEventListener('click', toggleSound);
   $('sound-btn').addEventListener('click', toggleSound);
-  $('hint-ok').addEventListener('click', (e) => { e.stopPropagation(); audio.sfx.tap(); nextHint(); });
+  $('haptic-btn').addEventListener('click', toggleHaptics);
+  $('pause-haptic').addEventListener('click', toggleHaptics);
+  $('hint-ok').addEventListener('click', (e) => { e.stopPropagation(); audio.sfx.tap(); haptics.buzz('ui'); nextHint(); });
   $('play-btn').addEventListener('click', () => {
-    audio.unlock(); audio.sfx.tap();
+    audio.unlock(); audio.sfx.tap(); haptics.buzz('ui');
     const firstOpen = LEVELS.findIndex((_, i) => !(save.stars[i] > 0));
     openLevel(firstOpen < 0 ? LEVELS.length - 1 : Math.min(firstOpen, save.unlocked));
   });
-  $('levels-btn').addEventListener('click', () => { audio.unlock(); audio.sfx.tap(); toLevels(); });
-  $('levels-back').addEventListener('click', () => { audio.sfx.tap(); toTitle(); });
+  $('levels-btn').addEventListener('click', () => { audio.unlock(); audio.sfx.tap(); haptics.buzz('ui'); toLevels(); });
+  $('levels-back').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toTitle(); });
   $('dialog').addEventListener('click', (e) => { if (e.target.id !== 'dlg-skip') nextLine(); });
-  $('dlg-skip').addEventListener('click', (e) => { e.stopPropagation(); audio.sfx.tap(); dlg = null; beginPlan(); });
+  $('dlg-skip').addEventListener('click', (e) => { e.stopPropagation(); audio.sfx.tap(); haptics.buzz('ui'); dlg = null; beginPlan(); });
   $('res-next').addEventListener('click', () => {
-    audio.sfx.tap();
+    audio.sfx.tap(); haptics.buzz('ui');
     if (levelIndex === LEVELS.length - 1) { show('ending'); audio.sfx.win(); return; }
     openLevel(levelIndex + 1);
   });
-  $('res-retry').addEventListener('click', () => { audio.sfx.tap(); prepareLevel(levelIndex); beginPlan(); });
-  $('res-levels').addEventListener('click', () => { audio.sfx.tap(); toLevels(); });
-  $('end-btn').addEventListener('click', () => { audio.sfx.tap(); toLevels(); });
+  $('res-retry').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); prepareLevel(levelIndex); beginPlan(); });
+  $('res-levels').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toLevels(); });
+  $('end-btn').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toLevels(); });
   window.addEventListener('resize', () => requestAnimationFrame(layout));
   document.addEventListener('visibilitychange', () => { if (document.hidden && game && game.phase === 'action') pause(); });
   window.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -900,6 +936,8 @@ function toTitle() { show('title'); }
 async function boot() {
   audio.setMuted(!!save.muted);
   soundLabel();
+  haptics.setEnabled(save.haptics !== false);
+  hapticLabel();
   wire();
   try {
     const tex = await load();

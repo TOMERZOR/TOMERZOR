@@ -24,6 +24,8 @@ When you change a file, run `python3 achori/tools/version.py` so phones load the
 - From level 4 Lior is smart: he sees traps and glue and goes around them, so you have to block every other way.
 - The "סוללת אידו" button files a complaint. It never helps.
 
+Vibration: every tap, placement, hit, catch, kill, steal and ability has its own pattern (`js/haptics.js`), and a caught mouse ticks faster and faster just before it breaks free. Android uses the Vibration API; iPhone Safari has no vibration API, so on iOS 18+ each pulse is the system tap from toggling a hidden switch. It can be turned off on the title screen and in pause.
+
 Leftover money can be spent during the action too: pick a tool, then tap an empty cell.
 
 ## Levels

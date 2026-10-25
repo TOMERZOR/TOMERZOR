@@ -1,4 +1,5 @@
-// Music and sound effects are synthesized live with WebAudio (no files to download).
+// Music and most sound effects are synthesized live with WebAudio; the arcade moments (jumps, power-ups,
+// bumps, crashes...) play retro game samples from one small sprite, audio/retro.wav.
 
 let ctx = null, master, sfxBus, musicBus, noiseBuf, comp;
 const settings = { music: true, sfx: true };
@@ -230,6 +231,44 @@ export const sfx = {
 
 function crateBreak(t, amt) {
   for (let i = 0; i < 4; i++) noise(t + i * 0.03 + Math.random() * 0.02, 0.07, 0.2 * amt, 'bandpass', 700 + Math.random() * 900, 400, 3);
+}
+
+// ---------- retro samples ----------
+// Cut from a retro game sound effects compilation into one mono sprite: name -> [offset s, length s, gain].
+const RETRO = {
+  jump: [0, 0.205, 0.45], superJump: [0.255, 0.3804, 0.55], powerup: [0.6853, 0.5798, 0.6], streak: [1.3151, 0.4016, 0.55],
+  bag: [1.7666, 0.7665, 0.6], mission: [2.5831, 0.573, 0.55], powerEnd: [3.2061, 0.7744, 0.45], shield: [4.0304, 0.4897, 0.6],
+  bonk: [4.5701, 0.2384, 0.6], crumble: [4.8585, 0.3417, 0.45], crash: [5.2502, 0.5604, 0.75], gameOver: [5.8605, 0.9327, 0.6],
+  denied: [6.8432, 0.2361, 0.5],
+};
+let retroBuf = null;
+export function loadRetro() {
+  if (!ctx || retroBuf) return;
+  fetch('audio/retro.wav').then(r => { if (!r.ok) throw new Error('retro'); return r.arrayBuffer(); })
+    .then(b => new Promise((res, rej) => ctx.decodeAudioData(b, res, rej)))
+    .then(buf => { retroBuf = buf; }).catch(() => { /* keep the synthesized versions */ });
+}
+// returns false (so the caller can synthesize instead) until the sprite has loaded
+function retro(name) {
+  if (!retroBuf) return false;
+  const [off, dur, vol] = RETRO[name];
+  const s = ctx.createBufferSource(), g = ctx.createGain();
+  s.buffer = retroBuf; g.gain.value = vol;
+  s.connect(g); g.connect(sfxBus);
+  s.start(ctx.currentTime, off, dur);
+  return true;
+}
+// these moments use the samples; the synthesized sounds above stay as the fallback
+for (const [fn, name] of Object.entries({ jump: 'jump', superJump: 'superJump', powerup: 'powerup', streak: 'streak', bag: 'bag',
+  mission: 'mission', powerEnd: 'powerEnd', shieldBreak: 'shield', stumble: 'bonk', crash: 'crash', denied: 'denied' })) {
+  const synth = sfx[fn];
+  sfx[fn] = (...args) => { if (!ok() || !retro(name)) synth(...args); };
+}
+// knocked a crate stack or a banner over
+sfx.crumble = () => { if (ok() && !retro('crumble')) crateBreak(ctx.currentTime, 0.6); };
+{ // the run is over: the retro jingle, but a new best keeps its fanfare
+  const synth = sfx.gameOver;
+  sfx.gameOver = (best = false) => { if (!ok() || best || !retro('gameOver')) synth(best); };
 }
 
 // ---------- music ----------

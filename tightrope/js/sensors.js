@@ -30,6 +30,7 @@ let lastT = 0;
 let prevRaw = null, prevRawT = 0;
 let touch = null;        // { x0, angle }
 let keys = 0;
+let jumpReq = false, jumpAt = 0;
 
 const norm = (v) => {
   const l = Math.hypot(v[0], v[1], v[2]) || 1;
@@ -92,6 +93,17 @@ function onMotion(e) {
 
   const rr = e.rotationRate;
   const hasGyro = rr && rr.alpha != null && rr.beta != null && rr.gamma != null;
+
+  // A quick flick of the top of the phone toward you is a jump: a fast turn
+  // about the screen's left-right axis, which ordinary balancing never makes.
+  if (hasGyro) {
+    const a = screenAngle();
+    const pitch = Math.abs(rr.beta * Math.cos(a) - rr.gamma * Math.sin(a));
+    if (pitch > 260 && now - jumpAt > 600) {
+      jumpAt = now;
+      jumpReq = true;
+    }
+  }
   if (!hyp) hyp = [a.slice(), a.slice()];
 
   if (hasGyro && dt > 0) {
@@ -146,6 +158,16 @@ export function hasMotion() {
   return tilt.source === 'gyro' || tilt.source === 'accel' || tilt.source === 'orientation';
 }
 
+// A jump was asked for since the last call (flick, swipe up or the space bar).
+export function consumeJump() {
+  const j = jumpReq;
+  jumpReq = false;
+  return j;
+}
+export function requestJump() {
+  jumpReq = true;
+}
+
 // Fallback controls: drag on the screen, or the arrow keys on a computer.
 export function enableFallback(el) {
   el.addEventListener('pointerdown', (e) => {
@@ -166,6 +188,7 @@ export function enableFallback(el) {
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
   window.addEventListener('keydown', (e) => {
+    if (e.key === ' ' && !e.repeat) { jumpReq = true; return; }
     if (e.key === 'ArrowLeft') keys = -1;
     else if (e.key === 'ArrowRight') keys = 1;
     else return;

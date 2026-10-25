@@ -5,9 +5,10 @@
 // The scenery is painted: a backdrop per theme (sky, distant ranges, the gorge),
 // the far cliff as a sprite that grows as you approach, and the walker as a
 // sprite whose legs are split so each one can lift on its step. The rope, the
-// water, droplets, weather and HUD are drawn live on top.
-import { rimAngle, birdLoad, gustWarning } from './sim.js';
-import { ART, img } from './assets.js';
+// liquid, droplets, coins, knots, hurdles, the ibex, rain, weather and HUD are
+// drawn live on top.
+import { rimAngle, birdLoad, gustWarning, rainX, JUMP_TIME } from './sim.js';
+import { ART, CHARACTERS, img } from './assets.js';
 
 // hz: where the painted horizon sits, as a share of the backdrop's height.
 // tint: colour laid over the walker and the cliff so they sit in the light.
@@ -61,7 +62,16 @@ export class Renderer {
     this.theme = THEMES.morning;
     this.level = null;
     this.art = {};
+    this.char = CHARACTERS[0];
+    this.pops = [];
+    this.rings = [];
+    this.head = { x: 0, y: 0 };
     this.resize();
+  }
+
+  setCharacter(c) {
+    this.char = c;
+    if (this.level) this.prepareArt();
   }
 
   resize() {
@@ -99,7 +109,7 @@ export class Renderer {
   // Loads this theme's pictures and bakes the tinted copies it needs.
   prepareArt() {
     const th = this.theme;
-    const key = th.bg;
+    const key = th.bg + this.char.id;
     const art = this.art = { key };
     const again = () => { if (this.art.key === key) this.prepareArt(); };
     art.bg = img(th.bg, again);
@@ -111,8 +121,11 @@ export class Renderer {
       // The cliff's silhouette in the haze colour, faded in with distance.
       art.cliffFog = tinted(cliff, th.fog, 0.4);
     }
-    const w = img(ART.walker.src, again);
+    const w = img(this.char.src, again);
     if (w) art.walker = th.walkerTint ? tinted(w, th.walkerTint) : w;
+    art.ibex = img(ART.ibex.src, again);
+    art.cloud = img(ART.cloud.src, again);
+    art.coin = img(ART.coin.src, again);
     art.birdSit = img(ART.birdSit.src, again);
     art.birdFly = img(ART.birdFly.src, again);
   }
@@ -154,10 +167,12 @@ export class Renderer {
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
     // Camera follows the walker; while he falls it stays put.
-    const manY = this.ropeY(s, s.z) - (view.drop || 0);
+    const jump = s.air > 0 ? Math.sin(Math.PI * (1 - s.air / JUMP_TIME)) * 0.4 : 0;
+    const manY = this.ropeY(s, s.z) + jump - (view.drop || 0);
     if (!view.frozenCam) {
-      this.camZ = s.z - 3.8;
-      this.camY = this.ropeY(s, s.z) + 2.3;
+      // High enough that the rope ahead shows over the walker's head.
+      this.camZ = s.z - 4.6;
+      this.camY = this.ropeY(s, s.z) + 3.4 + jump * 0.3 + (s.running ? Math.abs(Math.sin(s.stepPhase * Math.PI)) * 0.05 : 0);
       this.camX = s.swayX * 0.5;
     }
     const shake = view.shake || 0;
@@ -166,10 +181,17 @@ export class Renderer {
 
     this.drawBackdrop();
     this.drawCliff();
+    this.drawRain(s);
     this.drawRope(s);
+    this.drawRopeThings(s);
+    this.drawIbexes(s, true);
+    this.drawItems(s, true);
     this.drawWalker(s, view, manY);
+    this.drawItems(s, false);
+    this.drawIbexes(s, false);
     this.drawDrops(dt);
     this.drawWeather(s, dt);
+    this.drawPops(dt);
     g.restore();
     if (th.dark) {
       const v = g.createRadialGradient(W / 2, H * 0.55, H * 0.2, W / 2, H * 0.55, H * 0.8);
@@ -183,6 +205,199 @@ export class Renderer {
       this.drawLeanMeter(s, view);
       this.drawGustArrow(s);
     }
+  }
+
+  // Rain clouds over a stretch of rope; the stream drifts side to side.
+  drawRain(s) {
+    const g = this.g, im = this.art.cloud;
+    const t = s.t;
+    for (const c of s.clouds) {
+      if (c.z1 < this.camZ + 0.5) continue;
+      const x = rainX(c, t);
+      // Falling drops along the stretch, nearest last.
+      g.strokeStyle = this.theme.dark ? 'rgba(150,190,240,0.55)' : 'rgba(225,240,255,0.75)';
+      g.lineCap = 'round';
+      for (let z = c.z1; z >= Math.max(c.z0, this.camZ + 0.8); z -= 0.5) {
+        const base = this.ropeY(s, z);
+        for (let i = 0; i < 4; i++) {
+          const y = base + 4.4 - ((t * 7 + i * 1.6 + z * 1.3) % 6.4);
+          const a = this.project(x + Math.sin(z * 7 + i) * 0.05, y, z), b = this.project(x + Math.sin(z * 7 + i) * 0.05, y - 0.25, z);
+          if (!a || !b) continue;
+          g.lineWidth = Math.max(1, 0.025 * a.k);
+          g.beginPath();
+          g.moveTo(a.x, a.y);
+          g.lineTo(b.x, b.y);
+          g.stroke();
+        }
+      }
+      if (!im) continue;
+      for (const z of [c.z1 - 1.5, (c.z0 + c.z1) / 2, c.z0 + 1.5]) {
+        const p = this.project(x, this.ropeY(s, z) + 4.6, z);
+        if (!p) continue;
+        const w = 3.4 * p.k, h = w * ART.cloud.h / ART.cloud.w;
+        g.drawImage(im, p.x - w / 2, p.y - h * 0.65, w, h);
+      }
+    }
+  }
+
+  // Knots are bumps on the rope; hurdles are striped blocks to jump.
+  drawRopeThings(s) {
+    const g = this.g;
+    for (const z of s.knots) {
+      const p = this.project(this.ropeX(s, z), this.ropeY(s, z), z);
+      if (!p || z > s.z + 60) continue;
+      g.fillStyle = shade(this.theme.rope, -0.35);
+      g.beginPath();
+      g.ellipse(p.x, p.y, Math.max(2, 0.06 * p.k), Math.max(2, 0.05 * p.k), 0, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = shade(this.theme.rope, 0.2);
+      g.beginPath();
+      g.ellipse(p.x - 0.015 * p.k, p.y - 0.015 * p.k, Math.max(1, 0.025 * p.k), Math.max(1, 0.018 * p.k), 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (const h of s.hurdles) {
+      const z = h.z;
+      if (z > s.z + 60) continue;
+      const a = this.project(this.ropeX(s, z) - 0.2, this.ropeY(s, z) + 0.36, z), b = this.project(this.ropeX(s, z) + 0.2, this.ropeY(s, z) - 0.04, z);
+      if (!a || !b) continue;
+      const w = b.x - a.x, hh = b.y - a.y;
+      g.save();
+      g.beginPath();
+      g.rect(a.x, a.y, w, hh);
+      g.fillStyle = '#f6efe4';
+      g.fill();
+      g.clip();
+      g.fillStyle = '#d8352a';
+      for (let i = -2; i < 6; i++) {
+        g.beginPath();
+        g.moveTo(a.x + i * w * 0.3, b.y);
+        g.lineTo(a.x + i * w * 0.3 + w * 0.15, b.y);
+        g.lineTo(a.x + i * w * 0.3 + w * 0.15 + hh, a.y);
+        g.lineTo(a.x + i * w * 0.3 + hh, a.y);
+        g.fill();
+      }
+      g.restore();
+      g.strokeStyle = 'rgba(40,20,10,0.6)';
+      g.lineWidth = Math.max(1, 0.015 * a.k);
+      g.strokeRect(a.x, a.y, w, hh);
+      // An arrow over the first ones you meet, so the jump is obvious.
+      if (!h.done && z - s.z < 7 && z - s.z > 0.8) {
+        const pulse = 0.6 + 0.4 * Math.sin(performance.now() / 120);
+        g.fillStyle = `rgba(243,198,63,${pulse})`;
+        const cx = (a.x + b.x) / 2, top = a.y - 0.25 * a.k, sz = Math.max(8, 0.16 * a.k);
+        g.beginPath();
+        g.moveTo(cx, top - sz);
+        g.lineTo(cx + sz, top);
+        g.lineTo(cx + sz * 0.4, top);
+        g.lineTo(cx + sz * 0.4, top + sz);
+        g.lineTo(cx - sz * 0.4, top + sz);
+        g.lineTo(cx - sz * 0.4, top);
+        g.lineTo(cx - sz, top);
+        g.closePath();
+        g.fill();
+      }
+    }
+  }
+
+  // The ibex: ahead of the walker before he meets it, behind (and closer) after.
+  drawIbexes(s, ahead) {
+    const g = this.g, im = this.art.ibex;
+    if (!im) return;
+    for (const b of s.ibexes) {
+      if (b.state === 'gone' || (b.z > s.z) !== ahead || b.z > s.z + 60) continue;
+      const hop = b.state === 'pass' ? Math.abs(Math.sin(b.t * 9)) * 0.12 : 0;
+      const p = this.project(this.ropeX(s, b.z) + b.x, this.ropeY(s, b.z) + hop, b.z);
+      if (!p || p.k > this.f) continue;
+      const h = 1.5 * p.k, w = h * ART.ibex.w / ART.ibex.h;
+      g.save();
+      g.translate(p.x, p.y);
+      g.rotate(b.side * Math.min(0.25, b.t * 0.6));
+      g.drawImage(im, -w / 2, -h, w, h);
+      g.restore();
+    }
+  }
+
+  // Coins and water drops float at head height, off to the side.
+  drawItems(s, ahead) {
+    const g = this.g, coin = this.art.coin;
+    const t = performance.now() / 1000;
+    for (const it of s.items) {
+      if (it.taken || (it.z > s.z) !== ahead || it.z > s.z + 40) continue;
+      const bob = Math.sin(t * 3 + it.z) * 0.04;
+      const p = this.project(this.ropeX(s, it.z) + it.x, this.ropeY(s, it.z) + 1.95 + bob, it.z);
+      if (!p || p.k > this.f * 1.2) continue;
+      if (it.kind === 'coin') {
+        if (!coin) continue;
+        const sz = 0.26 * p.k, spin = Math.abs(Math.cos(t * 2.4 + it.z));
+        g.drawImage(coin, p.x - sz * spin / 2, p.y - sz / 2, sz * Math.max(0.15, spin), sz);
+      } else {
+        const r = 0.13 * p.k;
+        const glow = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
+        glow.addColorStop(0, 'rgba(120,200,255,0.55)');
+        glow.addColorStop(1, 'rgba(120,200,255,0)');
+        g.fillStyle = glow;
+        g.fillRect(p.x - r * 2.2, p.y - r * 2.2, r * 4.4, r * 4.4);
+        g.fillStyle = '#3aa0ea';
+        g.beginPath();
+        g.moveTo(p.x, p.y - r * 1.5);
+        g.quadraticCurveTo(p.x + r, p.y - r * 0.2, p.x + r * 0.85, p.y + r * 0.35);
+        g.arc(p.x, p.y + r * 0.35, r * 0.85, 0, Math.PI);
+        g.quadraticCurveTo(p.x - r, p.y - r * 0.2, p.x, p.y - r * 1.5);
+        g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.75)';
+        g.beginPath();
+        g.ellipse(p.x - r * 0.3, p.y + r * 0.1, r * 0.18, r * 0.3, -0.4, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
+  // Something happened in the simulation: show it.
+  onEvent(e, s) {
+    const h = this.head;
+    const gold = '#f3c63f';
+    if (e.type === 'coin') {
+      this.pops.push({ text: `+${25 * s.mult}`, x: h.x, y: h.y - 10, color: gold, t: 0, size: 26 });
+      this.rings.push({ x: h.x, y: h.y, t: 0, color: '255,214,90' });
+    } else if (e.type === 'orb') {
+      this.pops.push({ text: '+5%', x: h.x, y: h.y - 10, color: '#8fd3ff', t: 0, size: 28 });
+      this.rings.push({ x: h.x, y: h.y, t: 0, color: '120,200,255' });
+    } else if (e.type === 'hurdle' || e.type === 'ibexPass') {
+      this.pops.push({ text: `+${e.points}`, x: h.x, y: h.y - 30, color: gold, t: 0, size: 32 });
+    } else if (e.type === 'mult') {
+      this.pops.push({ text: `x${e.mult}`, x: this.W / 2, y: this.H * 0.3, color: gold, t: 0, size: 64 });
+    }
+  }
+
+  drawPops(dt) {
+    const g = this.g;
+    for (const r of this.rings) {
+      r.t += dt;
+      const a = Math.max(0, 1 - r.t / 0.45);
+      g.strokeStyle = `rgba(${r.color},${a})`;
+      g.lineWidth = 3;
+      g.beginPath();
+      g.arc(r.x, r.y, 10 + r.t * 90, 0, Math.PI * 2);
+      g.stroke();
+    }
+    this.rings = this.rings.filter((r) => r.t < 0.45);
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.direction = 'ltr';  // numbers like +25 read left to right even on a Hebrew page
+    for (const p of this.pops) {
+      p.t += dt;
+      const a = Math.max(0, 1 - Math.max(0, p.t - 0.5) / 0.5);
+      const grow = Math.min(1, p.t / 0.12);
+      g.globalAlpha = a;
+      g.font = `700 ${Math.round(p.size * (0.6 + 0.4 * grow))}px Karantina, 'Arial Narrow', sans-serif`;
+      g.lineWidth = 4;
+      g.strokeStyle = 'rgba(90,20,10,0.85)';
+      g.strokeText(p.text, p.x, p.y - p.t * 50);
+      g.fillStyle = p.color;
+      g.fillText(p.text, p.x, p.y - p.t * 50);
+    }
+    g.globalAlpha = 1;
+    this.pops = this.pops.filter((p) => p.t < 1);
   }
 
   drawBackdrop() {
@@ -246,7 +461,7 @@ export class Renderer {
   // The walker sprite, seen from behind. Legs are drawn as two halves so the
   // stepping foot can lift; the rest of him (pole and bucket included) is one piece.
   drawWalker(s, view, manY) {
-    const g = this.g, A = ART.walker;
+    const g = this.g, A = this.char;
     const p = this.project(this.ropeX(s, s.z), manY, s.z);
     if (!p) return;
     const k = p.k;
@@ -255,22 +470,31 @@ export class Renderer {
     g.translate(p.x, p.y);
     g.rotate(lean);
     const im = this.art.walker;
+    const ph = s.stepPhase % 2;
+    const liftL = ph < 1 ? Math.sin(ph * Math.PI) : 0;
+    const liftR = ph >= 1 ? Math.sin((ph - 1) * Math.PI) : 0;
     if (im) {
       const sc = k / A.ppm;
       const ox = -A.cx * sc, oy = -A.feetY * sc;
-      const ph = s.stepPhase % 2;
-      const liftL = ph < 1 ? Math.sin(ph * Math.PI) : 0;
-      const liftR = ph >= 1 ? Math.sin((ph - 1) * Math.PI) : 0;
-      const legH = A.h - A.legSplitY;
-      // Each leg: lifted a little and foreshortened as the foot comes forward.
-      for (const [x0, w, lift] of [[0, A.cx, liftL], [A.cx, A.w - A.cx, liftR]]) {
-        const squash = 1 - lift * 0.1;
-        const dy = -lift * 0.07 * k;
-        g.drawImage(im, x0, A.legSplitY, w, legH,
-          ox + x0 * sc, oy + A.legSplitY * sc + dy, w * sc, legH * sc * squash);
+      if (A.legs) {
+        const legH = A.h - A.legSplitY;
+        // Each leg: lifted a little and foreshortened as the foot comes forward.
+        for (const [x0, w, lift] of [[0, A.cx, liftL], [A.cx, A.w - A.cx, liftR]]) {
+          const squash = 1 - lift * 0.1;
+          const dy = -lift * 0.07 * k;
+          g.drawImage(im, x0, A.legSplitY, w, legH,
+            ox + x0 * sc, oy + A.legSplitY * sc + dy, w * sc, legH * sc * squash);
+        }
+        g.drawImage(im, 0, 0, A.w, A.legSplitY + 2, ox, oy, A.w * sc, (A.legSplitY + 2) * sc);
+      } else {
+        // Skirts, fur and tails: a small bounce on each step instead.
+        const bob = (liftL + liftR) * 0.025 * k;
+        g.drawImage(im, ox, oy - bob, A.w * sc, A.h * sc);
       }
-      g.drawImage(im, 0, 0, A.w, A.legSplitY + 2, ox, oy, A.w * sc, (A.legSplitY + 2) * sc);
     }
+    // Where the head is on screen, for score pops.
+    const hy = (A.feetY - A.rimY) / A.ppm;
+    this.head = { x: p.x + Math.sin(lean) * hy * k, y: p.y - Math.cos(lean) * hy * k };
     g.scale(k, -k);
     this.drawWater(s, view);
     const poleY = (A.feetY - A.poleY) / A.ppm;
@@ -281,14 +505,39 @@ export class Renderer {
     if (s.bird) this.drawBird(s, p, k, lean, poleEnd, poleY);
   }
 
-  // Water in the bucket on his head, in metres with y up from his feet.
+  // The liquid in the container on the head, in metres with y up from the feet.
+  // Open containers get a live surface; glass ones only show the overflow.
   drawWater(s, view) {
-    const g = this.g, A = ART.walker;
-    const rel = s.psi - view.lean;      // water surface relative to the bucket
-    const rim = rimAngle(s.fill);
-    const top = (A.feetY - A.bucketTopY) / A.ppm;
-    const wt = A.bucketHalfW / A.ppm * 0.97;
-    const ry = 0.032;
+    const g = this.g, A = this.char;
+    const rel = s.psi - view.lean;      // liquid surface relative to the container
+    const rim = rimAngle(s.fill, s.liq);
+    const top = (A.feetY - A.rimY) / A.ppm;
+    const wt = A.rimHalfW / A.ppm * 0.97;
+    const ry = 0.032 * wt / 0.13;
+    this.dropColor = A.color;
+    if (A.overlay) this.drawSurface(s, rel, top, wt, ry);
+    // Liquid climbing over the rim when it is about to spill.
+    const near = Math.abs(rel) / rim;
+    if (near > 0.6 && s.fill > 0.01) {
+      const side = rel > 0 ? -1 : 1;
+      const h = Math.min(0.09, (near - 0.6) * 0.12);
+      g.save();
+      g.translate(0, top - 0.004);
+      g.fillStyle = A.color;
+      g.globalAlpha = 0.92;
+      g.beginPath();
+      g.moveTo(side * wt * 0.1, 0.005);
+      g.quadraticCurveTo(side * wt * 0.7, h * 1.6, side * (wt + 0.012), -0.01);
+      g.lineTo(side * wt * 0.1, -0.01);
+      g.closePath();
+      g.fill();
+      g.restore();
+    }
+    this.emitDrops(s, view, top, wt);
+  }
+
+  drawSurface(s, rel, top, wt, ry) {
+    const g = this.g, A = this.char;
     g.save();
     g.translate(0, top - 0.004);
     g.fillStyle = '#3d454c';
@@ -301,30 +550,17 @@ export class Renderer {
       g.beginPath();
       g.ellipse(0, 0, wt * 0.95, ry * 0.88, 0, 0, Math.PI * 2);
       g.clip();
-      g.fillStyle = this.theme.dark ? '#1f5f93' : '#2f86c6';
+      g.fillStyle = shade(A.color, this.theme.dark ? -0.35 : -0.08);
       g.beginPath();
       g.ellipse(0, -depthShown, wt * 0.95, ry * 0.88, 0, 0, Math.PI * 2);
       g.fill();
       // The tilt shows as a bright crest moving to the high side.
       const off = Math.max(-1, Math.min(1, rel / 0.3)) * wt * 0.7;
-      g.fillStyle = 'rgba(200,236,255,0.75)';
+      g.fillStyle = 'rgba(255,255,255,0.5)';
       g.beginPath();
       g.ellipse(-off, -depthShown, wt * 0.45, ry * 0.45, 0, 0, Math.PI * 2);
       g.fill();
       g.restore();
-    }
-    // Water climbing over the rim when it is about to spill.
-    const near = Math.abs(rel) / rim;
-    if (near > 0.6 && s.fill > 0.01) {
-      const side = rel > 0 ? -1 : 1;
-      const h = Math.min(0.09, (near - 0.6) * 0.12);
-      g.fillStyle = 'rgba(70,160,225,0.92)';
-      g.beginPath();
-      g.moveTo(side * wt * 0.1, 0.005);
-      g.quadraticCurveTo(side * wt * 0.7, h * 1.6, side * (wt + 0.012), -0.01);
-      g.lineTo(side * wt * 0.1, -0.01);
-      g.closePath();
-      g.fill();
     }
     g.strokeStyle = 'rgba(225,232,238,0.9)';
     g.lineWidth = 0.011;
@@ -332,8 +568,11 @@ export class Renderer {
     g.ellipse(0, 0, wt, ry, 0, 0, Math.PI * 2);
     g.stroke();
     g.restore();
+  }
 
-    // Spawn droplets from the rim while water pours out.
+  // Spawn droplets from the rim while liquid pours out.
+  emitDrops(s, view, top, wt) {
+    const g = this.g;
     if (s.spillRate > 0 && view.emit) {
       const m = g.getTransform();
       const side = s.spillSide;
@@ -415,7 +654,8 @@ export class Renderer {
 
   drawDrops(dt) {
     const g = this.g;
-    g.fillStyle = 'rgba(80,170,235,0.9)';
+    g.fillStyle = this.dropColor || '#50aaeb';
+    g.globalAlpha = 0.9;
     const keep = [];
     for (const d of this.drops) {
       d.vy += d.g * dt;
@@ -427,6 +667,7 @@ export class Renderer {
       g.ellipse(d.x, d.y, d.r, d.r * (1 + Math.min(2, Math.abs(d.vy) / (d.g * 0.4))), 0, 0, Math.PI * 2);
       g.fill();
     }
+    g.globalAlpha = 1;
     this.drops = keep;
   }
 
@@ -498,7 +739,7 @@ export class Renderer {
     const level = h * (1 - s.fill);
     const tilt = Math.tan(Math.max(-1.2, Math.min(1.2, rel)));
     const visTilt = tilt * w * 0.5 * (s.fill > 0.02 ? 1 : 0);
-    g.fillStyle = '#3b9ae0';
+    g.fillStyle = this.char.color;
     g.beginPath();
     g.moveTo(-5, level - visTilt);
     g.lineTo(w + 5, level + visTilt);

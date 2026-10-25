@@ -61,6 +61,8 @@ Progress is stored in the browser (localStorage).
 
 The music is a Mizrahi dance-pop groove in Hijaz on D, generated live: four-on-the-floor kick under a darbuka maqsum, claps on the backbeat, riq and hats, a 3-3-2 bass, offbeat keyboard stabs that duck under the kick and a written two-phrase hook on a zurna-like lead with slides and vibrato (the oud plays it in the menu), in a 16-bar form with a darbuka break and a riser. It starts at 126 BPM and speeds up to about 148 with the run.
 
+The arcade moments use retro game samples (supplied by the user as one compilation, cut into a 300 KB sprite, `audio/retro.wav`): a square-wave glide for the jump and a longer climb for the sneakers' super jump, a rising arpeggio for power-ups and another for missions, coin blips for a streak, a scramble of notes for the mystery bag, a power-down for a power-up running out, a zap for the hamsa breaking, a bonk for a stumble with a crumble when a stack goes over, a noisy hit for a crash, a falling jingle at game over and a buzz when the shop says no. Everything else is synthesized, and the synthesized versions stand in until the sprite has loaded.
+
 Coins on the street all give the same ding; coins strung together in one jump (or a carpet ride) climb a scale, and the next landing resets it. There are footfalls at a running cadence, a whoosh on near misses, engines that rise in pitch as traffic comes at you and drop as it passes, car horns, a close-call sting, a coin shower for streaks, paper and a pop for the mystery bag, lift-off, wind and a swoop for the carpet, three ticks as a power-up runs out, a revive sweep, a sad trombone at game over (a fanfare for a new best), and a swish on menu sheets. There is no narration or recorded speech: the market people talk in speech bubbles.
 
 ## Code
@@ -77,7 +79,7 @@ Coins on the street all give the same ding; coins strung together in one jump (o
 | `js/light.js` | Baked sun-shadow atlas, sky occlusion and bounce light patched into the materials |
 | `js/i18n.js` | All player-facing text in Hebrew and English |
 | `js/assets.js` | GLB loading and the shared animation library |
-| `js/audio.js` | Synthesized music and sound effects |
+| `js/audio.js` | Synthesized music and sound effects, the retro sample sprite |
 | `js/ui.js`, `css/style.css` | Interface, right-to-left in Hebrew and left-to-right in English |
 | `js/config.js` | Characters, prices, power-ups, zones, missions |
 

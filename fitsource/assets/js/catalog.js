@@ -93,13 +93,13 @@ const sameWord = (a, b) => a === b || (a.length >= 5 && b.length >= 5 && Math.ab
 
 // What each category is called in English product titles and types.
 const CATEGORY_WORDS = {
-  top: ["tee", "tshirt", "shirt", "top", "polo", "sweater", "sweatshirt", "hoodie", "crewneck", "knit", "jumper", "longsleeve", "tank", "jersey", "cardigan"],
+  top: ["tee", "tshirt", "shirt", "top", "polo", "sweater", "sweatshirt", "hoodie", "crewneck", "knit", "jumper", "longsleeve", "tank", "jersey", "cardigan", "thermal", "henley", "zipper", "zip", "pullover", "quarterzip"],
   outerwear: ["jacket", "coat", "parka", "bomber", "puffer", "vest", "gilet", "blazer", "anorak", "overshirt", "windbreaker", "fleece"],
   bottom: ["pant", "pants", "jean", "jeans", "trouser", "trousers", "short", "shorts", "jogger", "sweatpant", "sweatpants", "cargo", "skirt", "denim"],
   dress: ["dress", "jumpsuit"],
-  footwear: ["shoe", "shoes", "sneaker", "sneakers", "boot", "boots", "clog", "loafer", "sandal", "slide", "mule"],
+  footwear: ["shoe", "shoes", "sneaker", "sneakers", "boot", "boots", "clog", "clogs", "loafer", "sandal", "slide", "mule", "trainer", "trainers"],
   bag: ["bag", "backpack", "tote", "pouch", "wallet"],
-  headwear: ["cap", "hat", "beanie", "bucket", "visor"],
+  headwear: ["cap", "hat", "beanie", "bucket", "visor", "trucker", "snapback", "skullcap", "balaclava"],
   eyewear: ["sunglasses", "glasses", "eyewear"],
   jewelry: ["ring", "chain", "necklace", "bracelet", "earring"],
   accessory: ["socks", "belt", "scarf", "gloves", "keychain"],
@@ -122,6 +122,7 @@ export function searchProducts(products, { name = "", query = "", color = "", ca
   for (const w of words(query)) if (!terms.has(w)) terms.set(w, 1);
   for (const w of words(color)) if (!terms.has(w)) terms.set(w, 0.7);
   const catWords = CATEGORY_WORDS[category] || [];
+  const kindOf = (ws) => Object.keys(CATEGORY_WORDS).find((k) => ws.some((w) => CATEGORY_WORDS[k].includes(w) || CATEGORY_WORDS[k].includes(w.replace(/s$/, ""))));
   const out = [];
   for (const d of docs) {
     let score = 0;
@@ -134,6 +135,11 @@ export function searchProducts(products, { name = "", query = "", color = "", ca
       }
     }
     if (catWords.length && d.w.some((w) => catWords.includes(w) || catWords.includes(w.replace(/s$/, "")))) score *= 1.25;
+    else if (category) {
+      // a cap when we want a tee: another kind of piece, whatever the words share
+      const kind = kindOf(d.w);
+      if (kind && kind !== category && !(["top", "outerwear"].includes(kind) && ["top", "outerwear"].includes(category))) score *= 0.3;
+    }
     if (score > 0) out.push({ product: d.p, score, cover: nameWords.length ? named / nameWords.length : 0 });
   }
   return out.sort((a, b) => b.score - a.score || Number(b.product.a) - Number(a.product.a)).slice(0, limit);
@@ -201,8 +207,10 @@ export async function findProducts(piece, limit = 8) {
 export function toMatch({ product: p, store, own }, kind = "original") {
   const date = new Date(store.updatedAt);
   const when = isNaN(date) ? "" : date.toLocaleDateString("he-IL", { day: "numeric", month: "numeric" });
+  // colourways are often separate products with the same name: say which one
+  const colors = p.c && p.c.length && p.c.length <= 3 && !p.c.some((c) => foldName(p.t).includes(foldName(c))) ? ` · ${p.c.join(" / ")}` : "";
   return {
-    title: p.t,
+    title: p.t + colors,
     brand: p.v || store.name,
     shop: own ? `${store.name}, האתר הרשמי` : store.name,
     url: `https://${store.domain}/products/${p.h}`,

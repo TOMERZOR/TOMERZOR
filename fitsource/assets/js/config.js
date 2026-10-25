@@ -32,6 +32,11 @@ export const CONFIG = {
   // Shown on the For brands page as the partnership contact. Leave empty to hide the button.
   contactEmail: "",
 
+  // Where the brand catalogs are (tools/crawl-catalog.mjs, rebuilt nightly by
+  // .github/workflows/fitsource-catalog.yml). A scan that names an indexed
+  // brand links to the product's page on the brand's site. Empty: no catalogs.
+  catalogBase: "https://raw.githubusercontent.com/TOMERZOR/TOMERZOR/fitsource-catalog/",
+
   // When set, scanning is switched off and this message is shown instead
   // (for previews hosted where the scanner can't be downloaded).
   scanDisabledMessage: "",

@@ -10,7 +10,7 @@ import * as store from "../store.js";
 import { openReceipt } from "../share.js";
 import { bindTagActions, linkSpotsAndTags } from "./shared.js";
 
-const KIND = { original: "המקור", exact: "זהה", close: "כמעט זהה", similar: "דומה", resale: "יד שנייה" };
+const KIND = { original: "המקור", exact: "זהה", close: "כמעט זהה", similar: "דומה", resale: "יד שנייה", brand: "מאותו מותג" };
 const CONF = { exact: "נמצא המוצר המדויק", likely: "כנראה זה", similar: "דומים" };
 
 function render([id]) {
@@ -99,8 +99,8 @@ function resultTag(item, i, scan) {
       <div class="tag__meta">
         ${item.color ? html`<span class="swatch">${item.hex ? html`<i style="--c:${item.hex}"></i>` : ""}${item.color}</span>` : ""}
         ${!deep && item.printed ? html`<span class="printed" title="הטקסט שקראנו על הבגד">${icon("magnifying-glass")}<bdi dir="ltr">${item.printed}</bdi></span>` : ""}
-        ${deep && m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "ILS")}</span>` : ""}
-        ${deep && m ? statusChip(m.availability, elsewhere || (m.verified ? "נבדק בחנות" : "")) : ""}
+        ${m && m.price != null ? html`<span class="price">${money(m.price, m.currency || "ILS")}</span>` : ""}
+        ${m ? statusChip(m.availability, elsewhere || (m.verified ? "נבדק בחנות" : m.catalog && isOriginal(m) ? m.note || "" : "")) : ""}
         <span class="label">${typeof item.confidence === "string" ? CONF[item.confidence] || "" : confidenceText(item.confidence)}</span>
       </div>
       <div class="tag__actions">
@@ -108,8 +108,9 @@ function resultTag(item, i, scan) {
         ${ownButton(own)}
       </div>
     </div>
-    ${deep && item.matches.length
+    ${item.matches.length
       ? html`<div class="matches">
+          ${item.notOnBrandSite ? html`<p class="matches__note">${icon("info")}<span>הפריט עצמו לא נמכר כרגע ב־<bdi>${item.notOnBrandSite}</bdi>, אולי מקולקציה קודמת. שווה לחפש אותו ביד שנייה.</span></p>` : ""}
           ${item.matches.map(
             (x) => html`<a class="match" ${aAttrs(x.url)}>
               <span class="match__shop"><bdi>${x.shop}</bdi><span class="match__kind ${x.match === "original" ? "match__kind--original" : ""}">${KIND[x.match] || x.match}</span><span class="match__title"><bdi>${x.title}</bdi></span></span>
@@ -164,7 +165,7 @@ function errorView(photo, message) {
 
 /** Lowest in-stock price for each piece (deep scans), minus the pieces you already own. */
 function scanTotal(scan) {
-  if (scan.engine !== "deep") return "";
+  if (!scan.items.some((it) => it.matches && it.matches.length)) return "";
   const priced = scan.items
     .map((it) => ({ m: buyNow(it), owned: store.isOwned(store.ownKey("scan", scan.id, it.id)) }))
     .filter((x) => x.m)
@@ -176,7 +177,7 @@ function resultView(scan) {
   const items = scan.items;
   const pos = spotPositions(items);
   const deep = scan.engine === "deep";
-  const soldCount = deep ? items.filter((it) => (primaryMatch(it) || {}).availability === "sold_out").length : 0;
+  const soldCount = items.filter((it) => (primaryMatch(it) || {}).availability === "sold_out").length;
   return html`<div class="detail">
     <div class="detail__media">
       <div data-results-shot>
@@ -185,7 +186,7 @@ function resultView(scan) {
           alt: "התמונה שלכם",
           frame: false,
           eager: true,
-          spots: items.map((it, i) => ({ ...pos[i], label: it.productName || it.name, sold: deep && (primaryMatch(it) || {}).availability === "sold_out" })),
+          spots: items.map((it, i) => ({ ...pos[i], label: it.productName || it.name, sold: (primaryMatch(it) || {}).availability === "sold_out" })),
           boxes: items.map((it) => it.box),
         })}
       </div>
@@ -325,7 +326,10 @@ function mount(root, [id]) {
 
     const onProgress = (ev) => {
       if (stale()) return;
-      if (ev.engine === "claude") {
+      if (ev.engine === "device" && ev.t === "status") {
+        phase.textContent = ev.msg;
+        addLine("שלב", ev.msg);
+      } else if (ev.engine === "claude") {
         engineLabel.textContent = "זיהוי עם Claude";
         if (ev.t === "status") {
           phase.textContent = ev.msg;

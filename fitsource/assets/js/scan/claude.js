@@ -111,3 +111,30 @@ export async function claudeRegion(sample, crop) {
     throw errorFor(e);
   }
 }
+
+/**
+ * Which catalog product each piece is. `pieces` is [{ item, candidates }]
+ * (candidates from the brand catalogs). Claude looks at the photo again and
+ * picks, per piece, the candidate that is the same product, or null.
+ * Resolves an array of candidate indexes (or null), one per piece.
+ */
+export async function claudePick(sample, blob, pieces, { signal } = {}) {
+  const lines = pieces.map(({ item, candidates }, n) => {
+    const head = `Piece ${n + 1}: ${item.queryEn || item.name} (brand ${item.brand}${item.productName ? `, looks like "${item.productName}"` : ""})`;
+    const list = candidates.map(({ product: p }, k) => `  ${k}: ${p.t}${p.ty ? ` | ${p.ty}` : ""}${p.c ? ` | colours: ${p.c.join(", ")}` : ""}`);
+    return [head, ...list].join("\n");
+  });
+  const prompt = `The attached image is an outfit photo. For each piece below, a search of stores that sell its brand (the brand's own store first) returned candidate products. Pick the candidate that is the same product as the piece in the photo: same design, same print or logo, same colourway. If no candidate is that product, use null; a similar product from the same brand is not a match.
+
+${lines.join("\n\n")}
+
+Reply with only this JSON: {"picks": [one candidate number or null per piece, in order]}`;
+  try {
+    const data = await sample.json(prompt, { images: [blob], signal });
+    const picks = Array.isArray(data && data.picks) ? data.picks : [];
+    return pieces.map((p, n) => (Number.isInteger(picks[n]) && picks[n] >= 0 && picks[n] < p.candidates.length ? picks[n] : null));
+  } catch (e) {
+    if (e && e.code === "cancelled") throw new DOMException("Scan cancelled", "AbortError");
+    throw errorFor(e);
+  }
+}

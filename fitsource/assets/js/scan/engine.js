@@ -4,7 +4,8 @@
 import { CONFIG } from "../config.js";
 import { fetchHealth, deepScan, ApiError } from "./remote.js";
 import { scanOnDevice, classifyOnDevice } from "./ondevice.js";
-import { viewerClaude, claudeScan, claudeRegion } from "./claude.js";
+import { viewerClaude, claudeScan, claudeRegion, claudePick } from "./claude.js";
+import { findProducts, toMatch } from "../catalog.js";
 import { HE } from "./vocab.js";
 import { colorHe } from "./color.js";
 
@@ -157,6 +158,49 @@ function fromDeep(it) {
 }
 
 /**
+ * Look each piece that names a brand up in the brand catalogs and add its
+ * product page as a match. With Claude at hand it picks the right product
+ * from the candidates (looking at the photo again); without, the best
+ * candidate counts only when it carries most of the words read off the piece.
+ * The other candidates come along as "similar" from the same store.
+ */
+export async function linkProducts(items, { sample = null, blob = null, onProgress = () => {}, signal } = {}) {
+  const named = items.filter((it) => it.brand && !(it.matches && it.matches.length));
+  if (!named.length) return items;
+  const found = await Promise.all(
+    named.map((it) =>
+      findProducts({ brand: it.brand, name: it.productName || it.printed || "", query: [it.queryEn, it.printed].filter(Boolean).join(" "), category: it.category }).catch(() => []),
+    ),
+  );
+  const pieces = named.map((item, k) => ({ item, candidates: found[k].slice(0, 6) })).filter((p) => p.candidates.length);
+  if (!pieces.length) return items;
+  onProgress({ t: "status", msg: "מחפשים את המוצר באתר של המותג" });
+  let picks = null;
+  if (sample && blob) {
+    try {
+      picks = await claudePick(sample, blob, pieces, { signal });
+    } catch (err) {
+      if (err.name === "AbortError") throw err;
+      picks = null; // fall back to the word match below
+    }
+  }
+  pieces.forEach(({ item, candidates }, k) => {
+    let chosen = null;
+    let kind = "original";
+    if (picks) chosen = picks[k] != null ? candidates[picks[k]] : null;
+    else if (candidates[0].cover >= 0.75 && (!candidates[1] || candidates[0].score >= candidates[1].score * 1.15)) {
+      chosen = candidates[0];
+      kind = "close"; // a word match, not checked against the photo
+    }
+    // other colourways of the piece, or (when the piece itself isn't there) a little more from the brand
+    const others = candidates.filter((c) => c !== chosen).slice(0, 2);
+    item.matches = [...(chosen ? [toMatch(chosen, kind)] : []), ...others.map((c) => toMatch(c, chosen ? "similar" : "brand"))];
+    if (!chosen) item.notOnBrandSite = candidates[0].store.name;
+  });
+  return items;
+}
+
+/**
  * Scan a prepared image. Tries deep scan first when available, then the
  * viewer's Claude (when the site runs as a claude.ai artifact), then the
  * on-device scanner, and says in `result.notice` why it fell back.
@@ -185,7 +229,8 @@ export async function runScan(prepared, { onProgress = () => {}, signal } = {}) 
   if (sample) {
     try {
       const data = await claudeScan(sample, prepared.blob, { onProgress: (ev) => onProgress({ engine: "claude", ...ev }), signal });
-      return { ...base, engine: "claude", vibe: data.vibe, summary: data.summary, items: data.items.map(fromDeep) };
+      const items = await linkProducts(data.items.map(fromDeep), { sample, blob: prepared.blob, onProgress: (ev) => onProgress({ engine: "claude", ...ev }), signal });
+      return { ...base, engine: "claude", vibe: data.vibe, summary: data.summary, items };
     } catch (err) {
       // Where the on-device scanner can't run either (the artifact preview), say why Claude failed.
       if (err.name === "AbortError" || CONFIG.scanDisabledMessage) throw err;
@@ -193,7 +238,8 @@ export async function runScan(prepared, { onProgress = () => {}, signal } = {}) 
     }
   }
   const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }), signal, textSource: prepared.text });
-  return { ...base, engine: "device", device: out.device, ms: out.ms, notice, vibe: "", summary: "", items: out.items.map(fromDevice) };
+  const items = await linkProducts(out.items.map(fromDevice), { onProgress: (ev) => onProgress({ engine: "device", ...ev }), signal });
+  return { ...base, engine: "device", device: out.device, ms: out.ms, notice, vibe: "", summary: "", items };
 }
 
 /** The part of an image inside `region` (fractions), as a JPEG. */
@@ -224,7 +270,10 @@ export async function runRegion(scan, region, blob, { onProgress = () => {} } = 
     const sample = await viewerClaude();
     if (sample) {
       const item = await claudeRegion(sample, await cropBlob(blob, region));
-      if (item) return { ...fromDeep(item), box };
+      if (item) {
+        const [linked] = await linkProducts([{ ...fromDeep(item), box }], { sample, blob }).catch(() => [{ ...fromDeep(item), box }]);
+        return linked;
+      }
       throw new Error("Claude לא זיהה פריט בסימון. נסו לסמן קרוב יותר.");
     }
   }

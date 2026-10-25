@@ -394,8 +394,25 @@ if (run("claude")) {
   await ctx.route("**/fitsource/assets/js/config.js", async (route) => {
     const src = fs.readFileSync(path.join(FITSOURCE, "assets/js/config.js"), "utf8")
       .replace("hashRouting: false", "hashRouting: true")
-      .replace('scanDisabledMessage: ""', 'scanDisabledMessage: "הסריקה כבויה בתצוגה המקדימה."');
+      .replace('scanDisabledMessage: ""', 'scanDisabledMessage: "הסריקה כבויה בתצוגה המקדימה."')
+      .replace(/catalogBase: "[^"]*"/, 'catalogBase: "https://catalog.test/"');
     await route.fulfill({ body: src, contentType: "text/javascript" });
+  });
+  // a tiny brand catalog: two colourways of the tee, and a hoodie
+  const CATALOG = {
+    "index.json": { updatedAt: "2026-10-25T02:30:00Z", brands: [{ id: "nude-project", name: "Nude Project", aliases: ["nude"], ok: true, domain: "nude-project.com", currency: "EUR", count: 3 }], vendors: {} },
+    "nude-project.json": {
+      id: "nude-project", name: "Nude Project", domain: "nude-project.com", currency: "EUR", updatedAt: "2026-10-25T02:30:00Z",
+      products: [
+        { h: "nude-mansion-tee-black", t: "Nude Mansion Tee", ty: "T-Shirts", c: ["Black"], a: true, s: ["M"], p: 55 },
+        { h: "nude-mansion-tee-white", t: "Nude Mansion Tee", ty: "T-Shirts", c: ["White"], a: true, s: ["S", "M", "L"], p: 55 },
+        { h: "mansion-hoodie", t: "Mansion Hoodie", ty: "Hoodies", c: ["Brown"], a: false, p: 95 },
+      ],
+    },
+  };
+  await ctx.route("https://catalog.test/**", (route) => {
+    const file = CATALOG[new URL(route.request().url()).pathname.slice(1)];
+    return file ? route.fulfill({ body: JSON.stringify(file), contentType: "application/json", headers: { "access-control-allow-origin": "*" } }) : route.fulfill({ status: 404, body: "" });
   });
   await ctx.addInitScript(() => {
     const answer = {
@@ -414,6 +431,11 @@ if (run("claude")) {
     sample.json = async (input, opts = {}) => {
       window.__sampleCalls.push({ input, images: opts.images ? [].concat(opts.images).length : 0 });
       if (window.__sampleMode === "declined") throw { code: "not_granted", message: "declined" };
+      // second call: pick the product among the catalog candidates (the white one)
+      if (/candidate products/.test(input)) {
+        const lines = input.split("\n").filter((l) => /^ +\d+: /.test(l));
+        return { picks: [lines.findIndex((l) => /White/.test(l))] };
+      }
       await new Promise((r) => setTimeout(r, 300));
       opts.onText && opts.onText({ text: JSON.stringify(answer), delta: "" });
       return JSON.parse(JSON.stringify(answer));
@@ -428,17 +450,24 @@ if (run("claude")) {
   await page.waitForSelector(".tags .tag", { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(900);
   await shot(page, "claude-1-results");
-  const tags = await page.$$eval(".tags .tag", (els) => els.map((e) => ({ brand: e.querySelector(".tag__brand").textContent, name: e.querySelector(".tag__name").textContent, label: e.querySelector(".tag__meta .label")?.textContent, google: e.querySelector('[data-shop="google"]')?.href, tx: e.querySelector('[data-shop="terminalx"]')?.href })));
+  const tags = await page.$$eval(".tags .tag", (els) => els.map((e) => ({ brand: e.querySelector(".tag__brand").textContent, name: e.querySelector(".tag__name").textContent, label: e.querySelector(".tag__meta .label")?.textContent, google: e.querySelector('[data-shop="google"]')?.href, tx: e.querySelector('[data-shop="terminalx"]')?.href, price: e.querySelector(".tag__meta .price")?.textContent, matches: [...e.querySelectorAll(".match")].map((m) => ({ href: m.href, text: m.textContent.replace(/\s+/g, " ").trim() })) })));
   check(tags.length === 2, `claude: expected 2 pieces, got ${JSON.stringify(tags)}`);
   if (tags[0]) {
     check(tags[0].brand === "Nude Project" && tags[0].name === "Nude Mansion Tee", `claude: brand and product not shown: ${JSON.stringify(tags[0])}`);
     check(tags[0].label === "כנראה זה", `claude: confidence label: ${tags[0].label}`);
     check(/q=Nude%20Project%20Nude%20Mansion%20tee$/.test(tags[0].google), `claude: Google should get the English query: ${tags[0].google}`);
     check(/Nude%20Project%20Nude%20Mansion%20%D7%98%D7%99%D7%A9%D7%A8%D7%98$/.test(tags[0].tx), `claude: Terminal X should get the Hebrew query: ${tags[0].tx}`);
+    // the product page on the brand's own site, the colourway Claude picked, first
+    const first = tags[0].matches[0] || {};
+    check(first.href === "https://nude-project.com/products/nude-mansion-tee-white", `claude: first match should be the white tee's page: ${JSON.stringify(tags[0].matches)}`);
+    check(/Nude Project, האתר הרשמי/.test(first.text) && /המקור/.test(first.text) && /55/.test(first.text), `claude: match should name the official site, mark it as the original, and show the price: ${first.text}`);
+    check(tags[0].matches.length === 3 && tags[0].matches.slice(1).every((m) => /דומה/.test(m.text)), `claude: the other candidates come as similar: ${JSON.stringify(tags[0].matches.map((m) => m.text))}`);
+    check(/55/.test(tags[0].price || ""), `claude: the piece shows the price: ${tags[0].price}`);
   }
+  if (tags[1]) check(tags[1].matches.length === 0, "claude: a piece with no brand has no catalog matches");
   check(/זיהוי עם Claude/.test(await page.locator(".detail__head .label").first().textContent()), "claude: results don't say Claude identified them");
   const calls = await page.evaluate(() => window.__sampleCalls);
-  check(calls.length === 1 && calls[0].images === 1 && /outfit photo/.test(calls[0].input), `claude: expected one call with the photo: ${JSON.stringify(calls).slice(0, 200)}`);
+  check(calls.length === 2 && calls.every((c) => c.images === 1) && /outfit photo/.test(calls[0].input) && /candidate products/.test(calls[1].input), `claude: expected an identify call and a pick call, each with the photo: ${JSON.stringify(calls).slice(0, 300)}`);
   // reload: the scan is saved
   await page.reload();
   await page.waitForSelector(".tags .tag", { timeout: 10000 }).catch(() => failures.push("claude: scan lost on reload"));

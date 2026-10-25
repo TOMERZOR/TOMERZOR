@@ -30,24 +30,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Karantina:wght@400;700&family=Amatic+SC:wght@700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=6">
+<link rel="stylesheet" href="css/style.css?v=7">
 <script type="importmap">
 {
  "imports": {
   "three": "./vendor/three.module.min.js",
   "three/addons/": "./vendor/addons/",
-  "./js/audio.js": "./js/audio.js?v=6",
-  "./js/main.js": "./js/main.js?v=6",
-  "./js/map.js": "./js/map.js?v=6",
-  "./js/mechanics.js": "./js/mechanics.js?v=6",
-  "./js/player.js": "./js/player.js?v=6",
-  "./js/post.js": "./js/post.js?v=6",
-  "./js/ruth.js": "./js/ruth.js?v=6",
-  "./js/story.js": "./js/story.js?v=6",
-  "./js/textures.js": "./js/textures.js?v=6",
-  "./js/ui.js": "./js/ui.js?v=6",
-  "./js/world.js": "./js/world.js?v=6",
-  "./js/yasmin.js": "./js/yasmin.js?v=6"
+  "./js/audio.js": "./js/audio.js?v=7",
+  "./js/main.js": "./js/main.js?v=7",
+  "./js/map.js": "./js/map.js?v=7",
+  "./js/mechanics.js": "./js/mechanics.js?v=7",
+  "./js/player.js": "./js/player.js?v=7",
+  "./js/post.js": "./js/post.js?v=7",
+  "./js/ruth.js": "./js/ruth.js?v=7",
+  "./js/story.js": "./js/story.js?v=7",
+  "./js/textures.js": "./js/textures.js?v=7",
+  "./js/ui.js": "./js/ui.js?v=7",
+  "./js/world.js": "./js/world.js?v=7",
+  "./js/yasmin.js": "./js/yasmin.js?v=7"
  }
 }
 </script>
@@ -55,6 +55,8 @@
 <body>
 <canvas id="game" aria-label="5 לילות אצל יסמין"></canvas>
 <img id="scare" alt="" aria-hidden="true">
+<video id="jumpvid" muted playsinline preload="auto" aria-hidden="true"></video>
+<div id="jumpfx" aria-hidden="true"></div>
 <div id="locker-view" aria-hidden="true"></div>
 <div id="blackout" aria-hidden="true"></div>
 
@@ -225,6 +227,6 @@
     </div>
   </div>
 </div>
-<script type="module" src="js/main.js?v=6"></script>
+<script type="module" src="js/main.js?v=7"></script>
 </body>
 </html>

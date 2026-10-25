@@ -41,7 +41,7 @@ Three months before you, Ruth was "the new one". She tried to escape through the
 - **Hints**: stuck on an objective for a few minutes, a hint appears.
 - **Checkpoints**: on night 3 after the generator is back on, on night 4 once her store is open, and on night 5 after the exit door is open, getting caught restarts there. After three catches the game-over screen offers easy mode.
 
-Getting caught is a jumpscare and a retry. Progress (the furthest night), found tapes and discoveries are saved in the browser. The menu shows the live corridor with Yasmin walking toward you.
+Getting caught is a jumpscare and a retry. The jumpscare is a filmed close-up of her charging into your face (an image-to-video clip), with shaking, zoom, red edges, a frame of negative and a strobe of a second face, layered stingers and her scream, then a hard cut to black and silence with only a ringing in your ears. Other scares: in a locker her black eyes press against the vents and creep closer; subliminal two-frame flashes of her face; and sometimes a breath right behind your ear — turn around and she is standing there, screams, and is gone. Progress (the furthest night), found tapes and discoveries are saved in the browser. The menu shows the live corridor with Yasmin walking toward you.
 
 ## Yasmin's AI (`js/yasmin.js`)
 
@@ -55,7 +55,7 @@ Grid A* (binary heap) with path smoothing that only cuts a corner when the strai
 
 ## Assets
 
-Yasmin and Nevo were generated as images from reference photos, turned into rigged, animated 3D models (Meshy image-to-3D with auto-rig; Yasmin's walk-with-bucket, run, scream and idle clips merged onto one skeleton); the mop bucket, the Labubu and the squash bottle are image-to-3D (Tripo) models; the wall/floor/ceiling textures, the jumpscare frames, the CCTV still and the key art were generated with GPT Image; all via Higgsfield. Voice lines are ElevenLabs v4 performances (library voices), effects are ElevenLabs sound effects. Models are compressed with gltf-transform (WebP textures, meshopt). Everything else (furniture, signage, posters, blood, the fence, the yard) is built in code.
+Yasmin and Nevo were generated as images from reference photos, turned into rigged, animated 3D models (Meshy image-to-3D with auto-rig; Yasmin's walk-with-bucket, run, scream and idle clips merged onto one skeleton); the mop bucket, the Labubu and the squash bottle are image-to-3D (Tripo) models; the wall/floor/ceiling textures, the jumpscare frames, the CCTV still and the key art were generated with GPT Image, and the jumpscare clip with Grok Imagine Video (image-to-video); all via Higgsfield. Voice lines are ElevenLabs v4 performances (library voices), effects are ElevenLabs sound effects. Models are compressed with gltf-transform (WebP textures, meshopt). Everything else (furniture, signage, posters, blood, the fence, the yard) is built in code.
 
 ## Code
 

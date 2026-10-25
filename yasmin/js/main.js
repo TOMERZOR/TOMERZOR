@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { World } from './world.js';
+import { World, collide } from './world.js';
 import { Player } from './player.js';
 import { Yasmin } from './yasmin.js';
 import { Audio } from './audio.js';
@@ -12,7 +12,7 @@ import { UI } from './ui.js';
 import { Story, NIGHTS, overLine } from './story.js';
 import { Mechanics } from './mechanics.js';
 import { TAPES, loadTapes, saveTapes } from './ruth.js';
-import { opaque, roomAt, isOutdoor, lineOfSight, cellsOf, cellCenter } from './map.js';
+import { opaque, roomAt, isOutdoor, lineOfSight, cellsOf, cellCenter, walkable, toCell } from './map.js';
 import * as T from './textures.js';
 
 const $ = (id) => document.getElementById(id);
@@ -85,6 +85,10 @@ async function load() {
   let mdone = 0;
   const modP = Promise.all(modelList.map(n => new Promise((res, rej) => loader.load(`models/${n}.glb?v=${V}`, g => { mdone++; parts.models = mdone / modelList.length; upd(); res([n, g]); }, undefined, rej)))).then(l => Object.fromEntries(l));
   const audP = audio.load('audio/', V, p => { parts.audio = p; upd(); });
+  // jumpscare media: decoded up front so the first frame is there the instant it is needed
+  for (const n of ['scare1.jpg', 'scare_sub.jpg', 'scare_locker.jpg']) { const im = new Image(); im.src = `img/${n}?v=${V}`; im.decode?.().catch(() => { }); }
+  const jv = $('jumpvid');
+  jv.src = `img/jump.${jv.canPlayType('video/webm; codecs="vp9"') ? 'webm' : 'mp4'}?v=${V}`; jv.load();
   const [tex, models] = await Promise.all([texP, modP, audP]);
   game.tex = tex; game.models = models;
   ui.progress(1, 'בונה את הבסיס...');
@@ -110,8 +114,14 @@ function build() {
   game.story = story;
   yasmin.onCaught = (fromLocker) => caught(fromLocker);
   // she presses her face to the vents of your locker before she opens it
-  yasmin.onLockerStare = () => { ui.scare(`img/scare3.jpg?v=${V}`, 0.97); audio.stinger('peek'); player.shake = 0.3; };
-  yasmin.onLockerLeave = () => { ui.scare(null, 0); audio.heartbeat(1); };
+  // she stops at your locker: her black eyes at the vents, slowly getting closer
+  yasmin.onLockerStare = () => {
+    const sc = $('scare'); sc.classList.remove('push');
+    ui.scare(`img/scare_locker.jpg?v=${V}`, 0.97);
+    requestAnimationFrame(() => requestAnimationFrame(() => sc.classList.add('push')));
+    audio.stinger('peek'); audio.play('sfx_behind', { volume: 1.2, muffle: false, sub: false }); player.shake = 0.4;
+  };
+  yasmin.onLockerLeave = () => { $('scare').classList.remove('push'); ui.scare(null, 0); audio.heartbeat(1); };
   yasmin.onSpot = () => { player.shake = Math.max(player.shake, 0.4); audio.stinger('peek'); };
   game.onLostPlayer = () => { };
   // warm up every shader, including objects that start hidden (tapes, ghost, bottles, signs), so nothing hitches later
@@ -169,6 +179,7 @@ function menu() {
 
 let radio = null;
 function startNight(n, fromCheckpoint = false) {
+  behind = null; cutDone = false;
   if (!fromCheckpoint || n !== game.night) game.caughtCount = 0;
   if (!fromCheckpoint || !game.checkpoint || game.checkpoint.night !== n) game.checkpoint = null;
   game.night = n;
@@ -336,7 +347,7 @@ game.flashBlackout = (dur) => {
 let caughtT = 0;
 function caught(fromLocker) {
   if (game.state !== 'play') return;
-  game.state = 'caught'; caughtT = 0;
+  game.state = 'caught'; caughtT = 0; behind = null; cutDone = false;
   game.caughtCount = (game.caughtCount || 0) + 1;
   ui.scare(null, 0);
   stopTape();
@@ -353,6 +364,38 @@ function caught(fromLocker) {
   P.shake = 2.2;
   audio.jumpscare();
   ui.hud(false);
+  $('scare').classList.remove('push');
+  // the lunge: a filmed close-up of her charging into your face
+  const jv = $('jumpvid');
+  jumpVid = jv.readyState >= 2;
+  if (jumpVid) { jv.currentTime = 0; jv.playbackRate = 1; jv.style.opacity = 1; jv.play().catch(() => { jumpVid = false; jv.style.opacity = 0; }); }
+}
+let jumpVid = false, cutDone = false;
+function jumpLayers(k) {
+  // shake, zoom, red edges, a frame of negative, strobing with a second face, then a hard cut to black
+  const jv = $('jumpvid'), sc = $('scare'), fx = $('jumpfx');
+  const live = k < 1.42;
+  const amp = live ? 34 * Math.max(0.25, 1 - k / 1.4) : 0;
+  const tf = `translate(${(Math.random() - 0.5) * amp}px, ${(Math.random() - 0.5) * amp}px) scale(${1.04 + k * 0.1}) rotate(${(Math.random() - 0.5) * amp * 0.04}deg)`;
+  const neg = live && Math.random() < 0.06;
+  const filt = neg ? 'invert(1) contrast(1.6)' : `contrast(${1.3 + Math.random() * 0.3}) saturate(${0.9 + Math.random() * 0.4}) brightness(${k < 0.06 ? 2.2 : 1})`;
+  const strobe = live && k > 0.5 && k < 0.78 && Math.floor(k * 22) % 2 === 0;
+  if (jumpVid) {
+    jv.style.opacity = live && !strobe ? 1 : 0; jv.style.transform = tf; jv.style.filter = filt;
+    ui.scare(`img/scare_sub.jpg?v=${V}`, strobe ? 1 : 0);
+  } else {
+    // no video (old browser / slow network): strobe the stills
+    const img = strobe ? 'scare_sub.jpg' : 'scare1.jpg';
+    ui.scare(`img/${img}?v=${V}`, live && (k < 0.45 || k > 0.5) ? 1 : 0);
+  }
+  sc.style.transform = tf; sc.style.filter = filt;
+  fx.style.opacity = live ? 0.55 + Math.random() * 0.4 : 0;
+  if (!live && !cutDone) {
+    cutDone = true;
+    ui.blackout(1, true); jv.pause(); jv.style.opacity = 0; ui.scare(null, 0);
+    sc.style.transform = sc.style.filter = '';
+    audio.cut(1.6);
+  }
 }
 function updateCaught(dt) {
   caughtT += dt;
@@ -362,12 +405,12 @@ function updateCaught(dt) {
   u.vhs.value = Math.min(1, k * 2);
   u.flashColor.value.setRGB(0.6, 0, 0);
   u.flash.value = k < 0.08 ? 0.5 : 0;
-  ui.scare(`img/scare1.jpg?v=${V}`, (k > 0.25 && k < 0.42) || (k > 0.95 && k < 1.08) ? 1 : 0);
+  jumpLayers(k);
   game.yasmin.mixer.update(dt);
   game.player.update(dt, clockT);
-  if (k > 1.5) ui.blackout(1);
-  if (k > 2.4 && game.state === 'caught') {
+  if (k > 3.0 && game.state === 'caught') {
     game.state = 'over';
+    cutDone = false; $('jumpfx').style.opacity = 0;
     ui.scare(null, 0);
     u.vhs.value = 0; u.warp.value = 0;
     game.player.lookAt = null;
@@ -455,6 +498,8 @@ function director(dt) {
   if (scareT > 0 || Y.state === 'chase' || game.finale) return;
   scareT = 35 + Math.random() * 45 - game.night * 4;
   const r = Math.random();
+  // the worst one: a breath right behind your ear — and when you turn around she is there
+  if (r < 0.2 && game.night >= 2 && tryBehind()) return;
   const far = cellsOf('.').map(([x, z]) => cellCenter(x, z)).filter(c => { const d = Math.hypot(c.x - P.pos.x, c.z - P.pos.z); return d > 14 && d < 28; });
   const spot = far[Math.floor(Math.random() * far.length)];
   if (r < 0.25 && spot) audio.play('sfx_door', { pos: new THREE.Vector3(spot.x, 1, spot.z), volume: 1.3, rate: 0.85 + Math.random() * 0.3 });
@@ -467,13 +512,56 @@ function director(dt) {
   } else if (r < 0.75) {
     audio.static_(1.4, 0.07);
     setTimeout(() => audio.play(Math.random() < 0.5 ? 'y_hear' : 'y_where', { volume: 0.45, verb: 1, muffle: false }), 500);
-  } else if (r < 0.9 && game.night >= 3) {
-    // subliminal flash
-    ui.scare(`img/scare2.jpg?v=${V}`, 0.35);
-    setTimeout(() => ui.scare(null, 0), 70);
-    audio.noise(0.15, { type: 'highpass', f: 3000, vol: 0.3 });
+  } else if (r < 0.9 && game.night >= 2) {
+    // subliminal flash: her face for two frames, a shriek, then nothing — did you see that?
+    ui.scare(`img/scare_sub.jpg?v=${V}`, 0.85);
+    setTimeout(() => ui.scare(null, 0), 60);
+    audio.play('sfx_jump2', { volume: 0.5, muffle: false, sub: false, rate: 1.15 });
+    game.flashBlackout(0.25); P.shake = 0.6;
   } else if (Y.visible && Y.state !== 'scripted') {
     game.flashBlackout(0.6);
+  }
+}
+
+// ---------- "she is right behind you" ----------
+let behind = null;
+const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3();
+function tryBehind() {
+  const Y = game.yasmin, P = game.player;
+  if (behind || P.hidden || ['chase', 'locker', 'scripted', 'mop'].includes(Y.state)) return false;
+  if (Y.visible && Math.hypot(Y.position.x - P.pos.x, Y.position.z - P.pos.z) < 18) return false;
+  const f = P.forward(_v1); f.y = 0; f.normalize();
+  const x = P.pos.x - f.x * 1.45, z = P.pos.z - f.z * 1.45;
+  if (!walkable(toCell(x), toCell(z)) || !lineOfSight(P.pos.x, P.pos.z, x, z, opaque)) return false;
+  _v2.set(x, 0, z); collide(game.world, _v2, 0.25);
+  if (Math.hypot(_v2.x - x, _v2.z - z) > 0.03) return false;
+  behind = { t: 0, hit: 0, saved: { visible: Y.visible, x: Y.position.x, z: Y.position.z, dir: Y.dir } };
+  Y.spawn(x, z, 'scripted', Math.atan2(P.pos.x - x, P.pos.z - z)); Y.script = null; Y.scriptMove = 0; Y.play('idle', 0.01);
+  audio.play('sfx_behind', { pos: new THREE.Vector3(x, 1.6, z), volume: 1.5, sub: false, ref: 1, verb: 0.1 });
+  return true;
+}
+function updateBehind(dt) {
+  if (!behind) return;
+  const Y = game.yasmin, P = game.player;
+  behind.t += dt;
+  if (Y.state !== 'scripted' || P.hidden) { behind = null; return; }
+  Y.faceTo(P.pos.x, P.pos.z, dt * 6); Y.group.rotation.y = Y.dir;
+  const f = P.forward(_v1); f.y = 0; f.normalize();
+  _v2.set(Y.position.x - P.pos.x, 0, Y.position.z - P.pos.z).normalize();
+  if (!behind.hit && f.dot(_v2) > 0.75) {
+    // you turned around
+    behind.hit = behind.t;
+    Y.play('scream', 0.02);
+    audio.play('sfx_jump2', { volume: 1.4, muffle: false, sub: false });
+    audio.play('sfx_scream', { volume: 0.9, pos: Y.position.clone().setY(1.6), sub: false });
+    P.shake = 1.4;
+    ui.scare(`img/scare_sub.jpg?v=${V}`, 0.5); setTimeout(() => ui.scare(null, 0), 50);
+  }
+  if ((behind.hit && behind.t - behind.hit > 0.4) || behind.t > 6) {
+    // gone, as if she was never there
+    game.flashBlackout(behind.hit ? 0.35 : 0.15);
+    const sv = behind.saved; behind = null;
+    if (sv.visible) Y.spawn(sv.x, sv.z, 'patrol', sv.dir); else Y.hide();
   }
 }
 
@@ -518,6 +606,7 @@ function tick(dt) {
     Y.update(dt, clockT, P, game);
     S.update(dt, clockT);
     director(dt);
+    updateBehind(dt);
     game.clockMin = Math.min(359, game.clockMin + dt * 0.5);
     ui.clock(game.clockMin);
     W.clockMinutes = game.clockMin;
@@ -609,7 +698,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && gam
 // settings
 const bindRange = (id, key, apply) => { const el = $(id); el.value = settings[key]; el.oninput = () => { settings[key] = +el.value; apply(+el.value); store.set('settings', settings); }; };
 bindRange('set-sens', 'sens', v => { if (game.player) game.player.sens = v; });
-bindRange('set-vol', 'vol', v => { audio.vol.master = v; if (audio.master) audio.master.gain.value = v; });
+bindRange('set-vol', 'vol', v => { audio.vol.master = v; if (audio.master) audio.master.gain.value = v; if (audio.direct) audio.direct.gain.value = v; });
 bindRange('set-music', 'music', v => { audio.vol.music = v; if (audio.music) audio.music.gain.value = v; });
 bindRange('set-bright', 'bright', v => { renderer.toneMappingExposure = 1.05 * v; });
 $('set-difficulty').value = settings.difficulty;
@@ -617,6 +706,6 @@ $('set-difficulty').onchange = () => { settings.difficulty = $('set-difficulty')
 $('set-quality').value = settings.quality;
 $('set-quality').onchange = () => { settings.quality = $('set-quality').value; store.set('settings', settings); };
 
-game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l), render: () => S_render(), post, renderer, clock: () => clockT };
+game.dbg = { tick: (dt) => tick(dt), startNight: (n, f) => startNight(n, f), play: () => play(), menu: () => menu(), closeNote: () => closeNote(), caught: (l) => caught(l), render: () => S_render(), post, renderer, behind: () => tryBehind(), behindState: () => behind, clock: () => clockT };
 load().catch(e => { console.error(e); ui.progress(1, 'שגיאה בטעינה: ' + e.message); });
 frame();

@@ -1,7 +1,7 @@
 // Music and sound effects are synthesized live with WebAudio (no files to download); only the market people's
 // voice lines are recordings (audio/*.mp3).
 
-let ctx = null, master, sfxBus, musicBus, noiseBuf, comp;
+let ctx = null, master, sfxBus, musicBus, musicLP, noiseBuf, comp;
 const settings = { music: true, sfx: true };
 const oudCache = new Map();
 
@@ -15,7 +15,8 @@ export function initAudio() {
   master = ctx.createGain(); master.gain.value = 0.9;
   sfxBus = ctx.createGain(); sfxBus.gain.value = settings.sfx ? 0.8 : 0;
   musicBus = ctx.createGain(); musicBus.gain.value = settings.music ? 0.42 : 0;
-  sfxBus.connect(comp); musicBus.connect(comp); comp.connect(master); master.connect(ctx.destination);
+  musicLP = ctx.createBiquadFilter(); musicLP.type = 'lowpass'; musicLP.frequency.value = 20000; musicLP.Q.value = 0.6;
+  sfxBus.connect(comp); musicBus.connect(musicLP); musicLP.connect(comp); comp.connect(master); master.connect(ctx.destination);
   const len = ctx.sampleRate * 1.5;
   noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
   const d = noiseBuf.getChannelData(0);
@@ -72,7 +73,7 @@ function panned(pan) {
 let lastCoin = 0;
 // coins picked up in the air climb this scale (major pentatonic, two octaves), one note per coin
 const AIR_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
-let wind = null;
+let wind = null, engine = null;
 export const sfx = {
   // On the ground every coin is the same bright ding. Strung together in one jump (or a carpet ride)
   // they climb a scale: pass air = how many coins this jump has already collected.
@@ -121,6 +122,48 @@ export const sfx = {
       w.g.gain.cancelScheduledValues(t); w.g.gain.setTargetAtTime(0.0001, t, 0.15);
       w.s.stop(t + 0.8); w.lfo.stop(t + 0.8);
     }
+  },
+  // oncoming traffic: a two-note horn (a long, falling blast when you are still in its way)
+  carHorn(pan = 0, long = false) { if (!ok()) return; const t = ctx.currentTime;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1900; lp.connect(panned(pan));
+    const blast = (t0, dur) => { for (const [f, v] of [[349.2, 0.06], [440, 0.05], [698.5, 0.015]]) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t0);
+      if (long) { o.frequency.setValueAtTime(f, t0 + dur * 0.55); o.frequency.exponentialRampToValueAtTime(f * 0.93, t0 + dur); }
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 0.015);
+      g.gain.setValueAtTime(v, t0 + dur - 0.04); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(lp); o.start(t0); o.stop(t0 + dur + 0.05);
+    } };
+    if (long) blast(t, 0.8); else { blast(t, 0.15); blast(t + 0.2, 0.26); }
+  },
+  // dodged traffic at the last moment: it tears past, a thump, a bright rising chord
+  closeCall(pan = 0, hair = false) { if (!ok()) return; const t = ctx.currentTime;
+    noise(t, 0.6, 0.34, 'bandpass', 3800, 360, 1.1, panned(pan), 0.03);
+    tone('sine', 120, 40, t, 0.45, 0.24);
+    const base = hair ? 783.99 : 659.25;
+    [0, 7, 12, 19].forEach((st, i) => { const f = base * Math.pow(2, st / 12); tone('triangle', f, f, t + 0.07 + i * 0.05, 0.45, 0.075); });
+    noise(t + 0.07, 0.6, 0.05, 'highpass', 7000, 9000, 0.7);
+  },
+  // engine of the nearest oncoming vehicle: level 0..1, rate > 1 while it approaches (Doppler), < 1 once past
+  engine(level, rate = 1, pan = 0) {
+    if (!ctx) return;
+    if (!engine) {
+      if (level <= 0 || !ok()) return;
+      const g = ctx.createGain(); g.gain.value = 0.0001;
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400; f.Q.value = 2;
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      const oscs = [['sawtooth', 52], ['square', 104.6], ['sawtooth', 78.3]].map(([type, hz]) => {
+        const o = ctx.createOscillator(); o.type = type; o.frequency.value = hz; o.connect(f); o.start(); return [o, hz];
+      });
+      f.connect(g);
+      if (p) { g.connect(p); p.connect(sfxBus); } else g.connect(sfxBus);
+      engine = { g, f, p, oscs };
+    }
+    const t = ctx.currentTime, v = ok() ? level : 0;
+    engine.g.gain.setTargetAtTime(Math.max(0.0001, v * 0.14), t, 0.05);
+    for (const [o, hz] of engine.oscs) o.frequency.setTargetAtTime(hz * rate, t, 0.06);
+    engine.f.frequency.setTargetAtTime(280 + 520 * v * rate, t, 0.06);
+    if (engine.p) engine.p.pan.setTargetAtTime(Math.max(-1, Math.min(1, pan)), t, 0.05);
   },
   // a power-up is about to run out
   tick() { if (!ok()) return; const t = ctx.currentTime; tone('square', 1760, 1760, t, 0.04, 0.035); },
@@ -437,6 +480,14 @@ export function setMusicIntensity(x) { // 0..1 with run speed
   if (music.mode !== 'run' || !ctx) return;
   music.bpm = 126 + x * 22;
   if (delay) delay.delayTime.setTargetAtTime(60 / music.bpm * 0.75, ctx.currentTime, 0.2);
+}
+// slow-motion moments: the music drops under water for a beat
+export function muffleMusic(sec) {
+  if (!ctx) return;
+  const t = ctx.currentTime, f = musicLP.frequency;
+  f.cancelScheduledValues(t); f.setValueAtTime(f.value, t);
+  f.exponentialRampToValueAtTime(520, t + 0.06);
+  f.setValueAtTime(520, t + sec * 0.6); f.exponentialRampToValueAtTime(20000, t + sec);
 }
 export function stopMusic() { music.on = false; if (music.timer) clearInterval(music.timer); music.timer = null; }
 export function duckMusic(on) { if (!ctx) return; musicBus.gain.setTargetAtTime(settings.music ? (on ? 0.12 : 0.42) : 0, ctx.currentTime, 0.15); }

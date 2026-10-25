@@ -27,7 +27,12 @@ const PROPS = {
   truckR:   { kind: 'platform', w: 2.15, front: 4.25, back: 6.15, h: 2.35, ramp: 4.2, make: () => P.makeTruck(true) },
   van:      { kind: 'wall', w: 2.0, front: 2.55, back: 2.5, h: 2.6, make: P.makeVan, speed: 2.2 },
   melonRoll: { kind: 'low', w: 0.95, front: 0.5, back: 0.5, h: 0.8, make: P.makeRollingMelon, speed: 6 },
+  // oncoming traffic (the 'oncoming' pattern); the model is sized width, height, length
+  deliveryVan: { kind: 'wall', w: 1.95, front: 2.5, back: 2.6, h: 2.5, make: () => P.makeVehicle('veh_van', 2.2, 2.53, 5.2), speed: 9 },
+  pickup:   { kind: 'wall', w: 1.9, front: 2.25, back: 2.35, h: 2.15, make: () => P.makeVehicle('veh_pickup', 2.05, 2.2, 4.7), speed: 8 },
 };
+// who drives at you down a coin trail, with their speed (the Na Nach van takes it easy: there are dancers on the roof)
+const TRAFFIC = [['deliveryVan', 0.5, 9], ['pickup', 0.35, 8], ['van', 0.15, 6]];
 const LOWS = ['crates', 'melons', 'sacks', 'barrier'];
 const HIGHS = ['banner', 'rugs'];
 const POWER_TYPES = [['magnet', 0.3], ['x2', 0.22], ['sneakers', 0.17], ['hamsa', 0.17], ['carpet', 0.14], ['bag', 0.18]];
@@ -259,6 +264,14 @@ export class Track {
 
   laneFree(lane, d) { return d > this.reserved[lane]; }
 
+  // Where an oncoming vehicle has to be for its bumper to reach the end of its coin trail `lead` seconds
+  // after the player does, at the player's current speed vp. Kept up to date until then, so the timing
+  // holds whatever the player's speed does on the way.
+  oncomingD(e, runD, vp) {
+    vp = Math.max(6, vp);
+    return e.meetD + PLAYER_BOX.halfD + e.front + (vp + e.speed) * e.lead + e.speed * Math.max(0, e.meetD - runD) / vp;
+  }
+
   pickWall(D, zoneId, lane, meetAt, pSpeed) {
     const diff = this.diff;
     const options = [['npc:vendor', 1], ['npc:chabad', 0.7], ['npc:breslov', zoneId === 'night' ? 1.3 : 0.6], ['npc:grandpa', 1], ['npc:moroccan', 1],
@@ -309,17 +322,21 @@ export class Track {
     let safe = this.safe;
     const r0 = Math.random();
     if (r0 < 0.3) safe = clamp(safe - 1, 0, 2); else if (r0 < 0.6) safe = clamp(safe + 1, 0, 2);
-    // prefer a lane not reserved by a walker
-    if (!this.laneFree(safe, D) && safe !== 1 && this.laneFree(1, D)) safe = 1;
+    // prefer a lane not reserved by a walker or oncoming traffic: the nearest free one
+    if (!this.laneFree(safe, D)) {
+      const free = [0, 1, 2].filter(l => this.laneFree(l, D));
+      if (free.length) safe = free.reduce((a, l) => Math.abs(l - this.safe) < Math.abs(a - this.safe) ? l : a);
+    }
 
     const lanesContent = ['', '', ''];
     const roll = Math.random();
     let pattern = 'basic';
     const can = name => ({
       jumpAll: D > 300, rollAll: D > 380, trucks: D > 230 && zone.id !== 'covered', van: D > 650 && zone.id !== 'covered',
-      chabad: D > 150, crowd: D > 180, rollers: D > 420,
+      chabad: D > 150, crowd: D > 180, rollers: D > 420, oncoming: D > 260 && zone.id !== 'covered',
     })[name];
-    const weights = [['jumpAll', 0.07 + 0.06 * diff], ['rollAll', 0.06 + 0.06 * diff], ['trucks', 0.12], ['van', 0.06], ['chabad', 0.06], ['crowd', 0.08], ['rollers', 0.06 + 0.04 * diff]];
+    const weights = [['jumpAll', 0.07 + 0.06 * diff], ['rollAll', 0.06 + 0.06 * diff], ['trucks', 0.12], ['van', 0.06], ['chabad', 0.06], ['crowd', 0.08], ['rollers', 0.06 + 0.04 * diff],
+      ['oncoming', 0.1 + 0.03 * diff]];
     let acc = 0;
     for (const [name, w] of weights) { acc += w; if (roll < acc) { if (can(name)) pattern = name; break; } }
 
@@ -371,6 +388,30 @@ export class Track {
       }
       if (lanesContent[safe]) coinsPlan.mode = 'arc';
       extraLen = 8;
+    } else if (pattern === 'oncoming') {
+      // traffic! a vehicle drives down your lane over a trail of coins. The trail ends a beat before its
+      // bumper: grab every coin, then dodge into the free lane next to it at the last moment
+      const L = this.safe;
+      const sides = [L - 1, L + 1].filter(l => l >= 0 && l <= 2);
+      const E = sides.includes(safe) ? safe : pick(sides);
+      const end = D + 6;
+      const start = Math.max(this.prevEnd + 2.5, end - rnd(26, 36));
+      if (end - start > 14 && this.laneFree(L, start - 4) && this.laneFree(E, end - 14)) {
+        let r = Math.random() * TRAFFIC.reduce((a, t) => a + t[1], 0), type = TRAFFIC[0];
+        for (const t of TRAFFIC) if ((r -= t[1]) <= 0) { type = t; break; }
+        const e = this.add(type[0], L, end, { speed: type[2] });
+        e.oncoming = true; e.horn = false;
+        e.meetD = end;
+        e.lead = THREE.MathUtils.lerp(0.6, 0.45, diff); // seconds from the last coin to the bumper
+        e.tti = Infinity;
+        e.d = this.oncomingD(e, runD, pSpeed);
+        this.reserved[L] = Math.max(this.reserved[L], e.d + e.back + 3);
+        for (let d = end; d >= start; d -= 2.2) this.addCoin(L, d);
+        lanesContent[L] = 'wall';
+        coinsPlan.mode = 'none';
+        safe = E;
+        extraLen = 10;
+      }
     } else if (pattern === 'crowd') {
       const lanes = [0, 1, 2].filter(L => L !== safe && this.laneFree(L, D));
       lanes.forEach((L, i) => { this.pickWall(D + i * rnd(3, 7), zone.id, L, meetAt, pSpeed); lanesContent[L] = 'wall'; });
@@ -414,7 +455,7 @@ export class Track {
         const def = PROPS.truck;
         for (const d of [D - 3.6, D - 2.2, D - 0.8]) this.addCoin(cl, d, 0.75 + PROPS.truckR.h * (d - (D - 4.2)) / 4.2);
         this.coinLine(cl, D + 0.6, D + def.front + def.back - 0.6, def.h + 0.75);
-      } else if (Math.random() < 0.8) this.coinLine(cl, coinStart, D - 3);
+      } else if (coinsPlan.mode === 'line' && Math.random() < 0.8) this.coinLine(cl, coinStart, D - 3);
     }
     // power-up
     if (D > this.nextPowerD && lanesContent[safe] === '' && this.laneFree(safe, D)) {
@@ -456,7 +497,24 @@ export class Track {
     for (const e of this.items) {
       if (e.dead) continue;
       const prevD = e.d;
-      if (e.speed > 0) e.d -= e.speed * dt;
+      if (e.speed > 0) {
+        if (e.oncoming && runD < e.meetD) e.d = Math.min(e.d, this.oncomingD(e, runD, (runD - prevRunD) / dt));
+        else e.d -= e.speed * dt;
+      }
+      if (e.oncoming && !e.alongside && !e.dead) {
+        // time to impact while the player is in its way; the last value left when they dodge rates the close call
+        const gap = e.d - e.front - (runD + PLAYER_BOX.halfD);
+        const inWay = Math.abs(px - e.x) < e.w / 2 + PLAYER_BOX.halfW && py < e.h;
+        if (gap > 0) {
+          if (inWay) {
+            e.tti = gap / Math.max(1, (runD - prevRunD) / dt + e.speed);
+            if (e.tti < 0.8 && !e.panic) { e.panic = true; this.events.push({ t: 'horn', vehicle: true, long: true, x: e.x }); }
+          }
+        } else {
+          e.alongside = true;
+          if (!inWay) this.events.push({ t: 'alongside', e, tti: e.tti });
+        }
+      }
       if (e.grace > 0) { e.grace -= dt; continue; }
       if (e.kind === 'power') {
         if (Math.abs(e.d - runD) < 0.9 && Math.abs(e.x - px) < 1.0 && py < 2.2) {
@@ -580,6 +638,11 @@ export class Track {
         if (show && !e.voiced && ahead < 30) { e.voiced = true; this.events.push({ t: 'voice', type: e.type, x: e.x }); }
       }
       if (e.horn && !e.honked && ahead < 30) { e.honked = true; this.events.push({ t: 'horn' }); }
+      if (e.oncoming) {
+        o.position.y = Math.abs(Math.sin(time * 19 + e.phase)) * 0.018; // engine shake
+        if (ud.lights) ud.lights.opacity = clamp((ahead - 1.5) / 5, 0, 1) * 0.85;
+        if (!e.honked && ahead < (pSpeed + e.speed) * 1.9) { e.honked = true; this.events.push({ t: 'horn', vehicle: true, x: e.x }); }
+      }
     }
     // coins (instanced)
     const m = this._m, q = this._q, eu = this._e, p = this._p, s = this._s;

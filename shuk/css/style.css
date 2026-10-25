@@ -43,6 +43,12 @@ body.css-finish #vignette { display: block; background: radial-gradient(ellipse 
   -webkit-mask: radial-gradient(ellipse 70% 60% at 50% 56%, transparent 45%, #000 100%); mask: radial-gradient(ellipse 70% 60% at 50% 56%, transparent 45%, #000 100%); }
 body.css-finish #speedlines.on { display: block; animation: speedlines .28s linear infinite; }
 @keyframes speedlines { from { transform: scale(1); opacity: var(--sl); } to { transform: scale(1.22); opacity: 0; } }
+/* close call with traffic: the screen edges flash warm (pink when it was by a hair) */
+#closecall { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0;
+  background: radial-gradient(ellipse 78% 72% at 50% 50%, transparent 52%, rgba(255, 210, 110, .5) 100%); }
+#closecall.hair { background: radial-gradient(ellipse 78% 72% at 50% 50%, transparent 48%, rgba(255, 96, 140, .55) 100%); }
+#closecall.go { animation: closecall .8s ease-out; }
+@keyframes closecall { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 0; } }
 .screen { position: absolute; inset: 0; display: none; pointer-events: none; }
 .screen.show { display: block; }
 .screen.show > * { pointer-events: auto; }
@@ -341,5 +347,5 @@ body.css-finish #speedlines.on { display: block; animation: speedlines .28s line
   .modal .panel { max-height: calc(100vh - 40px); overflow-y: auto; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .newbest, .power.ending, .gbtn.pulse, #loading .keyart, body.css-finish #speedlines.on { animation: none; }
+  .newbest, .power.ending, .gbtn.pulse, #loading .keyart, body.css-finish #speedlines.on, #closecall.go { animation: none; }
 }

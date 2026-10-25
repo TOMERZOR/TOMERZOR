@@ -183,10 +183,11 @@ async function boot() {
       props[n] = p;
     }, () => {}).finally(() => tick())));
     await Promise.all(['crates', 'melons'].map(n => assets.prop('ob_' + n).then(p => { MODEL_PROPS[n] = p; }, () => {})));
+    await Promise.all(['van', 'pickup'].map(n => assets.prop('veh_' + n).then(p => { MODEL_PROPS['veh_' + n] = p; }, () => {})));
     world.setPropModels(props);
     for (const _ of world.buildSteps()) { tick(0.6); await frame(); }
     game = new Game({ scene, camera, world, track, player, fx, ui, assets });
-    window.__shuk = { game, renderer, scene, camera, Save };
+    window.__shuk = { game, renderer, scene, camera, Save, render: () => look.render(game.time, 0) };
     await game.initChaser(); tick();
     world.reset(0);
     track.reset({});
@@ -207,7 +208,7 @@ const frame = () => new Promise(r => requestAnimationFrame(() => r()));
 // compile shaders and upload textures for everything that can appear in a run
 async function warmup() {
   const tmp = [];
-  const types = ['crates', 'melons', 'sacks', 'barrier', 'tefillin', 'banner', 'rugs', 'bannerWide', 'truck', 'truckR', 'van', 'melonRoll', 'pow:carpet', 'pow:bag',
+  const types = ['crates', 'melons', 'sacks', 'barrier', 'tefillin', 'banner', 'rugs', 'bannerWide', 'truck', 'truckR', 'van', 'deliveryVan', 'pickup', 'melonRoll', 'pow:carpet', 'pow:bag',
     'pow:magnet', 'pow:x2', 'pow:sneakers', 'pow:hamsa', ...Object.keys(NPC_TYPES).map(t => 'npc:' + t)];
   for (const t of types) { const o = track.acquireSync(t); o.visible = true; o.position.set((tmp.length % 5 - 2) * 2, 0, -6 - Math.floor(tmp.length / 5) * 3); tmp.push([t, o]); }
   camera.position.set(0, 3, 6); camera.lookAt(0, 1, -8);
@@ -268,7 +269,7 @@ function startRun() {
 
 function pause(on) {
   if (!game) return;
-  if (on && game.state === 'playing') { game.state = 'paused'; ui.pause(true); duckMusic(true); sfx.wind(false); }
+  if (on && game.state === 'playing') { game.state = 'paused'; ui.pause(true); duckMusic(true); sfx.wind(false); sfx.engine(0); game.engineOn = false; }
   else if (!on && game.state === 'paused') { game.state = 'playing'; ui.pause(false); duckMusic(false); if (player.flying) sfx.wind(true); }
 }
 

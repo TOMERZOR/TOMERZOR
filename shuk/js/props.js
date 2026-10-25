@@ -286,6 +286,26 @@ export function makeVan() {
   return g;
 }
 
+// Generated vehicles (white delivery van, greengrocer's pickup) that drive down the street at the runner.
+// Front faces +z; headlights are glow sprites the track fades out as the vehicle draws level.
+const HEADLIGHTS = { veh_van: [0.74, 0.93], veh_pickup: [0.7, 0.86] };
+export function makeVehicle(name, w, h, d) {
+  if (!MODEL_PROPS[name]) return makeVan();
+  const g = modelProp(name, w, h, d);
+  const mat = mats().glow.clone();
+  mat.color.set('#fff1cf');
+  const [hx, hy] = HEADLIGHTS[name];
+  for (const s of [-1, 1]) {
+    const l = new THREE.Sprite(mat);
+    l.scale.set(0.95, 0.95, 1);
+    l.position.set(s * hx, hy, d / 2 + 0.05);
+    l.renderOrder = 3;
+    g.add(l);
+  }
+  g.userData.lights = mat;
+  return g;
+}
+
 // ---------- power-ups ----------
 // The pickups are the rendered 3D icons from the UI kit, shown as glowing billboards that flip like coins.
 const iconTex = {};

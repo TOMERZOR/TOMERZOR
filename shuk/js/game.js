@@ -4,7 +4,7 @@ import { PHYS, POWERUPS, MISSIONS, REVIVE_COST, MAX_MULT, ZONES, LEVEL_REWARD, F
 import { speedAt } from './track.js';
 import * as P from './props.js';
 import { zoneAt } from './world.js';
-import { sfx, setMusicIntensity, voice } from './audio.js';
+import { sfx, setMusicIntensity, voice, muffleMusic } from './audio.js';
 import { haptic } from './haptics.js';
 import * as Save from './save.js';
 import { T } from './i18n.js';
@@ -27,6 +27,8 @@ export class Game {
     this.run = null;
     this.chaser = null;
     this.menuT = 0;
+    this.fovKick = 0;
+    this.engineOn = false;
   }
 
   async initChaser() {
@@ -57,7 +59,7 @@ export class Game {
       mult: Math.min(MAX_MULT, s.level), time: 0, chaserT: 0, invuln: 1.2,
       powers: { magnet: 0, x2: 0, sneakers: 0, hamsa: 0, carpet: 0 }, streak: 0, airCoins: 0, stepT: 0,
       stats: { coins: 0, dist: 0, jumps: 0, rolls: 0, score: 0, powerups: 0, dodgeNpc: 0, roofs: 0, zones: 1, magnetCoins: 0, nearMiss: 0, runs: 1 },
-      zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0,
+      zoneIndex: 0, revives: 0, tutorial, tutorialStep: 0, missionFlags: new Set(), roofed: new Set(), slow: 0, slowMo: 0,
     };
     this.fx.clear();
     this.player.reset();
@@ -113,11 +115,19 @@ export class Game {
     this.fx.update(dt, this.state === 'playing' ? (this.run ? this.run.speed * dt * this.timeScale() : 0) : 0);
   }
 
-  timeScale() { return this.run && this.run.slow > 0 ? 0.35 : 1; }
+  // tutorial hints hold the street in slow motion; a close call with traffic drops into it for a beat
+  timeScale() {
+    const r = this.run;
+    if (!r) return 1;
+    if (r.slow > 0) return 0.35;
+    if (r.slowMo > 0) { const k = Math.min(1, r.slowMo / 0.3); return 1 - 0.7 * k * k * (3 - 2 * k); }
+    return 1;
+  }
 
   updateRun(dtReal) {
     const r = this.run, p = this.player;
     const dt = dtReal * (this.state === 'playing' ? this.timeScale() : 1);
+    if (r.slowMo > 0) r.slowMo -= dtReal;
     if (this.state === 'playing') {
       r.time += dt;
       const target = r.tutorial ? 11.5 : speedAt(r.d);
@@ -143,7 +153,8 @@ export class Game {
     }
     p.superJump = r.powers.sneakers > 0;
     this.track.update(dt, r.d, r.speed, this.time, p);
-    p.update(dtReal, this.state === 'playing' ? r.speed : 0, this.time);
+    this.updateEngine();
+    p.update(r.slowMo > 0 ? dt : dtReal, this.state === 'playing' ? r.speed : 0, this.time); // the runner slows with a close call too
     this.world.update(dt, r.d, p.root.position, this.time);
     this.updateChaser(dtReal);
     this.updateCamera(dtReal);
@@ -201,7 +212,11 @@ export class Game {
       case 'hit':
         this.onHit(ev.e, ev.how);
         break;
+      case 'alongside':
+        this.vehiclePassing(ev.e, ev.tti, mul);
+        break;
       case 'passed':
+        if (ev.e.oncoming) break; // rated when it drew level
         if (ev.e.type.startsWith('npc:') || ev.e.type.startsWith('ped:') || ev.e.type === 'van') {
           r.stats.dodgeNpc++;
           if (ev.near) {
@@ -212,13 +227,50 @@ export class Game {
           }
         }
         break;
-      case 'horn': sfx.horn(); break;
+      case 'horn':
+        if (ev.vehicle) sfx.carHorn((ev.x - p.x) / 4, ev.long); else sfx.horn();
+        break;
       case 'voice': {
         const lines = VOICE_LINES[ev.type];
         if (lines && Math.random() < 0.7) voice(lines[Math.floor(Math.random() * lines.length)], ev.x / 4, 0.85);
         break;
       }
     }
+  }
+
+  // Oncoming traffic just drew level with the player. The later the dodge (time to impact when they left
+  // its lane), the bigger the moment: slow motion, a lens kick, a sting and points.
+  vehiclePassing(e, tti, mul) {
+    const r = this.run, p = this.player;
+    const pan = (e.x - p.x) / 3;
+    if (!(tti < 0.75)) { sfx.whoosh(pan); return; }
+    const hair = tti < 0.3;
+    const pts = (hair ? 300 : 150) * mul;
+    r.score += pts;
+    r.stats.nearMiss++;
+    r.slowMo = hair ? 0.75 : 0.55;
+    this.fovKick = hair ? 9 : 6;
+    sfx.closeCall(pan, hair); muffleMusic(r.slowMo + 0.2); haptic('power');
+    this.fx.shake(0.14, 0.3);
+    this.ui.closeCall(hair);
+    const lines = hair ? T.closeCall.hair : T.closeCall.close;
+    this.fx.popup(lines[Math.floor(Math.random() * lines.length)], p.x, p.y + 3.0, -1.2, hair ? '#ff6f91' : '#ffd23f', hair ? 1.3 : 1.15);
+    this.fx.popup('+' + pts.toLocaleString(), p.x, p.y + 2.3, -1.2, '#7df9ff', 0.8);
+  }
+
+  // engine of the nearest oncoming vehicle, Doppler-shifted as it tears past
+  updateEngine() {
+    const r = this.run;
+    let best = null, bd = 60;
+    if (this.state === 'playing') for (const e of this.track.items) {
+      if (!e.oncoming || e.dead) continue;
+      const a = Math.abs(e.d - r.d);
+      if (a < bd) { bd = a; best = e; }
+    }
+    if (best) {
+      sfx.engine((1 - bd / 60) ** 2, 1 + 0.12 * Math.tanh((best.d - r.d) / 5), (best.x - this.player.x) / 4);
+      this.engineOn = true;
+    } else if (this.engineOn) { sfx.engine(0); this.engineOn = false; }
   }
 
   activatePower(type, ev) {
@@ -320,6 +372,7 @@ export class Game {
     const r = this.run, p = this.player;
     p.die();
     sfx.crash(); sfx.wind(false); haptic('crash');
+    r.slowMo = 0;
     this.fx.shake(0.45, 0.55);
     this.fx.splat(p.x, 1, -0.6);
     this.state = 'dying';
@@ -372,7 +425,7 @@ export class Game {
     if (newBest) s.best = Math.floor(r.score);
     const missionNews = this.applyMissions(r.stats);
     Save.save();
-    sfx.wind(false);
+    sfx.wind(false); sfx.engine(0); this.engineOn = false;
     if (silent) return;
     sfx.gameOver(newBest);
     if (missionNews.leveled) setTimeout(() => sfx.levelUp(), 1400);
@@ -509,7 +562,8 @@ export class Game {
     // widen the lens with speed and kick it out during a super jump
     const r = this.run, base = cam.userData.baseFov || cam.fov;
     let fov = base;
-    if (r && this.state === 'playing') fov += THREE.MathUtils.clamp((r.speed - 14) / 20, 0, 1) * 4 + (p.superJump && !p.grounded ? 5 : 0);
+    if (r && this.state === 'playing') fov += THREE.MathUtils.clamp((r.speed - 14) / 20, 0, 1) * 4 + (p.superJump && !p.grounded ? 5 : 0) + this.fovKick;
+    this.fovKick *= Math.exp(-dt * 2.5);
     const nf = cam.fov + (fov - cam.fov) * (1 - Math.exp(-dt * 4));
     if (Math.abs(nf - cam.fov) > 0.01) { cam.fov = nf; cam.updateProjectionMatrix(); }
   }

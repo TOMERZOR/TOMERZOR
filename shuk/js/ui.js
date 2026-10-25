@@ -196,6 +196,12 @@ export class UI {
     z.querySelector('span').textContent = sub;
     z.classList.remove('show'); void z.offsetWidth; z.classList.add('show');
   }
+  // edge flash for a close call with traffic
+  closeCall(hair) {
+    const el = $('closecall');
+    el.classList.toggle('hair', hair);
+    el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  }
   toast(title, sub) {
     const box = $('toasts');
     while (box.children.length >= 2) box.firstChild.remove();

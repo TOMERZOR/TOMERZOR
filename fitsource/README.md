@@ -23,7 +23,7 @@ The quick scan uses MobileCLIP (Apple, via Transformers.js): the photo is looked
 
 The quick scan also reads text printed on the clothes (`scan/ocr.js`): PaddleOCR (PP-OCRv3 text detection and PP-OCRv5 English recognition, about 10 MB, from Hugging Face at a pinned revision, cached) runs on the body column of the photo at up to 1568 px, keeps the largest confident lettering (and a tagline set right under it), and recognises brand names from a short list (`BRANDS`), allowing for a misread letter or a word cut short ("EBRHARTT" is Carhartt, "STUSS" is Stüssy). The words go to the garment they are printed on and to the front of its search words, so a "NUDE MANSION" tee searches for "Nude Project NUDE MANSION"; Google gets them in English. Curved lettering (text around a circle) is not read. Try it with `node tools/eval-ocr.mjs photo.jpg`. The detector works in English; each piece is shown in Hebrew (`HE` in `vocab.js`), with the colour agreeing with the garment's gender and number (`colorHe` in `color.js`: "חולצה שחורה", "מכנסיים שחורים").
 
-The deep scan sends the photo to Claude (`claude-opus-5-5` by default) with web search, web fetch and a structured `submit_results` tool, streams progress to the page, then verifies stock at each shop. It is told to report the original source, then favour shops that sell in Israel or ship there, to search in Hebrew and English, and to answer in Hebrew (brand, product and shop names stay as the store writes them).
+The deep scan sends the photo to Claude (`claude-sonnet-5-5` by default; see "Which model" in BUSINESS.md) with web search, web fetch and a structured `submit_results` tool, streams progress to the page, then verifies stock at each shop. It is told to report the original source, then favour shops that sell in Israel or ship there, to search in Hebrew and English, and to answer in Hebrew (brand, product and shop names stay as the store writes them).
 
 Shop links search in Hebrew at Israeli shops and in English at shops with English catalogues (`en: true` in `shop.js`), so every piece carries both a Hebrew `query` and an English `queryEn`. Yad2 Market has no public search link, so its button opens the clothing section. Vinted is left out because it doesn't operate in Israel.
 
@@ -82,6 +82,10 @@ There is no `LocalBusiness` schema: FitSource has no shop or address. `OnlineBus
 
 ### 3. Deep scan (optional, recommended)
 
+The easy way, from GitHub alone: add the repository secrets `ANTHROPIC_API_KEY` (from console.anthropic.com; set a monthly spend limit there) and `CLOUDFLARE_API_TOKEN` (a free Cloudflare account, then My Profile > API Tokens > the "Edit Cloudflare Workers" template; add `CLOUDFLARE_ACCOUNT_ID` too if the token reaches several accounts), then run **Deploy FitSource API** from the Actions tab. The workflow (`.github/workflows/fitsource-api.yml`) tests the worker, creates the KV namespace the first time (`worker/tools/ensure-kv.mjs`), deploys, stores the key as a Worker secret, checks `/api/health`, and writes the API address into `apiBase` in `assets/js/config.js`. It runs again whenever `worker/` changes, and skips itself while the secrets are missing.
+
+By hand:
+
 1. Create an Anthropic API key at console.anthropic.com and set a monthly spend limit there.
 2. Create a free Cloudflare account, then:
 
@@ -95,7 +99,7 @@ There is no `LocalBusiness` schema: FitSource has no shop or address. `OnlineBus
    ```
 
 3. Put the address it prints (e.g. `https://fitsource-api.<you>.workers.dev`) in `assets/js/config.js` as `apiBase`.
-4. In `wrangler.toml`, set `ALLOWED_ORIGINS` to your site's address (comma-separated if several) and `wrangler deploy` again. Requests from other websites are then refused, so they can't spend your credits from a visitor's browser. Scripts outside a browser can still call the API, so keep the daily limit on and, for a hard cap, add a Cloudflare rate-limiting rule for `/api/scan` in the dashboard.
+4. In `wrangler.toml`, `ALLOWED_ORIGINS` lists the sites allowed to call the API (the GitHub Pages address and the local preview); change it if the site moves, and `wrangler deploy` again. Requests from other websites are then refused, so they can't spend your credits from a visitor's browser. Scripts outside a browser can still call the API, so keep the daily limit on and, for a hard cap, add a Cloudflare rate-limiting rule for `/api/scan` in the dashboard.
 
 Settings in `wrangler.toml`: `DAILY_SCAN_LIMIT` (free deep scans per visitor per day), `FITSOURCE_MODEL`, `FITSOURCE_EFFORT`, `MAX_SEARCHES`, `MAX_FETCHES`. Requests use Anthropic's server-side fallback (`fallbacks: "default"`) so a declined request is retried on a fallback model.
 

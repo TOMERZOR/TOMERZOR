@@ -32,11 +32,24 @@ Creators get a share (30 to 50%) of what their posted fits earn. That keeps the 
 ## What a scan costs
 
 - **Quick scan:** runs on the shopper's device. It costs nothing per scan beyond static hosting (free on GitHub Pages or Cloudflare Pages).
-- **Deep scan:** Claude reads the photo, searches the web in Hebrew and English, and reads product pages. With Claude Opus 5.5 ($4 per million input tokens, $20 per million output) plus web search, expect about $0.15 to $0.40 a scan (₪0.55 to ₪1.50), depending on how many searches it runs. Measure it on your own traffic before setting limits; the worker logs usage. Ways to cut the cost:
+- **Deep scan:** Claude reads the photo, searches the web in Hebrew and English, and reads product pages. With Claude Sonnet 5.5 ($2 per million input tokens, $10 per million output) plus web search ($10 per 1,000 searches), expect roughly $0.10 to $0.30 a scan (₪0.40 to ₪1.10), depending on how many searches it runs. This is an estimate; measure it on your own traffic before setting limits (the worker logs usage). Ways to cut the cost:
   - Results are cached for 24 hours by image fingerprint, so a viral photo is paid for once.
   - `DAILY_SCAN_LIMIT` caps free deep scans per visitor (default 8).
   - `MAX_SEARCHES` and `MAX_FETCHES` cap the work per scan.
-  - `FITSOURCE_MODEL` can be switched to `claude-sonnet-5-5` ($2 / $10), at some cost in accuracy. Test it on real photos first.
+  - `FITSOURCE_MODEL` picks the model (see below).
+
+### Which model
+
+Five real outfit photos (a Nude Project tee, Timberland boots twice, a Carhartt WIP sweater with Birkenstock Boston clogs, a Scuffers "withlove" hoodie at night, a Stüssy Burly Threads tee with a Polo Ralph Lauren cap) were given to each model to identify, from the photo alone, without web search. Out of 9 brand and model identifications:
+
+| Model | Price per million tokens (in / out) | Identified | Missed |
+|---|---|---|---|
+| Claude Haiku 5.5 | $0.10 / $0.50 | 4, plus 3 where it read the print but named no brand | Polo cap, Timberland in the dark |
+| **Claude Sonnet 5.5** (default) | $2 / $10 | 7, plus "Nude Mansion" for Nude Project | Scuffers |
+| Claude Opus 5.5 | $4 / $20 | 8 | Scuffers |
+| Claude Fable 5.1 | $10 / $50 | 8 | Scuffers |
+
+No model knew the Scuffers hoodie from its "withlove" print; the web search in a real scan is what finds that. Sonnet 5.5 identifies almost as well as Opus 5.5 at half the price, so it is the default. Haiku 5.5 costs a fraction (searches, at $0.01 each, become most of its bill) but needs the search to make up for what it doesn't recognise; try it with `FITSOURCE_MODEL = "claude-haiku-5-5"` (the worker then uses the basic web search and fetch tools, which Haiku supports) and compare on your own photos. Five photos is a small sample; re-run the comparison on real traffic before relying on it.
 
 ## Rough unit economics (assumptions)
 

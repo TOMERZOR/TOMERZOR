@@ -1,0 +1,96 @@
+# Deploys the FitSource API (fitsource/worker) to Cloudflare Workers and points
+# the site at it. Add these repository secrets (Settings > Secrets and
+# variables > Actions), then run this workflow from the Actions tab:
+#   ANTHROPIC_API_KEY      from console.anthropic.com (set a monthly spend limit there)
+#   CLOUDFLARE_API_TOKEN   Cloudflare dashboard > My Profile > API Tokens > "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  optional; needed only if the token reaches several accounts
+# Until the secrets exist, the workflow skips itself instead of failing.
+name: Deploy FitSource API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/playwright-mcp-add-8e6qct]
+    paths: ["fitsource/worker/**", ".github/workflows/fitsource-api.yml"]
+
+concurrency:
+  group: fitsource-api
+  cancel-in-progress: false
+
+permissions:
+  contents: write # to save the API address in the site's config
+  pages: write # to rebuild the site afterwards
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::ANTHROPIC_API_KEY or CLOUDFLARE_API_TOKEN is not set; skipping the deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install and test
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: fitsource/worker
+        run: |
+          npm ci
+          npm test
+
+      - name: Cache and daily limit storage
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: fitsource/worker
+        run: node tools/ensure-kv.mjs
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'true'
+        id: deploy
+        working-directory: fitsource/worker
+        run: |
+          npx wrangler deploy | tee deploy.log
+          printf '%s' "$ANTHROPIC_API_KEY" | npx wrangler secret put ANTHROPIC_API_KEY
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -z "$url" ]; then echo "::error::Could not find the workers.dev address in the deploy output"; exit 1; fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice::FitSource API is at $url"
+
+      - name: Check the API answers
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ steps.deploy.outputs.url }}/api/health" | tee health.json | grep -q '"deep_scan":true'; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::The API did not report deep_scan: true"; cat health.json; exit 1
+
+      - name: Point the site at the API
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          API_URL: ${{ steps.deploy.outputs.url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed -i -E "s|^(  apiBase: )\"[^\"]*\",|\1\"$API_URL\",|" fitsource/assets/js/config.js
+          if git diff --quiet; then echo "The site already uses $API_URL"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "FitSource: use the deployed API at $API_URL"
+          git push
+          # pushes made with the workflow token don't start a Pages build on their own
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "::warning::Could not start a Pages build; it runs on the next push."

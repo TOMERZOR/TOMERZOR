@@ -6,7 +6,20 @@ import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT, SUBMIT_TOOL, CATEGORIES, MATCH_KINDS, userInstruction } from "./prompt.js";
 import { AVAILABILITY, checkStock, isSafePublicUrl } from "./stock.js";
 
-export const DEFAULT_MODEL = "claude-opus-5-5";
+export const DEFAULT_MODEL = "claude-sonnet-5-5"; // see BUSINESS.md, "Which model"
+
+/**
+ * What a model supports, as far as the scan cares: the web tools with dynamic
+ * filtering (code execution trims search results before Claude reads them)
+ * came with Claude 4.6, but Haiku runs the basic versions; and the server-side
+ * fallback on a refusal is not offered for Haiku. FITSOURCE_WEB_TOOLS
+ * ("basic" or "dynamic") overrides the guess.
+ */
+export function modelProfile(model, env = {}) {
+  const haiku = /haiku/i.test(model);
+  const tools = env.FITSOURCE_WEB_TOOLS === "basic" || env.FITSOURCE_WEB_TOOLS === "dynamic" ? env.FITSOURCE_WEB_TOOLS : haiku ? "basic" : "dynamic";
+  return { tools, fallback: !haiku };
+}
 const MAX_TURNS = 6;
 
 export class ScanError extends Error {
@@ -130,9 +143,11 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
     });
   const model = env.FITSOURCE_MODEL || DEFAULT_MODEL;
   const effort = env.FITSOURCE_EFFORT || "medium";
+  const profile = modelProfile(model, env);
+  const dynamic = profile.tools === "dynamic";
   const tools = [
-    { type: "web_search_20260209", name: "web_search", max_uses: clampInt(env.MAX_SEARCHES || 10, 1, 30) },
-    { type: "web_fetch_20260209", name: "web_fetch", max_uses: clampInt(env.MAX_FETCHES || 8, 1, 30), max_content_tokens: 12000 },
+    { type: dynamic ? "web_search_20260209" : "web_search_20250305", name: "web_search", max_uses: clampInt(env.MAX_SEARCHES || 10, 1, 30) },
+    { type: dynamic ? "web_fetch_20260209" : "web_fetch_20250910", name: "web_fetch", max_uses: clampInt(env.MAX_FETCHES || 8, 1, 30), max_content_tokens: 12000 },
     SUBMIT_TOOL,
   ];
   const messages = [
@@ -157,8 +172,7 @@ export async function runScan({ image, focus = null, hint = null, env = {}, emit
       tools,
       messages,
       output_config: { effort },
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      ...(profile.fallback ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {}),
     }, signal ? { signal } : undefined);
 
     const pending = new Map(); // block index -> { name, json }

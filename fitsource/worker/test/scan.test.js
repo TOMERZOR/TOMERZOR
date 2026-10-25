@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import worker, { parseImage, parseFocus } from "../src/index.js";
-import { sanitizeResults } from "../src/scan.js";
+import { sanitizeResults, modelProfile } from "../src/scan.js";
 
 const TINY_JPEG = "data:image/jpeg;base64," + Buffer.alloc(3000, 7).toString("base64");
 
@@ -169,11 +169,12 @@ test("full scan streams progress, then verified results", async () => {
 
   // Request shape sent to Claude
   const first = seenBodies[0];
-  assert.equal(first.model, "claude-opus-5-5");
+  assert.equal(first.model, "claude-sonnet-5-5");
   assert.equal(first.fallbacks, "default");
   assert.deepEqual(first.output_config, { effort: "medium" });
   assert.equal(first.temperature, undefined);
   assert.deepEqual(first.tools.map((t) => t.name), ["web_search", "web_fetch", "submit_results"]);
+  assert.deepEqual(first.tools.slice(0, 2).map((t) => t.type), ["web_search_20260209", "web_fetch_20260209"]);
   assert.ok(first.messages[0].content[1].text.includes("the jacket"));
   // pause_turn resumes by sending the paused assistant turn back, no extra user text
   assert.equal(seenBodies[1].messages.length, 2);
@@ -228,7 +229,7 @@ test("KV cache answers repeat scans and the daily limit applies", async () => {
 
 test("health, stock and CORS routes", async () => {
   const health = await worker.fetch(new Request("https://api.example.com/api/health"), env(), {});
-  assert.deepEqual(await health.json(), { ok: true, deep_scan: true, model: "claude-opus-5-5", cache: false, daily_limit: null });
+  assert.deepEqual(await health.json(), { ok: true, deep_scan: true, model: "claude-sonnet-5-5", cache: false, daily_limit: null });
   const stock = await worker.fetch(new Request("https://api.example.com/api/stock?url=" + encodeURIComponent("https://page.example.org/item/7")), env(), {});
   assert.equal((await stock.json()).availability, "in_stock");
   const bad = await worker.fetch(new Request("https://api.example.com/api/stock?url=http://127.0.0.1/"), env(), {});
@@ -244,4 +245,13 @@ test("health, stock and CORS routes", async () => {
   assert.equal(good.headers.get("access-control-allow-origin"), "https://good.example");
   const nf = await worker.fetch(new Request("https://api.example.com/nope"), env(), {});
   assert.equal(nf.status, 404);
+});
+
+test("each model gets the web tools and fallback it supports", () => {
+  assert.deepEqual(modelProfile("claude-opus-5-5"), { tools: "dynamic", fallback: true });
+  assert.deepEqual(modelProfile("claude-sonnet-5-5"), { tools: "dynamic", fallback: true });
+  // Haiku: basic web tools (no dynamic filtering), no server-side fallback
+  assert.deepEqual(modelProfile("claude-haiku-5-5"), { tools: "basic", fallback: false });
+  assert.equal(modelProfile("claude-haiku-5-5", { FITSOURCE_WEB_TOOLS: "dynamic" }).tools, "dynamic");
+  assert.equal(modelProfile("claude-opus-5-5", { FITSOURCE_WEB_TOOLS: "nonsense" }).tools, "dynamic");
 });

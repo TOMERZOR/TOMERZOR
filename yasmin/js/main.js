@@ -81,7 +81,7 @@ async function load() {
     T.loadTex(`img/ruth_ghost.webp?v=${V}`, { repeat: false }).then(t => ['ruth_ghost', t]),
   ]).then(list => Object.fromEntries(list));
   const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
-  const modelList = ['yasmin', 'nevo', 'bucket', 'labubu', 'squash'];
+  const modelList = ['yasmin', 'nevo', 'bucket', 'labubu', 'squishy', 'squishy_torn', 'squishy_butter'];
   let mdone = 0;
   const modP = Promise.all(modelList.map(n => new Promise((res, rej) => loader.load(`models/${n}.glb?v=${V}`, g => { mdone++; parts.models = mdone / modelList.length; upd(); res([n, g]); }, undefined, rej)))).then(l => Object.fromEntries(l));
   const audP = audio.load('audio/', V, p => { parts.audio = p; upd(); });
@@ -322,7 +322,7 @@ function openJournal() {
   const tapes = loadTapes();
   const found = new Set(store.get('found', []));
   const keys = ['key1', 'key2', 'key3', 'key4'].filter(k => S.flags[k]).length;
-  const disc = [['squash', 'הסקווש של רועי'], ['labubu', 'הלבובו של מאיה'], ['nevo', 'מה קרה לנבו'], ['store', 'המחסן של יסמין'], ['ruth', 'רות'], ['ending', 'הבריחה']];
+  const disc = [['squash', 'הסקווישים של רועי'], ['labubu', 'הלבובו של מאיה'], ['nevo', 'מה קרה לנבו'], ['store', 'המחסן של יסמין'], ['ruth', 'רות'], ['ending', 'הבריחה']];
   let h = `<h3>יומן</h3><p class="type">מפתחות שער: <b>${keys}/4</b> · בקבוקים: <b>${P.bottles || 0}/3</b> · סוללה: <b>${Math.round(P.battery * 100)}%</b></p>`;
   h += `<p class="type"><b>קלטות של רות</b> (${tapes.size}/5)</p><div class="tapes">`;
   for (let i = 1; i <= 5; i++) h += tapes.has(i) ? `<button class="btn tape-btn" data-tape="${i}">▶ קלטת ${i}</button>` : `<button class="btn tape-btn" disabled>קלטת ${i} · לא נמצאה</button>`;
@@ -335,7 +335,7 @@ function openJournal() {
 
 // ---------- events from the story ----------
 game.discovered = (id) => {
-  const t = { squash: 'גילית: הסקווש של רועי', labubu: 'גילית: הלבובו של מאיה', nevo: 'גילית: מה קרה לנבו', store: 'גילית: המחסן של יסמין' }[id];
+  const t = { squash: 'גילית: הסקווישים של רועי', labubu: 'גילית: הלבובו של מאיה', nevo: 'גילית: מה קרה לנבו', store: 'גילית: המחסן של יסמין' }[id];
   if (t) ui.toast(t, 3);
   const found = new Set(store.get('found', [])); found.add(id); store.set('found', [...found]);
 };
@@ -463,7 +463,7 @@ function credits() {
     '<p>בבוקר מצאו את המסדרון מבריק.</p>',
     '<p>את נבו העבירו לבית מנוחה. הוא עדיין סופר משבצות.</p>',
     '<p>את הלבובו של מאיה תפרו. בערך.</p>',
-    '<p>את הסקווש של רועי — אף אחד לא שתה.</p>',
+    '<p>הסקווישים של רועי עדיין במקרר. אל תלחץ עליהם.</p>',
     ...(ruth ? ['<p class="big">ומישהי יצאה איתך מהשער.</p>', '<p>יחפה. רטובה. אחרי שלושה חודשים.</p>', '<p>רות חזרה הביתה.</p>'] : ['<p>על השער מצאו זוג עקבות יחפות שלא היו שלך.</p>', '<p class="small">(מצא את כל חמש הקלטות של רות כדי לשחרר אותה)</p>']),
     '<p class="big">ויסמין?</p>',
     '<p>יסמין קיבלה צל״ש על ניקיון.</p>',

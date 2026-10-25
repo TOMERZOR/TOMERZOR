@@ -187,7 +187,10 @@ export async function linkProducts(items, { sample = null, blob = null, onProgre
   pieces.forEach(({ item, candidates }, k) => {
     let chosen = null;
     let kind = "original";
-    if (picks) chosen = picks[k] != null ? candidates[picks[k]] : null;
+    if (picks) {
+      chosen = picks[k] != null ? candidates[picks[k]] : null;
+      if (chosen && !chosen.own) kind = "exact"; // the same product, at a store that stocks the brand
+    }
     else if (candidates[0].cover >= 0.75 && (!candidates[1] || candidates[0].score >= candidates[1].score * 1.15)) {
       chosen = candidates[0];
       kind = "close"; // a word match, not checked against the photo

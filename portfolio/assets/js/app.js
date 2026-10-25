@@ -121,7 +121,8 @@
   const afBox = document.querySelector(".hud__af");
   let current = -1;
   let lastBlink = 0;
-  const hydrate = (fr) => fr.querySelectorAll("[data-srcset]").forEach((el) => { el.srcset = el.dataset.srcset; el.removeAttribute("data-srcset"); });
+  // Later frames wait in <template> so they only download once the burst needs them.
+  const hydrate = (fr) => fr.querySelectorAll("template").forEach((t) => t.replaceWith(t.content));
   const blink = (el) => {
     const now = performance.now();
     if (reduce.matches || now - lastBlink < 340) return; // never more than three flashes a second
@@ -328,7 +329,10 @@
   /* ---------- Playback ---------- */
   const pb = document.getElementById("playback");
   if (pb && tiles.length) {
-    const img = pb.querySelector(".viewer__stage img");
+    const img = new Image();
+    img.alt = "";
+    img.decoding = "async";
+    pb.querySelector(".viewer__stage").append(img);
     const pbBlink = pb.querySelector(".viewer__blink");
     const cap = pb.querySelector(".pb-caption");
     const f = (k) => pb.querySelector(`[data-pb='${k}']`);

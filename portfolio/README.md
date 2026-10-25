@@ -3,6 +3,9 @@
 Hebrew (RTL) photography and video portfolio built around a camera: the page opens with an iris, the hero is a viewfinder that fires a burst of frames as you scroll, the gallery is filtered with a mode dial, and photos open in a playback screen. Static HTML, CSS and vanilla JS with no build step, like the rest of this repo.
 
 - `index.html`: the whole page (viewfinder hero, gallery with mode dial, video, about, contact, playback and video dialogs)
+- `accessibility.html`: the accessibility statement (הצהרת נגישות), linked from every footer
+- `404.html`: the page GitHub Pages and most static hosts show for a missing address. Its links and asset paths start with `/`, so it only works when the site sits at the root of its domain
+- `robots.txt`, `llms.txt`, `favicon.ico`: for search engines, AI assistants and browsers that look for these files at the root
 - `assets/css/style.css`: design tokens at the top (dark palette, accent and focus colors, spacing, type)
 - `assets/js/app.js`: iris, viewfinder burst, focus cursor, mode dial and gallery, playback, video previews and player, WhatsApp messages, optional shutter sound
 - `assets/img/`: photos as WebP at 480, 960 and 1600px wide (plus 2400px for the desktop hero)
@@ -17,14 +20,23 @@ Everything works without JavaScript (the first hero frame, the full gallery and 
 
 **Add a photo.** Export three WebP files named `<category>-<nn>-480.webp`, `-960.webp` and `-1600.webp` into `assets/img/`, then copy any `<figure class="tile">` block in `index.html` and update its `data-cat` (`sport`, `party`, `event`, `portrait` or `street`), `data-w`/`data-h` (original pixel size), `data-full`, file names and `alt` text. The dial counts the photos itself; only the starting text of `.dial__count` ("59 תמונות") needs the new total.
 
-**Change the hero burst.** Each `<figure class="vf__frame">` is one frame, with a landscape image for desktop and a portrait one for phones. Keep `--frames` on the `.vf` section equal to the number of frames, since it sets how long the burst stays pinned.
+**Change the hero burst.** Each `<figure class="vf__frame">` is one frame, with a landscape image for desktop and a portrait one for phones. Every frame after the first keeps its `<picture>` inside a `<template>`, so it only downloads once the burst needs it. Keep `--frames` on the `.vf` section equal to the number of frames, since it sets how long the burst stays pinned.
 
 **Add a video.** Put `<slug>.mp4`, `<slug>-preview.mp4` and `<slug>.webp` in `assets/video/` and copy a `<figure class="vcard">` block. Vertical reels go in `.reels`, horizontal videos in `.vgrid`.
 
 **Contact.** WhatsApp messages are set at the WhatsApp section of `app.js`: `PHONE` (international format, no plus sign), the opening sentence in `base` and one ending per subject chip in `subjects`. If the number changes, also update the `tel:` link, the two `wa.me` links and `telephone` in the JSON-LD block of `index.html`, which are what visitors without JavaScript get. Email and Instagram are plain links in the contact section and in the JSON-LD `sameAs` list.
 
+**Accessibility statement.** Update the date at the bottom of `accessibility.html` whenever the site changes in a way that affects accessibility.
+
+## Security
+
+The site has no server code, forms, logins or database, and loads nothing from other websites. Every page carries a Content Security Policy in a `<meta>` tag that only allows files from the site itself, so an injected script or a script from another site will not run.
+
+- `index.html` has one inline script (it adds the `js` class). The policy allows it by its SHA-256 hash, so if you change that script, update the hash in the policy. Get the new value with `printf '%s' 'document.documentElement.className="js";' | openssl dgst -sha256 -binary | base64`.
+- Adding analytics, an embedded video or a font from another site means adding that site to the policy, or the browser will block it.
+
 ## Launch checklist
 
-- Host the `portfolio/` folder on any static host (GitHub Pages, Netlify, Vercel, Cloudflare Pages). Every path is relative, so it works from a subfolder or its own domain.
-- Once the final address is known, change `og:image` in `index.html` to the full URL (for example `https://example.com/assets/img/og.jpg`) so WhatsApp and Instagram show the preview image.
+- Host the contents of `portfolio/` at the root of a domain on a static host such as GitHub Pages. The main page and the accessibility statement use relative paths and work from a subfolder too; only `404.html` needs the domain root. Cloudflare Pages rejects files over 25MB, and two of the videos are larger.
+- Once the final address is known, add it to the pages: `og:image` and `og:url` as full URLs (WhatsApp and Instagram need them for the preview image), a `<link rel="canonical">` on `index.html` and `accessibility.html`, a `sitemap.xml` listing both pages, a `Sitemap:` line in `robots.txt`, full URLs in `llms.txt` and in the JSON-LD blocks.
 - Videos total about 170MB. The largest file is 44MB, under GitHub's 50MB warning.

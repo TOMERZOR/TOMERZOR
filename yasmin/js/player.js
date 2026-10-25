@@ -150,7 +150,7 @@ export class Player {
     const holdKey = this.hidden && (k.Space || this.touch.runLock || this.touch.run);
     if (holdKey && this.stamina > 0.02 && this.staminaLock <= 0) {
       if (!this.holdingBreath) this.audio.noise(0.25, { type: 'bandpass', f: 900, vol: 0.12, a: 0.03, verb: 0 });
-      this.holdingBreath = true; this.stamina -= dt / 7;
+      this.holdingBreath = true; this.stamina -= dt / 10;
       if (this.stamina <= 0.02) { this.stamina = 0; this.staminaLock = 2; this.holdingBreath = false; this.gasp(); }
     } else if (this.holdingBreath) { this.holdingBreath = false; this.audio.noise(0.4, { type: 'bandpass', f: 1100, vol: 0.18, a: 0.02, verb: 0, f2: 600 }); }
     if (!this.hidden) this.holdingBreath = false;

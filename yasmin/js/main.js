@@ -114,9 +114,14 @@ function build() {
   yasmin.onLockerLeave = () => { ui.scare(null, 0); audio.heartbeat(1); };
   yasmin.onSpot = () => { player.shake = Math.max(player.shake, 0.4); audio.stinger('peek'); };
   game.onLostPlayer = () => { };
-  // warm up shaders so the first frames don't hitch
+  // warm up every shader, including objects that start hidden (tapes, ghost, bottles, signs), so nothing hitches later
   camera.position.set(3, 1.6, 5);
+  const hidden = [];
+  scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  game.mech.mopPatch(30, 11);
   renderer.compile(scene, camera);
+  for (const o of hidden) o.visible = false;
+  game.mech.clear();
   player.onKey = onKey;
   player.onLockChange = (locked) => {
     if (!locked && game.state === 'play' && !isTouch) pause(true);
@@ -162,6 +167,7 @@ function menu() {
   $('menu-stats').innerHTML = `קלטות של רות: <b>${tapes.size}/5</b> · גילויים: <b>${found.length}/6</b>${won ? ' · <b>ברחת</b>' + (store.get('ruthFree', false) ? ' · <b>רות חופשייה</b>' : '') : ''}`;
 }
 
+let radio = null;
 function startNight(n, fromCheckpoint = false) {
   if (!fromCheckpoint || n !== game.night) game.caughtCount = 0;
   if (!fromCheckpoint || !game.checkpoint || game.checkpoint.night !== n) game.checkpoint = null;
@@ -175,6 +181,9 @@ function startNight(n, fromCheckpoint = false) {
   if (game.checkpoint) { game.checkpoint.apply(); ui.toast('נקודת שמירה', 2); }
   ui.card(`לילה ${n}`, NIGHTS[n].title, NIGHTS[n].text);
   audio.static_(0.4, 0.05);
+  // night 1 opens with the sergeant major on the radio
+  if (radio) { radio.stop(0.1); radio = null; }
+  if (n === 1 && !fromCheckpoint) setTimeout(() => { if (game.state === 'card' || game.state === 'play') { audio.static_(0.3, 0.1); radio = audio.play('radio1', { volume: 1.0, verb: 0.15, muffle: false, sub: false }); } }, 1400);
 }
 
 function play() {
@@ -248,6 +257,8 @@ game.enterLocker = (L) => {
   game.story.after(0.38, () => {
     if (game.state !== 'play') { P.enabled = true; return; }
     P.hidden = L; P.enabled = true;
+    // on a phone the run button becomes "hold breath" inside: start with it released
+    P.touch.runLock = false; P.touch.run = false; $('t-run').classList.remove('on');
     P.yaw = L.ry; P.pitch = 0; P.lightOn = false;
     L.target = 0;
     ui.lockerView(true);
@@ -464,15 +475,30 @@ function director(dt) {
 }
 
 // ---------- main loop ----------
+const runBtn = $('t-run');
 const clock = new THREE.Clock();
 let clockT = 0;
 let fear = 0, chase = 0;
+// Adaptive resolution: drop the pixel ratio when frames run long, raise it again when there's headroom.
+const PR_MAX = pr, PR_MIN = Math.min(pr, quality === 'low' ? 0.6 : 0.8);
+let ftAvg = 16, ftT = 0;
+function adapt(raw) {
+  if (game.state !== 'play' || document.hidden) return;
+  ftAvg += (Math.min(raw, 0.1) * 1000 - ftAvg) * 0.05;
+  ftT += raw;
+  if (ftT < 2) return;
+  if (ftAvg > 24 && pr > PR_MIN) { pr = Math.max(PR_MIN, pr - 0.15); resize(); ftT = 0; }
+  else if (ftAvg < 13 && pr < PR_MAX) { pr = Math.min(PR_MAX, pr + 0.1); resize(); ftT = -2; }
+  else ftT = 0;
+}
 function frame() {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, clock.getDelta());
+  const raw = clock.getDelta();
+  const dt = Math.min(0.05, raw);
   if (!game.world || game.paused) return;
   tick(dt);
   S_render();
+  if (!params.has('fixedres')) adapt(raw);
 }
 function S_render() {
   game.story.renderCCTV(renderer, scene, clockT);
@@ -519,6 +545,7 @@ function tick(dt) {
     fear += (f - fear) * Math.min(1, dt * 2);
     chase += ((Y.state === 'chase' ? 1 : 0) - chase) * Math.min(1, dt * (Y.state === 'chase' ? 3 : 0.5));
     game.mech.update(dt);
+    if (isTouch) { const lbl = P.hidden ? 'נשימה' : 'ריצה'; if (runBtn.textContent !== lbl) runBtn.textContent = lbl; }
     ui.meters(P.stamina, P.battery, P.hasLight);
     $('bottles').textContent = P.bottles ? `בקבוקים: ${P.bottles}` : '';
     if (tape) $('tape-bar').style.width = Math.min(100, (performance.now() - tape.start) / 10 / tape.dur) + '%';

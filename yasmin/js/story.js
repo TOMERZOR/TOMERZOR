@@ -104,6 +104,20 @@ const NOTES = {
 בפנים, בעט: <b>רות ל.</b>
 הן נקיות. נקיות מדי.
 <span class="blood">על הסוליה מישהו כתב בטוש: "לכלכה".</span>`,
+  daniel: `<h3>פתק מתחת למזרן — חדר 4</h3>שמעתי אותה הלילה מחוץ לדלת.
+היא מגבה את אותו מקום כבר שעה.
+הלוך. חזור. הלוך. חזור.
+כאילו היא מנסה לנקות משהו שלא יורד.
+בבוקר ראיתי את המקום. הרצפה שם בהירה יותר.
+<span class="blood">בצורה של אדם.</span>
+— דניאל`,
+  camlog: `<div class="type"><h3>יומן מצלמות — משמרת לילה</h3>02:58 — שקט.
+03:12 — תורנית במסדרון הצפוני.
+03:13 — תורנית במסדרון הצפוני.
+03:14 — תורנית במסדרון הצפוני. עומדת. לא זזה.
+03:15 — תורנית מול המצלמה.
+03:16 — <span class="blood">אין תמונה.</span>
+03:17 — יש מישהו בחדר מצלמות.</div>`,
   board: `<h3>הלוח של יסמין</h3><img src="img/photo_yasmin.jpg" alt="">
 מתחת לתמונה, בטוש אדום:
 <span class="blood">"עובדת החודש. כל חודש."</span>`,
@@ -210,6 +224,9 @@ export class Story {
     this.paperFuse = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.28), new THREE.MeshStandardMaterial({ map: T.paperTex(), roughness: 0.85 }));
     this.paperFuse.position.set(W.fusePanel.x - 0.12, 1.45, W.fusePanel.z + 0.6); this.paperFuse.rotation.y = -Math.PI / 2; root.add(this.paperFuse);
     this.paperNevo = this.notePaper(64.2, 0.785, 43.1, 2.9);
+    this.paperDaniel = this.notePaper(3.25, 0.535, 40.4, 1.2);
+    this.paperCam = this.notePaper(51.6, 0.785, 3.1, 0.4);
+    W.wallDecal(T.scrawlTex('היא מאחוריך', { color: 'rgba(140,10,10,0.85)', size: 110 }), 8.5, 1.58, 14.06, 0, 0.9, 0.22);
 
     // --- generic pickups
     const keyMesh = () => {
@@ -449,6 +466,8 @@ export class Story {
     it({ label: 'קרא פתק', pos: () => this.paperFridge.getWorldPosition(v3(0, 0, 0)), use: () => { this.read('roi'); this.discover('squash'); } });
     it({ label: 'קרא פתק', pos: () => this.paperMaya.position, use: () => { this.read('maya'); this.discover('labubu'); } });
     it({ label: 'קרא', pos: () => this.paperFuse.position, use: () => { this.read('fuses'); } });
+    it({ label: 'קרא פתק', pos: () => this.paperDaniel.position, use: () => { this.read('daniel'); } });
+    it({ label: 'קרא יומן מצלמות', pos: () => this.paperCam.position, use: () => { this.read('camlog'); } });
     it({ label: 'קרא תיק רפואי', pos: () => this.paperNevo.position, enabled: () => !locks.I, use: () => {
       this.read('nevo'); this.discover('nevo'); if (n === 3) this.done('file');
       if (!this.flags.ghostCell) { this.flags.ghostCell = true; this.when(() => g.state === 'play' && P.pos.x < 59 && P.pos.z < 33, () => { this.apparition(49.6, 37, 5, true); this.after(0.6, () => g.audio.play('n_ruth', { pos: v3(this.nevo.position.x, 1.6, this.nevo.position.z), volume: 1.3 })); }); }
@@ -590,7 +609,7 @@ export class Story {
         const p = { mesh: m, x, z, clean: false };
         this.puddles.push(p);
         it({ label: 'נקה (החזק)', pos: () => v3(x, 0.4, z), range: 2.2, hold: 2.6, enabled: () => this.carryMop && !p.clean,
-          onHold: () => { if (Math.random() < 0.06) g.audio.mopSwish(); Y.noiseAt(x, z, 14); },
+          onHold: () => { if (Math.random() < 0.06) g.audio.mopSwish(); if (!p.heard) { p.heard = true; Y.noiseAt(x, z, 12); } },
           use: () => {
             p.clean = true; W.decals.remove(m);
             const o = this.obj('clean'); o.have++; this.refresh();

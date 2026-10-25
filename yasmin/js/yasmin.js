@@ -295,8 +295,8 @@ export class Yasmin {
           this.dir = Math.atan2(-L.fwd.x, -L.fwd.z);
           if (!this.lockerBeat) { this.lockerBeat = 1; this.speak('y_locker', { force: true, cd: 10 }); this.play('idle', 0.3); if (player.hidden === L && this.onLockerStare) this.onLockerStare(); }
           // she listens at the vents; if she saw you get in, or hears you breathe, she opens it
-          if (player.hidden === L && !player.holdingBreath && this.stateT > 1.2 && this.stateT < 3.4 && player.breathOut) this.heardBreath = true;
-          if (this.stateT > (this.sawHide === L ? 2.8 : 4.2)) {
+          if (player.hidden === L && this.stateT > 1.2 && player.breathOut) this.heardBreath = true;
+          if (this.stateT > (this.sawHide === L ? 2.8 : 3.6)) {
             if (player.hidden === L && (this.sawHide === L || this.heardBreath || !player.holdingBreath)) { L.target = 1; this.audio.play('sfx_locker', { pos: new THREE.Vector3(L.x, 1, L.z), volume: 1.2 }); this.catch(player, game, true); return; }
             this.heardBreath = false; this.sawHide = null;
             if (this.onLockerLeave) this.onLockerLeave();

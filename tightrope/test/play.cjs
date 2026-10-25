@@ -74,7 +74,12 @@ const URL = process.env.URL || 'http://localhost:8091/tightrope/';
   await page.evaluate(() => { window.__bot.on = false; });
   await page.click('#result-main').catch(() => {});
   if (res.state === 'won') await page.click('#brief-start').catch(() => {});
-  await page.waitForTimeout(4000 + 9000);
+  await page.waitForTimeout(4000);
+  for (let i = 0; i < 60; i++) {
+    await page.waitForTimeout(500);
+    if (await page.evaluate(() => window.__tightrope.sim && window.__tightrope.sim.state !== 'walk')) break;
+  }
+  await page.waitForTimeout(1500);
   await page.screenshot({ path: path.join(out, 'fail.png') });
   const res2 = await page.evaluate(() => ({ state: window.__tightrope.sim.state, fail: window.__tightrope.sim.fail, mode: window.__tightrope.mode }));
 

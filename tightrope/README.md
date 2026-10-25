@@ -38,8 +38,13 @@ Progress and settings are saved in the browser (localStorage).
 
 - `js/sensors.js`: tracks the "up" direction in the phone's axes. The gyroscope rotates it every motion event and the accelerometer slowly corrects drift, so the tilt is smooth and doesn't shake when your hand moves. Tilt is measured along the screen's left-right axis, so holding the phone flat or upright both work. Sign differences between browsers are detected live.
 - `js/sim.js`: the walker is an inverted pendulum (lean grows on its own, your tilt pushes back). The water surface is a damped pendulum driven by the bucket's sideways acceleration and by how fast you rotate the phone. Water pours out when the surface tilts past the rim relative to the bucket; the rim angle grows as the bucket empties.
-- `js/render.js`: a 2D canvas with a simple perspective camera behind the walker.
+- `js/render.js`: a 2D canvas with a simple perspective camera behind the walker. The painted backdrop fills the screen and sets the horizon; the far cliff is a sprite whose ledge post is pinned to the rope's far anchor, so it grows as you approach and fades into the haze when far. The walker sprite's legs are drawn as two halves so each foot lifts on its step; the water, droplets, rope, ribbon, wind and snow are drawn live on top.
+- `js/assets.js`: image paths and the measured anchor points in each painting (feet, pole, bucket rim, cliff ledge).
 - `js/audio.js`: wind, pouring water, rope creaks, birds and stings, all synthesised with Web Audio.
+
+## Art
+
+The paintings in `img/` were generated with Higgsfield (GPT Image 2.5): a backdrop for each of the six themes (morning, midday, sunset, night, snowstorm, red canyon), three far cliffs (green granite, snowy, sandstone), the walker with his pole and bucket, and a sparrow perched and flying. They were cropped, resized and saved as WebP; the cliffs were faded to transparent at the bottom and sides so they melt into the gorge. Sunset, night and snow tint the cliff and walker to match the light.
 
 ## Tests
 

@@ -11,7 +11,7 @@ import { FX } from './fx.js';
 import { Game } from './game.js';
 import { UI } from './ui.js';
 import { createInput } from './input.js';
-import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx } from './audio.js';
+import { initAudio, setAudioSettings, startMusic, setMusicMode, duckMusic, sfx, loadRetro } from './audio.js';
 import { haptic, setHaptics } from './haptics.js';
 import { Look, patchCurvedWorld, patchToneMapping } from './look.js';
 import { T } from './i18n.js';
@@ -237,6 +237,7 @@ function enter() {
   entered = true;
   initAudio();
   setAudioSettings(Save.get().settings);
+  loadRetro();
   startMusic('menu');
   haptic('tap');
   ui.menu();

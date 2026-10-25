@@ -134,3 +134,20 @@ export function classifyRegion(probs, { meta }, image, region) {
     box: { x: Math.round(region.x * 1000), y: Math.round(region.y * 1000), w: Math.round(region.w * 1000), h: Math.round(region.h * 1000) },
   };
 }
+
+/**
+ * Give the text read off the clothes ({ text, brand, y }, y as a fraction of
+ * the photo's height) to the garment it is printed on: the one whose box holds
+ * it, nearest the box's middle.
+ */
+export function attachText(items, found) {
+  if (!found || (!found.text && !found.brand) || !items.length) return items;
+  const y = found.y * 1000;
+  const mid = (it) => it.box.y + it.box.h / 2;
+  const holds = (it) => y >= it.box.y && y <= it.box.y + it.box.h;
+  const pool = items.filter(holds).length ? items.filter(holds) : items;
+  const it = pool.reduce((a, b) => (Math.abs(mid(b) - y) < Math.abs(mid(a) - y) ? b : a));
+  it.printed = found.text || "";
+  it.brand = found.brand || null;
+  return items;
+}

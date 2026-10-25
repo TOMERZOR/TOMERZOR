@@ -332,7 +332,7 @@ export class Game {
     if (fatal) return this.crash(e);
     // a stumble: low/high obstacles get knocked over, side hits bounce you back
     if (side) { p.bounceBack(); e.grace = 0.6; e.hit = false; }
-    else { this.track.knockAway(e, p.x); this.fx.splat(e.x, 0.6, -0.3); }
+    else { this.track.knockAway(e, p.x); this.fx.splat(e.x, 0.6, -0.3); sfx.crumble(); }
     this.stumble(e);
   }
 

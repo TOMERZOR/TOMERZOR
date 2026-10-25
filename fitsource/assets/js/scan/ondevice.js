@@ -57,10 +57,20 @@ function run(message, transfer, onStatus, signal) {
   });
 }
 
-/** Detect the garments in an image (Blob or ImageBitmap). */
-export async function scanOnDevice(source, { onStatus, signal } = {}) {
+/**
+ * Detect the garments in an image (Blob or ImageBitmap). `textSource`
+ * ({ blob, width, height }: the original photo and the size to read it at)
+ * is read for text printed on the clothes.
+ */
+export async function scanOnDevice(source, { onStatus, signal, textSource = null } = {}) {
   const bitmap = source instanceof ImageBitmap ? source : await createImageBitmap(source);
-  return run({ type: "scan", bitmap }, [bitmap], onStatus, signal);
+  let textBitmap = null;
+  try {
+    textBitmap = textSource ? await createImageBitmap(textSource.blob, { resizeWidth: textSource.width, resizeHeight: textSource.height, resizeQuality: "high" }) : null;
+  } catch {
+    textBitmap = null; // the scan still runs, without reading text
+  }
+  return run({ type: "scan", bitmap, textBitmap }, textBitmap ? [bitmap, textBitmap] : [bitmap], onStatus, signal);
 }
 
 /** Name the single garment inside `region` ({x,y,w,h} as fractions). */

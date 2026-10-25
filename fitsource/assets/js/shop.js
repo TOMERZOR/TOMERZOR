@@ -22,8 +22,12 @@ export const RESALE_SHOPS = [
   { id: "depop", name: "Depop", en: true, url: (s) => `https://www.depop.com/search/?q=${q(s)}` },
 ];
 
-/** The search words a shop gets: English catalogues get the English words when there are any. */
-export const queryFor = (shop, query, queryEn) => (shop.en && queryEn ? queryEn : query);
+/**
+ * The search words a shop gets: English catalogues get the English words when
+ * there are any. When the piece is `named` (a brand or a print was read off
+ * it), Google gets them too: brand names are searched in English.
+ */
+export const queryFor = (shop, query, queryEn, named = false) => ((shop.en || (named && shop.id === "google")) && queryEn ? queryEn : query);
 
 function isHttp(url) {
   try {

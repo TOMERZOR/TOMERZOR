@@ -3,7 +3,8 @@
 // browser; the photo never leaves the device.
 
 import { AutoProcessor, CLIPVisionModelWithProjection, RawImage, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js";
-import { makeWindows, decodeEmbeddings, scoreEmbedding, pickItems, classifyRegion } from "./detect.js";
+import { makeWindows, decodeEmbeddings, scoreEmbedding, pickItems, classifyRegion, attachText } from "./detect.js";
+import { loadOcr, readText, printedText, BODY } from "./ocr.js";
 
 const MODEL = "Xenova/mobileclip_s0";
 const BATCH = 6;
@@ -73,6 +74,58 @@ async function loadModel(post) {
   return { processor, model, emb, device };
 }
 
+// ---------- reading text on the clothes ----------
+
+// The same onnxruntime build transformers.js loads (its version and files), so
+// the browser downloads the runtime once.
+const ORT = "1.26.0-dev.20260416-b7804b056c";
+const ORT_DIST = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT}/dist/`;
+const IS_SAFARI = typeof navigator !== "undefined" && /Safari\//.test(navigator.userAgent) && !/Chrom(e|ium)|Android|CriOS|FxiOS|Edg/.test(navigator.userAgent);
+let ocrLoading = null;
+
+async function cachedBytes(url) {
+  let cache = null;
+  try {
+    cache = await caches.open("fitsource-ocr-v1");
+    const hit = await cache.match(url);
+    if (hit) return await hit.arrayBuffer();
+  } catch {
+    cache = null; // no Cache API here (private mode): just download
+  }
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OCR model: HTTP ${res.status}`);
+  const bytes = await res.arrayBuffer();
+  if (cache) cache.put(url, new Response(bytes.slice(0))).catch(() => {});
+  return bytes;
+}
+
+function loadText() {
+  if (!ocrLoading) {
+    ocrLoading = (async () => {
+      const ort = await import(`${ORT_DIST}ort.wasm.min.mjs`);
+      const variant = IS_SAFARI ? "ort-wasm-simd-threaded" : "ort-wasm-simd-threaded.asyncify";
+      ort.env.wasm.wasmPaths = { mjs: `${ORT_DIST}${variant}.mjs`, wasm: `${ORT_DIST}${variant}.wasm` };
+      return loadOcr(ort, cachedBytes, { executionProviders: ["wasm"] });
+    })();
+    ocrLoading.catch(() => (ocrLoading = null));
+  }
+  return ocrLoading;
+}
+
+/** Text printed on the clothes, or null. Never fails the scan. */
+async function findText(bitmap, post) {
+  if (!bitmap) return null;
+  try {
+    const pixels = bitmapToPixels(bitmap, 1568);
+    const ocr = await loadText();
+    post({ type: "status", stage: "reading", progress: 1, win: BODY });
+    return printedText(await readText(ocr, pixels, BODY));
+  } catch (err) {
+    console.warn("Reading text failed:", err);
+    return null;
+  }
+}
+
 /** Copy a sub-rectangle (fractions) of RGBA pixels into a new RawImage. */
 function cropRaw(img, win) {
   const x0 = Math.max(0, Math.round(win.x * img.width));
@@ -110,6 +163,7 @@ async function embed(state, images) {
 async function scan(msg, post) {
   const t0 = performance.now();
   const pixels = bitmapToPixels(msg.bitmap);
+  if (msg.textBitmap) loadText().catch(() => {}); // download alongside the garment model
   const state = await load(post);
   const raw = new RawImage(pixels.data, pixels.width, pixels.height, 4);
   const wins = makeWindows();
@@ -122,6 +176,8 @@ async function scan(msg, post) {
     embeds.forEach((e, j) => scored.push({ win: chunk[j], probs: scoreEmbedding(e, state.emb) }));
   }
   const items = pickItems(scored, state.emb, pixels);
+  if (cancelled.has(msg.id)) throw new Error("cancelled");
+  attachText(items, await findText(msg.textBitmap, post));
   return { items, device: state.device, ms: Math.round(performance.now() - t0) };
 }
 

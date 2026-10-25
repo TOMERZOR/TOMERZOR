@@ -199,6 +199,20 @@ if (run("quick")) {
   const names2 = await page.$$eval(".tags .tag__name", (els) => els.map((e) => e.textContent));
   check(names2.some((n) => /חצאית/.test(n)), `second scan should find the skirt: ${names2}`);
 
+  // text printed on a garment is read and searched for: "CreatedBy" on the denim
+  await page.setInputFiles("[data-newfile]", path.join(FITSOURCE, "assets/img/fits/created-by-god.jpg"));
+  await page.waitForFunction(() => document.querySelector(".tags .tag .printed"), null, { timeout: 120000 }).catch(() => {});
+  const printed = await page.$$eval(".tags .tag", (els) =>
+    els.filter((e) => e.querySelector(".printed")).map((e) => ({ name: e.querySelector(".tag__name").textContent, text: e.querySelector(".printed").textContent, query: e.querySelector("[data-query]").value, google: e.querySelector('[data-shop="google"]').href })),
+  );
+  check(printed.length === 1 && /CreatedBy/.test(printed[0].text), `the print should be read once: ${JSON.stringify(printed)}`);
+  if (printed[0]) {
+    check(/מכנס|שורט|ג'ינס/.test(printed[0].name), `the print belongs to the denim, not ${printed[0].name}`);
+    check(/^CreatedBy /.test(printed[0].query), `search words should start with the print: ${printed[0].query}`);
+    check(/q=CreatedBy%20[a-z%20-]+$/.test(printed[0].google), `Google should get the English words: ${printed[0].google}`);
+  }
+  await shot(page, "quick-6-printed");
+
   // a second photo dropped while the first is still loading wins
   await page.goto("http://127.0.0.1:8741/fitsource/");
   await page.setInputFiles("[data-file]", path.join(FITSOURCE, "assets/img/fits/null-signal.jpg"));

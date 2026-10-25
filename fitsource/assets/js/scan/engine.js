@@ -54,6 +54,7 @@ function drawScaled(source, maxSide, type = "image/jpeg", quality = 0.86) {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
   ctx.fillStyle = "#fff"; // transparent PNGs become white, not black, as JPEG
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(source, 0, 0, w, h);
@@ -71,7 +72,10 @@ export async function prepareImage(file) {
     const display = drawScaled(img, 1080, "image/jpeg", 0.82);
     const upload = drawScaled(img, 1568, "image/jpeg", 0.86);
     const blob = await new Promise((r) => display.canvas.toBlob(r, "image/jpeg", 0.9));
-    return { photo: display.dataUrl, width: display.width, height: display.height, upload: upload.dataUrl, blob };
+    // Text on clothes is read from the original file, scaled by the browser's best resampler.
+    const s = Math.min(1, 1568 / Math.max(w, h));
+    const text = { blob: file, width: Math.round(w * s), height: Math.round(h * s) };
+    return { photo: display.dataUrl, width: display.width, height: display.height, upload: upload.dataUrl, blob, text };
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -103,6 +107,18 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 
 const GROUP_TO_CATEGORY = { outerwear: "outerwear", top: "top", bottom: "bottom", dress: "dress", footwear: "footwear", bag: "bag", headwear: "headwear", eyewear: "eyewear" };
 
+/** Search words: the brand and the print when the photo shows them, else the colour and the garment. */
+const fold = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+export function deviceQueries(it, name, colorWord) {
+  // the print without the brand's own words, so "Stüssy" + "STUSSY BURLY THREADS" searches "Stüssy BURLY THREADS"
+  const brandWords = new Set(fold(it.brand || "").split(/\s+/));
+  const rest = (it.printed || "").split(/\s+/).filter((w) => w && !brandWords.has(fold(w))).join(" ");
+  const printed = [it.brand, rest].filter(Boolean).join(" ");
+  if (printed) return { query: `${printed} ${name}`, queryEn: `${printed} ${it.name.toLowerCase()}` };
+  return { query: colorWord ? `${name} ${colorWord}` : name, queryEn: it.query };
+}
+
 function fromDevice(it) {
   // The detector works in English; people see Hebrew. The colour agrees with the garment.
   const [name, g] = HE[it.name] || [it.name, "m"];
@@ -113,11 +129,11 @@ function fromDevice(it) {
     category: GROUP_TO_CATEGORY[it.group] || "accessory",
     color: color ? colorHe(color) : "",
     hex: it.color ? it.color.hex : null,
-    brand: null,
+    brand: it.brand || null,
+    printed: it.printed || "",
     confidence: it.confidence,
     box: it.box,
-    query: color ? `${name} ${colorHe(color, g)}` : name,
-    queryEn: it.query,
+    ...deviceQueries(it, name, color ? colorHe(color, g) : ""),
     matches: [],
   };
 }
@@ -163,7 +179,7 @@ export async function runScan(prepared, { onProgress = () => {}, signal } = {}) 
       notice = err instanceof ApiError && err.code === "daily_limit" ? err.message + " הפעם הסריקה רצה על המכשיר שלכם." : "הסריקה המעמיקה לא הייתה זמינה, אז הסריקה רצה על המכשיר שלכם.";
     }
   }
-  const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }), signal });
+  const out = await scanOnDevice(prepared.blob, { onStatus: (s) => onProgress({ engine: "device", ...s }), signal, textSource: prepared.text });
   return { ...base, engine: "device", device: out.device, ms: out.ms, notice, vibe: "", summary: "", items: out.items.map(fromDevice) };
 }
 

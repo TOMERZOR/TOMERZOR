@@ -533,7 +533,7 @@ const Game = {
     }
     // Online: the shared world, and where I am for the others, every frame, whatever is on the
     // screen (a talk, a menu, the club, a race), so nobody sees me freeze mid-conversation.
-    if (G.running) { WorldSync.update(dt); Multi.update(dt); }
+    if (G.running) { WorldSync.update(dt); Multi.update(dt); if (Multi.on) { Race.watch(); Arcade.watch(); } }
     // The race is a world of its own: while it's on, only it updates and draws.
     if (G.running && Race.active) {
       Race.frame(dt, t);

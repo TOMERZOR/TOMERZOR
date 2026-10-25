@@ -65,6 +65,8 @@ const Multi = {
         sl: !!s.sl,
         // The shared world: when they came online (the earliest leads), their day, clock and events.
         jt: +s.jt || 0,
+        // Said yes to an invite (this game id) and joins once their talk is over.
+        aj: +s.aj || 0,
         w: s.w && typeof s.w === 'object' ? { d: +s.w.d || 0, c: +s.w.c || 0, ev: Array.isArray(s.w.ev) ? s.w.ev.slice(-6).filter(e => Array.isArray(e) && +e[0]).map(e => [+e[0], String(e[1] || '').slice(0, 12), String(e[2] || '').slice(0, 40), +e[3] || 0]) : [] } : null,
         al: s.al && +s.al.id ? { id: +s.al.id, site: String(s.al.site || '').slice(0, 12) } : null,
         boss: s.boss && +s.boss.id ? { id: +s.boss.id, k: String(s.boss.k || 'burger').slice(0, 12), max: Math.min(1000, Math.max(50, +s.boss.max || 100)), dmg: Math.min(1000, Math.max(0, +s.boss.dmg || 0)), tk: Array.isArray(s.boss.tk) ? s.boss.tk.slice(-40).map(n => Math.floor(+n)).filter(n => n >= 0 && n < 5000) : [] } : null,
@@ -129,7 +131,7 @@ const Multi = {
       x: Math.round(P.x), y: Math.round(P.y), a: Math.round(P.angle * 100) / 100,
       m: !!P.moving, r: !!P.running, js: P.jumpSeq || 0, jk: P.jumpKind === 'runJump' ? 1 : 0, c: P.carry || false, say: this.say || null, cm: this.outbox,
       sl: !!this.sleeping,
-      jt: WorldSync.joinT, w: WorldSync.out(),
+      jt: WorldSync.joinT, w: WorldSync.out(), aj: Arcade.pendingId(),
       race: Race.presence(),
       ar: Arcade.presence(),
       al: G.alert && !G.alert.drill && G.alert.sid ? { id: G.alert.sid, site: World.id } : null,

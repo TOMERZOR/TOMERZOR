@@ -424,8 +424,6 @@ const Story = {
     Kashag.update(dt);
     BossArcs.update();
     Boss.watchCoop();
-    Race.watch();
-    Arcade.watch();
     Boss.update(dt);
     // Morning lineup: arriving at the parade ground completes it.
     if (this.has('lineup') && !G.alert) {

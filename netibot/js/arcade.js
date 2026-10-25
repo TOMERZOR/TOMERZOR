@@ -100,7 +100,7 @@ const Arcade = {
   play(game, net = null) {
     if (!game || this.active) return;
     this.active = game;
-    this.net = net ? { ...net, game: game.id } : null;
+    this.net = net ? { ...net, game: game.id, t0: performance.now() } : null;
     this.ui();
     $('#hud').classList.add('hidden');
     $('#overlay').classList.add('hidden');
@@ -242,11 +242,36 @@ const Arcade = {
   },
 
   // ---------- online ----------
-  // A host's invite: shown once in the world, with a button that brings you into the lobby.
+  // Whether a friend's invite can reach me now: anywhere in the world, over a menu, the map or
+  // a talk; only another game, an alert, a boss fight, a mini-game, the deploy controls, the
+  // tutorial or bed hold it.
+  canInvite() {
+    return Multi.on && G.running && !this.active && !Race.active && !G.alert && !Boss.active && !Mini.active && !Story.ctl && !Tutorial.active && !Multi.sleeping
+      && !(typeof Shesh !== 'undefined' && Shesh.m && Shesh.m.phase !== 'over');
+  },
+  // A friend's invite is waiting on the screen (another notice gives way to it).
+  inviteUp() { const c = $('#invite-card'); return !!(c && c.dataset.game); },
+  // Accepting from wherever you are: the club menu, the map and a picker close; mid-talk you
+  // join the moment it's over (meanwhile your presence says so, and the host's lobby waits).
+  accept(id, fn) {
+    this.closeHub();
+    if (UI.mapOpen()) UI.toggleMap(false);
+    const pk = $('#ar-pick'); if (pk) pk.remove();
+    if (UI.busy) { this.pending = { id, fn, at: performance.now() }; UI.toast('✔ מצטרפים ברגע שהשיחה נגמרת'); return; }
+    fn();
+  },
+  pendingId() { return this.pending ? this.pending.id : 0; },
+  // A host's invite: shown once, with a button that brings you into the lobby. Every frame
+  // online (js/game.js), whatever is on the screen.
   watch() {
+    if (this.pending) {
+      const q = this.pending;
+      if (performance.now() - q.at > 45000 || this.active || Race.active) this.pending = null;
+      else if (!UI.busy && this.canInvite()) { this.pending = null; q.fn(); }
+    }
     if (this.active || Race.active || !Multi.on) return;
-    this.nudge();
-    if (Game.engaged() || UI.busy || $('#invite-card')) return; // busy: the invite waits
+    if (!UI.busy && !G.paused) this.nudge();
+    if (!this.canInvite() || this.inviteUp()) return; // busy: the invite waits
     const p = Multi.peers.find(q => q.ar && q.ar.host && q.ar.cd > 3 && !this.seenInvites.has(q.ar.id));
     if (!p) return;
     const game = this.game(p.ar.g);
@@ -255,12 +280,14 @@ const Arcade = {
     if (!game) return;
     if (Multi.verGate(p, `מזמין ל${game.name}`)) return;
     Sound.horn();
-    UI.invite(`${game.icon} הזמנה מ${p.name}: ${game.name}! מתחילים בעוד ${Math.round(p.ar.cd)} שניות`, '🎮 להצטרף', () => {
-      const q = Multi.peers.find(r => r.ar && r.ar.id === p.ar.id);
-      if (!q || q.ar.cd < 2) { UI.toast('המשחק כבר התחיל', 'bad'); return; }
+    Settings.buzz([120, 60, 120]);
+    const id = p.ar.id;
+    UI.invite(`${game.icon} הזמנה מ${p.name}: ${game.name}! מתחילים בעוד ${Math.round(p.ar.cd)} שניות`, '🎮 להצטרף', () => this.accept(id, () => {
+      const q = Multi.peers.find(r => r.ar && r.ar.id === id);
+      if (!q || q.ar.cd < 1.5) { UI.toast('המשחק כבר התחיל', 'bad'); return; }
       if (this.active || Race.active || Boss.active || G.alert) return;
-      this.play(game, { id: q.ar.id, host: false, startAt: performance.now() + q.ar.cd * 1000 });
-    });
+      this.play(game, { id, host: false, startAt: performance.now() + q.ar.cd * 1000 });
+    }), { game: true });
   },
   // Now and then, with friends online, someone from the platoon dares you to a game against one
   // of them. The button invites everyone, like the hub does.
@@ -302,7 +329,10 @@ const Arcade = {
   lobby() {
     this.phase = 'lobby';
     const g = this.active;
-    this.panel(`<img class="ar-banner" src="${g.cover}" alt=""><h2>${g.icon} ${g.name}</h2><p class="ar-sub">${g.desc}</p><p class="ar-sub ar-wait"></p><div class="ar-who"></div>`);
+    this.panel(`<img class="ar-banner" src="${g.cover}" alt=""><h2>${g.icon} ${g.name}</h2><p class="ar-sub">${g.desc}</p><p class="ar-sub ar-wait"></p><div class="ar-who"></div>${this.net.host ? '<button class="btn ar-now hidden" data-now>▶ להתחיל עכשיו</button>' : ''}`);
+    const now = $('#arcade [data-now]');
+    // The host doesn't have to wait out the clock once the friends are in.
+    if (now) now.onclick = () => { Sound.click(); this.net.startAt = Math.min(this.net.startAt, performance.now() + 3000); now.classList.add('hidden'); this.net.now = true; };
   },
   updateLobby() {
     const left = Math.max(0, (this.net.startAt - performance.now()) / 1000);
@@ -311,8 +341,13 @@ const Arcade = {
       const peer = h && Multi.peers.find(p => p.peer === h.peer);
       if (peer && peer.ar.cd > 0) this.net.startAt = performance.now() + peer.ar.cd * 1000;
     }
+    // The host waits (up to a minute in all) for anyone who said yes and is finishing a talk.
+    const coming = this.net.host ? Multi.peers.filter(p => p.aj === this.net.id && !this.others().some(o => o.peer === p.peer)) : [];
+    if (coming.length && left < 3 && performance.now() - this.net.t0 < 60000 && !this.net.now) this.net.startAt = performance.now() + 3000;
+    const nowBtn = $('#arcade [data-now]');
+    if (nowBtn && !this.net.now) nowBtn.classList.toggle('hidden', this.players().length < (this.active.minOnline || 2) || coming.length > 0);
     const w = $('#arcade .ar-wait'), who = $('#arcade .ar-who');
-    if (w) w.textContent = `מתחילים בעוד ${Math.ceil(left)} שניות — ${this.net.to ? `הזמנה נשלחה ל${this.net.to.map(id => (Multi.peers.find(q => q.who === id) || {}).name || '').filter(Boolean).join(', ')}` : 'כל מי שמחובר קיבל הזמנה'}`;
+    if (w) w.textContent = `מתחילים בעוד ${Math.ceil(left)} שניות — ${coming.length ? `מחכים ל${coming.map(p => p.name).join(', ')} שמצטרף/ת...` : this.net.to ? `הזמנה נשלחה ל${this.net.to.map(id => (Multi.peers.find(q => q.who === id) || {}).name || '').filter(Boolean).join(', ')}` : 'כל מי שמחובר קיבל הזמנה'}`;
     if (who) {
       const html = this.players().map(p => `<span class="${p.isMe ? 'me' : ''}"><bdi data-raw>${esc(p.name)}</bdi></span>`).join('');
       if (who.innerHTML !== html) who.innerHTML = html;

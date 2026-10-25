@@ -187,14 +187,16 @@ const UI = {
   },
 
   // A card at the top with an action button (a friend's invite); it goes away by itself.
-  invite(text, label, onYes) {
+  // game: an invite to play with friends; it shows over everything (menus, the map, a talk).
+  invite(text, label, onYes, { game = false } = {}) {
     let box = $('#invite-card');
     if (box) box.remove();
     box = document.createElement('div');
     box.id = 'invite-card';
-    box.className = 'invite-card';
+    box.className = `invite-card${game ? ' game' : ''}`;
+    if (game) box.dataset.game = '1';
     box.innerHTML = `<div class="ic-text">${esc(text)}</div><div class="ic-row"><button class="btn small" data-y>${esc(label)}</button><button class="btn small ghost" data-n>✕</button></div>`;
-    $('#hud').appendChild(box);
+    (game ? document.body : $('#hud')).appendChild(box);
     const close = () => { box.remove(); clearTimeout(timer); };
     const timer = setTimeout(close, 25000);
     box.querySelector('[data-y]').onclick = () => { close(); onYes(); };

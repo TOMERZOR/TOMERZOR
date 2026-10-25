@@ -958,6 +958,11 @@ const Race = {
     if (w) w.textContent = `${map.emoji} ${map.name} · ${RACE_LEVELS[this.lv].name} — המירוץ מתחיל בעוד ${Math.ceil(left)} שניות`;
     const peers = Multi.peers.filter(p => p.race && p.race.id === this.net.id);
     if (who) who.innerHTML = [`<span>🗣️ ${esc(G.profile.name)} · ${this.myType.name}</span>`, ...peers.map(p => `<span><bdi data-raw>${esc(p.name)}</bdi> · ${(RACE_CARS.find(t => t.id === p.race.car) || RACE_CARS[0]).name}</span>`)].join('');
+    // The host waits (up to a minute) for anyone who said yes and is finishing a talk.
+    if (this.net.host) {
+      this.net.t0 = this.net.t0 || performance.now();
+      if (left < 4.5 && performance.now() - this.net.t0 < 60000 && Multi.peers.some(p => p.aj === this.net.id && !peers.some(q => q.peer === p.peer))) this.net.startAt = performance.now() + 4500;
+    }
     // A guest follows the host's clock.
     if (!this.net.host) {
       const h = Multi.peers.find(p => p.race && p.race.id === this.net.id && p.race.host);
@@ -978,7 +983,7 @@ const Race = {
   // In the world: a friend's race invite pops up once.
   watch() {
     if (this.active || !Multi.on) return;
-    if (Game.engaged() || UI.busy || $('#invite-card')) return; // busy: the invite waits
+    if (!Arcade.canInvite() || Arcade.inviteUp()) return; // busy: the invite waits (see Arcade.canInvite)
     const p = Multi.peers.find(q => q.race && q.race.host && q.race.cd > 3 && !this.seenInvites.has(q.race.id));
     if (!p) return;
     this.seenInvites.add(p.race.id);
@@ -986,12 +991,13 @@ const Race = {
     if (Array.isArray(p.race.to) && !p.race.to.includes(Multi.as)) return;
     if (Multi.verGate(p, 'מזמין לתחרות מפקדי נסיעה')) return;
     Sound.horn();
-    const map = RACE_MAPS.find(m => m.id === p.race.map) || RACE_MAPS[0];
-    UI.invite(`🏎️ הזמנה מ${p.name}: תחרות מפקדי נסיעה ב${map.name}! מתחילים בעוד ${Math.round(p.race.cd)} שניות`, '🏁 להצטרף', () => {
-      const q = Multi.peers.find(r => r.race && r.race.id === p.race.id);
-      if (!q || q.race.cd < 2) { UI.toast('המירוץ כבר התחיל', 'bad'); return; }
-      this.open({ id: q.race.id, host: false, startAt: performance.now() + q.race.cd * 1000, map: q.race.map, lv: q.race.lv || 0 });
-    });
+    Settings.buzz([120, 60, 120]);
+    const map = RACE_MAPS.find(m => m.id === p.race.map) || RACE_MAPS[0], id = p.race.id;
+    UI.invite(`🏎️ הזמנה מ${p.name}: תחרות מפקדי נסיעה ב${map.name}! מתחילים בעוד ${Math.round(p.race.cd)} שניות`, '🏁 להצטרף', () => Arcade.accept(id, () => {
+      const q = Multi.peers.find(r => r.race && r.race.id === id);
+      if (!q || q.race.cd < 1.5) { UI.toast('המירוץ כבר התחיל', 'bad'); return; }
+      this.open({ id, host: false, startAt: performance.now() + q.race.cd * 1000, map: q.race.map, lv: q.race.lv || 0 });
+    }), { game: true });
   },
 
   // ---------- the start ----------

@@ -19,7 +19,9 @@ const Lobby = {
   invited() { return !!this.params().l; },
   code() {
     const fromLink = (this.params().l || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
-    if (fromLink) return fromLink;
+    // A friend's invite link sets the lobby for good: opening the game later without the link
+    // (a home-screen icon, a bookmark, the plain address) still lands in the same world.
+    if (fromLink) { try { localStorage.setItem('netibot.lobby', fromLink); } catch (e) { /* storage may be blocked */ } return fromLink; }
     let c = null;
     try { c = localStorage.getItem('netibot.lobby'); } catch (e) { /* storage may be blocked */ }
     if (!c) {
@@ -123,54 +125,52 @@ const Lobby = {
       document.head.appendChild(s);
     });
   },
-  // Connect to every broker at once and keep the first that answers.
+  // Connect to every broker at once and stay on all that answer: players are in the lobby
+  // through each of them (a friend whose phone reached only one broker is still seen), and
+  // a broker that drops out doesn't split the world. The room is ready with the first one.
   async connect(code) {
     if (!(await this.loadLib())) return null;
     const me = 'p' + Math.random().toString(36).slice(2, 10);
     const base = `netibot/v1/${code}/`;
-    const urls = this.params().b ? [this.params().b] : LOBBY_BROKERS;
+    const urls = this.params().b ? this.params().b.split(',') : LOBBY_BROKERS; // b=: test brokers
     return new Promise(resolve => {
-      let done = false;
-      const clients = [];
-      const finish = (client) => {
-        if (done) return;
-        done = true;
-        for (const c of clients) if (c !== client) { try { c.end(true); } catch (e) { /* ignore */ } }
-        resolve(client ? lobbyRoom(client, base, me) : null);
-      };
+      let room = null;
       for (const url of urls) {
         try {
           const c = window.mqtt.connect(url, { clientId: me, clean: true, connectTimeout: 6000, reconnectPeriod: 2000, will: { topic: base + 'p/' + me, payload: '', qos: 0, retain: false } });
-          clients.push(c);
-          c.once('connect', () => finish(c));
+          c.once('connect', () => {
+            if (!room) { room = lobbyRoom(base, me); resolve(room); }
+            room.add(c);
+          });
           c.on('error', () => {});
         } catch (e) { /* a blocked socket just doesn't count */ }
       }
-      setTimeout(() => finish(null), 7000);
+      setTimeout(() => { if (!room) resolve(null); }, 7000);
     });
   },
 };
 
 // The same shape as the artifact room (presence + onPeers), so Multi doesn't care which it has.
-function lobbyRoom(client, base, me) {
-  const peers = new Map();
+function lobbyRoom(base, me) {
+  const peers = new Map(), clients = [];
   const fns = [];
   let last = null, lastSent = 0;
   const emit = () => {
     const list = [...peers].map(([id, p]) => ({ peer: id, isMe: false, kind: 'viewer', presence: p.presence }));
     for (const f of fns) f({ peers: list });
   };
-  client.subscribe(base + 'p/+');
-  client.on('message', (topic, buf) => {
+  const onMessage = (topic, buf) => {
     const id = topic.slice(base.length + 2);
     if (id === me) return;
-    if (!buf.length) { if (peers.delete(id)) emit(); return; }
+    // An empty message: they left (or only lost that one broker; then their next message on
+    // another one, within three seconds, keeps them).
+    if (!buf.length) { const p = peers.get(id); if (p) p.t = Math.min(p.t, Date.now() - 9000); return; }
     if (buf.length > 3000) return;
     try {
       const pr = JSON.parse(buf.toString());
       if (pr && typeof pr === 'object' && !Array.isArray(pr)) { peers.set(id, { presence: pr, t: Date.now() }); emit(); }
     } catch (e) { /* not ours */ }
-  });
+  };
   // Someone who closed the tab without saying goodbye drops out after a few seconds (12, so a
   // phone that freezes a moment loading a game's models isn't dropped from it).
   setInterval(() => {
@@ -178,13 +178,19 @@ function lobbyRoom(client, base, me) {
     for (const [id, p] of peers) if (Date.now() - p.t > 12000) { peers.delete(id); changed = true; }
     if (changed) emit();
   }, 1000);
-  const send = () => { if (last) { client.publish(base + 'p/' + me, last); lastSent = Date.now(); } };
+  const send = () => {
+    if (!last) return;
+    for (const c of clients) if (c.connected) { try { c.publish(base + 'p/' + me, last); } catch (e) { /* a broker that just dropped */ } }
+    lastSent = Date.now();
+  };
   setInterval(() => { if (Date.now() - lastSent > 1500) send(); }, 500);
   return {
     lobby: true,
+    add(c) { clients.push(c); c.subscribe(base + 'p/+'); c.on('message', onMessage); if (last) { try { c.publish(base + 'p/' + me, last); } catch (e) { /* ignore */ } } },
+    brokers() { return clients.filter(c => c.connected).length; },
     presence(st) { last = JSON.stringify(st); send(); return Promise.resolve(); },
     onPeers(fn) { fns.push(fn); return () => {}; },
-    leave() { try { client.publish(base + 'p/' + me, ''); client.end(); } catch (e) { /* ignore */ } },
+    leave() { for (const c of clients) { try { c.publish(base + 'p/' + me, ''); c.end(); } catch (e) { /* ignore */ } } },
   };
 }
 

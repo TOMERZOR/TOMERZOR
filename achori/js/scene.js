@@ -221,9 +221,13 @@ export class Scene {
       const have = this.items.get(i);
       const key = it ? it.kind + (it.kind === 'rock' ? it.look : '') + (it.sprung ? 's' : '') : null;
       if (have && have.userData.key === key) continue;
+      // a trap that just sprang is redrawn in place, without the placement pop
+      const sameThing = have && it && have.userData.kind === it.kind;
       if (have) { this.scene.remove(have); this.items.delete(i); }
       if (!it) continue;
       const v = this.makeItem(it, i);
+      v.userData.kind = it.kind;
+      if (sameThing) v.userData.born = -10;
       v.userData.key = key;
       this.items.set(i, v);
       this.scene.add(v);

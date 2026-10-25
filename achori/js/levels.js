@@ -478,8 +478,8 @@ export const LEVELS = [
       #.#.#.#
       .......
       ...G...`,
-    budget: 22, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, shaked: 2, food: 4, snapHold: 2.7, glueHold: 1.8, bucketHold: 4.2,
-    lior: { hp: 90, speed: 2.25 }, liorReturn: 1.8,
+    budget: 24, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, shaked: 2, food: 4, snapHold: 2.8, glueHold: 1.9, bucketHold: 4.3,
+    lior: { hp: 84, speed: 2.2 }, liorReturn: 1.9,
     waves: [
       { t: 1, type: 'lior', hole: 1 }, { t: 3, type: 'fast', hole: 3 }, { t: 5, type: 'fat', hole: 0 }, { t: 7, type: 'fast', hole: 4 },
       { t: 10, type: 'minion', hole: 2 }, { t: 13, type: 'fat', hole: 3 }, { t: 16, type: 'fast', hole: 0 }, { t: 18, type: 'fast', hole: 2 },

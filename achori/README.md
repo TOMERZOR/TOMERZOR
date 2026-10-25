@@ -54,5 +54,7 @@ All the art was generated with Higgsfield (GPT Image 2.5) in a flat adult-sitcom
 ```
 node achori/test/sim.mjs [level]        # each level: lost with no plan, won with a good plan, how many random plans win, a slower player
 node achori/test/play.cjs <outDir> [level]   # plays a level in a phone-sized browser and saves screenshots (needs the server on :8093)
-node achori/test/levels.cjs             # walks through all ten levels, the result screens and the ending; fails on any page error
+node achori/test/levels.cjs             # walks through all twenty levels, the result screens and the ending; fails on any page error
+node achori/test/fuzz.mjs [games]       # thousands of random games: no diagonal moves, no walking through blocks, no lost traps, no NaN, every game ends; and the planning route always matches the real run
+node achori/test/monkey.cjs [seconds]   # random taps on everything at three phone sizes, with pause/restart/leave mid-level and a damaged save; fails on any error or leftovers
 ```

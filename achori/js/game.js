@@ -193,19 +193,18 @@ export class Game {
   previewRoutes() {
     const smart = this.level.smart;
     return this.holes.map((h) => {
-      const t = this.chooseTarget(h, smart, null);
-      if (!t) return { hole: h, path: [] };
+      // step cell by cell and choose again at every cell, exactly as a running mouse does,
+      // so a cheese it smells halfway there shows up as a detour
       const cells = [h];
-      let at = h;
-      let leg = t;
-      // follow cheese detours on the way, the way a mouse would
       const eaten = new Set();
-      for (let guard = 0; guard < 6 && leg; guard++) {
-        cells.push(...leg.path);
-        at = leg.end;
-        if (at === this.goal) break;
-        eaten.add(at);
-        leg = this.chooseTarget(at, smart, eaten);
+      let at = h;
+      for (let guard = 0; guard < COLS * ROWS * 3 && at !== this.goal; guard++) {
+        const t = this.chooseTarget(at, smart, eaten);
+        if (!t || !t.path.length) break;
+        at = t.path[0];
+        cells.push(at);
+        const it = this.cells[at];
+        if (it && it.kind === 'cheese') eaten.add(at);
       }
       return { hole: h, path: cells };
     });
@@ -370,7 +369,7 @@ export class Game {
       this.emit('bucket', { id: m.id });
       return true;
     }
-    if (it && it.kind === 'glue') {
+    if (it && it.kind === 'glue' && !it.spent) {
       it.uses -= 1;
       this.hold(m, 'glued', this.level.glueHold, i);
       this.emit('glued', { id: m.id });
@@ -402,10 +401,15 @@ export class Game {
     return false;
   }
 
+  // is another mouse still stuck on this cell's trap? (two can share a glue tray)
+  othersOn(cell, m) {
+    return this.mice.some((o) => o !== m && o.alive && o.trapCell === cell && HELD.has(o.state));
+  }
+
   release(m) {
     const it = m.trapCell != null ? this.cells[m.trapCell] : null;
     if ((m.state === 'caught' || m.state === 'bucketed') && it && (it.kind === 'snap' || it.kind === 'bucket')) { this.cells[m.trapCell] = null; this.emit('broke', { id: m.id }); }
-    if (m.state === 'glued' && it && it.spent) this.cells[m.trapCell] = null;
+    if (m.state === 'glued' && it && it.spent && !this.othersOn(m.trapCell, m)) this.cells[m.trapCell] = null;
     const was = m.state;
     m.state = m.carrying ? 'flee' : 'run';
     m.trapCell = null;
@@ -438,9 +442,9 @@ export class Game {
 
   escape(m) {
     m.alive = false;
-    if (m.carrying) this.emit('escaped', { id: m.id, mouse: m.type });
+    if (m.carrying) this.emit('escaped', { id: m.id, mouse: m.type, x: m.x, z: m.z });
     m.carrying = false;
-    this.emit('left', { id: m.id });
+    this.emit('left', { id: m.id, x: m.x, z: m.z });
     if (m.type === 'lior') {
       // Lior always comes back for more: same mouse, same wounds, another burrow.
       m.state = 'away';
@@ -514,7 +518,7 @@ export class Game {
     if (m.trapCell != null) {
       const it = this.cells[m.trapCell];
       if (it && (it.kind === 'snap' || it.kind === 'bucket')) this.cells[m.trapCell] = null;
-      if (it && it.kind === 'glue' && it.spent) this.cells[m.trapCell] = null;
+      if (it && it.kind === 'glue' && it.spent && !this.othersOn(m.trapCell, m)) this.cells[m.trapCell] = null;
     }
     if (m.carrying) {
       m.carrying = false;
@@ -531,7 +535,8 @@ export class Game {
     this.abilities[name] -= 1;
     if (name === 'ofek') {
       for (const m of live) {
-        if (m.state === 'caught' || m.state === 'glued' || m.state === 'bucketed') m.t += 1.2;
+        // already held: hold longer (and stretch the ring with it); otherwise freeze
+        if (HELD.has(m.state)) { m.t += 1.2; m.heldMax = Math.max(m.heldMax, m.t); }
         else this.hold(m, 'stunned', 1.5, m.trapCell);
       }
     } else if (name === 'shaked') {

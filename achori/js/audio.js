@@ -28,7 +28,8 @@ export function unlock() {
     musicGain = ctx.createGain(); musicGain.gain.value = 0.32; musicGain.connect(master);
     noise = noiseBuffer();
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  // iOS uses 'interrupted' after a call or a trip to the background, not only 'suspended'
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});
 }
 
 export function setMuted(m) {

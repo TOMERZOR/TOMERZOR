@@ -14,7 +14,14 @@ const SAVE_KEY = 'achori.v1';
 const save = (() => {
   let s = null;
   try { s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch { s = null; }
-  return Object.assign({ unlocked: 0, stars: [], muted: false, ido: 0, hints: {} }, s || {});
+  const out = Object.assign({ unlocked: 0, stars: [], muted: false, ido: 0, hints: {} }, s && typeof s === 'object' ? s : {});
+  // a damaged or very old save must not break the game
+  if (!Array.isArray(out.stars)) out.stars = [];
+  if (!Array.isArray(out.best)) out.best = [];
+  if (!out.hints || typeof out.hints !== 'object') out.hints = {};
+  if (!Number.isFinite(out.unlocked)) out.unlocked = 0;
+  if (!Number.isFinite(out.ido)) out.ido = 0;
+  return out;
 })();
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch { /* private mode */ } }
 
@@ -38,11 +45,16 @@ let slowT = 0; // real seconds of slow motion left after a kill
 let freezeT = 0; // hit-stop: real seconds the action stands still
 let shownScore = 0;
 let killT = 0;
+let levelToken = 0; // changes whenever a level starts or ends, so late timers know they are stale
+const later = (ms, fn) => { const tok = levelToken; setTimeout(() => { if (tok === levelToken) fn(); }, ms); };
 
 // ---------- screens ----------
 const SCREENS = ['loading', 'title', 'levels', 'dialog', 'pause', 'result', 'ending'];
+let inputBlockUntil = 0;
 function show(id) {
   for (const s of SCREENS) $(s).classList.toggle('show', s === id);
+  // the finger that just closed a screen must not also land on the board
+  if (!id) inputBlockUntil = performance.now() + 350;
 }
 function playing(on) {
   $('hud').hidden = !on;
@@ -80,6 +92,7 @@ function layout() {
   let top = 70, bottom = 150;
   if (!$('hud').hidden) top = $('hud').getBoundingClientRect().bottom + 4;
   if (!$('tray').hidden) bottom = h - $('tray').getBoundingClientRect().top + 2;
+  document.documentElement.style.setProperty('--tray-h', bottom + 'px');
   scene.resize(w, h, { top, bottom });
   const fx = $('fx');
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -169,6 +182,7 @@ function renderLevels() {
 // ---------- the story before each level ----------
 let dlg = null;
 function openLevel(i) {
+  $('hint').hidden = true;
   levelIndex = i;
   const lv = LEVELS[i];
   playing(false);
@@ -199,6 +213,8 @@ function nextLine() {
 
 // ---------- a level ----------
 function prepareLevel(i) {
+  levelToken++;
+  resetEffects();
   const lv = LEVELS[i];
   ended = false;
   endTimer = 0;
@@ -331,6 +347,7 @@ function startAction() {
 function onPointer(e) {
   if (!game || paused || ended) return;
   if (document.querySelector('.screen.show')) return;
+  if (performance.now() < inputBlockUntil) return;
   audio.unlock();
   const x = e.clientX, y = e.clientY;
   if (game.phase === 'plan') return planTap(x, y);
@@ -401,7 +418,6 @@ function actionTap(x, y) {
       if (why) { refuse(why, cell); return; }
       audio.sfx.place();
       haptics.buzz('place');
-  haptics.buzz('place');
       tool = null;
       afterChange();
       return;
@@ -429,7 +445,8 @@ function onHit(m, x, y) {
 function handleEvents() {
   for (const ev of game.drain()) {
     const m = ev.id ? game.mice.find((q) => q.id === ev.id) : null;
-    const at = m ? scene.mouseScreen(m) : null;
+    // a mouse that left the burrow this frame is already gone from the list; its last spot comes with the event
+    const at = m ? scene.mouseScreen(m) : ev.x != null ? scene.project(wx(ev.x), 0.3, wz(ev.z)) : null;
     switch (ev.type) {
       case 'spawn':
         audio.sfx.squeak(m && m.type === 'minion' ? 1.3 : 1);
@@ -438,6 +455,7 @@ function handleEvents() {
         break;
       case 'snap':
         audio.sfx.snap();
+        scene.syncItems();
         audio.heat(true);
         scene.shake = 1;
         flash();
@@ -447,6 +465,7 @@ function handleEvents() {
         break;
       case 'bucket':
         audio.sfx.clang();
+        scene.syncItems();
         audio.heat(true);
         haptics.buzz('snap');
         scene.shake = 0.8;
@@ -462,6 +481,7 @@ function handleEvents() {
         break;
       case 'eat':
         audio.sfx.chomp();
+        scene.syncItems();
         haptics.buzz('eat');
         audio.heat(true);
         if (at) pop(at.x, at.y - 60, she(m) ? 'נעצרה לאכול!' : 'נעצר לאכול!', '');
@@ -507,6 +527,8 @@ function handleEvents() {
         bumpPitas();
         break;
       case 'escaped':
+        audio.sfx.steal();
+        haptics.buzz('free');
         if (at) pop(at.x, at.y - 50, she(m) ? 'ברחה עם פיתה!' : 'ברח עם פיתה!', 'red');
         renderHud();
         break;
@@ -551,8 +573,11 @@ function handleEvents() {
           audio.sfx.ring();
           haptics.buzz('refund');
           callout('img/shaked.webp', 'אני מתלוננת!');
-          setTimeout(() => { audio.sfx.recovered(); toast('סוללת אידו נשברו מהתלונות של שקד והחזירו ₪3', 'ido', 2600); }, 700);
-          const mn = $('money'); mn.classList.remove('flash'); void mn.offsetWidth;
+          later(700, () => {
+            audio.sfx.recovered();
+            toast('סוללת אידו נשברו מהתלונות של שקד והחזירו ₪3', 'ido', 2600);
+            const mn = $('money'); mn.classList.remove('gain'); void mn.offsetWidth; mn.classList.add('gain');
+          });
         } else {
           audio.sfx.disconnect();
           haptics.buzz('disconnect');
@@ -588,7 +613,7 @@ function killStamp(lior, ev = {}) {
   $('kill-img').classList.toggle('flat', !lior);
   const words = type === 'fat' ? FAT_WORDS : type === 'fast' ? FAST_WORDS : KILL_WORDS;
   $('kill-title').textContent = lior ? 'ליאור באום חוסלה!' : words[Math.floor(Math.random() * words.length)];
-  $('kill-sub').textContent = left > 0 ? `נשארו עוד ${left} ${left === 1 ? 'עכבר' : 'עכברים'}` : 'האתר נקי!';
+  $('kill-sub').textContent = left > 1 ? `נשארו עוד ${left} עכברים` : left === 1 ? 'נשאר עוד עכבר אחד' : 'האתר נקי!';
   el.classList.toggle('big', lior);
   el.hidden = false;
   el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
@@ -617,8 +642,10 @@ function flyPoints(from, pts) {
     { transform: 'translate(-50%,-120%) scale(1.5)', opacity: 1, offset: 0.25 },
     { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.7)`, opacity: 0.9 },
   ], { duration: 900, easing: 'cubic-bezier(.5,0,.6,1)' });
+  const tok = levelToken;
   anim.onfinish = () => {
     el.remove();
+    if (tok !== levelToken) return;
     audio.sfx.coin(game ? game.stats.kills : 0);
     const sc = $('score'); sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump');
   };
@@ -675,6 +702,24 @@ function dropView(id, keepBubble = false) {
   if (v.bubble && !keepBubble) v.bubble.remove();
   else if (v.bubble) { const b = v.bubble; setTimeout(() => b.remove(), 900); }
   views.delete(id);
+}
+
+// kill stamp, flying points, streak banners, hint: nothing of a level outlives it
+function resetEffects() {
+  for (const el of document.querySelectorAll('.fly, .streak')) el.remove();
+  $('kill').hidden = true;
+  $('callout').hidden = true;
+  $('hint').hidden = true;
+  killT = 0; slowT = 0; freezeT = 0;
+  if (scene) scene.shake = 0;
+}
+
+// the little animations over the board stop while the game is paused
+function effectAnims() {
+  return document.getAnimations().filter((a) => {
+    const t = a.effect && a.effect.target;
+    return t && t.closest && t.closest('#float, .fly, .streak, #kill, #callout, .combo');
+  });
 }
 
 function clearViews() {
@@ -858,6 +903,8 @@ function updateTicker(dt) {
 
 // ---------- end of a level ----------
 function finish() {
+  levelToken++;
+  resetEffects();
   audio.stopMusic();
   $('kill').hidden = true;
   killT = 0;
@@ -883,7 +930,7 @@ function finish() {
   const st = $('res-stars').children;
   [...st].forEach((s, i) => {
     s.className = '';
-    if (i < stars) setTimeout(() => { s.className = 'on show'; audio.sfx.star(i); }, 350 + i * 300);
+    if (i < stars) later(350 + i * 300, () => { s.className = 'on show'; audio.sfx.star(i); });
     else s.className = 'show';
   });
   const s = game.stats;
@@ -923,11 +970,14 @@ function pause() {
   if (document.querySelector('.screen.show')) return;
   paused = true;
   audio.stopMusic();
+  if (scene) scene.shake = 0;
+  for (const a of effectAnims()) a.pause();
   $('pause-quote').textContent = pick('ticker');
   show('pause');
 }
 function resume() {
   paused = false;
+  for (const a of effectAnims()) a.play();
   show(null);
   last = performance.now();
   if (game && game.phase === 'action') audio.startMusic();
@@ -943,7 +993,7 @@ function frame(now) {
   let dt = real;
   if (freezeT > 0 && !paused) { freezeT -= real; dt = 0; }
   else if (slowT > 0 && !paused) { slowT -= real; dt = real * 0.3; }
-  if (killT > 0) { killT -= real; if (killT <= 0) $('kill').hidden = true; }
+  if (killT > 0 && !paused) { killT -= real; if (killT <= 0) $('kill').hidden = true; }
   if (game && !paused) {
     if (game.phase === 'action') {
       acc += dt;
@@ -966,6 +1016,8 @@ function frame(now) {
 // ---------- wiring ----------
 function wire() {
   $('gl').addEventListener('pointerdown', onPointer);
+  document.addEventListener('pointerup', () => audio.unlock(), { passive: true });
+  document.addEventListener('touchend', () => audio.unlock(), { passive: true });
   $('gl').addEventListener('pointermove', (e) => {
     if (!game || game.phase !== 'plan' || e.pointerType !== 'mouse' || !tool) { return; }
     const cell = scene.pickCell(e.clientX, e.clientY);
@@ -1015,6 +1067,8 @@ function wire() {
 }
 
 function toLevels() {
+  levelToken++;
+  resetEffects();
   game = null;
   playing(false);
   audio.stopMusic();

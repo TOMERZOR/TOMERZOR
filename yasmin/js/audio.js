@@ -2,7 +2,7 @@
 // the corridor drone, fluorescent hum, drips, heartbeat, breathing, footsteps, stingers and the chase score.
 const FILES = ['y_where', 'y_misdar', 'y_hear', 'y_spot', 'y_chase', 'y_lost', 'y_caught', 'y_intro', 'y_locker', 'y_hum',
   'n_laugh', 'n_whisper', 'n_cry', 'n_count', 'sfx_scream', 'sfx_bucket', 'sfx_mop', 'sfx_gate', 'sfx_door', 'sfx_distant', 'sfx_locker', 'sfx_power',
-  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle'];
+  'r_tape1', 'r_tape2', 'r_tape3', 'r_tape4', 'r_tape5', 'n_ruth', 'y_pa2', 'y_pa3', 'y_pa5', 'y_ruth', 'y_sing', 'sfx_bottle', 'radio1'];
 
 export const SUBS = {
   y_where: 'יסמין: איפה אתה... הרצפה עוד רטובה...',

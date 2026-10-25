@@ -122,8 +122,8 @@ export class Yasmin {
   setNight(n, difficulty = 'normal') {
     this.night = n;
     const k = { easy: 0.85, normal: 1, hard: 1.08 }[difficulty] || 1;
-    this.walkSpeed = [0, 1.2, 1.3, 1.4, 1.5, 1.7][n] * k;
-    this.runSpeed = [0, 3.6, 3.9, 4.1, 4.35, 4.7][n] * k;
+    this.walkSpeed = [0, 1.2, 1.3, 1.4, 1.5, 1.6][n] * k;
+    this.runSpeed = [0, 3.5, 3.7, 3.9, 4.1, 4.3][n] * k;
     this.aggro = Math.min(1.2, [0, 0.35, 0.5, 0.65, 0.8, 1][n] * (difficulty === 'easy' ? 0.7 : difficulty === 'hard' ? 1.25 : 1));
     this.senseK = difficulty === 'easy' ? 0.75 : difficulty === 'hard' ? 1.2 : 1;
     this.group.userData.aggro = this.aggro;
@@ -214,8 +214,8 @@ export class Yasmin {
         if (!this.path || this.wp >= this.path.length) {
           // director: drift toward the player when she has been far away
           let target;
-          if (dist > 18 && Math.random() < 0.35 + this.aggro * 0.4) {
-            const near = this.patrolCells.filter(([x, z]) => { const c = cellCenter(x, z); const d = Math.hypot(c.x - pp.x, c.z - pp.z); return d > 6 && d < 14; });
+          if (dist > 22 && Math.random() < 0.2 + this.aggro * 0.3) {
+            const near = this.patrolCells.filter(([x, z]) => { const c = cellCenter(x, z); const d = Math.hypot(c.x - pp.x, c.z - pp.z); return d > 10 && d < 20; });
             target = near[Math.floor(Math.random() * near.length)];
           }
           if (!target) target = this.patrolCells[Math.floor(Math.random() * this.patrolCells.length)];
@@ -293,9 +293,13 @@ export class Yasmin {
         if (Math.hypot(dx, dz) < 0.45) {
           move = 0;
           this.dir = Math.atan2(-L.fwd.x, -L.fwd.z);
-          if (!this.lockerBeat) { this.lockerBeat = 1; this.speak('y_locker', { force: true, cd: 10 }); this.play('idle', 0.3); }
-          if (this.stateT > 2.8) {
-            if (player.hidden === L) { L.target = 1; this.audio.play('sfx_locker', { pos: new THREE.Vector3(L.x, 1, L.z), volume: 1.2 }); this.catch(player, game, true); return; }
+          if (!this.lockerBeat) { this.lockerBeat = 1; this.speak('y_locker', { force: true, cd: 10 }); this.play('idle', 0.3); if (player.hidden === L && this.onLockerStare) this.onLockerStare(); }
+          // she listens at the vents; if she saw you get in, or hears you breathe, she opens it
+          if (player.hidden === L && this.stateT > 1.2 && player.breathOut) this.heardBreath = true;
+          if (this.stateT > (this.sawHide === L ? 2.8 : 3.6)) {
+            if (player.hidden === L && (this.sawHide === L || this.heardBreath || !player.holdingBreath)) { L.target = 1; this.audio.play('sfx_locker', { pos: new THREE.Vector3(L.x, 1, L.z), volume: 1.2 }); this.catch(player, game, true); return; }
+            this.heardBreath = false; this.sawHide = null;
+            if (this.onLockerLeave) this.onLockerLeave();
             this.setState('patrol'); this.path = null;
           }
         }
@@ -311,7 +315,8 @@ export class Yasmin {
     // noticing the player
     if (['patrol', 'idle', 'investigate', 'search', 'mop'].includes(this.state)) {
       if (see > 0) {
-        this.awareness += dt * (0.8 + see * 3.5) * (0.7 + this.aggro * 0.6);
+        // far away it takes a couple of seconds to be sure it's you; close up, almost none
+        this.awareness += dt * (0.22 + see * see * 4.2) * (0.7 + this.aggro * 0.6);
         // turn toward
         if (this.awareness > 0.4) this.faceTo(pp.x, pp.z, dt * 3);
         if (this.awareness >= 1) this.startChase(player, game);
@@ -411,7 +416,7 @@ export class Yasmin {
     if (this.onSpot) this.onSpot();
   }
   checkLocker(L) {
-    this.lockerTarget = L; this.lockerBeat = 0;
+    this.lockerTarget = L; this.lockerBeat = 0; this.heardBreath = false;
     this.setState('locker');
     this.goTo(L.x + L.fwd.x * 0.75, L.z + L.fwd.z * 0.75);
   }

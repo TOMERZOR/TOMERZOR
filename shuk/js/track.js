@@ -635,7 +635,6 @@ export class Track {
         const show = ahead > 7 && ahead < 48;
         b.visible = show;
         if (show) b.material.opacity = Math.min(1, (48 - ahead) / 8, (ahead - 7) / 4);
-        if (show && !e.voiced && ahead < 30) { e.voiced = true; this.events.push({ t: 'voice', type: e.type, x: e.x }); }
       }
       if (e.horn && !e.honked && ahead < 30) { e.honked = true; this.events.push({ t: 'horn' }); }
       if (e.oncoming) {

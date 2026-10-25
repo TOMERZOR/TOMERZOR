@@ -53,7 +53,7 @@ async function load() {
   const tex = {};
   let done = 0;
   const all = [...IMAGES];
-  const extra = ['keyart', 'ofek', 'shalev', 'shaked', 'slipper'];
+  const extra = ['keyart', 'ofek', 'shalev', 'shaked', 'face_ofek', 'face_shalev', 'face_shaked', 'slipper'];
   const total = all.length + extra.length;
   const tick = () => { done++; $('load-fill').style.width = (100 * done / total) + '%'; };
   await Promise.all([
@@ -173,6 +173,7 @@ function nextLine() {
   panel.className = 'dlg-panel' + (who === 'lior' ? ' left' : '');
   const img = $('dlg-who');
   img.src = WHO[who].img;
+  img.classList.toggle('bust', !!WHO[who].bust);
   $('dlg-name').textContent = WHO[who].name;
   $('dlg-line').textContent = text;
   // restart the entry animations

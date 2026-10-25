@@ -120,7 +120,7 @@ button { font-family: inherit; cursor: pointer; touch-action: manipulation; }
   flex: 1; min-width: 0; height: 58px; border-radius: 16px; border: var(--line); background: var(--paper); color: var(--ink);
   box-shadow: var(--pop); display: flex; align-items: center; gap: 5px; padding: 0 6px; position: relative; overflow: hidden;
 }
-.ability img { width: 38px; height: 52px; object-fit: cover; object-position: 50% 4%; flex: none; align-self: flex-end; }
+.ability img { width: 40px; height: 44px; object-fit: cover; object-position: 50% 15%; flex: none; border-radius: 10px; border: 2px solid var(--ink); background: var(--yellow); }
 .ability span { font-weight: 900; font-size: 14px; line-height: 1.1; text-align: start; }
 .ability b {
   position: absolute; top: 4px; left: 6px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--ink); color: var(--yellow);
@@ -355,3 +355,10 @@ h1 .big { font-size: clamp(84px, 27vw, 150px); color: var(--yellow); transform: 
 @keyframes killImg { from { transform: translateY(-40px) scale(.4); opacity: 0; } }
 .kill img.flat { animation: none; }
 @keyframes killOut { 0%, 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-20px); } }
+
+/* the real faces: a talking-head card in the dialogue */
+.dlg-who.bust {
+  height: auto; width: 50%; max-width: 50%; max-height: 66%; aspect-ratio: 1; object-fit: contain; object-position: 50% 100%;
+  background: radial-gradient(circle at 50% 40%, #ffe27a, var(--yellow) 60%, #e0a800); border: var(--line); border-radius: 26px; box-shadow: 0 6px 0 var(--ink);
+  filter: none; bottom: 4%;
+}

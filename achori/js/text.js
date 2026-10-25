@@ -1,10 +1,10 @@
 // Everything the characters say. Picked at random, never the same line twice in a row.
 
 export const WHO = {
-  ofek: { name: 'אופק', img: 'img/ofek.webp' },
-  shalev: { name: 'שליו', img: 'img/shalev.webp' },
+  ofek: { name: 'אופק', img: 'img/face_ofek.webp', bust: true },
+  shalev: { name: 'שליו', img: 'img/face_shalev.webp', bust: true },
   lior: { name: 'ליאור באום', img: 'img/lior.webp' },
-  shaked: { name: 'שקד', img: 'img/shaked.webp' },
+  shaked: { name: 'שקד', img: 'img/face_shaked.webp', bust: true },
 };
 
 export const LINES = {

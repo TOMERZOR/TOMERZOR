@@ -155,6 +155,10 @@ function lobbyRoom(base, me) {
   const peers = new Map(), clients = [];
   const fns = [];
   let last = null, lastSent = 0;
+  // Every message is numbered (from the clock, so a reload keeps counting up). On several
+  // brokers each one arrives two or three times and not always in order: a copy that is not
+  // newer than the last one seen is dropped, so a game never sees a friend jump back in time.
+  let seq = Date.now();
   const emit = () => {
     const list = [...peers].map(([id, p]) => ({ peer: id, isMe: false, kind: 'viewer', presence: p.presence }));
     for (const f of fns) f({ peers: list });
@@ -168,7 +172,12 @@ function lobbyRoom(base, me) {
     if (buf.length > 3000) return;
     try {
       const pr = JSON.parse(buf.toString());
-      if (pr && typeof pr === 'object' && !Array.isArray(pr)) { peers.set(id, { presence: pr, t: Date.now() }); emit(); }
+      if (!pr || typeof pr !== 'object' || Array.isArray(pr)) return;
+      const old = peers.get(id), q = +pr.q || 0;
+      if (old && q && q <= old.q) { if (q === old.q) old.t = Date.now(); return; }
+      delete pr.q;
+      peers.set(id, { presence: pr, q, t: Date.now() });
+      emit();
     } catch (e) { /* not ours */ }
   };
   // Someone who closed the tab without saying goodbye drops out after a few seconds (12, so a
@@ -188,7 +197,7 @@ function lobbyRoom(base, me) {
     lobby: true,
     add(c) { clients.push(c); c.subscribe(base + 'p/+'); c.on('message', onMessage); if (last) { try { c.publish(base + 'p/' + me, last); } catch (e) { /* ignore */ } } },
     brokers() { return clients.filter(c => c.connected).length; },
-    presence(st) { last = JSON.stringify(st); send(); return Promise.resolve(); },
+    presence(st) { last = JSON.stringify({ ...st, q: ++seq }); send(); return Promise.resolve(); },
     onPeers(fn) { fns.push(fn); return () => {}; },
     leave() { for (const c of clients) { try { c.publish(base + 'p/' + me, ''); c.end(); } catch (e) { /* ignore */ } } },
   };

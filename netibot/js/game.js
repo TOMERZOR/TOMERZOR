@@ -516,7 +516,11 @@ const Game = {
     this.errs = [];
     try { if (Race.active) Race.exit(); } catch (err) { Race.active = false; }
     try { if (Arcade.active) Arcade.exit(); } catch (err) { Arcade.active = null; }
-    UI.toast(Multi.on ? '😵 המשחקון נתקע וחזרת לבסיס. אם שיחקתם אונליין — כדאי ששניכם תרעננו את הדף.' : '😵 המשחקון נתקע וחזרת לבסיס.', 'bad');
+    // What broke, short, on the toast: a screenshot of it is enough to find the bug.
+    const where = ((e && e.stack) || '').split('\n').map(l => (l.match(/([\w-]+\.js)(?:\?v=\w+)?:(\d+)/) || [])).find(m => m[1]);
+    const what = `${(e && e.message) || e}`.slice(0, 80) + (where ? ` @ ${where[1]}:${where[2]}` : '');
+    try { localStorage.setItem('netibot.crash', `${typeof NETIBOT_VER !== 'undefined' ? NETIBOT_VER : ''} ${what}`); } catch (err) { /* private mode */ }
+    UI.toast(`😵 המשחקון נתקע וחזרת לבסיס.${Multi.on ? ' אם שיחקתם אונליין — כדאי ששניכם תרעננו את הדף.' : ''}<br><small dir="ltr">${esc(what)}</small>`, 'bad', 9000);
   },
   step(t) {
     // Battery saver: about 30 frames a second.

@@ -137,10 +137,13 @@ const Arcade = {
     if (this.phase === 'lobby') this.updateLobby();
     else if (this.active) this.active.update(dt, t);
     if (this.cdAt) this.updateCountdown();
-    if (this.active) this.active.render(Scene3D.renderer);
+    // In the lobby the game hasn't built its scene and camera yet (that's enter(), when the
+    // round starts): only the lobby card shows.
+    if (this.active && this.phase !== 'lobby') this.active.render(Scene3D.renderer);
   },
   // Keeps a game's camera in step with the screen.
   fit(camera) {
+    if (!camera) return;
     const s = Scene3D.renderer.getSize(new THREE.Vector2()), a = s.x / Math.max(1, s.y);
     if (Math.abs(camera.aspect - a) > 0.001) { camera.aspect = a; camera.fov = a < 1 ? Math.max(camera.fov, 70) : camera.fov; camera.updateProjectionMatrix(); }
   },

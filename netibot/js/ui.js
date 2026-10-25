@@ -131,11 +131,11 @@ const UI = {
   },
   clearScreen() { this.screen(''); },
 
-  toast(text, kind = '') {
+  toast(text, kind = '', ms = 2700) {
     const t = el('div', { class: `toast ${kind}` }, fmt(text));
     if (String(text).includes('📱')) Sound.ding();
     $('#toasts').appendChild(t);
-    setTimeout(() => t.remove(), 2700);
+    setTimeout(() => t.remove(), ms);
   },
 
   prompt(text) {

@@ -8,6 +8,8 @@ Hebrew is the default; English is in Settings. Static site, no build step:
 npx http-server .     # from the repo root, then open http://localhost:8080/tightrope/
 ```
 
+When you change any file, bump the `?v=` number in `index.html` (the stylesheet, the import map and `main.js`) so phones load the new version instead of a cached one.
+
 Motion sensors only work over https (GitHub Pages is fine). On iPhone the game asks for motion access when you tap Play.
 
 ## How to play

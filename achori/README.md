@@ -30,7 +30,11 @@ Leftover money can be spent during the action too: pick a tool, then tap an empt
 
 ## Levels
 
-Ten levels in three parts of the site (the site manager's caravan, the storeroom, the kitchenette), adding a second burrow, henchman mice, cheese, glue, smart Lior, a burrow in the middle, and a final level with four burrows. Progress is saved in the browser.
+Twenty levels in five parts of the site: the site manager's caravan, the storeroom, the kitchenette, the meeting room and בית הגדי (the yard at sunset). Each adds something: a second burrow, henchman mice, cheese, glue, smart Lior, a burrow in the middle; then in part two Shmulik the fat mouse (slow, 9 hits), the bucket trap (₪4, holds about 4.5 s), sprinters (fast, 2 hits), mixed waves, Shalev's maze and a final level with five burrows. Progress and best scores are saved in the browser.
+
+## Killing
+
+A kill is meant to feel good: the action freezes for a split second (hit-stop, also a shorter one on every hit), the camera punches in, the scene goes to slow motion, a stamp names the kill ("שמוליק התפוצץ!", "פנקייק!", "ליאור באום חוסלה!") with how many mice are left, a splat mark stays on the floor, and the points fly up to the score. Hits rise in pitch as the combo grows; kills within 2.6 s of each other are announced (דאבל, טריפל, מולטי קיל, השמדה) and multiply the points. The level score adds a bonus for pitas kept and money left, and the result screen counts it up and marks a new record.
 
 ## Code
 

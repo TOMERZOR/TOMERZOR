@@ -20,18 +20,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Karantina:wght@700&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="stylesheet" href="css/style.css?v=9">
 <script type="importmap">
 {
  "imports": {
   "three": "./vendor/three.module.min.js",
-  "./js/audio.js": "./js/audio.js?v=7",
-  "./js/game.js": "./js/game.js?v=7",
-  "./js/haptics.js": "./js/haptics.js?v=7",
-  "./js/levels.js": "./js/levels.js?v=7",
-  "./js/main.js": "./js/main.js?v=7",
-  "./js/scene.js": "./js/scene.js?v=7",
-  "./js/text.js": "./js/text.js?v=7"
+  "./js/audio.js": "./js/audio.js?v=9",
+  "./js/game.js": "./js/game.js?v=9",
+  "./js/haptics.js": "./js/haptics.js?v=9",
+  "./js/levels.js": "./js/levels.js?v=9",
+  "./js/main.js": "./js/main.js?v=9",
+  "./js/scene.js": "./js/scene.js?v=9",
+  "./js/text.js": "./js/text.js?v=9"
  }
 }
 </script>
@@ -50,6 +50,7 @@
     </button>
     <div class="hud-mid">
       <div class="hud-level" id="hud-level"></div>
+      <div class="score" id="score" aria-label="נקודות">0</div>
       <div class="hud-row">
         <div class="pitas" id="pitas" aria-label="פיתות"></div>
         <div class="left-mice" id="left-mice" hidden aria-label="עכברים שנשארו"><img src="img/minion_run.webp" alt=""><b id="left-n"></b></div>
@@ -154,6 +155,7 @@
     <img class="res-img" id="res-img" alt="">
     <h2 id="res-title"></h2>
     <div class="stars" id="res-stars"><i></i><i></i><i></i></div>
+    <div class="res-score" id="res-score"></div>
     <p class="res-line" id="res-line"></p>
     <div class="res-stats" id="res-stats"></div>
     <button class="btn primary" id="res-next" type="button">לשלב הבא</button>
@@ -173,6 +175,6 @@
   </div>
 </section>
 
-<script type="module" src="js/main.js?v=7"></script>
+<script type="module" src="js/main.js?v=9"></script>
 </body>
 </html>

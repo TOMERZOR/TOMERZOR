@@ -7,11 +7,13 @@ import { COLS, ROWS, cellOf, idx } from './game.js';
 
 const SIZE = {
   lior: 1.5, lior_run: 1.08, lior_caught: 1.5, lior_glue: 1.45, lior_eat: 1.35, lior_ko: 1.3, lior_ghost: 1.3,
-  minion_run: 0.82, block: 1.25, toolbox: 1.1, snap: 0.92, glue: 0.95, cheese: 0.8, food: 1.25, burrow: 1.05,
+  minion_run: 0.82, fat_run: 0.98, fast_run: 0.62, bucket: 1.05, splat: 1.15, block: 1.25, toolbox: 1.1, snap: 0.92, glue: 0.95, cheese: 0.8, food: 1.25, burrow: 1.05,
 };
 
-export const IMAGES = ['lior', 'lior_run', 'lior_caught', 'lior_glue', 'lior_eat', 'lior_ko', 'lior_ghost', 'minion_run',
+export const IMAGES = ['lior', 'lior_run', 'lior_caught', 'lior_glue', 'lior_eat', 'lior_ko', 'lior_ghost', 'minion_run', 'fat_run', 'fast_run', 'bucket', 'splat', 'wall_meeting', 'wall_yard',
   'block', 'toolbox', 'snap', 'glue', 'cheese', 'food', 'burrow', 'floor', 'wall_office', 'wall_store', 'wall_kitchen'];
+
+const RUN = { lior: 'lior_run', minion: 'minion_run', fat: 'fat_run', fast: 'fast_run' };
 
 export const wx = (c) => c - (COLS - 1) / 2;
 export const wz = (r) => r - (ROWS - 1) / 2;
@@ -155,7 +157,28 @@ export class Scene {
   }
 
   // ---------- level contents ----------
+  // a mark on the floor where a mouse died; they stay until the level ends
+  addSplat(x, z) {
+    const s = this.sprite('splat', { anchor: 0.5 });
+    s.position.set(wx(x), 0.012, wz(z));
+    s.material.rotation = (Math.random() - 0.5) * 0.8;
+    s.material.opacity = 0.92;
+    s.scale.multiplyScalar(0.85 + Math.random() * 0.3);
+    this.order(s, wz(z) - 0.55, 0);
+    s.renderOrder -= 50;
+    s.userData.born = this.time;
+    s.userData.full = { x: s.scale.x, y: s.scale.y };
+    this.scene.add(s);
+    (this.splats ||= []).push(s);
+    if (this.splats.length > 40) this.scene.remove(this.splats.shift());
+  }
+
+  // a quick zoom-in punch, for the killing blow
+  punch(k = 1) { this.punchT = 0.32; this.punchK = k; }
+
   clearLevel() {
+    for (const s of this.splats || []) this.scene.remove(s);
+    this.splats = [];
     for (const v of this.items.values()) this.scene.remove(v);
     for (const v of this.mice.values()) { this.scene.remove(v.group); }
     if (this.foodView) this.scene.remove(this.foodView);
@@ -228,6 +251,10 @@ export class Scene {
       this.order(sh, z - 0.5, 0);
       g.add(sh);
       this.order(s, z, 1);
+    } else if (it.kind === 'bucket') {
+      s = this.sprite('bucket', { anchor: 0.2 });
+      if (it.sprung) { s.scale.multiplyScalar(0.92); s.material.rotation = 0.18; }
+      this.order(s, z + 0.3, 1);
     } else {
       s = this.sprite(it.kind, { anchor: 0.42 });
       this.order(s, z, 0);
@@ -285,7 +312,7 @@ export class Scene {
     if (v) return v;
     const group = new THREE.Group();
     const sh = this.shadow(m.type === 'lior' ? 1.0 : 0.75);
-    const body = this.sprite(m.type === 'lior' ? 'lior_run' : 'minion_run', { anchor: 0.08 });
+    const body = this.sprite(RUN[m.type] || 'minion_run', { anchor: 0.08 });
     group.add(sh, body);
     this.scene.add(group);
     v = { group, sh, body, pose: '', squash: 0, flash: 0, ghost: null };
@@ -313,6 +340,7 @@ export class Scene {
 
   poseMouse(m, v, dt) {
     const lior = m.type === 'lior';
+    const run = RUN[m.type] || 'minion_run';
     const t = this.time;
     const body = v.body;
     v.flash = Math.max(0, v.flash - dt);
@@ -328,12 +356,12 @@ export class Scene {
     switch (state) {
       case 'emerge': {
         const k = 1 - Math.max(0, m.t) / 0.55; // rising out of the hole
-        pose = lior ? 'lior_run' : 'minion_run';
+        pose = run;
         sy = 0.2 + 0.8 * k; sx = 0.7 + 0.3 * k; alpha = Math.min(1, k * 2);
         break;
       }
       case 'run': case 'flee': case 'confused': {
-        pose = lior ? 'lior_run' : 'minion_run';
+        pose = run;
         const f = m.state === 'confused' ? 9 : 17 + (m.dash > 0 ? 8 : 0);
         bob = Math.abs(Math.sin(t * f)) * 0.07;
         rot = Math.sin(t * f) * 0.05;
@@ -343,30 +371,39 @@ export class Scene {
         break;
       }
       case 'caught':
-        pose = lior ? 'lior_caught' : 'minion_run';
+        pose = lior ? 'lior_caught' : run;
         rot = Math.sin(t * 38) * 0.06;
         bob = lior ? 0 : 0.02;
         if (!lior) { rot = Math.sin(t * 40) * 0.25; }
         face = 1;
         break;
       case 'glued':
-        pose = lior ? 'lior_glue' : 'minion_run';
+        pose = lior ? 'lior_glue' : run;
         sx = 1 + Math.sin(t * 7) * 0.05; sy = 1 - Math.sin(t * 7) * 0.05;
         face = lior ? 1 : face;
         break;
+      case 'bucketed':
+        pose = run;
+        alpha = 0;
+        if (trapItem) {
+          const b = trapItem.userData.main;
+          b.material.rotation = Math.sin(t * 34) * 0.07;
+          b.position.y = Math.abs(Math.sin(t * 17)) * 0.06;
+        }
+        break;
       case 'eating':
-        pose = lior ? 'lior_eat' : 'minion_run';
+        pose = lior ? 'lior_eat' : run;
         sy = 1 + Math.sin(t * 14) * 0.05;
         face = 1;
         break;
       case 'stunned':
-        pose = lior ? 'lior' : 'minion_run';
+        pose = lior ? 'lior' : run;
         rot = Math.sin(t * 60) * 0.04;
         sx = 1.06; sy = 0.94;
         face = 1;
         break;
       case 'leaving': {
-        pose = lior ? 'lior_run' : 'minion_run';
+        pose = run;
         const k = Math.max(0, m.t) / 0.35;
         sy = 0.2 + 0.8 * k; alpha = k;
         break;
@@ -387,7 +424,7 @@ export class Scene {
           }
           alpha = k > 2.0 ? Math.max(0, 1 - (k - 2.0) / 0.6) : 1;
         } else {
-          pose = 'minion_run';
+          pose = run;
           sy = Math.max(0.12, 1 - k * 4); sx = 1 + Math.min(0.5, k * 2);
           rot = 0;
           alpha = k > 1.6 ? Math.max(0, 1 - (k - 1.6) / 0.8) : 1;
@@ -396,7 +433,7 @@ export class Scene {
         break;
       }
       default:
-        pose = lior ? 'lior_run' : 'minion_run';
+        pose = run;
     }
     if (pose !== v.pose) {
       this.setImage(body, pose);
@@ -495,6 +532,21 @@ export class Scene {
       const left = this.game.food / this.game.foodMax;
       this.foodPlate.material.opacity = 0.45 + 0.55 * left;
     }
+    for (const sp of this.splats || []) {
+      const age = this.time - sp.userData.born;
+      if (sp.userData.done) continue;
+      const f = sp.userData.full;
+      if (age >= 0.3) { sp.scale.set(f.x, f.y, 1); sp.userData.done = true; continue; }
+      const k = 0.3 + 0.7 * Math.min(1, age / 0.1) + Math.sin(Math.min(1, age / 0.3) * Math.PI) * 0.3;
+      sp.scale.set(f.x * k, f.y * k, 1);
+    }
+    const fov0 = 48;
+    if (this.punchT > 0) {
+      this.punchT = Math.max(0, this.punchT - dt);
+      const k = Math.sin((this.punchT / 0.32) * Math.PI) * 0.09 * (this.punchK || 1);
+      cam.fov = fov0 * (1 - k);
+      cam.updateProjectionMatrix();
+    } else if (cam.fov !== fov0) { cam.fov = fov0; cam.updateProjectionMatrix(); }
     this.renderer.render(this.scene, cam);
   }
 

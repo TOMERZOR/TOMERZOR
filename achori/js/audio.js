@@ -82,10 +82,26 @@ export const sfx = {
     tone('sine', f * 1.3, f * 0.9, 0.09, 0.14, 0.08);
   },
   snap() { burst(0.05, 1.0, 3500, 0.7, 0, 'highpass'); tone('square', 120, 50, 0.12, 0.5); burst(0.2, 0.4, 900, 2, 0.02); },
-  whack(power = 1) {
-    burst(0.09, 0.9 * power, 700, 0.8, 0, 'lowpass');
-    tone('sine', 140, 45, 0.16, 0.7 * power);
-    burst(0.04, 0.5, 2500, 1.5);
+  // each hit in a combo lands a little higher, so a streak sounds like it's building
+  whack(power = 1, n = 0) {
+    const up = Math.pow(1.035, Math.min(n, 24));
+    burst(0.09, 0.9 * power, 700 * up, 0.8, 0, 'lowpass');
+    tone('sine', 140 * up, 45 * up, 0.16, 0.7 * power);
+    burst(0.04, 0.5, 2500 * up, 1.5);
+    if (n >= 4) tone('square', 520 * up, 780 * up, 0.05, 0.035);
+  },
+  clang() {
+    [523, 787, 1290, 1873].forEach((f, i) => tone('triangle', f, f * 0.995, 0.9 - i * 0.15, 0.16 / (i + 1)));
+    burst(0.06, 0.6, 3000, 1.2);
+    tone('sine', 160, 60, 0.2, 0.5);
+  },
+  coin(n = 0) { const f = 1320 * Math.pow(1.06, n % 8); tone('square', f, f, 0.05, 0.05); tone('square', f * 1.5, f * 1.5, 0.12, 0.05, 0.05); },
+  multi(n) {
+    // a stab of brass and a boom, higher for bigger streaks
+    const base = 392 * Math.pow(1.12, Math.min(n, 5) - 2);
+    tone('sine', 90, 35, 0.5, 0.8);
+    burst(0.4, 0.5, 300, 0.7, 0, 'lowpass');
+    [[0, 1], [0.12, 1.26], [0.24, 1.5], [0.36, 2]].forEach(([w, k]) => { tone('sawtooth', base * k, base * k, 0.22, 0.07, w); tone('square', base * k * 1.005, base * k, 0.22, 0.04, w); });
   },
   whoosh() { burst(0.16, 0.25, 1200, 0.6); },
   glue() { tone('sine', 300, 90, 0.25, 0.25); burst(0.25, 0.25, 400, 4); },

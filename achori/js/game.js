@@ -9,6 +9,7 @@ export const ROWS = 9;
 export const TOOLS = {
   block: { cost: 1 },
   snap: { cost: 3 },
+  bucket: { cost: 4 },
   glue: { cost: 2 },
   cheese: { cost: 1 },
 };
@@ -16,9 +17,13 @@ export const TOOLS = {
 export const MICE = {
   lior: { radius: 0.42 },
   minion: { radius: 0.34 },
+  fat: { radius: 0.44 },
+  fast: { radius: 0.3 },
 };
 
-const HELD = new Set(['caught', 'glued', 'eating', 'stunned']);
+const HELD = new Set(['caught', 'glued', 'eating', 'stunned', 'bucketed']);
+// what a kill is worth before the combo bonus
+export const POINTS = { lior: 1000, minion: 150, fat: 400, fast: 300 };
 const SMELL = 4; // cheese pulls a mouse when it is at most this many steps away
 const SEEN_COST = 7; // extra path cost a smart mouse gives a cell with a visible trap
 
@@ -57,7 +62,10 @@ export class Game {
     this.abilities = { ofek: level.ofek || 0, shalev: level.shalev || 0, shaked: level.shaked || 0 };
     this.combo = 0;
     this.comboT = 0;
-    this.stats = { hits: 0, misses: 0, kills: 0, bestCombo: 0, stolen: 0, recovered: 0 };
+    this.stats = { hits: 0, misses: 0, kills: 0, bestCombo: 0, stolen: 0, recovered: 0, bestStreak: 0 };
+    this.score = 0;
+    this.streak = 0;
+    this.streakT = 0;
     this.liorRespawns = 0;
   }
 
@@ -149,7 +157,7 @@ export class Game {
   stepCost(j, smart) {
     let k = 1;
     const it = this.cells[j];
-    if (smart && it && (it.kind === 'snap' || it.kind === 'glue')) k += SEEN_COST;
+    if (smart && it && (it.kind === 'snap' || it.kind === 'glue' || it.kind === 'bucket')) k += SEEN_COST;
     return k;
   }
 
@@ -242,6 +250,7 @@ export class Game {
     if (this.phase !== 'action') return;
     this.time += dt;
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
+    if (this.streakT > 0) this.streakT -= dt;
     while (this.spawnQueue.length && this.spawnQueue[0].t <= this.time) this.spawn(this.spawnQueue.shift());
     for (const m of this.mice) this.updateMouse(m, dt);
     this.mice = this.mice.filter((m) => !(m.gone));
@@ -259,6 +268,8 @@ export class Game {
     const pending = this.spawnQueue.length > 0 || this.mice.some((m) => m.alive || m.respawnIn > 0);
     if (!pending) {
       this.phase = 'won';
+      this.bonus = { food: this.food * 500, money: this.budget * 50 };
+      this.score += this.bonus.food + this.bonus.money;
       this.emit('won', { stars: this.stars() });
     }
   }
@@ -353,6 +364,12 @@ export class Game {
       this.damage(m, 2, 'snap');
       return true;
     }
+    if (it && it.kind === 'bucket' && !it.sprung) {
+      it.sprung = true;
+      this.hold(m, 'bucketed', this.level.bucketHold, i);
+      this.emit('bucket', { id: m.id });
+      return true;
+    }
     if (it && it.kind === 'glue') {
       it.uses -= 1;
       this.hold(m, 'glued', this.level.glueHold, i);
@@ -387,12 +404,12 @@ export class Game {
 
   release(m) {
     const it = m.trapCell != null ? this.cells[m.trapCell] : null;
-    if (m.state === 'caught' && it && it.kind === 'snap') { this.cells[m.trapCell] = null; this.emit('broke', { id: m.id }); }
+    if ((m.state === 'caught' || m.state === 'bucketed') && it && (it.kind === 'snap' || it.kind === 'bucket')) { this.cells[m.trapCell] = null; this.emit('broke', { id: m.id }); }
     if (m.state === 'glued' && it && it.spent) this.cells[m.trapCell] = null;
     const was = m.state;
     m.state = m.carrying ? 'flee' : 'run';
     m.trapCell = null;
-    if (was === 'caught' || was === 'glued') { m.dash = 0.9; this.emit('free', { id: m.id }); }
+    if (was === 'caught' || was === 'glued' || was === 'bucketed') { m.dash = 0.9; this.emit('free', { id: m.id }); }
     if (m.next == null) this.plan(m);
   }
 
@@ -466,6 +483,7 @@ export class Game {
     this.comboT = 0.75;
     this.stats.bestCombo = Math.max(this.stats.bestCombo, this.combo);
     this.stats.hits += 1;
+    this.score += 10 * dmg;
     this.damage(m, dmg, 'whack');
     return 'hit';
   }
@@ -486,10 +504,16 @@ export class Game {
     m.alive = false;
     m.state = 'dead';
     m.deadT = 0;
+    // points, with a bonus for the combo that finished it and for kills in quick succession
+    this.streak = this.streakT > 0 ? this.streak + 1 : 1;
+    this.streakT = 2.6;
+    this.stats.bestStreak = Math.max(this.stats.bestStreak, this.streak);
+    const pts = Math.round((POINTS[m.type] || 100) * (1 + Math.min(this.combo, 30) / 15) * this.streak / 10) * 10;
+    this.score += pts;
     this.stats.kills += 1;
     if (m.trapCell != null) {
       const it = this.cells[m.trapCell];
-      if (it && it.kind === 'snap') this.cells[m.trapCell] = null;
+      if (it && (it.kind === 'snap' || it.kind === 'bucket')) this.cells[m.trapCell] = null;
       if (it && it.kind === 'glue' && it.spent) this.cells[m.trapCell] = null;
     }
     if (m.carrying) {
@@ -498,7 +522,7 @@ export class Game {
       this.stats.recovered += 1;
       this.emit('recovered', { id: m.id, food: this.food });
     }
-    this.emit('kill', { id: m.id, mouse: m.type });
+    this.emit('kill', { id: m.id, mouse: m.type, pts, streak: this.streak });
   }
 
   useAbility(name) {
@@ -507,7 +531,7 @@ export class Game {
     this.abilities[name] -= 1;
     if (name === 'ofek') {
       for (const m of live) {
-        if (m.state === 'caught' || m.state === 'glued') m.t += 1.2;
+        if (m.state === 'caught' || m.state === 'glued' || m.state === 'bucketed') m.t += 1.2;
         else this.hold(m, 'stunned', 1.5, m.trapCell);
       }
     } else if (name === 'shaked') {

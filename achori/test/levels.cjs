@@ -14,7 +14,8 @@ const port = process.argv[2] || 8093;
   await p.reload();
   await p.waitForSelector('#title.show');
   await p.click('#play-btn');
-  for (let i = 0; i < 10; i++) {
+  const total = await p.evaluate(() => window.__achori.LEVELS.length);
+  for (let i = 0; i < total; i++) {
     await p.waitForSelector('#dialog.show');
     for (let k = 0; k < 5 && await p.locator('#dialog.show').count(); k++) { await p.click('#dlg-bubble, .dlg-bubble', { force: true }); await p.waitForTimeout(80); }
     while (!(await p.locator('#hint').isHidden())) { await p.click('#hint-ok'); await p.waitForTimeout(60); }
@@ -27,6 +28,7 @@ const port = process.argv[2] || 8093;
       g.update(0.01);
       for (const m of g.mice) { if (m.respawnIn > 0) { m.respawnIn = 0.001; g.update(0.01); } }
       for (const m of g.mice) if (m.alive) { m.state = 'caught'; m.t = 5; m.heldMax = 5; while (m.alive) g.whack(m, 1); }
+      g.update(0.01);
     });
     await p.waitForSelector('#result.show', { timeout: 8000 });
     const title = await p.textContent('#res-title');

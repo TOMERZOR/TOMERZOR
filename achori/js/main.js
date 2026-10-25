@@ -35,6 +35,8 @@ let fxCtx = null;
 let comboEl = null;
 let tickerX = 0, tickerW = 0;
 let slowT = 0; // real seconds of slow motion left after a kill
+let freezeT = 0; // hit-stop: real seconds the action stands still
+let shownScore = 0;
 let killT = 0;
 
 // ---------- screens ----------
@@ -208,6 +210,8 @@ function prepareLevel(i) {
   scene.setRoutes(game.previewRoutes());
   clearViews();
   particles = [];
+  shownScore = 0;
+  $('score').textContent = '0';
   tool = lv.tools.includes('snap') ? 'snap' : lv.tools[0];
   buildTools();
   $('hud-level').textContent = `${i + 1}. ${lv.name}`;
@@ -410,7 +414,8 @@ function actionTap(x, y) {
 }
 
 function onHit(m, x, y) {
-  audio.sfx.whack(game.combo >= 12 ? 1.3 : 1);
+  audio.sfx.whack(game.combo >= 12 ? 1.3 : 1, game.combo);
+  freezeT = Math.max(freezeT, game.combo >= 12 ? 0.045 : 0.03);
   scene.hitFlash(m.id);
   scene.shake = Math.min(1, scene.shake + 0.35);
   haptics.buzz(game.combo >= 12 ? 'hitHard' : 'hit');
@@ -439,6 +444,14 @@ function handleEvents() {
         haptics.buzz('snap');
         if (at) { pop(at.x, at.y - 70, she(m) ? 'נתפסה!' : 'נתפס!', 'big'); burstAt(at, 14, '#e0c08a', 6); }
         if (m && m.type === 'lior') say(m, pick('liorCaught'));
+        break;
+      case 'bucket':
+        audio.sfx.clang();
+        audio.heat(true);
+        haptics.buzz('snap');
+        scene.shake = 0.8;
+        if (at) { pop(at.x, at.y - 70, 'בדלי!', 'big'); burstAt(at, 12, '#b8b8b8', 6); }
+        if (m && m.type === 'lior') say(m, pick('liorBucket'));
         break;
       case 'glued':
         audio.sfx.glue();
@@ -507,8 +520,13 @@ function handleEvents() {
         scene.shake = 1;
         flash();
         haptics.buzz(lior ? 'killLior' : 'kill');
+        freezeT = lior ? 0.16 : 0.09;
         slowT = lior ? 0.8 : 0.35;
-        killStamp(lior);
+        scene.punch(lior ? 1.4 : 0.8);
+        if (m) scene.addSplat(m.x, m.z);
+        killStamp(lior, ev);
+        if (at) flyPoints(at, ev.pts);
+        if (ev.streak >= 2) streakCall(ev.streak);
         if (at) {
           pop(at.x, at.y - 20, '✖', 'red big');
           burstAt(at, lior ? 40 : 24, '#ffd23f', 8, 'star');
@@ -558,12 +576,18 @@ function miceLeft() {
   return game.spawnQueue.length + game.mice.filter((q) => q.alive || q.respawnIn > 0).length;
 }
 
-function killStamp(lior) {
+const KILL_WORDS = ['באומון חוסל!', 'פנקייק!', 'לך לישון!', 'נמחק!', 'שטוח!', 'ביי באומון!', 'דפוק!'];
+const FAT_WORDS = ['שמוליק התפוצץ!', 'הדיאטה נגמרה!', 'שמוליק חוסל!'];
+const FAST_WORDS = ['ספרינטר חוסל!', 'סוף המרוץ!', 'עצר בבת אחת!'];
+
+function killStamp(lior, ev = {}) {
   const el = $('kill');
   const left = miceLeft();
-  $('kill-img').src = lior ? 'img/lior_ko.webp' : 'img/minion_run.webp';
+  const type = ev.mouse || (lior ? 'lior' : 'minion');
+  $('kill-img').src = lior ? 'img/lior_ko.webp' : `img/${type}_run.webp`;
   $('kill-img').classList.toggle('flat', !lior);
-  $('kill-title').textContent = lior ? 'ליאור באום חוסלה!' : 'באומון חוסל!';
+  const words = type === 'fat' ? FAT_WORDS : type === 'fast' ? FAST_WORDS : KILL_WORDS;
+  $('kill-title').textContent = lior ? 'ליאור באום חוסלה!' : words[Math.floor(Math.random() * words.length)];
   $('kill-sub').textContent = left > 0 ? `נשארו עוד ${left} ${left === 1 ? 'עכבר' : 'עכברים'}` : 'האתר נקי!';
   el.classList.toggle('big', lior);
   el.hidden = false;
@@ -576,6 +600,51 @@ function killStamp(lior) {
 
 // Lior Baum is a she; the henchmen are he
 const she = (m) => !!m && m.type === 'lior';
+
+// "+450" flies from the dead mouse up to the score
+function flyPoints(from, pts) {
+  if (!pts) return;
+  const el = document.createElement('div');
+  el.className = 'fly';
+  el.textContent = '+' + pts;
+  el.style.left = from.x + 'px';
+  el.style.top = from.y + 'px';
+  document.body.appendChild(el);
+  const to = $('score').getBoundingClientRect();
+  const dx = to.left + to.width / 2 - from.x, dy = to.top + to.height / 2 - from.y;
+  const anim = el.animate([
+    { transform: 'translate(-50%,-50%) scale(.4)', opacity: 0 },
+    { transform: 'translate(-50%,-120%) scale(1.5)', opacity: 1, offset: 0.25 },
+    { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.7)`, opacity: 0.9 },
+  ], { duration: 900, easing: 'cubic-bezier(.5,0,.6,1)' });
+  anim.onfinish = () => {
+    el.remove();
+    audio.sfx.coin(game ? game.stats.kills : 0);
+    const sc = $('score'); sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump');
+  };
+}
+
+function updateScore(dt) {
+  if (!game) return;
+  const target = game.score;
+  if (shownScore !== target) {
+    shownScore = target > shownScore ? Math.min(target, shownScore + Math.max(10, (target - shownScore) * dt * 6)) : target;
+    $('score').textContent = Math.round(shownScore).toLocaleString('he-IL');
+  }
+}
+
+const STREAKS = ['', '', 'דאבל!', 'טריפל!', 'מולטי קיל!', 'השמדה!', 'מכונת חיסול!'];
+function streakCall(n) {
+  audio.sfx.multi(n);
+  haptics.buzz('killLior');
+  const text = STREAKS[Math.min(n, STREAKS.length - 1)];
+  const el = document.createElement('div');
+  el.className = 'streak';
+  el.innerHTML = `<b></b><small>x${n} חיסולים ברצף</small>`;
+  el.querySelector('b').textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
 
 function bumpPitas() {
   for (const d of $('pitas').children) { d.classList.remove('bump'); void d.offsetWidth; d.classList.add('bump'); }
@@ -662,7 +731,7 @@ function updateViews(dt) {
         if (v.tick <= 0) { haptics.buzz('escaping'); v.tick = 0.08 + m.t * 0.25; }
       }
       v.mash.querySelector('.ring').setAttribute('stroke-dasharray', `${(k * 100).toFixed(1)} 100`);
-      v.mash.querySelector('.label').textContent = m.state === 'stunned' ? 'עכשיו!' : she(m) ? 'תכסח אותה!' : 'תכסח אותו!';
+      v.mash.querySelector('.label').textContent = m.state === 'stunned' ? 'עכשיו!' : m.hp / m.hpMax < 0.25 ? (she(m) ? 'סיים אותה!' : 'סיים אותו!') : m.state === 'bucketed' ? 'תכסח את הדלי!' : she(m) ? 'תכסח אותה!' : 'תכסח אותו!';
     }
     if (v.bubble) {
       v.bubbleT -= dt;
@@ -824,6 +893,24 @@ function finish() {
   add(`קומבו שיא: ${s.bestCombo}`);
   add(`פיתות שנשארו: ${game.food}/${game.foodMax}`);
   if (s.kills > 1) add(`חיסולים: ${s.kills}`);
+  if (s.bestStreak > 1) add(`רצף שיא: ${s.bestStreak}`);
+  // the score, counted up, with the end-of-level bonus spelled out
+  save.best = save.best || [];
+  const prev = save.best[levelIndex] || 0;
+  const record = won && game.score > prev;
+  if (record) { save.best[levelIndex] = game.score; persist(); }
+  const box = $('res-score');
+  box.innerHTML = '<b>0</b><small></small>';
+  const bonus = won && game.bonus ? `כולל בונוס: ${game.bonus.food} על פיתות, ${game.bonus.money} על כסף שנשאר` : '';
+  box.querySelector('small').textContent = record ? 'שיא חדש!' + (bonus ? ' · ' + bonus : '') : (prev ? `שיא: ${prev.toLocaleString('he-IL')}` : bonus);
+  box.classList.toggle('record', record);
+  const goal = game.score, t0 = performance.now();
+  const count = (now) => {
+    const k = Math.min(1, (now - t0) / 1100);
+    box.querySelector('b').textContent = Math.round(goal * (1 - Math.pow(1 - k, 3))).toLocaleString('he-IL');
+    if (k < 1 && $('result').classList.contains('show')) requestAnimationFrame(count);
+  };
+  requestAnimationFrame(count);
   const last = levelIndex === LEVELS.length - 1;
   $('res-next').hidden = !won;
   $('res-next').textContent = last ? 'לסיום' : 'לשלב הבא';
@@ -854,7 +941,8 @@ function frame(now) {
   if (!scene) return;
   // slow motion for a moment after a kill, so you see it land
   let dt = real;
-  if (slowT > 0 && !paused) { slowT -= real; dt = real * 0.3; }
+  if (freezeT > 0 && !paused) { freezeT -= real; dt = 0; }
+  else if (slowT > 0 && !paused) { slowT -= real; dt = real * 0.3; }
   if (killT > 0) { killT -= real; if (killT <= 0) $('kill').hidden = true; }
   if (game && !paused) {
     if (game.phase === 'action') {
@@ -864,6 +952,7 @@ function frame(now) {
     if (game.events.length) handleEvents();
     scene.syncMice(dt);
     updateViews(dt);
+    updateScore(real);
     updateTicker(dt);
     if (ended) {
       endTimer -= dt;

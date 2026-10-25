@@ -924,6 +924,23 @@ export class World {
 }
 
 // Collision: push a circle out of walls and boxes.
+// Is a straight walk from (x0,z0) to (x1,z1) clear of furniture, door frames and open doors for a body of radius r?
+// (Slab test of the segment against every collider grown by r.)
+export function clearLine(world, x0, z0, x1, z1, r) {
+  const dx = x1 - x0, dz = z1 - z0;
+  for (const b of world.colliders) {
+    const minX = b.minX - r, maxX = b.maxX + r, minZ = b.minZ - r, maxZ = b.maxZ + r;
+    if (Math.max(x0, x1) < minX || Math.min(x0, x1) > maxX || Math.max(z0, z1) < minZ || Math.min(z0, z1) > maxZ) continue;
+    let t0 = 0, t1 = 1;
+    if (Math.abs(dx) < 1e-9) { if (x0 < minX || x0 > maxX) continue; }
+    else { let a = (minX - x0) / dx, c = (maxX - x0) / dx; if (a > c) [a, c] = [c, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, c); }
+    if (Math.abs(dz) < 1e-9) { if (z0 < minZ || z0 > maxZ) continue; }
+    else { let a = (minZ - z0) / dz, c = (maxZ - z0) / dz; if (a > c) [a, c] = [c, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, c); }
+    if (t0 <= t1) return false;
+  }
+  return true;
+}
+
 export function collide(world, p, r) {
   const cx = Math.floor(p.x / CELL), cz = Math.floor(p.z / CELL);
   for (let i = 0; i < 2; i++) {

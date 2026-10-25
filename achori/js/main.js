@@ -120,7 +120,7 @@ function idoCall() {
   persist();
   let msg = pick('ido');
   if (save.ido === 10) msg = 'פנית לסוללת אידו 10 פעמים. אף אחד לא ענה. כל הכבוד על ההתמדה.';
-  if (save.ido === 50) msg = 'פנייה מס׳ 50! סוללת אידו שלחו לך מגנט למקרר. העכבר אכל אותו.';
+  if (save.ido === 50) msg = 'פנייה מס׳ 50! סוללת אידו שלחו לך מגנט למקרר. ליאור אכלה אותו.';
   toast(msg, 'ido', 3400);
   const b = $('ido-btn');
   b.classList.remove('ring'); void b.offsetWidth; b.classList.add('ring');
@@ -437,21 +437,21 @@ function handleEvents() {
         scene.shake = 1;
         flash();
         haptics.buzz('snap');
-        if (at) { pop(at.x, at.y - 70, 'נתפס!', 'big'); burstAt(at, 14, '#e0c08a', 6); }
+        if (at) { pop(at.x, at.y - 70, she(m) ? 'נתפסה!' : 'נתפס!', 'big'); burstAt(at, 14, '#e0c08a', 6); }
         if (m && m.type === 'lior') say(m, pick('liorCaught'));
         break;
       case 'glued':
         audio.sfx.glue();
         haptics.buzz('glue');
         audio.heat(true);
-        if (at) pop(at.x, at.y - 60, 'נדבק!', 'green');
+        if (at) pop(at.x, at.y - 60, she(m) ? 'נדבקה!' : 'נדבק!', 'green');
         if (m && m.type === 'lior') say(m, pick('liorGlued'));
         break;
       case 'eat':
         audio.sfx.chomp();
         haptics.buzz('eat');
         audio.heat(true);
-        if (at) pop(at.x, at.y - 60, 'נעצר לאכול!', '');
+        if (at) pop(at.x, at.y - 60, she(m) ? 'נעצרה לאכול!' : 'נעצר לאכול!', '');
         if (m && m.type === 'lior') say(m, pick('liorEat'));
         break;
       case 'hit':
@@ -470,7 +470,7 @@ function handleEvents() {
       case 'free':
         audio.sfx.free();
         haptics.buzz('free');
-        if (at) pop(at.x, at.y - 60, 'ברח!', 'red');
+        if (at) pop(at.x, at.y - 60, she(m) ? 'ברחה!' : 'ברח!', 'red');
         if (m && m.type === 'lior') say(m, pick('liorFree'));
         scene.syncItems();
         break;
@@ -494,7 +494,7 @@ function handleEvents() {
         bumpPitas();
         break;
       case 'escaped':
-        if (at) pop(at.x, at.y - 50, 'ברח עם פיתה!', 'red');
+        if (at) pop(at.x, at.y - 50, she(m) ? 'ברחה עם פיתה!' : 'ברח עם פיתה!', 'red');
         renderHud();
         break;
       case 'left':
@@ -563,7 +563,7 @@ function killStamp(lior) {
   const left = miceLeft();
   $('kill-img').src = lior ? 'img/lior_ko.webp' : 'img/minion_run.webp';
   $('kill-img').classList.toggle('flat', !lior);
-  $('kill-title').textContent = lior ? 'ליאור באום חוסל!' : 'באומון חוסל!';
+  $('kill-title').textContent = lior ? 'ליאור באום חוסלה!' : 'באומון חוסל!';
   $('kill-sub').textContent = left > 0 ? `נשארו עוד ${left} ${left === 1 ? 'עכבר' : 'עכברים'}` : 'האתר נקי!';
   el.classList.toggle('big', lior);
   el.hidden = false;
@@ -573,6 +573,9 @@ function killStamp(lior) {
   const chip = $('left-mice');
   chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump');
 }
+
+// Lior Baum is a she; the henchmen are he
+const she = (m) => !!m && m.type === 'lior';
 
 function bumpPitas() {
   for (const d of $('pitas').children) { d.classList.remove('bump'); void d.offsetWidth; d.classList.add('bump'); }
@@ -587,7 +590,7 @@ function viewFor(m) {
   hp.innerHTML = '<i></i>';
   const mash = document.createElement('div');
   mash.className = 'mash';
-  mash.innerHTML = '<svg viewBox="0 0 100 100"><circle class="ring-bg" cx="50" cy="50" r="44"/><circle class="ring" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="100 100"/></svg><div class="label">תכסח אותו!</div>';
+  mash.innerHTML = `<svg viewBox="0 0 100 100"><circle class="ring-bg" cx="50" cy="50" r="44"/><circle class="ring" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="100 100"/></svg><div class="label">${she(m) ? 'תכסח אותה!' : 'תכסח אותו!'}</div>`;
   mash.hidden = true;
   $('float').append(hp, mash);
   v = { hp, mash, bubble: null, bubbleT: 0 };
@@ -659,7 +662,7 @@ function updateViews(dt) {
         if (v.tick <= 0) { haptics.buzz('escaping'); v.tick = 0.08 + m.t * 0.25; }
       }
       v.mash.querySelector('.ring').setAttribute('stroke-dasharray', `${(k * 100).toFixed(1)} 100`);
-      v.mash.querySelector('.label').textContent = m.state === 'stunned' ? 'עכשיו!' : 'תכסח אותו!';
+      v.mash.querySelector('.label').textContent = m.state === 'stunned' ? 'עכשיו!' : she(m) ? 'תכסח אותה!' : 'תכסח אותו!';
     }
     if (v.bubble) {
       v.bubbleT -= dt;
@@ -806,7 +809,7 @@ function finish() {
     haptics.buzz('lose');
   }
   $('res-img').src = won ? 'img/lior_ko.webp' : 'img/lior_eat.webp';
-  $('res-title').textContent = won ? 'ליאור חוסל!' : 'העכברים ניצחו';
+  $('res-title').textContent = won ? 'ליאור חוסלה!' : 'העכברים ניצחו';
   $('res-line').textContent = won ? pick('win') : pick('lose');
   const st = $('res-stars').children;
   [...st].forEach((s, i) => {

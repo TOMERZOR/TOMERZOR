@@ -1,6 +1,6 @@
 # הרוג את העכבר באחורי
 
-A phone game. Lior Baum, the mouse who took over the site, comes up out of his burrows to steal Ofek's hummus and pita. You place blocks to steer his route and traps that hold him still, and when he's caught you hammer him with a flip-flop as fast as you can tap. Hebrew, portrait, static site, no build step:
+A phone game. Lior Baum, the mouse who took over the site (a she), comes up out of her burrows to steal Ofek's hummus and pita. You place blocks to steer her route and traps that hold her still, and when she's caught you hammer her with a flip-flop as fast as you can tap. Hebrew, portrait, static site, no build step:
 
 ```
 npx http-server -p 8093 -c-1 .     # from the repo root, then open http://localhost:8093/achori/
@@ -19,9 +19,9 @@ When you change a file, run `python3 achori/tools/version.py` so phones load the
 - **Combo.** Twelve hits in a row without a pause or a miss doubles the damage.
 - **Ofek's scream** freezes every mouse for a moment (and adds time to the ones already caught). **Shalev disconnects** sends them wandering away from the food.
 - **Shaked complains** to Ido's battalion so loudly that they refund ₪3 in the middle of the round, so you can buy another trap (from level 2).
-- When a mouse reaches the food it grabs a pita and runs for the nearest burrow. Kill it on the way and the pita comes back. If it gets away, the pita is gone. Lior always comes back from another burrow, having healed half his wounds.
+- When a mouse reaches the food it grabs a pita and runs for the nearest burrow. Kill it on the way and the pita comes back. If it gets away, the pita is gone. Lior always comes back from another burrow, having healed half her wounds.
 - Lose every pita and the mice win. Stars: 3 for keeping every pita, 2 for losing one, 1 otherwise.
-- From level 4 Lior is smart: he sees traps and glue and goes around them, so you have to block every other way.
+- From level 4 Lior is smart: she sees traps and glue and goes around them, so you have to block every other way.
 - The "סוללת אידו" button files a complaint. It never helps.
 
 Vibration: every tap, placement, hit, catch, kill, steal and ability has its own pattern (`js/haptics.js`), and a caught mouse ticks faster and faster just before it breaks free. Android uses the Vibration API; iPhone Safari has no vibration API, so on iOS 18+ each pulse is the system tap from toggling a hidden switch. It can be turned off on the title screen and in pause.

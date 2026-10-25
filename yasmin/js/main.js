@@ -406,7 +406,7 @@ function updateCaught(dt) {
   u.flashColor.value.setRGB(0.6, 0, 0);
   u.flash.value = k < 0.08 ? 0.5 : 0;
   jumpLayers(k);
-  game.yasmin.mixer.update(dt);
+  game.yasmin.mixer.update(dt); game.yasmin.updateProps(dt);
   game.player.update(dt, clockT);
   if (k > 3.0 && game.state === 'caught') {
     game.state = 'over';
@@ -658,7 +658,7 @@ function tick(dt) {
       camera.rotation.set(0.02, -Math.PI / 2 + Math.sin(clockT * 0.11) * 0.05, 0);
       if (Y.visible) {
         Y.position.x -= 0.5 * dt; Y.dir = -Math.PI / 2; Y.group.rotation.y = Y.dir;
-        Y.mixer.update(dt);
+        Y.mixer.update(dt); Y.updateProps(dt);
         if (Y.position.x < 15) { game.flashBlackout(0.4); Y.position.x = 62; }
       }
     } else if (st === 'card' || st === 'between' || st === 'ready') {

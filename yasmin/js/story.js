@@ -136,22 +136,22 @@ export class Story {
 
     // --- buckets
     this.rollBucket = place(this.bucketModel, 43, 0, 6.5, 0, 1);
-    place(this.bucketModel, 61.4, 0, 6.9, 0.4, 1);
+    place(this.bucketModel, 69.0, 0, 4.4, 0.4, 1);
     this.keyBucket = place(this.bucketModel, 68.3, 0, 6.6, -0.6, 1);
     place(this.bucketModel, 31.5, 0, 34.6, 2, 1);
-    W.addBox(60.9, 61.9, 6.5, 7.3); W.addBox(67.8, 68.8, 6.2, 7.0);
+    W.addBox(68.5, 69.5, 4.0, 4.8); W.addBox(67.8, 68.8, 6.2, 7.0);
 
     // --- Yasmin's store: shrine with candles, photo board, diary
     const J = W.bounds.J;
     for (let i = 0; i < 7; i++) {
       const c = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.08 + Math.random() * 0.12, 8), M.white);
-      c.position.set(J.X0 + 4.2 + i * 0.27, 0.8, J.Z1 - 1.0 + (i % 2) * 0.15); root.add(c);
+      c.position.set(J.X0 + 1.2 + i * 0.27, 0.8, J.Z1 - 1.4 + (i % 2) * 0.15); root.add(c);
       const fl = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffa040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false }));
       fl.scale.set(0.05, 0.09, 1); fl.position.set(c.position.x, c.position.y + c.geometry.parameters.height / 2 + 0.04, c.position.z); root.add(fl);
       W.dynamic.push({ update: (dt, t) => { fl.scale.y = 0.08 + Math.sin(t * 13 + i) * 0.015; fl.visible = this.candles; } });
     }
     this.candles = true;
-    W.addEmitter({ x: J.X0 + 5, y: 1.1, z: J.Z1 - 1.1, color: 0xff8a3a, power: 3, dist: 6, flicker: 'candle', on: () => this.candles });
+    W.addEmitter({ x: J.X0 + 2, y: 1.1, z: J.Z1 - 1.5, color: 0xff8a3a, power: 3, dist: 6, flicker: 'candle', on: () => this.candles });
     const loadImg = (src) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = src; });
     Promise.all(['img/photo_yasmin.jpg', 'img/photo_nevo.jpg', 'img/photo_labubu.jpg', 'img/photo_squash.jpg'].map(loadImg)).then(([py, pn, pl, ps]) => {
       const pin = (tex, x, y, z, ry, rz) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.36), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 })); m.position.set(x, y, z); m.rotation.set(0, ry, rz); root.add(m); return m; };
@@ -163,7 +163,7 @@ export class Story {
       pin(T.photoFrameTex(pn, 'נבו ה. — בידוד'), 47.98, 1.6, 6.2, -Math.PI / 2, 0.03);
     });
     W.wallDecal(T.scrawlTex('עובדת החודש', { color: 'rgba(150,10,10,0.9)', size: 90 }), J.X0 + 0.03, 2.1, 4.8, Math.PI / 2, 1.4, 0.35);
-    const diary = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.3), M.red); diary.position.set(J.X0 + 5.6, 0.775, J.Z1 - 0.95); root.add(diary);
+    const diary = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.03, 0.3), M.red); diary.position.set(J.X0 + 2.7, 0.775, J.Z1 - 1.3); root.add(diary);
     W.decal(T.bloodTex('smear'), J.X0 + 3, J.Z0 + 4, 2.5, 1.0, 0.3);
 
     // --- office: clipboard, tray, paper
@@ -427,7 +427,7 @@ export class Story {
       this.read('nevo'); this.discover('nevo'); if (n === 3) this.done('file');
       if (!this.flags.ghostCell) { this.flags.ghostCell = true; this.when(() => g.state === 'play' && P.pos.x < 59 && P.pos.z < 33, () => { this.apparition(49.6, 37, 5, true); this.after(0.6, () => g.audio.play('n_ruth', { pos: v3(this.nevo.position.x, 1.6, this.nevo.position.z), volume: 1.3 })); }); }
     } });
-    it({ label: 'קרא יומן', pos: () => v3(65.6, 0.8, 7.05), enabled: () => !locks.J, use: () => { this.read('diary'); } });
+    it({ label: 'קרא יומן', pos: () => v3(62.7, 0.8, 6.7), enabled: () => !locks.J, use: () => { this.read('diary'); } });
     it({ label: 'הסתכל על התמונות', pos: () => v3(60.1, 1.5, 4.8), enabled: () => !locks.J, use: () => { this.read('board'); } });
     it({ label: 'הסתכל', pos: () => this.labubu.position, range: 1.8, use: () => { this.discover('labubu'); g.ui.toast('הראש של הלבובו...'); } });
     // lockers: hide (and the flashlight one)
@@ -591,9 +591,9 @@ export class Story {
       it({ label: 'פתח את דלת היציאה (4 מפתחות)', pos: () => v3(35, 1.1, 43.8), range: 2.0, hold: 2.2, enabled: () => locks.X,
         onHold: () => { if (Math.random() < 0.08) g.audio.keys(); },
         use: () => { W.openDoor('X'); g.audio.play('sfx_door', { pos: v3(35, 1, 45), volume: 1.4 }); this.done('exit'); this.obj('gate').hidden = false; this.refresh(); this.finale(); } });
-      it({ label: 'פתח את המנעול בשער (החזק)', pos: () => v3(39.5, 1.1, 64.5), range: 2.2, hold: 4.5, enabled: () => !locks.X && gateClosed.v,
-        onHold: () => { if (Math.random() < 0.05) g.audio.keys(); if (Math.random() < 0.03) g.audio.play('sfx_gate', { pos: v3(39, 1, 65), volume: 0.6, sub: false }); },
-        use: () => { gateClosed.v = false; W.gate.target = 1; g.audio.play('sfx_gate', { pos: v3(38, 1, 65), volume: 1.5 }); g.audio.grind(4.5); this.done('gate'); this.obj('run').hidden = false; this.refresh(); } });
+      it({ label: 'פתח את המנעול בשער (החזק)', pos: () => v3(37.4, 1.1, 64.3), range: 2.4, hold: 4.5, enabled: () => !locks.X && gateClosed.v,
+        onHold: () => { if (Math.random() < 0.05) g.audio.keys(); if (Math.random() < 0.03) g.audio.play('sfx_gate', { pos: v3(37, 1, 65), volume: 0.6, sub: false }); },
+        use: () => { gateClosed.v = false; W.gate.target = 1; g.audio.play('sfx_gate', { pos: v3(36, 1, 65), volume: 1.5 }); g.audio.grind(4.5); this.done('gate'); this.obj('run').hidden = false; this.refresh(); } });
       this.when(() => P.pos.z > 67, () => g.escape());
       this.after(1.5, () => this.pa('y_pa5'));
       this.after(6, () => { Y.spawn(52, 27, 'patrol', -Math.PI / 2); });

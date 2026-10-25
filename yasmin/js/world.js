@@ -126,7 +126,7 @@ export class World {
     M.cardboard = std({ color: 0x8e6c45, roughness: 0.95 });
     M.tile = std({ color: 0xdfe3e0, roughness: 0.25, metalness: 0.05 });
     M.curtain = std({ color: 0x6f8f8a, roughness: 0.9, side: THREE.DoubleSide, transparent: true, opacity: 0.92 });
-    M.fence = new THREE.MeshStandardMaterial({ map: T.chainLinkTex(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.8, color: 0xb0b4b4 });
+    M.fence = new THREE.MeshStandardMaterial({ map: T.chainLinkTex(), alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.5, metalness: 0.8, color: 0xb0b4b4 });
     M.post = std({ color: 0x5c605c, roughness: 0.5, metalness: 0.7 });
     this.M = M;
     return M;
@@ -276,19 +276,16 @@ export class World {
     const M = this.M;
     const housing = new THREE.BoxGeometry(0.22, 0.07, 1.3);
     const tubeG = new THREE.CylinderGeometry(0.025, 0.025, 1.2, 8); tubeG.rotateX(Math.PI / 2);
+    // housings are merged into one mesh; tubes are one instanced mesh whose per-instance colour is the brightness
+    const hb = new Batcher();
     const add = (x, z, along = 'z', room) => {
-      const g = new THREE.Group();
-      g.position.set(x, H - 0.04, z);
-      if (along === 'x') g.rotation.y = Math.PI / 2;
-      const h = new THREE.Mesh(housing, M.tubeHousing); g.add(h);
-      const tm = M.tube.clone();
-      const t1 = new THREE.Mesh(tubeG, tm); t1.position.set(-0.05, -0.05, 0); g.add(t1);
-      const t2 = new THREE.Mesh(tubeG, tm); t2.position.set(0.05, -0.05, 0); g.add(t2);
-      this.root.add(g);
-      const f = { x, z, y: H - 0.15, group: g, mat: tm, room, mode: 0, phase: Math.random() * 100, level: 1, on: true, emergency: false, base: 1 };
+      const ry = along === 'x' ? Math.PI / 2 : 0;
+      hb.add(housing, M.tubeHousing, x, H - 0.04, z, ry);
+      const f = { x, z, y: H - 0.15, ry, room, mode: 0, phase: Math.random() * 100, level: 1, on: true, emergency: false, base: 1 };
       const r = Math.random();
       f.mode = r < 0.12 ? 1 : r < 0.16 ? 2 : r < 0.2 ? 3 : 0; // flicker, strobe, dead
       if (room === 'm') f.mode = r < 0.5 ? 1 : 0;
+      f.i = this.fixtures.length;
       this.fixtures.push(f);
       return f;
     };
@@ -305,6 +302,22 @@ export class World {
     }
     // the room with the cameras is dim: monitors light it
     for (const f of this.fixtures) if (f.room === 'c') f.mode = 3;
+    hb.build(this.root, { cast: false, receive: false });
+    const tubeMat = new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: true });
+    this.tubes = new THREE.InstancedMesh(tubeG, tubeMat, this.fixtures.length * 2);
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1);
+    this.fixtures.forEach((f, i) => {
+      q.setFromEuler(e.set(0, f.ry, 0));
+      for (const k of [0, 1]) {
+        const off = (k ? 0.05 : -0.05);
+        m4.compose(new THREE.Vector3(f.x + Math.cos(f.ry) * off, H - 0.09, f.z - Math.sin(f.ry) * off), q, one);
+        this.tubes.setMatrixAt(i * 2 + k, m4);
+        this.tubes.setColorAt(i * 2 + k, new THREE.Color(1, 1, 1));
+      }
+    });
+    this.tubes.frustumCulled = false;
+    this.root.add(this.tubes);
+    this._tc = new THREE.Color();
     // emergency red lights near key spots (used when the power is out)
     this.emergency = [];
     for (const [x, z] of [[3, 5], [16, 5], [30, 5], [2, 13], [17, 13], [30, 13], [28, 9], [17, 23], [10, 9]]) {
@@ -348,6 +361,7 @@ export class World {
   updateLights(dt, t, pp, yasmin) {
     // fixture emissive and visibility
     const cand = [];
+    this.tubes.instanceColor.needsUpdate = true;
     for (const f of this.fixtures) {
       let threat = 0;
       if (yasmin && yasmin.visible) {
@@ -356,8 +370,9 @@ export class World {
       }
       const lv = this.power ? this.fixtureLevel(f, t, threat) : 0;
       f.level = lv;
-      f.mat.emissiveIntensity = 0.15 + lv * 5;
-      f.mat.emissive.setHex(this.alarm > 0 ? 0xffb0a0 : 0xe8f4ff);
+      const b = 0.06 + lv * 4.2;
+      if (this.alarm > 0) this._tc.setRGB(b, b * 0.68, b * 0.62); else this._tc.setRGB(b * 0.92, b * 0.97, b);
+      this.tubes.setColorAt(f.i * 2, this._tc); this.tubes.setColorAt(f.i * 2 + 1, this._tc);
       const d = Math.hypot(f.x - pp.x, f.z - pp.z);
       if (d < 22) cand.push([d - lv * 2, f]);
     }
@@ -365,10 +380,10 @@ export class World {
       let lv = e.onFn && !e.onFn() ? 0 : 1;
       if (e.flicker === 'candle') lv *= 0.75 + 0.25 * Math.sin(t * 11 + e.phase) * Math.sin(t * 7.3);
       if (e.flicker === 'bad') lv *= Math.sin(t * 9 + e.phase) * Math.sin(t * 2.1) > 0.75 ? 0.1 : 1;
-      if (e.color !== 0xff8a3a && e.flicker !== 'candle' && !this.power && e.color !== 0x9fc4c8) lv = 0;
+      if (!e.outdoor && e.color !== 0xff8a3a && e.flicker !== 'candle' && !this.power && e.color !== 0x9fc4c8) lv = 0;
       e.level = lv;
       const d = Math.hypot(e.x - pp.x, e.z - pp.z);
-      if (d < 16 && lv > 0) cand.push([d - 4, e]);
+      if (d < (e.outdoor ? 40 : 16) && lv > 0) cand.push([e.outdoor ? d - 30 : d - 4, e]);
     }
     const emerg = !this.power || this.alarm > 0;
     for (const e of this.emergency) {
@@ -559,7 +574,7 @@ export class World {
       const pz = along ? J.Z0 + 0.25 : J.Z0 + 0.8 + (i - 13) * 0.38;
       this.mop(b, px, pz, along ? 0.25 : 0, along ? 0 : -0.25);
     }
-    this.table(b, J.X0 + 5, J.Z1 - 1.0, 2.2, 0.8);
+    this.table(b, J.X0 + 2.0, J.Z1 - 1.4, 2.2, 0.8);
     this.addBox(J.X0 + 0.2, J.X1 - 0.2, J.Z0, J.Z0 + 0.5);
 
     // Corridors: a few lockers to hide in, a bench, a fire extinguisher, a drinking fountain
@@ -729,13 +744,8 @@ export class World {
     for (const [x, z, lit] of [[10, 53, 0], [62, 53, 0], [26, 63, 1], [48, 63, 1]]) {
       b.add(new THREE.CylinderGeometry(0.07, 0.1, 6, 8), M.post, x, 3, z);
       b.add(box, M.darkMetal, x, 6, z + 0.2, 0, 0.6, 0.3, 0.4);
-      let s = null;
-      if (lit) {
-        s = new THREE.SpotLight(0xffe2b0, 0, 32, 0.75, 0.6, 1.2);
-        s.position.set(x, 5.9, z + 0.3);
-        s.target.position.set(x + (36 - x) * 0.3, 0, z - 6);
-        this.scene.add(s); this.scene.add(s.target);
-      }
+      const s = null;
+      this.addEmitter({ x, y: 5.6, z: z + 0.4, color: 0xffe2b0, power: 70, dist: 30, outdoor: true, on: () => this.floodOn });
       const lamp = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25), new THREE.MeshBasicMaterial({ color: 0xffe9c0 }));
       lamp.position.set(x, 5.84, z + 0.41); lamp.rotation.x = 0.4; this.root.add(lamp);
       this.flood.push({ s, lamp, x, z });
@@ -751,7 +761,7 @@ export class World {
     for (let k = 0; k <= 4; k++) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, fenceH, 0.06), M.post); r.position.set(-gw / 2 + k * gw / 4, fenceH / 2, 0); gate.add(r); }
     const chain = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.015, 6, 12), M.chrome); chain.position.set(gw / 2 - 0.1, 1.1, 0.05); gate.add(chain);
     const pad = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.05), M.yellow); pad.position.set(gw / 2 - 0.1, 0.98, 0.07); gate.add(pad);
-    gate.position.set(16 * CELL + gw / 2, 0, 32 * CELL + CELL / 2);
+    gate.position.set(15 * CELL + gw / 2, 0, 32 * CELL + CELL / 2);
     gate.traverse(o => { if (o.isMesh) o.castShadow = true; });
     this.root.add(gate);
     this.gate = { group: gate, open: 0, target: 0, x0: gate.position.x };
@@ -782,6 +792,10 @@ export class World {
     sky.position.set(36, 0, 36);
     this.sky = sky;
     this.root.add(sky);
+    const hills = new THREE.Mesh(new THREE.CylinderGeometry(150, 150, 30, 64, 1, true), new THREE.MeshBasicMaterial({ map: T.hillsTex(), transparent: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+    hills.material.map.repeat.set(3, 1);
+    hills.position.set(36, 12, 50); hills.renderOrder = -1;
+    this.root.add(hills);
   }
 
   // Room plates, exit signs, posters and wall scrawls.
@@ -850,12 +864,7 @@ export class World {
     }
     const outside = pp.z > 50;
     this.moon.intensity += ((outside ? 0.35 : 0) - this.moon.intensity) * Math.min(1, dt * 2);
-    for (const f of this.flood) {
-      if (!f.s) continue;
-      const lv = outside ? (this.alarm ? 0.5 + 0.5 * Math.sin(t * 9 + f.x) : 1) : 0;
-      f.s.intensity = lv * 420;
-      f.s.color.setHex(this.alarm ? 0xff6050 : 0xffe2b0);
-    }
+    this.floodOn = outside;
   }
 }
 

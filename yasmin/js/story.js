@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { locks, gateClosed, roomAt, toCell, lineOfSight, opaque } from './map.js';
 import * as T from './textures.js';
 import { TAPE_SPOTS, MAZE_GUIDE, tapeMesh, Ghost, missingPosterTex, loadTapes } from './ruth.js';
+const VER = new URL(import.meta.url).searchParams.get('v') || '0';
 
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -95,7 +96,7 @@ const NOTES = {
 יום 35: רות ניסתה לברוח דרך המבוך. ניקיתי גם אותה.
 יום 40: יש חדש. הוא הולך עם נעליים על הרטוב.
 <span class="blood">הלילה אני מנקה אותו.</span>`,
-  missing: `<h3>מודעה על הקיר</h3><img src="img/ruth_photo.jpg" alt="">
+  missing: `<h3>מודעה על הקיר</h3><img src="img/ruth_photo.jpg?v=${VER}" alt="">
 <b>נעדרת: רות ל.</b>
 נראתה לאחרונה במשמרת לילה, ליד המבוך, לפני שלושה חודשים.
 ממישהו שראה אותה בלילה ההוא נשאר רק פתק: "היא הלכה יחפה".
@@ -191,7 +192,7 @@ export class Story {
     }
     this.candles = true;
     W.addEmitter({ x: J.X0 + 2, y: 1.1, z: J.Z1 - 1.5, color: 0xff8a3a, power: 3, dist: 6, flicker: 'candle', on: () => this.candles });
-    const loadImg = (src) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = src; });
+    const loadImg = (src) => new Promise(r => { const im = new Image(); im.onload = () => r(im); im.src = `${src}?v=${VER}`; });
     Promise.all(['img/photo_yasmin.jpg', 'img/photo_nevo.jpg', 'img/photo_labubu.jpg', 'img/photo_squash.jpg'].map(loadImg)).then(([py, pn, pl, ps]) => {
       const pin = (tex, x, y, z, ry, rz) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.36), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 })); m.position.set(x, y, z); m.rotation.set(0, ry, rz); root.add(m); return m; };
       pin(T.photoFrameTex(py, 'אני ♥'), J.X0 + 0.02, 1.65, 5.0, Math.PI / 2, 0.05);

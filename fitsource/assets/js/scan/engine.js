@@ -108,8 +108,13 @@ const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 const GROUP_TO_CATEGORY = { outerwear: "outerwear", top: "top", bottom: "bottom", dress: "dress", footwear: "footwear", bag: "bag", headwear: "headwear", eyewear: "eyewear" };
 
 /** Search words: the brand and the print when the photo shows them, else the colour and the garment. */
+const fold = (s) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export function deviceQueries(it, name, colorWord) {
-  const printed = [it.brand, it.printed && !(it.brand || "").toLowerCase().includes(it.printed.toLowerCase()) ? it.printed : ""].filter(Boolean).join(" ");
+  // the print without the brand's own words, so "Stüssy" + "STUSSY BURLY THREADS" searches "Stüssy BURLY THREADS"
+  const brandWords = new Set(fold(it.brand || "").split(/\s+/));
+  const rest = (it.printed || "").split(/\s+/).filter((w) => w && !brandWords.has(fold(w))).join(" ");
+  const printed = [it.brand, rest].filter(Boolean).join(" ");
   if (printed) return { query: `${printed} ${name}`, queryEn: `${printed} ${it.name.toLowerCase()}` };
   return { query: colorWord ? `${name} ${colorWord}` : name, queryEn: it.query };
 }

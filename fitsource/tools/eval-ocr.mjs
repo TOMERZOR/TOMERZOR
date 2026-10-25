@@ -25,6 +25,6 @@ for (const f of file ? [file] : []) {
   const t0 = Date.now();
   const lines = await readText(ocr, { data: img.data, width: img.width, height: img.height }, region);
   console.log(path.basename(f), `${Date.now() - t0} ms`);
-  for (const l of lines) console.log("  ", l.score.toFixed(2), l.size.toFixed(3), JSON.stringify(l.text));
+  for (const l of lines) console.log("  ", l.score.toFixed(2), l.size.toFixed(3), `x${l.x} y${l.y}`, JSON.stringify(l.text));
   console.log("  =>", printedText(lines));
 }

@@ -2,7 +2,7 @@
 // read lines into search words, and where those words go.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boxesFromMap, ctcDecode, printedText, resample, OCR_MODELS } from "../assets/js/scan/ocr.js";
+import { boxesFromMap, ctcDecode, printedText, brandOfWord, resample, OCR_MODELS } from "../assets/js/scan/ocr.js";
 import { attachText } from "../assets/js/scan/detect.js";
 
 globalThis.location = new URL("https://tomerzor.github.io/TOMERZOR/fitsource/");
@@ -90,11 +90,13 @@ test("the text goes to the garment it is printed on", () => {
 
 test("search words for a piece with a print", () => {
   assert.deepEqual(deviceQueries({ name: "T-shirt", query: "light grey t-shirt", brand: "Nude Project", printed: "NUDE MANSION" }, "חולצת טי", "אפור בהיר"), {
-    query: "Nude Project NUDE MANSION חולצת טי",
-    queryEn: "Nude Project NUDE MANSION t-shirt",
+    query: "Nude Project MANSION חולצת טי",
+    queryEn: "Nude Project MANSION t-shirt",
   });
   // the print is the brand name: said once
   assert.equal(deviceQueries({ name: "hoodie", query: "black hoodie", brand: "Stone Island", printed: "STONE ISLAND" }, "קפוצ'ון", "שחור").query, "Stone Island קפוצ'ון");
+  assert.equal(deviceQueries({ name: "T-shirt", query: "blue t-shirt", brand: "Stüssy", printed: "STUSSY BURLY THREADS" }, "חולצת טי", "כחולה").query, "Stüssy BURLY THREADS חולצת טי");
+  assert.equal(deviceQueries({ name: "Hoodie", query: "brown hoodie", brand: null, printed: "CreatedBy" }, "קפוצ'ון", "חום").queryEn, "CreatedBy hoodie");
   // nothing read: colour and garment, as before
   assert.deepEqual(deviceQueries({ name: "baggy jeans", query: "light wash baggy jeans", printed: "" }, "ג'ינס רחב", "בהיר"), { query: "ג'ינס רחב בהיר", queryEn: "light wash baggy jeans" });
   // Google searches a named piece in English; Israeli shops keep Hebrew
@@ -103,6 +105,26 @@ test("search words for a piece with a print", () => {
   assert.equal(queryFor(google, "Nude Project חולצת טי", "Nude Project t-shirt", true), "Nude Project t-shirt");
   assert.equal(queryFor(google, "חולצת טי", "t-shirt"), "חולצת טי");
   assert.equal(queryFor(tx, "Nude Project חולצת טי", "Nude Project t-shirt", true), "Nude Project חולצת טי");
+});
+
+test("brands are recognised through misreads and cut-off words", () => {
+  assert.equal(brandOfWord("EBRHARTT")?.brand, "Carhartt WIP"); // two letters misread
+  assert.equal(brandOfWord("STUSS")?.brand, "Stüssy"); // the arm hides the Y
+  assert.equal(brandOfWord("vithlo,")?.brand, "Scuffers"); // "withlove", cut short and misread
+  assert.equal(brandOfWord("Represents")?.brand, "Represent");
+  assert.equal(brandOfWord("KITH")?.brand, "Kith");
+  // short names must be exact, and ordinary words stay ordinary
+  for (const w of ["KITE", "GUEST", "PARADE", "SUMMER", "LEISURE", "MANSION", "CHAMP", "IBIZA", "STUDIOS", "DREAM"]) assert.equal(brandOfWord(w), null, w);
+  // the misread word is written as the brand spells it
+  assert.deepEqual(printedText([{ text: "EBRHARTT", score: 0.92, size: 0.051, x: 0.3, y: 0.38 }, { text: "WIP", score: 0.88, size: 0.043, x: 0.4, y: 0.44 }]), { text: "CARHARTT", brand: "Carhartt WIP", y: 0.4055 });
+  // a tagline right under the headline is kept; a scrap above it is not
+  const stussy = printedText([
+    { text: "STUSS", score: 0.97, size: 0.072, x: 0.275, y: 0.577 },
+    { text: "BURLY THREADS", score: 0.89, size: 0.026, x: 0.344, y: 0.635 },
+    { text: "Leisure", score: 0.95, size: 0.03, x: 0.3, y: 0.5 },
+  ]);
+  assert.equal(stussy.text, "STUSSY BURLY THREADS");
+  assert.equal(stussy.brand, "Stüssy");
 });
 
 test("OCR models are pinned to a revision", () => {

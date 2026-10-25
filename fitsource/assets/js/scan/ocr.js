@@ -171,6 +171,7 @@ const BRANDS = [
   ["Levi's", ["levi's", "levis"]],
   ["Calvin Klein", ["calvin klein"]],
   ["Represent", ["represent"]],
+  ["Scuffers", ["scuffers", "withlove"]],
   ["Fear of God Essentials", ["fear of god", "essentials"]],
   ["Corteiz", ["corteiz", "crtz"]],
   ["Trapstar", ["trapstar"]],
@@ -207,27 +208,78 @@ const clean = (s) => s.toLowerCase().replace(/[^a-z0-9&'\s-]/g, " ").replace(/\s
  * From recognised lines, the words worth searching for: confident lines with
  * real words, the largest lettering first, and a brand when one is named.
  */
+/** Edit distance (insertions, deletions, substitutions). */
+export function editDistance(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const row = [i];
+    for (let j = 1; j <= b.length; j++) row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = row;
+  }
+  return prev[b.length];
+}
+
+/**
+ * The brand a single read word names, allowing for a misread letter or two
+ * ("EBRHARTT") and a word cut short by an arm or a fold ("STUSS"). Only
+ * one-word names of 6 letters or more are matched loosely; shorter ones
+ * ("KITH", "GUESS") must be read exactly, or ordinary words would match.
+ */
+export function brandOfWord(word) {
+  const w = clean(word).replace(/[^a-z0-9]/g, "");
+  if (w.length < 3) return null;
+  for (const [brand, aliases] of BRANDS) {
+    for (const a of aliases) {
+      if (/\s/.test(a)) continue;
+      const alias = a.replace(/[^a-z0-9]/g, "");
+      if (w === alias) return { brand, alias: a };
+      if (alias.length < 6 || w.length < 5) continue;
+      const near = editDistance(w, alias) <= (alias.length >= 8 ? 2 : 1);
+      const cut = w.length < alias.length && w.length >= alias.length - 2 && editDistance(w, alias.slice(0, w.length)) <= 1;
+      if (near || cut) return { brand, alias: a };
+    }
+  }
+  return null;
+}
+
+const sameCase = (model, word) => (model === model.toUpperCase() ? word.toUpperCase() : word);
+const readingOrder = (a, b) => (Math.abs(a.y - b.y) < 0.5 * Math.min(a.size, b.size) ? a.x - b.x : a.y - b.y);
+
+/**
+ * From recognised lines, the words worth searching for: confident lines with
+ * real words, the largest lettering first (plus a tagline set right under it,
+ * like "BURLY THREADS" under "STÜSSY"), and a brand when one is named.
+ */
 export function printedText(lines, { maxWords = 4 } = {}) {
-  // Short scraps (often a piece of curved lettering) are only kept when they name a brand.
-  const isBrand = (t) => BRANDS.some(([, aliases]) => aliases.includes(clean(t)));
   const letters = (t) => (t.match(/[A-Za-z]/g) || []).length;
-  const readable = lines.filter((l) => l.score >= MIN_SCORE && l.size >= 0.012 && (letters(l.text) >= 4 || isBrand(l.text)) && letters(l.text) >= l.text.replace(/\s/g, "").length * 0.7);
+  // Short scraps (often a piece of curved lettering) are only kept when they name a brand.
+  const readable = lines.filter((l) => l.score >= MIN_SCORE && l.size >= 0.012 && (letters(l.text) >= 4 || brandOfWord(l.text)) && letters(l.text) >= l.text.replace(/\s/g, "").length * 0.7);
   // the headline lettering only: fine print and half-read bits around it are noise
   const top = readable.length ? readable[0].size : 0;
-  const good = readable.filter((l) => l.size >= top * 0.6);
-  // the biggest lettering, read top to bottom, left to right
-  const picked = good.slice(0, 3).sort((a, b) => (Math.abs(a.y - b.y) < 0.5 * Math.min(a.size, b.size) ? a.x - b.x : a.y - b.y));
+  const head = readable.filter((l) => l.size >= top * 0.6).slice(0, 3).sort(readingOrder);
+  const bottom = Math.max(...head.map((l) => l.y + l.size));
+  const tagline = readable.find((l) => !head.includes(l) && l.size >= top * 0.3 && l.score >= 0.88 && letters(l.text) >= 4 && l.y + l.size / 2 >= bottom - top / 4 && l.y <= bottom + 3 * top); // boxes are padded, so they can overlap a little
+  const picked = tagline ? [...head, tagline] : head;
+
+  let hit = null;
+  const all = ` ${clean(picked.map((l) => l.text).join(" "))} `;
+  const named = BRANDS.find(([, aliases]) => aliases.some((a) => /\s/.test(a) && all.includes(` ${a} `)));
+  if (named) hit = named[0];
   const words = [];
   for (const l of picked) {
     for (const w of l.text.split(/\s+/)) {
-      const word = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9!&'.]+$/g, "");
-      if (word.length >= 2 && /[A-Za-z]/.test(word) && !words.some((x) => x.toLowerCase() === word.toLowerCase())) words.push(word);
+      let word = w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9!&'.]+$/g, "");
+      if (word.length < 2 || !/[A-Za-z]/.test(word)) continue;
+      const b = brandOfWord(word);
+      if (b) {
+        hit = hit || b.brand;
+        word = sameCase(word, b.alias); // as the brand spells it, not as it was misread
+      }
+      if (!words.some((x) => x.toLowerCase() === word.toLowerCase())) words.push(word);
     }
   }
   const text = words.slice(0, maxWords).join(" ");
-  const all = ` ${clean(good.map((l) => l.text).join(" "))} `;
-  const hit = BRANDS.find(([, aliases]) => aliases.some((a) => all.includes(` ${a} `)));
   // where the lettering sits (fraction of the region's height), to tell which garment it is on
-  const y = picked.length ? picked.reduce((t, l) => t + l.y + l.size / 2, 0) / picked.length : null;
-  return { text, brand: hit ? hit[0] : null, y };
+  const y = head.length ? head.reduce((t, l) => t + l.y + l.size / 2, 0) / head.length : null;
+  return { text, brand: hit, y };
 }

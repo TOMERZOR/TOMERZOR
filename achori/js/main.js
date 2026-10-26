@@ -87,9 +87,29 @@ async function load() {
 }
 
 // ---------- layout ----------
+// On iPhone, full screen (added to the home screen with a see-through status bar, or Safari
+// with its bars tucked away) the page is told the screen is shorter than it really is, so a
+// strip at the bottom shows nothing. Measure that strip; the background, the 3D view and the
+// tray's backdrop are stretched into it while every button stays above it.
+let probe = null;
+function bottomGap() {
+  if (!probe) {
+    probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none';
+    document.body.appendChild(probe);
+  }
+  let full = Math.max(window.innerHeight, probe.getBoundingClientRect().height || 0);
+  const ios = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  if (ios && standalone && screen.height) full = Math.max(full, window.innerWidth < window.innerHeight ? screen.height : screen.width);
+  return Math.max(0, Math.min(160, Math.round(full - window.innerHeight)));
+}
+
 function layout() {
+  const gap = bottomGap();
+  document.documentElement.style.setProperty('--gap', gap + 'px');
   if (!scene) return;
-  const w = window.innerWidth, h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight + gap;
   let top = 70, bottom = 150;
   if (!$('hud').hidden) top = $('hud').getBoundingClientRect().bottom + 4;
   if (!$('tray').hidden) bottom = h - $('tray').getBoundingClientRect().top + 2;
@@ -1126,6 +1146,8 @@ function wire() {
   $('res-levels').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toLevels(); });
   $('end-btn').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toLevels(); });
   window.addEventListener('resize', () => requestAnimationFrame(layout));
+  window.addEventListener('orientationchange', () => setTimeout(layout, 300));
+  if (window.visualViewport) visualViewport.addEventListener('resize', () => requestAnimationFrame(layout));
   document.addEventListener('visibilitychange', () => { if (document.hidden && game && game.phase === 'action') pause(); });
   window.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());

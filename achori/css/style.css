@@ -442,3 +442,16 @@ h1 .big { font-size: clamp(84px, 27vw, 150px); color: var(--yellow); transform: 
 .mash .ring { stroke: #ff8a5c; stroke-width: 3.5; opacity: .75; }
 .mash .ring-bg { stroke-width: 3.5; stroke: rgba(0, 0, 0, .25); }
 .mash .shrink { stroke: var(--yellow); stroke-width: 5; }
+
+/* ---------- the strip iOS leaves at the bottom in full screen (see bottomGap in main.js) ---------- */
+:root { --gap: 0px; }
+#stage { inset: auto; top: 0; left: 0; right: 0; height: calc(100% + var(--gap)); }
+.title-art, .title-shade { height: calc(100% + var(--gap)); bottom: auto; }
+#tray::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: var(--gap); background: rgba(20, 13, 8, 0.85); pointer-events: none; }
+@media (min-width: 600px) { #tray::after { background: none; } }
+/* screens with a see-through or scrolling backdrop reach the real bottom; their contents stay above the strip */
+.dialog, .modal, #levels { bottom: calc(-1 * var(--gap)); }
+#levels::before { bottom: calc(-1 * var(--gap)); }
+.levels-list { padding-bottom: calc(var(--safe-b) + 24px + var(--gap)); }
+.modal.show { padding-bottom: calc(var(--safe-b) + 16px + var(--gap)); }
+.dlg-panel { bottom: calc(var(--safe-b) + 3vh + var(--gap)); }

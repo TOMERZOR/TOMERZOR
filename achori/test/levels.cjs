@@ -27,7 +27,7 @@ const port = process.argv[2] || 8093;
       g.spawnQueue.forEach((w) => { w.t = 0; });
       g.update(0.01);
       for (const m of g.mice) { if (m.respawnIn > 0) { m.respawnIn = 0.001; g.update(0.01); } }
-      for (const m of g.mice) if (m.alive) { m.state = 'caught'; m.t = 5; m.heldMax = 5; g.damage(m, m.hp, 'whack'); }
+      for (const m of g.mice) if (m.alive) { m.state = 'caught'; m.t = 5; m.heldMax = 5; while (m.alive) g.whack(m, 1); }
       g.update(0.01);
     });
     await p.waitForSelector('#result.show', { timeout: 8000 });

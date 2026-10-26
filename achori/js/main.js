@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Game, TOOLS, cellOf, MICE, BEAT } from './game.js';
+import { Game, TOOLS, cellOf, MICE } from './game.js';
 import { LEVELS, AREAS } from './levels.js';
 import { Scene, IMAGES, wx, wz } from './scene.js';
 import { LINES, pick, WHO, TOOL_INFO, HINTS } from './text.js';
@@ -51,7 +51,6 @@ const later = (ms, fn) => { const tok = levelToken; setTimeout(() => { if (tok =
 // ---------- screens ----------
 const SCREENS = ['loading', 'title', 'levels', 'dialog', 'pause', 'result', 'ending'];
 let inputBlockUntil = 0;
-let lastStep = 0; // performance.now() of the last game update
 function show(id) {
   for (const s of SCREENS) $(s).classList.toggle('show', s === id);
   // the finger that just closed a screen must not also land on the board
@@ -372,7 +371,7 @@ function onPointer(e) {
   audio.unlock();
   const x = e.clientX, y = e.clientY;
   if (game.phase === 'plan') return planTap(x, y);
-  if (game.phase === 'action') return actionTap(x, y, touchLag(e));
+  if (game.phase === 'action') return actionTap(x, y);
 }
 
 function planTap(x, y) {
@@ -413,17 +412,7 @@ function afterChange() {
   renderHud();
 }
 
-// How far past the last game update the finger actually touched, in game seconds, so the
-// ring is judged at the touch and not at the frame. The screen shows each frame a little
-// late, so a tap that looks right to the eye arrives a touch late: allow for that too.
-const SCREEN_LAG = 0.03;
-function touchLag(e) {
-  const since = Math.max(0, Math.min(0.1, (e.timeStamp - lastStep) / 1000));
-  const scale = freezeT > 0 ? 0 : slowT > 0 ? 0.3 : 1;
-  return since * scale - SCREEN_LAG;
-}
-
-function actionTap(x, y, lateBy = 0) {
+function actionTap(x, y) {
   const px = scene.cellPixels();
   let best = null, bestK = Infinity;
   for (const m of game.mice) {
@@ -436,10 +425,9 @@ function actionTap(x, y, lateBy = 0) {
     if (k < bestK) { bestK = k; best = { m, d, R, held }; }
   }
   if (best && bestK < 1) {
-    const res = game.whack(best.m, 1 - bestK, lateBy);
+    const res = game.whack(best.m, 1 - bestK);
     slap(x, y);
-    if (res === 'hit' || res === 'perfect' || res === 'good') onHit(best.m, x, y, res);
-    else if (res === 'off') { audio.sfx.whack(0.3); audio.sfx.squeak(1.5); haptics.buzz('refuse'); }
+    if (res === 'hit') onHit(best.m, x, y);
     return;
   }
   if (tool) {
@@ -461,20 +449,14 @@ function actionTap(x, y, lateBy = 0) {
   else game.miss(null);
 }
 
-function onHit(m, x, y, grade = 'hit') {
-  const perfect = grade === 'perfect';
-  const hot = game.combo >= BEAT.streakAt;
-  audio.sfx.whack(perfect ? 1.4 : hot ? 1.2 : 1, game.combo);
-  if (perfect) audio.sfx.perfect(game.combo);
-  freezeT = Math.max(freezeT, perfect ? 0.07 : 0.035);
+function onHit(m, x, y) {
+  audio.sfx.whack(game.combo >= 12 ? 1.3 : 1, game.combo);
+  freezeT = Math.max(freezeT, game.combo >= 12 ? 0.045 : 0.03);
   scene.hitFlash(m.id);
-  scene.shake = Math.min(1, scene.shake + (perfect ? 0.6 : 0.35));
-  haptics.buzz(perfect || hot ? 'hitHard' : 'hit');
-  if (grade === 'hit') {
-    const words = ['באם!', 'טראח!', 'בום!', 'פאק!', 'בננה!', 'קבום!', 'טוש!'];
-    if (Math.random() < 0.5) pop(x + (Math.random() - 0.5) * 60, y - 60, words[Math.floor(Math.random() * words.length)], Math.random() < 0.5 ? 'red' : '');
-  }
-  if (perfect) burstAt({ x, y }, 10, '#ffd23f', 6, 'star');
+  scene.shake = Math.min(1, scene.shake + 0.35);
+  haptics.buzz(game.combo >= 12 ? 'hitHard' : 'hit');
+  const words = ['באם!', 'טראח!', 'בום!', 'פאק!', 'בננה!', 'קבום!', 'טוש!'];
+  if (Math.random() < 0.5) pop(x + (Math.random() - 0.5) * 60, y - 60, words[Math.floor(Math.random() * words.length)], Math.random() < 0.5 ? 'red' : '');
   burstAt({ x, y }, 7, m.type === 'lior' ? '#9a9aa2' : '#8a5a36', 4, 'fur');
   if (Math.random() < 0.3) burstAt({ x, y }, 3, '#ffd23f', 5, 'star');
 }
@@ -492,7 +474,6 @@ function handleEvents() {
         renderHud();
         break;
       case 'snap':
-        firstHold();
         audio.sfx.snap();
         scene.syncItems();
         audio.heat(true);
@@ -503,7 +484,6 @@ function handleEvents() {
         if (m && m.type === 'lior') say(m, pick('liorCaught'));
         break;
       case 'bucket':
-        firstHold();
         audio.sfx.clang();
         scene.syncItems();
         audio.heat(true);
@@ -513,7 +493,6 @@ function handleEvents() {
         if (m && m.type === 'lior') say(m, pick('liorBucket'));
         break;
       case 'glued':
-        firstHold();
         audio.sfx.glue();
         haptics.buzz('glue');
         audio.heat(true);
@@ -521,19 +500,12 @@ function handleEvents() {
         if (m && m.type === 'lior') say(m, pick('liorGlued'));
         break;
       case 'eat':
-        firstHold();
         audio.sfx.chomp();
         scene.syncItems();
         haptics.buzz('eat');
         audio.heat(true);
         if (at) pop(at.x, at.y - 60, she(m) ? 'נעצרה לאכול!' : 'נעצר לאכול!', '');
         if (m && m.type === 'lior') say(m, pick('liorEat'));
-        break;
-      case 'beat':
-        if (m) judge(m, ev.grade);
-        break;
-      case 'offbeat':
-        if (m) judge(m, null, ev.early);
         break;
       case 'hit':
         if (m && at && ev.how === 'whack') floatText(at.x + (Math.random() - 0.5) * 30, at.y - 30, '-' + ev.n);
@@ -708,33 +680,6 @@ function updateScore(dt) {
   }
 }
 
-// the first catch ever explains the ring; the ring itself carries a reminder for a few more
-function firstHold() {
-  save.beatTips = (save.beatTips || 0) + 1;
-  if (!save.hints.ring) {
-    save.hints.ring = true;
-    persist();
-    hintQueue = [HINTS.ring];
-    nextHint();
-    later(6500, () => { if ($('hint-text').textContent === HINTS.ring) $('hint').hidden = true; });
-  }
-}
-
-const TARGET_R = 21; // the target ring, in the mash svg's 0..100 units
-
-// "מושלם!" / "טוב" / "מוקדם!" over the ring, and the ring itself flashes
-function judge(m, grade, early) {
-  const v = views.get(m.id);
-  const at = scene.mouseScreen(m);
-  const text = grade === 'perfect' ? 'מושלם!' : grade === 'good' ? 'טוב' : early ? 'מוקדם!' : 'מאוחר!';
-  pop(at.x, at.y - scene.cellPixels() * 1.25, text, grade === 'perfect' ? 'judge perfect' : grade === 'good' ? 'judge good' : 'judge off');
-  if (v) {
-    const svg = v.mash.querySelector('svg');
-    svg.classList.remove('hit-perfect', 'hit-good', 'hit-off'); void svg.getBoundingClientRect();
-    svg.classList.add('hit-' + (grade || 'off'));
-  }
-}
-
 const STREAKS = ['', '', 'דאבל!', 'טריפל!', 'מולטי קיל!', 'השמדה!', 'מכונת חיסול!'];
 function streakCall(n) {
   audio.sfx.multi(n);
@@ -761,8 +706,7 @@ function viewFor(m) {
   hp.innerHTML = '<i></i>';
   const mash = document.createElement('div');
   mash.className = 'mash';
-  // outer arc: how long the trap still holds; inner: the fixed target ring and the circle closing onto it
-  mash.innerHTML = `<svg viewBox="0 0 100 100"><circle class="ring-bg" cx="50" cy="50" r="46"/><circle class="ring" cx="50" cy="50" r="46" pathLength="100" stroke-dasharray="100 100"/><circle class="target" cx="50" cy="50" r="${TARGET_R}"/><circle class="shrink" cx="50" cy="50" r="46"/></svg><div class="label">${she(m) ? 'תכסח אותה!' : 'תכסח אותו!'}</div>`;
+  mash.innerHTML = `<svg viewBox="0 0 100 100"><circle class="ring-bg" cx="50" cy="50" r="44"/><circle class="ring" cx="50" cy="50" r="44" pathLength="100" stroke-dasharray="100 100"/></svg><div class="label">${she(m) ? 'תכסח אותה!' : 'תכסח אותו!'}</div>`;
   mash.hidden = true;
   $('float').append(hp, mash);
   v = { hp, mash, bubble: null, bubbleT: 0 };
@@ -844,7 +788,7 @@ function updateViews(dt) {
     if (held) {
       v.mash.style.left = s.x + 'px';
       v.mash.style.top = (s.y + 4) + 'px';
-      const size = px * 2.3;
+      const size = px * 1.9;
       v.mash.style.width = v.mash.style.height = size + 'px';
       const k = Math.max(0, m.t / m.heldMax);
       if (m.t < 0.8 && m.state !== 'stunned') {
@@ -852,15 +796,7 @@ function updateViews(dt) {
         if (v.tick <= 0) { haptics.buzz('escaping'); v.tick = 0.08 + m.t * 0.25; }
       }
       v.mash.querySelector('.ring').setAttribute('stroke-dasharray', `${(k * 100).toFixed(1)} 100`);
-      // the closing circle: it meets the target ring exactly on the beat, and keeps shrinking a little after
-      const off = m.beatT - m.beatP;
-      const r = off <= 0 ? TARGET_R + (46 - TARGET_R) * (-off / m.beatP) : Math.max(8, TARGET_R - (off / BEAT.good) * 10);
-      const shrink = v.mash.querySelector('.shrink');
-      shrink.setAttribute('r', r.toFixed(2));
-      const zone = Math.abs(off) <= BEAT.perfect ? 'perfect' : Math.abs(off) <= BEAT.good ? 'good' : '';
-      if (shrink.dataset.zone !== zone) { shrink.dataset.zone = zone; shrink.setAttribute('class', 'shrink ' + zone); }
-      v.mash.querySelector('.label').textContent = (save.beatTips || 0) < 4 ? 'לחץ כשהעיגולים נפגשים!'
-        : m.state === 'stunned' ? 'עכשיו!' : m.hp / m.hpMax < 0.25 ? (she(m) ? 'סיים אותה!' : 'סיים אותו!') : m.state === 'bucketed' ? 'תכסח את הדלי!' : she(m) ? 'תכסח אותה!' : 'תכסח אותו!';
+      v.mash.querySelector('.label').textContent = m.state === 'stunned' ? 'עכשיו!' : m.hp / m.hpMax < 0.25 ? (she(m) ? 'סיים אותה!' : 'סיים אותו!') : m.state === 'bucketed' ? 'תכסח את הדלי!' : she(m) ? 'תכסח אותה!' : 'תכסח אותו!';
     }
     if (v.bubble) {
       v.bubbleT -= dt;
@@ -870,9 +806,9 @@ function updateViews(dt) {
   }
   audio.heat(game.mice.some((m) => m.alive && game.isHeld(m)));
   // combo counter
-  if (game.combo >= 2) {
+  if (game.combo >= 3) {
     if (!comboEl) { comboEl = document.createElement('div'); comboEl.className = 'combo'; document.body.appendChild(comboEl); }
-    comboEl.innerHTML = `x${game.combo}<small>${game.combo >= BEAT.streakAt ? 'בקצב! נזק x1.5' : 'קומבו'}</small>`;
+    comboEl.innerHTML = `x${game.combo}<small>${game.combo >= 12 ? 'נזק כפול!' : 'קומבו'}</small>`;
     comboEl.style.transform = `scale(${1 + Math.min(0.6, game.combo * 0.02) + (game.comboT > 0.65 ? 0.15 : 0)})`;
   } else if (comboEl) { comboEl.remove(); comboEl = null; }
   // the ability buttons glow when the food is in danger
@@ -1025,7 +961,6 @@ function finish() {
   add(`פיתות שנשארו: ${game.food}/${game.foodMax}`);
   if (s.kills > 1) add(`חיסולים: ${s.kills}`);
   if (s.bestStreak > 1) add(`רצף שיא: ${s.bestStreak}`);
-  if (s.perfect) add(`מושלמות: ${s.perfect}`);
   // the score, counted up, with the end-of-level bonus spelled out
   save.best = save.best || [];
   const prev = save.best[levelIndex] || 0;
@@ -1083,7 +1018,6 @@ function frame(now) {
     if (game.phase === 'action') {
       acc += dt;
       while (acc >= STEP) { game.update(STEP); acc -= STEP; }
-      lastStep = now;
     } else acc = 0;
     if (game.events.length) handleEvents();
     scene.syncMice(dt);

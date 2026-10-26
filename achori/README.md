@@ -11,12 +11,12 @@ When you change a file, run `python3 achori/tools/version.py` so phones load the
 ## How to play
 
 - **Plan.** The coloured dotted lines show exactly where each burrow's mouse will run. Pick a tool in the tray and tap a cell. Tap an item you placed to take it back (and get the money back). You can't wall the food off completely.
-- **Release the mouse.** Tap a running mouse to whack it: it is hard to hit and dodges. The real damage is done while a mouse is held (trap, glue, bucket, eating cheese, Ofek's scream), and there it's about timing, not speed: a yellow circle closes onto a white ring over the mouse, and you tap when they meet. Within 75 ms is **perfect** (5 damage), within 170 ms is **good** (2); anything else is **off the beat**: no damage, the combo breaks, and the mouse wriggles 0.3 s closer to breaking free, so mashing loses. Four on-beat hits in a row hit 1.5× harder. Lior's ring speeds up as she weakens; Shmulik's is slow, the small ones quick. Taps are judged at the moment of the touch (the event's timestamp), not at the last frame.
-  - **Trap** (₪3): catches it and holds it for about 3 seconds.
-  - **Bucket** (₪4): holds it about 4.5 seconds.
+- **Release the mouse.** Tap a mouse to whack it. A running mouse is hard to hit and dodges, so the real damage happens while it's held:
+  - **Trap** (₪3): catches it and holds it for about 3 seconds. Tap as fast as you can.
   - **Glue** (₪2): holds it for about 2 seconds; works twice.
   - **Cheese** (₪1): a mouse within 4 steps goes for it and stops to eat.
   - **Block** (₪1): it has to go around.
+- **Combo.** Twelve hits in a row without a pause or a miss doubles the damage.
 - **Ofek's scream** freezes every mouse for a moment (and adds time to the ones already caught). **Shalev disconnects** sends them wandering away from the food.
 - **Shaked complains** to Ido's battalion so loudly that they refund ₪3 in the middle of the round, so you can buy another trap (from level 2).
 - When a mouse reaches the food it grabs a pita and runs for the nearest burrow. Kill it on the way and the pita comes back. If it gets away, the pita is gone. Lior always comes back from another burrow, having healed half her wounds.
@@ -52,8 +52,7 @@ All the art was generated with Higgsfield (GPT Image 2.5) in a flat adult-sitcom
 ## Tests
 
 ```
-node achori/test/beat.mjs               # the timing ring's rules: early, perfect, good, streaks, mashing loses
-node achori/test/sim.mjs [level]        # a player who taps on the beat with a human timing error; each level: lost with no plan, won with a good plan, how many random plans win, a slower player
+node achori/test/sim.mjs [level]        # each level: lost with no plan, won with a good plan, how many random plans win, a slower player
 node achori/test/play.cjs <outDir> [level]   # plays a level in a phone-sized browser and saves screenshots (needs the server on :8093)
 node achori/test/levels.cjs             # walks through all twenty levels, the result screens and the ending; fails on any page error
 node achori/test/fuzz.mjs [games]       # thousands of random games: no diagonal moves, no walking through blocks, no lost traps, no NaN, every game ends; and the planning route always matches the real run

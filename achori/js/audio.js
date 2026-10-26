@@ -91,12 +91,6 @@ export const sfx = {
     burst(0.04, 0.5, 2500 * up, 1.5);
     if (n >= 4) tone('square', 520 * up, 780 * up, 0.05, 0.035);
   },
-  // a bright chime on a perfect hit, climbing with the streak
-  perfect(n = 0) {
-    const f = 1568 * Math.pow(1.06, Math.min(n, 12));
-    tone('triangle', f, f, 0.18, 0.14);
-    tone('sine', f * 2, f * 2, 0.12, 0.06, 0.02);
-  },
   clang() {
     [523, 787, 1290, 1873].forEach((f, i) => tone('triangle', f, f * 0.995, 0.9 - i * 0.15, 0.16 / (i + 1)));
     burst(0.06, 0.6, 3000, 1.2);

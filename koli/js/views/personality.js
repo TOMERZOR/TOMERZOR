@@ -22,7 +22,13 @@ export function renderPersonality(root, rerender) {
     SLIDERS.map((s) => {
       const out = h("output", { class: "mono", for: `sl-${s.key}` }, c[s.key]);
       const input = h("input", { type: "range", id: `sl-${s.key}`, min: 1, max: 5, step: 1, value: c[s.key], "aria-label": s.label });
-      input.addEventListener("input", () => (out.textContent = input.value));
+      input.addEventListener("input", () => {
+        if (out.textContent === input.value) return;
+        out.textContent = input.value;
+        out.classList.remove("bump");
+        void out.offsetWidth;
+        out.classList.add("bump");
+      });
       input.addEventListener("change", () => store.update((st) => (st.controls[s.key] = Number(input.value))));
       return h("div", { class: "slider" }, h("span", { class: "name" }, s.label, " ", out), input, h("div", { class: "ends" }, h("span", {}, s.low), h("span", {}, s.high)));
     }),

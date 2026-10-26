@@ -28,6 +28,9 @@ export function toast(text) {
   const el = document.getElementById("toast");
   el.textContent = text;
   el.hidden = false;
+  el.classList.remove("show");
+  void el.offsetWidth; // restart the entrance animation for back-to-back toasts
+  el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (el.hidden = true), 3200);
 }
@@ -58,6 +61,7 @@ export async function copyText(text, btn) {
 export async function busy(btn, label, fn) {
   const old = btn.textContent;
   btn.disabled = true;
+  btn.classList.add("busy");
   btn.textContent = label;
   try {
     return await fn();
@@ -66,6 +70,7 @@ export async function busy(btn, label, fn) {
     return undefined;
   } finally {
     btn.disabled = false;
+    btn.classList.remove("busy");
     btn.textContent = old;
   }
 }

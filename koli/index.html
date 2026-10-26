@@ -8,14 +8,14 @@
 <meta name="description" content="קולי לומדת איך יוצר/ת תוכן כותב/ת, ועונה למעריצים בהודעות הפרטיות באינסטגרם בקול שלו/ה, עם זיהוי של הקמפיין שעליו שואלים.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<div class="app">
+<div class="app" dir="rtl" lang="he">
   <header class="top">
     <div class="brand">
-      <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M5 9.5A4.5 4.5 0 0 1 9.5 5h13A4.5 4.5 0 0 1 27 9.5v8a4.5 4.5 0 0 1-4.5 4.5H14l-5.6 4.4a.6.6 0 0 1-1-.5V22A4.5 4.5 0 0 1 5 17.5z" fill="var(--accent)"/><path d="M11 11.5v4M14.5 9.5v8M18 12v3M21.5 10.5v6" stroke="var(--on-accent)" stroke-width="2" stroke-linecap="round"/></svg></span>
+      <span class="logo" aria-hidden="true"><span class="bars"><i></i><i></i><i></i><i></i><i></i></span></span>
       <span class="wordmark">קולי</span>
       <span class="latin">Koli</span>
     </div>
@@ -24,6 +24,7 @@
   </header>
 
   <nav class="tabs" role="tablist" aria-label="מסכים">
+    <span class="ink" aria-hidden="true"></span>
     <button type="button" role="tab" id="tab-inbox" data-tab="inbox">תיבת הודעות</button>
     <button type="button" role="tab" id="tab-voice" data-tab="voice">הקול</button>
     <button type="button" role="tab" id="tab-personality" data-tab="personality">אופי</button>

@@ -10,9 +10,11 @@ import { metaChips, metaFromReply, storyOptions, findStoryText, learn, draftCard
 const FAN_NAMES = ["שירה", "נוי", "דניאל", "יעל", "אור", "תמר", "עדי", "רוני"];
 let currentId = null;
 let composerText = "";
+let lastDraft = null;
 let composerStory = "";
 let pending = false;
 let fixing = null; // index of the bot message being corrected
+const seen = new Map(); // sim id -> how many messages were already on screen, so only new ones animate
 
 function current() {
   return store.sims.find((s) => s.id === currentId) || null;
@@ -41,7 +43,7 @@ function stats() {
   const top = [...byCampaign.entries()].sort((a, b) => b[1] - a[1])[0];
   return h(
     "div",
-    { class: "stat" },
+    { class: "stats" },
     h("div", {}, h("b", {}, store.sims.length), h("span", {}, "שיחות בסימולטור")),
     h("div", {}, h("b", {}, answered), h("span", {}, "תשובות של קולי")),
     h("div", {}, h("b", {}, handoffs), h("span", {}, "הועברו אלייך")),
@@ -75,7 +77,7 @@ export function renderInbox(root, rerender) {
 
   root.append(
     h("p", { class: "intro" }, "כאן מנסים את קולי לפני שהיא עונה באמת. כתבו כמו מעריץ/ה, אפשר גם כתגובה לסטורי של קמפיין, ותראו מה קולי עונה, על איזה קמפיין היא חושבת ששואלים, ומתי היא מעבירה אלייך."),
-    h("section", { class: "card" }, stats()),
+    stats(),
     h("div", { class: "inbox" }, threadList, chat(sim, mode, rerender)),
   );
 }
@@ -83,45 +85,60 @@ export function renderInbox(root, rerender) {
 function chat(sim, mode, rerender) {
   const nameInput = h("input", { id: "fan-name", value: sim.fanName, "aria-label": "שם המעריץ/ה", oninput: (e) => { sim.fanName = e.target.value; store.saveSims(); } });
   const msgs = h("div", { class: "messages", "aria-live": "polite" });
+  const shown = seen.has(sim.id) ? seen.get(sim.id) : sim.messages.length;
+  seen.set(sim.id, sim.messages.length);
+  const fresh = (i) => (i >= shown ? " new" : "");
 
   sim.messages.forEach((m, i) => {
-    if (m.storyId) msgs.append(h("div", { class: "story-ref" }, `הגיב/ה לסטורי: ${findStoryText(m.storyId) || "סטורי"}`));
+    if (m.storyId) msgs.append(h("div", { class: `story-ref${fresh(i)}` }, `הגיב/ה לסטורי: ${findStoryText(m.storyId) || "סטורי"}`));
     if (fixing === i) {
       msgs.append(fixEditor(sim, i, rerender));
       return;
     }
-    msgs.append(h("div", { class: `msg ${m.from}` }, m.text));
+    const bubble = h("div", { class: `msg ${m.from}${fresh(i)}` }, m.text);
+    // Bubbles of one reply arrive one after another, like real DMs.
+    if (i >= shown) bubble.style.animationDelay = `${(i - shown) * 90}ms`;
+    msgs.append(bubble);
     const nextIsSameGroup = sim.messages[i + 1]?.from === "bot" && sim.messages[i + 1]?.group === m.group;
     if (m.from === "bot" && m.meta && !nextIsSameGroup) {
-      msgs.append(metaChips(m.meta, h("button", { type: "button", class: "fix", onclick: () => { fixing = i; rerender(); } }, "תיקון")));
+      const chips = metaChips(m.meta, h("button", { type: "button", class: "fix", onclick: () => { fixing = i; rerender(); } }, "תיקון"));
+      if (i >= shown) chips.classList.add("new");
+      msgs.append(chips);
     }
   });
   if (sim.draft) {
-    msgs.append(metaChips(sim.draft.meta));
-    msgs.append(
-      draftCard({
-        draft: sim.draft,
-        onSend: (messages) => {
-          if (!messages.length) return toast("אין מה לשלוח");
-          const edited = messages.join("\n") !== sim.draft.messages.join("\n");
-          const group = uid("g");
-          messages.forEach((text) => sim.messages.push({ from: "bot", text, meta: sim.draft.meta, group }));
-          if (edited) {
-            learn(sim.draft.fanText, messages.join(" / "));
-            toast("נשלח. קולי שמרה את התיקון ותלמד ממנו.");
-          }
-          sim.draft = null;
-          store.saveSims();
-          rerender();
-        },
-        onSkip: () => {
-          sim.draft = null;
-          store.saveSims();
-          rerender();
-        },
-      }),
-    );
+    const draftIsNew = sim.draft !== lastDraft;
+    lastDraft = sim.draft;
+    const chips = metaChips(sim.draft.meta);
+    msgs.append(chips);
+    const card = draftCard({
+      draft: sim.draft,
+      onSend: (messages) => {
+        if (!messages.length) return toast("אין מה לשלוח");
+        const edited = messages.join("\n") !== sim.draft.messages.join("\n");
+        const group = uid("g");
+        messages.forEach((text) => sim.messages.push({ from: "bot", text, meta: sim.draft.meta, group }));
+        if (edited) {
+          learn(sim.draft.fanText, messages.join(" / "));
+          toast("נשלח. קולי שמרה את התיקון ותלמד ממנו.");
+        }
+        sim.draft = null;
+        store.saveSims();
+        rerender();
+      },
+      onSkip: () => {
+        sim.draft = null;
+        store.saveSims();
+        rerender();
+      },
+    });
+    if (draftIsNew) {
+      chips.classList.add("new");
+      card.classList.add("new");
+    }
+    msgs.append(card);
   }
+  document.querySelector(".app")?.classList.toggle("writing", pending);
   if (pending) msgs.append(h("div", { class: "typing", "aria-label": "קולי כותבת" }, h("i"), h("i"), h("i")));
   if (!sim.messages.length && !pending) msgs.append(h("div", { class: "empty" }, h("p", {}, "שלחו הודעה כמו מעריץ/ה, או בחרו אחת מהדוגמאות למטה.")));
   if (sim.failed && !pending) {
@@ -241,6 +258,7 @@ async function answer(sim, text, storyId, rerender, isRetry = false) {
     sim.failed = err.message || "Claude לא ענה";
   } finally {
     pending = false;
+    document.querySelector(".app")?.classList.remove("writing");
     store.saveSims();
     rerender();
   }

@@ -12,6 +12,22 @@ import { renderConnect } from "./views/connect.js";
 const VIEWS = { inbox: renderInbox, voice: renderVoice, personality: renderPersonality, campaigns: renderCampaigns, connect: renderConnect };
 const view = document.getElementById("view");
 let tab = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : "inbox";
+let shownTab = null;
+
+// The page is Hebrew, right to left, even when a host wraps it in its own <html>.
+document.documentElement.lang = "he";
+document.documentElement.dir = "rtl";
+
+/** Slide the tab indicator under the selected tab. */
+function moveInk() {
+  const ink = document.querySelector(".tabs .ink");
+  const sel = document.querySelector('.tabs button[aria-selected="true"]');
+  if (!ink || !sel) return;
+  ink.style.width = `${sel.offsetWidth}px`;
+  ink.style.transform = `translateX(${sel.offsetLeft}px)`;
+}
+window.addEventListener("resize", moveInk);
+document.fonts?.ready.then(moveInk);
 
 function render() {
   const scroll = window.scrollY;
@@ -22,6 +38,16 @@ function render() {
   document.getElementById("engine-label").textContent = engine.label;
   view.replaceChildren();
   VIEWS[tab](view, render);
+  // Animate the screen in only when it changes, not on every re-render.
+  const entering = shownTab !== tab;
+  shownTab = tab;
+  view.classList.remove("enter");
+  if (entering) {
+    [...view.children].forEach((el, i) => el.style.setProperty("--i", String(i)));
+    void view.offsetWidth;
+    view.classList.add("enter");
+  }
+  moveInk();
   window.scrollTo(0, scroll);
 }
 

@@ -101,7 +101,7 @@ function editor(c, rerender) {
       field("לינק לרכישה", h("input", { id: "cf-link", type: "url", dir: "ltr", value: c.link || "", onchange: (e) => { set(c.id, { link: e.target.value.trim() }); rerender(); } }), link && link !== c.link ? `קולי תשלח עם תיוג למעקב מכירות: ${link}` : null, true),
       input("start", "מתאריך", { type: "date" }),
       input("end", "עד תאריך", { type: "date" }),
-      field("איך מעריצים קוראים לזה", h("input", { id: "cf-keywords", value: (c.keywords || []).join(", "), placeholder: "סרום, הסרום הכתום, הקרם מהסטורי", onchange: (e) => set(c.id, { keywords: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }) }), "מופרד בפסיקים. עוזר לזהות את הקמפיין גם בלי תגובה לסטורי.", true),
+      field("איך עוקבים קוראים לזה", h("input", { id: "cf-keywords", value: (c.keywords || []).join(", "), placeholder: "סרום, הסרום הכתום, הקרם מהסטורי", onchange: (e) => set(c.id, { keywords: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }) }), "מופרד בפסיקים. עוזר לזהות את הקמפיין גם בלי תגובה לסטורי.", true),
       area("facts", "עובדות על המוצר", "רק מה שכתוב כאן קולי תגיד. מידות, רכיבים, משלוח, החזרות, וגם מה את/ה באמת חושב/ת עליו."),
       area("faq", "תשובות לשאלות נפוצות", "שאלה ותשובה בכל שורה. אפשר לכתוב ׳להעביר אליי׳ לשאלות רגישות.", 3),
     ),

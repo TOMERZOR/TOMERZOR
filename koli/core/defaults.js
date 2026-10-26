@@ -46,7 +46,7 @@ export const SLIDERS = [
 ];
 
 export const ADDRESS_OPTIONS = [
-  { value: "auto", label: "לפי השם וההודעה של המעריץ/ה" },
+  { value: "auto", label: "לפי השם וההודעה של העוקב/ת" },
   { value: "female", label: "בלשון נקבה" },
   { value: "male", label: "בלשון זכר" },
   { value: "plural", label: "בלשון רבים (ניטרלי)" },

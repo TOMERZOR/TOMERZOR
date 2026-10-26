@@ -42,7 +42,7 @@ export function renderPersonality(root, rerender) {
     { class: "card" },
     h("header", {}, h("h2", {}, "התנהגות")),
     field("איך לשלוח", radios("mode", [{ value: "approve", label: "טיוטות שאני מאשר/ת (מומלץ להתחלה)" }, { value: "auto", label: "עונה לבד" }], c.mode, (v) => store.update((s) => (s.controls.mode = v))), "בטיוטות, את/ה מאשר/ת כל תשובה לפני שהיא יוצאת, וקולי לומדת מהעריכות."),
-    field("פנייה למעריצים", radios("address", ADDRESS_OPTIONS, c.address, (v) => store.update((s) => (s.controls.address = v)))),
+    field("פנייה לעוקבים", radios("address", ADDRESS_OPTIONS, c.address, (v) => store.update((s) => (s.controls.address = v)))),
     field("כמה בועות לכל היותר בתשובה", radios("maxm", [1, 2, 3].map((n) => ({ value: n, label: String(n) })), c.maxMessages, (v) => store.update((s) => (s.controls.maxMessages = v)))),
   );
 
@@ -50,7 +50,7 @@ export function renderPersonality(root, rerender) {
   const disclosure = h(
     "section",
     { class: "card" },
-    h("header", {}, h("h2", {}, "שקיפות"), h("p", {}, "Meta מסמנת בעצמה שיחות עם AI של יוצרים, ובאיחוד האירופי זו חובה בחוק. מעריצים שיודעים שזו העוזרת שלך עדיין קונים, כי מה שהם צריכים זו תשובה מהירה.")),
+    h("header", {}, h("h2", {}, "שקיפות"), h("p", {}, "Meta מסמנת בעצמה שיחות עם AI של יוצרים, ובאיחוד האירופי זו חובה בחוק. עוקבים שיודעים שזו העוזרת שלך עדיין קונים, כי מה שהם צריכים זו תשובה מהירה.")),
     radios("disc", DISCLOSURE_OPTIONS, c.disclosure, (v) => { store.update((s) => (s.controls.disclosure = v)); rerender(); }),
     field("נוסח משלך (לא חובה)", h("input", { id: "disc-text", value: c.disclosureText, placeholder: disclosureLine({ ...store.state, controls: { ...c, disclosureText: "" } }), onchange: (e) => { store.update((s) => (s.controls.disclosureText = e.target.value)); rerender(); } })),
     disclosurePreview,

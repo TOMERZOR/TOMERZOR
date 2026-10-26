@@ -21,7 +21,7 @@ const PROFILE_FIELDS = [
   ["punctuation", "כתיב ופיסוק", "text"],
   ["openers", "פתיחות", "list"],
   ["closers", "סגירות", "list"],
-  ["addressing_fans", "פנייה למעריצים", "text"],
+  ["addressing_fans", "פנייה לעוקבים", "text"],
   ["language_mix", "שפות", "text"],
   ["humor", "הומור", "text"],
   ["dos", "תמיד", "lines"],
@@ -112,7 +112,7 @@ export function renderVoice(root, rerender) {
   const sources = h(
     "section",
     { class: "card" },
-    h("header", {}, h("h2", {}, "מאיפה לומדים"), h("p", {}, "ככל שיש יותר הודעות אמיתיות, הקול מדויק יותר. הכי טוב: תשובות אמיתיות שנשלחו למעריצים.")),
+    h("header", {}, h("h2", {}, "מאיפה לומדים"), h("p", {}, "ככל שיש יותר הודעות אמיתיות, הקול מדויק יותר. הכי טוב: תשובות אמיתיות שנשלחו לעוקבים.")),
     h(
       "div",
       { class: "grid2" },
@@ -199,7 +199,7 @@ function collected(rerender) {
     h(
       "div",
       { class: "grid2" },
-      h("ul", { class: "list" }, p.pairs.map((x, i) => h("li", { class: "pair" }, h("div", {}, h("b", {}, "מעריץ/ה: "), x.fan, h("br"), h("b", {}, "תשובה: "), x.reply), h("button", { type: "button", class: "x", "aria-label": "מחיקה", onclick: () => { remove("pairs", i); rerender(); } }, "×")))),
+      h("ul", { class: "list" }, p.pairs.map((x, i) => h("li", { class: "pair" }, h("div", {}, h("b", {}, "עוקב/ת: "), x.fan, h("br"), h("b", {}, "תשובה: "), x.reply), h("button", { type: "button", class: "x", "aria-label": "מחיקה", onclick: () => { remove("pairs", i); rerender(); } }, "×")))),
       h("ul", { class: "list" }, p.samples.map((x, i) => h("li", {}, h("div", {}, x.text), h("button", { type: "button", class: "x", "aria-label": "מחיקה", onclick: () => { remove("samples", i); rerender(); } }, "×")))),
     ),
     (p.samples.length || p.pairs.length) && h("button", { type: "button", class: "btn danger small", onclick: () => { store.update((s) => { s.persona.samples = []; s.persona.pairs = []; }); rerender(); } }, "מחיקת כל הדוגמאות"),
@@ -265,7 +265,7 @@ function correctionsCard(rerender) {
     { class: "card" },
     h("header", {}, h("h2", {}, "מה קולי למדה ממך"), h("p", {}, "תשובות שאישרת אחרי עריכה או תיקנת. אלה הדוגמאות החזקות ביותר, וקולי מחקה אותן קודם.")),
     c.length
-      ? h("ul", { class: "list" }, c.map((x, i) => h("li", { class: "pair" }, h("div", {}, h("b", {}, "מעריץ/ה: "), x.fan, h("br"), h("b", {}, "את/ה: "), x.reply), h("button", { type: "button", class: "x", "aria-label": "מחיקה", onclick: () => { store.update((s) => s.persona.corrections.splice(i, 1)); rerender(); } }, "×"))))
+      ? h("ul", { class: "list" }, c.map((x, i) => h("li", { class: "pair" }, h("div", {}, h("b", {}, "עוקב/ת: "), x.fan, h("br"), h("b", {}, "את/ה: "), x.reply), h("button", { type: "button", class: "x", "aria-label": "מחיקה", onclick: () => { store.update((s) => s.persona.corrections.splice(i, 1)); rerender(); } }, "×"))))
       : h("p", { class: "hint" }, "עוד אין. בתיבת ההודעות, ערכו טיוטה לפני השליחה או לחצו ״תיקון״ על תשובה."),
   );
 }

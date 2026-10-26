@@ -62,28 +62,28 @@ export function renderInbox(root, rerender) {
   const threadList = h(
     "div",
     { class: "threads" },
-    h("button", { type: "button", class: "btn ghost", onclick: () => { newSim(); rerender(); } }, "+ שיחה חדשה עם מעריץ/ה"),
+    h("button", { type: "button", class: "btn ghost", onclick: () => { newSim(); rerender(); } }, "+ שיחה חדשה עם עוקב/ת"),
     store.sims.map((s) => {
       const last = s.messages[s.messages.length - 1];
       const needs = s.draft?.meta?.handoff || s.messages.some((m) => m.meta?.handoff);
       return h(
         "button",
         { type: "button", class: "thread", "aria-current": s.id === currentId ? "true" : "false", onclick: () => { currentId = s.id; fixing = null; rerender(); } },
-        h("span", { class: "who" }, s.fanName || "מעריץ/ה", s.draft && h("span", { class: "chip accent" }, "טיוטה"), needs && h("span", { class: "chip danger" }, "צריך אותך")),
+        h("span", { class: "who" }, s.fanName || "עוקב/ת", s.draft && h("span", { class: "chip accent" }, "טיוטה"), needs && h("span", { class: "chip danger" }, "צריך אותך")),
         h("span", { class: "last" }, last ? `${last.from === "fan" ? "" : "את/ה: "}${last.text}` : "שיחה ריקה"),
       );
     }),
   );
 
   root.append(
-    h("p", { class: "intro" }, "כאן מנסים את קולי לפני שהיא עונה באמת. כתבו כמו מעריץ/ה, אפשר גם כתגובה לסטורי של קמפיין, ותראו מה קולי עונה, על איזה קמפיין היא חושבת ששואלים, ומתי היא מעבירה אלייך."),
+    h("p", { class: "intro" }, "כאן מנסים את קולי לפני שהיא עונה באמת. כתבו כמו עוקב/ת, אפשר גם כתגובה לסטורי של קמפיין, ותראו מה קולי עונה, על איזה קמפיין היא חושבת ששואלים, ומתי היא מעבירה אלייך."),
     stats(),
     h("div", { class: "inbox" }, threadList, chat(sim, mode, rerender)),
   );
 }
 
 function chat(sim, mode, rerender) {
-  const nameInput = h("input", { id: "fan-name", value: sim.fanName, "aria-label": "שם המעריץ/ה", oninput: (e) => { sim.fanName = e.target.value; store.saveSims(); } });
+  const nameInput = h("input", { id: "fan-name", value: sim.fanName, "aria-label": "שם העוקב/ת", oninput: (e) => { sim.fanName = e.target.value; store.saveSims(); } });
   const msgs = h("div", { class: "messages", "aria-live": "polite" });
   const shown = seen.has(sim.id) ? seen.get(sim.id) : sim.messages.length;
   seen.set(sim.id, sim.messages.length);
@@ -140,7 +140,7 @@ function chat(sim, mode, rerender) {
   }
   document.querySelector(".app")?.classList.toggle("writing", pending);
   if (pending) msgs.append(h("div", { class: "typing", "aria-label": "קולי כותבת" }, h("i"), h("i"), h("i")));
-  if (!sim.messages.length && !pending) msgs.append(h("div", { class: "empty" }, h("p", {}, "שלחו הודעה כמו מעריץ/ה, או בחרו אחת מהדוגמאות למטה.")));
+  if (!sim.messages.length && !pending) msgs.append(h("div", { class: "empty" }, h("p", {}, "שלחו הודעה כמו עוקב/ת, או בחרו אחת מהדוגמאות למטה.")));
   if (sim.failed && !pending) {
     msgs.append(h("div", { class: "meta" }, h("span", { class: "chip danger" }, sim.failed), h("button", { type: "button", class: "fix", onclick: () => retry(sim, rerender) }, "לנסות שוב")));
   }
@@ -153,7 +153,7 @@ function chat(sim, mode, rerender) {
     stories.map((s) => h("option", { value: s.id }, `תגובה לסטורי · ${s.label}`)),
   );
   storySelect.value = stories.some((s) => s.id === composerStory) ? composerStory : "";
-  const box = h("textarea", { id: "fan-text", rows: 2, placeholder: `כתבו כמו ${sim.fanName || "מעריץ/ה"}…`, value: composerText, oninput: (e) => (composerText = e.target.value) });
+  const box = h("textarea", { id: "fan-text", rows: 2, placeholder: `כתבו כמו ${sim.fanName || "עוקב/ת"}…`, value: composerText, oninput: (e) => (composerText = e.target.value) });
   box.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -179,7 +179,7 @@ function chat(sim, mode, rerender) {
     h("div", { class: "samples", "aria-label": "הודעות לדוגמה" }, SAMPLE_MESSAGES.map((s) => h("button", { type: "button", onclick: () => { composerText = s.text; composerStory = stories.some((x) => x.id === s.story) ? s.story : ""; rerender(); document.getElementById("fan-text")?.focus(); } }, s.text))),
     storySelect,
     h("div", { class: "send" }, box, sendBtn),
-    h("p", { class: "as" }, `את/ה כותב/ת בתור ${sim.fanName || "מעריץ/ה"}. Enter לשליחה, Shift+Enter לשורה חדשה.`),
+    h("p", { class: "as" }, `את/ה כותב/ת בתור ${sim.fanName || "עוקב/ת"}. Enter לשליחה, Shift+Enter לשורה חדשה.`),
   );
 
   requestAnimationFrame(() => (msgs.scrollTop = msgs.scrollHeight));

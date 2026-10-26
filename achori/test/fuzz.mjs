@@ -8,7 +8,7 @@ const N = Number(process.argv[2] || 150);
 let seed = 12345;
 const R = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
 const pick = (a) => a[Math.floor(R() * a.length)];
-const KNOWN = new Set(['placed', 'removed', 'start', 'spawn', 'snap', 'bucket', 'glued', 'eat', 'hit', 'dodge', 'free', 'broke', 'steal', 'recovered', 'escaped', 'left', 'kill', 'ability', 'won', 'lost']);
+const KNOWN = new Set(['placed', 'removed', 'start', 'spawn', 'snap', 'bucket', 'glued', 'eat', 'hit', 'beat', 'offbeat', 'dodge', 'free', 'broke', 'steal', 'recovered', 'escaped', 'left', 'kill', 'ability', 'won', 'lost']);
 const HELD_TRAP = { caught: 'snap', glued: 'glue', bucketed: 'bucket', eating: null };
 let failures = 0;
 const seen = new Map(); // each kind of failure is printed once, then counted

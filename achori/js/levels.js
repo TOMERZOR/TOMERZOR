@@ -49,7 +49,7 @@ export const LEVELS = [
       .......
       ...G...`,
     budget: 4, tools: ['snap', 'block'], snapHold: 4.0, shaked: 0,
-    lior: { hp: 14, speed: 1.5 },
+    lior: { hp: 20, speed: 1.5 },
     waves: [{ t: 1, type: 'lior', hole: 0 }],
     tutorial: true,
     intro: [
@@ -163,7 +163,7 @@ export const LEVELS = [
       .#.#.#.
       .......
       H.....H`,
-    budget: 12, tools: ['snap', 'glue', 'cheese', 'block'], shalev: 1, smart: true,
+    budget: 14, tools: ['snap', 'glue', 'cheese', 'block'], shalev: 1, smart: true,
     lior: { hp: 38, speed: 1.85 },
     waves: [{ t: 1, type: 'lior', hole: 1 }, { t: 6, type: 'minion', hole: 0 }, { t: 12, type: 'minion', hole: 1 }],
     intro: [
@@ -305,7 +305,7 @@ export const LEVELS = [
       ...#...
       .......
       .G.....`,
-    budget: 17, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, snapHold: 3.0, glueHold: 2.1,
+    budget: 19, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, snapHold: 3.0, glueHold: 2.1,
     lior: { hp: 48, speed: 2.0 },
     waves: [{ t: 1, type: 'lior', hole: 0 }, { t: 6, type: 'fat', hole: 0 }, { t: 12, type: 'minion', hole: 0 }],
     hint: 'bucket',
@@ -391,7 +391,7 @@ export const LEVELS = [
       .......
       .#...#.
       H.....H`,
-    budget: 18, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, snapHold: 2.8, glueHold: 1.9,
+    budget: 20, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, snapHold: 2.8, glueHold: 1.9,
     lior: { hp: 62, speed: 2.15 },
     waves: [{ t: 1, type: 'lior', hole: 0 }, { t: 3, type: 'minion', hole: 3 }, { t: 6, type: 'fast', hole: 1 }, { t: 9, type: 'fat', hole: 2 }, { t: 13, type: 'fast', hole: 3 }, { t: 17, type: 'minion', hole: 0 }],
     intro: [
@@ -479,7 +479,7 @@ export const LEVELS = [
       .......
       ...G...`,
     budget: 24, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, shaked: 2, food: 4, snapHold: 2.8, glueHold: 1.9, bucketHold: 4.3,
-    lior: { hp: 84, speed: 2.2 }, liorReturn: 1.9,
+    lior: { hp: 70, speed: 2.2 }, liorReturn: 1.9,
     waves: [
       { t: 1, type: 'lior', hole: 1 }, { t: 3, type: 'fast', hole: 3 }, { t: 5, type: 'fat', hole: 0 }, { t: 7, type: 'fast', hole: 4 },
       { t: 10, type: 'minion', hole: 2 }, { t: 13, type: 'fat', hole: 3 }, { t: 16, type: 'fast', hole: 0 }, { t: 18, type: 'fast', hole: 2 },

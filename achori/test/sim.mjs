@@ -6,8 +6,11 @@ import { LEVELS } from '../js/levels.js';
 
 function rnd(seed) { let s = seed; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
 
-// tapRate: taps per second on a held mouse; aim: chance a tap on a running mouse lands.
-export function play(level, placements, { tapRate = 6, aim = 0.35, runTaps = 1.2, seed = 1, abilities = true } = {}) {
+// A simulated player who taps held mice on the beat.
+function gauss(R) { return Math.sqrt(-2 * Math.log(R() + 1e-9)) * Math.cos(2 * Math.PI * R()); }
+
+// sigma: how far off the beat a tap lands; aim: chance a tap on a running mouse lands.
+export function play(level, placements, { sigma = 0.07, aim = 0.35, runTaps = 1.2, seed = 1, abilities = true } = {}) {
   const g = new Game(level, { seed });
   for (const [k, c, r] of placements) g.place(k, c, r);
   g.start();
@@ -27,8 +30,10 @@ export function play(level, placements, { tapRate = 6, aim = 0.35, runTaps = 1.2
     if (cd <= 0 && live.length) {
       const held = live.filter((m) => g.isHeld(m)).sort((a, b) => a.t - b.t);
       if (held.length) {
-        g.whack(held[0], 1);
-        cd = (1 / tapRate) * (0.8 + 0.4 * R());
+        // tap on the ring's beat, off by a human amount (gaussian, sigma seconds)
+        const m = held[0];
+        if (m._beat !== m.beatN) { m._beat = m.beatN; m._err = sigma * gauss(R); }
+        if (m.beatT >= m.beatP + m._err) { g.whack(m, 1); cd = 0.05; } else cd = 0;
       } else {
         const m = live[Math.floor(R() * live.length)];
         g.whack(m, R() < aim ? 0.4 + 0.6 * R() : 0.34 * R());
@@ -76,7 +81,7 @@ for (const li of only) {
   }
   // the best plan again with a slower, clumsier player
   let slow = 0;
-  for (let s = 1; s <= 10; s++) if (play(level, best.plan, { seed: s, tapRate: 4.5, aim: 0.4 }).phase === 'won') slow++;
+  for (let s = 1; s <= 10; s++) if (play(level, best.plan, { seed: s, sigma: 0.12, aim: 0.3 }).phase === 'won') slow++;
   console.log(`${li + 1}. ${level.name.padEnd(18)} no plan: ${none.phase.padEnd(4)}  random plans won ${(100 * wins / N).toFixed(0).padStart(3)}%  best plan stars ${(best.stars / 3).toFixed(1)}  slow player with best plan ${slow}/10`);
 }
 }

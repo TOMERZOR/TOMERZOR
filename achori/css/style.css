@@ -419,3 +419,26 @@ h1 .big { font-size: clamp(84px, 27vw, 150px); color: var(--yellow); transform: 
 /* centred when it fits, starts at the top (with room for the picture above the card) when it doesn't */
 .modal.show { place-items: start center; padding-top: 64px; padding-bottom: calc(var(--safe-b) + 16px); }
 .toast { width: max-content; max-width: min(calc(100vw - 32px), 420px); }
+
+/* ---------- the timing ring ---------- */
+.mash .ring-bg { stroke-width: 5; }
+.mash .ring { stroke-width: 5; opacity: .8; }
+.mash .target { fill: rgba(0, 0, 0, .18); stroke: #fff; stroke-width: 4; filter: drop-shadow(0 0 2px rgba(0,0,0,.8)); }
+.mash .shrink { fill: none; stroke: var(--yellow); stroke-width: 4.5; filter: drop-shadow(0 0 2px rgba(0,0,0,.9)); }
+.mash .shrink.good { stroke: #7dff6a; }
+.mash .shrink.perfect { stroke: #fff; stroke-width: 6; filter: drop-shadow(0 0 5px #ffd23f); }
+.mash svg.hit-perfect .target { animation: tPerfect .3s ease-out; }
+.mash svg.hit-good .target { animation: tGood .25s ease-out; }
+.mash svg.hit-off .target { animation: tOff .3s ease-out; }
+@keyframes tPerfect { 0% { stroke: #ffd23f; stroke-width: 10; fill: rgba(255, 210, 63, .55); } }
+@keyframes tGood { 0% { stroke: #7dff6a; stroke-width: 8; fill: rgba(125, 255, 106, .35); } }
+@keyframes tOff { 0%, 50% { stroke: #ff4a3a; stroke-width: 7; fill: rgba(255, 60, 40, .35); } }
+.pop.judge { font-size: 34px; animation-duration: .55s; }
+.pop.judge.perfect { font-size: 46px; color: #fff; text-shadow: 0 4px 0 var(--ink), 0 0 18px #ffd23f; }
+.pop.judge.good { color: #7dff6a; }
+.pop.judge.off { color: #ff5a4a; font-size: 28px; }
+
+/* the trap's countdown is a thin orange arc, so the yellow closing circle stands out */
+.mash .ring { stroke: #ff8a5c; stroke-width: 3.5; opacity: .75; }
+.mash .ring-bg { stroke-width: 3.5; stroke: rgba(0, 0, 0, .25); }
+.mash .shrink { stroke: var(--yellow); stroke-width: 5; }

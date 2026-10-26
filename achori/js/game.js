@@ -22,6 +22,19 @@ export const MICE = {
 };
 
 const HELD = new Set(['caught', 'glued', 'eating', 'stunned', 'bucketed']);
+// The timing ring on a held mouse: a circle shrinks onto a ring once every `period`
+// seconds, and a tap is judged by how far it lands from that moment. Tapping off the
+// beat lets the mouse wriggle free sooner, so mashing loses.
+export const BEAT = {
+  perfect: 0.075, // seconds either side of the moment
+  good: 0.17,
+  perfectDmg: 5,
+  goodDmg: 2,
+  offPenalty: 0.3, // seconds taken off the hold for a tap off the beat
+  streakAt: 4, // on-beat hits in a row before they hit harder
+  streakMul: 1.5,
+};
+
 // what a kill is worth before the combo bonus
 export const POINTS = { lior: 1000, minion: 150, fat: 400, fast: 300 };
 const SMELL = 4; // cheese pulls a mouse when it is at most this many steps away
@@ -283,6 +296,21 @@ export class Game {
     m.t = t;
     m.heldMax = t;
     m.trapCell = cell;
+    this.startBeat(m);
+  }
+
+  // Lior's ring speeds up as she weakens; the fat one is slow, the small ones quick
+  beatPeriod(m) {
+    if (m.type === 'lior') return 0.46 + 0.26 * (m.hp / m.hpMax);
+    if (m.type === 'fat') return 0.72;
+    if (m.type === 'fast') return 0.5;
+    return 0.58;
+  }
+
+  startBeat(m) {
+    m.beatN = (m.beatN || 0) + 1;
+    m.beatT = 0;
+    m.beatP = this.beatPeriod(m);
   }
 
   updateMouse(m, dt) {
@@ -305,6 +333,9 @@ export class Game {
     }
     if (HELD.has(m.state)) {
       m.t -= dt;
+      // a beat nobody tapped just starts over
+      m.beatT = (m.beatT || 0) + dt;
+      if (m.beatT > m.beatP + BEAT.good) this.startBeat(m);
       if (m.t <= 0) this.release(m);
       return;
     }
@@ -473,16 +504,16 @@ export class Game {
   isHeld(m) { return HELD.has(m.state); }
 
   // A tap on a mouse. `exact` is how close to its centre the tap landed, 0..1 (1 = dead centre).
-  whack(m, exact = 1) {
+  // lateBy: seconds of game time between the last update and the moment of the touch
+  whack(m, exact = 1, lateBy = 0) {
     if (this.phase !== 'action' || !m.alive || m.state === 'emerge' || m.state === 'leaving') return null;
-    let dmg = 1;
-    if (this.combo >= 12) dmg = 2;
-    if (!this.isHeld(m)) {
-      if (exact < 0.35) { this.miss(m); return 'dodge'; }
-      // one stumble, then he is wise to it for a moment and bolts instead
-      if (m.stumbleCd > 0) m.dash = 0.45;
-      else { m.stumble = 0.38; m.stumbleCd = 1.3; }
-    }
+    if (this.isHeld(m)) return this.beatHit(m, lateBy);
+    // a running mouse: hard to hit, and it dodges if you're off
+    const dmg = 1;
+    if (exact < 0.35) { this.miss(m); return 'dodge'; }
+    // one stumble, then it is wise to it for a moment and bolts instead
+    if (m.stumbleCd > 0) m.dash = 0.45;
+    else { m.stumble = 0.38; m.stumbleCd = 1.3; }
     this.combo += 1;
     this.comboT = 0.75;
     this.stats.bestCombo = Math.max(this.stats.bestCombo, this.combo);
@@ -490,6 +521,31 @@ export class Game {
     this.score += 10 * dmg;
     this.damage(m, dmg, 'whack');
     return 'hit';
+  }
+
+  // a tap on a held mouse, judged against its ring
+  beatHit(m, lateBy = 0) {
+    const off = m.beatT + lateBy - m.beatP;
+    const grade = Math.abs(off) <= BEAT.perfect ? 'perfect' : Math.abs(off) <= BEAT.good ? 'good' : null;
+    if (!grade) {
+      m.t = Math.max(0.02, m.t - BEAT.offPenalty);
+      this.combo = 0;
+      this.stats.misses += 1;
+      this.emit('offbeat', { id: m.id, early: off < 0 });
+      return 'off';
+    }
+    this.combo += 1;
+    this.comboT = 1.6; // on-beat hits are slower than mashing, so the combo lasts longer
+    this.stats.bestCombo = Math.max(this.stats.bestCombo, this.combo);
+    this.stats.hits += 1;
+    if (grade === 'perfect') this.stats.perfect = (this.stats.perfect || 0) + 1;
+    let dmg = grade === 'perfect' ? BEAT.perfectDmg : BEAT.goodDmg;
+    if (this.combo >= BEAT.streakAt) dmg = Math.round(dmg * BEAT.streakMul);
+    this.score += (grade === 'perfect' ? 50 : 20) * (this.combo >= BEAT.streakAt ? 2 : 1);
+    this.startBeat(m);
+    this.emit('beat', { id: m.id, grade, dmg, combo: this.combo });
+    this.damage(m, dmg, 'whack');
+    return grade;
   }
 
   miss(m) {

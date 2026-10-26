@@ -19,6 +19,13 @@ export function play(level, placements, { tapRate = 6, aim = 0.35, runTaps = 1.2
     cd -= dt;
     const live = g.liveMice().filter((m) => m.state !== 'emerge' && m.state !== 'leaving' && m.state !== 'away');
     if (abilities) {
+      // turbo on a held mouse as soon as it's ready; the tile when three are out; spray in front of the food;
+      // the potion on a boss when there are others to fight
+      if (g.turbo.ready && live.some((m) => g.isHeld(m))) g.useTurbo();
+      if (g.items.tile > 0 && live.length >= 3) g.useTile();
+      const g1 = cellOf(g.goal);
+      if (g.items.spray > 0 && live.some((m) => Math.abs(m.x - g1.c) + Math.abs(m.z - g1.r) < 3)) g.useSpray(g1.c, Math.max(0, g1.r - 1));
+      if (g.items.potion > 0 && live.length >= 3) { const b = live.find((m) => m.type === 'lior' || m.type === 'orel') || live[0]; g.usePotion(b); }
       const g0 = cellOf(g.goal);
       const danger = live.find((m) => !g.isHeld(m) && (m.carrying || Math.abs(m.x - g0.c) + Math.abs(m.z - g0.r) < 1.6));
       if (danger && g.abilities.ofek > 0) g.useAbility('ofek');

@@ -20,18 +20,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Karantina:wght@700&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=17">
+<link rel="stylesheet" href="css/style.css?v=19">
 <script type="importmap">
 {
  "imports": {
   "three": "./vendor/three.module.min.js",
-  "./js/audio.js": "./js/audio.js?v=17",
-  "./js/game.js": "./js/game.js?v=17",
-  "./js/haptics.js": "./js/haptics.js?v=17",
-  "./js/levels.js": "./js/levels.js?v=17",
-  "./js/main.js": "./js/main.js?v=17",
-  "./js/scene.js": "./js/scene.js?v=17",
-  "./js/text.js": "./js/text.js?v=17"
+  "./js/audio.js": "./js/audio.js?v=19",
+  "./js/game.js": "./js/game.js?v=19",
+  "./js/haptics.js": "./js/haptics.js?v=19",
+  "./js/levels.js": "./js/levels.js?v=19",
+  "./js/main.js": "./js/main.js?v=19",
+  "./js/scene.js": "./js/scene.js?v=19",
+  "./js/text.js": "./js/text.js?v=19"
  }
 }
 </script>
@@ -58,6 +58,10 @@
           <img src="img/lior.webp" alt="">
           <div class="boss-bar"><i id="boss-fill"></i></div>
         </div>
+        <div class="boss orel" id="boss2" hidden>
+          <img src="img/orel.webp" alt="">
+          <div class="boss-bar"><i id="boss2-fill"></i></div>
+        </div>
       </div>
     </div>
     <div class="money" id="money" aria-label="תקציב"><b id="money-n">0</b><span>₪</span></div>
@@ -79,8 +83,14 @@
     <button class="ability" id="ab-shalev" type="button"><img src="img/face_shalev.webp" alt=""><span>שליו מתנתק</span><b id="ab-shalev-n"></b></button>
     <button class="ability" id="ab-shaked" type="button"><img src="img/face_shaked.webp" alt=""><span>שקד מתלוננת</span><b id="ab-shaked-n"></b></button>
   </div>
+  <div class="tray-row items" id="row-items" hidden>
+    <button class="item" id="it-spray" type="button" data-item="spray"><img src="img/spray.webp" alt=""><span>תרסיס</span><b id="it-spray-n"></b></button>
+    <button class="item" id="it-potion" type="button" data-item="potion"><img src="img/potion.webp" alt=""><span>שיקוי</span><b id="it-potion-n"></b></button>
+    <button class="item" id="it-tile" type="button" data-item="tile"><img src="img/tile.webp" alt=""><span>בלטה</span><b id="it-tile-n"></b></button>
+  </div>
 </div>
 
+<button id="turbo-btn" class="turbo-btn" type="button" hidden aria-label="טורבו"><span class="turbo-ring" id="turbo-ring"></span><img src="img/turbo.webp" alt=""><b>טורבו</b></button>
 <div id="hint" class="hint" hidden><p id="hint-text"></p><button id="hint-ok" type="button">הבנתי</button></div>
 <div id="toast" class="toast" hidden></div>
 <div id="kill" class="kill" hidden><img id="kill-img" alt=""><div class="kill-stamp"><b id="kill-title"></b><span id="kill-sub"></span></div></div>
@@ -110,6 +120,7 @@
       <button class="btn small" id="haptic-btn" type="button">רטט: פועל</button>
     </div>
     <div class="small-row">
+      <button class="btn small" id="album-btn" type="button">אלבום העכברים</button>
       <button class="btn small" id="ido-title" type="button">התלונן לסוללת אידו</button>
     </div>
   </div>
@@ -124,6 +135,17 @@
   </div>
   <div class="takeover"><span id="takeover-text"></span><div class="take-bar"><i id="take-fill"></i></div></div>
   <div class="levels-list" id="levels-list"></div>
+</section>
+
+<section id="album" class="screen">
+  <div class="levels-head">
+    <button class="icon-btn" id="album-back" type="button" aria-label="חזרה">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <h2>אלבום העכברים</h2>
+  </div>
+  <p class="album-sub" id="album-sub"></p>
+  <div class="album-list" id="album-list"></div>
 </section>
 
 <section id="dialog" class="screen dialog">
@@ -169,12 +191,12 @@
   <div class="title-shade"></div>
   <div class="card end-card">
     <h2>האתר שוחרר!</h2>
-    <p>ליאור באום חוסלה. העכברים נסוגו. אופק ירד מהכיסא (לשנייה).<br>שליו עדיין לא מתחבר, אבל הוא מרוצה.</p>
+    <p>ליאור באום ואוראל חוסלו. המשפחה התפרקה, והעכברים נסוגו. אופק ירד מהכיסא (לשנייה).<br>שליו עדיין לא מתחבר, אבל הוא מרוצה.</p>
     <p class="muted">סוללת אידו פרסמו הודעה: "בזכות הטיפול המסור שלנו, הבעיה נפתרה."</p>
     <button class="btn primary" id="end-btn" type="button">חזרה למפת האתר</button>
   </div>
 </section>
 
-<script type="module" src="js/main.js?v=17"></script>
+<script type="module" src="js/main.js?v=19"></script>
 </body>
 </html>

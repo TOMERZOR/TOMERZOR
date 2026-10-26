@@ -1,4 +1,4 @@
-// Twenty levels in five parts of the site. Maps are 7 wide, 9 deep, back wall first:
+// Thirty levels in seven parts of the site. Maps are 7 wide, 9 deep, back wall first:
 // . floor   # junk the mice run around   H burrow   G the food
 // Waves: t = seconds after the start, hole = index into the map's burrows (reading order).
 
@@ -22,17 +22,19 @@ function parse(map) {
 
 const L = (def) => ({
   food: 3, ofek: 1, shalev: 0, shaked: 1, snapHold: 3.2, glueHold: 2.3, cheeseHold: 2.4, liorReturn: 2.5,
-  minion: { hp: 3, speed: 2.0 }, fat: { hp: 9, speed: 1.3 }, fast: { hp: 2, speed: 3.0 }, bucketHold: 4.4,
+  minion: { hp: 3, speed: 2.0 }, fat: { hp: 9, speed: 1.3 }, fast: { hp: 2, speed: 3.0 }, orel: { hp: 44, speed: 2.15 }, bucketHold: 4.4,
   ...def,
   ...parse(def.map),
 });
 
 export const AREAS = [
-  { id: 'office', name: 'הקרוואן של מנהל העבודה', wall: 'wall_office', tint: 0xffffff },
+  { id: 'office', name: 'המכולה של מנהל העבודה', wall: 'wall_office', tint: 0xffffff },
   { id: 'store', name: 'המחסן', wall: 'wall_store', tint: 0xf2ead8 },
   { id: 'kitchen', name: 'המטבחון', wall: 'wall_kitchen', tint: 0xfff4e6 },
   { id: 'meeting', name: 'חדר הישיבות', wall: 'wall_meeting', tint: 0xf4efe6 },
   { id: 'yard', name: 'בית הגדי', wall: 'wall_yard', tint: 0xffe9d2 },
+  { id: 'parking', name: 'החניון', wall: 'wall_parking', tint: 0xe8e8ee },
+  { id: 'ido', name: 'מטה סוללת אידו', wall: 'wall_ido', tint: 0xf3efe8 },
 ];
 
 export const LEVELS = [
@@ -53,7 +55,7 @@ export const LEVELS = [
     waves: [{ t: 1, type: 'lior', hole: 0 }],
     tutorial: true,
     intro: [
-      ['ofek', 'יש עכבר בקרוואן. אני חוזר: יש. עכבר. בקרוואן.'],
+      ['ofek', 'יש עכבר במכולה. אני חוזר: יש. עכבר. במכולה.'],
       ['shalev', 'קוראים לה ליאור באום. אני לא מתחבר אליה.'],
       ['ofek', 'שים לה מלכודת על השביל, וכשהיא נתפסת: תכסח אותה בכפכף! מהר!'],
     ],
@@ -83,7 +85,7 @@ export const LEVELS = [
     ],
   }),
   L({
-    name: 'שתי מחילות', area: 0,
+    name: 'שתי מחילות', area: 0, newMouse: 'minion',
     map: `
       .H...H.
       .......
@@ -123,7 +125,7 @@ export const LEVELS = [
     intro: [
       ['lior', 'אני מכירה את המלכודות שלך, חביבי. אני עוקפת אותן בעיניים עצומות.'],
       ['shalev', 'היא עוקפת מלכודות שהיא רואה. תסגור לה את הדרכים עם בלוקים, שלא תהיה לה ברירה.'],
-      ['ofek', 'סוללת אידו אמרו שהמחסן "לא באחריותם". גם הקרוואן לא. גם כלום.'],
+      ['ofek', 'סוללת אידו אמרו שהמחסן "לא באחריותם". גם המכולה לא. גם כלום.'],
     ],
   }),
   L({
@@ -272,7 +274,7 @@ export const LEVELS = [
   }),
   // ---------- part two ----------
   L({
-    name: 'הבאומון השמן', area: 3,
+    name: 'הבאומון השמן', area: 3, newMouse: 'fat',
     map: `
       .H...H.
       .......
@@ -289,7 +291,7 @@ export const LEVELS = [
     hint: 'fat',
     intro: [
       ['ofek', 'מה זה הדבר הזה?! זה עכבר או מקרר?!'],
-      ['lior', 'תכירו את שמוליק. הוא אכל את כל הבורקס של הישיבה.'],
+      ['lior', 'תכירו את צ׳יבוטרו. הוא אכל את כל הבורקס של הישיבה.'],
       ['shalev', 'הוא איטי, אבל צריך עליו הרבה מכות. דבק עליו ותכסח.'],
     ],
   }),
@@ -316,7 +318,7 @@ export const LEVELS = [
     ],
   }),
   L({
-    name: 'ספרינטרים', area: 3,
+    name: 'ספרינטרים', area: 3, newMouse: 'fast',
     map: `
       H.....H
       .#.#.#.
@@ -349,8 +351,8 @@ export const LEVELS = [
       #.#.#.#
       .......
       ...G...`,
-    budget: 17, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, smart: true, snapHold: 2.8, glueHold: 1.9,
-    lior: { hp: 58, speed: 2.1 },
+    budget: 19, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, smart: true, snapHold: 2.8, glueHold: 1.9,
+    lior: { hp: 54, speed: 2.1 },
     waves: [{ t: 1, type: 'lior', hole: 1 }, { t: 4, type: 'minion', hole: 0 }, { t: 7, type: 'fat', hole: 2 }, { t: 11, type: 'fast', hole: 0 }, { t: 15, type: 'minion', hole: 2 }],
     intro: [
       ['lior', 'פתחתי ישיבת הנהלה. סדר יום: סעיף א׳, החומוס של אופק. סעיף ב׳, גם.'],
@@ -376,7 +378,7 @@ export const LEVELS = [
     intro: [
       ['lior', 'ההנהלה החליטה פה אחד: החומוס עובר לעכברים. זה דמוקרטיה.'],
       ['ofek', 'מי הצביע?!'],
-      ['lior', 'אני, שמוליק ושמוליק השני.'],
+      ['lior', 'אני, צ׳יבוטרו וצ׳יבוטרו השני.'],
     ],
   }),
   L({
@@ -442,7 +444,7 @@ export const LEVELS = [
     intro: [
       ['ofek', 'ארבע מחילות! זה כבר לא אתר בנייה, זה כפר עכברים!'],
       ['shaked', 'כתבתי לסוללת אידו מכתב של ארבעה עמודים. הם ענו במילה אחת: "קיבלנו".'],
-      ['lior', 'באומונים! שמוליקים! ספרינטרים! הכול לחומוס!'],
+      ['lior', 'באומונים! צ׳יבוטרואים! ספרינטרים! הכול לחומוס!'],
     ],
   }),
   L({
@@ -467,7 +469,7 @@ export const LEVELS = [
     ],
   }),
   L({
-    name: 'ליאור באום: הסיבוב האחרון', area: 4, boss: true,
+    name: 'ליאור באום: הסיבוב הגדול', area: 4, boss: true,
     map: `
       H..H..H
       .......
@@ -486,10 +488,254 @@ export const LEVELS = [
       { t: 21, type: 'minion', hole: 4 }, { t: 24, type: 'fat', hole: 1 },
     ],
     intro: [
-      ['lior', 'זהו. סוף המשחק. אני לוקחת את החומוס, את האתר, ואת בית הגדי.'],
+      ['lior', 'זהו. אני לוקחת את החומוס, את האתר, ואת בית הגדי.'],
       ['shaked', 'ואני לוקחת את הכפכף.'],
       ['ofek', 'אני... אני יורד מהכיסא. באמת הפעם. בשביל החומוס.'],
       ['shalev', 'טוב. בפעם הראשונה בחיים: אני מתחבר. יאללה.'],
+    ],
+  }),
+  // ---------- part three: Orel, the family, and Ido's own headquarters ----------
+  L({
+    name: 'אוראל מגיע', area: 5, newMouse: 'orel',
+    map: `
+      .H...H.
+      .......
+      .#.#.#.
+      .......
+      ##.#.##
+      .......
+      .#...#.
+      .......
+      ...G...`,
+    budget: 17, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, snapHold: 2.8, glueHold: 1.9, items: { spray: 2 },
+    orel: { hp: 59, speed: 2.15 },
+    waves: [{ t: 1, type: 'orel', hole: 0 }, { t: 4, type: 'minion', hole: 1 }, { t: 8, type: 'fast', hole: 0 }, { t: 12, type: 'minion', hole: 1 }, { t: 15, type: 'fat', hole: 0 }],
+    hint: 'spray',
+    intro: [
+      ['orel', 'תקשיב טוב, חביבי. החומוס הזה? מהיום הוא של המשפחה.'],
+      ['ofek', 'מי זה?! למה יש לו סוויטשירט סטן?!'],
+      ['shaked', 'הבאתי תרסיס נגד עכברים. סוללת אידו אמרו שזה "לא תקני". שיתבעו אותי.'],
+    ],
+  }),
+  L({
+    name: 'שיקוי הבגידה', area: 5,
+    map: `
+      H..H..H
+      .......
+      .##.##.
+      .......
+      .......
+      #.#.#.#
+      .......
+      .......
+      ...G...`,
+    budget: 19, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, snapHold: 2.8, glueHold: 1.9, items: { spray: 1, potion: 2 },
+    lior: { hp: 74, speed: 2.15 },
+    waves: [
+      { t: 1, type: 'lior', hole: 1 }, { t: 2, type: 'minion', hole: 0 }, { t: 2.5, type: 'minion', hole: 2 }, { t: 6, type: 'minion', hole: 0 },
+      { t: 7, type: 'fat', hole: 2 }, { t: 11, type: 'minion', hole: 1 }, { t: 14, type: 'fast', hole: 0 }, { t: 15, type: 'fast', hole: 2 },
+    ],
+    hint: 'potion',
+    intro: [
+      ['shalev', 'מצאתי שיקוי במחסן. מי ששותה אותו מתחיל להרביץ לחברים שלו. מזכיר לי משהו.'],
+      ['lior', 'הבאומונים שלי נאמנים לי. נכון, חבר׳ה? ...חבר׳ה?'],
+    ],
+  }),
+  L({
+    name: 'בלטות מהשמיים', area: 5,
+    map: `
+      H.....H
+      .#...#.
+      .......
+      ..#.#..
+      H.....H
+      .......
+      .#.#.#.
+      .......
+      ...G...`,
+    budget: 17, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 1, ofek: 2, snapHold: 2.8, glueHold: 1.9, items: { spray: 1, potion: 1, tile: 2 },
+    orel: { hp: 62, speed: 2.2 },
+    waves: [
+      { t: 1, type: 'fast', hole: 0 }, { t: 1.5, type: 'fast', hole: 1 }, { t: 3, type: 'orel', hole: 2 }, { t: 4, type: 'fast', hole: 3 },
+      { t: 7, type: 'minion', hole: 0 }, { t: 8, type: 'minion', hole: 1 }, { t: 11, type: 'fast', hole: 2 }, { t: 12, type: 'fast', hole: 3 }, { t: 16, type: 'fat', hole: 0 },
+    ],
+    hint: 'tile',
+    intro: [
+      ['ofek', 'יש בלטות על הגג של החניון. אני עולה לשם. גבוה. רחוק מהעכברים.'],
+      ['orel', 'בלטות? אצלנו במשפחה זורקים בלטות רק על מי שלא משלם.'],
+      ['shaked', 'אופק, תזרוק! על כולם! עכשיו!'],
+    ],
+  }),
+  L({
+    name: 'המשפחה', area: 5, boss: true,
+    map: `
+      .H...H.
+      .#...#.
+      ...#...
+      .#...#.
+      ...#...
+      .#.#.#.
+      .......
+      ##...##
+      ...G...`,
+    budget: 19, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, food: 4, snapHold: 2.8, glueHold: 1.9, items: { spray: 2, potion: 1, tile: 1 },
+    lior: { hp: 84, speed: 2.15 }, orel: { hp: 62, speed: 2.2 }, liorReturn: 2.2,
+    waves: [{ t: 1, type: 'lior', hole: 0 }, { t: 2, type: 'orel', hole: 1 }, { t: 7, type: 'minion', hole: 0 }, { t: 10, type: 'fat', hole: 1 }, { t: 14, type: 'fast', hole: 0 }],
+    intro: [
+      ['lior', 'אוראל, אתה בא?'],
+      ['orel', 'אני תמיד בא. המשפחה לא משאירה חומוס על השולחן.'],
+      ['shalev', 'שניהם ביחד. אני מתחבר לזה פחות מתמיד.'],
+    ],
+  }),
+  L({
+    name: 'מרדף בחניון', area: 5,
+    map: `
+      H.H.H.H
+      .......
+      #.#.#.#
+      .......
+      .##.##.
+      .......
+      #.#.#.#
+      .......
+      ...G...`,
+    budget: 21, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, smart: true, snapHold: 2.7, glueHold: 1.8, items: { spray: 2, potion: 1, tile: 1 },
+    orel: { hp: 56, speed: 2.3 },
+    minion: { hp: 4, speed: 2.3 }, fast: { hp: 2, speed: 3.0 },
+    waves: [
+      { t: 1, type: 'orel', hole: 1 }, { t: 2, type: 'fast', hole: 0 }, { t: 2.5, type: 'fast', hole: 3 }, { t: 6, type: 'minion', hole: 2 },
+      { t: 9, type: 'fat', hole: 0 }, { t: 12, type: 'fast', hole: 1 }, { t: 13, type: 'fast', hole: 2 }, { t: 17, type: 'minion', hole: 3 },
+    ],
+    intro: [
+      ['orel', 'למדתי מליאור. אני רואה מלכודות מקילומטר.'],
+      ['shaked', 'הם עוקפים מלכודות?! תחסום להם הכול ותרסס!'],
+    ],
+  }),
+  L({
+    name: 'הלובי של סוללת אידו', area: 6,
+    map: `
+      ...H...
+      .#####.
+      .......
+      H.#.#.H
+      .......
+      .#####.
+      .......
+      .#...#.
+      ...G...`,
+    budget: 19, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, snapHold: 2.7, glueHold: 1.8, items: { spray: 2, potion: 2, tile: 1 },
+    lior: { hp: 89, speed: 2.2 },
+    waves: [
+      { t: 1, type: 'lior', hole: 0 }, { t: 3, type: 'minion', hole: 1 }, { t: 3.5, type: 'minion', hole: 2 }, { t: 7, type: 'fat', hole: 1 },
+      { t: 8, type: 'fat', hole: 2 }, { t: 12, type: 'fast', hole: 0 }, { t: 15, type: 'minion', hole: 1 }, { t: 16, type: 'minion', hole: 2 },
+    ],
+    intro: [
+      ['shaked', 'הגענו למטה של סוללת אידו. אם הם לא מטפלים, אנחנו נטפל.'],
+      ['ofek', 'רגע... יש פה עכברים בלובי?! גם אצלם?!'],
+      ['lior', 'ברוכים הבאים למשרד שלי.'],
+    ],
+  }),
+  L({
+    name: 'מחלקת תלונות', area: 6,
+    map: `
+      H.....H
+      .##.##.
+      .......
+      #.#.#.#
+      .H...H.
+      .......
+      ##.#.##
+      .......
+      ...G...`,
+    budget: 22, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, food: 4, snapHold: 2.7, glueHold: 1.8, items: { spray: 2, potion: 2, tile: 2 },
+    orel: { hp: 60, speed: 2.3 },
+    minion: { hp: 5, speed: 2.3 }, fast: { hp: 2, speed: 3.3 }, fat: { hp: 12, speed: 1.35 },
+    waves: [
+      { t: 1, type: 'fast', hole: 0 }, { t: 1, type: 'fast', hole: 1 }, { t: 3, type: 'orel', hole: 2 }, { t: 4, type: 'minion', hole: 3 },
+      { t: 7, type: 'fat', hole: 0 }, { t: 8, type: 'fat', hole: 1 }, { t: 11, type: 'fast', hole: 2 }, { t: 12, type: 'fast', hole: 3 },
+      { t: 15, type: 'minion', hole: 0 }, { t: 16, type: 'minion', hole: 1 }, { t: 19, type: 'fast', hole: 2 },
+    ],
+    intro: [
+      ['shaked', 'זאת מחלקת התלונות. יש פה 4,812 תלונות שלי. אף אחת לא נפתחה.'],
+      ['orel', 'אנחנו משתמשים בהן לבנות מחילות. נייר טוב.'],
+    ],
+  }),
+  L({
+    name: 'ישיבת הנהלה של סוללת אידו', area: 6, boss: true,
+    map: `
+      .H.H.H.
+      .......
+      ##.#.##
+      .......
+      .#.#.#.
+      .......
+      #.###.#
+      .......
+      ...G...`,
+    budget: 23, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, smart: true, food: 4, snapHold: 2.7, glueHold: 1.8, items: { spray: 2, potion: 2, tile: 2 },
+    lior: { hp: 84, speed: 2.25 }, orel: { hp: 60, speed: 2.3 }, liorReturn: 2.0,
+    waves: [
+      { t: 1, type: 'lior', hole: 1 }, { t: 2, type: 'orel', hole: 2 }, { t: 5, type: 'minion', hole: 0 }, { t: 9, type: 'fat', hole: 2 },
+      { t: 12, type: 'fast', hole: 0 }, { t: 13, type: 'fast', hole: 1 }, { t: 17, type: 'minion', hole: 2 },
+    ],
+    intro: [
+      ['lior', 'פתחנו את ישיבת ההנהלה. סעיף ראשון: אנחנו ההנהלה.'],
+      ['orel', 'סעיף שני: מי שמתלונן, מקבל בלטה.'],
+      ['shalev', 'סוף סוף ישיבה שאני מתחבר אליה. כי אני הולך לפרק אותה.'],
+    ],
+  }),
+  L({
+    name: 'הכספת', area: 6,
+    map: `
+      H.....H
+      .#.#.#.
+      .#.#.#.
+      .......
+      ###.###
+      ..#.#..
+      .#...#.
+      .#.#.#.
+      ...G...`,
+    budget: 18, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, smart: true, food: 4, snapHold: 2.7, glueHold: 1.8, items: { spray: 2, potion: 2, tile: 2 },
+    lior: { hp: 94, speed: 2.3 },
+    minion: { hp: 5, speed: 2.3 }, fast: { hp: 2, speed: 3.3 }, fat: { hp: 14, speed: 1.4 },
+    waves: [
+      { t: 1, type: 'lior', hole: 0 }, { t: 2, type: 'fat', hole: 1 }, { t: 5, type: 'fast', hole: 0 }, { t: 6, type: 'fast', hole: 1 },
+      { t: 10, type: 'fat', hole: 0 }, { t: 13, type: 'minion', hole: 1 }, { t: 14, type: 'minion', hole: 0 }, { t: 18, type: 'fast', hole: 1 },
+    ],
+    intro: [
+      ['ofek', 'זאת הכספת של סוללת אידו. מה הם שומרים פה?'],
+      ['shaked', 'את כל הכסף שלא הוציאו על מדביר.'],
+      ['lior', 'ועכשיו הוא שלי. כמו כל השאר.'],
+    ],
+  }),
+  L({
+    name: 'העימות האחרון', area: 6, boss: true,
+    map: `
+      H.H.H.H
+      .......
+      .#.#.#.
+      H.....H
+      ..#.#..
+      .#...#.
+      .......
+      #.#.#.#
+      ...G...`,
+    budget: 22, tools: ['snap', 'bucket', 'glue', 'cheese', 'block'], shalev: 2, ofek: 2, shaked: 2, food: 4, snapHold: 2.7, glueHold: 1.8, bucketHold: 4.2,
+    items: { spray: 3, potion: 2, tile: 2 },
+    lior: { hp: 108, speed: 2.25 }, orel: { hp: 76, speed: 2.3 }, liorReturn: 1.8,
+    minion: { hp: 5, speed: 2.3 }, fast: { hp: 2, speed: 3.3 }, fat: { hp: 14, speed: 1.4 },
+    waves: [
+      { t: 1, type: 'lior', hole: 1 }, { t: 2, type: 'orel', hole: 2 }, { t: 4, type: 'fast', hole: 0 }, { t: 4.5, type: 'fast', hole: 3 },
+      { t: 8, type: 'fat', hole: 4 }, { t: 9, type: 'fat', hole: 5 }, { t: 12, type: 'minion', hole: 0 }, { t: 13, type: 'minion', hole: 3 },
+      { t: 16, type: 'fast', hole: 4 }, { t: 17, type: 'fast', hole: 5 }, { t: 21, type: 'fat', hole: 1 }, { t: 24, type: 'minion', hole: 2 },
+    ],
+    intro: [
+      ['lior', 'זהו. כל המשפחה פה. כל המחילות פתוחות. אין לכם לאן לברוח.'],
+      ['orel', 'תמסרו את החומוס בשקט, ואף אחד לא מקבל בלטה.'],
+      ['shaked', 'יש לי תרסיס, שיקוי, ובלטה. ותלונה. בעיקר תלונה.'],
+      ['ofek', 'אני יורד מהכיסא. הפעם באמת. בשביל האתר.'],
+      ['shalev', 'אני... מתחבר. יאללה, לסיים את זה.'],
     ],
   }),
 ];

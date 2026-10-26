@@ -432,3 +432,48 @@ h1 .big { font-size: clamp(84px, 27vw, 150px); color: var(--yellow); transform: 
 .levels-list { padding-bottom: calc(var(--safe-b) + 24px + var(--gap)); }
 .modal.show { padding-bottom: calc(var(--safe-b) + 16px + var(--gap)); }
 .dlg-panel { bottom: calc(var(--safe-b) + 3vh + var(--gap)); }
+
+/* ---------- turbo, items, a second boss, the album ---------- */
+.boss.orel img { background: #9b59ff; }
+.boss.orel .boss-bar i { background: linear-gradient(#c58bff, #7b2cff); }
+.turbo-btn {
+  position: fixed; right: 12px; bottom: calc(var(--tray-h, 160px) + 14px); z-index: 6; width: 78px; height: 78px; border-radius: 50%;
+  border: var(--line); background: #3b2a1e; box-shadow: var(--pop); padding: 0; display: grid; place-items: center; overflow: visible;
+}
+.turbo-btn .turbo-ring { position: absolute; inset: 4px; border-radius: 50%; background: conic-gradient(#ff7a1a 0deg, rgba(0,0,0,.35) 0); }
+.turbo-btn .turbo-ring::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #2b1f16; }
+.turbo-btn img { position: relative; width: 54px; height: 54px; object-fit: contain; filter: grayscale(.8) brightness(.7); transition: filter .2s; }
+.turbo-btn b { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); background: var(--ink); color: #888; font-weight: 900; font-size: 13px; padding: 1px 8px; border-radius: 8px; white-space: nowrap; }
+.turbo-btn.ready { animation: turboGlow .5s ease-in-out infinite alternate; background: var(--orange); }
+.turbo-btn.ready img { filter: none; animation: shake .4s infinite; }
+.turbo-btn.ready b { color: var(--yellow); }
+.turbo-btn.busy img { filter: none; }
+@keyframes turboGlow { to { box-shadow: 0 4px 0 var(--ink), 0 0 26px 6px rgba(255, 140, 0, .8); transform: scale(1.08); } }
+.tray-row.items { margin-top: 8px; }
+.item {
+  flex: 1; min-width: 0; height: 50px; border-radius: 14px; border: var(--line); background: #e9f7d9; color: var(--ink); box-shadow: var(--pop);
+  display: flex; align-items: center; justify-content: center; gap: 6px; padding: 0 6px; position: relative;
+}
+.item img { width: 34px; height: 36px; object-fit: contain; }
+.item span { font-weight: 900; font-size: 15px; }
+.item b { position: absolute; top: -9px; left: -6px; min-width: 24px; height: 22px; border-radius: 11px; background: var(--ink); color: var(--yellow); font-size: 13px; line-height: 22px; font-weight: 900; text-align: center; }
+.item.on { background: var(--green); transform: translateY(-4px); box-shadow: 0 8px 0 var(--ink); }
+.item:disabled { opacity: .35; filter: grayscale(1); }
+.item:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+@media (max-height: 700px) { .item { height: 42px; } .turbo-btn { width: 64px; height: 64px; } .turbo-btn img { width: 44px; height: 44px; } }
+#album { background: #1c140e url(../img/wall_store.webp) center top/cover; overflow-y: auto; touch-action: pan-y; bottom: calc(-1 * var(--gap)); }
+#album::before { content: ''; position: fixed; inset: 0; bottom: calc(-1 * var(--gap)); background: rgba(20, 13, 8, 0.86); pointer-events: none; }
+.album-sub { position: relative; margin: 4px 16px 6px; font-weight: 700; }
+.album-list { position: relative; padding: 4px 14px calc(var(--safe-b) + 24px + var(--gap)); max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+.mcard { display: flex; gap: 12px; align-items: center; background: var(--paper); color: var(--ink); border: var(--line); border-radius: 18px; padding: 10px 12px; box-shadow: var(--pop); }
+.mcard .mimg { width: 92px; height: 92px; flex: none; border-radius: 14px; background: radial-gradient(circle, #ffe27a, var(--yellow) 70%); border: 2.5px solid var(--ink); display: grid; place-items: center; overflow: hidden; }
+.mcard .mimg img { max-width: 88px; max-height: 88px; object-fit: contain; }
+.mcard b { font-size: 20px; font-weight: 900; }
+.mcard p { margin: 3px 0 0; font-size: 14px; line-height: 1.35; font-weight: 500; }
+.mcard.locked .mimg { background: #6b5c4d; }
+.mcard.locked img { filter: brightness(0) opacity(.55); }
+.mcard.locked { background: #d8ccb8; }
+.dlg-panel.newmouse .dlg-who { animation: whoIn .5s cubic-bezier(.3, 1.6, .5, 1), newGlow 1.2s ease-in-out infinite alternate; }
+.dlg-panel.newmouse .dlg-bubble b { color: #7b2cff; font-size: 17px; }
+@keyframes newGlow { to { filter: drop-shadow(0 0 18px #ffc400) drop-shadow(0 6px 0 rgba(0,0,0,.5)); } }
+@media (max-width: 380px) { .ability span { font-size: 13px; line-height: 1.05; } .ability img { width: 30px; height: 30px; } }

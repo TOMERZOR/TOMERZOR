@@ -24,6 +24,11 @@ const PATTERNS = {
   refund: [12, 50, 12, 50, 30],
   start: [20, 60, 40],
   win: [30, 60, 30, 60, 120],
+  turboReady: [20, 40, 20, 40, 60],
+  turboHit: 12,
+  tile: [60, 30, 90],
+  spray: [30, 30, 30],
+  potion: [15, 40, 15],
   lose: [200],
 };
 

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { Game, TOOLS, cellOf, MICE } from './game.js';
+import { Game, TOOLS, cellOf, MICE, BOSSES, ITEMS, TURBO } from './game.js';
 import { LEVELS, AREAS } from './levels.js';
 import { Scene, IMAGES, wx, wz } from './scene.js';
-import { LINES, pick, WHO, TOOL_INFO, HINTS } from './text.js';
+import { LINES, pick, WHO, TOOL_INFO, HINTS, MOUSE_INFO, MOUSE_ORDER, ITEM_INFO } from './text.js';
 import * as audio from './audio.js';
 import * as haptics from './haptics.js';
 
@@ -19,6 +19,7 @@ const save = (() => {
   if (!Array.isArray(out.stars)) out.stars = [];
   if (!Array.isArray(out.best)) out.best = [];
   if (!out.hints || typeof out.hints !== 'object') out.hints = {};
+  if (!out.seen || typeof out.seen !== 'object') out.seen = {};
   if (!Number.isFinite(out.unlocked)) out.unlocked = 0;
   if (!Number.isFinite(out.ido)) out.ido = 0;
   return out;
@@ -49,8 +50,9 @@ let levelToken = 0; // changes whenever a level starts or ends, so late timers k
 const later = (ms, fn) => { const tok = levelToken; setTimeout(() => { if (tok === levelToken) fn(); }, ms); };
 
 // ---------- screens ----------
-const SCREENS = ['loading', 'title', 'levels', 'dialog', 'pause', 'result', 'ending'];
+const SCREENS = ['loading', 'title', 'levels', 'album', 'dialog', 'pause', 'result', 'ending'];
 let inputBlockUntil = 0;
+let itemMode = null; // 'spray' or 'potion' while waiting for the tap that aims it
 function show(id) {
   for (const s of SCREENS) $(s).classList.toggle('show', s === id);
   // the finger that just closed a screen must not also land on the board
@@ -210,7 +212,12 @@ function openLevel(i) {
   $('dlg-title').innerHTML = `<small></small>`;
   $('dlg-title').querySelector('small').textContent = `שלב ${i + 1} · ${AREAS[lv.area].name}`;
   $('dlg-title').appendChild(document.createTextNode(lv.name));
-  dlg = { lines: lv.intro || [], n: 0 };
+  save.seen = save.seen || {};
+  const lines = [...(lv.intro || [])];
+  if (lv.newMouse && !save.seen[lv.newMouse]) lines.unshift(['__new', lv.newMouse]);
+  for (const w of lv.waves) save.seen[w.type] = true;
+  persist();
+  dlg = { lines, n: 0 };
   // the room behind the dialogue
   prepareLevel(i);
   nextLine();
@@ -220,12 +227,23 @@ function nextLine() {
   if (dlg.n >= dlg.lines.length) { dlg = null; beginPlan(); return; }
   const [who, text] = dlg.lines[dlg.n++];
   const panel = $('dlg-panel');
-  panel.className = 'dlg-panel' + (who === 'lior' ? ' left' : '');
   const img = $('dlg-who');
-  img.src = WHO[who].img;
-  img.classList.toggle('bust', !!WHO[who].bust);
-  $('dlg-name').textContent = WHO[who].name;
-  $('dlg-line').textContent = text;
+  if (who === '__new') {
+    // "a new mouse!" card
+    const info = MOUSE_INFO[text];
+    panel.className = 'dlg-panel left newmouse';
+    img.src = info.img;
+    img.classList.remove('bust');
+    $('dlg-name').textContent = 'עכבר חדש נפתח: ' + info.name;
+    $('dlg-line').textContent = info.desc;
+    audio.sfx.turboReady();
+  } else {
+    panel.className = 'dlg-panel' + (who === 'lior' || who === 'orel' ? ' left' : '');
+    img.src = WHO[who].img;
+    img.classList.toggle('bust', !!WHO[who].bust);
+    $('dlg-name').textContent = WHO[who].name;
+    $('dlg-line').textContent = text;
+  }
   // restart the entry animations
   for (const el of [img, panel.querySelector('.dlg-bubble')]) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
   if (who === 'lior') audio.sfx.squeak(); else audio.sfx.tap(); haptics.buzz('ui');
@@ -253,6 +271,9 @@ function prepareLevel(i) {
   $('hud-level').textContent = `${i + 1}. ${lv.name}`;
   $('row-plan').hidden = false;
   $('row-action').hidden = true;
+  $('row-items').hidden = true;
+  $('turbo-btn').hidden = true;
+  itemMode = null;
   $('ab-shalev').hidden = !lv.shalev;
   $('ab-ofek').hidden = !lv.ofek;
   $('ab-shaked').hidden = !lv.shaked;
@@ -298,6 +319,7 @@ function buildTools() {
       e.stopPropagation();
       audio.unlock();
       audio.sfx.tap(); haptics.buzz('ui');
+      itemMode = null;
       tool = tool === k && game.phase === 'action' ? null : k;
       if (game.phase === 'plan') tool = k;
       toast(`${TOOL_INFO[k].name}: ${TOOL_INFO[k].desc}`, '', 1500);
@@ -337,11 +359,25 @@ function renderHud() {
   const total = game.level.waves.length;
   $('left-mice').hidden = game.phase === 'plan' || total < 2;
   $('left-n').textContent = '×' + miceLeft();
-  const lior = game.mice.find((m) => m.type === 'lior');
-  if (lior) {
-    $('boss').hidden = false;
-    $('boss-fill').style.width = (100 * lior.hp / lior.hpMax) + '%';
+  // a health bar for each boss on the board
+  for (const [type, box, fill] of [['lior', 'boss', 'boss-fill'], ['orel', 'boss2', 'boss2-fill']]) {
+    const b = game.mice.find((m) => m.type === type);
+    $(box).hidden = !b;
+    if (b) $(fill).style.width = (100 * b.hp / b.hpMax) + '%';
   }
+  // the items and the turbo
+  const has = Object.values(game.items).some((n) => n > 0) || Object.values(game.level.items || {}).some((n) => n > 0);
+  $('row-items').hidden = !(has && game.phase === 'action');
+  for (const k of ['spray', 'potion', 'tile']) {
+    const n = game.items[k];
+    $('it-' + k).hidden = !((game.level.items || {})[k] > 0);
+    $('it-' + k + '-n').textContent = n;
+    $('it-' + k).disabled = !(n > 0);
+    $('it-' + k).classList.toggle('on', itemMode === k);
+  }
+  $('turbo-btn').hidden = game.phase !== 'action';
+  $('turbo-btn').classList.toggle('ready', game.turbo.ready);
+  $('turbo-btn').classList.toggle('busy', !!game.turbo.active);
   renderTools();
 }
 
@@ -356,6 +392,7 @@ function startAction() {
   renderTools();
   $('row-plan').hidden = true;
   $('row-action').hidden = false;
+  renderHud();
   requestAnimationFrame(layout);
   audio.startMusic();
   pop(window.innerWidth / 2, window.innerHeight * 0.42, 'יאללה!', 'big');
@@ -412,7 +449,56 @@ function afterChange() {
   renderHud();
 }
 
+function useItemAt(x, y) {
+  const mode = itemMode;
+  itemMode = null;
+  if (mode === 'spray') {
+    const cell = scene.pickCell(x, y);
+    if (cell == null) { toast('לחץ על מקום בלוח'); itemMode = mode; renderHud(); return; }
+    const { c, r } = cellOf(cell);
+    game.useSpray(c, r);
+  } else if (mode === 'potion') {
+    const px = scene.cellPixels();
+    let best = null, bd = Infinity;
+    for (const m of game.mice) {
+      if (!game.hittable(m)) continue;
+      const p = scene.mouseScreen(m);
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d < bd) { bd = d; best = m; }
+    }
+    if (!best || bd > px * 1.6) { toast('לחץ על עכבר'); itemMode = mode; renderHud(); return; }
+    game.usePotion(best);
+  }
+  handleEvents();
+  renderHud();
+}
+
+function pickItem(k) {
+  if (!game || game.phase !== 'action' || !(game.items[k] > 0)) return;
+  audio.unlock(); audio.sfx.tap(); haptics.buzz('ui');
+  if (k === 'tile') {
+    if (!game.useTile()) toast('אין עכברים בחוץ');
+    itemMode = null;
+    handleEvents();
+    renderHud();
+    return;
+  }
+  itemMode = itemMode === k ? null : k;
+  tool = null;
+  if (itemMode) toast(`${ITEM_INFO[k].name}: ${ITEM_INFO[k].desc}`, '', 2200);
+  renderHud();
+}
+
+function fireTurbo() {
+  if (!game) return;
+  audio.unlock();
+  if (game.useTurbo()) handleEvents();
+  else if (!game.turbo.ready) { toast(`קומבו של ${TURBO.need} מכות טוען את הטורבו`); audio.sfx.error(); }
+  renderHud();
+}
+
 function actionTap(x, y) {
+  if (itemMode) return useItemAt(x, y);
   const px = scene.cellPixels();
   let best = null, bestK = Infinity;
   for (const m of game.mice) {
@@ -470,7 +556,7 @@ function handleEvents() {
     switch (ev.type) {
       case 'spawn':
         audio.sfx.squeak(m && m.type === 'minion' ? 1.3 : 1);
-        if (m && m.type === 'lior') say(m, pick(ev.back ? 'liorBack' : 'liorSpawn'));
+        talk(m, ev.back ? 'back' : 'spawn');
         renderHud();
         break;
       case 'snap':
@@ -481,7 +567,7 @@ function handleEvents() {
         flash();
         haptics.buzz('snap');
         if (at) { pop(at.x, at.y - 70, she(m) ? 'נתפסה!' : 'נתפס!', 'big'); burstAt(at, 14, '#e0c08a', 6); }
-        if (m && m.type === 'lior') say(m, pick('liorCaught'));
+        talk(m, 'caught');
         break;
       case 'bucket':
         audio.sfx.clang();
@@ -490,14 +576,14 @@ function handleEvents() {
         haptics.buzz('snap');
         scene.shake = 0.8;
         if (at) { pop(at.x, at.y - 70, 'בדלי!', 'big'); burstAt(at, 12, '#b8b8b8', 6); }
-        if (m && m.type === 'lior') say(m, pick('liorBucket'));
+        talk(m, 'bucket');
         break;
       case 'glued':
         audio.sfx.glue();
         haptics.buzz('glue');
         audio.heat(true);
         if (at) pop(at.x, at.y - 60, she(m) ? 'נדבקה!' : 'נדבק!', 'green');
-        if (m && m.type === 'lior') say(m, pick('liorGlued'));
+        talk(m, 'glued');
         break;
       case 'eat':
         audio.sfx.chomp();
@@ -505,13 +591,13 @@ function handleEvents() {
         haptics.buzz('eat');
         audio.heat(true);
         if (at) pop(at.x, at.y - 60, she(m) ? 'נעצרה לאכול!' : 'נעצר לאכול!', '');
-        if (m && m.type === 'lior') say(m, pick('liorEat'));
+        talk(m, 'eat');
         break;
       case 'hit':
         if (m && at && ev.how === 'whack') floatText(at.x + (Math.random() - 0.5) * 30, at.y - 30, '-' + ev.n);
-        if (m && m.type === 'lior') {
-          const b = $('boss'); b.classList.remove('hurt'); void b.offsetWidth; b.classList.add('hurt');
-          if (m.hp > 0 && m.hp / m.hpMax < 0.25 && !m.saidLow) { m.saidLow = true; say(m, pick('liorLow')); }
+        if (m && BOSSES.has(m.type)) {
+          const b = $(m.type === 'lior' ? 'boss' : 'boss2'); b.classList.remove('hurt'); void b.offsetWidth; b.classList.add('hurt');
+          if (m.hp > 0 && m.hp / m.hpMax < 0.25 && !m.saidLow) { m.saidLow = true; talk(m, 'low'); }
         }
         if (ev.combo >= 3 && ev.how === 'whack') audio.sfx.combo(Math.min(ev.combo, 20));
         renderHud();
@@ -524,7 +610,7 @@ function handleEvents() {
         audio.sfx.free();
         haptics.buzz('free');
         if (at) pop(at.x, at.y - 60, she(m) ? 'ברחה!' : 'ברח!', 'red');
-        if (m && m.type === 'lior') say(m, pick('liorFree'));
+        talk(m, 'free');
         scene.syncItems();
         break;
       case 'broke':
@@ -533,7 +619,7 @@ function handleEvents() {
       case 'steal':
         audio.sfx.steal();
         haptics.buzz('steal');
-        if (m && m.type === 'lior') say(m, pick('liorSteal'));
+        talk(m, 'steal');
         if (Math.random() < 0.5 || !game.level.shaked) toast('אופק: ' + pick('ofekPanic'), 'bad', 1600);
         else toast('שקד: ' + pick('shakedRant'), 'bad', 1600);
         renderHud();
@@ -557,7 +643,7 @@ function handleEvents() {
         renderHud();
         break;
       case 'kill': {
-        const lior = m && m.type === 'lior';
+        const lior = m && BOSSES.has(m.type);
         audio.sfx.kill(lior);
         scene.shake = 1;
         flash();
@@ -575,12 +661,75 @@ function handleEvents() {
           burstAt(at, 16, '#9a9aa2', 6, 'fur');
           burstAt(at, 12, '#e8392f', 5);
         }
-        if (m && m.type === 'lior') { toast('אופק: ' + pick('ofekHappy'), '', 1600); }
+        if (m && BOSSES.has(m.type)) { toast('אופק: ' + pick('ofekHappy'), '', 1600); }
         dropView(ev.id, true);
         scene.syncItems();
         renderHud();
         break;
       }
+      case 'turboReady':
+        audio.sfx.turboReady();
+        haptics.buzz('turboReady');
+        toast('טורבו טעון! לחץ על הכפכף הבוער', '', 1800);
+        if (!save.hints.turbo) { save.hints.turbo = true; persist(); hintQueue = [HINTS.turbo]; nextHint(); later(6000, () => { if ($('hint-text').textContent === HINTS.turbo) $('hint').hidden = true; }); }
+        renderHud();
+        break;
+      case 'turbo':
+        audio.sfx.turbo();
+        haptics.buzz('turboReady');
+        callout('img/turbo.webp', 'טורבו!!!');
+        flash();
+        scene.shake = 0.8;
+        renderHud();
+        break;
+      case 'turboHit':
+        if (at) {
+          const jx = (Math.random() - 0.5) * 50, jy = (Math.random() - 0.5) * 40;
+          slap(at.x + jx, at.y + jy);
+          burstAt({ x: at.x + jx, y: at.y + jy }, 4, m && m.type === 'lior' ? '#9a9aa2' : '#8a5a36', 4, 'fur');
+          if (ev.left % 4 === 0) pop(at.x + jx * 2, at.y - 70, ['באם!', 'טראח!', 'בום!', 'קבום!'][ev.left % 16 / 4 | 0] || 'באם!', 'red');
+        }
+        audio.sfx.turboHit(TURBO.hits - ev.left);
+        haptics.buzz('turboHit');
+        scene.hitFlash(ev.id);
+        scene.shake = Math.min(1, scene.shake + 0.25);
+        freezeT = Math.max(freezeT, 0.02);
+        break;
+      case 'turboEnd':
+        renderHud();
+        break;
+      case 'spray':
+        audio.sfx.spray();
+        haptics.buzz('spray');
+        { const p = scene.project(wx(ev.x), 0.3, wz(ev.z)); burstAt(p, 16, '#8fe04a', 5); pop(p.x, p.y - 60, 'פסססס!', 'green'); }
+        renderHud();
+        break;
+      case 'charm':
+        audio.sfx.potion();
+        haptics.buzz('potion');
+        if (at) { pop(at.x, at.y - 70, she(m) ? 'מכושפת!' : 'מכושף!', 'green'); burstAt(at, 14, '#7dff6a', 5, 'star'); }
+        renderHud();
+        break;
+      case 'charmHit':
+        audio.sfx.charmHit();
+        if (m && Math.random() < 0.35) say(m, pick('charmed'));
+        { const v = game.mice.find((q) => q.id === ev.victim); if (v) { const p = scene.mouseScreen(v); burstAt(p, 5, '#7dff6a', 4); scene.hitFlash(v.id); } }
+        break;
+      case 'charmEnd':
+        if (at) pop(at.x, at.y - 60, 'התפכח', '');
+        break;
+      case 'tile':
+        audio.sfx.tileWhistle();
+        scene.dropTiles(ev.ids, ITEMS.tile.delay);
+        renderHud();
+        break;
+      case 'tileHit':
+        audio.sfx.tileCrash();
+        haptics.buzz('tile');
+        scene.shake = 1;
+        for (const h of ev.hits) { const p = scene.project(wx(h.x), 0.2, wz(h.z)); burstAt(p, 12, '#b7b7b7', 6); }
+        if (ev.hits.length) { const p = scene.project(wx(ev.hits[0].x), 0.3, wz(ev.hits[0].z)); pop(p.x, p.y - 80, 'בלטה!', 'big'); }
+        break;
       case 'ability':
         if (ev.name === 'ofek') {
           audio.sfx.scream();
@@ -622,17 +771,17 @@ function miceLeft() {
 }
 
 const KILL_WORDS = ['באומון חוסל!', 'פנקייק!', 'לך לישון!', 'נמחק!', 'שטוח!', 'ביי באומון!', 'דפוק!'];
-const FAT_WORDS = ['שמוליק התפוצץ!', 'הדיאטה נגמרה!', 'שמוליק חוסל!'];
+const FAT_WORDS = ['צ׳יבוטרו התפוצץ!', 'הדיאטה נגמרה!', 'צ׳יבוטרו חוסל!'];
 const FAST_WORDS = ['ספרינטר חוסל!', 'סוף המרוץ!', 'עצר בבת אחת!'];
 
 function killStamp(lior, ev = {}) {
   const el = $('kill');
   const left = miceLeft();
   const type = ev.mouse || (lior ? 'lior' : 'minion');
-  $('kill-img').src = lior ? 'img/lior_ko.webp' : `img/${type}_run.webp`;
+  $('kill-img').src = type === 'lior' ? 'img/lior_ko.webp' : type === 'orel' ? 'img/orel_ko.webp' : `img/${type}_run.webp`;
   $('kill-img').classList.toggle('flat', !lior);
   const words = type === 'fat' ? FAT_WORDS : type === 'fast' ? FAST_WORDS : KILL_WORDS;
-  $('kill-title').textContent = lior ? 'ליאור באום חוסלה!' : words[Math.floor(Math.random() * words.length)];
+  $('kill-title').textContent = type === 'lior' ? 'ליאור באום חוסלה!' : type === 'orel' ? 'אוראל חוסל!' : words[Math.floor(Math.random() * words.length)];
   $('kill-sub').textContent = left > 1 ? `נשארו עוד ${left} עכברים` : left === 1 ? 'נשאר עוד עכבר אחד' : 'האתר נקי!';
   el.classList.toggle('big', lior);
   el.hidden = false;
@@ -643,8 +792,15 @@ function killStamp(lior, ev = {}) {
   chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump');
 }
 
-// Lior Baum is a she; the henchmen are he
+// Lior Baum is a she; the henchmen and Orel are he
 const she = (m) => !!m && m.type === 'lior';
+// what a boss says: Lior and Orel each have their own lines, the others keep quiet
+function talk(m, what) {
+  if (!m || !BOSSES.has(m.type)) return;
+  const key = m.type + what[0].toUpperCase() + what.slice(1);
+  if (LINES[key]) say(m, pick(key));
+  else if (m.type === 'orel' && (what === 'glued' || what === 'bucket' || what === 'eat')) say(m, pick('orelCaught'));
+}
 
 // "+450" flies from the dead mouse up to the score
 function flyPoints(from, pts) {
@@ -811,6 +967,12 @@ function updateViews(dt) {
     comboEl.innerHTML = `x${game.combo}<small>${game.combo >= 12 ? 'נזק כפול!' : 'קומבו'}</small>`;
     comboEl.style.transform = `scale(${1 + Math.min(0.6, game.combo * 0.02) + (game.comboT > 0.65 ? 0.15 : 0)})`;
   } else if (comboEl) { comboEl.remove(); comboEl = null; }
+  // the turbo meter fills with the combo
+  if (!$('turbo-btn').hidden) {
+    const k = game.turbo.ready ? 1 : game.turbo.charge;
+    $('turbo-ring').style.background = `conic-gradient(#ff7a1a ${k * 360}deg, rgba(0,0,0,.35) 0)`;
+    $('turbo-btn').classList.toggle('ready', game.turbo.ready);
+  }
   // the ability buttons glow when the food is in danger
   const g = cellOf(game.goal);
   const danger = game.mice.some((m) => m.alive && !game.isHeld(m) && m.state !== 'away' && (m.carrying || Math.hypot(m.x - g.c, m.z - g.r) < 2.2));
@@ -944,8 +1106,12 @@ function finish() {
     audio.sfx.lose();
     haptics.buzz('lose');
   }
-  $('res-img').src = won ? 'img/lior_ko.webp' : 'img/lior_eat.webp';
-  $('res-title').textContent = won ? 'ליאור חוסלה!' : 'העכברים ניצחו';
+  const types = new Set(LEVELS[levelIndex].waves.map((w) => w.type));
+  const boss = types.has('lior') ? 'lior' : types.has('orel') ? 'orel' : null;
+  $('res-img').src = won ? (boss === 'orel' ? 'img/orel_ko.webp' : 'img/lior_ko.webp') : 'img/lior_eat.webp';
+  $('res-title').textContent = !won ? 'העכברים ניצחו'
+    : boss === 'lior' && types.has('orel') ? 'ליאור ואוראל חוסלו!'
+    : boss === 'orel' ? 'אוראל חוסל!' : boss === 'lior' ? 'ליאור חוסלה!' : 'האתר נוקה!';
   $('res-line').textContent = won ? pick('win') : pick('lose');
   const st = $('res-stars').children;
   [...st].forEach((s, i) => {
@@ -1069,6 +1235,10 @@ function wire() {
   });
   $('levels-btn').addEventListener('click', () => { audio.unlock(); audio.sfx.tap(); haptics.buzz('ui'); toLevels(); });
   $('levels-back').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toTitle(); });
+  $('album-btn').addEventListener('click', () => { audio.unlock(); audio.sfx.tap(); haptics.buzz('ui'); toAlbum(); });
+  $('album-back').addEventListener('click', () => { audio.sfx.tap(); haptics.buzz('ui'); toTitle(); });
+  $('turbo-btn').addEventListener('click', (e) => { e.stopPropagation(); fireTurbo(); });
+  for (const k of ['spray', 'potion', 'tile']) $('it-' + k).addEventListener('click', (e) => { e.stopPropagation(); pickItem(k); });
   $('dialog').addEventListener('click', (e) => { if (e.target.id !== 'dlg-skip') nextLine(); });
   $('dlg-skip').addEventListener('click', (e) => { e.stopPropagation(); audio.sfx.tap(); haptics.buzz('ui'); dlg = null; beginPlan(); });
   $('res-next').addEventListener('click', () => {
@@ -1101,10 +1271,31 @@ function toLevels() {
 }
 function toTitle() { show('title'); }
 
+function renderAlbum() {
+  const list = $('album-list');
+  list.innerHTML = '';
+  const seen = save.seen || {};
+  let n = 0;
+  for (const k of MOUSE_ORDER) {
+    const info = MOUSE_INFO[k];
+    const open = !!seen[k];
+    if (open) n++;
+    const card = document.createElement('div');
+    card.className = 'mcard' + (open ? '' : ' locked');
+    card.innerHTML = `<div class="mimg"><img alt="" src="${info.img}"></div><div class="minfo"><b></b><p></p></div>`;
+    card.querySelector('b').textContent = open ? info.name : '???';
+    card.querySelector('p').textContent = open ? info.desc : `נפתח בשלב ${info.level}`;
+    list.appendChild(card);
+  }
+  $('album-sub').textContent = `פגשת ${n} מתוך ${MOUSE_ORDER.length} עכברים`;
+}
+function toAlbum() { renderAlbum(); show('album'); }
+
 async function boot() {
   audio.setMuted(!!save.muted);
   soundLabel();
   haptics.setEnabled(save.haptics !== false);
+  for (const k of MOUSE_ORDER) if (MOUSE_INFO[k].level <= save.unlocked && (save.stars[MOUSE_INFO[k].level - 1] || 0) > 0) save.seen[k] = true;
   hapticLabel();
   wire();
   try {
@@ -1124,4 +1315,4 @@ async function boot() {
 boot();
 
 // for tests
-window.__achori = { get game() { return game; }, get scene() { return scene; }, LEVELS, save, MICE };
+window.__achori = { get game() { return game; }, get scene() { return scene; }, LEVELS, save, MICE, openLevel };

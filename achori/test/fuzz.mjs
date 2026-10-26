@@ -8,7 +8,7 @@ const N = Number(process.argv[2] || 150);
 let seed = 12345;
 const R = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
 const pick = (a) => a[Math.floor(R() * a.length)];
-const KNOWN = new Set(['placed', 'removed', 'start', 'spawn', 'snap', 'bucket', 'glued', 'eat', 'hit', 'dodge', 'free', 'broke', 'steal', 'recovered', 'escaped', 'left', 'kill', 'ability', 'won', 'lost']);
+const KNOWN = new Set(['placed', 'removed', 'start', 'spawn', 'snap', 'bucket', 'glued', 'eat', 'hit', 'dodge', 'turboReady', 'turbo', 'turboHit', 'turboEnd', 'spray', 'charm', 'charmHit', 'charmEnd', 'tile', 'tileHit', 'free', 'broke', 'steal', 'recovered', 'escaped', 'left', 'kill', 'ability', 'won', 'lost']);
 const HELD_TRAP = { caught: 'snap', glued: 'glue', bucketed: 'bucket', eating: null };
 let failures = 0;
 const seen = new Map(); // each kind of failure is printed once, then counted
@@ -39,11 +39,17 @@ for (let li = 0; li < LEVELS.length; li++) {
       const live = g.mice.filter((m) => m.alive);
       if (live.length && R() < 0.08 + style * 0.3) g.whack(pick(live), R());
       if (R() < 0.002) g.useAbility(pick(['ofek', 'shalev', 'shaked']));
+      if (R() < 0.004) g.useSpray(Math.floor(R() * COLS), Math.floor(R() * ROWS));
+      if (R() < 0.004 && live.length) g.usePotion(pick(live));
+      if (R() < 0.003) g.useTile();
+      if (R() < 0.02) g.useTurbo();
       if (R() < 0.01) g.place(pick(level.tools), Math.floor(R() * COLS), Math.floor(R() * ROWS));
       if (R() < 0.01) g.miss(live.length ? pick(live) : null);
       for (const e of g.drain()) if (!KNOWN.has(e.type)) fail(li, n, t, 'unknown event ' + e.type);
       // ----- invariants -----
       if (g.budget < 0) fail(li, n, t, 'budget below zero');
+      if (Object.values(g.items).some((v) => v < 0)) fail(li, n, t, 'item count below zero');
+      if (g.turbo.charge < 0 || g.turbo.charge > 1) fail(li, n, t, 'turbo charge out of range');
       const carried = g.mice.filter((m) => m.alive && m.carrying).length;
       if (g.food < 0 || g.food + carried > g.foodMax) fail(li, n, t, `food ${g.food} + carried ${carried} > ${g.foodMax}`);
       if (!Number.isFinite(g.score)) fail(li, n, t, 'score not finite');

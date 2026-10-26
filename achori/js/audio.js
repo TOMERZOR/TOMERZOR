@@ -91,6 +91,14 @@ export const sfx = {
     burst(0.04, 0.5, 2500 * up, 1.5);
     if (n >= 4) tone('square', 520 * up, 780 * up, 0.05, 0.035);
   },
+  spray() { burst(0.9, 0.5, 5000, 0.6, 0, 'highpass'); burst(0.7, 0.25, 2500, 1.2, 0.05); },
+  potion() { [523, 784, 659, 1047, 1319].forEach((f, i) => tone('sine', f, f * 1.02, 0.14, 0.12, i * 0.06)); for (let i = 0; i < 6; i++) tone('sine', 300 + Math.random() * 500, 900 + Math.random() * 600, 0.05, 0.06, 0.1 + i * 0.07); },
+  charmHit() { burst(0.06, 0.6, 1200, 1, 0, 'lowpass'); tone('square', 300, 160, 0.08, 0.12); },
+  tileWhistle() { tone('sine', 2200, 500, 0.55, 0.12); },
+  tileCrash() { burst(0.5, 1.0, 600, 0.5, 0, 'lowpass'); tone('sine', 120, 35, 0.4, 0.9); for (let i = 0; i < 8; i++) burst(0.06, 0.35, 2000 + Math.random() * 3000, 2, 0.03 + i * 0.03); },
+  turboReady() { [784, 988, 1175, 1568].forEach((f, i) => tone('square', f, f, 0.08, 0.08, i * 0.05)); },
+  turbo() { tone('sawtooth', 200, 1600, 0.35, 0.14); burst(0.4, 0.4, 600, 1, 0, 'bandpass'); },
+  turboHit(n = 0) { const f = 500 + n * 45; burst(0.05, 0.7, 900, 0.8, 0, 'lowpass'); tone('sine', f * 0.3, f * 0.1, 0.08, 0.5); tone('square', f, f * 1.3, 0.03, 0.05); },
   clang() {
     [523, 787, 1290, 1873].forEach((f, i) => tone('triangle', f, f * 0.995, 0.9 - i * 0.15, 0.16 / (i + 1)));
     burst(0.06, 0.6, 3000, 1.2);

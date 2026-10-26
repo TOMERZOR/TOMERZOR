@@ -23,6 +23,11 @@ When you change a file, run `python3 achori/tools/version.py` so phones load the
 - Lose every pita and the mice win. Stars: 3 for keeping every pita, 2 for losing one, 1 otherwise.
 - From level 4 Lior is smart: she sees traps and glue and goes around them, so you have to block every other way.
 - The "סוללת אידו" button files a complaint. It never helps.
+- **Turbo.** A combo of 20 hits charges the turbo button. Tap it and the flip-flop fires 12 rapid double-damage hits on its own, chaining to the next mouse if the first one dies. A miss or a long pause empties the charge (unless it's already full).
+- **Items** (from level 21, a few per level, used during the action):
+  - **Anti-mouse spray**: tap a spot for a poison cloud that slows and hurts every mouse inside for about 3 seconds.
+  - **Betrayal potion**: tap a mouse; for 5.5 seconds it attacks its friends instead of going for the food.
+  - **Floor tile** (בלטה): a big tile drops from above on every mouse that's out: a little damage and a short stun.
 
 Vibration: every tap, placement, hit, catch, kill, steal and ability has its own pattern (`js/haptics.js`), and a caught mouse ticks faster and faster just before it breaks free. Android uses the Vibration API; iPhone Safari has no vibration API, so on iOS 18+ each pulse is the system tap from toggling a hidden switch. It can be turned off on the title screen and in pause.
 
@@ -30,11 +35,11 @@ Leftover money can be spent during the action too: pick a tool, then tap an empt
 
 ## Levels
 
-Twenty levels in five parts of the site: the site manager's caravan, the storeroom, the kitchenette, the meeting room and בית הגדי (the yard at sunset). Each adds something: a second burrow, henchman mice, cheese, glue, smart Lior, a burrow in the middle; then in part two Shmulik the fat mouse (slow, 9 hits), the bucket trap (₪4, holds about 4.5 s), sprinters (fast, 2 hits), mixed waves, Shalev's maze and a final level with five burrows. Progress and best scores are saved in the browser.
+Thirty levels in seven parts of the site: the site manager's container (מכולה), the storeroom, the kitchenette, the meeting room and בית הגדי (the yard at sunset). Each adds something: a second burrow, henchman mice, cheese, glue, smart Lior, a burrow in the middle; then in part two Chibotaro (צ׳יבוטרו) the fat mouse (slow, 9 hits), the bucket trap (₪4, holds about 4.5 s), sprinters (fast, 2 hits), mixed waves, Shalev's maze and a final level with five burrows. Part three (levels 21–30, the parking lot and Ido's battalion HQ) brings Orel (אוראל), the family's mafia boss in a purple satin zip-up and a gold chain: a boss a little weaker than Lior (44 hp) who also comes back after escaping. It also adds the items, and ends with Lior and Orel together. Each new mouse is introduced with a card before its first level, and the mouse album on the title screen fills in as you meet them. Progress and best scores are saved in the browser.
 
 ## Killing
 
-A kill is meant to feel good: the action freezes for a split second (hit-stop, also a shorter one on every hit), the camera punches in, the scene goes to slow motion, a stamp names the kill ("שמוליק התפוצץ!", "פנקייק!", "ליאור באום חוסלה!") with how many mice are left, a splat mark stays on the floor, and the points fly up to the score. Hits rise in pitch as the combo grows; kills within 2.6 s of each other are announced (דאבל, טריפל, מולטי קיל, השמדה) and multiply the points. The level score adds a bonus for pitas kept and money left, and the result screen counts it up and marks a new record.
+A kill is meant to feel good: the action freezes for a split second (hit-stop, also a shorter one on every hit), the camera punches in, the scene goes to slow motion, a stamp names the kill ("צ׳יבוטרו התפוצץ!", "פנקייק!", "ליאור באום חוסלה!") with how many mice are left, a splat mark stays on the floor, and the points fly up to the score. Hits rise in pitch as the combo grows; kills within 2.6 s of each other are announced (דאבל, טריפל, מולטי קיל, השמדה) and multiply the points. The level score adds a bonus for pitas kept and money left, and the result screen counts it up and marks a new record.
 
 ## Code
 
@@ -47,15 +52,15 @@ A kill is meant to feel good: the action freezes for a split second (hit-stop, a
 
 ## Art
 
-All the art was generated with Higgsfield (GPT Image 2.5) in a flat adult-sitcom cartoon style: Lior in seven poses (standing, running, caught in a trap, glued, eating, knocked out, ghost; made from the first one as a reference so they match), the henchman mouse, Ofek on his chair, Shalev and Shaked (caricatures drawn from photos of the real people, with the old drawings as a style reference), the trap, glue, cheese, blocks, toolbox, burrow, the hummus plate, the flip-flop, the floor, three back walls and the key art. `tools/sprite.py` trims them and saves WebP.
+All the art was generated with Higgsfield (GPT Image 2.5) in a flat adult-sitcom cartoon style: Lior in seven poses (standing, running, caught in a trap, glued, eating, knocked out, ghost; made from the first one as a reference so they match), the henchman mouse, Ofek on his chair, Shalev and Shaked (caricatures drawn from photos of the real people, with the old drawings as a style reference), the trap, glue, cheese, blocks, toolbox, burrow, the hummus plate, the flip-flop, the floor, the back walls of every world, the key art, and for part three Orel (standing, running, knocked out), the spray, the potion, the floor tile, the poison cloud and the turbo button. `tools/sprite.py` trims them and saves WebP.
 
 ## Tests
 
 ```
 node achori/test/sim.mjs [level]        # each level: lost with no plan, won with a good plan, how many random plans win, a slower player
 node achori/test/play.cjs <outDir> [level]   # plays a level in a phone-sized browser and saves screenshots (needs the server on :8093)
-node achori/test/levels.cjs             # walks through all twenty levels, the result screens and the ending; fails on any page error
-node achori/test/fuzz.mjs [games]       # thousands of random games: no diagonal moves, no walking through blocks, no lost traps, no NaN, every game ends; and the planning route always matches the real run
+node achori/test/levels.cjs             # walks through all thirty levels, the result screens and the ending; fails on any page error
+node achori/test/fuzz.mjs [games]       # thousands of random games: no diagonal moves, no walking through blocks, no lost traps, no NaN, every game ends; and the planning route always matches the real run; random use of turbo and items, whose counts never go negative
 node achori/test/monkey.cjs [seconds]   # random taps on everything at three phone sizes, with pause/restart/leave mid-level and a damaged save; fails on any error or leftovers
 ```
 

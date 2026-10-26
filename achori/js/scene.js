@@ -7,13 +7,13 @@ import { COLS, ROWS, cellOf, idx } from './game.js';
 
 const SIZE = {
   lior: 1.5, lior_run: 1.08, lior_caught: 1.5, lior_glue: 1.45, lior_eat: 1.35, lior_ko: 1.3, lior_ghost: 1.3,
-  minion_run: 0.82, fat_run: 0.98, fast_run: 0.62, bucket: 1.05, splat: 1.15, block: 1.25, toolbox: 1.1, snap: 0.92, glue: 0.95, cheese: 0.8, food: 1.25, burrow: 1.05,
+  minion_run: 0.82, orel_run: 1.05, orel_ko: 1.25, tile: 1.0, cloud: 1.6, fat_run: 0.98, fast_run: 0.62, bucket: 1.05, splat: 1.15, block: 1.25, toolbox: 1.1, snap: 0.92, glue: 0.95, cheese: 0.8, food: 1.25, burrow: 1.05,
 };
 
-export const IMAGES = ['lior', 'lior_run', 'lior_caught', 'lior_glue', 'lior_eat', 'lior_ko', 'lior_ghost', 'minion_run', 'fat_run', 'fast_run', 'bucket', 'splat', 'wall_meeting', 'wall_yard',
+export const IMAGES = ['lior', 'lior_run', 'lior_caught', 'lior_glue', 'lior_eat', 'lior_ko', 'lior_ghost', 'minion_run', 'fat_run', 'fast_run', 'bucket', 'splat', 'wall_meeting', 'wall_yard', 'orel_run', 'orel_ko', 'tile', 'cloud', 'wall_parking', 'wall_ido',
   'block', 'toolbox', 'snap', 'glue', 'cheese', 'food', 'burrow', 'floor', 'wall_office', 'wall_store', 'wall_kitchen'];
 
-const RUN = { lior: 'lior_run', minion: 'minion_run', fat: 'fat_run', fast: 'fast_run' };
+const RUN = { lior: 'lior_run', minion: 'minion_run', fat: 'fat_run', fast: 'fast_run', orel: 'orel_run' };
 
 export const wx = (c) => c - (COLS - 1) / 2;
 export const wz = (r) => r - (ROWS - 1) / 2;
@@ -176,9 +176,78 @@ export class Scene {
   // a quick zoom-in punch, for the killing blow
   punch(k = 1) { this.punchT = 0.32; this.punchK = k; }
 
+  // poison clouds follow the game's list; each is a few puffs that swell and drift
+  syncClouds() {
+    const list = (this.game && this.game.clouds) || [];
+    this.cloudViews ||= new Map();
+    for (const c of list) {
+      if (this.cloudViews.has(c)) continue;
+      const g = new THREE.Group();
+      for (let k = 0; k < 4; k++) {
+        const s = this.sprite('cloud', { anchor: 0.35, height: 1.3 + (k % 2) * 0.3 });
+        s.userData.off = { x: (k % 2 ? 0.55 : -0.55) * (k > 1 ? 0.6 : 1), z: (k > 1 ? 0.45 : -0.35), ph: k * 1.7 };
+        this.order(s, wz(c.z) + s.userData.off.z + 0.4, 1);
+        g.add(s);
+      }
+      g.position.set(wx(c.x), 0, wz(c.z));
+      g.userData.born = this.time;
+      this.scene.add(g);
+      this.cloudViews.set(c, g);
+    }
+    for (const [c, g] of this.cloudViews) {
+      const alive = list.includes(c);
+      const life = alive ? c.t : 0;
+      const age = this.time - g.userData.born;
+      const k = Math.min(1, age / 0.3) * Math.min(1, life / 0.5);
+      for (const s of g.children) {
+        const o = s.userData.off;
+        s.position.set(o.x + Math.sin(this.time * 1.3 + o.ph) * 0.12, 0.05 + Math.sin(this.time * 2 + o.ph) * 0.06, o.z);
+        s.material.opacity = 0.82 * k;
+        s.material.rotation = Math.sin(this.time + o.ph) * 0.15;
+      }
+      g.scale.setScalar(0.5 + 0.5 * Math.min(1, age / 0.3));
+      if (!alive && life <= 0) { this.scene.remove(g); this.cloudViews.delete(c); }
+    }
+  }
+
+  // a floor tile falls on each of these mice; it lands after `delay` seconds
+  dropTiles(ids, delay) {
+    this.falling ||= [];
+    for (const id of ids) {
+      const s = this.sprite('tile', { anchor: 0.3, height: 1.05 });
+      s.material.rotation = (Math.random() - 0.5) * 0.5;
+      this.scene.add(s);
+      this.falling.push({ id, s, t: delay, delay, landed: 0, x: 0, z: 0 });
+    }
+  }
+
+  updateTiles(dt) {
+    for (const f of this.falling || []) {
+      const m = this.game && this.game.mice.find((q) => q.id === f.id);
+      if (m && f.t > 0) { f.x = m.x; f.z = m.z; }
+      f.t -= dt;
+      const k = Math.max(0, f.t / f.delay);
+      if (f.t > 0) {
+        f.s.position.set(wx(f.x), 7 * k * k + 0.05, wz(f.z));
+        f.s.material.opacity = 1;
+      } else {
+        f.landed += dt;
+        f.s.position.set(wx(f.x), 0.02, wz(f.z));
+        f.s.scale.y = f.s.userData.h * Math.max(0.6, 1 - f.landed * 0.8);
+        f.s.material.opacity = Math.max(0, 1 - Math.max(0, f.landed - 0.5) / 0.4);
+      }
+      this.order(f.s, wz(f.z) + 0.5, 1);
+    }
+    this.falling = (this.falling || []).filter((f) => { if (f.landed > 0.95) { this.scene.remove(f.s); return false; } return true; });
+  }
+
   clearLevel() {
     for (const s of this.splats || []) this.scene.remove(s);
     this.splats = [];
+    for (const g of (this.cloudViews || new Map()).values()) this.scene.remove(g);
+    this.cloudViews = new Map();
+    for (const f of this.falling || []) this.scene.remove(f.s);
+    this.falling = [];
     for (const v of this.items.values()) this.scene.remove(v);
     for (const v of this.mice.values()) { this.scene.remove(v.group); }
     if (this.foodView) this.scene.remove(this.foodView);
@@ -315,7 +384,7 @@ export class Scene {
     let v = this.mice.get(m.id);
     if (v) return v;
     const group = new THREE.Group();
-    const sh = this.shadow(m.type === 'lior' ? 1.0 : 0.75);
+    const sh = this.shadow(m.type === 'lior' || m.type === 'orel' ? 1.0 : 0.75);
     const body = this.sprite(RUN[m.type] || 'minion_run', { anchor: 0.08 });
     group.add(sh, body);
     this.scene.add(group);
@@ -340,6 +409,8 @@ export class Scene {
     for (const [id, v] of this.mice) {
       if (!live.has(id)) { this.scene.remove(v.group); this.mice.delete(id); }
     }
+    this.syncClouds();
+    this.updateTiles(dt);
   }
 
   poseMouse(m, v, dt) {
@@ -427,6 +498,9 @@ export class Scene {
             this.order(v.ghost, z + 3, 1);
           }
           alpha = k > 2.0 ? Math.max(0, 1 - (k - 2.0) / 0.6) : 1;
+        } else if (m.type === 'orel') {
+          pose = 'orel_ko';
+          alpha = k > 1.6 ? Math.max(0, 1 - (k - 1.6) / 0.8) : 1;
         } else {
           pose = run;
           sy = Math.max(0.12, 1 - k * 4); sx = 1 + Math.min(0.5, k * 2);
@@ -451,7 +525,10 @@ export class Scene {
     body.position.y = bob;
     body.material.rotation = rot;
     body.material.opacity = alpha;
-    body.material.color.setRGB(1, v.flash > 0 ? 0.55 : 1, v.flash > 0 ? 0.55 : 1);
+    if (v.flash > 0) body.material.color.setRGB(1, 0.55, 0.55);
+    else if (m.charmed > 0) { const p = 0.5 + 0.5 * Math.sin(t * 10); body.material.color.setRGB(0.55 + 0.2 * p, 1, 0.45 + 0.2 * p); }
+    else if (m.gas > 0) body.material.color.setRGB(0.8, 1, 0.7);
+    else body.material.color.setRGB(1, 1, 1);
     v.sh.material.opacity = alpha * (state === 'dead' && lior ? 0.6 : 1);
     v.sh.visible = state !== 'emerge' || alpha > 0.4;
   }

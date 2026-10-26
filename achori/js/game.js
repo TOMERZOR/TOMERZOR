@@ -19,11 +19,24 @@ export const MICE = {
   minion: { radius: 0.34 },
   fat: { radius: 0.44 },
   fast: { radius: 0.3 },
+  orel: { radius: 0.42 },
+};
+
+// bosses come back out of another burrow when they get away, the rest are gone
+export const BOSSES = new Set(['lior', 'orel']);
+
+// Turbo: a combo this long charges it; firing it rains hits on a mouse
+export const TURBO = { need: 20, hits: 12, every: 0.07, dmg: 2 };
+// items you get a few of per level, used during the action
+export const ITEMS = {
+  spray: { radius: 1.45, dur: 3.2, dps: 1.2, slow: 0.45 }, // a poison cloud
+  potion: { dur: 5.5, dmg: 1, every: 0.4 }, // the mouse turns on its friends
+  tile: { delay: 0.6, dmg: 3, stun: 0.7 }, // a floor tile drops on every mouse
 };
 
 const HELD = new Set(['caught', 'glued', 'eating', 'stunned', 'bucketed']);
 // what a kill is worth before the combo bonus
-export const POINTS = { lior: 1000, minion: 150, fat: 400, fast: 300 };
+export const POINTS = { lior: 1000, orel: 700, minion: 150, fat: 400, fast: 300 };
 const SMELL = 4; // cheese pulls a mouse when it is at most this many steps away
 const SEEN_COST = 7; // extra path cost a smart mouse gives a cell with a visible trap
 
@@ -67,6 +80,11 @@ export class Game {
     this.streak = 0;
     this.streakT = 0;
     this.liorRespawns = 0;
+    this.turbo = { charge: 0, ready: false, active: null };
+    const items = level.items || {};
+    this.items = { spray: items.spray || 0, potion: items.potion || 0, tile: items.tile || 0 };
+    this.clouds = [];
+    this.tiles = [];
   }
 
   emit(type, data = {}) { this.events.push({ ...data, type }); }
@@ -248,10 +266,12 @@ export class Game {
   update(dt) {
     if (this.phase !== 'action') return;
     this.time += dt;
-    if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
+    if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; if (!this.turbo.ready) this.turbo.charge = 0; } }
     if (this.streakT > 0) this.streakT -= dt;
     while (this.spawnQueue.length && this.spawnQueue[0].t <= this.time) this.spawn(this.spawnQueue.shift());
     for (const m of this.mice) this.updateMouse(m, dt);
+    this.updateTurbo(dt);
+    this.updateItems(dt);
     this.mice = this.mice.filter((m) => !(m.gone));
     this.checkEnd();
   }
@@ -288,7 +308,7 @@ export class Game {
   updateMouse(m, dt) {
     if (m.respawnIn > 0) {
       m.respawnIn -= dt;
-      if (m.respawnIn <= 0) this.respawnLior(m);
+      if (m.respawnIn <= 0) this.respawnBoss(m);
       return;
     }
     if (!m.alive) {
@@ -298,6 +318,13 @@ export class Game {
     }
     if (m.dash > 0) m.dash -= dt;
     if (m.stumbleCd > 0) m.stumbleCd -= dt;
+    if (m.gas > 0) m.gas -= dt;
+    // the turbo flurry pins it in place, trap timer and all
+    if (m.turboLock > 0) { m.turboLock -= dt; return; }
+    if (m.charmed > 0) {
+      m.charmed -= dt;
+      if (m.charmed <= 0) { m.charmed = 0; this.emit('charmEnd', { id: m.id }); }
+    }
     if (m.state === 'emerge') {
       m.t -= dt;
       if (m.t <= 0) { m.state = 'run'; this.plan(m); }
@@ -309,6 +336,7 @@ export class Game {
       return;
     }
     if (m.stumble > 0) { m.stumble -= dt; return; }
+    if (m.charmed > 0 && m.state !== 'leaving' && this.charmAttack(m, dt)) return;
     if (m.state === 'confused') {
       m.t -= dt;
       if (m.t <= 0) { m.state = m.carrying ? 'flee' : 'run'; if (m.next == null) this.plan(m); return; }
@@ -326,6 +354,8 @@ export class Game {
     if (m.dash > 0) s *= 1.7;
     if (m.state === 'confused') s *= 0.55;
     if (m.carrying) s *= 0.9;
+    if (m.gas > 0) s *= ITEMS.spray.slow;
+    if (m.charmed > 0) s *= 1.15;
     return s;
   }
 
@@ -355,7 +385,7 @@ export class Game {
   arrive(m) {
     const i = m.cell;
     const it = this.cells[i];
-    if (m.state === 'confused') return false;
+    if (m.state === 'confused' || m.charmed > 0) return false;
     if (it && it.kind === 'snap' && !it.sprung) {
       it.sprung = true;
       this.hold(m, 'caught', this.level.snapHold, i);
@@ -419,7 +449,14 @@ export class Game {
 
   plan(m) {
     let t;
-    if (m.state === 'confused') {
+    if (m.charmed > 0) {
+      // chase the nearest other mouse; with nobody to fight, keep away from the food
+      const v = this.charmVictim(m);
+      const r = v ? this.route(m.cell, [v.next != null && v.next !== m.cell ? v.next : v.cell], false) : null;
+      if (r && r.path.length) { m.next = r.path[0]; return; }
+      if (v) { m.next = null; return; }
+    }
+    if (m.state === 'confused' || m.charmed > 0) {
       const opts = this.neighbours(m.cell).filter((j) => !this.blocks(j));
       // walk away from the food
       const g = cellOf(this.goal);
@@ -445,8 +482,8 @@ export class Game {
     if (m.carrying) this.emit('escaped', { id: m.id, mouse: m.type, x: m.x, z: m.z });
     m.carrying = false;
     this.emit('left', { id: m.id, x: m.x, z: m.z });
-    if (m.type === 'lior') {
-      // Lior always comes back for more: same mouse, same wounds, another burrow.
+    if (BOSSES.has(m.type)) {
+      // the bosses always come back for more: same mouse, same wounds, another burrow.
       m.state = 'away';
       m.respawnIn = this.level.liorReturn || 2.5;
       this.liorRespawns += 1;
@@ -455,7 +492,7 @@ export class Game {
     }
   }
 
-  respawnLior(m) {
+  respawnBoss(m) {
     const n = Math.floor(this.rand() * this.holes.length);
     const hole = this.holes[n];
     // back in the burrow he licks his wounds: half of what you did to him heals
@@ -488,13 +525,146 @@ export class Game {
     this.stats.bestCombo = Math.max(this.stats.bestCombo, this.combo);
     this.stats.hits += 1;
     this.score += 10 * dmg;
+    this.chargeTurbo();
     this.damage(m, dmg, 'whack');
     return 'hit';
+  }
+
+  // ---------- turbo ----------
+  chargeTurbo() {
+    const tb = this.turbo;
+    if (tb.ready || tb.active) return;
+    tb.charge = Math.min(1, this.combo / TURBO.need);
+    if (this.combo >= TURBO.need) { tb.ready = true; tb.charge = 1; this.emit('turboReady'); }
+  }
+
+  turboTarget() {
+    const live = this.mice.filter((m) => m.alive && m.state !== 'emerge' && m.state !== 'leaving' && m.state !== 'away');
+    if (!live.length) return null;
+    const held = live.filter((m) => HELD.has(m.state)).sort((a, b) => a.t - b.t);
+    if (held.length) return held[0];
+    const g = cellOf(this.goal);
+    return live.sort((a, b) => (Math.abs(a.x - g.c) + Math.abs(a.z - g.r) - (a.carrying ? 3 : 0)) - (Math.abs(b.x - g.c) + Math.abs(b.z - g.r) - (b.carrying ? 3 : 0)))[0];
+  }
+
+  useTurbo() {
+    const tb = this.turbo;
+    if (this.phase !== 'action' || !tb.ready || tb.active) return false;
+    const m = this.turboTarget();
+    if (!m) return false;
+    tb.ready = false;
+    tb.charge = 0;
+    tb.active = { left: TURBO.hits, t: 0, id: m.id };
+    this.emit('turbo', { id: m.id });
+    return true;
+  }
+
+  updateTurbo(dt) {
+    const a = this.turbo.active;
+    if (!a) return;
+    a.t -= dt;
+    while (a.t <= 0 && a.left > 0) {
+      let m = this.mice.find((q) => q.id === a.id && q.alive && q.state !== 'leaving' && q.state !== 'away');
+      if (!m) { m = this.turboTarget(); if (!m) { a.left = 0; break; } a.id = m.id; }
+      m.turboLock = TURBO.every * 3;
+      a.left -= 1;
+      a.t += TURBO.every;
+      this.score += 15;
+      this.emit('turboHit', { id: m.id, left: a.left });
+      this.damage(m, TURBO.dmg, 'turbo');
+    }
+    if (a.left <= 0) { this.turbo.active = null; this.emit('turboEnd'); }
+  }
+
+  // ---------- items ----------
+  hittable(m) { return m.alive && m.state !== 'emerge' && m.state !== 'leaving' && m.state !== 'away'; }
+
+  useSpray(c, r) {
+    if (this.phase !== 'action' || !(this.items.spray > 0) || !inside(c, r)) return false;
+    this.items.spray -= 1;
+    this.clouds.push({ x: c, z: r, t: ITEMS.spray.dur });
+    this.emit('spray', { x: c, z: r });
+    return true;
+  }
+
+  usePotion(m) {
+    if (this.phase !== 'action' || !(this.items.potion > 0) || !m || !this.hittable(m)) return false;
+    this.items.potion -= 1;
+    m.charmed = ITEMS.potion.dur;
+    m.attackCd = 0.2;
+    if (!HELD.has(m.state) && m.state !== 'confused' && m.next == null) this.plan(m);
+    this.emit('charm', { id: m.id });
+    return true;
+  }
+
+  useTile() {
+    if (this.phase !== 'action' || !(this.items.tile > 0)) return false;
+    const ids = this.mice.filter((m) => this.hittable(m)).map((m) => m.id);
+    if (!ids.length) return false;
+    this.items.tile -= 1;
+    this.tiles.push({ t: ITEMS.tile.delay, ids });
+    this.emit('tile', { ids });
+    return true;
+  }
+
+  charmVictim(m) {
+    let best = null, bd = Infinity;
+    for (const o of this.mice) {
+      if (o === m || !this.hittable(o) || o.charmed > 0) continue;
+      const d = Math.hypot(o.x - m.x, o.z - m.z);
+      if (d < bd) { bd = d; best = o; }
+    }
+    return best;
+  }
+
+  // a charmed mouse next to another one beats it up; returns true while it is fighting
+  charmAttack(m, dt) {
+    if (HELD.has(m.state)) return false;
+    const v = this.charmVictim(m);
+    if (!v || Math.hypot(v.x - m.x, v.z - m.z) > 0.95) return false;
+    m.attackCd = (m.attackCd || 0) - dt;
+    if (v.x > m.x + 0.01) m.face = 1; else if (v.x < m.x - 0.01) m.face = -1;
+    if (m.attackCd <= 0) {
+      m.attackCd = ITEMS.potion.every;
+      if (!HELD.has(v.state)) v.stumble = Math.max(v.stumble || 0, 0.3);
+      this.emit('charmHit', { id: m.id, victim: v.id });
+      this.damage(v, ITEMS.potion.dmg, 'charm');
+    }
+    // stay put only when standing on a cell centre, so it never stops between cells
+    return m.next == null;
+  }
+
+  updateItems(dt) {
+    for (const c of this.clouds) {
+      c.t -= dt;
+      for (const m of this.mice) {
+        if (!this.hittable(m) || Math.hypot(m.x - c.x, m.z - c.z) > ITEMS.spray.radius) continue;
+        m.gas = 0.25;
+        m.gasAcc = (m.gasAcc || 0) + ITEMS.spray.dps * dt;
+        while (m.gasAcc >= 1 && m.alive) { m.gasAcc -= 1; this.damage(m, 1, 'gas'); }
+      }
+    }
+    this.clouds = this.clouds.filter((c) => c.t > 0);
+    for (const tl of this.tiles) {
+      tl.t -= dt;
+      if (tl.t > 0) continue;
+      const hit = [];
+      for (const id of tl.ids) {
+        const m = this.mice.find((q) => q.id === id);
+        if (!m || !this.hittable(m)) continue;
+        hit.push({ id, x: m.x, z: m.z });
+        this.damage(m, ITEMS.tile.dmg, 'tile');
+        if (m.alive && !HELD.has(m.state)) this.hold(m, 'stunned', ITEMS.tile.stun, m.trapCell);
+      }
+      this.emit('tileHit', { hits: hit });
+    }
+    this.tiles = this.tiles.filter((tl) => tl.t > 0);
   }
 
   miss(m) {
     this.stats.misses += 1;
     this.combo = 0;
+    if (!this.turbo.ready) this.turbo.charge = 0;
     if (m && m.alive && !this.isHeld(m)) { m.dash = 0.5; this.emit('dodge', { id: m.id }); }
   }
 

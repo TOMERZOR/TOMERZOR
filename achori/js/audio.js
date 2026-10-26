@@ -1,5 +1,5 @@
-// Every sound is synthesised with Web Audio: squeaks, the trap, the slipper, Ofek's
-// scream, and a driving loop while the mice are out.
+// Every sound is synthesised with Web Audio (squeaks, the trap, Ofek's scream, and a driving
+// loop while the mice are out), except the flip-flop: real slaps on bare skin, from sfx/.
 
 let ctx = null, master = null, musicGain = null, sfxGain = null;
 let muted = false;
@@ -12,6 +12,35 @@ function noiseBuffer() {
   return b;
 }
 let noise = null;
+
+// the four slaps in sfx/; the third is the light one, used for misses
+const SLAPS = ['sfx/slap1.wav', 'sfx/slap2.wav', 'sfx/slap3.wav', 'sfx/slap4.wav'];
+const slaps = [];
+let lastSlap = -1;
+function loadSlaps() {
+  SLAPS.forEach((url, i) => {
+    fetch(url).then((r) => r.arrayBuffer())
+      .then((a) => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)))
+      .then((b) => { slaps[i] = b; })
+      .catch(() => { /* falls back to the synthesised slap */ });
+  });
+}
+// plays one slap; rate > 1 is higher and shorter. Returns false until the files have loaded.
+function slapSample(vol, rate, pool = [0, 1, 3]) {
+  if (!ctx) return false;
+  const ready = pool.filter((i) => slaps[i]);
+  if (!ready.length) return false;
+  let i = ready[Math.floor(Math.random() * ready.length)];
+  if (i === lastSlap && ready.length > 1) i = ready[(ready.indexOf(i) + 1) % ready.length];
+  lastSlap = i;
+  const s = ctx.createBufferSource(), g = ctx.createGain();
+  s.buffer = slaps[i];
+  s.playbackRate.value = rate * (0.96 + Math.random() * 0.08);
+  g.gain.value = vol;
+  s.connect(g).connect(sfxGain);
+  s.start();
+  return true;
+}
 
 export function unlock() {
   if (!ctx) {
@@ -27,6 +56,7 @@ export function unlock() {
     sfxGain = ctx.createGain(); sfxGain.connect(master);
     musicGain = ctx.createGain(); musicGain.gain.value = 0.32; musicGain.connect(master);
     noise = noiseBuffer();
+    loadSlaps();
   }
   // iOS uses 'interrupted' after a call or a trip to the background, not only 'suspended'
   if (ctx.state !== 'running') ctx.resume().catch(() => {});
@@ -86,9 +116,17 @@ export const sfx = {
   // each hit in a combo lands a little higher, so a streak sounds like it's building
   whack(power = 1, n = 0) {
     const up = Math.pow(1.035, Math.min(n, 24));
-    burst(0.09, 0.9 * power, 700 * up, 0.8, 0, 'lowpass');
-    tone('sine', 140 * up, 45 * up, 0.16, 0.7 * power);
-    burst(0.04, 0.5, 2500 * up, 1.5);
+    if (power < 0.5) { // a miss: the light slap on the floor
+      if (!slapSample(0.5, 1.1, [2])) burst(0.09, 0.9 * power, 700, 0.8, 0, 'lowpass');
+      return;
+    }
+    if (slapSample(Math.min(1.25, 0.95 * power), Math.min(1.35, up))) {
+      if (power > 1) tone('sine', 120 * up, 45 * up, 0.12, 0.35); // a bit more body once the combo doubles damage
+    } else {
+      burst(0.09, 0.9 * power, 700 * up, 0.8, 0, 'lowpass');
+      tone('sine', 140 * up, 45 * up, 0.16, 0.7 * power);
+      burst(0.04, 0.5, 2500 * up, 1.5);
+    }
     if (n >= 4) tone('square', 520 * up, 780 * up, 0.05, 0.035);
   },
   spray() { burst(0.9, 0.5, 5000, 0.6, 0, 'highpass'); burst(0.7, 0.25, 2500, 1.2, 0.05); },
@@ -98,7 +136,11 @@ export const sfx = {
   tileCrash() { burst(0.5, 1.0, 600, 0.5, 0, 'lowpass'); tone('sine', 120, 35, 0.4, 0.9); for (let i = 0; i < 8; i++) burst(0.06, 0.35, 2000 + Math.random() * 3000, 2, 0.03 + i * 0.03); },
   turboReady() { [784, 988, 1175, 1568].forEach((f, i) => tone('square', f, f, 0.08, 0.08, i * 0.05)); },
   turbo() { tone('sawtooth', 200, 1600, 0.35, 0.14); burst(0.4, 0.4, 600, 1, 0, 'bandpass'); },
-  turboHit(n = 0) { const f = 500 + n * 45; burst(0.05, 0.7, 900, 0.8, 0, 'lowpass'); tone('sine', f * 0.3, f * 0.1, 0.08, 0.5); tone('square', f, f * 1.3, 0.03, 0.05); },
+  turboHit(n = 0) {
+    const f = 500 + n * 45;
+    if (!slapSample(1.0, 1.1 + n * 0.025, [0, 1, 2, 3])) { burst(0.05, 0.7, 900, 0.8, 0, 'lowpass'); tone('sine', f * 0.3, f * 0.1, 0.08, 0.5); }
+    tone('square', f, f * 1.3, 0.03, 0.05);
+  },
   clang() {
     [523, 787, 1290, 1873].forEach((f, i) => tone('triangle', f, f * 0.995, 0.9 - i * 0.15, 0.16 / (i + 1)));
     burst(0.06, 0.6, 3000, 1.2);

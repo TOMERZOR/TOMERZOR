@@ -47,7 +47,7 @@ A kill is meant to feel good: the action freezes for a split second (hit-stop, a
 - `js/levels.js`: the maps (ASCII), budgets, mouse speed and health, waves and the dialogue before each level.
 - `js/scene.js`: three.js. A real perspective camera over the floor and the back wall; the art stands in the room as sprites that face the camera and are drawn back to front. The camera fits itself so the grid sits between the HUD and the tray on any screen.
 - `js/main.js`: screens, input, effects (slipper, comic words, particles, the mash ring), HUD and the loop.
-- `js/audio.js`: every sound and the music, synthesised with Web Audio.
+- `js/audio.js`: every sound and the music, synthesised with Web Audio, except the flip-flop: four real slaps on bare skin in `sfx/` (a free sound effect, cut into separate hits), picked at random, never the same one twice in a row, and pitched up as the combo grows.
 - `js/text.js`: all the lines and jokes.
 
 ## Art

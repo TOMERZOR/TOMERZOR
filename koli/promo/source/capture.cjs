@@ -43,9 +43,15 @@ function replyFor(text) {
   await p.locator('.stats').screenshot({ path: `${OUT}/stats.png` });
   await p.click('[data-tab="voice"]'); await p.waitForTimeout(600);
   const cards = p.locator('.view > .card');
-  await cards.nth(2).screenshot({ path: `${OUT}/profile.png` });
-  await cards.nth(3).screenshot({ path: `${OUT}/learned.png` });
-  await cards.nth(1).screenshot({ path: `${OUT}/sources.png` });
+  for (const a of ['היי מותקקק 💛 הוא 119₪ עכשיו, שווה כל שקל!', 'וואי בכיתי 🥹 תודה יפה שלי', 'זארה! לפני שבועיים, נראה לי עוד יש']) {
+    await p.fill('.quiz textarea', a); await p.click('.quiz .btn >> text=הבא');
+  }
+  await p.fill('.quiz textarea', 'אוי לא מאמי 😢 ספרי לי מה קרה? לפעמים לוקח כמה שבועות לראות תוצאות');
+  await p.waitForTimeout(500);
+  await p.locator('.quiz').screenshot({ path: `${OUT}/quiz.png` });
+  await cards.nth(3).screenshot({ path: `${OUT}/profile.png` });
+  await cards.nth(4).screenshot({ path: `${OUT}/learned.png` });
+  await cards.nth(2).screenshot({ path: `${OUT}/sources.png` });
   await p.click('[data-tab="personality"]'); await p.waitForTimeout(600);
   await p.locator('.sliders').locator('xpath=..').screenshot({ path: `${OUT}/sliders.png` });
   await p.locator('.card:has(h2:text("שקיפות"))').screenshot({ path: `${OUT}/disclosure.png` });

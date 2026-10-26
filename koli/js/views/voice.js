@@ -8,6 +8,8 @@ import { analyze } from "../engine.js";
 import { SLIDERS } from "../../core/defaults.js";
 import { parseInstagramExport, samplesFromText, isWantedFile, LIMITS } from "../../core/igexport.js";
 import { listZip, readZipText } from "../../core/zip.js";
+import { quizProgress } from "../../core/quiz.js";
+import { quizCard } from "./quiz.js";
 
 let imported = null; // {files, result} while the creator reviews an import
 
@@ -145,7 +147,7 @@ export function renderVoice(root, rerender) {
     collected(rerender),
   );
 
-  root.append(h("p", { class: "intro" }, "קולי לומדת איך את/ה כותב/ת מההודעות האמיתיות שלך, ואז Claude מנסח פרופיל קול שאפשר לערוך. כל תיקון שתעשו לתשובה בתיבת ההודעות נשמר גם הוא, ומלמד אותה עוד."), who, sources, profileCard(rerender), correctionsCard(rerender));
+  root.append(h("p", { class: "intro" }, "קולי לומדת איך את/ה כותב/ת מההודעות האמיתיות שלך, ואז Claude מנסח פרופיל קול שאפשר לערוך. כל תיקון שתעשו לתשובה בתיבת ההודעות נשמר גם הוא, ומלמד אותה עוד."), who, quizCard(rerender), sources, profileCard(rerender), correctionsCard(rerender));
 }
 
 function importReview(rerender) {
@@ -209,7 +211,7 @@ function collected(rerender) {
 function profileCard(rerender) {
   const p = store.state.persona;
   const prof = p.profile;
-  const enough = p.samples.length + p.pairs.length >= 5;
+  const enough = p.samples.length + p.pairs.length + quizProgress(p) >= 5;
   const runBtn = h("button", { type: "button", class: "btn", disabled: !enough }, prof ? "ניתוח מחדש" : "ניתוח הקול");
   runBtn.addEventListener("click", () =>
     busy(runBtn, "מנתחת… (עד דקה)", async () => {

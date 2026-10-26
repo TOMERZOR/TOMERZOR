@@ -7,6 +7,7 @@
 
 import { SLIDERS, INTENTS, disclosureLine } from "./defaults.js";
 import { activeCampaigns, trackedLink } from "./context.js";
+import { quizPairs } from "./quiz.js";
 
 const MAX_SAMPLE_CHARS = 6000;
 const MAX_PAIRS = 24;
@@ -143,7 +144,8 @@ export function buildSystemPrompt(state, now = new Date()) {
     male: "Address fans in masculine forms (אתה, תגיד, מתאים לך).",
     plural: "Address fans in plural forms (אתם, תגידו), which reads as neutral.",
   }[controls.address] || "";
-  const corrections = (persona.corrections || []).slice(-MAX_CORRECTIONS);
+  // Quiz answers and corrections are written by the creator for this tool, so they lead.
+  const corrections = [...quizPairs(persona), ...(persona.corrections || []).slice(-MAX_CORRECTIONS)];
   const pairs = (persona.pairs || []).slice(-MAX_PAIRS);
   const samples = pickSamples(persona.samples);
 
@@ -153,7 +155,7 @@ export function buildSystemPrompt(state, now = new Date()) {
     persona.about && `About ${name}:\n${persona.about}`,
     profileText(persona.profile) && `<voice_profile>\n${profileText(persona.profile)}\n</voice_profile>`,
     corrections.length &&
-      `<approved_replies>\nReplies ${name} wrote or approved in this tool. They are the best guide to the voice; match them closely.\n${corrections.map((c) => `Fan: ${c.fan}\n${name}: ${c.reply}`).join("\n\n")}\n</approved_replies>`,
+      `<approved_replies>\nReplies ${name} wrote in the voice quiz, or approved and corrected in this tool. They are the best guide to the voice; match them closely.\n${corrections.map((c) => `Fan: ${c.fan}\n${name}: ${c.reply}`).join("\n\n")}\n</approved_replies>`,
     pairs.length && `<real_conversations>\nReal DMs ${name} sent to fans.\n${pairs.map((p) => `Fan: ${p.fan}\n${name}: ${p.reply}`).join("\n\n")}\n</real_conversations>`,
     samples.length && `<writing_samples>\nThings ${name} wrote (messages, captions, comments):\n${samples.map((t) => `- ${t.replace(/\n+/g, " / ")}`).join("\n")}\n</writing_samples>`,
     `<personality>\nThe creator set these dials. They override the samples where they disagree.\n${sliders}\n</personality>`,
@@ -263,7 +265,7 @@ export function extractJson(text) {
 /** Prompt for learning the voice from samples. */
 export function buildAnalyzePrompt(persona) {
   const name = persona.name?.trim() || "the creator";
-  const pairs = (persona.pairs || []).slice(-60);
+  const pairs = [...quizPairs(persona), ...(persona.pairs || []).slice(-60)];
   const samples = pickSamples(persona.samples).slice(0, 200);
   return [
     `Below are real messages, captions and comments written by ${name}, an Instagram creator${persona.about ? ` (${persona.about})` : ""}. Study how ${name} writes so an assistant can answer fans' DMs in exactly this voice.`,

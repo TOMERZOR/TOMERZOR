@@ -85,7 +85,7 @@ export function defaultControls() {
 }
 
 export function defaultPersona() {
-  return { name: "", handle: "", gender: "female", about: "", samples: [], pairs: [], corrections: [], profile: null };
+  return { name: "", handle: "", gender: "female", about: "", samples: [], pairs: [], corrections: [], quiz: { answers: {} }, profile: null };
 }
 
 export function defaultState() {

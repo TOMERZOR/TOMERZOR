@@ -220,3 +220,22 @@ test("demo state is valid and its story reply detects the campaign", () => {
   assert.equal(d.campaignId, s.campaigns[0].id);
   assert.ok(buildSystemPrompt(s).length > 1000);
 });
+
+test("voice quiz: ten questions, gendered wording, answers lead the prompt and the analysis", async () => {
+  const { QUIZ, quizPairs, quizQuestion } = await import("../core/quiz.js");
+  const { buildAnalyzePrompt } = await import("../core/prompt.js");
+  assert.equal(QUIZ.length, 10);
+  assert.equal(new Set(QUIZ.map((q) => q.id)).size, 10);
+  const boundary = QUIZ.find((q) => q.id === "boundary");
+  assert.match(quizQuestion(boundary, "female"), /מתה עלייך/);
+  assert.match(quizQuestion(boundary, "male"), /מת עליך/);
+  const s = state();
+  s.persona.quiz = { answers: { coupon: "בטח מאמי! NOA20 💛", hurt: "   " } };
+  const pairs = quizPairs(s.persona);
+  assert.deepEqual(pairs, [{ fan: "יש קוד הנחה? 🙏", reply: "בטח מאמי! NOA20 💛", source: "quiz" }]);
+  const sys = buildSystemPrompt(s, NOW);
+  assert.match(sys, /voice quiz/);
+  assert.match(sys, /Fan: יש קוד הנחה\? 🙏\nנועה: בטח מאמי! NOA20 💛/);
+  assert.match(buildAnalyzePrompt(s.persona), /בטח מאמי! NOA20/);
+  assert.deepEqual(normalizeState({ persona: { name: "x" } }).persona.quiz, { answers: {} });
+});

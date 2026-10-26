@@ -12,3 +12,8 @@ fitsource/worker/node_modules/
 fitsource/worker/.wrangler/
 fitsource/test/out/
 fitsource/worker/.dev.vars
+
+# Koli
+koli/server/node_modules/
+koli/server/.wrangler/
+koli/server/.dev.vars

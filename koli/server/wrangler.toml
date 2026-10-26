@@ -1,0 +1,28 @@
+# Koli API. Deploy with the GitHub workflow (.github/workflows/koli-api.yml) or
+# `npx wrangler deploy` after the steps in ../README.md.
+name = "koli-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+KOLI_MODEL = "claude-opus-5-5"
+# Replies are short chat answers: low effort keeps them fast and cheap.
+KOLI_EFFORT = "low"
+# After the creator answers a fan personally, Koli stays out of that chat this long.
+KOLI_PAUSE_HOURS = "12"
+IG_GRAPH_VERSION = "v23.0"
+
+# Conversations, drafts and the creator's settings. Create it with
+# `npx wrangler kv namespace create KOLI_KV` and paste the id it prints.
+# Without it the server keeps everything in memory and forgets on restart.
+# [[kv_namespaces]]
+# binding = "KOLI_KV"
+# id = "paste-the-id-here"
+
+# Secrets, never in this file:
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put KOLI_ADMIN_TOKEN     any long random string; the Koli app asks for it
+#   npx wrangler secret put IG_APP_SECRET        Meta app > App settings > Basic > App secret
+#   npx wrangler secret put IG_ACCESS_TOKEN      Instagram user access token with instagram_business_manage_messages
+#   npx wrangler secret put IG_VERIFY_TOKEN      any string; paste the same one in Meta's webhook settings

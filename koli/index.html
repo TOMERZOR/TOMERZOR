@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Koli · קולי</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="קולי לומדת איך יוצר/ת תוכן כותב/ת, ועונה למעריצים בהודעות הפרטיות באינסטגרם בקול שלו/ה, עם זיהוי של הקמפיין שעליו שואלים.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Suez+One&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M5 9.5A4.5 4.5 0 0 1 9.5 5h13A4.5 4.5 0 0 1 27 9.5v8a4.5 4.5 0 0 1-4.5 4.5H14l-5.6 4.4a.6.6 0 0 1-1-.5V22A4.5 4.5 0 0 1 5 17.5z" fill="var(--accent)"/><path d="M11 11.5v4M14.5 9.5v8M18 12v3M21.5 10.5v6" stroke="var(--on-accent)" stroke-width="2" stroke-linecap="round"/></svg></span>
+      <span class="wordmark">קולי</span>
+      <span class="latin">Koli</span>
+    </div>
+    <p class="tagline">הקול שלך, בכל הודעה פרטית</p>
+    <button type="button" class="engine" id="engine-pill" data-state="none"><span class="dot"></span><span id="engine-label">בודקת חיבור…</span></button>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="מסכים">
+    <button type="button" role="tab" id="tab-inbox" data-tab="inbox">תיבת הודעות</button>
+    <button type="button" role="tab" id="tab-voice" data-tab="voice">הקול</button>
+    <button type="button" role="tab" id="tab-personality" data-tab="personality">אופי</button>
+    <button type="button" role="tab" id="tab-campaigns" data-tab="campaigns">קמפיינים</button>
+    <button type="button" role="tab" id="tab-connect" data-tab="connect">חיבור לאינסטגרם</button>
+  </nav>
+
+  <div class="banner" id="demo-banner" hidden>
+    <p><strong>זה חשבון הדגמה.</strong> מאיה והמותג לומי מומצאים, כדי שאפשר יהיה לנסות מיד. כשמוכנים, מתחילים עם החשבון שלך.</p>
+    <button type="button" class="btn ghost" id="start-fresh">להתחיל עם החשבון שלי</button>
+  </div>
+
+  <main id="view" class="view" tabindex="-1"></main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

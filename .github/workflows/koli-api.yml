@@ -1,0 +1,77 @@
+# Deploys the Koli API (koli/server) to Cloudflare Workers. Add these
+# repository secrets (Settings > Secrets and variables > Actions), then run this
+# workflow from the Actions tab:
+#   ANTHROPIC_API_KEY      from console.anthropic.com (set a monthly spend limit there)
+#   CLOUDFLARE_API_TOKEN   Cloudflare dashboard > My Profile > API Tokens > "Edit Cloudflare Workers" template
+#   KOLI_ADMIN_TOKEN       any long random string; the Koli app asks for it
+#   CLOUDFLARE_ACCOUNT_ID  optional; needed only if the token reaches several accounts
+# Instagram (optional until the Meta app is ready): IG_APP_SECRET, IG_ACCESS_TOKEN, IG_VERIFY_TOKEN.
+# Until the required secrets exist, the workflow skips itself instead of failing.
+name: Deploy Koli API
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/playwright-mcp-add-8e6qct]
+    paths: ["koli/server/**", "koli/core/**", ".github/workflows/koli-api.yml"]
+
+concurrency:
+  group: koli-api
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      KOLI_ADMIN_TOKEN: ${{ secrets.KOLI_ADMIN_TOKEN }}
+      IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      IG_VERIFY_TOKEN: ${{ secrets.IG_VERIFY_TOKEN }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$KOLI_ADMIN_TOKEN" ]; then
+            echo "::notice::ANTHROPIC_API_KEY, CLOUDFLARE_API_TOKEN or KOLI_ADMIN_TOKEN is not set; skipping the deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Install and test
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: koli/server
+        run: |
+          npm ci
+          npm test
+
+      - name: Conversation storage
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: koli/server
+        run: node tools/ensure-kv.mjs
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: koli/server
+        run: |
+          npx wrangler deploy | tee deploy.log
+          for name in ANTHROPIC_API_KEY KOLI_ADMIN_TOKEN IG_APP_SECRET IG_ACCESS_TOKEN IG_VERIFY_TOKEN; do
+            value="${!name}"
+            if [ -n "$value" ]; then printf '%s' "$value" | npx wrangler secret put "$name"; fi
+          done
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          echo "::notice::Koli API is at $url (webhook: $url/webhook/instagram)"

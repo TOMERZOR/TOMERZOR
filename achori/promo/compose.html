@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Promo composer</title>
+<link href="https://fonts.googleapis.com/css2?family=Karantina:wght@700&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #1a120c; --yellow: #ffc400; --red: #e8392f; --paper: #fff7e8; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; width: 1080px; height: 1920px; overflow: hidden; background: #000; font-family: 'Rubik', sans-serif; }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: #0d0905; }
+  .layer { position: absolute; inset: 0; }
+  #cam { position: absolute; inset: 0; transform-origin: 50% 45%; }
+  #shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .display { font-family: 'Karantina', 'Rubik', sans-serif; font-weight: 700; line-height: .86; -webkit-text-stroke: 10px var(--ink); paint-order: stroke fill; text-shadow: 0 14px 0 var(--ink); }
+  .cap { position: absolute; left: 0; right: 0; text-align: center; opacity: 0; will-change: transform, opacity; }
+  .sticker { position: absolute; padding: 14px 34px 18px; background: var(--yellow); color: var(--ink); border: 8px solid var(--ink); border-radius: 26px; box-shadow: 0 12px 0 var(--ink); font-family: 'Karantina', sans-serif; font-size: 112px; line-height: .9; opacity: 0; white-space: nowrap; }
+  .sticker small { display: block; font-family: 'Rubik', sans-serif; font-weight: 900; font-size: 44px; line-height: 1.15; }
+  .sticker.white { background: var(--paper); }
+  .sticker.red { background: var(--red); color: #fff; }
+  #open { background: #000; display: grid; place-items: center; }
+  #openText { color: #fff; font-size: 150px; font-family: 'Karantina', sans-serif; letter-spacing: 2px; text-shadow: 0 0 40px rgba(255, 190, 80, .35); }
+  #grain { position: absolute; inset: -50%; opacity: .07; mix-blend-mode: overlay; pointer-events: none; }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 48%, transparent 55%, rgba(0, 0, 0, .55) 100%); pointer-events: none; }
+  #flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+  #bars { position: absolute; inset: 0; pointer-events: none; }
+  #bars i { position: absolute; left: 0; right: 0; height: 0; background: #000; }
+  #bars i:first-child { top: 0; } #bars i:last-child { bottom: 0; }
+  /* phone for the planning shot */
+  #planBg { background: #1c140e; overflow: hidden; }
+  #planBgImg { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); object-fit: cover; filter: blur(18px) brightness(.45) saturate(1.2); }
+  .stripes { position: absolute; left: -20%; right: -20%; height: 120px; background: repeating-linear-gradient(-45deg, var(--yellow) 0 60px, var(--ink) 60px 120px); border-top: 8px solid var(--ink); border-bottom: 8px solid var(--ink); }
+  #phone { position: absolute; left: 50%; top: 50%; width: 700px; height: 1244px; margin: -622px 0 0 -350px; border-radius: 84px; background: #111; padding: 26px; box-shadow: 0 60px 120px rgba(0, 0, 0, .7), inset 0 0 0 6px #333; }
+  #phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 60px; display: block; }
+  #phone::before { content: ''; position: absolute; top: 44px; left: 50%; width: 170px; height: 44px; margin-left: -85px; background: #000; border-radius: 30px; z-index: 2; }
+  #planPersp { position: absolute; inset: 0; perspective: 2200px; }
+  /* Ido's complaint form */
+  #ido { background: #2b1f16; overflow: hidden; }
+  #idoBg { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #5a3d24, #1a120c 75%); }
+  #memo { position: absolute; left: 50%; top: 50%; width: 820px; height: 1100px; margin: -560px 0 0 -410px; background: #fbf6e9; border-radius: 10px; box-shadow: 0 50px 100px rgba(0, 0, 0, .6); padding: 70px 70px; color: #333; }
+  #memo .hd { display: flex; justify-content: space-between; align-items: center; border-bottom: 6px double #333; padding-bottom: 22px; }
+  #memo .logo { font-family: 'Karantina'; font-size: 96px; color: #1d4f8c; }
+  #memo .no { font-weight: 700; font-size: 34px; color: #777; }
+  #memo h3 { font-size: 58px; margin: 46px 0 18px; font-weight: 900; }
+  #memo p { font-size: 38px; margin: 10px 0; line-height: 1.5; }
+  #memo .line { height: 22px; border-bottom: 3px solid #ccc; margin: 26px 0; }
+  #stamp { position: absolute; left: 50%; top: 58%; transform-origin: 50% 50%; padding: 16px 40px 22px; border: 14px solid var(--red); border-radius: 22px; color: var(--red); font-family: 'Karantina'; font-size: 210px; line-height: .9; opacity: 0; white-space: nowrap; mix-blend-mode: multiply; }
+  #wipe { pointer-events: none; }
+  #wipeBand { position: absolute; left: -60%; width: 220%; top: 50%; height: 2700px; margin-top: -1350px; background: repeating-linear-gradient(-45deg, var(--yellow) 0 90px, var(--ink) 90px 180px); transform-origin: 50% 50%; border-top: 16px solid var(--ink); border-bottom: 16px solid var(--ink); }
+  #wipeText { position: absolute; left: 0; right: 0; top: 50%; text-align: center; transform: translateY(-50%); }
+  #wipeText span { display: inline-block; background: var(--yellow); color: var(--ink); border: 12px solid var(--ink); border-radius: 30px; padding: 20px 60px 34px; font-family: 'Karantina'; font-size: 190px; box-shadow: 0 18px 0 var(--ink); }
+  /* logo */
+  #logo { pointer-events: none; }
+  .lw { position: absolute; left: 0; right: 0; text-align: center; color: #fff; opacity: 0; }
+  #lw2 { color: var(--yellow); }
+  #shine { position: absolute; left: 0; right: 0; top: 160px; height: 760px; background: linear-gradient(100deg, transparent 40%, rgba(255, 255, 255, .55) 50%, transparent 60%); mix-blend-mode: overlay; opacity: 0; }
+  #tagline { position: absolute; left: 80px; right: 80px; top: 1460px; text-align: center; font-weight: 900; font-size: 52px; color: #fff; text-shadow: 0 4px 12px #000, 0 0 2px #000; opacity: 0; line-height: 1.3; }
+  /* end card */
+  #end { background: radial-gradient(circle at 50% 38%, #4a3220 0%, #1a120c 70%); overflow: hidden; }
+  #endArt { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .18; filter: blur(6px); }
+  #icon { position: absolute; left: 50%; top: 250px; width: 360px; height: 360px; margin-left: -180px; border-radius: 80px; border: 10px solid var(--ink); box-shadow: 0 20px 0 var(--ink), 0 40px 80px rgba(0, 0, 0, .5); overflow: hidden; background: var(--yellow); }
+  #icon img { width: 100%; height: 100%; display: block; }
+  #endTitle { position: absolute; left: 0; right: 0; top: 700px; text-align: center; }
+  #endTitle .display { display: block; }
+  .chips { position: absolute; left: 60px; right: 60px; top: 1160px; display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; }
+  .chip { background: var(--paper); color: var(--ink); border: 6px solid var(--ink); border-radius: 22px; padding: 10px 28px 16px; font-weight: 900; font-size: 44px; box-shadow: 0 8px 0 var(--ink); opacity: 0; }
+  #cta { position: absolute; left: 50%; top: 1420px; transform: translateX(-50%); background: #4fd15b; color: var(--ink); border: 10px solid var(--ink); border-radius: 40px; padding: 18px 70px 30px; font-family: 'Karantina'; font-size: 140px; box-shadow: 0 16px 0 var(--ink); white-space: nowrap; opacity: 0; }
+  #url { position: absolute; left: 0; right: 0; top: 1680px; text-align: center; color: #fff; font-weight: 700; font-size: 46px; direction: ltr; opacity: 0; letter-spacing: 1px; }
+  #url small { display: block; direction: rtl; font-size: 34px; opacity: .7; margin-top: 8px; }
+  #ghost { position: absolute; width: 260px; left: 760px; top: 1500px; opacity: 0; }
+  #endStripeTop, #endStripeBot { height: 70px; }
+  #endStripeTop { top: 60px; } #endStripeBot { bottom: 60px; }
+  #comic { position: absolute; left: 50%; top: 520px; transform-origin: 50% 50%; font-family: 'Karantina'; font-size: 300px; color: var(--yellow); -webkit-text-stroke: 14px var(--ink); paint-order: stroke fill; text-shadow: 0 18px 0 var(--ink); opacity: 0; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cam"><img id="shot" alt=""></div>
+
+  <div id="planBg" class="layer" hidden>
+    <img id="planBgImg" src="/game/img/wall_store.webp" alt="">
+    <div class="stripes" id="planStripe1" style="top:80px"></div>
+    <div class="stripes" id="planStripe2" style="bottom:80px"></div>
+    <div id="planPersp"><div id="phone"><img id="phoneImg" alt=""></div></div>
+  </div>
+
+  <div id="ido" class="layer" hidden>
+    <div id="idoBg"></div>
+    <div id="memo">
+      <div class="hd"><span class="logo">סוללת אידו</span><span class="no">תלונה מס׳ 4,812</span></div>
+      <h3>נושא: עכברים באתר</h3>
+      <p>מתלוננים: אופק, שקד (שוב), שליו (לא מתחבר)</p>
+      <p>תיאור: עכברה בשם ליאור באום גונבת את החומוס.</p>
+      <div class="line"></div><div class="line"></div>
+      <p>סטטוס הטיפול:</p>
+      <div class="line"></div><div class="line"></div>
+    </div>
+    <div id="stamp">לא מטופל</div>
+  </div>
+
+  <div id="logo" class="layer">
+    <div id="shine"></div>
+    <div class="lw display" id="lw1" style="top:250px;font-size:250px">הרוג את</div>
+    <div class="lw display" id="lw2" style="top:470px;font-size:430px">העכבר</div>
+    <div class="lw display" id="lw3" style="top:830px;font-size:250px">באחורי</div>
+    <div id="tagline">ליאור באום השתלטה על האתר.<br>רק אתה, כמה מלכודות וכפכף.</div>
+  </div>
+
+  <div id="end" class="layer" hidden>
+    <img id="endArt" src="/game/img/keyart.webp" alt="">
+    <div class="stripes" id="endStripeTop"></div>
+    <div class="stripes" id="endStripeBot"></div>
+    <div id="icon"><img src="/game/icons/icon-512.png" alt=""></div>
+    <div id="endTitle">
+      <span class="display" style="font-size:170px;color:#fff">הרוג את</span>
+      <span class="display" style="font-size:250px;color:var(--yellow)">העכבר באחורי</span>
+    </div>
+    <div class="chips"><span class="chip">20 שלבים</span><span class="chip">5 אזורים באתר</span><span class="chip">מלכודות, דבק ודלי</span></div>
+    <div id="cta">שחקו עכשיו!</div>
+    <div id="url">tomerzor.github.io/TOMERZOR/achori<small>בחינם, בטלפון, ישר מהדפדפן</small></div>
+    <img id="ghost" src="/game/img/lior_ghost.webp" alt="">
+  </div>
+
+  <!-- captions -->
+  <div class="cap display" id="cOne" style="top:300px;font-size:150px;color:#fff">עכברה אחת</div>
+  <div class="cap" id="cName" style="top:1270px">
+    <div class="sticker red" id="cWanted" style="position:relative;display:inline-block;opacity:1;font-size:70px;transform:rotate(-6deg);margin-bottom:-20px">מבוקשת</div>
+    <div class="display" style="font-size:250px;color:var(--yellow)">ליאור באום</div>
+    <div class="display" style="font-size:110px;color:#fff;margin-top:6px">השתלטה על האתר</div>
+  </div>
+  <div class="sticker" id="sOfek" style="right:70px;top:220px">אופק<small>מפחד מעכברים</small></div>
+  <div class="sticker" id="sShalev" style="right:60px;top:1350px">שליו<small>לא מתחבר</small></div>
+  <div class="sticker white" id="sShaked" style="left:60px;top:1560px">שקד<small>מתלוננת. הרבה.</small></div>
+  <div class="cap display" id="cIdo" style="top:150px;font-size:130px;color:#fff">והם לא מטפלים.</div>
+  <div class="cap display" id="cPlan1" style="top:120px;font-size:150px;color:var(--yellow)">טומנים מלכודות</div>
+  <div class="cap display" id="cPlan2" style="top:1660px;font-size:120px;color:#fff">מתכננים לה את הדרך</div>
+  <div class="cap display" id="cGo" style="top:600px;font-size:260px;color:#fff">משחררים!</div>
+  <div class="cap display" id="cMash" style="top:1430px;font-size:210px;color:var(--yellow)">תכסח בכפכף!</div>
+  <div class="sticker red" id="sScream" style="right:60px;top:1350px">צעקת אופק<small>משתקת את כולם</small></div>
+  <div class="cap display" id="cMulti" style="top:1420px;font-size:170px;color:#fff">חיסולים ברצף</div>
+  <div id="comic">פאק!!</div>
+
+  <div id="open" class="layer"><div id="openText"></div></div>
+  <div id="wipe" class="layer" hidden><div id="wipeBand"></div><div id="wipeText"><span>אז זה עליך.</span></div></div>
+
+  <canvas id="grain" width="540" height="960"></canvas>
+  <div id="vignette"></div>
+  <div id="bars"><i></i><i></i></div>
+  <div id="flash"></div>
+</div>
+
+<script type="module">
+import { T, SHOTS, FPS, OPEN_TEXT, SHAKES, FLASHES } from '/src/timeline.js';
+
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const outCubic = (k) => 1 - Math.pow(1 - k, 3);
+const inOut = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const outBack = (k, s = 1.9) => 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2);
+const lerp = (a, b, k) => a + (b - a) * k;
+// a slam: big and transparent -> overshoot -> settle
+const slam = (t, at, from = 2.6) => { const k = seg(t, at, at + 0.28); return { s: k <= 0 ? 0 : lerp(from, 1, outBack(k, 2.4)), o: clamp((t - at) / 0.06) }; };
+const show = (el, on) => { el.hidden = !on; };
+function rand(seed) { const x = Math.sin(seed * 12.9898) * 43758.5453; return x - Math.floor(x); }
+
+// camera shake from every impact up to now
+function shake(t) {
+  let x = 0, y = 0, r = 0;
+  for (const [at, s] of SHAKES) {
+    const d = t - at;
+    if (d < 0 || d > 0.45) continue;
+    const a = s * Math.pow(1 - d / 0.45, 2);
+    x += Math.sin(d * 90 + at) * 26 * a; y += Math.cos(d * 77 + at * 3) * 22 * a; r += Math.sin(d * 60) * 1.4 * a;
+  }
+  return { x, y, r };
+}
+
+const CUTS = SHOTS.map((s) => s[1]).concat([T.cut.ido, T.cut.wipe, T.cut.plan, T.cut.end]);
+// whip pans across cuts: blur and a sideways throw
+function whip(t) {
+  let best = 1;
+  let dir = 1;
+  for (const c of CUTS) { const d = Math.abs(t - c); if (d < best) { best = d; dir = t < c ? -1 : 1; } }
+  const k = clamp(1 - best / 0.1);
+  return { blur: k * k * 26, x: dir * k * k * 160 };
+}
+
+function cameraFor(name, k, t) {
+  switch (name) {
+    case 'lior': return { s: lerp(1.06, 1.2, inOut(k)), x: 0, y: lerp(0, -50, k), r: lerp(0, -1.2, k), o: '50% 70%' };
+    case 'ofek': { const p = outCubic(seg(k, 0, 0.25)); return { s: lerp(1.45, 1.12, p) + 0.06 * k, x: 0, y: lerp(-120, 0, p), r: 0, o: '50% 30%' }; }
+    case 'duo': return { s: 1.1, x: lerp(-45, 45, inOut(k)), y: 0, r: 0, o: '50% 50%' };
+    case 'run': return { s: lerp(1.0, 1.12, outCubic(k)), x: 0, y: 0, r: 0, o: '50% 40%' };
+    case 'mash': return { s: 1.2 + 0.06 * k, x: 0, y: 40, r: 0, o: '50% 40%' };
+    case 'scream': return { s: lerp(1.04, 1.16, k), x: 0, y: 0, r: 0, o: '50% 55%' };
+    case 'multi': return { s: lerp(1.12, 1.22, k), x: 0, y: 60, r: 0, o: '50% 35%' };
+    case 'slipper': { const p = outCubic(seg(k, 0, 0.3)); return { s: lerp(1.4, 1.06, p) + 0.05 * k, x: 0, y: 0, r: lerp(3, 0, p), o: '50% 45%' }; }
+    case 'keyart': return { s: lerp(1.5, 1.0, outCubic(seg(t, T.cut.keyart, T.logo + 0.4))), x: 0, y: lerp(260, 0, outCubic(seg(t, T.cut.keyart, T.logo + 0.4))), r: 0, o: '50% 72%' };
+    default: return { s: 1, x: 0, y: 0, r: 0, o: '50% 50%' };
+  }
+}
+
+async function setImg(img, src) {
+  if (img.dataset.src === src) return;
+  img.dataset.src = src;
+  img.src = src;
+  try { await img.decode(); } catch { /* a missing frame keeps the last one */ }
+}
+
+const grain = $('grain').getContext('2d');
+function drawGrain(t) {
+  const f = Math.floor(t * FPS);
+  const id = grain.createImageData(540, 960);
+  let s = f * 7919 + 1;
+  for (let i = 0; i < id.data.length; i += 4) { s = (s * 1103515245 + 12345) >>> 0; const v = s >>> 24; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; }
+  grain.putImageData(id, 0, 0);
+}
+
+window.render = async (t) => {
+  const M = window.__manifest || {};
+  // ----- which picture -----
+  const shot = SHOTS.find((s) => t >= s[1] && t < s[2]);
+  const onPlan = shot && shot[0] === 'plan';
+  const onClipOrGame = shot && !onPlan;
+  $('shot').style.visibility = onClipOrGame ? 'visible' : 'hidden';
+  if (shot) {
+    const [name, from, to, src, first] = shot;
+    const n = Math.min(M[src] || 1, first + Math.floor((t - from) * FPS));
+    const file = `/frames/${src}/${String(n).padStart(4, '0')}.jpg`;
+    if (onPlan) await setImg($('phoneImg'), file); else await setImg($('shot'), file);
+    const k = seg(t, from, to);
+    const cam = cameraFor(name, k, t);
+    const sh = shake(t);
+    const w = whip(t);
+    let punch = 0;
+    if (name === 'mash') for (const [at, s] of SHAKES) { const d = t - at; if (d >= 0 && d < 0.2 && s < 0.3) punch = Math.max(punch, 0.03 * (1 - d / 0.2)); else if (d >= 0 && d < 0.4 && s >= 1) punch = Math.max(punch, 0.14 * (1 - d / 0.4)); }
+    const camEl = $('cam');
+    camEl.style.transformOrigin = cam.o;
+    camEl.style.transform = `translate(${cam.x + sh.x + w.x}px, ${cam.y + sh.y}px) rotate(${cam.r + sh.r}deg) scale(${cam.s + punch})`;
+    camEl.style.filter = w.blur > 0.3 ? `blur(${w.blur.toFixed(1)}px)` : 'none';
+  }
+  // ----- the planning shot: the phone turns in 3D over a moving backdrop -----
+  show($('planBg'), onPlan);
+  if (onPlan) {
+    const k = seg(t, T.cut.plan, T.cut.run);
+    const w = whip(t);
+    const intro = outBack(seg(t, T.cut.plan, T.cut.plan + 0.45), 1.4);
+    $('phone').style.transform = `translateX(${w.x}px) translateY(${lerp(500, 0, intro) + 30}px) rotateY(${lerp(28, -14, inOut(k))}deg) rotateX(${lerp(14, 6, k)}deg) rotateZ(${lerp(-4, 2, k)}deg) scale(${lerp(0.86, 0.98, k)})`;
+    $('planBgImg').style.transform = `scale(1.1) translateX(${lerp(40, -40, k)}px)`;
+    $('planStripe1').style.transform = `translateX(${(t * 160) % 170}px)`;
+    $('planStripe2').style.transform = `translateX(${-(t * 160) % 170}px)`;
+    $('planBg').style.filter = w.blur > 0.3 ? `blur(${w.blur.toFixed(1)}px)` : 'none';
+  }
+  // ----- cold open: typewriter on black -----
+  const openOn = t < T.cut.lior;
+  show($('open'), openOn);
+  if (openOn) {
+    const nChars = Math.floor(clamp((t - 0.25) / 0.045, 0, OPEN_TEXT.length));
+    $('openText').textContent = OPEN_TEXT.slice(0, nChars) + (Math.floor(t * 3) % 2 && nChars < OPEN_TEXT.length ? '|' : '');
+    $('open').style.opacity = 1 - seg(t, T.cut.lior - 0.12, T.cut.lior);
+    $('openText').style.transform = `scale(${1 + 0.04 * t})`;
+  }
+  // ----- Ido's memo -----
+  const idoOn = t >= T.cut.ido && t < T.cut.wipe + 0.3;
+  show($('ido'), idoOn);
+  if (idoOn) {
+    const inK = outBack(seg(t, T.cut.ido, T.cut.ido + 0.45), 1.3);
+    const sh = shake(t);
+    $('memo').style.transform = `translate(${sh.x}px, ${lerp(1500, 0, inK) + sh.y}px) rotate(${lerp(14, -3, inK) + sh.r}deg) scale(${1 + 0.03 * seg(t, T.cut.ido, T.cut.wipe)})`;
+    const st = slam(t, T.cut.ido + 0.6, 3);
+    $('stamp').style.opacity = st.o * 0.92;
+    $('stamp').style.transform = `translate(-50%, -50%) translate(${sh.x}px, ${sh.y}px) rotate(-14deg) scale(${st.s})`;
+  }
+  // ----- the hazard wipe -----
+  const wipeOn = t >= T.cut.wipe - 0.15 && t < T.cut.plan + 0.15;
+  show($('wipe'), wipeOn);
+  if (wipeOn) {
+    const k = seg(t, T.cut.wipe - 0.15, T.cut.plan + 0.15);
+    const x = k < 0.35 ? lerp(-1800, 0, outCubic(k / 0.35)) : k > 0.75 ? lerp(0, 1800, Math.pow((k - 0.75) / 0.25, 2)) : 0;
+    $('wipeBand').style.transform = `translateX(${x}px) rotate(-8deg)`;
+    $('wipeText').style.transform = `translate(${x * 1.15}px, -50%) rotate(-8deg) scale(${1 + 0.05 * Math.sin(t * 20)})`;
+  }
+  // ----- logo over the key art -----
+  const logoOn = t >= T.logo - 0.05 && t < T.cut.end;
+  show($('logo'), logoOn);
+  if (logoOn) {
+    [['lw1', T.logo], ['lw2', T.logo + 0.35], ['lw3', T.logo + 0.7]].forEach(([id, at], i) => {
+      const s = slam(t, at, 3.2);
+      const sh = shake(t);
+      $(id).style.opacity = s.o;
+      $(id).style.transform = `translate(${sh.x * 0.6}px, ${sh.y * 0.6}px) scale(${s.s}) rotate(${i === 1 ? -3 + Math.sin(t * 3) * 1.5 : 0}deg)`;
+    });
+    const sk = seg(t, T.logo + 1.2, T.logo + 1.9);
+    $('shine').style.opacity = sk > 0 && sk < 1 ? 1 : 0;
+    $('shine').style.transform = `translateX(${lerp(-1100, 1100, sk)}px)`;
+    $('tagline').style.opacity = seg(t, T.logo + 1.6, T.logo + 1.9);
+    $('tagline').style.transform = `translateY(${lerp(40, 0, outCubic(seg(t, T.logo + 1.6, T.logo + 1.95)))}px)`;
+  }
+  // ----- end card -----
+  const endOn = t >= T.cut.end;
+  show($('end'), endOn);
+  if (endOn) {
+    const e = t - T.cut.end;
+    const ic = outBack(seg(e, 0.1, 0.55), 2.2);
+    $('icon').style.transform = `scale(${ic}) rotate(${lerp(-25, 0, ic) + Math.sin(e * 3) * 3}deg) translateY(${Math.sin(e * 2.4) * 12}px)`;
+    const tt = slam(t, T.cut.end + 0.35, 2.2);
+    $('endTitle').style.opacity = tt.o; $('endTitle').style.transform = `scale(${tt.s})`;
+    [...document.querySelectorAll('.chip')].forEach((c, i) => {
+      const k = outBack(seg(e, 0.8 + i * 0.2, 1.15 + i * 0.2), 2);
+      c.style.opacity = clamp(k * 3); c.style.transform = `translateY(${lerp(80, 0, k)}px) scale(${lerp(0.6, 1, k)})`;
+    });
+    const ck = outBack(seg(e, 1.6, 2.0), 2.5);
+    $('cta').style.opacity = clamp(ck * 3);
+    $('cta').style.transform = `translateX(-50%) scale(${ck * (1 + 0.04 * Math.sin(e * 9))})`;
+    $('url').style.opacity = seg(e, 1.9, 2.2);
+    const g = seg(e, 2.2, 4.6);
+    $('ghost').style.opacity = Math.sin(g * Math.PI) * 0.9;
+    $('ghost').style.transform = `translate(${Math.sin(g * 7) * 40}px, ${-g * 900}px) rotate(${Math.sin(g * 5) * 8}deg)`;
+    $('endStripeTop').style.transform = `translateX(${(e * 200) % 170}px)`;
+    $('endStripeBot').style.transform = `translateX(${-(e * 200) % 170}px)`;
+    $('endArt').style.transform = `scale(${1.1 + e * 0.02})`;
+  }
+  // ----- captions -----
+  const capIn = (id, a, b, { from = 2.6, rot = 0, fade = 0.15 } = {}) => {
+    const el = $(id);
+    if (t < a || t > b) { el.style.opacity = 0; return; }
+    const s = slam(t, a, from);
+    const out = 1 - seg(t, b - fade, b);
+    const sh = shake(t);
+    el.style.opacity = s.o * out;
+    el.style.transform = `translate(${sh.x * 0.5}px, ${sh.y * 0.5}px) scale(${s.s}) rotate(${rot}deg)`;
+  };
+  capIn('cOne', 2.0, 2.85, { from: 1.6 });
+  capIn('cName', 2.9, T.cut.ofek - 0.02, { from: 2.4, rot: -2 });
+  capIn('sOfek', T.cut.ofek + 0.12, T.cut.duo - 0.02, { rot: 4 });
+  capIn('sShalev', T.cut.duo + 0.15, T.cut.ido - 0.02, { rot: -4 });
+  capIn('sShaked', T.cut.duo + 0.85, T.cut.ido - 0.02, { rot: 5 });
+  capIn('cIdo', T.cut.ido + 0.75, T.cut.wipe - 0.02, { from: 1.8, rot: -2 });
+  capIn('cPlan1', T.cut.plan + 0.1, T.cut.run - 0.05, { rot: -2 });
+  capIn('cPlan2', T.cut.plan + 1.0, T.cut.run - 0.05, { from: 1.8, rot: 2 });
+  capIn('cGo', T.drop + 0.02, T.cut.mash, { from: 3, rot: -4, fade: 0.08 });
+  capIn('cMash', T.cut.mash + 0.08, T.cut.mash + 1.9, { rot: -3 });
+  capIn('sScream', T.cut.scream + 0.15, T.cut.multi - 0.02, { rot: 4 });
+  capIn('cMulti', T.cut.multi + 0.15, T.cut.slipper - 0.02, { from: 2, rot: -3 });
+  // comic word on the flip-flop
+  { const s = slam(t, T.cut.slipper + 0.03, 3.5); const out = 1 - seg(t, T.cut.slipper + 0.9, T.cut.slipper + 1.1);
+    $('comic').style.opacity = t >= T.cut.slipper && t < T.cut.keyart ? s.o * out : 0;
+    $('comic').style.transform = `translate(-50%, 0) rotate(-10deg) scale(${s.s * (1 + 0.04 * Math.sin(t * 30))})`; }
+  // ----- white flashes on the big hits -----
+  let fl = 0;
+  for (const at of FLASHES) { const d = t - at; if (d >= 0 && d < 0.22) fl = Math.max(fl, 0.75 * (1 - d / 0.22)); }
+  $('flash').style.opacity = fl;
+  // ----- cinema bars that close in for the cold open and the end -----
+  const bar = t < T.cut.lior ? 0 : t < T.cut.lior + 0.4 ? lerp(160, 0, seg(t, T.cut.lior, T.cut.lior + 0.4)) : 0;
+  document.querySelectorAll('#bars i').forEach((b) => { b.style.height = bar + 'px'; });
+  // fade to black at the very end
+  $('stage').style.opacity = 1 - seg(t, T.length - 0.35, T.length);
+  drawGrain(t);
+  $('grain').style.transform = `translate(${rand(Math.floor(t * FPS)) * 40}px, ${rand(Math.floor(t * FPS) + 9) * 40}px)`;
+};
+window.ready = document.fonts.ready.then(() => true);
+</script>
+</body>
+</html>

@@ -58,3 +58,12 @@ node achori/test/levels.cjs             # walks through all twenty levels, the r
 node achori/test/fuzz.mjs [games]       # thousands of random games: no diagonal moves, no walking through blocks, no lost traps, no NaN, every game ends; and the planning route always matches the real run
 node achori/test/monkey.cjs [seconds]   # random taps on everything at three phone sizes, with pause/restart/leave mid-level and a damaged save; fails on any error or leftovers
 ```
+
+## Promo
+
+`promo/promo.mp4` is a 30-second vertical trailer (1080×1920, 30 fps, sound mastered to about -15 LUFS). How it's made:
+
+- `promo/capture.cjs` plays the real game on a virtual clock (timers, requestAnimationFrame and CSS/WAAPI animations all advance exactly 1/30 s per frame) and screenshots each frame, with scripted taps: planning, a catch and a mash to the kill, Ofek's scream, a triple kill in the yard.
+- Five animated shots were made with Higgsfield: still frames in the game's style (GPT Image), animated with Kling 3.0.
+- `promo/timeline.js` is the edit: cuts, which frames each shot plays, every sound cue, shakes and flashes. `promo/compose.html` draws a frame for any time t: camera moves, whip pans, the phone in 3D, the Ido complaint form, Hebrew titles, the logo and the end card. `promo/soundtrack.js` renders the music and effects offline so they land on the frame.
+- `promo/render.cjs <workDir> <out.mp4>` renders every frame, the soundtrack, masters it (two-pass EBU R128) and muxes with ffmpeg.

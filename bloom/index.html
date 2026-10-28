@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>פריחה · Bloom</title>
+<meta name="description" content="משחק בלוקים: גוררים חלקים ללוח, ממלאים שורות וטורים, והם מתפוצצים לעלי כותרת. כל רמה מצמיחה פרח חדש בגן שלכם.">
+<meta name="theme-color" content="#1d1147">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="פריחה">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest?v=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-gem" viewBox="0 0 24 24"><path fill="#5fd6ff" d="M6 3h12l4 6-10 12L2 9z"/><path fill="#bff1ff" d="M6 3h12l-3 6H9z"/><path fill="#2aa3e0" d="M2 9h7l3 12z"/><path fill="#8fe4ff" d="M9 9h6l-3 12z"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path fill="#ff7a1a" d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z"/><path fill="#ffd23d" d="M12 12c1 2 3 3 3 5a3 3 0 0 1-6 0c0-1 1-2 1.5-2.5.2 1 .8 1.5 1.5 1.5 0-2-.5-3 0-4z"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path fill="#ffd23d" d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5z"/><rect x="5" y="17" width="14" height="3" rx="1" fill="#f0a500"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="12" rx="2" fill="#ff5d73"/><rect x="2" y="7" width="20" height="4" rx="1.5" fill="#ff8597"/><rect x="10.5" y="7" width="3" height="14" fill="#ffd23d"/><path fill="#ffd23d" d="M12 7c-1-3-5-4-5-1.5S11 7 12 7zm0 0c1-3 5-4 5-1.5S13 7 12 7z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7 7 0 0 0-1.7-1L15 3h-4l-.3 2.9a7 7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7 7 0 0 0 1.7 1L11 21h4l.3-2.9a7 7 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></symbol>
+  <symbol id="i-brush" viewBox="0 0 24 24"><path fill="currentColor" d="M20.7 3.3a1 1 0 0 0-1.4 0L10 12.6l1.4 1.4 9.3-9.3a1 1 0 0 0 0-1.4zM8.5 14c-1.9 0-3.5 1.6-3.5 3.5 0 1-.8 2-2 2.5 1 .7 2.3 1 3.5 1 2.5 0 4.5-2 4.5-4.5 0-1.4-1.1-2.5-2.5-2.5z"/></symbol>
+</svg>
+
+<main id="app">
+  <section id="home" class="screen">
+    <header class="topbar">
+      <div class="pill" id="h-gems"><svg><use href="#i-gem"/></svg><b>0</b></div>
+      <div class="pill" id="h-streak"><svg><use href="#i-fire"/></svg><b>0</b></div>
+      <span class="grow"></span>
+      <button class="round" id="h-skins" type="button" aria-label="סקינים"><svg><use href="#i-brush"/></svg></button>
+      <button class="round" id="h-settings" type="button" aria-label="הגדרות"><svg><use href="#i-gear"/></svg></button>
+    </header>
+
+    <div class="brand">
+      <h1 class="logo">פריחה</h1>
+      <p class="tagline">פוצצו שורות · תנו לגן לפרוח</p>
+    </div>
+
+    <div class="garden-wrap">
+      <canvas id="garden" aria-label="הגן שלך"></canvas>
+      <div class="level-chip"><span>רמה</span><b id="h-level">1</b></div>
+    </div>
+    <div class="xp">
+      <div class="bar"><i id="h-xpbar"></i></div>
+      <small id="h-xptext"></small>
+    </div>
+
+    <button class="play" id="h-play" type="button">שחקו</button>
+    <button class="link" id="h-new" type="button" hidden>משחק חדש</button>
+    <p class="best-line"><svg><use href="#i-crown"/></svg> שיא: <b id="h-best">0</b></p>
+
+    <div class="card">
+      <h2>משימות היום</h2>
+      <ul class="missions" id="h-missions"></ul>
+    </div>
+    <div class="card chest-card">
+      <svg class="chest-ico"><use href="#i-gift"/></svg>
+      <div class="grow">
+        <h2>תיבת מזל</h2>
+        <div class="bar"><i id="h-chestbar"></i></div>
+        <small id="h-chesttext"></small>
+      </div>
+    </div>
+  </section>
+
+  <section id="game" class="screen" hidden>
+    <header class="hud">
+      <button class="round" id="g-home" type="button" aria-label="בית"><svg><use href="#i-home"/></svg></button>
+      <div class="score-box">
+        <div class="score" id="g-score">0</div>
+        <div class="chase" id="g-chase"></div>
+      </div>
+      <div class="best-mini"><svg><use href="#i-crown"/></svg><b id="g-best">0</b></div>
+    </header>
+    <div id="stage"><canvas id="board" aria-label="לוח המשחק"></canvas></div>
+    <pre id="debug" hidden></pre>
+  </section>
+</main>
+
+<div id="overlay" hidden><div class="modal" id="modal"></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>

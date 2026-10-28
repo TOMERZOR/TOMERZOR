@@ -1,0 +1,1587 @@
+<!doctype html>
+<title>תירוצים</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="משחק תירוצים יומי: ממלאים טופס 17, הפקיד מחתים כל תירוץ, ומגלים כמה אתם חושבים כמו כולם.">
+<meta property="og:title" content="תירוצים · משרד התירוצים">
+<meta property="og:description" content="כל יום טופס אחד לכולם. 5 תירוצים, חותמת של פקיד, וכמה אתם חושבים כמו כולם.">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/terutzim/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Miriam+Libre:wght@400;700&family=Suez+One&family=VT323&display=swap">
+<style>
+/* Layout: the counter at the Excuses Ministry. Take a number from the red machine, a live clerk
+   behind window 3, a tilted "Form 17" you fill by pen and hold to stamp, then you stamp each line
+   yourself and flip the public's answers like a game-show board. One committed look (paper on a
+   green office desk), the same in light and dark. */
+:root {
+  color-scheme: light;
+  --desk: #1E6A57;
+  --desk-dark: #124C3E;
+  --on-desk: #F4F1E4;
+  --on-desk-dim: #B9D6CB;
+  --paper: #FBFAF3;
+  --paper-2: #F2EEDC;
+  --receipt: #FFFFFF;
+  --rule: #C7D5EA;
+  --ink: #1B1D2A;
+  --muted: #6B6F7E;
+  --pen: #1C3FAA;
+  --stamp: #6A2BB8;
+  --reject: #D62839;
+  --hl: #FFE94D;
+  --track: #E4E1D4;
+  --led-bg: #170707;
+  --led: #FF3B2F;
+  --led-dim: #FF9C94;
+  --btn: #FF5A1F;
+  --btn-dark: #B5380C;
+  --red: #D62839;
+  --red-dark: #7A0C18;
+  --clip: #9AA3AE;
+  --skin: #F1C7A1;
+  --skin-dark: #C28E67;
+  --hair: #8A8F99;
+  --hair-dark: #4A4F59;
+  --shirt: #BFD3EA;
+  --wall: #CFE3DD;
+  --frame: #E9E4D2;
+  --shadow: rgba(4, 24, 18, 0.35);
+  --title: "Suez One", "Frank Ruhl Libre", Georgia, serif;
+  --form: "Miriam Libre", "Arial Hebrew", Arial, sans-serif;
+  --hand: "Amatic SC", "Comic Sans MS", cursive;
+  --led-font: "VT323", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background-color: var(--desk);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.6px);
+  background-size: 14px 14px;
+  color: var(--ink);
+  font-family: var(--form);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--hl); outline-offset: 2px; }
+
+.desk {
+  max-width: 34rem; margin: 0 auto;
+  padding-block: 16px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 24px;
+}
+#deskArea { display: flex; flex-direction: column; gap: 24px; }
+
+/* ---------- Header ---------- */
+.machine { display: flex; align-items: center; gap: 10px; }
+.seal {
+  flex: none; width: 52px; height: 52px; border-radius: 50%;
+  border: 3px double var(--on-desk); color: var(--on-desk);
+  display: grid; place-items: center; text-align: center;
+  font-family: var(--title); font-size: 0.7rem; line-height: 1.05; transform: rotate(-10deg);
+}
+.brand { flex: 1; min-width: 0; }
+.logo { margin: 0; font-family: var(--title); font-weight: 400; font-size: 2.5rem; line-height: 1; color: var(--on-desk); }
+.dept { margin: 3px 0 0; font-size: 0.76rem; color: var(--on-desk-dim); }
+.sound {
+  flex: none; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--on-desk-dim);
+  background: transparent; color: var(--on-desk); display: grid; place-items: center;
+}
+.sound svg { width: 22px; height: 22px; }
+.sound .wave { transition: opacity 0.2s; }
+.sound[aria-pressed="false"] .wave { opacity: 0; }
+.sound[aria-pressed="true"] .mute { opacity: 0; }
+.led {
+  flex: none; min-width: 100px; padding: 6px 10px 5px; border-radius: 9px; text-align: center;
+  background: var(--led-bg); box-shadow: inset 0 0 0 2px #000, 0 4px 0 var(--desk-dark);
+}
+.led-label { display: block; font-size: 0.62rem; color: var(--led-dim); letter-spacing: 0.05em; }
+.led-num { display: block; direction: ltr; font-family: var(--led-font); font-size: 2.1rem; line-height: 1; color: var(--led); text-shadow: 0 0 6px rgba(255, 59, 47, 0.75); }
+.led-num.blink { animation: blink 1.2s steps(2) 3; }
+
+/* ---------- Intro: the ticket machine ---------- */
+.intro { display: flex; flex-direction: column; align-items: center; gap: 22px; padding-block: 18px 40px; text-align: center; }
+.intro-title { margin: 0; color: var(--on-desk); font-family: var(--title); font-weight: 400; font-size: 1.7rem; line-height: 1.15; text-wrap: balance; }
+.intro-sub { margin: -10px 0 0; color: var(--on-desk-dim); max-width: 30ch; }
+.dispenser {
+  position: relative; width: min(250px, 78vw); padding: 18px 18px 46px;
+  background: var(--btn); border-radius: 26px 26px 16px 16px;
+  box-shadow: inset 0 -10px 0 var(--btn-dark), inset 0 4px 0 rgba(255, 255, 255, 0.25), 0 22px 34px var(--shadow);
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.disp-screen { width: 100%; background: var(--led-bg); border-radius: 10px; padding: 8px 6px 6px; box-shadow: inset 0 0 0 3px #000; }
+.disp-screen span { display: block; font-size: 0.7rem; color: var(--led-dim); }
+.disp-screen b { display: block; font-family: var(--led-font); font-weight: 400; font-size: 3.2rem; line-height: 0.9; color: var(--led); text-shadow: 0 0 8px rgba(255, 59, 47, 0.8); }
+.take {
+  width: 112px; height: 112px; border-radius: 50%; border: 6px solid var(--btn-dark);
+  background: radial-gradient(circle at 38% 32%, #FF8F8F, var(--red) 58%, var(--red-dark));
+  box-shadow: 0 9px 0 var(--red-dark), 0 14px 22px rgba(0, 0, 0, 0.35);
+  color: #fff; font-family: var(--title); font-size: 1.25rem; line-height: 1.05;
+  animation: beg 1.6s ease-in-out infinite;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.take:active, .printing .take { transform: translateY(7px); box-shadow: 0 2px 0 var(--red-dark), 0 4px 8px rgba(0, 0, 0, 0.3); animation: none; }
+.slot-mouth { position: absolute; bottom: 16px; left: 50%; width: 130px; height: 10px; margin-left: -65px; background: #3A0E05; border-radius: 5px; }
+.disp-ticket {
+  position: absolute; top: calc(100% - 22px); left: 50%; width: 112px; margin-left: -56px; height: 0; overflow: hidden;
+  background: var(--paper-2); box-shadow: 0 6px 10px var(--shadow); z-index: 1;
+  display: grid; place-items: center; font-family: var(--led-font); font-size: 1.6rem;
+}
+.printing .disp-ticket { animation: print 0.9s steps(9) forwards; }
+
+/* ---------- Ticket ---------- */
+.ticket {
+  align-self: flex-end; margin-left: 6px; margin-top: -10px; position: relative;
+  background: var(--paper-2); color: var(--ink); font-size: 0.82rem; padding: 8px 12px 12px;
+  box-shadow: 0 6px 12px var(--shadow);
+}
+.ticket::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -7px; height: 7px;
+  background: conic-gradient(from -45deg at bottom, var(--paper-2) 90deg, transparent 0) 0 0 / 12px 100%;
+}
+.ticket b { font-family: var(--led-font); font-size: 1.15rem; font-weight: 400; }
+
+/* ---------- The clerk ---------- */
+.counter { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; margin-bottom: -14px; position: relative; z-index: 3; }
+.clerk {
+  position: relative; width: 116px; height: 124px; padding: 0; border: 7px solid var(--frame); border-bottom: 0;
+  border-radius: 14px 14px 0 0; background: linear-gradient(var(--wall), #B8D3CB); overflow: hidden;
+  box-shadow: 0 -2px 0 rgba(0, 0, 0, 0.1) inset;
+}
+.clerk::before {
+  content: "אשנב 3"; position: absolute; top: 4px; right: 6px; z-index: 2;
+  font-family: var(--title); font-size: 0.72rem; color: var(--ink); background: var(--hl); padding: 0 5px; border-radius: 3px;
+}
+.clerk::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: var(--frame); }
+.clerk svg { position: absolute; left: 50%; bottom: 4px; width: 104px; margin-left: -52px; overflow: visible; animation: breathe 4s ease-in-out infinite; transform-origin: 50% 100%; }
+.clerk.jolt svg { animation: jolt 0.45s ease-out; }
+.clerk .lids rect { transform-box: fill-box; transform-origin: 50% 0; transform: scaleY(0); animation: blinkLid 4.6s infinite; }
+.clerk .brows { transition: transform 0.2s; }
+.clerk .mouth { display: none; }
+.clerk[data-mood="neutral"] .m-neutral, .clerk[data-mood="smile"] .m-smile,
+.clerk[data-mood="o"] .m-o, .clerk[data-mood="frown"] .m-frown { display: inline; }
+.clerk[data-mood="o"] .brows, .clerk[data-mood="smile"] .brows { transform: translateY(-3px); }
+.clerk[data-mood="frown"] .brows { transform: translateY(2px); }
+.bubble {
+  position: relative; margin: 0; padding: 10px 13px; border-radius: 14px; background: var(--paper);
+  font-weight: 700; font-size: 0.95rem; line-height: 1.35; box-shadow: 0 6px 14px var(--shadow);
+}
+.bubble::after {
+  content: ""; position: absolute; right: -9px; top: 50%; margin-top: -9px;
+  border: 9px solid transparent; border-left-color: var(--paper); border-right: 0;
+}
+.bubble.pop { animation: pop 0.32s cubic-bezier(.2, 1.6, .4, 1); }
+
+/* ---------- The form ---------- */
+.form {
+  position: relative; background: var(--paper);
+  padding: 22px 34px 22px 18px; border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 16px 30px var(--shadow);
+  transform: rotate(-0.7deg);
+  transition: transform 0.45s cubic-bezier(.3, 1.3, .5, 1);
+}
+.form::before {
+  content: ""; position: absolute; top: 20px; bottom: 20px; right: 10px; width: 12px;
+  background: radial-gradient(circle at 6px 6px, var(--desk) 4.5px, transparent 5px) 0 0 / 12px 60px repeat-y;
+}
+.form::after { content: ""; position: absolute; top: -14px; left: 28px; width: 16px; height: 50px; border: 3px solid var(--clip); border-radius: 9px; transform: rotate(4deg); }
+.form.deal { animation: deal 0.6s cubic-bezier(.2, 1.2, .4, 1) both; }
+.form.thud { animation: thud 0.28s ease-out; }
+.form.taken { transform: translateY(-26px) rotate(1.8deg) scale(0.97); }
+
+.form-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid var(--ink); padding-bottom: 8px; }
+.form-no { font-family: var(--title); font-size: 1rem; border: 2px solid var(--ink); padding: 1px 8px; border-radius: 3px; }
+.form-sub { font-weight: 700; font-size: 0.95rem; }
+.field-label { margin: 14px 0 0; font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.q-title { margin: 2px 0 0; font-family: var(--title); font-weight: 400; font-size: clamp(2rem, 9vw, 2.7rem); line-height: 1.05; text-wrap: balance; }
+.fine { margin: 8px 0 0; font-size: 0.8rem; color: var(--muted); max-width: 44ch; }
+
+.lines { list-style: none; margin: 12px 0 0; padding: 0; }
+.line {
+  position: relative; display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto;
+  align-items: end; gap: 8px; min-height: 56px; padding: 4px 0 3px; border-bottom: 1.5px solid var(--rule);
+}
+.num { font-weight: 700; font-size: 0.85rem; color: var(--muted); padding-bottom: 7px; }
+.cell { min-width: 0; display: flex; flex-direction: column; }
+.hand { font-family: var(--hand); font-weight: 700; font-size: 2.05rem; line-height: 1; color: var(--pen); overflow-wrap: anywhere; padding-bottom: 2px; }
+.line.new .hand { animation: ink 0.55s ease-out both; }
+.line.gone .hand { animation: crumple 0.42s ease-in forwards; }
+.note { font-size: 0.76rem; color: var(--muted); padding-bottom: 4px; }
+.note.no { color: var(--reject); }
+.x { width: 40px; height: 40px; margin-bottom: 2px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+.x:hover { background: var(--track); color: var(--reject); }
+
+.line.res { cursor: default; }
+.line.res.pending { cursor: pointer; }
+.line.res.pending:hover { background: rgba(106, 43, 184, 0.05); }
+.tap {
+  justify-self: end; align-self: center; width: 68px; height: 46px; border: 2.5px dashed var(--muted); border-radius: 8px;
+  display: grid; place-items: center; font-weight: 700; font-size: 0.78rem; color: var(--muted);
+  transform: rotate(-6deg); animation: nudge 1.3s ease-in-out infinite;
+}
+.line.res.pending:nth-child(2) .tap { animation-delay: 0.15s; }
+.line.res.pending:nth-child(3) .tap { animation-delay: 0.3s; }
+.line.res.pending:nth-child(4) .tap { animation-delay: 0.45s; }
+.line.res.pending:nth-child(5) .tap { animation-delay: 0.6s; }
+.line.res.pending:hover .tap { border-color: var(--stamp); color: var(--stamp); }
+
+.stamp {
+  justify-self: end; align-self: center; margin-left: 2px;
+  font-family: var(--title); font-size: 1.05rem; line-height: 1; text-align: center; white-space: nowrap;
+  padding: 5px 9px 4px; border: 2.5px solid currentColor; border-radius: 6px;
+  transform: rotate(-9deg); opacity: 0.88; mix-blend-mode: multiply;
+}
+.stamp small { display: block; font-family: var(--form); font-weight: 700; font-size: 0.8rem; margin-top: 2px; }
+.stamp.ok { color: var(--stamp); }
+.stamp.no { color: var(--reject); }
+.stamp.slam { animation: slam 0.4s cubic-bezier(.2, 1.5, .4, 1) both; }
+
+.reveal-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--hl); font-weight: 700; font-size: 0.9rem; }
+.reveal-bar button { border: 2px solid var(--ink); background: var(--paper); border-radius: 8px; padding: 6px 12px; font-weight: 700; }
+
+.entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 16px; }
+.entry input {
+  height: 52px; padding: 0 12px; border: 0; border-bottom: 2px dashed var(--pen); border-radius: 0;
+  background: transparent; font-family: var(--hand); font-weight: 700; font-size: 1.9rem; color: var(--pen);
+}
+.entry input::placeholder { color: var(--muted); opacity: 0.7; }
+.entry input:focus { outline: none; border-bottom-style: solid; background: rgba(28, 63, 170, 0.05); }
+.btn-add { height: 46px; align-self: center; padding: 0 16px; border: 2px solid var(--ink); border-radius: 8px; background: var(--paper); font-weight: 700; box-shadow: 0 3px 0 var(--ink); }
+.btn-add:active { transform: translateY(3px); box-shadow: 0 0 0 var(--ink); }
+.msg { min-height: 1.3em; margin: 6px 0 0; font-size: 0.85rem; color: var(--reject); }
+.msg.shake { animation: nope 0.35s; }
+
+.btn-send {
+  position: relative; overflow: hidden; width: 100%; margin-top: 10px; height: 68px; border: 0; border-radius: 14px;
+  background: var(--btn); color: #fff; box-shadow: 0 6px 0 var(--btn-dark);
+  font-family: var(--title); font-size: 1.5rem; line-height: 1.05;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+.btn-send::before { content: ""; position: absolute; inset: 0; background: var(--btn-dark); transform-origin: 100% 50%; transform: scaleX(var(--p, 0)); }
+.btn-send span { position: relative; display: block; }
+.btn-send small { position: relative; display: block; font-family: var(--form); font-size: 0.75rem; font-weight: 700; opacity: 0.9; margin-top: 3px; }
+.btn-send.holding { transform: translateY(5px) scale(0.99); box-shadow: 0 1px 0 var(--btn-dark); }
+.btn-send:not(:disabled):not(.holding) { animation: pulse 2.2s ease-in-out infinite; }
+.btn-send:disabled { background: var(--track); color: var(--muted); box-shadow: 0 6px 0 #CFCBBB; cursor: not-allowed; font-size: 1.15rem; }
+
+.decision { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; margin-top: 18px; padding-top: 12px; border-top: 2px solid var(--ink); }
+.cred-label { font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.04em; }
+.cred { font-family: var(--title); line-height: 0.95; }
+.cred b { font-weight: 400; font-size: 4rem; }
+.cred span { font-size: 1.2rem; color: var(--muted); }
+.squares { margin-top: 6px; font-size: 1.25rem; letter-spacing: 0.08em; line-height: 1; }
+.verdict { max-width: 11rem; font-family: var(--title); font-size: 1.35rem; line-height: 1.05; text-align: center; padding: 8px 10px; border: 4px double currentColor; border-radius: 8px; transform: rotate(-11deg); mix-blend-mode: multiply; opacity: 0.9; }
+.verdict small { display: block; font-family: var(--form); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.06em; margin-bottom: 3px; }
+.verdict.ok { color: var(--stamp); }
+.verdict.no { color: var(--reject); }
+.decision.slam-in .verdict { animation: bigSlam 0.55s cubic-bezier(.2, 1.4, .4, 1) 0.2s both; }
+.decision.slam-in .cred, .decision.slam-in .squares { animation: rise 0.4s ease-out both; }
+
+/* ---------- Public board: flip tiles ---------- */
+#results { display: flex; flex-direction: column; gap: 24px; }
+#results.rise { animation: rise 0.5s ease-out both; }
+.receipt { position: relative; background: var(--receipt); padding: 18px 14px 22px; box-shadow: 0 12px 22px var(--shadow); transform: rotate(0.5deg); }
+.receipt::after { content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 9px; background: conic-gradient(from -45deg at bottom, var(--receipt) 90deg, transparent 0) 0 0 / 14px 100%; }
+.receipt h2 { margin: 0; text-align: center; font-family: var(--title); font-weight: 400; font-size: 1.4rem; }
+.receipt .sub { margin: 2px 0 12px; text-align: center; font-size: 0.75rem; color: var(--muted); border-bottom: 1.5px dashed var(--ink); padding-bottom: 10px; }
+.tiles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.tile { position: relative; display: block; width: 100%; height: 52px; padding: 0; border: 0; background: none; text-align: right; }
+.tile .in { position: absolute; inset: 0; transition: transform 0.16s ease-in; }
+.tile.squash .in { transform: scaleY(0.05); }
+.tiles.instant .tile .in { transition: none; }
+.face { position: absolute; inset: 0; border-radius: 7px; display: grid; align-items: center; padding: 0 12px; }
+.tile.flipped .front, .tile:not(.flipped) .back { display: none; }
+.front {
+  grid-template-columns: auto 1fr auto; gap: 12px; color: var(--paper);
+  background: repeating-linear-gradient(-45deg, var(--ink) 0 10px, #23263A 10px 20px);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.35);
+}
+.front .f-n { width: 30px; height: 30px; border-radius: 50%; background: var(--hl); color: var(--ink); display: grid; place-items: center; font-family: var(--title); font-size: 1rem; }
+.front .f-q { font-family: var(--title); font-size: 1.1rem; opacity: 0.6; letter-spacing: 0.3em; }
+.front .f-t { font-size: 0.75rem; opacity: 0.7; }
+.tile:not(.flipped):hover .front { filter: brightness(1.25); }
+.back { background: var(--paper-2); grid-template-columns: 1.2rem minmax(0, 1fr) 4.2rem 2.6rem; gap: 8px; }
+.tile.hit .back { background: var(--hl); }
+.b-rank { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
+.b-label { min-width: 0; font-size: 0.9rem; line-height: 1.15; overflow-wrap: anywhere; }
+.hit .b-label { font-weight: 700; }
+.b-label em { font-style: normal; font-size: 0.7rem; font-weight: 700; color: var(--stamp); white-space: nowrap; }
+.b-track { height: 9px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.b-track i { display: block; height: 100%; background: var(--ink); }
+.hit .b-track i { background: var(--stamp); }
+.b-pct { font-weight: 700; font-size: 0.95rem; text-align: left; font-variant-numeric: tabular-nums; }
+.board-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; padding-top: 8px; border-top: 1.5px dashed var(--ink); font-weight: 700; font-size: 0.9rem; }
+.flip-all { border: 2px solid var(--ink); background: var(--paper); border-radius: 8px; padding: 6px 12px; font-weight: 700; box-shadow: 0 3px 0 var(--ink); }
+.flip-all:active { transform: translateY(3px); box-shadow: none; }
+.other-row { margin-top: 6px; display: flex; justify-content: space-between; color: var(--muted); font-size: 0.88rem; padding: 0 12px; }
+
+/* ---------- Ticket stub ---------- */
+.stub { position: relative; background: var(--paper-2); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 20px var(--shadow); }
+.stub::before, .stub::after { content: ""; position: absolute; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 50%; background: var(--desk); }
+.stub::before { right: -11px; }
+.stub::after { left: -11px; }
+.stub.tear { animation: tear 0.5s ease-out; }
+.stub-label { font-size: 0.75rem; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; }
+.stub pre { margin: 0; white-space: pre-wrap; font-family: var(--form); font-size: 0.95rem; line-height: 1.6; padding-bottom: 12px; border-bottom: 2px dashed var(--muted); user-select: all; }
+.share-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.btn-copy { height: 50px; padding: 0 20px; border: 0; border-radius: 12px; background: var(--ink); color: var(--paper); box-shadow: 0 4px 0 #000; font-weight: 700; }
+.btn-copy:active { transform: translateY(3px); box-shadow: 0 1px 0 #000; }
+.copied { font-size: 0.88rem; font-weight: 700; color: var(--stamp); }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--led-bg); border-radius: 9px; padding: 8px 6px 7px; text-align: center; box-shadow: 0 4px 0 var(--desk-dark); }
+.stat b { display: block; font-family: var(--led-font); font-weight: 400; font-size: 2rem; line-height: 1; color: var(--led); text-shadow: 0 0 6px rgba(255, 59, 47, 0.7); }
+.stat span { font-size: 0.7rem; color: var(--led-dim); }
+.back-link { align-self: center; border: 0; background: none; color: var(--on-desk); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; padding: 6px; }
+
+/* ---------- More forms ---------- */
+.more h2 { margin: 0 0 10px; color: var(--on-desk); font-family: var(--title); font-weight: 400; font-size: 1.3rem; }
+.more ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.more li:nth-child(odd) button { transform: rotate(-0.5deg); }
+.more li:nth-child(even) button { transform: rotate(0.4deg); }
+.more button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 0; border-radius: 3px; background: var(--paper); text-align: right; box-shadow: 0 4px 10px var(--shadow); transition: transform 0.15s; }
+.more button:hover { transform: translateY(-2px) rotate(0deg); }
+.more button[aria-current="true"] { outline: 3px solid var(--hl); }
+.more .q-t { min-width: 0; font-weight: 700; }
+.more .st { flex: none; font-family: var(--title); font-size: 0.85rem; padding: 2px 7px; border: 2px solid currentColor; border-radius: 5px; transform: rotate(-6deg); color: var(--muted); }
+.more .st.ok { color: var(--stamp); }
+
+.proto { margin: 0; font-size: 0.82rem; color: var(--on-desk-dim); }
+.reset { margin-top: 6px; border: 0; background: none; padding: 4px 0; color: var(--hl); font-size: 0.82rem; text-decoration: underline; text-underline-offset: 3px; }
+
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+
+/* ---------- Motion ---------- */
+@keyframes blink { 50% { opacity: 0.25; } }
+@keyframes beg { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes print { from { height: 0; } to { height: 66px; } }
+@keyframes breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1.5px) scaleY(0.99); } }
+@keyframes jolt { 0% { transform: rotate(0); } 25% { transform: rotate(-6deg) translateY(-4px); } 55% { transform: rotate(5deg); } 100% { transform: rotate(0); } }
+@keyframes blinkLid { 0%, 94%, 100% { transform: scaleY(0); } 97% { transform: scaleY(1); } }
+@keyframes pop { from { transform: scale(0.7); } to { transform: scale(1); } }
+@keyframes deal { from { transform: translateY(70px) rotate(5deg); opacity: 0; } to { transform: rotate(-0.7deg); opacity: 1; } }
+@keyframes ink { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+@keyframes crumple { to { transform: translate(-120px, 30px) rotate(-200deg) scale(0.15); opacity: 0; filter: blur(1px); } }
+@keyframes nudge { 0%, 100% { transform: rotate(-6deg) scale(1); } 50% { transform: rotate(-6deg) scale(1.08); } }
+@keyframes slam { 0% { opacity: 0; transform: scale(2.8) rotate(-24deg); } 70% { opacity: 1; transform: scale(0.9) rotate(-8deg); } 100% { opacity: 0.88; transform: scale(1) rotate(-9deg); } }
+@keyframes bigSlam { 0% { opacity: 0; transform: scale(3.2) rotate(-30deg); } 65% { opacity: 1; transform: scale(0.88) rotate(-9deg); } 100% { opacity: 0.9; transform: scale(1) rotate(-11deg); } }
+@keyframes thud { 0% { transform: rotate(-0.7deg) translateY(0); } 35% { transform: rotate(-0.2deg) translateY(5px); } 100% { transform: rotate(-0.7deg) translateY(0); } }
+@keyframes nope { 25% { transform: translateX(-6px); } 50% { transform: translateX(6px); } 75% { transform: translateX(-3px); } }
+@keyframes pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.12); } }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tear { 30% { transform: rotate(-3deg) translateY(6px); } 60% { transform: rotate(1.5deg); } 100% { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="desk" dir="rtl" lang="he">
+  <header class="machine">
+    <div class="seal" aria-hidden="true">משרד<br>התירוצים</div>
+    <div class="brand">
+      <h1 class="logo">תירוצים</h1>
+      <p class="dept">משרד התירוצים · אגף קבלת קהל</p>
+    </div>
+    <button class="sound" id="sound" type="button" aria-pressed="true" aria-label="צלילים">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/>
+        <path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>
+        <path class="mute" d="M16 9l5 6M21 9l-5 6"/>
+      </svg>
+    </button>
+    <div class="led">
+      <span class="led-label" id="ledLabel">מספר בתור</span>
+      <span class="led-num" id="ledNum">001</span>
+    </div>
+  </header>
+
+  <section class="intro" id="intro" hidden>
+    <h2 class="intro-title">הפקיד מחכה. קחו מספר.</h2>
+    <p class="intro-sub" id="introSub">הבקשה של היום מחכה בפנים.</p>
+    <div class="dispenser">
+      <div class="disp-screen"><span>הבא בתור</span><b id="dispNum">001</b></div>
+      <button class="take" id="take" type="button">קח<br>מספר</button>
+      <div class="slot-mouth" aria-hidden="true"></div>
+      <div class="disp-ticket" id="dispTicket" aria-hidden="true">001</div>
+    </div>
+  </section>
+
+  <div id="deskArea">
+    <div class="ticket" id="ticket"></div>
+
+    <div class="counter">
+      <button class="clerk" id="clerk" type="button" data-mood="neutral" aria-label="הפקיד באשנב 3">
+        <svg viewBox="0 0 120 130" aria-hidden="true">
+          <path d="M12 132 Q16 98 60 95 Q104 98 108 132 Z" fill="var(--shirt)"/>
+          <path d="M50 96 L60 104 L70 96 L66 95 L60 99 L54 95 Z" fill="#FFFFFF"/>
+          <path d="M56 101 L64 101 L62 110 L67 130 L60 134 L53 130 L58 110 Z" fill="var(--red)"/>
+          <rect x="52" y="82" width="16" height="15" fill="var(--skin-dark)"/>
+          <ellipse cx="30" cy="56" rx="6" ry="9" fill="var(--skin-dark)"/>
+          <ellipse cx="90" cy="56" rx="6" ry="9" fill="var(--skin-dark)"/>
+          <ellipse cx="60" cy="56" rx="30" ry="34" fill="var(--skin)"/>
+          <path d="M30 56 Q27 28 44 25 L41 42 Q34 44 33 56 Z" fill="var(--hair)"/>
+          <path d="M90 56 Q93 28 76 25 L79 42 Q86 44 87 56 Z" fill="var(--hair)"/>
+          <path d="M44 27 Q58 17 78 26" stroke="var(--hair)" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <path d="M48 24 Q60 19 72 24" stroke="var(--hair)" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <g class="brows" stroke="var(--hair-dark)" stroke-width="3" stroke-linecap="round">
+            <path d="M39 40 L54 42"/><path d="M66 42 L81 40"/>
+          </g>
+          <g id="eyes" fill="var(--ink)">
+            <circle cx="47" cy="54" r="3.3"/><circle cx="73" cy="54" r="3.3"/>
+          </g>
+          <g class="lids" fill="var(--skin)">
+            <rect x="37" y="44" width="20" height="20"/><rect x="63" y="44" width="20" height="20"/>
+          </g>
+          <g fill="none" stroke="var(--ink)" stroke-width="2.4">
+            <circle cx="47" cy="54" r="10.5"/><circle cx="73" cy="54" r="10.5"/>
+            <path d="M57.5 54 Q60 51 62.5 54"/>
+          </g>
+          <path d="M60 59 Q55 69 61 70" stroke="var(--skin-dark)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+          <path d="M45 75 Q53 69 60 73 Q67 69 75 75 Q67 79 60 77 Q53 79 45 75 Z" fill="var(--hair-dark)"/>
+          <path class="mouth m-neutral" d="M53 82 Q60 84 67 82" stroke="var(--ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path class="mouth m-smile" d="M50 80 Q60 92 70 80" stroke="var(--ink)" stroke-width="2.4" fill="#7A2E2E" stroke-linecap="round"/>
+          <ellipse class="mouth m-o" cx="60" cy="83" rx="4" ry="5" fill="#5A1F1F"/>
+          <path class="mouth m-frown" d="M51 86 Q60 79 69 86" stroke="var(--ink)" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <p class="bubble" id="bubble" role="status" aria-live="polite">הבא בתור!</p>
+    </div>
+
+    <article class="form" id="form">
+      <div class="form-head">
+        <span class="form-no">טופס 17</span>
+        <span class="form-sub" id="formSub">בקשה להגשת תירוץ</span>
+      </div>
+      <p class="field-label">נושא הבקשה</p>
+      <h2 class="q-title" id="question">תירוץ לאיחור לעבודה</h2>
+      <p class="fine" id="fine"></p>
+
+      <ol class="lines" id="lines"></ol>
+
+      <div class="reveal-bar" id="revealBar" hidden>
+        <span>הקישו על כל שורה כדי להחתים אותה</span>
+        <button type="button" id="stampAll">החתם הכל</button>
+      </div>
+
+      <div id="play">
+        <form class="entry" id="entryForm" autocomplete="off">
+          <input id="answerInput" type="text" maxlength="40" placeholder="" enterkeyhint="done" aria-label="תשובה">
+          <button class="btn-add" type="submit">הוסף</button>
+        </form>
+        <p class="msg" id="msg" role="status"></p>
+        <button class="btn-send" id="send" type="button" disabled><span id="sendText">הגש לפקיד</span><small id="sendHint" hidden>החזיקו לחוץ עד שהחותמת נטענת</small></button>
+      </div>
+
+      <div class="decision" id="decision" hidden>
+        <div>
+          <div class="cred-label" id="credLabel">רמת אמינות</div>
+          <div class="cred"><b id="score">0</b><span>/<span id="max">0</span></span></div>
+          <div class="squares" id="squares" aria-hidden="true"></div>
+        </div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+    </article>
+
+    <section id="results" hidden>
+      <div class="receipt">
+        <h2 id="publicTitle">תירוצי הציבור</h2>
+        <p class="sub" id="receiptSub"></p>
+        <ol class="tiles" id="tiles"></ol>
+        <div class="other-row" id="otherRow" hidden><span>כל השאר</span><span id="otherPct"></span></div>
+        <div class="board-foot">
+          <span id="total"></span>
+          <button class="flip-all" id="flipAll" type="button">הפוך הכל</button>
+        </div>
+      </div>
+
+      <div class="stub" id="stub">
+        <span class="stub-label">ספח לשיתוף</span>
+        <pre id="shareText"></pre>
+        <div class="share-row">
+          <button class="btn-copy" id="copy" type="button">תלוש והעתק לוואטסאפ</button>
+          <span class="copied" id="copied" role="status"></span>
+        </div>
+      </div>
+
+      <div class="stats" id="stats"></div>
+      <button class="back-link" id="back" type="button" hidden>חזרה לטופס של היום</button>
+    </section>
+
+    <section class="more">
+      <h2>טפסים נוספים לתרגול</h2>
+      <ul id="archive"></ul>
+    </section>
+  </div>
+
+  <div>
+    <p class="proto">אב-טיפוס: התשובות של הציבור כאן הן הערכה שהוכנה מראש, לא תשובות אמיתיות של שחקנים. בגרסה המלאה הן ייאספו מכל מי ששיחק, והתוצאות המלאות ייחשפו למחרת. התוצאות שלך נשמרות רק במכשיר הזה.</p>
+    <button class="reset" id="reset" type="button">איפוס כל התוצאות במכשיר הזה</button>
+  </div>
+</div>
+<canvas id="confetti" hidden></canvas>
+
+<script>
+(function () {
+  "use strict";
+
+  // Form #1 is 28.10.2026, local time.
+  var LAUNCH = new Date(2026, 9, 28);
+  var MAX_ANSWERS = 5;
+  var MIN_TO_SEND = 3;
+  var HOLD_MS = 850;
+  var GAME_URL = "tomerzor.github.io/TOMERZOR/terutzim";
+
+  // [label, percent of the public, other ways people write it]
+  var EXCUSES = [
+    { id: "late", text: "תירוץ לאיחור לעבודה", a: [
+      ["פקקים", 30, ["פקק", "תנועה", "עומס", "עומסי תנועה", "איילון", "נתקעתי בפקק"]],
+      ["לא מצאתי חניה", 14, ["חניה", "חנייה", "חנית", "אין חניה"]],
+      ["לא שמעתי את השעון", 11, ["שעון", "שעון מעורר", "נרדמתי", "קמתי מאוחר", "התעוררתי מאוחר", "השכמתי", "לא שמעתי"]],
+      ["הילדים", 9, ["ילדים", "הילד", "הילדה", "גן", "הגן"]],
+      ["הרכבת", 8, ["רכבת", "רכבת ישראל"]],
+      ["האוטובוס", 7, ["אוטובוס", "אוטבוס", "תחבורה ציבורית"]],
+      ["מילואים", 5, ["צבא"]],
+      ["הכלב", 4, ["כלב"]]
+    ]},
+    { id: "wedding", text: "תירוץ למה לא באת לחתונה", a: [
+      ["הייתי חולה", 24, ["חולה", "חליתי", "לא הרגשתי טוב", "קורונה", "שפעת", "חום"]],
+      ["הייתי בחו\"ל", 15, ["חו\"ל", "בחו\"ל", "טסתי", "טיסה", "הייתי בטיסה", "חופשה", "בחופשה"]],
+      ["לא קיבלתי הזמנה", 13, ["הזמנה", "לא הוזמנתי", "ההזמנה לא הגיעה", "לא ידעתי"]],
+      ["אין בייביסיטר", 10, ["בייביסיטר", "ביביסיטר", "בייבסיטר", "הילדים", "ילדים", "הילד חולה"]],
+      ["מילואים", 9, ["צבא", "הייתי במילואים"]],
+      ["עבודה", 8, ["עבדתי", "משמרת", "הייתי בעבודה", "תורנות"]],
+      ["רחוק מדי", 6, ["רחוק", "באילת", "בצפון", "היה רחוק"]],
+      ["התבלבלתי בתאריך", 5, ["תאריך", "התבלבלתי", "שכחתי", "טעיתי בתאריך"]]
+    ]},
+    { id: "homework", text: "תירוץ למורה למה אין שיעורי בית", a: [
+      ["הכלב אכל", 25, ["כלב", "הכלב", "הכלב אכל את המחברת", "הכלב אכל את זה"]],
+      ["שכחתי בבית", 22, ["שכחתי", "שכחתי את המחברת", "נשאר בבית", "המחברת בבית"]],
+      ["לא הבנתי", 12, ["לא הבנתי את החומר", "לא ידעתי", "לא ידעתי שיש"]],
+      ["הייתי חולה", 11, ["חולה", "חליתי", "לא הרגשתי טוב", "חום"]],
+      ["הפסקת חשמל", 7, ["חשמל", "אין חשמל", "נפל החשמל"]],
+      ["המחשב נתקע", 6, ["מחשב", "המחשב התקלקל", "מדפסת", "אינטרנט", "אין אינטרנט", "וויפיי", "wifi"]],
+      ["אחי הקטן קרע", 5, ["אח", "אחי", "אחותי", "אח קטן", "אחי קרע"]],
+      ["היה לי חוג", 4, ["חוג", "אימון", "תחרות"]]
+    ]},
+    { id: "phone", text: "תירוץ למה לא ענית לטלפון", a: [
+      ["הטלפון היה על שקט", 29, ["שקט", "על שקט", "מושתק", "רטט", "על רטט", "השתקתי"]],
+      ["נגמרה הסוללה", 17, ["סוללה", "בטריה", "נגמרה הבטריה", "נכבה", "הטלפון נכבה", "אין סוללה"]],
+      ["הייתי במקלחת", 14, ["מקלחת", "התקלחתי"]],
+      ["נהגתי", 10, ["נהיגה", "הייתי בנהיגה", "באוטו", "ברכב"]],
+      ["הייתי בפגישה", 9, ["פגישה", "ישיבה", "הייתי בישיבה"]],
+      ["ישנתי", 7, ["נרדמתי", "הייתי ישן", "הייתי ישנה"]],
+      ["לא ראיתי", 5, ["לא שמתי לב", "לא שמעתי"]],
+      ["אין קליטה", 4, ["קליטה", "לא הייתה קליטה", "ממד", "ממ\"ד"]]
+    ]},
+    { id: "date", text: "תירוץ לבטל דייט ברגע האחרון", a: [
+      ["לא מרגיש טוב", 27, ["חולה", "לא מרגישה טוב", "כאב ראש", "כאב בטן", "חום", "מיגרנה"]],
+      ["נתקעתי בעבודה", 16, ["עבודה", "עבודה דחופה", "הבוס"]],
+      ["אירוע משפחתי", 13, ["משפחה", "אמא שלי", "אמא", "סבתא", "ארוחה משפחתית"]],
+      ["האוטו התקלקל", 10, ["אוטו", "רכב", "פנצר", "פנצ'ר", "תקר"]],
+      ["חבר במצוקה", 9, ["חבר", "חברה", "חבר צריך אותי", "חברה בצרות"]],
+      ["הכלב חולה", 7, ["כלב", "הכלב", "וטרינר", "חתול", "החתול"]],
+      ["שכחתי שקבעתי משהו", 6, ["שכחתי", "התבלבלתי", "קבעתי משהו"]],
+      ["חזרתי לאקס", 4, ["אקס", "האקס", "אקסית"]]
+    ]},
+    { id: "money", text: "תירוץ למה עוד לא החזרת כסף לחבר", a: [
+      ["הביט לא עובד", 26, ["ביט", "הביט נתקע", "פייבוקס", "פייבוקס לא עובד", "האפליקציה"]],
+      ["שכחתי", 22, ["פשוט שכחתי", "יצא לי מהראש"]],
+      ["עוד לא קיבלתי משכורת", 15, ["משכורת", "לא קיבלתי משכורת", "סוף החודש", "תחילת החודש", "אחרי המשכורת", "בעשירי"]],
+      ["אני במינוס", 11, ["מינוס", "אוברדרפט", "אין לי כסף", "הבנק"]],
+      ["אין לי מזומן", 9, ["מזומן", "אין מזומן", "כספומט"]],
+      ["כבר העברתי", 7, ["העברתי", "שלחתי", "תבדוק שוב", "תבדוק"]],
+      ["תזכיר לי", 5, ["תזכיר", "תזכורת"]]
+    ]},
+    { id: "gym", text: "תירוץ לא ללכת לחדר כושר", a: [
+      ["אין לי כוח", 24, ["עייף", "עייפה", "אין כוח", "מת מעייפות"]],
+      ["אין זמן", 18, ["זמן", "אין לי זמן", "עמוס"]],
+      ["כואב לי", 13, ["כואב", "כאב", "כאבי שרירים", "פציעה", "נפצעתי", "גב", "ברך"]],
+      ["מתחיל מחר", 12, ["מחר", "מיום ראשון", "ראשון", "משבוע הבא", "אחרי החגים"]],
+      ["מזג האוויר", 9, ["קר", "חם", "גשם", "מזג אוויר", "חם מדי", "קר מדי"]],
+      ["בדיוק אכלתי", 7, ["אכלתי", "אחרי אוכל", "שבע", "שבעה"]],
+      ["חדר הכושר מלא", 5, ["מלא", "צפוף", "אין מכשירים"]],
+      ["אין בגדים נקיים", 4, ["בגדים", "אין בגדים", "כביסה", "נעליים"]]
+    ]},
+    { id: "cop", text: "תירוץ לשוטר שעצר אותך", a: [
+      ["לא ראיתי את התמרור", 22, ["תמרור", "לא ראיתי", "לא שמתי לב", "רמזור"]],
+      ["ממהר לבית חולים", 18, ["בית חולים", "בי\"ח", "מיון", "אשתי יולדת", "לידה", "יולדת", "מקרה חירום", "חירום"]],
+      ["כולם נסעו ככה", 13, ["כולם", "כולם נוסעים ככה", "כולם עושים את זה"]],
+      ["לא ידעתי מה המהירות", 11, ["מהירות", "לא ידעתי", "לא היה שלט", "שלט"]],
+      ["צריך לשירותים", 10, ["שירותים", "פיפי", "דחוף לשירותים"]],
+      ["מאחר לעבודה", 8, ["מאחר", "מאחרת", "עבודה", "ממהר", "ממהרת"]],
+      ["מד המהירות מקולקל", 6, ["מד מהירות", "מד המהירות", "המד מהירות", "מקולקל", "המד לא עובד", "ספידומטר"]],
+      ["אני מכיר את המפקד", 4, ["מפקד", "מכיר את המפקד", "קצין", "פרוטקציה"]]
+    ]}
+  ];
+
+  // General questions, filed as a "request to submit an answer".
+  var GENERAL = [
+    { id: "beach", text: "משהו שלוקחים לים", a: [
+      ["מגבת", 22, ["מגבות"]],
+      ["קרם הגנה", 17, ["קרם", "קרם שיזוף", "הגנה", "קרם הגנה 50"]],
+      ["מטקות", 14, ["מטקה", "מטקאות", "מטקאס", "כדור"]],
+      ["שמשייה", 9, ["שמשיה", "צל"]],
+      ["אבטיח", 8, []],
+      ["כיסא", 7, ["כסא", "כיסא ים", "כסאות", "כיסאות", "כסא נוח", "כיסא נוח"]],
+      ["מים", 6, ["בקבוק מים", "שתיה", "שתייה", "בקבוק"]],
+      ["צידנית", 5, ["צדנית", "קולר", "צידניה"]],
+      ["משקפי שמש", 4, ["משקפיים", "משקפים", "משקפי"]],
+      ["בגד ים", 3, ["בגדי ים", "ביקיני"]]
+    ]},
+    { id: "falafel", text: "משהו ששמים בפיתה עם פלאפל", a: [
+      ["טחינה", 23, ["טחינה גולמית"]],
+      ["חומוס", 20, []],
+      ["סלט", 15, ["סלט ירקות", "ירקות", "עגבניה", "עגבנייה", "מלפפון", "סלט קצוץ"]],
+      ["צ'יפס", 11, ["ציפס", "chips"]],
+      ["חמוצים", 9, ["חמוץ", "מלפפון חמוץ", "מלפפונים חמוצים"]],
+      ["עמבה", 8, ["אמבה"]],
+      ["חריף", 6, ["סחוג", "שאטה", "פלפל חריף", "הריסה", "חילבה"]],
+      ["כרוב", 4, ["כרוב סגול", "כרוב לבן"]]
+    ]},
+    { id: "mom", text: "משהו שאמא שואלת בטלפון", a: [
+      ["אכלת?", 33, ["אכלתם", "אכלת משהו", "מה אכלת", "אכלת היום"]],
+      ["מתי אתה בא?", 15, ["מתי באים", "מתי את באה", "תבוא", "באים", "מתי מגיעים", "מגיעים לשישי", "באים בשישי"]],
+      ["איפה אתה?", 11, ["איפה", "איפה את", "איפה אתם"]],
+      ["למה לא ענית?", 10, ["לא ענית", "למה לא עונה", "למה לא חזרת"]],
+      ["התלבשת חם?", 9, ["מעיל", "התלבשת", "סוודר", "קר לך", "לבשת מעיל"]],
+      ["מה שלומך?", 8, ["מה נשמע", "מה קורה", "שלומך", "מה העניינים"]],
+      ["הכל בסדר?", 5, ["הכול בסדר", "בסדר"]],
+      ["ישנת?", 4, ["ישנת טוב", "ישנת מספיק"]]
+    ]},
+    { id: "clinic", text: "משהו ששומעים בתור בקופת חולים", a: [
+      ["מי אחרון?", 29, ["מי האחרון", "אחרון", "מי אחרונה", "מי בסוף"]],
+      ["רק שאלה", 21, ["שאלה קטנה", "רק לשאול", "רק שאלה קטנה", "שאלה"]],
+      ["יש לי תור", 13, ["תור", "אני בתור", "יש לי תור ל"]],
+      ["הייתי לפנייך", 10, ["הייתי לפני", "הייתי פה", "לפנייך", "לפניך", "הייתי קודם", "אני לפנייך"]],
+      ["כמה זמן זה לוקח?", 8, ["כמה זמן", "מחכה", "מחכים", "כבר שעה", "שעה"]],
+      ["המחשב נפל", 6, ["מחשב", "המערכת", "מערכת נפלה", "נפלה המערכת"]],
+      ["אחות!", 5, ["אחות", "אחיות"]],
+      ["שיעול", 4, ["משתעל", "השתעלות", "אפצ'י", "עיטוש"]]
+    ]},
+    { id: "whatsapp", text: "מה כותבים הכי הרבה בוואטסאפ", a: [
+      ["חחח", 26, ["חח", "lol", "צחוק", "ההה"]],
+      ["סבבה", 19, ["סבבא", "סבאבה"]],
+      ["אחלה", 13, ["אחלא"]],
+      ["יאללה", 12, ["יאלה"]],
+      ["בדרך", 8, ["בדרך אליך", "מגיע", "מגיעה"]],
+      ["מה קורה", 7, ["מה נשמע", "מה המצב", "מה העניינים"]],
+      ["תודה", 5, ["תודה רבה", "תנקס", "תודה!"]],
+      ["אוקיי", 4, ["אוקי", "ok", "אוק", "אוקה"]]
+    ]},
+    { id: "savta", text: "משהו שתמיד יש על השולחן אצל סבתא בשישי", a: [
+      ["חלה", 21, ["חלות", "לחם"]],
+      ["עוף", 18, ["עוף בתנור", "כרעיים", "שוקיים"]],
+      ["מרק עוף", 15, ["מרק", "קניידלך", "קניידלעך"]],
+      ["סלטים", 12, ["סלט", "חצילים", "מטבוחה", "סלט חצילים"]],
+      ["קוגל", 8, ["קיגל"]],
+      ["אורז", 7, ["אורז עם שקדים", "אורז לבן"]],
+      ["שניצל", 6, ["שניצלים"]],
+      ["יין", 5, ["קידוש", "יין קידוש"]],
+      ["גפילטע", 3, ["גפילטה", "דג ממולא", "דג", "דגים"]]
+    ]},
+    { id: "abroad", text: "משהו שכל ישראלי עושה בחו\"ל", a: [
+      ["מחפש ישראלים", 20, ["ישראלים", "מדבר עברית", "עברית", "מוצא ישראלים"]],
+      ["קונה בדיוטי פרי", 16, ["דיוטי", "דיוטי פרי", "דיוטיפרי", "קניות", "קונה"]],
+      ["משווה מחירים לארץ", 14, ["מחירים", "משווה", "משווה מחירים", "יקר", "בארץ זה יותר יקר"]],
+      ["מתלונן", 11, ["תלונות", "מקטר", "מתלונן על הכל"]],
+      ["לוקח במבה מהארץ", 9, ["במבה", "ביסלי", "אוכל מהארץ", "לוקח אוכל"]],
+      ["לוקח מהבופה", 8, ["בופה", "ארוחת בוקר", "כריכים מהבופה"]],
+      ["מצלם הכל", 7, ["מצלם", "תמונות", "סלפי"]],
+      ["מתמקח", 6, ["מיקוח", "הנחה", "מוריד מחיר", "מתווכח על המחיר"]]
+    ]}
+  ];
+  GENERAL.forEach(function (q) { q.general = true; });
+
+  // Excuses and general questions take turns, day by day.
+  var QUESTIONS = [];
+  for (var qi = 0; qi < Math.max(EXCUSES.length, GENERAL.length); qi++) {
+    if (EXCUSES[qi]) QUESTIONS.push(EXCUSES[qi]);
+    if (GENERAL[qi]) QUESTIONS.push(GENERAL[qi]);
+  }
+
+  // Wording that depends on whether the form asks for an excuse or an answer.
+  function W(q) {
+    return q.general ? {
+      sub: "בקשה להגשת תשובה", fine: "יש למלא עד 5 תשובות. כל תשובה נבדקת מול תשובות הציבור ושווה נקודות לפי אחוז האנשים שהגישו אותה. תשובה מקורית מדי תידחה.",
+      first: "התשובה הראשונה שעולה לך", more: "עוד תשובה", one: "תשובה אחת", many: "תשובות", dup: "כבר הגשת את התשובה הזאת. הפקיד שם לב.",
+      original: "תשובה מקורית מדי", publicTitle: "תשובות הציבור", cred: "רמת ישראליות"
+    } : {
+      sub: "בקשה להגשת תירוץ", fine: "יש למלא עד 5 תירוצים. כל תירוץ נבדק מול תירוצי הציבור ושווה נקודות לפי אחוז האנשים שהגישו אותו. תירוץ מקורי מדי יידחה.",
+      first: "התירוץ הראשון שעולה לך", more: "עוד תירוץ", one: "תירוץ אחד", many: "תירוצים", dup: "כבר הגשת את התירוץ הזה. הפקיד שם לב.",
+      original: "תירוץ מקורי מדי", publicTitle: "תירוצי הציבור", cred: "רמת אמינות"
+    };
+  }
+
+  // ---------- Matching ----------
+  var FINALS = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
+  function norm(s) {
+    return String(s).toLowerCase()
+      .replace(/[֑-ׇ]/g, "")
+      .replace(/[׳'"״`’‘?!.,:;()]/g, "")
+      .replace(/[-–—_/]/g, " ")
+      .replace(/[ךםןףץ]/g, function (c) { return FINALS[c]; })
+      .replace(/(.)\1{2,}/g, "$1$1")
+      .replace(/\s+/g, " ").trim()
+      .split(" ")
+      .map(function (w) { return w.length > 3 && w.charAt(0) === "ה" ? w.slice(1) : w; })
+      .join(" ");
+  }
+  function lev(a, b) {
+    if (Math.abs(a.length - b.length) > 1) return 2;
+    var prev = [], cur, i, j;
+    for (j = 0; j <= b.length; j++) prev[j] = j;
+    for (i = 1; i <= a.length; i++) {
+      cur = [i];
+      for (j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+  function matchAnswer(q, text) {
+    var n = norm(text);
+    if (!n) return -1;
+    var padded = " " + n + " ";
+    var words = n.split(" ");
+    var best = -1, bestScore = 0;
+    q.keys.forEach(function (keys, i) {
+      keys.forEach(function (k) {
+        var s = 0;
+        if (n === k) s = 1000 + k.length;
+        else if (padded.indexOf(" " + k + " ") !== -1) s = 500 + k.length;
+        else if (k.length >= 4 && (lev(n, k) <= 1 || (k.indexOf(" ") === -1 && words.some(function (w) { return w.length >= 4 && lev(w, k) <= 1; })))) s = 300 + k.length;
+        if (s > bestScore) { bestScore = s; best = i; }
+      });
+    });
+    return best;
+  }
+
+  QUESTIONS.forEach(function (q) {
+    q.a.sort(function (x, y) { return y[1] - x[1]; });
+    q.keys = q.a.map(function (row) {
+      var all = [row[0]].concat(row[2]).map(norm);
+      return all.filter(function (k, i) { return k && all.indexOf(k) === i; });
+    });
+    var total = q.a.reduce(function (s, r) { return s + r[1]; }, 0);
+    q.other = Math.max(0, 100 - total);
+    q.max = q.a.slice(0, MAX_ANSWERS).reduce(function (s, r) { return s + r[1]; }, 0);
+  });
+
+  function evaluate(q, answers) {
+    var used = {};
+    var score = 0;
+    var rows = answers.map(function (t) {
+      var i = matchAnswer(q, t);
+      if (i < 0) return { t: t, i: -1 };
+      if (used[i]) return { t: t, i: i, dup: true };
+      used[i] = true;
+      score += q.a[i][1];
+      return { t: t, i: i };
+    });
+    return { rows: rows, score: score, max: q.max, hits: used };
+  }
+  function square(r) {
+    if (r.i < 0 || r.dup) return "🟥";
+    return r.i < 3 ? "🟩" : "🟨";
+  }
+  function rankFor(score, max, q) {
+    var x = max ? score / max : 0;
+    if (q.general) {
+      if (x >= 0.8) return "ראש אחד עם המדינה";
+      if (x >= 0.6) return "ישראלי מצוי";
+      if (x >= 0.4) return "רגל אחת בברלין";
+      if (x >= 0.2) return "ראש משלך";
+      return "תייר בארץ הקודש";
+    }
+    if (x >= 0.8) return "תירוצן בדרגת ח״כ";
+    if (x >= 0.6) return "תירוצן מוסמך";
+    if (x >= 0.4) return "תירוצן מתלמד";
+    if (x >= 0.2) return "חשוד באמירת אמת";
+    return "ישר מדי. זה מדאיג";
+  }
+
+  // ---------- Days ----------
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function dayNumber() { return Math.max(1, Math.round((startOfDay(new Date()) - LAUNCH) / 86400000) + 1); }
+  function todayIndex() { return (dayNumber() - 1) % QUESTIONS.length; }
+  function pad3(n) { return String(n).padStart(3, "0"); }
+
+  // ---------- Storage (this device only) ----------
+  var KEY = "terutzim:v1";
+  function blank() { return { plays: {}, days: {}, drafts: {}, intro: 0 }; }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (s && s.plays && s.days) { s.drafts = s.drafts || {}; return s; }
+    } catch (e) {}
+    return blank();
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  var state = load();
+
+  // ---------- Helpers ----------
+  var $ = function (id) { return document.getElementById(id); };
+  var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var pending = [];
+  function later(fn, ms) { pending.push(setTimeout(fn, reduced ? Math.min(ms, 30) : ms)); }
+  function clearPending() { pending.forEach(clearTimeout); pending = []; }
+  function haptic(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+  function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+  // ---------- Sound (synthesized, no files) ----------
+  var Sound = (function () {
+    var ctx = null, on = true;
+    try { on = localStorage.getItem("terutzim:sound") !== "off"; } catch (e) {}
+    function ac() {
+      if (!on) return null;
+      if (!ctx) {
+        var C = window.AudioContext || window.webkitAudioContext;
+        if (!C) return null;
+        try { ctx = new C(); } catch (e) { return null; }
+      }
+      if (ctx.state === "suspended") ctx.resume();
+      return ctx;
+    }
+    function env(g, t, peak, dur) {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    }
+    function burst(freq, type, dur, vol, q, delay) {
+      var c = ac(); if (!c) return;
+      var t = c.currentTime + (delay || 0);
+      var len = Math.ceil(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      var s = c.createBufferSource(); s.buffer = buf;
+      var f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; if (q) f.Q.value = q;
+      var g = c.createGain(); env(g, t, vol, dur);
+      s.connect(f); f.connect(g); g.connect(c.destination);
+      s.start(t); s.stop(t + dur);
+    }
+    function tone(f0, f1, type, dur, vol, delay) {
+      var c = ac(); if (!c) return;
+      var t = c.currentTime + (delay || 0);
+      var o = c.createOscillator(); o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      var g = c.createGain(); env(g, t, vol, dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    return {
+      isOn: function () { return on; },
+      toggle: function () { on = !on; try { localStorage.setItem("terutzim:sound", on ? "on" : "off"); } catch (e) {} return on; },
+      key: function () { burst(3000 + Math.random() * 1500, "highpass", 0.03, 0.1); },
+      pen: function () { burst(2600, "bandpass", 0.2, 0.07, 2); burst(3400, "bandpass", 0.12, 0.05, 2, 0.12); },
+      thud: function () { tone(130, 40, "sine", 0.24, 0.7); burst(400, "lowpass", 0.1, 0.4); },
+      ding: function () { tone(1568, 0, "sine", 0.9, 0.22); tone(2093, 0, "sine", 0.6, 0.1, 0.03); },
+      print: function () { for (var i = 0; i < 9; i++) tone(i % 2 ? 190 : 150, 0, "square", 0.06, 0.045, i * 0.095); },
+      flip: function () { burst(900, "bandpass", 0.14, 0.2, 1.2); tone(500, 900, "triangle", 0.1, 0.05); },
+      crumple: function () { for (var i = 0; i < 6; i++) burst(1200 + Math.random() * 3000, "bandpass", 0.05, 0.14, 1.5, i * 0.045); },
+      buzz: function () { tone(120, 0, "sawtooth", 0.28, 0.07); },
+      rip: function () { burst(1800, "bandpass", 0.3, 0.2, 0.7); },
+      win: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0, "triangle", 0.22, 0.12, i * 0.11); }); },
+      sad: function () { [392, 330, 262].forEach(function (f, i) { tone(f, 0, "triangle", 0.3, 0.1, i * 0.18); }); }
+    };
+  })();
+
+  // ---------- The clerk ----------
+  var clerk = $("clerk"), bubble = $("bubble"), eyes = $("eyes");
+  var LINES = {
+    hello: ["הבא בתור!", "כן? מה רצית?", "שב, שב. כלומר תעמוד, אין כיסאות."],
+    add: ["רשמתי.", "המממ.", "מעניין. תמשיך.", "שמעתי יותר גרועים.", "זה בכלל חוקי?", "נרשם בטופס, לא בלב.", "אני לא שופט. טוב, קצת.", "ככה אמרה גם אמא שלי."],
+    del: ["מחקת? כאילו לא היה.", "יפה, גם אני מוחק דברים.", "נמחק. אף אחד לא ראה."],
+    dup: ["כבר כתבת את זה. אני רואה הכל.", "שוב? יש לי זיכרון של פיל."],
+    full: ["הטופס מלא. עכשיו להחתים.", "חמש. בדיוק כמו בנוהל."],
+    ready: ["אפשר כבר להגיש. או להוסיף עוד.", "זה מספיק לי. אבל יש עוד מקום."],
+    idle: ["נו? יש תור מאחוריך.", "הקפה שלי מתקרר.", "אני יוצא להפסקה בעוד חמש דקות.", "זה טופס, לא רומן."],
+    poke: ["אני בהפסקה.", "תחזור ביום ראשון.", "אין לי מושג, אני רק עובד פה.", "מערכת? איזו מערכת?", "זה לא אצלי, זה במחלקה השנייה.", "אל תדפוק על הזכוכית."],
+    holdStart: ["לאט… עוד רגע…", "מחזיק… מחזיק…"],
+    holdCancel: ["צריך להחזיק עד הסוף. ככה זה בבירוקרטיה.", "עזבת באמצע. כמו כולם."],
+    okEx: ["אושר. תירוץ של עם.", "קלאסי. אושר.", "שמעתי את זה כבר היום. אושר.", "אושר בלי שאלות."],
+    okGen: ["אושר. ישראלי אמיתי.", "נו בטח. אושר.", "אושר. כמו כולם."],
+    no: ["נדחה. מקורי מדי בשבילנו.", "חחח. לא.", "מה זה? נדחה.", "אין סעיף כזה. נדחה."],
+    dupNo: ["כבר החתמתי את זה. נדחה."],
+    board: ["תהפוך את שאר הלוח, תראה מה אחרים אמרו.", "רוצה לדעת מה כולם אמרו? תהפוך."],
+    done: ["הטופס הבא מחר. ואם תאחר, תביא תירוץ טוב.", "זהו להיום. אני יוצא להפסקה."]
+  };
+  var lastPick = {};
+  function pick(name) {
+    var arr = LINES[name], i;
+    do { i = Math.floor(Math.random() * arr.length); } while (arr.length > 1 && i === lastPick[name]);
+    lastPick[name] = i;
+    return arr[i];
+  }
+  function say(text, mood) {
+    bubble.textContent = text;
+    clerk.dataset.mood = mood || "neutral";
+    if (!reduced) restart(bubble, "pop");
+  }
+  function look(x, y) { eyes.setAttribute("transform", "translate(" + x.toFixed(1) + " " + y.toFixed(1) + ")"); }
+  var typing = false, lookRaf = 0, lookPt = null;
+  window.addEventListener("pointermove", function (e) {
+    lookPt = e;
+    if (lookRaf) return;
+    lookRaf = requestAnimationFrame(function () {
+      lookRaf = 0;
+      if (typing || $("deskArea").hidden) return;
+      var r = clerk.getBoundingClientRect();
+      var dx = lookPt.clientX - (r.left + r.width / 2), dy = lookPt.clientY - (r.top + r.height * 0.45);
+      var d = Math.hypot(dx, dy) || 1, k = Math.min(1, d / 160);
+      look(dx / d * 2.8 * k, dy / d * 2.4 * k);
+    });
+  });
+  var lastAction = Date.now();
+  function poke() { lastAction = Date.now(); }
+  setInterval(function () {
+    if (phase === "fill" && !$("deskArea").hidden && Date.now() - lastAction > 15000) { poke(); say(pick("idle"), "frown"); }
+  }, 3000);
+
+  // ---------- Flow ----------
+  var phase = "fill";
+  var current = null, entries = [], justAdded = -1, timer = null, result = null;
+
+  function playKey(c) { return c.daily ? "d" + c.day : "p" + c.q.id; }
+
+  function route() {
+    clearPending();
+    stopTimer();
+    cancelHold(true);
+    var m = /^#q(\d+)$/.exec(location.hash);
+    var idx = m ? parseInt(m[1], 10) - 1 : -1;
+    var tIdx = todayIndex();
+    if (idx < 0 || idx >= QUESTIONS.length || idx === tIdx) current = { q: QUESTIONS[tIdx], daily: true, day: dayNumber(), index: tIdx };
+    else current = { q: QUESTIONS[idx], daily: false, index: idx };
+    entries = (state.drafts[playKey(current)] || []).slice(0, MAX_ANSWERS);
+    justAdded = -1;
+    $("msg").textContent = "";
+    $("form").classList.remove("taken", "deal");
+    var played = state.plays[playKey(current)];
+    if (current.daily && !played && !entries.length && state.intro !== current.day) { showIntro(); return; }
+    showDesk();
+    render("static");
+    if (played) say(pick("done"), "neutral");
+    else say(entries.length ? "חזרת? הטופס שלך עוד פה." : pick("hello"), "smile");
+  }
+
+  function showIntro() {
+    phase = "intro";
+    $("intro").hidden = false;
+    $("deskArea").hidden = true;
+    $("intro").classList.remove("printing");
+    $("dispNum").textContent = pad3(current.day);
+    $("dispTicket").textContent = pad3(current.day);
+    $("introSub").textContent = current.q.general ? "הבקשה של היום מחכה בפנים. היום זו שאלה כללית." : "הבקשה של היום מחכה בפנים. תכינו תירוצים.";
+    setLedQueue();
+  }
+  function showDesk() { $("intro").hidden = true; $("deskArea").hidden = false; }
+
+  function takeNumber() {
+    if (phase !== "intro") return;
+    phase = "printing";
+    Sound.print();
+    haptic(40);
+    $("intro").classList.add("printing");
+    later(function () {
+      state.intro = current.day;
+      save();
+      Sound.ding();
+      showDesk();
+      render("static");
+      if (!reduced) restart($("form"), "deal");
+      say("מספר " + pad3(current.day) + "? בוא, בוא. " + (current.q.general ? "תמלא את הטופס." : "מה התירוץ היום?"), "smile");
+      window.scrollTo({ top: 0 });
+      later(function () { $("answerInput").focus({ preventScroll: true }); }, 500);
+    }, 1050);
+  }
+
+  function render(mode) {
+    var c = current, w = W(c.q);
+    var dateStr = new Intl.DateTimeFormat("he-IL", { weekday: "long", day: "numeric", month: "numeric" }).format(new Date());
+    var tk = $("ticket");
+    tk.textContent = "";
+    if (c.daily) {
+      tk.appendChild(document.createTextNode("מספרך בתור: "));
+      var b = document.createElement("b"); b.textContent = pad3(c.day); tk.appendChild(b);
+      tk.appendChild(document.createTextNode(" · " + dateStr));
+    } else {
+      tk.textContent = "טופס תרגול · לא נספר ברצף";
+    }
+    $("formSub").textContent = c.daily ? w.sub : w.sub + " (תרגול)";
+    $("question").textContent = c.q.text;
+    $("fine").textContent = w.fine;
+    $("publicTitle").textContent = w.publicTitle;
+    $("credLabel").textContent = w.cred;
+
+    var played = state.plays[playKey(c)];
+    if (played) renderResults(played.answers, mode);
+    else {
+      phase = "fill";
+      $("play").hidden = false;
+      $("decision").hidden = true;
+      $("results").hidden = true;
+      $("revealBar").hidden = true;
+      setLedQueue();
+      renderLines();
+    }
+    renderArchive();
+  }
+
+  function setLedQueue() {
+    $("ledLabel").textContent = current.daily ? "מספר בתור" : "תרגול";
+    $("ledNum").textContent = current.daily ? pad3(current.day) : "---";
+  }
+
+  // ---------- Filling the form ----------
+  function renderLines() {
+    var ol = $("lines");
+    ol.textContent = "";
+    for (var i = 0; i < MAX_ANSWERS; i++) {
+      var li = document.createElement("li");
+      li.className = "line" + (i === justAdded ? " new" : "");
+      var n = document.createElement("span"); n.className = "num"; n.textContent = (i + 1) + ".";
+      var cell = document.createElement("span"); cell.className = "cell";
+      var h = document.createElement("span"); h.className = "hand"; h.textContent = entries[i] || "";
+      cell.appendChild(h);
+      li.appendChild(n); li.appendChild(cell);
+      if (entries[i]) {
+        var x = document.createElement("button");
+        x.type = "button"; x.className = "x"; x.textContent = "×";
+        x.setAttribute("aria-label", "קמט וזרוק את " + entries[i]);
+        x.dataset.i = String(i);
+        li.appendChild(x);
+      } else {
+        li.appendChild(document.createElement("span"));
+      }
+      ol.appendChild(li);
+    }
+    justAdded = -1;
+    var w = W(current.q);
+    var full = entries.length >= MAX_ANSWERS;
+    var input = $("answerInput");
+    input.disabled = full;
+    input.placeholder = full ? "הטופס מלא. אפשר להגיש" : (entries.length ? w.more : w.first);
+    var send = $("send");
+    var left = MIN_TO_SEND - entries.length;
+    send.disabled = left > 0;
+    $("sendText").textContent = left > 1 ? "עוד " + left + " " + w.many + " כדי להגיש" : left === 1 ? "עוד " + w.one + " כדי להגיש" : "החזק כדי להחתים ולהגיש";
+    $("sendHint").hidden = left > 0;
+  }
+
+  function saveDraft() { state.drafts[playKey(current)] = entries.slice(); save(); }
+
+  function addEntry(raw) {
+    poke();
+    var v = raw.replace(/\s+/g, " ").trim();
+    if (!v || entries.length >= MAX_ANSWERS) return;
+    var n = norm(v);
+    var m = $("msg");
+    if (!n) { m.textContent = "צריך לכתוב מילים. הפקיד לא מקבל סימנים."; restart(m, "shake"); Sound.buzz(); return; }
+    if (entries.some(function (e) { return norm(e) === n; })) {
+      m.textContent = W(current.q).dup; restart(m, "shake");
+      Sound.buzz(); haptic([30, 40, 30]);
+      say(pick("dup"), "frown");
+      return;
+    }
+    entries.push(v);
+    justAdded = entries.length - 1;
+    m.textContent = "";
+    $("answerInput").value = "";
+    saveDraft();
+    renderLines();
+    Sound.pen();
+    haptic(12);
+    if (entries.length === MAX_ANSWERS) say(pick("full"), "smile");
+    else if (entries.length === MIN_TO_SEND) say(pick("ready"), "smile");
+    else say(pick("add"), Math.random() < 0.5 ? "o" : "neutral");
+  }
+
+  function removeEntry(i) {
+    poke();
+    var li = $("lines").children[i];
+    Sound.crumple();
+    haptic(15);
+    say(pick("del"), "neutral");
+    var finish = function () { entries.splice(i, 1); saveDraft(); renderLines(); };
+    if (reduced || !li) { finish(); return; }
+    li.classList.add("gone");
+    setTimeout(finish, 420);
+  }
+
+  // ---------- Hold to stamp ----------
+  var hold = { raf: 0, t0: 0 };
+  function holdStep() {
+    var k = (performance.now() - hold.t0) / HOLD_MS;
+    $("send").style.setProperty("--p", String(Math.min(1, k)));
+    if (k >= 1) { hold.raf = 0; $("send").classList.remove("holding"); submit(); return; }
+    hold.raf = requestAnimationFrame(holdStep);
+  }
+  function startHold(e) {
+    var send = $("send");
+    if (send.disabled || phase !== "fill" || hold.raf) return;
+    if (e) { e.preventDefault(); try { send.setPointerCapture(e.pointerId); } catch (err) {} }
+    poke();
+    hold.t0 = performance.now();
+    send.classList.add("holding");
+    Sound.key();
+    haptic(10);
+    say(pick("holdStart"), "o");
+    hold.raf = requestAnimationFrame(holdStep);
+  }
+  function cancelHold(silent) {
+    var send = $("send");
+    send.classList.remove("holding");
+    if (!hold.raf) return;
+    cancelAnimationFrame(hold.raf);
+    hold.raf = 0;
+    send.style.setProperty("--p", "0");
+    if (silent !== true) { say(pick("holdCancel"), "frown"); Sound.buzz(); }
+  }
+
+  function submit() {
+    if (phase !== "fill" || entries.length < MIN_TO_SEND) return;
+    var c = current;
+    var res = evaluate(c.q, entries);
+    state.plays[playKey(c)] = { answers: entries.slice(), score: res.score, max: res.max };
+    if (c.daily) state.days[c.day] = res.score;
+    delete state.drafts[playKey(c)];
+    save();
+    $("send").style.setProperty("--p", "0");
+    phase = "processing";
+    Sound.thud();
+    haptic([20, 50, 20]);
+    $("form").classList.add("taken");
+    $("play").hidden = true;
+    var steps = [["קיבלתי. בודק במערכת…", "neutral"], ["רגע… המערכת נפלה.", "frown"], ["עלתה. בערך.", "o"]];
+    steps.forEach(function (s, i) { later(function () { say(s[0], s[1]); if (i === 1) Sound.buzz(); }, i * 750); });
+    later(finishProcessing, steps.length * 750 + 200);
+  }
+  function finishProcessing() {
+    if (phase !== "processing") return;
+    clearPending();
+    $("form").classList.remove("taken");
+    Sound.ding();
+    render("reveal");
+    say("החותמת אצלך. תקיש על כל שורה.", "smile");
+    var top = $("form").getBoundingClientRect().top + window.scrollY - 150;
+    window.scrollTo({ top: Math.max(0, top), behavior: reduced ? "auto" : "smooth" });
+  }
+
+  // ---------- Results ----------
+  function renderResults(answers, mode) {
+    var c = current, q = c.q, w = W(q);
+    var res = evaluate(q, answers);
+    var reveal = mode === "reveal";
+    result = { res: res, w: w, ratio: res.max ? res.score / res.max : 0, rank: rankFor(res.score, res.max, q), left: reveal ? res.rows.length : 0 };
+    phase = reveal ? "reveal" : "done";
+    var squares = res.rows.map(square).join("");
+
+    $("play").hidden = true;
+    $("revealBar").hidden = !reveal;
+    $("decision").hidden = reveal;
+    $("results").hidden = reveal;
+    $("decision").classList.remove("slam-in");
+    $("results").classList.remove("rise");
+
+    var ol = $("lines");
+    ol.textContent = "";
+    res.rows.forEach(function (r, i) {
+      var li = document.createElement("li");
+      li.className = "line res";
+      li.dataset.i = String(i);
+      var n = document.createElement("span"); n.className = "num"; n.textContent = (i + 1) + ".";
+      var cell = document.createElement("span"); cell.className = "cell";
+      var h = document.createElement("span"); h.className = "hand"; h.textContent = r.t;
+      cell.appendChild(h);
+      li.appendChild(n); li.appendChild(cell);
+      if (reveal) {
+        li.classList.add("pending");
+        li.tabIndex = 0;
+        li.setAttribute("role", "button");
+        li.setAttribute("aria-label", "החתם את: " + r.t);
+        var tap = document.createElement("span"); tap.className = "tap"; tap.textContent = "הקש";
+        li.appendChild(tap);
+      } else {
+        stampInto(li, r, false);
+      }
+      ol.appendChild(li);
+    });
+
+    var verdict = $("verdict");
+    verdict.className = "verdict " + (result.ratio >= 0.4 ? "ok" : "no");
+    verdict.textContent = "";
+    var vs = document.createElement("small"); vs.textContent = "החלטת הפקיד";
+    verdict.appendChild(vs); verdict.appendChild(document.createTextNode(result.rank));
+    $("max").textContent = String(res.max);
+    $("score").textContent = reveal ? "0" : String(res.score);
+    $("squares").textContent = squares;
+
+    buildTiles(q, res, !reveal);
+    $("total").textContent = "הניקוד שלך: " + res.score + " מתוך " + res.max;
+    $("receiptSub").textContent = (c.daily ? "טופס " + pad3(c.day) : "טופס תרגול") + " · " + q.text;
+
+    var head = c.daily ? "תירוצים #" + c.day + " 🧾" : "תירוצים · תרגול 🧾";
+    $("shareText").textContent = head + "\n" + q.text + "\n" + squares + "\n" + w.cred + " " + res.score + "/" + res.max + " · " + result.rank + "\n" + GAME_URL;
+    $("copied").textContent = "";
+    $("back").hidden = c.daily;
+    renderStats();
+    if (!reveal) { if (c.daily) startTimer(); else setLedQueue(); }
+  }
+
+  function stampInto(li, r, animate) {
+    var q = current.q, w = W(q);
+    var cell = li.querySelector(".cell");
+    var tap = li.querySelector(".tap");
+    if (tap) tap.remove();
+    var note = document.createElement("span"); note.className = "note";
+    var st = document.createElement("span");
+    var ok = !(r.i < 0 || r.dup);
+    if (!ok) {
+      st.className = "stamp no"; st.textContent = "נדחה";
+      note.className = "note no";
+      note.textContent = r.dup ? "כבר הוגש כ\"" + q.a[r.i][0] + "\"" : w.original;
+    } else {
+      st.className = "stamp ok"; st.textContent = "אושר";
+      var sm = document.createElement("small"); sm.textContent = q.a[r.i][1] + "%"; st.appendChild(sm);
+      if (norm(r.t) !== norm(q.a[r.i][0])) note.textContent = "נרשם כ\"" + q.a[r.i][0] + "\"";
+    }
+    if (animate) st.classList.add("slam");
+    if (note.textContent) cell.appendChild(note);
+    li.appendChild(st);
+    li.classList.remove("pending");
+    li.removeAttribute("role");
+    li.removeAttribute("tabindex");
+    li.removeAttribute("aria-label");
+    return ok;
+  }
+
+  function stampLine(i) {
+    if (phase !== "reveal") return;
+    var li = $("lines").children[i];
+    if (!li || !li.classList.contains("pending")) return;
+    poke();
+    var r = result.res.rows[i];
+    var ok = stampInto(li, r, true);
+    Sound.thud();
+    haptic(ok ? 25 : [25, 40, 25]);
+    if (!reduced) restart($("form"), "thud");
+    if (ok) say(pick(current.q.general ? "okGen" : "okEx"), "smile");
+    else say(pick(r.dup ? "dupNo" : "no"), "frown");
+    result.left--;
+    if (result.left === 0) { phase = "verdict"; later(finishReveal, 650); }
+  }
+
+  function stampAll() {
+    var lis = Array.prototype.slice.call($("lines").children);
+    var delay = 0;
+    lis.forEach(function (li, i) {
+      if (li.classList.contains("pending")) { later(function () { stampLine(i); }, delay); delay += 330; }
+    });
+  }
+
+  function finishReveal() {
+    var res = result.res, ratio = result.ratio, q = current.q;
+    $("revealBar").hidden = true;
+    $("decision").hidden = false;
+    if (!reduced) $("decision").classList.add("slam-in");
+    later(function () {
+      Sound.thud(); haptic([30, 30, 60]);
+      if (!reduced) restart($("form"), "thud");
+      countUp($("score"), res.score, 900);
+    }, 280);
+    later(function () {
+      if (ratio >= 0.6) { Sound.win(); shred(); } else if (ratio < 0.3) Sound.sad(); else Sound.ding();
+      var line;
+      if (q.general) line = ratio >= 0.8 ? "אתה ישראלי יותר ממני." : ratio >= 0.6 ? "ישראלי מצוי. כמו כולם פה בתור." : ratio >= 0.4 ? "חצי פה, חצי בברלין." : "אתה בטוח שאתה מפה?";
+      else line = ratio >= 0.8 ? "וואו. אתה מוכן לכנסת." : ratio >= 0.6 ? "לא רע בכלל. תחזור מחר." : ratio >= 0.4 ? "בינוני. כמו השירות פה." : "אתה ישר מדי. זה חשוד.";
+      say(line, ratio >= 0.4 ? "smile" : "frown");
+      $("decision").scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+    }, 800);
+    later(function () {
+      phase = "done";
+      $("results").hidden = false;
+      if (!reduced) $("results").classList.add("rise");
+      var hits = Object.keys(res.hits).map(Number).sort(function (a, b) { return a - b; });
+      hits.forEach(function (i, k) { later(function () { flipTile(i); }, 500 + k * 380); });
+      later(function () { say(pick("board"), "o"); }, 700 + hits.length * 380);
+      if (current.daily) startTimer(); else setLedQueue();
+      renderArchive();
+    }, 2200);
+  }
+
+  function countUp(el, to, ms) {
+    if (reduced) { el.textContent = String(to); return; }
+    var s = performance.now();
+    (function step(t) {
+      var k = Math.min(1, (t - s) / ms);
+      el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(step);
+    })(s);
+  }
+
+  // ---------- Game-show board ----------
+  function buildTiles(q, res, allFlipped) {
+    var ul = $("tiles");
+    ul.textContent = "";
+    ul.classList.toggle("instant", allFlipped);
+    var top = q.a[0][1];
+    q.a.forEach(function (row, i) {
+      var hit = !!res.hits[i];
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tile" + (hit ? " hit" : "") + (allFlipped ? " flipped" : "");
+      b.dataset.i = String(i);
+      b.setAttribute("aria-label", allFlipped ? row[0] + ", " + row[1] + "%" : "הפוך את תשובה " + (i + 1));
+      var inner = document.createElement("span"); inner.className = "in";
+      var front = document.createElement("span"); front.className = "face front";
+      front.innerHTML = '<span class="f-n"></span><span class="f-q">???</span><span class="f-t">הקש להפוך</span>';
+      front.firstChild.textContent = String(i + 1);
+      var back = document.createElement("span"); back.className = "face back";
+      var rk = document.createElement("span"); rk.className = "b-rank"; rk.textContent = String(i + 1);
+      var lb = document.createElement("span"); lb.className = "b-label"; lb.textContent = row[0];
+      if (hit) { var em = document.createElement("em"); em.textContent = " ✓ אתה"; lb.appendChild(em); }
+      var tr = document.createElement("span"); tr.className = "b-track";
+      var bar = document.createElement("i"); bar.style.width = Math.round(row[1] / top * 100) + "%";
+      tr.appendChild(bar);
+      var pc = document.createElement("span"); pc.className = "b-pct"; pc.textContent = row[1] + "%";
+      back.appendChild(rk); back.appendChild(lb); back.appendChild(tr); back.appendChild(pc);
+      inner.appendChild(front); inner.appendChild(back);
+      b.appendChild(inner); li.appendChild(b); ul.appendChild(li);
+    });
+    $("otherPct").textContent = q.other + "%";
+    $("otherRow").hidden = !allFlipped || q.other <= 0;
+    $("flipAll").hidden = allFlipped;
+  }
+
+  function flipTile(i) {
+    var b = $("tiles").querySelector('.tile[data-i="' + i + '"]');
+    if (!b || b.classList.contains("flipped")) return;
+    if (b.classList.contains("squash")) return;
+    var row = current.q.a[i];
+    if (reduced) b.classList.add("flipped");
+    else {
+      b.classList.add("squash");
+      setTimeout(function () { b.classList.add("flipped"); b.classList.remove("squash"); }, 160);
+    }
+    b.setAttribute("aria-label", row[0] + ", " + row[1] + "%");
+    Sound.flip();
+    haptic(8);
+    if (!$("tiles").querySelector(".tile:not(.flipped):not(.squash)")) {
+      $("flipAll").hidden = true;
+      $("otherRow").hidden = current.q.other <= 0;
+      if (phase === "done") later(function () { say(pick("done"), "neutral"); }, 600);
+    }
+  }
+
+  // Shredded paper for a credible applicant.
+  function shred() {
+    if (reduced) return;
+    var c = $("confetti");
+    var ctx = c.getContext && c.getContext("2d");
+    if (!ctx) return;
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var cw = window.innerWidth, ch = window.innerHeight;
+    c.width = cw * dpr; c.height = ch * dpr; c.hidden = false;
+    var colors = ["#FBFAF3", "#C7D5EA", "#6A2BB8", "#FFE94D", "#FF5A1F", "#FFFFFF"];
+    var P = [];
+    for (var i = 0; i < 130; i++) {
+      P.push({ x: Math.random() * cw, y: -20 - Math.random() * ch * 0.7, w: 4 + Math.random() * 4, h: 12 + Math.random() * 16,
+        vy: 2.2 + Math.random() * 3, vx: -1 + Math.random() * 2, r: Math.random() * 6.28, vr: -0.15 + Math.random() * 0.3, c: colors[i % colors.length] });
+    }
+    var start = performance.now();
+    (function frame(t) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cw, ch);
+      P.forEach(function (p) {
+        p.x += p.vx + Math.sin(t / 300 + p.r) * 0.6; p.y += p.vy; p.r += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      if (t - start < 3400) requestAnimationFrame(frame);
+      else { ctx.clearRect(0, 0, cw, ch); c.hidden = true; }
+    })(start);
+  }
+
+  function renderStats() {
+    var days = Object.keys(state.days).map(Number);
+    var played = days.length;
+    var avg = played ? Math.round(days.reduce(function (s, d) { return s + state.days[d]; }, 0) / played) : 0;
+    var today = dayNumber();
+    var from = state.days[today] !== undefined ? today : today - 1;
+    var streak = 0;
+    while (state.days[from - streak] !== undefined) streak++;
+    var box = $("stats");
+    box.textContent = "";
+    [[played, "טפסים שהוגשו"], [streak, "ימים ברצף"], [avg, "ניקוד ממוצע"]].forEach(function (p) {
+      var d = document.createElement("div"); d.className = "stat";
+      var b = document.createElement("b"); b.textContent = String(p[0]);
+      var s = document.createElement("span"); s.textContent = p[1];
+      d.appendChild(b); d.appendChild(s); box.appendChild(d);
+    });
+  }
+
+  function startTimer() {
+    stopTimer();
+    $("ledLabel").textContent = "הטופס הבא בעוד";
+    $("ledNum").classList.add("blink");
+    var tick = function () {
+      var now = new Date();
+      var next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      var ms = next - now;
+      if (ms <= 1000) { stopTimer(); setTimeout(route, 1500); return; }
+      var s = Math.floor(ms / 1000);
+      $("ledNum").textContent = String(Math.floor(s / 3600)).padStart(2, "0") + ":" +
+        String(Math.floor(s % 3600 / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    };
+    tick();
+    timer = setInterval(tick, 1000);
+  }
+  function stopTimer() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $("ledNum").classList.remove("blink");
+  }
+
+  function renderArchive() {
+    var ul = $("archive");
+    ul.textContent = "";
+    var tIdx = todayIndex();
+    QUESTIONS.forEach(function (q, i) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button"; b.dataset.i = String(i);
+      if (i === current.index) b.setAttribute("aria-current", "true");
+      var t = document.createElement("span"); t.className = "q-t"; t.textContent = (i === tIdx ? "היום: " : "") + q.text;
+      var st = document.createElement("span");
+      var play = i === tIdx ? state.plays["d" + dayNumber()] : state.plays["p" + q.id];
+      st.className = "st" + (play ? " ok" : "");
+      st.textContent = play ? "הוגש " + play.score + "/" + play.max : "טרם הוגש";
+      b.appendChild(t); b.appendChild(st);
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+
+  // ---------- Events ----------
+  $("take").addEventListener("click", takeNumber);
+  $("entryForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    addEntry($("answerInput").value);
+    $("answerInput").focus();
+  });
+  $("answerInput").addEventListener("input", function (e) {
+    poke();
+    if (e.inputType && e.inputType.indexOf("insert") === 0) Sound.key();
+  });
+  $("answerInput").addEventListener("focus", function () { typing = true; look(0, 2.6); });
+  $("answerInput").addEventListener("blur", function () { typing = false; look(0, 0); });
+  $("lines").addEventListener("click", function (e) {
+    var x = e.target.closest(".x");
+    if (x) { removeEntry(Number(x.dataset.i)); return; }
+    var li = e.target.closest(".line.res.pending");
+    if (li) stampLine(Number(li.dataset.i));
+  });
+  $("lines").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var li = e.target.closest(".line.res.pending");
+    if (li) { e.preventDefault(); stampLine(Number(li.dataset.i)); }
+  });
+  $("stampAll").addEventListener("click", stampAll);
+
+  var send = $("send");
+  send.addEventListener("pointerdown", startHold);
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (ev) { send.addEventListener(ev, function () { if (hold.raf) cancelHold(); }); });
+  send.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  send.addEventListener("click", function (e) { if (e.detail === 0 && !send.disabled) submit(); });
+
+  clerk.addEventListener("click", function () {
+    poke();
+    if (phase === "processing") { finishProcessing(); return; }
+    if (phase === "intro" || phase === "printing") return;
+    say(pick("poke"), "o");
+    Sound.buzz();
+    if (!reduced) restart(clerk, "jolt");
+  });
+
+  $("tiles").addEventListener("click", function (e) {
+    var b = e.target.closest(".tile");
+    if (b) flipTile(Number(b.dataset.i));
+  });
+  $("flipAll").addEventListener("click", function () {
+    var k = 0;
+    Array.prototype.forEach.call($("tiles").querySelectorAll(".tile:not(.flipped)"), function (b) {
+      var i = Number(b.dataset.i);
+      later(function () { flipTile(i); }, k++ * 160);
+    });
+  });
+
+  $("copy").addEventListener("click", function () {
+    var text = $("shareText").textContent;
+    Sound.rip();
+    if (!reduced) restart($("stub"), "tear");
+    var done = function () { $("copied").textContent = "הועתק. עכשיו להדביק בקבוצה"; };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents($("shareText"));
+      var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      $("copied").textContent = "הטקסט מסומן. העתיקו אותו ידנית";
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback);
+      else fallback();
+    } catch (e) { fallback(); }
+  });
+
+  $("sound").setAttribute("aria-pressed", String(Sound.isOn()));
+  $("sound").addEventListener("click", function () {
+    var on = Sound.toggle();
+    $("sound").setAttribute("aria-pressed", String(on));
+    if (on) Sound.ding();
+  });
+
+  $("archive").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) return;
+    var i = Number(b.dataset.i);
+    location.hash = i === todayIndex() ? "today" : "q" + (i + 1);
+    window.scrollTo({ top: 0 });
+  });
+  $("back").addEventListener("click", function () { location.hash = "today"; window.scrollTo({ top: 0 }); });
+
+  var armed = false;
+  $("reset").addEventListener("click", function () {
+    if (!armed) {
+      armed = true;
+      $("reset").textContent = "בטוח? לחצו שוב כדי למחוק הכל";
+      setTimeout(function () { armed = false; $("reset").textContent = "איפוס כל התוצאות במכשיר הזה"; }, 4000);
+      return;
+    }
+    armed = false;
+    state = blank();
+    save();
+    $("reset").textContent = "איפוס כל התוצאות במכשיר הזה";
+    if (location.hash && location.hash !== "#today") location.hash = "today";
+    else route();
+    window.scrollTo({ top: 0 });
+  });
+
+  window.addEventListener("hashchange", route);
+  route();
+
+  // Exposed for quick checks from the console.
+  window.__terutzim = { norm: norm, matchAnswer: matchAnswer, QUESTIONS: QUESTIONS };
+})();
+</script>

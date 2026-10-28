@@ -107,9 +107,7 @@ function renderOptions(song) {
   box.innerHTML = "";
   for (const s of shuffle([song, ...others])) {
     const b = document.createElement("button");
-    b.innerHTML = `<span></span><small></small>`;
-    b.firstChild.textContent = s.title;
-    b.lastChild.textContent = s.artist;
+    b.textContent = s.title;
     b.onclick = () => answer(s === song, b);
     b.dataset.right = s === song ? "1" : "";
     box.append(b);
@@ -146,18 +144,12 @@ function timeLeft() {
 }
 
 function showHint() {
-  const song = state.deck[state.i];
   const h = $("#hint");
-  if (state.mode === "solo") {
-    const words = song.line.split(/\s+/);
-    h.textContent = `"${words.slice(0, Math.min(2, words.length - 1)).join(" ")}..."`;
-    state.hinted = true;
-    $("#hint-btn").hidden = true;
-  } else {
-    h.textContent = `🎙 ${song.artist}`;
-    $("#party-hint-btn").hidden = true;
-  }
+  h.textContent = `🎙 ${state.deck[state.i].artist}`;
   h.hidden = false;
+  state.hinted = true;
+  $("#hint-btn").hidden = true;
+  $("#party-hint-btn").hidden = true;
 }
 
 function answer(ok, btn) {
@@ -201,7 +193,8 @@ function openReveal(song, verdict, ok) {
   const v = $("#verdict");
   v.textContent = verdict;
   v.className = "verdict " + (verdict ? (ok ? "good" : "bad") : "");
-  $("#r-line").textContent = song.line;
+  $("#r-line").textContent = song.line || "";
+  $("#r-line").hidden = !song.line;
   $("#r-title").textContent = song.title;
   $("#r-artist").textContent = song.artist;
   $("#r-yt").href = "https://www.youtube.com/results?search_query=" + encodeURIComponent(`${song.title} ${song.artist}`);
@@ -272,7 +265,7 @@ function end() {
     li.innerHTML = `<img alt=""><span><b></b><small></small></span><i></i>`;
     li.querySelector("img").src = imgSrc(r.song);
     li.querySelector("b").textContent = r.song.title;
-    li.querySelector("small").textContent = `${r.song.artist} · "${r.song.line}"`;
+    li.querySelector("small").textContent = r.song.artist;
     li.querySelector("i").textContent = r.ok ? "✅" : "❌";
     ol.append(li);
   }

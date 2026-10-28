@@ -18,7 +18,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="preload" href="img/logo.webp" as="image">
+<link rel="stylesheet" href="css/style.css?v=2">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
@@ -63,14 +64,14 @@
 <main id="screens">
   <section id="s-title" class="screen">
     <div class="titlebg"></div>
-    <div class="logo"><span class="sub">מזה</span><h1>אורטל<br>קומבט</h1><span class="year">2026</span></div>
+    <h1 class="logo-img"><img src="img/logo.webp" alt="אורטל קומבט"></h1>
     <p class="tag">שמונה לוחמות. אייפונים עפים. כיסא כתר אחד.</p>
     <button class="big start pulse">לחצי להתחיל</button>
     <p class="loading">טוענת…</p>
   </section>
 
   <section id="s-menu" class="screen" hidden>
-    <div class="logo small"><h1>אורטל קומבט</h1></div>
+    <h1 class="logo-img small"><img src="img/logo.webp" alt="אורטל קומבט"></h1>
     <nav class="menu">
       <button data-go="cpu" class="big">🥊 קרב נגד המחשב</button>
       <button data-go="online" class="big">🌐 קרב אונליין עם חברה</button>
@@ -188,6 +189,6 @@
 
 <div id="rotate"><div>📱↔️</div><p>סובבי את הטלפון לרוחב</p></div>
 
-<script type="module" src="js/main.js?v=1"></script>
+<script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>

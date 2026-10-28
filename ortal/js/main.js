@@ -364,9 +364,7 @@ function startMatch(stage) {
   paused = false;
   $("#pauseBtn").hidden = mode === "online";
   setupHudNames();
-  const gr = [];
-  for (const c of [c0, c1]) { const v = VOICE_OF[CHARS[c].id]; for (const k of ["atk1", "atk2", "atk3", "hurt1", "hurt2", "hurt3", "big", "ko"]) gr.push(`g_${v}_${k}`); }
-  audio.preloadVoices(gr);
+  audio.preloadVoices(GRUNTS);
   show("fight");
   audio.music(true, 2);
   acc = 0;
@@ -450,7 +448,10 @@ function onEvent(ev) {
       const heavy = ["round", "hook", "upper", "spin", "fly", "nails", "whip", "sweep", "grab"];
       if (heavy.includes(ev.mv)) audio.sfx("whoosh");
       else if (["jab", "jab2", "kick", "airp", "airk"].includes(ev.mv)) audio.sfx("swish");
-      if (ev.mv !== "chair" && ev.mv !== "chairality") grunt(ev.p, "atk", heavy.includes(ev.mv) ? 0.75 : 0.3);
+      if (ev.mv !== "chair" && ev.mv !== "chairality") {
+        if (heavy.includes(ev.mv) || ["spin", "nails", "fly", "whip", "toss"].includes(ev.mv)) grunt(ev.p, "yell", 0.8);
+        else grunt(ev.p, "atk", 0.4);
+      }
       if (ev.mv === "flash") { setTimeout(() => { flash("on"); audio.sfx("flash"); }, 170); }
       if (ev.mv === "scream" || ev.mv === "vape" || ev.mv === "tiktok") audio.voice("shout_" + CHARS[P(ev.p).ch].id);
       break;
@@ -532,17 +533,21 @@ function myIndex() { return mode === "online" ? me : 0; }
 function isHuman(i) { return mode === "local" || i === myIndex(); }
 function padOf(i) { return mode === "local" ? i : 0; }
 
-// fighters' grunts: two fighters share each of the four recorded voices, pitched apart
-const VOICE_OF = { shontal: "danit", lian: "danit", liel: "zina", tahel: "zina", shirel: "yael", revital: "yael", maayan: "michal", agam: "michal" };
-const RATE_OF = { lian: 1.08, tahel: 1.07, revital: 0.94, agam: 0.93 };
-const lastGrunt = [0, 0];
+// fighters' grunts: one set of real effort and pain sounds, pitched per fighter
+// atk: light attack, yell: heavy attack, hurt: hit, big: heavy hit, ko: knocked out
+const PITCH = { shontal: 0.93, revital: 0.97, liel: 1.04, lian: 1.1, shirel: 1.0, agam: 0.9, maayan: 0.96, tahel: 1.14 };
+const GRUNTS = ["atk", "yell", "hurt", "big", "ko"].flatMap((k) => [1, 2, 3].map((n) => `x_${k}${n}`));
+const lastGrunt = [0, 0], lastPick = {};
 function grunt(i, kind, chance = 1) {
   const now = performance.now();
   if (kind !== "ko" && (now - lastGrunt[i] < 380 || Math.random() > chance)) return;
   lastGrunt[i] = now;
   const id = CHARS[simState().p[i].ch].id;
-  const n = kind === "atk" || kind === "hurt" ? kind + (1 + Math.floor(Math.random() * 3)) : kind;
-  audio.voice(`g_${VOICE_OF[id]}_${n}`, { duck: false, rate: (RATE_OF[id] || 1) * (0.97 + Math.random() * 0.06), gain: kind === "atk" ? 0.8 : 1 });
+  // never the same take twice in a row
+  let n = 1 + Math.floor(Math.random() * 3);
+  if (n === lastPick[kind]) n = (n % 3) + 1;
+  lastPick[kind] = n;
+  audio.voice(`x_${kind}${n}`, { duck: false, rate: PITCH[id] * (0.97 + Math.random() * 0.06), gain: kind === "atk" ? 0.65 : kind === "yell" ? 0.8 : 0.9 });
 }
 
 // you got hit: the screen edge flashes red on your side and your health bar jolts

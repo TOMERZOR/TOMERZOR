@@ -65,10 +65,12 @@ while (now < END) {
   }
   now += 1;
 }
-// let the network drain with the bots idle so everything confirms
+// let the network drain with both players idle so everything confirms
+// (a late packet only rewinds on the next tick, so keep ticking)
 for (let t = 0; t < 400; t++) {
   queue.sort((a, b) => a.at - b.at);
   while (queue.length && queue[0].at <= now) { const q = queue.shift(); sessions[q.to].receive(q.msg); }
+  if (t % 2 === 0) { sessions[0].tick(0); sessions[1].tick(0); }
   now += 16;
 }
 

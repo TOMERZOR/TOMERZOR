@@ -212,3 +212,37 @@ body.fighting.portrait #rotate { display: flex; }
   .buttons { transform: scale(0.88); transform-origin: right bottom; }
   .logo h1 { font-size: 64px; }
 }
+
+/* versus reads left (player 1) to right like the fight */
+#s-versus { direction: ltr; }
+.vs-side p { direction: rtl; }
+.vs-side img { max-height: 62vh; width: auto; max-width: 100%; }
+
+/* phones on their side: everything has to fit in ~390px of height */
+@media (max-height: 500px) {
+  .screen { gap: 8px; padding-top: calc(8px + var(--safe-t)); padding-bottom: calc(8px + var(--safe-b)); }
+  .logo.small h1 { font-size: 34px; }
+  .menu { gap: 7px; }
+  .menu button { padding: 9px 18px; font-size: 16px; }
+  .sel-wrap { flex-direction: column; gap: 6px; }
+  .sel-grid { grid-template-columns: repeat(8, 1fr); gap: 4px; flex: none; }
+  .card { aspect-ratio: 4 / 5; }
+  .card img { object-position: top; }
+  .sel-info { flex: 1; min-height: 0; flex-direction: row; }
+  .showcase { flex: 0 0 34%; min-height: 0; }
+  .info { overflow-y: auto; justify-content: flex-start; }
+  .info h3 { font-size: 24px; }
+  .info .bio { display: none; }
+  .moves li { padding: 3px 8px; }
+  .sel-bar button { padding: 8px 18px; font-size: 16px; }
+  .vs-side h3 { font-size: 26px; }
+  .vs-side p { font-size: 13px; min-height: 0; }
+  .res-img { width: auto; height: 38vh; }
+  .help { font-size: 13px; }
+}
+/* with the touch pad on screen, the chair meters move up under the health bars */
+@media (pointer: coarse) {
+  .meters { bottom: auto; top: calc(clamp(42px, 7.5vw, 62px) + var(--safe-t)); }
+  #netinfo { bottom: auto; top: calc(78px + var(--safe-t)); }
+  .iconbtn { top: auto; bottom: calc(8px + var(--safe-b)); }
+}

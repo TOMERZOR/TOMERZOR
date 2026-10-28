@@ -43,6 +43,7 @@ function readPad(i) {
 // ---------- touch ----------
 let touchBits = 0;
 let stickBits = 0;
+let tapped = 0; // presses not yet seen by the game, so a very quick tap still counts
 export function setupTouch(root) {
   const stick = root.querySelector(".stick");
   const knob = root.querySelector(".knob");
@@ -68,7 +69,7 @@ export function setupTouch(root) {
   zone.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     stickId = e.pointerId;
-    zone.setPointerCapture(e.pointerId);
+    try { zone.setPointerCapture(e.pointerId); } catch {}
     const r = stick.getBoundingClientRect();
     // the stick jumps to where the thumb lands (within the zone)
     const zr = zone.getBoundingClientRect();
@@ -85,7 +86,7 @@ export function setupTouch(root) {
 
   for (const btn of root.querySelectorAll("[data-btn]")) {
     const bit = IN[btn.dataset.btn];
-    const press = (e) => { e.preventDefault(); touchBits |= bit; btn.classList.add("on"); if (navigator.vibrate) navigator.vibrate(8); };
+    const press = (e) => { e.preventDefault(); touchBits |= bit; tapped |= bit; btn.classList.add("on"); if (navigator.vibrate) navigator.vibrate(8); };
     const rel = (e) => { e.preventDefault(); touchBits &= ~bit; btn.classList.remove("on"); };
     btn.addEventListener("pointerdown", press);
     btn.addEventListener("pointerup", rel); btn.addEventListener("pointercancel", rel); btn.addEventListener("pointerleave", rel);
@@ -95,10 +96,11 @@ export function setupTouch(root) {
 
 // slot: "solo" (everything controls you), "p1", "p2" (local versus)
 export function readInput(slot) {
-  if (slot === "p1") return readLayout(A) | readPad(0) | touchBits | stickBits;
+  const t = tapped; tapped = 0;
+  if (slot === "p1") return readLayout(A) | readPad(0) | touchBits | stickBits | t;
   if (slot === "p2") return readLayout(B) | readPad(1);
-  return readLayout(A) | readLayout(B) | readPad(0) | readPad(1) | touchBits | stickBits;
+  return readLayout(A) | readLayout(B) | readPad(0) | readPad(1) | touchBits | stickBits | t;
 }
 
 export function anyKey() { return down.size > 0; }
-export function clearTouch() { touchBits = 0; stickBits = 0; }
+export function clearTouch() { touchBits = 0; stickBits = 0; tapped = 0; }

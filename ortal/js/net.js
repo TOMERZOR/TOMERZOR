@@ -11,6 +11,7 @@ const BROKERS = qs.get("broker") ? [qs.get("broker")] : [
   "wss://broker.emqx.io:8084/mqtt",
   "wss://broker.hivemq.com:8884/mqtt",
   "wss://test.mosquitto.org:8081/mqtt",
+  "wss://mqtt.eclipseprojects.io:443/mqtt",
 ];
 const NO_RTC = qs.get("nortc") === "1";
 const PREFIX = "ortalkombat/v2/";

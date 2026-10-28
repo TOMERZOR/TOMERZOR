@@ -10,8 +10,14 @@ Live: https://tomerzor.github.io/TOMERZOR/shir/
 
 ## Modes
 
-- **משחק יחיד (solo):** 10 pictures, 4 song titles to choose from, 20 seconds each. Points for speed (100 to 200), +50 from a streak of three, half points after the hint (the singer's name). Best score is kept in the browser.
+- **משחק יחיד (solo):** 10 pictures, 4 song titles to choose from, 20 seconds each. Points for speed (100 to 200), +50 from a streak of three. Best score is kept in the browser.
 - **מצב מסיבה (party):** two named teams share one screen. Everyone shouts, someone taps חשיפה, then taps which team got it. 10 to 30 pictures.
+
+Hints, in both modes, show on the bottom of the picture:
+- **גלה אות:** the title appears as blank tiles and one random letter is filled in. Tap again for another; the last letter always stays hidden. Each letter costs 15% of the round's points in solo.
+- **מי שר?:** shows the singer. Costs 40% in solo.
+
+A right answer keeps at least 20% of its points however many hints were used.
 
 Pictures not seen yet come first, so repeat players keep getting new ones (kept in localStorage).
 

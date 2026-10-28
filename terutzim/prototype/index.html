@@ -339,7 +339,7 @@ button { cursor: pointer; }
     </div>
     <p class="field-label">נושא הבקשה</p>
     <h2 class="q-title" id="question">תירוץ לאיחור לעבודה</h2>
-    <p class="fine">יש למלא עד 5 תירוצים. כל תירוץ נבדק מול תירוצי הציבור ושווה נקודות לפי אחוז האנשים שהגישו אותו. תירוץ מקורי מדי יידחה.</p>
+    <p class="fine" id="fine">יש למלא עד 5 תירוצים. כל תירוץ נבדק מול תירוצי הציבור ושווה נקודות לפי אחוז האנשים שהגישו אותו. תירוץ מקורי מדי יידחה.</p>
 
     <ol class="lines" id="lines"></ol>
 
@@ -354,7 +354,7 @@ button { cursor: pointer; }
 
     <div class="decision" id="decision" hidden>
       <div>
-        <div class="cred-label">רמת אמינות</div>
+        <div class="cred-label" id="credLabel">רמת אמינות</div>
         <div class="cred"><b id="score">0</b><span>/<span id="max">0</span></span></div>
         <div class="squares" id="squares" aria-hidden="true"></div>
       </div>
@@ -364,7 +364,7 @@ button { cursor: pointer; }
 
   <section id="results" hidden>
     <div class="receipt">
-      <h2>תירוצי הציבור</h2>
+      <h2 id="publicTitle">תירוצי הציבור</h2>
       <p class="sub" id="receiptSub">תוצאות המדגם</p>
       <ol class="board" id="board"></ol>
       <div class="total"><span>הניקוד שלך</span><span id="total"></span></div>
@@ -389,7 +389,7 @@ button { cursor: pointer; }
   </section>
 
   <div>
-    <p class="proto">אב-טיפוס: תירוצי הציבור כאן הם הערכה שהוכנה מראש, לא תשובות אמיתיות של שחקנים. בגרסה המלאה הם ייאספו מכל מי ששיחק, והתוצאות המלאות ייחשפו למחרת. התוצאות שלך נשמרות רק במכשיר הזה.</p>
+    <p class="proto">אב-טיפוס: התשובות של הציבור כאן הן הערכה שהוכנה מראש, לא תשובות אמיתיות של שחקנים. בגרסה המלאה הם ייאספו מכל מי ששיחק, והתוצאות המלאות ייחשפו למחרת. התוצאות שלך נשמרות רק במכשיר הזה.</p>
     <button class="reset" id="reset" type="button">איפוס כל התוצאות במכשיר הזה</button>
   </div>
 </div>
@@ -417,7 +417,7 @@ button { cursor: pointer; }
   var MIN_TO_SEND = 3;
 
   // [label, percent of the public, other ways people write it]
-  var QUESTIONS = [
+  var EXCUSES = [
     { id: "late", text: "תירוץ לאיחור לעבודה", a: [
       ["פקקים", 30, ["פקק", "תנועה", "עומס", "עומסי תנועה", "איילון", "נתקעתי בפקק"]],
       ["לא מצאתי חניה", 14, ["חניה", "חנייה", "חנית", "אין חניה"]],
@@ -499,6 +499,104 @@ button { cursor: pointer; }
     ]}
   ];
 
+  // General questions, filed as a "request to submit an answer".
+  var GENERAL = [
+    { id: "beach", text: "משהו שלוקחים לים", a: [
+      ["מגבת", 22, ["מגבות"]],
+      ["קרם הגנה", 17, ["קרם", "קרם שיזוף", "הגנה", "קרם הגנה 50"]],
+      ["מטקות", 14, ["מטקה", "מטקאות", "מטקאס", "כדור"]],
+      ["שמשייה", 9, ["שמשיה", "צל"]],
+      ["אבטיח", 8, []],
+      ["כיסא", 7, ["כסא", "כיסא ים", "כסאות", "כיסאות", "כסא נוח", "כיסא נוח"]],
+      ["מים", 6, ["בקבוק מים", "שתיה", "שתייה", "בקבוק"]],
+      ["צידנית", 5, ["צדנית", "קולר", "צידניה"]],
+      ["משקפי שמש", 4, ["משקפיים", "משקפים", "משקפי"]],
+      ["בגד ים", 3, ["בגדי ים", "ביקיני"]]
+    ]},
+    { id: "falafel", text: "משהו ששמים בפיתה עם פלאפל", a: [
+      ["טחינה", 23, ["טחינה גולמית"]],
+      ["חומוס", 20, []],
+      ["סלט", 15, ["סלט ירקות", "ירקות", "עגבניה", "עגבנייה", "מלפפון", "סלט קצוץ"]],
+      ["צ'יפס", 11, ["ציפס", "chips"]],
+      ["חמוצים", 9, ["חמוץ", "מלפפון חמוץ", "מלפפונים חמוצים"]],
+      ["עמבה", 8, ["אמבה"]],
+      ["חריף", 6, ["סחוג", "שאטה", "פלפל חריף", "הריסה", "חילבה"]],
+      ["כרוב", 4, ["כרוב סגול", "כרוב לבן"]]
+    ]},
+    { id: "mom", text: "משהו שאמא שואלת בטלפון", a: [
+      ["אכלת?", 33, ["אכלתם", "אכלת משהו", "מה אכלת", "אכלת היום"]],
+      ["מתי אתה בא?", 15, ["מתי באים", "מתי את באה", "תבוא", "באים", "מתי מגיעים", "מגיעים לשישי", "באים בשישי"]],
+      ["איפה אתה?", 11, ["איפה", "איפה את", "איפה אתם"]],
+      ["למה לא ענית?", 10, ["לא ענית", "למה לא עונה", "למה לא חזרת"]],
+      ["התלבשת חם?", 9, ["מעיל", "התלבשת", "סוודר", "קר לך", "לבשת מעיל"]],
+      ["מה שלומך?", 8, ["מה נשמע", "מה קורה", "שלומך", "מה העניינים"]],
+      ["הכל בסדר?", 5, ["הכול בסדר", "בסדר"]],
+      ["ישנת?", 4, ["ישנת טוב", "ישנת מספיק"]]
+    ]},
+    { id: "clinic", text: "משהו ששומעים בתור בקופת חולים", a: [
+      ["מי אחרון?", 29, ["מי האחרון", "אחרון", "מי אחרונה", "מי בסוף"]],
+      ["רק שאלה", 21, ["שאלה קטנה", "רק לשאול", "רק שאלה קטנה", "שאלה"]],
+      ["יש לי תור", 13, ["תור", "אני בתור", "יש לי תור ל"]],
+      ["הייתי לפנייך", 10, ["הייתי לפני", "הייתי פה", "לפנייך", "לפניך", "הייתי קודם", "אני לפנייך"]],
+      ["כמה זמן זה לוקח?", 8, ["כמה זמן", "מחכה", "מחכים", "כבר שעה", "שעה"]],
+      ["המחשב נפל", 6, ["מחשב", "המערכת", "מערכת נפלה", "נפלה המערכת"]],
+      ["אחות!", 5, ["אחות", "אחיות"]],
+      ["שיעול", 4, ["משתעל", "השתעלות", "אפצ'י", "עיטוש"]]
+    ]},
+    { id: "whatsapp", text: "מה כותבים הכי הרבה בוואטסאפ", a: [
+      ["חחח", 26, ["חח", "lol", "צחוק", "ההה"]],
+      ["סבבה", 19, ["סבבא", "סבאבה"]],
+      ["אחלה", 13, ["אחלא"]],
+      ["יאללה", 12, ["יאלה"]],
+      ["בדרך", 8, ["בדרך אליך", "מגיע", "מגיעה"]],
+      ["מה קורה", 7, ["מה נשמע", "מה המצב", "מה העניינים"]],
+      ["תודה", 5, ["תודה רבה", "תנקס", "תודה!"]],
+      ["אוקיי", 4, ["אוקי", "ok", "אוק", "אוקה"]]
+    ]},
+    { id: "savta", text: "משהו שתמיד יש על השולחן אצל סבתא בשישי", a: [
+      ["חלה", 21, ["חלות", "לחם"]],
+      ["עוף", 18, ["עוף בתנור", "כרעיים", "שוקיים"]],
+      ["מרק עוף", 15, ["מרק", "קניידלך", "קניידלעך"]],
+      ["סלטים", 12, ["סלט", "חצילים", "מטבוחה", "סלט חצילים"]],
+      ["קוגל", 8, ["קיגל"]],
+      ["אורז", 7, ["אורז עם שקדים", "אורז לבן"]],
+      ["שניצל", 6, ["שניצלים"]],
+      ["יין", 5, ["קידוש", "יין קידוש"]],
+      ["גפילטע", 3, ["גפילטה", "דג ממולא", "דג", "דגים"]]
+    ]},
+    { id: "abroad", text: "משהו שכל ישראלי עושה בחו\"ל", a: [
+      ["מחפש ישראלים", 20, ["ישראלים", "מדבר עברית", "עברית", "מוצא ישראלים"]],
+      ["קונה בדיוטי פרי", 16, ["דיוטי", "דיוטי פרי", "דיוטיפרי", "קניות", "קונה"]],
+      ["משווה מחירים לארץ", 14, ["מחירים", "משווה", "משווה מחירים", "יקר", "בארץ זה יותר יקר"]],
+      ["מתלונן", 11, ["תלונות", "מקטר", "מתלונן על הכל"]],
+      ["לוקח במבה מהארץ", 9, ["במבה", "ביסלי", "אוכל מהארץ", "לוקח אוכל"]],
+      ["לוקח מהבופה", 8, ["בופה", "ארוחת בוקר", "כריכים מהבופה"]],
+      ["מצלם הכל", 7, ["מצלם", "תמונות", "סלפי"]],
+      ["מתמקח", 6, ["מיקוח", "הנחה", "מוריד מחיר", "מתווכח על המחיר"]]
+    ]}
+  ];
+  GENERAL.forEach(function (q) { q.general = true; });
+
+  // Excuses and general questions take turns, day by day.
+  var QUESTIONS = [];
+  for (var qi = 0; qi < Math.max(EXCUSES.length, GENERAL.length); qi++) {
+    if (EXCUSES[qi]) QUESTIONS.push(EXCUSES[qi]);
+    if (GENERAL[qi]) QUESTIONS.push(GENERAL[qi]);
+  }
+
+  // Wording that depends on whether the form asks for an excuse or an answer.
+  function W(q) {
+    return q.general ? {
+      sub: "בקשה להגשת תשובה", fine: "יש למלא עד 5 תשובות. כל תשובה נבדקת מול תשובות הציבור ושווה נקודות לפי אחוז האנשים שהגישו אותה. תשובה מקורית מדי תידחה.",
+      first: "התשובה הראשונה שעולה לך", more: "עוד תשובה", one: "תשובה אחת", many: "תשובות", dup: "כבר הגשת את התשובה הזאת. הפקיד שם לב.",
+      original: "תשובה מקורית מדי", publicTitle: "תשובות הציבור", cred: "רמת ישראליות"
+    } : {
+      sub: "בקשה להגשת תירוץ", fine: "יש למלא עד 5 תירוצים. כל תירוץ נבדק מול תירוצי הציבור ושווה נקודות לפי אחוז האנשים שהגישו אותו. תירוץ מקורי מדי יידחה.",
+      first: "התירוץ הראשון שעולה לך", more: "עוד תירוץ", one: "תירוץ אחד", many: "תירוצים", dup: "כבר הגשת את התירוץ הזה. הפקיד שם לב.",
+      original: "תירוץ מקורי מדי", publicTitle: "תירוצי הציבור", cred: "רמת אמינות"
+    };
+  }
+
   // ---------- Matching ----------
   var FINALS = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
   function norm(s) {
@@ -572,8 +670,15 @@ button { cursor: pointer; }
     if (r.i < 0 || r.dup) return "🟥";
     return r.i < 3 ? "🟩" : "🟨";
   }
-  function rankFor(score, max) {
+  function rankFor(score, max, q) {
     var x = max ? score / max : 0;
+    if (q.general) {
+      if (x >= 0.8) return "ראש אחד עם המדינה";
+      if (x >= 0.6) return "ישראלי מצוי";
+      if (x >= 0.4) return "רגל אחת בברלין";
+      if (x >= 0.2) return "ראש משלך";
+      return "תייר בארץ הקודש";
+    }
     if (x >= 0.8) return "תירוצן בדרגת ח״כ";
     if (x >= 0.6) return "תירוצן מוסמך";
     if (x >= 0.4) return "תירוצן מתלמד";
@@ -642,8 +747,12 @@ button { cursor: pointer; }
       tk.textContent = "טופס תרגול · לא נספר ברצף";
     }
     $("ticket").appendChild(tk);
-    $("formSub").textContent = c.daily ? "בקשה להגשת תירוץ" : "בקשה להגשת תירוץ (תרגול)";
+    var w = W(c.q);
+    $("formSub").textContent = c.daily ? w.sub : w.sub + " (תרגול)";
     $("question").textContent = c.q.text;
+    $("fine").textContent = w.fine;
+    $("publicTitle").textContent = w.publicTitle;
+    $("credLabel").textContent = w.cred;
 
     var played = state.plays[playKey(c)];
     $("play").hidden = !!played;
@@ -687,11 +796,12 @@ button { cursor: pointer; }
     var full = entries.length >= MAX_ANSWERS;
     var input = $("answerInput");
     input.disabled = full;
-    input.placeholder = full ? "הטופס מלא. אפשר להגיש" : (entries.length ? "עוד תירוץ" : "התירוץ הראשון שעולה לך");
+    var w = W(current.q);
+    input.placeholder = full ? "הטופס מלא. אפשר להגיש" : (entries.length ? w.more : w.first);
     var send = $("send");
     var left = MIN_TO_SEND - entries.length;
     send.disabled = left > 0;
-    send.textContent = left > 1 ? "עוד " + left + " תירוצים כדי להגיש" : left === 1 ? "עוד תירוץ אחד כדי להגיש" : "הגש לפקיד (" + entries.length + "/" + MAX_ANSWERS + ")";
+    send.textContent = left > 1 ? "עוד " + left + " " + w.many + " כדי להגיש" : left === 1 ? "עוד " + w.one + " כדי להגיש" : "הגש לפקיד (" + entries.length + "/" + MAX_ANSWERS + ")";
   }
 
   function saveDraft() { state.drafts[playKey(current)] = entries.slice(); save(); }
@@ -707,7 +817,7 @@ button { cursor: pointer; }
     if (!v || entries.length >= MAX_ANSWERS) return;
     var n = norm(v);
     if (!n) { say("צריך לכתוב מילים. הפקיד לא מקבל סימנים."); return; }
-    if (entries.some(function (e) { return norm(e) === n; })) { say("כבר הגשת את התירוץ הזה. הפקיד שם לב."); return; }
+    if (entries.some(function (e) { return norm(e) === n; })) { say(W(current.q).dup); return; }
     entries.push(v);
     justAdded = entries.length - 1;
     $("msg").textContent = "";
@@ -764,7 +874,8 @@ button { cursor: pointer; }
     var c = current, q = c.q;
     var res = evaluate(q, answers);
     var ratio = res.max ? res.score / res.max : 0;
-    var rank = rankFor(res.score, res.max);
+    var rank = rankFor(res.score, res.max, q);
+    var w = W(q);
     var squares = res.rows.map(square).join("");
     var STEP = 430, START = 250;
 
@@ -782,7 +893,7 @@ button { cursor: pointer; }
       if (r.i < 0 || r.dup) {
         st.className = "stamp no"; st.textContent = "נדחה";
         note.className = "note no";
-        note.textContent = r.dup ? "כבר הוגש כ\"" + q.a[r.i][0] + "\"" : "תירוץ מקורי מדי";
+        note.textContent = r.dup ? "כבר הוגש כ\"" + q.a[r.i][0] + "\"" : w.original;
       } else {
         st.className = "stamp ok"; st.textContent = "אושר";
         var sm = document.createElement("small"); sm.textContent = q.a[r.i][1] + "%"; st.appendChild(sm);
@@ -817,7 +928,7 @@ button { cursor: pointer; }
     $("receiptSub").textContent = (c.daily ? "טופס " + pad3(c.day) : "טופס תרגול") + " · " + q.text;
 
     var head = c.daily ? "תירוצים #" + c.day + " 🧾" : "תירוצים · תרגול 🧾";
-    $("shareText").textContent = head + "\n" + q.text + "\n" + squares + "\n" + "רמת אמינות " + res.score + "/" + res.max + " · " + rank;
+    $("shareText").textContent = head + "\n" + q.text + "\n" + squares + "\n" + w.cred + " " + res.score + "/" + res.max + " · " + rank;
     $("copied").textContent = "";
 
     $("back").hidden = c.daily;

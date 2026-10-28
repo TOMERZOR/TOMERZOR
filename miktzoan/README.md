@@ -1,4 +1,4 @@
-# מקצוען סימולטור (Pro Simulator)
+# סימולטור הנדימן (Handyman Simulator)
 
 A satirical 3D handyman game in Hebrew, in the style of idle-arcade "carry and deliver" games. Pick a trade (plumber, electrician, locksmith, renovator, AC tech or gardener), grab parts from the van, deliver them to neighbours, do the repair mini-game, then choose what to charge: fair price, no receipt, or garage price.
 

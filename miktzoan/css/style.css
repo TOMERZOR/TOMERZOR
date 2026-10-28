@@ -113,8 +113,8 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
 @keyframes fadeOut { to { opacity: 0; transform: scale(1.06); } }
 .logo { text-align: center; line-height: .9; transform: rotate(-3deg); animation: logoIn .8s cubic-bezier(.2, 1.6, .4, 1); }
 .logo-top, .logo-bot { font-family: Rubik, Fredoka, sans-serif; font-weight: 800; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 10px var(--ink); filter: drop-shadow(0 7px 0 var(--ink)); }
-.logo-top { font-size: clamp(54px, 17vw, 96px); background: linear-gradient(#fff6b0, var(--sun) 50%, #ff9d00); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.logo-bot { font-size: clamp(40px, 12.5vw, 70px); color: #fff; margin-top: 4px; }
+.logo-top { font-size: clamp(40px, 12.5vw, 70px); color: #fff; }
+.logo-bot { font-size: clamp(58px, 18vw, 104px); color: var(--sun); margin-top: 4px; }
 .logo-sub { margin-top: 12px; display: inline-block; background: var(--ink); color: #fff; font-weight: 600; font-size: 15px; padding: 5px 14px; border-radius: 99px; transform: rotate(2deg); }
 @keyframes logoIn { from { transform: scale(.2) rotate(-20deg); opacity: 0; } }
 .pick { color: #fff; font-weight: 700; font-size: 22px; margin: 22px 0 10px; text-shadow: 0 3px 0 var(--ink); }
@@ -187,6 +187,6 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
   .pros { grid-template-columns: repeat(3, 1fr); width: min(760px, 100%); }
 }
 @media (max-height: 760px) and (orientation: landscape) {
-  .logo-top { font-size: 64px; } .logo-bot { font-size: 46px; }
+  .logo-top { font-size: 46px; } .logo-bot { font-size: 68px; }
   .pick { margin: 12px 0 8px; }
 }

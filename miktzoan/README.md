@@ -15,3 +15,5 @@ Play: https://tomerzor.github.io/TOMERZOR/miktzoan/
 Progress is saved per trade in `localStorage`. Add `?ts=4` to the URL to run the game four times faster when testing.
 
 Preview locally: `npx http-server .` from the repo root and open http://localhost:8080/miktzoan/
+
+App icon: `tools/icon.html` renders the game's own handyman with three.js. Serve the repo, open `/miktzoan/tools/icon.html` (add `?zoom=0.78` for the maskable version with extra margin), screenshot the 1024×1024 square and resize it into `img/` (`icon-192/512`, `icon-maskable-192/512`, `apple-touch-icon` 180, `favicon-32`).

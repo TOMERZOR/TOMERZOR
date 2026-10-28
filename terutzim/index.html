@@ -1,4 +1,23 @@
+<!doctype html>
 <title>תירוצים</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="משחק תירוצים יומי: ממלאים טופס 17, הפקיד מחתים כל תירוץ, ומגלים כמה אתם חושבים כמו כולם.">
+<meta property="og:title" content="תירוצים · משרד התירוצים">
+<meta property="og:description" content="כל יום טופס אחד לכולם. 5 תירוצים, חותמת של פקיד, וכמה אתם חושבים כמו כולם.">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/terutzim/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/terutzim/icons/icon-512.png">
+<meta name="theme-color" content="#1E6A57">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="תירוצים">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -48,8 +67,10 @@
 }
 
 * { box-sizing: border-box; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 [hidden] { display: none !important; }
 body {
+  margin: 0;
   background-color: var(--desk);
   background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1.6px);
   background-size: 14px 14px;
@@ -531,6 +552,7 @@ button { cursor: pointer; }
   var MAX_ANSWERS = 5;
   var MIN_TO_SEND = 3;
   var HOLD_MS = 850;
+  var GAME_URL = "tomerzor.github.io/TOMERZOR/terutzim";
 
   // [label, percent of the public, other ways people write it]
   var EXCUSES = [
@@ -1223,7 +1245,7 @@ button { cursor: pointer; }
     $("receiptSub").textContent = (c.daily ? "טופס " + pad3(c.day) : "טופס תרגול") + " · " + q.text;
 
     var head = c.daily ? "תירוצים #" + c.day + " 🧾" : "תירוצים · תרגול 🧾";
-    $("shareText").textContent = head + "\n" + q.text + "\n" + squares + "\n" + w.cred + " " + res.score + "/" + res.max + " · " + result.rank;
+    $("shareText").textContent = head + "\n" + q.text + "\n" + squares + "\n" + w.cred + " " + res.score + "/" + res.max + " · " + result.rank + "\n" + GAME_URL;
     $("copied").textContent = "";
     $("back").hidden = c.daily;
     renderStats();

@@ -39,13 +39,13 @@ h1, h2, h3, .big b { font-family: "Secular One", Rubik, sans-serif; font-weight:
 
 /* Home */
 #home { justify-content: center; text-align: center; gap: 28px; }
-.logo .mic { font-size: 64px; display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+.logo .mic { width: 104px; height: 104px; border-radius: 24px; box-shadow: 0 8px 24px #0008; display: inline-block; animation: bob 2.4s ease-in-out infinite; }
 .logo h1 { font-size: clamp(44px, 13vw, 68px); line-height: 1; margin: 8px 0 10px; text-shadow: 0 4px 0 #0006; }
 .logo h1 em { font-style: normal; color: var(--yellow); }
 .logo .tag { color: var(--muted); margin: 0; font-size: 18px; }
 .modes { display: grid; gap: 12px; }
 .foot { color: var(--muted); font-size: 14px; margin: 0; }
-@keyframes bob { 50% { transform: translateY(-8px) rotate(-8deg); } }
+@keyframes bob { 50% { transform: translateY(-8px) rotate(-4deg); } }
 
 .big {
   display: flex; flex-direction: column; align-items: center; gap: 2px;

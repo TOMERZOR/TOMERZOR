@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- App icon generator: renders the game's own handyman. Open via a local server, then screenshot #icon (see tools/README). -->
+<html><head><meta charset="utf-8">
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.min.js" } }</script>
+<style>
+html, body { margin: 0; background: #222; }
+#icon { position: relative; width: 1024px; height: 1024px; overflow: hidden;
+  background: radial-gradient(circle at 50% 42%, #fff6b8 0%, #ffd23a 38%, #ff9d1f 78%, #f07b12 100%); }
+#icon.mask { --pad: 1; }
+.rays { position: absolute; inset: -40%; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.22) 0 9deg, transparent 9deg 18deg); }
+canvas { position: absolute; inset: 0; width: 1024px; height: 1024px; }
+</style></head>
+<body><div id="icon"><div class="rays"></div><canvas id="c" width="1024" height="1024"></canvas></div>
+<script type="module">
+import * as THREE from 'three';
+import * as M from '../js/models.js';
+import { PROS } from '../js/data.js';
+
+const zoom = +new URLSearchParams(location.search).get('zoom') || 1; // <1 leaves room for maskable safe zone
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(1024, 1024, false);
+r.outputColorSpace = THREE.SRGBColorSpace;
+r.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xffffff, 0xffc070, 1.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.4); key.position.set(2, 3, 4); scene.add(key);
+const rim = new THREE.DirectionalLight(0xfff0b0, 2.2); rim.position.set(-3, 2, -2); scene.add(rim);
+
+const P = PROS.plumber;
+const guy = M.makePerson({ shirt: P.shirt, pants: P.pants, hat: 'cap', hatColor: P.hatColor, mustache: true, belt: true, overalls: true, skin: 0xf1c27d });
+const u = guy.userData;
+u.belly.scale.set(0.36, 0.33, 0.34); u.belly.position.z = 0.17;
+// proud pose: right arm up with a big wrench, left hand on the belly
+u.arms[0].rotation.set(-0.75, 0, 0.5);
+u.arms[1].rotation.set(0, 0, 2.5);
+const wrench = new THREE.Group();
+const handle = M.mesh(M.roundedBox(0.1, 0.34, 0.06, 0.025), 0xb0bec5); handle.position.y = -0.22; wrench.add(handle);
+const jaw = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.055, 10, 24, Math.PI * 1.45), M.mat(0xcfd8dc));
+jaw.rotation.z = -0.22 * Math.PI; jaw.position.y = -0.46; wrench.add(jaw);
+const grip = M.mesh(M.roundedBox(0.11, 0.24, 0.07, 0.03), 0xe53935); grip.position.y = 0.0; wrench.add(grip);
+wrench.position.y = -0.42; u.arms[1].add(wrench);
+u.head.children.at(-1).position.y = 0.07; // lift the cap off the eyebrows
+u.head.rotation.set(0.05, 0.18, -0.06);
+guy.rotation.y = -0.32;
+scene.add(guy);
+
+const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
+cam.position.set(0, 1.5, 4.2 / zoom);
+cam.lookAt(0.2, 1.36, 0);
+scene.updateMatrixWorld(true);
+r.render(scene, cam);
+document.body.dataset.ready = '1';
+</script></body></html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>נחש את השיר</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a0b2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="נחש את השיר: תמונה מצחיקה, שורה אחת מלהיט ישראלי. מזהים את השיר?">
+<meta property="og:title" content="נחש את השיר">
+<meta property="og:description" content="תמונה מצחיקה, שורה אחת מלהיט. מזהים את השיר?">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/shir/img/og.jpg">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/shir/">
+<link rel="icon" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+
+<section id="home" class="screen active">
+  <div class="logo">
+    <span class="mic">🎤</span>
+    <h1>נחש את <em>השיר</em></h1>
+    <p class="tag">תמונה אחת. שורה אחת מלהיט. איזה שיר זה?</p>
+  </div>
+  <div class="modes">
+    <button class="big" data-mode="solo">
+      <b>משחק יחיד</b>
+      <small>10 תמונות, 4 תשובות, נגד השעון</small>
+    </button>
+    <button class="big alt" data-mode="party">
+      <b>מצב מסיבה</b>
+      <small>שתי קבוצות, מסך אחד. מי צועק ראשון?</small>
+    </button>
+  </div>
+  <p class="foot"><span id="pool-count"></span> להיטים מהשנתיים האחרונות</p>
+</section>
+
+<section id="teams" class="screen">
+  <h2>מי נגד מי?</h2>
+  <label>קבוצה 1 <input id="team0" maxlength="16" value="הזמרים"></label>
+  <label>קבוצה 2 <input id="team1" maxlength="16" value="המזייפים"></label>
+  <label>כמה תמונות? <select id="party-len"><option>10</option><option selected>15</option><option>20</option><option>30</option></select></label>
+  <button class="big" id="party-go"><b>יאללה</b></button>
+  <button class="link" data-home>חזרה</button>
+</section>
+
+<section id="play" class="screen">
+  <header class="hud">
+    <button class="icon" data-home aria-label="יציאה">✕</button>
+    <div class="progress"><span id="round-n"></span></div>
+    <div class="score" id="score"></div>
+  </header>
+  <div class="timer" id="timer"><i></i></div>
+  <figure class="pic" id="pic">
+    <img id="pic-img" alt="תמונה שמתארת שורה משיר">
+    <figcaption class="hint" id="hint" hidden></figcaption>
+  </figure>
+  <div id="solo-controls">
+    <div class="options" id="options"></div>
+    <button class="link" id="hint-btn">רמז (חצי ניקוד)</button>
+  </div>
+  <div id="party-controls">
+    <div class="party-score" id="party-score"></div>
+    <button class="big" id="reveal-btn"><b>חשיפה</b></button>
+    <button class="link" id="party-hint-btn">רמז</button>
+  </div>
+</section>
+
+<div class="reveal" id="reveal" hidden>
+  <div class="card">
+    <div class="verdict" id="verdict"></div>
+    <blockquote id="r-line"></blockquote>
+    <h3 id="r-title"></h3>
+    <p id="r-artist"></p>
+    <a id="r-yt" target="_blank" rel="noopener">▶ לשמוע ביוטיוב</a>
+    <div class="who" id="who">
+      <p>מי ניחש?</p>
+      <div class="who-btns">
+        <button data-who="0"></button>
+        <button data-who="1"></button>
+        <button data-who="-1" class="ghost">אף אחד</button>
+      </div>
+    </div>
+    <button class="big" id="next-btn"><b>הבא</b></button>
+  </div>
+</div>
+
+<section id="end" class="screen">
+  <div class="trophy">🏆</div>
+  <h2 id="end-title"></h2>
+  <p class="end-score" id="end-score"></p>
+  <p id="end-sub"></p>
+  <ol class="recap" id="recap"></ol>
+  <button class="big" id="again-btn"><b>עוד סיבוב</b></button>
+  <button class="big alt" id="share-btn"><b>לשתף</b></button>
+  <button class="link" data-home>למסך הראשי</button>
+</section>
+
+<script src="js/songs.js?v=1"></script>
+<script src="js/game.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>אורטל קומבט</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0716">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="אורטל קומבט: משחק לחימה בתלת ממד. שמונה לוחמות, קומבואים, אייפונים עפים וכיסא כתר. אונליין עם חברה או נגד המחשב.">
+<meta property="og:title" content="אורטל קומבט">
+<meta property="og:description" content="שמונה לוחמות, קומבואים, אייפונים עפים וכיסא כתר. בואי לקרב אונליין.">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/ortal/img/og.jpg">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/ortal/">
+<link rel="icon" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=1">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" hidden>
+  <div class="bars">
+    <div class="side s0">
+      <div class="name"><span class="n"></span><span class="pips"></span></div>
+      <div class="hp"><i class="trail"></i><i class="fill"></i></div>
+    </div>
+    <div class="timer">99</div>
+    <div class="side s1">
+      <div class="name"><span class="n"></span><span class="pips"></span></div>
+      <div class="hp"><i class="trail"></i><i class="fill"></i></div>
+    </div>
+  </div>
+  <div class="meters">
+    <div class="meter m0"><span class="lbl">🪑 כוח כתר</span><div class="bar"><i></i></div></div>
+    <div class="meter m1"><span class="lbl">🪑 כוח כתר</span><div class="bar"><i></i></div></div>
+  </div>
+  <div class="combo c0"></div>
+  <div class="combo c1"></div>
+  <div id="announce"></div>
+  <div id="banner"></div>
+  <div id="netinfo"></div>
+  <button id="pauseBtn" class="iconbtn" aria-label="השהיה">❚❚</button>
+  <div id="flash"></div>
+</div>
+
+<div id="touch" dir="ltr" hidden>
+  <div class="stickzone"><div class="stick"><div class="knob"></div></div></div>
+  <div class="buttons">
+    <button data-btn="B" class="b-block">חסימה</button>
+    <button data-btn="S" class="b-item"><span class="ico">📱</span>זריקה</button>
+    <button data-btn="K" class="b-kick">בעיטה</button>
+    <button data-btn="P" class="b-slap">סטירה</button>
+    <button data-btn="X" class="b-chair">🪑<small>כיסא כתר</small></button>
+  </div>
+</div>
+
+<main id="screens">
+  <section id="s-title" class="screen">
+    <div class="titlebg"></div>
+    <div class="logo"><span class="sub">מזה</span><h1>אורטל<br>קומבט</h1><span class="year">2026</span></div>
+    <p class="tag">שמונה לוחמות. אייפונים עפים. כיסא כתר אחד.</p>
+    <button class="big start pulse">לחצי להתחיל</button>
+    <p class="loading">טוענת…</p>
+  </section>
+
+  <section id="s-menu" class="screen" hidden>
+    <div class="logo small"><h1>אורטל קומבט</h1></div>
+    <nav class="menu">
+      <button data-go="cpu" class="big">🥊 קרב נגד המחשב</button>
+      <button data-go="online" class="big">🌐 קרב אונליין עם חברה</button>
+      <button data-go="local" class="big">👯 שתיים על מסך אחד</button>
+      <button data-go="help">📖 איך משחקים</button>
+      <button data-go="sound" class="soundBtn">🔊 צליל</button>
+    </nav>
+  </section>
+
+  <section id="s-online" class="screen" hidden>
+    <h2>קרב אונליין</h2>
+    <div class="online-choose">
+      <button class="big host">פתחי חדר</button>
+      <div class="or">או</div>
+      <div class="join">
+        <input class="code" inputmode="numeric" maxlength="5" placeholder="קוד חדר" dir="ltr">
+        <button class="big joinBtn">הצטרפי</button>
+      </div>
+    </div>
+    <div class="online-wait" hidden>
+      <p>הקוד של החדר:</p>
+      <div class="roomcode" dir="ltr"></div>
+      <button class="share">📤 שלחי לחברה</button>
+      <p class="status">מחכה שחברה תצטרף…</p>
+    </div>
+    <p class="online-status"></p>
+    <button class="back">חזרה</button>
+  </section>
+
+  <section id="s-select" class="screen" hidden>
+    <h2 class="sel-title">בחרי לוחמת</h2>
+    <div class="sel-wrap">
+      <div class="sel-grid"></div>
+      <div class="sel-info">
+        <canvas class="showcase"></canvas>
+        <div class="info">
+          <h3 class="nm"></h3>
+          <p class="tg"></p>
+          <p class="bio"></p>
+          <ul class="moves"></ul>
+        </div>
+      </div>
+    </div>
+    <div class="sel-bar">
+      <button class="back">חזרה</button>
+      <span class="sel-msg"></span>
+      <button class="big ready">אני מוכנה!</button>
+    </div>
+  </section>
+
+  <section id="s-versus" class="screen" hidden>
+    <div class="vs-side v0"><img alt=""><h3></h3><p></p></div>
+    <div class="vs">VS</div>
+    <div class="vs-side v1"><img alt=""><h3></h3><p></p></div>
+    <div class="vs-stage"></div>
+  </section>
+
+  <section id="s-result" class="screen" hidden>
+    <img class="res-img" alt="">
+    <h2 class="res-title"></h2>
+    <p class="res-line"></p>
+    <p class="res-sub"></p>
+    <div class="res-buttons">
+      <button class="big again">עוד קרב</button>
+      <button class="menuBtn">לתפריט</button>
+    </div>
+  </section>
+
+  <section id="s-help" class="screen" hidden>
+    <h2>איך משחקים</h2>
+    <div class="help">
+      <h3>הכפתורים</h3>
+      <table>
+        <tr><th></th><th>טלפון</th><th>מקלדת</th><th>שחקנית 2 (מקלדת)</th></tr>
+        <tr><td>תזוזה / קפיצה / שפיפה</td><td>ג'ויסטיק</td><td>W A S D</td><td>חיצים</td></tr>
+        <tr><td>סטירה</td><td>סטירה</td><td>J</td><td>1 / ,</td></tr>
+        <tr><td>בעיטה</td><td>בעיטה</td><td>K</td><td>2 / .</td></tr>
+        <tr><td>זריקת פריט</td><td>זריקה</td><td>L</td><td>3 / /</td></tr>
+        <tr><td>חסימה</td><td>חסימה (להחזיק)</td><td>I / רווח</td><td>0 / ;</td></tr>
+        <tr><td>כיסא כתר</td><td>🪑</td><td>O</td><td>5 / '</td></tr>
+      </table>
+      <h3>מכות</h3>
+      <ul>
+        <li><b>קדימה+סטירה</b>: אגרוף חזק. <b>למטה+סטירה</b>: אפרקאט שמעיף לאוויר.</li>
+        <li><b>קדימה+בעיטה</b>: בעיטה מסתובבת שמפילה. <b>למטה+בעיטה</b>: טאטוא נמוך.</li>
+        <li><b>חסימה+סטירה</b> מקרוב: משיכת שיער (אי אפשר לחסום).</li>
+        <li><b>זריקה</b>: כל לוחמת זורקת את הפריט שלה (אייפון 18 פרו מקס, תיק לואי, כפכף, עקב, ענן סומק). <b>קדימה+זריקה</b>: המכה המיוחדת שלה.</li>
+        <li>חסימה בעמידה עוצרת מכות גבוהות ובינוניות, חסימה בשפיפה עוצרת נמוכות. מכות מהאוויר צריך לחסום בעמידה.</li>
+      </ul>
+      <h3>קומבו וכיסא כתר 🪑</h3>
+      <ul>
+        <li>כל מכה ממלאת את <b>כוח הכתר</b>. מכות ברצף ממלאות יותר.</li>
+        <li>לכל לוחמת יש <b>קומבו משלה</b> (כתוב במסך הבחירה). מי שמצליחה אותו עד הסוף מקבלת בונוס ענק.</li>
+        <li>כשהפס מלא, הכפתור 🪑 נדלק: היא מרימה כיסא כתר וזורקת. 230 נזק.</li>
+        <li>בסוף הקרב, כשמופיע "תגמרי אותה!", לחצי 🪑 ל<b>כיסאליטי</b>.</li>
+      </ul>
+      <h3>אונליין</h3>
+      <p>אחת פותחת חדר ושולחת את הקוד (או הקישור), השנייה מצטרפת. המשחק מסנכרן את שתיכן פריים אחרי פריים עם rollback, כך שגם עם קליטה חלשה הקרב נשאר חלק.</p>
+    </div>
+    <button class="back">חזרה</button>
+  </section>
+
+  <section id="s-pause" class="screen dim" hidden>
+    <h2>הפסקה</h2>
+    <button class="big resume">המשך</button>
+    <button class="quit">יציאה לתפריט</button>
+  </section>
+
+  <section id="s-msg" class="screen dim" hidden>
+    <h2 class="msg-title"></h2>
+    <p class="msg-text"></p>
+    <button class="big msg-ok">אוקיי</button>
+  </section>
+</main>
+
+<div id="rotate"><div>📱↔️</div><p>סובבי את הטלפון לרוחב</p></div>
+
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>

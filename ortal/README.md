@@ -27,6 +27,10 @@ Every fighter also has: slap (jab, then a second jab), forward+slap (hook), down
 
 Best of three rounds, 99 seconds each. Standing block stops high and mid, crouching block stops low and mid; jumping attacks must be blocked standing.
 
+## Hits you can feel
+
+Every hit that lands: a white starburst and a shockwave ring at the point of contact, the camera jolts toward the hit and springs back while the lens punches in, the struck fighter rocks back and trembles through the hit freeze, a layered thump (sub, body, crack), and the fighters grunt and cry out: real effort and pain sounds from ElevenLabs' sound-effects model (three takes each of a light attack, a heavy attack yell, a hit, a heavy hit and a knockout scream, `voice/x_*.mp3`, trimmed to the burst by `tools/trimgrunt.py`), pitched differently for each fighter and never the same take twice in a row. Heavy hits kick up dust and sometimes knock off a gold hoop earring. When you are the one hit, the edge of the screen flashes red (your half in local versus) and your health bar jolts. Phones vibrate (Android; iPhone with iOS 18 through the switch-tap trick in `js/haptics.js`), gamepads rumble, each with its own pattern for landing, being hit, blocking, the chair and the knockout. Vibration can be turned off in the menu.
+
 ## Controls
 
 - Phone: joystick on the left (it moves to where your thumb lands), buttons on the right: סטירה, בעיטה, זריקה, חסימה (hold), 🪑.

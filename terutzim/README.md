@@ -5,6 +5,8 @@
 **▶ לשחק בטלפון או במחשב:** https://tomerzor.github.io/TOMERZOR/terutzim/
 
 - `index.html`: המשחק כולו בקובץ אחד (HTML, CSS ו-JS, בלי שרת).
+- `icons/`: אייקון האפליקציה (הפקיד באשנב 3). `icon.svg` הוא המקור, וממנו ייצאתי את קבצי ה-PNG.
+- `manifest.webmanifest`: מאפשר להוסיף את המשחק למסך הבית כמו אפליקציה.
 
 ## מה עובד
 

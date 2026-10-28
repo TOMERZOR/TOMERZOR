@@ -8,8 +8,11 @@ import { renderVoice } from "./views/voice.js";
 import { renderPersonality } from "./views/personality.js";
 import { renderCampaigns } from "./views/campaigns.js";
 import { renderConnect } from "./views/connect.js";
+import { renderGuide } from "./views/guide.js";
 
-const VIEWS = { inbox: renderInbox, voice: renderVoice, personality: renderPersonality, campaigns: renderCampaigns, connect: renderConnect };
+const VIEWS = { inbox: renderInbox, voice: renderVoice, personality: renderPersonality, campaigns: renderCampaigns, connect: renderConnect, guide: renderGuide };
+// Screens without their own tab, and the tab they live under.
+const PARENT = { guide: "connect" };
 const view = document.getElementById("view");
 let tab = VIEWS[location.hash.slice(1)] ? location.hash.slice(1) : "inbox";
 let shownTab = null;
@@ -31,7 +34,7 @@ document.fonts?.ready.then(moveInk);
 
 function render() {
   const scroll = window.scrollY;
-  for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+  for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === (PARENT[tab] || tab)));
   document.getElementById("demo-banner").hidden = !store.isDemo;
   const pill = document.getElementById("engine-pill");
   pill.dataset.state = engine.kind === "none" ? "none" : "ready";
@@ -51,18 +54,18 @@ function render() {
   window.scrollTo(0, scroll);
 }
 
-for (const b of document.querySelectorAll(".tabs button")) {
-  b.addEventListener("click", () => {
-    tab = b.dataset.tab;
-    try {
-      history.replaceState(null, "", `#${tab}`);
-    } catch {
-      /* sandboxed frame */
-    }
-    render();
-    window.scrollTo(0, 0);
-  });
+function go(next) {
+  tab = next;
+  try {
+    history.replaceState(null, "", `#${tab}`);
+  } catch {
+    /* sandboxed frame */
+  }
+  render();
+  window.scrollTo(0, 0);
 }
+for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => go(b.dataset.tab));
+window.addEventListener("koli:tab", (e) => go(e.detail));
 document.getElementById("engine-pill").addEventListener("click", () => {
   tab = "connect";
   render();

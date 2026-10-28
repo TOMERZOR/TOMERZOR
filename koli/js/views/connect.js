@@ -70,22 +70,12 @@ export function renderConnect(root, rerender) {
     h("p", { class: "hint" }, "חשוב: אחרי כל שינוי בקול, באופי או בקמפיינים, לחצו ״שליחת ההגדרות לשרת״ כדי שהתשובות באינסטגרם יתעדכנו."),
   );
 
-  const copyBtn = h("button", { type: "button", class: "btn quiet small" }, "העתקה");
-  copyBtn.addEventListener("click", () => copyText(webhookUrl(), copyBtn));
+  const guideDone = (store.settings.guideDone || []).length;
   const setup = h(
     "section",
-    { class: "card" },
-    h("header", {}, h("h2", {}, "חיבור לאינסטגרם, צעד אחר צעד"), h("p", {}, "דרך ה-API הרשמי של Meta, בלי סיסמאות ובלי סיכון לחשבון. צריך חשבון Creator או Business.")),
-    h(
-      "ol",
-      { class: "steps" },
-      h("li", {}, "ב-developers.facebook.com יוצרים אפליקציה מסוג Business ומוסיפים את המוצר Instagram (״API setup with Instagram login״)."),
-      h("li", {}, "מחברים את חשבון האינסטגרם, ומייצרים access token עם ההרשאות instagram_business_basic ו-instagram_business_manage_messages."),
-      h("li", {}, "בשרת מגדירים את הסודות: ANTHROPIC_API_KEY, KOLI_ADMIN_TOKEN, IG_APP_SECRET, IG_ACCESS_TOKEN ו-IG_VERIFY_TOKEN (מחרוזת שתבחרו). הפירוט ב-README."),
-      h("li", {}, "בהגדרות ה-Webhooks של האפליקציה מדביקים את הכתובת הזו, ואת אותו IG_VERIFY_TOKEN, ונרשמים לשדה messages:", h("div", { class: "copy" }, h("code", {}, webhookUrl()), copyBtn)),
-      h("li", {}, "באפליקציית אינסטגרם: הגדרות ← הודעות ← כלים מחוברים ← לאפשר גישה להודעות."),
-      h("li", {}, "כל עוד האפליקציה במצב פיתוח, היא עונה רק לחשבונות שהוגדרו כבודקים. כדי לענות לכל העוקבים, מגישים את האפליקציה ל-App Review של Meta עם הרשאת ההודעות."),
-    ),
+    { class: "card guide-cta" },
+    h("header", {}, h("h2", {}, "מדריך חיבור צעד אחר צעד"), h("span", { class: "mono quiz-count" }, `${guideDone}/11`), h("p", {}, "11 שלבים עם צילומי מסך ואיורים, בערך חצי שעה ובלי קוד: חשבון מקצועי, אפליקציה ב-Meta, השרת של קולי, Webhook, בדיקה ואישור של Meta.")),
+    h("div", { class: "row" }, h("button", { type: "button", class: "btn", onclick: () => window.dispatchEvent(new CustomEvent("koli:tab", { detail: "guide" })) }, guideDone ? "להמשיך במדריך" : "פתיחת המדריך")),
     h("p", { class: "hint" }, "Meta מאפשרת תשובה אוטומטית עד 24 שעות מההודעה האחרונה של העוקב/ת, וזה בדיוק המקרה כאן: הם כותבים ראשונים. כשאת/ה עונה בעצמך מהאפליקציה, קולי מזהה את זה ומפסיקה לענות בשיחה הזו ל-12 שעות."),
   );
 

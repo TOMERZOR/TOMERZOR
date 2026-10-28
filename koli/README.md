@@ -31,6 +31,8 @@ ANTHROPIC_API_KEY=sk-ant-... node tools/serve.mjs
 
 ## להעלות לאוויר ולחבר לאינסטגרם
 
+באפליקציה יש מדריך מלא של 11 שלבים, עם צילומי מסך ואיורים ושמירת התקדמות: לשונית "חיבור לאינסטגרם" ← "פתיחת המדריך" (או `#guide`). בקצרה:
+
 1. **השרת.** ב-GitHub מוסיפים את הסודות `ANTHROPIC_API_KEY`, `CLOUDFLARE_API_TOKEN` ו-`KOLI_ADMIN_TOKEN` (מחרוזת אקראית ארוכה) ומריצים את ה-workflow ‏**Deploy Koli API**. הוא יוצר אחסון KV לשיחות ומדפיס את כתובת השרת. אפשר גם ידנית: `npx wrangler deploy` בתיקייה `koli/server` ו-`npx wrangler secret put` לכל סוד (ראו `wrangler.toml`).
 2. **האפליקציה.** בלשונית "חיבור לאינסטגרם" מזינים את כתובת השרת ואת קוד הגישה, ולוחצים "שליחת ההגדרות לשרת". עושים את זה שוב אחרי כל שינוי בקול, באופי או בקמפיינים.
 3. **Meta.** ב-developers.facebook.com יוצרים אפליקציה מסוג Business עם Instagram ("API setup with Instagram login"), מחברים חשבון Creator או Business, ומייצרים token עם `instagram_business_basic` ו-`instagram_business_manage_messages`.

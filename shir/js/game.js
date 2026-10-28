@@ -2,6 +2,9 @@
 
 const SOLO_ROUNDS = 10;
 const ROUND_TIME = 20; // seconds per picture in solo
+const LETTER_COST = 0.15; // share of the round's points each revealed letter costs
+const ARTIST_COST = 0.4;
+const MIN_SHARE = 0.2; // a right answer keeps at least this share, however many hints
 const SEEN_KEY = "shir-seen";
 
 const $ = (s) => document.querySelector(s);
@@ -14,7 +17,10 @@ const state = {
   i: 0,
   score: 0,
   streak: 0,
-  hinted: false,
+  penalty: 0, // share of points lost to hints this round
+  shown: new Set(), // indexes of revealed title letters
+  newest: -1, // the letter revealed last, which pops in
+  artistShown: false,
   answered: false,
   results: [], // { song, ok, pts }
   teams: ["", ""],
@@ -78,7 +84,10 @@ function start(mode) {
 
 function round() {
   const song = state.deck[state.i];
-  state.hinted = false;
+  state.penalty = 0;
+  state.shown = new Set();
+  state.newest = -1;
+  state.artistShown = false;
   state.answered = false;
   $("#round-n").textContent = `תמונה ${state.i + 1} מתוך ${state.deck.length}`;
   renderScore();
@@ -90,14 +99,11 @@ function round() {
   img.onload = () => img.classList.add("in");
   img.onerror = () => pic.classList.add("missing");
   img.src = imgSrc(song);
-  $("#hint").hidden = true;
+  renderClues();
 
   if (state.mode === "solo") {
-    $("#hint-btn").hidden = false;
     renderOptions(song);
     startTimer();
-  } else {
-    $("#party-hint-btn").hidden = false;
   }
 }
 
@@ -143,13 +149,56 @@ function timeLeft() {
   return Math.max(0, 1 - (performance.now() - state.timerStart) / (ROUND_TIME * 1000));
 }
 
-function showHint() {
-  const h = $("#hint");
-  h.textContent = `🎙 ${state.deck[state.i].artist}`;
-  h.hidden = false;
-  state.hinted = true;
-  $("#hint-btn").hidden = true;
-  $("#party-hint-btn").hidden = true;
+const isLetter = (ch) => /[\p{L}\p{N}]/u.test(ch);
+const isHebrew = (text) => /[\u0590-\u05FF]/.test(text);
+
+function hiddenLetters() {
+  return [...state.deck[state.i].title].flatMap((ch, k) => (isLetter(ch) && !state.shown.has(k) ? [k] : []));
+}
+
+// One more letter of the title, at random. The last letter always stays hidden.
+function revealLetter() {
+  const left = hiddenLetters();
+  if (state.answered || left.length <= 1) return;
+  state.newest = left[Math.floor(Math.random() * left.length)];
+  state.shown.add(state.newest);
+  state.penalty += LETTER_COST;
+  renderClues();
+}
+
+function revealArtist() {
+  if (state.answered || state.artistShown) return;
+  state.artistShown = true;
+  state.penalty += ARTIST_COST;
+  renderClues();
+}
+
+function renderClues() {
+  const song = state.deck[state.i];
+  $("#clue-artist").hidden = !state.artistShown;
+  $("#clue-artist").textContent = `🎙 ${song.artist}`;
+  const tiles = $("#tiles");
+  tiles.hidden = state.shown.size === 0;
+  tiles.innerHTML = "";
+  tiles.dir = isHebrew(song.title) ? "rtl" : "ltr";
+  let k = 0;
+  for (const word of song.title.split(" ")) {
+    const w = document.createElement("span");
+    w.className = "word";
+    w.dir = isHebrew(word) ? "rtl" : "ltr"; // "32" or "Kawaii" read left to right
+    for (const ch of word) {
+      const t = document.createElement("i");
+      if (!isLetter(ch)) { t.className = "mark"; t.textContent = ch; }
+      else if (state.shown.has(k)) { t.className = k === state.newest ? "on new" : "on"; t.textContent = ch; }
+      w.append(t);
+      k++;
+    }
+    tiles.append(w);
+    k++; // the space
+  }
+  $("#clues").hidden = tiles.hidden && !state.artistShown;
+  $("#letter-btn").disabled = hiddenLetters().length <= 1;
+  $("#artist-btn").disabled = state.artistShown;
 }
 
 function answer(ok, btn) {
@@ -166,7 +215,7 @@ function answer(ok, btn) {
   if (ok) {
     state.streak++;
     pts = 100 + Math.round(100 * timeLeft());
-    if (state.hinted) pts = Math.round(pts / 2);
+    pts = Math.round(pts * Math.max(MIN_SHARE, 1 - state.penalty));
     if (state.streak >= 3) pts += 50;
     state.score += pts;
     $("#score").classList.remove("bump");
@@ -310,8 +359,8 @@ document.querySelector('[data-mode="solo"]').onclick = () => start("solo");
 document.querySelector('[data-mode="party"]').onclick = () => show("teams");
 $("#party-go").onclick = () => start("party");
 document.querySelectorAll("[data-home]").forEach((b) => (b.onclick = home));
-$("#hint-btn").onclick = showHint;
-$("#party-hint-btn").onclick = showHint;
+$("#letter-btn").onclick = revealLetter;
+$("#artist-btn").onclick = revealArtist;
 $("#reveal-btn").onclick = () => openReveal(state.deck[state.i], "", false);
 $("#next-btn").onclick = next;
 $("#who").querySelectorAll("button").forEach((b) => {

@@ -462,6 +462,8 @@ export class Arena {
     this.time = 0;
     texLoader.load("img/monogram.webp", (t) => { t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1.5); setBagTexture(t); });
     window.addEventListener("resize", () => this.resize());
+    window.addEventListener("orientationchange", () => setTimeout(() => this.resize(), 300));
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => this.resize());
     this.resize();
   }
 
@@ -478,9 +480,22 @@ export class Arena {
   resize() {
     const c = this.renderer.domElement;
     const w = c.clientWidth || window.innerWidth, h = c.clientHeight || window.innerHeight;
+    if (!w || !h) return;
+    this.size = w + "x" + h + "@" + this.renderer.getPixelRatio();
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+  }
+
+  // Phones rotate and browser bars slide in and out, and the resize event
+  // (especially on iPhone) can come before the page has its new size. So
+  // check the real size every frame; a mismatch would stretch the picture.
+  fitCanvas() {
+    const c = this.renderer.domElement;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (!w || !h) return;
+    const pr = this.renderer.getPixelRatio();
+    if (Math.abs(c.width - Math.floor(w * pr)) > 1 || Math.abs(c.height - Math.floor(h * pr)) > 1 || Math.abs(this.camera.aspect - w / h) > 0.01) this.resize();
   }
 
   async setStage(idx) {
@@ -647,6 +662,7 @@ export class Arena {
   // s: sim state, dt: seconds since last draw, focus: {x, y, k} camera punch-in
   // prev: a snapshot of the sim one frame earlier (snapshot()), alpha: 0..1 between them
   draw(s, dt, prev = null, alpha = 1) {
+    this.fitCanvas();
     this.time += dt;
     const frame = s.f - 1 + alpha;
     const [a, b] = s.p;
@@ -777,6 +793,7 @@ export class Showcase {
     const c = this.renderer.domElement;
     const w = c.clientWidth, h = c.clientHeight;
     if (!w || !h) return;
+    this.size = w + "x" + h;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
   }
@@ -798,6 +815,8 @@ export class Showcase {
     this.t = 0;
   }
   draw(dt) {
+    const c = this.renderer.domElement, pr = this.renderer.getPixelRatio();
+    if (c.clientWidth && c.clientHeight && (Math.abs(c.width - Math.floor(c.clientWidth * pr)) > 1 || Math.abs(c.height - Math.floor(c.clientHeight * pr)) > 1)) this.resize();
     this.t += dt;
     const m = this.models.get(this.current);
     if (m) { m.mixer.update(dt); this.slot.rotation.y = 0.5 + Math.sin(this.t * 0.6) * 0.6; }

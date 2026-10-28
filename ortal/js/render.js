@@ -322,6 +322,33 @@ class Fighter3D {
   chestPos(v) { (this.bones.Spine || this.model).getWorldPosition(v); return v; }
 }
 
+// ---------- impact sprites ----------
+function ringTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d");
+  const r = g.createRadialGradient(64, 64, 34, 64, 64, 62);
+  r.addColorStop(0, "rgba(255,255,255,0)"); r.addColorStop(0.55, "rgba(255,255,255,1)"); r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+function burstTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const g = c.getContext("2d");
+  g.translate(128, 128);
+  const glow = g.createRadialGradient(0, 0, 0, 0, 0, 70);
+  glow.addColorStop(0, "rgba(255,255,255,1)"); glow.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = glow; g.beginPath(); g.arc(0, 0, 70, 0, Math.PI * 2); g.fill();
+  g.fillStyle = "rgba(255,255,255,0.95)";
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + (i % 2) * 0.12;
+    const len = i % 2 ? 80 : 124, w = i % 2 ? 7 : 11;
+    g.save(); g.rotate(a);
+    g.beginPath(); g.moveTo(0, -w); g.lineTo(len, 0); g.lineTo(0, w); g.closePath(); g.fill();
+    g.restore();
+  }
+  return new THREE.CanvasTexture(c);
+}
+
 // ---------- particles ----------
 function dotTexture() {
   const c = document.createElement("canvas"); c.width = c.height = 64;
@@ -426,6 +453,9 @@ export class Arena {
     this.debris = [];        // chairs and items lying around after impact (render only)
     this.shake = 0;
     this.zoom = 0; this.zoomTarget = null;
+    this.kickX = 0; this.kickZ = 0; this.kickV = [0, 0]; this.fovKick = 0;
+    this.impacts = [];
+    this.ringTex = ringTexture(); this.burstTex = burstTexture();
     this.camX = 0; this.camZ = 6;
     this.stageGroup = new THREE.Group();
     this.scene.add(this.stageGroup);
@@ -558,6 +588,39 @@ export class Arena {
   blocked(i) { const f = this.fighters[i]; if (f) f.kick(0.45); }
   addShake(n) { this.shake = Math.max(this.shake, n); }
 
+  // The moment a hit lands: a white starburst and a shockwave ring where it
+  // connects, the camera jolts toward the hit and springs back, the lens punches in.
+  // power: about 0.5 for a jab, 1 for a heavy hit, 2 for the chair
+  impact(x, y, dir, power, color = 0xffffff) {
+    const add = (tex, size, life, spin, col, grow) => {
+      const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color: col, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+      m.position.set(x + dir * 0.05, y, 0.4);
+      m.material.rotation = Math.random() * Math.PI * 2;
+      m.scale.setScalar(size);
+      m.renderOrder = 10;
+      this.scene.add(m);
+      this.impacts.push({ m, life, max: life, size, spin, grow });
+    };
+    add(this.burstTex, 0.22 + 0.14 * power, 0.07 + 0.02 * power, 0, 0xffffff, 0.4);
+    add(this.burstTex, 0.18 + 0.1 * power, 0.09, 5, color, 0.8);
+    add(this.ringTex, 0.1, 0.13 + 0.03 * power, 0, color, 3 + 2 * power);
+    if (power >= 1) add(this.ringTex, 0.12, 0.2, 0, 0xffffff, 5 + 2 * power);
+    this.kickV[0] += dir * 0.9 * power;
+    this.kickV[1] -= 2.2 * power;
+    this.fovKick = Math.min(4, this.fovKick + 1.4 * power);
+    this.shake = Math.max(this.shake, 0.22 + 0.32 * power);
+  }
+
+  // a smaller jolt for a blocked hit: sparks against the guard, no lens punch
+  guardImpact(x, y, dir) {
+    const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.ringTex, color: 0x8ac8ff, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+    m.position.set(x, y, 0.4); m.scale.setScalar(0.25); m.renderOrder = 10;
+    this.scene.add(m);
+    this.impacts.push({ m, life: 0.16, max: 0.16, size: 0.25, spin: 0, grow: 4 });
+    this.kickV[0] += dir * 0.35;
+    this.shake = Math.max(this.shake, 0.18);
+  }
+
   // spill an item on the floor after it hits (render only)
   dropDebris(type, x, y, dir) {
     if (type === "blush" || type === "cloud") return;
@@ -624,6 +687,25 @@ export class Arena {
 
     this.particles.update(dt);
 
+    for (const im of this.impacts) {
+      im.life -= dt;
+      const k = 1 - Math.max(0, im.life) / im.max;
+      im.m.scale.setScalar(im.size * (1 + im.grow * k));
+      im.m.material.opacity = 0.9 * Math.max(0, 1 - k * k);
+      im.m.material.rotation += im.spin * dt;
+      if (im.life <= 0) { this.scene.remove(im.m); im.m.material.dispose(); }
+    }
+    this.impacts = this.impacts.filter((im) => im.life > 0);
+
+    // camera jolt on a spring
+    const springK = 220, damp = 16;
+    this.kickV[0] += (-springK * this.kickX - damp * this.kickV[0]) * dt;
+    this.kickV[1] += (-springK * this.kickZ - damp * this.kickV[1]) * dt;
+    this.kickX += this.kickV[0] * dt; this.kickZ += this.kickV[1] * dt;
+    this.fovKick = Math.max(0, this.fovKick - dt * 14);
+    const fov = 30 - this.fovKick;
+    if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
+
     // camera: frame both fighters, lean in on the action
     const ax = this.fighters[0] ? this.fighters[0].root.position.x : a.x / 1000, bx = this.fighters[1] ? this.fighters[1].root.position.x : b.x / 1000;
     const mid = (ax + bx) / 2;
@@ -645,8 +727,8 @@ export class Arena {
     this.shake = Math.max(0, this.shake - dt * 2.5);
     const sh = this.shake * this.shake;
     const jx = (Math.random() - 0.5) * 0.25 * sh, jy = (Math.random() - 0.5) * 0.2 * sh;
-    this.camera.position.set(this.camX + jx, ty + 0.38 + jy, this.camZ);
-    this.camera.lookAt(this.camX, ty, 0);
+    this.camera.position.set(this.camX + jx + this.kickX, ty + 0.38 + jy, this.camZ + this.kickZ);
+    this.camera.lookAt(this.camX + this.kickX * 0.5, ty, 0);
     if (this.key) { this.key.position.set(this.camX + 2.5, 7, 6); this.key.target.position.set(this.camX, 0, 0); }
 
     this.renderer.render(this.scene, this.camera);

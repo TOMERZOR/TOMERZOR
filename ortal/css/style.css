@@ -55,7 +55,7 @@ button:active { transform: translateY(3px); box-shadow: 0 1px 0 #6b4a10; }
 
 .menu { display: flex; flex-direction: column; gap: 12px; width: min(420px, 92vw); }
 .menu button { width: 100%; }
-.menu .soundBtn, .menu [data-go=help] { background: linear-gradient(180deg, #4b3a78, #2d2150); color: var(--text); box-shadow: 0 4px 0 #160f2c; font-size: 17px; }
+.menu .soundBtn, .menu .hapticsBtn, .menu [data-go=help] { background: linear-gradient(180deg, #4b3a78, #2d2150); color: var(--text); box-shadow: 0 4px 0 #160f2c; font-size: 17px; }
 
 /* online */
 .online-choose { display: flex; flex-direction: column; align-items: center; gap: 14px; }
@@ -253,3 +253,15 @@ body.fighting.portrait #rotate { display: flex; }
 .logo-img.small img { width: min(360px, 70vw); max-height: 26vh; animation: none; }
 @keyframes logoIn { from { transform: scale(1.8); opacity: 0; filter: blur(8px); } }
 @media (max-height: 500px) { .logo-img img { max-height: 46vh; } .logo-img.small img { max-height: 20vh; } }
+
+/* getting hit: the screen edge flashes red (your half in local versus), the bar jolts */
+#hurt { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(200, 0, 20, 0.55) 100%); }
+#hurt.left { background: radial-gradient(ellipse at 0% 50%, rgba(200, 0, 20, 0.55) 0%, transparent 45%); }
+#hurt.right { background: radial-gradient(ellipse at 100% 50%, rgba(200, 0, 20, 0.55) 0%, transparent 45%); }
+#hurt.on { animation: hurt 0.35s ease-out; }
+#hurt.on.big { animation: hurt 0.6s ease-out; filter: saturate(1.4); }
+@keyframes hurt { from { opacity: 1; } to { opacity: 0; } }
+.hp.jolt { animation: jolt 0.28s ease-out; }
+@keyframes jolt { 0% { transform: translate(0, 0); } 20% { transform: translate(-5px, 2px) rotate(-0.6deg); } 40% { transform: translate(5px, -2px) rotate(0.5deg); } 60% { transform: translate(-3px, 1px); } 80% { transform: translate(2px, 0); } 100% { transform: none; } }
+.combo.on { animation: comboPop 0.3s cubic-bezier(.2,2,.4,1); }
+@keyframes comboPop { from { transform: scale(1.9) rotate(-4deg); filter: brightness(2); } }

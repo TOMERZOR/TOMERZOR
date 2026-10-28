@@ -38,15 +38,17 @@ export function preloadVoices(names) { if (ctx) for (const n of names) load(n); 
 
 let lastVoice = null;
 // cut: stop the previous line (announcer interrupts taunts)
-export async function voice(name, { cut = false, gain = 1 } = {}) {
+export async function voice(name, { cut = false, gain = 1, duck = true, rate = 1 } = {}) {
   if (!ctx) return;
   const buf = await load(name);
   if (!buf) return;
   if (cut && lastVoice) { try { lastVoice.stop(); } catch {} }
   const src = ctx.createBufferSource(); src.buffer = buf;
+  src.playbackRate.value = rate;
   const g = ctx.createGain(); g.gain.value = gain;
   src.connect(g); g.connect(voiceBus);
   src.start();
+  if (!duck) return;
   lastVoice = src;
   // duck the music under speech
   if (musicBus) {
@@ -90,9 +92,12 @@ export function sfx(kind, opt = {}) {
   switch (kind) {
     case "hit": {
       const big = opt.big;
-      tone(t, big ? 0.22 : 0.13, { f: (big ? 120 : 170) * v, f2: 45, gain: big ? 0.9 : 0.6 });
-      noise(t, big ? 0.16 : 0.08, { f: 1800 * v, q: 0.8, gain: big ? 0.7 : 0.5, f2: 500 });
-      noise(t, 0.03, { type: "highpass", f: 4000, gain: 0.35 });
+      // body: a pitched-down thump; crack: a short bright transient; tail: low rumble
+      tone(t, big ? 0.26 : 0.14, { f: (big ? 110 : 160) * v, f2: 40, gain: big ? 1 : 0.7 });
+      tone(t, big ? 0.35 : 0.18, { type: "triangle", f: 62, f2: 30, gain: big ? 0.8 : 0.45 });
+      noise(t, big ? 0.18 : 0.09, { f: 1600 * v, q: 0.8, gain: big ? 0.75 : 0.55, f2: 420 });
+      noise(t, 0.025, { type: "highpass", f: 3500, gain: big ? 0.6 : 0.4 });
+      if (big) noise(t + 0.02, 0.4, { type: "lowpass", f: 300, gain: 0.35 });
       break;
     }
     case "slap": {
@@ -109,6 +114,7 @@ export function sfx(kind, opt = {}) {
       noise(t, 0.2, { f: 600, q: 0.7, gain: 0.25, f2: 2400, attack: 0.06 });
       break;
     }
+    case "swish": noise(t, 0.09, { f: 1400 * v, q: 0.9, gain: 0.16, f2: 3200, attack: 0.03 }); break;
     case "jump": noise(t, 0.12, { f: 400, q: 0.6, gain: 0.2, f2: 1200 }); break;
     case "land": tone(t, 0.12, { f: opt.hard ? 90 : 120, f2: 40, gain: opt.hard ? 0.8 : 0.3 }); if (opt.hard) noise(t, 0.2, { type: "lowpass", f: 600, gain: 0.5 }); break;
     case "chair": {

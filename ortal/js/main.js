@@ -9,6 +9,7 @@ import { CHARS, STAGES, comboText } from "./chars.js";
 import { readInput, setupTouch, clearTouch } from "./input.js";
 import { Bot } from "./ai.js";
 import * as audio from "./audio.js";
+import * as haptics from "./haptics.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -72,13 +73,17 @@ $(".start").onclick = async () => {
 })();
 
 // ---------- menu ----------
-function soundLabel() { $(".soundBtn").textContent = audio.isMuted() ? "🔇 צליל כבוי" : "🔊 צליל פועל"; }
+function soundLabel() {
+  $(".soundBtn").textContent = audio.isMuted() ? "🔇 צליל כבוי" : "🔊 צליל פועל";
+  $(".hapticsBtn").textContent = haptics.isEnabled() ? "📳 רטט פועל" : "📴 רטט כבוי";
+}
 soundLabel();
 for (const b of $$(".menu button")) {
   b.onclick = () => {
     audio.unlock(); audio.sfx("select");
     const go = b.dataset.go;
     if (go === "sound") { audio.setMuted(!audio.isMuted()); soundLabel(); return; }
+    if (go === "haptics") { haptics.setEnabled(!haptics.isEnabled()); soundLabel(); if (haptics.isEnabled()) haptics.buzz("land"); return; }
     if (go === "help") { show("help"); return; }
     mode = go;
     if (go === "online") { resetOnline(); show("online"); return; }
@@ -359,6 +364,9 @@ function startMatch(stage) {
   paused = false;
   $("#pauseBtn").hidden = mode === "online";
   setupHudNames();
+  const gr = [];
+  for (const c of [c0, c1]) { const v = VOICE_OF[CHARS[c].id]; for (const k of ["atk1", "atk2", "atk3", "hurt1", "hurt2", "hurt3", "big", "ko"]) gr.push(`g_${v}_${k}`); }
+  audio.preloadVoices(gr);
   show("fight");
   audio.music(true, 2);
   acc = 0;
@@ -411,7 +419,17 @@ function onEvent(ev) {
       arena.particles.burst(x, y, 0.2, ev.big ? 16 : 8, { colors: GLITTER, life: 0.8, size: 0.05, speed: 2.5, dir, grav: 2 });
       arena.particles.burst(x, y, 0.15, ev.big ? 14 : 6, { colors: BLOOD, life: 1.1, size: 0.06, speed: 2.8, dir, grav: 9, glow: false, drag: 0.6 });
       arena.hit(ev.p, ev.big);
-      if (ev.big) arena.addShake(0.8);
+      {
+        // how hard it lands decides everything that follows
+        const atk = 1 - ev.p;
+        const power = src === "chair" ? 2.2 : ev.dmg >= 90 ? 1.3 : ev.dmg >= 60 ? 0.95 : src === "move" ? 0.6 : 0.75;
+        arena.impact(x, y, dir, power, CHARS[P(atk).ch].color);
+        if (power >= 1.2) arena.particles.burst(P(ev.p).x / 1000, 0.08, 0, 10, { colors: [[0.55, 0.5, 0.48]], life: 0.7, size: 0.2, speed: 1.4, dir, grav: -0.4, glow: false, grow: 0.5 });
+        if (power >= 1.2 && Math.random() < 0.35) arena.dropDebris("earring", x, y + 0.1, -dir);
+        if (isHuman(atk)) haptics.buzz(src === "chair" ? "chair" : power >= 1.2 ? "landBig" : "land", padOf(atk));
+        if (isHuman(ev.p)) { haptics.buzz(src === "chair" ? "chair" : power >= 1.2 ? "hurtBig" : "hurt", padOf(ev.p)); hurtFeedback(ev.p, power >= 1.2); }
+        if (P(ev.p).hp > 0) grunt(ev.p, power >= 1.2 ? "big" : "hurt", power >= 1.2 ? 1 : 0.7);
+      }
       if (ev.combo >= 2) showCombo(1 - ev.p, `${ev.combo} מכות!`);
       if (ev.combo === 4) audio.voice("combo");
       break;
@@ -420,6 +438,9 @@ function onEvent(ev) {
       audio.sfx("block");
       arena.particles.burst(ev.x / 1000, ev.y / 1000, 0.25, 10, { colors: [[0.5, 0.8, 1], [1, 1, 1]], life: 0.25, size: 0.07, speed: 2.5, grav: 0 });
       arena.blocked(ev.p);
+      arena.guardImpact(ev.x / 1000, ev.y / 1000, P(1 - ev.p).face);
+      if (isHuman(ev.p)) haptics.buzz("block", padOf(ev.p));
+      if (isHuman(1 - ev.p)) haptics.buzz("blocked", padOf(1 - ev.p));
       break;
     case "clash":
       audio.sfx("block");
@@ -428,6 +449,8 @@ function onEvent(ev) {
     case "move": {
       const heavy = ["round", "hook", "upper", "spin", "fly", "nails", "whip", "sweep", "grab"];
       if (heavy.includes(ev.mv)) audio.sfx("whoosh");
+      else if (["jab", "jab2", "kick", "airp", "airk"].includes(ev.mv)) audio.sfx("swish");
+      if (ev.mv !== "chair" && ev.mv !== "chairality") grunt(ev.p, "atk", heavy.includes(ev.mv) ? 0.75 : 0.3);
       if (ev.mv === "flash") { setTimeout(() => { flash("on"); audio.sfx("flash"); }, 170); }
       if (ev.mv === "scream" || ev.mv === "vape" || ev.mv === "tiktok") audio.voice("shout_" + CHARS[P(ev.p).ch].id);
       break;
@@ -460,6 +483,8 @@ function onEvent(ev) {
       break;
     case "ko":
       audio.sfx("ko");
+      grunt(ev.p, "ko");
+      if (isHuman(ev.p)) haptics.buzz("ko", padOf(ev.p));
       arena.addShake(1.5);
       flash("on");
       if (mode !== "online") match.slow = 45;
@@ -503,6 +528,32 @@ function onEvent(ev) {
   }
 }
 function myIndex() { return mode === "online" ? me : 0; }
+// which sides are played by someone at this device
+function isHuman(i) { return mode === "local" || i === myIndex(); }
+function padOf(i) { return mode === "local" ? i : 0; }
+
+// fighters' grunts: two fighters share each of the four recorded voices, pitched apart
+const VOICE_OF = { shontal: "danit", lian: "danit", liel: "zina", tahel: "zina", shirel: "yael", revital: "yael", maayan: "michal", agam: "michal" };
+const RATE_OF = { lian: 1.08, tahel: 1.07, revital: 0.94, agam: 0.93 };
+const lastGrunt = [0, 0];
+function grunt(i, kind, chance = 1) {
+  const now = performance.now();
+  if (kind !== "ko" && (now - lastGrunt[i] < 380 || Math.random() > chance)) return;
+  lastGrunt[i] = now;
+  const id = CHARS[simState().p[i].ch].id;
+  const n = kind === "atk" || kind === "hurt" ? kind + (1 + Math.floor(Math.random() * 3)) : kind;
+  audio.voice(`g_${VOICE_OF[id]}_${n}`, { duck: false, rate: (RATE_OF[id] || 1) * (0.97 + Math.random() * 0.06), gain: kind === "atk" ? 0.8 : 1 });
+}
+
+// you got hit: the screen edge flashes red on your side and your health bar jolts
+function hurtFeedback(i, big) {
+  const el = $("#hurt");
+  el.className = "";
+  el.offsetWidth;
+  el.className = (big ? "on big " : "on ") + (mode === "local" ? (i === 0 ? "left" : "right") : "");
+  const bar = $(`.s${i} .hp`);
+  bar.classList.remove("jolt"); bar.offsetWidth; bar.classList.add("jolt");
+}
 
 function endMatch(winner, fatality) {
   if (!match || match.over) return;

@@ -115,6 +115,13 @@ export function makeVape() {
   return g;
 }
 
+// a big gold hoop earring, knocked off by a heavy hit
+export function makeEarring() {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.004, 6, 20), new THREE.MeshStandardMaterial({ color: 0xe8c050, roughness: 0.2, metalness: 1 }));
+  m.castShadow = true;
+  return m;
+}
+
 export function makeProp(type) {
   switch (type) {
     case "chair": return makeChair();
@@ -123,6 +130,7 @@ export function makeProp(type) {
     case "slide": return makeSlide();
     case "heel": return makeHeel();
     case "vape": return makeVape();
+    case "earring": return makeEarring();
   }
   return null;
 }

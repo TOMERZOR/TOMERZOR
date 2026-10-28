@@ -12,8 +12,8 @@ const BODY = 230;          // half width of a body
 const G = 6;               // gravity
 const JUMP_VY = 128;
 const JUMP_VX = 46;
-const WALK_F = 36;
-const WALK_B = 27;
+const WALK_F = 22;
+const WALK_B = 17;
 const METER_MAX = 1000;
 const ROUND_TIME = 99 * FPS;
 const BUFFER = 9;          // frames a pressed button waits for its chance
@@ -595,4 +595,4 @@ export function step(s, in0, in1) {
   return s;
 }
 
-export const CONST = { STAGE, MAX_GAP, BODY, METER_MAX, ROUND_TIME };
+export const CONST = { STAGE, MAX_GAP, BODY, METER_MAX, ROUND_TIME, WALK_F, WALK_B };

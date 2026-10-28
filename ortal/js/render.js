@@ -8,7 +8,7 @@ import { MeshoptDecoder } from "../vendor/addons/meshopt_decoder.module.js";
 import { RoomEnvironment } from "../vendor/addons/RoomEnvironment.js";
 import { clone as cloneSkinned } from "../vendor/addons/SkeletonUtils.js";
 import { decodePack, buildClips } from "./anim.js";
-import { MOVES, FIGHTERS } from "./sim.js";
+import { MOVES, FIGHTERS, CONST } from "./sim.js";
 import { CHARS, STAGES } from "./chars.js";
 import { makeProp, makeChair, setBagTexture } from "./props.js";
 
@@ -66,41 +66,111 @@ function heldProp(chId, mv, sf) {
   return null;
 }
 
-function poseFor(p, frame) {
+const ease = {
+  in: (x) => x * x,
+  out: (x) => 1 - (1 - x) * (1 - x),
+  inOut: (x) => x * x * (3 - 2 * x),
+};
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+// The walk clips are made in place at about 0.67 m/s; play them as fast as the
+// fighter really moves so the feet stay planted.
+const CLIP_WALK_SPEED = 0.67;
+const WALK_RATE = { walkf: (CONST.WALK_F * 60 / 1000) / CLIP_WALK_SPEED, walkb: (CONST.WALK_B * 60 / 1000) / CLIP_WALK_SPEED };
+
+// sf and frame may be fractional: the view runs between simulation frames
+function poseFor(p, sf, frame) {
   const sec = (n) => n / 60;
   switch (p.st) {
     case "intro": return { clip: "stance", t: sec(frame), loop: true };
     case "idle": return { clip: "stance", t: sec(frame), loop: true };
-    case "walkf": return { clip: "walkf", t: sec(p.sf) * 1.15, loop: true };
-    case "walkb": return { clip: "walkb", t: sec(p.sf) * 1.15, loop: true };
+    case "walkf": return { clip: "walkf", t: sec(sf) * WALK_RATE.walkf, loop: true };
+    case "walkb": return { clip: "walkb", t: sec(sf) * WALK_RATE.walkb, loop: true };
     case "crouch": case "cblock": return { clip: "sweep", t: 1.05 };
     case "block": return { clip: "block", t: 0.76 };
-    case "jump": return { clip: "jump", t: Math.min(1.15, 0.45 + (p.sf / 44) * 0.7) };
-    case "hit": return { clip: "hit", t: Math.min(0.9, sec(p.sf) * 1.8) };
+    case "jump": return { clip: "jump", t: 0.45 + 0.7 * ease.inOut(clamp01(sf / 44)), root: true };
+    // snap into the recoil, then hold it while the stun lasts
+    case "hit": return { clip: "hit", t: 0.16 + 0.56 * ease.out(clamp01(sf / 9)) };
     case "dazed": return { clip: "hit", t: 0.55 + 0.18 * Math.sin(frame * 0.09) };
     // knocked into the air: lean back while rising, then the falling part of the clip
     case "air_hit": return p.vy > 0
-      ? { clip: "knockdown", t: 0.22 + 0.2 * Math.min(1, p.sf / 14), root: true }
-      : { clip: "knockdown", t: 1.5 + 0.5 * Math.min(1, Math.max(0, 1 - p.y / 900)), root: true };
-    case "down": return { clip: "knockdown", t: 2.0 + Math.min(1, p.sf / 30) * 0.22, root: true };
+      ? { clip: "knockdown", t: 0.22 + 0.2 * ease.out(clamp01(sf / 14)), root: true }
+      : { clip: "knockdown", t: 1.5 + 0.5 * clamp01(1 - p.y / 900), root: true };
+    case "down": return { clip: "knockdown", t: 2.0 + ease.out(clamp01(sf / 30)) * 0.22, root: true };
     case "ko": return { clip: "knockdown", t: 2.22, root: true };
-    case "getup": return { clip: "jump", t: Math.max(0, 0.28 * (1 - p.sf / 26)) };
-    case "win": return { clip: "dance", t: sec(p.sf), loop: true };
+    case "getup": return { clip: "jump", t: 0.28 * (1 - ease.inOut(clamp01(sf / 26))) };
+    case "win": return { clip: "dance", t: sec(sf), loop: true };
     case "attack": {
       const m = MOVES[p.mv];
       const a = MOVE_ANIM[p.mv];
       if (!m || !a) return { clip: "stance", t: 0 };
       const [clip, t0, tA, tB, t1] = a;
-      const s = p.sf;
       let t;
-      if (s < m.s) t = t0 + (tA - t0) * (s / m.s);
-      else if (s < m.s + m.a) t = tA + (tB - tA) * ((s - m.s) / Math.max(1, m.a));
-      else t = tB + (t1 - tB) * Math.min(1, (s - m.s - m.a) / Math.max(1, m.r));
-      return { clip, t };
+      // wind up slowly and snap into the hit; settle out of it
+      if (sf < m.s) t = t0 + (tA - t0) * ease.in(sf / m.s);
+      else if (sf < m.s + m.a) t = tA + (tB - tA) * ((sf - m.s) / Math.max(1, m.a));
+      else t = tB + (t1 - tB) * ease.out(clamp01((sf - m.s - m.a) / Math.max(1, m.r)));
+      return { clip, t, attack: true };
     }
   }
   return { clip: "stance", t: sec(frame), loop: true };
 }
+
+// how fast to crossfade into a pose (per second)
+function blendRate(pose, st) {
+  if (st === "hit" || st === "air_hit") return 30;
+  if (pose.attack) return 22;
+  if (st === "block" || st === "cblock" || st === "jump") return 16;
+  return 9;
+}
+
+// A ribbon behind a striking hand or foot
+class Trail {
+  constructor(scene, color) {
+    this.max = 16;
+    this.pts = [];
+    const geo = new THREE.BufferGeometry();
+    this.pos = new Float32Array(this.max * 2 * 3);
+    this.alpha = new Float32Array(this.max * 2);
+    geo.setAttribute("position", new THREE.BufferAttribute(this.pos, 3));
+    geo.setAttribute("a", new THREE.BufferAttribute(this.alpha, 1));
+    const idx = [];
+    for (let i = 0; i < this.max - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    geo.setIndex(idx);
+    this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+      uniforms: { color: { value: new THREE.Color(color) } },
+      vertexShader: "attribute float a; varying float vA; void main(){ vA = a; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+      fragmentShader: "uniform vec3 color; varying float vA; void main(){ vec3 c = mix(color * 1.6, vec3(1.0), smoothstep(0.55, 1.0, vA)); gl_FragColor = vec4(c * vA, vA); }",
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    }));
+    this.mesh.frustumCulled = false;
+    scene.add(this.mesh);
+  }
+  update(dt, point) {
+    for (const p of this.pts) p.age += dt;
+    if (point) this.pts.unshift({ x: point.x, y: point.y, z: point.z + 0.05, age: 0 });
+    this.pts = this.pts.filter((p) => p.age < 0.11).slice(0, this.max);
+    const n = this.pts.length;
+    for (let i = 0; i < this.max; i++) {
+      const p = this.pts[Math.min(i, n - 1)];
+      if (!p || n < 2) { this.alpha[i * 2] = this.alpha[i * 2 + 1] = 0; continue; }
+      const q = this.pts[Math.min(i + 1, n - 1)], r = this.pts[Math.min(Math.max(i - 1, 0), n - 1)];
+      let dx = r.x - q.x, dy = r.y - q.y;
+      const l = Math.hypot(dx, dy) || 1;
+      const k = Math.min(1, i / Math.max(1, n - 1));
+      const w = 0.05 * (1 - k * k);
+      const nx = -dy / l * w, ny = dx / l * w;
+      this.pos.set([p.x + nx, p.y + ny, p.z, p.x - nx, p.y - ny, p.z], i * 6);
+      const al = i < n ? Math.pow(1 - k, 1.5) * (1 - p.age / 0.11) : 0;
+      this.alpha[i * 2] = this.alpha[i * 2 + 1] = al;
+    }
+    this.mesh.geometry.attributes.position.needsUpdate = true;
+    this.mesh.geometry.attributes.a.needsUpdate = true;
+  }
+  dispose(scene) { scene.remove(this.mesh); this.mesh.geometry.dispose(); }
+}
+
+const KICKS = new Set(["kick", "round", "sweep", "airk", "fly", "whip"]);
+const NO_TRAIL = new Set(["grab", "toss", "chair", "chairality", "vape", "scream"]);
 
 class Fighter3D {
   constructor(gltf, chIndex, side, mirrorTint) {
@@ -140,6 +210,8 @@ class Fighter3D {
     this.props = {};
     this.held = null;
     this.tmp = new THREE.Vector3();
+    this.flinch = 0; this.flinchV = 0; this.shake = 0;
+    this.trail = null;
   }
 
   prop(type) {
@@ -152,14 +224,19 @@ class Fighter3D {
     return this.props[type];
   }
 
-  update(p, frame, dt) {
-    const pose = poseFor(p, frame);
-    // short crossfade between poses
+  // p: sim state now, q: one frame before, alpha: how far between them we draw
+  update(p, q, alpha, frame, dt, hitstop = 0) {
+    const same = q && q.st === p.st && q.mv === p.mv && p.sf >= q.sf;
+    const sf = same ? q.sf + (p.sf - q.sf) * alpha : p.sf;
+    const lerp = (a, b) => (q && Math.abs(b - a) < 400 ? a + (b - a) * alpha : b);
+    const px = lerp(q ? q.x : p.x, p.x), py = lerp(q ? q.y : p.y, p.y);
+    const pose = poseFor(p, sf, frame);
+    // crossfade between poses
     if (!this.cur || this.cur.clip !== pose.clip) {
-      if (this.cur) { this.prev = { ...this.cur }; this.blend = 1; }
+      if (this.cur) { this.prev = { ...this.cur }; this.blend = 1; this.rate = blendRate(pose, p.st); }
     }
     this.cur = pose;
-    this.blend = Math.max(0, this.blend - dt * 9);
+    this.blend = Math.max(0, this.blend - dt * (this.rate || 9));
     for (const a of Object.values(this.actions)) a.setEffectiveWeight(0);
     const set = (ps, w) => {
       const a = this.actions[ps.clip];
@@ -168,30 +245,60 @@ class Fighter3D {
       a.time = ps.loop ? ((ps.t % d) + d) % d : Math.min(d - 0.001, Math.max(0, ps.t));
       a.setEffectiveWeight(w);
     };
-    if (this.prev && this.blend > 0) { set(this.prev, this.blend); set(pose, 1 - this.blend); }
+    const b = this.blend * this.blend * (3 - 2 * this.blend);
+    if (this.prev && b > 0) { set(this.prev, b); set(pose, 1 - b); }
     else set(pose, 1);
     this.mixer.update(0);
 
     // place
-    let y = p.y / 1000;
+    let y = py / 1000;
     if (pose.root) {
       const c = pack.clips[pose.clip];
       const k = Math.min(c.n - 1, Math.max(0, Math.round(pose.t * pack.fps)));
-      const hipsY = this.bones.Hips ? 0.94 : 0.94;
-      const dy = (c.h[k * 3 + 1] / 8000) * hipsY;
-      if (dy > 0) y -= dy;
+      const dy = (c.h[k * 3 + 1] / 8000) * 0.94;
+      if (dy > 0) y -= dy * (this.prev && b > 0 ? 1 - b : 1);
     }
-    this.root.position.set(p.x / 1000, Math.max(-0.05, y), 0);
+    // the one who got hit trembles while the action is frozen
+    let jx = 0;
+    if (this.shake > 0) {
+      if (hitstop > 0) jx = Math.sin(performance.now() * 0.09) * 0.03 * this.shake;
+      else this.shake = 0;
+    }
+    this.root.position.set(px / 1000 + jx, Math.max(-0.05, y), 0);
     const want = p.face > 0 ? Math.PI / 2 - 0.42 : -Math.PI / 2 + 0.42;
     let d = want - this.yaw;
     while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
     this.yaw += d * Math.min(1, dt * 14);
     this.root.rotation.y = this.yaw;
 
+    // recoil: the whole body rocks back from the feet and springs upright
+    this.flinchV += (-this.flinch * 260 - this.flinchV * 18) * dt;
+    this.flinch += this.flinchV * dt;
+    this.model.rotation.x = -0.2 * this.flinch;
+
     // hit flash
     if (this.flash > 0) this.flash = Math.max(0, this.flash - dt * 6);
     const fl = this.flash;
-    for (const m of this.mats) m.emissive.setRGB(fl, fl * 0.85, fl * 0.85);
+    for (const m of this.mats) m.emissive.setRGB(fl, fl * 0.55, fl * 0.45);
+
+    this.root.updateMatrixWorld(true);
+
+    // a streak behind the striking limb, from just before impact to just after
+    let tp = null;
+    if (p.st === "attack" && this.trail && !NO_TRAIL.has(p.mv)) {
+      const m = MOVES[p.mv];
+      if (sf >= m.s - 3 && sf < m.s + m.a + 3) {
+        const names = KICKS.has(p.mv) ? ["RightFoot", "LeftFoot"] : ["RightHand", "LeftHand"];
+        let best = -1e9;
+        for (const n of names) {
+          const bn = this.bones[n]; if (!bn) continue;
+          bn.getWorldPosition(this.tmp);
+          const ext = (this.tmp.x - this.root.position.x) * p.face + this.tmp.y * 0.3;
+          if (ext > best) { best = ext; tp = this.tmp.clone(); }
+        }
+      }
+    }
+    if (this.trail) this.trail.update(dt, tp);
 
     // the item in her hand
     const hold = p.st === "attack" ? heldProp(this.ch, p.mv, p.sf) : null;
@@ -201,7 +308,6 @@ class Fighter3D {
       const pr = this.prop(hold);
       pr.visible = true;
       const hand = this.bones.RightHand || this.bones.LeftHand;
-      this.root.updateMatrixWorld(true);
       hand.getWorldPosition(this.tmp);
       pr.position.copy(this.tmp);
       if (hold === "chair") { pr.position.y += 0.05; pr.rotation.set(Math.PI, this.yaw, 0.3 * p.face); }
@@ -209,6 +315,8 @@ class Fighter3D {
       else pr.rotation.set(0.3, this.yaw + Math.PI / 2, 0);
     }
   }
+
+  kick(amount) { this.flinchV += amount * 9; }
 
   headPos(v) { (this.bones.Head || this.model).getWorldPosition(v); return v; }
   chestPos(v) { (this.bones.Spine || this.model).getWorldPosition(v); return v; }
@@ -299,7 +407,9 @@ export class Arena {
   constructor(canvas) {
     const lowEnd = /iPhone|Android/.test(navigator.userAgent) && Math.min(screen.width, screen.height) < 400;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !lowEnd, powerPreference: "high-performance" });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lowEnd ? 1.5 : 2));
+    this.maxRatio = lowEnd ? 1.5 : 2;
+    this.quality = 2;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.maxRatio));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
@@ -322,6 +432,16 @@ export class Arena {
     this.time = 0;
     texLoader.load("img/monogram.webp", (t) => { t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 1.5); setBagTexture(t); });
     window.addEventListener("resize", () => this.resize());
+    this.resize();
+  }
+
+  // 2: full, 1: fewer pixels, 0: fewer pixels and no shadows
+  setQuality(level) {
+    if (level === this.quality) return;
+    this.quality = level;
+    const dpr = window.devicePixelRatio || 1;
+    this.renderer.setPixelRatio(Math.min(dpr, level === 2 ? this.maxRatio : level === 1 ? 1.25 : 1));
+    if (this.key) this.key.castShadow = level > 0;
     this.resize();
   }
 
@@ -391,7 +511,7 @@ export class Arena {
     // lights
     g.add(new THREE.HemisphereLight(0xffffff, st.floor, 0.55));
     const key = new THREE.DirectionalLight(0xfff2e0, 2.8);
-    key.position.set(2.5, 7, 6); key.castShadow = true;
+    key.position.set(2.5, 7, 6); key.castShadow = this.quality > 0;
     key.shadow.mapSize.set(1024, 1024);
     Object.assign(key.shadow.camera, { left: -6, right: 6, top: 5, bottom: -1, near: 1, far: 20 });
     key.shadow.bias = -0.0005; key.shadow.normalBias = 0.02;
@@ -403,11 +523,11 @@ export class Arena {
 
   async setFighters(ch0, ch1) {
     await loadPack();
-    for (const f of this.fighters) { this.scene.remove(f.root); for (const pr of Object.values(f.props)) this.scene.remove(pr); }
+    for (const f of this.fighters) { this.scene.remove(f.root); for (const pr of Object.values(f.props)) this.scene.remove(pr); if (f.trail) f.trail.dispose(this.scene); }
     this.fighters = [];
     const [g0, g1] = await Promise.all([loadFighterModel(CHARS[ch0].id), loadFighterModel(CHARS[ch1].id)]);
     this.fighters = [new Fighter3D(g0, ch0, 0, false), new Fighter3D(g1, ch1, 1, ch0 === ch1)];
-    for (const f of this.fighters) this.scene.add(f.root);
+    for (const f of this.fighters) { this.scene.add(f.root); f.trail = new Trail(this.scene, CHARS[f.ch].color); }
     this.clearProjectiles();
   }
 
@@ -434,7 +554,8 @@ export class Arena {
     return m;
   }
 
-  hit(i, big) { const f = this.fighters[i]; if (f) f.flash = big ? 1.2 : 0.8; }
+  hit(i, big) { const f = this.fighters[i]; if (f) { f.flash = big ? 0.45 : 0.3; f.kick(big ? 1.4 : 0.9); f.shake = 1; } }
+  blocked(i) { const f = this.fighters[i]; if (f) f.kick(0.45); }
   addShake(n) { this.shake = Math.max(this.shake, n); }
 
   // spill an item on the floor after it hits (render only)
@@ -461,19 +582,23 @@ export class Arena {
   }
 
   // s: sim state, dt: seconds since last draw, focus: {x, y, k} camera punch-in
-  draw(s, dt) {
+  // prev: a snapshot of the sim one frame earlier (snapshot()), alpha: 0..1 between them
+  draw(s, dt, prev = null, alpha = 1) {
     this.time += dt;
-    const frame = s.f;
+    const frame = s.f - 1 + alpha;
     const [a, b] = s.p;
-    for (let i = 0; i < 2; i++) if (this.fighters[i]) this.fighters[i].update(s.p[i], frame, dt);
+    for (let i = 0; i < 2; i++) if (this.fighters[i]) this.fighters[i].update(s.p[i], prev && prev.p[i], alpha, frame, dt, s.hs);
+    const prevPr = prev ? prev.pr : null;
 
     // projectiles
     const seen = new Set();
     for (const q of s.pr) {
       seen.add(q.id);
       const m = this.projectileMesh(q);
-      m.position.set(q.x / 1000, q.y / 1000, 0.15);
-      const t = q.age;
+      const o = prevPr && prevPr.get(q.id);
+      const qx = o ? o.x + (q.x - o.x) * alpha : q.x, qy = o ? o.y + (q.y - o.y) * alpha : q.y;
+      m.position.set(qx / 1000, qy / 1000, 0.15);
+      const t = q.age - 1 + alpha;
       if (q.t === "chair") m.rotation.set(t * 0.12, 0, t * 0.25 * Math.sign(q.vx || 1));
       else if (q.t === "phone") m.rotation.set(t * 0.5, t * 0.3, t * 0.7);
       else if (q.t === "bag") m.rotation.set(0, t * 0.15, t * 0.35 * -Math.sign(q.vx));
@@ -500,8 +625,9 @@ export class Arena {
     this.particles.update(dt);
 
     // camera: frame both fighters, lean in on the action
-    const mid = (a.x + b.x) / 2000;
-    const gap = Math.abs(a.x - b.x) / 1000;
+    const ax = this.fighters[0] ? this.fighters[0].root.position.x : a.x / 1000, bx = this.fighters[1] ? this.fighters[1].root.position.x : b.x / 1000;
+    const mid = (ax + bx) / 2;
+    const gap = Math.abs(ax - bx);
     const aspect = this.camera.aspect;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const wantW = Math.max(4.4, gap + 2.8);
@@ -532,6 +658,15 @@ export class Arena {
     const c = this.renderer.domElement;
     return [(v.x + 1) / 2 * c.clientWidth, (1 - v.y) / 2 * c.clientHeight];
   }
+}
+
+// What the view needs from the previous simulation frame to draw in between
+export function snapshot(s) {
+  return {
+    f: s.f,
+    p: s.p.map((q) => ({ st: q.st, mv: q.mv, sf: q.sf, x: q.x, y: q.y })),
+    pr: new Map(s.pr.map((q) => [q.id, { x: q.x, y: q.y }])),
+  };
 }
 
 // A lone fighter turning on a pedestal, for the character select screen.

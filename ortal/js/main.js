@@ -4,7 +4,7 @@
 import { createState, step, IN, MOVES, FIGHTERS, CONST } from "./sim.js";
 import { Rollback } from "./rollback.js";
 import { Net } from "./net.js";
-import { Arena, Showcase, loadFighterModel, loadPack } from "./render.js";
+import { Arena, Showcase, loadFighterModel, loadPack, snapshot } from "./render.js";
 import { CHARS, STAGES, comboText } from "./chars.js";
 import { readInput, setupTouch, clearTouch } from "./input.js";
 import { Bot } from "./ai.js";
@@ -419,6 +419,7 @@ function onEvent(ev) {
     case "block":
       audio.sfx("block");
       arena.particles.burst(ev.x / 1000, ev.y / 1000, 0.25, 10, { colors: [[0.5, 0.8, 1], [1, 1, 1]], life: 0.25, size: 0.07, speed: 2.5, grav: 0 });
+      arena.blocked(ev.p);
       break;
     case "clash":
       audio.sfx("block");
@@ -630,6 +631,9 @@ function frame(now) {
     acc += dt * rate;
     let n = 0;
     while (acc >= 1 / 60 && n < 6) {
+      // keep the frame before the newest one, so the view can draw between them
+      const s0 = simState();
+      if (s0) match.prevSnap = snapshot(s0);
       tick();
       acc -= 1 / 60; n++;
       if (match && match.slow > 0) match.slow--;
@@ -637,7 +641,12 @@ function frame(now) {
     }
     if (n >= 6) acc = 0;
     const s = simState();
-    if (s) { if (!NO_DRAW) arena.draw(s, dt); updateHud(s); }
+    if (s && match) {
+      const alpha = Math.min(1, acc * 60);
+      if (!NO_DRAW) arena.draw(s, dt, match.prevSnap, alpha);
+      updateHud(s);
+      watchSpeed(dt);
+    }
   } else if (current === "select" && showcase) {
     showcase.draw(dt);
   } else if (current === "pause" && match) {
@@ -645,6 +654,13 @@ function frame(now) {
   }
 }
 requestAnimationFrame(frame);
+
+// If the device can't keep up, draw fewer pixels, then drop shadows.
+let slowFrames = 0, fastFrames = 0;
+function watchSpeed(dt) {
+  if (dt > 1 / 45) { slowFrames++; fastFrames = 0; } else { fastFrames++; slowFrames = Math.max(0, slowFrames - 1); }
+  if (slowFrames > 90 && arena.quality > 0) { arena.setQuality(arena.quality - 1); slowFrames = 0; }
+}
 
 setupTouch($("#touch"));
 show("title");

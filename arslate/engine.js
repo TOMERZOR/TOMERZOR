@@ -462,6 +462,7 @@
         let punct = s.punct;
         if (punct === "!" && r() < 0.5) punct = "!!";
         if (punct === "?" && mood === "anger") punct = "?!";
+        if (punct) out = out.replace(/[.!?…]+$/, "");
         s.out = lead + out + punct + s.space;
       }
     }

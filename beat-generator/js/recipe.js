@@ -47,11 +47,12 @@ BG.SCALES = {
 };
 
 // Chord progressions as scale degrees (0 = the key's own chord), one chord per bar.
+// Freestyle beats loop few chords, so two-chord vamps are on the list on purpose.
 const PROGRESSIONS = {
-  aeolian:  [[0, 5, 2, 6], [0, 3, 4, 0], [0, 5, 3, 4], [0, 6, 5, 6], [0, 0, 5, 5], [0, 3, 0, 5]],
-  dorian:   [[0, 3, 0, 3], [0, 6, 3, 0], [0, 3, 4, 3], [0, 1, 3, 0]],
-  phrygian: [[0, 1, 0, 1], [0, 1, 6, 0], [0, 6, 1, 0], [0, 0, 1, 6]],
-  harmonic: [[0, 5, 4, 4], [0, 3, 4, 0], [0, 5, 3, 4], [0, 1, 4, 0]],
+  aeolian:  [[0, 5, 2, 6], [0, 0, 5, 5], [0, 3, 0, 3], [0, 5, 3, 4], [0, 0, 5, 6], [5, 6, 0, 0]],
+  dorian:   [[0, 3, 0, 3], [0, 0, 3, 3], [0, 6, 3, 0]],
+  phrygian: [[0, 1, 0, 1], [0, 0, 1, 1], [0, 5, 1, 0]],
+  harmonic: [[0, 5, 4, 4], [0, 0, 5, 4], [0, 3, 5, 4]],
   hijaz:    [[0, 1, 0, 1], [0, 1, 6, 0], [0, 6, 1, 0], [0, 0, 6, 1]],
   ionian:   [[0, 4, 5, 3], [0, 5, 3, 4], [3, 4, 0, 0], [0, 3, 4, 3], [5, 3, 0, 4]],
   mixo:     [[0, 6, 3, 0], [0, 3, 6, 0], [0, 6, 0, 3]],
@@ -61,28 +62,28 @@ const PROGRESSIONS = {
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 const STYLE_BASE = {
-  trap:    { bpm: [122, 146], swing: [0, 0.04],   scale: ["aeolian", "harmonic", "phrygian"], chords: ["pad", "piano"], lead: ["glock", "piano", "vibes"], reverb: 0.25 },
-  drill:   { bpm: [140, 146], swing: [0, 0],      scale: ["harmonic", "aeolian", "phrygian"], chords: ["strings"], lead: ["piano", "vibes"], reverb: 0.25 },
-  boombap: { bpm: [84, 95],   swing: [0.12, 0.24], scale: ["aeolian", "dorian"],              chords: ["piano"], lead: ["piano", "vibes"], reverb: 0.15 },
-  lofi:    { bpm: [70, 86],   swing: [0.18, 0.3],  scale: ["dorian", "aeolian", "ionian"],     chords: ["ep"], lead: ["kalimba", "vibes"], reverb: 0.3 },
-  dembow:  { bpm: [90, 102],  swing: [0, 0.04],    scale: ["aeolian", "dorian", "mixo"],       chords: ["harp", "ep"], lead: ["kalimba", "harp"], reverb: 0.2 }
+  trap:    { bpm: [122, 146], swing: [0, 0.04],   scale: ["aeolian", "harmonic", "phrygian"], lead: ["piano"], bells: 0.5, reverb: 0.3 },
+  drill:   { bpm: [140, 146], swing: [0, 0],      scale: ["harmonic", "aeolian", "phrygian"], lead: ["piano"], bells: 0.25, reverb: 0.3 },
+  boombap: { bpm: [84, 95],   swing: [0.12, 0.24], scale: ["aeolian", "dorian"],              lead: ["piano"], bells: 0, reverb: 0.15 },
+  lofi:    { bpm: [70, 86],   swing: [0.18, 0.3],  scale: ["dorian", "aeolian"],               lead: ["piano", "vibes"], bells: 0, reverb: 0.3 },
+  dembow:  { bpm: [90, 102],  swing: [0, 0.04],    scale: ["aeolian", "dorian"],               lead: ["piano", "harp"], bells: 0.2, reverb: 0.2 }
 };
 
 // What each mood changes. Earlier moods in SCALE_PRIORITY win the scale.
 const MOOD_FX = {
   dark:       { scale: ["phrygian", "harmonic"], bpm: 0,   bright: -0.3, reverb: 0.1 },
-  sad:        { scale: ["aeolian"],              bpm: -4,  bright: -0.1, chords: "piano", lead: "piano" },
-  happy:      { scale: ["ionian", "mixo"],       bpm: 4,   bright: 0.3,  lead: "kalimba" },
+  sad:        { scale: ["aeolian"],              bpm: -4,  bright: -0.1, lead: "piano" },
+  happy:      { scale: ["ionian", "mixo"],       bpm: 4,   bright: 0.3 },
   summer:     { scale: ["mixo", "ionian"],       bpm: 4,   bright: 0.3 },
   aggressive: { scale: ["harmonic", "phrygian"], bpm: 6,   dist: 0.55, rolls: 0.25 },
   chill:      { scale: ["dorian"],               bpm: -8,  swing: 0.06, reverb: 0.1, rolls: -0.15 },
-  epic:       { scale: ["harmonic"],             bpm: 0,   chords: "strings", lead: "harp", reverb: 0.15 },
+  epic:       { scale: ["harmonic"],             bpm: 0,   bells: 1, reverb: 0.15 },
   night:      { scale: ["dorian", "aeolian"],    bpm: -2,  bright: -0.15, reverb: 0.15 },
   rain:       { rain: true, reverb: 0.1, bright: -0.1 },
   vinyl:      { vinyl: true, bright: -0.2 },
   oriental:   { scale: ["hijaz"],                lead: "qanun" },
-  dreamy:     { scale: ["lydian", "dorian"],     bpm: -4,  reverb: 0.3, chords: "pad", lead: "harp", sevenths: true },
-  love:       { scale: ["ionian", "dorian"],     bpm: -2,  chords: "ep", lead: "vibes", sevenths: true },
+  dreamy:     { scale: ["dorian", "lydian"],     bpm: -4,  reverb: 0.3, lead: "harp" },
+  love:       { scale: ["dorian", "ionian"],     bpm: -2,  lead: "vibes" },
   fast:       { bpm: 12, rolls: 0.15 },
   slow:       { bpm: -10 }
 };
@@ -153,18 +154,40 @@ function drums(style, rng, rolls) {
   return { kick, snare, clap, hat, open, ghost };
 }
 
-function chordNotes(scaleSteps, rootPc, degree, octaveBase, sevenths) {
-  const notes = [];
+// Chord tones of a scale degree as semitones above the key: root, third, fifth and (with sevenths) the seventh.
+function chordTones(scaleSteps, degree, sevenths) {
   const count = sevenths ? 4 : 3;
+  const tones = [];
   for (let i = 0; i < count; i++) {
     const idx = degree + i * 2;
-    const st = scaleSteps[idx % 7] + 12 * Math.floor(idx / 7);
-    notes.push(octaveBase + rootPc + st);
+    tones.push(scaleSteps[idx % 7] + 12 * Math.floor(idx / 7));
   }
-  // Keep voicings in one register so chord changes don't jump around.
-  return notes.map((n) => (n > octaveBase + 19 ? n - 12 : n)).sort((a, b) => a - b);
+  return tones;
 }
 
+// Close voicings in one register, each chord moved to the inversion nearest the last one so the hands barely move.
+function voiceChords(tonesList, rootPc) {
+  let prev = null;
+  return tonesList.map((tones) => {
+    const pcs = tones.map((t) => (rootPc + t) % 12);
+    let best = null;
+    for (let inv = 0; inv < pcs.length; inv++) {
+      const order = pcs.slice(inv).concat(pcs.slice(0, inv));
+      const notes = [];
+      let n = 53 + ((order[0] - 53 % 12 + 12) % 12); // start between F3 and E4
+      for (const pc of order) {
+        while (n % 12 !== pc) n++;
+        notes.push(n);
+        n++;
+      }
+      const centre = notes.reduce((a, b) => a + b, 0) / notes.length;
+      const cost = prev ? notes.reduce((a, x, i) => a + Math.abs(x - (prev[i] ?? prev[prev.length - 1])), 0) : Math.abs(centre - 62);
+      if (!best || cost < best.cost) best = { notes, cost };
+    }
+    prev = best.notes;
+    return best.notes;
+  });
+}
 function bassLine(style, kick, degrees, scaleSteps, bassRoot, rng) {
   const bass = empty();
   const slide = empty();
@@ -186,36 +209,91 @@ function bassLine(style, kick, degrees, scaleSteps, bassRoot, rng) {
   return { bass, slide };
 }
 
-function chordRhythm(type, rng) {
-  if (type === "harp") return rng.pick([[0, 3, 6, 10, 12], [0, 3, 6, 8, 11, 14], [0, 6, 10]]);
-  if (type === "piano") return rng.pick([[0], [0, 10], [0, 7], [0, 3]]);
-  return [0];
-}
+// Chord parts: [step, velocity, length in steps]. Sustained and soft under the melody, stabs in boom bap.
+const CHORD_PARTS = {
+  trap: [[[0, 0.32, 16]], [[0, 0.3, 16]]],
+  drill: [[[0, 0.3, 16]], [[0, 0.32, 10], [10, 0.26, 6]]],
+  boombap: [[[0, 0.5, 4], [10, 0.4, 3]], [[0, 0.5, 6]], [[0, 0.48, 3], [7, 0.4, 3]]],
+  lofi: [[[0, 0.36, 16]], [[0, 0.36, 10], [10, 0.3, 6]]],
+  dembow: [[[0, 0.36, 3], [3, 0.3, 3], [6, 0.34, 4], [10, 0.3, 3], [12, 0.3, 4]], [[0, 0.34, 6], [6, 0.3, 4], [10, 0.3, 6]]]
+};
 
-function melody(lead, degrees, scaleSteps, rootPc, rng, density) {
-  const mel = empty();
-  if (!lead) return mel;
-  const octave = lead === "glock" ? 72 : lead === "qanun" ? 62 : 60;
-  // One two-bar motif: rhythm plus scale offsets from each bar's chord, repeated with a changed ending.
-  const rhythm = [];
-  for (let s = 0; s < STEPS * 2; s++) {
-    const strong = s % 4 === 0 ? 0.55 : s % 2 === 0 ? 0.3 : 0.12;
-    if (rng.chance(strong * density)) rhythm.push(s);
+// Melody motifs: [step, chord tone, length in steps]. Chord tone 0 is the root, 1 the third, 2 the fifth,
+// 3 the seventh (or the octave), and 4 and up repeat an octave higher. Every motif only uses tones of the
+// chord under it, the way producers build bell and piano loops, so it always fits the harmony.
+const MOTIFS = {
+  trap: [
+    [[0, 4, 2], [2, 2, 2], [4, 1, 2], [6, 2, 2], [8, 4, 2], [10, 2, 2], [12, 1, 2], [14, 0, 2]],
+    [[0, 5, 3], [3, 4, 3], [6, 2, 2], [8, 5, 3], [11, 4, 3], [14, 2, 2]],
+    [[0, 4, 3], [3, 3, 3], [6, 2, 6], [12, 1, 2], [14, 2, 2]],
+    [[0, 4, 2], [2, 2, 2], [4, 4, 2], [6, 2, 2], [8, 5, 2], [10, 2, 2], [12, 4, 2], [14, 1, 2]],
+    [[0, 2, 6], [6, 4, 4], [10, 3, 6]]
+  ],
+  drill: [
+    [[0, 4, 3], [3, 4, 3], [6, 3, 4], [10, 4, 2], [12, 2, 4]],
+    [[0, 2, 3], [3, 1, 3], [6, 0, 4], [11, 1, 2], [13, 2, 3]],
+    [[0, 4, 3], [3, 2, 3], [6, 4, 3], [9, 3, 3], [12, 1, 4]]
+  ],
+  boombap: [
+    [[0, 4, 3], [3, 3, 3], [7, 2, 5], [12, 1, 2], [14, 2, 2]],
+    [[2, 5, 2], [4, 4, 2], [6, 2, 6], [14, 1, 2]],
+    [[0, 2, 4], [6, 4, 2], [10, 3, 6]]
+  ],
+  lofi: [
+    [[0, 4, 6], [6, 3, 4], [10, 2, 6]],
+    [[2, 2, 2], [4, 4, 4], [8, 5, 4], [12, 4, 4]],
+    [[0, 5, 4], [4, 4, 2], [6, 2, 8], [14, 3, 2]]
+  ],
+  dembow: [
+    [[0, 2, 2], [3, 2, 2], [6, 4, 2], [8, 2, 2], [11, 1, 2], [14, 0, 2]],
+    [[0, 4, 2], [3, 4, 2], [6, 5, 2], [10, 4, 2], [12, 2, 4]]
+  ]
+};
+
+// Hijaz phrases for the qanun, in scale degrees of the key: they walk down 5-4-3-2-1 through the scale's
+// augmented second, which is what makes it sound Middle Eastern. Two bars, repeated.
+const HIJAZ_PHRASES = [
+  [[[0, 4, 2], [2, 3, 2], [4, 2, 2], [6, 1, 2], [8, 2, 4], [12, 1, 2], [14, 0, 2]], [[0, 0, 3], [3, 1, 3], [6, 2, 2], [8, 3, 4], [12, 2, 2], [14, 1, 2]]],
+  [[[0, 2, 3], [3, 1, 3], [6, 0, 2], [8, 1, 2], [10, 2, 2], [12, 3, 4]], [[0, 4, 3], [3, 3, 3], [6, 2, 2], [8, 1, 4], [12, 0, 4]]]
+];
+
+function melody(style, lead, chordTonesList, rootPc, rng, scaleSteps) {
+  const mel = empty(), vel = empty(), len = empty();
+  const humanize = (b, step, base) => {
+    const accent = step % 4 === 0 ? 0.1 : 0;
+    vel[b][step] = Math.min(0.95, base + accent + (rng.next() - 0.5) * 0.12);
+  };
+  if (lead === "qanun") {
+    const phrase = rng.pick(HIJAZ_PHRASES);
+    const tonic = 60 + rootPc + (rootPc > 6 ? -12 : 0) + 12;
+    for (let b = 0; b < BARS; b++) {
+      phrase[b % 2].forEach(([step, deg, l]) => {
+        mel[b][step] = tonic + scaleSteps[deg] - (deg > 4 ? 12 : 0);
+        len[b][step] = l;
+        humanize(b, step, 0.62);
+      });
+    }
+    return { mel, vel, len };
   }
-  if (!rhythm.length) rhythm.push(0, 6, 10);
-  let walk = 0;
-  const contour = rhythm.map(() => (walk = Math.max(-2, Math.min(7, walk + rng.pick([-2, -1, 0, 1, 1, 2, 4])))));
-  const alt = contour.map((c, i) => (i >= contour.length - 2 ? c + rng.pick([-1, 1, 2]) : c));
-  for (let half = 0; half < 2; half++) {
-    const cont = half === 0 ? contour : alt;
-    rhythm.forEach((s, i) => {
-      const b = half * 2 + Math.floor(s / STEPS);
-      const deg = degrees[b] + cont[i];
-      const pc = scaleSteps[((deg % 7) + 7) % 7] + 12 * Math.floor(deg / 7);
-      mel[b][s % STEPS] = octave + rootPc + pc;
+  const motif = rng.pick(MOTIFS[style]);
+  // Phrase: the motif on bars 1-3, then bar 4 keeps only its first half and holds, leaving space.
+  const centre = style === "lofi" ? 64 : 67;
+  for (let b = 0; b < BARS; b++) {
+    const tones = chordTonesList[b];
+    // Put this chord's root as near the centre as possible so the line doesn't leap between chords.
+    let root = rootPc + tones[0];
+    while (root < centre - 9) root += 12;
+    while (root >= centre + 3) root -= 12;
+    // The chord's tones over three octaves, low to high.
+    const ladder = [...new Set([0, 12, 24].flatMap((o) => tones.map((t) => root + t - tones[0] + o)))].sort((a, b) => a - b);
+    const notes = b === BARS - 1 ? motif.filter((n) => n[0] < 8) : motif;
+    notes.forEach(([step, tone, l], i) => {
+      mel[b][step] = ladder[Math.min(tone, ladder.length - 1)];
+      len[b][step] = b === BARS - 1 && i === notes.length - 1 ? 16 - step : l;
+      humanize(b, step, 0.58);
     });
   }
-  return mel;
+  return { mel, vel, len };
 }
 
 BG.makeRecipe = function (parsed, variation = 0) {
@@ -240,7 +318,8 @@ BG.makeRecipe = function (parsed, variation = 0) {
   let bpm = rng.int(base.bpm[0], base.bpm[1]);
   let swing = base.swing[0] + rng.next() * (base.swing[1] - base.swing[0]);
   let bright = 0, reverb = base.reverb, dist = style === "drill" || style === "trap" ? 0.2 : 0, rolls = 0;
-  let chords = rng.pick(base.chords), lead = rng.pick(base.lead), sevenths = style === "lofi", rain = false, vinyl = style === "boombap" || style === "lofi";
+  let lead = rng.pick(base.lead), bells = rng.chance(base.bells), rain = false, vinyl = style === "boombap" || style === "lofi";
+  let sevenths = true;
   for (const m of moods) {
     const fx = MOOD_FX[m];
     bpm += fx.bpm || 0;
@@ -249,31 +328,29 @@ BG.makeRecipe = function (parsed, variation = 0) {
     reverb += fx.reverb || 0;
     rolls += fx.rolls || 0;
     if (fx.dist) dist = Math.max(dist, fx.dist);
-    if (fx.chords) chords = fx.chords;
     if (fx.lead) lead = fx.lead;
-    if (fx.sevenths) sevenths = true;
+    if (fx.bells) bells = true;
     if (fx.rain) rain = true;
     if (fx.vinyl) vinyl = true;
   }
   if (moods.includes("oriental")) lead = "qanun";
   bpm = Math.max(60, Math.min(170, bpm));
-  if (style === "lofi" && (chords === "pad" || chords === "strings")) chords = "ep";
-  if (scale === "hijaz") sevenths = false;
+  if (scale === "hijaz" || scale === "phrygian") sevenths = false;
+  if (lead !== "piano") bells = false;
 
   const rootPc = rng.int(0, 11);
   const steps = BG.SCALES[scale].steps;
   const degrees = rng.pick(PROGRESSIONS[scale]);
-  const chordOct = 52;
-  const chordList = degrees.map((d) => chordNotes(steps, rootPc, d, chordOct, sevenths));
+  const tonesList = degrees.map((d) => chordTones(steps, d, sevenths));
+  const chordList = voiceChords(tonesList, rootPc);
   const bassRoot = 28 + ((rootPc - 4 + 12) % 12); // E1..D#2, where an 808 sits
 
   const d = drums(style, rng, rolls);
   const { bass, slide } = bassLine(style, d.kick, degrees, steps, bassRoot, rng);
-  const chordHits = empty();
-  const rhythm = chordRhythm(chords, rng);
-  for (let b = 0; b < BARS; b++) rhythm.forEach((s) => (chordHits[b][s] = 1));
-  const density = style === "lofi" ? 0.6 : style === "boombap" ? 0.7 : 1;
-  const mel = melody(lead, degrees, steps, rootPc, rng, density);
+  const chordHits = empty(), chordLen = empty();
+  const part = rng.pick(CHORD_PARTS[style]);
+  for (let b = 0; b < BARS; b++) part.forEach(([s, v, l]) => { chordHits[b][s] = v; chordLen[b][s] = l; });
+  const mel = melody(style, lead, tonesList, rootPc, rng, steps);
 
   return {
     version: 1,
@@ -288,8 +365,8 @@ BG.makeRecipe = function (parsed, variation = 0) {
     keyLabel: NOTE_NAMES[rootPc] + " " + BG.SCALES[scale].label,
     scale,
     chords: chordList,
-    sound: { chords, lead, dist, reverb: Math.min(0.6, reverb), bright: Math.max(-0.6, Math.min(0.5, bright)), rain, vinyl, style },
-    patterns: { kick: d.kick, snare: d.snare, clap: d.clap, hat: d.hat, open: d.open, ghost: d.ghost, bass, slide, chord: chordHits, melody: mel }
+    sound: { chords: "piano", lead, bells, dist, reverb: Math.min(0.6, reverb), bright: Math.max(-0.6, Math.min(0.5, bright)), rain, vinyl, style },
+    patterns: { kick: d.kick, snare: d.snare, clap: d.clap, hat: d.hat, open: d.open, ghost: d.ghost, bass, slide, chord: chordHits, chordLen, melody: mel.mel, melVel: mel.vel, melLen: mel.len }
   };
 };
 

@@ -13,9 +13,8 @@ All sounds in this folder are free to use. Each file was trimmed, normalized and
 From the [Versilian Community Sample Library (VCSL)](https://github.com/sgossner/VCSL), CC0 1.0:
 
 - `steinway_*`: Steinway B grand piano
-- `fmpiano_*`: TX81Z FM electric piano
 - `harp_*`: concert harp
-- `glockenspiel_*`, `vibraphone_*`, `kalimba_*`
+- `glockenspiel_*`, `vibraphone_*`
 - `psaltery_pluck_*`: plucked psaltery, used as a qanun
 
-Glockenspiel, vibraphone, kalimba and psaltery files sound one octave above the note in their name; `BG.INSTRUMENTS` in `js/engine.js` accounts for that.
+Glockenspiel, vibraphone and psaltery files sound one octave above the note in their name; `BG.INSTRUMENTS` in `js/engine.js` accounts for that.

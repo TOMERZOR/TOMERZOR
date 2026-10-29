@@ -13,10 +13,10 @@ const noteMidi = (n) => {
 };
 
 // Mix levels in dB, tuned against real freestyle type beats: drums and 808 up front, the loop under them.
-BG.LEVELS = { kick: -4, snare: -6, clap: -8, hat: -13, open: -16, ghost: -16, perc: -10, bass808: -5, bassSub: -12, chords: -17, pad: -9, lead: -13, makeup: 9 };
+BG.LEVELS = { kick: -4, snare: -6, clap: -8, hat: -13, open: -16, ghost: -16, perc: -10, bass808: -5, bassSub: -12, chords: -15, lead: -10, bells: -17, makeup: 9 };
 BG.STYLE_LEVELS = {
-  lofi: { hat: -14, kick: -4, chords: -18, lead: -14, makeup: 8 },
-  boombap: { kick: -2, snare: -3, hat: -14, lead: -17, chords: -18, makeup: 7 }
+  lofi: { hat: -14, kick: -4, chords: -14, lead: -11, makeup: 8 },
+  boombap: { kick: -2, snare: -3, hat: -14, lead: -13, chords: -15, makeup: 7 }
 };
 
 // Song form: a 4-bar intro with just the loop, then a 4-bar breakdown at the end of every 32 bars.
@@ -40,14 +40,13 @@ const BASS_808_ROOT = 43; // the tuned 808 samples are a G1
 // Pitched instruments: sample folder, the notes as named in the files, and how far the recording sounds above that name.
 BG.INSTRUMENTS = {
   piano:   { file: "steinway", notes: ["C2", "Fs2", "C3", "Fs3", "C4", "Fs4", "C5", "Fs5", "C6"], shift: 0, release: 1.2, trim: -3 },
-  ep:      { file: "fmpiano", notes: ["C2", "E2", "C3", "E3", "C4", "E4", "C5", "E5", "C6"], shift: 0, release: 1, trim: -1 },
   harp:    { file: "harp", notes: ["C3", "G3", "B3", "F4", "C5", "G5", "B5"], shift: 0, release: 1.2, trim: -4 },
   glock:   { file: "glockenspiel", notes: ["G4", "C5", "G5", "C6", "G6", "C7"], shift: 12, release: 1.2, trim: -7 },
   vibes:   { file: "vibraphone", notes: ["A2", "E3", "B3", "D4", "A4", "E5"], shift: 12, release: 1.2, trim: -3 },
-  kalimba: { file: "kalimba", notes: ["B2", "Fs3", "B3", "Fs4"], shift: 12, release: 0.8, trim: -1 },
   qanun:   { file: "psaltery_pluck", notes: ["As3", "D4", "C5", "Fs5"], shift: 12, release: 0.8, trim: 0 }
 };
-const SYNTH_CHORDS = ["pad", "strings"];
+// The keys are darkened per style, like a filtered sample.
+const KEYS_CUTOFF = { trap: 4200, drill: 3600, boombap: 5000, lofi: 2600, dembow: 6500 };
 
 /* Sample loading. Decoded buffers are shared by live playback and offline rendering. */
 const cache = {};
@@ -59,7 +58,7 @@ function samplesFor(recipe) {
   const kit = BG.KITS[recipe.sound.style];
   const files = Object.values(kit).map((n) => `drums/${n}.wav`);
   if (recipe.moods.includes("oriental")) Object.values(DARBUKA).forEach((n) => files.push(`drums/${n}.wav`));
-  for (const inst of [recipe.sound.lead, recipe.sound.chords]) {
+  for (const inst of [recipe.sound.lead, recipe.sound.chords, recipe.sound.bells && "glock"]) {
     const def = BG.INSTRUMENTS[inst];
     if (def) def.notes.forEach((n) => files.push(`keys/${def.file}_${n}.wav`));
   }
@@ -78,16 +77,6 @@ function sampler(inst, buffers) {
   const urls = {};
   def.notes.forEach((n) => (urls[noteName(noteMidi(n) + def.shift)] = buffers[`keys/${def.file}_${n}.wav`]));
   return new Tone.Sampler({ urls, release: def.release });
-}
-
-function padSynth(type, bright) {
-  const cut = 1800 * Math.pow(2, bright * 2);
-  const synth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: "fatsawtooth", count: 3, spread: type === "strings" ? 28 : 18 },
-    envelope: { attack: type === "strings" ? 0.35 : 0.6, decay: 0.4, sustain: 0.7, release: 1.4 }
-  });
-  synth.maxPolyphony = 16;
-  return { synth, vol: type === "strings" ? -20 : -22, filterFreq: type === "strings" ? cut * 1.4 : cut };
 }
 
 // Creates every instrument for one recipe and connects it to `out`. `buffers` comes from BG.loadSamples.
@@ -160,29 +149,34 @@ BG.buildRig = async function (recipe, out, buffers) {
     bassSynth.chain(drive, channel(L.bassSub));
   }
 
-  // Chords: a sampled instrument, or a soft synth pad under everything.
-  let chords;
-  if (SYNTH_CHORDS.includes(snd.chords)) {
-    const pad = padSynth(snd.chords, snd.bright);
-    chords = keep(pad.synth);
-    const lp = keep(new Tone.Filter(pad.filterFreq, "lowpass"));
-    const hp = keep(new Tone.Filter(220, "highpass"));
-    chords.chain(lp, hp, channel(pad.vol + L.pad, 0.35 + snd.reverb));
+  // Keys: chords and melody are darkened with a filter per style, like a sampled loop, each at its own level.
+  const cutoff = KEYS_CUTOFF[snd.style] * Math.pow(2, snd.bright);
+  const chords = keep(sampler(snd.chords, buffers));
+  const chordLp = keep(new Tone.Filter({ type: "lowpass", frequency: cutoff, rolloff: -24 }));
+  const chordHp = keep(new Tone.Filter(160, "highpass"));
+  const chordCh = channel(L.chords + BG.INSTRUMENTS[snd.chords].trim, 0.25 + snd.reverb);
+  const lead = keep(sampler(snd.lead, buffers));
+  const leadLp = keep(new Tone.Filter({ type: "lowpass", frequency: cutoff * 1.3, rolloff: -24 }));
+  const delay = keep(new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.2, wet: 0.12 }));
+  const leadCh = channel(L.lead + BG.INSTRUMENTS[snd.lead].trim, 0.25 + snd.reverb, 0.1);
+  if (lofi) {
+    // Lo-fi tape wobble.
+    const w1 = keep(new Tone.Vibrato({ frequency: 0.55, depth: 0.08 }));
+    const w2 = keep(new Tone.Vibrato({ frequency: 0.55, depth: 0.08 }));
+    chords.chain(w1, chordLp, chordHp, chordCh);
+    lead.chain(w2, leadLp, delay, leadCh);
   } else {
-    chords = keep(sampler(snd.chords, buffers));
-    const hp = keep(new Tone.Filter(180, "highpass"));
-    const ch = channel(L.chords + BG.INSTRUMENTS[snd.chords].trim, 0.25 + snd.reverb);
-    if (lofi) {
-      const wobble = keep(new Tone.Vibrato({ frequency: 0.6, depth: 0.1 }));
-      chords.chain(wobble, hp, ch);
-    } else {
-      chords.chain(hp, ch);
-    }
+    chords.chain(chordLp, chordHp, chordCh);
+    lead.chain(leadLp, delay, leadCh);
   }
 
-  const lead = keep(sampler(snd.lead, buffers));
-  const delay = keep(new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.22, wet: 0.15 }));
-  lead.chain(delay, channel(L.lead + BG.INSTRUMENTS[snd.lead].trim, 0.25 + snd.reverb, 0.1));
+  // Bells: a glockenspiel an octave above the piano melody, quiet, for the dark-bells trap sound.
+  let bells = null;
+  if (snd.bells) {
+    bells = keep(sampler("glock", buffers));
+    const bellsLp = keep(new Tone.Filter(7000, "lowpass"));
+    bells.chain(bellsLp, channel(L.bells, 0.45 + snd.reverb, -0.2));
+  }
 
   let crackle = null;
   if (snd.vinyl) {
@@ -206,7 +200,7 @@ BG.buildRig = async function (recipe, out, buffers) {
   return {
     recipe,
     mute: {},
-    kit, drum, drumBus, bassOut, bassSynth, chords, lead, crackle,
+    kit, drum, drumBus, bassOut, bassSynth, chords, lead, bells, crackle,
     darbuka: recipe.moods.includes("oriental"),
     sources,
     lastOpen: null,
@@ -305,12 +299,13 @@ function playStep(rig, step, time, stepDur) {
     }
   }
   if (!m.chords && P.chord[bar][s]) {
-    const type = r.sound.chords;
-    const sustain = type === "harp" ? stepDur * 3 : type === "piano" ? stepDur * 6 : stepDur * 15.5;
-    rig.chords.triggerAttackRelease(r.chords[bar].map(midiHz), sustain, t, 0.7);
+    rig.chords.triggerAttackRelease(r.chords[bar].map(midiHz), P.chordLen[bar][s] * stepDur, t, P.chord[bar][s]);
   }
   if (!m.melody && P.melody[bar][s]) {
-    rig.lead.triggerAttackRelease(midiHz(P.melody[bar][s]), stepDur * 3, t, 0.85);
+    const note = P.melody[bar][s];
+    const dur = P.melLen[bar][s] * stepDur;
+    rig.lead.triggerAttackRelease(midiHz(note), dur, t, P.melVel[bar][s]);
+    if (rig.bells) rig.bells.triggerAttackRelease(midiHz(note + 12), dur, t, P.melVel[bar][s] * 0.8);
   }
   if (rig.crackle) {
     // Random clicks, kept in order and inside this step so they never land before an earlier one.

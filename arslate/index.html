@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <title>ערסלייט</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="ערסלייט מתרגם עברית תקנית לערסית מדוברת, בזמן אמת. מנוע ARS-4, אלף ומאה ביטויים, אפס פשרות.">
-<meta property="og:title" content="ערסלייט · תרגום מקצועי לשפת השכונה">
-<meta property="og:description" content="כותבים עברית, מקבלים ערסית. בזמן אמת, בלי שרת, בדיוק של חבר ילדות.">
+<meta name="description" content="ערסלייט מתרגם עברית לערסית, בזמן אמת.">
+<meta property="og:title" content="ערסלייט">
+<meta property="og:description" content="כותבים עברית, מקבלים ערסית.">
 <meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/arslate/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="he_IL">
 <meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/arslate/icons/icon-512.png">
-<meta name="theme-color" content="#F6F5F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0C0C0D" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -23,222 +23,110 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
 <style>
-/* Layout: a deadpan premium translator. Warm paper (or near-black) ground with one soft gold glow,
-   a single console card: language bar, the input line, then the output set in an editorial serif.
-   Gold is the only accent, a wink at the chain. Light and dark follow the device. */
+/* Layout: one column, nothing else. A small wordmark, the input line with a hairline under it
+   (it turns gold and runs while translating), and the answer set in a serif below.
+   Actions appear only once there is an answer. Gold is the only accent. Light and dark follow the device. */
 :root {
   color-scheme: light dark;
-  --bg: #F6F5F1;
-  --glow: rgba(196, 150, 64, .16);
-  --surface: #FFFFFF;
-  --surface-2: #FBFAF7;
+  --bg: #F7F6F3;
   --ink: #111113;
-  --ink-2: #55565C;
-  --ink-3: #8E8F95;
-  --line: #E8E6E0;
-  --line-2: #F0EEE9;
+  --ink-2: #5E5F65;
+  --ink-3: #9A9BA1;
+  --line: #E3E1DB;
+  --hover: rgba(17, 17, 19, .05);
   --gold: #A27326;
   --gold-2: #C9A25A;
-  --gold-soft: #F4ECDC;
-  --ok: #2F9E62;
-  --shadow: 0 1px 2px rgba(17, 17, 19, .04), 0 12px 32px -12px rgba(40, 30, 10, .14), 0 40px 80px -40px rgba(40, 30, 10, .18);
   --sans: "IBM Plex Sans Hebrew", "Assistant", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --serif: "Frank Ruhl Libre", "David", "Times New Roman", serif;
   --ease: cubic-bezier(.2, .7, .2, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0C0C0D;
-    --glow: rgba(214, 174, 98, .10);
-    --surface: #141416;
-    --surface-2: #18181B;
-    --ink: #F2F1EC;
-    --ink-2: #A9A9AF;
-    --ink-3: #6F6F76;
-    --line: #26262A;
-    --line-2: #1F1F23;
-    --gold: #D6AE62;
-    --gold-2: #E7C887;
-    --gold-soft: #2A2416;
-    --ok: #4CC487;
-    --shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 24px 60px -24px rgba(0, 0, 0, .7);
+    --bg: #0C0C0D; --ink: #F2F1EC; --ink-2: #A9A9AF; --ink-3: #66666D; --line: #2A2A2E;
+    --hover: rgba(255, 255, 255, .06); --gold: #D6AE62; --gold-2: #E7C887;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0C0C0D; --glow: rgba(214, 174, 98, .10); --surface: #141416; --surface-2: #18181B; --ink: #F2F1EC;
-  --ink-2: #A9A9AF; --ink-3: #6F6F76; --line: #26262A; --line-2: #1F1F23; --gold: #D6AE62; --gold-2: #E7C887;
-  --gold-soft: #2A2416; --ok: #4CC487; --shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 24px 60px -24px rgba(0, 0, 0, .7);
+  --bg: #0C0C0D; --ink: #F2F1EC; --ink-2: #A9A9AF; --ink-3: #66666D; --line: #2A2A2E;
+  --hover: rgba(255, 255, 255, .06); --gold: #D6AE62; --gold-2: #E7C887;
 }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
-  background:
-    radial-gradient(900px 520px at 85% -10%, var(--glow), transparent 70%),
-    var(--bg);
-  background-attachment: fixed;
-  color: var(--ink);
-  font-family: var(--sans);
-  font-size: 16px;
-  line-height: 1.5;
+  margin: 0; min-height: 100vh; min-height: 100dvh;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--sans); font-size: 16px; line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  display: flex;
-  flex-direction: column;
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.wrap { width: 100%; max-width: 720px; margin: 0 auto; padding: 0 16px; }
-@media (min-width: 640px) { .wrap { padding: 0 24px; } }
 
-/* ---------- Top bar ---------- */
-.top {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-top: max(18px, env(safe-area-inset-top)); padding-bottom: 18px;
-}
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
-.mark {
-  width: 32px; height: 32px; border-radius: 9px;
-  display: grid; place-items: center;
-  background: var(--ink); color: var(--gold-2);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .12) inset, 0 4px 12px -4px rgba(0, 0, 0, .35);
-}
-:root[data-theme="dark"] .mark { background: #232326; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { background: #232326; } }
-.mark svg { width: 20px; height: 20px; }
-.word { font-weight: 600; font-size: 19px; letter-spacing: -.01em; }
-.tag {
-  font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
-  color: var(--gold); border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
-  padding: 2px 6px 1px; border-radius: 6px; direction: ltr;
-}
-.status { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
-.status .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 50%, transparent); animation: pulse 2.6s var(--ease) infinite; }
-.status .eng { direction: ltr; font-feature-settings: "tnum"; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent); } 70%, 100% { box-shadow: 0 0 0 7px transparent; } }
+.col { width: 100%; max-width: 640px; margin: 0 auto; padding: 0 20px; }
 
-/* ---------- Intro ---------- */
-.intro { padding: 28px 0 26px; }
-@media (min-width: 640px) { .intro { padding: 56px 0 36px; } }
-.eyebrow { margin: 0 0 14px; font-size: 13px; font-weight: 500; color: var(--gold); letter-spacing: .02em; display: flex; align-items: center; gap: 10px; }
-.eyebrow::before { content: ""; width: 22px; height: 1px; background: currentColor; opacity: .6; }
-h1 {
-  margin: 0; font-family: var(--serif); font-weight: 700;
-  font-size: clamp(38px, 9vw, 60px); line-height: 1.04; letter-spacing: -.015em;
-}
-h1 em { font-style: normal; color: var(--gold); position: relative; white-space: nowrap; }
-h1 em::after {
-  content: ""; position: absolute; inset-inline: 2px; bottom: .02em; height: .07em;
-  background: linear-gradient(90deg, transparent, var(--gold-2), transparent); opacity: .7; border-radius: 2px;
-}
-.lede { margin: 18px 0 0; max-width: 34em; color: var(--ink-2); font-size: 16.5px; }
-@media (min-width: 640px) { .lede { font-size: 17.5px; } }
-.lede b { color: var(--ink); font-weight: 600; font-feature-settings: "tnum"; }
+header.col { padding-top: max(22px, env(safe-area-inset-top)); }
+.brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: inherit; }
+.brand svg { width: 20px; height: 20px; color: var(--gold); }
+.brand span { font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
 
-/* ---------- Console ---------- */
-.console {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.langs {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  height: 54px; padding: 0 8px; border-bottom: 1px solid var(--line-2);
-}
-.lang { font-size: 14.5px; font-weight: 500; padding: 0 12px; display: flex; align-items: center; gap: 8px; }
-.lang--to { justify-content: flex-end; }
-.lang--to i { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }
-.lang small { color: var(--ink-3); font-size: 13px; font-weight: 400; }
-.swap {
-  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2);
-  transition: background .2s, transform .5s var(--ease);
-}
-.swap:hover { background: var(--line-2); color: var(--ink); }
-.swap.spin { transform: rotate(180deg); }
-.swap svg { width: 18px; height: 18px; }
+main.col { padding-top: 16vh; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
+@media (max-width: 640px) { main.col { padding-top: 11vh; } }
 
-.pane { position: relative; }
-.pane--in { padding: 22px 22px 14px; }
+.field { position: relative; display: flex; align-items: flex-start; gap: 8px; }
 textarea {
-  display: block; width: 100%; min-height: 84px; max-height: 50vh; resize: none;
+  display: block; flex: 1; min-width: 0; min-height: 1.4em; max-height: 45vh; resize: none;
   border: 0; outline: 0; background: transparent; color: var(--ink);
-  font: 400 21px/1.5 var(--sans); padding: 0; margin: 0; caret-color: var(--gold);
+  font: 400 26px/1.4 var(--sans); padding: 0; margin: 0; caret-color: var(--gold);
 }
-@media (min-width: 640px) { textarea { font-size: 23px; min-height: 96px; } }
-textarea:focus-visible { outline: none; }
+@media (min-width: 640px) { textarea { font-size: 30px; } }
 textarea::placeholder { color: var(--ink-3); opacity: 1; }
-.in-foot { display: flex; align-items: center; gap: 12px; min-height: 36px; margin-top: 10px; }
-.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; mask-image: linear-gradient(to left, #000 85%, transparent); -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); padding-inline-end: 24px; }
-.chips::-webkit-scrollbar { display: none; }
-.chip {
-  flex: none; font-size: 13.5px; color: var(--ink-2); white-space: nowrap;
-  border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
-  transition: border-color .2s, color .2s, background .2s;
+textarea:focus-visible { outline: none; }
+
+.rule { position: relative; height: 1px; margin-top: 18px; background: var(--line); overflow: hidden; }
+.rule::after {
+  content: ""; position: absolute; inset: 0; background: var(--gold);
+  transform: scaleX(0); transform-origin: right; transition: transform .5s var(--ease);
 }
-.chip:hover { border-color: color-mix(in srgb, var(--gold) 50%, var(--line)); color: var(--ink); background: var(--surface-2); }
-.count { margin-inline-start: auto; font-size: 12.5px; color: var(--ink-3); direction: ltr; font-feature-settings: "tnum"; white-space: nowrap; }
+.field:focus-within + .rule::after { transform: scaleX(1); }
+.rule::before {
+  content: ""; position: absolute; top: 0; width: 35%; height: 100%; z-index: 1; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--gold-2), transparent);
+}
+.busy .rule::before { opacity: 1; animation: run .9s linear infinite; }
+@keyframes run { from { right: -35%; } to { right: 100%; } }
+
 .icon-btn {
-  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); flex: none;
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); flex: none;
   transition: background .2s, color .2s, transform .15s;
 }
-.icon-btn:hover { background: var(--line-2); color: var(--ink); }
+.icon-btn:hover { background: var(--hover); color: var(--ink); }
 .icon-btn:active { transform: scale(.94); }
-.icon-btn svg { width: 19px; height: 19px; }
+.icon-btn svg { width: 18px; height: 18px; }
 .icon-btn[hidden] { display: none; }
+.field .icon-btn { margin-top: 2px; }
 
-.pane--out {
-  background: var(--surface-2); border-top: 1px solid var(--line-2);
-  padding: 22px 22px 16px; min-height: 168px;
-}
-.out-label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 500; color: var(--ink-3); margin-bottom: 10px; letter-spacing: .02em; }
-.out-label i { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+.result { margin-top: 32px; }
+.result[hidden] { display: none; }
 .out {
   margin: 0; font-family: var(--serif); font-weight: 500;
-  font-size: 26px; line-height: 1.45; letter-spacing: -.003em; color: var(--ink);
-  white-space: pre-wrap; overflow-wrap: anywhere; min-height: 1.45em;
+  font-size: 28px; line-height: 1.45; color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: anywhere;
 }
-@media (min-width: 640px) { .out { font-size: 30px; } }
-.out .ph { color: var(--ink-3); font-weight: 500; opacity: .75; }
-.out .w { display: inline; animation: rise .5s var(--ease) both; }
+@media (min-width: 640px) { .out { font-size: 32px; } }
+.out .w { animation: rise .5s var(--ease) both; }
 @keyframes rise { from { opacity: 0; filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
 
-.scan { position: absolute; top: -1px; inset-inline: 0; height: 2px; overflow: hidden; opacity: 0; transition: opacity .2s; }
-.scan::before { content: ""; position: absolute; top: 0; width: 40%; height: 100%; background: linear-gradient(90deg, transparent, var(--gold-2), transparent); animation: scan 1s linear infinite; }
-.busy .scan { opacity: 1; }
-@keyframes scan { from { right: -40%; } to { right: 100%; } }
+.actions { display: flex; gap: 4px; margin-top: 18px; margin-inline-start: -8px; animation: fade .4s .2s var(--ease) both; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
-.out-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
-.out-foot[hidden] { display: none; }
-.meter { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-3); }
-.meter b { color: var(--ink); font-weight: 600; font-feature-settings: "tnum"; direction: ltr; min-width: 3ch; }
-.meter .bar { width: 64px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
-.meter .bar s { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold-2), var(--gold)); border-radius: inherit; transition: width .8s var(--ease); }
-.meter .ms { direction: ltr; font-feature-settings: "tnum"; }
-.meter .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-3); opacity: .6; }
-.actions { display: flex; gap: 2px; margin-inline-start: auto; }
-
-/* ---------- Proof row ---------- */
-.proof { list-style: none; margin: 22px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.proof li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.35; }
-.proof svg { width: 16px; height: 16px; flex: none; color: var(--gold); }
-@media (max-width: 520px) { .proof { grid-template-columns: 1fr; gap: 10px; padding: 0 4px; } }
-
-footer { margin-top: auto; padding: 44px 0 max(24px, env(safe-area-inset-bottom)); font-size: 12.5px; color: var(--ink-3); }
-footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-
-/* ---------- Toast ---------- */
 .toast {
-  position: fixed; left: 50%; bottom: max(24px, env(safe-area-inset-bottom)); transform: translate(-50%, 12px);
+  position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 10px);
   background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500;
-  padding: 10px 16px; border-radius: 12px; box-shadow: 0 12px 30px -10px rgba(0, 0, 0, .35);
-  opacity: 0; pointer-events: none; transition: opacity .25s, transform .35s var(--ease); white-space: nowrap; max-width: calc(100vw - 32px);
+  padding: 9px 15px; border-radius: 10px; opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .35s var(--ease); white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
@@ -248,88 +136,42 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 </style>
 </head>
 <body>
-<header class="wrap top">
-  <a class="brand" href="./" aria-label="ערסלייט, דף הבית">
-    <span class="mark" aria-hidden="true">
-      <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 11 16)"/><rect x="13.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 21 16)"/></svg>
-    </span>
-    <span class="word">ערסלייט</span>
-    <span class="tag">PRO</span>
+<header class="col">
+  <a class="brand" href="./" aria-label="ערסלייט">
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 11 16)"/><rect x="13.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 21 16)"/></svg>
+    <span>ערסלייט</span>
   </a>
-  <div class="status"><span class="dot" aria-hidden="true"></span><span>מנוע <span class="eng">ARS-4</span> פעיל</span></div>
 </header>
 
-<main class="wrap">
-  <section class="intro">
-    <p class="eyebrow">תרגום מכונה לשפת הרחוב</p>
-    <h1>מדברים עברית.<br>נשמעים <em>שכונה</em>.</h1>
-    <p class="lede">ערסלייט מתרגם עברית תקנית לערסית מדוברת, בזמן אמת ובדיוק של חבר ילדות. <b id="size">1,100</b> ביטויים במילון, אפס פשרות.</p>
-  </section>
-
-  <section class="console" aria-label="מתרגם">
-    <div class="langs">
-      <span class="lang">עברית <small>תקנית</small></span>
-      <button class="swap" id="swap" type="button" aria-label="החלפת כיוון התרגום" title="החלפת כיוון">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/></svg>
-      </button>
-      <span class="lang lang--to">ערסית <small>ישראל</small><i aria-hidden="true"></i></span>
-    </div>
-
-    <div class="pane pane--in">
-      <label for="src" class="sr">טקסט לתרגום</label>
-      <textarea id="src" rows="2" maxlength="1000" placeholder="מה רוצים להגיד?" enterkeyhint="done" autocomplete="off" spellcheck="false"></textarea>
-      <div class="in-foot">
-        <div class="chips" id="chips" aria-label="דוגמאות"></div>
-        <span class="count" id="count" hidden>0 / 1000</span>
-        <button class="icon-btn" id="clear" type="button" aria-label="ניקוי" title="ניקוי" hidden>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="pane pane--out" id="outPane">
-      <div class="scan" aria-hidden="true"></div>
-      <div class="out-label"><i aria-hidden="true"></i>ערסית</div>
-      <p class="out" id="out" aria-live="polite"><span class="ph">התרגום יופיע כאן.</span></p>
-      <div class="out-foot" id="outFoot" hidden>
-        <div class="meter">
-          <span>מדד ערסיות</span>
-          <span class="bar" aria-hidden="true"><s id="bar"></s></span>
-          <b id="score">0%</b>
-          <span class="sep" aria-hidden="true"></span>
-          <span class="ms" id="ms"></span>
-        </div>
-        <div class="actions">
-          <button class="icon-btn" id="again" type="button" aria-label="נוסח אחר" title="נוסח אחר">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
-          </button>
-          <button class="icon-btn" id="speak" type="button" aria-label="השמעה" title="השמעה" hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-          </button>
-          <button class="icon-btn" id="copy" type="button" aria-label="העתקה" title="העתקה">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
-          </button>
-          <button class="icon-btn" id="share" type="button" aria-label="שיתוף" title="שיתוף">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <ul class="proof">
-    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3z"/><path d="m9 12 2 2 4-4"/></svg>שום מילה לא יוצאת מהמכשיר</li>
-    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 4 14h7l-1 7 9-11h-7l1-7z"/></svg>תרגום מיידי, גם בלי קליטה</li>
-    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="5"/><path d="m9 13.5-1.5 7L12 18l4.5 2.5-1.5-7"/></svg>מאושר על ידי ועד השכונה</li>
-  </ul>
-</main>
-
-<footer>
-  <div class="wrap">
-    <span>© 2026 ערסלייט בע״מ. כל הזכויות שמורות לשכונה.</span>
-    <span>הנוסחים נוצרים אוטומטית. לא לשימוש מול אמא.</span>
+<main class="col" id="app">
+  <div class="field">
+    <label for="src" class="sr">טקסט בעברית לתרגום לערסית</label>
+    <textarea id="src" rows="1" maxlength="1000" placeholder="מה רוצים להגיד?" enterkeyhint="done" autocomplete="off" spellcheck="false" autofocus></textarea>
+    <button class="icon-btn" id="clear" type="button" aria-label="ניקוי" title="ניקוי" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
   </div>
-</footer>
+  <div class="rule" aria-hidden="true"></div>
+
+  <section class="result" id="result" hidden>
+    <h2 class="sr">בערסית</h2>
+    <p class="out" id="out" aria-live="polite"></p>
+    <div class="actions">
+      <button class="icon-btn" id="copy" type="button" aria-label="העתקה" title="העתקה">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
+      </button>
+      <button class="icon-btn" id="again" type="button" aria-label="נוסח אחר" title="נוסח אחר">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
+      </button>
+      <button class="icon-btn" id="speak" type="button" aria-label="השמעה" title="השמעה" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      </button>
+      <button class="icon-btn" id="share" type="button" aria-label="שיתוף" title="שיתוף">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+      </button>
+    </div>
+  </section>
+</main>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -339,23 +181,9 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
-  const src = $("src"), out = $("out"), outPane = $("outPane"), outFoot = $("outFoot");
+  const app = $("app"), src = $("src"), out = $("out"), result = $("result");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const EXAMPLES = ["מה שלומך?", "אני מאחר קצת, אני תקוע בפקק", "תודה רבה על העזרה", "זה יקר מדי, תן לי הנחה", "אני אוהב אותך", "נמאס לי מהעבודה", "בוא נאכל משהו", "אני לא מבין מה אתה רוצה ממני"];
-  const SWAP_LINES = ["אין דרך חזרה מערסית.", "מערסית לא חוזרים, נשמה.", "הכיוון הזה עוד בפיתוח. כנראה לתמיד."];
-
-  $("size").textContent = Arslate.size.toLocaleString("en-US");
-
-  let variant = 0, timer = 0, current = null, swapCount = 0;
-
-  /* דוגמאות */
-  const chips = $("chips");
-  EXAMPLES.forEach(t => {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "chip"; b.textContent = t;
-    b.addEventListener("click", () => { src.value = t; variant = 0; onInput(true); src.focus(); });
-    chips.appendChild(b);
-  });
+  let variant = 0, timer = 0, current = null;
 
   function grow() {
     src.style.height = "auto";
@@ -364,18 +192,13 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
 
   function render(res) {
     current = res;
-    outPane.classList.remove("busy");
+    app.classList.remove("busy");
     out.textContent = "";
-    if (!res || !res.text) {
-      out.innerHTML = '<span class="ph">התרגום יופיע כאן.</span>';
-      outFoot.hidden = true;
-      return;
-    }
+    if (!res || !res.text) { result.hidden = true; return; }
     if (reduced) out.textContent = res.text;
     else {
-      const parts = res.text.split(/(\s+)/);
       let i = 0;
-      for (const p of parts) {
+      for (const p of res.text.split(/(\s+)/)) {
         if (!p) continue;
         if (/^\s+$/.test(p)) { out.appendChild(document.createTextNode(p)); continue; }
         const s = document.createElement("span");
@@ -385,27 +208,17 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
         out.appendChild(s);
       }
     }
-    outFoot.hidden = false;
-    $("score").textContent = res.score + "%";
-    $("bar").style.width = "0";
-    requestAnimationFrame(() => requestAnimationFrame(() => { $("bar").style.width = res.score + "%"; }));
-    $("ms").textContent = Math.max(res.ms, 0.01).toFixed(2) + "ms";
+    result.hidden = false;
   }
 
-  function run() {
-    render(Arslate.translate(src.value, variant));
-  }
+  function run() { render(Arslate.translate(src.value, variant)); }
 
   function onInput(now) {
-    const len = src.value.length;
-    $("count").textContent = len + " / 1000";
-    $("count").hidden = !len;
-    $("clear").hidden = !len;
-    chips.style.display = len ? "none" : "";
+    $("clear").hidden = !src.value.length;
     grow();
     clearTimeout(timer);
     if (!src.value.trim()) { render(null); return; }
-    outPane.classList.add("busy");
+    app.classList.add("busy");
     timer = setTimeout(run, now === true ? 120 : 420);
   }
 
@@ -420,16 +233,8 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
   });
 
   $("clear").addEventListener("click", () => { src.value = ""; variant = 0; onInput(); src.focus(); });
-  $("again").addEventListener("click", () => { variant++; outPane.classList.add("busy"); setTimeout(run, 220); });
+  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, 200); });
 
-  $("swap").addEventListener("click", e => {
-    const b = e.currentTarget;
-    b.classList.add("spin");
-    setTimeout(() => b.classList.remove("spin"), 600);
-    toast(SWAP_LINES[swapCount++ % SWAP_LINES.length]);
-  });
-
-  /* העתקה */
   $("copy").addEventListener("click", async () => {
     if (!current) return;
     try { await navigator.clipboard.writeText(current.text); }
@@ -439,32 +244,28 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
       try { document.execCommand("copy"); } catch (e2) {}
       ta.remove();
     }
-    toast("הועתק. עכשיו תשלח לו.");
+    toast("הועתק");
   });
 
-  /* שיתוף */
   $("share").addEventListener("click", async () => {
     if (!current) return;
     const url = location.origin + location.pathname;
-    const text = current.text + "\n\n(תורגם בערסלייט)";
     if (navigator.share) {
-      try { await navigator.share({ text, url }); } catch (e) {}
+      try { await navigator.share({ text: current.text, url }); } catch (e) {}
     } else {
-      window.open("https://wa.me/?text=" + encodeURIComponent(text + " " + url), "_blank", "noopener");
+      window.open("https://wa.me/?text=" + encodeURIComponent(current.text + "\n" + url), "_blank", "noopener");
     }
   });
 
   /* השמעה, רק אם יש קול עברי במכשיר */
   let heVoice = null;
   function findVoice() {
-    if (!("speechSynthesis" in window)) return;
-    const v = speechSynthesis.getVoices();
-    heVoice = v.find(x => /^he|^iw/i.test(x.lang)) || null;
+    heVoice = speechSynthesis.getVoices().find(v => /^(he|iw)/i.test(v.lang)) || null;
     $("speak").hidden = !heVoice;
   }
   if ("speechSynthesis" in window) {
     findVoice();
-    speechSynthesis.addEventListener && speechSynthesis.addEventListener("voiceschanged", findVoice);
+    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener("voiceschanged", findVoice);
   }
   $("speak").addEventListener("click", () => {
     if (!current || !heVoice) return;
@@ -480,7 +281,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 12px; flex-wr
     t.textContent = msg;
     t.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1600);
   }
 
   /* ?q= בכתובת ממלא את השדה */

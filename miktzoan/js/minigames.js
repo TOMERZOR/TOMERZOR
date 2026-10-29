@@ -485,6 +485,7 @@ export function runMiniGame(kind, o) {
     el.hidden = false; el.classList.remove('out'); void el.offsetWidth; el.classList.add('in');
 
     const g = GAMES[kind](o);
+    g.time = Math.max(8, g.time + (o.bonusTime || 0)); // the doorstep chat can buy or cost seconds
     kick.hidden = !g.kickable; // before measuring: the button takes room from the stage
     const wrap = el.querySelector('.mg-stage');
     // client size ignores the pop-in scale animation running on the card

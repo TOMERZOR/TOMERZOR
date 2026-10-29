@@ -37,6 +37,8 @@ export class Game {
     this.all = loadAll();
     this.all.last = pro;
     this.c = this.all.careers[pro] ||= freshCareer();
+    const c = this.c; // fields added after the first release
+    c.up.ads ??= 0; c.subs ??= []; c.streak ??= 0; c.register ??= 0;
     this.pro = pro; this.P = D.PROS[pro];
     const P = this.P;
     this.world.setVan(P.shirt === 0xe9e4d6 ? 0xe67e22 : P.shirt, `${P.name} ${['מקצוען', 'בע״מ', 'ובניו', 'בע״מ'][D.PRO_ORDER.indexOf(pro) % 4]}`);
@@ -51,7 +53,18 @@ export class Game {
     this.jobs = []; this.jobT = 2.5; this.jobSeq = 0;
     this.coins = []; this.flyers = []; this.parts = [];
     this.pickT = 0; this.dropT = 0; this.payT = 0; this.dustT = 0; this.saveT = 0; this.hintT = 0; this.honkT = 0;
+    this.pendingFollow = []; this.popIns = []; this.subSigns = new Map(); this.lastTalk = -1;
     this.buildPads();
+    this.buildRegister();
+    for (const i of c.subs) this.addSubSign(this.world.houses[i], true);
+    // the subscriptions kept paying (at half rate) while the game was closed
+    if (c.lastSeen && c.subs.length) {
+      const away = Math.min(4 * 3600, (Date.now() - c.lastSeen) / 1000);
+      const before = c.register;
+      c.register = Math.min(this.regCap, c.register + away * this.income * 0.5);
+      const got = Math.floor(c.register - before);
+      if (got >= 5) setTimeout(() => { sfx.kaching(); this.ui.toast({ icon: '💰', name: 'הקופה', text: `בזמן שלא היית, המנויים שילמו ₪${got}. בוא לאסוף!`, cls: 'review', dur: 5 }); }, 1400);
+    }
     this.syncUpgrades();
     this.world.setLocks(this.c.level);
     this.ui.hud(true);
@@ -73,6 +86,8 @@ export class Game {
     for (const f of this.flyers) rm(f.obj);
     for (const p of this.parts) rm(p.m);
     for (const p of this.pads || []) rm(p.group);
+    if (this.reg) { rm(this.reg.group); rm(this.reg.zone); for (const b of this.reg.bills) rm(b); this.ui.untrack(this.reg.label); this.ui.untrack(this.reg.guide); }
+    for (const sgn of this.subSigns?.values() || []) rm(sgn);
     this.ui.untrack(this.guideEl); this.guideEl = null;
     this.helper = null;
     this.running = false;
@@ -80,12 +95,16 @@ export class Game {
 
   save() {
     if (!this.c) return;
+    this.c.lastSeen = Date.now();
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.all)); } catch {}
   }
 
   // ---------- derived ----------
   get cap() { return D.capacity(this.c.up.belt); }
   get hcap() { return D.helperCap(this.c.up.helper); }
+  get income() { return this.c.subs.length * D.SUB_RATE * D.subMult(this.c.up.ads); }
+  get regCap() { return D.registerCap(this.c.up.ads); }
+  get streakMult() { return 1 + 0.1 * Math.min(this.c.streak, 10); }
   get rating() { const r = this.c.reviews; return r.reduce((a, b) => a + b, 0) / r.length; }
   title(l = this.c.level) { return D.TITLES[Math.min(l - 1, D.TITLES.length - 1)].replace('{pro}', this.P.name); }
 
@@ -95,6 +114,7 @@ export class Game {
     this.ui.setRating(this.rating);
     this.ui.setLevel(c.level, Math.min(1, c.xp / need), this.title());
     this.ui.setDay(c.day, c.dayT / DAY_LEN);
+    this.ui.setStreak(c.streak, this.streakMult);
   }
 
   syncUpgrades() {
@@ -124,7 +144,7 @@ export class Game {
       const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
       const top = new THREE.Mesh(new THREE.PlaneGeometry(2.36, 2.36), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
       top.rotation.x = -Math.PI / 2; top.position.y = 0.15; group.add(top);
-      group.position.set(-6 + i * 3, 0, BASE.padsZ);
+      group.position.set(-7.5 + i * 3, 0, BASE.padsZ);
       this.scene.add(group);
       const pad = { u, group, canvas, tex, paid: 0, dwell: 0, pulse: 0 };
       this.drawPad(pad);
@@ -150,6 +170,113 @@ export class Game {
     pad.tex.needsUpdate = true;
   }
 
+  // ---------- register: subscription money piles up here as bills ----------
+  buildRegister() {
+    const g = new THREE.Group();
+    const desk = M.mesh(M.roundedBox(1.8, 0.95, 0.9, 0.08), 0xa9744a); desk.position.y = 0.48; g.add(desk);
+    const top = M.mesh(M.roundedBox(1.95, 0.08, 1.0, 0.03), 0xd7b27c); top.position.y = 0.98; g.add(top);
+    const body = M.mesh(M.roundedBox(0.8, 0.36, 0.62, 0.08), 0x37474f); body.position.set(-0.3, 1.2, 0); g.add(body);
+    const screen = M.mesh(M.roundedBox(0.56, 0.3, 0.06, 0.03), 0x7ee787, { emissive: 0x1f6b2a, emissiveIntensity: 0.8 }); screen.position.set(-0.3, 1.5, -0.12); screen.rotation.x = -0.35; g.add(screen);
+    for (let i = 0; i < 6; i++) { const k = M.mesh(M.roundedBox(0.13, 0.05, 0.11, 0.02), 0xeceff1); k.position.set(-0.52 + (i % 3) * 0.17, 1.4, 0.1 + Math.floor(i / 3) * 0.14); g.add(k); }
+    const crate = M.mesh(M.roundedBox(1.25, 0.2, 0.9, 0.05), 0xc8a165); crate.position.set(1.65, 0.1, 0.05); g.add(crate);
+    g.position.set(-0.6, 0, -6.2);
+    this.scene.add(g);
+    const zone = dashedSquare(3.2, 0x7ee787);
+    zone.position.set(0, 0.05, -4.2); this.scene.add(zone);
+    this.world.colliders.push({ minX: -1.6, maxX: 1.7, minZ: -6.75, maxZ: -5.6 });
+    const label = document.createElement('div'); label.className = 'reglabel';
+    label.innerHTML = '<div><b>💰 ₪0</b><small></small></div>';
+    const reg = this.reg = { group: g, zone, bills: [], label: null, guide: null, taking: false, takeT: 0, got: 0, base: new THREE.Vector3(1.05, 0.2, -6.15), shown: -1, pulse: 0 };
+    reg.label = this.ui.track(label, () => tmp2.set(0.2, 2.6, -6.2));
+  }
+  billPos(i) {
+    const col = i % 4, lay = Math.floor(i / 4);
+    return this.reg.base.clone().add(new THREE.Vector3((col % 2 - 0.5) * 0.6, 0.05 + lay * 0.08, (Math.floor(col / 2) - 0.5) * 0.36));
+  }
+  makeBill() {
+    const g = new THREE.Group();
+    const b = M.mesh(M.roundedBox(0.56, 0.07, 0.32, 0.02), 0x43a047); g.add(b);
+    const band = M.mesh(new THREE.BoxGeometry(0.12, 0.075, 0.325), 0xfff59d); g.add(band);
+    const mark = M.mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.076, 12), 0x2e7d32); g.add(mark); mark.position.x = 0.17;
+    return g;
+  }
+  updateRegister(dt) {
+    const reg = this.reg, c = this.c, pp = this.player.position;
+    const cap = this.regCap;
+    c.register = Math.min(cap, c.register + this.income * dt);
+    const per = cap / 48;
+    const target = Math.min(48, Math.ceil(c.register / per - 0.001));
+    const inZone = !this.busy && Math.abs(pp.x - reg.zone.position.x) < 1.6 && Math.abs(pp.z - reg.zone.position.z) < 1.6;
+    if (inZone && reg.bills.length && c.register >= 1) {
+      if (!reg.taking) { reg.taking = true; reg.got = 0; reg.n = 0; sfx.kaching(); vibrate(15); c.collected = true; }
+      reg.takeT -= dt;
+      while (reg.takeT <= 0 && reg.bills.length) {
+        reg.takeT += 0.055;
+        const n = reg.bills.length;
+        const value = n === 1 ? Math.floor(c.register) : Math.floor(c.register / n);
+        c.register -= value;
+        const bill = reg.bills.pop();
+        const k = reg.n++;
+        this.fly(bill, bill.position.clone(), () => tmp2.copy(this.player.position).setY(1.3), 0.32, 1.3, () => {
+          this.scene.remove(bill); this.c.coins += value; reg.got += value;
+          sfx.bill(k); if (k % 2 === 0) sfx.coin();
+          this.ui.setCoins(this.c.coins, true);
+          if (!reg.bills.length && !this.flyers.some(f => f.bill)) { this.ui.float(this.player.position.clone().setY(3), `+₪${reg.got}`, ''); this.sparkle(this.player.position.clone().setY(1.5), 10); }
+        });
+        this.flyers[this.flyers.length - 1].bill = n > 1;
+      }
+    } else {
+      reg.taking = false;
+      while (reg.bills.length < target) { // a new bill drops onto the pile
+        const b = this.makeBill(); const p = this.billPos(reg.bills.length);
+        b.position.copy(p); b.rotation.y = (Math.random() - 0.5) * 0.25; b.scale.setScalar(0.01);
+        this.scene.add(b); reg.bills.push(b); this.popIns.push({ obj: b, t: 0 });
+        if (pp.distanceTo(p) < 9 && !this.busy) sfx.bubble(reg.bills.length % 8, 0.12);
+      }
+      while (reg.bills.length > target) this.scene.remove(reg.bills.pop());
+    }
+    // label
+    const shown = Math.floor(c.register);
+    if (shown !== reg.shown || reg.subs !== c.subs.length) {
+      reg.shown = shown; reg.subs = c.subs.length;
+      const full = c.register >= cap - 0.5;
+      reg.label.el.querySelector('b').textContent = full ? `💰 ₪${shown} · מלא!` : `💰 ₪${shown}`;
+      reg.label.el.querySelector('small').textContent = c.subs.length ? `${c.subs.length} מנויים · ₪${Math.round(this.income * 60)}/דקה` : 'אין מנויים עדיין';
+      reg.label.el.classList.toggle('full', full);
+    }
+    const wantGuide = c.register >= cap * 0.35 && !inZone;
+    if (wantGuide && !reg.guide) reg.guide = this.ui.guide(() => tmp2.set(0, 3.6, -4.6), '💰');
+    if (!wantGuide && reg.guide) { this.ui.untrack(reg.guide); reg.guide = null; }
+  }
+  addSubSign(h, instant) {
+    if (!h || this.subSigns.has(h.i)) return;
+    const tex = M.textCanvas(256, 128, (x, W, H) => {
+      x.fillStyle = '#2e7d32'; M.rr(x, 4, 4, W - 8, H - 8, 22); x.fill();
+      x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.direction = 'rtl';
+      x.font = '700 50px Fredoka, Rubik, sans-serif'; x.fillText('✓ מנוי', W / 2, H / 2 + 2);
+    });
+    const g = new THREE.Group();
+    const post = M.mesh(new THREE.BoxGeometry(0.08, 1.1, 0.08), 0x6d4c2f); post.position.y = 0.55; g.add(post);
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide })); board.position.y = 1.25; g.add(board);
+    const side = new THREE.Vector3(Math.cos(h.slot.rot), 0, -Math.sin(h.slot.rot));
+    g.position.copy(h.door).addScaledVector(h.facing, 0.6).addScaledVector(side, 1.5);
+    this.scene.add(g); this.subSigns.set(h.i, g);
+    if (!instant) { g.scale.setScalar(0.01); this.popIns.push({ obj: g, t: 0 }); this.sparkle(g.position.clone().setY(1.3), 16); }
+  }
+  removeSubSign(h) {
+    const g = this.subSigns.get(h.i); if (!g) return;
+    this.scene.remove(g); this.subSigns.delete(h.i); this.poof(g.position.clone().setY(1), 0xffffff, 8);
+  }
+  updatePopIns(dt) {
+    for (const p of this.popIns) {
+      p.t += dt * 3.2;
+      const e = Math.min(1, p.t);
+      p.obj.scale.setScalar(Math.max(0.01, 1 + Math.sin(e * Math.PI * 1.5) * (1 - e) * 0.6 - (1 - e) * (1 - e)));
+      if (e >= 1) { p.obj.scale.setScalar(1); p.done = true; }
+    }
+    this.popIns = this.popIns.filter(p => !p.done);
+  }
+
   // ---------- supply ----------
   addStock(instant) {
     const it = M.makeItem(this.pro);
@@ -170,41 +297,53 @@ export class Game {
   }
 
   // ---------- jobs ----------
-  spawnJob() {
+  spawnJob(o = {}) {
     const busyHouses = new Set(this.jobs.map(j => j.house));
     const free = this.world.houses.filter(h => h.slot.unlock <= this.c.level && !busyHouses.has(h));
-    if (!free.length) return;
-    const house = D.pick(free);
-    const tmpl = D.pick(this.P.jobs);
+    if (!o.house && !free.length) return;
+    const house = o.house || D.pick(free);
+    const tmpl = o.tmpl || D.pick(this.P.jobs);
     const lv = this.c.level;
+    const vip = !o.house && lv >= 2 && this.c.tut >= 2 && Math.random() < 0.15;
     const capTotal = this.cap + this.hcap;
-    const need = Math.max(1, Math.min(capTotal, 1 + Math.floor(Math.random() * Math.min(5, 1 + Math.ceil(lv / 2)))));
+    const need = o.need || Math.max(1, Math.min(capTotal, 1 + Math.floor(Math.random() * Math.min(5, 1 + Math.ceil(lv / 2)))));
     const dist = house.door.distanceTo(BASE.pallet);
-    const max = (26 + dist * 1.2 + need * 5) * (1 - Math.min(0.3, (lv - 1) * 0.04)) + (this.c.tut < 2 ? 40 : 0);
-    const name = D.pick(D.NAMES);
+    const max = (26 + dist * 1.2 + need * 5) * (1 - Math.min(0.3, (lv - 1) * 0.04)) * (vip ? 0.75 : 1) * (o.follow ? 1.25 : 1) + (this.c.tut < 2 ? 40 : 0);
+    const name = o.name || D.pick(D.NAMES);
     const cust = M.makePerson({});
+    if (vip) { // a little gold crown
+      const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.17, 0.16, 5, 1, true), M.mat(0xffc928, { side: THREE.DoubleSide, emissive: 0x6b4a00 }));
+      crown.position.y = 0.36; cust.userData.head.add(crown);
+    }
     cust.position.copy(house.door).addScaledVector(house.facing, -0.2);
     cust.rotation.y = Math.atan2(house.facing.x, house.facing.z);
     cust.scale.setScalar(0.001);
     this.scene.add(cust);
-    const ring = ringMarker(0xffe066);
+    const ring = ringMarker(vip ? 0xffb300 : o.follow ? 0x7ee787 : 0xffe066);
     ring.position.copy(house.door).addScaledVector(house.facing, 1.0); ring.position.y = 0.05;
     this.scene.add(ring);
     const job = {
       id: ++this.jobSeq, house, tmpl, need, delivered: 0, time: max, max, name, cust, ring,
-      reward: Math.round(30 + need * 14 + lv * 7 + Math.random() * 12),
-      xp: 18 + need * 7 + lv * 2, state: 'open', excused: false, spot: ring.position.clone(), appear: 0, angry: false,
+      reward: Math.round((30 + need * 14 + lv * 7 + Math.random() * 12) * (vip ? 2.2 : 1) * (o.follow ? 1.4 : 1)),
+      xp: Math.round((18 + need * 7 + lv * 2) * (vip ? 1.5 : 1)), state: 'open', excused: false, spot: ring.position.clone(), appear: 0, angry: false,
+      vip, follow: !!o.follow, mood: (vip ? -1 : 0) + (o.follow ? 1 : 0), mult: 1, bonusTime: 0,
     };
-    job.marker = this.ui.marker(() => tmp.copy(house.door).setY(3.2), this.P.emoji);
+    job.marker = this.ui.marker(() => tmp.copy(house.door).setY(3.2), vip ? '👑' : o.follow ? '🔁' : this.P.emoji);
     this.jobs.push(job);
     sfx.phone(); vibrate([30, 60, 30]);
-    this.ui.toast({ icon: '📱', name: `${name} · ${tmpl.t}`, text: tmpl.m, dur: 5.5 });
+    this.ui.toast({ icon: vip ? '👑' : '📱', name: `${vip ? 'לקוח VIP · ' : ''}${name} · ${tmpl.t}`, text: vip ? `${tmpl.m} (משלם כפול, אבל אין לו סבלנות)` : tmpl.m, dur: 5.5, cls: vip ? 'review' : '' });
   }
 
   updateJobs(dt) {
     const lv = this.c.level;
     const maxOpen = Math.min(4, 1 + Math.floor((lv + 1) / 2));
     const open = this.jobs.filter(j => j.state === 'open').length;
+    for (const f of this.pendingFollow) {
+      if (this.jobs.some(j => j.house === f.house)) continue;
+      f.done = true;
+      this.spawnJob({ house: f.house, name: f.name, follow: true, need: 1 + (Math.random() < 0.5 ? 1 : 0), tmpl: { t: `חזרה ל${f.name}`, m: `${f.extra}, כמו שסיכמנו 🙏` } });
+    }
+    this.pendingFollow = this.pendingFollow.filter(f => !f.done);
     this.jobT -= dt;
     if (this.jobT <= 0 && open < maxOpen && (this.c.tut >= 1 || this.jobs.length === 0)) {
       this.spawnJob();
@@ -248,6 +387,12 @@ export class Game {
     this.c.today.lost++;
     sfx.fail();
     this.ui.toast({ icon: '😡', name: j.name, text: `${j.name} ${D.pick(D.LATE_LINES)}`, cls: 'bad', stars: 1 });
+    if (this.c.streak) { this.c.streak = 0; this.ui.float(this.player.position.clone().setY(3), 'הרצף נשבר 💔', 'bad'); }
+    const si = this.c.subs.indexOf(j.house.i);
+    if (si >= 0) {
+      this.c.subs.splice(si, 1); this.removeSubSign(j.house);
+      setTimeout(() => this.ui.toast({ icon: '📇', name: j.name, text: `${j.name} ${D.pick(D.UNSUB_LINES)}`, cls: 'bad' }), 1600);
+    }
     this.refreshHUD();
   }
 
@@ -269,44 +414,77 @@ export class Game {
     document.getElementById('excuseBtn').hidden = true;
     this.vel.set(0, 0, 0);
     const c = j.cust;
-    this.ui.bubble(() => tmp2.copy(c.position).setY(2.3), D.pick(D.ARRIVE_LINES), 1.6);
-    await wait(900);
+    // how fast you came sets the opening mood
+    const frac = j.time / j.max;
+    if (frac > 0.6) j.mood += 1; else if (frac < 0.25) j.mood -= 1;
+    this.ui.bubble(() => tmp2.copy(c.position).setY(2.3), frac > 0.6 ? 'איזה מהר! 😮' : frac < 0.25 ? 'סוף סוף!! 😤' : D.pick(D.ARRIVE_LINES), 1.6);
+    await wait(800);
+    await this.talk(j);
     duckMusic(true);
     const res = await runMiniGame(this.P.game, {
       title: `${this.P.emoji} ${j.tmpl.t}`, customer: `${j.name}: "${j.tmpl.m}"`,
-      diff: Math.min(1, (this.c.level - 1) * 0.12 + j.need * 0.06), skill: this.c.up.skill, find: D.pick(this.P.finds),
+      diff: Math.min(1, (this.c.level - 1) * 0.12 + j.need * 0.06 + (j.vip ? 0.15 : 0)), skill: this.c.up.skill, find: D.pick(this.P.finds), bonusTime: j.bonusTime,
     });
     duckMusic(false);
     const q = res.quality;
-    const stars = Math.max(1, Math.min(5, Math.round(1 + q * 4)));
+    const mood = clampMood(j.mood);
+    const stars = Math.max(1, Math.min(5, Math.round(1 + q * 4) + (mood >= 2 ? 1 : mood <= -2 ? -1 : 0)));
     const bonus = 1 + this.c.up.skill * 0.15;
     const doorFee = res.kicked ? 120 : 0;
-    const amount = mult => Math.round(j.reward * mult * (0.55 + 0.45 * q) * bonus) + doorFee;
+    const streakMult = this.streakMult;
+    const amount = mult => Math.round(j.reward * mult * (0.55 + 0.45 * q) * bonus * j.mult * streakMult) + doorFee;
+    const tipFor = id => id === 'greedy' || mood < 1 ? 0 : Math.round(j.reward * 0.15 * mood * (j.vip ? 2 : 1));
     const head = res.kicked ? '🦶 הדלת עפה. אבל נפתחה!' : q > 0.85 ? 'עבודה מושלמת!' : q > 0.55 ? 'העבודה הושלמה!' : q > 0.3 ? 'נו... זה עובד. בערך.' : 'אמ... לפחות ניסית?';
+    const chips = [
+      `<span class="chip">${D.MOODS[mood + 3]} מצב רוח</span>`,
+      j.vip ? '<span class="chip gold">👑 VIP</span>' : '',
+      j.mult !== 1 ? `<span class="chip">${j.mult > 1 ? '📈' : '📉'} x${j.mult.toFixed(2)}</span>` : '',
+      streakMult > 1 ? `<span class="chip fire">🔥 רצף x${streakMult.toFixed(1)}</span>` : '',
+      tipFor('fair') ? `<span class="chip gold">💛 טיפ ₪${tipFor('fair')}</span>` : '',
+    ].join('');
     const choice = await this.ui.modal(`
       <h2>${head}</h2>
       <div class="stars">${[1, 2, 3, 4, 5].map(i => `<span class="${i <= stars ? 'on' : ''}" style="animation-delay:${i * 0.09}s">⭐</span>`).join('')}</div>
+      <div class="chips">${chips}</div>
       <div class="quote">${esc(j.name)}: "נו, כמה אני חייב לך?"${res.kicked ? ' <br>(+ ₪120 דלת חדשה, כמובן)' : ''}</div>
       <div class="choices">${D.PRICES.map(p => `
-        <button class="choice ${p.id}" data-v="${p.id}"><span class="ci">${p.icon}</span><span class="cb"><div class="cl">${p.label}</div><div class="cs">${p.sub}</div></span><span class="ca">₪${amount(p.mult)}</span></button>`).join('')}
+        <button class="choice ${p.id}" data-v="${p.id}"><span class="ci">${p.icon}</span><span class="cb"><div class="cl">${p.label}</div><div class="cs">${p.sub}${tipFor(p.id) ? ' · + טיפ' : ''}</div></span><span class="ca">₪${amount(p.mult)}</span></button>`).join('')}
       </div>`);
     const pr = D.PRICES.find(p => p.id === choice);
-    let money = amount(pr.mult);
+    const money = amount(pr.mult);
+    const tip = tipFor(choice);
     let final = stars;
     if (choice === 'greedy') final = Math.max(1, stars - 3);
     if (res.kicked) final = Math.min(final, 2);
     this.c.reviews.push(final); this.trimReviews();
-    const t = this.c.today; t.jobs++; t.earned += money; this.c.stats.jobs++; this.c.stats.earned += money;
+    const t = this.c.today; t.jobs++; t.earned += money + tip; this.c.stats.jobs++; this.c.stats.earned += money + tip;
     if (choice === 'cash') t.cash++;
     if (choice === 'greedy') t.greedy++;
     if (res.kicked) t.kicked++;
     j.state = 'leaving'; j.leaveT = 0; j.happy = choice !== 'greedy' && final >= 3;
     c.userData.body.rotation.y = 0;
     this.ui.bubble(() => tmp2.copy(c.position).setY(2.3), j.happy ? D.pick(['😍', '🥳', '🙏', '👍']) : D.pick(['😡', '🤬', '😱', '💸']), 2, 'emoji');
-    this.burstCoins(tmp.copy(j.house.door).setY(1.2), money);
-    sfx.cash(); vibrate(30);
+    const door = j.house.door.clone().setY(1.2);
+    this.burstCoins(door, money);
+    sfx.kaching(); vibrate(30);
     this.ui.float(this.player.position.clone().setY(2.6), `+${Math.round(j.xp)} XP`, 'xp');
-    // review lands a moment later
+    if (tip) setTimeout(() => { this.burstCoins(door, tip, true); sfx.tip(); this.ui.float(door.clone().setY(2.6), `💛 טיפ +₪${tip}`, ''); }, 650);
+    // streak of happy customers
+    const good = final >= 4 && choice !== 'greedy';
+    if (good) {
+      this.c.streak++;
+      if (this.c.streak >= 2) setTimeout(() => { sfx.streak(this.c.streak); this.ui.float(this.player.position.clone().setY(3.2), `🔥 רצף ${this.c.streak}! x${this.streakMult.toFixed(1)}`, ''); }, 900);
+    } else if (final <= 2 && this.c.streak) { this.c.streak = 0; this.ui.float(this.player.position.clone().setY(3.2), 'הרצף נשבר 💔', 'bad'); }
+    // happy customers may sign a maintenance subscription that pays into the register
+    const hi = j.house.i;
+    if (good && !this.c.subs.includes(hi) && (this.c.subs.length === 0 || Math.random() < D.subChance(this.c.up.ads) + (j.vip ? 0.25 : 0))) {
+      this.c.subs.push(hi);
+      setTimeout(() => {
+        sfx.sub(); vibrate([20, 40, 20]);
+        this.addSubSign(j.house);
+        this.ui.toast({ icon: '📇', name: `${j.name} · מנוי אחזקה`, text: `${j.name} ${D.pick(D.SUB_LINES)} (+₪${(D.SUB_RATE * D.subMult(this.c.up.ads) * 60).toFixed(0)} לדקה)`, cls: 'review', dur: 5 });
+      }, 2600);
+    }
     setTimeout(() => {
       const pool = choice === 'greedy' ? D.REVIEWS.greedy : final >= 4 ? [...D.REVIEWS.great, ...this.P.praise] : final === 3 ? D.REVIEWS.ok : D.REVIEWS.bad;
       sfx.job();
@@ -328,6 +506,47 @@ export class Game {
     this.busy = false;
     await this.checkLevel();
     this.save();
+  }
+
+  // WhatsApp-style chat on the doorstep. Answers move the customer's mood and the price.
+  talk(j) {
+    let k; do { k = Math.floor(Math.random() * D.TALKS.length); } while ((k === this.lastTalk || (j.follow && D.TALKS[k].a.some(a => a.follow))) && D.TALKS.length > 2);
+    this.lastTalk = k;
+    const T = D.TALKS[k], extra = D.pick(D.EXTRAS);
+    const fill = x => esc(x.replace('{extra}', extra));
+    const face = () => D.MOODS[clampMood(j.mood) + 3];
+    const meter = () => D.MOODS.map((m, i) => `<i class="${i === clampMood(j.mood) + 3 ? 'on' : ''}">${m}</i>`).join('');
+    return this.ui.modal(`
+      <div class="chat-head"><span class="cav">${face()}</span><div class="cn"><b>${esc(j.name)}${j.vip ? ' 👑' : ''}</b><small>${esc(j.tmpl.t)} · מקליד/ה...</small></div></div>
+      <div class="moodbar">${meter()}</div>
+      <div class="chat"><div class="msg them">${fill(T.q)}</div></div>
+      <div class="answers">${T.a.map((a, i) => `<button class="ans" data-c="${i}">${fill(a.t)}</button>`).join('')}</div>`,
+    (card, close) => {
+      const chat = card.querySelector('.chat');
+      sfx.phone();
+      card.querySelectorAll('[data-c]').forEach(btn => btn.addEventListener('click', () => {
+        card.querySelectorAll('[data-c]').forEach(b => { b.disabled = true; b.classList.toggle('picked', b === btn); });
+        const a = T.a[+btn.dataset.c];
+        let reply = a.r, dm = a.mood || 0, mult = a.mult || 1, note = a.note;
+        if (a.upsell) {
+          if (Math.random() < 0.55) { reply = D.pick(D.UPSELL_YES); dm = -1; mult = 1.5; note = 'מכרת לו מערכת חדשה! x1.5'; }
+          else { reply = D.pick(D.UPSELL_NO); dm = -2; note = 'הוא לא קנה את זה'; }
+        }
+        chat.insertAdjacentHTML('beforeend', `<div class="msg me">${fill(a.t)}</div>`);
+        sfx.send();
+        setTimeout(() => {
+          j.mood = clampMood(j.mood + dm); j.mult *= mult; j.bonusTime += a.time || 0;
+          if (a.follow) this.pendingFollow.push({ house: j.house, name: j.name, extra });
+          chat.insertAdjacentHTML('beforeend', `<div class="msg them">${esc(reply)}</div>${note || dm ? `<div class="fx ${dm > 0 ? 'up' : dm < 0 ? 'down' : ''}">${dm > 0 ? '😊 +' + dm : dm < 0 ? '😠 ' + dm : ''}${note ? ' · ' + esc(note) : ''}</div>` : ''}`);
+          card.querySelector('.cav').textContent = face();
+          card.querySelector('.cav').classList.add('pop');
+          card.querySelector('.moodbar').innerHTML = meter();
+          card.querySelector('.cn small').textContent = j.tmpl.t;
+          if (dm > 0) sfx.moodUp(); else if (dm < 0) sfx.moodDown(); else sfx.bubble(3);
+          setTimeout(() => close(a), 1500);
+        }, 650);
+      }));
+    });
   }
 
   async checkLevel() {
@@ -411,12 +630,13 @@ export class Game {
   }
 
   // ---------- coins & effects ----------
-  burstCoins(pos, value) {
+  burstCoins(pos, value, gold) {
     const n = Math.max(6, Math.min(26, Math.round(value / 6)));
     let left = value;
     for (let i = 0; i < n; i++) {
       const v = i === n - 1 ? left : Math.floor(value / n); left -= v;
       const m = M.makeCoin(); m.position.copy(pos); this.scene.add(m);
+      if (gold) m.scale.setScalar(1.35);
       const a = Math.random() * Math.PI * 2, s = rand(2, 4.5);
       this.coins.push({ m, v, vel: new THREE.Vector3(Math.cos(a) * s, rand(5, 8), Math.sin(a) * s), t: 0, state: 'air', spin: rand(6, 12) });
     }
@@ -427,7 +647,7 @@ export class Game {
       c.t += dt; c.m.rotation.z += c.spin * dt;
       if (c.state === 'air') {
         c.vel.y -= 22 * dt; c.m.position.addScaledVector(c.vel, dt);
-        if (c.m.position.y < 0.2) { c.m.position.y = 0.2; c.vel.y *= -0.45; c.vel.x *= 0.6; c.vel.z *= 0.6; if (Math.abs(c.vel.y) < 1) c.state = 'ground'; }
+        if (c.m.position.y < 0.2) { if (c.vel.y < -3 && Math.random() < 0.3) sfx.bubble(8 + Math.floor(Math.random() * 4), 0.06); c.m.position.y = 0.2; c.vel.y *= -0.45; c.vel.x *= 0.6; c.vel.z *= 0.6; if (Math.abs(c.vel.y) < 1) c.state = 'ground'; }
         if (c.t > 0.7) c.state = 'mag';
       } else if (c.state === 'ground' || c.state === 'mag') {
         if (c.t > 0.45) c.state = 'mag';
@@ -538,6 +758,8 @@ export class Game {
     this.updateCoins(dt);
     this.updateParts(dt);
     this.updatePads(dt);
+    this.updateRegister(dt);
+    this.updatePopIns(dt);
     this.updateGuide();
 
     // honking cars
@@ -719,6 +941,7 @@ export class Game {
     if (this.busy) r = null;
     else if (this.c.tut === 0 && open.length) r = `אסוף ${this.P.item} מהטנדר 🛻`;
     else if (this.c.tut === 1 && open.length) r = 'קדימה ללקוח! עקוב אחרי הסימן ❗';
+    else if (this.c.register >= 25 && !this.c.collected) r = 'יש כסף בקופה! לך לאסוף 💰';
     else if (!open.length) r = 'מחכים לטלפון... 📱';
     else if (this.c.stats.jobs < 4 && this.c.coins >= D.upgradeCost(D.UPGRADES[0], this.c.up.belt) && this.c.up.belt === 0) r = 'עמוד על משטח שדרוג כדי לקנות 🎒';
     this.ui.ribbon(r);
@@ -748,4 +971,5 @@ function makeScooter() {
 }
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
+const clampMood = m => Math.max(-3, Math.min(3, m));
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

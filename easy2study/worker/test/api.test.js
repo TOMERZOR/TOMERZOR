@@ -109,7 +109,30 @@ test("several pages are sent as image blocks, in order", async () => {
   assert.equal(res.status, 200);
   const content = seen[0].body.messages[0].content;
   assert.deepEqual(content.slice(0, 3).map((b) => b.source.data), ["cGFnZTE=", "cGFnZTI=", "cGFnZTM="]);
-  assert.match(content[3].text, /The 3 images above, in order, are pages/);
+  assert.match(content[3].text, /the 3 images \(pages, in order\) above are the learner's study material/);
+});
+
+test("a PDF goes first, as a document block, next to photos", async () => {
+  reply = message(PLAN);
+  seen.length = 0;
+  const pdf = { data: "JVBERi0xLjQKJcfsj6IK" };
+  const res = await worker.fetch(post("/api/plan", { profile: PROFILE, topic: "פרק 3", pdf, images: [{ media_type: "image/png", data: "iVBORw0K" }] }), env());
+  assert.equal(res.status, 200);
+  const content = seen[0].body.messages[0].content;
+  assert.equal(content[0].type, "document");
+  assert.equal(content[0].source.media_type, "application/pdf");
+  assert.equal(content[1].type, "image");
+  assert.match(content[2].text, /the PDF document and the image above are the learner's study material/);
+});
+
+test("a file that is not a PDF, or a huge one, is refused", async () => {
+  seen.length = 0;
+  const bad = await worker.fetch(post("/api/plan", { pdf: { data: "aGVsbG8=" } }), env());
+  assert.equal(bad.status, 400);
+  assert.equal((await bad.json()).error, "bad_pdf");
+  const big = await worker.fetch(post("/api/plan", { pdf: { data: "JVBER" + "A".repeat(14_000_000) } }), env());
+  assert.equal(big.status, 413);
+  assert.equal(seen.length, 0);
 });
 
 test("more than four pages are refused", async () => {

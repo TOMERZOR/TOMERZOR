@@ -767,7 +767,7 @@
   function newLesson() {
     current = { name: "new" };
     const ai = Tutor.available();
-    const d = { subject: null, topic: "", material: "", images: [], when: null, paste: false };
+    const d = { subject: null, topic: "", material: "", images: [], pdf: null, when: null, paste: false };
     const WHEN = [["today", "היום"], ["tomorrow", "מחר"], ["week", "השבוע"], ["later", "בעוד יותר משבוע"], ["unknown", g("לא יודע", "לא יודעת")]];
     const el = mount(`
       <div class="topbar">
@@ -792,10 +792,13 @@
           <div class="attach">
             <button type="button" class="attach__btn" data-pick="camera">${icon("camera", "icon--lg")}<span>לצלם<small>דף מהספר</small></span></button>
             <button type="button" class="attach__btn" data-pick="gallery">${icon("image", "icon--lg")}<span>תמונה<small>מהגלריה</small></span></button>
+            <button type="button" class="attach__btn" data-pick="pdf" aria-pressed="false">${icon("file-pdf", "icon--lg")}<span>קובץ PDF<small>עד 10MB</small></span></button>
             <button type="button" class="attach__btn" data-paste aria-pressed="false">${icon("clipboard-text", "icon--lg")}<span>טקסט<small>להדביק</small></span></button>
           </div>
           <input type="file" accept="image/*" capture="environment" hidden data-file="camera">
           <input type="file" accept="image/*" multiple hidden data-file="gallery">
+          <input type="file" accept="application/pdf,.pdf" hidden data-file="pdf">
+          <div data-pdf></div>
           <div class="photos" data-photos aria-live="polite"></div>
           <div data-paste-box hidden><label class="sr-only" for="material">החומר</label><textarea id="material" class="textarea" maxlength="8000" placeholder="להדביק כאן את החומר"></textarea></div>
         </div>` : ""}
@@ -813,7 +816,7 @@
     const make = $("[data-make]", el);
     const topic = $("#topic", el);
     const err = $("[data-err]", el);
-    const refresh = () => { make.disabled = !(d.topic.trim() || d.images.length || d.material.trim()); err.textContent = ""; };
+    const refresh = () => { make.disabled = !(d.topic.trim() || d.images.length || d.pdf || d.material.trim()); err.textContent = ""; };
     $("[data-back]", el).onclick = home;
     radio(el, "data-subject", (v) => { d.subject = v; });
     radio(el, "data-when", (v) => { d.when = v; });
@@ -839,13 +842,46 @@
         if (more) more.onclick = () => $('[data-file="gallery"]', el).click();
         refresh();
       };
+      // One PDF: a tile with its name and size, and a remove button.
+      const pdfBox = $("[data-pdf]", el);
+      const pdfBtn = $('[data-pick="pdf"]', el);
+      const drawPdf = () => {
+        pdfBtn.setAttribute("aria-pressed", String(Boolean(d.pdf)));
+        pdfBox.innerHTML = d.pdf ? `
+          <div class="file">
+            <span class="file__ic">${icon("file-pdf")}</span>
+            <span class="file__text"><bdi class="file__name">${esc(d.pdf.name.replace(/\.pdf$/i, ""))}</bdi><span class="small muted">${fileSize(d.pdf.size)}</span></span>
+            <button type="button" class="icon-btn" data-rm-pdf aria-label="להסיר את הקובץ">${icon("x")}</button>
+          </div>` : "";
+        const rm = $("[data-rm-pdf]", pdfBox);
+        if (rm) rm.onclick = () => { d.pdf = null; drawPdf(); };
+        refresh();
+      };
+      $('[data-file="pdf"]', el).onchange = async (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = "";
+        if (!f) return;
+        if (!/pdf$/i.test(f.type) && !/\.pdf$/i.test(f.name)) return toast("זה לא נראה כמו קובץ PDF.");
+        if (f.size > PDF_MAX) return toast("הקובץ גדול מ-10MB. אפשר לשלוח רק את הפרק שצריך?");
+        try {
+          d.pdf = { name: f.name, size: f.size, data: await toBase64(f) };
+        } catch {
+          return toast("לא הצלחתי לפתוח את הקובץ. אפשר לנסות שוב?");
+        }
+        drawPdf();
+        pdfBox.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
+      };
       $$("[data-pick]", el).forEach((b) => {
         b.onclick = () => {
+          if (b.dataset.pick === "pdf") {
+            if (d.pdf) toast("אפשר קובץ PDF אחד. הקובץ החדש יחליף את הקודם.");
+            return $('[data-file="pdf"]', el).click();
+          }
           if (d.images.length >= MAX) return toast(`אפשר עד ${MAX} עמודים בפעם אחת.`);
           $(`[data-file="${b.dataset.pick}"]`, el).click();
         };
       });
-      $$("[data-file]", el).forEach((input) => {
+      $$('[data-file]:not([data-file="pdf"])', el).forEach((input) => {
         input.onchange = async () => {
           const files = [...(input.files || [])];
           input.value = "";
@@ -880,6 +916,17 @@
       }
       startPath({ ...d, goal: "exam" });
     };
+  }
+
+  const PDF_MAX = 10 * 1024 * 1024;
+  const fileSize = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)}MB` : `${Math.max(1, Math.round(n / 1024))}KB`);
+  function toBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result).split(",")[1]);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
   }
 
   // Phone photos are big: resize to at most 1600px and send as JPEG.
@@ -931,6 +978,8 @@
     too_long: "החומר ארוך מדי בשביל פעם אחת. אפשר לשלוח חלק ממנו?",
     image_too_large: "התמונות גדולות מדי. אפשר לנסות עם פחות עמודים?",
     too_many_images: "אפשר עד 4 עמודים בפעם אחת.",
+    pdf_too_large: "הקובץ גדול מדי. אפשר לשלוח רק את הפרק שצריך?",
+    bad_pdf: "לא הצלחתי לקרוא את הקובץ. זה בטוח קובץ PDF?",
     network: "נראה שאין חיבור לאינטרנט כרגע.",
     timeout: "זה לקח יותר מדי זמן. אפשר לנסות שוב?",
   };
@@ -957,13 +1006,13 @@
   // written when the learner gets near it (the next one is prepared while
   // they learn the current one).
   const pending = {}; // "courseId:index" -> promise of a lesson id
-  const photos = {}; // courseId -> images, kept for this visit only
+  const photos = {}; // courseId -> {images, pdf}, kept for this visit only
 
   function startPath(d) {
     const p = S.profile || {};
     const fav = (p.interests || [])[0];
     const lines = [
-      (d.images || []).length ? `קורא את ${d.images.length === 1 ? "הדף" : "הדפים"} ששלחת...` : "חושב מאיפה הכי כדאי להתחיל...",
+      d.pdf ? "קורא את הקובץ ששלחת..." : (d.images || []).length ? `קורא את ${d.images.length === 1 ? "הדף" : "הדפים"} ששלחת...` : "חושב מאיפה הכי כדאי להתחיל...",
       "מחלק את הנושא לשלבים קטנים...",
       fav ? `מחפש דוגמאות מ${fav}...` : "מחפש דוגמאות מהחיים...",
       "בונה לך מסלול, צעד אחר צעד...",
@@ -976,6 +1025,7 @@
       topic: (d.topic || "").trim(),
       material: (d.material || "").trim() || null,
       images: d.images || [],
+      pdf: d.pdf ? { data: d.pdf.data } : null,
       goal: d.goal,
       when: d.when || null,
     }).then((res) => {
@@ -1002,7 +1052,7 @@
         created: Date.now(),
         updated: Date.now(),
       };
-      if ((d.images || []).length && !str(plan.notes)) photos[id] = d.images;
+      if (((d.images || []).length || d.pdf) && !str(plan.notes)) photos[id] = { images: d.images || [], pdf: d.pdf ? { data: d.pdf.data } : null };
       save();
       prepare(id, 0);
       coursePath(id);
@@ -1030,7 +1080,8 @@
       subject: c.subject ? subjectOf(c.subject).name : null,
       topic: c.topic,
       material: c.notes || null,
-      images: photos[courseId] || [],
+      images: (photos[courseId] || {}).images || [],
+      pdf: (photos[courseId] || {}).pdf || null,
       goal: c.goal,
       when: c.when,
       course: { title: c.title, chapters: c.chapters.map((x) => x.title), index: i, goal: ch.goal, learned },

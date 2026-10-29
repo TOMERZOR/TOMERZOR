@@ -15,6 +15,12 @@ AirDrop של אפל עובד בפרוטוקול סגור (AWDL), שמשתמש ב
 
 צריך Python 3.8 ומעלה. לא צריך להתקין שום חבילה נוספת.
 
+**הדרך הקצרה (בכל מחשב שיש בו Python):** פותחים Python (החלון עם `>>>`), מדביקים את השורה הזאת ולוחצים Enter:
+```python
+import urllib.request as u; exec(u.urlopen("https://raw.githubusercontent.com/TOMERZOR/TOMERZOR/claude/nifty-noether-y5yku0/wifidrop/install.py").read())
+```
+השורה מורידה רק את הקבצים של WiFiDrop לתיקייה `WiFiDrop-app` בתיקיית המשתמש, ומפעילה את התוכנה. בפעמים הבאות מפעילים בלחיצה כפולה על `start-windows.bat` שבתיקייה הזאת.
+
 **Windows**
 1. מתקינים Python מ-[python.org/downloads](https://www.python.org/downloads/). בהתקנה מסמנים **Add python.exe to PATH**.
 2. לוחצים לחיצה כפולה על `start-windows.bat`.

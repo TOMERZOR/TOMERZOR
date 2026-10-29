@@ -1115,3 +1115,7 @@ html, body { overflow-x: hidden; max-width: 100%; }
 .veq__p small { font-size: .7em; color: var(--ink-2); text-align: center; max-width: 7.5em; line-height: 1.3; }
 .veq__p--op { background: transparent; min-width: 0; padding: 8px 2px; }
 .veq__p--op b { color: var(--accent); }
+
+/* Going back in a lesson: the screen comes in from the right, the way back reads in Hebrew */
+.screen--back.screen--enter { animation-name: screen-in-back; }
+@keyframes screen-in-back { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }

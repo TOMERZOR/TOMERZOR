@@ -1609,17 +1609,42 @@
     </div>`;
   }
 
+  // Back goes to the previous screen of the lesson; from the first one, to the path map.
+  const lessonCourse = () => { const r = S.lessons[L.id]; return r && r.courseId && S.courses[r.courseId] ? r.courseId : null; };
   function lessonTop() {
+    const canBack = L.pos > 0 || lessonCourse();
     return `<div class="topbar">
-      <button class="icon-btn" data-close aria-label="לצאת מהשיעור">${icon("x")}</button>
+      ${canBack ? `<button class="icon-btn" data-prev aria-label="${L.pos > 0 ? "חזרה למסך הקודם" : "חזרה למפת השלבים"}">${icon("arrow-right")}</button>` : ""}
       ${progressBar()}
       <span class="got" data-got aria-label="${g("הבנת", "הבנת")} ${L.got} דברים">${icon("check", "icon--sm")}<b>${L.got}</b></span>
       <button class="icon-btn" data-read aria-label="הקראה בקול" aria-pressed="${S.settings.read}">${icon("speaker-high")}</button>
+      <button class="icon-btn" data-close aria-label="לצאת מהשיעור">${icon("x")}</button>
     </div>`;
   }
 
+  function goBack() {
+    stopSpeaking();
+    if (L.pos > 0) {
+      L.pos--;
+      L.back = true;
+      renderStep();
+      return;
+    }
+    const courseId = lessonCourse();
+    if (courseId) { clearInterval(breakTimer); coursePath(courseId); }
+  }
+  // Arrow keys follow the reading direction: right is back, left is forward.
+  document.addEventListener("keydown", (e) => {
+    if (current.name !== "lesson" || sheetState || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "")) return;
+    if (e.key === "ArrowRight") { const b = $(".screen:not(.screen--leave) [data-prev]"); if (b) { e.preventDefault(); b.click(); } }
+    if (e.key === "ArrowLeft") { const b = $(".screen:not(.screen--leave) [data-next]"); if (b && !b.disabled) { e.preventDefault(); b.click(); } }
+  });
+
   function bindLessonTop(el, readFn) {
     $("[data-close]", el).onclick = () => { stopSpeaking(); clearInterval(breakTimer); home(); };
+    const pb = $("[data-prev]", el);
+    if (pb) pb.onclick = goBack;
     const rb = $("[data-read]", el);
     rb.onclick = () => {
       S.settings.read = !S.settings.read;
@@ -1628,6 +1653,13 @@
       if (S.settings.read) readFn(); else stopSpeaking();
       toast(S.settings.read ? "הקראה בקול: פועלת" : "הקראה בקול: כבויה");
     };
+  }
+
+  // Going back slides the screen in from the right (backwards in Hebrew).
+  function lessonCls() {
+    const back = L.back;
+    L.back = false;
+    return back ? "lesson screen--back" : "lesson";
   }
 
   function renderStep() {
@@ -1853,7 +1885,7 @@
       <div class="lesson__bar">
         <button class="btn btn--lost" data-lost>${icon("question")}לא הבנתי</button>
         <button class="btn btn--primary" data-next></button>
-      </div>`, "lesson");
+      </div>`, lessonCls());
     const next = $("[data-next]", el);
     const label = () => {
       next.innerHTML = examQ && shown === 0
@@ -2214,8 +2246,8 @@
       ${lessonTop()}
       <div class="lesson__stage">${checkHtml(c, { kicker: calmLine })}</div>
       <div class="lesson__bar" style="grid-template-columns:1fr">
-        <button class="btn btn--primary" data-next disabled>${isLast ? "סיימתי" : "ממשיכים"} ${icon(isLast ? "check" : "arrow-left")}</button>
-      </div>`, "lesson");
+        <button class="btn btn--primary" data-next ${i in L.answered ? "" : "disabled"}>${isLast ? "סיימתי" : "ממשיכים"} ${icon(isLast ? "check" : "arrow-left")}</button>
+      </div>`, lessonCls());
     bindLessonTop(el, () => speak(`${spoken(c.question)}. ${c.options.map((o, k) => `${KEYS[k]}: ${spoken(o)}`).join(". ")}`));
     if (S.settings.read) setTimeout(() => speak(`${spoken(c.question)}. ${c.options.map((o, k) => `${KEYS[k]}: ${spoken(o)}`).join(". ")}`), 350);
     const next = $("[data-next]", el);

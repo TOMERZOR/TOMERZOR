@@ -13,7 +13,7 @@ export function drawGarden(cv, flowers, progress, now) {
 
   // a soft glow behind the flowers, then two rolling hills
   const glow = c.createRadialGradient(W / 2, H * 0.9, 0, W / 2, H * 0.9, W * 0.6);
-  glow.addColorStop(0, 'rgba(167,139,250,0.28)'); glow.addColorStop(1, 'rgba(167,139,250,0)');
+  glow.addColorStop(0, 'rgba(255,170,130,0.22)'); glow.addColorStop(1, 'rgba(255,170,130,0)');
   c.fillStyle = glow; c.fillRect(0, 0, W, H);
   const ground = H * 0.8;
   const hill = (y0, amp, freq, phase, top, bottom) => {
@@ -32,7 +32,7 @@ export function drawGarden(cv, flowers, progress, now) {
   const gap = Math.min(54, (W - 40) / slots);
   const x0 = W / 2 - ((slots - 1) * gap) / 2;
   list.forEach((f, i) => drawFlower(c, x0 + i * gap, ground + 6, f, H, now, 1));
-  drawFlower(c, x0 + list.length * gap, ground + 6, { hue: 270, petals: 5, height: 0.5, kind: 0 }, H, now, progress, true);
+  drawFlower(c, x0 + list.length * gap, ground + 6, { hue: 20, petals: 5, height: 0.5, kind: 0 }, H, now, progress, true);
 }
 
 function drawFlower(c, x, y, f, H, now, grow, bud = false) {
@@ -47,7 +47,7 @@ function drawFlower(c, x, y, f, H, now, grow, bud = false) {
     // the next flower: a bud with a ring that fills with XP
     c.strokeStyle = 'rgba(255,255,255,0.15)'; c.lineWidth = 2.5;
     c.beginPath(); c.arc(tx, ty, 11, 0, TAU); c.stroke();
-    c.strokeStyle = '#f0abfc';
+    c.strokeStyle = '#ffb38a';
     c.beginPath(); c.arc(tx, ty, 11, -Math.PI / 2, -Math.PI / 2 + TAU * grow); c.stroke();
     const g = c.createRadialGradient(tx - 2, ty - 3, 0, tx, ty, 7);
     g.addColorStop(0, '#bbf7d0'); g.addColorStop(1, '#22c55e');

@@ -11,12 +11,12 @@ const draw = (size, full) => {
   const c = cv.getContext('2d');
   const u = size / 100;
   // background: deep night with soft violet and pink glows
-  c.fillStyle = '#100c26';
+  c.fillStyle = '#061416';
   if (full) c.fillRect(0, 0, size, size);
   else { c.beginPath(); c.roundRect(0, 0, size, size, 22 * u); c.fill(); }
   c.save();
   if (!full) { c.beginPath(); c.roundRect(0, 0, size, size, 22 * u); c.clip(); }
-  for (const [x, y, r, col] of [[20, 15, 70, 'rgba(110,70,255,0.75)'], [95, 90, 65, 'rgba(236,72,153,0.55)'], [90, 10, 40, 'rgba(14,165,233,0.35)']]) {
+  for (const [x, y, r, col] of [[20, 15, 70, 'rgba(15,118,110,0.85)'], [95, 90, 65, 'rgba(249,115,98,0.5)'], [90, 10, 40, 'rgba(5,150,105,0.45)']]) {
     const g = c.createRadialGradient(x * u, y * u, 0, x * u, y * u, r * u);
     g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
     c.fillStyle = g; c.fillRect(0, 0, size, size);
@@ -54,12 +54,12 @@ const draw = (size, full) => {
   seed('square', cx + d, cy + d, R, '#4cc9ff');
   // the flower blooming in the middle
   c.save();
-  c.shadowColor = 'rgba(236,72,153,0.8)'; c.shadowBlur = 8 * u;
+  c.shadowColor = 'rgba(255,110,100,0.8)'; c.shadowBlur = 8 * u;
   for (let i = 0; i < 6; i++) {
     const a = i / 6 * TAU - Math.PI / 2;
     c.save(); c.translate(cx, cy); c.rotate(a);
     const g = c.createLinearGradient(0, 0, 14 * u, 0);
-    g.addColorStop(0, '#ec4899'); g.addColorStop(1, '#fbcfe8');
+    g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#ffd6c2');
     c.fillStyle = g;
     c.beginPath(); c.ellipse(7 * u, 0, 7.5 * u, 4.4 * u, 0, 0, TAU); c.fill();
     c.restore();

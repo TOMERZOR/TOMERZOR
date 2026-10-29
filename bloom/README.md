@@ -46,7 +46,7 @@ Difficulty also climbs on its own: 4 colours for a new player's opening, 5 from 
 
 Turn on **Settings → developer mode** to see the mercy value, the reasons, the weed pace and the last bundle's stats while you play.
 
-**Look.** A dark, glassy interface: drifting colour glows behind frosted cards, the Outfit typeface, line icons, a level ring and bottom sheets for every dialog. Seeds are soft clay shapes, and each colour has its own silhouette (round, square, drop, leaf, hexagon, clover), so groups read by shape too, which also helps colour-blind players.
+**Look.** A dark, glassy "night garden" interface: deep teal with drifting teal, green and coral glows behind frosted cards, a coral-to-peach accent for the main actions and mint progress bars, the Outfit typeface, line icons, a level ring and bottom sheets for every dialog. Seeds are soft clay shapes, and each colour has its own silhouette (round, square, drop, leaf, hexagon, clover), so groups read by shape too, which also helps colour-blind players.
 
 **Feedback.** Seeds of the same colour are joined by soft bridges, so groups read at a glance. Blooms open into flowers in a wave and burst into petals; the clear sound climbs a pentatonic scale with the chain; banners for chains ("Chain x3!"), big blooms and new specials; screen shake grows with the chain and specials. The sky over the garden glows red when a column nears the top. Passing the best score mid-game fires "New best!".
 

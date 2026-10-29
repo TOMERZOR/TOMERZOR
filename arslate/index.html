@@ -11,8 +11,8 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="he_IL">
 <meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/arslate/icons/icon-512.png">
-<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0C0C0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#CFE0F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0D12" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ערסלייט">
@@ -23,132 +23,178 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
 <style>
-/* Layout: one column, nothing else. A small app-icon wordmark, the input line with a hairline under it
-   (gold on focus, a gold shimmer runs along it while translating), and the answer in heavy Heebo (800) below.
-   Pill actions appear only once there is an answer. Gold is the only accent. Light and dark follow the device. */
+/* Layout: a calm sky-blue field, a tight bold headline with a grey line under it, and one big white
+   prompt card (rounded, soft shadow, round send button in the corner). The answer opens below the card.
+   Type is the system SF on Apple devices (the closest to the reference), Heebo everywhere else, with very
+   tight tracking on display sizes. Ink is the accent: the send button and the copy button. */
 :root {
   color-scheme: light dark;
-  --bg: #F7F6F3;
-  --glow: rgba(201, 162, 90, .14);
-  --ink: #0F0F11;
-  --ink-2: #5E5F65;
-  --ink-3: #A3A4AA;
-  --line: #E4E2DC;
-  --hover: rgba(15, 15, 17, .05);
-  --chip: #FFFFFF;
-  --gold: #A27326;
-  --gold-2: #C9A25A;
-  --select: rgba(201, 162, 90, .28);
-  --font: "Heebo", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  --ease: cubic-bezier(.2, .7, .2, 1);
+  --sky-1: #C9DCF6;
+  --sky-2: #E3ECF9;
+  --sky-3: #F4F7FC;
+  --ink: #0E1116;
+  --ink-2: #4A5261;
+  --ink-3: #8A93A3;
+  --card: #FFFFFF;
+  --card-2: #F7F9FC;
+  --line: rgba(14, 17, 22, .08);
+  --shadow: 0 1px 1px rgba(30, 60, 110, .04), 0 10px 24px -8px rgba(30, 60, 110, .14), 0 32px 64px -24px rgba(30, 60, 110, .22);
+  --shadow-up: 0 1px 1px rgba(30, 60, 110, .05), 0 14px 30px -8px rgba(30, 60, 110, .18), 0 44px 80px -24px rgba(30, 60, 110, .28);
+  --btn-off: #E4E8EF;
+  --btn-off-ink: #A7AFBC;
+  --select: rgba(70, 120, 210, .22);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
+  --spring: cubic-bezier(.34, 1.4, .64, 1);
+  --ease: cubic-bezier(.16, 1, .3, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0B0B0C; --glow: rgba(214, 174, 98, .09); --ink: #F4F3EE; --ink-2: #A9A9AF; --ink-3: #5F5F66;
-    --line: #26262A; --hover: rgba(255, 255, 255, .06); --chip: #161618; --gold: #D6AE62; --gold-2: #E7C887;
-    --select: rgba(214, 174, 98, .3);
+    --sky-1: #121826; --sky-2: #0E121B; --sky-3: #0B0D12;
+    --ink: #F1F3F7; --ink-2: #A3ABBA; --ink-3: #6C7484;
+    --card: #171B23; --card-2: #1C212B; --line: rgba(255, 255, 255, .07);
+    --shadow: 0 0 0 1px rgba(255, 255, 255, .05) inset, 0 20px 50px -20px rgba(0, 0, 0, .7);
+    --shadow-up: 0 0 0 1px rgba(255, 255, 255, .08) inset, 0 28px 70px -20px rgba(0, 0, 0, .8);
+    --btn-off: #262C37; --btn-off-ink: #5D6576; --select: rgba(120, 160, 240, .3);
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0B0B0C; --glow: rgba(214, 174, 98, .09); --ink: #F4F3EE; --ink-2: #A9A9AF; --ink-3: #5F5F66;
-  --line: #26262A; --hover: rgba(255, 255, 255, .06); --chip: #161618; --gold: #D6AE62; --gold-2: #E7C887;
-  --select: rgba(214, 174, 98, .3);
+  --sky-1: #121826; --sky-2: #0E121B; --sky-3: #0B0D12;
+  --ink: #F1F3F7; --ink-2: #A3ABBA; --ink-3: #6C7484;
+  --card: #171B23; --card-2: #1C212B; --line: rgba(255, 255, 255, .07);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, .05) inset, 0 20px 50px -20px rgba(0, 0, 0, .7);
+  --shadow-up: 0 0 0 1px rgba(255, 255, 255, .08) inset, 0 28px 70px -20px rgba(0, 0, 0, .8);
+  --btn-off: #262C37; --btn-off-ink: #5D6576; --select: rgba(120, 160, 240, .3);
 }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
+html, body { overflow-x: clip; }
 body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
-  background: radial-gradient(760px 420px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+  background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 42%, var(--sky-3) 100%) fixed;
   color: var(--ink);
   font-family: var(--font); font-size: 16px; line-height: 1.5;
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
 }
 ::selection { background: var(--select); }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 10px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 12px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.col { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 22px; }
+.col { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 20px; }
 
-header.col { padding-top: max(24px, env(safe-area-inset-top)); }
+/* ---------- Header ---------- */
+header.col { display: flex; align-items: center; min-height: calc(72px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
 .mark {
-  width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--gold-2);
-  background: linear-gradient(180deg, #1F1F22, #0C0C0D);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, .1) inset, 0 0 0 1px rgba(0, 0, 0, .06), 0 6px 14px -6px rgba(0, 0, 0, .45);
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: #E7C887;
+  background: linear-gradient(180deg, #23262C, #0E1013);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .12) inset, 0 6px 14px -6px rgba(14, 17, 22, .5);
 }
-.mark svg { width: 19px; height: 19px; }
-:root[data-theme="dark"] .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .09) inset, 0 1px 0 rgba(255, 255, 255, .08) inset; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .09) inset, 0 1px 0 rgba(255, 255, 255, .08) inset; } }
-.brand span { font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+.mark svg { width: 20px; height: 20px; }
+:root[data-theme="dark"] .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 1px 0 rgba(255, 255, 255, .1) inset; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 1px 0 rgba(255, 255, 255, .1) inset; } }
+.brand span { font-weight: 800; font-size: 21px; letter-spacing: -.035em; }
 
-main.col { padding-top: 17vh; padding-bottom: max(48px, env(safe-area-inset-bottom)); }
-@media (max-width: 640px) { main.col { padding-top: 12vh; } }
+/* ---------- Hero ---------- */
+main.col { padding-top: 9vh; padding-bottom: max(56px, env(safe-area-inset-bottom)); }
+@media (max-width: 640px) { main.col { padding-top: 7vh; } }
+h1 {
+  margin: 0; text-align: center; font-weight: 800;
+  font-size: clamp(40px, 11vw, 64px); line-height: 1.02; letter-spacing: -.045em;
+}
+.sub { margin: 14px auto 0; text-align: center; color: var(--ink-2); font-size: 18px; font-weight: 500; letter-spacing: -.012em; max-width: 30em; }
+@media (min-width: 640px) { .sub { font-size: 20px; } }
 
-.field { display: flex; align-items: flex-start; gap: 10px; }
+/* ---------- Prompt card ---------- */
+.card {
+  position: relative; margin-top: 36px;
+  background: var(--card); border-radius: 28px; box-shadow: var(--shadow);
+  padding: 22px 24px 18px;
+  transition: box-shadow .5s var(--ease), transform .5s var(--ease);
+}
+.card::after { /* soft fade toward the bottom, like the reference */
+  content: ""; position: absolute; inset: auto 0 0 0; height: 55%; border-radius: 0 0 28px 28px; pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--card-2));
+}
+.card:focus-within { box-shadow: var(--shadow-up); transform: translateY(-2px); }
 textarea {
-  display: block; flex: 1; min-width: 0; min-height: 1.3em; max-height: 45vh; resize: none;
+  position: relative; z-index: 1;
+  display: block; width: 100%; min-height: 92px; max-height: 40vh; resize: none;
   border: 0; outline: 0; background: transparent; color: var(--ink);
-  font: 500 27px/1.3 var(--font); letter-spacing: -.015em; padding: 0; margin: 0; caret-color: var(--gold);
+  font: 400 20px/1.45 var(--font); letter-spacing: -.012em; padding: 0; margin: 0; caret-color: var(--ink);
 }
-@media (min-width: 640px) { textarea { font-size: 32px; } }
+@media (min-width: 640px) { textarea { font-size: 21px; min-height: 104px; } }
 textarea::placeholder { color: var(--ink-3); opacity: 1; }
 textarea:focus-visible { outline: none; }
 
+.bar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; min-height: 44px; }
 .clear {
-  width: 32px; height: 32px; margin-top: 2px; border-radius: 50%; display: grid; place-items: center; flex: none;
-  color: var(--ink-3); background: var(--hover); transition: color .2s, transform .15s, opacity .2s;
+  height: 32px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--ink-3);
+  opacity: 0; transform: scale(.9); pointer-events: none; transition: opacity .25s var(--ease), transform .35s var(--spring), color .2s, background .2s;
 }
-.clear:hover { color: var(--ink); }
-.clear:active { transform: scale(.92); }
-.clear svg { width: 15px; height: 15px; }
-.clear[hidden] { display: none; }
+.clear.on { opacity: 1; transform: none; pointer-events: auto; }
+.clear:hover { color: var(--ink); background: var(--line); }
 
-.rule { position: relative; height: 1px; margin-top: 20px; background: var(--line); overflow: hidden; }
-.rule::after {
-  content: ""; position: absolute; inset: 0; background: linear-gradient(270deg, var(--gold), var(--gold-2));
-  transform: scaleX(0); transform-origin: right; transition: transform .6s var(--ease);
+.send {
+  position: relative; width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--btn-off); color: var(--btn-off-ink);
+  transition: background .3s var(--ease), color .3s var(--ease), transform .45s var(--spring), box-shadow .3s var(--ease);
 }
-.field:focus-within + .rule::after { transform: scaleX(1); }
-.rule::before {
-  content: ""; position: absolute; top: 0; width: 30%; height: 100%; z-index: 1; opacity: 0;
-  background: linear-gradient(90deg, transparent, #fff8e6, transparent);
+.send svg { width: 20px; height: 20px; transition: transform .45s var(--spring); }
+.send.on { background: var(--ink); color: var(--card); box-shadow: 0 8px 18px -8px rgba(14, 17, 22, .55); }
+.send.on:hover svg { transform: translateY(-2px); }
+.send:active { transform: scale(.9); }
+.send:disabled { cursor: default; }
+.send .ring { /* spins while translating */
+  position: absolute; inset: -4px; border-radius: 50%; opacity: 0; transition: opacity .2s;
+  background: conic-gradient(from 0deg, transparent 0 70%, var(--ink-3) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
 }
-.busy .rule::before { opacity: 1; animation: run .9s linear infinite; }
-@keyframes run { from { right: -30%; } to { right: 100%; } }
+.busy .send .ring { opacity: 1; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-.result { margin-top: 40px; }
-.result[hidden] { display: none; }
-.label { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--gold); letter-spacing: .01em; }
-.label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+/* ---------- Answer ---------- */
+.result { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .6s var(--ease); }
+.result.open { grid-template-rows: 1fr; }
+.result > div { overflow: hidden; min-height: 0; }
+.answer { padding: 34px 6px 18px; }
+.label { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--ink-3); letter-spacing: -.005em; }
 .out {
-  margin: 0; font-weight: 800; font-size: 34px; line-height: 1.2; letter-spacing: -.025em; color: var(--ink);
+  margin: 0; font-weight: 800; font-size: 32px; line-height: 1.16; letter-spacing: -.035em; color: var(--ink);
   white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty;
 }
-@media (min-width: 640px) { .out { font-size: 44px; } }
-.out .w { display: inline-block; animation: rise .55s var(--ease) both; }
-@keyframes rise { from { opacity: 0; transform: translateY(.18em); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@media (min-width: 640px) { .out { font-size: 40px; } }
+.out .w { display: inline-block; animation: rise .6s var(--ease) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(.3em); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
 
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; animation: fade .45s .25s var(--ease) both; }
-@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.open .actions { animation: fade .5s .25s var(--ease) both; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .pill {
-  height: 40px; padding: 0 16px 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px;
-  font-size: 14.5px; font-weight: 600; color: var(--ink);
-  background: var(--chip); box-shadow: 0 0 0 1px var(--line) inset, 0 1px 2px rgba(0, 0, 0, .04);
-  transition: background .2s, box-shadow .2s, transform .15s;
+  height: 42px; padding: 0 17px 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--ink);
+  background: var(--card); box-shadow: 0 0 0 1px var(--line) inset, 0 2px 6px -2px rgba(30, 60, 110, .12);
+  transition: box-shadow .25s var(--ease), transform .35s var(--spring);
 }
-.pill:hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 45%, var(--line)) inset, 0 4px 12px -6px rgba(0, 0, 0, .18); }
-.pill:active { transform: scale(.97); }
-.pill svg { width: 17px; height: 17px; flex: none; }
-.pill--primary { background: var(--ink); color: var(--bg); box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .45); }
-.pill--primary:hover { box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .5); }
+.pill:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--line) inset, 0 8px 18px -8px rgba(30, 60, 110, .3); }
+.pill:active { transform: scale(.96); }
+.pill svg { width: 18px; height: 18px; flex: none; }
+.pill--primary { background: var(--ink); color: var(--card); box-shadow: 0 8px 18px -8px rgba(14, 17, 22, .5); }
 .pill[hidden] { display: none; }
 .pill .ok { display: none; }
-.pill.done .ok { display: block; }
+.pill.done .ok { display: block; animation: pop .45s var(--spring); }
 .pill.done .ic { display: none; }
+@keyframes pop { from { transform: scale(.4); } to { transform: none; } }
+
+/* ---------- Entrance ---------- */
+.in { animation: enter .9s var(--ease) both; }
+.in:nth-child(2) { animation-delay: .08s; }
+.in:nth-child(3) { animation-delay: .16s; }
+@keyframes enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -164,36 +210,46 @@ textarea:focus-visible { outline: none; }
 </header>
 
 <main class="col" id="app">
-  <div class="field">
-    <label for="src" class="sr">טקסט בעברית לתרגום לערסית</label>
-    <textarea id="src" rows="1" maxlength="1000" placeholder="מה רוצים להגיד?" enterkeyhint="done" autocomplete="off" spellcheck="false" autofocus></textarea>
-    <button class="clear" id="clear" type="button" aria-label="ניקוי" title="ניקוי" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-  </div>
-  <div class="rule" aria-hidden="true"></div>
+  <h1 class="in">מדברים כמו ערס.</h1>
+  <p class="sub in">כותבים בעברית, מקבלים ערסית.</p>
 
-  <section class="result" id="result" hidden>
-    <h2 class="label">בערסית</h2>
-    <p class="out" id="out" aria-live="polite"></p>
-    <div class="actions">
-      <button class="pill pill--primary" id="copy" type="button">
-        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
-        <svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
-        <span id="copyLabel">העתקה</span>
+  <form class="card in" id="form" autocomplete="off">
+    <label for="src" class="sr">טקסט בעברית לתרגום לערסית</label>
+    <textarea id="src" rows="3" maxlength="1000" placeholder="מה רוצים להגיד?" enterkeyhint="send" spellcheck="false"></textarea>
+    <div class="bar">
+      <button class="send" id="send" type="submit" aria-label="תרגום" disabled>
+        <span class="ring" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
       </button>
-      <button class="pill" id="again" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
-        נוסח אחר
-      </button>
-      <button class="pill" id="share" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
-        שיתוף
-      </button>
-      <button class="pill" id="speak" type="button" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-        השמעה
-      </button>
+      <button class="clear" id="clear" type="button">ניקוי</button>
+    </div>
+  </form>
+
+  <section class="result" id="result" aria-live="polite">
+    <div>
+      <div class="answer">
+        <h2 class="label">בערסית</h2>
+        <p class="out" id="out"></p>
+        <div class="actions">
+          <button class="pill pill--primary" id="copy" type="button">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
+            <svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+            <span id="copyLabel">העתקה</span>
+          </button>
+          <button class="pill" id="again" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
+            נוסח אחר
+          </button>
+          <button class="pill" id="share" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+            שיתוף
+          </button>
+          <button class="pill" id="speak" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            השמעה
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 </main>
@@ -204,7 +260,7 @@ textarea:focus-visible { outline: none; }
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
-  const app = $("app"), src = $("src"), out = $("out"), result = $("result");
+  const app = $("app"), src = $("src"), out = $("out"), result = $("result"), send = $("send");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let variant = 0, timer = 0, current = null, copyTimer = 0;
 
@@ -216,8 +272,8 @@ textarea:focus-visible { outline: none; }
   function render(res) {
     current = res;
     app.classList.remove("busy");
+    if (!res || !res.text) { result.classList.remove("open"); return; }
     out.textContent = "";
-    if (!res || !res.text) { result.hidden = true; return; }
     if (reduced) out.textContent = res.text;
     else {
       let i = 0;
@@ -226,37 +282,43 @@ textarea:focus-visible { outline: none; }
         if (/^\s+$/.test(p)) { out.appendChild(document.createTextNode(p)); continue; }
         const s = document.createElement("span");
         s.className = "w";
-        s.style.animationDelay = Math.min(i++ * 28, 900) + "ms";
+        s.style.animationDelay = Math.min(i++ * 32, 900) + "ms";
         s.textContent = p;
         out.appendChild(s);
       }
     }
-    result.hidden = false;
+    result.classList.add("open");
   }
 
   function run() { render(Arslate.translate(src.value, variant)); }
 
-  function onInput(now) {
-    $("clear").hidden = !src.value.length;
+  function onInput(delay) {
+    const has = !!src.value.trim();
+    send.disabled = !has;
+    send.classList.toggle("on", has);
+    $("clear").classList.toggle("on", !!src.value.length);
     grow();
     clearTimeout(timer);
-    if (!src.value.trim()) { render(null); return; }
+    if (!has) { render(null); return; }
     app.classList.add("busy");
-    timer = setTimeout(run, now === true ? 120 : 420);
+    timer = setTimeout(run, delay == null ? 450 : delay);
   }
 
   src.addEventListener("input", () => { variant = 0; onInput(); });
+  $("form").addEventListener("submit", e => {
+    e.preventDefault();
+    if (!src.value.trim()) return;
+    clearTimeout(timer);
+    app.classList.add("busy");
+    timer = setTimeout(run, 160);
+    if (matchMedia("(pointer: coarse)").matches) src.blur();
+  });
   src.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      clearTimeout(timer);
-      if (src.value.trim()) run();
-      if (matchMedia("(pointer: coarse)").matches) src.blur();
-    }
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("form").requestSubmit(); }
   });
 
   $("clear").addEventListener("click", () => { src.value = ""; variant = 0; onInput(); src.focus(); });
-  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, 200); });
+  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, 220); });
 
   $("copy").addEventListener("click", async () => {
     if (!current) return;
@@ -302,9 +364,26 @@ textarea:focus-visible { outline: none; }
     speechSynthesis.speak(u);
   });
 
+  /* הטקסט המעומעם בתיבה מקליד דוגמאות, כל עוד היא ריקה */
+  const HINTS = ["מה שלומך?", "אני מאחר קצת, אני תקוע בפקק", "תודה רבה על העזרה", "זה יקר מדי, תן לי הנחה", "אני אוהב אותך"];
+  if (!reduced) {
+    let h = 0, c = 0, dir = 1;
+    (function tick() {
+      const text = HINTS[h];
+      let wait = 55;
+      if (src.value) { setTimeout(tick, 600); return; }
+      c += dir;
+      if (c > text.length) { dir = -1; c = text.length; wait = 1700; }
+      else if (c < 0) { dir = 1; c = 0; h = (h + 1) % HINTS.length; wait = 350; }
+      else if (dir < 0) wait = 22;
+      src.placeholder = text.slice(0, c) + (dir > 0 ? "|" : "");
+      setTimeout(tick, wait);
+    })();
+  }
+
   /* ?q= בכתובת ממלא את השדה */
   const q = new URLSearchParams(location.search).get("q");
-  if (q) { src.value = q.slice(0, 1000); onInput(true); }
+  if (q) { src.value = q.slice(0, 1000); onInput(120); }
   grow();
 })();
 </script>

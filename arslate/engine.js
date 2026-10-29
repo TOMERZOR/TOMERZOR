@@ -1,0 +1,388 @@
+/* ערסלייט: מנוע התרגום (ARS-4). עובד כולו בדפדפן, בלי שרת.
+   1. מחלק לשורות ולמשפטים, ובכל משפט מחליף את הביטוי הארוך ביותר שנמצא במילון (עד 6 מילים).
+      מילים עם ו/ש בהתחלה נתפסות תמיד, ושמות עצם ותארים גם עם ה/ב/ל/מ/כ.
+   2. "מתבל" כל משפט: פתיח (וואלה, תקשיב...) וסיומת (אחי, על אמא שלי...) לפי סוג המשפט.
+   3. אם פונים לאישה (את, תגידי, בואי...), הפניות והציוויים עוברים ללשון נקבה.
+   אותו טקסט תמיד נותן אותו תרגום; variant אחר נותן נוסח אחר. */
+(function () {
+  "use strict";
+
+  const MAX_PHRASE = 6;
+  const APPOSITION = /, (כפרה עלי(ה|ו|הם)|מלכה?|מלכים|גבר גבר|גבר|צדיקה|חיים שלי|אם ירצה השם|בשעה טובה)$/;
+  const LETTER = "א-תa-zA-Z0-9";
+  const WORD_RE = new RegExp("[" + LETTER + "]+(?:['\"][" + LETTER + "]+)*'?", "g");
+
+  /* ---------- המילון ---------- */
+  const PHRASES = Object.create(null);
+  const NOUNS = Object.create(null);
+  const STAND = Object.create(null);
+  let entryCount = 0;
+  (function parse(src) {
+    let target = PHRASES;
+    for (const raw of src.split("\n")) {
+      const line = raw.trim();
+      if (!line || line[0] === "#") continue;
+      if (line === "@phrases") { target = PHRASES; continue; }
+      if (line === "@nouns") { target = NOUNS; continue; }
+      if (line === "@stand") { target = STAND; continue; }
+      const eq = line.indexOf("=");
+      if (eq < 0) continue;
+      const variants = line.slice(eq + 1).split("|").map(s => s.trim());
+      for (const k of line.slice(0, eq).split(",")) {
+        const key = norm(k);
+        if (!key) continue;
+        target[key] = variants;
+        entryCount++;
+      }
+    }
+  })(window.ARS_LEXICON || "");
+
+  /* ---------- פניות ---------- */
+  const ADDR_M = ["אחי", "אחי", "אחשלי", "אח שלי", "נשמה", "כפרה", "כפרה עליך", "יא מלך", "מלך", "יא גבר",
+    "חביבי", "יא חביבי", "צדיק", "יא צדיק", "יא תותח", "אלוף", "יא אלוף", "יא בוס", "חיים שלי", "עיני",
+    "נשמה שלי", "יא זהב", "יא חיים שלי", "אחי היקר", "יא אח", "יא ורדי"];
+  const ADDR_F = ["אחותי", "אחותי", "נשמה", "כפרה", "כפרה עלייך", "יא מלכה", "מלכה", "מאמי", "בובה",
+    "חיים שלי", "יא חיים שלי", "נשמה שלי", "מותק", "יא מותק", "יא זהב", "בובה שלי", "אחותי היקרה", "צדיקה"];
+  const ADDR_ALL = new Set(ADDR_M.concat(ADDR_F));
+
+  /* פתיחים וסיומות לפי סוג משפט */
+  const OPEN = {
+    plain: ["וואלה,", "שמע,", "תקשיב,", "{A},", "תכלס,", "יא אללה,", "בחייאת,", "תשמע מה אני אומר לך,", "קיצר,", "{A}, תקשיב,", "וואלה {A},"],
+    question: ["תגיד,", "{A},", "שאלה,", "תגיד לי {A},", "וואלה,", "בחייאת,"],
+    anger: ["תקשיב טוב,", "יא אללה,", "בחייאת,", "{A}, תקשיב,", "וואלק,", "אינעל ראבק,"],
+    love: ["{A},", "תקשיב,", "בנשמה,", "וואלה {A},"],
+    sad: ["וואלה,", "{A},", "יא אללה,", "אחח,"],
+    excited: ["יא אללה,", "וואו,", "{A},", "וואלה,", "אמאל'ה,"]
+  };
+  const CLOSE = {
+    plain: [" {A}", " {A}", " {A}", ", על אמא שלי", ", בחיי", ", אתה מבין", ", קלטת", ", סגור", ", בנשמה", ", חלאס", ", תכלס", ", וזהו", ", בלי חוכמות"],
+    question: [" {A}", " {A}", " {A}", ", נו", ", מה, לא", ", יא אללה"],
+    anger: [" {A}", ", על אמא שלי", ", חלאס", ", עד כאן", ", אתה שומע", ", וזהו"],
+    love: [" {A}", " {A}", ", על אמא שלי", ", בנשמה", ", מכל הלב"],
+    sad: [" {A}", ", מה לעשות", ", באסה", ", יא אללה"],
+    excited: [" {A}", " {A}", ", פצצות", ", אש", ", יא אללה", ", חבל על הזמן"]
+  };
+
+  /* מילים שאם המשפט כבר מתחיל בהן, לא מוסיפים פתיח */
+  const NO_OPEN = new Set(["אהלן", "מה", "יאללה", "וואלה", "שמע", "שמעי", "תקשיב", "תקשיבי", "תגיד", "תגידי", "בוקר", "ערב",
+    "לילה", "שבת", "חג", "יא", "סבבה", "סגור", "בטח", "ברור", "אין", "חלאס", "די", "סחתיין", "מזל", "תודה", "כפרה",
+    "סורי", "מחילה", "בכיף", "שלום", "רואים", "וואו", "וואי", "אמאל'ה", "אוף", "בחיי", "בחייאת", "על", "תכלס", "בקיצור",
+    "קיצר", "לחיים", "שנה", "יום", "צהריים", "ערבים", "בוקרים", "רגע", "שנייה", "חכה'לי", "חכי'לי", "תסתום", "תסתמי",
+    "שחרר", "עזוב", "חחחח", "מתתי", "קרעת", "בהצלחה", "בתיאבון", "נעים", "כבוד", "דבש", "אש", "הכל", "חיים",
+    "ששש", "נו", "אוהו", "פצצות", "פצצה", "מהההה", "באסה", "פדיחה", "אופס"]);
+
+  const MOOD_WORDS = {
+    anger: /(^| )(כועס|כועסת|עצבני|עצבנית|נמאס|שונא|שונאת|תסתום|שתוק|תשתוק|מעצבן|מעצבנת|לעזאזל|תפסיק|תפסיקי|מטומטם|מטומטמת|אידיוט|די)( |$)/,
+    love: /(^| )(אוהב|אוהבת|מתגעגע|מתגעגעת|אהבה|יקר לי|יקרה לי|חסר לי|חסרה לי)( |$)/,
+    sad: /(^| )(עצוב|עצובה|באסה|קשה לי|בוכה|מבואס|מבואסת|חבל|מצטער|מצטערת)( |$)/
+  };
+  const QUESTION_START = /^(מה|למה|איך|מתי|איפה|מי|כמה|האם|מאיפה|לאן|איזה|איזו|אפשר|יש לך|יש לכם|נכון ש|אתה|את)( |$)/;
+  const SKIP_DECOR = /(^| )(שלום|היי|הי|בוקר|ערב|לילה|תודה|סליחה|להתראות|ביי|מזל טוב|שבת שלום|חג שמח|בהצלחה|נתראה)( |$)/;
+
+  /* פנייה לאישה */
+  const FEM_RE = /(^|[\s,.!?])(את|ואת|בואי|תבואי|תגידי|תעשי|תקשיבי|תשמעי|תראי|תחכי|חכי|תביאי|תלכי|תירגעי|תרגעי|תסלחי|תעזרי|תתקשרי|תשלחי|תשמרי|תפסיקי|תשתקי|תני|קחי|שבי|לכי|יפה שלי|מתוקה|חמודה|יקרה|אהובתי|מאמי|אחותי|גברת|מלכה|נסיכה|בובה|משקרת|צוחקת|רצינית|צודקת|בטוחה|אלייך|עלייך|אותך מתוקה)(?=$|[\s,.!?])/;
+  /* מה מחליפים בטקסט שהמנוע מייצר כשפונים לאישה (לא נוגעים במילים שהמשתמש כתב) */
+  const FEM_SWAP = [
+    ["אתה מלך", "את מלכה"], ["אתה תותח", "את תותחית"], ["אתה מגיע", "את מגיעה"], ["אתה חושב", "את חושבת"],
+    ["אתה צריך", "את צריכה"], ["אתה בא", "את באה"], ["אתה מבין", "את מבינה"], ["אתה שומע", "את שומעת"],
+    ["אתה קולט", "את קולטת"], ["אתה עושה", "את עושה"], ["אתה מכיר", "את מכירה"], ["אתה סגור", "את סגורה"],
+    ["אתה רציני", "את רצינית"], ["אתה יכול", "את יכולה"], ["אתה מחרטט", "את מחרטטת"], ["אתה עובד", "את עובדת"],
+    ["אתה מספר", "את מספרת"], ["אתה מסתכל", "את מסתכלת"], ["אתה נלחץ", "את נלחצת"], ["אתה פה", "את פה"],
+    ["אתה יקר", "את יקרה"], ["אתה הכל", "את הכל"], ["אתה לא", "את לא"], ["אתה רוצה", "את רוצה"],
+    ["מה אתה", "מה את"], ["אתה", "את"],
+    ["עליך", "עלייך"], ["אליך", "אלייך"], ["בשבילך", "בשבילך"], ["שמע", "שמעי"], ["תקשיב", "תקשיבי"], ["תשמע", "תשמעי"],
+    ["תגיד", "תגידי"], ["תראה", "תראי"], ["תסתכל", "תסתכלי"], ["תירגע", "תירגעי"], ["תעשה", "תעשי"], ["תסדר", "תסדרי"],
+    ["תקפוץ", "תקפצי"], ["תביא", "תביאי"], ["תן", "תני"], ["קח", "קחי"], ["תוריד", "תורידי"], ["שב", "שבי"],
+    ["תצלצל", "תצלצלי"], ["תזרוק", "תזרקי"], ["תשאיר", "תשאירי"], ["תהיה", "תהיי"], ["תמכור", "תמכרי"], ["תיקח", "תיקחי"],
+    ["שחרר", "שחררי"], ["עזוב", "עזבי"], ["תסתום", "תסתמי"], ["סגור את הפה", "סגרי את הפה"], ["תסגור", "תסגרי"],
+    ["תחכה", "תחכי"], ["חכה'לי", "חכי'לי"], ["בוא'נה", "בואי'נה"], ["תגיע", "תגיעי"], ["תתפלל", "תתפללי"], ["תמחל", "תמחלי"],
+    ["תרים", "תרימי"], ["שים", "שימי"], ["שמור", "שמרי"], ["תשמור", "תשמרי"], ["תקרע", "תקרעי"], ["תפרק", "תפרקי"],
+    ["תאמין", "תאמיני"], ["תבין", "תביני"], ["תקלוט", "תקלטי"], ["תחלום", "תחלמי"], ["תטחן", "תטחני"], ["תחזור", "תחזרי"],
+    ["תרגיש", "תרגישי"], ["תיזהר", "תיזהרי"], ["בוא נשב", "בואי נשב"], ["בוא נעשה", "בואי נעשה"], ["בוא נדפוק", "בואי נדפוק"],
+    ["בוא נרים", "בואי נרים"], ["בוא", "בואי"], ["סע", "סעי"], ["שתחיה", "שתחיי"], ["ותעשה", "ותעשי"], ["שתהיה בריא", "שתהיי בריאה"],
+    ["תהיה חזק", "תהיי חזקה"], ["צודק", "צודקת"], ["דיברת", "דיברת"], ["אכלת", "אכלת"]
+  ];
+  const FEM_SWAP_RE = FEM_SWAP.map(([m, f]) => [new RegExp("(^|[^" + LETTER + "'])" + esc(m) + "(?=$|[^" + LETTER + "'])", "g"), "$1" + f]);
+
+  /* ---------- כלים ---------- */
+  function esc(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+  function norm(s) {
+    return s.normalize("NFC")
+      .replace(/[֑-ׇ]/g, "")
+      .replace(/[׳‘’`]/g, "'")
+      .replace(/[״“”]/g, '"')
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+  function hash(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function rng(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function pick(list, r) { return list[Math.floor(r() * list.length)]; }
+  function femify(s) {
+    for (const [re, to] of FEM_SWAP_RE) s = s.replace(re, to);
+    return s;
+  }
+
+  /* מפרק משפט לטוקנים: מילים ומה שביניהן */
+  function tokenize(s) {
+    const out = [];
+    let last = 0;
+    WORD_RE.lastIndex = 0;
+    let m;
+    while ((m = WORD_RE.exec(s))) {
+      if (m.index > last) out.push({ w: false, t: s.slice(last, m.index) });
+      out.push({ w: true, t: m[0], n: norm(m[0]).replace(/'$/, "") });
+      last = m.index + m[0].length;
+    }
+    if (last < s.length) out.push({ w: false, t: s.slice(last) });
+    return out;
+  }
+
+  const ALWAYS_PREFIX = ["וכש", "וש", "כש", "ש", "ו"];
+  const NOUN_PREFIX = ["וכשה", "וכשב", "וכשל", "כשה", "כשב", "כשל", "ושה", "ושב", "ושל", "ושמ", "וה", "וב", "ול", "ומ", "וכ",
+    "שה", "שב", "של", "שמ", "מה", "כה", "ה", "ב", "ל", "מ", "כ"];
+
+  /* מחפש ביטוי במילון; מחזיר [variants, prefix] או null */
+  function lookup(words) {
+    const key = words.join(" ");
+    if (PHRASES[key]) return [PHRASES[key], ""];
+    if (words.length === 1 && NOUNS[key]) return [NOUNS[key], ""];
+    const first = words[0];
+    const rest = words.slice(1).join(" ");
+    for (const p of ALWAYS_PREFIX) {
+      if (first.length > p.length + 1 && first.startsWith(p)) {
+        const k = (first.slice(p.length) + (rest ? " " + rest : ""));
+        if (PHRASES[k]) return [PHRASES[k], p];
+        if (words.length === 1 && NOUNS[k]) return [NOUNS[k], p];
+      }
+    }
+    if (words.length === 1) {
+      for (const p of NOUN_PREFIX) {
+        if (first.length > p.length + 1 && first.startsWith(p) && NOUNS[first.slice(p.length)]) {
+          return [NOUNS[first.slice(p.length)], p];
+        }
+      }
+    }
+    return null;
+  }
+
+  /* מדביק תחילית (ו, ה, ב...) לנוסח שנבחר */
+  function attachPrefix(prefix, variant) {
+    if (!prefix) return variant;
+    if (!variant) return prefix.replace(/[הבלמכ]+$/, "") ;
+    if (variant[0] === "{") return variant;
+    let p = prefix, v = variant;
+    if (v[0] === "ה" && /[בלכ]$/.test(p)) v = v.slice(1);
+    else if (v[0] === "ה" && /ה$/.test(p)) p = p.slice(0, -1);
+    return p + v;
+  }
+
+  /* ---------- תרגום ---------- */
+  function translate(input, variant) {
+    const t0 = (typeof performance !== "undefined" ? performance : Date).now();
+    const clean = input.normalize("NFC").replace(/[֑-ׇ]/g, "").replace(/[׳‘’]/g, "'").replace(/[״“”]/g, '"');
+    if (!clean.trim()) return { text: "", score: 0, words: 0, ms: 0 };
+
+    const r = rng(hash(norm(clean)) ^ Math.imul((variant | 0) + 1, 0x9E3779B1));
+    const fem = FEM_RE.test(" " + norm(clean) + " ");
+    const pool = (fem ? ADDR_F : ADDR_M).slice();
+    const usedAddr = new Set();
+    let addrBudget = 0; // כמה פניות מותר עוד (מתחדש בכל משפט שני)
+    const gen = s => (fem ? femify(s) : s);
+
+    function address() {
+      let choices = pool.filter(a => !usedAddr.has(a));
+      if (!choices.length) choices = pool;
+      const a = pick(choices, r);
+      usedAddr.add(a);
+      return a;
+    }
+    /* ממלא {A}: פנייה אמיתית או מוחק אותה, לפי התקציב */
+    function fill(s, allow) {
+      return s.replace(/(,?\s*)\{A\}(,?)/g, (m, before, after, off) => {
+        if (allow.n > 0) {
+          allow.n--;
+          return before + address() + after;
+        }
+        const atStart = off === 0;
+        return atStart ? "" : (after && !before.includes(",") ? "," : "");
+      }).replace(/^\s*,\s*/, "").replace(/\s+,/g, ",").replace(/,,+/g, ",").replace(/\s{2,}/g, " ").trim();
+    }
+
+    // לשורות ואז למשפטים, ושומרים את הפיסוק והרווחים שבסוף כל משפט
+    const parts = clean.split(/(\n+)/);
+    let replacedWords = 0, totalWords = 0, decorations = 0;
+    const lines = [];
+    let sentenceIndex = 0;
+    const allSentences = [];
+    for (const part of parts) {
+      if (/^\n+$/.test(part)) { lines.push({ br: part }); continue; }
+      const re = /[^.!?…]+(?:[.!?…]+|$)\s*|[.!?…]+\s*/g;
+      let m;
+      const sents = [];
+      while ((m = re.exec(part))) {
+        if (!m[0]) { re.lastIndex++; continue; }
+        const mm = m[0].match(/^([\s\S]*?)([.!?…]*)(\s*)$/);
+        sents.push({ body: mm[1], punct: mm[2], space: mm[3] });
+      }
+      lines.push({ sents });
+      allSentences.push(...sents);
+    }
+    const lastSentence = allSentences[allSentences.length - 1];
+
+    for (const line of lines) {
+      if (line.br) continue;
+      for (const s of line.sents) {
+        const isFirst = sentenceIndex === 0;
+        const isLast = s === lastSentence;
+        sentenceIndex++;
+        if (sentenceIndex % 2 === 1) addrBudget = Math.min(addrBudget + 1, 1);
+        const allow = { n: addrBudget };
+
+        const lead = s.body.match(/^\s*/)[0];
+        const tokens = tokenize(s.body.trim());
+        const words = tokens.filter(t => t.w);
+        totalWords += words.length;
+        if (!words.length) { s.out = s.body; continue; }
+        const key = words.map(w => w.n.replace(/'$/, "")).join(" ");
+
+        // משפט שעומד לבד
+        let out;
+        let standalone = false;
+        if (STAND[key] || (words.length === 1 && /^ח{3,}$/.test(key))) {
+          const list = STAND[key] || PHRASES["חחח"];
+          out = fill(gen(pick(list, r)), allow);
+          replacedWords += words.length;
+          standalone = true;
+        } else {
+          // החלפת ביטויים: הארוך ביותר קודם
+          const pieces = [];
+          let i = 0;
+          while (i < tokens.length) {
+            const tok = tokens[i];
+            if (!tok.w) { pieces.push({ t: tok.t }); i++; continue; }
+            let hit = null, span = 0, idxEnd = i;
+            const seq = [];
+            const idx = [];
+            let j = i;
+            while (j < tokens.length && seq.length < MAX_PHRASE) {
+              if (tokens[j].w) { seq.push(tokens[j].n); idx.push(j); j++; }
+              else if (/^\s+$/.test(tokens[j].t) && j + 1 < tokens.length && tokens[j + 1].w) j++;
+              else break;
+            }
+            for (let L = seq.length; L >= 1; L--) {
+              const found = lookup(seq.slice(0, L));
+              if (found) { hit = found; span = L; idxEnd = idx[L - 1]; break; }
+            }
+            if (/^ח{3,}$/.test(tok.n)) { hit = [PHRASES["חחח"], ""]; span = 1; idxEnd = i; }
+            if (hit) {
+              let [variants, prefix] = hit;
+              if (prefix && /[הבלמכ]/.test(prefix)) {
+                const single = variants.filter(v => v && !/\s/.test(v));
+                if (single.length) variants = single;
+              }
+              const followedByWord = tokens.slice(idxEnd + 1).some(t => t.w);
+              if (followedByWord) {
+                // באמצע משפט: נוסחים בלי פסיק, חוץ מתוספות כמו "אמא שלי, כפרה עליה"
+                const inline = variants.filter(v => !v.replace(/\s*\{A\}$/, "").includes(",") || APPOSITION.test(v));
+                if (inline.length) variants = inline;
+              }
+              const sofar = pieces.map(p => p.t).join("");
+              let v = pick(variants, r);
+              for (let k = 0; k < 3 && v && sofar.includes(v.replace(/\s*\{A\}.*$/, "")); k++) v = pick(variants, r);
+              const atStart = pieces.every(p => !p.t.trim());
+              if (followedByWord) v = v.replace(/,?\s*\{A\}\s*$/, "");
+              if (!atStart) v = v.replace(/^\{A\},?\s*/, "");
+              if (followedByWord && v.includes(",") && !/[,?]$/.test(v) && tokens[idxEnd + 1] && /^\s+$/.test(tokens[idxEnd + 1].t)) v += ",";
+              v = attachPrefix(prefix, v);
+              pieces.push({ t: fill(gen(v), allow), hit: true });
+              replacedWords += span;
+              i = idxEnd + 1;
+            } else {
+              pieces.push({ t: tok.t });
+              i++;
+            }
+          }
+          out = pieces.map(p => p.t).join("").replace(/\s{2,}/g, " ").replace(/\s+,/g, ",").replace(/^\s*,\s*/, "").trim();
+        }
+
+        // סוג המשפט
+        const isQ = s.punct.includes("?") || QUESTION_START.test(key);
+        let mood = isQ ? "question" : "plain";
+        if (MOOD_WORDS.anger.test(key)) mood = "anger";
+        else if (MOOD_WORDS.love.test(key)) mood = "love";
+        else if (MOOD_WORDS.sad.test(key)) mood = "sad";
+        else if (!isQ && s.punct.includes("!")) mood = "excited";
+
+        const skipDecor = SKIP_DECOR.test(key);
+        const hasAddr = [...ADDR_ALL].some(a => new RegExp("(^|[^" + LETTER + "])" + esc(a) + "($|[^" + LETTER + "])").test(out));
+        if (hasAddr) allow.n = 0;
+
+        // פתיח
+        const firstWord = (out.match(WORD_RE) || [""])[0];
+        const openChance = standalone ? 0 : isFirst ? 0.8 : 0.3;
+        if (!skipDecor && out && !NO_OPEN.has(firstWord) && !ADDR_ALL.has(firstWord) && r() < openChance) {
+          const op = fill(gen(pick(OPEN[mood], r)), allow);
+          if (op && op !== ",") { out = op.replace(/,?$/, ",") + " " + out; decorations++; }
+        }
+        // סיומת
+        const closeChance = isLast ? 0.85 : 0.35;
+        const hasAddrNow = hasAddr || [...usedAddr].some(a => out.includes(a));
+        if (!skipDecor && out && r() < closeChance) {
+          let options = CLOSE[mood];
+          if (hasAddrNow || allow.n <= 0) options = options.filter(c => !c.includes("{A}"));
+          if (standalone) options = options.filter(c => c.includes("{A}"));
+          if (options.length) {
+            const tpl = pick(options, r);
+            const body = tpl.replace(/^,?\s*/, "");
+            const c = fill(gen(body), allow);
+            if (c && !out.includes(c)) {
+              const sep = tpl.startsWith(",") || (body.startsWith("{A}") && out.includes(",")) ? ", " : " ";
+              out = out.replace(/[,\s]+$/, "") + sep + c;
+              decorations++;
+            }
+          }
+        }
+        addrBudget = allow.n;
+
+        // פיסוק: קריאה מקבלת עוד סימן, שאלה נשארת שאלה
+        let punct = s.punct;
+        if (punct === "!" && r() < 0.5) punct = "!!";
+        if (punct === "?" && mood === "anger") punct = "?!";
+        s.out = lead + out + punct + s.space;
+      }
+    }
+
+    const text = lines.map(l => (l.br ? l.br : l.sents.map(s => s.out).join(""))).join("").trim();
+    const ratio = totalWords ? replacedWords / totalWords : 0;
+    const score = Math.max(61, Math.min(99, Math.round(58 + ratio * 34 + decorations * 4 + (hash(text) % 5))));
+    const ms = (typeof performance !== "undefined" ? performance : Date).now() - t0;
+    return { text, score, words: totalWords, ms, fem };
+  }
+
+  /* אם אין בכלל עברית ולא מצאנו כלום */
+  function translateSafe(input, variant) {
+    const res = translate(input, variant);
+    if (res.text && !/[א-ת]/.test(input) && !/[א-ת]/.test(res.text)) {
+      const lines = ["אחי, תכתוב בעברית. מה אני, גוגל?", "וואלה לא קלטתי, תכתוב בעברית נשמה", "בעברית {A}, בעברית. אנחנו בישראל"];
+      res.text = lines[hash(input) % lines.length].replace("{A}", "אחי");
+      res.score = 99;
+    }
+    return res;
+  }
+
+  window.Arslate = { translate: translateSafe, size: entryCount };
+})();

@@ -427,6 +427,7 @@ function show(name) {
   $('home').hidden = name !== 'home';
   $('game').hidden = name !== 'game';
   document.body.classList.toggle('neon', !!currentSkin().dark);
+  document.body.classList.toggle('in-game', name === 'game');
   if (name === 'game') requestAnimationFrame(() => R.resize());
 }
 
@@ -463,10 +464,10 @@ function renderHome() {
   $('h-streak').querySelector('b').textContent = M.streak.count;
   $('h-level').textContent = M.level;
   const need = xpForLevel(M.level);
-  $('h-xpbar').style.width = `${(M.xp / need * 100).toFixed(1)}%`;
+  $('h-ring').style.setProperty('--p', (M.xp / need * 100).toFixed(1));
   $('h-xptext').textContent = `${fmt(need - M.xp)} XP to your next flower`;
   $('h-best').textContent = fmt(M.best);
-  $('h-play').textContent = M.saved ? 'Continue' : 'Play';
+  $('h-play').querySelector('span').textContent = M.saved ? 'Continue' : 'Play';
   $('h-new').hidden = !M.saved;
   const ms = missions();
   $('h-missions').innerHTML = ms.list.map((m) => `
@@ -560,7 +561,7 @@ if (streak) {
   renderHome();
   const next = Math.min(50, 5 * (streak.count + 1));
   modal(`
-    <svg style="font-size:64px"><use href="#i-fire"/></svg>
+    <svg class="hero-ico"><use href="#i-fire"/></svg>
     <h2>${streak.count === 1 ? (M.games ? 'Welcome back!' : 'Welcome!') : `${streak.count}-day streak!`}</h2>
     ${streak.usedFreeze ? '<p>You missed a day, but a streak freeze saved it</p>' : ''}
     <div class="big-num">${plus(streak.gems)} ${gem}</div>

@@ -10,84 +10,63 @@ const draw = (size, full) => {
   cv.width = cv.height = size;
   const c = cv.getContext('2d');
   const u = size / 100;
-  // background: deep purple with a soft glow and light rays behind the flower
-  const bg = c.createRadialGradient(50 * u, 45 * u, 0, 50 * u, 50 * u, 75 * u);
-  bg.addColorStop(0, '#7b3cf0'); bg.addColorStop(0.55, '#3a1a96'); bg.addColorStop(1, '#170b42');
-  c.fillStyle = bg;
+  // background: deep night with soft violet and pink glows
+  c.fillStyle = '#100c26';
   if (full) c.fillRect(0, 0, size, size);
-  else { c.beginPath(); c.roundRect(0, 0, size, size, 22 * u); c.fill(); c.save(); c.clip(); }
+  else { c.beginPath(); c.roundRect(0, 0, size, size, 22 * u); c.fill(); }
   c.save();
-  c.translate(50 * u, 50 * u);
-  c.globalAlpha = 0.12;
-  c.fillStyle = '#fff';
-  for (let i = 0; i < 12; i++) {
-    c.rotate(TAU / 12);
-    c.beginPath(); c.moveTo(0, 0); c.lineTo(-5 * u, -80 * u); c.lineTo(5 * u, -80 * u); c.fill();
+  if (!full) { c.beginPath(); c.roundRect(0, 0, size, size, 22 * u); c.clip(); }
+  for (const [x, y, r, col] of [[20, 15, 70, 'rgba(110,70,255,0.75)'], [95, 90, 65, 'rgba(236,72,153,0.55)'], [90, 10, 40, 'rgba(14,165,233,0.35)']]) {
+    const g = c.createRadialGradient(x * u, y * u, 0, x * u, y * u, r * u);
+    g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = g; c.fillRect(0, 0, size, size);
   }
   c.restore();
-  // a maskable icon gets cropped to a circle: keep the artwork inside the safe zone
-  const k = full ? 0.8 : 1;
+  const k = full ? 0.8 : 1; // a maskable icon gets cropped to a circle: keep the art in the safe zone
   c.translate(50 * u, 50 * u); c.scale(k, k); c.translate(-50 * u, -50 * u);
 
-  const block = (x, y, s, col, light, dark, tilt) => {
-    c.save();
-    c.translate(x + s / 2, y + s / 2); c.rotate(tilt); c.translate(-s / 2, -s / 2);
-    c.shadowColor = 'rgba(10,0,40,0.45)'; c.shadowBlur = 3 * u; c.shadowOffsetY = 2 * u;
-    c.beginPath(); c.roundRect(0, 0, s, s, s * 0.24);
-    const g = c.createLinearGradient(0, 0, 0, s);
-    g.addColorStop(0, light); g.addColorStop(0.55, col); g.addColorStop(1, dark);
-    c.fillStyle = g; c.fill();
-    c.shadowColor = 'transparent';
-    c.lineWidth = s * 0.045; c.strokeStyle = dark; c.stroke();
-    c.fillStyle = 'rgba(255,255,255,0.5)';
-    c.beginPath(); c.ellipse(s * 0.4, s * 0.25, s * 0.25, s * 0.1, -0.25, 0, TAU); c.fill();
-    c.fillStyle = 'rgba(255,255,255,0.85)';
-    c.beginPath(); c.arc(s * 0.74, s * 0.22, s * 0.05, 0, TAU); c.fill();
-    c.restore();
-  };
-  const s = 31 * u, gap = 3 * u, x0 = 50 * u - s - gap / 2, y0 = 52 * u - s - gap / 2;
-  block(x0, y0, s, '#ff5d73', '#ff9aa8', '#c22c45', -0.05);
-  block(x0 + s + gap, y0, s, '#ffb02e', '#ffd27a', '#c97a00', 0.04);
-  block(x0, y0 + s + gap, s, '#3bc4ff', '#8fdfff', '#0d7fbd', 0.05);
-  block(x0 + s + gap, y0 + s + gap, s, '#58d66b', '#9cf0a6', '#22903a', -0.04);
-
-  // the flower bursting from the middle
-  const fx = 50 * u, fy = 52 * u, pr = 15 * u;
-  c.shadowColor = 'rgba(60,0,60,0.5)'; c.shadowBlur = 4 * u; c.shadowOffsetY = 2 * u;
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * TAU - Math.PI / 2;
-    c.save(); c.translate(fx, fy); c.rotate(a);
-    const g = c.createLinearGradient(0, 0, pr * 1.3, 0);
-    g.addColorStop(0, '#ff3d8b'); g.addColorStop(1, '#ffb3dc');
-    c.fillStyle = g;
-    c.beginPath(); c.ellipse(pr * 0.62, 0, pr * 0.62, pr * 0.42, 0, 0, TAU); c.fill();
-    c.restore();
-  }
-  c.shadowColor = 'transparent';
-  for (let i = 0; i < 6; i++) {
-    const a = i / 6 * TAU - Math.PI / 2;
-    c.save(); c.translate(fx, fy); c.rotate(a);
-    c.fillStyle = 'rgba(255,255,255,0.45)';
-    c.beginPath(); c.ellipse(pr * 0.75, -pr * 0.12, pr * 0.28, pr * 0.1, 0, 0, TAU); c.fill();
-    c.restore();
-  }
-  const cg = c.createRadialGradient(fx - 2 * u, fy - 2 * u, 0, fx, fy, 6.5 * u);
-  cg.addColorStop(0, '#fff3a0'); cg.addColorStop(0.6, '#ffd23d'); cg.addColorStop(1, '#f08c00');
-  c.fillStyle = cg;
-  c.beginPath(); c.arc(fx, fy, 6.5 * u, 0, TAU); c.fill();
-
-  // sparkles
-  const star = (x, y, r) => {
-    c.fillStyle = '#fff';
+  const path = (shape, cx, cy, R) => {
     c.beginPath();
-    for (let j = 0; j < 4; j++) {
-      const an = j * Math.PI / 2;
-      c.lineTo(x + Math.cos(an) * r, y + Math.sin(an) * r);
-      c.lineTo(x + Math.cos(an + Math.PI / 4) * r * 0.28, y + Math.sin(an + Math.PI / 4) * r * 0.28);
-    }
-    c.fill();
+    if (shape === 'square') { const h = R * 0.8; c.roundRect(cx - h, cy - h, h * 2, h * 2, R * 0.38); }
+    else if (shape === 'drop') { c.moveTo(cx, cy - R * 0.98); c.bezierCurveTo(cx + R * 0.3, cy - R * 0.55, cx + R * 0.86, cy - R * 0.1, cx + R * 0.86, cy + R * 0.26); c.arc(cx, cy + R * 0.26, R * 0.86, 0, Math.PI); c.bezierCurveTo(cx - R * 0.86, cy - R * 0.1, cx - R * 0.3, cy - R * 0.55, cx, cy - R * 0.98); }
+    else if (shape === 'leaf') { c.moveTo(cx - R * 0.86, cy + R * 0.86); c.quadraticCurveTo(cx - R * 0.95, cy - R * 0.95, cx + R * 0.86, cy - R * 0.86); c.quadraticCurveTo(cx + R * 0.95, cy + R * 0.95, cx - R * 0.86, cy + R * 0.86); }
+    else c.arc(cx, cy, R * 0.9, 0, TAU);
   };
-  if (size >= 64) { star(83 * u, 17 * u, 6 * u); star(16 * u, 84 * u, 4.5 * u); star(88 * u, 80 * u, 3 * u); }
+  const shadeHex = (hex, amt) => { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255; if (amt >= 0) { r += (255 - r) * amt; g += (255 - g) * amt; b += (255 - b) * amt; } else { r *= 1 + amt; g *= 1 + amt; b *= 1 + amt; } return `rgb(${r | 0},${g | 0},${b | 0})`; };
+  const seed = (shape, cx, cy, R, color) => {
+    c.save();
+    c.shadowColor = 'rgba(8,4,30,0.55)'; c.shadowBlur = 5 * u; c.shadowOffsetY = 2.5 * u;
+    path(shape, cx, cy, R);
+    const g = c.createRadialGradient(cx - R * 0.4, cy - R * 0.5, R * 0.1, cx, cy, R * 1.25);
+    g.addColorStop(0, shadeHex(color, 0.35)); g.addColorStop(0.55, color); g.addColorStop(1, shadeHex(color, -0.3));
+    c.fillStyle = g; c.fill();
+    c.restore();
+    c.save(); path(shape, cx, cy, R); c.clip();
+    const hl = c.createRadialGradient(cx - R * 0.35, cy - R * 0.5, 0, cx - R * 0.35, cy - R * 0.5, R * 0.95);
+    hl.addColorStop(0, 'rgba(255,255,255,0.45)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = hl; c.fillRect(0, 0, size, size);
+    c.restore();
+  };
+  const R = 15 * u, d = 17 * u, cx = 50 * u, cy = 52 * u;
+  seed('circle', cx - d, cy - d, R, '#ff5a6e');
+  seed('drop', cx + d, cy - d, R, '#ffd23f');
+  seed('leaf', cx - d, cy + d, R, '#3ddc84');
+  seed('square', cx + d, cy + d, R, '#4cc9ff');
+  // the flower blooming in the middle
+  c.save();
+  c.shadowColor = 'rgba(236,72,153,0.8)'; c.shadowBlur = 8 * u;
+  for (let i = 0; i < 6; i++) {
+    const a = i / 6 * TAU - Math.PI / 2;
+    c.save(); c.translate(cx, cy); c.rotate(a);
+    const g = c.createLinearGradient(0, 0, 14 * u, 0);
+    g.addColorStop(0, '#ec4899'); g.addColorStop(1, '#fbcfe8');
+    c.fillStyle = g;
+    c.beginPath(); c.ellipse(7 * u, 0, 7.5 * u, 4.4 * u, 0, 0, TAU); c.fill();
+    c.restore();
+  }
+  c.restore();
+  c.fillStyle = '#fde68a';
+  c.beginPath(); c.arc(cx, cy, 4 * u, 0, TAU); c.fill();
   return cv.toDataURL('image/png');
 };
 

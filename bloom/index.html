@@ -5,65 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Bloom</title>
 <meta name="description" content="A gravity puzzle: drop bundles of coloured seeds into your garden. Four of a colour bloom, everything above falls, and the fall sets off chains. Watch out for the weeds.">
-<meta name="theme-color" content="#1d1147">
+<meta name="theme-color" content="#0b0b1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bloom">
-<link rel="icon" href="icons/favicon-32.png?v=2" sizes="32x32" type="image/png">
-<link rel="icon" href="icons/icon-192.png?v=2" sizes="192x192" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=2">
-<link rel="manifest" href="manifest.webmanifest?v=2">
+<link rel="icon" href="icons/favicon-32.png?v=3" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png?v=3" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
+<link rel="manifest" href="manifest.webmanifest?v=3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
+<div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-gem" viewBox="0 0 24 24"><path fill="#5fd6ff" d="M6 3h12l4 6-10 12L2 9z"/><path fill="#bff1ff" d="M6 3h12l-3 6H9z"/><path fill="#2aa3e0" d="M2 9h7l3 12z"/><path fill="#8fe4ff" d="M9 9h6l-3 12z"/></symbol>
-  <symbol id="i-fire" viewBox="0 0 24 24"><path fill="#ff7a1a" d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 2-5 3-6 0 2 1 3 2 3 0-4-1-6 1-9z"/><path fill="#ffd23d" d="M12 12c1 2 3 3 3 5a3 3 0 0 1-6 0c0-1 1-2 1.5-2.5.2 1 .8 1.5 1.5 1.5 0-2-.5-3 0-4z"/></symbol>
-  <symbol id="i-crown" viewBox="0 0 24 24"><path fill="#ffd23d" d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5z"/><rect x="5" y="17" width="14" height="3" rx="1" fill="#f0a500"/></symbol>
-  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="12" rx="2" fill="#ff5d73"/><rect x="2" y="7" width="20" height="4" rx="1.5" fill="#ff8597"/><rect x="10.5" y="7" width="3" height="14" fill="#ffd23d"/><path fill="#ffd23d" d="M12 7c-1-3-5-4-5-1.5S11 7 12 7zm0 0c1-3 5-4 5-1.5S13 7 12 7z"/></symbol>
-  <symbol id="i-home" viewBox="0 0 24 24"><path fill="currentColor" d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></symbol>
-  <symbol id="i-gear" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7 7 0 0 0-1.7-1L15 3h-4l-.3 2.9a7 7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7 7 0 0 0 1.7 1L11 21h4l.3-2.9a7 7 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></symbol>
-  <symbol id="i-brush" viewBox="0 0 24 24"><path fill="currentColor" d="M20.7 3.3a1 1 0 0 0-1.4 0L10 12.6l1.4 1.4 9.3-9.3a1 1 0 0 0 0-1.4zM8.5 14c-1.9 0-3.5 1.6-3.5 3.5 0 1-.8 2-2 2.5 1 .7 2.3 1 3.5 1 2.5 0 4.5-2 4.5-4.5 0-1.4-1.1-2.5-2.5-2.5z"/></symbol>
+  <defs>
+    <linearGradient id="g-gem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ef0ff"/><stop offset="1" stop-color="#3aa8ff"/></linearGradient>
+    <linearGradient id="g-fire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff5e3a"/></linearGradient>
+    <linearGradient id="g-crown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe58a"/><stop offset="1" stop-color="#f5a524"/></linearGradient>
+    <linearGradient id="g-gift" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8ab4"/><stop offset="1" stop-color="#a855f7"/></linearGradient>
+  </defs>
+  <symbol id="i-gem" viewBox="0 0 24 24"><path fill="url(#g-gem)" d="M7 3.5h10l4.5 5.5L12 21 2.5 9z"/><path fill="#fff" opacity=".45" d="M7 3.5h10L15 9H9z"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path fill="url(#g-fire)" d="M12 2.5c.8 3.6 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.8 1.6-4.6 2.6-5.5.1 1.8.9 2.8 1.9 2.8 0-3.6-.9-5.5 1-8.3z"/><path fill="#fff" opacity=".5" d="M12 13c.9 1.7 2.4 2.6 2.4 4.3a2.4 2.4 0 0 1-4.8 0c0-1 .7-1.8 1.2-2.2.2.8.6 1.2 1.2 1.2 0-1.6-.4-2.4 0-3.3z"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path fill="url(#g-crown)" d="M3.5 8l4.4 3.6L12 5l4.1 6.6L20.5 8l-1.8 10.5H5.3z"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.5" y="10" width="17" height="10.5" rx="2.5" fill="url(#g-gift)"/><rect x="2.5" y="7" width="19" height="4.5" rx="2" fill="#ffb3d1"/><rect x="11" y="7" width="2" height="13.5" fill="#fff" opacity=".85"/><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M12 7c-1.2-2.6-4.6-3.4-4.6-1.3C7.4 7 10.5 7 12 7zm0 0c1.2-2.6 4.6-3.4 4.6-1.3C16.6 7 13.5 7 12 7z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></g></symbol>
+  <symbol id="i-palette" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3.5a8.5 8.5 0 0 0 0 17c1.3 0 1.9-.9 1.6-2-.4-1.4.6-2.5 2-2.5h1.6a3.3 3.3 0 0 0 3.3-3.3C20.5 7.6 16.7 3.5 12 3.5z"/><circle cx="7.8" cy="11" r="1.3" fill="currentColor"/><circle cx="10.5" cy="7.3" r="1.3" fill="currentColor"/><circle cx="15" cy="7.5" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.6v12.8a1 1 0 0 0 1.5.9l10.2-6.4a1 1 0 0 0 0-1.8L9.5 4.7A1 1 0 0 0 8 5.6z"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path fill="none" stroke="#6ee7a0" stroke-width="2" stroke-linecap="round" d="M12 21v-8"/><path fill="#6ee7a0" d="M12 13c0-4 3-6.5 7-6.5 0 4-3 6.5-7 6.5zM12 11C12 8 9.8 6 6.5 6c0 3 2.2 5 5.5 5z"/></symbol>
 </svg>
 
 <main id="app">
   <section id="home" class="screen">
     <header class="topbar">
-      <div class="pill" id="h-gems"><svg><use href="#i-gem"/></svg><b>0</b></div>
-      <div class="pill" id="h-streak"><svg><use href="#i-fire"/></svg><b>0</b></div>
+      <div class="chip" id="h-gems"><svg><use href="#i-gem"/></svg><b>0</b></div>
+      <div class="chip" id="h-streak"><svg><use href="#i-fire"/></svg><b>0</b></div>
       <span class="grow"></span>
-      <button class="round" id="h-skins" type="button" aria-label="Skins"><svg><use href="#i-brush"/></svg></button>
-      <button class="round" id="h-settings" type="button" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
+      <button class="icon-btn" id="h-skins" type="button" aria-label="Skins"><svg><use href="#i-palette"/></svg></button>
+      <button class="icon-btn" id="h-settings" type="button" aria-label="Settings"><svg><use href="#i-settings"/></svg></button>
     </header>
 
     <div class="brand">
-      <h1 class="logo">Bloom</h1>
-      <p class="tagline">Drop seeds · Grow chains</p>
+      <h1 class="logo">bloom</h1>
+      <p class="tagline">Drop seeds. Grow chains.</p>
     </div>
 
-    <div class="garden-wrap">
+    <div class="garden-card glass">
       <canvas id="garden" aria-label="Your garden"></canvas>
-      <div class="level-chip"><span>LVL</span><b id="h-level">1</b></div>
-    </div>
-    <div class="xp">
-      <div class="bar"><i id="h-xpbar"></i></div>
-      <small id="h-xptext"></small>
+      <div class="level-row">
+        <div class="ring" id="h-ring"><b id="h-level">1</b></div>
+        <div class="grow"><span class="eyebrow">Level</span><small id="h-xptext"></small></div>
+      </div>
     </div>
 
-    <button class="play" id="h-play" type="button">Play</button>
-    <button class="link" id="h-new" type="button" hidden>New game</button>
-    <p class="best-line"><svg><use href="#i-crown"/></svg> Best: <b id="h-best">0</b></p>
+    <button class="play" id="h-play" type="button"><svg><use href="#i-play"/></svg><span>Play</span></button>
+    <div class="under-play">
+      <span class="best-line"><svg><use href="#i-crown"/></svg>Best <b id="h-best">0</b></span>
+      <button class="link" id="h-new" type="button" hidden>New game</button>
+    </div>
 
-    <div class="card">
-      <h2>Today's missions</h2>
+    <div class="glass card">
+      <div class="card-head"><h2>Today's missions</h2><span class="eyebrow">Daily</span></div>
       <ul class="missions" id="h-missions"></ul>
     </div>
-    <div class="card chest-card">
-      <svg class="chest-ico"><use href="#i-gift"/></svg>
+    <div class="glass card chest-card">
+      <div class="chest-ico"><svg><use href="#i-gift"/></svg></div>
       <div class="grow">
         <h2>Lucky chest</h2>
         <div class="bar"><i id="h-chestbar"></i></div>
@@ -74,12 +84,13 @@
 
   <section id="game" class="screen" hidden>
     <header class="hud">
-      <button class="round" id="g-home" type="button" aria-label="Home"><svg><use href="#i-home"/></svg></button>
+      <button class="icon-btn" id="g-home" type="button" aria-label="Home"><svg><use href="#i-home"/></svg></button>
       <div class="score-box">
+        <span class="eyebrow">Score</span>
         <div class="score" id="g-score">0</div>
         <div class="chase" id="g-chase"></div>
       </div>
-      <div class="best-mini"><svg><use href="#i-crown"/></svg><b id="g-best">0</b></div>
+      <div class="chip best-mini"><svg><use href="#i-crown"/></svg><b id="g-best">0</b></div>
     </header>
     <div id="stage"><canvas id="board" aria-label="Garden"></canvas></div>
     <div id="hint" hidden></div>
@@ -90,6 +101,6 @@
 <div id="overlay" hidden><div class="modal" id="modal"></div></div>
 <div id="toasts" aria-live="polite"></div>
 
-<script type="module" src="js/main.js?v=3"></script>
+<script type="module" src="js/main.js?v=4"></script>
 </body>
 </html>

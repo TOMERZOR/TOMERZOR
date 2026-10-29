@@ -22,3 +22,7 @@ ARSLATE_EFFORT = "low"
 
 # The API key is a secret, never put it in this file:
 #   npx wrangler secret put ANTHROPIC_API_KEY
+
+[[kv_namespaces]]
+binding = "ARSLATE_KV"
+id = "71472465df9347baaa6f098162f9162d"

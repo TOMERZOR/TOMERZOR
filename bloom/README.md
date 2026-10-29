@@ -46,11 +46,13 @@ Difficulty also climbs on its own: 4 colours for a new player's opening, 5 from 
 
 Turn on **Settings → developer mode** to see the mercy value, the reasons, the weed pace and the last bundle's stats while you play.
 
-**Feedback.** Seeds of the same colour are joined by bridges, so groups read at a glance. Blooms open into flowers in a wave and burst into petals; the clear sound climbs a pentatonic scale with the chain; banners for chains ("Chain x3!"), big blooms and new specials; screen shake grows with the chain and specials. The sky over the garden glows red when a column nears the top. Passing the best score mid-game fires "New best!".
+**Look.** A dark, glassy interface: drifting colour glows behind frosted cards, the Outfit typeface, line icons, a level ring and bottom sheets for every dialog. Seeds are soft clay shapes, and each colour has its own silhouette (round, square, drop, leaf, hexagon, clover), so groups read by shape too, which also helps colour-blind players.
+
+**Feedback.** Seeds of the same colour are joined by soft bridges, so groups read at a glance. Blooms open into flowers in a wave and burst into petals; the clear sound climbs a pentatonic scale with the chain; banners for chains ("Chain x3!"), big blooms and new specials; screen shake grows with the chain and specials. The sky over the garden glows red when a column nears the top. Passing the best score mid-game fires "New best!".
 
 **Near misses.** The HUD counts down "X to beat your best!" from 70% of your best. The game-over screen says "So close!" and how many points were missing, and shows the nearest unfinished goal.
 
-**Between games (`js/meta.js`).** Levels from XP, each planting a flower in the garden on the home screen (the next one is a bud that grows with XP); a daily streak with growing gems and a streak freeze; three daily missions (bloom N groups, chain xN, score N, play N games, bloom N seeds at once, pull N weeds, make N special flowers); a lucky chest that fills with blooms and holds a random amount of gems (sometimes a jackpot); skins bought with gems (Jelly, Candy, Pastel, Gems, Neon). Progress and the game in progress are saved in the browser.
+**Between games (`js/meta.js`).** Levels from XP, each planting a flower in the garden on the home screen (the next one is a bud that grows with XP); a daily streak with growing gems and a streak freeze; three daily missions (bloom N groups, chain xN, score N, play N games, bloom N seeds at once, pull N weeds, make N special flowers); a lucky chest that fills with blooms and holds a random amount of gems (sometimes a jackpot); skins bought with gems (Clay, Glass, Pastel, Gems, Neon). Progress and the game in progress are saved in the browser.
 
 ## Where the line is
 

@@ -653,9 +653,16 @@ class Handler(BaseHTTPRequestHandler):
 
 class Server(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    # On Windows SO_REUSEADDR lets a second copy bind the same port, so it asks
+    # for exclusive use instead; elsewhere it only allows a quick restart.
+    allow_reuse_address = not sys.platform.startswith("win")
     stopping = False
     verbose = False
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 def load_config(root, new_key):

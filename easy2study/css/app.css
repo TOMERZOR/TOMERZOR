@@ -404,6 +404,7 @@ img { max-width: 100%; display: block; }
   inset-inline-start: -120px; top: -170px;
   background: radial-gradient(closest-side, rgb(255 255 255 / .22), transparent);
 }
+.start { grid-template-columns: minmax(0, 1fr); }
 .start__title { font-size: 1.6rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; margin: 0; }
 .start__sub { margin: 0; opacity: .86; font-size: .95em; max-width: 30ch; }
 .start .btn { background: var(--hero-ink); color: var(--hero); justify-self: start; min-height: 54px; }
@@ -724,3 +725,126 @@ img { max-width: 100%; display: block; }
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 }
 :root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+
+/* ---------- Any topic: the question box on the home card ---------- */
+.quest {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 10px 24px -14px rgb(0 0 0 / .35);
+}
+.quest__input {
+  flex: 1; min-width: 0;
+  min-height: 50px;
+  padding: 0 16px;
+  border: 0; background: transparent;
+  color: var(--ink);
+}
+.quest__input::placeholder { color: var(--ink-3); opacity: 1; }
+.quest__input:focus { outline: none; }
+.quest:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero-ink) 60%, transparent), 0 10px 24px -14px rgb(0 0 0 / .35); }
+.quest__go { width: 50px; height: 50px; border-radius: 999px; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); transition: transform var(--t-fast) var(--ease-out), background var(--t-fast); }
+.quest__go:hover { background: var(--accent-strong); }
+.quest__go:active { transform: scale(.92); }
+.hero-chips { margin-inline: -22px; padding-inline: 22px; margin-top: -2px; }
+.hero-chips .chip { background: rgb(255 255 255 / .12); color: var(--hero-ink); box-shadow: inset 0 0 0 1px rgb(255 255 255 / .26); min-height: 40px; font-size: .86em; }
+.hero-chips .chip:hover { background: rgb(255 255 255 / .2); }
+.exam-btn {
+  display: flex; gap: 14px; align-items: center;
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-card);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  text-align: start;
+  transition: transform var(--t-fast) var(--ease-out);
+}
+.exam-btn:active { transform: scale(.985); }
+
+/* This week */
+.week { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: center; padding: 18px; border-radius: var(--r-card); background: var(--surface); box-shadow: var(--shadow); }
+.week__num { font-size: 2.6rem; font-weight: 800; letter-spacing: -.04em; line-height: 1; color: var(--accent); min-width: 1.4ch; text-align: center; font-variant-numeric: tabular-nums; }
+.week__text { display: grid; gap: 2px; }
+.week__share { grid-column: 1 / -1; margin-top: 10px; min-height: 50px; }
+
+/* ---------- Path map ---------- */
+.path__head { display: grid; gap: 10px; margin: 6px 0 26px; }
+.path { list-style: none; margin: 0; padding: 0; display: grid; }
+.path__step { position: relative; display: flex; gap: 16px; padding-bottom: 14px; }
+.path__step:not(:last-child)::before,
+.path__step:not(:last-child)::after {
+  content: ""; position: absolute;
+  inset-inline-start: 23px; top: 52px; bottom: 4px;
+  width: 3px; border-radius: 3px;
+  background: var(--line);
+}
+.path__step:not(:last-child)::after { background: var(--accent); transform: scaleY(0); transform-origin: top; transition: transform 600ms var(--ease-out) 120ms; }
+.path__step[data-state="done"]:not(:last-child)::after { transform: scaleY(1); }
+.path__node {
+  position: relative;
+  width: 48px; height: 48px; flex: none;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 700;
+  background: var(--surface);
+  color: var(--ink-3);
+  box-shadow: inset 0 0 0 2px var(--line);
+  transition: background 420ms var(--ease-out), color 420ms, box-shadow 420ms, transform 420ms var(--ease-out);
+}
+.path__num, .path__check { grid-area: 1 / 1; transition: opacity 260ms, transform 420ms var(--ease-out); }
+.path__check { width: 22px; height: 22px; opacity: 0; transform: scale(.4) rotate(-20deg); }
+.path__step[data-state="done"] .path__node { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+.path__step[data-state="done"] .path__num { opacity: 0; transform: scale(.4); }
+.path__step[data-state="done"] .path__check { opacity: 1; transform: none; }
+.path__step[data-state="now"] .path__node { background: var(--accent-soft); color: var(--accent-soft-ink); box-shadow: inset 0 0 0 2.5px var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .path__step[data-state="now"] .path__node::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: ping 2.4s var(--ease-out) infinite; }
+  .path__step--fill .path__node { animation: pop 520ms var(--ease-out); }
+  .path__step--arrive .path__body { animation: rise 520ms var(--ease-out) both; }
+}
+@keyframes ping { 0% { transform: scale(.85); opacity: .7; } 70%, 100% { transform: scale(1.25); opacity: 0; } }
+.path__body {
+  flex: 1; display: grid; gap: 4px; align-content: start;
+  padding: 11px 16px 14px;
+  border-radius: 18px;
+  text-align: start;
+  transition: background var(--t-med), box-shadow var(--t-med), transform var(--t-fast) var(--ease-out);
+}
+.path__title { font-weight: 600; line-height: 1.35; }
+.path__goal { color: var(--ink-3); font-size: .86em; line-height: 1.5; }
+.path__step[data-state="todo"] .path__title { color: var(--ink-2); }
+.path__step[data-state="now"] .path__body { background: var(--surface); box-shadow: var(--shadow); }
+.path__step[data-state="now"] .path__body:active { transform: scale(.985); }
+.path__step[data-state="done"] .path__body:hover { background: var(--surface-2); }
+
+/* ---------- Step by step inside a bite ---------- */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.step {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  animation: rise 420ms var(--ease-out) both;
+  transition: background var(--t-med), color var(--t-med);
+}
+.step__n { width: 28px; height: 28px; border-radius: 10px; flex: none; display: grid; place-items: center; background: var(--surface); font-weight: 700; font-size: .82em; transition: background var(--t-med), color var(--t-med); }
+.step__t { padding-top: 1px; letter-spacing: var(--ls); word-spacing: var(--ws); }
+.step[data-now] { background: var(--accent-soft); color: var(--accent-soft-ink); }
+.step[data-now] .step__n { background: var(--accent); color: var(--accent-ink); }
+.btn__count { font-size: .78em; font-weight: 500; opacity: .75; font-variant-numeric: tabular-nums; direction: ltr; }
+
+/* "Things you understood" counter in the lesson bar */
+.got { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-soft-ink); font-weight: 700; font-size: .9em; font-variant-numeric: tabular-nums; flex: none; }
+.got.bump { animation: got-bump 420ms var(--ease-out); }
+@keyframes got-bump { 30% { transform: scale(1.22); } 60% { transform: scale(.96); } }
+
+.done__stats { display: flex; gap: 10px; justify-content: center; margin-top: 4px; }
+.done__stat { display: grid; justify-items: center; padding: 10px 18px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); font-size: .82em; color: var(--ink-2); }
+.done__stat b { font-size: 1.9rem; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* Buttons that carry a lesson title: the title shortens, the button never grows */
+.btn--block { max-width: 100%; min-width: 0; }
+.btn__ell { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sticky-foot, .lesson__bar { min-width: 0; }

@@ -3,7 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
-import worker, { cleanProfile } from "../src/index.js";
+import worker, { cleanProfile, cleanCourse } from "../src/index.js";
 import { SYSTEM_PROMPT } from "../src/prompt.js";
 
 let reply = null; // what the fake Claude answers next
@@ -95,6 +95,8 @@ test("a lesson is written with structured output, caching and the refusal fallba
   const user = sent.body.messages[0].content;
   assert.match(user, /<topic>שברים<\/topic>/);
   assert.match(user, /<test_is>tomorrow<\/test_is>/);
+  assert.match(user, /<goal>exam<\/goal>/);
+  assert.match(user, /<lesson_request>/);
   assert.match(user, /feminine/);
   assert.ok(!user.includes("נועה"), "the learner's name never reaches the API");
 });
@@ -113,7 +115,7 @@ test("a photo of the material is sent as an image block", async () => {
 test("lesson input is checked before calling Claude", async () => {
   seen.length = 0;
   assert.equal((await worker.fetch(post("/api/lesson", { profile: PROFILE }), env())).status, 400);
-  assert.equal((await worker.fetch(post("/api/lesson", { topic: "x", material: "א".repeat(9000) }), env())).status, 413);
+  assert.equal((await worker.fetch(post("/api/lesson", { topic: "x", material: "א".repeat(13000) }), env())).status, 413);
   assert.equal((await worker.fetch(post("/api/lesson", { image: { media_type: "image/svg+xml", data: "AAAA" } }), env())).status, 400);
   assert.equal((await worker.fetch(post("/api/lesson", "topic=x", { type: "text/plain" }), env())).status, 415);
   assert.equal(seen.length, 0);
@@ -179,4 +181,54 @@ test("the profile is reduced to known fields", () => {
   assert.equal(p.tone, "friend");
   assert.equal(p.gender, "feminine");
   assert.ok(!("name" in p) && !("extra" in p));
+});
+
+const PLAN = { title: "חורים שחורים", subtitle: "מכוכב ועד חור שחור", chapters: [{ title: "מה זה כוח משיכה", goal: "להבין למה דברים נופלים." }, { title: "איך כוכב מת", goal: "להבין מה קורה בסוף חייו של כוכב." }], notes: "" };
+
+test("a path is planned at low effort from a topic", async () => {
+  reply = message(PLAN);
+  seen.length = 0;
+  const res = await worker.fetch(post("/api/plan", { profile: PROFILE, topic: "חורים שחורים", goal: "curious" }), env());
+  assert.equal(res.status, 200);
+  const data = await res.json();
+  assert.equal(data.plan.chapters.length, 2);
+  const sent = seen[0].body;
+  assert.equal(sent.output_config.effort, "low");
+  assert.deepEqual(sent.output_config.format.schema.required, ["title", "subtitle", "chapters", "notes"]);
+  assert.match(sent.messages[0].content, /<plan_request>/);
+  assert.match(sent.messages[0].content, /<goal>curious<\/goal>/);
+});
+
+test("a path with no chapters is not passed on", async () => {
+  reply = message({ ...PLAN, chapters: [] });
+  const res = await worker.fetch(post("/api/plan", { topic: "x" }), env());
+  assert.equal(res.status, 502);
+});
+
+test("a chapter lesson knows its place in the path", async () => {
+  reply = message(LESSON);
+  seen.length = 0;
+  const course = { title: "חורים שחורים", chapters: ["מה זה כוח משיכה", "איך כוכב מת"], index: 1, goal: "להבין מה קורה בסוף חייו של כוכב.", learned: ["כוח משיכה מושך דברים זה לזה."] };
+  const res = await worker.fetch(post("/api/lesson", { profile: PROFILE, topic: "חורים שחורים", material: "הערות מהצילום", goal: "curious", course }), env());
+  assert.equal(res.status, 200);
+  const user = seen[0].body.messages[0].content;
+  assert.match(user, /<chapter>2\. איך כוכב מת: להבין מה קורה בסוף חייו של כוכב\.<\/chapter>/);
+  assert.match(user, /<learned>\n- כוח משיכה מושך דברים זה לזה\.\n<\/learned>/);
+  assert.match(user, /<notes>\nהערות מהצילום\n<\/notes>/);
+  assert.match(user, /Write this chapter's lesson\./);
+});
+
+test("a course with a bad index is ignored", () => {
+  assert.equal(cleanCourse({ chapters: ["א"], index: 3 }), null);
+  assert.equal(cleanCourse({ chapters: [], index: 0 }), null);
+  assert.equal(cleanCourse({ chapters: ["א", "ב"], index: 1 }).title, "ב");
+});
+
+test("plans have their own daily limit", async () => {
+  reply = message(PLAN);
+  const e = env({ E2S_KV: new MemoryKV(), DAILY_PLANS: "1", DAILY_LESSONS: "5" });
+  assert.equal((await worker.fetch(post("/api/plan", { topic: "x" }), e)).status, 200);
+  assert.equal((await worker.fetch(post("/api/plan", { topic: "x" }), e)).status, 429);
+  reply = message(LESSON);
+  assert.equal((await worker.fetch(post("/api/lesson", { topic: "x" }), e)).status, 200);
 });

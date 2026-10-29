@@ -6,6 +6,7 @@
 //   [[3/4]]      a fraction, drawn stacked.
 //   {אתה|את}     masculine|feminine. The app picks one from the profile.
 // Each bite: title, text, simpler (said more simply), example, optional
+// steps (shown one at a time, for processes and solved exercises), optional
 // visual and optional check (a quick question with 2 to 3 options; answer is
 // the index of the right one).
 
@@ -78,7 +79,13 @@ window.E2S_LESSONS = [
       },
       {
         title: "מחברים שברים עם אותו מכנה",
-        text: "מחברים רק את המונים. המכנה נשאר כמו שהוא.\n[[1/5]] + [[2/5]] = [[3/5]]\nהמכנה לא משתנה, כי גודל החתיכות לא השתנה.",
+        text: "מחברים רק את המונים. המכנה נשאר כמו שהוא.\nבואו נפתור את [[1/5]] + [[2/5]], צעד אחר צעד:",
+        steps: [
+          "בודקים שהמכנים שווים: 5 ו-5. שווים!",
+          "מחברים את המונים: 1 + 2 = 3",
+          "המכנה נשאר 5, כי גודל החתיכות לא השתנה",
+          "התשובה: [[3/5]]",
+        ],
         simpler: "למעלה מחברים. למטה לא נוגעים.",
         example: "{אכלת|אכלת} משולש פיצה אחד מתוך 5, ואחר כך עוד 2. {אכלת|אכלת} 3 משולשים מתוך 5: [[3/5]].",
         check: {
@@ -205,7 +212,13 @@ window.E2S_LESSONS = [
       },
       {
         title: "הכלל של ה-s",
-        text: "עם he, she, it מוסיפים **s** לפועל.\nHe eats. She plays. It runs.",
+        text: "עם he, she, it מוסיפים **s** לפועל.\nבואו נבנה משפט ביחד:",
+        steps: [
+          "מי עושה? She, כלומר היא",
+          "מה היא עושה? הפועל play",
+          "she זה היא, אז מוסיפים s: plays",
+          "She plays football.",
+        ],
         simpler: "הוא, היא, זה: מוסיפים s.",
         example: "My dog sleeps all day. הכלב (it) ישן כל היום, אז sleep מקבל s.",
         check: {
@@ -263,7 +276,13 @@ window.E2S_LESSONS = [
       },
       {
         title: "ההמצאה שהזיזה הכל",
-        text: "ההמצאה החשובה ביותר הייתה **מנוע קיטור**.\nהוא עובד עם אש ומים, ונותן כוח למכונות, לרכבות ולאוניות.",
+        text: "ההמצאה החשובה ביותר הייתה **מנוע קיטור**. הוא נתן כוח למכונות, לרכבות ולאוניות.\nככה הוא עובד:",
+        steps: [
+          "שורפים פחם, והאש מחממת מים בדוד",
+          "המים רותחים והופכים לקיטור",
+          "הקיטור דוחף חלק שנקרא בוכנה, קדימה ואחורה",
+          "הבוכנה מסובבת גלגל, והמכונה זזה",
+        ],
         simpler: "אש מחממת מים. האדים דוחפים. המכונה זזה.",
         example: "כמו המכסה של סיר רותח שקופץ למעלה: לאדים יש כוח.",
         check: {

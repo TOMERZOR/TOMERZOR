@@ -17,8 +17,10 @@
   function defaults() {
     return {
       profile: null,
-      settings: { size: "m", comfort: false, theme: "auto", motion: "auto", read: false },
+      settings: { size: "m", comfort: false, theme: "auto", motion: "auto", read: false, sound: true },
       lessons: {},
+      courses: {},
+      log: [],
       days: [],
     };
   }
@@ -110,6 +112,46 @@
   function vibrate(ms) {
     try { if (!reduceMotion() && navigator.vibrate) navigator.vibrate(ms); } catch { /* not supported */ }
   }
+
+  // Small synthesized sounds (no audio files): a soft tick for every "got it",
+  // a two-note chime for a right answer, a short rising tune at the finish.
+  const Sound = (() => {
+    let ctx = null;
+    function audio() {
+      if (!ctx) {
+        const A = window.AudioContext || window.webkitAudioContext;
+        if (!A) return null;
+        ctx = new A();
+      }
+      if (ctx.state === "suspended") ctx.resume();
+      return ctx;
+    }
+    function tone(freq, at, dur, { type = "sine", gain = 0.05, to } = {}) {
+      const c = audio();
+      if (!c) return;
+      const t = c.currentTime + at;
+      const o = c.createOscillator();
+      const v = c.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+      v.gain.setValueAtTime(0.0001, t);
+      v.gain.exponentialRampToValueAtTime(gain, t + 0.015);
+      v.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(v).connect(c.destination);
+      o.start(t);
+      o.stop(t + dur + 0.03);
+    }
+    const on = () => S.settings.sound !== false;
+    const play = (fn) => { try { if (on()) fn(); } catch { /* audio blocked */ } };
+    return {
+      tick: () => play(() => tone(620, 0, 0.11, { to: 930, gain: 0.045 })),
+      step: () => play(() => tone(540, 0, 0.09, { type: "triangle", gain: 0.05 })),
+      right: () => play(() => { tone(784, 0, 0.18, { type: "triangle", gain: 0.07 }); tone(1175, 0.1, 0.3, { type: "triangle", gain: 0.06 }); }),
+      soft: () => play(() => tone(440, 0, 0.2, { gain: 0.035 })),
+      win: () => play(() => [523, 659, 784, 1047].forEach((f, k) => tone(f, k * 0.1, 0.36, { type: "triangle", gain: 0.055 }))),
+    };
+  })();
 
   // ---------- Settings applied to the page ----------
   function applySettings() {
@@ -548,17 +590,68 @@
     return steps;
   }
 
+  // What the learner did, for "this week" and the parents' summary.
+  function logEvent(k, t) {
+    S.log = (S.log || []).concat({ d: today(), k, t: t || "" }).slice(-800);
+    save();
+  }
+  function weekStats() {
+    const from = new Date();
+    from.setDate(from.getDate() - 6);
+    const since = from.toISOString().slice(0, 10);
+    const week = (S.log || []).filter((e) => e.d >= since);
+    return {
+      bites: week.filter((e) => e.k === "bite").length,
+      right: week.filter((e) => e.k === "right").length,
+      days: new Set(week.map((e) => e.d)).size,
+      topics: [...new Set(week.filter((e) => e.k === "lesson").map((e) => e.t))],
+    };
+  }
+  async function shareWeek() {
+    const p = S.profile || {};
+    const w = weekStats();
+    const who = p.name || g("הוא", "היא");
+    const text = [
+      `Easy2Study: מה ${who} ${g("למד", "למדה")} השבוע`,
+      `✓ ${w.bites} דברים חדשים ש${g("הבין", "הבינה")}`,
+      `✓ ${w.right} תשובות נכונות`,
+      `✓ ${w.days} ימי למידה`,
+      w.topics.length ? `נושאים: ${w.topics.slice(0, 8).join(", ")}` : "",
+    ].filter(Boolean).join("\n");
+    try {
+      if (navigator.share) { await navigator.share({ text }); return; }
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("הסיכום הועתק. אפשר להדביק בוואטסאפ.");
+    } catch {
+      toast("לא הצלחתי לשתף מהדפדפן הזה.");
+    }
+  }
+
+  const SUGGEST = ["למה השמיים כחולים?", "חורים שחורים", "שברים", "מלחמת העצמאות", "מה זה אינפלציה?", "איך המוח זוכר?", "פוטוסינתזה", "Present Simple"];
+
+  function courseProgress(c) {
+    const done = c.chapters.filter((x) => x.done).length;
+    return { done, total: c.chapters.length, next: c.chapters.findIndex((x) => !x.done) };
+  }
+
   function home() {
     current = { name: "home" };
     const p = S.profile;
     const a = derive();
+    const ai = Tutor.available();
     const recs = Object.entries(S.lessons).map(([id, r]) => ({ id, ...r, lesson: getLesson(id) })).filter((r) => r.lesson);
-    const going = recs.filter((r) => !r.done).sort((x, y) => y.updated - x.updated).slice(0, 2);
+    const going = recs.filter((r) => !r.done && !r.courseId).sort((x, y) => y.updated - x.updated).slice(0, 2);
     const done = recs.filter((r) => r.done).sort((x, y) => (y.feel === "lost") - (x.feel === "lost") || y.updated - x.updated).slice(0, 4);
+    const courses = Object.entries(S.courses || {}).map(([id, c]) => ({ id, ...c, prog: courseProgress(c) }))
+      .sort((x, y) => (x.prog.next < 0) - (y.prog.next < 0) || y.updated - x.updated).slice(0, 4);
     const st = streak();
-    const sub = a.small
-      ? "מתחילים ב-2 דקות. אם בא לך עוד, ממשיכים."
-      : `${g("תגיד", "תגידי")} לי על מה המבחן, ואני אפרק את זה לחתיכות קטנות.`;
+    const w = weekStats();
+    const chips = ai ? SUGGEST : BUILTIN.map((l) => l.title);
+    const sub = a.small ? "כל נושא בעולם. מתחילים ב-2 דקות, ואם בא לך עוד, ממשיכים." : "כל נושא בעולם. נבנה לך מסלול קצר, צעד אחר צעד.";
     const el = mount(`
       <div class="topbar">
         <span class="brand">Easy<b>2</b>Study</span>
@@ -570,10 +663,35 @@
         <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>${greeting()}${p.name ? `, ${esc(p.name)}` : ""}</h1>
       </div>
       <section class="start stagger" aria-labelledby="start-t" style="--i:1">
-        <h2 class="start__title" id="start-t">מה לומדים היום?</h2>
+        <h2 class="start__title" id="start-t">מה בא לך להבין?</h2>
         <p class="start__sub">${esc(sub)}</p>
-        <button class="btn" data-new>${icon("plus")}${g("בוא", "בואי")} נתחיל</button>
+        <form class="quest" data-quest>
+          <label class="sr-only" for="quest">נושא</label>
+          <input id="quest" class="quest__input" maxlength="140" autocomplete="off" enterkeyhint="go" placeholder="${ai ? "למשל: למה יש עונות בשנה?" : "למשל: שברים"}">
+          <button class="quest__go" aria-label="יאללה">${icon("arrow-left")}</button>
+        </form>
+        <div class="chips chips--scroll hero-chips" aria-label="רעיונות">
+          ${chips.map((t) => `<button type="button" class="chip" data-suggest="${esc(t)}">${plain(t)}</button>`).join("")}
+        </div>
       </section>
+      <button class="exam-btn stagger" style="--i:2" data-new>
+        <span class="review__ic">${icon("clipboard-text")}</span>
+        <span class="resume__text"><b style="font-weight:600">יש לי מבחן</b><span class="small muted" style="display:block">לצלם דף, להדביק סיכום, לבחור מתי</span></span>
+        ${icon("caret-left", "icon--sm")}
+      </button>
+      ${courses.length ? `
+      <section class="section" aria-labelledby="paths-t">
+        <h2 class="h3" id="paths-t">המסלולים שלי</h2>
+        ${courses.map((c) => {
+          const pct = Math.round((c.prog.done / c.prog.total) * 100);
+          const line = c.prog.next < 0 ? `${g("סיימת", "סיימת")} את כל ${c.prog.total} השלבים` : `שלב ${c.prog.next + 1} מתוך ${c.prog.total}: ${c.chapters[c.prog.next].title}`;
+          return `<button class="resume" data-course="${esc(c.id)}">
+            <span class="ring" style="--p:${pct}"><span>${c.prog.next < 0 ? icon("check", "icon--sm") : `${c.prog.done}/${c.prog.total}`}</span></span>
+            <span class="resume__text"><span class="resume__title">${esc(c.title)}</span><span class="small muted resume__title" style="display:block;font-weight:400">${esc(line)}</span></span>
+            ${icon("caret-left", "icon--sm")}
+          </button>`;
+        }).join("")}
+      </section>` : ""}
       ${going.length ? `
       <section class="section" aria-labelledby="cont-t">
         <h2 class="h3" id="cont-t">להמשיך מאיפה ${g("שעצרת", "שעצרת")}</h2>
@@ -586,6 +704,17 @@
             ${icon("caret-left", "icon--sm")}
           </button>`;
         }).join("")}
+      </section>` : ""}
+      ${w.bites ? `
+      <section class="section" aria-labelledby="week-t">
+        <div class="week">
+          <div class="week__num" aria-hidden="true">${w.bites}</div>
+          <div class="week__text">
+            <h2 class="h3" id="week-t">השבוע ${g("הבנת", "הבנת")} ${w.bites === 1 ? "דבר חדש אחד" : `${w.bites} דברים חדשים`}</h2>
+            <span class="small muted">${w.right} תשובות נכונות${w.topics.length ? `, ${w.topics.length === 1 ? "נושא אחד" : `${w.topics.length} נושאים`}` : ""}</span>
+          </div>
+          <button class="btn btn--soft week__share" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>
+        </div>
       </section>` : ""}
       ${done.length ? `
       <section class="section" aria-labelledby="rev-t">
@@ -603,14 +732,35 @@
         <div class="lesson-rail">
           ${BUILTIN.map((l) => `<button class="tile" data-open="${l.id}">
             <span class="tile__ic">${icon(subjectOf(l.subject).icon)}</span>
-            <span><span class="tile__title">${esc(l.title)}</span><span class="tile__meta" style="display:block">${esc(l.subtitle)}</span></span>
+            <span><span class="tile__title">${plain(l.title)}</span><span class="tile__meta" style="display:block">${esc(l.subtitle)}</span></span>
           </button>`).join("")}
         </div>
       </section>`, "home");
     $("[data-settings]", el).onclick = settingsSheet;
     $("[data-new]", el).onclick = () => newLesson();
+    const quest = $("#quest", el);
+    const go = (topic) => {
+      topic = topic.trim();
+      if (!topic) return quest.focus();
+      if (!ai) {
+        const match = findBuiltin(topic);
+        if (match) return openLesson(match.id);
+        return toast("כרגע אפשר ללמוד רק את השיעורים המוכנים.");
+      }
+      startPath({ topic, goal: "curious" });
+    };
+    $("[data-quest]", el).onsubmit = (e) => { e.preventDefault(); go(quest.value); };
+    $$("[data-suggest]", el).forEach((b) => (b.onclick = () => go(b.dataset.suggest)));
     $$("[data-open]", el).forEach((b) => (b.onclick = () => openLesson(b.dataset.open)));
+    $$("[data-course]", el).forEach((b) => (b.onclick = () => coursePath(b.dataset.course)));
     $$("[data-review]", el).forEach((b) => (b.onclick = () => review(b.dataset.review)));
+    const sh = $("[data-share]", el);
+    if (sh) sh.onclick = shareWeek;
+  }
+
+  function findBuiltin(topic) {
+    const t = topic.trim().toLowerCase();
+    return BUILTIN.find((l) => l.title.toLowerCase() === t || l.keywords.some((k) => t.includes(k.toLowerCase()) || (t.length > 2 && k.toLowerCase().includes(t))));
   }
 
   // New lesson ------------------------------------------------------------
@@ -697,14 +847,13 @@
       mat.oninput = () => { d.material = mat.value; refresh(); };
     }
     make.onclick = () => {
-      const t = d.topic.trim().toLowerCase();
-      const match = BUILTIN.find((l) => l.keywords.some((k) => t.includes(k.toLowerCase()) || (t.length > 2 && k.toLowerCase().includes(t))) || l.title.toLowerCase() === t);
       if (!ai) {
+        const match = findBuiltin(d.topic);
         if (match) return openLesson(match.id);
         err.textContent = "את הנושא הזה אפשר יהיה ללמוד כשהמורה החכם יחובר. בינתיים אפשר לבחור שיעור מוכן מהמסך הראשי.";
         return;
       }
-      generate(d);
+      startPath({ ...d, goal: "exam" });
     };
   }
 
@@ -730,17 +879,9 @@
   }
 
   // Loading ---------------------------------------------------------------
-  function generate(d) {
+  // A calm waiting screen with rotating lines. Returns {alive(), stop()}.
+  function loadingScreen(lines, onCancel) {
     current = { name: "loading" };
-    const p = S.profile || {};
-    const fav = (p.interests || [])[0];
-    const lines = [
-      d.image ? "קורא את הדף ששלחת..." : "חושב איך להסביר את זה הכי פשוט...",
-      "מפרק את החומר לחתיכות קטנות...",
-      fav ? `מחפש דוגמאות מ${fav}...` : "מחפש דוגמאות מהחיים...",
-      "מכין שאלות קטנות, בלי ציונים...",
-      "כמעט מוכן...",
-    ];
     const el = mount(`
       <div class="topbar"><button class="icon-btn" data-back aria-label="ביטול">${icon("x")}</button></div>
       <div class="loading">
@@ -753,55 +894,237 @@
       k = Math.min(k + 1, lines.length - 1);
       line.style.opacity = 0;
       setTimeout(() => { line.textContent = lines[k]; line.style.opacity = 1; }, 240);
-    }, 3800);
-    $("[data-back]", el).onclick = () => { alive = false; clearInterval(rot); newLesson(); };
-    Tutor.lesson({
-      profile: profileForAI(),
-      subject: d.subject ? subjectOf(d.subject).name : null,
-      topic: d.topic.trim(),
-      material: d.material.trim() || null,
-      image: d.image,
-      when: d.when,
-    }).then((res) => {
-      clearInterval(rot);
-      if (!alive) return;
-      const lesson = normalizeLesson(res.lesson, d.subject);
-      if (!lesson) throw Object.assign(new Error("bad lesson"), { code: "bad_lesson" });
-      const id = "ai-" + Date.now().toString(36);
-      S.lessons[id] = { lesson, pos: 0, done: false, updated: Date.now() };
-      save();
-      openLesson(id);
-    }).catch((e) => {
-      clearInterval(rot);
-      if (!alive) return;
-      failed(e.code, d);
-    });
+    }, 3600);
+    const stop = () => { alive = false; clearInterval(rot); };
+    $("[data-back]", el).onclick = () => { stop(); onCancel(); };
+    return { alive: () => alive && current.name === "loading", stop };
   }
 
-  function failed(code, d) {
-    const msg = {
-      daily_limit: "הגעת למכסת השיעורים החכמים להיום. מחר יש עוד! בינתיים אפשר לחזור על שיעורים קודמים.",
-      refused: "לא הצלחתי להכין שיעור מהחומר הזה. אפשר לנסח את הנושא קצת אחרת?",
-      too_long: "החומר ארוך מדי בשביל פעם אחת. אפשר לשלוח חלק ממנו?",
-      image_too_large: "התמונה גדולה מדי. אפשר לנסות לצלם שוב?",
-      network: "נראה שאין חיבור לאינטרנט כרגע.",
-      timeout: "זה לקח יותר מדי זמן. אפשר לנסות שוב?",
-    }[code] || "משהו השתבש אצלי, לא אצלך. אפשר לנסות שוב?";
+  const ERRORS = {
+    daily_limit: "הגעת למכסה של היום. מחר יש עוד! בינתיים אפשר לחזור על מה שכבר למדת.",
+    refused: "לא הצלחתי להכין שיעור מזה. אפשר לנסח את הנושא קצת אחרת?",
+    too_long: "החומר ארוך מדי בשביל פעם אחת. אפשר לשלוח חלק ממנו?",
+    image_too_large: "התמונה גדולה מדי. אפשר לנסות לצלם שוב?",
+    network: "נראה שאין חיבור לאינטרנט כרגע.",
+    timeout: "זה לקח יותר מדי זמן. אפשר לנסות שוב?",
+  };
+  function failed(code, retry, back) {
     current = { name: "error" };
     const el = mount(`
       <div class="topbar"><button class="icon-btn" data-back aria-label="חזרה">${icon("arrow-right")}</button></div>
       <div class="loading" style="text-align:center;justify-items:center">
         <span class="adapt__ic" style="width:64px;height:64px;border-radius:22px">${icon("smiley-nervous", "icon--lg")}</span>
         <h1 class="h2" tabindex="-1" data-autofocus>אופס.</h1>
-        <p class="lead">${esc(msg)}</p>
+        <p class="lead">${esc(ERRORS[code] || "משהו השתבש אצלי, לא אצלך. אפשר לנסות שוב?")}</p>
         <div style="display:grid;gap:8px;width:100%;margin-top:8px">
           <button class="btn btn--primary btn--block" data-retry>${icon("arrow-counter-clockwise")}לנסות שוב</button>
           <button class="btn btn--ghost" data-home>למסך הראשי</button>
         </div>
       </div>`);
-    $("[data-back]", el).onclick = newLesson;
-    $("[data-retry]", el).onclick = () => generate(d);
+    $("[data-back]", el).onclick = back || home;
+    $("[data-retry]", el).onclick = retry;
     $("[data-home]", el).onclick = home;
+  }
+
+  // Paths -----------------------------------------------------------------
+  // Any topic becomes a path of short chapters. Each chapter is a lesson,
+  // written when the learner gets near it (the next one is prepared while
+  // they learn the current one).
+  const pending = {}; // "courseId:index" -> promise of a lesson id
+  const photos = {}; // courseId -> image, kept for this visit only
+
+  function startPath(d) {
+    const p = S.profile || {};
+    const fav = (p.interests || [])[0];
+    const lines = [
+      d.image ? "קורא את הדף ששלחת..." : "חושב מאיפה הכי כדאי להתחיל...",
+      "מחלק את הנושא לשלבים קטנים...",
+      fav ? `מחפש דוגמאות מ${fav}...` : "מחפש דוגמאות מהחיים...",
+      "בונה לך מסלול, צעד אחר צעד...",
+      "כמעט מוכן...",
+    ];
+    const ld = loadingScreen(lines, d.goal === "exam" ? newLesson : home);
+    Tutor.plan({
+      profile: profileForAI(),
+      subject: d.subject ? subjectOf(d.subject).name : null,
+      topic: (d.topic || "").trim(),
+      material: (d.material || "").trim() || null,
+      image: d.image || null,
+      goal: d.goal,
+      when: d.when || null,
+    }).then((res) => {
+      if (!ld.alive()) return;
+      ld.stop();
+      const plan = res.plan || {};
+      const str = (v) => (typeof v === "string" ? v.trim() : "");
+      const chapters = (Array.isArray(plan.chapters) ? plan.chapters : [])
+        .map((c) => ({ title: str(c && c.title), goal: str(c && c.goal), lessonId: null, done: false }))
+        .filter((c) => c.title).slice(0, 8);
+      if (!chapters.length) return failed("no_plan", () => startPath(d));
+      const id = "c-" + Date.now().toString(36);
+      const notes = str(plan.notes) || (d.material || "").trim();
+      S.courses = S.courses || {};
+      S.courses[id] = {
+        title: str(plan.title) || d.topic || "המסלול שלי",
+        subtitle: str(plan.subtitle),
+        topic: (d.topic || "").trim() || str(plan.title),
+        subject: d.subject || "other",
+        goal: d.goal,
+        when: d.when || null,
+        notes: notes.slice(0, 12000),
+        chapters,
+        created: Date.now(),
+        updated: Date.now(),
+      };
+      if (d.image && !str(plan.notes)) photos[id] = d.image;
+      save();
+      prepare(id, 0);
+      coursePath(id);
+    }).catch((e) => {
+      if (!ld.alive()) return;
+      ld.stop();
+      failed(e.code, () => startPath(d), d.goal === "exam" ? newLesson : home);
+    });
+  }
+
+  // Writes chapter i (once) and resolves to its lesson id.
+  function prepare(courseId, i) {
+    const c = S.courses[courseId];
+    if (!c || !c.chapters[i]) return Promise.reject(Object.assign(new Error("no chapter"), { code: "no_chapter" }));
+    const ch = c.chapters[i];
+    if (ch.lessonId && getLesson(ch.lessonId)) return Promise.resolve(ch.lessonId);
+    const key = courseId + ":" + i;
+    if (pending[key]) return pending[key];
+    const learned = c.chapters.slice(0, i).flatMap((x) => {
+      const l = x.lessonId && getLesson(x.lessonId);
+      return l && l.summary.length ? l.summary : [x.goal || x.title];
+    }).slice(-16);
+    pending[key] = Tutor.lesson({
+      profile: profileForAI(),
+      subject: c.subject ? subjectOf(c.subject).name : null,
+      topic: c.topic,
+      material: c.notes || null,
+      image: photos[courseId] || null,
+      goal: c.goal,
+      when: c.when,
+      course: { title: c.title, chapters: c.chapters.map((x) => x.title), index: i, goal: ch.goal, learned },
+    }).then((res) => {
+      const lesson = normalizeLesson(res.lesson, c.subject);
+      if (!lesson) throw Object.assign(new Error("bad lesson"), { code: "bad_lesson" });
+      lesson.title = ch.title;
+      const id = `${courseId}-${i}`;
+      S.lessons[id] = { lesson, pos: 0, done: false, updated: Date.now(), courseId, chapter: i };
+      ch.lessonId = id;
+      save();
+      return id;
+    }).finally(() => { delete pending[key]; });
+    return pending[key];
+  }
+
+  function openChapter(courseId, i) {
+    const c = S.courses[courseId];
+    const ch = c.chapters[i];
+    const ready = ch.lessonId && getLesson(ch.lessonId);
+    if (ready) return openLesson(ch.lessonId);
+    const ld = loadingScreen([`מכין את שלב ${i + 1}: ${ch.title}`, "מפרק לחתיכות קטנות...", "מכין שאלות קטנות, בלי ציונים...", "כמעט מוכן..."], () => coursePath(courseId));
+    prepare(courseId, i).then((id) => {
+      if (!ld.alive()) return;
+      ld.stop();
+      openLesson(id);
+    }).catch((e) => {
+      if (!ld.alive()) return;
+      ld.stop();
+      failed(e.code, () => openChapter(courseId, i), () => coursePath(courseId));
+    });
+  }
+
+  function coursePath(courseId, { justDone = -1 } = {}) {
+    current = { name: "path" };
+    const c = S.courses[courseId];
+    if (!c) return home();
+    c.updated = Date.now();
+    save();
+    const prog = courseProgress(c);
+    const all = prog.next < 0;
+    // The chapter just finished is drawn as "now" first, then fills in.
+    const stateOf = (k) => {
+      if (k === justDone) return "now";
+      if (justDone >= 0 && k === justDone + 1) return "todo";
+      return c.chapters[k].done ? "done" : k === prog.next ? "now" : "todo";
+    };
+    const nextCh = all ? null : c.chapters[prog.next];
+    const el = mount(`
+      <div class="topbar">
+        <button class="icon-btn" data-back aria-label="למסך הראשי">${icon("arrow-right")}</button>
+        <span class="topbar__spacer"></span>
+        <span class="small muted" data-count>${prog.done} מתוך ${prog.total} שלבים</span>
+      </div>
+      ${all ? `
+      <div class="done__hero" style="padding-top:12px">
+        <span class="done__badge pop" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="draw" d="M12 25l8 8 16-17"/></svg></span>
+        <h1 class="h1" tabindex="-1" data-autofocus>${g("סיימת", "סיימת")} את כל המסלול!</h1>
+        <p class="lead">${plain(c.title.replace(/[.!?]+$/, ""))}: ${g("עכשיו אתה מבין", "עכשיו את מבינה")} את זה, צעד אחר צעד.</p>
+      </div>` : `
+      <div class="path__head stagger">
+        <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>${plain(c.title)}</h1>
+        ${c.subtitle ? `<p class="lead" style="--i:1">${plain(c.subtitle)}</p>` : ""}
+      </div>`}
+      <ol class="path" aria-label="השלבים">
+        ${c.chapters.map((ch, k) => `
+        <li class="path__step" data-k="${k}" data-state="${stateOf(k)}">
+          <span class="path__node" aria-hidden="true"><span class="path__num">${k + 1}</span>${icon("check", "path__check")}</span>
+          <button class="path__body" data-ch="${k}" ${!ch.done && k !== prog.next && justDone < 0 ? `aria-disabled="true"` : ""}>
+            <span class="path__title">${plain(ch.title)}</span>
+            ${ch.goal ? `<span class="path__goal">${plain(ch.goal)}</span>` : ""}
+            <span class="sr-only">${ch.done ? "הושלם" : k === prog.next ? "השלב הבא" : "עוד לא"}</span>
+          </button>
+        </li>`).join("")}
+      </ol>
+      <div class="sticky-foot" style="display:grid;gap:8px">
+        ${all
+          ? `<button class="btn btn--primary btn--block" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>
+             <button class="btn btn--soft btn--block" data-deeper>${icon("sparkle")}להעמיק עוד בנושא</button>`
+          : `<button class="btn btn--primary btn--block" data-go><span class="btn__ell">${prog.done ? "להמשיך" : "מתחילים"}: ${esc(nextCh.title)}</span>${icon("arrow-left")}</button>`}
+      </div>`, "path-screen");
+    $("[data-back]", el).onclick = home;
+    $$("[data-ch]", el).forEach((b) => {
+      b.onclick = () => {
+        const k = Number(b.dataset.ch);
+        const ch = c.chapters[k];
+        if (ch.done && ch.lessonId) return openLesson(ch.lessonId, { restart: true });
+        if (k === prog.next) return openChapter(courseId, k);
+        toast("קודם השלבים שלפני. ככה זה נבנה, צעד אחר צעד.");
+      };
+    });
+    const go = $("[data-go]", el);
+    if (go) go.onclick = () => openChapter(courseId, prog.next);
+    const sh = $("[data-share]", el);
+    if (sh) sh.onclick = shareWeek;
+    const deeper = $("[data-deeper]", el);
+    if (deeper) deeper.onclick = () => startPath({
+      topic: `${c.topic}: השלב הבא`,
+      material: `כבר ${g("למדתי", "למדתי")} במסלול הקודם: ${c.chapters.map((x) => x.title).join(", ")}. עכשיו אני רוצה להעמיק ולהמשיך מאיפה שזה נגמר.`,
+      subject: c.subject,
+      goal: c.goal,
+    });
+    if (!all) prepare(courseId, prog.next).catch(() => { /* retried when the learner taps */ });
+    if (justDone >= 0) {
+      setTimeout(() => {
+        const li = $(`.path__step[data-k="${justDone}"]`, el);
+        if (!li) return;
+        li.dataset.state = "done";
+        li.classList.add("path__step--fill");
+        Sound.step();
+        vibrate(12);
+        setTimeout(() => {
+          const nx = $(`.path__step[data-k="${justDone + 1}"]`, el);
+          if (nx) { nx.dataset.state = "now"; nx.classList.add("path__step--arrive"); }
+          if (all) { Sound.win(); burst($(".done__badge", el)); }
+        }, 420);
+      }, reduceMotion() ? 0 : 520);
+    } else if (all) {
+      setTimeout(() => burst($(".done__badge", el)), 420);
+    }
   }
 
   // Whatever comes back from the tutor, keep only what the app can show.
@@ -810,6 +1133,8 @@
     const str = (v) => (typeof v === "string" ? v.trim() : "");
     const bites = raw.bites.map((b) => {
       const bite = { title: str(b.title), text: str(b.text), simpler: str(b.simpler), example: str(b.example) };
+      const steps = Array.isArray(b.steps) ? b.steps.map(str).filter(Boolean).slice(0, 8) : [];
+      if (steps.length >= 2) bite.steps = steps;
       const c = b.check || {};
       const options = Array.isArray(c.options) ? c.options.map(str).filter(Boolean).slice(0, 4) : [];
       if (str(c.question) && options.length >= 2 && Number.isInteger(c.answer) && c.answer >= 0 && c.answer < options.length) {
@@ -844,7 +1169,11 @@
     rec.updated = Date.now();
     save();
     const steps = stepsOf(lesson);
-    L = { id, lesson, steps, pos: Math.min(rec.pos || 0, steps.length - 1), extras: {}, answered: {}, simple, lost: 0, activeMs: 0, lastTick: Date.now(), nextBreak: derive().focus * 60000, firstCheck: true };
+    L = { id, lesson, steps, pos: Math.min(rec.pos || 0, steps.length - 1), extras: {}, answered: {}, shown: {}, got: 0, counted: {}, simple, lost: 0, activeMs: 0, lastTick: Date.now(), nextBreak: derive().focus * 60000, firstCheck: true };
+    // Prepare the next chapter of the path while this one is learned.
+    if (rec.courseId && S.courses[rec.courseId] && S.courses[rec.courseId].chapters[rec.chapter + 1]) {
+      prepare(rec.courseId, rec.chapter + 1).catch(() => { /* retried when the learner gets there */ });
+    }
     clearInterval(breakTimer);
     breakTimer = setInterval(tickBreak, 15000);
     renderStep();
@@ -871,6 +1200,7 @@
     return `<div class="topbar">
       <button class="icon-btn" data-close aria-label="לצאת מהשיעור">${icon("x")}</button>
       ${progressBar()}
+      <span class="got" data-got aria-label="${g("הבנת", "הבנת")} ${L.got} דברים">${icon("check", "icon--sm")}<b>${L.got}</b></span>
       <button class="icon-btn" data-read aria-label="הקראה בקול" aria-pressed="${S.settings.read}">${icon("speaker-high")}</button>
     </div>`;
   }
@@ -917,6 +1247,26 @@
     return `${you}<div class="extra" data-extra="${x.key}"><span class="extra__label">${icon(label[0])}${esc(label[1])}</span>${body}</div>`;
   }
 
+  const biteText = (b) => (b.steps ? `${b.text}\n${b.steps.map((x, k) => `${k + 1}. ${x}`).join("\n")}` : b.text);
+  const stepHtml = (x, k, now) => `<li class="step" ${now ? "data-now" : ""}><span class="step__n" aria-hidden="true">${k + 1}</span><span class="step__t">${rich(x, { lines: false })}</span></li>`;
+
+  // One more thing understood: tick, a little buzz, the counter goes up.
+  function gotIt(i) {
+    Sound.tick();
+    vibrate(8);
+    if (L.counted[i]) return;
+    L.counted[i] = true;
+    L.got++;
+    logEvent("bite", L.lesson.title);
+    const pill = $(".screen:not(.screen--leave) [data-got]");
+    if (pill) {
+      $("b", pill).textContent = L.got;
+      pill.classList.remove("bump");
+      void pill.offsetWidth;
+      pill.classList.add("bump");
+    }
+  }
+
   function renderBite(i) {
     const b = L.lesson.bites[i];
     const n = L.lesson.bites.length;
@@ -926,6 +1276,9 @@
       if (b.example) extras.push({ kind: "example", text: b.example, key: "e" + i });
     }
     const isLast = L.pos === L.steps.length - 1;
+    const steps = b.steps || [];
+    let shown = steps.length ? (L.simple ? steps.length : L.shown[i] || 1) : 0;
+    L.shown[i] = shown;
     const el = mount(`
       ${lessonTop()}
       <div class="lesson__stage">
@@ -934,6 +1287,7 @@
           <h1 class="bite__title" tabindex="-1" data-autofocus>${rich(b.title, { lines: false })}</h1>
           ${visualHtml(b.visual)}
           <div class="bite__text">${rich(b.text)}</div>
+          ${steps.length ? `<ol class="steps" aria-label="צעד אחר צעד">${steps.slice(0, shown).map((x, k) => stepHtml(x, k, k === shown - 1 && shown < steps.length)).join("")}</ol>` : ""}
           <div data-extras>${extras.map(extraHtml).join("")}</div>
         </article>
         <div class="tools" role="group" aria-label="עזרה">
@@ -944,13 +1298,39 @@
       </div>
       <div class="lesson__bar">
         <button class="btn btn--lost" data-lost>${icon("question")}לא הבנתי</button>
-        <button class="btn btn--primary" data-next>${isLast ? "סיימתי" : "הבנתי"} ${icon(isLast ? "check" : "arrow-left")}</button>
+        <button class="btn btn--primary" data-next></button>
       </div>`, "lesson");
-    const read = () => speak(`${spoken(b.title)}. ${spoken(b.text)}`);
+    const next = $("[data-next]", el);
+    const label = () => {
+      next.innerHTML = shown < steps.length
+        ? `הצעד הבא <span class="btn__count">${shown + 1}/${steps.length}</span> ${icon("arrow-left")}`
+        : `${isLast ? "סיימתי" : "הבנתי"} ${icon(isLast ? "check" : "arrow-left")}`;
+    };
+    label();
+    const read = () => speak(`${spoken(b.title)}. ${spoken(b.text)}. ${steps.slice(0, shown).map(spoken).join(". ")}`);
     bindLessonTop(el, read);
     if (S.settings.read) setTimeout(read, 350);
     bindTerms(el);
-    $("[data-next]", el).onclick = () => { markStudied(); advance(); };
+    next.onclick = () => {
+      markStudied();
+      if (shown < steps.length) {
+        // Step by step: the main button reveals the next step.
+        const ol = $(".steps", el);
+        $$(".step", ol).forEach((li) => li.removeAttribute("data-now"));
+        shown++;
+        L.shown[i] = shown;
+        ol.insertAdjacentHTML("beforeend", stepHtml(steps[shown - 1], shown - 1, shown < steps.length));
+        bindTerms(ol);
+        Sound.step();
+        vibrate(6);
+        label();
+        ol.lastElementChild.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
+        if (S.settings.read) speak(spoken(steps[shown - 1]));
+        return;
+      }
+      gotIt(i);
+      advance();
+    };
     $("[data-lost]", el).onclick = () => lostSheet(i);
     $$("[data-tool]", el).forEach((t) => {
       t.onclick = () => {
@@ -1006,7 +1386,7 @@
     Tutor.help({
       profile: profileForAI(),
       lesson: { title: L.lesson.title, subject: subjectOf(L.lesson.subject).name },
-      bite: { title: spoken(b.title), text: spoken(b.text) },
+      bite: { title: spoken(b.title), text: spoken(biteText(b)) },
       kind,
       word: word || null,
       question: question || null,
@@ -1082,7 +1462,7 @@
   function lostSheet(i) {
     L.lost++;
     const b = L.lesson.bites[i];
-    const hasTerms = /\*\*(.+?)\*\*/.test(b.text);
+    const hasTerms = /\*\*(.+?)\*\*/.test(biteText(b));
     const lines = ["זה בסדר גמור. ככה לומדים.", "שאלה טובה זה חצי תשובה.", "כולם נתקעים לפעמים. גם המורים."];
     const s = sheet(`
       <div class="sheet__head">
@@ -1104,7 +1484,7 @@
       btn.onclick = () => {
         const k = btn.dataset.h;
         if (k === "word") {
-          const words = [...b.text.matchAll(/\*\*(.+?)\*\*/g)].map((m) => m[1]);
+          const words = [...new Set([...biteText(b).matchAll(/\*\*(.+?)\*\*/g)].map((m) => m[1]))];
           closeSheet(true);
           return wordPick(words);
         }
@@ -1165,7 +1545,7 @@
       const step = L && L.steps[L.pos];
       const b = step ? L.lesson.bites[step.i] : null;
       if (!Tutor.available() || !b) { $("[data-meaning]", s).textContent = "אין לי עדיין הסבר למילה הזו."; return; }
-      Tutor.help({ profile: profileForAI(), lesson: { title: L.lesson.title, subject: subjectOf(L.lesson.subject).name }, bite: { title: spoken(b.title), text: spoken(b.text) }, kind: "word", word })
+      Tutor.help({ profile: profileForAI(), lesson: { title: L.lesson.title, subject: subjectOf(L.lesson.subject).name }, bite: { title: spoken(b.title), text: spoken(biteText(b)) }, kind: "word", word })
         .then((r) => { L.lesson.glossary = { ...(L.lesson.glossary || {}), [word]: r.text }; save(); const m = $("[data-meaning]", s); if (m) m.innerHTML = rich(r.text, { lines: false }); })
         .catch(() => { const m = $("[data-meaning]", s); if (m) m.textContent = "לא הצלחתי להביא הסבר עכשיו."; });
     } else if (S.settings.read) setTimeout(say, 250);
@@ -1248,10 +1628,14 @@
           fb.innerHTML = `<div class="feedback feedback--yes"><span class="feedback__ic">${icon("check")}</span><div><b>${praise}</b>${why}</div></div>`;
           burst(rightBtn);
           vibrate(18);
+          Sound.right();
+          logEvent("right", L ? L.lesson.title : "");
         } else if (a < 0) {
           fb.innerHTML = `<div class="feedback"><span class="feedback__ic">${icon("lightbulb")}</span><div><b>זה בסדר לא לדעת. עכשיו ${g("אתה יודע", "את יודעת")}:</b>${why}</div></div>`;
+          Sound.soft();
         } else {
           fb.innerHTML = `<div class="feedback"><span class="feedback__ic">${icon("lightbulb")}</span><div><b>כמעט! ככה זה עובד:</b>${why}</div></div>`;
+          Sound.soft();
         }
         bindTerms(fb);
         if (S.settings.read) speak(fb.textContent);
@@ -1298,8 +1682,11 @@
     rec.done = true;
     rec.pos = 0;
     rec.updated = Date.now();
+    const c = rec.courseId && S.courses[rec.courseId];
+    if (c && c.chapters[rec.chapter]) { c.chapters[rec.chapter].done = true; c.updated = Date.now(); }
     save();
     markStudied();
+    logEvent("lesson", c ? c.title : L.lesson.title);
     done(L.id);
   }
 
@@ -1309,12 +1696,16 @@
     const rec = S.lessons[id];
     const right = Object.values(L ? L.answered : {}).filter(Boolean).length;
     const total = Object.keys(L ? L.answered : {}).length;
+    const got = L ? L.got : 0;
+    const c = rec.courseId && S.courses[rec.courseId];
+    const nextCh = c ? c.chapters[rec.chapter + 1] : null;
     const el = mount(`
       <div class="topbar"><span class="topbar__spacer"></span><button class="icon-btn" data-home aria-label="למסך הראשי">${icon("x")}</button></div>
       <div class="done__hero">
         <span class="done__badge pop" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="draw" d="M12 25l8 8 16-17"/></svg></span>
-        <h1 class="h1" tabindex="-1" data-autofocus>${g("סיימת", "סיימת")}!</h1>
-        <p class="lead">${esc(lesson.title)}${total ? `. ${right} מתוך ${total} שאלות נכונות${right < total ? ", והשאר כבר ברורות יותר." : "."}` : "."}</p>
+        <h1 class="h1" tabindex="-1" data-autofocus>${c ? `שלב ${rec.chapter + 1} מאחוריך!` : `${g("סיימת", "סיימת")}!`}</h1>
+        <p class="lead">${plain(lesson.title)}${total ? `. ${right} מתוך ${total} שאלות נכונות${right < total ? ", והשאר כבר ברורות יותר." : "."}` : "."}</p>
+        ${got ? `<div class="done__stats"><span class="done__stat"><b>${got}</b>${got === 1 ? "דבר חדש" : "דברים חדשים"}</span>${total ? `<span class="done__stat"><b>${right}</b>${right === 1 ? "תשובה נכונה" : "תשובות נכונות"}</span>` : ""}</div>` : ""}
       </div>
       ${lesson.summary && lesson.summary.length ? `
       <section class="section" style="margin-top:0" aria-labelledby="sum-t">
@@ -1331,12 +1722,16 @@
         <div data-feel-out></div>
       </section>
       <div class="sticky-foot" style="display:grid;gap:8px">
-        <button class="btn btn--primary btn--block" data-home2>${icon("house")}למסך הראשי</button>
-        ${stepsOf(lesson).some((s) => s.t === "check") ? `<button class="btn btn--soft btn--block" data-review>${icon("list-checks")}תרגול מהיר</button>` : ""}
+        ${c ? `<button class="btn btn--primary btn--block" data-path><span class="btn__ell">${nextCh ? `לשלב הבא: ${esc(nextCh.title)}` : "לסיים את המסלול"}</span>${icon("arrow-left")}</button>` : ""}
+        <button class="btn ${c ? "btn--soft" : "btn--primary"} btn--block" data-home2>${icon("house")}למסך הראשי</button>
+        ${stepsOf(lesson).some((s) => s.t === "check") ? `<button class="btn btn--ghost" data-review>${icon("list-checks")}תרגול מהיר</button>` : ""}
       </div>`, "done");
     bindTerms(el);
+    Sound.win();
     $("[data-home]", el).onclick = home;
     $("[data-home2]", el).onclick = home;
+    const pb = $("[data-path]", el);
+    if (pb) pb.onclick = () => coursePath(rec.courseId, { justDone: rec.chapter });
     const rv = $("[data-review]", el);
     if (rv) rv.onclick = () => review(id);
     const out = $("[data-feel-out]", el);
@@ -1424,6 +1819,7 @@
         <div class="set-row"><span class="set-row__l">${icon("text-aa")}גודל טקסט</span>${seg("size", [["m", "א", "רגיל"], ["l", "א+", "גדול"], ["xl", "א++", "גדול מאוד"]])}</div>
         <div class="set-row"><span class="set-row__l" id="sw-c">${icon("book-open-text")}ריווח נוח לקריאה</span>${sw("comfort", st.comfort)}</div>
         <div class="set-row"><span class="set-row__l" id="sw-r">${icon("speaker-high")}הקראה בקול</span>${sw("read", st.read)}</div>
+        <div class="set-row"><span class="set-row__l" id="sw-s">${icon("smiley")}צלילים קטנים</span>${sw("sound", st.sound !== false)}</div>
       </div>
       <div class="set-group">
         <div class="set-row"><span class="set-row__l">${icon("moon")}מראה</span>${seg("theme", [["auto", "אוטומטי"], ["light", "בהיר"], ["dark", "כהה"]])}</div>
@@ -1438,6 +1834,7 @@
     $("[data-sw='comfort']", s).setAttribute("aria-labelledby", "sw-c");
     $("[data-sw='read']", s).setAttribute("aria-labelledby", "sw-r");
     $("[data-sw='motion']", s).setAttribute("aria-labelledby", "sw-m");
+    $("[data-sw='sound']", s).setAttribute("aria-labelledby", "sw-s");
     $$("[data-set]", s).forEach((b) => {
       b.onclick = () => {
         st[b.dataset.set] = b.dataset.v;
@@ -1450,8 +1847,10 @@
       b.onclick = () => {
         const k = b.dataset.sw;
         if (k === "motion") st.motion = st.motion === "off" ? "auto" : "off";
+        else if (k === "sound") st.sound = st.sound === false;
         else st[k] = !st[k];
-        b.setAttribute("aria-checked", String(k === "motion" ? st.motion === "off" : st[k]));
+        b.setAttribute("aria-checked", String(k === "motion" ? st.motion === "off" : k === "sound" ? st.sound !== false : st[k]));
+        if (k === "sound") Sound.tick();
         if (k === "read" && !st.read) stopSpeaking();
         if (k === "read" && st.read && !canSpeak()) toast("בדפדפן הזה אין הקראה בעברית, אבל ננסה.");
         save();

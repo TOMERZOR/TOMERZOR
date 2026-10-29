@@ -10,10 +10,12 @@ compatibility_flags = ["nodejs_compat"]
 # Comma-separated list of sites allowed to call the API. "*" allows any site.
 ALLOWED_ORIGINS = "https://tomerzor.github.io,http://localhost:8080,http://127.0.0.1:8080"
 # Per visitor per day (needs the KV namespace below). 0 = no limit.
-DAILY_LESSONS = "15"
+DAILY_PLANS = "12"
+DAILY_LESSONS = "40"
 DAILY_HELP = "120"
 E2S_MODEL = "claude-opus-5-5"
-# Writing a lesson needs some thought; one re-explanation is quick.
+# Writing a lesson needs some thought; a path outline and one re-explanation are quick.
+PLAN_EFFORT = "low"
 LESSON_EFFORT = "medium"
 HELP_EFFORT = "low"
 

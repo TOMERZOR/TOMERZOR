@@ -36,7 +36,9 @@ window.E2STutor = (() => {
 
   return {
     available: () => Boolean(base),
-    // {profile, subject, topic, material?, image?: {media_type, data}, when?} -> {lesson}
+    // {profile, topic, subject?, material?, image?: {media_type, data}, goal, when?} -> {plan: {title, subtitle, chapters, notes}}
+    plan: (body) => post("/api/plan", body, 90000),
+    // the same, plus course: {title, chapters, index, goal, learned} -> {lesson}
     lesson: (body) => post("/api/lesson", body, 120000),
     // {profile, lesson: {title, subject}, bite: {title, text}, kind, word?, question?} -> {text, example}
     help: (body) => post("/api/help", body, 60000),

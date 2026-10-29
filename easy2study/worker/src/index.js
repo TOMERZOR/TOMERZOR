@@ -1,20 +1,21 @@
 // Easy2Study API (Cloudflare Worker). Routes:
 //   GET  /api/health   what this deployment can do
-//   POST /api/lesson   {profile, subject?, topic?, material?, image?, when?} -> {lesson}
+//   POST /api/plan     {profile, topic?, subject?, material?, image?, goal?, when?} -> {plan}
+//   POST /api/lesson   {profile, topic?, subject?, material?, image?, goal?, when?, course?} -> {lesson}
 //   POST /api/help     {profile, lesson, bite, kind, word?, question?, previous?} -> {text, example}
 //
 // Bindings (all optional except the key): ANTHROPIC_API_KEY (secret),
-// E2S_KV (KV namespace for daily limits), ALLOWED_ORIGINS, DAILY_LESSONS,
-// DAILY_HELP, E2S_MODEL, LESSON_EFFORT, HELP_EFFORT.
+// E2S_KV (KV namespace for daily limits), ALLOWED_ORIGINS, DAILY_PLANS,
+// DAILY_LESSONS, DAILY_HELP, E2S_MODEL, PLAN_EFFORT, LESSON_EFFORT, HELP_EFFORT.
 // The site falls back to its built-in lessons and help whenever this API says no.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM_PROMPT, LESSON_SCHEMA, HELP_SCHEMA, lessonMessage, helpMessage } from "./prompt.js";
+import { SYSTEM_PROMPT, PLAN_SCHEMA, LESSON_SCHEMA, HELP_SCHEMA, planMessage, lessonMessage, helpMessage } from "./prompt.js";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 // Models that accept the server-side refusal fallback (`fallbacks: "default"`).
 const FALLBACK_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-sonnet-5-5"]);
-const LIMITS = { topic: 200, material: 8000, image: 3_000_000, question: 400, word: 60, bite: 1500 };
+const LIMITS = { topic: 200, material: 12000, image: 3_000_000, question: 400, word: 60, bite: 1500 };
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const HELP_KINDS = new Set(["simpler", "again", "example", "word", "answer"]);
 
@@ -62,7 +63,7 @@ function clientIp(request) {
 
 /** Daily per-IP quota kept in KV. KV is not atomic, so a burst can slip a few past the limit. */
 async function takeQuota(env, request, kind) {
-  const limit = parseInt((kind === "lesson" ? env.DAILY_LESSONS : env.DAILY_HELP) || "0", 10);
+  const limit = parseInt({ plan: env.DAILY_PLANS, lesson: env.DAILY_LESSONS, help: env.DAILY_HELP }[kind] || "0", 10);
   if (!env.E2S_KV || !limit) return true;
   const day = new Date().toISOString().slice(0, 10);
   const key = `quota:${kind}:${day}:${await sha256(clientIp(request))}`;
@@ -141,36 +142,77 @@ async function readJson(request) {
   }
 }
 
-async function handleLesson(request, env, cors) {
-  const { body, error } = await readJson(request);
-  if (error) return json({ error: error[0] }, error[1], cors);
+/** The shared part of /api/plan and /api/lesson: what to learn and from what. */
+function readSource(body) {
   const topic = cleanText(body.topic, LIMITS.topic);
-  const rawMaterial = cleanText(body.material);
-  if (rawMaterial.length > LIMITS.material) return json({ error: "too_long", max: LIMITS.material }, 413, cors);
-  const material = rawMaterial || null;
+  const material = cleanText(body.material);
+  if (material.length > LIMITS.material) return { error: ["too_long", 413] };
   let image = null;
   if (body.image) {
     const { media_type: type, data } = body.image;
-    if (!IMAGE_TYPES.has(type) || typeof data !== "string" || !/^[A-Za-z0-9+/=]+$/.test(data)) return json({ error: "bad_image" }, 400, cors);
-    if (data.length > LIMITS.image) return json({ error: "image_too_large" }, 413, cors);
+    if (!IMAGE_TYPES.has(type) || typeof data !== "string" || !/^[A-Za-z0-9+/=]+$/.test(data)) return { error: ["bad_image", 400] };
+    if (data.length > LIMITS.image) return { error: ["image_too_large", 413] };
     image = { type, data };
   }
-  if (!topic && !material && !image) return json({ error: "empty" }, 400, cors);
+  if (!topic && !material && !image) return { error: ["empty", 400] };
+  return {
+    image,
+    fields: {
+      profile: cleanProfile(body.profile),
+      subject: cleanText(body.subject, 40) || null,
+      topic: topic || null,
+      material: material || null,
+      goal: pick(body.goal, ["exam", "curious"], "exam"),
+      when: pick(body.when, ["today", "tomorrow", "week", "later", "unknown"], null),
+    },
+  };
+}
+
+function withImage(image, text) {
+  if (!image) return text;
+  return [
+    { type: "image", source: { type: "base64", media_type: image.type, data: image.data } },
+    { type: "text", text: `<material_photo>The image above is the learner's study material.</material_photo>\n${text}` },
+  ];
+}
+
+/** {title, chapters, index, goal, learned} for one chapter of a path, or null. */
+export function cleanCourse(c) {
+  if (!c || typeof c !== "object") return null;
+  const chapters = strList(c.chapters, 8, 120);
+  const index = Number.isInteger(c.index) && c.index >= 0 && c.index < chapters.length ? c.index : -1;
+  if (!chapters.length || index < 0) return null;
+  return { title: cleanText(c.title, 120) || chapters[index], chapters, index, goal: cleanText(c.goal, 300), learned: strList(c.learned, 24, 300) };
+}
+
+async function handlePlan(request, env, cors) {
+  const { body, error } = await readJson(request);
+  if (error) return json({ error: error[0] }, error[1], cors);
+  const src = readSource(body);
+  if (src.error) return json({ error: src.error[0] }, src.error[1], cors);
+  if (!(await takeQuota(env, request, "plan"))) return json({ error: "daily_limit" }, 429, cors);
+
+  const content = withImage(src.image, planMessage(src.fields));
+  const res = await ask({ env, content, schema: PLAN_SCHEMA, effort: env.PLAN_EFFORT || "low", maxTokens: 12000 });
+  // One line per request for cost tracking (wrangler tail / Workers logs).
+  console.log(JSON.stringify({ event: "plan", image: Boolean(src.image), chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
+  if (res.refused) return json({ error: "refused" }, 422, cors);
+  const plan = res.data;
+  if (res.error || !plan || !Array.isArray(plan.chapters) || !plan.chapters.length) return json({ error: "no_plan" }, 502, cors);
+  return json({ plan, model: res.usage.model }, 200, cors);
+}
+
+async function handleLesson(request, env, cors) {
+  const { body, error } = await readJson(request);
+  if (error) return json({ error: error[0] }, error[1], cors);
+  const src = readSource(body);
+  if (src.error) return json({ error: src.error[0] }, src.error[1], cors);
   if (!(await takeQuota(env, request, "lesson"))) return json({ error: "daily_limit" }, 429, cors);
 
-  const text = lessonMessage({
-    profile: cleanProfile(body.profile),
-    subject: cleanText(body.subject, 40) || null,
-    topic: topic || null,
-    material,
-    when: pick(body.when, ["today", "tomorrow", "week", "later", "unknown"], null),
-  });
-  const content = image
-    ? [{ type: "image", source: { type: "base64", media_type: image.type, data: image.data } }, { type: "text", text: `<material_photo>The image above is the learner's study material.</material_photo>\n${text}` }]
-    : text;
+  const course = cleanCourse(body.course);
+  const content = withImage(src.image, lessonMessage({ ...src.fields, course }));
   const res = await ask({ env, content, schema: LESSON_SCHEMA, effort: env.LESSON_EFFORT || "medium", maxTokens: 16000 });
-  // One line per request for cost tracking (wrangler tail / Workers logs).
-  console.log(JSON.stringify({ event: "lesson", image: Boolean(image), chars: (material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
+  console.log(JSON.stringify({ event: "lesson", chapter: course ? course.index : null, image: Boolean(src.image), chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
   if (res.refused) return json({ error: "refused" }, 422, cors);
   if (res.error || !res.data || !Array.isArray(res.data.bites) || !res.data.bites.length) return json({ error: "no_lesson" }, 502, cors);
   return json({ lesson: res.data, model: res.usage.model }, 200, cors);
@@ -221,6 +263,7 @@ export default {
             ai: Boolean(env.ANTHROPIC_API_KEY),
             model: env.E2S_MODEL || DEFAULT_MODEL,
             limits: Boolean(env.E2S_KV),
+            daily_plans: parseInt(env.DAILY_PLANS || "0", 10) || null,
             daily_lessons: parseInt(env.DAILY_LESSONS || "0", 10) || null,
             daily_help: parseInt(env.DAILY_HELP || "0", 10) || null,
           },
@@ -228,7 +271,7 @@ export default {
           cors,
         );
       }
-      const route = request.method === "POST" && { "/api/lesson": handleLesson, "/api/help": handleHelp }[pathname];
+      const route = request.method === "POST" && { "/api/plan": handlePlan, "/api/lesson": handleLesson, "/api/help": handleHelp }[pathname];
       if (route) {
         if (!env.ANTHROPIC_API_KEY) return json({ error: "not_configured" }, 503, cors);
         return await route(request, env, cors);

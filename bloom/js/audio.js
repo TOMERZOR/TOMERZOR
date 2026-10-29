@@ -105,5 +105,11 @@ export const sfx = {
     const t = ctx.currentTime;
     for (let i = 0; i < 6; i++) tone(freq(SCALE[i + 2]), t + i * 0.07, 0.5, { type: 'triangle', vol: 0.12 });
   },
+  weeds() {
+    if (!ready()) return;
+    const t = ctx.currentTime;
+    tone(110, t, 0.35, { type: 'sawtooth', vol: 0.06, slide: 1.5 });
+    noise(t, 0.3, { vol: 0.12, freq: 400, q: 0.8 });
+  },
   tick() { if (!ready()) return; tone(1200, ctx.currentTime, 0.03, { type: 'square', vol: 0.03 }); },
 };

@@ -1,7 +1,7 @@
 // Everything that lasts between games: best score, level and XP, gems, the daily streak, daily
 // missions, the lucky chest, skins and the garden. Kept in localStorage; if storage is blocked the
 // game still plays, it just forgets.
-const KEY = 'bloom.v1';
+const KEY = 'bloom.v2'; // v1 was the line-clearing prototype
 
 export const SKINS = [
   { id: 'jelly', name: 'ג׳לי', cost: 0, style: 'jelly', colors: ['#ff5d73', '#ffa83a', '#ffd93d', '#5bd66f', '#3bc4ff', '#7a6cff', '#e66bff'] },
@@ -12,11 +12,11 @@ export const SKINS = [
 ];
 
 const defaults = () => ({
-  best: 0, games: 0, xp: 300, level: 1, gems: 0, totalLines: 0,
+  best: 0, games: 0, xp: 300, level: 1, gems: 0, totalBlooms: 0,
   recent: [], // last 10 final scores
   streak: { count: 0, day: null, freezes: 1 },
   missions: null, // { day, list: [{ type, goal, progress, reward, done, claimed }], bonus }
-  chest: { lines: 10 }, // the bar starts part-filled: a started bar gets finished
+  chest: { n: 8 }, // blooms towards the next chest; starts part-filled: a started bar gets finished
   skins: ['jelly'], skin: 'jelly',
   garden: [flowerSeed(1)], // one flower per level-up; the first one is a gift
   sound: true, haptics: true,
@@ -91,12 +91,13 @@ export function checkStreak() {
 
 // ---- daily missions --------------------------------------------------------------------------
 const MISSION_TYPES = {
-  lines: { text: (g) => `נקו ${g} שורות`, goals: [15, 25, 40], reward: 15 },
-  combo: { text: (g) => `הגיעו לקומבו x${g}`, goals: [3, 4, 5], reward: 15 },
-  score: { text: (g) => `${g.toLocaleString('he-IL')} נקודות במשחק אחד`, goals: [2000, 4000, 7000], reward: 20 },
+  blooms: { text: (g) => `הפריחו ${g} קבוצות`, goals: [12, 20, 30], reward: 15 },
+  chain: { text: (g) => `שרשרת x${g}`, goals: [2, 3, 3], reward: 20 },
+  score: { text: (g) => `${g.toLocaleString('he-IL')} נקודות במשחק אחד`, goals: [2500, 5000, 8000], reward: 20 },
   games: { text: (g) => `שחקו ${g} משחקים`, goals: [3, 4, 5], reward: 10 },
-  multi: { text: (g) => `נקו ${g} שורות במהלך אחד`, goals: [2, 2, 3], reward: 15 },
-  place: { text: (g) => `הניחו ${g} חלקים`, goals: [60, 100, 150], reward: 10 },
+  big: { text: (g) => `הפריחו ${g} זרעים בבת אחת`, goals: [6, 6, 8], reward: 15 },
+  weeds: { text: (g) => `עקרו ${g} עשבים`, goals: [10, 20, 30], reward: 15 },
+  specials: { text: (g) => `צרו ${g} פרחים מיוחדים`, goals: [1, 2, 3], reward: 20 },
 };
 
 function seeded(str) {
@@ -130,15 +131,17 @@ export function progressMissions(ev) {
   const done = [];
   for (const m of ms.list) {
     if (m.done) continue;
+    const acc = (key) => Math.min(m.goal, (m.acc || 0) + (ev[key] || 0));
     switch (m.type) {
-      case 'lines': m.progress = Math.min(m.goal, (m.acc || 0) + (ev.lines || 0)); break;
-      case 'place': m.progress = Math.min(m.goal, (m.acc || 0) + (ev.placements || 0)); break;
+      case 'blooms': m.progress = acc('blooms'); break;
+      case 'weeds': m.progress = acc('weeds'); break;
+      case 'specials': m.progress = acc('specials'); break;
       case 'games': m.progress = Math.min(m.goal, (m.acc || 0) + (ev.finished ? 1 : 0)); break;
-      case 'combo': m.progress = Math.max(m.progress, Math.min(m.goal, ev.maxCombo || 0)); break;
+      case 'chain': m.progress = Math.max(m.progress, Math.min(m.goal, ev.maxChain || 0)); break;
       case 'score': m.progress = Math.max(m.progress, Math.min(m.goal, ev.score || 0)); break;
-      case 'multi': m.progress = Math.max(m.progress, Math.min(m.goal, ev.maxLines || 0)); break;
+      case 'big': m.progress = Math.max(m.progress, Math.min(m.goal, ev.maxGroup || 0)); break;
     }
-    if (ev.finished && ['lines', 'place', 'games'].includes(m.type)) m.acc = m.progress;
+    if (ev.finished && ['blooms', 'weeds', 'specials', 'games'].includes(m.type)) m.acc = m.progress;
     if (m.progress >= m.goal) { m.done = true; state.gems += m.reward; done.push(m); }
   }
   if (!ms.bonus && ms.list.every((m) => m.done)) { ms.bonus = true; state.gems += 40; done.push({ bonus: true, reward: 40 }); }
@@ -147,13 +150,13 @@ export function progressMissions(ev) {
 }
 
 // ---- lucky chest -----------------------------------------------------------------------------
-// Fills with cleared lines. What's inside varies, so opening it never gets routine.
-export const CHEST_LINES = 40;
-export function addChestLines(n) {
-  state.chest.lines += n;
+// Fills with blooms. What's inside varies, so opening it never gets routine.
+export const CHEST_GOAL = 30;
+export function addChestBlooms(n) {
+  state.chest.n += n;
   const opened = [];
-  while (state.chest.lines >= CHEST_LINES) {
-    state.chest.lines -= CHEST_LINES;
+  while (state.chest.n >= CHEST_GOAL) {
+    state.chest.n -= CHEST_GOAL;
     const x = Math.random();
     const gems = x < 0.55 ? 15 + Math.floor(Math.random() * 10) : x < 0.88 ? 30 + Math.floor(Math.random() * 20) : 80 + Math.floor(Math.random() * 40);
     state.gems += gems;

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>פריחה · Bloom</title>
-<meta name="description" content="משחק בלוקים: גוררים חלקים ללוח, ממלאים שורות וטורים, והם מתפוצצים לעלי כותרת. כל רמה מצמיחה פרח חדש בגן שלכם.">
+<meta name="description" content="משחק פאזל עם כוח משיכה: מפילים צרורות זרעים צבעוניים לגן, ארבעה באותו צבע פורחים, ומה שמעליהם נופל לשרשראות. עשבים שוטים עולים מלמטה.">
 <meta name="theme-color" content="#1d1147">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -42,7 +42,7 @@
 
     <div class="brand">
       <h1 class="logo">פריחה</h1>
-      <p class="tagline">פוצצו שורות · תנו לגן לפרוח</p>
+      <p class="tagline">הפילו זרעים · הפריחו שרשראות</p>
     </div>
 
     <div class="garden-wrap">
@@ -82,6 +82,7 @@
       <div class="best-mini"><svg><use href="#i-crown"/></svg><b id="g-best">0</b></div>
     </header>
     <div id="stage"><canvas id="board" aria-label="לוח המשחק"></canvas></div>
+    <div id="hint" hidden></div>
     <pre id="debug" hidden></pre>
   </section>
 </main>
@@ -89,6 +90,6 @@
 <div id="overlay" hidden><div class="modal" id="modal"></div></div>
 <div id="toasts" aria-live="polite"></div>
 
-<script type="module" src="js/main.js?v=1"></script>
+<script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>

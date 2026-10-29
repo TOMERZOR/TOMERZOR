@@ -22,10 +22,21 @@ Live: https://tomerzor.github.io/TOMERZOR/prita/
   - 7 strumming patterns, highlighted as they play.
 - **כלים (tools):** a chromatic tuner from the microphone (standard, Drop D, half step down, Open G, with reference tones) and a metronome with tap tempo, beats per bar, subdivisions and a speed trainer.
 
+## Design
+
+A night-stage look taken from the instrument: rosewood, nickel strings and an amp-amber glow. Amber is kept for primary actions and things that are playing; green means in tune or correct.
+
+- **Playable strings:** the home screen, the chord sheets and the first-run screen have six strings you can strum with a finger, with sound and vibrating strings.
+- **Native-style navigation:** a floating glass tab bar, large titles that fold into a compact bar as you scroll, screens that push in with the previous one sliding aside, swipe from the right edge to go back, and chord details in a bottom sheet you pull down to close.
+- **Tactile controls:** a rotary tempo knob that pulses on each beat, a BPM number you can drag sideways, iOS-style switches, a headstock-shaped tuner with pegs that light up when a string is in tune, and short vibrations on phones that support them.
+- Type: Heebo for text, Karantina for Hebrew display titles, Barlow Condensed for numbers and chord names. Reduced motion, reduced transparency and increased contrast are respected.
+
 Progress is kept only in the browser (localStorage). The microphone needs HTTPS (GitHub Pages is fine) and permission in the browser.
 
 ## Code
 
 - `js/data.js`: chords, scales, strumming patterns, progressions and the 8-level path. To add a step, add a unit to a level in `PATH`.
 - `js/audio.js`: a plucked-string synth (Karplus-Strong), the metronome scheduler, and YIN pitch detection for the tuner and the note game.
+- `js/ui.js`: the playable strings, the tempo knob, progress rings, drag-to-scrub and haptics.
+- `js/icons.js`: the stroke icon set.
 - `js/app.js`: the screens, the practice activities and the daily session builder.

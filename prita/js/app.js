@@ -164,22 +164,30 @@ function scaleMarks(rootName, scaleId, box = null, frets = 15) {
 const DEG = { 0: "1", 1: "b2", 2: "2", 3: "b3", 4: "3", 5: "4", 6: "b5", 7: "5", 8: "b6", 9: "6", 10: "b7", 11: "7" };
 const degreeLabel = (d) => DEG[d];
 
-// ---------- Panels (full-screen sheets for activities) ----------
+// ---------- Panels: pushed screens and bottom sheets ----------
 const panelStack = [];
 let ignorePop = 0;
-function openPanel(title, build, { onClose } = {}) {
-  const el = h(`<section class="panel" role="dialog" aria-label="${title}">
-    <header class="panel-head"><button class="icon-btn back" aria-label="חזרה">→</button><h2>${title}</h2></header>
-    <div class="panel-body"></div></section>`);
+function openPanel(title, build, { onClose, sheet = false, cls = "" } = {}) {
+  const el = h(sheet
+    ? `<section class="sheet-wrap ${cls}" role="dialog" aria-modal="true" aria-label="${title}">
+        <div class="scrim"></div>
+        <div class="sheet"><div class="sheet-grip"><i class="grabber"></i><header class="sheet-head"><h2>${title}</h2><button class="icon-btn close" aria-label="סגירה">${icon("close")}</button></header></div>
+        <div class="panel-body"></div></div></section>`
+    : `<section class="panel ${cls}" role="dialog" aria-label="${title}">
+        <header class="panel-head"><button class="icon-btn back" aria-label="חזרה">${icon("back")}</button><h2>${title}</h2><span class="head-slot"></span></header>
+        <div class="panel-body"></div><div class="edge"></div></section>`);
   document.body.appendChild(el);
-  const p = { el, body: $(".panel-body", el), cleanups: [], onClose };
+  const p = { el, sheet, body: $(".panel-body", el), cleanups: [], onClose, head: $(".head-slot", el) };
   p.cleanup = (fn) => p.cleanups.push(fn);
   p.close = () => closePanel(p);
-  $(".back", el).onclick = () => history.back();
+  $(".back, .close", el).onclick = () => history.back();
+  if (sheet) { $(".scrim", el).onclick = () => history.back(); dragToDismiss(p); }
+  else edgeSwipe(p);
   panelStack.push(p);
   activeCount++;
   history.pushState({ panel: panelStack.length }, "");
-  requestAnimationFrame(() => el.classList.add("open"));
+  stackChanged();
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("open")));
   build(p.body, p);
   return p;
 }
@@ -191,8 +199,17 @@ function closePanel(p, fromPop) {
   p.cleanups.forEach((fn) => { try { fn(); } catch (e) { console.error(e); } });
   if (p.onClose) p.onClose();
   p.el.classList.remove("open");
-  setTimeout(() => p.el.remove(), 250);
+  p.el.classList.add("closing");
+  stackChanged();
+  setTimeout(() => p.el.remove(), 420);
   if (!fromPop) { ignorePop++; history.back(); }
+}
+// Screens underneath slide aside and dim, like a native navigation stack.
+function stackChanged() {
+  const full = panelStack.filter((x) => !x.sheet);
+  document.body.classList.toggle("pushed", full.length > 0);
+  document.body.classList.toggle("sheeted", panelStack.length > 0 && panelStack[panelStack.length - 1].sheet);
+  full.forEach((x, i) => x.el.classList.toggle("behind", i < full.length - 1));
 }
 window.addEventListener("popstate", () => {
   if (ignorePop) { ignorePop--; return; }
@@ -200,11 +217,62 @@ window.addEventListener("popstate", () => {
   if (top) closePanel(top, true);
 });
 
-function toast(msg) {
-  const t = h(`<div class="toast">${msg}</div>`);
-  document.body.appendChild(t);
-  setTimeout(() => t.classList.add("show"), 10);
-  setTimeout(() => { t.classList.remove("show"); setTimeout(() => t.remove(), 300); }, 2200);
+// Drag from the screen edge to go back (right edge in Hebrew).
+function edgeSwipe(p) {
+  const edge = $(".edge", p.el), el = p.el;
+  let x0 = null, t0 = 0, dx = 0;
+  edge.addEventListener("pointerdown", (e) => { x0 = e.clientX; t0 = performance.now(); dx = 0; el.classList.add("dragging"); edge.setPointerCapture(e.pointerId); });
+  edge.addEventListener("pointermove", (e) => {
+    if (x0 == null) return;
+    dx = Math.min(0, e.clientX - x0);
+    el.style.transform = `translateX(${dx}px)`;
+    document.body.style.setProperty("--back-progress", Math.min(1, -dx / innerWidth));
+  });
+  const up = () => {
+    if (x0 == null) return;
+    const v = dx / Math.max(1, performance.now() - t0);
+    el.classList.remove("dragging");
+    el.style.transform = "";
+    document.body.style.removeProperty("--back-progress");
+    if (dx < -innerWidth * 0.3 || v < -0.5) { haptic(8); history.back(); }
+    x0 = null;
+  };
+  edge.addEventListener("pointerup", up);
+  edge.addEventListener("pointercancel", up);
+}
+
+// Pull a sheet down by its grip to close it.
+function dragToDismiss(p) {
+  const grip = $(".sheet-grip", p.el), sh = $(".sheet", p.el);
+  let y0 = null, t0 = 0, dy = 0;
+  grip.addEventListener("pointerdown", (e) => { if (e.target.closest(".close")) return; y0 = e.clientY; t0 = performance.now(); dy = 0; sh.classList.add("dragging"); grip.setPointerCapture(e.pointerId); });
+  grip.addEventListener("pointermove", (e) => {
+    if (y0 == null) return;
+    dy = e.clientY - y0;
+    sh.style.transform = `translateY(${dy > 0 ? dy : dy / 6}px)`;
+  });
+  const up = () => {
+    if (y0 == null) return;
+    const v = dy / Math.max(1, performance.now() - t0);
+    sh.classList.remove("dragging");
+    sh.style.transform = "";
+    if (dy > 110 || v > 0.6) history.back();
+    y0 = null;
+  };
+  grip.addEventListener("pointerup", up);
+  grip.addEventListener("pointercancel", up);
+}
+
+// A pill that drops in at the top of the screen.
+let toastEl = null, toastTimer = 0;
+function toast(msg, ic = "check") {
+  if (!toastEl) { toastEl = h(`<div class="island" role="status" aria-live="polite"></div>`); document.body.appendChild(toastEl); }
+  toastEl.innerHTML = `${icon(ic)}<span>${msg}</span>`;
+  toastEl.classList.remove("show");
+  void toastEl.offsetWidth;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2400);
 }
 
 let wakeLock = null;
@@ -215,28 +283,36 @@ async function keepAwake(on) {
   } catch (e) { /* not supported */ }
 }
 
-// ---------- Metronome control used inside activities ----------
+// ---------- Transport bar used inside exercises ----------
 function metroControl(container, metro, { bpm, min = 30, max = 240, onBpm } = {}) {
   metro.bpm = bpm || metro.bpm;
-  const el = h(`<div class="metro-ctl">
-    <button class="play" aria-label="הפעלה">▶</button>
-    <div class="bpm-box" dir="ltr"><button class="step" data-d="-5">−5</button><div class="bpm"><b>${metro.bpm}</b><small>BPM</small></div><button class="step" data-d="5">+5</button></div>
-    <div class="beats">${Array.from({ length: metro.beats }, () => "<i></i>").join("")}</div>
+  const el = h(`<div class="transport">
+    <button class="t-play" aria-label="הפעלה">${icon("play")}</button>
+    <div class="t-bpm" dir="ltr">
+      <button class="t-step" data-d="-5" aria-label="האטה">${icon("minus")}</button>
+      <div class="t-num" title="גררו לצדדים"><b>${metro.bpm}</b><small>BPM</small></div>
+      <button class="t-step" data-d="5" aria-label="האצה">${icon("plus")}</button>
+    </div>
+    <div class="t-beats" dir="ltr">${Array.from({ length: metro.beats }, () => "<i></i>").join("")}</div>
   </div>`);
   container.appendChild(el);
-  const b = $(".bpm b", el), playBtn = $(".play", el);
+  const b = $(".t-num b", el), playBtn = $(".t-play", el);
   const set = (v) => { metro.bpm = clamp(v, min, max); b.textContent = metro.bpm; if (onBpm) onBpm(metro.bpm); };
-  $$(".step", el).forEach((s) => (s.onclick = () => set(metro.bpm + +s.dataset.d)));
-  const dots = () => $$(".beats i", el);
+  $$(".t-step", el).forEach((s) => (s.onclick = () => set(metro.bpm + +s.dataset.d)));
+  scrubber($(".t-num", el), () => metro.bpm, set, 0.2);
+  const dots = () => $$(".t-beats i", el);
   const prevTick = metro.onTick;
   metro.onTick = (info) => {
-    if (info.sub === 0) dots().forEach((d, i) => d.classList.toggle("on", i === info.beat));
+    if (info.sub === 0) {
+      dots().forEach((d, i) => d.classList.toggle("on", i === info.beat));
+      playBtn.classList.remove("pulse"); void playBtn.offsetWidth; playBtn.classList.add("pulse");
+    }
     if (prevTick) prevTick(info);
   };
   metro.onBpm = (v) => { b.textContent = v; if (onBpm) onBpm(v); };
   const toggle = () => {
-    if (metro.running) { metro.stop(); playBtn.textContent = "▶"; playBtn.classList.remove("on"); dots().forEach((d) => d.classList.remove("on")); }
-    else { metro.start(); playBtn.textContent = "■"; playBtn.classList.add("on"); }
+    if (metro.running) { metro.stop(); playBtn.innerHTML = icon("play"); playBtn.classList.remove("on"); dots().forEach((d) => d.classList.remove("on")); }
+    else { metro.start(); playBtn.innerHTML = icon("stop"); playBtn.classList.add("on"); }
   };
   playBtn.onclick = toggle;
   return { el, set, toggle, stop: () => metro.running && toggle() };
@@ -248,7 +324,7 @@ const Acts = {};
 
 function stepsHTML(u) {
   if (!u.how) return "";
-  return `<details class="how" ${u.openHow ? "open" : ""}><summary>איך עושים את זה</summary><ol>${u.how.map((x) => `<li>${x}</li>`).join("")}</ol>${u.goal ? `<p class="goal">🎯 יעד: ${u.goal}</p>` : ""}</details>`;
+  return `<details class="how" ${u.openHow ? "open" : ""}><summary>איך עושים את זה</summary><ol>${u.how.map((x) => `<li>${x}</li>`).join("")}</ol>${u.goal ? `<p class="goal">${icon("train")}<span>יעד: ${u.goal}</span></p>` : ""}</details>`;
 }
 
 Acts.chords = (c, u, p) => {
@@ -262,7 +338,7 @@ Acts.chords = (c, u, p) => {
   let withSound = true;
   c.appendChild(h(`<div class="chord-row">${chords.map((id) => chordCard(id)).join("")}</div>`));
   c.appendChild(h(`<div class="strum-line" dir="ltr">${strumCells(strum)}</div>`));
-  const opts = h(`<label class="switch"><input type="checkbox" checked> האפליקציה מנגנת איתי</label>`);
+  const opts = h(`<label class="toggle-row"><span>האפליקציה מנגנת איתי</span><input type="checkbox" class="toggle" checked></label>`);
   c.appendChild(opts);
   $("input", opts).onchange = (e) => (withSound = e.target.checked);
   const cards = $$(".chord-row .chord-card", c);
@@ -324,7 +400,7 @@ Acts.changes = (c, u, p) => {
     const isNew = record("changes", key, n);
     $(".best", box).textContent = best();
     Sound.click(Sound.context().currentTime + 0.01, 2);
-    toast(isNew && n ? `שיא חדש: ${n} החלפות! 🔥` : `${n} החלפות. השיא: ${best()}`);
+    toast(isNew && n ? `שיא חדש: ${n} החלפות` : `${n} החלפות · השיא ${best()}`, isNew && n ? "flame" : "loop");
   };
   const hit = () => {
     if (!running) {
@@ -349,10 +425,10 @@ Acts.changes = (c, u, p) => {
 };
 
 function cleanRecordButton(c, metro, key, label = "ניגנתי נקי") {
-  const btn = h(`<button class="btn ghost rec">✓ ${label} ב-<span>${metro.bpm}</span> BPM</button>`);
+  const btn = h(`<button class="btn wide rec">${icon("check")}<span>${label} ב-<span class="v">${metro.bpm}</span> BPM</span></button>`);
   const best = h(`<p class="hint best-line"></p>`);
-  const paint = () => { $("span", btn).textContent = metro.bpm; best.textContent = S.records.bpm[key] ? `השיא שלכם: ${S.records.bpm[key]} BPM` : ""; };
-  btn.onclick = () => { if (record("bpm", key, metro.bpm)) toast(`שיא חדש: ${metro.bpm} BPM 🔥`); else toast("נשמר. השיא נשאר " + S.records.bpm[key]); paint(); };
+  const paint = () => { $(".v", btn).textContent = metro.bpm; best.textContent = S.records.bpm[key] ? `השיא שלכם: ${S.records.bpm[key]} BPM` : ""; };
+  btn.onclick = () => { if (record("bpm", key, metro.bpm)) toast(`שיא חדש: ${metro.bpm} BPM`, "flame"); else toast("נשמר · השיא נשאר " + S.records.bpm[key]); paint(); };
   c.append(btn, best);
   paint();
   return paint;
@@ -372,7 +448,7 @@ Acts.spider = (c, u, p) => {
   });
   c.appendChild(h(`<pre class="tab" dir="ltr">${lines.join("\n")}</pre>`));
   c.appendChild(h(`<p class="hint">עולים מ-E הנמוך ל-e ובחזרה. ${metro.sub === 1 ? "תו אחד לכל קליק." : metro.sub === 2 ? "שני תווים לכל פעמה." : metro.sub === 3 ? "שלושה תווים לכל פעמה." : "ארבעה תווים לכל פעמה."} סריגים ${pos} עד ${pos + 3}.</p>`));
-  const trainer = h(`<label class="switch"><input type="checkbox"> מאמן מהירות: +2 BPM כל 4 תיבות</label>`);
+  const trainer = h(`<label class="toggle-row"><span>מאמן מהירות<small>‎+2 BPM כל 4 תיבות</small></span><input type="checkbox" class="toggle"></label>`);
   c.appendChild(trainer);
   let base = u.bpmNow || u.bpm;
   $("input", trainer).onchange = (e) => (metro.trainer = e.target.checked ? { step: 2, everyBars: 4, target: base + 30 } : null);
@@ -391,13 +467,13 @@ Acts.scale = (c, u, p) => {
     <select class="k">${NOTE_NAMES.map((n) => `<option ${n === key ? "selected" : ""}>${n}</option>`).join("")}</select>
     <select class="sc">${Object.entries(SCALES).map(([id, s]) => `<option value="${id}" ${id === scale ? "selected" : ""}>${s.name}</option>`).join("")}</select>
     <select class="bx"></select>
-    <button class="btn small lab">${S.settings.labels === "deg" ? "1-2-3" : "C-D-E"}</button>
+    <button class="btn small lab" aria-label="שמות תווים או דרגות">${S.settings.labels === "deg" ? "1-2-3" : "C-D-E"}</button>
   </div>`);
   c.appendChild(head);
   const fbWrap = h(`<div></div>`);
   c.appendChild(fbWrap);
   c.appendChild(h(`<p class="hint">עיגול כתום = השורש. ${metro.sub > 1 ? `${metro.sub} תווים לכל פעמה.` : "תו אחד לכל פעמה, עולים ויורדים."}</p>`));
-  const play = h(`<button class="btn ghost">🔊 השמע את הסולם</button>`);
+  const play = h(`<button class="btn wide">${icon("speaker")}<span>השמיעו את הסולם</span></button>`);
   c.appendChild(play);
   const draw = () => {
     const sc = SCALES[scale];
@@ -485,17 +561,18 @@ Acts.jam = (c, u, p) => {
 };
 
 Acts.free = (c, u, p) => {
-  const box = h(`<div class="free-timer"><b>0:00</b><button class="btn">▶ טיימר</button></div>`);
+  const box = h(`<div class="free-timer"><b>0:00</b><button class="btn">${icon("timer")}<span>טיימר</span></button></div>`);
   c.appendChild(box);
   let t = 0, iv = 0;
   $("button", box).onclick = (e) => {
-    if (iv) { clearInterval(iv); iv = 0; e.target.textContent = "▶ טיימר"; return; }
-    e.target.textContent = "■ עצור";
+    const btn = e.currentTarget;
+    if (iv) { clearInterval(iv); iv = 0; btn.innerHTML = `${icon("timer")}<span>טיימר</span>`; return; }
+    btn.innerHTML = `${icon("stop")}<span>עצירה</span>`;
     iv = setInterval(() => { t++; $("b", box).textContent = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; }, 1000);
   };
   p.cleanup(() => clearInterval(iv));
   if (/בנד|כיוון/.test(u.title)) {
-    const go = h(`<button class="btn ghost">🎚️ פתחו את המכוון</button>`);
+    const go = h(`<button class="btn wide">${icon("tuner")}<span>פתחו את המכוון</span></button>`);
     go.onclick = () => openTunerPanel();
     c.appendChild(go);
   }
@@ -506,7 +583,7 @@ Acts.notes = (c, u, p) => {
   const strings = u.strings || [0, 1, 2, 3, 4, 5];
   const rkey = strings.join("");
   const box = h(`<div class="game">
-    <div class="seg mode"><button data-m="tap" class="on">👆 הקשה</button><button data-m="mic">🎤 נגינה</button></div>
+    <div class="seg mode"><button data-m="tap" class="on">${icon("hand")}הקשה</button><button data-m="mic">${icon("mic")}נגינה</button></div>
     <div class="ch-stats"><div><small>זמן</small><b class="t">60</b></div><div><small>נכונות</small><b class="n">0</b></div><div><small>שיא</small><b class="best">${S.records.notes[rkey] || 0}</b></div></div>
     <div class="question">לחצו התחל</div>
     <div class="fbw"></div>
@@ -543,7 +620,8 @@ Acts.notes = (c, u, p) => {
     if (stopMic) { stopMic(); stopMic = null; }
     const isNew = record("notes", rkey, n);
     $(".best", box).textContent = S.records.notes[rkey] || 0;
-    q.textContent = isNew && n ? `שיא חדש: ${n}! 🔥` : `${n} נכונות`;
+    q.textContent = isNew && n ? `שיא חדש: ${n}` : `${n} נכונות`;
+    if (isNew && n) toast(`שיא חדש: ${n} תווים בדקה`, "flame");
     keepAwake(false);
   };
   const onPitch = (r) => {
@@ -586,7 +664,7 @@ Acts.ear = (c, u, p) => {
     <div class="seg mode"><button data-m="intervals">מרווחים</button><button data-m="chords">אקורדים</button></div>
     <div class="seg lvl"></div>
     <div class="ch-stats"><div><small>רצף</small><b class="n">0</b></div><div><small>שיא רצף</small><b class="best">0</b></div></div>
-    <button class="tap-big">🔊 השמע</button>
+    <button class="tap-big">${icon("speaker")}<span>השמיעו</span></button>
     <div class="answers"></div>
   </div>`);
   c.appendChild(box);
@@ -650,10 +728,10 @@ function openUnit(u, { inSession = false, onRate = null, title } = {}) {
       body.appendChild(foot);
       const paint = () => {
         const met = goalMet(u);
-        if (met && !S.done[u.id]) { S.done[u.id] = today(); save(); toast("עמדתם ביעד! השלב הבא נפתח 🎉"); }
-        foot.innerHTML = S.done[u.id] ? `<p class="done-badge">✓ הושלם</p><button class="btn ghost small undo">סמן כלא הושלם</button>` : u.check === "self" ? `<button class="btn primary mark">✓ עמדתי ביעד</button>` : `<p class="hint">היעד ייבדק לבד כשתשברו את השיא.</p><button class="btn ghost small mark">סמן כהושלם בכל זאת</button>`;
+        if (met && !S.done[u.id]) { S.done[u.id] = today(); save(); toast("עמדתם ביעד · השלב הבא נפתח", "trophy"); }
+        foot.innerHTML = S.done[u.id] ? `<p class="done-badge">${icon("check")}<span>השלב הושלם</span></p><button class="link undo">סמנו כלא הושלם</button>` : u.check === "self" ? `<button class="cta mark">${icon("check")}<span>עמדתי ביעד</span></button>` : `<p class="hint">היעד נבדק לבד כשתשברו את השיא.</p><button class="link mark">סמנו כהושלם בכל זאת</button>`;
         const m = $(".mark", foot);
-        if (m) m.onclick = () => { S.done[u.id] = today(); if (api.bpm) S.bpm[keyB] = api.bpm(); save(); toast("כל הכבוד! 🎸"); paint(); renderAll(); };
+        if (m) m.onclick = () => { S.done[u.id] = today(); if (api.bpm) S.bpm[keyB] = api.bpm(); save(); toast("כל הכבוד", "trophy"); paint(); renderAll(); };
         const un = $(".undo", foot);
         if (un) un.onclick = () => { delete S.done[u.id]; save(); paint(); renderAll(); };
       };
@@ -702,27 +780,35 @@ function buildSession(minutes) {
   return blocks;
 }
 
-function startSession(minutes) {
-  const blocks = buildSession(minutes);
-  let i = 0, startedAt = Date.now();
+function startSession(minutes, planned) {
+  const blocks = planned || buildSession(minutes);
+  let i = 0;
+  const startedAt = Date.now();
   keepAwake(true);
   const runBlock = () => {
     const b = blocks[i];
     const tempo = ["chords", "strum", "scale", "spider", "jam"].includes(b.kind);
-    const p = openUnit(b, { inSession: true, title: `${i + 1}/${blocks.length} · ${b.title}` });
+    const p = openUnit(b, { inSession: true, title: "האימון היומי" });
+    const total = b.minutes * 60;
     const bar = h(`<div class="session-bar">
       <div class="prog">${blocks.map((_, j) => `<i class="${j < i ? "done" : j === i ? "now" : ""}"></i>`).join("")}</div>
-      <div class="sb-row"><div class="clock"><b>${fmt(b.minutes * 60)}</b><small>${b.focus ? "המשימה של היום" : "זמן לתרגיל"}</small></div><button class="btn primary next">${i === blocks.length - 1 ? "סיום" : "הבא ←"}</button></div>
-      ${b.focus ? `<label class="switch goal-check"><input type="checkbox"> עמדתי ביעד: ${b.goal}</label>` : ""}
-      <div class="rate" hidden><p>איך היה הקצב?</p><div class="row"><button data-r="-5" class="btn">קשה</button><button data-r="2" class="btn">בדיוק</button><button data-r="5" class="btn">קל מדי</button></div></div>
+      <div class="sb-row">
+        <div class="sb-clock">${ring(0.01, { size: 64, stroke: 5, cls: "sb-ring" })}<b>${fmt(total)}</b></div>
+        <div class="sb-info"><small>${b.focus ? "המשימה של היום" : `תרגיל ${i + 1} מתוך ${blocks.length}`}</small><b>${b.title}</b></div>
+        <button class="cta small next">${i === blocks.length - 1 ? "סיום" : "הבא"}</button>
+      </div>
+      ${b.focus ? `<label class="toggle-row goal-check"><span>עמדתי ביעד<small>${b.goal}</small></span><input type="checkbox" class="toggle"></label>` : ""}
+      <div class="rate" hidden><p>איך היה הקצב?</p><div class="rate-opts"><button data-r="-5"><b>קשה</b><small>‎−5 BPM</small></button><button data-r="2"><b>בדיוק</b><small>‎+2 BPM</small></button><button data-r="5"><b>קל מדי</b><small>‎+5 BPM</small></button></div></div>
     </div>`);
     p.body.prepend(bar);
-    let left = b.minutes * 60;
+    const ringFill = $(".sb-ring .ring-fill", bar);
+    let left = total;
     const iv = setInterval(() => {
       if (document.visibilityState !== "visible") return;
       left--;
-      $(".clock b", bar).textContent = fmt(Math.max(0, left));
-      if (left === 0) { bar.classList.add("timeup"); chime(); }
+      $(".sb-clock b", bar).textContent = fmt(Math.max(0, left));
+      ringFill.style.setProperty("--p", 100 - clamp(((total - left) / total) * 100, 0, 100));
+      if (left === 0) { bar.classList.add("timeup"); chime(); haptic(30); }
     }, 1000);
     p.cleanup(() => clearInterval(iv));
     let advancing = false;
@@ -734,11 +820,11 @@ function startSession(minutes) {
     const go = () => {
       advancing = true;
       autoGoal();
-      if (goalBox && goalBox.checked && !S.done[b.id]) { S.done[b.id] = today(); save(); toast("שלב הושלם! 🎉"); }
+      if (goalBox && goalBox.checked && !S.done[b.id]) { S.done[b.id] = today(); save(); toast("שלב הושלם"); }
       p.close();
       i++;
-      if (i < blocks.length) setTimeout(runBlock, 280);
-      else setTimeout(() => finishSession(Math.round((Date.now() - startedAt) / 60000)), 280);
+      if (i < blocks.length) setTimeout(runBlock, 320);
+      else setTimeout(() => finishSession(Math.round((Date.now() - startedAt) / 60000)), 320);
     };
     $(".next", bar).onclick = () => {
       if (tempo && $(".rate", bar).hidden) { $(".rate", bar).hidden = false; $(".next", bar).hidden = true; return; }
@@ -765,63 +851,99 @@ function finishSession(mins) {
   save();
   keepAwake(false);
   const st = streak();
-  openPanel("כל הכבוד!", (body) => {
+  const goalPct = clamp((minutesOn(today()) / S.goalMin) * 100, 0, 100);
+  openPanel("כל הכבוד", (body) => {
     body.innerHTML = `<div class="finish">
-      <div class="big-emoji">🎸</div>
-      <h3>אימון הושלם</h3>
-      <div class="ch-stats"><div><small>דקות</small><b>${Math.max(1, mins)}</b></div><div><small>רצף ימים</small><b>${st}🔥</b></div><div><small>אימונים</small><b>${S.sessions}</b></div></div>
-      <p>המטרונום כבר מכוון לאימון הבא לפי מה שסימנתם. נתראה מחר!</p>
-      <button class="btn primary close">סגור</button></div>`;
+      <div class="burst" aria-hidden="true">${Array.from({ length: 18 }, (_, k) => `<i style="--a:${k * 20}deg;--d:${0.4 + (k % 4) * 0.12}s"></i>`).join("")}</div>
+      ${ring(goalPct, { size: 150, stroke: 12, cls: "big-ring", label: `${minutesOn(today())}` })}
+      <p class="eyebrow">דקות היום מתוך ${S.goalMin}</p>
+      <h3 class="display">אימון הושלם</h3>
+      <div class="stat-row"><div><b>${Math.max(1, mins)}</b><small>דקות באימון</small></div><div><b>${st}</b><small>ימים ברצף</small></div><div><b>${S.sessions}</b><small>אימונים</small></div></div>
+      <p class="muted">המטרונום כבר מכוון לאימון הבא לפי מה שסימנתם.</p>
+      <button class="cta close">סיום</button></div>`;
     $(".close", body).onclick = () => history.back();
     chime();
-  }, { onClose: () => renderAll() });
+    haptic([20, 60, 20]);
+  }, { onClose: () => renderAll(), cls: "celebrate" });
 }
 
 // ---------- Views ----------
+const HE_DAYS = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+const HE_MONTHS = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
+function greeting() {
+  const hr = new Date().getHours();
+  return hr < 5 ? "לילה טוב" : hr < 12 ? "בוקר טוב" : hr < 17 ? "צהריים טובים" : hr < 21 ? "ערב טוב" : "לילה טוב";
+}
+const dateLine = () => { const d = new Date(); return `יום ${HE_DAYS[d.getDay()]}, ${d.getDate()} ב${HE_MONTHS[d.getMonth()]}`; };
+function heroChord(u) {
+  if (!u) return "G";
+  return (u.chords && u.chords[0]) || u.chord || (u.pair && u.pair[0]) || (u.prog && PROGRESSIONS.find((x) => x.id === u.prog).chords[0]) || "G";
+}
+const chordNotes = (id) => (i) => { const f = CHORDS[id].frets[i]; return f < 0 ? null : TUNING[i] + f; };
+const KIND_ICON = { chords: "chords", changes: "loop", strum: "strum", scale: "scale", spider: "speed", notes: "notes", ear: "ear", jam: "jam", free: "hand" };
+const SHORT = { spider: "חימום", strum: "פריטה", chords: "אקורדים", changes: "החלפות", scale: "סולם", jam: "שיר", notes: "תווים", ear: "אוזן", free: "טכניקה" };
+
+let homePad = null, homePlan = null;
 function renderHome() {
   const v = $("#v-home");
+  if (homePad) { homePad.destroy(); homePad = null; }
   const lvl = currentLevel();
   const doneN = lvl.units.filter((u) => S.done[u.id]).length;
   const next = lvl.units.find((u) => !S.done[u.id]);
+  const chord = heroChord(next);
   const st = streak();
+  homePlan = buildSession(S.goalMin);
   const todayMin = minutesOn(today());
   v.innerHTML = `
-    <div class="hero">
-      <div class="hero-top"><span class="chip">🔥 ${st} ימים ברצף</span><span class="chip">${todayMin}/${S.goalMin} דק' היום</span></div>
-      <h1>האימון של היום</h1>
-      <p>רמה ${lvl.id}: ${lvl.name}${next ? ` · עכשיו: <b>${next.title}</b>` : ""}</p>
-      <div class="seg dur">${[10, 20, 30, 45].map((m) => `<button data-m="${m}" class="${m === S.goalMin ? "on" : ""}">${m} דק'</button>`).join("")}</div>
-      <button class="btn primary huge start">▶ התחילו אימון</button>
-      <div class="lvl-bar"><i style="width:${(doneN / lvl.units.length) * 100}%"></i></div>
-      <small class="muted">${doneN} מתוך ${lvl.units.length} שלבים ברמה ${lvl.id}</small>
-    </div>
-    <h3 class="sec">7 הימים האחרונים</h3>
-    <div class="week">${lastDays(7).map((d) => `<div class="day ${minutesOn(d) >= S.goalMin ? "full" : minutesOn(d) >= 2 ? "part" : ""}"><i style="height:${Math.min(100, (minutesOn(d) / S.goalMin) * 100)}%"></i><small>${dayName(d)}</small></div>`).join("")}</div>
-    <h3 class="sec">קיצורי דרך</h3>
-    <div class="quick">
-      <button data-go="tuner">🎚️<b>מכוון</b></button>
-      <button data-go="metro">⏱️<b>מטרונום</b></button>
-      <button data-go="jam">🥁<b>ג'אם</b></button>
-      <button data-go="notes">🎯<b>תווים</b></button>
-    </div>
-    <h3 class="sec">השיאים שלכם</h3>
-    <div class="records">${recordsHTML()}</div>
-    <p class="muted small-print">הכול נשמר רק בדפדפן הזה. <button class="link reset">איפוס</button></p>`;
-  $(".start", v).onclick = () => startSession(S.goalMin);
+    <header class="lt">
+      <div><p class="eyebrow">${dateLine()}</p><h1 data-title>${greeting()}</h1></div>
+      <div class="streak ${st ? "on" : ""}" aria-label="${st} ימים ברצף">${icon("flame")}<b>${st}</b></div>
+    </header>
+    <section class="stage">
+      <div class="stage-top">
+        <div><p class="eyebrow">רמה ${lvl.id} · ${lvl.name}</p><h2>${next ? next.title : "סיימתם את המסלול"}</h2></div>
+        ${ring((doneN / lvl.units.length) * 100, { size: 54, label: `${doneN}/${lvl.units.length}` })}
+      </div>
+      <canvas class="strings" aria-label="מיתרים לפריטה"></canvas>
+      <p class="stage-hint">${icon("hand")}<span>החליקו על המיתרים · האקורד <b dir="ltr">${chordName(chord)}</b></span></p>
+    </section>
+    <section class="today">
+      <div class="plan">${homePlan.map((b) => `<span>${icon(KIND_ICON[b.kind])}${SHORT[b.kind]}<small>${b.minutes}′</small></span>`).join("")}</div>
+      <div class="seg dur" role="radiogroup" aria-label="אורך האימון">${[10, 20, 30, 45].map((m) => `<button role="radio" aria-checked="${m === S.goalMin}" data-m="${m}" class="${m === S.goalMin ? "on" : ""}">${m} דק'</button>`).join("")}</div>
+      <button class="cta start">${icon("play")}<span>התחילו אימון</span></button>
+      <p class="today-sub">${todayMin ? `${todayMin} מתוך ${S.goalMin} דקות היום` : "עוד לא ניגנתם היום"}</p>
+    </section>
+    <section class="group">
+      <h3 class="sec">השבוע</h3>
+      <div class="week">${lastDays(7).map((d) => `<div class="day ${d === today() ? "is-today" : ""}">${ring((minutesOn(d) / S.goalMin) * 100, { size: 36, stroke: 4 })}<small>${dayName(d)}</small></div>`).join("")}</div>
+    </section>
+    <section class="group">
+      <h3 class="sec">כלים</h3>
+      <div class="tiles">
+        ${[["tuner", "tuner", "מכוון"], ["metro", "metro", "מטרונום"], ["jam", "jam", "ג'אם"], ["notes", "notes", "תווים"]].map(([go, ic, name]) => `<button class="tile" data-go="${go}"><span class="sq">${icon(ic)}</span><b>${name}</b></button>`).join("")}
+      </div>
+    </section>
+    <section class="group">
+      <h3 class="sec">השיאים שלכם</h3>
+      ${recordsHTML()}
+    </section>
+    <p class="small-print">ההתקדמות נשמרת רק במכשיר הזה · <button class="link reset">איפוס</button></p>`;
+  homePad = StringsPad($(".stage .strings", v), { notes: chordNotes(chord), height: 150, onStrum: () => $(".stage", v).classList.add("strummed") });
+  $(".start", v).onclick = () => startSession(S.goalMin, homePlan);
   $$(".dur button", v).forEach((b) => (b.onclick = () => { S.goalMin = +b.dataset.m; save(); renderHome(); }));
-  $$(".quick button", v).forEach((b) => (b.onclick = () => quick(b.dataset.go)));
-  $(".reset", v).onclick = () => { if (confirm("למחוק את כל ההתקדמות?")) { S = blank(); save(); location.reload(); } };
+  $$(".tile", v).forEach((b) => (b.onclick = () => quick(b.dataset.go)));
+  $(".reset", v).onclick = () => { if (confirm("למחוק את כל ההתקדמות? אי אפשר לבטל את זה.")) { S = blank(); save(); location.reload(); } };
 }
 function recordsHTML() {
   const r = S.records;
   const rows = [];
-  Object.entries(r.changes).forEach(([k, v]) => rows.push([`החלפות ${k.split("-").map(chordName).join(" ↔ ")}`, `${v}/דקה`]));
-  if (r.bpm.spider) rows.push(["עכביש כרומטי", `${r.bpm.spider} BPM`]);
-  Object.entries(r.bpm).filter(([k]) => k.startsWith("scale:")).forEach(([k, v]) => rows.push([SCALES[k.slice(6)].name, `${v} BPM`]));
-  Object.entries(r.notes).forEach(([k, v]) => rows.push([`תווים (${k.length === 6 ? "כל המיתרים" : [...k].map((s) => STRING_NAMES[s]).join(", ")})`, `${v}/דקה`]));
-  Object.entries(r.ear).forEach(([k, v]) => rows.push([k === "chords" ? "אוזן: אקורדים" : "אוזן: מרווחים", `רצף ${v}`]));
-  if (!rows.length) return `<p class="muted">עוד אין שיאים. כל אימון ישבור אחד 💪</p>`;
-  return rows.map(([a, b]) => `<div class="rec-row"><span>${a}</span><b>${b}</b></div>`).join("");
+  Object.entries(r.changes).forEach(([k, v]) => rows.push([v, "החלפות בדקה", k.split("-").map(chordName).join(" ↔ "), "loop"]));
+  if (r.bpm.spider) rows.push([r.bpm.spider, "BPM", "עכביש כרומטי", "speed"]);
+  Object.entries(r.bpm).filter(([k]) => k.startsWith("scale:")).forEach(([k, v]) => rows.push([v, "BPM", SCALES[k.slice(6)].name, "scale"]));
+  Object.entries(r.notes).forEach(([k, v]) => rows.push([v, "תווים בדקה", k.length === 6 ? "כל המיתרים" : "מיתרים " + [...k].map((s) => STRING_NAMES[s]).join(", "), "notes"]));
+  Object.entries(r.ear).forEach(([k, v]) => rows.push([v, "ברצף", k === "chords" ? "אוזן: אקורדים" : "אוזן: מרווחים", "ear"]));
+  if (!rows.length) return `<div class="empty">${icon("trophy")}<p><b>השיאים יופיעו כאן</b><small>כל אימון שובר אחד. נתחיל?</small></p></div>`;
+  return `<div class="rec-scroll">${rows.map(([n, unit, what, ic]) => `<div class="rcard">${icon(ic)}<b class="num">${n}</b><small>${unit}</small><span dir="auto">${what}</span></div>`).join("")}</div>`;
 }
 function lastDays(n) {
   const out = [];
@@ -833,25 +955,35 @@ function lastDays(n) {
 const dayName = (k) => ["א", "ב", "ג", "ד", "ה", "ו", "ש"][new Date(k + "T12:00").getDay()];
 
 function quick(go) {
-  if (go === "tuner") { nav("tools"); setToolTab("tuner"); }
-  else if (go === "metro") { nav("tools"); setToolTab("metro"); }
+  if (go === "tuner") { toolTab = "tuner"; nav("tools"); }
+  else if (go === "metro") { toolTab = "metro"; nav("tools"); }
   else if (go === "jam") openUnit({ kind: "jam", key: "jam", title: "ג'אם", prog: "pop", bpm: 80 });
   else if (go === "notes") openUnit({ kind: "notes", title: "מצאו את התו", strings: [0, 1, 2, 3, 4, 5] });
 }
 
-const KIND_ICON = { chords: "🎵", changes: "🔁", strum: "↕️", scale: "🎼", spider: "🕷️", notes: "🎯", ear: "👂", jam: "🥁", free: "✋" };
+const openLevels = new Set();
 function renderPath() {
   const v = $("#v-path");
   const cur = currentLevel().id;
-  v.innerHTML = `<h1 class="title">המסלול</h1><p class="muted">8 רמות ממתחילים מוחלטים ועד נגינה מתקדמת. כל שלב עם יעד ברור.</p>` +
-    PATH.map((l) => {
+  if (!openLevels.size) openLevels.add(cur);
+  const total = PATH.reduce((a, l) => a + l.units.length, 0);
+  const done = PATH.reduce((a, l) => a + l.units.filter((u) => S.done[u.id]).length, 0);
+  v.innerHTML = `<header class="lt"><div><p class="eyebrow">${done} מתוך ${total} שלבים</p><h1 data-title>המסלול</h1></div></header>
+    <div class="journey">${PATH.map((l) => {
       const n = l.units.filter((u) => S.done[u.id]).length;
       const state = n === l.units.length ? "done" : l.id === cur ? "cur" : l.id < cur ? "done" : "lock";
-      return `<section class="level ${state}">
-        <header><span class="lnum">${state === "done" ? "✓" : l.id}</span><div><h3>${l.name}</h3><p>${l.goal}</p></div></header>
-        <div class="units">${l.units.map((u) => `<button class="unit ${S.done[u.id] ? "done" : ""}" data-u="${u.id}"><span>${KIND_ICON[u.kind]}</span><b>${u.title}</b><small>${u.goal}</small><em>${S.done[u.id] ? "✓" : "‹"}</em></button>`).join("")}</div>
+      const node = state === "done" ? `<span class="node">${icon("check")}</span>` : state === "lock" ? `<span class="node">${icon("lock")}</span>` : ring((n / l.units.length) * 100, { size: 44, stroke: 4, cls: "node-ring", label: l.id });
+      return `<section class="lv ${state} ${openLevels.has(l.id) ? "open" : ""}" data-l="${l.id}">
+        <button class="lv-head" aria-expanded="${openLevels.has(l.id)}">${node}<div><small>רמה ${l.id}${state === "cur" ? " · אתם כאן" : ""}</small><h3>${l.name}</h3><p>${l.goal}</p></div>${icon("chevron", "chev")}</button>
+        <div class="lv-units"><div>${l.units.map((u) => `<button class="unit ${S.done[u.id] ? "done" : ""}" data-u="${u.id}"><span class="sq">${icon(KIND_ICON[u.kind])}</span><span class="u-txt"><b>${u.title}</b><small>${u.goal}</small></span>${S.done[u.id] ? icon("check", "u-state ok") : icon("chevron", "u-state")}</button>`).join("")}</div></div>
       </section>`;
-    }).join("");
+    }).join("")}</div>`;
+  $$(".lv-head", v).forEach((b) => (b.onclick = () => {
+    const sec = b.closest(".lv"), id = +sec.dataset.l;
+    sec.classList.toggle("open");
+    b.setAttribute("aria-expanded", sec.classList.contains("open"));
+    sec.classList.contains("open") ? openLevels.add(id) : openLevels.delete(id);
+  }));
   $$(".unit", v).forEach((b) => (b.onclick = () => openUnit(unitById(b.dataset.u).unit)));
 }
 
@@ -859,19 +991,19 @@ let chordCat = "open";
 function renderChords() {
   const v = $("#v-chords");
   const ids = Object.keys(CHORDS).filter((id) => CHORDS[id].cat === chordCat);
-  v.innerHTML = `<h1 class="title">אקורדים</h1>
-    <div class="chips">${CHORD_CATS.map(([id, name]) => `<button data-c="${id}" class="${id === chordCat ? "on" : ""}">${name}</button>`).join("")}</div>
+  v.innerHTML = `<header class="lt"><div><p class="eyebrow">${Object.keys(CHORDS).length} אקורדים · הקישו כדי לנגן</p><h1 data-title>אקורדים</h1></div></header>
+    <div class="chips" role="tablist">${CHORD_CATS.map(([id, name]) => `<button role="tab" aria-selected="${id === chordCat}" data-c="${id}" class="${id === chordCat ? "on" : ""}">${name}</button>`).join("")}</div>
     <div class="chord-grid">${ids.map((id) => chordCard(id)).join("")}</div>
-    <div class="card">
-      <h3>מאמן החלפות בדקה</h3>
-      <p class="muted">השיטה הכי מהירה ללמוד מעברים: דקה אחת, שני אקורדים, סופרים החלפות.</p>
-      <div class="row"><select class="ca">${chordOptions("C")}</select><span>↔</span><select class="cb">${chordOptions("G")}</select><button class="btn primary go">התחל</button></div>
-    </div>`;
+    <section class="card trainer-card">
+      <div class="tc-head"><span class="sq">${icon("loop")}</span><div><h3>החלפות בדקה</h3><p class="muted">הדרך הכי מהירה ללמוד מעבר: דקה אחת, שני אקורדים, סופרים.</p></div></div>
+      <div class="pair" dir="ltr"><select class="ca" aria-label="אקורד ראשון">${chordOptions("C")}</select><span>${icon("loop")}</span><select class="cb" aria-label="אקורד שני">${chordOptions("G")}</select></div>
+      <button class="cta go">${icon("play")}<span>התחילו דקה</span></button>
+    </section>`;
   $$(".chips button", v).forEach((b) => (b.onclick = () => { chordCat = b.dataset.c; renderChords(); }));
   $$(".chord-grid .chord-card", v).forEach((el) => (el.onclick = () => openChord(el.dataset.chord)));
   $(".go", v).onclick = () => {
     const a = $(".ca", v).value, b = $(".cb", v).value;
-    if (a === b) return toast("בחרו שני אקורדים שונים");
+    if (a === b) return toast("בחרו שני אקורדים שונים", "chords");
     openUnit({ kind: "changes", title: `${chordName(a)} ↔ ${chordName(b)}`, pair: [a, b] });
   };
 }
@@ -879,30 +1011,42 @@ const chordOptions = (sel) => Object.keys(CHORDS).map((id) => `<option value="${
 
 function openChord(id) {
   Sound.strum(id);
-  openPanel(chordName(id), (body) => {
-    const notes = Sound.chordMidis(id).map((m) => Sound.noteName(m));
-    body.innerHTML = `<div class="chord-detail">${chordCard(id, "huge")}
-      <p class="muted">תווים: <b dir="ltr">${[...new Set(notes)].join(" · ")}</b></p>
-      <p class="muted">המספרים = האצבעות: 1 מורה, 2 אמה, 3 קמיצה, 4 זרת. × = לא מנגנים את המיתר, ○ = מיתר פתוח.</p>
-      <div class="row"><button class="btn primary s">🔊 פריטה</button><button class="btn a">🎶 מיתר אחרי מיתר</button></div></div>`;
-    $(".s", body).onclick = () => Sound.strum(id);
-    $(".a", body).onclick = () => { const t = Sound.context().currentTime; Sound.chordMidis(id).forEach((m, i) => Sound.pluck(m, t + i * 0.32, 0.5, 1.5)); };
-    $(".chord-card", body).onclick = () => Sound.strum(id);
-  });
+  openPanel(chordName(id), (body, p) => {
+    const notes = [...new Set(Sound.chordMidis(id).map((m) => Sound.noteName(m)))];
+    body.innerHTML = `<div class="chord-detail">
+      <div class="cd-top">${chordSVG(id)}<div class="cd-info"><p class="eyebrow">תווים</p><p class="cd-notes" dir="ltr">${notes.join(" · ")}</p><p class="muted small">1 מורה · 2 אמה · 3 קמיצה · 4 זרת<br>× לא מנגנים · ○ מיתר פתוח</p></div></div>
+      <div class="stage mini"><canvas class="strings"></canvas><p class="stage-hint">${icon("hand")}<span>פרטו בעצמכם</span></p></div>
+      <div class="btn-row"><button class="cta s">${icon("speaker")}<span>פריטה</span></button><button class="btn a">${icon("strum")}<span>ארפג'ו</span></button></div>
+      <button class="btn wide chg">${icon("loop")}<span>תרגלו החלפות עם האקורד הזה</span></button></div>`;
+    const pad = StringsPad($(".strings", body), { notes: chordNotes(id), height: 132 });
+    p.cleanup(() => pad.destroy());
+    $(".s", body).onclick = () => pad.strum("D");
+    $(".a", body).onclick = () => [0, 1, 2, 3, 4, 5].forEach((i, k) => setTimeout(() => { if (CHORDS[id].frets[i] >= 0) Sound.pluck(TUNING[i] + CHORDS[id].frets[i], 0, 0.5, 1.5); }, k * 320));
+    $(".chg", body).onclick = () => {
+      const other = id === "G" ? "C" : "G";
+      history.back();
+      setTimeout(() => openUnit({ kind: "changes", title: `${chordName(id)} ↔ ${chordName(other)}`, pair: [id, other] }), 380);
+    };
+  }, { sheet: true });
 }
 
 function renderTrain() {
   const v = $("#v-train");
+  const r = S.records;
+  const bestOf = (o) => Math.max(0, ...Object.values(o));
   const items = [
-    ["notes", "🎯", "מצאו את התו", "משחק דקה: מוצאים תווים על הצוואר בהקשה, או מנגנים אותם למיקרופון."],
-    ["ear", "👂", "אימון אוזן", "מזהים מרווחים ואקורדים בשמיעה. ככה מנגנים מה ששומעים."],
-    ["scale", "🎼", "סולמות על הצוואר", "פנטטונית, בלוז, מז'ור ומודוסים, בכל סולם ובכל תיבה."],
-    ["jam", "🥁", "ג'אם עם האפליקציה", "האפליקציה מנגנת אקורדים ובס, אתם מנגנים איתה או מאלתרים סולו."],
-    ["spider", "🕷️", "מאמן מהירות", "עכביש כרומטי עם מטרונום שעולה לבד. הדרך לנגינה מהירה ונקייה."],
-    ["strum", "↕️", "קצבי פריטה", "7 קצבים, מרבעים פשוטים ועד פאנק בשש-עשריות."],
+    ["notes", "notes", "מצאו את התו", "הקישו על התו בצוואר או נגנו אותו למיקרופון.", bestOf(r.notes) ? `שיא ${bestOf(r.notes)} בדקה` : "משחק של דקה"],
+    ["ear", "ear", "אימון אוזן", "מרווחים ואקורדים בשמיעה.", bestOf(r.ear) ? `רצף ${bestOf(r.ear)}` : "7 רמות"],
+    ["scale", "scale", "סולמות", "8 סולמות, כל מפתח, 5 תיבות.", "על כל הצוואר"],
+    ["jam", "jam", "ג'אם", "האפליקציה מלווה, אתם מנגנים.", "7 מהלכים"],
+    ["spider", "speed", "מאמן מהירות", "מטרונום שעולה לבד.", r.bpm.spider ? `${r.bpm.spider} BPM` : "עכביש כרומטי"],
+    ["strum", "strum", "קצבי פריטה", "מרבעים ועד פאנק.", "7 קצבים"],
   ];
-  v.innerHTML = `<h1 class="title">אימונים</h1><div class="train-list">${items.map(([k, i, t, d]) => `<button class="train-item" data-k="${k}"><span>${i}</span><div><b>${t}</b><small>${d}</small></div></button>`).join("")}</div>`;
-  $$(".train-item", v).forEach((b) => (b.onclick = () => openTrainer(b.dataset.k)));
+  v.innerHTML = `<header class="lt"><div><p class="eyebrow">אימונים ממוקדים</p><h1 data-title>אימונים</h1></div></header>
+    <div class="bento">${items.map(([k, ic, t, d, stat], i) => `<button class="bt ${i === 0 ? "wide" : ""}" data-k="${k}">
+      <span class="sq">${icon(ic)}</span>${i === 0 ? `<span class="bt-art" aria-hidden="true">${[0, 1, 2, 3, 4, 5].map(() => "<i></i>").join("")}<em style="--x:28%;--y:2"></em><em style="--x:58%;--y:4" class="r"></em></span>` : ""}
+      <b>${t}</b><small>${d}</small><span class="stat">${stat}</span></button>`).join("")}</div>`;
+  $$(".bt", v).forEach((b) => (b.onclick = () => openTrainer(b.dataset.k)));
 }
 function openTrainer(k) {
   if (k === "notes") openUnit({ kind: "notes", title: "מצאו את התו", strings: [0, 1, 2, 3, 4, 5] });
@@ -911,10 +1055,9 @@ function openTrainer(k) {
   else if (k === "jam") openUnit({ kind: "jam", key: "jam", title: "ג'אם", prog: "pop", bpm: 80 });
   else if (k === "spider") openUnit({ kind: "spider", key: "spider", title: "מאמן מהירות", bpm: 60, how: PATH[2].units[0].how });
   else if (k === "strum") {
-    openPanel("קצבי פריטה", (body, p) => {
-      body.innerHTML = `<div class="strum-list">${Object.entries(STRUMS).map(([id, s]) => `<button class="train-item" data-s="${id}"><div><b>${s.name}</b><small dir="ltr">${[...s.slots].map((x) => (x === "D" ? "↓" : x === "U" ? "↑" : "·")).join(" ")}</small></div></button>`).join("")}</div>`;
+    openPanel("קצבי פריטה", (body) => {
+      body.innerHTML = `<div class="list-group">${Object.entries(STRUMS).map(([id, s]) => `<button class="lg-row nav" data-s="${id}"><span class="lg-main"><b>${s.name}</b><small class="arrows" dir="ltr">${[...s.slots].map((x) => (x === "D" ? "↓" : x === "U" ? "↑" : "·")).join(" ")}</small></span>${icon("chevron", "u-state")}</button>`).join("")}</div>`;
       $$("[data-s]", body).forEach((b) => (b.onclick = () => openUnit({ kind: "strum", key: "strum:" + b.dataset.s, title: STRUMS[b.dataset.s].name, strum: b.dataset.s, chord: b.dataset.s === "funk" ? "Am7" : "G", bpm: 70 })));
-      void p;
     });
   }
 }
@@ -929,7 +1072,9 @@ function setToolTab(t) { toolTab = t; renderTools(); }
 function renderTools() {
   const v = $("#v-tools");
   if (tunerStop) { tunerStop(); tunerStop = null; }
-  v.innerHTML = `<div class="seg tooltabs"><button data-t="tuner" class="${toolTab === "tuner" ? "on" : ""}">🎚️ מכוון</button><button data-t="metro" class="${toolTab === "metro" ? "on" : ""}">⏱️ מטרונום</button></div><div class="tool-body"></div>`;
+  v.innerHTML = `<header class="lt"><div><p class="eyebrow">${toolTab === "tuner" ? "כוונו לפני כל אימון" : "הקצב הוא הכול"}</p><h1 data-title>${toolTab === "tuner" ? "מכוון" : "מטרונום"}</h1></div></header>
+    <div class="seg tooltabs" role="tablist"><button role="tab" data-t="tuner" class="${toolTab === "tuner" ? "on" : ""}">${icon("tuner")}מכוון</button><button role="tab" data-t="metro" class="${toolTab === "metro" ? "on" : ""}">${icon("metro")}מטרונום</button></div>
+    <div class="tool-body"></div>`;
   $$(".tooltabs button", v).forEach((b) => (b.onclick = () => setToolTab(b.dataset.t)));
   const body = $(".tool-body", v);
   if (toolTab === "tuner") buildTuner(body, (stop) => (tunerStop = stop));
@@ -943,56 +1088,77 @@ function openTunerPanel() {
 function buildTuner(body, registerStop) {
   const tun = TUNINGS[S.settings.tuning] || TUNINGS.standard;
   let stop = null;
+  const W = 300, c = 150, R = 124;
+  const pt = (deg, r) => [c + r * Math.sin((deg * Math.PI) / 180), 160 - r * Math.cos((deg * Math.PI) / 180)];
+  let ticks = "";
+  for (let k = -50; k <= 50; k += 5) {
+    const a = (k / 50) * 60, major = k % 25 === 0;
+    const [x0, y0] = pt(a, R), [x1, y1] = pt(a, R - (major ? 16 : 9));
+    ticks += `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" class="${k === 0 ? "zero" : major ? "maj" : ""}"/>`;
+  }
+  const peg = (i) => `<button class="peg" data-i="${i}" aria-label="מיתר ${Sound.noteName(tun.notes[i])}"><b>${Sound.noteName(tun.notes[i])}</b><small>${Sound.octave(tun.notes[i])}</small></button>`;
   body.innerHTML = `<div class="tuner">
-    <select class="tuning">${Object.entries(TUNINGS).map(([id, t]) => `<option value="${id}" ${id === S.settings.tuning ? "selected" : ""}>${t.name}</option>`).join("")}</select>
-    <div class="gauge">
-      <svg viewBox="0 0 240 130" dir="ltr"><path d="M20 120 A100 100 0 0 1 220 120" class="arc"/>
-        ${[-50, -25, 0, 25, 50].map((c) => { const a = (c / 50) * 70 * Math.PI / 180; return `<line x1="${120 + Math.sin(a) * 92}" y1="${120 - Math.cos(a) * 92}" x2="${120 + Math.sin(a) * 104}" y2="${120 - Math.cos(a) * 104}" class="tick ${c === 0 ? "zero" : ""}"/>`; }).join("")}
-        <rect x="102" y="12" width="36" height="10" rx="5" class="ok-zone"/>
-        <line x1="120" y1="120" x2="120" y2="28" class="needle"/><circle cx="120" cy="120" r="7" class="hub"/></svg>
-      <div class="readout"><b class="note">—</b><small class="cents">נגנו מיתר</small></div>
+    <div class="t-display">
+      <svg viewBox="0 0 ${W} 178" dir="ltr" aria-hidden="true">
+        <defs><linearGradient id="tz" x1="0" x2="1"><stop offset="0" stop-color="#ff6b5b" stop-opacity=".0"/><stop offset=".42" stop-color="#ffb547" stop-opacity=".5"/><stop offset=".5" stop-color="#5be39a"/><stop offset=".58" stop-color="#ffb547" stop-opacity=".5"/><stop offset="1" stop-color="#ff6b5b" stop-opacity="0"/></linearGradient></defs>
+        <path d="M${pt(-60, R + 10).join(" ")} A${R + 10} ${R + 10} 0 0 1 ${pt(60, R + 10).join(" ")}" class="zone" stroke="url(#tz)"/>
+        <g class="ticks">${ticks}</g>
+        <g class="needle"><line x1="${c}" y1="160" x2="${c}" y2="${160 - R + 4}"/><circle cx="${c}" cy="${160 - R + 4}" r="5"/></g>
+      </svg>
+      <div class="t-read"><b class="t-note">—</b><span class="t-cents">נגנו מיתר אחד</span></div>
     </div>
-    <div class="strings" dir="ltr">${tun.notes.map((m, i) => `<button data-i="${i}"><b>${Sound.noteName(m)}</b><small>${Sound.octave(m)}</small></button>`).join("")}</div>
-    <p class="hint tstatus">לחצו על "הפעל מיקרופון" ונגנו מיתר אחד בכל פעם. לחיצה על מיתר משמיעה צליל ייחוס.</p>
-    <button class="btn primary mic">🎤 הפעל מיקרופון</button>
+    <div class="headstock" dir="ltr">
+      <div class="pegs">${peg(2)}${peg(1)}${peg(0)}</div>
+      <div class="hs"><span>${icon("practice")}</span></div>
+      <div class="pegs">${peg(3)}${peg(4)}${peg(5)}</div>
+    </div>
+    <label class="pill-select">${icon("tuner")}<select class="tuning" aria-label="כיוון">${Object.entries(TUNINGS).map(([id, t]) => `<option value="${id}" ${id === S.settings.tuning ? "selected" : ""}>${t.name}</option>`).join("")}</select></label>
+    <button class="cta mic">${icon("mic")}<span>הפעילו מיקרופון</span></button>
+    <p class="hint tstatus">הקישו על יתד כדי לשמוע את הצליל הנכון.</p>
   </div>`;
   $(".tuning", body).onchange = (e) => { if (stop) { stop(); stop = null; } S.settings.tuning = e.target.value; save(); buildTuner(body, registerStop); };
-  $$(".strings button", body).forEach((b) => (b.onclick = () => Sound.pluck(tun.notes[+b.dataset.i], 0, 0.6, 2.5)));
-  const needle = $(".needle", body), noteEl = $(".note", body), centsEl = $(".cents", body), gauge = $(".gauge", body);
-  let hist = [], lastSeen = 0;
+  $$(".peg", body).forEach((b) => (b.onclick = () => Sound.pluck(tun.notes[+b.dataset.i], 0, 0.6, 2.5)));
+  const needle = $(".needle", body), noteEl = $(".t-note", body), centsEl = $(".t-cents", body), disp = $(".t-display", body);
+  let hist = [], lastSeen = 0, inSince = 0;
   const onPitch = (r) => {
     if (!r || r.clarity < 0.8 || r.freq < 60 || r.freq > 1100) {
-      if (Date.now() - lastSeen > 1200) { gauge.classList.remove("in", "near"); }
+      if (Date.now() - lastSeen > 1200) disp.classList.remove("in", "near", "live");
       return;
     }
     lastSeen = Date.now();
+    disp.classList.add("live");
     hist.push(r.freq);
     if (hist.length > 7) hist.shift();
     const f = [...hist].sort((a, b) => a - b)[Math.floor(hist.length / 2)];
     const midi = Sound.freqToMidi(f);
-    // nearest open string of the tuning, if within a few semitones; else nearest note
     let si = -1, best = 99;
     tun.notes.forEach((m, i) => { const d = Math.abs(midi - m); if (d < best) { best = d; si = i; } });
     const targetMidi = best < 2.5 ? tun.notes[si] : Math.round(midi);
     const cents = clamp(Math.round((midi - targetMidi) * 100), -50, 50);
     noteEl.textContent = Sound.noteName(targetMidi);
-    centsEl.textContent = Math.abs(cents) <= 4 ? "מכוון ✓" : cents < 0 ? `נמוך ב-${-cents} סנט · הדקו` : `גבוה ב-${cents} סנט · שחררו`;
-    needle.style.transform = `rotate(${(cents / 50) * 70}deg)`;
-    gauge.classList.toggle("in", Math.abs(cents) <= 4);
-    gauge.classList.toggle("near", Math.abs(cents) > 4 && Math.abs(cents) <= 15);
-    $$(".strings button", body).forEach((b, i) => b.classList.toggle("now", best < 2.5 && i === si));
-    if (best < 2.5 && Math.abs(cents) <= 4) $$(".strings button", body)[si].classList.add("tuned");
+    const inTune = Math.abs(cents) <= 4;
+    centsEl.textContent = inTune ? "מכוון" : cents < 0 ? `נמוך ב-${-cents} סנט · הדקו` : `גבוה ב-${cents} סנט · שחררו`;
+    needle.style.transform = `rotate(${(cents / 50) * 60}deg)`;
+    disp.classList.toggle("in", inTune);
+    disp.classList.toggle("near", !inTune && Math.abs(cents) <= 15);
+    $$(".peg", body).forEach((b) => b.classList.toggle("now", best < 2.5 && +b.dataset.i === si));
+    if (best < 2.5 && inTune) {
+      if (!inSince) inSince = Date.now();
+      const pegEl = $(`.peg[data-i="${si}"]`, body);
+      if (Date.now() - inSince > 400 && !pegEl.classList.contains("tuned")) { pegEl.classList.add("tuned"); haptic(18); }
+    } else inSince = 0;
   };
   $(".mic", body).onclick = async (e) => {
-    if (stop) { stop(); stop = null; e.target.textContent = "🎤 הפעל מיקרופון"; return; }
+    const btn = e.currentTarget;
+    if (stop) { stop(); stop = null; btn.innerHTML = `${icon("mic")}<span>הפעילו מיקרופון</span>`; btn.classList.remove("on"); disp.classList.remove("live", "in", "near"); return; }
     try {
       await Sound.startMic();
-      stop = Sound.listen(onPitch);
+      const s0 = Sound.listen(onPitch);
       activeCount++;
-      const s0 = stop;
       stop = () => { s0(); activeCount--; };
       registerStop(() => stop && stop());
-      e.target.textContent = "⏹ עצור";
+      btn.innerHTML = `${icon("stop")}<span>עצירה</span>`;
+      btn.classList.add("on");
       $(".tstatus", body).textContent = "מקשיב… נגנו מיתר אחד ותנו לו לצלצל.";
     } catch (err) {
       $(".tstatus", body).textContent = "אין גישה למיקרופון. אשרו גישה בהגדרות הדפדפן ונסו שוב.";
@@ -1004,38 +1170,37 @@ let tapTimes = [];
 function buildMetronome(body) {
   const m = toolsMetro;
   body.innerHTML = `<div class="metro">
-    <div class="beat-dots" dir="ltr">${Array.from({ length: m.beats }, (_, i) => `<i class="${i === 0 ? "acc" : ""}"></i>`).join("")}</div>
-    <div class="big-bpm" dir="ltr"><button class="step" data-d="-1">−</button><div><b>${m.bpm}</b><small>BPM · ${tempoName(m.bpm)}</small></div><button class="step" data-d="1">+</button></div>
-    <input type="range" min="30" max="240" value="${m.bpm}" class="slider" dir="ltr">
-    <div class="row"><button class="btn primary huge play">${m.running ? "■ עצור" : "▶ הפעל"}</button><button class="btn tap">👆 טאפ</button></div>
-    <label>פעמות בתיבה <div class="seg beats">${[2, 3, 4, 6].map((b) => `<button data-b="${b}" class="${b === m.beats ? "on" : ""}">${b}</button>`).join("")}</div></label>
-    <label>חלוקה <div class="seg subs">${[[1, "♩"], [2, "♫"], [3, "3"], [4, "♬"]].map(([s, l]) => `<button data-s="${s}" class="${s === m.sub ? "on" : ""}">${l}</button>`).join("")}</div></label>
-    <div class="card trainer">
-      <label class="switch"><input type="checkbox" class="tr-on" ${m.trainer ? "checked" : ""}> <b>מאמן מהירות</b></label>
-      <p class="muted">המטרונום עולה לבד בהדרגה. מתחילים בקצב נוח ומגיעים ליעד בלי לשים לב.</p>
-      <div class="row wrap"><span>+</span><input type="number" class="tr-step" value="${(m.trainer && m.trainer.step) || 2}" min="1" max="10"><span>BPM כל</span><input type="number" class="tr-bars" value="${(m.trainer && m.trainer.everyBars) || 4}" min="1" max="32"><span>תיבות, עד</span><input type="number" class="tr-target" value="${(m.trainer && m.trainer.target) || m.bpm + 30}" min="40" max="240"></div>
+    <div class="knob-wrap"><div class="knob-el"></div></div>
+    <div class="beat-row" dir="ltr">${Array.from({ length: m.beats }, (_, i) => `<i class="${i === 0 ? "acc" : ""}"></i>`).join("")}</div>
+    <div class="btn-row"><button class="cta play">${m.running ? icon("stop") + "<span>עצירה</span>" : icon("play") + "<span>הפעלה</span>"}</button><button class="btn tap">${icon("tap")}<span>טאפ</span></button></div>
+    <div class="list-group">
+      <div class="lg-row"><span>פעמות בתיבה</span><div class="seg mini beats">${[2, 3, 4, 6].map((b) => `<button data-b="${b}" class="${b === m.beats ? "on" : ""}">${b}</button>`).join("")}</div></div>
+      <div class="lg-row"><span>חלוקה</span><div class="seg mini subs">${[[1, "♩"], [2, "♫"], [3, "3"], [4, "♬"]].map(([s, l]) => `<button data-s="${s}" class="${s === m.sub ? "on" : ""}">${l}</button>`).join("")}</div></div>
+      <label class="lg-row"><span class="lg-main"><b>מאמן מהירות</b><small>הקצב עולה לבד בהדרגה</small></span><input type="checkbox" class="toggle tr-on" ${m.trainer ? "checked" : ""}></label>
+      <div class="lg-row tr-opts" ${m.trainer ? "" : "hidden"}><span>‎+<input type="number" class="tr-step" value="${(m.trainer && m.trainer.step) || 2}" min="1" max="10"> כל <input type="number" class="tr-bars" value="${(m.trainer && m.trainer.everyBars) || 4}" min="1" max="32"> תיבות, עד <input type="number" class="tr-target" value="${(m.trainer && m.trainer.target) || m.bpm + 30}" min="40" max="240"></span></div>
     </div>
   </div>`;
-  const bEl = $(".big-bpm b", body), small = $(".big-bpm small", body), slider = $(".slider", body);
-  const set = (v) => { m.bpm = clamp(Math.round(v), 30, 240); bEl.textContent = m.bpm; small.textContent = `BPM · ${tempoName(m.bpm)}`; slider.value = m.bpm; };
-  m.onBpm = set;
-  $$(".step", body).forEach((s) => (s.onclick = () => set(m.bpm + +s.dataset.d)));
-  slider.oninput = () => set(+slider.value);
+  const playBtn = $(".play", body);
+  const toggle = () => {
+    if (m.running) { m.stop(); playBtn.innerHTML = icon("play") + "<span>הפעלה</span>"; playBtn.classList.remove("on"); $$(".beat-row i", body).forEach((d) => d.classList.remove("on")); }
+    else { readTrainer(); m.start(); playBtn.innerHTML = icon("stop") + "<span>עצירה</span>"; playBtn.classList.add("on"); }
+  };
+  const knob = Knob($(".knob-el", body), { value: m.bpm, onChange: (v) => (m.bpm = v), onTap: toggle });
+  m.onBpm = (v) => knob.set(v);
   m.onTick = (info) => {
-    const dots = $$("#v-tools .beat-dots i");
-    if (info.sub === 0) dots.forEach((d, i) => d.classList.toggle("on", i === info.beat));
+    if (info.sub !== 0) return;
+    $$("#v-tools .beat-row i").forEach((d, i) => d.classList.toggle("on", i === info.beat));
+    knob.pulse(info.beat === 0);
   };
-  $(".play", body).onclick = (e) => {
-    if (m.running) { m.stop(); e.target.textContent = "▶ הפעל"; $$(".beat-dots i", body).forEach((d) => d.classList.remove("on")); }
-    else { readTrainer(); m.start(); e.target.textContent = "■ עצור"; }
-  };
+  playBtn.onclick = toggle;
   $(".tap", body).onclick = () => {
     const now = performance.now();
     tapTimes = tapTimes.filter((t) => now - t < 2500);
     tapTimes.push(now);
     if (tapTimes.length >= 2) {
       const gaps = tapTimes.slice(1).map((t, i) => t - tapTimes[i]);
-      set(60000 / (gaps.reduce((a, b) => a + b, 0) / gaps.length));
+      m.bpm = clamp(Math.round(60000 / (gaps.reduce((a, b) => a + b, 0) / gaps.length)), 30, 240);
+      knob.set(m.bpm);
     }
     Sound.click(Sound.context().currentTime + 0.005, 1);
   };
@@ -1044,33 +1209,49 @@ function buildMetronome(body) {
   const readTrainer = () => {
     m.trainer = $(".tr-on", body).checked ? { step: +$(".tr-step", body).value || 2, everyBars: +$(".tr-bars", body).value || 4, target: +$(".tr-target", body).value || 240 } : null;
   };
-  $$(".trainer input", body).forEach((i) => (i.onchange = readTrainer));
+  $(".tr-on", body).onchange = (e) => { $(".tr-opts", body).hidden = !e.target.checked; readTrainer(); };
+  $$(".tr-opts input", body).forEach((i) => (i.onchange = readTrainer));
 }
 const tempoName = (b) => (b < 60 ? "לרגו" : b < 76 ? "אדג'ו" : b < 108 ? "אנדנטה" : b < 120 ? "מודרטו" : b < 168 ? "אלגרו" : "פרסטו");
 
 // ---------- Onboarding ----------
 function onboarding() {
   const el = h(`<section class="onboard">
-    <div class="ob-card">
-      <div class="logo-big">🎸</div>
+    <div class="ob-hero">
+      <img class="ob-mark" src="img/icon.png" width="88" height="88" alt="">
       <h1>פריטה</h1>
-      <p>המורה לגיטרה שבכיס. אימון יומי קצר שמתאים את עצמו אליכם, מהאקורד הראשון ועד סולו מהיר.</p>
+      <p>המורה לגיטרה שבכיס. אימון קצר כל יום, מהאקורד הראשון ועד סולו מהיר.</p>
+    </div>
+    <div class="stage ob-stage"><canvas class="strings" aria-label="מיתרים לפריטה"></canvas><p class="stage-hint">${icon("hand")}<span>החליקו אצבע על המיתרים</span></p></div>
+    <div class="ob-step2" hidden>
       <h3>כמה אתם כבר מנגנים?</h3>
-      <div class="ob-opts">
-        <button data-l="1"><b>אף פעם לא ניגנתי</b><small>מתחילים מהחזקה וכיוון</small></button>
-        <button data-l="2"><b>יודע/ת כמה אקורדים</b><small>Em, Am, C, G</small></button>
-        <button data-l="4"><b>מנגן/ת שירים</b><small>אקורדים פתוחים וקצבים</small></button>
-        <button data-l="6"><b>מנגן/ת סולואים</b><small>מוטים ופנטטונית</small></button>
+      <div class="list-group ob-opts">
+        <button class="lg-row nav" data-l="1"><span class="lg-main"><b>אף פעם לא ניגנתי</b><small>מתחילים מהחזקה וכיוון</small></span>${icon("chevron", "u-state")}</button>
+        <button class="lg-row nav" data-l="2"><span class="lg-main"><b>יודע/ת כמה אקורדים</b><small dir="ltr">Em · Am · C · G</small></span>${icon("chevron", "u-state")}</button>
+        <button class="lg-row nav" data-l="4"><span class="lg-main"><b>מנגן/ת שירים</b><small>אקורדים פתוחים וקצבים</small></span>${icon("chevron", "u-state")}</button>
+        <button class="lg-row nav" data-l="6"><span class="lg-main"><b>מנגן/ת סולואים</b><small>מוטים ופנטטונית</small></span>${icon("chevron", "u-state")}</button>
       </div>
-    </div></section>`);
+    </div>
+    <button class="btn ghost ob-next">המשך</button>
+  </section>`);
   document.body.appendChild(el);
+  const reveal = () => {
+    if (el.classList.contains("step2")) return;
+    el.classList.add("step2");
+    $(".ob-step2", el).hidden = false;
+    $(".ob-next", el).hidden = true;
+    haptic(12);
+  };
+  const pad = StringsPad($(".strings", el), { notes: chordNotes("E"), height: 170, onStrum: () => setTimeout(reveal, 500) });
+  $(".ob-next", el).onclick = reveal;
   $$(".ob-opts button", el).forEach((b) => (b.onclick = () => {
     const lv = +b.dataset.l;
     PATH.filter((l) => l.id < lv).forEach((l) => l.units.forEach((u) => (S.done[u.id] = "skip")));
     S.onboarded = true;
     save();
+    pad.destroy();
     el.classList.add("out");
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => el.remove(), 450);
     renderAll();
   }));
 }
@@ -1078,20 +1259,32 @@ function onboarding() {
 // ---------- Navigation ----------
 let view = "home";
 function nav(v) {
+  if (v === view && $("#v-" + v).childElementCount) { window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" }); return; }
   view = v;
   $$(".view").forEach((x) => x.classList.toggle("active", x.id === "v-" + v));
-  $$(".tabbar button").forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+  $$(".tabbar button").forEach((b) => { b.classList.toggle("on", b.dataset.v === v); b.setAttribute("aria-current", b.dataset.v === v ? "page" : "false"); });
   if (v !== "tools" && tunerStop) { tunerStop(); tunerStop = null; }
+  if (v !== "home" && homePad) { homePad.destroy(); homePad = null; }
   render(v);
   window.scrollTo(0, 0);
+  onScroll();
 }
 function render(v) {
   ({ home: renderHome, path: renderPath, chords: renderChords, train: renderTrain, tools: renderTools })[v]();
+  const t = $(`#v-${v} [data-title]`);
+  $(".navbar b").textContent = t ? t.textContent : "";
 }
 function renderAll() { render(view); }
 
+// The large title folds into a compact bar as the page scrolls.
+function onScroll() { document.body.classList.toggle("scrolled", window.scrollY > 48); }
+window.addEventListener("scroll", onScroll, { passive: true });
+
 $$(".tabbar button").forEach((b) => (b.onclick = () => nav(b.dataset.v)));
+// Light haptic on every button press, on phones that support it
+document.addEventListener("pointerdown", (e) => { if (e.target.closest("button, .chord-card, .lg-row")) haptic(5); });
 // The first tap anywhere unlocks audio on iOS
 document.addEventListener("pointerdown", () => Sound.context(), { once: true });
+view = "";
 nav("home");
 if (!S.onboarded) onboarding();

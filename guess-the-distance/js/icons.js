@@ -31,8 +31,12 @@ const P = {
   pin: '<path d="M12 21s-6.5-6.2-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.3"/>',
 };
 
+// Icons that point "forward" are mirrored in right-to-left layouts.
+const DIRECTIONAL = new Set(["arrow"]);
+
 export function icon(name, cls = "") {
-  return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
+  if (DIRECTIONAL.has(name)) cls += " dir-flip";
+  return `<svg class="${cls.trim()}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[name] || ""}</svg>`;
 }
 
 export const MODE_COLORS = {

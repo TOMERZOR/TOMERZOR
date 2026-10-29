@@ -3,7 +3,7 @@
 // server; this file only draws it.
 
 import { $, html, esc, countUp, confetti, haptic, toast, sleep, reducedMotion } from "./ui.js";
-import { t, word, fmtNum, fmtTimeHtml, fmtKmHtml, fmtValue, placeName } from "./i18n.js";
+import { t, word, fmtNum, fmtTimeHtml, fmtKmHtml, fmtValue, placeName, tripArrow, iso } from "./i18n.js";
 import { icon, MODE_COLORS } from "./icons.js";
 import { artCanvas } from "./art.js";
 import { createPicker } from "./wheel.js";
@@ -172,13 +172,13 @@ export class DuelUI {
     this.revealN = 0;
     audio.setMood("duel");
     sfx.match();
-    haptic([20, 50, 30]);
+    haptic("success");
     const colors = MAPS[m.map]?.colors || MAPS.israel.colors;
     const panel = overlay(`
       <div class="vs">
-        <div class="side left"><div class="face">${esc(m.you.avatar)}</div><span>${esc(m.you.name)}</span></div>
+        <div class="side left"><div class="face">${esc(m.you.avatar)}</div><span><bdi>${esc(m.you.name)}</bdi></span></div>
         <div class="mid">${esc(t("vs"))}</div>
-        <div class="side right"><div class="face">${esc(m.opponent.avatar)}</div><span>${esc(m.opponent.name)}${m.opponent.bot ? " 🤖" : ""}</span></div>
+        <div class="side right"><div class="face">${esc(m.opponent.avatar)}</div><span><bdi>${esc(m.opponent.name)}</bdi>${m.opponent.bot ? " 🤖" : ""}</span></div>
       </div>
       <p class="muted">${esc(word("mapsWord", m.map))} · ${esc(m.measure === "time" ? t("mTime") : t("mDistance"))} · ${fmtNum(m.maxHp)} ❤️</p>
       <div class="countdown" id="cd"></div>`);
@@ -192,6 +192,7 @@ export class DuelUI {
         if (!cd.isConnected || this.round) return;
         cd.innerHTML = `<span>${n}</span>`;
         sfx.countdown(false);
+        haptic("tap");
       }, 1200 + k * 950);
     });
     gmap.idle();
@@ -219,7 +220,7 @@ export class DuelUI {
     const max = this.match.maxHp;
     const f = Math.max(0, hp / max);
     return `<div class="hp glass ${side} ${f < 0.3 ? "low" : ""}" id="hp-${side}">
-      <div class="who"><span class="av">${esc(p.avatar)}</span><span class="nm">${esc(side === "you" ? t("you") : p.name)}</span></div>
+      <div class="who"><span class="av">${esc(p.avatar)}</span><span class="nm">${esc(side === "you" ? t("me") : p.name)}</span></div>
       <div class="bar" role="meter" aria-valuemin="0" aria-valuemax="${max}" aria-valuenow="${hp}" aria-label="${esc(p.name)}"><i class="ghost" style="transform:scaleX(${f})"></i><i class="fill" style="transform:scaleX(${f})"></i></div>
       <div class="val num" id="hpv-${side}">${fmtNum(hp)}</div>
     </div>`;
@@ -284,6 +285,7 @@ export class DuelUI {
       brief(`<div class="n">${esc(t("round"))}</div><div class="big num">${m.n}</div>${mult}`, m.multiplier > 1 ? 1300 : 900);
     } else {
       sfx.countdown(true);
+      haptic("lock");
     }
     this.drawRound(m, { myGuess: null, oppLocked: false });
   }
@@ -315,7 +317,7 @@ export class DuelUI {
     this.picker = createPicker(sheet.querySelector(".picker-host"), { measure, value: myGuess ?? (measure === "time" ? 30 : 10), onTick: () => sfx.tick() });
     requestAnimationFrame(() => sheet.classList.remove("down"));
     this.ring?.stop();
-    this.ring = timerRing(sheet.querySelector(".ring-host"), m.timeLeft, { onHurry: () => sfx.hurry() });
+    this.ring = timerRing(sheet.querySelector(".ring-host"), m.timeLeft, { onHurry: () => { sfx.hurry(); haptic("tap"); } });
     const btn = sheet.querySelector("#btn-guess");
     btn.addEventListener("click", () => {
       if (this.lockedN === m.n) return;
@@ -340,7 +342,7 @@ export class DuelUI {
     if (!this.round || m.n !== this.round.n) return;
     this.lockedN = m.n;
     sfx.lock();
-    haptic([10, 30, 10]);
+    haptic("lock");
     this.showLocked(m.value);
   }
 
@@ -353,7 +355,7 @@ export class DuelUI {
     }
     this.ring?.set(m.timeLeft);
     sfx.hurry();
-    haptic(15);
+    haptic("warning");
   }
 
   onDeadline(m) {
@@ -370,7 +372,7 @@ export class DuelUI {
     if (tag && this.match) {
       const o = this.match.opponent;
       tag.classList.toggle("locked", m.guesses.opp != null);
-      tag.textContent = `${o.avatar} ${o.name} · ${m.guesses.opp == null ? t("noGuess") : fmtValue(m.guesses.opp, this.match.measure)}`;
+      tag.textContent = `${o.avatar} ${iso(o.name)} · ${iso(m.guesses.opp == null ? t("noGuess") : fmtValue(m.guesses.opp, this.match.measure))}`;
     }
     const round = this.round?.round;
     const measure = this.match.measure;
@@ -393,7 +395,7 @@ export class DuelUI {
       </div>
       <div class="line-host"></div>
       <div class="points">
-        <div class="points-row"><b class="num" id="pts-you">0</b><span>${esc(t("you"))} · ${esc(opp.name)}</span><b class="num" id="pts-opp">0</b></div>
+        <div class="points-row"><b class="num" id="pts-you">0</b><span>${esc(t("you"))} · ${esc(iso(opp.name))}</span><b class="num" id="pts-opp">0</b></div>
         <div class="meter"><i id="meter"></i></div>
       </div>
       ${sourceLine(route)}
@@ -414,9 +416,10 @@ export class DuelUI {
     const v = sheet.querySelector("#verdict");
     if (v) v.style.cssText = "opacity:1;transition:opacity .3s;";
     sfx.verdict(m.scores.you);
+    haptic(m.scores.you >= MAX_ROUND ? "success" : m.scores.you >= 3800 ? "lock" : m.scores.you < 1500 ? "warning" : "tap");
     const meter = sheet.querySelector("#meter");
     if (meter) meter.style.width = `${(m.scores.you / MAX_ROUND) * 100}%`;
-    countUp(sheet.querySelector("#pts-you"), m.scores.you, { ms: 1000, onTick: (p) => sfx.count(p * (m.scores.you / MAX_ROUND)) });
+    countUp(sheet.querySelector("#pts-you"), m.scores.you, { ms: 1000, onTick: (p) => { sfx.count(p * (m.scores.you / MAX_ROUND)); haptic("tick"); } });
     countUp(sheet.querySelector("#pts-opp"), m.scores.opp, { ms: 1000 });
     if (m.scores.you >= MAX_ROUND) confetti({ count: 90 });
     await sleep(1150);
@@ -427,12 +430,12 @@ export class DuelUI {
       const card = $(`#hp-${side}`);
       if (side === "you") {
         sfx.damage();
-        haptic([40, 30, 80]);
+        haptic("heavy");
         document.body.append(html('<div class="flash-red"></div>'));
         setTimeout(() => $(".flash-red")?.remove(), 900);
       } else {
         sfx.hit();
-        haptic(20);
+        haptic("lock");
       }
       if (card) {
         card.classList.remove("hit");
@@ -463,12 +466,12 @@ export class DuelUI {
     const win = m.result === "win", draw = m.result === "draw";
     const colors = win ? ["#ffd23f", "#ff9500", "#ff2d87"] : draw ? ["#7cc6ff", "#5b6bff", "#c04bff"] : ["#5b6bff", "#3a3a8c", "#1c1c3a"];
     const title = win ? t("victory") : draw ? t("draw") : t("defeat");
-    const sub = m.reason === "forfeit" && m.quitter === "opp" ? t("forfeitWin", { name: match.opponent.name }) : `${fmtNum(m.hp.you)} ❤️ · ${fmtNum(m.hp.opp)} ❤️`;
+    const sub = m.reason === "forfeit" && m.quitter === "opp" ? t("forfeitWin", { name: match.opponent.name }) : `${match.you.avatar} ${iso(fmtNum(m.hp.you))} ❤️ · ${match.opponent.avatar} ${iso(fmtNum(m.hp.opp))} ❤️`;
     const rows = m.rounds.map((r) => `
       <div class="rr">
         <div class="mi" style="background:${(MODE_COLORS[r.mode] || MODE_COLORS.car)[1]}">${icon(r.mode)}</div>
-        <div><div class="tt">${esc(placeName(r.from))} → ${esc(placeName(r.to))}</div>
-        <div class="dd num">${esc(fmtValue(r.actual, match.measure))} · ${esc(t("you"))} ${r.you == null ? "—" : esc(fmtValue(r.you, match.measure))} · ${esc(match.opponent.name)} ${r.opp == null ? "—" : esc(fmtValue(r.opp, match.measure))}</div></div>
+        <div><div class="tt">${esc(placeName(r.from))} ${tripArrow()} ${esc(placeName(r.to))}</div>
+        <div class="dd num">${esc(iso(fmtValue(r.actual, match.measure)))} · ${esc(t("you"))} ${r.you == null ? "—" : esc(iso(fmtValue(r.you, match.measure)))} · ${esc(iso(match.opponent.name))} ${r.opp == null ? "—" : esc(iso(fmtValue(r.opp, match.measure)))}</div></div>
         <div class="sc num">${fmtNum(r.scores.you)}<small>${scoreEmoji(r.scores.you)} ${r.loser === "you" ? "💥" : r.loser === "opp" ? "⚔️" : ""}</small></div>
       </div>`).join("");
     setTimeout(() => {
@@ -500,7 +503,7 @@ export class DuelUI {
       if (win) {
         sfx.win();
         confetti({ count: 220 });
-        haptic([30, 40, 30, 40, 90]);
+        haptic("success");
       } else if (draw) sfx.verdict(3000);
       else sfx.lose();
     }, m.reason === "forfeit" ? 0 : 400);

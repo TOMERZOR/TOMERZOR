@@ -98,6 +98,7 @@ input { font: inherit; color: inherit; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 [hidden] { display: none !important; }
+[dir="rtl"] svg.dir-flip { transform: scaleX(-1); }
 
 /* ---------- Liquid Glass ---------- */
 .glass {
@@ -336,7 +337,16 @@ input { font: inherit; color: inherit; }
 .leaflet-container { font-family: var(--font); background: var(--map-bg); }
 .leaflet-control-attribution { background: transparent !important; font-size: 9px; color: var(--label-3); margin-bottom: calc(var(--sheet-h, 0px) + 2px) !important; transition: margin 0.5s var(--ease-out); }
 .leaflet-control-attribution a { color: inherit; }
-.offline-land { fill: var(--land); stroke: rgba(120, 130, 150, 0.35); stroke-width: 1; }
+.map-label { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; white-space: nowrap; pointer-events: none; }
+.map-label i { width: 5px; height: 5px; border-radius: 50%; background: #6b6f78; box-shadow: 0 0 0 1.5px #fff; }
+.map-label span { font-size: 11.5px; font-weight: 600; color: #3a3d44; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; }
+.map-label.big span { font-size: 13px; font-weight: 700; color: #1c1d21; }
+@media (prefers-color-scheme: dark) {
+  .map-label span { color: #d6d8de; text-shadow: 0 0 2px #000, 0 0 3px #000, 0 0 4px #000; }
+  .map-label.big span { color: #fff; }
+  .map-label i { background: #b9bcc4; box-shadow: 0 0 0 1.5px #000; }
+  .tiles-invert-dark { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.7); }
+}
 
 .topbar {
   position: absolute; z-index: 5; left: 0; right: 0; top: 0;

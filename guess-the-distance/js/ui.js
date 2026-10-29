@@ -60,13 +60,54 @@ export function toast(msg, ms = 2400) {
   toastTimer = setTimeout(() => el.classList.remove("on"), ms);
 }
 
+// Haptics. Android gets navigator.vibrate. iPhones ignore vibrate, but
+// Safari 18+ plays the system haptic tick when a native switch toggles, so
+// on iOS we toggle a hidden <input type="checkbox" switch> instead.
 let hapticsOn = true;
+let iosSwitch = null;
+let lastHaptic = 0;
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 export function setHaptics(on) {
   hapticsOn = on;
 }
-export function haptic(pattern = 8) {
-  if (!hapticsOn || !navigator.vibrate) return;
-  try { navigator.vibrate(pattern); } catch {}
+
+function iosTick() {
+  if (!iosSwitch) {
+    iosSwitch = document.createElement("label");
+    iosSwitch.setAttribute("aria-hidden", "true");
+    iosSwitch.style.cssText = "position:fixed;left:-200px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.setAttribute("switch", "");
+    input.tabIndex = -1;
+    iosSwitch.append(input);
+    document.body.append(iosSwitch);
+  }
+  iosSwitch.click();
+}
+
+// pattern: milliseconds, or [on, off, on, ...] like navigator.vibrate.
+// Named feels: "tick" (wheel notch), "tap", "lock", "success", "warning", "heavy".
+const FEELS = { tick: 4, tap: 8, lock: [10, 40, 12], success: [12, 60, 12, 60, 24], warning: [18, 70, 18], heavy: [40, 30, 70] };
+export function haptic(pattern = "tap") {
+  if (!hapticsOn) return;
+  const p = typeof pattern === "string" ? FEELS[pattern] ?? 8 : pattern;
+  const now = performance.now();
+  // a flick through the wheel shouldn't buzz continuously
+  if (pattern === "tick" && now - lastHaptic < 28) return;
+  lastHaptic = now;
+  if (!isIOS && navigator.vibrate) {
+    try { navigator.vibrate(p); } catch {}
+    return;
+  }
+  if (!isIOS) return;
+  const pulses = Array.isArray(p) ? p : [p];
+  let at = 0;
+  pulses.forEach((ms, i) => {
+    if (i % 2 === 0) setTimeout(iosTick, at);
+    at += ms;
+  });
 }
 
 // Confetti, drawn on one full-screen canvas.
@@ -150,8 +191,13 @@ export function segmented(el, options, value, onChange) {
 
 // A tiny press-and-feel helper for big buttons.
 export function onTap(el, fn) {
-  el.addEventListener("click", (e) => {
-    haptic(6);
-    fn(e);
-  });
+  el.addEventListener("click", (e) => fn(e));
+}
+
+// A light tap on every button-like control, in one place.
+export function tapHaptics(root = document) {
+  root.addEventListener("click", (e) => {
+    const t = e.target.closest("button, .chip, .art-card, [role=switch], [role=tab], [role=radio]");
+    if (t && !t.disabled && !t.closest(".wheel")) haptic("tap");
+  }, true);
 }

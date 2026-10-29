@@ -2,7 +2,7 @@
 // first-run screen, invite and challenge links, and the glue between the
 // solo games, duels, sound and storage.
 
-import { $, $$, html, esc, toast, segmented, setHaptics, haptic } from "./ui.js";
+import { $, $$, html, esc, toast, segmented, setHaptics, haptic, tapHaptics } from "./ui.js";
 import { t, setLang, getLang, word, fmtNum } from "./i18n.js";
 import { icon } from "./icons.js";
 import { artCanvas, paintArt } from "./art.js";
@@ -14,6 +14,7 @@ import { DuelNet, detectServer } from "./net.js";
 import { DuelUI } from "./duelui.js";
 import { playSolo, dailyInfo } from "./solo.js";
 import { overlay, closeOverlay } from "./stage.js";
+import { prepareMap as gmapPrepare } from "./map.js";
 
 load();
 setLang(store.settings.lang);
@@ -42,6 +43,13 @@ const app = {
   settings: () => store.settings,
   recordSolo,
   recordDuel,
+  dailyProgress: () => store.daily[dailyInfo().day],
+  saveDailyProgress(results) {
+    const day = dailyInfo().day;
+    if (store.daily[day] && !store.daily[day].partial) return;
+    store.daily[day] = { partial: true, results: results.map((r) => ({ score: r.score, guess: r.guess, actual: r.actual })) };
+    save();
+  },
 };
 duels.app = app;
 window.__gtdApp = app;
@@ -77,7 +85,6 @@ function go(next) {
     return;
   }
   sfx.tap();
-  haptic(5);
   const order = TABS.map((x) => x[0]);
   const dir = order.indexOf(next) > order.indexOf(tab) ? 1 : -1;
   document.documentElement.style.setProperty("--dirx", String(getLang() === "he" ? -dir : dir));
@@ -117,7 +124,6 @@ function mapChips(current, name) {
 function bindChips(root, key) {
   root.querySelectorAll(`.chip[data-group="${key}"]`).forEach((c) => c.addEventListener("click", () => {
     sfx.toggle();
-    haptic(5);
     store.settings[key] = c.dataset.map;
     save();
     root.querySelectorAll(`.chip[data-group="${key}"]`).forEach((x) => {
@@ -132,7 +138,9 @@ function bindChips(root, key) {
 function renderPlay() {
   const v = $("#v-play");
   const daily = dailyInfo();
-  const done = store.daily[daily.day];
+  const entry = store.daily[daily.day];
+  const done = entry && !entry.partial ? entry : null;
+  const resumeAt = entry?.partial ? entry.results.length : 0;
   const dColors = MAPS[daily.map].colors;
   const s = store.settings;
   const best = (kind) => store.best[kind]?.[`${s.map}|${s.measure}`];
@@ -150,11 +158,11 @@ function renderPlay() {
       ${artCanvas(dColors, "daily-" + daily.day)}
       <div class="art-body">
         <h2 class="art-title">${esc(t("daily"))}</h2>
-        <div class="art-sub">${MAPS[daily.map].emoji} ${esc(word("mapsWord", daily.map))} · ${esc(done ? t("dailyDone") : t("dailySub"))}</div>
+        <div class="art-sub">${MAPS[daily.map].emoji} ${esc(word("mapsWord", daily.map))} · ${esc(done ? t("dailyDone") : resumeAt ? t("dailyResume", { n: resumeAt + 1 }) : t("dailySub"))}</div>
         <div class="hero-meta">
           <div class="pill-stat">
-            <div class="bar" style="--fill:${done ? doneFill : 8}%"><i></i></div>
-            <div><b class="num">${done ? fmtNum(done.score) : "5"}</b><span>${done ? esc(done.grid) : esc(t("roundsWord"))}</span></div>
+            <div class="bar" style="--fill:${done ? doneFill : resumeAt ? resumeAt * 20 : 8}%"><i></i></div>
+            <div><b class="num">${done ? fmtNum(done.score) : resumeAt ? `${resumeAt}/5` : "5"}</b><span>${done ? esc(done.grid) : esc(t("roundsWord"))}</span></div>
           </div>
           <span class="round-btn" aria-hidden="true">${icon(done ? "share" : "play")}</span>
         </div>
@@ -344,7 +352,6 @@ function renderMe() {
     e.currentTarget.setAttribute("aria-checked", String(on));
     apply(on);
     sfx.toggle();
-    haptic(6);
   });
   toggle("#sw-music", "music", (on) => { audio.setMusic(on); if (on) audio.unlock(); });
   toggle("#sw-sfx", "sfx", (on) => audio.setSfx(on));
@@ -358,7 +365,6 @@ function renderMe() {
     const b = e.target.closest("button");
     if (!b) return;
     sfx.toggle();
-    haptic(6);
     store.profile.avatar = b.dataset.a;
     save();
     $$("#avatars button", v).forEach((x) => x.classList.toggle("on", x === b));
@@ -430,7 +436,6 @@ function onboarding() {
       const b = e.target.closest("button");
       if (!b) return;
       avatar = b.dataset.a;
-      haptic(6);
       sfx.toggle();
       $$("#ob-av button", el).forEach((x) => x.classList.toggle("on", x === b));
     });
@@ -472,6 +477,7 @@ function readLinks() {
 
 // ---------- boot ----------
 async function boot() {
+  tapHaptics();
   const unlockOnce = () => {
     audio.unlock();
     removeEventListener("pointerdown", unlockOnce);
@@ -492,6 +498,7 @@ async function boot() {
   if (!store.profile.name) await onboarding();
   render();
 
+  gmapPrepare();
   detectServer().then((s) => {
     server = s;
     if (tab === "me") renderMe();

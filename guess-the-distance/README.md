@@ -32,7 +32,7 @@ Duels follow GeoGuessr Duels: both start with 6,000 health; each round the lower
 
 Every round asks a live OpenStreetMap router (OSRM, through the FOSSGIS servers at routing.openstreetmap.de for car, bike and foot, and the OSRM demo server for cars) for the actual route, its distance and its duration, and draws that route on the map. Drive times are without traffic. Flights are great-circle paths with scheduled block times. Results are cached (in memory on the Node server, in Cloudflare's edge cache on the Worker), and at most 3 router requests run at once.
 
-If the router can't be reached, listed trips fall back to reference numbers from real road, path and flight data (`core/places.js`), and the reveal says so. Random Places needs the live router (the spots are made up on the spot, then snapped to the nearest road); without it those rounds swap to a listed trip. The map tiles are CARTO's; without them the game draws its own coastline map (`vendor/land.json`, Natural Earth).
+If the router can't be reached, listed trips fall back to reference numbers from real road, path and flight data (`core/places.js`), and the reveal says so. Random Places needs the live router (the spots are made up on the spot, then snapped to the nearest road); without it those rounds swap to a listed trip. The map is a real street map from the first tile service that answers: CARTO, then OpenStreetMap, then Esri. If none can load (offline, blocked network), the game draws its own map from Natural Earth data in `vendor/basemap.json` (land, lakes, borders, roads, and city names in Hebrew and English), styled like Apple Maps. It is only downloaded in that case.
 
 ## Server
 
@@ -48,6 +48,8 @@ Reconnects: if a player drops mid-duel (or reloads), the server keeps their seat
 ## Sound
 
 All music and effects are synthesized live with the Web Audio API, nothing to download: a calm menu loop, a brighter game loop and a faster minor duel loop on one scheduler, plus wheel ticks, lock-in, reveal swell, rising score ticks, a perfect-guess chime, hits, damage, countdowns, victory and defeat. Music, sound effects and haptics each have a switch in Profile.
+
+Haptics: a tick on every notch of the time and distance wheels and while points count up, a tap on buttons, chips and switches, and distinct feels for locking in, the verdict, the duel countdown, the last 5 seconds, taking damage and winning. Android uses the vibration API. iPhones ignore it, so on iOS (Safari 18 and later) the game toggles a hidden native switch, which plays the system haptic tick.
 
 ## Files
 

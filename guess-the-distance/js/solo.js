@@ -3,7 +3,7 @@
 // the same rounds).
 
 import { $, html, esc, countUp, confetti, haptic, toast, sleep, reducedMotion } from "./ui.js";
-import { t, word, placeName, fmtNum, fmtTimeHtml, fmtKmHtml, fmtValue, getLang } from "./i18n.js";
+import { t, word, placeName, fmtNum, fmtTimeHtml, fmtKmHtml, fmtValue, getLang, tripArrow, iso } from "./i18n.js";
 import { icon, MODE_COLORS } from "./icons.js";
 import { artCanvas, paintArt } from "./art.js";
 import { createPicker } from "./wheel.js";
@@ -65,6 +65,16 @@ export async function playSolo(opts, app) {
   let total = 0;
   let streak = 0;
   let i = 0;
+  // The Daily Challenge is one try: rounds already played stay played.
+  if (kind === "daily") {
+    const saved = app.dailyProgress();
+    for (const r of saved?.partial ? saved.results : []) {
+      if (!rounds[i]) break;
+      results.push({ ...r, round: rounds[i] });
+      total += r.score;
+      i++;
+    }
+  }
   const count = kind === "streak" ? Infinity : rounds.length;
   while (i < count && !me.aborted) {
     if (kind === "streak" && i >= rounds.length - 2) {
@@ -77,13 +87,16 @@ export async function playSolo(opts, app) {
     }
     const round = rounds[i];
     const res = await playRound(round, { i, kind, measure, total, streak, count: rounds.length, me, map });
+
     if (me.aborted || !res) return;
     results.push(res);
     total += res.score;
+    if (kind === "daily") app.saveDailyProgress(results);
     if (kind === "streak") {
       if (res.score >= STREAK_PASS) {
         streak++;
         sfx.streak(streak);
+        haptic("lock");
       } else break;
     }
     i++;
@@ -112,7 +125,7 @@ function topbar({ kind, i, count, total, streak, onClose }) {
       <button class="icon-btn glass" id="btn-exit" aria-label="${esc(t("home"))}">${icon("close")}</button>
       <div class="capsule glass">${roundLabel}</div>
       <div class="spacer"></div>
-      <div class="capsule glass"><small>${esc(t("score"))}</small><span class="num" id="hud-score">${fmtNum(total)}</span></div>
+      <div class="capsule glass"><small>${esc(t("score"))}</small><span class="num" id="hud-score" data-v="${total}">${fmtNum(total)}</span></div>
     </div>`);
   el.querySelector("#btn-exit").addEventListener("click", () => {
     sfx.tap();
@@ -168,7 +181,7 @@ async function playRound(round, ctx) {
     btn.addEventListener("click", () => submit(picker.value));
     if (kind === "timed") {
       ring = timerRing(sheet.querySelector(".ring-host"), TIMED_MS, {
-        onHurry: () => sfx.hurry(),
+        onHurry: () => { sfx.hurry(); haptic("tap"); },
         onEnd: () => {
           toast(t("timeUp"));
           submit(picker.touched ? picker.value : null);
@@ -182,7 +195,7 @@ async function playRound(round, ctx) {
   });
   if (me.aborted || guess === undefined) return null;
   sfx.lock();
-  haptic([10, 30, 10]);
+  haptic("lock");
   picker.disable(true);
 
   const { route } = round;
@@ -212,7 +225,7 @@ async function reveal({ sheet, round, route, actual, guess, score, measure, kind
     </div>
     <div class="line-host"></div>
     <div class="points">
-      <div class="points-row"><b class="num" id="pts">0</b><span>/ ${fmtNum(MAX_ROUND)} ${esc(t("points"))}</span></div>
+      <div class="points-row"><b class="num" id="pts">0</b><span>${esc(t("ofPoints", { max: fmtNum(MAX_ROUND) }))}</span></div>
       <div class="meter"><i id="meter"></i></div>
     </div>
     ${sourceLine(route)}
@@ -234,16 +247,17 @@ async function reveal({ sheet, round, route, actual, guess, score, measure, kind
   if (me.aborted) return;
   sheet.querySelector("#verdict").style.cssText = "opacity:1;transition:opacity .3s, transform .5s var(--spring);";
   sfx.verdict(score);
+  if (score < MAX_ROUND) haptic(score >= 3800 ? "lock" : score < 1500 ? "warning" : "tap");
   sheet.querySelector("#meter").style.width = `${(score / MAX_ROUND) * 100}%`;
   const hud = $("#hud-score");
   const before = Number(hud?.dataset.v || 0);
-  countUp(sheet.querySelector("#pts"), score, { ms: 1100, onTick: (p) => sfx.count(p * (score / MAX_ROUND)) });
+  setTimeout(() => countUp(sheet.querySelector("#pts"), score, { ms: 1100, onTick: (p) => { sfx.count(p * (score / MAX_ROUND)); haptic("tick"); } }), 260);
   if (hud) {
     hud.dataset.v = before + score;
     countUp(hud, before + score, { from: before, ms: 1100 });
   }
   if (score >= MAX_ROUND) {
-    haptic([20, 40, 20, 40, 60]);
+    haptic("success");
     confetti();
   } else if (score >= 4500) {
     confetti({ count: 60 });
@@ -267,8 +281,8 @@ function showSummary({ kind, map, measure, seed, total, results, streak, challen
     const rd = r.round;
     return `<div class="rr">
       <div class="mi" style="background:${(MODE_COLORS[rd.mode] || MODE_COLORS.car)[1]}">${icon(rd.mode)}</div>
-      <div><div class="tt">${esc(placeName(rd.from))} → ${esc(placeName(rd.to))}</div>
-      <div class="dd num">${esc(fmtValue(r.actual, measure))} · ${esc(t("youGuessed"))} ${r.guess == null ? "—" : esc(fmtValue(r.guess, measure))}</div></div>
+      <div><div class="tt">${esc(placeName(rd.from))} ${tripArrow()} ${esc(placeName(rd.to))}</div>
+      <div class="dd num">${esc(iso(fmtValue(r.actual, measure)))} · ${esc(t("youGuessed"))} ${r.guess == null ? "—" : esc(iso(fmtValue(r.guess, measure)))}</div></div>
       <div class="sc num">${fmtNum(r.score)}<small>${scoreEmoji(r.score)}</small></div>
     </div>`;
   }).join("");
@@ -291,9 +305,10 @@ function showSummary({ kind, map, measure, seed, total, results, streak, challen
     </div>`);
   const totalEl = panel.querySelector("#sum-total");
   setTimeout(() => {
-    countUp(totalEl, isStreak ? streak : total, { ms: 1600, onTick: (p) => sfx.count(p) }).then(() => {
+    countUp(totalEl, isStreak ? streak : total, { ms: 1600, onTick: (p) => { sfx.count(p); haptic("tick"); } }).then(() => {
       if (isStreak ? streak >= 5 : total / (max || 1) >= 0.75) {
         sfx.win();
+        haptic("success");
         confetti({ count: 180 });
       } else sfx.verdict(isStreak ? (streak >= 2 ? 3000 : 0) : (total / (max || 1)) * MAX_ROUND);
     });
@@ -334,6 +349,7 @@ function showSummary({ kind, map, measure, seed, total, results, streak, challen
 }
 
 export async function shareOrCopy(text, url, copiedMsg) {
+  text = text.replace(/[\u2066-\u2069]/g, ""); // isolates are for the screen, not for messages
   if (navigator.share && matchMedia("(pointer: coarse)").matches) {
     try {
       await navigator.share({ text, url, title: "Guess The Distance" });

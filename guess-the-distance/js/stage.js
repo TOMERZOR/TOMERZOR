@@ -2,7 +2,7 @@
 // map, the trip card, the timer ring, the number line and overlays.
 
 import { $, html, esc, sleep } from "./ui.js";
-import { t, word, placeName, fmtValue, fmtNum, fmtKm } from "./i18n.js";
+import { t, word, placeName, fmtValue, fmtNum, fmtKm, tripArrow, iso } from "./i18n.js";
 import { icon, MODE_COLORS } from "./icons.js";
 import { artCanvas, paintArt } from "./art.js";
 import * as gmap from "./map.js";
@@ -75,7 +75,7 @@ export function tripCard(round, { measure, extraTag = "" }) {
   if (round.crowKm == null) round.crowKm = Math.round(haversineKm(from, to) * 10) / 10;
   const crow = measure === "time" && round.crowKm ? `<span class="tag">${icon("pin")}${esc(t("crow", { d: fmtKm(round.crowKm) }))}</span>` : "";
   const el = html(`
-    <div class="trip glass enter" role="group" aria-label="${esc(placeName(from))} → ${esc(placeName(to))}">
+    <div class="trip glass enter" role="group" aria-label="${esc(placeName(from))} ${tripArrow()} ${esc(placeName(to))}">
       ${modeBadge(round.mode)}
       <div class="trip-places">
         <div class="trip-line"><span class="dot a"></span><span class="nm">${esc(placeName(from))}</span>${from.street ? `<span class="st">· ${esc(from.street)}</span>` : ""}</div>
@@ -141,11 +141,16 @@ export function numberLine({ actual, you, opp, measure, oppName }) {
   const lo = Math.min(...vals), hi = Math.max(...vals);
   const spread = hi - lo || hi * 0.3 || 1;
   const a = Math.max(0, lo - spread * 0.3), b = hi + spread * 0.3;
-  const pos = (v) => 6 + ((v - a) / (b - a)) * 88;
+  // Mirrored in Hebrew, like every slider and progress bar: small on the right.
+  const rtl = document.dir === "rtl";
+  const pos = (v) => {
+    const x = 6 + ((v - a) / (b - a)) * 88;
+    return rtl ? 100 - x : x;
+  };
   const tall = opp !== undefined;
   const el = html(`<div class="line ${tall ? "tall" : ""}" aria-hidden="true"><div class="axis"></div></div>`);
   const mk = (cls, v, label) => {
-    const m = html(`<div class="mk ${cls}" style="left:50%;opacity:0"><span class="lb num">${esc(label)}</span><span class="pt"></span></div>`);
+    const m = html(`<div class="mk ${cls}" style="left:50%;opacity:0"><span class="lb num" dir="${document.dir || "ltr"}">${esc(label)}</span><span class="pt"></span></div>`);
     el.append(m);
     requestAnimationFrame(() => requestAnimationFrame(() => {
       m.style.left = pos(v) + "%";
@@ -155,7 +160,7 @@ export function numberLine({ actual, you, opp, measure, oppName }) {
   };
   if (you != null) {
     const gap = html(`<div class="gap"></div>`);
-    const x1 = pos(Math.min(you, actual)), x2 = pos(Math.max(you, actual));
+    const x1 = Math.min(pos(you), pos(actual)), x2 = Math.max(pos(you), pos(actual));
     gap.style.left = x1 + "%";
     gap.style.width = x2 - x1 + "%";
     gap.style.transform = "scaleX(0)";
@@ -163,11 +168,11 @@ export function numberLine({ actual, you, opp, measure, oppName }) {
     setTimeout(() => (gap.style.transform = "scaleX(1)"), 500);
   }
   mk("actual", actual, fmtValue(actual, measure));
-  if (you != null) mk("you low", you, `${t("you")} · ${fmtValue(you, measure)}`);
+  if (you != null) mk("you low", you, `${t("you")} · ${iso(fmtValue(you, measure))}`);
   if (opp != null) {
     const near = you != null && Math.abs(pos(you) - pos(opp)) < 26;
     const nearActual = Math.abs(pos(actual) - pos(opp)) < 26;
-    const m = mk(`opp ${near ? "" : "low"}`, opp, `${oppName || ""} · ${fmtValue(opp, measure)}`);
+    const m = mk(`opp ${near ? "" : "low"}`, opp, `${iso(oppName || "")} · ${iso(fmtValue(opp, measure))}`);
     if (near && nearActual) m.style.top = "70px";
   }
   return el;
@@ -182,7 +187,7 @@ export function sourceLine(route) {
 export function altLine(route, measure) {
   if (measure === "time") {
     const speed = route.km && route.min ? Math.round(route.km / (route.min / 60)) : null;
-    return `${fmtKm(route.km)}${speed ? ` · ${fmtNum(speed)} ${t("km")}/${t("hours")}` : ""}`;
+    return `${fmtKm(route.km)}${speed ? ` · ${t("speed", { n: fmtNum(speed) })}` : ""}`;
   }
   return fmtValue(route.min, "time");
 }

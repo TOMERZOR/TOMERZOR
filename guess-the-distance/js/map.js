@@ -1,22 +1,76 @@
 // The map behind every round: two pins, then the real route drawing itself
-// with a little vehicle riding along it. Uses Leaflet with CARTO's tiles,
-// and falls back to a built-in coastline map when tiles can't load.
+// with a little vehicle riding along it. A real street map from the first
+// tile service that answers (CARTO, then OpenStreetMap, then Esri). If none
+// can load, the game draws its own map from Natural Earth data: land, lakes,
+// borders, roads and cities with Hebrew names.
 
 import { getLang } from "./i18n.js";
 import { MODE_EMOJI } from "./icons.js";
 import { reducedMotion } from "./ui.js";
+import { PLACES } from "../core/places.js";
 
 const L = window.L;
 const MODE_COLOR = { car: "#0a84ff", foot: "#30c35a", bike: "#ff9500", flight: "#af52de" };
+const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+
+const PROVIDERS = [
+  {
+    url: (d) => d ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    opts: { subdomains: "abcd", maxZoom: 19, attribution: `${OSM} · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>` },
+  },
+  {
+    url: () => "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    opts: { maxZoom: 19, attribution: OSM, className: "tiles-invert-dark" },
+  },
+  {
+    url: () => "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    opts: { maxZoom: 19, attribution: "Tiles © Esri", className: "tiles-invert-dark" },
+  },
+];
 
 let map = null;
 let tiles = null;
+let provider = 0;
 let layer = null;
 let offline = false;
-let tileOk = 0, tileErr = 0;
 let animFrame = 0;
 
 const dark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+
+// Called once at startup: find the first tile service that answers, so the
+// first round already has its map. If none does, start loading the built-in map.
+let probe = null;
+let basePromise = null;
+export function prepareMap() {
+  if (probe) return probe;
+  const tryTile = (i) => new Promise((resolve) => {
+    const img = new Image();
+    const timer = setTimeout(() => resolve(false), 5000);
+    img.onload = () => { clearTimeout(timer); resolve(true); };
+    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    img.src = PROVIDERS[i].url(false).replace("{s}", "a").replace("{z}", "5").replace("{x}", "19").replace("{y}", "13").replace("{r}", "");
+  });
+  probe = (async () => {
+    const ok = await Promise.all(PROVIDERS.map((_, i) => tryTile(i)));
+    const first = ok.indexOf(true);
+    if (first >= 0) {
+      if (!tiles) provider = first;
+      return true;
+    }
+    loadBase();
+    if (map && !offline) goOffline();
+    else if (!map) offline = "pending";
+    return false;
+  })();
+  return probe;
+}
+
+function loadBase() {
+  if (!basePromise) {
+    basePromise = fetch(new URL("../vendor/basemap.json", import.meta.url)).then((r) => r.json()).catch(() => null);
+  }
+  return basePromise;
+}
 
 export function initMap(el) {
   if (map || !L) return map;
@@ -31,57 +85,119 @@ export function initMap(el) {
     preferCanvas: false,
   }).setView([31.6, 35], 7);
   map.attributionControl.setPrefix(false);
-  setTiles();
-  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", setTiles);
+  if (offline === "pending") {
+    offline = false;
+    goOffline();
+  } else setTiles();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => (offline ? restyleBasemap() : setTiles()));
   layer = L.layerGroup().addTo(map);
   return map;
 }
 
 function setTiles() {
-  if (!map) return;
+  if (!map || offline) return;
   if (tiles) tiles.remove();
-  if (offline) return;
-  const url = dark()
-    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-    : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
-  tiles = L.tileLayer(url, {
-    subdomains: "abcd",
-    maxZoom: 19,
-    detectRetina: false,
-    attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-  });
-  tiles.on("tileload", () => tileOk++);
+  const P = PROVIDERS[provider];
+  let ok = 0, err = 0;
+  tiles = L.tileLayer(P.url(dark()), { detectRetina: false, ...P.opts });
+  tiles.on("tileload", () => ok++);
   tiles.on("tileerror", () => {
-    tileErr++;
-    if (tileErr >= 4 && tileOk === 0) goOffline();
+    err++;
+    // This service isn't answering here: try the next one.
+    if (err >= 4 && ok === 0) {
+      if (provider < PROVIDERS.length - 1) {
+        provider++;
+        setTiles();
+      } else goOffline();
+    }
   });
   tiles.addTo(map);
 }
 
-// No tiles (offline, blocked network): draw the coastlines we ship.
+// ---------- the built-in map ----------
+let base = null;
+let baseLayers = [];
+let labels = null;
+
+const STYLE = {
+  light: { water: "#a9d3f2", land: "#f4f1ea", lake: "#a9d3f2", border: "#a39aa8", major: "#f6c95d", majorCase: "#d9a63a", minor: "#ffffff", minorCase: "#d6d1c8" },
+  dark: { water: "#16263a", land: "#2a2c30", lake: "#16263a", border: "#6c6772", major: "#8a6d2c", majorCase: "#5c4a1f", minor: "#4a4d53", minorCase: "#3a3c41" },
+};
+
 async function goOffline() {
   if (offline) return;
   offline = true;
   if (tiles) tiles.remove();
-  try {
-    const res = await fetch(new URL("../vendor/land.json", import.meta.url));
-    const rings = await res.json();
-    const css = getComputedStyle(document.documentElement);
-    const renderer = L.canvas({ padding: 0.5 });
-    const style = {
-      renderer,
-      color: dark() ? "rgba(140,150,170,.35)" : "rgba(120,130,150,.35)",
-      weight: 1,
-      fillColor: css.getPropertyValue("--land").trim() || "#f7f7f5",
-      fillOpacity: 1,
-      interactive: false,
-    };
-    for (const shift of [0, -360, 360]) {
-      const polys = rings.map((r) => [r.map(([lon, lat]) => [lat, lon + shift])]);
-      L.polygon(polys, style).addTo(map).bringToBack();
-    }
-  } catch {
-    /* the plain background still works */
+  map.attributionControl.addAttribution('Map data: <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>');
+  base = await loadBase();
+  if (!base) return; /* the plain background still works */
+  restyleBasemap();
+  map.on("moveend zoomend", placeLabels);
+  placeLabels();
+}
+
+function restyleBasemap() {
+  if (!base) return;
+  baseLayers.forEach((l) => l.remove());
+  baseLayers = [];
+  const c = STYLE[dark() ? "dark" : "light"];
+  map.getContainer().style.background = c.water;
+  const renderer = L.canvas({ padding: 0.4 });
+  const pane = map.getPane("basemap") || map.createPane("basemap");
+  pane.style.zIndex = 150;
+  const ll = (r, shift = 0) => r.map(([lon, lat]) => [lat, lon + shift]);
+  const add = (l) => baseLayers.push(l.addTo(map));
+  const common = { renderer, pane: "basemap", interactive: false, smoothFactor: 1.2 };
+  for (const shift of [0, -360, 360]) {
+    add(L.polygon(base.land.map((r) => [ll(r, shift)]), { ...common, stroke: false, fillColor: c.land, fillOpacity: 1 }));
+  }
+  add(L.polygon(base.lakes.map((r) => [ll(r)]), { ...common, stroke: false, fillColor: c.lake, fillOpacity: 1 }));
+  add(L.polyline(base.roads.minor.map((r) => ll(r)), { ...common, color: c.minorCase, weight: 3.2, opacity: 0.9 }));
+  add(L.polyline(base.roads.minor.map((r) => ll(r)), { ...common, color: c.minor, weight: 1.8, opacity: 1 }));
+  add(L.polyline(base.roads.major.map((r) => ll(r)), { ...common, color: c.majorCase, weight: 4.4, opacity: 0.9 }));
+  add(L.polyline(base.roads.major.map((r) => ll(r)), { ...common, color: c.major, weight: 2.8, opacity: 1 }));
+  add(L.polyline(base.borders.map((r) => ll(r)), { ...common, color: c.border, weight: 1.2, opacity: 0.8, dashArray: "5 4" }));
+  if (labels) placeLabels();
+}
+
+// City names, biggest first, without overlaps. Our own places (with their
+// Hebrew names) win over Natural Earth's where both exist.
+let allPlaces = null;
+let pins = [];
+function placeLabels() {
+  if (!base || !map) return;
+  if (!labels) labels = L.layerGroup().addTo(map);
+  labels.clearLayers();
+  const near = (a, c) => Math.abs(a[0] - c[0]) < 0.05 && Math.abs(a[1] - c[1]) < 0.06;
+  if (!allPlaces) {
+    const own = Object.values(PLACES).filter((p) => !p.city).map((p) => [p.lat, p.lon, p.en, p.he, p.r === "il" ? 5 : 3]);
+    allPlaces = [...own, ...base.places.filter((p) => !own.some((o) => near(o, p)))].sort((a, c) => a[4] - c[4]);
+  }
+  const z = map.getZoom();
+  const b = map.getBounds().pad(0.05);
+  const he = getLang() === "he";
+  // keep names out from under the round's pins
+  const taken = pins.map((ll) => {
+    const pt = map.latLngToContainerPoint(ll);
+    return [pt.x - 26, pt.y - 50, pt.x + 26, pt.y + 6];
+  });
+  let count = 0;
+  for (const p of allPlaces) {
+    if (p[4] > z - 1.5) break;
+    if (count >= 70) break;
+    if (!b.contains([p[0], p[1]])) continue;
+    const name = (he && p[3]) || p[2];
+    if (!name) continue;
+    const pt = map.latLngToContainerPoint([p[0], p[1]]);
+    const w = name.length * 7 + 12, h = 18;
+    const box = [pt.x - w / 2, pt.y - h - 4, pt.x + w / 2, pt.y + 4];
+    if (taken.some((t) => !(box[2] < t[0] || box[0] > t[2] || box[3] < t[1] || box[1] > t[3]))) continue;
+    taken.push(box);
+    count++;
+    L.marker([p[0], p[1]], {
+      icon: L.divIcon({ className: "", html: `<div class="map-label ${p[4] <= 2 ? "big" : ""}"><i></i><span>${name.replace(/[<>&]/g, "")}</span></div>`, iconSize: [0, 0] }),
+      interactive: false, keyboard: false, pane: "overlayPane",
+    }).addTo(labels);
   }
 }
 
@@ -102,6 +218,7 @@ function pinIcon(kind) {
 }
 
 export function clear() {
+  pins = [];
   cancelAnimationFrame(animFrame);
   layer?.clearLayers();
 }
@@ -144,6 +261,7 @@ export async function showTrip(round, pad) {
     while (b[1] - a[1] > 180) b = [b[0], b[1] - 360];
     while (b[1] - a[1] < -180) b = [b[0], b[1] + 360];
   }
+  pins = [a, b];
   L.marker(a, { icon: pinIcon("a"), keyboard: false, interactive: false }).addTo(layer);
   L.marker(b, { icon: pinIcon("b"), keyboard: false, interactive: false, zIndexOffset: 10 }).addTo(layer);
   await fit([a, b], pad, maxZoomFor(round.mode));

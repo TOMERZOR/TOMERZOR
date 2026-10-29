@@ -55,7 +55,7 @@ class Wheel {
       this.index = idx;
       this.aria();
       if (!silent) {
-        haptic(4);
+        haptic("tick");
         this.onChange?.(this.value, true);
       }
     }
@@ -138,7 +138,9 @@ export function createPicker(container, { measure, value, onTick, onChange }) {
       }
       box.append(w.el);
     });
-    box.append(unit(t("km")));
+    // the digits always read left to right; in Hebrew the unit goes on their left
+    if (document.dir === "rtl") box.insertBefore(unit(t("km")), box.children[1]);
+    else box.append(unit(t("km")));
     box.classList.add("digits");
   }
 

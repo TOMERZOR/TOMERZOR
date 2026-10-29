@@ -4,7 +4,7 @@ const STR = {
   he: {
     hello: "שלום, {name}",
     tabPlay: "משחק", tabDuel: "1 על 1", tabMe: "פרופיל",
-    daily: "האתגר היומי", dailySub: "אותם 5 סיבובים לכולם, היום", dailyDone: "שיחקת היום", dailyPlay: "שחקו", roundsWord: "סיבובים",
+    daily: "האתגר היומי", dailySub: "אותם 5 סיבובים לכולם, היום", dailyDone: "שיחקת היום", dailyPlay: "שחקו", roundsWord: "סיבובים", dailyResume: "ממשיכים מסיבוב {n}",
     modes: "מצבי משחק", maps: "מפה", measure: "מה מנחשים",
     classic: "קלאסי", classicSub: "5 סיבובים, בלי לחץ",
     streak: "רצף", streakSub: "ממשיכים כל עוד קולעים",
@@ -13,7 +13,7 @@ const STR = {
     best: "שיא {n}",
     mTime: "זמן נסיעה", mDistance: "מרחק בכביש",
     duelTitle: "דו־קרב", duelLead: "1 על 1 בזמן אמת. מי שקרוב יותר פוגע בשני.",
-    online: "{n} מחוברים", offline: "השרת לא מחובר", connecting: "מתחבר…",
+    online: "מחוברים: {n}", offline: "השרת לא מחובר", connecting: "מתחבר…",
     quick: "משחק מהיר", quickSub: "יריב אקראי מכל העולם", find: "מצאו יריב",
     room: "חדר פרטי", roomSub: "שחקו נגד חבר עם קוד", createRoom: "פתחו חדר", join: "הצטרפו", codePh: "קוד",
     bot: "נגד בוט", botSub: "תרגול 1 על 1, בכל זמן", easy: "קל", normal: "רגיל", hard: "קשה", playBot: "שחקו נגד הבוט",
@@ -30,9 +30,9 @@ const STR = {
     askTime: "כמה זמן זה לוקח?", askDistance: "כמה קילומטרים בדרך?", askDistanceFlight: "כמה קילומטרים בטיסה?",
     askSubCar: "ברכב, בלי פקקים", askSubFoot: "ברגל", askSubBike: "באופניים", askSubFlight: "בטיסה ישירה",
     guess: "ניחוש", locked: "ננעל ✓", hours: "שע׳", mins: "דק׳", km: "ק״מ",
-    crow: "קו אווירי {d}",
+    crow: "{d} בקו אווירי", speed: "{n} קמ״ש", ofPoints: "מתוך {max}",
     actualTime: "זמן אמיתי", actualDistance: "מרחק אמיתי",
-    youGuessed: "ניחשת", over: "{p}% יותר", under: "{p}% פחות", exact: "בול!",
+    youGuessed: "ניחשת", over: "גבוה ב־{p}%", under: "נמוך ב־{p}%", exact: "בול!",
     perfect: "מושלם!", amazing: "מדהים", great: "יפה מאוד", good: "לא רע", ok: "כמעט", miss: "רחוק",
     next: "לסיבוב הבא", finish: "לתוצאות", points: "נקודות",
     srcLive: "מסלול אמיתי · OpenStreetMap", srcRef: "נתוני ייחוס (הנתב לא זמין)", srcFlight: "מסלול טיסה · זמן לפי לוח טיסות",
@@ -44,20 +44,20 @@ const STR = {
     shareText: "Guess The Distance · {title}\n{score}\n{grid}",
     copied: "הועתק",
     challengeMade: "הקישור הועתק. שלחו לחבר!",
-    challengedBy: "{name} מאתגר אותך", challengedScore: "{score} נקודות ב{map}. תצליחו יותר?", acceptChallenge: "קבלו את האתגר",
-    beat: "ניצחת את {name}! 🏆", lostTo: "{name} עדיין מוביל/ה", tieWith: "תיקו עם {name}",
-    searching: "מחפשים יריב…", searchingSub: "{n} מחוברים עכשיו", cancel: "ביטול", tryBot: "אין אף אחד? שחקו נגד בוט",
+    challengedBy: "אתגר מ־{name}", challengedScore: "{score} נקודות במפה {map}. תצליחו לעקוף?", acceptChallenge: "קבלו את האתגר",
+    beat: "עקפת את {name}! 🏆", lostTo: "{name} עדיין בראש", tieWith: "תיקו עם {name}",
+    searching: "מחפשים יריב…", searchingSub: "מחוברים עכשיו: {n}", cancel: "ביטול", tryBot: "אין אף אחד? שחקו נגד בוט",
     waitingRoom: "מחכים לחבר", roomCode: "קוד החדר", shareRoom: "שלחו את הקישור", inviteText: "בואו לדו־קרב ב־Guess The Distance! קוד: {code}",
     vs: "VS", roundN: "סיבוב {n}", damageX: "נזק ×{m}",
-    thinking: "{name} חושב/ת…", oppLocked: "{name} ננעל/ה!", hurry: "נשארו {s} שנ׳",
-    oppAway: "{name} התנתק/ה, מחכים שיחזור…", oppBack: "{name} חזר/ה",
+    thinking: "מחכים ל־{name}…", oppLocked: "הניחוש של {name} ננעל!", hurry: "נשארו {s} שנ׳",
+    oppAway: "החיבור של {name} נפל, מחכים…", oppBack: "{name} שוב במשחק",
     victory: "ניצחון!", defeat: "הפסד", draw: "תיקו",
-    forfeitWin: "{name} עזב/ה את המשחק", rematch: "משחק חוזר", rematchWaiting: "מחכים ליריב…", rematchAsked: "{name} רוצה משחק חוזר!",
+    forfeitWin: "{name} כבר לא במשחק", rematch: "משחק חוזר", rematchWaiting: "מחכים ליריב…", rematchAsked: "{name} רוצה משחק חוזר!",
     leaveQ: "לצאת מהמשחק?", leaveDuel: "יציאה תיחשב כהפסד.", leave: "יציאה", stay: "נשארים",
     noRoom: "לא מצאנו חדר עם הקוד הזה", ownRoom: "זה החדר שלך 🙂", inMatch: "כבר יש לך משחק פעיל", errGeneric: "משהו השתבש, נסו שוב",
     reconnecting: "החיבור נפל, מתחברים מחדש…", reconnected: "חזרנו",
     dmg: "−{n}",
-    yourGuess: "את/ה", you: "את/ה",
+    you: "שלך", me: "אני",
     noGuess: "בלי ניחוש",
     mapsWord: { israel: "ישראל", world: "העולם", walks: "הליכות בעיר", flights: "טיסות", random: "מקומות רנדומליים", mixed: "הכול" },
     modeWord: { car: "רכב", foot: "הליכה", bike: "אופניים", flight: "טיסה" },
@@ -65,7 +65,7 @@ const STR = {
   en: {
     hello: "Hello, {name}",
     tabPlay: "Play", tabDuel: "1v1", tabMe: "Profile",
-    daily: "Daily Challenge", dailySub: "The same 5 rounds for everyone, today", dailyDone: "Played today", dailyPlay: "Play", roundsWord: "rounds",
+    daily: "Daily Challenge", dailySub: "The same 5 rounds for everyone, today", dailyDone: "Played today", dailyPlay: "Play", roundsWord: "rounds", dailyResume: "Continue from round {n}",
     modes: "Modes", maps: "Map", measure: "What you guess",
     classic: "Classic", classicSub: "5 rounds, no rush",
     streak: "Streak", streakSub: "Keep going while you're close",
@@ -91,9 +91,9 @@ const STR = {
     askTime: "How long does it take?", askDistance: "How far by road?", askDistanceFlight: "How far is the flight?",
     askSubCar: "By car, without traffic", askSubFoot: "On foot", askSubBike: "By bike", askSubFlight: "Nonstop flight",
     guess: "Guess", locked: "Locked ✓", hours: "h", mins: "min", km: "km",
-    crow: "{d} as the crow flies",
+    crow: "{d} as the crow flies", speed: "{n} km/h", ofPoints: "/ {max} points",
     actualTime: "Real time", actualDistance: "Real distance",
-    youGuessed: "You guessed", over: "{p}% over", under: "{p}% under", exact: "Spot on!",
+    youGuessed: "You guessed", over: "{p}% too high", under: "{p}% too low", exact: "Spot on!",
     perfect: "Perfect!", amazing: "Amazing", great: "Great", good: "Not bad", ok: "Close-ish", miss: "Way off",
     next: "Next Round", finish: "See Results", points: "points",
     srcLive: "Real route · OpenStreetMap", srcRef: "Reference data (router unavailable)", srcFlight: "Flight path · scheduled time",
@@ -118,7 +118,7 @@ const STR = {
     noRoom: "No room with that code", ownRoom: "That's your own room 🙂", inMatch: "You're already in a match", errGeneric: "Something went wrong, try again",
     reconnecting: "Connection lost, reconnecting…", reconnected: "Back online",
     dmg: "−{n}",
-    yourGuess: "You", you: "You",
+    you: "You", me: "You",
     noGuess: "No guess",
     mapsWord: { israel: "Israel", world: "The World", walks: "City Walks", flights: "Flights", random: "Random Places", mixed: "Everything" },
     modeWord: { car: "Car", foot: "Walk", bike: "Bike", flight: "Flight" },
@@ -137,9 +137,15 @@ export function getLang() {
   return lang;
 }
 
+// Wrap a piece of text in Unicode isolates so a Latin name or a number keeps
+// its place inside a Hebrew sentence (and the other way round).
+export function iso(s) {
+  return `\u2068${s}\u2069`;
+}
+
 export function t(key, vars) {
   let s = STR[lang][key] ?? STR.en[key] ?? key;
-  if (vars && typeof s === "string") s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? ""));
+  if (vars && typeof s === "string") s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? "" : iso(vars[k])));
   return s;
 }
 
@@ -166,7 +172,8 @@ export function fmtTime(min) {
   const { h, m } = splitMin(min);
   const H = t("hours"), M = t("mins");
   if (!h) return `${m} ${M}`;
-  return `${h} ${H} ${String(m).padStart(2, "0")} ${M}`;
+  if (!m) return `${h} ${H}`;
+  return `${h} ${H} ${m} ${M}`;
 }
 
 // HTML for the big answer: numbers big, units small.
@@ -174,7 +181,8 @@ export function fmtTimeHtml(min) {
   const { h, m } = splitMin(min);
   const H = t("hours"), M = t("mins");
   if (!h) return `<span class="num">${m}</span><small>${M}</small>`;
-  return `<span class="num">${h}</span><small>${H}</small><span class="num">${String(m).padStart(2, "0")}</span><small>${M}</small>`;
+  if (!m) return `<span class="num">${h}</span><small>${H}</small>`;
+  return `<span class="num">${h}</span><small>${H}</small><span class="num">${m}</span><small>${M}</small>`;
 }
 
 export function fmtKm(km) {
@@ -185,6 +193,11 @@ export function fmtKm(km) {
 export function fmtKmHtml(km) {
   const v = km < 20 ? Math.round(km * 10) / 10 : Math.round(km);
   return `<span class="num">${nf().format(v)}</span><small>${t("km")}</small>`;
+}
+
+// "A → B" in English, "A ← B" in Hebrew, so the arrow always points onward.
+export function tripArrow() {
+  return lang === "he" ? "←" : "→";
 }
 
 export function fmtValue(v, measure) {

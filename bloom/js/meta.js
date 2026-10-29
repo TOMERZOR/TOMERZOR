@@ -4,11 +4,11 @@
 const KEY = 'bloom.v2'; // v1 was the line-clearing prototype
 
 export const SKINS = [
-  { id: 'jelly', name: 'Jelly', cost: 0, style: 'jelly', colors: ['#ff5d73', '#ffa83a', '#ffd93d', '#5bd66f', '#3bc4ff', '#7a6cff', '#e66bff'] },
-  { id: 'candy', name: 'Candy', cost: 120, style: 'candy', colors: ['#ff4f9a', '#ff8a3d', '#ffe14a', '#3fe0a0', '#47b8ff', '#a774ff', '#ff6fd8'] },
-  { id: 'pastel', name: 'Pastel', cost: 200, style: 'flat', colors: ['#f7a6b5', '#f9c99b', '#f6e6a0', '#b5e3b0', '#a9d6f2', '#c3b6f2', '#e8b5e8'] },
-  { id: 'gem', name: 'Gems', cost: 350, style: 'gem', colors: ['#e0115f', '#ff7b00', '#ffc400', '#00b36b', '#0091e6', '#5b3cc4', '#c21bb5'] },
-  { id: 'neon', name: 'Neon', cost: 500, style: 'neon', colors: ['#ff2e6e', '#ff9f1c', '#f9f871', '#2bff88', '#22d3ff', '#8f5bff', '#ff4fff'], dark: true },
+  { id: 'jelly', name: 'Clay', cost: 0, style: 'clay', colors: ['#ff5a6e', '#ff9f43', '#ffd23f', '#3ddc84', '#4cc9ff', '#a78bfa', '#f472b6'] },
+  { id: 'candy', name: 'Glass', cost: 120, style: 'glass', colors: ['#ff6b8b', '#ffa94d', '#ffe066', '#51e5a8', '#5cd2ff', '#b197fc', '#f783ac'] },
+  { id: 'pastel', name: 'Pastel', cost: 200, style: 'flat', colors: ['#f9a8b8', '#fdc49a', '#fbe7a1', '#a7e8bd', '#a5d8f5', '#c9b8f8', '#f5b5d8'] },
+  { id: 'gem', name: 'Gems', cost: 350, style: 'gem', colors: ['#e11d48', '#ea580c', '#eab308', '#059669', '#0284c7', '#7c3aed', '#db2777'] },
+  { id: 'neon', name: 'Neon', cost: 500, style: 'neon', colors: ['#ff2e6e', '#ff9f1c', '#f9f871', '#2bff88', '#22d3ff', '#a78bfa', '#ff4fff'], dark: true },
 ];
 
 const defaults = () => ({

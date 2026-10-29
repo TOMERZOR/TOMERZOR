@@ -65,11 +65,57 @@ function withTimeout(promise, ms, what) {
     .finally(() => clearTimeout(timer));
 }
 
-/* Sample loading. Decoded buffers are shared by live playback and offline rendering. */
+/* Sample loading. Decoded buffers are shared by live playback and offline rendering.
+   The samples are plain 16-bit WAV, so they are read here directly instead of with the browser's
+   decodeAudioData, which on iPhones sometimes never finishes when several files decode at once. */
+function parseWav(data) {
+  const view = new DataView(data);
+  const tag = (o) => String.fromCharCode(view.getUint8(o), view.getUint8(o + 1), view.getUint8(o + 2), view.getUint8(o + 3));
+  if (tag(0) !== "RIFF" || tag(8) !== "WAVE") throw new Error("not a WAV file");
+  let fmt = null, dataOffset = 0, dataSize = 0;
+  for (let o = 12; o + 8 <= data.byteLength; ) {
+    const id = tag(o), size = view.getUint32(o + 4, true);
+    if (id === "fmt ") fmt = { format: view.getUint16(o + 8, true), channels: view.getUint16(o + 10, true), rate: view.getUint32(o + 12, true), bits: view.getUint16(o + 22, true) };
+    if (id === "data") { dataOffset = o + 8; dataSize = Math.min(size, data.byteLength - dataOffset); break; }
+    o += 8 + size + (size & 1);
+  }
+  if (!fmt || fmt.format !== 1 || fmt.bits !== 16 || !dataOffset) throw new Error("unsupported WAV");
+  const frames = Math.floor(dataSize / (2 * fmt.channels));
+  const buffer = Tone.getContext().rawContext.createBuffer(fmt.channels, frames, fmt.rate);
+  for (let c = 0; c < fmt.channels; c++) {
+    const out = new Float32Array(frames);
+    for (let i = 0; i < frames; i++) out[i] = view.getInt16(dataOffset + (i * fmt.channels + c) * 2, true) / 32768;
+    buffer.copyToChannel(out, c);
+  }
+  return new Tone.ToneAudioBuffer(buffer);
+}
+
+// A few downloads at a time, each with a time limit and one retry.
+let active = 0;
+const waiting = [];
+async function fetchLimited(url) {
+  if (active >= 6) await new Promise((resolve) => waiting.push(resolve));
+  active++;
+  try {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const res = await withTimeout(fetch(url), 15000, "download");
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await withTimeout(res.arrayBuffer(), 15000, "download");
+      } catch (e) {
+        if (attempt >= 2) throw e;
+      }
+    }
+  } finally {
+    active--;
+    if (waiting.length) waiting.shift()();
+  }
+}
+
 const cache = {};
 function load(path) {
   if (!cache[path]) {
-    cache[path] = withTimeout(Tone.ToneAudioBuffer.fromUrl("samples/" + path), 20000, "loading " + path)
+    cache[path] = fetchLimited("samples/" + path).then(parseWav)
       .catch((e) => { delete cache[path]; throw new Error("sample " + path + ": " + ((e && e.message) || e)); });
   }
   return cache[path];

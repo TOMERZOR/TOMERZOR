@@ -69,7 +69,7 @@
   const ADDR_AN = weighted({ "חיים שלי": 4, "כפרה": 3, "לבשלי": 3, "מאמי": 2, "חיים": 2, "נשמה": 2, "כפרה עליך": 1 });
   const ADDR_AF = weighted({ "יפה שלי": 3, "מתוקה": 3, "אחותי": 3, "חיים שלי": 3, "כפרה": 2, "מאמי": 2, "לבשלי": 2,
     "שימדורה": 1, "אמא": 1, "חיים": 1, "כפרה עלייך": 1 });
-  const ADDR_ALL = new Set(ADDR_M.concat(ADDR_F, ADDR_AN, ADDR_AF));
+  const ADDR_ALL = new Set(ADDR_M.concat(ADDR_F, ADDR_AN, ADDR_AF, ["ימלשין", "יכחול", "יפקח", "יזין", "יא אפס"]));
 
   /* פתיחים וסיומות לפי סוג משפט */
   const OPEN = {

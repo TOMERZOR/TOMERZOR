@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Guess The Distance · brag</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="fonts/local.css">
+<style>
+/* Every frame is a pure function of time: render(t) sets all styles, nothing
+   animates on its own. The stage is 1920×1080; in preview it is scaled to fit
+   the window and loops. ?render loads it for frame capture. */
+:root {
+  --bg: #f2f2f7; --ink: #0b0b0f; --ink-2: rgba(60, 60, 67, .62); --tint: #007aff; --red: #ff3b30; --green: #34c759;
+  --glass: rgba(255, 255, 255, .72);
+  --shadow: 0 2px 4px rgba(20, 30, 60, .05), 0 30px 70px -24px rgba(20, 30, 70, .35);
+  --font: "Heebo", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #e6e8ef; overflow: hidden; }
+body { display: grid; place-items: center; font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; flex: none; background: var(--bg); transform-origin: 50% 50%; }
+body.render { display: block; }
+body.render #stage { transform: none !important; }
+.layer { position: absolute; inset: 0; will-change: transform, opacity, filter; }
+.blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; }
+.num { font-variant-numeric: tabular-nums; }
+small.u { font-size: .46em; font-weight: 700; color: var(--ink-2); margin: 0 .08em 0 .3em; letter-spacing: 0; }
+
+/* hook */
+.q1 { position: absolute; right: 150px; top: 330px; font-size: 156px; font-weight: 900; letter-spacing: -.045em; line-height: 1; display: flex; gap: 34px; }
+.q1 span { display: inline-block; }
+.routepill { position: absolute; right: 150px; top: 540px; display: flex; align-items: center; gap: 30px; padding: 26px 46px 26px 30px; border-radius: 999px;
+  background: #fff; box-shadow: var(--shadow); font-size: 76px; font-weight: 800; letter-spacing: -.03em; }
+.badge { width: 104px; height: 104px; border-radius: 30px; position: relative; overflow: hidden; display: grid; place-items: center; color: #fff; flex: none; }
+.badge canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.badge svg { position: relative; width: 58px; height: 58px; }
+.routepill .dot { width: 22px; height: 22px; border-radius: 50%; display: inline-block; margin: 0 12px; vertical-align: middle; box-shadow: 0 0 0 5px rgba(0, 0, 0, .04); }
+.wheelcard { position: absolute; left: 170px; top: 170px; width: 640px; height: 740px; border-radius: 64px; background: var(--glass); box-shadow: var(--shadow), inset 0 0 0 2px rgba(255, 255, 255, .9);
+  backdrop-filter: blur(30px); }
+.wheelcard h3 { margin: 52px 0 0; text-align: center; font-size: 50px; font-weight: 800; letter-spacing: -.02em; }
+.wheelcard .sub { text-align: center; font-size: 30px; color: var(--ink-2); margin-top: 4px; }
+.picker { position: absolute; left: 40px; right: 40px; top: 190px; height: 360px; direction: rtl; }
+.band { position: absolute; left: 0; right: 0; top: 150px; height: 66px; border-radius: 20px; background: rgba(120, 120, 128, .13); }
+.col { position: absolute; top: 0; height: 360px; width: 150px; overflow: hidden;
+  -webkit-mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); mask: linear-gradient(transparent, #000 30%, #000 70%, transparent); perspective: 900px; }
+.col i { position: absolute; left: 0; right: 0; height: 66px; line-height: 66px; text-align: center; font-style: normal; font-size: 50px; font-weight: 500; transform-origin: 50% 50%; }
+.unit { position: absolute; top: 150px; height: 66px; line-height: 66px; font-size: 34px; font-weight: 700; }
+.gbtn { position: absolute; left: 44px; right: 44px; bottom: 52px; height: 104px; border-radius: 999px; background: var(--ink); color: #fff; display: grid; place-items: center;
+  font-size: 42px; font-weight: 800; box-shadow: 0 18px 40px -16px rgba(0, 0, 0, .55); }
+
+/* phone */
+.phone { position: absolute; width: 466px; height: 972px; border-radius: 74px; background: #0b0b0f; padding: 16px; box-shadow: 0 2px 2px rgba(0, 0, 0, .1), 0 60px 120px -40px rgba(10, 20, 60, .55), inset 0 0 0 3px #2a2a30; }
+.phone .scr { position: relative; width: 100%; height: 100%; border-radius: 58px; overflow: hidden; background: #fff; }
+.phone .scr img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.phone .scr svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.phone .island { position: absolute; top: 30px; left: 50%; width: 130px; height: 38px; margin-left: -65px; border-radius: 20px; background: #000; z-index: 3; }
+.car { position: absolute; font-size: 30px; line-height: 1; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .35)); }
+
+/* answer */
+.ans { position: absolute; right: 150px; top: 230px; width: 900px; }
+.lbl { font-size: 36px; font-weight: 700; color: var(--ink-2); letter-spacing: .06em; }
+.big { font-size: 200px; font-weight: 900; letter-spacing: -.05em; line-height: 1; margin-top: 10px; }
+.guessline { font-size: 40px; font-weight: 600; color: var(--ink-2); margin-top: 18px; }
+.pts { display: inline-flex; align-items: center; gap: 22px; margin-top: 54px; padding: 22px 40px; border-radius: 999px; background: #fff; box-shadow: var(--shadow); font-size: 76px; font-weight: 900; letter-spacing: -.03em; }
+.pts small { font-size: 34px; color: var(--ink-2); font-weight: 700; letter-spacing: 0; }
+.meter { width: 720px; height: 26px; border-radius: 99px; background: rgba(120, 120, 128, .16); margin-top: 34px; overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(-90deg, #ffcc00, #34c759 60%, #00c7be); margin-right: 0; }
+.verdict { margin-top: 30px; font-size: 64px; font-weight: 900; letter-spacing: -.03em; }
+.verdict small { font-size: 38px; color: var(--ink-2); font-weight: 700; margin-right: 18px; letter-spacing: 0; }
+
+/* logo */
+#logoL { overflow: hidden; }
+#logoArt { position: absolute; inset: -40px; width: calc(100% + 80px); height: calc(100% + 80px); }
+.logowrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; text-align: center; }
+.logowrap img { width: 210px; height: 210px; border-radius: 48px; box-shadow: 0 30px 60px -20px rgba(0, 0, 40, .5), 0 0 0 4px rgba(255, 255, 255, .35); }
+.wordmark { direction: ltr; font-size: 170px; font-weight: 900; letter-spacing: -.05em; line-height: 1; margin-top: 54px; text-shadow: 0 8px 40px rgba(0, 0, 60, .25); white-space: nowrap; }
+.wordmark span { display: inline-block; }
+.tagline { font-size: 58px; font-weight: 700; margin-top: 34px; opacity: .95; letter-spacing: -.01em; }
+
+/* modes */
+.title { position: absolute; right: 150px; font-size: 104px; font-weight: 900; letter-spacing: -.045em; line-height: 1.02; }
+.cards { position: absolute; right: 150px; top: 330px; display: flex; gap: 22px; }
+.mcard { position: relative; width: 210px; height: 280px; border-radius: 44px; overflow: hidden; color: #fff; box-shadow: 0 30px 60px -24px rgba(30, 40, 90, .5); }
+.mcard canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mcard .ico { position: absolute; top: 26px; right: 26px; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .24); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .45); }
+.mcard .ico svg { width: 34px; height: 34px; }
+.mcard b { position: absolute; right: 24px; left: 16px; bottom: 28px; font-size: 40px; font-weight: 900; letter-spacing: -.03em; line-height: 1.02; text-shadow: 0 2px 16px rgba(0, 0, 0, .2); }
+.chips { position: absolute; right: 150px; top: 680px; display: flex; gap: 18px; flex-wrap: wrap; width: 1140px; }
+.chip { height: 84px; padding: 0 34px; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 3px rgba(60, 60, 67, .14); display: flex; align-items: center; gap: 12px; font-size: 38px; font-weight: 700; }
+.chip.on { color: #fff; background: linear-gradient(135deg, #00b4ff, #2346ff 55%, #7a2bff); box-shadow: 0 16px 30px -14px rgba(35, 70, 255, .7); }
+
+/* duel */
+.vs { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 120px; }
+.vside { display: flex; flex-direction: column; align-items: center; gap: 22px; font-size: 54px; font-weight: 800; }
+.face { width: 290px; height: 290px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 170px; box-shadow: var(--shadow); }
+.vsword { direction: ltr; font-size: 170px; font-weight: 900; font-style: italic; background: linear-gradient(135deg, #ff2d87, #ff9500); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 20px; }
+.hpcol { position: absolute; top: 330px; width: 560px; }
+.hpcol .who { display: flex; align-items: center; gap: 18px; font-size: 52px; font-weight: 800; }
+.hpcol .who em { font-style: normal; font-size: 70px; }
+.hpbar { height: 34px; border-radius: 99px; background: rgba(120, 120, 128, .2); margin-top: 22px; overflow: hidden; position: relative; }
+.hpbar i { position: absolute; inset: 0; border-radius: inherit; }
+.hpval { font-size: 46px; font-weight: 800; color: var(--ink-2); margin-top: 14px; }
+.dmg { position: absolute; font-size: 120px; font-weight: 900; color: var(--red); text-shadow: 0 10px 40px rgba(255, 59, 48, .45); letter-spacing: -.03em; direction: ltr; }
+.flash { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 40, 40, .32)); pointer-events: none; }
+
+/* everywhere */
+.win { position: absolute; width: 1180px; height: 790px; border-radius: 30px; overflow: hidden; background: #fff; box-shadow: 0 60px 120px -40px rgba(10, 20, 60, .5), 0 0 0 2px rgba(0, 0, 0, .06); }
+.win .bar { height: 52px; background: #f6f6f8; display: flex; align-items: center; gap: 12px; padding: 0 22px; direction: ltr; border-bottom: 1px solid rgba(0, 0, 0, .06); }
+.win .bar i { width: 16px; height: 16px; border-radius: 50%; }
+.win .bar span { flex: 1; text-align: center; font-size: 20px; font-weight: 600; color: var(--ink-2); margin-left: -80px; }
+.win img { display: block; width: 100%; height: calc(100% - 52px); object-fit: cover; object-position: top; }
+.sub2 { position: absolute; right: 150px; font-size: 52px; font-weight: 700; color: var(--ink-2); letter-spacing: -.01em; }
+
+/* outro */
+.outro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.outro img { width: 190px; height: 190px; border-radius: 44px; box-shadow: 0 30px 60px -24px rgba(35, 70, 255, .6); }
+.outro .wm { direction: ltr; font-size: 132px; font-weight: 900; letter-spacing: -.05em; margin-top: 40px; line-height: 1; }
+.outro .ask { font-size: 76px; font-weight: 900; letter-spacing: -.035em; margin-top: 34px; background: linear-gradient(90deg, #7a2bff, #2346ff 50%, #00b4ff); -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 10px; }
+.outro .url { direction: ltr; margin-top: 44px; padding: 22px 44px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 38px; font-weight: 700; letter-spacing: -.01em; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="layer" id="bgL">
+    <div class="blob" id="blob1" style="width:900px;height:900px;background:#7cc6ff"></div>
+    <div class="blob" id="blob2" style="width:800px;height:800px;background:#c9a8ff"></div>
+  </div>
+
+  <!-- 1. hook -->
+  <div class="layer" id="hookL">
+    <div class="q1" id="q1"><span>כמה</span><span>זמן</span><span>לוקח</span></div>
+    <div class="routepill" id="rpill">
+      <div class="badge"><canvas class="art" data-colors="#00b4ff,#2346ff,#7a2bff" data-seed="badge-car"></canvas><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg></div>
+      <span><span class="dot" style="background:#007aff"></span>תל אביב ← <span class="dot" style="background:#ff3b30"></span>אילת?</span>
+    </div>
+    <div class="wheelcard" id="wcard">
+      <h3>כמה זמן זה לוקח?</h3>
+      <div class="sub">ברכב, בלי פקקים</div>
+      <div class="picker">
+        <div class="band" id="band"></div>
+        <div class="col" id="colH" style="right:70px"></div>
+        <div class="unit" style="right:236px">שע׳</div>
+        <div class="col" id="colM" style="right:300px"></div>
+        <div class="unit" style="right:468px">דק׳</div>
+      </div>
+      <div class="gbtn" id="gbtn">ניחוש</div>
+    </div>
+  </div>
+
+  <!-- 2. the answer -->
+  <div class="layer" id="ansL">
+    <div class="phone" id="phoneA" style="left:230px;top:54px">
+      <div class="island"></div>
+      <div class="scr">
+        <img id="imgRound" src="shots/phone-round.png" alt="">
+        <img id="imgReveal" src="shots/phone-reveal-noroute.png" alt="">
+        <svg viewBox="0 0 390 844" preserveAspectRatio="none" id="routeSvg">
+          <polyline id="routeGlow" fill="none" stroke="#0a84ff" stroke-width="12" stroke-opacity=".22" stroke-linecap="round" stroke-linejoin="round" style="filter:blur(3px)"/>
+          <polyline id="routeLine" fill="none" stroke="#0a84ff" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 10"/>
+        </svg>
+        <div class="car" id="car">🚗</div>
+      </div>
+    </div>
+    <div class="ans">
+      <div class="lbl" id="aLbl">הזמן האמיתי</div>
+      <div class="big num" id="aBig"></div>
+      <div class="guessline" id="aGuess">ניחשת 4 שע׳ 10 דק׳ · 350 ק״מ בכביש</div>
+      <div class="pts num" id="aPts"><span id="aPtsN">+0</span><small>נקודות</small></div>
+      <div class="meter" id="aMeter"><i id="aMeterI"></i></div>
+      <div class="verdict" id="aVerdict">יפה מאוד<small>גבוה ב־6% בלבד</small></div>
+    </div>
+  </div>
+
+  <!-- 3. logo -->
+  <div class="layer" id="logoL">
+    <canvas class="art" id="logoArt" data-colors="#00b4ff,#2346ff,#7a2bff" data-seed="brag-logo"></canvas>
+    <div class="logowrap">
+      <img id="logoIcon" src="icon.svg" alt="">
+      <div class="wordmark" id="wordmark"></div>
+      <div class="tagline" id="tagline">נחשו זמני נסיעה אמיתיים. עד הדקה.</div>
+    </div>
+  </div>
+
+  <!-- 4. modes and maps -->
+  <div class="layer" id="modesL">
+    <div class="phone" id="phoneH" style="left:150px;top:54px"><div class="island"></div><div class="scr"><img src="shots/phone-home.png" alt=""></div></div>
+    <div class="title" id="mTitle" style="top:150px">5 דרכים לשחק</div>
+    <div class="cards" id="cards"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- 5. duel -->
+  <div class="layer" id="duelL">
+    <div class="title" id="dTitle" style="top:110px">1 על 1. בזמן אמת.</div>
+    <div class="vs" id="vs">
+      <div class="vside" id="vsMe"><div class="face">😎</div><span>תומר</span></div>
+      <div class="vsword" id="vsWord">VS</div>
+      <div class="vside" id="vsOpp"><div class="face">🦊</div><span>Dana</span></div>
+    </div>
+    <div class="phone" id="phoneD" style="left:732px;top:54px"><div class="island"></div><div class="scr"><img src="shots/phone-duel.png" alt=""></div></div>
+    <div class="hpcol" id="hpMe" style="right:150px">
+      <div class="who"><em>😎</em>אני</div>
+      <div class="hpbar"><i style="background:linear-gradient(90deg,#34c759,#30d158)"></i></div>
+      <div class="hpval num" id="hpMeV">6,000</div>
+    </div>
+    <div class="hpcol" id="hpOpp" style="left:150px">
+      <div class="who"><em>🦊</em>Dana</div>
+      <div class="hpbar"><i id="hpOppGhost" style="background:#ffd0cc"></i><i id="hpOppI" style="background:linear-gradient(90deg,#ff9500,#ff6a3d)"></i></div>
+      <div class="hpval num" id="hpOppV">6,000</div>
+    </div>
+    <div class="dmg num" id="dmg">−4,236</div>
+    <div class="sub2" id="dSub" style="top:820px">מי שקרוב יותר, פוגע.</div>
+    <div class="flash" id="flash"></div>
+  </div>
+
+  <!-- 6. everywhere -->
+  <div class="layer" id="everyL">
+    <div class="win" id="win" style="left:90px;top:200px"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>guess-the-distance.moffy-app.workers.dev</span></div><img src="shots/desk-reveal.png" alt=""></div>
+    <div class="phone" id="phoneE" style="left:1250px;top:290px;transform-origin:50% 100%"><div class="island"></div><div class="scr"><img src="shots/phone-reveal.png" alt=""></div></div>
+    <div class="title" id="eTitle" style="top:56px">בטלפון ובמחשב.</div>
+    <div class="sub2" id="eSub" style="top:172px">מסלולים אמיתיים מ־OpenStreetMap.</div>
+  </div>
+
+  <!-- 7. outro -->
+  <div class="layer" id="outroL">
+    <div class="outro">
+      <img id="oIcon" src="icon.svg" alt="">
+      <div class="wm" id="oWm">Guess The Distance</div>
+      <div class="ask" id="oAsk">אז… כמה זמן זה לוקח?</div>
+      <div class="url" id="oUrl">guess-the-distance.moffy-app.workers.dev</div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { drawArt } from "./lib/art.js";
+
+const DUR = 22.5;
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const T = (t, a, b) => clamp((t - a) / (b - a));
+const outExpo = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+const outCubic = (p) => 1 - Math.pow(1 - p, 3);
+const inOut = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const spring = (p) => (p <= 0 ? 0 : p >= 1 ? 1 : 1 - Math.exp(-6.5 * p) * Math.cos(9 * p));
+function vis(el, o, tr = "", blur = 0) {
+  el.style.opacity = String(clamp(o));
+  el.style.visibility = o <= 0.001 ? "hidden" : "visible";
+  el.style.transform = tr;
+  el.style.filter = blur > 0.05 ? `blur(${blur}px)` : "";
+}
+const pop = (el, t, at, d = 0.55, from = 0.6) => {
+  const p = T(t, at, at + d);
+  vis(el, clamp(p * 3), `scale(${lerp(from, 1, spring(p))})`);
+};
+const rise = (el, t, at, d = 0.6, dy = 50) => {
+  const p = T(t, at, at + d);
+  vis(el, clamp(p * 2.5), `translateY(${(1 - outExpo(p)) * dy}px)`, (1 - clamp(p * 2)) * 8);
+};
+const nf = new Intl.NumberFormat("he-IL");
+const timeHtml = (min) => {
+  const h = Math.floor(min / 60), m = Math.round(min % 60);
+  return h ? `${h}<small class="u">שע׳</small>${m}<small class="u">דק׳</small>` : `${m}<small class="u">דק׳</small>`;
+};
+
+/* ---------- build ---------- */
+const ICONS = {
+  calendar: '<rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+  trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>',
+  flame: '<path d="M12 21c-3.9 0-7-2.7-7-6.5 0-3.4 2.4-5.6 4-7.5.4 2 1.5 3.3 2.8 3.8C12 7.5 13 5 15.5 3c-.3 3 3.5 6 3.5 11.5 0 3.8-3.1 6.5-7 6.5z"/>',
+  timer: '<circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 2M10 2.5h4M18.5 6.5l1.5-1.5"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.2 1.2"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.2-1.2"/>',
+};
+const MODES = [
+  ["האתגר היומי", "calendar", ["#00b4ff", "#2346ff", "#7a2bff"]],
+  ["קלאסי", "trophy", ["#7cc6ff", "#5b6bff", "#c04bff"]],
+  ["רצף", "flame", ["#ffb340", "#ff3b6b", "#8f5bff"]],
+  ["נגד השעון", "timer", ["#34e0a1", "#00a3ff", "#3a5bff"]],
+  ["אתגר חבר", "link", ["#ff6a3d", "#ff2d87", "#ffd23f"]],
+];
+$("cards").innerHTML = MODES.map(([n, ic, c], i) => `<div class="mcard" id="mc${i}"><canvas class="art" data-colors="${c.join(",")}" data-seed="mode-${i}"></canvas><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[ic]}</svg></span><b>${n}</b></div>`).join("");
+const MAPS = ["🇮🇱 ישראל", "🌍 העולם", "🚶 הליכות בעיר", "✈️ טיסות", "🎲 מקומות רנדומליים"];
+$("chips").innerHTML = MAPS.map((m, i) => `<div class="chip ${i === 0 ? "on" : ""}" id="ch${i}">${m}</div>`).join("");
+const WM = "Guess The Distance";
+$("wordmark").innerHTML = [...WM].map((c) => `<span>${c === " " ? "&nbsp;" : c}</span>`).join("");
+const wmChars = [...$("wordmark").children];
+const q1Words = [...$("q1").children];
+
+// wheels: 7 rows each, re-labelled every frame
+for (const id of ["colH", "colM"]) $(id).innerHTML = Array.from({ length: 9 }, () => "<i></i>").join("");
+function drawWheel(col, pos, mod) {
+  const rows = [...col.children];
+  const base = Math.floor(pos) - 4;
+  rows.forEach((el, k) => {
+    const v = base + k;
+    const off = v - pos;
+    const a = clamp(off / 3.2, -1, 1);
+    const val = ((v % mod) + mod) % mod;
+    el.textContent = mod === 60 ? String(val).padStart(2, "0") : String(val);
+    el.style.top = `${150 + off * 66}px`;
+    el.style.transform = `rotateX(${-a * 62}deg) scale(${1 - Math.abs(a) * 0.1})`;
+    el.style.opacity = String(Math.max(0, 1 - Math.abs(a) * 0.6));
+  });
+}
+const hourPos = (t) => lerp(0, 4, inOut(T(t, 0.5, 2.3)));
+const minPos = (t) => lerp(-22, 10, outCubic(T(t, 0.4, 2.45)));
+
+// route from the real app reveal
+const ROUTE = await fetch("shots/route.json").then((r) => r.json());
+const cum = [0];
+for (let i = 1; i < ROUTE.length; i++) cum.push(cum[i - 1] + Math.hypot(ROUTE[i][0] - ROUTE[i - 1][0], ROUTE[i][1] - ROUTE[i - 1][1]));
+function routeUpTo(p) {
+  const d = p * cum[cum.length - 1];
+  const pts = [ROUTE[0]];
+  let k = 1;
+  while (k < ROUTE.length && cum[k] <= d) pts.push(ROUTE[k++]);
+  if (k < ROUTE.length) {
+    const f = (d - cum[k - 1]) / (cum[k] - cum[k - 1] || 1);
+    pts.push([lerp(ROUTE[k - 1][0], ROUTE[k][0], f), lerp(ROUTE[k - 1][1], ROUTE[k][1], f)]);
+  }
+  return pts;
+}
+
+/* ---------- sound cues (read by the audio script) ---------- */
+const SFX = [];
+const cue = (t, k, v) => SFX.push({ t: +t.toFixed(3), k, v });
+for (let f = 0; f < 2.6 * 240; f++) {
+  const t0 = f / 240, t1 = (f + 1) / 240;
+  if (Math.round(hourPos(t0)) !== Math.round(hourPos(t1))) cue(t1, "tick", 1);
+  if (Math.round(minPos(t0)) !== Math.round(minPos(t1))) cue(t1, "tick", 0.7);
+}
+cue(2.78, "press"); cue(2.86, "lock");
+cue(3.1, "whoosh"); cue(3.62, "swap"); cue(3.85, "draw");
+for (let i = 0; i < 16; i++) cue(5.0 + i * 0.05, "count", i / 16);
+cue(5.55, "bell", 3);
+cue(6.45, "riser"); cue(6.75, "boom"); cue(7.0, "sparkle");
+cue(9.2, "whoosh");
+MODES.forEach((_, i) => cue(9.62 + i * 0.12, "swish", i));
+MAPS.forEach((_, i) => cue(10.85 + i * 0.09, "pop", i));
+cue(12.55, "whoosh"); cue(12.95, "slam"); cue(13.05, "slam2"); cue(13.25, "vs");
+cue(14.3, "whoosh"); cue(15.2, "hit"); cue(15.22, "damage");
+cue(17.15, "whoosh"); cue(17.45, "swish", 2);
+cue(19.75, "whoosh"); cue(19.95, "boom2"); cue(20.6, "bell", 4);
+
+/* ---------- render ---------- */
+function render(t) {
+  // background drift
+  vis($("blob1"), 1, `translate(${-200 + Math.sin(t * 0.4) * 120}px, ${-260 + Math.cos(t * 0.3) * 80}px)`);
+  vis($("blob2"), 1, `translate(${1300 + Math.cos(t * 0.35) * 140}px, ${520 + Math.sin(t * 0.5) * 90}px)`);
+
+  /* 1. hook 0–3.2 */
+  const H = $("hookL");
+  if (t < 3.35) {
+    const out = T(t, 3.0, 3.3);
+    vis(H, 1 - out, `scale(${1 + out * 0.06})`, out * 12);
+    q1Words.forEach((w, i) => rise(w, t, 0.1 + i * 0.1, 0.55, 80));
+    pop($("rpill"), t, 0.45, 0.6, 0.7);
+    const pc = T(t, 0.2, 0.8);
+    vis($("wcard"), clamp(pc * 2), `translateY(${(1 - outExpo(pc)) * 120}px) rotate(${(1 - outExpo(pc)) * -4}deg)`);
+    drawWheel($("colH"), hourPos(t), 61);
+    drawWheel($("colM"), minPos(t), 60);
+    const press = T(t, 2.72, 2.95);
+    $("gbtn").style.transform = `scale(${1 - Math.sin(Math.PI * press) * 0.06})`;
+    $("gbtn").textContent = t >= 2.86 ? "ננעל ✓" : "ניחוש";
+    $("gbtn").style.background = t >= 2.86 ? "#34c759" : "";
+    $("band").style.boxShadow = t >= 2.86 ? "inset 0 0 0 4px rgba(52,199,89,.7)" : "";
+  } else vis(H, 0);
+
+  /* 2. answer 3.2–6.6 */
+  const A = $("ansL");
+  if (t > 3.05 && t < 6.75) {
+    const pin = T(t, 3.05, 3.55), out = T(t, 6.35, 6.7);
+    vis(A, clamp(pin * 2) * (1 - out), "", out * 10);
+    vis($("phoneA"), 1, `translateY(${(1 - outExpo(pin)) * 500}px) rotate(${(1 - outExpo(pin)) * 8}deg) scale(${1 - out * 0.08})`);
+    const sw = T(t, 3.55, 3.8);
+    $("imgReveal").style.opacity = String(sw);
+    const dp = inOut(T(t, 3.85, 5.25));
+    const pts = dp > 0 ? routeUpTo(dp) : [];
+    const s = pts.map((p) => p.join(",")).join(" ");
+    $("routeLine").setAttribute("points", s);
+    $("routeGlow").setAttribute("points", s);
+    const car = $("car");
+    if (dp > 0 && dp < 1) {
+      const last = pts[pts.length - 1];
+      const sc = 940 / 844;
+      vis(car, 1, `translate(${last[0] * sc - 15}px, ${last[1] * sc - 15}px)`);
+      car.style.left = "0"; car.style.top = "0";
+    } else vis(car, 0);
+    rise($("aLbl"), t, 3.7, 0.5, 30);
+    const ab = T(t, 3.85, 5.0);
+    vis($("aBig"), clamp(ab * 3), `translateY(${(1 - outExpo(T(t, 3.85, 4.35))) * 40}px)`);
+    $("aBig").innerHTML = timeHtml(Math.round(235 * outCubic(ab)));
+    rise($("aGuess"), t, 4.3, 0.5, 24);
+    const pp = T(t, 4.95, 5.75);
+    pop($("aPts"), t, 4.95, 0.5, 0.7);
+    $("aPtsN").textContent = "+" + nf.format(Math.round(4297 * outCubic(pp)));
+    rise($("aMeter"), t, 5.0, 0.4, 20);
+    $("aMeterI").style.width = `${(4297 / 5000) * 100 * outCubic(pp)}%`;
+    pop($("aVerdict"), t, 5.55, 0.6, 0.6);
+  } else vis(A, 0);
+
+  /* 3. logo 6.6–9.2 */
+  const Lg = $("logoL");
+  if (t > 6.4 && t < 9.45) {
+    const wipe = outCubic(T(t, 6.45, 6.95));
+    const out = T(t, 9.1, 9.4);
+    vis(Lg, 1, `translateY(${-out * 1080}px)`);
+    Lg.style.clipPath = `circle(${wipe * 120}% at 50% 50%)`;
+    vis($("logoArt"), 1, `scale(${1.12 - T(t, 6.45, 9.4) * 0.08}) translateX(${T(t, 6.45, 9.4) * -30}px)`);
+    const ip = T(t, 6.8, 7.4);
+    vis($("logoIcon"), clamp(ip * 3), `scale(${spring(ip)}) rotate(${(1 - spring(ip)) * -20}deg)`);
+    wmChars.forEach((c, i) => rise(c, t, 7.05 + i * 0.022, 0.5, 90));
+    rise($("tagline"), t, 7.6, 0.6, 40);
+  } else vis(Lg, 0);
+
+  /* 4. modes 9.2–12.6 */
+  const M = $("modesL");
+  if (t > 9.1 && t < 12.75) {
+    const out = T(t, 12.4, 12.7);
+    vis(M, 1 - out, `scale(${1 - out * 0.04})`, out * 10);
+    const ph = T(t, 9.2, 9.75);
+    vis($("phoneH"), clamp(ph * 2), `perspective(1600px) translateX(${(1 - outExpo(ph)) * -500}px) rotateY(${12 - outExpo(ph) * 4}deg)`);
+    rise($("mTitle"), t, 9.3, 0.55, 60);
+    MODES.forEach((_, i) => {
+      const p = T(t, 9.6 + i * 0.12, 10.3 + i * 0.12);
+      vis($("mc" + i), clamp(p * 3), `translateX(${(1 - spring(p)) * -260}px) translateY(${(1 - spring(p)) * 80}px) rotate(${(1 - spring(p)) * -10}deg)`);
+    });
+    MAPS.forEach((_, i) => pop($("ch" + i), t, 10.85 + i * 0.09, 0.5, 0.5));
+  } else vis(M, 0);
+
+  /* 5. duel 12.6–17.2 */
+  const D = $("duelL");
+  if (t > 12.5 && t < 17.35) {
+    const out = T(t, 17.0, 17.3);
+    vis(D, 1 - out, "", out * 10);
+    rise($("dTitle"), t, 12.65, 0.5, 60);
+    const tOut = T(t, 14.0, 14.3);
+    if (tOut > 0) vis($("dTitle"), 1 - tOut, `translateY(${-tOut * 40}px)`, tOut * 8);
+    const vsOut = T(t, 14.0, 14.4);
+    const m1 = T(t, 12.75, 13.15), m2 = T(t, 12.85, 13.25);
+    vis($("vsMe"), (1 - vsOut) * clamp(m1 * 3), `translateX(${(1 - spring(m1)) * 900}px) rotate(${(1 - spring(m1)) * 14}deg) translateY(${vsOut * 200}px) scale(${1 - vsOut * 0.3})`);
+    vis($("vsOpp"), (1 - vsOut) * clamp(m2 * 3), `translateX(${(1 - spring(m2)) * -900}px) rotate(${(1 - spring(m2)) * -14}deg) translateY(${vsOut * 200}px) scale(${1 - vsOut * 0.3})`);
+    pop($("vsWord"), t, 13.2, 0.5, 0.2);
+    $("vsWord").style.opacity = String(clamp(T(t, 13.2, 13.35) * 3) * (1 - vsOut));
+    const shake = t > 13.0 && t < 13.35 ? Math.sin(t * 90) * 10 * (1 - T(t, 13.0, 13.35)) : 0;
+    $("vs").style.transform = `translateX(${shake}px)`;
+    // phone + health
+    const ph = T(t, 14.2, 14.75);
+    vis($("phoneD"), clamp(ph * 2), `translateY(${(1 - outExpo(ph)) * 600}px)`);
+    rise($("hpMe"), t, 14.35, 0.5, 40);
+    rise($("hpOpp"), t, 14.45, 0.5, 40);
+    const hit = T(t, 15.2, 16.1), ghost = T(t, 15.6, 16.4);
+    const hp = Math.round(lerp(6000, 1764, outCubic(hit)));
+    $("hpOppI").style.transform = `scaleX(${hp / 6000})`; $("hpOppI").style.transformOrigin = "left";
+    $("hpOppGhost").style.transform = `scaleX(${lerp(1, 1764 / 6000, outCubic(ghost))})`; $("hpOppGhost").style.transformOrigin = "left";
+    $("hpOppV").textContent = nf.format(hp);
+    const sh = t > 15.2 && t < 15.7 ? Math.sin(t * 110) * 14 * (1 - T(t, 15.2, 15.7)) : 0;
+    $("hpOpp").style.transform += ` translateX(${sh}px)`;
+    const dm = T(t, 15.2, 16.6);
+    vis($("dmg"), dm < 0.15 ? dm / 0.15 : 1 - T(t, 16.3, 16.7), `translateY(${-outCubic(dm) * 60}px) scale(${dm < 0.15 ? lerp(0.6, 1.15, dm / 0.15) : lerp(1.15, 1, T(t, 15.41, 15.6))})`);
+    $("dmg").style.left = "190px"; $("dmg").style.top = "580px";
+    vis($("flash"), t > 15.2 ? 1 - T(t, 15.2, 15.9) : 0);
+    rise($("dSub"), t, 14.6, 0.55, 30);
+  } else vis(D, 0);
+
+  /* 6. everywhere 17.2–19.8 */
+  const E = $("everyL");
+  if (t > 17.05 && t < 19.95) {
+    const out = T(t, 19.6, 19.9);
+    vis(E, 1 - out, `scale(${1 - out * 0.04})`, out * 10);
+    const w = T(t, 17.2, 17.8);
+    vis($("win"), clamp(w * 2), `perspective(2000px) translateY(${(1 - outExpo(w)) * 300}px) rotateX(${(1 - outExpo(w)) * 14}deg)`);
+    const p = T(t, 17.45, 18.05);
+    vis($("phoneE"), clamp(p * 2), `translateY(${(1 - spring(p)) * 400}px) rotate(${(1 - spring(p)) * 10 + 4}deg)`);
+    rise($("eTitle"), t, 17.3, 0.5, 50);
+    rise($("eSub"), t, 17.55, 0.5, 30);
+  } else vis(E, 0);
+
+  /* 7. outro 19.8–22.5 */
+  const O = $("outroL");
+  if (t > 19.7) {
+    vis(O, T(t, 19.7, 19.9));
+    const ip = T(t, 19.85, 20.45);
+    vis($("oIcon"), clamp(ip * 3), `scale(${spring(ip)}) rotate(${(1 - spring(ip)) * 25}deg)`);
+    rise($("oWm"), t, 20.05, 0.55, 60);
+    rise($("oAsk"), t, 20.5, 0.55, 40);
+    rise($("oUrl"), t, 20.95, 0.5, 30);
+  } else vis(O, 0);
+}
+
+/* ---------- preview / render ---------- */
+await document.fonts.ready;
+await Promise.all([...document.images].map((im) => (im.complete ? 0 : new Promise((r) => (im.onload = im.onerror = r)))));
+document.querySelectorAll("canvas.art").forEach((c) => drawArt(c, c.dataset.colors.split(","), { seed: c.dataset.seed, dir: c.dataset.dir || "v" }));
+window.__render = render; window.__dur = DUR; window.__sfx = SFX; window.__ready = true;
+const params = new URLSearchParams(location.search);
+const stage = $("stage");
+if (params.has("render")) { document.body.classList.add("render"); render(+params.get("t") || 0); }
+else {
+  const fit = () => { const s = Math.min(innerWidth / 1920, innerHeight / 1080) * 0.96; stage.style.transform = `scale(${s})`; };
+  addEventListener("resize", fit); fit();
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); };
+  loop();
+}
+</script>
+</body>
+</html>

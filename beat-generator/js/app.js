@@ -52,6 +52,15 @@
   const input = $("kw");
   const status = (msg, err = false) => { $("status").textContent = msg || ""; $("status").classList.toggle("err", err); };
 
+  // Show any failure on the page, so it can be reported from a phone.
+  const showError = (msg) => {
+    status("תקלה: " + msg, true);
+    $("go").disabled = false;
+  };
+  BG.onError = showError;
+  window.addEventListener("error", (e) => showError(e.message || "error"));
+  window.addEventListener("unhandledrejection", (e) => showError((e.reason && e.reason.message) || String(e.reason)));
+
   /* Keyword chips */
   const norm = (s) => " " + s.toLowerCase().replace(/[,،.;!?]/g, " ").replace(/\s+/g, " ").trim() + " ";
   const chipEls = [];
@@ -330,21 +339,26 @@
   }
 
   async function generate({ autoplay = true } = {}) {
-    const player = ensurePlayer();
-    const parsed = BG.parseKeywords(state.text);
-    const recipe = BG.makeRecipe(parsed, state.variation);
-    free.setExtra(parsed.unknown);
     $("go").disabled = true;
     $("again").disabled = true;
     status("מכין סאונד...");
+    let parsed, recipe;
     try {
-      await player.load(recipe);
+      const player = ensurePlayer();
+      parsed = BG.parseKeywords(state.text);
+      recipe = BG.makeRecipe(parsed, state.variation);
+      free.setExtra(parsed.unknown);
+      await player.load(recipe, (stage, done, total) => {
+        status(stage === "samples" ? `טוען סאונדים ${done}/${total}...` : "מכין כלים...");
+      });
     } catch (e) {
       console.error(e);
-      status("משהו נתקע בהכנת הסאונד. נסו שוב.", true);
+      status("משהו נתקע בהכנת הסאונד. נסו שוב. (" + ((e && e.message) || e) + ")", true);
       $("go").disabled = false;
+      if (state.recipe) $("again").disabled = false;
       return;
     }
+    const player = state.player;
     state.recipe = recipe;
     document.body.classList.add("ready");
     setControls(true);
@@ -354,17 +368,20 @@
     if (autoplay && !player.playing) player.start();
     if (autoplay) revealDeck();
     setPlayIcon();
-    status(autoplay || player.playing ? "" : "הביט מוכן. לחצו על נגן.");
+    if (!$("status").classList.contains("err")) status(autoplay || player.playing ? "" : "הביט מוכן. לחצו על נגן.");
     writeHash();
   }
 
-  $("form").addEventListener("submit", (e) => {
+  $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
     Tone.start();
     setAudioSession("playback");
     state.text = input.value.trim();
-    state.variation = 0;
-    generate();
+    const link = state.linked && state.linked.text === state.text ? state.linked : null;
+    state.linked = null;
+    state.variation = link ? link.variation : 0;
+    await generate();
+    if (link && link.bpm && state.recipe) nudgeBpm(link.bpm - state.recipe.bpm);
   });
 
   $("again").addEventListener("click", () => {
@@ -568,16 +585,14 @@
     $("takes").hidden = false;
   }
 
-  /* Open a shared link */
+  /* Open a shared link. Only the words are filled in: browsers (iPhones above all) block audio until a tap,
+     and loading samples before it can hang, so the beat is built on the first tap of the button. */
   const params = new URLSearchParams(location.hash.slice(1));
   if (params.has("k") || params.has("v")) {
     input.value = params.get("k") || "";
-    state.text = input.value.trim();
-    state.variation = Number(params.get("v")) || 0;
     syncChips();
-    generate({ autoplay: false }).then(() => {
-      const bpm = Number(params.get("bpm"));
-      if (bpm >= 60 && bpm <= 170) nudgeBpm(bpm - state.recipe.bpm);
-    });
+    const bpm = Number(params.get("bpm"));
+    state.linked = { text: input.value.trim(), variation: Number(params.get("v")) || 0, bpm: bpm >= 60 && bpm <= 170 ? bpm : 0 };
+    status("לחצו על צור ביט כדי לשמוע את הביט מהקישור.");
   }
 })();

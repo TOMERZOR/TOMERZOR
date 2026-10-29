@@ -48,10 +48,30 @@ BG.INSTRUMENTS = {
 // The keys are darkened per style, like a filtered sample.
 const KEYS_CUTOFF = { trap: 4200, drill: 3600, boombap: 5000, lofi: 2600, dembow: 6500 };
 
+// Errors during playback are reported here instead of stopping the beat; the page shows them.
+BG.onError = null;
+const reported = new Set();
+function report(where, e) {
+  const msg = `${where}: ${(e && e.message) || e}`;
+  if (reported.has(msg)) return;
+  reported.add(msg);
+  console.error(msg, e);
+  if (BG.onError) BG.onError(msg);
+}
+// Rejects if a promise takes longer than `ms`, so a stuck step shows an error instead of hanging the page.
+function withTimeout(promise, ms, what) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(what + " timed out")), ms); })])
+    .finally(() => clearTimeout(timer));
+}
+
 /* Sample loading. Decoded buffers are shared by live playback and offline rendering. */
 const cache = {};
 function load(path) {
-  if (!cache[path]) cache[path] = Tone.ToneAudioBuffer.fromUrl("samples/" + path).catch((e) => { delete cache[path]; throw e; });
+  if (!cache[path]) {
+    cache[path] = withTimeout(Tone.ToneAudioBuffer.fromUrl("samples/" + path), 20000, "loading " + path)
+      .catch((e) => { delete cache[path]; throw new Error("sample " + path + ": " + ((e && e.message) || e)); });
+  }
   return cache[path];
 }
 function samplesFor(recipe) {
@@ -64,9 +84,10 @@ function samplesFor(recipe) {
   }
   return [...new Set(files)];
 }
-BG.loadSamples = async function (recipe) {
+BG.loadSamples = async function (recipe, onProgress) {
   const files = samplesFor(recipe);
-  const buffers = await Promise.all(files.map(load));
+  let done = 0;
+  const buffers = await Promise.all(files.map((f) => load(f).then((b) => { done++; if (onProgress) onProgress(done, files.length); return b; })));
   const out = {};
   files.forEach((f, i) => (out[f] = buffers[i]));
   return out;
@@ -99,7 +120,8 @@ BG.buildRig = async function (recipe, out, buffers) {
   bus.chain(tone, comp, makeup, limiter, clipper, out);
 
   const reverb = keep(new Tone.Reverb({ decay: 2.8 + snd.reverb * 4, preDelay: 0.02, wet: 1 }));
-  await reverb.ready;
+  // Safari can be slow to build the reverb; play without it rather than wait.
+  try { await withTimeout(reverb.ready, 5000, "reverb"); } catch (e) { report("reverb", e); }
   reverb.connect(bus);
 
   const channel = (volDb, send = 0, pan = 0) => {
@@ -217,6 +239,14 @@ BG.buildRig = async function (recipe, out, buffers) {
 // Returns a voice that can be cut short with a quick fade, for the 808 and open hats.
 function hit(rig, buffer, dest, time, gain = 1, rate = 1) {
   if (!buffer) return null;
+  try {
+    return startVoice(rig, buffer, dest, time, gain, rate);
+  } catch (e) {
+    report("sound", e);
+    return null;
+  }
+}
+function startVoice(rig, buffer, dest, time, gain, rate) {
   const ctx = dest.context.rawContext;
   const src = ctx.createBufferSource();
   src.buffer = buffer.get();
@@ -344,9 +374,10 @@ BG.Player = class {
 
   get playing() { return this._on === true; }
 
-  async load(recipe) {
-    const buffers = await BG.loadSamples(recipe);
-    const next = await BG.buildRig(recipe, this.out, buffers);
+  async load(recipe, onStage) {
+    const buffers = await BG.loadSamples(recipe, (done, total) => onStage && onStage("samples", done, total));
+    if (onStage) onStage("rig");
+    const next = await withTimeout(BG.buildRig(recipe, this.out, buffers), 15000, "building the instruments");
     if (this.rig) next.mute = this.rig.mute;
     const old = this.rig;
     this.rig = next;
@@ -358,7 +389,7 @@ BG.Player = class {
       this.eventId = transport.scheduleRepeat((time) => {
         const step = Math.round(transport.getTicksAtTime(time) / (transport.PPQ / 4));
         const stepDur = 15 / transport.bpm.value;
-        playStep(this.rig, step, time, stepDur);
+        try { playStep(this.rig, step, time, stepDur); } catch (e) { report("step", e); }
         if (this.onStep) draw.schedule(() => this.onStep(step), time);
       }, "16n", 0);
     }

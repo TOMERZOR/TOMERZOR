@@ -2,5 +2,5 @@
 // writes the AI tutor's address here by itself.
 // Empty = built-in lessons only, in the browser.
 window.E2S_CONFIG = {
-  apiBase: "",
+  apiBase: "https://easy2study-api.moffy-app.workers.dev",
 };

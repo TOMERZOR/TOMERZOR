@@ -27,3 +27,7 @@ HELP_EFFORT = "low"
 
 # The API key is a secret, never put it in this file:
 #   npx wrangler secret put ANTHROPIC_API_KEY
+
+[[kv_namespaces]]
+binding = "E2S_KV"
+id = "ca5127f002f7409793ff2bd5be6587f1"

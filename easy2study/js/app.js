@@ -1,0 +1,1501 @@
+// Easy2Study: the whole app. Vanilla JS, no build step. Everything the learner
+// tells us stays in this browser (localStorage); the AI tutor only gets the
+// learning profile (never the name) when it writes or explains a lesson.
+(() => {
+  "use strict";
+
+  const KEY = "easy2study:v1";
+  const SPRITE = "icons/sprite.svg";
+  const SUBJECTS = window.E2S_SUBJECTS;
+  const BUILTIN = window.E2S_LESSONS;
+  const Tutor = window.E2STutor;
+  const root = document.documentElement;
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+
+  // ---------- State ----------
+  function defaults() {
+    return {
+      profile: null,
+      settings: { size: "m", comfort: false, theme: "auto", motion: "auto", read: false },
+      lessons: {},
+      days: [],
+    };
+  }
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
+      const d = defaults();
+      return { ...d, ...raw, settings: { ...d.settings, ...(raw.settings || {}) } };
+    } catch {
+      return defaults();
+    }
+  }
+  let S = load();
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* private mode: keep going in memory */ }
+  }
+
+  // ---------- Helpers ----------
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const icon = (name, cls = "") => `<svg class="icon ${cls}" aria-hidden="true"><use href="${SPRITE}#i-${name}"/></svg>`;
+  let draftGender = null;
+  const gender = () => (S.profile && S.profile.gender) || draftGender || "m";
+  // Masculine or feminine wording, from the profile.
+  const g = (m, f) => (gender() === "f" ? f : m);
+  const gfill = (s) => String(s ?? "").replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (_, m, f) => g(m, f));
+  const reduceMotion = () => S.settings.motion === "off" || matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  // Latin runs (English in a Hebrew sentence) are isolated so punctuation lands right.
+  const LATIN = /[A-Za-z_](?:[A-Za-z0-9_'’\-.,?!:;"\s]*[A-Za-z0-9_.?!"])?/g;
+  function plain(t) {
+    let out = "", last = 0;
+    for (const m of t.matchAll(LATIN)) {
+      out += esc(t.slice(last, m.index)) + `<bdi>${esc(m[0])}</bdi>`;
+      last = m.index + m[0].length;
+    }
+    return out + esc(t.slice(last));
+  }
+  const frac = (a, b) => `<span class="frac" role="img" aria-label="${esc(a)} חלקי ${esc(b)}"><span>${esc(a)}</span><i></i><span>${esc(b)}</span></span>`;
+  function inline(line) {
+    const re = /\*\*(.+?)\*\*|\[\[(\d+)\/(\d+)\]\]/g;
+    let out = "", last = 0, m;
+    while ((m = re.exec(line))) {
+      out += plain(line.slice(last, m.index));
+      out += m[1] ? `<button type="button" class="term" data-term="${esc(m[1])}">${plain(m[1])}</button>` : frac(m[2], m[3]);
+      last = re.lastIndex;
+    }
+    return out + plain(line.slice(last));
+  }
+  // Lesson text: **term**, [[a/b]], {m|f}, one line per sentence group.
+  function rich(src, { lines = true } = {}) {
+    const text = gfill(src).trim();
+    if (!lines) return inline(text.replace(/\n+/g, " "));
+    return text.split(/\n+/).map((l, i) => `<span class="line" style="--i:${i}">${inline(l)}</span>`).join("");
+  }
+  const spoken = (src) => gfill(src).replace(/\*\*(.+?)\*\*/g, "$1").replace(/\[\[(\d+)\/(\d+)\]\]/g, "$1 חלקי $2");
+
+  function toast(msg) {
+    $$(".toast").forEach((t) => t.remove());
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.setAttribute("role", "status");
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  function burst(el) {
+    if (reduceMotion() || !el) return;
+    const r = el.getBoundingClientRect();
+    const b = document.createElement("div");
+    b.className = "burst";
+    b.style.left = r.left + r.width * 0.5 + "px";
+    b.style.top = r.top + r.height * 0.5 + "px";
+    for (let i = 0; i < 16; i++) {
+      const a = (Math.PI * 2 * i) / 16 + Math.random() * 0.4;
+      const d = 60 + Math.random() * 70;
+      const p = document.createElement("i");
+      p.style.setProperty("--x", Math.cos(a) * d + "px");
+      p.style.setProperty("--y", Math.sin(a) * d - 20 + "px");
+      p.style.setProperty("--r", Math.round(Math.random() * 360) + "deg");
+      p.style.animationDelay = Math.random() * 60 + "ms";
+      b.appendChild(p);
+    }
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 900);
+  }
+
+  function vibrate(ms) {
+    try { if (!reduceMotion() && navigator.vibrate) navigator.vibrate(ms); } catch { /* not supported */ }
+  }
+
+  // ---------- Settings applied to the page ----------
+  function applySettings() {
+    const st = S.settings;
+    root.dataset.size = st.size;
+    root.dataset.comfort = st.comfort ? "on" : "off";
+    if (st.theme === "auto") delete root.dataset.theme; else root.dataset.theme = st.theme;
+    root.dataset.motion = st.motion;
+    const dark = st.theme === "dark" || (st.theme === "auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+    $('meta[name="theme-color"]').setAttribute("content", dark ? "#0e1412" : "#f4f7f5");
+  }
+
+  // ---------- Profile ----------
+  const GRADES = [
+    ["1", "א׳"], ["2", "ב׳"], ["3", "ג׳"], ["4", "ד׳"], ["5", "ה׳"], ["6", "ו׳"],
+    ["7", "ז׳"], ["8", "ח׳"], ["9", "ט׳"], ["10", "י׳"], ["11", "י״א"], ["12", "י״ב"],
+    ["post", "אחרי תיכון"], ["none", "לא בבית ספר"],
+  ];
+  const LAZY = () => [
+    { label: "מכונת למידה", desc: g("תן לי את כל החומר, אני על זה", "תני לי את כל החומר, אני על זה") },
+    { label: g("חרוץ רוב הזמן", "חרוצה רוב הזמן"), desc: g("לומד כשצריך, בלי דרמות", "לומדת כשצריך, בלי דרמות") },
+    { label: "תלוי במצב הרוח", desc: "יש ימים כאלה ויש ימים אחרים" },
+    { label: "רק אם זה קצר", desc: "חתיכות קטנות, בבקשה" },
+    { label: "הספה ואני זה סיפור אהבה", desc: "הכי קל שיש, ובלי להתאמץ" },
+  ];
+  const FOCUS = [
+    { v: 5, label: "בערך 5 דקות", sub: "ואז הראש כבר במקום אחר" },
+    { v: 10, label: "בערך 10 דקות" },
+    { v: 20, label: "בערך 20 דקות" },
+    { v: 30, label: "חצי שעה ויותר" },
+  ];
+  const STYLES = [
+    { id: "examples", label: "דוגמאות מהחיים", icon: "lightbulb" },
+    { id: "visual", label: "ציורים ותרשימים", icon: "image" },
+    { id: "listen", label: "לשמוע בקול", icon: "speaker-high" },
+    { id: "practice", label: "לתרגל שאלות", icon: "list-checks" },
+    { id: "stories", label: "סיפורים", icon: "book-open-text" },
+    { id: "short", label: "רשימות קצרות", icon: "cards" },
+  ];
+  const NEEDS = () => [
+    { id: "adhd", label: "קשב וריכוז", sub: "הראש בורח מהר" },
+    { id: "dyslexia", label: "קשה לי לקרוא הרבה טקסט", sub: "למשל דיסלקציה" },
+    { id: "dyscalculia", label: "קשה לי עם מספרים", sub: "למשל דיסקלקוליה" },
+    { id: "anxiety", label: "לחץ לפני מבחנים" },
+    { id: "starting", label: "קשה לי להתחיל" },
+    { id: "language", label: "עברית היא לא השפה הראשונה שלי" },
+    { id: "none", label: "אין משהו מיוחד" },
+  ];
+  const INTERESTS = ["כדורגל", "כדורסל", "גיימינג", "מוזיקה", "טיקטוק ויוטיוב", "חיות", "אוכל ובישול", "ציור ויצירה", "אופנה", "מדע וחלל", "ריקוד", "מכוניות", "סדרות וסרטים", "טבע וטיולים"];
+  const TONES = () => [
+    { id: "friend", label: g("כמו חבר", "כמו חברה"), sub: "בגובה העיניים, עם קצת הומור" },
+    { id: "calm", label: "רגוע ועדין", sub: "לאט, בסבלנות, בלי לחץ" },
+    { id: "short", label: "קצר ולעניין", sub: "בלי חפירות" },
+  ];
+
+  function derive(p = S.profile || {}) {
+    const lazy = p.lazy || 3;
+    const needs = new Set(p.needs || []);
+    const styles = new Set(p.styles || []);
+    let sentences = [4, 3, 3, 2, 2][lazy - 1];
+    if (needs.has("adhd")) sentences = Math.min(sentences, 2);
+    let focus = p.focus || 10;
+    if (needs.has("adhd")) focus = Math.min(focus, 10);
+    return {
+      sentences,
+      focus,
+      read: needs.has("dyslexia") || styles.has("listen"),
+      comfort: needs.has("dyslexia"),
+      large: needs.has("dyslexia") || (p.age && p.age <= 8),
+      calm: needs.has("anxiety"),
+      small: needs.has("starting") || lazy >= 4,
+    };
+  }
+
+  // What the AI tutor gets. No name.
+  function profileForAI() {
+    const p = S.profile || {};
+    const grade = GRADES.find(([v]) => v === p.grade);
+    return {
+      age: p.age || null,
+      grade: grade ? grade[1] : null,
+      gender: p.gender || "m",
+      laziness: p.lazy || 3,
+      focus_minutes: derive(p).focus,
+      max_sentences: derive(p).sentences,
+      styles: (p.styles || []).map((id) => (STYLES.find((s) => s.id === id) || {}).label).filter(Boolean),
+      needs: (p.needs || []).filter((n) => n !== "none"),
+      interests: p.interests || [],
+      tone: p.tone || "friend",
+    };
+  }
+
+  // ---------- Screens ----------
+  let current = { name: null };
+  function mount(html, cls = "") {
+    stopSpeaking();
+    closeSheet(true);
+    const app = $("#app");
+    const old = $(".screen:not(.screen--leave)", app);
+    const el = document.createElement("main");
+    el.className = `screen ${cls} screen--enter`;
+    el.innerHTML = html;
+    if (old) {
+      old.classList.remove("screen--enter");
+      old.classList.add("screen--leave");
+      setTimeout(() => old.remove(), 200);
+    }
+    app.appendChild(el);
+    window.scrollTo(0, 0);
+    el.addEventListener("animationend", (e) => { if (e.target === el) el.classList.remove("screen--enter"); });
+    const f = $("[data-autofocus]", el);
+    if (f) f.focus({ preventScroll: true });
+    return el;
+  }
+
+  // Welcome ---------------------------------------------------------------
+  function welcome() {
+    current = { name: "welcome" };
+    const el = mount(`
+      <div class="topbar"><span class="brand" aria-label="Easy2Study">Easy<b>2</b>Study</span></div>
+      <div class="welcome__art" aria-hidden="true">
+        <div class="bites-art">
+          <div class="bite-art"><div class="bite-art__line bite-art__line--accent"></div><div class="bite-art__line"></div></div>
+          <div class="bite-art"><div class="bite-art__line bite-art__line--accent"></div><div class="bite-art__line"></div><div class="bite-art__line" style="width:70%"></div></div>
+          <div class="bite-art"><span class="bite-art__q">${icon("question")}</span><div class="bite-art__line bite-art__line--accent"></div><div class="bite-art__line"></div><div class="bite-art__line" style="width:62%"></div><div class="bite-art__row"><div class="bite-art__pill"></div><div class="bite-art__pill bite-art__pill--accent"></div></div></div>
+        </div>
+      </div>
+      <div class="welcome__copy stagger">
+        <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>ללמוד למבחן, בקצב שלך.</h1>
+        <p class="lead" style="--i:1">הסברים קצרים במילים פשוטות, חתיכה אחרי חתיכה. ותמיד אפשר להגיד "לא הבנתי".</p>
+      </div>
+      <div class="welcome__actions">
+        <button class="btn btn--primary btn--block" data-go>מתחילים ${icon("arrow-left")}</button>
+        <p class="small muted" style="text-align:center;margin:8px 0 0">לוקח פחות מדקה. בלי הרשמה.</p>
+      </div>`, "welcome");
+    $("[data-go]", el).onclick = () => onboarding(0, {});
+  }
+
+  // Onboarding ------------------------------------------------------------
+  const STEPS = ["name", "age", "grade", "lazy", "focus", "styles", "needs", "interests", "tone"];
+
+  function onboarding(i, draft) {
+    current = { name: "onboarding", i };
+    if (draft.gender) draftGender = draft.gender;
+    const step = STEPS[i];
+    const segs = STEPS.map((_, k) => `<span class="ob__seg" ${k <= i ? "data-on" : ""}></span>`).join("");
+    const optionalSteps = new Set(["styles", "needs", "interests"]);
+    const el = mount(`
+      <div class="topbar">
+        <button class="icon-btn" data-back aria-label="חזרה">${icon("arrow-right")}</button>
+        <div class="ob__progress" aria-hidden="true">${segs}</div>
+        <span class="small muted" style="white-space:nowrap">${i + 1} מתוך ${STEPS.length}</span>
+      </div>
+      <div class="ob__body stagger">${obStep(step, draft)}</div>
+      <div class="ob__foot">
+        <button class="btn btn--primary btn--block" data-next>${i === STEPS.length - 1 ? "סיימנו" : "הבא"} ${icon("arrow-left")}</button>
+        ${optionalSteps.has(step) ? `<button class="btn btn--ghost" data-skip>אפשר לדלג</button>` : ""}
+      </div>`, "ob");
+    $$(".ob__body > *", el).forEach((c, k) => c.style.setProperty("--i", k));
+    const next = $("[data-next]", el);
+    const valid = () => {
+      if (step === "name") return Boolean(draft.gender);
+      if (step === "grade") return Boolean(draft.grade);
+      return true;
+    };
+    const refresh = () => { next.disabled = !valid(); };
+    obBind(step, el, draft, refresh);
+    refresh();
+    $("[data-back]", el).onclick = () => (i === 0 ? (S.profile ? home() : welcome()) : onboarding(i - 1, draft));
+    next.onclick = () => (i === STEPS.length - 1 ? finishOnboarding(draft) : onboarding(i + 1, draft));
+    const skip = $("[data-skip]", el);
+    if (skip) skip.onclick = () => (i === STEPS.length - 1 ? finishOnboarding(draft) : onboarding(i + 1, draft));
+  }
+
+  const choiceRow = (attrs, label, sub, multi) => `
+    <button type="button" class="choice" role="${multi ? "checkbox" : "radio"}" ${multi ? "data-multi" : ""} ${attrs}>
+      <span class="choice__mark">${icon("check")}</span>
+      <span class="choice__text">${esc(label)}${sub ? `<span class="choice__sub">${esc(sub)}</span>` : ""}</span>
+    </button>`;
+
+  function obStep(step, d) {
+    switch (step) {
+      case "name":
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>היי! איך קוראים לך?</h1></div>
+          <div class="field"><label class="sr-only" for="ob-name">שם</label>
+            <input id="ob-name" class="input" autocomplete="given-name" maxlength="24" placeholder="השם שלך" value="${esc(d.name || "")}"></div>
+          <div class="ob__q"><h2 class="h3">איך לפנות אליך?</h2></div>
+          <div class="choices" role="radiogroup" aria-label="איך לפנות אליך">
+            ${choiceRow(`data-gender="m" aria-checked="${d.gender === "m"}"`, "בלשון זכר", "אתה")}
+            ${choiceRow(`data-gender="f" aria-checked="${d.gender === "f"}"`, "בלשון נקבה", "את")}
+          </div>`;
+      case "age":
+        if (!d.age) d.age = 13;
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>${g("בן", "בת")} כמה ${g("אתה", "את")}?</h1>
+          <p class="lead">ככה נדע באיזה מילים להסביר.</p></div>
+          <div class="stepper">
+            <button type="button" class="stepper__btn" data-age="1" aria-label="להוסיף שנה">+</button>
+            <output class="stepper__value" aria-live="polite">${d.age}</output>
+            <button type="button" class="stepper__btn" data-age="-1" aria-label="להוריד שנה">−</button>
+          </div>`;
+      case "grade":
+        if (!d.grade && d.age) {
+          const k = d.age - 6;
+          d.grade = d.age >= 19 ? "post" : k >= 1 && k <= 12 ? String(k) : null;
+        }
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>באיזו כיתה?</h1></div>
+          <div class="grade-grid" role="radiogroup" aria-label="כיתה">
+            ${GRADES.map(([v, l]) => `<button type="button" role="radio" class="chip ${v.length > 2 ? "chip--wide" : ""}" data-grade="${v}" aria-checked="${d.grade === v}">${l}</button>`).join("")}
+          </div>`;
+      case "lazy": {
+        if (!d.lazy) d.lazy = 3;
+        const L = LAZY()[d.lazy - 1];
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>כמה עצלנות יש בך?</h1>
+          <p class="lead">בכנות. אף אחד לא שופט, וזה רק כדי שנדע כמה לחתוך.</p></div>
+          <div class="lazy">
+            <div class="lazy__face"><div class="lazy__text"><div class="lazy__label">${esc(L.label)}</div><div class="lazy__desc">${esc(L.desc)}</div></div><span class="lazy__meter" style="transform:scaleX(${d.lazy / 5})"></span></div>
+            <input class="range" type="range" min="1" max="5" step="1" value="${d.lazy}" aria-label="רמת עצלנות, 1 עד 5" aria-valuetext="${esc(L.label)}">
+            <div class="range__ends" aria-hidden="true"><span>אש בעיניים</span><span>מצב ספה</span></div>
+          </div>`;
+      }
+      case "focus":
+        if (!d.focus) d.focus = 10;
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>כמה זמן ${g("אתה מצליח", "את מצליחה")} להתרכז ברצף?</h1>
+          <p class="lead">לפי זה נציע הפסקות קטנות בזמן הנכון.</p></div>
+          <div class="choices" role="radiogroup" aria-label="זמן ריכוז">
+            ${FOCUS.map((f) => choiceRow(`data-focus="${f.v}" aria-checked="${d.focus === f.v}"`, f.label, f.sub)).join("")}
+          </div>`;
+      case "styles":
+        d.styles = d.styles || [];
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>מה הכי עוזר לך להבין?</h1>
+          <p class="lead">אפשר לבחור כמה.</p></div>
+          <div class="chips">
+            ${STYLES.map((s) => `<button type="button" class="chip" data-style="${s.id}" aria-pressed="${d.styles.includes(s.id)}">${icon(s.icon)}${s.label}</button>`).join("")}
+          </div>`;
+      case "needs":
+        d.needs = d.needs || [];
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>יש משהו שיעזור לנו להתאים את עצמנו אליך?</h1></div>
+          <div class="ob__note">${icon("heart", "icon--sm")}<span>לא חובה. זה נשמר רק אצלך במכשיר, ומשמש רק כדי להסביר לך טוב יותר.</span></div>
+          <div class="choices">
+            ${NEEDS().map((n) => choiceRow(`data-need="${n.id}" aria-checked="${d.needs.includes(n.id)}"`, n.label, n.sub, true)).join("")}
+          </div>`;
+      case "interests":
+        d.interests = d.interests || [];
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>מה ${g("אתה אוהב", "את אוהבת")}?</h1>
+          <p class="lead">נביא דוגמאות מהעולם שלך. אפשר לבחור כמה.</p></div>
+          <div class="chips">
+            ${INTERESTS.map((x) => `<button type="button" class="chip" data-interest="${esc(x)}" aria-pressed="${d.interests.includes(x)}">${esc(x)}</button>`).join("")}
+          </div>`;
+      case "tone":
+        if (!d.tone) d.tone = "friend";
+        return `
+          <div class="ob__q"><h1 class="h2" tabindex="-1" data-autofocus>ואיך לדבר איתך?</h1></div>
+          <div class="choices" role="radiogroup" aria-label="סגנון דיבור">
+            ${TONES().map((t) => choiceRow(`data-tone="${t.id}" aria-checked="${d.tone === t.id}"`, t.label, t.sub)).join("")}
+          </div>`;
+    }
+    return "";
+  }
+
+  function radio(el, attr, onPick) {
+    $$(`[${attr}]`, el).forEach((b) => {
+      b.onclick = () => {
+        $$(`[${attr}]`, el).forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        onPick(b.getAttribute(attr));
+      };
+    });
+  }
+  function toggles(el, attr, list, { exclusive, prop = "aria-pressed" } = {}) {
+    $$(`[${attr}]`, el).forEach((b) => {
+      b.onclick = () => {
+        const v = b.getAttribute(attr);
+        const at = list.indexOf(v);
+        if (at >= 0) list.splice(at, 1);
+        else {
+          if (exclusive && v === exclusive) list.splice(0, list.length);
+          else if (exclusive) { const x = list.indexOf(exclusive); if (x >= 0) list.splice(x, 1); }
+          list.push(v);
+        }
+        $$(`[${attr}]`, el).forEach((x) => x.setAttribute(prop, String(list.includes(x.getAttribute(attr)))));
+      };
+    });
+  }
+
+  function obBind(step, el, d, changed) {
+    switch (step) {
+      case "name": {
+        const inp = $("#ob-name", el);
+        inp.oninput = () => { d.name = inp.value.trim(); };
+        inp.onkeydown = (e) => { if (e.key === "Enter") inp.blur(); };
+        radio(el, "data-gender", (v) => {
+          d.gender = v;
+          draftGender = v;
+          changed();
+        });
+        break;
+      }
+      case "age": {
+        const out = $(".stepper__value", el);
+        $$("[data-age]", el).forEach((b) => {
+          b.onclick = () => {
+            d.age = Math.max(5, Math.min(99, d.age + Number(b.dataset.age)));
+            out.textContent = d.age;
+            d.grade = null;
+            out.classList.remove("bump");
+            void out.offsetWidth;
+            out.classList.add("bump");
+          };
+        });
+        break;
+      }
+      case "grade":
+        radio(el, "data-grade", (v) => { d.grade = v; changed(); });
+        break;
+      case "lazy": {
+        const r = $(".range", el);
+        const text = $(".lazy__text", el);
+        const meter = $(".lazy__meter", el);
+        r.oninput = () => {
+          d.lazy = Number(r.value);
+          const L = LAZY()[d.lazy - 1];
+          meter.style.transform = `scaleX(${d.lazy / 5})`;
+          r.setAttribute("aria-valuetext", L.label);
+          text.classList.add("swap");
+          clearTimeout(r._t);
+          r._t = setTimeout(() => {
+            $(".lazy__label", text).textContent = L.label;
+            $(".lazy__desc", text).textContent = L.desc;
+            text.classList.remove("swap");
+          }, 140);
+        };
+        break;
+      }
+      case "focus":
+        radio(el, "data-focus", (v) => { d.focus = Number(v); });
+        break;
+      case "styles":
+        toggles(el, "data-style", d.styles);
+        break;
+      case "needs":
+        toggles(el, "data-need", d.needs, { exclusive: "none", prop: "aria-checked" });
+        break;
+      case "interests":
+        toggles(el, "data-interest", d.interests);
+        break;
+      case "tone":
+        radio(el, "data-tone", (v) => { d.tone = v; });
+        break;
+    }
+  }
+
+  function finishOnboarding(d) {
+    const first = !S.profile;
+    S.profile = { name: d.name || "", gender: d.gender || "m", age: d.age || null, grade: d.grade || null, lazy: d.lazy || 3, focus: d.focus || 10, styles: d.styles || [], needs: d.needs || [], interests: d.interests || [], tone: d.tone || "friend" };
+    const a = derive();
+    if (first) {
+      if (a.large) S.settings.size = "l";
+      if (a.comfort) S.settings.comfort = true;
+      if (a.read) S.settings.read = true;
+    }
+    save();
+    applySettings();
+    ready();
+  }
+
+  function ready() {
+    current = { name: "ready" };
+    const p = S.profile;
+    const a = derive();
+    const rows = [
+      ["cards", `הסברים קצרים: עד ${a.sentences} משפטים בכל פעם`],
+      ["question", `כפתור "לא הבנתי" תמיד פה, בלי בושה`],
+      ["coffee", `הפסקה קטנה בערך כל ${a.focus} דקות`],
+    ];
+    if (S.settings.read) rows.push(["speaker-high", "אקריא לך כל הסבר בקול"]);
+    if (S.settings.comfort) rows.push(["text-aa", "טקסט גדול ומרווח, נוח לקריאה"]);
+    if (a.calm) rows.push(["wind", "תרגול בלי ציונים, ותרגיל נשימה כשצריך"]);
+    if (p.interests.length) rows.push(["heart", `דוגמאות מ${p.interests.slice(0, 2).join(" ומ")}`]);
+    const el = mount(`
+      <div class="topbar"><span class="brand">Easy<b>2</b>Study</span></div>
+      <div class="ob__body stagger" style="padding-top:12px">
+        <div class="ob__q">
+          <h1 class="h1" tabindex="-1" data-autofocus>${p.name ? `${esc(p.name)}, ` : ""}הכל מוכן.</h1>
+          <p class="lead">ככה נלמד ביחד:</p>
+        </div>
+        <div class="adapt">
+          ${rows.map(([ic, t]) => `<div class="adapt__row"><span class="adapt__ic">${icon(ic)}</span><span>${esc(t)}</span></div>`).join("")}
+        </div>
+        <p class="small muted" style="margin:0">אפשר לשנות הכל בכל רגע מההגדרות.</p>
+      </div>
+      <div class="ob__foot"><button class="btn btn--primary btn--block" data-go>${g("יאללה, בוא", "יאללה, בואי")} ${icon("arrow-left")}</button></div>`);
+    $$(".ob__body > *", el).forEach((c, k) => c.style.setProperty("--i", k));
+    $("[data-go]", el).onclick = home;
+  }
+
+  // Home ------------------------------------------------------------------
+  function streak() {
+    const days = new Set(S.days);
+    let n = 0;
+    const d = new Date();
+    if (!days.has(today())) d.setDate(d.getDate() - 1);
+    while (days.has(d.toISOString().slice(0, 10))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  function markStudied() {
+    const t = today();
+    if (!S.days.includes(t)) { S.days.push(t); S.days = S.days.slice(-90); save(); }
+  }
+  function greeting() {
+    const h = new Date().getHours();
+    if (h < 5) return "לילה טוב";
+    if (h < 12) return "בוקר טוב";
+    if (h < 17) return "צהריים טובים";
+    if (h < 21) return "ערב טוב";
+    return "לילה טוב";
+  }
+  const subjectOf = (id) => SUBJECTS.find((s) => s.id === id) || SUBJECTS[SUBJECTS.length - 1];
+  function getLesson(id) {
+    const rec = S.lessons[id];
+    if (rec && rec.lesson) return rec.lesson;
+    return BUILTIN.find((l) => l.id === id) || null;
+  }
+  function stepsOf(lesson) {
+    const steps = [];
+    lesson.bites.forEach((b, i) => {
+      steps.push({ t: "bite", i });
+      if (b.check && b.check.question) steps.push({ t: "check", i });
+    });
+    return steps;
+  }
+
+  function home() {
+    current = { name: "home" };
+    const p = S.profile;
+    const a = derive();
+    const recs = Object.entries(S.lessons).map(([id, r]) => ({ id, ...r, lesson: getLesson(id) })).filter((r) => r.lesson);
+    const going = recs.filter((r) => !r.done).sort((x, y) => y.updated - x.updated).slice(0, 2);
+    const done = recs.filter((r) => r.done).sort((x, y) => (y.feel === "lost") - (x.feel === "lost") || y.updated - x.updated).slice(0, 4);
+    const st = streak();
+    const sub = a.small
+      ? "מתחילים ב-2 דקות. אם בא לך עוד, ממשיכים."
+      : `${g("תגיד", "תגידי")} לי על מה המבחן, ואני אפרק את זה לחתיכות קטנות.`;
+    const el = mount(`
+      <div class="topbar">
+        <span class="brand">Easy<b>2</b>Study</span>
+        <span class="topbar__spacer"></span>
+        ${st >= 2 ? `<span class="streak" title="ימים ברצף">${icon("flame", "icon--sm")}${st} ימים ברצף</span>` : ""}
+        <button class="icon-btn" data-settings aria-label="הגדרות">${icon("gear-six")}</button>
+      </div>
+      <div class="home__hello stagger">
+        <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>${greeting()}${p.name ? `, ${esc(p.name)}` : ""}</h1>
+      </div>
+      <section class="start stagger" aria-labelledby="start-t" style="--i:1">
+        <h2 class="start__title" id="start-t">מה לומדים היום?</h2>
+        <p class="start__sub">${esc(sub)}</p>
+        <button class="btn" data-new>${icon("plus")}${g("בוא", "בואי")} נתחיל</button>
+      </section>
+      ${going.length ? `
+      <section class="section" aria-labelledby="cont-t">
+        <h2 class="h3" id="cont-t">להמשיך מאיפה ${g("שעצרת", "שעצרת")}</h2>
+        ${going.map((r) => {
+          const n = stepsOf(r.lesson).length;
+          const pct = Math.round(((r.pos || 0) / n) * 100);
+          return `<button class="resume" data-open="${esc(r.id)}">
+            <span class="ring" style="--p:${pct}"><span>${pct}%</span></span>
+            <span class="resume__text"><span class="resume__title">${esc(r.lesson.title)}</span><span class="small muted">${esc(subjectOf(r.lesson.subject).name)}</span></span>
+            ${icon("caret-left", "icon--sm")}
+          </button>`;
+        }).join("")}
+      </section>` : ""}
+      ${done.length ? `
+      <section class="section" aria-labelledby="rev-t">
+        <h2 class="h3" id="rev-t">חזרה מהירה</h2>
+        <div class="review">
+          ${done.map((r) => `<button class="review__row" data-review="${esc(r.id)}">
+            <span class="review__ic">${icon(subjectOf(r.lesson.subject).icon)}</span>
+            <span class="review__text"><b style="font-weight:600">${esc(r.lesson.title)}</b><br><span class="small muted">${r.feel === "lost" ? "כדאי לעבור על זה שוב" : r.feel === "ok" ? "עוד סיבוב קטן ויהיה מושלם" : "רק לרענן"}</span></span>
+            <span class="review__go">${icon("arrow-counter-clockwise")}</span>
+          </button>`).join("")}
+        </div>
+      </section>` : ""}
+      <section class="section" aria-labelledby="ex-t">
+        <div class="section__head"><h2 class="h3" id="ex-t">שיעורים מוכנים</h2><span class="small muted">בלי אינטרנט</span></div>
+        <div class="lesson-rail">
+          ${BUILTIN.map((l) => `<button class="tile" data-open="${l.id}">
+            <span class="tile__ic">${icon(subjectOf(l.subject).icon)}</span>
+            <span><span class="tile__title">${esc(l.title)}</span><span class="tile__meta" style="display:block">${esc(l.subtitle)}</span></span>
+          </button>`).join("")}
+        </div>
+      </section>`, "home");
+    $("[data-settings]", el).onclick = settingsSheet;
+    $("[data-new]", el).onclick = () => newLesson();
+    $$("[data-open]", el).forEach((b) => (b.onclick = () => openLesson(b.dataset.open)));
+    $$("[data-review]", el).forEach((b) => (b.onclick = () => review(b.dataset.review)));
+  }
+
+  // New lesson ------------------------------------------------------------
+  function newLesson() {
+    current = { name: "new" };
+    const ai = Tutor.available();
+    const d = { subject: null, topic: "", material: "", image: null, when: null, paste: false };
+    const WHEN = [["today", "היום"], ["tomorrow", "מחר"], ["week", "השבוע"], ["later", "בעוד יותר משבוע"], ["unknown", g("לא יודע", "לא יודעת")]];
+    const el = mount(`
+      <div class="topbar">
+        <button class="icon-btn" data-back aria-label="חזרה">${icon("arrow-right")}</button>
+      </div>
+      <div class="new__body stagger">
+        <h1 class="h2" tabindex="-1" data-autofocus>על מה המבחן?</h1>
+        <div class="field">
+          <span class="label" id="subj-l">מקצוע</span>
+          <div class="chips chips--scroll" role="radiogroup" aria-labelledby="subj-l">
+            ${SUBJECTS.map((s) => `<button type="button" role="radio" class="chip" data-subject="${s.id}" aria-checked="false">${icon(s.icon)}${s.name}</button>`).join("")}
+          </div>
+        </div>
+        <div class="field">
+          <label class="label" for="topic">הנושא</label>
+          <input id="topic" class="input" maxlength="140" placeholder="למשל: שברים, מחזור המים">
+          <span class="help">אפשר לכתוב במילים שלך. גם "מה שהמורה אמרה בשיעור האחרון" זה בסדר.</span>
+        </div>
+        ${ai ? `
+        <div class="field">
+          <span class="label">יש לך חומר מהמורה? <span class="muted" style="font-weight:400">(לא חובה)</span></span>
+          <div class="attach">
+            <button type="button" class="attach__btn" data-photo aria-pressed="false">${icon("camera", "icon--lg")}<span>לצלם דף<small>מהספר או מהמחברת</small></span></button>
+            <button type="button" class="attach__btn" data-paste aria-pressed="false">${icon("clipboard-text", "icon--lg")}<span>להדביק טקסט<small>סיכום, דף עבודה</small></span></button>
+          </div>
+          <input type="file" accept="image/*" capture="environment" hidden data-file>
+          <div data-photo-preview></div>
+          <div data-paste-box hidden><label class="sr-only" for="material">החומר</label><textarea id="material" class="textarea" maxlength="8000" placeholder="להדביק כאן את החומר"></textarea></div>
+        </div>` : ""}
+        <div class="field">
+          <span class="label" id="when-l">מתי המבחן?</span>
+          <div class="chips" role="radiogroup" aria-labelledby="when-l">
+            ${WHEN.map(([v, l]) => `<button type="button" role="radio" class="chip" data-when="${v}" aria-checked="false">${l}</button>`).join("")}
+          </div>
+        </div>
+        ${ai ? "" : `<div class="notice">${icon("sparkle", "icon--sm")}<span>המורה החכם (AI) עוד לא מחובר, אז כרגע אפשר ללמוד את השיעורים המוכנים: שברים, מחזור המים, Present Simple והמהפכה התעשייתית. אחרי החיבור, כל נושא יעבוד.</span></div>`}
+        <p class="small muted" data-err role="alert" style="margin:0"></p>
+      </div>
+      <div class="sticky-foot"><button class="btn btn--primary btn--block" data-make disabled>${icon("sparkle")}להכין לי שיעור</button></div>`, "new");
+
+    const make = $("[data-make]", el);
+    const topic = $("#topic", el);
+    const err = $("[data-err]", el);
+    const refresh = () => { make.disabled = !(d.topic.trim() || d.image || d.material.trim()); err.textContent = ""; };
+    $("[data-back]", el).onclick = home;
+    radio(el, "data-subject", (v) => { d.subject = v; });
+    radio(el, "data-when", (v) => { d.when = v; });
+    topic.oninput = () => { d.topic = topic.value; refresh(); };
+    topic.onkeydown = (e) => { if (e.key === "Enter" && !make.disabled) make.click(); };
+    if (ai) {
+      const file = $("[data-file]", el);
+      const prev = $("[data-photo-preview]", el);
+      const photoBtn = $("[data-photo]", el);
+      const pasteBtn = $("[data-paste]", el);
+      const box = $("[data-paste-box]", el);
+      const mat = $("#material", el);
+      photoBtn.onclick = () => file.click();
+      file.onchange = async () => {
+        const f = file.files && file.files[0];
+        if (!f) return;
+        try {
+          d.image = await shrinkImage(f);
+          photoBtn.setAttribute("aria-pressed", "true");
+          prev.innerHTML = `<div class="photo-preview"><img alt="הדף ${g("שצילמת", "שצילמת")}" src="data:${d.image.media_type};base64,${d.image.data}"><button type="button" class="icon-btn" data-rm aria-label="להסיר את התמונה">${icon("x")}</button></div>`;
+          $("[data-rm]", prev).onclick = () => { d.image = null; prev.innerHTML = ""; file.value = ""; photoBtn.setAttribute("aria-pressed", "false"); refresh(); };
+        } catch {
+          toast("לא הצלחתי לפתוח את התמונה. אפשר לנסות שוב?");
+        }
+        refresh();
+      };
+      pasteBtn.onclick = () => {
+        d.paste = !d.paste;
+        box.hidden = !d.paste;
+        pasteBtn.setAttribute("aria-pressed", String(d.paste));
+        if (d.paste) mat.focus(); else { d.material = ""; mat.value = ""; refresh(); }
+      };
+      mat.oninput = () => { d.material = mat.value; refresh(); };
+    }
+    make.onclick = () => {
+      const t = d.topic.trim().toLowerCase();
+      const match = BUILTIN.find((l) => l.keywords.some((k) => t.includes(k.toLowerCase()) || (t.length > 2 && k.toLowerCase().includes(t))) || l.title.toLowerCase() === t);
+      if (!ai) {
+        if (match) return openLesson(match.id);
+        err.textContent = "את הנושא הזה אפשר יהיה ללמוד כשהמורה החכם יחובר. בינתיים אפשר לבחור שיעור מוכן מהמסך הראשי.";
+        return;
+      }
+      generate(d);
+    };
+  }
+
+  // Phone photos are big: resize to at most 1600px and send as JPEG.
+  function shrinkImage(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const max = 1600;
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * k);
+        c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        const data = c.toDataURL("image/jpeg", 0.82).split(",")[1];
+        resolve({ media_type: "image/jpeg", data });
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+      img.src = url;
+    });
+  }
+
+  // Loading ---------------------------------------------------------------
+  function generate(d) {
+    current = { name: "loading" };
+    const p = S.profile || {};
+    const fav = (p.interests || [])[0];
+    const lines = [
+      d.image ? "קורא את הדף ששלחת..." : "חושב איך להסביר את זה הכי פשוט...",
+      "מפרק את החומר לחתיכות קטנות...",
+      fav ? `מחפש דוגמאות מ${fav}...` : "מחפש דוגמאות מהחיים...",
+      "מכין שאלות קטנות, בלי ציונים...",
+      "כמעט מוכן...",
+    ];
+    const el = mount(`
+      <div class="topbar"><button class="icon-btn" data-back aria-label="ביטול">${icon("x")}</button></div>
+      <div class="loading">
+        <div class="skeleton" aria-hidden="true"><div class="sk sk--title"></div><div style="height:4px"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+        <p class="loading__line" role="status" aria-live="polite">${esc(lines[0])}</p>
+      </div>`);
+    let k = 0, alive = true;
+    const line = $(".loading__line", el);
+    const rot = setInterval(() => {
+      k = Math.min(k + 1, lines.length - 1);
+      line.style.opacity = 0;
+      setTimeout(() => { line.textContent = lines[k]; line.style.opacity = 1; }, 240);
+    }, 3800);
+    $("[data-back]", el).onclick = () => { alive = false; clearInterval(rot); newLesson(); };
+    Tutor.lesson({
+      profile: profileForAI(),
+      subject: d.subject ? subjectOf(d.subject).name : null,
+      topic: d.topic.trim(),
+      material: d.material.trim() || null,
+      image: d.image,
+      when: d.when,
+    }).then((res) => {
+      clearInterval(rot);
+      if (!alive) return;
+      const lesson = normalizeLesson(res.lesson, d.subject);
+      if (!lesson) throw Object.assign(new Error("bad lesson"), { code: "bad_lesson" });
+      const id = "ai-" + Date.now().toString(36);
+      S.lessons[id] = { lesson, pos: 0, done: false, updated: Date.now() };
+      save();
+      openLesson(id);
+    }).catch((e) => {
+      clearInterval(rot);
+      if (!alive) return;
+      failed(e.code, d);
+    });
+  }
+
+  function failed(code, d) {
+    const msg = {
+      daily_limit: "הגעת למכסת השיעורים החכמים להיום. מחר יש עוד! בינתיים אפשר לחזור על שיעורים קודמים.",
+      refused: "לא הצלחתי להכין שיעור מהחומר הזה. אפשר לנסח את הנושא קצת אחרת?",
+      too_long: "החומר ארוך מדי בשביל פעם אחת. אפשר לשלוח חלק ממנו?",
+      image_too_large: "התמונה גדולה מדי. אפשר לנסות לצלם שוב?",
+      network: "נראה שאין חיבור לאינטרנט כרגע.",
+      timeout: "זה לקח יותר מדי זמן. אפשר לנסות שוב?",
+    }[code] || "משהו השתבש אצלי, לא אצלך. אפשר לנסות שוב?";
+    current = { name: "error" };
+    const el = mount(`
+      <div class="topbar"><button class="icon-btn" data-back aria-label="חזרה">${icon("arrow-right")}</button></div>
+      <div class="loading" style="text-align:center;justify-items:center">
+        <span class="adapt__ic" style="width:64px;height:64px;border-radius:22px">${icon("smiley-nervous", "icon--lg")}</span>
+        <h1 class="h2" tabindex="-1" data-autofocus>אופס.</h1>
+        <p class="lead">${esc(msg)}</p>
+        <div style="display:grid;gap:8px;width:100%;margin-top:8px">
+          <button class="btn btn--primary btn--block" data-retry>${icon("arrow-counter-clockwise")}לנסות שוב</button>
+          <button class="btn btn--ghost" data-home>למסך הראשי</button>
+        </div>
+      </div>`);
+    $("[data-back]", el).onclick = newLesson;
+    $("[data-retry]", el).onclick = () => generate(d);
+    $("[data-home]", el).onclick = home;
+  }
+
+  // Whatever comes back from the tutor, keep only what the app can show.
+  function normalizeLesson(raw, subject) {
+    if (!raw || !Array.isArray(raw.bites)) return null;
+    const str = (v) => (typeof v === "string" ? v.trim() : "");
+    const bites = raw.bites.map((b) => {
+      const bite = { title: str(b.title), text: str(b.text), simpler: str(b.simpler), example: str(b.example) };
+      const c = b.check || {};
+      const options = Array.isArray(c.options) ? c.options.map(str).filter(Boolean).slice(0, 4) : [];
+      if (str(c.question) && options.length >= 2 && Number.isInteger(c.answer) && c.answer >= 0 && c.answer < options.length) {
+        bite.check = { question: str(c.question), options, answer: c.answer, why: str(c.why) };
+      }
+      return bite;
+    }).filter((b) => b.title && b.text).slice(0, 10);
+    if (!bites.length) return null;
+    const glossary = {};
+    (raw.terms || []).forEach((t) => { if (t && str(t.word) && str(t.meaning)) glossary[str(t.word)] = str(t.meaning); });
+    return {
+      title: str(raw.title) || "השיעור שלי",
+      subtitle: str(raw.subtitle),
+      subject: subject || "other",
+      glossary,
+      bites,
+      summary: Array.isArray(raw.summary) ? raw.summary.map(str).filter(Boolean).slice(0, 6) : [],
+      ai: true,
+    };
+  }
+
+  // Lesson ----------------------------------------------------------------
+  let L = null; // the open lesson: {id, lesson, steps, pos, extras, simple, ...}
+  let breakTimer = null;
+
+  function openLesson(id, { simple = false, restart = false } = {}) {
+    const lesson = getLesson(id);
+    if (!lesson) return home();
+    const rec = S.lessons[id] || (S.lessons[id] = { pos: 0, done: false });
+    if (restart || rec.done) rec.pos = 0;
+    rec.done = false;
+    rec.updated = Date.now();
+    save();
+    const steps = stepsOf(lesson);
+    L = { id, lesson, steps, pos: Math.min(rec.pos || 0, steps.length - 1), extras: {}, answered: {}, simple, lost: 0, activeMs: 0, lastTick: Date.now(), nextBreak: derive().focus * 60000, firstCheck: true };
+    clearInterval(breakTimer);
+    breakTimer = setInterval(tickBreak, 15000);
+    renderStep();
+  }
+
+  function tickBreak() {
+    if (!L || current.name !== "lesson") return;
+    const now = Date.now();
+    if (!document.hidden) L.activeMs += Math.min(now - L.lastTick, 30000);
+    L.lastTick = now;
+    if (L.activeMs >= L.nextBreak && !$(".sheet-wrap")) {
+      L.nextBreak = L.activeMs + derive().focus * 60000;
+      breakSheet();
+    }
+  }
+
+  function progressBar() {
+    return `<div class="progress" role="progressbar" aria-label="התקדמות בשיעור" aria-valuemin="0" aria-valuemax="${L.steps.length}" aria-valuenow="${L.pos}">
+      ${L.steps.map((_, k) => `<span class="progress__seg" data-state="${k < L.pos ? "done" : k === L.pos ? "now" : "todo"}"></span>`).join("")}
+    </div>`;
+  }
+
+  function lessonTop() {
+    return `<div class="topbar">
+      <button class="icon-btn" data-close aria-label="לצאת מהשיעור">${icon("x")}</button>
+      ${progressBar()}
+      <button class="icon-btn" data-read aria-label="הקראה בקול" aria-pressed="${S.settings.read}">${icon("speaker-high")}</button>
+    </div>`;
+  }
+
+  function bindLessonTop(el, readFn) {
+    $("[data-close]", el).onclick = () => { stopSpeaking(); clearInterval(breakTimer); home(); };
+    const rb = $("[data-read]", el);
+    rb.onclick = () => {
+      S.settings.read = !S.settings.read;
+      save();
+      rb.setAttribute("aria-pressed", String(S.settings.read));
+      if (S.settings.read) readFn(); else stopSpeaking();
+      toast(S.settings.read ? "הקראה בקול: פועלת" : "הקראה בקול: כבויה");
+    };
+  }
+
+  function renderStep() {
+    current = { name: "lesson" };
+    const step = L.steps[L.pos];
+    const rec = S.lessons[L.id];
+    rec.pos = L.pos;
+    rec.updated = Date.now();
+    save();
+    if (step.t === "check") return renderCheck(step.i);
+    renderBite(step.i);
+  }
+
+  function visualHtml(v) {
+    if (!v) return "";
+    const pie = (n, k, cap, sm) => `<div><div class="pie ${sm ? "pie--sm" : ""}" style="--n:${n};--k:${k}"><span class="pie__cuts"></span></div>${cap ? `<div class="visual__cap">${frac(...cap.split("/"))}</div>` : ""}</div>`;
+    if (v.type === "pie") return `<div class="visual" aria-hidden="true">${pie(v.n, v.k, v.cap)}</div>`;
+    if (v.type === "pies") return `<div class="visual" aria-hidden="true">${v.items.map((x) => pie(x.n, x.k, x.cap, true)).join("")}</div>`;
+    if (v.type === "cycle") {
+      const names = [["sun", "התאדות"], ["wind", "התעבות"], ["arrow-counter-clockwise", "משקעים"], ["globe-hemisphere-west", "איסוף"]];
+      return `<div class="visual" aria-hidden="true"><div class="cycle">${names.map(([ic, n], k) => `<div class="cycle__step" ${v.on === k || v.on === -1 ? "data-on" : ""}>${icon(ic)}${n}</div>`).join("")}</div></div>`;
+    }
+    return "";
+  }
+
+  function extraHtml(x) {
+    const label = { example: ["lightbulb", "דוגמה"], simpler: ["feather", "במילים פשוטות יותר"], again: ["arrow-counter-clockwise", "הסבר אחר"], answer: ["chat-circle-text", "תשובה לשאלה שלך"], word: ["book-open-text", x.word ? `מה זה "${x.word}"?` : "מילה"] }[x.kind] || ["sparkle", ""];
+    const you = x.q ? `<div class="extra extra--you"><span class="extra__label">${icon("chat-circle-text")}${g("שאלת", "שאלת")}</span><p>${esc(x.q)}</p></div>` : "";
+    const body = x.loading ? `<span class="typing" aria-label="חושב"><i></i><i></i><i></i></span>` : `<p>${rich(x.text, { lines: false })}</p>${x.example ? `<p class="muted" style="margin-top:6px">${rich(x.example, { lines: false })}</p>` : ""}`;
+    return `${you}<div class="extra" data-extra="${x.key}"><span class="extra__label">${icon(label[0])}${esc(label[1])}</span>${body}</div>`;
+  }
+
+  function renderBite(i) {
+    const b = L.lesson.bites[i];
+    const n = L.lesson.bites.length;
+    const extras = L.extras[i] || (L.extras[i] = []);
+    if (L.simple && b.simpler && !extras.some((x) => x.kind === "simpler")) {
+      extras.push({ kind: "simpler", text: b.simpler, key: "s" + i });
+      if (b.example) extras.push({ kind: "example", text: b.example, key: "e" + i });
+    }
+    const isLast = L.pos === L.steps.length - 1;
+    const el = mount(`
+      ${lessonTop()}
+      <div class="lesson__stage">
+        <span class="lesson__kicker">${esc(L.lesson.title)} · ${i + 1} מתוך ${n}</span>
+        <article class="bite bite--enter" aria-live="polite">
+          <h1 class="bite__title" tabindex="-1" data-autofocus>${rich(b.title, { lines: false })}</h1>
+          ${visualHtml(b.visual)}
+          <div class="bite__text">${rich(b.text)}</div>
+          <div data-extras>${extras.map(extraHtml).join("")}</div>
+        </article>
+        <div class="tools" role="group" aria-label="עזרה">
+          <button type="button" class="chip" data-tool="example">${icon("lightbulb")}דוגמה</button>
+          <button type="button" class="chip" data-tool="simpler">${icon("feather")}יותר פשוט</button>
+          <button type="button" class="chip" data-tool="ask">${icon("chat-circle-text")}שאלה משלי</button>
+        </div>
+      </div>
+      <div class="lesson__bar">
+        <button class="btn btn--lost" data-lost>${icon("question")}לא הבנתי</button>
+        <button class="btn btn--primary" data-next>${isLast ? "סיימתי" : "הבנתי"} ${icon(isLast ? "check" : "arrow-left")}</button>
+      </div>`, "lesson");
+    const read = () => speak(`${spoken(b.title)}. ${spoken(b.text)}`);
+    bindLessonTop(el, read);
+    if (S.settings.read) setTimeout(read, 350);
+    bindTerms(el);
+    $("[data-next]", el).onclick = () => { markStudied(); advance(); };
+    $("[data-lost]", el).onclick = () => lostSheet(i);
+    $$("[data-tool]", el).forEach((t) => {
+      t.onclick = () => {
+        const k = t.dataset.tool;
+        if (k === "ask") return askSheet(i);
+        addHelp(i, k);
+      };
+    });
+  }
+
+  function bindTerms(el) {
+    $$(".term", el).forEach((t) => (t.onclick = () => termSheet(t.dataset.term)));
+  }
+
+  function advance() {
+    if (L.pos >= L.steps.length - 1) return finishLesson();
+    L.pos++;
+    renderStep();
+  }
+
+  // Adds an explanation under the bite: example, simpler, again (from scratch), word, answer.
+  function addHelp(i, kind, { word, question } = {}) {
+    const b = L.lesson.bites[i];
+    const extras = L.extras[i] || (L.extras[i] = []);
+    const key = kind + "-" + Date.now();
+    const box = $("[data-extras]");
+    const offline = () => {
+      if (kind === "example") return b.example ? { text: b.example } : null;
+      if (kind === "simpler") return b.simpler ? { text: b.simpler } : null;
+      if (kind === "again") return b.simpler ? { text: b.simpler, example: b.example } : null;
+      if (kind === "word") {
+        const m = lookup(word);
+        return m ? { text: m } : null;
+      }
+      return null;
+    };
+    // Built-in help first for the simple asks: instant and free.
+    const local = offline();
+    const useAI = Tutor.available() && (L.lesson.ai || kind === "answer" || !local || extras.some((x) => x.kind === kind));
+    if (!useAI) {
+      if (!local) return toast(kind === "answer" ? "שאלות חופשיות יעבדו כשהמורה החכם יחובר." : "אין לי עוד הסבר כזה לחלק הזה.");
+      if (extras.some((x) => x.kind === kind && x.text === local.text)) return scrollToExtra(extras.find((x) => x.kind === kind && x.text === local.text).key);
+      const x = { kind, key, word, ...local };
+      extras.push(x);
+      box.insertAdjacentHTML("beforeend", extraHtml(x));
+      afterExtra(key);
+      return;
+    }
+    const x = { kind, key, word, q: question, loading: true };
+    extras.push(x);
+    box.insertAdjacentHTML("beforeend", extraHtml(x));
+    scrollToExtra(key);
+    Tutor.help({
+      profile: profileForAI(),
+      lesson: { title: L.lesson.title, subject: subjectOf(L.lesson.subject).name },
+      bite: { title: spoken(b.title), text: spoken(b.text) },
+      kind,
+      word: word || null,
+      question: question || null,
+      previous: extras.filter((e) => e.text).map((e) => spoken(e.text)).slice(-3),
+    }).then((res) => {
+      Object.assign(x, { loading: false, text: res.text, example: res.example || "" });
+    }).catch(() => {
+      const f = local || { text: "לא הצלחתי לענות עכשיו. אפשר לנסות שוב עוד רגע?" };
+      Object.assign(x, { loading: false, ...f });
+    }).finally(() => {
+      const node = $(`[data-extra="${key}"]`);
+      if (!node) return;
+      const prev = node.previousElementSibling && node.previousElementSibling.classList.contains("extra--you") ? node.previousElementSibling : null;
+      if (prev) prev.remove();
+      node.outerHTML = extraHtml(x);
+      afterExtra(key);
+    });
+  }
+
+  function afterExtra(key) {
+    const node = $(`[data-extra="${key}"]`);
+    if (!node) return;
+    bindTerms(node.parentElement);
+    scrollToExtra(key);
+    if (S.settings.read) speak(node.textContent.replace(/^\s*\S.*?\n/, ""));
+  }
+  function scrollToExtra(key) {
+    const node = $(`[data-extra="${key}"]`);
+    if (node) node.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center" });
+  }
+
+  function lookup(word) {
+    const gl = (L && L.lesson.glossary) || {};
+    if (gl[word]) return gl[word];
+    const k = Object.keys(gl).find((w) => w.includes(word) || word.includes(w));
+    return k ? gl[k] : null;
+  }
+
+  // Sheets ----------------------------------------------------------------
+  let sheetState = null;
+  function sheet(html, label, onClose) {
+    closeSheet(true);
+    const wrap = document.createElement("div");
+    wrap.className = "sheet-wrap";
+    wrap.innerHTML = `<div class="sheet-scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet__grip" aria-hidden="true"></div>${html}</div>`;
+    document.body.appendChild(wrap);
+    sheetState = { wrap, onClose, back: document.activeElement };
+    $(".sheet-scrim", wrap).onclick = () => closeSheet();
+    $$("[data-sheet-close]", wrap).forEach((b) => (b.onclick = () => closeSheet()));
+    const f = $("[data-autofocus]", wrap) || $("button", wrap);
+    if (f) f.focus({ preventScroll: true });
+    return $(".sheet", wrap);
+  }
+  function closeSheet(instant) {
+    if (!sheetState) return;
+    const { wrap, onClose, back } = sheetState;
+    sheetState = null;
+    if (instant || reduceMotion()) wrap.remove();
+    else { wrap.classList.add("sheet--closing"); setTimeout(() => wrap.remove(), 220); }
+    if (onClose) onClose();
+    if (back && back.isConnected && !instant) back.focus({ preventScroll: true });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sheetState) closeSheet();
+    if (e.key === "Tab" && sheetState) {
+      const f = $$("button, input, textarea, [tabindex]:not([tabindex='-1'])", sheetState.wrap).filter((x) => !x.disabled && x.offsetParent !== null);
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+
+  function lostSheet(i) {
+    L.lost++;
+    const b = L.lesson.bites[i];
+    const hasTerms = /\*\*(.+?)\*\*/.test(b.text);
+    const lines = ["זה בסדר גמור. ככה לומדים.", "שאלה טובה זה חצי תשובה.", "כולם נתקעים לפעמים. גם המורים."];
+    const s = sheet(`
+      <div class="sheet__head">
+        <div><h2 class="h2" tabindex="-1" data-autofocus>מה לא ברור?</h2><p class="lead small" style="margin-top:4px">${lines[(L.lost - 1) % lines.length]}</p></div>
+        <button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button>
+      </div>
+      <div class="help-list">
+        <button class="help-opt" data-h="simpler"><span class="help-opt__ic">${icon("feather")}</span><span><b>להסביר יותר פשוט</b><small>במילים קלות יותר</small></span></button>
+        <button class="help-opt" data-h="example"><span class="help-opt__ic">${icon("lightbulb")}</span><span><b>דוגמה מהחיים</b><small>משהו שמכירים</small></span></button>
+        ${hasTerms ? `<button class="help-opt" data-h="word"><span class="help-opt__ic">${icon("book-open-text")}</span><span><b>מילה שלא הבנתי</b><small>המילים הצבועות בהסבר</small></span></button>` : ""}
+        <button class="help-opt" data-h="again"><span class="help-opt__ic">${icon("arrow-counter-clockwise")}</span><span><b>לא הבנתי כלום</b><small>נסביר מההתחלה, בדרך אחרת</small></span></button>
+      </div>
+      ${Tutor.available() ? `
+      <div class="field"><label class="label small" for="lost-q">או ${g("כתוב", "כתבי")} במילים שלך מה לא ברור</label>
+        <form class="ask" data-ask><textarea id="lost-q" class="textarea" maxlength="400" rows="1" placeholder="למשל: למה המכנה לא משתנה?"></textarea><button class="icon-btn" aria-label="שליחה">${icon("paper-plane-tilt")}</button></form></div>` : ""}
+      ${L.lost >= 3 ? `<button class="btn btn--ghost" data-break>${icon("coffee")}אולי הפסקה קטנה? הראש צריך מנוחה לפעמים</button>` : ""}
+    `, "מה לא ברור");
+    $$("[data-h]", s).forEach((btn) => {
+      btn.onclick = () => {
+        const k = btn.dataset.h;
+        if (k === "word") {
+          const words = [...b.text.matchAll(/\*\*(.+?)\*\*/g)].map((m) => m[1]);
+          closeSheet(true);
+          return wordPick(words);
+        }
+        closeSheet();
+        addHelp(i, k);
+      };
+    });
+    const form = $("[data-ask]", s);
+    if (form) bindAsk(form, i);
+    const br = $("[data-break]", s);
+    if (br) br.onclick = () => { closeSheet(true); breakSheet(); };
+  }
+
+  function bindAsk(form, i) {
+    const ta = $("textarea", form);
+    ta.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } };
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const q = ta.value.trim();
+      if (!q) return ta.focus();
+      closeSheet();
+      addHelp(i, "answer", { question: q });
+    };
+  }
+
+  function askSheet(i) {
+    if (!Tutor.available()) return toast("שאלות חופשיות יעבדו כשהמורה החכם יחובר.");
+    const s = sheet(`
+      <div class="sheet__head"><h2 class="h2">מה ${g("תרצה", "תרצי")} לשאול?</h2><button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button></div>
+      <p class="lead small" style="margin-top:-6px">אין שאלה טיפשית. באמת.</p>
+      <form class="ask" data-ask><label class="sr-only" for="ask-q">השאלה שלך</label><textarea id="ask-q" class="textarea" maxlength="400" rows="1" placeholder="השאלה שלך" data-autofocus></textarea><button class="icon-btn" aria-label="שליחה">${icon("paper-plane-tilt")}</button></form>
+    `, "שאלה משלי");
+    bindAsk($("[data-ask]", s), i);
+  }
+
+  function wordPick(words) {
+    const s = sheet(`
+      <div class="sheet__head"><h2 class="h2" tabindex="-1" data-autofocus>איזו מילה?</h2><button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button></div>
+      <div class="chips">${words.map((w) => `<button class="chip" data-w="${esc(w)}">${plain(w)}</button>`).join("")}</div>
+      <p class="small muted" style="margin:0">טיפ: אפשר תמיד ללחוץ על מילה צבועה בהסבר.</p>
+    `, "איזו מילה");
+    $$("[data-w]", s).forEach((b) => (b.onclick = () => termSheet(b.dataset.w)));
+  }
+
+  function termSheet(word) {
+    const meaning = lookup(word);
+    const s = sheet(`
+      <div class="sheet__head"><span class="small muted">מה זה אומר?</span><button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button></div>
+      <div class="word-card"><div class="word-card__w">${plain(word)}</div><p class="reading" style="margin:0" data-meaning>${meaning ? rich(meaning, { lines: false }) : `<span class="typing" aria-label="חושב"><i></i><i></i><i></i></span>`}</p></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn--soft" data-say style="flex:1">${icon("speaker-high")}להקריא</button>
+        <button class="btn btn--primary" data-sheet-close style="flex:1">הבנתי</button>
+      </div>
+    `, `מה זה ${word}`);
+    const say = () => speak(`${word}. ${spoken($("[data-meaning]", s).textContent)}`);
+    $("[data-say]", s).onclick = say;
+    if (!meaning) {
+      const step = L && L.steps[L.pos];
+      const b = step ? L.lesson.bites[step.i] : null;
+      if (!Tutor.available() || !b) { $("[data-meaning]", s).textContent = "אין לי עדיין הסבר למילה הזו."; return; }
+      Tutor.help({ profile: profileForAI(), lesson: { title: L.lesson.title, subject: subjectOf(L.lesson.subject).name }, bite: { title: spoken(b.title), text: spoken(b.text) }, kind: "word", word })
+        .then((r) => { L.lesson.glossary = { ...(L.lesson.glossary || {}), [word]: r.text }; save(); const m = $("[data-meaning]", s); if (m) m.innerHTML = rich(r.text, { lines: false }); })
+        .catch(() => { const m = $("[data-meaning]", s); if (m) m.textContent = "לא הצלחתי להביא הסבר עכשיו."; });
+    } else if (S.settings.read) setTimeout(say, 250);
+  }
+
+  function breakSheet() {
+    const mins = Math.max(1, Math.round((L ? L.activeMs : 0) / 60000));
+    const s = sheet(`
+      <div class="sheet__head"><div><h2 class="h2" tabindex="-1" data-autofocus>${g("עבדת", "עבדת")} יפה${L && L.activeMs > 60000 ? ` ${mins} דקות` : ""}.</h2><p class="lead small" style="margin-top:4px">הראש לומד גם בהפסקות. ממש.</p></div><button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button></div>
+      <div class="help-list">
+        <button class="help-opt" data-b="breathe"><span class="help-opt__ic">${icon("wind")}</span><span><b>נשימה של דקה</b><small>להירגע ולחזור עם ראש נקי</small></span></button>
+        <button class="help-opt" data-b="go"><span class="help-opt__ic">${icon("arrow-left")}</span><span><b>להמשיך ללמוד</b><small>אני בפוקוס</small></span></button>
+        <button class="help-opt" data-b="stop"><span class="help-opt__ic">${icon("house")}</span><span><b>מספיק להיום</b><small>ההתקדמות נשמרת</small></span></button>
+      </div>`, "הפסקה");
+    $$("[data-b]", s).forEach((b) => {
+      b.onclick = () => {
+        const k = b.dataset.b;
+        if (k === "breathe") return breathe();
+        closeSheet();
+        if (k === "stop") { clearInterval(breakTimer); home(); }
+      };
+    });
+  }
+
+  function breathe() {
+    const s = sheet(`
+      <div class="sheet__head"><h2 class="h2">נושמים ביחד</h2><button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button></div>
+      <div class="breath"><div class="breath__ring ${reduceMotion() ? "" : "run"}"><span data-say role="status" aria-live="polite">שאיפה...</span></div>
+      <p class="small muted" style="margin:0" data-count>3 נשימות</p></div>
+      <button class="btn btn--primary btn--block" data-sheet-close>${g("אני מוכן, ממשיכים", "אני מוכנה, ממשיכים")}</button>
+    `, "נשימה", () => clearInterval(t));
+    const say = $("[data-say]", s);
+    const cnt = $("[data-count]", s);
+    const phases = ["שאיפה...", "להחזיק...", "נשיפה..."];
+    let k = 0, rounds = 3;
+    const t = setInterval(() => {
+      k++;
+      say.textContent = phases[k % 3];
+      if (k % 3 === 0) {
+        rounds--;
+        cnt.textContent = rounds > 0 ? `עוד ${rounds === 1 ? "נשימה אחת" : `${rounds} נשימות`}` : "כל הכבוד";
+        if (rounds <= 0) { clearInterval(t); say.textContent = "מצוין"; }
+      }
+    }, 4000);
+  }
+
+  // Quick check -----------------------------------------------------------
+  const KEYS = ["א", "ב", "ג", "ד"];
+  function checkHtml(c, { kicker }) {
+    return `
+      <span class="lesson__kicker">${esc(kicker)}</span>
+      <article class="bite bite--enter check">
+        <h1 class="check__q" tabindex="-1" data-autofocus>${rich(c.question, { lines: false })}</h1>
+        <div class="choices" role="group" aria-label="תשובות">
+          ${c.options.map((o, k) => `<button class="answer" data-a="${k}"><span class="answer__key" aria-hidden="true">${KEYS[k]}</span><span>${rich(o, { lines: false })}</span></button>`).join("")}
+          <button class="answer answer--unsure" data-a="-1"><span class="answer__key" aria-hidden="true">${icon("question", "icon--sm")}</span><span>${g("לא בטוח", "לא בטוחה")}</span></button>
+        </div>
+        <div data-fb aria-live="polite"></div>
+      </article>`;
+  }
+
+  // Wires up a check. onDone(right) is called when the learner moves on.
+  function bindCheck(el, c, onAnswer) {
+    let locked = false;
+    $$("[data-a]", el).forEach((btn) => {
+      btn.onclick = () => {
+        if (locked) return;
+        locked = true;
+        const a = Number(btn.dataset.a);
+        const right = a === c.answer;
+        const rightBtn = $(`[data-a="${c.answer}"]`, el);
+        $$("[data-a]", el).forEach((x) => { if (x !== rightBtn && x !== btn) x.dataset.state = "faded"; x.setAttribute("aria-disabled", "true"); });
+        rightBtn.dataset.state = "right";
+        if (!right && a >= 0) btn.dataset.state = "almost";
+        if (a < 0) btn.dataset.state = "faded";
+        const fb = $("[data-fb]", el);
+        const why = c.why ? `<p>${rich(c.why, { lines: false })}</p>` : "";
+        if (right) {
+          const praise = ["נכון!", "בדיוק!", "יש!", "מעולה!"][Math.floor(Math.random() * 4)];
+          fb.innerHTML = `<div class="feedback feedback--yes"><span class="feedback__ic">${icon("check")}</span><div><b>${praise}</b>${why}</div></div>`;
+          burst(rightBtn);
+          vibrate(18);
+        } else if (a < 0) {
+          fb.innerHTML = `<div class="feedback"><span class="feedback__ic">${icon("lightbulb")}</span><div><b>זה בסדר לא לדעת. עכשיו ${g("אתה יודע", "את יודעת")}:</b>${why}</div></div>`;
+        } else {
+          fb.innerHTML = `<div class="feedback"><span class="feedback__ic">${icon("lightbulb")}</span><div><b>כמעט! ככה זה עובד:</b>${why}</div></div>`;
+        }
+        bindTerms(fb);
+        if (S.settings.read) speak(fb.textContent);
+        onAnswer(right, a);
+      };
+    });
+  }
+
+  function renderCheck(i) {
+    const c = L.lesson.bites[i].check;
+    const a = derive();
+    const calmLine = a.calm && L.firstCheck ? "רק תרגול. אף אחד לא בודק, ואין ציון." : "בדיקה קטנה, בלי ציון";
+    L.firstCheck = false;
+    const isLast = L.pos === L.steps.length - 1;
+    const el = mount(`
+      ${lessonTop()}
+      <div class="lesson__stage">${checkHtml(c, { kicker: calmLine })}</div>
+      <div class="lesson__bar" style="grid-template-columns:1fr">
+        <button class="btn btn--primary" data-next disabled>${isLast ? "סיימתי" : "ממשיכים"} ${icon(isLast ? "check" : "arrow-left")}</button>
+      </div>`, "lesson");
+    bindLessonTop(el, () => speak(`${spoken(c.question)}. ${c.options.map((o, k) => `${KEYS[k]}: ${spoken(o)}`).join(". ")}`));
+    if (S.settings.read) setTimeout(() => speak(`${spoken(c.question)}. ${c.options.map((o, k) => `${KEYS[k]}: ${spoken(o)}`).join(". ")}`), 350);
+    const next = $("[data-next]", el);
+    bindCheck(el, c, (right) => {
+      L.answered[i] = right;
+      const rec = S.lessons[L.id];
+      rec.misses = rec.misses || [];
+      if (!right && !rec.misses.includes(i)) rec.misses.push(i);
+      if (right) rec.misses = rec.misses.filter((x) => x !== i);
+      save();
+      markStudied();
+      next.disabled = false;
+      next.focus({ preventScroll: true });
+      next.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
+    });
+    next.onclick = advance;
+  }
+
+  // Done ------------------------------------------------------------------
+  function finishLesson() {
+    clearInterval(breakTimer);
+    stopSpeaking();
+    const rec = S.lessons[L.id];
+    rec.done = true;
+    rec.pos = 0;
+    rec.updated = Date.now();
+    save();
+    markStudied();
+    done(L.id);
+  }
+
+  function done(id) {
+    current = { name: "done" };
+    const lesson = getLesson(id);
+    const rec = S.lessons[id];
+    const right = Object.values(L ? L.answered : {}).filter(Boolean).length;
+    const total = Object.keys(L ? L.answered : {}).length;
+    const el = mount(`
+      <div class="topbar"><span class="topbar__spacer"></span><button class="icon-btn" data-home aria-label="למסך הראשי">${icon("x")}</button></div>
+      <div class="done__hero">
+        <span class="done__badge pop" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="draw" d="M12 25l8 8 16-17"/></svg></span>
+        <h1 class="h1" tabindex="-1" data-autofocus>${g("סיימת", "סיימת")}!</h1>
+        <p class="lead">${esc(lesson.title)}${total ? `. ${right} מתוך ${total} שאלות נכונות${right < total ? ", והשאר כבר ברורות יותר." : "."}` : "."}</p>
+      </div>
+      ${lesson.summary && lesson.summary.length ? `
+      <section class="section" style="margin-top:0" aria-labelledby="sum-t">
+        <h2 class="h3" id="sum-t">מה למדנו, בקצרה</h2>
+        <div class="summary"><ol>${lesson.summary.map((s) => `<li><span>${rich(s, { lines: false })}</span></li>`).join("")}</ol></div>
+      </section>` : ""}
+      <section class="section" aria-labelledby="feel-t">
+        <h2 class="h3" id="feel-t">איך ${g("אתה מרגיש", "את מרגישה")} עם החומר?</h2>
+        <div class="feel" role="radiogroup" aria-labelledby="feel-t">
+          <button class="choice" role="radio" data-feel="good" aria-checked="${rec.feel === "good"}">${icon("smiley")}<span>${g("מבין", "מבינה")} לגמרי</span></button>
+          <button class="choice" role="radio" data-feel="ok" aria-checked="${rec.feel === "ok"}">${icon("smiley-meh")}<span>בערך</span></button>
+          <button class="choice" role="radio" data-feel="lost" aria-checked="${rec.feel === "lost"}">${icon("smiley-nervous")}<span>עדיין ${g("מבולבל", "מבולבלת")}</span></button>
+        </div>
+        <div data-feel-out></div>
+      </section>
+      <div class="sticky-foot" style="display:grid;gap:8px">
+        <button class="btn btn--primary btn--block" data-home2>${icon("house")}למסך הראשי</button>
+        ${stepsOf(lesson).some((s) => s.t === "check") ? `<button class="btn btn--soft btn--block" data-review>${icon("list-checks")}תרגול מהיר</button>` : ""}
+      </div>`, "done");
+    bindTerms(el);
+    $("[data-home]", el).onclick = home;
+    $("[data-home2]", el).onclick = home;
+    const rv = $("[data-review]", el);
+    if (rv) rv.onclick = () => review(id);
+    const out = $("[data-feel-out]", el);
+    radio(el, "data-feel", (v) => {
+      rec.feel = v;
+      save();
+      out.innerHTML = v === "lost"
+        ? `<div class="feedback" style="margin-top:12px"><span class="feedback__ic">${icon("heart")}</span><div><b>הכל טוב, נעבור על זה שוב.</b><p>הפעם עם ההסבר הכי פשוט ודוגמה בכל שלב.</p><button class="btn btn--soft" data-simple style="margin-top:12px;min-height:48px">${icon("feather")}לעבור שוב, הכי פשוט</button></div></div>`
+        : v === "ok" ? `<p class="small muted" style="margin:12px 0 0">שמרתי לך את זה בחזרה המהירה במסך הראשי.</p>` : `<p class="small muted" style="margin:12px 0 0">אלוף${g("", "ה")}. ${g("אתה", "את")} ${g("מוכן", "מוכנה")} לזה.</p>`;
+      const sb = $("[data-simple]", out);
+      if (sb) sb.onclick = () => openLesson(id, { simple: true, restart: true });
+    });
+    if (!reduceMotion()) setTimeout(() => burst($(".done__badge", el)), 420);
+  }
+
+  // Review: all the checks of a lesson, the missed ones first ------------
+  function review(id) {
+    const lesson = getLesson(id);
+    const rec = S.lessons[id] || {};
+    const misses = new Set(rec.misses || []);
+    const qs = lesson.bites.map((b, i) => ({ i, c: b.check })).filter((x) => x.c);
+    qs.sort((x, y) => misses.has(y.i) - misses.has(x.i));
+    if (!qs.length) return openLesson(id, { restart: true });
+    let k = 0, right = 0;
+    const show = () => {
+      current = { name: "review" };
+      const q = qs[k];
+      const el = mount(`
+        <div class="topbar">
+          <button class="icon-btn" data-close aria-label="יציאה">${icon("x")}</button>
+          <div class="progress" aria-hidden="true">${qs.map((_, j) => `<span class="progress__seg" data-state="${j < k ? "done" : j === k ? "now" : "todo"}"></span>`).join("")}</div>
+          <span style="width:46px"></span>
+        </div>
+        <div class="lesson__stage">${checkHtml(q.c, { kicker: `חזרה מהירה: ${lesson.title}` })}</div>
+        <div class="lesson__bar" style="grid-template-columns:1fr"><button class="btn btn--primary" data-next disabled>${k === qs.length - 1 ? "סיימתי" : "הבאה"} ${icon("arrow-left")}</button></div>`, "lesson");
+      L = L && L.id === id ? L : { id, lesson, steps: stepsOf(lesson), pos: 0, extras: {}, answered: {} };
+      $("[data-close]", el).onclick = home;
+      const next = $("[data-next]", el);
+      bindCheck(el, q.c, (ok) => {
+        if (ok) right++;
+        rec.misses = (rec.misses || []).filter((x) => x !== q.i);
+        if (!ok) rec.misses.push(q.i);
+        S.lessons[id] = rec;
+        save();
+        markStudied();
+        next.disabled = false;
+        next.focus({ preventScroll: true });
+      });
+      next.onclick = () => {
+        if (k < qs.length - 1) { k++; show(); return; }
+        if (right === qs.length) { rec.feel = "good"; save(); }
+        reviewDone(id, right, qs.length);
+      };
+    };
+    show();
+  }
+
+  function reviewDone(id, right, total) {
+    const lesson = getLesson(id);
+    const all = right === total;
+    const el = mount(`
+      <div class="done__hero" style="padding-top:60px">
+        <span class="done__badge pop" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="draw" d="M12 25l8 8 16-17"/></svg></span>
+        <h1 class="h1" tabindex="-1" data-autofocus>${right} מתוך ${total}</h1>
+        <p class="lead">${all ? `${esc(lesson.title)}: ${g("אתה", "את")} ${g("שולט", "שולטת")} בזה.` : "כל טעות עכשיו היא טעות שלא תהיה במבחן."}</p>
+      </div>
+      <div class="sticky-foot" style="display:grid;gap:8px;margin-top:auto">
+        ${all ? "" : `<button class="btn btn--soft btn--block" data-again>${icon("feather")}לעבור על השיעור שוב, הכי פשוט</button>`}
+        <button class="btn btn--primary btn--block" data-home>${icon("house")}למסך הראשי</button>
+      </div>`, "done");
+    $("[data-home]", el).onclick = home;
+    const ag = $("[data-again]", el);
+    if (ag) ag.onclick = () => openLesson(id, { simple: true, restart: true });
+    if (all) setTimeout(() => burst($(".done__badge", el)), 420);
+  }
+
+  // Settings --------------------------------------------------------------
+  function settingsSheet() {
+    const st = S.settings;
+    const seg = (key, opts) => `<div class="seg" role="radiogroup">${opts.map(([v, l, a]) => `<button role="radio" data-set="${key}" data-v="${v}" aria-checked="${st[key] === v}" ${a ? `aria-label="${a}"` : ""}>${l}</button>`).join("")}</div>`;
+    const sw = (key, on) => `<button class="switch" role="switch" data-sw="${key}" aria-checked="${on}" aria-label="${key}"></button>`;
+    const s = sheet(`
+      <div class="sheet__head"><h2 class="h2" tabindex="-1" data-autofocus>הגדרות</h2><button class="icon-btn" data-sheet-close aria-label="סגירה">${icon("x")}</button></div>
+      <div class="set-group">
+        <div class="set-row"><span class="set-row__l">${icon("text-aa")}גודל טקסט</span>${seg("size", [["m", "א", "רגיל"], ["l", "א+", "גדול"], ["xl", "א++", "גדול מאוד"]])}</div>
+        <div class="set-row"><span class="set-row__l" id="sw-c">${icon("book-open-text")}ריווח נוח לקריאה</span>${sw("comfort", st.comfort)}</div>
+        <div class="set-row"><span class="set-row__l" id="sw-r">${icon("speaker-high")}הקראה בקול</span>${sw("read", st.read)}</div>
+      </div>
+      <div class="set-group">
+        <div class="set-row"><span class="set-row__l">${icon("moon")}מראה</span>${seg("theme", [["auto", "אוטומטי"], ["light", "בהיר"], ["dark", "כהה"]])}</div>
+        <div class="set-row"><span class="set-row__l" id="sw-m">${icon("sparkle")}פחות אנימציות</span>${sw("motion", st.motion === "off")}</div>
+      </div>
+      <div class="set-group">
+        <button class="set-row" data-edit style="width:100%"><span class="set-row__l">${icon("sliders-horizontal")}לעדכן את הפרטים שלי</span>${icon("caret-left", "icon--sm")}</button>
+        <button class="set-row" data-wipe style="width:100%"><span class="set-row__l">${icon("trash")}למחוק הכל ולהתחיל מחדש</span></button>
+      </div>
+      <p class="small muted" style="margin:0">כל המידע נשמר רק בדפדפן הזה.${Tutor.available() ? " כשהמורה החכם מכין שיעור, הוא מקבל את הגיל, הכיתה וסגנון הלמידה (בלי השם) ואת החומר ששלחת." : ""}</p>
+    `, "הגדרות");
+    $("[data-sw='comfort']", s).setAttribute("aria-labelledby", "sw-c");
+    $("[data-sw='read']", s).setAttribute("aria-labelledby", "sw-r");
+    $("[data-sw='motion']", s).setAttribute("aria-labelledby", "sw-m");
+    $$("[data-set]", s).forEach((b) => {
+      b.onclick = () => {
+        st[b.dataset.set] = b.dataset.v;
+        $$(`[data-set="${b.dataset.set}"]`, s).forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+        save();
+        applySettings();
+      };
+    });
+    $$("[data-sw]", s).forEach((b) => {
+      b.onclick = () => {
+        const k = b.dataset.sw;
+        if (k === "motion") st.motion = st.motion === "off" ? "auto" : "off";
+        else st[k] = !st[k];
+        b.setAttribute("aria-checked", String(k === "motion" ? st.motion === "off" : st[k]));
+        if (k === "read" && !st.read) stopSpeaking();
+        if (k === "read" && st.read && !canSpeak()) toast("בדפדפן הזה אין הקראה בעברית, אבל ננסה.");
+        save();
+        applySettings();
+      };
+    });
+    $("[data-edit]", s).onclick = () => { closeSheet(true); onboarding(0, JSON.parse(JSON.stringify(S.profile))); };
+    $("[data-wipe]", s).onclick = () => {
+      if (!confirm("למחוק את כל הפרטים והשיעורים מהמכשיר הזה?")) return;
+      try { localStorage.removeItem(KEY); } catch { /* nothing to remove */ }
+      S = defaults();
+      draftGender = null;
+      applySettings();
+      welcome();
+    };
+  }
+
+  // ---------- Speech ----------
+  let voice = null;
+  function pickVoice() {
+    if (!("speechSynthesis" in window)) return;
+    const vs = speechSynthesis.getVoices();
+    voice = vs.find((v) => /^he|^iw/i.test(v.lang)) || null;
+  }
+  const canSpeak = () => "speechSynthesis" in window && Boolean(voice);
+  function speak(text) {
+    if (!("speechSynthesis" in window)) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(String(text).replace(/\s+/g, " ").trim());
+      u.lang = "he-IL";
+      if (voice) u.voice = voice;
+      u.rate = 0.92;
+      speechSynthesis.speak(u);
+    } catch { /* speech not available */ }
+  }
+  function stopSpeaking() {
+    try { if ("speechSynthesis" in window) speechSynthesis.cancel(); } catch { /* nothing to stop */ }
+  }
+
+  // ---------- Start ----------
+  applySettings();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applySettings);
+  if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+  document.addEventListener("visibilitychange", () => { if (L) L.lastTick = Date.now(); });
+  if (S.profile) home(); else welcome();
+})();

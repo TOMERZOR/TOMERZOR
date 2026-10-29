@@ -22,3 +22,8 @@ koli/server/.dev.vars
 arslate/worker/node_modules/
 arslate/worker/.wrangler/
 arslate/worker/.dev.vars
+
+# Easy2Study
+easy2study/worker/node_modules/
+easy2study/worker/.wrangler/
+easy2study/worker/.dev.vars

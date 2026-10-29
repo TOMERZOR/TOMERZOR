@@ -13,10 +13,10 @@ const noteMidi = (n) => {
 };
 
 // Mix levels in dB, tuned against real freestyle type beats: drums and 808 up front, the loop under them.
-BG.LEVELS = { kick: -4, snare: -6, clap: -8, hat: -13, open: -16, ghost: -16, perc: -10, bass808: -5, bassSub: -12, chords: -15, lead: -10, bells: -17, makeup: 9 };
+BG.LEVELS = { kick: -5, snare: -6, clap: -8, hat: -13, open: -16, ghost: -16, perc: -10, bass808: -20, bassSub: -17, chords: -13, lead: -8, bells: -17, makeup: 9 };
 BG.STYLE_LEVELS = {
-  lofi: { hat: -14, kick: -4, chords: -14, lead: -11, makeup: 8 },
-  boombap: { kick: -2, snare: -3, hat: -14, lead: -13, chords: -15, makeup: 7 }
+  lofi: { hat: -14, kick: -4, bassSub: -20, chords: -14, lead: -11, makeup: 10 },
+  boombap: { kick: -5, snare: -3, hat: -14, bassSub: -20, lead: -13, chords: -15, makeup: 8.5 }
 };
 
 // Song form: a 4-bar intro with just the loop, then a 4-bar breakdown at the end of every 32 bars.
@@ -28,11 +28,11 @@ BG.section = function (absBar) {
 
 // Drum kits, by style. Names are files in samples/drums.
 BG.KITS = {
-  trap:    { kick: "k808", snare: "s808", clap: "clap808", hat: "hat808", open: "open808", ghost: "rim808", bass: "bass808" },
-  drill:   { kick: "k808b", snare: "s707b", clap: "clap808", hat: "hat808", open: "open808", ghost: "rim808", bass: "bass808click" },
+  trap:    { kick: "k707a", snare: "s808", clap: "clap808", hat: "hat808", open: "open808", ghost: "rim808", bass: "bass808" },
+  drill:   { kick: "k707a", snare: "s707b", clap: "clap808", hat: "hat808", open: "open808", ghost: "rim808", bass: "bass808click" },
   boombap: { kick: "k707a", snare: "snareAcou", clap: "clapAcou", hat: "hatAcou", open: "openAcou", ghost: "snareGhost" },
   lofi:    { kick: "k707b", snare: "sidestick", clap: "clapAcou", hat: "hatAcouSoft", open: "openAcou", ghost: "snareGhost" },
-  dembow:  { kick: "k808b", snare: "s808b", clap: "rim808", hat: "shaker", open: "open808", ghost: "rim808", bass: "bass808click" }
+  dembow:  { kick: "k707b", snare: "s808b", clap: "rim808", hat: "shaker", open: "open808", ghost: "rim808", bass: "bass808click" }
 };
 const DARBUKA = { dum: "darbuka1", tek: "darbuka3", ka: "darbuka5" };
 const BASS_808_ROOT = 43; // the tuned 808 samples are a G1
@@ -134,7 +134,7 @@ BG.buildRig = async function (recipe, out, buffers) {
   let bassOut = null, bassSynth = null;
   if (kit.bass) {
     bassOut = channel(L.bass808);
-    const drive = keep(new Tone.Distortion({ distortion: Math.max(0.3, snd.dist), oversample: "2x", wet: 0.45 }));
+    const drive = keep(new Tone.Distortion({ distortion: Math.max(0.3, snd.dist), oversample: "2x", wet: 0.3 }));
     const input = keep(new Tone.Gain(1));
     input.chain(drive, bassOut);
     bassOut = input;
@@ -196,32 +196,47 @@ BG.buildRig = async function (recipe, out, buffers) {
     rain.sync().start(0);
   }
 
-  const sources = new Set();
+  const voices = new Set();
   return {
     recipe,
     mute: {},
     kit, drum, drumBus, bassOut, bassSynth, chords, lead, bells, crackle,
     darbuka: recipe.moods.includes("oriental"),
-    sources,
+    voices,
     lastOpen: null,
     lastBass: null,
     dispose() {
-      sources.forEach((s) => { try { s.dispose(); } catch (e) { /* already gone */ } });
+      voices.forEach((v) => { try { v.stop(v.src.context.currentTime, 0.05); } catch (e) { /* already stopped */ } });
       nodes.forEach((n) => { try { n.unsync && n.unsync(); n.dispose(); } catch (e) { /* already gone */ } });
     }
   };
 };
 
-// Plays a one-shot buffer at `time`. Returns the source so it can be cut short.
+// Plays a one-shot buffer at `time` on a plain Web Audio source, which Tone connects into the mix.
+// (Tone's own one-shot source reports "ended" as soon as a stop is scheduled, which cut sounds off.)
+// Returns a voice that can be cut short with a quick fade, for the 808 and open hats.
 function hit(rig, buffer, dest, time, gain = 1, rate = 1) {
   if (!buffer) return null;
-  // Offline renders run these callbacks after Tone switches back to the live context, so use the channel's context.
-  const src = new Tone.ToneBufferSource({ context: dest.context, url: buffer, playbackRate: rate, fadeOut: 0.004 });
-  src.connect(dest);
-  src.start(time, 0, undefined, gain);
-  rig.sources.add(src);
-  src.onended = () => { rig.sources.delete(src); src.dispose(); };
-  return src;
+  const ctx = dest.context.rawContext;
+  const src = ctx.createBufferSource();
+  src.buffer = buffer.get();
+  src.playbackRate.value = rate;
+  const amp = ctx.createGain();
+  amp.gain.value = gain;
+  src.connect(amp);
+  Tone.connect(amp, dest);
+  src.onended = () => { amp.disconnect(); rig.voices.delete(voice); };
+  src.start(time);
+  const voice = {
+    src,
+    stop(at, fade = 0.03) {
+      amp.gain.setValueAtTime(gain, at);
+      amp.gain.linearRampToValueAtTime(0, at + fade);
+      src.stop(at + fade + 0.005);
+    }
+  };
+  rig.voices.add(voice);
+  return voice;
 }
 
 // Maqsum, the most common Middle Eastern rhythm: dum, tek, ka on the 16th grid.
@@ -255,7 +270,7 @@ function playStep(rig, step, time, stepDur) {
   }
   if (!hatOff) {
     const h = P.hat[bar][s];
-    const cutOpen = (at) => { if (rig.lastOpen) { try { rig.lastOpen.stop(at); } catch (e) { /* ended */ } rig.lastOpen = null; } };
+    const cutOpen = (at) => { if (rig.lastOpen) { rig.lastOpen.stop(at, 0.02); rig.lastOpen = null; } };
     if (h >= 2) {
       cutOpen(t);
       for (let i = 0; i < h; i++) hit(rig, rig.drum(k.hat), B.hat, t + (i * stepDur) / h, 0.45 + 0.45 * (i / h));
@@ -282,17 +297,17 @@ function playStep(rig, step, time, stepDur) {
       const rate = Math.pow(2, (note - BASS_808_ROOT) / 12);
       const dur = Math.min(len, 16) * stepDur * 0.97;
       const prev = rig.lastBass;
-      const src = hit(rig, rig.drum(k.bass), rig.bassOut, t, 1, rate);
-      if (src) {
+      const voice = hit(rig, rig.drum(k.bass), rig.bassOut, t, 1, rate);
+      if (voice) {
         if (P.slide[bar][s] && prev) {
           // Slide: start at the previous pitch and glide into this one.
-          src.playbackRate.setValueAtTime(prev.rate, t);
-          src.playbackRate.exponentialRampToValueAtTime(rate, t + 0.08);
+          voice.src.playbackRate.setValueAtTime(prev.rate, t);
+          voice.src.playbackRate.exponentialRampToValueAtTime(rate, t + 0.08);
         }
-        src.fadeOut = 0.03;
-        src.stop(t + dur);
-        if (prev && prev.src) { try { prev.src.stop(t); } catch (e) { /* ended */ } }
-        rig.lastBass = { src, rate };
+        voice.stop(t + dur, 0.04);
+        // The 808 is monophonic: a new note cuts the last one.
+        if (prev) prev.voice.stop(t, 0.015);
+        rig.lastBass = { voice, rate };
       }
     } else {
       rig.bassSynth.triggerAttackRelease(midiHz(note), Math.min(len, 3) * stepDur * 0.95, t, 0.95);

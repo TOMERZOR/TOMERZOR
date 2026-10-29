@@ -27,6 +27,12 @@ export class UI {
   setCoins(n, bump) { $('coins').textContent = Math.floor(n).toLocaleString('en-US'); if (bump) this.bump($('coins').parentElement); }
   setRating(r) { $('rating').textContent = r.toFixed(1); }
   setLevel(lvl, frac, title) { $('lvlNum').textContent = lvl; $('lvlBar').style.transform = `scaleX(${frac})`; $('lvlTitle').textContent = title; }
+  setStreak(n, mult) {
+    const el = $('streakPill'); if (!el) return;
+    el.hidden = n < 2;
+    const txt = `רצף ${n} · x${mult.toFixed(1)}`;
+    if ($('streak').textContent !== txt) { $('streak').textContent = txt; if (n >= 2) this.bump(el); }
+  }
   setDay(day, frac) { $('dayLabel').textContent = `יום ${day}`; $('dayBar').style.transform = `scaleX(${frac})`; }
   bump(el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
   ribbon(text) {

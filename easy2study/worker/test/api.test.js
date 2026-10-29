@@ -101,6 +101,24 @@ test("a lesson is written with structured output, caching and the refusal fallba
   assert.ok(!user.includes("נועה"), "the learner's name never reaches the API");
 });
 
+test("several pages are sent as image blocks, in order", async () => {
+  reply = message(PLAN);
+  seen.length = 0;
+  const pages = ["cGFnZTE=", "cGFnZTI=", "cGFnZTM="].map((data) => ({ media_type: "image/jpeg", data }));
+  const res = await worker.fetch(post("/api/plan", { profile: PROFILE, images: pages }), env());
+  assert.equal(res.status, 200);
+  const content = seen[0].body.messages[0].content;
+  assert.deepEqual(content.slice(0, 3).map((b) => b.source.data), ["cGFnZTE=", "cGFnZTI=", "cGFnZTM="]);
+  assert.match(content[3].text, /The 3 images above, in order, are pages/);
+});
+
+test("more than four pages are refused", async () => {
+  const pages = Array.from({ length: 5 }, () => ({ media_type: "image/jpeg", data: "AAAA" }));
+  const res = await worker.fetch(post("/api/plan", { images: pages }), env());
+  assert.equal(res.status, 413);
+  assert.equal((await res.json()).error, "too_many_images");
+});
+
 test("a photo of the material is sent as an image block", async () => {
   reply = message(LESSON);
   seen.length = 0;

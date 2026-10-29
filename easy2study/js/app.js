@@ -767,7 +767,7 @@
   function newLesson() {
     current = { name: "new" };
     const ai = Tutor.available();
-    const d = { subject: null, topic: "", material: "", image: null, when: null, paste: false };
+    const d = { subject: null, topic: "", material: "", images: [], when: null, paste: false };
     const WHEN = [["today", "היום"], ["tomorrow", "מחר"], ["week", "השבוע"], ["later", "בעוד יותר משבוע"], ["unknown", g("לא יודע", "לא יודעת")]];
     const el = mount(`
       <div class="topbar">
@@ -790,11 +790,13 @@
         <div class="field">
           <span class="label">יש לך חומר מהמורה? <span class="muted" style="font-weight:400">(לא חובה)</span></span>
           <div class="attach">
-            <button type="button" class="attach__btn" data-photo aria-pressed="false">${icon("camera", "icon--lg")}<span>לצלם דף<small>מהספר או מהמחברת</small></span></button>
-            <button type="button" class="attach__btn" data-paste aria-pressed="false">${icon("clipboard-text", "icon--lg")}<span>להדביק טקסט<small>סיכום, דף עבודה</small></span></button>
+            <button type="button" class="attach__btn" data-pick="camera">${icon("camera", "icon--lg")}<span>לצלם<small>דף מהספר</small></span></button>
+            <button type="button" class="attach__btn" data-pick="gallery">${icon("image", "icon--lg")}<span>תמונה<small>מהגלריה</small></span></button>
+            <button type="button" class="attach__btn" data-paste aria-pressed="false">${icon("clipboard-text", "icon--lg")}<span>טקסט<small>להדביק</small></span></button>
           </div>
-          <input type="file" accept="image/*" capture="environment" hidden data-file>
-          <div data-photo-preview></div>
+          <input type="file" accept="image/*" capture="environment" hidden data-file="camera">
+          <input type="file" accept="image/*" multiple hidden data-file="gallery">
+          <div class="photos" data-photos aria-live="polite"></div>
           <div data-paste-box hidden><label class="sr-only" for="material">החומר</label><textarea id="material" class="textarea" maxlength="8000" placeholder="להדביק כאן את החומר"></textarea></div>
         </div>` : ""}
         <div class="field">
@@ -811,33 +813,56 @@
     const make = $("[data-make]", el);
     const topic = $("#topic", el);
     const err = $("[data-err]", el);
-    const refresh = () => { make.disabled = !(d.topic.trim() || d.image || d.material.trim()); err.textContent = ""; };
+    const refresh = () => { make.disabled = !(d.topic.trim() || d.images.length || d.material.trim()); err.textContent = ""; };
     $("[data-back]", el).onclick = home;
     radio(el, "data-subject", (v) => { d.subject = v; });
     radio(el, "data-when", (v) => { d.when = v; });
     topic.oninput = () => { d.topic = topic.value; refresh(); };
     topic.onkeydown = (e) => { if (e.key === "Enter" && !make.disabled) make.click(); };
     if (ai) {
-      const file = $("[data-file]", el);
-      const prev = $("[data-photo-preview]", el);
-      const photoBtn = $("[data-photo]", el);
+      const MAX = 4;
+      const photos = $("[data-photos]", el);
       const pasteBtn = $("[data-paste]", el);
       const box = $("[data-paste-box]", el);
       const mat = $("#material", el);
-      photoBtn.onclick = () => file.click();
-      file.onchange = async () => {
-        const f = file.files && file.files[0];
-        if (!f) return;
-        try {
-          d.image = await shrinkImage(f);
-          photoBtn.setAttribute("aria-pressed", "true");
-          prev.innerHTML = `<div class="photo-preview"><img alt="הדף ${g("שצילמת", "שצילמת")}" src="data:${d.image.media_type};base64,${d.image.data}"><button type="button" class="icon-btn" data-rm aria-label="להסיר את התמונה">${icon("x")}</button></div>`;
-          $("[data-rm]", prev).onclick = () => { d.image = null; prev.innerHTML = ""; file.value = ""; photoBtn.setAttribute("aria-pressed", "false"); refresh(); };
-        } catch {
-          toast("לא הצלחתי לפתוח את התמונה. אפשר לנסות שוב?");
-        }
+      // Up to 4 pages: each one a thumbnail with its number and a remove button.
+      const drawPhotos = () => {
+        photos.innerHTML = d.images.map((im, k) => `
+          <figure class="photo">
+            <img alt="עמוד ${k + 1}" src="data:${im.media_type};base64,${im.data}">
+            <figcaption>${k + 1}</figcaption>
+            <button type="button" class="photo__rm" data-rm="${k}" aria-label="להסיר את עמוד ${k + 1}">${icon("x", "icon--sm")}</button>
+          </figure>`).join("") + (d.images.length && d.images.length < MAX
+          ? `<button type="button" class="photo photo--add" data-more aria-label="להוסיף עוד עמוד">${icon("plus")}<span>עוד עמוד</span></button>` : "");
+        $$("[data-rm]", photos).forEach((x) => (x.onclick = () => { d.images.splice(Number(x.dataset.rm), 1); drawPhotos(); refresh(); }));
+        const more = $("[data-more]", photos);
+        if (more) more.onclick = () => $('[data-file="gallery"]', el).click();
         refresh();
       };
+      $$("[data-pick]", el).forEach((b) => {
+        b.onclick = () => {
+          if (d.images.length >= MAX) return toast(`אפשר עד ${MAX} עמודים בפעם אחת.`);
+          $(`[data-file="${b.dataset.pick}"]`, el).click();
+        };
+      });
+      $$("[data-file]", el).forEach((input) => {
+        input.onchange = async () => {
+          const files = [...(input.files || [])];
+          input.value = "";
+          if (!files.length) return;
+          const room = MAX - d.images.length;
+          if (files.length > room) toast(`אפשר עד ${MAX} עמודים, אז לקחתי את ${room === 1 ? "הראשון" : `${room} הראשונים`}.`);
+          for (const f of files.slice(0, room)) {
+            try {
+              d.images.push(await shrinkImage(f));
+            } catch {
+              toast("לא הצלחתי לפתוח אחת התמונות. אפשר לנסות שוב?");
+            }
+          }
+          drawPhotos();
+          photos.lastElementChild && photos.lastElementChild.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
+        };
+      });
       pasteBtn.onclick = () => {
         d.paste = !d.paste;
         box.hidden = !d.paste;
@@ -904,7 +929,8 @@
     daily_limit: "הגעת למכסה של היום. מחר יש עוד! בינתיים אפשר לחזור על מה שכבר למדת.",
     refused: "לא הצלחתי להכין שיעור מזה. אפשר לנסח את הנושא קצת אחרת?",
     too_long: "החומר ארוך מדי בשביל פעם אחת. אפשר לשלוח חלק ממנו?",
-    image_too_large: "התמונה גדולה מדי. אפשר לנסות לצלם שוב?",
+    image_too_large: "התמונות גדולות מדי. אפשר לנסות עם פחות עמודים?",
+    too_many_images: "אפשר עד 4 עמודים בפעם אחת.",
     network: "נראה שאין חיבור לאינטרנט כרגע.",
     timeout: "זה לקח יותר מדי זמן. אפשר לנסות שוב?",
   };
@@ -931,13 +957,13 @@
   // written when the learner gets near it (the next one is prepared while
   // they learn the current one).
   const pending = {}; // "courseId:index" -> promise of a lesson id
-  const photos = {}; // courseId -> image, kept for this visit only
+  const photos = {}; // courseId -> images, kept for this visit only
 
   function startPath(d) {
     const p = S.profile || {};
     const fav = (p.interests || [])[0];
     const lines = [
-      d.image ? "קורא את הדף ששלחת..." : "חושב מאיפה הכי כדאי להתחיל...",
+      (d.images || []).length ? `קורא את ${d.images.length === 1 ? "הדף" : "הדפים"} ששלחת...` : "חושב מאיפה הכי כדאי להתחיל...",
       "מחלק את הנושא לשלבים קטנים...",
       fav ? `מחפש דוגמאות מ${fav}...` : "מחפש דוגמאות מהחיים...",
       "בונה לך מסלול, צעד אחר צעד...",
@@ -949,7 +975,7 @@
       subject: d.subject ? subjectOf(d.subject).name : null,
       topic: (d.topic || "").trim(),
       material: (d.material || "").trim() || null,
-      image: d.image || null,
+      images: d.images || [],
       goal: d.goal,
       when: d.when || null,
     }).then((res) => {
@@ -976,7 +1002,7 @@
         created: Date.now(),
         updated: Date.now(),
       };
-      if (d.image && !str(plan.notes)) photos[id] = d.image;
+      if ((d.images || []).length && !str(plan.notes)) photos[id] = d.images;
       save();
       prepare(id, 0);
       coursePath(id);
@@ -1004,7 +1030,7 @@
       subject: c.subject ? subjectOf(c.subject).name : null,
       topic: c.topic,
       material: c.notes || null,
-      image: photos[courseId] || null,
+      images: photos[courseId] || [],
       goal: c.goal,
       when: c.when,
       course: { title: c.title, chapters: c.chapters.map((x) => x.title), index: i, goal: ch.goal, learned },

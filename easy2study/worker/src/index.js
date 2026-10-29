@@ -1,7 +1,8 @@
 // Easy2Study API (Cloudflare Worker). Routes:
 //   GET  /api/health   what this deployment can do
-//   POST /api/plan     {profile, topic?, subject?, material?, image?, goal?, when?} -> {plan}
-//   POST /api/lesson   {profile, topic?, subject?, material?, image?, goal?, when?, course?} -> {lesson}
+//   POST /api/plan     {profile, topic?, subject?, material?, images?, goal?, when?} -> {plan}
+//   POST /api/lesson   {profile, topic?, subject?, material?, images?, goal?, when?, course?} -> {lesson}
+// images: up to 4 pages, each {media_type, data (base64)}. A single `image` is still accepted.
 //   POST /api/help     {profile, lesson, bite, kind, word?, question?, previous?} -> {text, example}
 //
 // Bindings (all optional except the key): ANTHROPIC_API_KEY (secret),
@@ -15,7 +16,7 @@ import { SYSTEM_PROMPT, PLAN_SCHEMA, LESSON_SCHEMA, HELP_SCHEMA, planMessage, le
 export const DEFAULT_MODEL = "claude-opus-5-5";
 // Models that accept the server-side refusal fallback (`fallbacks: "default"`).
 const FALLBACK_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-sonnet-5-5"]);
-const LIMITS = { topic: 200, material: 12000, image: 3_000_000, question: 400, word: 60, bite: 1500 };
+const LIMITS = { topic: 200, material: 12000, image: 3_000_000, images: 4, imagesTotal: 8_000_000, question: 400, word: 60, bite: 1500 };
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const HELP_KINDS = new Set(["simpler", "again", "example", "word", "answer"]);
 
@@ -147,16 +148,20 @@ function readSource(body) {
   const topic = cleanText(body.topic, LIMITS.topic);
   const material = cleanText(body.material);
   if (material.length > LIMITS.material) return { error: ["too_long", 413] };
-  let image = null;
-  if (body.image) {
-    const { media_type: type, data } = body.image;
+  const raw = Array.isArray(body.images) ? body.images : body.image ? [body.image] : [];
+  if (raw.length > LIMITS.images) return { error: ["too_many_images", 413] };
+  const images = [];
+  let total = 0;
+  for (const im of raw) {
+    const { media_type: type, data } = im || {};
     if (!IMAGE_TYPES.has(type) || typeof data !== "string" || !/^[A-Za-z0-9+/=]+$/.test(data)) return { error: ["bad_image", 400] };
-    if (data.length > LIMITS.image) return { error: ["image_too_large", 413] };
-    image = { type, data };
+    total += data.length;
+    if (data.length > LIMITS.image || total > LIMITS.imagesTotal) return { error: ["image_too_large", 413] };
+    images.push({ type, data });
   }
-  if (!topic && !material && !image) return { error: ["empty", 400] };
+  if (!topic && !material && !images.length) return { error: ["empty", 400] };
   return {
-    image,
+    images,
     fields: {
       profile: cleanProfile(body.profile),
       subject: cleanText(body.subject, 40) || null,
@@ -168,11 +173,12 @@ function readSource(body) {
   };
 }
 
-function withImage(image, text) {
-  if (!image) return text;
+function withImages(images, text) {
+  if (!images.length) return text;
+  const what = images.length === 1 ? "The image above is" : `The ${images.length} images above, in order, are pages of`;
   return [
-    { type: "image", source: { type: "base64", media_type: image.type, data: image.data } },
-    { type: "text", text: `<material_photo>The image above is the learner's study material.</material_photo>\n${text}` },
+    ...images.map((im) => ({ type: "image", source: { type: "base64", media_type: im.type, data: im.data } })),
+    { type: "text", text: `<material_photo>${what} the learner's study material.</material_photo>\n${text}` },
   ];
 }
 
@@ -192,10 +198,10 @@ async function handlePlan(request, env, cors) {
   if (src.error) return json({ error: src.error[0] }, src.error[1], cors);
   if (!(await takeQuota(env, request, "plan"))) return json({ error: "daily_limit" }, 429, cors);
 
-  const content = withImage(src.image, planMessage(src.fields));
+  const content = withImages(src.images, planMessage(src.fields));
   const res = await ask({ env, content, schema: PLAN_SCHEMA, effort: env.PLAN_EFFORT || "low", maxTokens: 12000 });
   // One line per request for cost tracking (wrangler tail / Workers logs).
-  console.log(JSON.stringify({ event: "plan", image: Boolean(src.image), chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
+  console.log(JSON.stringify({ event: "plan", images: src.images.length, chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
   if (res.refused) return json({ error: "refused" }, 422, cors);
   const plan = res.data;
   if (res.error || !plan || !Array.isArray(plan.chapters) || !plan.chapters.length) return json({ error: "no_plan" }, 502, cors);
@@ -210,9 +216,9 @@ async function handleLesson(request, env, cors) {
   if (!(await takeQuota(env, request, "lesson"))) return json({ error: "daily_limit" }, 429, cors);
 
   const course = cleanCourse(body.course);
-  const content = withImage(src.image, lessonMessage({ ...src.fields, course }));
+  const content = withImages(src.images, lessonMessage({ ...src.fields, course }));
   const res = await ask({ env, content, schema: LESSON_SCHEMA, effort: env.LESSON_EFFORT || "medium", maxTokens: 16000 });
-  console.log(JSON.stringify({ event: "lesson", chapter: course ? course.index : null, image: Boolean(src.image), chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
+  console.log(JSON.stringify({ event: "lesson", chapter: course ? course.index : null, images: src.images.length, chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
   if (res.refused) return json({ error: "refused" }, 422, cors);
   if (res.error || !res.data || !Array.isArray(res.data.bites) || !res.data.bites.length) return json({ error: "no_lesson" }, 502, cors);
   return json({ lesson: res.data, model: res.usage.model }, 200, cors);

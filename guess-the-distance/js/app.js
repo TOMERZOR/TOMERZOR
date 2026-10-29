@@ -14,7 +14,7 @@ import { DuelNet, detectServer } from "./net.js";
 import { DuelUI } from "./duelui.js";
 import { playSolo, dailyInfo } from "./solo.js";
 import { overlay, closeOverlay } from "./stage.js";
-import { prepareMap as gmapPrepare } from "./map.js";
+import { prepareMap as gmapPrepare, relabel as gmapRelabel } from "./map.js";
 
 load();
 setLang(store.settings.lang);
@@ -342,6 +342,7 @@ function renderMe() {
     store.settings.lang = val;
     save();
     setLang(val);
+    gmapRelabel();
     sfx.toggle();
     render();
   });

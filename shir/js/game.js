@@ -20,6 +20,8 @@ const allSongs = window.SONGS || [];
 const imgSrc = (s) => `img/s/${s.id}.webp`;
 const langOf = (s) => s.lang || "he";
 // The keyboard follows the title's letters: "Kawaii" is on the Hebrew list but typed in English.
+// What the player types: `answer` drops a long bracketed tail, e.g. "A Bar Song" for "A Bar Song (Tipsy)".
+const answerOf = (s) => s.answer || s.title;
 const typedIn = (s) => (/[\u0590-\u05FF]/.test(s.title) ? "he" : "en");
 const fold = (ch) => FINALS[ch] || ch.toLowerCase();
 
@@ -109,7 +111,7 @@ function start(mode) {
 function round() {
   const song = state.deck[state.i];
   const keys = KEYBOARDS[typedIn(song)].join("");
-  state.slots = [...song.title].map((ch) => {
+  state.slots = [...answerOf(song)].map((ch) => {
     const typable = keys.includes(fold(ch)) || keys.includes(ch);
     // Digits and punctuation are given; only letters on the keyboard are typed.
     return { ch, typable, locked: !typable, typed: "" };

@@ -1,8 +1,8 @@
 {
-  "name": "פריחה · Bloom",
-  "short_name": "פריחה",
-  "lang": "he",
-  "dir": "rtl",
+  "name": "Bloom",
+  "short_name": "Bloom",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",

@@ -1,12 +1,13 @@
-// Plays the game in a phone-sized browser with real touch-like drags and saves screenshots.
+// Plays the game in a phone-sized browser with real taps (to turn bundles) and drags, and saves
+// screenshots along the way.
 //   npx http-server -p 8093 .   (from the repo root)
-//   node bloom/test/play.cjs <outDir> [moves=40]
+//   node bloom/test/play.cjs <outDir> [drops=40]
 const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 
 const out = process.argv[2] || 'shots';
-const moves = +(process.argv[3] || 40);
+const drops = +(process.argv[3] || 40);
 fs.mkdirSync(out, { recursive: true });
 
 (async () => {
@@ -17,65 +18,65 @@ fs.mkdirSync(out, { recursive: true });
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto('http://localhost:8093/bloom/?t=' + Date.now());
   await page.waitForTimeout(800);
-  await page.screenshot({ path: path.join(out, '1-streak.png') });
   await page.click('[data-act="ok"]');
   await page.waitForTimeout(300);
-  await page.screenshot({ path: path.join(out, '2-home.png') });
+  await page.screenshot({ path: path.join(out, '1-home.png') });
   await page.click('#h-play', { force: true });
   await page.waitForTimeout(900);
-  await page.screenshot({ path: path.join(out, '3-game.png') });
+  await page.screenshot({ path: path.join(out, '2-start.png') });
 
   const box = await page.locator('#board').boundingBox();
-  let placed = 0, shot = 0;
-  for (let k = 0; k < moves * 3 && placed < moves; k++) {
-    // Pick the move that clears the most lines (a decent player), then drag it like a finger.
-    const mv = await page.evaluate(() => {
+  let done = 0, shots = 0;
+  while (done < drops) {
+    // A decent player: the move (bundle, turns, column) with the most points, then the lowest garden.
+    const mv = await page.evaluate(async () => {
       const B = window.__bloom, G = B.game;
-      if (!G || G.over) return null;
-      const L = B.layout;
+      if (!G || G.over || G.busy) return null;
+      const bd = await import('./js/board.js');
+      const { stepPoints } = await import('./js/rules.js');
       let best = null;
-      G.tray.forEach((p, i) => {
-        if (!p) return;
-        for (let r = 0; r + p.shape.h <= 8; r++) for (let c = 0; c + p.shape.w <= 8; c++) {
-          let ok = true;
-          for (const [dr, dc] of p.shape.cells) if (G.grid[(r + dr) * 8 + c + dc]) ok = false;
-          if (!ok) continue;
-          const g = G.grid.slice();
-          for (const [dr, dc] of p.shape.cells) g[(r + dr) * 8 + c + dc] = 1;
-          let lines = 0;
-          for (let a = 0; a < 8; a++) { let row = true, col = true; for (let b = 0; b < 8; b++) { if (!g[a * 8 + b]) row = false; if (!g[b * 8 + a]) col = false; } lines += row + col; }
-          const v = lines * 10 + r * 0.1 + Math.random();
-          if (!best || v > best.v) best = { v, i, r, c, w: p.shape.w, h: p.shape.h };
+      G.tray.forEach((t, i) => {
+        if (!t) return;
+        let p = t.piece;
+        for (let k = 0; k < 4; k++) {
+          const w = bd.pieceWidth(p), h = bd.pieceHeight(p);
+          for (let c = 0; c + w <= bd.COLS; c++) {
+            if (!bd.canDrop(G.board, p, c)) continue;
+            const b = bd.cloneBoard(G.board);
+            bd.drop(b, p, c);
+            const steps = bd.resolve(b);
+            const v = steps.reduce((a, s) => a + stepPoints(s), 0) - Math.max(...bd.heights(b)) * 15 + Math.random() * 5;
+            if (!best || v > best.v) best = { v, i, k, c, w, h };
+          }
+          p = bd.rotate(p);
         }
       });
       if (!best) return null;
-      const s = L.slots[best.i], cell = L.cell;
-      // where the mouse must be so the piece's top-left lands on (r, c): see dragTo() (a mouse holds the piece centred)
-      const x = L.boardX + best.c * cell + best.w * cell / 2;
-      const y = L.boardY + best.r * cell + best.h * cell / 2;
-      return { from: [s.x, s.y], to: [x, y] };
+      const L = B.layout, s = L.slots[best.i], cell = L.cell;
+      return { slot: [s.x, s.y], turns: best.k, to: [L.boardX + best.c * cell + best.w * cell / 2, L.boardY + cell * 2] };
     });
-    if (!mv) { await page.waitForTimeout(400); if (await page.locator('#overlay').isVisible()) break; continue; }
-    await page.mouse.move(box.x + mv.from[0], box.y + mv.from[1]);
+    if (!mv) {
+      await page.waitForTimeout(300);
+      if (await page.locator('#overlay').isVisible()) break;
+      continue;
+    }
+    const sx = box.x + mv.slot[0], sy = box.y + mv.slot[1];
+    for (let k = 0; k < mv.turns; k++) { await page.mouse.click(sx, sy); await page.waitForTimeout(60); }
+    await page.mouse.move(sx, sy);
     await page.mouse.down();
-    for (let s = 1; s <= 6; s++) await page.mouse.move(box.x + mv.from[0] + (mv.to[0] - mv.from[0]) * s / 6, box.y + mv.from[1] + (mv.to[1] - mv.from[1]) * s / 6);
-    if (placed === 5) await page.screenshot({ path: path.join(out, '4-drag.png') });
+    for (let s = 1; s <= 6; s++) await page.mouse.move(sx + (box.x + mv.to[0] - sx) * s / 6, sy + (box.y + mv.to[1] - sy) * s / 6);
+    if (done === 3) await page.screenshot({ path: path.join(out, '3-drag.png') });
     await page.mouse.up();
-    placed++;
-    await page.waitForTimeout(placed % 10 === 0 ? 120 : 260);
-    const lines = await page.evaluate(() => window.__bloom.game?.lines || 0);
-    if (lines > 0 && shot === 0) { shot = 1; await page.screenshot({ path: path.join(out, '5-clear.png') }); }
+    done++;
+    // catch a bloom mid-animation
+    await page.waitForTimeout(330);
+    const chain = await page.evaluate(() => window.__bloom.game?.busy && window.__bloom.game.view !== window.__bloom.game.board);
+    if (chain && shots < 3) { shots++; await page.screenshot({ path: path.join(out, `4-bloom-${shots}.png`) }); }
+    for (let i = 0; i < 40 && (await page.evaluate(() => window.__bloom.game?.busy)); i++) await page.waitForTimeout(100);
   }
-  await page.screenshot({ path: path.join(out, '6-late.png') });
-  const st = await page.evaluate(() => ({ score: window.__bloom.game?.score, placements: window.__bloom.game?.placements, lines: window.__bloom.game?.lines }));
-  console.log('placed', placed, st);
-  // the game-over flow: offer of a second chance, then results
-  for (let i = 0; i < 30 && !(await page.locator('#overlay').isVisible()); i++) await page.waitForTimeout(300);
-  if (await page.locator('#overlay').isVisible()) {
-    await page.screenshot({ path: path.join(out, '7-over.png') });
-    const end = page.locator('[data-act="end"]');
-    if (await end.count()) { await end.click(); await page.waitForTimeout(1600); await page.screenshot({ path: path.join(out, '8-results.png') }); }
-  }
+  await page.screenshot({ path: path.join(out, '5-late.png') });
+  const st = await page.evaluate(() => { const G = window.__bloom.game; return G && { score: G.score, drops: G.drops, blooms: G.blooms, maxChain: G.maxChain, weeds: G.weeds, specials: G.specials }; });
+  console.log('dropped', done, st);
   console.log('errors:', errors.length ? errors : 'none');
   await browser.close();
 })();

@@ -45,7 +45,7 @@ function drawFlower(c, x, y, f, H, now, grow, bud = false) {
     c.fillStyle = '#7ad67a';
     c.beginPath(); c.ellipse(tx, ty, 5 + grow * 3, 8 + grow * 3, 0, 0, TAU); c.fill();
     c.fillStyle = '#ffd23d';
-    c.font = '800 11px Rubik, sans-serif'; c.textAlign = 'center';
+    c.font = '800 11px Fredoka, sans-serif'; c.textAlign = 'center';
     c.fillText(`${Math.floor(grow * 100)}%`, tx, ty - 16);
     return;
   }

@@ -27,7 +27,11 @@ const TYPES = {
 // the reference data only.
 const R = process.env.ROUTER_URL?.replace(/\/+$/, "");
 const endpoints = R ? { car: [`${R}/routed-car`], bike: [`${R}/routed-bike`], foot: [`${R}/routed-foot`] } : undefined;
-const resolve = createResolver({ live: process.env.ROUTER !== "off", endpoints });
+const resolve = createResolver({
+  live: process.env.ROUTER !== "off",
+  endpoints,
+  headers: { "User-Agent": "GuessTheDistance/1.0 (+https://github.com/TOMERZOR/TOMERZOR)" },
+});
 const hub = new Hub({ resolve, log: (s) => console.log(new Date().toISOString(), s) });
 
 async function serveStatic(req, res) {

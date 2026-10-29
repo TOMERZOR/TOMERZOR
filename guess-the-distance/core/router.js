@@ -25,6 +25,7 @@ export function createResolver({
   endpoints = DEFAULT_ENDPOINTS,
   timeoutMs = 7000,
   live = true,
+  headers = {},
 } = {}) {
   let liveDownUntil = 0;
   // The public routers ask for gentle use: at most a few requests at a time.
@@ -44,7 +45,7 @@ export function createResolver({
       const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
       const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null;
       try {
-        const res = await fetchFn(url, { signal: ctrl?.signal, headers: { Accept: "application/json" } });
+        const res = await fetchFn(url, { signal: ctrl?.signal, headers: { Accept: "application/json", ...headers } });
         if (!res.ok) { failures++; continue; }
         const data = await res.json();
         const r = data?.routes?.[0];

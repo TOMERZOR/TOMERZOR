@@ -1,8 +1,13 @@
 // The map behind every round: two pins, then the real route drawing itself
-// with a little vehicle riding along it. A real street map from the first
-// tile service that answers (CARTO, then OpenStreetMap, then Esri). If none
-// can load, the game draws its own map from Natural Earth data: land, lakes,
-// borders, roads and cities with Hebrew names.
+// with a little vehicle riding along it.
+//
+// The street map comes from the first service that answers, all free and
+// keyless:
+//   1. OpenFreeMap vector tiles drawn by MapLibre: crisp at any zoom, Hebrew
+//      or English labels to match the game's language.
+//   2. OpenStreetMap's raster tiles.
+//   3. Esri's World Street Map.
+// If none can load, the game draws its own map from Natural Earth data.
 
 import { getLang } from "./i18n.js";
 import { MODE_EMOJI } from "./icons.js";
@@ -12,62 +17,119 @@ import { PLACES } from "../core/places.js";
 const L = window.L;
 const MODE_COLOR = { car: "#0a84ff", foot: "#30c35a", bike: "#ff9500", flight: "#af52de" };
 const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+const OFM = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · ' + OSM;
 
-const PROVIDERS = [
+const NE_CREDIT = 'Map data: <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>';
+
+const STYLES = {
+  light: "https://tiles.openfreemap.org/styles/liberty",
+  dark: "https://tiles.openfreemap.org/styles/dark",
+};
+
+const RASTERS = [
   {
-    url: (d) => d ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    opts: { subdomains: "abcd", maxZoom: 19, attribution: `${OSM} · © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>` },
-  },
-  {
-    url: () => "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     opts: { maxZoom: 19, attribution: OSM, className: "tiles-invert-dark" },
   },
   {
-    url: () => "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
     opts: { maxZoom: 19, attribution: "Tiles © Esri", className: "tiles-invert-dark" },
   },
 ];
 
 let map = null;
-let tiles = null;
-let provider = 0;
+let tiles = null; // the current Leaflet layer for the street map
+let source = null; // { kind: "vector", dark } | { kind: "raster", i } | { kind: "offline" }
 let layer = null;
 let offline = false;
 let animFrame = 0;
 
 const dark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+const vendor = (f) => new URL(`../vendor/${f}`, import.meta.url).href;
 
-// Called once at startup: find the first tile service that answers, so the
-// first round already has its map. If none does, start loading the built-in map.
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(null), ms))]);
+}
+
+// "ok", "slow" (no answer yet: still worth trying) or "fail".
+async function styleOk(url) {
+  try {
+    const res = await withTimeout(fetch(url, { mode: "cors" }), 8000);
+    if (res === null) return "slow";
+    if (!res.ok) return "fail";
+    const st = await res.json();
+    return st && st.sources && st.layers?.length ? "ok" : "fail";
+  } catch {
+    return "fail";
+  }
+}
+
+function imageOk(url) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const timer = setTimeout(() => resolve("slow"), 8000);
+    img.onload = () => { clearTimeout(timer); resolve("ok"); };
+    img.onerror = () => { clearTimeout(timer); resolve("fail"); };
+    img.src = url.replace("{z}", "5").replace("{x}", "19").replace("{y}", "13");
+  });
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.append(s);
+  });
+}
+
+let glReady = null;
+function loadGL() {
+  if (!glReady) {
+    glReady = (async () => {
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = vendor("maplibre/maplibre-gl.css");
+      document.head.append(css);
+      await loadScript(vendor("maplibre/maplibre-gl.js"));
+      await loadScript(vendor("maplibre/leaflet-maplibre-gl.js"));
+      // Hebrew and Arabic labels need the right-to-left shaping plugin.
+      try { window.maplibregl.setRTLTextPlugin(vendor("maplibre/mapbox-gl-rtl-text.js"), true); } catch {}
+      return true;
+    })().catch(() => false);
+  }
+  return glReady;
+}
+
+// Called once at startup: find the first map service that answers, so the
+// first round already has its map. If none does, load the built-in map.
 let probe = null;
 let basePromise = null;
 export function prepareMap() {
   if (probe) return probe;
-  const tryTile = (i) => new Promise((resolve) => {
-    const img = new Image();
-    const timer = setTimeout(() => resolve(false), 5000);
-    img.onload = () => { clearTimeout(timer); resolve(true); };
-    img.onerror = () => { clearTimeout(timer); resolve(false); };
-    img.src = PROVIDERS[i].url(false).replace("{s}", "a").replace("{z}", "5").replace("{x}", "19").replace("{y}", "13").replace("{r}", "");
-  });
   probe = (async () => {
-    const ok = await Promise.all(PROVIDERS.map((_, i) => tryTile(i)));
-    const first = ok.indexOf(true);
-    if (first >= 0) {
-      if (!tiles) provider = first;
-      return true;
+    const [light, darkStyle, ...rasters] = await Promise.all([styleOk(STYLES.light), styleOk(STYLES.dark), ...RASTERS.map((r) => imageOk(r.url))]);
+    if (light !== "fail" && (await loadGL()) && window.maplibregl && L.maplibreGL) {
+      source = { kind: "vector", darkStyle: darkStyle === "ok" };
+    } else {
+      let i = rasters.indexOf("ok");
+      if (i < 0) i = rasters.indexOf("slow");
+      if (i >= 0) source = { kind: "raster", i };
+      else {
+        source = { kind: "offline" };
+        loadBase();
+      }
     }
-    loadBase();
-    if (map && !offline) goOffline();
-    else if (!map) offline = "pending";
-    return false;
+    if (map) applySource();
+    return source;
   })();
   return probe;
 }
 
 function loadBase() {
   if (!basePromise) {
-    basePromise = fetch(new URL("../vendor/basemap.json", import.meta.url)).then((r) => r.json()).catch(() => null);
+    basePromise = fetch(vendor("basemap.json")).then((r) => r.json()).catch(() => null);
   }
   return basePromise;
 }
@@ -85,33 +147,141 @@ export function initMap(el) {
     preferCanvas: false,
   }).setView([31.6, 35], 7);
   map.attributionControl.setPrefix(false);
-  if (offline === "pending") {
-    offline = false;
-    goOffline();
-  } else setTiles();
-  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => (offline ? restyleBasemap() : setTiles()));
+  // zoom buttons for a mouse, on the side away from the game panel
+  if (matchMedia("(min-width: 1024px)").matches) {
+    L.control.zoom({ position: document.dir === "rtl" ? "bottomleft" : "bottomright", zoomInTitle: "+", zoomOutTitle: "−" }).addTo(map);
+  }
   layer = L.layerGroup().addTo(map);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => (offline ? restyleBasemap() : applySource()));
+  if (source) applySource();
+  else prepareMap();
   return map;
 }
 
-function setTiles() {
-  if (!map || offline) return;
-  if (tiles) tiles.remove();
-  const P = PROVIDERS[provider];
-  let ok = 0, err = 0;
-  tiles = L.tileLayer(P.url(dark()), { detectRetina: false, ...P.opts });
-  tiles.on("tileload", () => ok++);
-  tiles.on("tileerror", () => {
-    err++;
-    // This service isn't answering here: try the next one.
-    if (err >= 4 && ok === 0) {
-      if (provider < PROVIDERS.length - 1) {
-        provider++;
-        setTiles();
-      } else goOffline();
+let credit = null;
+function setCredit(text) {
+  if (!map) return;
+  if (credit) map.attributionControl.removeAttribution(credit);
+  credit = text;
+  if (text) map.attributionControl.addAttribution(text);
+}
+
+function applySource() {
+  if (!map || !source || offline) return;
+  if (tiles) {
+    tiles.remove();
+    tiles = null;
+  }
+  setCredit(null);
+  if (source.kind === "vector") return useVector();
+  if (source.kind === "raster") return useRaster(source.i);
+  goOffline();
+}
+
+// When the street map fails after all, move down the list.
+function nextSource() {
+  if (source?.kind === "vector") source = { kind: "raster", i: 0 };
+  else if (source?.kind === "raster" && source.i < RASTERS.length - 1) source = { kind: "raster", i: source.i + 1 };
+  else source = { kind: "offline" };
+  applySource();
+}
+
+function useVector() {
+  const d = dark();
+  // OpenFreeMap's own dark style when it has one; otherwise the light style, inverted.
+  const url = d && source.darkStyle ? STYLES.dark : STYLES.light;
+  const gl = L.maplibreGL({ style: url, attribution: OFM, className: d && !source.darkStyle ? "tiles-invert-dark" : "" });
+  tiles = gl;
+  gl.addTo(map);
+  setCredit(OFM);
+  const glMap = gl.getMaplibreMap();
+  let loaded = false;
+  glMap.on("style.load", () => {
+    loaded = true;
+    localizeLabels(glMap);
+  });
+  glMap.on("error", (e) => {
+    if (!loaded && /style|fetch|load/i.test(String(e?.error?.message || ""))) {
+      loaded = true;
+      nextSource();
     }
   });
-  tiles.addTo(map);
+  setTimeout(() => {
+    if (!loaded && tiles === gl) nextSource();
+  }, 12000);
+}
+
+// Labels in the game's language: Hebrew names where OpenStreetMap has them.
+function localizeLabels(glMap) {
+  const he = getLang() === "he";
+  const field = he
+    ? ["coalesce", ["get", "name:he"], ["get", "name"]]
+    : ["coalesce", ["get", "name:en"], ["get", "name:latin"], ["get", "name"]];
+  for (const l of glMap.getStyle()?.layers || []) {
+    if (l.type !== "symbol" || !l.layout?.["text-field"]) continue;
+    try { glMap.setLayoutProperty(l.id, "text-field", field); } catch {}
+  }
+}
+
+// Which map is showing, for the Profile screen.
+export function mapStatus() {
+  if (!source) return "checking";
+  if (source.kind === "vector") return "openfreemap";
+  if (source.kind === "raster") return source.i === 0 ? "osm" : "esri";
+  return "builtin";
+}
+
+// The built-in map is a last resort: at the start of each game, ask the map
+// services again in case the network has come back.
+let retrying = false;
+export async function retryRealMap() {
+  if (!offline || retrying || !map) return;
+  retrying = true;
+  probe = null;
+  const prev = source;
+  source = null;
+  offline = "checking";
+  try {
+    await prepareMap();
+  } finally {
+    retrying = false;
+  }
+  if (source?.kind === "offline") {
+    offline = true;
+    source = prev;
+    return;
+  }
+  leaveOffline();
+  applySource();
+}
+
+function leaveOffline() {
+  baseLayers.forEach((l) => l.remove());
+  baseLayers = [];
+  labels?.clearLayers();
+  map.off("moveend zoomend", placeLabels);
+  map.getContainer().style.background = "";
+  map.attributionControl.removeAttribution(NE_CREDIT);
+  offline = false;
+}
+
+export function relabel() {
+  if (source?.kind === "vector" && tiles?.getMaplibreMap) {
+    try { localizeLabels(tiles.getMaplibreMap()); } catch {}
+  }
+}
+
+function useRaster(i) {
+  const R = RASTERS[i];
+  let ok = 0, err = 0;
+  const t = L.tileLayer(R.url, { detectRetina: false, ...R.opts });
+  tiles = t;
+  t.on("tileload", () => ok++);
+  t.on("tileerror", () => {
+    err++;
+    if (err >= 4 && ok === 0 && tiles === t) nextSource();
+  });
+  t.addTo(map);
 }
 
 // ---------- the built-in map ----------
@@ -127,8 +297,11 @@ const STYLE = {
 async function goOffline() {
   if (offline) return;
   offline = true;
-  if (tiles) tiles.remove();
-  map.attributionControl.addAttribution('Map data: <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>');
+  if (tiles) {
+    tiles.remove();
+    tiles = null;
+  }
+  map.attributionControl.addAttribution(NE_CREDIT);
   base = await loadBase();
   if (!base) return; /* the plain background still works */
   restyleBasemap();

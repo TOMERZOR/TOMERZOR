@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
   push:
     branches: [claude/playwright-mcp-add-8e6qct]
-    paths: ["guess-the-distance/core/**", "guess-the-distance/server/**", "guess-the-distance/wrangler.toml", "guess-the-distance/package*.json", ".github/workflows/guess-the-distance.yml"]
+    paths: ["guess-the-distance/**", "!guess-the-distance/config.js", ".github/workflows/guess-the-distance.yml"]
 
 concurrency:
   group: guess-the-distance

@@ -2,7 +2,7 @@
 // first-run screen, invite and challenge links, and the glue between the
 // solo games, duels, sound and storage.
 
-import { $, $$, html, esc, toast, segmented, setHaptics, haptic, tapHaptics } from "./ui.js";
+import { $, $$, html, esc, toast, segmented, setHaptics, haptic, tapHaptics, isDesktop, onDesktopChange } from "./ui.js";
 import { t, setLang, getLang, word, fmtNum } from "./i18n.js";
 import { icon } from "./icons.js";
 import { artCanvas, paintArt } from "./art.js";
@@ -14,7 +14,7 @@ import { DuelNet, detectServer } from "./net.js";
 import { DuelUI } from "./duelui.js";
 import { playSolo, dailyInfo } from "./solo.js";
 import { overlay, closeOverlay } from "./stage.js";
-import { prepareMap as gmapPrepare } from "./map.js";
+import { prepareMap as gmapPrepare, relabel as gmapRelabel, mapStatus as gmapStatus } from "./map.js";
 
 load();
 setLang(store.settings.lang);
@@ -53,6 +53,29 @@ const app = {
 };
 duels.app = app;
 window.__gtdApp = app;
+
+
+// ---------- desktop sidebar ----------
+function renderSidebar() {
+  const sb = $("#sidebar");
+  if (!sb) return;
+  const p = store.profile, st = store.stats, s = store.settings;
+  sb.innerHTML = `
+    <div class="sb-brand"><img src="img/icon.svg" alt="" width="40" height="40"><div><b>Guess The</b><b>Distance</b></div></div>
+    <nav class="sb-nav" role="tablist" aria-label="Guess The Distance">
+      ${TABS.map(([id, ic, label]) => `<button class="sb-item ${id === tab ? "on" : ""}" role="tab" aria-selected="${id === tab}" data-tab="${id}">${icon(ic)}<span>${esc(t(label))}</span>${id === "duel" && net.state === "open" ? `<em class="sb-badge num">${fmtNum(Math.max(1, net.online))}</em>` : ""}</button>`).join("")}
+    </nav>
+    <div class="sb-foot">
+      <button class="sb-me" data-tab="me"><span class="sb-av">${esc(p.avatar)}</span><span class="sb-who"><b>${esc(p.name || "—")}</b><small class="num">${esc(t("wins"))} ${fmtNum(st.wins)} · ${esc(t("games"))} ${fmtNum(st.games)}</small></span></button>
+      <div class="sb-toggles">
+        <button class="icon-btn" id="sb-music" aria-pressed="${s.music}" aria-label="${esc(t("music"))}" title="${esc(t("music"))}">${icon("music")}</button>
+        <button class="icon-btn" id="sb-sfx" aria-pressed="${s.sfx}" aria-label="${esc(t("sfx"))}" title="${esc(t("sfx"))}">${icon("speaker")}</button>
+      </div>
+    </div>`;
+  sb.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => go(b.dataset.tab)));
+  $("#sb-music", sb).addEventListener("click", () => { setPref("music", !store.settings.music); sfx.toggle(); });
+  $("#sb-sfx", sb).addEventListener("click", () => { setPref("sfx", !store.settings.sfx); sfx.toggle(); });
+}
 
 // ---------- tab bar ----------
 const TABS = [
@@ -96,6 +119,7 @@ function go(next) {
 // ---------- views ----------
 function render() {
   renderTabbar();
+  renderSidebar();
   $$(".view").forEach((v) => v.classList.toggle("active", v.id === `v-${tab}`));
   if (tab === "play") renderPlay();
   if (tab === "duel") renderDuel();
@@ -147,7 +171,9 @@ function renderPlay() {
   const bestTag = (n) => (n ? `<span class="best num">${esc(t("best", { n: fmtNum(n) }))}</span>` : "");
   const doneFill = done ? Math.round((done.score / 25000) * 100) : 0;
   v.innerHTML = `<div class="view-inner">
-    ${header(`Guess The<br>Distance`)}
+    ${header(`Guess The <br>Distance`)}
+    <div class="d-top">
+    <div class="d-main">
     ${challenge ? `
       <div class="card-plain challenge-banner">
         <h3>${esc(t("challengedBy", { name: challenge.name }))}</h3>
@@ -168,14 +194,17 @@ function renderPlay() {
         </div>
       </div>
     </button>
-
-    <div class="section-label">${esc(t("maps"))}</div>
-    ${mapChips(s.map, "map")}
-    <div class="section-label">${esc(t("measure"))}</div>
-    <div id="measure"></div>
+    </div>
+    <aside class="d-side">
+      <div class="section-label">${esc(t("maps"))}</div>
+      ${mapChips(s.map, "map")}
+      <div class="section-label">${esc(t("measure"))}</div>
+      <div id="measure"></div>
+    </aside>
+    </div>
 
     <div class="section-label">${esc(t("modes"))}</div>
-    <div class="grid2">
+    <div class="grid2 modes-grid">
       ${modeCard("classic", "trophy", t("classic"), t("classicSub"), bestTag(best("classic")))}
       ${modeCard("streak", "flame", t("streak"), t("streakSub"), bestTag(store.best.streak))}
       ${modeCard("timed", "timer", t("timed"), t("timedSub"), bestTag(best("timed")))}
@@ -190,7 +219,7 @@ function renderPlay() {
     paintArt(v);
   });
   bindChips(v, "map");
-  $("#go-me", v).addEventListener("click", () => go("me"));
+  $("#go-me", v)?.addEventListener("click", () => go("me"));
   $("#daily", v).addEventListener("click", () => {
     sfx.tap();
     if (done) {
@@ -234,7 +263,9 @@ function renderDuel() {
   const c = MODE_ART.quick;
   v.innerHTML = `<div class="view-inner">
     ${header(esc(t("duelTitle")), { hello: false })}
-    <p class="muted" style="margin:-12px 4px 16px">${esc(t("duelLead"))}<br>${statusHtml}</p>
+    <p class="muted lead">${esc(t("duelLead"))}<br>${statusHtml}</p>
+    <div class="d-top">
+    <div class="d-main">
     <button class="art-card hero drift" id="quick" style="--c1:${c[0]};--c2:${c[1]};--c3:${c[2]}">
       ${artCanvas(c, "quick")}
       <div class="art-body">
@@ -250,12 +281,17 @@ function renderDuel() {
       </div>
     </button>
     ${st === "local" ? `<p class="muted" style="font-size:14px;margin:12px 4px 0">${esc(t("serverOffNote"))}</p>` : ""}
+    </div>
+    <aside class="d-side">
+      <div class="section-label">${esc(t("maps"))}</div>
+      ${mapChips(dmap, "duelMap")}
+      <div class="section-label">${esc(t("measure"))}</div>
+      <div id="dmeasure"></div>
+    </aside>
+    </div>
 
-    <div class="section-label">${esc(t("maps"))}</div>
-    ${mapChips(dmap, "duelMap")}
-    <div class="section-label">${esc(t("measure"))}</div>
-    <div id="dmeasure"></div>
-
+    <div class="d-cards">
+    <div class="d-cell">
     <div class="section-label">${esc(t("room"))}</div>
     <div class="card-plain stack">
       <p style="margin:0">${esc(t("roomSub"))}</p>
@@ -265,16 +301,22 @@ function renderDuel() {
         <button class="btn btn-soft" id="join-room">${esc(t("join"))}</button>
       </div>
     </div>
+    </div>
 
+    <div class="d-cell">
     <div class="section-label">${esc(t("bot"))}</div>
     <div class="card-plain stack">
       <p style="margin:0">${esc(t("botSub"))}</p>
       <div id="bot-level"></div>
       <button class="btn btn-soft btn-block" id="play-bot">${icon("robot")}${esc(t("playBot"))}</button>
     </div>
+    </div>
 
-    <div class="section-label"></div>
-    <details class="card-plain"><summary>${esc(t("rulesTitle"))}</summary><p class="rules" style="margin:12px 0 0">${t("rules")}</p></details>
+    <div class="d-cell">
+    <div class="section-label"><span class="d-only">${esc(t("rulesTitle"))}</span></div>
+    <details class="card-plain" ${isDesktop() ? "open" : ""}><summary>${esc(t("rulesTitle"))}</summary><p class="rules" style="margin:12px 0 0">${t("rules")}</p></details>
+    </div>
+    </div>
   </div>`;
   bindChips(v, "duelMap");
   segmented($("#dmeasure", v), [["time", t("mTime")], ["distance", t("mDistance")]], dmeasure, (val) => {
@@ -287,7 +329,7 @@ function renderDuel() {
     store.settings.botLevel = val;
     save();
   });
-  $("#go-me", v).addEventListener("click", () => go("me"));
+  $("#go-me", v)?.addEventListener("click", () => go("me"));
   const cur = () => [store.settings.duelMap || "israel", store.settings.duelMeasure || "time"];
   $("#quick", v).addEventListener("click", () => { sfx.tap(); duels.quick(...cur()); });
   $("#create-room", v).addEventListener("click", () => { sfx.tap(); duels.createRoom(...cur()); });
@@ -314,6 +356,8 @@ function renderMe() {
   const sw = (id, on) => `<button class="switch" role="switch" aria-checked="${on}" id="${id}" aria-labelledby="${id}-l"></button>`;
   v.innerHTML = `<div class="view-inner">
     ${header(esc(store.profile.name || t("tabMe")), { hello: false })}
+    <div class="d-cols">
+    <div class="d-col">
     <div class="stats-grid">
       <div class="stat"><b class="num">${fmtNum(st.games)}</b><span>${esc(t("games"))}</span></div>
       <div class="stat"><b class="num">${fmtNum(bestClassic)}</b><span>${esc(t("bestClassic"))}</span></div>
@@ -322,7 +366,13 @@ function renderMe() {
       <div class="stat"><b class="num">${fmtNum(st.losses)}</b><span>${esc(t("losses"))}</span></div>
       <div class="stat"><b class="num">${fmtNum(st.perfects)}</b><span>${esc(t("perfects"))}</span></div>
     </div>
+    <div class="section-label">${esc(t("name"))}</div>
+    <input class="field" id="name" maxlength="18" value="${esc(store.profile.name)}" placeholder="${esc(t("namePh"))}" aria-label="${esc(t("name"))}">
+    <div class="section-label">${esc(t("pickAvatar"))}</div>
+    <div class="emoji-grid" id="avatars">${AVATARS.map((a) => `<button class="${a === store.profile.avatar ? "on" : ""}" data-a="${a}" aria-label="${a}">${a}</button>`).join("")}</div>
+    </div>
 
+    <div class="d-col">
     <div class="section-label">${esc(t("settings"))}</div>
     <div class="list">
       <div class="row"><span class="ri" style="background:#007aff">${icon("globe")}</span><span class="rl">${esc(t("language"))}</span><div id="lang" style="width:150px"></div></div>
@@ -330,35 +380,31 @@ function renderMe() {
       <div class="row"><span class="ri" style="background:#ff9500">${icon("speaker")}</span><span class="rl" id="sw-sfx-l">${esc(t("sfx"))}</span>${sw("sw-sfx", s.sfx)}</div>
       <div class="row"><span class="ri" style="background:#34c759">${icon("vibrate")}</span><span class="rl" id="sw-hap-l">${esc(t("haptics"))}</span>${sw("sw-hap", s.haptics)}</div>
       <div class="row"><span class="ri" style="background:#5856d6">${icon("server")}</span><span class="rl">${esc(t("server"))}</span><span class="rv" id="srv">${esc(server ? t("serverOn") : t("serverOff"))}</span></div>
+      <div class="row"><span class="ri" style="background:#30b0c7">${icon("pin")}</span><span class="rl">${esc(t("mapRow"))}</span><span class="rv" id="map-src">${esc(word("mapSrc", gmapStatus()))}</span></div>
     </div>
-
-    <div class="section-label">${esc(t("name"))}</div>
-    <input class="field" id="name" maxlength="18" value="${esc(store.profile.name)}" placeholder="${esc(t("namePh"))}" aria-label="${esc(t("name"))}">
-    <div class="section-label">${esc(t("pickAvatar"))}</div>
-    <div class="emoji-grid" id="avatars">${AVATARS.map((a) => `<button class="${a === store.profile.avatar ? "on" : ""}" data-a="${a}" aria-label="${a}">${a}</button>`).join("")}</div>
     <p class="muted" style="font-size:13px;margin:22px 4px 0">${esc(t("about"))}</p>
+    </div>
+    </div>
   </div>`;
   segmented($("#lang", v), [["he", "עברית"], ["en", "English"]], s.lang, (val) => {
     store.settings.lang = val;
     save();
     setLang(val);
+    gmapRelabel();
     sfx.toggle();
     render();
   });
-  const toggle = (id, key, apply) => $(id, v).addEventListener("click", (e) => {
-    const on = !store.settings[key];
-    store.settings[key] = on;
-    save();
-    e.currentTarget.setAttribute("aria-checked", String(on));
-    apply(on);
+  const toggle = (id, key) => $(id, v).addEventListener("click", () => {
+    setPref(key, !store.settings[key]);
     sfx.toggle();
   });
-  toggle("#sw-music", "music", (on) => { audio.setMusic(on); if (on) audio.unlock(); });
-  toggle("#sw-sfx", "sfx", (on) => audio.setSfx(on));
-  toggle("#sw-hap", "haptics", (on) => setHaptics(on));
+  toggle("#sw-music", "music");
+  toggle("#sw-sfx", "sfx");
+  toggle("#sw-hap", "haptics");
   $("#name", v).addEventListener("change", (e) => {
     store.profile.name = e.target.value.trim().slice(0, 18);
     save();
+    renderSidebar();
     net.state !== "idle" && net.hello();
   });
   $("#avatars", v).addEventListener("click", (e) => {
@@ -368,8 +414,25 @@ function renderMe() {
     store.profile.avatar = b.dataset.a;
     save();
     $$("#avatars button", v).forEach((x) => x.classList.toggle("on", x === b));
+    renderSidebar();
     net.state !== "idle" && net.hello();
   });
+}
+
+// One place that changes a sound/feel setting, so Profile and the desktop
+// sidebar always agree.
+function setPref(key, on) {
+  store.settings[key] = on;
+  save();
+  if (key === "music") {
+    audio.setMusic(on);
+    if (on) audio.unlock();
+  }
+  if (key === "sfx") audio.setSfx(on);
+  if (key === "haptics") setHaptics(on);
+  const sw = { music: "#sw-music", sfx: "#sw-sfx", haptics: "#sw-hap" }[key];
+  $(sw)?.setAttribute("aria-checked", String(on));
+  $(`#sb-${key}`)?.setAttribute("aria-pressed", String(on));
 }
 
 // ---------- stats ----------
@@ -486,11 +549,7 @@ async function boot() {
   addEventListener("pointerdown", unlockOnce);
   addEventListener("keydown", unlockOnce);
   addEventListener("resize", () => requestAnimationFrame(moveThumb));
-  addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && $("#overlay").classList.contains("on") && $("#q-cancel, #r-cancel, #l-stay")) {
-      ($("#q-cancel") || $("#r-cancel") || $("#l-stay")).click();
-    }
-  });
+  addEventListener("keydown", onKey);
 
   const { room } = readLinks();
   if (room) tab = "duel";
@@ -498,7 +557,10 @@ async function boot() {
   if (!store.profile.name) await onboarding();
   render();
 
-  gmapPrepare();
+  gmapPrepare().then(() => {
+    const el = $("#map-src");
+    if (el) el.textContent = word("mapSrc", gmapStatus());
+  });
   detectServer().then((s) => {
     server = s;
     if (tab === "me") renderMe();
@@ -509,7 +571,12 @@ async function boot() {
       paintArt($("#v-duel"));
     }
   });
-  net.on("online", () => tab === "duel" && refreshOnline());
+  net.on("online", () => {
+    if (tab === "duel") refreshOnline();
+    renderSidebar();
+  });
+  net.on("state", () => renderSidebar());
+  onDesktopChange(() => render());
   // Back in the middle of a duel after a reload: reconnect and the server
   // puts us back in the match.
   let midMatch = false;
@@ -519,6 +586,46 @@ async function boot() {
     await net.connect();
     duels.joinRoom(room);
   }
+}
+
+// Keyboard: Enter guesses or moves on, Escape backs out, 1/2/3 switch screens.
+function onKey(e) {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const typing = e.target.closest?.("input, textarea, select");
+  const overlayOn = $("#overlay").classList.contains("on");
+  const inGame = $("#stage").classList.contains("on");
+  const visible = (sel) => {
+    const b = $(sel);
+    return b && !b.disabled && b.offsetParent !== null ? b : null;
+  };
+  if (e.key === "Escape") {
+    const cancel = overlayOn && (visible("#q-cancel") || visible("#r-cancel") || visible("#l-stay"));
+    if (cancel) return cancel.click();
+    if (!overlayOn && inGame) (visible("#btn-exit") || visible("#d-exit"))?.click();
+    return;
+  }
+  if (typing) return;
+  if (e.key === "Enter" && !e.repeat) {
+    // a focused button handles its own Enter
+    const btn = e.target.closest?.("button, summary, a");
+    if (btn && !["btn-guess", "btn-next"].includes(btn.id)) return;
+    if (overlayOn) {
+      const b = visible("#sum-again") || visible("#end-rematch") || visible("#accept-ch");
+      if (b && e.target === document.body) {
+        e.preventDefault();
+        b.click();
+      }
+      return;
+    }
+    if (!inGame) return;
+    const b = visible("#btn-guess") || visible("#btn-next");
+    if (b) {
+      e.preventDefault();
+      b.click();
+    }
+    return;
+  }
+  if (!inGame && !overlayOn && ["1", "2", "3"].includes(e.key)) go(TABS[Number(e.key) - 1][0]);
 }
 
 function refreshOnline() {

@@ -16,6 +16,13 @@ export function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// Desktop layout (sidebar, side panel in games, keyboard hints) from 1024px.
+const desktopQuery = matchMedia("(min-width: 1024px)");
+export const isDesktop = () => desktopQuery.matches;
+export function onDesktopChange(fn) {
+  desktopQuery.addEventListener?.("change", fn);
+}
+
 export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

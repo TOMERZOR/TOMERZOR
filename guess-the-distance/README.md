@@ -22,6 +22,10 @@ Live (after the deploy workflow has run once): the Worker's `workers.dev` addres
 
 Maps: Israel, The World, City Walks, Flights, Random Places. What you guess: travel time or road distance.
 
+## Phone and desktop
+
+From 1024px wide the game switches to a desktop layout: a translucent sidebar (with quick music and sound toggles) instead of the tab bar, content in columns, the game's trip card and guess panel in a side panel next to a full-size map with zoom buttons, and results in windows. Keyboard: Enter guesses and moves to the next round, ↑↓ turn a wheel, ←→ move between wheels, Esc leaves, 1/2/3 switch screens. In Hebrew everything is mirrored (sidebar and panel on the right).
+
 ## Scoring
 
 Up to 5,000 a round. The error is measured as a ratio, so being 6 minutes off a 1-hour drive costs the same as 1.5 hours off a 15-hour one: `5000 × e^(−2.5 × |ln((guess + 5) / (actual + 5))|)`. Within a minute (or 0.5%) is a perfect 5,000. Roughly: 5% off ≈ 4,450, 10% ≈ 4,000, 25% ≈ 3,000, 50% ≈ 1,950, double ≈ 1,000.
@@ -32,7 +36,7 @@ Duels follow GeoGuessr Duels: both start with 6,000 health; each round the lower
 
 Every round asks a live OpenStreetMap router (OSRM, through the FOSSGIS servers at routing.openstreetmap.de for car, bike and foot, and the OSRM demo server for cars) for the actual route, its distance and its duration, and draws that route on the map. Drive times are without traffic. Flights are great-circle paths with scheduled block times. Results are cached (in memory on the Node server, in Cloudflare's edge cache on the Worker), and at most 3 router requests run at once.
 
-If the router can't be reached, listed trips fall back to reference numbers from real road, path and flight data (`core/places.js`), and the reveal says so. Random Places needs the live router (the spots are made up on the spot, then snapped to the nearest road); without it those rounds swap to a listed trip. The map is a real street map from the first tile service that answers: CARTO, then OpenStreetMap, then Esri. If none can load (offline, blocked network), the game draws its own map from Natural Earth data in `vendor/basemap.json` (land, lakes, borders, roads, and city names in Hebrew and English), styled like Apple Maps. It is only downloaded in that case.
+If the router can't be reached, listed trips fall back to reference numbers from real road, path and flight data (`core/places.js`), and the reveal says so. Random Places needs the live router (the spots are made up on the spot, then snapped to the nearest road); without it those rounds swap to a listed trip. The map is a real street map from the first free, keyless service that answers: OpenFreeMap vector tiles drawn with MapLibre (labels in Hebrew or English to match the game; vendored in `vendor/maplibre/` with the RTL text plugin), then OpenStreetMap's raster tiles, then Esri's World Street Map. The app checks them once at startup. If none can load (offline, blocked network), the game draws its own map from Natural Earth data in `vendor/basemap.json` (land, lakes, borders, roads, and city names in Hebrew and English), styled like Apple Maps. It is only downloaded in that case.
 
 ## Server
 
@@ -57,4 +61,4 @@ Haptics: a tick on every notch of the time and distance wheels and while points 
 - `js/`: the page. `app.js` (tabs, onboarding, links), `solo.js`, `duelui.js`, `stage.js` (game screen pieces), `wheel.js` (iOS wheel picker and distance odometer), `map.js` (Leaflet, route drawing), `audio.js`, `art.js` (the streaked gradient card art), `net.js`, `i18n.js`.
 - `css/app.css`: the Apple-style design: system type, grouped surfaces, Liquid Glass on the floating layer, springs, light and dark, reduced motion and reduced transparency.
 
-Credits: map data © OpenStreetMap contributors, routing by OSRM / FOSSGIS, tiles © CARTO, coastlines from Natural Earth, Leaflet (BSD-2).
+Credits: map data © OpenStreetMap contributors, vector tiles by OpenFreeMap / OpenMapTiles, MapLibre GL (BSD-3), routing by OSRM / FOSSGIS, coastlines from Natural Earth, Leaflet (BSD-2).

@@ -53,11 +53,25 @@ export async function getRounds({ seed, map, count = 5, from = 0 }) {
   if (base) {
     try {
       const data = await fetchJSON(`${base}/api/rounds?seed=${encodeURIComponent(seed)}&map=${map}&count=${count}&from=${from}`, 15000);
-      if (Array.isArray(data.rounds) && data.rounds.length) return data.rounds;
+      if (Array.isArray(data.rounds) && data.rounds.length) return upgradeRoutes(data.rounds);
     } catch {}
   }
   const specs = makeRounds({ seed, map, count: from + count }).slice(from);
   return Promise.all(specs.map((s) => resolveRound(s, resolver)));
+}
+
+// The server could only give reference numbers for some rounds (its router
+// didn't answer): ask the routers straight from this browser instead, so the
+// round gets its real route and line on the map.
+async function upgradeRoutes(rounds) {
+  await Promise.all(rounds.map(async (r) => {
+    if (r.route?.source !== "reference" || r.mode === "flight") return;
+    try {
+      const live = await resolver({ mode: r.mode, from: r.from, to: r.to, random: r.random });
+      if (live?.source === "live") r.route = live;
+    } catch {}
+  }));
+  return rounds;
 }
 
 // One duel connection: remote WebSocket or the in-page hub.

@@ -92,8 +92,18 @@ export function unlock() {
 export function setMusic(on) {
   musicOn = on;
   if (!ctx) return;
-  musicBus.gain.setTargetAtTime(on ? 0.3 : 0, ctx.currentTime, 0.25);
-  if (on && !playing) startMusic();
+  // Cancel anything still scheduled on the music level (a duck's return to
+  // full volume would otherwise bring the music back after it was turned off).
+  const g = musicBus.gain, t = ctx.currentTime;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(g.value, t);
+  if (on) {
+    g.setTargetAtTime(0.3, t, 0.25);
+    if (!playing) startMusic();
+  } else {
+    g.setTargetAtTime(0, t, 0.06);
+    stopMusic();
+  }
 }
 
 export function setSfx(on) {
@@ -107,17 +117,31 @@ export function setMood(m) {
 
 // Duck the music under big moments.
 export function duck(amount = 0.35, ms = 1400) {
-  if (!ctx || !musicOn) return;
+  if (!ctx || !musicOn || !playing) return;
   const g = musicBus.gain, t = ctx.currentTime;
   g.cancelScheduledValues(t);
   g.setTargetAtTime(0.3 * amount, t, 0.05);
   g.setTargetAtTime(0.3, t + ms / 1000, 0.4);
+  const restoreAt = t + ms / 1000;
+  setTimeout(() => {
+    // if the music was switched off meanwhile, make sure it stays off
+    if (!musicOn && ctx) {
+      musicBus.gain.cancelScheduledValues(ctx.currentTime);
+      musicBus.gain.setValueAtTime(0, ctx.currentTime);
+    }
+  }, Math.max(0, (restoreAt - t) * 1000) + 20);
 }
 
 // ---------- music ----------
 
+function stopMusic() {
+  playing = false;
+  clearInterval(timer);
+  timer = null;
+}
+
 function startMusic() {
-  if (!ctx || playing) return;
+  if (!ctx || playing || !musicOn) return;
   playing = true;
   nextTime = ctx.currentTime + 0.1;
   step = 0;
@@ -377,3 +401,4 @@ export const sfx = {
   }),
   streak: (n) => fx((t) => bell(mtof(72 + Math.min(n, 12) * 2), t, 0.12)),
 };
+export function debugState() { return { playing, timer: !!timer, gain: musicBus ? musicBus.gain.value : null, musicOn }; }

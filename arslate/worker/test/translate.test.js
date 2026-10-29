@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import worker, { cleanText } from "../src/index.js";
-import { SYSTEM_PROMPT, EXAMPLES } from "../src/prompt.js";
+import { SYSTEM_PROMPT, EXAMPLES, ARSIT_EXAMPLES } from "../src/prompt.js";
 
 let reply = null; // what the fake Claude answers next
 const seen = []; // request bodies it received
@@ -54,6 +54,8 @@ class MemoryKV {
 test("the system prompt carries every example", () => {
   assert.ok(EXAMPLES.length >= 50);
   for (const [plain] of EXAMPLES) assert.ok(SYSTEM_PROMPT.includes(plain), plain);
+  assert.ok(ARSIT_EXAMPLES.length >= 15);
+  for (const [plain] of ARSIT_EXAMPLES) assert.ok(SYSTEM_PROMPT.includes(plain), plain);
   assert.ok(!SYSTEM_PROMPT.includes("—"), "no em dashes in the prompt");
 });
 
@@ -72,8 +74,24 @@ test("translates and sends a cached system prompt with the fallback", async () =
   assert.match(headers["anthropic-beta"], /server-side-fallback-2026-07-01/);
   assert.deepEqual(body.system[0].cache_control, { type: "ephemeral" });
   assert.equal(body.system[0].text, SYSTEM_PROMPT);
-  assert.match(body.messages[0].content, /<text>\nשלום, מה שלומך\?\n<\/text>/);
+  assert.match(body.messages[0].content, /^<persona>ערס<\/persona>\n<text>\nשלום, מה שלומך\?\n<\/text>/);
   assert.ok(!("thinking" in body) && !("temperature" in body));
+});
+
+test("the ערסית persona is named in the message and cached apart", async () => {
+  const kv = new MemoryKV();
+  reply = message("היי חיים שלי, מה נשמע?");
+  seen.length = 0;
+  const res = await worker.fetch(post({ text: "שלום", persona: "arsit" }), env({ ARSLATE_KV: kv }));
+  assert.equal(res.status, 200);
+  assert.match(seen[0].body.messages[0].content, /^<persona>ערסית<\/persona>/);
+  assert.equal(seen[0].body.system[0].text, SYSTEM_PROMPT, "same cached system prompt for both voices");
+  reply = message("מה אומר אחשלי?");
+  await worker.fetch(post({ text: "שלום" }), env({ ARSLATE_KV: kv }));
+  assert.equal(seen.length, 2, "the ערס version is not served from the ערסית cache");
+  const bogus = await worker.fetch(post({ text: "שלום", persona: "admin" }), env());
+  assert.equal(bogus.status, 200);
+  assert.match(seen[2].body.messages[0].content, /^<persona>ערס<\/persona>/);
 });
 
 test("asks for a different wording when given the previous one", async () => {

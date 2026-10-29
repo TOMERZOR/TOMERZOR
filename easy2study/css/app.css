@@ -866,3 +866,29 @@ img { max-width: 100%; display: block; }
 
 /* A line that is all English or a formula reads left to right, still aligned with the Hebrew */
 .line[dir="ltr"] { text-align: right; }
+
+/* ---------- Layout guards (Safari on iPhone) ----------
+   A grid or flex child is as wide as its longest unbreakable line unless told
+   otherwise. One long path title used to widen the whole home column on iOS,
+   pushing everything sideways. Every column is capped at the screen width. */
+html, body { overflow-x: hidden; max-width: 100%; }
+#app { overflow-x: clip; }
+.screen { width: 100%; padding-inline: max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-right)); }
+.screen > *, .section > *, .start > *, .ob__body > *, .new__body > *, .lesson__stage > *, .loading > * { min-width: 0; max-width: 100%; }
+.section, .ob__body, .new__body, .lesson__stage, .path__head, .help-list, .choices, .review { grid-template-columns: minmax(0, 1fr); }
+.resume, .exam-btn, .review__row, .path__body, .help-opt, .choice, .answer { min-width: 0; max-width: 100%; overflow: hidden; }
+.resume__text { display: grid; gap: 2px; min-width: 0; overflow: hidden; }
+
+/* ---------- Phone rhythm ---------- */
+.home__hello { margin: 4px 0 18px; }
+.home__hello .h1 { font-size: clamp(1.7rem, 7vw, 2.3rem); }
+.start { padding: 22px 20px 20px; gap: 14px; border-radius: 26px; }
+.start__sub { font-size: .92em; line-height: 1.5; }
+.exam-btn { margin-top: 12px; padding: 14px; gap: 14px; }
+.section { margin-top: 28px; gap: 12px; }
+.resume { padding: 14px; gap: 14px; }
+.ring { width: 50px; height: 50px; }
+.ring::before { width: 39px; height: 39px; }
+/* Rows that scroll edge to edge reach past the padding on purpose. */
+.hero-chips, .lesson-rail, .tools, .chips--scroll { max-width: none; }
+.start .hero-chips { margin-inline: -20px; padding-inline: 20px; }

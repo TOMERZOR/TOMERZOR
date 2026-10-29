@@ -686,7 +686,7 @@
         <p class="start__sub">${esc(sub)}</p>
         <form class="quest" data-quest>
           <label class="sr-only" for="quest">נושא</label>
-          <input id="quest" class="quest__input" maxlength="140" autocomplete="off" enterkeyhint="go" placeholder="${ai ? "למשל: למה יש עונות בשנה?" : "למשל: שברים"}">
+          <input id="quest" class="quest__input" maxlength="140" autocomplete="off" enterkeyhint="go" placeholder="${ai ? "למשל: למה יש עונות?" : "למשל: שברים"}">
           <button class="quest__go" aria-label="יאללה">${icon("arrow-left")}</button>
         </form>
         <div class="chips chips--scroll hero-chips" aria-label="רעיונות">
@@ -695,7 +695,7 @@
       </section>
       <button class="exam-btn stagger" style="--i:2" data-new>
         <span class="review__ic">${icon("clipboard-text")}</span>
-        <span class="resume__text"><b style="font-weight:600">יש לי מבחן</b><span class="small muted" style="display:block">לצלם דף, להדביק סיכום, לבחור מתי</span></span>
+        <span class="resume__text"><span class="resume__title">יש לי מבחן</span><span class="small muted resume__title" style="font-weight:400">צילום, PDF או סיכום מהמורה</span></span>
         ${icon("caret-left", "icon--sm")}
       </button>
       ${courses.length ? `

@@ -61,28 +61,28 @@ const PROGRESSIONS = {
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 const STYLE_BASE = {
-  trap:    { bpm: [122, 146], swing: [0, 0.04],   scale: ["aeolian", "harmonic", "phrygian"], chords: "pad",  lead: "bell",  bass: "808", reverb: 0.25 },
-  drill:   { bpm: [140, 146], swing: [0, 0],      scale: ["harmonic", "aeolian", "phrygian"], chords: "strings", lead: "piano", bass: "808", reverb: 0.25 },
-  boombap: { bpm: [84, 95],   swing: [0.12, 0.24], scale: ["aeolian", "dorian"],              chords: "piano", lead: "piano", bass: "sub", reverb: 0.15 },
-  lofi:    { bpm: [70, 86],   swing: [0.18, 0.3],  scale: ["dorian", "aeolian", "ionian"],     chords: "ep",   lead: "soft",  bass: "sub", reverb: 0.3 },
-  dembow:  { bpm: [90, 102],  swing: [0, 0.04],    scale: ["aeolian", "dorian", "mixo"],       chords: "pluck", lead: "pluck", bass: "sub", reverb: 0.2 }
+  trap:    { bpm: [122, 146], swing: [0, 0.04],   scale: ["aeolian", "harmonic", "phrygian"], chords: ["pad", "piano"], lead: ["glock", "piano", "vibes"], reverb: 0.25 },
+  drill:   { bpm: [140, 146], swing: [0, 0],      scale: ["harmonic", "aeolian", "phrygian"], chords: ["strings"], lead: ["piano", "vibes"], reverb: 0.25 },
+  boombap: { bpm: [84, 95],   swing: [0.12, 0.24], scale: ["aeolian", "dorian"],              chords: ["piano"], lead: ["piano", "vibes"], reverb: 0.15 },
+  lofi:    { bpm: [70, 86],   swing: [0.18, 0.3],  scale: ["dorian", "aeolian", "ionian"],     chords: ["ep"], lead: ["kalimba", "vibes"], reverb: 0.3 },
+  dembow:  { bpm: [90, 102],  swing: [0, 0.04],    scale: ["aeolian", "dorian", "mixo"],       chords: ["harp", "ep"], lead: ["kalimba", "harp"], reverb: 0.2 }
 };
 
 // What each mood changes. Earlier moods in SCALE_PRIORITY win the scale.
 const MOOD_FX = {
   dark:       { scale: ["phrygian", "harmonic"], bpm: 0,   bright: -0.3, reverb: 0.1 },
   sad:        { scale: ["aeolian"],              bpm: -4,  bright: -0.1, chords: "piano", lead: "piano" },
-  happy:      { scale: ["ionian", "mixo"],       bpm: 4,   bright: 0.3,  lead: "pluck" },
+  happy:      { scale: ["ionian", "mixo"],       bpm: 4,   bright: 0.3,  lead: "kalimba" },
   summer:     { scale: ["mixo", "ionian"],       bpm: 4,   bright: 0.3 },
   aggressive: { scale: ["harmonic", "phrygian"], bpm: 6,   dist: 0.55, rolls: 0.25 },
   chill:      { scale: ["dorian"],               bpm: -8,  swing: 0.06, reverb: 0.1, rolls: -0.15 },
-  epic:       { scale: ["harmonic"],             bpm: 0,   chords: "strings", lead: "brass", reverb: 0.15 },
+  epic:       { scale: ["harmonic"],             bpm: 0,   chords: "strings", lead: "harp", reverb: 0.15 },
   night:      { scale: ["dorian", "aeolian"],    bpm: -2,  bright: -0.15, reverb: 0.15 },
   rain:       { rain: true, reverb: 0.1, bright: -0.1 },
   vinyl:      { vinyl: true, bright: -0.2 },
-  oriental:   { scale: ["hijaz"],                lead: "oud" },
-  dreamy:     { scale: ["lydian", "dorian"],     bpm: -4,  reverb: 0.3, chords: "pad", sevenths: true },
-  love:       { scale: ["ionian", "dorian"],     bpm: -2,  chords: "ep", sevenths: true },
+  oriental:   { scale: ["hijaz"],                lead: "qanun" },
+  dreamy:     { scale: ["lydian", "dorian"],     bpm: -4,  reverb: 0.3, chords: "pad", lead: "harp", sevenths: true },
+  love:       { scale: ["ionian", "dorian"],     bpm: -2,  chords: "ep", lead: "vibes", sevenths: true },
   fast:       { bpm: 12, rolls: 0.15 },
   slow:       { bpm: -10 }
 };
@@ -187,7 +187,7 @@ function bassLine(style, kick, degrees, scaleSteps, bassRoot, rng) {
 }
 
 function chordRhythm(type, rng) {
-  if (type === "pluck") return rng.pick([[0, 3, 6, 10, 12], [0, 3, 6, 8, 11, 14], [0, 6, 10]]);
+  if (type === "harp") return rng.pick([[0, 3, 6, 10, 12], [0, 3, 6, 8, 11, 14], [0, 6, 10]]);
   if (type === "piano") return rng.pick([[0], [0, 10], [0, 7], [0, 3]]);
   return [0];
 }
@@ -195,7 +195,7 @@ function chordRhythm(type, rng) {
 function melody(lead, degrees, scaleSteps, rootPc, rng, density) {
   const mel = empty();
   if (!lead) return mel;
-  const octave = lead === "bell" ? 72 : lead === "oud" || lead === "pluck" ? 60 : 60;
+  const octave = lead === "glock" ? 72 : lead === "qanun" ? 62 : 60;
   // One two-bar motif: rhythm plus scale offsets from each bar's chord, repeated with a changed ending.
   const rhythm = [];
   for (let s = 0; s < STEPS * 2; s++) {
@@ -240,7 +240,7 @@ BG.makeRecipe = function (parsed, variation = 0) {
   let bpm = rng.int(base.bpm[0], base.bpm[1]);
   let swing = base.swing[0] + rng.next() * (base.swing[1] - base.swing[0]);
   let bright = 0, reverb = base.reverb, dist = style === "drill" || style === "trap" ? 0.2 : 0, rolls = 0;
-  let chords = base.chords, lead = base.lead, sevenths = style === "lofi", rain = false, vinyl = style === "boombap" || style === "lofi";
+  let chords = rng.pick(base.chords), lead = rng.pick(base.lead), sevenths = style === "lofi", rain = false, vinyl = style === "boombap" || style === "lofi";
   for (const m of moods) {
     const fx = MOOD_FX[m];
     bpm += fx.bpm || 0;
@@ -255,9 +255,9 @@ BG.makeRecipe = function (parsed, variation = 0) {
     if (fx.rain) rain = true;
     if (fx.vinyl) vinyl = true;
   }
-  if (moods.includes("oriental")) lead = "oud";
+  if (moods.includes("oriental")) lead = "qanun";
   bpm = Math.max(60, Math.min(170, bpm));
-  if (style === "lofi" && chords === "pad") chords = "ep";
+  if (style === "lofi" && (chords === "pad" || chords === "strings")) chords = "ep";
   if (scale === "hijaz") sevenths = false;
 
   const rootPc = rng.int(0, 11);
@@ -288,7 +288,7 @@ BG.makeRecipe = function (parsed, variation = 0) {
     keyLabel: NOTE_NAMES[rootPc] + " " + BG.SCALES[scale].label,
     scale,
     chords: chordList,
-    sound: { chords, lead, bass: base.bass, dist, reverb: Math.min(0.6, reverb), bright: Math.max(-0.6, Math.min(0.5, bright)), rain, vinyl, style },
+    sound: { chords, lead, dist, reverb: Math.min(0.6, reverb), bright: Math.max(-0.6, Math.min(0.5, bright)), rain, vinyl, style },
     patterns: { kick: d.kick, snare: d.snare, clap: d.clap, hat: d.hat, open: d.open, ghost: d.ghost, bass, slide, chord: chordHits, melody: mel }
   };
 };

@@ -118,7 +118,7 @@ function seedSprite(style, color, shape, size, dpr) {
 
   // soft drop shadow under the body
   c.save();
-  c.shadowColor = 'rgba(8,4,30,0.45)'; c.shadowBlur = s * 0.12; c.shadowOffsetY = s * 0.06;
+  c.shadowColor = 'rgba(0,14,14,0.5)'; c.shadowBlur = s * 0.12; c.shadowOffsetY = s * 0.06;
   shapePath(c, shape, cx, cy, R);
   if (style === 'glass') {
     c.fillStyle = rgba(color, 0.55);
@@ -141,7 +141,7 @@ function seedSprite(style, color, shape, size, dpr) {
     hl.addColorStop(0, `rgba(255,255,255,${style === 'glass' ? 0.55 : 0.42})`); hl.addColorStop(1, 'rgba(255,255,255,0)');
     c.fillStyle = hl; c.fillRect(0, 0, s, s);
     const sh = c.createRadialGradient(cx + R * 0.35, cy + R * 0.7, 0, cx + R * 0.35, cy + R * 0.7, R);
-    sh.addColorStop(0, 'rgba(10,0,40,0.22)'); sh.addColorStop(1, 'rgba(10,0,40,0)');
+    sh.addColorStop(0, 'rgba(0,20,20,0.22)'); sh.addColorStop(1, 'rgba(0,20,20,0)');
     c.fillStyle = sh; c.fillRect(0, 0, s, s);
   } else if (style === 'flat') {
     c.fillStyle = 'rgba(0,0,0,0.1)'; c.fillRect(0, cy + R * 0.45, s, s);
@@ -238,7 +238,7 @@ export function createRenderer(canvas) {
   // ---- drawing ------------------------------------------------------------------------------
   // `v` is a grid value: a colour index 1..7, WEED, or 'grey' for the game-over fade.
   function drawSeed(x, y, s, v, skin, alpha = 1, scale = 1) {
-    const color = v === WEED ? 'weed' : v === 'grey' ? '#6b6890' : skin.colors[v - 1];
+    const color = v === WEED ? 'weed' : v === 'grey' ? '#5d7472' : skin.colors[v - 1];
     const sp = seedSprite(skin.style, color, v === WEED ? 0 : (v === 'grey' ? 0 : v - 1), s, dpr);
     const ds = sp.width / dpr * scale;
     c.globalAlpha = alpha;
@@ -327,7 +327,7 @@ export function createRenderer(canvas) {
     const d = st.drag;
     if (d && d.valid) {
       const g = c.createLinearGradient(0, by, 0, by + bh);
-      g.addColorStop(0, 'rgba(167,139,250,0)'); g.addColorStop(1, 'rgba(167,139,250,0.16)');
+      g.addColorStop(0, 'rgba(94,234,212,0)'); g.addColorStop(1, 'rgba(94,234,212,0.16)');
       c.fillStyle = g; rr(c, bx + d.col * cell + 2, by, d.w * cell - 4, bh, 12); c.fill();
     }
 
@@ -486,7 +486,7 @@ export function createRenderer(canvas) {
       c.scale(sc, sc);
       c.globalAlpha = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
       c.font = `800 ${Math.round(cell * 0.55 * f.size)}px ${FONT}`;
-      c.shadowColor = 'rgba(10,5,40,0.55)'; c.shadowBlur = 10; c.shadowOffsetY = 3;
+      c.shadowColor = 'rgba(0,18,18,0.6)'; c.shadowBlur = 10; c.shadowOffsetY = 3;
       c.fillStyle = f.color; c.fillText(f.text, 0, 0);
       c.restore();
     }

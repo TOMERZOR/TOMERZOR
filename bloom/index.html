@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Bloom</title>
 <meta name="description" content="A gravity puzzle: drop bundles of coloured seeds into your garden. Four of a colour bloom, everything above falls, and the fall sets off chains. Watch out for the weeds.">
-<meta name="theme-color" content="#0b0b1a">
+<meta name="theme-color" content="#061416">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bloom">
-<link rel="icon" href="icons/favicon-32.png?v=3" sizes="32x32" type="image/png">
-<link rel="icon" href="icons/icon-192.png?v=3" sizes="192x192" type="image/png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=3">
-<link rel="manifest" href="manifest.webmanifest?v=3">
+<link rel="icon" href="icons/favicon-32.png?v=4" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/icon-192.png?v=4" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=4">
+<link rel="manifest" href="manifest.webmanifest?v=4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 <div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -26,12 +26,12 @@
     <linearGradient id="g-gem" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9ef0ff"/><stop offset="1" stop-color="#3aa8ff"/></linearGradient>
     <linearGradient id="g-fire" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#ff5e3a"/></linearGradient>
     <linearGradient id="g-crown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe58a"/><stop offset="1" stop-color="#f5a524"/></linearGradient>
-    <linearGradient id="g-gift" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8ab4"/><stop offset="1" stop-color="#a855f7"/></linearGradient>
+    <linearGradient id="g-gift" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc38a"/><stop offset="1" stop-color="#ff5f7e"/></linearGradient>
   </defs>
   <symbol id="i-gem" viewBox="0 0 24 24"><path fill="url(#g-gem)" d="M7 3.5h10l4.5 5.5L12 21 2.5 9z"/><path fill="#fff" opacity=".45" d="M7 3.5h10L15 9H9z"/></symbol>
   <symbol id="i-fire" viewBox="0 0 24 24"><path fill="url(#g-fire)" d="M12 2.5c.8 3.6 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.8 1.6-4.6 2.6-5.5.1 1.8.9 2.8 1.9 2.8 0-3.6-.9-5.5 1-8.3z"/><path fill="#fff" opacity=".5" d="M12 13c.9 1.7 2.4 2.6 2.4 4.3a2.4 2.4 0 0 1-4.8 0c0-1 .7-1.8 1.2-2.2.2.8.6 1.2 1.2 1.2 0-1.6-.4-2.4 0-3.3z"/></symbol>
   <symbol id="i-crown" viewBox="0 0 24 24"><path fill="url(#g-crown)" d="M3.5 8l4.4 3.6L12 5l4.1 6.6L20.5 8l-1.8 10.5H5.3z"/></symbol>
-  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.5" y="10" width="17" height="10.5" rx="2.5" fill="url(#g-gift)"/><rect x="2.5" y="7" width="19" height="4.5" rx="2" fill="#ffb3d1"/><rect x="11" y="7" width="2" height="13.5" fill="#fff" opacity=".85"/><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M12 7c-1.2-2.6-4.6-3.4-4.6-1.3C7.4 7 10.5 7 12 7zm0 0c1.2-2.6 4.6-3.4 4.6-1.3C16.6 7 13.5 7 12 7z"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.5" y="10" width="17" height="10.5" rx="2.5" fill="url(#g-gift)"/><rect x="2.5" y="7" width="19" height="4.5" rx="2" fill="#ffd2b8"/><rect x="11" y="7" width="2" height="13.5" fill="#fff" opacity=".85"/><path fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" d="M12 7c-1.2-2.6-4.6-3.4-4.6-1.3C7.4 7 10.5 7 12 7zm0 0c1.2-2.6 4.6-3.4 4.6-1.3C16.6 7 13.5 7 12 7z"/></symbol>
   <symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H5.5A1.5 1.5 0 0 1 4 19z"/></symbol>
   <symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></g></symbol>
   <symbol id="i-palette" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M12 3.5a8.5 8.5 0 0 0 0 17c1.3 0 1.9-.9 1.6-2-.4-1.4.6-2.5 2-2.5h1.6a3.3 3.3 0 0 0 3.3-3.3C20.5 7.6 16.7 3.5 12 3.5z"/><circle cx="7.8" cy="11" r="1.3" fill="currentColor"/><circle cx="10.5" cy="7.3" r="1.3" fill="currentColor"/><circle cx="15" cy="7.5" r="1.3" fill="currentColor"/></symbol>
@@ -101,6 +101,6 @@
 <div id="overlay" hidden><div class="modal" id="modal"></div></div>
 <div id="toasts" aria-live="polite"></div>
 
-<script type="module" src="js/main.js?v=4"></script>
+<script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>

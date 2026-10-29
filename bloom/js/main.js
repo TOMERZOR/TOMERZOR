@@ -15,7 +15,7 @@ import {
 const $ = (id) => document.getElementById(id);
 const M = meta();
 setSound(M.sound);
-const fmt = (n) => Math.round(n).toLocaleString('he-IL');
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
 const gem = '<svg><use href="#i-gem"/></svg>';
 const plus = (n) => `<bdi dir="ltr">+${typeof n === 'number' ? fmt(n) : n}</bdi>`;
 const vibrate = (p) => { if (M.haptics && navigator.vibrate) navigator.vibrate(p); };
@@ -142,7 +142,7 @@ canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
 
 // ---- dropping, blooming, chains --------------------------------------------------------------
-const PRAISE = ['יפה!', 'מעולה!', 'מדהים!', 'וואו!', 'פנומנלי!', 'בלתי נתפס!'];
+const PRAISE = ['Nice!', 'Great!', 'Amazing!', 'Wow!', 'Incredible!', 'Unreal!'];
 
 async function dropAt(slot, col) {
   G.busy = true;
@@ -218,8 +218,8 @@ async function playSteps(steps, landed) {
     vibrate(st.chain >= 2 ? [20, 40, 30] : 18);
     if (st.blasts.length) { sfx.big(); R.setFlash(st.blasts.some((b) => b.kind === 2) ? '#ffffff' : '#ffd23d', now); }
     if (st.made.length) setTimeout(() => { sfx.gem(); R.pop(st.made.map((m) => [m.r, m.c]), performance.now()); }, 250);
-    if (st.chain >= 2) R.setBanner(`שרשרת x${st.chain}!`, PRAISE[Math.min(PRAISE.length - 1, st.chain - 2)], now, ['#ffd23d', '#ff9ad5', '#7de3ff', '#b6ff6d'][st.chain % 4]);
-    else if (st.made.length) R.setBanner(st.made[0].kind === 2 ? 'פרח קשת!' : 'חמנייה!', st.made[0].kind === 2 ? 'מפריח את כל הצבע שלו' : 'מפוצצת 3x3 כשהיא פורחת', now, '#7de3ff');
+    if (st.chain >= 2) R.setBanner(`Chain x${st.chain}!`, PRAISE[Math.min(PRAISE.length - 1, st.chain - 2)], now, ['#ffd23d', '#ff9ad5', '#7de3ff', '#b6ff6d'][st.chain % 4]);
+    else if (st.made.length) R.setBanner(st.made[0].kind === 2 ? 'Rainbow flower!' : 'Sunflower!', st.made[0].kind === 2 ? 'blooms its whole colour' : 'blasts a 3x3 when it blooms', now, '#7de3ff');
     else if (st.cleared.length >= 7) R.setBanner(PRAISE[Math.min(PRAISE.length - 1, st.cleared.length - 6)], '', now, '#b6ff6d');
     bumpScore();
     checkRecord();
@@ -232,7 +232,7 @@ async function playSteps(steps, landed) {
   if (steps.length && fillCount(G.board) === 0 && steps.reduce((n, st) => n + st.cleared.length, 0) >= 12) {
     G.score += CLEAR_GARDEN_BONUS;
     const now = performance.now();
-    R.setBanner('גן נקי!', `+${fmt(CLEAR_GARDEN_BONUS)}`, now, '#7dffb0');
+    R.setBanner('Clean garden!', `+${fmt(CLEAR_GARDEN_BONUS)}`, now, '#7dffb0');
     R.setFlash('#ffffff', now);
     sfx.allClear();
     await sleep(500);
@@ -242,7 +242,7 @@ async function playSteps(steps, landed) {
 function checkRecord() {
   if (M.best > 0 && !G.recordShown && G.score > M.best) {
     G.recordShown = true;
-    setTimeout(() => { const t = performance.now(); R.setBanner('שיא חדש!', '', t, '#ffd23d'); R.setFlash('#ffd23d', t); sfx.record(); vibrate([30, 50, 30, 50, 60]); }, 600);
+    setTimeout(() => { const t = performance.now(); R.setBanner('New best!', '', t, '#ffd23d'); R.setFlash('#ffd23d', t); sfx.record(); vibrate([30, 50, 30, 50, 60]); }, 600);
   }
 }
 
@@ -261,8 +261,8 @@ function updateHud() {
   $('g-best').textContent = fmt(Math.max(M.best, G.recordShown ? G.score : 0));
   const chase = $('g-chase');
   let text = '', hot = false;
-  if (G.recordShown) { text = 'שיא חדש!'; hot = true; }
-  else if (M.best > 0 && G.score >= M.best * 0.7) { text = `עוד ${fmt(M.best - G.score + 1)} לשיא!`; hot = G.score >= M.best * 0.9; }
+  if (G.recordShown) { text = 'New best!'; hot = true; }
+  else if (M.best > 0 && G.score >= M.best * 0.7) { text = `${fmt(M.best - G.score + 1)} to beat your best!`; hot = G.score >= M.best * 0.9; }
   if (chase.textContent !== text) chase.textContent = text;
   chase.classList.toggle('hot', hot);
 }
@@ -276,10 +276,10 @@ function hint(text) {
 }
 function tutorial() {
   if (M.games > 0 || !G) return hint(null);
-  if (G.drops === 0) hint('גררו צרור זרעים מעל הגן ושחררו. הזרעים נופלים');
-  else if (G.blooms === 0 && G.drops < 6) hint('4 זרעים באותו צבע שנוגעים זה בזה פורחים!');
-  else if (!M.tutRotate && G.drops < 12) hint('הקישו על צרור כדי לסובב אותו');
-  else if (G.drops < 14 && G.weedTimer <= 2) hint('עשבים עולים מלמטה. הפריחו לידם כדי לעקור אותם');
+  if (G.drops === 0) hint('Drag a bundle over the garden, let go');
+  else if (G.blooms === 0 && G.drops < 6) hint('4 touching seeds of one colour bloom!');
+  else if (!M.tutRotate && G.drops < 12) hint('Tap a bundle to turn it');
+  else if (G.drops < 14 && G.weedTimer <= 2) hint('Weeds rise from below. Bloom next to them to pull them out');
   else hint(null);
 }
 
@@ -298,13 +298,13 @@ function offerChance() {
   const gap = M.best - G.score;
   const close = M.best > 0 && gap > 0 && G.score >= M.best * 0.6;
   modal(`
-    <h2>הגן התמלא!</h2>
-    <p>${close ? `אתם רק <b style="color:#ffd23d">${fmt(gap + 1)}</b> נקודות מהשיא` : 'אפשר להמשיך מאיפה שעצרתם'}</p>
+    <h2>Garden full!</h2>
+    <p>${close ? `Only <b style="color:#ffd23d">${fmt(gap + 1)}</b> points from your best` : 'Pick up right where you left off'}</p>
     <div class="btns">
-      <button class="btn gold" data-act="chance"><svg><use href="#i-gift"/></svg> צ׳אנס נוסף</button>
-      <button class="btn quiet" data-act="end">סיום</button>
+      <button class="btn gold" data-act="chance"><svg><use href="#i-gift"/></svg> Second chance</button>
+      <button class="btn quiet" data-act="end">No thanks</button>
     </div>
-    <p style="font-size:13px">צ׳אנס אחד חינם בכל משחק</p>`, {
+    <p style="font-size:13px">One free second chance every game</p>`, {
     chance: () => { closeModal(); secondChance(); },
     end: () => { closeModal(); finish(); },
   });
@@ -325,7 +325,7 @@ function secondChance() {
   R.bloom(cleared, currentSkin().colors, now, 3);
   R.setShake(12, now);
   sfx.big();
-  R.setBanner('ממשיכים!', '', now, '#7dffb0');
+  R.setBanner('Keep going!', '', now, '#7dffb0');
   G.tray = [0, 1, 2].map((i) => { const p = newPiece({ rescue: true }); p.t0 = now + 200 + i * 80; return p; });
   G.weedTimer += 3;
   updateFits();
@@ -352,29 +352,29 @@ function finish() {
 
 function showResults(r) {
   const near = !r.record && r.prevBest > 0 && r.s >= r.prevBest * 0.7;
-  const title = r.record ? (r.prevBest > 0 ? 'שיא חדש!' : 'משחק ראשון!') : near ? 'כמעט!' : 'סוף המשחק';
+  const title = r.record ? (r.prevBest > 0 ? 'New best!' : 'First game!') : near ? 'So close!' : 'Game over';
   const rows = [];
   const lvl = M.level, frac = M.xp / xpForLevel(M.level);
-  rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">רמה ${lvl} <small>${plus(r.xpGain)} ניסיון · עוד ${fmt(xpForLevel(lvl) - M.xp)} לפרח הבא</small><div class="bar"><i data-to="${(frac * 100).toFixed(1)}" style="width:${r.ups.length ? 0 : (r.prevFrac * 100).toFixed(1)}%"></i></div></div></div>`);
-  for (const u of r.ups) rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">עליתם לרמה ${u.level}! <small>פרח חדש פרח בגן שלכם</small></div><b>${plus(u.gems)}</b>${gem}</div>`);
-  for (const c of r.chests) rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">${c.jackpot ? 'ג׳קפוט! ' : ''}פתחתם תיבת מזל</div><b>${plus(c.gems)}</b>${gem}</div>`);
-  for (const m of r.done) rows.push(`<div class="reward">${gem}<div class="grow">${m.bonus ? 'כל משימות היום הושלמו!' : `משימה: ${missionText(m)}`}</div><b>${plus(m.reward)}</b>${gem}</div>`);
+  rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">Level ${lvl} <small>${plus(r.xpGain)} XP · ${fmt(xpForLevel(lvl) - M.xp)} to the next flower</small><div class="bar"><i data-to="${(frac * 100).toFixed(1)}" style="width:${r.ups.length ? 0 : (r.prevFrac * 100).toFixed(1)}%"></i></div></div></div>`);
+  for (const u of r.ups) rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">Level ${u.level}! <small>A new flower bloomed in your garden</small></div><b>${plus(u.gems)}</b>${gem}</div>`);
+  for (const c of r.chests) rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">${c.jackpot ? 'Jackpot! ' : ''}Lucky chest opened</div><b>${plus(c.gems)}</b>${gem}</div>`);
+  for (const m of r.done) rows.push(`<div class="reward">${gem}<div class="grow">${m.bonus ? "All of today's missions done!" : `Mission: ${missionText(m)}`}</div><b>${plus(m.reward)}</b>${gem}</div>`);
   if (!r.chests.length) {
     const left = CHEST_GOAL - M.chest.n;
-    rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">תיבת מזל <small>${left <= 8 ? `רק עוד ${left} פריחות!` : `עוד ${left} פריחות`}</small><div class="bar"><i data-to="${(M.chest.n / CHEST_GOAL * 100).toFixed(1)}" style="width:${(r.prevChest / CHEST_GOAL * 100).toFixed(1)}%"></i></div></div></div>`);
+    rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">Lucky chest <small>${left <= 8 ? `Only ${left} more blooms!` : `${left} more blooms`}</small><div class="bar"><i data-to="${(M.chest.n / CHEST_GOAL * 100).toFixed(1)}" style="width:${(r.prevChest / CHEST_GOAL * 100).toFixed(1)}%"></i></div></div></div>`);
   }
   const open = missions().list.filter((m) => !m.done).sort((a, b) => b.progress / b.goal - a.progress / a.goal)[0];
   if (open && !r.done.length) rows.push(`<div class="reward">${gem}<div class="grow">${missionText(open)} <small>${fmt(open.progress)} / ${fmt(open.goal)}</small><div class="bar"><i style="width:${(open.progress / open.goal * 100).toFixed(1)}%"></i></div></div><b>${plus(open.reward)}</b>${gem}</div>`);
 
   modal(`
     <h2>${title}</h2>
-    ${r.record && r.prevBest > 0 ? '<span class="record">שברתם את השיא!</span>' : ''}
+    ${r.record && r.prevBest > 0 ? '<span class="record">You beat your best!</span>' : ''}
     <div class="big-num" data-count="${r.s}">0</div>
-    ${near ? `<p class="near">חסרו רק ${fmt(r.prevBest - r.s + 1)} לשיא!</p>` : `<p>שיא: ${fmt(M.best)}</p>`}
+    ${near ? `<p class="near">Just ${fmt(r.prevBest - r.s + 1)} short of your best!</p>` : `<p>Best: ${fmt(M.best)}</p>`}
     <div class="rewards">${rows.map((x, i) => x.replace('class="reward"', `class="reward" style="animation-delay:${0.25 + i * 0.12}s"`)).join('')}</div>
     <div class="btns">
-      <button class="btn go" data-act="again">שחקו שוב</button>
-      <button class="btn quiet" data-act="home">לבית</button>
+      <button class="btn go" data-act="again">Play again</button>
+      <button class="btn quiet" data-act="home">Home</button>
     </div>`, {
     again: () => { closeModal(); startGame(); },
     home: () => { closeModal(); goHome(); },
@@ -394,7 +394,7 @@ function showResults(r) {
 }
 
 function missionToast(m) {
-  toast(`${gem} ${m.bonus ? 'כל המשימות הושלמו!' : missionText(m)} · ${plus(m.reward)}`);
+  toast(`${gem} ${m.bonus ? 'All missions done!' : missionText(m)} · ${plus(m.reward)}`);
   sfx.gem();
 }
 
@@ -464,17 +464,17 @@ function renderHome() {
   $('h-level').textContent = M.level;
   const need = xpForLevel(M.level);
   $('h-xpbar').style.width = `${(M.xp / need * 100).toFixed(1)}%`;
-  $('h-xptext').textContent = `עוד ${fmt(need - M.xp)} ניסיון לפרח הבא`;
+  $('h-xptext').textContent = `${fmt(need - M.xp)} XP to your next flower`;
   $('h-best').textContent = fmt(M.best);
-  $('h-play').textContent = M.saved ? 'המשיכו' : 'שחקו';
+  $('h-play').textContent = M.saved ? 'Continue' : 'Play';
   $('h-new').hidden = !M.saved;
   const ms = missions();
   $('h-missions').innerHTML = ms.list.map((m) => `
     <li class="${m.done ? 'done' : ''}"><span>${m.done ? '✓ ' : ''}${missionText(m)}</span><span class="rw">${plus(m.reward)}${gem}</span>
     <div class="bar"><i style="width:${(m.progress / m.goal * 100).toFixed(1)}%"></i></div></li>`).join('') +
-    `<li class="bonus"><span>${ms.bonus ? '✓ בונוס היום נאסף' : 'השלימו את שלושתן לבונוס'}</span><span class="rw">${plus(40)}${gem}</span></li>`;
+    `<li class="bonus"><span>${ms.bonus ? "✓ Today's bonus collected" : 'Finish all three for a bonus'}</span><span class="rw">${plus(40)}${gem}</span></li>`;
   $('h-chestbar').style.width = `${(M.chest.n / CHEST_GOAL * 100).toFixed(1)}%`;
-  $('h-chesttext').textContent = `${M.chest.n} / ${CHEST_GOAL} פריחות · מה יש בפנים? רק מזל יודע`;
+  $('h-chesttext').textContent = `${M.chest.n} / ${CHEST_GOAL} blooms · what's inside? Only luck knows`;
 }
 
 $('h-play').addEventListener('click', () => { unlock(); sfx.tick(); M.saved ? resumeGame() : startGame(); });
@@ -484,18 +484,18 @@ $('g-home').addEventListener('click', () => { sfx.tick(); goHome(); });
 $('h-skins').addEventListener('click', () => { unlock(); sfx.tick(); openSkins(); });
 function openSkins() {
   modal(`
-    <h2>סקינים</h2>
+    <h2>Skins</h2>
     <p>${gem} ${fmt(M.gems)}</p>
     <div class="skins">${SKINS.map((s) => `
       <button class="skin ${M.skin === s.id ? 'on' : ''}" data-act="skin" data-id="${s.id}">
         <canvas data-skin="${s.id}"></canvas>${s.name}
-        <small>${M.skins.includes(s.id) ? (M.skin === s.id ? 'בשימוש' : 'בחרו') : `${s.cost} ${gem}`}</small>
+        <small>${M.skins.includes(s.id) ? (M.skin === s.id ? 'Equipped' : 'Use') : `${s.cost} ${gem}`}</small>
       </button>`).join('')}</div>
-    <div class="btns"><button class="btn quiet" data-act="close">סגירה</button></div>`, {
+    <div class="btns"><button class="btn quiet" data-act="close">Close</button></div>`, {
     skin: (b) => {
       const id = b.dataset.id;
       if (M.skins.includes(id)) selectSkin(id);
-      else if (!buySkin(id)) { const s = SKINS.find((k) => k.id === id); toast(`חסרים עוד ${s.cost - M.gems} ${gem}`); sfx.nope(); return; }
+      else if (!buySkin(id)) { const s = SKINS.find((k) => k.id === id); toast(`You need ${s.cost - M.gems} more ${gem}`); sfx.nope(); return; }
       else sfx.gem();
       document.body.classList.toggle('neon', !!currentSkin().dark);
       renderHome();
@@ -509,11 +509,11 @@ function openSkins() {
 $('h-settings').addEventListener('click', () => {
   unlock(); sfx.tick();
   modal(`
-    <h2>הגדרות</h2>
-    <label class="toggle">צלילים <input type="checkbox" data-set="sound" ${M.sound ? 'checked' : ''}></label>
-    <label class="toggle">רטט <input type="checkbox" data-set="haptics" ${M.haptics ? 'checked' : ''}></label>
-    <label class="toggle">מצב מפתחים (מה המנוע חושב) <input type="checkbox" data-set="debug" ${M.debug ? 'checked' : ''}></label>
-    <div class="btns"><button class="btn quiet" data-act="close">סגירה</button></div>`, { close: closeModal });
+    <h2>Settings</h2>
+    <label class="toggle">Sound <input type="checkbox" data-set="sound" ${M.sound ? 'checked' : ''}></label>
+    <label class="toggle">Vibration <input type="checkbox" data-set="haptics" ${M.haptics ? 'checked' : ''}></label>
+    <label class="toggle">Developer mode (what the engine thinks) <input type="checkbox" data-set="debug" ${M.debug ? 'checked' : ''}></label>
+    <div class="btns"><button class="btn quiet" data-act="close">Close</button></div>`, { close: closeModal });
   $('modal').querySelectorAll('[data-set]').forEach((inp) => inp.addEventListener('change', () => {
     M[inp.dataset.set] = inp.checked;
     setSound(M.sound);
@@ -561,11 +561,11 @@ if (streak) {
   const next = Math.min(50, 5 * (streak.count + 1));
   modal(`
     <svg style="font-size:64px"><use href="#i-fire"/></svg>
-    <h2>${streak.count === 1 ? (M.games ? 'ברוכים השבים!' : 'ברוכים הבאים!') : `${streak.count} ימים ברצף!`}</h2>
-    ${streak.usedFreeze ? '<p>פספסתם יום, אבל הקפאת הרצף שמרה עליו</p>' : ''}
+    <h2>${streak.count === 1 ? (M.games ? 'Welcome back!' : 'Welcome!') : `${streak.count}-day streak!`}</h2>
+    ${streak.usedFreeze ? '<p>You missed a day, but a streak freeze saved it</p>' : ''}
     <div class="big-num">${plus(streak.gems)} ${gem}</div>
-    <p>חזרו מחר וקבלו ${plus(next)}</p>
-    <div class="btns"><button class="btn go" data-act="ok">יאללה!</button></div>`, { ok: () => { closeModal(); renderHome(); sfx.gem(); } });
+    <p>Come back tomorrow for ${plus(next)}</p>
+    <div class="btns"><button class="btn go" data-act="ok">Let's go!</button></div>`, { ok: () => { closeModal(); renderHome(); sfx.gem(); } });
 }
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

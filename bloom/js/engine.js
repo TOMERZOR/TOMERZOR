@@ -26,28 +26,28 @@ export function computeMercy(ctx) {
 
   // Late in a game the help fades, so even a great run ends while it's still fun.
   const late = clamp((drops - 40) / 70, 0, 1);
-  if (games < 3 && drops < 60) m += add('שחקן חדש', 0.3 - games * 0.08);
-  if (drops < 12) m += add('פתיחה', 0.18 * (1 - drops / 12));
-  if (fill > 0.4) m += add('גן עמוס', (fill - 0.4) * 1.3 * (1 - late * 0.8));
-  if (top > 0.7) m += add('קרוב לתקרה', (top - 0.7) * 1.2 * (1 - late * 0.8));
-  if (dry >= 3) m += add('בלי פריחה', (dry - 2) * 0.07 * (1 - late * 0.8));
+  if (games < 3 && drops < 60) m += add('new player', 0.3 - games * 0.08);
+  if (drops < 12) m += add('opening', 0.18 * (1 - drops / 12));
+  if (fill > 0.4) m += add('garden filling up', (fill - 0.4) * 1.3 * (1 - late * 0.8));
+  if (top > 0.7) m += add('near the top', (top - 0.7) * 1.2 * (1 - late * 0.8));
+  if (dry >= 3) m += add('no bloom lately', (dry - 2) * 0.07 * (1 - late * 0.8));
   const recent = ctx.recentScores || [];
   if (recent.length >= 4) {
     const sorted = [...recent].sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
-    if (median > 0 && recent.slice(-3).reduce((a, b) => a + b, 0) / 3 < median * 0.6) m += add('רצף הפסדים', 0.15);
+    if (median > 0 && recent.slice(-3).reduce((a, b) => a + b, 0) / 3 < median * 0.6) m += add('losing streak', 0.15);
   }
-  if ((ctx.thinkMs || 0) > 6000) m += add('מתלבט', 0.08);
-  if (fill < 0.25 && (ctx.lastChain || 0) >= 2) m += add('שיוט', -0.2);
+  if ((ctx.thinkMs || 0) > 6000) m += add('thinking long', 0.08);
+  if (fill < 0.25 && (ctx.lastChain || 0) >= 2) m += add('cruising', -0.2);
   const best = ctx.best || 0, score = ctx.score || 0;
-  if (best > 0 && score >= best * 0.75 && score < best) m += add('מרדף שיא', 0.25);
-  if (best > 0 && score > best * 1.15) m += add('אחרי שיא', -0.12);
-  m += add('גל מתח', Math.sin((drops / 24) * Math.PI * 2) * 0.13);
-  if (late > 0) m += add('עייפות', -late * 0.8);
+  if (best > 0 && score >= best * 0.75 && score < best) m += add('chasing best', 0.25);
+  if (best > 0 && score > best * 1.15) m += add('past best', -0.12);
+  m += add('tension wave', Math.sin((drops / 24) * Math.PI * 2) * 0.13);
+  if (late > 0) m += add('late game', -late * 0.8);
 
   const rescue = !!ctx.rescue || (dry >= 6 && late < 0.5);
-  if (dry >= 6 && late < 0.5) reasons.push(['חלק מציל', 0]);
-  if (ctx.rescue) { m = 1; reasons.push(['צ׳אנס נוסף', 0]); }
+  if (dry >= 6 && late < 0.5) reasons.push(['rescue bundle', 0]);
+  if (ctx.rescue) { m = 1; reasons.push(['second chance', 0]); }
   return { mercy: clamp(m, 0, 1), reasons, rescue, fill };
 }
 

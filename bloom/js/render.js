@@ -317,10 +317,10 @@ export function createRenderer(canvas) {
     // weed countdown under the bed
     if (st.weedIn != null) {
       const y = by + bh + 12, n = Math.min(st.weedIn, 9);
-      c.textAlign = 'right'; c.textBaseline = 'middle'; c.direction = 'rtl';
-      c.font = `800 ${Math.round(cell * 0.3)}px Rubik, system-ui, sans-serif`;
+      c.textAlign = 'right'; c.textBaseline = 'middle'; c.direction = 'ltr';
+      c.font = `800 ${Math.round(cell * 0.3)}px Fredoka, system-ui, sans-serif`;
       c.fillStyle = n <= 1 ? `rgba(255,120,120,${0.7 + pulse * 0.3})` : 'rgba(255,255,255,0.7)';
-      c.fillText(n <= 1 ? 'עשבים בתור הבא!' : `עשבים בעוד ${n}`, bx + bw, y);
+      c.fillText(n <= 1 ? 'Weeds next drop!' : `Weeds in ${n}`, bx + bw, y);
       for (let i = 0; i < n; i++) {
         const x = bx + 6 + i * cell * 0.34, yy = y + (n <= 1 ? Math.sin(now / 60) * 2 : 0);
         c.strokeStyle = '#6fbf3a'; c.lineWidth = 2.5; c.lineCap = 'round';
@@ -389,7 +389,7 @@ export function createRenderer(canvas) {
       c.translate(f.x, f.y - easeOut(t) * cell * 1.4);
       c.scale(sc, sc);
       c.globalAlpha = t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
-      c.font = `900 ${Math.round(cell * 0.62 * f.size)}px "Rubik", system-ui, sans-serif`;
+      c.font = `900 ${Math.round(cell * 0.62 * f.size)}px "Fredoka", system-ui, sans-serif`;
       c.lineWidth = cell * 0.14 * f.size; c.strokeStyle = 'rgba(30,10,60,0.85)'; c.lineJoin = 'round';
       c.strokeText(f.text, 0, 0);
       c.fillStyle = f.color; c.fillText(f.text, 0, 0);
@@ -408,16 +408,16 @@ export function createRenderer(canvas) {
         c.rotate(-0.06);
         c.scale(sc, sc);
         c.globalAlpha = t > 0.75 ? 1 - (t - 0.75) / 0.25 : 1;
-        c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'rtl';
+        c.textAlign = 'center'; c.textBaseline = 'middle'; c.direction = 'ltr';
         const fs = Math.min(W / (banner.text.length * 0.62 + 1), cell * 1.5);
-        c.font = `900 ${Math.round(fs)}px "Rubik", system-ui, sans-serif`;
+        c.font = `900 ${Math.round(fs)}px "Fredoka", system-ui, sans-serif`;
         c.lineJoin = 'round';
         c.lineWidth = fs * 0.22; c.strokeStyle = '#2a0d55'; c.strokeText(banner.text, 0, 0);
         const gr = c.createLinearGradient(0, -fs / 2, 0, fs / 2);
         gr.addColorStop(0, '#fff7c2'); gr.addColorStop(0.5, banner.color); gr.addColorStop(1, shade(banner.color, -0.25));
         c.fillStyle = gr; c.fillText(banner.text, 0, 0);
         if (banner.sub) {
-          c.font = `800 ${Math.round(fs * 0.4)}px "Rubik", system-ui, sans-serif`;
+          c.font = `800 ${Math.round(fs * 0.4)}px "Fredoka", system-ui, sans-serif`;
           c.lineWidth = fs * 0.12; c.strokeText(banner.sub, 0, fs * 0.72);
           c.fillStyle = '#fff'; c.fillText(banner.sub, 0, fs * 0.72);
         }

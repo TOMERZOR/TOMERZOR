@@ -1,8 +1,8 @@
-# פריחה · Bloom
+# Bloom
 
 A gravity puzzle for phones. You drop bundles of coloured seeds into a garden; four or more seeds of one colour that touch bloom into flowers and disappear, everything above falls, and the fall can set off the next bloom: a chain. Weeds push up from below every few drops and only wither when something blooms next to them. The game ends when no bundle fits.
 
-Hebrew, static site, no build step:
+English, static site, no build step:
 
 ```
 npx http-server -p 8093 .     # from the repo root, then open http://localhost:8093/bloom/
@@ -46,9 +46,9 @@ Difficulty also climbs on its own: 4 colours for a new player's opening, 5 from 
 
 Turn on **Settings → developer mode** to see the mercy value, the reasons, the weed pace and the last bundle's stats while you play.
 
-**Feedback.** Seeds of the same colour are joined by bridges, so groups read at a glance. Blooms open into flowers in a wave and burst into petals; the clear sound climbs a pentatonic scale with the chain; banners for chains ("שרשרת x3!"), big blooms and new specials; screen shake grows with the chain and specials. The sky over the garden glows red when a column nears the top. Passing the best score mid-game fires "שיא חדש!".
+**Feedback.** Seeds of the same colour are joined by bridges, so groups read at a glance. Blooms open into flowers in a wave and burst into petals; the clear sound climbs a pentatonic scale with the chain; banners for chains ("Chain x3!"), big blooms and new specials; screen shake grows with the chain and specials. The sky over the garden glows red when a column nears the top. Passing the best score mid-game fires "New best!".
 
-**Near misses.** The HUD counts down "עוד X לשיא!" from 70% of your best. The game-over screen says "כמעט!" and how many points were missing, and shows the nearest unfinished goal.
+**Near misses.** The HUD counts down "X to beat your best!" from 70% of your best. The game-over screen says "So close!" and how many points were missing, and shows the nearest unfinished goal.
 
 **Between games (`js/meta.js`).** Levels from XP, each planting a flower in the garden on the home screen (the next one is a bud that grows with XP); a daily streak with growing gems and a streak freeze; three daily missions (bloom N groups, chain xN, score N, play N games, bloom N seeds at once, pull N weeds, make N special flowers); a lucky chest that fills with blooms and holds a random amount of gems (sometimes a jackpot); skins bought with gems (Jelly, Candy, Pastel, Gems, Neon). Progress and the game in progress are saved in the browser.
 

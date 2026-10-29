@@ -18,7 +18,7 @@ body {
   background: radial-gradient(120% 70% at 50% 0%, #4b23a8 0%, var(--bg1) 40%, var(--bg2) 100%) fixed;
   background-color: var(--bg2);
   color: var(--ink);
-  font-family: "Rubik", system-ui, sans-serif;
+  font-family: "Fredoka", system-ui, sans-serif;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -57,7 +57,6 @@ svg { width: 1em; height: 1em; flex: none; }
 
 .bar { height: 12px; border-radius: 99px; background: rgba(0, 0, 0, 0.35); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #ffd23d, #ff7ab6); transition: width 0.9s cubic-bezier(.2, .9, .3, 1.2); }
-html[dir="rtl"] .bar i { margin-inline-start: 0; }
 .xp small, .chest-card small { display: block; margin-top: 6px; color: var(--muted); font-weight: 700; font-size: 13px; }
 
 .play {

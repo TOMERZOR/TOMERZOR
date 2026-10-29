@@ -4,11 +4,11 @@
 const KEY = 'bloom.v2'; // v1 was the line-clearing prototype
 
 export const SKINS = [
-  { id: 'jelly', name: 'ג׳לי', cost: 0, style: 'jelly', colors: ['#ff5d73', '#ffa83a', '#ffd93d', '#5bd66f', '#3bc4ff', '#7a6cff', '#e66bff'] },
-  { id: 'candy', name: 'ממתקים', cost: 120, style: 'candy', colors: ['#ff4f9a', '#ff8a3d', '#ffe14a', '#3fe0a0', '#47b8ff', '#a774ff', '#ff6fd8'] },
-  { id: 'pastel', name: 'פסטל', cost: 200, style: 'flat', colors: ['#f7a6b5', '#f9c99b', '#f6e6a0', '#b5e3b0', '#a9d6f2', '#c3b6f2', '#e8b5e8'] },
-  { id: 'gem', name: 'אבני חן', cost: 350, style: 'gem', colors: ['#e0115f', '#ff7b00', '#ffc400', '#00b36b', '#0091e6', '#5b3cc4', '#c21bb5'] },
-  { id: 'neon', name: 'ניאון', cost: 500, style: 'neon', colors: ['#ff2e6e', '#ff9f1c', '#f9f871', '#2bff88', '#22d3ff', '#8f5bff', '#ff4fff'], dark: true },
+  { id: 'jelly', name: 'Jelly', cost: 0, style: 'jelly', colors: ['#ff5d73', '#ffa83a', '#ffd93d', '#5bd66f', '#3bc4ff', '#7a6cff', '#e66bff'] },
+  { id: 'candy', name: 'Candy', cost: 120, style: 'candy', colors: ['#ff4f9a', '#ff8a3d', '#ffe14a', '#3fe0a0', '#47b8ff', '#a774ff', '#ff6fd8'] },
+  { id: 'pastel', name: 'Pastel', cost: 200, style: 'flat', colors: ['#f7a6b5', '#f9c99b', '#f6e6a0', '#b5e3b0', '#a9d6f2', '#c3b6f2', '#e8b5e8'] },
+  { id: 'gem', name: 'Gems', cost: 350, style: 'gem', colors: ['#e0115f', '#ff7b00', '#ffc400', '#00b36b', '#0091e6', '#5b3cc4', '#c21bb5'] },
+  { id: 'neon', name: 'Neon', cost: 500, style: 'neon', colors: ['#ff2e6e', '#ff9f1c', '#f9f871', '#2bff88', '#22d3ff', '#8f5bff', '#ff4fff'], dark: true },
 ];
 
 const defaults = () => ({
@@ -91,13 +91,13 @@ export function checkStreak() {
 
 // ---- daily missions --------------------------------------------------------------------------
 const MISSION_TYPES = {
-  blooms: { text: (g) => `הפריחו ${g} קבוצות`, goals: [12, 20, 30], reward: 15 },
-  chain: { text: (g) => `שרשרת x${g}`, goals: [2, 3, 3], reward: 20 },
-  score: { text: (g) => `${g.toLocaleString('he-IL')} נקודות במשחק אחד`, goals: [2500, 5000, 8000], reward: 20 },
-  games: { text: (g) => `שחקו ${g} משחקים`, goals: [3, 4, 5], reward: 10 },
-  big: { text: (g) => `הפריחו ${g} זרעים בבת אחת`, goals: [6, 6, 8], reward: 15 },
-  weeds: { text: (g) => `עקרו ${g} עשבים`, goals: [10, 20, 30], reward: 15 },
-  specials: { text: (g) => `צרו ${g} פרחים מיוחדים`, goals: [1, 2, 3], reward: 20 },
+  blooms: { text: (g) => `Bloom ${g} groups`, goals: [12, 20, 30], reward: 15 },
+  chain: { text: (g) => `Make a x${g} chain`, goals: [2, 3, 3], reward: 20 },
+  score: { text: (g) => `Score ${g.toLocaleString('en-US')} in one game`, goals: [2500, 5000, 8000], reward: 20 },
+  games: { text: (g) => `Play ${g} games`, goals: [3, 4, 5], reward: 10 },
+  big: { text: (g) => `Bloom ${g} seeds at once`, goals: [6, 6, 8], reward: 15 },
+  weeds: { text: (g) => `Pull ${g} weeds`, goals: [10, 20, 30], reward: 15 },
+  specials: { text: (g) => `Grow ${g} special flower${g > 1 ? 's' : ''}`, goals: [1, 2, 3], reward: 20 },
 };
 
 function seeded(str) {

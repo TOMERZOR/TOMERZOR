@@ -1,22 +1,25 @@
-import { N, emptyGrid, fits, place, anyFit, linesWith, fillCount } from './board.js';
-import { SHAPE_BY_ID } from './pieces.js';
-import { makeTray } from './engine.js';
-import { scoreMove } from './rules.js';
+import {
+  COLS, ROWS, WEED, emptyBoard, cloneBoard, heights, canDrop, drop, resolve, rotate, anyDrop, growWeeds,
+  pieceWidth, pieceHeight, fillCount, idx, seedGarden,
+} from './board.js';
+import { makePieceFor, colorCount } from './engine.js';
+import { stepPoints, CLEAR_GARDEN_BONUS } from './rules.js';
 import { createRenderer, previewSkin } from './render.js';
 import { drawGarden } from './garden.js';
 import { sfx, unlock, setSound } from './audio.js';
 import {
   meta, save, SKINS, currentSkin, buySkin, selectSkin, checkStreak, missions, missionText, progressMissions,
-  addChestLines, CHEST_LINES, addXp, xpForLevel, finishGame,
+  addChestBlooms, CHEST_GOAL, addXp, xpForLevel, finishGame,
 } from './meta.js';
 
 const $ = (id) => document.getElementById(id);
 const M = meta();
 setSound(M.sound);
-const fmt = (n) => Math.round(n).toLocaleString('he-IL');
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
 const gem = '<svg><use href="#i-gem"/></svg>';
 const plus = (n) => `<bdi dir="ltr">+${typeof n === 'number' ? fmt(n) : n}</bdi>`;
 const vibrate = (p) => { if (M.haptics && navigator.vibrate) navigator.vibrate(p); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const canvas = $('board');
 const R = createRenderer(canvas);
@@ -24,54 +27,52 @@ let G = null; // the game in progress
 let screen = 'home';
 
 // ---- game state ------------------------------------------------------------------------------
+const sized = (p) => ({ ...p, w: pieceWidth(p), h: pieceHeight(p) });
+
 function freshGame() {
+  const b = emptyBoard();
   return {
-    grid: emptyGrid(), tray: [null, null, null], score: 0, shown: 0, combo: 0, movesSinceClear: 0,
-    placements: 0, trayIndex: 0, lines: 0, maxCombo: 0, maxLines: 0, chanceUsed: false, recordShown: false,
-    over: false, overT: 0, drag: null, think: [], lastAction: performance.now(), engine: null,
+    board: b, view: b, tray: [null, null, null], score: 0, shown: 0, drops: 0, dropsSinceBloom: 0, lastChain: 0,
+    blooms: 0, weeds: 0, specials: 0, maxChain: 0, maxGroup: 0, weedTimer: 0, chanceUsed: false, recordShown: false,
+    over: false, overT: 0, busy: false, drag: null, think: [], lastAction: performance.now(), engine: null,
   };
 }
 
 function saveGame() {
   if (!G) return;
+  const { board, tray, score, drops, dropsSinceBloom, lastChain, blooms, weeds, specials, maxChain, maxGroup, weedTimer, chanceUsed, recordShown } = G;
   M.saved = {
-    grid: [...G.grid], tray: G.tray.map((p) => p && { id: p.shape.id, ci: p.ci }), score: G.score, combo: G.combo,
-    movesSinceClear: G.movesSinceClear, placements: G.placements, trayIndex: G.trayIndex, lines: G.lines,
-    maxCombo: G.maxCombo, maxLines: G.maxLines, chanceUsed: G.chanceUsed, recordShown: G.recordShown,
+    grid: [...board.grid], spec: [...board.spec], tray: tray.map((p) => p && { shape: p.piece.shape, cells: p.piece.cells, colors: p.piece.colors }),
+    score, drops, dropsSinceBloom, lastChain, blooms, weeds, specials, maxChain, maxGroup, weedTimer, chanceUsed, recordShown,
   };
   save();
 }
 
 function restoreGame(s) {
   const g = freshGame();
-  Object.assign(g, { ...s, grid: Uint8Array.from(s.grid), shown: s.score });
-  g.tray = s.tray.map((p) => p && SHAPE_BY_ID.get(p.id) ? { shape: SHAPE_BY_ID.get(p.id), ci: p.ci, t0: performance.now() } : null);
+  Object.assign(g, s);
+  g.board = { grid: Uint8Array.from(s.grid), spec: Uint8Array.from(s.spec) };
+  g.view = g.board;
+  g.shown = s.score;
+  g.tray = s.tray.map((p) => p && { piece: sized(p), t0: performance.now() });
   return g;
 }
 
 function engineCtx(extra = {}) {
   const think = G.think.length ? G.think.reduce((a, b) => a + b, 0) / G.think.length : 0;
   return {
-    grid: G.grid, score: G.score, best: M.best, gamesPlayed: M.games, placements: G.placements,
-    movesSinceClear: G.movesSinceClear, combo: G.combo, thinkMs: think, recentScores: M.recent, trayIndex: G.trayIndex, ...extra,
+    board: G.board, score: G.score, best: M.best, gamesPlayed: M.games, drops: G.drops,
+    dropsSinceBloom: G.dropsSinceBloom, lastChain: G.lastChain, thinkMs: think, recentScores: M.recent, ...extra,
   };
 }
 
-function dealTray(rescue = false) {
-  const t = makeTray(engineCtx({ rescue }));
+function newPiece(extra) {
+  const t = makePieceFor(engineCtx(extra));
   G.engine = t;
-  const colors = [1, 2, 3, 4, 5, 6, 7].sort(() => Math.random() - 0.5);
-  const now = performance.now();
-  G.tray = t.pieces.map((shape, i) => ({ shape, ci: colors[i], t0: now + i * 70 }));
-  G.trayIndex++;
-  G.lastAction = now;
-  updateFits();
-  saveGame();
-  showDebug();
-  if (!G.tray.some((p) => p.fits)) gameOver();
+  return { piece: sized(t.piece), t0: performance.now() };
 }
 
-function updateFits() { for (const p of G.tray) if (p) p.fits = anyFit(G.grid, p.shape); }
+function updateFits() { for (const p of G.tray) if (p) p.fits = anyDrop(G.board, p.piece); }
 
 // ---- input -----------------------------------------------------------------------------------
 function pos(e) {
@@ -80,118 +81,172 @@ function pos(e) {
 }
 
 function dragTo(d, x, y) {
-  const L = R.layout, cell = L.cell;
-  const w = d.shape.w * cell, h = d.shape.h * cell;
-  d.x = x - w / 2;
-  d.y = d.touch ? y - h - cell * 1.1 : y - h / 2;
-  const c = Math.round((d.x - L.boardX) / cell), r = Math.round((d.y - L.boardY) / cell);
-  d.valid = fits(G.grid, d.shape, r, c);
-  d.r = r; d.c = c;
-  d.lines = d.valid ? linesWith(G.grid, d.shape, r, c) : null;
-  if (d.lines && !d.lines.rows.length && !d.lines.cols.length) d.lines = null;
+  const L = R.layout, cell = L.cell, p = d.piece;
+  d.x = x - p.w * cell / 2;
+  d.y = d.touch ? y - p.h * cell - cell * 0.9 : y - p.h * cell / 2;
+  const col = Math.max(0, Math.min(COLS - p.w, Math.round((d.x - L.boardX) / cell)));
+  d.w = p.w;
+  d.valid = d.y + p.h * cell < L.boardY + L.bh + cell * 0.6 && canDrop(G.board, p, col);
+  if (col === d.col && d.landing) return;
+  d.col = col;
+  d.landing = null; d.preview = null;
+  if (!canDrop(G.board, p, col)) return;
+  // where the seeds land, and which seeds would bloom
+  const t = cloneBoard(G.board);
+  const landed = drop(t, p, col);
+  d.landing = landed.map((q) => ({ r: q.r, c: q.c, color: t.grid[idx(q.r, q.c)] }));
+  const steps = resolve(cloneBoard(t));
+  d.preview = steps.length ? steps[0].cleared.map((q) => idx(q.r, q.c)) : null;
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  if (!G || G.over || G.drag || !$('overlay').hidden) return;
+  if (!G || G.over || G.busy || G.drag || !$('overlay').hidden) return;
   unlock();
   const p = pos(e);
   const i = R.layout.slots.findIndex((s, k) => G.tray[k] && Math.abs(p.x - s.x) < s.w / 2 && Math.abs(p.y - s.y) < s.h / 2 + 10);
   if (i < 0) return;
-  const piece = G.tray[i];
-  G.drag = { slot: i, shape: piece.shape, ci: piece.ci, touch: e.pointerType !== 'mouse', id: e.pointerId };
+  G.drag = { slot: i, piece: G.tray[i].piece, touch: e.pointerType !== 'mouse', id: e.pointerId, sx: p.x, sy: p.y, t0: performance.now(), moved: false, col: -1 };
   canvas.setPointerCapture(e.pointerId);
-  dragTo(G.drag, p.x, p.y);
-  sfx.pick();
-  vibrate(5);
 });
 
 canvas.addEventListener('pointermove', (e) => {
   const d = G?.drag;
   if (!d || d.id !== e.pointerId) return;
   const p = pos(e);
-  const was = d.valid && `${d.r},${d.c}`;
+  if (!d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) < 10) return;
+  if (!d.moved) { d.moved = true; sfx.pick(); vibrate(5); hint(null); }
+  const was = d.valid && d.col;
   dragTo(d, p.x, p.y);
-  if (d.valid && `${d.r},${d.c}` !== was) vibrate(2);
+  if (d.valid && d.col !== was) vibrate(2);
 });
 
 function endDrag(e) {
   const d = G?.drag;
   if (!d || d.id !== e.pointerId) return;
   G.drag = null;
-  if (d.valid) placeAt(d.slot, d.r, d.c);
-  else {
-    G.tray[d.slot].t0 = performance.now() - 220;
-    const p = pos(e);
-    if (p.y < R.layout.boardY + R.layout.size) sfx.nope();
+  const slot = G.tray[d.slot];
+  if (!d.moved) {
+    // a tap turns the bundle
+    slot.piece = sized(rotate(slot.piece));
+    slot.rotT = performance.now();
+    slot.fits = anyDrop(G.board, slot.piece);
+    sfx.tick();
+    vibrate(4);
+    M.tutRotate = true;
+    return;
   }
+  if (d.valid) dropAt(d.slot, d.col);
+  else { slot.t0 = performance.now() - 220; sfx.nope(); }
 }
 canvas.addEventListener('pointerup', endDrag);
 canvas.addEventListener('pointercancel', endDrag);
 
-// ---- placing and scoring ---------------------------------------------------------------------
-const PRAISE = ['יפה!', 'מעולה!', 'מדהים!', 'וואו!', 'פנומנלי!', 'בלתי נתפס!'];
+// ---- dropping, blooming, chains --------------------------------------------------------------
+const PRAISE = ['Nice!', 'Great!', 'Amazing!', 'Wow!', 'Incredible!', 'Unreal!'];
 
-function placeAt(slot, r, c) {
+async function dropAt(slot, col) {
+  G.busy = true;
   const now = performance.now();
-  const p = G.tray[slot];
-  const skin = currentSkin();
-  const res = place(G.grid, p.shape, r, c, p.ci);
-  G.grid = res.grid;
+  const piece = G.tray[slot].piece;
   G.tray[slot] = null;
   G.think = [...G.think, now - G.lastAction].slice(-3);
-  G.lastAction = now;
-  const allClear = res.lines > 0 && fillCount(G.grid) === 0;
-  const st = scoreMove(G, p.shape.n, res.lines, allClear);
-  G.combo = st.combo; G.movesSinceClear = st.movesSinceClear;
-  G.score += st.points;
-  G.placements++;
-  G.lines += res.lines;
-  G.maxCombo = Math.max(G.maxCombo, G.combo);
-  G.maxLines = Math.max(G.maxLines, res.lines);
+  const landed = drop(G.board, piece, col);
+  G.view = cloneBoard(G.board);
+  R.fall(landed.map((q) => ({ c: q.c, from: q.from - 1, to: q.r })), now, 200);
+  G.drops++;
+  await sleep(260);
+  sfx.place(landed.length);
+  vibrate(8);
+  R.pop(landed.map((q) => [q.r, q.c]), performance.now());
 
-  const clearedSet = new Set(res.cleared.map((q) => q.r * N + q.c));
-  R.pop(p.shape.cells.map(([dr, dc]) => [r + dr, c + dc]).filter(([y, x]) => !clearedSet.has(y * N + x)), now);
-  const [cx, cy] = R.cellCenter(r + (p.shape.h - 1) / 2, c + (p.shape.w - 1) / 2);
-  bumpScore();
+  const steps = resolve(G.board, landed.map((q) => idx(q.r, q.c)));
+  await playSteps(steps, landed);
+  G.dropsSinceBloom = steps.length ? 0 : G.dropsSinceBloom + 1;
+  G.lastChain = steps.length;
 
-  if (res.lines) {
-    const power = res.lines + G.combo * 0.5;
-    R.burst(res.cleared, skin.colors, now, power);
-    R.setShake(3 + res.lines * 3 + Math.min(6, G.combo), now);
-    R.float(`+${fmt(st.points)}`, cx, cy, now, { color: G.combo >= 3 ? '#ffd23d' : '#fff', size: 1 + Math.min(0.8, res.lines * 0.15 + G.combo * 0.06) });
-    sfx.clear(res.lines, G.combo);
-    if (res.lines >= 3 || G.combo >= 4) sfx.big();
-    vibrate(res.lines >= 2 ? [20, 40, 30] : 18);
-    if (allClear) {
-      R.setBanner('לוח נקי!', `+${fmt(2000)}`, now, '#7dffb0');
-      R.setFlash('#ffffff', now);
-      sfx.allClear();
-    } else if (res.lines >= 2 || G.combo >= 2) {
-      const k = Math.min(PRAISE.length - 1, res.lines - 1 + Math.floor(G.combo / 2));
-      R.setBanner(PRAISE[k], G.combo >= 2 ? `קומבו x${G.combo}` : '', now, ['#ffd23d', '#ff9ad5', '#7de3ff', '#b6ff6d'][k % 4]);
-    }
-  } else {
-    sfx.place(p.shape.n);
-    vibrate(8);
+  // weeds
+  G.weedTimer--;
+  if (G.weedTimer <= 0) {
+    const plan = G.engine.weeds;
+    const h = heights(G.board);
+    const cols = [...Array(COLS).keys()].filter((c) => h[c] < ROWS).sort(() => Math.random() - 0.5).slice(0, plan.count);
+    growWeeds(G.board, cols);
+    G.view = cloneBoard(G.board);
+    const moves = [];
+    for (const c of cols) for (let r = 0; r < ROWS; r++) if (G.board.grid[idx(r, c)]) moves.push({ c, from: r + 1, to: r });
+    R.fall(moves, performance.now(), 260);
+    R.setShake(5, performance.now());
+    sfx.weeds();
+    vibrate([10, 30, 10]);
+    G.weedTimer = plan.every;
+    await sleep(300);
+    const more = resolve(G.board);
+    if (more.length) await playSteps(more, []);
   }
 
-  if (M.best > 0 && !G.recordShown && G.score > M.best) {
-    G.recordShown = true;
-    setTimeout(() => { const t = performance.now(); R.setBanner('שיא חדש!', '', t, '#ffd23d'); R.setFlash('#ffd23d', t); sfx.record(); vibrate([30, 50, 30, 50, 60]); }, res.lines ? 700 : 0);
-  }
-
+  G.tray[slot] = newPiece();
   for (const m of progressMissions(totals(false))) missionToast(m);
-
-  if (G.tray.every((q) => !q)) setTimeout(() => { if (G && !G.over) dealTray(); }, 140);
-  else {
-    updateFits();
-    saveGame();
-    if (!G.tray.some((q) => q && q.fits)) gameOver();
-  }
+  G.view = G.board;
+  G.lastAction = performance.now();
+  G.busy = false;
+  updateFits();
+  saveGame();
   showDebug();
+  tutorial();
+  if (!G.tray.some((p) => p && p.fits)) gameOver();
 }
 
-const totals = (finished) => ({ lines: G.lines, placements: G.placements, score: G.score, maxCombo: G.maxCombo, maxLines: G.maxLines, finished });
+async function playSteps(steps, landed) {
+  const skin = currentSkin();
+  for (const st of steps) {
+    const now = performance.now();
+    G.view = st.mid;
+    const pts = stepPoints(st);
+    G.score += pts;
+    G.blooms += st.groups.length;
+    G.weeds += st.weeds;
+    G.specials += st.made.length;
+    G.maxChain = Math.max(G.maxChain, st.chain);
+    for (const g of st.groups) G.maxGroup = Math.max(G.maxGroup, g.size);
+    const power = st.cleared.length / 4 + st.chain;
+    R.bloom(st.cleared, skin.colors, now, power);
+    const mid = st.cleared[Math.floor(st.cleared.length / 2)];
+    const [cx, cy] = R.cellCenter(mid.r, mid.c);
+    R.float(`+${fmt(pts)}`, cx, cy, now + 120, { color: st.chain >= 2 ? '#ffd23d' : '#fff', size: 1 + Math.min(0.9, st.chain * 0.15 + st.cleared.length * 0.02) });
+    R.setShake(3 + st.chain * 2 + (st.blasts.length ? 8 : 0), now);
+    sfx.clear(Math.min(4, st.groups.length + Math.floor(st.cleared.length / 6)), st.chain);
+    vibrate(st.chain >= 2 ? [20, 40, 30] : 18);
+    if (st.blasts.length) { sfx.big(); R.setFlash(st.blasts.some((b) => b.kind === 2) ? '#ffffff' : '#ffd23d', now); }
+    if (st.made.length) setTimeout(() => { sfx.gem(); R.pop(st.made.map((m) => [m.r, m.c]), performance.now()); }, 250);
+    if (st.chain >= 2) R.setBanner(`Chain x${st.chain}!`, PRAISE[Math.min(PRAISE.length - 1, st.chain - 2)], now, ['#ffd23d', '#ff9ad5', '#7de3ff', '#b6ff6d'][st.chain % 4]);
+    else if (st.made.length) R.setBanner(st.made[0].kind === 2 ? 'Rainbow flower!' : 'Sunflower!', st.made[0].kind === 2 ? 'blooms its whole colour' : 'blasts a 3x3 when it blooms', now, '#7de3ff');
+    else if (st.cleared.length >= 7) R.setBanner(PRAISE[Math.min(PRAISE.length - 1, st.cleared.length - 6)], '', now, '#b6ff6d');
+    bumpScore();
+    checkRecord();
+    await sleep(380);
+    G.view = st.after;
+    R.fall(st.moves, performance.now(), 200);
+    if (st.moves.length) await sleep(230);
+  }
+  // a clean garden only counts when there was a real garden to clear
+  if (steps.length && fillCount(G.board) === 0 && steps.reduce((n, st) => n + st.cleared.length, 0) >= 12) {
+    G.score += CLEAR_GARDEN_BONUS;
+    const now = performance.now();
+    R.setBanner('Clean garden!', `+${fmt(CLEAR_GARDEN_BONUS)}`, now, '#7dffb0');
+    R.setFlash('#ffffff', now);
+    sfx.allClear();
+    await sleep(500);
+  }
+}
+
+function checkRecord() {
+  if (M.best > 0 && !G.recordShown && G.score > M.best) {
+    G.recordShown = true;
+    setTimeout(() => { const t = performance.now(); R.setBanner('New best!', '', t, '#ffd23d'); R.setFlash('#ffd23d', t); sfx.record(); vibrate([30, 50, 30, 50, 60]); }, 600);
+  }
+}
+
+const totals = (finished) => ({ blooms: G.blooms, weeds: G.weeds, specials: G.specials, score: G.score, maxChain: G.maxChain, maxGroup: G.maxGroup, finished });
 
 function bumpScore() {
   const el = $('g-score');
@@ -206,11 +261,26 @@ function updateHud() {
   $('g-best').textContent = fmt(Math.max(M.best, G.recordShown ? G.score : 0));
   const chase = $('g-chase');
   let text = '', hot = false;
-  if (G.recordShown) { text = 'שיא חדש!'; hot = true; }
-  else if (M.best > 0 && G.score >= M.best * 0.7) { text = `עוד ${fmt(M.best - G.score + 1)} לשיא!`; hot = G.score >= M.best * 0.9; }
-  else if (G.combo >= 2) text = `קומבו x${G.combo}`;
+  if (G.recordShown) { text = 'New best!'; hot = true; }
+  else if (M.best > 0 && G.score >= M.best * 0.7) { text = `${fmt(M.best - G.score + 1)} to beat your best!`; hot = G.score >= M.best * 0.9; }
   if (chase.textContent !== text) chase.textContent = text;
   chase.classList.toggle('hot', hot);
+}
+
+// ---- first-game hints ------------------------------------------------------------------------
+function hint(text) {
+  const el = $('hint');
+  if (!text) { el.hidden = true; return; }
+  el.textContent = text;
+  el.hidden = false;
+}
+function tutorial() {
+  if (M.games > 0 || !G) return hint(null);
+  if (G.drops === 0) hint('Drag a bundle over the garden, let go');
+  else if (G.blooms === 0 && G.drops < 6) hint('4 touching seeds of one colour bloom!');
+  else if (!M.tutRotate && G.drops < 12) hint('Tap a bundle to turn it');
+  else if (G.drops < 14 && G.weedTimer <= 2) hint('Weeds rise from below. Bloom next to them to pull them out');
+  else hint(null);
 }
 
 // ---- game over, second chance, results -------------------------------------------------------
@@ -228,13 +298,13 @@ function offerChance() {
   const gap = M.best - G.score;
   const close = M.best > 0 && gap > 0 && G.score >= M.best * 0.6;
   modal(`
-    <h2>אין מקום!</h2>
-    <p>${close ? `אתם רק <b style="color:#ffd23d">${fmt(gap + 1)}</b> נקודות מהשיא` : 'אפשר להמשיך מאיפה שעצרתם'}</p>
+    <h2>Garden full!</h2>
+    <p>${close ? `Only <b style="color:#ffd23d">${fmt(gap + 1)}</b> points from your best` : 'Pick up right where you left off'}</p>
     <div class="btns">
-      <button class="btn gold" data-act="chance"><svg><use href="#i-gift"/></svg> צ׳אנס נוסף</button>
-      <button class="btn quiet" data-act="end">סיום</button>
+      <button class="btn gold" data-act="chance"><svg><use href="#i-gift"/></svg> Second chance</button>
+      <button class="btn quiet" data-act="end">No thanks</button>
     </div>
-    <p style="font-size:13px">צ׳אנס אחד חינם בכל משחק</p>`, {
+    <p style="font-size:13px">One free second chance every game</p>`, {
     chance: () => { closeModal(); secondChance(); },
     end: () => { closeModal(); finish(); },
   });
@@ -245,83 +315,77 @@ function secondChance() {
   G.over = false;
   G.overT = 0;
   const now = performance.now();
-  if (fillCount(G.grid) > N * N * 0.5) {
-    // Blast the most crowded 3x3 corner of the board first, so the rescue pieces have room.
-    let best = null;
-    for (let r = 0; r <= N - 3; r++) for (let c = 0; c <= N - 3; c++) {
-      let n = 0;
-      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) if (G.grid[(r + y) * N + c + x]) n++;
-      if (!best || n > best.n) best = { r, c, n };
-    }
-    const cleared = [];
-    for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
-      const i = (best.r + y) * N + best.c + x;
-      if (G.grid[i]) { cleared.push({ r: best.r + y, c: best.c + x, color: G.grid[i] }); G.grid[i] = 0; }
-    }
-    R.burst(cleared, currentSkin().colors, now, 3);
-    R.setShake(12, now);
-    sfx.big();
+  // the top four rows burst into flowers, then fresh kind bundles and a break from the weeds
+  const cleared = [];
+  for (let r = 0; r < 4; r++) for (let c = 0; c < COLS; c++) {
+    const i = idx(r, c);
+    if (G.board.grid[i]) { cleared.push({ r, c, color: G.board.grid[i] }); G.board.grid[i] = 0; G.board.spec[i] = 0; }
   }
-  R.setBanner('ממשיכים!', '', now, '#7dffb0');
-  dealTray(true);
+  G.view = G.board;
+  R.bloom(cleared, currentSkin().colors, now, 3);
+  R.setShake(12, now);
+  sfx.big();
+  R.setBanner('Keep going!', '', now, '#7dffb0');
+  G.tray = [0, 1, 2].map((i) => { const p = newPiece({ rescue: true }); p.t0 = now + 200 + i * 80; return p; });
+  G.weedTimer += 3;
+  updateFits();
+  saveGame();
 }
 
 function finish() {
-  const s = G.score, lines = G.lines;
-  const prevLevel = M.level;
+  const s = G.score, blooms = G.blooms;
   const prevFrac = M.xp / xpForLevel(M.level);
   const { prevBest, record } = finishGame(s);
   const done = progressMissions(totals(true));
-  M.totalLines += lines;
-  const prevChest = M.chest.lines;
-  const chests = addChestLines(lines);
+  M.totalBlooms += blooms;
+  const prevChest = M.chest.n;
+  const chests = addChestBlooms(blooms);
   const xpGain = s + 50;
   const ups = addXp(xpGain);
   M.saved = null;
   save();
   G = null;
+  hint(null);
   if (record && prevBest > 0) sfx.record();
-  showResults({ s, prevBest, record, done, chests, ups, prevLevel, prevFrac, xpGain, lines, prevChest });
+  showResults({ s, prevBest, record, done, chests, ups, prevFrac, xpGain, prevChest });
 }
 
 function showResults(r) {
   const near = !r.record && r.prevBest > 0 && r.s >= r.prevBest * 0.7;
-  const title = r.record ? (r.prevBest > 0 ? 'שיא חדש!' : 'משחק ראשון!') : near ? 'כמעט!' : 'סוף המשחק';
+  const title = r.record ? (r.prevBest > 0 ? 'New best!' : 'First game!') : near ? 'So close!' : 'Game over';
   const rows = [];
-  // XP bar (animated from where it was)
   const lvl = M.level, frac = M.xp / xpForLevel(M.level);
-  rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">רמה ${lvl} <small>${plus(r.xpGain)} ניסיון · עוד ${fmt(xpForLevel(lvl) - M.xp)} לפרח הבא</small><div class="bar"><i data-to="${(frac * 100).toFixed(1)}" style="width:${r.ups.length ? 0 : (r.prevFrac * 100).toFixed(1)}%"></i></div></div></div>`);
-  for (const u of r.ups) rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">עליתם לרמה ${u.level}! <small>פרח חדש פרח בגן שלכם</small></div><b>${plus(u.gems)}</b>${gem}</div>`);
-  for (const c of r.chests) rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">${c.jackpot ? 'ג׳קפוט! ' : ''}פתחתם תיבת מזל</div><b>${plus(c.gems)}</b>${gem}</div>`);
-  for (const m of r.done) rows.push(`<div class="reward">${gem}<div class="grow">${m.bonus ? 'כל משימות היום הושלמו!' : `משימה: ${missionText(m)}`}</div><b>${plus(m.reward)}</b>${gem}</div>`);
+  rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">Level ${lvl} <small>${plus(r.xpGain)} XP · ${fmt(xpForLevel(lvl) - M.xp)} to the next flower</small><div class="bar"><i data-to="${(frac * 100).toFixed(1)}" style="width:${r.ups.length ? 0 : (r.prevFrac * 100).toFixed(1)}%"></i></div></div></div>`);
+  for (const u of r.ups) rows.push(`<div class="reward"><svg><use href="#i-crown"/></svg><div class="grow">Level ${u.level}! <small>A new flower bloomed in your garden</small></div><b>${plus(u.gems)}</b>${gem}</div>`);
+  for (const c of r.chests) rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">${c.jackpot ? 'Jackpot! ' : ''}Lucky chest opened</div><b>${plus(c.gems)}</b>${gem}</div>`);
+  for (const m of r.done) rows.push(`<div class="reward">${gem}<div class="grow">${m.bonus ? "All of today's missions done!" : `Mission: ${missionText(m)}`}</div><b>${plus(m.reward)}</b>${gem}</div>`);
   if (!r.chests.length) {
-    const left = CHEST_LINES - M.chest.lines;
-    rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">תיבת מזל <small>${left <= 10 ? `רק עוד ${left} שורות!` : `עוד ${left} שורות`}</small><div class="bar"><i data-to="${(M.chest.lines / CHEST_LINES * 100).toFixed(1)}" style="width:${(r.prevChest / CHEST_LINES * 100).toFixed(1)}%"></i></div></div></div>`);
+    const left = CHEST_GOAL - M.chest.n;
+    rows.push(`<div class="reward"><svg><use href="#i-gift"/></svg><div class="grow">Lucky chest <small>${left <= 8 ? `Only ${left} more blooms!` : `${left} more blooms`}</small><div class="bar"><i data-to="${(M.chest.n / CHEST_GOAL * 100).toFixed(1)}" style="width:${(r.prevChest / CHEST_GOAL * 100).toFixed(1)}%"></i></div></div></div>`);
   }
   const open = missions().list.filter((m) => !m.done).sort((a, b) => b.progress / b.goal - a.progress / a.goal)[0];
   if (open && !r.done.length) rows.push(`<div class="reward">${gem}<div class="grow">${missionText(open)} <small>${fmt(open.progress)} / ${fmt(open.goal)}</small><div class="bar"><i style="width:${(open.progress / open.goal * 100).toFixed(1)}%"></i></div></div><b>${plus(open.reward)}</b>${gem}</div>`);
 
   modal(`
     <h2>${title}</h2>
-    ${r.record && r.prevBest > 0 ? '<span class="record">שברתם את השיא!</span>' : ''}
+    ${r.record && r.prevBest > 0 ? '<span class="record">You beat your best!</span>' : ''}
     <div class="big-num" data-count="${r.s}">0</div>
-    ${near ? `<p class="near">חסרו רק ${fmt(r.prevBest - r.s + 1)} לשיא!</p>` : `<p>שיא: ${fmt(M.best)}</p>`}
+    ${near ? `<p class="near">Just ${fmt(r.prevBest - r.s + 1)} short of your best!</p>` : `<p>Best: ${fmt(M.best)}</p>`}
     <div class="rewards">${rows.map((x, i) => x.replace('class="reward"', `class="reward" style="animation-delay:${0.25 + i * 0.12}s"`)).join('')}</div>
     <div class="btns">
-      <button class="btn go" data-act="again">שחקו שוב</button>
-      <button class="btn quiet" data-act="home">לבית</button>
+      <button class="btn go" data-act="again">Play again</button>
+      <button class="btn quiet" data-act="home">Home</button>
     </div>`, {
     again: () => { closeModal(); startGame(); },
     home: () => { closeModal(); goHome(); },
   });
-  // count the score up, then fill the bars
   const el = $('modal').querySelector('[data-count]');
   const t0 = performance.now(), dur = Math.min(1400, 400 + r.s / 10);
   const step = () => {
     const t = Math.min(1, (performance.now() - t0) / dur);
     el.textContent = fmt(r.s * (1 - Math.pow(1 - t, 3)));
     if (t < 1) requestAnimationFrame(step);
-    else if (r.record) { sfx.gem(); }
+    else if (r.record) sfx.gem();
   };
   requestAnimationFrame(step);
   setTimeout(() => $('modal').querySelectorAll('[data-to]').forEach((b) => { b.style.width = `${b.dataset.to}%`; }), 450);
@@ -330,7 +394,7 @@ function showResults(r) {
 }
 
 function missionToast(m) {
-  toast(`${gem} ${m.bonus ? 'כל המשימות הושלמו!' : missionText(m)} · ${plus(m.reward)}`);
+  toast(`${gem} ${m.bonus ? 'All missions done!' : missionText(m)} · ${plus(m.reward)}`);
   sfx.gem();
 }
 
@@ -363,26 +427,34 @@ function show(name) {
   $('home').hidden = name !== 'home';
   $('game').hidden = name !== 'game';
   document.body.classList.toggle('neon', !!currentSkin().dark);
+  document.body.classList.toggle('in-game', name === 'game');
   if (name === 'game') requestAnimationFrame(() => R.resize());
 }
 
 function startGame() {
   G = freshGame();
+  seedGarden(G.board, colorCount(M.games, 0));
   show('game');
-  requestAnimationFrame(() => dealTray());
+  const now = performance.now();
+  G.tray = [0, 1, 2].map((i) => { const p = newPiece(); p.t0 = now + 150 + i * 80; return p; });
+  G.weedTimer = G.engine.weeds.every;
+  updateFits();
+  showDebug();
+  tutorial();
 }
 
 function resumeGame() {
   G = restoreGame(M.saved);
   show('game');
   updateFits();
-  if (!G.tray.some((p) => p)) requestAnimationFrame(() => dealTray());
-  else if (!G.tray.some((p) => p && p.fits)) { G.over = false; setTimeout(gameOver, 300); }
+  tutorial();
+  if (!G.tray.some((p) => p && p.fits)) setTimeout(gameOver, 300);
 }
 
 function goHome() {
-  if (G) saveGame();
+  if (G && !G.busy) saveGame();
   G = null;
+  hint(null);
   renderHome();
   show('home');
 }
@@ -392,18 +464,18 @@ function renderHome() {
   $('h-streak').querySelector('b').textContent = M.streak.count;
   $('h-level').textContent = M.level;
   const need = xpForLevel(M.level);
-  $('h-xpbar').style.width = `${(M.xp / need * 100).toFixed(1)}%`;
-  $('h-xptext').textContent = `עוד ${fmt(need - M.xp)} ניסיון לפרח הבא`;
+  $('h-ring').style.setProperty('--p', (M.xp / need * 100).toFixed(1));
+  $('h-xptext').textContent = `${fmt(need - M.xp)} XP to your next flower`;
   $('h-best').textContent = fmt(M.best);
-  $('h-play').textContent = M.saved ? 'המשיכו' : 'שחקו';
+  $('h-play').querySelector('span').textContent = M.saved ? 'Continue' : 'Play';
   $('h-new').hidden = !M.saved;
   const ms = missions();
   $('h-missions').innerHTML = ms.list.map((m) => `
     <li class="${m.done ? 'done' : ''}"><span>${m.done ? '✓ ' : ''}${missionText(m)}</span><span class="rw">${plus(m.reward)}${gem}</span>
     <div class="bar"><i style="width:${(m.progress / m.goal * 100).toFixed(1)}%"></i></div></li>`).join('') +
-    `<li class="bonus"><span>${ms.bonus ? '✓ בונוס היום נאסף' : 'השלימו את שלושתן לבונוס'}</span><span class="rw">${plus(40)}${gem}</span></li>`;
-  $('h-chestbar').style.width = `${(M.chest.lines / CHEST_LINES * 100).toFixed(1)}%`;
-  $('h-chesttext').textContent = `${M.chest.lines} / ${CHEST_LINES} שורות · מה יש בפנים? רק מזל יודע`;
+    `<li class="bonus"><span>${ms.bonus ? "✓ Today's bonus collected" : 'Finish all three for a bonus'}</span><span class="rw">${plus(40)}${gem}</span></li>`;
+  $('h-chestbar').style.width = `${(M.chest.n / CHEST_GOAL * 100).toFixed(1)}%`;
+  $('h-chesttext').textContent = `${M.chest.n} / ${CHEST_GOAL} blooms · what's inside? Only luck knows`;
 }
 
 $('h-play').addEventListener('click', () => { unlock(); sfx.tick(); M.saved ? resumeGame() : startGame(); });
@@ -413,18 +485,18 @@ $('g-home').addEventListener('click', () => { sfx.tick(); goHome(); });
 $('h-skins').addEventListener('click', () => { unlock(); sfx.tick(); openSkins(); });
 function openSkins() {
   modal(`
-    <h2>סקינים</h2>
+    <h2>Skins</h2>
     <p>${gem} ${fmt(M.gems)}</p>
     <div class="skins">${SKINS.map((s) => `
       <button class="skin ${M.skin === s.id ? 'on' : ''}" data-act="skin" data-id="${s.id}">
         <canvas data-skin="${s.id}"></canvas>${s.name}
-        <small>${M.skins.includes(s.id) ? (M.skin === s.id ? 'בשימוש' : 'בחרו') : `${s.cost} ${gem}`}</small>
+        <small>${M.skins.includes(s.id) ? (M.skin === s.id ? 'Equipped' : 'Use') : `${s.cost} ${gem}`}</small>
       </button>`).join('')}</div>
-    <div class="btns"><button class="btn quiet" data-act="close">סגירה</button></div>`, {
+    <div class="btns"><button class="btn quiet" data-act="close">Close</button></div>`, {
     skin: (b) => {
       const id = b.dataset.id;
       if (M.skins.includes(id)) selectSkin(id);
-      else if (!buySkin(id)) { const s = SKINS.find((k) => k.id === id); toast(`חסרים עוד ${s.cost - M.gems} ${gem}`); sfx.nope(); return; }
+      else if (!buySkin(id)) { const s = SKINS.find((k) => k.id === id); toast(`You need ${s.cost - M.gems} more ${gem}`); sfx.nope(); return; }
       else sfx.gem();
       document.body.classList.toggle('neon', !!currentSkin().dark);
       renderHome();
@@ -438,11 +510,11 @@ function openSkins() {
 $('h-settings').addEventListener('click', () => {
   unlock(); sfx.tick();
   modal(`
-    <h2>הגדרות</h2>
-    <label class="toggle">צלילים <input type="checkbox" data-set="sound" ${M.sound ? 'checked' : ''}></label>
-    <label class="toggle">רטט <input type="checkbox" data-set="haptics" ${M.haptics ? 'checked' : ''}></label>
-    <label class="toggle">מצב מפתחים (מה המנוע חושב) <input type="checkbox" data-set="debug" ${M.debug ? 'checked' : ''}></label>
-    <div class="btns"><button class="btn quiet" data-act="close">סגירה</button></div>`, { close: closeModal });
+    <h2>Settings</h2>
+    <label class="toggle">Sound <input type="checkbox" data-set="sound" ${M.sound ? 'checked' : ''}></label>
+    <label class="toggle">Vibration <input type="checkbox" data-set="haptics" ${M.haptics ? 'checked' : ''}></label>
+    <label class="toggle">Developer mode (what the engine thinks) <input type="checkbox" data-set="debug" ${M.debug ? 'checked' : ''}></label>
+    <div class="btns"><button class="btn quiet" data-act="close">Close</button></div>`, { close: closeModal });
   $('modal').querySelectorAll('[data-set]').forEach((inp) => inp.addEventListener('change', () => {
     M[inp.dataset.set] = inp.checked;
     setSound(M.sound);
@@ -454,22 +526,21 @@ function showDebug() {
   const el = $('debug');
   el.hidden = !M.debug || !G?.engine;
   if (el.hidden) return;
-  const t = G.engine;
-  const s = t.stats || {};
-  el.textContent = `mercy ${t.mercy.toFixed(2)}  fill ${(fillCount(G.grid) / 64 * 100).toFixed(0)}%\n` +
+  const t = G.engine, s = t.stats || {};
+  el.textContent = `mercy ${t.mercy.toFixed(2)}  fill ${(fillCount(G.board) / (COLS * ROWS) * 100).toFixed(0)}%  weeds every ${t.weeds.every} x${t.weeds.count}\n` +
     t.reasons.map(([k, v]) => `${v >= 0 ? '+' : ''}${v.toFixed(2)} ${k}`).join('\n') +
-    `\ntray: ${t.pieces.map((p) => p.family).join(' ')}\nsolvable ${s.solvable} · clears now ${s.now} · best lines ${s.lines}${s.allClear ? ' · ALL CLEAR' : ''}`;
+    `\nlast: ${t.piece.shape} [${t.piece.colors.join(',')}]  blooms ${s.bloom} · best chain ${s.bestChain} · seeds ${s.bestCleared}`;
 }
 
 // ---- loop ------------------------------------------------------------------------------------
 function frame(now) {
   if (screen === 'game' && G) {
-    const skin = currentSkin();
-    const d = G.drag;
+    const v = G.view;
+    const maxH = Math.max(...heights(G.board));
     R.draw({
-      grid: G.grid, skin, overT: G.overT,
-      tray: G.tray.map((p) => p && { ...p, color: skin.colors[p.ci - 1] }),
-      drag: d && { ...d, color: skin.colors[d.ci - 1] },
+      grid: v.grid, spec: v.spec, skin: currentSkin(), overT: G.overT, tray: G.tray, drag: G.drag && G.drag.moved ? G.drag : null,
+      preview: G.drag?.moved && G.drag.valid ? G.drag.preview : null,
+      danger: Math.max(0, (maxH - (ROWS - 3)) / 3), weedIn: G.busy ? null : G.weedTimer,
     }, now);
     updateHud();
   } else if (screen === 'home') {
@@ -479,7 +550,7 @@ function frame(now) {
 }
 
 window.addEventListener('resize', () => { if (screen === 'game') R.resize(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && G) saveGame(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && G && !G.busy) saveGame(); });
 
 // ---- start -----------------------------------------------------------------------------------
 renderHome();
@@ -490,15 +561,15 @@ if (streak) {
   renderHome();
   const next = Math.min(50, 5 * (streak.count + 1));
   modal(`
-    <svg style="font-size:64px"><use href="#i-fire"/></svg>
-    <h2>${streak.count === 1 ? (M.games ? 'ברוכים השבים!' : 'ברוכים הבאים!') : `${streak.count} ימים ברצף!`}</h2>
-    ${streak.usedFreeze ? '<p>פספסתם יום, אבל הקפאת הרצף שמרה עליו</p>' : ''}
+    <svg class="hero-ico"><use href="#i-fire"/></svg>
+    <h2>${streak.count === 1 ? (M.games ? 'Welcome back!' : 'Welcome!') : `${streak.count}-day streak!`}</h2>
+    ${streak.usedFreeze ? '<p>You missed a day, but a streak freeze saved it</p>' : ''}
     <div class="big-num">${plus(streak.gems)} ${gem}</div>
-    <p>חזרו מחר וקבלו ${plus(next)}</p>
-    <div class="btns"><button class="btn go" data-act="ok">יאללה!</button></div>`, { ok: () => { closeModal(); renderHome(); sfx.gem(); } });
+    <p>Come back tomorrow for ${plus(next)}</p>
+    <div class="btns"><button class="btn go" data-act="ok">Let's go!</button></div>`, { ok: () => { closeModal(); renderHome(); sfx.gem(); } });
 }
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
 // For tests: a handle on the running game.
-window.__bloom = { get game() { return G; }, meta: M, layout: R.layout, placeAt: (...a) => placeAt(...a), startGame };
+window.__bloom = { get game() { return G; }, meta: M, layout: R.layout, dropAt: (...a) => dropAt(...a), startGame, WEED };

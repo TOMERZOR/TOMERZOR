@@ -4,6 +4,9 @@ A satirical 3D handyman game in Hebrew, in the style of idle-arcade "carry and d
 
 Play: https://tomerzor.github.io/TOMERZOR/miktzoan/
 
+- Before each repair there is a WhatsApp-style chat on the doorstep: answers move the customer's mood (tips, stars), the price (upsell gamble, "neighbour price") or the repair time, and can book a follow-up job. VIP customers pay double with less patience; happy customers in a row build a streak multiplier.
+- Happy customers may sign a maintenance subscription. Subscriptions pay into the register at the base (bills pile up, walk in to collect), also at half rate while the game is closed. The "פרסום" pad raises the rate, the register size and the sign-up chance.
+
 - Static site, no build step: three.js (vendored in `vendor/`), vanilla JS modules, WebAudio for all sound.
 - `js/data.js`: trades, job texts, reviews, excuses, upgrade costs. Edit jokes and balance here.
 - `js/world.js`: the neighbourhood, roads, houses, cars, cats, lighting, camera. Static scenery is merged into a few meshes at load (`bake()`).

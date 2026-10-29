@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#1a0b2e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="description" content="נחש את השיר: תמונה מצחיקה, שורה אחת מלהיט ישראלי. מזהים את השיר?">
+<meta name="description" content="נחש את השיר: תמונה מצחיקה, להיט אחד בעברית או באנגלית. מזהים את השיר?">
 <meta property="og:title" content="נחש את השיר">
 <meta property="og:description" content="תמונה מצחיקה, שורה אחת מלהיט. מזהים את השיר?">
 <meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/shir/img/og.jpg">
@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;600;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=3">
+<link rel="stylesheet" href="css/style.css?v=4">
 </head>
 <body>
 
@@ -30,10 +30,15 @@
     <h1>נחש את <em>השיר</em></h1>
     <p class="tag">תמונה אחת מצחיקה. להיט אחד. איזה שיר זה?</p>
   </div>
+  <div class="langs" role="group" aria-label="שפת השירים">
+    <button data-lang="he">עברית</button>
+    <button data-lang="en">English</button>
+    <button data-lang="all">הכול</button>
+  </div>
   <div class="modes">
     <button class="big" data-mode="solo">
       <b>משחק יחיד</b>
-      <small>10 תמונות, 4 תשובות, נגד השעון</small>
+      <small>10 תמונות, מקלידים את שם השיר</small>
     </button>
     <button class="big alt" data-mode="party">
       <b>מצב מסיבה</b>
@@ -61,17 +66,16 @@
   <div class="timer" id="timer"><i></i></div>
   <figure class="pic" id="pic">
     <img id="pic-img" alt="תמונה שמתארת שורה משיר">
-    <figcaption class="clues" id="clues" hidden>
-      <span class="clue-artist" id="clue-artist" hidden></span>
-      <div class="tiles" id="tiles" hidden></div>
-    </figcaption>
+    <span class="clue-artist" id="clue-artist" dir="auto" hidden></span>
   </figure>
+  <div class="tiles" id="tiles" aria-live="polite"></div>
   <div class="hints">
     <button id="letter-btn">🔤 גלה אות <small>‎-15%</small></button>
     <button id="artist-btn">🎙 מי שר? <small>‎-40%</small></button>
+    <button id="skip-btn">🏳️ ויתור</button>
   </div>
   <div id="solo-controls">
-    <div class="options" id="options"></div>
+    <div class="kbd" id="kbd"></div>
   </div>
   <div id="party-controls">
     <div class="party-score" id="party-score"></div>
@@ -83,8 +87,8 @@
   <div class="card">
     <div class="verdict" id="verdict"></div>
     <blockquote id="r-line"></blockquote>
-    <h3 id="r-title"></h3>
-    <p id="r-artist"></p>
+    <h3 id="r-title" dir="auto"></h3>
+    <p id="r-artist" dir="auto"></p>
     <a id="r-yt" target="_blank" rel="noopener">▶ לשמוע ביוטיוב</a>
     <div class="who" id="who">
       <p>מי ניחש?</p>
@@ -109,7 +113,7 @@
   <button class="link" data-home>למסך הראשי</button>
 </section>
 
-<script src="js/songs.js?v=2"></script>
-<script src="js/game.js?v=3"></script>
+<script src="js/songs.js?v=3"></script>
+<script src="js/game.js?v=4"></script>
 </body>
 </html>

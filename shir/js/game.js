@@ -1,27 +1,42 @@
 "use strict";
 
 const SOLO_ROUNDS = 10;
-const ROUND_TIME = 20; // seconds per picture in solo
+const ROUND_TIME = 60; // seconds per picture in solo
 const LETTER_COST = 0.15; // share of the round's points each revealed letter costs
 const ARTIST_COST = 0.4;
 const MIN_SHARE = 0.2; // a right answer keeps at least this share, however many hints
 const SEEN_KEY = "shir-seen";
+const LANG_KEY = "shir-lang";
+
+const KEYBOARDS = {
+  he: ["קראטוןםפ", "שדגכעיחלךף", "זסבהנמצתץ"],
+  en: ["qwertyuiop", "asdfghjkl", "zxcvbnm"],
+};
+// Final letters count as their regular form, so ם and מ are the same answer.
+const FINALS = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
 
 const $ = (s) => document.querySelector(s);
-const songs = window.SONGS || [];
+const allSongs = window.SONGS || [];
 const imgSrc = (s) => `img/s/${s.id}.webp`;
+const langOf = (s) => s.lang || "he";
+// The keyboard follows the title's letters: "Kawaii" is on the Hebrew list but typed in English.
+// What the player types: `answer` drops a long bracketed tail, e.g. "A Bar Song" for "A Bar Song (Tipsy)".
+const answerOf = (s) => s.answer || s.title;
+const typedIn = (s) => (/[\u0590-\u05FF]/.test(s.title) ? "he" : "en");
+const fold = (ch) => FINALS[ch] || ch.toLowerCase();
 
 const state = {
   mode: "solo",
+  lang: "all", // which songs: "he", "en" or "all"
   deck: [],
   i: 0,
   score: 0,
   streak: 0,
-  penalty: 0, // share of points lost to hints this round
-  shown: new Set(), // indexes of revealed title letters
-  newest: -1, // the letter revealed last, which pops in
-  artistShown: false,
   answered: false,
+  slots: [], // the title, one entry per character: { ch, typable, locked, typed }
+  newest: -1, // the slot revealed last, which pops in
+  penalty: 0, // share of points lost to hints this round
+  artistShown: false,
   results: [], // { song, ok, pts }
   teams: ["", ""],
   teamScore: [0, 0],
@@ -44,16 +59,19 @@ function shuffle(a) {
   return a;
 }
 
+function pool() {
+  return state.lang === "all" ? allSongs : allSongs.filter((s) => langOf(s) === state.lang);
+}
+
 // Songs not shown yet come first, so repeat players keep getting new pictures.
 function buildDeck(n) {
+  const songs = pool();
   const seen = new Set(store(SEEN_KEY) || []);
-  let fresh = songs.filter((s) => !seen.has(s.id));
-  if (fresh.length < n) {
-    store(SEEN_KEY, []);
-    fresh = shuffle(fresh).concat(shuffle(songs.filter((s) => seen.has(s.id))));
-    return fresh.slice(0, n);
-  }
-  return shuffle(fresh).slice(0, n);
+  const fresh = shuffle(songs.filter((s) => !seen.has(s.id)));
+  if (fresh.length >= n) return fresh.slice(0, n);
+  const used = songs.filter((s) => seen.has(s.id));
+  store(SEEN_KEY, [...seen].filter((id) => !used.some((s) => s.id === id)));
+  return fresh.concat(shuffle(used)).slice(0, n);
 }
 
 function markSeen(song) {
@@ -66,10 +84,18 @@ function show(id) {
   window.scrollTo(0, 0);
 }
 
+function setLang(lang) {
+  state.lang = lang;
+  store(LANG_KEY, lang);
+  document.querySelectorAll("[data-lang]").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
+  $("#pool-count").textContent = pool().length;
+}
+
 function start(mode) {
+  if (!pool().length) return;
   state.mode = mode;
   const n = mode === "solo" ? SOLO_ROUNDS : +$("#party-len").value;
-  state.deck = buildDeck(Math.min(n, songs.length));
+  state.deck = buildDeck(Math.min(n, pool().length));
   state.i = 0;
   state.score = 0;
   state.streak = 0;
@@ -84,9 +110,14 @@ function start(mode) {
 
 function round() {
   const song = state.deck[state.i];
-  state.penalty = 0;
-  state.shown = new Set();
+  const keys = KEYBOARDS[typedIn(song)].join("");
+  state.slots = [...answerOf(song)].map((ch) => {
+    const typable = keys.includes(fold(ch)) || keys.includes(ch);
+    // Digits and punctuation are given; only letters on the keyboard are typed.
+    return { ch, typable, locked: !typable, typed: "" };
+  });
   state.newest = -1;
+  state.penalty = 0;
   state.artistShown = false;
   state.answered = false;
   $("#round-n").textContent = `תמונה ${state.i + 1} מתוך ${state.deck.length}`;
@@ -99,25 +130,10 @@ function round() {
   img.onload = () => img.classList.add("in");
   img.onerror = () => pic.classList.add("missing");
   img.src = imgSrc(song);
+
+  renderKeyboard(typedIn(song));
   renderClues();
-
-  if (state.mode === "solo") {
-    renderOptions(song);
-    startTimer();
-  }
-}
-
-function renderOptions(song) {
-  const others = shuffle(songs.filter((s) => s.id !== song.id && s.title !== song.title)).slice(0, 3);
-  const box = $("#options");
-  box.innerHTML = "";
-  for (const s of shuffle([song, ...others])) {
-    const b = document.createElement("button");
-    b.textContent = s.title;
-    b.onclick = () => answer(s === song, b);
-    b.dataset.right = s === song ? "1" : "";
-    box.append(b);
-  }
+  if (state.mode === "solo") startTimer();
 }
 
 function renderScore() {
@@ -139,7 +155,7 @@ function startTimer() {
   const tick = (now) => {
     const left = Math.max(0, 1 - (now - state.timerStart) / (ROUND_TIME * 1000));
     bar.style.transform = `scaleX(${left})`;
-    if (left <= 0) return answer(false, null);
+    if (left <= 0) return answer(false, "time");
     state.raf = requestAnimationFrame(tick);
   };
   state.raf = requestAnimationFrame(tick);
@@ -149,21 +165,83 @@ function timeLeft() {
   return Math.max(0, 1 - (performance.now() - state.timerStart) / (ROUND_TIME * 1000));
 }
 
-const isLetter = (ch) => /[\p{L}\p{N}]/u.test(ch);
-const isHebrew = (text) => /[\u0590-\u05FF]/.test(text);
+/* Typing */
 
-function hiddenLetters() {
-  return [...state.deck[state.i].title].flatMap((ch, k) => (isLetter(ch) && !state.shown.has(k) ? [k] : []));
+function renderKeyboard(lang) {
+  const kbd = $("#kbd");
+  if (kbd.dataset.lang === lang) return;
+  kbd.dataset.lang = lang;
+  kbd.dir = lang === "he" ? "rtl" : "ltr";
+  kbd.innerHTML = "";
+  KEYBOARDS[lang].forEach((row, r) => {
+    const line = document.createElement("div");
+    for (const ch of row) {
+      const b = document.createElement("button");
+      b.textContent = ch;
+      b.dataset.key = ch;
+      line.append(b);
+    }
+    if (r === KEYBOARDS[lang].length - 1) {
+      const del = document.createElement("button");
+      del.className = "del";
+      del.dataset.key = "Backspace";
+      del.setAttribute("aria-label", "מחיקה");
+      del.textContent = "⌫";
+      line.append(del);
+    }
+    kbd.append(line);
+  });
+}
+
+function typeKey(key) {
+  if (state.mode !== "solo" || state.answered) return;
+  if (key === "Backspace") {
+    const last = state.slots.findLastIndex((s) => !s.locked && s.typed);
+    if (last >= 0) state.slots[last].typed = "";
+  } else {
+    const next = state.slots.find((s) => !s.locked && !s.typed);
+    if (!next) return;
+    next.typed = key;
+  }
+  state.newest = -1;
+  renderClues();
+  const open = state.slots.filter((s) => !s.locked);
+  if (open.length && open.every((s) => s.typed)) check();
+}
+
+function check() {
+  const right = state.slots.every((s) => s.locked || fold(s.typed) === fold(s.ch));
+  if (right) return answer(true);
+  const tiles = $("#tiles");
+  tiles.classList.remove("shake", "wrong");
+  void tiles.offsetWidth;
+  tiles.classList.add("shake", "wrong");
+  setTimeout(() => {
+    if (state.answered) return;
+    state.slots.forEach((s) => { if (!s.locked) s.typed = ""; });
+    tiles.classList.remove("wrong");
+    renderClues();
+  }, 600);
+}
+
+/* Hints */
+
+function hiddenSlots() {
+  return state.slots.flatMap((s, k) => (s.typable && !s.locked ? [k] : []));
 }
 
 // One more letter of the title, at random. The last letter always stays hidden.
 function revealLetter() {
-  const left = hiddenLetters();
+  const left = hiddenSlots();
   if (state.answered || left.length <= 1) return;
   state.newest = left[Math.floor(Math.random() * left.length)];
-  state.shown.add(state.newest);
+  const slot = state.slots[state.newest];
+  slot.locked = true;
+  slot.typed = "";
   state.penalty += LETTER_COST;
   renderClues();
+  const open = state.slots.filter((s) => !s.locked);
+  if (state.mode === "solo" && open.every((s) => s.typed)) check();
 }
 
 function revealArtist() {
@@ -177,40 +255,40 @@ function renderClues() {
   const song = state.deck[state.i];
   $("#clue-artist").hidden = !state.artistShown;
   $("#clue-artist").textContent = `🎙 ${song.artist}`;
+  const solo = state.mode === "solo";
+  const anyShown = state.slots.some((s) => s.typable && s.locked);
   const tiles = $("#tiles");
-  tiles.hidden = state.shown.size === 0;
+  // In party mode the blanks appear once someone asks for a letter.
+  tiles.hidden = !solo && !anyShown;
+  tiles.dir = typedIn(song) === "he" ? "rtl" : "ltr";
   tiles.innerHTML = "";
-  tiles.dir = isHebrew(song.title) ? "rtl" : "ltr";
-  let k = 0;
-  for (const word of song.title.split(" ")) {
-    const w = document.createElement("span");
-    w.className = "word";
-    w.dir = isHebrew(word) ? "rtl" : "ltr"; // "32" or "Kawaii" read left to right
-    for (const ch of word) {
-      const t = document.createElement("i");
-      if (!isLetter(ch)) { t.className = "mark"; t.textContent = ch; }
-      else if (state.shown.has(k)) { t.className = k === state.newest ? "on new" : "on"; t.textContent = ch; }
-      w.append(t);
-      k++;
+  const cursor = solo ? state.slots.findIndex((s) => !s.locked && !s.typed) : -1;
+  let word = null;
+  state.slots.forEach((s, k) => {
+    if (s.ch === " ") { word = null; return; }
+    if (!word) {
+      word = document.createElement("span");
+      word.className = "word";
+      tiles.append(word);
     }
-    tiles.append(w);
-    k++; // the space
-  }
-  $("#clues").hidden = tiles.hidden && !state.artistShown;
-  $("#letter-btn").disabled = hiddenLetters().length <= 1;
+    const t = document.createElement("i");
+    if (!s.typable) { t.className = "mark"; t.textContent = s.ch; }
+    else if (s.locked) { t.className = k === state.newest ? "on new" : "on"; t.textContent = s.ch; }
+    else if (s.typed) { t.className = "typed"; t.textContent = s.typed; }
+    else if (k === cursor) t.className = "cursor";
+    word.append(t);
+  });
+  $("#letter-btn").disabled = hiddenSlots().length <= 1;
   $("#artist-btn").disabled = state.artistShown;
 }
 
-function answer(ok, btn) {
+/* Rounds */
+
+function answer(ok, why) {
   if (state.answered) return;
   state.answered = true;
   cancelAnimationFrame(state.raf);
   const song = state.deck[state.i];
-  const box = $("#options");
-  box.querySelectorAll("button").forEach((b) => {
-    b.disabled = true;
-    if (b.dataset.right) b.classList.add("right");
-  });
   let pts = 0;
   if (ok) {
     state.streak++;
@@ -221,21 +299,18 @@ function answer(ok, btn) {
     $("#score").classList.remove("bump");
     void $("#score").offsetWidth;
     $("#score").classList.add("bump");
+    $("#tiles").classList.add("right");
     confetti();
   } else {
     state.streak = 0;
-    if (btn) btn.classList.add("wrong");
-    box.classList.remove("shake");
-    void box.offsetWidth;
-    box.classList.add("shake");
   }
   state.results.push({ song, ok, pts });
   markSeen(song);
   renderScore();
   const verdict = ok
     ? (state.streak >= 3 ? `🔥 ${state.streak} ברצף! +${pts}` : `נכון! +${pts}`)
-    : (btn ? "לא הפעם" : "נגמר הזמן ⏰");
-  setTimeout(() => openReveal(song, verdict, ok), 650);
+    : (why === "time" ? "נגמר הזמן ⏰" : "לא נורא, הבא בתור");
+  setTimeout(() => openReveal(song, verdict, ok), ok ? 700 : 300);
 }
 
 function openReveal(song, verdict, ok) {
@@ -261,6 +336,7 @@ function openReveal(song, verdict, ok) {
 
 function next() {
   $("#reveal").hidden = true;
+  $("#tiles").classList.remove("right");
   state.i++;
   if (state.i >= state.deck.length) end();
   else round();
@@ -311,7 +387,7 @@ function end() {
   ol.innerHTML = "";
   for (const r of state.results) {
     const li = document.createElement("li");
-    li.innerHTML = `<img alt=""><span><b></b><small></small></span><i></i>`;
+    li.innerHTML = `<img alt=""><span><b dir="auto"></b><small dir="auto"></small></span><i></i>`;
     li.querySelector("img").src = imgSrc(r.song);
     li.querySelector("b").textContent = r.song.title;
     li.querySelector("small").textContent = r.song.artist;
@@ -354,13 +430,22 @@ function home() {
   show("home");
 }
 
-$("#pool-count").textContent = songs.length;
+setLang(store(LANG_KEY) || "all");
+document.querySelectorAll("[data-lang]").forEach((b) => (b.onclick = () => setLang(b.dataset.lang)));
 document.querySelector('[data-mode="solo"]').onclick = () => start("solo");
 document.querySelector('[data-mode="party"]').onclick = () => show("teams");
 $("#party-go").onclick = () => start("party");
 document.querySelectorAll("[data-home]").forEach((b) => (b.onclick = home));
 $("#letter-btn").onclick = revealLetter;
 $("#artist-btn").onclick = revealArtist;
+$("#skip-btn").onclick = () => answer(false, "skip");
+$("#kbd").onclick = (e) => { const k = e.target.closest("[data-key]"); if (k) typeKey(k.dataset.key); };
+document.addEventListener("keydown", (e) => {
+  if (!$("#play").classList.contains("active") || !$("#reveal").hidden || e.ctrlKey || e.metaKey) return;
+  const song = state.deck[state.i];
+  if (e.key === "Backspace") return typeKey("Backspace");
+  if (song && KEYBOARDS[typedIn(song)].join("").includes(e.key.toLowerCase())) typeKey(e.key.toLowerCase());
+});
 $("#reveal-btn").onclick = () => openReveal(state.deck[state.i], "", false);
 $("#next-btn").onclick = next;
 $("#who").querySelectorAll("button").forEach((b) => {

@@ -21,7 +21,7 @@ const RULES = `You rewrite Hebrew text the way an Israeli "ars" would say it: a 
 
 There are two voices, and the <persona> tag says which one to use:
 - ערס (the default): the guy described above.
-- ערסית: a woman from the same neighborhood. She talks about herself in the feminine (אני מתה, אני חייבת, אני מאחרת) and has her own words: יפה שלי, חיים, חיים שלי, מתוקה, כפרה, לבשלי, שימדורה, מאמי, אחותי, אמא, אמאלה, וואנה, יעני, שרופה על, מחילה, בעזרת השם, ברוך השם, חיה בסרט (living in a dream), שחרר ממני / סעי ממני, אל תעלה לי את העצבים / אל תעלי לי את העצבים, אני מתה, אני פיפי (laughing hard, or needing the toilet), יאללה, שומע. She doesn't say אחשלי, יא מלך or the heavy curses.
+- ערסית: a woman from the same neighborhood. She talks about herself in the feminine (אני מתה, אני חייבת, אני מאחרת) and has her own words: יפה שלי, חיים, חיים שלי, מתוקה, כפרה, לבשלי, שימדורה, מאמי, אחותי, אמא, אמאלה, וואנה, יעני, שרופה על, מחילה, בעזרת השם, ברוך השם, חיה בסרט (living in a dream), שחרר ממני / סעי ממני, אל תעלה לי את העצבים / אל תעלי לי את העצבים, אני פיפי, אני מתה (said together: I'm dying, I can't, when something is funny or too much; never about the toilet), יאללה, שומע. She doesn't say אחשלי, יא מלך or the heavy curses.
 
 Each example shows ordinary Hebrew and one or more ways it is said: first the ערס examples, then the ערסית ones.`;
 

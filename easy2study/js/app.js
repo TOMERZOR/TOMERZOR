@@ -50,12 +50,26 @@
   const today = () => new Date().toISOString().slice(0, 10);
 
   // Latin runs (English in a Hebrew sentence) are isolated so punctuation lands right.
-  const LATIN = /[A-Za-z_](?:[A-Za-z0-9_'’\-.,?!:;"\s]*[A-Za-z0-9_.?!"])?/g;
+  // English and formulas inside Hebrew: each run of Latin text (with the digits,
+  // subscripts and math signs around it: O=O, H₂SO₄, 2H₂ + O₂ → 2H₂O) is isolated
+  // so the browser can't flip its parts. Punctuation that ends the run belongs
+  // to the Hebrew sentence, so it stays outside.
+  const HEB = /[\u0590-\u05FF]/;
+  const LATIN = /[0-9]*[A-Za-z_][A-Za-z0-9_\u00B2\u00B3\u00B9\u2070-\u209F'’"\-+=*/^%<>≈≠≤≥°×÷·→←↔⇌().,?!:;\[\]\s]*/g;
+  function latinRun(raw) {
+    // A whole English sentence ("I play football every day.") keeps its own period.
+    const sentence = /^[A-Z]/.test(raw) && (raw.match(/[A-Za-z]{2,}/g) || []).length >= 3;
+    let run = sentence ? raw.replace(/\s+$/, "").replace(/[,:;(\["'’\-]+$/, "") : raw.replace(/[\s.,?!:;(\["'’\-]+$/, "");
+    const unclosed = (o, c) => run.endsWith(c) && run.split(o).length < run.split(c).length;
+    while (unclosed("(", ")") || unclosed("[", "]")) run = run.slice(0, -1).replace(/[\s.,?!:;]+$/, "");
+    return run;
+  }
   function plain(t) {
     let out = "", last = 0;
     for (const m of t.matchAll(LATIN)) {
-      out += esc(t.slice(last, m.index)) + `<bdi>${esc(m[0])}</bdi>`;
-      last = m.index + m[0].length;
+      const run = latinRun(m[0]);
+      out += esc(t.slice(last, m.index)) + `<bdi>${esc(run)}</bdi>`;
+      last = m.index + run.length;
     }
     return out + esc(t.slice(last));
   }
@@ -73,8 +87,13 @@
   // Lesson text: **term**, [[a/b]], {m|f}, one line per sentence group.
   function rich(src, { lines = true } = {}) {
     const text = gfill(src).trim();
-    if (!lines) return inline(text.replace(/\n+/g, " "));
-    return text.split(/\n+/).map((l, i) => `<span class="line" style="--i:${i}">${inline(l)}</span>`).join("");
+    // A line with no Hebrew at all (an English sentence, an equation) reads left to right.
+    const ltr = (l) => !HEB.test(l) && /[A-Za-z0-9]/.test(l);
+    if (!lines) {
+      const one = text.replace(/\n+/g, " ");
+      return ltr(one) ? `<bdi dir="ltr">${inline(one)}</bdi>` : inline(one);
+    }
+    return text.split(/\n+/).map((l, i) => `<span class="line" style="--i:${i}"${ltr(l) ? ' dir="ltr"' : ""}>${inline(l)}</span>`).join("");
   }
   const spoken = (src) => gfill(src).replace(/\*\*(.+?)\*\*/g, "$1").replace(/\[\[(\d+)\/(\d+)\]\]/g, "$1 חלקי $2");
 

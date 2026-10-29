@@ -863,3 +863,6 @@ img { max-width: 100%; display: block; }
 .file__text { flex: 1; min-width: 0; display: grid; }
 .file__name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 [data-pdf]:empty { display: none; }
+
+/* A line that is all English or a formula reads left to right, still aligned with the Hebrew */
+.line[dir="ltr"] { text-align: right; }

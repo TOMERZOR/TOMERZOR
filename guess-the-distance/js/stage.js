@@ -89,7 +89,7 @@ export function tripCard(round, { measure, extraTag = "" }) {
 
 export function askText(round, measure) {
   const sub = { car: "askSubCar", foot: "askSubFoot", bike: "askSubBike", flight: "askSubFlight" }[round.mode];
-  return { title: measure === "time" ? t("askTime") : t("askDistance"), sub: t(sub) };
+  return { title: measure === "time" ? t("askTime") : round.mode === "flight" ? t("askDistanceFlight") : t("askDistance"), sub: t(sub) };
 }
 
 // A circular countdown. Returns { stop, set(msLeft) }.

@@ -126,7 +126,10 @@ export class DuelUI {
     }, 1000);
   }
 
-  onQueued() {}
+  onQueued(m) {
+    const p = $("#overlay-panel p.muted");
+    if (p && typeof m.online === "number") p.textContent = t("searchingSub", { n: fmtNum(Math.max(1, m.online)) });
+  }
 
   onRoom(m) {
     const url = new URL(location.href);

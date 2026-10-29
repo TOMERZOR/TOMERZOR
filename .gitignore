@@ -31,3 +31,9 @@ easy2study/worker/.dev.vars
 # Guess The Distance
 guess-the-distance/node_modules/
 guess-the-distance/.wrangler/
+
+# Easy2Study ad: build files
+easy2study/ad/frames.mp4
+easy2study/ad/audio.wav
+easy2study/ad/sfx.json
+easy2study/ad/node_modules

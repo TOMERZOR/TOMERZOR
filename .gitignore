@@ -27,3 +27,7 @@ arslate/worker/.dev.vars
 easy2study/worker/node_modules/
 easy2study/worker/.wrangler/
 easy2study/worker/.dev.vars
+
+# Guess The Distance
+guess-the-distance/node_modules/
+guess-the-distance/.wrangler/

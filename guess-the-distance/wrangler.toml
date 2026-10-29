@@ -1,0 +1,19 @@
+# Guess The Distance server on Cloudflare Workers. Deploy with the GitHub
+# workflow (.github/workflows/guess-the-distance.yml) or `npx wrangler deploy`
+# from this folder. The Worker serves the game itself too, so the workers.dev
+# address is a complete, playable copy.
+name = "guess-the-distance"
+main = "server/worker.js"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "GameHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameHub"]

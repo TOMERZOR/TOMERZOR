@@ -297,7 +297,8 @@ function drawWheel(col, pos, mod) {
     const off = v - pos;
     const a = clamp(off / 3.2, -1, 1);
     const val = ((v % mod) + mod) % mod;
-    el.textContent = mod === 60 ? String(val).padStart(2, "0") : String(val);
+    // minutes wrap around like a clock; hours start at 0, like the game's wheel
+    el.textContent = mod === 60 ? String(val).padStart(2, "0") : v < 0 || v > 60 ? "" : String(v);
     el.style.top = `${150 + off * 66}px`;
     el.style.transform = `rotateX(${-a * 62}deg) scale(${1 - Math.abs(a) * 0.1})`;
     el.style.opacity = String(Math.max(0, 1 - Math.abs(a) * 0.6));

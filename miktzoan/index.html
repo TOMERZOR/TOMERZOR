@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Rubik:wght@500;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=2">
+<link rel="stylesheet" href="css/style.css?v=3">
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
@@ -31,6 +31,7 @@
   <div class="hud-row">
     <div class="pill coins"><span class="ico">🪙</span><b id="coins">0</b></div>
     <div class="pill rating"><span class="ico">⭐</span><b id="rating">5.0</b></div>
+    <div class="pill streak" id="streakPill" hidden><span class="ico">🔥</span><b id="streak"></b></div>
     <button class="pill btn-menu" id="menuBtn" aria-label="תפריט">☰</button>
   </div>
   <div class="level">
@@ -80,6 +81,6 @@
 <!-- generic modal -->
 <section id="modal" hidden><div class="card"></div></section>
 
-<script type="module" src="js/main.js?v=1"></script>
+<script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>

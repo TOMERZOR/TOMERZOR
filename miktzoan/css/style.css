@@ -190,3 +190,44 @@ button { font: inherit; color: inherit; border: 0; cursor: pointer; }
   .logo-top { font-size: 46px; } .logo-bot { font-size: 68px; }
   .pick { margin: 12px 0 8px; }
 }
+
+/* ---------- streak pill ---------- */
+.pill.streak { background: linear-gradient(#ff8a3d, #e8430c); border-color: #ffd6a8; }
+.pill.streak b { color: #fff; font-size: 17px; }
+
+/* ---------- doorstep chat ---------- */
+.chat-head { display: flex; align-items: center; gap: 10px; text-align: right; background: #075e54; color: #fff; margin: -18px -16px 0; padding: 12px 14px; border-radius: 22px 22px 0 0; }
+.chat-head .cav { width: 48px; height: 48px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-size: 30px; flex: none; }
+.chat-head .cav.pop { animation: starPop .45s cubic-bezier(.2, 2, .4, 1); }
+.chat-head .cn { display: flex; flex-direction: column; }
+.chat-head .cn b { font-size: 19px; }
+.chat-head .cn small { font-size: 13px; opacity: .85; }
+.moodbar { display: flex; justify-content: space-between; background: #e9f4ef; margin: 0 -16px; padding: 6px 14px; font-size: 20px; }
+.moodbar i { font-style: normal; filter: grayscale(1) opacity(.35); transition: transform .25s, filter .25s; }
+.moodbar i.on { filter: none; transform: scale(1.45); }
+.chat { display: flex; flex-direction: column; gap: 8px; padding: 12px 2px; min-height: 120px; background: #efe7dd url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='8' cy='8' r='1.5' fill='%23d8cfc3'/%3E%3Ccircle cx='28' cy='26' r='1.5' fill='%23d8cfc3'/%3E%3C/svg%3E"); margin: 0 -16px; padding-inline: 12px; }
+.msg { max-width: 82%; padding: 8px 12px; border-radius: 14px; font-size: 16px; line-height: 1.3; text-align: right; box-shadow: 0 1px 1px rgba(0, 0, 0, .15); animation: msgIn .3s cubic-bezier(.2, 1.4, .4, 1); }
+.msg.them { align-self: flex-end; background: #fff; border-top-right-radius: 4px; }
+.msg.me { align-self: flex-start; background: #d9fdd3; border-top-left-radius: 4px; }
+@keyframes msgIn { from { transform: scale(.6) translateY(10px); opacity: 0; } }
+.fx { align-self: center; font-size: 13px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: #fff3c4; animation: msgIn .3s; }
+.fx.up { background: #d4f8dc; color: #1b7a36; }
+.fx.down { background: #ffe0e0; color: #b3261e; }
+.answers { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.ans { padding: 11px 14px; border-radius: 16px; border: 3px solid var(--ink); background: #fff; box-shadow: 0 4px 0 var(--ink); font-weight: 600; font-size: 16px; text-align: right; }
+.ans:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.ans:disabled { opacity: .4; }
+.ans.picked { opacity: 1; background: #d9fdd3; }
+
+/* ---------- price chips ---------- */
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-bottom: 8px; }
+.chip { font-size: 14px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: #eee6d8; }
+.chip.gold { background: #ffe9a0; }
+.chip.fire { background: #ffd2b8; }
+
+/* ---------- register label ---------- */
+.reglabel { position: absolute; left: 0; top: 0; }
+.reglabel > div { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); direction: rtl; background: rgba(27, 94, 32, .92); color: #fff; border: 3px solid #fff; border-radius: 16px; padding: 4px 12px; text-align: center; white-space: nowrap; box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.reglabel b { display: block; font-size: 18px; color: #fff59d; }
+.reglabel small { font-size: 12px; opacity: .9; }
+.reglabel.full > div { background: #e8430c; animation: excusePulse .7s infinite; }

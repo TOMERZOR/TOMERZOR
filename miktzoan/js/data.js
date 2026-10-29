@@ -130,7 +130,13 @@ export const UPGRADES = [
   { id: 'helper', name: 'שוליה', icon: '🧑‍🔧', max: 4, base: 120, grow: 1.9, desc: l => l ? `שוליה סוחב ${helperCap(l)}` : 'לשכור שוליה' },
   { id: 'skill', name: 'קורס מקצועי', icon: '🎓', max: 5, base: 80, grow: 1.85, desc: l => `+${l * 15}% תשלום` },
   { id: 'van', name: 'טנדר', icon: '🛻', max: 4, base: 70, grow: 1.9, desc: l => `מלאי ${vanStock(l)}` },
+  { id: 'ads', name: 'פרסום', icon: '📣', max: 4, base: 150, grow: 2.0, desc: l => `מנויים x${subMult(l)}` },
 ];
+// Maintenance subscriptions: happy customers pay into the register at the base
+export const subMult = l => [1, 1.5, 2, 2.5, 3][l];
+export const SUB_RATE = 0.8;            // ₪ per second per subscription, before ads
+export const registerCap = l => 200 + l * 150;
+export const subChance = l => 0.35 + l * 0.1;
 export const capacity = l => [3, 4, 5, 6, 8, 10, 12][l];
 export const helperCap = l => [0, 3, 4, 6, 8][l];
 export const vanStock = l => [6, 9, 12, 16, 20][l];
@@ -138,5 +144,51 @@ export const vanRate = l => [1.4, 1.0, 0.75, 0.55, 0.4][l];
 export const speedOf = l => [5.2, 6.4, 8, 9.6, 11.2][l];
 export const upgradeCost = (u, l) => Math.round(u.base * Math.pow(u.grow, l) / 5) * 5;
 export const xpFor = lvl => Math.round(60 * Math.pow(1.45, lvl - 1));
+
+// The chat with the customer before the repair. Each answer moves their mood (-3..+3) and maybe the price.
+// fx: mood, mult (price), time (extra seconds in the repair), upsell (gamble), follow (comes back with a second job)
+export const TALKS = [
+  { q: 'אז מה הבעיה, דוקטור? 🩺', a: [
+    { t: 'בעיה קטנה, 5 דקות עבודה', r: 'יופי! ידעתי שאתה תותח 🙏', mood: 1 },
+    { t: 'מי עשה לך את זה?! 😱', r: 'הגיס שלי... הוא "מבין בזה" 😳', mood: -1, mult: 1.15, note: 'דרמה עולה כסף' },
+    { t: 'צריך להחליף את כל המערכת', upsell: true },
+  ] },
+  { q: 'רוצה קפה? יש נס, יש טורקי, יש מה שאתה רוצה ☕', a: [
+    { t: 'שחור, 2 סוכר', r: 'מיד! ועוגה? יש עוגת שמרים 🍰', mood: 1 },
+    { t: 'יש אולי שקשוקה?', r: 'בשבילך? בטח. גם חלה 🍳', mood: 2, mult: 0.9, note: 'אכלת. הנחה קטנה' },
+    { t: 'אין זמן, אני מקצוען ⏱️', r: 'וואו. בסדר. מקצוען. 😐', mood: -1, time: 4, note: '+4 שניות לתיקון' },
+  ] },
+  { q: 'ראיתי ביוטיוב שפשוט צריך להכות בזה חזק 👊', a: [
+    { t: 'אתה צודק לגמרי', r: 'ידעתי! אני גאון 😎', mood: 1 },
+    { t: 'יוטיוב זה לא מקצוע', r: 'וואלה... נעלבתי קצת 😶', mood: -1, mult: 1.1, note: 'ידע עולה כסף' },
+    { t: 'אז למה קראת לי?', r: 'כי אשתי אמרה 😤', mood: -2, mult: 1.2 },
+  ] },
+  { q: 'כבר שאתה פה... תסתכל גם על {extra}? 🥺', a: [
+    { t: 'בטח, אחזור עם חלקים 👍', r: 'מלאך! מחכה לך 😇', mood: 1, follow: true, note: 'עבודה נוספת אצל הלקוח' },
+    { t: 'זה עולה כסף, אחי', r: 'הכל אצלכם כסף 🙄', mood: -1, mult: 1.1 },
+    { t: 'אני לא רואה כלום 🙈', r: 'אתה לא רואה?! זה מטפטף!', mood: 0 },
+  ] },
+  { q: 'השכן אומר שהוא היה עושה את זה בחצי מחיר 🤨', a: [
+    { t: 'אז שהשכן יעשה 😏', r: 'טוב טוב... תעשה אתה', mood: -1, mult: 1.15 },
+    { t: 'אעשה לך מחיר שכן', r: 'אתה נשמה! 💛', mood: 2, mult: 0.85, note: 'מחיר שכן' },
+    { t: 'השכן שלך חייב לי כסף', r: 'מה?! ספר הכל 🍿', mood: 1 },
+  ] },
+  { q: 'אל תדאג, הכלב לא נושך. בדרך כלל. 🐕', a: [
+    { t: 'מה שמו?', r: 'שוקו! הוא אוהב אותך 🐶', mood: 1 },
+    { t: 'יש לי פה עוגייה בשבילו', r: 'עכשיו הוא אוהב אותך יותר ממני 😂', mood: 2, time: -2, note: 'שוקו מפריע. -2 שניות' },
+    { t: 'אני אחכה בחוץ', r: 'הוא נעלב 🐶💔', mood: -1 },
+  ] },
+  { q: 'רגע, אתה עם ביטוח? רישיון? המלצות? 🧐', a: [
+    { t: 'יש לי 4.9 בגוגל', r: 'וואו! אני אכתוב 5 😍', mood: 1 },
+    { t: 'יש לי שפם. זה רישיון.', r: 'האמת... משכנע 🥸', mood: 1, mult: 1.05 },
+    { t: 'אתה רוצה תיקון או חקירה?', r: 'בסדר בסדר, תעבוד 😬', mood: -1, time: 2 },
+  ] },
+];
+export const UPSELL_YES = ['טוב... אם אתה אומר. תחליף הכל 💸', 'אוי ואבוי. בסדר, תחליף 😩'];
+export const UPSELL_NO = ['אחי, אני לא מטומטם 🤨', 'ראיתי את הסרטון של "כלבוטק", אל תנסה 😤'];
+export const EXTRAS = ['הדוד', 'השקע במטבח', 'המזגן בחדר של הילד', 'הדלת שחורקת', 'הגינה של אמא', 'המנורה בשירותים'];
+export const MOODS = ['😡', '😠', '😕', '😐', '🙂', '😊', '😍'];
+export const SUB_LINES = ['חתם על מנוי אחזקה! 💰 כסף יזרום לקופה', 'רוצה אותך כל חודש! מנוי חדש 💸', 'שמר אותך באנשי קשר כ"אחי" ונרשם למנוי 📇'];
+export const UNSUB_LINES = ['ביטל את המנוי ועבר למוטי תיקונים 💔', 'ביטל מנוי. "מקצוען, אבל לא מגיע"'];
 
 export const pick = a => a[Math.floor(Math.random() * a.length)];

@@ -17,3 +17,8 @@ fitsource/worker/.dev.vars
 koli/server/node_modules/
 koli/server/.wrangler/
 koli/server/.dev.vars
+
+# ArsLate
+arslate/worker/node_modules/
+arslate/worker/.wrangler/
+arslate/worker/.dev.vars

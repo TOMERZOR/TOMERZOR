@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>ערסלייט</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="ערסלייט מתרגם עברית לערסית, בזמן אמת.">
+<meta property="og:title" content="ערסלייט">
+<meta property="og:description" content="כותבים עברית, מקבלים ערסית.">
+<meta property="og:url" content="https://tomerzor.github.io/TOMERZOR/arslate/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
+<meta property="og:image" content="https://tomerzor.github.io/TOMERZOR/arslate/icons/icon-512.png">
+<meta name="theme-color" content="#CFE0F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0D12" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ערסלייט">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: a calm sky-blue field, a tight bold headline with a grey line under it, and one big white
+   prompt card (rounded, soft shadow, round send button in the corner). The answer opens below the card.
+   Type is the system SF on Apple devices (the closest to the reference), Heebo everywhere else, with very
+   tight tracking on display sizes. Ink is the accent: the send button and the copy button. */
+:root {
+  color-scheme: light dark;
+  --sky-1: #C9DCF6;
+  --sky-2: #E3ECF9;
+  --sky-3: #F4F7FC;
+  --ink: #0E1116;
+  --ink-2: #4A5261;
+  --ink-3: #8A93A3;
+  --card: #FFFFFF;
+  --card-2: #F7F9FC;
+  --line: rgba(14, 17, 22, .08);
+  --shadow: 0 1px 1px rgba(30, 60, 110, .04), 0 10px 24px -8px rgba(30, 60, 110, .14), 0 32px 64px -24px rgba(30, 60, 110, .22);
+  --shadow-up: 0 1px 1px rgba(30, 60, 110, .05), 0 14px 30px -8px rgba(30, 60, 110, .18), 0 44px 80px -24px rgba(30, 60, 110, .28);
+  --btn-off: #E4E8EF;
+  --btn-off-ink: #A7AFBC;
+  --select: rgba(70, 120, 210, .22);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
+  --spring: cubic-bezier(.34, 1.4, .64, 1);
+  --ease: cubic-bezier(.16, 1, .3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sky-1: #121826; --sky-2: #0E121B; --sky-3: #0B0D12;
+    --ink: #F1F3F7; --ink-2: #A3ABBA; --ink-3: #6C7484;
+    --card: #171B23; --card-2: #1C212B; --line: rgba(255, 255, 255, .07);
+    --shadow: 0 0 0 1px rgba(255, 255, 255, .05) inset, 0 20px 50px -20px rgba(0, 0, 0, .7);
+    --shadow-up: 0 0 0 1px rgba(255, 255, 255, .08) inset, 0 28px 70px -20px rgba(0, 0, 0, .8);
+    --btn-off: #262C37; --btn-off-ink: #5D6576; --select: rgba(120, 160, 240, .3);
+  }
+}
+:root[data-theme="dark"] {
+  --sky-1: #121826; --sky-2: #0E121B; --sky-3: #0B0D12;
+  --ink: #F1F3F7; --ink-2: #A3ABBA; --ink-3: #6C7484;
+  --card: #171B23; --card-2: #1C212B; --line: rgba(255, 255, 255, .07);
+  --shadow: 0 0 0 1px rgba(255, 255, 255, .05) inset, 0 20px 50px -20px rgba(0, 0, 0, .7);
+  --shadow-up: 0 0 0 1px rgba(255, 255, 255, .08) inset, 0 28px 70px -20px rgba(0, 0, 0, .8);
+  --btn-off: #262C37; --btn-off-ink: #5D6576; --select: rgba(120, 160, 240, .3);
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+html, body { overflow-x: clip; }
+body {
+  margin: 0; min-height: 100vh; min-height: 100dvh;
+  background: linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 42%, var(--sky-3) 100%) fixed;
+  color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
+}
+::selection { background: var(--select); }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 12px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.col { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 20px; }
+
+/* ---------- Header ---------- */
+header.col { display: flex; align-items: center; min-height: calc(72px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top); }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.mark {
+  width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; color: #E7C887;
+  background: linear-gradient(180deg, #23262C, #0E1013);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .12) inset, 0 6px 14px -6px rgba(14, 17, 22, .5);
+}
+.mark svg { width: 20px; height: 20px; }
+:root[data-theme="dark"] .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 1px 0 rgba(255, 255, 255, .1) inset; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .1) inset, 0 1px 0 rgba(255, 255, 255, .1) inset; } }
+.brand span { font-weight: 800; font-size: 21px; letter-spacing: -.035em; }
+
+/* ---------- Hero ---------- */
+main.col { padding-top: 9vh; padding-bottom: max(56px, env(safe-area-inset-bottom)); }
+@media (max-width: 640px) { main.col { padding-top: 7vh; } }
+h1 {
+  margin: 0; text-align: center; font-weight: 800;
+  font-size: clamp(40px, 11vw, 64px); line-height: 1.02; letter-spacing: -.045em;
+}
+.sub { margin: 14px auto 0; text-align: center; color: var(--ink-2); font-size: 18px; font-weight: 500; letter-spacing: -.012em; max-width: 30em; }
+@media (min-width: 640px) { .sub { font-size: 20px; } }
+
+/* ---------- Prompt card ---------- */
+.card {
+  position: relative; margin-top: 36px;
+  background: var(--card); border-radius: 28px; box-shadow: var(--shadow);
+  padding: 22px 24px 18px;
+  transition: box-shadow .5s var(--ease), transform .5s var(--ease);
+}
+.card::after { /* soft fade toward the bottom, like the reference */
+  content: ""; position: absolute; inset: auto 0 0 0; height: 55%; border-radius: 0 0 28px 28px; pointer-events: none;
+  background: linear-gradient(180deg, transparent, var(--card-2));
+}
+.card:focus-within { box-shadow: var(--shadow-up); transform: translateY(-2px); }
+textarea {
+  position: relative; z-index: 1;
+  display: block; width: 100%; min-height: 92px; max-height: 40vh; resize: none;
+  border: 0; outline: 0; background: transparent; color: var(--ink);
+  font: 400 20px/1.45 var(--font); letter-spacing: -.012em; padding: 0; margin: 0; caret-color: var(--ink);
+}
+@media (min-width: 640px) { textarea { font-size: 21px; min-height: 104px; } }
+textarea::placeholder { color: var(--ink-3); opacity: 1; }
+textarea:focus-visible { outline: none; }
+
+.bar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; min-height: 44px; }
+.clear {
+  height: 32px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--ink-3);
+  opacity: 0; transform: scale(.9); pointer-events: none; transition: opacity .25s var(--ease), transform .35s var(--spring), color .2s, background .2s;
+}
+.clear.on { opacity: 1; transform: none; pointer-events: auto; }
+.clear:hover { color: var(--ink); background: var(--line); }
+
+.send {
+  position: relative; width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: var(--btn-off); color: var(--btn-off-ink);
+  transition: background .3s var(--ease), color .3s var(--ease), transform .45s var(--spring), box-shadow .3s var(--ease);
+}
+.send svg { width: 20px; height: 20px; transition: transform .45s var(--spring); }
+.send.on { background: var(--ink); color: var(--card); box-shadow: 0 8px 18px -8px rgba(14, 17, 22, .55); }
+.send.on:hover svg { transform: translateY(-2px); }
+.send:active { transform: scale(.9); }
+.send:disabled { cursor: default; }
+.send .ring { /* spins while translating */
+  position: absolute; inset: -4px; border-radius: 50%; opacity: 0; transition: opacity .2s;
+  background: conic-gradient(from 0deg, transparent 0 70%, var(--ink-3) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+}
+.busy .send .ring { opacity: 1; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Answer ---------- */
+.result { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .6s var(--ease); }
+.result.open { grid-template-rows: 1fr; }
+.result > div { overflow: hidden; min-height: 0; }
+.answer { padding: 34px 6px 18px; }
+.label { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--ink-3); letter-spacing: -.005em; }
+.out {
+  margin: 0; font-weight: 800; font-size: 32px; line-height: 1.16; letter-spacing: -.035em; color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty;
+}
+@media (min-width: 640px) { .out { font-size: 40px; } }
+.out .w { display: inline-block; animation: rise .6s var(--ease) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(.3em); filter: blur(6px); } to { opacity: 1; transform: none; filter: blur(0); } }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.open .actions { animation: fade .5s .25s var(--ease) both; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.pill {
+  height: 42px; padding: 0 17px 0 15px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--ink);
+  background: var(--card); box-shadow: 0 0 0 1px var(--line) inset, 0 2px 6px -2px rgba(30, 60, 110, .12);
+  transition: box-shadow .25s var(--ease), transform .35s var(--spring);
+}
+.pill:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px var(--line) inset, 0 8px 18px -8px rgba(30, 60, 110, .3); }
+.pill:active { transform: scale(.96); }
+.pill svg { width: 18px; height: 18px; flex: none; }
+.pill--primary { background: var(--ink); color: var(--card); box-shadow: 0 8px 18px -8px rgba(14, 17, 22, .5); }
+.pill[hidden] { display: none; }
+.pill .ok { display: none; }
+.pill.done .ok { display: block; animation: pop .45s var(--spring); }
+.pill.done .ic { display: none; }
+@keyframes pop { from { transform: scale(.4); } to { transform: none; } }
+
+/* ---------- Entrance ---------- */
+.in { animation: enter .9s var(--ease) both; }
+.in:nth-child(2) { animation-delay: .08s; }
+.in:nth-child(3) { animation-delay: .16s; }
+@keyframes enter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="col">
+  <a class="brand" href="./" aria-label="ערסלייט">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="3.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 11 16)"/><rect x="13.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 21 16)"/></svg></span>
+    <span>ערסלייט</span>
+  </a>
+</header>
+
+<main class="col" id="app">
+  <h1 class="in">מדברים כמו ערס.</h1>
+  <p class="sub in">כותבים בעברית, מקבלים ערסית.</p>
+
+  <form class="card in" id="form" autocomplete="off">
+    <label for="src" class="sr">טקסט בעברית לתרגום לערסית</label>
+    <textarea id="src" rows="3" maxlength="1000" placeholder="מה רוצים להגיד?" enterkeyhint="send" spellcheck="false"></textarea>
+    <div class="bar">
+      <button class="send" id="send" type="submit" aria-label="תרגום" disabled>
+        <span class="ring" aria-hidden="true"></span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+      </button>
+      <button class="clear" id="clear" type="button">ניקוי</button>
+    </div>
+  </form>
+
+  <section class="result" id="result" aria-live="polite">
+    <div>
+      <div class="answer">
+        <h2 class="label">בערסית</h2>
+        <p class="out" id="out"></p>
+        <div class="actions">
+          <button class="pill pill--primary" id="copy" type="button">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
+            <svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+            <span id="copyLabel">העתקה</span>
+          </button>
+          <button class="pill" id="again" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
+            נוסח אחר
+          </button>
+          <button class="pill" id="share" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+            שיתוף
+          </button>
+          <button class="pill" id="speak" type="button" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            השמעה
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="config.js"></script>
+<script src="lexicon.js"></script>
+<script src="examples.js"></script>
+<script src="engine.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const app = $("app"), src = $("src"), out = $("out"), result = $("result"), send = $("send");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let variant = 0, timer = 0, current = null, copyTimer = 0;
+
+  function grow() {
+    src.style.height = "auto";
+    src.style.height = src.scrollHeight + "px";
+  }
+
+  function render(res) {
+    current = res;
+    app.classList.remove("busy");
+    if (!res || !res.text) { result.classList.remove("open"); return; }
+    out.textContent = "";
+    if (reduced) out.textContent = res.text;
+    else {
+      let i = 0;
+      for (const p of res.text.split(/(\s+)/)) {
+        if (!p) continue;
+        if (/^\s+$/.test(p)) { out.appendChild(document.createTextNode(p)); continue; }
+        const s = document.createElement("span");
+        s.className = "w";
+        s.style.animationDelay = Math.min(i++ * 32, 900) + "ms";
+        s.textContent = p;
+        out.appendChild(s);
+      }
+    }
+    result.classList.add("open");
+  }
+
+  /* מצב AI: אם יש שרת (config.js), Claude מנסח מחדש. כל תקלה, מגבלה או סירוב נופלים בשקט למילון שבדפדפן. */
+  const API = String((window.ARSLATE_CONFIG || {}).apiBase || "").replace(/\/+$/, "");
+  let reqId = 0, inflight = null;
+
+  function local() { return Arslate.translate(src.value, variant); }
+
+  async function run() {
+    if (!API) { render(local()); return; }
+    const id = ++reqId;
+    if (inflight) inflight.abort();
+    inflight = new AbortController();
+    const kill = setTimeout(() => inflight.abort(), 12000);
+    try {
+      const res = await fetch(API + "/api/translate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: src.value.slice(0, 600), previous: variant && current ? current.text : undefined }),
+        signal: inflight.signal,
+      });
+      const data = res.ok ? await res.json() : null;
+      if (id !== reqId) return;
+      render(data && data.text ? { text: data.text } : local());
+    } catch (err) {
+      if (id === reqId) render(local());
+    } finally {
+      clearTimeout(kill);
+    }
+  }
+
+  function onInput(delay) {
+    const has = !!src.value.trim();
+    send.disabled = !has;
+    send.classList.toggle("on", has);
+    $("clear").classList.toggle("on", !!src.value.length);
+    grow();
+    clearTimeout(timer);
+    if (!has) { reqId++; render(null); return; }
+    if (API && delay == null) return; // עם שרת מתרגמים בשליחה, לא בכל הקלדה
+    app.classList.add("busy");
+    timer = setTimeout(run, delay == null ? 450 : delay);
+  }
+
+  src.addEventListener("input", () => { variant = 0; onInput(); });
+  $("form").addEventListener("submit", e => {
+    e.preventDefault();
+    if (!src.value.trim()) return;
+    clearTimeout(timer);
+    app.classList.add("busy");
+    timer = setTimeout(run, 160);
+    if (matchMedia("(pointer: coarse)").matches) src.blur();
+  });
+  src.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("form").requestSubmit(); }
+  });
+
+  $("clear").addEventListener("click", () => { src.value = ""; variant = 0; onInput(); src.focus(); });
+  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, API ? 0 : 220); });
+
+  $("copy").addEventListener("click", async () => {
+    if (!current) return;
+    try { await navigator.clipboard.writeText(current.text); }
+    catch (err) {
+      const ta = document.createElement("textarea");
+      ta.value = current.text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e2) {}
+      ta.remove();
+    }
+    const b = $("copy");
+    b.classList.add("done");
+    $("copyLabel").textContent = "הועתק";
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => { b.classList.remove("done"); $("copyLabel").textContent = "העתקה"; }, 1500);
+  });
+
+  $("share").addEventListener("click", async () => {
+    if (!current) return;
+    const url = location.origin + location.pathname;
+    if (navigator.share) {
+      try { await navigator.share({ text: current.text, url }); } catch (e) {}
+    } else {
+      window.open("https://wa.me/?text=" + encodeURIComponent(current.text + "\n" + url), "_blank", "noopener");
+    }
+  });
+
+  /* השמעה, רק אם יש קול עברי במכשיר */
+  let heVoice = null;
+  function findVoice() {
+    heVoice = speechSynthesis.getVoices().find(v => /^(he|iw)/i.test(v.lang)) || null;
+    $("speak").hidden = !heVoice;
+  }
+  if ("speechSynthesis" in window) {
+    findVoice();
+    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener("voiceschanged", findVoice);
+  }
+  $("speak").addEventListener("click", () => {
+    if (!current || !heVoice) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(current.text);
+    u.voice = heVoice; u.lang = heVoice.lang; u.rate = 1.04; u.pitch = .9;
+    speechSynthesis.speak(u);
+  });
+
+  /* הטקסט המעומעם בתיבה מקליד דוגמאות, כל עוד היא ריקה */
+  const HINTS = ["מה שלומך?", "אני מאחר קצת, אני תקוע בפקק", "תודה רבה על העזרה", "זה יקר מדי, תן לי הנחה", "אני אוהב אותך"];
+  if (!reduced) {
+    let h = 0, c = 0, dir = 1;
+    (function tick() {
+      const text = HINTS[h];
+      let wait = 55;
+      if (src.value) { setTimeout(tick, 600); return; }
+      c += dir;
+      if (c > text.length) { dir = -1; c = text.length; wait = 1700; }
+      else if (c < 0) { dir = 1; c = 0; h = (h + 1) % HINTS.length; wait = 350; }
+      else if (dir < 0) wait = 22;
+      src.placeholder = text.slice(0, c) + (dir > 0 ? "|" : "");
+      setTimeout(tick, wait);
+    })();
+  }
+
+  /* ?q= בכתובת ממלא את השדה */
+  const q = new URLSearchParams(location.search).get("q");
+  if (q) { src.value = q.slice(0, 1000); onInput(120); }
+  grow();
+})();
+</script>
+</body>
+</html>

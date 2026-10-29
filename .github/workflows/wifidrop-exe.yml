@@ -1,0 +1,75 @@
+# Builds WiFiDrop (wifidrop/) into a single Windows WiFiDrop.exe with
+# PyInstaller, checks that it starts and answers, and publishes it as the
+# "wifidrop-latest" release, so this link always gives the newest build:
+#   https://github.com/TOMERZOR/TOMERZOR/releases/download/wifidrop-latest/WiFiDrop.exe
+name: Build WiFiDrop.exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, claude/nifty-noether-y5yku0]
+    paths: ["wifidrop/**", ".github/workflows/wifidrop-exe.yml"]
+
+concurrency:
+  group: wifidrop-exe
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: wifidrop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install pyinstaller==6.11.1
+
+      - name: Build
+        run: >
+          pyinstaller wifidrop.py --onefile --name WiFiDrop --icon icon.ico
+          --add-data "web;web" --noconfirm --clean
+
+      - name: Check that the .exe starts and serves the page
+        run: |
+          $p = Start-Process -FilePath dist\WiFiDrop.exe -ArgumentList "--no-browser","--dir","$env:RUNNER_TEMP\wd" -PassThru
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 30 -and -not $ok; $i++) {
+              Start-Sleep -Seconds 1
+              try {
+                $info = Invoke-RestMethod http://127.0.0.1:8765/api/info
+                $page = Invoke-WebRequest http://127.0.0.1:8765/ -UseBasicParsing
+                $js = Invoke-WebRequest http://127.0.0.1:8765/static/app.js -UseBasicParsing
+                $ok = $info.host -and $page.Content.Contains("WiFiDrop") -and $js.StatusCode -eq 200
+              } catch { }
+            }
+            if (-not $ok) { throw "WiFiDrop.exe did not answer on port 8765" }
+            Write-Host "OK: $($info.url)"
+          } finally {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WiFiDrop
+          path: wifidrop/dist/WiFiDrop.exe
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete wifidrop-latest --cleanup-tag --yes 2>$null
+          $global:LASTEXITCODE = 0
+          gh release create wifidrop-latest dist/WiFiDrop.exe --target $env:GITHUB_SHA `
+            --title "WiFiDrop for Windows" `
+            --notes "Download WiFiDrop.exe and double-click it. Windows may warn that the app is unrecognized: click More info, then Run anyway. When the firewall asks, allow Private networks. Built from $env:GITHUB_SHA."

@@ -9,6 +9,7 @@ or run:  python install.py
 def _install_wifidrop():
     import subprocess
     import sys
+    import time
     import urllib.request
     from pathlib import Path
 
@@ -23,8 +24,16 @@ def _install_wifidrop():
     for name in files:
         dest = target / name
         dest.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(base + name) as res:
-            dest.write_bytes(res.read())
+        for attempt in range(5):
+            try:
+                with urllib.request.urlopen(base + name) as res:
+                    dest.write_bytes(res.read())
+                break
+            except OSError:
+                # GitHub sometimes answers "too many requests"; wait and retry.
+                if attempt == 4:
+                    raise
+                time.sleep(2 ** attempt)
         print("  ✓", name)
     if sys.platform != "win32":
         (target / "start-mac.command").chmod(0o755)

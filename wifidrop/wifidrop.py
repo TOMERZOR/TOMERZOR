@@ -516,7 +516,11 @@ def main():
     try:
         server = Server(("0.0.0.0", args.port), Handler)
     except OSError as e:
-        sys.exit(f"Can't listen on port {args.port} ({e}). Is WiFiDrop already running? Try --port {args.port + 1}")
+        print(f"Can't listen on port {args.port} ({e}). Is WiFiDrop already running? Try --port {args.port + 1}", file=sys.stderr)
+        if getattr(sys, "frozen", False):
+            # A double-clicked .exe closes its window on exit, hiding the message.
+            input("\nPress Enter to close...")
+        sys.exit(1)
     server.verbose = args.verbose
 
     url = state.url()

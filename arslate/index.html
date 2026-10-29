@@ -169,6 +169,22 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- Answer ---------- */
+/* Thinking line while the answer loads, like Claude: a twinkling star and a rotating word with a shimmer */
+.thinking { display: none; align-items: center; gap: 10px; padding: 30px 6px 0; }
+.thinking.on { display: flex; animation: fade .35s var(--ease) both; }
+.spark { width: 22px; text-align: center; font-size: 21px; line-height: 1; color: #C9A25A; font-family: system-ui, sans-serif; }
+.think-word {
+  font-size: 17px; font-weight: 600; letter-spacing: -.01em;
+  background: linear-gradient(90deg, var(--ink-3) 0%, var(--ink-3) 35%, var(--ink) 50%, var(--ink-3) 65%, var(--ink-3) 100%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shimmer 1.8s linear infinite;
+  transition: opacity .18s var(--ease), transform .3s var(--spring);
+}
+.think-word.out { opacity: 0; transform: translateY(-6px); }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+.thinking.on + .result .answer { opacity: .25; filter: blur(1.5px); }
+.answer { transition: opacity .3s var(--ease), filter .3s var(--ease); }
+
 .result { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .6s var(--ease); }
 .result.open { grid-template-rows: 1fr; }
 .result > div { overflow: hidden; min-height: 0; }
@@ -252,6 +268,11 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
     </div>
   </form>
 
+  <div class="thinking" id="thinking" role="status" aria-live="polite">
+    <span class="spark" id="spark" aria-hidden="true">✻</span>
+    <span class="think-word" id="thinkWord">מערסס…</span>
+  </div>
+
   <section class="result" id="result" aria-live="polite">
     <div>
       <div class="answer">
@@ -306,9 +327,39 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
     src.style.height = src.scrollHeight + "px";
   }
 
+  /* "חושב...": מילים מתחלפות בזמן שהתשובה נטענת */
+  const THINK = {
+    ars: ["מערסס…", "מתרגם…", "מחמם את המנוע…", "מכוון את השרשרת…", "מתייעץ עם השכונה…", "מתקשר לאחשלי…", "מפצח גרעינים…",
+      "בודק עם בעל הבית…", "מנגב את הכלי…", "שם ג'ל בשיער…", "מחפש חנייה…", "נודר נדר…", "עושה סיבוב בשכונה…", "מוריד הילוך…"],
+    arsit: ["מערססת…", "מתרגמת…", "מורחת גלוס…", "מסדרת ציפורניים…", "שולחת הודעה קולית…", "מתייעצת עם אחותי…", "מסדרת פן…",
+      "מצלמת סטורי…", "שרופה על זה…", "אומרת בעזרת השם…", "מתקשרת לאמאלה…"]
+  };
+  const SPARK = ["·", "✢", "✳", "✶", "✻", "✽", "✻", "✶", "✳", "✢"];
+  let thinkTimer = 0, sparkTimer = 0, busySince = 0;
+  function setBusy(on) {
+    app.classList.toggle("busy", on);
+    const th = $("thinking"), word = $("thinkWord");
+    if (!on) { th.classList.remove("on"); clearInterval(thinkTimer); clearInterval(sparkTimer); return; }
+    if (th.classList.contains("on")) return;
+    busySince = performance.now();
+    const words = THINK[persona];
+    const order = [0, ...words.slice(1).map((w, i) => i + 1).sort(() => Math.random() - .5)];
+    let i = 0;
+    word.textContent = words[0];
+    word.classList.remove("out");
+    th.classList.add("on");
+    if (reduced) return;
+    thinkTimer = setInterval(() => {
+      word.classList.add("out");
+      setTimeout(() => { i++; word.textContent = words[order[i % order.length]]; word.classList.remove("out"); }, 180);
+    }, 1500);
+    let g = 0;
+    sparkTimer = setInterval(() => { $("spark").textContent = SPARK[g++ % SPARK.length]; }, 130);
+  }
+
   function render(res) {
     current = res;
-    app.classList.remove("busy");
+    setBusy(false);
     if (!res || !res.text) { result.classList.remove("open"); return; }
     out.textContent = "";
     if (reduced) out.textContent = res.text;
@@ -334,7 +385,12 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
   function local() { return Arslate.translate(src.value, variant, persona); }
 
   async function run() {
-    if (!API) { render(local()); return; }
+    if (!API) {
+      // לבד בדפדפן זה מיידי, אז נותנים לאנימציה רגע להופיע
+      const id = ++reqId;
+      setTimeout(() => { if (id === reqId) render(local()); }, Math.max(0, 650 - (performance.now() - busySince)));
+      return;
+    }
     const id = ++reqId;
     if (inflight) inflight.abort();
     inflight = new AbortController();
@@ -365,7 +421,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
     clearTimeout(timer);
     if (!has) { reqId++; render(null); return; }
     if (API && delay == null) return; // עם שרת מתרגמים בשליחה, לא בכל הקלדה
-    app.classList.add("busy");
+    setBusy(true);
     timer = setTimeout(run, delay == null ? 450 : delay);
   }
 
@@ -374,7 +430,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
     e.preventDefault();
     if (!src.value.trim()) return;
     clearTimeout(timer);
-    app.classList.add("busy");
+    setBusy(true);
     timer = setTimeout(run, 160);
     if (matchMedia("(pointer: coarse)").matches) src.blur();
   });
@@ -383,7 +439,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
   });
 
   $("clear").addEventListener("click", () => { src.value = ""; variant = 0; onInput(); src.focus(); });
-  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, API ? 0 : 220); });
+  $("again").addEventListener("click", () => { variant++; setBusy(true); setTimeout(run, API ? 0 : 220); });
 
   $("copy").addEventListener("click", async () => {
     if (!current) return;
@@ -455,7 +511,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
     if (p === persona) return;
     applyPersona(p, true);
     try { localStorage.setItem("arslate.persona", p); } catch (e) {}
-    if (src.value.trim()) { variant = 0; app.classList.add("busy"); clearTimeout(timer); timer = setTimeout(run, 160); }
+    if (src.value.trim()) { variant = 0; setBusy(true); clearTimeout(timer); timer = setTimeout(run, 160); }
   }));
   document.addEventListener("click", e => { if (!menu.contains(e.target)) setMenu(false); });
   document.addEventListener("keydown", e => {

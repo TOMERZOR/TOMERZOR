@@ -2,7 +2,7 @@
 // Streak, Time Attack, and Challenge a Friend (a shareable link that replays
 // the same rounds).
 
-import { $, html, esc, countUp, confetti, haptic, toast, sleep, reducedMotion } from "./ui.js";
+import { $, html, esc, countUp, confetti, haptic, toast, sleep, reducedMotion, isDesktop } from "./ui.js";
 import { t, word, placeName, fmtNum, fmtTimeHtml, fmtKmHtml, fmtValue, getLang, tripArrow, iso } from "./i18n.js";
 import { icon, MODE_COLORS } from "./icons.js";
 import { artCanvas, paintArt } from "./art.js";
@@ -13,7 +13,7 @@ import { MAPS } from "../core/places.js";
 import { randomSeed, dayKey } from "../core/rng.js";
 import * as gmap from "./map.js";
 import * as audio from "./audio.js";
-import { openStage, closeStage, stageUi, mapPad, tripCard, askText, timerRing, numberLine, sourceLine, altLine, overlay, closeOverlay, loadingPanel, rankFor, scoreEmoji } from "./stage.js";
+import { openStage, closeStage, stageUi, inspector, mapPad, tripCard, askText, timerRing, numberLine, sourceLine, altLine, overlay, closeOverlay, loadingPanel, rankFor, scoreEmoji } from "./stage.js";
 
 const sfx = audio.sfx;
 const DAILY_MAPS = ["israel", "world", "walks", "israel", "flights", "world", "random"];
@@ -147,7 +147,8 @@ async function playRound(round, ctx) {
   const ui = stageUi();
   ui.innerHTML = "";
   ui.append(topbar({ kind, i, count, total, streak, onClose: () => exitSolo(app) }));
-  ui.append(tripCard(round, { measure }));
+  const side = inspector();
+  side.append(tripCard(round, { measure }));
   const ask = askText(round, measure);
   const sheet = html(`
     <div class="sheet glass down" role="region" aria-label="${esc(ask.title)}">
@@ -157,15 +158,16 @@ async function playRound(round, ctx) {
       <div class="picker-host"></div>
       <div class="guess-row">
         ${kind === "timed" ? '<div class="ring-host" aria-hidden="true"></div>' : ""}
-        <button class="btn btn-ink" id="btn-guess">${esc(t("guess"))}</button>
+        <button class="btn btn-ink" id="btn-guess">${esc(t("guess"))}<kbd class="kbd" aria-hidden="true">↵</kbd></button>
       </div>
     </div>`);
-  ui.append(sheet);
+  side.append(sheet);
   const picker = createPicker(sheet.querySelector(".picker-host"), {
     measure,
     value: measure === "time" ? 30 : 10,
     onTick: () => sfx.tick(),
   });
+  if (isDesktop()) requestAnimationFrame(() => picker.focus());
   requestAnimationFrame(() => sheet.classList.remove("down"));
   sfx.whoosh();
   gmap.showTrip(round, mapPad());
@@ -229,7 +231,7 @@ async function reveal({ sheet, round, route, actual, guess, score, measure, kind
       <div class="meter"><i id="meter"></i></div>
     </div>
     ${sourceLine(route)}
-    <button class="btn btn-ink btn-block" id="btn-next">${esc(last ? t("finish") : t("next"))} ${icon("arrow")}</button>`;
+    <button class="btn btn-ink btn-block" id="btn-next">${esc(last ? t("finish") : t("next"))} ${icon("arrow")}<kbd class="kbd" aria-hidden="true">↵</kbd></button>`;
   sheet.querySelector(".line-host").append(numberLine({ actual, you: guess, measure }));
   const fmt = measure === "time" ? (x) => fmtTimeHtml(x) : (x) => fmtKmHtml(x);
   sfx.reveal();
@@ -302,7 +304,7 @@ function showSummary({ kind, map, measure, seed, total, results, streak, challen
       ${kind !== "streak" && kind !== "daily" ? `<button class="btn btn-tint" id="sum-challenge">${icon("link")}${esc(t("challenge"))}</button>` : ""}
       <button class="btn btn-soft" id="sum-share">${icon("share")}${esc(t("share"))}</button>
       <button class="btn btn-soft" id="sum-home">${esc(t("home"))}</button>
-    </div>`);
+    </div>`, { cls: "summary" });
   const totalEl = panel.querySelector("#sum-total");
   setTimeout(() => {
     countUp(totalEl, isStreak ? streak : total, { ms: 1600, onTick: (p) => { sfx.count(p); haptic("tick"); } }).then(() => {

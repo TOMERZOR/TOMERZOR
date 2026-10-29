@@ -1,7 +1,7 @@
 // The game screen pieces shared by solo games and duels: the stage over the
 // map, the trip card, the timer ring, the number line and overlays.
 
-import { $, html, esc, sleep } from "./ui.js";
+import { $, html, esc, sleep, isDesktop } from "./ui.js";
 import { t, word, placeName, fmtValue, fmtNum, fmtKm, tripArrow, iso } from "./i18n.js";
 import { icon, MODE_COLORS } from "./icons.js";
 import { artCanvas, paintArt } from "./art.js";
@@ -38,27 +38,41 @@ export function closeStage() {
 }
 
 // Room the map should leave for the floating UI.
+// The column that holds the trip card and the guess sheet. On a phone it
+// is invisible (display: contents) and they float over the map as before;
+// on a desktop it is a side panel, like the sidebar in Apple Maps.
+export function inspector() {
+  const ui = stageUi();
+  let col = ui.querySelector(".inspector");
+  if (!col) {
+    col = document.createElement("div");
+    col.className = "inspector";
+    ui.append(col);
+  }
+  return col;
+}
+
+// Room the map should leave for the floating UI.
 export function mapPad() {
   const ui = stageUi();
   const trip = ui.querySelector(".trip");
   const sheet = ui.querySelector(".sheet");
-  const wide = innerWidth >= 900;
+  const col = ui.querySelector(".inspector");
   const rtl = document.dir === "rtl";
   const pad = { top: 70, bottom: 40, left: 40, right: 40 };
+  if (isDesktop() && col) {
+    // the side panel covers the start side; the top bar sits over the map
+    const w = col.offsetWidth + 60;
+    if (rtl) pad.right = w;
+    else pad.left = w;
+    pad.top = 110;
+    pad.bottom = 60;
+    return pad;
+  }
   // Sizes come from layout, not getBoundingClientRect, so a sheet that is
   // still sliding in counts at its final place.
-  if (trip && !wide) pad.top = trip.offsetTop + trip.offsetHeight + 24;
-  if (trip && wide) {
-    if (rtl) pad.right = trip.offsetWidth + 48;
-    else pad.left = trip.offsetWidth + 48;
-    pad.top = 90;
-  }
-  if (sheet) {
-    if (wide) {
-      if (rtl) pad.left = sheet.offsetWidth + 48;
-      else pad.right = sheet.offsetWidth + 48;
-    } else pad.bottom = sheet.offsetHeight + 44;
-  }
+  if (trip) pad.top = trip.offsetTop + trip.offsetHeight + 24;
+  if (sheet) pad.bottom = sheet.offsetHeight + 44;
   if (innerHeight - pad.top - pad.bottom < 120) pad.bottom = Math.max(40, innerHeight - pad.top - 120);
   return pad;
 }

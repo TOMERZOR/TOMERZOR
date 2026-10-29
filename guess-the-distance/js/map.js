@@ -142,6 +142,10 @@ export function initMap(el) {
     preferCanvas: false,
   }).setView([31.6, 35], 7);
   map.attributionControl.setPrefix(false);
+  // zoom buttons for a mouse, on the side away from the game panel
+  if (matchMedia("(min-width: 1024px)").matches) {
+    L.control.zoom({ position: document.dir === "rtl" ? "bottomleft" : "bottomright", zoomInTitle: "+", zoomOutTitle: "−" }).addTo(map);
+  }
   layer = L.layerGroup().addTo(map);
   matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => (offline ? restyleBasemap() : applySource()));
   if (source) applySource();

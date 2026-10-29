@@ -2,7 +2,7 @@
 // damage reveal, the end screen and rematches. All state comes from the
 // server; this file only draws it.
 
-import { $, html, esc, countUp, confetti, haptic, toast, sleep, reducedMotion } from "./ui.js";
+import { $, html, esc, countUp, confetti, haptic, toast, sleep, reducedMotion, isDesktop } from "./ui.js";
 import { t, word, fmtNum, fmtTimeHtml, fmtKmHtml, fmtValue, placeName, tripArrow, iso } from "./i18n.js";
 import { icon, MODE_COLORS } from "./icons.js";
 import { artCanvas } from "./art.js";
@@ -11,7 +11,7 @@ import { MAPS } from "../core/places.js";
 import { verdict, MAX_ROUND } from "../core/scoring.js";
 import * as gmap from "./map.js";
 import * as audio from "./audio.js";
-import { openStage, closeStage, stageUi, mapPad, tripCard, askText, timerRing, numberLine, sourceLine, altLine, overlay, closeOverlay, overlayOpen, loadingPanel, brief, scoreEmoji } from "./stage.js";
+import { openStage, closeStage, stageUi, inspector, mapPad, tripCard, askText, timerRing, numberLine, sourceLine, altLine, overlay, closeOverlay, overlayOpen, loadingPanel, brief, scoreEmoji } from "./stage.js";
 import { shareOrCopy } from "./solo.js";
 
 const sfx = audio.sfx;
@@ -292,7 +292,8 @@ export class DuelUI {
 
   drawRound(m, { myGuess, oppLocked }) {
     const ui = stageUi();
-    ui.querySelectorAll(".trip, .sheet").forEach((n) => n.remove());
+    const side = inspector();
+    side.innerHTML = "";
     this.setHp("you", m.hp.you, false);
     this.setHp("opp", m.hp.opp, false);
     const measure = this.match.measure;
@@ -300,7 +301,7 @@ export class DuelUI {
     const roundTag = `<span class="tag num" style="color:var(--label)">${esc(t("roundN", { n: m.n }))}</span>${m.multiplier > 1 ? `<span class="mult">×${m.multiplier}</span>` : ""}`;
     const trip = tripCard(m.round, { measure, extraTag: `${roundTag}<span class="tag opp ${oppLocked ? "locked" : ""}" id="opp-tag">${esc(opp.avatar)} ${esc(oppLocked ? t("oppLocked", { name: opp.name }) : t("thinking", { name: opp.name }))}</span>` });
     trip.style.top = "calc(var(--safe-top) + 108px)";
-    ui.append(trip);
+    side.append(trip);
     const ask = askText(m.round, measure);
     const sheet = html(`
       <div class="sheet glass down">
@@ -310,11 +311,12 @@ export class DuelUI {
         <div class="picker-host"></div>
         <div class="guess-row">
           <div class="ring-host" aria-hidden="true"></div>
-          <button class="btn btn-ink" id="btn-guess">${esc(t("guess"))}</button>
+          <button class="btn btn-ink" id="btn-guess">${esc(t("guess"))}<kbd class="kbd" aria-hidden="true">↵</kbd></button>
         </div>
       </div>`);
-    ui.append(sheet);
+    side.append(sheet);
     this.picker = createPicker(sheet.querySelector(".picker-host"), { measure, value: myGuess ?? (measure === "time" ? 30 : 10), onTick: () => sfx.tick() });
+    if (isDesktop() && myGuess == null) requestAnimationFrame(() => this.picker?.focus());
     requestAnimationFrame(() => sheet.classList.remove("down"));
     this.ring?.stop();
     this.ring = timerRing(sheet.querySelector(".ring-host"), m.timeLeft, { onHurry: () => { sfx.hurry(); haptic("tap"); } });
@@ -399,7 +401,7 @@ export class DuelUI {
         <div class="meter"><i id="meter"></i></div>
       </div>
       ${sourceLine(route)}
-      <button class="btn btn-ink btn-block" id="btn-next">${esc(m.last ? t("finish") : t("next"))} ${icon("arrow")}</button>`;
+      <button class="btn btn-ink btn-block" id="btn-next">${esc(m.last ? t("finish") : t("next"))} ${icon("arrow")}<kbd class="kbd" aria-hidden="true">↵</kbd></button>`;
     sheet.querySelector(".line-host").append(numberLine({ actual, you: m.guesses.you, opp: m.guesses.opp, measure, oppName: opp.name }));
     const nextBtn = sheet.querySelector("#btn-next");
     nextBtn.addEventListener("click", () => {
@@ -489,7 +491,7 @@ export class DuelUI {
         <div class="actions">
           <button class="btn btn-ink" id="end-rematch">${icon("swords")}${esc(t("rematch"))}</button>
           <button class="btn btn-soft" id="end-home">${esc(t("home"))}</button>
-        </div>`);
+        </div>`, { cls: "summary" });
       panel.querySelector("#end-rematch").addEventListener("click", (e) => {
         sfx.tap();
         e.currentTarget.disabled = true;

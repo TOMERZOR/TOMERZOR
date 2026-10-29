@@ -22,6 +22,10 @@ Live (after the deploy workflow has run once): the Worker's `workers.dev` addres
 
 Maps: Israel, The World, City Walks, Flights, Random Places. What you guess: travel time or road distance.
 
+## Phone and desktop
+
+From 1024px wide the game switches to a desktop layout: a translucent sidebar (with quick music and sound toggles) instead of the tab bar, content in columns, the game's trip card and guess panel in a side panel next to a full-size map with zoom buttons, and results in windows. Keyboard: Enter guesses and moves to the next round, ↑↓ turn a wheel, ←→ move between wheels, Esc leaves, 1/2/3 switch screens. In Hebrew everything is mirrored (sidebar and panel on the right).
+
 ## Scoring
 
 Up to 5,000 a round. The error is measured as a ratio, so being 6 minutes off a 1-hour drive costs the same as 1.5 hours off a 15-hour one: `5000 × e^(−2.5 × |ln((guess + 5) / (actual + 5))|)`. Within a minute (or 0.5%) is a perfect 5,000. Roughly: 5% off ≈ 4,450, 10% ≈ 4,000, 25% ≈ 3,000, 50% ≈ 1,950, double ≈ 1,000.

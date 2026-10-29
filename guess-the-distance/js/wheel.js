@@ -81,6 +81,18 @@ class Wheel {
   }
 
   key(e) {
+    // left/right move between wheels in the order they appear on screen
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const wheels = [...this.el.parentElement.querySelectorAll(".wheel")];
+      const rtl = getComputedStyle(this.el.parentElement).direction === "rtl";
+      const forward = (e.key === "ArrowRight") !== rtl;
+      const next = wheels[wheels.indexOf(this.el) + (forward ? 1 : -1)];
+      if (next) {
+        e.preventDefault();
+        next.focus({ preventScroll: true });
+      }
+      return;
+    }
     const step = { ArrowUp: -1, ArrowDown: 1, PageUp: -5, PageDown: 5 }[e.key];
     if (step) {
       e.preventDefault();

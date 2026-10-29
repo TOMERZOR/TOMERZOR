@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="WiFiDrop">
+<meta name="theme-color" content="#0a84ff">
+<title>WiFiDrop</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icon.png">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <img src="/static/icon.svg" alt="" class="logo">
+  <div>
+    <h1>WiFiDrop</h1>
+    <p class="sub" id="subtitle">מתחבר…</p>
+  </div>
+  <span class="dot" id="live" title="מחובר"></span>
+</header>
+
+<main id="app">
+
+  <!-- PC only: how to connect the phone -->
+  <section class="card pc-only" id="connect">
+    <div class="qr-wrap"><div id="qr" class="qr" aria-label="קוד QR לחיבור האייפון"></div></div>
+    <div class="connect-text">
+      <h2>חיבור האייפון</h2>
+      <ol>
+        <li>מוודאים שהאייפון והמחשב על אותה רשת Wi-Fi.</li>
+        <li>פותחים את המצלמה באייפון ומכוונים לקוד.</li>
+        <li>נוגעים בקישור שמופיע, והדף נפתח ב-Safari.</li>
+      </ol>
+      <p class="muted">או מקלידים ב-Safari:</p>
+      <code class="url" id="url" dir="ltr"></code>
+      <details id="other-urls" hidden>
+        <summary>לא נפתח? נסו כתובת אחרת</summary>
+        <ul id="other-list" dir="ltr"></ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- Send files -->
+  <section class="card">
+    <h2 class="phone-only">שליחה למחשב</h2>
+    <h2 class="pc-only">שליחה לאייפון</h2>
+    <label class="drop" id="drop">
+      <input type="file" id="picker" multiple>
+      <span class="drop-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="34" height="34"><path d="M12 16V4m0 0-5 5m5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <strong class="phone-only">בחירת תמונות, סרטונים או קבצים</strong>
+      <strong class="pc-only">גוררים לכאן קבצים, או לוחצים לבחירה</strong>
+      <span class="muted pc-only">אפשר גם להדביק (Ctrl+V) תמונה שהעתקתם</span>
+    </label>
+    <ul class="uploads" id="uploads"></ul>
+  </section>
+
+  <!-- Files waiting for the phone -->
+  <section class="card">
+    <div class="card-head">
+      <h2 class="phone-only">מהמחשב</h2>
+      <h2 class="pc-only">ממתינים לאייפון</h2>
+      <button class="link pc-only" data-open="outbox">פתיחת התיקייה</button>
+    </div>
+    <ul class="files" id="outbox"></ul>
+    <p class="empty" id="outbox-empty">
+      <span class="phone-only">עדיין אין כאן קבצים. מה שתשלחו מהמחשב יופיע כאן.</span>
+      <span class="pc-only">קבצים שתשלחו יחכו כאן עד שתורידו אותם באייפון.</span>
+    </p>
+    <p class="hint phone-only" id="save-hint" hidden>טיפ: נוגעים בתמונה כדי לפתוח אותה, ואז לחיצה ארוכה ← "שמירה בתמונות".</p>
+  </section>
+
+  <!-- Text / links -->
+  <section class="card">
+    <h2>טקסט וקישורים</h2>
+    <form id="text-form" class="text-form">
+      <textarea id="text" rows="2" placeholder="מדביקים טקסט או קישור…" dir="auto"></textarea>
+      <button type="submit" class="primary">שליחה</button>
+    </form>
+    <ul class="messages" id="messages"></ul>
+    <button class="link pc-only" id="clear-messages" hidden>ניקוי ההיסטוריה</button>
+  </section>
+
+  <!-- PC only: what arrived -->
+  <section class="card pc-only">
+    <div class="card-head">
+      <h2>התקבלו מהאייפון</h2>
+      <button class="link" data-open="received">פתיחת התיקייה</button>
+    </div>
+    <ul class="files" id="received"></ul>
+    <p class="empty" id="received-empty">מה שתשלחו מהאייפון יישמר ב-<span id="folder" dir="ltr"></span></p>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="/static/vendor/qrcode.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

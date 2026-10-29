@@ -18,6 +18,7 @@ export function openStage(moodName = "game") {
   st.setAttribute("aria-hidden", "false");
   document.querySelectorAll(".view").forEach((v) => v.setAttribute("inert", ""));
   gmap.initMap($("#map"));
+  gmap.retryRealMap();
   requestAnimationFrame(() => gmap.invalidate());
   audio.setMood(moodName);
 }

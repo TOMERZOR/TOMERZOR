@@ -338,7 +338,7 @@ input { font: inherit; color: inherit; }
 .leaflet-container { font-family: var(--font); background: var(--map-bg); }
 .leaflet-control-attribution { background: transparent !important; font-size: 9px; color: var(--label-3); margin-bottom: calc(var(--sheet-h, 0px) + 2px) !important; transition: margin 0.5s var(--ease-out); }
 .leaflet-control-attribution a { color: inherit; }
-.map-label { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; white-space: nowrap; pointer-events: none; }
+.map-label { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); display: flex; flex-direction: column-reverse; align-items: center; gap: 2px; white-space: nowrap; pointer-events: none; }
 .map-label i { width: 5px; height: 5px; border-radius: 50%; background: #6b6f78; box-shadow: 0 0 0 1.5px #fff; }
 .map-label span { font-size: 11.5px; font-weight: 600; color: #3a3d44; text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; }
 .map-label.big span { font-size: 13px; font-weight: 700; color: #1c1d21; }

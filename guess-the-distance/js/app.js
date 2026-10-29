@@ -14,7 +14,7 @@ import { DuelNet, detectServer } from "./net.js";
 import { DuelUI } from "./duelui.js";
 import { playSolo, dailyInfo } from "./solo.js";
 import { overlay, closeOverlay } from "./stage.js";
-import { prepareMap as gmapPrepare, relabel as gmapRelabel } from "./map.js";
+import { prepareMap as gmapPrepare, relabel as gmapRelabel, mapStatus as gmapStatus } from "./map.js";
 
 load();
 setLang(store.settings.lang);
@@ -380,6 +380,7 @@ function renderMe() {
       <div class="row"><span class="ri" style="background:#ff9500">${icon("speaker")}</span><span class="rl" id="sw-sfx-l">${esc(t("sfx"))}</span>${sw("sw-sfx", s.sfx)}</div>
       <div class="row"><span class="ri" style="background:#34c759">${icon("vibrate")}</span><span class="rl" id="sw-hap-l">${esc(t("haptics"))}</span>${sw("sw-hap", s.haptics)}</div>
       <div class="row"><span class="ri" style="background:#5856d6">${icon("server")}</span><span class="rl">${esc(t("server"))}</span><span class="rv" id="srv">${esc(server ? t("serverOn") : t("serverOff"))}</span></div>
+      <div class="row"><span class="ri" style="background:#30b0c7">${icon("pin")}</span><span class="rl">${esc(t("mapRow"))}</span><span class="rv" id="map-src">${esc(word("mapSrc", gmapStatus()))}</span></div>
     </div>
     <p class="muted" style="font-size:13px;margin:22px 4px 0">${esc(t("about"))}</p>
     </div>
@@ -556,7 +557,10 @@ async function boot() {
   if (!store.profile.name) await onboarding();
   render();
 
-  gmapPrepare();
+  gmapPrepare().then(() => {
+    const el = $("#map-src");
+    if (el) el.textContent = word("mapSrc", gmapStatus());
+  });
   detectServer().then((s) => {
     server = s;
     if (tab === "me") renderMe();

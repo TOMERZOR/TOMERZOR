@@ -33,9 +33,12 @@ function edgeCache() {
   };
 }
 
+// The public OSRM servers ask every client to identify itself.
+const ROUTER_HEADERS = { "User-Agent": "GuessTheDistance/1.0 (+https://github.com/TOMERZOR/TOMERZOR)" };
+
 let resolver;
 function getResolver() {
-  if (!resolver) resolver = createResolver({ cache: edgeCache() });
+  if (!resolver) resolver = createResolver({ cache: edgeCache(), headers: ROUTER_HEADERS });
   return resolver;
 }
 

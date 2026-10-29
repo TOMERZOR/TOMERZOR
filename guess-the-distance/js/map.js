@@ -19,6 +19,8 @@ const MODE_COLOR = { car: "#0a84ff", foot: "#30c35a", bike: "#ff9500", flight: "
 const OSM = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 const OFM = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> · © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · ' + OSM;
 
+const NE_CREDIT = 'Map data: <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>';
+
 const STYLES = {
   light: "https://tiles.openfreemap.org/styles/liberty",
   dark: "https://tiles.openfreemap.org/styles/dark",
@@ -49,23 +51,25 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(null), ms))]);
 }
 
+// "ok", "slow" (no answer yet: still worth trying) or "fail".
 async function styleOk(url) {
   try {
-    const res = await withTimeout(fetch(url, { mode: "cors" }), 5000);
-    if (!res?.ok) return false;
+    const res = await withTimeout(fetch(url, { mode: "cors" }), 8000);
+    if (res === null) return "slow";
+    if (!res.ok) return "fail";
     const st = await res.json();
-    return !!(st && st.sources && st.layers?.length);
+    return st && st.sources && st.layers?.length ? "ok" : "fail";
   } catch {
-    return false;
+    return "fail";
   }
 }
 
 function imageOk(url) {
   return new Promise((resolve) => {
     const img = new Image();
-    const timer = setTimeout(() => resolve(false), 5000);
-    img.onload = () => { clearTimeout(timer); resolve(true); };
-    img.onerror = () => { clearTimeout(timer); resolve(false); };
+    const timer = setTimeout(() => resolve("slow"), 8000);
+    img.onload = () => { clearTimeout(timer); resolve("ok"); };
+    img.onerror = () => { clearTimeout(timer); resolve("fail"); };
     img.src = url.replace("{z}", "5").replace("{x}", "19").replace("{y}", "13");
   });
 }
@@ -106,10 +110,11 @@ export function prepareMap() {
   if (probe) return probe;
   probe = (async () => {
     const [light, darkStyle, ...rasters] = await Promise.all([styleOk(STYLES.light), styleOk(STYLES.dark), ...RASTERS.map((r) => imageOk(r.url))]);
-    if (light && (await loadGL()) && window.maplibregl && L.maplibreGL) {
-      source = { kind: "vector", darkStyle };
+    if (light !== "fail" && (await loadGL()) && window.maplibregl && L.maplibreGL) {
+      source = { kind: "vector", darkStyle: darkStyle === "ok" };
     } else {
-      const i = rasters.indexOf(true);
+      let i = rasters.indexOf("ok");
+      if (i < 0) i = rasters.indexOf("slow");
       if (i >= 0) source = { kind: "raster", i };
       else {
         source = { kind: "offline" };
@@ -203,7 +208,7 @@ function useVector() {
   });
   setTimeout(() => {
     if (!loaded && tiles === gl) nextSource();
-  }, 9000);
+  }, 12000);
 }
 
 // Labels in the game's language: Hebrew names where OpenStreetMap has them.
@@ -216,6 +221,48 @@ function localizeLabels(glMap) {
     if (l.type !== "symbol" || !l.layout?.["text-field"]) continue;
     try { glMap.setLayoutProperty(l.id, "text-field", field); } catch {}
   }
+}
+
+// Which map is showing, for the Profile screen.
+export function mapStatus() {
+  if (!source) return "checking";
+  if (source.kind === "vector") return "openfreemap";
+  if (source.kind === "raster") return source.i === 0 ? "osm" : "esri";
+  return "builtin";
+}
+
+// The built-in map is a last resort: at the start of each game, ask the map
+// services again in case the network has come back.
+let retrying = false;
+export async function retryRealMap() {
+  if (!offline || retrying || !map) return;
+  retrying = true;
+  probe = null;
+  const prev = source;
+  source = null;
+  offline = "checking";
+  try {
+    await prepareMap();
+  } finally {
+    retrying = false;
+  }
+  if (source?.kind === "offline") {
+    offline = true;
+    source = prev;
+    return;
+  }
+  leaveOffline();
+  applySource();
+}
+
+function leaveOffline() {
+  baseLayers.forEach((l) => l.remove());
+  baseLayers = [];
+  labels?.clearLayers();
+  map.off("moveend zoomend", placeLabels);
+  map.getContainer().style.background = "";
+  map.attributionControl.removeAttribution(NE_CREDIT);
+  offline = false;
 }
 
 export function relabel() {
@@ -254,7 +301,7 @@ async function goOffline() {
     tiles.remove();
     tiles = null;
   }
-  map.attributionControl.addAttribution('Map data: <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>');
+  map.attributionControl.addAttribution(NE_CREDIT);
   base = await loadBase();
   if (!base) return; /* the plain background still works */
   restyleBasemap();

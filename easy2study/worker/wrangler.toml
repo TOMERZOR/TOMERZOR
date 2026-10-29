@@ -16,6 +16,9 @@ DAILY_HELP = "120"
 E2S_MODEL = "claude-opus-5-5"
 # Writing a lesson needs some thought; a path outline and one re-explanation are quick.
 PLAN_EFFORT = "low"
+# An exam path must cover the whole test, and a practice test spans all of it.
+PLAN_EXAM_EFFORT = "medium"
+EXAM_EFFORT = "medium"
 LESSON_EFFORT = "medium"
 HELP_EFFORT = "low"
 

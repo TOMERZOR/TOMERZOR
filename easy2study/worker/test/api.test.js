@@ -3,7 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
-import worker, { cleanProfile, cleanCourse } from "../src/index.js";
+import worker, { cleanProfile, cleanCourse, cleanExamCourse } from "../src/index.js";
 import { SYSTEM_PROMPT } from "../src/prompt.js";
 
 let reply = null; // what the fake Claude answers next
@@ -235,7 +235,7 @@ test("a path is planned at low effort from a topic", async () => {
   assert.equal(data.plan.chapters.length, 2);
   const sent = seen[0].body;
   assert.equal(sent.output_config.effort, "low");
-  assert.deepEqual(sent.output_config.format.schema.required, ["title", "subtitle", "chapters", "notes"]);
+  assert.deepEqual(sent.output_config.format.schema.required, ["title", "subtitle", "syllabus", "chapters", "notes"]);
   assert.match(sent.messages[0].content, /<plan_request>/);
   assert.match(sent.messages[0].content, /<goal>curious<\/goal>/);
 });
@@ -272,4 +272,45 @@ test("plans have their own daily limit", async () => {
   assert.equal((await worker.fetch(post("/api/plan", { topic: "x" }), e)).status, 429);
   reply = message(LESSON);
   assert.equal((await worker.fetch(post("/api/lesson", { topic: "x" }), e)).status, 200);
+});
+
+test("an exam path gets more thought and knows the question types", async () => {
+  reply = message(PLAN);
+  seen.length = 0;
+  const res = await worker.fetch(post("/api/plan", { profile: PROFILE, topic: "מלחמת העצמאות", goal: "exam", qtypes: "open", when: "week" }), env());
+  assert.equal(res.status, 200);
+  const sent = seen[0].body;
+  assert.equal(sent.output_config.effort, "medium");
+  assert.match(sent.messages[0].content, /<question_types>open<\/question_types>/);
+});
+
+test("a curious path doesn't mention question types", async () => {
+  reply = message(PLAN);
+  seen.length = 0;
+  await worker.fetch(post("/api/plan", { topic: "למה השמיים כחולים", goal: "curious", qtypes: "open" }), env());
+  assert.ok(!seen[0].body.messages[0].content.includes("<question_types>"));
+});
+
+const EXAM = { title: "מבחן תרגול", questions: [{ chapter: 0, question: "מה זה כוח משיכה?", options: ["כוח שמושך גופים זה לזה", "סוג של אור", "חום"], answer: 0, why: "כוח משיכה מושך גופים זה לזה." }] };
+
+test("a practice test covers the whole path and skips questions already seen", async () => {
+  reply = message(EXAM);
+  seen.length = 0;
+  const res = await worker.fetch(post("/api/exam", { profile: PROFILE, topic: "חורים שחורים", material: "הערות", qtypes: "choice", course: { title: "חורים שחורים", chapters: ["כוח משיכה", "מוות של כוכב"], syllabus: ["כוח משיכה", "חיים ומוות של כוכבים"], learned: ["כוח משיכה מושך גופים."] }, seen: ["מה המכנה?"] }), env());
+  assert.equal(res.status, 200);
+  assert.equal((await res.json()).exam.questions.length, 1);
+  const sent = seen[0].body;
+  assert.deepEqual(sent.output_config.format.schema.required, ["title", "questions"]);
+  const user = sent.messages[0].content;
+  assert.match(user, /<exam_request>/);
+  assert.match(user, /<chapters>\n0\. כוח משיכה\n1\. מוות של כוכב\n<\/chapters>/);
+  assert.match(user, /<syllabus>\n- כוח משיכה/);
+  assert.match(user, /<seen>\n- מה המכנה\?\n<\/seen>/);
+  assert.match(user, /<notes>\nהערות\n<\/notes>/);
+});
+
+test("a practice test needs the path's chapters", async () => {
+  const res = await worker.fetch(post("/api/exam", { topic: "x", course: { chapters: [] } }), env());
+  assert.equal(res.status, 400);
+  assert.equal(cleanExamCourse({ chapters: ["א"], syllabus: ["x"] }).title, "א");
 });

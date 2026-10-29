@@ -40,6 +40,8 @@ window.E2STutor = (() => {
     plan: (body) => post("/api/plan", body, 170000),
     // the same, plus course: {title, chapters, index, goal, learned} -> {lesson}
     lesson: (body) => post("/api/lesson", body, 170000),
+    // {profile, topic, material?, qtypes?, course: {title, chapters, syllabus, learned}, seen?} -> {exam: {title, questions}}
+    exam: (body) => post("/api/exam", body, 170000),
     // {profile, lesson: {title, subject}, bite: {title, text}, kind, word?, question?} -> {text, example}
     help: (body) => post("/api/help", body, 60000),
   };

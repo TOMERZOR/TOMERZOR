@@ -2,17 +2,20 @@
 //   GET  /api/health   what this deployment can do
 //   POST /api/plan     {profile, topic?, subject?, material?, images?, goal?, when?} -> {plan}
 //   POST /api/lesson   {profile, topic?, subject?, material?, images?, goal?, when?, course?} -> {lesson}
+//   POST /api/exam     {profile, topic, material?, when?, qtypes?, course: {title, chapters, syllabus, learned}, seen?} -> {exam}
+// goal "exam" bodies may also carry qtypes: "choice" | "open" | "both" | "unknown".
 // images: up to 4 pages, each {media_type, data (base64)}. A single `image` is still accepted.
 // pdf: one document, {data (base64)}.
 //   POST /api/help     {profile, lesson, bite, kind, word?, question?, previous?} -> {text, example}
 //
 // Bindings (all optional except the key): ANTHROPIC_API_KEY (secret),
 // E2S_KV (KV namespace for daily limits), ALLOWED_ORIGINS, DAILY_PLANS,
-// DAILY_LESSONS, DAILY_HELP, E2S_MODEL, PLAN_EFFORT, LESSON_EFFORT, HELP_EFFORT.
+// DAILY_LESSONS, DAILY_HELP, E2S_MODEL, PLAN_EFFORT, PLAN_EXAM_EFFORT, LESSON_EFFORT,
+// EXAM_EFFORT, HELP_EFFORT.
 // The site falls back to its built-in lessons and help whenever this API says no.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { SYSTEM_PROMPT, PLAN_SCHEMA, LESSON_SCHEMA, HELP_SCHEMA, planMessage, lessonMessage, helpMessage } from "./prompt.js";
+import { SYSTEM_PROMPT, PLAN_SCHEMA, LESSON_SCHEMA, EXAM_SCHEMA, HELP_SCHEMA, planMessage, lessonMessage, examMessage, helpMessage } from "./prompt.js";
 
 export const DEFAULT_MODEL = "claude-opus-5-5";
 // Models that accept the server-side refusal fallback (`fallbacks: "default"`).
@@ -179,6 +182,7 @@ function readSource(body) {
       material: material || null,
       goal: pick(body.goal, ["exam", "curious"], "exam"),
       when: pick(body.when, ["today", "tomorrow", "week", "later", "unknown"], null),
+      qtypes: pick(body.qtypes, ["choice", "open", "both", "unknown"], "unknown"),
     },
   };
 }
@@ -214,7 +218,9 @@ async function handlePlan(request, env, cors) {
   if (!(await takeQuota(env, request, "plan"))) return json({ error: "daily_limit" }, 429, cors);
 
   const content = withFiles(src, planMessage(src.fields));
-  const res = await ask({ env, content, schema: PLAN_SCHEMA, effort: env.PLAN_EFFORT || "low", maxTokens: 12000 });
+  // An exam path has to cover the whole test, so it gets more thought than a curious one.
+  const effort = src.fields.goal === "exam" ? env.PLAN_EXAM_EFFORT || "medium" : env.PLAN_EFFORT || "low";
+  const res = await ask({ env, content, schema: PLAN_SCHEMA, effort, maxTokens: 16000 });
   // One line per request for cost tracking (wrangler tail / Workers logs).
   console.log(JSON.stringify({ event: "plan", images: src.images.length, pdf: Boolean(src.pdf), chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
   if (res.refused) return json({ error: "refused" }, 422, cors);
@@ -232,11 +238,37 @@ async function handleLesson(request, env, cors) {
 
   const course = cleanCourse(body.course);
   const content = withFiles(src, lessonMessage({ ...src.fields, course }));
-  const res = await ask({ env, content, schema: LESSON_SCHEMA, effort: env.LESSON_EFFORT || "medium", maxTokens: 16000 });
+  // Exam chapters teach everything in them, so they run longer.
+  const res = await ask({ env, content, schema: LESSON_SCHEMA, effort: env.LESSON_EFFORT || "medium", maxTokens: src.fields.goal === "exam" ? 20000 : 16000 });
   console.log(JSON.stringify({ event: "lesson", chapter: course ? course.index : null, images: src.images.length, pdf: Boolean(src.pdf), chars: (src.fields.material || "").length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
   if (res.refused) return json({ error: "refused" }, 422, cors);
   if (res.error || !res.data || !Array.isArray(res.data.bites) || !res.data.bites.length) return json({ error: "no_lesson" }, 502, cors);
   return json({ lesson: res.data, model: res.usage.model }, 200, cors);
+}
+
+/** {title, chapters, syllabus, learned} for a whole path's practice test, or null. */
+export function cleanExamCourse(c) {
+  if (!c || typeof c !== "object") return null;
+  const chapters = strList(c.chapters, 8, 120);
+  if (!chapters.length) return null;
+  return { title: cleanText(c.title, 120) || chapters[0], chapters, syllabus: strList(c.syllabus, 16, 160), learned: strList(c.learned, 40, 300) };
+}
+
+async function handleExam(request, env, cors) {
+  const { body, error } = await readJson(request);
+  if (error) return json({ error: error[0] }, error[1], cors);
+  const src = readSource(body);
+  if (src.error) return json({ error: src.error[0] }, src.error[1], cors);
+  const course = cleanExamCourse(body.course);
+  if (!course) return json({ error: "bad_request" }, 400, cors);
+  if (!(await takeQuota(env, request, "lesson"))) return json({ error: "daily_limit" }, 429, cors);
+
+  const content = withFiles(src, examMessage({ ...src.fields, course, seen: strList(body.seen, 40, 300) }));
+  const res = await ask({ env, content, schema: EXAM_SCHEMA, effort: env.EXAM_EFFORT || "medium", maxTokens: 16000 });
+  console.log(JSON.stringify({ event: "exam", chapters: course.chapters.length, refused: Boolean(res.refused), error: res.error || null, ...res.usage }));
+  if (res.refused) return json({ error: "refused" }, 422, cors);
+  if (res.error || !res.data || !Array.isArray(res.data.questions) || !res.data.questions.length) return json({ error: "no_exam" }, 502, cors);
+  return json({ exam: res.data, model: res.usage.model }, 200, cors);
 }
 
 async function handleHelp(request, env, cors) {
@@ -292,7 +324,7 @@ export default {
           cors,
         );
       }
-      const route = request.method === "POST" && { "/api/plan": handlePlan, "/api/lesson": handleLesson, "/api/help": handleHelp }[pathname];
+      const route = request.method === "POST" && { "/api/plan": handlePlan, "/api/lesson": handleLesson, "/api/exam": handleExam, "/api/help": handleHelp }[pathname];
       if (route) {
         if (!env.ANTHROPIC_API_KEY) return json({ error: "not_configured" }, 503, cors);
         return await route(request, env, cors);

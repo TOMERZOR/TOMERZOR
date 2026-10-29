@@ -898,8 +898,9 @@
   function newLesson() {
     current = { name: "new" };
     const ai = Tutor.available();
-    const d = { subject: null, topic: "", material: "", images: [], pdf: null, when: null, paste: false };
+    const d = { subject: null, topic: "", material: "", images: [], pdf: null, when: null, qtypes: null, paste: false };
     const WHEN = [["today", "היום"], ["tomorrow", "מחר"], ["week", "השבוע"], ["later", "בעוד יותר משבוע"], ["unknown", g("לא יודע", "לא יודעת")]];
+    const QTYPES = [["choice", "אמריקאיות"], ["open", "פתוחות"], ["both", "גם וגם"], ["unknown", g("לא יודע", "לא יודעת")]];
     const el = mount(`
       <div class="topbar">
         <button class="icon-btn" data-back aria-label="חזרה">${icon("arrow-right")}</button>
@@ -913,9 +914,9 @@
           </div>
         </div>
         <div class="field">
-          <label class="label" for="topic">הנושא</label>
-          <input id="topic" class="input" maxlength="140" placeholder="למשל: שברים, מחזור המים">
-          <span class="help">אפשר לכתוב במילים שלך. גם "מה שהמורה אמרה בשיעור האחרון" זה בסדר.</span>
+          <label class="label" for="topic">מה נכנס למבחן?</label>
+          <textarea id="topic" class="textarea textarea--short" maxlength="200" rows="2" placeholder="למשל: מלחמת העצמאות, מהחלוקה ועד ההסכמים"></textarea>
+          <span class="help">כדאי לכתוב את כל הנושאים שהמורה אמרה. ככה ההכנה תכסה את כולם.</span>
         </div>
         ${ai ? `
         <div class="field">
@@ -934,6 +935,12 @@
           <div data-paste-box hidden><label class="sr-only" for="material">החומר</label><textarea id="material" class="textarea" maxlength="8000" placeholder="להדביק כאן את החומר"></textarea></div>
         </div>` : ""}
         <div class="field">
+          <span class="label" id="qt-l">איך נראות השאלות?</span>
+          <div class="chips" role="radiogroup" aria-labelledby="qt-l">
+            ${QTYPES.map(([v, l]) => `<button type="button" role="radio" class="chip" data-qt="${v}" aria-checked="false">${l}</button>`).join("")}
+          </div>
+        </div>
+        <div class="field">
           <span class="label" id="when-l">מתי המבחן?</span>
           <div class="chips" role="radiogroup" aria-labelledby="when-l">
             ${WHEN.map(([v, l]) => `<button type="button" role="radio" class="chip" data-when="${v}" aria-checked="false">${l}</button>`).join("")}
@@ -942,7 +949,7 @@
         ${ai ? "" : `<div class="notice">${icon("sparkle", "icon--sm")}<span>המורה החכם (AI) עוד לא מחובר, אז כרגע אפשר ללמוד את השיעורים המוכנים: שברים, מחזור המים, Present Simple והמהפכה התעשייתית. אחרי החיבור, כל נושא יעבוד.</span></div>`}
         <p class="small muted" data-err role="alert" style="margin:0"></p>
       </div>
-      <div class="sticky-foot"><button class="btn btn--primary btn--block" data-make disabled>${icon("sparkle")}להכין לי שיעור</button></div>`, "new");
+      <div class="sticky-foot"><button class="btn btn--primary btn--block" data-make disabled>${icon("sparkle")}לבנות לי הכנה למבחן</button></div>`, "new");
 
     const make = $("[data-make]", el);
     const topic = $("#topic", el);
@@ -951,8 +958,8 @@
     $("[data-back]", el).onclick = home;
     radio(el, "data-subject", (v) => { d.subject = v; });
     radio(el, "data-when", (v) => { d.when = v; });
+    radio(el, "data-qt", (v) => { d.qtypes = v; });
     topic.oninput = () => { d.topic = topic.value; refresh(); };
-    topic.onkeydown = (e) => { if (e.key === "Enter" && !make.disabled) make.click(); };
     if (ai) {
       const MAX = 4;
       const photos = $("[data-photos]", el);
@@ -1159,6 +1166,7 @@
       pdf: d.pdf ? { data: d.pdf.data } : null,
       goal: d.goal,
       when: d.when || null,
+      qtypes: d.qtypes || null,
     }).then((res) => {
       if (!ld.alive()) return;
       ld.stop();
@@ -1178,6 +1186,8 @@
         subject: d.subject || "other",
         goal: d.goal,
         when: d.when || null,
+        qtypes: d.qtypes || null,
+        syllabus: (Array.isArray(plan.syllabus) ? plan.syllabus : []).map(str).filter(Boolean).slice(0, 16),
         notes: notes.slice(0, 12000),
         chapters,
         created: Date.now(),
@@ -1215,6 +1225,7 @@
       pdf: (photos[courseId] || {}).pdf || null,
       goal: c.goal,
       when: c.when,
+      qtypes: c.qtypes,
       course: { title: c.title, chapters: c.chapters.map((x) => x.title), index: i, goal: ch.goal, learned },
     }).then((res) => {
       const lesson = normalizeLesson(res.lesson, c.subject);
@@ -1253,14 +1264,22 @@
     c.updated = Date.now();
     save();
     const prog = courseProgress(c);
-    const all = prog.next < 0;
+    const exam = c.goal === "exam";
+    const chaptersDone = prog.next < 0;
+    const practice = c.practice || null;
+    // An exam path ends with a practice test; it is finished once that was taken.
+    const all = chaptersDone && (!exam || Boolean(practice));
+    const n = c.chapters.length;
     // The chapter just finished is drawn as "now" first, then fills in.
     const stateOf = (k) => {
       if (k === justDone) return "now";
       if (justDone >= 0 && k === justDone + 1) return "todo";
+      if (k === n) return practice ? "done" : chaptersDone ? "now" : "todo";
       return c.chapters[k].done ? "done" : k === prog.next ? "now" : "todo";
     };
-    const nextCh = all ? null : c.chapters[prog.next];
+    const nextCh = chaptersDone ? null : c.chapters[prog.next];
+    const ready = practice && practice.best / practice.total >= 0.85;
+    const anyDone = prog.done > 0;
     const el = mount(`
       <div class="topbar">
         <button class="icon-btn" data-back aria-label="למסך הראשי">${icon("arrow-right")}</button>
@@ -1270,44 +1289,73 @@
       ${all ? `
       <div class="done__hero" style="padding-top:12px">
         <span class="done__badge pop" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="draw" d="M12 25l8 8 16-17"/></svg></span>
-        <h1 class="h1" tabindex="-1" data-autofocus>${g("סיימת", "סיימת")} את כל המסלול!</h1>
-        <p class="lead">${plain(c.title.replace(/[.!?]+$/, ""))}: ${g("עכשיו אתה מבין", "עכשיו את מבינה")} את זה, צעד אחר צעד.</p>
+        <h1 class="h1" tabindex="-1" data-autofocus>${exam ? (ready ? `${g("אתה מוכן", "את מוכנה")} למבחן!` : `${g("עברת", "עברת")} על כל החומר!`) : `${g("סיימת", "סיימת")} את כל המסלול!`}</h1>
+        <p class="lead">${exam
+          ? `במבחן התרגול: ${practice.best} מתוך ${practice.total}. ${ready ? "נשאר רק לנוח לפני המבחן." : "עוד סיבוב על השלבים המסומנים, ואז מבחן תרגול חדש."}`
+          : `${plain(c.title.replace(/[.!?]+$/, ""))}: ${g("עכשיו אתה מבין", "עכשיו את מבינה")} את זה, צעד אחר צעד.`}</p>
       </div>` : `
       <div class="path__head stagger">
         <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>${plain(c.title)}</h1>
         ${c.subtitle ? `<p class="lead" style="--i:1">${plain(c.subtitle)}</p>` : ""}
       </div>`}
+      ${exam && (c.syllabus || []).length ? `
+      <details class="syllabus" ${all ? "" : "open"}>
+        <summary>${icon("list-checks")}<span>המבחן כולל ${c.syllabus.length} נושאים, וכולם במסלול</span>${icon("caret-left", "icon--sm syllabus__caret")}</summary>
+        <ul>${c.syllabus.map((x) => `<li>${plain(x)}</li>`).join("")}</ul>
+      </details>` : ""}
       <ol class="path" aria-label="השלבים">
-        ${c.chapters.map((ch, k) => `
+        ${c.chapters.map((ch, k) => {
+          const weak = practice && (practice.weak || []).includes(k);
+          return `
         <li class="path__step" data-k="${k}" data-state="${stateOf(k)}">
           <span class="path__node" aria-hidden="true"><span class="path__num">${k + 1}</span>${icon("check", "path__check")}</span>
           <button class="path__body" data-ch="${k}" ${!ch.done && k !== prog.next && justDone < 0 ? `aria-disabled="true"` : ""}>
             <span class="path__title">${plain(ch.title)}</span>
             ${ch.goal ? `<span class="path__goal">${plain(ch.goal)}</span>` : ""}
+            ${weak ? `<span class="path__flag">${icon("arrow-counter-clockwise", "icon--sm")}כדאי לחזור על זה</span>` : ""}
             <span class="sr-only">${ch.done ? "הושלם" : k === prog.next ? "השלב הבא" : "עוד לא"}</span>
           </button>
-        </li>`).join("")}
+        </li>`;
+        }).join("")}
+        ${exam ? `
+        <li class="path__step path__step--test" data-k="${n}" data-state="${stateOf(n)}">
+          <span class="path__node" aria-hidden="true"><span class="path__num">${icon("list-checks", "icon--sm")}</span>${icon("check", "path__check")}</span>
+          <button class="path__body" data-test ${chaptersDone ? "" : 'aria-disabled="true"'}>
+            <span class="path__title">מבחן תרגול</span>
+            <span class="path__goal">${practice ? `הכי טוב: ${practice.best} מתוך ${practice.total}. אפשר שוב, עם שאלות חדשות.` : "שאלות על כל החומר, כמו במבחן האמיתי. בסוף רואים מה כדאי לחזק."}</span>
+          </button>
+        </li>` : ""}
       </ol>
       <div class="sticky-foot" style="display:grid;gap:8px">
-        ${all
-          ? `<button class="btn btn--primary btn--block" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>
-             <button class="btn btn--soft btn--block" data-deeper>${icon("sparkle")}להעמיק עוד בנושא</button>`
-          : `<button class="btn btn--primary btn--block" data-go><span class="btn__ell">${prog.done ? "להמשיך" : "מתחילים"}: ${esc(nextCh.title)}</span>${icon("arrow-left")}</button>`}
+        ${!chaptersDone
+          ? `<button class="btn btn--primary btn--block" data-go><span class="btn__ell">${prog.done ? "להמשיך" : "מתחילים"}: ${esc(nextCh.title)}</span>${icon("arrow-left")}</button>`
+          : exam && !practice
+            ? `<button class="btn btn--primary btn--block" data-test2>${icon("list-checks")}למבחן התרגול</button>`
+            : exam
+              ? `<button class="btn btn--primary btn--block" data-test2>${icon("list-checks")}מבחן תרגול חדש</button>
+                 <button class="btn btn--soft btn--block" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>`
+              : `<button class="btn btn--primary btn--block" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>
+                 <button class="btn btn--soft btn--block" data-deeper>${icon("sparkle")}להעמיק עוד בנושא</button>`}
+        ${exam && anyDone ? `<button class="btn btn--ghost" data-sheet>${icon("book-open-text")}דף סיכום למבחן</button>` : ""}
       </div>`, "path-screen");
     $("[data-back]", el).onclick = home;
     $$("[data-ch]", el).forEach((b) => {
       b.onclick = () => {
         const k = Number(b.dataset.ch);
         const ch = c.chapters[k];
-        if (ch.done && ch.lessonId) return openLesson(ch.lessonId, { restart: true });
+        if (ch.done && ch.lessonId) return openLesson(ch.lessonId, { restart: true, simple: Boolean(practice && (practice.weak || []).includes(k)) });
         if (k === prog.next) return openChapter(courseId, k);
         toast("קודם השלבים שלפני. ככה זה נבנה, צעד אחר צעד.");
       };
     });
+    const startTest = () => (chaptersDone ? practiceTest(courseId) : toast("מבחן התרגול נפתח אחרי שעוברים על כל השלבים."));
+    $$("[data-test], [data-test2]", el).forEach((b) => (b.onclick = startTest));
     const go = $("[data-go]", el);
     if (go) go.onclick = () => openChapter(courseId, prog.next);
     const sh = $("[data-share]", el);
     if (sh) sh.onclick = shareWeek;
+    const sheetBtn = $("[data-sheet]", el);
+    if (sheetBtn) sheetBtn.onclick = () => summarySheet(courseId);
     const deeper = $("[data-deeper]", el);
     if (deeper) deeper.onclick = () => startPath({
       topic: `${c.topic}: השלב הבא`,
@@ -1315,7 +1363,7 @@
       subject: c.subject,
       goal: c.goal,
     });
-    if (!all) prepare(courseId, prog.next).catch(() => { /* retried when the learner taps */ });
+    if (!chaptersDone) prepare(courseId, prog.next).catch(() => { /* retried when the learner taps */ });
     if (justDone >= 0) {
       setTimeout(() => {
         const li = $(`.path__step[data-k="${justDone}"]`, el);
@@ -1335,6 +1383,159 @@
     }
   }
 
+  // Practice test ---------------------------------------------------------
+  // New questions on the whole path, like the real test. The result shows
+  // which chapters need another round.
+  function practiceTest(courseId) {
+    const c = S.courses[courseId];
+    const lessons = c.chapters.map((x) => x.lessonId && getLesson(x.lessonId));
+    const learned = lessons.flatMap((l, k) => (l && l.summary.length ? l.summary : [c.chapters[k].goal || c.chapters[k].title])).slice(-40);
+    const seenQs = [
+      ...lessons.flatMap((l) => (l ? l.bites.filter((b) => b.check).map((b) => spoken(b.check.question)) : [])),
+      ...(c.practiceSeen || []),
+    ].slice(-40);
+    const ld = loadingScreen(["מכין מבחן תרגול על כל החומר...", "בוחר שאלות מכל השלבים...", "מסדר מהקל אל הקשה...", "כמעט מוכן..."], () => coursePath(courseId));
+    Tutor.exam({
+      profile: profileForAI(),
+      subject: c.subject ? subjectOf(c.subject).name : null,
+      topic: c.topic,
+      material: c.notes || null,
+      when: c.when,
+      qtypes: c.qtypes,
+      course: { title: c.title, chapters: c.chapters.map((x) => x.title), syllabus: c.syllabus || [], learned },
+      seen: seenQs,
+    }).then((res) => {
+      if (!ld.alive()) return;
+      ld.stop();
+      const str = (v) => (typeof v === "string" ? v.trim() : "");
+      const qs = ((res.exam && res.exam.questions) || []).map((q) => {
+        const options = Array.isArray(q.options) ? q.options.map(str).filter(Boolean).slice(0, 4) : [];
+        if (!str(q.question) || options.length < 2 || !Number.isInteger(q.answer) || q.answer < 0 || q.answer >= options.length) return null;
+        const ch = Number.isInteger(q.chapter) && q.chapter >= 0 && q.chapter < c.chapters.length ? q.chapter : -1;
+        return { question: str(q.question), options, answer: q.answer, why: str(q.why), chapter: ch };
+      }).filter(Boolean).slice(0, 20);
+      if (!qs.length) return failed("no_exam", () => practiceTest(courseId), () => coursePath(courseId));
+      c.practiceSeen = [...(c.practiceSeen || []), ...qs.map((q) => spoken(q.question))].slice(-60);
+      save();
+      runPractice(courseId, qs);
+    }).catch((e) => {
+      if (!ld.alive()) return;
+      ld.stop();
+      failed(e.code, () => practiceTest(courseId), () => coursePath(courseId));
+    });
+  }
+
+  function runPractice(courseId, qs) {
+    const c = S.courses[courseId];
+    const answers = [];
+    let k = 0;
+    const show = () => {
+      current = { name: "practice" };
+      const q = qs[k];
+      const right = answers.filter(Boolean).length;
+      const el = mount(`
+        <div class="topbar">
+          <button class="icon-btn" data-close aria-label="לצאת ממבחן התרגול">${icon("x")}</button>
+          <div class="progress" aria-hidden="true">${qs.map((_, j) => `<span class="progress__seg" data-state="${j < k ? "done" : j === k ? "now" : "todo"}"></span>`).join("")}</div>
+          <span class="got" aria-label="${right} תשובות נכונות">${icon("check", "icon--sm")}<b>${right}</b></span>
+        </div>
+        <div class="lesson__stage">${checkHtml(q, { kicker: `מבחן תרגול · שאלה ${k + 1} מתוך ${qs.length}${q.chapter >= 0 ? ` · ${c.chapters[q.chapter].title}` : ""}` })}</div>
+        <div class="lesson__bar" style="grid-template-columns:1fr"><button class="btn btn--primary" data-next disabled>${k === qs.length - 1 ? "לתוצאות" : "השאלה הבאה"} ${icon("arrow-left")}</button></div>`, "lesson");
+      $("[data-close]", el).onclick = () => {
+        if (!answers.length || confirm("לצאת ממבחן התרגול? התשובות עד עכשיו לא יישמרו.")) coursePath(courseId);
+      };
+      const next = $("[data-next]", el);
+      if (S.settings.read) setTimeout(() => speak(`${spoken(q.question)}. ${q.options.map((o, j) => `${KEYS[j]}: ${spoken(o)}`).join(". ")}`), 350);
+      bindCheck(el, q, (ok) => {
+        answers[k] = ok;
+        markStudied();
+        next.disabled = false;
+        next.focus({ preventScroll: true });
+        next.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
+      });
+      next.onclick = () => {
+        if (k < qs.length - 1) { k++; show(); return; }
+        practiceResult(courseId, qs, answers);
+      };
+    };
+    show();
+  }
+
+  function practiceResult(courseId, qs, answers) {
+    current = { name: "practice-result" };
+    const c = S.courses[courseId];
+    const right = answers.filter(Boolean).length;
+    const total = qs.length;
+    const ratio = right / total;
+    // Per chapter: how many of its questions were right.
+    const by = c.chapters.map((ch, i) => {
+      const mine = qs.map((q, j) => ({ q, ok: answers[j] })).filter((x) => x.q.chapter === i);
+      return { i, title: ch.title, n: mine.length, ok: mine.filter((x) => x.ok).length };
+    }).filter((x) => x.n);
+    const weak = by.filter((x) => x.ok < x.n).map((x) => x.i);
+    // Keep the best attempt (as right out of its own total) and what to strengthen now.
+    const prev = c.practice;
+    const better = !prev || ratio > prev.best / prev.total;
+    c.practice = { best: better ? right : prev.best, total: better ? total : prev.total, weak, at: Date.now() };
+    c.updated = Date.now();
+    save();
+    logEvent("lesson", `מבחן תרגול: ${c.title}`);
+    const verdict = ratio >= 0.85
+      ? [`${g("אתה מוכן", "את מוכנה")} למבחן!`, "ידעת כמעט הכל. נשאר רק לנוח טוב לפני."]
+      : ratio >= 0.6
+        ? ["כמעט שם!", "עוד חזרה קצרה על השלבים המסומנים, ואז מבחן תרגול חדש."]
+        : ["יש מה לחזק, וזה בדיוק בשביל זה.", "כל טעות כאן היא טעות שלא תהיה במבחן. נעבור שוב על השלבים המסומנים, הפעם הכי פשוט."];
+    const el = mount(`
+      <div class="topbar"><span class="topbar__spacer"></span><button class="icon-btn" data-back aria-label="חזרה למסלול">${icon("x")}</button></div>
+      <div class="done__hero">
+        <div class="score pop" role="img" aria-label="${right} מתוך ${total}" style="--p:${Math.round(ratio * 100)}"><b>${right}</b><span>מתוך ${total}</span></div>
+        <h1 class="h1" tabindex="-1" data-autofocus>${verdict[0]}</h1>
+        <p class="lead">${verdict[1]}</p>
+      </div>
+      <section class="section" style="margin-top:0" aria-labelledby="by-t">
+        <h2 class="h3" id="by-t">לפי שלבים</h2>
+        <div class="bytopic">
+          ${by.map((x) => `<button class="bytopic__row" data-ch="${x.i}" ${x.ok === x.n ? 'data-ok' : ""}>
+            <span class="bytopic__ic">${icon(x.ok === x.n ? "check" : "arrow-counter-clockwise", "icon--sm")}</span>
+            <span class="bytopic__t"><span class="resume__title">${plain(x.title)}</span><span class="small muted">${x.ok} מתוך ${x.n} נכונות${x.ok < x.n ? ", כדאי לחזור" : ""}</span></span>
+            ${x.ok < x.n ? icon("caret-left", "icon--sm") : ""}
+          </button>`).join("")}
+        </div>
+      </section>
+      <div class="sticky-foot" style="display:grid;gap:8px">
+        ${weak.length ? `<button class="btn btn--primary btn--block" data-ch-first><span class="btn__ell">לחזור על: ${esc(c.chapters[weak[0]].title)}</span>${icon("arrow-left")}</button>` : ""}
+        <button class="btn ${weak.length ? "btn--soft" : "btn--primary"} btn--block" data-again>${icon("list-checks")}מבחן תרגול חדש</button>
+        <button class="btn btn--ghost" data-path>למסלול</button>
+      </div>`, "done");
+    if (ratio >= 0.6) { Sound.win(); setTimeout(() => burst($(".score", el)), 380); } else Sound.soft();
+    const openWeak = (i) => {
+      const ch = c.chapters[i];
+      if (ch && ch.lessonId && getLesson(ch.lessonId)) openLesson(ch.lessonId, { restart: true, simple: true });
+    };
+    $$(".bytopic__row:not([data-ok])", el).forEach((b) => (b.onclick = () => openWeak(Number(b.dataset.ch))));
+    const first = $("[data-ch-first]", el);
+    if (first) first.onclick = () => openWeak(weak[0]);
+    $("[data-again]", el).onclick = () => practiceTest(courseId);
+    $("[data-path]", el).onclick = () => coursePath(courseId);
+    $("[data-back]", el).onclick = () => coursePath(courseId);
+  }
+
+  // Summary sheet: everything to remember for the test, on one page --------
+  function summarySheet(courseId) {
+    const c = S.courses[courseId];
+    const parts = c.chapters.map((ch, i) => ({ ch, i, l: ch.lessonId && getLesson(ch.lessonId) }));
+    const el = page("sheet", "דף סיכום למבחן", parts.map(({ ch, i, l }) => l ? `
+      <section class="sumsheet">
+        <h2 class="h3"><span class="sumsheet__n">${i + 1}</span>${plain(ch.title)}</h2>
+        <ul class="sumsheet__list">${l.summary.map((x) => `<li><span>${rich(x, { lines: false })}</span></li>`).join("")}</ul>
+        ${Object.keys(l.glossary || {}).length ? `<dl class="sumsheet__terms">${Object.entries(l.glossary).map(([w, m]) => `<div><dt>${plain(w)}</dt><dd>${rich(m, { lines: false })}</dd></div>`).join("")}</dl>` : ""}
+        ${l.bites.filter((b) => b.pitfall).map((b) => `<p class="pitfall">${icon("lightbulb", "icon--sm")}<span>${rich(b.pitfall, { lines: false })}</span></p>`).join("")}
+      </section>` : `
+      <section class="sumsheet sumsheet--todo"><h2 class="h3"><span class="sumsheet__n">${i + 1}</span>${plain(ch.title)}</h2><p class="small muted" style="margin:0">יופיע כאן אחרי שתלמד${g("", "י")} את השלב.</p></section>`).join(""), plain(c.title));
+    $("[data-back]", el).onclick = () => coursePath(courseId);
+    bindTerms(el);
+  }
+
   // Whatever comes back from the tutor, keep only what the app can show.
   function normalizeLesson(raw, subject) {
     if (!raw || !Array.isArray(raw.bites)) return null;
@@ -1343,6 +1544,8 @@
       const bite = { title: str(b.title), text: str(b.text), simpler: str(b.simpler), example: str(b.example) };
       const steps = Array.isArray(b.steps) ? b.steps.map(str).filter(Boolean).slice(0, 8) : [];
       if (steps.length >= 2) bite.steps = steps;
+      if (["worked", "exam"].includes(b.kind)) bite.kind = b.kind;
+      if (str(b.pitfall)) bite.pitfall = str(b.pitfall);
       const c = b.check || {};
       const options = Array.isArray(c.options) ? c.options.map(str).filter(Boolean).slice(0, 4) : [];
       if (str(c.question) && options.length >= 2 && Number.isInteger(c.answer) && c.answer >= 0 && c.answer < options.length) {
@@ -1485,17 +1688,24 @@
     }
     const isLast = L.pos === L.steps.length - 1;
     const steps = b.steps || [];
-    let shown = steps.length ? (L.simple ? steps.length : L.shown[i] || 1) : 0;
+    // A test question hides its answer until the learner has tried.
+    const examQ = b.kind === "exam" && steps.length > 0;
+    let shown = steps.length ? (L.simple ? steps.length : L.shown[i] ?? (examQ ? 0 : 1)) : 0;
     L.shown[i] = shown;
+    const tipHtml = () => (examQ && b.example ? `<p class="tip">${icon("lightbulb", "icon--sm")}<span><b>טיפ למבחן:</b> ${rich(b.example, { lines: false })}</span></p>` : "");
     const el = mount(`
       ${lessonTop()}
       <div class="lesson__stage">
         <span class="lesson__kicker">${esc(L.lesson.title)} · ${i + 1} מתוך ${n}</span>
-        <article class="bite bite--enter" aria-live="polite">
+        <article class="bite bite--enter ${b.kind === "exam" ? "bite--exam" : ""}" aria-live="polite">
+          ${b.kind === "exam" ? `<span class="bite__badge">${icon("list-checks", "icon--sm")}שאלה כמו במבחן</span>` : b.kind === "worked" ? `<span class="bite__badge bite__badge--quiet">${icon("pencil-simple-line", "icon--sm")}דוגמה פתורה</span>` : ""}
           <h1 class="bite__title" tabindex="-1" data-autofocus>${rich(b.title, { lines: false })}</h1>
           ${visualHtml(b.visual)}
           <div class="bite__text">${rich(b.text)}</div>
-          ${steps.length ? `<ol class="steps" aria-label="צעד אחר צעד">${steps.slice(0, shown).map((x, k) => stepHtml(x, k, k === shown - 1 && shown < steps.length)).join("")}</ol>` : ""}
+          ${examQ && shown === 0 ? `<p class="tryfirst" data-try>${g("נסה", "נסי")} לענות לבד, בראש או על דף. אחר כך נחשוף את התשובה, צעד אחר צעד.</p>` : ""}
+          ${steps.length ? `<ol class="steps ${examQ ? "steps--answer" : ""}" aria-label="${examQ ? "התשובה, צעד אחר צעד" : "צעד אחר צעד"}">${steps.slice(0, shown).map((x, k) => stepHtml(x, k, k === shown - 1 && shown < steps.length)).join("")}</ol>` : ""}
+          <div data-tip>${shown === steps.length ? tipHtml() : ""}</div>
+          ${b.pitfall ? `<p class="pitfall">${icon("lightbulb", "icon--sm")}<span><b>טעות נפוצה:</b> ${rich(b.pitfall, { lines: false })}</span></p>` : ""}
           <div data-extras>${extras.map(extraHtml).join("")}</div>
         </article>
         <div class="tools" role="group" aria-label="עזרה">
@@ -1510,7 +1720,9 @@
       </div>`, "lesson");
     const next = $("[data-next]", el);
     const label = () => {
-      next.innerHTML = shown < steps.length
+      next.innerHTML = examQ && shown === 0
+        ? `לראות את התשובה ${icon("arrow-left")}`
+        : shown < steps.length
         ? `הצעד הבא <span class="btn__count">${shown + 1}/${steps.length}</span> ${icon("arrow-left")}`
         : `${isLast ? "סיימתי" : "הבנתי"} ${icon(isLast ? "check" : "arrow-left")}`;
     };
@@ -1529,6 +1741,9 @@
         L.shown[i] = shown;
         ol.insertAdjacentHTML("beforeend", stepHtml(steps[shown - 1], shown - 1, shown < steps.length));
         bindTerms(ol);
+        const tryFirst = $("[data-try]", el);
+        if (tryFirst) tryFirst.remove();
+        if (shown === steps.length) { $("[data-tip]", el).innerHTML = tipHtml(); bindTerms($("[data-tip]", el)); }
         Sound.step();
         vibrate(6);
         label();

@@ -23,112 +23,132 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500&family=IBM+Plex+Sans+Hebrew:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@500;600;700;800&display=swap">
 <style>
-/* Layout: one column, nothing else. A small wordmark, the input line with a hairline under it
-   (it turns gold and runs while translating), and the answer set in a serif below.
-   Actions appear only once there is an answer. Gold is the only accent. Light and dark follow the device. */
+/* Layout: one column, nothing else. A small app-icon wordmark, the input line with a hairline under it
+   (gold on focus, a gold shimmer runs along it while translating), and the answer in heavy Heebo (800) below.
+   Pill actions appear only once there is an answer. Gold is the only accent. Light and dark follow the device. */
 :root {
   color-scheme: light dark;
   --bg: #F7F6F3;
-  --ink: #111113;
+  --glow: rgba(201, 162, 90, .14);
+  --ink: #0F0F11;
   --ink-2: #5E5F65;
-  --ink-3: #9A9BA1;
-  --line: #E3E1DB;
-  --hover: rgba(17, 17, 19, .05);
+  --ink-3: #A3A4AA;
+  --line: #E4E2DC;
+  --hover: rgba(15, 15, 17, .05);
+  --chip: #FFFFFF;
   --gold: #A27326;
   --gold-2: #C9A25A;
-  --sans: "IBM Plex Sans Hebrew", "Assistant", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  --serif: "Frank Ruhl Libre", "David", "Times New Roman", serif;
+  --select: rgba(201, 162, 90, .28);
+  --font: "Heebo", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --ease: cubic-bezier(.2, .7, .2, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0C0C0D; --ink: #F2F1EC; --ink-2: #A9A9AF; --ink-3: #66666D; --line: #2A2A2E;
-    --hover: rgba(255, 255, 255, .06); --gold: #D6AE62; --gold-2: #E7C887;
+    --bg: #0B0B0C; --glow: rgba(214, 174, 98, .09); --ink: #F4F3EE; --ink-2: #A9A9AF; --ink-3: #5F5F66;
+    --line: #26262A; --hover: rgba(255, 255, 255, .06); --chip: #161618; --gold: #D6AE62; --gold-2: #E7C887;
+    --select: rgba(214, 174, 98, .3);
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0C0C0D; --ink: #F2F1EC; --ink-2: #A9A9AF; --ink-3: #66666D; --line: #2A2A2E;
-  --hover: rgba(255, 255, 255, .06); --gold: #D6AE62; --gold-2: #E7C887;
+  --bg: #0B0B0C; --glow: rgba(214, 174, 98, .09); --ink: #F4F3EE; --ink-2: #A9A9AF; --ink-3: #5F5F66;
+  --line: #26262A; --hover: rgba(255, 255, 255, .06); --chip: #161618; --gold: #D6AE62; --gold-2: #E7C887;
+  --select: rgba(214, 174, 98, .3);
 }
 
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; min-height: 100vh; min-height: 100dvh;
-  background: var(--bg); color: var(--ink);
-  font-family: var(--sans); font-size: 16px; line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
+  background: radial-gradient(760px 420px at 50% -120px, var(--glow), transparent 75%) no-repeat, var(--bg);
+  color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility;
 }
+::selection { background: var(--select); }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 8px; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 10px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.col { width: 100%; max-width: 640px; margin: 0 auto; padding: 0 20px; }
+.col { width: 100%; max-width: 680px; margin: 0 auto; padding: 0 22px; }
 
-header.col { padding-top: max(22px, env(safe-area-inset-top)); }
-.brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: inherit; }
-.brand svg { width: 20px; height: 20px; color: var(--gold); }
-.brand span { font-weight: 600; font-size: 16px; letter-spacing: -.01em; }
-
-main.col { padding-top: 16vh; padding-bottom: max(40px, env(safe-area-inset-bottom)); }
-@media (max-width: 640px) { main.col { padding-top: 11vh; } }
-
-.field { position: relative; display: flex; align-items: flex-start; gap: 8px; }
-textarea {
-  display: block; flex: 1; min-width: 0; min-height: 1.4em; max-height: 45vh; resize: none;
-  border: 0; outline: 0; background: transparent; color: var(--ink);
-  font: 400 26px/1.4 var(--sans); padding: 0; margin: 0; caret-color: var(--gold);
+header.col { padding-top: max(24px, env(safe-area-inset-top)); }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+.mark {
+  width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: var(--gold-2);
+  background: linear-gradient(180deg, #1F1F22, #0C0C0D);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .1) inset, 0 0 0 1px rgba(0, 0, 0, .06), 0 6px 14px -6px rgba(0, 0, 0, .45);
 }
-@media (min-width: 640px) { textarea { font-size: 30px; } }
+.mark svg { width: 19px; height: 19px; }
+:root[data-theme="dark"] .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .09) inset, 0 1px 0 rgba(255, 255, 255, .08) inset; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mark { box-shadow: 0 0 0 1px rgba(255, 255, 255, .09) inset, 0 1px 0 rgba(255, 255, 255, .08) inset; } }
+.brand span { font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+
+main.col { padding-top: 17vh; padding-bottom: max(48px, env(safe-area-inset-bottom)); }
+@media (max-width: 640px) { main.col { padding-top: 12vh; } }
+
+.field { display: flex; align-items: flex-start; gap: 10px; }
+textarea {
+  display: block; flex: 1; min-width: 0; min-height: 1.3em; max-height: 45vh; resize: none;
+  border: 0; outline: 0; background: transparent; color: var(--ink);
+  font: 500 27px/1.3 var(--font); letter-spacing: -.015em; padding: 0; margin: 0; caret-color: var(--gold);
+}
+@media (min-width: 640px) { textarea { font-size: 32px; } }
 textarea::placeholder { color: var(--ink-3); opacity: 1; }
 textarea:focus-visible { outline: none; }
 
-.rule { position: relative; height: 1px; margin-top: 18px; background: var(--line); overflow: hidden; }
+.clear {
+  width: 32px; height: 32px; margin-top: 2px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  color: var(--ink-3); background: var(--hover); transition: color .2s, transform .15s, opacity .2s;
+}
+.clear:hover { color: var(--ink); }
+.clear:active { transform: scale(.92); }
+.clear svg { width: 15px; height: 15px; }
+.clear[hidden] { display: none; }
+
+.rule { position: relative; height: 1px; margin-top: 20px; background: var(--line); overflow: hidden; }
 .rule::after {
-  content: ""; position: absolute; inset: 0; background: var(--gold);
-  transform: scaleX(0); transform-origin: right; transition: transform .5s var(--ease);
+  content: ""; position: absolute; inset: 0; background: linear-gradient(270deg, var(--gold), var(--gold-2));
+  transform: scaleX(0); transform-origin: right; transition: transform .6s var(--ease);
 }
 .field:focus-within + .rule::after { transform: scaleX(1); }
 .rule::before {
-  content: ""; position: absolute; top: 0; width: 35%; height: 100%; z-index: 1; opacity: 0;
-  background: linear-gradient(90deg, transparent, var(--gold-2), transparent);
+  content: ""; position: absolute; top: 0; width: 30%; height: 100%; z-index: 1; opacity: 0;
+  background: linear-gradient(90deg, transparent, #fff8e6, transparent);
 }
 .busy .rule::before { opacity: 1; animation: run .9s linear infinite; }
-@keyframes run { from { right: -35%; } to { right: 100%; } }
+@keyframes run { from { right: -30%; } to { right: 100%; } }
 
-.icon-btn {
-  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); flex: none;
-  transition: background .2s, color .2s, transform .15s;
-}
-.icon-btn:hover { background: var(--hover); color: var(--ink); }
-.icon-btn:active { transform: scale(.94); }
-.icon-btn svg { width: 18px; height: 18px; }
-.icon-btn[hidden] { display: none; }
-.field .icon-btn { margin-top: 2px; }
-
-.result { margin-top: 32px; }
+.result { margin-top: 40px; }
 .result[hidden] { display: none; }
+.label { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--gold); letter-spacing: .01em; }
+.label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .out {
-  margin: 0; font-family: var(--serif); font-weight: 500;
-  font-size: 28px; line-height: 1.45; color: var(--ink);
-  white-space: pre-wrap; overflow-wrap: anywhere;
+  margin: 0; font-weight: 800; font-size: 34px; line-height: 1.2; letter-spacing: -.025em; color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty;
 }
-@media (min-width: 640px) { .out { font-size: 32px; } }
-.out .w { animation: rise .5s var(--ease) both; }
-@keyframes rise { from { opacity: 0; filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
+@media (min-width: 640px) { .out { font-size: 44px; } }
+.out .w { display: inline-block; animation: rise .55s var(--ease) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(.18em); filter: blur(5px); } to { opacity: 1; transform: none; filter: blur(0); } }
 
-.actions { display: flex; gap: 4px; margin-top: 18px; margin-inline-start: -8px; animation: fade .4s .2s var(--ease) both; }
-@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
-
-.toast {
-  position: fixed; left: 50%; bottom: max(28px, env(safe-area-inset-bottom)); transform: translate(-50%, 10px);
-  background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 500;
-  padding: 9px 15px; border-radius: 10px; opacity: 0; pointer-events: none;
-  transition: opacity .25s, transform .35s var(--ease); white-space: nowrap;
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; animation: fade .45s .25s var(--ease) both; }
+@keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.pill {
+  height: 40px; padding: 0 16px 0 14px; border-radius: 999px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 14.5px; font-weight: 600; color: var(--ink);
+  background: var(--chip); box-shadow: 0 0 0 1px var(--line) inset, 0 1px 2px rgba(0, 0, 0, .04);
+  transition: background .2s, box-shadow .2s, transform .15s;
 }
-.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.pill:hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--gold) 45%, var(--line)) inset, 0 4px 12px -6px rgba(0, 0, 0, .18); }
+.pill:active { transform: scale(.97); }
+.pill svg { width: 17px; height: 17px; flex: none; }
+.pill--primary { background: var(--ink); color: var(--bg); box-shadow: 0 6px 16px -8px rgba(0, 0, 0, .45); }
+.pill--primary:hover { box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .5); }
+.pill[hidden] { display: none; }
+.pill .ok { display: none; }
+.pill.done .ok { display: block; }
+.pill.done .ic { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -138,7 +158,7 @@ textarea:focus-visible { outline: none; }
 <body>
 <header class="col">
   <a class="brand" href="./" aria-label="ערסלייט">
-    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 11 16)"/><rect x="13.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 21 16)"/></svg>
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><rect x="3.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 11 16)"/><rect x="13.5" y="11" width="15" height="10" rx="5" transform="rotate(-45 21 16)"/></svg></span>
     <span>ערסלייט</span>
   </a>
 </header>
@@ -147,33 +167,36 @@ textarea:focus-visible { outline: none; }
   <div class="field">
     <label for="src" class="sr">טקסט בעברית לתרגום לערסית</label>
     <textarea id="src" rows="1" maxlength="1000" placeholder="מה רוצים להגיד?" enterkeyhint="done" autocomplete="off" spellcheck="false" autofocus></textarea>
-    <button class="icon-btn" id="clear" type="button" aria-label="ניקוי" title="ניקוי" hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    <button class="clear" id="clear" type="button" aria-label="ניקוי" title="ניקוי" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>
   <div class="rule" aria-hidden="true"></div>
 
   <section class="result" id="result" hidden>
-    <h2 class="sr">בערסית</h2>
+    <h2 class="label">בערסית</h2>
     <p class="out" id="out" aria-live="polite"></p>
     <div class="actions">
-      <button class="icon-btn" id="copy" type="button" aria-label="העתקה" title="העתקה">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
+      <button class="pill pill--primary" id="copy" type="button">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>
+        <svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+        <span id="copyLabel">העתקה</span>
       </button>
-      <button class="icon-btn" id="again" type="button" aria-label="נוסח אחר" title="נוסח אחר">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
+      <button class="pill" id="again" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/></svg>
+        נוסח אחר
       </button>
-      <button class="icon-btn" id="speak" type="button" aria-label="השמעה" title="השמעה" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <button class="pill" id="share" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+        שיתוף
       </button>
-      <button class="icon-btn" id="share" type="button" aria-label="שיתוף" title="שיתוף">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M5 12v6.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V12"/></svg>
+      <button class="pill" id="speak" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+        השמעה
       </button>
     </div>
   </section>
 </main>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="lexicon.js"></script>
 <script src="engine.js"></script>
@@ -183,7 +206,7 @@ textarea:focus-visible { outline: none; }
   const $ = id => document.getElementById(id);
   const app = $("app"), src = $("src"), out = $("out"), result = $("result");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let variant = 0, timer = 0, current = null;
+  let variant = 0, timer = 0, current = null, copyTimer = 0;
 
   function grow() {
     src.style.height = "auto";
@@ -244,7 +267,11 @@ textarea:focus-visible { outline: none; }
       try { document.execCommand("copy"); } catch (e2) {}
       ta.remove();
     }
-    toast("הועתק");
+    const b = $("copy");
+    b.classList.add("done");
+    $("copyLabel").textContent = "הועתק";
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => { b.classList.remove("done"); $("copyLabel").textContent = "העתקה"; }, 1500);
   });
 
   $("share").addEventListener("click", async () => {
@@ -274,15 +301,6 @@ textarea:focus-visible { outline: none; }
     u.voice = heVoice; u.lang = heVoice.lang; u.rate = 1.04; u.pitch = .9;
     speechSynthesis.speak(u);
   });
-
-  let toastTimer = 0;
-  function toast(msg) {
-    const t = $("toast");
-    t.textContent = msg;
-    t.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove("show"), 1600);
-  }
 
   /* ?q= בכתובת ממלא את השדה */
   const q = new URLSearchParams(location.search).get("q");

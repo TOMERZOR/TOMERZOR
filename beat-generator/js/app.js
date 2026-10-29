@@ -191,10 +191,10 @@
   }
 
   /* Freestyle stage */
-  function buildCountdown() {
+  function buildCountdown(bars = state.every) {
     const box = $("countdown");
     box.innerHTML = "";
-    for (let b = 0; b < state.every; b++) {
+    for (let b = 0; b < bars; b++) {
       const bar = document.createElement("div");
       bar.className = "bar";
       bar.innerHTML = "<i></i><i></i><i></i><i></i>";
@@ -207,11 +207,24 @@
     $("next-word").textContent = free.next || "...";
     if (!reduceMotion) { el.classList.remove("swap"); void el.offsetWidth; el.classList.add("swap"); }
   }
+  // During the intro the stage counts down 4, 3, 2, 1, then the words start with the beat.
   function tickCountdown(step) {
-    const barIndex = Math.floor(step / BG.STEPS);
+    const abs = Math.floor(step / BG.STEPS);
     const s = step % BG.STEPS;
-    if (s === 0 && barIndex % state.every === 0) showWord(free.advance());
-    const pos = (barIndex % state.every) * 4 + Math.floor(s / 4);
+    const intro = abs < BG.INTRO_BARS;
+    const barIndex = intro ? abs : abs - BG.INTRO_BARS;
+    const span = intro ? BG.INTRO_BARS : state.every;
+    if (s === 0) {
+      if (intro) {
+        if (!free.next) free.next = free.draw();
+        $("word").textContent = String(BG.INTRO_BARS - abs);
+        $("next-word").textContent = free.next;
+      } else if (barIndex % state.every === 0) {
+        showWord(free.advance());
+      }
+    }
+    if ($("countdown").children.length !== span) buildCountdown(span);
+    const pos = (barIndex % span) * 4 + Math.floor(s / 4);
     $("countdown").querySelectorAll("i").forEach((el, i) => {
       el.classList.toggle("done", i < pos);
       el.classList.toggle("now", i === pos);
@@ -257,6 +270,16 @@
   });
 
   /* Beat */
+  // Shows which part of the song is playing and dims the tracks that rest in it.
+  function showSection(sec) {
+    if (sec === state.section) return;
+    state.section = sec;
+    $("section").textContent = sec === "intro" ? "פתיחה" : sec === "break" ? "ברייק" : "";
+    const heavy = state.recipe && (state.recipe.style === "trap" || state.recipe.style === "drill");
+    const resting = sec === "intro" ? ["kick", "snare", "hat", "bass"] : sec === "break" ? (heavy ? ["kick", "snare", "bass"] : ["hat"]) : [];
+    document.querySelectorAll(".row").forEach((row) => row.classList.toggle("resting", resting.includes(row.dataset.row)));
+  }
+
   function ensurePlayer() {
     if (!state.player) {
       state.player = new BG.Player();
@@ -264,6 +287,7 @@
         const bar = Math.floor(step / BG.STEPS) % BG.BARS;
         if (bar !== state.shownBar) renderBar(bar);
         moveHead(step % BG.STEPS);
+        showSection(BG.section(Math.floor(step / BG.STEPS)));
         tickCountdown(step);
       };
     }
@@ -358,6 +382,7 @@
       if (state.recorder) stopRecording();
       p.stop();
       moveHead(-1);
+      showSection(null);
     } else {
       p.start();
     }
@@ -401,9 +426,9 @@
     $("go").disabled = true;
     $("again").disabled = true;
     $("dl-label").textContent = "מכין קובץ...";
-    status("מכין קובץ WAV של 8 בארים...");
+    status("מכין ביט של שתי דקות, עם פתיחה וברייק...");
     try {
-      const buffer = await BG.renderBuffer(JSON.parse(JSON.stringify(state.recipe)), 8);
+      const buffer = await BG.renderSong(JSON.parse(JSON.stringify(state.recipe)), 120);
       saveBlob(BG.encodeWav(buffer), fileBase() + ".wav");
       status("הקובץ ירד.");
     } catch (e) {

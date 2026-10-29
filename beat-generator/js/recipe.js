@@ -61,7 +61,7 @@ const PROGRESSIONS = {
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 const STYLE_BASE = {
-  trap:    { bpm: [132, 150], swing: [0, 0.04],   scale: ["aeolian", "harmonic", "phrygian"], chords: "pad",  lead: "bell",  bass: "808", reverb: 0.25 },
+  trap:    { bpm: [122, 146], swing: [0, 0.04],   scale: ["aeolian", "harmonic", "phrygian"], chords: "pad",  lead: "bell",  bass: "808", reverb: 0.25 },
   drill:   { bpm: [140, 146], swing: [0, 0],      scale: ["harmonic", "aeolian", "phrygian"], chords: "strings", lead: "piano", bass: "808", reverb: 0.25 },
   boombap: { bpm: [84, 95],   swing: [0.12, 0.24], scale: ["aeolian", "dorian"],              chords: "piano", lead: "piano", bass: "sub", reverb: 0.15 },
   lofi:    { bpm: [70, 86],   swing: [0.18, 0.3],  scale: ["dorian", "aeolian", "ionian"],     chords: "ep",   lead: "soft",  bass: "sub", reverb: 0.3 },
@@ -113,7 +113,7 @@ function drums(style, rng, rolls) {
       kick[b] = fromSteps(k);
       clap[b] = fromSteps([8]);
       snare[b] = fromSteps(fill && rng.chance(0.6) ? [8, 15] : [8]);
-      const sixteenths = rng.chance(0.45);
+      const sixteenths = rng.chance(0.25);
       for (let s = 0; s < STEPS; s++) if (sixteenths || s % 2 === 0) hat[b][s] = s % 4 === 0 ? 1 : 0.7;
       const nRolls = Math.max(0, Math.round((b % 2 ? 2 : 1) + rolls * 6 + (fill ? 1 : 0)));
       for (let i = 0; i < nRolls; i++) hat[b][rng.int(2, 15)] = rng.pick([2, 3, 3, 4]);
@@ -259,13 +259,11 @@ BG.makeRecipe = function (parsed, variation = 0) {
   bpm = Math.max(60, Math.min(170, bpm));
   if (style === "lofi" && chords === "pad") chords = "ep";
   if (scale === "hijaz") sevenths = false;
-  // Leave room for the voice: not every variation gets a lead line.
-  if (rng.chance(style === "boombap" ? 0.45 : 0.25) && !moods.includes("oriental")) lead = null;
 
   const rootPc = rng.int(0, 11);
   const steps = BG.SCALES[scale].steps;
   const degrees = rng.pick(PROGRESSIONS[scale]);
-  const chordOct = 48;
+  const chordOct = 52;
   const chordList = degrees.map((d) => chordNotes(steps, rootPc, d, chordOct, sevenths));
   const bassRoot = 28 + ((rootPc - 4 + 12) % 12); // E1..D#2, where an 808 sits
 

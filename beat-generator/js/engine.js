@@ -6,6 +6,20 @@ window.BG = window.BG || {};
 
 const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
+// Mix levels in dB, tuned against real freestyle type beats: drums and 808 up front, the loop under them.
+BG.LEVELS = { kick: -3, click: -16, snare: -3, clap: -5, hat: -5, open: -12, bass808: -16, bassSub: -10, chords: 4, lead: 8, makeup: 4.5 };
+// Boom bap is drum-led: a sine sub, the loop pulled back, hats softer.
+BG.STYLE_LEVELS = {
+  lofi: { chords: -1, lead: 4, makeup: 6.5 },
+  boombap: { bassSub: -12, lead: 5, chords: 0, hat: -9, kick: 0, snare: -1, makeup: 6 } };
+
+// Song form: a 4-bar intro with just the loop, then a 4-bar breakdown at the end of every 32 bars.
+BG.INTRO_BARS = 4;
+BG.section = function (absBar) {
+  if (absBar < BG.INTRO_BARS) return "intro";
+  return (absBar - BG.INTRO_BARS) % 32 >= 28 ? "break" : "main";
+};
+
 function chordSynth(type, bright) {
   const cut = 1800 * Math.pow(2, bright * 2);
   let synth, vol, filterFreq = cut;
@@ -84,11 +98,15 @@ BG.buildRig = async function (recipe, out) {
   const snd = recipe.sound;
   const lofi = snd.style === "lofi";
 
-  const comp = keep(new Tone.Compressor({ threshold: -16, ratio: 3, attack: 0.01, release: 0.2 }));
-  const limiter = keep(new Tone.Limiter(-1));
-  const tone = keep(new Tone.Filter({ type: "lowpass", frequency: lofi || snd.vinyl ? 5200 : 18000, rolloff: -12 }));
+  const L = Object.assign({}, BG.LEVELS, BG.STYLE_LEVELS[snd.style]);
+  // Master: glue compression, make-up gain, limiter and a soft clipper so it is as loud as a released beat.
+  const comp = keep(new Tone.Compressor({ threshold: -20, ratio: 3.5, attack: 0.006, release: 0.15 }));
+  const makeup = keep(new Tone.Gain(Tone.dbToGain(L.makeup)));
+  const limiter = keep(new Tone.Limiter(-2));
+  const clipper = keep(new Tone.WaveShaper((v) => 0.97 * Math.tanh(1.4 * v) / Math.tanh(1.4), 4096));
+  const tone = keep(new Tone.Filter({ type: "lowpass", frequency: lofi ? 9000 : snd.vinyl ? 11000 : 18000, rolloff: -12 }));
   const bus = keep(new Tone.Gain(0.85));
-  bus.chain(tone, comp, limiter, out);
+  bus.chain(tone, comp, makeup, limiter, clipper, out);
 
   const reverb = keep(new Tone.Reverb({ decay: 2.8 + snd.reverb * 4, preDelay: 0.02, wet: 1 }));
   await reverb.ready;
@@ -105,39 +123,46 @@ BG.buildRig = async function (recipe, out) {
     return ch;
   };
 
+  const hard = snd.style === "boombap";
+  const soft = lofi ? -2 : 0;
+  // Kick: a pitched body plus a short click so it cuts through on phone speakers.
   const kick = keep(new Tone.MembraneSynth({
-    pitchDecay: lofi ? 0.03 : 0.045, octaves: lofi ? 4 : 6,
-    envelope: { attack: 0.001, decay: lofi ? 0.25 : 0.4, sustain: 0, release: 0.1 }
+    pitchDecay: lofi ? 0.03 : 0.05, octaves: lofi ? 4 : 6,
+    envelope: { attack: 0.001, decay: lofi ? 0.25 : hard ? 0.5 : 0.36, sustain: 0, release: 0.1 }
   }));
-  kick.connect(channel(lofi ? -7 : -4));
+  const kickCh = channel(L.kick + soft);
+  kick.connect(kickCh);
+  const kickClick = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.0005, decay: 0.009, sustain: 0 } }));
+  const clickHp = keep(new Tone.Filter(2500, "highpass"));
+  kickClick.chain(clickHp, channel(L.click + soft));
 
-  const snareCh = channel(lofi ? -14 : -11, 0.12);
-  const snareNoise = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: lofi ? 0.12 : 0.17, sustain: 0 } }));
-  const snareHp = keep(new Tone.Filter(lofi ? 1200 : 1800, "highpass"));
+  const snareCh = channel(L.snare + soft, 0.12);
+  const snareNoise = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: lofi ? 0.12 : hard ? 0.22 : 0.17, sustain: 0 } }));
+  const snareHp = keep(new Tone.Filter(lofi ? 1200 : 1500, "highpass"));
   snareNoise.chain(snareHp, snareCh);
-  const snareBody = keep(new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.001, decay: 0.1, sustain: 0 } }));
-  snareBody.volume.value = -6;
+  const snareBody = keep(new Tone.MembraneSynth({ pitchDecay: 0.02, octaves: 2, envelope: { attack: 0.001, decay: hard ? 0.14 : 0.1, sustain: 0 } }));
+  snareBody.volume.value = hard ? -2 : -5;
   snareBody.connect(snareCh);
 
-  const clap = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.11, sustain: 0 } }));
-  const clapBp = keep(new Tone.Filter({ type: "bandpass", frequency: 1400, Q: 0.9 }));
-  clap.chain(clapBp, channel(-12, 0.15));
+  const clap = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.13, sustain: 0 } }));
+  const clapBp = keep(new Tone.Filter({ type: "bandpass", frequency: 1500, Q: 0.8 }));
+  clap.chain(clapBp, channel(L.clap + soft, 0.18));
 
-  const hat = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.035, sustain: 0 } }));
-  const hatHp = keep(new Tone.Filter(lofi ? 6000 : 7800, "highpass"));
-  hat.chain(hatHp, channel(lofi ? -24 : -19, 0, -0.15));
-  const openHat = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.24, sustain: 0 } }));
-  const openHp = keep(new Tone.Filter(6500, "highpass"));
-  openHat.chain(openHp, channel(-24, 0.05, 0.15));
+  const hat = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.045, sustain: 0 } }));
+  const hatHp = keep(new Tone.Filter(lofi ? 5500 : 6500, "highpass"));
+  hat.chain(hatHp, channel(L.hat + soft * 1.6, 0, -0.15));
+  const openHat = keep(new Tone.NoiseSynth({ noise: { type: "white" }, envelope: { attack: 0.001, decay: 0.26, sustain: 0 } }));
+  const openHp = keep(new Tone.Filter(6000, "highpass"));
+  openHat.chain(openHp, channel(L.open + soft, 0.05, 0.15));
 
   const is808 = snd.bass === "808";
   const bass = keep(new Tone.MonoSynth({
-    oscillator: { type: is808 ? "sine" : "triangle" },
+    oscillator: { type: is808 || snd.style === "boombap" ? "sine" : "triangle" },
     filter: { type: "lowpass", rolloff: -24, Q: 1 },
     filterEnvelope: { attack: 0.001, decay: 0.2, sustain: 1, release: 0.3, baseFrequency: is808 ? 900 : 380, octaves: 0 },
-    envelope: is808 ? { attack: 0.004, decay: 0.5, sustain: 0.75, release: 0.25 } : { attack: 0.01, decay: 0.25, sustain: 0.5, release: 0.15 }
+    envelope: is808 ? { attack: 0.004, decay: 0.6, sustain: 0.85, release: 0.3 } : { attack: 0.008, decay: 0.3, sustain: 0.6, release: 0.18 }
   }));
-  const bassCh = channel(is808 ? -6 : -8);
+  const bassCh = channel(is808 ? L.bass808 : L.bassSub);
   if (snd.dist > 0) {
     const drive = keep(new Tone.Distortion({ distortion: snd.dist, oversample: "2x", wet: 0.6 }));
     bass.chain(drive, bassCh);
@@ -148,12 +173,14 @@ BG.buildRig = async function (recipe, out) {
   const ch = chordSynth(snd.chords, snd.bright);
   keep(ch.synth);
   const chordFilter = keep(new Tone.Filter(ch.filterFreq, "lowpass"));
-  const chordCh = channel(ch.vol, 0.35 + snd.reverb, 0);
+  // Keep the chords out of the 808's range.
+  const chordHp = keep(new Tone.Filter(220, "highpass"));
+  const chordCh = channel(ch.vol + L.chords, 0.35 + snd.reverb, 0);
   if (lofi) {
     const wobble = keep(new Tone.Vibrato({ frequency: 0.6, depth: 0.12 }));
-    ch.synth.chain(wobble, chordFilter, chordCh);
+    ch.synth.chain(wobble, chordFilter, chordHp, chordCh);
   } else {
-    ch.synth.chain(chordFilter, chordCh);
+    ch.synth.chain(chordFilter, chordHp, chordCh);
   }
 
   let lead = null;
@@ -161,7 +188,7 @@ BG.buildRig = async function (recipe, out) {
     lead = leadSynth(snd.lead);
     keep(lead.synth);
     const delay = keep(new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.25, wet: 0.18 }));
-    lead.synth.chain(delay, channel(lead.vol, 0.3 + snd.reverb, 0.1));
+    lead.synth.chain(delay, channel(lead.vol + L.lead, 0.3 + snd.reverb, 0.1));
   }
 
   let crackle = null;
@@ -185,7 +212,7 @@ BG.buildRig = async function (recipe, out) {
   return {
     recipe,
     mute: {},
-    kick, snareNoise, snareBody, clap, hat, openHat, bass, chords: ch.synth, lead: lead && lead.synth, leadMono: lead && lead.mono, crackle,
+    kick, kickClick, snareNoise, snareBody, clap, hat, openHat, bass, chords: ch.synth, lead: lead && lead.synth, leadMono: lead && lead.mono, crackle,
     dispose() { nodes.forEach((n) => { try { n.unsync && n.unsync(); n.dispose(); } catch (e) { /* already gone */ } }); }
   };
 };
@@ -195,12 +222,24 @@ function playStep(rig, step, time, stepDur) {
   const r = rig.recipe;
   const P = r.patterns;
   const m = rig.mute;
-  const bar = Math.floor(step / BG.STEPS) % BG.BARS;
+  const abs = Math.floor(step / BG.STEPS);
+  const bar = abs % BG.BARS;
   const s = step % BG.STEPS;
   const t = s % 2 === 1 ? time + r.swing * stepDur : time;
+  // Intro: the loop alone. Breakdown: trap and drill drop the drums and 808, the rest drop the hats.
+  const sec = BG.section(abs);
+  const heavy = r.sound.style === "trap" || r.sound.style === "drill";
+  const dropBeat = sec === "intro" || (sec === "break" && heavy);
+  const kickOff = m.kick || dropBeat;
+  const snareOff = m.snare || dropBeat;
+  const hatOff = m.hat || sec === "intro" || (sec === "break" && !heavy);
+  const bassOff = m.bass || dropBeat;
 
-  if (!m.kick && P.kick[bar][s]) rig.kick.triggerAttackRelease(r.sound.style === "lofi" ? 50 : 46, "8n", t, P.kick[bar][s]);
-  if (!m.snare) {
+  if (!kickOff && P.kick[bar][s]) {
+    rig.kick.triggerAttackRelease(r.sound.style === "lofi" ? 50 : 46, "8n", t, P.kick[bar][s]);
+    rig.kickClick.triggerAttackRelease("64n", t, P.kick[bar][s] * 0.8);
+  }
+  if (!snareOff) {
     if (P.snare[bar][s]) {
       rig.snareNoise.triggerAttackRelease("16n", t, P.snare[bar][s]);
       rig.snareBody.triggerAttackRelease(185, "16n", t, P.snare[bar][s] * 0.8);
@@ -212,7 +251,7 @@ function playStep(rig, step, time, stepDur) {
       rig.clap.triggerAttackRelease("16n", t + 0.023, 0.8);
     }
   }
-  if (!m.hat) {
+  if (!hatOff) {
     const h = P.hat[bar][s];
     if (h >= 2) {
       for (let i = 0; i < h; i++) rig.hat.triggerAttackRelease("64n", t + (i * stepDur) / h, 0.45 + 0.4 * (i / h));
@@ -221,7 +260,7 @@ function playStep(rig, step, time, stepDur) {
     }
     if (P.open[bar][s]) rig.openHat.triggerAttackRelease("8n", t, 0.7);
   }
-  if (!m.bass && P.bass[bar][s]) {
+  if (!bassOff && P.bass[bar][s]) {
     // Hold the note until the next one starts.
     let len = 1;
     while (len < 16) {
@@ -230,7 +269,7 @@ function playStep(rig, step, time, stepDur) {
       len++;
     }
     const is808 = r.sound.bass === "808";
-    const dur = Math.min(len, is808 ? 8 : 3) * stepDur * 0.95;
+    const dur = Math.min(len, is808 ? 16 : 3) * stepDur * 0.95;
     rig.bass.portamento = P.slide[bar][s] ? 0.07 : 0;
     rig.bass.triggerAttackRelease(midiHz(P.bass[bar][s]), dur, t, 0.95);
   }
@@ -287,22 +326,53 @@ BG.Player = class {
   setBpm(bpm) { this.transport.bpm.value = bpm; if (this.rig) this.rig.recipe.bpm = bpm; }
 };
 
-// Renders `bars` bars of the recipe to an AudioBuffer, offline and faster than real time.
-BG.renderBuffer = async function (recipe, bars = 8) {
-  const seconds = (bars * 4 * 60) / recipe.bpm + 2.5;
+// Renders 4 bars starting at `startBar`, plus a tail so reverb and 808s can ring out.
+async function renderSection(recipe, startBar) {
+  const barSec = 240 / recipe.bpm;
+  const seconds = BG.BARS * barSec + TAIL;
   const buffer = await Tone.Offline(async (ctx) => {
     const rig = await BG.buildRig(recipe, ctx.destination);
     const transport = ctx.transport;
     transport.bpm.value = recipe.bpm;
-    const total = bars * BG.STEPS;
+    const total = BG.BARS * BG.STEPS;
     transport.scheduleRepeat((time) => {
       const step = Math.round(transport.getTicksAtTime(time) / (transport.PPQ / 4));
-      if (step < total) playStep(rig, step, time, 15 / recipe.bpm);
+      if (step < total) playStep(rig, step + startBar * BG.STEPS, time, 15 / recipe.bpm);
     }, "16n", 0);
     transport.start(0);
-    transport.stop(seconds - 2.5 + 0.05);
+    transport.stop(BG.BARS * barSec);
   }, seconds, 2, 44100);
   return buffer.get();
+}
+const TAIL = 3;
+
+// A full beat of about `minSeconds`: intro, main loops with a breakdown every 32 bars, ending on a main loop.
+// The loop repeats exactly, so each section is rendered once and copied, which keeps the download fast.
+BG.renderSong = async function (recipe, minSeconds = 120) {
+  const barSec = 240 / recipe.bpm;
+  const sections = { intro: 0, main: BG.INTRO_BARS, break: BG.INTRO_BARS + 28 };
+  const plan = ["intro"];
+  let bars = BG.INTRO_BARS;
+  while (bars * barSec < minSeconds || BG.section(bars - 1) !== "main") {
+    plan.push(BG.section(bars));
+    bars += BG.BARS;
+  }
+  const rendered = {};
+  for (const name of new Set(plan)) rendered[name] = await renderSection(recipe, sections[name]);
+  const rate = rendered.intro.sampleRate;
+  const segLen = Math.round(BG.BARS * barSec * rate);
+  const length = segLen * plan.length + Math.round(TAIL * rate);
+  const channels = [new Float32Array(length), new Float32Array(length)];
+  plan.forEach((name, i) => {
+    const buf = rendered[name];
+    for (let c = 0; c < 2; c++) {
+      const src = buf.getChannelData(c);
+      const dst = channels[c];
+      const off = i * segLen;
+      for (let j = 0; j < src.length && off + j < length; j++) dst[off + j] += src[j];
+    }
+  });
+  return { numberOfChannels: 2, length, sampleRate: rate, getChannelData: (c) => channels[c], seconds: length / rate };
 };
 
 BG.encodeWav = function (audioBuffer) {

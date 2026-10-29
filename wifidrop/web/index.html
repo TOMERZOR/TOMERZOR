@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="WiFiDrop">
-<meta name="theme-color" content="#0a84ff">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="/static/manifest.webmanifest">
 <title>WiFiDrop</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/static/icon.png">
@@ -23,6 +26,23 @@
 
 <main id="app">
 
+  <!-- Phone only: make it an app -->
+  <section class="card install" id="install" hidden>
+    <button class="icon-btn close" id="install-close" aria-label="סגירה">×</button>
+    <img src="/static/icon.png" alt="" class="install-icon">
+    <div>
+      <h2>להפוך את WiFiDrop לאפליקציה</h2>
+      <ol>
+        <li>נוגעים בכפתור השיתוף
+          <svg class="share-glyph" viewBox="0 0 24 24" width="18" height="18" aria-label="שיתוף"><path d="M12 15V3m0 0L8 7m4-4 4 4M7 10H5v11h14V10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          של Safari.</li>
+        <li>בוחרים <strong>הוספה למסך הבית</strong> ואז <strong>הוסף</strong>.</li>
+      </ol>
+      <p class="muted">מעכשיו WiFiDrop נפתח מהאייקון, בלי לסרוק שוב.</p>
+    </div>
+  </section>
+  <p class="notice" id="moved" hidden></p>
+
   <!-- PC only: how to connect the phone -->
   <section class="card pc-only" id="connect">
     <div class="qr-wrap"><div id="qr" class="qr" aria-label="קוד QR לחיבור האייפון"></div></div>
@@ -35,6 +55,12 @@
       </ol>
       <p class="muted">או מקלידים ב-Safari:</p>
       <code class="url" id="url" dir="ltr"></code>
+      <p class="stable" id="stable" hidden>כתובת קבועה: <code dir="ltr" id="stable-host"></code><br><span class="muted">אחרי הסריקה הראשונה האייפון עובר אליה לבד, והיא לא משתנה גם כשהנתב מחליף את כתובת המחשב.</span></p>
+      <label class="switch" id="autostart-row" hidden>
+        <input type="checkbox" id="autostart">
+        <span class="track"></span>
+        <span>להפעיל את WiFiDrop אוטומטית כשהמחשב נדלק</span>
+      </label>
       <details id="other-urls" hidden>
         <summary>לא נפתח? נסו כתובת אחרת</summary>
         <ul id="other-list" dir="ltr"></ul>

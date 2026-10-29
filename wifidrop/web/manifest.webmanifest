@@ -1,0 +1,14 @@
+{
+  "name": "WiFiDrop",
+  "short_name": "WiFiDrop",
+  "description": "שליחת קבצים וטקסט בין האייפון למחשב ב-Wi-Fi",
+  "lang": "he",
+  "dir": "rtl",
+  "display": "standalone",
+  "background_color": "#f2f2f7",
+  "theme_color": "#0a84ff",
+  "icons": [
+    { "src": "/static/icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -17,7 +17,7 @@ def _install_wifidrop():
     files = [
         "wifidrop.py", "README.md", "start-windows.bat", "start-mac.command",
         "web/index.html", "web/locked.html", "web/app.css", "web/app.js",
-        "web/icon.svg", "web/icon.png", "web/vendor/qrcode.js",
+        "web/icon.svg", "web/icon.png", "web/manifest.webmanifest", "web/vendor/qrcode.js",
     ]
     target = Path.home() / "WiFiDrop-app"
     print(f"Downloading WiFiDrop to {target} ...")

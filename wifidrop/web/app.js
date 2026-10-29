@@ -374,12 +374,81 @@
       $("other-urls").hidden = false;
       for (const u of info.otherUrls) $("other-list").append(el("li", {}, el("code", {}, u)));
     }
+    if (info.stableUrl) {
+      $("stable").hidden = false;
+      $("stable-host").textContent = `${info.mdnsHost}:${info.port}`;
+    }
+    if (info.autostart !== null) {
+      const box = $("autostart");
+      $("autostart-row").hidden = false;
+      box.checked = info.autostart;
+      box.addEventListener("change", async () => {
+        try {
+          const r = await api("/api/autostart", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: box.checked }),
+          });
+          box.checked = r.autostart;
+          toast(r.autostart ? "WiFiDrop יופעל עם המחשב" : "WiFiDrop לא יופעל אוטומטית");
+        } catch (e) {
+          box.checked = !box.checked;
+          toast(e.message);
+        }
+      });
+    }
     document.querySelectorAll("[data-open]").forEach((b) =>
       b.addEventListener("click", () => api("/api/open", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder: b.dataset.open }),
       }).catch((e) => toast(e.message))));
+  }
+
+  // ---------- permanent address and home screen (phone) ----------
+
+  const standalone = navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  const storage = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } },
+  };
+
+  // Opened by IP (from the QR code)? Move to NAME.local, which survives the PC
+  // getting a new IP, but only once we know that name reaches this same PC.
+  async function moveToStableAddress() {
+    if (!info.mdnsHost || location.hostname === info.mdnsHost) return false;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 3000);
+    try {
+      const res = await fetch(`http://${info.mdnsHost}:${info.port}/api/ping`, { cache: "no-store", signal: ctrl.signal });
+      const ping = await res.json();
+      if (ping.instance !== info.instance) return false;
+    } catch (_) {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+    if (standalone) {
+      // A home screen app can't change its address; offer to add the new one.
+      const note = $("moved");
+      note.replaceChildren("יש ל-WiFiDrop כתובת קבועה. ",
+        el("a", { href: info.stableUrl, target: "_blank", rel: "noopener" }, "פתחו אותה ב-Safari"),
+        " והוסיפו אותה למסך הבית במקום האייקון הזה.");
+      note.hidden = false;
+      return false;
+    }
+    location.replace(info.stableUrl);
+    return true;
+  }
+
+  function offerHomeScreen() {
+    const ios = /iP(hone|od|ad)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (!ios || standalone || storage.get("wd-install-hidden")) return;
+    $("install").hidden = false;
+    $("install-close").addEventListener("click", () => {
+      $("install").hidden = true;
+      storage.set("wd-install-hidden", "1");
+    });
   }
 
   // ---------- start ----------
@@ -392,6 +461,8 @@
       return;
     }
     if (info.host) setupPc();
+    else if (await moveToStableAddress()) return;
+    else offerHomeScreen();
     setupDrop();
     setupText();
     const state = await api("/api/state").catch(() => null);

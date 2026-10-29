@@ -5,6 +5,8 @@
 import "../../examples.js";
 
 export const EXAMPLES = globalThis.ARS_EXAMPLES || [];
+export const ARSIT_EXAMPLES = globalThis.ARSIT_EXAMPLES || [];
+export const PERSONAS = { ars: "ערס", arsit: "ערסית" };
 
 const RULES = `You rewrite Hebrew text the way an Israeli "ars" would say it: a smart ars, someone who grew up in the neighborhood. Same meaning, said in the street.
 
@@ -17,7 +19,11 @@ const RULES = `You rewrite Hebrew text the way an Israeli "ars" would say it: a 
 - If the text isn't in Hebrew, rewrite it into ars Hebrew anyway.
 - When a <previous> version is given, write a clearly different wording of the same message.
 
-Each example shows ordinary Hebrew and one or more ways an ars would say it.`;
+There are two voices, and the <persona> tag says which one to use:
+- ערס (the default): the guy described above.
+- ערסית: a woman from the same neighborhood. She talks about herself in the feminine (אני מתה, אני חייבת, אני מאחרת) and has her own words: יפה שלי, חיים, חיים שלי, מתוקה, כפרה, לבשלי, שימדורה, מאמי, אחותי, אמא, אמאלה, וואנה, יעני, שרופה על, מחילה, בעזרת השם, ברוך השם, חיה בסרט (living in a dream), שחרר ממני / סעי ממני, אל תעלה לי את העצבים / אל תעלי לי את העצבים, אני מתה, אני פיפי (laughing hard, or needing the toilet), יאללה, שומע. She doesn't say אחשלי, יא מלך or the heavy curses.
+
+Each example shows ordinary Hebrew and one or more ways it is said: first the ערס examples, then the ערסית ones.`;
 
 function escapeXml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -31,10 +37,16 @@ export const SYSTEM_PROMPT = [
     `<example><regular>${escapeXml(plain)}</regular>${ars.split("|").map((v) => `<ars>${escapeXml(v.trim())}</ars>`).join("")}</example>`,
   ),
   "</examples>",
+  "",
+  "<arsit_examples>",
+  ...ARSIT_EXAMPLES.map(([plain, ars]) =>
+    `<example><regular>${escapeXml(plain)}</regular>${ars.split("|").map((v) => `<arsit>${escapeXml(v.trim())}</arsit>`).join("")}</example>`,
+  ),
+  "</arsit_examples>",
 ].join("\n");
 
-export function userMessage(text, previous) {
-  let msg = `<text>\n${escapeXml(text)}\n</text>`;
+export function userMessage(text, previous, persona = "ars") {
+  let msg = `<persona>${PERSONAS[persona] || PERSONAS.ars}</persona>\n<text>\n${escapeXml(text)}\n</text>`;
   if (previous) msg += `\n\n<previous>\n${escapeXml(previous)}\n</previous>`;
   return msg;
 }

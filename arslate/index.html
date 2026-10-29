@@ -90,7 +90,7 @@ h1 {
 
 /* ---------- Prompt card ---------- */
 .card {
-  position: relative; margin-top: 36px;
+  position: relative; z-index: 2; margin-top: 36px;
   background: var(--card); border-radius: 28px; box-shadow: var(--shadow);
   padding: 22px 24px 18px;
   transition: box-shadow .5s var(--ease), transform .5s var(--ease);
@@ -110,7 +110,38 @@ textarea {
 textarea::placeholder { color: var(--ink-3); opacity: 1; }
 textarea:focus-visible { outline: none; }
 
-.bar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; min-height: 44px; }
+.bar { position: relative; z-index: 3; display: flex; align-items: center; gap: 12px; margin-top: 6px; min-height: 44px; }
+.tools { position: relative; display: flex; align-items: center; gap: 4px; margin-inline-start: auto; }
+
+/* Model picker, like choosing a model in Claude: the button names the persona, the menu opens under it */
+.model {
+  height: 36px; padding: 0 12px 0 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 15px; font-weight: 600; letter-spacing: -.01em; color: var(--ink-2);
+  transition: background .2s, color .2s, transform .35s var(--spring);
+}
+.model:hover, .model[aria-expanded="true"] { background: var(--line); color: var(--ink); }
+.model:active { transform: scale(.96); }
+.model svg { width: 14px; height: 14px; transition: transform .35s var(--spring); }
+.model[aria-expanded="true"] svg { transform: rotate(180deg); }
+.menu {
+  position: absolute; top: calc(100% + 10px); left: 0; z-index: 20; width: 270px; padding: 6px;
+  background: var(--card); border-radius: 20px;
+  box-shadow: 0 0 0 1px var(--line), 0 18px 40px -12px rgba(30, 60, 110, .3), 0 4px 12px -4px rgba(30, 60, 110, .12);
+  transform-origin: top left; opacity: 0; transform: translateY(-6px) scale(.96); pointer-events: none;
+  transition: opacity .2s var(--ease), transform .35s var(--spring);
+}
+.menu.open { opacity: 1; transform: none; pointer-events: auto; }
+.opt {
+  width: 100%; display: grid; grid-template-columns: 1fr 20px; align-items: center; gap: 2px 10px; text-align: start;
+  padding: 11px 12px; border-radius: 14px; transition: background .15s;
+}
+.opt:hover, .opt:focus-visible { background: var(--card-2); outline: none; }
+.opt b { font-size: 16px; font-weight: 700; letter-spacing: -.015em; color: var(--ink); }
+.opt span { grid-column: 1; font-size: 13px; color: var(--ink-3); line-height: 1.35; }
+.opt svg { grid-row: 1 / span 2; grid-column: 2; width: 18px; height: 18px; color: var(--ink); opacity: 0; transform: scale(.6); transition: opacity .2s, transform .35s var(--spring); }
+.opt[aria-checked="true"] svg { opacity: 1; transform: none; }
+h1 .who { display: inline-block; transition: opacity .25s var(--ease), transform .45s var(--spring); }
+h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
 .clear {
   height: 32px; padding: 0 12px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--ink-3);
   opacity: 0; transform: scale(.9); pointer-events: none; transition: opacity .25s var(--ease), transform .35s var(--spring), color .2s, background .2s;
@@ -190,7 +221,7 @@ textarea:focus-visible { outline: none; }
 </header>
 
 <main class="col" id="app">
-  <h1 class="in">מדברים כמו ערס.</h1>
+  <h1 class="in">מדברים כמו <span class="who" id="who">ערס</span>.</h1>
   <p class="sub in">כותבים בעברית, מקבלים ערסית.</p>
 
   <form class="card in" id="form" autocomplete="off">
@@ -201,7 +232,23 @@ textarea:focus-visible { outline: none; }
         <span class="ring" aria-hidden="true"></span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
       </button>
-      <button class="clear" id="clear" type="button">ניקוי</button>
+      <div class="tools">
+        <button class="clear" id="clear" type="button">ניקוי</button>
+        <button class="model" id="model" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="menu">
+          <span id="modelName">ערס 3.5</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="menu" id="menu" role="menu" aria-label="בחירת מודל">
+          <button class="opt" type="button" role="menuitemradio" data-persona="ars" aria-checked="true">
+            <b>ערס 3.5</b><span>הכי חזק בשכונה. לכל משימה.</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          </button>
+          <button class="opt" type="button" role="menuitemradio" data-persona="arsit" aria-checked="false">
+            <b>ערסית 2.5</b><span>חדה, מהירה ושרופה על כל דבר.</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          </button>
+        </div>
+      </div>
     </div>
   </form>
 
@@ -246,6 +293,14 @@ textarea:focus-visible { outline: none; }
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let variant = 0, timer = 0, current = null, copyTimer = 0;
 
+  /* בחירת מודל: ערס 3.5 או ערסית 2.5. נשמר בדפדפן */
+  const PERSONAS = {
+    ars: { name: "ערס 3.5", who: "ערס", hints: ["מה שלומך?", "אני מאחר קצת, אני תקוע בפקק", "תודה רבה על העזרה", "זה יקר מדי, תן לי הנחה", "אני אוהב אותך"] },
+    arsit: { name: "ערסית 2.5", who: "ערסית", hints: ["מה שלומך?", "זה מצחיק מאוד", "אני מאחרת קצת", "תפסיק להציק לי", "אני מאוד רוצה את השמלה הזאת"] }
+  };
+  let persona = "ars";
+  try { if (PERSONAS[localStorage.getItem("arslate.persona")]) persona = localStorage.getItem("arslate.persona"); } catch (e) {}
+
   function grow() {
     src.style.height = "auto";
     src.style.height = src.scrollHeight + "px";
@@ -276,7 +331,7 @@ textarea:focus-visible { outline: none; }
   const API = String((window.ARSLATE_CONFIG || {}).apiBase || "").replace(/\/+$/, "");
   let reqId = 0, inflight = null;
 
-  function local() { return Arslate.translate(src.value, variant); }
+  function local() { return Arslate.translate(src.value, variant, persona); }
 
   async function run() {
     if (!API) { render(local()); return; }
@@ -288,7 +343,7 @@ textarea:focus-visible { outline: none; }
       const res = await fetch(API + "/api/translate", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text: src.value.slice(0, 600), previous: variant && current ? current.text : undefined }),
+        body: JSON.stringify({ text: src.value.slice(0, 600), previous: variant && current ? current.text : undefined, persona }),
         signal: inflight.signal,
       });
       const data = res.ok ? await res.json() : null;
@@ -374,12 +429,54 @@ textarea:focus-visible { outline: none; }
     speechSynthesis.speak(u);
   });
 
+  /* תפריט המודלים */
+  const modelBtn = $("model"), menu = $("menu"), opts = [...menu.querySelectorAll(".opt")];
+  function setMenu(open) {
+    menu.classList.toggle("open", open);
+    modelBtn.setAttribute("aria-expanded", String(open));
+    if (open) (opts.find(o => o.dataset.persona === persona) || opts[0]).focus();
+  }
+  function applyPersona(p, animate) {
+    persona = p;
+    $("modelName").textContent = PERSONAS[p].name;
+    opts.forEach(o => o.setAttribute("aria-checked", String(o.dataset.persona === p)));
+    const who = $("who");
+    if (animate && !reduced) {
+      who.classList.add("swap");
+      setTimeout(() => { who.textContent = PERSONAS[p].who; who.classList.remove("swap"); }, 180);
+    } else who.textContent = PERSONAS[p].who;
+    hintReset = true;
+  }
+  modelBtn.addEventListener("click", e => { e.stopPropagation(); setMenu(!menu.classList.contains("open")); });
+  opts.forEach(o => o.addEventListener("click", () => {
+    const p = o.dataset.persona;
+    setMenu(false);
+    modelBtn.focus();
+    if (p === persona) return;
+    applyPersona(p, true);
+    try { localStorage.setItem("arslate.persona", p); } catch (e) {}
+    if (src.value.trim()) { variant = 0; app.classList.add("busy"); clearTimeout(timer); timer = setTimeout(run, 160); }
+  }));
+  document.addEventListener("click", e => { if (!menu.contains(e.target)) setMenu(false); });
+  document.addEventListener("keydown", e => {
+    if (!menu.classList.contains("open")) return;
+    if (e.key === "Escape") { setMenu(false); modelBtn.focus(); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const i = opts.indexOf(document.activeElement);
+      opts[(i + (e.key === "ArrowDown" ? 1 : opts.length - 1)) % opts.length].focus();
+    }
+  });
+  let hintReset = false;
+  applyPersona(persona, false);
+
   /* הטקסט המעומעם בתיבה מקליד דוגמאות, כל עוד היא ריקה */
-  const HINTS = ["מה שלומך?", "אני מאחר קצת, אני תקוע בפקק", "תודה רבה על העזרה", "זה יקר מדי, תן לי הנחה", "אני אוהב אותך"];
   if (!reduced) {
     let h = 0, c = 0, dir = 1;
     (function tick() {
-      const text = HINTS[h];
+      if (hintReset) { hintReset = false; h = 0; c = 0; dir = 1; }
+      const HINTS = PERSONAS[persona].hints;
+      const text = HINTS[h % HINTS.length];
       let wait = 55;
       if (src.value) { setTimeout(tick, 600); return; }
       c += dir;

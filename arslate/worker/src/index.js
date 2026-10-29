@@ -1,6 +1,6 @@
 // ArsLate API (Cloudflare Worker). Routes:
 //   GET  /api/health      what this deployment can do
-//   POST /api/translate   {text, previous?} -> {text, model}
+//   POST /api/translate   {text, previous?, persona?: "ars" | "arsit"} -> {text, model}
 //
 // Bindings (all optional except the key): ANTHROPIC_API_KEY (secret),
 // ARSLATE_KV (KV namespace for caching and daily limits), ALLOWED_ORIGINS,
@@ -75,7 +75,7 @@ export function cleanText(value) {
   return value.normalize("NFC").replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, " ").replace(/[ \t]+/g, " ").trim();
 }
 
-export async function translate({ text, previous, env }) {
+export async function translate({ text, previous, persona, env }) {
   const client = new Anthropic({
     apiKey: env.ANTHROPIC_API_KEY,
     ...(env.ANTHROPIC_BASE_URL ? { baseURL: env.ANTHROPIC_BASE_URL } : {}),
@@ -87,7 +87,7 @@ export async function translate({ text, previous, env }) {
     model,
     max_tokens: 4000,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: userMessage(text, previous) }],
+    messages: [{ role: "user", content: userMessage(text, previous, persona) }],
     output_config: { effort: env.ARSLATE_EFFORT || "low" },
     ...(FALLBACK_MODELS.has(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {}),
   });
@@ -112,19 +112,20 @@ async function handleTranslate(request, env, cors) {
   if (!text) return json({ error: "empty" }, 400, cors);
   if (text.length > MAX_CHARS) return json({ error: "too_long", max: MAX_CHARS }, 413, cors);
   const previous = cleanText(body.previous).slice(0, MAX_CHARS * 2) || null;
+  const persona = body.persona === "arsit" ? "arsit" : "ars";
 
   // Only first versions are cached; "another version" always asks again.
-  const cacheKey = env.ARSLATE_KV && !previous ? `tr:${await sha256(text)}` : null;
+  const cacheKey = env.ARSLATE_KV && !previous ? `tr:${persona}:${await sha256(text)}` : null;
   if (cacheKey) {
     const hit = await env.ARSLATE_KV.get(cacheKey);
     if (hit) return json({ text: hit, cached: true }, 200, cors);
   }
   if (!(await takeQuota(env, request))) return json({ error: "daily_limit" }, 429, cors);
 
-  const res = await translate({ text, previous, env });
+  const res = await translate({ text, previous, persona, env });
   // One line per translation for cost tracking (wrangler tail / Workers logs).
   const u = res.usage || {};
-  console.log(JSON.stringify({ event: "translate", model: res.model, chars: text.length, refused: Boolean(res.refused), input_tokens: u.input_tokens, output_tokens: u.output_tokens, cache_read: u.cache_read_input_tokens }));
+  console.log(JSON.stringify({ event: "translate", persona, model: res.model, chars: text.length, refused: Boolean(res.refused), input_tokens: u.input_tokens, output_tokens: u.output_tokens, cache_read: u.cache_read_input_tokens }));
   if (res.refused) return json({ error: "refused" }, 422, cors);
   if (!res.text || res.truncated) return json({ error: "no_text" }, 502, cors);
   if (cacheKey) await env.ARSLATE_KV.put(cacheKey, res.text, { expirationTtl: CACHE_TTL });

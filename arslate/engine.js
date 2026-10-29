@@ -17,6 +17,7 @@
   const PHRASES = Object.create(null);
   const NOUNS = Object.create(null);
   const STAND = Object.create(null);
+  const ARSIT = Object.create(null); // נוסחים של ערסית 2.5 שגוברים על המילון הרגיל
   let entryCount = 0;
   (function parse(src) {
     let target = PHRASES;
@@ -26,6 +27,7 @@
       if (line === "@phrases") { target = PHRASES; continue; }
       if (line === "@nouns") { target = NOUNS; continue; }
       if (line === "@stand") { target = STAND; continue; }
+      if (line === "@arsit") { target = ARSIT; continue; }
       const eq = line.indexOf("=");
       if (eq < 0) continue;
       const variants = line.slice(eq + 1).split("|").map(s => s.trim());
@@ -44,6 +46,11 @@
     const key = sentenceKey(src);
     if (key) { EXAMPLES[key] = dst.split("|").map(v => v.trim()); entryCount++; }
   }
+  const ARSIT_EXAMPLES = Object.create(null);
+  for (const [src, dst] of ((typeof window !== "undefined" ? window : globalThis).ARSIT_EXAMPLES || [])) {
+    const key = sentenceKey(src);
+    if (key) { ARSIT_EXAMPLES[key] = dst.split("|").map(v => v.trim()); entryCount++; }
+  }
   function sentenceKey(s) {
     return tokenize(norm(s)).filter(t => t.w).map(t => t.n.replace(/'$/, "")).join(" ");
   }
@@ -58,7 +65,11 @@
   });
   const ADDR_F = ["אחותי", "אחותי", "נשמה", "נשמה", "כפרה", "כפרה עלייך", "יא מלכה", "מלכה", "מאמי", "בובה", "נסיכה", "יא נסיכה",
     "חיים שלי", "יא חיים שלי", "נשמה שלי", "מותק", "יא מותק", "יא זהב", "בובה שלי", "אחותי היקרה", "צדיקה"];
-  const ADDR_ALL = new Set(ADDR_M.concat(ADDR_F));
+  /* ערסית 2.5: הפניות שלה. בלי לדעת למי היא מדברת, רק פניות שמתאימות לשני המינים */
+  const ADDR_AN = weighted({ "חיים שלי": 4, "כפרה": 3, "לבשלי": 3, "מאמי": 2, "חיים": 2, "נשמה": 2, "כפרה עליך": 1 });
+  const ADDR_AF = weighted({ "יפה שלי": 3, "מתוקה": 3, "אחותי": 3, "חיים שלי": 3, "כפרה": 2, "מאמי": 2, "לבשלי": 2,
+    "שימדורה": 1, "אמא": 1, "חיים": 1, "כפרה עלייך": 1 });
+  const ADDR_ALL = new Set(ADDR_M.concat(ADDR_F, ADDR_AN, ADDR_AF));
 
   /* פתיחים וסיומות לפי סוג משפט */
   const OPEN = {
@@ -83,8 +94,41 @@
   /* קללות: אחת למשפט מספיקה */
   const CURSE_RE = /כוסאומו|כושלירבאק|מזדיין|להזדיין|תזדיין|אינעל|מזיין|לזיין/;
 
+  const OPEN_ARSIT = {
+    plain: ["וואנה,", "יעני,", "אמאלה,", "יאללה,", "שומע,", "{A},", "{A},", "וואלה,"],
+    question: ["שומע {A},", "{A},", "יעני,", "וואנה,"],
+    anger: ["וואנה,", "אמאלה,", "{A}, שומע,", "יעני,"],
+    love: ["{A},", "וואנה {A},", "אמאלה,"],
+    sad: ["אמאלה,", "{A},", "וואנה,"],
+    excited: ["אמאלה,", "וואנה,", "{A},", "יאללה,"]
+  };
+  const CLOSE_ARSIT = {
+    plain: [" {A}", " {A}", " {A}", ", בעזרת השם", ", ברוך השם", ", יעני", ", אני מתה", ", באמא שלי"],
+    question: [" {A}", " {A}", ", יעני"],
+    anger: [" {A}", ", אמאלה", ", יעני", ", באמא שלי"],
+    love: [" {A}", " {A}", ", אני מתה עליך", ", ביקר לי"],
+    sad: [" {A}", ", מה לעשות", ", בעזרת השם"],
+    excited: [" {A}", ", אני מתה", ", אני פיפי", ", אמאלה"]
+  };
+  /* היא מדברת על עצמה בלשון נקבה */
+  const SPEAKER_F = [
+    ["אני מת", "אני מתה"], ["מת על", "מתה על"], ["מת לראות", "מתה לראות"], ["מת מרעב", "מתה מרעב"], ["מת מצחוק", "מתה מצחוק"],
+    ["משוגע על", "משוגעת על"], ["אני חייב", "אני חייבת"], ["חייב לחרבן", "חייבת לחרבן"], ["אני מאחר", "אני מאחרת"],
+    ["אני זז", "אני זזה"], ["אני עף", "אני עפה"], ["אני מתקפל", "אני מתקפלת"], ["אני חותך", "אני חותכת"], ["אני מגיע", "אני מגיעה"],
+    ["אני רותח", "אני רותחת"], ["אני מתפוצץ", "אני מתפוצצת"], ["אני מפוצץ", "אני מפוצצת"], ["אני יודע", "אני יודעת"],
+    ["מה אני יודע", "מה אני יודעת"], ["לא קולט", "לא קולטת"], ["לא יודע", "לא יודעת"], ["אני אומר לך", "אני אומרת לך"],
+    ["מה אני, פראייר", "מה אני, פראיירית"], ["פראייר פה", "פראיירית פה"], ["אני טוחן", "אני טוחנת"], ["זורם", "זורמת"],
+    ["אני שבור", "אני שבורה"], ["אני מסדר", "אני מסדרת"], ["אני מטפל", "אני מטפלת"], ["אני רץ", "אני רצה"],
+    ["הייתי אוכל", "הייתי אוכלת"], ["מורעב", "מורעבת"], ["אני בטוח", "אני בטוחה"], ["לא סגור", "לא סגורה"],
+    ["סגור איתך", "סגורה איתך"], ["אני לחוץ", "אני לחוצה"], ["מבואס", "מבואסת"], ["אני מאושר", "אני מאושרת"],
+    ["אני שמח", "אני שמחה"], ["אני גמור", "אני גמורה"], ["אני מפורק", "אני מפורקת"], ["אני הרוס", "אני הרוסה"],
+    ["אני משוגע", "אני משוגעת"], ["אני עסוק", "אני עסוקה"], ["אני מת עליך", "אני מתה עליך"]
+  ];
+  /* פניות גבריות שמגיעות מהמילון או מהדוגמאות מוחלפות בפנייה שלה */
+  const MALE_ADDR_RE = /(^|[^\u05D0-\u05EA'])(אחשלי|אחי|יא מלך|יא גבר|יא ערס|יא ברבור|ברבור|יא נסיך|יא אבא|יא צדיק|יא תותח|יא חביבי)(?=$|[^\u05D0-\u05EA'])/g;
+
   /* מילים שאם המשפט כבר מתחיל בהן, לא מוסיפים פתיח */
-  const NO_OPEN = new Set(["שומע", "שומעת", "כוסאומו", "כושלירבאק", "אהלן", "וואלק", "נודר", "באמא", "ביקר", "בתפילין", "אל", "מה", "יאללה", "וואלה", "שמע", "שמעי", "תקשיב", "תקשיבי", "תגיד", "תגידי", "בוקר", "ערב",
+  const NO_OPEN = new Set(["וואנה", "יעני", "אמאלה", "מחילה", "אני", "שחרר", "סעי", "שומע", "שומעת", "כוסאומו", "כושלירבאק", "אהלן", "וואלק", "נודר", "באמא", "ביקר", "בתפילין", "אל", "מה", "יאללה", "וואלה", "שמע", "שמעי", "תקשיב", "תקשיבי", "תגיד", "תגידי", "בוקר", "ערב",
     "לילה", "שבת", "חג", "יא", "סבבה", "סגור", "בטח", "ברור", "אין", "חלאס", "די", "סחתיין", "מזל", "תודה", "כפרה",
     "סורי", "מחילה", "בכיף", "שלום", "רואים", "וואו", "וואי", "אמאל'ה", "אוף", "בחיי", "בחייאת", "על", "תכלס", "בקיצור",
     "קיצר", "בקיצר", "לחיים", "שנה", "יום", "צהריים", "ערבים", "בוקרים", "רגע", "שנייה", "חכה'לי", "חכי'לי", "תסתום", "תסתמי",
@@ -103,6 +147,8 @@
   const FEM_RE = /(^\s*|[,.!?]\s*)(את|ואת)(?=\s)|(^|[\s,.!?])(בואי|תבואי|תגידי|תעשי|תקשיבי|תשמעי|תראי|תחכי|חכי|תביאי|תלכי|תירגעי|תרגעי|תסלחי|תעזרי|תתקשרי|תשלחי|תשמרי|תפסיקי|תשתקי|תני|קחי|שבי|לכי|יפה שלי|מתוקה|חמודה|יקרה|אהובתי|מאמי|אחותי|גברת|מלכה|נסיכה|בובה|משקרת|צוחקת|רצינית|צודקת|בטוחה|אלייך|עלייך|אותך מתוקה)(?=$|[\s,.!?])/;
   /* מה מחליפים בטקסט שהמנוע מייצר כשפונים לאישה (לא נוגעים במילים שהמשתמש כתב) */
   const FEM_SWAP = [
+    ["שחרר ממני", "סעי ממני"], ["אל תעלה לי את העצבים", "אל תעלי לי את העצבים"], ["אתה חי בסרט", "את חיה בסרט"],
+    ["אתה מעלה לי", "את מעלה לי"],
     ["אתה מלך", "את מלכה"], ["אתה תותח", "את תותחית"], ["אתה מגיע", "את מגיעה"], ["אתה חושב", "את חושבת"],
     ["אתה צריך", "את צריכה"], ["אתה בא", "את באה"], ["אתה מבין", "את מבינה"], ["אתה שומע", "את שומעת"],
     ["אתה קולט", "את קולטת"], ["אתה עושה", "את עושה"], ["אתה מכיר", "את מכירה"], ["אתה סגור", "את סגורה"],
@@ -122,6 +168,7 @@
     ["בוא נרים", "בואי נרים"], ["בוא", "בואי"], ["סע", "סעי"], ["שתחיה", "שתחיי"], ["ותעשה", "ותעשי"], ["שתהיה בריא", "שתהיי בריאה"],
     ["תהיה חזק", "תהיי חזקה"], ["צודק", "צודקת"], ["דיברת", "דיברת"], ["אכלת", "אכלת"]
   ];
+  const SPEAKER_F_RE = SPEAKER_F.map(([m, f]) => [new RegExp("(^|[^" + LETTER + "'])" + esc(m) + "(?=$|[^" + LETTER + "'])", "g"), "$1" + f]);
   const FEM_SWAP_RE = FEM_SWAP.map(([m, f]) => [new RegExp("(^|[^" + LETTER + "'])" + esc(m) + "(?=$|[^" + LETTER + "'])", "g"), "$1" + f]);
 
   /* ---------- כלים ---------- */
@@ -177,16 +224,18 @@
     "שה", "שב", "של", "שמ", "מה", "כה", "ה", "ב", "ל", "מ", "כ"];
 
   /* מחפש ביטוי במילון; מחזיר [variants, prefix] או null */
+  let ARSIT_ON = false; // נקבע בכל תרגום
+  function ph(k) { return (ARSIT_ON && ARSIT[k]) || PHRASES[k]; }
   function lookup(words) {
     const key = words.join(" ");
-    if (PHRASES[key]) return [PHRASES[key], ""];
+    if (ph(key)) return [ph(key), ""];
     if (words.length === 1 && NOUNS[key]) return [NOUNS[key], ""];
     const first = words[0];
     const rest = words.slice(1).join(" ");
     for (const p of ALWAYS_PREFIX) {
       if (first.length > p.length + 1 && first.startsWith(p)) {
         const k = (first.slice(p.length) + (rest ? " " + rest : ""));
-        if (PHRASES[k]) return [PHRASES[k], p];
+        if (ph(k)) return [ph(k), p];
         if (words.length === 1 && NOUNS[k]) return [NOUNS[k], p];
       }
     }
@@ -212,20 +261,31 @@
   }
 
   /* ---------- תרגום ---------- */
-  function translate(input, variant) {
+  function translate(input, variant, persona) {
+    const arsit = persona === "arsit";
+    ARSIT_ON = arsit;
     const t0 = (typeof performance !== "undefined" ? performance : Date).now();
     const clean = input.normalize("NFC").replace(/[֑-ׇ]/g, "").replace(/[׳‘’]/g, "'").replace(/[״“”]/g, '"');
     if (!clean.trim()) return { text: "", score: 0, words: 0, ms: 0 };
 
     const r = rng(hash(norm(clean)) ^ Math.imul((variant | 0) + 1, 0x9E3779B1));
     const fem = FEM_RE.test(" " + norm(clean) + " ");
-    const pool = (fem ? ADDR_F : ADDR_M).slice();
+    const pool = (arsit ? (fem ? ADDR_AF : ADDR_AN) : (fem ? ADDR_F : ADDR_M)).slice();
+    const OP = arsit ? OPEN_ARSIT : OPEN, CL = arsit ? CLOSE_ARSIT : CLOSE;
     const usedAddr = new Set();
     let addrBudget = 0; // כמה פניות מותר עוד (מתחדש בכל משפט שני)
-    const gen = s => (fem ? femify(s) : s);
+    const gen = s => {
+      let o = fem ? femify(s) : s;
+      if (arsit) {
+        for (const [re, to] of SPEAKER_F_RE) o = o.replace(re, to);
+        o = o.replace(MALE_ADDR_RE, (m, pre) => pre + address());
+      }
+      return o;
+    };
 
     // כל הטקסט הוא משפט מהמאגר
-    const whole = EXAMPLES[sentenceKey(clean)];
+    const wk = sentenceKey(clean);
+    const whole = arsit ? (ARSIT_EXAMPLES[wk] || (ARSIT[wk] ? null : EXAMPLES[wk])) : EXAMPLES[wk];
     if (whole) {
       let text = gen(whole[(hash(norm(clean)) + (variant | 0)) % whole.length]);
       const end = clean.trim().match(/[.!?…]+$/);
@@ -293,12 +353,13 @@
         // משפט שעומד לבד
         let out;
         let standalone = false;
-        if (EXAMPLES[key]) {
-          out = gen(EXAMPLES[key][(hash(key) + (variant | 0)) % EXAMPLES[key].length]).replace(/[.!?…]+$/, "");
+        const exList = arsit ? (ARSIT_EXAMPLES[key] || (ARSIT[key] ? null : EXAMPLES[key])) : EXAMPLES[key];
+        if (exList) {
+          out = gen(exList[(hash(key) + (variant | 0)) % exList.length]).replace(/[.!?…]+$/, "");
           replacedWords += words.length;
           standalone = true;
-        } else if (STAND[key] || (words.length === 1 && /^ח{3,}$/.test(key))) {
-          const list = STAND[key] || PHRASES["חחח"];
+        } else if ((arsit && ARSIT[key]) || STAND[key] || (words.length === 1 && /^ח{3,}$/.test(key))) {
+          const list = (arsit && ARSIT[key]) || STAND[key] || ph("חחח");
           out = fill(gen(pick(list, r)), allow);
           replacedWords += words.length;
           standalone = true;
@@ -322,7 +383,7 @@
               const found = lookup(seq.slice(0, L));
               if (found) { hit = found; span = L; idxEnd = idx[L - 1]; break; }
             }
-            if (/^ח{3,}$/.test(tok.n)) { hit = [PHRASES["חחח"], ""]; span = 1; idxEnd = i; }
+            if (/^ח{3,}$/.test(tok.n)) { hit = [ph("חחח"), ""]; span = 1; idxEnd = i; }
             if (hit) {
               let [variants, prefix] = hit;
               if (prefix && /[הבלמכ]/.test(prefix)) {
@@ -337,7 +398,7 @@
               }
               const sofar = pieces.map(p => p.t).join("");
               let v = pick(variants, r);
-              for (let k = 0; k < 3 && v && sofar.includes(v.replace(/\s*\{A\}.*$/, "")); k++) v = pick(variants, r);
+              for (let k = 0; k < 4 && v && sofar.includes(gen(v.replace(/\s*\{A\}.*$/, ""))); k++) v = pick(variants, r);
               const atStart = pieces.every(p => !p.t.trim());
               if (followedByWord) v = v.replace(/,?\s*\{A\}\s*$/, "");
               if (!atStart) v = v.replace(/^\{A\},?\s*/, "");
@@ -370,7 +431,7 @@
         const firstWord = (out.match(WORD_RE) || [""])[0];
         const openChance = standalone ? 0 : isFirst ? 0.8 : 0.3;
         if (!skipDecor && out && !NO_OPEN.has(firstWord) && !ADDR_ALL.has(firstWord) && r() < openChance) {
-          const opens = CURSE_RE.test(out) ? OPEN[mood].filter(o => !CURSE_RE.test(o)) : OPEN[mood];
+          const opens = CURSE_RE.test(out) ? OP[mood].filter(o => !CURSE_RE.test(o)) : OP[mood];
           const op = fill(gen(pick(opens, r)), allow);
           if (op && op !== ",") { out = op.replace(/,?$/, ",") + " " + out; decorations++; }
         }
@@ -379,7 +440,7 @@
         const hasAddrNow = hasAddr || [...usedAddr].some(a => out.includes(a));
         const hasOath = OATH_RE.test(out);
         if (!skipDecor && out && r() < closeChance) {
-          let options = CLOSE[mood];
+          let options = CL[mood];
           if (hasAddrNow || allow.n <= 0) options = options.filter(c => !c.includes("{A}"));
           if (standalone) options = options.filter(c => c.includes("{A}"));
           if (hasOath || isQ) options = options.filter(c => !OATH_RE.test(c));
@@ -413,8 +474,8 @@
   }
 
   /* אם אין בכלל עברית ולא מצאנו כלום */
-  function translateSafe(input, variant) {
-    const res = translate(input, variant);
+  function translateSafe(input, variant, persona) {
+    const res = translate(input, variant, persona);
     if (res.text && !/[א-ת]/.test(input) && !/[א-ת]/.test(res.text)) {
       const lines = ["אחי, תכתוב בעברית. מה אני, גוגל?", "וואלה לא קלטתי, תכתוב בעברית נשמה", "בעברית {A}, בעברית. אנחנו בישראל"];
       res.text = lines[hash(input) % lines.length].replace("{A}", "אחי");

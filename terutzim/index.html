@@ -390,34 +390,47 @@ button { cursor: pointer; }
 }
 
 /* ---------- Endless mode: home ---------- */
-#home { justify-content: flex-start; padding-bottom: 0; }
-#home .clerk-wrap { flex-direction: row; gap: 12px; }
-#home .window { width: 112px; height: 116px; border-radius: 26px 26px 12px 12px; box-shadow: 0 6px 0 var(--ink); }
-#home .window .sign { font-size: 0.66rem; top: 7px; right: 8px; }
-#home .bubble { flex: 1; max-width: none; text-align: right; font-size: 1.05rem; }
-#home .bubble::before { right: -14px; left: auto; top: 50%; bottom: auto; margin: -10px 0 0; border-width: 10px 0 10px 14px; border-color: transparent transparent transparent var(--ink); }
-#home .bubble::after { right: -9px; left: auto; top: 50%; bottom: auto; margin: -7px 0 0; border-width: 7px 0 7px 10px; border-color: transparent transparent transparent var(--card); }
+#home { justify-content: flex-start; padding-bottom: 0; gap: 14px; }
+#home .clerk-wrap { flex-direction: column-reverse; align-items: center; gap: 14px; }
+#home .window { width: 150px; height: 156px; border-radius: 32px 32px 14px 14px; box-shadow: 0 7px 0 var(--ink); }
+#home .window .sign { font-size: 0.76rem; top: 9px; right: 11px; }
+#home .bubble { flex: none; max-width: 20rem; text-align: center; font-size: 1.1rem; }
+#home .bubble::before { right: auto; top: auto; left: 50%; bottom: -15px; margin: 0 0 0 -11px; border-width: 15px 11px 0 11px; border-color: var(--ink) transparent transparent; }
+#home .bubble::after { right: auto; top: auto; left: 50%; bottom: -10px; margin: 0 0 0 -8px; border-width: 11px 8px 0 8px; border-color: var(--card) transparent transparent; }
 
-.level-card { padding: 12px 14px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 12px; }
-.level-badge { grid-row: span 2; width: 52px; height: 52px; border: var(--out); border-radius: 16px; background: var(--purple); color: #fff; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 1.5rem; box-shadow: 0 4px 0 var(--ink); transform: rotate(-4deg); }
-.level-name { font-family: var(--display); font-weight: 700; font-size: 1.15rem; line-height: 1.1; display: flex; justify-content: space-between; gap: 8px; }
+.hero-btn {
+  width: 100%; min-height: 112px; margin-top: 4px; flex-direction: column; gap: 2px;
+  border-radius: 28px; box-shadow: 0 8px 0 var(--ink); animation: heroBob 2.6s ease-in-out infinite;
+}
+.hero-btn .hb-row { display: flex; align-items: center; gap: 12px; font-size: 2.6rem; line-height: 1; }
+.hero-btn svg { width: 44px; height: 44px; }
+.hero-btn small { font-family: var(--body); font-weight: 500; font-size: 0.92rem; opacity: 0.95; }
+.hero-btn:active { transform: translateY(8px); box-shadow: 0 0 0 var(--ink); animation: none; }
+
+.level-card { padding: 6px 2px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px 10px; background: none; border: 0; box-shadow: none; border-radius: 0; }
+.level-badge { grid-row: span 2; width: 36px; height: 36px; border: 2.5px solid var(--ink); border-radius: 11px; background: var(--purple); color: #fff; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 1.1rem; box-shadow: 0 3px 0 var(--ink); transform: rotate(-4deg); }
+.level-name { font-family: var(--display); font-weight: 700; font-size: 1rem; line-height: 1.1; display: flex; justify-content: space-between; gap: 8px; }
 .level-name small { font-family: var(--body); font-weight: 500; font-size: 0.78rem; color: var(--ink-soft); white-space: nowrap; }
-.xpbar { height: 16px; border: 2.5px solid var(--ink); border-radius: 99px; background: var(--soft); overflow: hidden; }
-.xpbar i { display: block; height: 100%; width: 0; background: var(--orange); border-left: 2.5px solid var(--ink); transition: width 0.9s cubic-bezier(.2, .8, .2, 1); }
-.xpbar i[style*="width: 0"] { border-left: 0; }
+.xpbar { height: 12px; border: 2.5px solid var(--ink); border-radius: 99px; background: rgba(255, 255, 255, 0.75); overflow: hidden; }
+.xpbar i { display: block; height: 100%; width: 0; background: var(--orange); transition: width 0.9s cubic-bezier(.2, .8, .2, 1); }
+.score-card .xpbar { height: 16px; background: var(--soft); }
 
-.mix-btn { flex-direction: column; gap: 2px; min-height: 76px; }
-.mix-btn small { font-family: var(--body); font-weight: 500; font-size: 0.82rem; opacity: 0.95; }
-
-.daily { padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; }
-.daily-top { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.daily-q { margin: 0; font-family: var(--display); font-weight: 700; font-size: 1.15rem; line-height: 1.15; }
-.daily .btn { min-height: 46px; padding: 6px 16px; font-size: 1.05rem; }
-.daily-done { margin: 0; font-size: 0.85rem; color: var(--ink-soft); }
+.daily-row {
+  width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  padding: 10px 12px; border: var(--out); border-radius: 18px; background: var(--card); box-shadow: 0 4px 0 var(--ink);
+  text-align: right; transition: transform 0.08s, box-shadow 0.08s;
+}
+.daily-row:active { transform: translateY(4px); box-shadow: none; }
+.dr-q { min-width: 0; font-family: var(--display); font-weight: 600; font-size: 1rem; line-height: 1.2; }
+.dr-x { padding: 2px 10px; border: 2.5px solid var(--ink); border-radius: 99px; background: var(--purple); color: #fff; font-family: var(--display); font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+.daily-done { margin: -6px 0 0; text-align: center; font-size: 0.85rem; color: var(--ink-soft); }
 .daily-done b { font-family: var(--display); color: var(--ink); direction: ltr; display: inline-block; }
 .chip-orange { background: var(--orange); color: #fff; }
+.home-links { display: flex; justify-content: center; gap: 18px; padding: 4px 0 8px; }
+.home-links button { border: 0; background: none; padding: 6px 2px; font-family: var(--display); font-weight: 600; font-size: 1rem; color: var(--ink); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+@keyframes heroBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 
-.section-title { margin: 6px 2px -4px; font-family: var(--display); font-weight: 700; font-size: 1.35rem; display: flex; justify-content: space-between; align-items: baseline; }
+.section-title { margin: 14px 2px -4px; font-family: var(--display); font-weight: 700; font-size: 1.35rem; display: flex; justify-content: space-between; align-items: baseline; }
 .section-title small { font-family: var(--body); font-weight: 500; font-size: 0.85rem; color: var(--ink-soft); }
 .cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .cat {
@@ -533,30 +546,30 @@ button { cursor: pointer; }
   <section class="screen" id="home">
     <div class="clerk-slot"></div>
 
-    <div class="card level-card">
+    <button class="btn btn-green hero-btn" id="playBtn" type="button">
+      <span class="hb-row"><svg viewBox="0 0 24 24" fill="currentColor" stroke="#1E1B2E" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M18.5 12 7 19V5z"/></svg><span id="playLabel">שחק!</span></span>
+      <small id="playSub">שאלה אקראית מכל הקטגוריות</small>
+    </button>
+
+    <div class="level-card">
       <div class="level-badge" id="levelNum">1</div>
       <div class="level-name"><span id="levelName">מתמחה</span><small id="levelNext"></small></div>
       <div class="xpbar"><i id="xpFill"></i></div>
     </div>
 
-    <button class="btn btn-green btn-xl mix-btn" id="playBtn" type="button"><span id="playLabel">שחק עכשיו</span><small id="playSub">שאלה אקראית מכל הקטגוריות</small></button>
+    <button class="daily-row" id="dailyBtn" type="button">
+      <span class="chip chip-orange">טופס היום</span>
+      <span class="dr-q" id="dailyQ"></span>
+      <span class="dr-x" id="dailyX">ניקוד כפול</span>
+    </button>
+    <p class="daily-done" id="dailyDone" hidden></p>
 
-    <div class="card daily">
-      <div class="daily-top">
-        <span class="chip chip-orange">טופס היום · ניקוד כפול</span>
-        <span class="day-no" id="dayNo">#1</span>
-      </div>
-      <p class="daily-q" id="dailyQ"></p>
-      <button class="btn btn-purple" id="dailyBtn" type="button">שחק</button>
-      <p class="daily-done" id="dailyDone" hidden></p>
-    </div>
-
-    <h2 class="section-title">קטגוריות <small id="catsSummary"></small></h2>
+    <h2 class="section-title">או בחרו קטגוריה <small id="catsSummary"></small></h2>
     <div class="cats" id="cats"></div>
 
-    <div class="home-row">
-      <button class="btn" id="howBtn" type="button">איך משחקים?</button>
-      <button class="btn" id="statsBtn" type="button">הסטטיסטיקה שלי</button>
+    <div class="home-links">
+      <button id="howBtn" type="button">איך משחקים?</button>
+      <button id="statsBtn" type="button">הסטטיסטיקה שלי</button>
     </div>
   </section>
 
@@ -1282,6 +1295,40 @@ button { cursor: pointer; }
     return x >= 0.8 ? 3 : x >= 0.6 ? 2 : x >= 0.35 ? 1 : 0;
   }
 
+  // ---------- Progress ----------
+  var LEVELS = [
+    [0, "מתמחה"], [60, "פקיד זוטר"], [160, "פקיד"], [320, "פקיד בכיר"], [550, "רכז"], [850, "ראש מדור"],
+    [1250, "ראש ענף"], [1750, "מנהל אגף"], [2400, "סמנכ״ל"], [3200, "מנכ״ל המשרד"], [4300, "שר התירוצים"]
+  ];
+  function levelOf(xp) {
+    var i = 0;
+    while (i + 1 < LEVELS.length && xp >= LEVELS[i + 1][0]) i++;
+    var next = LEVELS[i + 1];
+    return { i: i, name: LEVELS[i][1], from: LEVELS[i][0], to: next ? next[0] : null, nextName: next ? next[1] : null,
+      frac: next ? (xp - LEVELS[i][0]) / (next[0] - LEVELS[i][0]) : 1 };
+  }
+  function starsFor(score, max) {
+    var x = max ? score / max : 0;
+    return x >= 0.8 ? 3 : x >= 0.6 ? 2 : x >= 0.35 ? 1 : 0;
+  }
+
+  // ---------- Progress ----------
+  var LEVELS = [
+    [0, "מתמחה"], [60, "פקיד זוטר"], [160, "פקיד"], [320, "פקיד בכיר"], [550, "רכז"], [850, "ראש מדור"],
+    [1250, "ראש ענף"], [1750, "מנהל אגף"], [2400, "סמנכ״ל"], [3200, "מנכ״ל המשרד"], [4300, "שר התירוצים"]
+  ];
+  function levelOf(xp) {
+    var i = 0;
+    while (i + 1 < LEVELS.length && xp >= LEVELS[i + 1][0]) i++;
+    var next = LEVELS[i + 1];
+    return { i: i, name: LEVELS[i][1], from: LEVELS[i][0], to: next ? next[0] : null, nextName: next ? next[1] : null,
+      frac: next ? (xp - LEVELS[i][0]) / (next[0] - LEVELS[i][0]) : 1 };
+  }
+  function starsFor(score, max) {
+    var x = max ? score / max : 0;
+    return x >= 0.8 ? 3 : x >= 0.6 ? 2 : x >= 0.35 ? 1 : 0;
+  }
+
   // ---------- Days ----------
   function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
   function dayNumber() { return Math.max(1, Math.round((startOfDay(new Date()) - LAUNCH) / 86400000) + 1); }
@@ -1385,7 +1432,7 @@ button { cursor: pointer; }
   // ---------- The clerk ----------
   var clerkWrap = $("clerkWrap"), clerk = $("clerk"), bubble = $("bubble"), eyes = $("eyes");
   var LINES = {
-    hello: ["הבא בתור!", "כן? מה רצית?", "שב, שב. כלומר תעמוד, אין כיסאות.", "עוד מישהו עם תירוץ?", "בחר קטגוריה. אין לי כל היום. בעצם יש לי."],
+    hello: ["הבא בתור!", "כן? מה רצית?", "שב, שב. כלומר תעמוד, אין כיסאות.", "עוד מישהו עם תירוץ?", "לחץ על הכפתור הירוק. אין לי כל היום. בעצם יש לי."],
     add: ["רשמתי.", "המממ.", "מעניין. תמשיך.", "שמעתי יותר גרועים.", "זה בכלל חוקי?", "נרשם בטופס, לא בלב.", "אני לא שופט. טוב, קצת.", "ככה אמרה גם אמא שלי."],
     del: ["מחקת? כאילו לא היה.", "יפה, גם אני מוחק דברים.", "נמחק. אף אחד לא ראה."],
     dup: ["כבר כתבת את זה. אני רואה הכל.", "שוב? יש לי זיכרון של פיל."],
@@ -1487,17 +1534,17 @@ button { cursor: pointer; }
     renderStreak();
     renderLevel("xpFill", "levelName", "levelNum", "levelNext");
     var cur = state.cur && byId[state.cur.qid] && (state.drafts[state.cur.qid] || []).length ? state.cur : null;
-    $("playLabel").textContent = cur ? "המשיכו את הטופס" : "שחק עכשיו";
+    $("playLabel").textContent = cur ? "המשיכו" : "שחק!";
     $("playSub").textContent = cur ? "“" + byId[cur.qid].text + "”" : "שאלה אקראית מכל הקטגוריות";
     var dq = dailyQuestion();
-    $("dayNo").textContent = "#" + dayNumber();
     $("dailyQ").textContent = dq.text;
     var done = dailyDone();
-    $("dailyBtn").textContent = done ? "תוצאות" : "שחק";
+    $("dailyX").textContent = done ? "הוגש ✓" : "ניקוד כפול";
+    $("dailyBtn").setAttribute("aria-label", "טופס היום: " + dq.text + (done ? ", כבר הוגש" : ", ניקוד כפול"));
     $("dailyDone").hidden = !done;
     if (done) {
       $("dailyDone").textContent = "";
-      $("dailyDone").appendChild(document.createTextNode("הוגש: " + state.days[dayNumber()] + " נק׳ · טופס חדש בעוד "));
+      $("dailyDone").appendChild(document.createTextNode("טופס היום הוגש (" + state.days[dayNumber()] + " נק׳). טופס חדש בעוד "));
       $("dailyDone").appendChild(el("b", "cd", "00:00:00"));
       startTimer();
     } else stopTimer();

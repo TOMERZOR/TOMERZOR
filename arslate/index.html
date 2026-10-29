@@ -254,7 +254,9 @@ textarea:focus-visible { outline: none; }
   </section>
 </main>
 
+<script src="config.js"></script>
 <script src="lexicon.js"></script>
+<script src="examples.js"></script>
 <script src="engine.js"></script>
 <script>
 (function () {
@@ -290,7 +292,34 @@ textarea:focus-visible { outline: none; }
     result.classList.add("open");
   }
 
-  function run() { render(Arslate.translate(src.value, variant)); }
+  /* מצב AI: אם יש שרת (config.js), Claude מנסח מחדש. כל תקלה, מגבלה או סירוב נופלים בשקט למילון שבדפדפן. */
+  const API = String((window.ARSLATE_CONFIG || {}).apiBase || "").replace(/\/+$/, "");
+  let reqId = 0, inflight = null;
+
+  function local() { return Arslate.translate(src.value, variant); }
+
+  async function run() {
+    if (!API) { render(local()); return; }
+    const id = ++reqId;
+    if (inflight) inflight.abort();
+    inflight = new AbortController();
+    const kill = setTimeout(() => inflight.abort(), 12000);
+    try {
+      const res = await fetch(API + "/api/translate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text: src.value.slice(0, 600), previous: variant && current ? current.text : undefined }),
+        signal: inflight.signal,
+      });
+      const data = res.ok ? await res.json() : null;
+      if (id !== reqId) return;
+      render(data && data.text ? { text: data.text } : local());
+    } catch (err) {
+      if (id === reqId) render(local());
+    } finally {
+      clearTimeout(kill);
+    }
+  }
 
   function onInput(delay) {
     const has = !!src.value.trim();
@@ -299,7 +328,8 @@ textarea:focus-visible { outline: none; }
     $("clear").classList.toggle("on", !!src.value.length);
     grow();
     clearTimeout(timer);
-    if (!has) { render(null); return; }
+    if (!has) { reqId++; render(null); return; }
+    if (API && delay == null) return; // עם שרת מתרגמים בשליחה, לא בכל הקלדה
     app.classList.add("busy");
     timer = setTimeout(run, delay == null ? 450 : delay);
   }
@@ -318,7 +348,7 @@ textarea:focus-visible { outline: none; }
   });
 
   $("clear").addEventListener("click", () => { src.value = ""; variant = 0; onInput(); src.focus(); });
-  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, 220); });
+  $("again").addEventListener("click", () => { variant++; app.classList.add("busy"); setTimeout(run, API ? 0 : 220); });
 
   $("copy").addEventListener("click", async () => {
     if (!current) return;

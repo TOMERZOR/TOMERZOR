@@ -37,6 +37,16 @@
     }
   })(window.ARS_LEXICON || "");
 
+  /* משפטים שלמים מתוך מאגר הדוגמאות (examples.js): התרגום המדויק שלהם */
+  const EXAMPLES = Object.create(null);
+  for (const [src, dst] of ((typeof window !== "undefined" ? window : globalThis).ARS_EXAMPLES || [])) {
+    const key = sentenceKey(src);
+    if (key) { EXAMPLES[key] = dst.split("|").map(v => v.trim()); entryCount++; }
+  }
+  function sentenceKey(s) {
+    return tokenize(norm(s)).filter(t => t.w).map(t => t.n.replace(/'$/, "")).join(" ");
+  }
+
   /* ---------- פניות ---------- */
   const ADDR_M = ["אחי", "אחי", "אחשלי", "אח שלי", "נשמה", "כפרה", "כפרה עליך", "יא מלך", "מלך", "יא גבר",
     "חביבי", "יא חביבי", "צדיק", "יא צדיק", "יא תותח", "אלוף", "יא אלוף", "יא בוס", "חיים שלי", "עיני",
@@ -89,7 +99,7 @@
     ["אתה רציני", "את רצינית"], ["אתה יכול", "את יכולה"], ["אתה מחרטט", "את מחרטטת"], ["אתה עובד", "את עובדת"],
     ["אתה מספר", "את מספרת"], ["אתה מסתכל", "את מסתכלת"], ["אתה נלחץ", "את נלחצת"], ["אתה פה", "את פה"],
     ["אתה יקר", "את יקרה"], ["אתה הכל", "את הכל"], ["אתה לא", "את לא"], ["אתה רוצה", "את רוצה"],
-    ["מה אתה", "מה את"], ["אתה", "את"],
+    ["מה אתה", "מה את"], ["אתה", "את"], ["אחי", "אחותי"], ["אחשלי", "אחותי"], ["יא גבר", "יא מלכה"],
     ["עליך", "עלייך"], ["אליך", "אלייך"], ["בשבילך", "בשבילך"], ["שמע", "שמעי"], ["תקשיב", "תקשיבי"], ["תשמע", "תשמעי"],
     ["תגיד", "תגידי"], ["תראה", "תראי"], ["תסתכל", "תסתכלי"], ["תירגע", "תירגעי"], ["תעשה", "תעשי"], ["תסדר", "תסדרי"],
     ["תקפוץ", "תקפצי"], ["תביא", "תביאי"], ["תן", "תני"], ["קח", "קחי"], ["תוריד", "תורידי"], ["שב", "שבי"],
@@ -203,6 +213,16 @@
     let addrBudget = 0; // כמה פניות מותר עוד (מתחדש בכל משפט שני)
     const gen = s => (fem ? femify(s) : s);
 
+    // כל הטקסט הוא משפט מהמאגר
+    const whole = EXAMPLES[sentenceKey(clean)];
+    if (whole) {
+      let text = gen(whole[(hash(norm(clean)) + (variant | 0)) % whole.length]);
+      const end = clean.trim().match(/[.!?…]+$/);
+      if (end && !/[.!?…]$/.test(text)) text += end[0];
+      const ms = (typeof performance !== "undefined" ? performance : Date).now() - t0;
+      return { text, score: 97 + (hash(text) % 3), words: sentenceKey(clean).split(" ").length, ms, fem };
+    }
+
     function address() {
       let choices = pool.filter(a => !usedAddr.has(a));
       if (!choices.length) choices = pool;
@@ -262,7 +282,11 @@
         // משפט שעומד לבד
         let out;
         let standalone = false;
-        if (STAND[key] || (words.length === 1 && /^ח{3,}$/.test(key))) {
+        if (EXAMPLES[key]) {
+          out = gen(EXAMPLES[key][(hash(key) + (variant | 0)) % EXAMPLES[key].length]).replace(/[.!?…]+$/, "");
+          replacedWords += words.length;
+          standalone = true;
+        } else if (STAND[key] || (words.length === 1 && /^ח{3,}$/.test(key))) {
           const list = STAND[key] || PHRASES["חחח"];
           out = fill(gen(pick(list, r)), allow);
           replacedWords += words.length;

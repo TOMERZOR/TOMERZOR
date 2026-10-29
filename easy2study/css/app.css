@@ -1016,3 +1016,102 @@ html, body { overflow-x: hidden; max-width: 100%; }
 .sumsheet__terms dt { font-weight: 700; }
 .sumsheet__terms dd { margin: 0; color: var(--ink-2); font-size: .92em; }
 .sumsheet--todo { box-shadow: none; background: transparent; border: 1.5px dashed var(--line); }
+
+/* ---------- Diagrams ----------
+   Every part has --d (its order). With .viz--play the parts build up one by
+   one; the replay button restarts it. Reduced motion shows them at once. */
+.viz { position: relative; margin: 4px 0 0; padding: 16px 14px 12px; border-radius: 20px; background: var(--surface-2); display: grid; gap: 12px; }
+.viz figcaption { font-size: .84em; color: var(--ink-2); text-align: center; padding-inline: 34px; min-height: 22px; letter-spacing: var(--ls); word-spacing: var(--ws); }
+.viz__replay { position: absolute; bottom: 6px; inset-inline-end: 6px; width: 34px; height: 34px; border-radius: 999px; display: grid; place-items: center; color: var(--ink-3); transition: background var(--t-fast), color var(--t-fast); }
+.viz__replay:hover { background: var(--surface); color: var(--ink); }
+.viz .visual { padding: 0; }
+.viz--pie, .viz--pies, .viz--cycle { background: transparent; padding: 4px 0 0; }
+.viz--pie .viz__replay, .viz--pies .viz__replay { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .viz--play .viz-in { animation: viz-in 520ms var(--ease-out) both; animation-delay: calc(var(--d, 0) * 160ms + 120ms); }
+  .viz--play .viz-pop { animation: viz-pop 520ms var(--ease-out) both; animation-delay: calc(var(--d, 0) * 180ms + 120ms); }
+  .viz--play .viz-drop { animation: viz-drop 560ms var(--ease-out) both; animation-delay: calc(var(--d, 0) * 220ms + 300ms); }
+  .viz--play .vbar__fill { animation: viz-grow 900ms var(--ease-out) both; animation-delay: calc(var(--d, 0) * 140ms + 200ms); }
+  .viz--play .vbar { animation: viz-in 420ms var(--ease-out) both; animation-delay: calc(var(--d, 0) * 140ms + 80ms); }
+  .viz--play .vtime li::before, .viz--play .vflow li:not(:last-child)::after { animation: viz-line 600ms var(--ease-out) both; animation-delay: calc(var(--d, 0) * 160ms + 320ms); }
+  .viz--play .vnum__axis { stroke-dasharray: 310; animation: viz-draw 700ms var(--ease-out) both; }
+  .ringc__spin { animation: ring-spin 6s linear infinite; }
+}
+@keyframes viz-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes viz-pop { 0% { opacity: 0; transform: scale(.6); } 70% { opacity: 1; transform: scale(1.06); } 100% { transform: none; } }
+@keyframes viz-drop { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: none; } }
+@keyframes viz-grow { from { transform: scaleX(0); } to { transform: scaleX(var(--w)); } }
+@keyframes viz-line { from { transform: scaleY(0); } }
+@keyframes viz-draw { from { stroke-dashoffset: 310; } to { stroke-dashoffset: 0; } }
+@keyframes ring-spin { to { transform: rotate(360deg); } }
+
+/* flow: numbered stages joined by a line */
+.vflow { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.vflow li { position: relative; display: flex; gap: 12px; align-items: flex-start; }
+.vflow li:not(:last-child)::after { content: ""; position: absolute; inset-inline-start: 15px; top: 34px; bottom: -12px; width: 2px; background: color-mix(in srgb, var(--accent) 45%, transparent); transform-origin: top; }
+.vflow__n { width: 32px; height: 32px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: .85em; position: relative; z-index: 1; }
+.vflow__t { display: grid; padding-top: 4px; }
+.vflow__t b { font-weight: 600; }
+.vflow__t small, .vtree__kid small, .ringc__legend span { color: var(--ink-2); font-size: .84em; line-height: 1.5; }
+.vflow__loop { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: .8em; font-weight: 600; }
+
+/* a short cycle as a ring, with a dot going round */
+.ringc { position: relative; width: min(100%, 290px); aspect-ratio: 1; margin: 6px auto 0; }
+.ringc__track { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ringc__track circle { fill: none; stroke: color-mix(in srgb, var(--accent) 40%, transparent); stroke-width: 1.2; stroke-dasharray: 2.5 2.5; }
+.ringc__spin { position: absolute; inset: 14%; }
+.ringc__spin i { position: absolute; top: -5px; left: calc(50% - 5px); width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); }
+.ringc__node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 4px; width: 38%; padding: 8px 6px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow); text-align: center; font-size: .8em; font-weight: 600; line-height: 1.3; }
+.viz--play .ringc__node.viz-pop { animation-name: ring-pop; }
+@keyframes ring-pop { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 70% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); } 100% { transform: translate(-50%, -50%); } }
+.ringc__node b { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: .85em; }
+.ringc__legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ringc__legend li { display: flex; gap: 8px; align-items: baseline; }
+.ringc__legend b { width: 20px; height: 20px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: .72em; }
+
+/* timeline */
+.vtime { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.vtime li { position: relative; display: grid; grid-template-columns: 94px 14px minmax(0, 1fr); gap: 10px; align-items: start; }
+.vtime li:not(:last-child)::before { content: ""; position: absolute; top: 18px; bottom: -14px; inset-inline-start: 110px; width: 2px; background: color-mix(in srgb, var(--accent) 40%, transparent); transform-origin: top; }
+.vtime__date { justify-self: start; max-width: 100%; padding: 2px 7px; border-radius: 8px; background: var(--surface); font-weight: 700; font-size: .78em; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vtime__dot { width: 14px; height: 14px; margin-top: 5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 20%, transparent); position: relative; z-index: 1; }
+.vtime__t { font-size: .92em; line-height: 1.5; }
+
+/* bars (horizontal, growing from the start side) */
+.vbars { display: grid; gap: 10px; }
+.vbar { display: grid; grid-template-columns: minmax(70px, 30%) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: .88em; }
+.vbar__l { font-weight: 600; line-height: 1.3; }
+.vbar__track { height: 22px; }
+.vbar__fill { display: block; height: 100%; border-radius: 8px; background: var(--accent); transform: scaleX(var(--w)); transform-origin: right; }
+.vbar__v { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vbar__v small { font-weight: 500; color: var(--ink-3); }
+
+/* compare */
+.vcmp { display: grid; grid-template-columns: repeat(var(--c), minmax(0, 1fr)); gap: 6px; font-size: .88em; }
+.vcmp__h { padding: 8px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); text-align: center; font-weight: 700; line-height: 1.3; }
+.vcmp__c { padding: 8px; border-radius: 12px; background: var(--surface); text-align: center; line-height: 1.4; }
+
+/* tree: a whole and its parts */
+.vtree { display: grid; justify-items: center; }
+.vtree__root { padding: 8px 18px; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 700; text-align: center; }
+.vtree__kids { position: relative; width: 100%; margin-top: 16px; padding-top: 16px; display: grid; grid-template-columns: repeat(var(--c), minmax(0, 1fr)); gap: 8px; }
+.vtree__kids::before { content: ""; position: absolute; top: -16px; left: 50%; width: 2px; height: 16px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.vtree__kids::after { content: ""; position: absolute; top: 0; left: 12%; right: 12%; height: 2px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.vtree__kid { position: relative; display: grid; gap: 2px; padding: 10px 8px; border-radius: 14px; background: var(--surface); text-align: center; font-size: .88em; line-height: 1.35; }
+.vtree__kid::before { content: ""; position: absolute; top: -16px; left: 50%; width: 2px; height: 16px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+/* number line (SVG, always left to right like in math books) */
+.vnum { width: 100%; height: auto; overflow: visible; font-family: var(--font); }
+.vnum line, .vnum__axis { stroke: var(--ink-3); stroke-width: 1.5; }
+.vnum__arrow { fill: var(--ink-3); }
+.vnum text { fill: var(--ink-2); font-size: 11px; text-anchor: middle; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: plaintext; }
+.vnum__pt circle { fill: var(--accent); stroke: var(--surface-2); stroke-width: 3; }
+.vnum__pt .vnum__lbl { fill: var(--ink); font-size: 12px; font-weight: 700; }
+
+/* equation: each part with what it means under it */
+.veq { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 8px 6px; }
+.veq__p { display: grid; justify-items: center; gap: 4px; padding: 8px; border-radius: 14px; background: var(--surface); min-width: 46px; }
+.veq__p b { font-size: 1.35em; font-weight: 700; line-height: 1.2; }
+.veq__p small { font-size: .7em; color: var(--ink-2); text-align: center; max-width: 7.5em; line-height: 1.3; }
+.veq__p--op { background: transparent; min-width: 0; padding: 8px 2px; }
+.veq__p--op b { color: var(--accent); }

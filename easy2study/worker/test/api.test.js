@@ -4,7 +4,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import worker, { cleanProfile, cleanCourse, cleanExamCourse } from "../src/index.js";
-import { SYSTEM_PROMPT } from "../src/prompt.js";
+import { SYSTEM_PROMPT, LESSON_SCHEMA, VISUAL_TYPES } from "../src/prompt.js";
 
 let reply = null; // what the fake Claude answers next
 const seen = []; // request bodies it received
@@ -313,4 +313,11 @@ test("a practice test needs the path's chapters", async () => {
   const res = await worker.fetch(post("/api/exam", { topic: "x", course: { chapters: [] } }), env());
   assert.equal(res.status, 400);
   assert.equal(cleanExamCourse({ chapters: ["א"], syllabus: ["x"] }).title, "א");
+});
+
+test("every bite carries a diagram slot the app knows how to draw", () => {
+  const bite = LESSON_SCHEMA.properties.bites.items;
+  assert.ok(bite.required.includes("visual"));
+  assert.deepEqual(bite.properties.visual.properties.type.enum, VISUAL_TYPES);
+  for (const t of VISUAL_TYPES.filter((x) => x !== "none")) assert.match(SYSTEM_PROMPT, new RegExp(`"${t}"`), t);
 });

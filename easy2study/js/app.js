@@ -1546,6 +1546,8 @@
       if (steps.length >= 2) bite.steps = steps;
       if (["worked", "exam"].includes(b.kind)) bite.kind = b.kind;
       if (str(b.pitfall)) bite.pitfall = str(b.pitfall);
+      const visual = normalizeVisual(b.visual);
+      if (visual) bite.visual = visual;
       const c = b.check || {};
       const options = Array.isArray(c.options) ? c.options.map(str).filter(Boolean).slice(0, 4) : [];
       if (str(c.question) && options.length >= 2 && Number.isInteger(c.answer) && c.answer >= 0 && c.answer < options.length) {
@@ -1639,16 +1641,150 @@
     renderBite(step.i);
   }
 
-  function visualHtml(v) {
-    if (!v) return "";
-    const pie = (n, k, cap, sm) => `<div><div class="pie ${sm ? "pie--sm" : ""}" style="--n:${n};--k:${k}"><span class="pie__cuts"></span></div>${cap ? `<div class="visual__cap">${frac(...cap.split("/"))}</div>` : ""}</div>`;
-    if (v.type === "pie") return `<div class="visual" aria-hidden="true">${pie(v.n, v.k, v.cap)}</div>`;
-    if (v.type === "pies") return `<div class="visual" aria-hidden="true">${v.items.map((x) => pie(x.n, x.k, x.cap, true)).join("")}</div>`;
-    if (v.type === "cycle") {
+  // Diagrams --------------------------------------------------------------
+  // Each bite can carry one diagram, drawn here in HTML/SVG and built up with
+  // a short animation (replayable). The tutor picks the type; the built-in
+  // lessons use the same shapes plus a few of their own (pie, pies, cycle).
+  const num = (n) => (Number.isFinite(n) ? n.toLocaleString("he-IL", { maximumFractionDigits: 2 }) : "");
+  const heb = (s) => HEB.test(String(s || ""));
+  const delay = (k) => `style="--d:${k}"`;
+  const VIZ = {
+    pie(v) {
+      const n = Math.max(1, Math.min(100, v.n || 1));
+      const k = Math.max(0, Math.min(n, v.k || 0));
+      const cap = v.cap || (n <= 12 ? `${k}/${n}` : `${Math.round((k / n) * 100)}%`);
+      return `<div class="visual">${pieHtml(n, k, cap)}</div>`;
+    },
+    pies: (v) => `<div class="visual">${v.items.map((x) => pieHtml(x.n, x.k, x.cap, true)).join("")}</div>`,
+    cycle(v) {
       const names = [["sun", "התאדות"], ["wind", "התעבות"], ["arrow-counter-clockwise", "משקעים"], ["globe-hemisphere-west", "איסוף"]];
-      return `<div class="visual" aria-hidden="true"><div class="cycle">${names.map(([ic, n], k) => `<div class="cycle__step" ${v.on === k || v.on === -1 ? "data-on" : ""}>${icon(ic)}${n}</div>`).join("")}</div></div>`;
-    }
-    return "";
+      return `<div class="visual"><div class="cycle">${names.map(([ic, n], k) => `<div class="cycle__step viz-in" ${delay(k)} ${v.on === k || v.on === -1 ? "data-on" : ""}>${icon(ic)}${n}</div>`).join("")}</div></div>`;
+    },
+    flow(v) {
+      const items = v.items || [];
+      // A short loop reads best as a ring; anything longer as a list.
+      if (v.cyclic && items.length >= 3 && items.length <= 6 && items.every((x) => x.label.length <= 16)) {
+        const n = items.length;
+        return `<div class="ringc">
+          <svg class="ringc__track" viewBox="0 0 100 100"><circle cx="50" cy="50" r="36"/></svg>
+          <span class="ringc__spin"><i></i></span>
+          ${items.map((x, k) => {
+            const a = (-90 + (360 / n) * k) * (Math.PI / 180);
+            return `<span class="ringc__node viz-pop" data-k="${k}" style="--d:${k};left:${(50 + 36 * Math.cos(a)).toFixed(2)}%;top:${(50 + 36 * Math.sin(a)).toFixed(2)}%"><b>${k + 1}</b>${rich(x.label, { lines: false })}</span>`;
+          }).join("")}
+        </div>
+        ${items.some((x) => x.detail) ? `<ol class="ringc__legend">${items.map((x, k) => (x.detail ? `<li class="viz-in" ${delay(k + 1)}><b>${k + 1}</b><span>${rich(x.detail, { lines: false })}</span></li>` : "")).join("")}</ol>` : ""}`;
+      }
+      return `<ol class="vflow">${items.map((x, k) => `<li class="viz-in" ${delay(k)}><span class="vflow__n">${k + 1}</span><span class="vflow__t"><b>${rich(x.label, { lines: false })}</b>${x.detail ? `<small>${rich(x.detail, { lines: false })}</small>` : ""}</span></li>`).join("")}</ol>
+        ${v.cyclic ? `<div class="vflow__loop viz-in" ${delay(items.length)}>${icon("arrow-counter-clockwise", "icon--sm")}וחוזר להתחלה</div>` : ""}`;
+    },
+    timeline: (v) => `<ol class="vtime">${(v.items || []).map((x, k) => `<li class="viz-in" ${delay(k)}><span class="vtime__date">${rich(x.label, { lines: false })}</span><span class="vtime__dot"></span><span class="vtime__t">${rich(x.detail, { lines: false })}</span></li>`).join("")}</ol>`,
+    bars(v) {
+      const items = (v.items || []).filter((x) => Number.isFinite(x.value));
+      const max = Math.max(...items.map((x) => Math.abs(x.value)), 0);
+      if (!items.length || !max) return "";
+      return `<div class="vbars">${items.map((x, k) => `<div class="vbar" ${delay(k)}><span class="vbar__l">${rich(x.label, { lines: false })}</span><span class="vbar__track"><span class="vbar__fill" style="--w:${Math.max(0.03, Math.abs(x.value) / max)}"></span></span><span class="vbar__v">${num(x.value)}${v.unit ? ` <small>${esc(v.unit)}</small>` : ""}</span></div>`).join("")}</div>`;
+    },
+    compare(v) {
+      const cols = (v.columns || []).filter((c) => c.title).slice(0, 3);
+      if (cols.length < 2) return "";
+      const rows = Math.max(...cols.map((c) => c.rows.length));
+      let cells = cols.map((c, ci) => `<b class="vcmp__h viz-in" ${delay(ci)}>${rich(c.title, { lines: false })}</b>`).join("");
+      for (let r = 0; r < rows; r++) cells += cols.map((c) => `<span class="vcmp__c viz-in" ${delay(r + 1)}>${c.rows[r] ? rich(c.rows[r], { lines: false }) : ""}</span>`).join("");
+      return `<div class="vcmp" style="--c:${cols.length}">${cells}</div>`;
+    },
+    tree: (v) => `<div class="vtree">
+        <div class="vtree__root viz-pop" ${delay(0)}>${rich(v.root || "", { lines: false })}</div>
+        <div class="vtree__kids" style="--c:${(v.items || []).length <= 4 ? (v.items || []).length : 3}">${(v.items || []).map((x, k) => `<div class="vtree__kid viz-in" ${delay(k + 1)}><b>${rich(x.label, { lines: false })}</b>${x.detail ? `<small>${rich(x.detail, { lines: false })}</small>` : ""}</div>`).join("")}</div>
+      </div>`,
+    numberline(v) {
+      const pts = (v.items || []).filter((x) => Number.isFinite(x.value));
+      let lo = Number.isFinite(v.min) ? v.min : 0;
+      let hi = Number.isFinite(v.max) ? v.max : 0;
+      if (pts.length) { lo = Math.min(lo, ...pts.map((x) => x.value)); hi = Math.max(hi, ...pts.map((x) => x.value)); }
+      if (hi <= lo) hi = lo + 10;
+      const span = hi - lo;
+      const step = [0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000].find((s) => span / s <= 10) || span / 10;
+      const X = (val) => 16 + ((val - lo) / span) * 288;
+      let ticks = "";
+      for (let t = Math.ceil(lo / step) * step, i = 0; t <= hi + 1e-9 && i < 40; t += step, i++) {
+        const x = X(t).toFixed(1);
+        ticks += `<line x1="${x}" x2="${x}" y1="58" y2="66"/><text x="${x}" y="82">${num(Math.round(t * 100) / 100)}</text>`;
+      }
+      let last = -99, up = false;
+      const marks = pts.map((p, k) => {
+        const x = X(p.value);
+        up = Math.abs(x - last) < 44 ? !up : false;
+        last = x;
+        return `<g class="vnum__pt viz-drop" ${delay(k)}><circle cx="${x.toFixed(1)}" cy="62" r="6"/><text x="${x.toFixed(1)}" y="${up ? 22 : 42}" class="vnum__lbl">${esc(p.label || num(p.value))}</text></g>`;
+      }).join("");
+      return `<svg class="vnum" viewBox="0 0 320 90" dir="ltr"><line class="vnum__axis" x1="8" x2="312" y1="62" y2="62"/><path class="vnum__arrow" d="M312 62l-7-4.5v9z"/>${ticks}${marks}</svg>`;
+    },
+    equation(v) {
+      const items = v.items || [];
+      if (!items.length) return "";
+      const dir = items.some((x) => heb(x.label)) ? "rtl" : "ltr";
+      return `<div class="veq" dir="${dir}">${items.map((x, k) => `<span class="veq__p viz-pop ${x.detail ? "" : "veq__p--op"}" ${delay(k)}><b>${rich(x.label, { lines: false })}</b>${x.detail ? `<small dir="rtl">${rich(x.detail, { lines: false })}</small>` : ""}</span>`).join("")}</div>`;
+    },
+  };
+  const pieHtml = (n, k, cap, sm) => `<div class="viz-pop" ${delay(0)}><div class="pie ${sm ? "pie--sm" : ""}" style="--n:${n};--k:${k}">${n <= 12 ? '<span class="pie__cuts"></span>' : ""}</div>${cap ? `<div class="visual__cap">${/^\d+\/\d+$/.test(cap) ? frac(...cap.split("/")) : esc(cap)}</div>` : ""}</div>`;
+
+  // What a screen reader hears instead of the drawing.
+  function vizText(v) {
+    const items = (v.items || []).map((x) => [x.label, x.detail, Number.isFinite(x.value) && v.type !== "flow" && v.type !== "timeline" && v.type !== "tree" && v.type !== "equation" ? num(x.value) : ""].filter(Boolean).join(" ")).filter(Boolean);
+    const cols = (v.columns || []).map((c) => `${c.title}: ${c.rows.join(", ")}`);
+    return spoken([v.caption, v.root, ...items, ...cols].filter(Boolean).join(". "));
+  }
+
+  function visualHtml(v) {
+    if (!v || !v.type || v.type === "none" || !VIZ[v.type]) return "";
+    const body = VIZ[v.type](v);
+    if (!body) return "";
+    const replay = !["pie", "pies"].includes(v.type);
+    return `<figure class="viz viz--${v.type} viz--play">
+      <div class="viz__draw" aria-hidden="true">${body}</div>
+      ${v.caption ? `<figcaption>${rich(v.caption, { lines: false })}</figcaption>` : ""}
+      <span class="sr-only">${esc(vizText(v))}</span>
+      ${replay ? `<button type="button" class="viz__replay" data-replay aria-label="להציג שוב את התרשים">${icon("arrow-counter-clockwise", "icon--sm")}</button>` : ""}
+    </figure>`;
+  }
+  function bindViz(el) {
+    $$("[data-replay]", el).forEach((b) => {
+      b.onclick = () => {
+        const f = b.closest(".viz");
+        f.classList.remove("viz--play");
+        void f.offsetWidth;
+        f.classList.add("viz--play");
+        Sound.step();
+      };
+    });
+  }
+
+  // Keeps only a diagram the app can draw, in known shapes.
+  function normalizeVisual(raw) {
+    if (!raw || typeof raw !== "object" || !VIZ[raw.type] || ["pies", "cycle"].includes(raw.type)) return null;
+    const str = (x) => (typeof x === "string" ? x.trim() : "");
+    const fin = (x) => (typeof x === "number" && Number.isFinite(x) ? x : NaN);
+    const v = {
+      type: raw.type,
+      caption: str(raw.caption),
+      root: str(raw.root),
+      unit: str(raw.unit),
+      cyclic: raw.cyclic === true,
+      min: fin(raw.min),
+      max: fin(raw.max),
+      n: Number.isInteger(raw.n) ? raw.n : 0,
+      k: Number.isInteger(raw.k) ? raw.k : 0,
+      items: (Array.isArray(raw.items) ? raw.items : []).map((x) => ({ label: str(x && x.label), detail: str(x && x.detail), value: fin(x && x.value) })).filter((x) => x.label || x.detail || Number.isFinite(x.value)).slice(0, 8),
+      columns: (Array.isArray(raw.columns) ? raw.columns : []).map((c) => ({ title: str(c && c.title), rows: (Array.isArray(c && c.rows) ? c.rows : []).map(str).slice(0, 6) })).slice(0, 3),
+    };
+    if (v.min === 0 && v.max === 0) { v.min = NaN; v.max = NaN; }
+    const ok = {
+      flow: v.items.length >= 2, timeline: v.items.length >= 2, bars: v.items.filter((x) => Number.isFinite(x.value)).length >= 2,
+      compare: v.columns.filter((c) => c.title).length >= 2, tree: v.root && v.items.length >= 2,
+      numberline: v.items.some((x) => Number.isFinite(x.value)), pie: v.n >= 2 && v.k >= 0 && v.k <= v.n, equation: v.items.length >= 2,
+    }[v.type];
+    return ok ? v : null;
   }
 
   function extraHtml(x) {
@@ -1700,8 +1836,8 @@
         <article class="bite bite--enter ${b.kind === "exam" ? "bite--exam" : ""}" aria-live="polite">
           ${b.kind === "exam" ? `<span class="bite__badge">${icon("list-checks", "icon--sm")}שאלה כמו במבחן</span>` : b.kind === "worked" ? `<span class="bite__badge bite__badge--quiet">${icon("pencil-simple-line", "icon--sm")}דוגמה פתורה</span>` : ""}
           <h1 class="bite__title" tabindex="-1" data-autofocus>${rich(b.title, { lines: false })}</h1>
-          ${visualHtml(b.visual)}
           <div class="bite__text">${rich(b.text)}</div>
+          ${visualHtml(b.visual)}
           ${examQ && shown === 0 ? `<p class="tryfirst" data-try>${g("נסה", "נסי")} לענות לבד, בראש או על דף. אחר כך נחשוף את התשובה, צעד אחר צעד.</p>` : ""}
           ${steps.length ? `<ol class="steps ${examQ ? "steps--answer" : ""}" aria-label="${examQ ? "התשובה, צעד אחר צעד" : "צעד אחר צעד"}">${steps.slice(0, shown).map((x, k) => stepHtml(x, k, k === shown - 1 && shown < steps.length)).join("")}</ol>` : ""}
           <div data-tip>${shown === steps.length ? tipHtml() : ""}</div>
@@ -1727,7 +1863,8 @@
         : `${isLast ? "סיימתי" : "הבנתי"} ${icon(isLast ? "check" : "arrow-left")}`;
     };
     label();
-    const read = () => speak(`${spoken(b.title)}. ${spoken(b.text)}. ${steps.slice(0, shown).map(spoken).join(". ")}`);
+    const read = () => speak(`${spoken(b.title)}. ${spoken(b.text)}. ${b.visual ? `${vizText(b.visual)}. ` : ""}${steps.slice(0, shown).map(spoken).join(". ")}`);
+    bindViz(el);
     bindLessonTop(el, read);
     if (S.settings.read) setTimeout(read, 350);
     bindTerms(el);

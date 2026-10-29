@@ -7,7 +7,8 @@
 //   {אתה|את}     masculine|feminine. The app picks one from the profile.
 // Each bite: title, text, simpler (said more simply), example, optional
 // steps (shown one at a time, for processes and solved exercises), optional
-// visual and optional check (a quick question with 2 to 3 options; answer is
+// visual (a diagram: pie, pies, cycle, or any type the tutor uses: flow,
+// timeline, bars, compare, tree, numberline, equation) and optional check (a quick question with 2 to 3 options; answer is
 // the index of the right one).
 
 window.E2S_SUBJECTS = [
@@ -62,7 +63,7 @@ window.E2S_LESSONS = [
         text: "אם המכנה זהה, החתיכות באותו גודל.\nאז פשוט בודקים את המונה: מי שלקח יותר חתיכות, גדול יותר.",
         simpler: "אותן חתיכות. מי שיש לו יותר חתיכות, מנצח.",
         example: "[[3/8]] גדול מ-[[1/8]]: שלושה משולשים מאותה פיצה זה יותר ממשולש אחד.",
-        visual: { type: "pies", items: [{ n: 8, k: 3, cap: "3/8" }, { n: 8, k: 1, cap: "1/8" }] },
+        visual: { type: "numberline", min: 0, max: 1, caption: "על ציר המספרים, [[3/8]] רחוק יותר מאפס", items: [{ value: 0.125, label: "1/8" }, { value: 0.375, label: "3/8" }] },
       },
       {
         title: "הטריק המפתיע",
@@ -87,6 +88,7 @@ window.E2S_LESSONS = [
           "התשובה: [[3/5]]",
         ],
         simpler: "למעלה מחברים. למטה לא נוגעים.",
+        visual: { type: "equation", caption: "המונים מתחברים, המכנה נשאר", items: [{ label: "[[1/5]]", detail: "חתיכה אחת" }, { label: "+", detail: "" }, { label: "[[2/5]]", detail: "עוד שתיים" }, { label: "=", detail: "" }, { label: "[[3/5]]", detail: "שלוש מתוך חמש" }] },
         example: "{אכלת|אכלת} משולש פיצה אחד מתוך 5, ואחר כך עוד 2. {אכלת|אכלת} 3 משולשים מתוך 5: [[3/5]].",
         check: {
           question: "כמה זה [[2/7]] + [[3/7]]?",
@@ -136,7 +138,7 @@ window.E2S_LESSONS = [
         text: "המים בעולם עוברים כל הזמן מסלול במעגל.\nלמסלול הזה קוראים **מחזור המים**.\nיש בו ארבעה שלבים, ואז הכל מתחיל מחדש.",
         simpler: "מים מסתובבים במעגל: מהים לשמיים, ומהשמיים בחזרה למטה.",
         example: "יכול להיות שהמים {ששתית|ששתית} היום ירדו פעם כגשם על דינוזאור.",
-        visual: { type: "cycle", on: -1 },
+        visual: { type: "flow", cyclic: true, caption: "ארבעה שלבים, וחוזר חלילה", items: [{ label: "התאדות", detail: "השמש מחממת, המים עולים כאדים" }, { label: "התעבות", detail: "למעלה קר, האדים נהיים טיפות" }, { label: "משקעים", detail: "טיפות כבדות נופלות" }, { label: "איסוף", detail: "המים חוזרים לים ולאדמה" }] },
       },
       {
         title: "שלב 1: התאדות",
@@ -220,6 +222,7 @@ window.E2S_LESSONS = [
           "She plays football.",
         ],
         simpler: "הוא, היא, זה: מוסיפים s.",
+        visual: { type: "compare", caption: "אותו פועל, עם s או בלי", columns: [{ title: "I, you, we, they", rows: ["play", "eat", "like"] }, { title: "he, she, it", rows: ["plays", "eats", "likes"] }] },
         example: "My dog sleeps all day. הכלב (it) ישן כל היום, אז sleep מקבל s.",
         check: {
           question: "She ___ pizza.",
@@ -232,6 +235,7 @@ window.E2S_LESSONS = [
         title: "מילים שהן רמז",
         text: "יש מילים שהן **רמז** ל-Present Simple:\nalways, usually, every day, never.\nרואים אחת מהן? כנראה צריך Present Simple.",
         simpler: "always או every day במשפט? זה Present Simple.",
+        visual: { type: "tree", root: "מילים שרומזות", caption: "רואים אחת מהן? כנראה Present Simple", items: [{ label: "always", detail: "תמיד" }, { label: "usually", detail: "בדרך כלל" }, { label: "every day", detail: "כל יום" }, { label: "never", detail: "אף פעם" }] },
         example: "I always forget my keys. המילה always היא הרמז.",
       },
       {
@@ -272,6 +276,7 @@ window.E2S_LESSONS = [
         title: "מה השתנה?",
         text: "לפני בערך 250 שנה, באנגליה, התחילו לייצר דברים ב**מכונות** במקום בידיים.\nהשינוי הגדול הזה נקרא **המהפכה התעשייתית**.",
         simpler: "פעם עשו הכל בידיים. ואז הגיעו מכונות. זו המהפכה התעשייתית.",
+        visual: { type: "timeline", caption: "כמה רגעים חשובים באנגליה", items: [{ label: "1769", detail: "ג'יימס וואט משפר את מנוע הקיטור" }, { label: "1825", detail: "קו הרכבת הציבורי הראשון" }, { label: "1833", detail: "חוק ראשון שמגביל עבודת ילדים במפעלים" }] },
         example: "פעם תפרו חולצה אחת בכמה ימים. מכונה יכלה לעשות הרבה בד בזמן קצר.",
       },
       {
@@ -296,6 +301,7 @@ window.E2S_LESSONS = [
         title: "מהכפר לעיר",
         text: "אנשים עזבו את הכפרים ועברו לערים כדי לעבוד ב**מפעלים**.\nהערים גדלו מהר מאוד. לזה קוראים **עיור**.",
         simpler: "אנשים עברו לעיר, כי שם הייתה עבודה במפעלים.",
+        visual: { type: "bars", unit: "תושבים", caption: "מנצ'סטר גדלה פי ארבעה בתוך 50 שנה (מספרים מעוגלים)", items: [{ label: "1801", value: 70000 }, { label: "1851", value: 303000 }] },
         example: "העיר מנצ'סטר באנגליה גדלה פי כמה בתוך כמה עשרות שנים.",
       },
       {

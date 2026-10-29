@@ -48,6 +48,16 @@ Lesson rules (a <lesson_request>):
 - "steps": when the bite teaches a process, a calculation, a method or a sequence, put its stages here, 2 to 6 items, each one short action or event (a solved exercise shows the numbers in each step). Then "text" is just a one or two sentence lead-in. Otherwise "steps" is an empty array.
 - Add a quick check after roughly every second bite (fill "check"); for other bites leave check.question as an empty string and options empty. A check has 2 or 3 short options, "answer" is the zero-based index of the right one, and "why" explains the right answer in one or two kind sentences. Vary which position the right answer is in. Checks test understanding, not memorized wording.
 - "kind" is "concept" for a bite that teaches an idea, "worked" for a solved example shown in steps, and "exam" for a test question (exam lessons only, see below).
+- "visual": a diagram the app draws and animates under the bite's text. Give one to roughly every second or third bite, wherever seeing it helps more than reading (always for a process, a cycle, dates, quantities, a comparison or parts of a whole); otherwise type "none". The types:
+  - "flow": a process or chain of cause and effect; "items" are the stages in order (2 to 6). "cyclic" true when it loops back to the start (like the water cycle).
+  - "timeline": events in time; "items" are events in order, label = the date or year, detail = what happened (2 to 7).
+  - "bars": quantities to compare; "items" have label and value (2 to 6), "unit" says what the numbers measure. Only real numbers from the material or well-known facts, never invented ones.
+  - "compare": two or three things side by side; "columns" each have a title and 2 to 5 short rows, row i of every column about the same aspect.
+  - "tree": a whole and its parts, or a category and its kinds; "root" is the whole, "items" are the parts (2 to 6) with a short detail each.
+  - "numberline": numbers on a line (negative numbers, order, distance, inequalities); "min" and "max" set the range, "items" are the marked points (value and a short label).
+  - "pie": a fraction or a percentage of a whole; "n" equal parts, "k" of them highlighted.
+  - "equation": a formula or a sentence pattern with each part explained; "items" are the parts in reading order (label = the part as written, like "a²" or "+", detail = what it means, empty for signs).
+  "caption" says in one short sentence what the diagram shows. Labels have 1 to 4 words, details up to 8. Unused fields stay empty (empty strings, empty arrays, zeros, false).
 - "pitfall": when learners often get this exact point mixed up, one short sentence on the usual mistake and the right way; otherwise an empty string.
 - "summary" is 3 to 5 short sentences: what to remember.
 
@@ -161,6 +171,33 @@ export const PLAN_SCHEMA = {
   },
 };
 
+const num = { type: "number" };
+export const VISUAL_TYPES = ["none", "flow", "timeline", "bars", "compare", "tree", "numberline", "pie", "equation"];
+const VISUAL_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["type", "caption", "items", "columns", "root", "cyclic", "unit", "min", "max", "n", "k"],
+  properties: {
+    type: { type: "string", enum: VISUAL_TYPES },
+    caption: str,
+    items: {
+      type: "array",
+      items: { type: "object", additionalProperties: false, required: ["label", "detail", "value"], properties: { label: str, detail: str, value: num } },
+    },
+    columns: {
+      type: "array",
+      items: { type: "object", additionalProperties: false, required: ["title", "rows"], properties: { title: str, rows: { type: "array", items: str } } },
+    },
+    root: str,
+    cyclic: { type: "boolean" },
+    unit: str,
+    min: num,
+    max: num,
+    n: { type: "integer" },
+    k: { type: "integer" },
+  },
+};
+
 export const LESSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -173,9 +210,10 @@ export const LESSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["kind", "title", "text", "simpler", "example", "steps", "pitfall", "check"],
+        required: ["kind", "title", "text", "simpler", "example", "steps", "visual", "pitfall", "check"],
         properties: {
           kind: { type: "string", enum: ["concept", "worked", "exam"] },
+          visual: VISUAL_SCHEMA,
           pitfall: str,
           title: str,
           text: str,

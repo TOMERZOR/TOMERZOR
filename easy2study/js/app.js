@@ -657,26 +657,54 @@
     return { done, total: c.chapters.length, next: c.chapters.findIndex((x) => !x.done) };
   }
 
+  // Rows shared by the home screen and the menu pages.
+  function allCourses() {
+    return Object.entries(S.courses || {}).map(([id, c]) => ({ id, ...c, prog: courseProgress(c) }))
+      .sort((x, y) => (x.prog.next < 0) - (y.prog.next < 0) || y.updated - x.updated);
+  }
+  function lessonRecs() {
+    return Object.entries(S.lessons).map(([id, r]) => ({ id, ...r, lesson: getLesson(id) })).filter((r) => r.lesson);
+  }
+  function courseRow(c) {
+    const pct = Math.round((c.prog.done / c.prog.total) * 100);
+    const line = c.prog.next < 0 ? `${g("סיימת", "סיימת")} את כל ${c.prog.total} השלבים` : `שלב ${c.prog.next + 1} מתוך ${c.prog.total}: ${c.chapters[c.prog.next].title}`;
+    return `<button class="resume" data-course="${esc(c.id)}">
+      <span class="ring" style="--p:${pct}"><span>${c.prog.next < 0 ? icon("check", "icon--sm") : `${c.prog.done}/${c.prog.total}`}</span></span>
+      <span class="resume__text"><span class="resume__title">${plain(c.title)}</span><span class="small muted resume__title" style="font-weight:400">${plain(line)}</span></span>
+      ${icon("caret-left", "icon--sm")}
+    </button>`;
+  }
+  function lessonRow(r) {
+    const pct = Math.round(((r.pos || 0) / stepsOf(r.lesson).length) * 100);
+    return `<button class="resume" data-open="${esc(r.id)}">
+      <span class="ring" style="--p:${pct}"><span>${pct}%</span></span>
+      <span class="resume__text"><span class="resume__title">${plain(r.lesson.title)}</span><span class="small muted resume__title" style="font-weight:400">${esc(subjectOf(r.lesson.subject).name)}</span></span>
+      ${icon("caret-left", "icon--sm")}
+    </button>`;
+  }
+  function bindRows(el) {
+    $$("[data-open]", el).forEach((b) => (b.onclick = () => openLesson(b.dataset.open)));
+    $$("[data-course]", el).forEach((b) => (b.onclick = () => coursePath(b.dataset.course)));
+    $$("[data-review]", el).forEach((b) => (b.onclick = () => review(b.dataset.review)));
+  }
+
+  // Home: only what it takes to start learning. Everything else is in the menu.
   function home() {
     current = { name: "home" };
     const p = S.profile;
     const a = derive();
     const ai = Tutor.available();
-    const recs = Object.entries(S.lessons).map(([id, r]) => ({ id, ...r, lesson: getLesson(id) })).filter((r) => r.lesson);
-    const going = recs.filter((r) => !r.done && !r.courseId).sort((x, y) => y.updated - x.updated).slice(0, 2);
-    const done = recs.filter((r) => r.done).sort((x, y) => (y.feel === "lost") - (x.feel === "lost") || y.updated - x.updated).slice(0, 4);
-    const courses = Object.entries(S.courses || {}).map(([id, c]) => ({ id, ...c, prog: courseProgress(c) }))
-      .sort((x, y) => (x.prog.next < 0) - (y.prog.next < 0) || y.updated - x.updated).slice(0, 4);
-    const st = streak();
-    const w = weekStats();
+    // The one thing to continue: the most recent unfinished path or lesson.
+    const next = [
+      ...allCourses().filter((c) => c.prog.next >= 0).map((c) => ({ t: c.updated, html: courseRow(c) })),
+      ...lessonRecs().filter((r) => !r.done && !r.courseId).map((r) => ({ t: r.updated, html: lessonRow(r) })),
+    ].sort((x, y) => y.t - x.t)[0];
     const chips = ai ? SUGGEST : BUILTIN.map((l) => l.title);
     const sub = a.small ? "כל נושא בעולם. מתחילים ב-2 דקות, ואם בא לך עוד, ממשיכים." : "כל נושא בעולם. נבנה לך מסלול קצר, צעד אחר צעד.";
     const el = mount(`
       <div class="topbar">
+        <button class="icon-btn" data-menu aria-label="תפריט" aria-haspopup="dialog">${icon("list")}</button>
         <span class="brand">Easy<b>2</b>Study</span>
-        <span class="topbar__spacer"></span>
-        ${st >= 2 ? `<span class="streak" title="ימים ברצף">${icon("flame", "icon--sm")}${st} ימים ברצף</span>` : ""}
-        <button class="icon-btn" data-settings aria-label="הגדרות">${icon("gear-six")}</button>
       </div>
       <div class="home__hello stagger">
         <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>${greeting()}${p.name ? `, ${esc(p.name)}` : ""}</h1>
@@ -698,64 +726,12 @@
         <span class="resume__text"><span class="resume__title">יש לי מבחן</span><span class="small muted resume__title" style="font-weight:400">צילום, PDF או סיכום מהמורה</span></span>
         ${icon("caret-left", "icon--sm")}
       </button>
-      ${courses.length ? `
-      <section class="section" aria-labelledby="paths-t">
-        <h2 class="h3" id="paths-t">המסלולים שלי</h2>
-        ${courses.map((c) => {
-          const pct = Math.round((c.prog.done / c.prog.total) * 100);
-          const line = c.prog.next < 0 ? `${g("סיימת", "סיימת")} את כל ${c.prog.total} השלבים` : `שלב ${c.prog.next + 1} מתוך ${c.prog.total}: ${c.chapters[c.prog.next].title}`;
-          return `<button class="resume" data-course="${esc(c.id)}">
-            <span class="ring" style="--p:${pct}"><span>${c.prog.next < 0 ? icon("check", "icon--sm") : `${c.prog.done}/${c.prog.total}`}</span></span>
-            <span class="resume__text"><span class="resume__title">${esc(c.title)}</span><span class="small muted resume__title" style="display:block;font-weight:400">${esc(line)}</span></span>
-            ${icon("caret-left", "icon--sm")}
-          </button>`;
-        }).join("")}
-      </section>` : ""}
-      ${going.length ? `
-      <section class="section" aria-labelledby="cont-t">
+      ${next ? `
+      <section class="section stagger" aria-labelledby="cont-t" style="--i:3">
         <h2 class="h3" id="cont-t">להמשיך מאיפה ${g("שעצרת", "שעצרת")}</h2>
-        ${going.map((r) => {
-          const n = stepsOf(r.lesson).length;
-          const pct = Math.round(((r.pos || 0) / n) * 100);
-          return `<button class="resume" data-open="${esc(r.id)}">
-            <span class="ring" style="--p:${pct}"><span>${pct}%</span></span>
-            <span class="resume__text"><span class="resume__title">${esc(r.lesson.title)}</span><span class="small muted">${esc(subjectOf(r.lesson.subject).name)}</span></span>
-            ${icon("caret-left", "icon--sm")}
-          </button>`;
-        }).join("")}
-      </section>` : ""}
-      ${w.bites ? `
-      <section class="section" aria-labelledby="week-t">
-        <div class="week">
-          <div class="week__num" aria-hidden="true">${w.bites}</div>
-          <div class="week__text">
-            <h2 class="h3" id="week-t">השבוע ${g("הבנת", "הבנת")} ${w.bites === 1 ? "דבר חדש אחד" : `${w.bites} דברים חדשים`}</h2>
-            <span class="small muted">${w.right} תשובות נכונות${w.topics.length ? `, ${w.topics.length === 1 ? "נושא אחד" : `${w.topics.length} נושאים`}` : ""}</span>
-          </div>
-          <button class="btn btn--soft week__share" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>
-        </div>
-      </section>` : ""}
-      ${done.length ? `
-      <section class="section" aria-labelledby="rev-t">
-        <h2 class="h3" id="rev-t">חזרה מהירה</h2>
-        <div class="review">
-          ${done.map((r) => `<button class="review__row" data-review="${esc(r.id)}">
-            <span class="review__ic">${icon(subjectOf(r.lesson.subject).icon)}</span>
-            <span class="review__text"><b style="font-weight:600">${esc(r.lesson.title)}</b><br><span class="small muted">${r.feel === "lost" ? "כדאי לעבור על זה שוב" : r.feel === "ok" ? "עוד סיבוב קטן ויהיה מושלם" : "רק לרענן"}</span></span>
-            <span class="review__go">${icon("arrow-counter-clockwise")}</span>
-          </button>`).join("")}
-        </div>
-      </section>` : ""}
-      <section class="section" aria-labelledby="ex-t">
-        <div class="section__head"><h2 class="h3" id="ex-t">שיעורים מוכנים</h2><span class="small muted">בלי אינטרנט</span></div>
-        <div class="lesson-rail">
-          ${BUILTIN.map((l) => `<button class="tile" data-open="${l.id}">
-            <span class="tile__ic">${icon(subjectOf(l.subject).icon)}</span>
-            <span><span class="tile__title">${plain(l.title)}</span><span class="tile__meta" style="display:block">${esc(l.subtitle)}</span></span>
-          </button>`).join("")}
-        </div>
-      </section>`, "home");
-    $("[data-settings]", el).onclick = settingsSheet;
+        ${next.html}
+      </section>` : ""}`, "home");
+    $("[data-menu]", el).onclick = menu;
     $("[data-new]", el).onclick = () => newLesson();
     const quest = $("#quest", el);
     const go = (topic) => {
@@ -770,11 +746,147 @@
     };
     $("[data-quest]", el).onsubmit = (e) => { e.preventDefault(); go(quest.value); };
     $$("[data-suggest]", el).forEach((b) => (b.onclick = () => go(b.dataset.suggest)));
-    $$("[data-open]", el).forEach((b) => (b.onclick = () => openLesson(b.dataset.open)));
-    $$("[data-course]", el).forEach((b) => (b.onclick = () => coursePath(b.dataset.course)));
-    $$("[data-review]", el).forEach((b) => (b.onclick = () => review(b.dataset.review)));
-    const sh = $("[data-share]", el);
-    if (sh) sh.onclick = shareWeek;
+    bindRows(el);
+  }
+
+  // Menu ------------------------------------------------------------------
+  function menu() {
+    const p = S.profile || {};
+    const st = streak();
+    const w = weekStats();
+    const courses = allCourses();
+    const reviews = lessonRecs().filter((r) => r.done).length;
+    const item = (go, ic, label, badge) => `<button class="menu__item" data-go="${go}" ${current.name === go ? 'aria-current="page"' : ""}>${icon(ic)}<span>${label}</span>${badge ? `<span class="menu__badge">${badge}</span>` : ""}</button>`;
+    const s = sheet(`
+      <div class="menu__head">
+        <span class="menu__avatar" aria-hidden="true">${esc((p.name || "E").trim().charAt(0))}</span>
+        <span class="menu__who">
+          <b>${esc(p.name || "Easy2Study")}</b>
+          <span class="small muted">${st >= 2 ? `${icon("flame", "icon--sm")} ${st} ימים ברצף` : w.bites ? `השבוע ${g("הבנת", "הבנת")} ${w.bites} דברים` : "מוכנים להתחיל?"}</span>
+        </span>
+        <button class="icon-btn" data-sheet-close aria-label="סגירת התפריט">${icon("x")}</button>
+      </div>
+      <nav class="menu__list" aria-label="תפריט">
+        ${item("home", "house", "בית")}
+        ${item("paths", "path", "המסלולים שלי", courses.length || "")}
+        ${item("reviews", "arrow-counter-clockwise", "חזרה מהירה", reviews || "")}
+        ${item("ready", "books", "שיעורים מוכנים")}
+        ${item("progress", "chart-line-up", "ההתקדמות שלי")}
+        ${item("new", "clipboard-text", "יש לי מבחן")}
+      </nav>
+      <nav class="menu__list menu__list--quiet" aria-label="עוד">
+        ${item("settings", "gear-six", "הגדרות")}
+        ${item("about", "info", "איך זה עובד")}
+      </nav>
+    `, "תפריט", null, "drawer");
+    const routes = { home, paths: pathsPage, reviews: reviewsPage, ready: readyPage, progress: progressPage, new: newLesson, about: aboutPage };
+    $$("[data-go]", s).forEach((b) => {
+      b.onclick = () => {
+        const k = b.dataset.go;
+        if (k === "settings") { closeSheet(true); return settingsSheet(); }
+        if (k === current.name) return closeSheet();
+        closeSheet(true);
+        routes[k]();
+      };
+    });
+  }
+
+  // A plain page opened from the menu: back to home, menu at hand.
+  function page(name, title, body, sub) {
+    current = { name };
+    const el = mount(`
+      <div class="topbar">
+        <button class="icon-btn" data-back aria-label="חזרה">${icon("arrow-right")}</button>
+        <span class="topbar__spacer"></span>
+        <button class="icon-btn" data-menu aria-label="תפריט" aria-haspopup="dialog">${icon("list")}</button>
+      </div>
+      <div class="page__head stagger">
+        <h1 class="h1" style="--i:0" tabindex="-1" data-autofocus>${title}</h1>
+        ${sub ? `<p class="lead" style="--i:1">${sub}</p>` : ""}
+      </div>
+      <div class="page__body">${body}</div>`, "page");
+    $("[data-back]", el).onclick = home;
+    $("[data-menu]", el).onclick = menu;
+    bindRows(el);
+    return el;
+  }
+  const emptyState = (text, cta) => `<div class="empty">${esc(text)}${cta ? `<br><button class="btn btn--soft" data-start style="margin-top:14px;min-height:48px">${icon("sparkle")}${cta}</button>` : ""}</div>`;
+  function bindStart(el) {
+    const b = $("[data-start]", el);
+    if (b) b.onclick = () => { home(); setTimeout(() => { const q = $("#quest"); if (q) q.focus(); }, 60); };
+  }
+
+  function pathsPage() {
+    const list = allCourses();
+    const el = page("paths", "המסלולים שלי", list.length
+      ? `<div class="stack">${list.map(courseRow).join("")}</div>`
+      : emptyState("עוד אין מסלולים. כותבים נושא במסך הבית, ומקבלים מסלול צעד אחר צעד.", "להתחיל מסלול"),
+      list.length ? `${list.filter((c) => c.prog.next < 0).length} מתוך ${list.length} הושלמו` : "");
+    bindStart(el);
+  }
+
+  function reviewsPage() {
+    const done = lessonRecs().filter((r) => r.done).sort((x, y) => (y.feel === "lost") - (x.feel === "lost") || y.updated - x.updated);
+    const el = page("reviews", "חזרה מהירה", done.length
+      ? `<div class="review">${done.map((r) => `<button class="review__row" data-review="${esc(r.id)}">
+          <span class="review__ic">${icon(subjectOf(r.lesson.subject).icon)}</span>
+          <span class="review__text"><b style="font-weight:600">${plain(r.lesson.title)}</b><br><span class="small muted">${r.feel === "lost" ? "כדאי לעבור על זה שוב" : r.feel === "ok" ? "עוד סיבוב קטן ויהיה מושלם" : "רק לרענן"}</span></span>
+          <span class="review__go">${icon("arrow-counter-clockwise")}</span>
+        </button>`).join("")}</div>`
+      : emptyState("כאן יופיעו שיעורים שסיימת, עם השאלות שכדאי לחזור עליהן ראשונות."),
+      done.length ? "השאלות שהיו קשות מופיעות ראשונות." : "");
+    bindStart(el);
+  }
+
+  function readyPage() {
+    page("ready", "שיעורים מוכנים", `<div class="tile-grid">${BUILTIN.map((l) => `<button class="tile" data-open="${l.id}">
+        <span class="tile__ic">${icon(subjectOf(l.subject).icon)}</span>
+        <span><span class="tile__title">${plain(l.title)}</span><span class="tile__meta" style="display:block">${esc(l.subtitle)}</span></span>
+      </button>`).join("")}</div>`, "עובדים גם בלי אינטרנט.");
+  }
+
+  function progressPage() {
+    const w = weekStats();
+    const st = streak();
+    const log = S.log || [];
+    const total = { bites: log.filter((e) => e.k === "bite").length, lessons: log.filter((e) => e.k === "lesson").length };
+    const days = new Set(S.days);
+    const week = Array.from({ length: 7 }, (_, k) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - k));
+      return { on: days.has(d.toISOString().slice(0, 10)), label: "אבגדהוש"[d.getDay()] };
+    });
+    const el = page("progress", "ההתקדמות שלי", `
+      <div class="week">
+        <div class="week__num" aria-hidden="true">${w.bites}</div>
+        <div class="week__text">
+          <h2 class="h3">השבוע ${g("הבנת", "הבנת")} ${w.bites === 1 ? "דבר חדש אחד" : `${w.bites} דברים חדשים`}</h2>
+          <span class="small muted">${w.right} תשובות נכונות${w.topics.length ? `, ${w.topics.length === 1 ? "נושא אחד" : `${w.topics.length} נושאים`}` : ""}</span>
+        </div>
+        <div class="days" role="img" aria-label="ימי למידה השבוע: ${week.filter((d) => d.on).length} מתוך 7">
+          ${week.map((d) => `<span class="days__d" ${d.on ? "data-on" : ""}><i>${d.on ? icon("check", "icon--sm") : ""}</i>${d.label}׳</span>`).join("")}
+        </div>
+        <button class="btn btn--primary week__share" data-share>${icon("paper-plane-tilt")}לשתף את ההורים</button>
+      </div>
+      <div class="totals">
+        <div class="totals__n"><b>${st}</b>${st === 1 ? "יום ברצף" : "ימים ברצף"}</div>
+        <div class="totals__n"><b>${total.bites}</b>דברים שהבנת</div>
+        <div class="totals__n"><b>${total.lessons}</b>שלבים ושיעורים</div>
+      </div>`, "בלי ציונים. רק כמה למדת.");
+    $("[data-share]", el).onclick = shareWeek;
+  }
+
+  function aboutPage() {
+    const steps = [
+      ["sparkle", "כותבים מה רוצים להבין", "כל נושא בעולם, או חומר למבחן: צילום, PDF או סיכום."],
+      ["path", "מקבלים מסלול קצר", "כמה שלבים, מהבסיס ועד המטרה. כל שלב לוקח כמה דקות."],
+      ["cards", "לומדים בחתיכות קטנות", "משפט או שניים בכל פעם, ותהליכים צעד אחר צעד."],
+      ["question", "לא הבנת? אומרים", "הסבר פשוט יותר, דוגמה, מילה שלא ברורה, או שאלה משלך."],
+      ["list-checks", "בודקים בלי ציונים", "שאלה קטנה כל כמה חתיכות, וחזרה מהירה בסוף."],
+    ];
+    page("about", "איך זה עובד", `
+      <ol class="how">${steps.map(([ic, t, d]) => `<li><span class="adapt__ic">${icon(ic)}</span><span><b>${t}</b><span class="small muted" style="display:block">${d}</span></span></li>`).join("")}</ol>
+      <p class="small muted" style="margin:18px 0 0">כל הפרטים נשמרים רק בדפדפן הזה. המורה החכם מקבל את הגיל, הכיתה וסגנון הלמידה, בלי השם.</p>`);
   }
 
   function findBuiltin(topic) {
@@ -1523,10 +1635,10 @@
 
   // Sheets ----------------------------------------------------------------
   let sheetState = null;
-  function sheet(html, label, onClose) {
+  function sheet(html, label, onClose, variant) {
     closeSheet(true);
     const wrap = document.createElement("div");
-    wrap.className = "sheet-wrap";
+    wrap.className = `sheet-wrap${variant ? ` sheet-wrap--${variant}` : ""}`;
     wrap.innerHTML = `<div class="sheet-scrim"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="sheet__grip" aria-hidden="true"></div>${html}</div>`;
     document.body.appendChild(wrap);
     sheetState = { wrap, onClose, back: document.activeElement };

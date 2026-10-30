@@ -283,7 +283,45 @@
     el.addEventListener("animationend", (e) => { if (e.target === el) el.classList.remove("screen--enter"); });
     const f = $("[data-autofocus]", el);
     if (f) f.focus({ preventScroll: true });
+    syncTabs();
     return el;
+  }
+
+  // Bottom tab bar ----------------------------------------------------------
+  // Home on the far left, profile on the far right, whatever the language
+  // (the bar is laid out left to right on purpose). Shown on the main screens
+  // only; lessons, paths and tests get the whole screen.
+  const TABS = [
+    ["home", "house", "בית", () => home()],
+    ["paths", "path", "מסלולים", () => pathsPage()],
+    ["new", "clipboard-text", "מבחן", () => newLesson()],
+    ["reviews", "arrow-counter-clockwise", "חזרה", () => reviewsPage()],
+    ["profile", "user-circle", "פרופיל", () => profilePage()],
+  ];
+  const TAB_OF = { home: "home", paths: "paths", new: "new", reviews: "reviews", profile: "profile", library: "profile", about: "profile" };
+  const tabbar = document.createElement("nav");
+  tabbar.className = "tabbar";
+  tabbar.dir = "ltr";
+  tabbar.setAttribute("aria-label", "ניווט ראשי");
+  tabbar.innerHTML = `<span class="tabbar__glow" aria-hidden="true"></span>${TABS.map(([id, ic, label]) => `<button type="button" class="tab ${id === "new" ? "tab--main" : ""}" data-tab="${id}" dir="rtl"><span class="tab__ic">${icon(ic)}</span><span class="tab__l">${label}</span></button>`).join("")}`;
+  document.body.appendChild(tabbar);
+  $$("[data-tab]", tabbar).forEach((b) => {
+    b.onclick = () => {
+      const tab = TABS.find(([id]) => id === b.dataset.tab);
+      if (TAB_OF[current.name] === tab[0] && current.name === tab[0]) return window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+      tab[3]();
+    };
+  });
+  function syncTabs() {
+    const on = Boolean(S.profile) && current.name in TAB_OF;
+    tabbar.hidden = !on;
+    document.body.classList.toggle("has-tabs", on);
+    if (!on) return;
+    const at = TABS.findIndex(([id]) => id === TAB_OF[current.name]);
+    $$("[data-tab]", tabbar).forEach((b, i) => {
+      if (i === at) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+    });
+    tabbar.style.setProperty("--at", at);
   }
 
   // Welcome ---------------------------------------------------------------
@@ -770,8 +808,8 @@
         ${item("home", "house", "בית")}
         ${item("paths", "path", "המסלולים שלי", courses.length || "")}
         ${item("reviews", "arrow-counter-clockwise", "חזרה מהירה", reviews || "")}
-        ${item("ready", "books", "שיעורים מוכנים")}
-        ${item("progress", "chart-line-up", "ההתקדמות שלי")}
+        ${item("library", "books", "שיעורים מוכנים")}
+        ${item("profile", "user-circle", "הפרופיל שלי")}
         ${item("new", "clipboard-text", "יש לי מבחן")}
       </nav>
       <nav class="menu__list menu__list--quiet" aria-label="עוד">
@@ -779,7 +817,7 @@
         ${item("about", "info", "איך זה עובד")}
       </nav>
     `, "תפריט", null, "drawer");
-    const routes = { home, paths: pathsPage, reviews: reviewsPage, ready: readyPage, progress: progressPage, new: newLesson, about: aboutPage };
+    const routes = { home, paths: pathsPage, reviews: reviewsPage, library: readyPage, profile: profilePage, new: newLesson, about: aboutPage };
     $$("[data-go]", s).forEach((b) => {
       b.onclick = () => {
         const k = b.dataset.go;
@@ -839,13 +877,15 @@
   }
 
   function readyPage() {
-    page("ready", "שיעורים מוכנים", `<div class="tile-grid">${BUILTIN.map((l) => `<button class="tile" data-open="${l.id}">
+    page("library", "שיעורים מוכנים", `<div class="tile-grid">${BUILTIN.map((l) => `<button class="tile" data-open="${l.id}">
         <span class="tile__ic">${icon(subjectOf(l.subject).icon)}</span>
         <span><span class="tile__title">${plain(l.title)}</span><span class="tile__meta" style="display:block">${esc(l.subtitle)}</span></span>
       </button>`).join("")}</div>`, "עובדים גם בלי אינטרנט.");
   }
 
-  function progressPage() {
+  // Profile: who is learning, how it's going, and everything personal.
+  function profilePage() {
+    const p = S.profile || {};
     const w = weekStats();
     const st = streak();
     const log = S.log || [];
@@ -856,7 +896,15 @@
       d.setDate(d.getDate() - (6 - k));
       return { on: days.has(d.toISOString().slice(0, 10)), label: "אבגדהוש"[d.getDay()] };
     });
-    const el = page("progress", "ההתקדמות שלי", `
+    const grade = GRADES.find(([v]) => v === p.grade);
+    const about = [grade ? (p.grade === "post" || p.grade === "none" ? grade[1] : `כיתה ${grade[1]}`) : "", p.age ? `${g("בן", "בת")} ${p.age}` : ""].filter(Boolean).join(" · ");
+    const row = (go, ic, label) => `<button class="set-row" data-row="${go}" style="width:100%"><span class="set-row__l">${icon(ic)}${label}</span>${icon("caret-left", "icon--sm")}</button>`;
+    const el = page("profile", "הפרופיל שלי", `
+      <div class="prof">
+        <span class="prof__avatar" aria-hidden="true">${esc((p.name || "E").trim().charAt(0))}</span>
+        <span class="prof__who"><b>${esc(p.name || "")}</b>${about ? `<span class="small muted">${esc(about)}</span>` : ""}</span>
+        ${st >= 1 ? `<span class="streak">${icon("flame", "icon--sm")}${st === 1 ? "יום אחד" : `${st} ימים`} ברצף</span>` : ""}
+      </div>
       <div class="week">
         <div class="week__num" aria-hidden="true">${w.bites}</div>
         <div class="week__text">
@@ -872,8 +920,22 @@
         <div class="totals__n"><b>${st}</b>${st === 1 ? "יום ברצף" : "ימים ברצף"}</div>
         <div class="totals__n"><b>${total.bites}</b>דברים שהבנת</div>
         <div class="totals__n"><b>${total.lessons}</b>שלבים ושיעורים</div>
-      </div>`, "בלי ציונים. רק כמה למדת.");
+      </div>
+      <div class="set-group">
+        ${row("ready", "books", "שיעורים מוכנים")}
+        ${row("edit", "sliders-horizontal", "לעדכן את הפרטים שלי")}
+        ${row("settings", "gear-six", "הגדרות")}
+        ${row("about", "info", "איך זה עובד")}
+      </div>`, "");
     $("[data-share]", el).onclick = shareWeek;
+    $$("[data-row]", el).forEach((b) => {
+      b.onclick = () => ({
+        ready: readyPage,
+        edit: () => onboarding(0, JSON.parse(JSON.stringify(S.profile))),
+        settings: settingsSheet,
+        about: aboutPage,
+      })[b.dataset.row]();
+    });
   }
 
   function aboutPage() {

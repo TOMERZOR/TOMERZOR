@@ -794,3 +794,15 @@ function ring() {
   beep();
   navigator.vibrate?.([400, 150, 400, 150, 400]);
 }
+
+// Sound needs a tap before it can play; any tap on the page counts.
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchend', unlockAudio);
+
+// ---------- Direct links: …/shomer/#camera and …/shomer/#phone ----------
+
+const startScreen = { '#camera': 'cam-setup', '#phone': 'pair' }[location.hash];
+if (startScreen) {
+  history.replaceState(null, '', location.pathname);
+  show(startScreen);
+}

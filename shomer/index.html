@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=1">
+<link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 
@@ -101,6 +101,7 @@
 
     <label class="check"><input type="checkbox" id="photo"> לצרף תמונה להתראה</label>
     <label class="check"><input type="checkbox" id="urgent"> התראה דחופה (צלצול ורטט ארוכים)</label>
+    <label class="check"><input type="checkbox" id="live"> שידור חי לטלפון שלך</label>
 
     <details>
       <summary>מתקדם</summary>
@@ -124,6 +125,7 @@
   </div>
   <div class="run-info">
     <span id="sent-count">0 התראות</span>
+    <span id="viewers"></span>
     <span id="last-sent"></span>
   </div>
   <div class="run-actions">
@@ -146,6 +148,13 @@
 
 <section id="listen" class="screen">
   <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>התראות</h2></header>
+  <div class="live" id="live-view" hidden>
+    <video id="live-video" playsinline muted autoplay></video>
+    <canvas id="live-overlay"></canvas>
+    <div class="live-state" id="live-state" data-kind="wait"></div>
+    <button class="live-size" id="live-size" aria-label="הגדל">⛶</button>
+  </div>
+  <button class="ghost" id="live-toggle"></button>
   <div class="card">
     <p class="conn"><i id="conn-dot"></i><span id="conn-text">מתחבר…</span></p>
     <button class="primary" id="enable-alerts">🔊 הפעל צליל והתראות</button>
@@ -163,6 +172,6 @@
 </section>
 
 <script src="js/qrcode.js"></script>
-<script type="module" src="js/app.js?v=1"></script>
+<script type="module" src="js/app.js?v=2"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import { MotionDetector, sensitivityToThreshold, toGray } from './motion.js';
 import * as ntfy from './ntfy.js';
+import { LiveCamera, LiveViewer, liveSupported } from './live.js';
 
 const $ = id => document.getElementById(id);
 
@@ -19,7 +20,7 @@ const store = {
 
 const settings = Object.assign({
   mode: 'motion', sens: 6, name: '', cooldown: 30, arm: 10, facing: 'environment',
-  photo: true, urgent: true, server: ntfy.DEFAULT_SERVER, topic: null,
+  photo: true, urgent: true, live: true, server: ntfy.DEFAULT_SERVER, topic: null,
 }, store.get('settings', {}));
 if (!settings.topic) settings.topic = ntfy.newTopic();
 const saveSettings = () => store.set('settings', settings);
@@ -78,6 +79,7 @@ function renderSetup() {
   $('facing').value = settings.facing;
   $('photo').checked = settings.photo;
   $('urgent').checked = settings.urgent;
+  $('live').checked = settings.live;
   $('server').value = settings.server === ntfy.DEFAULT_SERVER ? '' : settings.server;
   $('test-status').textContent = '';
 }
@@ -101,6 +103,7 @@ bind('arm', 'arm', el => +el.value);
 bind('facing', 'facing', el => el.value);
 bind('photo', 'photo', el => el.checked);
 bind('urgent', 'urgent', el => el.checked);
+bind('live', 'live', el => el.checked);
 
 $('server').addEventListener('change', () => {
   const v = $('server').value.trim().replace(/\/+$/, '');
@@ -187,6 +190,7 @@ async function openCamera() {
   video.srcObject = run.stream;
   await video.play().catch(() => {});
   run.detector.reset();
+  run.live?.setTrack(run.stream.getVideoTracks()[0]);
 }
 
 async function requestWakeLock() {
@@ -210,6 +214,7 @@ $('start').addEventListener('click', async () => {
   };
   $('sent-count').textContent = '0 התראות';
   $('last-sent').textContent = '';
+  $('viewers').textContent = '';
   setStatus('פותח את המצלמה…', 'wait');
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera api');
@@ -217,6 +222,12 @@ $('start').addEventListener('click', async () => {
   } catch {
     setStatus('אין גישה למצלמה. אשר גישה למצלמה בדפדפן ונסה שוב.', 'err');
     return;
+  }
+  if (settings.live && liveSupported()) {
+    run.live = new LiveCamera(settings.server, settings.topic, {
+      track: run.stream.getVideoTracks()[0],
+      onViewers: n => ($('viewers').textContent = n ? `👁 ${n === 1 ? 'צופה אחד' : n + ' צופים'}` : ''),
+    });
   }
   if (settings.mode === 'people') {
     loadPeopleModel().then(m => run && (run.model = m), () => run && (run.model = false));
@@ -228,6 +239,7 @@ $('start').addEventListener('click', async () => {
 function stopWatching() {
   if (!run) return;
   clearTimeout(run.timer);
+  run.live?.close();
   run.stream?.getTracks().forEach(t => t.stop());
   run.wake?.release().catch(() => {});
   video.srcObject = null;
@@ -266,6 +278,10 @@ function tick() {
   run.hot = r.score >= threshold ? run.hot + 1 : 0;
   const moving = run.hot >= 2;
   drawOverlay(vw, vh, moving ? box : null, now);
+  if (run.live && (moving || run.boxShown)) {
+    run.boxShown = moving;
+    run.live.broadcast({ type: 'motion', box: moving && box ? { x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh } : null });
+  }
   drawMeter(r.score, threshold);
 
   if (now < run.armedAt) return setStatus(`מתחיל לשמור בעוד ${Math.ceil((run.armedAt - now) / 1000)} שניות…`, 'wait');
@@ -359,11 +375,18 @@ async function trigger(kind, box, frame) {
   const at = new Date();
   current.lastAlert = at.getTime();
   if (box) current.marks.push({ box, at: at.getTime() });
+  const title = kind === 'person' ? `זוהה אדם · ${cameraName()}` : `זוהתה תנועה · ${cameraName()}`;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  current.live?.broadcast({
+    type: 'alert',
+    title,
+    box: box && { x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh },
+  });
   $('last-sent').dataset.time = clock(at);
   try {
     const image = settings.photo ? await snapshot(box, frame) : null;
     await ntfy.publish(settings.server, settings.topic, {
-      title: kind === 'person' ? `זוהה אדם · ${cameraName()}` : `זוהתה תנועה · ${cameraName()}`,
+      title,
       message: `${cameraName()} · ${clock(at)}`,
       tags: kind === 'person' ? 'bust_in_silhouette,rotating_light' : 'rotating_light',
       priority: settings.urgent ? 5 : 4,
@@ -427,6 +450,8 @@ function startListening(topic, server = ntfy.DEFAULT_SERVER) {
     if (listen === current) msgs.forEach(m => addAlert(m, false));
   }).catch(() => {});
 
+  setLive(store.get('liveOn', true));
+
   const es = new EventSource(ntfy.sseUrl(server, topic));
   current.es = es;
   es.onopen = () => setConn('ok', 'מחובר. ההתראות יופיעו כאן.');
@@ -441,8 +466,83 @@ function startListening(topic, server = ntfy.DEFAULT_SERVER) {
 
 function stopListening() {
   listen?.es?.close();
+  listen?.viewer?.close();
+  listen?.wake?.release().catch(() => {});
   listen = null;
+  $('live-view').classList.remove('big');
 }
+
+// ---------- Live view on the receiving screen ----------
+
+const liveVideo = $('live-video');
+const liveOverlay = $('live-overlay');
+const LIVE_STATES = {
+  wait: ['wait', 'מתחבר לשידור… (המצלמה צריכה להיות במצב שמירה)'],
+  live: ['live', 'שידור חי'],
+  lost: ['wait', 'השידור נותק, מתחבר מחדש…'],
+};
+
+function setLive(on) {
+  if (!liveSupported()) on = false;
+  listen.viewer?.close();
+  listen.viewer = null;
+  $('live-view').hidden = !on;
+  $('live-toggle').hidden = !liveSupported();
+  $('live-toggle').textContent = on ? 'כבה שידור חי (חוסך סוללה)' : '📺 הצג שידור חי';
+  drawLiveBox(null);
+  if (!on) return;
+  const current = listen;
+  listen.viewer = new LiveViewer(listen.server, listen.topic, {
+    video: liveVideo,
+    onState: state => {
+      if (listen !== current) return;
+      const [kind, text] = LIVE_STATES[state];
+      $('live-state').dataset.kind = kind;
+      $('live-state').textContent = text;
+      if (state !== 'live') drawLiveBox(null);
+    },
+    onEvent: e => {
+      if (e.type === 'motion') drawLiveBox(e.box, '#ffb703');
+      if (e.type === 'alert') {
+        drawLiveBox(e.box, '#ff3b4e');
+        ring({ title: e.title });
+        const el = $('live-view');
+        el.classList.remove('alarm');
+        void el.offsetWidth;
+        el.classList.add('alarm');
+      }
+    },
+  });
+  keepAwake();
+}
+
+async function keepAwake() {
+  try {
+    if (listen && navigator.wakeLock && !document.hidden) listen.wake = await navigator.wakeLock.request('screen');
+  } catch {}
+}
+
+function drawLiveBox(box, color) {
+  const w = liveVideo.videoWidth || 640, h = liveVideo.videoHeight || 480;
+  if (liveOverlay.width !== w || liveOverlay.height !== h) {
+    liveOverlay.width = w;
+    liveOverlay.height = h;
+  }
+  const ctx = liveOverlay.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  if (!box) return;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(2, w / 160);
+  ctx.strokeRect(box.x * w, box.y * h, box.w * w, box.h * h);
+}
+
+$('live-toggle').addEventListener('click', () => {
+  const on = $('live-view').hidden;
+  store.set('liveOn', on);
+  setLive(on);
+});
+$('live-size').addEventListener('click', () => $('live-view').classList.toggle('big'));
+document.addEventListener('visibilitychange', () => listen?.viewer && !document.hidden && keepAwake());
 
 function setConn(kind, text) {
   $('conn-dot').dataset.kind = kind;
@@ -511,11 +611,17 @@ function beep(times = 3) {
   }
 }
 
+let lastRing = { title: '', at: 0 };
+
 function ring(m) {
+  // The live view and ntfy both deliver the same alert; ring once.
+  const now = Date.now();
+  if (m.title === lastRing.title && now - lastRing.at < 12000) return;
+  lastRing = { title: m.title, at: now };
   beep();
   navigator.vibrate?.([400, 150, 400, 150, 400]);
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    try { new Notification(m.title || 'שומר', { body: m.message, tag: m.id, icon: 'img/icon.png' }); } catch {}
+    try { new Notification(m.title || 'שומר', { body: m.message || '', icon: 'img/icon.png' }); } catch {}
   }
 }
 

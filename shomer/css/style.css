@@ -224,6 +224,51 @@ summary { cursor: pointer; color: var(--muted); }
 .curtain[hidden] { display: none; }
 
 /* Receiving */
+.live {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 2px solid var(--line);
+}
+.live[hidden] { display: none; }
+.live video, .live canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.live.alarm { border-color: var(--alert); animation: alarm 0.5s steps(2) 8; }
+.live.big {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  aspect-ratio: auto;
+  border-radius: 0;
+  border-width: 4px;
+}
+.live-state {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  background: rgba(13, 19, 33, 0.8);
+}
+.live-state[data-kind="live"]::before { content: "● "; color: var(--alert); }
+.live-state:empty { display: none; }
+.live-size {
+  position: absolute;
+  bottom: 10px;
+  inset-inline-end: 10px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(13, 19, 33, 0.8);
+  font-size: 20px;
+}
+#live-toggle { margin: 10px 0 14px; }
+@keyframes alarm { 50% { border-color: transparent; } }
+
 .conn { display: flex; align-items: center; gap: 8px; font-weight: 500; }
 .conn i { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
 .conn i[data-kind="ok"] { background: var(--ok); }
@@ -255,6 +300,6 @@ summary { cursor: pointer; color: var(--muted); }
 @keyframes flash { from { background: rgba(255, 59, 78, 0.35); } to { background: var(--panel); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .alerts li.new { animation: none; }
+  .alerts li.new, .live.alarm { animation: none; }
   .meter i { transition: none; }
 }

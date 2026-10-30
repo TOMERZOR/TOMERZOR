@@ -38,11 +38,6 @@ async function writeFile(p, blob) {
   const r = await fetch(`/api/write?p=${encodeURIComponent(p)}`, { method: 'PUT', headers: { 'x-kafitz-token': TOKEN }, body: blob });
   if (!r.ok) throw new Error('WRITE');
 }
-async function copyFile(from, to) {
-  if (!to.length) return;
-  const r = await fetch('/api/copy', { method: 'POST', headers: { 'x-kafitz-token': TOKEN }, body: JSON.stringify({ from, to }) });
-  if (!r.ok) throw new Error('WRITE');
-}
 let sys = { sep: '/', home: '', outDir: 'Kafitz Captions' };
 fetch(`/api/info?t=${TOKEN}`).then((r) => r.json()).then((j) => (sys = j)).catch(() => {});
 const join = (...parts) => parts.join(sys.sep).replace(/[\\/]+/g, sys.sep);
@@ -107,7 +102,7 @@ async function refreshSeq() {
   if (!S.seq) { $('seqName').textContent = 'קפיץ'; $('seqMeta').textContent = 'אין סיקוונס פתוח'; return; }
   $('seqName').textContent = S.seq.name;
   $('seqMeta').innerHTML = `<bdi dir="ltr">${S.seq.width}×${S.seq.height}</bdi> · <bdi dir="ltr">${+S.seq.fps.toFixed(3)} fps</bdi>`;
-  $('placeLabel').textContent = store.get(placedKey(), null) ? 'עדכון הכתוביות בטיימליין' : 'הוספה לטיימליין';
+  $('placeLabel').textContent = placedState().items.length ? 'עדכון הכתוביות בטיימליין' : 'הוספה לטיימליין';
   fitStage();
 }
 $('refresh').onclick = refreshSeq;
@@ -384,66 +379,99 @@ function outRoot() {
 let cancelRender = false;
 $('renderCancel').onclick = () => { cancelRender = true; };
 
-// Draws every frame of the captions to a transparent PNG sequence, then has Premiere import it
-// and lay it over the clips. Frames with no caption are copies of one blank PNG.
+// What's on the timeline for each sequence: the track, and one clip per caption with a signature of
+// its words, timing and style. An update re-renders only captions whose signature changed.
+function placedState() {
+  const v = store.get(placedKey(), null);
+  if (typeof v === 'string') return { track: -1, items: [{ sig: '', id: v }] }; // one combined clip from version 1
+  return v || { track: -1, items: [] };
+}
+function hash(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+const captionName = (pg) => pg.lines.map((line) => line.map((i) => S.words[i].text).join(' ')).join(' / ');
+
+// Draws one caption, every frame from its start to its end, as a transparent PNG sequence.
+async function renderCaption(pg, sig, dir, canvas, ctx, onFrame) {
+  const { width: W, height: H, fps } = S.seq;
+  const startF = Math.round(pg.start * fps);
+  const endF = Math.max(startF + 1, Math.round(pg.end * fps));
+  const file = (f) => join(dir, `c_${sig}`, `k_${sig}_${String(f - startF).padStart(5, '0')}.png`);
+  const state = {};
+  const inFlight = new Set();
+  for (let f = startF; f < endF; f++) {
+    if (cancelRender) throw new Error('CANCELED');
+    ctx.clearRect(0, 0, W, H);
+    drawCaptions(ctx, W, H, f / fps, S.words, S.pages, S.style, state);
+    const blob = await canvas.convertToBlob({ type: 'image/png' });
+    const p = writeFile(file(f), blob).finally(() => inFlight.delete(p));
+    inFlight.add(p);
+    if (inFlight.size >= 6) await Promise.race(inFlight);
+    onFrame();
+  }
+  await Promise.all(inFlight);
+  return { file: file(startF), start: startF / fps, end: endF / fps, name: captionName(pg), frames: endF - startF };
+}
+
 async function placeOnTimeline() {
   if (!S.pages.length) { toast('עוד אין כתוביות. קודם מתמללים.', true); return; }
   await refreshSeq();
   if (!S.seq) return;
   setPlaying(false);
   const { width: W, height: H, fps } = S.seq;
-  const style = S.style;
-  await ensureFont(style);
-  const startF = Math.max(0, Math.floor(S.pages[0].start * fps));
-  const endF = Math.ceil(S.pages[S.pages.length - 1].end * fps) + 1;
-  const stamp = Date.now().toString(36);
-  const dir = join(outRoot(), `${safeName(S.seq.name)}-${stamp}`);
-  const name = (f) => join(dir, `kafitz_${stamp}_${String(f - startF).padStart(5, '0')}.png`);
+  await ensureFont(S.style);
+  const styleKey = JSON.stringify(S.style) + `|${W}x${H}@${fps}`;
+  const wanted = S.pages.map((pg) => {
+    const words = pg.idx.map((i) => S.words[i]);
+    return { pg, sig: hash(styleKey + JSON.stringify(pg.lines.map((l) => l.length)) + JSON.stringify(words.map((w) => [w.text, Math.round(w.start * 1000), Math.round(w.end * 1000)])) + pg.start.toFixed(3) + pg.end.toFixed(3)) };
+  });
+  const prev = placedState();
+  // Captions deleted by hand in Premiere get drawn again.
+  if (prev.items.length) {
+    const alive = new Set(await host('present', prev.items.map((it) => it.id)).catch(() => prev.items.map((it) => it.id)));
+    prev.items = prev.items.filter((it) => alive.has(it.id));
+  }
+  const prevSigs = new Set(prev.items.map((it) => it.sig));
+  const wantedSigs = new Set(wanted.map((w) => w.sig));
+  const keep = prev.items.filter((it) => wantedSigs.has(it.sig));
+  const remove = prev.items.filter((it) => !wantedSigs.has(it.sig)).map((it) => it.id);
+  const todo = wanted.filter((w) => !prevSigs.has(w.sig));
+  if (!todo.length && !remove.length) { toast('הכתוביות בטיימליין כבר מעודכנות.'); return; }
+
+  const dir = join(outRoot(), safeName(S.seq.name));
   const canvas = new OffscreenCanvas(W, H);
   const ctx = canvas.getContext('2d');
-  const state = {};
-
+  const totalFrames = todo.reduce((n, w) => n + Math.max(1, Math.round(w.pg.end * fps) - Math.round(w.pg.start * fps)), 0);
+  let done = 0;
   cancelRender = false;
   $('renderModal').hidden = false;
-  $('renderTitle').textContent = 'מכין את הכתוביות';
+  $('renderTitle').textContent = todo.length === 1 ? 'מכין כתובית אחת' : `מכין ${todo.length} כתוביות`;
   $('renderBar').style.width = '0%';
   try {
-    const blank = join(outRoot(), `_blank_${W}x${H}.png`);
-    ctx.clearRect(0, 0, W, H);
-    await writeFile(blank, await canvas.convertToBlob({ type: 'image/png' }));
-    let blanks = [];
-    const inFlight = new Set();
-    const total = endF - startF;
-    for (let f = startF; f < endF; f++) {
-      if (cancelRender) throw new Error('CANCELED');
-      const t = f / fps;
-      if (!pageAt(S.pages, t)) {
-        blanks.push(name(f));
-        if (blanks.length >= 200) { await copyFile(blank, blanks); blanks = []; }
-      } else {
-        ctx.clearRect(0, 0, W, H);
-        drawCaptions(ctx, W, H, t, S.words, S.pages, style, state);
-        const blob = await canvas.convertToBlob({ type: 'image/png' });
-        const p = writeFile(name(f), blob).finally(() => inFlight.delete(p));
-        inFlight.add(p);
-        if (inFlight.size >= 6) await Promise.race(inFlight);
-      }
-      if ((f - startF) % 10 === 0) {
-        const k = (f - startF) / total;
-        $('renderBar').style.width = Math.round(k * 100) + '%';
-        $('renderText').textContent = `מצייר פריימים… ${Math.round(k * 100)}%`;
-      }
+    const items = [];
+    for (const w of todo) {
+      const item = await renderCaption(w.pg, w.sig, dir, canvas, ctx, () => {
+        if (++done % 10 === 0) {
+          const k = done / totalFrames;
+          $('renderBar').style.width = Math.round(k * 100) + '%';
+          $('renderText').textContent = `מצייר… ${Math.round(k * 100)}%`;
+        }
+      });
+      items.push({ ...item, sig: w.sig });
     }
-    await copyFile(blank, blanks);
-    await Promise.all(inFlight);
     $('renderTitle').textContent = 'מוסיף לטיימליין';
     $('renderText').textContent = 'פרימייר מייבא את הכתוביות…';
     $('renderBar').style.width = '100%';
-    const prev = store.get(placedKey(), null);
-    const res = await host('place', name(startF), fps, startF / fps, total / fps, prev);
-    store.set(placedKey(), res.nodeId);
+    const res = await host('placeCaptions', items.map(({ file, start, end, name }) => ({ file, start, end, name })), fps, remove, prev.track, safeName(S.seq.name));
+    const placed = items.map((it, k) => ({ sig: it.sig, id: res.ids[k] }));
+    store.set(placedKey(), { track: res.track, items: [...keep, ...placed] });
     $('placeLabel').textContent = 'עדכון הכתוביות בטיימליין';
-    toast(prev ? `הכתוביות עודכנו בערוץ V${res.track}.` : `הכתוביות נוספו בערוץ V${res.track}.`);
+    const n = (k) => (k === 1 ? 'כתובית אחת' : `${k} כתוביות`);
+    if (!keep.length) toast(`נוספו ${n(items.length)} כקליפים נפרדים בערוץ V${res.track + 1}.`);
+    else if (!items.length) toast(`הוסרו ${n(remove.length)} מהטיימליין.`);
+    else toast(`${items.length === 1 ? 'עודכנה' : 'עודכנו'} ${n(items.length)}. ${keep.length === 1 ? 'השאר' : `${keep.length} האחרות`} נשארו כמו שהן.`);
   } catch (e) {
     if (e.message !== 'CANCELED') toast(errText(e), true);
   } finally {

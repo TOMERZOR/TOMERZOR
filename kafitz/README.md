@@ -40,8 +40,8 @@ Models download once from Hugging Face and are cached by the browser. WebGPU is 
 
 - **Transcribe** reads the selected clips (or everything on A1, then V1), transcribes the part of each clip that's used, and places the words on the sequence's timeline.
 - The preview follows Premiere's playhead; clicking a caption moves the playhead.
-- **הוספה לטיימליין** draws every frame to a transparent PNG sequence in `Kafitz Captions/` next to the project file, imports it at the sequence frame rate and puts it on the first video track that is free above the clips (adding one if needed). Pressing it again after changes replaces the previous version.
-- **כתוביות פרימייר** writes an SRT and adds it as a native Premiere caption track (no animation, editable in Premiere).
+- **הוספה לטיימליין** puts every caption on the timeline as its own clip, named with its text: a transparent PNG sequence per caption in `Kafitz Captions/<sequence>/` next to the project file, imported at the sequence frame rate, on the first video track that is free above the clips (adding one if needed). Updating redraws only the captions whose words, timing or style changed, and redraws any caption clip that was deleted by hand. Replaced clips' project items move to `Kafitz/<sequence>/ישנים`.
+- **כתוביות פרימייר** writes an SRT and adds it as a native Premiere caption track. Premiere's caption tracks can't animate, so this is plain text, editable in Premiere.
 
 How it runs: `bootstrap.html` (the panel's page, with Node) starts `server.js` on 127.0.0.1 and shows `panel.html` from it in an iframe, so the panel gets a normal http origin for module workers and the model cache. Calls to Premiere go through `postMessage` to the bootstrap, which runs them in `host/kafitz.jsx`. The server only accepts media reads and writes with a random per-session token, and only writes inside a `Kafitz Captions` folder.
 

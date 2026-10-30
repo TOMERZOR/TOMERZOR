@@ -32,14 +32,24 @@ It's an illustration, not history: the growth curves are global averages, and ac
 
 ## Controls
 
-- Drag the slider, or click a year under it.
-- Arrow keys on the slider step a year near today, and 10, 50 or 100 years further back. Home and End jump to the ends.
+- Drag anywhere on the timeline ruler, or tap a labeled year to land on it exactly. On Android phones a light tick marks each labeled year.
+- Arrow keys step a year near today, and 10, 50 or 100 years further back. Page Up and Page Down take 10 steps. Home and End jump to the ends.
 - Space plays the whole timeline in 30 seconds.
 - The address keeps the place and year (`#zoom/lat/lon/year`), so a link opens the same view.
 
+## Design and smoothness
+
+- The interface is one dark gradient at the bottom of the map: a large thin year numeral (Geist), a caption (IBM Plex Sans Hebrew) whose mark is filled for a real photo and hollow for an estimate, and a ruler with a playhead. There's no frosted glass, because a blur over a WebGL map redraws every frame on phones.
+- Pointer input only records the playhead position. The readout and the map catch up once per animation frame, and only the cover layers whose opacity changed are touched.
+- While dragging, a year's photo is fetched only once the playhead rests on it for 140 ms. The previous photo stays visible until the new one has loaded, and a hairline under the ruler shows that it's loading.
+- The reconstruction (OpenStreetMap tiles, tile workers, ground textures) loads only when you grab the timeline or open a year before 2016, so the first photo appears fast.
+- The map renders at no more than 2x pixel density.
+- Entrance and caption animations respect `prefers-reduced-motion`.
+
 ## Files
 
-- `index.html`, `style.css`: the page and the slider panel
+- `index.html`, `style.css`: the page and the timeline
+- `fonts/`: Geist and IBM Plex Sans Hebrew (SIL OFL)
 - `js/app.js`: the map, imagery switching, cover layers, textures, slider
 - `js/model.js`: slider scale, year text, build-year curves, sea level, Wayback releases
 - `js/cores.js`: historic cores

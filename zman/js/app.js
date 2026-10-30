@@ -1,7 +1,7 @@
 import {
   MIN_YEAR, NOW_YEAR, FIRST_REAL_YEAR, WAYBACK_FALLBACK, CURVES, HEIGHT_YEAR, SLICES, TICKS,
   releasesFromConfig, releaseForYear, sliderToYear, yearToSlider, roundYear,
-  formatYear, caption, sliceCover, seaLevel,
+  formatYear, yearParts, caption, sliceCover, seaLevel, rulerTicks,
 } from "./model.js";
 
 const WAYBACK_CONFIG = "https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json";
@@ -42,17 +42,17 @@ const metersToPx = (m) => ["interpolate", ["exponential", 2], ["zoom"],
 // up with it) can't show through.
 const GROUPS = [
   {
-    id: "farm", sourceLayer: "landcover", type: "fill", pattern: "wild", opacity: 0.85, cores: false,
+    id: "farm", sourceLayer: "landcover", type: "fill", pattern: "wild", opacity: 0.85, cores: false, from: -8000,
     filter: ["==", ["get", "class"], "farmland"],
     birth: curve(CURVES.farmland),
   },
   {
-    id: "air", sourceLayer: "aeroway", type: "fill", pattern: "ground", opacity: 1, cores: false,
+    id: "air", sourceLayer: "aeroway", type: "fill", pattern: "ground", opacity: 1, cores: false, from: 1925,
     filter: ["match", ["geometry-type"], ["Polygon", "MultiPolygon"], true, false],
     birth: curve(CURVES.airport),
   },
   {
-    id: "airline", sourceLayer: "aeroway", type: "line", pattern: "ground", opacity: 1, cores: false,
+    id: "airline", sourceLayer: "aeroway", type: "line", pattern: "ground", opacity: 1, cores: false, from: 1925,
     filter: ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false],
     birth: curve(CURVES.airport),
     width: metersToPx(["match", ["get", "class"], "runway", 60, 25]),
@@ -116,9 +116,11 @@ const opacityProp = (g) => (g.type === "fill" ? "fill-opacity" : "line-opacity")
 // ---------- ground textures ----------
 // Land drawn over things that didn't exist yet. The color is sampled from a
 // wide view of the area so a desert gets sand and a forest gets green.
+// Made only once the reconstruction is first needed, so it never delays the
+// first photo.
 
 const DEFAULT_GROUND = [146, 138, 104];
-const PATTERN_SIZE = 512; // drawn at 2x, so it repeats every 256 screen pixels
+const PATTERN_SIZE = 256;
 
 function mulberry32(seed) {
   return () => {
@@ -129,22 +131,23 @@ function mulberry32(seed) {
   };
 }
 
-// Tileable value noise, a few octaves.
+// Tileable value noise, a few octaves. The broad ones are kept faint so the
+// 256 px repeat doesn't show as a pattern.
 function noiseField(size, seed) {
   const rand = mulberry32(seed);
   const out = new Float32Array(size * size);
-  const octaves = [[6, 0.22], [12, 0.3], [24, 0.24], [64, 0.14], [160, 0.1]];
-  for (const [cells, weight] of octaves) {
-    const grid = Array.from({ length: cells * cells }, rand);
-    const at = (x, y) => grid[((y + cells) % cells) * cells + ((x + cells) % cells)];
+  for (const [cells, weight] of [[4, 0.08], [8, 0.2], [16, 0.3], [40, 0.24], [96, 0.18]]) {
+    const grid = Float32Array.from({ length: cells * cells }, rand);
     for (let y = 0; y < size; y++) {
+      const gy = (y / size) * cells, y0 = Math.floor(gy);
+      let fy = gy - y0; fy = fy * fy * (3 - 2 * fy);
+      const r0 = (y0 % cells) * cells, r1 = ((y0 + 1) % cells) * cells;
       for (let x = 0; x < size; x++) {
-        const gx = (x / size) * cells, gy = (y / size) * cells;
-        const x0 = Math.floor(gx), y0 = Math.floor(gy);
-        let fx = gx - x0, fy = gy - y0;
-        fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
-        const top = at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx;
-        const bottom = at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx;
+        const gx = (x / size) * cells, x0 = Math.floor(gx);
+        let fx = gx - x0; fx = fx * fx * (3 - 2 * fx);
+        const c0 = x0 % cells, c1 = (x0 + 1) % cells;
+        const top = grid[r0 + c0] * (1 - fx) + grid[r0 + c1] * fx;
+        const bottom = grid[r1 + c0] * (1 - fx) + grid[r1 + c1] * fx;
         out[y * size + x] += (top * (1 - fy) + bottom * fy) * weight;
       }
     }
@@ -152,8 +155,7 @@ function noiseField(size, seed) {
   return out;
 }
 
-const NOISE_GROUND = noiseField(PATTERN_SIZE, 7);
-const NOISE_WILD = noiseField(PATTERN_SIZE, 23);
+let noises = null;
 
 function makePattern(base, noise, shadeTint) {
   const data = new Uint8ClampedArray(PATTERN_SIZE * PATTERN_SIZE * 4);
@@ -173,11 +175,12 @@ function makePattern(base, noise, shadeTint) {
 }
 
 function groundPatterns(base) {
+  noises ||= { ground: noiseField(PATTERN_SIZE, 7), wild: noiseField(PATTERN_SIZE, 23) };
   const shade = [base[0] * 0.6, base[1] * 0.72, base[2] * 0.5];
   const wildBase = [base[0] * 0.8 + 52 * 0.2, base[1] * 0.8 + 78 * 0.2, base[2] * 0.8 + 40 * 0.2];
   return {
-    ground: makePattern(base, NOISE_GROUND, shade),
-    wild: makePattern(wildBase, NOISE_WILD, [wildBase[0] * 0.55, wildBase[1] * 0.7, wildBase[2] * 0.45]),
+    ground: makePattern(base, noises.ground, shade),
+    wild: makePattern(wildBase, noises.wild, [wildBase[0] * 0.55, wildBase[1] * 0.7, wildBase[2] * 0.45]),
   };
 }
 
@@ -219,21 +222,27 @@ async function sampleGround(num, lng, lat) {
   return [median(r), median(g), median(b)];
 }
 
-// ---------- the page ----------
+// ---------- state ----------
 
 const els = {
-  slider: document.getElementById("slider"),
-  year: document.getElementById("year"),
+  hud: document.getElementById("hud"),
+  yearNum: document.getElementById("yearNum"),
+  yearEra: document.getElementById("yearEra"),
   caption: document.getElementById("caption"),
-  ticks: document.getElementById("ticks"),
-  panel: document.getElementById("panel"),
+  captionRow: document.getElementById("captionRow"),
+  scrubber: document.getElementById("scrubber"),
+  track: document.getElementById("track"),
+  ruler: document.getElementById("ruler"),
+  labels: document.getElementById("labels"),
+  playhead: document.getElementById("playhead"),
 };
 
 let releases = { ...WAYBACK_FALLBACK };
 let year = NOW_YEAR;
+let t = 1; // playhead position 0..1; kept separately so dragging is continuous
 let groundColor = DEFAULT_GROUND;
-let activeImagery = null;
 let styleReady = false;
+let dragging = false;
 
 function parseHash() {
   const parts = location.hash.replace(/^#/, "").split("/").map(Number);
@@ -247,79 +256,122 @@ function parseHash() {
 }
 
 const fromHash = parseHash();
-if (fromHash && fromHash.year != null) year = fromHash.year;
+if (fromHash && fromHash.year != null) { year = fromHash.year; t = yearToSlider(year); }
 
 const map = new maplibregl.Map({
   container: "map",
   center: fromHash ? fromHash.center : DEFAULT_VIEW.center,
   zoom: fromHash ? fromHash.zoom : DEFAULT_VIEW.zoom,
   maxZoom: 19.5,
-  attributionControl: { compact: true },
+  // Phones with 3x screens would draw 2.25x more pixels for little visible gain.
+  pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+  attributionControl: false,
   dragRotate: false,
   pitchWithRotate: false,
   touchPitch: false,
+  refreshExpiredTiles: false,
   style: {
     version: 8,
     sources: {
       dem: { type: "raster-dem", tiles: [DEM_TILES], encoding: "terrarium", tileSize: 256, maxzoom: 11, attribution: DEM_ATTRIBUTION },
     },
-    layers: [{ id: "bg", type: "background", paint: { "background-color": "#10151b" } }],
+    layers: [{ id: "bg", type: "background", paint: { "background-color": "#0b0d10" } }],
   },
 });
 map.touchZoomRotate.disableRotation();
-window.zman = { map, setYear: (y) => setYear(y) }; // handy in the console
+map.addControl(new maplibregl.AttributionControl({ compact: true }), "top-left");
+window.zman = { map, setYear: (y) => jumpTo(y) }; // handy in the console
+
+// ---------- satellite photos ----------
+// One raster layer per Wayback release, created on first use. The previous
+// photo stays underneath until the new one has loaded, so switching years
+// never shows holes, and only a few photo layers are ever drawn at once.
+
+const shownImagery = new Set();
+let topImagery = null;
+let pendingImagery = null;
+let wantedRelease = null;
+let imageryTimer = 0;
 
 function baseRelease() {
   return releaseForYear(FIRST_REAL_YEAR, releases);
 }
 
-function addImagery(rel) {
+function ensureImagery(rel) {
   const id = `img-${rel.num}`;
   if (!map.getSource(id)) {
     map.addSource(id, {
       type: "raster", tiles: [waybackTiles(rel.num)], tileSize: 256, maxzoom: 18,
       attribution: IMAGERY_ATTRIBUTION,
     });
-    map.addLayer({ id, type: "raster", source: id, paint: { "raster-fade-duration": 250 } }, FIRST_COVER);
+    map.addLayer({ id, type: "raster", source: id, layout: { visibility: "none" }, paint: { "raster-fade-duration": 300 } }, FIRST_COVER);
   }
   return id;
 }
 
 function showImagery(rel) {
-  const id = addImagery(rel);
-  map.setLayoutProperty(id, "visibility", "visible");
-  map.moveLayer(id, FIRST_COVER); // on top of the other photos while it loads
-  activeImagery = id;
-  hideOtherImageryWhenLoaded();
+  const id = ensureImagery(rel);
+  if (id === topImagery && !pendingImagery) return;
+  if (!shownImagery.has(id)) {
+    map.setLayoutProperty(id, "visibility", "visible");
+    shownImagery.add(id);
+  }
+  if (topImagery !== id) {
+    map.moveLayer(id, FIRST_COVER);
+    topImagery = id;
+  }
+  pendingImagery = id;
+  setLoading(true);
+  settleImagery();
 }
 
-// Keep the previous photo underneath until the new one has loaded, so
-// switching years never shows holes.
-function hideOtherImageryWhenLoaded() {
-  if (!activeImagery || !map.isSourceLoaded(activeImagery)) return;
-  const base = `img-${baseRelease().num}`;
-  for (const layer of map.getStyle().layers) {
-    if (layer.type === "raster" && layer.id !== activeImagery && layer.id !== base) {
-      map.setLayoutProperty(layer.id, "visibility", "none");
-    }
+function settleImagery() {
+  if (!pendingImagery || !map.isSourceLoaded(pendingImagery)) return;
+  for (const id of shownImagery) {
+    if (id !== pendingImagery) map.setLayoutProperty(id, "visibility", "none");
   }
+  shownImagery.clear();
+  shownImagery.add(pendingImagery);
+  pendingImagery = null;
+  setLoading(false);
+}
+
+/** While dragging, wait until the playhead rests on a year before fetching its photo. */
+function requestImagery(rel) {
+  if (wantedRelease && wantedRelease.num === rel.num) return;
+  wantedRelease = rel;
+  clearTimeout(imageryTimer);
+  if (dragging) imageryTimer = setTimeout(() => showImagery(rel), 140);
+  else showImagery(rel);
+}
+
+let loadingOn = false;
+function setLoading(on) {
+  if (on === loadingOn) return;
+  loadingOn = on;
+  if (on) els.hud.dataset.loading = ""; else delete els.hud.dataset.loading;
 }
 
 // ---------- OpenStreetMap tiles, rewritten in workers ----------
 // The vector tiles go through tile-worker.js (see src/tiles.js), which splits
 // merged shapes apart and gives each one its place in the build order.
+// Nothing here loads until the reconstruction is about to be needed.
 
-const workers = Array.from({ length: Math.min(4, Math.max(2, (navigator.hardwareConcurrency || 4) >> 1)) },
-  () => new Worker("js/tile-worker.js"));
+let workers = null;
 const pending = new Map();
 let nextJob = 0;
-for (const w of workers) {
-  w.onmessage = ({ data }) => {
-    const job = pending.get(data.id);
-    if (!job) return;
-    pending.delete(data.id);
-    if (data.error) job.reject(new Error(data.error)); else job.resolve(data.data);
-  };
+
+function startWorkers() {
+  workers = Array.from({ length: Math.min(4, Math.max(2, (navigator.hardwareConcurrency || 4) >> 1)) },
+    () => new Worker("js/tile-worker.js"));
+  for (const w of workers) {
+    w.onmessage = ({ data }) => {
+      const job = pending.get(data.id);
+      if (!job) return;
+      pending.delete(data.id);
+      if (data.error) job.reject(new Error(data.error)); else job.resolve(data.data);
+    };
+  }
 }
 
 maplibregl.addProtocol("zman", (params, abort) => new Promise((resolve, reject) => {
@@ -332,52 +384,60 @@ maplibregl.addProtocol("zman", (params, abort) => new Promise((resolve, reject) 
   workers[id % workers.length].postMessage({ id, url, z: Number(m[1]), x: Number(m[2]), y: Number(m[3]) });
 }));
 
-async function addOsm() {
-  const tilejson = await fetch(OSM_TILEJSON).then((r) => (r.ok ? r.json() : Promise.reject(r.status)));
-  map.addSource("osm", {
-    type: "vector",
-    tiles: tilejson.tiles.map((t) => `zman://${t}`),
-    minzoom: tilejson.minzoom || 0,
-    maxzoom: Math.min(14, tilejson.maxzoom || 14),
-    attribution: OSM_ATTRIBUTION,
-  });
-  addCovers();
-  applyCovers();
+let coversState = "off"; // off -> loading -> on
+const coverLayers = []; // { id, prop, group, k }
+const lastOpacity = new Map();
+
+function ensureCovers() {
+  if (coversState !== "off" || !styleReady) return;
+  coversState = "loading";
+  startWorkers();
+  const pats = groundPatterns(groundColor);
+  map.addImage("ground", pats.ground);
+  map.addImage("wild", pats.wild);
+  fetch(OSM_TILEJSON)
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((tilejson) => {
+      map.addSource("osm", {
+        type: "vector",
+        tiles: tilejson.tiles.map((url) => `zman://${url}`),
+        minzoom: tilejson.minzoom || 0,
+        maxzoom: Math.min(14, tilejson.maxzoom || 14),
+        attribution: OSM_ATTRIBUTION,
+      });
+      addCoverLayers();
+      coversState = "on";
+      applyMap();
+      updateGround();
+    })
+    .catch(() => { /* no OpenStreetMap: the photos still work, without the reconstruction */ });
+}
+
+function addCoverLayers() {
+  for (const g of GROUPS) {
+    for (let k = 0; k < SLICES.length - 1; k++) {
+      if (SLICES[k + 1] <= (g.from ?? MIN_YEAR)) continue; // nothing of this kind is that old
+      const id = coverId(g, k);
+      const layer = { id, type: g.type, source: "osm", "source-layer": g.sourceLayer, filter: sliceFilter(g, k), paint: {} };
+      if (g.type === "fill") {
+        Object.assign(layer.paint, { "fill-pattern": g.pattern, "fill-antialias": false, "fill-opacity": 0, "fill-opacity-transition": { duration: 160 } });
+      } else {
+        layer.layout = { "line-cap": "round", "line-join": "round" };
+        Object.assign(layer.paint, { "line-pattern": g.pattern, "line-width": g.width, "line-opacity": 0, "line-opacity-transition": { duration: 160 } });
+      }
+      map.addLayer(layer);
+      coverLayers.push({ id, prop: opacityProp(g), group: g, k });
+      lastOpacity.set(id, 0);
+    }
+  }
 }
 
 function addSea() {
-  const pats = groundPatterns(groundColor);
-  map.addImage("ground", pats.ground, { pixelRatio: 2 });
-  map.addImage("wild", pats.wild, { pixelRatio: 2 });
   map.addLayer({
     id: FIRST_COVER, type: "color-relief", source: "dem",
-    paint: { "color-relief-opacity": 0, "color-relief-color": seaColor(0) },
+    layout: { visibility: "none" },
+    paint: { "color-relief-opacity": 0.97, "color-relief-color": seaColor(-50) },
   });
-}
-
-function addCovers() {
-  for (const g of GROUPS) {
-    for (let k = 0; k < SLICES.length - 1; k++) {
-      const layer = {
-        id: coverId(g, k), type: g.type, source: "osm", "source-layer": g.sourceLayer,
-        filter: sliceFilter(g, k),
-        paint: {},
-      };
-      if (g.type === "fill") {
-        layer.paint["fill-pattern"] = g.pattern;
-        layer.paint["fill-antialias"] = false; // no hairline seams between neighboring covers
-        layer.paint["fill-opacity"] = 0;
-        layer.paint["fill-opacity-transition"] = { duration: 220 };
-      } else {
-        layer.layout = { "line-cap": "round", "line-join": "round" };
-        layer.paint["line-pattern"] = g.pattern;
-        layer.paint["line-width"] = g.width;
-        layer.paint["line-opacity"] = 0;
-        layer.paint["line-opacity-transition"] = { duration: 220 };
-      }
-      map.addLayer(layer);
-    }
-  }
 }
 
 function seaColor(level) {
@@ -385,26 +445,39 @@ function seaColor(level) {
   const sand = "rgb(214, 198, 158)";
   const land = `rgb(${c[0] * 0.92 | 0}, ${c[1] * 0.98 | 0}, ${c[2] * 0.85 | 0})`;
   const shore = `rgb(${c[0] | 0}, ${c[1] | 0}, ${c[2] | 0})`;
-  if (level > -6) return ["interpolate", ["linear"], ["elevation"], -2, "rgba(0,0,0,0)", -1, "rgba(0,0,0,0)"];
   return ["interpolate", ["linear"], ["elevation"],
     level - 0.6, "rgba(0,0,0,0)", level, sand, level + 2, land, -2.6, shore, -2, "rgba(0,0,0,0)"];
 }
 
+let seaShown = false;
+let seaLevelDrawn = null;
+function applySea() {
+  const level = Math.round(seaLevel(year) * 2) / 2;
+  const show = level <= -6;
+  if (show !== seaShown) {
+    map.setLayoutProperty(FIRST_COVER, "visibility", show ? "visible" : "none");
+    seaShown = show;
+  }
+  if (show && level !== seaLevelDrawn) {
+    map.setPaintProperty(FIRST_COVER, "color-relief-color", seaColor(level));
+    seaLevelDrawn = level;
+  }
+}
+
+/** Sets only the layer opacities that changed: a drag usually touches one or two slices. */
 function applyCovers() {
   const past = year < FIRST_REAL_YEAR;
-  for (const g of GROUPS) {
-    for (let k = 0; k < SLICES.length - 1; k++) {
-      if (!map.getLayer(coverId(g, k))) continue;
-      map.setPaintProperty(coverId(g, k), opacityProp(g), past ? g.opacity * sliceCover(year, k) : 0);
-    }
+  for (const { id, prop, group, k } of coverLayers) {
+    const value = past ? Math.round(group.opacity * sliceCover(year, k) * 100) / 100 : 0;
+    if (lastOpacity.get(id) === value) continue;
+    lastOpacity.set(id, value);
+    map.setPaintProperty(id, prop, value);
   }
-  const level = seaLevel(year);
-  map.setPaintProperty(FIRST_COVER, "color-relief-color", seaColor(level));
-  map.setPaintProperty(FIRST_COVER, "color-relief-opacity", level > -6 ? 0 : 0.97);
 }
 
 let sampledTile = "";
 async function updateGround() {
+  if (coversState !== "on") return;
   const c = map.getCenter();
   const key = tileXY(c.lng, c.lat, 7).join("/");
   if (key === sampledTile) return;
@@ -412,27 +485,68 @@ async function updateGround() {
   try {
     const color = await sampleGround(baseRelease().num, c.lng, c.lat);
     if (!color || key !== sampledTile) return;
+    const diff = Math.abs(color[0] - groundColor[0]) + Math.abs(color[1] - groundColor[1]) + Math.abs(color[2] - groundColor[2]);
+    if (diff < 18) return; // close enough: skip rebuilding the textures
     groundColor = color;
     const pats = groundPatterns(color);
     map.updateImage("ground", pats.ground);
     map.updateImage("wild", pats.wild);
-    applyCovers();
+    seaLevelDrawn = null;
+    applySea();
   } catch {
     // Keep the current color if the sample tile can't be read.
   }
 }
 
-function render() {
-  els.year.textContent = formatYear(year);
+// ---------- applying a year ----------
+// Input only records where the playhead is; the HUD and the map catch up once
+// per animation frame, however many pointer events arrived in between.
+
+let frame = 0;
+let shownMode = "";
+let shownYear = null;
+
+function schedule() {
+  if (!frame) frame = requestAnimationFrame(flush);
+}
+
+function flush() {
+  frame = 0;
+  drawPlayhead();
+  if (year !== shownYear) {
+    shownYear = year;
+    renderReadout();
+    applyMap();
+  }
+}
+
+function renderReadout() {
+  const { num, era } = yearParts(year);
+  els.yearNum.textContent = num;
+  els.yearEra.textContent = era;
   const rel = releaseForYear(Math.max(year, FIRST_REAL_YEAR), releases);
-  const real = year >= FIRST_REAL_YEAR;
+  const mode = year >= FIRST_REAL_YEAR ? "real" : "estimate";
   els.caption.textContent = caption(year, rel);
-  els.panel.dataset.mode = real ? "real" : "estimate";
-  els.slider.setAttribute("aria-valuetext", `${formatYear(year)}, ${els.caption.textContent}`);
+  if (mode !== shownMode) {
+    els.hud.dataset.mode = mode;
+    if (shownMode) { // not on first paint
+      els.captionRow.classList.remove("is-swapping");
+      void els.captionRow.offsetWidth;
+      els.captionRow.classList.add("is-swapping");
+    }
+    shownMode = mode;
+  }
+  els.scrubber.setAttribute("aria-valuenow", String(Math.round(t * 1000)));
+  els.scrubber.setAttribute("aria-valuetext", `${formatYear(year)}, ${els.caption.textContent}`);
   document.title = `${formatYear(year)} · זמן`;
+}
+
+function applyMap() {
   if (!styleReady) return;
-  showImagery(rel);
+  if (year < FIRST_REAL_YEAR + 2) ensureCovers(); // close to the past: get the reconstruction ready
+  requestImagery(releaseForYear(Math.max(year, FIRST_REAL_YEAR), releases));
   applyCovers();
+  applySea();
   saveHash();
 }
 
@@ -441,80 +555,156 @@ function saveHash() {
   clearTimeout(hashTimer);
   hashTimer = setTimeout(() => {
     const c = map.getCenter();
-    const hash = `#${map.getZoom().toFixed(2)}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}/${year}`;
-    history.replaceState(null, "", hash);
-  }, 250);
+    history.replaceState(null, "", `#${map.getZoom().toFixed(2)}/${c.lat.toFixed(5)}/${c.lng.toFixed(5)}/${year}`);
+  }, 300);
 }
 
-function setYear(next, { moveSlider = true } = {}) {
-  next = Math.min(NOW_YEAR, Math.max(MIN_YEAR, next));
-  if (moveSlider) els.slider.value = Math.round(yearToSlider(next) * Number(els.slider.max));
-  updateSliderFill();
-  if (next === year && styleReady && activeImagery) return;
-  year = next;
-  render();
+// ---------- the scrubber ----------
+
+let trackWidth = 0;
+function measure() {
+  trackWidth = els.track.getBoundingClientRect().width;
+  drawPlayhead();
 }
 
-function updateSliderFill() {
-  els.slider.style.setProperty("--p", `${(Number(els.slider.value) / Number(els.slider.max)) * 100}%`);
+function drawPlayhead() {
+  els.playhead.style.setProperty("--x", (t * trackWidth).toFixed(1));
 }
 
-function buildTicks() {
-  els.ticks.textContent = "";
-  for (const t of TICKS) {
-    const tick = document.createElement("button");
-    tick.type = "button";
-    tick.className = `tick${t.wide ? " tick--wide" : ""}`;
-    tick.style.left = `${yearToSlider(t.year) * 100}%`;
-    tick.textContent = t.label;
-    tick.tabIndex = -1;
-    tick.addEventListener("click", () => setYear(t.year));
-    els.ticks.appendChild(tick);
+function setT(next) {
+  t = Math.min(1, Math.max(0, next));
+  const y = sliderToYear(t);
+  if (y !== year) buzz(year, y);
+  year = y;
+  schedule();
+}
+
+function jumpTo(y) {
+  year = Math.min(NOW_YEAR, Math.max(MIN_YEAR, Math.round(y)));
+  t = yearToSlider(year);
+  schedule();
+}
+
+// A light tick on phones that support it, when the playhead crosses a labeled year.
+const MAJOR = TICKS.map((tk) => tk.year);
+function buzz(from, to) {
+  if (!dragging || !navigator.vibrate) return;
+  const lo = Math.min(from, to), hi = Math.max(from, to);
+  if (MAJOR.some((m) => m > lo && m <= hi)) navigator.vibrate(4);
+}
+
+function buildRuler() {
+  const ns = "http://www.w3.org/2000/svg";
+  const real = yearToSlider(FIRST_REAL_YEAR);
+  const majors = new Set(TICKS.map((tk) => tk.year));
+  const frag = document.createDocumentFragment();
+  const base = document.createElementNS(ns, "line");
+  Object.entries({ x1: 0, x2: 1000, y1: 24, y2: 24, class: "base" }).forEach(([k, v]) => base.setAttribute(k, v));
+  frag.appendChild(base);
+  const marks = rulerTicks(0.0045);
+  for (const tk of TICKS) if (!marks.some((m) => m.year === tk.year)) marks.push({ year: tk.year, t: yearToSlider(tk.year) });
+  for (const m of marks) {
+    const major = majors.has(m.year);
+    const line = document.createElementNS(ns, "line");
+    const x = (m.t * 1000).toFixed(2);
+    line.setAttribute("x1", x); line.setAttribute("x2", x);
+    line.setAttribute("y1", major ? 6 : 15); line.setAttribute("y2", 24);
+    line.setAttribute("class", `${m.t >= real - 1e-9 ? "real" : "past"}${major ? " major" : ""}`);
+    frag.appendChild(line);
   }
-  els.slider.style.setProperty("--real", `${yearToSlider(FIRST_REAL_YEAR) * 100}%`);
+  els.ruler.replaceChildren(frag);
+
+  els.labels.replaceChildren(...TICKS.map((tk) => {
+    const label = document.createElement("span");
+    label.className = `label${tk.wide ? " label--wide" : ""}${tk.year >= FIRST_REAL_YEAR ? " is-real" : ""}`;
+    label.style.left = `${yearToSlider(tk.year) * 100}%`;
+    label.textContent = tk.label;
+    return label;
+  }));
 }
+
+function pointerT(e) {
+  const r = els.track.getBoundingClientRect();
+  return (e.clientX - r.left) / r.width;
+}
+
+let downX = 0;
+els.scrubber.addEventListener("pointerdown", (e) => {
+  if (e.button > 0) return;
+  stopPlay();
+  dragging = true;
+  downX = e.clientX;
+  els.scrubber.setPointerCapture(e.pointerId);
+  els.scrubber.classList.add("is-dragging");
+  ensureCovers();
+  setT(pointerT(e));
+});
+els.scrubber.addEventListener("pointermove", (e) => {
+  if (dragging) setT(pointerT(e));
+});
+function endDrag(e) {
+  if (!dragging) return;
+  dragging = false;
+  els.scrubber.classList.remove("is-dragging");
+  // A tap (not a drag) near a labeled year lands exactly on it.
+  if (Math.abs(e.clientX - downX) < 4 && trackWidth) {
+    const near = TICKS.find((tk) => Math.abs(yearToSlider(tk.year) - t) * trackWidth < 12);
+    if (near) jumpTo(near.year);
+  }
+  // Fetch the photo for where the playhead stopped right away.
+  clearTimeout(imageryTimer);
+  wantedRelease = null;
+  if (styleReady) applyMap();
+}
+els.scrubber.addEventListener("pointerup", endDrag);
+els.scrubber.addEventListener("pointercancel", endDrag);
 
 // One step of the arrow keys: a year near today, more further back.
-function stepYear(dir) {
+function stepYear(dir, big = false) {
   const ago = NOW_YEAR - year;
   const step = ago > 3000 ? 100 : ago > 1000 ? 50 : ago > 300 ? 10 : 1;
-  return roundYear(year + dir * step);
+  return roundYear(year + dir * step * (big ? 10 : 1));
 }
+
+els.scrubber.addEventListener("focus", () => ensureCovers());
+els.scrubber.addEventListener("keydown", (e) => {
+  const keys = {
+    ArrowLeft: () => stepYear(-1), ArrowDown: () => stepYear(-1),
+    ArrowRight: () => stepYear(1), ArrowUp: () => stepYear(1),
+    PageDown: () => stepYear(-1, true), PageUp: () => stepYear(1, true),
+    Home: () => MIN_YEAR, End: () => NOW_YEAR,
+  };
+  if (!keys[e.key]) return;
+  e.preventDefault();
+  stopPlay();
+  jumpTo(keys[e.key]());
+});
 
 let playing = 0;
+function stopPlay() {
+  if (playing) cancelAnimationFrame(playing);
+  playing = 0;
+}
 function togglePlay() {
-  if (playing) { cancelAnimationFrame(playing); playing = 0; return; }
-  let t = yearToSlider(year);
+  if (playing) return stopPlay();
+  ensureCovers();
   if (t >= 0.999) t = 0;
   let last = performance.now();
-  const tick = (now) => {
-    t = Math.min(1, t + (now - last) / 30000);
+  const step = (now) => {
+    setT(t + (now - last) / 30000);
     last = now;
-    setYear(sliderToYear(t));
-    playing = t < 1 ? requestAnimationFrame(tick) : 0;
+    playing = t < 1 ? requestAnimationFrame(step) : 0;
   };
-  playing = requestAnimationFrame(tick);
+  playing = requestAnimationFrame(step);
 }
-
-els.slider.max = 10000;
-els.slider.addEventListener("input", () => {
-  if (playing) togglePlay();
-  setYear(sliderToYear(Number(els.slider.value) / Number(els.slider.max)), { moveSlider: false });
-});
-els.slider.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); setYear(stepYear(-1)); }
-  else if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); setYear(stepYear(1)); }
-  else if (e.key === "Home") { e.preventDefault(); setYear(MIN_YEAR); }
-  else if (e.key === "End") { e.preventDefault(); setYear(NOW_YEAR); }
-});
 document.addEventListener("keydown", (e) => {
-  if (e.key === " " && !e.target.closest("button")) { e.preventDefault(); togglePlay(); }
+  if (e.key === " ") { e.preventDefault(); togglePlay(); }
 });
 
-buildTicks();
-els.slider.value = Math.round(yearToSlider(year) * Number(els.slider.max));
-updateSliderFill();
-render();
+new ResizeObserver(measure).observe(els.track);
+buildRuler();
+measure();
+flush();
 
 map.on("load", () => {
   // Start with the credits folded into the (i) button; they're one tap away.
@@ -522,13 +712,15 @@ map.on("load", () => {
   foldCredits();
   map.once("idle", foldCredits);
   addSea();
-  addImagery(baseRelease());
+  ensureImagery(baseRelease());
   styleReady = true;
-  render();
-  updateGround();
-  addOsm().catch(() => { /* no OpenStreetMap: the photos still work, without the reconstruction */ });
+  shownYear = null;
+  flush();
 });
-map.on("sourcedata", (e) => { if (e.sourceId === activeImagery) hideOtherImageryWhenLoaded(); });
+map.on("sourcedata", (e) => {
+  if (pendingImagery && e.sourceId === pendingImagery) settleImagery();
+});
+map.on("idle", () => { if (pendingImagery) settleImagery(); });
 map.on("moveend", () => {
   if (!styleReady) return;
   updateGround();
@@ -539,6 +731,10 @@ fetch(WAYBACK_CONFIG)
   .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
   .then((config) => {
     const live = releasesFromConfig(config);
-    if (Object.keys(live).length) { releases = live; render(); }
+    if (!Object.keys(live).length) return;
+    releases = live;
+    shownYear = null;
+    wantedRelease = null;
+    schedule();
   })
   .catch(() => { /* the built-in list still works */ });

@@ -34,13 +34,30 @@ Models download once from Hugging Face and are cached by the browser. WebGPU is 
 - **Style tab:** 9 animations (פופ is the default), speed, size, words per line (1 to 8), 1 or 2 lines, 8 Hebrew fonts, text and highlight colours, outline width and colour, shadow strength, softness, distance and colour, height on screen, a dark band behind the line, and uppercase for English. Settings are remembered.
 - Drag the caption up or down on the video to move it. Click the video or press Space to play.
 
+## Premiere Pro panel
+
+`premiere/` is the same app as a Premiere Pro panel (CEP, Premiere 2021 and up). Download `kafitz-premiere.zip` (linked on the home screen), unzip, run `install/install-mac.command` or `install/install-windows.bat`, restart Premiere, then Window > Extensions > Kafitz.
+
+- **Transcribe** reads the selected clips (or everything on A1, then V1), transcribes the part of each clip that's used, and places the words on the sequence's timeline.
+- The preview follows Premiere's playhead; clicking a caption moves the playhead.
+- **הוספה לטיימליין** draws every frame to a transparent PNG sequence in `Kafitz Captions/` next to the project file, imports it at the sequence frame rate and puts it on the first video track that is free above the clips (adding one if needed). Pressing it again after changes replaces the previous version.
+- **כתוביות פרימייר** writes an SRT and adds it as a native Premiere caption track (no animation, editable in Premiere).
+
+How it runs: `bootstrap.html` (the panel's page, with Node) starts `server.js` on 127.0.0.1 and shows `panel.html` from it in an iframe, so the panel gets a normal http origin for module workers and the model cache. Calls to Premiere go through `postMessage` to the bootstrap, which runs them in `host/kafitz.jsx`. The server only accepts media reads and writes with a random per-session token, and only writes inside a `Kafitz Captions` folder.
+
+Build the zip after changing anything the panel uses: `python3 kafitz/premiere/build.py`.
+
+Not handled: clips with speed changes or time remapping (the timing assumes 100% speed), and nested sequences as the clip to transcribe.
+
 ## Files
 
 - `js/render.js`: page grouping (`buildPages`), layout (RTL aware) and the animations
 - `js/transcribe.js`: audio extraction, splitting, engines, ElevenLabs call
 - `js/worker.js`: the Whisper worker
 - `js/export.js`: MP4 export and SRT
-- `js/app.js`: the UI
+- `js/ui.js`: the style controls and caption list, shared with the Premiere panel
+- `js/app.js`: the website UI
+- `premiere/`: the Premiere Pro panel
 
 ## Browser support
 

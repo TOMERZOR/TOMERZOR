@@ -51,6 +51,7 @@
       <select id="homeLang"></select>
     </div>
     <p class="fine"><i class="ph ph-lock-simple"></i> התמלול רץ על המכשיר שלכם. הסרטון לא נשלח לשום מקום.</p>
+    <a class="ppro-link" href="kafitz-premiere.zip" download><i class="ph ph-puzzle-piece"></i> עובדים ב-Premiere Pro? הורידו את קפיץ כתוסף</a>
   </section>
   <figure class="demo" aria-hidden="true">
     <canvas id="demoCanvas"></canvas>
@@ -90,79 +91,7 @@
       <button role="tab" aria-selected="false" data-tab="text">טקסט <span class="count" id="pageCount"></span></button>
     </div>
 
-    <div class="tab-body" id="tab-style">
-      <h3>אנימציה</h3>
-      <div class="anims" id="anims"></div>
-      <div class="field">
-        <label for="speed">מהירות <output id="speedOut"></output></label>
-        <input type="range" id="speed" min="0.5" max="2" step="0.1">
-      </div>
-
-      <h3>טקסט</h3>
-      <div class="field">
-        <label for="size">גודל <output id="sizeOut"></output></label>
-        <input type="range" id="size" min="3" max="14" step="0.5">
-      </div>
-      <div class="field two">
-        <div>
-          <label>מילים בשורה</label>
-          <div class="stepper" id="wplStep">
-            <button data-d="-1" aria-label="פחות מילים"><i class="ph ph-minus"></i></button>
-            <output id="wplOut">3</output>
-            <button data-d="1" aria-label="יותר מילים"><i class="ph ph-plus"></i></button>
-          </div>
-        </div>
-        <div>
-          <label>שורות</label>
-          <div class="seg" id="linesSeg">
-            <button data-v="1">1</button><button data-v="2">2</button>
-          </div>
-        </div>
-      </div>
-      <div class="field">
-        <label>גופן</label>
-        <div class="fonts" id="fonts"></div>
-      </div>
-      <div class="field two">
-        <div>
-          <label for="color">צבע טקסט</label>
-          <div class="swatches" data-for="color"></div>
-        </div>
-        <div>
-          <label for="hi">צבע הדגשה</label>
-          <div class="swatches" data-for="hi"></div>
-        </div>
-      </div>
-
-      <h3>קו מתאר וצל</h3>
-      <div class="field">
-        <label for="stroke">עובי קו מתאר <output id="strokeOut"></output></label>
-        <div class="with-color"><input type="range" id="stroke" min="0" max="20" step="1"><input type="color" id="strokeColor" aria-label="צבע קו המתאר"></div>
-      </div>
-      <div class="field">
-        <label for="shadow">עוצמת צל <output id="shadowOut"></output></label>
-        <div class="with-color"><input type="range" id="shadow" min="0" max="100" step="1"><input type="color" id="shadowColor" aria-label="צבע הצל"></div>
-      </div>
-      <div class="field two">
-        <div>
-          <label for="shadowBlur">ריכוך <output id="shadowBlurOut"></output></label>
-          <input type="range" id="shadowBlur" min="0" max="80" step="1">
-        </div>
-        <div>
-          <label for="shadowDist">מרחק <output id="shadowDistOut"></output></label>
-          <input type="range" id="shadowDist" min="0" max="30" step="1">
-        </div>
-      </div>
-
-      <h3>מיקום ועוד</h3>
-      <div class="field">
-        <label for="posY">גובה על המסך</label>
-        <input type="range" id="posY" min="0.08" max="0.95" step="0.01">
-      </div>
-      <label class="toggle"><input type="checkbox" id="bg"><span>רקע כהה מאחורי השורה</span></label>
-      <label class="toggle"><input type="checkbox" id="upper"><span>אותיות גדולות (English)</span></label>
-      <button class="link" id="resetStyle"><i class="ph ph-arrow-u-up-left"></i> חזרה לברירת המחדל</button>
-    </div>
+    <div class="tab-body" id="tab-style"></div>
 
     <div class="tab-body" id="tab-text" hidden>
       <div class="redo">

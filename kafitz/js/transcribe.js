@@ -30,14 +30,15 @@ export const LANGUAGES = [
   { id: 'spanish', code: 'es', label: 'Español' },
 ];
 
-// Decodes the video's sound to 16 kHz mono, the format Whisper expects.
+// Decodes the video's sound to 16 kHz mono, the format Whisper expects. `file` is a Blob or a URL.
 export async function extractAudio(file) {
   let mono, rate;
   try {
     ({ mono, rate } = await decodeWithMediabunny(file));
   } catch (err) {
     const ctx = new AudioContext();
-    const decoded = await ctx.decodeAudioData(await file.arrayBuffer()).catch(() => { throw new Error('NO_AUDIO'); });
+    const bytes = typeof file === 'string' ? await (await fetch(file)).arrayBuffer() : await file.arrayBuffer();
+    const decoded = await ctx.decodeAudioData(bytes).catch(() => { throw new Error('NO_AUDIO'); });
     ctx.close();
     rate = decoded.sampleRate;
     mono = new Float32Array(decoded.length);
@@ -58,8 +59,9 @@ export async function extractAudio(file) {
 }
 
 async function decodeWithMediabunny(file) {
-  const { Input, BlobSource, ALL_FORMATS, AudioBufferSink } = await import(MEDIABUNNY);
-  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  const { Input, BlobSource, UrlSource, ALL_FORMATS, AudioBufferSink } = await import(MEDIABUNNY);
+  const source = typeof file === 'string' ? new UrlSource(file) : new BlobSource(file);
+  const input = new Input({ source, formats: ALL_FORMATS });
   const track = await input.getPrimaryAudioTrack();
   if (!track) throw new Error('NO_AUDIO');
   if (!(await track.canDecode())) throw new Error('CANT_DECODE');

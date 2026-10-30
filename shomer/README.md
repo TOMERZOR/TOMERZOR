@@ -1,6 +1,6 @@
 # שומר (Shomer)
 
-A camera that alerts your phone when someone approaches, with a live picture. **Local only:** there is no server and no cloud. Pictures and alerts go straight between the two devices over the Wi-Fi they share, encrypted, and nothing is saved anywhere. It works with no internet at all.
+A camera that alerts your phone when someone approaches, with a live picture. Pictures and alerts go straight between the two devices over the Wi-Fi they share, encrypted, and nothing is saved anywhere; that part needs no internet at all. Optionally, alerts also arrive as push notifications while your phone is locked or Shomer is in the background: those go, end-to-end encrypted and without photos, through Apple's or Google's push service (see Push notifications).
 
 Two ways to run it:
 
@@ -33,6 +33,17 @@ Keep both screens on: the browser stops the camera when the screen turns off, an
 **If the link drops,** your phone shows ❌ and sounds a different, low alarm every 15 s. The camera sends a heartbeat every 2 s, so this happens within about 10 s if the camera dies, leaves Wi-Fi range or its screen turns off. The live picture dims so an old frame isn't mistaken for a live one, and it always shows how old the picture is. Your phone sends heartbeats too, so the camera shows 📵 when the phone stops answering. The camera phone puts up a new code by itself: tap חבר מחדש on your phone and scan again. Every alert waits for the phone to confirm it and is sent again after a reconnect (the last 10), so none are lost.
 
 **Keep both iPhones awake:** if a phone locks or Safari goes to the background, the browser stops the page and the link drops. Set Auto-Lock to Never (Settings, Display & Brightness) and turn Low Power Mode off on both (it forces Auto-Lock to 30 s). The app also holds a screen wake lock, with a silent looping video as a fallback where that isn't supported (iPhone home-screen apps before iOS 18.4).
+
+### Push notifications (`js/push.js`, `relay/`)
+
+For an alert at the top of the screen while the phone is locked or Shomer is in the background. An iPhone can only get that through Apple's push service, so this needs internet on both phones (your hotspot is enough).
+
+1. On iPhone, push works only in the app added to the home screen (iOS 16.4+): in Safari tap Share, Add to Home Screen, open Shomer from the icon and pair from there.
+2. After pairing, the phone shows התראות כשהטלפון נעול: tap הפעל התראות and allow notifications. A test notification arrives; שלח התראת בדיקה sends another (lock the phone to see it at the top).
+
+How it works: over the local link the camera gives the phone its public key (VAPID, RFC 8292, a P-256 key kept on the camera); the phone subscribes with it and hands the subscription back. The camera keeps it, so pushes keep coming after the local link drops or the camera restarts. On an alert the camera sends it over the local link first. If the phone isn't showing Shomer (it reports that in its heartbeat), or doesn't confirm within 3 s, the camera encrypts the text for the phone (Web Push, RFC 8291, aes128gcm), signs it, and posts it through the relay to the push service. Only the title and time go this way, never a photo.
+
+The relay (`relay/worker.js`, a Cloudflare Worker deployed by `.github/workflows/shomer-push.yml`, which then writes its address into `js/config.js`) exists only because browsers can't post to Apple's push service directly. It forwards the encrypted, signed message unchanged, only to known push services, and holds no keys and stores nothing. Neither it nor Apple can read the alert.
 
 ### How the link works (`js/link.js`, `js/scan.js`)
 

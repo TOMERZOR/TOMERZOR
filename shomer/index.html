@@ -37,8 +37,9 @@
     </button>
   </div>
   <div class="card local">
-    <h3>🔒 מקומי בלבד</h3>
-    <p>אין שרת ואין ענן. הווידאו, התמונות וההתראות עוברים ישירות ומוצפנים בין שני המכשירים ברשת ה-Wi-Fi המשותפת, ולא נשמרים בשום מקום.</p>
+    <h3>🔒 פרטיות</h3>
+    <p>התמונות, התמונה החיה וההתראות עוברים ישירות ומוצפנים בין שני המכשירים ברשת ה-Wi-Fi המשותפת, ולא נשמרים בשום מקום.</p>
+    <p>אם תפעיל התראות כשהטלפון נעול, ההתראה עצמה (טקסט בלבד, בלי תמונה) עוברת מוצפנת דרך שירות ההתראות של אפל/גוגל, ולכן צריך אינטרנט. אפל וגוגל לא יכולות לקרוא אותה.</p>
     <p class="note" id="offline-state">טוען…</p>
   </div>
   <ol class="how">
@@ -131,6 +132,7 @@
   </div>
   <div class="run-info">
     <span id="link-state"></span>
+    <span id="push-state"></span>
     <span id="sent-count"></span>
     <span id="last-sent"></span>
   </div>
@@ -172,7 +174,13 @@
     <button class="ghost" id="check">בדיקת חיבור וצליל</button>
   </div>
   <p class="note center" id="check-result" role="status"></p>
-  <p class="note">השאר את המסך הזה פתוח: הצליל וההתראות עובדים רק כשהוא מוצג. אם הטלפון ננעל או שעוברים לאפליקציה אחרת, החיבור עלול ליפול. באייפון: הגדרות ← תצוגה ובהירות ← נעילה אוטומטית ← <b>אף פעם</b>, ומצב חיסכון בסוללה כבוי.</p>
+  <div class="card push-card" id="push-card" hidden>
+    <h3>🔔 התראות כשהטלפון נעול</h3>
+    <p id="push-text"></p>
+    <button class="primary" id="push-enable" hidden>הפעל התראות</button>
+    <button class="ghost" id="push-test" hidden>שלח התראת בדיקה</button>
+  </div>
+  <p class="note">עם התראות פעילות אפשר לנעול את הטלפון או לעבור לאפליקציה אחרת: כשמישהו מתקרב תופיע התראה למעלה. התמונה החיה ותמונות ההתראות מגיעות רק כששומר פתוח על המסך; אם הוא היה ברקע זמן רב, ייתכן שתצטרך לחבר מחדש כדי לראות אותן.</p>
   <h3 class="list-title">התראות</h3>
   <ul class="alerts" id="alerts"><li class="empty">עוד אין התראות.</li></ul>
 </section>

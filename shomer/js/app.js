@@ -165,7 +165,7 @@ function setStatus(text, kind = 'ok') {
 async function openCamera() {
   run.stream?.getTracks().forEach(t => t.stop());
   run.stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: settings.facing }, width: { ideal: 640 }, height: { ideal: 480 } },
+    video: { facingMode: { ideal: settings.facing }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15, max: 24 } },
     audio: false,
   });
   video.srcObject = run.stream;
@@ -348,6 +348,7 @@ function onPhoneMessage(msg) {
     run.link.setTrack(run.liveOn ? run.stream?.getVideoTracks()[0] : null);
   }
   if (msg.type === 'ping') run.link.send({ type: 'pong', t: msg.t });
+  if (msg.type === 'video-restart' && run.liveOn) run.link.restartVideo(run.stream?.getVideoTracks()[0]);
 }
 
 async function sendHeartbeat() {
@@ -384,8 +385,12 @@ function tick() {
   const now = Date.now();
   run.hot = r.score >= threshold ? run.hot + 1 : 0;
   const moving = run.hot >= 2;
-  drawOverlay(vw, vh, moving ? box : null, now);
-  drawMeter(r.score, threshold);
+  if (!moving) run.idleChecks = 0;
+  // Nothing to draw while the screen is blacked out.
+  if (curtain.hidden) {
+    drawOverlay(vw, vh, moving ? box : null, now);
+    drawMeter(r.score, threshold);
+  }
   if (run.link?.open && (moving || run.boxShown)) {
     run.boxShown = moving;
     run.link.send({ type: 'motion', box: moving && box ? normalize(box, vw, vh) : null });
@@ -431,9 +436,10 @@ function zoomOn(frame, box) {
 
 async function checkForPeople(motionBox) {
   const now = Date.now();
-  if (run.detecting || now - run.lastDetect < 600) return;
+  if (run.detecting || now - run.lastDetect < (run.detectGap || 600)) return;
   run.detecting = true;
   const current = run;
+  let found = false;
   try {
     // Detect on a frozen frame and send that same frame, so the box matches the photo.
     const frame = grabFrame(video);
@@ -447,11 +453,18 @@ async function checkForPeople(motionBox) {
         bbox = [zoom.x0 + x * zoom.scale, zoom.y0 + y * zoom.scale, w * zoom.scale, h * zoom.scale];
       }
     }
+    found = !!person;
     if (person && run === current) {
       const [x, y, w, h] = bbox;
       trigger('person', { x, y, w, h }, frame);
     }
   } catch {}
+  // Detection is the heaviest work on the phone. Under constant motion with no one there (wind in
+  // the bushes) check less often, up to every 2.5 s, and never use more than about a third of the time,
+  // so the phone stays cool and the live video smooth.
+  const took = Date.now() - now;
+  current.idleChecks = found ? 0 : (current.idleChecks || 0) + 1;
+  current.detectGap = Math.min(2500, Math.max(600 + current.idleChecks * 150, took * 3));
   current.detecting = false;
   current.lastDetect = Date.now();
 }
@@ -619,6 +632,7 @@ function beginPhone(link) {
     setLive(p.liveOn);
     keepAwake(p);
     p.watchdog = setInterval(() => watchdog(p), 1000);
+    p.statsTimer = setInterval(() => videoQuality(p), 2000);
     // If the video hasn't started, ask once more.
     setTimeout(() => phone === p && p.liveOn && !liveVideo.videoWidth && p.link.send({ type: 'live', on: true }), 6000);
   });
@@ -636,7 +650,9 @@ function closePhone() {
   if (!phone) return;
   clearInterval(phone.watchdog);
   clearInterval(phone.lostAlarm);
+  clearInterval(phone.statsTimer);
   clearTimeout(phone.pingTimer);
+  $('live-quality').textContent = '';
   phone.link.close();
   phone.wake?.release().catch(() => {});
   phone = null;
@@ -694,6 +710,27 @@ function lostCamera(p) {
   drawLiveBox(null);
   alarmLost();
   p.lostAlarm = setInterval(alarmLost, 15000);
+}
+
+// Shows frame rate and delay on the live view, and restarts the video if it froze while the link is up.
+async function videoQuality(p) {
+  const el = $('live-quality');
+  if (!p.liveOn || p.lost) {
+    el.textContent = '';
+    p.frozen = 0;
+    return;
+  }
+  let stats;
+  try { stats = await p.link.videoStats(); } catch { return; }
+  if (phone !== p || stats.fps == null) return;
+  const fps = Math.round(stats.fps);
+  el.textContent = `${fps} fps` + (stats.delay != null ? ` · ${stats.delay.toFixed(1)} שנ׳` : '');
+  el.classList.toggle('bad', fps < 5);
+  p.frozen = fps < 1 ? (p.frozen || 0) + 1 : 0;
+  if (p.frozen >= 2 && Date.now() - (p.lastRestart || 0) > 10000) {
+    p.lastRestart = Date.now();
+    p.link.send({ type: 'video-restart' });
+  }
 }
 
 function setConn(kind) {

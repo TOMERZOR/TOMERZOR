@@ -294,6 +294,19 @@ summary { cursor: pointer; color: var(--muted); }
   font-weight: 700;
   background: rgba(13, 19, 33, 0.8);
 }
+.live-quality {
+  position: absolute;
+  bottom: 10px;
+  inset-inline-start: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(13, 19, 33, 0.7);
+  color: var(--muted);
+}
+.live-quality:empty { display: none; }
+.live-quality.bad { color: #fff; background: var(--alert); }
 .live-state[data-kind="live"]::before { content: "● "; color: var(--alert); }
 .live-state:empty { display: none; }
 .live-size {

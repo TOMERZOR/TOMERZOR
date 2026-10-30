@@ -1,14 +1,13 @@
-# Runs Shomer at boot. Edit the topic and name, then:
+# Runs Shomer at boot. Set your own key (it's in the page address, so keep it private), then:
 #   sudo cp shomer.service /etc/systemd/system/ && sudo systemctl enable --now shomer
 #   journalctl -u shomer -f        # to see alerts and errors
 [Unit]
-Description=Shomer camera alerts
-After=network-online.target
-Wants=network-online.target
+Description=Shomer camera alerts (local only)
+After=NetworkManager.service
 
 [Service]
 User=pi
-ExecStart=/usr/bin/python3 /home/pi/shomer/shomer.py --topic shomer-CHANGE-ME --name "הכניסה"
+ExecStart=/usr/bin/python3 /home/pi/shomer/shomer.py --people --name "המצלמה" --key CHANGE-ME-TO-A-LONG-RANDOM-KEY
 Restart=always
 RestartSec=5
 

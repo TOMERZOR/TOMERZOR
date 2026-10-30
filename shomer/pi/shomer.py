@@ -1,28 +1,36 @@
 #!/usr/bin/env python3
-"""Shomer for a Raspberry Pi (or any Linux computer) with a camera.
+"""Shomer for a Raspberry Pi (or any Linux computer) with a camera. Local only.
 
-Watches the camera and sends a push notification through ntfy when something moves,
-or only when a person is seen (--people). Uses the same channel as the web app,
-so the phone pairs the same way.
+Watches the camera and, when something moves (or only when a person is seen, --people),
+alerts the phone that has the Pi's page open. The Pi serves the page itself: live video,
+alerts with a photo, and an alarm if the Pi goes quiet. Nothing leaves the local network,
+and nothing is saved to disk.
 
-    python3 shomer.py --topic shomer-xxxxxxxx --name "הכניסה"
-    python3 shomer.py --topic ... --people --sensitivity 7
-    python3 shomer.py --topic ... --source clip.mp4     # test on a video file
+Run the Pi as its own Wi-Fi hotspot (see README) and open the printed address on your phone:
+
+    python3 shomer.py --name "שיחים מול העמדה"
+    python3 shomer.py --people --sensitivity 7
+    python3 shomer.py --source clip.mp4                 # test on a video file
 """
 
 import argparse
+import json
 import secrets
 import signal
 import sys
+import threading
 import time
-import urllib.parse
-import urllib.request
+from collections import deque
 from datetime import datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 import cv2
 import numpy as np
 
 SMALL_W = 160
+VIEWER = Path(__file__).with_name("viewer.html")
 
 
 def sensitivity_to_threshold(level):
@@ -129,34 +137,144 @@ def open_camera(source):
     return read, cap.release
 
 
-def publish(server, topic, title, message, tags, priority, image=None):
-    params = {"title": title, "tags": tags, "priority": str(priority)}
-    body = message.encode()
-    if image is not None:
-        params.update(message=message, filename="shomer.jpg")
-        body = image
-    url = f"{server.rstrip('/')}/{urllib.parse.quote(topic)}?{urllib.parse.urlencode(params)}"
-    with urllib.request.urlopen(urllib.request.Request(url, data=body, method="POST"), timeout=15) as res:
-        return res.status
+class Hub:
+    """What the watcher shares with the phone: the latest frame, recent alerts and a heartbeat."""
+
+    def __init__(self, name):
+        self.name = name
+        self.cond = threading.Condition()
+        self.jpeg = None
+        self.frame_no = 0
+        self.alerts = deque(maxlen=20)  # in memory only
+        self.event_no = 0
+        self.status = "wait"
+
+    def put_frame(self, jpeg):
+        with self.cond:
+            self.jpeg = jpeg
+            self.frame_no += 1
+            self.cond.notify_all()
+
+    def add_alert(self, alert):
+        with self.cond:
+            self.event_no += 1
+            alert["id"] = self.event_no
+            self.alerts.append(alert)
+            self.cond.notify_all()
+
+
+def make_handler(hub, key):
+    page = VIEWER.read_text(encoding="utf-8")
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def log_message(self, *args):
+            pass
+
+        def deny(self):
+            self.send_response(403)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def do_GET(self):
+            url = urlparse(self.path)
+            if parse_qs(url.query).get("k", [""])[0] != key:
+                return self.deny()
+            if url.path == "/":
+                body = page.encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+            elif url.path == "/stream":
+                self.stream()
+            elif url.path == "/events":
+                self.events()
+            elif url.path.startswith("/photo/"):
+                self.photo(url.path.rsplit("/", 1)[-1])
+            else:
+                self.send_error(404)
+
+        def stream(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "multipart/x-mixed-replace; boundary=frame")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            seen = -1
+            try:
+                while True:
+                    with hub.cond:
+                        hub.cond.wait_for(lambda: hub.frame_no != seen, timeout=5)
+                        seen, jpeg = hub.frame_no, hub.jpeg
+                    if jpeg is None:
+                        continue
+                    self.wfile.write(b"--frame\r\nContent-Type: image/jpeg\r\nContent-Length: %d\r\n\r\n" % len(jpeg))
+                    self.wfile.write(jpeg + b"\r\n")
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def events(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            seen = hub.event_no
+            try:
+                while True:
+                    with hub.cond:
+                        hub.cond.wait_for(lambda: hub.event_no != seen, timeout=2)
+                        new = [a for a in hub.alerts if a["id"] > seen]
+                        seen = hub.event_no
+                    for a in new:
+                        data = {k: v for k, v in a.items() if k != "jpeg"}
+                        data["photo"] = f"photo/{a['id']}?k={key}" if a.get("jpeg") else None
+                        self.wfile.write(f"event: alert\ndata: {json.dumps(data, ensure_ascii=False)}\n\n".encode())
+                    # Heartbeat: the page sounds an alarm if these stop.
+                    hb = {"name": hub.name, "status": hub.status}
+                    self.wfile.write(f"event: hb\ndata: {json.dumps(hb, ensure_ascii=False)}\n\n".encode())
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+
+        def photo(self, ident):
+            with hub.cond:
+                jpeg = next((a.get("jpeg") for a in hub.alerts if str(a["id"]) == ident), None)
+            if not jpeg:
+                return self.send_error(404)
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(jpeg)))
+            self.end_headers()
+            self.wfile.write(jpeg)
+
+    return Handler
 
 
 def main():
-    p = argparse.ArgumentParser(description="Motion / person alerts to your phone through ntfy.")
-    p.add_argument("--topic", help="ntfy channel (the same code the web app shows). A new one is made if omitted.")
-    p.add_argument("--server", default="https://ntfy.sh")
-    p.add_argument("--name", default="המצלמה", help="camera name shown in the alert")
+    p = argparse.ArgumentParser(description="Local motion / person alerts with live view. Nothing leaves your network.")
+    p.add_argument("--name", default="המצלמה", help="camera name shown on the phone")
     p.add_argument("--people", action="store_true", help="alert only when a person is detected")
     p.add_argument("--sensitivity", type=int, default=6, choices=range(1, 11), metavar="1-10")
-    p.add_argument("--cooldown", type=float, default=30, help="seconds between alerts")
-    p.add_argument("--no-photo", action="store_true", help="don't attach a photo")
-    p.add_argument("--not-urgent", action="store_true", help="normal priority instead of urgent")
+    p.add_argument("--cooldown", type=float, default=15, help="seconds between alerts")
+    p.add_argument("--no-photo", action="store_true", help="don't attach a photo to alerts")
     p.add_argument("--source", help="camera index (0) or video file. Default: Pi camera, then camera 0")
     p.add_argument("--fps", type=float, default=8)
+    p.add_argument("--host", default="0.0.0.0", help="address to serve the phone page on")
+    p.add_argument("--port", type=int, default=8000)
+    p.add_argument("--key", help="access key in the page address (default: a new random one each start)")
     args = p.parse_args()
 
-    topic = args.topic or "shomer-" + secrets.token_hex(8)
-    if not args.topic:
-        print(f"New channel: {topic}\nIn the ntfy app on your phone, subscribe to this topic.", flush=True)
+    key = args.key or secrets.token_urlsafe(9)
+    hub = Hub(args.name)
+    server = ThreadingHTTPServer((args.host, args.port), make_handler(hub, key))
+    server.daemon_threads = True
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"Phone page: http://<this device's address>:{args.port}/?k={key}", flush=True)
+    print(f"  (on the Pi's own hotspot: http://10.42.0.1:{args.port}/?k={key})", flush=True)
 
     read, close = open_camera(args.source)
     detector = MotionDetector()
@@ -171,7 +289,7 @@ def main():
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    print(f"Watching ({'people' if people else 'any motion'}), channel {topic}", flush=True)
+    print(f"Watching ({'people' if people else 'any motion'})", flush=True)
 
     try:
         while running:
@@ -185,41 +303,48 @@ def main():
             score, box = detector.process(gray)
             hot = hot + 1 if score >= threshold else 0
             now = time.time()
+            s = w / SMALL_W
+            motion_box = tuple(int(v * s) for v in box) if box and hot >= 2 else None
+            hub.status = "move" if motion_box else "ok"
 
+            alert_box = kind = None
             if hot >= 2 and now - last_alert >= args.cooldown:
-                kind = None
                 if people is None:
-                    kind = "motion"
-                    s = w / SMALL_W
-                    box = tuple(int(v * s) for v in box) if box else None
+                    kind, alert_box = "motion", motion_box
                 elif now - last_check >= 0.5:
                     last_check = now
-                    box = people.find(frame)
-                    kind = "person" if box else None
+                    alert_box = people.find(frame)
+                    kind = "person" if alert_box else None
 
-                if kind:
-                    last_alert = now
-                    stamp = datetime.now().strftime("%H:%M:%S")
-                    image = None
-                    if not args.no_photo:
-                        shot = frame.copy()
-                        if box:
-                            x, y, bw, bh = box
-                            cv2.rectangle(shot, (x, y), (x + bw, y + bh), (78, 59, 255), max(3, w // 160))
-                        image = cv2.imencode(".jpg", shot, [cv2.IMWRITE_JPEG_QUALITY, 75])[1].tobytes()
-                    title = f"{'זוהה אדם' if kind == 'person' else 'זוהתה תנועה'} · {args.name}"
-                    try:
-                        publish(args.server, topic, title, f"{args.name} · {stamp}",
-                                "bust_in_silhouette,rotating_light" if kind == "person" else "rotating_light",
-                                4 if args.not_urgent else 5, image)
-                        print(f"{stamp} alert sent: {kind}", flush=True)
-                    except Exception as e:  # keep watching even if the network hiccups
-                        last_alert = now - args.cooldown + 5
-                        print(f"{stamp} send failed: {e}", flush=True)
+            if kind:
+                last_alert = now
+                stamp = datetime.now().strftime("%H:%M:%S")
+                jpeg = None
+                if not args.no_photo:
+                    shot = frame.copy()
+                    if alert_box:
+                        x, y, bw, bh = alert_box
+                        cv2.rectangle(shot, (x, y), (x + bw, y + bh), (78, 59, 255), max(3, w // 160))
+                    jpeg = cv2.imencode(".jpg", shot, [cv2.IMWRITE_JPEG_QUALITY, 75])[1].tobytes()
+                hub.add_alert({
+                    "title": "זוהה אדם" if kind == "person" else "זוהתה תנועה",
+                    "name": args.name,
+                    "at": int(now * 1000),
+                    "jpeg": jpeg,
+                })
+                print(f"{stamp} alert: {kind}", flush=True)
+
+            # Live view frame, with the moving area boxed.
+            live = frame.copy()
+            if motion_box:
+                x, y, bw, bh = motion_box
+                cv2.rectangle(live, (x, y), (x + bw, y + bh), (3, 183, 255), max(2, w // 200))
+            hub.put_frame(cv2.imencode(".jpg", live, [cv2.IMWRITE_JPEG_QUALITY, 60])[1].tobytes())
 
             time.sleep(max(0.0, 1 / args.fps - (time.monotonic() - started)))
     finally:
         close()
+        server.shutdown()
 
 
 if __name__ == "__main__":

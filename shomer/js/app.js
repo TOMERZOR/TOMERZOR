@@ -1,6 +1,6 @@
 import { MotionDetector, sensitivityToThreshold, toGray } from './motion.js';
-import * as ntfy from './ntfy.js';
-import { LiveCamera, LiveViewer, liveSupported } from './live.js';
+import { CameraLink, PhoneLink, linkSupported, isCode } from './link.js';
+import { scanVideo } from './scan.js';
 
 const $ = id => document.getElementById(id);
 
@@ -18,13 +18,11 @@ const store = {
   },
 };
 
-const settings = Object.assign({
-  mode: 'motion', sens: 6, name: '', cooldown: 30, arm: 10, facing: 'environment',
-  photo: true, urgent: true, live: true, server: ntfy.DEFAULT_SERVER, topic: null,
-}, store.get('settings', {}));
-if (!settings.topic) settings.topic = ntfy.newTopic();
+const settings = Object.assign(
+  { mode: 'people', sens: 6, name: '', cooldown: 15, arm: 10, facing: 'environment', photo: true },
+  store.get('settings', {}),
+);
 const saveSettings = () => store.set('settings', settings);
-saveSettings();
 
 const cameraName = () => settings.name.trim() || 'המצלמה';
 const clock = (date = new Date()) => date.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -32,43 +30,61 @@ const clock = (date = new Date()) => date.toLocaleTimeString('he-IL', { hour: '2
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   window.scrollTo(0, 0);
-  if (id !== 'listen') stopListening();
+  if (id !== 'pair') stopPhoneScan();
+  if (id !== 'listen' && id !== 'pair') closePhone();
   if (id === 'cam-setup') renderSetup();
-  if (id === 'listen-join') $('join-topic').value = store.get('listenTopic', '');
-  if (id === 'home' && location.hash) history.replaceState(null, '', location.pathname);
+  if (id === 'pair') startPhonePairing();
 }
 
-document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.go === 'pair') unlockAudio();
+  show(b.dataset.go);
+}));
 
-async function copy(text, button) {
+function drawQr(el, text) {
+  const qr = qrcode(0, 'L');
+  qr.addData(text);
+  qr.make();
+  el.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 3, scalable: true });
+}
+
+async function keepAwake(holder) {
   try {
-    await navigator.clipboard.writeText(text);
-    const label = button.textContent;
-    button.textContent = 'הועתק ✓';
-    setTimeout(() => (button.textContent = label), 1500);
+    if (navigator.wakeLock && !document.hidden) holder.wake = await navigator.wakeLock.request('screen');
   } catch {}
 }
+
+// ---------- Offline: everything is cached by the service worker after the first visit ----------
+
+async function checkOffline() {
+  const el = $('offline-state');
+  if (!('serviceWorker' in navigator)) return (el.textContent = 'הדפדפן הזה לא תומך בעבודה בלי אינטרנט.');
+  try {
+    await navigator.serviceWorker.register('sw.js');
+    await navigator.serviceWorker.ready;
+    for (let i = 0; i < 60; i++) {
+      for (const key of await caches.keys()) {
+        if (key.startsWith('shomer-') && (await (await caches.open(key)).match('vendor/ssdlite/group1-shard5of5'))) {
+          el.textContent = '✓ מוכן לעבודה בלי אינטרנט. מומלץ להוסיף למסך הבית.';
+          return;
+        }
+      }
+      el.textContent = 'מוריד את האפליקציה למכשיר כדי שתעבוד גם בלי אינטרנט…';
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  } catch {}
+  el.textContent = 'פתח את האתר פעם אחת עם אינטרנט, כדי שיעבוד אחר כך גם בלי.';
+}
+checkOffline();
 
 // ---------- Camera setup ----------
 
 const MODE_NOTES = {
-  motion: 'מתריע על כל תנועה בתמונה. פשוט ומהיר, אבל גם חתול או וילון שזז יפעילו אותו.',
-  people: 'מתריע רק כשהמצלמה מזהה אדם (בינה מלאכותית שרצה במכשיר עצמו). פחות התראות שווא, וצריך אינטרנט כדי לטעון אותה בפעם הראשונה.',
+  motion: 'מתריע על כל תנועה בתמונה. בשטח פתוח גם עלים וענפים ברוח יפעילו אותו.',
+  people: 'מתריע רק כשמזוהה אדם (בינה מלאכותית שרצה במכשיר עצמו). מומלץ בשטח פתוח ובין שיחים.',
 };
 
-function pairUrl() {
-  let url = `${location.origin}${location.pathname}#listen=${settings.topic}`;
-  if (settings.server !== ntfy.DEFAULT_SERVER) url += `&s=${encodeURIComponent(settings.server)}`;
-  return url;
-}
-
 function renderSetup() {
-  $('topic').textContent = settings.topic;
-  const qr = qrcode(0, 'M');
-  qr.addData(pairUrl());
-  qr.make();
-  $('qr').innerHTML = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-checked', b.dataset.mode === settings.mode));
   $('mode-note').textContent = MODE_NOTES[settings.mode];
   $('sens').value = settings.sens;
@@ -78,10 +94,6 @@ function renderSetup() {
   $('arm').value = settings.arm;
   $('facing').value = settings.facing;
   $('photo').checked = settings.photo;
-  $('urgent').checked = settings.urgent;
-  $('live').checked = settings.live;
-  $('server').value = settings.server === ntfy.DEFAULT_SERVER ? '' : settings.server;
-  $('test-status').textContent = '';
 }
 
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
@@ -102,42 +114,8 @@ bind('cooldown', 'cooldown', el => +el.value);
 bind('arm', 'arm', el => +el.value);
 bind('facing', 'facing', el => el.value);
 bind('photo', 'photo', el => el.checked);
-bind('urgent', 'urgent', el => el.checked);
-bind('live', 'live', el => el.checked);
 
-$('server').addEventListener('change', () => {
-  const v = $('server').value.trim().replace(/\/+$/, '');
-  settings.server = /^https?:\/\/\S+$/.test(v) ? v : ntfy.DEFAULT_SERVER;
-  saveSettings();
-  renderSetup();
-});
-
-$('new-topic').addEventListener('click', () => {
-  if (!confirm('ליצור ערוץ חדש? טלפונים שכבר מחוברים יפסיקו לקבל התראות עד שיסרקו שוב.')) return;
-  settings.topic = ntfy.newTopic();
-  saveSettings();
-  renderSetup();
-});
-
-$('copy-topic').addEventListener('click', e => copy(settings.topic, e.currentTarget));
-
-$('test-send').addEventListener('click', async () => {
-  const out = $('test-status');
-  out.textContent = 'שולח…';
-  try {
-    await ntfy.publish(settings.server, settings.topic, {
-      title: 'בדיקה: שומר מחובר',
-      message: `${cameraName()}: אם קיבלת את זה, הכול עובד.`,
-      tags: 'white_check_mark',
-      priority: 3,
-    });
-    out.textContent = 'נשלח ✓ בדוק שההתראה הגיעה לטלפון שלך.';
-  } catch {
-    out.textContent = 'השליחה נכשלה. בדוק שיש חיבור לאינטרנט.';
-  }
-});
-
-// ---------- People detection (COCO-SSD, loaded only when needed) ----------
+// ---------- People detection (COCO-SSD, shipped with the app, runs on the device) ----------
 
 let modelPromise = null;
 
@@ -153,9 +131,9 @@ function loadScript(src) {
 
 function loadPeopleModel() {
   modelPromise ||= (async () => {
-    if (!window.tf) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
-    if (!window.cocoSsd) await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js');
-    return window.cocoSsd.load({ base: 'lite_mobilenet_v2' });
+    if (!window.tf) await loadScript('vendor/tf.min.js');
+    if (!window.cocoSsd) await loadScript('vendor/coco-ssd.min.js');
+    return window.cocoSsd.load({ base: 'lite_mobilenet_v2', modelUrl: 'vendor/ssdlite/model.json' });
   })().catch(err => {
     modelPromise = null;
     throw err;
@@ -179,6 +157,7 @@ function setStatus(text, kind = 'ok') {
   const el = $('status');
   if (el.textContent !== text) el.textContent = text;
   el.dataset.kind = kind;
+  if (run) run.statusKind = kind;
 }
 
 async function openCamera() {
@@ -190,13 +169,7 @@ async function openCamera() {
   video.srcObject = run.stream;
   await video.play().catch(() => {});
   run.detector.reset();
-  run.live?.setTrack(run.stream.getVideoTracks()[0]);
-}
-
-async function requestWakeLock() {
-  try {
-    if (run && navigator.wakeLock && !document.hidden) run.wake = await navigator.wakeLock.request('screen');
-  } catch {}
+  run.link?.setTrack(run.liveOn ? run.stream.getVideoTracks()[0] : null);
 }
 
 $('start').addEventListener('click', async () => {
@@ -211,10 +184,12 @@ $('start').addEventListener('click', async () => {
     detecting: false,
     model: null,
     marks: [],
+    queue: [],
+    liveOn: true,
   };
-  $('sent-count').textContent = '0 התראות';
+  $('sent-count').textContent = '';
   $('last-sent').textContent = '';
-  $('viewers').textContent = '';
+  $('link-state').textContent = '';
   setStatus('פותח את המצלמה…', 'wait');
   try {
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('no camera api');
@@ -223,37 +198,131 @@ $('start').addEventListener('click', async () => {
     setStatus('אין גישה למצלמה. אשר גישה למצלמה בדפדפן ונסה שוב.', 'err');
     return;
   }
-  if (settings.live && liveSupported()) {
-    run.live = new LiveCamera(settings.server, settings.topic, {
-      track: run.stream.getVideoTracks()[0],
-      onViewers: n => ($('viewers').textContent = n ? `👁 ${n === 1 ? 'צופה אחד' : n + ' צופים'}` : ''),
-    });
-  }
   if (settings.mode === 'people') {
     loadPeopleModel().then(m => run && (run.model = m), () => run && (run.model = false));
   }
-  requestWakeLock();
+  keepAwake(run);
   tick();
+  run.heartbeat = setInterval(sendHeartbeat, 2000);
+  if (linkSupported()) startCameraPairing();
+  else $('link-state').textContent = 'הדפדפן הזה לא תומך בחיבור לטלפון';
 });
 
 function stopWatching() {
   if (!run) return;
   clearTimeout(run.timer);
-  run.live?.close();
+  clearInterval(run.heartbeat);
+  run.stopScan?.();
+  run.link?.close();
   run.stream?.getTracks().forEach(t => t.stop());
   run.wake?.release().catch(() => {});
   video.srcObject = null;
   run = null;
   $('curtain').hidden = true;
+  $('pair-panel').hidden = true;
 }
 
 $('stop').addEventListener('click', () => {
+  if (run?.link?.open && !confirm('לעצור את השמירה? הטלפון יתנתק.')) return;
   stopWatching();
   show('cam-setup');
 });
 
 $('blackout').addEventListener('click', () => ($('curtain').hidden = false));
 $('curtain').addEventListener('click', () => ($('curtain').hidden = true));
+
+// ----- Pairing, camera side: show our code, then read the phone's code through the lens -----
+
+async function startCameraPairing() {
+  const current = run;
+  current.stopScan?.();
+  current.link?.close();
+  const link = (current.link = new CameraLink());
+  $('pair-panel').hidden = false;
+  $('pair-again').hidden = true;
+  $('pair-qr').innerHTML = '';
+  $('pair-status').textContent = 'מכין קוד…';
+
+  link.on('open', () => run === current && current.link === link && onPhoneConnected());
+  link.on('message', msg => run === current && onPhoneMessage(msg));
+  link.on('state', state => run === current && current.link === link && onLinkState(state));
+
+  let code;
+  try {
+    code = await link.createCode();
+  } catch {
+    $('pair-status').textContent = 'לא הצלחתי להכין קוד חיבור. נסה לעצור ולהתחיל שוב.';
+    return;
+  }
+  if (current.link !== link) return;
+  drawQr($('pair-qr'), code);
+  $('pair-status').textContent = 'מחכה לקוד מהטלפון…';
+
+  const tried = new Set();
+  current.stopScan = scanVideo(video, {
+    accept: text => isCode(text) && !tried.has(text),
+    onCode: async text => {
+      tried.add(text);
+      try {
+        await link.acceptCode(text);
+        current.stopScan();
+        $('pair-status').textContent = 'קיבלתי את הקוד, מתחבר…';
+      } catch {
+        $('pair-status').textContent = 'זה לא הקוד מהטלפון. בטלפון סרוק קודם את הקוד שמוצג כאן.';
+      }
+    },
+  });
+}
+
+$('pair-again').addEventListener('click', () => run && startCameraPairing());
+$('pair-skip').addEventListener('click', () => {
+  if (!run) return;
+  run.stopScan?.();
+  $('pair-panel').hidden = true;
+  $('pair-again').hidden = false;
+  $('link-state').textContent = 'בלי טלפון';
+});
+
+function onPhoneConnected() {
+  $('pair-panel').hidden = true;
+  $('pair-again').hidden = true;
+  $('link-state').textContent = '🔗 הטלפון מחובר';
+  sendHeartbeat();
+  // Alerts that happened while the phone was away.
+  for (const msg of run.queue.splice(0)) run.link.send(msg);
+}
+
+function onLinkState(state) {
+  if (state === 'connected') {
+    if (run.link.open) $('link-state').textContent = '🔗 הטלפון מחובר';
+  } else if (state === 'disconnected') {
+    $('link-state').textContent = '⚠️ החיבור לטלפון נחלש…';
+  } else if (state === 'failed' || state === 'closed') {
+    // Show a fresh code right away, so it's ready when you get to the camera.
+    $('link-state').textContent = '❌ הטלפון לא מחובר';
+    startCameraPairing();
+  }
+}
+
+function onPhoneMessage(msg) {
+  if (msg.type === 'live') {
+    run.liveOn = !!msg.on;
+    run.link.setTrack(run.liveOn ? run.stream?.getVideoTracks()[0] : null);
+  }
+  if (msg.type === 'ping') run.link.send({ type: 'pong', t: msg.t });
+}
+
+async function sendHeartbeat() {
+  if (!run?.link?.open) return;
+  let battery = null;
+  try {
+    const b = await navigator.getBattery?.();
+    if (b) battery = { level: Math.round(b.level * 100), charging: b.charging };
+  } catch {}
+  run?.link?.send({ type: 'hb', name: cameraName(), battery, status: run.statusKind });
+}
+
+// ----- Detection loop -----
 
 function tick() {
   if (!run) return;
@@ -278,11 +347,11 @@ function tick() {
   run.hot = r.score >= threshold ? run.hot + 1 : 0;
   const moving = run.hot >= 2;
   drawOverlay(vw, vh, moving ? box : null, now);
-  if (run.live && (moving || run.boxShown)) {
-    run.boxShown = moving;
-    run.live.broadcast({ type: 'motion', box: moving && box ? { x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh } : null });
-  }
   drawMeter(r.score, threshold);
+  if (run.link?.open && (moving || run.boxShown)) {
+    run.boxShown = moving;
+    run.link.send({ type: 'motion', box: moving && box ? normalize(box, vw, vh) : null });
+  }
 
   if (now < run.armedAt) return setStatus(`מתחיל לשמור בעוד ${Math.ceil((run.armedAt - now) / 1000)} שניות…`, 'wait');
   if (r.warming) return setStatus('מתכונן…', 'wait');
@@ -294,12 +363,14 @@ function tick() {
     else if (run.model) checkForPeople();
   }
 
-  if (cooling) setStatus(`🚨 התראה נשלחה ${$('last-sent').dataset.time || ''}`, 'alert');
+  if (cooling) setStatus(`🚨 התראה ${$('last-sent').dataset.time || ''}`, 'alert');
   else if (peopleOnly && !run.model) setStatus('טוען זיהוי אנשים…', 'wait');
   else if (moving) setStatus(peopleOnly ? 'יש תנועה, בודק אם זה אדם…' : 'תנועה!', 'move');
   else if (settings.mode === 'people' && run.model === false) setStatus('שומר (זיהוי אנשים לא נטען, מתריע על כל תנועה)', 'ok');
   else setStatus('שומר', 'ok');
 }
+
+const normalize = (box, vw, vh) => ({ x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh });
 
 async function checkForPeople() {
   const now = Date.now();
@@ -356,7 +427,7 @@ function grabFrame(source) {
 // frame: the video itself, or a canvas from grabFrame() at full video size.
 function snapshot(box, frame = video) {
   const vw = frame.videoWidth || frame.width, vh = frame.videoHeight || frame.height;
-  const scale = Math.min(1, 800 / vw);
+  const scale = Math.min(1, 640 / vw);
   const c = document.createElement('canvas');
   c.width = Math.round(vw * scale);
   c.height = Math.round(vh * scale);
@@ -367,160 +438,247 @@ function snapshot(box, frame = video) {
     ctx.lineWidth = Math.max(3, c.width / 160);
     ctx.strokeRect(box.x * scale, box.y * scale, box.w * scale, box.h * scale);
   }
-  return new Promise(resolve => c.toBlob(resolve, 'image/jpeg', 0.75));
+  return c.toDataURL('image/jpeg', 0.7);
 }
 
-async function trigger(kind, box, frame) {
-  const current = run;
+function trigger(kind, box, frame) {
   const at = new Date();
-  current.lastAlert = at.getTime();
-  if (box) current.marks.push({ box, at: at.getTime() });
-  const title = kind === 'person' ? `זוהה אדם · ${cameraName()}` : `זוהתה תנועה · ${cameraName()}`;
-  const vw = video.videoWidth, vh = video.videoHeight;
-  current.live?.broadcast({
-    type: 'alert',
-    title,
-    box: box && { x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh },
-  });
+  run.lastAlert = at.getTime();
+  if (box) run.marks.push({ box, at: at.getTime() });
   $('last-sent').dataset.time = clock(at);
-  try {
-    const image = settings.photo ? await snapshot(box, frame) : null;
-    await ntfy.publish(settings.server, settings.topic, {
-      title,
-      message: `${cameraName()} · ${clock(at)}`,
-      tags: kind === 'person' ? 'bust_in_silhouette,rotating_light' : 'rotating_light',
-      priority: settings.urgent ? 5 : 4,
-      image,
-    });
-    current.sent++;
-    $('sent-count').textContent = current.sent === 1 ? 'התראה אחת' : `${current.sent} התראות`;
-    $('last-sent').textContent = `אחרונה: ${clock(at)}`;
-  } catch {
-    // Let it try again in a few seconds instead of waiting out the whole pause.
-    current.lastAlert = Date.now() - settings.cooldown * 1000 + 5000;
-    $('last-sent').textContent = `השליחה נכשלה ${clock()}, בדוק אינטרנט`;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const msg = {
+    type: 'alert',
+    kind,
+    title: kind === 'person' ? 'זוהה אדם' : 'זוהתה תנועה',
+    name: cameraName(),
+    at: at.getTime(),
+    box: box && normalize(box, vw, vh),
+    photo: settings.photo ? snapshot(box, frame) : null,
+  };
+  run.sent++;
+  $('sent-count').textContent = run.sent === 1 ? 'התראה אחת' : `${run.sent} התראות`;
+  $('last-sent').textContent = `אחרונה: ${clock(at)}`;
+  if (!run.link?.send(msg)) {
+    run.queue.push(msg);
+    if (run.queue.length > 5) run.queue.shift();
   }
 }
 
 document.addEventListener('visibilitychange', async () => {
-  if (!run) return;
-  if (document.hidden) {
-    run.wasHidden = true;
-    ntfy.beacon(settings.server, settings.topic, {
-      title: `שומר עבר לרקע · ${cameraName()}`,
-      message: 'המסך כבה או שנפתחה אפליקציה אחרת, ולכן ייתכן שהמצלמה הפסיקה לשמור. פתח את שומר שוב במכשיר.',
-      tags: 'warning',
-      priority: 4,
-    });
-    return;
-  }
-  requestWakeLock();
+  if (!run || document.hidden) return;
+  keepAwake(run);
   const track = run.stream?.getVideoTracks()[0];
   if (!track || track.readyState === 'ended') {
     try { await openCamera(); } catch { return setStatus('המצלמה נסגרה. לחץ עצור ואז התחל שוב.', 'err'); }
   }
   run.detector.reset();
-  if (run.wasHidden) {
-    run.wasHidden = false;
-    ntfy.publish(settings.server, settings.topic, {
-      title: `שומר חזר לשמור · ${cameraName()}`,
-      message: clock(),
-      tags: 'eyes',
-      priority: 2,
-    }).catch(() => {});
-  }
 });
 
-// ---------- Receiving ----------
+// ---------- Phone side ----------
 
-let listen = null;
+let phone = null;
+let scan = null;
+const scanVideoEl = $('scan-video');
 
-function startListening(topic, server = ntfy.DEFAULT_SERVER) {
-  stopListening();
-  store.set('listenTopic', topic);
-  show('listen');
-  listen = { topic, server, seen: new Set() };
-  $('listen-topic').textContent = topic;
-  $('open-ntfy').href = `ntfy://${new URL(server).host}/${topic}`;
-  $('alerts').innerHTML = '<li class="empty">עוד אין התראות.</li>';
-  setConn('wait', 'מתחבר…');
+async function startPhonePairing() {
+  stopPhoneScan();
+  closePhone();
+  $('scan-step').hidden = false;
+  $('answer-step').hidden = true;
+  $('pair-phone-status').textContent = '';
+  if (!linkSupported()) {
+    $('pair-phone-status').textContent = 'הדפדפן הזה לא תומך בחיבור. עדכן את הדפדפן או נסה Chrome.';
+    return;
+  }
+  const current = (scan = {});
+  try {
+    current.stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    });
+  } catch {
+    $('pair-phone-status').textContent = 'אין גישה למצלמה. אשר גישה למצלמה כדי לסרוק את הקוד.';
+    return;
+  }
+  if (scan !== current) return current.stream.getTracks().forEach(t => t.stop());
+  scanVideoEl.srcObject = current.stream;
+  scanVideoEl.play().catch(() => {});
 
-  const current = listen;
-  ntfy.history(server, topic).then(msgs => {
-    if (listen === current) msgs.forEach(m => addAlert(m, false));
-  }).catch(() => {});
-
-  setLive(store.get('liveOn', true));
-
-  const es = new EventSource(ntfy.sseUrl(server, topic));
-  current.es = es;
-  es.onopen = () => setConn('ok', 'מחובר. ההתראות יופיעו כאן.');
-  es.onerror = () => setConn('wait', 'מתחבר מחדש…');
-  es.onmessage = e => {
-    try {
-      const m = JSON.parse(e.data);
-      if (m.event === 'message') addAlert(m, true);
-    } catch {}
-  };
+  const tried = new Set();
+  current.stop = scanVideo(scanVideoEl, {
+    accept: text => isCode(text) && !tried.has(text),
+    onCode: async text => {
+      tried.add(text);
+      const link = new PhoneLink();
+      let answer;
+      try {
+        answer = await link.answerCode(text);
+      } catch {
+        link.close();
+        $('pair-phone-status').textContent = 'זה לא קוד של מכשיר המצלמה. סרוק את הקוד שמוצג במכשיר המצלמה.';
+        return;
+      }
+      if (scan !== current) return link.close();
+      stopPhoneScan();
+      beginPhone(link);
+      $('scan-step').hidden = true;
+      $('answer-step').hidden = false;
+      drawQr($('answer-qr'), answer);
+      $('pair-phone-status').textContent = 'מחכה שהמצלמה תקרא את הקוד…';
+    },
+  });
 }
 
-function stopListening() {
-  listen?.es?.close();
-  listen?.viewer?.close();
-  listen?.wake?.release().catch(() => {});
-  listen = null;
-  $('live-view').classList.remove('big');
+function stopPhoneScan() {
+  if (!scan) return;
+  scan.stop?.();
+  scan.stream?.getTracks().forEach(t => t.stop());
+  scanVideoEl.srcObject = null;
+  scan = null;
 }
 
-// ---------- Live view on the receiving screen ----------
+// ----- Receiving: live view, alerts, link watchdog -----
 
 const liveVideo = $('live-video');
 const liveOverlay = $('live-overlay');
-const LIVE_STATES = {
-  wait: ['wait', 'מתחבר לשידור… (המצלמה צריכה להיות במצב שמירה)'],
-  live: ['live', 'שידור חי'],
-  lost: ['wait', 'השידור נותק, מתחבר מחדש…'],
-};
+
+function beginPhone(link) {
+  const p = (phone = { link, lastSeen: 0, lost: false, liveOn: store.get('liveOn', true) });
+  link.on('open', () => {
+    if (phone !== p) return;
+    p.lastSeen = Date.now();
+    show('listen');
+    $('alerts').innerHTML = '<li class="empty">עוד אין התראות.</li>';
+    $('check-result').textContent = '';
+    setLive(p.liveOn);
+    keepAwake(p);
+    p.watchdog = setInterval(() => watchdog(p), 1000);
+    // If the video hasn't started, ask once more.
+    setTimeout(() => phone === p && p.liveOn && !liveVideo.videoWidth && p.link.send({ type: 'live', on: true }), 6000);
+  });
+  link.on('track', stream => {
+    liveVideo.srcObject = stream;
+    liveVideo.play().catch(() => {});
+  });
+  link.on('message', msg => phone === p && onCameraMessage(p, msg));
+  link.on('state', state => {
+    if (phone === p && p.watchdog && (state === 'failed' || state === 'closed')) lostCamera(p);
+  });
+}
+
+function closePhone() {
+  if (!phone) return;
+  clearInterval(phone.watchdog);
+  clearInterval(phone.lostAlarm);
+  clearTimeout(phone.pingTimer);
+  phone.link.close();
+  phone.wake?.release().catch(() => {});
+  phone = null;
+  liveVideo.srcObject = null;
+  $('live-view').classList.remove('big');
+}
+
+function onCameraMessage(p, msg) {
+  p.lastSeen = Date.now();
+  if (p.lost || p.weak) {
+    p.lost = p.weak = false;
+    clearInterval(p.lostAlarm);
+    setConn('ok');
+  }
+  if (msg.type === 'hb') {
+    if (msg.name !== p.name) {
+      p.name = msg.name;
+      setConn('ok');
+    }
+    const b = msg.battery;
+    $('battery').textContent = b ? `${b.charging ? '⚡' : '🔋'} ${b.level}%` : '';
+    $('battery').classList.toggle('low', !!b && !b.charging && b.level <= 20);
+  }
+  if (msg.type === 'motion') drawLiveBox(msg.box, '#ffb703');
+  if (msg.type === 'alert') {
+    drawLiveBox(msg.box, '#ff3b4e');
+    addAlert(msg);
+    ring();
+    const el = $('live-view');
+    el.classList.remove('alarm');
+    void el.offsetWidth;
+    el.classList.add('alarm');
+  }
+  if (msg.type === 'pong') {
+    clearTimeout(p.pingTimer);
+    $('check-result').textContent = `✓ החיבור תקין (${Math.round(performance.now() - msg.t)} ms)`;
+    beep(1);
+  }
+}
+
+// The camera sends a heartbeat every 2 s; silence means it died, went out of range or its screen went off.
+function watchdog(p) {
+  const quiet = Date.now() - p.lastSeen;
+  if (quiet > 10000) lostCamera(p);
+  else if (quiet > 5000 && !p.weak && !p.lost) {
+    p.weak = true;
+    setConn('weak');
+  }
+}
+
+function lostCamera(p) {
+  if (p.lost) return;
+  p.lost = true;
+  setConn('lost');
+  drawLiveBox(null);
+  alarmLost();
+  p.lostAlarm = setInterval(alarmLost, 15000);
+}
+
+function setConn(kind) {
+  const name = phone?.name || 'המצלמה';
+  const text = {
+    ok: `מחובר ל${name}`,
+    weak: 'החיבור למצלמה חלש…',
+    lost: '❌ החיבור למצלמה אבד! בדוק את מכשיר המצלמה. אם הוא לא חוזר תוך כמה שניות, חבר מחדש.',
+  }[kind];
+  $('conn-banner').dataset.kind = kind;
+  $('conn-text').textContent = text;
+  $('battery').hidden = kind === 'lost';
+  $('reconnect').hidden = kind !== 'lost';
+  // Don't leave the last frame looking like a live picture.
+  $('live-view').classList.toggle('stale', kind === 'lost');
+  $('live-state').textContent = kind === 'ok' ? 'שידור חי' : kind === 'lost' ? 'אין שידור' : '';
+}
 
 function setLive(on) {
-  if (!liveSupported()) on = false;
-  listen.viewer?.close();
-  listen.viewer = null;
+  phone.liveOn = on;
+  store.set('liveOn', on);
+  phone.link.send({ type: 'live', on });
   $('live-view').hidden = !on;
-  $('live-toggle').hidden = !liveSupported();
   $('live-toggle').textContent = on ? 'כבה שידור חי (חוסך סוללה)' : '📺 הצג שידור חי';
-  drawLiveBox(null);
-  if (!on) return;
-  const current = listen;
-  listen.viewer = new LiveViewer(listen.server, listen.topic, {
-    video: liveVideo,
-    onState: state => {
-      if (listen !== current) return;
-      const [kind, text] = LIVE_STATES[state];
-      $('live-state').dataset.kind = kind;
-      $('live-state').textContent = text;
-      if (state !== 'live') drawLiveBox(null);
-    },
-    onEvent: e => {
-      if (e.type === 'motion') drawLiveBox(e.box, '#ffb703');
-      if (e.type === 'alert') {
-        drawLiveBox(e.box, '#ff3b4e');
-        ring({ title: e.title });
-        const el = $('live-view');
-        el.classList.remove('alarm');
-        void el.offsetWidth;
-        el.classList.add('alarm');
-      }
-    },
-  });
-  keepAwake();
+  setConn(phone.lost ? 'lost' : phone.weak ? 'weak' : 'ok');
 }
 
-async function keepAwake() {
-  try {
-    if (listen && navigator.wakeLock && !document.hidden) listen.wake = await navigator.wakeLock.request('screen');
-  } catch {}
-}
+$('live-toggle').addEventListener('click', () => phone && setLive(!phone.liveOn));
+$('live-size').addEventListener('click', () => $('live-view').classList.toggle('big'));
+
+$('check').addEventListener('click', () => {
+  if (!phone) return;
+  unlockAudio();
+  $('check-result').textContent = 'בודק…';
+  phone.link.send({ type: 'ping', t: performance.now() });
+  clearTimeout(phone.pingTimer);
+  phone.pingTimer = setTimeout(() => ($('check-result').textContent = '❌ אין תשובה מהמצלמה'), 3000);
+});
+
+$('reconnect').addEventListener('click', () => {
+  unlockAudio();
+  show('pair');
+});
+
+$('disconnect').addEventListener('click', () => {
+  if (phone?.link.open && !confirm('להתנתק מהמצלמה? כדי להתחבר שוב צריך לסרוק מחדש.')) return;
+  show('home');
+});
+
+document.addEventListener('visibilitychange', () => phone && !document.hidden && keepAwake(phone));
 
 function drawLiveBox(box, color) {
   const w = liveVideo.videoWidth || 640, h = liveVideo.videoHeight || 480;
@@ -536,124 +694,65 @@ function drawLiveBox(box, color) {
   ctx.strokeRect(box.x * w, box.y * h, box.w * w, box.h * h);
 }
 
-$('live-toggle').addEventListener('click', () => {
-  const on = $('live-view').hidden;
-  store.set('liveOn', on);
-  setLive(on);
-});
-$('live-size').addEventListener('click', () => $('live-view').classList.toggle('big'));
-document.addEventListener('visibilitychange', () => listen?.viewer && !document.hidden && keepAwake());
-
-function setConn(kind, text) {
-  $('conn-dot').dataset.kind = kind;
-  $('conn-text').textContent = text;
-}
-
-function addAlert(m, live) {
-  if (listen.seen.has(m.id)) return;
-  listen.seen.add(m.id);
+function addAlert(msg) {
   const list = $('alerts');
   list.querySelector('.empty')?.remove();
-
   const li = document.createElement('li');
+  li.className = 'new';
   const head = document.createElement('div');
   head.className = 'alert-head';
   const title = document.createElement('b');
-  title.textContent = m.title || 'שומר';
+  title.textContent = `${msg.title} · ${msg.name}`;
   const time = document.createElement('time');
-  time.textContent = clock(new Date(m.time * 1000));
+  time.textContent = clock(new Date(msg.at));
   head.append(title, time);
   li.append(head);
-  if (m.attachment?.url && (m.attachment.type || '').startsWith('image/')) {
+  if (typeof msg.photo === 'string' && msg.photo.startsWith('data:image/jpeg')) {
     const img = document.createElement('img');
-    img.src = m.attachment.url;
+    img.src = msg.photo;
     img.alt = 'תמונה מהמצלמה';
-    img.loading = 'lazy';
     li.append(img);
-  } else if (m.message && m.message !== 'You received a file: shomer.jpg') {
-    const p = document.createElement('p');
-    p.textContent = m.message;
-    li.append(p);
   }
-  if (live) li.classList.add('new');
-
-  // History arrives oldest first and live messages are newest, so newest always goes on top.
   list.prepend(li);
-  while (list.children.length > 30) list.lastElementChild.remove();
-  if (live) ring(m);
+  // Kept in memory only, and only the latest ones.
+  while (list.children.length > 20) list.lastElementChild.remove();
 }
+
+// ---------- Sound ----------
 
 let audio = null;
 
-$('enable-alerts').addEventListener('click', async e => {
-  const button = e.currentTarget;
-  audio ||= new (window.AudioContext || window.webkitAudioContext)();
-  await audio.resume().catch(() => {});
-  if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission().catch(() => {});
-  beep(1);
-  button.textContent = '✓ צליל והתראות פעילים';
-  button.classList.add('done');
-});
+function unlockAudio() {
+  try {
+    audio ||= new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume().catch(() => {});
+  } catch {}
+}
 
-function beep(times = 3) {
+function tone(freqs, step, gainLevel = 0.4) {
   if (!audio || audio.state !== 'running') return;
   const t0 = audio.currentTime;
-  for (let i = 0; i < times * 2; i++) {
+  freqs.forEach((f, i) => {
     const osc = audio.createOscillator();
     const gain = audio.createGain();
-    osc.frequency.value = i % 2 ? 660 : 880;
-    gain.gain.setValueAtTime(0.0001, t0 + i * 0.22);
-    gain.gain.exponentialRampToValueAtTime(0.4, t0 + i * 0.22 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.22 + 0.2);
+    osc.frequency.value = f;
+    gain.gain.setValueAtTime(0.0001, t0 + i * step);
+    gain.gain.exponentialRampToValueAtTime(gainLevel, t0 + i * step + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + i * step + step - 0.02);
     osc.connect(gain).connect(audio.destination);
-    osc.start(t0 + i * 0.22);
-    osc.stop(t0 + i * 0.22 + 0.21);
-  }
+    osc.start(t0 + i * step);
+    osc.stop(t0 + i * step + step);
+  });
 }
 
-let lastRing = { title: '', at: 0 };
+const beep = (times = 3) => tone(Array.from({ length: times * 2 }, (_, i) => (i % 2 ? 660 : 880)), 0.22);
 
-function ring(m) {
-  // The live view and ntfy both deliver the same alert; ring once.
-  const now = Date.now();
-  if (m.title === lastRing.title && now - lastRing.at < 12000) return;
-  lastRing = { title: m.title, at: now };
+function alarmLost() {
+  tone([440, 330, 440, 330], 0.4, 0.5);
+  navigator.vibrate?.([800, 300, 800]);
+}
+
+function ring() {
   beep();
   navigator.vibrate?.([400, 150, 400, 150, 400]);
-  if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
-    try { new Notification(m.title || 'שומר', { body: m.message || '', icon: 'img/icon.png' }); } catch {}
-  }
 }
-
-$('copy-listen').addEventListener('click', e => copy(listen?.topic || '', e.currentTarget));
-
-$('join-form').addEventListener('submit', e => {
-  e.preventDefault();
-  const topic = $('join-topic').value.trim();
-  if (!ntfy.isValidTopic(topic)) {
-    $('join-topic').setCustomValidity('קוד ערוץ לא תקין');
-    $('join-topic').reportValidity();
-    return;
-  }
-  $('join-topic').setCustomValidity('');
-  history.replaceState(null, '', `#listen=${topic}`);
-  startListening(topic);
-});
-$('join-topic').addEventListener('input', () => $('join-topic').setCustomValidity(''));
-
-// ---------- Routing (#listen=<topic>&s=<server> comes from the pairing QR) ----------
-
-function route() {
-  const params = new URLSearchParams(location.hash.slice(1));
-  const topic = params.get('listen');
-  if (topic && ntfy.isValidTopic(topic)) {
-    stopWatching();
-    let server = ntfy.DEFAULT_SERVER;
-    const s = params.get('s');
-    if (s && /^https?:$/.test(new URL(s, location.href).protocol)) server = s.replace(/\/+$/, '');
-    startListening(topic, server);
-  }
-}
-
-window.addEventListener('hashchange', route);
-route();

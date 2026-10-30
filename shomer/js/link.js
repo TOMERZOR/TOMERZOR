@@ -183,9 +183,33 @@ export class CameraLink extends Link {
       return this.sender.replaceTrack(track).catch(() => {});
     }
     if (!track) return;
-    const tr = this.pc.addTransceiver(track, { direction: 'sendonly' });
+    // Smooth over sharp: 15 fps, capped bitrate, and under strain the resolution drops, not the frame rate.
+    const tr = this.pc.addTransceiver(track, {
+      direction: 'sendonly',
+      sendEncodings: [{ maxBitrate: 900_000, maxFramerate: 15 }],
+    });
     this.sender = tr.sender;
+    preferH264(tr);
+    const params = this.sender.getParameters();
+    params.degradationPreference = 'maintain-framerate';
+    this.sender.setParameters(params).catch(() => {});
   }
+
+  // Restarting the track makes the encoder start over with a fresh keyframe.
+  async restartVideo(track) {
+    if (!this.sender || !track) return;
+    await this.sender.replaceTrack(null).catch(() => {});
+    await this.sender.replaceTrack(track).catch(() => {});
+  }
+}
+
+// iPhones and most Android phones encode H.264 in hardware, which keeps the phone cool and the video smooth.
+function preferH264(transceiver) {
+  try {
+    const codecs = RTCRtpSender.getCapabilities('video').codecs;
+    const h264 = codecs.filter(c => c.mimeType === 'video/H264');
+    if (h264.length) transceiver.setCodecPreferences([...h264, ...codecs.filter(c => c.mimeType !== 'video/H264')]);
+  } catch {}
 }
 
 export class PhoneLink extends Link {
@@ -193,6 +217,23 @@ export class PhoneLink extends Link {
     super('phone');
     this.pc.ondatachannel = e => this.setupChannel(e.channel);
     this.pc.ontrack = e => this.emit('track', e.streams[0] || new MediaStream([e.track]));
+  }
+
+  // Frames per second actually shown and the delay added on the phone (jitter buffer plus half the round trip).
+  async videoStats() {
+    let frames = null, delay = null, rtt = null;
+    (await this.pc.getStats()).forEach(r => {
+      if (r.type === 'inbound-rtp' && r.kind === 'video') {
+        frames = r.framesDecoded ?? null;
+        if (r.jitterBufferEmittedCount) delay = r.jitterBufferDelay / r.jitterBufferEmittedCount;
+      }
+      if (r.type === 'candidate-pair' && r.nominated && r.currentRoundTripTime != null) rtt = r.currentRoundTripTime;
+    });
+    const now = performance.now();
+    const fps = frames != null && this.lastFrames != null ? ((frames - this.lastFrames) * 1000) / (now - this.lastAt) : null;
+    this.lastFrames = frames;
+    this.lastAt = now;
+    return { fps, delay: delay != null ? delay + (rtt || 0) / 2 : null };
   }
 
   // Step 2: scan the camera's code, return the code to show back to it.

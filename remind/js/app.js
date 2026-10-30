@@ -6,6 +6,9 @@ import * as Push from './push.js';
 
 const { SLOTS, FORMS, FOOD, COLORS, WEEKDAYS } = S;
 
+// Shown in the profile, so it's easy to check which version a phone is running.
+const APP_VERSION = '1.2';
+
 let state = S.load();
 const view = { tab: 'home', day: S.dateKey(), today: S.dateKey(), month: null, histDay: S.dateKey(), justChecked: new Set(), celebrate: false, ringPrev: {} };
 const $view = document.getElementById('view');
@@ -666,7 +669,7 @@ function renderProfile() {
     <button class="row danger" data-act="reset"><span class="sq" style="--c:var(--red)">${icon('trash')}</span><span class="txt t">מחיקת כל הנתונים</span></button>
   </div>
 
-  <div class="foot">${wordmark()}גרסה 1.0 · הכל נשמר בטלפון הזה בלבד</div>`;
+  <div class="foot">${wordmark()}גרסה ${APP_VERSION} · הכל נשמר בטלפון הזה בלבד</div>`;
 }
 
 function nameSheet() {
@@ -1265,8 +1268,27 @@ function onboarding() {
 
 // ---------- Start ----------
 
+// Updates. An iPhone home-screen app is usually resumed rather than relaunched, and a resume doesn't
+// look for a new version, so check on every return to the app. When a new version takes over, reload
+// into it right away, or, if a sheet or dialog is open, as soon as the app goes to the background.
+let swReg = null;
+let reloadPending = false;
+const busy = () => !state.onboarded || document.querySelector('.sheet, .dialog-wrap');
+function reloadIntoUpdate() {
+  try { sessionStorage.setItem('remind.updated', APP_VERSION); } catch {}
+  location.reload();
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  let controlled = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => { swReg = reg; }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // The first install also takes control; that's not an update, but any later change is.
+    if (!controlled) { controlled = true; return; }
+    if (reloadPending) return;
+    reloadPending = true;
+    if (!busy()) reloadIntoUpdate();
+  });
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data?.type === 'open-dose') openDose(e.data.date, e.data.t);
     else if (e.data?.type === 'refresh' && state.onboarded) render();
@@ -1274,7 +1296,11 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
+  if (document.visibilityState === 'hidden') {
+    if (reloadPending) reloadIntoUpdate();
+    return;
+  }
+  swReg?.update().catch(() => {});
   tick(true);
   queueSync(300);
 });
@@ -1292,3 +1318,9 @@ if (state.onboarded) {
   onboarding();
 }
 lastMinute = `${S.dateKey()} ${S.nowMinutes()}`;
+try {
+  if (sessionStorage.getItem('remind.updated') && state.onboarded) {
+    sessionStorage.removeItem('remind.updated');
+    setTimeout(() => toast(`Remind. עודכן לגרסה ${APP_VERSION}`, { icon: 'sparkle' }), 600);
+  }
+} catch {}

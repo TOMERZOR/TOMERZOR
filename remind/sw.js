@@ -1,6 +1,6 @@
 // Keeps the app on the phone so it opens instantly and without internet, and shows the reminders
 // the server pushes. Bump VERSION whenever a file changes.
-const VERSION = 'remind-v4';
+const VERSION = 'remind-v5';
 const FILES = [
   './',
   'index.html',
@@ -21,7 +21,11 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' skips the browser's HTTP cache (GitHub Pages lets files sit there for 10 minutes),
+  // so a new version never gets stored with old files.
+  e.waitUntil(caches.open(VERSION)
+    .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {

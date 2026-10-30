@@ -29,4 +29,4 @@ The server gets only times and random dose ids, never medicine names. The servic
 
 While Remind. is open, it also shows an in-app banner when a dose time arrives.
 
-Bump `VERSION` in `sw.js` whenever a file changes.
+Bump `VERSION` in `sw.js` whenever a file changes, and `APP_VERSION` in `js/app.js` (shown in the profile). The app checks for a new version every time it comes back to the screen (an iPhone home-screen app is usually resumed, not relaunched) and reloads into it by itself, keeping all data.

@@ -1,6 +1,7 @@
 import { ANIMATIONS, FONTS, DEFAULT_STYLE, buildPages, drawCaptions, pageAt, ensureFont } from './render.js';
 import { ENGINES, LANGUAGES, Transcriber, extractAudio } from './transcribe.js';
 import { exportVideo, cancelExport, toSRT, download } from './export.js';
+import { mountStyle, renderCaptionList, editWords } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -188,57 +189,17 @@ function renderTimeline() {
   $('tlPages').innerHTML = S.pages.map((p) => `<i style="left:${(p.start / d) * 100}%;width:${((p.end - p.start) / d) * 100}%"></i>`).join('');
 }
 
-const pageText = (pg) => pg.idx.map((i) => S.words[i].text).join(' ');
-
 function renderList() {
-  const ol = $('captions');
-  const active = document.activeElement;
-  if (active?.classList?.contains('txt') && ol.contains(active)) return; // don't yank text from under the cursor
   $('pageCount').textContent = S.pages.length ? `(${S.pages.length})` : '';
   $('emptyList').hidden = S.pages.length > 0 || S.running;
-  const frag = document.createDocumentFragment();
-  S.pages.forEach((pg, n) => {
-    const li = document.createElement('li');
-    li.className = 'cap';
-    li.style.animationDelay = Math.min(n, 12) * 18 + 'ms';
-    li.innerHTML = `
-      <time title="קפיצה לכאן">${fmt(pg.start)}</time>
-      <div class="txt" contenteditable="plaintext-only" spellcheck="false"></div>
-      <div class="acts">
-        <button class="icon-btn" data-act="redo" title="לתמלל שוב רק את הקטע הזה" aria-label="תמלול מחדש של הקטע"><i class="ph ph-arrows-clockwise"></i></button>
-        <button class="icon-btn" data-act="del" title="מחיקת הכתובית" aria-label="מחיקה"><i class="ph ph-trash"></i></button>
-      </div>`;
-    const txt = li.querySelector('.txt');
-    txt.textContent = pageText(pg);
-    txt.dir = 'auto';
-    li.querySelector('time').onclick = () => { video.currentTime = pg.start + 0.01; };
-    txt.onfocus = () => { video.currentTime = pg.start + 0.01; video.pause(); };
-    txt.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); txt.blur(); } if (e.key === 'Escape') { txt.textContent = pageText(pg); txt.blur(); } };
-    txt.onblur = () => commitEdit(pg, txt.textContent);
-    li.querySelector('[data-act=del]').onclick = () => { S.words.splice(pg.idx[0], pg.idx.length); rebuild(); };
-    li.querySelector('[data-act=redo]').onclick = () => redoPage(pg, li);
-    frag.append(li);
+  renderCaptionList($('captions'), {
+    words: S.words, pages: S.pages, fmt,
+    onSeek: (pg) => { video.currentTime = pg.start + 0.01; },
+    onFocus: (pg) => { video.currentTime = pg.start + 0.01; video.pause(); },
+    onCommit: (pg, raw) => { if (editWords(S.words, pg, raw)) setTimeout(rebuild); },
+    onDelete: (pg) => { S.words.splice(pg.idx[0], pg.idx.length); rebuild(); },
+    onRedo: redoPage,
   });
-  ol.replaceChildren(frag);
-}
-
-// Replaces a caption's words with the edited text. Same word count keeps every word's timing;
-// otherwise the caption's time is shared between the new words by length.
-function commitEdit(pg, raw) {
-  const parts = raw.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
-  if (parts.join(' ') === pageText(pg)) return;
-  const old = pg.idx.map((i) => S.words[i]);
-  let fresh;
-  if (parts.length === old.length) {
-    fresh = old.map((w, k) => ({ ...w, text: parts[k] }));
-  } else {
-    const s = old[0].start, e = old[old.length - 1].end;
-    const weights = parts.map((p) => p.length + 2), total = weights.reduce((a, b) => a + b, 0);
-    let at = s;
-    fresh = parts.map((p, k) => { const d = ((e - s) * weights[k]) / total; const w = { text: p, start: at, end: at + d }; at += d; return w; });
-  }
-  S.words.splice(pg.idx[0], pg.idx.length, ...fresh);
-  setTimeout(rebuild);
 }
 
 // ---------- transcription ----------
@@ -343,84 +304,15 @@ function setStyle(k, v) {
   syncControls();
 }
 
-const ranges = { speed: (v) => `×${(+v).toFixed(1)}`, size: (v) => v, stroke: (v) => v, shadow: (v) => v + '%', shadowBlur: (v) => v, shadowDist: (v) => v, posY: null };
-for (const [k, f] of Object.entries(ranges)) {
-  $(k).oninput = (e) => setStyle(k, +e.target.value);
-}
-for (const k of ['strokeColor', 'shadowColor']) $(k).oninput = (e) => setStyle(k, e.target.value);
-for (const k of ['bg', 'upper']) $(k).onchange = (e) => setStyle(k, e.target.checked);
-$('wplStep').onclick = (e) => {
-  const b = e.target.closest('button');
-  if (b) setStyle('wordsPerLine', Math.min(8, Math.max(1, S.style.wordsPerLine + +b.dataset.d)));
-};
-$('linesSeg').onclick = (e) => { const b = e.target.closest('button'); if (b) setStyle('lines', +b.dataset.v); };
-$('resetStyle').onclick = () => { S.style = { ...DEFAULT_STYLE }; store.set('style', S.style); ensureFont(S.style); rebuild(); syncControls(); };
-
-// Fonts
-$('fonts').innerHTML = FONTS.map((f) => `<button data-font="${f.id}" style="font-family:'${f.id}';font-weight:${f.weight}" title="${f.id}">${f.label}</button>`).join('');
-$('fonts').onclick = (e) => { const b = e.target.closest('button'); if (b) setStyle('font', b.dataset.font); };
-
-// Colour swatches
-const PALETTE = { color: ['#ffffff', '#ffe14d', '#111111', '#ff5c8a', '#5ce1e6'], hi: ['#ffe14d', '#7cff6b', '#ff5c8a', '#5ce1e6', '#ff8a3d', '#b18cff'] };
-document.querySelectorAll('.swatches').forEach((box) => {
-  const k = box.dataset.for;
-  box.innerHTML = PALETTE[k].map((c) => `<button data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join('') + `<input type="color" aria-label="צבע אחר">`;
-  box.onclick = (e) => { const b = e.target.closest('button'); if (b) setStyle(k, b.dataset.c); };
-  box.querySelector('input').oninput = (e) => setStyle(k, e.target.value);
+const syncControls = mountStyle($('tab-style'), {
+  getStyle: () => S.style,
+  setStyle,
+  reset: (style) => { S.style = style; store.set('style', S.style); ensureFont(S.style); rebuild(); syncControls(); },
+  isVisible: () => !$('tab-style').hidden && !$('editor').hidden,
 });
-
-// Animation tiles, each with a live preview
-const DEMO = (() => {
-  const words = [];
-  const txt = ['כך', 'זה', 'זז'];
-  let t = 0.15;
-  for (const w of txt) { words.push({ text: w, start: t, end: t + 0.4 }); t += 0.45; }
-  words[2].end = 1.9; // hold the last word so the loop is rarely empty
-  return { words, loop: 2.4 };
-})();
-$('anims').innerHTML = ANIMATIONS.map((a) => `<button class="anim" data-anim="${a.id}"><canvas width="240" height="160"></canvas><span>${a.label}</span></button>`).join('');
-$('anims').onclick = (e) => { const b = e.target.closest('.anim'); if (b) setStyle('anim', b.dataset.anim); };
-const tileStates = new Map();
-function drawTiles(now) {
-  if (!$('tab-style').hidden && !$('editor').hidden) {
-    const t = (now / 1000) % DEMO.loop;
-    for (const b of $('anims').children) {
-      const c = b.querySelector('canvas'), ctx = c.getContext('2d');
-      const st = { ...S.style, anim: b.dataset.anim, size: 21, posY: 0.5, wordsPerLine: 3, lines: 1 };
-      const key = b.dataset.anim;
-      if (!tileStates.has(key)) tileStates.set(key, { pages: buildPages(DEMO.words, st), state: {} });
-      const ts = tileStates.get(key);
-      ctx.clearRect(0, 0, c.width, c.height);
-      drawCaptions(ctx, c.width, c.height, t, DEMO.words, ts.pages, st, ts.state);
-    }
-  }
-  requestAnimationFrame(drawTiles);
-}
-requestAnimationFrame(drawTiles);
-
-function syncControls() {
-  const s = S.style;
-  for (const [k, f] of Object.entries(ranges)) {
-    $(k).value = s[k];
-    if (f && $(k + 'Out')) $(k + 'Out').textContent = f(s[k]);
-  }
-  $('strokeColor').value = s.strokeColor;
-  $('shadowColor').value = s.shadowColor;
-  $('bg').checked = s.bg;
-  $('upper').checked = s.upper;
-  $('wplOut').textContent = s.wordsPerLine;
-  document.querySelectorAll('#linesSeg button').forEach((b) => b.setAttribute('aria-pressed', +b.dataset.v === s.lines));
-  document.querySelectorAll('#fonts button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.font === s.font));
-  document.querySelectorAll('#anims .anim').forEach((b) => b.setAttribute('aria-pressed', b.dataset.anim === s.anim));
-  document.querySelectorAll('.swatches').forEach((box) => {
-    const v = s[box.dataset.for];
-    box.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.c.toLowerCase() === v.toLowerCase()));
-    box.querySelector('input').value = v;
-  });
-}
 syncControls();
 ensureFont(S.style);
-document.fonts.ready.then(() => { S.renderState = {}; tileStates.forEach((v) => (v.state = {})); });
+document.fonts.ready.then(() => { S.renderState = {}; });
 
 // Tabs
 function switchTab(name) {

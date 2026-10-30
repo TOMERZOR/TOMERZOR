@@ -23,9 +23,10 @@ test('a breakout on volume is an entry with a stop under the price and a 2:1 tar
     assert.equal(a.status, 'enter', `seed ${seed}`);
     assert.ok(a.setups.some(s => s.id === 'breakout' && s.age === 0));
     assert.ok(a.score >= ENTER_SCORE);
-    const { entry, stop, target } = a.levels;
-    assert.ok(stop < entry && target > entry);
-    assert.ok(Math.abs((target - entry) - 2 * (entry - stop)) < 0.006);
+    const { entry, stop, t1, t2, level } = a.levels;
+    assert.ok(stop < level && level < entry, 'the stop sits under the breakout level');
+    assert.ok(Math.abs((t1 - entry) - 1.5 * (entry - stop)) < 0.006);
+    assert.ok(Math.abs((t2 - entry) - 3 * (entry - stop)) < 0.006);
     assert.ok(a.checks.some(c => c.label.includes('נפח מסחר')));
   }
 });

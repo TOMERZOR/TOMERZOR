@@ -8,6 +8,7 @@ import * as api from './api.js';
 import * as push from './push.js';
 import { icon } from './icons.js';
 import { Chart, sparkline, MA_COLORS } from './chart.js';
+import { PLAYBOOK, byId as playbookById, COMMON as PLAYBOOK_COMMON } from './playbook.js';
 
 const state = load();
 let board = api.cachedBoard();
@@ -17,6 +18,8 @@ let scanQuery = '';
 let searchResults = null;
 let updatesView = 'alerts';
 let inbox = [];
+let inboxLoaded = false;
+let managed = {}; // position id -> where it stands against its plan (from the server)
 let firstBoard = true;
 const sheets = [];
 
@@ -218,7 +221,7 @@ function viewToday() {
     ${weak ? `<div class="callout callout--warn">${icon('warn')}<p><b>שוק חלש.</b> ה-S&P 500 מתחת לממוצע 200 יום. בתקופות כאלה פריצות נכשלות יותר, והציונים מוחלשים בהתאם.</p></div>` : ''}
 
     <section class="section" aria-labelledby="h-enter">
-      <div class="section-head"><h2 id="h-enter">הזדמנויות כניסה</h2>${entries.length ? `<span class="count">${entries.length}</span>` : ''}</div>
+      <div class="section-head"><h2 id="h-enter">הזדמנויות כניסה</h2>${entries.length ? `<span class="count">${entries.length}</span>` : ''}<button class="link head-link" data-action="playbook">הסטאפים</button></div>
       ${entries.length ? entries.map(entryCard).join('') : `<div class="card empty empty--small"><div class="empty-icon">${icon('scan')}</div><p><b>אין כרגע סימן כניסה.</b><br>מבט סורק ${items.length} מניות כל כמה דקות ויתריע ברגע שיופיע סטאפ.</p></div>`}
     </section>
 
@@ -278,10 +281,11 @@ function entryCard(i) {
       ${sparkline(i.spark?.slice(-45), { width: 110, height: 36 })}
     </div>
     <div class="setup-tag">${icon('bolt')}${esc(i.setupName || 'סטאפ כניסה')}</div>
-    <div class="levels">
+    <div class="levels levels--4">
       <div><span>כניסה</span><b>${n(money(L.entry))}</b></div>
       <div><span>סטופ</span><b class="down">${n(money(L.stop))}</b></div>
-      <div><span>יעד</span><b class="up">${n(money(L.target))}</b></div>
+      <div><span>יעד 1</span><b class="up">${n(money(L.t1))}</b></div>
+      <div><span>יעד 2</span><b class="up">${n(money(L.t2))}</b></div>
     </div>
     ${size?.shares ? `<p class="entry-size">לפי התקציב שלך: ${n(shares(size.shares))} מניות · ${n(money(size.cost))} · סיכון ${n(money(size.risk))}</p>` : ''}
   </article>`;
@@ -411,7 +415,7 @@ function viewPortfolio() {
     </section>` : ''}
     ${capWarnings.map(p => `<div class="callout callout--warn">${icon('warn')}<p><b>${esc(p.t)}</b> היא ${n(fixed(((p.value ?? p.cost) / budget) * 100, 1) + '%')} מהתקציב, מעל התקרה שלך (${n(state.risk.maxPositionPct + '%')}). שקול להקטין.</p></div>`).join('')}
     ${pos.length ? `<section class="section"><div class="section-head"><h2>עסקאות פתוחות</h2></div><div class="list">${pos.map(positionRow).join('')}</div></section>`
-    : `<section class="card empty"><div class="empty-icon">${icon('briefcase')}</div><h2>עוד אין עסקאות</h2><p>כשתיכנס למניה, לחץ <b>״נכנסתי לעסקה״</b> בעמוד שלה. מבט יעקוב אחרי הסטופ והיעד ויתריע לך כשמגיעים אליהם.</p><button class="btn btn--tinted" data-action="add-position">הוספת עסקה ידנית</button></section>`}
+    : `<section class="card empty"><div class="empty-icon">${icon('briefcase')}</div><h2>עוד אין עסקאות</h2><p>כשתיכנס למניה, לחץ <b>״נכנסתי לעסקה״</b> בעמוד שלה. מבט ינהל אותה לפי התוכנית: יזיז את הסטופ, ויתריע ביעד 1, ביעד 2 ובכל סימן יציאה.</p><button class="btn btn--tinted" data-action="add-position">הוספת עסקה ידנית</button></section>`}
     ${state.closed.length ? `<section class="section"><div class="section-head"><h2>עסקאות שנסגרו</h2></div>
       <div class="card tax">
         <div><span>רווח ממומש ${year} · טווח קצר</span><b class="${tone(realized('short'))}">${n(money(realized('short')))}</b></div>
@@ -422,20 +426,42 @@ function viewPortfolio() {
     <p class="footnote">הכל נשמר רק בטלפון הזה. גיבוי בהגדרות.</p>`;
 }
 
+const POS_STATE = { hold: ['מחזיקים', 'hold'], t1: ['יעד 1: למכור חצי', 'enter'], t2: ['יעד 2: למכור', 'enter'], exit: ['לצאת', 'avoid'] };
+
+// Where the price sits between the stop and target 2, with target 1 and the entry marked.
+function rangeBar(price, entry, stop, t1, t2) {
+  if (!(isNum(price) && stop && t2 > stop)) return '';
+  const at = v => Math.max(0, Math.min(1, (v - stop) / (t2 - stop))) * 100;
+  return `<div class="range-bar" aria-hidden="true"><i class="range-entry" style="inset-inline-start:${at(entry)}%"></i>${t1 ? `<i class="range-t1" style="inset-inline-start:${at(t1)}%"></i>` : ''}<b style="inset-inline-start:${at(price)}%"></b></div>
+    <div class="range-labels"><span>סטופ ${n(money(stop))}</span>${t1 ? `<span>יעד 1 ${n(money(t1))}</span>` : ''}<span>יעד 2 ${n(money(t2))}</span></div>`;
+}
+
+function managedCard(p, m) {
+  const [label, cls] = POS_STATE[m.state] || POS_STATE.hold;
+  return `<section class="card managed managed--${cls}">
+    <div class="managed-head"><span class="managed-state">${label}</span><span class="managed-r">${n(`${signed(m.r, 2)}R`)}</span></div>
+    <p>${esc(m.next)}</p>
+    <div class="managed-grid">
+      <div><span>${m.stopKind === 'trail' ? 'סטופ נגרר' : m.stopKind === 'breakeven' ? 'סטופ בכניסה' : 'סטופ'}</span><b class="down">${n(money(m.stopNow))}</b></div>
+      <div><span>יעד 1</span><b class="up">${n(money(m.t1))}</b>${m.t1Hit ? '<small>הושג ✓</small>' : ''}</div>
+      <div><span>יעד 2</span><b class="up">${n(money(m.t2))}</b>${m.t2Hit ? '<small>הושג ✓</small>' : ''}</div>
+      <div><span>ימים</span><b>${n(String(m.days))}${m.timeDays ? ` <small>מתוך ${n(String(m.timeDays))}</small>` : ''}</b></div>
+    </div>
+  </section>`;
+}
+
 function positionRow(p) {
-  let bar = '';
-  if (p.price != null && p.stop && p.target && p.target > p.stop) {
-    const f = Math.max(0, Math.min(1, (p.price - p.stop) / (p.target - p.stop)));
-    const e = Math.max(0, Math.min(1, (p.entry - p.stop) / (p.target - p.stop)));
-    bar = `<div class="range-bar" aria-hidden="true"><i class="range-entry" style="inset-inline-start:${e * 100}%"></i><b style="inset-inline-start:${f * 100}%"></b></div>
-      <div class="range-labels"><span>סטופ ${n(money(p.stop))}</span><span>יעד ${n(money(p.target))}</span></div>`;
-  }
+  const m = managed[p.id];
+  // The bar runs from the original stop to target 2, so progress reads the same as the stop trails up.
+  const bar = m ? rangeBar(p.price ?? m.price, p.entry, m.initialStop, m.t1, m.t2) : rangeBar(p.price, p.entry, p.stop, p.t1, p.t2 ?? p.target);
+  const [stateLabel, stateCls] = m ? POS_STATE[m.state] || POS_STATE.hold : [];
   const term = taxTerm(p.date);
   return `<button class="row row--position" data-action="position" data-id="${esc(p.id)}">
     <div class="row-main">
       <span class="ticker">${esc(p.t)}</span>
       <span class="name">${n(shares(p.shares))} מניות · כניסה ${n(money(p.entry))}</span>
       <span class="row-sub">${daysHeld(p.date)} ימים · ${term === 'long' ? 'טווח ארוך' : 'טווח קצר'}</span>
+      ${m ? `<span class="row-status row-status--${stateCls}">${stateLabel}${m.state === 'exit' ? ` · ${esc(m.exitText)}` : ''}</span>` : ''}
     </div>
     <div class="row-quote">
       <span class="row-price">${n(p.price != null ? fixed(p.price) : '—')}</span>
@@ -454,7 +480,7 @@ function closedRow(c) {
 
 // ---------- Updates ----------
 
-const FEED_ICONS = { enter: ['bolt', 'enter'], near: ['flag', 'near'], filing: ['doc', 'filing'], congress: ['building', 'congress'], stop: ['arrowDown', 'avoid'], target: ['arrowUp', 'enter'], bell: ['bell', 'hold'] };
+const FEED_ICONS = { enter: ['bolt', 'enter'], near: ['flag', 'near'], filing: ['doc', 'filing'], congress: ['building', 'congress'], stop: ['arrowDown', 'avoid'], exit: ['arrowDown', 'avoid'], target: ['arrowUp', 'enter'], t1: ['arrowUp', 'enter'], t2: ['arrowUp', 'enter'], bell: ['bell', 'hold'] };
 
 function viewUpdates() {
   const seg = `<div class="segmented" role="tablist">
@@ -666,11 +692,14 @@ function openDetail(t) {
           b.classList.toggle('is-on', !!show[b.dataset.k]);
           chart?.set(chartData());
         } else if (act === 'enter') {
-          openPositionEditor({ t, name: data.sig.name, entry: data.sig.levels?.entry ?? data.sig.price, stop: data.sig.levels?.stop, target: data.sig.levels?.target, size: sizeFor(data.sig.levels || { entry: data.sig.price, stop: null }, data.sig.price) });
+          const L = data.sig.levels || {};
+          openPositionEditor({ t, name: data.sig.name, entry: L.pending ? L.trigger : L.entry ?? data.sig.price, stop: L.stop, t1: L.t1, t2: L.t2, setup: L.setup, level: L.level, size: sizeFor(L.stop ? L : { entry: data.sig.price, stop: null }, data.sig.price) });
         } else if (act === 'open-url') {
           window.open(b.dataset.url, '_blank', 'noopener');
         } else if (act === 'risk') {
           openSettings('risk');
+        } else if (act === 'playbook') {
+          openPlaybook(b.dataset.setup);
         }
       });
     },
@@ -787,18 +816,10 @@ function detailBody(d, range, show) {
         ${ring(s.score, 58)}
       </div>
       <p class="verdict-text">${esc(verdictText(s))}</p>
-      ${s.status === 'enter' ? `<div class="levels levels--lg">
-        <div><span>כניסה</span><b>${n(money(L.entry))}</b></div>
-        <div><span>סטופ</span><b class="down">${n(money(L.stop))}</b><small>${n(`−${fixed(L.riskPct, 1)}%`)}</small></div>
-        <div><span>יעד</span><b class="up">${n(money(L.target))}</b><small>${n(`+${fixed((L.target / L.entry - 1) * 100, 1)}%`)}</small></div>
-      </div><p class="footnote">יחס סיכוי-סיכון 1:2. הסטופ מתחת לשפל האחרון, לפי התנודתיות (ATR) של המניה.</p>` : ''}
-      ${s.status === 'near' ? `<div class="levels levels--lg">
-        <div><span>טריגר</span><b>${n(money(L.trigger))}</b></div>
-        <div><span>סטופ אם נכנסים</span><b class="down">${n(money(L.stop))}</b></div>
-        <div><span>יעד</span><b class="up">${n(money(L.target))}</b></div>
-      </div>` : ''}
       ${s.warnings?.length ? `<ul class="warnings">${s.warnings.map(w => `<li>${icon('warn')}<span>${esc(w)}</span></li>`).join('')}</ul>` : ''}
     </section>
+
+    ${(s.status === 'enter' || s.status === 'near') && L.t1 ? planCard(L) : ''}
 
     ${s.status === 'enter' || s.status === 'near' ? `<section class="card sizing">
       <h3>${icon('shield')}כמה לקנות</h3>
@@ -839,15 +860,73 @@ function detailBody(d, range, show) {
     </div>`;
 }
 
+// ---------- Trade plans ----------
+
+const pctFrom = (v, base) => (isNum(v) && base ? (v / base - 1) * 100 : null);
+
+// The ready-made plan for a signal: entry, stop, two targets and how to get out.
+function planCard(L) {
+  const pb = playbookById[L.setup];
+  const steps = [
+    ['entry', 'כניסה', L.entry, L.pending ? `קונים רק אם המחיר עובר את ${money(L.trigger)}. עד שזה קורה, לא נכנסים.` : `קונים עכשיו. לא רודפים מעל ${money(L.maxEntry)}.`],
+    ['stop', 'סטופ', L.stop, `${L.stopWhy || ''}. אם המחיר מגיע לכאן, יוצאים.`],
+    ['t1', `יעד 1 · ${fixed(L.t1R, 1)}R`, L.t1, 'מוכרים חצי ומזיזים את הסטופ לנקודת הכניסה.'],
+    ['t2', `יעד 2 · ${fixed(L.t2R, 1)}R`, L.t2, 'מוכרים את השאר, או משאירים חלק עם סטופ נגרר.'],
+  ];
+  return `<section class="card plan">
+    <h3>${icon('flag')}תוכנית המסחר${pb ? `<span class="plan-name">${esc(pb.name)}</span>` : ''}</h3>
+    <ol class="ladder">${steps.map(([k, label, v, text]) => `<li class="step step--${k}">
+      <span class="step-dot" aria-hidden="true"></span>
+      <div class="step-body">
+        <div class="step-head"><b>${label}</b><span class="step-price">${n(money(v))}${k !== 'entry' ? ` <small>${n(pctText(pctFrom(v, L.entry), 1))}</small>` : ''}</span></div>
+        <p>${esc(text)}</p>
+      </div>
+    </li>`).join('')}</ol>
+    <div class="exit-rules"><b>${icon('arrowDown')}מתי יוצאים</b><p>${esc(pb?.exit || '')}</p></div>
+    <button class="link" data-act="playbook" data-setup="${esc(L.setup || '')}">איך הסטאפ הזה עובד</button>
+  </section>`;
+}
+
+function openPlaybook(focus) {
+  openSheet({
+    label: 'הסטאפים',
+    cls: 'sheet--tall',
+    html: `<div class="sheet-nav" data-drag><span></span><h2>הסטאפים</h2><button class="link link--bold" data-close>סיום</button></div>
+      <div class="playbook">
+        <p class="explain">שישה סטאפים מוכנים. לכל אחד יש כלל כניסה, סטופ, שני יעדים וכללי יציאה. מבט מחשב את המחירים לכל מניה, ועוקב אחרי העסקה אחרי שנכנסת.</p>
+        ${PLAYBOOK.map(pb => `<section class="card pb" id="pb-${pb.id}">
+          <h3>${icon('bolt')}${esc(pb.name)}</h3>
+          <p class="pb-idea">${esc(pb.idea)}</p>
+          <dl>
+            <dt>כניסה</dt><dd>${esc(pb.entry)}</dd>
+            <dt>סטופ</dt><dd>${esc(pb.stop)}</dd>
+            <dt>יעד 1</dt><dd>${esc(pb.t1)} מוכרים חצי, הסטופ עובר לכניסה.</dd>
+            <dt>יעד 2</dt><dd>${esc(pb.t2)} מוכרים את השאר.</dd>
+            <dt>יציאה</dt><dd>${esc(pb.exit)}</dd>
+          </dl>
+        </section>`).join('')}
+        <section class="card pb"><h3>${icon('shield')}כללים לכל הסטאפים</h3><dl>${PLAYBOOK_COMMON.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></section>
+        <p class="footnote">כללים, לא הבטחה: גם סטאפ טוב נגמר לפעמים בסטופ. בגלל זה הסיכון קבוע מראש.</p>
+      </div>`,
+    onMount: body => {
+      if (focus) setTimeout(() => body.querySelector(`#pb-${focus}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 420);
+    },
+  });
+}
+
 // ---------- Positions ----------
 
 function openPositionEditor(prefill = {}, existing = null) {
-  const p = existing || { id: uid(), t: prefill.t || '', entry: prefill.entry ?? '', shares: prefill.size?.shares || '', stop: prefill.stop ?? '', target: prefill.target ?? '', date: new Date().toISOString().slice(0, 10) };
+  const p = existing || { id: uid(), t: prefill.t || '', entry: prefill.entry ?? '', shares: prefill.size?.shares || '', stop: prefill.stop ?? '', t1: prefill.t1 ?? '', t2: prefill.t2 ?? '', setup: prefill.setup || null, level: prefill.level ?? null, date: new Date().toISOString().slice(0, 10) };
+  const m = existing ? managed[p.id] : null;
+  const pb = playbookById[p.setup];
   const field = (name, label, value, attrs = '') => `<label class="field"><span>${label}</span><input name="${name}" value="${esc(value ?? '')}" ${attrs}></label>`;
   openSheet({
     label: existing ? 'עריכת עסקה' : 'עסקה חדשה',
     html: `<div class="sheet-nav" data-drag><button class="link" data-close>ביטול</button><h2>${existing ? esc(p.t) : 'עסקה חדשה'}</h2><button class="link link--bold" data-save>שמירה</button></div>
       <form class="form" novalidate>
+        ${m ? managedCard(p, m) : ''}
+        ${pb ? `<p class="form-plan">${icon('flag', 'inline')} לפי הסטאפ <b>${esc(pb.name)}</b>. ${esc(pb.exit)}</p>` : ''}
         <div class="group">
           ${field('t', 'מניה', p.t, `autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="AAPL" dir="ltr" ${existing || prefill.t ? 'readonly' : ''}`)}
           ${field('entry', 'מחיר כניסה ($)', p.entry, 'inputmode="decimal" dir="ltr" placeholder="0.00"')}
@@ -855,10 +934,11 @@ function openPositionEditor(prefill = {}, existing = null) {
           ${field('date', 'תאריך', p.date, 'type="date" dir="ltr"')}
         </div>
         <div class="group">
-          ${field('stop', 'סטופ ($)', p.stop, 'inputmode="decimal" dir="ltr" placeholder="לא חובה"')}
-          ${field('target', 'יעד ($)', p.target, 'inputmode="decimal" dir="ltr" placeholder="לא חובה"')}
+          ${field('stop', 'סטופ ($)', p.stop, 'inputmode="decimal" dir="ltr" placeholder="אוטומטי"')}
+          ${field('t1', 'יעד 1 ($)', p.t1 ?? '', 'inputmode="decimal" dir="ltr" placeholder="אוטומטי"')}
+          ${field('t2', 'יעד 2 ($)', p.t2 ?? p.target ?? '', 'inputmode="decimal" dir="ltr" placeholder="אוטומטי"')}
         </div>
-        <p class="footnote">מבט יתריע כשהמחיר יגיע לסטופ או ליעד. התראה בלבד: שום דבר לא נמכר אוטומטית.</p>
+        <p class="footnote">שדה ריק מקבל ערך אוטומטי: סטופ לפי התנודתיות, יעד 1 ויעד 2 בפי 1.5 ופי 3 מהסיכון. מבט מתריע ביעד 1 (למכור חצי), ביעד 2 ובכל סימן יציאה. התראה בלבד: שום דבר לא נמכר אוטומטית.</p>
         <p class="form-error" data-error hidden></p>
         ${existing ? `<div class="group group--actions">
           <button type="button" class="action" data-chart>${icon('today')}פתח את הגרף</button>
@@ -876,15 +956,18 @@ function openPositionEditor(prefill = {}, existing = null) {
         const entry = num(f.entry);
         const qty = num(f.shares);
         const stop = num(f.stop);
-        const target = num(f.target);
+        const t1 = num(f.t1);
+        const t2 = num(f.t2);
         const problem = !/^[A-Z][A-Z0-9]{0,5}([.-][A-Z]{1,2})?$/.test(t) ? 'טיקר לא תקין'
           : !(entry > 0) ? 'צריך מחיר כניסה'
           : !(qty > 0) ? 'צריך כמות מניות'
           : stop != null && !(stop > 0 && stop < entry) ? 'הסטופ צריך להיות מתחת למחיר הכניסה'
-          : target != null && !(target > entry) ? 'היעד צריך להיות מעל מחיר הכניסה'
+          : t1 != null && !(t1 > entry) ? 'יעד 1 צריך להיות מעל מחיר הכניסה'
+          : t2 != null && !(t2 > (t1 ?? entry)) ? 'יעד 2 צריך להיות מעל יעד 1'
           : !/^\d{4}-\d{2}-\d{2}$/.test(f.date || '') ? 'תאריך לא תקין' : null;
         if (problem) { err.textContent = problem; err.hidden = false; return; }
-        const next = { ...p, t, entry, shares: qty, stop, target, date: f.date };
+        const next = { ...p, t, entry, shares: qty, stop, t1, t2, date: f.date };
+        delete next.target;
         state.positions = existing ? state.positions.map(x => (x.id === p.id ? next : x)) : [...state.positions, next];
         persist();
         push.sync(state);
@@ -1003,6 +1086,9 @@ function openSettings(focus) {
         </div>
         <p class="footnote">ה-SEC מבקשת מכל תוכנה שקוראת את הדיווחים להזדהות בשם ואימייל. הם נשלחים רק ל-SEC, בכותרת של הבקשות.</p>
 
+        <h3 class="group-title">מסחר</h3>
+        <div class="group"><button type="button" class="cell cell--button" data-open-playbook>${icon('flag', 'inline')} הסטאפים: כניסה, סטופ, יעדים ויציאה</button></div>
+
         <h3 class="group-title">גיבוי</h3>
         <div class="group">
           <button type="button" class="cell cell--button" data-export>${icon('share', 'inline')} שמירת גיבוי לקובץ</button>
@@ -1050,6 +1136,8 @@ function openSettings(focus) {
           for (const b of body.querySelectorAll('[data-scope]')) b.classList.toggle('is-on', b === t);
           body.querySelector('[data-minscore]').hidden = state.prefs.scope === 'watch';
           saveAll();
+        } else if ('openPlaybook' in t.dataset) {
+          openPlaybook();
         } else if ('pushOn' in t.dataset) {
           t.disabled = true;
           try {
@@ -1233,6 +1321,7 @@ function onAction(e) {
   else if (a === 'add-position') openPositionEditor({});
   else if (a === 'position') { const p = state.positions.find(x => x.id === el.dataset.id); if (p) openPositionEditor({}, p); }
   else if (a === 'retry') refresh(true);
+  else if (a === 'playbook') openPlaybook();
 }
 
 // ---------- Data ----------
@@ -1249,7 +1338,6 @@ async function refresh(manual = false) {
       const known = new Set((prev.feed || []).map(x => x.id));
       for (const ev of (board.feed || []).filter(x => !known.has(x.id) && relevant(x)).slice(0, 2)) banner(ev);
     }
-    localAlerts();
     firstBoard = false;
   } catch (err) {
     boardError = err;
@@ -1261,29 +1349,13 @@ async function refresh(manual = false) {
       const d = await api.deviceGet(state.device.id);
       const known = new Set(inbox.map(x => x.id));
       const fresh = (d.inbox || []).filter(x => !known.has(x.id));
-      if (inbox.length && fresh.length && !state.device.push) fresh.slice(0, 2).forEach(banner);
+      if (inboxLoaded && fresh.length && !state.device.push) fresh.slice(0, 2).forEach(banner);
       inbox = d.inbox || [];
+      inboxLoaded = true;
+      managed = d.positions || {};
     } catch {}
   }
   if (!sheets.some(s => s.root.querySelector('.sheet--onboarding'))) render();
-}
-
-// Without push, stops and targets still ring while the app is open.
-function localAlerts() {
-  if (state.device.push) return;
-  state.localRang ||= {};
-  for (const p of state.positions) {
-    const price = priceOf(p.t);
-    if (price == null) continue;
-    for (const [kind, hit, title] of [['stop', p.stop && price <= p.stop, `${p.t} הגיעה לסטופ ${money(p.stop)}`], ['target', p.target && price >= p.target, `${p.t} הגיעה ליעד ${money(p.target)}`]]) {
-      const key = `${p.id}:${kind}`;
-      if (hit && !state.localRang[key]) {
-        state.localRang[key] = Date.now();
-        banner({ type: kind, t: p.t, title, body: `המחיר עכשיו ${money(price)}` });
-      }
-    }
-  }
-  persist();
 }
 
 // Light and dark follow the phone's setting.

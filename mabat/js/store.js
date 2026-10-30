@@ -13,7 +13,6 @@ export const DEFAULTS = {
   closed: [],
   onboarded: false,
   feedSeenAt: 0,
-  localRang: {},
   scannerFilter: 'all',
 };
 
@@ -41,7 +40,7 @@ export function serverPayload(state) {
   return {
     prefs: state.prefs,
     watch: state.watch,
-    positions: state.positions.map(p => ({ id: p.id, t: p.t, entry: p.entry, stop: p.stop, target: p.target })),
+    positions: state.positions.map(p => ({ id: p.id, t: p.t, entry: p.entry, stop: p.stop, t1: p.t1, t2: p.t2 ?? p.target, setup: p.setup, level: p.level, date: p.date })),
     sec: state.sec,
   };
 }

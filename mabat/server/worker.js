@@ -21,6 +21,7 @@
 
 import { marketState, nyParts, closeMinutes } from './clock.js';
 import { analyze, chartSeries, SETUPS } from './signals.js';
+import { manage, PLAYBOOK } from './plans.js';
 import * as src from './sources.js';
 import { UNIVERSE, UNIVERSE_TICKERS, byTicker, FUNDS, WATCHED_MEMBERS, matchIssuer } from './universe.js';
 import { vapidKeys, sendPush, PUSH_HOSTS } from './push.js';
@@ -52,6 +53,8 @@ const isEtf = t => byTicker[t]?.sector === 'etf';
 
 const DEVICE_ID = /^[A-Za-z0-9_-]{22,43}$/;
 
+const price = v => (v == null || v === '' || !(Number(v) > 0) ? null : Number(v));
+
 export function cleanDevice(body) {
   if (!body || typeof body !== 'object') throw new Error('bad body');
   const out = {};
@@ -79,8 +82,12 @@ export function cleanDevice(body) {
     id: String(x.id || '').slice(0, 24),
     t: String(x.t || '').toUpperCase(),
     entry: Number(x.entry),
-    stop: x.stop == null || x.stop === '' ? null : Number(x.stop),
-    target: x.target == null || x.target === '' ? null : Number(x.target),
+    stop: price(x.stop),
+    t1: price(x.t1),
+    t2: price(x.t2) ?? price(x.target),
+    level: price(x.level),
+    setup: PLAYBOOK[x.setup] ? x.setup : null,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(x.date || '') ? x.date : null,
   })).filter(x => x.id && src.TICKER.test(x.t) && x.entry > 0);
   const sec = typeof body.sec === 'string' ? body.sec.trim().slice(0, 120) : '';
   out.sec = /\S+\s+\S+@\S+\.\S+/.test(sec) ? sec : '';
@@ -141,7 +148,7 @@ export class Market {
     if (sub) return json({ error: 'not found' }, 404);
     if (request.method === 'GET') {
       const dev = await this.storage.get(key);
-      return json({ inbox: dev?.inbox || [], push: !!dev?.subscription });
+      return json({ inbox: dev?.inbox || [], push: !!dev?.subscription, positions: await this.managed(dev?.positions || []) });
     }
     if (request.method === 'DELETE') {
       await this.storage.delete(key);
@@ -160,6 +167,19 @@ export class Market {
     const ids = (await this.storage.get('devices')) || [];
     if (!ids.includes(id)) await this.storage.put('devices', [...ids, id].slice(-50));
     return json({ ok: true, inbox: dev.inbox, push: !!dev.subscription });
+  }
+
+  // Where each position stands against its plan, from the stored bars.
+  async managed(positions) {
+    if (!positions.length) return {};
+    const tickers = [...new Set(positions.map(p => p.t))];
+    const stored = await this.storage.get(tickers.map(t => `bars:${t}`));
+    const out = {};
+    for (const p of positions) {
+      const rec = stored.get(`bars:${p.t}`);
+      if (rec?.bars?.length > 20) out[p.id] = manage(p, src.unpackBars(rec.bars));
+    }
+    return out;
   }
 
   async devices() {
@@ -211,6 +231,7 @@ export class Market {
     const ctxBase = await this.contextBase(now);
     const prevSigs = batch.length ? await this.storage.get(batch.map(t => `sig:${t}`)) : new Map();
     const fresh = {};
+    const freshBars = {};
     for (const t of batch) {
       try {
         const chart = await src.yahooChart(get, t);
@@ -219,6 +240,7 @@ export class Market {
         if (t === 'SPY') ctxBase.spy = spyContext(sig);
         await this.storage.put({ [`bars:${t}`]: { meta: chart.meta, bars: src.packBars(chart.bars.slice(-460)), at: now }, [`sig:${t}`]: sig });
         fresh[t] = sig;
+        freshBars[t] = chart.bars;
         scan[t] = now;
         health.yahoo = { ok: true, at: now, source: chart.source };
 
@@ -228,7 +250,7 @@ export class Market {
           events.push({
             type: 'enter', t, score: sig.score,
             title: `כניסה: ${t} ${money(sig.price)}`,
-            body: `${SETUPS[sig.setup]} · ציון ${sig.score}\nסטופ ${money(sig.levels.stop)} · יעד ${money(sig.levels.target)}`,
+            body: `${SETUPS[sig.setup]} · ציון ${sig.score}\nסטופ ${money(sig.levels.stop)} · יעד 1 ${money(sig.levels.t1)} · יעד 2 ${money(sig.levels.t2)}`,
           });
         } else if (prev && sig.status === 'near' && prev.status === 'hold' && !rang(`near:${t}`, 2 * DAY)) {
           mark(`near:${t}`);
@@ -266,20 +288,27 @@ export class Market {
     }
     await this.storage.put('jobCursor', cursor);
 
-    // Stops and targets of each phone's positions (trader-alerts: each rings once).
+    // Each phone's positions, managed by their plan (trader-alerts: each alert rings once):
+    // target 1 (sell half, stop to the entry), target 2, and the exit (stop, trailing stop,
+    // a failed setup, the time stop).
     const personal = [];
     for (const d of devices) {
       if (d.prefs?.positions === false) continue;
       for (const p of d.positions || []) {
-        const sig = fresh[p.t];
-        if (!sig) continue;
-        if (p.stop && sig.price <= p.stop && !rang(`pos:${d.id}:${p.id}:stop`, 30 * DAY)) {
-          mark(`pos:${d.id}:${p.id}:stop`);
-          personal.push({ dev: d, ev: { type: 'stop', t: p.t, title: `${p.t} הגיעה לסטופ ${money(p.stop)}`, body: `המחיר עכשיו ${money(sig.price)}. זו התראה בלבד: שום דבר לא נמכר.` } });
-        }
-        if (p.target && sig.price >= p.target && !rang(`pos:${d.id}:${p.id}:target`, 30 * DAY)) {
-          mark(`pos:${d.id}:${p.id}:target`);
-          personal.push({ dev: d, ev: { type: 'target', t: p.t, title: `${p.t} הגיעה ליעד ${money(p.target)}`, body: `המחיר עכשיו ${money(sig.price)} (כניסה ב-${money(p.entry)}).` } });
+        if (!freshBars[p.t]) continue;
+        const m = manage(p, freshBars[p.t]);
+        const key = kind => `pos:${d.id}:${p.id}:${kind}`;
+        const say = (kind, ev) => { if (!rang(key(kind), 60 * DAY)) { mark(key(kind)); personal.push({ dev: d, ev: { t: p.t, ...ev } }); } };
+        if (m.exit) {
+          say('exit', {
+            type: m.exit === 'stop' ? 'stop' : 'exit',
+            title: m.exit === 'stop' ? `${p.t} הגיעה לסטופ ${money(m.stopNow)}` : `סימן יציאה ב-${p.t}`,
+            body: `${m.exitText}. המחיר ${money(m.price)}. זו התראה בלבד: שום דבר לא נמכר.`,
+          });
+        } else if (m.t2Hit) {
+          say('t2', { type: 't2', title: `${p.t} הגיעה ליעד 2 ${money(m.t2)}`, body: `מוכרים את השאר, או ממשיכים עם סטופ נגרר ב-${money(m.stopNow)}.` });
+        } else if (m.t1Hit) {
+          say('t1', { type: 't1', title: `${p.t} הגיעה ליעד 1 ${money(m.t1)}`, body: `לפי התוכנית: מוכרים חצי ומזיזים את הסטופ לנקודת הכניסה (${money(p.entry)}).` });
         }
       }
     }
@@ -292,7 +321,7 @@ export class Market {
       const feed = (await this.storage.get('feed')) || [];
       await this.storage.put('feed', [...stamped.filter(e => !e.quiet).reverse(), ...feed].slice(0, 150));
     }
-    const pushed = await this.deliver(stamped, personal.map(x => ({ ...x, ev: { ...x.ev, id: `${now.toString(36)}p`, at: now } })), devices, counter);
+    const pushed = await this.deliver(stamped, personal.map((x, k) => ({ ...x, ev: { ...x.ev, id: `${now.toString(36)}p${k}`, at: now } })), devices, counter);
     return { session: mkt.session, refreshed: Object.keys(fresh), due: due.length, events: stamped.length + personal.length, pushed, subrequests: counter.n };
   }
 

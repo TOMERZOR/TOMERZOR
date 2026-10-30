@@ -131,15 +131,20 @@ test('device settings are checked', () => {
     subscription: { endpoint: 'https://web.push.apple.com/abc', keys: { p256dh: 'x', auth: 'y' } },
     prefs: { minScore: 10, scope: 'watch', near: true },
     watch: ['aapl', 'AAPL', 'not a ticker', 'BRK-B'],
-    positions: [{ id: 'p1', t: 'msft', entry: '410.5', stop: 390, target: '' }, { id: '', t: 'X', entry: 1 }],
+    positions: [{ id: 'p1', t: 'msft', entry: '410.5', stop: 390, target: '', t1: '430', setup: 'breakout', date: '2026-10-01' }, { id: 'p2', t: 'AAPL', entry: 100, setup: 'made-up', date: 'yesterday', target: 120 }, { id: '', t: 'X', entry: 1 }],
     sec: 'Jane Doe jane@example.com',
   });
   assert.equal(d.prefs.minScore, 50);
   assert.equal(d.prefs.scope, 'watch');
   assert.deepEqual(d.watch, ['AAPL', 'BRK-B']);
-  assert.equal(d.positions.length, 1);
+  assert.equal(d.positions.length, 2);
   assert.equal(d.positions[0].entry, 410.5);
-  assert.equal(d.positions[0].target, null);
+  assert.equal(d.positions[0].t1, 430);
+  assert.equal(d.positions[0].t2, null);
+  assert.equal(d.positions[0].setup, 'breakout');
+  assert.equal(d.positions[1].setup, null);
+  assert.equal(d.positions[1].date, null);
+  assert.equal(d.positions[1].t2, 120); // an older app's single target becomes target 2
   assert.equal(d.sec, 'Jane Doe jane@example.com');
   assert.throws(() => cleanDevice({ subscription: { endpoint: 'https://evil.example.com/x', keys: { p256dh: 'a', auth: 'b' } } }));
   assert.equal(cleanDevice({ sec: 'nope' }).sec, '');

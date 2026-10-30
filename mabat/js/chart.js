@@ -92,7 +92,7 @@ export class Chart {
 
     const values = view.map(b => b.c);
     for (const s of Object.values(ma)) for (const v of s) if (v != null) values.push(v);
-    const lv = levels ? [levels.entry, levels.stop, levels.target, levels.trigger].filter(v => v != null) : [];
+    const lv = levels ? [levels.entry, levels.stop, levels.t1, levels.t2, levels.trigger].filter(v => v != null) : [];
     values.push(...lv);
     let lo = Math.min(...values);
     let hi = Math.max(...values);
@@ -193,11 +193,12 @@ export class Chart {
     // entry / stop / target / trigger lines with a tag on the price axis
     if (levels) {
       const tags = [
-        ['target', 'יעד', css('--green')],
+        ['t2', 'יעד 2', css('--green-ink')],
+        ['t1', 'יעד 1', css('--green-ink')],
         ['entry', 'כניסה', css('--blue')],
         ['trigger', 'טריגר', css('--orange')],
-        ['stop', 'סטופ', css('--red')],
-      ].filter(([k]) => levels[k] != null).map(([k, label, c]) => ({ k, label, c, y: Math.round(y(levels[k])) + 0.5 }));
+        ['stop', 'סטופ', css('--red-ink')],
+      ].filter(([k]) => levels[k] != null && !(k === 'entry' && levels.pending)).map(([k, label, c]) => ({ k, label, c, y: Math.round(y(levels[k])) + 0.5 }));
       // tags on the price axis are pushed apart so they never overlap
       tags.sort((a, b) => a.y - b.y);
       for (let k = 0; k < tags.length; k++) tags[k].ty = k ? Math.max(tags[k].y, tags[k - 1].ty + 20) : tags[k].y;

@@ -548,3 +548,56 @@ main {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* ---------- Trade plans ---------- */
+
+.levels--4 { grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); }
+.head-link { margin-inline-start: auto; font-size: 0.9412rem; padding: 8px 2px; }
+.plan h3 { flex-wrap: wrap; }
+.plan-name { font-size: 0.8235rem; font-weight: 600; color: var(--label-2); margin-inline-start: auto; }
+.ladder { list-style: none; margin: 4px 0 0; padding: 0; position: relative; }
+.step { display: flex; gap: 12px; position: relative; padding-bottom: 14px; }
+.step:last-child { padding-bottom: 4px; }
+.step::before { content: ""; position: absolute; inset-inline-start: 6px; top: 16px; bottom: -2px; width: 2px; background: var(--separator); }
+.step:last-child::before { display: none; }
+.step-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; margin-top: 3px; border: 3px solid var(--blue); background: var(--card); position: relative; z-index: 1; }
+.step--stop .step-dot { border-color: var(--red); }
+.step--t1 .step-dot, .step--t2 .step-dot { border-color: var(--green); }
+.step--t2 .step-dot { background: var(--green); }
+.step-body { flex: 1; min-width: 0; }
+.step-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.step-head b { font-size: 1rem; }
+.step-price { font-size: 1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.step-price small { font-size: 0.7647rem; font-weight: 500; color: var(--label-2); }
+.step--stop .step-price { color: var(--red-ink); }
+.step--t1 .step-price, .step--t2 .step-price { color: var(--green-ink); }
+.step-body p { margin: 2px 0 0; font-size: 0.8824rem; color: var(--label-2); line-height: 1.45; }
+.exit-rules { margin-top: 12px; background: var(--card-2); border-radius: 12px; padding: 10px 12px; }
+.exit-rules b { display: flex; align-items: center; gap: 6px; font-size: 0.8824rem; }
+.exit-rules b .icon { width: 16px; height: 16px; color: var(--red-ink); }
+.exit-rules p { margin: 4px 0 0; font-size: 0.8824rem; line-height: 1.5; color: var(--label); }
+.plan > .link { display: inline-block; margin-top: 10px; padding: 6px 0; font-size: 0.9412rem; }
+
+.playbook { padding: 4px 16px 20px; }
+.pb + .pb { margin-top: 12px; }
+.pb-idea { margin: 0 0 10px; font-size: 0.9412rem; line-height: 1.5; color: var(--label); }
+.pb dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; font-size: 0.8824rem; line-height: 1.5; }
+.pb dt { font-weight: 700; color: var(--label); white-space: nowrap; }
+.pb dd { margin: 0; color: var(--label-2); }
+
+.managed { margin-bottom: 8px; }
+.managed-head { display: flex; justify-content: space-between; align-items: baseline; }
+.managed-state { font-size: 1.3rem; font-weight: 800; }
+.managed--enter .managed-state { color: var(--green-ink); }
+.managed--avoid .managed-state { color: var(--red-ink); }
+.managed--hold .managed-state { color: var(--label); }
+.managed-r { font-size: 1rem; font-weight: 700; color: var(--label-2); }
+.managed > p { margin: 6px 0 12px; font-size: 0.9412rem; line-height: 1.5; }
+.managed-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 8px; }
+.managed-grid > div { background: var(--card-2); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
+.managed-grid > div > span { font-size: 0.7059rem; color: var(--label-2); }
+.managed-grid b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.managed-grid small { font-size: 0.7059rem; color: var(--label-2); font-weight: 500; }
+.form-plan { font-size: 0.8235rem; color: var(--label-2); line-height: 1.5; margin: 4px 4px 8px; }
+.range-t1 { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--green-ink); transform: translateX(50%); }
+.row-status--hold { color: var(--label-2); }

@@ -8,6 +8,7 @@
 //         'avoid'  downtrend or a serious filing
 
 import { sma, rsi, macd, atr, bollinger, priorHigh, priorLow, last, pct } from './indicators.js';
+import { tradePlan } from './plans.js';
 
 export const SETUPS = {
   breakout: 'פריצה לשיא חדש',
@@ -193,10 +194,8 @@ export function analyze(bars, ctx = {}) {
   }
   score = Math.round(Math.max(0, Math.min(100, score)));
 
-  // ---------- Status and levels ----------
+  // ---------- Status and the trade plan ----------
   const downtrend = has200 ? c < s200[i] && s50[i] < s200[i] : c < s50[i] && slope50 < 0;
-  const swingLow = priorLow(bars, i + 1, 10);
-  const stop = Math.max(c - 2.5 * ATR, Math.min(c - 1.5 * ATR, swingLow - 0.25 * ATR));
 
   let status = 'hold';
   let levels = null;
@@ -206,18 +205,16 @@ export function analyze(bars, ctx = {}) {
   else if (downtrend && !best) status = 'avoid';
 
   if (status === 'enter') {
-    const entry = round(c);
-    const stopAt = round(stop);
-    levels = { entry, stop: stopAt, target: round(entry + 2 * (entry - stopAt)), rr: 2, riskPct: round((1 - stopAt / entry) * 100, 1) };
+    levels = tradePlan(best.id, bars, { entry: c, atr: ATR, sma20: s20[i], signalIndex: i - best.age });
   } else if (status === 'hold' && !downtrend && high20) {
+    // Close to a breakout: a pending plan, buy only above the trigger.
     const trigger = high20 * 1.002;
     const dist = pct(trigger, c);
     if (dist > 0 && dist <= 3 && score + 8 >= NEAR_SCORE) {
       status = 'near';
       setupPts = 8;
       score = Math.min(100, score + 8);
-      levels = { trigger: round(trigger), distPct: round(dist, 1), stop: round(Math.max(trigger - 2.5 * ATR, Math.min(trigger - 1.5 * ATR, swingLow - 0.25 * ATR))) };
-      levels.target = round(levels.trigger + 2 * (levels.trigger - levels.stop));
+      levels = { ...tradePlan('breakout', bars, { entry: trigger, atr: ATR, signalIndex: i }), trigger: round(trigger), distPct: round(dist, 1), pending: true };
     }
   }
 
@@ -227,7 +224,7 @@ export function analyze(bars, ctx = {}) {
     chgPct: round(pct(c, prev), 2),
     score,
     status,
-    setup: status === 'enter' ? best.id : null,
+    setup: status === 'enter' ? best.id : status === 'near' ? 'breakout' : null,
     setups: fired,
     levels,
     checks,

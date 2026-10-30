@@ -1,0 +1,16 @@
+# Runs Shomer at boot. Edit the topic and name, then:
+#   sudo cp shomer.service /etc/systemd/system/ && sudo systemctl enable --now shomer
+#   journalctl -u shomer -f        # to see alerts and errors
+[Unit]
+Description=Shomer camera alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+ExecStart=/usr/bin/python3 /home/pi/shomer/shomer.py --topic shomer-CHANGE-ME --name "הכניסה"
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

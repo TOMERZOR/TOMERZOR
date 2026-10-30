@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>שומר</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1321">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="שומר">
+<meta name="description" content="שומר: טלפון ישן הופך למצלמה ששולחת לך התראה כשמישהו מתקרב.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="img/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+
+<section id="home" class="screen active">
+  <header class="brand">
+    <img src="img/icon.svg" width="88" height="88" alt="">
+    <h1>שומר</h1>
+    <p class="tag">טלפון ישן הופך למצלמה ששולחת לך התראה כשמישהו מתקרב.</p>
+  </header>
+  <div class="choices">
+    <button class="big" data-go="cam-setup">
+      <span class="emoji" aria-hidden="true">📷</span>
+      <b>המכשיר הזה יהיה המצלמה</b>
+      <small>מניחים אותו מול הדלת, מחובר לחשמל</small>
+    </button>
+    <button class="big" data-go="listen-join">
+      <span class="emoji" aria-hidden="true">🔔</span>
+      <b>המכשיר הזה יקבל התראות</b>
+      <small>הטלפון שלך, שנמצא לידך</small>
+    </button>
+  </div>
+  <ol class="how">
+    <li>פותחים את האתר במכשיר שישמש מצלמה ובוחרים „המצלמה”.</li>
+    <li>סורקים את הקוד שמופיע בו עם הטלפון שלך.</li>
+    <li>מתקינים בטלפון את האפליקציה החינמית <b>ntfy</b> ונרשמים לערוץ, כדי לקבל התראות גם כשהמסך כבוי.</li>
+  </ol>
+</section>
+
+<section id="cam-setup" class="screen">
+  <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>הגדרת המצלמה</h2></header>
+
+  <div class="card pair">
+    <h3>חיבור לטלפון שלך</h3>
+    <div class="qr" id="qr" aria-label="קוד QR לחיבור הטלפון"></div>
+    <p>סרוק עם המצלמה של הטלפון שלך, או הקלד בו את קוד הערוץ:</p>
+    <div class="topic"><code id="topic"></code><button class="small" id="copy-topic">העתק</button></div>
+    <button class="ghost" id="test-send">שלח התראת בדיקה</button>
+    <p class="note" id="test-status" role="status"></p>
+  </div>
+
+  <div class="card">
+    <h3>מה לזהות</h3>
+    <div class="seg" role="radiogroup" aria-label="מה לזהות">
+      <button role="radio" data-mode="motion">כל תנועה</button>
+      <button role="radio" data-mode="people">רק אנשים</button>
+    </div>
+    <p class="note" id="mode-note"></p>
+
+    <label class="field">רגישות <output id="sens-out"></output>
+      <input type="range" id="sens" min="1" max="10" step="1">
+    </label>
+
+    <label class="field">שם המצלמה (יופיע בהתראה)
+      <input type="text" id="name" maxlength="30" placeholder="לדוגמה: הכניסה">
+    </label>
+
+    <div class="row2">
+      <label class="field">הפסקה בין התראות
+        <select id="cooldown">
+          <option value="15">15 שניות</option>
+          <option value="30">30 שניות</option>
+          <option value="60">דקה</option>
+          <option value="300">5 דקות</option>
+        </select>
+      </label>
+      <label class="field">התחלה אחרי
+        <select id="arm">
+          <option value="0">מיד</option>
+          <option value="10">10 שניות</option>
+          <option value="30">30 שניות</option>
+          <option value="60">דקה</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="field">מצלמה
+      <select id="facing">
+        <option value="environment">אחורית</option>
+        <option value="user">קדמית</option>
+      </select>
+    </label>
+
+    <label class="check"><input type="checkbox" id="photo"> לצרף תמונה להתראה</label>
+    <label class="check"><input type="checkbox" id="urgent"> התראה דחופה (צלצול ורטט ארוכים)</label>
+
+    <details>
+      <summary>מתקדם</summary>
+      <label class="field">שרת ntfy
+        <input type="url" id="server" dir="ltr" placeholder="https://ntfy.sh">
+      </label>
+      <button class="ghost" id="new-topic">צור ערוץ חדש</button>
+      <p class="note">ערוץ חדש מנתק את הטלפונים שכבר מחוברים, וצריך לסרוק שוב.</p>
+    </details>
+  </div>
+
+  <button class="primary" id="start">התחל לשמור</button>
+</section>
+
+<section id="cam-run" class="screen">
+  <div class="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+    <div class="status" id="status" role="status"></div>
+    <div class="meter" aria-hidden="true"><i id="meter"></i><b id="meter-mark"></b></div>
+  </div>
+  <div class="run-info">
+    <span id="sent-count">0 התראות</span>
+    <span id="last-sent"></span>
+  </div>
+  <div class="run-actions">
+    <button class="ghost" id="blackout">מסך שחור</button>
+    <button class="danger" id="stop">עצור</button>
+  </div>
+  <div class="curtain" id="curtain" hidden><p>שומר פועל<br><small>הקש כדי להציג</small></p></div>
+</section>
+
+<section id="listen-join" class="screen">
+  <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>קבלת התראות</h2></header>
+  <div class="card">
+    <p>במכשיר שמשמש מצלמה, בחר „המכשיר הזה יהיה המצלמה” וסרוק את הקוד שמופיע שם. אפשר גם להקליד את קוד הערוץ:</p>
+    <form id="join-form">
+      <input type="text" id="join-topic" dir="ltr" placeholder="shomer-..." autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="primary">התחבר</button>
+    </form>
+  </div>
+</section>
+
+<section id="listen" class="screen">
+  <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>התראות</h2></header>
+  <div class="card">
+    <p class="conn"><i id="conn-dot"></i><span id="conn-text">מתחבר…</span></p>
+    <button class="primary" id="enable-alerts">🔊 הפעל צליל והתראות</button>
+    <p class="note">צליל והתראות בדף הזה עובדים רק כשהוא פתוח. כדי לקבל התראות גם כשהטלפון נעול, התקן את <b>ntfy</b>:</p>
+    <div class="apps">
+      <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a>
+      <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">iPhone</a>
+    </div>
+    <p class="note">באפליקציה: ➕, ובשם הנושא (topic) הקלד:</p>
+    <div class="topic"><code id="listen-topic"></code><button class="small" id="copy-listen">העתק</button></div>
+    <a class="ghost link" id="open-ntfy" href="#">פתח באפליקציית ntfy (אנדרואיד)</a>
+  </div>
+  <h3 class="list-title">התראות אחרונות</h3>
+  <ul class="alerts" id="alerts"><li class="empty">עוד אין התראות.</li></ul>
+</section>
+
+<script src="js/qrcode.js"></script>
+<script type="module" src="js/app.js?v=1"></script>
+</body>
+</html>

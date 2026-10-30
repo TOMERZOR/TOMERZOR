@@ -1,6 +1,7 @@
 import { MotionDetector, sensitivityToThreshold, toGray } from './motion.js';
 import { CameraLink, PhoneLink, linkSupported, isCode } from './link.js';
 import { scanVideo } from './scan.js';
+import { cameraKeys, sendPush, pushSupport, subscribe } from './push.js';
 
 const $ = id => document.getElementById(id);
 
@@ -202,7 +203,11 @@ $('start').addEventListener('click', async () => {
     liveOn: true,
     lastPreview: 0,
     phoneSeen: 0,
+    phoneVisible: false,
+    pushSub: store.get('pushSub', null),
   };
+  cameraKeys(store).then(k => run && (run.keys = k)).catch(() => {});
+  $('push-state').textContent = run.pushSub ? '📲 פוש מוכן' : '';
   $('sent-count').textContent = '';
   $('last-sent').textContent = '';
   $('link-state').textContent = '';
@@ -340,6 +345,11 @@ function onPhoneConnected() {
   run.phoneSeen = Date.now();
   if (settings.dark) setDark(true);
   sendHeartbeat();
+  // The phone needs the camera's public key to subscribe to pushes from it.
+  cameraKeys(store).then(k => {
+    run.keys = k;
+    run.link?.send({ type: 'push-key', key: k.publicKey });
+  }).catch(() => {});
   // Alerts the phone hasn't confirmed yet (it was away, or the link dropped mid-way).
   for (const msg of run.pending.values()) run.link.send(msg);
 }
@@ -360,7 +370,14 @@ function onPhoneMessage(msg) {
   if (!run.phoneSeen || Date.now() - run.phoneSeen > 10000) $('link-state').textContent = '🔗 הטלפון מחובר';
   run.phoneSeen = Date.now();
   if (msg.type === 'live') run.liveOn = !!msg.on;
+  if (msg.type === 'hb' && 'visible' in msg) run.phoneVisible = !!msg.visible;
   if (msg.type === 'ack') run.pending.delete(msg.id);
+  if (msg.type === 'push-sub' && msg.sub?.endpoint) {
+    run.pushSub = msg.sub;
+    store.set('pushSub', msg.sub);
+    if (!msg.quiet) testPush();
+  }
+  if (msg.type === 'push-test') testPush();
   if (msg.type === 'ping') run.link.send({ type: 'pong', t: msg.t });
 }
 
@@ -576,6 +593,43 @@ function trigger(kind, box, frame) {
   run.pending.set(msg.id, msg);
   if (run.pending.size > 10) run.pending.delete(run.pending.keys().next().value);
   run.link?.send(msg);
+  maybePush(msg);
+}
+
+// ----- Push to the phone through Apple/Google, for when Shomer isn't on its screen -----
+
+// If the phone has Shomer open on screen, the local link is enough. Otherwise push right away;
+// and if the phone doesn't confirm the local alert within 3 s, push anyway.
+function maybePush(msg) {
+  if (!run.pushSub) return;
+  const watching = run.link?.open && run.phoneVisible && Date.now() - run.phoneSeen < 4000;
+  if (!watching) return pushAlert(msg);
+  const current = run;
+  setTimeout(() => run === current && current.pending.has(msg.id) && pushAlert(msg), 3000);
+}
+
+async function pushAlert(msg) {
+  const current = run;
+  try {
+    current.keys ||= await cameraKeys(store);
+    const ok = await sendPush(current.pushSub, current.keys, { title: `${msg.title} · ${msg.name}`, body: clock(new Date(msg.at)), tag: msg.id });
+    if (run === current) $('push-state').textContent = ok ? `📲 פוש נשלח ${clock()}` : '📲 הפוש נדחה';
+    return ok;
+  } catch (err) {
+    if (err.gone) {
+      // The phone turned notifications off or reinstalled; it has to subscribe again.
+      store.set('pushSub', null);
+      current.pushSub = null;
+    }
+    if (run === current) $('push-state').textContent = err.gone ? '📲 הפוש בוטל בטלפון' : '📲 אין אינטרנט לפוש';
+    return false;
+  }
+}
+
+async function testPush() {
+  if (!run?.pushSub) return;
+  const ok = await pushAlert({ title: 'בדיקה', name: cameraName(), at: Date.now(), id: `test-${Date.now()}` });
+  run?.link?.send({ type: 'push-result', ok });
 }
 
 document.addEventListener('visibilitychange', async () => {
@@ -720,6 +774,16 @@ function onCameraMessage(p, msg) {
     void el.offsetWidth;
     el.classList.add('alarm');
   }
+  if (msg.type === 'push-key') {
+    p.pushKey = msg.key;
+    renderPush(p);
+    // Already allowed and subscribed with this camera's key: just hand the subscription over.
+    if (store.get('pushKey', '') === msg.key && window.Notification?.permission === 'granted') enablePush(p, true);
+  }
+  if (msg.type === 'push-result') {
+    p.pushBusy = false;
+    renderPush(p, msg.ok ? '✓ התראות פעילות. נעל את הטלפון ונסה: ההתראה תופיע למעלה.' : '❌ ההתראה לא נשלחה. לשני הטלפונים צריך להיות אינטרנט.');
+  }
   if (msg.type === 'pong') {
     clearTimeout(p.pingTimer);
     $('check-result').textContent = `✓ החיבור תקין (${Math.round(performance.now() - msg.t)} ms)`;
@@ -733,7 +797,7 @@ function watchdog(p) {
   const now = Date.now();
   if (now - (p.lastHb || 0) >= 2000) {
     p.lastHb = now;
-    p.link.send({ type: 'hb' });
+    p.link.send({ type: 'hb', visible: !document.hidden });
   }
   previewAge(p);
   const quiet = now - p.lastSeen;
@@ -812,7 +876,61 @@ $('disconnect').addEventListener('click', () => {
   show('home');
 });
 
-document.addEventListener('visibilitychange', () => phone && !document.hidden && keepAwake(phone));
+document.addEventListener('visibilitychange', () => {
+  if (!phone) return;
+  // Tell the camera right away, so it starts pushing instead of waiting for a missed confirmation.
+  phone.link.send({ type: 'hb', visible: !document.hidden });
+  if (!document.hidden) keepAwake(phone);
+});
+
+function renderPush(p, text) {
+  const support = pushSupport();
+  $('push-card').hidden = !p.pushKey || support === 'none';
+  const enabled = store.get('pushKey', '') === p.pushKey && window.Notification?.permission === 'granted';
+  if (support === 'ios-browser') {
+    $('push-text').textContent = 'באייפון זה עובד רק מהאפליקציה במסך הבית: בספארי לחץ שיתוף ← „הוסף למסך הבית”, פתח את שומר מהאייקון וחבר שוב למצלמה. צריך iOS 16.4 ומעלה.';
+  } else {
+    $('push-text').textContent = text || (enabled
+      ? '✓ התראות פעילות: כשמישהו מתקרב תקבל התראה למעלה גם כשהטלפון נעול או ששומר ברקע. צריך אינטרנט בשני הטלפונים.'
+      : 'כדי לקבל התראה למעלה גם כשהטלפון נעול או ששומר ברקע. ההתראה עוברת מוצפנת דרך שירות ההתראות של אפל/גוגל ולכן צריך אינטרנט. תמונות לא נשלחות כך.');
+  }
+  $('push-enable').hidden = support !== 'ok' || enabled || p.pushBusy;
+  $('push-test').hidden = support !== 'ok' || !enabled || p.pushBusy;
+}
+
+async function enablePush(p, quiet) {
+  if (!p.pushKey) return;
+  p.pushBusy = true;
+  if (!quiet) renderPush(p, 'מפעיל…');
+  try {
+    const sub = await subscribe(p.pushKey);
+    store.set('pushKey', p.pushKey);
+    p.link.send({ type: 'push-sub', sub, quiet });
+    if (quiet) {
+      p.pushBusy = false;
+      renderPush(p);
+    } else {
+      renderPush(p, 'שולח התראת בדיקה…');
+    }
+  } catch (err) {
+    p.pushBusy = false;
+    renderPush(p, err.denied ? 'ההתראות חסומות. אפשר אותן בהגדרות ← התראות ← שומר.' : 'לא הצלחתי להפעיל התראות. ודא שיש אינטרנט ונסה שוב.');
+  }
+}
+
+$('push-enable').addEventListener('click', () => phone && enablePush(phone));
+$('push-test').addEventListener('click', () => {
+  if (!phone) return;
+  phone.pushBusy = true;
+  renderPush(phone, 'שולח התראת בדיקה… נעל את הטלפון עכשיו כדי לראות אותה למעלה.');
+  phone.link.send({ type: 'push-test' });
+  setTimeout(() => {
+    if (phone?.pushBusy) {
+      phone.pushBusy = false;
+      renderPush(phone, '❌ אין תשובה מהמצלמה.');
+    }
+  }, 15000);
+});
 
 function addAlert(msg) {
   const list = $('alerts');

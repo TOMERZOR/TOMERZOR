@@ -1,0 +1,5 @@
+# Shomer push relay on Cloudflare Workers. Deploy with the GitHub workflow
+# (.github/workflows/shomer-push.yml) or `npx wrangler deploy` from this folder.
+name = "shomer-push"
+main = "worker.js"
+compatibility_date = "2026-10-01"

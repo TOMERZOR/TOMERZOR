@@ -258,6 +258,9 @@ summary { cursor: pointer; color: var(--muted); }
 #battery { margin-inline-start: auto; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 #battery.low { color: var(--alert); }
 .conn-banner[data-kind="lost"] #battery { color: #fff; }
+.push-card p { margin: 0 0 10px; }
+.push-card .ghost { margin-top: 8px; }
+.push-card [hidden] { display: none; }
 .listen-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 4px; }
 .listen-actions .ghost { margin: 0; padding: 10px 8px; }
 

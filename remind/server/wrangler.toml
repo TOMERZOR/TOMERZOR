@@ -1,0 +1,14 @@
+# Remind. reminder server on Cloudflare Workers. Deploy with the GitHub workflow
+# (.github/workflows/remind-push.yml) or `npx wrangler deploy` from this folder.
+name = "remind-push"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# One Durable Object per phone: its schedule, its push subscription and an alarm for the next reminder.
+[[durable_objects.bindings]]
+name = "DEVICES"
+class_name = "Device"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Device"]

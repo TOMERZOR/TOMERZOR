@@ -41,3 +41,7 @@ easy2study/ad/node_modules
 # Shomer relay
 shomer/relay/.wrangler/
 shomer/relay/node_modules/
+
+# Remind. server
+remind/server/.wrangler/
+remind/server/node_modules/

@@ -19,7 +19,7 @@ const store = {
 };
 
 const settings = Object.assign(
-  { mode: 'people', sens: 6, name: '', cooldown: 15, arm: 10, facing: 'environment', photo: true },
+  { mode: 'people', sens: 6, name: '', cooldown: 15, arm: 10, facing: 'environment', photo: true, dark: true },
   store.get('settings', {}),
 );
 const saveSettings = () => store.set('settings', settings);
@@ -94,6 +94,7 @@ function renderSetup() {
   $('arm').value = settings.arm;
   $('facing').value = settings.facing;
   $('photo').checked = settings.photo;
+  $('dark').checked = settings.dark;
 }
 
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
@@ -114,6 +115,7 @@ bind('cooldown', 'cooldown', el => +el.value);
 bind('arm', 'arm', el => +el.value);
 bind('facing', 'facing', el => el.value);
 bind('photo', 'photo', el => el.checked);
+bind('dark', 'dark', el => el.checked);
 
 // ---------- People detection (COCO-SSD, shipped with the app, runs on the device) ----------
 
@@ -173,6 +175,8 @@ async function openCamera() {
 }
 
 $('start').addEventListener('click', async () => {
+  // Full screen hides the status bar (clock, icons), which would otherwise stay lit. Android only.
+  document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
   show('cam-run');
   run = {
     detector: new MotionDetector(),
@@ -218,8 +222,9 @@ function stopWatching() {
   run.wake?.release().catch(() => {});
   video.srcObject = null;
   run = null;
-  $('curtain').hidden = true;
+  setDark(false);
   $('pair-panel').hidden = true;
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 
 $('stop').addEventListener('click', () => {
@@ -228,8 +233,39 @@ $('stop').addEventListener('click', () => {
   show('cam-setup');
 });
 
-$('blackout').addEventListener('click', () => ($('curtain').hidden = false));
-$('curtain').addEventListener('click', () => ($('curtain').hidden = true));
+// Dark screen. Only a 2-second press brings the display back, so leaves or a brush of the hand
+// in the bushes can't light it up or reach the buttons.
+function setDark(on) {
+  const curtain = $('curtain');
+  if (on && !curtain.hidden) return;
+  curtain.hidden = !on;
+  // Restart the hint's fade-out each time.
+  const hint = $('curtain-hint');
+  hint.style.animation = 'none';
+  void hint.offsetWidth;
+  hint.style.animation = '';
+  document.querySelector('meta[name="theme-color"]').content = on ? '#000000' : '#0d1321';
+}
+
+$('blackout').addEventListener('click', () => setDark(true));
+
+let holdTimer = null;
+const curtain = $('curtain');
+curtain.addEventListener('pointerdown', () => {
+  curtain.classList.add('holding');
+  clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => {
+    curtain.classList.remove('holding');
+    setDark(false);
+  }, 2000);
+});
+for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
+  curtain.addEventListener(type, () => {
+    clearTimeout(holdTimer);
+    curtain.classList.remove('holding');
+  });
+}
+curtain.addEventListener('contextmenu', e => e.preventDefault());
 
 // ----- Pairing, camera side: show our code, then read the phone's code through the lens -----
 
@@ -281,12 +317,14 @@ $('pair-skip').addEventListener('click', () => {
   $('pair-panel').hidden = true;
   $('pair-again').hidden = false;
   $('link-state').textContent = 'בלי טלפון';
+  if (settings.dark) setDark(true);
 });
 
 function onPhoneConnected() {
   $('pair-panel').hidden = true;
   $('pair-again').hidden = true;
   $('link-state').textContent = '🔗 הטלפון מחובר';
+  if (settings.dark) setDark(true);
   sendHeartbeat();
   // Alerts that happened while the phone was away.
   for (const msg of run.queue.splice(0)) run.link.send(msg);

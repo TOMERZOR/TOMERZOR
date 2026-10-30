@@ -194,6 +194,7 @@ summary { cursor: pointer; color: var(--muted); }
 .run-actions .ghost { margin: 0; }
 .run-actions [hidden] { display: none; }
 
+/* Pure black, nothing lit: on OLED screens black pixels give off no light at all. */
 .curtain {
   position: fixed;
   inset: 0;
@@ -201,10 +202,20 @@ summary { cursor: pointer; color: var(--muted); }
   display: grid;
   place-items: center;
   text-align: center;
-  color: #333;
   z-index: 10;
+  cursor: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .curtain[hidden] { display: none; }
+.curtain p { color: #2a2a2a; font-size: 14px; animation: fade-out 4s forwards; }
+.curtain.holding p { animation: none; color: #444; }
+@keyframes fade-out { 70% { opacity: 1; } to { opacity: 0; } }
+.prep { margin: 8px 0 0; padding-inline-start: 20px; color: var(--muted); font-size: 14px; }
+.prep li { margin-bottom: 6px; }
+.prep b { color: var(--ink); }
 
 /* Pairing */
 .local p { margin: 6px 0; }

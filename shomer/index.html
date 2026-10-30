@@ -94,6 +94,19 @@
     </label>
 
     <label class="check"><input type="checkbox" id="photo"> לשלוח תמונה עם ההתראה</label>
+    <label class="check"><input type="checkbox" id="dark"> להחשיך את המסך כשהטלפון שלך מתחבר</label>
+  </div>
+
+  <div class="card">
+    <h3>🌙 כדי שהמכשיר לא יאיר בחושך</h3>
+    <p class="note">המסך חייב להישאר דלוק כדי שהמצלמה תעבוד, אבל שומר מציג עליו שחור מוחלט. את השאר מגדירים בטלפון עצמו:</p>
+    <ul class="prep">
+      <li>בהירות המסך למינימום, ו<b>בהירות אוטומטית כבויה</b></li>
+      <li><b>נא לא להפריע</b> מופעל, כדי שהתראות ושיחות לא ידליקו את המסך</li>
+      <li>מצב כהה מופעל, והפנס כבוי</li>
+      <li>בטלפונים עם מסך OLED שחור לא מאיר בכלל. במסך LCD נשאר זוהר חלש: כסה את המסך בפס בד או נייר כהה</li>
+      <li>הנקודה הירוקה שמסמנת שהמצלמה פעילה (אנדרואיד/אייפון) קטנה מאוד, אבל אפשר לכסות גם אותה בפס בידוד</li>
+    </ul>
   </div>
 
   <button class="primary" id="start">התחל לשמור</button>
@@ -125,7 +138,7 @@
     <button class="ghost" id="blackout">מסך שחור</button>
     <button class="danger" id="stop">עצור</button>
   </div>
-  <div class="curtain" id="curtain" hidden><p>שומר פועל<br><small>הקש כדי להציג</small></p></div>
+  <div class="curtain" id="curtain" hidden><p id="curtain-hint">לחיצה ארוכה (2 שניות) מחזירה את התצוגה</p></div>
 </section>
 
 <section id="pair" class="screen">

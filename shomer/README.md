@@ -26,7 +26,9 @@ Live: https://tomerzor.github.io/TOMERZOR/shomer/
 3. Your phone: הטלפון שלי, scan that code. Your phone then shows its own code: point it at the camera phone's lens (about 20 cm away).
 4. Connected: your phone shows the live view and rings on every alert. בדיקת חיבור וצליל checks the link end to end.
 
-Keep both screens on (the app keeps them awake; מסך שחור blacks out the camera phone). Your phone only rings while the Shomer screen is open.
+Keep both screens on: the browser stops the camera when the screen turns off, and the app keeps both awake. Your phone only rings while the Shomer screen is open.
+
+**Dark camera phone:** once your phone connects (or on מסך שחור), the camera phone shows pure black, and on Android it also goes full screen so the status bar is hidden. Only a 2-second press brings the display back, so leaves or a brush of the hand can't light it up or reach the buttons. If the link drops, the new pairing code waits under the black screen. A web page can't change screen brightness, so before placing it: brightness to minimum with auto-brightness off, Do Not Disturb on, dark mode on. On OLED screens black gives off no light; an LCD still glows faintly, so cover it. The camera-in-use dot (Android/iPhone) can be taped over too.
 
 **If the link drops,** your phone shows ❌ and sounds a different, low alarm every 15 s. The camera sends a heartbeat every 2 s, so this happens within about 10 s if the camera dies, leaves Wi-Fi range or its screen turns off. The live picture dims so a frozen frame isn't mistaken for live video. The camera phone puts up a new code by itself: tap חבר מחדש on your phone and scan again. Alerts from while the phone was away (the last 5) are delivered when it reconnects.
 

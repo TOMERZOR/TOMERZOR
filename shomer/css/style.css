@@ -347,3 +347,4 @@ summary { cursor: pointer; color: var(--muted); }
   .alerts li.new, .live.alarm { animation: none; }
   .meter i { transition: none; }
 }
+#forget { margin-top: 16px; }

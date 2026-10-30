@@ -1,9 +1,12 @@
-// A direct, local link between the camera device and the phone (WebRTC, encrypted).
+// A direct, local link between the camera device and the phone (WebRTC data channels, encrypted).
 // There is no server at all: the two devices pair by showing each other QR codes, and then
 // talk straight over the Wi-Fi they share (e.g. the phone's hotspot, internet not needed).
 //
-// The QR codes carry only a data channel, so they stay small and easy to scan. Video is added
-// afterwards by renegotiating over that data channel. The camera always makes the offers.
+// Only data goes over the link, no video stream: it needs no renegotiation once connected and
+// little bandwidth, which keeps it steady. Two channels:
+// - "shomer": reliable and ordered, for alerts, heartbeats and commands.
+// - "preview": unreliable, for the once-a-second picture. A lost or late picture is simply
+//   skipped, so it can never hold up an alert or a heartbeat behind it.
 
 const PREFIX = 'SHOMER1:'; // full SDP, deflated (fallback)
 const COMPACT = 'SHOMER2:'; // just the fields that differ between connections
@@ -94,9 +97,10 @@ function trimSdp(sdp) {
     .join('\r\n');
 }
 
+const PREVIEW_BACKLOG = 64 * 1024; // skip pictures while this much is still waiting to go out
+
 class Link {
-  constructor(role) {
-    this.role = role;
+  constructor() {
     this.handlers = {};
     // No STUN/TURN servers: candidates come only from the devices' own network interfaces.
     this.pc = new RTCPeerConnection({ iceServers: [] });
@@ -113,21 +117,40 @@ class Link {
   }
 
   setupChannel(dc) {
+    if (dc.label === 'preview') {
+      this.preview = dc;
+      dc.onmessage = e => typeof e.data === 'string' && this.emit('preview', e.data);
+      return;
+    }
     this.dc = dc;
     dc.onopen = () => this.emit('open');
     dc.onclose = () => this.emit('state', 'closed');
-    dc.onmessage = async e => {
+    dc.onmessage = e => {
       let msg;
       try { msg = JSON.parse(e.data); } catch { return; }
-      if (msg.type === 'sdp') return this.renegotiate(msg).catch(() => {});
       this.emit('message', msg);
     };
   }
 
   send(msg) {
     if (this.dc?.readyState !== 'open') return false;
-    this.dc.send(JSON.stringify(msg));
-    return true;
+    try {
+      this.dc.send(JSON.stringify(msg));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  sendPreview(dataUrl) {
+    const dc = this.preview;
+    if (dc?.readyState !== 'open' || dc.bufferedAmount > PREVIEW_BACKLOG) return false;
+    try {
+      dc.send(dataUrl);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   get open() {
@@ -142,13 +165,9 @@ class Link {
 
 export class CameraLink extends Link {
   constructor() {
-    super('camera');
+    super();
     this.setupChannel(this.pc.createDataChannel('shomer', { ordered: true }));
-    this.dc.addEventListener('open', () => {
-      // Video goes over the same connection, negotiated now that the channel is up.
-      this.pc.onnegotiationneeded = () => this.offerOverChannel().catch(() => {});
-      if (this.pendingTrack !== undefined) this.setTrack(this.pendingTrack);
-    });
+    this.setupChannel(this.pc.createDataChannel('preview', { ordered: false, maxRetransmits: 0 }));
   }
 
   // Step 1: the code the phone scans.
@@ -164,76 +183,12 @@ export class CameraLink extends Link {
     if (msg.r !== 'a') throw new Error('expected the phone\'s code');
     await this.pc.setRemoteDescription({ type: 'answer', sdp: msg.s });
   }
-
-  async offerOverChannel() {
-    await this.pc.setLocalDescription(await this.pc.createOffer());
-    this.send({ type: 'sdp', sdp: this.pc.localDescription });
-  }
-
-  async renegotiate(msg) {
-    if (msg.sdp.type === 'answer') await this.pc.setRemoteDescription(msg.sdp);
-  }
-
-  // Send the camera's video, or null to pause it (saves battery when nobody is watching).
-  setTrack(track) {
-    if (!this.open) return void (this.pendingTrack = track);
-    if (this.sender) {
-      // An offer that got no answer is sent again.
-      if (this.pc.signalingState === 'have-local-offer') this.send({ type: 'sdp', sdp: this.pc.localDescription });
-      return this.sender.replaceTrack(track).catch(() => {});
-    }
-    if (!track) return;
-    // Smooth over sharp: 15 fps, capped bitrate, and under strain the resolution drops, not the frame rate.
-    const tr = this.pc.addTransceiver(track, {
-      direction: 'sendonly',
-      sendEncodings: [{ maxBitrate: 900_000, maxFramerate: 15 }],
-    });
-    this.sender = tr.sender;
-    preferH264(tr);
-    const params = this.sender.getParameters();
-    params.degradationPreference = 'maintain-framerate';
-    this.sender.setParameters(params).catch(() => {});
-  }
-
-  // Restarting the track makes the encoder start over with a fresh keyframe.
-  async restartVideo(track) {
-    if (!this.sender || !track) return;
-    await this.sender.replaceTrack(null).catch(() => {});
-    await this.sender.replaceTrack(track).catch(() => {});
-  }
-}
-
-// iPhones and most Android phones encode H.264 in hardware, which keeps the phone cool and the video smooth.
-function preferH264(transceiver) {
-  try {
-    const codecs = RTCRtpSender.getCapabilities('video').codecs;
-    const h264 = codecs.filter(c => c.mimeType === 'video/H264');
-    if (h264.length) transceiver.setCodecPreferences([...h264, ...codecs.filter(c => c.mimeType !== 'video/H264')]);
-  } catch {}
 }
 
 export class PhoneLink extends Link {
   constructor() {
-    super('phone');
+    super();
     this.pc.ondatachannel = e => this.setupChannel(e.channel);
-    this.pc.ontrack = e => this.emit('track', e.streams[0] || new MediaStream([e.track]));
-  }
-
-  // Frames per second actually shown and the delay added on the phone (jitter buffer plus half the round trip).
-  async videoStats() {
-    let frames = null, delay = null, rtt = null;
-    (await this.pc.getStats()).forEach(r => {
-      if (r.type === 'inbound-rtp' && r.kind === 'video') {
-        frames = r.framesDecoded ?? null;
-        if (r.jitterBufferEmittedCount) delay = r.jitterBufferDelay / r.jitterBufferEmittedCount;
-      }
-      if (r.type === 'candidate-pair' && r.nominated && r.currentRoundTripTime != null) rtt = r.currentRoundTripTime;
-    });
-    const now = performance.now();
-    const fps = frames != null && this.lastFrames != null ? ((frames - this.lastFrames) * 1000) / (now - this.lastAt) : null;
-    this.lastFrames = frames;
-    this.lastAt = now;
-    return { fps, delay: delay != null ? delay + (rtt || 0) / 2 : null };
   }
 
   // Step 2: scan the camera's code, return the code to show back to it.
@@ -244,12 +199,5 @@ export class PhoneLink extends Link {
     await this.pc.setLocalDescription(await this.pc.createAnswer());
     await gathered(this.pc);
     return encode('a', trimSdp(this.pc.localDescription.sdp));
-  }
-
-  async renegotiate(msg) {
-    if (msg.sdp.type !== 'offer') return;
-    await this.pc.setRemoteDescription(msg.sdp);
-    await this.pc.setLocalDescription(await this.pc.createAnswer());
-    this.send({ type: 'sdp', sdp: this.pc.localDescription });
   }
 }

@@ -1,6 +1,6 @@
 # שומר (Shomer)
 
-A camera that alerts your phone when someone approaches, with live view. **Local only:** there is no server and no cloud. Video, photos and alerts go straight between the two devices over the Wi-Fi they share, encrypted, and nothing is saved anywhere. It works with no internet at all.
+A camera that alerts your phone when someone approaches, with a live picture. **Local only:** there is no server and no cloud. Pictures and alerts go straight between the two devices over the Wi-Fi they share, encrypted, and nothing is saved anywhere. It works with no internet at all.
 
 Two ways to run it:
 
@@ -24,17 +24,19 @@ Live: https://tomerzor.github.io/TOMERZOR/shomer/
 1. Turn on your phone's hotspot and connect the camera phone to it. Both phones must be on the same Wi-Fi.
 2. Camera phone: המכשיר הזה יהיה המצלמה, set it up, התחל לשמור. It shows a QR code.
 3. Your phone: הטלפון שלי, scan that code. Your phone then shows its own code: point it at the camera phone's lens (about 20 cm away).
-4. Connected: your phone shows the live view and rings on every alert. בדיקת חיבור וצליל checks the link end to end.
+4. Connected: your phone shows a live picture (a new still about once a second) and rings on every alert. בדיקת חיבור וצליל checks the link end to end.
 
 Keep both screens on: the browser stops the camera when the screen turns off, and the app keeps both awake. Your phone only rings while the Shomer screen is open.
 
 **Dark camera phone:** once your phone connects (or on מסך שחור), the camera phone shows pure black, and on Android it also goes full screen so the status bar is hidden. Only a 2-second press brings the display back, so leaves or a brush of the hand can't light it up or reach the buttons. If the link drops, the new pairing code waits under the black screen. A web page can't change screen brightness, so before placing it: brightness to minimum with auto-brightness off, Do Not Disturb on, dark mode on. On OLED screens black gives off no light; an LCD still glows faintly, so cover it. The camera-in-use dot (Android/iPhone) can be taped over too.
 
-**If the link drops,** your phone shows ❌ and sounds a different, low alarm every 15 s. The camera sends a heartbeat every 2 s, so this happens within about 10 s if the camera dies, leaves Wi-Fi range or its screen turns off. The live picture dims so a frozen frame isn't mistaken for live video. The camera phone puts up a new code by itself: tap חבר מחדש on your phone and scan again. Alerts from while the phone was away (the last 5) are delivered when it reconnects.
+**If the link drops,** your phone shows ❌ and sounds a different, low alarm every 15 s. The camera sends a heartbeat every 2 s, so this happens within about 10 s if the camera dies, leaves Wi-Fi range or its screen turns off. The live picture dims so an old frame isn't mistaken for a live one, and it always shows how old the picture is. Your phone sends heartbeats too, so the camera shows 📵 when the phone stops answering. The camera phone puts up a new code by itself: tap חבר מחדש on your phone and scan again. Every alert waits for the phone to confirm it and is sent again after a reconnect (the last 10), so none are lost.
+
+**Keep both iPhones awake:** if a phone locks or Safari goes to the background, the browser stops the page and the link drops. Set Auto-Lock to Never (Settings, Display & Brightness) and turn Low Power Mode off on both (it forces Auto-Lock to 30 s). The app also holds a screen wake lock, with a silent looping video as a fallback where that isn't supported (iPhone home-screen apps before iOS 18.4).
 
 ### How the link works (`js/link.js`, `js/scan.js`)
 
-WebRTC with no STUN/TURN servers, so only the devices' own local addresses are used. Pairing takes no server either: the two QR codes are the WebRTC offer and answer. They describe only a data channel, and only the fields that differ between connections (ICE credentials, DTLS fingerprint and role, local addresses, about 140 characters), so the codes are small and scan easily. The other side rebuilds the full description. Video is added afterwards over the data channel, which also carries alerts (with a JPEG), motion boxes, heartbeats and battery level. QR codes are read with the browser's BarcodeDetector or jsQR.
+WebRTC with no STUN/TURN servers, so only the devices' own local addresses are used. Pairing takes no server either: the two QR codes are the WebRTC offer and answer. They describe only a data channel, and only the fields that differ between connections (ICE credentials, DTLS fingerprint and role, local addresses, about 140 characters), so the codes are small and scan easily. The other side rebuilds the full description. There is no video stream, so nothing is renegotiated once connected. Two data channels: a reliable one for alerts (with a JPEG), heartbeats both ways, acknowledgements and battery level, and an unreliable one for the preview picture (320px JPEG, about once a second), so a lost or late picture is skipped instead of holding up an alert behind it. Pictures are also skipped while the link has a backlog. QR codes are read with the browser's BarcodeDetector or jsQR.
 
 ## Detection
 
@@ -46,7 +48,7 @@ Each alert has the camera name, time and (optionally) a photo with the person or
 ## In the field
 
 - **Range:** a phone hotspot reaches roughly 30 to 50 m outdoors. Test from the spot before relying on it.
-- **Power:** put a power bank under the camera phone. With the screen and camera on, a battery alone lasts only a few hours. Your phone shows the camera's battery level. Live view uses more battery on both ends; turn it off when you don't need it, and alerts keep working.
+- **Power:** put a power bank under the camera phone. With the screen and camera on, a battery alone lasts only a few hours. Your phone shows the camera's battery level. The live picture uses a little battery on both ends; hide it when you don't need it, and alerts keep working.
 - **Mode:** use רק אנשים among bushes; כל תנועה fires on every gust of wind.
 - **Night:** a phone camera sees little in the dark, so detection gets weak. For night use, the Raspberry Pi with a NoIR camera and an infrared light works much better.
 - **Test** before every shift: בדיקת חיבור וצליל, then walk past the camera.

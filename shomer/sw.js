@@ -1,6 +1,6 @@
 // Caches the whole app on the first visit, so it then runs with no internet at all.
 // Bump VERSION whenever a file changes.
-const VERSION = 'shomer-v11';
+const VERSION = 'shomer-v12';
 const FILES = [
   './',
   'index.html',
@@ -24,6 +24,7 @@ const FILES = [
   'img/icon.png',
   'img/icon-512.png',
   'img/apple-touch-icon.png',
+  'img/keepawake.mp4',
 ];
 
 self.addEventListener('install', e => {

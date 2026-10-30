@@ -1,5 +1,5 @@
-// The push relay's address. Filled in by .github/workflows/shomer-push.yml after it deploys
-// shomer/relay/. Empty means the camera posts to the push service directly.
+// The relay's address (camera-phone link and push). Filled in by .github/workflows/shomer-push.yml
+// after it deploys shomer/relay/.
 export const config = {
-  pushRelay: "https://shomer-push.moffy-app.workers.dev",
+  relay: "https://shomer-push.moffy-app.workers.dev",
 };

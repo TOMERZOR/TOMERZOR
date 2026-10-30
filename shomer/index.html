@@ -38,14 +38,14 @@
   </div>
   <div class="card local">
     <h3>🔒 פרטיות</h3>
-    <p>התמונות, התמונה החיה וההתראות עוברים ישירות ומוצפנים בין שני המכשירים ברשת ה-Wi-Fi המשותפת, ולא נשמרים בשום מקום.</p>
-    <p>אם תפעיל התראות כשהטלפון נעול, ההתראה עצמה (טקסט בלבד, בלי תמונה) עוברת מוצפנת דרך שירות ההתראות של אפל/גוגל, ולכן צריך אינטרנט. אפל וגוגל לא יכולות לקרוא אותה.</p>
+    <p>התמונות, התמונה החיה וההתראות מוצפנים מקצה לקצה במפתח שיש רק לשני המכשירים (הוא בקוד שסורקים). הם עוברים דרך ממסר באינטרנט שלא יכול לפתוח אותם, ולא נשמרים בשום מקום.</p>
+    <p>התראות כשהטלפון נעול (טקסט בלבד, בלי תמונה) עוברות מוצפנות דרך שירות ההתראות של אפל/גוגל, שגם הוא לא יכול לקרוא אותן.</p>
     <p class="note" id="offline-state">טוען…</p>
   </div>
   <ol class="how">
-    <li>מחברים את שני המכשירים לאותה רשת Wi-Fi. הכי פשוט: מדליקים נקודה חמה בטלפון שלך ומחברים אליה את מכשיר המצלמה. לא צריך אינטרנט.</li>
+    <li>לשני המכשירים צריך אינטרנט: גלישה סלולרית, Wi-Fi, או נקודה חמה מהטלפון שלך.</li>
     <li>במכשיר המצלמה: „המכשיר הזה יהיה המצלמה” ← „התחל לשמור”. יופיע קוד.</li>
-    <li>בטלפון שלך: „הטלפון שלי”, סורקים את הקוד, ואז מראים את הקוד שמופיע בטלפון לעדשה של מכשיר המצלמה.</li>
+    <li>בטלפון שלך: „הטלפון שלי” וסורקים את הקוד, פעם אחת בלבד. מאז הם מתחברים לבד, גם אחרי ניתוק או הפעלה מחדש.</li>
   </ol>
 </section>
 
@@ -123,10 +123,10 @@
 
     <div class="pair-panel" id="pair-panel" hidden>
       <h3>חיבור לטלפון שלך</h3>
-      <p><b>1.</b> בטלפון שלך פתח את שומר ← „הטלפון שלי” וסרוק:</p>
+      <p>בטלפון שלך פתח את שומר ← „הטלפון שלי” וסרוק. סורקים פעם אחת; טלפון שכבר סרק מתחבר לבד.</p>
       <div class="qr" id="pair-qr" aria-label="קוד לסריקה בטלפון"></div>
-      <p><b>2.</b> הפנה את הקוד שיופיע בטלפון אל העדשה של המכשיר הזה.</p>
       <p class="note" id="pair-status" role="status"></p>
+      <button class="ghost" id="pair-new">קוד חדש (מנתק טלפונים שכבר חוברו)</button>
       <button class="ghost" id="pair-skip">בלי טלפון, רק לזהות</button>
     </div>
   </div>
@@ -147,22 +147,18 @@
 <section id="pair" class="screen">
   <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>חיבור למצלמה</h2></header>
   <div class="card" id="scan-step">
-    <p><b>1.</b> כוון את המצלמה של הטלפון אל הקוד שעל המסך של מכשיר המצלמה.</p>
+    <p>כוון את המצלמה של הטלפון אל הקוד שעל המסך של מכשיר המצלמה. צריך לסרוק רק פעם אחת.</p>
     <div class="scan-box"><video id="scan-video" playsinline muted autoplay></video><i aria-hidden="true"></i></div>
-  </div>
-  <div class="card" id="answer-step" hidden>
-    <p><b>2.</b> עכשיו הפנה את המסך הזה אל העדשה של מכשיר המצלמה (בדרך כלל בגב שלו), במרחק של כ-20 ס״מ.</p>
-    <div class="qr big-qr" id="answer-qr" aria-label="קוד להצגה למצלמה"></div>
   </div>
   <p class="note center" id="pair-phone-status" role="status"></p>
 </section>
 
 <section id="listen" class="screen">
   <header class="bar"><button class="back" id="disconnect" aria-label="נתק">→</button><h2>שומר</h2></header>
-  <div class="conn-banner" id="conn-banner" data-kind="ok">
-    <i></i><span id="conn-text"></span><span id="battery"></span>
+  <div class="conn-banner" id="conn-banner" data-kind="weak">
+    <i></i><span id="conn-text">מתחבר למצלמה…</span><span id="battery"></span>
   </div>
-  <button class="primary" id="reconnect" hidden>חבר מחדש</button>
+  <button class="primary" id="reconnect" hidden>נסה להתחבר עכשיו</button>
   <div class="live" id="live-view">
     <img id="live-img" alt="תמונה חיה מהמצלמה">
     <div class="live-state" id="live-state"></div>
@@ -183,6 +179,7 @@
   <p class="note">עם התראות פעילות אפשר לנעול את הטלפון או לעבור לאפליקציה אחרת: כשמישהו מתקרב תופיע התראה למעלה. התמונה החיה ותמונות ההתראות מגיעות רק כששומר פתוח על המסך; אם הוא היה ברקע זמן רב, ייתכן שתצטרך לחבר מחדש כדי לראות אותן.</p>
   <h3 class="list-title">התראות</h3>
   <ul class="alerts" id="alerts"><li class="empty">עוד אין התראות.</li></ul>
+  <button class="ghost" id="forget">סרוק מצלמה אחרת</button>
 </section>
 
 <script src="vendor/qrcode.js"></script>

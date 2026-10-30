@@ -1,6 +1,6 @@
 // Caches the whole app on the first visit, so it then runs with no internet at all.
 // Bump VERSION whenever a file changes.
-const VERSION = 'shomer-v13';
+const VERSION = 'shomer-v14';
 const FILES = [
   './',
   'index.html',

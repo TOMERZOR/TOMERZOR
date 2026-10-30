@@ -76,7 +76,7 @@ jobs:
           RELAY_URL: ${{ steps.deploy.outputs.url }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          sed -i -E "s|^(  pushRelay: )\"[^\"]*\",|\1\"$RELAY_URL\",|" shomer/js/config.js
+          sed -i -E "s|^(  relay: )\"[^\"]*\",|\1\"$RELAY_URL\",|" shomer/js/config.js
           if git diff --quiet; then echo "The site already uses $RELAY_URL"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

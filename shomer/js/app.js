@@ -1,5 +1,5 @@
 import { MotionDetector, sensitivityToThreshold, toGray } from './motion.js';
-import { CameraLink, PhoneLink, linkSupported, isCode } from './link.js';
+import { Link, linkSupported, isCode, newKey, codeFor, keyFrom } from './link.js';
 import { scanVideo } from './scan.js';
 import { cameraKeys, sendPush, pushSupport, subscribe } from './push.js';
 
@@ -225,7 +225,7 @@ $('start').addEventListener('click', async () => {
   keepAwake(run);
   tick();
   run.heartbeat = setInterval(sendHeartbeat, 2000);
-  if (linkSupported()) startCameraPairing();
+  if (linkSupported()) startCameraLink();
   else $('link-state').textContent = 'הדפדפן הזה לא תומך בחיבור לטלפון';
 });
 
@@ -233,7 +233,6 @@ function stopWatching() {
   if (!run) return;
   clearTimeout(run.timer);
   clearInterval(run.heartbeat);
-  run.stopScan?.();
   run.link?.close();
   run.stream?.getTracks().forEach(t => t.stop());
   run.wake?.release().catch(() => {});
@@ -285,56 +284,43 @@ for (const type of ['pointerup', 'pointercancel', 'pointerleave']) {
 }
 curtain.addEventListener('contextmenu', e => e.preventDefault());
 
-// ----- Pairing, camera side: show our code, then read the phone's code through the lens -----
+// ----- Link, camera side: the pairing code holds the key; the phone scans it once -----
 
-async function startCameraPairing() {
+function startCameraLink() {
   const current = run;
-  current.stopScan?.();
+  let key = store.get('roomKey', null);
+  if (!key) {
+    key = newKey();
+    store.set('roomKey', key);
+  }
   current.link?.close();
-  const link = (current.link = new CameraLink());
+  const link = (current.link = new Link(key, 'camera'));
+  drawQr($('pair-qr'), codeFor(key));
   $('pair-panel').hidden = false;
   $('pair-again').hidden = true;
-  $('pair-qr').innerHTML = '';
-  $('pair-status').textContent = 'מכין קוד…';
-
   link.on('open', () => run === current && current.link === link && onPhoneConnected());
   link.on('message', msg => run === current && onPhoneMessage(msg));
   link.on('state', state => run === current && current.link === link && onLinkState(state));
-
-  let code;
-  try {
-    code = await link.createCode();
-  } catch {
-    $('pair-status').textContent = 'לא הצלחתי להכין קוד חיבור. נסה לעצור ולהתחיל שוב.';
-    return;
-  }
-  if (current.link !== link) return;
-  drawQr($('pair-qr'), code);
-  $('pair-status').textContent = 'מחכה לקוד מהטלפון…';
-
-  const tried = new Set();
-  current.stopScan = scanVideo(video, {
-    accept: text => isCode(text) && !tried.has(text),
-    onCode: async text => {
-      tried.add(text);
-      try {
-        await link.acceptCode(text);
-        current.stopScan();
-        $('pair-status').textContent = 'קיבלתי את הקוד, מתחבר…';
-      } catch {
-        $('pair-status').textContent = 'זה לא הקוד מהטלפון. בטלפון סרוק קודם את הקוד שמוצג כאן.';
-      }
-    },
-  });
+  onLinkState('offline');
 }
 
-$('pair-again').addEventListener('click', () => run && startCameraPairing());
+$('pair-again').addEventListener('click', () => {
+  if (!run) return;
+  $('pair-panel').hidden = false;
+  $('pair-again').hidden = true;
+});
+$('pair-new').addEventListener('click', () => {
+  if (!run || !confirm('ליצור קוד חדש? טלפונים שכבר מחוברים יתנתקו ויצטרכו לסרוק מחדש.')) return;
+  store.set('roomKey', null);
+  store.set('pushSub', null);
+  run.pushSub = null;
+  $('push-state').textContent = '';
+  startCameraLink();
+});
 $('pair-skip').addEventListener('click', () => {
   if (!run) return;
-  run.stopScan?.();
   $('pair-panel').hidden = true;
   $('pair-again').hidden = false;
-  $('link-state').textContent = 'בלי טלפון';
   if (settings.dark) setDark(true);
 });
 
@@ -354,16 +340,16 @@ function onPhoneConnected() {
   for (const msg of run.pending.values()) run.link.send(msg);
 }
 
+// The link reconnects by itself; this only says where things stand.
 function onLinkState(state) {
-  if (state === 'connected') {
-    if (run.link.open) $('link-state').textContent = '🔗 הטלפון מחובר';
-  } else if (state === 'disconnected') {
-    $('link-state').textContent = '⚠️ החיבור לטלפון נחלש…';
-  } else if (state === 'failed' || state === 'closed') {
-    // Show a fresh code right away, so it's ready when you get to the camera.
-    $('link-state').textContent = '❌ הטלפון לא מחובר';
-    startCameraPairing();
-  }
+  const text = {
+    offline: '🌐 אין חיבור לאינטרנט, מנסה שוב…',
+    waiting: '📵 הטלפון לא מחובר',
+    connected: '🔗 הטלפון מחובר',
+  }[state];
+  $('link-state').textContent = text;
+  $('pair-status').textContent = state === 'offline' ? text : state === 'waiting' ? 'מחכה שהטלפון יסרוק את הקוד… (טלפון שכבר סרק אותו מתחבר לבד)' : '';
+  if (state !== 'connected' && $('pair-panel').hidden) $('pair-again').hidden = false;
 }
 
 function onPhoneMessage(msg) {
@@ -405,8 +391,8 @@ function tick() {
   if (small.width !== w || small.height !== h) {
     small.width = w;
     small.height = h;
-    run.gray = new Uint8Array(w * h);
   }
+  if (run.gray?.length !== w * h) run.gray = new Uint8Array(w * h);
   sctx.drawImage(video, 0, 0, w, h);
   toGray(sctx.getImageData(0, 0, w, h).data, run.gray);
   const r = run.detector.process(run.gray, w, h);
@@ -651,13 +637,15 @@ const scanVideoEl = $('scan-video');
 async function startPhonePairing() {
   stopPhoneScan();
   closePhone();
-  $('scan-step').hidden = false;
-  $('answer-step').hidden = true;
   $('pair-phone-status').textContent = '';
   if (!linkSupported()) {
-    $('pair-phone-status').textContent = 'הדפדפן הזה לא תומך בחיבור. עדכן את הדפדפן או נסה Chrome.';
+    $('pair-phone-status').textContent = 'הדפדפן הזה לא תומך בחיבור. עדכן את הדפדפן.';
     return;
   }
+  // Paired before: connect straight away, no scanning.
+  const saved = store.get('pairKey', null);
+  if (saved) return connectPhone(saved);
+
   const current = (scan = {});
   try {
     current.stream = await navigator.mediaDevices.getUserMedia({
@@ -671,28 +659,13 @@ async function startPhonePairing() {
   if (scan !== current) return current.stream.getTracks().forEach(t => t.stop());
   scanVideoEl.srcObject = current.stream;
   scanVideoEl.play().catch(() => {});
-
-  const tried = new Set();
   current.stop = scanVideo(scanVideoEl, {
-    accept: text => isCode(text) && !tried.has(text),
-    onCode: async text => {
-      tried.add(text);
-      const link = new PhoneLink();
-      let answer;
-      try {
-        answer = await link.answerCode(text);
-      } catch {
-        link.close();
-        $('pair-phone-status').textContent = 'זה לא קוד של מכשיר המצלמה. סרוק את הקוד שמוצג במכשיר המצלמה.';
-        return;
-      }
-      if (scan !== current) return link.close();
-      stopPhoneScan();
-      beginPhone(link);
-      $('scan-step').hidden = true;
-      $('answer-step').hidden = false;
-      drawQr($('answer-qr'), answer);
-      $('pair-phone-status').textContent = 'מחכה שהמצלמה תקרא את הקוד…';
+    accept: isCode,
+    onCode: text => {
+      if (scan !== current) return;
+      const key = keyFrom(text);
+      store.set('pairKey', key);
+      connectPhone(key);
     },
   });
 }
@@ -705,21 +678,31 @@ function stopPhoneScan() {
   scan = null;
 }
 
+function connectPhone(key) {
+  show('listen');
+  beginPhone(new Link(key, 'phone'));
+}
+
 // ----- Receiving: live view, alerts, link watchdog -----
 
 const liveImg = $('live-img');
 
 function beginPhone(link) {
-  const p = (phone = { link, lastSeen: 0, lost: false, liveOn: store.get('liveOn', true), seenAlerts: new Set(), lastFrame: 0 });
+  const now = Date.now();
+  const p = (phone = { link, lastSeen: now, graceUntil: now + 8000, liveOn: store.get('liveOn', true), seenAlerts: new Set(), lastFrame: 0, conn: '' });
+  $('alerts').innerHTML = '<li class="empty">עוד אין התראות.</li>';
+  $('check-result').textContent = '';
+  $('push-card').hidden = true;
+  setLive(p.liveOn);
+  setConn('connecting');
+  keepAwake(p);
+  p.watchdog = setInterval(() => watchdog(p), 1000);
   link.on('open', () => {
     if (phone !== p) return;
     p.lastSeen = Date.now();
-    show('listen');
-    $('alerts').innerHTML = '<li class="empty">עוד אין התראות.</li>';
-    $('check-result').textContent = '';
-    setLive(p.liveOn);
-    keepAwake(p);
-    p.watchdog = setInterval(() => watchdog(p), 1000);
+    setConn('ok');
+    link.send({ type: 'live', on: p.liveOn });
+    link.send({ type: 'hb', visible: !document.hidden });
   });
   link.on('preview', dataUrl => {
     if (phone !== p || !dataUrl.startsWith('data:image/jpeg')) return;
@@ -728,7 +711,9 @@ function beginPhone(link) {
   });
   link.on('message', msg => phone === p && onCameraMessage(p, msg));
   link.on('state', state => {
-    if (phone === p && p.watchdog && (state === 'failed' || state === 'closed')) lostCamera(p);
+    if (phone !== p || state === 'connected') return;
+    // The link is already trying again; the watchdog sounds the alarm if it takes too long.
+    if (!p.lost) setConn(state === 'offline' ? 'reconnecting' : 'nocamera');
   });
 }
 
@@ -748,8 +733,8 @@ function closePhone() {
 
 function onCameraMessage(p, msg) {
   p.lastSeen = Date.now();
-  if (p.lost || p.weak) {
-    p.lost = p.weak = false;
+  if (p.lost || p.conn !== 'ok') {
+    p.lost = false;
     clearInterval(p.lostAlarm);
     setConn('ok');
   }
@@ -791,21 +776,20 @@ function onCameraMessage(p, msg) {
   }
 }
 
-// The camera sends a heartbeat every 2 s; silence means it died, went out of range or its screen went off.
-// The phone sends one back, so the camera can tell too.
+// The camera sends a heartbeat every 2 s; silence means it died, lost its internet or its screen
+// went off. The phone sends one back, so the camera can tell too. Right after the phone comes
+// back from the background the link needs a moment to reconnect, so there's a short grace period.
 function watchdog(p) {
   const now = Date.now();
-  if (now - (p.lastHb || 0) >= 2000) {
+  if (p.link.open && now - (p.lastHb || 0) >= 2000) {
     p.lastHb = now;
     p.link.send({ type: 'hb', visible: !document.hidden });
   }
   previewAge(p);
+  if (document.hidden || now < p.graceUntil) return;
   const quiet = now - p.lastSeen;
   if (quiet > 10000) lostCamera(p);
-  else if (quiet > 5000 && !p.weak && !p.lost) {
-    p.weak = true;
-    setConn('weak');
-  }
+  else if (quiet > 5000 && p.conn === 'ok') setConn('weak');
 }
 
 function lostCamera(p) {
@@ -830,12 +814,19 @@ function previewAge(p) {
 
 function setConn(kind) {
   const name = phone?.name || 'המצלמה';
-  const text = {
+  let text = {
+    connecting: 'מתחבר למצלמה…',
     ok: `מחובר ל${name}`,
     weak: 'החיבור למצלמה חלש…',
-    lost: '❌ החיבור למצלמה אבד! בדוק את מכשיר המצלמה. אם הוא לא חוזר תוך כמה שניות, חבר מחדש.',
+    reconnecting: 'מתחבר מחדש…',
+    nocamera: 'מחכה למצלמה… (היא צריכה להיות במצב שמירה, עם אינטרנט)',
   }[kind];
-  $('conn-banner').dataset.kind = kind;
+  if (kind === 'lost') {
+    const why = phone?.link.state === 'offline' ? 'לטלפון הזה אין חיבור לאינטרנט' : phone?.link.state === 'waiting' ? 'המצלמה לא מחוברת (כבויה, בלי אינטרנט או שהמסך שלה כבה)' : 'המצלמה לא עונה';
+    text = `❌ ${why}. מנסה להתחבר שוב כל הזמן.`;
+  }
+  if (phone) phone.conn = kind;
+  $('conn-banner').dataset.kind = kind === 'lost' ? 'lost' : kind === 'ok' ? 'ok' : 'weak';
   $('conn-text').textContent = text;
   $('battery').hidden = kind === 'lost';
   $('reconnect').hidden = kind !== 'lost';
@@ -850,7 +841,6 @@ function setLive(on) {
   phone.link.send({ type: 'live', on });
   $('live-view').hidden = !on;
   $('live-toggle').textContent = on ? 'הסתר תמונה חיה' : '📺 הצג תמונה חיה';
-  setConn(phone.lost ? 'lost' : phone.weak ? 'weak' : 'ok');
 }
 
 $('live-toggle').addEventListener('click', () => phone && setLive(!phone.liveOn));
@@ -868,19 +858,27 @@ $('check').addEventListener('click', () => {
 $('reconnect').addEventListener('click', () => {
   unlockAudio();
   if (awakeVideo.paused) awakeVideo.play().catch(() => {});
-  show('pair');
+  if (!phone) return;
+  phone.graceUntil = Date.now() + 8000;
+  phone.link.probe();
 });
 
-$('disconnect').addEventListener('click', () => {
-  if (phone?.link.open && !confirm('להתנתק מהמצלמה? כדי להתחבר שוב צריך לסרוק מחדש.')) return;
-  show('home');
+$('disconnect').addEventListener('click', () => show('home'));
+
+$('forget').addEventListener('click', () => {
+  if (!confirm('לשכוח את המצלמה הזו ולסרוק קוד של מצלמה אחרת?')) return;
+  store.set('pairKey', null);
+  show('pair');
 });
 
 document.addEventListener('visibilitychange', () => {
   if (!phone) return;
   // Tell the camera right away, so it starts pushing instead of waiting for a missed confirmation.
   phone.link.send({ type: 'hb', visible: !document.hidden });
-  if (!document.hidden) keepAwake(phone);
+  if (document.hidden) return;
+  keepAwake(phone);
+  // Back from the background: give the link a moment to reconnect before calling it lost.
+  phone.graceUntil = Date.now() + 8000;
 });
 
 function renderPush(p, text) {

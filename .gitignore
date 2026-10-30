@@ -37,3 +37,7 @@ easy2study/ad/frames.mp4
 easy2study/ad/audio.wav
 easy2study/ad/sfx.json
 easy2study/ad/node_modules
+
+# Shomer relay
+shomer/relay/.wrangler/
+shomer/relay/node_modules/

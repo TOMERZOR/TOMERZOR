@@ -1,11 +1,11 @@
 # שומר (Shomer)
 
-A camera that alerts your phone when someone approaches, with a live picture. Pictures and alerts go straight between the two devices over the Wi-Fi they share, encrypted, and nothing is saved anywhere; that part needs no internet at all. Optionally, alerts also arrive as push notifications while your phone is locked or Shomer is in the background: those go, end-to-end encrypted and without photos, through Apple's or Google's push service (see Push notifications).
+A camera that alerts your phone when someone approaches, with a live picture. The two devices talk through a small relay on the internet, end-to-end encrypted with a key only they have, and nothing is saved anywhere. Alerts also arrive as push notifications while your phone is locked or Shomer is in the background (end-to-end encrypted too, without photos, through Apple's or Google's push service).
 
 Two ways to run it:
 
 - **Two phones (this web app):** an old phone is the camera, your phone gets the alerts.
-- **Raspberry Pi (`pi/`):** a Pi with a camera is the camera and its own Wi-Fi network; your phone opens its page.
+- **Raspberry Pi (`pi/`):** a Pi with a camera is the camera and its own Wi-Fi network; your phone opens its page. That one is fully local, with no internet.
 
 ## Two phones
 
@@ -15,24 +15,26 @@ Static site, no build step:
 npx http-server -p 8790 -c-1 .     # from the repo root, then open http://localhost:8790/shomer/
 ```
 
-Live: https://tomerzor.github.io/TOMERZOR/shomer/
+Live: https://tomerzor.github.io/TOMERZOR/shomer/ (direct links: `#camera` for the camera phone, `#phone` for yours)
 
-**Before you go (with internet):** open the site once on both phones and add it to the home screen. A service worker (`sw.js`) stores the whole app on the phone, including the person-detection model, and the home screen says ✓ מוכן לעבודה בלי אינטרנט. From then on it runs offline; loading it only downloads the app's own files, and nothing is ever uploaded.
+Both phones need internet: mobile data, Wi-Fi, or your phone's hotspot. A service worker (`sw.js`) stores the whole app on the phone, including the person-detection model, so the app itself loads even with a poor connection.
 
-**At the spot (no internet needed):**
-
-1. Turn on your phone's hotspot and connect the camera phone to it. Both phones must be on the same Wi-Fi.
+1. On your iPhone, add Shomer to the home screen (Safari, Share, Add to Home Screen) and always open it from there; push notifications only work in that app.
 2. Camera phone: המכשיר הזה יהיה המצלמה, set it up, התחל לשמור. It shows a QR code.
-3. Your phone: הטלפון שלי, scan that code. Your phone then shows its own code: point it at the camera phone's lens (about 20 cm away).
-4. Connected: your phone shows a live picture (a new still about once a second) and rings on every alert. בדיקת חיבור וצליל checks the link end to end.
+3. Your phone: הטלפון שלי, scan that code. **Only once:** from then on the two find each other by themselves, after a drop, after the phone was locked, or after either app restarts.
+4. Connected: your phone shows a live picture (a new still about once a second) and rings on every alert. Turn on התראות כשהטלפון נעול to get them at the top of the screen when Shomer isn't open.
 
-Keep both screens on: the browser stops the camera when the screen turns off, and the app keeps both awake. Your phone only rings while the Shomer screen is open.
+**Dark camera phone:** once your phone connects (or on מסך שחור), the camera phone shows pure black, and on Android it also goes full screen so the status bar is hidden. Only a 2-second press brings the display back, so leaves or a brush of the hand can't light it up or reach the buttons. A web page can't change screen brightness, so before placing it: brightness to minimum with auto-brightness off, Do Not Disturb on, dark mode on. On OLED screens black gives off no light; an LCD still glows faintly, so cover it. The camera-in-use dot (Android/iPhone) can be taped over too.
 
-**Dark camera phone:** once your phone connects (or on מסך שחור), the camera phone shows pure black, and on Android it also goes full screen so the status bar is hidden. Only a 2-second press brings the display back, so leaves or a brush of the hand can't light it up or reach the buttons. If the link drops, the new pairing code waits under the black screen. A web page can't change screen brightness, so before placing it: brightness to minimum with auto-brightness off, Do Not Disturb on, dark mode on. On OLED screens black gives off no light; an LCD still glows faintly, so cover it. The camera-in-use dot (Android/iPhone) can be taped over too.
+**Keep the camera phone awake:** Auto-Lock Never and Low Power Mode off (it forces Auto-Lock to 30 s), since the browser stops the camera when the screen turns off. The app also holds a screen wake lock, with a silent looping video as a fallback (iPhone home-screen apps before iOS 18.4).
 
-**If the link drops,** your phone shows ❌ and sounds a different, low alarm every 15 s. The camera sends a heartbeat every 2 s, so this happens within about 10 s if the camera dies, leaves Wi-Fi range or its screen turns off. The live picture dims so an old frame isn't mistaken for a live one, and it always shows how old the picture is. Your phone sends heartbeats too, so the camera shows 📵 when the phone stops answering. The camera phone puts up a new code by itself: tap חבר מחדש on your phone and scan again. Every alert waits for the phone to confirm it and is sent again after a reconnect (the last 10), so none are lost.
+**If something drops:** both sides keep reconnecting by themselves (1, 2, 4, 8, then every 10 s, and right away when the network or the screen comes back). While Shomer is open, your phone sounds a low alarm every 15 s and says why if the camera stays away for 10 s: no internet on the phone, the camera isn't connected, or it isn't answering. The live picture dims and shows its age, so an old frame isn't mistaken for a live one. The camera shows 📵 when your phone isn't there. Every alert waits for the phone to confirm it and is sent again after a reconnect (the last 10), and is pushed if the phone isn't watching, so none are lost.
 
-**Keep both iPhones awake:** if a phone locks or Safari goes to the background, the browser stops the page and the link drops. Set Auto-Lock to Never (Settings, Display & Brightness) and turn Low Power Mode off on both (it forces Auto-Lock to 30 s). The app also holds a screen wake lock, with a silent looping video as a fallback where that isn't supported (iPhone home-screen apps before iOS 18.4).
+### How the link works (`js/link.js`, `relay/`)
+
+The camera makes a random 256-bit key and shows it in the QR code (`SHOMER3:<key>`); the phone keeps it. Both connect out over a WebSocket to the relay's room `/room/<id>`, where the id is a hash of the key, so the relay never learns the key. Every message is encrypted with AES-GCM under that key before it leaves the device, and anything that doesn't decrypt is ignored. The room (a Cloudflare Durable Object) passes binary messages between the camera and up to 3 phones and tells each side who is connected; it stores nothing and sleeps while nothing is sent (keep-alive pings are answered without waking it). A connection that looks open but is dead (common after an iPhone was locked) is found by a ping when the screen comes back and replaced.
+
+Messages: alerts (with a JPEG), heartbeats both ways (with the camera's battery and whether the phone is showing Shomer), acknowledgements, push setup, and the preview picture (320px JPEG about once a second, only while your phone shows it, skipped while the connection has a backlog). QR codes are read with the browser's BarcodeDetector or jsQR. "קוד חדש" on the camera makes a new key, which disconnects phones that scanned the old one.
 
 ### Push notifications (`js/push.js`, `relay/`)
 
@@ -41,13 +43,9 @@ For an alert at the top of the screen while the phone is locked or Shomer is in 
 1. On iPhone, push works only in the app added to the home screen (iOS 16.4+): in Safari tap Share, Add to Home Screen, open Shomer from the icon and pair from there.
 2. After pairing, the phone shows התראות כשהטלפון נעול: tap הפעל התראות and allow notifications. A test notification arrives; שלח התראת בדיקה sends another (lock the phone to see it at the top).
 
-How it works: over the local link the camera gives the phone its public key (VAPID, RFC 8292, a P-256 key kept on the camera); the phone subscribes with it and hands the subscription back. The camera keeps it, so pushes keep coming after the local link drops or the camera restarts. On an alert the camera sends it over the local link first. If the phone isn't showing Shomer (it reports that in its heartbeat), or doesn't confirm within 3 s, the camera encrypts the text for the phone (Web Push, RFC 8291, aes128gcm), signs it, and posts it through the relay to the push service. Only the title and time go this way, never a photo.
+How it works: over the link the camera gives the phone its public key (VAPID, RFC 8292, a P-256 key kept on the camera); the phone subscribes with it and hands the subscription back. The camera keeps it, so pushes keep coming while the link is down or after the camera restarts. On an alert the camera sends it over the link first. If the phone isn't showing Shomer (it reports that in its heartbeat), or doesn't confirm within 3 s, the camera encrypts the text for the phone (Web Push, RFC 8291, aes128gcm), signs it, and posts it through the relay to the push service. Only the title and time go this way, never a photo.
 
-The relay (`relay/worker.js`, a Cloudflare Worker deployed by `.github/workflows/shomer-push.yml`, which then writes its address into `js/config.js`) exists only because browsers can't post to Apple's push service directly. It forwards the encrypted, signed message unchanged, only to known push services, and holds no keys and stores nothing. Neither it nor Apple can read the alert.
-
-### How the link works (`js/link.js`, `js/scan.js`)
-
-WebRTC with no STUN/TURN servers, so only the devices' own local addresses are used. Pairing takes no server either: the two QR codes are the WebRTC offer and answer. They describe only a data channel, and only the fields that differ between connections (ICE credentials, DTLS fingerprint and role, local addresses, about 140 characters), so the codes are small and scan easily. The other side rebuilds the full description. There is no video stream, so nothing is renegotiated once connected. Two data channels: a reliable one for alerts (with a JPEG), heartbeats both ways, acknowledgements and battery level, and an unreliable one for the preview picture (320px JPEG, about once a second), so a lost or late picture is skipped instead of holding up an alert behind it. Pictures are also skipped while the link has a backlog. QR codes are read with the browser's BarcodeDetector or jsQR.
+The relay's `/send` (`relay/worker.js`, a Cloudflare Worker deployed by `.github/workflows/shomer-push.yml`, which then writes its address into `js/config.js`) is there because browsers can't post to Apple's push service directly. It forwards the encrypted, signed message unchanged, only to known push services, and holds no keys and stores nothing. Neither it nor Apple can read the alert.
 
 ## Detection
 
@@ -58,12 +56,12 @@ Each alert has the camera name, time and (optionally) a photo with the person or
 
 ## In the field
 
-- **Range:** a phone hotspot reaches roughly 30 to 50 m outdoors. Test from the spot before relying on it.
+- **Internet:** check that the camera phone has signal (or reaches your hotspot) from where it will stand. A phone hotspot reaches roughly 30 to 50 m outdoors.
 - **Power:** put a power bank under the camera phone. With the screen and camera on, a battery alone lasts only a few hours. Your phone shows the camera's battery level. The live picture uses a little battery on both ends; hide it when you don't need it, and alerts keep working.
 - **Mode:** use רק אנשים among bushes; כל תנועה fires on every gust of wind.
 - **Night:** a phone camera sees little in the dark, so detection gets weak. For night use, the Raspberry Pi with a NoIR camera and an infrared light works much better.
-- **Test** before every shift: בדיקת חיבור וצליל, then walk past the camera.
-- **Untested combinations:** the phone-to-phone link has been tested in Chrome, not yet on two real phones over a hotspot. If the phones don't connect while one of them is the hotspot, put both on a separate small Wi-Fi router (no SIM or internet needed), or use the Pi.
+- **Test** before every shift: בדיקת חיבור וצליל, שלח התראת בדיקה with your phone locked, then walk past the camera.
+- **Tested** in Chrome against the relay running on Cloudflare's runtime locally, not yet on two real iPhones.
 
 ## Raspberry Pi version (`pi/`)
 

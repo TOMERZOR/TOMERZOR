@@ -92,8 +92,8 @@ export async function sendPush(subscription, keys, notification) {
     Urgency: 'high',
   };
   let res;
-  if (config.pushRelay) {
-    res = await fetch(`${config.pushRelay}/send`, {
+  if (config.relay) {
+    res = await fetch(`${config.relay}/send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: subscription.endpoint, headers, body: b64u(body) }),

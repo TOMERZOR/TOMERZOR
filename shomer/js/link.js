@@ -12,7 +12,7 @@ import { config } from './config.js';
 const PREFIX = 'SHOMER3:';
 const PING_MS = 15000;
 const DEAD_MS = 40000; // no answer to pings for this long: the connection is dead, open a new one
-const PREVIEW_BACKLOG = 64 * 1024; // skip pictures while this much is still waiting to go out
+const PREVIEW_BACKLOG = 16 * 1024; // skip pictures while this much is still waiting to go out
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();

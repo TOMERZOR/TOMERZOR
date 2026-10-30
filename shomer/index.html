@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>שומר</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1321">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="שומר">
+<meta name="description" content="שומר: מצלמה שמתריעה לטלפון שלך כשמישהו מתקרב. עובד מקומית בלבד, בלי אינטרנט ובלי שרתים.">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="img/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icon.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="css/style.css?v=3">
+</head>
+<body>
+
+<section id="home" class="screen active">
+  <header class="brand">
+    <img src="img/icon.svg" width="88" height="88" alt="">
+    <h1>שומר</h1>
+    <p class="tag">מצלמה שמתריעה לטלפון שלך כשמישהו מתקרב, עם צפייה חיה.</p>
+  </header>
+  <div class="choices">
+    <button class="big" data-go="cam-setup">
+      <span class="emoji" aria-hidden="true">📷</span>
+      <b>המכשיר הזה יהיה המצלמה</b>
+      <small>מוצב מול האזור שרוצים לשמור עליו</small>
+    </button>
+    <button class="big" data-go="pair">
+      <span class="emoji" aria-hidden="true">🔔</span>
+      <b>הטלפון שלי</b>
+      <small>מקבל התראות ורואה את המצלמה בשידור חי</small>
+    </button>
+  </div>
+  <div class="card local">
+    <h3>🔒 מקומי בלבד</h3>
+    <p>אין שרת ואין ענן. הווידאו, התמונות וההתראות עוברים ישירות ומוצפנים בין שני המכשירים ברשת ה-Wi-Fi המשותפת, ולא נשמרים בשום מקום.</p>
+    <p class="note" id="offline-state">טוען…</p>
+  </div>
+  <ol class="how">
+    <li>מחברים את שני המכשירים לאותה רשת Wi-Fi. הכי פשוט: מדליקים נקודה חמה בטלפון שלך ומחברים אליה את מכשיר המצלמה. לא צריך אינטרנט.</li>
+    <li>במכשיר המצלמה: „המכשיר הזה יהיה המצלמה” ← „התחל לשמור”. יופיע קוד.</li>
+    <li>בטלפון שלך: „הטלפון שלי”, סורקים את הקוד, ואז מראים את הקוד שמופיע בטלפון לעדשה של מכשיר המצלמה.</li>
+  </ol>
+</section>
+
+<section id="cam-setup" class="screen">
+  <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>הגדרת המצלמה</h2></header>
+
+  <div class="card">
+    <h3>מה לזהות</h3>
+    <div class="seg" role="radiogroup" aria-label="מה לזהות">
+      <button role="radio" data-mode="motion">כל תנועה</button>
+      <button role="radio" data-mode="people">רק אנשים</button>
+    </div>
+    <p class="note" id="mode-note"></p>
+
+    <label class="field">רגישות <output id="sens-out"></output>
+      <input type="range" id="sens" min="1" max="10" step="1">
+    </label>
+
+    <label class="field">שם המצלמה (יופיע בהתראה)
+      <input type="text" id="name" maxlength="30" placeholder="לדוגמה: שיחים מול העמדה">
+    </label>
+
+    <div class="row2">
+      <label class="field">הפסקה בין התראות
+        <select id="cooldown">
+          <option value="10">10 שניות</option>
+          <option value="15">15 שניות</option>
+          <option value="30">30 שניות</option>
+          <option value="60">דקה</option>
+        </select>
+      </label>
+      <label class="field">התחלה אחרי
+        <select id="arm">
+          <option value="0">מיד</option>
+          <option value="10">10 שניות</option>
+          <option value="30">30 שניות</option>
+          <option value="60">דקה</option>
+        </select>
+      </label>
+    </div>
+
+    <label class="field">מצלמה
+      <select id="facing">
+        <option value="environment">אחורית</option>
+        <option value="user">קדמית</option>
+      </select>
+    </label>
+
+    <label class="check"><input type="checkbox" id="photo"> לשלוח תמונה עם ההתראה</label>
+    <label class="check"><input type="checkbox" id="dark"> להחשיך את המסך כשהטלפון שלך מתחבר</label>
+  </div>
+
+  <div class="card">
+    <h3>🌙 כדי שהמכשיר לא יאיר בחושך</h3>
+    <p class="note">המסך חייב להישאר דלוק כדי שהמצלמה תעבוד, אבל שומר מציג עליו שחור מוחלט. את השאר מגדירים בטלפון עצמו:</p>
+    <ul class="prep">
+      <li>בהירות המסך למינימום, ו<b>בהירות אוטומטית כבויה</b></li>
+      <li><b>נא לא להפריע</b> מופעל, כדי שהתראות ושיחות לא ידליקו את המסך</li>
+      <li>מצב כהה מופעל, והפנס כבוי</li>
+      <li>בטלפונים עם מסך OLED שחור לא מאיר בכלל. במסך LCD נשאר זוהר חלש: כסה את המסך בפס בד או נייר כהה</li>
+      <li>הנקודה הירוקה שמסמנת שהמצלמה פעילה (אנדרואיד/אייפון) קטנה מאוד, אבל אפשר לכסות גם אותה בפס בידוד</li>
+    </ul>
+  </div>
+
+  <button class="primary" id="start">התחל לשמור</button>
+</section>
+
+<section id="cam-run" class="screen">
+  <div class="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+    <div class="status" id="status" role="status"></div>
+    <div class="meter" aria-hidden="true"><i id="meter"></i><b></b></div>
+
+    <div class="pair-panel" id="pair-panel" hidden>
+      <h3>חיבור לטלפון שלך</h3>
+      <p><b>1.</b> בטלפון שלך פתח את שומר ← „הטלפון שלי” וסרוק:</p>
+      <div class="qr" id="pair-qr" aria-label="קוד לסריקה בטלפון"></div>
+      <p><b>2.</b> הפנה את הקוד שיופיע בטלפון אל העדשה של המכשיר הזה.</p>
+      <p class="note" id="pair-status" role="status"></p>
+      <button class="ghost" id="pair-skip">בלי טלפון, רק לזהות</button>
+    </div>
+  </div>
+  <div class="run-info">
+    <span id="link-state"></span>
+    <span id="sent-count"></span>
+    <span id="last-sent"></span>
+  </div>
+  <div class="run-actions">
+    <button class="ghost" id="pair-again" hidden>חבר טלפון</button>
+    <button class="ghost" id="blackout">מסך שחור</button>
+    <button class="danger" id="stop">עצור</button>
+  </div>
+  <div class="curtain" id="curtain" hidden><p id="curtain-hint">לחיצה ארוכה (2 שניות) מחזירה את התצוגה</p></div>
+</section>
+
+<section id="pair" class="screen">
+  <header class="bar"><button class="back" data-go="home" aria-label="חזרה">→</button><h2>חיבור למצלמה</h2></header>
+  <div class="card" id="scan-step">
+    <p><b>1.</b> כוון את המצלמה של הטלפון אל הקוד שעל המסך של מכשיר המצלמה.</p>
+    <div class="scan-box"><video id="scan-video" playsinline muted autoplay></video><i aria-hidden="true"></i></div>
+  </div>
+  <div class="card" id="answer-step" hidden>
+    <p><b>2.</b> עכשיו הפנה את המסך הזה אל העדשה של מכשיר המצלמה (בדרך כלל בגב שלו), במרחק של כ-20 ס״מ.</p>
+    <div class="qr big-qr" id="answer-qr" aria-label="קוד להצגה למצלמה"></div>
+  </div>
+  <p class="note center" id="pair-phone-status" role="status"></p>
+</section>
+
+<section id="listen" class="screen">
+  <header class="bar"><button class="back" id="disconnect" aria-label="נתק">→</button><h2>שומר</h2></header>
+  <div class="conn-banner" id="conn-banner" data-kind="ok">
+    <i></i><span id="conn-text"></span><span id="battery"></span>
+  </div>
+  <button class="primary" id="reconnect" hidden>חבר מחדש</button>
+  <div class="live" id="live-view">
+    <video id="live-video" playsinline muted autoplay></video>
+    <canvas id="live-overlay"></canvas>
+    <div class="live-state" id="live-state"></div>
+    <button class="live-size" id="live-size" aria-label="הגדל">⛶</button>
+  </div>
+  <div class="listen-actions">
+    <button class="ghost" id="live-toggle"></button>
+    <button class="ghost" id="check">בדיקת חיבור וצליל</button>
+  </div>
+  <p class="note center" id="check-result" role="status"></p>
+  <p class="note">השאר את המסך הזה פתוח: הצליל וההתראות עובדים רק כשהוא מוצג. המסך לא ייכבה מעצמו.</p>
+  <h3 class="list-title">התראות</h3>
+  <ul class="alerts" id="alerts"><li class="empty">עוד אין התראות.</li></ul>
+</section>
+
+<script src="vendor/qrcode.js"></script>
+<script src="vendor/jsQR.js" defer></script>
+<script type="module" src="js/app.js?v=3"></script>
+</body>
+</html>

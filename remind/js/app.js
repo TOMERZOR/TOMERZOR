@@ -740,7 +740,7 @@ function notifSheet() {
   const sheet = openSheet({
     title: 'תזכורות', trail: 'סיום',
     body: `<div style="text-align:center;padding:6px 0 18px"><span class="tile big" style="--c:var(--red);margin:0 auto 14px">${icon('bell')}</span>
-      <h3 style="margin:0 0 6px;font-size:1.35rem;font-weight:800">תזכורת בכל זמן תרופה</h3>
+      <h3 style="margin:0 0 6px;font-size:1.35rem;font-weight:900">תזכורת בכל זמן תרופה</h3>
       <p style="margin:0;color:var(--label-2)">גם כשהאפליקציה סגורה והטלפון נעול. אם עוד לא סימנת, תגיע תזכורת חוזרת.</p></div>
       <div id="nb">${notifBody()}</div>`,
   });

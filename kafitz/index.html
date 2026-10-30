@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>קפיץ · כתוביות שזזות</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0e10">
+<meta name="description" content="מעלים סרטון ומקבלים כתוביות מונפשות. גודל, צל, מילים בשורה ואנימציה, הכול ניתן לשינוי. התמלול רץ בדפדפן.">
+<meta property="og:title" content="קפיץ · כתוביות שזזות">
+<meta property="og:description" content="מעלים סרטון ומקבלים כתוביות מונפשות, ישר בדפדפן.">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Heebo:wght@900&family=Secular+One&family=Suez+One&family=Fredoka:wght@700&family=Karantina:wght@700&family=Varela+Round&family=Assistant:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="css/style.css?v=1">
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="./" aria-label="קפיץ, דף הבית">
+    <img src="img/icon.svg" width="28" height="28" alt="">
+    <span>קפיץ</span>
+  </a>
+  <div class="top-actions" hidden id="topActions">
+    <button class="btn ghost" id="newVideo"><i class="ph ph-arrow-counter-clockwise"></i><span>סרטון אחר</span></button>
+    <div class="menu-wrap">
+      <button class="btn primary" id="exportBtn" aria-haspopup="menu" aria-expanded="false"><i class="ph ph-download-simple"></i><span>ייצוא</span></button>
+      <div class="menu" id="exportMenu" role="menu" hidden>
+        <button role="menuitem" data-export="mp4"><i class="ph ph-film-strip"></i><span><b>סרטון עם כתוביות</b><small>MP4, באיכות המקור</small></span></button>
+        <button role="menuitem" data-export="srt"><i class="ph ph-subtitles"></i><span><b>קובץ כתוביות</b><small>SRT, לעריכה בתוכנות אחרות</small></span></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Empty state: drop a video -->
+<main id="home" class="home">
+  <section class="intro">
+    <h1>כתוביות שזזות<br>עם הדיבור</h1>
+    <p>מעלים סרטון, הוא מתומלל לבד, ואתם משחקים עם הגודל, הצל, מספר המילים בשורה והאנימציה.</p>
+    <label class="drop" id="drop" tabindex="0">
+      <input type="file" id="fileInput" accept="video/*,audio/*" hidden>
+      <i class="ph ph-upload-simple"></i>
+      <b>גררו סרטון לכאן</b>
+      <span>או <u>בחרו קובץ</u> מהמחשב</span>
+    </label>
+    <div class="lang-row">
+      <label for="homeLang">שפת הדיבור</label>
+      <select id="homeLang"></select>
+    </div>
+    <p class="fine"><i class="ph ph-lock-simple"></i> התמלול רץ על המכשיר שלכם. הסרטון לא נשלח לשום מקום.</p>
+  </section>
+  <figure class="demo" aria-hidden="true">
+    <canvas id="demoCanvas"></canvas>
+    <figcaption id="demoLabel">פופ</figcaption>
+  </figure>
+</main>
+
+<!-- Editor -->
+<main id="editor" class="editor" hidden>
+  <section class="stage-col">
+    <div class="stage" id="stage">
+      <video id="video" playsinline preload="auto"></video>
+      <canvas id="overlay"></canvas>
+      <div class="status" id="status" hidden>
+        <div class="status-row">
+          <span id="statusText">מכין…</span>
+          <button class="icon-btn" id="cancelRun" aria-label="עצירת התמלול"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="bar"><i id="statusBar"></i></div>
+      </div>
+      <button class="big-play" id="bigPlay" aria-label="ניגון"><i class="ph-fill ph-play"></i></button>
+    </div>
+    <div class="transport">
+      <button class="icon-btn" id="playBtn" aria-label="ניגון"><i class="ph-fill ph-play"></i></button>
+      <div class="timeline" id="timeline">
+        <div class="tl-pages" id="tlPages"></div>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="מיקום בסרטון">
+      </div>
+      <span class="time" id="time">0:00</span>
+    </div>
+    <p class="hint"><i class="ph ph-hand-pointing"></i> גררו את הכתובית על הסרטון כדי להזיז אותה</p>
+  </section>
+
+  <aside class="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="style">עיצוב</button>
+      <button role="tab" aria-selected="false" data-tab="text">טקסט <span class="count" id="pageCount"></span></button>
+    </div>
+
+    <div class="tab-body" id="tab-style">
+      <h3>אנימציה</h3>
+      <div class="anims" id="anims"></div>
+      <div class="field">
+        <label for="speed">מהירות <output id="speedOut"></output></label>
+        <input type="range" id="speed" min="0.5" max="2" step="0.1">
+      </div>
+
+      <h3>טקסט</h3>
+      <div class="field">
+        <label for="size">גודל <output id="sizeOut"></output></label>
+        <input type="range" id="size" min="3" max="14" step="0.5">
+      </div>
+      <div class="field two">
+        <div>
+          <label>מילים בשורה</label>
+          <div class="stepper" id="wplStep">
+            <button data-d="-1" aria-label="פחות מילים"><i class="ph ph-minus"></i></button>
+            <output id="wplOut">3</output>
+            <button data-d="1" aria-label="יותר מילים"><i class="ph ph-plus"></i></button>
+          </div>
+        </div>
+        <div>
+          <label>שורות</label>
+          <div class="seg" id="linesSeg">
+            <button data-v="1">1</button><button data-v="2">2</button>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>גופן</label>
+        <div class="fonts" id="fonts"></div>
+      </div>
+      <div class="field two">
+        <div>
+          <label for="color">צבע טקסט</label>
+          <div class="swatches" data-for="color"></div>
+        </div>
+        <div>
+          <label for="hi">צבע הדגשה</label>
+          <div class="swatches" data-for="hi"></div>
+        </div>
+      </div>
+
+      <h3>קו מתאר וצל</h3>
+      <div class="field">
+        <label for="stroke">עובי קו מתאר <output id="strokeOut"></output></label>
+        <div class="with-color"><input type="range" id="stroke" min="0" max="20" step="1"><input type="color" id="strokeColor" aria-label="צבע קו המתאר"></div>
+      </div>
+      <div class="field">
+        <label for="shadow">עוצמת צל <output id="shadowOut"></output></label>
+        <div class="with-color"><input type="range" id="shadow" min="0" max="100" step="1"><input type="color" id="shadowColor" aria-label="צבע הצל"></div>
+      </div>
+      <div class="field two">
+        <div>
+          <label for="shadowBlur">ריכוך <output id="shadowBlurOut"></output></label>
+          <input type="range" id="shadowBlur" min="0" max="80" step="1">
+        </div>
+        <div>
+          <label for="shadowDist">מרחק <output id="shadowDistOut"></output></label>
+          <input type="range" id="shadowDist" min="0" max="30" step="1">
+        </div>
+      </div>
+
+      <h3>מיקום ועוד</h3>
+      <div class="field">
+        <label for="posY">גובה על המסך</label>
+        <input type="range" id="posY" min="0.08" max="0.95" step="0.01">
+      </div>
+      <label class="toggle"><input type="checkbox" id="bg"><span>רקע כהה מאחורי השורה</span></label>
+      <label class="toggle"><input type="checkbox" id="upper"><span>אותיות גדולות (English)</span></label>
+      <button class="link" id="resetStyle"><i class="ph ph-arrow-u-up-left"></i> חזרה לברירת המחדל</button>
+    </div>
+
+    <div class="tab-body" id="tab-text" hidden>
+      <div class="redo">
+        <div class="field two">
+          <div>
+            <label for="engine">מנוע תמלול</label>
+            <select id="engine"></select>
+          </div>
+          <div>
+            <label for="lang">שפה</label>
+            <select id="lang"></select>
+          </div>
+        </div>
+        <p class="engine-note" id="engineNote"></p>
+        <div class="field" id="keyField" hidden>
+          <label for="apiKey">מפתח ElevenLabs</label>
+          <input type="password" id="apiKey" autocomplete="off" placeholder="sk_…" dir="ltr">
+          <small>נשמר רק בדפדפן הזה. השמע נשלח ל-ElevenLabs לתמלול.</small>
+        </div>
+        <button class="btn primary wide" id="redoAll"><i class="ph ph-arrows-clockwise"></i><span>תמלול מחדש</span></button>
+      </div>
+      <ol class="captions" id="captions"></ol>
+      <p class="empty-list" id="emptyList" hidden>עוד אין כתוביות. התמלול יופיע כאן תוך כדי.</p>
+    </div>
+  </aside>
+</main>
+
+<div class="modal" id="exportModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+    <h2 id="exportTitle">מייצא סרטון</h2>
+    <p id="exportText">צורב את הכתוביות לתוך הסרטון…</p>
+    <div class="bar big"><i id="exportBar"></i></div>
+    <button class="btn ghost" id="exportCancel">ביטול</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module" src="js/app.js?v=1"></script>
+</body>
+</html>

@@ -398,7 +398,7 @@ function tick() {
   const peopleOnly = settings.mode === 'people' && run.model !== false;
   if (moving && !cooling) {
     if (!peopleOnly) trigger('motion', box);
-    else if (run.model) checkForPeople();
+    else if (run.model) checkForPeople(box);
   }
 
   if (cooling) setStatus(`🚨 התראה ${$('last-sent').dataset.time || ''}`, 'alert');
@@ -410,7 +410,26 @@ function tick() {
 
 const normalize = (box, vw, vh) => ({ x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh });
 
-async function checkForPeople() {
+const PERSON_SCORE = 0.55;
+
+const bestPerson = found => found.filter(p => p.class === 'person' && p.score >= PERSON_SCORE).sort((a, b) => b.score - a.score)[0];
+
+// The model looks at the frame shrunk to about 300px, so a far-away person a few dozen pixels
+// tall is easily missed. When the motion is in a small area, look again at a zoomed-in square
+// around it, which makes that person several times bigger for the model.
+function zoomOn(frame, box) {
+  const fw = frame.width, fh = frame.height;
+  const side = Math.min(fw, fh, Math.max(box.w, box.h, fh / 4) * 2);
+  if (side > 0.75 * Math.min(fw, fh)) return null;
+  const x0 = Math.max(0, Math.min(fw - side, box.x + box.w / 2 - side / 2));
+  const y0 = Math.max(0, Math.min(fh - side, box.y + box.h / 2 - side / 2));
+  const crop = document.createElement('canvas');
+  crop.width = crop.height = 300;
+  crop.getContext('2d').drawImage(frame, x0, y0, side, side, 0, 0, 300, 300);
+  return { crop, x0, y0, scale: side / 300 };
+}
+
+async function checkForPeople(motionBox) {
   const now = Date.now();
   if (run.detecting || now - run.lastDetect < 600) return;
   run.detecting = true;
@@ -418,10 +437,18 @@ async function checkForPeople() {
   try {
     // Detect on a frozen frame and send that same frame, so the box matches the photo.
     const frame = grabFrame(video);
-    const found = await current.model.detect(frame, 10, 0.4);
-    const person = found.filter(p => p.class === 'person' && p.score >= 0.55).sort((a, b) => b.score - a.score)[0];
+    let person = bestPerson(await current.model.detect(frame, 10, 0.4));
+    let bbox = person?.bbox;
+    const zoom = !person && motionBox && zoomOn(frame, motionBox);
+    if (zoom) {
+      person = bestPerson(await current.model.detect(zoom.crop, 10, 0.4));
+      if (person) {
+        const [x, y, w, h] = person.bbox;
+        bbox = [zoom.x0 + x * zoom.scale, zoom.y0 + y * zoom.scale, w * zoom.scale, h * zoom.scale];
+      }
+    }
     if (person && run === current) {
-      const [x, y, w, h] = person.bbox;
+      const [x, y, w, h] = bbox;
       trigger('person', { x, y, w, h }, frame);
     }
   } catch {}

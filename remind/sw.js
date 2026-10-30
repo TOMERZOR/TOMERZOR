@@ -1,11 +1,14 @@
 // Keeps the app on the phone so it opens instantly and without internet, and shows the reminders
 // the server pushes. Bump VERSION whenever a file changes.
-const VERSION = 'remind-v2';
+const VERSION = 'remind-v3';
 const FILES = [
   './',
   'index.html',
   'manifest.webmanifest',
   'css/style.css',
+  'fonts/heebo-hebrew.woff2',
+  'fonts/heebo-latin.woff2',
+  'fonts/jakarta-latin.woff2',
   'js/app.js',
   'js/store.js',
   'js/icons.js',

@@ -11,6 +11,6 @@
   </defs>
   <rect width="1024" height="1024" fill="url(#bg)"/>
   <rect width="1024" height="1024" fill="url(#shine)"/>
-  <text x="430" y="732" text-anchor="middle" font-family="Inter Display, SF Pro Display, -apple-system, Helvetica, Arial, sans-serif" font-weight="900" font-size="600" letter-spacing="-20" fill="#fff">R</text>
+  <text x="430" y="732" text-anchor="middle" font-family="Plus Jakarta Sans, Inter Display, -apple-system, Helvetica, Arial, sans-serif" font-weight="800" font-size="600" letter-spacing="-20" fill="#fff">R</text>
   <circle cx="702" cy="684" r="62" fill="#ffd60a"/>
 </svg>

@@ -16,7 +16,7 @@ npx http-server -p 8791 -c-1 .     # from the repo root, then open http://localh
 - **History:** full-day streak, adherence for 7 and 30 days, a month calendar with a ring per day, and the doses of any day.
 - **Profile:** the times of day, repeat interval, notifications (with a test), text size, light/dark, a family contact and a one-tap WhatsApp summary of today, backup to a file, restore, delete everything.
 
-Everything is stored on the phone (localStorage).
+Everything is stored on the phone (localStorage). Fonts: Heebo (Hebrew) and Plus Jakarta Sans (Latin and digits), self-hosted from `fonts/` (SIL OFL).
 
 ## Reminders when the app is closed (`server/`)
 

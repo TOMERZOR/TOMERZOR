@@ -44,8 +44,8 @@ var kafitz = (function () {
     return false;
   }
 
-  function findBin(name) {
-    var root = app.project.rootItem;
+  function findBin(name, parent) {
+    var root = parent || app.project.rootItem;
     for (var i = 0; i < root.children.numItems; i++) {
       var c = root.children[i];
       if (c.type === ProjectItemType.BIN && c.name === name) return c;
@@ -106,40 +106,88 @@ var kafitz = (function () {
       return ok(true);
     },
 
-    // Imports a PNG sequence and lays it on the lowest video track that is free above everything in that time range.
-    // prevNodeId: the previous Kafitz captions, which are removed from the timeline first.
-    place: function (firstFile, rate, startSec, durSec, prevNodeId) {
+    // Which of these project item ids still have a clip on the timeline.
+    present: function (ids) {
       var s = seq();
       if (!s) return fail('NO_SEQUENCE');
-      var bin = findBin('Kafitz');
-      if (!app.project.importFiles([firstFile], true, bin, true)) return fail('IMPORT_FAILED');
-      var item = findImported(bin, firstFile);
-      if (!item) return fail('IMPORT_NOT_FOUND');
-      item.setOverrideFrameRate(rate);
+      var want = {}, found = {}, out = [], i, j;
+      for (i = 0; i < ids.length; i++) want[ids[i]] = true;
+      for (i = 0; i < s.videoTracks.numTracks; i++) {
+        var t = s.videoTracks[i];
+        for (j = 0; j < t.clips.numItems; j++) {
+          var pi = t.clips[j].projectItem;
+          if (pi && want[pi.nodeId]) found[pi.nodeId] = true;
+        }
+      }
+      for (i = 0; i < ids.length; i++) if (found[ids[i]]) out.push(ids[i]);
+      return ok(out);
+    },
 
+    // Puts one clip per caption on the timeline. items: [{file, start, end, name}], each file the first
+    // frame of a PNG sequence. removeIds: earlier Kafitz captions to take off the timeline first (their
+    // project items move to an "old" bin). hintTrack: the track used last time (0-based), kept if still free.
+    placeCaptions: function (items, rate, removeIds, hintTrack, folderName) {
+      var s = seq();
+      if (!s) return fail('NO_SEQUENCE');
+      var bin = findBin(folderName, findBin('Kafitz'));
       var i, j, tracks = s.videoTracks;
-      if (prevNodeId) {
+
+      var drop = {};
+      for (i = 0; i < removeIds.length; i++) drop[removeIds[i]] = true;
+      if (removeIds.length) {
+        var oldBin = null;
         for (i = 0; i < tracks.numTracks; i++) {
           for (j = tracks[i].clips.numItems - 1; j >= 0; j--) {
             var c = tracks[i].clips[j];
-            if (c.projectItem && c.projectItem.nodeId === prevNodeId) c.remove(false, false);
+            if (c.projectItem && drop[c.projectItem.nodeId]) {
+              var pi = c.projectItem;
+              c.remove(false, false);
+              try { if (!oldBin) oldBin = findBin('ישנים', bin); pi.moveBin(oldBin); } catch (e) {}
+            }
           }
         }
       }
 
-      var endSec = startSec + durSec, top = -1;
-      for (i = 0; i < tracks.numTracks; i++) if (overlaps(tracks[i], startSec, endSec)) top = i;
-      var target = top + 1;
-      if (target >= tracks.numTracks) {
-        try {
-          app.enableQE();
-          qe.project.getActiveSequence().addTracks(1, tracks.numTracks, 0);
-        } catch (e) {}
-        tracks = seq().videoTracks;
-        if (target >= tracks.numTracks) return fail('NO_FREE_TRACK');
+      var placed = [], from = Infinity, to = -Infinity;
+      for (i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (!app.project.importFiles([it.file], true, bin, true)) return fail('IMPORT_FAILED');
+        var item = findImported(bin, it.file);
+        if (!item) return fail('IMPORT_NOT_FOUND');
+        item.setOverrideFrameRate(rate);
+        try { item.name = it.name; } catch (e) {}
+        placed.push({ item: item, start: it.start, end: it.end });
+        if (it.start < from) from = it.start;
+        if (it.end > to) to = it.end;
       }
-      tracks[target].overwriteClip(item, startSec);
-      return ok({ nodeId: item.nodeId, track: target + 1 });
+      if (!placed.length) return ok({ ids: [], track: hintTrack });
+
+      function free(track) {
+        for (var k = 0; k < placed.length; k++) if (overlaps(track, placed[k].start, placed[k].end)) return false;
+        return true;
+      }
+      var target;
+      if (hintTrack >= 0 && hintTrack < tracks.numTracks && free(tracks[hintTrack])) {
+        target = hintTrack;
+      } else {
+        var top = -1;
+        for (i = 0; i < tracks.numTracks; i++) if (overlaps(tracks[i], from, to)) top = i;
+        target = top + 1;
+        if (target >= tracks.numTracks) {
+          try {
+            app.enableQE();
+            qe.project.getActiveSequence().addTracks(1, tracks.numTracks, 0);
+          } catch (e) {}
+          tracks = seq().videoTracks;
+          if (target >= tracks.numTracks) return fail('NO_FREE_TRACK');
+        }
+      }
+      var ids = [];
+      for (i = 0; i < placed.length; i++) {
+        tracks[target].overwriteClip(placed[i].item, placed[i].start);
+        ids.push(placed[i].item.nodeId);
+      }
+      return ok({ ids: ids, track: target });
     },
 
     // Imports an SRT file as a Premiere caption track.

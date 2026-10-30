@@ -65,13 +65,6 @@ function createServer(root, token) {
           fs.mkdirSync(path.dirname(p), { recursive: true });
           fs.writeFile(p, buf, (err) => { res.writeHead(err ? 500 : 204); res.end(err ? String(err) : undefined); });
         });
-      } else if (url.pathname === '/api/copy' && req.method === 'POST' && req.headers['x-kafitz-token'] === token) {
-        readBody(req, (buf) => {
-          const { from, to } = JSON.parse(buf.toString('utf8'));
-          if (!insideOutDir(from) || !to.every(insideOutDir)) { res.writeHead(403); res.end(); return; }
-          for (const t of to) fs.copyFileSync(from, t);
-          res.writeHead(204); res.end();
-        });
       } else if (req.method === 'GET' || req.method === 'HEAD') {
         // The extension's own files.
         const file = path.join(root, decodeURIComponent(url.pathname));

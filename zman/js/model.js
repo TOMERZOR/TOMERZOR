@@ -90,6 +90,12 @@ export function formatYear(year) {
   return `${Math.max(1, -year).toLocaleString("en-US")} לפנה״ס`;
 }
 
+/** The year as a numeral and an era label, for the big readout. */
+export function yearParts(year) {
+  if (year >= 1) return { num: String(year), era: "" };
+  return { num: Math.max(1, -year).toLocaleString("en-US"), era: "לפנה״ס" };
+}
+
 const MONTHS_HE = ["ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"];
 
 export function caption(year, release) {
@@ -176,6 +182,7 @@ export function seaLevel(year) {
 }
 
 // ---------- slider ticks ----------
+// Labeled years under the ruler. `wide` ones only show on wider screens.
 export const TICKS = [
   { year: MIN_YEAR, label: "10,000 לפנה״ס", wide: false },
   { year: 1, label: "שנה 1", wide: true },
@@ -187,3 +194,18 @@ export const TICKS = [
   { year: FIRST_REAL_YEAR, label: "2014", wide: false },
   { year: NOW_YEAR, label: "היום", wide: false },
 ];
+
+/**
+ * Small ruler marks between the labels: sparse in deep time, every year
+ * near today, thinned so they stay at least `minGap` (0..1) apart.
+ */
+export function rulerTicks(minGap = 0.006) {
+  const step = (y) => (y < -1000 ? 1000 : y < 1000 ? 250 : y < 1800 ? 100 : y < 1950 ? 10 : y < 2010 ? 5 : 1);
+  const out = [];
+  let last = -1;
+  for (let y = MIN_YEAR; y <= NOW_YEAR; y += step(y)) {
+    const t = yearToSlider(y);
+    if (t - last >= minGap) { out.push({ year: y, t }); last = t; }
+  }
+  return out;
+}

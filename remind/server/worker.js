@@ -17,6 +17,7 @@
 
 const NAG_WINDOW = 120; // minutes after the dose time that repeats may still be sent
 const LATE_LIMIT = 150 * 60 * 1000; // an alarm that runs this late doesn't send old reminders
+const HORIZON = 33; // days to look ahead for the next reminder (covers a monthly one)
 const MAX_BODY = 32 * 1024;
 const PUSH_HOSTS = [/(^|\.)push\.apple\.com$/, /^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /\.notify\.windows\.com$/];
 
@@ -65,15 +66,24 @@ export function addDays(date, n) {
 }
 
 const weekday = date => new Date(`${date}T12:00:00Z`).getUTCDay();
+const monthDays = date => { const [y, m] = date.split('-').map(Number); return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
+
+// The 31st falls on the last day of shorter months.
+function isMonthDay(date, day) {
+  const d = +date.slice(8);
+  return d === day || (day > monthDays(date) && d === monthDays(date));
+}
 
 // ---------- Schedule ----------
 //
-// schedule: [{ t: 'HH:MM', items: [{ k: 'doseKey', d: [0..6] | null, s?: 'YYYY-MM-DD', u?: 'YYYY-MM-DD' }] }]
+// schedule: [{ t: 'HH:MM', items: [{ k: 'doseKey', d: [0..6] | null, m?: 1..31, o?: 'YYYY-MM-DD', s?: 'YYYY-MM-DD', u?: 'YYYY-MM-DD' }] }]
+//   d: weekdays (null: every day), m: day of the month, o: one date only, s/u: start and end dates
 // taken:    { 'YYYY-MM-DD': ['doseKey', ...] }
 
 export function dueOn(group, date) {
   const wd = weekday(date);
-  return group.items.filter(it => (!it.d || it.d.includes(wd)) && (!it.s || it.s <= date) && (!it.u || it.u >= date)).map(it => it.k);
+  return group.items.filter(it => (!it.d || it.d.includes(wd)) && (!it.m || isMonthDay(date, it.m)) && (!it.o || it.o === date)
+    && (!it.s || it.s <= date) && (!it.u || it.u >= date)).map(it => it.k);
 }
 
 export function pendingOn(state, group, date) {
@@ -83,7 +93,7 @@ export function pendingOn(state, group, date) {
 
 // Every moment a reminder could go out, from `from` on, for `days` days: the dose time itself and
 // the repeats after it.
-export function moments(state, from, days = 8) {
+export function moments(state, from, days = HORIZON) {
   const out = [];
   const nag = state.nag > 0 ? state.nag : 0;
   const repeats = nag ? Math.floor(NAG_WINDOW / nag) : 0;
@@ -112,8 +122,10 @@ export function plan(state, lastRun, now) {
     const pending = pendingOn(state, m.group, m.date);
     if (pending.length) send.push({ date: m.date, t: m.t, n: m.n, keys: pending });
   }
-  const next = all.find(m => m.at > now);
-  return { send, next: next ? next.at : null };
+  const found = all.find(m => m.at > now);
+  // Nothing within the horizon (a one-date dose months away): wake up later and look again.
+  const later = (state.schedule || []).some(g => g.items.length) ? now + (HORIZON - 3) * 86400000 : null;
+  return { send, next: found ? found.at : later };
 }
 
 // ---------- Validation ----------
@@ -133,6 +145,8 @@ export function clean(body) {
       items: (Array.isArray(g.items) ? g.items : []).slice(0, 64).map(it => {
         if (!KEY.test(it.k)) throw new Error('bad key');
         const item = { k: it.k, d: Array.isArray(it.d) ? it.d.filter(x => Number.isInteger(x) && x >= 0 && x <= 6) : null };
+        if (Number.isInteger(it.m) && it.m >= 1 && it.m <= 31) item.m = it.m;
+        if (DATE.test(it.o || '')) item.o = it.o;
         if (DATE.test(it.s || '')) item.s = it.s;
         if (DATE.test(it.u || '')) item.u = it.u;
         return item;

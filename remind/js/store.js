@@ -127,12 +127,39 @@ export function slotIcon(slot) {
   return m < 11 * 60 ? 'sunrise' : m < 17 * 60 ? 'sun' : 'moon';
 }
 
+// How often a medicine repeats: 'daily' | 'weekly' (med.days) | 'monthly' (med.monthDay) | 'once' (med.onDate).
+// Medicines saved before monthly and one-date existed have no `repeat`, only `days`.
+export function repeatOf(med) {
+  return med.repeat || (med.days ? 'weekly' : 'daily');
+}
+
+export const lastDayOfMonth = date => { const d = parseDate(date); return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); };
+
+// The 31st falls on the last day of shorter months.
+export function isMonthDay(date, monthDay) {
+  const day = parseDate(date).getDate();
+  return day === monthDay || (monthDay > lastDayOfMonth(date) && day === lastDayOfMonth(date));
+}
+
 export function activeOn(med, date) {
   if (med.start && date < med.start) return false;
   if (med.until && date > med.until) return false;
   if (med.deleted && date >= med.deleted) return false;
-  if (med.days && !med.days.includes(parseDate(date).getDay())) return false;
+  const repeat = repeatOf(med);
+  if (repeat === 'once') return date === med.onDate;
+  if (repeat === 'monthly') return isMonthDay(date, med.monthDay);
+  if (repeat === 'weekly') return med.days.includes(parseDate(date).getDay());
   return true;
+}
+
+// A one-date medicine whose date passed, or a course that ended.
+export function ended(med, today = dateKey()) {
+  return (med.until && med.until < today) || (repeatOf(med) === 'once' && med.onDate < today);
+}
+
+export function shortDate(key) {
+  const d = parseDate(key);
+  return `${d.getDate()} ב${MONTHS[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`;
 }
 
 export const doseKey = (med, slot) => `${med.id}@${slot}`;
@@ -208,14 +235,22 @@ export function doseText(med) {
 
 export function scheduleText(state, med) {
   const times = med.times.map(s => (SLOTS[s] ? SLOTS[s].label : s)).join(', ');
-  const days = !med.days || med.days.length === 7 ? 'כל יום' : med.days.map(d => WEEKDAYS[d] + '׳').join(' ');
+  const repeat = repeatOf(med);
+  let days;
+  if (repeat === 'once') days = `רק ב־${shortDate(med.onDate)}`;
+  else if (repeat === 'monthly') days = `ב־${med.monthDay} בכל חודש`;
+  else if (repeat === 'weekly' && med.days.length < 7) days = med.days.map(d => WEEKDAYS[d] + '׳').join(' ');
+  else days = 'כל יום';
   return `${times} · ${days}`;
 }
 
 // Days of stock left, at today's rate. null when not tracked.
 export function stockDays(state, med) {
   if (med.stock == null) return null;
-  const perDay = med.times.length * (Number(med.amount) || 1) * (med.days ? med.days.length / 7 : 1);
+  const repeat = repeatOf(med);
+  if (repeat === 'once') return null;
+  const share = repeat === 'monthly' ? 12 / 365 : repeat === 'weekly' ? med.days.length / 7 : 1;
+  const perDay = med.times.length * (Number(med.amount) || 1) * share;
   return perDay ? Math.floor(med.stock / perDay) : null;
 }
 
@@ -263,11 +298,14 @@ export function serverSchedule(state) {
   const groups = new Map();
   const today = dateKey();
   for (const med of state.meds) {
-    if (med.deleted || (med.until && med.until < today)) continue;
+    if (med.deleted || ended(med, today)) continue;
+    const repeat = repeatOf(med);
     for (const slot of med.times) {
       const t = slotTime(state, slot);
       if (!groups.has(t)) groups.set(t, { t, items: [] });
-      const item = { k: doseKey(med, slot), d: med.days || null };
+      const item = { k: doseKey(med, slot), d: repeat === 'weekly' ? med.days : null };
+      if (repeat === 'monthly') item.m = med.monthDay;
+      if (repeat === 'once') item.o = med.onDate;
       if (med.start) item.s = med.start;
       if (med.until) item.u = med.until;
       groups.get(t).items.push(item);

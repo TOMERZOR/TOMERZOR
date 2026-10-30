@@ -238,6 +238,20 @@ function renderHome() {
         out += `<button class="card banner press" data-act="edit-med" data-id="${med.id}"><span class="ico" style="background:var(--orange)">${icon('box')}</span><span class="txt"><b>המלאי של ${esc(med.name)} נגמר בקרוב</b><span>${med.stock ? `נשארו ${med.stock} · בערך ${days === 1 ? 'יום אחד' : `${days} ימים`}` : 'נגמר המלאי'}. כדאי לחדש מרשם</span></span>${icon('chevron')}</button>`;
       }
     }
+    // Monthly and one-date medicines are easy to forget, so they get a heads-up a few days ahead.
+    const soon = new Set();
+    for (let i = 1; i <= 3; i++) {
+      const day = S.addDays(today, i);
+      for (const g of S.dayPlan(state, day)) {
+        for (const d of g.doses) {
+          const repeat = S.repeatOf(d.med);
+          if ((repeat !== 'monthly' && repeat !== 'once') || soon.has(d.med.id)) continue;
+          soon.add(d.med.id);
+          const when = i === 1 ? 'מחר' : `בעוד ${i} ימים`;
+          out += `<button class="card banner press" data-act="day" data-date="${day}"><span class="ico" style="background:var(--indigo)">${icon('calendar')}</span><span class="txt"><b>${esc(d.med.name)} ${when}</b><span>${S.shortDate(day)} · בשעה <span dir="ltr">${g.time}</span> · ${repeat === 'monthly' ? 'פעם בחודש' : 'תאריך אחד'}</span></span>${icon('chevron')}</button>`;
+        }
+      }
+    }
   }
 
   if (!plan.length) {
@@ -340,8 +354,8 @@ function medRow(med) {
 function renderMeds() {
   const today = S.dateKey();
   const live = liveMeds();
-  const active = live.filter(m => !m.until || m.until >= today);
-  const ended = live.filter(m => m.until && m.until < today);
+  const active = live.filter(m => !S.ended(m, today));
+  const ended = live.filter(m => S.ended(m, today));
   let out = `<div class="topbar"><span></span><button class="round-btn accent" data-act="add-med" aria-label="הוספת תרופה">${icon('plus')}</button></div>
     <h1 class="large-title">התרופות שלי</h1>`;
   if (!live.length) return out + emptyState();
@@ -350,6 +364,15 @@ function renderMeds() {
   if (ended.length) out += `<div class="section-title">טיפולים שהסתיימו</div><div class="card">${ended.map(medRow).join('')}</div>`;
   out += `<button class="btn soft block" style="margin-top:22px" data-act="add-med">${icon('plus')} הוספת תרופה</button>`;
   return out;
+}
+
+const REPEATS = [['daily', 'כל יום', 'repeat'], ['weekly', 'ימים בשבוע', 'calendar'], ['monthly', 'פעם בחודש', 'history'], ['once', 'תאריך אחד', 'pin']];
+
+// The next date that a monthly dose falls on, from today.
+function nextMonthly(day) {
+  let date = S.dateKey();
+  for (let i = 0; i < 62; i++, date = S.addDays(date, 1)) if (S.isMonthDay(date, day)) return date;
+  return date;
 }
 
 function stepFor(form) {
@@ -362,6 +385,9 @@ function medSheet(existing = null, { onSaved } = {}) {
   const d = existing
     ? JSON.parse(JSON.stringify(existing))
     : { id: S.uid(), name: '', form: 'tablet', color: COLORS[liveMeds().length % COLORS.length], amount: 1, times: [firstSlot], days: null, food: 'any', note: '', stock: null, until: null, start: S.dateKey(), created: Date.now() };
+  d.repeat = S.repeatOf(d);
+  d.monthDay ||= S.parseDate(S.dateKey()).getDate();
+  d.onDate ||= S.dateKey();
 
   const sections = {
     tile: () => `<span class="tile big" style="--c:${d.color}">${icon(FORMS[d.form].icon)}</span>`,
@@ -371,8 +397,12 @@ function medSheet(existing = null, { onSaved } = {}) {
     times: () => `<div class="slot-chips">${Object.entries(SLOTS).map(([k, s]) => `<button class="chip ${d.times.includes(k) ? 'on' : ''}" data-f="slot" data-v="${k}">${icon(s.icon)}${s.label}<small>${S.slotTime(state, k)}</small></button>`).join('')}</div>
       ${d.times.filter(t => !SLOTS[t]).map(t => `<div class="card custom-time" style="margin-top:8px">${icon('clock')}<span class="grow">שעה נוספת</span><input type="time" class="time-in" value="${t}" data-f="custom" data-v="${t}"><button class="round-btn" style="width:2rem;height:2rem" data-f="rm-custom" data-v="${t}" aria-label="הסרה">${icon('x')}</button></div>`).join('')}
       <button class="link-btn" data-f="add-custom">${icon('plus', 'inline')} שעה אחרת</button>`,
-    days: () => `<div class="seg"><button class="${d.days ? '' : 'on'}" data-f="every">כל יום</button><button class="${d.days ? 'on' : ''}" data-f="some">ימים מסוימים</button></div>
-      ${d.days ? `<div class="weekdays">${WEEKDAYS.map((w, i) => `<button class="${d.days.includes(i) ? 'on' : ''}" data-f="wd" data-v="${i}">${w}</button>`).join('')}</div>` : ''}`,
+    days: () => `<div class="chips grid2">${REPEATS.map(([k, l, ic]) => `<button class="chip ${d.repeat === k ? 'on' : ''}" data-f="repeat" data-v="${k}">${icon(ic)}${l}</button>`).join('')}</div>
+      ${d.repeat === 'weekly' ? `<div class="weekdays">${WEEKDAYS.map((w, i) => `<button class="${d.days.includes(i) ? 'on' : ''}" data-f="wd" data-v="${i}">${w}</button>`).join('')}</div>` : ''}
+      ${d.repeat === 'monthly' ? `<div class="card month-pick"><div class="t">באיזה יום בחודש?</div><div class="weekdays month">${Array.from({ length: 31 }, (_, i) => `<button class="${d.monthDay === i + 1 ? 'on' : ''}" data-f="mday" data-v="${i + 1}">${i + 1}</button>`).join('')}</div>
+        <p class="hint" style="margin:10px 2px 0">${d.monthDay > 28 ? `בחודשים בלי ${d.monthDay} ימים, ביום האחרון של החודש. ` : ''}הפעם הבאה: ${S.relativeDay(nextMonthly(d.monthDay))}</p></div>` : ''}
+      ${d.repeat === 'once' ? `<div class="card" style="margin-top:10px"><label class="row plain"><span class="sq" style="--c:var(--indigo)">${icon('calendar')}</span><span class="txt t">תאריך</span><input type="date" class="field" style="width:auto" value="${d.onDate}" min="${S.dateKey()}" data-f="ondate"></label></div>
+        <p class="hint">${S.prettyDate(d.onDate)}</p>` : ''}`,
     food: () => Object.entries(FOOD).map(([k, v]) => `<button class="chip ${d.food === k ? 'on' : ''}" data-f="food" data-v="${k}">${v}</button>`).join(''),
     stock: () => `<label class="row plain"><span class="sq" style="--c:var(--orange)">${icon('box')}</span><span class="txt"><span class="t">מעקב אחרי המלאי</span><span class="s">יורד בכל סימון, ומזכיר כשנגמר</span></span><span class="switch"><input type="checkbox" data-f="stock-on" ${d.stock != null ? 'checked' : ''}><span></span></span></label>
       ${d.stock != null ? `<div class="stepper" style="border-top:0.5px solid var(--sep)"><button class="round-btn" data-f="stock" data-v="-1" aria-label="פחות">${icon('minus')}</button><span class="txt">יש בבית <span class="n">${d.stock}</span> ${FORMS[d.form].units}</span><button class="round-btn" data-f="stock" data-v="1" aria-label="יותר">${icon('plus')}</button></div>
@@ -386,18 +416,18 @@ function medSheet(existing = null, { onSaved } = {}) {
     <div class="section-title">סוג</div><div class="chips scroll" id="f-form">${sections.form()}</div>
     <div class="section-title">צבע</div><div class="colors" id="f-color">${sections.color()}</div>
     <div class="section-title">מינון</div><div class="card stepper" id="f-dose">${sections.dose()}</div>
-    <div class="section-title">מתי לוקחים</div><div id="f-times">${sections.times()}</div>
-    <div class="section-title">באילו ימים</div><div id="f-days">${sections.days()}</div>
+    <div class="section-title">כל כמה זמן</div><div id="f-days">${sections.days()}</div>
+    <div class="section-title">באיזו שעה</div><div id="f-times">${sections.times()}</div>
     <div class="section-title">אוכל</div><div class="chips grid2" id="f-food">${sections.food()}</div>
     <div class="section-title">עוד</div><div class="card" id="f-stock">${sections.stock()}</div>
-    <div class="card" id="f-until" style="margin-top:10px">${sections.until()}</div>
+    <div class="card" id="f-until" style="margin-top:10px;${d.repeat === 'once' ? 'display:none' : ''}">${sections.until()}</div>
     <div class="section-title">הערות</div><textarea class="note" id="f-note" placeholder="למשל: לא לקחת עם חלב" maxlength="200">${esc(d.note)}</textarea>
     ${isNew ? '' : `<button class="btn danger block" style="margin-top:26px" data-f="delete">${icon('trash')} מחיקת התרופה</button>`}`;
 
   const sheet = openSheet({ title: isNew ? 'תרופה חדשה' : 'עריכת תרופה', lead: 'ביטול', trail: isNew ? 'הוספה' : 'שמירה', body });
   const $ = id => sheet.body.querySelector(`#f-${id}`);
   const refresh = (...names) => names.forEach(n => { $(n).innerHTML = sections[n](); });
-  const canSave = () => d.name.trim() && d.times.length && (!d.days || d.days.length);
+  const canSave = () => d.name.trim() && d.times.length && (d.repeat !== 'weekly' || d.days.length) && (d.repeat !== 'once' || d.onDate);
   const updateSave = () => { sheet.trailBtn.disabled = !canSave(); };
   updateSave();
 
@@ -420,6 +450,10 @@ function medSheet(existing = null, { onSaved } = {}) {
       refresh('until');
     } else if (f === 'until') {
       d.until = e.target.value || null;
+    } else if (f === 'ondate') {
+      d.onDate = e.target.value || S.dateKey();
+      refresh('days');
+      updateSave();
     }
   });
 
@@ -456,12 +490,14 @@ function medSheet(existing = null, { onSaved } = {}) {
       d.times = d.times.filter(t => t !== v);
       refresh('times');
       updateSave();
-    } else if (f === 'every') {
-      d.days = null;
+    } else if (f === 'repeat') {
+      d.repeat = v;
+      if (v === 'weekly') d.days ||= [0, 1, 2, 3, 4, 5, 6];
       refresh('days');
+      $('until').style.display = v === 'once' ? 'none' : '';
       updateSave();
-    } else if (f === 'some') {
-      d.days ||= [0, 1, 2, 3, 4, 5, 6];
+    } else if (f === 'mday') {
+      d.monthDay = Number(v);
       refresh('days');
     } else if (f === 'wd') {
       const i = Number(v);
@@ -494,6 +530,10 @@ function medSheet(existing = null, { onSaved } = {}) {
     d.name = d.name.trim();
     d.note = d.note.trim();
     d.times = [...new Set(d.times)];
+    if (d.repeat !== 'weekly') d.days = null;
+    if (d.repeat !== 'monthly') delete d.monthDay;
+    if (d.repeat !== 'once') delete d.onDate;
+    else d.until = null;
     if (isNew) state.meds.push(d);
     else state.meds = state.meds.map(m => (m.id === d.id ? d : m));
     commit();

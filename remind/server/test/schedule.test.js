@@ -62,7 +62,31 @@ test('weekdays, start and end dates', () => {
   assert.equal(plan(s, at('2026-11-02', '09:00'), at('2026-11-02', '09:00')).next, at('2026-11-06', '20:00'));
   s.schedule[0].items[0] = { k: 'a@evening', d: null, s: '2026-11-04', u: '2026-11-05' };
   assert.equal(plan(s, at('2026-11-02', '09:00'), at('2026-11-02', '09:00')).next, at('2026-11-04', '20:00'));
-  assert.equal(plan(s, at('2026-11-05', '21:00'), at('2026-11-05', '21:00')).next, null);
+  // After the course ends nothing is due; it only wakes up later to look again.
+  const now = at('2026-11-05', '21:00');
+  assert.equal(plan(s, now, now).next, now + 30 * 86400000);
+  assert.equal(plan({ ...s, schedule: [] }, now, now).next, null);
+});
+
+test('once a month, on the day of the month', () => {
+  const s = state({ nag: 0, schedule: [{ t: '10:30', items: [{ k: 'b@10:30', d: null, m: 15 }] }] });
+  assert.equal(plan(s, at('2026-11-02', '09:00'), at('2026-11-02', '09:00')).next, at('2026-11-15', '10:30'));
+  assert.equal(plan(s, at('2026-11-15', '11:00'), at('2026-11-15', '11:00')).next, at('2026-12-15', '10:30'));
+  const sent = plan(s, at('2026-11-15', '10:29'), at('2026-11-15', '10:30') + 500).send;
+  assert.deepEqual(sent, [{ date: '2026-11-15', t: '10:30', n: 0, keys: ['b@10:30'] }]);
+  // The 31st falls on the last day of shorter months.
+  s.schedule[0].items[0].m = 31;
+  assert.equal(plan(s, at('2027-02-01', '09:00'), at('2027-02-01', '09:00')).next, at('2027-02-28', '10:30'));
+});
+
+test('one date only', () => {
+  const s = state({ nag: 0, schedule: [{ t: '09:00', items: [{ k: 'c@09:00', d: null, o: '2026-11-20' }] }] });
+  assert.equal(plan(s, at('2026-11-02', '08:00'), at('2026-11-02', '08:00')).next, at('2026-11-20', '09:00'));
+  // Months away: no moment within the horizon, so it wakes in 30 days to look again.
+  s.schedule[0].items[0].o = '2027-03-01';
+  const now = at('2026-11-02', '08:00');
+  assert.equal(plan(s, now, now).next, now + 30 * 86400000);
+  assert.equal(plan(s, at('2027-02-20', '08:00'), at('2027-02-20', '08:00')).next, at('2027-03-01', '09:00'));
 });
 
 test('a late alarm sends only the latest reminder per dose time', () => {
@@ -77,9 +101,11 @@ test('input is checked', () => {
   assert.throws(() => clean({ tz: 'Nowhere/City' }));
   assert.throws(() => clean({ tz: TZ, schedule: [{ t: '25:00', items: [] }] }));
   assert.throws(() => clean({ tz: TZ, subscription: { endpoint: 'https://evil.example/x', keys: { p256dh: 'a', auth: 'b' } } }));
-  const ok = clean({ tz: TZ, nag: 7, schedule: [{ t: '08:00', items: [{ k: 'x@morning', d: [1, 9] }] }] });
+  const ok = clean({ tz: TZ, nag: 7, schedule: [{ t: '08:00', items: [{ k: 'x@morning', d: [1, 9] }, { k: 'y@morning', d: null, m: 40, o: 'soon' }, { k: 'z@morning', d: null, m: 15, o: '2026-12-01' }] }] });
   assert.equal(ok.nag, 15);
   assert.deepEqual(ok.schedule[0].items[0].d, [1]);
+  assert.deepEqual(ok.schedule[0].items[1], { k: 'y@morning', d: null });
+  assert.deepEqual(ok.schedule[0].items[2], { k: 'z@morning', d: null, m: 15, o: '2026-12-01' });
 });
 
 test('push payload is encrypted for the subscription (RFC 8291 layout)', async () => {

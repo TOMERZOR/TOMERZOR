@@ -399,18 +399,28 @@ function tick() {
   const threshold = sensitivityToThreshold(settings.sens);
   const scale = vw / w;
   const box = r.box && { x: r.box.x * scale, y: r.box.y * scale, w: r.box.w * scale, h: r.box.h * scale };
-
   const now = Date.now();
+
   run.hot = r.score >= threshold ? run.hot + 1 : 0;
-  const moving = run.hot >= 2;
-  if (!moving) run.idleChecks = 0;
+  // In people mode the person detector confirms, so one frame of motion is enough to start looking.
+  const peopleOnly = settings.mode === 'people' && run.model !== false;
+  const moving = run.hot >= (peopleOnly ? 1 : 2);
+  // When this burst of motion started; it ends after 3 s of calm.
+  if (!moving) {
+    run.calmSince ??= now;
+    if (now - run.calmSince > 3000) run.motionSince = 0;
+  } else {
+    run.calmSince = null;
+    run.motionSince ||= now;
+  }
   // Nothing to draw while the screen is blacked out.
   if (curtain.hidden) {
     drawOverlay(vw, vh, moving ? box : null, now);
     drawMeter(r.score, threshold);
   }
   // About once a second, a small picture for the phone's preview, with the moving area boxed.
-  if (run.liveOn && run.link?.open && now - run.lastPreview >= PREVIEW_MS) {
+  // Paused for a moment after an alert, so the alert's photo goes out first.
+  if (run.liveOn && run.link?.open && now - run.lastPreview >= PREVIEW_MS && now - run.lastAlert > 2000) {
     run.lastPreview = now;
     run.link.sendPreview(previewFrame(moving ? box : null));
   }
@@ -419,7 +429,6 @@ function tick() {
   if (r.warming) return setStatus('מתכונן…', 'wait');
 
   const cooling = now - run.lastAlert < settings.cooldown * 1000;
-  const peopleOnly = settings.mode === 'people' && run.model !== false;
   if (moving && !cooling) {
     if (!peopleOnly) trigger('motion', box);
     else if (run.model) checkForPeople(box);
@@ -457,8 +466,8 @@ const PERSON_SCORE = 0.55;
 const bestPerson = found => found.filter(p => p.class === 'person' && p.score >= PERSON_SCORE).sort((a, b) => b.score - a.score)[0];
 
 // The model looks at the frame shrunk to about 300px, so a far-away person a few dozen pixels
-// tall is easily missed. When the motion is in a small area, look again at a zoomed-in square
-// around it, which makes that person several times bigger for the model.
+// tall is easily missed. A zoomed-in square around a small area of motion makes that person
+// several times bigger for the model.
 function zoomOn(frame, box) {
   const fw = frame.width, fh = frame.height;
   const side = Math.min(fw, fh, Math.max(box.w, box.h, fh / 4) * 2);
@@ -473,22 +482,22 @@ function zoomOn(frame, box) {
 
 async function checkForPeople(motionBox) {
   const now = Date.now();
-  if (run.detecting || now - run.lastDetect < (run.detectGap || 600)) return;
+  if (run.detecting || now - run.lastDetect < (run.detectGap || 0)) return;
   run.detecting = true;
   const current = run;
   let found = false;
   try {
     // Detect on a frozen frame and send that same frame, so the box matches the photo.
     const frame = grabFrame(video);
-    let person = bestPerson(await current.model.detect(frame, 10, 0.4));
+    // When the motion is in a small area, take turns between the whole frame and a zoomed look at
+    // that area. One model run per check keeps each check short, so a person is caught sooner.
+    const zoom = motionBox && zoomOn(frame, motionBox);
+    const zoomed = zoom && (current.zoomTurn = !current.zoomTurn);
+    const person = bestPerson(await current.model.detect(zoomed ? zoom.crop : frame, 10, 0.4));
     let bbox = person?.bbox;
-    const zoom = !person && motionBox && zoomOn(frame, motionBox);
-    if (zoom) {
-      person = bestPerson(await current.model.detect(zoom.crop, 10, 0.4));
-      if (person) {
-        const [x, y, w, h] = person.bbox;
-        bbox = [zoom.x0 + x * zoom.scale, zoom.y0 + y * zoom.scale, w * zoom.scale, h * zoom.scale];
-      }
+    if (person && zoomed) {
+      const [x, y, w, h] = person.bbox;
+      bbox = [zoom.x0 + x * zoom.scale, zoom.y0 + y * zoom.scale, w * zoom.scale, h * zoom.scale];
     }
     found = !!person;
     if (person && run === current) {
@@ -496,12 +505,13 @@ async function checkForPeople(motionBox) {
       trigger('person', { x, y, w, h }, frame);
     }
   } catch {}
-  // Detection is the heaviest work on the phone. Under constant motion with no one there (wind in
-  // the bushes) check less often, up to every 2.5 s, and never use more than about a third of the time,
-  // so the phone stays cool and the live video smooth.
+  // Detection is the heaviest work on the phone. Right after motion starts it looks again as soon as
+  // it can (leaving the phone a short breather), so a person walking in is caught within a check or
+  // two. Only when motion goes on for a while with no one there (wind in the bushes) does it slow
+  // down, to at most every 1.5 s, so the phone stays cool.
   const took = Date.now() - now;
-  current.idleChecks = found ? 0 : (current.idleChecks || 0) + 1;
-  current.detectGap = Math.min(2500, Math.max(600 + current.idleChecks * 150, took * 3));
+  const windy = !found && now - (current.motionSince || now) > 8000;
+  current.detectGap = Math.max(100, took * 0.25, windy ? 1500 : 0);
   current.detecting = false;
   current.lastDetect = Date.now();
 }
@@ -570,7 +580,7 @@ function trigger(kind, box, frame) {
     name: cameraName(),
     at: at.getTime(),
     box: box && normalize(box, vw, vh),
-    photo: settings.photo ? snapshot(box, frame) : null,
+    photo: null,
   };
   run.sent++;
   $('sent-count').textContent = run.sent === 1 ? 'התראה אחת' : `${run.sent} התראות`;
@@ -578,20 +588,30 @@ function trigger(kind, box, frame) {
   // Kept until the phone confirms it, and sent again after a reconnect. Only the latest 10.
   run.pending.set(msg.id, msg);
   if (run.pending.size > 10) run.pending.delete(run.pending.keys().next().value);
+  // The alert goes out right away, small; its photo follows a moment later, so encoding and
+  // uploading ~50 KB never holds up the ring.
   run.link?.send(msg);
   maybePush(msg);
+  if (settings.photo) {
+    const current = run;
+    const source = frame || grabFrame(video);
+    setTimeout(() => {
+      msg.photo = snapshot(box, source);
+      current.link?.send({ type: 'alert-photo', id: msg.id, photo: msg.photo });
+    }, 0);
+  }
 }
 
 // ----- Push to the phone through Apple/Google, for when Shomer isn't on its screen -----
 
 // If the phone has Shomer open on screen, the local link is enough. Otherwise push right away;
-// and if the phone doesn't confirm the local alert within 3 s, push anyway.
+// and if the phone doesn't confirm the alert within 1.5 s, push anyway.
 function maybePush(msg) {
   if (!run.pushSub) return;
   const watching = run.link?.open && run.phoneVisible && Date.now() - run.phoneSeen < 4000;
   if (!watching) return pushAlert(msg);
   const current = run;
-  setTimeout(() => run === current && current.pending.has(msg.id) && pushAlert(msg), 3000);
+  setTimeout(() => run === current && current.pending.has(msg.id) && pushAlert(msg), 1500);
 }
 
 async function pushAlert(msg) {
@@ -759,6 +779,7 @@ function onCameraMessage(p, msg) {
     void el.offsetWidth;
     el.classList.add('alarm');
   }
+  if (msg.type === 'alert-photo') attachPhoto(msg.id, msg.photo);
   if (msg.type === 'push-key') {
     p.pushKey = msg.key;
     renderPush(p);
@@ -935,6 +956,7 @@ function addAlert(msg) {
   list.querySelector('.empty')?.remove();
   const li = document.createElement('li');
   li.className = 'new';
+  li.dataset.id = msg.id;
   const head = document.createElement('div');
   head.className = 'alert-head';
   const title = document.createElement('b');
@@ -943,15 +965,21 @@ function addAlert(msg) {
   time.textContent = clock(new Date(msg.at));
   head.append(title, time);
   li.append(head);
-  if (typeof msg.photo === 'string' && msg.photo.startsWith('data:image/jpeg')) {
-    const img = document.createElement('img');
-    img.src = msg.photo;
-    img.alt = 'תמונה מהמצלמה';
-    li.append(img);
-  }
   list.prepend(li);
+  attachPhoto(msg.id, msg.photo);
   // Kept in memory only, and only the latest ones.
   while (list.children.length > 20) list.lastElementChild.remove();
+}
+
+// The photo arrives a moment after its alert.
+function attachPhoto(id, photo) {
+  if (typeof photo !== 'string' || !photo.startsWith('data:image/jpeg')) return;
+  const li = [...$('alerts').children].find(el => el.dataset.id === id);
+  if (!li || li.querySelector('img')) return;
+  const img = document.createElement('img');
+  img.src = photo;
+  img.alt = 'תמונה מהמצלמה';
+  li.append(img);
 }
 
 // ---------- Sound ----------

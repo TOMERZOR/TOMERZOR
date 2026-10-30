@@ -101,6 +101,7 @@
     <h3>🌙 כדי שהמכשיר לא יאיר בחושך</h3>
     <p class="note">המסך חייב להישאר דלוק כדי שהמצלמה תעבוד, אבל שומר מציג עליו שחור מוחלט. את השאר מגדירים בטלפון עצמו:</p>
     <ul class="prep">
+      <li><b>נעילה אוטומטית: אף פעם</b> (באייפון: הגדרות ← תצוגה ובהירות), ו<b>מצב חיסכון בסוללה כבוי</b>. בחיסכון בסוללה האייפון ננעל אחרי 30 שניות והחיבור נופל</li>
       <li>בהירות המסך למינימום, ו<b>בהירות אוטומטית כבויה</b></li>
       <li><b>נא לא להפריע</b> מופעל, כדי שהתראות ושיחות לא ידליקו את המסך</li>
       <li>מצב כהה מופעל, והפנס כבוי</li>
@@ -161,8 +162,7 @@
   </div>
   <button class="primary" id="reconnect" hidden>חבר מחדש</button>
   <div class="live" id="live-view">
-    <video id="live-video" playsinline muted autoplay></video>
-    <canvas id="live-overlay"></canvas>
+    <img id="live-img" alt="תמונה חיה מהמצלמה">
     <div class="live-state" id="live-state"></div>
     <div class="live-quality" id="live-quality"></div>
     <button class="live-size" id="live-size" aria-label="הגדל">⛶</button>
@@ -172,7 +172,7 @@
     <button class="ghost" id="check">בדיקת חיבור וצליל</button>
   </div>
   <p class="note center" id="check-result" role="status"></p>
-  <p class="note">השאר את המסך הזה פתוח: הצליל וההתראות עובדים רק כשהוא מוצג. המסך לא ייכבה מעצמו.</p>
+  <p class="note">השאר את המסך הזה פתוח: הצליל וההתראות עובדים רק כשהוא מוצג. אם הטלפון ננעל או שעוברים לאפליקציה אחרת, החיבור עלול ליפול. באייפון: הגדרות ← תצוגה ובהירות ← נעילה אוטומטית ← <b>אף פעם</b>, ומצב חיסכון בסוללה כבוי.</p>
   <h3 class="list-title">התראות</h3>
   <ul class="alerts" id="alerts"><li class="empty">עוד אין התראות.</li></ul>
 </section>

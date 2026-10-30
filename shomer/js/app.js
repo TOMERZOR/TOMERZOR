@@ -37,7 +37,10 @@ function show(id) {
 }
 
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
-  if (b.dataset.go === 'pair') unlockAudio();
+  if (b.dataset.go === 'pair') {
+    unlockAudio();
+    if (awakeVideo.paused) awakeVideo.play().catch(() => {});
+  }
   show(b.dataset.go);
 }));
 
@@ -48,7 +51,14 @@ function drawQr(el, text) {
   el.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 3, scalable: true });
 }
 
+// If the screen turns off, the browser stops the page and the link between the devices drops.
+// The Wake Lock API keeps it on; where that's missing or broken (iPhone web apps before iOS 18.4),
+// a tiny silent video playing in a loop does the same job.
+const awakeVideo = Object.assign(document.createElement('video'), { src: 'img/keepawake.mp4', muted: true, loop: true, playsInline: true });
+awakeVideo.setAttribute('playsinline', '');
+
 async function keepAwake(holder) {
+  if (awakeVideo.paused) awakeVideo.play().catch(() => {});
   try {
     if (navigator.wakeLock && !document.hidden) holder.wake = await navigator.wakeLock.request('screen');
   } catch {}
@@ -171,13 +181,13 @@ async function openCamera() {
   video.srcObject = run.stream;
   await video.play().catch(() => {});
   run.detector.reset();
-  run.link?.setTrack(run.liveOn ? run.stream.getVideoTracks()[0] : null);
 }
 
 $('start').addEventListener('click', async () => {
   // Full screen hides the status bar (clock, icons), which would otherwise stay lit. Android only.
   document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
   show('cam-run');
+  if (awakeVideo.paused) awakeVideo.play().catch(() => {});
   run = {
     detector: new MotionDetector(),
     hot: 0,
@@ -188,8 +198,10 @@ $('start').addEventListener('click', async () => {
     detecting: false,
     model: null,
     marks: [],
-    queue: [],
+    pending: new Map(),
     liveOn: true,
+    lastPreview: 0,
+    phoneSeen: 0,
   };
   $('sent-count').textContent = '';
   $('last-sent').textContent = '';
@@ -222,6 +234,7 @@ function stopWatching() {
   run.wake?.release().catch(() => {});
   video.srcObject = null;
   run = null;
+  if (!phone) awakeVideo.pause();
   setDark(false);
   $('pair-panel').hidden = true;
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -324,10 +337,11 @@ function onPhoneConnected() {
   $('pair-panel').hidden = true;
   $('pair-again').hidden = true;
   $('link-state').textContent = '🔗 הטלפון מחובר';
+  run.phoneSeen = Date.now();
   if (settings.dark) setDark(true);
   sendHeartbeat();
-  // Alerts that happened while the phone was away.
-  for (const msg of run.queue.splice(0)) run.link.send(msg);
+  // Alerts the phone hasn't confirmed yet (it was away, or the link dropped mid-way).
+  for (const msg of run.pending.values()) run.link.send(msg);
 }
 
 function onLinkState(state) {
@@ -343,16 +357,17 @@ function onLinkState(state) {
 }
 
 function onPhoneMessage(msg) {
-  if (msg.type === 'live') {
-    run.liveOn = !!msg.on;
-    run.link.setTrack(run.liveOn ? run.stream?.getVideoTracks()[0] : null);
-  }
+  if (!run.phoneSeen || Date.now() - run.phoneSeen > 10000) $('link-state').textContent = '🔗 הטלפון מחובר';
+  run.phoneSeen = Date.now();
+  if (msg.type === 'live') run.liveOn = !!msg.on;
+  if (msg.type === 'ack') run.pending.delete(msg.id);
   if (msg.type === 'ping') run.link.send({ type: 'pong', t: msg.t });
-  if (msg.type === 'video-restart' && run.liveOn) run.link.restartVideo(run.stream?.getVideoTracks()[0]);
 }
 
 async function sendHeartbeat() {
   if (!run?.link?.open) return;
+  // The phone sends heartbeats too; say so on the camera if they stop.
+  if (Date.now() - run.phoneSeen > 10000) $('link-state').textContent = '📵 הטלפון לא עונה';
   let battery = null;
   try {
     const b = await navigator.getBattery?.();
@@ -391,9 +406,10 @@ function tick() {
     drawOverlay(vw, vh, moving ? box : null, now);
     drawMeter(r.score, threshold);
   }
-  if (run.link?.open && (moving || run.boxShown)) {
-    run.boxShown = moving;
-    run.link.send({ type: 'motion', box: moving && box ? normalize(box, vw, vh) : null });
+  // About once a second, a small picture for the phone's preview, with the moving area boxed.
+  if (run.liveOn && run.link?.open && now - run.lastPreview >= PREVIEW_MS) {
+    run.lastPreview = now;
+    run.link.sendPreview(previewFrame(moving ? box : null));
   }
 
   if (now < run.armedAt) return setStatus(`מתחיל לשמור בעוד ${Math.ceil((run.armedAt - now) / 1000)} שניות…`, 'wait');
@@ -411,6 +427,24 @@ function tick() {
   else if (moving) setStatus(peopleOnly ? 'יש תנועה, בודק אם זה אדם…' : 'תנועה!', 'move');
   else if (settings.mode === 'people' && run.model === false) setStatus('שומר (זיהוי אנשים לא נטען, מתריע על כל תנועה)', 'ok');
   else setStatus('שומר', 'ok');
+}
+
+const PREVIEW_MS = 1000;
+const previewCanvas = document.createElement('canvas');
+
+function previewFrame(box) {
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const scale = 320 / vw;
+  previewCanvas.width = 320;
+  previewCanvas.height = Math.round(vh * scale);
+  const ctx = previewCanvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, previewCanvas.width, previewCanvas.height);
+  if (box) {
+    ctx.strokeStyle = '#ffb703';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(box.x * scale, box.y * scale, box.w * scale, box.h * scale);
+  }
+  return previewCanvas.toDataURL('image/jpeg', 0.6);
 }
 
 const normalize = (box, vw, vh) => ({ x: box.x / vw, y: box.y / vh, w: box.w / vw, h: box.h / vh });
@@ -527,6 +561,7 @@ function trigger(kind, box, frame) {
   const vw = video.videoWidth, vh = video.videoHeight;
   const msg = {
     type: 'alert',
+    id: `${at.getTime()}-${Math.random().toString(36).slice(2, 7)}`,
     kind,
     title: kind === 'person' ? 'זוהה אדם' : 'זוהתה תנועה',
     name: cameraName(),
@@ -537,10 +572,10 @@ function trigger(kind, box, frame) {
   run.sent++;
   $('sent-count').textContent = run.sent === 1 ? 'התראה אחת' : `${run.sent} התראות`;
   $('last-sent').textContent = `אחרונה: ${clock(at)}`;
-  if (!run.link?.send(msg)) {
-    run.queue.push(msg);
-    if (run.queue.length > 5) run.queue.shift();
-  }
+  // Kept until the phone confirms it, and sent again after a reconnect. Only the latest 10.
+  run.pending.set(msg.id, msg);
+  if (run.pending.size > 10) run.pending.delete(run.pending.keys().next().value);
+  run.link?.send(msg);
 }
 
 document.addEventListener('visibilitychange', async () => {
@@ -618,11 +653,10 @@ function stopPhoneScan() {
 
 // ----- Receiving: live view, alerts, link watchdog -----
 
-const liveVideo = $('live-video');
-const liveOverlay = $('live-overlay');
+const liveImg = $('live-img');
 
 function beginPhone(link) {
-  const p = (phone = { link, lastSeen: 0, lost: false, liveOn: store.get('liveOn', true) });
+  const p = (phone = { link, lastSeen: 0, lost: false, liveOn: store.get('liveOn', true), seenAlerts: new Set(), lastFrame: 0 });
   link.on('open', () => {
     if (phone !== p) return;
     p.lastSeen = Date.now();
@@ -632,13 +666,11 @@ function beginPhone(link) {
     setLive(p.liveOn);
     keepAwake(p);
     p.watchdog = setInterval(() => watchdog(p), 1000);
-    p.statsTimer = setInterval(() => videoQuality(p), 2000);
-    // If the video hasn't started, ask once more.
-    setTimeout(() => phone === p && p.liveOn && !liveVideo.videoWidth && p.link.send({ type: 'live', on: true }), 6000);
   });
-  link.on('track', stream => {
-    liveVideo.srcObject = stream;
-    liveVideo.play().catch(() => {});
+  link.on('preview', dataUrl => {
+    if (phone !== p || !dataUrl.startsWith('data:image/jpeg')) return;
+    liveImg.src = dataUrl;
+    p.lastFrame = Date.now();
   });
   link.on('message', msg => phone === p && onCameraMessage(p, msg));
   link.on('state', state => {
@@ -650,13 +682,13 @@ function closePhone() {
   if (!phone) return;
   clearInterval(phone.watchdog);
   clearInterval(phone.lostAlarm);
-  clearInterval(phone.statsTimer);
   clearTimeout(phone.pingTimer);
   $('live-quality').textContent = '';
   phone.link.close();
   phone.wake?.release().catch(() => {});
   phone = null;
-  liveVideo.srcObject = null;
+  if (!run) awakeVideo.pause();
+  liveImg.removeAttribute('src');
   $('live-view').classList.remove('big');
 }
 
@@ -676,9 +708,11 @@ function onCameraMessage(p, msg) {
     $('battery').textContent = b ? `${b.charging ? '⚡' : '🔋'} ${b.level}%` : '';
     $('battery').classList.toggle('low', !!b && !b.charging && b.level <= 20);
   }
-  if (msg.type === 'motion') drawLiveBox(msg.box, '#ffb703');
   if (msg.type === 'alert') {
-    drawLiveBox(msg.box, '#ff3b4e');
+    // Confirm every copy; the camera resends until it hears back.
+    p.link.send({ type: 'ack', id: msg.id });
+    if (p.seenAlerts.has(msg.id)) return;
+    p.seenAlerts.add(msg.id);
     addAlert(msg);
     ring();
     const el = $('live-view');
@@ -694,8 +728,15 @@ function onCameraMessage(p, msg) {
 }
 
 // The camera sends a heartbeat every 2 s; silence means it died, went out of range or its screen went off.
+// The phone sends one back, so the camera can tell too.
 function watchdog(p) {
-  const quiet = Date.now() - p.lastSeen;
+  const now = Date.now();
+  if (now - (p.lastHb || 0) >= 2000) {
+    p.lastHb = now;
+    p.link.send({ type: 'hb' });
+  }
+  previewAge(p);
+  const quiet = now - p.lastSeen;
   if (quiet > 10000) lostCamera(p);
   else if (quiet > 5000 && !p.weak && !p.lost) {
     p.weak = true;
@@ -707,30 +748,20 @@ function lostCamera(p) {
   if (p.lost) return;
   p.lost = true;
   setConn('lost');
-  drawLiveBox(null);
   alarmLost();
   p.lostAlarm = setInterval(alarmLost, 15000);
 }
 
-// Shows frame rate and delay on the live view, and restarts the video if it froze while the link is up.
-async function videoQuality(p) {
+// How old the preview picture is. It's a still picture every second, not video.
+function previewAge(p) {
   const el = $('live-quality');
-  if (!p.liveOn || p.lost) {
+  if (!p.liveOn || p.lost || !p.lastFrame) {
     el.textContent = '';
-    p.frozen = 0;
     return;
   }
-  let stats;
-  try { stats = await p.link.videoStats(); } catch { return; }
-  if (phone !== p || stats.fps == null) return;
-  const fps = Math.round(stats.fps);
-  el.textContent = `${fps} fps` + (stats.delay != null ? ` · ${stats.delay.toFixed(1)} שנ׳` : '');
-  el.classList.toggle('bad', fps < 5);
-  p.frozen = fps < 1 ? (p.frozen || 0) + 1 : 0;
-  if (p.frozen >= 2 && Date.now() - (p.lastRestart || 0) > 10000) {
-    p.lastRestart = Date.now();
-    p.link.send({ type: 'video-restart' });
-  }
+  const age = Math.round((Date.now() - p.lastFrame) / 1000);
+  el.textContent = age <= 1 ? 'עכשיו' : `לפני ${age} שנ׳`;
+  el.classList.toggle('bad', age > 5);
 }
 
 function setConn(kind) {
@@ -746,7 +777,7 @@ function setConn(kind) {
   $('reconnect').hidden = kind !== 'lost';
   // Don't leave the last frame looking like a live picture.
   $('live-view').classList.toggle('stale', kind === 'lost');
-  $('live-state').textContent = kind === 'ok' ? 'שידור חי' : kind === 'lost' ? 'אין שידור' : '';
+  $('live-state').textContent = kind === 'ok' ? 'תמונה חיה' : kind === 'lost' ? 'אין חיבור' : '';
 }
 
 function setLive(on) {
@@ -754,7 +785,7 @@ function setLive(on) {
   store.set('liveOn', on);
   phone.link.send({ type: 'live', on });
   $('live-view').hidden = !on;
-  $('live-toggle').textContent = on ? 'כבה שידור חי (חוסך סוללה)' : '📺 הצג שידור חי';
+  $('live-toggle').textContent = on ? 'הסתר תמונה חיה' : '📺 הצג תמונה חיה';
   setConn(phone.lost ? 'lost' : phone.weak ? 'weak' : 'ok');
 }
 
@@ -772,6 +803,7 @@ $('check').addEventListener('click', () => {
 
 $('reconnect').addEventListener('click', () => {
   unlockAudio();
+  if (awakeVideo.paused) awakeVideo.play().catch(() => {});
   show('pair');
 });
 
@@ -781,20 +813,6 @@ $('disconnect').addEventListener('click', () => {
 });
 
 document.addEventListener('visibilitychange', () => phone && !document.hidden && keepAwake(phone));
-
-function drawLiveBox(box, color) {
-  const w = liveVideo.videoWidth || 640, h = liveVideo.videoHeight || 480;
-  if (liveOverlay.width !== w || liveOverlay.height !== h) {
-    liveOverlay.width = w;
-    liveOverlay.height = h;
-  }
-  const ctx = liveOverlay.getContext('2d');
-  ctx.clearRect(0, 0, w, h);
-  if (!box) return;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(2, w / 160);
-  ctx.strokeRect(box.x * w, box.y * h, box.w * w, box.h * h);
-}
 
 function addAlert(msg) {
   const list = $('alerts');
@@ -860,8 +878,12 @@ function ring() {
 }
 
 // Sound needs a tap before it can play; any tap on the page counts.
-document.addEventListener('click', unlockAudio);
-document.addEventListener('touchend', unlockAudio);
+function onTap() {
+  unlockAudio();
+  if ((run || phone || scan) && awakeVideo.paused) awakeVideo.play().catch(() => {});
+}
+document.addEventListener('click', onTap);
+document.addEventListener('touchend', onTap);
 
 // ---------- Direct links: …/shomer/#camera and …/shomer/#phone ----------
 

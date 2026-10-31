@@ -1,0 +1,26 @@
+<section class="section">
+  <div class="container container--narrow">
+    <h1 class="section__title">{{ page.title }}</h1>
+    {%- if page.content != blank -%}<div class="rte">{{ page.content }}</div>{%- endif -%}
+    {%- form 'contact', class: 'contact' -%}
+      {%- if form.posted_successfully? -%}
+        <p class="notice" role="status">תודה! קיבלנו את הפנייה ונחזור אלייך תוך יום עסקים.</p>
+      {%- elsif form.errors -%}
+        <p class="notice notice--error" role="alert">{{ form.errors | default_errors }}</p>
+      {%- endif -%}
+      <label class="field"><span>שם</span><input type="text" name="contact[name]" autocomplete="name" value="{{ form.name }}"></label>
+      <label class="field"><span>אימייל *</span><input type="email" name="contact[email]" autocomplete="email" required value="{{ form.email }}"></label>
+      <label class="field"><span>טלפון</span><input type="tel" name="contact[phone]" autocomplete="tel" value="{{ form.phone }}"></label>
+      <label class="field"><span>מספר הזמנה (אם יש)</span><input type="text" name="contact[order]"></label>
+      <label class="field"><span>הודעה *</span><textarea name="contact[body]" rows="5" required>{{ form.body }}</textarea></label>
+      <button type="submit" class="btn">שליחה</button>
+    {%- endform -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "צור קשר",
+  "tag": "div"
+}
+{% endschema %}

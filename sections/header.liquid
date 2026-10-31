@@ -1,0 +1,49 @@
+<header class="header">
+  <div class="container header__row">
+    <button type="button" class="header__icon header__menu-btn" aria-controls="MenuDrawer" aria-expanded="false" data-menu-open aria-label="תפריט">
+      {% render 'icon', name: 'menu' %}
+    </button>
+    <a href="{{ routes.root_url }}" class="header__logo" aria-label="{{ shop.name }} – דף הבית">
+      {%- if settings.logo != blank -%}
+        {{ settings.logo | image_url: width: 480 | image_tag: width: settings.logo_width, height: null, alt: shop.name, style: 'height:auto' }}
+      {%- else -%}
+        <span class="wordmark">{{ shop.name }}</span>
+      {%- endif -%}
+    </a>
+    <nav class="header__nav" aria-label="ראשי">
+      {%- for link in section.settings.menu.links -%}
+        <a href="{{ link.url }}"{% if link.active %} aria-current="page"{% endif %}>{{ link.title }}</a>
+      {%- endfor -%}
+    </nav>
+    <a href="{{ routes.cart_url }}" class="header__icon header__cart" aria-label="סל הקניות, {{ cart.item_count }} פריטים">
+      {% render 'icon', name: 'cart' %}
+      {%- if cart.item_count > 0 -%}<span class="header__count">{{ cart.item_count }}</span>{%- endif -%}
+    </a>
+  </div>
+  <div class="drawer" id="MenuDrawer" hidden data-menu>
+    <div class="drawer__panel">
+      <button type="button" class="header__icon drawer__close" data-menu-close aria-label="סגירה">{% render 'icon', name: 'x' %}</button>
+      <nav aria-label="תפריט נייד">
+        {%- for link in section.settings.menu.links -%}
+          <a href="{{ link.url }}">{{ link.title }}</a>
+        {%- endfor -%}
+      </nav>
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "כותרת עליונה",
+  "tag": "div",
+  "class": "section-header",
+  "settings": [
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "תפריט",
+      "default": "main-menu"
+    }
+  ]
+}
+{% endschema %}

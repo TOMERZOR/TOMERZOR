@@ -1,0 +1,166 @@
+{%- liquid
+  assign bg = section.settings.bg
+-%}
+<div class="section section--product{% if bg == 'alt' %} section--alt{% endif %}" id="buy">
+  <div class="container">
+    {% render 'buy-box', product: product, section: section %}
+    {%- if section.blocks.size > 0 -%}
+      <div class="app-blocks">
+        {%- for block in section.blocks -%}{% render block %}{%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "עמוד מוצר",
+  "tag": "section",
+  "class": "section-main-product",
+  "settings": [
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "שורה קטנה מעל הכותרת",
+      "default": "תלתלים בלי חום · בזמן שאת ישנה"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "תת-כותרת",
+      "default": "מגלגלת בערב, מתעוררת עם תלתלים רכים. בלי מסלסל, בלי נזק מחום."
+    },
+    {
+      "type": "textarea",
+      "id": "bullets",
+      "label": "נקודות מפתח (שורה לכל נקודה)",
+      "default": "אפס חום: בלי מסלסל, בלי פן ובלי נזק לשיער\nסאטן חלק שמפחית חיכוך וקרזול\nנוח לשינה: רך ומרופד לכל אורכו\n5 דקות בערב במקום 40 דקות בבוקר"
+    },
+    {
+      "type": "header",
+      "content": "אפשרויות מוצר"
+    },
+    {
+      "type": "text",
+      "id": "bundle_option",
+      "label": "שם האפשרות של החבילות",
+      "default": "חבילה"
+    },
+    {
+      "type": "text",
+      "id": "bundle_label",
+      "label": "כותרת בחירת חבילה",
+      "default": "בחרי חבילה"
+    },
+    {
+      "type": "range",
+      "id": "popular_index",
+      "label": "איזו חבילה מסומנת כפופולרית",
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "default": 2,
+      "info": "0 = בלי סימון"
+    },
+    {
+      "type": "text",
+      "id": "popular_text",
+      "label": "טקסט התגית",
+      "default": "הכי משתלם"
+    },
+    {
+      "type": "text",
+      "id": "color_option",
+      "label": "שם האפשרות של הצבע",
+      "default": "צבע"
+    },
+    {
+      "type": "textarea",
+      "id": "swatches",
+      "label": "צבעי הדגימות (שם:קוד)",
+      "default": "שמפניה:#D8C08F\nשחור:#1F1B1A\nורוד פודרה:#E3B9B4"
+    },
+    {
+      "type": "header",
+      "content": "כפתור והזמנה"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "טקסט הכפתור",
+      "default": "להזמנה"
+    },
+    {
+      "type": "checkbox",
+      "id": "go_to_checkout",
+      "label": "מעבר ישיר לתשלום אחרי לחיצה",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_dynamic_checkout",
+      "label": "הצגת כפתורי תשלום מהיר (Apple Pay וכו') אם הסולק תומך",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "eta_min",
+      "label": "זמן אספקה מינימלי (ימי עסקים)",
+      "min": 1,
+      "max": 30,
+      "step": 1,
+      "default": 10
+    },
+    {
+      "type": "range",
+      "id": "eta_max",
+      "label": "זמן אספקה מקסימלי (ימי עסקים)",
+      "min": 1,
+      "max": 40,
+      "step": 1,
+      "default": 18
+    },
+    {
+      "type": "header",
+      "content": "לשוניות"
+    },
+    {
+      "type": "richtext",
+      "id": "tab_box",
+      "label": "מה בקופסה",
+      "default": "<p>בכל סט: מוט סלסול מסאטן באורך כ-85 ס\"מ, 2 גומיות סאטן ושקית אחסון מסאטן.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "tab_shipping",
+      "label": "משלוח והחזרות",
+      "default": "<p>משלוח חינם לכל הארץ עם מספר מעקב. זמן אספקה: בדרך כלל 10–15 ימי עסקים, ולא יותר מ-18 ימי עסקים.</p><p>אפשר לבטל עסקה תוך 14 יום מקבלת המוצר, בהתאם לחוק הגנת הצרכן.</p>"
+    },
+    {
+      "type": "header",
+      "content": "עיצוב"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    }
+  ]
+}
+{% endschema %}

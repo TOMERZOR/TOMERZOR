@@ -1,0 +1,95 @@
+<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+  <div class="container iwt{% if section.settings.image_first == false %} iwt--reverse{% endif %}">
+    <div class="iwt__media">
+      {%- if section.settings.image != blank -%}
+        {{ section.settings.image | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 50vw, 100vw', widths: '400, 600, 800, 1000, 1200', alt: section.settings.image.alt }}
+      {%- elsif section.settings.fallback != blank -%}
+        {{ section.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: '' }}
+      {%- endif -%}
+    </div>
+    <div class="iwt__copy">
+      {%- if section.settings.eyebrow != blank -%}<p class="eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
+      <h2 class="section__title section__title--start">{{ section.settings.title }}</h2>
+      <div class="rte">{{ section.settings.text }}</div>
+      {%- if section.settings.button_text != blank -%}
+        <a class="btn" href="{{ section.settings.button_link | default: '#buy' }}">{{ section.settings.button_text }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "תמונה עם טקסט",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "תמונה"
+    },
+    {
+      "type": "text",
+      "id": "fallback",
+      "label": "תמונת ברירת מחדל מתוך הערכה (שם קובץ)",
+      "default": "morning-curls.jpg"
+    },
+    {
+      "type": "checkbox",
+      "id": "image_first",
+      "label": "תמונה בצד ימין",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "שורה קטנה",
+      "default": "התוצאה"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "תלתלים רכים של פן, בלי לגעת במסלסל"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "טקסט",
+      "default": "<p>השיער מתלפף סביב מוט רך ומתייבש בעדינות בזמן השינה. בבוקר משחררות, מפזרות עם האצבעות ומקבלות גלים מלאים בנפח.</p><p>התוצאה משתנה לפי סוג ואורך השיער. בפעם הראשונה כדאי לנסות כמה שיטות גלגול עד שמוצאים את שלך.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "טקסט כפתור",
+      "default": "לבחירת סט"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "קישור כפתור"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "presets": [
+    {
+      "name": "תמונה עם טקסט"
+    }
+  ]
+}
+{% endschema %}

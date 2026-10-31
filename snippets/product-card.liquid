@@ -1,0 +1,9 @@
+<a class="card" href="{{ product.url }}">
+  <span class="card__img">
+    {%- if product.featured_image -%}
+      {{ product.featured_image | image_url: width: 700 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 25vw, 50vw', widths: '300, 500, 700', alt: product.featured_image.alt }}
+    {%- endif -%}
+  </span>
+  <span class="card__title">{{ product.title }}</span>
+  <span class="card__price">{% if product.price_varies %}החל מ-{% endif %}{{ product.price_min | money }}</span>
+</a>

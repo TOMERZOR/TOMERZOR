@@ -1,0 +1,62 @@
+<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+  <div class="container container--narrow center">
+    {%- if section.settings.title != blank -%}<h2 class="section__title">{{ section.settings.title }}</h2>{%- endif -%}
+    <div class="rte">{{ section.settings.text }}</div>
+    {%- if section.settings.button_text != blank -%}
+      <a class="btn" href="{{ section.settings.button_link | default: '#buy' }}">{{ section.settings.button_text }}</a>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "טקסט וכפתור",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "מתנה מושלמת לחנוכה"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "טקסט",
+      "default": "<p>קנו 2 סטים, אחד בשבילך ואחד לחברה הכי טובה.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "טקסט כפתור",
+      "default": "לבחירת חבילה"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "קישור כפתור"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": "alt"
+    }
+  ],
+  "presets": [
+    {
+      "name": "טקסט וכפתור"
+    }
+  ]
+}
+{% endschema %}

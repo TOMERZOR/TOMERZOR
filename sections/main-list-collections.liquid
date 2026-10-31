@@ -1,0 +1,17 @@
+<section class="section">
+  <div class="container">
+    <h1 class="section__title">כל המוצרים</h1>
+    <div class="grid">
+      {%- for p in collections.all.products limit: 24 -%}
+        {% render 'product-card', product: p %}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "רשימת אוספים",
+  "tag": "div"
+}
+{% endschema %}

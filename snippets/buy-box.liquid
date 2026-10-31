@@ -1,0 +1,289 @@
+{%- comment -%}
+  The product "landing" buy box: gallery, bundle picker, colour picker, order button, trust row.
+  Params: product, section
+  Expects options named by section.settings.bundle_option (default "חבילה") and
+  section.settings.color_option (default "צבע"). Both are optional.
+{%- endcomment -%}
+{%- liquid
+  assign current = product.selected_or_first_available_variant
+  assign form_id = 'BuyForm-' | append: section.id
+  assign bundle_name = section.settings.bundle_option | default: 'חבילה'
+  assign color_name = section.settings.color_option | default: 'צבע'
+  assign bpos = -1
+  assign cpos = -1
+  for option in product.options_with_values
+    if option.name == bundle_name
+      assign bpos = forloop.index0
+      assign bundle_option = option
+    elsif option.name == color_name
+      assign cpos = forloop.index0
+      assign color_option = option
+    endif
+  endfor
+-%}
+
+<div class="buy" data-buy data-section="{{ section.id }}" data-bpos="{{ bpos }}" data-cpos="{{ cpos }}">
+  <div class="buy__gallery" data-gallery>
+    <div class="buy__slides" data-slides>
+      {%- if product.media.size > 0 -%}
+        {%- for media in product.media -%}
+          {%- if media.media_type == 'image' -%}
+            <figure class="buy__slide" data-media-id="{{ media.id }}">
+              {{ media | image_url: width: 1200 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '(min-width: 990px) 55vw, 100vw', widths: '400, 600, 800, 1000, 1200', alt: media.alt }}
+            </figure>
+          {%- elsif media.media_type == 'video' or media.media_type == 'external_video' -%}
+            <figure class="buy__slide buy__slide--video" data-media-id="{{ media.id }}">
+              {{ media | media_tag: image_size: '1200x', autoplay: true, loop: true, muted: true, controls: false }}
+            </figure>
+          {%- endif -%}
+        {%- endfor -%}
+      {%- else -%}
+        <figure class="buy__slide">
+          {{ 'product-hero.jpg' | asset_url | image_tag: alt: product.title, loading: 'eager' }}
+        </figure>
+      {%- endif -%}
+    </div>
+    {%- if product.media.size > 1 -%}
+      <div class="buy__thumbs" role="list">
+        {%- for media in product.media -%}
+          <button type="button" class="buy__thumb{% if forloop.first %} is-active{% endif %}" data-thumb="{{ forloop.index0 }}" aria-label="תמונה {{ forloop.index }} מתוך {{ product.media.size }}" role="listitem">
+            {{ media.preview_image | image_url: width: 160 | image_tag: loading: 'lazy', alt: '' }}
+          </button>
+        {%- endfor -%}
+      </div>
+    {%- endif -%}
+  </div>
+
+  <div class="buy__info">
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="buy__eyebrow">{{ section.settings.eyebrow }}</p>
+    {%- endif -%}
+    <h1 class="buy__title">{{ product.title }}</h1>
+    {%- if section.settings.subtitle != blank -%}
+      <p class="buy__subtitle">{{ section.settings.subtitle }}</p>
+    {%- endif -%}
+
+    <div class="buy__price" data-price>
+      <span class="price">{{ current.price | money }}</span>
+      {%- if current.compare_at_price > current.price -%}
+        <s class="price price--was">{{ current.compare_at_price | money }}</s>
+      {%- endif -%}
+    </div>
+
+    {%- if section.settings.bullets != blank -%}
+      <ul class="buy__bullets">
+        {%- assign bullet_lines = section.settings.bullets | newline_to_br | split: '<br />' -%}
+        {%- for line in bullet_lines -%}
+          {%- assign clean = line | strip -%}
+          {%- if clean != blank -%}
+            <li>{% render 'icon', name: 'check' %}<span>{{ clean }}</span></li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+
+    {%- form 'product', product, id: form_id, class: 'buy__form', novalidate: 'novalidate' -%}
+      <input type="hidden" name="id" value="{{ current.id }}" data-variant-input>
+      <input type="hidden" name="quantity" value="1">
+      {%- if section.settings.go_to_checkout -%}
+        <input type="hidden" name="return_to" value="/checkout">
+      {%- endif -%}
+
+      {%- if bpos >= 0 -%}
+        {%- liquid
+          assign single_price = 0
+          for v in product.variants
+            assign vq = v.options[bpos] | split: ' ' | first | plus: 0
+            if vq <= 1
+              if cpos < 0 or v.options[cpos] == current.options[cpos]
+                assign single_price = v.price
+                break
+              endif
+            endif
+          endfor
+        -%}
+        <fieldset class="bundles" data-option-index="{{ bpos }}">
+          <legend class="opt__label">{{ section.settings.bundle_label | default: 'בחרי חבילה' }}</legend>
+          {%- for ov in bundle_option.values -%}
+            {%- liquid
+              assign value = ov.name | default: ov
+              assign qty = value | split: ' ' | first | plus: 0
+              if qty < 1
+                assign qty = 1
+              endif
+              assign v_price = 0
+              for v in product.variants
+                if v.options[bpos] == value
+                  if cpos < 0 or v.options[cpos] == current.options[cpos]
+                    assign v_price = v.price
+                    break
+                  endif
+                endif
+              endfor
+              assign full = single_price | times: qty
+              assign saving = full | minus: v_price
+              assign per_set = v_price | divided_by: qty
+              assign checked = false
+              if current.options[bpos] == value
+                assign checked = true
+              endif
+              assign show_badge = false
+              if forloop.index == section.settings.popular_index and section.settings.popular_text != blank
+                assign show_badge = true
+              endif
+            -%}
+            <label class="bundle{% if checked %} is-checked{% endif %}">
+              <input type="radio" name="opt-{{ section.id }}-{{ bpos }}" value="{{ value | escape }}" {% if checked %}checked{% endif %} data-option>
+              <span class="bundle__dot" aria-hidden="true"></span>
+              <span class="bundle__main">
+                <span class="bundle__name">{{ value }}</span>
+                {%- if qty > 1 -%}
+                  <span class="bundle__per">{{ per_set | money }} לסט</span>
+                {%- endif -%}
+              </span>
+              <span class="bundle__side">
+                <span class="bundle__price" data-bundle-price="{{ value | escape }}">{{ v_price | money }}</span>
+                <span class="bundle__save" data-bundle-save="{{ value | escape }}">{% if saving > 0 %}חוסכת {{ saving | money }}{% endif %}</span>
+              </span>
+              {%- if show_badge -%}<span class="bundle__badge">{{ section.settings.popular_text }}</span>{%- endif -%}
+            </label>
+          {%- endfor -%}
+        </fieldset>
+      {%- endif -%}
+
+      {%- if cpos >= 0 -%}
+        {%- assign swatch_map = section.settings.swatches | newline_to_br | split: '<br />' -%}
+        <fieldset class="swatches" data-option-index="{{ cpos }}">
+          <legend class="opt__label">צבע: <strong data-color-label>{{ current.options[cpos] }}</strong></legend>
+          <div class="swatches__row">
+            {%- for ov in color_option.values -%}
+              {%- liquid
+                assign value = ov.name | default: ov
+                assign hex = '#cccccc'
+                for pair in swatch_map
+                  assign parts = pair | strip | split: ':'
+                  if parts[0] == value
+                    assign hex = parts[1] | strip
+                  endif
+                endfor
+                if ov.swatch.color
+                  assign hex = ov.swatch.color
+                endif
+              -%}
+              <label class="swatch" title="{{ value | escape }}">
+                <input type="radio" name="opt-{{ section.id }}-{{ cpos }}" value="{{ value | escape }}" {% if current.options[cpos] == value %}checked{% endif %} data-option>
+                <span class="swatch__chip" style="--chip: {{ hex }}"></span>
+                <span class="visually-hidden">{{ value }}</span>
+              </label>
+            {%- endfor -%}
+          </div>
+        </fieldset>
+      {%- endif -%}
+
+      {%- for option in product.options_with_values -%}
+        {%- if forloop.index0 != bpos and forloop.index0 != cpos and option.values.size > 1 -%}
+          <fieldset class="pills" data-option-index="{{ forloop.index0 }}">
+            <legend class="opt__label">{{ option.name }}</legend>
+            {%- assign opos = forloop.index0 -%}
+            {%- for ov in option.values -%}
+              {%- assign value = ov.name | default: ov -%}
+              <label class="pill-opt">
+                <input type="radio" name="opt-{{ section.id }}-{{ opos }}" value="{{ value | escape }}" {% if current.options[opos] == value %}checked{% endif %} data-option>
+                <span>{{ value }}</span>
+              </label>
+            {%- endfor -%}
+          </fieldset>
+        {%- endif -%}
+      {%- endfor -%}
+
+      <button type="submit" name="add" class="btn btn--buy" data-buy-button {% unless current.available %}disabled{% endunless %}>
+        <span data-buy-label>{% if current.available %}{{ section.settings.button_text | default: 'להזמנה' }}{% else %}אזל מהמלאי{% endif %}</span>
+        <span class="btn__price" data-buy-price>{{ current.price | money }}</span>
+      </button>
+      {%- if section.settings.show_dynamic_checkout -%}
+        {{ form | payment_button }}
+      {%- endif -%}
+      <p class="buy__error" role="alert" hidden data-buy-error></p>
+    {%- endform -%}
+
+    <p class="buy__eta" data-eta data-min="{{ section.settings.eta_min }}" data-max="{{ section.settings.eta_max }}">
+      {% render 'icon', name: 'truck' %}
+      <span>הזמנה היום · צפי הגעה <strong data-eta-range>{{ section.settings.eta_min }}–{{ section.settings.eta_max }} ימי עסקים</strong></span>
+    </p>
+
+    <ul class="trust">
+      <li>{% render 'icon', name: 'truck' %}<span>{{ settings.delivery_text }}</span></li>
+      <li>{% render 'icon', name: 'return' %}<span>{{ settings.returns_text }}</span></li>
+      <li>{% render 'icon', name: 'lock' %}<span>{{ settings.payment_text }}</span></li>
+    </ul>
+
+    <div class="accordion">
+      {%- if product.description != blank -%}
+        <details class="accordion__item" open>
+          <summary>תיאור המוצר {% render 'icon', name: 'chevron' %}</summary>
+          <div class="accordion__body rte">{{ product.description }}</div>
+        </details>
+      {%- endif -%}
+      {%- if section.settings.tab_box != blank -%}
+        <details class="accordion__item">
+          <summary>מה בקופסה {% render 'icon', name: 'chevron' %}</summary>
+          <div class="accordion__body rte">{{ section.settings.tab_box }}</div>
+        </details>
+      {%- endif -%}
+      <details class="accordion__item">
+        <summary>משלוח והחזרות {% render 'icon', name: 'chevron' %}</summary>
+        <div class="accordion__body rte">
+          {{ section.settings.tab_shipping }}
+          {%- if shop.shipping_policy != blank or shop.refund_policy != blank -%}
+            <p>
+              {%- if shop.shipping_policy != blank -%}<a href="{{ shop.shipping_policy.url }}">מדיניות משלוחים</a>{%- endif -%}
+              {%- if shop.shipping_policy != blank and shop.refund_policy != blank %} · {% endif -%}
+              {%- if shop.refund_policy != blank -%}<a href="{{ shop.refund_policy.url }}">מדיניות ביטולים והחזרות</a>{%- endif -%}
+            </p>
+          {%- endif -%}
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <script type="application/json" data-variants>
+    [
+      {%- for v in product.variants -%}
+        {"id": {{ v.id }}, "available": {{ v.available | json }}, "price": {{ v.price }}, "compare": {{ v.compare_at_price | default: 0 }}, "options": {{ v.options | json }}, "media": {{ v.featured_media.id | default: 0 }}}{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  </script>
+</div>
+
+<div class="sticky-buy" data-sticky-buy hidden>
+  <div class="sticky-buy__info">
+    <span class="sticky-buy__title">{{ product.title }}</span>
+    <span class="sticky-buy__price" data-sticky-price>{{ current.price | money }}</span>
+  </div>
+  <button type="submit" form="{{ form_id }}" class="btn btn--small" {% unless current.available %}disabled{% endunless %} data-sticky-button>{{ section.settings.button_text | default: 'להזמנה' }}</button>
+</div>
+
+{%- if request.page_type == 'product' -%}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": {{ product.title | json }},
+      "description": {{ product.description | strip_html | truncate: 400 | json }},
+      {%- if product.featured_image -%}"image": {{ product.featured_image | image_url: width: 1200 | prepend: 'https:' | json }},{%- endif -%}
+      "brand": {"@type": "Brand", "name": {{ product.vendor | default: shop.name | json }}},
+      "offers": [
+        {%- for v in product.variants -%}
+          {
+            "@type": "Offer",
+            "sku": {{ v.sku | default: v.id | json }},
+            "price": {{ v.price | divided_by: 100.0 | json }},
+            "priceCurrency": {{ cart.currency.iso_code | json }},
+            "availability": "https://schema.org/{% if v.available %}InStock{% else %}OutOfStock{% endif %}",
+            "url": {{ request.origin | append: v.url | json }}
+          }{% unless forloop.last %},{% endunless %}
+        {%- endfor -%}
+      ]
+    }
+  </script>
+{%- endif -%}

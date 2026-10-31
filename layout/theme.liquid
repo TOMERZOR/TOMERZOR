@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code | default: 'he' }}" dir="{% if request.locale.iso_code == 'en' %}ltr{% else %}rtl{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="{{ settings.color_bg }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {%- if settings.favicon != blank -%}
+    <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 64, height: 64 }}">
+  {%- endif -%}
+  <title>
+    {{ page_title }}
+    {%- if current_page != 1 %} &ndash; עמוד {{ current_page }}{% endif -%}
+    {%- unless page_title contains shop.name %} &ndash; {{ shop.name }}{% endunless -%}
+  </title>
+  {%- if page_description -%}
+    <meta name="description" content="{{ page_description | escape }}">
+  {%- endif -%}
+  {% render 'meta-tags' %}
+
+  {{ 'heebo-hebrew.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+  <style>
+    @font-face {
+      font-family: 'Heebo';
+      src: url('{{ 'heebo-hebrew.woff2' | asset_url }}') format('woff2');
+      font-weight: 100 900;
+      font-display: swap;
+    }
+    :root {
+      --bg: {{ settings.color_bg }};
+      --bg-alt: {{ settings.color_bg_alt }};
+      --ink: {{ settings.color_ink }};
+      --muted: {{ settings.color_muted }};
+      --accent: {{ settings.color_accent }};
+      --accent-ink: {{ settings.color_accent_ink }};
+      --line: {{ settings.color_line }};
+      --sale: {{ settings.color_sale }};
+    }
+  </style>
+  {{ 'theme.css' | asset_url | stylesheet_tag }}
+  <script>
+    window.theme = {
+      routes: {
+        root: {{ routes.root_url | json }},
+        cart: {{ routes.cart_url | json }},
+        cartAdd: {{ routes.cart_add_url | json }},
+        cartChange: {{ routes.cart_change_url | json }}
+      },
+      moneyFormat: {{ shop.money_format | json }}
+    };
+  </script>
+  <script src="{{ 'theme.js' | asset_url }}" defer></script>
+
+  {{ content_for_header }}
+</head>
+
+<body class="template-{{ template.name | handle }}">
+  <a class="skip-link" href="#MainContent">דילוג לתוכן</a>
+
+  {% sections 'header-group' %}
+
+  <main id="MainContent" tabindex="-1">
+    {{ content_for_layout }}
+  </main>
+
+  {% sections 'footer-group' %}
+</body>
+</html>

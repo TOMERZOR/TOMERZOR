@@ -29,7 +29,11 @@
         {%- for media in product.media -%}
           {%- if media.media_type == 'image' -%}
             <figure class="buy__slide" data-media-id="{{ media.id }}">
-              {{ media | image_url: width: 1200 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '(min-width: 990px) 55vw, 100vw', widths: '400, 600, 800, 1000, 1200', alt: media.alt }}
+              {%- if forloop.first -%}
+                {{ media | image_url: width: 1200 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '(min-width: 990px) 55vw, 100vw', widths: '400, 600, 800, 1000, 1200', alt: media.alt }}
+              {%- else -%}
+                {{ media | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 55vw, 100vw', widths: '400, 600, 800, 1000, 1200', alt: media.alt }}
+              {%- endif -%}
             </figure>
           {%- elsif media.media_type == 'video' or media.media_type == 'external_video' -%}
             <figure class="buy__slide buy__slide--video" data-media-id="{{ media.id }}">
@@ -44,9 +48,9 @@
       {%- endif -%}
     </div>
     {%- if product.media.size > 1 -%}
-      <div class="buy__thumbs" role="list">
+      <div class="buy__thumbs">
         {%- for media in product.media -%}
-          <button type="button" class="buy__thumb{% if forloop.first %} is-active{% endif %}" data-thumb="{{ forloop.index0 }}" aria-label="תמונה {{ forloop.index }} מתוך {{ product.media.size }}" role="listitem">
+          <button type="button" class="buy__thumb{% if forloop.first %} is-active{% endif %}" data-thumb="{{ forloop.index0 }}" aria-label="תמונה {{ forloop.index }} מתוך {{ product.media.size }}">
             {{ media.preview_image | image_url: width: 160 | image_tag: loading: 'lazy', alt: '' }}
           </button>
         {%- endfor -%}
@@ -71,9 +75,9 @@
         <p class="buy__subtitle">{{ section.settings.subtitle }}</p>
       {%- endif -%}
       <div class="buy__price" data-price>
-        <span class="price">{{ current.price | money_without_trailing_zeros }}</span>
+        <span class="price">{% render 'money', cents: current.price %}</span>
         {%- if current.compare_at_price > current.price -%}
-          <s class="price price--was">{{ current.compare_at_price | money_without_trailing_zeros }}</s>
+          <s class="price price--was">{% render 'money', cents: current.compare_at_price %}</s>
         {%- endif -%}
       </div>
     </div>
@@ -130,7 +134,7 @@
               endfor
               assign full = single_price | times: qty
               assign saving = full | minus: v_price
-              assign per_set = v_price | divided_by: qty
+              assign per_set = v_price | times: 1.0 | divided_by: qty | divided_by: 100 | round | times: 100
               assign checked = false
               if current.options[bpos] == value
                 assign checked = true
@@ -146,12 +150,12 @@
               <span class="bundle__main">
                 <span class="bundle__name">{{ value }}</span>
                 {%- if qty > 1 -%}
-                  <span class="bundle__per">{{ per_set | money_without_trailing_zeros }} לסט</span>
+                  <span class="bundle__per">{% render 'money', cents: per_set %} לסט</span>
                 {%- endif -%}
               </span>
               <span class="bundle__side">
-                <span class="bundle__price" data-bundle-price="{{ value | escape }}">{{ v_price | money_without_trailing_zeros }}</span>
-                <span class="bundle__save" data-bundle-save="{{ value | escape }}">{% if saving > 0 %}חוסכת {{ saving | money_without_trailing_zeros }}{% endif %}</span>
+                <span class="bundle__price" data-bundle-price="{{ value | escape }}">{% render 'money', cents: v_price %}</span>
+                <span class="bundle__save" data-bundle-save="{{ value | escape }}">{% if saving > 0 %}חוסכת {% render 'money', cents: saving %}{% endif %}</span>
               </span>
               {%- if show_badge -%}<span class="bundle__badge">{{ section.settings.popular_text }}</span>{%- endif -%}
             </label>
@@ -206,7 +210,7 @@
 
       <button type="submit" name="add" class="btn btn--buy" data-loading-text="מעבירה לתשלום..." data-buy-button {% unless current.available %}disabled{% endunless %}>
         <span data-buy-label>{% if current.available %}{{ section.settings.button_text | default: 'להזמנה' }}{% else %}אזל מהמלאי{% endif %}</span>
-        <span class="btn__price" data-buy-price>{{ current.price | money_without_trailing_zeros }}</span>
+        <span class="btn__price" data-buy-price>{% render 'money', cents: current.price %}</span>
       </button>
       {%- if section.settings.show_dynamic_checkout -%}
         {{ form | payment_button }}
@@ -266,7 +270,7 @@
 <div class="sticky-buy" data-sticky-buy hidden>
   <div class="sticky-buy__info">
     <span class="sticky-buy__title">{{ product.title }}</span>
-    <span class="sticky-buy__price" data-sticky-price>{{ current.price | money_without_trailing_zeros }}</span>
+    <span class="sticky-buy__price" data-sticky-price>{% render 'money', cents: current.price %}</span>
   </div>
   <button type="submit" form="{{ form_id }}" class="btn btn--small" {% unless current.available %}disabled{% endunless %} data-sticky-button>{{ section.settings.button_text | default: 'להזמנה' }}</button>
 </div>

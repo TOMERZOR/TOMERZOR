@@ -22,3 +22,7 @@ TRIPO_MODEL = "v3.1-20260211"
 # Keys are secrets, never put them in this file:
 #   npx wrangler secret put ANTHROPIC_API_KEY
 #   npx wrangler secret put TRIPO_API_KEY
+
+[[kv_namespaces]]
+binding = "LIVINGROOM_KV"
+id = "1a0f3fa8356d44c1859c2930146d6111"

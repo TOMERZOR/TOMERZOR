@@ -1,0 +1,45 @@
+{%- comment -%}
+  Design tokens. One palette (midnight ink + deep rose accent on cool off-white), one radius system,
+  one spacing scale. Dark tokens apply when the visitor's system is dark, unless the merchant forces light.
+  Fonts: Karantina 700 (display) + Heebo (UI/body), both SIL OFL, self-hosted.
+{%- endcomment -%}
+<style>
+  @font-face { font-family: 'Karantina'; src: url('{{ 'karantina-700-hebrew.woff2' | asset_url }}') format('woff2'); font-weight: 700; font-display: swap; unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Karantina'; src: url('{{ 'karantina-700-latin.woff2' | asset_url }}') format('woff2'); font-weight: 700; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: 'Heebo'; src: url('{{ 'heebo-hebrew.woff2' | asset_url }}') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: 'Heebo'; src: url('{{ 'heebo-latin.woff2' | asset_url }}') format('woff2'); font-weight: 100 900; font-display: swap; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+  :root {
+    --bg: {{ settings.color_bg }};
+    --surface: {{ settings.color_surface }};
+    --tint: {{ settings.color_tint }};
+    --ink: {{ settings.color_ink }};
+    --muted: {{ settings.color_muted }};
+    --line: {{ settings.color_line }};
+    --accent: {{ settings.color_accent }};
+    --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--bg));
+    --night: {{ settings.color_night }};
+    --night-ink: #EDEFF6;
+    --night-muted: #AEB3C9;
+    --night-line: rgb(255 255 255 / .12);
+    --btn: var(--ink);
+    --btn-ink: var(--bg);
+    --shadow: 0 1px 2px rgb(20 26 48 / .06), 0 12px 32px -12px rgb(20 26 48 / .18);
+  }
+  {%- unless settings.color_scheme == 'light' %}
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-scheme="light"]) {
+      --bg: #0E1122;
+      --surface: #161A31;
+      --tint: #12162B;
+      --ink: #ECEEF6;
+      --muted: #A6ABC2;
+      --line: #282E4C;
+      --accent: #EC86A6;
+      --accent-soft: color-mix(in srgb, var(--accent) 18%, var(--bg));
+      --night: #080A17;
+      --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 16px 40px -16px rgb(0 0 0 / .7);
+    }
+  }
+  {%- endunless %}
+</style>

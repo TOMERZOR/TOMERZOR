@@ -1,18 +1,26 @@
-<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
-  <div class="container container--narrow">
-    <h2 class="section__title">{{ section.settings.title }}</h2>
-    <table class="compare">
-      <thead><tr><th scope="col"></th><th scope="col" class="compare__us">{{ section.settings.us }}</th><th scope="col">{{ section.settings.them }}</th></tr></thead>
-      <tbody>
-        {%- for block in section.blocks -%}
-          <tr {{ block.shopify_attributes }}>
-            <th scope="row">{{ block.settings.label }}</th>
-            <td class="compare__us">{% if block.settings.us %}{% render 'icon', name: 'check' %}<span class="visually-hidden">כן</span>{% else %}{% render 'icon', name: 'x' %}<span class="visually-hidden">לא</span>{% endif %}</td>
-            <td>{% if block.settings.them %}{% render 'icon', name: 'check' %}<span class="visually-hidden">כן</span>{% else %}{% render 'icon', name: 'x' %}<span class="visually-hidden">לא</span>{% endif %}</td>
-          </tr>
-        {%- endfor -%}
-      </tbody>
-    </table>
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container">
+    <div class="section-head reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+    </div>
+    <div class="versus">
+      <div class="versus__card versus__card--us reveal">
+        <p class="versus__title">{{ section.settings.us }}</p>
+        <ul class="versus__list">
+          {%- assign lines = section.settings.us_points | newline_to_br | split: '<br />' -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check-circle' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+        </ul>
+      </div>
+      <div class="versus__card versus__card--them reveal" style="--i: 1">
+        <p class="versus__title">{{ section.settings.them }}</p>
+        <ul class="versus__list">
+          {%- assign lines = section.settings.them_cons | newline_to_br | split: '<br />' -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'x-circle' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+          {%- assign lines = section.settings.them_pros | newline_to_br | split: '<br />' -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check-circle' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -25,19 +33,37 @@
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "מוט סאטן מול מסלסל חשמלי"
+      "default": "סאטן מול מסלסל"
     },
     {
       "type": "text",
       "id": "us",
-      "label": "עמודה שלנו",
-      "default": "מוט סאטן"
+      "label": "הכרטיס שלנו",
+      "default": "סט LUNÉ"
+    },
+    {
+      "type": "textarea",
+      "id": "us_points",
+      "label": "יתרונות שלנו (שורה לכל יתרון)",
+      "default": "בלי חום על השיער\nעובד בזמן שאת ישנה\nבלי חשמל ובלי שקע\nנכנס לכל תיק נסיעות"
     },
     {
       "type": "text",
       "id": "them",
-      "label": "עמודה שנייה",
-      "default": "מסלסל / פן"
+      "label": "הכרטיס השני",
+      "default": "מסלסל ופן"
+    },
+    {
+      "type": "textarea",
+      "id": "them_cons",
+      "label": "חסרונות (שורה לכל אחד)",
+      "default": "חום גבוה על השיער\nזמן מול המראה בבוקר\nצריך חשמל ושקע"
+    },
+    {
+      "type": "textarea",
+      "id": "them_pros",
+      "label": "יתרונות אמיתיים שלהם (הוגנות בונה אמון)",
+      "default": "תוצאה מהירה יותר"
     },
     {
       "type": "select",
@@ -49,85 +75,16 @@
           "label": "רגיל"
         },
         {
-          "value": "alt",
+          "value": "tint",
           "label": "משני"
         }
       ],
-      "default": "alt"
-    }
-  ],
-  "max_blocks": 8,
-  "blocks": [
-    {
-      "type": "row",
-      "name": "שורה",
-      "settings": [
-        {
-          "type": "text",
-          "id": "label",
-          "label": "תכונה",
-          "default": "תכונה"
-        },
-        {
-          "type": "checkbox",
-          "id": "us",
-          "label": "אצלנו",
-          "default": true
-        },
-        {
-          "type": "checkbox",
-          "id": "them",
-          "label": "אצלם",
-          "default": false
-        }
-      ]
+      "default": ""
     }
   ],
   "presets": [
     {
-      "name": "השוואה",
-      "blocks": [
-        {
-          "type": "row",
-          "settings": {
-            "label": "בלי חום על השיער",
-            "us": true,
-            "them": false
-          }
-        },
-        {
-          "type": "row",
-          "settings": {
-            "label": "עובד בזמן שאת ישנה",
-            "us": true,
-            "them": false
-          }
-        },
-        {
-          "type": "row",
-          "settings": {
-            "label": "לא צריך חשמל",
-            "us": true,
-            "them": false
-          }
-        },
-        {
-          "type": "row",
-          "settings": {
-            "label": "קל לקחת לנסיעות",
-            "us": true,
-            "them": false
-          }
-        },
-        {
-          "type": "row",
-          "settings": {
-            "label": "תוצאה תוך פחות מחצי שעה",
-            "us": false,
-            "them": true
-          }
-        }
-      ]
+      "name": "השוואה"
     }
   ]
 }

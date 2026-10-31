@@ -51,23 +51,31 @@
           </button>
         {%- endfor -%}
       </div>
+      <div class="buy__dots" aria-hidden="true">
+        {%- for media in product.media -%}<span class="buy__dot{% if forloop.first %} is-active{% endif %}"></span>{%- endfor -%}
+      </div>
     {%- endif -%}
   </div>
 
   <div class="buy__info">
-    {%- if section.settings.eyebrow != blank -%}
-      <p class="buy__eyebrow">{{ section.settings.eyebrow }}</p>
-    {%- endif -%}
-    <h1 class="buy__title">{{ product.title }}</h1>
-    {%- if section.settings.subtitle != blank -%}
-      <p class="buy__subtitle">{{ section.settings.subtitle }}</p>
-    {%- endif -%}
-
-    <div class="buy__price" data-price>
-      <span class="price">{{ current.price | money }}</span>
-      {%- if current.compare_at_price > current.price -%}
-        <s class="price price--was">{{ current.compare_at_price | money }}</s>
+    <div class="buy__head">
+      {%- if section.settings.eyebrow != blank -%}
+        <p class="eyebrow">{{ section.settings.eyebrow }}</p>
       {%- endif -%}
+      {%- if request.page_type == 'product' -%}
+        <h1 class="buy__title display">{{ product.title }}</h1>
+      {%- else -%}
+        <h2 class="buy__title display">{{ product.title }}</h2>
+      {%- endif -%}
+      {%- if section.settings.subtitle != blank -%}
+        <p class="buy__subtitle">{{ section.settings.subtitle }}</p>
+      {%- endif -%}
+      <div class="buy__price" data-price>
+        <span class="price">{{ current.price | money }}</span>
+        {%- if current.compare_at_price > current.price -%}
+          <s class="price price--was">{{ current.compare_at_price | money }}</s>
+        {%- endif -%}
+      </div>
     </div>
 
     {%- if section.settings.bullets != blank -%}
@@ -196,7 +204,7 @@
         {%- endif -%}
       {%- endfor -%}
 
-      <button type="submit" name="add" class="btn btn--buy" data-buy-button {% unless current.available %}disabled{% endunless %}>
+      <button type="submit" name="add" class="btn btn--buy" data-loading-text="מעבירה לתשלום..." data-buy-button {% unless current.available %}disabled{% endunless %}>
         <span data-buy-label>{% if current.available %}{{ section.settings.button_text | default: 'להזמנה' }}{% else %}אזל מהמלאי{% endif %}</span>
         <span class="btn__price" data-buy-price>{{ current.price | money }}</span>
       </button>
@@ -208,7 +216,7 @@
 
     <p class="buy__eta" data-eta data-min="{{ section.settings.eta_min }}" data-max="{{ section.settings.eta_max }}">
       {% render 'icon', name: 'truck' %}
-      <span>הזמנה היום · צפי הגעה <strong data-eta-range>{{ section.settings.eta_min }}–{{ section.settings.eta_max }} ימי עסקים</strong></span>
+      <span>הזמנה היום, צפי הגעה <strong data-eta-range>{{ section.settings.eta_min }}-{{ section.settings.eta_max }} ימי עסקים</strong></span>
     </p>
 
     <ul class="trust">
@@ -237,7 +245,7 @@
           {%- if shop.shipping_policy != blank or shop.refund_policy != blank -%}
             <p>
               {%- if shop.shipping_policy != blank -%}<a href="{{ shop.shipping_policy.url }}">מדיניות משלוחים</a>{%- endif -%}
-              {%- if shop.shipping_policy != blank and shop.refund_policy != blank %} · {% endif -%}
+              {%- if shop.shipping_policy != blank and shop.refund_policy != blank %}<br>{% endif -%}
               {%- if shop.refund_policy != blank -%}<a href="{{ shop.refund_policy.url }}">מדיניות ביטולים והחזרות</a>{%- endif -%}
             </p>
           {%- endif -%}

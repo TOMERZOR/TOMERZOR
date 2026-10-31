@@ -1,6 +1,6 @@
 <section class="section">
   <div class="container container--narrow">
-    <h1 class="section__title">{{ blog.title }}</h1>
+    <h1 class="page-title">{{ blog.title }}</h1>
     {%- paginate blog.articles by 12 -%}
       <div class="articles">
         {%- for article in blog.articles -%}

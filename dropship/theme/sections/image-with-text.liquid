@@ -1,18 +1,17 @@
-<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
-  <div class="container iwt{% if section.settings.image_first == false %} iwt--reverse{% endif %}">
-    <div class="iwt__media">
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container feature{% if section.settings.flip %} feature--flip{% endif %}">
+    <div class="feature__media reveal">
       {%- if section.settings.image != blank -%}
         {{ section.settings.image | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 50vw, 100vw', widths: '400, 600, 800, 1000, 1200', alt: section.settings.image.alt }}
       {%- elsif section.settings.fallback != blank -%}
-        {{ section.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: '' }}
+        {{ section.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: section.settings.alt, width: 1000, height: 1000 }}
       {%- endif -%}
     </div>
-    <div class="iwt__copy">
-      {%- if section.settings.eyebrow != blank -%}<p class="eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
-      <h2 class="section__title section__title--start">{{ section.settings.title }}</h2>
-      <div class="rte">{{ section.settings.text }}</div>
+    <div class="feature__copy reveal" style="--i: 1">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      <div class="lead rte">{{ section.settings.text }}</div>
       {%- if section.settings.button_text != blank -%}
-        <a class="btn" href="{{ section.settings.button_link | default: '#buy' }}">{{ section.settings.button_text }}</a>
+        <a class="btn" href="#buy"{% if section.settings.pick != blank %} data-pick="{{ section.settings.pick | escape }}"{% endif %}>{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
       {%- endif -%}
     </div>
   </div>
@@ -31,43 +30,44 @@
     {
       "type": "text",
       "id": "fallback",
-      "label": "תמונת ברירת מחדל מתוך הערכה (שם קובץ)",
-      "default": "morning-curls.jpg"
-    },
-    {
-      "type": "checkbox",
-      "id": "image_first",
-      "label": "תמונה בצד ימין",
-      "default": true
+      "label": "תמונת ברירת מחדל מהערכה",
+      "default": "gift.jpg"
     },
     {
       "type": "text",
-      "id": "eyebrow",
-      "label": "שורה קטנה",
-      "default": "התוצאה"
+      "id": "alt",
+      "label": "תיאור התמונה (נגישות)",
+      "default": "שני סטי סאטן בקופסת מתנה"
+    },
+    {
+      "type": "checkbox",
+      "id": "flip",
+      "label": "תמונה בצד השני",
+      "default": false
     },
     {
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "תלתלים רכים של פן, בלי לגעת במסלסל"
+      "default": "מתנה שכל אחת תשמח לקבל"
     },
     {
       "type": "richtext",
       "id": "text",
       "label": "טקסט",
-      "default": "<p>השיער מתלפף סביב מוט רך ומתייבש בעדינות בזמן השינה. בבוקר משחררות, מפזרות עם האצבעות ומקבלות גלים מלאים בנפח.</p><p>התוצאה משתנה לפי סוג ואורך השיער. בפעם הראשונה כדאי לנסות כמה שיטות גלגול עד שמוצאים את שלך.</p>"
+      "default": "<p>כל סט מגיע בשקית סאטן, מוכן לנתינה. בחבילה של 2 כל סט יוצא 90 ₪: אחד בשבילך ואחד בשבילה.</p>"
     },
     {
       "type": "text",
       "id": "button_text",
       "label": "טקסט כפתור",
-      "default": "לבחירת סט"
+      "default": "לחבילת 2 סטים"
     },
     {
-      "type": "url",
-      "id": "button_link",
-      "label": "קישור כפתור"
+      "type": "text",
+      "id": "pick",
+      "label": "חבילה שתיבחר אוטומטית בלחיצה",
+      "default": "2 סטים"
     },
     {
       "type": "select",
@@ -79,7 +79,7 @@
           "label": "רגיל"
         },
         {
-          "value": "alt",
+          "value": "tint",
           "label": "משני"
         }
       ],

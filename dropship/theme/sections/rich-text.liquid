@@ -1,40 +1,51 @@
-<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
-  <div class="container container--narrow center">
-    {%- if section.settings.title != blank -%}<h2 class="section__title">{{ section.settings.title }}</h2>{%- endif -%}
-    <div class="rte">{{ section.settings.text }}</div>
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container container--narrow closer reveal">
+    {%- if section.settings.image != blank -%}
+      {{ section.settings.image | image_url: width: 240, height: 240, crop: 'center' | image_tag: class: 'closer__img', loading: 'lazy', alt: '' }}
+    {%- elsif section.settings.fallback != blank -%}
+      {{ section.settings.fallback | asset_url | image_tag: class: 'closer__img', loading: 'lazy', alt: '', width: 120, height: 120 }}
+    {%- endif -%}
+    <h2 class="display h2">{{ section.settings.title }}</h2>
+    {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
     {%- if section.settings.button_text != blank -%}
-      <a class="btn" href="{{ section.settings.button_link | default: '#buy' }}">{{ section.settings.button_text }}</a>
+      <a class="btn" href="#buy">{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
     {%- endif -%}
   </div>
 </section>
 
 {% schema %}
 {
-  "name": "טקסט וכפתור",
+  "name": "קריאה לפעולה",
   "tag": "div",
   "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "תמונה קטנה עגולה"
+    },
+    {
+      "type": "text",
+      "id": "fallback",
+      "label": "תמונת ברירת מחדל מהערכה",
+      "default": "product-hero.jpg"
+    },
     {
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "מתנה מושלמת לחנוכה"
+      "default": "מוכנה להתעורר עם תלתלים?"
     },
     {
-      "type": "richtext",
+      "type": "text",
       "id": "text",
       "label": "טקסט",
-      "default": "<p>קנו 2 סטים, אחד בשבילך ואחד לחברה הכי טובה.</p>"
+      "default": "משלוח חינם וביטול עסקה תוך 14 יום."
     },
     {
       "type": "text",
       "id": "button_text",
       "label": "טקסט כפתור",
-      "default": "לבחירת חבילה"
-    },
-    {
-      "type": "url",
-      "id": "button_link",
-      "label": "קישור כפתור"
+      "default": "להזמנה"
     },
     {
       "type": "select",
@@ -46,16 +57,16 @@
           "label": "רגיל"
         },
         {
-          "value": "alt",
+          "value": "tint",
           "label": "משני"
         }
       ],
-      "default": "alt"
+      "default": ""
     }
   ],
   "presets": [
     {
-      "name": "טקסט וכפתור"
+      "name": "קריאה לפעולה"
     }
   ]
 }

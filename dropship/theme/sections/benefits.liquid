@@ -1,13 +1,29 @@
-<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
   <div class="container">
-    {%- if section.settings.title != blank -%}<h2 class="section__title">{{ section.settings.title }}</h2>{%- endif -%}
-    <div class="benefits">
+    <div class="section-head reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+    </div>
+    <div class="bento">
       {%- for block in section.blocks -%}
-        <div class="benefit" {{ block.shopify_attributes }}>
-          <span class="benefit__icon">{% render 'icon', name: block.settings.icon %}</span>
-          <h3 class="benefit__title">{{ block.settings.title }}</h3>
-          <p class="benefit__text">{{ block.settings.text }}</p>
-        </div>
+        {%- liquid
+          assign style = block.settings.style
+          if block.settings.image != blank or block.settings.fallback != blank
+            assign style = 'image'
+          endif
+        -%}
+        <article class="tile tile--{{ style }} reveal" style="--i: {{ forloop.index0 }}" {{ block.shopify_attributes }}>
+          {%- if style == 'image' -%}
+            {%- if block.settings.image != blank -%}
+              {{ block.settings.image | image_url: width: 1000 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 33vw, 100vw', widths: '400, 700, 1000', alt: '' }}
+            {%- else -%}
+              {{ block.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: '', width: 800, height: 1000 }}
+            {%- endif -%}
+          {%- else -%}
+            <span class="tile__icon">{% render 'icon', name: block.settings.icon %}</span>
+          {%- endif -%}
+          <h3>{{ block.settings.title }}</h3>
+          <p>{{ block.settings.text }}</p>
+        </article>
       {%- endfor -%}
     </div>
   </div>
@@ -15,14 +31,14 @@
 
 {% schema %}
 {
-  "name": "יתרונות",
+  "name": "יתרונות (בנטו)",
   "tag": "div",
   "settings": [
     {
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "למה כולן עוברות לתלתלים בלי חום"
+      "default": "למה כולן עוברות לסאטן"
     },
     {
       "type": "select",
@@ -34,27 +50,62 @@
           "label": "רגיל"
         },
         {
-          "value": "alt",
+          "value": "tint",
           "label": "משני"
         }
       ],
-      "default": "alt"
+      "default": ""
     }
   ],
-  "max_blocks": 6,
+  "max_blocks": 4,
   "blocks": [
     {
-      "type": "benefit",
-      "name": "יתרון",
+      "type": "tile",
+      "name": "אריח",
       "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "תמונה (אופציונלי)"
+        },
+        {
+          "type": "text",
+          "id": "fallback",
+          "label": "תמונת ברירת מחדל מהערכה",
+          "info": "שם קובץ מתיקיית assets, אם אין תמונה"
+        },
+        {
+          "type": "select",
+          "id": "style",
+          "label": "סגנון כשאין תמונה",
+          "options": [
+            {
+              "value": "accent",
+              "label": "צבע הדגשה רך"
+            },
+            {
+              "value": "ink",
+              "label": "כהה"
+            },
+            {
+              "value": "plain",
+              "label": "רגיל"
+            }
+          ],
+          "default": "accent"
+        },
         {
           "type": "select",
           "id": "icon",
-          "label": "אייקון",
+          "label": "אייקון (כשאין תמונה)",
           "options": [
             {
-              "value": "flame-off",
+              "value": "no-heat",
               "label": "בלי חום"
+            },
+            {
+              "value": "timer",
+              "label": "טיימר"
             },
             {
               "value": "moon",
@@ -63,10 +114,6 @@
             {
               "value": "sparkle",
               "label": "ברק"
-            },
-            {
-              "value": "clock",
-              "label": "זמן"
             },
             {
               "value": "heart",
@@ -79,66 +126,28 @@
             {
               "value": "travel",
               "label": "נסיעות"
-            },
-            {
-              "value": "check",
-              "label": "וי"
             }
           ],
-          "default": "flame-off"
+          "default": "timer"
         },
         {
           "type": "text",
           "id": "title",
           "label": "כותרת",
-          "default": "אפס נזק מחום"
+          "default": "יתרון"
         },
         {
-          "type": "textarea",
+          "type": "text",
           "id": "text",
-          "label": "טקסט",
-          "default": "בלי מסלסל ובלי פן. השיער מתסלסל בעדינות בזמן שאת ישנה."
+          "label": "טקסט (עד 15 מילים)",
+          "default": "תיאור קצר"
         }
       ]
     }
   ],
   "presets": [
     {
-      "name": "יתרונות",
-      "blocks": [
-        {
-          "type": "benefit",
-          "settings": {
-            "icon": "flame-off",
-            "title": "אפס נזק מחום",
-            "text": "בלי מסלסל ובלי פן. השיער מתסלסל בעדינות בזמן שאת ישנה."
-          }
-        },
-        {
-          "type": "benefit",
-          "settings": {
-            "icon": "clock",
-            "title": "חוסכת זמן בבוקר",
-            "text": "5 דקות של גלגול בערב במקום 40 דקות מול המראה בבוקר."
-          }
-        },
-        {
-          "type": "benefit",
-          "settings": {
-            "icon": "sparkle",
-            "title": "סאטן נגד קרזול",
-            "text": "בד חלק שמפחית חיכוך, כדי שהשיער יישאר רך ומבריק."
-          }
-        },
-        {
-          "type": "benefit",
-          "settings": {
-            "icon": "moon",
-            "title": "נוח לשינה",
-            "text": "מוט רך ומרופד לכל אורכו. שמים, נרדמים, וזהו."
-          }
-        }
-      ]
+      "name": "יתרונות (בנטו)"
     }
   ]
 }

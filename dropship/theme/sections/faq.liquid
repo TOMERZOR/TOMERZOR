@@ -1,7 +1,15 @@
-<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
-  <div class="container container--narrow">
-    <h2 class="section__title">{{ section.settings.title }}</h2>
-    <div class="accordion accordion--faq">
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container faq">
+    <div class="faq__side reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
+      {%- if settings.whatsapp_number != blank -%}
+        <a class="btn btn--ghost btn--small" href="https://wa.me/{{ settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' }}" target="_blank" rel="noopener">{% render 'icon', name: 'whatsapp' %} כתבי לנו בוואטסאפ</a>
+      {%- elsif section.settings.contact_page != blank -%}
+        <a class="btn btn--ghost btn--small" href="{{ section.settings.contact_page.url }}">כתבי לנו</a>
+      {%- endif -%}
+    </div>
+    <div class="accordion reveal" style="--i: 1">
       {%- for block in section.blocks -%}
         <details class="accordion__item" {{ block.shopify_attributes }}>
           <summary>{{ block.settings.question }} {% render 'icon', name: 'chevron' %}</summary>
@@ -37,6 +45,17 @@
       "default": "שאלות נפוצות"
     },
     {
+      "type": "text",
+      "id": "text",
+      "label": "טקסט",
+      "default": "לא מצאת תשובה? נחזור אלייך תוך יום עסקים."
+    },
+    {
+      "type": "page",
+      "id": "contact_page",
+      "label": "עמוד צור קשר (אם אין וואטסאפ)"
+    },
+    {
       "type": "select",
       "id": "bg",
       "label": "רקע",
@@ -46,7 +65,7 @@
           "label": "רגיל"
         },
         {
-          "value": "alt",
+          "value": "tint",
           "label": "משני"
         }
       ],
@@ -76,58 +95,7 @@
   ],
   "presets": [
     {
-      "name": "שאלות נפוצות",
-      "blocks": [
-        {
-          "type": "question",
-          "settings": {
-            "question": "לאיזה אורך שיער זה מתאים?",
-            "answer": "<p>הכי טוב לשיער באורך כתפיים ומטה. בשיער קצר יותר קשה ללפף את השיער סביב המוט.</p>"
-          }
-        },
-        {
-          "type": "question",
-          "settings": {
-            "question": "שיער רטוב או יבש?",
-            "answer": "<p>הכי טוב על שיער לח כמעט יבש (בערך 80% יבש). שיער רטוב מדי לא יספיק להתייבש עד הבוקר, ושיער יבש לגמרי יחזיק פחות. אפשר לרסס מעט מים או קרם תלתלים לפני הגלגול.</p>"
-          }
-        },
-        {
-          "type": "question",
-          "settings": {
-            "question": "כמה זמן צריך להשאיר?",
-            "answer": "<p>לפחות 3–4 שעות, והכי טוב לילה שלם.</p>"
-          }
-        },
-        {
-          "type": "question",
-          "settings": {
-            "question": "כמה זמן מחזיקים התלתלים?",
-            "answer": "<p>זה תלוי בסוג השיער. בדרך כלל יום עד יומיים. ספריי קל לקיבוע עוזר לשיער חלק במיוחד.</p>"
-          }
-        },
-        {
-          "type": "question",
-          "settings": {
-            "question": "נוח לישון עם זה?",
-            "answer": "<p>המוט עשוי ספוג רך עטוף בסאטן, אז רוב הנשים ישנות איתו בלי בעיה. רוב הלקוחות מתרגלות אחרי לילה או שניים.</p>"
-          }
-        },
-        {
-          "type": "question",
-          "settings": {
-            "question": "מתי ההזמנה תגיע?",
-            "answer": "<p>המשלוח חינם ומגיע עם מספר מעקב. זמן האספקה הוא בדרך כלל 10–15 ימי עסקים, ולא יותר מ-18 ימי עסקים. תקבלי מייל עם מספר המעקב ברגע שהחבילה יוצאת.</p>"
-          }
-        },
-        {
-          "type": "question",
-          "settings": {
-            "question": "אפשר להחזיר?",
-            "answer": "<p>כן. אפשר לבטל את העסקה תוך 14 יום מיום קבלת המוצר, בהתאם לחוק הגנת הצרכן. כל הפרטים במדיניות הביטולים וההחזרות.</p>"
-          }
-        }
-      ]
+      "name": "שאלות נפוצות"
     }
   ]
 }

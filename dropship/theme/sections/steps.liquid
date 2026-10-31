@@ -13,10 +13,7 @@
               {{ block.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: block.settings.title, width: 676, height: 912 }}
             {%- endif -%}
           </div>
-          <div class="step__label">
-            <span class="step__num" aria-hidden="true">{{ forloop.index }}</span>
-            <h3 class="step__title">{{ block.settings.title }}</h3>
-          </div>
+          <h3 class="step__title">{{ block.settings.title }}</h3>
           <p class="step__text">{{ block.settings.text }}</p>
         </li>
       {%- endfor -%}

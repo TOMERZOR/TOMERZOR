@@ -96,9 +96,7 @@
     },
     "gift": {
       "type": "image-with-text",
-      "settings": {
-        "bg": "tint"
-      }
+      "settings": {}
     },
     "reviews": {
       "type": "apps",

@@ -164,7 +164,7 @@
       });
     });
 
-    /* delivery estimate in real dates (Israeli business days: Sun–Thu) */
+    /* delivery estimate in real dates (Israeli business days: Sun to Thu) */
     var eta = root.querySelector('[data-eta]');
     if (eta) {
       var addBusinessDays = function (start, n) {

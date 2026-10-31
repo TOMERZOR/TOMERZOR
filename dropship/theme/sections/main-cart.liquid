@@ -17,7 +17,7 @@
               <div class="cart-item__info">
                 <a href="{{ item.url }}" class="cart-item__title">{{ item.product.title }}</a>
                 {%- unless item.product.has_only_default_variant -%}<p class="cart-item__variant">{{ item.variant.title }}</p>{%- endunless -%}
-                <p class="cart-item__price">{{ item.final_line_price | money_without_trailing_zeros }}</p>
+                <p class="cart-item__price">{% render 'money', cents: item.final_line_price %}</p>
                 <div class="cart-item__qty">
                   <label class="visually-hidden" for="qty-{{ item.key }}">כמות</label>
                   <input id="qty-{{ item.key }}" type="number" name="updates[]" value="{{ item.quantity }}" min="0" inputmode="numeric">
@@ -29,9 +29,9 @@
         </ul>
         <div class="cart__summary">
           {%- for discount in cart.cart_level_discount_applications -%}
-            <p class="cart__discount">{{ discount.title }}: −{{ discount.total_allocated_amount | money_without_trailing_zeros }}</p>
+            <p class="cart__discount">{{ discount.title }}: −{% render 'money', cents: discount.total_allocated_amount %}</p>
           {%- endfor -%}
-          <p class="cart__total"><span>סה"כ</span> <strong>{{ cart.total_price | money_without_trailing_zeros }}</strong></p>
+          <p class="cart__total"><span>סה"כ</span> <strong>{% render 'money', cents: cart.total_price %}</strong></p>
           <p class="cart__note">משלוח חינם. המחירים כוללים את כל המסים, בלי עמלות נוספות.</p>
           <div class="cart__actions">
             <button type="submit" name="update" class="btn btn--ghost">עדכון הסל</button>

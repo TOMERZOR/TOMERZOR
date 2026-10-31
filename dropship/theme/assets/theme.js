@@ -2,19 +2,12 @@
 (function () {
   'use strict';
 
+  /* Prices always in shekels (₪119, ₪1,374, ₪89.50), matching snippets/money.liquid,
+     whatever money format the store is set to. */
   function formatMoney(cents) {
-    var fmt = (window.theme && window.theme.moneyFormat) || '₪{{amount}}';
     var value = cents / 100;
-    var noDec = Math.round(value).toLocaleString('en-US');
     var whole = Math.round(value) === value;
-    var dec = whole ? noDec : value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    var commaDec = value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return fmt.replace(/\{\{\s*(\w+)\s*\}\}/, function (_, key) {
-      if (key === 'amount_no_decimals') return noDec;
-      if (key === 'amount_with_comma_separator') return commaDec;
-      if (key === 'amount_no_decimals_with_comma_separator') return Math.round(value).toLocaleString('de-DE');
-      return dec;
-    });
+    return '₪' + value.toLocaleString('en-US', { minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: 2 });
   }
 
   function qtyOf(label) {

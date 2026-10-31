@@ -45,3 +45,8 @@ shomer/relay/node_modules/
 # Remind. server
 remind/server/.wrangler/
 remind/server/node_modules/
+
+# Living Room
+livingroom/server/node_modules/
+livingroom/server/.wrangler/
+livingroom/server/.dev.vars

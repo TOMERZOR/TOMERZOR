@@ -1,0 +1,24 @@
+# Living Room API. Deployed by .github/workflows/livingroom-api.yml once the repository secrets exist;
+# by hand: `npx wrangler deploy`, then `npx wrangler secret put ANTHROPIC_API_KEY` and `TRIPO_API_KEY`.
+name = "livingroom-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Comma-separated list of sites allowed to call the API. "*" allows any site.
+ALLOWED_ORIGINS = "https://tomerzor.github.io,http://localhost:8792,http://127.0.0.1:8792"
+# Per visitor per day (needs the KV namespace below). 0 = no limit.
+DAILY_IMPORTS = "40"
+DAILY_MODELS = "4"
+LIVINGROOM_MODEL = "claude-opus-5-5"
+TRIPO_MODEL = "v3.1-20260211"
+
+# Optional: enforces the daily limits. The deploy workflow creates and binds it (tools/ensure-kv.mjs).
+# [[kv_namespaces]]
+# binding = "LIVINGROOM_KV"
+# id = "paste-the-id-here"
+
+# Keys are secrets, never put them in this file:
+#   npx wrangler secret put ANTHROPIC_API_KEY
+#   npx wrangler secret put TRIPO_API_KEY

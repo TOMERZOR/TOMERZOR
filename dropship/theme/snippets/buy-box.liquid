@@ -39,7 +39,7 @@
         {%- endfor -%}
       {%- else -%}
         <figure class="buy__slide">
-          {{ 'product-hero.jpg' | asset_url | image_tag: alt: product.title, loading: 'eager' }}
+          <img src="{{ 'product-hero.jpg' | asset_url }}" alt="{{ product.title | escape }}" width="1200" height="1200" loading="eager">
         </figure>
       {%- endif -%}
     </div>

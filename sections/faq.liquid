@@ -4,9 +4,9 @@
       <h2 class="display h2">{{ section.settings.title }}</h2>
       {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
       {%- if settings.whatsapp_number != blank -%}
-        <a class="btn btn--ghost btn--small" href="https://wa.me/{{ settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' }}" target="_blank" rel="noopener">{% render 'icon', name: 'whatsapp' %} כתבי לנו בוואטסאפ</a>
+        <a class="btn btn--ghost btn--small" href="https://wa.me/{{ settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' }}" target="_blank" rel="noopener">{% render 'icon', name: 'whatsapp' %} צור קשר</a>
       {%- elsif section.settings.contact_page != blank -%}
-        <a class="btn btn--ghost btn--small" href="{{ section.settings.contact_page.url }}">כתבי לנו</a>
+        <a class="btn btn--ghost btn--small" href="{{ section.settings.contact_page.url }}">צור קשר</a>
       {%- endif -%}
     </div>
     <div class="accordion reveal" style="--i: 1">

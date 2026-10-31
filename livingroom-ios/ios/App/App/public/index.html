@@ -37,10 +37,10 @@
       <div class="hero">
         <h1 class="hero-title">איך זה ייראה <em>אצלך</em> בסלון?</h1>
         <p class="hero-sub">מדביקים קישור לכל פריט מהאינטרנט ורואים אותו בחדר שלכם, בגודל האמיתי.</p>
-        <form class="paste" id="paste-form" autocomplete="off">
+        <form class="paste" id="paste-form" autocomplete="off" novalidate>
           <label class="sr-only" for="paste-input">קישור למוצר</label>
           <span class="paste-icon" aria-hidden="true"></span>
-          <input id="paste-input" name="url" type="url" inputmode="url" dir="ltr" placeholder="https://" enterkeyhint="go" required>
+          <input id="paste-input" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" dir="ltr" placeholder="https://" enterkeyhint="go">
           <button class="paste-clip" type="button" data-act="clipboard">הדבקה</button>
           <button class="paste-go" type="submit" aria-label="הוספה"></button>
         </form>

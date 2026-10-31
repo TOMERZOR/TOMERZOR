@@ -30,7 +30,8 @@ export function arSupport() {
       try { return (await nativeAR('isAvailable', {})).available ? 'quicklook' : null; } catch { return 'quicklook'; }
     }
     try { if (navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')) return 'webxr'; } catch { /* not available */ }
-    if (isIOS() && document.createElement('a').relList.supports('ar')) return 'quicklook';
+    // any browser on iPhone/iPad is WebKit and can open AR Quick Look links
+    if (isIOS()) return 'quicklook';
     return null;
   })();
   return supportP;
@@ -44,7 +45,7 @@ function stripHelpers(obj) {
   return obj;
 }
 
-/** Builds a USDZ of the given items (with their placements) and opens it in AR Quick Look. */
+/** Builds a USDZ of the given items (with their placements). In the iPhone app it opens right away; on the web it returns { url } for a link. */
 export async function openQuickLook(entries) {
   const scene = new THREE.Scene();
   const allWall = entries.every(e => CATEGORIES[e.item.category]?.mount === 'wall');
@@ -74,15 +75,9 @@ export async function openQuickLook(entries) {
     return;
   }
   const blob = new Blob([data], { type: 'model/vnd.usdz+zip' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.setAttribute('rel', 'ar');
-  // real size only: the viewer can't pinch-scale the item
-  a.href = `${url}#allowsContentScaling=0`;
-  a.appendChild(document.createElement('img'));
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 60000);
+  // Safari opens AR Quick Look only from a link the person taps themselves (an <a rel="ar"> around an
+  // <img>), so the file is returned and the app shows that link.
+  return { url: `${URL.createObjectURL(blob)}#allowsContentScaling=0` };
 }
 
 // ---------- Android: WebXR ----------

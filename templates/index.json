@@ -10,55 +10,6 @@
         "product": "satin-heatless-curling-set"
       }
     },
-    "ticker": {
-      "type": "ticker",
-      "blocks": {
-        "t0": {
-          "type": "item",
-          "settings": {
-            "text": "אפס חום"
-          }
-        },
-        "t1": {
-          "type": "item",
-          "settings": {
-            "text": "סאטן נגד קרזול"
-          }
-        },
-        "t2": {
-          "type": "item",
-          "settings": {
-            "text": "5 דקות בערב"
-          }
-        },
-        "t3": {
-          "type": "item",
-          "settings": {
-            "text": "משלוח חינם"
-          }
-        },
-        "t4": {
-          "type": "item",
-          "settings": {
-            "text": "ביטול עסקה תוך 14 יום"
-          }
-        },
-        "t5": {
-          "type": "item",
-          "settings": {
-            "text": "3 צבעים"
-          }
-        }
-      },
-      "block_order": [
-        "t0",
-        "t1",
-        "t2",
-        "t3",
-        "t4",
-        "t5"
-      ]
-    },
     "night": {
       "type": "night-morning",
       "settings": {}
@@ -71,34 +22,33 @@
           "type": "tile",
           "settings": {
             "fallback": "satin-macro.jpg",
-            "title": "סאטן שלא מקרזל",
-            "text": "בד חלק שמפחית חיכוך, כך שהשיער נשאר רך ומבריק."
+            "title": "סאטן חלק",
+            "text": "פחות חיכוך על השיער בזמן השינה, ולכן פחות קרזול בבוקר."
           }
         },
         "b2": {
           "type": "tile",
           "settings": {
             "style": "accent",
-            "icon": "timer",
-            "title": "5 דקות בערב",
-            "text": "במקום 40 דקות מול המראה בבוקר."
+            "figure": "5",
+            "title": "דקות של גלגול בערב",
+            "text": "זה כל הזמן שזה לוקח. בבוקר רק משחררות ומפזרות עם האצבעות."
           }
         },
         "b3": {
           "type": "tile",
           "settings": {
             "fallback": "hero-night.jpg",
-            "title": "נוח לישון איתו",
-            "text": "ספוג רך ומרופד לכל האורך. שמים ונרדמים."
+            "title": "רך מספיק לישון איתו",
+            "text": "ספוג מרופד לכל האורך, בלי קליפסים ובלי חלקים קשים."
           }
         },
         "b4": {
           "type": "tile",
           "settings": {
-            "style": "ink",
-            "icon": "no-heat",
-            "title": "אפס חום",
-            "text": "בלי מסלסל ובלי פן, אז אין נזק מחום."
+            "fallback": "colors.jpg",
+            "title": "3 צבעים",
+            "text": "שמפניה, שחור וורוד פודרה. בכל סט 2 גומיות ושקית."
           }
         }
       },
@@ -231,7 +181,6 @@
   },
   "order": [
     "hero",
-    "ticker",
     "featured",
     "night",
     "benefits",

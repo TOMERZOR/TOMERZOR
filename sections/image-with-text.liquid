@@ -11,7 +11,7 @@
       <h2 class="display h2">{{ section.settings.title }}</h2>
       <div class="lead rte">{{ section.settings.text }}</div>
       {%- if section.settings.button_text != blank -%}
-        <a class="btn" href="#buy"{% if section.settings.pick != blank %} data-pick="{{ section.settings.pick | escape }}"{% endif %}>{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
+        <a class="btn" href="#buy"{% if section.settings.pick != blank %} data-pick="{{ section.settings.pick | escape }}"{% endif %}>{{ section.settings.button_text }}</a>
       {%- endif -%}
     </div>
   </div>
@@ -49,13 +49,13 @@
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "מתנה שכל אחת תשמח לקבל"
+      "default": "2 סטים, אחד מהם למתנה"
     },
     {
       "type": "richtext",
       "id": "text",
       "label": "טקסט",
-      "default": "<p>כל סט מגיע בשקית סאטן, מוכן לנתינה. בחבילה של 2 כל סט יוצא 90 ₪: אחד בשבילך ואחד בשבילה.</p>"
+      "default": "<p>כל סט מגיע בשקית סאטן משלו. בחבילה של 2 כל סט יוצא 90 ₪ במקום 119 ₪.</p>"
     },
     {
       "type": "text",

@@ -3,7 +3,7 @@
     <div class="night__copy reveal">
       <h2 class="display h2">{{ section.settings.title }}</h2>
       <p class="lead">{{ section.settings.text }}</p>
-      <a class="btn btn--light" href="#buy">{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
+      <a class="btn btn--light" href="#buy">{{ section.settings.button_text }}</a>
       {%- if section.settings.note != blank -%}<p class="night__note">{{ section.settings.note }}</p>{%- endif -%}
     </div>
     <div class="night__pair">
@@ -36,13 +36,13 @@
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "את ישנה. הסאטן עובד."
+      "default": "בערב מגלגלות, בבוקר משחררות"
     },
     {
       "type": "textarea",
       "id": "text",
       "label": "טקסט",
-      "default": "מגלגלות בערב בחמש דקות, משחררות בבוקר ומקבלות גלים רכים עם נפח. התוצאה משתנה לפי סוג השיער."
+      "default": "השיער מתייבש סביב המוט במשך הלילה ומקבל צורה. בבוקר מורידים את הגומיות, מפזרים עם האצבעות ויוצאים. התוצאה משתנה לפי סוג השיער."
     },
     {
       "type": "text",

@@ -1,14 +1,11 @@
 <section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
-  <div class="container container--narrow closer reveal">
-    {%- if section.settings.image != blank -%}
-      {{ section.settings.image | image_url: width: 240, height: 240, crop: 'center' | image_tag: class: 'closer__img', loading: 'lazy', alt: '' }}
-    {%- elsif section.settings.fallback != blank -%}
-      {{ section.settings.fallback | asset_url | image_tag: class: 'closer__img', loading: 'lazy', alt: '', width: 120, height: 120 }}
-    {%- endif -%}
-    <h2 class="display h2">{{ section.settings.title }}</h2>
-    {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
+  <div class="container closer reveal">
+    <div class="closer__copy">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
+    </div>
     {%- if section.settings.button_text != blank -%}
-      <a class="btn" href="#buy">{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
+      <a class="btn" href="#buy">{{ section.settings.button_text }}</a>
     {%- endif -%}
   </div>
 </section>
@@ -19,27 +16,16 @@
   "tag": "div",
   "settings": [
     {
-      "type": "image_picker",
-      "id": "image",
-      "label": "תמונה קטנה עגולה"
-    },
-    {
-      "type": "text",
-      "id": "fallback",
-      "label": "תמונת ברירת מחדל מהערכה",
-      "default": "product-hero.jpg"
-    },
-    {
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "מוכנה להתעורר עם תלתלים?"
+      "default": "הזמנה היום, תלתלים בעוד כשבועיים"
     },
     {
       "type": "text",
       "id": "text",
       "label": "טקסט",
-      "default": "משלוח חינם וביטול עסקה תוך 14 יום."
+      "default": "משלוח חינם עם מספר מעקב, וביטול עסקה עד 14 יום מהקבלה."
     },
     {
       "type": "text",
@@ -61,7 +47,7 @@
           "label": "משני"
         }
       ],
-      "default": ""
+      "default": "tint"
     }
   ],
   "presets": [

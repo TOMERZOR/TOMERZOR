@@ -377,6 +377,11 @@ export function parseInfoTable(xml) {
   return rows;
 }
 
+// The first six characters of a CUSIP name the issuer, and they stay the same when a fund writes the
+// company's name differently from one quarter to the next ("BANK AMER CORP", "BANK OF AMER CORP").
+// They also join share classes of one company (Alphabet A and C).
+export const issuerKey = h => (h.cusip && h.cusip.length >= 6 ? h.cusip.slice(0, 6).toUpperCase() : h.name);
+
 // Sums the rows a holding is split into (Berkshire reports one stock across subsidiaries), drops
 // options and bonds, and gives each its share of the fund.
 export function holdingsByIssuer(rows) {
@@ -385,10 +390,10 @@ export function holdingsByIssuer(rows) {
   for (const r of rows) {
     if (r.putCall || r.type === 'PRN') continue;
     total += r.value;
-    const h = by.get(r.cusip.slice(0, 6) + r.name) || { name: r.name, cusip: r.cusip, value: 0, shares: 0 };
+    const h = by.get(issuerKey(r)) || { name: r.name, cusip: r.cusip, value: 0, shares: 0 };
     h.value += r.value;
     h.shares += r.shares;
-    by.set(r.cusip.slice(0, 6) + r.name, h);
+    by.set(issuerKey(r), h);
   }
   return [...by.values()].map(h => ({ ...h, pct: total ? (h.value / total) * 100 : 0 })).sort((a, b) => b.value - a.value);
 }

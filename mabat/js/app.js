@@ -9,6 +9,7 @@ import * as push from './push.js';
 import { icon } from './icons.js';
 import { Chart, sparkline, MA_COLORS } from './chart.js';
 import { PLAYBOOK, byId as playbookById, COMMON as PLAYBOOK_COMMON } from './playbook.js';
+import { initSegmented } from './segmented.js';
 
 const state = load();
 let board = api.cachedBoard();
@@ -483,7 +484,7 @@ function closedRow(c) {
 const FEED_ICONS = { enter: ['bolt', 'enter'], near: ['flag', 'near'], filing: ['doc', 'filing'], congress: ['building', 'congress'], stop: ['arrowDown', 'avoid'], exit: ['arrowDown', 'avoid'], target: ['arrowUp', 'enter'], t1: ['arrowUp', 'enter'], t2: ['arrowUp', 'enter'], bell: ['bell', 'hold'] };
 
 function viewUpdates() {
-  const seg = `<div class="segmented" role="tablist">
+  const seg = `<div class="segmented" data-seg="updates" role="tablist">
     ${[['alerts', 'התראות'], ['funds', 'כסף חכם'], ['congress', 'קונגרס']].map(([id, label]) => `<button class="${updatesView === id ? 'is-on' : ''}" data-action="updates-view" data-v="${id}" role="tab" aria-selected="${updatesView === id}">${label}</button>`).join('')}
   </div>`;
   if (!api.hasServer()) return header('עדכונים') + seg + noServerCard();
@@ -581,7 +582,7 @@ function openSheet({ html, cls = '', label = '', onMount, onClose }) {
   let startY = null;
   let dy = 0;
   sheet.addEventListener('pointerdown', e => {
-    if (e.target.closest('canvas, input, textarea, select, .no-drag')) return;
+    if (e.target.closest('canvas, input, textarea, select, .segmented, .no-drag')) return;
     if (!e.target.closest('[data-drag]') && body.scrollTop > 0) return;
     startY = e.clientY;
     dy = 0;
@@ -805,7 +806,7 @@ function detailBody(d, range, show) {
     </div>
     <div class="chart-wrap"><canvas class="chart" aria-label="גרף מחיר של ${esc(d.t)}" role="img"></canvas></div>
     <div class="chart-controls">
-      <div class="segmented segmented--sm" role="tablist">${RANGES.map(([label, days]) => `<button data-act="range" data-days="${days}" class="${days === range ? 'is-on' : ''}">${label}</button>`).join('')}</div>
+      <div class="segmented segmented--sm" data-seg="range" role="tablist">${RANGES.map(([label, days]) => `<button data-act="range" data-days="${days}" class="${days === range ? 'is-on' : ''}">${label}</button>`).join('')}</div>
       <span data-range-chg></span>
     </div>
     <div class="ma-chips">${Object.entries({ sma20: 'ממוצע 20', sma50: 'ממוצע 50', sma200: 'ממוצע 200' }).map(([k, label]) => `<button data-act="ma" data-k="${k}" class="ma-chip ${show[k] ? 'is-on' : ''}" style="--c:${MA_COLORS[k]}"><i></i>${label}</button>`).join('')}</div>
@@ -1369,6 +1370,7 @@ function applyTheme() {
 applyTheme();
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
 shell();
+initSegmented();
 render();
 if (!state.onboarded) openOnboarding();
 refresh();

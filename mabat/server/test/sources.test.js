@@ -109,6 +109,12 @@ test('13F information table: rows summed per issuer, options and bonds dropped',
   assert.ok(Math.abs(h[0].pct - 66.67) < 0.01);
 });
 
+test('13F: a company written differently between quarters is still the same holding', () => {
+  const before = src.holdingsByIssuer(src.parseInfoTable(infoTableXml([{ name: 'BANK AMER CORP', cusip: '060505104', value: 100, shares: 10 }])));
+  const now = src.holdingsByIssuer(src.parseInfoTable(infoTableXml([{ name: 'BANK OF AMER CORP', cusip: '060505104', value: 120, shares: 10 }])));
+  assert.equal(src.issuerKey(before[0]), src.issuerKey(now[0]));
+});
+
 test('House index: unzipped, PTRs only, dates and links', async () => {
   const xml = houseXml([
     { last: 'Pelosi', first: 'Nancy', district: 'CA11', date: '2026-08-21', docId: '20035143' },

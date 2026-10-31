@@ -449,18 +449,19 @@ export class Market {
         return true;
       }
       if (!filings.length) { await this.storage.put(`f13:${fund.cik}`, { at: now, ok: false, error: 'no 13F-HR' }); return true; }
-      if (prev?.ok && prev.acc === filings[0].acc) { await this.storage.put(`f13:${fund.cik}`, { ...prev, at: now }); return true; }
+      // v2: holdings matched by CUSIP; older records are read again once.
+      if (prev?.ok && prev.v === 2 && prev.acc === filings[0].acc) { await this.storage.put(`f13:${fund.cik}`, { ...prev, at: now }); return true; }
       const nowRows = src.holdingsByIssuer(await src.infoTable(get, ua, fund.cik, filings[0].acc));
       const beforeRows = filings[1] ? src.holdingsByIssuer(await src.infoTable(get, ua, fund.cik, filings[1].acc)) : [];
-      const before = new Map(beforeRows.map(h => [h.cusip.slice(0, 6) + h.name, h]));
+      const before = new Map(beforeRows.map(h => [src.issuerKey(h), h]));
       const holdings = nowRows.slice(0, 60).map(h => {
-        const b = before.get(h.cusip.slice(0, 6) + h.name);
+        const b = before.get(src.issuerKey(h));
         const change = !beforeRows.length ? null : !b ? 'new' : h.shares > b.shares * 1.01 ? 'added' : h.shares < b.shares * 0.99 ? 'trimmed' : 'same';
         return { name: h.name, t: matchIssuer(h.name), pct: Math.round(h.pct * 100) / 100, shares: h.shares, change };
       });
-      const sold = beforeRows.length ? beforeRows.filter(b => !nowRows.some(h => h.cusip.slice(0, 6) + h.name === b.cusip.slice(0, 6) + b.name)).slice(0, 10).map(b => ({ name: b.name, t: matchIssuer(b.name) })) : [];
+      const sold = beforeRows.length ? beforeRows.filter(b => !nowRows.some(h => src.issuerKey(h) === src.issuerKey(b))).slice(0, 10).map(b => ({ name: b.name, t: matchIssuer(b.name) })) : [];
       await this.storage.put(`f13:${fund.cik}`, {
-        at: now, ok: true, acc: filings[0].acc, period: filings[0].period, filed: filings[0].date,
+        at: now, ok: true, v: 2, acc: filings[0].acc, period: filings[0].period, filed: filings[0].date,
         url: `https://www.sec.gov/Archives/edgar/data/${fund.cik}/${filings[0].acc.replace(/-/g, '')}/`, holdings, sold,
       });
       await this.rebuildHolders();

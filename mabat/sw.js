@@ -1,6 +1,6 @@
 // Keeps Mabat on the phone so it opens instantly, and shows the alerts the market server pushes.
 // Bump VERSION whenever a file changes.
-const VERSION = 'mabat-v2';
+const VERSION = 'mabat-v3';
 const FILES = [
   './',
   'index.html',
@@ -15,6 +15,7 @@ const FILES = [
   'js/icons.js',
   'js/playbook.js',
   'js/push.js',
+  'js/segmented.js',
   'js/store.js',
   'img/icon.svg',
   'img/icon-192.png',

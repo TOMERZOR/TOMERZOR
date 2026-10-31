@@ -26,7 +26,7 @@ export const UNIVERSE = [
   ['SHOP', 'Shopify', 'SHOPIFY', 'tech'],
   ['COIN', 'Coinbase', 'COINBASE', 'finance'],
   ['JPM', 'JPMorgan Chase', 'JPMORGAN', 'finance'],
-  ['BAC', 'Bank of America', 'BANK AMER', 'finance'],
+  ['BAC', 'Bank of America', 'BANK AMER|BANK OF AMER', 'finance'],
   ['GS', 'Goldman Sachs', 'GOLDMAN SACHS', 'finance'],
   ['V', 'Visa', 'VISA INC', 'finance'],
   ['MA', 'Mastercard', 'MASTERCARD', 'finance'],

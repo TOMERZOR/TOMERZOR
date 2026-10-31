@@ -264,6 +264,19 @@ main {
 .segmented button.is-on { background: var(--bg-2); font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.04); }
 :root[data-theme="dark"] .segmented button.is-on { background: #636366; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .segmented button.is-on { background: #636366; } }
+/* The sliding thumb (js/segmented.js) */
+.segmented.has-thumb { position: relative; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.segmented.has-thumb button { position: relative; z-index: 1; transition: font-weight 0.2s; }
+.segmented.has-thumb button.is-on { background: none !important; box-shadow: none; }
+.seg-thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 0; z-index: 0; border-radius: 8px;
+  background: var(--bg-2); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.04);
+  transform: translateX(var(--x, 0)) scale(1);
+  transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1), width 0.32s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.seg-thumb.is-pressed { transform: translateX(var(--x, 0)) scale(0.95); }
+:root[data-theme="dark"] .seg-thumb { background: #636366; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .seg-thumb { background: #636366; } }
 .segmented--sm { margin: 0; flex: none; }
 .segmented--sm button { padding: 6px 12px; min-height: 32px; font-size: 0.7647rem; }
 

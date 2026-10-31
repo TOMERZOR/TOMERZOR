@@ -1,31 +1,33 @@
 <footer class="footer">
-  <div class="container footer__grid">
-    <div class="footer__brand">
-      <span class="wordmark">{{ shop.name }}</span>
-      {%- if section.settings.about != blank -%}<div class="rte">{{ section.settings.about }}</div>{%- endif -%}
-      <div class="footer__social">
-        {%- if settings.social_facebook != blank -%}<a href="{{ settings.social_facebook }}" aria-label="פייסבוק">{% render 'icon', name: 'facebook' %}</a>{%- endif -%}
-        {%- if settings.social_instagram != blank -%}<a href="{{ settings.social_instagram }}" aria-label="אינסטגרם">{% render 'icon', name: 'instagram' %}</a>{%- endif -%}
-        {%- if settings.social_tiktok != blank -%}<a href="{{ settings.social_tiktok }}" aria-label="טיקטוק">{% render 'icon', name: 'tiktok' %}</a>{%- endif -%}
+  <div class="container">
+    <div class="footer__grid">
+      <div class="footer__brand">
+        <span class="wordmark">{{ shop.name }}</span>
+        {%- if section.settings.about != blank -%}<div class="rte">{{ section.settings.about }}</div>{%- endif -%}
+        {%- if settings.social_facebook != blank or settings.social_instagram != blank or settings.social_tiktok != blank -%}
+          <div class="footer__social">
+            {%- if settings.social_instagram != blank -%}<a href="{{ settings.social_instagram }}" aria-label="אינסטגרם">{% render 'icon', name: 'instagram' %}</a>{%- endif -%}
+            {%- if settings.social_facebook != blank -%}<a href="{{ settings.social_facebook }}" aria-label="פייסבוק">{% render 'icon', name: 'facebook' %}</a>{%- endif -%}
+            {%- if settings.social_tiktok != blank -%}<a href="{{ settings.social_tiktok }}" aria-label="טיקטוק">{% render 'icon', name: 'tiktok' %}</a>{%- endif -%}
+          </div>
+        {%- endif -%}
+      </div>
+      <nav class="footer__links" aria-label="מידע ומדיניות">
+        <p class="footer__head">מידע</p>
+        {%- for link in section.settings.menu.links -%}
+          <a href="{{ link.url }}">{{ link.title }}</a>
+        {%- endfor -%}
+        {%- for policy in shop.policies -%}
+          <a href="{{ policy.url }}">{{ policy.title }}</a>
+        {%- endfor -%}
+      </nav>
+      <div class="footer__biz">
+        <p class="footer__head">פרטי העסק</p>
+        <div class="rte">{{ section.settings.business }}</div>
+        {%- if shop.email != blank -%}<a href="mailto:{{ shop.email }}">{{ shop.email }}</a>{%- endif -%}
       </div>
     </div>
-    <nav class="footer__links" aria-label="מידע ומדיניות">
-      <p class="footer__head">מידע</p>
-      {%- for link in section.settings.menu.links -%}
-        <a href="{{ link.url }}">{{ link.title }}</a>
-      {%- endfor -%}
-      {%- for policy in shop.policies -%}
-        <a href="{{ policy.url }}">{{ policy.title }}</a>
-      {%- endfor -%}
-    </nav>
-    <div class="footer__biz">
-      <p class="footer__head">פרטי העסק</p>
-      <div class="rte">{{ section.settings.business }}</div>
-      {%- if shop.email != blank -%}<p><a href="mailto:{{ shop.email }}">{{ shop.email }}</a></p>{%- endif -%}
-    </div>
-  </div>
-  <div class="container footer__bottom">
-    <p>&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}. כל הזכויות שמורות.</p>
+    <p class="footer__bottom">&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}</p>
   </div>
 </footer>
 {%- if settings.whatsapp_number != blank -%}
@@ -41,7 +43,7 @@
       "type": "richtext",
       "id": "about",
       "label": "על המותג",
-      "default": "<p>אביזרי שיער מסאטן לתלתלים בלי חום. נבחרו ונבדקו בשבילך.</p>"
+      "default": "<p>אביזרי שיער מסאטן לתלתלים בלי חום.</p>"
     },
     {
       "type": "link_list",
@@ -53,7 +55,7 @@
       "type": "richtext",
       "id": "business",
       "label": "פרטי העסק (חובה לפי חוק הגנת הצרכן)",
-      "default": "<p>[שם העסק] · עוסק [פטור/מורשה] מס' [מספר]<br>[כתובת מלאה]<br>טלפון: [מספר טלפון]</p>"
+      "default": "<p>[שם העסק], עוסק [פטור/מורשה] מס' [מספר]<br>[כתובת מלאה]<br>טלפון: [מספר טלפון]</p>"
     }
   ]
 }

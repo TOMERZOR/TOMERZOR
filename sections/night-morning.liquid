@@ -1,0 +1,88 @@
+<section class="night">
+  <div class="container night__grid">
+    <div class="night__copy reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      <p class="lead">{{ section.settings.text }}</p>
+      <a class="btn btn--light" href="#buy">{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
+      {%- if section.settings.note != blank -%}<p class="night__note">{{ section.settings.note }}</p>{%- endif -%}
+    </div>
+    <div class="night__pair">
+      <figure class="night__fig reveal" style="--i: 1">
+        {%- if section.settings.image_before != blank -%}
+          {{ section.settings.image_before | image_url: width: 900 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 30vw, 50vw', widths: '400, 600, 900', alt: section.settings.image_before.alt }}
+        {%- else -%}
+          {{ 'night-before.jpg' | asset_url | image_tag: loading: 'lazy', alt: 'בערב: השיער מגולגל סביב מוט הסאטן', width: 752, height: 666 }}
+        {%- endif -%}
+        <figcaption>{% render 'icon', name: 'moon' %}{{ section.settings.caption_before }}</figcaption>
+      </figure>
+      <figure class="night__fig reveal" style="--i: 2">
+        {%- if section.settings.image_after != blank -%}
+          {{ section.settings.image_after | image_url: width: 900 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 30vw, 50vw', widths: '400, 600, 900', alt: section.settings.image_after.alt }}
+        {%- else -%}
+          {{ 'morning-after.jpg' | asset_url | image_tag: loading: 'lazy', alt: 'בבוקר: גלים רכים אחרי שחרור המוט', width: 752, height: 666 }}
+        {%- endif -%}
+        <figcaption>{% render 'icon', name: 'sun' %}{{ section.settings.caption_after }}</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "בערב ובבוקר",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "את ישנה. הסאטן עובד."
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "טקסט",
+      "default": "מגלגלות בערב בחמש דקות, משחררות בבוקר ומקבלות גלים רכים עם נפח. התוצאה משתנה לפי סוג השיער."
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "כפתור",
+      "default": "להזמנה"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_before",
+      "label": "תמונת ערב"
+    },
+    {
+      "type": "text",
+      "id": "caption_before",
+      "label": "כיתוב ערב",
+      "default": "בערב"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_after",
+      "label": "תמונת בוקר"
+    },
+    {
+      "type": "text",
+      "id": "caption_after",
+      "label": "כיתוב בוקר",
+      "default": "בבוקר"
+    },
+    {
+      "type": "text",
+      "id": "note",
+      "label": "הערה קטנה",
+      "default": "התמונות להמחשה."
+    }
+  ],
+  "presets": [
+    {
+      "name": "בערב ובבוקר"
+    }
+  ]
+}
+{% endschema %}

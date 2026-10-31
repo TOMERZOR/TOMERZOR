@@ -123,28 +123,46 @@
     /* gallery thumbs */
     var slides = root.querySelector('[data-slides]');
     var thumbs = root.querySelectorAll('[data-thumb]');
+    var dots = root.querySelectorAll('.buy__dot');
     thumbs.forEach(function (t) {
       t.addEventListener('click', function () {
         var s = slides.children[parseInt(t.dataset.thumb, 10)];
         if (s) slides.scrollTo({ left: s.offsetLeft - slides.firstElementChild.offsetLeft, behavior: 'smooth' });
       });
     });
-    if (slides && thumbs.length) {
-      slides.addEventListener('scroll', function () {
-        var w = slides.clientWidth || 1;
-        var i = Math.round(Math.abs(slides.scrollLeft) / w);
-        thumbs.forEach(function (t, j) { t.classList.toggle('is-active', i === j); });
-      }, { passive: true });
+    if (slides && (thumbs.length || dots.length) && 'IntersectionObserver' in window) {
+      var slideObs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          var i = Array.prototype.indexOf.call(slides.children, en.target);
+          thumbs.forEach(function (t, j) { t.classList.toggle('is-active', i === j); });
+          dots.forEach(function (d, j) { d.classList.toggle('is-active', i === j); });
+        });
+      }, { root: slides, threshold: 0.6 });
+      Array.prototype.forEach.call(slides.children, function (c) { slideObs.observe(c); });
     }
 
-    /* sticky bar: show once the main button scrolls out of view */
+    /* sticky bar: visible whenever the main order button is off screen,
+       except while the hero (which has its own CTA) is in view */
     if (sticky && 'IntersectionObserver' in window) {
       sticky.hidden = false;
-      new IntersectionObserver(function (entries) {
-        var e = entries[0];
-        sticky.classList.toggle('is-visible', !e.isIntersecting && e.boundingClientRect.top < 0);
-      }).observe(button);
+      var buttonVisible = true;
+      var heroVisible = !!document.querySelector('.hero');
+      var update = function () { sticky.classList.toggle('is-visible', !buttonVisible && !heroVisible); };
+      new IntersectionObserver(function (entries) { buttonVisible = entries[0].isIntersecting; update(); }).observe(button);
+      var hero = document.querySelector('.hero');
+      if (hero) new IntersectionObserver(function (entries) { heroVisible = entries[0].isIntersecting; update(); }, { threshold: 0.15 }).observe(hero);
     }
+
+    /* links that pre-select a bundle, e.g. the gift section */
+    document.querySelectorAll('[data-pick]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        var want = link.getAttribute('data-pick');
+        root.querySelectorAll('.bundle input').forEach(function (input) {
+          if (input.value === want) { input.checked = true; render(); }
+        });
+      });
+    });
 
     /* delivery estimate in real dates (Israeli business days: Sun–Thu) */
     var eta = root.querySelector('[data-eta]');
@@ -168,7 +186,14 @@
 
     /* prevent double submit */
     form.addEventListener('submit', function () {
-      setTimeout(function () { button.disabled = true; }, 0);
+      setTimeout(function () {
+        button.classList.add('is-loading');
+        if (button.dataset.loadingText && buyLabel) buyLabel.textContent = button.dataset.loadingText;
+      }, 0);
+    });
+    window.addEventListener('pageshow', function () {
+      button.classList.remove('is-loading');
+      render();
     });
   }
 
@@ -204,7 +229,24 @@
     }, 4500);
   }
 
+  /* ---------- Scroll reveal ---------- */
+  function initReveal() {
+    var els = document.querySelectorAll('.reveal');
+    if (!els.length) return;
+    if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      els.forEach(function (el) { el.classList.add('is-in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { en.target.classList.add('is-in'); io.unobserve(en.target); }
+      });
+    }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+    els.forEach(function (el) { io.observe(el); });
+  }
+
   function init() {
+    initReveal();
     document.querySelectorAll('[data-buy]').forEach(initBuy);
     initMenu();
     initAnnounce();

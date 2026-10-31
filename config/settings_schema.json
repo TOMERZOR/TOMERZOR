@@ -10,39 +10,144 @@
   {
     "name": "צבעים",
     "settings": [
-      { "type": "color", "id": "color_bg", "label": "רקע", "default": "#FBF7F2" },
-      { "type": "color", "id": "color_bg_alt", "label": "רקע משני", "default": "#F3EADF" },
-      { "type": "color", "id": "color_ink", "label": "טקסט", "default": "#2B2320" },
-      { "type": "color", "id": "color_muted", "label": "טקסט משני", "default": "#75685F" },
-      { "type": "color", "id": "color_accent", "label": "כפתורים", "default": "#2B2320" },
-      { "type": "color", "id": "color_accent_ink", "label": "טקסט על כפתורים", "default": "#FFFFFF" },
-      { "type": "color", "id": "color_line", "label": "קווים", "default": "#E6DACB" },
-      { "type": "color", "id": "color_sale", "label": "הדגשת חיסכון", "default": "#A4573F" }
+      {
+        "type": "select",
+        "id": "color_scheme",
+        "label": "מצב תצוגה",
+        "options": [
+          {
+            "value": "auto",
+            "label": "אוטומטי (בהיר או כהה לפי המכשיר)"
+          },
+          {
+            "value": "light",
+            "label": "תמיד בהיר"
+          }
+        ],
+        "default": "auto"
+      },
+      {
+        "type": "color",
+        "id": "color_bg",
+        "label": "רקע",
+        "default": "#F4F5F8"
+      },
+      {
+        "type": "color",
+        "id": "color_surface",
+        "label": "משטח (כרטיסים)",
+        "default": "#FCFCFD"
+      },
+      {
+        "type": "color",
+        "id": "color_tint",
+        "label": "רקע משני",
+        "default": "#E9EBF2"
+      },
+      {
+        "type": "color",
+        "id": "color_ink",
+        "label": "טקסט וכפתורים",
+        "default": "#141A30"
+      },
+      {
+        "type": "color",
+        "id": "color_muted",
+        "label": "טקסט משני",
+        "default": "#545A70"
+      },
+      {
+        "type": "color",
+        "id": "color_line",
+        "label": "קווים",
+        "default": "#D9DCE6"
+      },
+      {
+        "type": "color",
+        "id": "color_accent",
+        "label": "צבע הדגשה",
+        "default": "#B4385E"
+      },
+      {
+        "type": "color",
+        "id": "color_night",
+        "label": "רקע אזור הלילה",
+        "default": "#121630"
+      }
     ]
   },
   {
     "name": "לוגו ואייקון",
     "settings": [
-      { "type": "image_picker", "id": "logo", "label": "לוגו (אם ריק, יוצג שם החנות)" },
-      { "type": "range", "id": "logo_width", "label": "רוחב לוגו", "min": 60, "max": 240, "step": 10, "unit": "px", "default": 110 },
-      { "type": "image_picker", "id": "favicon", "label": "אייקון לדפדפן (32×32)" }
+      {
+        "type": "image_picker",
+        "id": "logo",
+        "label": "לוגו (אם ריק, יוצג שם החנות)"
+      },
+      {
+        "type": "range",
+        "id": "logo_width",
+        "label": "רוחב לוגו",
+        "min": 60,
+        "max": 240,
+        "step": 10,
+        "unit": "px",
+        "default": 110
+      },
+      {
+        "type": "image_picker",
+        "id": "favicon",
+        "label": "אייקון לדפדפן (32×32)"
+      }
     ]
   },
   {
     "name": "משלוח ואמון",
     "settings": [
-      { "type": "text", "id": "delivery_text", "label": "זמן אספקה (מוצג בעמוד המוצר)", "default": "משלוח חינם עם מספר מעקב · בדרך כלל 10–15 ימי עסקים" },
-      { "type": "text", "id": "returns_text", "label": "החזרות", "default": "ביטול עסקה תוך 14 יום לפי חוק הגנת הצרכן" },
-      { "type": "text", "id": "payment_text", "label": "תשלום", "default": "תשלום מאובטח באשראי" }
+      {
+        "type": "text",
+        "id": "delivery_text",
+        "label": "זמן אספקה (מוצג בעמוד המוצר)",
+        "default": "משלוח חינם עם מספר מעקב"
+      },
+      {
+        "type": "text",
+        "id": "returns_text",
+        "label": "החזרות",
+        "default": "ביטול עסקה תוך 14 יום לפי חוק הגנת הצרכן"
+      },
+      {
+        "type": "text",
+        "id": "payment_text",
+        "label": "תשלום",
+        "default": "תשלום מאובטח באשראי"
+      }
     ]
   },
   {
     "name": "רשתות חברתיות",
     "settings": [
-      { "type": "url", "id": "social_facebook", "label": "פייסבוק" },
-      { "type": "url", "id": "social_instagram", "label": "אינסטגרם" },
-      { "type": "url", "id": "social_tiktok", "label": "טיקטוק" },
-      { "type": "text", "id": "whatsapp_number", "label": "וואטסאפ לשירות לקוחות (פורמט 9725XXXXXXXX)", "info": "אם תמלא, יופיע כפתור וואטסאפ צף." }
+      {
+        "type": "url",
+        "id": "social_facebook",
+        "label": "פייסבוק"
+      },
+      {
+        "type": "url",
+        "id": "social_instagram",
+        "label": "אינסטגרם"
+      },
+      {
+        "type": "url",
+        "id": "social_tiktok",
+        "label": "טיקטוק"
+      },
+      {
+        "type": "text",
+        "id": "whatsapp_number",
+        "label": "וואטסאפ לשירות לקוחות (פורמט 9725XXXXXXXX)",
+        "info": "אם תמלא, יופיע כפתור וואטסאפ צף."
+      }
     ]
   }
 ]

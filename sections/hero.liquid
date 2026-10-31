@@ -1,21 +1,23 @@
 {%- liquid
   assign img = section.settings.image
 -%}
-<section class="hero{% if section.settings.layout == 'overlay' %} hero--overlay{% endif %}">
+<section class="hero">
   <div class="hero__media">
     {%- if img != blank -%}
-      {{ img | image_url: width: 1800 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '100vw', widths: '600, 900, 1200, 1500, 1800', alt: img.alt }}
+      {{ img | image_url: width: 1800 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '(min-width: 990px) 58vw, 100vw', widths: '600, 900, 1200, 1500, 1800', alt: img.alt }}
     {%- else -%}
-      {{ 'hero-night.jpg' | asset_url | image_tag: loading: 'eager', fetchpriority: 'high', alt: '' }}
+      {{ 'asleep.jpg' | asset_url | image_tag: loading: 'eager', fetchpriority: 'high', alt: 'אישה ישנה עם מוט סלסול מסאטן בשיער', width: 800, height: 1000 }}
     {%- endif -%}
   </div>
   <div class="hero__copy">
-    {%- if section.settings.eyebrow != blank -%}<p class="eyebrow">{{ section.settings.eyebrow }}</p>{%- endif -%}
-    <h2 class="hero__title">{{ section.settings.title }}</h2>
-    {%- if section.settings.text != blank -%}<div class="hero__text rte">{{ section.settings.text }}</div>{%- endif -%}
-    {%- if section.settings.button_text != blank -%}
-      <a class="btn" href="{{ section.settings.button_link | default: '#buy' }}">{{ section.settings.button_text }}</a>
-    {%- endif -%}
+    <h1 class="hero__title display">{{ section.settings.title }}</h1>
+    {%- if section.settings.text != blank -%}<p class="hero__text">{{ section.settings.text }}</p>{%- endif -%}
+    <div class="hero__ctas">
+      <a class="btn btn--light" href="#buy">{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
+      {%- if section.settings.secondary_text != blank -%}
+        <a class="btn btn--ghost" href="#how">{{ section.settings.secondary_text }}</a>
+      {%- endif -%}
+    </div>
   </div>
 </section>
 
@@ -27,52 +29,31 @@
     {
       "type": "image_picker",
       "id": "image",
-      "label": "תמונה"
-    },
-    {
-      "type": "select",
-      "id": "layout",
-      "label": "פריסה",
-      "options": [
-        {
-          "value": "overlay",
-          "label": "טקסט על התמונה"
-        },
-        {
-          "value": "split",
-          "label": "תמונה וטקסט זה לצד זה"
-        }
-      ],
-      "default": "split"
-    },
-    {
-      "type": "text",
-      "id": "eyebrow",
-      "label": "שורה קטנה",
-      "default": "החדש של הלילה"
+      "label": "תמונה (לאורך, 4:5)"
     },
     {
       "type": "text",
       "id": "title",
-      "label": "כותרת",
+      "label": "כותרת (עד 6 מילים)",
       "default": "הולכת לישון. מתעוררת עם תלתלים."
     },
     {
-      "type": "richtext",
+      "type": "text",
       "id": "text",
-      "label": "טקסט",
-      "default": "<p>מוט סלסול מסאטן שעושה את העבודה בזמן שאת ישנה. בלי מסלסל, בלי פן, בלי נזק מחום.</p>"
+      "label": "טקסט (עד 20 מילים)",
+      "default": "מוט סאטן רך שמסלסל את השיער בזמן השינה. בלי מסלסל, בלי חום, בלי נזק."
     },
     {
       "type": "text",
       "id": "button_text",
-      "label": "טקסט כפתור",
-      "default": "אני רוצה תלתלים"
+      "label": "כפתור ראשי (גלילה לרכישה)",
+      "default": "להזמנה"
     },
     {
-      "type": "url",
-      "id": "button_link",
-      "label": "קישור כפתור (ריק = גלילה לרכישה)"
+      "type": "text",
+      "id": "secondary_text",
+      "label": "כפתור משני (גלילה ל'איך זה עובד')",
+      "default": "איך זה עובד"
     }
   ],
   "presets": [

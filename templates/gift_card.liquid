@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>כרטיס מתנה – {{ shop.name }}</title>
+  <title>כרטיס מתנה | {{ shop.name }}</title>
   <style>
     @font-face { font-family: 'Heebo'; src: url('{{ 'heebo-hebrew.woff2' | asset_url }}') format('woff2'); font-weight: 100 900; font-display: swap; }
     :root { --bg: {{ settings.color_bg }}; --bg-alt: {{ settings.color_bg_alt }}; --ink: {{ settings.color_ink }}; --muted: {{ settings.color_muted }}; --accent: {{ settings.color_accent }}; --accent-ink: {{ settings.color_accent_ink }}; --line: {{ settings.color_line }}; --sale: {{ settings.color_sale }}; }
@@ -17,7 +17,7 @@
   <main class="section">
     <div class="container container--narrow center">
       <p class="wordmark">{{ shop.name }}</p>
-      <h1 class="section__title">כרטיס מתנה בשווי {{ gift_card.balance | money }}</h1>
+      <h1 class="page-title">כרטיס מתנה בשווי {{ gift_card.balance | money }}</h1>
       {%- if gift_card.expired or gift_card.enabled == false -%}<p class="notice notice--error">הכרטיס אינו פעיל.</p>{%- endif -%}
       <p>הקוד לשימוש בקופה:</p>
       <p class="gift-code"><strong>{{ gift_card.code | format_code }}</strong></p>

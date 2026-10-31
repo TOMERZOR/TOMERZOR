@@ -1,6 +1,6 @@
 <article class="section">
   <div class="container container--narrow">
-    <h1 class="section__title">{{ article.title }}</h1>
+    <h1 class="page-title">{{ article.title }}</h1>
     <p class="center muted">{{ article.published_at | date: '%d.%m.%Y' }}</p>
     {%- if article.image -%}<div class="article__img">{{ article.image | image_url: width: 1400 | image_tag: alt: article.title }}</div>{%- endif -%}
     <div class="rte">{{ article.content }}</div>

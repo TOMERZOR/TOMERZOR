@@ -1,16 +1,22 @@
-<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}" id="how">
   <div class="container">
-    <h2 class="section__title">{{ section.settings.title }}</h2>
-    {%- if section.settings.image != blank -%}
-      <div class="steps__image">{{ section.settings.image | image_url: width: 1400 | image_tag: loading: 'lazy', alt: section.settings.image.alt }}</div>
-    {%- elsif section.settings.fallback != blank -%}
-      <div class="steps__image">{{ section.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: 'שלושת שלבי השימוש' }}</div>
-    {%- endif -%}
+    <div class="section-head reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+    </div>
     <ol class="steps">
       {%- for block in section.blocks -%}
-        <li class="step" {{ block.shopify_attributes }}>
-          <span class="step__num">{{ forloop.index }}</span>
-          <h3 class="step__title">{{ block.settings.title }}</h3>
+        <li class="step reveal" style="--i: {{ forloop.index0 }}" {{ block.shopify_attributes }}>
+          <div class="step__img">
+            {%- if block.settings.image != blank -%}
+              {{ block.settings.image | image_url: width: 800 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 30vw, 78vw', widths: '400, 600, 800', alt: block.settings.title }}
+            {%- elsif block.settings.fallback != blank -%}
+              {{ block.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: block.settings.title, width: 676, height: 912 }}
+            {%- endif -%}
+          </div>
+          <div class="step__label">
+            <span class="step__num" aria-hidden="true">{{ forloop.index }}</span>
+            <h3 class="step__title">{{ block.settings.title }}</h3>
+          </div>
           <p class="step__text">{{ block.settings.text }}</p>
         </li>
       {%- endfor -%}
@@ -30,17 +36,6 @@
       "default": "3 צעדים, 5 דקות"
     },
     {
-      "type": "image_picker",
-      "id": "image",
-      "label": "תמונה"
-    },
-    {
-      "type": "text",
-      "id": "fallback",
-      "label": "תמונת ברירת מחדל מתוך הערכה",
-      "default": "how-to.jpg"
-    },
-    {
       "type": "select",
       "id": "bg",
       "label": "רקע",
@@ -50,24 +45,34 @@
           "label": "רגיל"
         },
         {
-          "value": "alt",
+          "value": "tint",
           "label": "משני"
         }
       ],
       "default": ""
     }
   ],
-  "max_blocks": 5,
+  "max_blocks": 4,
   "blocks": [
     {
       "type": "step",
-      "name": "שלב",
+      "name": "צעד",
       "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "תמונה"
+        },
+        {
+          "type": "text",
+          "id": "fallback",
+          "label": "תמונת ברירת מחדל מהערכה"
+        },
         {
           "type": "text",
           "id": "title",
-          "label": "כותרת",
-          "default": "שלב"
+          "label": "פועל (מילה אחת)",
+          "default": "מניחות"
         },
         {
           "type": "textarea",
@@ -79,30 +84,7 @@
   ],
   "presets": [
     {
-      "name": "איך זה עובד",
-      "blocks": [
-        {
-          "type": "step",
-          "settings": {
-            "title": "מניחות",
-            "text": "מניחות את המוט על הראש כמו קשת, כשהאמצע בקו השיער."
-          }
-        },
-        {
-          "type": "step",
-          "settings": {
-            "title": "מגלגלות",
-            "text": "לוקחות קווצה ומלפפות סביב המוט, ומוסיפות שיער בכל סיבוב. אותו דבר בצד השני."
-          }
-        },
-        {
-          "type": "step",
-          "settings": {
-            "title": "ישנות",
-            "text": "סוגרות את הקצוות עם גומיות הסאטן, הולכות לישון ומשחררות בבוקר."
-          }
-        }
-      ]
+      "name": "איך זה עובד"
     }
   ]
 }

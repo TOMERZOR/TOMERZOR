@@ -1,6 +1,6 @@
 // Keeps Living Room on the phone so it opens instantly, also offline.
 // Bump VERSION whenever a file changes.
-const VERSION = 'livingroom-v3';
+const VERSION = 'livingroom-v4';
 const FILES = [
   './',
   'css/app.css',
@@ -11,6 +11,20 @@ const FILES = [
   'img/icon-512.png',
   'img/icon-maskable-512.png',
   'img/icon.svg',
+  'img/starters/arm-boucle.webp',
+  'img/starters/art-abstract.webp',
+  'img/starters/bed-linen.webp',
+  'img/starters/chair-wood.webp',
+  'img/starters/coffee-round.webp',
+  'img/starters/dining-oak.webp',
+  'img/starters/lamp-arc.webp',
+  'img/starters/mirror-round.webp',
+  'img/starters/plant-monstera.webp',
+  'img/starters/rug-wool.webp',
+  'img/starters/shelf-oak.webp',
+  'img/starters/sideboard.webp',
+  'img/starters/sofa-oslo.webp',
+  'img/starters/tv-65.webp',
   'index.html',
   'js/api.js',
   'js/app.js',

@@ -20,6 +20,29 @@
 { "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
 <script src="js/config.js"></script>
+<script>
+// Shows unexpected errors on screen (a screenshot of it tells us what broke), and says so if the app never started.
+(function () {
+  var shown = 0;
+  function report(msg) {
+    if (shown++ > 2) return;
+    var el = document.getElementById('crash');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'crash';
+      el.setAttribute('role', 'alert');
+      el.style.cssText = 'position:fixed;z-index:100;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);padding:12px 14px;border-radius:16px;background:#2a1414;color:#fff;font:13px/1.45 system-ui,sans-serif;direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-word;box-shadow:0 10px 30px rgba(0,0,0,.3)';
+      el.onclick = function () { el.remove(); shown = 0; };
+      (document.body || document.documentElement).appendChild(el);
+    }
+    el.textContent += (el.textContent ? '\n' : 'תקלה (נגיעה סוגרת):\n') + String(msg).slice(0, 300);
+  }
+  window.__report = report;
+  addEventListener('error', function (e) { report((e.message || 'error') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+  addEventListener('unhandledrejection', function (e) { var r = e.reason; report('promise: ' + (r && (r.message || r.code) || r)); });
+  setTimeout(function () { if (!window.__livingroom) report('האפליקציה לא נטענה עד הסוף. ' + navigator.userAgent); }, 9000);
+})();
+</script>
 </head>
 <body>
 <div id="app">

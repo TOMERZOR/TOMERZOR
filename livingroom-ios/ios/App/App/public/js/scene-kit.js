@@ -277,14 +277,17 @@ export function polygonsOverlap(a, b, slack = 0.01) {
 export const isSolid = root => !root.userData.wall && root.userData.item.category !== 'rug';
 
 // ---------- environment ----------
-export function addLights(scene, { shadows = true } = {}) {
+/** Phones get lighter rendering: smaller shadow maps and pixel ratio. */
+export const LIGHT_DEVICE = matchMedia('(pointer: coarse)').matches;
+
+export function addLights(scene, { shadows = true, shadowSize = LIGHT_DEVICE ? 1024 : 2048 } = {}) {
   const hemi = new THREE.HemisphereLight('#ffffff', '#b9b2a6', 0.9);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight('#fff4e5', 2.2);
   sun.position.set(2.5, 5, 3.5);
   if (shadows) {
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(shadowSize, shadowSize);
     const s = 6;
     Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 0.5, far: 20 });
     sun.shadow.bias = -0.0004;

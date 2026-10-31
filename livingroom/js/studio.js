@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createItemObject, setSelected, footprint, polygonsOverlap, isSolid, addLights, defaultY, ACCENT, disposeItemObject } from './scene-kit.js';
+import { createItemObject, setSelected, footprint, polygonsOverlap, isSolid, addLights, defaultY, ACCENT, disposeItemObject, LIGHT_DEVICE } from './scene-kit.js';
 import { CATEGORIES } from './catalog.js';
 
 const M = v => v / 100;
@@ -24,8 +24,9 @@ export class Studio {
     this.tweens = [];
     this.flags = { dims: false, clearance: false, person: false };
 
-    const r = this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
-    r.setPixelRatio(Math.min(devicePixelRatio, 2));
+    // only the planner needs to read its pixels back (room snapshots)
+    const r = this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: !preview });
+    r.setPixelRatio(Math.min(devicePixelRatio, LIGHT_DEVICE ? 1.5 : 2));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.NeutralToneMapping;
     r.toneMappingExposure = 1.0;

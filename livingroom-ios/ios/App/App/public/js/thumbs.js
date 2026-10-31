@@ -3,11 +3,12 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { createItemObject, addLights, disposeItemObject } from './scene-kit.js';
 import { CATEGORIES } from './catalog.js';
+import { blobs } from './store.js';
 
 let ctx = null;
 function setup() {
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 360;
+  canvas.width = canvas.height = 300;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.NeutralToneMapping;
@@ -29,11 +30,22 @@ function setup() {
 let queue = Promise.resolve();
 const cache = new Map();
 
-/** A data URL picture of the item. Cached per item version. */
+const pause = () => new Promise(r => (window.requestIdleCallback ? requestIdleCallback(() => r(), { timeout: 200 }) : setTimeout(r, 40)));
+
+/** A picture of the item. Ready-made items use pictures shipped with the app; others are rendered once and kept. */
 export function thumbnail(item) {
+  if (item.starter && !item.updatedAt) return Promise.resolve(`img/starters/${item.id.replace(/^starter_/, '')}.webp`);
   const key = `${item.id}:${item.updatedAt || 0}:${item.model?.kind}:${item.color}:${item.dims.w}x${item.dims.d}x${item.dims.h}`;
   if (cache.has(key)) return cache.get(key);
-  const p = queue = queue.then(() => render(item)).catch(() => null);
+  const p = queue = queue.then(async () => {
+    const stored = await blobs.get(`thumb:${key}`).catch(() => null);
+    if (stored) return stored;
+    // one picture at a time, with a breather in between so taps aren't held up
+    await pause();
+    const url = await render(item);
+    if (url) blobs.put(`thumb:${key}`, url).catch(() => {});
+    return url;
+  }).catch(() => null);
   cache.set(key, p);
   return p;
 }
@@ -53,7 +65,7 @@ async function render(item) {
   camera.position.copy(center).add(dir.multiplyScalar(dist));
   camera.lookAt(center);
   renderer.render(scene, camera);
-  const url = canvas.toDataURL('image/png');
+  const url = canvas.toDataURL('image/webp', 0.9);
   scene.remove(root);
   disposeItemObject(root);
   return url;

@@ -1,0 +1,249 @@
+{
+  "sections": {
+    "hero": {
+      "type": "hero",
+      "settings": {}
+    },
+    "featured": {
+      "type": "featured-product",
+      "settings": {
+        "product": "satin-heatless-curling-set"
+      }
+    },
+    "benefits": {
+      "type": "benefits",
+      "blocks": {
+        "b1": {
+          "type": "benefit",
+          "settings": {
+            "icon": "flame-off",
+            "title": "אפס נזק מחום",
+            "text": "בלי מסלסל ובלי פן. השיער מתסלסל בעדינות בזמן שאת ישנה."
+          }
+        },
+        "b2": {
+          "type": "benefit",
+          "settings": {
+            "icon": "clock",
+            "title": "חוסכת זמן בבוקר",
+            "text": "5 דקות של גלגול בערב במקום 40 דקות מול המראה בבוקר."
+          }
+        },
+        "b3": {
+          "type": "benefit",
+          "settings": {
+            "icon": "sparkle",
+            "title": "סאטן נגד קרזול",
+            "text": "בד חלק שמפחית חיכוך, כדי שהשיער יישאר רך ומבריק."
+          }
+        },
+        "b4": {
+          "type": "benefit",
+          "settings": {
+            "icon": "moon",
+            "title": "נוח לשינה",
+            "text": "מוט רך ומרופד לכל אורכו. שמים, נרדמים, וזהו."
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3",
+        "b4"
+      ],
+      "settings": {
+        "bg": "alt"
+      }
+    },
+    "steps": {
+      "type": "steps",
+      "blocks": {
+        "s1": {
+          "type": "step",
+          "settings": {
+            "title": "מניחות",
+            "text": "מניחות את המוט על הראש כמו קשת, כשהאמצע בקו השיער."
+          }
+        },
+        "s2": {
+          "type": "step",
+          "settings": {
+            "title": "מגלגלות",
+            "text": "לוקחות קווצה ומלפפות סביב המוט, ומוסיפות שיער בכל סיבוב. אותו דבר בצד השני."
+          }
+        },
+        "s3": {
+          "type": "step",
+          "settings": {
+            "title": "ישנות",
+            "text": "סוגרות את הקצוות עם גומיות הסאטן, הולכות לישון ומשחררות בבוקר."
+          }
+        }
+      },
+      "block_order": [
+        "s1",
+        "s2",
+        "s3"
+      ]
+    },
+    "result": {
+      "type": "image-with-text",
+      "settings": {
+        "fallback": "morning-curls.jpg"
+      }
+    },
+    "compare": {
+      "type": "comparison",
+      "blocks": {
+        "r1": {
+          "type": "row",
+          "settings": {
+            "label": "בלי חום על השיער",
+            "us": true,
+            "them": false
+          }
+        },
+        "r2": {
+          "type": "row",
+          "settings": {
+            "label": "עובד בזמן שאת ישנה",
+            "us": true,
+            "them": false
+          }
+        },
+        "r3": {
+          "type": "row",
+          "settings": {
+            "label": "לא צריך חשמל",
+            "us": true,
+            "them": false
+          }
+        },
+        "r4": {
+          "type": "row",
+          "settings": {
+            "label": "קל לקחת לנסיעות",
+            "us": true,
+            "them": false
+          }
+        },
+        "r5": {
+          "type": "row",
+          "settings": {
+            "label": "תוצאה תוך פחות מחצי שעה",
+            "us": false,
+            "them": true
+          }
+        }
+      },
+      "block_order": [
+        "r1",
+        "r2",
+        "r3",
+        "r4",
+        "r5"
+      ]
+    },
+    "gift": {
+      "type": "image-with-text",
+      "settings": {
+        "fallback": "gift.jpg",
+        "image_first": false,
+        "eyebrow": "מתנה",
+        "title": "מתנה שכל אחת תשמח לקבל",
+        "text": "<p>סט סאטן בשקית אחסון, מוכן לנתינה. בחבילת 2 סטים כל סט יוצא זול יותר: אחד בשבילך ואחד לחברה, לאחות או לאמא.</p>",
+        "button_text": "לחבילת 2 סטים",
+        "bg": "alt"
+      }
+    },
+    "reviews": {
+      "type": "apps",
+      "settings": {}
+    },
+    "faq": {
+      "type": "faq",
+      "blocks": {
+        "q1": {
+          "type": "question",
+          "settings": {
+            "question": "לאיזה אורך שיער זה מתאים?",
+            "answer": "<p>הכי טוב לשיער באורך כתפיים ומטה. בשיער קצר יותר קשה ללפף את השיער סביב המוט.</p>"
+          }
+        },
+        "q2": {
+          "type": "question",
+          "settings": {
+            "question": "שיער רטוב או יבש?",
+            "answer": "<p>הכי טוב על שיער לח כמעט יבש (בערך 80% יבש). שיער רטוב מדי לא יספיק להתייבש עד הבוקר, ושיער יבש לגמרי יחזיק פחות. אפשר לרסס מעט מים או קרם תלתלים לפני הגלגול.</p>"
+          }
+        },
+        "q3": {
+          "type": "question",
+          "settings": {
+            "question": "כמה זמן צריך להשאיר?",
+            "answer": "<p>לפחות 3–4 שעות, והכי טוב לילה שלם.</p>"
+          }
+        },
+        "q4": {
+          "type": "question",
+          "settings": {
+            "question": "כמה זמן מחזיקים התלתלים?",
+            "answer": "<p>זה תלוי בסוג השיער. בדרך כלל יום עד יומיים. ספריי קל לקיבוע עוזר לשיער חלק במיוחד.</p>"
+          }
+        },
+        "q5": {
+          "type": "question",
+          "settings": {
+            "question": "נוח לישון עם זה?",
+            "answer": "<p>המוט עשוי ספוג רך עטוף בסאטן, אז רוב הנשים ישנות איתו בלי בעיה. רוב הלקוחות מתרגלות אחרי לילה או שניים.</p>"
+          }
+        },
+        "q6": {
+          "type": "question",
+          "settings": {
+            "question": "מתי ההזמנה תגיע?",
+            "answer": "<p>המשלוח חינם ומגיע עם מספר מעקב. זמן האספקה הוא בדרך כלל 10–15 ימי עסקים, ולא יותר מ-18 ימי עסקים. תקבלי מייל עם מספר המעקב ברגע שהחבילה יוצאת.</p>"
+          }
+        },
+        "q7": {
+          "type": "question",
+          "settings": {
+            "question": "אפשר להחזיר?",
+            "answer": "<p>כן. אפשר לבטל את העסקה תוך 14 יום מיום קבלת המוצר, בהתאם לחוק הגנת הצרכן. כל הפרטים במדיניות הביטולים וההחזרות.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "q1",
+        "q2",
+        "q3",
+        "q4",
+        "q5",
+        "q6",
+        "q7"
+      ]
+    },
+    "cta": {
+      "type": "rich-text",
+      "settings": {
+        "title": "מוכנה להתעורר עם תלתלים?",
+        "text": "<p>משלוח חינם, ביטול עסקה תוך 14 יום ותשלום מאובטח.</p>",
+        "button_text": "לבחירת סט",
+        "button_link": "#buy"
+      }
+    }
+  },
+  "order": [
+    "hero",
+    "featured",
+    "benefits",
+    "steps",
+    "result",
+    "compare",
+    "gift",
+    "reviews",
+    "faq",
+    "cta"
+  ]
+}

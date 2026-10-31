@@ -1,0 +1,145 @@
+<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+  <div class="container">
+    {%- if section.settings.title != blank -%}<h2 class="section__title">{{ section.settings.title }}</h2>{%- endif -%}
+    <div class="benefits">
+      {%- for block in section.blocks -%}
+        <div class="benefit" {{ block.shopify_attributes }}>
+          <span class="benefit__icon">{% render 'icon', name: block.settings.icon %}</span>
+          <h3 class="benefit__title">{{ block.settings.title }}</h3>
+          <p class="benefit__text">{{ block.settings.text }}</p>
+        </div>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "יתרונות",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "למה כולן עוברות לתלתלים בלי חום"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": "alt"
+    }
+  ],
+  "max_blocks": 6,
+  "blocks": [
+    {
+      "type": "benefit",
+      "name": "יתרון",
+      "settings": [
+        {
+          "type": "select",
+          "id": "icon",
+          "label": "אייקון",
+          "options": [
+            {
+              "value": "flame-off",
+              "label": "בלי חום"
+            },
+            {
+              "value": "moon",
+              "label": "לילה"
+            },
+            {
+              "value": "sparkle",
+              "label": "ברק"
+            },
+            {
+              "value": "clock",
+              "label": "זמן"
+            },
+            {
+              "value": "heart",
+              "label": "לב"
+            },
+            {
+              "value": "gift",
+              "label": "מתנה"
+            },
+            {
+              "value": "travel",
+              "label": "נסיעות"
+            },
+            {
+              "value": "check",
+              "label": "וי"
+            }
+          ],
+          "default": "flame-off"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "כותרת",
+          "default": "אפס נזק מחום"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "טקסט",
+          "default": "בלי מסלסל ובלי פן. השיער מתסלסל בעדינות בזמן שאת ישנה."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "יתרונות",
+      "blocks": [
+        {
+          "type": "benefit",
+          "settings": {
+            "icon": "flame-off",
+            "title": "אפס נזק מחום",
+            "text": "בלי מסלסל ובלי פן. השיער מתסלסל בעדינות בזמן שאת ישנה."
+          }
+        },
+        {
+          "type": "benefit",
+          "settings": {
+            "icon": "clock",
+            "title": "חוסכת זמן בבוקר",
+            "text": "5 דקות של גלגול בערב במקום 40 דקות מול המראה בבוקר."
+          }
+        },
+        {
+          "type": "benefit",
+          "settings": {
+            "icon": "sparkle",
+            "title": "סאטן נגד קרזול",
+            "text": "בד חלק שמפחית חיכוך, כדי שהשיער יישאר רך ומבריק."
+          }
+        },
+        {
+          "type": "benefit",
+          "settings": {
+            "icon": "moon",
+            "title": "נוח לשינה",
+            "text": "מוט רך ומרופד לכל אורכו. שמים, נרדמים, וזהו."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

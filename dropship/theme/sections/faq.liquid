@@ -1,0 +1,134 @@
+<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+  <div class="container container--narrow">
+    <h2 class="section__title">{{ section.settings.title }}</h2>
+    <div class="accordion accordion--faq">
+      {%- for block in section.blocks -%}
+        <details class="accordion__item" {{ block.shopify_attributes }}>
+          <summary>{{ block.settings.question }} {% render 'icon', name: 'chevron' %}</summary>
+          <div class="accordion__body rte">{{ block.settings.answer }}</div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- if section.blocks.size > 0 -%}
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {%- for block in section.blocks -%}
+        {"@type": "Question", "name": {{ block.settings.question | json }}, "acceptedAnswer": {"@type": "Answer", "text": {{ block.settings.answer | strip_html | json }}}}{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  }
+</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "שאלות נפוצות",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "שאלות נפוצות"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "question",
+      "name": "שאלה",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "שאלה",
+          "default": "שאלה"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "תשובה",
+          "default": "<p>תשובה</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "שאלות נפוצות",
+      "blocks": [
+        {
+          "type": "question",
+          "settings": {
+            "question": "לאיזה אורך שיער זה מתאים?",
+            "answer": "<p>הכי טוב לשיער באורך כתפיים ומטה. בשיער קצר יותר קשה ללפף את השיער סביב המוט.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "שיער רטוב או יבש?",
+            "answer": "<p>הכי טוב על שיער לח כמעט יבש (בערך 80% יבש). שיער רטוב מדי לא יספיק להתייבש עד הבוקר, ושיער יבש לגמרי יחזיק פחות. אפשר לרסס מעט מים או קרם תלתלים לפני הגלגול.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "כמה זמן צריך להשאיר?",
+            "answer": "<p>לפחות 3–4 שעות, והכי טוב לילה שלם.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "כמה זמן מחזיקים התלתלים?",
+            "answer": "<p>זה תלוי בסוג השיער. בדרך כלל יום עד יומיים. ספריי קל לקיבוע עוזר לשיער חלק במיוחד.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "נוח לישון עם זה?",
+            "answer": "<p>המוט עשוי ספוג רך עטוף בסאטן, אז רוב הנשים ישנות איתו בלי בעיה. רוב הלקוחות מתרגלות אחרי לילה או שניים.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "מתי ההזמנה תגיע?",
+            "answer": "<p>המשלוח חינם ומגיע עם מספר מעקב. זמן האספקה הוא בדרך כלל 10–15 ימי עסקים, ולא יותר מ-18 ימי עסקים. תקבלי מייל עם מספר המעקב ברגע שהחבילה יוצאת.</p>"
+          }
+        },
+        {
+          "type": "question",
+          "settings": {
+            "question": "אפשר להחזיר?",
+            "answer": "<p>כן. אפשר לבטל את העסקה תוך 14 יום מיום קבלת המוצר, בהתאם לחוק הגנת הצרכן. כל הפרטים במדיניות הביטולים וההחזרות.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

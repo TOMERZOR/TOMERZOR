@@ -1,0 +1,109 @@
+<section class="section{% if section.settings.bg == 'alt' %} section--alt{% endif %}">
+  <div class="container">
+    <h2 class="section__title">{{ section.settings.title }}</h2>
+    {%- if section.settings.image != blank -%}
+      <div class="steps__image">{{ section.settings.image | image_url: width: 1400 | image_tag: loading: 'lazy', alt: section.settings.image.alt }}</div>
+    {%- elsif section.settings.fallback != blank -%}
+      <div class="steps__image">{{ section.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: 'שלושת שלבי השימוש' }}</div>
+    {%- endif -%}
+    <ol class="steps">
+      {%- for block in section.blocks -%}
+        <li class="step" {{ block.shopify_attributes }}>
+          <span class="step__num">{{ forloop.index }}</span>
+          <h3 class="step__title">{{ block.settings.title }}</h3>
+          <p class="step__text">{{ block.settings.text }}</p>
+        </li>
+      {%- endfor -%}
+    </ol>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "איך זה עובד",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "3 צעדים, 5 דקות"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "תמונה"
+    },
+    {
+      "type": "text",
+      "id": "fallback",
+      "label": "תמונת ברירת מחדל מתוך הערכה",
+      "default": "how-to.jpg"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "max_blocks": 5,
+  "blocks": [
+    {
+      "type": "step",
+      "name": "שלב",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "כותרת",
+          "default": "שלב"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "טקסט"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "איך זה עובד",
+      "blocks": [
+        {
+          "type": "step",
+          "settings": {
+            "title": "מניחות",
+            "text": "מניחות את המוט על הראש כמו קשת, כשהאמצע בקו השיער."
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "title": "מגלגלות",
+            "text": "לוקחות קווצה ומלפפות סביב המוט, ומוסיפות שיער בכל סיבוב. אותו דבר בצד השני."
+          }
+        },
+        {
+          "type": "step",
+          "settings": {
+            "title": "ישנות",
+            "text": "סוגרות את הקצוות עם גומיות הסאטן, הולכות לישון ומשחררות בבוקר."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

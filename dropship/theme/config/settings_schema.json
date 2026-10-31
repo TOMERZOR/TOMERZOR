@@ -1,0 +1,48 @@
+[
+  {
+    "name": "theme_info",
+    "theme_name": "LUNE",
+    "theme_version": "1.0.0",
+    "theme_author": "LUNE",
+    "theme_documentation_url": "https://github.com/TOMERZOR/TOMERZOR/tree/main/dropship",
+    "theme_support_url": "https://github.com/TOMERZOR/TOMERZOR"
+  },
+  {
+    "name": "צבעים",
+    "settings": [
+      { "type": "color", "id": "color_bg", "label": "רקע", "default": "#FBF7F2" },
+      { "type": "color", "id": "color_bg_alt", "label": "רקע משני", "default": "#F3EADF" },
+      { "type": "color", "id": "color_ink", "label": "טקסט", "default": "#2B2320" },
+      { "type": "color", "id": "color_muted", "label": "טקסט משני", "default": "#75685F" },
+      { "type": "color", "id": "color_accent", "label": "כפתורים", "default": "#2B2320" },
+      { "type": "color", "id": "color_accent_ink", "label": "טקסט על כפתורים", "default": "#FFFFFF" },
+      { "type": "color", "id": "color_line", "label": "קווים", "default": "#E6DACB" },
+      { "type": "color", "id": "color_sale", "label": "הדגשת חיסכון", "default": "#A4573F" }
+    ]
+  },
+  {
+    "name": "לוגו ואייקון",
+    "settings": [
+      { "type": "image_picker", "id": "logo", "label": "לוגו (אם ריק, יוצג שם החנות)" },
+      { "type": "range", "id": "logo_width", "label": "רוחב לוגו", "min": 60, "max": 240, "step": 10, "unit": "px", "default": 110 },
+      { "type": "image_picker", "id": "favicon", "label": "אייקון לדפדפן (32×32)" }
+    ]
+  },
+  {
+    "name": "משלוח ואמון",
+    "settings": [
+      { "type": "text", "id": "delivery_text", "label": "זמן אספקה (מוצג בעמוד המוצר)", "default": "משלוח חינם עם מספר מעקב · בדרך כלל 10–15 ימי עסקים" },
+      { "type": "text", "id": "returns_text", "label": "החזרות", "default": "ביטול עסקה תוך 14 יום לפי חוק הגנת הצרכן" },
+      { "type": "text", "id": "payment_text", "label": "תשלום", "default": "תשלום מאובטח באשראי" }
+    ]
+  },
+  {
+    "name": "רשתות חברתיות",
+    "settings": [
+      { "type": "url", "id": "social_facebook", "label": "פייסבוק" },
+      { "type": "url", "id": "social_instagram", "label": "אינסטגרם" },
+      { "type": "url", "id": "social_tiktok", "label": "טיקטוק" },
+      { "type": "text", "id": "whatsapp_number", "label": "וואטסאפ לשירות לקוחות (פורמט 9725XXXXXXXX)", "info": "אם תמלא, יופיע כפתור וואטסאפ צף." }
+    ]
+  }
+]

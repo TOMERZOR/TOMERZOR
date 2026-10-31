@@ -15,7 +15,8 @@ class LivingRoomViewController: CAPBridgeViewController {
 @objc(ARQuickLookPlugin)
 public class ARQuickLookPlugin: CAPPlugin, CAPBridgedPlugin, QLPreviewControllerDataSource, QLPreviewControllerDelegate {
     public let identifier = "ARQuickLookPlugin"
-    public let jsName = "ARQuickLook"
+    // same as the Objective-C class name, so Capacitor can also load it on demand by name
+    public let jsName = "ARQuickLookPlugin"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "present", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
@@ -45,7 +46,14 @@ public class ARQuickLookPlugin: CAPPlugin, CAPBridgedPlugin, QLPreviewController
             let preview = QLPreviewController()
             preview.dataSource = self
             preview.delegate = self
-            self.bridge?.viewController?.present(preview, animated: true)
+            // present over whatever is on top (a share sheet, an alert...)
+            var top = self.bridge?.viewController
+            while let next = top?.presentedViewController { top = next }
+            guard let host = top else {
+                call.reject("No screen to show AR on")
+                return
+            }
+            host.present(preview, animated: true)
             call.resolve()
         }
     }

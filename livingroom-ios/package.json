@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Living Room for iPhone: the web app in a native shell (Capacitor) with native AR Quick Look.",
   "scripts": {
-    "sync": "node sync.mjs && npx cap sync ios",
+    "sync": "node sync.mjs && npx cap sync ios && node postsync.mjs",
     "open": "npx cap open ios"
   },
   "devDependencies": {

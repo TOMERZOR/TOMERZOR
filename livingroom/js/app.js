@@ -669,6 +669,7 @@ function manualSheet(ctx = {}) {
 
 // ---------- AR ----------
 async function launchAR(entries, { asGroup = false } = {}) {
+  toast('מכינים את הפריט למציאות רבודה');
   const mode = await arSupport();
   if (mode === 'webxr') {
     closeSheet();
@@ -685,11 +686,11 @@ async function launchAR(entries, { asGroup = false } = {}) {
     return;
   }
   if (mode === 'quicklook') {
-    toast('מכינים את הפריט למציאות רבודה');
     let res;
     try { res = await openQuickLook(entries); } catch (e) {
       console.warn(e);
-      toast(`לא הצלחנו לפתוח את התצוגה${e?.message ? ` (${e.message})` : ''}`, 5000);
+      window.__report?.(`AR: ${e?.message || e?.code || e}`);
+      toast('לא הצלחנו לפתוח את התצוגה', 4000);
       return;
     }
     if (res?.url) quickLookSheet(entries, res.url);

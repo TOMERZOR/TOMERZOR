@@ -18,16 +18,18 @@ let supportP = null;
 /** 'webxr' | 'quicklook' | null */
 /** Inside the iPhone app (livingroom-ios), AR Quick Look is opened by a native plugin. */
 const nativeIOS = () => Boolean(window.Capacitor?.isNativePlatform?.()) && window.Capacitor.getPlatform?.() === 'ios';
-function nativeAR(method, options) {
+function nativeAR(method, options, ms = 20000) {
   const C = window.Capacitor;
-  const plugin = C.Plugins?.ARQuickLook;
-  return plugin?.[method] ? plugin[method](options) : C.nativePromise('ARQuickLook', method, options);
+  const plugin = C.Plugins?.ARQuickLookPlugin;
+  const call = plugin?.[method] ? plugin[method](options) : C.nativePromise('ARQuickLookPlugin', method, options);
+  // if the native side never answers (plugin not registered), fail loudly instead of waiting forever
+  return Promise.race([call, new Promise((_, rej) => setTimeout(() => rej(new Error(`ARQuickLook.${method}: no answer from the app`)), ms))]);
 }
 
 export function arSupport() {
   supportP ||= (async () => {
     if (nativeIOS()) {
-      try { return (await nativeAR('isAvailable', {})).available ? 'quicklook' : null; } catch { return 'quicklook'; }
+      try { return (await nativeAR('isAvailable', {}, 3000)).available ? 'quicklook' : null; } catch (e) { window.__report?.(e.message); return 'quicklook'; }
     }
     try { if (navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')) return 'webxr'; } catch { /* not available */ }
     // any browser on iPhone/iPad is WebKit and can open AR Quick Look links

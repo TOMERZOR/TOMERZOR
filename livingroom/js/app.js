@@ -313,8 +313,10 @@ async function openItem(itemArg) {
   state.viewer?.dispose();
   const viewer = state.viewer = new Studio(body.querySelector('.viewer canvas'), { preview: true });
   viewer.setFlag('dims', true);
-  await viewer.addItem(item, { x: 0, z: 0 }, { animate: false });
-  viewer.frameAll();
+  // the preview loads in the background; the sheet's controls work right away
+  viewer.addItem(item, { x: 0, z: 0 }, { animate: false })
+    .then(() => viewer.frameAll())
+    .catch(e => { console.warn('preview failed', e); toast('לא הצלחנו להציג את הפריט'); });
   updateBadge();
   $('#color-section', body).hidden = (item.model?.kind || 'shape') !== 'shape';
   renderAiProgress();
@@ -327,14 +329,28 @@ async function openItem(itemArg) {
     if (html) b.outerHTML = html.replace('class="badge', 'id="vbadge" class="badge');
   }
 
-  let rebuildT;
-  const changed = async (patch, { rebuild = true } = {}) => {
-    item = await ownItem(item);
+  let rebuildT, owning = null;
+  /** A ready-made or shared item becomes the user's own copy once, on the first edit. */
+  const ensureOwn = async () => {
+    if (!item.starter && !item.shared) return item;
+    const fromId = item.id;
+    owning ||= ownItem(item);
+    item = await owning;
     state.openItemId = item.id;
+    // a room showing the original now shows the copy
+    if (state.studio?.hasItem(fromId)) { await state.studio.replaceItem(item, fromId); saveRoomSoon(); }
+    return item;
+  };
+  const changed = async (patch, { rebuild = true } = {}) => {
+    await ensureOwn();
     Object.assign(item, patch);
     await saveItem(item);
-    if (rebuild) { clearTimeout(rebuildT); rebuildT = setTimeout(() => state.viewer?.replaceItem(item), 180); }
-    if (state.studio) state.studio.replaceItem(item);
+    if (!rebuild) return;
+    clearTimeout(rebuildT);
+    rebuildT = setTimeout(() => {
+      state.viewer?.replaceItem(item);
+      if (state.studio?.hasItem(item.id)) state.studio.replaceItem(item).then(saveRoomSoon);
+    }, 180);
   };
 
   $('#it-name', body).addEventListener('change', e => changed({ name: e.target.value.trim() || item.name }, { rebuild: false }));
@@ -347,7 +363,7 @@ async function openItem(itemArg) {
     });
   }
   const kindSeg = bindSeg(body, 'kind', v => {
-    if (v === 'glb' && !item.hasGlb) { startAiModel(item).then(it => { if (it) item = it; renderAiProgress(); }); return false; }
+    if (v === 'glb' && !item.hasGlb) { startAiModel(item).then(it => { if (it) { item = it; state.openItemId = it.id; } renderAiProgress(); }); return false; }
     changed({ model: { ...item.model, kind: v } }).then(() => { updateBadge(); });
     $('#color-section', body).hidden = v !== 'shape';
   });
@@ -365,7 +381,7 @@ async function openItem(itemArg) {
     const d = e.target.closest('[data-do]');
     if (!d) return;
     if (d.dataset.do === 'ar') launchAR([{ item }]);
-    if (d.dataset.do === 'plan') { if (item.shared) item = await ownItem(item); pickRoomFor(item); }
+    if (d.dataset.do === 'plan') { if (item.shared) await ensureOwn(); pickRoomFor(item); }
     if (d.dataset.do === 'share') shareItem(item);
     if (d.dataset.do === 'delete') deleteItem(item);
   });
@@ -599,8 +615,18 @@ function photoSheet({ blob, cut, ctx }) {
       source: ctx.url ? { url: ctx.url, store: new URL(ctx.url).hostname.replace(/^www\./, '') } : {}, createdAt: Date.now(),
     };
     await saveItem(item);
-    openItem(item);
+    afterCreate(item, ctx);
   });
+}
+
+/** A new item opens in its sheet, or, when made from inside the planner, goes straight into the room. */
+async function afterCreate(item, ctx = {}) {
+  if (ctx.toRoom && state.studio) {
+    closeSheet();
+    await state.studio.addItem(item, {}, { select: true });
+    saveRoomSoon();
+    toast(`${item.name} נוסף לחדר`);
+  } else openItem(item);
 }
 
 function dimsFields(d) {
@@ -637,7 +663,7 @@ function manualSheet(ctx = {}) {
     if (!dims) { toast('הזינו רוחב, עומק וגובה'); return; }
     const item = { id: uid('i'), name: $('#mn-name', body).value.trim() || CATEGORIES[cat].he, category: cat, dims, dimsSource: 'user', color, model: { kind: 'shape' }, source: ctx.url ? { url: ctx.url, store: new URL(ctx.url).hostname.replace(/^www\./, '') } : {}, createdAt: Date.now() };
     await saveItem(item);
-    openItem(item);
+    afterCreate(item, ctx);
   });
 }
 
@@ -771,7 +797,17 @@ async function openStudio(roomId, addItems = []) {
   studio.setRoom(room.size);
   $('#room-name').value = room.name;
   for (const btn of $$('.dock [aria-pressed]')) btn.setAttribute('aria-pressed', 'false');
-  for (const e of roomEntries(room)) await studio.addItem(e.item, e.placement, { animate: false });
+  const night = $('[data-act="toggle-night"]');
+  night.querySelector('.dock-ic').innerHTML = icon('moon');
+  night.lastElementChild.textContent = 'ערב';
+  state.roomLoading = true;
+  try {
+    for (const e of roomEntries(room)) {
+      if (state.studio !== studio) return;
+      await studio.addItem(e.item, e.placement, { animate: false }).catch(err => console.warn('item failed', err));
+    }
+  } finally { if (state.studio === studio) state.roomLoading = false; }
+  if (state.studio !== studio) return;
   studio.frameAll();
   for (const item of addItems) await studio.addItem(item, {}, { select: true });
   if (addItems.length) { saveRoomSoon(); toast(`${addItems[0].name} נוסף לחדר`); }
@@ -787,7 +823,8 @@ function saveRoomSoon() {
 }
 async function saveRoom({ snapshot = false } = {}) {
   const studio = state.studio, room = state.room;
-  if (!studio || !room) return;
+  // while the room is still loading, saving now would drop the items not yet added
+  if (!studio || !room || state.roomLoading) return;
   room.placements = studio.placements();
   room.name = $('#room-name').value.trim() || room.name;
   if (snapshot && room.placements.length) {
@@ -809,7 +846,9 @@ function updateRoomMeta() {
 }
 
 async function leaveStudio() {
-  if (state.studio && state.room && state.studio.objects.size) await saveRoom({ snapshot: true });
+  closeSheet();
+  if (state.studio && state.room && state.studio.objects.size && !state.roomLoading) await saveRoom({ snapshot: true });
+  state.roomLoading = false;
   state.studio?.dispose();
   state.studio = null;
   state.room = null;
@@ -829,12 +868,12 @@ function studioAddSheet() {
     const n = e.target.closest('[data-new]');
     if (n) {
       if (n.dataset.new === 'link') { await leaveStudio(); $('#paste-input').focus(); toast('הדביקו קישור, ואחר כך ״הוסף לחדר״'); }
-      if (n.dataset.new === 'photo') pickPhoto();
-      if (n.dataset.new === 'manual') manualSheet();
+      if (n.dataset.new === 'photo') pickPhoto({ toRoom: true });
+      if (n.dataset.new === 'manual') manualSheet({ toRoom: true });
       return;
     }
     const r = e.target.closest('[data-item]');
-    if (!r) return;
+    if (!r || !state.studio) return;
     // ready-made items stay shared; they are copied only when edited
     const item = findItem(r.dataset.item);
     closeSheet();
@@ -879,14 +918,15 @@ async function deleteRoom() {
 // ---------- settings ----------
 async function settingsSheet() {
   const s = settings.get();
-  const h = await api.health();
-  const status = !api.hasServer() ? 'לא מחובר: מוסיפים פריטים מתמונה או לפי מידות' : !h ? 'לא עונה כרגע' : `${h.ai ? 'קריאת עמודים עם AI' : 'קריאת עמודים בסיסית'}${h.models3d ? ' · מודלים תלת-ממדיים' : ''}`;
+  const describe = h => (!api.hasServer() ? 'לא מחובר: מוסיפים פריטים מתמונה או לפי מידות' : !h ? 'לא עונה כרגע' : `${h.ai ? 'קריאת עמודים עם AI' : 'קריאת עמודים בסיסית'}${h.models3d ? ' · מודלים תלת-ממדיים' : ''}`);
+  const status = api.hasServer() ? 'בודקים…' : describe(null);
   const body = openSheet(`${sheetHead('הגדרות')}
     <div class="sheet-section" style="margin-top:0"><span class="label">יחידות</span>${seg('units', [{ v: 'cm', label: 'סנטימטרים' }, { v: 'in', label: 'אינצ׳ים' }], s.units)}</div>
     <div class="sheet-section"><span class="label">מראה</span>${seg('theme', [{ v: 'auto', label: 'אוטומטי' }, { v: 'light', label: 'בהיר' }, { v: 'dark', label: 'כהה' }], s.theme)}</div>
-    <div class="sheet-section"><span class="label">שרת</span><p class="hint" style="margin:0">${esc(status)}</p></div>
+    <div class="sheet-section"><span class="label">שרת</span><p class="hint" style="margin:0" id="server-status">${esc(status)}</p></div>
     <div class="sheet-section"><span class="label">הנתונים שלך</span><p class="hint" style="margin:0 0 10px">${state.items.length} פריטים ו-${state.rooms.length} חדרים שמורים במכשיר הזה בלבד.</p>
       <button class="btn btn-ghost btn-small" type="button" data-wipe style="color:var(--danger)">${icon('trash')}מחיקת הכול</button></div>`, { label: 'הגדרות' });
+  if (api.hasServer()) api.health().then(h => { state.models3d = Boolean(h?.models3d); const el = $('#server-status', body); if (el) el.textContent = describe(h); });
   bindSeg(body, 'units', v => { settings.set({ units: v }); applySettings(); lastMine = lastRooms = null; $('#starters').innerHTML = ''; renderHome(); });
   bindSeg(body, 'theme', v => { settings.set({ theme: v }); applySettings(); });
   let armed = false;
@@ -1013,6 +1053,8 @@ async function start() {
   api.health().then(h => { state.models3d = Boolean(h?.models3d); });
   for (const it of state.items) if (it.model?.task && it.model.status === 'running') pollModel(it.id);
   route();
+  // Safari may clear site data after 7 days without a visit unless storage is persistent
+  navigator.storage?.persist?.().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   window.__livingroom = { state, openItem, openStudio, launchAR, findItem };
 }

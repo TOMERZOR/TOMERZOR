@@ -195,7 +195,11 @@ export async function itemAssets(item) {
   if (wantsImage) {
     const stored = await blobs.get(`photo:${item.id}`);
     let img = null;
-    if (stored) img = await loadImage(URL.createObjectURL(stored));
+    if (stored) {
+      const url = URL.createObjectURL(stored);
+      img = await loadImage(url);
+      URL.revokeObjectURL(url);
+    }
     else if (item.image) img = await loadImage(proxied(item.image));
     if (img) {
       if (item.model?.kind === 'photo') out.image = cutoutImage(img).canvas;

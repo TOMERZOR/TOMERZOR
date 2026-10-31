@@ -34,7 +34,8 @@ async function call(path, { method = 'GET', body, timeout = 45000 } = {}) {
 let healthP = null;
 export function health() {
   if (!API) return Promise.resolve(null);
-  healthP ||= call('/api/health', { timeout: 8000 }).catch(() => null);
+  // a failed check isn't kept, so a short network drop doesn't switch features off for the session
+  healthP ||= call('/api/health', { timeout: 8000 }).catch(() => { healthP = null; return null; });
   return healthP;
 }
 

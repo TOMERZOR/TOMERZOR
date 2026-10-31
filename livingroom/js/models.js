@@ -525,7 +525,9 @@ export function fitToBox(object, W, D, H, wall) {
 const imageCache = new Map();
 export function loadImage(src) {
   if (!src) return Promise.resolve(null);
-  if (imageCache.has(src)) return imageCache.get(src);
+  // one-off local images (blob:, data:) aren't kept, so edits don't pile decoded photos up in memory
+  const keep = !/^(blob|data):/.test(src);
+  if (keep && imageCache.has(src)) return imageCache.get(src);
   const p = new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -533,7 +535,7 @@ export function loadImage(src) {
     img.onerror = () => resolve(null);
     img.src = src;
   });
-  imageCache.set(src, p);
+  if (keep) imageCache.set(src, p);
   return p;
 }
 

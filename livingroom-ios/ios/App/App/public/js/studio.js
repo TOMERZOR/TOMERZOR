@@ -96,6 +96,10 @@ export class Studio {
   pause() { this.running = false; this.renderer.setAnimationLoop(null); }
   resume() { if (!this.running) { this.running = true; this.renderer.setAnimationLoop(() => this.frame()); } }
   dispose() {
+    this.disposed = true;
+    this.listeners?.abort();
+    this.selected = null;
+    this.onSelect = this.onChange = this.onConflicts = () => {};
     this.pause();
     this.resizeObs.disconnect();
     for (const root of this.objects.values()) disposeItemObject(root);
@@ -183,6 +187,7 @@ export class Studio {
   // ---------- items ----------
   async addItem(item, placement = {}, { animate = true, select = false } = {}) {
     const root = await createItemObject(item);
+    if (this.disposed) { disposeItemObject(root); return null; }
     const pid = placement.pid || `p_${Math.random().toString(36).slice(2, 9)}`;
     root.userData.pid = pid;
     root.position.set(placement.x ?? 0, placement.y ?? defaultY(item), placement.z ?? 0);
@@ -204,10 +209,15 @@ export class Studio {
   }
 
   /** Swaps an item's object for a rebuilt one (after its size, colour or model changed). */
-  async replaceItem(item) {
+  hasItem(id) { return [...this.objects.values()].some(r => r.userData.item.id === id); }
+
+  /** Swaps an item's objects for rebuilt ones (its size, colour or model changed, or it became a copy: fromId). */
+  async replaceItem(item, fromId = item.id) {
     for (const [pid, old] of [...this.objects]) {
-      if (old.userData.item.id !== item.id) continue;
+      if (old.userData.item.id !== fromId) continue;
       const root = await createItemObject(item);
+      // another rebuild (or closing the planner) got here first: drop this one
+      if (this.disposed || this.objects.get(pid) !== old) { disposeItemObject(root); continue; }
       root.userData.pid = pid;
       root.position.copy(old.position);
       if (old.userData.wall !== (CATEGORIES[item.category]?.mount === 'wall')) root.position.y = defaultY(item);
@@ -242,6 +252,7 @@ export class Studio {
     const off = M(s.userData.item.dims.w) + 0.1;
     const dx = Math.cos(s.rotation.y) * off, dz = -Math.sin(s.rotation.y) * off;
     const root = await this.addItem(s.userData.item, { ...p, pid: undefined, x: p.x + dx, z: p.z + dz }, { select: true });
+    if (!root) return;
     this.clampToRoom(root);
     this.onChange();
   }
@@ -410,11 +421,14 @@ export class Studio {
   // ---------- pointer: select, drag on the floor, two-finger twist ----------
   bindPointer() {
     const el = this.canvas;
-    el.addEventListener('pointerdown', e => this.down(e));
-    el.addEventListener('pointermove', e => this.move(e));
-    el.addEventListener('pointerup', e => this.up(e));
-    el.addEventListener('pointercancel', e => this.up(e));
-    el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') this.up(e); });
+    // removed in dispose(): the canvas is reused by the next planner
+    this.listeners = new AbortController();
+    const o = { signal: this.listeners.signal };
+    el.addEventListener('pointerdown', e => this.down(e), o);
+    el.addEventListener('pointermove', e => this.move(e), o);
+    el.addEventListener('pointerup', e => this.up(e), o);
+    el.addEventListener('pointercancel', e => this.up(e), o);
+    el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') this.up(e); }, o);
   }
   ray(e) {
     const rect = this.canvas.getBoundingClientRect();

@@ -47,7 +47,11 @@ export class Studio {
     c.minDistance = 0.6;
     c.maxDistance = 22;
     c.target.set(0, 0.4, 0);
-    if (preview) { c.autoRotate = !reduceMotion(); c.autoRotateSpeed = 1.1; c.enablePan = false; }
+    if (preview) {
+      c.autoRotate = !reduceMotion(); c.autoRotateSpeed = 1.1; c.enablePan = false; c.enableZoom = false;
+      // sideways drags turn the item, up-and-down swipes still scroll the page around it
+      canvas.style.touchAction = 'pan-y';
+    }
 
     // floor: catches shadows, plus a quiet 50cm grid
     const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.16 }));
@@ -98,6 +102,8 @@ export class Studio {
     this.objects.clear();
     this.controls.dispose();
     this.renderer.dispose();
+    // phones allow only a few WebGL contexts; give this one back now instead of waiting for GC
+    this.renderer.forceContextLoss();
   }
 
   frame() {

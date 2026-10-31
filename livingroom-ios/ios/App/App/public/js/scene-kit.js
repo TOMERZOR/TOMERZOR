@@ -19,7 +19,9 @@ function softRectTexture(w, d) {
   const x = c.getContext('2d');
   const pad = 0.16; // share of the texture taken by the blur on each side
   const blur = Math.min(c.width, c.height) * pad;
-  x.filter = `blur(${blur * 0.55}px)`;
+  // shadowBlur works in every browser (Safari has no canvas filter)
+  x.shadowColor = 'rgba(0,0,0,1)';
+  x.shadowBlur = blur * 0.9;
   x.fillStyle = 'rgba(0,0,0,1)';
   const rx = c.width * pad, ry = c.height * pad;
   x.beginPath();

@@ -16,8 +16,19 @@ export const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navi
 
 let supportP = null;
 /** 'webxr' | 'quicklook' | null */
+/** Inside the iPhone app (livingroom-ios), AR Quick Look is opened by a native plugin. */
+const nativeIOS = () => Boolean(window.Capacitor?.isNativePlatform?.()) && window.Capacitor.getPlatform?.() === 'ios';
+function nativeAR(method, options) {
+  const C = window.Capacitor;
+  const plugin = C.Plugins?.ARQuickLook;
+  return plugin?.[method] ? plugin[method](options) : C.nativePromise('ARQuickLook', method, options);
+}
+
 export function arSupport() {
   supportP ||= (async () => {
+    if (nativeIOS()) {
+      try { return (await nativeAR('isAvailable', {})).available ? 'quicklook' : null; } catch { return 'quicklook'; }
+    }
     try { if (navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')) return 'webxr'; } catch { /* not available */ }
     if (isIOS() && document.createElement('a').relList.supports('ar')) return 'quicklook';
     return null;
@@ -56,6 +67,12 @@ export async function openQuickLook(entries) {
     maxTextureSize: 1024,
     ar: { anchoring: { type: 'plane' }, planeAnchoring: { alignment: allWall ? 'vertical' : 'horizontal' } },
   });
+  if (nativeIOS()) {
+    let bin = '';
+    for (let i = 0; i < data.length; i += 0x8000) bin += String.fromCharCode.apply(null, data.subarray(i, i + 0x8000));
+    await nativeAR('present', { data: btoa(bin) });
+    return;
+  }
   const blob = new Blob([data], { type: 'model/vnd.usdz+zip' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

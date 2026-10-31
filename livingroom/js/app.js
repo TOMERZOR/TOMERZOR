@@ -653,7 +653,7 @@ async function launchAR(entries, { asGroup = false } = {}) {
 
 /** On a computer: a QR code that opens the same item (or room) on the phone. */
 function handoffSheet(entries) {
-  const link = entries.length === 1 ? shareLink(entries[0].item) : location.href.split('#')[0];
+  const link = entries.length === 1 ? shareLink(entries[0].item) : publicBase();
   const qr = qrcode(0, 'M');
   qr.addData(link);
   qr.make();
@@ -668,9 +668,12 @@ function handoffSheet(entries) {
 // ---------- share ----------
 const b64url = s => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64url = s => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+// Inside the iPhone app the page lives at capacitor://localhost, so shared links point to the website.
+const PUBLIC_URL = 'https://tomerzor.github.io/TOMERZOR/livingroom/';
+const publicBase = () => (location.protocol.startsWith('http') ? location.href.split('#')[0] : PUBLIC_URL);
 function shareLink(item) {
   const data = { n: item.name, c: item.category, d: [item.dims.w, item.dims.d, item.dims.h], k: item.color, s: item.shape || undefined, i: item.image && !item.image.startsWith('data:') ? item.image : undefined, u: item.source?.url, p: item.source?.price || undefined, $: item.source?.currency || undefined };
-  return `${location.href.split('#')[0]}#i/${b64url(JSON.stringify(data))}`;
+  return `${publicBase()}#i/${b64url(JSON.stringify(data))}`;
 }
 function itemFromLink(code) {
   try {

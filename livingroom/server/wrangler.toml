@@ -7,7 +7,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 # Comma-separated list of sites allowed to call the API. "*" allows any site.
-ALLOWED_ORIGINS = "https://tomerzor.github.io,http://localhost:8792,http://127.0.0.1:8792"
+ALLOWED_ORIGINS = "https://tomerzor.github.io,capacitor://localhost,http://localhost:8792,http://127.0.0.1:8792"
 # Per visitor per day (needs the KV namespace below). 0 = no limit.
 DAILY_IMPORTS = "40"
 DAILY_MODELS = "4"

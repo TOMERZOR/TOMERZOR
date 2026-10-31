@@ -1,6 +1,6 @@
 // Keeps Living Room on the phone so it opens instantly, also offline.
 // Bump VERSION whenever a file changes.
-const VERSION = 'livingroom-v1';
+const VERSION = 'livingroom-v2';
 const FILES = [
   './',
   'css/app.css',

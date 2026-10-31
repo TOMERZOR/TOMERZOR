@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Living Room · לראות את זה אצלך בבית</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="description" content="מדביקים קישור לכל רהיט או פריט נוי מהאינטרנט ורואים אותו אצלכם בסלון, בגודל האמיתי, במציאות רבודה.">
+<meta name="theme-color" content="#EDEFF1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1113" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Living Room">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preload" href="fonts/rubik-hebrew-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script src="js/config.js"></script>
+</head>
+<body>
+<div id="app">
+  <!-- Home -->
+  <section class="view view-home" id="view-home" aria-label="בית">
+    <header class="topbar">
+      <a class="wordmark" href="#home" aria-label="Living Room">
+        <span class="mark" aria-hidden="true"><i></i></span>
+        <span class="word">Living Room</span>
+      </a>
+      <button class="icon-btn" type="button" data-act="settings" aria-label="הגדרות"></button>
+    </header>
+
+    <div class="home-grid">
+      <div class="hero">
+        <h1 class="hero-title">איך זה ייראה <em>אצלך</em> בסלון?</h1>
+        <p class="hero-sub">מדביקים קישור לכל פריט מהאינטרנט ורואים אותו בחדר שלכם, בגודל האמיתי.</p>
+        <form class="paste" id="paste-form" autocomplete="off">
+          <label class="sr-only" for="paste-input">קישור למוצר</label>
+          <span class="paste-icon" aria-hidden="true"></span>
+          <input id="paste-input" name="url" type="url" inputmode="url" dir="ltr" placeholder="https://" enterkeyhint="go" required>
+          <button class="paste-clip" type="button" data-act="clipboard">הדבקה</button>
+          <button class="paste-go" type="submit" aria-label="הוספה"></button>
+        </form>
+        <div class="hero-alt">
+          <button class="chip" type="button" data-act="add-photo"></button>
+          <button class="chip" type="button" data-act="add-manual"></button>
+        </div>
+      </div>
+      <div class="hero-stage" aria-hidden="true">
+        <canvas id="hero-canvas"></canvas>
+      </div>
+    </div>
+
+    <section class="shelf-section" id="mine-section" aria-labelledby="mine-title">
+      <div class="section-head"><h2 id="mine-title">הפריטים שלי</h2><span class="count" id="mine-count"></span></div>
+      <div class="cards" id="mine"></div>
+    </section>
+
+    <section class="shelf-section" id="rooms-section" aria-labelledby="rooms-title">
+      <div class="section-head"><h2 id="rooms-title">החדרים שלי</h2></div>
+      <div class="rooms" id="rooms"></div>
+    </section>
+
+    <section class="shelf-section" aria-labelledby="starter-title">
+      <div class="section-head"><h2 id="starter-title">לנסות עכשיו</h2></div>
+      <div class="cards cards-starter" id="starters"></div>
+    </section>
+
+    <footer class="foot">
+      <p>הכול נשמר על המכשיר שלך. המידות נלקחות מעמוד המוצר, כדאי לבדוק אותן לפני הזמנה.</p>
+    </footer>
+  </section>
+
+  <!-- Planner -->
+  <section class="view view-studio" id="view-studio" aria-label="תכנון החדר" hidden>
+    <canvas id="studio-canvas"></canvas>
+    <header class="studio-top">
+      <button class="icon-btn glass" type="button" data-act="back" aria-label="חזרה"></button>
+      <div class="studio-title glass">
+        <input id="room-name" aria-label="שם החדר" maxlength="40">
+        <span class="studio-meta" id="room-meta"></span>
+      </div>
+      <button class="icon-btn glass" type="button" data-act="room-size" aria-label="מידות החדר"></button>
+    </header>
+    <div class="conflict glass" id="conflict" role="status" aria-live="polite" hidden></div>
+    <div class="selbar glass" id="selbar" hidden>
+      <span class="selbar-name" id="sel-name"></span>
+      <button type="button" data-act="sel-rotl" aria-label="סיבוב שמאלה"></button>
+      <button type="button" data-act="sel-rotr" aria-label="סיבוב ימינה"></button>
+      <button type="button" data-act="sel-dup" aria-label="שכפול"></button>
+      <button type="button" data-act="sel-info" aria-label="פרטי הפריט"></button>
+      <button type="button" data-act="sel-del" aria-label="הסרה מהחדר"></button>
+    </div>
+    <nav class="dock glass" aria-label="כלים">
+      <button type="button" data-act="studio-add"><span class="dock-ic"></span><span>פריט</span></button>
+      <button type="button" data-act="toggle-dims" aria-pressed="false"><span class="dock-ic"></span><span>מידות</span></button>
+      <button type="button" data-act="toggle-clearance" aria-pressed="false"><span class="dock-ic"></span><span>מעבר</span></button>
+      <button type="button" data-act="toggle-person" aria-pressed="false"><span class="dock-ic"></span><span>אדם</span></button>
+      <button type="button" data-act="toggle-night" aria-pressed="false"><span class="dock-ic"></span><span>ערב</span></button>
+      <button type="button" class="dock-ar" data-act="studio-ar"><span class="dock-ic"></span><span>בחדר שלי</span></button>
+    </nav>
+  </section>
+</div>
+
+<!-- Sheets -->
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+  <div class="sheet-grip" aria-hidden="true"></div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="ar-overlay" id="ar-overlay" hidden></div>
+<input type="file" id="file-input" accept="image/*" hidden>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

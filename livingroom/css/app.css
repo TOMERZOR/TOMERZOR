@@ -167,6 +167,7 @@ button:disabled { cursor: default; }
   animation: rise 0.6s var(--out) both; animation-delay: calc(var(--i, 0) * 45ms);
 }
 .card:active { transform: scale(0.975); }
+.no-anim > * { animation: none !important; }
 @media (hover: hover) { .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); } }
 .card-pic { aspect-ratio: 1; display: grid; place-items: center; background: radial-gradient(120% 90% at 50% 70%, var(--surface-2), var(--sunken)); position: relative; }
 .card-pic img { width: 92%; height: 92%; object-fit: contain; }
@@ -205,6 +206,7 @@ button:disabled { cursor: default; }
 /* ---------- sheet ---------- */
 .scrim { position: fixed; inset: 0; background: rgb(8 10 12 / 0.38); z-index: 40; opacity: 0; transition: opacity 0.35s var(--spring); }
 .scrim.open { opacity: 1; }
+.scrim:not(.open), .sheet:not(.open) { pointer-events: none; }
 .sheet {
   position: fixed; z-index: 41; inset: auto 0 0 0; max-height: min(94dvh, 900px); display: flex; flex-direction: column;
   background: var(--surface); border-radius: var(--r-sheet) var(--r-sheet) 0 0; box-shadow: var(--shadow-lg);
@@ -238,6 +240,8 @@ button:disabled { cursor: default; }
 @media (min-width: 760px) { .viewer { margin: 0; border-radius: 22px; } }
 .viewer canvas { width: 100%; height: 100%; display: block; touch-action: none; }
 .viewer .badge { top: 14px; right: 14px; }
+.viewer-close { position: absolute; top: 10px; left: 10px; width: 40px; height: 40px; background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.viewer-close .ic { width: 18px; height: 18px; }
 .viewer-hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 13px; color: var(--ink-3); pointer-events: none; }
 
 .source-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink-2); font-size: 15px; }
@@ -257,7 +261,7 @@ button:disabled { cursor: default; }
 .seg { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--sunken); border-radius: 999px; padding: 4px; }
 .seg button { position: relative; z-index: 1; height: 40px; border-radius: 999px; font-weight: 500; font-size: 14.5px; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: color 0.25s; }
 .seg button[aria-pressed='true'] { color: var(--ink); }
-.seg button:disabled { opacity: 0.4; }
+.seg button:disabled, .seg button.seg-muted { opacity: 0.45; }
 .seg button .ic { width: 17px; height: 17px; }
 .seg-thumb { position: absolute; top: 4px; bottom: 4px; border-radius: 999px; background: var(--surface-2); box-shadow: var(--shadow); transition: transform 0.4s var(--spring), width 0.4s var(--spring); }
 
@@ -315,11 +319,15 @@ button:disabled { cursor: default; }
 .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; }
 .room-size { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
+.ql-link { display: grid; place-items: center; border-radius: 22px; background: radial-gradient(90% 80% at 50% 65%, var(--surface-2), var(--sunken)); aspect-ratio: 4 / 3; }
+.ql-link img { width: 72%; height: 72%; object-fit: contain; }
+
 /* ---------- toast ---------- */
 .toast {
   position: fixed; z-index: 60; top: calc(var(--safe-t) + 12px); left: 50%; transform: translate(-50%, -140%);
   max-width: min(92vw, 460px); padding: 12px 18px; border-radius: 999px; background: var(--ink); color: var(--bg);
   font-weight: 500; font-size: 15px; box-shadow: var(--shadow-lg); transition: transform 0.45s var(--spring); text-align: center;
+  pointer-events: none;
 }
 .toast.show { transform: translate(-50%, 0); }
 
@@ -350,7 +358,7 @@ button:disabled { cursor: default; }
 .selbar button .ic { width: 20px; height: 20px; }
 .selbar [data-act='sel-del'] { color: var(--danger); }
 
-.conflict { position: absolute; top: calc(var(--safe-t) + 74px); left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 500; display: flex; gap: 8px; align-items: center; animation: pop 0.35s var(--spring) both; white-space: nowrap; max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; }
+.conflict { pointer-events: none; position: absolute; top: calc(var(--safe-t) + 74px); left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; font-size: 14px; font-weight: 500; display: flex; gap: 8px; align-items: center; animation: pop 0.35s var(--spring) both; white-space: nowrap; max-width: calc(100vw - 24px); overflow: hidden; text-overflow: ellipsis; }
 .conflict .ic { color: var(--danger); width: 18px; height: 18px; }
 
 /* ---------- AR overlay ---------- */

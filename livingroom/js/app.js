@@ -54,6 +54,7 @@ function openSheet(html, { onClose, label } = {}) {
   sheet.setAttribute('aria-label', label || '');
   sheet.hidden = false; scrim.hidden = false;
   sheetClose = onClose || null;
+  state.hero?.pause();
   if (!wasOpen) {
     void sheet.offsetWidth;
     sheet.classList.add('open'); scrim.classList.add('open');
@@ -68,6 +69,7 @@ function closeSheet() {
   if (sheet.hidden) return;
   sheet.classList.remove('open'); scrim.classList.remove('open');
   if (sheetClose) { const f = sheetClose; sheetClose = null; f(); }
+  if (!$('#view-home').hidden) state.hero?.resume();
   setTimeout(() => { if (!sheet.classList.contains('open')) { sheet.hidden = true; scrim.hidden = true; $('#sheet-body').innerHTML = ''; } }, 480);
 }
 $('#scrim').addEventListener('click', closeSheet);
@@ -91,7 +93,7 @@ $('#sheet').addEventListener('click', e => { if (e.target.closest('[data-close]'
 /** A segmented control whose thumb slides between options. */
 function seg(name, options, value) {
   return `<div class="seg" role="group" data-seg="${name}"><span class="seg-thumb" aria-hidden="true"></span>${options.map(o =>
-    `<button type="button" data-v="${o.v}" aria-pressed="${o.v === value}" ${o.disabled ? 'disabled' : ''}>${o.icon ? icon(o.icon) : ''}${o.label}</button>`).join('')}</div>`;
+    `<button type="button" data-v="${o.v}" aria-pressed="${o.v === value}" ${o.disabled ? 'disabled' : ''} ${o.reason ? `class="seg-muted" data-reason="${esc(o.reason)}"` : ''}>${o.icon ? icon(o.icon) : ''}${o.label}</button>`).join('')}</div>`;
 }
 function layoutSeg(el) {
   const thumb = el.querySelector('.seg-thumb');
@@ -109,6 +111,8 @@ function bindSeg(root, name, onPick) {
   el.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
+    // options that can't be used yet say why instead of doing nothing
+    if (b.dataset.reason) { toast(b.dataset.reason, 3600); return; }
     const ok = onPick(b.dataset.v);
     if (ok === false) return;
     el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
@@ -172,17 +176,23 @@ function fillThumbs(container) {
   }
 }
 
+let lastMine = null, lastRooms = null;
 function renderHome() {
   const mine = $('#mine');
   $('#mine-count').textContent = state.items.length ? String(state.items.length) : '';
-  mine.innerHTML = state.items.length
+  const mineHtml = state.items.length
     ? state.items.map(cardHtml).join('')
     : `<div class="empty"><strong>עוד אין כאן פריטים</strong><span>הדביקו קישור למוצר מכל חנות, צלמו מוצר, או התחילו מאחד הפריטים למטה.</span></div>`;
-  mine.classList.toggle('cards', state.items.length > 0);
-  fillThumbs(mine);
+  if (mineHtml !== lastMine) {
+    mine.classList.toggle('no-anim', lastMine !== null);
+    mine.innerHTML = mineHtml;
+    lastMine = mineHtml;
+    mine.classList.toggle('cards', state.items.length > 0);
+    fillThumbs(mine);
+  }
 
   const roomsEl = $('#rooms');
-  roomsEl.innerHTML = state.rooms.map((r, i) => {
+  const roomsHtml = state.rooms.map((r, i) => {
     const entries = roomEntries(r);
     const total = entries.reduce((s, e) => s + (Number(e.item.source?.price) || 0), 0);
     return `<button class="room-card" type="button" data-room="${esc(r.id)}" style="--i:${i}">
@@ -193,6 +203,7 @@ function renderHome() {
       <div class="room-pic">${icon('plus')}</div>
       <div class="room-text"><div class="room-name">חדר חדש</div><div class="room-meta">מסדרים פריטים בתלת-ממד ואז רואים את כולם יחד בחדר</div></div>
     </button>`;
+  if (roomsHtml !== lastRooms) { roomsEl.classList.toggle('no-anim', lastRooms !== null); roomsEl.innerHTML = roomsHtml; lastRooms = roomsHtml; }
 
   const st = $('#starters');
   if (!st.childElementCount) { st.innerHTML = STARTER_ITEMS.map(cardHtml).join(''); fillThumbs(st); }
@@ -217,7 +228,10 @@ function setupStatic() {
 async function startHero() {
   const canvas = $('#hero-canvas');
   const studio = state.hero = new Studio(canvas, { preview: true, previewDims: false });
-  studio.controls.enableZoom = false;
+  // the picture only turns by itself; touches pass through so the page scrolls normally
+  studio.controls.enabled = false;
+  canvas.style.touchAction = 'auto';
+  canvas.style.pointerEvents = 'none';
   studio.controls.autoRotateSpeed = 0.7;
   const pick = key => STARTER_ITEMS.find(i => i.id === `starter_${key}`);
   const layout = [
@@ -244,10 +258,11 @@ function dimsWarn(item) {
 
 function modelOptions(item) {
   const hasPhoto = Boolean(item.image || item.hasPhoto);
+  const hasGlb = Boolean(item.hasGlb || item.model?.kind === 'glb');
   return [
     { v: 'shape', label: 'צורה', icon: 'shapes' },
-    { v: 'photo', label: 'תמונה', icon: 'image', disabled: !hasPhoto },
-    { v: 'glb', label: '3D', icon: 'cube', disabled: !(item.hasGlb || item.model?.kind === 'glb') && !(hasPhoto && state.models3d) },
+    { v: 'photo', label: 'תמונה', icon: 'image', reason: hasPhoto ? null : 'לפריט הזה אין תמונה. פריט מקישור או מצילום מוצג גם כתמונה.' },
+    { v: 'glb', label: '3D', icon: 'cube', reason: hasGlb ? null : !hasPhoto ? 'מודל תלת-ממדי נבנה מתמונת המוצר. הוסיפו את הפריט מקישור או מצילום.' : !state.models3d ? 'בניית מודלים תלת-ממדיים עוד לא מחוברת בשרת.' : null },
   ];
 }
 
@@ -257,7 +272,7 @@ async function openItem(itemArg) {
   const src = item.source || {};
   const storeLink = src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${icon('storefront')}${esc(src.store || 'לעמוד המוצר')}${icon('arrow-up-right')}</a>` : '';
   const body = openSheet(`
-    <div class="viewer"><canvas></canvas><span class="badge" id="vbadge" hidden></span><span class="viewer-hint">גוררים כדי לסובב</span></div>
+    <div class="viewer"><canvas></canvas><span class="badge" id="vbadge" hidden></span><button class="icon-btn viewer-close" type="button" data-close aria-label="סגירה">${icon('x')}</button><span class="viewer-hint">גוררים הצידה כדי לסובב</span></div>
     <div class="sheet-section">
       <input class="field" id="it-name" style="font-size:22px;font-weight:600;height:56px" value="${esc(item.name)}" aria-label="שם הפריט" maxlength="80">
       <div class="source-row" style="margin-top:10px">${storeLink}${src.price ? `<span class="price">${price(src.price, src.currency)}</span>` : ''}${item.starter ? '<span>פריט לדוגמה</span>' : ''}</div>
@@ -298,8 +313,10 @@ async function openItem(itemArg) {
   state.viewer?.dispose();
   const viewer = state.viewer = new Studio(body.querySelector('.viewer canvas'), { preview: true });
   viewer.setFlag('dims', true);
-  await viewer.addItem(item, { x: 0, z: 0 }, { animate: false });
-  viewer.frameAll();
+  // the preview loads in the background; the sheet's controls work right away
+  viewer.addItem(item, { x: 0, z: 0 }, { animate: false })
+    .then(() => viewer.frameAll())
+    .catch(e => { console.warn('preview failed', e); toast('לא הצלחנו להציג את הפריט'); });
   updateBadge();
   $('#color-section', body).hidden = (item.model?.kind || 'shape') !== 'shape';
   renderAiProgress();
@@ -312,14 +329,28 @@ async function openItem(itemArg) {
     if (html) b.outerHTML = html.replace('class="badge', 'id="vbadge" class="badge');
   }
 
-  let rebuildT;
-  const changed = async (patch, { rebuild = true } = {}) => {
-    item = await ownItem(item);
+  let rebuildT, owning = null;
+  /** A ready-made or shared item becomes the user's own copy once, on the first edit. */
+  const ensureOwn = async () => {
+    if (!item.starter && !item.shared) return item;
+    const fromId = item.id;
+    owning ||= ownItem(item);
+    item = await owning;
     state.openItemId = item.id;
+    // a room showing the original now shows the copy
+    if (state.studio?.hasItem(fromId)) { await state.studio.replaceItem(item, fromId); saveRoomSoon(); }
+    return item;
+  };
+  const changed = async (patch, { rebuild = true } = {}) => {
+    await ensureOwn();
     Object.assign(item, patch);
     await saveItem(item);
-    if (rebuild) { clearTimeout(rebuildT); rebuildT = setTimeout(() => state.viewer?.replaceItem(item), 180); }
-    if (state.studio) state.studio.replaceItem(item);
+    if (!rebuild) return;
+    clearTimeout(rebuildT);
+    rebuildT = setTimeout(() => {
+      state.viewer?.replaceItem(item);
+      if (state.studio?.hasItem(item.id)) state.studio.replaceItem(item).then(saveRoomSoon);
+    }, 180);
   };
 
   $('#it-name', body).addEventListener('change', e => changed({ name: e.target.value.trim() || item.name }, { rebuild: false }));
@@ -331,8 +362,8 @@ async function openItem(itemArg) {
       $('#dims-warn', body).innerHTML = '';
     });
   }
-  bindSeg(body, 'kind', v => {
-    if (v === 'glb' && !item.hasGlb) { startAiModel(item).then(it => { if (it) item = it; renderAiProgress(); }); return false; }
+  const kindSeg = bindSeg(body, 'kind', v => {
+    if (v === 'glb' && !item.hasGlb) { startAiModel(item).then(it => { if (it) { item = it; state.openItemId = it.id; } renderAiProgress(); }); return false; }
     changed({ model: { ...item.model, kind: v } }).then(() => { updateBadge(); });
     $('#color-section', body).hidden = v !== 'shape';
   });
@@ -350,7 +381,7 @@ async function openItem(itemArg) {
     const d = e.target.closest('[data-do]');
     if (!d) return;
     if (d.dataset.do === 'ar') launchAR([{ item }]);
-    if (d.dataset.do === 'plan') { if (item.shared) item = await ownItem(item); pickRoomFor(item); }
+    if (d.dataset.do === 'plan') { if (item.shared) await ensureOwn(); pickRoomFor(item); }
     if (d.dataset.do === 'share') shareItem(item);
     if (d.dataset.do === 'delete') deleteItem(item);
   });
@@ -371,7 +402,7 @@ async function openItem(itemArg) {
     item = findItem(id) || item;
     renderAiProgress();
     updateBadge();
-    if (done) { bindSeg(body, 'kind', () => {})?.set('glb'); state.viewer?.replaceItem(item); }
+    if (done) { kindSeg?.set('glb'); state.viewer?.replaceItem(item); }
   };
 }
 
@@ -584,8 +615,18 @@ function photoSheet({ blob, cut, ctx }) {
       source: ctx.url ? { url: ctx.url, store: new URL(ctx.url).hostname.replace(/^www\./, '') } : {}, createdAt: Date.now(),
     };
     await saveItem(item);
-    openItem(item);
+    afterCreate(item, ctx);
   });
+}
+
+/** A new item opens in its sheet, or, when made from inside the planner, goes straight into the room. */
+async function afterCreate(item, ctx = {}) {
+  if (ctx.toRoom && state.studio) {
+    closeSheet();
+    await state.studio.addItem(item, {}, { select: true });
+    saveRoomSoon();
+    toast(`${item.name} נוסף לחדר`);
+  } else openItem(item);
 }
 
 function dimsFields(d) {
@@ -622,7 +663,7 @@ function manualSheet(ctx = {}) {
     if (!dims) { toast('הזינו רוחב, עומק וגובה'); return; }
     const item = { id: uid('i'), name: $('#mn-name', body).value.trim() || CATEGORIES[cat].he, category: cat, dims, dimsSource: 'user', color, model: { kind: 'shape' }, source: ctx.url ? { url: ctx.url, store: new URL(ctx.url).hostname.replace(/^www\./, '') } : {}, createdAt: Date.now() };
     await saveItem(item);
-    openItem(item);
+    afterCreate(item, ctx);
   });
 }
 
@@ -645,10 +686,25 @@ async function launchAR(entries, { asGroup = false } = {}) {
   }
   if (mode === 'quicklook') {
     toast('מכינים את הפריט למציאות רבודה');
-    try { await openQuickLook(entries); } catch (e) { console.warn(e); toast('לא הצלחנו לפתוח את התצוגה'); }
+    let res;
+    try { res = await openQuickLook(entries); } catch (e) {
+      console.warn(e);
+      toast(`לא הצלחנו לפתוח את התצוגה${e?.message ? ` (${e.message})` : ''}`, 5000);
+      return;
+    }
+    if (res?.url) quickLookSheet(entries, res.url);
     return;
   }
   handoffSheet(entries);
+}
+
+/** iPhone Safari: AR Quick Look opens from a tap on a real link around a picture. */
+async function quickLookSheet(entries, url) {
+  const pic = (await thumbnail(entries[0].item)) || 'img/icon-512.png';
+  const body = openSheet(`${sheetHead(entries.length > 1 ? 'החדר מוכן' : 'הפריט מוכן', 'נוגעים בתמונה כדי לראות אותו אצלכם בחדר, בגודל האמיתי.')}
+    <a class="ql-link" rel="ar" href="${esc(url)}" download="LivingRoom.usdz"><img src="${pic}" alt="פתיחה במציאות רבודה"></a>
+    <a class="btn btn-accent" rel="ar" href="${esc(url)}" download="LivingRoom.usdz" style="width:100%;margin-top:14px"><img src="${pic}" alt="" style="display:none">${icon('cube-focus')}פתיחה בחדר שלי</a>`, { label: 'מציאות רבודה' });
+  body.addEventListener('click', e => { if (e.target.closest('a[rel="ar"]')) setTimeout(closeSheet, 600); });
 }
 
 /** On a computer: a QR code that opens the same item (or room) on the phone. */
@@ -741,7 +797,17 @@ async function openStudio(roomId, addItems = []) {
   studio.setRoom(room.size);
   $('#room-name').value = room.name;
   for (const btn of $$('.dock [aria-pressed]')) btn.setAttribute('aria-pressed', 'false');
-  for (const e of roomEntries(room)) await studio.addItem(e.item, e.placement, { animate: false });
+  const night = $('[data-act="toggle-night"]');
+  night.querySelector('.dock-ic').innerHTML = icon('moon');
+  night.lastElementChild.textContent = 'ערב';
+  state.roomLoading = true;
+  try {
+    for (const e of roomEntries(room)) {
+      if (state.studio !== studio) return;
+      await studio.addItem(e.item, e.placement, { animate: false }).catch(err => console.warn('item failed', err));
+    }
+  } finally { if (state.studio === studio) state.roomLoading = false; }
+  if (state.studio !== studio) return;
   studio.frameAll();
   for (const item of addItems) await studio.addItem(item, {}, { select: true });
   if (addItems.length) { saveRoomSoon(); toast(`${addItems[0].name} נוסף לחדר`); }
@@ -757,7 +823,8 @@ function saveRoomSoon() {
 }
 async function saveRoom({ snapshot = false } = {}) {
   const studio = state.studio, room = state.room;
-  if (!studio || !room) return;
+  // while the room is still loading, saving now would drop the items not yet added
+  if (!studio || !room || state.roomLoading) return;
   room.placements = studio.placements();
   room.name = $('#room-name').value.trim() || room.name;
   if (snapshot && room.placements.length) {
@@ -779,7 +846,9 @@ function updateRoomMeta() {
 }
 
 async function leaveStudio() {
-  if (state.studio && state.room && state.studio.objects.size) await saveRoom({ snapshot: true });
+  closeSheet();
+  if (state.studio && state.room && state.studio.objects.size && !state.roomLoading) await saveRoom({ snapshot: true });
+  state.roomLoading = false;
   state.studio?.dispose();
   state.studio = null;
   state.room = null;
@@ -799,12 +868,12 @@ function studioAddSheet() {
     const n = e.target.closest('[data-new]');
     if (n) {
       if (n.dataset.new === 'link') { await leaveStudio(); $('#paste-input').focus(); toast('הדביקו קישור, ואחר כך ״הוסף לחדר״'); }
-      if (n.dataset.new === 'photo') pickPhoto();
-      if (n.dataset.new === 'manual') manualSheet();
+      if (n.dataset.new === 'photo') pickPhoto({ toRoom: true });
+      if (n.dataset.new === 'manual') manualSheet({ toRoom: true });
       return;
     }
     const r = e.target.closest('[data-item]');
-    if (!r) return;
+    if (!r || !state.studio) return;
     // ready-made items stay shared; they are copied only when edited
     const item = findItem(r.dataset.item);
     closeSheet();
@@ -849,15 +918,16 @@ async function deleteRoom() {
 // ---------- settings ----------
 async function settingsSheet() {
   const s = settings.get();
-  const h = await api.health();
-  const status = !api.hasServer() ? 'לא מחובר: מוסיפים פריטים מתמונה או לפי מידות' : !h ? 'לא עונה כרגע' : `${h.ai ? 'קריאת עמודים עם AI' : 'קריאת עמודים בסיסית'}${h.models3d ? ' · מודלים תלת-ממדיים' : ''}`;
+  const describe = h => (!api.hasServer() ? 'לא מחובר: מוסיפים פריטים מתמונה או לפי מידות' : !h ? 'לא עונה כרגע' : `${h.ai ? 'קריאת עמודים עם AI' : 'קריאת עמודים בסיסית'}${h.models3d ? ' · מודלים תלת-ממדיים' : ''}`);
+  const status = api.hasServer() ? 'בודקים…' : describe(null);
   const body = openSheet(`${sheetHead('הגדרות')}
     <div class="sheet-section" style="margin-top:0"><span class="label">יחידות</span>${seg('units', [{ v: 'cm', label: 'סנטימטרים' }, { v: 'in', label: 'אינצ׳ים' }], s.units)}</div>
     <div class="sheet-section"><span class="label">מראה</span>${seg('theme', [{ v: 'auto', label: 'אוטומטי' }, { v: 'light', label: 'בהיר' }, { v: 'dark', label: 'כהה' }], s.theme)}</div>
-    <div class="sheet-section"><span class="label">שרת</span><p class="hint" style="margin:0">${esc(status)}</p></div>
+    <div class="sheet-section"><span class="label">שרת</span><p class="hint" style="margin:0" id="server-status">${esc(status)}</p></div>
     <div class="sheet-section"><span class="label">הנתונים שלך</span><p class="hint" style="margin:0 0 10px">${state.items.length} פריטים ו-${state.rooms.length} חדרים שמורים במכשיר הזה בלבד.</p>
       <button class="btn btn-ghost btn-small" type="button" data-wipe style="color:var(--danger)">${icon('trash')}מחיקת הכול</button></div>`, { label: 'הגדרות' });
-  bindSeg(body, 'units', v => { settings.set({ units: v }); applySettings(); renderHome(); $('#starters').innerHTML = ''; renderHome(); });
+  if (api.hasServer()) api.health().then(h => { state.models3d = Boolean(h?.models3d); const el = $('#server-status', body); if (el) el.textContent = describe(h); });
+  bindSeg(body, 'units', v => { settings.set({ units: v }); applySettings(); lastMine = lastRooms = null; $('#starters').innerHTML = ''; renderHome(); });
   bindSeg(body, 'theme', v => { settings.set({ theme: v }); applySettings(); });
   let armed = false;
   body.addEventListener('click', async e => {
@@ -983,6 +1053,8 @@ async function start() {
   api.health().then(h => { state.models3d = Boolean(h?.models3d); });
   for (const it of state.items) if (it.model?.task && it.model.status === 'running') pollModel(it.id);
   route();
+  // Safari may clear site data after 7 days without a visit unless storage is persistent
+  navigator.storage?.persist?.().catch(() => {});
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
   window.__livingroom = { state, openItem, openStudio, launchAR, findItem };
 }

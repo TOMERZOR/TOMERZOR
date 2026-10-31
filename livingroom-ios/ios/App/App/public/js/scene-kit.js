@@ -19,7 +19,9 @@ function softRectTexture(w, d) {
   const x = c.getContext('2d');
   const pad = 0.16; // share of the texture taken by the blur on each side
   const blur = Math.min(c.width, c.height) * pad;
-  x.filter = `blur(${blur * 0.55}px)`;
+  // shadowBlur works in every browser (Safari has no canvas filter)
+  x.shadowColor = 'rgba(0,0,0,1)';
+  x.shadowBlur = blur * 0.9;
   x.fillStyle = 'rgba(0,0,0,1)';
   const rx = c.width * pad, ry = c.height * pad;
   x.beginPath();
@@ -193,7 +195,11 @@ export async function itemAssets(item) {
   if (wantsImage) {
     const stored = await blobs.get(`photo:${item.id}`);
     let img = null;
-    if (stored) img = await loadImage(URL.createObjectURL(stored));
+    if (stored) {
+      const url = URL.createObjectURL(stored);
+      img = await loadImage(url);
+      URL.revokeObjectURL(url);
+    }
     else if (item.image) img = await loadImage(proxied(item.image));
     if (img) {
       if (item.model?.kind === 'photo') out.image = cutoutImage(img).canvas;

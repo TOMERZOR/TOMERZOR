@@ -8,16 +8,16 @@
         <p class="versus__title">{{ section.settings.us }}</p>
         <ul class="versus__list">
           {%- assign lines = section.settings.us_points | newline_to_br | split: '<br />' -%}
-          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check-circle' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
         </ul>
       </div>
       <div class="versus__card versus__card--them reveal" style="--i: 1">
         <p class="versus__title">{{ section.settings.them }}</p>
         <ul class="versus__list">
           {%- assign lines = section.settings.them_cons | newline_to_br | split: '<br />' -%}
-          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'x-circle' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'x' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
           {%- assign lines = section.settings.them_pros | newline_to_br | split: '<br />' -%}
-          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check-circle' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
         </ul>
       </div>
     </div>

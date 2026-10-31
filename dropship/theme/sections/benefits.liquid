@@ -18,8 +18,8 @@
             {%- else -%}
               {{ block.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: '', width: 800, height: 1000 }}
             {%- endif -%}
-          {%- else -%}
-            <span class="tile__icon">{% render 'icon', name: block.settings.icon %}</span>
+          {%- elsif block.settings.figure != blank -%}
+            <span class="tile__figure" aria-hidden="true">{{ block.settings.figure }}</span>
           {%- endif -%}
           <h3>{{ block.settings.title }}</h3>
           <p>{{ block.settings.text }}</p>
@@ -38,7 +38,7 @@
       "type": "text",
       "id": "title",
       "label": "כותרת",
-      "default": "למה כולן עוברות לסאטן"
+      "default": "למה דווקא סאטן"
     },
     {
       "type": "select",
@@ -95,40 +95,10 @@
           "default": "accent"
         },
         {
-          "type": "select",
-          "id": "icon",
-          "label": "אייקון (כשאין תמונה)",
-          "options": [
-            {
-              "value": "no-heat",
-              "label": "בלי חום"
-            },
-            {
-              "value": "timer",
-              "label": "טיימר"
-            },
-            {
-              "value": "moon",
-              "label": "לילה"
-            },
-            {
-              "value": "sparkle",
-              "label": "ברק"
-            },
-            {
-              "value": "heart",
-              "label": "לב"
-            },
-            {
-              "value": "gift",
-              "label": "מתנה"
-            },
-            {
-              "value": "travel",
-              "label": "נסיעות"
-            }
-          ],
-          "default": "timer"
+          "type": "text",
+          "id": "figure",
+          "label": "מספר גדול (כשאין תמונה)",
+          "info": "למשל 5. רק מספר אמיתי."
         },
         {
           "type": "text",

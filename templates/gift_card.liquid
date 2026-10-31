@@ -17,7 +17,7 @@
   <main class="section">
     <div class="container container--narrow center">
       <p class="wordmark">{{ shop.name }}</p>
-      <h1 class="page-title">כרטיס מתנה בשווי {{ gift_card.balance | money }}</h1>
+      <h1 class="page-title">כרטיס מתנה בשווי {{ gift_card.balance | money_without_trailing_zeros }}</h1>
       {%- if gift_card.expired or gift_card.enabled == false -%}<p class="notice notice--error">הכרטיס אינו פעיל.</p>{%- endif -%}
       <p>הקוד לשימוש בקופה:</p>
       <p class="gift-code"><strong>{{ gift_card.code | format_code }}</strong></p>

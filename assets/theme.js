@@ -6,7 +6,8 @@
     var fmt = (window.theme && window.theme.moneyFormat) || '₪{{amount}}';
     var value = cents / 100;
     var noDec = Math.round(value).toLocaleString('en-US');
-    var dec = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var whole = Math.round(value) === value;
+    var dec = whole ? noDec : value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     var commaDec = value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return fmt.replace(/\{\{\s*(\w+)\s*\}\}/, function (_, key) {
       if (key === 'amount_no_decimals') return noDec;

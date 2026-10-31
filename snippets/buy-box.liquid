@@ -71,9 +71,9 @@
         <p class="buy__subtitle">{{ section.settings.subtitle }}</p>
       {%- endif -%}
       <div class="buy__price" data-price>
-        <span class="price">{{ current.price | money }}</span>
+        <span class="price">{{ current.price | money_without_trailing_zeros }}</span>
         {%- if current.compare_at_price > current.price -%}
-          <s class="price price--was">{{ current.compare_at_price | money }}</s>
+          <s class="price price--was">{{ current.compare_at_price | money_without_trailing_zeros }}</s>
         {%- endif -%}
       </div>
     </div>
@@ -146,12 +146,12 @@
               <span class="bundle__main">
                 <span class="bundle__name">{{ value }}</span>
                 {%- if qty > 1 -%}
-                  <span class="bundle__per">{{ per_set | money }} לסט</span>
+                  <span class="bundle__per">{{ per_set | money_without_trailing_zeros }} לסט</span>
                 {%- endif -%}
               </span>
               <span class="bundle__side">
-                <span class="bundle__price" data-bundle-price="{{ value | escape }}">{{ v_price | money }}</span>
-                <span class="bundle__save" data-bundle-save="{{ value | escape }}">{% if saving > 0 %}חוסכת {{ saving | money }}{% endif %}</span>
+                <span class="bundle__price" data-bundle-price="{{ value | escape }}">{{ v_price | money_without_trailing_zeros }}</span>
+                <span class="bundle__save" data-bundle-save="{{ value | escape }}">{% if saving > 0 %}חוסכת {{ saving | money_without_trailing_zeros }}{% endif %}</span>
               </span>
               {%- if show_badge -%}<span class="bundle__badge">{{ section.settings.popular_text }}</span>{%- endif -%}
             </label>
@@ -206,7 +206,7 @@
 
       <button type="submit" name="add" class="btn btn--buy" data-loading-text="מעבירה לתשלום..." data-buy-button {% unless current.available %}disabled{% endunless %}>
         <span data-buy-label>{% if current.available %}{{ section.settings.button_text | default: 'להזמנה' }}{% else %}אזל מהמלאי{% endif %}</span>
-        <span class="btn__price" data-buy-price>{{ current.price | money }}</span>
+        <span class="btn__price" data-buy-price>{{ current.price | money_without_trailing_zeros }}</span>
       </button>
       {%- if section.settings.show_dynamic_checkout -%}
         {{ form | payment_button }}
@@ -266,7 +266,7 @@
 <div class="sticky-buy" data-sticky-buy hidden>
   <div class="sticky-buy__info">
     <span class="sticky-buy__title">{{ product.title }}</span>
-    <span class="sticky-buy__price" data-sticky-price>{{ current.price | money }}</span>
+    <span class="sticky-buy__price" data-sticky-price>{{ current.price | money_without_trailing_zeros }}</span>
   </div>
   <button type="submit" form="{{ form_id }}" class="btn btn--small" {% unless current.available %}disabled{% endunless %} data-sticky-button>{{ section.settings.button_text | default: 'להזמנה' }}</button>
 </div>

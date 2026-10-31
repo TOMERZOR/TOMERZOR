@@ -2,7 +2,7 @@
   <div class="container">
     <div class="footer__grid">
       <div class="footer__brand">
-        <span class="wordmark">{{ shop.name }}</span>
+        <span class="wordmark">{{ settings.brand_name | default: shop.name }}</span>
         {%- if section.settings.about != blank -%}<div class="rte">{{ section.settings.about }}</div>{%- endif -%}
         {%- if settings.social_facebook != blank or settings.social_instagram != blank or settings.social_tiktok != blank -%}
           <div class="footer__social">
@@ -27,7 +27,7 @@
         {%- if shop.email != blank -%}<a href="mailto:{{ shop.email }}">{{ shop.email }}</a>{%- endif -%}
       </div>
     </div>
-    <p class="footer__bottom">&copy; {{ 'now' | date: '%Y' }} {{ shop.name }}</p>
+    <p class="footer__bottom">&copy; {{ 'now' | date: '%Y' }} {{ settings.brand_name | default: shop.name }}</p>
   </div>
 </footer>
 {%- if settings.whatsapp_number != blank -%}

@@ -3,11 +3,11 @@
     <button type="button" class="header__icon header__menu-btn" aria-controls="MenuDrawer" aria-expanded="false" data-menu-open aria-label="תפריט">
       {% render 'icon', name: 'menu' %}
     </button>
-    <a href="{{ routes.root_url }}" class="header__logo" aria-label="{{ shop.name }}, לדף הבית">
+    <a href="{{ routes.root_url }}" class="header__logo" aria-label="{{ settings.brand_name | default: shop.name }}, לדף הבית">
       {%- if settings.logo != blank -%}
-        {{ settings.logo | image_url: width: 480 | image_tag: width: settings.logo_width, height: null, alt: shop.name, style: 'height:auto' }}
+        {{ settings.logo | image_url: width: 480 | image_tag: width: settings.logo_width, height: null, alt: settings.brand_name, style: 'height:auto' }}
       {%- else -%}
-        <span class="wordmark">{{ shop.name }}</span>
+        <span class="wordmark">{{ settings.brand_name | default: shop.name }}</span>
       {%- endif -%}
     </a>
     <nav class="header__nav" aria-label="ראשי">

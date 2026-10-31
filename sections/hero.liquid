@@ -6,7 +6,7 @@
     {%- if img != blank -%}
       {{ img | image_url: width: 1800 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '(min-width: 990px) 58vw, 100vw', widths: '600, 900, 1200, 1500, 1800', alt: img.alt }}
     {%- else -%}
-      {{ 'asleep.jpg' | asset_url | image_tag: loading: 'eager', fetchpriority: 'high', alt: 'אישה ישנה עם מוט סלסול מסאטן בשיער', width: 800, height: 1000 }}
+      <img src="{{ 'asleep.jpg' | asset_url }}" alt="אישה ישנה עם מוט סלסול מסאטן בשיער" width="800" height="1000" loading="eager" fetchpriority="high">
     {%- endif -%}
   </div>
   <div class="hero__copy">

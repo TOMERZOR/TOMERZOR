@@ -3,7 +3,7 @@
     {%- if section.settings.image != blank -%}
       {{ section.settings.image | image_url: width: 2000 | image_tag: loading: 'lazy', sizes: '100vw', widths: '600, 900, 1200, 1600, 2000', alt: section.settings.image.alt }}
     {%- elsif section.settings.fallback != blank -%}
-      {{ section.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: section.settings.alt, width: 1000, height: 1000 }}
+      <img src="{{ section.settings.fallback | asset_url }}" alt="{{ section.settings.alt | escape }}" width="1000" height="1000" loading="lazy">
     {%- endif -%}
   </div>
   <div class="container band__inner">

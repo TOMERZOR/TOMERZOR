@@ -16,7 +16,7 @@
             {%- if block.settings.image != blank -%}
               {{ block.settings.image | image_url: width: 1000 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 33vw, 100vw', widths: '400, 700, 1000', alt: '' }}
             {%- else -%}
-              {{ block.settings.fallback | asset_url | image_tag: loading: 'lazy', alt: '', width: 800, height: 1000 }}
+              <img src="{{ block.settings.fallback | asset_url }}" alt="" width="800" height="1000" loading="lazy">
             {%- endif -%}
           {%- elsif block.settings.figure != blank -%}
             <span class="tile__figure" aria-hidden="true">{{ block.settings.figure }}</span>

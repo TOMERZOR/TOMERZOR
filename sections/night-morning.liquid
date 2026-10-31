@@ -9,7 +9,7 @@
         {%- if section.settings.image_before != blank -%}
           {{ section.settings.image_before | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 45vw, 50vw', widths: '400, 600, 900, 1200', alt: section.settings.image_before.alt }}
         {%- else -%}
-          {{ 'night-before.jpg' | asset_url | image_tag: loading: 'lazy', alt: 'בערב: השיער מגולגל סביב מוט הסאטן', width: 752, height: 666 }}
+          <img src="{{ 'night-before.jpg' | asset_url }}" alt="בערב: השיער מגולגל סביב מוט הסאטן" width="752" height="666" loading="lazy">
         {%- endif -%}
         <figcaption>{% render 'icon', name: 'moon' %}{{ section.settings.caption_before }}</figcaption>
       </figure>
@@ -17,7 +17,7 @@
         {%- if section.settings.image_after != blank -%}
           {{ section.settings.image_after | image_url: width: 1200 | image_tag: loading: 'lazy', sizes: '(min-width: 990px) 45vw, 50vw', widths: '400, 600, 900, 1200', alt: section.settings.image_after.alt }}
         {%- else -%}
-          {{ 'morning-after.jpg' | asset_url | image_tag: loading: 'lazy', alt: 'בבוקר: גלים רכים אחרי שחרור המוט', width: 752, height: 666 }}
+          <img src="{{ 'morning-after.jpg' | asset_url }}" alt="בבוקר: גלים רכים אחרי שחרור המוט" width="752" height="666" loading="lazy">
         {%- endif -%}
         <figcaption>{% render 'icon', name: 'sun' %}{{ section.settings.caption_after }}</figcaption>
       </figure>

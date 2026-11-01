@@ -51,6 +51,9 @@ export function defaults() {
     },
     meds: [],
     log: {},
+    // The time each dose was due when it was marked, so later changes to the times of day don't
+    // rewrite how late it was: { 'YYYY-MM-DD': { doseKey: 'HH:MM' } }
+    planned: {},
     device: { id: null, push: false },
   };
 }
@@ -290,6 +293,77 @@ export function adherence(state, days, now = new Date()) {
     }
   }
   return total ? Math.round((taken / total) * 100) : null;
+}
+
+// ---------- Timing: how late a dose was marked ----------
+
+// Within this many minutes of the dose time counts as on time.
+export const ON_TIME = 15;
+
+// Minutes between the dose time and the moment it was marked (negative: early). null when not
+// taken, or when it was marked on a later day (marking yesterday's dose today says nothing about
+// when it was taken).
+export function delayOf(state, date, dose) {
+  const t = takenAt(state, date, dose.key);
+  if (!t) return null;
+  const at = new Date(t);
+  if (dateKey(at) !== date) return null;
+  return nowMinutes(at) - minutes(state.planned?.[date]?.[dose.key] || dose.time);
+}
+
+export const retroactive = (state, date, dose) => {
+  const t = takenAt(state, date, dose.key);
+  return !!t && dateKey(new Date(t)) !== date;
+};
+
+export function duration(m) {
+  if (m < 60) return m === 1 ? 'דקה' : `${m} דק׳`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  const hours = h === 1 ? 'שעה' : h === 2 ? 'שעתיים' : `${h} שעות`;
+  return rest ? `${hours} ו־${rest} דק׳` : hours;
+}
+
+// 'on' | 'late' | 'early', with a short label for chips.
+export function delayInfo(min) {
+  if (min == null) return null;
+  if (Math.abs(min) <= ON_TIME) return { kind: 'on', label: 'בזמן', long: 'בזמן' };
+  if (min > 0) return { kind: 'late', label: `איחור ${duration(min)}`, long: `באיחור של ${duration(min)}` };
+  return { kind: 'early', label: `מוקדם ${duration(-min)}`, long: `מוקדם ב־${duration(-min)}` };
+}
+
+// Over the last `days` days: how many doses were marked on time, the average lateness (early
+// counts as 0), and the same per time of day.
+export function timing(state, days, now = new Date()) {
+  const today = dateKey(now);
+  const all = [];
+  const groups = new Map();
+  for (let i = 0; i < days; i++) {
+    const date = addDays(today, -i);
+    for (const g of dayPlan(state, date)) {
+      for (const d of g.doses) {
+        const min = delayOf(state, date, d);
+        if (min == null) continue;
+        all.push(min);
+        const id = SLOTS[d.slot] ? d.slot : d.time;
+        if (!groups.has(id)) groups.set(id, { slot: d.slot, time: d.time, mins: [] });
+        groups.get(id).mins.push(min);
+      }
+    }
+  }
+  const sum = mins => {
+    if (!mins.length) return null;
+    return {
+      count: mins.length,
+      onTime: Math.round((mins.filter(m => m <= ON_TIME).length / mins.length) * 100),
+      avgLate: Math.round(mins.reduce((a, m) => a + Math.max(0, m), 0) / mins.length),
+      worst: Math.max(...mins),
+    };
+  };
+  const bySlot = [...groups.values()]
+    .map(g => ({ slot: g.slot, time: g.time, ...sum(g.mins) }))
+    .sort((a, b) => minutes(a.time) - minutes(b.time));
+  return { ...sum(all), bySlot };
 }
 
 // ---------- What the reminder server gets ----------

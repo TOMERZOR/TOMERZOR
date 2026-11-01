@@ -314,6 +314,22 @@ input, textarea { outline: none; }
 .dose .sub b { color: var(--green); font-weight: 800; display: inline-flex; align-items: center; gap: 3px; }
 .dose .sub b .ic { width: 0.95rem; height: 0.95rem; }
 .dose .sub .warn { color: var(--red); font-weight: 800; }
+.delay { display: inline-block; font-size: 0.74rem; font-weight: 800; padding: 1px 7px; border-radius: 99px; line-height: 1.5; }
+.delay.on { background: var(--green-soft); color: var(--green); }
+.delay.late { background: var(--orange-soft); color: var(--orange); }
+.delay.early { background: var(--accent-soft); color: var(--accent); }
+.delay.retro { background: var(--fill); color: var(--label-2); }
+.log-row .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-row .st { flex: none; }
+.log-row .st .tm { display: inline-flex; align-items: center; gap: 4px; }
+.log-row .st:has(.delay) { flex-direction: column; align-items: flex-end; gap: 3px; }
+.stats.two { grid-template-columns: 1fr 1fr; }
+.timing-row { align-items: flex-start; }
+.timing-row .bar { display: block; height: 6px; border-radius: 99px; background: var(--fill); margin: 7px 0 5px; overflow: hidden; }
+.timing-row .bar i { display: block; height: 100%; border-radius: 99px; background: var(--green); transform-origin: right; animation: grow 0.8s var(--ease) both 0.2s; }
+.timing-row .bar i.late { background: var(--orange); }
+.timing-row .bar i.very { background: var(--red); }
+@keyframes grow { from { transform: scaleX(0); } }
 .dose.taken .name { color: var(--label-2); }
 .dose.taken .tile { opacity: 0.55; filter: saturate(0.6); }
 .dose.flash { animation: flash 1.4s var(--ease); }

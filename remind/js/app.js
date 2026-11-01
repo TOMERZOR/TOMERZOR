@@ -6,6 +6,9 @@ import * as Push from './push.js';
 
 const { SLOTS, FORMS, FOOD, COLORS, WEEKDAYS } = S;
 
+// Shown in the profile, so it's easy to check which version a phone is running.
+const APP_VERSION = '1.3';
+
 let state = S.load();
 const view = { tab: 'home', day: S.dateKey(), today: S.dateKey(), month: null, histDay: S.dateKey(), justChecked: new Set(), celebrate: false, ringPrev: {} };
 const $view = document.getElementById('view');
@@ -202,6 +205,13 @@ function groupChip(date, g) {
   return `<span class="chip-status">${S.inMinutes(S.minutes(g.time) - S.nowMinutes())}</span>`;
 }
 
+// How late (or early) a taken dose was marked, as a small colored label.
+function delayChip(date, d) {
+  if (S.retroactive(state, date, d)) return '<span class="delay retro">סומן בדיעבד</span>';
+  const info = S.delayInfo(S.delayOf(state, date, d));
+  return info ? `<span class="delay ${info.kind}">${info.label}</span>` : '';
+}
+
 function doseRow(date, d) {
   const today = S.dateKey();
   const st = S.status(state, date, d);
@@ -209,7 +219,7 @@ function doseRow(date, d) {
   const med = d.med;
   const extra = [med.food && med.food !== 'any' ? FOOD[med.food] : '', med.note ? (med.note.length > 40 ? `${med.note.slice(0, 40)}…` : med.note) : ''].filter(Boolean);
   const sub = t
-    ? `<span>${S.doseText(med)}</span><b>${icon('check')} נלקח <span dir="ltr">${S.clock(t)}</span></b>`
+    ? `<span>${S.doseText(med)}</span><b>${icon('check')} נלקח <span dir="ltr">${S.clock(t)}</span></b>${delayChip(date, d)}`
     : `<span>${[S.doseText(med), ...extra.map(esc)].join(' · ')}</span>${st === 'missed' ? '<span class="warn">לא סומן</span>' : ''}`;
   const cls = [st, date > today && 'future', view.justChecked.has(d.key) && 'pop'].filter(Boolean).join(' ');
   return `<button class="dose ${cls}" data-act="toggle" data-date="${date}" data-key="${d.key}" role="checkbox" aria-checked="${t ? 'true' : 'false'}">
@@ -280,8 +290,11 @@ function findDose(date, key) {
 function mark(date, doses) {
   const now = Date.now();
   state.log[date] ||= {};
+  state.planned ||= {};
+  state.planned[date] ||= {};
   for (const d of doses) {
     state.log[date][d.key] = now;
+    state.planned[date][d.key] = d.time;
     if (d.med.stock != null) d.med.stock = Math.max(0, +(d.med.stock - (Number(d.med.amount) || 1)).toFixed(2));
     view.justChecked.add(d.key);
   }
@@ -290,7 +303,9 @@ function mark(date, doses) {
   commit();
   render();
   navigator.vibrate?.(12);
-  toast(doses.length > 1 ? `סומנו ${doses.length} תרופות` : `סומן: ${doses[0].med.name}`, {
+  const info = S.delayInfo(S.delayOf(state, date, doses[0]));
+  const when = date === S.dateKey() ? ` ב־${S.clock(Date.now())}${info && info.kind !== 'on' ? ` · ${info.long}` : ''}` : '';
+  toast(doses.length > 1 ? `סומנו ${doses.length} תרופות${when}` : `סומן: ${doses[0].med.name}${when}`, {
     undo: () => {
       unmark(date, doses);
       render();
@@ -302,6 +317,7 @@ function unmark(date, doses) {
   for (const d of doses) {
     if (!state.log[date]?.[d.key]) continue;
     delete state.log[date][d.key];
+    if (state.planned?.[date]) delete state.planned[date][d.key];
     if (d.med.stock != null) d.med.stock = +(d.med.stock + (Number(d.med.amount) || 1)).toFixed(2);
   }
   commit();
@@ -554,6 +570,8 @@ function renderHistory() {
   const streak = S.streak(state);
   const w = S.adherence(state, 7);
   const mo = S.adherence(state, 30);
+  const tm = S.timing(state, 30);
+  const tw = S.timing(state, 7);
 
   let out = `<div class="topbar"></div><h1 class="large-title">היסטוריה</h1>
     <div class="stats">
@@ -561,6 +579,26 @@ function renderHistory() {
       <div class="card stat"><span style="color:var(--green)">${icon('check')}</span><b>${w == null ? '—' : `${w}%`}</b><span>השבוע</span></div>
       <div class="card stat"><span style="color:var(--accent)">${icon('calendar')}</span><b>${mo == null ? '—' : `${mo}%`}</b><span>30 יום</span></div>
     </div>`;
+
+  // Timing: how close to the dose time she marks, from the moment of each mark.
+  out += `<div class="section-title"><span>דיוק בזמנים</span><span>30 יום</span></div>`;
+  if (!tm.count) {
+    out += `<div class="card" style="padding:16px;color:var(--label-2);text-align:center">כשמסמנים תרופות, כאן יופיע כמה זמן אחרי השעה הן נלקחו.</div>`;
+  } else {
+    out += `<div class="stats two">
+      <div class="card stat"><span style="color:var(--green)">${icon('clock')}</span><b>${tm.onTime}%</b><span>נלקחו בזמן (עד ${S.ON_TIME} דק׳)</span></div>
+      <div class="card stat"><span style="color:var(--orange)">${icon('repeat')}</span><b>${tm.avgLate ? S.duration(tm.avgLate) : 'בזמן'}</b><span>איחור ממוצע${tw.count ? ` · השבוע ${tw.avgLate ? S.duration(tw.avgLate) : 'בזמן'}` : ''}</span></div>
+    </div>
+    <div class="card" style="margin-top:10px">${tm.bySlot.map(g => {
+      const title = SLOTS[g.slot] ? SLOTS[g.slot].label : `בשעה ${g.time}`;
+      const pct = Math.min(100, (g.avgLate / 60) * 100);
+      const kind = g.avgLate <= S.ON_TIME ? 'on' : g.avgLate <= 45 ? 'late' : 'very';
+      return `<div class="row timing-row"><span class="slot-ic ${slotClass(g.slot, g.time)}">${icon(S.slotIcon(g.slot))}</span>
+        <span class="txt"><span class="t">${title} <span class="s" style="display:inline" dir="ltr">${g.time}</span></span>
+        <span class="bar"><i class="${kind}" style="width:${Math.max(4, pct)}%"></i></span>
+        <span class="s">${g.avgLate <= S.ON_TIME ? 'בדרך כלל בזמן' : `בממוצע ${S.duration(g.avgLate)} אחרי השעה`} · ${g.onTime}% בזמן</span></span></div>`;
+    }).join('')}</div>`;
+  }
 
   const first = new Date(y, m - 1, 1);
   const daysIn = new Date(y, m, 0).getDate();
@@ -595,7 +633,7 @@ function renderHistory() {
     out += `<div class="card">${plan.flatMap(g => g.doses).map(d => {
       const t = S.takenAt(state, date, d.key);
       const st = S.status(state, date, d);
-      const badge = t ? `<span class="st ok">${icon('check')} <span dir="ltr">${S.clock(t)}</span></span>`
+      const badge = t ? `<span class="st ok"><span class="tm">${icon('check')} <span dir="ltr">${S.clock(t)}</span></span>${delayChip(date, d)}</span>`
         : st === 'missed' ? `<span class="st no">${icon('x')} לא סומן</span>`
         : `<span class="st wait">${st === 'upcoming' ? 'מתוכנן' : 'ממתין'}</span>`;
       return `<div class="log-row"><span class="time">${d.time}</span><span class="tile" style="--c:${d.med.color};width:2rem;height:2rem;border-radius:9px">${icon(FORMS[d.med.form]?.icon || 'tablet')}</span><span class="txt">${esc(d.med.name)}</span>${badge}</div>`;
@@ -666,7 +704,7 @@ function renderProfile() {
     <button class="row danger" data-act="reset"><span class="sq" style="--c:var(--red)">${icon('trash')}</span><span class="txt t">מחיקת כל הנתונים</span></button>
   </div>
 
-  <div class="foot">${wordmark()}גרסה 1.0 · הכל נשמר בטלפון הזה בלבד</div>`;
+  <div class="foot">${wordmark()}גרסה ${APP_VERSION} · הכל נשמר בטלפון הזה בלבד</div>`;
 }
 
 function nameSheet() {
@@ -800,7 +838,8 @@ function shareDay() {
   for (const g of S.dayPlan(state, date)) {
     for (const d of g.doses) {
       const t = S.takenAt(state, date, d.key);
-      lines.push(`${t ? '✅' : '⏳'} ${d.med.name} (${g.time})${t ? ` · נלקח ב־${S.clock(t)}` : ' · עוד לא סומן'}`);
+      const info = t ? S.delayInfo(S.delayOf(state, date, d)) : null;
+      lines.push(`${t ? '✅' : '⏳'} ${d.med.name} (${g.time})${t ? ` · נלקח ב־${S.clock(t)}${info ? ` (${info.long})` : ''}` : ' · עוד לא סומן'}`);
     }
   }
   const sum = S.daySummary(state, date);
@@ -1265,8 +1304,27 @@ function onboarding() {
 
 // ---------- Start ----------
 
+// Updates. An iPhone home-screen app is usually resumed rather than relaunched, and a resume doesn't
+// look for a new version, so check on every return to the app. When a new version takes over, reload
+// into it right away, or, if a sheet or dialog is open, as soon as the app goes to the background.
+let swReg = null;
+let reloadPending = false;
+const busy = () => !state.onboarded || document.querySelector('.sheet, .dialog-wrap');
+function reloadIntoUpdate() {
+  try { sessionStorage.setItem('remind.updated', APP_VERSION); } catch {}
+  location.reload();
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  let controlled = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => { swReg = reg; }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // The first install also takes control; that's not an update, but any later change is.
+    if (!controlled) { controlled = true; return; }
+    if (reloadPending) return;
+    reloadPending = true;
+    if (!busy()) reloadIntoUpdate();
+  });
   navigator.serviceWorker.addEventListener('message', e => {
     if (e.data?.type === 'open-dose') openDose(e.data.date, e.data.t);
     else if (e.data?.type === 'refresh' && state.onboarded) render();
@@ -1274,7 +1332,11 @@ if ('serviceWorker' in navigator) {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible') return;
+  if (document.visibilityState === 'hidden') {
+    if (reloadPending) reloadIntoUpdate();
+    return;
+  }
+  swReg?.update().catch(() => {});
   tick(true);
   queueSync(300);
 });
@@ -1292,3 +1354,9 @@ if (state.onboarded) {
   onboarding();
 }
 lastMinute = `${S.dateKey()} ${S.nowMinutes()}`;
+try {
+  if (sessionStorage.getItem('remind.updated') && state.onboarded) {
+    sessionStorage.removeItem('remind.updated');
+    setTimeout(() => toast(`Remind. עודכן לגרסה ${APP_VERSION}`, { icon: 'sparkle' }), 600);
+  }
+} catch {}

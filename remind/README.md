@@ -11,9 +11,9 @@ npx http-server -p 8791 -c-1 .     # from the repo root, then open http://localh
 ## What it does
 
 - **Onboarding:** name, the usual morning/noon/evening times, how often to repeat a reminder, text size, the first medicines, notifications. On an iPhone in Safari it first shows how to add Remind. to the home screen (notifications only work from there, and the home-screen app keeps its own data).
-- **Today:** progress ring, the next dose, a week strip, a heads-up 1–3 days before a monthly or one-date medicine, and the doses grouped by time. A dose is marked with its round checkbox **only after taking it**: marking more than 30 minutes early asks first, unmarking asks first, every mark shows the time it was taken and has an undo. Past days can be marked late; future days can't be marked.
+- **Today:** progress ring, the next dose, a week strip, a heads-up 1–3 days before a monthly or one-date medicine, and the doses grouped by time. A dose is marked with its round checkbox **only after taking it**: marking more than 30 minutes early asks first, unmarking asks first, every mark shows the time it was taken, how late or early that was (or "marked later" for a past day), and has an undo. Past days can be marked late; future days can't be marked.
 - **Medicines:** name, type (tablet, capsule, syrup, drops, inhaler, injection), color, dose, how often (every day, chosen weekdays, once a month on a day of the month, or one date only; the 31st falls on the last day of shorter months), times (morning/noon/evening, or any time), before/with/after food, notes, an optional stock count that goes down with each mark and warns when about a week is left, and an optional end date for a course.
-- **History:** full-day streak, adherence for 7 and 30 days, a month calendar with a ring per day, and the doses of any day.
+- **History:** full-day streak, adherence for 7 and 30 days, timing (share of doses marked within 15 minutes of their time, average lateness, and per time of day, from the moment each dose was marked), a month calendar with a ring per day, and the doses of any day.
 - **Profile:** the times of day, repeat interval, notifications (with a test), text size, light/dark, a family contact and a one-tap WhatsApp summary of today, backup to a file, restore, delete everything.
 
 Everything is stored on the phone (localStorage). Fonts: Heebo (Hebrew) and Plus Jakarta Sans (Latin and digits), self-hosted from `fonts/` (SIL OFL).
@@ -29,4 +29,4 @@ The server gets only times and random dose ids, never medicine names. The servic
 
 While Remind. is open, it also shows an in-app banner when a dose time arrives.
 
-Bump `VERSION` in `sw.js` whenever a file changes.
+Bump `VERSION` in `sw.js` whenever a file changes, and `APP_VERSION` in `js/app.js` (shown in the profile). The app checks for a new version every time it comes back to the screen (an iPhone home-screen app is usually resumed, not relaunched) and reloads into it by itself, keeping all data.

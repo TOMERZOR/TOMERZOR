@@ -5,7 +5,7 @@ const KEY = 'mabat-v1';
 
 export const DEFAULTS = {
   device: { id: null, push: false },
-  prefs: { entries: true, near: false, scope: 'all', minScore: 70, bell: false, news: true, congress: true, positions: true },
+  prefs: { entries: true, near: false, scope: 'all', minScore: 70, bell: false, news: true, congress: true, positions: true, approach: true },
   risk: { budget: null, riskPct: 1, maxPositionPct: 25, cashBufferPct: 10, fractional: true },
   sec: '',
   watch: [],

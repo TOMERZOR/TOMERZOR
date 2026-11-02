@@ -543,7 +543,7 @@ function closedRow(c) {
 
 // ---------- Updates ----------
 
-const FEED_ICONS = { enter: ['bolt', 'enter'], near: ['flag', 'near'], filing: ['doc', 'filing'], congress: ['building', 'congress'], stop: ['arrowDown', 'avoid'], exit: ['arrowDown', 'avoid'], target: ['arrowUp', 'enter'], t1: ['arrowUp', 'enter'], t2: ['arrowUp', 'enter'], bell: ['bell', 'hold'] };
+const FEED_ICONS = { enter: ['bolt', 'enter'], near: ['flag', 'near'], filing: ['doc', 'filing'], congress: ['building', 'congress'], stop: ['arrowDown', 'avoid'], exit: ['arrowDown', 'avoid'], target: ['arrowUp', 'enter'], t1: ['arrowUp', 'enter'], t2: ['arrowUp', 'enter'], 'near-target': ['flag', 'near'], 'near-stop': ['warn', 'near'], bell: ['bell', 'hold'] };
 
 function viewUpdates() {
   const seg = `<div class="segmented" data-seg="updates" role="tablist">
@@ -1192,7 +1192,8 @@ function openSettings(focus) {
             <div class="segmented segmented--sm"><button type="button" data-scope="all" class="${p.scope === 'all' ? 'is-on' : ''}">כל השוק</button><button type="button" data-scope="watch" class="${p.scope === 'watch' ? 'is-on' : ''}">רק המעקב</button></div></div>
           <div class="cell cell--stack" ${p.scope === 'watch' ? 'hidden' : ''} data-minscore><span class="cell-text"><span>ציון מינימלי להתראה: <b class="num" data-score-val>${p.minScore}</b></span><small>ככל שהציון גבוה יותר, פחות התראות ויותר איכות</small></span><input type="range" name="minScore" min="60" max="90" step="5" value="${p.minScore}" class="no-drag"></div>
           ${toggle('near', 'קרוב לכניסה', p.near, 'כשמניה מתקרבת לטריגר')}
-          ${toggle('positions', 'סטופ ויעד בתיק', p.positions)}
+          ${toggle('positions', 'יעדים, סטופים ויציאה בתיק', p.positions, 'נבדק מול מחיר חי כל חצי דקה בזמן המסחר')}
+          ${toggle('approach', 'כשמתקרבים ליעד או לסטופ', p.approach, 'פעם אחת, כשהמחיר במרחק 1% ומטה')}
           ${toggle('news', 'דיווחי \u20668-K\u2069 חשובים', p.news, 'למניות במעקב ובתיק: דוחות, שינוי הנהלה, אזהרות')}
           ${toggle('congress', 'דיווחי מסחר של ננסי פלוסי', p.congress)}
           ${toggle('bell', 'פתיחת המסחר', p.bell, 'כל יום ב-16:30 שעון ישראל (בדרך כלל)')}
@@ -1236,7 +1237,7 @@ function openSettings(focus) {
       const numOr = (v, d, min, max) => { const x = Number(String(v).replace(/[$,\s]/g, '')); return Number.isFinite(x) && x >= min && x <= max ? x : d; };
       const saveAll = () => {
         const f = new FormData(form);
-        for (const k of ['entries', 'near', 'positions', 'news', 'congress', 'bell']) state.prefs[k] = form.elements[k].checked;
+        for (const k of ['entries', 'near', 'positions', 'approach', 'news', 'congress', 'bell']) state.prefs[k] = form.elements[k].checked;
         state.prefs.minScore = Number(f.get('minScore')) || 70;
         const budget = String(f.get('budget') || '').replace(/[$,\s]/g, '');
         state.risk.budget = budget && Number(budget) > 0 ? Number(budget) : null;

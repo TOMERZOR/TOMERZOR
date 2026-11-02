@@ -12,6 +12,7 @@
 //   GET    /board              every tracked stock, the market clock, the feed, funds and Congress
 //   GET    /t/<TICKER>         one stock: bars, indicators, the analysis, fundamentals, news, filings
 //   GET    /search?q=          find a US stock or ETF by name or ticker
+//   GET    /q?t=AAPL,MSFT      live quotes for up to 20 stocks (the app polls this every few seconds)
 //   GET    /d/<id>/key         the VAPID public key to subscribe with
 //   GET    /d/<id>             this phone's alerts inbox (stops and targets of its positions)
 //   PUT    /d/<id>             { subscription, prefs, watch, positions, sec }
@@ -36,6 +37,7 @@ const MIN = 60000;
 const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 const STALE = { open: 4 * MIN, pre: 15 * MIN, post: 10 * MIN, closed: 3 * HOUR };
+const QUOTE_TTL = 12000;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -102,6 +104,7 @@ export class Market {
     this.storage = ctx.storage;
     this.env = env;
     this.peek = new Map(); // stocks looked up but not tracked: { at, data }
+    this.quotes = new Map(); // ticker -> { at, quote }: live quotes, kept a few seconds
     // Tests send pushes to the local stand-in too.
     this.sender = env.UPSTREAM ? (u, init) => fetch(`${env.UPSTREAM}/${u.replace(/^https:\/\//, '')}`, init) : (u, init) => fetch(u, init);
   }
@@ -117,6 +120,10 @@ export class Market {
         if (!this.env.DEV) return json({ error: 'not found' }, 404);
         return json(await this.tick(Number(url.searchParams.get('now')) || Date.now(), true));
       }
+      if (path === '/q') {
+        const list = [...new Set((url.searchParams.get('t') || '').toUpperCase().split(',').filter(t => src.TICKER.test(t)))].slice(0, 20);
+        return json(await this.liveQuotes(list), 200, { 'Cache-Control': 'no-store' });
+      }
       if (path === '/search') {
         const q = (url.searchParams.get('q') || '').trim().slice(0, 40);
         if (!q) return json({ results: [] });
@@ -130,6 +137,30 @@ export class Market {
     } catch (e) {
       return json({ error: e.message || 'error' }, e.status && e.status < 500 ? e.status : 500);
     }
+  }
+
+  // ---------- Live quotes ----------
+
+  async liveQuotes(list) {
+    const now = Date.now();
+    const get = src.makeFetch(this.env);
+    const quotes = {};
+    await Promise.all(list.map(async t => {
+      const hit = this.quotes.get(t);
+      if (hit && now - hit.at < QUOTE_TTL) { quotes[t] = hit.quote; return; }
+      try {
+        const q = await src.yahooQuote(get, t);
+        const quote = { ...q, t, at: now };
+        this.quotes.set(t, { at: now, quote });
+        quotes[t] = quote;
+      } catch {
+        // Yahoo didn't answer: the last scanned price, marked as such.
+        const sig = await this.storage.get(`sig:${t}`);
+        if (sig?.price) quotes[t] = { t, price: sig.price, prevClose: sig.prevClose, chgPct: sig.chgPct, chg: sig.prevClose ? sig.price - sig.prevClose : null, time: sig.barTime || null, at: sig.at, stale: true };
+      }
+    }));
+    if (this.quotes.size > 300) for (const [k, v] of this.quotes) if (now - v.at > 60000) this.quotes.delete(k);
+    return { at: now, market: marketState(now), quotes };
   }
 
   // ---------- Devices ----------
@@ -639,7 +670,7 @@ export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const url = new URL(request.url);
-    if (!/^\/(health|board|tick|search|t\/|d\/)/.test(url.pathname) || url.pathname === '/tick-cron') return json({ error: 'not found' }, 404);
+    if (!/^\/(health|board|tick|search|q$|t\/|d\/)/.test(url.pathname) || url.pathname === '/tick-cron') return json({ error: 'not found' }, 404);
     const stub = env.MARKET.get(env.MARKET.idFromName('market'));
     return stub.fetch(request);
   },

@@ -614,3 +614,39 @@ main {
 .form-plan { font-size: 0.8235rem; color: var(--label-2); line-height: 1.5; margin: 4px 4px 8px; }
 .range-t1 { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--green-ink); transform: translateX(50%); }
 .row-status--hold { color: var(--label-2); }
+
+/* ---------- Live prices ---------- */
+
+.live-val { border-radius: 6px; padding: 0 2px; margin: 0 -2px; transition: background-color 0.9s ease-out; }
+.live-val.flash-up { animation: flashUp 1.1s ease-out; }
+.live-val.flash-down { animation: flashDown 1.1s ease-out; }
+@keyframes flashUp { 0% { background-color: color-mix(in srgb, var(--green) 38%, transparent); } 100% { background-color: transparent; } }
+@keyframes flashDown { 0% { background-color: color-mix(in srgb, var(--red) 34%, transparent); } 100% { background-color: transparent; } }
+.live-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.7059rem; font-weight: 700; color: var(--green-ink); margin-inline-start: 8px; vertical-align: 1px; }
+.live-badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.6s infinite; }
+.d-when { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.d-when .live-badge { margin: 0; }
+.d-when .ext { color: var(--label-2); }
+.d-when .ext b { font-weight: 600; }
+
+.folio { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; margin-top: 12px; transition: transform 0.2s var(--ease); }
+.folio:active { transform: scale(0.98); }
+.folio-label { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8235rem; font-weight: 600; color: var(--label-2); }
+.folio-label .icon { width: 17px; height: 17px; }
+.folio-pl { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.folio-sub { font-size: 0.8235rem; color: var(--label-2); }
+
+.mine { margin-bottom: 12px; }
+.mine-head { display: flex; align-items: center; justify-content: space-between; }
+.mine-head h3 { margin: 0; }
+.mine-pl { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.mine-pl span { font-size: 1.05rem; font-weight: 700; margin-inline-start: 6px; }
+.mine-sub { margin: 0 0 12px; font-size: 0.7647rem; color: var(--label-2); }
+.mine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 8px; }
+.mine-grid > div { background: var(--card-2); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; }
+.mine-grid > div > span { font-size: 0.7059rem; color: var(--label-2); }
+.mine-grid b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+
+.row-pl { font-size: 0.7647rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.summary-today { font-size: 0.8824rem; color: var(--label-2); margin-top: 2px; }
+.since { font-size: 0.7059rem; font-weight: 500; color: var(--label-2); margin-inline-start: 4px; }

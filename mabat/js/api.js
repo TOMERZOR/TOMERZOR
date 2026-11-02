@@ -46,6 +46,9 @@ export async function detail(t, fresh = false) {
 }
 export const peekDetail = t => details.get(t)?.data || null;
 
+// Live quotes for up to 20 stocks: { at, market, quotes: { AAPL: { price, prevClose, chg, chgPct, time, ext?, stale? } } }
+export const quotes = list => call(`/q?t=${list.map(encodeURIComponent).join(',')}`);
+
 export const search = q => call(`/search?q=${encodeURIComponent(q)}`).then(d => d.results || []);
 export const deviceKey = id => call(`/d/${id}/key`);
 export const deviceGet = id => call(`/d/${id}`);

@@ -21,6 +21,10 @@ let updatesView = 'alerts';
 let inbox = [];
 let inboxLoaded = false;
 let managed = {}; // position id -> where it stands against its plan (from the server)
+let live = {}; // ticker -> the latest quote from /q, refreshed every few seconds while the market is open
+let quoteMarket = null; // the market clock that came with the last quotes
+const liveHooks = new Set(); // open stock pages, told when quotes arrive
+const detailOpen = new Set(); // tickers whose page is open
 let firstBoard = true;
 const sheets = [];
 
@@ -219,6 +223,7 @@ function viewToday() {
       ${indexTile('נאסד״ק 100', 'QQQ', qqq, board.items.find(i => i.t === 'QQQ'))}
     </section>
     ${sourceWarning()}
+    ${portfolioStrip()}
     ${weak ? `<div class="callout callout--warn">${icon('warn')}<p><b>שוק חלש.</b> ה-S&P 500 מתחת לממוצע 200 יום. בתקופות כאלה פריצות נכשלות יותר, והציונים מוחלשים בהתאם.</p></div>` : ''}
 
     <section class="section" aria-labelledby="h-enter">
@@ -239,8 +244,37 @@ function viewToday() {
 
     <footer class="status-foot">
       <p>${icon('clock')} עודכן ${ago(board.lastTick || board.at)} · ${items.length} מניות בסריקה</p>
-      <p>המחירים מעוכבים בכ-15 דקות. מבט הוא כלי ניתוח, לא ייעוץ השקעות.</p>
+      <p>המחירים מ-Yahoo Finance ומתעדכנים כל כמה שניות. ייתכן עיכוב קל, והמחיר אצל הברוקר הוא הקובע. מבט הוא כלי ניתוח, לא ייעוץ השקעות.</p>
     </footer>`;
+}
+
+// The portfolio at a glance, at the live prices.
+function portfolioStrip() {
+  if (!state.positions.length) return '';
+  let cost = 0;
+  let value = 0;
+  let today = 0;
+  let todayKnown = false;
+  for (const t of new Set(state.positions.map(p => p.t))) {
+    const h = holding(t);
+    if (!h || h.value == null) continue;
+    cost += h.cost;
+    value += h.value;
+    if (h.today != null) { today += h.today; todayKnown = true; }
+  }
+  if (!cost) return '';
+  const pl = value - cost;
+  return `<button class="card folio" data-action="tab" data-to="portfolio">
+    <span class="folio-label">${icon('briefcase')}התיק שלך${liveBadge()}</span>
+    <span class="folio-pl ${tone(pl)}">${n(signedMoney(pl))} · ${n(pctText((pl / cost) * 100))}</span>
+    <span class="folio-sub">שווי ${n(money(value))}${todayKnown ? ` · היום <b class="${tone(today)}">${n(signedMoney(today))}</b>` : ''}</span>
+  </button>`;
+}
+
+// A pulsing "live" mark while quotes are coming in during the session.
+function liveBadge() {
+  const fresh = Object.values(live).some(q => !q.stale && Date.now() - q.at < 60000);
+  return fresh && quoteMarket?.session === 'open' ? '<span class="live-badge"><i></i>חי</span>' : '';
 }
 
 // Says so when prices stopped arriving, instead of showing old numbers as if they were fresh.
@@ -257,10 +291,11 @@ function errorCard() {
 }
 
 function indexTile(label, t, r, item) {
+  if (r && live[t]) r = { ...r, price: live[t].price, chgPct: live[t].chgPct ?? r.chgPct };
   if (!r) return `<div class="index-tile"><span class="index-name">${label}</span><span class="index-price">—</span></div>`;
   return `<button class="index-tile" data-action="detail" data-t="${t}">
     <span class="index-name">${label}</span>
-    <span class="index-row"><span class="index-price">${n(fixed(r.price))}</span><span class="chg chg--${tone(r.chgPct)}">${n(pctText(r.chgPct))}</span></span>
+    <span class="index-row"><span class="index-price">${livePrice(t, n(fixed(r.price)))}</span><span class="chg chg--${tone(r.chgPct)}">${n(pctText(r.chgPct))}</span></span>
     ${item?.spark ? sparkline(item.spark.slice(-40), { width: 140, height: 30 }) : ''}
     <span class="index-trend trend--${r.trend}">${TREND[r.trend] || ''}</span>
   </button>`;
@@ -268,6 +303,7 @@ function indexTile(label, t, r, item) {
 
 function entryCard(i) {
   const L = i.levels || {};
+  i = { ...i, price: priceOf(i.t) ?? i.price, chgPct: dayPctOf(i.t) ?? i.chgPct };
   const size = state.risk.budget ? sizeFor(L, i.price) : null;
   return `<article class="card entry" data-action="detail" data-t="${esc(i.t)}" tabindex="0" role="button" aria-label="${esc(i.t)}, סימן כניסה, ציון ${i.score}">
     <div class="entry-top">
@@ -278,7 +314,7 @@ function entryCard(i) {
       ${ring(i.score, 46)}
     </div>
     <div class="entry-mid">
-      <div class="price-block"><span class="price">${n(money(i.price))}</span><span class="chg chg--${tone(i.chgPct)}">${n(pctText(i.chgPct))}</span></div>
+      <div class="price-block"><span class="price">${livePrice(i.t, n(money(i.price)))}</span><span class="chg chg--${tone(i.chgPct)}">${n(pctText(i.chgPct))}</span></div>
       ${sparkline(i.spark?.slice(-45), { width: 110, height: 36 })}
     </div>
     <div class="setup-tag">${icon('bolt')}${esc(i.setupName || 'סטאפ כניסה')}</div>
@@ -310,6 +346,7 @@ function nearRow(i) {
 
 function stockRow(i) {
   const st = STATUS[i.status] || STATUS.hold;
+  i = { ...i, price: priceOf(i.t) ?? i.price, chgPct: dayPctOf(i.t) ?? i.chgPct };
   return `<button class="row" data-action="detail" data-t="${esc(i.t)}">
     <div class="row-main">
       <span class="ticker">${esc(i.t)}${state.watch.includes(i.t) ? `<span class="star-mini">${icon('starFill')}</span>` : ''}</span>
@@ -318,7 +355,7 @@ function stockRow(i) {
     </div>
     ${sparkline(i.spark?.slice(-30), { width: 56, height: 26 })}
     <div class="row-quote">
-      <span class="row-price">${n(fixed(i.price))}</span>
+      <span class="row-price">${livePrice(i.t, n(fixed(i.price)))}</span>
       <span class="chip chip--${tone(i.chgPct)}">${n(pctText(i.chgPct))}</span>
     </div>
     <span class="status-dot status--${st.cls}" role="img" aria-label="${st.label}, ציון ${i.score}"><b class="num" aria-hidden="true">${i.score}</b></span>
@@ -380,7 +417,26 @@ function onInput(e) {
 
 // ---------- Portfolio ----------
 
-const priceOf = t => board?.items?.find(i => i.t === t)?.price ?? api.peekDetail(t)?.sig?.price ?? null;
+const priceOf = t => live[t]?.price ?? board?.items?.find(i => i.t === t)?.price ?? api.peekDetail(t)?.sig?.price ?? null;
+const dayPctOf = t => live[t]?.chgPct ?? board?.items?.find(i => i.t === t)?.chgPct ?? null;
+// A price that flashes when the live quote moves it.
+const livePrice = (t, html) => `<span class="live-val" data-live="${esc(t)}">${html}</span>`;
+
+// Every position in a stock added up: shares, average price paid, value and gain at the live price.
+function holding(t, price = priceOf(t)) {
+  const list = state.positions.filter(p => p.t === t);
+  if (!list.length) return null;
+  const qty = list.reduce((a, p) => a + p.shares, 0);
+  const cost = list.reduce((a, p) => a + p.entry * p.shares, 0);
+  const value = price != null ? price * qty : null;
+  const q = live[t];
+  return {
+    qty, cost, avg: cost / qty, value,
+    pl: value != null ? value - cost : null,
+    plPct: value != null ? (value / cost - 1) * 100 : null,
+    today: q?.chg != null && !q.stale ? q.chg * qty : null,
+  };
+}
 
 function viewPortfolio() {
   const add = `<button class="icon-btn" data-action="add-position" aria-label="הוספת עסקה">${icon('plus')}</button>`;
@@ -388,13 +444,17 @@ function viewPortfolio() {
     const price = priceOf(p.t);
     const value = price != null ? price * p.shares : null;
     const cost = p.entry * p.shares;
-    return { ...p, price, value, cost, pl: value != null ? value - cost : null, plPct: price != null ? (price / p.entry - 1) * 100 : null };
+    const q = live[p.t];
+    return { ...p, price, value, cost, pl: value != null ? value - cost : null, plPct: price != null ? (price / p.entry - 1) * 100 : null, today: q?.chg != null && !q.stale ? q.chg * p.shares : null };
   });
   const invested = pos.reduce((s, p) => s + p.cost, 0);
   const valued = pos.filter(p => p.value != null);
   const value = valued.reduce((s, p) => s + p.value, 0);
   const pl = valued.reduce((s, p) => s + p.pl, 0);
   const plPct = valued.length ? (pl / valued.reduce((s, p) => s + p.cost, 0)) * 100 : null;
+  const withToday = pos.filter(p => p.today != null);
+  const today = withToday.length ? withToday.reduce((s, p) => s + p.today, 0) : null;
+  const todayPct = today != null && value ? (today / (value - today)) * 100 : null;
   const budget = state.risk.budget;
   const year = new Date().getFullYear();
   const closedYear = state.closed.filter(c => c.exitDate?.startsWith(String(year)));
@@ -407,7 +467,8 @@ function viewPortfolio() {
       <div class="summary-main">
         <span class="summary-label">שווי נוכחי</span>
         <span class="summary-value">${n(money(value || invested, 2))}</span>
-        <span class="chg chg--${tone(pl)} chg--lg">${n(signedMoney(pl))} · ${n(pctText(plPct))}</span>
+        <span class="chg chg--${tone(pl)} chg--lg">${n(signedMoney(pl))} · ${n(pctText(plPct))} <small class="since">מאז הקנייה</small></span>
+        ${today != null ? `<span class="summary-today">היום ${n(signedMoney(today))} · ${n(pctText(todayPct))}${liveBadge()}</span>` : ''}
       </div>
       <div class="summary-grid">
         <div><span>הושקע</span><b>${n(money(invested))}</b></div>
@@ -465,8 +526,9 @@ function positionRow(p) {
       ${m ? `<span class="row-status row-status--${stateCls}">${stateLabel}${m.state === 'exit' ? ` · ${esc(m.exitText)}` : ''}</span>` : ''}
     </div>
     <div class="row-quote">
-      <span class="row-price">${n(p.price != null ? fixed(p.price) : '—')}</span>
+      <span class="row-price">${livePrice(p.t, n(p.price != null ? fixed(p.price) : '—'))}</span>
       <span class="chip chip--${tone(p.plPct)}">${n(pctText(p.plPct))}</span>
+      <span class="row-pl ${tone(p.pl)}">${n(signedMoney(p.pl))}</span>
     </div>
     ${bar ? `<div class="row-wide">${bar}</div>` : ''}
   </button>`;
@@ -636,8 +698,38 @@ document.addEventListener('keydown', e => {
 
 const RANGES = [['1M', 22], ['3M', 64], ['6M', 127], ['1Y', 253]];
 
+// The line under the big price: live, after hours, or the close.
+function quoteLine(q, s) {
+  const secTime = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  let main;
+  if (q && !q.stale && quoteMarket?.session === 'open' && Date.now() - q.at < 90000) main = `<span class="live-badge"><i></i>חי</span> ${q.time ? secTime.format(new Date(q.time * 1000)) : ''}`;
+  else if (q?.time) main = `${quoteMarket?.session === 'open' ? 'עודכן' : 'מחיר סגירה'} · ${heWeekdayTime.format(new Date(q.time * 1000))}`;
+  else main = s?.at ? `עודכן ${ago(s.at)}` : '';
+  const ext = q?.ext ? `<span class="ext">${q.ext.session === 'post' ? 'אחרי הסגירה' : 'לפני הפתיחה'} ${n(money(q.ext.price))} <b class="${tone(q.ext.chgPct)}">${n(pctText(q.ext.chgPct))}</b></span>` : '';
+  return `${main}${ext}`;
+}
+
+// "Your position" on a stock's page, at the live price.
+function positionCard(t, price) {
+  const h = holding(t, price);
+  if (!h) return '';
+  return `<section class="card mine" data-mine>
+    <div class="mine-head"><h3>${icon('briefcase')}הפוזיציה שלך</h3>${liveBadge()}</div>
+    <div class="mine-pl ${tone(h.pl)}">${n(signedMoney(h.pl))} <span>${n(pctText(h.plPct))}</span></div>
+    <p class="mine-sub">רווח או הפסד מאז הקנייה</p>
+    <div class="mine-grid">
+      <div><span>מניות</span><b>${n(shares(h.qty))}</b></div>
+      <div><span>מחיר קנייה${state.positions.filter(p => p.t === t).length > 1 ? ' ממוצע' : ''}</span><b>${n(money(h.avg))}</b></div>
+      <div><span>שווי עכשיו</span><b>${n(money(h.value))}</b></div>
+      <div><span>היום</span><b class="${tone(h.today)}">${h.today != null ? n(signedMoney(h.today)) : '—'}</b></div>
+    </div>
+  </section>`;
+}
+
 function openDetail(t) {
   let chart = null;
+  let scrubbing = false;
+  let onQuotes = null;
   let data = null;
   let range = Number(localStorage.getItem('mabat-range')) || 127;
   let show = JSON.parse(localStorage.getItem('mabat-ma') || '{"sma50":true}');
@@ -655,7 +747,7 @@ function openDetail(t) {
         </div>
       </div>
       <div class="d-scroll" data-body>${detailSkeleton(cached)}</div>`,
-    onClose: () => { chart?.destroy(); clearInterval(timer); },
+    onClose: () => { chart?.destroy(); clearInterval(timer); liveHooks.delete(onQuotes); detailOpen.delete(t); },
     onMount: (body) => {
       const load = async fresh => {
         try {
@@ -667,6 +759,10 @@ function openDetail(t) {
       };
       load(false);
       timer = setInterval(() => { if (document.visibilityState === 'visible') load(true); }, 60000);
+      detailOpen.add(t);
+      onQuotes = changed => applyLive(body, changed);
+      liveHooks.add(onQuotes);
+      pollQuotes();
       body.addEventListener('click', e => {
         const b = e.target.closest('[data-act]');
         if (!b) return;
@@ -714,6 +810,32 @@ function openDetail(t) {
     show,
   });
 
+  // A new live quote: the big price, the line under it, the position card and the chart's last point.
+  function applyLive(body, changed) {
+    const q = live[t];
+    if (!q || !data) return;
+    const holder = body.querySelector('[data-body]');
+    const bars = data.bars;
+    const last = bars[bars.length - 1];
+    if (!q.stale && q.time && Math.abs(q.time - last[0]) < 12 * 3600 && q.time >= last[0] - 600) {
+      last[4] = q.price;
+      last[2] = Math.max(last[2], q.price);
+      last[3] = Math.min(last[3], q.price);
+      if (!scrubbing) chart?.set(chartData());
+    }
+    if (scrubbing) return;
+    const p = holder.querySelector('[data-price]');
+    const c = holder.querySelector('[data-chg]');
+    const d = holder.querySelector('[data-when]');
+    if (p) p.innerHTML = livePrice(t, n(money(q.price)));
+    if (c && q.chgPct != null) { c.className = `chg chg--${tone(q.chgPct)}`; c.innerHTML = n(pctText(q.chgPct)); }
+    if (d) d.innerHTML = quoteLine(q, data.sig);
+    const mine = holder.querySelector('[data-mine]');
+    if (mine) mine.outerHTML = positionCard(t, q.price);
+    if (changed?.[t]) flash({ [t]: changed[t] });
+    updateRangeChange(holder);
+  }
+
   function updateRangeChange(body) {
     const bars = data.bars;
     const first = bars[Math.max(0, bars.length - range)];
@@ -740,11 +862,14 @@ function openDetail(t) {
         const p = holder.querySelector('[data-price]');
         const c = holder.querySelector('[data-chg]');
         const d = holder.querySelector('[data-when]');
+        scrubbing = !!bar;
         if (!bar) {
-          p.innerHTML = n(money(s.price));
-          c.className = `chg chg--${tone(s.chgPct)}`;
-          c.innerHTML = n(pctText(s.chgPct));
-          d.textContent = s.barTime ? `${ago(s.at)} · מעוכב` : '';
+          const q = live[t];
+          p.innerHTML = n(money(q?.price ?? s.price));
+          const pctNow = q?.chgPct ?? s.chgPct;
+          c.className = `chg chg--${tone(pctNow)}`;
+          c.innerHTML = n(pctText(pctNow));
+          d.innerHTML = quoteLine(q, s);
           return;
         }
         p.innerHTML = n(money(bar.c));
@@ -756,6 +881,7 @@ function openDetail(t) {
     });
     chart.set(chartData());
     updateRangeChange(holder);
+    if (live[t]) applyLive(body);
   }
 }
 
@@ -802,8 +928,9 @@ function detailBody(d, range, show) {
     <div class="d-price">
       <span class="price-xl" data-price>${n(money(s.price))}</span>
       <span class="chg chg--${tone(s.chgPct)}" data-chg>${n(pctText(s.chgPct))}</span>
-      <span class="d-when" data-when>${ago(s.at)} · מעוכב</span>
+      <span class="d-when" data-when>${quoteLine(live[d.t], s)}</span>
     </div>
+    ${positionCard(d.t, live[d.t]?.price ?? s.price)}
     <div class="chart-wrap"><canvas class="chart" aria-label="גרף מחיר של ${esc(d.t)}" role="img"></canvas></div>
     <div class="chart-controls">
       <div class="segmented segmented--sm" data-seg="range" role="tablist">${RANGES.map(([label, days]) => `<button data-act="range" data-days="${days}" class="${days === range ? 'is-on' : ''}">${label}</button>`).join('')}</div>
@@ -1099,7 +1226,7 @@ function openSettings(focus) {
         <h3 class="group-title">אודות</h3>
         <div class="group about">
           <p><b>איך מבט עובד.</b> שרת סורק כ-50 מניות גדולות ואת רשימת המעקב שלך כל כמה דקות בזמן המסחר. לכל מניה הוא קורא את הגרף היומי (ממוצעים נעים, RSI, MACD, נפח, פריצות), את הדוחות הכספיים מה-SEC, את דוחות 13F של קרנות גדולות, דיווחי \u20668-K\u2069 וכותרות, ונותן ציון 0–100. כשסטאפ כניסה מתקיים עם ציון גבוה, אתה מקבל התראה עם מחיר כניסה, סטופ ויעד.</p>
-          <p><b>מקורות.</b> Yahoo Finance (מחירים מעוכבים בכ-15 דקות וכותרות), SEC EDGAR (דוחות, \u20668-K\u2069, 13F), בית הנבחרים האמריקאי (דיווחי STOCK Act).</p>
+          <p><b>מקורות.</b> Yahoo Finance (מחירים, עם עדכון כל כמה שניות בזמן המסחר, וכותרות), SEC EDGAR (דוחות, \u20668-K\u2069, 13F), בית הנבחרים האמריקאי (דיווחי STOCK Act).</p>
           <p><b>חשוב.</b> מבט הוא כלי ניתוח וחינוך, לא ייעוץ השקעות. סימן כניסה הוא מצב בגרף, לא הבטחה: חלק מהעסקאות יפגעו בסטופ. אף פעם לא משקיעים כסף שאי אפשר להרשות לעצמך להפסיד.</p>
         </div>
       </form>`,
@@ -1220,7 +1347,7 @@ function openOnboarding() {
         <ul class="ob-points">
           <li>מבט הוא כלי ניתוח, <b>לא ייעוץ השקעות</b>. סימן כניסה הוא מצב בגרף, לא הבטחה לרווח.</li>
           <li>חלק מהעסקאות יגיעו לסטופ. בגלל זה הסטופ והגודל מחושבים מראש.</li>
-          <li>המחירים מעוכבים בכ-15 דקות. המחיר אצל הברוקר הוא הקובע.</li>
+          <li>המחירים מתעדכנים כל כמה שניות, אבל ייתכן עיכוב קל. המחיר אצל הברוקר הוא הקובע.</li>
           <li>מבט לא קונה ולא מוכר בשבילך. ההחלטה תמיד שלך.</li>
         </ul>
       </div>`,
@@ -1322,6 +1449,7 @@ function onAction(e) {
   else if (a === 'add-position') openPositionEditor({});
   else if (a === 'position') { const p = state.positions.find(x => x.id === el.dataset.id); if (p) openPositionEditor({}, p); }
   else if (a === 'retry') refresh(true);
+  else if (a === 'tab') setTab(el.dataset.to);
   else if (a === 'playbook') openPlaybook();
 }
 
@@ -1359,6 +1487,54 @@ async function refresh(manual = false) {
   if (!sheets.some(s => s.root.querySelector('.sheet--onboarding'))) render();
 }
 
+// ---------- Live quotes ----------
+
+// The stocks on screen get a live quote: your positions, the watchlist, an open stock page, the
+// two indexes and today's entry signals (20 at most, in that order).
+function quoteTickers() {
+  const entries = (board?.items || []).filter(i => i.status === 'enter').map(i => i.t);
+  return [...new Set([...detailOpen, ...state.positions.map(p => p.t), ...state.watch, 'SPY', 'QQQ', ...entries])].slice(0, 20);
+}
+
+function flash(changed) {
+  for (const [t, dir] of Object.entries(changed)) {
+    for (const el of document.querySelectorAll(`[data-live="${CSS.escape(t)}"]`)) {
+      el.classList.remove('flash-up', 'flash-down');
+      void el.offsetWidth;
+      el.classList.add(dir === 'up' ? 'flash-up' : 'flash-down');
+    }
+  }
+}
+
+let quoteTimer = null;
+let quoting = false;
+async function pollQuotes() {
+  clearTimeout(quoteTimer);
+  if (!quoting && api.hasServer() && document.visibilityState === 'visible') {
+    const list = quoteTickers();
+    if (list.length) {
+      quoting = true;
+      try {
+        const d = await api.quotes(list);
+        const changed = {};
+        for (const [t, q] of Object.entries(d.quotes || {})) {
+          const old = live[t]?.price;
+          if (old != null && q.price !== old) changed[t] = q.price > old ? 'up' : 'down';
+          live[t] = q;
+        }
+        quoteMarket = d.market || quoteMarket;
+        if (!sheets.some(s => s.root.querySelector('.sheet--onboarding')) && tab !== 'updates') render();
+        flash(changed);
+        liveHooks.forEach(h => h(changed));
+      } catch {}
+      quoting = false;
+    }
+  }
+  // Every 15 seconds in the session, 30 before and after it, every two minutes when it's closed.
+  const session = quoteMarket?.session ?? board?.market?.session;
+  quoteTimer = setTimeout(pollQuotes, session === 'open' ? 15000 : session === 'pre' || session === 'post' ? 30000 : 120000);
+}
+
 // Light and dark follow the phone's setting.
 function applyTheme() {
   const dark = matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1376,10 +1552,11 @@ if (!state.onboarded) openOnboarding();
 refresh();
 setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 60000);
 setInterval(() => { if (document.visibilityState === 'visible' && tab === 'today') render(); }, 30000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { refresh(); pollQuotes(); } });
 window.addEventListener('online', () => refresh());
 if (api.hasServer() && !state.device.id) { push.deviceId(state); persist(); }
 if (api.hasServer()) push.sync(state, true);
+pollQuotes();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

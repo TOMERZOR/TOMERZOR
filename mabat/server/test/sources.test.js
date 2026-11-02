@@ -177,3 +177,23 @@ test('the chart reader falls back to Stooq when Yahoo refuses', async () => {
   const unknown = async () => { throw new src.SourceError('nope', 404); };
   await assert.rejects(src.yahooChart(unknown, 'NOPE'), e => e.status === 404);
 });
+
+test('live quote: price, change from yesterday, and the after-hours price', () => {
+  const reg = { start: 1793367000, end: 1793390400 };
+  const json = { chart: { result: [{
+    meta: { symbol: 'AAPL', regularMarketPrice: 210, regularMarketTime: reg.end, chartPreviousClose: 200, currentTradingPeriod: { regular: reg } },
+    timestamp: [reg.start + 60, reg.end - 60, reg.end + 600],
+    indicators: { quote: [{ close: [201, 210, 212.1] }] },
+  }], error: null } };
+  const q = src.parseQuote(json);
+  assert.equal(q.price, 210);
+  assert.equal(q.chg, 10);
+  assert.ok(Math.abs(q.chgPct - 5) < 1e-9);
+  assert.equal(q.ext.session, 'post');
+  assert.equal(q.ext.price, 212.1);
+  assert.ok(Math.abs(q.ext.chgPct - 1) < 1e-9);
+  json.chart.result[0].indicators.quote[0].close[2] = null;
+  json.chart.result[0].timestamp.pop();
+  assert.equal(src.parseQuote(json).ext, undefined);
+  assert.throws(() => src.parseQuote({ chart: { result: null, error: { description: 'No data found' } } }), e => e.status === 404);
+});

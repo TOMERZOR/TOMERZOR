@@ -125,6 +125,56 @@ export function parseChart(json) {
   };
 }
 
+// ---------- Yahoo live quote ----------
+
+// The latest price from the one-day chart at one-minute bars, with yesterday's close, and the
+// pre-market or after-hours price when there is one.
+export async function yahooQuote(get, symbol) {
+  let lastError;
+  for (const host of ['query1.finance.yahoo.com', 'query2.finance.yahoo.com']) {
+    try {
+      const res = await get(`https://${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=1d&interval=1m&includePrePost=true`);
+      return parseQuote(await res.json());
+    } catch (e) {
+      lastError = e;
+      if (e.status === 404) break;
+    }
+  }
+  throw lastError;
+}
+
+export function parseQuote(json) {
+  const result = json?.chart?.result?.[0];
+  const meta = result?.meta;
+  if (!meta || !Number.isFinite(meta.regularMarketPrice)) throw new SourceError(json?.chart?.error?.description || 'no quote', 404);
+  const prev = meta.chartPreviousClose ?? meta.previousClose ?? null;
+  const price = meta.regularMarketPrice;
+  const out = {
+    t: meta.symbol,
+    price,
+    prevClose: prev,
+    chg: prev ? price - prev : null,
+    chgPct: prev ? (price / prev - 1) * 100 : null,
+    time: meta.regularMarketTime || null,
+  };
+  // The newest minute outside the regular session is the pre-market or after-hours price.
+  const reg = meta.currentTradingPeriod?.regular;
+  const ts = result.timestamp || [];
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  if (reg?.start && reg?.end) {
+    for (let k = ts.length - 1; k >= 0; k--) {
+      if (closes[k] == null || !Number.isFinite(closes[k])) continue;
+      if (ts[k] >= reg.end || ts[k] < reg.start) {
+        if (!out.time || ts[k] > out.time) {
+          out.ext = { price: closes[k], time: ts[k], session: ts[k] >= reg.end ? 'post' : 'pre', chgPct: (closes[k] / price - 1) * 100 };
+        }
+      }
+      break;
+    }
+  }
+  return out;
+}
+
 // Bars kept compactly in storage: [t, o, h, l, c, v]
 const r4 = v => Math.round(v * 10000) / 10000;
 export const packBars = bars => bars.map(b => [b.t, r4(b.o), r4(b.h), r4(b.l), r4(b.c), b.v]);

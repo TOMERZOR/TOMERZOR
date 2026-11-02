@@ -89,6 +89,21 @@ http.createServer(async (req, res) => {
       const base = 20 + (seedOf(t) % 400);
       const bars = barsFor(shape, state.end, seedOf(t) % 3 + 1, base);
       const u = UNIVERSE.find(x => x.t === t);
+      if (url.searchParams.get('range') === '1d') {
+        // A live quote: today's minutes, the price wandering a little from call to call.
+        state.tick = (state.tick || 0) + 1;
+        const last = bars[bars.length - 1];
+        const prev = bars[bars.length - 2].c;
+        const price = +(last.c * (1 + 0.004 * Math.sin(state.tick / 3 + seedOf(t)))).toFixed(2);
+        const now = Math.floor(Date.now() / 1000);
+        const reg = { start: now - 3 * 3600, end: now + 3 * 3600 };
+        const ts = Array.from({ length: 30 }, (_, k) => now - (29 - k) * 60);
+        return send(res, 200, { chart: { result: [{
+          meta: { symbol: t, currency: 'USD', regularMarketPrice: price, regularMarketTime: now, chartPreviousClose: prev, previousClose: prev, currentTradingPeriod: { regular: reg } },
+          timestamp: ts,
+          indicators: { quote: [{ close: ts.map((_, k) => +(price * (1 + (k - 29) * 0.0002)).toFixed(2)) }] },
+        }], error: null } });
+      }
       return send(res, 200, yahooChartJson(t, bars, { name: u ? `${u.name} Inc.` : `${t} Corp`, type: u?.sector === 'etf' ? 'ETF' : 'EQUITY' }));
     }
     if (path.startsWith('/query1.finance.yahoo.com/v1/finance/search')) {

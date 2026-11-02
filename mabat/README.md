@@ -50,7 +50,7 @@ Every signal comes with a plan for its setup: the entry (and the most to pay; a 
 | oversold reversal | 1.5R | 2.5R | 2 ATR | RSI above 70 (the bounce is done) | 7 days |
 | squeeze breakout | 1.5R | 3R | 3 ATR | close under the 20-day average before target 1 | 10 days |
 
-At target 1 half is sold and the stop moves to the entry; once the trade is 1R up the stop trails under the highest close and never moves down. "I entered" saves the plan with the position, and the server manages it from the bars (no stored state): alerts at target 1, target 2 and on any exit (stop, stop at entry, trailing stop, failed setup, time stop). A position added by hand gets the same defaults. The setups library (Today → "הסטאפים", or Settings) explains each plan in Hebrew.
+At target 1 half is sold and the stop moves to the entry; once the trade is 1R up the stop trails under the highest close and never moves down. "I entered" saves the plan with the position, and the server manages it from the bars (no stored state): alerts at target 1, target 2 and on any exit (stop, stop at entry, trailing stop, failed setup, time stop). A position added by hand gets the same defaults. Positions are checked against a live quote twice a minute during the session (on each scan and on a Durable Object alarm 30 seconds after it), and an alert also comes once when the price gets within 1% of target 1, target 2 or the current stop (Settings, "כשמתקרבים ליעד או לסטופ"). The setups library (Today → "הסטאפים", or Settings) explains each plan in Hebrew.
 
 How much to buy follows trader-budget and trader-risk: risk a set percent of the budget between entry and stop, never more than the per-stock cap, never into the cash buffer.
 

@@ -20,7 +20,7 @@
 //   DELETE /d/<id>             forget this phone
 //   POST   /tick               run one scan now (only with the DEV variable, for tests)
 
-import { marketState, nyParts, closeMinutes } from './clock.js';
+import { marketState, nyParts, closeMinutes, barDate } from './clock.js';
 import { analyze, chartSeries, SETUPS } from './signals.js';
 import { manage, PLAYBOOK } from './plans.js';
 import * as src from './sources.js';
@@ -38,6 +38,8 @@ const HOUR = 60 * MIN;
 const DAY = 24 * HOUR;
 const STALE = { open: 4 * MIN, pre: 15 * MIN, post: 10 * MIN, closed: 3 * HOUR };
 const QUOTE_TTL = 12000;
+const POSITION_CHECK = 30000; // between scans, open positions are checked against a live quote this often
+const MAX_POSITION_QUOTES = 15;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -78,6 +80,7 @@ export function cleanDevice(body) {
     news: p.news !== false,
     congress: p.congress !== false,
     positions: p.positions !== false,
+    approach: p.approach !== false,
   };
   out.watch = [...new Set((Array.isArray(body.watch) ? body.watch : []).map(t => String(t).toUpperCase()).filter(t => src.TICKER.test(t)))].slice(0, MAX_WATCH);
   out.positions = (Array.isArray(body.positions) ? body.positions : []).slice(0, MAX_POSITIONS).map(x => ({
@@ -141,9 +144,9 @@ export class Market {
 
   // ---------- Live quotes ----------
 
-  async liveQuotes(list) {
+  async liveQuotes(list, counter) {
     const now = Date.now();
-    const get = src.makeFetch(this.env);
+    const get = src.makeFetch(this.env, counter);
     const quotes = {};
     await Promise.all(list.map(async t => {
       const hit = this.quotes.get(t);
@@ -255,7 +258,7 @@ export class Market {
     const batch = due.slice(0, PER_TICK);
 
     const events = [];
-    const ring = (await this.storage.get('rang')) || {};
+    const ring = await this.ringState();
     const rang = (key, within) => ring[key] && now - ring[key] < within;
     const mark = key => { ring[key] = now; };
 
@@ -300,6 +303,9 @@ export class Market {
       events.push({ type: 'bell', title: 'הפעמון צלצל: הבורסה בניו יורק נפתחה', body: mkt.earlyClose ? 'היום נסגרים מוקדם, ב-13:00 שעון ניו יורק' : 'המסחר פתוח עד 16:00 שעון ניו יורק', quiet: true });
     }
 
+    // Open positions first: they matter more than the slower jobs.
+    const personal = await this.positionAlerts(now, devices, rang, mark, freshBars, counter);
+
     // Slower jobs, up to two a minute, while the subrequest budget lasts.
     const ua = await this.secAgent(devices);
     health.sec = ua ? health.sec || { ok: null } : { ok: false, error: 'needs-contact' };
@@ -319,31 +325,6 @@ export class Market {
     }
     await this.storage.put('jobCursor', cursor);
 
-    // Each phone's positions, managed by their plan (trader-alerts: each alert rings once):
-    // target 1 (sell half, stop to the entry), target 2, and the exit (stop, trailing stop,
-    // a failed setup, the time stop).
-    const personal = [];
-    for (const d of devices) {
-      if (d.prefs?.positions === false) continue;
-      for (const p of d.positions || []) {
-        if (!freshBars[p.t]) continue;
-        const m = manage(p, freshBars[p.t]);
-        const key = kind => `pos:${d.id}:${p.id}:${kind}`;
-        const say = (kind, ev) => { if (!rang(key(kind), 60 * DAY)) { mark(key(kind)); personal.push({ dev: d, ev: { t: p.t, ...ev } }); } };
-        if (m.exit) {
-          say('exit', {
-            type: m.exit === 'stop' ? 'stop' : 'exit',
-            title: m.exit === 'stop' ? `${p.t} הגיעה לסטופ ${money(m.stopNow)}` : `סימן יציאה ב-${p.t}`,
-            body: `${m.exitText}. המחיר ${money(m.price)}. זו התראה בלבד: שום דבר לא נמכר.`,
-          });
-        } else if (m.t2Hit) {
-          say('t2', { type: 't2', title: `${p.t} הגיעה ליעד 2 ${money(m.t2)}`, body: `מוכרים את השאר, או ממשיכים עם סטופ נגרר ב-${money(m.stopNow)}.` });
-        } else if (m.t1Hit) {
-          say('t1', { type: 't1', title: `${p.t} הגיעה ליעד 1 ${money(m.t1)}`, body: `לפי התוכנית: מוכרים חצי ומזיזים את הסטופ לנקודת הכניסה (${money(p.entry)}).` });
-        }
-      }
-    }
-
     for (const key of Object.keys(ring)) if (now - ring[key] > 40 * DAY) delete ring[key];
     await this.storage.put({ scan, health, rang: ring, lastTick: now });
 
@@ -353,7 +334,82 @@ export class Market {
       await this.storage.put('feed', [...stamped.filter(e => !e.quiet).reverse(), ...feed].slice(0, 150));
     }
     const pushed = await this.deliver(stamped, personal.map((x, k) => ({ ...x, ev: { ...x.ev, id: `${now.toString(36)}p${k}`, at: now } })), devices, counter);
+    // Half way to the next scan, check the positions again.
+    if (mkt.open && devices.some(d => d.positions?.length && d.prefs?.positions !== false)) await this.storage.setAlarm(now + POSITION_CHECK);
     return { session: mkt.session, refreshed: Object.keys(fresh), due: due.length, events: stamped.length + personal.length, pushed, subrequests: counter.n };
+  }
+
+  // What has already rung, shared by the scan and the position check so neither repeats the other.
+  async ringState() {
+    this.ring ||= (await this.storage.get('rang')) || {};
+    return this.ring;
+  }
+
+  // The 30-second position check between scans (a Durable Object alarm, set by tick).
+  async alarm() {
+    const now = Date.now();
+    if (!marketState(now).open || this.checking) return;
+    this.checking = true;
+    try {
+      const devices = await this.devices();
+      const ring = await this.ringState();
+      const rang = (key, within) => ring[key] && now - ring[key] < within;
+      const personal = await this.positionAlerts(now, devices, rang, k => { ring[k] = now; });
+      if (personal.length) {
+        await this.storage.put('rang', ring);
+        await this.deliver([], personal.map((x, k) => ({ ...x, ev: { ...x.ev, id: `${now.toString(36)}a${k}`, at: now } })), devices, { n: 0 });
+      }
+    } finally {
+      this.checking = false;
+    }
+  }
+
+  // Every phone's positions against their plan, at the latest price: the scan's fresh bars, or the
+  // stored bars with today's bar brought up to a live quote. Alerts: target 1, target 2, exits,
+  // and approaching target 1, target 2 or the stop (within plans.APPROACH_PCT). Each rings once.
+  async positionAlerts(now, devices, rang, mark, freshBars = {}, counter = { n: 0 }) {
+    const holders = devices.filter(d => d.prefs?.positions !== false && d.positions?.length);
+    const tickers = [...new Set(holders.flatMap(d => d.positions.map(p => p.t)))].slice(0, MAX_POSITION_QUOTES);
+    if (!tickers.length) return [];
+    const need = tickers.filter(t => !freshBars[t]);
+    const stored = need.length ? await this.storage.get(need.map(t => `bars:${t}`)) : new Map();
+    const quotes = need.length && marketState(now).open ? (await this.liveQuotes(need, counter)).quotes : {};
+    const barsOf = { ...freshBars };
+    for (const t of need) {
+      const rec = stored.get(`bars:${t}`);
+      if (!rec?.bars?.length) continue;
+      const bars = src.unpackBars(rec.bars);
+      if (quotes[t] && !quotes[t].stale) withQuote(bars, quotes[t]);
+      barsOf[t] = bars;
+    }
+
+    const personal = [];
+    const pct = v => `${v.toFixed(1)}%`;
+    for (const d of holders) {
+      for (const p of d.positions) {
+        if (!barsOf[p.t]) continue;
+        const m = manage(p, barsOf[p.t]);
+        const key = kind => `pos:${d.id}:${p.id}:${kind}`;
+        const say = (kind, ev) => { if (!rang(key(kind), 60 * DAY)) { mark(key(kind)); personal.push({ dev: d, ev: { t: p.t, ...ev } }); } };
+        if (m.exit) {
+          say('exit', {
+            type: m.exit === 'stop' ? 'stop' : 'exit',
+            title: m.exit === 'stop' ? `${p.t} הגיעה לסטופ ${money(m.stopNow)}` : `סימן יציאה ב-${p.t}`,
+            body: `${m.exitText}. המחיר ${money(m.price)}. זו התראה בלבד: שום דבר לא נמכר.`,
+          });
+          continue;
+        }
+        if (m.t2Hit) say('t2', { type: 't2', title: `${p.t} הגיעה ליעד 2 ${money(m.t2)}`, body: `מוכרים את השאר, או ממשיכים עם סטופ נגרר ב-${money(m.stopNow)}.` });
+        else if (m.t1Hit) say('t1', { type: 't1', title: `${p.t} הגיעה ליעד 1 ${money(m.t1)}`, body: `לפי התוכנית: מוכרים חצי ומזיזים את הסטופ לנקודת הכניסה (${money(p.entry)}).` });
+        if (d.prefs?.approach === false) continue;
+        for (const k of m.approach) {
+          if (k === 't1') say('near-t1', { type: 'near-target', title: `${p.t} מתקרבת ליעד 1`, body: `${money(m.price)}, עוד ${pct(m.dist.t1)} ליעד 1 (${money(m.t1)}). ביעד מוכרים חצי ומזיזים את הסטופ לכניסה.` });
+          if (k === 't2') say('near-t2', { type: 'near-target', title: `${p.t} מתקרבת ליעד 2`, body: `${money(m.price)}, עוד ${pct(m.dist.t2)} ליעד 2 (${money(m.t2)}).` });
+          if (k === 'stop') say(`near-stop-${m.stopKind}`, { type: 'near-stop', title: `${p.t} מתקרבת ל${m.stopKind === 'trail' ? 'סטופ הנגרר' : 'סטופ'}`, body: `${money(m.price)}, עוד ${pct(m.dist.stop)} מהסטופ (${money(m.stopNow)}). אם יגיע, לפי התוכנית יוצאים.` });
+        }
+      }
+    }
+    return personal;
   }
 
   async contextBase(now) {
@@ -660,6 +716,21 @@ export class Market {
     }
     return data;
   }
+}
+
+// Today's bar brought up to a live quote (or a new bar for a day the scan hasn't seen yet).
+export function withQuote(bars, q) {
+  const last = bars[bars.length - 1];
+  const day = barDate(q.time);
+  const lastDay = barDate(last.t);
+  if (day === lastDay) {
+    last.c = q.price;
+    last.h = Math.max(last.h, q.price);
+    last.l = Math.min(last.l, q.price);
+  } else if (day > lastDay) {
+    bars.push({ t: q.time, o: q.price, h: q.price, l: q.price, c: q.price, v: 0 });
+  }
+  return bars;
 }
 
 function spyContext(sig) {

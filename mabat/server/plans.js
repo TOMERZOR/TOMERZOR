@@ -18,6 +18,9 @@ export const PLAYBOOK = {
   reversal: { t1R: 1.5, t2R: 2.5, trail: 2, days: 7, invalidate: 'rsi' },
   squeeze: { t1R: 1.5, t2R: 3, trail: 3, days: 10, invalidate: 'sma20' },
 };
+// "Approaching" a level: the price is within this many percent of it.
+export const APPROACH_PCT = 1;
+
 // A position the user added by hand, without a setup.
 export const MANUAL = { t1R: 1.5, t2R: 3, trail: 3, days: null, invalidate: null };
 
@@ -140,6 +143,13 @@ export function manage(pos, bars) {
   if (!exit && p.days && days >= p.days && !t1Hit) exit = 'time';
 
   const state = exit ? 'exit' : t2Hit ? 't2' : t1Hit ? 't1' : 'hold';
+  // How far the price is from each level still ahead, in percent, and which are within APPROACH_PCT.
+  const dist = {
+    t1: t1Hit ? null : (t1 / c - 1) * 100,
+    t2: t2Hit ? null : (t2 / c - 1) * 100,
+    stop: (c / stopNow - 1) * 100,
+  };
+  const approach = exit ? [] : Object.keys(dist).filter(k => dist[k] != null && dist[k] > 0 && dist[k] <= APPROACH_PCT);
   const next = exit ? `לפי התוכנית יוצאים: ${EXIT_TEXT[exit]}.`
     : t2Hit ? `יעד 2 הושג. מוכרים את השאר, או ממשיכים עם סטופ ב-${usd(stopNow)}.`
     : t1Hit ? `יעד 1 הושג: מוכרים חצי. הסטופ עכשיו ${usd(stopNow)}, היעד הבא ${usd(t2)}.`
@@ -157,6 +167,8 @@ export function manage(pos, bars) {
     exitText: exit ? EXIT_TEXT[exit] : null,
     state,
     r: round((c - entry) / R, 2),
+    dist: { t1: round(dist.t1, 2), t2: round(dist.t2, 2), stop: round(dist.stop, 2) },
+    approach,
     next,
   };
 }

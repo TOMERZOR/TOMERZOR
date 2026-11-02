@@ -98,3 +98,30 @@ test('a hand-entered position without a setup or targets still gets a plan', () 
   assert.ok(m.initialStop < entry && m.t1 > entry && m.t2 > m.t1);
   assert.equal(m.timeDays, null);
 });
+
+test('approaching: within 1% of target 1 or of the stop, not after an exit', () => {
+  const nearT1 = trade([pl => pl.t1 * 0.995]);
+  const m1 = manage(nearT1.pos, nearT1.bars);
+  assert.deepEqual(m1.approach, ['t1']);
+  assert.ok(m1.dist.t1 > 0 && m1.dist.t1 <= 1);
+  const nearStop = trade([pl => pl.stop * 1.006], { setup: 'pullback', from: 'up' });
+  const m2 = manage(nearStop.pos, nearStop.bars);
+  assert.ok(m2.approach.includes('stop'), JSON.stringify(m2.dist));
+  const far = trade([0.001], { setup: 'pullback', from: 'up' });
+  assert.deepEqual(manage(far.pos, far.bars).approach.filter(k => k !== 'stop'), []);
+  const out = trade([pl => pl.stop * 0.99]);
+  assert.deepEqual(manage(out.pos, out.bars).approach, []);
+});
+
+test('a live quote updates today\'s bar, or opens a new day', async () => {
+  const { withQuote } = await import('../worker.js');
+  const bars = barsFor('up', '2026-10-29', 1).slice(-5).map(b => ({ ...b }));
+  const last = bars.at(-1);
+  withQuote(bars, { price: last.h * 1.01, time: last.t + 60 });
+  assert.equal(bars.length, 5);
+  assert.equal(bars.at(-1).c, last.c);
+  assert.ok(bars.at(-1).h >= bars.at(-1).c);
+  withQuote(bars, { price: 99, time: Math.floor(nyTime('2026-10-30', 600) / 1000) });
+  assert.equal(bars.length, 6);
+  assert.equal(bars.at(-1).c, 99);
+});

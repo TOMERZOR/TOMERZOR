@@ -1,6 +1,6 @@
 // Keeps Mabat on the phone so it opens instantly, and shows the alerts the market server pushes.
 // Bump VERSION whenever a file changes.
-const VERSION = 'mabat-v4';
+const VERSION = 'mabat-v5';
 const FILES = [
   './',
   'index.html',
@@ -60,7 +60,7 @@ self.addEventListener('push', e => {
       icon: 'img/icon-192.png',
       badge: 'img/icon-192.png',
       data: { t: msg.t || null, url: msg.url || null },
-      requireInteraction: msg.type === 'enter' || msg.type === 'stop',
+      requireInteraction: ['enter', 'stop', 'exit', 'near-stop'].includes(msg.type),
     });
     for (const client of await self.clients.matchAll({ type: 'window' })) client.postMessage({ type: 'refresh' });
   })());

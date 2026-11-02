@@ -623,14 +623,20 @@ function openSheet({ html, cls = '', label = '', onMount, onClose }) {
   const prevFocus = document.activeElement;
   let closed = false;
   let detach = () => {};
-  const close = (fromPop = false) => {
+  // dragged: the finger already threw the sheet down, so it keeps going from there.
+  const close = (fromPop = false, dragged = false) => {
     if (closed) return;
     closed = true;
     detach();
+    root.classList.add(dragged ? 'closing-drag' : 'closing');
     root.classList.remove('open');
     sheets.splice(sheets.findIndex(s => s.id === id), 1);
     if (!fromPop && history.state?.sheet === id) history.back();
-    setTimeout(() => { root.remove(); onClose?.(); }, 380);
+    // Removed when the slide down has finished (or after a while, if no transition runs).
+    let done = false;
+    const finish = () => { if (done) return; done = true; root.remove(); onClose?.(); };
+    sheet.addEventListener('transitionend', e => { if (e.target === sheet && e.propertyName === 'transform') finish(); });
+    setTimeout(finish, 700);
     if (!sheets.length) document.body.classList.remove('has-sheet');
     prevFocus?.focus?.({ preventScroll: true });
   };
@@ -662,7 +668,7 @@ function openSheet({ html, cls = '', label = '', onMount, onClose }) {
     startY = null;
     sheet.style.transition = '';
     sheet.style.transform = '';
-    if (dy > 110) close();
+    if (dy > 110) close(false, true);
   };
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', release);

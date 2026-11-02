@@ -344,6 +344,11 @@ main {
 .sheet--full, .sheet--tall { height: calc(100% - var(--safe-top) - 12px); max-height: none; }
 .sheet-root.open .sheet-backdrop { opacity: 1; }
 .sheet-root.open .sheet { transform: none; }
+/* Closing: an even ease-in-out, like a sheet dismissed on iPhone; after a swipe, it carries on from the finger. */
+.sheet-root.closing .sheet { transition: transform 0.46s cubic-bezier(0.45, 0, 0.25, 1); }
+.sheet-root.closing .sheet-backdrop { transition: opacity 0.46s ease; }
+.sheet-root.closing-drag .sheet { transition: transform 0.32s cubic-bezier(0.2, 0.7, 0.35, 1); }
+.sheet-root.closing-drag .sheet-backdrop { transition: opacity 0.32s ease-out; }
 .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--label-3); margin: 6px auto 0; flex: none; }
 .sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; flex: 1; display: flex; flex-direction: column; padding-bottom: calc(var(--safe-bottom) + 16px); }
 .sheet-nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 10px 16px 6px; position: sticky; top: 0; background: var(--bg); z-index: 2; }

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>תעודות הוקרה – סוללת אידו</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  @page { size: 297mm 210mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #777; font-family: 'Heebo', sans-serif; color: #111; }
+
+  .page {
+    width: 297mm; height: 210mm; position: relative; overflow: hidden;
+    margin: 0 auto 10mm; page-break-after: always;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 42%, rgba(255,255,255,.95), rgba(255,255,255,0) 70%),
+      repeating-linear-gradient(118deg, rgba(255,255,255,0) 0 38mm, rgba(255,255,255,.55) 38.4mm, rgba(255,255,255,0) 39mm 61mm),
+      linear-gradient(160deg, #dcdcdc 0%, #f2f2f2 35%, #e4e4e4 60%, #c9c9c9 100%);
+  }
+  /* fine grain / brushed texture */
+  .page::before {
+    content: ""; position: absolute; inset: 0; opacity: .33; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9 .04' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  /* ---------- metallic frame ---------- */
+  .frame-outer {
+    position: absolute; inset: 6mm; border-radius: 1.5mm;
+    background: linear-gradient(135deg, #2a2a2a 0%, #f5f5f5 18%, #8d8d8d 32%, #ffffff 48%, #6f6f6f 62%, #e8e8e8 78%, #2e2e2e 100%);
+    padding: 3.2mm;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+  .frame-line { position: absolute; inset: 6mm; border: .5mm solid #0c0c0c; border-radius: 1.5mm; z-index: 1; }
+  .frame-line::after { content: ""; position: absolute; inset: 2.7mm; border: .5mm solid #0c0c0c;
+    box-shadow: inset 0 0 5mm rgba(0,0,0,.16); }
+  .frame-inner {
+    position: absolute; inset: 12.5mm; border: .35mm solid #111;
+  }
+  .frame-inner::before {
+    content: ""; position: absolute; inset: 1.1mm; border: .2mm solid rgba(0,0,0,.55);
+  }
+
+  /* corner brackets */
+  .corner { position: absolute; width: 34mm; height: 34mm; z-index: 3; }
+  .corner.tr { top: 7.5mm; right: 7.5mm; }
+  .corner.tl { top: 7.5mm; left: 7.5mm; transform: scaleX(-1); }
+  .corner.br { bottom: 7.5mm; right: 7.5mm; transform: scaleY(-1); }
+  .corner.bl { bottom: 7.5mm; left: 7.5mm; transform: scale(-1,-1); }
+
+  .sparkle { position: absolute; z-index: 4; width: 9mm; height: 9mm; }
+
+  /* ---------- content ---------- */
+  .content {
+    position: absolute; inset: 15mm 20mm 16mm; z-index: 2;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+  }
+  .logo { width: 106mm; margin-top: 0;
+    filter: drop-shadow(0 .9mm .8mm rgba(0,0,0,.35)); }
+
+  .banner { display: flex; align-items: center; justify-content: center; gap: 4mm; }
+  .bars { height: 11mm; width: auto; flex: none; }
+  .bars.left { transform: scaleX(-1); }
+
+  .chrome {
+    position: relative; display: inline-block;
+    font-family: 'Rubik', sans-serif; font-weight: 900; font-style: italic;
+    line-height: 1; white-space: nowrap; letter-spacing: .2mm;
+  }
+  .chrome .base, .chrome .face { display: block; }
+  .chrome .base {
+    color: #0b0b0b; -webkit-text-stroke: 1.7mm #0b0b0b;
+    filter: drop-shadow(0 1mm 1.1mm rgba(0,0,0,.45));
+  }
+  .chrome .rim {
+    position: absolute; inset: 0; color: transparent;
+    -webkit-text-stroke: 1.5mm transparent;
+    background: linear-gradient(180deg, #ffffff 0%, #bdbdbd 45%, #5c5c5c 55%, #e0e0e0 100%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+  .chrome .face {
+    position: absolute; inset: 0; color: transparent;
+    background: linear-gradient(180deg,
+      #ffffff 0%, #f1f1f1 22%, #b9b9b9 40%, #6e6e6e 49%, #2c2c2c 52%,
+      #7d7d7d 60%, #d6d6d6 76%, #ffffff 90%, #c4c4c4 100%);
+    -webkit-background-clip: text; background-clip: text;
+  }
+
+  .title { font-size: 22mm; margin-top: 2.4mm; padding: 0 1.5mm; }
+  .lead { font-family: 'Heebo'; font-weight: 800; font-size: 6.8mm; margin-top: 3.8mm; letter-spacing: .1mm; }
+  .name { font-size: 20mm; margin-top: 2.4mm; padding: 0 1.5mm; }
+
+  .divider { display: flex; align-items: center; gap: 2.5mm; width: 160mm; margin: 4mm 0 2.8mm; }
+  .divider i { flex: 1; height: .45mm; background: linear-gradient(90deg, transparent, #111 18%, #111 82%, transparent); }
+  .divider svg { width: 5.5mm; height: 5.5mm; }
+
+  .unit { font-family: 'Heebo'; font-weight: 800; font-size: 6.8mm; letter-spacing: .1mm; }
+  .body { font-family: 'Heebo'; font-weight: 500; font-size: 4.75mm; line-height: 1.62; margin-top: 1.6mm; color: #1a1a1a; white-space: nowrap; }
+
+  .brush { position: relative; margin-top: 4.2mm; width: 146mm; height: 14.5mm;
+    display: flex; align-items: center; justify-content: center; }
+  .brush svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .brush span { position: relative; color: #fff; font-family: 'Rubik'; font-weight: 800; font-style: italic;
+    font-size: 8mm; letter-spacing: .2mm; text-shadow: 0 .3mm .6mm rgba(0,0,0,.6); }
+
+  .footer { margin-top: auto; width: 100%;
+    display: flex; align-items: flex-end; justify-content: space-between; padding: 0 12mm 1mm; }
+  .sig { width: 62mm; text-align: center; }
+  .sig .line { height: 10mm; border-bottom: .35mm solid #111; }
+  .sig .role { font-family: 'Heebo'; font-weight: 700; font-size: 4.3mm; margin-top: 1.4mm; }
+  .emblem { display: flex; flex-direction: column; align-items: center; }
+  .emblem img { width: 22mm; filter: drop-shadow(0 .6mm .6mm rgba(0,0,0,.35)); }
+  .emblem b { font-family: 'Heebo'; font-weight: 900; font-size: 4.4mm; margin-top: .8mm; letter-spacing: .3mm; }
+
+  @media print { body { background: none; } .page { margin: 0; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="chromeV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#cfcfcf"/>
+      <stop offset=".5" stop-color="#4a4a4a"/><stop offset=".62" stop-color="#9a9a9a"/>
+      <stop offset="1" stop-color="#f6f6f6"/>
+    </linearGradient>
+    <linearGradient id="chromeD" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fafafa"/><stop offset=".4" stop-color="#9c9c9c"/>
+      <stop offset=".55" stop-color="#3a3a3a"/><stop offset=".7" stop-color="#d9d9d9"/>
+      <stop offset="1" stop-color="#6a6a6a"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#fff"/><stop offset=".25" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+
+    <!-- speed bars (pointing outward = to the right in this drawing) -->
+    <symbol id="bars" viewBox="0 0 120 30">
+      <g stroke="#0b0b0b" stroke-width="1.3" stroke-linejoin="round" fill="url(#chromeV)">
+        <path d="M0 3 L78 3 L72 9 L0 9 Z"/>
+        <path d="M0 12 L118 12 L110 18 L0 18 Z"/>
+        <path d="M0 21 L92 21 L86 27 L0 27 Z"/>
+      </g>
+    </symbol>
+
+    <symbol id="corner" viewBox="0 0 100 100">
+      <g stroke="#0b0b0b" stroke-width="1.4" stroke-linejoin="round">
+        <path d="M100 0 L100 92 L88 80 L88 12 L20 12 L8 0 Z" fill="url(#chromeD)"/>
+        <path d="M84 16 L84 58 L76 50 L76 24 L50 24 L42 16 Z" fill="#141414"/>
+        <path d="M70 0 L100 30 L100 40 L60 0 Z" fill="url(#chromeV)" opacity=".0"/>
+      </g>
+    </symbol>
+
+    <symbol id="spark" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="22" fill="url(#glow)"/>
+      <path d="M50 0 L54 46 L100 50 L54 54 L50 100 L46 54 L0 50 L46 46 Z" fill="#fff"/>
+    </symbol>
+
+    <symbol id="star4" viewBox="0 0 100 100">
+      <path d="M50 0 L58 42 L100 50 L58 58 L50 100 L42 58 L0 50 L42 42 Z" fill="#111"/>
+    </symbol>
+
+    <symbol id="brushShape" viewBox="0 0 600 64" preserveAspectRatio="none">
+      <path fill="#0c0c0c" d="M14 14 C60 6 140 9 210 6 C300 2 380 7 460 4 C520 2 566 6 592 10 C597 18 590 22 598 30
+        C592 38 599 44 590 52 C540 58 470 55 400 60 C320 63 240 57 160 61 C100 63 50 58 10 56
+        C4 48 12 42 2 36 C10 30 3 24 14 14 Z"/>
+      <g stroke="#3a3a3a" stroke-width="1" opacity=".45" fill="none">
+        <path d="M40 20 C200 16 400 18 570 17"/><path d="M30 44 C220 41 380 45 575 42"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="pages"></div>
+
+<script>
+const soldiers = [
+  { name: 'נגה ישראלי', f: true },
+  { name: 'ניר למברג', f: false },
+  { name: 'שילת ביטון', f: true },
+];
+
+const chrome = (t, cls) =>
+  `<span class="chrome ${cls}"><span class="base">${t}</span><span class="face">${t}</span></span>`;
+
+const bannerWrap = (inner, h) => `
+  <div class="banner">
+    <svg class="bars right" style="height:${h}mm;width:${h*4.4}mm"><use href="#bars"/></svg>
+    ${inner}
+    <svg class="bars left" style="height:${h}mm;width:${h*4.4}mm"><use href="#bars"/></svg>
+  </div>`;
+
+document.getElementById('pages').innerHTML = soldiers.map(s => `
+  <section class="page">
+    <div class="frame-outer"></div><div class="frame-line"></div>
+    <div class="frame-inner"></div>
+
+    <svg class="corner tr"><use href="#corner"/></svg>
+    <svg class="corner tl"><use href="#corner"/></svg>
+    <svg class="corner br"><use href="#corner"/></svg>
+    <svg class="corner bl"><use href="#corner"/></svg>
+
+    <svg class="sparkle" style="top:4.2mm;right:38mm"><use href="#spark"/></svg>
+    <svg class="sparkle" style="bottom:4.2mm;left:38mm"><use href="#spark"/></svg>
+
+    <div class="content">
+      <img class="logo" src="ido_wings.png" alt="">
+      ${bannerWrap(chrome('תעודת הוקרה', 'title'), 12)}
+
+      <div class="lead">מוענקת בזאת בהוקרה ובתודה ${s.f ? 'לחיילת המשתחררת' : 'לחייל המשתחרר'}</div>
+      ${bannerWrap(chrome(s.name, 'name'), 10.5)}
+
+      <div class="divider"><i></i><svg><use href="#star4"/></svg><i></i></div>
+
+      <div class="unit">על שירותך המסור בסוללת אידו – גדוד 947</div>
+      <div class="body">
+        לאורך שירותך הוכחת מקצועיות, מסירות ונחישות, והיית חלק בלתי נפרד מהמשפחה ומרוח הלחימה של הסוללה.<br>
+        תרומתך הותירה חותם שלא יישכח. אנו מודים לך מכל הלב ומאחלים לך הצלחה רבה בהמשך הדרך.
+      </div>
+
+      <div class="brush"><svg viewBox="0 0 600 64" preserveAspectRatio="none"><use href="#brushShape"/></svg><span>פעם באידו – תמיד חלק מהאגדה</span></div>
+
+      <div class="footer">
+        <div class="sig"><div class="line"></div><div class="role">מפקד הסוללה</div></div>
+        <div class="emblem"><img src="gdud.png" alt=""><b>גדוד 947</b></div>
+        <div class="sig"><div class="line"></div><div class="role">מפקד הגדוד</div></div>
+      </div>
+    </div>
+  </section>`).join('');
+</script>
+</body>
+</html>

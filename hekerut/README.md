@@ -1,0 +1,38 @@
+# היכרות בקליק
+
+A social network for the moment you meet someone new from the army. You build your profile once (where you're from, age, mechina or service year, unit down to the team, tironut, roles and courses). When you meet someone, they scan your code and see your whole path, the people you both know and what you have in common. Hebrew, RTL, installable on the home screen (PWA). Static site, no build step.
+
+Live (after merging): https://tomerzor.github.io/TOMERZOR/hekerut/
+
+```
+npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localhost:8795/hekerut/
+```
+
+## What it does
+
+- **Onboarding (5 short steps):** photo, name, how to address you (he/she/either), age, city · mechina or service year · status, draft and release month, corps, then the unit levels. The labels follow the corps: artillery asks for a סוללה, infantry for a פלוגה, the air force for a טייסת. Each level opens after the one above it, and all of them are optional · tironut, roles and courses with years · one line about you, and who sees the full path.
+- **Home:** friends as round "stories", a "met someone new?" card, people you may know (friends of friends, same unit, mechina, tironut or city, with the reason), your own card, recent activity.
+- **Code (center button):** your QR code and a share link, or the camera scanner. Scanning opens a "nice to meet you" screen: how many people you both know, who they are, what you share ("same battery!", "same mechina", "same draft") and one tap to connect.
+- **Profiles:** friends / followers / following counts, follow, mutual connections, "what you have in common", and the path as a timeline. The **story** button plays the path as full-screen slides (Instagram-style: tap for next, hold to pause).
+- **Friends and followers:** following is one-way. When both follow each other, they're friends. You can remove a follower.
+- **Activity:** who scanned your code, who followed you, who followed back, and when a friend starts a new role.
+- **Settings:** light/dark/auto, who sees the full path, a new code (the old one stops opening the full path), moving to another phone (a personal login QR), delete the account.
+
+### Privacy
+
+- Never asks for a personal number. The service step reminds people not to enter classified unit names or locations.
+- By default the full path (battalion and below, tironut, dates, roles) is visible only to people who scanned your code or whom you follow. Everyone else sees name, age, city, corps, brigade, mechina and current role. One setting makes everything public.
+
+## Server (`server/`)
+
+A Cloudflare Worker with one Durable Object (SQLite) holding profiles, follows and activity, so mutual connections are a quick lookup. The rules (who sees what, what counts as mutual, what two people have in common, suggestions) are in `js/core.js`, shared between the server and the app's demo mode.
+
+- Login: on sign-up the server returns an id and a random secret token, kept on the phone. Sign-ups are limited to 10 an hour per address.
+- Deploy: `.github/workflows/hekerut-api.yml` runs on pushes to `hekerut/server/` or `hekerut/js/core.js` on the main branch (needs the `CLOUDFLARE_API_TOKEN` secret, already used by Remind. and Shomer), then writes the address into `js/config.js`.
+- Tests: `cd hekerut/server && npm test` (both stores, visibility, follows, friends, mutuals, common ground, suggestions, routes).
+
+**Demo mode:** while `js/config.js` has no server address, the whole network runs in the browser with ten made-up people, and they follow back after a moment. The scanner has a "try with a sample profile" button. In demo mode a code only works on the phone that made it.
+
+Bump `VERSION` in `sw.js` whenever a file changes, and `APP_VERSION` in `js/app.js` (shown in settings).
+
+Fonts: Heebo and Plus Jakarta Sans, self-hosted (SIL OFL). QR: qrcode-generator (MIT) and jsQR (Apache 2.0) in `vendor/`.

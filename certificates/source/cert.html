@@ -80,9 +80,11 @@
   }
   .chrome .face {
     position: absolute; inset: 0; color: transparent;
-    background: linear-gradient(180deg,
-      #ffffff 0%, #f1f1f1 22%, #b9b9b9 40%, #6e6e6e 49%, #2c2c2c 52%,
-      #7d7d7d 60%, #d6d6d6 76%, #ffffff 90%, #c4c4c4 100%);
+    background:
+      linear-gradient(112deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.7) 47%, rgba(255,255,255,0) 56%),
+      linear-gradient(180deg,
+        #ffffff 0%, #f5f5f5 16%, #d9d9d9 36%, #b4b4b4 56%,
+        #979797 72%, #b9b9b9 86%, #e9e9e9 100%);
     -webkit-background-clip: text; background-clip: text;
   }
 
@@ -121,7 +123,7 @@
   <defs>
     <linearGradient id="chromeV" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#ffffff"/><stop offset=".35" stop-color="#cfcfcf"/>
-      <stop offset=".5" stop-color="#4a4a4a"/><stop offset=".62" stop-color="#9a9a9a"/>
+      <stop offset=".6" stop-color="#a2a2a2"/><stop offset=".8" stop-color="#b8b8b8"/>
       <stop offset="1" stop-color="#f6f6f6"/>
     </linearGradient>
     <linearGradient id="chromeD" x1="0" y1="0" x2="1" y2="1">
@@ -223,7 +225,7 @@ document.getElementById('pages').innerHTML = soldiers.map(s => `
       <div class="brush"><svg viewBox="0 0 600 64" preserveAspectRatio="none"><use href="#brushShape"/></svg><span>פעם באידו – תמיד חלק מהאגדה</span></div>
 
       <div class="footer">
-        <div class="sig"><div class="line"></div><div class="role">מפקד הסוללה</div></div>
+        <div class="sig"><div class="line"></div><div class="role">מפקדת הסוללה</div></div>
         <div class="emblem"><img src="gdud.png" alt=""><b>גדוד 947</b></div>
         <div class="sig"><div class="line"></div><div class="role">מפקד הגדוד</div></div>
       </div>

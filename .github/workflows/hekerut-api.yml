@@ -1,0 +1,85 @@
+# Deploys the היכרות בקליק server (hekerut/server/) to Cloudflare Workers, then points the
+# GitHub Pages copy of the app at it. Until then the app runs in demo mode in each browser.
+# Needs the repository secret CLOUDFLARE_API_TOKEN ("Edit Cloudflare Workers" template), and
+# CLOUDFLARE_ACCOUNT_ID only if the token reaches several accounts.
+# Until the token exists, the workflow skips itself instead of failing.
+name: Deploy היכרות בקליק server
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/playwright-mcp-add-8e6qct]
+    paths: ["hekerut/server/**", "hekerut/js/core.js", ".github/workflows/hekerut-api.yml"]
+
+concurrency:
+  group: hekerut-api
+  cancel-in-progress: false
+
+permissions:
+  contents: write # to save the server address in the site's config
+  pages: write # to rebuild the site afterwards
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping the deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Test
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: hekerut/server
+        run: npm test
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'true'
+        id: deploy
+        working-directory: hekerut/server
+        run: |
+          npx --yes wrangler@4 deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -z "$url" ]; then echo "::error::Could not find the workers.dev address in the deploy output"; exit 1; fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice::היכרות בקליק server is live at $url"
+
+      - name: Check the server answers
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ steps.deploy.outputs.url }}/health" | tee health.json | grep -q '"service":"hekerut-api"'; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::The server did not answer /health"; cat health.json; exit 1
+
+      - name: Point the site at the server
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          SERVER_URL: ${{ steps.deploy.outputs.url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sed -i -E "s|^(  server: )\"[^\"]*\",|\1\"$SERVER_URL\",|" hekerut/js/config.js
+          if git diff --quiet; then echo "The site already uses $SERVER_URL"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "היכרות בקליק: use the deployed server at $SERVER_URL"
+          git push
+          # pushes made with the workflow token don't start a Pages build on their own
+          gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "::warning::Could not start a Pages build; it runs on the next push."

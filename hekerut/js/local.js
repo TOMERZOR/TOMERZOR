@@ -7,7 +7,8 @@ const KEY = 'hekerut.demo.v1';
 
 export class MemoryStore {
   constructor(data) {
-    this.d = data || { users: {}, photos: {}, follows: {}, events: {} };
+    this.d = data || {};
+    for (const k of ['users', 'photos', 'follows', 'events', 'media', 'posts', 'likes', 'stories', 'views']) this.d[k] ||= {};
   }
   user(id) { return this.d.users[id] ? structuredClone(this.d.users[id]) : null; }
   putUser(u) { this.d.users[u.id] = structuredClone({ ...u, idx: indexFields(u.profile) }); }
@@ -17,7 +18,51 @@ export class MemoryStore {
     delete this.d.events[id];
     for (const k of Object.keys(this.d.follows)) if (k.startsWith(`${id}>`) || k.endsWith(`>${id}`)) delete this.d.follows[k];
     for (const list of Object.values(this.d.events)) for (let i = list.length - 1; i >= 0; i--) if (list[i].actor === id) list.splice(i, 1);
+    for (const p of Object.values(this.d.posts)) if (p.uid === id) this.deletePost(p.id);
+    for (const st of Object.values(this.d.stories)) if (st.uid === id) this.deleteStory(st.id);
+    for (const [k, m] of Object.entries(this.d.media)) if (m.owner === id) delete this.d.media[k];
+    for (const k of Object.keys(this.d.likes)) if (k.endsWith(`>${id}`)) delete this.d.likes[k];
+    for (const k of Object.keys(this.d.views)) if (k.endsWith(`>${id}`)) delete this.d.views[k];
   }
+  putMedia(id, owner, data) { this.d.media[id] = { owner, data }; }
+  media(id) { return this.d.media[id]?.data || null; }
+  deleteMedia(id) { delete this.d.media[id]; }
+  putPost(p) { this.d.posts[p.id] = { ...p }; }
+  post(id) { return this.d.posts[id] ? { ...this.d.posts[id] } : null; }
+  deletePost(id) {
+    delete this.d.posts[id];
+    for (const k of Object.keys(this.d.likes)) if (k.startsWith(`${id}>`)) delete this.d.likes[k];
+  }
+  postsBy(uid, limit, before) { return Object.values(this.d.posts).filter(p => p.uid === uid && p.at < before).sort((a, b) => b.at - a.at).slice(0, limit).map(p => ({ ...p })); }
+  postCount(uid) { return Object.values(this.d.posts).filter(p => p.uid === uid).length; }
+  feedPosts(viewer, limit, before) {
+    const ids = new Set([viewer, ...this.following(viewer)]);
+    return Object.values(this.d.posts).filter(p => ids.has(p.uid) && p.at < before).sort((a, b) => b.at - a.at).slice(0, limit).map(p => ({ ...p }));
+  }
+  putLike(post, uid, at) { this.d.likes[`${post}>${uid}`] = at; }
+  deleteLike(post, uid) { delete this.d.likes[`${post}>${uid}`]; }
+  liked(post, uid) { return `${post}>${uid}` in this.d.likes; }
+  likeCount(post) { return Object.keys(this.d.likes).filter(k => k.startsWith(`${post}>`)).length; }
+  putStory(st) { this.d.stories[st.id] = { ...st }; }
+  story(id) { return this.d.stories[id] ? { ...this.d.stories[id] } : null; }
+  deleteStory(id) {
+    delete this.d.stories[id];
+    for (const k of Object.keys(this.d.views)) if (k.startsWith(`${id}>`)) delete this.d.views[k];
+  }
+  storiesBy(uid, since) { return Object.values(this.d.stories).filter(s => s.uid === uid && s.at > since).map(s => ({ ...s })); }
+  storyFeed(viewer, since) {
+    const ids = new Set([viewer, ...this.following(viewer)]);
+    return Object.values(this.d.stories).filter(s => ids.has(s.uid) && s.at > since).sort((a, b) => a.at - b.at).map(s => ({ ...s }));
+  }
+  purgeStories(before, limit) {
+    const old = Object.values(this.d.stories).filter(s => s.at <= before).slice(0, limit);
+    for (const s of old) this.deleteStory(s.id);
+    return old.map(s => s.media);
+  }
+  putView(story, uid, at) { const k = `${story}>${uid}`; if (!(k in this.d.views)) this.d.views[k] = at; }
+  seen(story, uid) { return `${story}>${uid}` in this.d.views; }
+  viewCount(story) { return Object.keys(this.d.views).filter(k => k.startsWith(`${story}>`)).length; }
+  views(story) { return Object.entries(this.d.views).filter(([k]) => k.startsWith(`${story}>`)).map(([k, at]) => ({ uid: k.slice(story.length + 1), at })).sort((a, b) => b.at - a.at); }
   photo(id) { return this.d.photos[id] || null; }
   putPhoto(id, data) { if (data) this.d.photos[id] = data; else delete this.d.photos[id]; }
   follow(a, b) { return this.d.follows[`${a}>${b}`] || null; }
@@ -72,6 +117,9 @@ function seed(store, now) {
     store.putFollow(a, b, { met: true, at: now });
     store.putFollow(b, a, { met: true, at: now });
   }
+  // A couple of text stories, so the demo's story row isn't empty.
+  store.putStory({ id: 'st-noa', uid: 'd-noa', media: null, text: 'יום אחרון של קו בגולן 🧡', bg: 'b1', at: now - 2 * 3600e3 });
+  store.putStory({ id: 'st-itay', uid: 'd-itay', media: null, text: 'חודש לשחרור.\nמי בא לטרק?', bg: 'b3', at: now - 5 * 3600e3 });
 }
 
 // Same calls as the server client in api.js, answered here.
@@ -118,6 +166,17 @@ export class LocalApi {
     }
     return out;
   }
+  createPost(s, body) { return this.run(() => this.net.createPost(this.net.auth(s.id, s.token), body)); }
+  deletePost(s, id) { return this.run(() => this.net.deletePost(this.net.auth(s.id, s.token), id)); }
+  like(s, id, on) { return this.run(() => this.net.like(this.net.auth(s.id, s.token), id, on)); }
+  posts(s, before) { return this.run(() => this.net.posts(this.net.auth(s.id, s.token), before)); }
+  userPosts(s, id, before) { return this.run(() => this.net.userPosts(this.net.auth(s.id, s.token), id, before)); }
+  post(s, id) { return this.run(() => this.net.post(this.net.auth(s.id, s.token), id)); }
+  createStory(s, body) { return this.run(() => this.net.createStory(this.net.auth(s.id, s.token), body)); }
+  tray(s) { return this.run(() => this.net.tray(this.net.auth(s.id, s.token))); }
+  seeStory(s, id) { return this.run(() => this.net.seeStory(this.net.auth(s.id, s.token), id)); }
+  storyViewers(s, id) { return this.run(() => this.net.storyViewers(this.net.auth(s.id, s.token), id)); }
+  deleteStory(s, id) { return this.run(() => this.net.deleteStory(this.net.auth(s.id, s.token), id)); }
   onChange(fn) { this.listeners.add(fn); }
   reset() { try { localStorage.removeItem(KEY); } catch {} }
 }

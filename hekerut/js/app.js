@@ -5,7 +5,7 @@ import { api, demo, session, saveSession } from './api.js';
 import { qrSvg, startScanner } from './qr.js';
 import { CORPS, STATUS, PREP, MONTHS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily } from './core.js';
 
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -21,7 +21,8 @@ const store = {
 
 let sess = session();
 let me = null;
-const cache = { feed: null, lists: {}, views: {} };
+const cache = { feed: null, lists: {}, views: {}, grids: {} };
+const profTab = {};
 const ui = { peopleTab: 'friends', query: '', results: null };
 
 // ---------- Suggestions for the free-text fields ----------
@@ -75,6 +76,7 @@ function toast(text, ic = 'check') {
 function errorText(e) {
   if (e?.code === 'offline') return 'אין חיבור לאינטרנט כרגע';
   if (e?.code === 'photo') return 'התמונה גדולה מדי';
+  if (e?.code === 'image') return 'לא הצלחנו לקרוא את התמונה';
   if (e?.code === 'slow_down') return 'יותר מדי ניסיונות. נסו שוב בעוד שעה';
   if (e?.code === 'not_found') return 'הפרופיל הזה לא קיים יותר';
   return 'משהו השתבש. נסו שוב';
@@ -418,21 +420,25 @@ async function readPhoto(file) {
 
 async function renderHome(seq) {
   const draw = feed => {
-    const f = feed || { stories: [], suggestions: [], events: [] };
+    const f = feed || { stories: [], suggestions: [], events: [], tray: [], posts: { items: [], next: null } };
     const friends = me.counts.friends;
+    const posts = f.posts?.items || [];
+    const sugg = `
+      <section class="sec">
+        <div class="sec-head"><h2>אולי מכירים</h2><span class="muted">לפי יחידה, מכינה וחברים</span></div>
+        <div class="sugg-rail">${feed ? (f.suggestions.length ? f.suggestions.map((p, i) => suggestionCard(p, i)).join('') : `<div class="rail-empty">${icon('sparkle')}<span>ככל שתתחברו ליותר אנשים, נמצא לכם עוד מכרים</span></div>`)
+          : '<div class="sugg sk"></div>'.repeat(3)}</div>
+      </section>`;
     page(`
       <header class="topbar home-top">
         ${wordmark()}
         <div class="tb-actions">
           ${demo ? '<span class="demo-pill">הדגמה</span>' : ''}
+          <button class="icon-btn" data-act="create" aria-label="פוסט או סטורי חדש">${icon('plus-square')}</button>
           <button class="icon-btn" data-act="search" aria-label="חיפוש">${icon('search')}</button>
         </div>
       </header>
-      <section class="stories" aria-label="חברים">
-        <button class="story mine" data-act="code">${avatar(me, 'l', { ring: true })}<span class="story-plus">${icon('qr')}</span><small>הקוד שלי</small></button>
-        ${feed ? f.stories.map((p, i) => `<button class="story" data-story="${p.id}" style="--i:${i}">${avatar(p, 'l', { ring: true })}<small>${esc(p.name.split(' ')[0])}</small></button>`).join('')
-          : '<span class="story sk"></span>'.repeat(4)}
-      </section>
+      ${trayHtml(f, !feed)}
       ${friends < 3 ? `
       <section class="hero-card">
         <div class="hc-glow"></div>
@@ -441,19 +447,15 @@ async function renderHome(seq) {
         <p>במקום להסביר שוב את כל המסלול, תנו לו לסרוק את הקוד. הוא יראה מאיפה אתם, מה עשיתם ומי משותף לכם.</p>
         <div class="hc-btns"><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button><button class="btn glass" data-act="scan">${icon('scan')}<span>סריקה</span></button></div>
       </section>` : ''}
-      <section class="sec">
-        <div class="sec-head"><h2>אולי מכירים</h2><span class="muted">לפי יחידה, מכינה וחברים</span></div>
-        <div class="sugg-rail">${feed ? (f.suggestions.length ? f.suggestions.map((p, i) => suggestionCard(p, i)).join('') : `<div class="rail-empty">${icon('sparkle')}<span>ככל שתתחברו ליותר אנשים, נמצא לכם עוד מכרים</span></div>`)
-          : '<div class="sugg sk"></div>'.repeat(3)}</div>
-      </section>
+      <button class="compose-row" data-act="new-post">${avatar(me, 's')}<span>מה חדש אצלך?</span><span class="cr-ic">${icon('image')}</span></button>
+      ${feed && !posts.length ? `<div class="feed-empty">${icon('image')}<b>עוד אין פוסטים</b><p>פוסטים של מי שאת/ה עוקב/ת אחריו יופיעו כאן. אפשר להתחיל מהפוסט שלך.</p></div>` : ''}
+      <section class="feed">${posts.slice(0, 3).map((p, i) => postCard(p, i)).join('')}</section>
+      ${sugg}
+      ${posts.length > 3 ? `<section class="feed">${posts.slice(3).map((p, i) => postCard(p, i)).join('')}${f.posts.next ? '<button class="btn soft wide" data-act="more-posts">עוד פוסטים</button>' : ''}</section>` : ''}
+      ${feed && !posts.length ? `
       <section class="sec">
         <div class="sec-head"><h2>הכרטיס שלך</h2><button class="link-btn" data-act="story-me">${icon('play')}<span>כך רואים אותך</span></button></div>
         ${myCard()}
-      </section>
-      ${feed && f.events.length ? `
-      <section class="sec">
-        <div class="sec-head"><h2>לאחרונה</h2><button class="link-btn" data-go="activity">הכל</button></div>
-        <div class="list">${f.events.slice(0, 3).map(eventRow).join('')}</div>
       </section>` : ''}
       <div class="foot-space"></div>`, 'home');
   };
@@ -615,16 +617,17 @@ function eventText(e) {
   const you = gen(me.profile, 'אחריך', 'אחרייך', 'אחריך');
   if (e.kind === 'scan') return `${n} ${gen(a, 'סרק', 'סרקה')} את הקוד שלך ${gen(a, 'ועוקב', 'ועוקבת')} ${you}`;
   if (e.kind === 'friend') return `${n} ${gen(a, 'עקב', 'עקבה')} ${you} בחזרה. אתם חברים עכשיו`;
+  if (e.kind === 'like') return `${n} ${gen(a, 'אהב', 'אהבה')} את הפוסט שלך`;
   if (e.kind === 'role') return `${n} ${gen(a, 'התחיל', 'התחילה')} תפקיד חדש: <b>${esc(e.data?.t)}</b>`;
   return `${n} ${gen(a, 'התחיל', 'התחילה')} לעקוב ${you}`;
 }
-const EVENT_ICON = { scan: 'qr', friend: 'heart', role: 'badge', follow: 'user' };
+const EVENT_ICON = { scan: 'qr', friend: 'heart', role: 'badge', follow: 'user', like: 'heart' };
 
 function eventRow(e, i = 0) {
   return `<div class="row ev ${e.read ? '' : 'unread'}" style="--i:${i}" data-open="${e.actor.id}" data-name="${esc(e.actor.name)}">
     <span class="ev-av">${avatar(e.actor, 'm')}<span class="ev-ic k-${e.kind}">${icon(EVENT_ICON[e.kind] || 'user')}</span></span>
     <div class="row-text"><span>${eventText(e)}</span><small>${timeAgo(e.at)}</small></div>
-    ${e.kind !== 'role' && !e.actor.rel?.following ? followBtn(e.actor, 'sm') : ''}
+    ${e.kind !== 'role' && e.kind !== 'like' && !e.actor.rel?.following ? followBtn(e.actor, 'sm') : ''}
   </div>`;
 }
 
@@ -654,7 +657,10 @@ async function renderActivity(seq) {
 
 async function renderProfile(id, seq = renderSeq) {
   const mine = id === me.id;
-  const draw = v => page(profileHtml(v, mine), mine ? 'me' : 'none');
+  const draw = v => {
+    page(profileHtml(v, mine), mine ? 'me' : 'none');
+    if (v.level === 'full' && document.querySelector(`[data-grid="${id}"]`) && !draw.loading) { draw.loading = true; loadGrid(id, seq); }
+  };
   if (mine) draw({ person: me, level: 'full', rel: { self: true }, counts: me.counts, mutual: [], mutualCount: 0, common: [] });
   else if (cache.views[id]) draw(cache.views[id]);
   else page(`${topbar('', { back: true })}<div class="prof-sk"><span class="av av-xl sk"></span><i></i><i></i><i></i></div>`, 'none');
@@ -681,13 +687,14 @@ function profileHtml(v, mine) {
   const full = v.level === 'full';
   const prof = full ? p.profile : null;
   const firstName = esc(p.name.split(' ')[0]);
+  const tab = profTab[p.id] || (v.counts.posts ? 'posts' : 'path');
   return `
     ${topbar(mine ? esc(p.name) : '', { back: !mine, actions: mine ? `<button class="icon-btn" data-go="settings" aria-label="הגדרות">${icon('gear')}</button>` : `<button class="icon-btn" data-story="${p.id}" aria-label="המסלול כסטורי">${icon('play')}</button>` })}
     <section class="prof" data-name="${esc(p.name)}">
       <div class="prof-head">
         <button class="prof-av" data-story="${p.id}" aria-label="המסלול כסטורי">${avatar(p, 'xl', { ring: true })}</button>
         <div class="stats">
-          ${[['friends', 'חברים'], ['followers', 'עוקבים'], ['following', 'במעקב']].map(([k, l]) => `<button class="stat" data-list="${k}" data-of="${p.id}" ${full ? '' : 'disabled'}><b>${v.counts[k]}</b><small>${l}</small></button>`).join('')}
+          ${[['posts', 'פוסטים'], ['friends', 'חברים'], ['followers', 'עוקבים']].map(([k, l]) => `<button class="stat" ${k === 'posts' ? `data-ptab-prof="posts" data-of="${p.id}"` : `data-list="${k}" data-of="${p.id}"`} ${full ? '' : 'disabled'}><b>${v.counts[k] || 0}</b><small>${l}</small></button>`).join('')}
         </div>
       </div>
       <h2 class="prof-name">${esc(p.name)}</h2>
@@ -704,10 +711,11 @@ function profileHtml(v, mine) {
           <div class="common-list">${v.common.map((c, i) => `<div class="cg" style="--i:${i}"><b>${esc(c.title)}</b>${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</div>`).join('')}</div>
         </div>` : ''}
     </section>
-    <section class="path">
+    <div class="seg prof-seg"><button class="seg-b ${tab === 'path' ? 'on' : ''}" data-ptab-prof="path" data-of="${p.id}">${icon('shield')}המסלול</button><button class="seg-b ${tab === 'posts' ? 'on' : ''}" data-ptab-prof="posts" data-of="${p.id}">${icon('image')}פוסטים</button><span class="seg-pill" style="--n:${tab === 'path' ? 0 : 1}"></span></div>
+    ${tab === 'path' ? `<section class="path">
       <h3 class="path-title">${mine ? 'המסלול שלי' : `המסלול של ${firstName}`}</h3>
       ${full ? pathHtml(prof) : lockedPath(p)}
-    </section>
+    </section>` : `<section class="posts-tab">${full ? gridHtml(p.id) : lockedPath(p)}</section>`}
     <div class="foot-space"></div>`;
 }
 
@@ -802,11 +810,13 @@ function renderSettings() {
 // ---------- Sheets ----------
 
 let sheetClose = null;
+let sheetGen = 0;
 function openSheet(html, { cls = '', onClose } = {}) {
   closeSheet(true);
+  sheetGen++;
   $overlay.innerHTML = `<div class="backdrop" data-act="sheet-close"></div><div class="sheet ${cls}" role="dialog" aria-modal="true"><span class="grabber"></span>${html}</div>`;
   $overlay.classList.add('open');
-  document.body.classList.add('locked');
+  document.body.classList.add('no-scroll');
   sheetClose = onClose || null;
   return $overlay.querySelector('.sheet');
 }
@@ -815,10 +825,12 @@ function closeSheet(instant = false) {
   const fn = sheetClose;
   sheetClose = null;
   fn?.();
-  document.body.classList.remove('locked');
-  if (instant) { $overlay.classList.remove('open', 'closing'); $overlay.innerHTML = ''; return; }
+  document.body.classList.remove('no-scroll');
+  if (instant) { sheetGen++; $overlay.classList.remove('open', 'closing'); $overlay.innerHTML = ''; return; }
   $overlay.classList.add('closing');
-  setTimeout(() => { $overlay.classList.remove('open', 'closing'); $overlay.innerHTML = ''; }, 260);
+  const gen = sheetGen;
+  // A sheet opened while this one slides away (an action sheet leading to another) must stay.
+  setTimeout(() => { if (gen === sheetGen) { $overlay.classList.remove('open', 'closing'); $overlay.innerHTML = ''; } }, 260);
 }
 
 function actionSheet(title, options) {
@@ -1065,7 +1077,7 @@ async function openStory(id) {
     <button class="sv-tap prev" data-sv="prev" aria-label="הקודם"></button>
     <button class="sv-tap next" data-sv="next" aria-label="הבא"></button>`;
   document.body.append(el);
-  document.body.classList.add('locked');
+  document.body.classList.add('no-scroll');
   requestAnimationFrame(() => el.classList.add('open'));
   storyState = { el, slides, i: -1, timer: 0, t0: 0, paused: false, left: 0, id };
   showSlide(0);
@@ -1128,8 +1140,403 @@ function closeStory() {
   clearTimeout(s.timer);
   storyState = null;
   s.el.classList.remove('open');
-  document.body.classList.remove('locked');
+  document.body.classList.remove('no-scroll');
   setTimeout(() => s.el.remove(), 300);
+}
+
+// ---------- Posts ----------
+
+const likesText = n => (n === 1 ? 'לייק אחד' : `${n} לייקים`);
+
+function postCard(p, i = 0) {
+  const a = p.author;
+  return `<article class="post" data-post="${p.id}" style="--i:${i}">
+    <header class="post-head">
+      <button class="post-who" data-open="${a.id}">${avatar(a, 's')}<span><b>${esc(a.name)}</b><small>${esc([headline(a), timeAgo(p.at)].filter(Boolean).join(' · '))}</small></span></button>
+      ${p.mine ? `<button class="icon-btn sm" data-post-menu="${p.id}" aria-label="אפשרויות">${icon('more')}</button>` : ''}
+    </header>
+    <div class="post-media" data-dbl="${p.id}" style="aspect-ratio:${p.ratio || 1}">
+      <img src="${esc(p.image)}" alt="" loading="lazy" decoding="async">
+      <span class="burst">${icon('heart')}</span>
+    </div>
+    <div class="post-actions">
+      <button class="like-btn ${p.liked ? 'on' : ''}" data-like="${p.id}" aria-label="לייק" aria-pressed="${!!p.liked}">${icon('heart')}</button>
+      <span class="likes" data-likes="${p.id}">${p.likes ? likesText(p.likes) : ''}</span>
+    </div>
+    ${p.caption ? `<p class="caption"><b>${esc(a.name.split(' ')[0])}</b> ${esc(p.caption).replace(/\n/g, '<br>')}</p>` : ''}
+  </article>`;
+}
+
+// Every copy of a post the app holds: the home feed, profile grids and an open post sheet.
+function eachPost(id, fn) {
+  cache.feed?.posts?.items.forEach(p => p.id === id && fn(p));
+  Object.values(cache.grids).forEach(g => g.items.forEach(p => p.id === id && fn(p)));
+}
+
+async function toggleLike(id, force) {
+  let cur;
+  eachPost(id, p => { cur = p; });
+  const btn = document.querySelector(`[data-like="${id}"]`);
+  const was = cur ? cur.liked : btn?.classList.contains('on');
+  const on = force ?? !was;
+  if (on === was) return;
+  const paint = (liked, likes) => {
+    document.querySelectorAll(`[data-like="${id}"]`).forEach(b => { b.classList.toggle('on', liked); b.setAttribute('aria-pressed', liked); if (liked) { b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); } });
+    document.querySelectorAll(`[data-likes="${id}"]`).forEach(el => { el.textContent = likes ? likesText(likes) : ''; });
+    eachPost(id, p => { p.liked = liked; p.likes = likes; });
+  };
+  const before = cur?.likes ?? 0;
+  paint(on, Math.max(0, before + (on ? 1 : -1)));
+  haptic(on ? 14 : 6);
+  try {
+    const r = await api.like(sess, id, on);
+    paint(r.liked, r.likes);
+  } catch (e) {
+    paint(was, before);
+    toast(errorText(e), 'close');
+  }
+}
+
+let lastTap = { id: null, t: 0 };
+function onPostTap(media) {
+  const id = media.dataset.dbl;
+  const now = Date.now();
+  if (lastTap.id === id && now - lastTap.t < 320) {
+    lastTap = { id: null, t: 0 };
+    const b = media.querySelector('.burst');
+    b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
+    toggleLike(id, true);
+  } else lastTap = { id, t: now };
+}
+
+async function postMenu(id) {
+  const ok = await actionSheet('הפוסט יימחק לתמיד', [{ id: 'del', label: 'מחיקת הפוסט', danger: true }]);
+  if (ok !== 'del') return;
+  try {
+    await api.deletePost(sess, id);
+    if (cache.feed?.posts) cache.feed.posts.items = cache.feed.posts.items.filter(p => p.id !== id);
+    Object.values(cache.grids).forEach(g => { g.items = g.items.filter(p => p.id !== id); });
+    document.querySelectorAll(`[data-post="${id}"], [data-thumb="${id}"]`).forEach(el => el.remove());
+    if (me.counts.posts) me.counts.posts--;
+    closeSheet();
+    toast('הפוסט נמחק', 'trash');
+  } catch (e) { toast(errorText(e), 'close'); }
+}
+
+async function openPost(id) {
+  let p;
+  Object.values(cache.grids).forEach(g => g.items.forEach(x => { if (x.id === id) p = x; }));
+  try { p = p || await api.post(sess, id); } catch (e) { return toast(errorText(e), 'close'); }
+  openSheet(`<div class="post-sheet">${postCard(p)}</div>`, { cls: 'tall' });
+}
+
+async function loadMorePosts(btn) {
+  const f = cache.feed;
+  if (!f?.posts?.next) return;
+  btn.disabled = true;
+  try {
+    const more = await api.posts(sess, f.posts.next);
+    f.posts.items.push(...more.items);
+    f.posts.next = more.next;
+    btn.insertAdjacentHTML('beforebegin', more.items.map((p, i) => postCard(p, i)).join(''));
+    if (!more.next) btn.remove(); else btn.disabled = false;
+  } catch (e) { btn.disabled = false; toast(errorText(e), 'close'); }
+}
+
+// Profile grid
+async function loadGrid(id, seq) {
+  const box = () => document.querySelector(`[data-grid="${id}"]`);
+  try {
+    const g = await api.userPosts(sess, id);
+    cache.grids[id] = g;
+    if (seq === renderSeq && box()) box().outerHTML = gridHtml(id);
+  } catch (e) {
+    if (e.code === 'private' && box()) box().outerHTML = `<div class="locked" data-grid="${id}">${icon('lock')}<b>הפוסטים נפתחים כשנפגשים</b></div>`;
+  }
+}
+
+function gridHtml(id) {
+  const g = cache.grids[id];
+  if (!g) return `<div class="grid" data-grid="${id}">${'<span class="thumb sk"></span>'.repeat(6)}</div>`;
+  if (!g.items.length) {
+    return id === me.id
+      ? `<div class="empty-state small" data-grid="${id}">${icon('image')}<h2>הפוסט הראשון שלך</h2><p>תמונה מהבסיס, מהשטח או מהשחרור.</p><button class="btn primary" data-act="new-post">${icon('plus')}<span>פוסט חדש</span></button></div>`
+      : `<div class="empty-mini" data-grid="${id}">${icon('image')}<span>עוד אין פוסטים</span></div>`;
+  }
+  return `<div class="grid" data-grid="${id}">${g.items.map((p, i) => `<button class="thumb" data-thumb="${p.id}" style="--i:${i}"><img src="${esc(p.image)}" alt="" loading="lazy" decoding="async">${p.likes ? `<span>${icon('heart')}${p.likes}</span>` : ''}</button>`).join('')}</div>`;
+}
+
+// ---------- Making a post or a story ----------
+
+// Resizes and center-crops an image to fit between minRatio and maxRatio (width / height),
+// then compresses it under the server's limit.
+async function readMedia(file, { maxW, maxH, minRatio, maxRatio }) {
+  const img = await new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = () => rej(Object.assign(new Error('image'), { code: 'image' }));
+    i.src = URL.createObjectURL(file);
+  });
+  let sw = img.naturalWidth, sh = img.naturalHeight;
+  const r = sw / sh;
+  if (r < minRatio) sh = sw / minRatio; else if (r > maxRatio) sw = sh * maxRatio;
+  const sx = (img.naturalWidth - sw) / 2, sy = (img.naturalHeight - sh) / 2;
+  let scale = Math.min(1, maxW / sw, maxH / sh);
+  const c = document.createElement('canvas');
+  try {
+    for (let round = 0; round < 4; round++, scale *= 0.8) {
+      c.width = Math.round(sw * scale);
+      c.height = Math.round(sh * scale);
+      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+      for (const q of [0.84, 0.74, 0.64, 0.54]) {
+        const data = c.toDataURL('image/jpeg', q);
+        if (data.length < 400 * 1024) return { data, ratio: c.width / c.height };
+      }
+    }
+  } finally { URL.revokeObjectURL(img.src); }
+  throw Object.assign(new Error('photo'), { code: 'photo' });
+}
+
+let compose = null;
+
+async function chooseCreate() {
+  const k = await actionSheet('מה משתפים?', [{ id: 'post', label: 'פוסט: תמונה עם כיתוב' }, { id: 'story', label: 'סטורי: ל־24 שעות' }]);
+  if (k === 'post') openComposer('post');
+  if (k === 'story') openComposer('story');
+}
+
+function openComposer(kind) {
+  compose = { kind, image: null, ratio: 1, text: '', bg: 'b1', mode: 'photo' };
+  const sheet = openSheet('<div class="composer"></div>', { cls: 'tall composer-sheet', onClose: () => { compose = null; } });
+  drawComposer(sheet.querySelector('.composer'));
+}
+
+function drawComposer(box = document.querySelector('.composer')) {
+  if (!box || !compose) return;
+  const c = compose;
+  const BGS = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
+  if (c.kind === 'post') {
+    box.innerHTML = `
+      <h2 class="sheet-title">פוסט חדש</h2>
+      <label class="pick ${c.image ? 'has' : ''}" style="${c.image ? `aspect-ratio:${c.ratio}` : ''}">
+        ${c.image ? `<img src="${c.image}" alt="">` : `<span class="pick-empty">${icon('image')}<b>בחירת תמונה</b><small>מהגלריה או מהמצלמה</small></span>`}
+        <input type="file" accept="image/*" data-media hidden>
+        ${c.image ? `<span class="pick-change">${icon('refresh')}<span>החלפה</span></span>` : ''}
+      </label>
+      <textarea class="inp" data-compose="text" rows="3" maxlength="500" placeholder="כתבו משהו...">${esc(c.text)}</textarea>
+      <button class="btn primary big wide" data-act="publish" ${c.image ? '' : 'disabled'}>${icon('share')}<span>פרסום</span></button>`;
+  } else {
+    box.innerHTML = `
+      <h2 class="sheet-title">סטורי חדש</h2>
+      <div class="seg compose-seg"><button class="seg-b ${c.mode === 'photo' ? 'on' : ''}" data-cmode="photo">תמונה</button><button class="seg-b ${c.mode === 'text' ? 'on' : ''}" data-cmode="text">טקסט</button><span class="seg-pill" style="--n:${c.mode === 'photo' ? 0 : 1}"></span></div>
+      <div class="story-prev ${c.image && c.mode === 'photo' ? '' : c.bg}">
+        ${c.mode === 'photo' ? (c.image ? `<img src="${c.image}" alt="">` : `<label class="pick-empty light">${icon('camera')}<b>בחירת תמונה</b><small>תמונה לגובה נראית הכי טוב</small><input type="file" accept="image/*" data-media hidden></label>`) : ''}
+        ${c.mode === 'text' || c.image ? `<textarea class="story-text" data-compose="text" maxlength="200" rows="3" placeholder="${c.mode === 'text' ? 'מה קורה?' : 'טקסט על התמונה (לא חובה)'}">${esc(c.text)}</textarea>` : ''}
+        ${c.mode === 'photo' && c.image ? `<label class="pick-change">${icon('refresh')}<span>החלפה</span><input type="file" accept="image/*" data-media hidden></label>` : ''}
+      </div>
+      ${c.mode === 'text' ? `<div class="swatches">${BGS.map(b => `<button class="sw ${b} ${b === c.bg ? 'on' : ''}" data-bg="${b}" aria-label="רקע"></button>`).join('')}</div>` : ''}
+      <button class="btn primary big wide" data-act="publish" ${(c.mode === 'photo' ? c.image : c.text.trim()) ? '' : 'disabled'}>${icon('sparkle')}<span>לסטורי</span></button>`;
+  }
+}
+
+async function onMediaPicked(input) {
+  const file = input.files?.[0];
+  if (!file || !compose) return;
+  const box = document.querySelector('.composer');
+  box?.classList.add('busy');
+  try {
+    const opts = compose.kind === 'post'
+      ? { maxW: 1080, maxH: 1350, minRatio: 0.8, maxRatio: 1.91 }
+      : { maxW: 720, maxH: 1280, minRatio: 9 / 16, maxRatio: 9 / 16 };
+    const { data, ratio } = await readMedia(file, opts);
+    compose.image = data;
+    compose.ratio = ratio;
+    drawComposer();
+  } catch (e) { toast(errorText(e), 'close'); }
+  box?.classList.remove('busy');
+}
+
+async function publish(btn) {
+  const c = compose;
+  if (!c) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    if (c.kind === 'post') {
+      const p = await api.createPost(sess, { image: c.image, caption: c.text, ratio: c.ratio });
+      if (cache.feed?.posts) cache.feed.posts.items.unshift(p);
+      if (cache.grids[me.id]) cache.grids[me.id].items.unshift(p);
+      me.counts.posts = (me.counts.posts || 0) + 1;
+      toast('הפוסט פורסם', 'check');
+    } else {
+      const photo = c.mode === 'photo';
+      await api.createStory(sess, { image: photo ? c.image : undefined, text: c.text, bg: c.bg });
+      if (cache.feed) cache.feed.tray = await api.tray(sess).catch(() => cache.feed.tray);
+      toast('הסטורי עלה ל־24 שעות', 'sparkle');
+    }
+    haptic(25);
+    compose = null;
+    closeSheet();
+    const r = route().name;
+    if (r === 'home' || r === 'me') render();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'לנסות שוב';
+    toast(errorText(e), 'close');
+  }
+}
+
+// ---------- Stories people upload ----------
+
+let trayState = null;
+const STORY_MS = 5200;
+
+function openTray(gi, si = null) {
+  const groups = cache.feed?.tray || [];
+  if (!groups[gi]) return;
+  closeSheet(true);
+  closeStory();
+  const el = document.createElement('div');
+  el.className = 'story-view tray-view';
+  document.body.append(el);
+  document.body.classList.add('no-scroll');
+  requestAnimationFrame(() => el.classList.add('open'));
+  trayState = { el, groups, gi, si: 0, timer: 0, t0: 0, left: 0, paused: false };
+  const g = groups[gi];
+  showTray(gi, si ?? Math.max(0, g.mine ? 0 : g.stories.findIndex(s => !s.seen)));
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-tv]');
+    if (!b) return;
+    const s = trayState;
+    if (!s) return;
+    const k = b.dataset.tv;
+    if (k === 'close') return closeTray();
+    if (k === 'next') return showTray(s.gi, s.si + 1);
+    if (k === 'prev') return showTray(s.gi, s.si - 1);
+    if (k === 'viewers') return storyViewers();
+    if (k === 'delete') return deleteStoryNow();
+    if (k === 'author') { const id = s.groups[s.gi].author.id; closeTray(); return go(id === me.id ? 'me' : `u/${id}`); }
+  });
+  const hold = on => { const s = trayState; if (!s) return; on ? pauseTray() : resumeTray(); };
+  el.addEventListener('pointerdown', e => { if (e.target.closest('.sv-tap') && trayState) { trayState.downAt = Date.now(); hold(true); } });
+  el.addEventListener('pointerup', () => hold(false));
+  el.addEventListener('pointercancel', () => hold(false));
+}
+
+function showTray(gi, si) {
+  const s = trayState;
+  if (!s) return;
+  if (s.downAt && Date.now() - s.downAt > 350) { s.downAt = 0; return; }
+  s.downAt = 0;
+  let g = s.groups[gi];
+  if (si < 0) { if (gi > 0) { gi--; g = s.groups[gi]; si = g.stories.length - 1; } else si = 0; }
+  if (si >= g.stories.length) { gi++; si = 0; g = s.groups[gi]; }
+  if (!g) return closeTray();
+  s.gi = gi; s.si = si;
+  const st = g.stories[si];
+  const a = g.author;
+  clearTimeout(s.timer);
+  s.el.innerHTML = `
+    <div class="sv-bars">${g.stories.map((_, k) => `<span class="${k < si ? 'done' : ''}"><i></i></span>`).join('')}</div>
+    <div class="sv-top"><button class="sv-who" data-tv="author">${avatar(a, 's')}<b>${esc(g.mine ? 'הסטורי שלך' : a.name)}</b><small>${timeAgo(st.at)}</small></button><button class="icon-btn" data-tv="close" aria-label="סגירה">${icon('close')}</button></div>
+    <div class="sv-stage tv-stage ${st.image ? '' : st.bg}">
+      ${st.image ? `<img class="tv-img" src="${esc(st.image)}" alt="">` : ''}
+      ${st.text ? `<p class="tv-text ${st.image ? 'on-photo' : ''}">${esc(st.text).replace(/\n/g, '<br>')}</p>` : ''}
+    </div>
+    <button class="sv-tap prev" data-tv="prev" aria-label="הקודם"></button>
+    <button class="sv-tap next" data-tv="next" aria-label="הבא"></button>
+    ${g.mine ? `<div class="tv-foot"><button class="tv-views" data-tv="viewers">${icon('eye')}<span>${st.views || 0} צפיות</span></button><button class="icon-btn" data-tv="delete" aria-label="מחיקה">${icon('trash')}</button></div>` : ''}`;
+  const start = () => {
+    if (trayState !== s || s.gi !== gi || s.si !== si) return;
+    const bar = s.el.querySelector(`.sv-bars span:nth-child(${si + 1})`);
+    if (bar) { bar.className = 'run'; bar.firstElementChild.style.animationDuration = `${STORY_MS}ms`; }
+    s.left = STORY_MS;
+    s.t0 = Date.now();
+    if (!s.paused) s.timer = setTimeout(() => showTray(s.gi, s.si + 1), STORY_MS);
+  };
+  const img = s.el.querySelector('.tv-img');
+  if (img && !img.complete) { img.addEventListener('load', start, { once: true }); img.addEventListener('error', start, { once: true }); } else start();
+  if (!st.seen && !g.mine) {
+    st.seen = true;
+    g.seen = g.stories.every(x => x.seen);
+    api.seeStory(sess, st.id).catch(() => {});
+  }
+}
+
+function pauseTray() {
+  const s = trayState;
+  if (!s || s.paused) return;
+  s.paused = true;
+  clearTimeout(s.timer);
+  s.left -= Date.now() - s.t0;
+  s.el.classList.add('paused');
+}
+function resumeTray() {
+  const s = trayState;
+  if (!s || !s.paused) return;
+  s.paused = false;
+  s.t0 = Date.now();
+  s.el.classList.remove('paused');
+  s.timer = setTimeout(() => showTray(s.gi, s.si + 1), Math.max(200, s.left));
+}
+function closeTray() {
+  const s = trayState;
+  if (!s) return;
+  clearTimeout(s.timer);
+  trayState = null;
+  s.el.classList.remove('open');
+  document.body.classList.remove('no-scroll');
+  setTimeout(() => s.el.remove(), 300);
+  if (route().name === 'home') render();
+}
+
+async function storyViewers() {
+  const s = trayState;
+  const st = s.groups[s.gi].stories[s.si];
+  pauseTray();
+  const sheet = openSheet(`<h2 class="sheet-title">צפו בסטורי</h2><div class="list">${skeletonRows(2)}</div>`, { cls: 'tall over-story', onClose: () => resumeTray() });
+  try {
+    const list = await api.storyViewers(sess, st.id);
+    const box = sheet.querySelector('.list');
+    if (box) box.innerHTML = list.length ? list.map((p, i) => `<div class="row" style="--i:${i}" data-open="${p.id}">${avatar(p, 'm')}<div class="row-text"><b>${esc(p.name)}</b><small>${timeAgo(p.at)}</small></div></div>`).join('') : `<div class="empty-mini">${icon('eye')}<span>עוד אף אחד לא צפה</span></div>`;
+  } catch (e) { toast(errorText(e), 'close'); }
+}
+
+async function deleteStoryNow() {
+  const s = trayState;
+  const g = s.groups[s.gi];
+  const st = g.stories[s.si];
+  pauseTray();
+  const ok = await actionSheet('למחוק את הסטורי?', [{ id: 'yes', label: 'מחיקה', danger: true }]);
+  if (ok !== 'yes') return resumeTray();
+  try {
+    await api.deleteStory(sess, st.id);
+    g.stories.splice(s.si, 1);
+    if (!g.stories.length) { s.groups.splice(s.gi, 1); return closeTray(); }
+    s.paused = false;
+    s.el.classList.remove('paused');
+    showTray(s.gi, Math.min(s.si, g.stories.length - 1));
+    toast('הסטורי נמחק', 'trash');
+  } catch (e) { toast(errorText(e), 'close'); resumeTray(); }
+}
+
+// The row of round avatars: your story, people with new stories, then friends (their path).
+function trayHtml(f, loading) {
+  const tray = f.tray || [];
+  const mine = tray.find(g => g.mine);
+  const withStory = new Set(tray.map(g => g.author.id));
+  const others = tray.map((g, gi) => ({ g, gi })).filter(x => !x.g.mine);
+  const friends = (f.stories || []).filter(p => !withStory.has(p.id));
+  return `<section class="stories" aria-label="סטוריז">
+    <div class="story mine">
+      <button class="story-av" data-act="${mine ? 'my-story' : 'new-story'}">${avatar(me, 'l', { ring: true, cls: mine ? 'has-story' : 'no-story' })}</button>
+      <button class="story-plus" data-act="new-story" aria-label="סטורי חדש">${icon('plus')}</button>
+      <small>הסטורי שלך</small>
+    </div>
+    ${loading ? '<span class="story sk"></span>'.repeat(4) : ''}
+    ${others.map(({ g, gi }, i) => `<button class="story" data-tray="${gi}" style="--i:${i}">${avatar(g.author, 'l', { ring: true, cls: g.seen ? 'seen' : 'has-story' })}<small>${esc(g.author.name.split(' ')[0])}</small></button>`).join('')}
+    ${friends.map((p, i) => `<button class="story" data-story="${p.id}" style="--i:${others.length + i}">${avatar(p, 'l', { ring: true, cls: 'path-ring' })}<small>${esc(p.name.split(' ')[0])}</small></button>`).join('')}
+  </section>`;
 }
 
 // ---------- Moving to another phone ----------
@@ -1182,6 +1589,12 @@ document.addEventListener('click', async e => {
     if (act === 'scan') { haptic(); return openScan('scan'); }
     if (act === 'search') { ui.query = ''; go('people'); setTimeout(() => $('#q')?.focus(), 350); return; }
     if (act === 'story-me') return openStory(me.id);
+    if (act === 'create') { haptic(); return chooseCreate(); }
+    if (act === 'new-post') { haptic(); return openComposer('post'); }
+    if (act === 'new-story') { haptic(); return openComposer('story'); }
+    if (act === 'my-story') { haptic(); return openTray(cache.feed.tray.findIndex(g => g.mine)); }
+    if (act === 'publish') return publish(t.closest('[data-act]'));
+    if (act === 'more-posts') return loadMorePosts(t.closest('[data-act]'));
     if (act === 'share') return shareCode();
     if (act === 'copy') return copyText(codeUrl());
     if (act === 'save') return saveEdit();
@@ -1239,6 +1652,22 @@ document.addEventListener('click', async e => {
     try { await api.removeFollower(sess, rm.dataset.removeFollower); cache.lists = {}; me = await api.me(sess); render(); } catch (er) { toast(errorText(er), 'close'); }
     return;
   }
+  const like = t.closest('[data-like]');
+  if (like) return toggleLike(like.dataset.like);
+  const dbl = t.closest('[data-dbl]');
+  if (dbl) return onPostTap(dbl);
+  const pm = t.closest('[data-post-menu]');
+  if (pm) return postMenu(pm.dataset.postMenu);
+  const thumb = t.closest('[data-thumb]');
+  if (thumb) { haptic(); return openPost(thumb.dataset.thumb); }
+  const tray = t.closest('[data-tray]');
+  if (tray) { haptic(); return openTray(+tray.dataset.tray); }
+  const cmode = t.closest('[data-cmode]');
+  if (cmode && compose) { compose.mode = cmode.dataset.cmode; haptic(); return drawComposer(); }
+  const bg = t.closest('[data-bg]');
+  if (bg && compose) { compose.bg = bg.dataset.bg; haptic(); return drawComposer(); }
+  const pt = t.closest('[data-ptab-prof]');
+  if (pt) { profTab[pt.dataset.of] = pt.dataset.ptabProf; haptic(); return renderProfile(pt.dataset.of); }
   const story = t.closest('[data-story]');
   if (story) { haptic(); return openStory(story.dataset.story); }
   const list = t.closest('[data-list]');
@@ -1279,6 +1708,12 @@ function onChip(chip) {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') return onSearch(t.value);
+  if (t.dataset.compose && compose) {
+    compose.text = t.value;
+    const pub = document.querySelector('[data-act="publish"]');
+    if (pub) pub.disabled = compose.kind === 'post' ? !compose.image : compose.mode === 'photo' ? !compose.image : !t.value.trim();
+    return;
+  }
   const m = formModel();
   if (!m) return;
   if (t.dataset.f) {
@@ -1307,6 +1742,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', async e => {
   const t = e.target;
   const m = formModel();
+  if (t.dataset.media !== undefined) return onMediaPicked(t);
   if (t.dataset.photo !== undefined && t.files?.[0]) {
     try { draftPhoto = await readPhoto(t.files[0]); rerenderSection('basics'); } catch (er) { toast(errorText(er), 'close'); }
     return;
@@ -1319,7 +1755,7 @@ document.addEventListener('change', async e => {
   }
 });
 
-window.addEventListener('hashchange', () => { closeStory(); render(); });
+window.addEventListener('hashchange', () => { closeStory(); if (trayState) { const s = trayState; trayState = null; clearTimeout(s.timer); s.el.remove(); document.body.classList.remove('no-scroll'); } render(); });
 
 api.onChange(async () => {
   try { me = await api.me(sess); } catch {}

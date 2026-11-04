@@ -64,7 +64,7 @@ for (const [kind, make] of Object.entries(stores)) {
     const sug = net.feed(ua()).suggestions;
     assert.equal(sug[0].id, b.id);
 
-    assert.deepEqual(net.counts(a.id), { friends: 1, followers: 1, following: 1 });
+    assert.deepEqual(net.counts(a.id), { friends: 1, followers: 1, following: 1, posts: 0 });
     assert.equal(net.list(ua(), a.id, 'friends')[0].id, c.id);
     assert.throws(() => net.list(ub(), a.id, 'friends'), /private/);
 
@@ -151,4 +151,94 @@ test('air defense: battalion, battery and פלגה inside the air force', () => 
   assert.equal(commonGround(a, b)[0].title, 'אותה פלגה!');
   const c = cleanProfile(person('ג', { city: 'חיפה', unit: { corps: 'air', path: ['רמת דוד'] } }));
   assert.equal(commonGround(a, c).find(x => x.k === 'corps').title, 'שניכם בחיל האוויר');
+});
+
+const IMG = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+
+for (const [kind, make] of Object.entries(stores)) {
+  test(`${kind}: posts, likes and stories follow who can see the full path`, () => {
+    let t = 10_000_000;
+    const net = new Network(make(), { random: randomString, now: () => t });
+    const reg = name => { const r = net.register({ profile: person(name) }); return () => net.auth(r.id, r.token); };
+    const a = reg('אורי'), b = reg('בר'), c = reg('גל');
+
+    const p = net.createPost(a(), { image: IMG, caption: 'שורה\nשנייה', ratio: 0.5 });
+    assert.equal(p.ratio, 0.8, 'ratio is clamped to 4:5');
+    assert.equal(p.caption, 'שורה\nשנייה');
+    assert.throws(() => net.createPost(a(), { image: 'data:text/html;base64,AA==' }), /image/);
+
+    // b follows a but they never met: a's posts stay hidden.
+    net.follow(b(), a().id);
+    assert.equal(net.posts(b()).items.length, 0);
+    assert.throws(() => net.userPosts(b(), a().id), /private/);
+    // a follows back: b sees the post in the feed and on the profile.
+    net.follow(a(), b().id);
+    t += 1000;
+    assert.equal(net.posts(b()).items[0].id, p.id);
+    assert.equal(net.userPosts(b(), a().id).items.length, 1);
+    assert.equal(net.counts(a().id).posts, 1);
+
+    // Likes, with an event for the author.
+    assert.deepEqual(net.like(b(), p.id, true), { liked: true, likes: 1 });
+    assert.deepEqual(net.like(b(), p.id, true), { liked: true, likes: 1 });
+    assert.equal(net.feed(a()).events[0].kind, 'like');
+    assert.throws(() => net.like(c(), p.id, true), /private/);
+    assert.deepEqual(net.like(b(), p.id, false), { liked: false, likes: 0 });
+
+    // Stories: own first, unseen before seen, views for the author, gone after 24 hours.
+    const s1 = net.createStory(a(), { image: IMG });
+    const s2 = net.createStory(a(), { text: 'שלום', bg: 'b3' });
+    assert.throws(() => net.createStory(a(), {}), /empty/);
+    const tray = net.tray(b());
+    assert.equal(tray.length, 1);
+    assert.deepEqual(tray[0].stories.map(x => x.id), [s1.id, s2.id]);
+    assert.equal(tray[0].seen, false);
+    net.seeStory(b(), s1.id);
+    net.seeStory(b(), s2.id);
+    assert.equal(net.tray(b())[0].seen, true);
+    assert.equal(net.tray(a())[0].mine, true);
+    assert.equal(net.tray(a())[0].stories[0].views, 1);
+    assert.equal(net.storyViewers(a(), s1.id)[0].id, b().id);
+    assert.throws(() => net.storyViewers(b(), s1.id), /not_found/);
+    assert.equal(net.tray(c()).length, 0, 'not following, not met');
+    t += 86400e3 + 1;
+    assert.equal(net.tray(b()).length, 0);
+    net.createStory(b(), { text: 'חדש' });
+    assert.equal(net.s.story(s1.id), null, 'expired stories are cleared');
+
+    // Deleting a post, then the account, removes the rest.
+    assert.throws(() => net.deletePost(b(), p.id), /not_found/);
+    net.deletePost(a(), p.id);
+    assert.equal(net.posts(b()).items.length, 0);
+    net.createPost(a(), { image: IMG });
+    net.remove(a());
+    assert.equal(net.posts(b()).items.length, 0);
+  });
+}
+
+test('http routes for posts and stories', async () => {
+  const net = new Network(new SqlStore(fakeSql()), { random: randomString, mediaUrl: id => (id ? `/m/${id}` : null) });
+  const call = async (method, path, body, s) => {
+    const req = new Request(`https://x.dev${path}`, { method, headers: s ? { Authorization: `Bearer ${s.id}.${s.token}` } : {}, body: body ? JSON.stringify(body) : undefined });
+    try {
+      const res = await handle(req, net, () => true);
+      return { status: res.status, data: res.headers.get('Content-Type')?.includes('json') ? await res.json() : await res.arrayBuffer() };
+    } catch (e) { return { status: e.status, data: { error: e.code } }; }
+  };
+  const a = (await call('POST', '/register', { profile: person('אורי') })).data;
+  const post = (await call('POST', '/posts', { image: IMG, caption: 'היי', ratio: 1 }, a)).data;
+  assert.equal(post.image, `/m/${post.image.slice(3)}`);
+  const img = await call('GET', post.image);
+  assert.equal(img.status, 200);
+  assert.equal(new Uint8Array(img.data)[0], 0xff);
+  assert.equal((await call('GET', '/posts', null, a)).data.items[0].id, post.id);
+  assert.equal((await call('GET', `/u/${a.id}/posts`, null, a)).data.items.length, 1);
+  assert.equal((await call('POST', `/posts/${post.id}/like`, null, a)).data.likes, 1);
+  assert.equal((await call('DELETE', `/posts/${post.id}/like`, null, a)).data.likes, 0);
+  const st = (await call('POST', '/stories', { text: 'בוקר טוב' }, a)).data;
+  assert.equal((await call('GET', '/stories', null, a)).data[0].stories[0].id, st.id);
+  assert.equal((await call('GET', `/stories/${st.id}/viewers`, null, a)).data.length, 0);
+  assert.equal((await call('DELETE', `/stories/${st.id}`, null, a)).data.ok, true);
+  assert.equal((await call('DELETE', `/posts/${post.id}`, null, a)).data.ok, true);
+  assert.equal((await call('GET', '/feed', null, a)).data.posts.items.length, 0);
 });

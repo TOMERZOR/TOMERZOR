@@ -14,8 +14,11 @@ npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localh
 - **Home:** friends as round "stories", a "met someone new?" card, people you may know (friends of friends, same unit, mechina, tironut or city, with the reason), your own card, recent activity.
 - **Code (center button):** your QR code and a share link, or the camera scanner. Scanning opens a "nice to meet you" screen: how many people you both know, who they are, what you share ("same battery!", "same mechina", "same draft") and one tap to connect.
 - **Profiles:** friends / followers / following counts, follow, mutual connections, "what you have in common", and the path as a timeline. The **story** button plays the path as full-screen slides (Instagram-style: tap for next, hold to pause).
+- **Posts:** a photo (cropped between 4:5 and 1.91:1, compressed on the phone) with a caption. A feed of posts from people you follow on the home screen, double-tap or the heart to like, and a grid on every profile (next to the path tab). Your own posts can be deleted.
+- **Stories:** a photo (9:16) or a line of text on a background, gone after 24 hours. They show as rings at the top of the home screen (gold until seen; friends without a story keep a quiet ring that plays their path). Tap for the next one, hold to pause. On your own stories you see who viewed them and can delete them.
+- Posts and stories are seen by the same people who see the full path: people you follow and people who met you (or everyone, with the public setting).
 - **Friends and followers:** following is one-way. When both follow each other, they're friends. You can remove a follower.
-- **Activity:** who scanned your code, who followed you, who followed back, and when a friend starts a new role.
+- **Activity:** who scanned your code, who followed you, who followed back, who liked a post, and when a friend starts a new role.
 - **Settings:** light/dark/auto, who sees the full path, a new code (the old one stops opening the full path), moving to another phone (a personal login QR), delete the account.
 
 ### Privacy
@@ -25,13 +28,14 @@ npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localh
 
 ## Server (`server/`)
 
-A Cloudflare Worker with one Durable Object (SQLite) holding profiles, follows and activity, so mutual connections are a quick lookup. The rules (who sees what, what counts as mutual, what two people have in common, suggestions) are in `js/core.js`, shared between the server and the app's demo mode.
+A Cloudflare Worker with one Durable Object (SQLite) holding profiles, follows, activity, posts, likes, stories and their images, so mutual connections are a quick lookup. The rules (who sees what, what counts as mutual, what two people have in common, suggestions) are in `js/core.js`, shared between the server and the app's demo mode.
 
 - Login: on sign-up the server returns an id and a random secret token, kept on the phone. Sign-ups are limited to 10 an hour per address.
 - Deploy: `.github/workflows/hekerut-api.yml` runs on pushes to `hekerut/server/` or `hekerut/js/core.js` on the main branch (needs the `CLOUDFLARE_API_TOKEN` secret, already used by Remind. and Shomer), then writes the address into `js/config.js`.
-- Tests: `cd hekerut/server && npm test` (both stores, visibility, follows, friends, mutuals, common ground, suggestions, routes).
+- Images arrive as JPEG data URLs of at most 400 KB, are served from `/m/<id>`, and are deleted with their post or story. Expired stories are cleared whenever someone posts a new one. Limits: 20 posts an hour, 30 stories a day.
+- Tests: `cd hekerut/server && npm test` (both stores, visibility, follows, friends, mutuals, common ground, suggestions, posts, likes, stories, routes).
 
-**Demo mode:** while `js/config.js` has no server address, the whole network runs in the browser with ten made-up people, and they follow back after a moment. The scanner has a "try with a sample profile" button. In demo mode a code only works on the phone that made it.
+**Demo mode:** while `js/config.js` has no server address, the whole network runs in the browser with ten made-up people (two of them with a text story), and they follow back after a moment. The scanner has a "try with a sample profile" button. In demo mode a code only works on the phone that made it.
 
 Bump `VERSION` in `sw.js` whenever a file changes, and `APP_VERSION` in `js/app.js` (shown in settings).
 

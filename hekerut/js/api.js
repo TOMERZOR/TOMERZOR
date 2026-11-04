@@ -48,6 +48,17 @@ class RemoteApi {
   follow(s, id, key) { return this.call('POST', `/u/${encodeURIComponent(id)}/follow`, s, { key }); }
   unfollow(s, id) { return this.call('DELETE', `/u/${encodeURIComponent(id)}/follow`, s); }
   removeFollower(s, id) { return this.call('DELETE', `/u/${encodeURIComponent(id)}/follower`, s); }
+  createPost(s, body) { return this.call('POST', '/posts', s, body); }
+  deletePost(s, id) { return this.call('DELETE', `/posts/${encodeURIComponent(id)}`, s); }
+  like(s, id, on) { return this.call(on ? 'POST' : 'DELETE', `/posts/${encodeURIComponent(id)}/like`, s); }
+  posts(s, before) { return this.call('GET', `/posts${before ? `?before=${before}` : ''}`, s); }
+  userPosts(s, id, before) { return this.call('GET', `/u/${encodeURIComponent(id)}/posts${before ? `?before=${before}` : ''}`, s); }
+  post(s, id) { return this.call('GET', `/posts/${encodeURIComponent(id)}`, s); }
+  createStory(s, body) { return this.call('POST', '/stories', s, body); }
+  tray(s) { return this.call('GET', '/stories', s); }
+  seeStory(s, id) { return this.call('POST', `/stories/${encodeURIComponent(id)}/seen`, s); }
+  storyViewers(s, id) { return this.call('GET', `/stories/${encodeURIComponent(id)}/viewers`, s); }
+  deleteStory(s, id) { return this.call('DELETE', `/stories/${encodeURIComponent(id)}`, s); }
   onChange() {}
   reset() {}
 }

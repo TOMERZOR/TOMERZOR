@@ -18,10 +18,18 @@
 //   GET    /search?q= *
 //   GET    /feed *               activity, people you may know, friends' stories
 //   GET    /p/<id>               profile photo
+//   GET    /posts[?before=] *    posts by people you follow, and yours
+//   POST   /posts *              { image (data URL), caption, ratio }
+//   GET    /posts/<id> *  · DELETE /posts/<id> *  · POST|DELETE /posts/<id>/like *
+//   GET    /u/<id>/posts[?before=] *
+//   GET    /stories *            the story tray (24 hours)
+//   POST   /stories *            { image? , text?, bg }
+//   DELETE /stories/<id> *  · POST /stories/<id>/seen *  · GET /stories/<id>/viewers *
+//   GET    /m/<id>               a post or story image
 
 import { Network, ApiError, indexFields } from '../js/core.js';
 
-const MAX_BODY = 160 * 1024;
+const MAX_BODY = 600 * 1024;
 const REGISTER_PER_HOUR = 10;
 
 const CORS = {
@@ -41,6 +49,8 @@ export default {
     return stub.fetch(req);
   },
 };
+
+const finite = n => (Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER);
 
 export function randomString(n) {
   const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -69,6 +79,18 @@ export class SqlStore {
       CREATE INDEX IF NOT EXISTS follows_b ON follows(b);
       CREATE TABLE IF NOT EXISTS events (n INTEGER PRIMARY KEY AUTOINCREMENT, uid TEXT, kind TEXT, actor TEXT, data TEXT, at INTEGER, read INTEGER DEFAULT 0);
       CREATE INDEX IF NOT EXISTS events_uid ON events(uid, n);
+      CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, owner TEXT, data TEXT);
+      CREATE INDEX IF NOT EXISTS media_owner ON media(owner);
+      CREATE TABLE IF NOT EXISTS posts (id TEXT PRIMARY KEY, uid TEXT, media TEXT, ratio REAL, caption TEXT, at INTEGER);
+      CREATE INDEX IF NOT EXISTS posts_uid ON posts(uid, at);
+      CREATE INDEX IF NOT EXISTS posts_at ON posts(at);
+      CREATE TABLE IF NOT EXISTS likes (post TEXT, uid TEXT, at INTEGER, PRIMARY KEY (post, uid));
+      CREATE INDEX IF NOT EXISTS likes_uid ON likes(uid);
+      CREATE TABLE IF NOT EXISTS stories (id TEXT PRIMARY KEY, uid TEXT, media TEXT, text TEXT, bg TEXT, at INTEGER);
+      CREATE INDEX IF NOT EXISTS stories_uid ON stories(uid, at);
+      CREATE INDEX IF NOT EXISTS stories_at ON stories(at);
+      CREATE TABLE IF NOT EXISTS views (story TEXT, uid TEXT, at INTEGER, PRIMARY KEY (story, uid));
+      CREATE INDEX IF NOT EXISTS views_uid ON views(uid);
     `);
   }
   rows(q, ...args) { return this.sql.exec(q, ...args).toArray(); }
@@ -86,7 +108,49 @@ export class SqlStore {
     this.sql.exec('DELETE FROM photos WHERE id = ?', id);
     this.sql.exec('DELETE FROM follows WHERE a = ? OR b = ?', id, id);
     this.sql.exec('DELETE FROM events WHERE uid = ? OR actor = ?', id, id);
+    this.sql.exec('DELETE FROM likes WHERE uid = ? OR post IN (SELECT id FROM posts WHERE uid = ?)', id, id);
+    this.sql.exec('DELETE FROM views WHERE uid = ? OR story IN (SELECT id FROM stories WHERE uid = ?)', id, id);
+    this.sql.exec('DELETE FROM posts WHERE uid = ?', id);
+    this.sql.exec('DELETE FROM stories WHERE uid = ?', id);
+    this.sql.exec('DELETE FROM media WHERE owner = ?', id);
   }
+  putMedia(id, owner, data) { this.sql.exec('INSERT OR REPLACE INTO media VALUES (?, ?, ?)', id, owner, data); }
+  media(id) { return this.rows('SELECT data FROM media WHERE id = ?', id)[0]?.data || null; }
+  deleteMedia(id) { this.sql.exec('DELETE FROM media WHERE id = ?', id); }
+  putPost(p) { this.sql.exec('INSERT OR REPLACE INTO posts VALUES (?, ?, ?, ?, ?, ?)', p.id, p.uid, p.media, p.ratio, p.caption, p.at); }
+  post(id) { return this.rows('SELECT * FROM posts WHERE id = ?', id)[0] || null; }
+  deletePost(id) {
+    this.sql.exec('DELETE FROM posts WHERE id = ?', id);
+    this.sql.exec('DELETE FROM likes WHERE post = ?', id);
+  }
+  postsBy(uid, limit, before) { return this.rows('SELECT * FROM posts WHERE uid = ? AND at < ? ORDER BY at DESC LIMIT ?', uid, finite(before), limit); }
+  postCount(uid) { return this.rows('SELECT COUNT(*) AS c FROM posts WHERE uid = ?', uid)[0].c; }
+  feedPosts(viewer, limit, before) {
+    return this.rows('SELECT * FROM posts WHERE (uid = ? OR uid IN (SELECT b FROM follows WHERE a = ?)) AND at < ? ORDER BY at DESC LIMIT ?', viewer, viewer, finite(before), limit);
+  }
+  putLike(post, uid, at) { this.sql.exec('INSERT OR IGNORE INTO likes VALUES (?, ?, ?)', post, uid, at); }
+  deleteLike(post, uid) { this.sql.exec('DELETE FROM likes WHERE post = ? AND uid = ?', post, uid); }
+  liked(post, uid) { return this.rows('SELECT 1 AS x FROM likes WHERE post = ? AND uid = ?', post, uid).length > 0; }
+  likeCount(post) { return this.rows('SELECT COUNT(*) AS c FROM likes WHERE post = ?', post)[0].c; }
+  putStory(st) { this.sql.exec('INSERT OR REPLACE INTO stories VALUES (?, ?, ?, ?, ?, ?)', st.id, st.uid, st.media, st.text, st.bg, st.at); }
+  story(id) { return this.rows('SELECT * FROM stories WHERE id = ?', id)[0] || null; }
+  deleteStory(id) {
+    this.sql.exec('DELETE FROM stories WHERE id = ?', id);
+    this.sql.exec('DELETE FROM views WHERE story = ?', id);
+  }
+  storiesBy(uid, since) { return this.rows('SELECT * FROM stories WHERE uid = ? AND at > ?', uid, since); }
+  storyFeed(viewer, since) {
+    return this.rows('SELECT * FROM stories WHERE (uid = ? OR uid IN (SELECT b FROM follows WHERE a = ?)) AND at > ? ORDER BY at ASC LIMIT 600', viewer, viewer, since);
+  }
+  purgeStories(before, limit) {
+    const old = this.rows('SELECT id, media FROM stories WHERE at <= ? LIMIT ?', before, limit);
+    for (const r of old) this.deleteStory(r.id);
+    return old.map(r => r.media);
+  }
+  putView(story, uid, at) { this.sql.exec('INSERT OR IGNORE INTO views VALUES (?, ?, ?)', story, uid, at); }
+  seen(story, uid) { return this.rows('SELECT 1 AS x FROM views WHERE story = ? AND uid = ?', story, uid).length > 0; }
+  viewCount(story) { return this.rows('SELECT COUNT(*) AS c FROM views WHERE story = ?', story)[0].c; }
+  views(story) { return this.rows('SELECT uid, at FROM views WHERE story = ? ORDER BY at DESC LIMIT 500', story); }
   photo(id) { return this.rows('SELECT data FROM photos WHERE id = ?', id)[0]?.data || null; }
   putPhoto(id, data) {
     if (data) this.sql.exec('INSERT OR REPLACE INTO photos VALUES (?, ?)', id, data);
@@ -127,8 +191,8 @@ export async function handle(req, net, limiter) {
   const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
   const m = req.method;
 
-  if (m === 'GET' && parts[0] === 'p' && parts.length === 2) {
-    const data = net.s.photo(parts[1]);
+  if (m === 'GET' && (parts[0] === 'p' || parts[0] === 'm') && parts.length === 2) {
+    const data = parts[0] === 'p' ? net.s.photo(parts[1]) : net.s.media(parts[1]);
     if (!data) return new Response('not found', { status: 404, headers: CORS });
     const [head, b64] = data.split(',');
     const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
@@ -165,6 +229,22 @@ export async function handle(req, net, limiter) {
     if (parts[2] === 'follow' && m === 'DELETE') return json(net.unfollow(me(), id));
     if (parts[2] === 'follower' && m === 'DELETE') return json(net.removeFollower(me(), id));
   }
+  if (parts[0] === 'posts') {
+    const before = Number(url.searchParams.get('before')) || Infinity;
+    if (parts.length === 1 && m === 'GET') return json(net.posts(me(), before));
+    if (parts.length === 1 && m === 'POST') return json(net.createPost(me(), body));
+    if (parts.length === 2 && m === 'GET') return json(net.post(me(), parts[1]));
+    if (parts.length === 2 && m === 'DELETE') return json(net.deletePost(me(), parts[1]));
+    if (parts[2] === 'like' && (m === 'POST' || m === 'DELETE')) return json(net.like(me(), parts[1], m === 'POST'));
+  }
+  if (parts[0] === 'stories') {
+    if (parts.length === 1 && m === 'GET') return json(net.tray(me()));
+    if (parts.length === 1 && m === 'POST') return json(net.createStory(me(), body));
+    if (parts.length === 2 && m === 'DELETE') return json(net.deleteStory(me(), parts[1]));
+    if (parts[2] === 'seen' && m === 'POST') return json(net.seeStory(me(), parts[1]));
+    if (parts[2] === 'viewers' && m === 'GET') return json(net.storyViewers(me(), parts[1]));
+  }
+  if (parts[0] === 'u' && parts[1] && parts[2] === 'posts' && m === 'GET') return json(net.userPosts(me(), parts[1], Number(url.searchParams.get('before')) || Infinity));
   if (parts[0] === 'search' && m === 'GET') return json(net.search(me(), url.searchParams.get('q') || ''));
   if (parts[0] === 'feed' && m === 'GET') return json(net.feed(me()));
   throw new ApiError(404, 'route');
@@ -191,6 +271,7 @@ export class NetworkDO {
     this.net = new Network(this.store, {
       random: randomString,
       photoUrl: (id, ver) => (ver ? `${this.origin}/p/${id}?v=${ver}` : null),
+      mediaUrl: id => (id ? `${this.origin}/m/${id}` : null),
     });
   }
   async fetch(req) {

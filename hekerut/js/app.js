@@ -8,7 +8,7 @@ import { openCreator, closeCreator, creatorOpen } from './create.js';
 import * as Push from './push.js';
 import { CORPS, BERETS, beretOf, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');

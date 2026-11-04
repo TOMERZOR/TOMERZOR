@@ -6,9 +6,9 @@ import { config } from './config.js';
 import { qrSvg, startScanner } from './qr.js';
 import { openCreator, closeCreator, creatorOpen } from './create.js';
 import * as Push from './push.js';
-import { CORPS, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
+import { CORPS, BERETS, beretOf, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -42,12 +42,18 @@ const GRADS = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'];
 const hash = s => [...String(s)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
 const initials = name => String(name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('');
 
-function avatar(p, size = 'm', { ring = false, cls = '' } = {}) {
+// The beret color travels with the avatar: the ring around it, or a small dot in the corner.
+function avatar(p, size = 'm', { ring = false, cls = '', dot = true } = {}) {
   const inner = p?.photo
     ? `<img src="${esc(p.photo)}" alt="" loading="lazy" decoding="async">`
     : `<span class="av-ini ${GRADS[hash(p?.id || p?.name) % GRADS.length]}">${esc(initials(p?.name))}</span>`;
-  return `<span class="av av-${size} ${ring ? 'ring' : ''} ${cls}">${inner}</span>`;
+  const b = BERETS[p?.beret];
+  const style = b ? `style="--bc:${b.color}"` : '';
+  const badge = b && dot && !ring && (size === 'm' || size === 'l') ? `<i class="bdot ${b.camo ? 'camo' : ''}"></i>` : '';
+  return `<span class="av av-${size} ${ring ? 'ring' : ''} ${b && ring ? `beret-ring ${b.camo ? 'camo' : ''}` : ''} ${cls}" ${style}>${inner}${badge}</span>`;
 }
+
+const beretPill = key => { const b = BERETS[key]; return b ? `<span class="beret-pill ${b.camo ? 'camo' : ''}" style="--bc:${b.color}"><i></i>כומתה ${b.name}</span>` : ''; };
 
 const ageLine = p => [p.age ? `${gen(p, 'בן', 'בת', 'בן/בת')} ${p.age}` : '', p.city ? `מ${p.city}` : ''].filter(Boolean).join(' · ');
 const headline = p => [p.role, p.top ? (CORPS[p.corps]?.parent ? `${CORPS[p.corps].name} · ${p.top}` : p.top) : CORPS[p.corps]?.name].filter(Boolean).join(' · ');
@@ -370,6 +376,7 @@ function sectionHtml(id, p) {
       ${field('חיל / זרוע', `<div class="corps">${Object.entries(CORPS).filter(([, v]) => !v.parent).map(([k, v]) => `<button type="button" class="corps-chip ${k === corpsFamily(p.unit.corps) ? 'on' : ''}" data-corps="${k}">${v.name}</button>`).join('')}</div>`)}
       ${corpsFamily(p.unit.corps) === 'air' ? `<div class="sub-corps">${field('איפה בחיל האוויר?', `<div class="chips">${[['air', 'בסיס / טייסת'], ['airdef', 'הגנ״א']].map(([k, l]) => `<button type="button" class="chip ${k === p.unit.corps ? 'on' : ''}" data-corps="${k}">${l}</button>`).join('')}</div>`)}</div>` : ''}
       ${c ? `<div class="levels"><div class="levels-head">${icon('shield')}<span>היחידה שלך ב${c.name}</span></div>${levels}</div>` : ''}
+      ${c ? beretPicker(p) : ''}
       <p class="note">${icon('lock')}<span>רק מה שמותר לספר. בלי שמות של יחידות מסווגות, מספר אישי או מיקומים.</span></p>`;
   }
   if (id === 'path') {
@@ -491,6 +498,7 @@ async function renderHome(seq) {
     cache.feed = feed;
     if (me.unread) me.unread = 0;
     draw(feed);
+    checkMilestone();
   } catch (e) { if (!cache.feed) toast(errorText(e), 'close'); }
 }
 
@@ -681,17 +689,18 @@ function eventText(e) {
   if (e.kind === 'scan') return `${n} ${gen(a, 'סרק', 'סרקה')} את הקוד שלך ${gen(a, 'ועוקב', 'ועוקבת')} ${you}`;
   if (e.kind === 'friend') return `${n} ${gen(a, 'עקב', 'עקבה')} ${you} בחזרה. אתם חברים עכשיו`;
   if (e.kind === 'like') return `${n} ${gen(a, 'אהב', 'אהבה')} את הפוסט שלך`;
+  if (e.kind === 'chapcha') return `${n} ${gen(a, 'שלח', 'שלחה')} לך צ׳פחה 🤜`;
   if (e.kind === 'story_like') return `${n} ${gen(a, 'אהב', 'אהבה')} את הסטורי שלך`;
   if (e.kind === 'role') return `${n} ${gen(a, 'התחיל', 'התחילה')} תפקיד חדש: <b>${esc(e.data?.t)}</b>`;
   return `${n} ${gen(a, 'התחיל', 'התחילה')} לעקוב ${you}`;
 }
-const EVENT_ICON = { scan: 'qr', friend: 'heart', role: 'badge', follow: 'user', like: 'heart', story_like: 'heart' };
+const EVENT_ICON = { scan: 'qr', friend: 'heart', role: 'badge', follow: 'user', like: 'heart', story_like: 'heart', chapcha: 'sparkle' };
 
 function eventRow(e, i = 0) {
   return `<div class="row ev ${e.read ? '' : 'unread'}" style="--i:${i}" data-open="${e.actor.id}" data-name="${esc(e.actor.name)}">
     <span class="ev-av">${avatar(e.actor, 'm')}<span class="ev-ic k-${e.kind}">${icon(EVENT_ICON[e.kind] || 'user')}</span></span>
     <div class="row-text"><span>${eventText(e)}</span><small>${timeAgo(e.at)}</small></div>
-    ${!['role', 'like', 'story_like'].includes(e.kind) && !e.actor.rel?.following ? followBtn(e.actor, 'sm') : ''}
+    ${e.kind === 'chapcha' ? `<button class="btn soft sm" data-chapcha="${e.actor.id}">🤜 בחזרה</button>` : !['role', 'like', 'story_like'].includes(e.kind) && !e.actor.rel?.following ? followBtn(e.actor, 'sm') : ''}
   </div>`;
 }
 
@@ -755,7 +764,7 @@ function profileHtml(v, mine) {
   const tab = profTab[p.id] || (v.counts.posts ? 'posts' : 'path');
   return `
     ${topbar(mine ? esc(p.name) : '', { back: !mine, actions: mine ? `<button class="icon-btn" data-go="settings" aria-label="הגדרות">${icon('gear')}</button>` : `<button class="icon-btn" data-story="${p.id}" aria-label="המסלול כסטורי">${icon('play')}</button>` })}
-    <section class="prof" data-name="${esc(p.name)}">
+    <section class="prof" data-name="${esc(p.name)}" ${BERETS[p.beret] ? `style="--bc:${BERETS[p.beret].color}"` : ''}>
       <div class="prof-head">
         <button class="prof-av" data-story="${p.id}" aria-label="המסלול כסטורי">${avatar(p, 'xl', { ring: true })}</button>
         <div class="stats">
@@ -763,12 +772,12 @@ function profileHtml(v, mine) {
         </div>
       </div>
       <h2 class="prof-name">${esc(p.name)}</h2>
-      <div class="prof-meta">${esc(ageLine(p))}${p.status ? `<span class="status-pill">${esc(statusLabel(prof || p))}</span>` : ''}</div>
+      <div class="prof-meta">${esc(ageLine(p))}${p.status ? `<span class="status-pill">${esc(statusLabel(prof || p))}</span>` : ''}${beretPill(p.beret)}</div>
       ${prof?.bio ? `<p class="bio">${esc(prof.bio)}</p>` : ''}
       ${prof ? serviceMeter(prof) : ''}
       <div class="prof-btns">
         ${mine ? `<button class="btn soft" data-go="edit">${icon('edit')}<span>עריכה</span></button><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button>`
-          : `${followBtn(p.rel ? p : { ...p, rel: v.rel }, 'big')}<button class="btn soft big" data-go="chat/${p.id}">${icon('send')}<span>הודעה</span></button><button class="btn soft big sq" data-story="${p.id}" aria-label="המסלול כסטורי">${icon('play')}</button>`}
+          : `${followBtn(p.rel ? p : { ...p, rel: v.rel }, 'big')}<button class="btn soft big" data-go="chat/${p.id}">${icon('send')}<span>הודעה</span></button><button class="btn soft big sq chapcha" data-chapcha="${p.id}" aria-label="צ׳פחה">🤜</button>`}
       </div>
       ${!mine && v.mutualCount ? mutualHtml(v) : ''}
       ${!mine && v.common.length ? `
@@ -1119,7 +1128,8 @@ function storySlides(v) {
   const corps = CORPS[pr?.unit.corps || p.corps];
   if (corps) {
     const chain = pr ? unitChain(pr) : p.top ? [{ label: corps.levels[0], text: p.top }] : [];
-    slides.push({ bg: 's4', html: `<span class="s-ic">${icon('shield')}</span><small class="eyebrow">היחידה</small><h2>${esc(corps.name)}</h2>${corps.parent ? `<p>${esc(CORPS[corps.parent].name)}</p>` : ''}<div class="s-chain">${chain.map((c, i) => `<span style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` });
+    const bk = BERETS[pr ? beretOf(pr) : p.beret];
+    slides.push({ bg: 's4', style: bk ? `--bc:${bk.color}` : '', html: `<span class="s-ic beret-ic ${bk?.camo ? 'camo' : ''}" ${bk ? `style="--bc:${bk.color}"` : ''}>${icon('shield')}</span><small class="eyebrow">היחידה${bk ? ` · כומתה ${bk.name}` : ''}</small><h2>${esc(corps.name)}</h2>${corps.parent ? `<p>${esc(CORPS[corps.parent].name)}</p>` : ''}<div class="s-chain">${chain.map((c, i) => `<span style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` });
   }
   const roles = pr ? pr.roles : p.role ? [{ t: p.role }] : [];
   if (roles.length) slides.push({ bg: 's5', html: `<span class="s-ic">${icon('badge')}</span><small class="eyebrow">התפקידים</small><ol class="s-roles">${roles.map((r, i) => `<li style="--i:${i}" class="${r.to ? '' : 'now'}"><b>${esc(r.t)}</b><small>${r.from ? `${r.from}–${r.to || 'היום'}` : ''}</small></li>`).join('')}</ol>` });
@@ -1178,7 +1188,8 @@ function showSlide(i) {
   s.i = i;
   const slide = s.slides[i];
   const stage = s.el.querySelector('.sv-stage');
-  stage.className = `sv-stage ${slide.bg}`;
+  stage.className = `sv-stage ${slide.bg} ${slide.style ? 'tinted' : ''}`;
+  stage.style.cssText = slide.style || '';
   stage.innerHTML = `<div class="slide">${slide.html}</div>`;
   s.el.classList.toggle('at-end', !!slide.end);
   s.el.querySelectorAll('.sv-bars span').forEach((b, k) => {
@@ -1578,6 +1589,83 @@ function trayHtml(f, loading) {
   </section>`;
 }
 
+// ---------- Beret ----------
+
+function beretPicker(p) {
+  const auto = beretOf({ ...p, beret: '' });
+  const cur = p.beret || '';
+  return `<div class="field"><span class="f-label">צבע הכומתה</span>
+    <div class="berets">
+      <button type="button" class="beret ${cur ? '' : 'on'}" data-beret="" aria-label="אוטומטי">
+        <i class="${BERETS[auto]?.camo ? 'camo' : ''}" style="--bc:${BERETS[auto]?.color || '#888'}"></i><small>לפי היחידה</small>
+      </button>
+      ${Object.entries(BERETS).map(([k, b]) => `<button type="button" class="beret ${cur === k ? 'on' : ''}" data-beret="${k}" aria-label="${b.name}"><i class="${b.camo ? 'camo' : ''}" style="--bc:${b.color}"></i><small>${b.name}</small></button>`).join('')}
+    </div>
+    <small class="f-hint">${cur ? `בחרת כומתה ${BERETS[cur].name}` : auto ? `לפי היחידה: כומתה ${BERETS[auto].name}. אם אצלך אחרת, בחרו כאן.` : ''}</small>
+  </div>`;
+}
+
+// ---------- צ׳פחה ----------
+
+async function sendChapcha(btn) {
+  const id = btn.dataset.chapcha;
+  btn.disabled = true;
+  haptic(30);
+  try {
+    const r = await api.chapcha(sess, id);
+    if (r.ok) {
+      const fly = document.createElement('div');
+      fly.className = 'fist-fly';
+      fly.textContent = '🤜';
+      const rect = btn.getBoundingClientRect();
+      fly.style.left = `${rect.left + rect.width / 2}px`;
+      fly.style.top = `${rect.top}px`;
+      document.body.append(fly);
+      setTimeout(() => fly.remove(), 1100);
+      toast('צ׳פחה נשלחה', 'sparkle');
+    } else {
+      const h = Math.max(1, Math.ceil((r.next - Date.now()) / 3600e3));
+      toast(`כבר שלחת צ׳פחה. אפשר שוב בעוד ${h === 1 ? 'שעה' : `${h} שעות`}`, 'sparkle');
+    }
+  } catch (e) { toast(e.code === 'private' ? 'צ׳פחות אפשר לשלוח למי שמכירים' : errorText(e), 'close'); }
+  btn.disabled = false;
+}
+
+// ---------- פז״ם milestones ----------
+
+// The moments worth a party, newest last: days served, halfway, and the countdown to release.
+function milestones(c) {
+  if (!c || c.untilDraft) return [];
+  const out = [];
+  for (const d of [100, 200, 300, 365, 500, 600, 700, 800, 900]) if (c.served >= d && d < c.total) out.push({ id: `s${d}`, at: d, big: `${d}`, title: d === 365 ? 'שנה בצבא!' : `${d} ימים בפז״ם`, sub: d === 365 ? 'שנה שלמה של שירות. כל הכבוד' : 'עוד אבן דרך בשירות' });
+  if (c.pct >= 0.5) out.push({ id: 'half', at: Math.ceil(c.total / 2), big: '½', title: 'חצי שירות!', sub: 'מכאן זה רק בירידה' });
+  for (const d of [100, 50, 30, 7]) if (c.left <= d && !c.done && c.total - d > 0) out.push({ id: `l${d}`, at: c.total - d, big: `${d}`, title: `${d} ימים לשחרור`, sub: d === 7 ? 'השבוע האחרון!' : 'הספירה לאחור התחילה' });
+  if (c.done) out.push({ id: 'done', at: c.total, big: '🎓', title: 'סיימת את השירות הסדיר!', sub: 'שחרור שמח' });
+  return out.sort((a, b) => a.at - b.at);
+}
+
+function checkMilestone() {
+  if (!me?.profile || me.profile.status !== 'active') return;
+  const list = milestones(serviceClock(me.profile));
+  if (!list.length) return;
+  const key = `hekerut.ms.${me.id}`;
+  const seen = new Set(store.get(key, []));
+  // A profile filled in mid-service doesn't celebrate everything at once: only the newest.
+  if (!seen.size && list.length > 1) { store.set(key, list.slice(0, -1).map(m => m.id)); list.splice(0, list.length - 1); }
+  const m = [...list].reverse().find(x => !seen.has(x.id));
+  if (!m) return;
+  setTimeout(() => {
+    // Busy with something else (a sheet, the maker, a story): try again on the next visit home.
+    if ($overlay.classList.contains('open') || creatorOpen() || storyState || trayState || route().name !== 'home') return;
+    store.set(key, [...new Set([...store.get(key, []), ...list.map(x => x.id)])]);
+    openSheet(`<div class="milestone"><div class="ms-big">${esc(m.big)}</div><h2>${esc(m.title)}</h2><p>${esc(m.sub)}</p>
+      <button class="btn primary big wide" data-act="ms-story">${icon('sparkle')}<span>לשתף בסטורי</span></button>
+      <button class="btn ghost" data-act="sheet-close">אחר כך</button></div>`, { cls: 'ms-sheet' });
+    confetti();
+    haptic(40);
+  }, 900);
+}
+
 // ---------- Phone notifications ----------
 
 function pushBanner() {
@@ -1864,6 +1952,7 @@ document.addEventListener('click', async e => {
     if (act === 'story-me') return openStory(me.id);
     if (act === 'create') { haptic(); return create('story'); }
     if (act === 'new-chat') { haptic(); return newChat(); }
+    if (act === 'ms-story') { closeSheet(true); return create('story', { sticker: 'pazam' }); }
     if (act === 'chat-send') {
       const ta = document.querySelector('[data-chat-input]');
       const text = ta?.value.trim();
@@ -1941,6 +2030,10 @@ document.addEventListener('click', async e => {
   }
   const failed = t.closest('.msg.failed');
   if (failed && chatState) { const m = chatState.msgs.find(x => String(x.id) === failed.dataset.mid); if (m) return sendChat(m.text, m); }
+  const cp = t.closest('[data-chapcha]');
+  if (cp) { e.stopPropagation(); return sendChapcha(cp); }
+  const br = t.closest('[data-beret]');
+  if (br) { const m = formModel(); m.beret = br.dataset.beret; haptic(); if (route().name !== 'edit') saveDraft(); return rerenderSection('service'); }
   const like = t.closest('[data-like]');
   if (like) return toggleLike(like.dataset.like);
   const dbl = t.closest('[data-dbl]');

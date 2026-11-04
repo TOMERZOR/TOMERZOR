@@ -64,6 +64,7 @@ export class MemoryStore {
   putLike(post, uid, at) { this.d.likes[`${post}>${uid}`] = at; }
   deleteLike(post, uid) { delete this.d.likes[`${post}>${uid}`]; }
   liked(post, uid) { return `${post}>${uid}` in this.d.likes; }
+  likeAt(post, uid) { return this.d.likes[`${post}>${uid}`] ?? null; }
   likeCount(post) { return Object.keys(this.d.likes).filter(k => k.startsWith(`${post}>`)).length; }
   putStory(st) { this.d.stories[st.id] = { ...st }; }
   story(id) { return this.d.stories[id] ? { ...this.d.stories[id] } : null; }
@@ -188,6 +189,7 @@ export class LocalApi {
     }
     return out;
   }
+  chapcha(s, id) { return this.run(() => this.net.chapcha(this.net.auth(s.id, s.token), id)); }
   createPost(s, body) { return this.run(() => this.net.createPost(this.net.auth(s.id, s.token), body)); }
   deletePost(s, id) { return this.run(() => this.net.deletePost(this.net.auth(s.id, s.token), id)); }
   like(s, id, on) { return this.run(() => this.net.like(this.net.auth(s.id, s.token), id, on)); }

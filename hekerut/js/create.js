@@ -6,6 +6,7 @@
 
 import { icon } from './icons.js';
 import { FILTERS, filterCss, applyFilter, toJpeg } from './imagefx.js';
+import { BERETS, beretOf, serviceClock, CORPS, prettyLevel } from './core.js';
 
 const SW = 720, SH = 1280;
 const BGS = [
@@ -25,7 +26,7 @@ let ctx = null, el = null, s = null;
 export const creatorOpen = () => !!el;
 
 // context: { api, sess, me, toast, haptic, avatar, errorText, onPosted(post), onStory() }
-export function openCreator(context, mode = 'story', { pick = false } = {}) {
+export function openCreator(context, mode = 'story', { pick = false, sticker = '' } = {}) {
   closeCreator(true);
   ctx = context;
   el = document.createElement('div');
@@ -41,6 +42,8 @@ export function openCreator(context, mode = 'story', { pick = false } = {}) {
   el.addEventListener('input', onInput);
   el.addEventListener('change', onChange);
   el.addEventListener('pointerdown', onDown);
+  // Opened from a milestone: straight to a story with its sticker on it.
+  if (sticker && mode === 'story') { const st = stickers().find(x => x.id === sticker) || stickers()[0]; if (st) Object.assign(s, { step: 'edit', texts: [placed(st)] }); }
   draw();
   requestAnimationFrame(() => el?.classList.add('open'));
   // Opened from "new post": go straight to the photo picker, as the tap still counts as the user's.
@@ -99,6 +102,12 @@ function drawCamera() {
 function photoStyle(ox, oy) { return `object-position:${(ox * 100).toFixed(2)}% ${(oy * 100).toFixed(2)}%`; }
 
 function textHtml(t) {
+  if (t.kind === 'sticker') {
+    const st = t.variant === 'patch'
+      ? `--bc:${t.color};color:${t.fg}`
+      : `background:${t.color};color:${t.fg}`;
+    return `<div class="cr-text sticker ${t.variant} ${t.camo ? 'camo' : ''}" data-tid="${t.id}" style="left:${t.x * 100}%;top:${t.y * 100}%;font-size:${(t.size * 100).toFixed(2)}cqw;${st}">${t.variant === 'patch' ? `<b>${esc(t.t)}</b><small>${esc(t.sub || '')}</small>` : esc(t.t)}</div>`;
+  }
   const box = t.box ? `background:${t.color};color:${light(t.color) ? '#111' : '#fff'}` : `color:${t.color}`;
   return `<div class="cr-text ${t.box ? 'box' : ''} ${t.id === s.editing ? 'is-editing' : ''}" data-tid="${t.id}" style="left:${t.x * 100}%;top:${t.y * 100}%;font-size:${(t.size * 100).toFixed(2)}cqw;${box}">${esc(t.t).replace(/\n/g, '<br>')}</div>`;
 }
@@ -115,6 +124,7 @@ function drawEdit() {
       <button class="cr-ic" data-cr="retake" aria-label="חזרה">${icon('back')}</button>
       <div class="cr-tools">
         ${s.src ? '' : `<button class="cr-ic" data-cr="bg" aria-label="רקע"><span class="bg-dot" style="background:${gradCss(s.bg)}"></span></button>`}
+        <button class="cr-ic" data-cr="stickers" aria-label="מדבקות">${icon('sparkle')}</button>
         <button class="cr-ic" data-cr="add-text" aria-label="טקסט"><span class="aa">Aa</span></button>
       </div>
     </div>
@@ -122,7 +132,8 @@ function drawEdit() {
       <button class="cr-share" data-cr="share-story">${ctx.avatar(ctx.me, 's')}<span>הסטורי שלך</span></button>
       <button class="cr-go" data-cr="share-story" aria-label="שיתוף">${icon('back')}</button>
     </div>
-    ${s.editing ? textEditorHtml() : ''}`;
+    ${s.editing ? textEditorHtml() : ''}
+    ${s.picking ? stickerTrayHtml() : ''}`;
   if (s.editing) {
     const ta = el.querySelector('.te-field textarea');
     ta?.focus();
@@ -343,7 +354,7 @@ function onUp() {
     s.texts = s.texts.filter(x => x.id !== d.id);
     ctx.haptic(25);
     draw();
-  } else if (!d.moved) {
+  } else if (!d.moved && s.texts.find(x => x.id === d.id)?.kind !== 'sticker') {
     s.editing = d.id;
     draw();
   }
@@ -354,6 +365,7 @@ function onUp() {
 function onClick(e) {
   if (!el) return;
   const b = e.target.closest('[data-cr], [data-cr-mode], [data-te], [data-color], [data-flt]');
+  if (!b && s.picking && !e.target.closest('.st-tray')) { s.picking = false; return draw(); }
   if (!b) {
     // A tap on an empty text story starts writing.
     if (s.step === 'edit' && !s.src && !s.editing && e.target.closest('[data-cr-stage]') && !e.target.closest('.cr-text')) addText();
@@ -378,6 +390,9 @@ function onClick(e) {
   if (k === 'retake') { Object.assign(s, { src: null, srcUrl: '', texts: [], editing: null, step: 'camera' }); return draw(); }
   if (k === 'bg') { s.bg = (s.bg + 1) % BGS.length; return draw(); }
   if (k === 'add-text') return addText();
+  if (k === 'stickers') { s.picking = true; return draw(); }
+  if (k === 'stickers-close') { s.picking = false; return draw(); }
+  if (k === 'sticker') { const st = stickers().find(x => x.id === b.dataset.id); if (st) s.texts.push(placed(st)); s.picking = false; return draw(); }
   if (k === 'share-story') return shareStory(b);
   if (k === 'aspect') { const i = ASPECTS.findIndex(a => a[0] === s.aspect); s.aspect = ASPECTS[(i + 1) % ASPECTS.length][0]; s.pox = s.poy = 0.5; return drawPick(); }
   if (k === 'to-filter') { if (!s.pimg) return; s.thumb = s.thumb || cropTo(160, 'normal').toDataURL('image/jpeg', 0.8); s.step = 'filter'; return draw(); }
@@ -427,6 +442,77 @@ function finishText() {
   draw();
 }
 
+
+// ---------- Stickers ----------
+
+// Your פז״ם, the countdown to release, your unit's patch in its beret color, and a few phrases.
+function stickers() {
+  const p = ctx.me.profile || {};
+  const out = [];
+  const c = p.status === 'active' ? serviceClock(p) : null;
+  if (c && !c.untilDraft) {
+    out.push({ id: 'pazam', t: `${c.served} ימים בפז״ם`, color: '#f0cf8e', fg: '#1b1408' });
+    if (!c.done) out.push({ id: 'left', t: `עוד ${c.left} ימים לשחרור 🎉`, color: '#ffffff', fg: '#111111' });
+  } else if (c?.untilDraft) out.push({ id: 'pazam', t: `עוד ${c.untilDraft} ימים לגיוס`, color: '#f0cf8e', fg: '#1b1408' });
+  const bk = BERETS[beretOf(p)];
+  const corps = CORPS[p.unit?.corps];
+  if (corps) {
+    const top = p.unit.path?.[0] ? prettyLevel(corps.levels[0], p.unit.path[0]) : corps.name;
+    const sub = p.unit.path?.[1] ? prettyLevel(corps.levels[1], p.unit.path[1]) : (p.unit.path?.[0] ? corps.name : '');
+    out.push({ id: 'patch', variant: 'patch', t: top, sub, color: bk?.color || '#6b6b3a', fg: '#fff', camo: !!bk?.camo });
+  }
+  if (bk) out.push({ id: 'beret', t: `כומתה ${bk.name}`, color: bk.color, fg: '#ffffff' });
+  for (const [t, color, fg] of [['שבת שלום 🕯️', '#ffffff', '#111111'], ['בוקר טוב מהבסיס ☀️', '#f0cf8e', '#1b1408'], ['יוצא הביתה 🏠', '#8e9b5a', '#ffffff'],
+    ['חוזר לבסיס 🎒', '#111111', '#ffffff'], ['סופ״ש 🙌', '#ff5a7a', '#ffffff'], ['שמירה 🌙', '#1b2a4e', '#ffffff'], ['אחרי שטח 🌲', '#3f4b2a', '#ffffff'], ['מילואים 💪', '#d39a54', '#1b1408']]) {
+    out.push({ id: t, t, color, fg });
+  }
+  return out;
+}
+
+function placed(st) {
+  return { ...st, id: Math.random().toString(36).slice(2, 8), kind: 'sticker', variant: st.variant || 'pill', x: 0.5, y: 0.36 + Math.random() * 0.1, size: st.variant === 'patch' ? 0.07 : 0.062 };
+}
+
+function stickerTrayHtml() {
+  return `<div class="st-tray"><div class="st-head"><b>מדבקות</b><button class="cr-ic" data-cr="stickers-close" aria-label="סגירה">${icon('close')}</button></div>
+    <div class="st-grid">${stickers().map(st => `<button data-cr="sticker" data-id="${esc(st.id)}" class="st-item">${textHtml({ ...st, kind: 'sticker', variant: st.variant || 'pill', id: 'x', x: 0.5, y: 0.5, size: st.variant === 'patch' ? 0.055 : 0.034 }).replace('class="cr-text', 'class="cr-text preview')}</button>`).join('')}</div>
+  </div>`;
+}
+
+function drawSticker(g, t) {
+  const px = t.size * SW;
+  const x = t.x * SW, y = t.y * SH;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  try { g.direction = 'rtl'; } catch {}
+  g.shadowColor = 'rgba(0,0,0,0.28)';
+  g.shadowBlur = px * 0.5;
+  g.shadowOffsetY = px * 0.12;
+  if (t.variant === 'patch') {
+    const r = px * 2.1;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = t.color; g.fill();
+    g.shadowColor = 'transparent';
+    if (t.camo) { g.save(); g.clip(); for (const [dx, dy, rr, c] of [[-0.5, -0.4, 0.6, '#3f4b2a'], [0.5, 0.2, 0.55, '#7a6a3f'], [-0.2, 0.6, 0.5, '#2f3a22'], [0.3, -0.7, 0.4, '#8a8f55']]) { g.beginPath(); g.arc(x + dx * r, y + dy * r, rr * r, 0, Math.PI * 2); g.fillStyle = c; g.fill(); } g.restore(); }
+    g.setLineDash([px * 0.22, px * 0.18]);
+    g.lineWidth = px * 0.1; g.strokeStyle = 'rgba(255,255,255,0.85)';
+    g.beginPath(); g.arc(x, y, r * 0.86, 0, Math.PI * 2); g.stroke();
+    g.setLineDash([]);
+    g.fillStyle = t.fg;
+    g.font = `900 ${px * 0.92}px Heebo, sans-serif`;
+    g.fillText(t.t, x, y - (t.sub ? px * 0.38 : 0), r * 1.5);
+    if (t.sub) { g.font = `700 ${px * 0.56}px Heebo, sans-serif`; g.fillText(t.sub, x, y + px * 0.62, r * 1.5); }
+    return;
+  }
+  g.font = `800 ${px}px Heebo, sans-serif`;
+  const w = g.measureText(t.t).width + px * 1.2, h = px * 1.9;
+  g.fillStyle = t.color;
+  roundRect(g, x - w / 2, y - h / 2, w, h, px * 0.55);
+  g.fill();
+  g.shadowColor = 'transparent';
+  g.fillStyle = t.fg;
+  g.fillText(t.t, x, y + px * 0.04);
+}
+
 // ---------- Making the images ----------
 
 async function renderStory() {
@@ -449,6 +535,7 @@ async function renderStory() {
     g.fillRect(0, 0, SW, SH);
   }
   for (const t of s.texts) {
+    if (t.kind === 'sticker') { drawSticker(g, t); continue; }
     const px = t.size * SW;
     g.font = `800 ${px}px Heebo, sans-serif`;
     g.textAlign = 'center';

@@ -1061,3 +1061,61 @@ select.inp { padding-left: 34px; background-image: linear-gradient(45deg, transp
 .tv-reply::placeholder { color: rgba(255, 255, 255, 0.75); }
 .tv-send { position: absolute; left: 4px; top: 50%; width: 38px; height: 38px; margin-top: -19px; display: grid; place-items: center; color: #fff; }
 .tv-send .ic { width: 20px; height: 20px; transform: scaleX(-1); }
+
+/* ---------- Berets ---------- */
+
+.camo, .bdot.camo, .beret-pill.camo i, .berets .camo {
+  background-color: #5d6b3a !important;
+  background-image: radial-gradient(circle at 20% 30%, #3f4b2a 0 22%, transparent 23%), radial-gradient(circle at 75% 25%, #7a6a3f 0 18%, transparent 19%),
+    radial-gradient(circle at 60% 75%, #2f3a22 0 24%, transparent 25%), radial-gradient(circle at 25% 80%, #8a8f55 0 16%, transparent 17%) !important;
+}
+.bdot { position: absolute; bottom: 0; left: 0; width: 30%; height: 30%; min-width: 11px; min-height: 11px; border-radius: 50%; background: var(--bc); box-shadow: 0 0 0 2px var(--bg); }
+.av.ring.beret-ring, .prof-av .av.ring.beret-ring { background: conic-gradient(from 200deg, var(--bc), color-mix(in srgb, var(--bc) 55%, #fff), var(--bc), color-mix(in srgb, var(--bc) 70%, #000), var(--bc)); }
+.av.ring.beret-ring.camo { background-size: 60% 60% !important; }
+.beret-pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 8px; border-radius: 99px; background: color-mix(in srgb, var(--bc) 16%, transparent); color: var(--text); font: 700 12.5px "Heebo", sans-serif; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bc) 35%, transparent); }
+.beret-pill i { width: 12px; height: 12px; border-radius: 50%; background: var(--bc); box-shadow: 0 0 0 1.5px var(--bg); }
+.beret-pill.camo { background: rgba(93, 107, 58, 0.16) !important; background-image: none !important; }
+.prof[style*="--bc"] .prof-name { text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--bc) 70%, transparent); text-decoration-thickness: 4px; text-underline-offset: 6px; }
+.berets { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.beret { display: grid; justify-items: center; gap: 5px; padding: 8px 2px; border-radius: 14px; transition: background 0.2s, transform 0.25s var(--spring); }
+.beret:active { transform: scale(0.92); }
+.beret i { width: 34px; height: 22px; border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%; background: var(--bc); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.2); position: relative; }
+.beret i::after { content: ""; position: absolute; top: -3px; left: 50%; width: 6px; height: 6px; margin-left: -3px; border-radius: 50%; background: inherit; }
+.beret small { font: 600 11px "Heebo", sans-serif; color: var(--text-2); text-align: center; line-height: 1.2; }
+.beret.on { background: var(--card-2); box-shadow: inset 0 0 0 1.5px var(--gold); }
+.beret.on small { color: var(--text); }
+.edit-sec .beret.on { background: var(--bg); }
+.s-ic.beret-ic { background: color-mix(in srgb, var(--bc) 55%, transparent); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); color: #fff; }
+.sv-stage.tinted { background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--bc) 85%, #000), transparent 65%), radial-gradient(90% 70% at 50% 100%, color-mix(in srgb, var(--bc) 40%, #000), transparent 60%), #0b0b0a; }
+
+/* ---------- צ׳פחה ---------- */
+
+.btn.chapcha { font-size: 22px; }
+.fist-fly { position: fixed; z-index: 120; font-size: 44px; pointer-events: none; transform: translate(-50%, -50%); animation: fist 1.05s var(--ease) forwards; }
+@keyframes fist { 0% { transform: translate(-50%, 0) scale(0.6) rotate(0); opacity: 0; } 20% { opacity: 1; transform: translate(-50%, -40px) scale(1.4) rotate(-12deg); } 55% { transform: translate(-50%, -70px) scale(1.15) rotate(8deg); } 100% { transform: translate(-50%, -160px) scale(0.8); opacity: 0; } }
+.ev-ic.k-chapcha { background: linear-gradient(135deg, #ffd84d, #e2742a); color: #3a1c00; }
+
+/* ---------- Milestones ---------- */
+
+.milestone { display: grid; justify-items: center; text-align: center; gap: 8px; padding: 10px 0 4px; }
+.ms-big { width: 132px; height: 132px; border-radius: 40px; display: grid; place-items: center; background: var(--grad); color: var(--on-grad); font: 900 54px/1 "Plus Jakarta Sans", "Heebo", sans-serif; letter-spacing: -0.04em; box-shadow: 0 20px 50px rgba(211, 154, 84, 0.45); animation: msin 0.9s var(--spring) both; }
+@keyframes msin { from { transform: scale(0.3) rotate(-20deg); opacity: 0; } }
+.milestone h2 { font: 900 28px "Heebo", sans-serif; letter-spacing: -0.02em; margin-top: 10px; animation: rise 0.5s var(--ease) both 0.2s; }
+.milestone p { color: var(--text-2); font-size: 15.5px; animation: rise 0.5s var(--ease) both 0.3s; }
+.milestone .btn.wide { margin-top: 14px; }
+
+/* ---------- Story stickers ---------- */
+
+.cr-text.sticker { cursor: grab; text-shadow: none; font-weight: 800; box-shadow: 0 0.12em 0.5em rgba(0, 0, 0, 0.28); }
+.cr-text.sticker.pill { padding: 0.45em 0.6em; border-radius: 0.55em; white-space: nowrap; }
+.cr-text.sticker.patch { width: 4.2em; height: 4.2em; padding: 0; border-radius: 50%; background: var(--bc); display: grid; place-content: center; text-align: center; line-height: 1.1; }
+.cr-text.sticker.patch::before { content: ""; position: absolute; inset: 7%; border-radius: 50%; border: 0.1em dashed rgba(255, 255, 255, 0.85); }
+.cr-text.sticker.patch b { font-size: 0.92em; font-weight: 900; }
+.cr-text.sticker.patch small { font-size: 0.56em; font-weight: 700; margin-top: 0.15em; }
+.st-tray { position: absolute; inset: auto 0 0; z-index: 25; max-height: 70%; overflow-y: auto; padding: 10px 14px calc(18px + env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; background: rgba(18, 18, 18, 0.92); backdrop-filter: blur(20px); animation: sheetup 0.4s var(--ease) both; container-type: inline-size; }
+@keyframes sheetup { from { transform: translateY(100%); } }
+.st-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 4px 10px; }
+.st-head b { font: 800 17px "Heebo", sans-serif; }
+.st-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.st-item { position: relative; height: 92px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
+.st-item .cr-text.preview { pointer-events: none; }

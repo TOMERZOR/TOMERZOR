@@ -341,3 +341,44 @@ test('push subscriptions are checked before they are kept', async () => {
   assert.equal(store.subsOf('u1')[0].endpoint, good.endpoint);
   assert.throws(() => p.subscribe({ id: 'u1' }, { endpoint: 'http://x' }), /subscription/);
 });
+
+test('berets by brigade and corps, and a hand-picked one', async () => {
+  const { beretOf } = await import('../../js/core.js');
+  const b = (corps, path, extra = {}) => beretOf(cleanProfile(person('x', { unit: { corps, path }, ...extra })));
+  assert.equal(b('infantry', ['גולני', '13']), 'brown');
+  assert.equal(b('infantry', ['צנחנים']), 'red');
+  assert.equal(b('infantry', ['גבעתי']), 'purple');
+  assert.equal(b('infantry', ['נח"ל']), 'lime');
+  assert.equal(b('infantry', ['כפיר']), 'camo');
+  assert.equal(b('infantry', ['ביסלמ״ח']), 'olive');
+  assert.equal(b('armor', ['7']), 'black');
+  assert.equal(b('artillery', ['215']), 'turquoise');
+  assert.equal(b('airdef', ['137']), 'darkgrey');
+  assert.equal(b('homefront', []), 'orange');
+  assert.equal(b('medical', []), 'olive');
+  assert.equal(b('border', ['', 'קרקל'], { beret: 'lime' }), 'lime', 'picked by hand');
+  assert.equal(b('', []), '');
+  assert.equal(cleanProfile({ name: 'x', beret: 'pink' }).beret, '');
+});
+
+for (const [kind, make] of Object.entries(stores)) {
+  test(`${kind}: צ׳פחה once every 6 hours, to people you know`, () => {
+    let t = 70_000_000;
+    const notes = [];
+    const net = new Network(make(), { random: randomString, now: () => t, notify: (to, n) => notes.push({ to, ...n }) });
+    const reg = name => { const r = net.register({ profile: person(name, { g: 'f' }) }); return () => net.auth(r.id, r.token); };
+    const a = reg('אורית'), b = reg('בתיה'), c = reg('גלית');
+    assert.throws(() => net.chapcha(a(), b().id), /private/);
+    net.follow(a(), b().id);
+    assert.equal(net.chapcha(a(), b().id).ok, true);
+    assert.equal(net.feed(b()).events[0].kind, 'chapcha');
+    assert.equal(notes.at(-1).title, 'אורית שלחה לך צ׳פחה 🤜');
+    assert.equal(notes.at(-1).body, 'להחזיר לה צ׳פחה?');
+    assert.equal(net.chapcha(a(), b().id).ok, false, 'too soon');
+    t += 6 * 3600e3 + 1;
+    assert.equal(net.chapcha(a(), b().id).ok, true);
+    assert.equal(net.chapcha(b(), a().id).ok, true, 'back, since a follows b');
+    assert.throws(() => net.chapcha(c(), a().id), /private/);
+    assert.equal(net.view(b(), a().id).person.beret, 'turquoise');
+  });
+}

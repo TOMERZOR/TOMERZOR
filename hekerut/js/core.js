@@ -7,7 +7,7 @@
 // Each corps names its own levels: artillery has a סוללה where infantry has a פלוגה, the air force
 // has a טייסת. `sugg` offers a few common answers per level; everything stays free text.
 export const CORPS = {
-  infantry: { name: 'חי״ר', levels: ['חטיבה', 'גדוד', 'פלוגה', 'מחלקה', 'כיתה / צוות'], sugg: [['גולני', 'גבעתי', 'צנחנים', 'נח״ל', 'כפיר', 'קומנדו']] },
+  infantry: { name: 'חי״ר', levels: ['חטיבה', 'גדוד', 'פלוגה', 'מחלקה', 'כיתה / צוות'], sugg: [['גולני', 'גבעתי', 'צנחנים', 'נח״ל', 'כפיר', 'קומנדו', 'ביסלמ״ח']] },
   armor: { name: 'שריון', levels: ['חטיבה', 'גדוד', 'פלוגה', 'מחלקה', 'צוות'], sugg: [['7', '188', '401', '460']] },
   artillery: { name: 'תותחנים', levels: ['חטיבה', 'גדוד', 'סוללה', 'מחלקה', 'צוות'], sugg: [['215', '282', '214']] },
   engineering: { name: 'הנדסה קרבית', levels: ['חטיבה / יחידה', 'גדוד', 'פלוגה', 'מחלקה', 'צוות'], sugg: [['יהל״ם']] },
@@ -24,8 +24,55 @@ export const CORPS = {
   logistics: { name: 'טכנולוגיה ולוגיסטיקה', levels: ['יחידה', 'בסיס', 'מדור', 'צוות'], sugg: [] },
   medical: { name: 'רפואה', levels: ['יחידה', 'בסיס', 'מדור', 'צוות'], sugg: [] },
   education: { name: 'חינוך ונוער', levels: ['יחידה', 'בסיס', 'מדור', 'צוות'], sugg: [] },
+  staff: { name: 'מטכ״ל ויחידות מיוחדות', levels: ['יחידה', 'צוות', 'תת־צוות'], sugg: [] },
+  magav: { name: 'מג״ב', levels: ['מחוז / יחידה', 'פלוגה', 'מחלקה', 'צוות'], sugg: [] },
+  manpower: { name: 'כוח אדם ושלישות', levels: ['יחידה', 'בסיס', 'מדור', 'צוות'], sugg: [] },
+  rabbinate: { name: 'רבנות צבאית', levels: ['יחידה', 'בסיס', 'מדור'], sugg: [] },
+  spokes: { name: 'דובר צה״ל', levels: ['יחידה', 'מדור', 'צוות'], sugg: [] },
   other: { name: 'אחר', levels: ['יחידה', 'תת־יחידה', 'מדור', 'צוות'], sugg: [] },
 };
+
+// ---------- Berets ----------
+//
+// The color of each corps' and brigade's beret. Infantry brigades each have their own; corps
+// without one of their own wear olive. Anyone can pick their beret by hand in the profile, for
+// units this list doesn't know or a beret that differs.
+export const BERETS = {
+  olive: { name: 'זית', color: '#6b6b3a' },
+  brown: { name: 'חומה', color: '#6e4527' },
+  red: { name: 'אדומה', color: '#b0202c' },
+  purple: { name: 'סגולה', color: '#6b2c94' },
+  lime: { name: 'ירוקה בהירה', color: '#78b83a' },
+  camo: { name: 'מנומרת', color: '#5d6b3a', camo: true },
+  black: { name: 'שחורה', color: '#1d1d1f' },
+  turquoise: { name: 'טורקיז', color: '#169c9c' },
+  silver: { name: 'אפורה בהירה', color: '#9aa1a8' },
+  sand: { name: 'בצבע חול', color: '#c2a36a' },
+  darkgreen: { name: 'ירוקה כהה', color: '#1f4a2c' },
+  navy: { name: 'כחולה כהה', color: '#1b2a4e' },
+  darkgrey: { name: 'אפורה כהה', color: '#4a4f57' },
+  blue: { name: 'כחולה', color: '#2457a8' },
+  sky: { name: 'תכלת כהה', color: '#3b7ea6' },
+  orange: { name: 'כתומה', color: '#e2742a' },
+};
+const CORPS_BERET = {
+  armor: 'black', artillery: 'turquoise', engineering: 'silver', recon: 'sand', intel: 'darkgreen', air: 'darkgrey',
+  airdef: 'darkgrey', navy: 'navy', c4i: 'sky', homefront: 'orange', mp: 'blue', magav: 'darkgreen', staff: 'red',
+};
+const BRIGADE_BERET = [[/גולני/, 'brown'], [/צנחנ/, 'red'], [/גבעתי/, 'purple'], [/נחל/, 'lime'], [/כפיר/, 'camo'], [/קומנדו|עוז|89/, 'red']];
+
+// The beret key for a profile: the one picked by hand, else the brigade's, else the corps'.
+export function beretOf(p) {
+  if (BERETS[p?.beret]) return p.beret;
+  const corps = p?.unit?.corps;
+  if (!corps) return '';
+  if (corps === 'infantry') {
+    const top = norm(p.unit.path?.[0]);
+    for (const [re, k] of BRIGADE_BERET) if (re.test(top)) return k;
+    return 'olive';
+  }
+  return CORPS_BERET[corps] || 'olive';
+}
 
 export const STATUS = {
   pre: { m: 'לפני גיוס', f: 'לפני גיוס' },
@@ -173,6 +220,7 @@ export function cleanProfile(input = {}) {
     tironut: str(p.tironut, LIMITS.text),
     roles,
     vis: p.vis === 'all' ? 'all' : 'met',
+    beret: BERETS[p.beret] ? p.beret : '',
   };
 }
 
@@ -240,6 +288,7 @@ export const commonScore = list => list.reduce((s, c) => s + c.w, 0);
 
 const SUGGEST_MAX = 12;
 const CHAT_PAGE = 40;
+const CHAPCHA_GAP = 6 * 3600e3;
 const MESSAGES_PER_MINUTE = 30;
 export const convId = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 const DAY = 86400e3;
@@ -293,6 +342,7 @@ export class Network {
       top: p.unit.path[0] ? prettyLevel(CORPS[p.unit.corps]?.levels[0] || '', p.unit.path[0]) : '',
       prep: p.prep.kind !== 'none' ? p.prep.name || PREP[p.prep.kind] : '',
       role: role?.t || '',
+      beret: beretOf(p),
       photo: this.photoUrl(u.id, u.photoVer),
     };
   }
@@ -474,6 +524,25 @@ export class Network {
           : `${n} ${gen(a.profile, 'התחיל', 'התחילה')} לעקוב אחריך`;
       this.notify(to, { title: kind === 'friend' ? 'חבר חדש' : 'עוקב חדש', body, url: `#u/${actor}`, tag: `f-${actor}` });
     }
+  }
+
+  // --- צ׳פחה: a quick hello, one per person every 6 hours ---
+
+  chapcha(u, id) {
+    const t = this.s.user(id);
+    if (!t || t.id === u.id) throw new ApiError(404, 'not_found');
+    const r = this.rel(u, t);
+    if (!r.following && !r.followsMe && !r.met) throw new ApiError(403, 'private');
+    const key = `cp:${id}`;
+    const last = this.s.likeAt(key, u.id);
+    const now = this.now();
+    if (last && now - last < CHAPCHA_GAP) return { ok: false, next: last + CHAPCHA_GAP };
+    this.s.deleteLike(key, u.id);
+    this.s.putLike(key, u.id, now);
+    this.s.addEvent(id, { kind: 'chapcha', actor: u.id, data: {}, at: now }, EVENTS_MAX);
+    const n = u.profile.name.split(' ')[0];
+    this.notify(id, { title: `${n} ${gen(u.profile, 'שלח', 'שלחה')} לך צ׳פחה 🤜`, body: `להחזיר ${gen(u.profile, 'לו', 'לה', 'לו/לה')} צ׳פחה?`, url: `#u/${u.id}`, tag: `cp-${u.id}` });
+    return { ok: true, next: now + CHAPCHA_GAP };
   }
 
   // --- Chats ---

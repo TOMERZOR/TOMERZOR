@@ -15,6 +15,7 @@
 //   POST   /u/<id>/follow *      { key? } (the key marks that they met, i.e. scanned the code)
 //   DELETE /u/<id>/follow *
 //   DELETE /u/<id>/follower *    remove someone who follows you
+//   POST   /u/<id>/chapcha *     a צ׳פחה (quick hello), one every 6 hours
 //   GET    /search?q= *
 //   GET    /feed *               activity, people you may know, friends' stories
 //   GET    /p/<id>               profile photo
@@ -145,6 +146,7 @@ export class SqlStore {
   putLike(post, uid, at) { this.sql.exec('INSERT OR IGNORE INTO likes VALUES (?, ?, ?)', post, uid, at); }
   deleteLike(post, uid) { this.sql.exec('DELETE FROM likes WHERE post = ? AND uid = ?', post, uid); }
   liked(post, uid) { return this.rows('SELECT 1 AS x FROM likes WHERE post = ? AND uid = ?', post, uid).length > 0; }
+  likeAt(post, uid) { return this.rows('SELECT at FROM likes WHERE post = ? AND uid = ?', post, uid)[0]?.at ?? null; }
   likeCount(post) { return this.rows('SELECT COUNT(*) AS c FROM likes WHERE post = ?', post)[0].c; }
   putStory(st) { this.sql.exec('INSERT OR REPLACE INTO stories VALUES (?, ?, ?, ?, ?, ?)', st.id, st.uid, st.media, st.text, st.bg, st.at); }
   story(id) { return this.rows('SELECT * FROM stories WHERE id = ?', id)[0] || null; }
@@ -265,6 +267,7 @@ export async function handle(req, net, limiter, push = noPush) {
     if (parts[2] === 'follow' && m === 'POST') return json(net.follow(me(), id, String(body.key || '')));
     if (parts[2] === 'follow' && m === 'DELETE') return json(net.unfollow(me(), id));
     if (parts[2] === 'follower' && m === 'DELETE') return json(net.removeFollower(me(), id));
+    if (parts[2] === 'chapcha' && m === 'POST') return json(net.chapcha(me(), id));
   }
   if (parts[0] === 'posts') {
     const before = Number(url.searchParams.get('before')) || Infinity;

@@ -35,6 +35,7 @@ const P = {
   phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
   more: '<circle cx="5.5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18.5" cy="12" r="1.3" fill="currentColor"/>',
   'plus-square': '<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><path d="M12 8.5v7M8.5 12h7"/>',
+  send: '<path d="M21 3 3.6 10.2c-.8.3-.8 1.5.1 1.8l6.8 2.2 2.2 6.8c.3.9 1.5.9 1.8.1z"/><path d="M21 3 10.5 14.2"/>',
   heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20z"/>',
 };
 

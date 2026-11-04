@@ -239,6 +239,9 @@ export const commonScore = list => list.reduce((s, c) => s + c.w, 0);
 // opts: { now(), random(n) -> url-safe string of n chars, photoUrl(id, ver) }
 
 const SUGGEST_MAX = 12;
+const CHAT_PAGE = 40;
+const MESSAGES_PER_MINUTE = 30;
+export const convId = (a, b) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 const DAY = 86400e3;
 const PAGE = 12;
 const GRID_PAGE = 24;
@@ -262,6 +265,8 @@ export class Network {
     this.random = opts.random;
     this.photoUrl = opts.photoUrl || ((id, ver) => (ver ? this.s.photo(id) : null));
     this.mediaUrl = opts.mediaUrl || (id => (id ? this.s.media(id) : null));
+    // notify(userId, { title, body, url, tag }): a phone notification, sent by the server after the request.
+    this.notify = opts.notify || (() => {});
   }
 
   // --- Auth ---
@@ -352,7 +357,7 @@ export class Network {
   }
 
   me(u) {
-    return { ...this.full(u), key: u.key, counts: this.counts(u.id), unread: this.s.unread(u.id) };
+    return { ...this.full(u), key: u.key, counts: this.counts(u.id), unread: this.s.unread(u.id), unreadChats: this.s.unreadMessages(u.id) };
   }
 
   update(u, { profile, photo } = {}) {
@@ -460,6 +465,68 @@ export class Network {
 
   event(to, kind, actor, data = {}) {
     this.s.addEvent(to, { kind, actor, data, at: this.now() }, EVENTS_MAX);
+    // New followers reach the phone too; likes and role news stay in the activity tab.
+    const a = (kind === 'follow' || kind === 'scan' || kind === 'friend') && this.s.user(actor);
+    if (a) {
+      const n = a.profile.name.split(' ')[0];
+      const body = kind === 'friend' ? `${n} ${gen(a.profile, 'עקב', 'עקבה')} אחריך בחזרה. אתם חברים עכשיו`
+        : kind === 'scan' ? `${n} ${gen(a.profile, 'סרק', 'סרקה')} את הקוד שלך ${gen(a.profile, 'ועוקב', 'ועוקבת')} אחריך`
+          : `${n} ${gen(a.profile, 'התחיל', 'התחילה')} לעקוב אחריך`;
+      this.notify(to, { title: kind === 'friend' ? 'חבר חדש' : 'עוקב חדש', body, url: `#u/${actor}`, tag: `f-${actor}` });
+    }
+  }
+
+  // --- Chats ---
+  //
+  // You can write to friends, to people you met (scanned or were scanned), to people who follow
+  // you, and to anyone who already wrote to you. Strangers can't open a chat.
+
+  canChat(u, t) {
+    if (!t || u.id === t.id) return false;
+    const r = this.rel(u, t);
+    return r.friends || r.met || r.followsMe || this.s.hasMessageFrom(convId(u.id, t.id), t.id);
+  }
+
+  messageView(u, m) {
+    return { id: m.n, text: m.text, at: m.at, mine: m.sender === u.id, read: !!m.read, ...(m.meta?.story ? { story: true } : {}) };
+  }
+
+  chats(u) {
+    return this.s.convs(u.id).map(c => {
+      const other = c.a === u.id ? c.b : c.a;
+      const t = this.s.user(other);
+      return t ? { other: { ...this.summary(t), rel: this.rel(u, t) }, last: this.messageView(u, c.last), unread: c.unread } : null;
+    }).filter(Boolean).sort((x, y) => y.last.at - x.last.at);
+  }
+
+  // Newest first; `after` (a message id) returns only newer ones, for checking while the chat is open.
+  chat(u, id, { before = Infinity, after = 0 } = {}) {
+    const t = this.s.user(id);
+    if (!t) throw new ApiError(404, 'not_found');
+    const conv = convId(u.id, id);
+    const list = this.s.messages(conv, CHAT_PAGE, before, after);
+    this.s.markConvRead(conv, u.id);
+    return {
+      other: { ...this.summary(t), rel: this.rel(u, t) },
+      canSend: this.canChat(u, t),
+      messages: list.map(m => this.messageView(u, m)),
+      next: !after && list.length === CHAT_PAGE ? list[list.length - 1].n : null,
+    };
+  }
+
+  send(u, id, { text, story } = {}) {
+    const t = this.s.user(id);
+    if (!t) throw new ApiError(404, 'not_found');
+    if (!this.canChat(u, t)) throw new ApiError(403, 'cant_chat');
+    const body = para(text, 1000);
+    if (!body) throw new ApiError(400, 'empty');
+    const now = this.now();
+    if (this.s.sentSince(u.id, now - 60e3) >= MESSAGES_PER_MINUTE) throw new ApiError(429, 'slow_down');
+    const m = { conv: convId(u.id, id), sender: u.id, recipient: id, text: body, at: now, meta: story ? { story: true } : null };
+    m.n = this.s.addMessage(m);
+    const n = u.profile.name.split(' ')[0];
+    this.notify(id, { title: story ? `${n} ${gen(u.profile, 'הגיב', 'הגיבה')} לסטורי שלך` : n, body: body.slice(0, 140), url: `#chat/${u.id}`, tag: `m-${u.id}` });
+    return this.messageView(u, m);
   }
 
   feed(u) {

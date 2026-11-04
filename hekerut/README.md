@@ -20,6 +20,8 @@ npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localh
 - **Posts:** a photo (cropped between 4:5 and 1.91:1, compressed on the phone) with a caption. A feed of posts from people you follow on the home screen, double-tap or the heart to like, and a grid on every profile (next to the path tab). Your own posts can be deleted.
 - **Stories:** a photo (9:16) or a line of text on a background, gone after 24 hours. They show as rings at the top of the home screen (gold until seen; friends without a story keep a quiet ring that plays their path). Tap for the next one, hold to pause. On your own stories you see who viewed them and can delete them.
 - Posts and stories are seen by the same people who see the full path: people you follow and people who met you (or everyone, with the public setting).
+- **Chats:** the paper plane at the top of the home screen (with an unread count), "הודעה" on a profile, or a reply to a story. You can write to friends, to people you met, to people who follow you, and to anyone who wrote to you first. Bubbles, days, "נשלחה / נראתה", retry on a failed send. An open chat checks for new messages every 3 seconds.
+- **Phone notifications** (`js/push.js`, Web Push): a new message or a new follower reaches the phone even when the app is closed. Turned on from a banner in chats or activity, or in settings. On an iPhone they work from the app added to the home screen (iOS 16.4+).
 - **Friends and followers:** following is one-way. When both follow each other, they're friends. You can remove a follower.
 - **Activity:** who scanned your code, who followed you, who followed back, who liked a post, and when a friend starts a new role.
 - **Settings:** light/dark/auto, who sees the full path, a new code (the old one stops opening the full path), moving to another phone (a personal login QR), delete the account.
@@ -35,6 +37,7 @@ A Cloudflare Worker with one Durable Object (SQLite) holding profiles, follows, 
 
 - Login: on sign-up the server returns an id and a random secret token, kept on the phone. Sign-ups are limited to 10 an hour per address.
 - Deploy: `.github/workflows/hekerut-api.yml` runs on every push to `hekerut/` on the app's own branch, `claude/military-social-app-zbkrwn`, with no merge needed. It tests and deploys the server, then deploys the app's static files as the `hekerut` worker (`site/wrangler.toml`). It needs the `CLOUDFLARE_API_TOKEN` secret, already used by Remind. and Shomer. `js/config.js` holds both addresses.
+- Notifications: one VAPID key pair for the server (made on first use, kept in the database), phone subscriptions in the `subs` table, encrypted per RFC 8291 and sent after the answer (`ctx.waitUntil`). Subscriptions the push service rejects (404/410) are dropped.
 - Images arrive as JPEG data URLs of at most 400 KB, are served from `/m/<id>`, and are deleted with their post or story. Expired stories are cleared whenever someone posts a new one. Limits: 20 posts an hour, 30 stories a day.
 - Tests: `cd hekerut/server && npm test` (both stores, visibility, follows, friends, mutuals, common ground, suggestions, posts, likes, stories, routes).
 

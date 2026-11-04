@@ -5,9 +5,10 @@ import { api, demo, session, saveSession } from './api.js';
 import { config } from './config.js';
 import { qrSvg, startScanner } from './qr.js';
 import { openCreator, closeCreator, creatorOpen } from './create.js';
+import * as Push from './push.js';
 import { CORPS, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -132,7 +133,9 @@ function buildTabbar() {
 }
 
 function setTabbar(active) {
-  $tabbar.classList.toggle('hidden', !sess || !me);
+  $tabbar.classList.toggle('hidden', !sess || !me || active === 'chat');
+  document.querySelectorAll('[data-chat-badge]').forEach(b => { b.textContent = me?.unreadChats || ''; b.hidden = !me?.unreadChats; });
+  try { if (navigator.setAppBadge) (me?.unreadChats ? navigator.setAppBadge(me.unreadChats) : navigator.clearAppBadge()); } catch {}
   $tabbar.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === active));
   $tabbar.querySelector('[data-tab="activity"]')?.classList.toggle('badge', !!me?.unread);
 }
@@ -153,11 +156,29 @@ async function render() {
     }
   }
   if (seq !== renderSeq) return;
-  const views = { home: renderHome, people: renderPeople, activity: renderActivity, me: () => renderProfile(me.id), u: () => renderProfile(r.arg), edit: renderEdit, settings: renderSettings };
+  if (r.name !== 'chat') stopChat();
+  const views = { chats: renderChats, chat: s => renderChat(r.arg, s), home: renderHome, people: renderPeople, activity: renderActivity, me: () => renderProfile(me.id), u: () => renderProfile(r.arg), edit: renderEdit, settings: renderSettings };
   (views[r.name] || renderHome)(seq);
 }
 
+// A screen is often drawn twice: at once from what the app remembers, then again when fresh data
+// arrives. Only the first draw animates in; the refresh swaps the content quietly (or not at all
+// when nothing changed), keeping the scroll position, so screens don't replay or jump.
+let lastPage = { key: '', html: '' };
 function page(html, tab, { cls = '' } = {}) {
+  const key = `${location.hash}|${tab}|${cls}`;
+  if (key === lastPage.key) {
+    if (html !== lastPage.html) {
+      const y = window.scrollY;
+      lastPage.html = html;
+      $view.className = `view ${cls} quiet`;
+      $view.innerHTML = html;
+      window.scrollTo(0, y);
+    }
+    setTabbar(tab);
+    return;
+  }
+  lastPage = { key, html };
   $view.className = `view ${cls}`;
   $view.innerHTML = html;
   $view.querySelectorAll('.meter [data-countup]').forEach(el => countUp(el, +el.dataset.countup));
@@ -438,6 +459,7 @@ async function renderHome(seq) {
         <div class="tb-actions">
           ${demo ? '<span class="demo-pill">הדגמה</span>' : ''}
           <button class="icon-btn" data-act="create" aria-label="פוסט או סטורי חדש">${icon('plus-square')}</button>
+          <button class="icon-btn has-badge" data-go="chats" aria-label="הודעות">${icon('send')}<span class="nbadge" data-chat-badge ${me.unreadChats ? '' : 'hidden'}>${me.unreadChats || ''}</span></button>
           <button class="icon-btn" data-act="search" aria-label="חיפוש">${icon('search')}</button>
         </div>
       </header>
@@ -680,6 +702,7 @@ async function renderActivity(seq) {
     const older = ev?.filter(e => Date.now() - e.at >= 7 * 86400e3) || [];
     page(`
       ${topbar('פעילות')}
+      ${pushBanner()}
       ${!ev ? `<div class="list">${skeletonRows(5)}</div>` : !ev.length ? `<div class="empty-state">${icon('bell')}<h2>שקט כאן בינתיים</h2><p>כשמישהו יסרוק את הקוד שלך, יעקוב אחריך או יתחיל תפקיד חדש, זה יופיע כאן.</p><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button></div>` : `
         ${fresh.length ? `<h3 class="list-title">השבוע</h3><div class="list">${fresh.map(eventRow).join('')}</div>` : ''}
         ${older.length ? `<h3 class="list-title">קודם</h3><div class="list">${older.map(eventRow).join('')}</div>` : ''}`}
@@ -745,7 +768,7 @@ function profileHtml(v, mine) {
       ${prof ? serviceMeter(prof) : ''}
       <div class="prof-btns">
         ${mine ? `<button class="btn soft" data-go="edit">${icon('edit')}<span>עריכה</span></button><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button>`
-          : `${followBtn(p.rel ? p : { ...p, rel: v.rel }, 'big')}<button class="btn soft big" data-story="${p.id}">${icon('play')}<span>המסלול</span></button>`}
+          : `${followBtn(p.rel ? p : { ...p, rel: v.rel }, 'big')}<button class="btn soft big" data-go="chat/${p.id}">${icon('send')}<span>הודעה</span></button><button class="btn soft big sq" data-story="${p.id}" aria-label="המסלול כסטורי">${icon('play')}</button>`}
       </div>
       ${!mine && v.mutualCount ? mutualHtml(v) : ''}
       ${!mine && v.common.length ? `
@@ -841,6 +864,7 @@ function renderSettings() {
         <div class="set-row"><span>${icon('eye')}מי רואה את כל המסלול</span>${chips('vis-set', me.profile.vis, [['met', 'מי שהכרתי'], ['all', 'כולם']])}</div>
       </div>
       <div class="group">
+        <div data-push-row></div>
         <button class="set-row btnrow" data-act="new-key">${icon('refresh')}<span><b>קוד חדש</b><small>הקוד הישן יפסיק לפתוח את המסלול המלא</small></span></button>
         <button class="set-row btnrow" data-act="transfer">${icon('phone')}<span><b>מעבר לטלפון אחר</b><small>קישור כניסה אישי לחשבון שלך</small></span></button>
       </div>
@@ -850,6 +874,7 @@ function renderSettings() {
       </div>
       <p class="foot">${wordmark()}<br>גרסה ${APP_VERSION}</p>
     </div>`, 'none');
+  pushRow().then(h => { const el = document.querySelector('[data-push-row]'); if (el) el.outerHTML = h; });
 }
 
 // ---------- Sheets ----------
@@ -1364,6 +1389,7 @@ function openTray(gi, si = null) {
     if (k === 'viewers') return storyViewers();
     if (k === 'delete') return deleteStoryNow();
     if (k === 'like') return likeStoryNow(b);
+    if (k === 'send') return replyToStory(b.closest('form'));
     if (k === 'author') { const id = s.groups[s.gi].author.id; closeTray(); return go(id === me.id ? 'me' : `u/${id}`); }
   });
   // Hold to pause; swipe down to close; swipe sideways to the next or previous person.
@@ -1402,6 +1428,10 @@ function openTray(gi, si = null) {
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
+  // Typing a reply pauses the story.
+  el.addEventListener('focusin', e => { if (e.target.matches('.tv-reply')) pauseTray(); });
+  el.addEventListener('focusout', e => { if (e.target.matches('.tv-reply') && !e.target.value) setTimeout(resumeTray, 150); });
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.tv-reply')) { e.preventDefault(); replyToStory(e.target.form); } });
 }
 
 // The next or previous person's stories, with a slide.
@@ -1454,7 +1484,7 @@ function showTray(gi, si, force = false) {
     <button class="sv-tap prev" data-tv="prev" aria-label="הקודם"></button>
     <button class="sv-tap next" data-tv="next" aria-label="הבא"></button>
     ${g.mine ? `<div class="tv-foot"><button class="tv-views" data-tv="viewers">${icon('eye')}<span>${st.views || 0} צפיות</span>${st.likes ? `<span class="tv-likes">${icon('heart')}${st.likes}</span>` : ''}</button><button class="icon-btn" data-tv="delete" aria-label="מחיקה">${icon('trash')}</button></div>`
-      : `<div class="tv-foot other"><button class="tv-reply" data-tv="author">${icon('user')}<span>לפרופיל של ${esc(a.name.split(' ')[0])}</span></button><button class="tv-heart ${st.liked ? 'on' : ''}" data-tv="like" aria-label="לייק" aria-pressed="${!!st.liked}">${icon('heart')}</button></div>`}`;
+      : `<div class="tv-foot other"><form class="tv-reply-form" data-tv-form onsubmit="return false"><input class="tv-reply" maxlength="500" enterkeyhint="send" placeholder="שליחת הודעה ל${esc(a.name.split(' ')[0])}..."><button class="tv-send" data-tv="send" aria-label="שליחה">${icon('send')}</button></form><button class="tv-heart ${st.liked ? 'on' : ''}" data-tv="like" aria-label="לייק" aria-pressed="${!!st.liked}">${icon('heart')}</button></div>`}`;
   const start = () => {
     if (trayState !== s || s.gi !== gi || s.si !== si) return;
     const bar = s.el.querySelector(`.sv-bars span:nth-child(${si + 1})`);
@@ -1548,6 +1578,238 @@ function trayHtml(f, loading) {
   </section>`;
 }
 
+// ---------- Phone notifications ----------
+
+function pushBanner() {
+  if (demo || store.get('hekerut.pushDismissed')) return '';
+  const sup = Push.support();
+  if (sup === 'none' || (sup === 'ok' && Push.permission() === 'granted')) return '';
+  if (sup === 'install') {
+    return `<div class="push-banner">${icon('bell')}<div><b>התראות לטלפון</b><small>באייפון ההתראות עובדות מהאפליקציה שעל מסך הבית: בספארי לוחצים שיתוף ואז "הוספה למסך הבית".</small></div><button class="icon-btn sm" data-act="push-dismiss" aria-label="סגירה">${icon('close')}</button></div>`;
+  }
+  if (Push.permission() === 'denied') return '';
+  return `<div class="push-banner">${icon('bell')}<div><b>לא לפספס הודעות</b><small>התראה לטלפון כשמישהו כותב לך או מתחיל לעקוב אחריך</small></div><button class="btn primary sm" data-act="push-on">הפעלה</button><button class="icon-btn sm" data-act="push-dismiss" aria-label="סגירה">${icon('close')}</button></div>`;
+}
+
+async function pushOn(btn) {
+  if (btn) btn.disabled = true;
+  try {
+    await Push.enable(api, sess);
+    toast('ההתראות פועלות', 'bell');
+    haptic(20);
+    render();
+  } catch (e) {
+    if (btn) btn.disabled = false;
+    toast(e.code === 'denied' ? 'ההתראות חסומות. אפשר לאשר אותן בהגדרות הטלפון' : errorText(e), 'close');
+  }
+}
+
+async function pushRow() {
+  const sup = Push.support();
+  const on = await Push.active();
+  const small = demo ? 'יעבדו כשהאפליקציה מחוברת לשרת'
+    : sup === 'install' ? 'באייפון: הוסיפו קודם את האפליקציה למסך הבית'
+      : sup === 'none' ? 'הדפדפן הזה לא תומך בהתראות'
+        : Push.permission() === 'denied' ? 'חסומות בהגדרות הטלפון' : on ? 'הודעות ועוקבים חדשים' : 'כבויות';
+  const can = !demo && sup === 'ok' && Push.permission() !== 'denied';
+  return `<button class="set-row btnrow" ${can ? `data-act="${on ? 'push-off' : 'push-on'}"` : 'disabled'}>${icon('bell')}<span><b>התראות לטלפון ${on ? '· פועלות' : ''}</b><small>${small}</small></span>${can ? `<span class="set-pill ${on ? 'on' : ''}">${on ? 'כיבוי' : 'הפעלה'}</span>` : ''}</button>`;
+}
+
+// ---------- Chats ----------
+
+const meWord = () => gen(me.profile, 'אתה', 'את', 'את/ה');
+
+function chatRow(c, i = 0) {
+  const o = c.other;
+  return `<button class="row chat-row ${c.unread ? 'unread' : ''}" style="--i:${i}" data-go="chat/${o.id}">
+    ${avatar(o, 'm')}
+    <div class="row-text"><b>${esc(o.name)}</b><small>${c.last.mine ? `${meWord()}: ` : ''}${esc(c.last.text.split('\n')[0])}</small></div>
+    <span class="chat-meta"><small>${timeAgo(c.last.at)}</small>${c.unread ? `<span class="count">${c.unread}</span>` : ''}</span>
+  </button>`;
+}
+
+async function renderChats(seq) {
+  const draw = list => page(`
+    ${topbar('הודעות', { back: true, actions: `<button class="icon-btn" data-act="new-chat" aria-label="הודעה חדשה">${icon('edit')}</button>` })}
+    ${pushBanner()}
+    <div class="list chats">${list ? (list.length ? list.map(chatRow).join('')
+      : `<div class="empty-state">${icon('send')}<h2>עוד אין הודעות</h2><p>אפשר לכתוב לחברים, למי שהכרת ולמי שעוקב אחריך.</p><button class="btn primary" data-act="new-chat">${icon('edit')}<span>הודעה חדשה</span></button></div>`)
+      : skeletonRows(4)}</div>
+    <div class="foot-space"></div>`, 'none');
+  draw(cache.chats);
+  try {
+    const list = await api.chats(sess);
+    cache.chats = list;
+    if (seq === renderSeq) draw(list);
+  } catch (e) { if (!cache.chats) toast(errorText(e), 'close'); }
+}
+
+// Pick someone to write to: friends first, then people who follow you.
+async function newChat() {
+  const sheet = openSheet(`<h2 class="sheet-title">הודעה חדשה</h2><div class="list">${skeletonRows(3)}</div>`, { cls: 'tall' });
+  try {
+    const [friends, followers] = await Promise.all([api.list(sess, me.id, 'friends'), api.list(sess, me.id, 'followers')]);
+    const seen = new Set();
+    const all = [...friends, ...followers].filter(p => !seen.has(p.id) && seen.add(p.id));
+    const box = sheet.querySelector('.list');
+    if (box) box.innerHTML = all.length ? all.map((p, i) => `<button class="row" style="--i:${i}" data-go="chat/${p.id}">${avatar(p, 'm')}<div class="row-text"><b>${esc(p.name)}</b><small>${esc(headline(p) || ageLine(p))}</small></div>${icon('send')}</button>`).join('')
+      : `<div class="empty-mini">${icon('people')}<span>כשיהיו לך חברים או עוקבים, אפשר יהיה לכתוב להם מכאן</span></div>`;
+  } catch (e) { toast(errorText(e), 'close'); }
+}
+
+let chatState = null;
+
+function stopChat() {
+  if (chatState) clearTimeout(chatState.timer);
+  chatState = null;
+}
+
+const dayLabel = t => {
+  const d = new Date(t), now = new Date();
+  const days = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 86400e3);
+  if (days === 0) return 'היום';
+  if (days === 1) return 'אתמול';
+  return d.toLocaleDateString('he-IL', { weekday: days < 7 ? 'long' : undefined, day: 'numeric', month: 'long' });
+};
+const clock = t => new Date(t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+
+function bubblesHtml() {
+  const c = chatState;
+  const list = [...c.msgs].sort((a, b) => a.id - b.id);
+  let out = c.next ? '<button class="older" data-act="chat-older">הודעות קודמות</button>' : '';
+  let lastDay = '';
+  const lastMine = [...list].reverse().find(m => m.mine);
+  list.forEach((m, i) => {
+    const day = new Date(m.at).toDateString();
+    if (day !== lastDay) { out += `<div class="day-sep"><span>${dayLabel(m.at)}</span></div>`; lastDay = day; }
+    const next = list[i + 1];
+    const tail = !next || next.mine !== m.mine || next.at - m.at > 5 * 60e3;
+    out += `<div class="msg ${m.mine ? 'mine' : 'theirs'} ${tail ? 'tail' : ''} ${m.pending ? 'pending' : ''} ${m.failed ? 'failed' : ''}" data-mid="${m.id}">
+      ${m.story ? `<small class="msg-ref">${icon('sparkle')}${m.mine ? 'הגבת לסטורי' : 'הגיב/ה לסטורי שלך'}</small>` : ''}
+      <span class="bubble">${esc(m.text).replace(/\n/g, '<br>')}</span>
+      ${tail ? `<small class="msg-time">${m.failed ? 'לא נשלחה · לחצו לנסות שוב' : clock(m.at)}${m === lastMine && !m.pending && !m.failed ? ` · ${m.read ? 'נראתה' : 'נשלחה'}` : ''}</small>` : ''}
+    </div>`;
+  });
+  if (!list.length) out += `<div class="chat-hello">${avatar(c.other, 'xl', { ring: true })}<b>${esc(c.other.name)}</b><small>${esc(headline(c.other) || ageLine(c.other))}</small><span>תגידו שלום 👋</span></div>`;
+  return out;
+}
+
+function drawChatMessages(stick = true) {
+  const box = document.querySelector('.chat-scroll');
+  if (!box || !chatState) return;
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.innerHTML = bubblesHtml();
+  if (stick || atBottom) box.scrollTop = box.scrollHeight;
+}
+
+async function renderChat(id, seq) {
+  stopChat();
+  const cachedOther = cache.views[id]?.person || cache.chats?.find(c => c.other.id === id)?.other;
+  chatState = { id, msgs: [], other: cachedOther || { id, name: '' }, canSend: true, next: null, timer: 0 };
+  const header = o => `<header class="topbar chat-top">
+      <button class="icon-btn" data-act="back" aria-label="חזרה">${icon('back')}</button>
+      <button class="chat-who" data-go="u/${id}">${avatar(o, 's')}<span><b>${esc(o.name)}</b><small>${esc(headline(o) || ageLine(o))}</small></span></button>
+      <span class="tb-gap"></span>
+    </header>`;
+  page(`${header(chatState.other)}<div class="chat-scroll">${skeletonRows(3)}</div>
+    <form class="chat-bar" onsubmit="return false"><textarea class="inp" rows="1" maxlength="1000" placeholder="הודעה..." enterkeyhint="send" data-chat-input></textarea><button class="send-btn" data-act="chat-send" aria-label="שליחה" disabled>${icon('send')}</button></form>`, 'chat', { cls: 'chat-page' });
+  try {
+    const r = await api.chat(sess, id);
+    if (seq !== renderSeq || chatState?.id !== id) return;
+    Object.assign(chatState, { other: r.other, canSend: r.canSend, msgs: r.messages, next: r.next });
+    document.querySelector('.chat-top').outerHTML = header(r.other);
+    if (!r.canSend) document.querySelector('.chat-bar').outerHTML = `<p class="chat-locked">${icon('lock')}<span>אפשר לכתוב לחברים, למי שהכרת ולמי שעוקב אחריך</span></p>`;
+    drawChatMessages(true);
+    if (me.unreadChats) { me = await api.me(sess).catch(() => me); setTabbar('chat'); }
+    pollChat();
+  } catch (e) {
+    toast(errorText(e), 'close');
+  }
+}
+
+// While the chat is open, check for new messages (and "seen") every few seconds.
+function pollChat(delay = 3000) {
+  const c = chatState;
+  if (!c) return;
+  clearTimeout(c.timer);
+  c.timer = setTimeout(async () => {
+    if (chatState !== c || route().name !== 'chat') return;
+    if (!document.hidden) {
+      try {
+        const r = await api.chat(sess, c.id);
+        if (chatState !== c) return;
+        const byId = new Map(c.msgs.filter(m => !m.pending && !m.failed).map(m => [m.id, m]));
+        let changed = false;
+        for (const m of r.messages) {
+          const old = byId.get(m.id);
+          if (!old) { c.msgs.push(m); changed = true; } else if (old.read !== m.read) { old.read = m.read; changed = true; }
+        }
+        if (changed) { drawChatMessages(false); haptic(5); }
+      } catch {}
+    }
+    pollChat(document.hidden ? 8000 : 3000);
+  }, delay);
+}
+
+async function sendChat(text, retry) {
+  const c = chatState;
+  if (!c) return;
+  const temp = retry || { id: Date.now() * 1000, text, at: Date.now(), mine: true, pending: true };
+  temp.pending = true;
+  temp.failed = false;
+  if (!retry) c.msgs.push(temp);
+  drawChatMessages(true);
+  haptic(8);
+  try {
+    const m = await api.send(sess, c.id, { text: temp.text });
+    if (chatState !== c) return;
+    c.msgs = c.msgs.filter(x => x !== temp && x.id !== m.id);
+    c.msgs.push(m);
+    if (cache.chats) delete cache.chats;
+    drawChatMessages(true);
+  } catch (e) {
+    temp.pending = false;
+    temp.failed = true;
+    drawChatMessages(true);
+    toast(e.code === 'cant_chat' ? 'אפשר לכתוב רק לחברים, למי שהכרת ולמי שעוקב אחריך' : errorText(e), 'close');
+  }
+}
+
+async function olderChat(btn) {
+  const c = chatState;
+  if (!c?.next) return;
+  btn.disabled = true;
+  try {
+    const r = await api.chat(sess, c.id, { before: c.next });
+    c.msgs.push(...r.messages);
+    c.next = r.next;
+    const box = document.querySelector('.chat-scroll');
+    const h = box.scrollHeight;
+    drawChatMessages(false);
+    box.scrollTop = box.scrollHeight - h;
+  } catch (e) { btn.disabled = false; toast(errorText(e), 'close'); }
+}
+
+// A reply to someone's story goes to their chat.
+async function replyToStory(form) {
+  const s = trayState;
+  const input = form.querySelector('input');
+  const text = input.value.trim();
+  if (!s || !text) return;
+  const g = s.groups[s.gi];
+  input.value = '';
+  input.blur();
+  try {
+    await api.send(sess, g.author.id, { text, story: true });
+    toast(`נשלח ל${g.author.name.split(' ')[0]}`, 'send');
+    haptic(15);
+  } catch (e) {
+    input.value = text;
+    toast(e.code === 'cant_chat' ? 'אפשר לשלוח הודעות רק לחברים ולמי שהכרת' : errorText(e), 'close');
+  }
+  resumeTray();
+}
+
 // ---------- Moving to another phone ----------
 
 function showTransfer() {
@@ -1601,6 +1863,21 @@ document.addEventListener('click', async e => {
     if (act === 'search') { ui.query = ''; go('people'); setTimeout(() => $('#q')?.focus(), 350); return; }
     if (act === 'story-me') return openStory(me.id);
     if (act === 'create') { haptic(); return create('story'); }
+    if (act === 'new-chat') { haptic(); return newChat(); }
+    if (act === 'chat-send') {
+      const ta = document.querySelector('[data-chat-input]');
+      const text = ta?.value.trim();
+      if (!text) return;
+      ta.value = '';
+      ta.style.height = '';
+      document.querySelector('[data-act="chat-send"]').disabled = true;
+      ta.focus();
+      return sendChat(text);
+    }
+    if (act === 'chat-older') return olderChat(t.closest('[data-act]'));
+    if (act === 'push-on') return pushOn(t.closest('[data-act]'));
+    if (act === 'push-off') { await Push.disable(api, sess); toast('ההתראות כבויות', 'bell'); return render(); }
+    if (act === 'push-dismiss') { store.set('hekerut.pushDismissed', true); t.closest('.push-banner')?.remove(); return; }
     if (act === 'new-post') { haptic(); return create('post', { pick: true }); }
     if (act === 'new-story') { haptic(); return create('story'); }
     if (act === 'my-story') { haptic(); return openTray(cache.feed.tray.findIndex(g => g.mine)); }
@@ -1662,6 +1939,8 @@ document.addEventListener('click', async e => {
     try { await api.removeFollower(sess, rm.dataset.removeFollower); cache.lists = {}; me = await api.me(sess); render(); } catch (er) { toast(errorText(er), 'close'); }
     return;
   }
+  const failed = t.closest('.msg.failed');
+  if (failed && chatState) { const m = chatState.msgs.find(x => String(x.id) === failed.dataset.mid); if (m) return sendChat(m.text, m); }
   const like = t.closest('[data-like]');
   if (like) return toggleLike(like.dataset.like);
   const dbl = t.closest('[data-dbl]');
@@ -1714,6 +1993,13 @@ function onChip(chip) {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') return onSearch(t.value);
+  if (t.dataset.chatInput !== undefined) {
+    t.style.height = '';
+    t.style.height = `${Math.min(t.scrollHeight, 140)}px`;
+    const b = document.querySelector('[data-act="chat-send"]');
+    if (b) b.disabled = !t.value.trim();
+    return;
+  }
 
   const m = formModel();
   if (!m) return;
@@ -1763,7 +2049,13 @@ document.addEventListener('change', async e => {
 
 window.addEventListener('hashchange', () => { closeStory(); closeCreator(); if (trayState) { const s = trayState; trayState = null; clearTimeout(s.timer); s.el.remove(); document.body.classList.remove('no-scroll'); } render(); });
 
-api.onChange(async () => {
+api.onChange(async kind => {
+  if (kind === 'message') {
+    if (chatState) pollChat(0);
+    try { me = await api.me(sess); setTabbar(route().name); } catch {}
+    if (route().name !== 'chat') toast('הודעה חדשה', 'send');
+    return;
+  }
   try { me = await api.me(sess); } catch {}
   cache.lists = {};
   const r = route().name;
@@ -1772,6 +2064,30 @@ api.onChange(async () => {
   else setTabbar(r);
   toast('מישהו עקב אחריך בחזרה', 'heart');
 });
+
+// Enter sends a chat message on a computer keyboard (Shift+Enter for a new line); phones keep Enter for lines.
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.shiftKey || !e.target.matches?.('[data-chat-input]') || matchMedia('(pointer: coarse)').matches) return;
+  e.preventDefault();
+  document.querySelector('[data-act="chat-send"]')?.click();
+});
+
+// A tap on a notification while the app is open: go to that chat or profile.
+navigator.serviceWorker?.addEventListener('message', e => {
+  if (e.data?.type === 'open' && e.data.url) location.hash = e.data.url.replace(/^#/, '');
+});
+
+// The unread badge on the messages button stays current while the app is on screen.
+setInterval(async () => {
+  if (document.hidden || !sess || !me || route().name === 'chat') return;
+  try {
+    const m = await api.me(sess);
+    const fresh = m.unreadChats !== me.unreadChats || m.unread !== me.unread;
+    me = m;
+    setTabbar(route().name);
+    if (fresh && route().name === 'chats') render();
+  } catch {}
+}, 25000);
 
 // Comes back to the screen: refresh counts and the activity dot.
 document.addEventListener('visibilitychange', async () => {
@@ -1806,4 +2122,5 @@ if (!moveHome()) {
   applyTheme();
   buildTabbar();
   render();
+  if (sess && !demo) Push.refresh(api, sess);
 }

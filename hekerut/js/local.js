@@ -9,6 +9,8 @@ export class MemoryStore {
   constructor(data) {
     this.d = data || {};
     for (const k of ['users', 'photos', 'follows', 'events', 'media', 'posts', 'likes', 'stories', 'views']) this.d[k] ||= {};
+    this.d.messages ||= [];
+    this.d.seq ||= 0;
   }
   user(id) { return this.d.users[id] ? structuredClone(this.d.users[id]) : null; }
   putUser(u) { this.d.users[u.id] = structuredClone({ ...u, idx: indexFields(u.profile) }); }
@@ -23,6 +25,26 @@ export class MemoryStore {
     for (const [k, m] of Object.entries(this.d.media)) if (m.owner === id) delete this.d.media[k];
     for (const k of Object.keys(this.d.likes)) if (k.endsWith(`>${id}`)) delete this.d.likes[k];
     for (const k of Object.keys(this.d.views)) if (k.endsWith(`>${id}`)) delete this.d.views[k];
+    this.d.messages = this.d.messages.filter(m => m.sender !== id && m.recipient !== id);
+  }
+  addMessage(m) { const n = ++this.d.seq; this.d.messages.push({ ...m, n, read: false }); return n; }
+  messages(conv, limit, before, after) {
+    return this.d.messages.filter(m => m.conv === conv && m.n < before && m.n > after).sort((a, b) => b.n - a.n).slice(0, limit).map(m => ({ ...m }));
+  }
+  hasMessageFrom(conv, sender) { return this.d.messages.some(m => m.conv === conv && m.sender === sender); }
+  sentSince(uid, since) { return this.d.messages.filter(m => m.sender === uid && m.at > since).length; }
+  markConvRead(conv, uid) { for (const m of this.d.messages) if (m.conv === conv && m.recipient === uid) m.read = true; }
+  unreadMessages(uid) { return this.d.messages.filter(m => m.recipient === uid && !m.read).length; }
+  convs(uid) {
+    const by = new Map();
+    for (const m of this.d.messages) {
+      if (m.sender !== uid && m.recipient !== uid) continue;
+      const c = by.get(m.conv) || { a: m.conv.split('|')[0], b: m.conv.split('|')[1], last: m, unread: 0 };
+      if (m.n > c.last.n) c.last = m;
+      if (m.recipient === uid && !m.read) c.unread++;
+      by.set(m.conv, c);
+    }
+    return [...by.values()].map(c => ({ ...c, last: { ...c.last } }));
   }
   putMedia(id, owner, data) { this.d.media[id] = { owner, data }; }
   media(id) { return this.d.media[id]?.data || null; }
@@ -178,6 +200,25 @@ export class LocalApi {
   storyViewers(s, id) { return this.run(() => this.net.storyViewers(this.net.auth(s.id, s.token), id)); }
   deleteStory(s, id) { return this.run(() => this.net.deleteStory(this.net.auth(s.id, s.token), id)); }
   likeStory(s, id, on) { return this.run(() => this.net.likeStory(this.net.auth(s.id, s.token), id, on)); }
+  chats(s) { return this.run(() => this.net.chats(this.net.auth(s.id, s.token))); }
+  chat(s, id, opts) { return this.run(() => this.net.chat(this.net.auth(s.id, s.token), id, opts)); }
+  send(s, id, body) {
+    const out = this.run(() => this.net.send(this.net.auth(s.id, s.token), id, body));
+    // The made-up people answer, so the demo shows a conversation.
+    if (id.startsWith('d-')) {
+      setTimeout(() => {
+        const them = this.store.user(id);
+        if (!them || !this.store.user(s.id)) return;
+        const lines = ['היי! איזה כיף לשמוע ממך 😊', 'אחלה, נדבר בקרוב', 'חחח בדיוק חשבתי עלייך', 'מתי משתחררים? 🙃', 'סגור, נתאם'];
+        try { this.net.send(them, s.id, { text: lines[Math.floor(Math.random() * lines.length)] }); this.save(); } catch {}
+        for (const fn of this.listeners) fn('message');
+      }, 2200);
+    }
+    return out;
+  }
+  pushKey() { return Promise.reject(Object.assign(new Error('demo'), { code: 'demo' })); }
+  subscribe() { return Promise.resolve({ ok: true }); }
+  unsubscribe() { return Promise.resolve({ ok: true }); }
   onChange(fn) { this.listeners.add(fn); }
   reset() { try { localStorage.removeItem(KEY); } catch {} }
 }

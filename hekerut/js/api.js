@@ -60,6 +60,12 @@ class RemoteApi {
   storyViewers(s, id) { return this.call('GET', `/stories/${encodeURIComponent(id)}/viewers`, s); }
   deleteStory(s, id) { return this.call('DELETE', `/stories/${encodeURIComponent(id)}`, s); }
   likeStory(s, id, on) { return this.call(on ? 'POST' : 'DELETE', `/stories/${encodeURIComponent(id)}/like`, s); }
+  chats(s) { return this.call('GET', '/chats', s); }
+  chat(s, id, { before, after } = {}) { return this.call('GET', `/chats/${encodeURIComponent(id)}${before ? `?before=${before}` : after ? `?after=${after}` : ''}`, s); }
+  send(s, id, body) { return this.call('POST', `/chats/${encodeURIComponent(id)}`, s, body); }
+  pushKey() { return this.call('GET', '/push/key'); }
+  subscribe(s, subscription) { return this.call('POST', '/push', s, { subscription }); }
+  unsubscribe(s, endpoint) { return this.call('POST', '/push/remove', s, { endpoint }); }
   onChange() {}
   reset() {}
 }

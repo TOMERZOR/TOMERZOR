@@ -985,3 +985,79 @@ select.inp { padding-left: 34px; background-image: linear-gradient(45deg, transp
 .tv-heart.pop { animation: pop 0.45s var(--spring); }
 .tv-likes { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: 8px; }
 .tv-likes .ic { width: 16px; height: 16px; fill: #ff3b5c; stroke: #ff3b5c; }
+
+.cr-spacer { width: 44px; height: 44px; }
+
+/* ---------- Quiet refresh (no replayed entrance animations) ---------- */
+
+.view.quiet *:not(.sk):not(.prof-av .av):not(.prof-av .av *) { animation: none !important; }
+
+/* ---------- Badges, banners ---------- */
+
+.has-badge { position: relative; }
+.nbadge { position: absolute; top: 3px; left: 1px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--red); color: #fff; font: 800 11px/18px "Plus Jakarta Sans", sans-serif; text-align: center; box-shadow: 0 0 0 2px var(--bg); animation: pop 0.45s var(--spring); }
+.nbadge[hidden] { display: none; }
+.push-banner { display: flex; align-items: center; gap: 12px; margin: 6px 0 14px; padding: 14px; border-radius: 20px; background: var(--grad-soft); box-shadow: inset 0 0 0 1px var(--line); animation: rise 0.5s var(--ease) both; }
+.push-banner > .ic { width: 26px; height: 26px; color: var(--gold); flex: none; }
+.push-banner > div { flex: 1; display: grid; gap: 2px; }
+.push-banner b { font: 800 15px "Heebo", sans-serif; }
+.push-banner small { color: var(--text-2); font-size: 13px; line-height: 1.45; }
+.set-pill { margin-inline-start: auto; padding: 6px 12px; border-radius: 99px; background: var(--grad); color: var(--on-grad); font: 700 13px "Heebo", sans-serif; }
+.set-pill.on { background: var(--card-2); color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line); }
+.set-row.btnrow:disabled { opacity: 0.6; }
+.btn.sq { flex: 0 0 50px !important; padding: 0; }
+
+/* ---------- Chats ---------- */
+
+.chat-row { width: 100%; text-align: start; }
+.chat-row.unread .row-text b { font-weight: 800; }
+.chat-row.unread .row-text small { color: var(--text); font-weight: 600; }
+.chat-meta { display: grid; justify-items: end; gap: 4px; flex: none; }
+.chat-meta small { color: var(--text-3); font-size: 12px; }
+.count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 99px; background: var(--grad); color: var(--on-grad); font: 800 11.5px/20px "Plus Jakarta Sans", sans-serif; text-align: center; }
+.row > .ic { color: var(--gold); width: 20px; height: 20px; }
+
+.view.chat-page { display: flex; flex-direction: column; height: 100dvh; min-height: 0; padding: 0 16px; }
+.chat-top { flex: none; }
+.chat-who { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; text-align: start; }
+.chat-who > span { display: grid; min-width: 0; }
+.chat-who b { font: 800 16px "Heebo", sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-who small { color: var(--text-2); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 8px 14px 12px; display: flex; flex-direction: column; gap: 2px; }
+.older { align-self: center; margin: 6px 0 10px; padding: 6px 14px; border-radius: 99px; background: var(--card-2); color: var(--text-2); font: 600 13px "Heebo", sans-serif; }
+.day-sep { display: flex; justify-content: center; margin: 14px 0 8px; }
+.day-sep span { padding: 4px 12px; border-radius: 99px; background: var(--card-2); color: var(--text-3); font: 600 12px "Heebo", sans-serif; }
+.msg { display: grid; justify-items: start; max-width: 78%; animation: msgin 0.32s var(--spring) both; }
+.msg.mine { align-self: flex-end; justify-items: end; }
+.msg.theirs { align-self: flex-start; }
+@keyframes msgin { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+.bubble { padding: 9px 14px; border-radius: 20px; font-size: 15.5px; line-height: 1.42; white-space: pre-wrap; word-break: break-word; }
+.msg.theirs .bubble { background: var(--card-2); box-shadow: inset 0 0 0 1px var(--line); }
+.msg.mine .bubble { background: var(--grad); color: var(--on-grad); }
+.msg.theirs.tail .bubble { border-bottom-right-radius: 6px; }
+.msg.mine.tail .bubble { border-bottom-left-radius: 6px; }
+.msg.tail { margin-bottom: 6px; }
+.msg.pending .bubble { opacity: 0.6; }
+.msg.failed .bubble { background: var(--red); color: #fff; cursor: pointer; }
+.msg-time { color: var(--text-3); font-size: 11.5px; margin-top: 3px; padding: 0 6px; }
+.msg-ref { display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font-size: 12px; margin-bottom: 3px; padding: 0 6px; }
+.msg-ref .ic { width: 13px; height: 13px; color: var(--gold); }
+.chat-hello { margin: auto; display: grid; justify-items: center; gap: 4px; text-align: center; padding: 30px 0; animation: rise 0.5s var(--ease) both; }
+.chat-hello b { font: 800 20px "Heebo", sans-serif; margin-top: 10px; }
+.chat-hello small { color: var(--text-2); }
+.chat-hello span { margin-top: 12px; color: var(--text-2); font-size: 15px; }
+.chat-bar { flex: none; display: flex; align-items: flex-end; gap: 8px; padding: 8px 0 calc(10px + env(safe-area-inset-bottom)); }
+.chat-bar .inp { min-height: 46px; height: 46px; max-height: 140px; padding: 12px 16px; border-radius: 23px; resize: none; line-height: 1.4; font-size: 16px; }
+.send-btn { flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: var(--on-grad); box-shadow: 0 6px 16px rgba(211, 154, 84, 0.35); transition: transform 0.25s var(--spring), opacity 0.2s; }
+.send-btn:disabled { opacity: 0.35; box-shadow: none; }
+.send-btn:active:not(:disabled) { transform: scale(0.88); }
+.send-btn .ic { width: 21px; height: 21px; transform: scaleX(-1); stroke-width: 2.1; }
+.chat-locked { flex: none; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 0 calc(16px + env(safe-area-inset-bottom)); color: var(--text-3); font-size: 13.5px; text-align: center; }
+.chat-locked .ic { width: 16px; height: 16px; }
+
+/* Story reply */
+.tv-reply-form { flex: 1; position: relative; display: flex; }
+.tv-reply-form .tv-reply { width: 100%; outline: 0; font-size: 15px; padding-inline-end: 46px; }
+.tv-reply::placeholder { color: rgba(255, 255, 255, 0.75); }
+.tv-send { position: absolute; left: 4px; top: 50%; width: 38px; height: 38px; margin-top: -19px; display: grid; place-items: center; color: #fff; }
+.tv-send .ic { width: 20px; height: 20px; transform: scaleX(-1); }

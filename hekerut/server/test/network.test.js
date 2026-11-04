@@ -276,3 +276,68 @@ test('פז״ם: days served, days left and the release date by track', async () 
   assert.equal(serviceClock(man, at('2027-05-01')).left, 0);
   assert.equal(cleanProfile({ name: 'x', draft: '2024-02-30' }).draft, '');
 });
+
+for (const [kind, make] of Object.entries(stores)) {
+  test(`${kind}: chats between people who know each other, with phone notifications`, () => {
+    let t = 50_000_000;
+    const notes = [];
+    const net = new Network(make(), { random: randomString, now: () => (t += 1000), notify: (to, n) => notes.push({ to, ...n }) });
+    const reg = name => { const r = net.register({ profile: person(name) }); return () => net.auth(r.id, r.token); };
+    const a = reg('אורי'), b = reg('בר'), c = reg('גל');
+
+    // Strangers can't write; a follow reaches the phone.
+    assert.throws(() => net.send(a(), b().id, { text: 'היי' }), /cant_chat/);
+    net.follow(b(), a().id);
+    assert.equal(notes.at(-1).to, a().id);
+    assert.equal(notes.at(-1).title, 'עוקב חדש');
+    assert.equal(notes.at(-1).url, `#u/${b().id}`);
+    // a can write to someone who follows them; b can't yet write to a (a doesn't follow b).
+    assert.throws(() => net.send(b(), a().id, { text: 'שלום' }), /cant_chat/);
+    const m1 = net.send(a(), b().id, { text: 'היי בר!\nמה קורה?' });
+    assert.equal(m1.mine, true);
+    assert.equal(notes.at(-1).to, b().id);
+    assert.equal(notes.at(-1).title, 'אורי');
+    assert.equal(notes.at(-1).url, `#chat/${a().id}`);
+    // Once a wrote, b can answer.
+    net.send(b(), a().id, { text: 'הכל טוב', story: true });
+    assert.equal(notes.at(-1).title, 'בר הגיב לסטורי שלך');
+    assert.equal(net.me(a()).unreadChats, 1);
+    const list = net.chats(a());
+    assert.equal(list.length, 1);
+    assert.equal(list[0].other.id, b().id);
+    assert.equal(list[0].last.text, 'הכל טוב');
+    assert.equal(list[0].unread, 1);
+    const conv = net.chat(a(), b().id);
+    assert.deepEqual(conv.messages.map(m => [m.text, m.mine]), [['הכל טוב', false], ['היי בר!\nמה קורה?', true]]);
+    assert.equal(conv.messages[0].story, true);
+    assert.equal(conv.canSend, true);
+    assert.equal(net.me(a()).unreadChats, 0, 'opening the chat reads it');
+    assert.equal(net.chat(b(), a().id).messages[0].read, true, 'b sees that a read their message');
+    // Only newer messages with `after`.
+    const last = conv.messages[0].id;
+    net.send(b(), a().id, { text: 'עוד משהו' });
+    assert.deepEqual(net.chat(a(), b().id, { after: last }).messages.map(m => m.text), ['עוד משהו']);
+    assert.throws(() => net.send(a(), b().id, { text: '   ' }), /empty/);
+    assert.throws(() => net.send(c(), a().id, { text: 'x' }), /cant_chat/);
+    // Too many in a minute.
+    for (let i = 0; i < 30; i++) { t -= 1000; try { net.send(a(), b().id, { text: `${i}` }); } catch (e) { assert.match(e.code, /slow_down/); } }
+    net.remove(b());
+    assert.equal(net.chats(a()).length, 0);
+  });
+}
+
+test('push subscriptions are checked before they are kept', async () => {
+  const { validSubscription, Pusher } = await import('../worker.js');
+  const good = { endpoint: 'https://web.push.apple.com/QAB', keys: { p256dh: 'B'.repeat(87), auth: 'a'.repeat(22) } };
+  assert.equal(validSubscription(good), true);
+  assert.equal(validSubscription({ ...good, endpoint: 'https://evil.example/x' }), false);
+  assert.equal(validSubscription({ ...good, keys: { p256dh: 'x', auth: 'y' } }), false);
+  const store = new SqlStore(fakeSql());
+  const p = new Pusher(store);
+  const k1 = await p.keys(), k2 = await p.keys();
+  assert.equal(k1.publicKey, k2.publicKey, 'one key pair, kept');
+  assert.equal(k1.publicKey.length, 87);
+  p.subscribe({ id: 'u1' }, good);
+  assert.equal(store.subsOf('u1')[0].endpoint, good.endpoint);
+  assert.throws(() => p.subscribe({ id: 'u1' }, { endpoint: 'http://x' }), /subscription/);
+});

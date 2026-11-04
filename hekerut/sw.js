@@ -1,6 +1,6 @@
 // Keeps the app on the phone so it opens instantly, even without internet. The network itself
 // (profiles, follows) comes from the server and isn't cached here. Bump VERSION whenever a file changes.
-const VERSION = 'hekerut-v6';
+const VERSION = 'hekerut-v7';
 const FILES = [
   './',
   'index.html',
@@ -17,6 +17,7 @@ const FILES = [
   'js/qr.js',
   'js/create.js',
   'js/imagefx.js',
+  'js/push.js',
   'js/config.js',
   'vendor/qrcode.js',
   'vendor/jsQR.js',
@@ -53,4 +54,36 @@ self.addEventListener('fetch', e => {
     return;
   }
   e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request)));
+});
+
+// Phone notifications from the server: new messages and new followers.
+self.addEventListener('push', e => {
+  let n = {};
+  try { n = e.data.json(); } catch {}
+  e.waitUntil((async () => {
+    // Skip a message notification when that chat is open on screen right now.
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (n.url && wins.some(w => w.visibilityState === 'visible' && w.focused && new URL(w.url).hash === n.url)) return;
+    try { if (self.navigator.setAppBadge) await self.navigator.setAppBadge(); } catch {}
+    await self.registration.showNotification(n.title || 'היכרות בקליק', {
+      body: n.body || '',
+      icon: 'img/icon-192.png',
+      badge: 'img/icon-192.png',
+      tag: n.tag || undefined,
+      renotify: !!n.tag,
+      lang: 'he',
+      dir: 'rtl',
+      data: { url: n.url || '#home' },
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const target = new URL(`./${e.notification.data?.url || '#home'}`, self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const win = list.find(c => 'focus' in c);
+    if (win) { win.postMessage({ type: 'open', url: e.notification.data?.url }); return win.focus(); }
+    return self.clients.openWindow(target);
+  }));
 });

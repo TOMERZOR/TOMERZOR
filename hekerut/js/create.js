@@ -1,5 +1,5 @@
 // The full-screen maker, Instagram-style.
-//   Story: the camera (shutter, gallery, flip) or "Aa" for text on a color. Then text you can
+//   Story: the camera (shutter and gallery) or "Aa" for text on a color. Then text you can
 //   drag, recolor, resize, or drag onto the trash; the photo itself can be dragged to frame it.
 //   What you see is burned into one image, so the story looks the same for everyone.
 //   Post: pick a photo and frame it (1:1, 4:5 or its own shape), pick a filter, write a caption.
@@ -90,7 +90,7 @@ function drawCamera() {
     <div class="cr-bottom">
       <label class="cr-gallery" aria-label="גלריה">${icon('image')}<input type="file" accept="image/*" data-cr-file hidden></label>
       <button class="shutter" data-cr="shoot" aria-label="צילום"><span></span></button>
-      <button class="cr-ic round" data-cr="flip" aria-label="החלפת מצלמה">${icon('refresh')}</button>
+      <span class="cr-spacer"></span>
     </div>
     ${modes()}`;
   startCamera();
@@ -374,7 +374,6 @@ function onClick(e) {
   const k = b.dataset.cr;
   if (k === 'close') return closeCreator();
   if (k === 'shoot') return shoot();
-  if (k === 'flip') { s.facing = s.facing === 'user' ? 'environment' : 'user'; return drawCamera(); }
   if (k === 'create') { stopCamera(); Object.assign(s, { src: null, srcUrl: '', step: 'edit', texts: [] }); return addText(); }
   if (k === 'retake') { Object.assign(s, { src: null, srcUrl: '', texts: [], editing: null, step: 'camera' }); return draw(); }
   if (k === 'bg') { s.bg = (s.bg + 1) % BGS.length; return draw(); }

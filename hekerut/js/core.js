@@ -15,6 +15,8 @@ export const CORPS = {
   recon: { name: 'איסוף קרבי', levels: ['חטיבה / יחידה', 'גדוד', 'פלוגה', 'מחלקה', 'צוות'], sugg: [] },
   intel: { name: 'מודיעין', levels: ['יחידה', 'בסיס / זרוע', 'מדור', 'צוות'], sugg: [] },
   air: { name: 'חיל האוויר', levels: ['בסיס / כנף', 'טייסת / יחידה', 'מדור', 'צוות'], sugg: [] },
+  // Air defense is part of the air force, picked as a second step after choosing חיל האוויר.
+  airdef: { name: 'הגנ״א', full: 'חיל האוויר · הגנ״א', parent: 'air', levels: ['גדוד', 'סוללה', 'פלגה', 'צוות'], sugg: [] },
   navy: { name: 'חיל הים', levels: ['בסיס / זרוע', 'שייטת / יחידה', 'ספינה / מדור', 'צוות'], sugg: [] },
   c4i: { name: 'תקשוב', levels: ['יחידה', 'בסיס', 'מדור', 'צוות'], sugg: [] },
   homefront: { name: 'פיקוד העורף', levels: ['חטיבה / יחידה', 'גדוד', 'פלוגה', 'מחלקה', 'צוות'], sugg: [] },
@@ -32,6 +34,9 @@ export const STATUS = {
   reserve: { m: 'במילואים', f: 'במילואים' },
   released: { m: 'משוחרר', f: 'משוחררת', x: 'משוחרר/ת' },
 };
+
+export const corpsName = k => CORPS[k]?.full || CORPS[k]?.name || '';
+export const corpsFamily = k => CORPS[k]?.parent || k;
 
 export const PREP = { none: 'בלי', mechina: 'מכינה', year: 'שנת שירות' };
 
@@ -151,6 +156,8 @@ export function commonGround(a, b) {
     } else {
       push('corps', `שניכם ב${c.name}`, '', 1);
     }
+  } else if (a.unit?.corps && corpsFamily(a.unit.corps) === corpsFamily(b.unit?.corps)) {
+    push('corps', `שניכם ב${CORPS[corpsFamily(a.unit.corps)].name}`, '', 1);
   }
   if (a.prep?.kind !== 'none' && a.prep?.kind === b.prep?.kind) {
     if (a.prep.name && norm(a.prep.name) === norm(b.prep.name)) push('prep', a.prep.kind === 'mechina' ? 'אותה מכינה' : 'אותה שנת שירות', a.prep.name, 6);

@@ -143,3 +143,12 @@ test('http routes', async () => {
   assert.equal((await call('GET', '/nope')).status, 404);
   assert.equal((await call('DELETE', '/me', null, a)).data.ok, true);
 });
+
+test('air defense: battalion, battery and פלגה inside the air force', () => {
+  const a = cleanProfile(person('א', { unit: { corps: 'airdef', path: ['137', 'ב', 'א'] } }));
+  assert.deepEqual(unitChain(a).map(x => x.text), ['גדוד 137', 'סוללה ב׳', 'פלגה א׳']);
+  const b = cleanProfile(person('ב', { unit: { corps: 'airdef', path: ['137', 'ב', 'א', '2'] } }));
+  assert.equal(commonGround(a, b)[0].title, 'אותה פלגה!');
+  const c = cleanProfile(person('ג', { city: 'חיפה', unit: { corps: 'air', path: ['רמת דוד'] } }));
+  assert.equal(commonGround(a, c).find(x => x.k === 'corps').title, 'שניכם בחיל האוויר');
+});

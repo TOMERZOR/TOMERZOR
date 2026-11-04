@@ -317,6 +317,7 @@ select.inp { padding-left: 34px; background-image: linear-gradient(45deg, transp
 .corps-chip:active { transform: scale(0.93); }
 .corps-chip.on { background: var(--grad); color: var(--on-grad); box-shadow: 0 6px 16px rgba(211, 154, 84, 0.32); }
 
+.sub-corps { animation: rise 0.4s var(--ease) both; }
 .levels { border-radius: var(--r); padding: 16px; background: var(--grad-soft); box-shadow: inset 0 0 0 1px var(--line); display: grid; animation: rise 0.45s var(--ease) both; }
 .levels-head { display: flex; align-items: center; gap: 8px; font: 700 15px "Heebo", sans-serif; margin-bottom: 4px; }
 .levels-head .ic { color: var(--gold); }

@@ -2,7 +2,7 @@
 
 A social network for the moment you meet someone new from the army. You build your profile once (where you're from, age, mechina or service year, unit down to the team, tironut, roles and courses). When you meet someone, they scan your code and see your whole path, the people you both know and what you have in common. Hebrew, RTL, installable on the home screen (PWA). Static site, no build step.
 
-Live (after merging): https://tomerzor.github.io/TOMERZOR/hekerut/
+Live: https://hekerut.moffy-app.workers.dev (its own address; the old GitHub Pages link forwards there with the login).
 
 ```
 npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localhost:8795/hekerut/
@@ -32,7 +32,7 @@ npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localh
 A Cloudflare Worker with one Durable Object (SQLite) holding profiles, follows, activity, posts, likes, stories and their images, so mutual connections are a quick lookup. The rules (who sees what, what counts as mutual, what two people have in common, suggestions) are in `js/core.js`, shared between the server and the app's demo mode.
 
 - Login: on sign-up the server returns an id and a random secret token, kept on the phone. Sign-ups are limited to 10 an hour per address.
-- Deploy: `.github/workflows/hekerut-api.yml` runs on pushes to `hekerut/server/` or `hekerut/js/core.js` on the main branch (needs the `CLOUDFLARE_API_TOKEN` secret, already used by Remind. and Shomer), then writes the address into `js/config.js`.
+- Deploy: `.github/workflows/hekerut-api.yml` runs on every push to `hekerut/` on the app's own branch, `claude/military-social-app-zbkrwn`, with no merge needed. It tests and deploys the server, then deploys the app's static files as the `hekerut` worker (`site/wrangler.toml`). It needs the `CLOUDFLARE_API_TOKEN` secret, already used by Remind. and Shomer. `js/config.js` holds both addresses.
 - Images arrive as JPEG data URLs of at most 400 KB, are served from `/m/<id>`, and are deleted with their post or story. Expired stories are cleared whenever someone posts a new one. Limits: 20 posts an hour, 30 stories a day.
 - Tests: `cd hekerut/server && npm test` (both stores, visibility, follows, friends, mutuals, common ground, suggestions, posts, likes, stories, routes).
 

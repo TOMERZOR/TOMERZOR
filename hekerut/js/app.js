@@ -2,10 +2,11 @@
 
 import { icon } from './icons.js';
 import { api, demo, session, saveSession } from './api.js';
+import { config } from './config.js';
 import { qrSvg, startScanner } from './qr.js';
 import { CORPS, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -140,7 +141,7 @@ async function render() {
   const seq = ++renderSeq;
   const r = route();
   closeSheet(true);
-  if (r.name === 'login' && r.arg) return loginFromLink(r.arg);
+  if (r.name === 'login' && r.arg) return loginFromLink();
   if (r.name === 'c' && r.arg) return openCode(r.arg);
   if (!sess) return renderOnboarding();
   if (!me) {
@@ -1594,9 +1595,11 @@ function showTransfer() {
     <button class="btn soft wide" data-copy-login="${esc(url)}">${icon('copy')}<span>העתקת קישור הכניסה</span></button>`);
 }
 
-async function loginFromLink(arg) {
-  const [id, token] = arg.split('.');
-  history.replaceState(null, '', '#home');
+// #login/<id>.<token>, optionally followed by |<where to go next> (used when moving to the new address).
+async function loginFromLink() {
+  const [cred, next] = decodeURIComponent(location.hash.slice('#login/'.length)).split('|');
+  const [id, token] = cred.split('.');
+  history.replaceState(null, '', `#${next || 'home'}`);
   try {
     const m = await api.me({ id, token });
     sess = { id, token };
@@ -1836,6 +1839,18 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   });
 }
 
-applyTheme();
-buildTabbar();
-render();
+// The app moved from GitHub Pages to its own address (config.site). Old links and home-screen
+// icons forward there, carrying the login so nobody has to sign in again.
+function moveHome() {
+  if (!config.site || !location.hostname.endsWith('github.io')) return false;
+  const next = location.hash.slice(1);
+  const s = session();
+  location.replace(`${config.site}/#${s ? `login/${s.id}.${s.token}${next ? `|${next}` : ''}` : next}`);
+  return true;
+}
+
+if (!moveHome()) {
+  applyTheme();
+  buildTabbar();
+  render();
+}

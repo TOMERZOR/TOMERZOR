@@ -3,9 +3,9 @@
 import { icon } from './icons.js';
 import { api, demo, session, saveSession } from './api.js';
 import { qrSvg, startScanner } from './qr.js';
-import { CORPS, STATUS, PREP, MONTHS, gen, statusLabel, monthLabel, unitChain, currentRole } from './core.js';
+import { CORPS, STATUS, PREP, MONTHS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily } from './core.js';
 
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -46,7 +46,7 @@ function avatar(p, size = 'm', { ring = false, cls = '' } = {}) {
 }
 
 const ageLine = p => [p.age ? `${gen(p, 'בן', 'בת', 'בן/בת')} ${p.age}` : '', p.city ? `מ${p.city}` : ''].filter(Boolean).join(' · ');
-const headline = p => [p.role, p.top || CORPS[p.corps]?.name].filter(Boolean).join(' · ');
+const headline = p => [p.role, p.top ? (CORPS[p.corps]?.parent ? `${CORPS[p.corps].name} · ${p.top}` : p.top) : CORPS[p.corps]?.name].filter(Boolean).join(' · ');
 
 function timeAgo(t) {
   const s = (Date.now() - t) / 1000;
@@ -341,7 +341,8 @@ function sectionHtml(id, p) {
         ${field('גיוס', monthPicker('draft', p.draft))}
         ${showRelease ? field('שחרור', monthPicker('release', p.release)) : '<span></span>'}
       </div>
-      ${field('חיל / זרוע', `<div class="corps">${Object.entries(CORPS).map(([k, v]) => `<button type="button" class="corps-chip ${k === p.unit.corps ? 'on' : ''}" data-corps="${k}">${v.name}</button>`).join('')}</div>`)}
+      ${field('חיל / זרוע', `<div class="corps">${Object.entries(CORPS).filter(([, v]) => !v.parent).map(([k, v]) => `<button type="button" class="corps-chip ${k === corpsFamily(p.unit.corps) ? 'on' : ''}" data-corps="${k}">${v.name}</button>`).join('')}</div>`)}
+      ${corpsFamily(p.unit.corps) === 'air' ? `<div class="sub-corps">${field('איפה בחיל האוויר?', `<div class="chips">${[['air', 'בסיס / טייסת'], ['airdef', 'הגנ״א']].map(([k, l]) => `<button type="button" class="chip ${k === p.unit.corps ? 'on' : ''}" data-corps="${k}">${l}</button>`).join('')}</div>`)}</div>` : ''}
       ${c ? `<div class="levels"><div class="levels-head">${icon('shield')}<span>היחידה שלך ב${c.name}</span></div>${levels}</div>` : ''}
       <p class="note">${icon('lock')}<span>רק מה שמותר לספר. בלי שמות של יחידות מסווגות, מספר אישי או מיקומים.</span></p>`;
   }
@@ -484,7 +485,7 @@ function myCard() {
     <div class="mc-path">
       ${p.prep.kind !== 'none' ? `<span class="mc-step">${icon('tent')}${esc(p.prep.name || PREP[p.prep.kind])}</span>` : ''}
       ${p.tironut ? `<span class="mc-step">${icon('flag')}${esc(p.tironut)}</span>` : ''}
-      ${p.unit.corps ? `<span class="mc-step">${icon('shield')}${esc([CORPS[p.unit.corps].name, ...chain.slice(0, 2).map(x => x.text)].join(' · '))}</span>` : ''}
+      ${p.unit.corps ? `<span class="mc-step">${icon('shield')}${esc([corpsName(p.unit.corps), ...chain.slice(0, 2).map(x => x.text)].join(' · '))}</span>` : ''}
       ${currentRole(p) ? `<span class="mc-step">${icon('badge')}${esc(currentRole(p).t)}</span>` : ''}
     </div>
     <div class="mc-stats"><span><b>${me.counts.friends}</b> חברים</span><span><b>${me.counts.followers}</b> עוקבים</span><span class="mc-qr">${icon('qr')}</span></div>
@@ -727,7 +728,7 @@ function pathHtml(p) {
   if (p.tironut) items.push({ ic: 'flag', k: 'טירונות', t: p.tironut });
   if (p.unit.corps) {
     const chain = unitChain(p);
-    items.push({ ic: 'shield', k: 'היחידה', t: CORPS[p.unit.corps].name, html: chain.length ? `<div class="chain">${chain.map((c, i) => `<span class="link" style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` : '' });
+    items.push({ ic: 'shield', k: 'היחידה', t: corpsName(p.unit.corps), html: chain.length ? `<div class="chain">${chain.map((c, i) => `<span class="link" style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` : '' });
   }
   if (p.roles.length) {
     items.push({ ic: 'badge', k: 'תפקידים וקורסים', t: '', html: `<ol class="roles-view">${p.roles.map(r => `<li class="${r.to ? '' : 'now'}"><b>${esc(r.t)}</b><small>${r.from || ''}${r.from || r.to ? '–' : ''}${r.to || (r.from ? 'היום' : '')}</small>${r.to ? '' : '<span class="now-tag">עכשיו</span>'}</li>`).join('')}</ol>` });
@@ -741,7 +742,7 @@ function pathHtml(p) {
 }
 
 function lockedPath(p) {
-  const bits = [CORPS[p.corps]?.name, p.top, p.prep, p.role].filter(Boolean);
+  const bits = [corpsName(p.corps), p.top, p.prep, p.role].filter(Boolean);
   return `${bits.length ? `<div class="summary-chips">${bits.map(b => `<span>${esc(b)}</span>`).join('')}</div>` : ''}
     <div class="locked">${icon('lock')}<b>שאר המסלול נפתח כשנפגשים</b><p>סרקו את הקוד של ${esc(p.name.split(' ')[0])}, או חכו ש${gen(p, 'הוא', 'היא', 'הוא/היא')} ${gen(p, 'יעקוב', 'תעקוב', 'יעקוב/תעקוב')} אחריכם בחזרה.</p></div>`;
 }
@@ -1034,7 +1035,7 @@ function storySlides(v) {
   const corps = CORPS[pr?.unit.corps || p.corps];
   if (corps) {
     const chain = pr ? unitChain(pr) : p.top ? [{ label: corps.levels[0], text: p.top }] : [];
-    slides.push({ bg: 's4', html: `<span class="s-ic">${icon('shield')}</span><small class="eyebrow">היחידה</small><h2>${esc(corps.name)}</h2><div class="s-chain">${chain.map((c, i) => `<span style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` });
+    slides.push({ bg: 's4', html: `<span class="s-ic">${icon('shield')}</span><small class="eyebrow">היחידה</small><h2>${esc(corps.name)}</h2>${corps.parent ? `<p>${esc(CORPS[corps.parent].name)}</p>` : ''}<div class="s-chain">${chain.map((c, i) => `<span style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` });
   }
   const roles = pr ? pr.roles : p.role ? [{ t: p.role }] : [];
   if (roles.length) slides.push({ bg: 's5', html: `<span class="s-ic">${icon('badge')}</span><small class="eyebrow">התפקידים</small><ol class="s-roles">${roles.map((r, i) => `<li style="--i:${i}" class="${r.to ? '' : 'now'}"><b>${esc(r.t)}</b><small>${r.from ? `${r.from}–${r.to || 'היום'}` : ''}</small></li>`).join('')}</ol>` });
@@ -1215,7 +1216,10 @@ document.addEventListener('click', async e => {
   if (corps) {
     const m = formModel();
     haptic();
-    if (m.unit.corps !== corps.dataset.corps) m.unit = { corps: corps.dataset.corps, path: [] };
+    const k = corps.dataset.corps;
+    // The sub-choice (בסיס / טייסת or הגנ״א) switches within the air force; the main chips pick or clear a corps.
+    if (corps.closest('.sub-corps')) { if (m.unit.corps !== k) m.unit = { corps: k, path: [] }; }
+    else if (corpsFamily(m.unit.corps) !== k) m.unit = { corps: k, path: [] };
     else m.unit = { corps: '', path: [] };
     if (route().name !== 'edit') saveDraft();
     rerenderSection('service');

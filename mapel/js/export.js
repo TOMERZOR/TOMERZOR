@@ -53,7 +53,7 @@ function boardSheet(st, idx, ds) {
   const rows = [];
   const merges = [];
   const width = fixed.length + ds.length;
-  rows.push({ height: 26, cells: [{ v: `${st.unit || 'הפלוגה'} · לוח נוכחות`, s: S.title }] });
+  rows.push({ height: 26, cells: [{ v: `${st.unit || 'הפלגה'} · לוח נוכחות`, s: S.title }] });
   rows.push({ cells: [{ v: `${fmtShort(ds[0])}–${fmtShort(ds[ds.length - 1])} · הופק ב־${fmtShort(t)}`, s: S.sub }] });
   merges.push(`A1:${colName(width - 1)}1`, `A2:${colName(width - 1)}2`);
   rows.push({ height: 32, cells: [...fixed.map(v => ({ v, s: S.head })),
@@ -115,7 +115,7 @@ function sitesSheet(st, idx, ds) {
   const t = today();
   const rows = [];
   const width = 1 + ds.length;
-  rows.push({ height: 26, cells: [{ v: `${st.unit || 'הפלוגה'} · מי סוגר איפה`, s: S.title }] });
+  rows.push({ height: 26, cells: [{ v: `${st.unit || 'הפלגה'} · מי סוגר איפה`, s: S.title }] });
   rows.push({ cells: [] });
   rows.push({ height: 32, cells: [{ v: 'אתר', s: S.head }, ...ds.map(d => ({ v: fmtDay(d), s: d === t ? S.headToday : isWeekend(d) ? S.headWknd : S.head }))] });
   const rosters = ds.map(d => siteRoster(st, idx, d));

@@ -17,7 +17,7 @@ export function demoState() {
   const start = today();
   const st = {
     v: 1,
-    unit: 'פלוגה ב׳',
+    unit: 'פלגה ב׳',
     start,
     days: 14,
     unassigned: 'home',

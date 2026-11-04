@@ -7,7 +7,7 @@ import { autoAssign, clearAutoInPeriod } from './schedule.js';
 import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -183,7 +183,7 @@ function renderNow() {
         <li><button data-act="go" data-tab="board">${icon('board')}<span><b>ממלאים אילוצים</b><small>גימלים, הפניות, חופשות, ומי לא יכול מתי</small></span></button></li>
         <li><button data-act="go" data-tab="sites">${icon('wand')}<span><b>משבצים ומייצאים לאקסל</b><small>הלוח מתמלא לבד, ומה שמילאת ביד נשאר</small></span></button></li>
       </ol>
-      <button class="link-btn" data-act="loadDemo">או נסו עם פלוגה לדוגמה</button>
+      <button class="link-btn" data-act="loadDemo">או נסו עם פלגה לדוגמה</button>
     </div>`;
   }
 
@@ -937,7 +937,7 @@ function settingsSheet() {
       const s = st();
       return `
         <div class="card form">
-          <label class="field"><span>שם הפלוגה</span><input type="text" data-field="unit" value="${h(s.unit)}" placeholder="למשל: פלוגה ב׳"></label>
+          <label class="field"><span>שם הפלגה</span><input type="text" data-field="unit" value="${h(s.unit)}" placeholder="למשל: פלגה ב׳"></label>
         </div>
         <h3 class="sub-title">תקופת הלוח</h3>
         <div class="card form">
@@ -953,7 +953,7 @@ function settingsSheet() {
           <label class="row"><span class="row-ic" style="--c:#5856d6">${icon('upload')}</span><span class="row-main"><span class="row-title">שחזור מגיבוי</span><span class="row-sub">מחליף את כל מה שיש עכשיו</span></span><input type="file" accept="application/json,.json" data-field="restore" hidden>${icon('chevron', 'row-chev')}</label>
         </div>
         <div class="card list">
-          <button class="row" data-act="loadDemo"><span class="row-ic" style="--c:#ff9500">${icon('people')}</span><span class="row-main"><span class="row-title">פלוגה לדוגמה</span><span class="row-sub">18 חיילים ו־3 אתרים, כדי לראות איך זה עובד</span></span>${icon('chevron', 'row-chev')}</button>
+          <button class="row" data-act="loadDemo"><span class="row-ic" style="--c:#ff9500">${icon('people')}</span><span class="row-main"><span class="row-title">פלגה לדוגמה</span><span class="row-sub">18 חיילים ו־3 אתרים, כדי לראות איך זה עובד</span></span>${icon('chevron', 'row-chev')}</button>
           <button class="row" data-act="wipe"><span class="row-ic" style="--c:#ff3b30">${icon('trash')}</span><span class="row-main"><span class="row-title danger">מחיקת הכל</span></span></button>
         </div>
         <p class="foot-note">מפל for you · גרסה ${APP_VERSION}<br>הנתונים נשמרים רק בטלפון הזה.</p>`;
@@ -990,12 +990,12 @@ function settingsSheet() {
 
 async function loadDemo() {
   const s = st();
-  if (s.soldiers.length && !await confirmDialog({ title: 'לטעון פלוגה לדוגמה?', message: 'מה שיש עכשיו יוחלף. כדאי לגבות קודם.', ok: 'טעינה' })) return;
+  if (s.soldiers.length && !await confirmDialog({ title: 'לטעון פלגה לדוגמה?', message: 'מה שיש עכשיו יוחלף. כדאי לגבות קודם.', ok: 'טעינה' })) return;
   S.replaceAll(demoState());
   closeAll();
   ui.at = null;
   ui.platoon = '';
-  toast('נטענה פלוגה לדוגמה');
+  toast('נטענה פלגה לדוגמה');
   render(true);
 }
 
@@ -1034,12 +1034,12 @@ function renderWelcome() {
   return `<div class="welcome">
     <img class="welcome-icon" src="img/icon.svg" alt="" width="96" height="96">
     <h1>מפל <span class="latin">for you</span></h1>
-    <p class="welcome-tag">כל הפלוגה, כל יום, במקום אחד.<br>מי סוגר איפה, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
+    <p class="welcome-tag">כל הפלגה, כל יום, במקום אחד.<br>מי סוגר איפה, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
     <div class="card form welcome-form">
-      <label class="field"><span>שם הפלוגה</span><input type="text" id="w-unit" placeholder="למשל: פלוגה ב׳" autocomplete="off"></label>
+      <label class="field"><span>שם הפלגה</span><input type="text" id="w-unit" placeholder="למשל: פלגה ב׳" autocomplete="off"></label>
     </div>
     <button class="btn primary big" data-act="start">מתחילים</button>
-    <button class="link-btn" data-act="loadDemo">או נסו עם פלוגה לדוגמה</button>
+    <button class="link-btn" data-act="loadDemo">או נסו עם פלגה לדוגמה</button>
     <p class="welcome-foot">הכל נשמר רק בטלפון שלך.</p>
   </div>`;
 }

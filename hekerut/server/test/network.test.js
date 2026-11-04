@@ -242,3 +242,31 @@ test('http routes for posts and stories', async () => {
   assert.equal((await call('DELETE', `/posts/${post.id}`, null, a)).data.ok, true);
   assert.equal((await call('GET', '/feed', null, a)).data.posts.items.length, 0);
 });
+
+test('פז״ם: days served, days left and the release date by track', async () => {
+  const { serviceClock, trackOf } = await import('../../js/core.js');
+  const at = s => new Date(`${s}T12:00:00`).getTime();
+  const man = cleanProfile(person('א', { draft: '2024-08-15' }));
+  const c = serviceClock(man, at('2025-08-15'));
+  assert.equal(c.end, '2027-04-15', '2 years 8 months');
+  assert.equal(c.served, 365);
+  assert.equal(c.left, 608);
+  assert.equal(c.total, 973);
+  const woman = cleanProfile(person('ב', { g: 'f', draft: '2024-08-15' }));
+  assert.equal(trackOf(woman), 'f24');
+  assert.equal(serviceClock(woman, at('2025-08-15')).end, '2026-08-15', '2 years');
+  const fighter = cleanProfile(person('ג', { g: 'f', track: 'f32', draft: '2024-08-15' }));
+  assert.equal(serviceClock(fighter, at('2025-08-15')).end, '2027-04-15', 'דין אישה כדין גבר');
+  assert.equal(cleanProfile(person('ד', { g: 'm', track: 'f24' })).track, '', 'a man gets the default track');
+  // A month without a day counts from the 1st; a day the release month lacks falls on its last day.
+  assert.equal(serviceClock(cleanProfile(person('ה', { draft: '2024-03' })), at('2024-03-02')).end, '2026-11-01');
+  assert.equal(serviceClock(cleanProfile(person('ו', { g: 'f', draft: '2023-06-30' })), at('2024-01-01')).end, '2025-06-30');
+  assert.equal(serviceClock(cleanProfile(person('ז', { draft: '2024-06-30' })), at('2024-01-01')).end, '2027-02-28');
+  // Before the draft: days until it. After the end: done.
+  const pre = serviceClock(cleanProfile(person('ח', { status: 'pre', draft: '2026-03-01' })), at('2026-02-20'));
+  assert.equal(pre.untilDraft, 9);
+  assert.equal(pre.served, 0);
+  assert.equal(serviceClock(man, at('2027-05-01')).done, true);
+  assert.equal(serviceClock(man, at('2027-05-01')).left, 0);
+  assert.equal(cleanProfile({ name: 'x', draft: '2024-02-30' }).draft, '');
+});

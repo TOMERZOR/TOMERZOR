@@ -49,7 +49,54 @@ const LIMITS = { name: 40, text: 40, bio: 120, roles: 12, photo: 90 * 1024 };
 export const gen = (p, m, f, x = `${m}/${f}`) => (p?.g === 'f' ? f : p?.g === 'x' ? x : m);
 export const statusLabel = p => { const s = STATUS[p?.status]; return s ? (s[p.g] || s.m) : ''; };
 export const ageOf = (p, now = Date.now()) => (p?.born ? new Date(now).getFullYear() - p.born : null);
-export const monthLabel = ym => { if (!/^\d{4}-\d{2}$/.test(ym || '')) return ''; const [y, m] = ym.split('-'); return `${MONTHS[+m - 1]} ${y}`; };
+export const monthLabel = ym => {
+  if (!/^\d{4}-\d{2}(-\d{2})?$/.test(ym || '')) return '';
+  const [y, m, d] = ym.split('-');
+  return `${d ? `${+d} ב` : ''}${MONTHS[+m - 1]} ${y}`;
+};
+
+// ---------- How long the service is, and how much is left ----------
+
+// Months of regular service: men 2 years 8 months, women 2 years, and women in combat roles
+// (דין אישה כדין גבר) 2 years 8 months like men.
+export const TRACKS = {
+  m32: { months: 32, label: 'בן', len: 'שנתיים ו־8 חודשים' },
+  f24: { months: 24, label: 'בת', len: 'שנתיים' },
+  f32: { months: 32, label: 'בת לוחמת', len: 'שנתיים ו־8 חודשים', note: 'דין אישה כדין גבר' },
+};
+export const trackOf = p => (TRACKS[p?.track] ? p.track : p?.g === 'f' ? 'f24' : 'm32');
+
+const DAY_MS = 86400e3;
+const utcDay = (y, m, d) => Date.UTC(y, m - 1, d);
+const ymd = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+
+// From the draft date (a month alone counts from the 1st) and the track: days served (פז״ם),
+// days left, the expected release date and how far along. `today` is the phone's local date.
+export function serviceClock(p, now = Date.now()) {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(p?.draft || '');
+  if (!m) return null;
+  const [y, mo, d] = [+m[1], +m[2], +(m[3] || 1)];
+  const months = TRACKS[trackOf(p)].months;
+  const start = utcDay(y, mo, d);
+  // Same day of the month, `months` later; a day the month doesn't have falls on its last day.
+  const ey = y + Math.floor((mo - 1 + months) / 12), em = ((mo - 1 + months) % 12) + 1;
+  const end = utcDay(ey, em, Math.min(d, new Date(Date.UTC(ey, em, 0)).getUTCDate()));
+  const local = new Date(now);
+  const today = utcDay(local.getFullYear(), local.getMonth() + 1, local.getDate());
+  const total = Math.round((end - start) / DAY_MS);
+  const served = Math.round((today - start) / DAY_MS);
+  return {
+    track: trackOf(p),
+    start: ymd(start),
+    end: ymd(end),
+    total,
+    served: Math.max(0, Math.min(served, total)),
+    left: Math.max(0, Math.round((end - today) / DAY_MS)),
+    untilDraft: served < 0 ? -served : 0,
+    pct: Math.max(0, Math.min(1, served / total)),
+    done: today >= end,
+  };
+}
 
 // Compares free text loosely: "גדוד 13" and "13", "מכינת רבין" and "רבין", "נח"ל" and "נח״ל".
 export function norm(s) {
@@ -94,6 +141,11 @@ const str = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').t
 const para = (v, max) => String(v ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 const year = v => { const n = parseInt(v, 10); return n >= 1940 && n <= 2100 ? n : null; };
 const ym = v => (/^\d{4}-(0[1-9]|1[0-2])$/.test(v || '') ? v : '');
+const ymdOrYm = v => {
+  if (ym(v)) return v;
+  const m = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})$/.exec(v || '');
+  return m && +m[3] >= 1 && +m[3] <= new Date(Date.UTC(+m[1], +m[2], 0)).getUTCDate() ? v : '';
+};
 
 export function cleanProfile(input = {}) {
   const p = input || {};
@@ -113,8 +165,10 @@ export function cleanProfile(input = {}) {
     bio: str(p.bio, LIMITS.bio),
     prep: { kind: prepKind, name: prepKind === 'none' ? '' : str(p.prep?.name, LIMITS.text) },
     status: STATUS[p.status] ? p.status : 'active',
-    draft: ym(p.draft),
+    draft: ymdOrYm(p.draft),
     release: ym(p.release),
+    // A track that doesn't fit the chosen form of address falls back to the default for it.
+    track: TRACKS[p.track] && !(p.g === 'm' && p.track[0] === 'f') && !(p.g === 'f' && p.track[0] === 'm') ? p.track : '',
     unit: { corps, path },
     tironut: str(p.tironut, LIMITS.text),
     roles,
@@ -166,7 +220,7 @@ export function commonGround(a, b) {
     else push('prep', a.prep.kind === 'mechina' ? 'שניכם עשיתם מכינה' : 'שניכם עשיתם שנת שירות', '', 1);
   }
   if (a.tironut && norm(a.tironut) === norm(b.tironut)) push('tironut', 'טירונות באותו מקום', a.tironut, 4);
-  if (a.draft && a.draft === b.draft) push('draft', 'אותו מחזור גיוס', monthLabel(a.draft), 4);
+  if (a.draft && a.draft.slice(0, 7) === b.draft?.slice(0, 7)) push('draft', 'אותו מחזור גיוס', monthLabel(a.draft.slice(0, 7)), 4);
   else if (a.draft && b.draft && a.draft.slice(0, 4) === b.draft.slice(0, 4)) push('draft', 'התגייסתם באותה שנה', a.draft.slice(0, 4), 2);
   if (a.city && norm(a.city) === norm(b.city)) push('city', 'מאותה עיר', a.city, 3);
   const rb = new Set((b.roles || []).map(r => norm(r.t)));

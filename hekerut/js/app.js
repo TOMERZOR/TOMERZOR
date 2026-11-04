@@ -3,9 +3,9 @@
 import { icon } from './icons.js';
 import { api, demo, session, saveSession } from './api.js';
 import { qrSvg, startScanner } from './qr.js';
-import { CORPS, STATUS, PREP, MONTHS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily } from './core.js';
+import { CORPS, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -158,6 +158,7 @@ async function render() {
 function page(html, tab, { cls = '' } = {}) {
   $view.className = `view ${cls}`;
   $view.innerHTML = html;
+  $view.querySelectorAll('.meter [data-countup]').forEach(el => countUp(el, +el.dataset.countup));
   $view.classList.remove('enter');
   void $view.offsetWidth;
   $view.classList.add('enter');
@@ -286,11 +287,12 @@ const field = (label, inner, { err = '', hint = '' } = {}) => `<label class="fie
 const input = (path, value, attrs = '') => `<input class="inp" data-f="${path}" value="${esc(value)}" ${attrs}>`;
 const chips = (path, value, options) => `<div class="chips" role="radiogroup">${options.map(([v, l]) => `<button type="button" class="chip ${v === value ? 'on' : ''}" data-chip="${path}" data-v="${v}" role="radio" aria-checked="${v === value}">${l}</button>`).join('')}</div>`;
 
-function monthPicker(path, value) {
-  const [y, m] = (value || '').split('-');
+function monthPicker(path, value, withDay = false) {
+  const [y, m, d] = (value || '').split('-');
   const now = new Date().getFullYear();
   const years = Array.from({ length: 30 }, (_, i) => now + 1 - i);
-  return `<div class="month-pick" data-month="${path}">
+  return `<div class="month-pick ${withDay ? 'with-day' : ''}" data-month="${path}">
+    ${withDay ? `<select class="inp" data-part="d" aria-label="יום"><option value="">יום</option>${Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, '0')}" ${+d === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>` : ''}
     <select class="inp" data-part="m" aria-label="חודש"><option value="">חודש</option>${MONTHS.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}" ${+m === i + 1 ? 'selected' : ''}>${n}</option>`).join('')}</select>
     <select class="inp" data-part="y" aria-label="שנה"><option value="">שנה</option>${years.map(n => `<option ${+y === n ? 'selected' : ''}>${n}</option>`).join('')}</select>
   </div>`;
@@ -339,10 +341,9 @@ function sectionHtml(id, p) {
     }
     return `
       ${field('איפה את/ה היום?', chips('status', p.status, Object.entries(STATUS).map(([k, v]) => [k, v[p.g] || v.m])))}
-      <div class="row2">
-        ${field('גיוס', monthPicker('draft', p.draft))}
-        ${showRelease ? field('שחרור', monthPicker('release', p.release)) : '<span></span>'}
-      </div>
+      ${field('תאריך גיוס', monthPicker('draft', p.draft, true), { hint: p.draft && p.draft.length === 7 ? 'הוסיפו גם את היום, כדי שהספירה תהיה מדויקת' : '' })}
+      ${p.status === 'active' || p.status === 'pre' ? trackPicker(p) : ''}
+      ${showRelease ? field('שחרור', monthPicker('release', p.release)) : ''}
       ${field('חיל / זרוע', `<div class="corps">${Object.entries(CORPS).filter(([, v]) => !v.parent).map(([k, v]) => `<button type="button" class="corps-chip ${k === corpsFamily(p.unit.corps) ? 'on' : ''}" data-corps="${k}">${v.name}</button>`).join('')}</div>`)}
       ${corpsFamily(p.unit.corps) === 'air' ? `<div class="sub-corps">${field('איפה בחיל האוויר?', `<div class="chips">${[['air', 'בסיס / טייסת'], ['airdef', 'הגנ״א']].map(([k, l]) => `<button type="button" class="chip ${k === p.unit.corps ? 'on' : ''}" data-corps="${k}">${l}</button>`).join('')}</div>`)}</div>` : ''}
       ${c ? `<div class="levels"><div class="levels-head">${icon('shield')}<span>היחידה שלך ב${c.name}</span></div>${levels}</div>` : ''}
@@ -479,6 +480,43 @@ function suggestionCard(p, i) {
   </article>`;
 }
 
+// ---------- פז״ם: days served and days left ----------
+
+function trackPicker(p) {
+  const opts = p.g === 'm' ? ['m32'] : p.g === 'f' ? ['f24', 'f32'] : ['m32', 'f24', 'f32'];
+  const cur = opts.includes(trackOf(p)) ? trackOf(p) : opts[0];
+  const clock = serviceClock({ ...p, track: cur });
+  const preview = clock ? (p.status === 'pre' && clock.untilDraft
+    ? `עוד <b>${clock.untilDraft}</b> ימים לגיוס · שחרור משוער ${esc(monthLabel(clock.end))}`
+    : clock.done ? `לפי החישוב השירות הסדיר הסתיים ב־${esc(monthLabel(clock.end))}`
+      : `שחרור משוער: <b>${esc(monthLabel(clock.end))}</b> · נשארו <b>${clock.left}</b> ימים`) : 'בחרו תאריך גיוס, ונחשב כמה נשאר';
+  return `<div class="track">
+    ${opts.length > 1 ? field('מסלול השירות', chips('track', cur, opts.map(k => [k, `${TRACKS[k].label} · ${TRACKS[k].len}`])), { hint: opts.includes('f32') ? 'בת לוחמת: דין אישה כדין גבר, שנתיים ו־8 חודשים' : '' }) : `<p class="f-hint">שירות סדיר של ${TRACKS[cur].len}</p>`}
+    <p class="track-preview">${icon('calendar')}<span>${preview}</span></p>
+  </div>`;
+}
+
+// The countdown card on a profile: פז״ם, days left, the expected release date and a progress bar.
+function serviceMeter(p, { compact = false } = {}) {
+  if (p.status !== 'active' && p.status !== 'pre') return '';
+  const c = serviceClock(p);
+  if (!c) return '';
+  if (p.status === 'pre' || c.untilDraft) {
+    if (!c.untilDraft) return '';
+    return `<div class="meter pre ${compact ? 'compact' : ''}"><div class="m-nums"><div><b data-countup="${c.untilDraft}">${c.untilDraft}</b><small>ימים לגיוס</small></div></div><p class="m-foot">${icon('calendar')}גיוס ב־${esc(monthLabel(c.start))}</p></div>`;
+  }
+  const pct = Math.round(c.pct * 100);
+  return `<div class="meter ${compact ? 'compact' : ''} ${c.done ? 'done' : ''}">
+    <div class="m-nums">
+      <div><b data-countup="${c.served}">${c.served}</b><small>ימים בפז״ם</small></div>
+      <div class="m-pct"><b>${pct}%</b><small>מהשירות</small></div>
+      <div><b data-countup="${c.left}">${c.left}</b><small>${c.done ? 'השירות הסדיר הושלם' : 'ימים לשחרור'}</small></div>
+    </div>
+    <div class="m-bar"><span style="--p:${c.pct}"></span></div>
+    <p class="m-foot">${icon('flag')}${c.done ? `שחרור משוער היה ב־${esc(monthLabel(c.end))}` : `שחרור משוער: ${esc(monthLabel(c.end))}`}<span class="m-track" title="${esc(TRACKS[c.track].len)}">${esc(TRACKS[c.track].label)}</span></p>
+  </div>`;
+}
+
 function myCard() {
   const p = me.profile;
   const chain = unitChain(p);
@@ -490,6 +528,7 @@ function myCard() {
       ${p.unit.corps ? `<span class="mc-step">${icon('shield')}${esc([corpsName(p.unit.corps), ...chain.slice(0, 2).map(x => x.text)].join(' · '))}</span>` : ''}
       ${currentRole(p) ? `<span class="mc-step">${icon('badge')}${esc(currentRole(p).t)}</span>` : ''}
     </div>
+    ${serviceMeter(p, { compact: true })}
     <div class="mc-stats"><span><b>${me.counts.friends}</b> חברים</span><span><b>${me.counts.followers}</b> עוקבים</span><span class="mc-qr">${icon('qr')}</span></div>
   </article>`;
 }
@@ -700,6 +739,7 @@ function profileHtml(v, mine) {
       <h2 class="prof-name">${esc(p.name)}</h2>
       <div class="prof-meta">${esc(ageLine(p))}${p.status ? `<span class="status-pill">${esc(statusLabel(prof || p))}</span>` : ''}</div>
       ${prof?.bio ? `<p class="bio">${esc(prof.bio)}</p>` : ''}
+      ${prof ? serviceMeter(prof) : ''}
       <div class="prof-btns">
         ${mine ? `<button class="btn soft" data-go="edit">${icon('edit')}<span>עריכה</span></button><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button>`
           : `${followBtn(p.rel ? p : { ...p, rel: v.rel }, 'big')}<button class="btn soft big" data-story="${p.id}">${icon('play')}<span>המסלול</span></button>`}
@@ -732,7 +772,9 @@ function mutualHtml(v) {
 function pathHtml(p) {
   const items = [];
   if (p.prep.kind !== 'none') items.push({ ic: 'tent', k: PREP[p.prep.kind], t: p.prep.name || PREP[p.prep.kind] });
-  if (p.draft || p.release) items.push({ ic: 'calendar', k: 'גיוס', t: [monthLabel(p.draft) && `גיוס ${monthLabel(p.draft)}`, monthLabel(p.release) && `שחרור ${monthLabel(p.release)}`].filter(Boolean).join(' · ') });
+  const clock = p.status === 'active' ? serviceClock(p) : null;
+  const releaseText = monthLabel(p.release) ? `שחרור ${monthLabel(p.release)}` : clock && !clock.untilDraft ? `שחרור משוער ${monthLabel(clock.end)}` : '';
+  if (p.draft || p.release) items.push({ ic: 'calendar', k: 'גיוס', t: [monthLabel(p.draft) && `גיוס ${monthLabel(p.draft)}`, releaseText].filter(Boolean).join(' · ') });
   if (p.tironut) items.push({ ic: 'flag', k: 'טירונות', t: p.tironut });
   if (p.unit.corps) {
     const chain = unitChain(p);
@@ -1044,6 +1086,8 @@ function storySlides(v) {
   const prep = pr ? (pr.prep.kind !== 'none' ? pr.prep.name || PREP[pr.prep.kind] : '') : p.prep;
   if (prep) slides.push({ bg: 's2', html: `<span class="s-ic">${icon('tent')}</span><small class="eyebrow">לפני הצבא</small><h2>${esc(prep)}</h2><p>${pr ? PREP[pr.prep.kind] : ''}</p>` });
   if (pr && (pr.tironut || pr.draft)) slides.push({ bg: 's3', html: `<span class="s-ic">${icon('flag')}</span><small class="eyebrow">ההתחלה</small><h2>${pr.tironut ? `טירונות ב${esc(pr.tironut)}` : `גיוס ${esc(monthLabel(pr.draft))}`}</h2><p>${pr.tironut && pr.draft ? `גיוס ${esc(monthLabel(pr.draft))}` : ''}${pr.release ? ` · שחרור ${esc(monthLabel(pr.release))}` : ''}</p>` });
+  const sc = pr && pr.status === 'active' ? serviceClock(pr) : null;
+  if (sc && !sc.untilDraft) slides.push({ bg: 's2', html: `<span class="s-ic">${icon('calendar')}</span><small class="eyebrow">פז״ם</small><h2>${sc.served} ימים</h2><div class="s-meter"><span style="--p:${sc.pct}"></span></div><p>${sc.done ? 'השירות הסדיר הושלם' : `עוד ${sc.left} ימים לשחרור · ${esc(monthLabel(sc.end))}`}</p>` });
   const corps = CORPS[pr?.unit.corps || p.corps];
   if (corps) {
     const chain = pr ? unitChain(pr) : p.top ? [{ label: corps.levels[0], text: p.top }] : [];
@@ -1696,7 +1740,7 @@ function onChip(chip) {
     setPath(m, path, v);
     if (path === 'prep.kind' && v === 'none') m.prep.name = '';
     if (route().name !== 'edit') saveDraft();
-    if (['prep.kind', 'status', 'g', 'vis'].includes(path)) {
+    if (['prep.kind', 'status', 'g', 'vis', 'track'].includes(path)) {
       rerenderSection(sectionOf(chip));
       if (path === 'g' && route().name === 'edit') rerenderSection('service');
       return;
@@ -1750,8 +1794,14 @@ document.addEventListener('change', async e => {
   const mp = t.closest('[data-month]');
   if (mp && m) {
     const y = mp.querySelector('[data-part="y"]').value, mo = mp.querySelector('[data-part="m"]').value;
-    setPath(m, mp.dataset.month, y && mo ? `${y}-${mo}` : '');
+    const d = mp.querySelector('[data-part="d"]')?.value;
+    // A day the chosen month doesn't have (31 in a 30-day month) moves to its last day.
+    const dd = d && y && mo ? String(Math.min(+d, new Date(+y, +mo, 0).getDate())).padStart(2, '0') : '';
+    const before = mp.dataset.month === 'draft' ? m.draft : '';
+    setPath(m, mp.dataset.month, y && mo ? `${y}-${mo}${dd ? `-${dd}` : ''}` : '');
     if (route().name !== 'edit') saveDraft();
+    // Recalculate the release date once the date is whole; a half-picked date keeps its selects as they are.
+    if (mp.dataset.month === 'draft' && y && mo && m.draft !== before) rerenderSection(sectionOf(mp));
   }
 });
 

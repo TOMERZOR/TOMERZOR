@@ -50,3 +50,9 @@ remind/server/node_modules/
 livingroom/server/node_modules/
 livingroom/server/.wrangler/
 livingroom/server/.dev.vars
+
+# היכרות בקליק
+hekerut/site/public/
+hekerut/server/node_modules/
+hekerut/server/.wrangler/
+hekerut/site/.wrangler/

@@ -49,7 +49,54 @@ const LIMITS = { name: 40, text: 40, bio: 120, roles: 12, photo: 90 * 1024 };
 export const gen = (p, m, f, x = `${m}/${f}`) => (p?.g === 'f' ? f : p?.g === 'x' ? x : m);
 export const statusLabel = p => { const s = STATUS[p?.status]; return s ? (s[p.g] || s.m) : ''; };
 export const ageOf = (p, now = Date.now()) => (p?.born ? new Date(now).getFullYear() - p.born : null);
-export const monthLabel = ym => { if (!/^\d{4}-\d{2}$/.test(ym || '')) return ''; const [y, m] = ym.split('-'); return `${MONTHS[+m - 1]} ${y}`; };
+export const monthLabel = ym => {
+  if (!/^\d{4}-\d{2}(-\d{2})?$/.test(ym || '')) return '';
+  const [y, m, d] = ym.split('-');
+  return `${d ? `${+d} ב` : ''}${MONTHS[+m - 1]} ${y}`;
+};
+
+// ---------- How long the service is, and how much is left ----------
+
+// Months of regular service: men 2 years 8 months, women 2 years, and women in combat roles
+// (דין אישה כדין גבר) 2 years 8 months like men.
+export const TRACKS = {
+  m32: { months: 32, label: 'בן', len: 'שנתיים ו־8 חודשים' },
+  f24: { months: 24, label: 'בת', len: 'שנתיים' },
+  f32: { months: 32, label: 'בת לוחמת', len: 'שנתיים ו־8 חודשים', note: 'דין אישה כדין גבר' },
+};
+export const trackOf = p => (TRACKS[p?.track] ? p.track : p?.g === 'f' ? 'f24' : 'm32');
+
+const DAY_MS = 86400e3;
+const utcDay = (y, m, d) => Date.UTC(y, m - 1, d);
+const ymd = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; };
+
+// From the draft date (a month alone counts from the 1st) and the track: days served (פז״ם),
+// days left, the expected release date and how far along. `today` is the phone's local date.
+export function serviceClock(p, now = Date.now()) {
+  const m = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/.exec(p?.draft || '');
+  if (!m) return null;
+  const [y, mo, d] = [+m[1], +m[2], +(m[3] || 1)];
+  const months = TRACKS[trackOf(p)].months;
+  const start = utcDay(y, mo, d);
+  // Same day of the month, `months` later; a day the month doesn't have falls on its last day.
+  const ey = y + Math.floor((mo - 1 + months) / 12), em = ((mo - 1 + months) % 12) + 1;
+  const end = utcDay(ey, em, Math.min(d, new Date(Date.UTC(ey, em, 0)).getUTCDate()));
+  const local = new Date(now);
+  const today = utcDay(local.getFullYear(), local.getMonth() + 1, local.getDate());
+  const total = Math.round((end - start) / DAY_MS);
+  const served = Math.round((today - start) / DAY_MS);
+  return {
+    track: trackOf(p),
+    start: ymd(start),
+    end: ymd(end),
+    total,
+    served: Math.max(0, Math.min(served, total)),
+    left: Math.max(0, Math.round((end - today) / DAY_MS)),
+    untilDraft: served < 0 ? -served : 0,
+    pct: Math.max(0, Math.min(1, served / total)),
+    done: today >= end,
+  };
+}
 
 // Compares free text loosely: "גדוד 13" and "13", "מכינת רבין" and "רבין", "נח"ל" and "נח״ל".
 export function norm(s) {
@@ -90,8 +137,15 @@ export function currentRole(p) {
 // ---------- Validation ----------
 
 const str = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, max);
+// Like str, but keeps line breaks (captions and story text).
+const para = (v, max) => String(v ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 const year = v => { const n = parseInt(v, 10); return n >= 1940 && n <= 2100 ? n : null; };
 const ym = v => (/^\d{4}-(0[1-9]|1[0-2])$/.test(v || '') ? v : '');
+const ymdOrYm = v => {
+  if (ym(v)) return v;
+  const m = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})$/.exec(v || '');
+  return m && +m[3] >= 1 && +m[3] <= new Date(Date.UTC(+m[1], +m[2], 0)).getUTCDate() ? v : '';
+};
 
 export function cleanProfile(input = {}) {
   const p = input || {};
@@ -111,8 +165,10 @@ export function cleanProfile(input = {}) {
     bio: str(p.bio, LIMITS.bio),
     prep: { kind: prepKind, name: prepKind === 'none' ? '' : str(p.prep?.name, LIMITS.text) },
     status: STATUS[p.status] ? p.status : 'active',
-    draft: ym(p.draft),
+    draft: ymdOrYm(p.draft),
     release: ym(p.release),
+    // A track that doesn't fit the chosen form of address falls back to the default for it.
+    track: TRACKS[p.track] && !(p.g === 'm' && p.track[0] === 'f') && !(p.g === 'f' && p.track[0] === 'm') ? p.track : '',
     unit: { corps, path },
     tironut: str(p.tironut, LIMITS.text),
     roles,
@@ -164,7 +220,7 @@ export function commonGround(a, b) {
     else push('prep', a.prep.kind === 'mechina' ? 'שניכם עשיתם מכינה' : 'שניכם עשיתם שנת שירות', '', 1);
   }
   if (a.tironut && norm(a.tironut) === norm(b.tironut)) push('tironut', 'טירונות באותו מקום', a.tironut, 4);
-  if (a.draft && a.draft === b.draft) push('draft', 'אותו מחזור גיוס', monthLabel(a.draft), 4);
+  if (a.draft && a.draft.slice(0, 7) === b.draft?.slice(0, 7)) push('draft', 'אותו מחזור גיוס', monthLabel(a.draft.slice(0, 7)), 4);
   else if (a.draft && b.draft && a.draft.slice(0, 4) === b.draft.slice(0, 4)) push('draft', 'התגייסתם באותה שנה', a.draft.slice(0, 4), 2);
   if (a.city && norm(a.city) === norm(b.city)) push('city', 'מאותה עיר', a.city, 3);
   const rb = new Set((b.roles || []).map(r => norm(r.t)));
@@ -183,6 +239,20 @@ export const commonScore = list => list.reduce((s, c) => s + c.w, 0);
 // opts: { now(), random(n) -> url-safe string of n chars, photoUrl(id, ver) }
 
 const SUGGEST_MAX = 12;
+const DAY = 86400e3;
+const PAGE = 12;
+const GRID_PAGE = 24;
+const POSTS_PER_HOUR = 20;
+const STORIES_PER_DAY = 30;
+const MEDIA_MAX = 420 * 1024;
+export const STORY_BG = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
+
+const clampRatio = (r, min, max) => { const n = Number(r); return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.round(n * 1000) / 1000)) : 1; };
+
+export function cleanImage(img) {
+  if (typeof img !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(img) || img.length > MEDIA_MAX) throw new ApiError(400, 'image');
+  return img;
+}
 const EVENTS_MAX = 60;
 
 export class Network {
@@ -191,6 +261,7 @@ export class Network {
     this.now = opts.now || (() => Date.now());
     this.random = opts.random;
     this.photoUrl = opts.photoUrl || ((id, ver) => (ver ? this.s.photo(id) : null));
+    this.mediaUrl = opts.mediaUrl || (id => (id ? this.s.media(id) : null));
   }
 
   // --- Auth ---
@@ -262,7 +333,7 @@ export class Network {
   }
 
   counts(id) {
-    return { friends: this.friendsOf(id).size, followers: this.s.followers(id).length, following: this.s.following(id).length };
+    return { friends: this.friendsOf(id).size, followers: this.s.followers(id).length, following: this.s.following(id).length, posts: this.s.postCount(id) };
   }
 
   // --- Account ---
@@ -397,7 +468,158 @@ export class Network {
       return a ? { ...e, actor: { ...this.summary(a), rel: this.rel(u, a) } } : null;
     }).filter(Boolean);
     this.s.markRead(u.id);
-    return { events, suggestions: this.suggest(u), stories: this.stories(u) };
+    return { events, suggestions: this.suggest(u), stories: this.stories(u), tray: this.tray(u), posts: this.posts(u) };
+  }
+
+  // --- Posts ---
+  //
+  // A post is a photo with a caption. Posts and stories are seen by the same people who see the
+  // full path: the author, people they follow, and people who met them (or everyone, with vis 'all').
+
+  canSee(viewer, author, cache) {
+    if (viewer?.id === author.id) return true;
+    const k = author.id;
+    if (cache && cache.has(k)) return cache.get(k);
+    const ok = this.canSeeFull(viewer, author);
+    cache?.set(k, ok);
+    return ok;
+  }
+
+  postView(viewer, p, author = this.s.user(p.uid)) {
+    if (!author) return null;
+    return {
+      id: p.id,
+      author: this.summary(author),
+      image: this.mediaUrl(p.media),
+      ratio: p.ratio,
+      caption: p.caption,
+      at: p.at,
+      likes: this.s.likeCount(p.id),
+      liked: !!viewer && this.s.liked(p.id, viewer.id),
+      mine: viewer?.id === p.uid,
+    };
+  }
+
+  createPost(u, { image, caption, ratio } = {}) {
+    const img = cleanImage(image);
+    const now = this.now();
+    if (this.s.postsBy(u.id, 25, Infinity).filter(p => now - p.at < 3600e3).length >= POSTS_PER_HOUR) throw new ApiError(429, 'slow_down');
+    const media = this.random(16);
+    this.s.putMedia(media, u.id, img);
+    const p = { id: this.random(12), uid: u.id, media, ratio: clampRatio(ratio, 0.8, 1.91), caption: para(caption, 500), at: now };
+    this.s.putPost(p);
+    return this.postView(u, p, u);
+  }
+
+  deletePost(u, id) {
+    const p = this.s.post(id);
+    if (!p || p.uid !== u.id) throw new ApiError(404, 'not_found');
+    this.s.deletePost(id);
+    this.s.deleteMedia(p.media);
+    return { ok: true };
+  }
+
+  like(u, id, on) {
+    const p = this.s.post(id);
+    const a = p && this.s.user(p.uid);
+    if (!a) throw new ApiError(404, 'not_found');
+    if (!this.canSee(u, a)) throw new ApiError(403, 'private');
+    const had = this.s.liked(id, u.id);
+    if (on && !had) {
+      this.s.putLike(id, u.id, this.now());
+      if (p.uid !== u.id) this.event(p.uid, 'like', u.id, { post: id });
+    }
+    if (!on && had) this.s.deleteLike(id, u.id);
+    return { liked: !!on, likes: this.s.likeCount(id) };
+  }
+
+  // Posts by the people they follow, and their own, newest first.
+  posts(u, before = Infinity) {
+    const raw = this.s.feedPosts(u.id, PAGE, before || Infinity);
+    const seen = new Map(), users = new Map();
+    const items = raw.map(p => {
+      const a = users.get(p.uid) || this.s.user(p.uid);
+      if (!a) return null;
+      users.set(p.uid, a);
+      return this.canSee(u, a, seen) ? this.postView(u, p, a) : null;
+    }).filter(Boolean);
+    return { items, next: raw.length === PAGE ? raw[raw.length - 1].at : null };
+  }
+
+  userPosts(viewer, id, before = Infinity) {
+    const a = this.s.user(id);
+    if (!a) throw new ApiError(404, 'not_found');
+    if (!this.canSee(viewer, a)) throw new ApiError(403, 'private');
+    const raw = this.s.postsBy(id, GRID_PAGE, before || Infinity);
+    return { items: raw.map(p => this.postView(viewer, p, a)), next: raw.length === GRID_PAGE ? raw[raw.length - 1].at : null };
+  }
+
+  post(viewer, id) {
+    const p = this.s.post(id);
+    const a = p && this.s.user(p.uid);
+    if (!a) throw new ApiError(404, 'not_found');
+    if (!this.canSee(viewer, a)) throw new ApiError(403, 'private');
+    return this.postView(viewer, p, a);
+  }
+
+  // --- Stories: a photo or a line of text, gone after 24 hours ---
+
+  storyView(viewer, st) {
+    const mine = viewer?.id === st.uid;
+    return { id: st.id, image: st.media ? this.mediaUrl(st.media) : null, text: st.text, bg: st.bg, at: st.at, seen: mine || (!!viewer && this.s.seen(st.id, viewer.id)), ...(mine ? { views: this.s.viewCount(st.id) } : {}) };
+  }
+
+  createStory(u, { image, text, bg } = {}) {
+    const now = this.now();
+    for (const m of this.s.purgeStories(now - DAY, 100)) if (m) this.s.deleteMedia(m);
+    if (this.s.storiesBy(u.id, now - DAY).length >= STORIES_PER_DAY) throw new ApiError(429, 'slow_down');
+    const t = para(text, 200);
+    if (!image && !t) throw new ApiError(400, 'empty');
+    let media = null;
+    if (image) { media = this.random(16); this.s.putMedia(media, u.id, cleanImage(image)); }
+    const st = { id: this.random(12), uid: u.id, media, text: t, bg: STORY_BG.includes(bg) ? bg : STORY_BG[0], at: now };
+    this.s.putStory(st);
+    return this.storyView(u, st);
+  }
+
+  // The round avatars at the top of the home screen: their own first, then unseen, then seen.
+  tray(u) {
+    const since = this.now() - DAY;
+    const groups = new Map();
+    for (const st of this.s.storyFeed(u.id, since)) {
+      if (!groups.has(st.uid)) groups.set(st.uid, []);
+      groups.get(st.uid).push(st);
+    }
+    const seen = new Map();
+    const out = [];
+    for (const [uid, list] of groups) {
+      const a = uid === u.id ? u : this.s.user(uid);
+      if (!a || !this.canSee(u, a, seen)) continue;
+      const stories = list.sort((x, y) => x.at - y.at).map(st => this.storyView(u, st));
+      out.push({ author: this.summary(a), mine: uid === u.id, stories, seen: stories.every(x => x.seen), last: stories[stories.length - 1].at });
+    }
+    return out.sort((x, y) => y.mine - x.mine || x.seen - y.seen || y.last - x.last);
+  }
+
+  seeStory(u, id) {
+    const st = this.s.story(id);
+    if (!st || st.at < this.now() - DAY) throw new ApiError(404, 'not_found');
+    if (st.uid !== u.id) this.s.putView(id, u.id, this.now());
+    return { ok: true };
+  }
+
+  storyViewers(u, id) {
+    const st = this.s.story(id);
+    if (!st || st.uid !== u.id) throw new ApiError(404, 'not_found');
+    return this.s.views(id).map(v => { const x = this.s.user(v.uid); return x ? { ...this.summary(x), at: v.at } : null; }).filter(Boolean);
+  }
+
+  deleteStory(u, id) {
+    const st = this.s.story(id);
+    if (!st || st.uid !== u.id) throw new ApiError(404, 'not_found');
+    this.s.deleteStory(id);
+    if (st.media) this.s.deleteMedia(st.media);
+    return { ok: true };
   }
 
   // Friends first, most recently updated first: the round avatars at the top of the home screen.

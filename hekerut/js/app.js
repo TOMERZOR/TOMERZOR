@@ -6,9 +6,10 @@ import { config } from './config.js';
 import { qrSvg, startScanner } from './qr.js';
 import { openCreator, closeCreator, creatorOpen } from './create.js';
 import * as Push from './push.js';
+import { dialHtml, mountDial } from './dial.js';
 import { CORPS, BERETS, beretOf, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.8';
+const APP_VERSION = '2.0';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -187,7 +188,7 @@ function page(html, tab, { cls = '' } = {}) {
   lastPage = { key, html };
   $view.className = `view ${cls}`;
   $view.innerHTML = html;
-  $view.querySelectorAll('.meter [data-countup]').forEach(el => countUp(el, +el.dataset.countup));
+  $view.querySelectorAll('.meter [data-countup], .tile [data-countup]').forEach(el => countUp(el, +el.dataset.countup));
   $view.classList.remove('enter');
   void $view.offsetWidth;
   $view.classList.add('enter');
@@ -240,6 +241,7 @@ function renderOnboarding() {
         ${step > 0 && step < STEPS.length - 1 ? '<button class="btn ghost" data-act="onb-skip">דילוג</button>' : ''}
       </div>
     </div>`, 'none', { cls: 'no-tabs' });
+  mountFormDials();
 }
 
 function renderWelcome() {
@@ -316,16 +318,6 @@ const field = (label, inner, { err = '', hint = '' } = {}) => `<label class="fie
 const input = (path, value, attrs = '') => `<input class="inp" data-f="${path}" value="${esc(value)}" ${attrs}>`;
 const chips = (path, value, options) => `<div class="chips" role="radiogroup">${options.map(([v, l]) => `<button type="button" class="chip ${v === value ? 'on' : ''}" data-chip="${path}" data-v="${v}" role="radio" aria-checked="${v === value}">${l}</button>`).join('')}</div>`;
 
-function monthPicker(path, value, withDay = false) {
-  const [y, m, d] = (value || '').split('-');
-  const now = new Date().getFullYear();
-  const years = Array.from({ length: 30 }, (_, i) => now + 1 - i);
-  return `<div class="month-pick ${withDay ? 'with-day' : ''}" data-month="${path}">
-    ${withDay ? `<select class="inp" data-part="d" aria-label="יום"><option value="">יום</option>${Array.from({ length: 31 }, (_, i) => `<option value="${String(i + 1).padStart(2, '0')}" ${+d === i + 1 ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>` : ''}
-    <select class="inp" data-part="m" aria-label="חודש"><option value="">חודש</option>${MONTHS.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}" ${+m === i + 1 ? 'selected' : ''}>${n}</option>`).join('')}</select>
-    <select class="inp" data-part="y" aria-label="שנה"><option value="">שנה</option>${years.map(n => `<option ${+y === n ? 'selected' : ''}>${n}</option>`).join('')}</select>
-  </div>`;
-}
 
 function sectionHtml(id, p) {
   if (id === 'basics') {
@@ -340,10 +332,8 @@ function sectionHtml(id, p) {
       </div>
       ${field('שם', input('name', p.name, 'placeholder="שם פרטי ומשפחה" maxlength="40" autocomplete="name"'), { err: 'name' })}
       ${field('איך לפנות אליך?', chips('g', p.g, [['m', 'אליו'], ['f', 'אליה'], ['x', 'לא משנה']]))}
-      <div class="row2">
-        ${field('גיל', `<input class="inp" type="number" inputmode="numeric" min="16" max="80" data-age value="${p.born ? new Date().getFullYear() - p.born : ''}" placeholder="21">`, { err: 'age' })}
-        ${field('מאיפה?', input('city', p.city, 'list="dl-city" placeholder="עיר / יישוב" maxlength="40"'))}
-      </div>
+      <div class="field"><span class="f-label">גיל</span><div class="dial-host ${p.born ? '' : 'unset'}" data-dial="age">${dialHtml({ title: gen(p, 'בן כמה?', 'בת כמה?', 'בן/בת כמה?'), unit: 'שנים' })}</div><small class="f-err" data-err="age"></small>${p.born ? '' : '<small class="f-hint">גררו את הסרגל לבחירה</small>'}</div>
+      ${field('מאיפה?', input('city', p.city, 'list="dl-city" placeholder="עיר / יישוב" maxlength="40"'))}
       ${datalist('dl-city', CITIES)}`;
   }
   if (id === 'prep') {
@@ -370,9 +360,9 @@ function sectionHtml(id, p) {
     }
     return `
       ${field('איפה את/ה היום?', chips('status', p.status, Object.entries(STATUS).map(([k, v]) => [k, v[p.g] || v.m])))}
-      ${field('תאריך גיוס', monthPicker('draft', p.draft, true), { hint: p.draft && p.draft.length === 7 ? 'הוסיפו גם את היום, כדי שהספירה תהיה מדויקת' : '' })}
+      ${field('תאריך גיוס', dateButton('draft', p.draft, true), { hint: p.draft && p.draft.length === 7 ? 'הוסיפו גם את היום, כדי שהספירה תהיה מדויקת' : '' })}
       ${p.status === 'active' || p.status === 'pre' ? trackPicker(p) : ''}
-      ${showRelease ? field('שחרור', monthPicker('release', p.release)) : ''}
+      ${showRelease ? field('שחרור', dateButton('release', p.release, false)) : ''}
       ${field('חיל / זרוע', `<div class="corps">${Object.entries(CORPS).filter(([, v]) => !v.parent).map(([k, v]) => `<button type="button" class="corps-chip ${k === corpsFamily(p.unit.corps) ? 'on' : ''}" data-corps="${k}">${v.name}</button>`).join('')}</div>`)}
       ${corpsFamily(p.unit.corps) === 'air' ? `<div class="sub-corps">${field('איפה בחיל האוויר?', `<div class="chips">${[['air', 'בסיס / טייסת'], ['airdef', 'הגנ״א']].map(([k, l]) => `<button type="button" class="chip ${k === p.unit.corps ? 'on' : ''}" data-corps="${k}">${l}</button>`).join('')}</div>`)}</div>` : ''}
       ${c ? `<div class="levels"><div class="levels-head">${icon('shield')}<span>היחידה שלך ב${c.name}</span></div>${levels}</div>` : ''}
@@ -390,9 +380,9 @@ function sectionHtml(id, p) {
             <span class="role-dot ${r.to ? '' : 'now'}"></span>
             <input class="inp" data-f="roles.${i}.t" value="${esc(r.t)}" list="dl-role" maxlength="40" placeholder="תפקיד או קורס">
             <div class="role-years">
-              <input class="inp yr" data-f="roles.${i}.from" value="${esc(r.from)}" inputmode="numeric" maxlength="4" placeholder="משנה">
+              <button type="button" class="inp yr ${r.from ? '' : 'empty'}" data-year="roles.${i}.from">${r.from || 'משנה'}</button>
               <span>–</span>
-              <input class="inp yr" data-f="roles.${i}.to" value="${esc(r.to)}" inputmode="numeric" maxlength="4" placeholder="היום">
+              <button type="button" class="inp yr ${r.to ? '' : 'empty'}" data-year="roles.${i}.to">${r.to || 'היום'}</button>
             </div>
             <button type="button" class="icon-btn sm" data-role-del="${i}" aria-label="מחיקה">${icon('close')}</button>
           </div>`).join('')}
@@ -424,6 +414,84 @@ function rerenderSection(id) {
   const sec = form.querySelector(`[data-sec="${id}"]`);
   const html = sectionHtml(id, formModel());
   if (sec) sec.innerHTML = html; else form.innerHTML = html;
+  mountFormDials();
+}
+
+// ---------- Dials: age, dates and years ----------
+
+let formDials = [];
+function mountFormDials() {
+  formDials.forEach(d => d.destroy());
+  formDials = [];
+  const host = document.querySelector('[data-dial="age"]');
+  if (!host) return;
+  const m = formModel();
+  const year = new Date().getFullYear();
+  formDials.push(mountDial(host, {
+    min: 16, max: 70, value: m.born ? year - m.born : 21, longFor: v => v % 5 === 0, labelFor: v => (v % 10 === 0 ? v : ''), label: 'גיל',
+    onChange: v => {
+      m.born = year - v;
+      host.classList.remove('unset');
+      host.parentElement.querySelector('.f-hint')?.remove();
+      if (route().name !== 'edit') saveDraft();
+    },
+  }));
+}
+
+function dateButton(path, value, withDay) {
+  return `<button type="button" class="inp date-btn ${value ? '' : 'empty'}" data-date="${path}" data-day="${withDay ? 1 : ''}">${icon('calendar')}<span>${value ? esc(monthLabel(value)) : 'בחירת תאריך'}</span></button>`;
+}
+
+const SHORT_MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+
+// A sheet with a dial for the day (if asked), the month and the year.
+function openDateSheet(path, withDay) {
+  const m = formModel();
+  const cur = (path.split('.').reduce((o, k) => o?.[k], m) || '').split('-');
+  const now = new Date();
+  const val = { y: +cur[0] || now.getFullYear(), mo: +cur[1] || now.getMonth() + 1, d: +cur[2] || (withDay ? now.getDate() : 1) };
+  const title = path === 'draft' ? 'תאריך גיוס' : path === 'release' ? 'תאריך שחרור' : 'תאריך';
+  const sheet = openSheet(`<h2 class="sheet-title">${title}</h2>
+    <div class="date-dials">
+      ${withDay ? `<div data-dd="d">${dialHtml({ title: 'יום', compact: true })}</div>` : ''}
+      <div data-dd="mo">${dialHtml({ title: 'חודש', compact: true })}</div>
+      <div data-dd="y">${dialHtml({ title: 'שנה', compact: true })}</div>
+    </div>
+    <p class="date-preview"></p>
+    <div class="sheet-btns"><button class="btn primary big" data-date-ok>אישור</button>${cur[0] ? '<button class="btn soft big" data-date-clear>ניקוי</button>' : ''}</div>`, { onClose: () => dials.forEach(d => d.destroy()) });
+  const preview = () => { sheet.querySelector('.date-preview').textContent = monthLabel(`${val.y}-${String(val.mo).padStart(2, '0')}${withDay ? `-${String(Math.min(val.d, new Date(val.y, val.mo, 0).getDate())).padStart(2, '0')}` : ''}`); };
+  const dials = [];
+  if (withDay) dials.push(mountDial(sheet.querySelector('[data-dd="d"]'), { min: 1, max: 31, value: val.d, longFor: v => v === 1 || v % 5 === 0, labelFor: v => (v === 1 || v % 5 === 0 ? v : ''), spacing: 16, label: 'יום', onChange: v => { val.d = v; preview(); } }));
+  dials.push(mountDial(sheet.querySelector('[data-dd="mo"]'), { min: 1, max: 12, value: val.mo, every: 1, spacing: 30, label: 'חודש', format: v => MONTHS[v - 1], labelFor: v => SHORT_MONTHS[v - 1], onChange: v => { val.mo = v; preview(); } }));
+  dials.push(mountDial(sheet.querySelector('[data-dd="y"]'), { min: now.getFullYear() - 30, max: now.getFullYear() + 2, value: val.y, longFor: v => v % 5 === 0, labelFor: v => (v % 5 === 0 ? v : ''), spacing: 22, label: 'שנה', onChange: v => { val.y = v; preview(); } }));
+  preview();
+  const done = v => {
+    setPath(m, path, v);
+    if (route().name !== 'edit') saveDraft();
+    closeSheet();
+    rerenderSection(path === 'draft' || path === 'release' ? 'service' : 'path');
+  };
+  sheet.querySelector('[data-date-ok]').addEventListener('click', () => {
+    const dd = withDay ? `-${String(Math.min(val.d, new Date(val.y, val.mo, 0).getDate())).padStart(2, '0')}` : '';
+    done(`${val.y}-${String(val.mo).padStart(2, '0')}${dd}`);
+  });
+  sheet.querySelector('[data-date-clear]')?.addEventListener('click', () => done(''));
+}
+
+// A sheet with one year dial (the years of a role); "to" can also be "היום".
+function openYearSheet(path) {
+  const m = formModel();
+  const now = new Date().getFullYear();
+  const cur = +path.split('.').reduce((o, k) => o?.[k], m) || now;
+  let v = cur;
+  const isTo = path.endsWith('.to');
+  const sheet = openSheet(`<h2 class="sheet-title">${isTo ? 'עד שנה' : 'משנה'}</h2>
+    <div data-yd>${dialHtml({ title: 'שנה' })}</div>
+    <div class="sheet-btns"><button class="btn primary big" data-year-ok>אישור</button>${isTo ? '<button class="btn soft big" data-year-now>עד היום</button>' : ''}</div>`, { onClose: () => d.destroy() });
+  const d = mountDial(sheet.querySelector('[data-yd]'), { min: now - 30, max: now + 1, value: cur, longFor: v => v % 5 === 0, labelFor: v => (v % 5 === 0 ? v : ''), spacing: 22, label: 'שנה', onChange: x => { v = x; } });
+  const done = val => { setPath(m, path, val); if (route().name !== 'edit') saveDraft(); closeSheet(); rerenderSection('path'); };
+  sheet.querySelector('[data-year-ok]').addEventListener('click', () => done(v));
+  sheet.querySelector('[data-year-now]')?.addEventListener('click', () => done(''));
 }
 const sectionOf = el => el.closest('[data-sec]')?.dataset.sec || STEPS[step].id;
 
@@ -461,16 +529,19 @@ async function renderHome(seq) {
           : '<div class="sugg sk"></div>'.repeat(3)}</div>
       </section>`;
     page(`
-      <header class="topbar home-top">
-        ${wordmark()}
-        <div class="tb-actions">
-          ${demo ? '<span class="demo-pill">הדגמה</span>' : ''}
-          <button class="icon-btn" data-act="create" aria-label="פוסט או סטורי חדש">${icon('plus-square')}</button>
-          <button class="icon-btn has-badge" data-go="chats" aria-label="הודעות">${icon('send')}<span class="nbadge" data-chat-badge ${me.unreadChats ? '' : 'hidden'}>${me.unreadChats || ''}</span></button>
-          <button class="icon-btn" data-act="search" aria-label="חיפוש">${icon('search')}</button>
-        </div>
-      </header>
-      ${trayHtml(f, !feed)}
+      <section class="hero topo">
+        <header class="hero-bar">
+          ${wordmark()}
+          <div class="tb-actions">
+            ${demo ? '<span class="demo-pill">הדגמה</span>' : ''}
+            <button class="icon-btn glassy" data-act="create" aria-label="פוסט או סטורי חדש">${icon('plus-square')}</button>
+            <button class="icon-btn glassy has-badge" data-go="chats" aria-label="הודעות">${icon('send')}<span class="nbadge" data-chat-badge ${me.unreadChats ? '' : 'hidden'}>${me.unreadChats || ''}</span></button>
+            <button class="icon-btn glassy" data-act="search" aria-label="חיפוש">${icon('search')}</button>
+          </div>
+        </header>
+        ${trayHtml(f, !feed)}
+      </section>
+      ${pazamTiles(me.profile)}
       ${friends < 3 ? `
       <section class="hero-card">
         <div class="hc-glow"></div>
@@ -510,6 +581,45 @@ function suggestionCard(p, i) {
     <span class="reason">${icon(p.mutualCount ? 'people' : 'sparkle')}${esc(p.reason)}</span>
     ${followBtn(p, 'sm')}
   </article>`;
+}
+
+// ---------- Tiles (the "שטח" look): big numbers in a bento grid ----------
+
+function pazamTiles(p) {
+  const c = p?.status === 'active' ? serviceClock(p) : p?.status === 'pre' ? serviceClock(p) : null;
+  if (!c) return '';
+  if (c.untilDraft) return `<div class="tiles"><div class="tile s4"><small>לגיוס</small><b class="num g" data-countup="${c.untilDraft}">${c.untilDraft}</b><span class="t-sub">ימים · ${esc(monthLabel(c.start))}</span></div></div>`;
+  if (p.status !== 'active') return '';
+  return `<div class="tiles">
+    <div class="tile s2"><small>ימים בפז״ם</small><b class="num g" data-countup="${c.served}">${c.served}</b></div>
+    <div class="tile s2"><small>${c.done ? 'השירות הסדיר' : 'לשחרור'}</small>${c.done ? '<b class="num">✓</b>' : `<b class="num" data-countup="${c.left}">${c.left}</b>`}</div>
+    <div class="tile s4 thin"><div class="t-bar"><span style="--p:${c.pct}"></span></div><span class="t-foot"><b>${Math.round(c.pct * 100)}%</b> מהשירות · שחרור ${c.done ? 'היה' : 'משוער'} ${esc(monthLabel(c.end))}</span></div>
+  </div>`;
+}
+
+function profileTiles(v, mine) {
+  const p = v.person;
+  const prof = v.level === 'full' ? p.profile : null;
+  const c = prof && (prof.status === 'active' || prof.status === 'pre') ? serviceClock(prof) : null;
+  const chain = prof ? unitChain(prof) : [];
+  const corps = CORPS[prof?.unit.corps || p.corps];
+  let out = '';
+  if (c && c.untilDraft) out += `<div class="tile s4"><small>לגיוס</small><b class="num g" data-countup="${c.untilDraft}">${c.untilDraft}</b><span class="t-sub">ימים · ${esc(monthLabel(c.start))}</span></div>`;
+  else if (c && prof.status === 'active') {
+    out += `<div class="tile s2"><small>ימים בפז״ם</small><b class="num g" data-countup="${c.served}">${c.served}</b></div>`;
+    out += `<div class="tile s2"><small>${c.done ? 'השירות הסדיר' : 'לשחרור'}</small>${c.done ? '<b class="num">✓</b>' : `<b class="num" data-countup="${c.left}">${c.left}</b>`}</div>`;
+  }
+  if (corps) {
+    out += `<div class="tile s4"><small>היחידה</small><b class="t-title">${esc(prof ? corpsName(prof.unit.corps) : corps.name)}</b>
+      ${chain.length ? `<div class="chain">${chain.map(x => `<span>${esc(x.text)}</span>`).join('')}</div>` : p.top ? `<div class="chain"><span>${esc(p.top)}</span></div>` : ''}
+      ${c && !c.untilDraft && prof.status === 'active' ? `<div class="t-bar"><span style="--p:${c.pct}"></span></div><span class="t-foot"><b>${Math.round(c.pct * 100)}%</b> מהשירות · שחרור ${c.done ? 'היה' : 'משוער'} ${esc(monthLabel(c.end))}</span>` : ''}
+    </div>`;
+  }
+  if (!mine) {
+    if (v.mutualCount) out += `<button class="tile s2 tap" data-mutual="${p.id}"><small>מכירים משותפים</small><b class="num">${v.mutualCount}</b><span class="stack">${v.mutual.slice(0, 3).map(m => avatar(m, 's', { dot: false })).join('')}</span></button>`;
+    if (v.common.length) out += `<div class="tile ${v.mutualCount ? 's2' : 's4'}"><small>מה משותף</small><b class="t-title">${esc(v.common[0].title)}</b>${v.common[0].detail ? `<span class="t-sub">${esc(v.common[0].detail)}</span>` : ''}</div>`;
+  }
+  return out ? `<div class="tiles">${out}</div>` : '';
 }
 
 // ---------- פז״ם: days served and days left ----------
@@ -560,7 +670,6 @@ function myCard() {
       ${p.unit.corps ? `<span class="mc-step">${icon('shield')}${esc([corpsName(p.unit.corps), ...chain.slice(0, 2).map(x => x.text)].join(' · '))}</span>` : ''}
       ${currentRole(p) ? `<span class="mc-step">${icon('badge')}${esc(currentRole(p).t)}</span>` : ''}
     </div>
-    ${serviceMeter(p, { compact: true })}
     <div class="mc-stats"><span><b>${me.counts.friends}</b> חברים</span><span><b>${me.counts.followers}</b> עוקבים</span><span class="mc-qr">${icon('qr')}</span></div>
   </article>`;
 }
@@ -763,27 +872,29 @@ function profileHtml(v, mine) {
   const firstName = esc(p.name.split(' ')[0]);
   const tab = profTab[p.id] || (v.counts.posts ? 'posts' : 'path');
   return `
-    ${topbar(mine ? esc(p.name) : '', { back: !mine, actions: mine ? `<button class="icon-btn" data-go="settings" aria-label="הגדרות">${icon('gear')}</button>` : `<button class="icon-btn" data-story="${p.id}" aria-label="המסלול כסטורי">${icon('play')}</button>` })}
-    <section class="prof" data-name="${esc(p.name)}" ${BERETS[p.beret] ? `style="--bc:${BERETS[p.beret].color}"` : ''}>
-      <div class="prof-head">
-        <button class="prof-av" data-story="${p.id}" aria-label="המסלול כסטורי">${avatar(p, 'xl', { ring: true })}</button>
-        <div class="stats">
-          ${[['posts', 'פוסטים'], ['friends', 'חברים'], ['followers', 'עוקבים']].map(([k, l]) => `<button class="stat" ${k === 'posts' ? `data-ptab-prof="posts" data-of="${p.id}"` : `data-list="${k}" data-of="${p.id}"`} ${full ? '' : 'disabled'}><b>${v.counts[k] || 0}</b><small>${l}</small></button>`).join('')}
-        </div>
-      </div>
+    <section class="hero topo prof-hero" data-name="${esc(p.name)}" ${BERETS[p.beret] ? `style="--bc:${BERETS[p.beret].color}"` : ''}>
+      <header class="hero-bar">
+        ${mine ? '<span class="tb-gap"></span>' : `<button class="icon-btn glassy" data-act="back" aria-label="חזרה">${icon('back')}</button>`}
+        ${mine ? `<button class="icon-btn glassy" data-go="settings" aria-label="הגדרות">${icon('gear')}</button>` : `<button class="icon-btn glassy" data-story="${p.id}" aria-label="המסלול כסטורי">${icon('play')}</button>`}
+      </header>
+      <button class="prof-av" data-story="${p.id}" aria-label="המסלול כסטורי">${avatar(p, 'xl', { ring: true })}</button>
       <h2 class="prof-name">${esc(p.name)}</h2>
       <div class="prof-meta">${esc(ageLine(p))}${p.status ? `<span class="status-pill">${esc(statusLabel(prof || p))}</span>` : ''}${beretPill(p.beret)}</div>
       ${prof?.bio ? `<p class="bio">${esc(prof.bio)}</p>` : ''}
-      ${prof ? serviceMeter(prof) : ''}
+      <div class="stats">
+        ${[['posts', 'פוסטים'], ['friends', 'חברים'], ['followers', 'עוקבים']].map(([k, l]) => `<button class="stat" ${k === 'posts' ? `data-ptab-prof="posts" data-of="${p.id}"` : `data-list="${k}" data-of="${p.id}"`} ${full ? '' : 'disabled'}><b>${v.counts[k] || 0}</b><small>${l}</small></button>`).join('')}
+      </div>
+    </section>
+    <section class="prof" data-name="${esc(p.name)}">
+      ${profileTiles(v, mine)}
       <div class="prof-btns">
         ${mine ? `<button class="btn soft" data-go="edit">${icon('edit')}<span>עריכה</span></button><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button>`
           : `${followBtn(p.rel ? p : { ...p, rel: v.rel }, 'big')}<button class="btn soft big" data-go="chat/${p.id}">${icon('send')}<span>הודעה</span></button><button class="btn soft big sq chapcha" data-chapcha="${p.id}" aria-label="צ׳פחה">🤜</button>`}
       </div>
-      ${!mine && v.mutualCount ? mutualHtml(v) : ''}
-      ${!mine && v.common.length ? `
+      ${!mine && v.common.length > 1 ? `
         <div class="common">
-          <h3>${icon('sparkle')}מה משותף לכם</h3>
-          <div class="common-list">${v.common.map((c, i) => `<div class="cg" style="--i:${i}"><b>${esc(c.title)}</b>${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</div>`).join('')}</div>
+          <h3>${icon('sparkle')}עוד דברים משותפים</h3>
+          <div class="common-list">${v.common.slice(1).map((c, i) => `<div class="cg" style="--i:${i}"><b>${esc(c.title)}</b>${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</div>`).join('')}</div>
         </div>` : ''}
     </section>
     <div class="seg prof-seg"><button class="seg-b ${tab === 'path' ? 'on' : ''}" data-ptab-prof="path" data-of="${p.id}">${icon('shield')}המסלול</button><button class="seg-b ${tab === 'posts' ? 'on' : ''}" data-ptab-prof="posts" data-of="${p.id}">${icon('image')}פוסטים</button><span class="seg-pill" style="--n:${tab === 'path' ? 0 : 1}"></span></div>
@@ -846,6 +957,7 @@ function renderEdit() {
       ${sections.map(([id, t]) => `<section class="edit-sec"><h3>${t}</h3><div data-sec="${id}">${sectionHtml(id, editDraft)}</div></section>`).join('')}
     </form>
     <div class="foot-space"></div>`, 'none');
+  mountFormDials();
 }
 
 async function saveEdit() {
@@ -2032,6 +2144,10 @@ document.addEventListener('click', async e => {
   if (failed && chatState) { const m = chatState.msgs.find(x => String(x.id) === failed.dataset.mid); if (m) return sendChat(m.text, m); }
   const cp = t.closest('[data-chapcha]');
   if (cp) { e.stopPropagation(); return sendChapcha(cp); }
+  const dbtn = t.closest('[data-date]');
+  if (dbtn) { haptic(); return openDateSheet(dbtn.dataset.date, !!dbtn.dataset.day); }
+  const ybtn = t.closest('[data-year]');
+  if (ybtn) { haptic(); return openYearSheet(ybtn.dataset.year); }
   const br = t.closest('[data-beret]');
   if (br) { const m = formModel(); m.beret = br.dataset.beret; haptic(); if (route().name !== 'edit') saveDraft(); return rerenderSection('service'); }
   const like = t.closest('[data-like]');

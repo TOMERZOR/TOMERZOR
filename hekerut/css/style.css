@@ -1124,3 +1124,144 @@ select.inp { padding-left: 34px; background-image: linear-gradient(45deg, transp
 .st-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .st-item { position: relative; height: 92px; border-radius: 18px; background: rgba(255, 255, 255, 0.06); overflow: hidden; }
 .st-item .cr-text.preview { pointer-events: none; }
+
+/* ---------- Dial (js/dial.js) ---------- */
+
+.dial { position: relative; overflow: hidden; border-radius: 26px; padding: 16px 0 12px; background: #0d0d0c; color: #f4efe4; text-align: center; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; outline: 0; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.dial:focus-visible { box-shadow: 0 0 0 3px var(--gold-soft), inset 0 0 0 1.5px var(--gold); }
+.dial.dragging { cursor: grabbing; }
+.dial-title { font: 700 15px "Heebo", sans-serif; color: rgba(244, 239, 228, 0.85); }
+.dial-num { position: relative; height: 1.1em; margin: 4px auto 0; display: flex; justify-content: center; direction: ltr; font: 800 64px/1.1 "Plus Jakarta Sans", "Heebo", sans-serif; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; }
+.dial-num .col { position: relative; display: inline-block; height: 1.1em; overflow: hidden; min-width: 0.62em; }
+.dial-num .col.whole { min-width: 3em; }
+.dial-num .ch { position: absolute; inset: 0; display: grid; place-items: center; }
+.dial-num .ch.cur { position: relative; }
+.dial-num .ch.in.up { animation: rollInUp 0.24s var(--ease) both; }
+.dial-num .ch.in.down { animation: rollInDown 0.24s var(--ease) both; }
+.dial-num .ch.out.up { animation: rollOutUp 0.24s var(--ease) both; }
+.dial-num .ch.out.down { animation: rollOutDown 0.24s var(--ease) both; }
+@keyframes rollInUp { from { transform: translateY(60%); opacity: 0; filter: blur(3px); } }
+@keyframes rollInDown { from { transform: translateY(-60%); opacity: 0; filter: blur(3px); } }
+@keyframes rollOutUp { to { transform: translateY(-60%); opacity: 0; filter: blur(3px); } }
+@keyframes rollOutDown { to { transform: translateY(60%); opacity: 0; filter: blur(3px); } }
+.dial-unit { font: 600 13px "Heebo", sans-serif; color: rgba(244, 239, 228, 0.55); margin-top: -2px; }
+.dial-ruler { position: relative; height: 62px; margin-top: 10px; direction: ltr; -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+.dial-track { position: absolute; top: 0; left: 0; height: 100%; will-change: transform; }
+.tk { position: absolute; top: 8px; width: 2px; height: 16px; margin-left: -1px; border-radius: 2px; background: rgba(244, 239, 228, 0.28); }
+.tk.long { top: 2px; height: 28px; background: rgba(244, 239, 228, 0.6); }
+.tk small { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); font: 600 12px "Plus Jakarta Sans", "Heebo", sans-serif; color: rgba(244, 239, 228, 0.45); white-space: nowrap; }
+.dial-needle { position: absolute; top: -4px; left: 50%; width: 3px; height: 40px; margin-left: -1.5px; border-radius: 3px; background: #ff7a3d; box-shadow: 0 0 12px rgba(255, 122, 61, 0.55); }
+.dial-needle::before { content: ""; position: absolute; top: -5px; left: 50%; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: #ff7a3d; }
+.dial-host.unset .dial-num { opacity: 0.35; }
+.dial.compact { padding: 12px 0 6px; border-radius: 20px; }
+.dial.compact .dial-title { font-size: 13px; }
+.dial.compact .dial-num { font-size: 40px; }
+.dial.compact .dial-ruler { height: 54px; margin-top: 4px; }
+.date-dials { display: grid; gap: 10px; }
+.date-preview { text-align: center; font: 800 18px "Heebo", sans-serif; margin: 14px 0 4px; }
+.sheet-btns { display: flex; gap: 8px; margin-top: 12px; }
+.date-btn { display: flex; align-items: center; gap: 10px; text-align: start; cursor: pointer; }
+.date-btn .ic { width: 19px; height: 19px; color: var(--gold); }
+.date-btn.empty span, .inp.yr.empty { color: var(--text-3); }
+button.inp.yr { width: 66px; text-align: center; padding: 0 4px; font-family: "Plus Jakarta Sans", "Heebo", sans-serif; cursor: pointer; }
+
+/* =====================================================================
+   "שטח": a warm gradient header with contour lines, white tiles with big
+   numbers (bento), ink buttons. Light by default, with a dark version.
+   ===================================================================== */
+
+:root {
+  --bg: #f6f3ec;
+  --card: #ffffff;
+  --card-2: #f1ece2;
+  --ink: #16140f;
+  --on-ink: #f6f3ec;
+  --hero: linear-gradient(160deg, #e9d6aa 0%, #c99a58 46%, #7f8f4a 100%);
+  --hero-ink: #1b1408;
+  --topo-ink: rgba(27, 20, 8, 0.14);
+  --tile-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 10px 30px rgba(60, 40, 10, 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f0c; --card: #171815; --card-2: #20211d; --ink: #f6f3ec; --on-ink: #16140f;
+    --hero: linear-gradient(160deg, #4a3c22 0%, #3a2f1a 45%, #26301a 100%); --hero-ink: #f6efe0; --topo-ink: rgba(246, 239, 224, 0.1);
+    --tile-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0f0c; --card: #171815; --card-2: #20211d; --ink: #f6f3ec; --on-ink: #16140f;
+  --hero: linear-gradient(160deg, #4a3c22 0%, #3a2f1a 45%, #26301a 100%); --hero-ink: #f6efe0; --topo-ink: rgba(246, 239, 224, 0.1);
+  --tile-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Buttons: ink is the main action; the gold gradient stays for the brand moments. */
+.btn.primary { background: var(--ink); color: var(--on-ink); box-shadow: 0 6px 18px rgba(22, 20, 15, 0.18); }
+.btn.soft { background: var(--card); box-shadow: inset 0 0 0 1px var(--line-2); }
+.hero-card .btn.primary, .welcome .btn.primary, .onb-foot .btn.primary, .pv-cta .btn.primary { background: var(--grad); color: var(--on-grad); box-shadow: 0 6px 20px rgba(211, 154, 84, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.45); }
+
+/* The header */
+.hero { position: relative; isolation: isolate; margin: 0 -16px; padding: calc(10px + env(safe-area-inset-top)) 16px 18px; background: var(--hero); color: var(--hero-ink); border-radius: 0 0 36px 36px; overflow: hidden; }
+.hero.topo::after { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--topo-ink); -webkit-mask: url("../img/topo.svg") center / cover no-repeat; mask: url("../img/topo.svg") center / cover no-repeat; }
+.hero-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 48px; }
+.hero .wordmark { color: var(--hero-ink); }
+.hero .wm-accent { background: none; -webkit-background-clip: initial; background-clip: initial; color: var(--hero-ink); opacity: 0.7; }
+.hero .wm-mark { background: var(--hero-ink); color: #e9d6aa; box-shadow: none; }
+.icon-btn.glassy { background: rgba(255, 255, 255, 0.42); color: var(--hero-ink); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+:root[data-theme="dark"] .icon-btn.glassy { background: rgba(255, 255, 255, 0.1); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .icon-btn.glassy { background: rgba(255, 255, 255, 0.1); } }
+.hero .demo-pill { background: rgba(255, 255, 255, 0.45); color: var(--hero-ink); }
+.hero .stories { margin: 10px -16px 0; padding: 6px 16px 2px; }
+.hero .story small { color: var(--hero-ink); font-weight: 700; opacity: 0.85; }
+.hero .av.ring::before { background: color-mix(in srgb, var(--hero-ink) 8%, #fff); }
+.hero .av.ring.no-story, .hero .av.ring.seen { background: rgba(255, 255, 255, 0.55); }
+.hero .story-plus { box-shadow: 0 0 0 3px #d7b67b; background: var(--hero-ink); color: #e9d6aa; }
+
+/* Tiles */
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+.tile { position: relative; display: grid; align-content: start; gap: 2px; padding: 14px 16px; border-radius: 24px; background: var(--card); box-shadow: var(--tile-shadow); text-align: start; animation: rise 0.5s var(--ease) both; min-width: 0; }
+.tile.s2 { grid-column: span 2; }
+.tile.s4 { grid-column: span 4; }
+.tile.thin { padding: 12px 16px; }
+.tile.tap { cursor: pointer; transition: transform 0.25s var(--spring); }
+.tile.tap:active { transform: scale(0.97); }
+.tile small { font: 700 12.5px "Heebo", sans-serif; color: var(--text-2); }
+.tile .num { font: 900 38px/1.05 "Plus Jakarta Sans", "Heebo", sans-serif; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+.tile .num.g { background: linear-gradient(135deg, #d39a54, #7f8f4a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tile .t-title { font: 800 17px/1.25 "Heebo", sans-serif; margin-top: 2px; }
+.tile .t-sub { color: var(--text-2); font-size: 13px; }
+.tile .chain { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tile .chain span { padding: 6px 10px; border-radius: 10px; background: var(--card-2); font: 800 13px "Heebo", sans-serif; }
+.t-bar { height: 8px; border-radius: 8px; background: var(--card-2); overflow: hidden; margin-top: 10px; }
+.t-bar span { display: block; height: 100%; width: calc(var(--p) * 100%); border-radius: 8px; background: linear-gradient(90deg, #f0cf8e, #d39a54, #7f8f4a); animation: fill 1.2s var(--ease) both 0.2s; }
+.t-foot { display: block; margin-top: 7px; color: var(--text-2); font-size: 12.5px; }
+.t-foot b { color: var(--text); font-family: "Plus Jakarta Sans", "Heebo", sans-serif; }
+.tile .stack { position: absolute; left: 14px; bottom: 14px; }
+.tile .stack .av { box-shadow: 0 0 0 2.5px var(--card); }
+
+/* Profile */
+.prof-hero { display: grid; justify-items: center; text-align: center; padding-bottom: 20px; }
+.prof-hero .hero-bar { width: 100%; }
+.prof-hero .prof-av { margin-top: -4px; }
+.prof-hero .av.ring::before { background: color-mix(in srgb, var(--hero-ink) 8%, #fff); }
+.prof-hero .prof-name { margin-top: 10px; font-size: 30px; text-decoration: none !important; }
+.prof-hero .prof-meta { justify-content: center; color: color-mix(in srgb, var(--hero-ink) 75%, transparent); font-weight: 600; }
+.prof-hero .status-pill { background: rgba(255, 255, 255, 0.45); color: var(--hero-ink); }
+.prof-hero .beret-pill { background: rgba(255, 255, 255, 0.45); color: var(--hero-ink); box-shadow: none; }
+.prof-hero .bio { max-width: 320px; color: var(--hero-ink); }
+.prof-hero .stats { display: flex; gap: 6px; margin-top: 14px; }
+.prof-hero .stat { min-width: 84px; padding: 8px 12px; border-radius: 16px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(8px); }
+:root[data-theme="dark"] .prof-hero .stat, :root[data-theme="dark"] .prof-hero .status-pill, :root[data-theme="dark"] .prof-hero .beret-pill { background: rgba(255, 255, 255, 0.08); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .prof-hero .stat, :root:not([data-theme="light"]) .prof-hero .status-pill, :root:not([data-theme="light"]) .prof-hero .beret-pill { background: rgba(255, 255, 255, 0.08); } }
+.prof-hero .stat b { font-size: 19px; color: var(--hero-ink); }
+.prof-hero .stat small { color: color-mix(in srgb, var(--hero-ink) 70%, transparent); }
+.prof { padding-top: 0; }
+.prof .prof-btns { margin-top: 12px; }
+.view.enter > .hero { animation: heroin 0.55s var(--ease) both; }
+@keyframes heroin { from { opacity: 0; transform: translateY(-12px); } }
+
+/* Cards and rows pick up the tile look */
+.post-sheet .post, .feed .post { background: var(--card); margin: 0; border-radius: 26px; padding-top: 12px; overflow: hidden; box-shadow: var(--tile-shadow); }
+.feed .post .post-media { margin: 0; }
+.feed .post .caption { padding-bottom: 14px; }
+.compose-row, .mycard, .sugg, .tl-body, .tl-ic, .edit-sec, .group, .rail-empty, .mutual { box-shadow: var(--tile-shadow); }
+.home-sec-gap { height: 4px; }

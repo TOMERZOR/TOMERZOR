@@ -8,6 +8,10 @@ Live: https://hekerut.moffy-app.workers.dev (its own address; the old GitHub Pag
 npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localhost:8795/hekerut/
 ```
 
+## Look
+
+"שטח": a warm gradient header (gold to olive) with map contour lines (`img/topo.svg`), white tiles with big numbers (bento), ink buttons; light by default with a dark version. Numbers and dates are picked with a dial (`js/dial.js`): a big number whose changed digit rolls, a ruler you drag across the whole width with inertia and snapping, one orange needle, a vibration per step where supported, arrow keys too. It's used for age, the draft and release dates (day, month, year) and the years of each role.
+
 ## What it does
 
 - **Onboarding (5 short steps):** photo, name, how to address you (he/she/either), age, city · mechina or service year · status, draft and release month, corps, then the unit levels. The labels follow the corps: artillery asks for a סוללה, infantry for a פלוגה, the air force for a טייסת. Each level opens after the one above it, and all of them are optional · tironut, roles and courses with years · one line about you, and who sees the full path.

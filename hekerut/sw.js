@@ -1,6 +1,6 @@
 // Keeps the app on the phone so it opens instantly, even without internet. The network itself
 // (profiles, follows) comes from the server and isn't cached here. Bump VERSION whenever a file changes.
-const VERSION = 'hekerut-v5';
+const VERSION = 'hekerut-v6';
 const FILES = [
   './',
   'index.html',
@@ -15,6 +15,8 @@ const FILES = [
   'js/local.js',
   'js/icons.js',
   'js/qr.js',
+  'js/create.js',
+  'js/imagefx.js',
   'js/config.js',
   'vendor/qrcode.js',
   'vendor/jsQR.js',

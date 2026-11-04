@@ -177,6 +177,7 @@ export class LocalApi {
   seeStory(s, id) { return this.run(() => this.net.seeStory(this.net.auth(s.id, s.token), id)); }
   storyViewers(s, id) { return this.run(() => this.net.storyViewers(this.net.auth(s.id, s.token), id)); }
   deleteStory(s, id) { return this.run(() => this.net.deleteStory(this.net.auth(s.id, s.token), id)); }
+  likeStory(s, id, on) { return this.run(() => this.net.likeStory(this.net.auth(s.id, s.token), id, on)); }
   onChange(fn) { this.listeners.add(fn); }
   reset() { try { localStorage.removeItem(KEY); } catch {} }
 }

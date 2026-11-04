@@ -201,6 +201,12 @@ for (const [kind, make] of Object.entries(stores)) {
     assert.equal(net.storyViewers(a(), s1.id)[0].id, b().id);
     assert.throws(() => net.storyViewers(b(), s1.id), /not_found/);
     assert.equal(net.tray(c()).length, 0, 'not following, not met');
+    assert.deepEqual(net.likeStory(b(), s1.id, true), { liked: true });
+    assert.equal(net.tray(b())[0].stories[0].liked, true);
+    assert.equal(net.tray(a())[0].stories[0].likes, 1);
+    assert.equal(net.feed(a()).events[0].kind, 'story_like');
+    assert.throws(() => net.likeStory(a(), s1.id, true), /private/, 'not on your own story');
+    assert.throws(() => net.likeStory(c(), s1.id, true), /private/);
     t += 86400e3 + 1;
     assert.equal(net.tray(b()).length, 0);
     net.createStory(b(), { text: 'חדש' });

@@ -59,6 +59,7 @@ class RemoteApi {
   seeStory(s, id) { return this.call('POST', `/stories/${encodeURIComponent(id)}/seen`, s); }
   storyViewers(s, id) { return this.call('GET', `/stories/${encodeURIComponent(id)}/viewers`, s); }
   deleteStory(s, id) { return this.call('DELETE', `/stories/${encodeURIComponent(id)}`, s); }
+  likeStory(s, id, on) { return this.call(on ? 'POST' : 'DELETE', `/stories/${encodeURIComponent(id)}/like`, s); }
   onChange() {}
   reset() {}
 }

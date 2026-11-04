@@ -4,9 +4,10 @@ import { icon } from './icons.js';
 import { api, demo, session, saveSession } from './api.js';
 import { config } from './config.js';
 import { qrSvg, startScanner } from './qr.js';
+import { openCreator, closeCreator, creatorOpen } from './create.js';
 import { CORPS, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -449,7 +450,7 @@ async function renderHome(seq) {
         <p>במקום להסביר שוב את כל המסלול, תנו לו לסרוק את הקוד. הוא יראה מאיפה אתם, מה עשיתם ומי משותף לכם.</p>
         <div class="hc-btns"><button class="btn primary" data-act="code">${icon('qr')}<span>הקוד שלי</span></button><button class="btn glass" data-act="scan">${icon('scan')}<span>סריקה</span></button></div>
       </section>` : ''}
-      <button class="compose-row" data-act="new-post">${avatar(me, 's')}<span>מה חדש אצלך?</span><span class="cr-ic">${icon('image')}</span></button>
+      <button class="compose-row" data-act="new-post">${avatar(me, 's')}<span>מה חדש אצלך?</span><span class="crow-ic">${icon('image')}</span></button>
       ${feed && !posts.length ? `<div class="feed-empty">${icon('image')}<b>עוד אין פוסטים</b><p>פוסטים של מי שאת/ה עוקב/ת אחריו יופיעו כאן. אפשר להתחיל מהפוסט שלך.</p></div>` : ''}
       <section class="feed">${posts.slice(0, 3).map((p, i) => postCard(p, i)).join('')}</section>
       ${sugg}
@@ -658,16 +659,17 @@ function eventText(e) {
   if (e.kind === 'scan') return `${n} ${gen(a, 'סרק', 'סרקה')} את הקוד שלך ${gen(a, 'ועוקב', 'ועוקבת')} ${you}`;
   if (e.kind === 'friend') return `${n} ${gen(a, 'עקב', 'עקבה')} ${you} בחזרה. אתם חברים עכשיו`;
   if (e.kind === 'like') return `${n} ${gen(a, 'אהב', 'אהבה')} את הפוסט שלך`;
+  if (e.kind === 'story_like') return `${n} ${gen(a, 'אהב', 'אהבה')} את הסטורי שלך`;
   if (e.kind === 'role') return `${n} ${gen(a, 'התחיל', 'התחילה')} תפקיד חדש: <b>${esc(e.data?.t)}</b>`;
   return `${n} ${gen(a, 'התחיל', 'התחילה')} לעקוב ${you}`;
 }
-const EVENT_ICON = { scan: 'qr', friend: 'heart', role: 'badge', follow: 'user', like: 'heart' };
+const EVENT_ICON = { scan: 'qr', friend: 'heart', role: 'badge', follow: 'user', like: 'heart', story_like: 'heart' };
 
 function eventRow(e, i = 0) {
   return `<div class="row ev ${e.read ? '' : 'unread'}" style="--i:${i}" data-open="${e.actor.id}" data-name="${esc(e.actor.name)}">
     <span class="ev-av">${avatar(e.actor, 'm')}<span class="ev-ic k-${e.kind}">${icon(EVENT_ICON[e.kind] || 'user')}</span></span>
     <div class="row-text"><span>${eventText(e)}</span><small>${timeAgo(e.at)}</small></div>
-    ${e.kind !== 'role' && e.kind !== 'like' && !e.actor.rel?.following ? followBtn(e.actor, 'sm') : ''}
+    ${!['role', 'like', 'story_like'].includes(e.kind) && !e.actor.rel?.following ? followBtn(e.actor, 'sm') : ''}
   </div>`;
 }
 
@@ -1143,7 +1145,8 @@ const SLIDE_MS = 4800;
 function showSlide(i) {
   const s = storyState;
   if (!s) return;
-  if (s.downAt && Date.now() - s.downAt > 350) { s.downAt = 0; return; }
+  if (s.swiped) { s.swiped = false; s.downAt = 0; return; }
+  if (s.downAt && Date.now() - s.downAt > 350) { s.downAt = 0; resumeTray(); return; }
   s.downAt = 0;
   if (i < 0) i = 0;
   if (i >= s.slides.length) return closeStory();
@@ -1311,124 +1314,24 @@ function gridHtml(id) {
   return `<div class="grid" data-grid="${id}">${g.items.map((p, i) => `<button class="thumb" data-thumb="${p.id}" style="--i:${i}"><img src="${esc(p.image)}" alt="" loading="lazy" decoding="async">${p.likes ? `<span>${icon('heart')}${p.likes}</span>` : ''}</button>`).join('')}</div>`;
 }
 
-// ---------- Making a post or a story ----------
+// ---------- Making a post or a story (js/create.js) ----------
 
-// Resizes and center-crops an image to fit between minRatio and maxRatio (width / height),
-// then compresses it under the server's limit.
-async function readMedia(file, { maxW, maxH, minRatio, maxRatio }) {
-  const img = await new Promise((res, rej) => {
-    const i = new Image();
-    i.onload = () => res(i);
-    i.onerror = () => rej(Object.assign(new Error('image'), { code: 'image' }));
-    i.src = URL.createObjectURL(file);
-  });
-  let sw = img.naturalWidth, sh = img.naturalHeight;
-  const r = sw / sh;
-  if (r < minRatio) sh = sw / minRatio; else if (r > maxRatio) sw = sh * maxRatio;
-  const sx = (img.naturalWidth - sw) / 2, sy = (img.naturalHeight - sh) / 2;
-  let scale = Math.min(1, maxW / sw, maxH / sh);
-  const c = document.createElement('canvas');
-  try {
-    for (let round = 0; round < 4; round++, scale *= 0.8) {
-      c.width = Math.round(sw * scale);
-      c.height = Math.round(sh * scale);
-      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
-      for (const q of [0.84, 0.74, 0.64, 0.54]) {
-        const data = c.toDataURL('image/jpeg', q);
-        if (data.length < 400 * 1024) return { data, ratio: c.width / c.height };
-      }
-    }
-  } finally { URL.revokeObjectURL(img.src); }
-  throw Object.assign(new Error('photo'), { code: 'photo' });
-}
-
-let compose = null;
-
-async function chooseCreate() {
-  const k = await actionSheet('מה משתפים?', [{ id: 'post', label: 'פוסט: תמונה עם כיתוב' }, { id: 'story', label: 'סטורי: ל־24 שעות' }]);
-  if (k === 'post') openComposer('post');
-  if (k === 'story') openComposer('story');
-}
-
-function openComposer(kind) {
-  compose = { kind, image: null, ratio: 1, text: '', bg: 'b1', mode: 'photo' };
-  const sheet = openSheet('<div class="composer"></div>', { cls: 'tall composer-sheet', onClose: () => { compose = null; } });
-  drawComposer(sheet.querySelector('.composer'));
-}
-
-function drawComposer(box = document.querySelector('.composer')) {
-  if (!box || !compose) return;
-  const c = compose;
-  const BGS = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
-  if (c.kind === 'post') {
-    box.innerHTML = `
-      <h2 class="sheet-title">פוסט חדש</h2>
-      <label class="pick ${c.image ? 'has' : ''}" style="${c.image ? `aspect-ratio:${c.ratio}` : ''}">
-        ${c.image ? `<img src="${c.image}" alt="">` : `<span class="pick-empty">${icon('image')}<b>בחירת תמונה</b><small>מהגלריה או מהמצלמה</small></span>`}
-        <input type="file" accept="image/*" data-media hidden>
-        ${c.image ? `<span class="pick-change">${icon('refresh')}<span>החלפה</span></span>` : ''}
-      </label>
-      <textarea class="inp" data-compose="text" rows="3" maxlength="500" placeholder="כתבו משהו...">${esc(c.text)}</textarea>
-      <button class="btn primary big wide" data-act="publish" ${c.image ? '' : 'disabled'}>${icon('share')}<span>פרסום</span></button>`;
-  } else {
-    box.innerHTML = `
-      <h2 class="sheet-title">סטורי חדש</h2>
-      <div class="seg compose-seg"><button class="seg-b ${c.mode === 'photo' ? 'on' : ''}" data-cmode="photo">תמונה</button><button class="seg-b ${c.mode === 'text' ? 'on' : ''}" data-cmode="text">טקסט</button><span class="seg-pill" style="--n:${c.mode === 'photo' ? 0 : 1}"></span></div>
-      <div class="story-prev ${c.image && c.mode === 'photo' ? '' : c.bg}">
-        ${c.mode === 'photo' ? (c.image ? `<img src="${c.image}" alt="">` : `<label class="pick-empty light">${icon('camera')}<b>בחירת תמונה</b><small>תמונה לגובה נראית הכי טוב</small><input type="file" accept="image/*" data-media hidden></label>`) : ''}
-        ${c.mode === 'text' || c.image ? `<textarea class="story-text" data-compose="text" maxlength="200" rows="3" placeholder="${c.mode === 'text' ? 'מה קורה?' : 'טקסט על התמונה (לא חובה)'}">${esc(c.text)}</textarea>` : ''}
-        ${c.mode === 'photo' && c.image ? `<label class="pick-change">${icon('refresh')}<span>החלפה</span><input type="file" accept="image/*" data-media hidden></label>` : ''}
-      </div>
-      ${c.mode === 'text' ? `<div class="swatches">${BGS.map(b => `<button class="sw ${b} ${b === c.bg ? 'on' : ''}" data-bg="${b}" aria-label="רקע"></button>`).join('')}</div>` : ''}
-      <button class="btn primary big wide" data-act="publish" ${(c.mode === 'photo' ? c.image : c.text.trim()) ? '' : 'disabled'}>${icon('sparkle')}<span>לסטורי</span></button>`;
-  }
-}
-
-async function onMediaPicked(input) {
-  const file = input.files?.[0];
-  if (!file || !compose) return;
-  const box = document.querySelector('.composer');
-  box?.classList.add('busy');
-  try {
-    const opts = compose.kind === 'post'
-      ? { maxW: 1080, maxH: 1350, minRatio: 0.8, maxRatio: 1.91 }
-      : { maxW: 720, maxH: 1280, minRatio: 9 / 16, maxRatio: 9 / 16 };
-    const { data, ratio } = await readMedia(file, opts);
-    compose.image = data;
-    compose.ratio = ratio;
-    drawComposer();
-  } catch (e) { toast(errorText(e), 'close'); }
-  box?.classList.remove('busy');
-}
-
-async function publish(btn) {
-  const c = compose;
-  if (!c) return;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-  try {
-    if (c.kind === 'post') {
-      const p = await api.createPost(sess, { image: c.image, caption: c.text, ratio: c.ratio });
+function create(mode, opts) {
+  closeSheet(true);
+  openCreator({
+    api, sess, me, toast, haptic, avatar, errorText,
+    onPosted: p => {
       if (cache.feed?.posts) cache.feed.posts.items.unshift(p);
       if (cache.grids[me.id]) cache.grids[me.id].items.unshift(p);
       me.counts.posts = (me.counts.posts || 0) + 1;
-      toast('הפוסט פורסם', 'check');
-    } else {
-      const photo = c.mode === 'photo';
-      await api.createStory(sess, { image: photo ? c.image : undefined, text: c.text, bg: c.bg });
+      const r = route().name;
+      if (r === 'home' || r === 'me') render();
+    },
+    onStory: async () => {
       if (cache.feed) cache.feed.tray = await api.tray(sess).catch(() => cache.feed.tray);
-      toast('הסטורי עלה ל־24 שעות', 'sparkle');
-    }
-    haptic(25);
-    compose = null;
-    closeSheet();
-    const r = route().name;
-    if (r === 'home' || r === 'me') render();
-  } catch (e) {
-    btn.disabled = false;
-    btn.textContent = 'לנסות שוב';
-    toast(errorText(e), 'close');
-  }
+      if (route().name === 'home') render();
+    },
+  }, mode, opts);
 }
 
 // ---------- Stories people upload ----------
@@ -1460,18 +1363,78 @@ function openTray(gi, si = null) {
     if (k === 'prev') return showTray(s.gi, s.si - 1);
     if (k === 'viewers') return storyViewers();
     if (k === 'delete') return deleteStoryNow();
+    if (k === 'like') return likeStoryNow(b);
     if (k === 'author') { const id = s.groups[s.gi].author.id; closeTray(); return go(id === me.id ? 'me' : `u/${id}`); }
   });
-  const hold = on => { const s = trayState; if (!s) return; on ? pauseTray() : resumeTray(); };
-  el.addEventListener('pointerdown', e => { if (e.target.closest('.sv-tap') && trayState) { trayState.downAt = Date.now(); hold(true); } });
-  el.addEventListener('pointerup', () => hold(false));
-  el.addEventListener('pointercancel', () => hold(false));
+  // Hold to pause; swipe down to close; swipe sideways to the next or previous person.
+  let sw = null;
+  el.addEventListener('pointerdown', e => {
+    if (!trayState || !e.target.closest('.sv-tap, .tv-stage')) return;
+    trayState.downAt = Date.now();
+    sw = { x: e.clientX, y: e.clientY, dx: 0, dy: 0 };
+    pauseTray();
+  });
+  el.addEventListener('pointermove', e => {
+    if (!sw) return;
+    sw.dx = e.clientX - sw.x;
+    sw.dy = e.clientY - sw.y;
+    if (sw.dy > 10 && Math.abs(sw.dy) > Math.abs(sw.dx)) {
+      el.style.transition = 'none';
+      el.style.transform = `translateY(${sw.dy}px) scale(${1 - Math.min(sw.dy, 400) / 2400})`;
+      el.style.borderRadius = '24px';
+    }
+  });
+  const end = () => {
+    if (!sw || !trayState) { sw = null; return; }
+    const { dx, dy } = sw;
+    sw = null;
+    el.style.transition = '';
+    el.style.borderRadius = '';
+    if (dy > 110 && dy > Math.abs(dx)) { trayState.swiped = true; el.style.transform = ''; return closeTray(); }
+    el.style.transform = '';
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+      trayState.swiped = true;
+      trayState.paused = false;
+      el.classList.remove('paused');
+      return switchGroup(dx < 0 ? 1 : -1);
+    }
+    resumeTray();
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
 }
 
-function showTray(gi, si) {
+// The next or previous person's stories, with a slide.
+function switchGroup(dir) {
   const s = trayState;
   if (!s) return;
-  if (s.downAt && Date.now() - s.downAt > 350) { s.downAt = 0; return; }
+  const gi = s.gi + dir;
+  if (gi < 0 || gi >= s.groups.length) return dir > 0 ? closeTray() : showTray(s.gi, 0, true);
+  s.el.classList.remove('slide-next', 'slide-prev');
+  void s.el.offsetWidth;
+  s.el.classList.add(dir > 0 ? 'slide-next' : 'slide-prev');
+  const g = s.groups[gi];
+  showTray(gi, g.mine ? 0 : Math.max(0, g.stories.findIndex(x => !x.seen)), true);
+}
+
+async function likeStoryNow(btn) {
+  const s = trayState;
+  const st = s.groups[s.gi].stories[s.si];
+  const on = !st.liked;
+  st.liked = on;
+  btn.classList.toggle('on', on);
+  btn.setAttribute('aria-pressed', on);
+  if (on) { btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop'); }
+  haptic(on ? 16 : 6);
+  try { await api.likeStory(sess, st.id, on); } catch (e) { st.liked = !on; btn.classList.toggle('on', !on); toast(errorText(e), 'close'); }
+}
+
+function showTray(gi, si, force = false) {
+  const s = trayState;
+  if (!s) return;
+  // The click that follows a swipe or a long hold doesn't also move to the next story.
+  if (!force && s.swiped) { s.swiped = false; s.downAt = 0; return; }
+  if (s.downAt && Date.now() - s.downAt > 350) { s.downAt = 0; resumeTray(); return; }
   s.downAt = 0;
   let g = s.groups[gi];
   if (si < 0) { if (gi > 0) { gi--; g = s.groups[gi]; si = g.stories.length - 1; } else si = 0; }
@@ -1490,7 +1453,8 @@ function showTray(gi, si) {
     </div>
     <button class="sv-tap prev" data-tv="prev" aria-label="הקודם"></button>
     <button class="sv-tap next" data-tv="next" aria-label="הבא"></button>
-    ${g.mine ? `<div class="tv-foot"><button class="tv-views" data-tv="viewers">${icon('eye')}<span>${st.views || 0} צפיות</span></button><button class="icon-btn" data-tv="delete" aria-label="מחיקה">${icon('trash')}</button></div>` : ''}`;
+    ${g.mine ? `<div class="tv-foot"><button class="tv-views" data-tv="viewers">${icon('eye')}<span>${st.views || 0} צפיות</span>${st.likes ? `<span class="tv-likes">${icon('heart')}${st.likes}</span>` : ''}</button><button class="icon-btn" data-tv="delete" aria-label="מחיקה">${icon('trash')}</button></div>`
+      : `<div class="tv-foot other"><button class="tv-reply" data-tv="author">${icon('user')}<span>לפרופיל של ${esc(a.name.split(' ')[0])}</span></button><button class="tv-heart ${st.liked ? 'on' : ''}" data-tv="like" aria-label="לייק" aria-pressed="${!!st.liked}">${icon('heart')}</button></div>`}`;
   const start = () => {
     if (trayState !== s || s.gi !== gi || s.si !== si) return;
     const bar = s.el.querySelector(`.sv-bars span:nth-child(${si + 1})`);
@@ -1636,11 +1600,10 @@ document.addEventListener('click', async e => {
     if (act === 'scan') { haptic(); return openScan('scan'); }
     if (act === 'search') { ui.query = ''; go('people'); setTimeout(() => $('#q')?.focus(), 350); return; }
     if (act === 'story-me') return openStory(me.id);
-    if (act === 'create') { haptic(); return chooseCreate(); }
-    if (act === 'new-post') { haptic(); return openComposer('post'); }
-    if (act === 'new-story') { haptic(); return openComposer('story'); }
+    if (act === 'create') { haptic(); return create('story'); }
+    if (act === 'new-post') { haptic(); return create('post', { pick: true }); }
+    if (act === 'new-story') { haptic(); return create('story'); }
     if (act === 'my-story') { haptic(); return openTray(cache.feed.tray.findIndex(g => g.mine)); }
-    if (act === 'publish') return publish(t.closest('[data-act]'));
     if (act === 'more-posts') return loadMorePosts(t.closest('[data-act]'));
     if (act === 'share') return shareCode();
     if (act === 'copy') return copyText(codeUrl());
@@ -1709,10 +1672,6 @@ document.addEventListener('click', async e => {
   if (thumb) { haptic(); return openPost(thumb.dataset.thumb); }
   const tray = t.closest('[data-tray]');
   if (tray) { haptic(); return openTray(+tray.dataset.tray); }
-  const cmode = t.closest('[data-cmode]');
-  if (cmode && compose) { compose.mode = cmode.dataset.cmode; haptic(); return drawComposer(); }
-  const bg = t.closest('[data-bg]');
-  if (bg && compose) { compose.bg = bg.dataset.bg; haptic(); return drawComposer(); }
   const pt = t.closest('[data-ptab-prof]');
   if (pt) { profTab[pt.dataset.of] = pt.dataset.ptabProf; haptic(); return renderProfile(pt.dataset.of); }
   const story = t.closest('[data-story]');
@@ -1755,12 +1714,7 @@ function onChip(chip) {
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'q') return onSearch(t.value);
-  if (t.dataset.compose && compose) {
-    compose.text = t.value;
-    const pub = document.querySelector('[data-act="publish"]');
-    if (pub) pub.disabled = compose.kind === 'post' ? !compose.image : compose.mode === 'photo' ? !compose.image : !t.value.trim();
-    return;
-  }
+
   const m = formModel();
   if (!m) return;
   if (t.dataset.f) {
@@ -1789,7 +1743,6 @@ document.addEventListener('input', e => {
 document.addEventListener('change', async e => {
   const t = e.target;
   const m = formModel();
-  if (t.dataset.media !== undefined) return onMediaPicked(t);
   if (t.dataset.photo !== undefined && t.files?.[0]) {
     try { draftPhoto = await readPhoto(t.files[0]); rerenderSection('basics'); } catch (er) { toast(errorText(er), 'close'); }
     return;
@@ -1808,7 +1761,7 @@ document.addEventListener('change', async e => {
   }
 });
 
-window.addEventListener('hashchange', () => { closeStory(); if (trayState) { const s = trayState; trayState = null; clearTimeout(s.timer); s.el.remove(); document.body.classList.remove('no-scroll'); } render(); });
+window.addEventListener('hashchange', () => { closeStory(); closeCreator(); if (trayState) { const s = trayState; trayState = null; clearTimeout(s.timer); s.el.remove(); document.body.classList.remove('no-scroll'); } render(); });
 
 api.onChange(async () => {
   try { me = await api.me(sess); } catch {}

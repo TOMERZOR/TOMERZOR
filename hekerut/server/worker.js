@@ -24,7 +24,7 @@
 //   GET    /u/<id>/posts[?before=] *
 //   GET    /stories *            the story tray (24 hours)
 //   POST   /stories *            { image? , text?, bg }
-//   DELETE /stories/<id> *  · POST /stories/<id>/seen *  · GET /stories/<id>/viewers *
+//   DELETE /stories/<id> *  · POST /stories/<id>/seen *  · GET /stories/<id>/viewers *  · POST|DELETE /stories/<id>/like *
 //   GET    /m/<id>               a post or story image
 
 import { Network, ApiError, indexFields } from '../js/core.js';
@@ -243,6 +243,7 @@ export async function handle(req, net, limiter) {
     if (parts.length === 2 && m === 'DELETE') return json(net.deleteStory(me(), parts[1]));
     if (parts[2] === 'seen' && m === 'POST') return json(net.seeStory(me(), parts[1]));
     if (parts[2] === 'viewers' && m === 'GET') return json(net.storyViewers(me(), parts[1]));
+    if (parts[2] === 'like' && (m === 'POST' || m === 'DELETE')) return json(net.likeStory(me(), parts[1], m === 'POST'));
   }
   if (parts[0] === 'u' && parts[1] && parts[2] === 'posts' && m === 'GET') return json(net.userPosts(me(), parts[1], Number(url.searchParams.get('before')) || Infinity));
   if (parts[0] === 'search' && m === 'GET') return json(net.search(me(), url.searchParams.get('q') || ''));

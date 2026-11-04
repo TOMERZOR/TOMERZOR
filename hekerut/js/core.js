@@ -566,7 +566,12 @@ export class Network {
 
   storyView(viewer, st) {
     const mine = viewer?.id === st.uid;
-    return { id: st.id, image: st.media ? this.mediaUrl(st.media) : null, text: st.text, bg: st.bg, at: st.at, seen: mine || (!!viewer && this.s.seen(st.id, viewer.id)), ...(mine ? { views: this.s.viewCount(st.id) } : {}) };
+    return {
+      id: st.id, image: st.media ? this.mediaUrl(st.media) : null, text: st.text, bg: st.bg, at: st.at,
+      seen: mine || (!!viewer && this.s.seen(st.id, viewer.id)),
+      liked: !!viewer && !mine && this.s.liked(`st:${st.id}`, viewer.id),
+      ...(mine ? { views: this.s.viewCount(st.id), likes: this.s.likeCount(`st:${st.id}`) } : {}),
+    };
   }
 
   createStory(u, { image, text, bg } = {}) {
@@ -614,10 +619,24 @@ export class Network {
     return this.s.views(id).map(v => { const x = this.s.user(v.uid); return x ? { ...this.summary(x), at: v.at } : null; }).filter(Boolean);
   }
 
+  // A heart on someone's story (stored with the post likes, as st:<id>); the author gets one event.
+  likeStory(u, id, on) {
+    const st = this.s.story(id);
+    const a = st && st.at > this.now() - DAY && this.s.user(st.uid);
+    if (!a) throw new ApiError(404, 'not_found');
+    if (st.uid === u.id || !this.canSee(u, a)) throw new ApiError(403, 'private');
+    const key = `st:${id}`;
+    const had = this.s.liked(key, u.id);
+    if (on && !had) { this.s.putLike(key, u.id, this.now()); this.event(st.uid, 'story_like', u.id, { story: id }); }
+    if (!on && had) this.s.deleteLike(key, u.id);
+    return { liked: !!on };
+  }
+
   deleteStory(u, id) {
     const st = this.s.story(id);
     if (!st || st.uid !== u.id) throw new ApiError(404, 'not_found');
     this.s.deleteStory(id);
+    this.s.deletePost(`st:${id}`);
     if (st.media) this.s.deleteMedia(st.media);
     return { ok: true };
   }

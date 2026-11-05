@@ -655,6 +655,15 @@ html.selecting .cell:not(.sel) { opacity: 0.75; }
 .explain-ic { width: 44px; height: 44px; border-radius: 14px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #5856d6, #007aff); }
 .foot-note { text-align: center; color: var(--label-2); font-size: 13px; margin: 24px 0 8px; }
 
+/* paste a list */
+.paste-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.paste-acts .btn { min-height: 52px; font-size: 16px; padding: 0 12px; }
+.sheet .paste-acts .btn:not(.primary) { background: var(--sheet-card); }
+.row.off .row-title, .row.off .row-sub, .row.off .avatar { opacity: 0.4; }
+.row.off .row-title { text-decoration: line-through; }
+.sheet #bulk-preview .row { animation: rise 0.35s var(--ease) both; animation-delay: calc(var(--i, 0) * 25ms); }
+.empty-acts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
 /* ---------- Sheets ---------- */
 
 .sheet-layer { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; justify-content: center; }

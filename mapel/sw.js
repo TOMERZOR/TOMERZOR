@@ -1,9 +1,9 @@
 // Keeps the app on the phone so it opens instantly and without internet. Bump VERSION whenever a file changes.
-const VERSION = 'mapel-v2';
+const VERSION = 'mapel-v3';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'fonts/heebo-hebrew.woff2', 'fonts/heebo-latin.woff2', 'fonts/jakarta-latin.woff2',
-  'js/app.js', 'js/store.js', 'js/schedule.js', 'js/export.js', 'js/xlsx.js', 'js/ui.js', 'js/icons.js', 'js/demo.js',
+  'js/app.js', 'js/store.js', 'js/schedule.js', 'js/export.js', 'js/xlsx.js', 'js/ui.js', 'js/icons.js', 'js/demo.js', 'js/paste.js',
   'img/icon.svg', 'img/icon-192.png', 'img/icon-512.png', 'img/apple-touch-icon.png',
 ];
 

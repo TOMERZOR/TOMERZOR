@@ -6,8 +6,9 @@ import { openSheet, refreshLive, confirmDialog, toast, bind, h, tick, closeAll }
 import { autoAssign, clearAutoInPeriod } from './schedule.js';
 import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
+import { parseList } from './paste.js';
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.1.0';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -117,7 +118,7 @@ function personRow(item, date, extra = '') {
   if (x.cons.length) bits.push(`<span class="tag" style="--c:${S.KINDS.constraint.color}">אילוץ</span>`);
   return `<button class="row" data-act="cell" data-sid="${so.id}" data-date="${date}">
     ${avatar(so)}
-    <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${bits.join(' · ') || h(so.role || '')}</span></span>
+    <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${bits.join(' · ') || h(so.pn ? `מ.א. ${so.pn}` : '')}</span></span>
     ${extra}${icon('chevron', 'row-chev')}
   </button>`;
 }
@@ -179,11 +180,11 @@ function renderNow() {
       <h2>מתחילים בארבעה צעדים</h2>
       <ol>
         <li class="${s.sites.length ? 'done' : ''}"><button data-act="addSite">${icon(s.sites.length ? 'check' : 'sites')}<span><b>מוסיפים אתרים לסגירה</b><small>מוצבים, ש.ג, חמ״ל, וכמה חיילים כל אחד צריך</small></span></button></li>
-        <li class="${s.soldiers.length ? 'done' : ''}"><button data-act="addSoldier">${icon(s.soldiers.length ? 'check' : 'people')}<span><b>מוסיפים את החיילים</b><small>אחד אחד, או רשימה שלמה בהדבקה</small></span></button></li>
+        <li class="${s.soldiers.length ? 'done' : ''}"><button data-act="addSoldier">${icon(s.soldiers.length ? 'check' : 'people')}<span><b>מוסיפים את החיילים</b><small>אחד אחד, או רשימה שלמה מוואטסאפ</small></span></button></li>
         <li><button data-act="go" data-tab="board">${icon('board')}<span><b>ממלאים אילוצים</b><small>גימלים, הפניות, חופשות, ומי לא יכול מתי</small></span></button></li>
         <li><button data-act="go" data-tab="sites">${icon('wand')}<span><b>משבצים ומייצאים לאקסל</b><small>הלוח מתמלא לבד, ומה שמילאת ביד נשאר</small></span></button></li>
       </ol>
-      <button class="link-btn" data-act="loadDemo">או נסו עם פלגה לדוגמה</button>
+      <button class="link-btn" data-act="loadDemo">או נסו עם נתונים לדוגמה</button>
     </div>`;
   }
 
@@ -284,7 +285,7 @@ function renderBoard() {
 
   let body = '', group = null;
   for (const so of sold) {
-    const g = so.platoon || 'ללא מחלקה';
+    const g = so.platoon || 'ללא פלגה';
     if (g !== group) {
       group = g;
       body += `<tr class="grp"><td colspan="${ds.length + 1}"><span>${h(g)}</span></td></tr>`;
@@ -402,13 +403,13 @@ function renderSoldiers() {
   const idx = S.index(s);
   const t = S.today();
   const pls = platoons();
-  let html = header('חיילים', `${s.soldiers.length} חיילים${pls.length ? ` · ${pls.length} מחלקות` : ''}`, `<button class="icon-btn" data-act="addSoldier" aria-label="הוספת חיילים">${icon('plus')}</button>`);
+  let html = header('חיילים', `${s.soldiers.length} חיילים${pls.length ? ` · ${pls.length} פלגות` : ''}`, `<button class="icon-btn" data-act="addSoldier" aria-label="הוספת חיילים">${icon('plus')}</button>`);
   if (!s.soldiers.length) {
-    html += empty('people', 'אין עדיין חיילים', 'מוסיפים חייל אחד, או מדביקים רשימה שלמה של שמות.',
-      '<button class="btn primary" data-act="addSoldier">הוספת חיילים</button>');
+    html += empty('people', 'אין עדיין חיילים', 'מוסיפים חייל אחד, או מדביקים רשימה שלמה מוואטסאפ.',
+      '<button class="btn primary" data-act="pasteList">הדבקת רשימה מוואטסאפ</button><button class="btn" data-act="addSoldier">חייל אחד</button>');
     return html;
   }
-  html += `<label class="search">${icon('search')}<input type="search" placeholder="חיפוש לפי שם, מ.א., תפקיד" value="${h(ui.q)}" data-search aria-label="חיפוש"></label>`;
+  html += `<label class="search">${icon('search')}<input type="search" placeholder="חיפוש לפי שם או מ.א." value="${h(ui.q)}" data-search aria-label="חיפוש"></label>`;
   html += `<div id="soldier-list">${soldierList(idx, t)}</div>`;
   return html;
 }
@@ -416,22 +417,22 @@ function renderSoldiers() {
 function soldierList(idx, t) {
   const s = st();
   const q = ui.q.trim();
-  const list = S.sortedSoldiers(s).filter(so => !q || [so.name, so.pn, so.role, so.platoon].some(v => (v || '').includes(q)));
+  const list = S.sortedSoldiers(s).filter(so => !q || [so.name, so.pn, so.platoon].some(v => (v || '').includes(q)));
   if (!list.length) return `<p class="list-empty big">אין תוצאות ל״${h(q)}״</p>`;
   let html = '', group = null, open = false, i = 0;
   for (const so of list) {
-    const g = so.platoon || 'ללא מחלקה';
+    const g = so.platoon || 'ללא פלגה';
     if (g !== group) {
       if (open) html += '</div>';
       group = g;
-      html += `<h2 class="group-title plain">${h(g)}<span class="count">${list.filter(x => (x.platoon || 'ללא מחלקה') === g).length}</span></h2><div class="card list">`;
+      html += `<h2 class="group-title plain">${h(g)}<span class="count">${list.filter(x => (x.platoon || 'ללא פלגה') === g).length}</span></h2><div class="card list">`;
       open = true;
     }
     const x = S.dayOf(idx, so.id, t);
     const lk = S.look(s, x.main);
     html += `<button class="row" data-act="who" data-sid="${so.id}" style="--i:${Math.min(i++, 14)}">
       ${avatar(so)}
-      <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.role, so.pn].filter(Boolean).map(h).join(' · ')}</span></span>
+      <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.pn && `מ.א. ${so.pn}`, so.phone].filter(Boolean).map(h).join(' · ')}</span></span>
       ${pill(lk)}${icon('chevron', 'row-chev')}
     </button>`;
   }
@@ -657,7 +658,7 @@ function soldierSheet(sid) {
       return `
         <div class="person-head">
           ${avatar(so, 'lg')}
-          <div><h3>${h(so.name)}</h3><p>${[so.platoon, so.role, so.pn && `מ.א. ${so.pn}`].filter(Boolean).map(h).join(' · ')}</p></div>
+          <div><h3>${h(so.name)}</h3><p>${[so.platoon, so.pn && `מ.א. ${so.pn}`].filter(Boolean).map(h).join(' · ')}</p></div>
         </div>
         <div class="person-acts">
           <button class="act" data-act="add">${icon('plus')}<span>הוספה</span></button>
@@ -703,66 +704,119 @@ function soldierSheet(sid) {
 
 /* ---------- Sheet: add / edit soldiers ---------- */
 
-function soldierForm(sid) {
+const PASTE_HINT = 'מעתיקים בוואטסאפ את ההודעה עם הרשימה (לחיצה ארוכה, העתקה) ומדביקים כאן. מספרי טלפון ומ.א. בשורה נקלטים לבד.';
+
+function soldierForm(sid, { list = false } = {}) {
   const s0 = st();
   const so = sid ? S.soldierById(s0, sid) : null;
-  const f = so ? { ...so } : { name: '', pn: '', platoon: ui.platoon || '', role: '', phone: '', note: '' };
-  const bulk = { on: false, text: '', platoon: f.platoon };
+  const f = so ? { name: so.name, pn: so.pn || '', platoon: so.platoon || '', phone: so.phone || '', note: so.note || '' }
+    : { name: '', pn: '', platoon: ui.platoon || '', phone: '', note: '' };
+  const bulk = { on: list && !so, text: '', platoon: f.platoon, skip: new Set() };
   const pls = platoons();
   const dl = `<datalist id="pl-list">${pls.map(p => `<option value="${h(p)}">`).join('')}</datalist>`;
+  const existing = () => new Set(st().soldiers.map(x => x.name.replace(/\s+/g, ' ').trim()));
+  const parsed = () => {
+    const have = existing();
+    return parseList(bulk.text).map(x => ({ ...x, dup: have.has(x.name) }));
+  };
+  const toAdd = () => parsed().filter(x => !x.dup && !bulk.skip.has(x.name));
+
+  function preview() {
+    const list = parsed();
+    if (!list.length) return `<p class="field-note">${PASTE_HINT}</p>`;
+    const n = toAdd().length;
+    return `<h3 class="sub-title">${n ? `${n} חיילים יתווספו` : 'אין חיילים חדשים להוסיף'}</h3>
+      <div class="card list">${list.map((x, i) => {
+        const off = x.dup || bulk.skip.has(x.name);
+        return `<div class="row static${off ? ' off' : ''}" style="--i:${Math.min(i, 12)}">
+          ${avatar({ id: x.name, name: x.name })}
+          <span class="row-main"><span class="row-title">${h(x.name)}</span><span class="row-sub">${x.dup ? 'כבר ברשימה' : [x.phone && ltr(x.phone), x.pn && `מ.א. ${h(x.pn)}`].filter(Boolean).join(' · ') || '&nbsp;'}</span></span>
+          ${x.dup ? '' : `<button class="icon-btn sm${off ? '' : ' danger'}" data-act="skip" data-name="${h(x.name)}" aria-label="${off ? 'להחזיר' : 'להוריד'} את ${h(x.name)}">${icon(off ? 'plus' : 'x')}</button>`}
+        </div>`;
+      }).join('')}</div>`;
+  }
+
   openSheet({
     title: so ? 'פרטי החייל' : 'חיילים חדשים',
     done: { label: so ? 'שמירה' : 'הוספה', act: 'save' },
     render: () => `
-      ${so ? '' : segmented('mode', [['one', 'חייל אחד'], ['list', 'רשימה']], bulk.on ? 'list' : 'one')}
+      ${so ? '' : segmented('mode', [['one', 'חייל אחד'], ['list', 'רשימה מוואטסאפ']], bulk.on ? 'list' : 'one')}
       ${bulk.on ? `
-        <div class="card form">
-          <label class="field"><span>מחלקה</span><input type="text" data-field="bplatoon" list="pl-list" value="${h(bulk.platoon)}" placeholder="למשל: מחלקה 1"></label>
+        <div class="paste-acts">
+          <button class="btn primary" data-act="paste">${icon('paste')}<span>הדבקה</span></button>
+          <label class="btn">${icon('people')}<span>איש קשר או קובץ</span><input type="file" accept=".vcf,.txt,text/vcard,text/plain" data-field="bfile" hidden></label>
         </div>
-        <div class="card form"><label class="field full"><textarea data-field="btext" rows="9" placeholder="שם אחד בכל שורה&#10;אפשר גם: שם, מ.א., תפקיד, טלפון" aria-label="רשימת חיילים">${h(bulk.text)}</textarea></label></div>
-        <p class="field-note">${bulkParse().length ? `${bulkParse().length} חיילים יתווספו` : 'אפשר להדביק עמודה מאקסל או מוואטסאפ.'}</p>` : `
+        <div class="card form"><label class="field full"><textarea data-field="btext" rows="6" placeholder="1. משה כהן 052-1234567&#10;2. דוד לוי&#10;…" aria-label="רשימת חיילים">${h(bulk.text)}</textarea></label></div>
+        <div class="card form">
+          <label class="field"><span>פלגה</span><input type="text" data-field="bplatoon" list="pl-list" value="${h(bulk.platoon)}" placeholder="לכולם, לא חובה"></label>
+        </div>
+        <div id="bulk-preview">${preview()}</div>` : `
         <div class="card form">
           <label class="field"><span>שם מלא</span><input type="text" data-field="name" value="${h(f.name)}" autocomplete="off" placeholder="חובה"></label>
           <label class="field"><span>מ.א.</span><input type="text" inputmode="numeric" data-field="pn" value="${h(f.pn)}" autocomplete="off"></label>
-          <label class="field"><span>מחלקה</span><input type="text" data-field="platoon" list="pl-list" value="${h(f.platoon)}" placeholder="למשל: מחלקה 1"></label>
-          <label class="field"><span>תפקיד</span><input type="text" data-field="role" value="${h(f.role)}" placeholder="למשל: קלע"></label>
-          <label class="field"><span>טלפון</span><input type="tel" data-field="phone" value="${h(f.phone)}" dir="ltr"></label>
+          <label class="field"><span>פלגה</span><input type="text" data-field="platoon" list="pl-list" value="${h(f.platoon)}" placeholder="למשל: פלגה 1" autocomplete="off"></label>
+          <label class="field"><span>טלפון</span><input type="tel" data-field="phone" value="${h(f.phone)}" dir="ltr" autocomplete="off"></label>
         </div>
         <div class="card form"><label class="field full"><textarea data-field="note" rows="3" placeholder="הערות" aria-label="הערות">${h(f.note)}</textarea></label></div>`}
       ${dl}`,
     on: {
       seg: (el, ev, sh) => { bulk.on = el.dataset.v === 'list'; sh.update(); },
+      paste: async (el, ev, sh) => {
+        try {
+          const t = await navigator.clipboard.readText();
+          if (!t.trim()) return toast('אין כלום בהעתקה');
+          bulk.text = bulk.text.trim() ? `${bulk.text.trim()}\n${t}` : t;
+          sh.update();
+          tick();
+        } catch {
+          toast('לוחצים לחיצה ארוכה בתיבה ובוחרים ״הדבקה״');
+          sh.body.querySelector('[data-field=btext]')?.focus();
+        }
+      },
+      skip: (el, ev, sh) => {
+        const n = el.dataset.name;
+        if (bulk.skip.has(n)) bulk.skip.delete(n); else bulk.skip.add(n);
+        paintPreview(sh);
+      },
       save: (el, ev, sh) => {
         if (bulk.on) {
-          const list = bulkParse();
-          if (!list.length) return toast('אין שמות ברשימה');
-          S.commit(s => { for (const x of list) s.soldiers.push({ id: S.uid(), ...x }); });
+          const list = toAdd();
+          if (!list.length) return toast(parsed().length ? 'כל השמות כבר ברשימה' : 'אין שמות ברשימה');
+          const platoon = bulk.platoon.trim();
+          S.commit(s => { for (const x of list) s.soldiers.push({ id: S.uid(), name: x.name, pn: x.pn, phone: x.phone, platoon, note: '' }); }, { undoable: true });
           sh.close();
-          toast(`נוספו ${list.length} חיילים`);
+          toast(`נוספו ${list.length} חיילים`, undoAction());
           return;
         }
         if (!f.name.trim()) { toast('צריך שם'); sh.body.querySelector('[data-field=name]')?.focus(); return; }
-        const clean = { name: f.name.trim(), pn: f.pn.trim(), platoon: f.platoon.trim(), role: f.role.trim(), phone: f.phone.trim(), note: f.note.trim() };
+        const clean = { name: f.name.trim(), pn: f.pn.trim(), platoon: f.platoon.trim(), phone: f.phone.trim(), note: f.note.trim() };
         if (so) S.commit(s => Object.assign(S.soldierById(s, sid), clean));
         else S.commit(s => { s.soldiers.push({ id: S.uid(), ...clean }); });
         sh.close();
         toast(so ? 'נשמר' : `${clean.name} נוסף`);
       },
     },
-    field: (el, ev, sh) => {
+    field: async (el, ev, sh) => {
       const k = el.dataset.field;
-      if (k === 'btext') { bulk.text = el.value; const p = sh.body.querySelector('.field-note'); if (p) p.textContent = bulkParse().length ? `${bulkParse().length} חיילים יתווספו` : 'אפשר להדביק עמודה מאקסל או מוואטסאפ.'; return; }
+      if (k === 'btext') { bulk.text = el.value; paintPreview(sh); return; }
       if (k === 'bplatoon') { bulk.platoon = el.value; return; }
+      if (k === 'bfile') {
+        const files = [...(el.files || [])];
+        if (!files.length || ev.type !== 'change') return;
+        const texts = await Promise.all(files.map(fl => fl.text()));
+        bulk.text = [bulk.text.trim(), ...texts].filter(Boolean).join('\n');
+        el.value = '';
+        sh.update();
+        return;
+      }
       f[k] = el.value;
     },
-    mounted: sh => { if (!so) setTimeout(() => sh.body.querySelector('input,textarea')?.focus({ preventScroll: true }), 380); },
+    mounted: sh => { if (!so && !bulk.on) setTimeout(() => sh.body.querySelector('input,textarea')?.focus({ preventScroll: true }), 380); },
   });
 
-  function bulkParse() {
-    return bulk.text.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
-      const [name, pn = '', role = '', phone = ''] = l.split(/\t|,|;/).map(x => x.trim());
-      return { name: name.replace(/^\d+[.)]\s*/, ''), pn, role, phone, platoon: bulk.platoon.trim(), note: '' };
-    }).filter(x => x.name);
+  function paintPreview(sh) {
+    const box = sh.body.querySelector('#bulk-preview');
+    if (box) box.innerHTML = preview();
   }
 }
 
@@ -858,7 +912,7 @@ function siteDaySheet(siteId, date) {
         <h3 class="sub-title">פנויים ביום הזה</h3>
         <div class="card list">${free.map(({ so, x }) => `
           <button class="row" data-act="put" data-sid="${so.id}">${avatar(so)}
-            <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.platoon, so.role].filter(Boolean).map(h).join(' · ')}${x.cons.length ? ` · <span class="tag" style="--c:${S.KINDS.constraint.color}">אילוץ${x.cons[0].note ? ': ' + h(x.cons[0].note) : ''}</span>` : ''}</span></span>
+            <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.platoon, so.pn && `מ.א. ${so.pn}`].filter(Boolean).map(h).join(' · ')}${x.cons.length ? ` · <span class="tag" style="--c:${S.KINDS.constraint.color}">אילוץ${x.cons[0].note ? ': ' + h(x.cons[0].note) : ''}</span>` : ''}</span></span>
             <span class="add-ic">${icon('plus')}</span>
           </button>`).join('') || '<p class="list-empty">אין חיילים פנויים</p>'}</div>`;
     },
@@ -937,7 +991,7 @@ function settingsSheet() {
       const s = st();
       return `
         <div class="card form">
-          <label class="field"><span>שם הפלגה</span><input type="text" data-field="unit" value="${h(s.unit)}" placeholder="למשל: פלגה ב׳"></label>
+          <label class="field"><span>שם היחידה</span><input type="text" data-field="unit" value="${h(s.unit)}" placeholder="למשל: סוללה ב׳"></label>
         </div>
         <h3 class="sub-title">תקופת הלוח</h3>
         <div class="card form">
@@ -953,7 +1007,7 @@ function settingsSheet() {
           <label class="row"><span class="row-ic" style="--c:#5856d6">${icon('upload')}</span><span class="row-main"><span class="row-title">שחזור מגיבוי</span><span class="row-sub">מחליף את כל מה שיש עכשיו</span></span><input type="file" accept="application/json,.json" data-field="restore" hidden>${icon('chevron', 'row-chev')}</label>
         </div>
         <div class="card list">
-          <button class="row" data-act="loadDemo"><span class="row-ic" style="--c:#ff9500">${icon('people')}</span><span class="row-main"><span class="row-title">פלגה לדוגמה</span><span class="row-sub">18 חיילים ו־3 אתרים, כדי לראות איך זה עובד</span></span>${icon('chevron', 'row-chev')}</button>
+          <button class="row" data-act="loadDemo"><span class="row-ic" style="--c:#ff9500">${icon('people')}</span><span class="row-main"><span class="row-title">נתונים לדוגמה</span><span class="row-sub">18 חיילים ו־3 אתרים, כדי לראות איך זה עובד</span></span>${icon('chevron', 'row-chev')}</button>
           <button class="row" data-act="wipe"><span class="row-ic" style="--c:#ff3b30">${icon('trash')}</span><span class="row-main"><span class="row-title danger">מחיקת הכל</span></span></button>
         </div>
         <p class="foot-note">מפל for you · גרסה ${APP_VERSION}<br>הנתונים נשמרים רק בטלפון הזה.</p>`;
@@ -990,12 +1044,12 @@ function settingsSheet() {
 
 async function loadDemo() {
   const s = st();
-  if (s.soldiers.length && !await confirmDialog({ title: 'לטעון פלגה לדוגמה?', message: 'מה שיש עכשיו יוחלף. כדאי לגבות קודם.', ok: 'טעינה' })) return;
+  if (s.soldiers.length && !await confirmDialog({ title: 'לטעון נתונים לדוגמה?', message: 'מה שיש עכשיו יוחלף. כדאי לגבות קודם.', ok: 'טעינה' })) return;
   S.replaceAll(demoState());
   closeAll();
   ui.at = null;
   ui.platoon = '';
-  toast('נטענה פלגה לדוגמה');
+  toast('נטענו נתונים לדוגמה');
   render(true);
 }
 
@@ -1034,12 +1088,12 @@ function renderWelcome() {
   return `<div class="welcome">
     <img class="welcome-icon" src="img/icon.svg" alt="" width="96" height="96">
     <h1>מפל <span class="latin">for you</span></h1>
-    <p class="welcome-tag">כל הפלגה, כל יום, במקום אחד.<br>מי סוגר איפה, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
+    <p class="welcome-tag">כל החיילים, כל יום, במקום אחד.<br>מי סוגר איפה, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
     <div class="card form welcome-form">
-      <label class="field"><span>שם הפלגה</span><input type="text" id="w-unit" placeholder="למשל: פלגה ב׳" autocomplete="off"></label>
+      <label class="field"><span>שם היחידה</span><input type="text" id="w-unit" placeholder="למשל: סוללה ב׳" autocomplete="off"></label>
     </div>
     <button class="btn primary big" data-act="start">מתחילים</button>
-    <button class="link-btn" data-act="loadDemo">או נסו עם פלגה לדוגמה</button>
+    <button class="link-btn" data-act="loadDemo">או נסו עם נתונים לדוגמה</button>
     <p class="welcome-foot">הכל נשמר רק בטלפון שלך.</p>
   </div>`;
 }
@@ -1206,6 +1260,7 @@ bind(view, {
     siteDay: el => siteDaySheet(el.dataset.site, el.dataset.date),
     auto: () => autoSheet(),
     addSoldier: () => soldierForm(),
+    pasteList: () => soldierForm(null, { list: true }),
   },
 });
 

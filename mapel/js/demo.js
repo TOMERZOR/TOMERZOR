@@ -1,23 +1,23 @@
-// A sample company to try the app with: three platoons, three sites, a few gimels, referrals
+// Sample data to try the app with: three פלגות, three sites, a few gimels, referrals
 // and constraints, then an automatic schedule on top.
 
 import { addDays, today, uid, addEvent, SITE_COLORS } from './store.js';
 import { autoAssign } from './schedule.js';
 
 const NAMES = [
-  ['איתי כהן', 'מחלקה 1', 'מ״כ'], ['נועם לוי', 'מחלקה 1', 'קלע'], ['יונתן מזרחי', 'מחלקה 1', 'מקלען'],
-  ['עומר פרץ', 'מחלקה 1', 'חובש'], ['דניאל ביטון', 'מחלקה 1', 'קשר'], ['אורי אברהם', 'מחלקה 1', 'קלע'],
-  ['אריאל פרידמן', 'מחלקה 2', 'מ״כ'], ['רועי אזולאי', 'מחלקה 2', 'נגביסט'], ['איתמר דהן', 'מחלקה 2', 'קלע'],
-  ['יהונתן שפירא', 'מחלקה 2', 'צלף'], ['עידו גבאי', 'מחלקה 2', 'קלע'], ['אלון חדד', 'מחלקה 2', 'מטוליסט'],
-  ['גיא אוחיון', 'מחלקה 3', 'מ״כ'], ['ליאור יוסף', 'מחלקה 3', 'קלע'], ['שחר בן דוד', 'מחלקה 3', 'קשר'],
-  ['תומר קליין', 'מחלקה 3', 'חובש'], ['מתן אלמוג', 'מחלקה 3', 'קלע'], ['אביב רוזן', 'מחלקה 3', 'נהג'],
+  ['איתי כהן', 'פלגה 1'], ['נועם לוי', 'פלגה 1'], ['יונתן מזרחי', 'פלגה 1'],
+  ['עומר פרץ', 'פלגה 1'], ['דניאל ביטון', 'פלגה 1'], ['אורי אברהם', 'פלגה 1'],
+  ['אריאל פרידמן', 'פלגה 2'], ['רועי אזולאי', 'פלגה 2'], ['איתמר דהן', 'פלגה 2'],
+  ['יהונתן שפירא', 'פלגה 2'], ['עידו גבאי', 'פלגה 2'], ['אלון חדד', 'פלגה 2'],
+  ['גיא אוחיון', 'פלגה 3'], ['ליאור יוסף', 'פלגה 3'], ['שחר בן דוד', 'פלגה 3'],
+  ['תומר קליין', 'פלגה 3'], ['מתן אלמוג', 'פלגה 3'], ['אביב רוזן', 'פלגה 3'],
 ];
 
 export function demoState() {
   const start = today();
   const st = {
     v: 1,
-    unit: 'פלגה ב׳',
+    unit: 'סוללה ב׳',
     start,
     days: 14,
     unassigned: 'home',
@@ -28,8 +28,8 @@ export function demoState() {
       { id: uid(), name: 'ש.ג ראשי', color: SITE_COLORS[1], need: 2, weekendNeed: '', start: '', end: '' },
       { id: uid(), name: 'חמ״ל', color: SITE_COLORS[2], need: 1, weekendNeed: '', start: '08:00', end: '20:00' },
     ],
-    soldiers: NAMES.map(([name, platoon, role], i) => ({
-      id: uid(), name, platoon, role, pn: String(8712340 + i * 37), phone: `05${2 + (i % 3)}-${String(4410000 + i * 1373).slice(0, 7)}`, note: '',
+    soldiers: NAMES.map(([name, platoon], i) => ({
+      id: uid(), name, platoon, pn: String(8712340 + i * 37), phone: `05${2 + (i % 3)}-${String(4410000 + i * 1373).slice(0, 7)}`, note: '',
     })),
     events: [],
   };

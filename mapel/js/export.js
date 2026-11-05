@@ -48,12 +48,12 @@ function cellFor(st, x, date) {
 
 function boardSheet(st, idx, ds) {
   const soldiers = sortedSoldiers(st);
-  const fixed = ['שם', 'מ.א.', 'מחלקה', 'תפקיד'];
+  const fixed = ['שם', 'מ.א.', 'פלגה'];
   const t = today();
   const rows = [];
   const merges = [];
   const width = fixed.length + ds.length;
-  rows.push({ height: 26, cells: [{ v: `${st.unit || 'הפלגה'} · לוח נוכחות`, s: S.title }] });
+  rows.push({ height: 26, cells: [{ v: `${st.unit || 'היחידה'} · לוח נוכחות`, s: S.title }] });
   rows.push({ cells: [{ v: `${fmtShort(ds[0])}–${fmtShort(ds[ds.length - 1])} · הופק ב־${fmtShort(t)}`, s: S.sub }] });
   merges.push(`A1:${colName(width - 1)}1`, `A2:${colName(width - 1)}2`);
   rows.push({ height: 32, cells: [...fixed.map(v => ({ v, s: S.head })),
@@ -61,7 +61,7 @@ function boardSheet(st, idx, ds) {
 
   let group = null;
   for (const so of soldiers) {
-    const g = so.platoon || 'ללא מחלקה';
+    const g = so.platoon || 'ללא פלגה';
     if (g !== group) {
       group = g;
       const r = rows.length + 1;
@@ -76,25 +76,25 @@ function boardSheet(st, idx, ds) {
     });
     rows.push({
       height: Math.max(22, 14 * maxLines + 6),
-      cells: [{ v: so.name, s: S.name }, { v: so.pn || '', s: S.center }, { v: so.platoon || '', s: S.center }, { v: so.role || '', s: S.center }, ...dayCells],
+      cells: [{ v: so.name, s: S.name }, { v: so.pn || '', s: S.center }, { v: so.platoon || '', s: S.center }, ...dayCells],
     });
   }
 
   // Totals per day
   rows.push({ cells: [] });
   const tr = rows.length + 1;
-  rows.push({ height: 22, cells: [{ v: 'סיכום יומי', s: S.totalName }, ...Array(3).fill({ v: '', s: S.totalName }), ...ds.map(d => ({ v: fmtDay(d), s: S.total }))] });
-  merges.push(`A${tr}:D${tr}`);
+  rows.push({ height: 22, cells: [{ v: 'סיכום יומי', s: S.totalName }, ...Array(2).fill({ v: '', s: S.totalName }), ...ds.map(d => ({ v: fmtDay(d), s: S.total }))] });
+  merges.push(`A${tr}:C${tr}`);
   const rosters = ds.map(d => siteRoster(st, idx, d));
   for (const site of st.sites) {
     const r = rows.length + 1;
-    rows.push({ cells: [{ v: site.name, s: { ...S.name, color: ink(site.color) } }, '', '', '',
+    rows.push({ cells: [{ v: site.name, s: { ...S.name, color: ink(site.color) } }, '', '',
       ...ds.map((d, i) => {
         const have = rosters[i].get(site.id).length, need = needOn(site, d);
         const short = have < need;
         return { v: need ? `${have}/${need}` : String(have), s: { h: 'center', border: true, bold: short, fill: short ? '#ffd9d6' : undefined, color: short ? '#b3261e' : undefined } };
       })] });
-    merges.push(`A${r}:D${r}`);
+    merges.push(`A${r}:C${r}`);
   }
   const count = (pred) => ds.map(d => ({ v: soldiers.filter(so => pred(dayOf(idx, so.id, d))).length, s: S.center }));
   for (const [label, pred] of [
@@ -104,18 +104,18 @@ function boardSheet(st, idx, ds) {
     ['חופשה / קורס / אחר', x => ['leave', 'course', 'other'].includes(x.main?.kind)],
   ]) {
     const r = rows.length + 1;
-    rows.push({ cells: [{ v: label, s: S.name }, '', '', '', ...count(pred)] });
-    merges.push(`A${r}:D${r}`);
+    rows.push({ cells: [{ v: label, s: S.name }, '', '', ...count(pred)] });
+    merges.push(`A${r}:C${r}`);
   }
 
-  return { name: 'לוח נוכחות', rtl: true, cols: [18, 11, 10, 12, ...ds.map(() => 15)], rows, merges, freeze: { rows: 3, cols: 1 } };
+  return { name: 'לוח נוכחות', rtl: true, cols: [18, 11, 10, ...ds.map(() => 15)], rows, merges, freeze: { rows: 3, cols: 1 } };
 }
 
 function sitesSheet(st, idx, ds) {
   const t = today();
   const rows = [];
   const width = 1 + ds.length;
-  rows.push({ height: 26, cells: [{ v: `${st.unit || 'הפלגה'} · מי סוגר איפה`, s: S.title }] });
+  rows.push({ height: 26, cells: [{ v: `${st.unit || 'היחידה'} · מי סוגר איפה`, s: S.title }] });
   rows.push({ cells: [] });
   rows.push({ height: 32, cells: [{ v: 'אתר', s: S.head }, ...ds.map(d => ({ v: fmtDay(d), s: d === t ? S.headToday : isWeekend(d) ? S.headWknd : S.head }))] });
   const rosters = ds.map(d => siteRoster(st, idx, d));
@@ -138,17 +138,17 @@ function sitesSheet(st, idx, ds) {
 
 function soldiersSheet(st, idx) {
   const rows = [{ height: 26, cells: [{ v: 'חיילים', s: S.title }] }, { cells: [] }];
-  const head = ['שם', 'מ.א.', 'מחלקה', 'תפקיד', 'טלפון', 'ימי סגירה', 'ימים בבית', 'גימלים', 'חופשה / קורס', 'הפניות', 'הערות'];
+  const head = ['שם', 'מ.א.', 'פלגה', 'טלפון', 'ימי סגירה', 'ימים בבית', 'גימלים', 'חופשה / קורס', 'הפניות', 'הערות'];
   rows.push({ height: 30, cells: head.map(v => ({ v, s: S.head })) });
   for (const so of sortedSoldiers(st)) {
     const t = tally(st, idx, so.id);
     rows.push({ cells: [
-      { v: so.name, s: S.name }, { v: so.pn || '', s: S.center }, { v: so.platoon || '', s: S.center }, { v: so.role || '', s: S.center },
+      { v: so.name, s: S.name }, { v: so.pn || '', s: S.center }, { v: so.platoon || '', s: S.center },
       { v: so.phone || '', s: S.center }, { v: t.site, s: S.center }, { v: t.home + t.none, s: S.center }, { v: t.gimel, s: S.center },
       { v: t.leave + t.course, s: S.center }, { v: t.referral, s: S.center }, { v: so.note || '', s: S.text },
     ] });
   }
-  return { name: 'חיילים', rtl: true, cols: [18, 11, 10, 12, 13, 10, 10, 9, 12, 9, 28], rows, freeze: { rows: 3, cols: 1 } };
+  return { name: 'חיילים', rtl: true, cols: [18, 11, 10, 13, 10, 10, 9, 12, 9, 28], rows, freeze: { rows: 3, cols: 1 } };
 }
 
 function eventsSheet(st, ds) {

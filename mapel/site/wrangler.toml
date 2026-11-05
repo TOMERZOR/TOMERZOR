@@ -1,0 +1,7 @@
+# מפל for you, served by Cloudflare at its own address (https://mapel.moffy-app.workers.dev).
+# The deploy workflow (.github/workflows/mapel-site.yml) copies the app's files into ./public first.
+name = "mapel"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./public"

@@ -1,0 +1,72 @@
+# מפל for you has its own home: every push to its branch deploys the app (the static files in
+# mapel/) to Cloudflare, with no merge needed.
+#   App: https://mapel.moffy-app.workers.dev
+# Uses the repository secret CLOUDFLARE_API_TOKEN (and CLOUDFLARE_ACCOUNT_ID if set), like the
+# other apps. Until the token exists, the workflow skips itself instead of failing.
+name: Deploy מפל for you
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/mapel-for-you-app-5tqv5y]
+    paths: ["mapel/**", ".github/workflows/mapel-site.yml"]
+
+concurrency:
+  group: mapel-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping the deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Check the scripts parse
+        if: steps.secrets.outputs.ready == 'true'
+        run: for f in mapel/js/*.js mapel/sw.js; do node --check "$f"; done
+
+      - name: Deploy the app
+        if: steps.secrets.outputs.ready == 'true'
+        id: site
+        working-directory: mapel/site
+        run: |
+          mkdir -p public
+          cp -r ../index.html ../manifest.webmanifest ../sw.js ../css ../js ../fonts ../img public/
+          npx --yes wrangler@4 deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -z "$url" ]; then echo "::error::Could not find the workers.dev address in the deploy output"; exit 1; fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check the app answers
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ steps.site.outputs.url }}/" | grep -q 'מפל for you'; then
+              echo "::notice::מפל for you is live at ${{ steps.site.outputs.url }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The app did not answer"; exit 1

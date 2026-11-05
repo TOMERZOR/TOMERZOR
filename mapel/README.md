@@ -2,7 +2,7 @@
 
 A company commander's attendance board (מ״פ): where every soldier is on every day of the coming weeks, who closes at which site, gimels, medical referrals, leave and constraints, and the whole board as an Excel file. Hebrew, Apple-style, light and dark, installable on the phone's home screen (PWA). Static site, no build step, works offline.
 
-Live (after merging): https://tomerzor.github.io/TOMERZOR/mapel/
+Live: https://mapel.moffy-app.workers.dev (every push to the branch `claude/mapel-for-you-app-5tqv5y` deploys it, by `.github/workflows/mapel-site.yml`; no merge needed). After a merge it is also at https://tomerzor.github.io/TOMERZOR/mapel/
 
 ```
 npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localhost:8795/mapel/

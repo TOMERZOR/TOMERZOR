@@ -46,7 +46,7 @@ export function openSheet(opts) {
   };
 
   function paintHead() {
-    const cancel = opts.cancel === false ? '' : `<button class="sh-btn" data-act="__close">${h(opts.cancel || (opts.done ? 'ביטול' : 'סגירה'))}</button>`;
+    const cancel = opts.cancel === false ? '' : `<button class="sh-btn" data-act="__close">${h(opts.cancel || (opts.done ? 'ביטול' : 'סיום'))}</button>`;
     const done = opts.done ? `<button class="sh-btn strong" data-act="${opts.done.act || '__done'}">${h(opts.done.label)}</button>` : '<span class="sh-btn ghost"></span>';
     head.innerHTML = `${cancel || '<span class="sh-btn ghost"></span>'}<div class="sh-title"><h2>${h(opts.title || '')}</h2>${opts.sub ? `<p>${h(opts.sub)}</p>` : ''}</div>${done}`;
     el.setAttribute('aria-label', opts.title || '');

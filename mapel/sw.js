@@ -1,5 +1,5 @@
 // Keeps the app on the phone so it opens instantly and without internet. Bump VERSION whenever a file changes.
-const VERSION = 'mapel-v6';
+const VERSION = 'mapel-v7';
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'css/style.css',
   'fonts/heebo-hebrew.woff2', 'fonts/heebo-latin.woff2', 'fonts/jakarta-latin.woff2',

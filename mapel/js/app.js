@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -179,7 +179,7 @@ function renderNow() {
     html += `<div class="card steps">
       <h2>מתחילים בארבעה צעדים</h2>
       <ol>
-        <li class="${s.sites.length ? 'done' : ''}"><button data-act="addSite">${icon(s.sites.length ? 'check' : 'sites')}<span><b>מוסיפים אתרים לסגירה</b><small>מוצבים, ש.ג, חמ״ל, וכמה חיילים כל אחד צריך</small></span></button></li>
+        <li class="${s.sites.length ? 'done' : ''}"><button data-act="addSite">${icon(s.sites.length ? 'check' : 'sites')}<span><b>מוסיפים אתרים</b><small>מוצבים, ש.ג, חמ״ל, וכמה חיילים כל אחד צריך</small></span></button></li>
         <li class="${s.soldiers.length ? 'done' : ''}"><button data-act="addSoldier">${icon(s.soldiers.length ? 'check' : 'people')}<span><b>מוסיפים את החיילים</b><small>אחד אחד, או רשימה שלמה מוואטסאפ</small></span></button></li>
         <li><button data-act="go" data-tab="board">${icon('board')}<span><b>ממלאים אילוצים</b><small>גימלים, הפניות, חופשות, ומי לא יכול מתי</small></span></button></li>
         <li><button data-act="go" data-tab="sites">${icon('wand')}<span><b>משבצים ומייצאים לאקסל</b><small>הלוח מתמלא לבד, ומה שמילאת ביד נשאר</small></span></button></li>
@@ -310,11 +310,17 @@ function renderBoard() {
   }
 
   const rosters = ds.map(d => S.siteRoster(s, idx, d));
-  const foot = `<tr class="foot"><th scope="row" class="who"><span class="foot-label">סוגרים</span></th>${ds.map((d, i) => {
-    let have = 0, need = 0;
-    for (const site of s.sites) { have += rosters[i].get(site.id).length; need += S.needOn(site, d); }
-    const cls = need ? (have >= need ? 'ok' : 'short') : '';
-    return `<td class="${d === t ? 'is-today' : ''}${S.isWeekend(d) ? ' wknd' : ''}"><span class="foot-num ${cls}">${have}${need ? `<small>/${need}</small>` : ''}</span></td>`;
+  // present out of the soldiers shown; red when the sites need more than that day has
+  const foot = `<tr class="foot"><th scope="row" class="who"><span class="foot-label">נוכחים</span></th>${ds.map((d, i) => {
+    let need = 0, short = false;
+    for (const site of s.sites) {
+      const n = S.needOn(site, d);
+      need += n;
+      if (rosters[i].get(site.id).length < n) short = true;
+    }
+    const here = sold.filter(so => S.atSite(idx, so.id, d)).length;
+    const cls = need ? (short ? 'short' : 'ok') : '';
+    return `<td class="${d === t ? 'is-today' : ''}${S.isWeekend(d) ? ' wknd' : ''}"><span class="foot-num ${cls}" title="${short ? 'חסרים באתרים' : ''}">${here}<small>/${sold.length}</small></span><span class="foot-word">נוכחים</span></td>`;
   }).join('')}</tr>`;
 
   html += `<div class="card grid-card"><div class="grid-scroll" id="grid"><table class="grid"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div></div>`;
@@ -354,10 +360,10 @@ function renderSites() {
   const idx = S.index(s);
   const ds = S.periodDates(s);
   const t = S.today();
-  let html = header('אתרים', `מי סוגר איפה · ${periodText()}`, `<button class="icon-btn" data-act="addSite" aria-label="אתר חדש">${icon('plus')}</button>`);
+  let html = header('אתרים', `מי נוכח איפה · ${periodText()}`, `<button class="icon-btn" data-act="addSite" aria-label="אתר חדש">${icon('plus')}</button>`);
 
   if (!s.sites.length) {
-    html += empty('sites', 'אין עדיין אתרים', 'אתר הוא מקום שסוגרים בו: מוצב, ש.ג, חמ״ל, מטבח. לכל אתר קובעים כמה חיילים הוא צריך ביום.',
+    html += empty('sites', 'אין עדיין אתרים', 'אתר הוא מקום שחיילים נוכחים בו: מוצב, ש.ג, חמ״ל, מטבח. לכל אתר קובעים כמה חיילים הוא צריך ביום.',
       '<button class="btn primary" data-act="addSite">הוספת אתר</button>');
     return html;
   }
@@ -461,7 +467,7 @@ function cellSheet(sid, date) {
       return `
         <div class="status-hero" style="--c:${lk.color || 'var(--label-3)'}">
           <span class="status-ic">${icon(x.main ? KIND_ICON[x.main.kind] : 'house')}</span>
-          <div><b>${h(lk.label || 'לא שובץ')}</b><small>${x.main ? h(eventSpan(x.main)) : 'אין שום דבר ביום הזה'}${x.main?.auto ? ' · שובץ אוטומטית' : ''}</small></div>
+          <div><b>${h(lk.label || 'לא שובץ')}</b><small>${x.main?.kind === 'site' ? h(S.presenceWord(S.index(s), sid, date)) + ' · ' : ''}${x.main ? h(eventSpan(x.main)) : 'אין שום דבר ביום הזה'}${x.main?.auto ? ' · שובץ אוטומטית' : ''}</small></div>
         </div>
         ${evs.length ? `<div class="card list">${evs.map(e => eventRow(e)).join('')}</div>` : ''}
         <h3 class="sub-title">מה יש לו ביום הזה</h3>
@@ -519,7 +525,7 @@ function eventSpan(e) {
 function eventRow(e, i = 0) {
   const s = st();
   const color = e.kind === 'site' ? S.siteById(s, e.siteId)?.color : S.KINDS[e.kind].color;
-  const title = e.kind === 'site' ? `סגירה · ${S.kindLabel(s, e)}` : e.kind === 'other' ? (e.note || 'אחר') : S.KINDS[e.kind].label;
+  const title = e.kind === 'site' ? `${S.presenceTitle(S.index(s), e)} · ${S.kindLabel(s, e)}` : e.kind === 'other' ? (e.note || 'אחר') : S.KINDS[e.kind].label;
   const note = e.kind !== 'other' && e.note ? ` · ${h(e.note)}` : '';
   return `<button class="row" data-act="edit" data-id="${e.id}" style="--i:${i}">
     <span class="row-ic" style="--c:${color}">${icon(KIND_ICON[e.kind])}</span>
@@ -561,7 +567,7 @@ function eventEditor({ id, draft, cells, closeAlso }) {
       const kinds = S.KIND_ORDER.filter(k => k !== 'site' || s.sites.length);
       return `
         <div class="kind-grid compact">${kinds.map(k => `<button class="kind-btn${f.kind === k ? ' on' : ''}" data-act="kind" data-kind="${k}" style="--c:${k === 'site' ? (S.siteById(s, f.siteId)?.color || s.sites[0]?.color) : S.KINDS[k].color}" aria-pressed="${f.kind === k}">${icon(KIND_ICON[k])}<span>${h(S.KINDS[k].label)}</span></button>`).join('')}</div>
-        ${f.kind === 'site' ? `<h3 class="sub-title">איפה סוגר</h3><div class="chips-wrap">${s.sites.map(site => `<button class="chip color${f.siteId === site.id ? ' on' : ''}" data-act="site" data-id="${site.id}" style="--c:${site.color}">${h(site.name)}</button>`).join('')}</div>` : ''}
+        ${f.kind === 'site' ? `<h3 class="sub-title">איפה נוכח</h3><div class="chips-wrap">${s.sites.map(site => `<button class="chip color${f.siteId === site.id ? ' on' : ''}" data-act="site" data-id="${site.id}" style="--c:${site.color}">${h(site.name)}</button>`).join('')}</div>` : ''}
         ${multi ? '' : `
         <h3 class="sub-title">מתי</h3>
         <div class="card form">
@@ -674,7 +680,7 @@ function soldierSheet(sid) {
           </button>`;
         }).join('')}</div>
         <div class="tally">
-          <span><b>${tl.site}</b>ימי סגירה</span><span><b>${tl.home + tl.none}</b>בבית</span><span><b>${tl.gimel}</b>גימלים</span><span><b>${tl.referral}</b>הפניות</span>
+          <span><b>${tl.site}</b>ימי נוכחות</span><span><b>${tl.closings}</b>סגירות</span><span><b>${tl.home + tl.none}</b>בבית</span><span><b>${tl.gimel}</b>גימלים</span><span><b>${tl.referral}</b>הפניות</span>
         </div>
         <h3 class="sub-title">אילוצים</h3>
         <div class="card list">${cons.map((e, i) => eventRow(e, i)).join('') || '<p class="list-empty">אין אילוצים</p>'}
@@ -903,7 +909,7 @@ function siteDaySheet(siteId, date) {
           ${need ? `<span class="bar big"><span style="width:${Math.min(100, here.length / need * 100)}%"></span></span>` : ''}
           <span>${need ? (here.length >= need ? 'מאויש' : `חסרים ${need - here.length}`) : 'האתר לא צריך חיילים ביום הזה'}</span>
         </div>
-        <h3 class="sub-title">סוגרים כאן</h3>
+        <h3 class="sub-title">נוכחים כאן</h3>
         <div class="card list">${here.map(({ soldier: so, ev }) => `
           <div class="row static">${avatar(so)}
             <span class="row-main"><span class="row-title">${h(so.name)}${ev.auto ? ' <span class="badge">אוטומטי</span>' : ''}</span><span class="row-sub">${[so.platoon, S.timeText(ev, date)].filter(Boolean).map(h).join(' · ')}</span></span>
@@ -943,7 +949,7 @@ function autoSheet() {
       </div>
       <h3 class="sub-title">כללים</h3>
       <div class="card form">
-        <div class="field"><span>סוגרים עד</span>${stepper('maxStreak', r.maxStreak, 1, 30, 'ימים ברצף')}<span class="field-hint">ימים ברצף</span></div>
+        <div class="field"><span>נוכחים עד</span>${stepper('maxStreak', r.maxStreak, 1, 30, 'ימים ברצף')}<span class="field-hint">ימים ברצף</span></div>
         <div class="field"><span>ואז לפחות</span>${stepper('minRest', r.minRest, 0, 14, 'ימים בבית')}<span class="field-hint">ימים בבית</span></div>
       </div>
       <p class="field-note">השיבוץ הקודם שנעשה אוטומטית בתקופה מתחלף בחדש.</p>
@@ -954,7 +960,7 @@ function autoSheet() {
         const res = S.commit(s => { s.rules = { ...r }; return autoAssign(s); }, { undoable: true });
         sh.close();
         tick();
-        toast(res.short ? `שובצו ${res.filled} ימי סגירה · חסרים עוד ${res.short}` : `שובצו ${res.filled} ימי סגירה · הכל מאויש`, undoAction());
+        toast(res.short ? `שובצו ${res.filled} ימי נוכחות · חסרים עוד ${res.short}` : `שובצו ${res.filled} ימי נוכחות · הכל מאויש`, undoAction());
       },
       clearAuto: (el, ev, sh) => {
         const n = S.commit(s => clearAutoInPeriod(s), { undoable: true });
@@ -1002,7 +1008,7 @@ function settingsSheet() {
         <div class="card form"><div class="field col">${segmented('unassigned', [['home', 'מוצג כ״בבית״'], ['blank', 'נשאר ריק']], s.unassigned)}</div></div>
         <h3 class="sub-title">ייצוא וגיבוי</h3>
         <div class="card list">
-          <button class="row" data-act="export"><span class="row-ic" style="--c:#248a3d">${icon('table')}</span><span class="row-main"><span class="row-title">ייצוא לאקסל</span><span class="row-sub">לוח, מי סוגר איפה, חיילים, הפניות ואילוצים</span></span>${icon('chevron', 'row-chev')}</button>
+          <button class="row" data-act="export"><span class="row-ic" style="--c:#248a3d">${icon('table')}</span><span class="row-main"><span class="row-title">ייצוא לאקסל</span><span class="row-sub">לוח, מי נוכח איפה, חיילים, הפניות ואילוצים</span></span>${icon('chevron', 'row-chev')}</button>
           <button class="row" data-act="backup"><span class="row-ic" style="--c:#007aff">${icon('download')}</span><span class="row-main"><span class="row-title">גיבוי לקובץ</span><span class="row-sub">כדי להעביר לטלפון אחר או לשמור בצד</span></span>${icon('chevron', 'row-chev')}</button>
           <label class="row"><span class="row-ic" style="--c:#5856d6">${icon('upload')}</span><span class="row-main"><span class="row-title">שחזור מגיבוי</span><span class="row-sub">מחליף את כל מה שיש עכשיו</span></span><input type="file" accept="application/json,.json" data-field="restore" hidden>${icon('chevron', 'row-chev')}</label>
         </div>
@@ -1115,7 +1121,7 @@ function renderWelcome() {
   return `<div class="welcome">
     <img class="welcome-icon" src="img/icon.svg" alt="" width="96" height="96">
     <h1>מפל <span class="latin">for you</span></h1>
-    <p class="welcome-tag">כל החיילים, כל יום, במקום אחד.<br>מי סוגר איפה, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
+    <p class="welcome-tag">כל החיילים, כל יום, במקום אחד.<br>מי נוכח איפה, מי סוגר בסופ״ש, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
     <div class="card form welcome-form">
       <label class="field"><span>שם היחידה</span><input type="text" id="w-unit" placeholder="למשל: סוללה ב׳" autocomplete="off"></label>
     </div>

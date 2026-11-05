@@ -31,7 +31,7 @@ export const daysWord = n => (n === 1 ? 'יום אחד' : n === 2 ? 'יומיי�
 
 // main: fills the whole day (one per soldier per day). The others sit on top of the day.
 export const KINDS = {
-  site:       { label: 'סגירה',  color: null,      main: true,  pri: 5 },
+  site:       { label: 'נוכחות', color: null,      main: true,  pri: 5 },
   home:       { label: 'בבית',   color: '#8e8e93', main: true,  pri: 3 },
   gimel:      { label: 'גימלים', color: '#ff3b30', main: true,  pri: 0 },
   leave:      { label: 'חופשה',  color: '#32ade6', main: true,  pri: 1 },
@@ -169,7 +169,7 @@ export function look(st, main) {
 }
 
 export function kindLabel(st, e) {
-  if (e.kind === 'site') return siteById(st, e.siteId)?.name || 'סגירה';
+  if (e.kind === 'site') return siteById(st, e.siteId)?.name || 'נוכחות';
   return KINDS[e.kind].label;
 }
 
@@ -331,13 +331,41 @@ export function problems(st) {
   return out;
 }
 
-// Days per kind for a soldier inside the period.
+// Presence (נוכחות) is being at a site. Over a weekend, Thursday to Sunday, it's a closing (סגירה):
+// Friday and Saturday always, Thursday when it goes on into Friday, Sunday when it comes from Saturday.
+export function atSite(idx, sid, date) {
+  const m = dayOf(idx, sid, date).main;
+  return m?.kind === 'site' ? m : null;
+}
+export function isClosing(idx, sid, date) {
+  if (!atSite(idx, sid, date)) return false;
+  const w = wd(date);
+  if (w === 5 || w === 6) return true;
+  if (w === 4) return !!atSite(idx, sid, addDays(date, 1));
+  if (w === 0) return !!atSite(idx, sid, addDays(date, -1));
+  return false;
+}
+export const presenceWord = (idx, sid, date) => (isClosing(idx, sid, date) ? 'סגירה' : 'נוכחות');
+
+// What a presence event is called: סגירה when all of it is a weekend closing, otherwise נוכחות
+// (with a note when part of it is a closing).
+export function presenceTitle(idx, e) {
+  const ds = dates(e.from, Math.min(60, diffDays(e.from, e.to) + 1));
+  const n = ds.filter(d => isClosing(idx, e.soldierId, d)).length;
+  if (!n) return 'נוכחות';
+  return n === ds.length ? 'סגירה' : 'נוכחות, כולל סגירה';
+}
+
+// Days per kind for a soldier inside the period, and how many weekends they closed.
 export function tally(st, idx, sid) {
-  const t = { site: 0, home: 0, gimel: 0, leave: 0, course: 0, other: 0, none: 0, referral: 0 };
+  const t = { site: 0, home: 0, gimel: 0, leave: 0, course: 0, other: 0, none: 0, referral: 0, closings: 0 };
+  const weekends = new Set();
   for (const d of periodDates(st)) {
     const x = dayOf(idx, sid, d);
     if (x.main) t[x.main.kind]++; else t.none++;
     t.referral += x.refs.length;
+    if (x.main?.kind === 'site' && (wd(d) === 5 || wd(d) === 6)) weekends.add(wd(d) === 5 ? d : addDays(d, -1));
   }
+  t.closings = weekends.size;
   return t;
 }

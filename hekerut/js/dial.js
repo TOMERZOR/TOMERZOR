@@ -148,7 +148,7 @@ export function mountDial(root, opts) {
 
 // Replaces the text in `box` one character column at a time; only the columns that changed move.
 // Words (a month's name) and a change of length roll as one piece.
-function roll(box, text, dir) {
+export function roll(box, text, dir) {
   const numeric = /^\d+$/.test(text);
   const cols = [...box.children].filter(c => !c.classList.contains('whole'));
   if (!box.children.length || !dir) return primeNumber(box, text);
@@ -175,7 +175,7 @@ function roll(box, text, dir) {
 }
 
 // The number at rest: a column per digit (so a change moves only its digit), or one piece for words.
-function primeNumber(box, text) {
+export function primeNumber(box, text) {
   box.innerHTML = /^\d+$/.test(text)
     ? [...text].map(c => `<span class="col"><span class="ch cur">${c}</span></span>`).join('')
     : `<span class="col whole"><span class="ch cur">${text}</span></span>`;

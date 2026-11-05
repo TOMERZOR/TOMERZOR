@@ -176,10 +176,20 @@ export function unitChain(p) {
   return (p.unit.path || []).map((v, i) => (v && c.levels[i] ? { label: c.levels[i], text: prettyLevel(c.levels[i], v) } : null)).filter(Boolean);
 }
 
+// The role of today: an ongoing role (not a course) first, then the one that ended last.
 export function currentRole(p) {
-  const roles = p?.roles || [];
-  return roles.find(r => !r.to) || roles[roles.length - 1] || null;
+  const roles = (p?.roles || []).filter(r => r.kind !== 'course');
+  const list = roles.length ? roles : p?.roles || [];
+  return list.find(r => !r.to) || [...list].sort((a, b) => monthKey(b.to || b.from) - monthKey(a.to || a.from))[0] || null;
 }
+
+// 'YYYY' or 'YYYY-MM' as a month number (a year alone counts from its January); 0 when empty.
+export const monthKey = ym => { const m = /^(\d{4})(?:-(\d{2}))?/.exec(String(ym || '')); return m ? +m[1] * 12 + (m[2] ? +m[2] - 1 : 0) : 0; };
+export const ymOf = k => `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, '0')}`;
+const SHORT_MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+// "אוג׳ 24" for a month, "2024" for a year alone.
+export const shortYm = ym => { const m = /^(\d{4})(?:-(\d{2}))?/.exec(String(ym || '')); return !m ? '' : m[2] ? `${SHORT_MONTHS[+m[2] - 1]} ${m[1].slice(2)}` : m[1]; };
+export const rangeLabel = r => (r.from || r.to ? `${shortYm(r.from) || '?'} – ${r.to ? shortYm(r.to) : 'היום'}` : '');
 
 // ---------- Validation ----------
 
@@ -188,6 +198,8 @@ const str = (v, max) => String(v ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').t
 const para = (v, max) => String(v ?? '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
 const year = v => { const n = parseInt(v, 10); return n >= 1940 && n <= 2100 ? n : null; };
 const ym = v => (/^\d{4}-(0[1-9]|1[0-2])$/.test(v || '') ? v : '');
+// A month or a year, from older profiles that kept only the year (as a number).
+const monthOrYear = v => { const t = String(v ?? '').trim(); return ym(t) || (/^(19[4-9]\d|20\d\d)$/.test(t) ? t : ''); };
 const ymdOrYm = v => {
   if (ym(v)) return v;
   const m = /^(\d{4})-(0[1-9]|1[0-2])-(\d{2})$/.exec(v || '');
@@ -200,9 +212,24 @@ export function cleanProfile(input = {}) {
   const levels = corps ? CORPS[corps].levels.length : 0;
   const path = Array.from({ length: levels }, (_, i) => str(p.unit?.path?.[i], LIMITS.text));
   while (path.length && !path[path.length - 1]) path.pop();
+  // Roles and courses: from and to are a month ('YYYY-MM') or a year ('YYYY'); no `to` means still
+  // in it. `place` says where a course was; `unit` is the unit it was in, when not the main one.
   const roles = (Array.isArray(p.roles) ? p.roles : []).slice(0, LIMITS.roles)
-    .map(r => ({ t: str(r?.t, LIMITS.text), from: year(r?.from) || '', to: year(r?.to) || '' }))
-    .filter(r => r.t);
+    .map(r => {
+      const uc = CORPS[r?.unit?.corps] ? r.unit.corps : '';
+      const upath = uc ? Array.from({ length: CORPS[uc].levels.length }, (_, i) => str(r.unit.path?.[i], LIMITS.text)) : [];
+      while (upath.length && !upath[upath.length - 1]) upath.pop();
+      return {
+        t: str(r?.t, LIMITS.text),
+        kind: r?.kind === 'course' || (!r?.kind && /^קורס/.test(String(r?.t || '').trim())) ? 'course' : 'role',
+        from: monthOrYear(r?.from),
+        to: monthOrYear(r?.to),
+        place: str(r?.place, LIMITS.text),
+        unit: uc ? { corps: uc, path: upath } : null,
+      };
+    })
+    .filter(r => r.t)
+    .sort((a, b) => (monthKey(a.from) || 1e9) - (monthKey(b.from) || 1e9));
   const prepKind = PREP[p.prep?.kind] ? p.prep.kind : 'none';
   return {
     name: str(p.name, LIMITS.name),
@@ -271,9 +298,12 @@ export function commonGround(a, b) {
   if (a.draft && a.draft.slice(0, 7) === b.draft?.slice(0, 7)) push('draft', 'אותו מחזור גיוס', monthLabel(a.draft.slice(0, 7)), 4);
   else if (a.draft && b.draft && a.draft.slice(0, 4) === b.draft.slice(0, 4)) push('draft', 'התגייסתם באותה שנה', a.draft.slice(0, 4), 2);
   if (a.city && norm(a.city) === norm(b.city)) push('city', 'מאותה עיר', a.city, 3);
+  // The same course in the same month: probably the same cohort.
+  const sameCourse = (a.roles || []).find(r => r.kind === 'course' && r.from && (b.roles || []).some(x => x.kind === 'course' && norm(x.t) === norm(r.t) && x.from === r.from));
+  if (sameCourse) push('course', 'אותו מחזור קורס!', `${sameCourse.t} · ${shortYm(sameCourse.from)}`, 7);
   const rb = new Set((b.roles || []).map(r => norm(r.t)));
-  const role = (a.roles || []).find(r => rb.has(norm(r.t)));
-  if (role) push('role', 'אותו תפקיד', role.t, 2);
+  const role = (a.roles || []).find(r => rb.has(norm(r.t)) && r !== sameCourse);
+  if (role) push('role', role.kind === 'course' ? 'אותו קורס' : 'אותו תפקיד', role.t, 2);
 
   return out.sort((x, y) => y.w - x.w);
 }

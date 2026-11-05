@@ -12,6 +12,10 @@ npx http-server -p 8795 -c-1 .     # from the repo root, then open http://localh
 
 "שטח": a warm gradient header (gold to olive) with map contour lines (`img/topo.svg`), white tiles with big numbers (bento), ink buttons; light by default with a dark version. Numbers and dates are picked with a dial (`js/dial.js`): a big number whose changed digit rolls, a ruler you drag across the whole width with inertia and snapping, one orange needle, a vibration per step where supported, arrow keys too. It's used for age, the draft and release dates (day, month, year) and the years of each role.
 
+## The journey
+
+The heart of a profile is its journey (`js/journey.js`): a timeline of the service you drag like the age dial, a ruler of months with the years marked, inertia and snapping to a month, a needle, the month and year rolling above, and cards for what was happening that month (the mechina, the draft and tironut, every role and course with its unit or place, the release), with a context line (month N of the service, months to the draft, months since release). Under the ruler a colored bar for each, in lanes when they overlap; tapping a bar or a mark goes to it. The first time it's seen it travels from the draft to today. Roles and courses run from a month to a month (or "עד היום"), with where a course was and the unit it was in (corps and levels), edited in a sheet; the same course in the same month counts as "אותו מחזור קורס".
+
 ## What it does
 
 - **Onboarding (5 short steps):** photo, name, how to address you (he/she/either), age, city · mechina or service year · status, draft and release month, corps, then the unit levels. The labels follow the corps: artillery asks for a סוללה, infantry for a פלוגה, the air force for a טייסת. Each level opens after the one above it, and all of them are optional · tironut, roles and courses with years · one line about you, and who sees the full path.

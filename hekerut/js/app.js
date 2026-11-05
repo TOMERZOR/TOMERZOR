@@ -7,9 +7,10 @@ import { qrSvg, startScanner } from './qr.js';
 import { openCreator, closeCreator, creatorOpen } from './create.js';
 import * as Push from './push.js';
 import { dialHtml, mountDial } from './dial.js';
-import { CORPS, BERETS, beretOf, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock } from './core.js';
+import { journeyHtml, mountJourney } from './journey.js';
+import { CORPS, BERETS, beretOf, STATUS, PREP, MONTHS, TRACKS, gen, statusLabel, monthLabel, unitChain, currentRole, corpsName, corpsFamily, trackOf, serviceClock, monthKey, rangeLabel } from './core.js';
 
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 
 const $ = sel => document.querySelector(sel);
 const $view = $('#view');
@@ -375,22 +376,10 @@ function sectionHtml(id, p) {
       ${field('איפה עשית טירונות?', input('tironut', p.tironut, 'list="dl-tir" maxlength="40" placeholder="למשל: שיזפון"'))}
       ${datalist('dl-tir', TIRONUT)}
       <div class="field"><span class="f-label">תפקידים וקורסים</span>
-        <div class="roles">${roles.map((r, i) => `
-          <div class="role-row" style="--i:${i}">
-            <span class="role-dot ${r.to ? '' : 'now'}"></span>
-            <input class="inp" data-f="roles.${i}.t" value="${esc(r.t)}" list="dl-role" maxlength="40" placeholder="תפקיד או קורס">
-            <div class="role-years">
-              <button type="button" class="inp yr ${r.from ? '' : 'empty'}" data-year="roles.${i}.from">${r.from || 'משנה'}</button>
-              <span>–</span>
-              <button type="button" class="inp yr ${r.to ? '' : 'empty'}" data-year="roles.${i}.to">${r.to || 'היום'}</button>
-            </div>
-            <button type="button" class="icon-btn sm" data-role-del="${i}" aria-label="מחיקה">${icon('close')}</button>
-          </div>`).join('')}
-        </div>
-        ${roles.length < 12 ? `<button type="button" class="add-row" data-act="role-add">${icon('plus')}<span>${roles.length ? 'עוד תפקיד או קורס' : 'הוספת תפקיד'}</span></button>` : ''}
-        <small class="f-hint">השאירו את ״עד״ ריק בתפקיד של היום</small>
-      </div>
-      ${datalist('dl-role', ROLES)}`;
+        <div class="roles">${roles.map((r, i) => roleCard(r, i)).join('')}</div>
+        ${roles.length < 12 ? `<div class="add-two"><button type="button" class="add-row" data-act="role-add" data-kind="role">${icon('plus')}<span>תפקיד</span></button><button type="button" class="add-row" data-act="role-add" data-kind="course">${icon('plus')}<span>קורס</span></button></div>` : ''}
+        <small class="f-hint">מכל אחד נבנה ציר הזמן של המסע שלך: מתי התחיל, עד מתי, ואיפה</small>
+      </div>`;
   }
   if (id === 'bio') {
     return `
@@ -447,10 +436,24 @@ const SHORT_MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', '�
 // A sheet with a dial for the day (if asked), the month and the year.
 function openDateSheet(path, withDay) {
   const m = formModel();
-  const cur = (path.split('.').reduce((o, k) => o?.[k], m) || '').split('-');
+  openDateSheetFor({
+    title: path === 'draft' ? 'תאריך גיוס' : path === 'release' ? 'תאריך שחרור' : 'תאריך',
+    value: path.split('.').reduce((o, k) => o?.[k], m) || '',
+    withDay,
+    onDone: v => {
+      setPath(m, path, v);
+      if (route().name !== 'edit') saveDraft();
+      rerenderSection(path === 'draft' || path === 'release' ? 'service' : 'path');
+    },
+  });
+}
+
+// Dials for the day (if asked), the month and the year. onDone(value or '' when cleared).
+function openDateSheetFor({ title, value = '', withDay = false, clearLabel = 'ניקוי', onDone, onCancel }) {
+  const cur = String(value || '').split('-');
   const now = new Date();
   const val = { y: +cur[0] || now.getFullYear(), mo: +cur[1] || now.getMonth() + 1, d: +cur[2] || (withDay ? now.getDate() : 1) };
-  const title = path === 'draft' ? 'תאריך גיוס' : path === 'release' ? 'תאריך שחרור' : 'תאריך';
+  let finished = false;
   const sheet = openSheet(`<h2 class="sheet-title">${title}</h2>
     <div class="date-dials">
       ${withDay ? `<div data-dd="d">${dialHtml({ title: 'יום', compact: true })}</div>` : ''}
@@ -458,24 +461,125 @@ function openDateSheet(path, withDay) {
       <div data-dd="y">${dialHtml({ title: 'שנה', compact: true })}</div>
     </div>
     <p class="date-preview"></p>
-    <div class="sheet-btns"><button class="btn primary big" data-date-ok>אישור</button>${cur[0] ? '<button class="btn soft big" data-date-clear>ניקוי</button>' : ''}</div>`, { onClose: () => dials.forEach(d => d.destroy()) });
+    <div class="sheet-btns"><button class="btn primary big" data-date-ok>אישור</button>${cur[0] || clearLabel !== 'ניקוי' ? `<button class="btn soft big" data-date-clear>${clearLabel}</button>` : ''}</div>`, { onClose: () => { dials.forEach(d => d.destroy()); if (!finished) onCancel?.(); } });
   const preview = () => { sheet.querySelector('.date-preview').textContent = monthLabel(`${val.y}-${String(val.mo).padStart(2, '0')}${withDay ? `-${String(Math.min(val.d, new Date(val.y, val.mo, 0).getDate())).padStart(2, '0')}` : ''}`); };
   const dials = [];
   if (withDay) dials.push(mountDial(sheet.querySelector('[data-dd="d"]'), { min: 1, max: 31, value: val.d, longFor: v => v === 1 || v % 5 === 0, labelFor: v => (v === 1 || v % 5 === 0 ? v : ''), spacing: 16, label: 'יום', onChange: v => { val.d = v; preview(); } }));
   dials.push(mountDial(sheet.querySelector('[data-dd="mo"]'), { min: 1, max: 12, value: val.mo, every: 1, spacing: 30, label: 'חודש', format: v => MONTHS[v - 1], labelFor: v => SHORT_MONTHS[v - 1], onChange: v => { val.mo = v; preview(); } }));
-  dials.push(mountDial(sheet.querySelector('[data-dd="y"]'), { min: now.getFullYear() - 30, max: now.getFullYear() + 2, value: val.y, longFor: v => v % 5 === 0, labelFor: v => (v % 5 === 0 ? v : ''), spacing: 22, label: 'שנה', onChange: v => { val.y = v; preview(); } }));
+  dials.push(mountDial(sheet.querySelector('[data-dd="y"]'), { min: now.getFullYear() - 30, max: now.getFullYear() + 3, value: val.y, longFor: v => v % 5 === 0, labelFor: v => (v % 5 === 0 ? v : ''), spacing: 22, label: 'שנה', onChange: v => { val.y = v; preview(); } }));
   preview();
-  const done = v => {
-    setPath(m, path, v);
-    if (route().name !== 'edit') saveDraft();
-    closeSheet();
-    rerenderSection(path === 'draft' || path === 'release' ? 'service' : 'path');
-  };
+  const done = v => { finished = true; closeSheet(true); onDone(v); };
   sheet.querySelector('[data-date-ok]').addEventListener('click', () => {
     const dd = withDay ? `-${String(Math.min(val.d, new Date(val.y, val.mo, 0).getDate())).padStart(2, '0')}` : '';
     done(`${val.y}-${String(val.mo).padStart(2, '0')}${dd}`);
   });
   sheet.querySelector('[data-date-clear]')?.addEventListener('click', () => done(''));
+}
+
+// ---------- Roles and courses ----------
+
+const COURSES = ['קורס מ״כים', 'קורס קצינים', 'קורס סמלים', 'קורס חובשים', 'קורס צלפים', 'קורס מדריכים', 'קורס קשר', 'קורס נהיגה', 'קורס מש״קים', 'קורס מ״פים', 'קורס תצפיתניות', 'קורס מודיעין', 'קורס לוחמה בשטח בנוי'];
+const COURSE_PLACES = ['בה״ד 1', 'ביסלמ״ח', 'מחנה 80', 'שיזפון', 'בסיס הגדוד', 'בסיס החטיבה'];
+
+function roleCard(r, i) {
+  const where = [r.place && `ב${r.place}`, r.unit && [corpsName(r.unit.corps), ...unitChain({ unit: r.unit }).map(x => x.text)].join(' · ')].filter(Boolean).join(' · ');
+  return `<button type="button" class="role-card k-${r.kind} ${r.to ? '' : 'now'}" data-role-edit="${i}" style="--i:${i}">
+    <span class="rc-ic">${icon(r.kind === 'course' ? 'sparkle' : 'badge')}</span>
+    <span class="rc-text"><b>${esc(r.t)}</b><small>${esc([rangeLabel(r) || 'בלי תאריכים', where].filter(Boolean).join(' · '))}</small></span>
+    ${r.to ? '' : '<span class="now-tag">עכשיו</span>'}
+    ${icon('chevron')}
+  </button>`;
+}
+
+let roleEdit = null;
+
+// Where a date picker for a role should start: after the previous role, else at the draft.
+function suggestMonth(m, r, which) {
+  if (which === 'to' && r.from) return r.from.length === 4 ? `${r.from}-01` : r.from;
+  const ends = (m.roles || []).filter(x => x !== r).map(x => monthKey(x.to || x.from)).filter(Boolean);
+  const k = ends.length ? Math.max(...ends) + 1 : m.draft ? monthKey(m.draft) : 0;
+  return k ? `${Math.floor(k / 12)}-${String((k % 12) + 1).padStart(2, '0')}` : '';
+}
+
+function openRoleSheet(index) {
+  const m = formModel();
+  if (index !== undefined) roleEdit = { index, r: structuredClone(index === null ? { t: '', kind: 'role', from: '', to: '', place: '', unit: null } : m.roles[index]) };
+  const { r } = roleEdit;
+  const course = r.kind === 'course';
+  const c = CORPS[r.unit?.corps];
+  const html = `<h2 class="sheet-title">${roleEdit.index === null ? (course ? 'קורס חדש' : 'תפקיד חדש') : (course ? 'עריכת קורס' : 'עריכת תפקיד')}</h2>
+    <div class="form role-form">
+      ${chips('re.kind', r.kind, [['role', 'תפקיד'], ['course', 'קורס']])}
+      ${field(course ? 'איזה קורס?' : 'איזה תפקיד?', `<input class="inp" data-re="t" value="${esc(r.t)}" list="dl-re" maxlength="40" placeholder="${course ? 'למשל: קורס מ״כים' : 'למשל: מפקד צוות'}">`)}
+      ${datalist('dl-re', course ? COURSES : ROLES)}
+      <div class="row2">
+        ${field('מתי התחיל?', `<button type="button" class="inp date-btn ${r.from ? '' : 'empty'}" data-re-date="from">${icon('calendar')}<span>${r.from ? esc(monthLabel(r.from.length === 4 ? `${r.from}-01` : r.from)) : 'חודש ושנה'}</span></button>`)}
+        ${field('עד מתי?', `<button type="button" class="inp date-btn ${r.to ? '' : 'empty'}" data-re-date="to">${icon('calendar')}<span>${r.to ? esc(monthLabel(r.to.length === 4 ? `${r.to}-01` : r.to)) : (course ? 'עדיין בקורס' : 'עד היום')}</span></button>`)}
+      </div>
+      ${course ? field('איפה היה הקורס?', `<input class="inp" data-re="place" value="${esc(r.place)}" list="dl-place" maxlength="40" placeholder="למשל: בה״ד 1">`) + datalist('dl-place', COURSE_PLACES) : ''}
+      ${field('באיזו יחידה?', chips('re.unitMode', r.unit ? 'other' : 'mine', [['mine', 'ביחידה שלי'], ['other', 'ביחידה אחרת']]))}
+      ${r.unit ? `<div class="levels">
+        <select class="inp" data-re-corps>${Object.entries(CORPS).map(([k, v]) => `<option value="${k}" ${k === r.unit.corps ? 'selected' : ''}>${v.full || v.name}</option>`).join('')}</select>
+        ${c.levels.map((l, i) => field(l, `<input class="inp" data-re-level="${i}" value="${esc(r.unit.path[i] || '')}" maxlength="40" placeholder="לא חובה">`)).join('')}
+      </div>` : ''}
+      <div class="sheet-btns"><button class="btn primary big" data-re-save>שמירה</button>${roleEdit.index !== null ? `<button class="btn soft big danger-text" data-re-del>${icon('trash')}<span>מחיקה</span></button>` : ''}</div>
+    </div>`;
+  // Already open (a chip or the unit changed): redraw in place, without sliding in again.
+  const open = document.querySelector('.sheet.role-sheet');
+  if (open) { const y = open.scrollTop; open.innerHTML = `<span class="grabber"></span>${html}`; open.scrollTop = y; return; }
+  const sheet = openSheet(html, { cls: 'tall role-sheet' });
+  sheet.addEventListener('input', e => {
+    const { r } = roleEdit || {};
+    if (!r) return;
+    const t = e.target;
+    if (t.dataset.re) r[t.dataset.re] = t.value;
+    if (t.dataset.reLevel !== undefined) r.unit.path[+t.dataset.reLevel] = t.value;
+  });
+  sheet.addEventListener('change', e => {
+    if (e.target.dataset.reCorps !== undefined && roleEdit) { roleEdit.r.unit = { corps: e.target.value, path: [] }; openRoleSheet(); }
+  });
+  sheet.addEventListener('click', e => {
+    if (!roleEdit) return;
+    const { r } = roleEdit;
+    const chip = e.target.closest('[data-chip^="re."]');
+    if (chip) {
+      e.stopPropagation();
+      haptic();
+      if (chip.dataset.chip === 're.kind') r.kind = chip.dataset.v;
+      else r.unit = chip.dataset.v === 'other' ? { corps: m.unit.corps || 'infantry', path: [...(m.unit.path || [])] } : null;
+      return openRoleSheet();
+    }
+    const d = e.target.closest('[data-re-date]');
+    if (d) {
+      const which = d.dataset.reDate;
+      return openDateSheetFor({
+        title: which === 'from' ? 'מתי התחיל?' : 'עד מתי?',
+        value: r[which] ? (r[which].length === 4 ? `${r[which]}-01` : r[which]) : suggestMonth(m, r, which),
+        clearLabel: which === 'to' ? (r.kind === 'course' ? 'עדיין בקורס' : 'עד היום') : 'ניקוי',
+        onDone: v => { r[which] = v; openRoleSheet(); },
+        onCancel: () => setTimeout(() => openRoleSheet(), 280),
+      });
+    }
+    if (e.target.closest('[data-re-save]')) {
+      r.t = r.t.trim();
+      if (!r.t) { toast(r.kind === 'course' ? 'איזה קורס?' : 'איזה תפקיד?', 'close'); return; }
+      if (r.from && r.to && monthKey(r.to) < monthKey(r.from)) { toast('הסיום לפני ההתחלה', 'close'); return; }
+      if (roleEdit.index === null) m.roles.push(r); else m.roles[roleEdit.index] = r;
+      m.roles.sort((a, b) => (monthKey(a.from) || 1e9) - (monthKey(b.from) || 1e9));
+      roleEdit = null;
+      if (route().name !== 'edit') saveDraft();
+      closeSheet();
+      rerenderSection('path');
+      haptic(15);
+    }
+    if (e.target.closest('[data-re-del]')) {
+      m.roles.splice(roleEdit.index, 1);
+      roleEdit = null;
+      if (route().name !== 'edit') saveDraft();
+      closeSheet();
+      rerenderSection('path');
+    }
+  });
 }
 
 // A sheet with one year dial (the years of a role); "to" can also be "היום".
@@ -838,10 +942,22 @@ async function renderActivity(seq) {
 
 // ---------- Profile ----------
 
+// The journey keeps its place when the profile redraws (fresh data), and travels to today only once.
+let liveJourney = null;
+const journeyAt = {};
+function mountProfileJourney(id, v) {
+  const el = document.querySelector('[data-journey]');
+  if (!el || el.dataset.on) return;
+  liveJourney?.destroy();
+  el.dataset.on = '1';
+  liveJourney = mountJourney($view, v.person.profile, { at: journeyAt[id] ?? null, onMove: k => { journeyAt[id] = k; } });
+}
+
 async function renderProfile(id, seq = renderSeq) {
   const mine = id === me.id;
   const draw = v => {
     page(profileHtml(v, mine), mine ? 'me' : 'none');
+    mountProfileJourney(id, v);
     if (v.level === 'full' && document.querySelector(`[data-grid="${id}"]`) && !draw.loading) { draw.loading = true; loadGrid(id, seq); }
   };
   if (mine) draw({ person: me, level: 'full', rel: { self: true }, counts: me.counts, mutual: [], mutualCount: 0, common: [] });
@@ -870,7 +986,7 @@ function profileHtml(v, mine) {
   const full = v.level === 'full';
   const prof = full ? p.profile : null;
   const firstName = esc(p.name.split(' ')[0]);
-  const tab = profTab[p.id] || (v.counts.posts ? 'posts' : 'path');
+  const tab = profTab[p.id] || 'path';
   return `
     <section class="hero topo prof-hero" data-name="${esc(p.name)}" ${BERETS[p.beret] ? `style="--bc:${BERETS[p.beret].color}"` : ''}>
       <header class="hero-bar">
@@ -897,8 +1013,9 @@ function profileHtml(v, mine) {
           <div class="common-list">${v.common.slice(1).map((c, i) => `<div class="cg" style="--i:${i}"><b>${esc(c.title)}</b>${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</div>`).join('')}</div>
         </div>` : ''}
     </section>
-    <div class="seg prof-seg"><button class="seg-b ${tab === 'path' ? 'on' : ''}" data-ptab-prof="path" data-of="${p.id}">${icon('shield')}המסלול</button><button class="seg-b ${tab === 'posts' ? 'on' : ''}" data-ptab-prof="posts" data-of="${p.id}">${icon('image')}פוסטים</button><span class="seg-pill" style="--n:${tab === 'path' ? 0 : 1}"></span></div>
+    <div class="seg prof-seg"><button class="seg-b ${tab === 'path' ? 'on' : ''}" data-ptab-prof="path" data-of="${p.id}">${icon('flag')}המסע</button><button class="seg-b ${tab === 'posts' ? 'on' : ''}" data-ptab-prof="posts" data-of="${p.id}">${icon('image')}פוסטים</button><span class="seg-pill" style="--n:${tab === 'path' ? 0 : 1}"></span></div>
     ${tab === 'path' ? `<section class="path">
+      ${full ? journeyHtml(prof, { title: mine ? 'המסע שלי' : `המסע של ${firstName}` }) : ''}
       <h3 class="path-title">${mine ? 'המסלול שלי' : `המסלול של ${firstName}`}</h3>
       ${full ? pathHtml(prof) : lockedPath(p)}
     </section>` : `<section class="posts-tab">${full ? gridHtml(p.id) : lockedPath(p)}</section>`}
@@ -927,7 +1044,7 @@ function pathHtml(p) {
     items.push({ ic: 'shield', k: 'היחידה', t: corpsName(p.unit.corps), html: chain.length ? `<div class="chain">${chain.map((c, i) => `<span class="link" style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` : '' });
   }
   if (p.roles.length) {
-    items.push({ ic: 'badge', k: 'תפקידים וקורסים', t: '', html: `<ol class="roles-view">${p.roles.map(r => `<li class="${r.to ? '' : 'now'}"><b>${esc(r.t)}</b><small>${r.from || ''}${r.from || r.to ? '–' : ''}${r.to || (r.from ? 'היום' : '')}</small>${r.to ? '' : '<span class="now-tag">עכשיו</span>'}</li>`).join('')}</ol>` });
+    items.push({ ic: 'badge', k: 'תפקידים וקורסים', t: '', html: `<ol class="roles-view">${p.roles.map(r => `<li class="${r.to ? '' : 'now'} k-${r.kind}"><span class="rv-kind">${r.kind === 'course' ? 'קורס' : 'תפקיד'}</span><b>${esc(r.t)}</b>${r.to ? '' : '<span class="now-tag">עכשיו</span>'}<small>${esc([rangeLabel(r), r.place && `ב${r.place}`, r.unit && [corpsName(r.unit.corps), ...unitChain({ unit: r.unit }).map(x => x.text)].join(' · ')].filter(Boolean).join(' · '))}</small></li>`).join('')}</ol>` });
   }
   if (!items.length) return `<div class="empty-mini">${icon('edit')}<span>עוד אין פרטים על השירות</span></div>`;
   return `<ol class="timeline">${items.map((it, i) => `
@@ -1244,7 +1361,7 @@ function storySlides(v) {
     slides.push({ bg: 's4', style: bk ? `--bc:${bk.color}` : '', html: `<span class="s-ic beret-ic ${bk?.camo ? 'camo' : ''}" ${bk ? `style="--bc:${bk.color}"` : ''}>${icon('shield')}</span><small class="eyebrow">היחידה${bk ? ` · כומתה ${bk.name}` : ''}</small><h2>${esc(corps.name)}</h2>${corps.parent ? `<p>${esc(CORPS[corps.parent].name)}</p>` : ''}<div class="s-chain">${chain.map((c, i) => `<span style="--i:${i}"><small>${esc(c.label.split(' /')[0])}</small>${esc(c.text)}</span>`).join('')}</div>` });
   }
   const roles = pr ? pr.roles : p.role ? [{ t: p.role }] : [];
-  if (roles.length) slides.push({ bg: 's5', html: `<span class="s-ic">${icon('badge')}</span><small class="eyebrow">התפקידים</small><ol class="s-roles">${roles.map((r, i) => `<li style="--i:${i}" class="${r.to ? '' : 'now'}"><b>${esc(r.t)}</b><small>${r.from ? `${r.from}–${r.to || 'היום'}` : ''}</small></li>`).join('')}</ol>` });
+  if (roles.length) slides.push({ bg: 's5', html: `<span class="s-ic">${icon('badge')}</span><small class="eyebrow">התפקידים</small><ol class="s-roles">${roles.map((r, i) => `<li style="--i:${i}" class="${r.to ? '' : 'now'}"><b>${esc(r.t)}</b><small>${esc(rangeLabel(r))}</small></li>`).join('')}</ol>` });
   if (!self && (v.common.length || v.mutualCount)) {
     slides.push({ bg: 's6', html: `<span class="s-ic">${icon('sparkle')}</span><small class="eyebrow">ביניכם</small><h2>${v.common.length ? 'מה משותף לכם' : 'מכירים משותפים'}</h2>
       ${v.common.length ? `<div class="s-common">${v.common.slice(0, 4).map((c, i) => `<span style="--i:${i}"><b>${esc(c.title)}</b>${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</span>`).join('')}</div>` : ''}
@@ -2047,12 +2164,9 @@ document.addEventListener('click', async e => {
     if (act === 'onb-skip') return onboardingNext(true);
     if (act === 'onb-back') { step = Math.max(0, step - 1); saveDraft(); return renderOnboarding(); }
     if (act === 'role-add') {
-      const m = formModel();
-      m.roles.push({ t: '', from: '', to: '' });
-      rerenderSection('path');
-      const inputs = document.querySelectorAll('[data-f$=".t"]');
-      inputs[inputs.length - 1]?.focus();
-      return;
+      haptic();
+      roleEdit = { index: null, r: { t: '', kind: t.closest('[data-act]').dataset.kind || 'role', from: '', to: '', place: '', unit: null } };
+      return openRoleSheet();
     }
     if (act === 'photo-remove') { draftPhoto = null; return rerenderSection('basics'); }
     if (act === 'back') { haptic(); return history.length > 1 ? history.back() : go('home'); }
@@ -2126,6 +2240,8 @@ document.addEventListener('click', async e => {
     rerenderSection('service');
     return;
   }
+  const redit = t.closest('[data-role-edit]');
+  if (redit) { haptic(); return openRoleSheet(+redit.dataset.roleEdit); }
   const del = t.closest('[data-role-del]');
   if (del) { formModel().roles.splice(+del.dataset.roleDel, 1); return rerenderSection('path'); }
   const follow = t.closest('[data-follow]');

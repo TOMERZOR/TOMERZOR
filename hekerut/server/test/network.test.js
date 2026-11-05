@@ -103,7 +103,7 @@ test('profile cleaning and display helpers', () => {
   assert.equal(p.name, 'דנה');
   assert.equal(p.g, 'm');
   assert.deepEqual(p.unit, { corps: '', path: [] });
-  assert.deepEqual(p.roles, [{ t: 'לוחמת', from: 2023, to: '' }]);
+  assert.deepEqual(p.roles, [{ t: 'לוחמת', kind: 'role', from: '2023', to: '', place: '', unit: null }]);
   assert.equal(p.vis, 'met');
   assert.equal(p.prep.name, '');
   assert.equal(prettyLevel('גדוד', '13'), 'גדוד 13');
@@ -382,3 +382,26 @@ for (const [kind, make] of Object.entries(stores)) {
     assert.equal(net.view(b(), a().id).person.beret, 'turquoise');
   });
 }
+
+test('roles and courses: month ranges, where a course was, its unit, the current role, the same cohort', async () => {
+  const { currentRole, rangeLabel, monthKey } = await import('../../js/core.js');
+  const p = cleanProfile(person('א', { roles: [
+    { t: 'מפקד צוות', from: '2024-09', to: '' },
+    { t: 'קורס מ״כים', from: '2024-05', to: '2024-08', place: 'בה״ד 1', unit: { corps: 'artillery', path: ['215', '402'] } },
+    { t: 'לוחם', from: '2023-08', to: '2024-04' },
+    { t: 'x', from: '2024-13', to: 'abc', unit: { corps: 'nope' } },
+  ] }));
+  assert.deepEqual(p.roles.map(r => r.t), ['לוחם', 'קורס מ״כים', 'מפקד צוות', 'x'], 'sorted by start, undated last');
+  assert.equal(p.roles[1].kind, 'course', 'a title starting with קורס is a course');
+  assert.equal(p.roles[1].place, 'בה״ד 1');
+  assert.deepEqual(p.roles[1].unit, { corps: 'artillery', path: ['215', '402'] });
+  assert.deepEqual([p.roles[3].from, p.roles[3].to, p.roles[3].unit], ['', '', null]);
+  assert.equal(currentRole(p).t, 'מפקד צוות');
+  assert.equal(rangeLabel(p.roles[1]), 'מאי 24 – אוג׳ 24');
+  assert.equal(rangeLabel(p.roles[2]), 'ספט׳ 24 – היום');
+  assert.equal(monthKey('2024-01'), 2024 * 12);
+  const q = cleanProfile(person('ב', { roles: [{ t: 'קורס מ״כים', kind: 'course', from: '2024-05', to: '2024-08' }] }));
+  assert.equal(commonGround(p, q).find(c => c.k === 'course').title, 'אותו מחזור קורס!');
+  // Older profiles kept years as numbers.
+  assert.equal(cleanProfile({ name: 'x', roles: [{ t: 'לוחם', from: 2022, to: 2023 }] }).roles[0].to, '2023');
+});

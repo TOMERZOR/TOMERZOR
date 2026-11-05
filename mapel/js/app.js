@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -92,7 +92,7 @@ function whereAll(date, time) {
     let ref = null;
     if (time) ref = x.refs.find(r => S.activeAt(r, date, time));
     const mainOn = x.main && (!time || S.activeAt(x.main, date, time)) ? x.main : null;
-    const item = { so, x, ev: mainOn, ref };
+    const item = { so, x, ev: mainOn, ref, closing: mainOn?.kind === 'site' && S.isClosing(idx, so.id, date) };
     if (ref) by.referral.push(item);
     else if (mainOn?.kind === 'site' && bySite.has(mainOn.siteId)) bySite.get(mainOn.siteId).push(item);
     else if (mainOn && by[mainOn.kind]) by[mainOn.kind].push(item);
@@ -105,6 +105,7 @@ function whereAll(date, time) {
 function personRow(item, date, extra = '') {
   const { so, x, ev, ref } = item;
   const bits = [];
+  if (item.closing) bits.push('<span class="tag closing-tag">סגירה</span>');
   if (so.platoon) bits.push(h(so.platoon));
   if (ref) bits.push(`${ltr(S.timeText(ref, date) || 'היום')}${ref.note ? ' · ' + h(ref.note) : ''}`);
   else if (ev) {
@@ -297,8 +298,9 @@ function renderBoard() {
       const tt = x.main ? S.timeText(x.main, d) : '';
       const key = so.id + '|' + d;
       const sel = ui.sel.has(key);
-      const label = [lk.label || 'ריק', tt, x.refs.length ? 'הפניה' : '', x.cons.length ? 'אילוץ' : ''].filter(Boolean).join(', ');
-      body += `<td class="${d === t ? 'is-today' : ''}${S.isWeekend(d) ? ' wknd' : ''}"><button class="cell${lk.idle ? ' idle' : ''}${sel ? ' sel' : ''}${x.main?.auto ? ' auto' : ''}" data-act="cell" data-sid="${so.id}" data-date="${d}" style="--c:${lk.color || 'transparent'}" aria-label="${h(so.name)}, ${h(S.fmtDay(d))}: ${h(label)}"${ui.select ? ` aria-pressed="${sel}"` : ''}>
+      const label = [lk.label || 'ריק', x.main?.kind === 'site' && S.isClosing(idx, so.id, d) ? 'סגירה' : '', tt, x.refs.length ? 'הפניה' : '', x.cons.length ? 'אילוץ' : ''].filter(Boolean).join(', ');
+      const closing = x.main?.kind === 'site' && S.isClosing(idx, so.id, d);
+      body += `<td class="${d === t ? 'is-today' : ''}${S.isWeekend(d) ? ' wknd' : ''}"><button class="cell${lk.idle ? ' idle' : ''}${closing ? ' closing' : ''}${sel ? ' sel' : ''}${x.main?.auto ? ' auto' : ''}" data-act="cell" data-sid="${so.id}" data-date="${d}" style="--c:${lk.color || 'transparent'}" aria-label="${h(so.name)}, ${h(S.fmtDay(d))}: ${h(label)}"${ui.select ? ` aria-pressed="${sel}"` : ''}>
         <span class="cell-label">${h(lk.label)}</span>
         ${tt ? `<span class="cell-time" dir="ltr">${h(tt)}</span>` : ''}
         ${x.refs.length ? `<span class="cell-ref" dir="ltr">${icon('pin', 'xs')}${h(x.refs[0].start || '')}</span>` : ''}
@@ -334,7 +336,7 @@ function legend() {
     ...s.sites.map(x => [x.name, x.color]),
     ...['home', 'gimel', 'referral', 'leave', 'course', 'constraint'].map(k => [S.KINDS[k].label, S.KINDS[k].color]),
   ];
-  return `<div class="legend">${items.map(([l, c]) => `<span><i style="--c:${c}"></i>${h(l)}</span>`).join('')}<span><i class="auto-i"></i>שובץ אוטומטית</span></div>`;
+  return `<div class="legend"><span class="legend-closing"><i class="closing-i"></i>סגירה (חמישי עד ראשון)</span>${items.map(([l, c]) => `<span><i style="--c:${c}"></i>${h(l)}</span>`).join('')}<span><i class="auto-i"></i>שובץ אוטומטית</span></div>`;
 }
 
 function segmented(name, options, value) {
@@ -674,7 +676,8 @@ function soldierSheet(sid) {
         <div class="strip" role="list">${ds.map(d => {
           const x = S.dayOf(idx, sid, d);
           const lk = S.look(s, x.main);
-          return `<button class="strip-day${d === t ? ' is-today' : ''}${lk.idle ? ' idle' : ''}" role="listitem" data-act="day" data-date="${d}" style="--c:${lk.color || 'transparent'}" aria-label="${h(S.fmtDay(d))}: ${h(lk.label || 'ריק')}">
+          const closing = x.main?.kind === 'site' && S.isClosing(idx, sid, d);
+          return `<button class="strip-day${d === t ? ' is-today' : ''}${lk.idle ? ' idle' : ''}${closing ? ' closing' : ''}" role="listitem" data-act="day" data-date="${d}" style="--c:${lk.color || 'transparent'}" aria-label="${h(S.fmtDay(d))}: ${h(lk.label || 'ריק')}">
             <small>${S.WEEKDAYS[S.wd(d)]} ${S.fmtShort(d)}</small><b>${h(lk.label || '—')}</b>
             ${x.refs.length ? `<i class="strip-ref" style="--c:${S.KINDS.referral.color}"></i>` : ''}${x.cons.length ? `<i class="strip-con" style="--c:${S.KINDS.constraint.color}"></i>` : ''}
           </button>`;

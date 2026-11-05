@@ -3,7 +3,7 @@
 import { buildXlsx, colName } from './xlsx.js';
 import {
   KINDS, index, dayOf, look, timeText, periodDates, sortedSoldiers, siteRoster, needOn, tally,
-  fmtDay, fmtShort, kindLabel, isWeekend, today,
+  fmtDay, fmtShort, kindLabel, isWeekend, today, isClosing,
 } from './store.js';
 
 const mix = (hex, other, t) => {
@@ -29,7 +29,7 @@ const S = {
   totalName: { bold: true, fill: '#f2f2f7', h: 'right', border: true },
 };
 
-function cellFor(st, x, date) {
+function cellFor(st, x, date, closing = false) {
   const lk = look(st, x.main);
   const lines = [];
   if (lk.label) lines.push(lk.label);
@@ -38,7 +38,10 @@ function cellFor(st, x, date) {
   for (const r of x.refs) lines.push(`הפניה${timeText(r, date) ? ' ' + timeText(r, date) : ''}${r.note ? ' · ' + r.note : ''}`);
   for (const c of x.cons) lines.push(`אילוץ${c.note ? ': ' + c.note : ''}`);
   const color = x.main ? lk.color : x.refs.length ? KINDS.referral.color : null;
-  const s = color
+  // closing (a weekend at a site) is dark with white text, so it stands out from weekday presence
+  const s = closing
+    ? { h: 'center', border: true, wrap: true, fill: '#2c2c2e', color: '#ffffff', bold: true }
+    : color
     ? { h: 'center', border: true, wrap: true, fill: tint(color), color: ink(color), bold: !!x.main }
     : { ...S.empty, wrap: true, fill: lk.label ? '#f2f2f7' : undefined, color: '#6c6c70' };
   // rows don't grow by themselves in Excel, so count the wrapped lines (about 13 characters fit a day column)
@@ -54,7 +57,7 @@ function boardSheet(st, idx, ds) {
   const merges = [];
   const width = fixed.length + ds.length;
   rows.push({ height: 26, cells: [{ v: `${st.unit || 'היחידה'} · לוח נוכחות`, s: S.title }] });
-  rows.push({ cells: [{ v: `${fmtShort(ds[0])}–${fmtShort(ds[ds.length - 1])} · הופק ב־${fmtShort(t)}`, s: S.sub }] });
+  rows.push({ cells: [{ v: `${fmtShort(ds[0])}–${fmtShort(ds[ds.length - 1])} · הופק ב־${fmtShort(t)} · תא כהה = סגירה בסופ״ש`, s: S.sub }] });
   merges.push(`A1:${colName(width - 1)}1`, `A2:${colName(width - 1)}2`);
   rows.push({ height: 32, cells: [...fixed.map(v => ({ v, s: S.head })),
     ...ds.map(d => ({ v: fmtDay(d), s: d === t ? S.headToday : isWeekend(d) ? S.headWknd : S.head }))] });
@@ -70,7 +73,8 @@ function boardSheet(st, idx, ds) {
     }
     let maxLines = 1;
     const dayCells = ds.map(d => {
-      const c = cellFor(st, dayOf(idx, so.id, d), d);
+      const x = dayOf(idx, so.id, d);
+      const c = cellFor(st, x, d, x.main?.kind === 'site' && isClosing(idx, so.id, d));
       maxLines = Math.max(maxLines, c.lines);
       return c.cell;
     });

@@ -51,6 +51,8 @@
   --today: rgba(0, 122, 255, 0.07);
   --sheet-bg: #f2f2f7;
   --sheet-card: #ffffff;
+  --closing-bg: #1c1c1e;
+  --closing-ink: #ffffff;
   --ink-mix: black;
   --ink-amt: 42%;
   --tint-amt: 15%;
@@ -86,6 +88,8 @@
     --today: rgba(10, 132, 255, 0.14);
     --sheet-bg: #1c1c1e;
     --sheet-card: #2c2c2e;
+    --closing-bg: #f2f2f7;
+    --closing-ink: #000000;
     --ink-mix: white;
     --ink-amt: 38%;
     --tint-amt: 24%;
@@ -408,6 +412,15 @@ label.row { cursor: pointer; }
 .cell:active { transform: scale(0.93); }
 .cell.idle { background: transparent; color: var(--label-3); font-weight: 500; }
 .cell.auto { background-image: repeating-linear-gradient(135deg, transparent 0 7px, color-mix(in srgb, var(--c) 9%, transparent) 7px 9px); }
+/* closing: a weekend at a site. Dark (light in dark mode) with the site's color as a dot */
+.cell.closing { background: var(--closing-bg); color: var(--closing-ink); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+.cell.closing::before { content: ""; position: absolute; top: 6px; inset-inline-start: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.cell.closing.auto { background-image: repeating-linear-gradient(135deg, transparent 0 7px, rgba(128, 128, 128, 0.22) 7px 9px); }
+.cell.closing.sel { box-shadow: 0 0 0 2.5px var(--accent); }
+.strip-day.closing { background: var(--closing-bg); color: var(--closing-ink); }
+.tag.closing-tag { --c: #1c1c1e; background: var(--closing-bg); color: var(--closing-ink); }
+.legend i.closing-i { background: var(--closing-bg); box-shadow: inset 0 0 0 1px var(--sep); }
+.legend-closing { font-weight: 700; color: var(--label); }
 .cell-label { max-width: 92%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .cell-time { font-size: 11px; font-weight: 600; opacity: 0.85; }
 .cell-ref {

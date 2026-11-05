@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -336,7 +336,7 @@ function legend() {
     ...s.sites.map(x => [x.name, x.color]),
     ...['home', 'gimel', 'referral', 'leave', 'course', 'constraint'].map(k => [S.KINDS[k].label, S.KINDS[k].color]),
   ];
-  return `<div class="legend"><span class="legend-closing"><i class="closing-i"></i>סגירה (חמישי עד ראשון)</span>${items.map(([l, c]) => `<span><i style="--c:${c}"></i>${h(l)}</span>`).join('')}<span><i class="auto-i"></i>שובץ אוטומטית</span></div>`;
+  return `<div class="legend"><span class="legend-closing"><i class="closing-i"></i>סגירה (חמישי עד שבת)</span>${items.map(([l, c]) => `<span><i style="--c:${c}"></i>${h(l)}</span>`).join('')}<span><i class="auto-i"></i>שובץ אוטומטית</span></div>`;
 }
 
 function segmented(name, options, value) {

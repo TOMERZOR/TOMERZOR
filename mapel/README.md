@@ -1,6 +1,6 @@
 # מפל for you
 
-A company commander's attendance board (מ״פ): where every soldier is on every day of the coming weeks, who is present at which site (נוכחות; over a weekend, Thursday to Sunday, it's a closing, סגירה), gimels, medical referrals, leave and constraints, and the whole board as an Excel file. Hebrew, Apple-style, light and dark, installable on the phone's home screen (PWA). Static site, no build step, works offline.
+A company commander's attendance board (מ״פ): where every soldier is on every day of the coming weeks, who is present at which site (נוכחות; over a weekend, Thursday to Saturday, it's a closing, סגירה), gimels, medical referrals, leave and constraints, and the whole board as an Excel file. Hebrew, Apple-style, light and dark, installable on the phone's home screen (PWA). Static site, no build step, works offline.
 
 Live: https://mapel.moffy-app.workers.dev (every push to the branch `claude/mapel-for-you-app-5tqv5y` deploys it, by `.github/workflows/mapel-site.yml`; no merge needed). After a merge it is also at https://tomerzor.github.io/TOMERZOR/mapel/
 

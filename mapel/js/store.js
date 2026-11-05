@@ -331,8 +331,8 @@ export function problems(st) {
   return out;
 }
 
-// Presence (נוכחות) is being at a site. Over a weekend, Thursday to Sunday, it's a closing (סגירה):
-// Friday and Saturday always, Thursday when it goes on into Friday, Sunday when it comes from Saturday.
+// Presence (נוכחות) is being at a site. Over a weekend, Thursday to Saturday, it's a closing (סגירה):
+// Friday and Saturday always, and Thursday when it goes on into Friday. Sunday is never a closing.
 export function atSite(idx, sid, date) {
   const m = dayOf(idx, sid, date).main;
   return m?.kind === 'site' ? m : null;
@@ -342,7 +342,6 @@ export function isClosing(idx, sid, date) {
   const w = wd(date);
   if (w === 5 || w === 6) return true;
   if (w === 4) return !!atSite(idx, sid, addDays(date, 1));
-  if (w === 0) return !!atSite(idx, sid, addDays(date, -1));
   return false;
 }
 export const presenceWord = (idx, sid, date) => (isClosing(idx, sid, date) ? 'סגירה' : 'נוכחות');

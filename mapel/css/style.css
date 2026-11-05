@@ -655,6 +655,9 @@ html.selecting .cell:not(.sel) { opacity: 0.75; }
 .explain-ic { width: 44px; height: 44px; border-radius: 14px; flex: none; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #5856d6, #007aff); }
 .foot-note { text-align: center; color: var(--label-2); font-size: 13px; margin: 24px 0 8px; }
 
+.export-opt { min-height: 76px; }
+.row-sub.wrap { white-space: normal; }
+
 /* paste a list */
 .paste-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .paste-acts .btn { min-height: 52px; font-size: 16px; padding: 0 12px; }

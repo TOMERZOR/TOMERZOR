@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -1062,18 +1062,45 @@ function download(blob, name) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
 }
 
-async function exportXlsx() {
+const isPhone = () => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// Excel reads a sheet's right-to-left setting; the iPhone preview and WhatsApp ignore it. So there
+// are two versions, and the one for the device you're on is first.
+function exportXlsx() {
   const s = st();
   if (!s.soldiers.length) return toast('אין עדיין חיילים לייצא');
-  const name = fileName(s);
-  const blob = new Blob([workbook(s)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const file = new File([blob], name, { type: blob.type });
-  const touch = matchMedia('(pointer: coarse)').matches;
-  if (touch && navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: name }); return; } catch (e) { if (e.name === 'AbortError') return; }
-  }
-  download(blob, name);
-  toast('קובץ האקסל ירד', { icon: icon('check') });
+  const phone = isPhone();
+  const opt = (forPhone, title, sub, ic) => `
+    <button class="row export-opt${forPhone === phone ? ' rec' : ''}" data-act="go" data-phone="${forPhone ? 1 : ''}">
+      <span class="row-ic" style="--c:${forPhone ? '#007aff' : '#248a3d'}">${icon(ic)}</span>
+      <span class="row-main"><span class="row-title">${title}${forPhone === phone ? ' <span class="badge">מומלץ כאן</span>' : ''}</span><span class="row-sub wrap">${sub}</span></span>
+      ${icon('chevron', 'row-chev')}
+    </button>`;
+  const choices = [
+    opt(false, 'לפתיחה במחשב', 'גיליון Excel מימין לשמאל, עם עמודת השמות קבועה בגלילה', 'table'),
+    opt(true, 'לפתיחה בטלפון', 'לשליחה בוואטסאפ ולתצוגה באייפון. מימין לשמאל גם שם', 'phone'),
+  ];
+  if (phone) choices.reverse();
+  openSheet({
+    title: 'ייצוא לאקסל',
+    sub: periodText().replace(/[⁦-⁩]/g, ''),
+    render: () => `<div class="card list">${choices.join('')}</div>`,
+    on: {
+      go: async (el, ev, sh) => {
+        const forPhone = !!el.dataset.phone;
+        const name = fileName(st(), { forPhone });
+        const blob = new Blob([workbook(st(), { forPhone })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const file = new File([blob], name, { type: blob.type });
+        if (phone && navigator.canShare?.({ files: [file] })) {
+          try { await navigator.share({ files: [file], title: name }); sh.close(); return; } catch (e) { if (e.name === 'AbortError') return; }
+        }
+        download(blob, name);
+        sh.close();
+        toast('קובץ האקסל ירד', { icon: icon('check') });
+      },
+    },
+  });
 }
 
 function backup() {

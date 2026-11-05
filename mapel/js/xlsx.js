@@ -114,9 +114,9 @@ const safeName = (n, used) => {
   return s;
 };
 
-// Right-to-left that works in every viewer. Excel and Google Sheets read the sheet's rightToLeft
-// flag, but the iPhone preview (Quick Look), Numbers and others ignore it and show the first column
-// on the left. So the columns are written in reverse instead (the first column ends up last, on the
+// Right-to-left for phones. Excel and Google Sheets read the sheet's rightToLeft flag, but the
+// iPhone preview (Quick Look), Numbers and others ignore it and show the first column on the
+// left. So for phones the columns are written in reverse instead (the first column ends up last, on the
 // right) and the sheet itself stays left-to-right: it reads right to left everywhere. Frozen columns
 // can only be on the left, so only the header rows stay frozen, and the sheet opens scrolled to its
 // right end, where the names are.
@@ -148,16 +148,17 @@ function mirror(sh) {
     return `${colName(left)}${a.r}:${colName(right)}${b.r}`;
   });
   let left = width, sum = 0;
-  while (left > 0 && sum + cols[left - 1] <= 160) sum += cols[--left];
+  while (left > 0 && sum + cols[left - 1] <= 110) sum += cols[--left];
   return { ...sh, rtl: false, rows, cols, merges, freeze: sh.freeze?.rows ? { rows: sh.freeze.rows } : null, scrollTo: left };
 }
 
-export function buildXlsx(sheets) {
+// opts.mirror: write right-to-left sheets mirrored (for phones), instead of as Excel RTL sheets
+export function buildXlsx(sheets, { mirror: mirrored = false } = {}) {
   const styles = styleBook();
   const used = new Set();
   const names = sheets.map(s => safeName(s.name, used));
   const files = [];
-  sheets.forEach((sh, i) => files.push([`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh.rtl ? mirror(sh) : sh, styles)]));
+  sheets.forEach((sh, i) => files.push([`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh.rtl && mirrored ? mirror(sh) : sh, styles)]));
   files.unshift(
     ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +

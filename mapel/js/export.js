@@ -174,14 +174,16 @@ function eventsSheet(st, ds) {
   return { name: 'הפניות ואילוצים', rtl: true, cols: [18, 12, 12, 12, 9, 9, 36], rows, freeze: { rows: 3, cols: 1 } };
 }
 
-export function workbook(st) {
+// forPhone: mirrored columns, so it reads right to left in the iPhone preview, WhatsApp and Numbers
+// (and still visually on a computer). Otherwise a real Excel right-to-left sheet with the names frozen.
+export function workbook(st, { forPhone = false } = {}) {
   const idx = index(st);
   const ds = periodDates(st);
-  return buildXlsx([boardSheet(st, idx, ds), sitesSheet(st, idx, ds), soldiersSheet(st, idx), eventsSheet(st, ds)]);
+  return buildXlsx([boardSheet(st, idx, ds), sitesSheet(st, idx, ds), soldiersSheet(st, idx), eventsSheet(st, ds)], { mirror: forPhone });
 }
 
-export function fileName(st) {
+export function fileName(st, { forPhone = false } = {}) {
   const ds = periodDates(st);
   // Latin only: some browsers drop a Hebrew download name and save the file as "download"
-  return `mapel-for-you ${fmtShort(ds[0])}-${fmtShort(ds[ds.length - 1])}.xlsx`;
+  return `mapel-for-you ${fmtShort(ds[0])}-${fmtShort(ds[ds.length - 1])}${forPhone ? '' : ' Excel'}.xlsx`;
 }

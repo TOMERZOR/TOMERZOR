@@ -58,16 +58,27 @@ function blank() {
     unassigned: 'home',          // a day with nothing on it: 'home' (shown as בבית) or 'blank'
     rules: { maxStreak: 7, minRest: 3 },
     sites: [],
+    platoons: [],                // the פלגות, in the order the commander made them
     soldiers: [],
     events: [],
     onboarded: false,
   };
 }
 
+// Older data had no list of פלגות, only the name on each soldier: make the list from those.
+function withPlatoons(st) {
+  if (!Array.isArray(st.platoons)) st.platoons = [];
+  for (const so of st.soldiers || []) {
+    const p = (so.platoon || '').trim();
+    if (p && !st.platoons.includes(p)) st.platoons.push(p);
+  }
+  return st;
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...blank(), ...JSON.parse(raw) };
+    if (raw) return withPlatoons({ ...blank(), ...JSON.parse(raw) });
   } catch {}
   return blank();
 }
@@ -101,7 +112,7 @@ export function undo() {
   return true;
 }
 export function replaceAll(next) {
-  state = { ...blank(), ...next, onboarded: true };
+  state = withPlatoons({ ...blank(), ...next, onboarded: true });
   save();
   emit();
 }
@@ -119,10 +130,28 @@ export const periodDates = st => dates(st.start, st.days);
 export const needOn = (site, date) =>
   (isWeekend(date) && site.weekendNeed != null && site.weekendNeed !== '' ? +site.weekendNeed : +site.need) || 0;
 
+export const platoonList = st => [...(st.platoons || [])];
+
+// By פלגה (in the order they were made, no פלגה last), then by name.
 export function sortedSoldiers(st) {
-  return [...st.soldiers].sort((a, b) =>
-    (a.platoon || 'תתת').localeCompare(b.platoon || 'תתת', 'he', { numeric: true }) ||
-    a.name.localeCompare(b.name, 'he'));
+  const order = new Map(platoonList(st).map((p, i) => [p, i]));
+  const rank = so => (so.platoon && order.has(so.platoon) ? order.get(so.platoon) : 1e6);
+  return [...st.soldiers].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'he'));
+}
+
+export function addPlatoon(st, name) {
+  const n = name.trim();
+  if (n && !st.platoons.includes(n)) st.platoons.push(n);
+  return n;
+}
+export function renamePlatoon(st, from, to) {
+  const n = to.trim();
+  st.platoons = st.platoons.map(p => (p === from ? n : p)).filter((p, i, a) => a.indexOf(p) === i);
+  for (const so of st.soldiers) if (so.platoon === from) so.platoon = n;
+}
+export function removePlatoon(st, name) {
+  st.platoons = st.platoons.filter(p => p !== name);
+  for (const so of st.soldiers) if (so.platoon === name) so.platoon = '';
 }
 
 export function index(st) {

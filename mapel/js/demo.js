@@ -23,6 +23,7 @@ export function demoState() {
     unassigned: 'home',
     rules: { maxStreak: 7, minRest: 3 },
     onboarded: true,
+    platoons: ['פלגה 1', 'פלגה 2', 'פלגה 3'],
     sites: [
       { id: uid(), name: 'מוצב צפוני', color: SITE_COLORS[0], need: 4, weekendNeed: 3, start: '', end: '' },
       { id: uid(), name: 'ש.ג ראשי', color: SITE_COLORS[1], need: 2, weekendNeed: '', start: '', end: '' },

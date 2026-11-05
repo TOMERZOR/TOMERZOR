@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -237,8 +237,53 @@ function pickTimeSheet() {
 
 /* ---------- View: board ---------- */
 
-function platoons() {
-  return [...new Set(st().soldiers.map(s => s.platoon || ''))].filter(Boolean).sort((a, b) => a.localeCompare(b, 'he', { numeric: true }));
+const platoons = () => S.platoonList(st());
+
+// Chips to pick a פלגה from the ones already made, or make a new one
+function platoonPicker(value, act) {
+  const pls = platoons();
+  return `<div class="chips-wrap">${[...pls.map(p => [p, p]), ['', 'ללא פלגה']].map(([v, l]) =>
+    `<button class="chip${value === v ? ' on' : ''}" data-act="${act}" data-v="${h(v)}" aria-pressed="${value === v}">${h(l)}</button>`).join('')}
+    <button class="chip add" data-act="newPlatoon">${icon('plus', 'sm')}<span>פלגה חדשה</span></button></div>`;
+}
+
+// Create a פלגה (name is empty) or rename / delete one. onDone(name) after creating.
+function platoonForm(name = '', onDone) {
+  const f = { name };
+  const count = () => st().soldiers.filter(x => x.platoon === name).length;
+  openSheet({
+    title: name ? 'עריכת פלגה' : 'פלגה חדשה',
+    done: { label: name ? 'שמירה' : 'יצירה', act: 'save' },
+    render: () => `
+      <div class="card form"><label class="field"><span>שם</span><input type="text" data-field="name" value="${h(f.name)}" placeholder="למשל: פלגה 1" autocomplete="off" enterkeyhint="done"></label></div>
+      ${name ? `<p class="field-note">${count() ? `${count()} חיילים בפלגה` : 'אין עדיין חיילים בפלגה'}</p>
+        <div class="sheet-actions">
+          <button class="btn" data-act="addHere">${icon('plus')}<span>הוספת חיילים לפלגה</span></button>
+          <button class="btn danger-soft" data-act="del">${icon('trash')}<span>מחיקת הפלגה</span></button>
+        </div>` : ''}`,
+    on: {
+      save: (el, ev, sh) => {
+        const n = f.name.trim();
+        if (!n) { toast('צריך שם לפלגה'); return; }
+        if (n !== name && platoons().includes(n)) { toast('יש כבר פלגה בשם הזה'); return; }
+        if (name) S.commit(s => S.renamePlatoon(s, name, n));
+        else S.commit(s => { S.addPlatoon(s, n); });
+        sh.close();
+        toast(name ? 'נשמר' : `${n} נוצרה`);
+        onDone?.(n);
+      },
+      addHere: (el, ev, sh) => { sh.close(); soldierForm(null, { platoon: name }); },
+      del: async (el, ev, sh) => {
+        const n = count();
+        if (!await confirmDialog({ title: `למחוק את ${name}?`, message: n ? `${n} החיילים שבה יישארו, בלי פלגה` : '', ok: 'מחיקה', danger: true })) return;
+        S.commit(s => S.removePlatoon(s, name), { undoable: true });
+        sh.close();
+        toast('הפלגה נמחקה', undoAction());
+      },
+    },
+    field: el => { f.name = el.value; },
+    mounted: sh => { if (!name) setTimeout(() => sh.body.querySelector('input')?.focus({ preventScroll: true }), 380); },
+  });
 }
 
 function boardSoldiers() {
@@ -266,7 +311,7 @@ function renderBoard() {
     ${segmented('days', [[7, 'שבוע'], [14, 'שבועיים'], [28, 'חודש']], s.days)}
   </div>`;
 
-  const pls = platoons();
+  const pls = platoons().filter(p => s.soldiers.some(x => x.platoon === p));
   if (pls.length > 1) {
     html += `<div class="chips-scroll">${[['', 'כולם'], ...pls.map(p => [p, p])].map(([v, l]) =>
       `<button class="chip${ui.platoon === v ? ' on' : ''}" data-act="platoon" data-v="${h(v)}">${h(l)}</button>`).join('')}</div>`;
@@ -412,12 +457,15 @@ function renderSoldiers() {
   const t = S.today();
   const pls = platoons();
   let html = header('חיילים', `${s.soldiers.length} חיילים${pls.length ? ` · ${pls.length} פלגות` : ''}`, `<button class="icon-btn" data-act="addSoldier" aria-label="הוספת חיילים">${icon('plus')}</button>`);
-  if (!s.soldiers.length) {
-    html += empty('people', 'אין עדיין חיילים', 'אחד אחד, או רשימה מוואטסאפ',
+  html += `<div class="chips-scroll pl-row" aria-label="פלגות">${pls.map(p =>
+    `<button class="chip" data-act="editPlatoon" data-v="${h(p)}">${h(p)}<span class="chip-count">${s.soldiers.filter(x => x.platoon === p).length}</span></button>`).join('')}
+    <button class="chip add" data-act="newPlatoon">${icon('plus', 'sm')}<span>פלגה חדשה</span></button></div>`;
+  if (!s.soldiers.length && !pls.length) {
+    html += empty('people', 'אין עדיין חיילים', 'יוצרים פלגה, ואז מוסיפים אליה חיילים',
       '<button class="btn primary" data-act="pasteList">הדבקת רשימה מוואטסאפ</button><button class="btn" data-act="addSoldier">חייל אחד</button>');
     return html;
   }
-  html += `<label class="search">${icon('search')}<input type="search" placeholder="חיפוש לפי שם או מ.א." value="${h(ui.q)}" data-search aria-label="חיפוש"></label>`;
+  if (s.soldiers.length) html += `<label class="search">${icon('search')}<input type="search" placeholder="חיפוש לפי שם או מ.א." value="${h(ui.q)}" data-search aria-label="חיפוש"></label>`;
   html += `<div id="soldier-list">${soldierList(idx, t)}</div>`;
   return html;
 }
@@ -426,25 +474,28 @@ function soldierList(idx, t) {
   const s = st();
   const q = ui.q.trim();
   const list = S.sortedSoldiers(s).filter(so => !q || [so.name, so.pn, so.platoon].some(v => (v || '').includes(q)));
-  if (!list.length) return `<p class="list-empty big">אין תוצאות ל״${h(q)}״</p>`;
-  let html = '', group = null, open = false, i = 0;
-  for (const so of list) {
-    const g = so.platoon || 'ללא פלגה';
-    if (g !== group) {
-      if (open) html += '</div>';
-      group = g;
-      html += `<h2 class="group-title plain">${h(g)}<span class="count">${list.filter(x => (x.platoon || 'ללא פלגה') === g).length}</span></h2><div class="card list">`;
-      open = true;
-    }
-    const x = S.dayOf(idx, so.id, t);
-    const lk = S.look(s, x.main);
-    html += `<button class="row" data-act="who" data-sid="${so.id}" style="--i:${Math.min(i++, 14)}">
-      ${avatar(so)}
-      <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.pn && `מ.א. ${so.pn}`, so.phone].filter(Boolean).map(h).join(' · ')}</span></span>
-      ${pill(lk)}${icon('chevron', 'row-chev')}
-    </button>`;
+  if (!list.length && q) return `<p class="list-empty big">אין תוצאות ל״${h(q)}״</p>`;
+  // every פלגה gets a group (also an empty one, when not searching), with a row to add to it
+  const groups = [...(q ? [] : platoons()), ''].map(p => [p, list.filter(x => (x.platoon || '') === p)])
+    .filter(([p, l]) => l.length || (!q && p));
+  if (q) for (const so of list) if (so.platoon && !groups.some(([p]) => p === so.platoon)) groups.push([so.platoon, list.filter(x => x.platoon === so.platoon)]);
+  let html = '', i = 0;
+  for (const [p, members] of groups) {
+    html += `<h2 class="group-title plain">${p ? `<button class="group-edit" data-act="editPlatoon" data-v="${h(p)}">${h(p)}</button>` : 'ללא פלגה'}<span class="count">${members.length}</span></h2><div class="card list">`;
+    html += members.map(so => soldierRow(so, idx, t, i++)).join('');
+    if (p && !q) html += `<button class="row add" data-act="addTo" data-v="${h(p)}"><span class="row-ic plain">${icon('plus')}</span><span class="row-main"><span class="row-title accent">הוספה ל${h(p)}</span></span></button>`;
+    html += '</div>';
   }
-  return html + (open ? '</div>' : '');
+  return html;
+}
+
+function soldierRow(so, idx, t, i) {
+  const lk = S.look(st(), S.dayOf(idx, so.id, t).main);
+  return `<button class="row" data-act="who" data-sid="${so.id}" style="--i:${Math.min(i, 14)}">
+    ${avatar(so)}
+    <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.pn && `מ.א. ${so.pn}`, so.phone].filter(Boolean).map(h).join(' · ')}</span></span>
+    ${pill(lk)}${icon('chevron', 'row-chev')}
+  </button>`;
 }
 
 /* ---------- Sheets: a soldier's day ---------- */
@@ -715,14 +766,13 @@ function soldierSheet(sid) {
 
 const PASTE_HINT = 'מעתיקים בוואטסאפ את ההודעה עם השמות ומדביקים כאן';
 
-function soldierForm(sid, { list = false } = {}) {
+function soldierForm(sid, { list = false, platoon } = {}) {
   const s0 = st();
   const so = sid ? S.soldierById(s0, sid) : null;
   const f = so ? { name: so.name, pn: so.pn || '', platoon: so.platoon || '', phone: so.phone || '', note: so.note || '' }
-    : { name: '', pn: '', platoon: ui.platoon || '', phone: '', note: '' };
+    : { name: '', pn: '', platoon: platoon ?? ui.platoon ?? '', phone: '', note: '' };
+  if (!so && f.platoon && !platoons().includes(f.platoon)) f.platoon = '';
   const bulk = { on: list && !so, text: '', platoon: f.platoon, skip: new Set() };
-  const pls = platoons();
-  const dl = `<datalist id="pl-list">${pls.map(p => `<option value="${h(p)}">`).join('')}</datalist>`;
   const existing = () => new Set(st().soldiers.map(x => x.name.replace(/\s+/g, ' ').trim()));
   const parsed = () => {
     const have = existing();
@@ -756,20 +806,21 @@ function soldierForm(sid, { list = false } = {}) {
           <label class="btn">${icon('people')}<span>איש קשר או קובץ</span><input type="file" accept=".vcf,.txt,text/vcard,text/plain" data-field="bfile" hidden></label>
         </div>
         <div class="card form"><label class="field full"><textarea data-field="btext" rows="6" placeholder="1. משה כהן 052-1234567&#10;2. דוד לוי&#10;…" aria-label="רשימת חיילים">${h(bulk.text)}</textarea></label></div>
-        <div class="card form">
-          <label class="field"><span>פלגה</span><input type="text" data-field="bplatoon" list="pl-list" value="${h(bulk.platoon)}" placeholder="לכולם, לא חובה"></label>
-        </div>
+        <h3 class="sub-title">לאיזו פלגה</h3>
+        ${platoonPicker(bulk.platoon, 'pickPl')}
         <div id="bulk-preview">${preview()}</div>` : `
         <div class="card form">
           <label class="field"><span>שם מלא</span><input type="text" data-field="name" value="${h(f.name)}" autocomplete="off" placeholder="חובה"></label>
           <label class="field"><span>מ.א.</span><input type="text" inputmode="numeric" data-field="pn" value="${h(f.pn)}" autocomplete="off"></label>
-          <label class="field"><span>פלגה</span><input type="text" data-field="platoon" list="pl-list" value="${h(f.platoon)}" placeholder="למשל: פלגה 1" autocomplete="off"></label>
           <label class="field"><span>טלפון</span><input type="tel" data-field="phone" value="${h(f.phone)}" dir="ltr" autocomplete="off"></label>
         </div>
-        <div class="card form"><label class="field full"><textarea data-field="note" rows="3" placeholder="הערות" aria-label="הערות">${h(f.note)}</textarea></label></div>`}
-      ${dl}`,
+        <h3 class="sub-title">פלגה</h3>
+        ${platoonPicker(f.platoon, 'pickPl')}
+        <div class="card form" style="margin-top:12px"><label class="field full"><textarea data-field="note" rows="3" placeholder="הערות" aria-label="הערות">${h(f.note)}</textarea></label></div>`}`,
     on: {
       seg: (el, ev, sh) => { bulk.on = el.dataset.v === 'list'; sh.update(); },
+      pickPl: (el, ev, sh) => { if (bulk.on) bulk.platoon = el.dataset.v; else f.platoon = el.dataset.v; sh.update(); },
+      newPlatoon: (el, ev, sh) => platoonForm('', n => { if (bulk.on) bulk.platoon = n; else f.platoon = n; sh.update(); }),
       paste: async (el, ev, sh) => {
         try {
           const t = await navigator.clipboard.readText();
@@ -808,7 +859,6 @@ function soldierForm(sid, { list = false } = {}) {
     field: async (el, ev, sh) => {
       const k = el.dataset.field;
       if (k === 'btext') { bulk.text = el.value; paintPreview(sh); return; }
-      if (k === 'bplatoon') { bulk.platoon = el.value; return; }
       if (k === 'bfile') {
         const files = [...(el.files || [])];
         if (!files.length || ev.type !== 'change') return;
@@ -1296,6 +1346,9 @@ bind(view, {
     auto: () => autoSheet(),
     addSoldier: () => soldierForm(),
     pasteList: () => soldierForm(null, { list: true }),
+    newPlatoon: () => platoonForm(),
+    editPlatoon: el => platoonForm(el.dataset.v),
+    addTo: el => soldierForm(null, { platoon: el.dataset.v }),
   },
 });
 

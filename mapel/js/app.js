@@ -1084,7 +1084,7 @@ function exportXlsx() {
   if (phone) choices.reverse();
   openSheet({
     title: 'ייצוא לאקסל',
-    sub: periodText().replace(/[⁦-⁩]/g, ''),
+    sub: periodText(),
     render: () => `<div class="card list">${choices.join('')}</div>`,
     on: {
       go: async (el, ev, sh) => {

@@ -74,7 +74,7 @@ function sheetXml(sh, styles) {
   let pane = '';
   if (fr.rows || fr.cols) {
     const active = fr.rows && fr.cols ? 'bottomRight' : fr.rows ? 'bottomLeft' : 'topRight';
-    pane = `<pane${fr.cols ? ` xSplit="${fr.cols}"` : ''}${fr.rows ? ` ySplit="${fr.rows}"` : ''} topLeftCell="${colName(fr.cols || 0)}${(fr.rows || 0) + 1}" activePane="${active}" state="frozen"/>` +
+    pane = `<pane${fr.cols ? ` xSplit="${fr.cols}"` : ''}${fr.rows ? ` ySplit="${fr.rows}"` : ''} topLeftCell="${colName(Math.max(fr.cols || 0, sh.scrollTo || 0))}${(fr.rows || 0) + 1}" activePane="${active}" state="frozen"/>` +
       `<selection pane="${active}"/>`;
   }
   const cols = (sh.cols || []).map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('');
@@ -96,7 +96,7 @@ function sheetXml(sh, styles) {
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>' +
-    `<sheetViews><sheetView${sh.rtl ? ' rightToLeft="1"' : ''} workbookViewId="0">${pane}</sheetView></sheetViews>` +
+    `<sheetViews><sheetView${sh.rtl ? ' rightToLeft="1"' : ''}${sh.scrollTo ? ` topLeftCell="${colName(sh.scrollTo)}1"` : ''} workbookViewId="0">${pane}</sheetView></sheetViews>` +
     '<sheetFormatPr defaultRowHeight="15"/>' +
     (cols ? `<cols>${cols}</cols>` : '') +
     `<sheetData>${rows}</sheetData>` +
@@ -114,12 +114,50 @@ const safeName = (n, used) => {
   return s;
 };
 
+// Right-to-left that works in every viewer. Excel and Google Sheets read the sheet's rightToLeft
+// flag, but the iPhone preview (Quick Look), Numbers and others ignore it and show the first column
+// on the left. So the columns are written in reverse instead (the first column ends up last, on the
+// right) and the sheet itself stays left-to-right: it reads right to left everywhere. Frozen columns
+// can only be on the left, so only the header rows stay frozen, and the sheet opens scrolled to its
+// right end, where the names are.
+const parseRef = ref => {
+  const m = /^([A-Z]+)(\d+)$/.exec(ref);
+  let c = 0;
+  for (const ch of m[1]) c = c * 26 + ch.charCodeAt(0) - 64;
+  return { c: c - 1, r: +m[2] };
+};
+function mirror(sh) {
+  const width = Math.max(sh.cols?.length || 0, ...sh.rows.map(r => (r.cells || []).length));
+  const flip = i => width - 1 - i;
+  const rows = sh.rows.map(r => {
+    const cells = Array(width).fill(null);
+    (r.cells || []).forEach((c, i) => { cells[flip(i)] = c; });
+    return { ...r, cells };
+  });
+  const cols = Array.from({ length: width }, (_, i) => (sh.cols || [])[flip(i)] ?? 10);
+  const merges = (sh.merges || []).map(m => {
+    const [a, b] = m.split(':').map(parseRef);
+    const left = flip(b.c), right = flip(a.c);
+    // a merged range shows only its top-left cell, so the content moves there
+    const cells = rows[a.r - 1].cells;
+    const c = cells[right];
+    if (c != null && left !== right) {
+      cells[left] = c;
+      cells[right] = typeof c === 'object' ? { v: '', s: c.s } : null;
+    }
+    return `${colName(left)}${a.r}:${colName(right)}${b.r}`;
+  });
+  let left = width, sum = 0;
+  while (left > 0 && sum + cols[left - 1] <= 160) sum += cols[--left];
+  return { ...sh, rtl: false, rows, cols, merges, freeze: sh.freeze?.rows ? { rows: sh.freeze.rows } : null, scrollTo: left };
+}
+
 export function buildXlsx(sheets) {
   const styles = styleBook();
   const used = new Set();
   const names = sheets.map(s => safeName(s.name, used));
   const files = [];
-  sheets.forEach((sh, i) => files.push([`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh, styles)]));
+  sheets.forEach((sh, i) => files.push([`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh.rtl ? mirror(sh) : sh, styles)]));
   files.unshift(
     ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +

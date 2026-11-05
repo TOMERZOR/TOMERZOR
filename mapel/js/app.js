@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 

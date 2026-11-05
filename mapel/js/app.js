@@ -8,7 +8,7 @@ import { workbook, fileName } from './export.js';
 import { demoState } from './demo.js';
 import { parseList } from './paste.js';
 
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.5.0';
 const view = document.getElementById('view');
 const tabbar = document.getElementById('tabbar');
 
@@ -180,10 +180,10 @@ function renderNow() {
     html += `<div class="card steps">
       <h2>מתחילים בארבעה צעדים</h2>
       <ol>
-        <li class="${s.sites.length ? 'done' : ''}"><button data-act="addSite">${icon(s.sites.length ? 'check' : 'sites')}<span><b>מוסיפים אתרים</b><small>מוצבים, ש.ג, חמ״ל, וכמה חיילים כל אחד צריך</small></span></button></li>
-        <li class="${s.soldiers.length ? 'done' : ''}"><button data-act="addSoldier">${icon(s.soldiers.length ? 'check' : 'people')}<span><b>מוסיפים את החיילים</b><small>אחד אחד, או רשימה שלמה מוואטסאפ</small></span></button></li>
-        <li><button data-act="go" data-tab="board">${icon('board')}<span><b>ממלאים אילוצים</b><small>גימלים, הפניות, חופשות, ומי לא יכול מתי</small></span></button></li>
-        <li><button data-act="go" data-tab="sites">${icon('wand')}<span><b>משבצים ומייצאים לאקסל</b><small>הלוח מתמלא לבד, ומה שמילאת ביד נשאר</small></span></button></li>
+        <li class="${s.sites.length ? 'done' : ''}"><button data-act="addSite">${icon(s.sites.length ? 'check' : 'sites')}<span><b>מוסיפים אתרים</b><small>וכמה חיילים כל אחד צריך</small></span></button></li>
+        <li class="${s.soldiers.length ? 'done' : ''}"><button data-act="addSoldier">${icon(s.soldiers.length ? 'check' : 'people')}<span><b>מוסיפים את החיילים</b><small>או מדביקים רשימה מוואטסאפ</small></span></button></li>
+        <li><button data-act="go" data-tab="board">${icon('board')}<span><b>ממלאים אילוצים</b><small>גימלים, הפניות וחופשות</small></span></button></li>
+        <li><button data-act="go" data-tab="sites">${icon('wand')}<span><b>משבצים ומייצאים לאקסל</b><small>מה שמילאת ביד נשאר</small></span></button></li>
       </ol>
       <button class="link-btn" data-act="loadDemo">או נסו עם נתונים לדוגמה</button>
     </div>`;
@@ -273,12 +273,12 @@ function renderBoard() {
   }
 
   if (!s.soldiers.length) {
-    html += empty('board', 'הלוח ריק', 'מוסיפים חיילים, והלוח מראה איפה כל אחד בכל יום.', '<button class="btn primary" data-act="addSoldier">הוספת חיילים</button>');
+    html += empty('board', 'הלוח ריק', 'מוסיפים חיילים כדי להתחיל', '<button class="btn primary" data-act="addSoldier">הוספת חיילים</button>');
     return html;
   }
 
   if (ui.select) {
-    html += `<p class="hint">${icon('select', 'sm')} מסמנים תאים, שורה (בלחיצה על שם) או עמודה (בלחיצה על יום), ואז בוחרים מה לשים בהם.</p>`;
+    html += `<p class="hint">${icon('select', 'sm')} בוחרים תאים, שם לשורה שלמה או יום לעמודה שלמה</p>`;
   }
 
   const head = `<tr><th class="corner" scope="col">חייל</th>${ds.map(d =>
@@ -336,7 +336,7 @@ function legend() {
     ...s.sites.map(x => [x.name, x.color]),
     ...['home', 'gimel', 'referral', 'leave', 'course', 'constraint'].map(k => [S.KINDS[k].label, S.KINDS[k].color]),
   ];
-  return `<div class="legend"><span class="legend-closing"><i class="closing-i"></i>סגירה (חמישי עד שבת)</span>${items.map(([l, c]) => `<span><i style="--c:${c}"></i>${h(l)}</span>`).join('')}<span><i class="auto-i"></i>שובץ אוטומטית</span></div>`;
+  return `<div class="legend"><span class="legend-closing"><i class="closing-i"></i>סגירה (חמישי עד שבת)</span>${items.map(([l, c]) => `<span><i style="--c:${c}"></i>${h(l)}</span>`).join('')}</div>`;
 }
 
 function segmented(name, options, value) {
@@ -365,7 +365,7 @@ function renderSites() {
   let html = header('אתרים', `מי נוכח איפה · ${periodText()}`, `<button class="icon-btn" data-act="addSite" aria-label="אתר חדש">${icon('plus')}</button>`);
 
   if (!s.sites.length) {
-    html += empty('sites', 'אין עדיין אתרים', 'אתר הוא מקום שחיילים נוכחים בו: מוצב, ש.ג, חמ״ל, מטבח. לכל אתר קובעים כמה חיילים הוא צריך ביום.',
+    html += empty('sites', 'אין עדיין אתרים', 'מוצב, ש.ג, חמ״ל, וכמה חיילים כל אחד צריך ביום',
       '<button class="btn primary" data-act="addSite">הוספת אתר</button>');
     return html;
   }
@@ -374,7 +374,7 @@ function renderSites() {
   const totalShort = probs.reduce((n, p) => n + p.need - p.have, 0);
   html += `<button class="auto-card" data-act="auto">
     <span class="auto-ic">${icon('wand')}</span>
-    <span class="auto-text"><b>שיבוץ אוטומטי</b><small>${totalShort ? `חסרים ${totalShort} שיבוצים בתקופה. ממלאים לפי זמינות, אילוצים ואיזון.` : 'כל האתרים מאוישים בתקופה הזו.'}</small></span>
+    <span class="auto-text"><b>שיבוץ אוטומטי</b><small>${totalShort ? `חסרים ${totalShort} שיבוצים בתקופה` : 'כל האתרים מאוישים'}</small></span>
     ${icon('chevron', 'row-chev')}
   </button>`;
 
@@ -413,7 +413,7 @@ function renderSoldiers() {
   const pls = platoons();
   let html = header('חיילים', `${s.soldiers.length} חיילים${pls.length ? ` · ${pls.length} פלגות` : ''}`, `<button class="icon-btn" data-act="addSoldier" aria-label="הוספת חיילים">${icon('plus')}</button>`);
   if (!s.soldiers.length) {
-    html += empty('people', 'אין עדיין חיילים', 'מוסיפים חייל אחד, או מדביקים רשימה שלמה מוואטסאפ.',
+    html += empty('people', 'אין עדיין חיילים', 'אחד אחד, או רשימה מוואטסאפ',
       '<button class="btn primary" data-act="pasteList">הדבקת רשימה מוואטסאפ</button><button class="btn" data-act="addSoldier">חייל אחד</button>');
     return html;
   }
@@ -469,7 +469,7 @@ function cellSheet(sid, date) {
       return `
         <div class="status-hero" style="--c:${lk.color || 'var(--label-3)'}">
           <span class="status-ic">${icon(x.main ? KIND_ICON[x.main.kind] : 'house')}</span>
-          <div><b>${h(lk.label || 'לא שובץ')}</b><small>${x.main?.kind === 'site' ? h(S.presenceWord(S.index(s), sid, date)) + ' · ' : ''}${x.main ? h(eventSpan(x.main)) : 'אין שום דבר ביום הזה'}${x.main?.auto ? ' · שובץ אוטומטית' : ''}</small></div>
+          <div><b>${h(lk.label || 'לא שובץ')}</b><small>${x.main?.kind === 'site' ? h(S.presenceWord(S.index(s), sid, date)) + ' · ' : ''}${x.main ? h(eventSpan(x.main)) : 'אין שום דבר ביום הזה'}${x.main?.auto ? ' · אוטומטי' : ''}</small></div>
         </div>
         ${evs.length ? `<div class="card list">${evs.map(e => eventRow(e)).join('')}</div>` : ''}
         <h3 class="sub-title">מה יש לו ביום הזה</h3>
@@ -531,7 +531,7 @@ function eventRow(e, i = 0) {
   const note = e.kind !== 'other' && e.note ? ` · ${h(e.note)}` : '';
   return `<button class="row" data-act="edit" data-id="${e.id}" style="--i:${i}">
     <span class="row-ic" style="--c:${color}">${icon(KIND_ICON[e.kind])}</span>
-    <span class="row-main"><span class="row-title">${h(title)}${e.auto ? ' <span class="badge">אוטומטי</span>' : ''}</span><span class="row-sub">${h(eventSpan(e))}${note}</span></span>
+    <span class="row-main"><span class="row-title">${h(title)}</span><span class="row-sub">${h(eventSpan(e))}${note}${e.auto ? ' · אוטומטי' : ''}</span></span>
     ${icon('pencil', 'row-chev')}
   </button>`;
 }
@@ -713,7 +713,7 @@ function soldierSheet(sid) {
 
 /* ---------- Sheet: add / edit soldiers ---------- */
 
-const PASTE_HINT = 'מעתיקים בוואטסאפ את ההודעה עם הרשימה (לחיצה ארוכה, העתקה) ומדביקים כאן. מספרי טלפון ומ.א. בשורה נקלטים לבד.';
+const PASTE_HINT = 'מעתיקים בוואטסאפ את ההודעה עם השמות ומדביקים כאן';
 
 function soldierForm(sid, { list = false } = {}) {
   const s0 = st();
@@ -915,7 +915,7 @@ function siteDaySheet(siteId, date) {
         <h3 class="sub-title">נוכחים כאן</h3>
         <div class="card list">${here.map(({ soldier: so, ev }) => `
           <div class="row static">${avatar(so)}
-            <span class="row-main"><span class="row-title">${h(so.name)}${ev.auto ? ' <span class="badge">אוטומטי</span>' : ''}</span><span class="row-sub">${[so.platoon, S.timeText(ev, date)].filter(Boolean).map(h).join(' · ')}</span></span>
+            <span class="row-main"><span class="row-title">${h(so.name)}</span><span class="row-sub">${[so.platoon, S.timeText(ev, date), ev.auto && 'אוטומטי'].filter(Boolean).map(h).join(' · ')}</span></span>
             <button class="icon-btn sm danger" data-act="remove" data-sid="${so.id}" aria-label="הוצאת ${h(so.name)} מהאתר">${icon('x')}</button>
           </div>`).join('') || '<p class="list-empty">אף אחד עדיין</p>'}</div>
         <h3 class="sub-title">פנויים ביום הזה</h3>
@@ -947,15 +947,14 @@ function autoSheet() {
     done: { label: 'שיבוץ', act: 'run' },
     render: () => `
       <div class="explain">
-        <span class="explain-ic">${icon('wand')}</span>
-        <p>ממלא את המקומות הפנויים בכל אתר, לפי מי שפנוי בכל יום. מי שבגימלים, בחופשה, בקורס או בבית לפי מה שהכנסת לא ישובץ, וחייל עם אילוץ ישובץ רק אם אין אף אחד אחר. <b>מה שהכנסת ביד לא משתנה.</b></p>
+        <p>ממלא את המקומות הפנויים מחיילים פנויים. חייל עם אילוץ ישובץ רק אם אין אחר. <b>מה שמילאת ביד נשאר</b></p>
       </div>
       <h3 class="sub-title">כללים</h3>
       <div class="card form">
         <div class="field"><span>נוכחים עד</span>${stepper('maxStreak', r.maxStreak, 1, 30, 'ימים ברצף')}<span class="field-hint">ימים ברצף</span></div>
         <div class="field"><span>ואז לפחות</span>${stepper('minRest', r.minRest, 0, 14, 'ימים בבית')}<span class="field-hint">ימים בבית</span></div>
       </div>
-      <p class="field-note">השיבוץ הקודם שנעשה אוטומטית בתקופה מתחלף בחדש.</p>
+      <p class="field-note">השיבוץ האוטומטי הקודם מתחלף בחדש</p>
       <div class="sheet-actions"><button class="btn plain" data-act="clearAuto">${icon('trash')}<span>ניקוי השיבוץ האוטומטי</span></button></div>`,
     on: {
       step: (el, ev, sh) => { const k = el.dataset.name; r[k] = Math.max(k === 'minRest' ? 0 : 1, Math.min(k === 'minRest' ? 14 : 30, r[k] + +el.dataset.d)); sh.update(); },
@@ -1012,11 +1011,11 @@ function settingsSheet() {
         <h3 class="sub-title">ייצוא וגיבוי</h3>
         <div class="card list">
           <button class="row" data-act="export"><span class="row-ic" style="--c:#248a3d">${icon('table')}</span><span class="row-main"><span class="row-title">ייצוא לאקסל</span><span class="row-sub">לוח, מי נוכח איפה, חיילים, הפניות ואילוצים</span></span>${icon('chevron', 'row-chev')}</button>
-          <button class="row" data-act="backup"><span class="row-ic" style="--c:#007aff">${icon('download')}</span><span class="row-main"><span class="row-title">גיבוי לקובץ</span><span class="row-sub">כדי להעביר לטלפון אחר או לשמור בצד</span></span>${icon('chevron', 'row-chev')}</button>
-          <label class="row"><span class="row-ic" style="--c:#5856d6">${icon('upload')}</span><span class="row-main"><span class="row-title">שחזור מגיבוי</span><span class="row-sub">מחליף את כל מה שיש עכשיו</span></span><input type="file" accept="application/json,.json" data-field="restore" hidden>${icon('chevron', 'row-chev')}</label>
+          <button class="row" data-act="backup"><span class="row-ic" style="--c:#007aff">${icon('download')}</span><span class="row-main"><span class="row-title">גיבוי לקובץ</span><span class="row-sub">להעברה לטלפון אחר</span></span>${icon('chevron', 'row-chev')}</button>
+          <label class="row"><span class="row-ic" style="--c:#5856d6">${icon('upload')}</span><span class="row-main"><span class="row-title">שחזור מגיבוי</span><span class="row-sub">מחליף את מה שיש</span></span><input type="file" accept="application/json,.json" data-field="restore" hidden>${icon('chevron', 'row-chev')}</label>
         </div>
         <div class="card list">
-          <button class="row" data-act="loadDemo"><span class="row-ic" style="--c:#ff9500">${icon('people')}</span><span class="row-main"><span class="row-title">נתונים לדוגמה</span><span class="row-sub">18 חיילים ו־3 אתרים, כדי לראות איך זה עובד</span></span>${icon('chevron', 'row-chev')}</button>
+          <button class="row" data-act="loadDemo"><span class="row-ic" style="--c:#ff9500">${icon('people')}</span><span class="row-main"><span class="row-title">נתונים לדוגמה</span><span class="row-sub">18 חיילים ו־3 אתרים</span></span>${icon('chevron', 'row-chev')}</button>
           <button class="row" data-act="wipe"><span class="row-ic" style="--c:#ff3b30">${icon('trash')}</span><span class="row-main"><span class="row-title danger">מחיקת הכל</span></span></button>
         </div>
         <p class="foot-note">מפל for you · גרסה ${APP_VERSION}<br>הנתונים נשמרים רק בטלפון הזה.</p>`;
@@ -1083,12 +1082,12 @@ function exportXlsx() {
   const opt = (forPhone, title, sub, ic) => `
     <button class="row export-opt${forPhone === phone ? ' rec' : ''}" data-act="go" data-phone="${forPhone ? 1 : ''}">
       <span class="row-ic" style="--c:${forPhone ? '#007aff' : '#248a3d'}">${icon(ic)}</span>
-      <span class="row-main"><span class="row-title">${title}${forPhone === phone ? ' <span class="badge">מומלץ כאן</span>' : ''}</span><span class="row-sub wrap">${sub}</span></span>
+      <span class="row-main"><span class="row-title">${title}</span><span class="row-sub wrap">${sub}</span></span>
       ${icon('chevron', 'row-chev')}
     </button>`;
   const choices = [
-    opt(false, 'לפתיחה במחשב', 'גיליון Excel מימין לשמאל, עם עמודת השמות קבועה בגלילה', 'table'),
-    opt(true, 'לפתיחה בטלפון', 'לשליחה בוואטסאפ ולתצוגה באייפון. מימין לשמאל גם שם', 'phone'),
+    opt(false, 'לפתיחה במחשב', 'Excel מימין לשמאל', 'table'),
+    opt(true, 'לפתיחה בטלפון', 'לוואטסאפ ולאייפון', 'phone'),
   ];
   if (phone) choices.reverse();
   openSheet({
@@ -1124,7 +1123,7 @@ function renderWelcome() {
   return `<div class="welcome">
     <img class="welcome-icon" src="img/icon.svg" alt="" width="96" height="96">
     <h1>מפל <span class="latin">for you</span></h1>
-    <p class="welcome-tag">כל החיילים, כל יום, במקום אחד.<br>מי נוכח איפה, מי סוגר בסופ״ש, מי בגימלים, למי יש הפניה, ולוח מוכן לאקסל.</p>
+    <p class="welcome-tag">מי נוכח איפה, מי סוגר בסופ״ש ומי בבית</p>
     <div class="card form welcome-form">
       <label class="field"><span>שם היחידה</span><input type="text" id="w-unit" placeholder="למשל: סוללה ב׳" autocomplete="off"></label>
     </div>

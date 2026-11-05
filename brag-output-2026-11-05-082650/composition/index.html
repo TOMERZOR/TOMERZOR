@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>מפל for you · פרסומת</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="fonts/local.css">
+<style>
+/* Every frame is a pure function of time: render(t) sets all styles, nothing animates on its own.
+   The stage is 1080×1920; in preview it is scaled to fit the window and plays in a loop.
+   Colors and shapes come from the app itself (mapel/css/style.css). */
+:root {
+  --bg: #f2f2f7; --card: #ffffff; --label: #000000; --label-2: #6c6c70; --label-3: #aeaeb2;
+  --sep: rgba(60, 60, 67, .14); --fill: rgba(118, 118, 128, .12); --accent: #007aff;
+  --north: #007aff; --gate: #34c759; --ops: #5856d6;
+  --gimel: #ff3b30; --ref: #ff9500; --con: #e6b800; --closing: #1c1c1e;
+  --font: "Heebo", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #e5e5ea; overflow: hidden; }
+body { display: grid; place-items: center; font-family: var(--font); color: var(--label); -webkit-font-smoothing: antialiased; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; flex: none; transform-origin: 50% 50%; background: var(--bg); }
+body.render { display: block; }
+body.render #stage { transform: none !important; }
+.layer { position: absolute; inset: 0; will-change: transform, opacity, filter; }
+.w { display: inline-block; will-change: transform, opacity, filter; }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* ---------- captions (top of the frame) ---------- */
+.cap { position: absolute; top: 150px; left: 60px; right: 60px; text-align: center; font-weight: 900; font-size: 82px; line-height: 1.12; }
+.cap .w { margin: 0 .12em; }
+
+/* ---------- group chat ---------- */
+#chat { background: #ebe7e1; }
+.chat-head { position: absolute; top: 0; left: 0; right: 0; height: 250px; padding: 90px 50px 0; display: flex; align-items: center; gap: 26px;
+  background: #f7f7f7; border-bottom: 2px solid rgba(0, 0, 0, .06); z-index: 3; }
+.chat-head .back { width: 50px; height: 50px; flex: none; color: var(--accent); }
+.gav { width: 104px; height: 104px; border-radius: 50%; background: #cfd8e3; display: grid; place-items: center; font-weight: 800; font-size: 40px; color: #3a5068; flex: none; }
+.gname b { display: block; font-size: 46px; font-weight: 800; }
+.gname span { display: block; font-size: 32px; color: var(--label-2); margin-top: 2px; }
+.unread { margin-inline-start: auto; min-width: 96px; height: 76px; padding: 0 22px; border-radius: 38px; background: var(--gimel); color: #fff;
+  font-weight: 800; font-size: 44px; display: grid; place-items: center; direction: ltr; }
+.msgs { position: absolute; left: 0; right: 0; top: 250px; bottom: 0; overflow: hidden; }
+.m { position: absolute; right: 44px; max-width: 820px; padding: 22px 34px 18px; border-radius: 40px; border-top-right-radius: 12px; background: #fff;
+  font-size: 46px; line-height: 1.3; font-weight: 500; box-shadow: 0 2px 2px rgba(0, 0, 0, .05); transform-origin: 100% 0; }
+.m b { display: block; font-size: 32px; font-weight: 700; margin-bottom: 2px; }
+.m small { display: block; text-align: left; font-size: 26px; color: var(--label-3); margin-top: 4px; direction: ltr; }
+.m.out { right: auto; left: 44px; background: #d9f3cf; border-top-right-radius: 40px; border-top-left-radius: 12px; transform-origin: 0 0; }
+.file { display: flex; align-items: center; gap: 24px; padding: 18px 10px 8px; }
+.file .xl { width: 92px; height: 112px; border-radius: 14px; background: #fff; display: grid; place-items: center; font-weight: 900; font-size: 30px; color: #1c1c1e;
+  box-shadow: inset 0 0 0 3px #1c1c1e; direction: ltr; }
+.file b { font-size: 40px; display: block; direction: ltr; text-align: right; }
+.file span { font-size: 30px; color: var(--label-2); }
+.scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .62); }
+.hook { position: absolute; left: 60px; right: 60px; top: 690px; text-align: center; color: #fff; font-weight: 900; }
+.hook .big { font-size: 150px; line-height: 1.05; display: block; }
+.hook .small { font-size: 96px; line-height: 1.15; display: block; margin-top: 18px; }
+.when { position: absolute; top: 300px; left: 0; right: 0; text-align: center; }
+.when span { display: inline-block; padding: 18px 44px; border-radius: 60px; background: rgba(28, 28, 30, .86); color: #fff; font-weight: 800; font-size: 54px; }
+
+/* ---------- reveal / outro ---------- */
+.mark { position: absolute; left: 50%; width: 320px; height: 320px; margin-left: -160px; }
+.mark svg { width: 100%; height: 100%; display: block; }
+.name { position: absolute; left: 0; right: 0; text-align: center; font-weight: 900; font-size: 140px; line-height: 1.1; }
+.name .latin { font-weight: 800; }
+.tag { position: absolute; left: 60px; right: 60px; text-align: center; font-weight: 700; font-size: 64px; line-height: 1.25; color: var(--label-2); }
+.tag .w { margin: 0 .1em; }
+.url { position: absolute; left: 0; right: 0; text-align: center; font-weight: 700; font-size: 46px; color: var(--accent); direction: ltr; }
+
+/* ---------- app card / sheet ---------- */
+.sheet { position: absolute; left: 40px; right: 40px; top: 470px; height: 1400px; background: var(--bg); border-radius: 56px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .18); overflow: hidden; }
+.grab { width: 90px; height: 12px; border-radius: 6px; background: var(--label-3); margin: 22px auto 0; }
+.shead { display: grid; grid-template-columns: 220px 1fr 220px; align-items: center; padding: 16px 36px 10px; font-size: 42px; }
+.shead .c { color: var(--accent); }
+.shead .t { text-align: center; font-weight: 800; }
+.shead .d { color: var(--accent); font-weight: 800; text-align: left; }
+.seg { position: relative; margin: 18px 40px 0; height: 96px; border-radius: 26px; background: rgba(118, 118, 128, .14); display: grid; grid-template-columns: 1fr 1fr; padding: 6px; }
+.seg .pillbg { position: absolute; top: 6px; bottom: 6px; width: calc(50% - 6px); border-radius: 21px; background: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, .12); }
+.seg span { position: relative; display: grid; place-items: center; font-weight: 700; font-size: 38px; }
+.paste { margin: 30px 40px 0; height: 120px; border-radius: 34px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; gap: 18px; font-weight: 800; font-size: 44px; }
+.paste svg { width: 50px; height: 50px; }
+.sub { margin: 38px 70px 14px; font-size: 34px; font-weight: 600; color: var(--label-2); }
+.list { margin: 0 40px; background: #fff; border-radius: 40px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 28px; height: 132px; padding: 0 36px; border-top: 2px solid var(--sep); }
+.row:first-child { border-top: 0; }
+.av { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 34px; flex: none; }
+.row .n { font-size: 44px; font-weight: 700; }
+.row .p { font-size: 32px; color: var(--label-2); direction: ltr; text-align: right; }
+.more { margin: 22px 70px 0; font-size: 34px; color: var(--label-2); font-weight: 600; }
+.chips { display: flex; gap: 18px; margin: 6px 40px 0; }
+.chip { height: 92px; padding: 0 40px; border-radius: 46px; background: rgba(118, 118, 128, .12); font-weight: 700; font-size: 38px; display: grid; place-items: center; }
+.chip.on { background: #000; color: #fff; }
+
+.toast { position: absolute; top: 560px; left: 50%; height: 120px; padding: 0 54px; border-radius: 60px; background: rgba(255, 255, 255, .96);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .18); display: flex; align-items: center; gap: 20px; font-weight: 800; font-size: 44px; white-space: nowrap; transform-origin: 50% 0; }
+.toast svg { width: 48px; height: 48px; color: #34c759; }
+
+/* ---------- board ---------- */
+.board { position: absolute; left: 40px; right: 40px; top: 470px; height: 1110px; background: #fff; border-radius: 52px; box-shadow: 0 26px 70px rgba(0, 0, 0, .14); overflow: hidden; }
+.bh { display: flex; align-items: center; justify-content: space-between; padding: 30px 40px 14px; }
+.bh b { font-size: 50px; font-weight: 900; }
+.xlbtn { height: 88px; padding: 0 38px; border-radius: 44px; background: #248a3d; color: #fff; font-weight: 800; font-size: 38px; display: flex; align-items: center; gap: 12px; }
+.xlbtn svg { width: 40px; height: 40px; }
+.grid { position: absolute; top: 132px; left: 0; right: 0; }
+.gr { position: absolute; left: 0; right: 0; height: 106px; display: flex; }
+.gr .who { width: 260px; height: 100%; display: flex; align-items: center; padding: 0 34px; font-size: 36px; font-weight: 700; border-left: 2px solid var(--sep); flex: none; }
+.gr .day { width: 148px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none; }
+.gr .day small { font-size: 28px; color: var(--label-2); font-weight: 600; }
+.gr .day b { font-size: 34px; font-weight: 800; }
+.gr .slot { width: 148px; height: 100%; position: relative; flex: none; }
+.gr.line { border-top: 2px solid var(--sep); }
+.wk { background: rgba(118, 118, 128, .06); }
+.cell { position: absolute; left: 6px; right: 6px; top: 12px; bottom: 12px; border-radius: 24px; display: grid; place-items: center; font-size: 26px; font-weight: 800; white-space: nowrap; overflow: hidden; }
+.cell.idle { color: var(--label-3); font-weight: 600; }
+.dot { position: absolute; top: 12px; right: 13px; width: 13px; height: 13px; border-radius: 50%; }
+.badge { position: absolute; bottom: 4px; left: -2px; height: 36px; padding: 0 12px; border-radius: 18px; background: var(--ref); color: #fff; font-size: 24px; font-weight: 800; display: grid; place-items: center; direction: ltr; box-shadow: 0 0 0 4px #fff; }
+.conmark { position: absolute; top: 4px; left: -2px; width: 38px; height: 38px; border-radius: 50%; background: var(--con); color: #3d3000; font-size: 26px; font-weight: 900; display: grid; place-items: center; box-shadow: 0 0 0 4px #fff; }
+.foot { border-top: 2px solid var(--sep); background: #fff; }
+.foot .who { color: var(--label-2); font-size: 32px; }
+.foot .slot { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.foot .slot b { font-size: 36px; font-weight: 900; direction: ltr; }
+.foot .slot b small { font-size: 26px; color: var(--label-2); font-weight: 600; }
+.foot .slot span { font-size: 22px; color: var(--label-2); font-weight: 600; }
+.legend { position: absolute; top: 1610px; left: 0; right: 0; text-align: center; font-size: 36px; font-weight: 700; display: flex; justify-content: center; align-items: center; gap: 16px; }
+.legend i { width: 34px; height: 34px; border-radius: 10px; background: var(--closing); display: inline-block; }
+.autob { position: absolute; top: 1610px; left: 40px; right: 40px; height: 150px; border-radius: 44px; background: #fff; box-shadow: 0 20px 50px rgba(0, 0, 0, .12);
+  display: flex; align-items: center; gap: 26px; padding: 0 44px; }
+.autob svg { width: 64px; height: 64px; color: var(--accent); flex: none; }
+.autob b { display: block; font-size: 46px; color: var(--accent); font-weight: 800; }
+.autob span { display: block; font-size: 32px; color: var(--label-2); }
+.pop { position: absolute; width: 640px; background: #fff; border-radius: 40px; box-shadow: 0 30px 80px rgba(0, 0, 0, .25); padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; transform-origin: 80% 0; }
+.pop div { height: 120px; border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-weight: 800; font-size: 34px; }
+
+/* ---------- spreadsheet ---------- */
+.xl { position: absolute; left: 40px; right: 40px; top: 470px; height: 1110px; background: #fff; border-radius: 30px; box-shadow: 0 26px 70px rgba(0, 0, 0, .18); overflow: hidden; }
+.xlbar { height: 110px; background: #2b2b2e; color: #fff; display: flex; align-items: center; gap: 22px; padding: 0 36px; font-size: 34px; font-weight: 700; }
+.xlbar .ico { width: 60px; height: 70px; border-radius: 10px; background: #fff; color: #1c1c1e; display: grid; place-items: center; font-size: 22px; font-weight: 900; direction: ltr; }
+.xlbar span { direction: ltr; }
+.xlgrid { position: absolute; top: 110px; left: 0; right: 0; bottom: 0; }
+.xr { display: flex; height: 78px; }
+.xr > div { border-left: 1.5px solid #d1d1d6; border-bottom: 1.5px solid #d1d1d6; display: grid; place-items: center; font-size: 26px; font-weight: 700; white-space: nowrap; overflow: hidden; flex: none; }
+.xr .rn { width: 64px; background: #f2f2f7; color: #8e8e93; font-weight: 600; }
+.xr.hd > div { background: #f2f2f7; color: #8e8e93; font-weight: 600; height: 54px; }
+.xr.hd { height: 54px; }
+
+/* ---------- finger ---------- */
+.finger { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; background: rgba(60, 60, 67, .28); box-shadow: 0 0 0 6px rgba(255, 255, 255, .85); z-index: 50; }
+.ripple { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 6px solid rgba(60, 60, 67, .35); z-index: 49; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="layer" id="chatL">
+    <div class="layer" id="chat">
+      <div class="chat-head">
+        <svg class="back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+        <div class="gav">פ2</div>
+        <div class="gname"><b>פלגה 2 · עדכונים</b><span id="gsub">23 משתתפים</span></div>
+        <div class="unread" id="unread">12</div>
+      </div>
+      <div class="msgs" id="msgs"></div>
+    </div>
+    <div class="when" id="when"><span>יום חמישי, 23:40</span></div>
+    <div class="scrim" id="scrim"></div>
+    <div class="hook" id="hook"><span class="big" id="hk1"></span><span class="small" id="hk2"></span></div>
+  </div>
+
+  <div class="layer" id="revealL">
+    <div class="mark" id="rMark" style="top:560px"></div>
+    <div class="name" id="rName" style="top:930px"></div>
+    <div class="tag" id="rTag" style="top:1130px"></div>
+  </div>
+
+  <div class="layer" id="pasteL">
+    <div class="cap" id="cap1"></div>
+    <div class="m" id="listMsg" style="top:470px;right:90px;width:900px"><b style="color:#c05621">שחר בן דוד</b><span id="listTxt"></span></div>
+    <div class="sheet" id="sheet">
+      <div class="grab"></div>
+      <div class="shead"><span class="c">ביטול</span><span class="t">חיילים חדשים</span><span class="d" id="addBtn">הוספה</span></div>
+      <div class="seg"><div class="pillbg" id="segPill"></div><span>חייל אחד</span><span>רשימה מוואטסאפ</span></div>
+      <div class="paste" id="pasteBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="3"/><path d="M9 4V3h6v1.5a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/><path d="M9 11h6M9 15h4"/></svg>הדבקה</div>
+      <div class="sub" id="pcount">18 חיילים יתווספו</div>
+      <div class="list" id="plist"></div>
+      <div class="more" id="pmore">ועוד 13</div>
+      <div class="sub" style="margin-top:30px">לאיזו פלגה</div>
+      <div class="chips"><div class="chip">פלגה 1</div><div class="chip" id="chip2">פלגה 2</div><div class="chip">פלגה 3</div></div>
+    </div>
+    <div class="toast" id="toast1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>נוספו 18 חיילים</div>
+  </div>
+
+  <div class="layer" id="boardL">
+    <div class="cap" id="cap2"></div>
+    <div class="cap" id="cap3"></div>
+    <div class="cap" id="cap4"></div>
+    <div class="board" id="board">
+      <div class="bh"><b>פלגה 2</b><div class="xlbtn" id="xlBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9.5h18M3 15h18M9.5 9.5V20"/></svg>אקסל</div></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="legend" id="legend"><i></i>סגירה (חמישי עד שבת)</div>
+    <div class="autob" id="autob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 20 10-10"/><path d="m13 7 1.5-1.5 4 4L17 11"/><path d="M18 2.5v3M16.5 4h3M6 3.5v2M5 4.5h2M20 13.5v2M19 14.5h2"/></svg><div><b>שיבוץ אוטומטי</b><span id="autoSub">חסרים 9 שיבוצים</span></div></div>
+    <div class="pop" id="kpop"></div>
+    <div class="toast" id="toast2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>כל האתרים מאוישים</div>
+    <div class="xl" id="xl"><div class="xlbar"><div class="ico">XLSX</div><span>mapel-for-you 10.11-23.11 Excel.xlsx</span></div><div class="xlgrid" id="xlgrid"></div></div>
+  </div>
+
+  <div class="layer" id="sendL">
+    <div class="cap" id="cap5"></div>
+  </div>
+
+  <div class="layer" id="outroL">
+    <div class="mark" id="oMark" style="top:520px"></div>
+    <div class="name" id="oName" style="top:890px"></div>
+    <div class="tag" id="oTag" style="top:1090px;color:#000;font-weight:800;font-size:72px"></div>
+    <div class="url" id="oUrl" style="top:1290px">mapel.moffy-app.workers.dev</div>
+  </div>
+
+  <div class="ripple" id="ripple"></div>
+  <div class="finger" id="finger"></div>
+</div>
+
+<script>
+/* ================= helpers ================= */
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const T = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const outExpo = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+const outCubic = (p) => 1 - Math.pow(1 - p, 3);
+const inCubic = (p) => p * p * p;
+const inOutCubic = (p) => (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const spring = (p) => (p <= 0 ? 0 : p >= 1 ? 1 : 1 - Math.exp(-6.5 * p) * Math.cos(10.5 * p));
+const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+function vis(el, op, tf = "", blur = 0) {
+  el.style.opacity = op; el.style.transform = tf; el.style.filter = blur > .05 ? `blur(${blur}px)` : "none";
+  el.style.visibility = op <= 0.001 ? "hidden" : "visible";
+}
+function popIn(el, t, at, dur = .5, from = .4, extra = "") {
+  const p = T(t, at, at + dur);
+  vis(el, clamp(p * 3), `${extra} scale(${lerp(from, 1, spring(p))})`);
+}
+function rise(spans, t, at, stagger = .07, dur = .55, dist = 70) {
+  spans.forEach((s, i) => {
+    const p = T(t, at + i * stagger, at + i * stagger + dur);
+    vis(s, clamp(p * 2.2), `translateY(${(1 - outExpo(p)) * dist}px)`, (1 - outCubic(p)) * 12);
+  });
+}
+function splitWords(el, text) { el.innerHTML = text.split(" ").map((w) => `<span class="w">${w}</span>`).join(" "); return [...el.querySelectorAll(".w")]; }
+/* a caption: words rise in at `a`, the whole line leaves at `b` */
+function caption(spans, el, t, a, b) {
+  if (t < a - .05 || t > b + .35) { vis(el, 0); return; }
+  const out = T(t, b, b + .3);
+  vis(el, 1 - out, `translateY(${-out * 60}px)`, out * 14);
+  rise(spans, t, a, .08, .5, 80);
+}
+/* whip transition: a layer comes in from the left / leaves to the right with motion blur */
+function whipIn(el, t, a, d = .35) { const p = outExpo(T(t, a, a + d)); return { x: (1 - p) * -1080, blur: (1 - p) * 24 }; }
+function finger(t, keys) {
+  /* keys: [[time, x, y, press]] — the finger glides between points and presses on `press` */
+  const f = $("finger"), r = $("ripple");
+  let shown = false;
+  for (let i = 0; i < keys.length; i++) {
+    const [ta, x, y, d] = keys[i];
+    if (t >= ta - .25 && t <= ta + d) {
+      const pin = T(t, ta - .25, ta - .05), press = T(t, ta, ta + .12), lift = T(t, ta + .12, ta + .3), out = T(t, ta + d - .15, ta + d);
+      const s = lerp(1.25, 1, outCubic(pin)) - .12 * Math.sin(Math.PI * clamp(press + lift * 0)) ;
+      f.style.left = x + "px"; f.style.top = y + "px";
+      vis(f, clamp(pin * 1.5) * (1 - out), `scale(${s})`);
+      const rp = T(t, ta, ta + .45);
+      r.style.left = x + "px"; r.style.top = y + "px";
+      vis(r, rp > 0 && rp < 1 ? (1 - rp) * .9 : 0, `scale(${lerp(.6, 2.2, outCubic(rp))})`);
+      shown = true;
+      break;
+    }
+  }
+  if (!shown) { vis(f, 0); vis(r, 0); }
+}
+const ICON = `<svg viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#2f5bea"/><g transform="translate(96 112)"><rect x="0" y="0" width="96" height="76" rx="22" fill="#fff"/><rect x="112" y="0" width="96" height="76" rx="22" fill="#fff" opacity=".42"/><rect x="224" y="0" width="96" height="76" rx="22" fill="#fff" opacity=".42"/><rect x="0" y="100" width="96" height="76" rx="22" fill="#fff" opacity=".42"/><rect x="112" y="100" width="96" height="76" rx="22" fill="#34d399"/><rect x="224" y="100" width="96" height="76" rx="22" fill="#fff"/><rect x="0" y="200" width="96" height="76" rx="22" fill="#fff"/><rect x="112" y="200" width="96" height="76" rx="22" fill="#fff" opacity=".42"/><rect x="224" y="200" width="96" height="76" rx="22" fill="#fbbf24"/></g></svg>`;
+$("rMark").innerHTML = ICON; $("oMark").innerHTML = ICON;
+
+/* ================= script ================= */
+const DUR = 24.5;
+const SFX = [];
+
+/* --- hook: the group chat --- */
+const MSGS = [
+  ["עומר פרץ", "#c05621", "מי סוגר השבוע?"],
+  ["נועם לוי", "#2b6cb0", "יש לי הפניה מחר ב־09:30"],
+  ["יונתן מזרחי", "#6b46c1", "הוצאתי גימלים ליומיים"],
+  ["איתי כהן", "#2f855a", "אפשר לא לסגור שבת? חתונה של אח"],
+  ["דניאל ביטון", "#b83280", "מה עם הלוח??"],
+  ["שחר בן דוד", "#c05621", "אני יכול רק עד חמישי"],
+  ["אורי אברהם", "#2c7a7b", "מי במוצב צפוני ביום ד׳?"],
+  ["עומר פרץ", "#c05621", "???"],
+  ["רון ביטון", "#975a16", "יש לי מבחן ביום ג׳"],
+  ["נועם לוי", "#2b6cb0", "שלחתם כבר את הלוח?"],
+  ["יוסי אברהם", "#2b6cb0", "אני בקורס עד שני"],
+  ["עידו גבאי", "#6b46c1", "מישהו מחליף אותי בש.ג?"],
+  ["דניאל ביטון", "#b83280", "המפל??"],
+  ["איתי כהן", "#2f855a", "יש עדכון?"],
+  ["גיא אוחיון", "#2c7a7b", "מה איתנו בסופ״ש"],
+  ["שחר בן דוד", "#c05621", "לוח????"],
+];
+// the first five are already there on the first frame; the rest land faster and faster
+const SEEDED = 7;
+const tMsg = []; { let tt = .25; for (let i = 0; i < MSGS.length; i++) { if (i < SEEDED) { tMsg.push(-1); continue; } tMsg.push(tt); tt += lerp(.22, .09, (i - SEEDED) / (MSGS.length - SEEDED - 1)); } }
+$("msgs").innerHTML = MSGS.map(([n, c, x], i) => `<div class="m" id="m${i}"><b style="color:${c}">${n}</b>${x}<small>23:${String(40 + Math.floor(i / 4)).padStart(2, "0")}</small></div>`).join("") +
+  `<div class="m out" id="mFile"><div class="file"><div class="xl">XLSX</div><div><b>mapel-for-you.xlsx</b><span>הלוח לשבועיים</span></div></div><small>23:52</small></div>
+   <div class="m" id="mThanks"><b style="color:#c05621">עומר פרץ</b>סוף סוף, תודה המפל<small>23:52</small></div>`;
+const hk1 = splitWords($("hk1"), "47 הודעות");
+const hk2 = splitWords($("hk2"), "ועדיין אין לוח");
+tMsg.forEach((x, i) => { if (x >= 0) SFX.push([x, "ping", i]); });
+SFX.push([1.25, "riser"]);
+SFX.push([1.35, "hit"]);
+
+/* --- reveal --- */
+const rName = $("rName"); rName.innerHTML = `מפל <span class="latin">for you</span>`;
+const rTag = splitWords($("rTag"), "כל הפלגה, כל יום, במקום אחד");
+SFX.push([3.0, "suck"], [3.38, "boom"], [3.42, "shimmer"]);
+
+/* --- paste from WhatsApp --- */
+const cap1 = splitWords($("cap1"), "מדביקים את הרשימה מוואטסאפ");
+$("listTxt").innerHTML = "רשימה לשבוע:<br>1. משה כהן 052-1234567<br>2. דוד לוי 8712345<br>3. יוסי אברהם<br>4. רון ביטון 054-7654321<br>5. עידו גבאי…";
+const PEOPLE = [["משה כהן", "052-1234567", "#007aff"], ["דוד לוי", "מ.א. 8712345", "#34c759"], ["יוסי אברהם", "", "#ff9500"], ["רון ביטון", "054-7654321", "#5856d6"], ["עידו גבאי", "053-3334444", "#ff2d55"]];
+$("plist").innerHTML = PEOPLE.map(([n, p, c], i) => `<div class="row" id="pr${i}"><div class="av" style="background:color-mix(in srgb, ${c} 18%, #fff);color:color-mix(in srgb, ${c} 70%, #000)">${n.split(" ").map((w) => w[0]).join("")}</div><div><div class="n">${n}</div><div class="p">${p || "&nbsp;"}</div></div></div>`).join("");
+const P0 = 5.8;
+SFX.push([P0, "whoosh"], [P0 + .2, "pop", 0], [6.45, "swish"], [6.85, "tap"], [6.9, "paste"]);
+for (let i = 0; i < 5; i++) SFX.push([7.05 + i * .12, "tick", i]);
+SFX.push([8.25, "tap"], [8.3, "pop", 2], [8.75, "tap"], [8.9, "chime"]);
+
+/* --- board --- */
+const cap2 = splitWords($("cap2"), "גימלים, הפניות ואילוצים. בלחיצה");
+const cap3 = splitWords($("cap3"), "ומי סוגר בסופ״ש? רואים מיד");
+const cap4 = splitWords($("cap4"), "שיבוץ אוטומטי. מה שמילאת ביד נשאר");
+const DAYS = [["ג׳", "10.11"], ["ד׳", "11.11"], ["ה׳", "12.11"], ["ו׳", "13.11"], ["ש׳", "14.11"]];
+const WHO = ["אורי אברהם", "איתי כהן", "דניאל ביטון", "יונתן מזרחי", "נועם לוי", "עומר פרץ", "שחר בן דוד"];
+const SITE = { N: ["מוצב צפוני", "#007aff"], G: ["ש.ג ראשי", "#34c759"], H: ["חמ״ל", "#5856d6"] };
+// start of the board scene, then what the commander taps, then what the automatic schedule fills
+const START = ["NNNNN", "hhhhh", "GGhhh", "hhhhh", "HHHhh", "hhhhh", "GGGGG"];
+const AUTO = { "1,0": "G", "1,1": "G", "2,2": "H", "3,3": "H", "3,4": "H", "4,3": "G", "4,4": "G", "5,2": "N", "5,3": "N", "5,4": "N" };
+const AUTO_ORDER = Object.keys(AUTO).sort((a, b) => { const [r1, c1] = a.split(",").map(Number), [r2, c2] = b.split(",").map(Number); return (r1 + c1) - (r2 + c2) || r1 - r2; });
+const GIMEL = ["3,0", "3,1"];
+const closingCell = (code, r, c, codes) => code && code !== "h" && code !== "x" && (c === 3 || c === 4 || (c === 2 && codes(r, 3) && codes(r, 3) !== "h" && codes(r, 3) !== "x"));
+let gridHTML = `<div class="gr" style="top:0"><div class="who" style="color:var(--label-2);font-size:30px">חייל</div>${DAYS.map(([a, b], c) => `<div class="day${c >= 3 ? " wk" : ""}"><small>${a}</small><b>${b}</b></div>`).join("")}</div>`;
+WHO.forEach((n, r) => {
+  gridHTML += `<div class="gr line" style="top:${106 + r * 106}px"><div class="who">${n}</div>${DAYS.map((d, c) => `<div class="slot${c >= 3 ? " wk" : ""}"><div class="cell" id="c${r}_${c}"></div></div>`).join("")}</div>`;
+});
+gridHTML += `<div class="gr foot" style="top:${106 + 7 * 106}px"><div class="who">נוכחים</div>${DAYS.map((d, c) => `<div class="slot${c >= 3 ? " wk" : ""}"><b id="f${c}"></b><span>נוכחים</span></div>`).join("")}</div>`;
+$("grid").innerHTML = gridHTML;
+$("c4_0").insertAdjacentHTML("afterend", `<div class="badge" id="refb">09:30</div>`);
+$("c1_3").insertAdjacentHTML("afterend", `<div class="conmark" id="conm">!</div>`);
+$("kpop").innerHTML = [["נוכחות", "#007aff"], ["בבית", "#8e8e93"], ["גימלים", "#ff3b30"], ["הפניה", "#ff9500"]].map(([l, c]) =>
+  `<div style="background:color-mix(in srgb, ${c} 15%, #fff);color:color-mix(in srgb, ${c} 62%, #000)" ${l === "גימלים" ? 'id="kGimel"' : ""}>${l}</div>`).join("");
+
+const B0 = 9.6, TAP_CELL = 10.25, POP_AT = 10.4, TAP_GIMEL = 10.85, REF_AT = 11.3, CON_AT = 11.6, SWEEP = 12.15, AUTO_TAP = 14.35, AUTO_A = 14.6, AUTO_STEP = .13;
+SFX.push([B0, "whoosh"], [TAP_CELL, "tap"], [POP_AT, "pop", 1], [TAP_GIMEL, "tap"], [TAP_GIMEL + .08, "pop", 3], [TAP_GIMEL + .16, "pop", 4], [REF_AT, "pop", 5], [CON_AT, "pop", 6]);
+for (let i = 0; i < 9; i++) SFX.push([SWEEP + i * .07, "flip", i]);
+SFX.push([14.0, "swish"], [AUTO_TAP, "tap"]);
+AUTO_ORDER.forEach((k, i) => SFX.push([AUTO_A + i * AUTO_STEP, "pop", 4 + i]));
+SFX.push([AUTO_A + AUTO_ORDER.length * AUTO_STEP + .15, "chime"]);
+
+/* --- excel + send --- */
+const cap5 = splitWords($("cap5"), "לוח מוכן לאקסל, מימין לשמאל");
+const XL0 = 18.0, XL_TAP = 18.25, FLIP = 18.4, SEND = 19.85, THANKS = 20.55;
+SFX.push([XL_TAP, "tap"], [FLIP, "flip", 3], [FLIP + .28, "whoosh"], [SEND - .2, "suck"], [SEND, "send"], [THANKS, "ping", 20]);
+{
+  // the spreadsheet, right to left: column A on the right, row numbers on the right
+  const LET = ["A", "B", "C", "D", "E", "F", "G", "H"];
+  const W = [64, 200, 120, 130, 118, 118, 118, 118];
+  let h = `<div class="xr hd"><div class="rn"></div>${LET.slice(0, 7).map((l, i) => `<div style="width:${W[i + 1]}px">${l}</div>`).join("")}</div>`;
+  const head = ["שם", "מ.א.", "פלגה", ...DAYS.slice(0, 4).map(([a, b]) => `${a} ${b}`)];
+  const rows = [
+    [{ v: "סוללה ב׳ · לוח נוכחות", s: "font-size:30px;font-weight:900;justify-content:end;padding-right:16px", span: 7 }],
+    head.map((v) => ({ v, s: "background:#1c1c1e;color:#fff" })),
+  ];
+  const tint = (c) => `background:color-mix(in srgb, ${c} 20%, #fff);color:color-mix(in srgb, ${c} 55%, #000)`;
+  WHO.forEach((n, r) => {
+    const cells = [{ v: n, s: "justify-content:end;padding-right:14px" }, { v: String(8712340 + r * 37), s: "color:#3a3a3c;font-weight:600" }, { v: "פלגה 2", s: "font-weight:600" }];
+    for (let c = 0; c < 4; c++) {
+      let code = START[r][c]; const k = `${r},${c}`;
+      if (AUTO[k]) code = AUTO[k];
+      if (GIMEL.includes(k)) code = "x";
+      const nextCode = (rr, cc) => { const kk = `${rr},${cc}`; return GIMEL.includes(kk) ? "x" : AUTO[kk] || START[rr][cc]; };
+      if (code === "x") cells.push({ v: "גימלים", s: tint("#ff3b30") });
+      else if (code === "h") cells.push({ v: "בבית", s: "background:#f2f2f7;color:#6c6c70;font-weight:600" });
+      else if (closingCell(code, r, c, nextCode)) cells.push({ v: SITE[code][0], s: "background:#2c2c2e;color:#fff" });
+      else cells.push({ v: SITE[code][0], s: tint(SITE[code][1]) });
+    }
+    rows.push(cells);
+  });
+  rows.forEach((cells, i) => {
+    h += `<div class="xr"><div class="rn">${i + 1}</div>`;
+    if (cells[0].span) h += `<div style="width:${W.slice(1).reduce((a, b) => a + b, 0) - W[7]}px;${cells[0].s}">${cells[0].v}</div>`;
+    else cells.forEach((c, j) => { h += `<div style="width:${W[j + 1]}px;${c.s}">${c.v}</div>`; });
+    h += "</div>";
+  });
+  $("xlgrid").innerHTML = h;
+}
+
+/* --- outro --- */
+$("oName").innerHTML = `מפל <span class="latin">for you</span>`;
+const oTag = splitWords($("oTag"), "פחות וואטסאפ, יותר שליטה");
+SFX.push([21.15, "whoosh"], [21.45, "boom"], [21.5, "shimmer"], [23.9, "end"]);
+SFX.sort((a, b) => a[0] - b[0]);
+
+/* ================= render ================= */
+function cellState(r, c, t) {
+  const k = `${r},${c}`;
+  let code = START[r][c], at = B0;
+  if (GIMEL.includes(k) && t >= TAP_GIMEL + .05) { code = "x"; at = TAP_GIMEL + .05 + GIMEL.indexOf(k) * .08; }
+  const ai = AUTO_ORDER.indexOf(k);
+  if (ai >= 0 && t >= AUTO_A + ai * AUTO_STEP) { code = AUTO[k]; at = AUTO_A + ai * AUTO_STEP; }
+  return { code, at };
+}
+function paintCell(r, c, t) {
+  const el = $(`c${r}_${c}`);
+  const { code, at } = cellState(r, c, t);
+  const nextCode = (rr, cc) => cellState(rr, cc, t).code;
+  const closing = t >= SWEEP && closingCell(code, r, c, nextCode);
+  let html, bg, col, cls = "cell";
+  if (code === "h") { html = "בבית"; bg = "transparent"; col = "var(--label-3)"; cls += " idle"; }
+  else if (code === "x") { html = "גימלים"; bg = "color-mix(in srgb, #ff3b30 15%, #fff)"; col = "color-mix(in srgb, #ff3b30 58%, #000)"; }
+  else {
+    const [name, c0] = SITE[code];
+    if (closing) { html = `<i class="dot" style="background:${c0}"></i>${name}`; bg = "#1c1c1e"; col = "#fff"; }
+    else { html = name; bg = `color-mix(in srgb, ${c0} 15%, #fff)`; col = `color-mix(in srgb, ${c0} 58%, #000)`; }
+  }
+  if (el.dataset.h !== html + bg) { el.innerHTML = html; el.dataset.h = html + bg; }
+  el.className = cls; el.style.background = bg; el.style.color = col;
+  // pop when the cell changes; flip when it turns into a closing
+  let tf = "", op = 1;
+  const changed = at > B0 ? T(t, at, at + .45) : 1;
+  if (changed < 1) tf = `scale(${lerp(.5, 1, spring(changed))})`;
+  if (closing) {
+    const order = r * .02 + (c - 2) * .09;
+    const fp = T(t, SWEEP + order, SWEEP + order + .35);
+    if (at <= SWEEP && fp < 1) tf = `perspective(600px) rotateX(${(1 - outCubic(fp)) * 90}deg)`;
+  }
+  el.style.opacity = op; el.style.transform = tf;
+}
+function presentCount(c, t) { let n = 0; for (let r = 0; r < WHO.length; r++) { const code = cellState(r, c, t).code; if (code !== "h" && code !== "x") n++; } return n; }
+
+function render(t) {
+  /* ---------- hook ---------- */
+  const chatL = $("chatL");
+  const hookOut = T(t, 3.0, 3.4), sendBack = t >= SEND - .9 && t < 21.3;
+  if (t < 3.45 || sendBack) {
+    vis(chatL, 1);
+    if (!sendBack) {
+      const push = 1 + .07 * inOutCubic(T(t, .2, 2.9));
+      const shake = T(t, 1.1, 2.95) * (1 - hookOut);
+      const sx = Math.sin(t * 61) * 7 * shake, sy = Math.cos(t * 47) * 6 * shake;
+      const s = lerp(push, .04, inCubic(hookOut));
+      const ch = $("chat"); ch.style.transformOrigin = "50% 50%"; ch.style.borderRadius = "0"; ch.style.boxShadow = "none";
+      vis(ch, 1, `translate(${sx}px, ${sy}px) scale(${s}) rotate(${hookOut * -14}deg)`, hookOut * 18);
+      chatL.style.opacity = 1 - T(t, 3.25, 3.45);
+    } else {
+      const p = outExpo(T(t, SEND - .9, SEND - .55));
+      const out = T(t, 21.0, 21.3);
+      const ch = $("chat");
+      ch.style.transformOrigin = "50% 0"; ch.style.borderRadius = "70px"; ch.style.overflow = "hidden"; ch.style.boxShadow = "0 30px 80px rgba(0,0,0,.2)";
+      vis(ch, 1, `translate(${(1 - p) * -1080 + out * 1080}px, 430px) scale(.78)`, (1 - p) * 20 + out * 20);
+    }
+    // messages stack from the bottom, each new one pushes the rest up
+    const box = $("msgs"), H = box.clientHeight;
+    const heights = MSGS.map((m, i) => $(`m${i}`).offsetHeight + 22);
+    const fileH = $("mFile").offsetHeight + 22, thH = $("mThanks").offsetHeight + 22;
+    const extra = sendBack ? fileH * outExpo(T(t, SEND, SEND + .35)) + thH * outExpo(T(t, THANKS, THANKS + .35)) : 0;
+    let below = extra;
+    for (let i = MSGS.length - 1; i >= 0; i--) {
+      const p = T(t, tMsg[i], tMsg[i] + .28);
+      const el = $(`m${i}`);
+      if (sendBack) { el.style.top = (H - 40 - below - heights[i]) + "px"; vis(el, 1); below += heights[i]; continue; }
+      if (p <= 0) { vis(el, 0); continue; }
+      el.style.top = (H - 40 - below - heights[i]) + "px";
+      vis(el, clamp(p * 3), `scale(${lerp(.55, 1, spring(p))})`);
+      below += heights[i] * outExpo(p);
+    }
+    const mf = $("mFile"), mt = $("mThanks");
+    if (sendBack) {
+      mf.style.top = (H - 40 - thH * outExpo(T(t, THANKS, THANKS + .35)) - fileH) + "px";
+      popIn(mf, t, SEND, .5, .3);
+      mt.style.top = (H - 40 - thH) + "px";
+      popIn(mt, t, THANKS, .5, .4);
+    } else { vis(mf, 0); vis(mt, 0); }
+    // unread counter climbs to 47
+    const shownN = sendBack ? 0 : tMsg.filter((x) => x <= t).length;
+    const n = sendBack ? 0 : Math.round(lerp(12, 47, (shownN - SEEDED) / (MSGS.length - SEEDED)));
+    const u = $("unread");
+    u.textContent = n;
+    const last = sendBack ? -9 : tMsg.filter((x) => x <= t).pop() ?? -9;
+    vis(u, sendBack ? 0 : 1, `scale(${1 + .18 * (1 - outCubic(T(t, last, last + .18)))})`);
+    $("gsub").textContent = sendBack ? "23 משתתפים" : (shownN > 2 && shownN < MSGS.length ? `${MSGS[shownN - 1][0].split(" ")[0]} מקליד…` : "23 משתתפים");
+    // labels
+    const w = $("when");
+    if (!sendBack && t < 1.4) { const a = 1, o = T(t, 1.15, 1.4); vis(w, a * (1 - o), `translateY(${(1 - outExpo(a)) * -40}px) scale(${1 - o * .1})`); } else vis(w, 0);
+    const sc = $("scrim"), hk = $("hook");
+    if (!sendBack && t >= 1.3) {
+      vis(sc, T(t, 1.3, 1.5) * (1 - hookOut));
+      vis(hk, 1 - hookOut, `scale(${1 + hookOut * .3})`, hookOut * 20);
+      rise(hk1, t, 1.38, .1, .45, 90); rise(hk2, t, 1.75, .1, .5, 70);
+    } else { vis(sc, 0); vis(hk, 0); }
+  } else vis(chatL, 0);
+
+  /* ---------- reveal ---------- */
+  const R = $("revealL");
+  if (t >= 3.2 && t < 6.15) {
+    const out = T(t, 5.75, 6.1);
+    vis(R, 1, `translateX(${outCubic(out) * 1080}px)`, out * 22);
+    const pm = T(t, 3.32, 3.95);
+    vis($("rMark"), clamp(pm * 4), `scale(${spring(pm) * (1 + .04 * Math.sin(Math.max(0, t - 3.9) * 3))}) rotate(${(1 - spring(pm)) * -25}deg)`);
+    const pn = T(t, 3.6, 4.1);
+    vis($("rName"), clamp(pn * 2), `translateY(${(1 - outExpo(pn)) * 80}px) scale(${lerp(.9, 1, outExpo(pn))})`, (1 - pn) * 14);
+    rise(rTag, t, 4.15, .1, .5, 60);
+  } else vis(R, 0);
+
+  /* ---------- paste ---------- */
+  const PL = $("pasteL");
+  if (t >= P0 - .05 && t < 9.95) {
+    const wi = whipIn(PL, t, P0);
+    const out = T(t, 9.55, 9.9);
+    vis(PL, 1, `translateX(${wi.x + outCubic(out) * 1080}px)`, wi.blur + out * 22);
+    caption(cap1, $("cap1"), t, P0 + .15, 9.4);
+    // the list message, then it flies into the sheet
+    const lm = $("listMsg");
+    const fly = inOutCubic(T(t, 6.45, 6.95));
+    if (t < 6.95) { popIn(lm, t, P0 + .2, .5, .5, `translateY(${fly * 520}px) scale(${1 - fly * .6})`); lm.style.opacity = clamp(T(t, P0 + .2, P0 + .35) * 3) * (1 - T(t, 6.75, 6.95)); }
+    else vis(lm, 0);
+    // the sheet slides up
+    const sp = outExpo(T(t, 6.25, 6.75));
+    vis($("sheet"), 1, `translateY(${(1 - sp) * 1500}px)`);
+    $("segPill").style.left = "6px";
+    const pb = $("pasteBtn"); pb.style.transform = `scale(${1 - .06 * Math.sin(Math.PI * T(t, 6.85, 7.0))})`;
+    for (let i = 0; i < 5; i++) { const p = T(t, 7.05 + i * .12, 7.4 + i * .12); vis($(`pr${i}`), clamp(p * 2.5), `translateY(${(1 - outExpo(p)) * 50}px)`); }
+    const pc = T(t, 7.0, 7.25); vis($("pcount"), pc); vis($("pmore"), T(t, 7.7, 7.9));
+    const c2 = $("chip2"); const on = t >= 8.3; c2.className = "chip" + (on ? " on" : ""); c2.style.transform = on ? `scale(${lerp(.9, 1, spring(T(t, 8.3, 8.7)))})` : "";
+    const tp = T(t, 8.9, 9.3), to = T(t, 9.3, 9.5);
+    vis($("toast1"), clamp(tp * 3) * (1 - to * 0), `translate(-50%, ${(1 - spring(tp)) * -120}px) scale(${lerp(.85, 1, spring(tp))})`);
+    if (t < 8.9) vis($("toast1"), 0);
+  } else vis(PL, 0);
+
+  /* ---------- board, auto, excel ---------- */
+  const BL = $("boardL");
+  if (t >= B0 - .05 && t < SEND - .55) {
+    const wi = whipIn(BL, t, B0);
+    const out = T(t, SEND - .9, SEND - .55);
+    vis(BL, 1, `translateX(${wi.x + outCubic(out) * 1080}px)`, wi.blur + out * 22);
+    caption(cap2, $("cap2"), t, B0 + .15, 11.85);
+    caption(cap3, $("cap3"), t, 12.05, 13.85);
+    caption(cap4, $("cap4"), t, 14.05, 17.75);
+    for (let r = 0; r < WHO.length; r++) for (let c = 0; c < 5; c++) paintCell(r, c, t);
+    for (let c = 0; c < 5; c++) {
+      const n = presentCount(c, t);
+      const f = $(`f${c}`); const txt = `${n}<small>/7</small>`;
+      if (f.innerHTML !== txt) f.innerHTML = txt;
+    }
+    popIn($("refb"), t, REF_AT, .45, .3);
+    popIn($("conm"), t, CON_AT, .45, .3);
+    // kind popover
+    const kp = $("kpop"); kp.style.left = "200px"; kp.style.top = "1080px";
+    if (t >= POP_AT && t < TAP_GIMEL + .3) { const p = T(t, POP_AT, POP_AT + .4), o = T(t, TAP_GIMEL + .05, TAP_GIMEL + .3); vis(kp, clamp(p * 3) * (1 - o), `scale(${lerp(.6, 1, spring(p)) * (1 - o * .1)})`); } else vis(kp, 0);
+    $("kGimel").style.boxShadow = t >= TAP_GIMEL ? "inset 0 0 0 5px #ff3b30" : "none";
+    // legend, then the auto button takes its place
+    const lg = $("legend");
+    if (t >= SWEEP + .3 && t < 14.0) { const p = T(t, SWEEP + .3, SWEEP + .7), o = T(t, 13.8, 14.0); vis(lg, p * (1 - o), `translateY(${(1 - outExpo(p)) * 30}px)`); } else vis(lg, 0);
+    const ab = $("autob");
+    if (t >= 13.95 && t < XL0) {
+      const p = T(t, 13.95, 14.35), o = T(t, XL0 - .3, XL0);
+      vis(ab, clamp(p * 2) * (1 - o), `translateY(${(1 - outExpo(p)) * 160}px) scale(${1 - .04 * Math.sin(Math.PI * T(t, AUTO_TAP, AUTO_TAP + .2))})`);
+      const left = AUTO_ORDER.filter((k, i) => t < AUTO_A + i * AUTO_STEP).length;
+      $("autoSub").textContent = left ? `חסרים ${left} שיבוצים` : "כל האתרים מאוישים";
+    } else vis(ab, 0);
+    const doneAt = AUTO_A + AUTO_ORDER.length * AUTO_STEP + .15;
+    if (t >= doneAt && t < XL0) { const p = T(t, doneAt, doneAt + .45), o = T(t, 17.5, 17.8); vis($("toast2"), clamp(p * 3) * (1 - o), `translate(-50%, ${(1 - spring(p)) * -120 - o * 60}px) scale(${lerp(.85, 1, spring(p))})`); } else vis($("toast2"), 0);
+    // excel: the board flips into the spreadsheet
+    const bd = $("board"), xl = $("xl");
+    const f1 = T(t, FLIP, FLIP + .28), f2 = T(t, FLIP + .28, FLIP + .6);
+    if (t < FLIP + .28) { vis(bd, 1, `perspective(1800px) rotateY(${inCubic(f1) * 90}deg)`); vis(xl, 0); }
+    else { vis(bd, 0); vis(xl, 1, `perspective(1800px) rotateY(${(1 - outCubic(f2)) * -90}deg) scale(${1 - .5 * inCubic(T(t, SEND - .55, SEND - .2))})`, 0); }
+    $("xlBtn").style.transform = `scale(${1 - .08 * Math.sin(Math.PI * T(t, XL_TAP, XL_TAP + .2))})`;
+  } else vis(BL, 0);
+  // the excel caption stays over the chat while the file is sent
+  const SL = $("sendL");
+  if (t >= XL0 && t < 21.3) {
+    vis(SL, 1);
+    caption(cap5, $("cap5"), t, XL0 + .05, 20.85);
+  } else vis(SL, 0);
+
+  /* ---------- outro ---------- */
+  const O = $("outroL");
+  if (t >= 21.15) {
+    vis(O, 1, `translateX(${(1 - outExpo(T(t, 21.15, 21.5))) * -1080}px)`, (1 - T(t, 21.15, 21.5)) * 20);
+    const pm = T(t, 21.4, 22.0);
+    vis($("oMark"), clamp(pm * 4), `scale(${spring(pm)}) rotate(${(1 - spring(pm)) * -25}deg)`);
+    const pn = T(t, 21.65, 22.15);
+    vis($("oName"), clamp(pn * 2), `translateY(${(1 - outExpo(pn)) * 80}px)`, (1 - pn) * 14);
+    rise(oTag, t, 22.2, .1, .5, 60);
+    const pu = T(t, 22.8, 23.3); vis($("oUrl"), clamp(pu * 2), `translateY(${(1 - outExpo(pu)) * 30}px)`);
+  } else vis(O, 0);
+
+  /* ---------- finger ---------- */
+  finger(t, [
+    [6.85, 540, 470 + 360, .4],
+    [8.25, 684, 1822, .4],
+    [8.75, 160, 470 + 85, .4],
+    [TAP_CELL, 40 + 1000 - 260 - 74, 470 + 132 + 106 * 4 + 53, .35],
+    [TAP_GIMEL, 666, 1300, .35],
+    [AUTO_TAP, 540, 1685, .4],
+    [XL_TAP, 220, 470 + 74, .35],
+  ]);
+}
+
+/* ================= preview / render ================= */
+window.__render = render; window.__dur = DUR; window.__sfx = SFX;
+const params = new URLSearchParams(location.search);
+const stage = $("stage");
+if (params.has("render")) { document.body.classList.add("render"); document.fonts.ready.then(() => render(+params.get("t") || 0)); }
+else {
+  const fit = () => { const s = Math.min(innerWidth / 1080, innerHeight / 1920) * .96; stage.style.transform = `scale(${s})`; };
+  addEventListener("resize", fit); fit();
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); };
+  document.fonts.ready.then(loop);
+}
+</script>
+</body>
+</html>

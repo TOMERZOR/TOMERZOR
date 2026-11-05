@@ -60,3 +60,9 @@ hekerut/site/.wrangler/
 # מפל for you
 mapel/site/public/
 mapel/site/.wrangler/
+
+# brag render intermediates
+brag-output*/composition/frames.mp4
+brag-output*/composition/audio.wav
+brag-output*/composition/sfx.json
+brag-output*/composition/render.log

@@ -18,6 +18,9 @@ const LLMS = [
 ];
 const VOICES = [
   { id: '8sZ9Z3Jy28CGLLCmKEHn', name: 'ויקטור', desc: 'חם וטוב לב (ברירת המחדל)' },
+  { id: 'IK7YYZcSpmlkjKrQxbSn', name: 'ראאד', desc: 'מבוגר, צרוד קצת, מבטא מפרץ/סעודי' },
+  { id: 'Jez3JdhBInQTvlAvDOWR', name: 'מונסלנס', desc: 'מבוגר, חם ורגוע, מבטא מצרי' },
+  { id: 'kIybghJkLIe04WclQHIw', name: 'ד"ר סאלח', desc: 'מבטא ירדני' },
   { id: 'ZiofZHcEBTn5sRySe5h8', name: 'נמרוד', desc: 'חם ובטוח' },
   { id: '6Ijsl5024dyMrE00loVE', name: 'הרצל', desc: 'רגוע ומדוד' },
   { id: 'l7Q9rbdCC6j3J5dNlOOg', name: 'איתמר', desc: 'ברור, קריין' },

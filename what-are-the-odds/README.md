@@ -2,7 +2,7 @@
 
 A free site with two modes. Hebrew first, with an English toggle.
 
-- **Just curious (סתם סקרן):** finish the sentence "מה הסיכוי..." / "What are the odds..." and get the real odds, with an explanation and where the number comes from. A dice button types one of 200 random questions for people with no idea what to ask.
+- **Just curious (סתם סקרן):** one line that reads "מה הסיכויים ש…" / "What are the odds that…"; finish it, press Enter, and get the real odds with an explanation and where the number comes from. The dice at the end of the line types one of 320 random questions for people with no idea what to ask.
 - **Game (משחק), "Higher or lower?":** a card shows a question and a number; guess whether the real odds are higher or lower. Solo (a streak, 3 misses and you're out), two players on one phone, or two phones in a room joined by link or 4-letter code. Turns alternate, and like Hitster's tokens the other player may challenge twice a game: if the guess is wrong, the point goes to them. First to 5 wins.
 
 Live (after the deploy workflow runs): https://what-are-the-odds.moffy-app.workers.dev
@@ -19,7 +19,7 @@ Live (after the deploy workflow runs): https://what-are-the-odds.moffy-app.worke
 - While it works it says "מחשב סיכויים" with a shimmer and bouncing dots (at least 0.9 s, so checked facts get the same moment of suspense).
 - The number then rolls through discrete steps that come further and further apart (an ease-out in time), each with a synthesized tick that climbs in pitch, until the exact number lands with a small pop and a chime. Phones also get a haptic tick per step (Android vibration; on iPhone, Safari 18+'s switch haptic).
 - Sounds are made live with Web Audio (`public/js/sound.js`), with a mute button. `prefers-reduced-motion` skips the roll and the shimmer.
-- Type: Assistant for Hebrew and the system font for English and numbers (SF Pro on iPhone and Mac). Light and dark follow the device.
+- Type: Assistant for Hebrew and the system font for English and numbers (SF Pro on iPhone and Mac), all at regular weight, nothing bold. Light and dark follow the device.
 
 ## Cost
 
@@ -41,13 +41,13 @@ The page alone also runs from any static server (`npx http-server public`); with
 
 ## Adding questions
 
-Add an entry to `FACTS` in `public/js/core/data.js`: the probability `p`, keyword groups `k` (every group must match; `stem*` matches word beginnings; Hebrew prefixes ו ה ש ב ל מ כ are stripped automatically), optional words `o`, the question and explanation in Hebrew and English, and the source. `npm test` checks that every question finds its own answer in both languages.
+Add an entry to `FACTS` in `public/js/core/data.js`: the probability `p`, keyword groups `k` (every group must match; `stem*` matches word beginnings; Hebrew prefixes ו ה ש ב ל מ כ are stripped automatically), optional words `o`, excluding words `x` (if one appears it's a different question, like "five-leaf clover"), the question (written to follow "מה הסיכויים ש" / "What are the odds that") and explanation in Hebrew and English, and the source. `npm test` checks that every question finds its own answer in both languages, and that no open question in the random pool borrows a checked answer.
 
 ## Files
 
 - `public/index.html`, `public/css/style.css`, `public/js/app.js`: the page and the "just curious" mode
 - `public/js/game-ui.js`: the game screens; `roll.js`: the rolling number; `sound.js`: sounds and haptics; `i18n.js`: all interface text; `icons.js`: Phosphor icons (MIT)
-- `public/js/core/`: shared by the page and the Worker: `data.js` (facts), `questions.js` (the 200 random questions), `match.js` (Hebrew-aware matching, self-harm check), `format.js` (numbers, comparisons), `game.js` (thresholds and the two-player rules)
+- `public/js/core/`: shared by the page and the Worker: `data.js` (facts), `questions.js` (the 320 random questions: the 97 checked ones plus 223 open ones, each written to follow "מה הסיכויים ש"), `match.js` (Hebrew-aware matching, self-harm check), `format.js` (numbers, comparisons), `game.js` (thresholds and the two-player rules)
 - `public/js/config.js`: the API address used when the page is served from somewhere else (GitHub Pages)
 - `worker/worker.js`: `/api/health`, `/api/odds`, and the game rooms: `POST /api/room` makes a code, `/api/room/CODE/ws` is a WebSocket into a Durable Object (`GameRoom`) that runs the same `Match` rules for both phones, keeps seats across reloads and gives the challenger 9 seconds
 - `test/`: `node --test`

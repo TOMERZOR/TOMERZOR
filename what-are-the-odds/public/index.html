@@ -35,15 +35,12 @@
 <main>
   <section class="view" id="view-curious" role="tabpanel" aria-labelledby="tab-curious">
     <form class="ask" id="ask" autocomplete="off" role="search">
-      <label class="ask__prefix" for="q" data-t="prefix">מה הסיכוי</label>
-      <div class="ask__field">
-        <input id="q" name="q" type="text" maxlength="160" enterkeyhint="go" spellcheck="false" placeholder="שהשמש תתפוצץ מחר">
-        <button class="ask__go" type="submit" id="go"></button>
-      </div>
+      <label class="ask__line" for="q">
+        <span class="ask__prefix" data-t="prefix">מה הסיכויים ש</span>
+        <input id="q" name="q" type="text" maxlength="140" enterkeyhint="go" spellcheck="false" placeholder="השמש תתפוצץ מחר">
+      </label>
+      <button class="ask__dice" type="button" id="random"></button>
     </form>
-    <div class="ask__more">
-      <button class="pill" type="button" id="random"></button>
-    </div>
 
     <section class="result" id="result" aria-live="polite" hidden>
       <p class="result__q" id="r-q"></p>
@@ -76,10 +73,6 @@
       </div>
     </section>
 
-    <details class="all">
-      <summary><span data-t="browse">כל השאלות הבדוקות</span> <span class="all__count" id="all-count"></span></summary>
-      <div id="cats"></div>
-    </details>
   </section>
 
   <section class="view" id="view-game" role="tabpanel" aria-labelledby="tab-game" hidden>
@@ -88,8 +81,7 @@
 </main>
 
 <footer class="foot">
-  <p data-t="foot1">המספרים הם סטטיסטיקה על אוכלוסיות שלמות, לא תחזית עליך. זה לא ייעוץ רפואי, משפטי או כלכלי.</p>
-  <p data-t="foot2">נתון בדוק: מספר ממקור שמופיע בתשובה, או חישוב מדויק. הערכת AI: הערכה של מודל שפה, כדאי לבדוק לפני שמסתמכים עליה.</p>
+  <p data-t="foot1">סטטיסטיקה על אוכלוסיות, לא תחזית עליך. לא ייעוץ רפואי, משפטי או כלכלי.</p>
 </footer>
 
 <div class="toast" id="toast" role="status" hidden></div>

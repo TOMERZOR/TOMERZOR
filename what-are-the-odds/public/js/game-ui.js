@@ -351,7 +351,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       ${boardHtml(m)}
       <p class="turn">${m.phase === "over" ? "" : m.turnHtml}</p>
       <article class="card ${isNew ? "is-new" : ""}" lang="${L}">
-        <p class="card__q">${esc(s().prefix)} ${esc(q)}?</p>
+        <p class="card__q">${esc(L === "he" ? `${s().prefix}${q}` : `${s().prefix} ${q}`)}?</p>
         <p class="card__vs">${s().vs}</p>
         <div class="card__t"><bdi>${esc(thresholdLabel(m.card.t, L))}</bdi></div>
         <div class="choices">

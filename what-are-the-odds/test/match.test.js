@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { FACTS, CATEGORIES } from "../public/js/core/data.js";
+import { QUESTION_POOL } from "../public/js/core/questions.js";
 import { findFact, needsCare, normalize } from "../public/js/core/match.js";
 import { describe, compare, bigNumber } from "../public/js/core/format.js";
 
@@ -41,11 +42,20 @@ for (const q of ["שהחברה שלי תעזוב אותי", "that my flight is d
   });
 }
 
-test("every fact answers its own question, in both languages", () => {
+test("every fact answers its own question, in both languages, with and without the opener", () => {
   for (const f of FACTS) {
-    for (const lang of ["he", "en"]) {
-      const r = findFact(f[lang].q);
-      assert.equal(r.fact && r.fact.id, f.id, `${f.id} (${lang}): "${f[lang].q}" matched ${r.fact && r.fact.id}`);
+    for (const q of [f.he.q, `מה הסיכויים ש${f.he.q}`, f.en.q, `What are the odds that ${f.en.q}`]) {
+      const r = findFact(q);
+      assert.equal(r.fact && r.fact.id, f.id, `${f.id}: "${q}" matched ${r.fact && r.fact.id}`);
+    }
+  }
+});
+
+test("open questions in the random pool never borrow a checked fact's answer", () => {
+  for (const x of QUESTION_POOL.filter((p) => !p.id)) {
+    for (const q of [`מה הסיכויים ש${x.he}`, `What are the odds that ${x.en}`]) {
+      const r = findFact(q);
+      assert.equal(r.fact, null, `"${q}" matched ${r.fact && r.fact.id}`);
     }
   }
 });

@@ -2,11 +2,11 @@
 
 export const STR = {
   he: {
-    skip: "דלגו לשאלה", curious: "סתם סקרן", game: "משחק", prefix: "מה הסיכוי", go: "בדקו",
+    skip: "דלגו לשאלה", curious: "סתם סקרן", game: "משחק", prefix: "מה הסיכויים ש", go: "בדקו",
     random: "שאלה אקראית", thinking: "מחשב סיכויים", impossible: "בלתי אפשרי", certain: "ודאי",
     share: "שתפו", again: "שאלה אחרת", related: "אולי התכוונתם:", relatedMore: "עוד שאלות:",
     browse: "כל השאלות הבדוקות", soundOn: "צליל פועל", soundOff: "צליל כבוי", langBtn: "EN", langLabel: "English",
-    foot1: "המספרים הם סטטיסטיקה על אוכלוסיות שלמות, לא תחזית עליך. זה לא ייעוץ רפואי, משפטי או כלכלי.",
+    foot1: "סטטיסטיקה על אוכלוסיות, לא תחזית עליך. לא ייעוץ רפואי, משפטי או כלכלי.",
     foot2: "נתון בדוק: מספר ממקור שמופיע בתשובה, או חישוב מדויק. הערכת AI: הערכה של מודל שפה, כדאי לבדוק לפני שמסתמכים עליה.",
     oneIn: "1 מתוך", badgeFact: "נתון בדוק", badgeAi: "הערכת AI", badgeUnknown: "אי אפשר לדעת מראש",
     conf: { high: "ביטחון גבוה", medium: "ביטחון בינוני", low: "הערכה גסה" },
@@ -22,7 +22,7 @@ export const STR = {
     careText: "על שאלה כזו לא נענה במספר. אם עובר עליך משהו קשה, לא צריך להתמודד לבד: אפשר לדבר עם מישהו עכשיו, בחינם ובאנונימיות.",
     careLines: [["ער״ן, עזרה ראשונה נפשית: 1201", "tel:1201"], ["סה״ר, צ׳אט תמיכה", "https://sahar.org.il"]],
     copied: "הקישור הועתק",
-    placeholders: ["שהשמש תתפוצץ מחר", "להיוולד בן", "לזכות בלוטו", "שיפגע בי ברק השנה", "להיוולד בלי אוזניים", "שטוסט ייפול על החמאה"],
+    placeholders: ["השמש תתפוצץ מחר", "תינוק ייוולד בן", "אזכה בלוטו", "פינגווין יחצה כביש", "יפגע בי ברק השנה", "טוסט ייפול על החמאה"],
     cats: { birth: "לידה וגוף", games: "משחקים ומזל", money: "כסף והגרלות", danger: "סכנות", space: "חלל וטבע", life: "חיים ויומיום", animals: "בעלי חיים", tech: "מספרים ומחשבים" },
 
     gTitle: "גבוה או נמוך?",
@@ -49,11 +49,11 @@ export const STR = {
     badCode: "קוד של 4 אותיות באנגלית",
   },
   en: {
-    skip: "Skip to the question", curious: "Just curious", game: "Game", prefix: "What are the odds", go: "Check",
+    skip: "Skip to the question", curious: "Just curious", game: "Game", prefix: "What are the odds that", go: "Check",
     random: "Random question", thinking: "Crunching the odds", impossible: "Impossible", certain: "Certain",
     share: "Share", again: "Ask another", related: "Did you mean:", relatedMore: "More questions:",
     browse: "All checked questions", soundOn: "Sound on", soundOff: "Sound off", langBtn: "עב", langLabel: "עברית",
-    foot1: "These numbers are statistics about whole populations, not predictions about you. Not medical, legal or financial advice.",
+    foot1: "Statistics about populations, not predictions about you. Not medical, legal or financial advice.",
     foot2: "Checked fact: a number from the source shown, or exact math. AI estimate: a language model's estimate; double-check before relying on it.",
     oneIn: "1 in", badgeFact: "Checked fact", badgeAi: "AI estimate", badgeUnknown: "Nobody can know",
     conf: { high: "high confidence", medium: "medium confidence", low: "rough estimate" },
@@ -69,7 +69,7 @@ export const STR = {
     careText: "We won't answer this one with a number. If you're going through something hard, you don't have to face it alone: you can talk to someone right now, free and anonymous.",
     careLines: [["In Israel: ERAN 1201", "tel:1201"], ["In the US: call or text 988", "tel:988"], ["Elsewhere: findahelpline.com", "https://findahelpline.com"]],
     copied: "Link copied",
-    placeholders: ["that the sun explodes tomorrow", "of being born a boy", "of winning the lottery", "of being struck by lightning", "of being born without ears", "of toast landing butter-side down"],
+    placeholders: ["the sun explodes tomorrow", "a baby is born a boy", "I win the lottery", "a penguin crosses the road", "lightning strikes me", "toast lands butter-side down"],
     cats: { birth: "Birth & body", games: "Games & luck", money: "Money & lotteries", danger: "Danger", space: "Space & nature", life: "Life & everyday", animals: "Animals", tech: "Numbers & computers" },
 
     gTitle: "Higher or lower?",

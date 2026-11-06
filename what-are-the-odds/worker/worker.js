@@ -146,7 +146,7 @@ export function cleanAnswer(raw) {
 async function askModel(env, model, q, lang) {
   const messages = [
     { role: "system", content: systemPrompt(lang) },
-    { role: "user", content: (lang === "he" ? "מה הסיכוי " : "What are the odds ") + q },
+    { role: "user", content: stripOpener(normalize(q)) !== normalize(q) ? q : (lang === "he" ? "מה הסיכוי " : "What are the odds ") + q },
   ];
   try {
     const out = await env.AI.run(model, {

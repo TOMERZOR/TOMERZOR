@@ -1,6 +1,6 @@
-import { FACTS, CATEGORIES } from "./core/data.js";
+import { FACTS } from "./core/data.js";
 import { findFact, factById, needsCare, normalize, stripOpener } from "./core/match.js";
-import { describe, compare, plain, LANDMARKS } from "./core/format.js";
+import { compare, plain, LANDMARKS } from "./core/format.js";
 import { QUESTION_POOL } from "./core/questions.js";
 import { STR, fmt } from "./i18n.js";
 import { icon } from "./icons.js";
@@ -10,12 +10,12 @@ import { initGame } from "./game-ui.js";
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  form: $("ask"), q: $("q"), go: $("go"), random: $("random"), result: $("result"), rq: $("r-q"), thinking: $("r-thinking"),
+  form: $("ask"), q: $("q"), random: $("random"), result: $("result"), rq: $("r-q"), thinking: $("r-thinking"),
   body: $("r-body"), odds: $("r-odds"), pre: $("r-pre"), num: $("r-num"), alt: $("r-alt"), after: $("r-after"),
   badge: $("r-badge"), meter: $("r-meter"), fill: $("r-fill"), dot: $("r-dot"), marks: $("r-marks"),
   compare: $("r-compare"), explain: $("r-explain"), source: $("r-source"), share: $("share"), again: $("again"),
   related: $("r-related"), relatedTitle: $("r-related-title"), relatedList: $("r-related-list"),
-  cats: $("cats"), allCount: $("all-count"), lang: $("lang"), sound: $("sound"), toast: $("toast"),
+  lang: $("lang"), sound: $("sound"), toast: $("toast"),
   tabCurious: $("tab-curious"), tabGame: $("tab-game"), viewCurious: $("view-curious"), viewGame: $("view-game"),
   modes: document.querySelector(".modes"),
 };
@@ -49,12 +49,11 @@ function applyLang() {
   els.lang.textContent = s.langBtn;
   els.lang.setAttribute("aria-label", s.langLabel);
   els.q.placeholder = s.placeholders[0];
-  els.go.innerHTML = icon("arrow-right", "icon flip");
-  els.go.setAttribute("aria-label", s.go);
-  els.random.innerHTML = `${icon("dice-five")}<span>${s.random}</span>`;
+  els.random.innerHTML = icon("dice-five");
+  els.random.setAttribute("aria-label", s.random);
+  els.random.title = s.random;
   els.share.innerHTML = `${icon("share-network")}<span>${s.share}</span>`;
   paintSound();
-  renderBrowse();
   game.setLang(ui);
   if (current && current.view.kind === "fact") {
     const f = factById(current.view.id);
@@ -95,52 +94,17 @@ function setMode(mode, { push = true } = {}) {
   }
 }
 
-// ---------- browse ----------
-function shortValue(p, lang) {
-  const d = describe(p, lang);
-  if (d.main.kind === "oneIn") return d.main.exp != null ? `1:${d.main.text}e${d.main.exp}` : `1:${d.main.text}`;
-  return d.main.text;
-}
-
-function renderBrowse() {
-  els.allCount.textContent = `(${FACTS.length})`;
-  els.cats.replaceChildren(...CATEGORIES.map((c) => {
-    const box = document.createElement("div");
-    box.className = "cat";
-    const h = document.createElement("h3");
-    h.textContent = STR[ui].cats[c.id] || c[ui];
-    const ul = document.createElement("ul");
-    for (const f of FACTS.filter((x) => x.cat === c.id)) {
-      const li = document.createElement("li");
-      const b = document.createElement("button");
-      b.type = "button";
-      const q = document.createElement("span");
-      q.className = "q";
-      q.textContent = f[ui].q;
-      const v = document.createElement("span");
-      v.className = "val";
-      v.dir = "auto";
-      v.textContent = shortValue(f.p, ui);
-      b.append(q, v);
-      b.addEventListener("click", () => {
-        sound.unlock();
-        els.q.value = f[ui].q;
-        ask(f[ui].q, { factId: f.id });
-        els.form.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
-      });
-      li.append(b);
-      ul.append(li);
-    }
-    box.append(h, ul);
-    return box;
-  }));
-}
-
 // ---------- result ----------
+// What's in the box plus "מה הסיכויים ש" / "What are the odds that", unless they typed it.
+export function fullQuestion(text, lang) {
+  const t = String(text || "").trim().replace(/[?？!.]+$/, "");
+  if (stripOpener(normalize(t)) !== normalize(t)) return t;
+  if (lang === "he") return `מה הסיכויים ${t.startsWith("ש") ? t : `ש${t}`}`;
+  return /^(that|of|to)\b/i.test(t) ? `What are the odds ${t}` : `What are the odds that ${t}`;
+}
+
 function questionLine(text, lang) {
-  const opener = stripOpener(normalize(text)) !== normalize(text);
-  const t = text.trim().replace(/[?？!.]+$/, "");
-  return (opener ? t : `${STR[lang].prefix} ${t}`) + "?";
+  return `${fullQuestion(text, lang)}?`;
 }
 
 function chip(entry, lang) {
@@ -223,7 +187,7 @@ async function showFact(fact, question, lang, related, { animate = true } = {}) 
   const s = STR[lang];
   startCard(question, lang);
   thinking(false);
-  const sameQuestion = normalize(stripOpener(normalize(question))) === normalize(fact[lang].q);
+  const sameQuestion = stripOpener(normalize(fullQuestion(question, lang))) === stripOpener(normalize(fullQuestion(fact[lang].q, lang)));
   setBadge("fact", s.badgeFact);
   els.compare.textContent = compare(fact.p, lang, fact.id);
   els.explain.textContent = fact[lang].x;
@@ -235,7 +199,6 @@ async function showFact(fact, question, lang, related, { animate = true } = {}) 
   if (seq !== askSeq) return;
   paintMeter(fact.p, lang);
   revealAfter();
-  setRelated((related || []).filter((id) => id !== fact.id), lang, s.relatedMore);
 }
 
 async function showAi(view, question, lang) {
@@ -265,7 +228,6 @@ async function showAi(view, question, lang) {
     sound.land();
   }
   revealAfter();
-  setRelated(view.related, lang, s.relatedMore);
 }
 
 function showNone(reason, question, lang, related) {
@@ -356,13 +318,14 @@ function updateUrl(params) {
 }
 
 async function ask(raw, { factId } = {}) {
-  const q = String(raw || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const q = String(raw || "").replace(/\s+/g, " ").trim().slice(0, 140);
   if (!q) { els.q.focus(); return; }
   const seq = ++askSeq;
   const lang = hasHebrew(q) ? "he" : /[a-z]/i.test(q) ? "en" : ui;
+  const full = fullQuestion(q, lang);
   updateUrl({ q });
 
-  if (needsCare(q)) { showCare(q, lang); return; }
+  if (needsCare(full)) { showCare(q, lang); return; }
 
   startCard(q, lang);
   thinking(true);
@@ -370,7 +333,7 @@ async function ask(raw, { factId } = {}) {
   const minThink = sleep(reduced() ? 0 : 900);
 
   const direct = factId ? factById(factId) : null;
-  const { fact, related } = direct ? { fact: direct, related: [] } : findFact(q);
+  const { fact, related } = direct ? { fact: direct, related: [] } : findFact(full);
   if (fact) {
     await minThink;
     if (seq !== askSeq) return;
@@ -378,7 +341,7 @@ async function ask(raw, { factId } = {}) {
     return;
   }
   try {
-    const [body] = await Promise.all([fetchAnswer(q, lang), minThink]);
+    const [body] = await Promise.all([fetchAnswer(full, lang), minThink]);
     if (seq !== askSeq) return;
     if (body.kind === "fact" && factById(body.id)) showFact(factById(body.id), q, lang, body.related);
     else if (body.kind === "ai" || body.kind === "unknown") showAi(body, q, lang);

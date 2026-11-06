@@ -6,9 +6,9 @@ import { QUESTION_POOL } from "../public/js/core/questions.js";
 import { Match, makeThreshold, isCorrect, rng, thresholdLabel, WIN_SCORE, TOKENS } from "../public/js/core/game.js";
 import { newCode } from "../worker/worker.js";
 
-test("the random pool has 200 questions in both languages, no repeats", () => {
-  assert.equal(QUESTION_POOL.length, 200);
-  assert.equal(new Set(QUESTION_POOL.map((q) => q.he)).size, 200);
+test("the random pool has 320 questions in both languages, no repeats", () => {
+  assert.equal(QUESTION_POOL.length, 320);
+  assert.equal(new Set(QUESTION_POOL.map((q) => q.he)).size, 320);
   assert.ok(QUESTION_POOL.every((q) => q.he && q.en));
 });
 

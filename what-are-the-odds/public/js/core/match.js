@@ -21,7 +21,7 @@ const STOP_RAW = new Set([
   "happens", "happening", "this", "any", "some", "there", "was", "were", "if", "become", "becoming", "find", "finding", "guess", "guessing",
   "win", "winning", "catch", "catching", "making", "make", "using", "one", "an", "ever", "before", "so", "just",
   // generic Hebrew verbs and fillers
-  "לקבל", "לנחש", "למצוא", "לזכות", "לתפוס", "אחד", "אחת", "היתה", "כבר", "אי", "הזה", "הזאת", "בחיים", "שבחיים",
+  "לקבל", "לנחש", "למצוא", "לזכות", "לתפוס", "אקבל", "אנחש", "אמצא", "אזכה", "אתפוס", "אשלוף", "אענה", "אעשה", "אקלע", "אנצח", "אראה", "אתקבל", "ייצא", "תהיה", "יהיו", "אכנס", "כשאני", "אמות", "im", "dealt", "get", "gets", "אחד", "אחת", "היתה", "כבר", "אי", "הזה", "הזאת", "בחיים", "שבחיים",
 ]);
 
 const STOP = new Set([...STOP_RAW].map((w) => normalize(w)));
@@ -41,7 +41,7 @@ export function normalize(text) {
 
 // Drop the "what are the odds" opener if the person typed it themselves.
 const OPENERS = [
-  /^מה (?:ה)?(?:סיכוי|סיכויים|סבירות)(?:ים)?\s*/, /^(?:what s|what are|whats|what is) the (?:odds|chances?|probability|likelihood)\s*/,
+  /^מה (?:ה)?(?:סיכויימ|סיכויים|סיכוי|סבירות)\s*/, /^(?:what s|what are|whats|what is) the (?:odds|chances?|probability|likelihood)\s*/,
   /^(?:odds|chances?)\s*/,
 ];
 export function stripOpener(normalized) {
@@ -79,6 +79,7 @@ function compileFact(f) {
     c = {
       groups: f.k.map((g) => g.map(compileKeyword)),
       optional: (f.o || []).map(compileKeyword),
+      exclude: (f.x || []).map(compileKeyword),
     };
     compiled.set(f, c);
   }
@@ -116,6 +117,8 @@ export function tokenize(question) {
 
 function isContent(token) {
   if (STOP.has(token)) return false;
+  // "שאקבל", "ושזה": a stop word behind ש or ו
+  if (/^[שו][\u05D0-\u05EA]{2,}/.test(token) && STOP.has(token.slice(1))) return false;
   return token.length > 1 || /\d/.test(token);
 }
 
@@ -154,9 +157,11 @@ export function rank(question, facts = FACTS) {
     covered.forEach((i) => { if (content[i]) understood++; });
     const coverage = Math.min(1, understood / contentCount);
     const groups = c.groups.length;
-    const full = matched === groups;
+    // words that mean it's a different question ("five-leaf clover", "a lunar eclipse")
+    const excluded = c.exclude.some((kw) => matchKeyword(tokens, tvars, kw));
+    const full = matched === groups && !excluded;
     const score = (full ? 10 : 0) + (matched / groups) * 4 + groups * 0.5 + coverage * 3;
-    results.push({ fact, groups, matched, coverage, score });
+    results.push({ fact, groups, matched: excluded ? Math.min(matched, groups - 1) : matched, coverage, score });
   }
   return results.sort((a, b) => b.score - a.score);
 }

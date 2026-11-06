@@ -103,7 +103,7 @@ def at_src(id, frame):             # timeline time of a source frame inside a cl
 
 
 SFX = [
-    dict(name="sigh2_b", at=6.9, gain=.5),
+    dict(name="sigh", at=6.75, gain=.55),
     dict(name="slam", at=at_src("s3", 200), gain=.9),
     dict(name="key", at=at_src("s5", 20), gain=.5),
     dict(name="key", at=at_src("s5", 44), gain=.5),

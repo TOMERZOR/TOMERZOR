@@ -2,6 +2,7 @@
 
 Real recordings from Freesound (found through Openverse). CC0 needs no credit; it is listed anyway.
 
+- "Dog Breathing" by dmnvz, CC0, https://freesound.org/people/dmnvz/sounds/397882
 - "g1.wav" by angstrom, CC0, https://freesound.org/people/angstrom/sounds/11088
 - "Mouse click sounds" by Masgame, CC0, https://freesound.org/people/Masgame/sounds/347544
 - "typing on a laptop keyboard" by supersnd, CC0, https://freesound.org/people/supersnd/sounds/215744
@@ -13,4 +14,4 @@ Real recordings from Freesound (found through Openverse). CC0 needs no credit; i
 - "Swosh swoosh whoosh air sound, free, high quality" by qubodup, CC0, https://freesound.org/people/qubodup/sounds/60026
 - "Wood block hit" by thomasjaunism, CC0, https://freesound.org/people/thomasjaunism/sounds/218460
 
-Narration: ElevenLabs. Music: ElevenLabs Music v2.5 via Higgsfield. Breath-only dog sigh: ElevenLabs (placeholder until a real dog sigh can be downloaded).
+Narration: ElevenLabs. Music: ElevenLabs Music v2.5 via Higgsfield. 

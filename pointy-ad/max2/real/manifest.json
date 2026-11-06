@@ -1,16 +1,5 @@
 [
  {
-  "file": "assets/sigh/fs-274841_dog-sighing-snorting.mp3",
-  "category": "sigh",
-  "source": "freesound via Openverse",
-  "freesound_id": 274841,
-  "title": "Koira, huokauksia, tuhinaa sis\u00e4ll\u00e4 / A dog, hound, medium-size, starting to sleep, sighing, snorting, licking lips, interior",
-  "creator": "YleArkisto",
-  "licence": "by",
-  "page": "https://freesound.org/people/YleArkisto/sounds/274841",
-  "url": "https://cdn.freesound.org/previews/274/274841_4415905-hq.mp3"
- },
- {
   "file": "assets/sip/fs-411973_sipping-drink.mp3",
   "category": "sip",
   "source": "freesound via Openverse",
@@ -141,5 +130,25 @@
   "licence": "cc0",
   "page": "https://freesound.org/people/thomasjaunism/sounds/218460",
   "url": "https://cdn.freesound.org/previews/218/218460_3344538-hq.mp3"
+ },
+ {
+  "file": "assets/sigh/fs-397882_dog-breathing.mp3",
+  "category": "sigh",
+  "source": "freesound (downloaded by the user)",
+  "freesound_id": 397882,
+  "title": "Dog Breathing",
+  "creator": "dmnvz",
+  "licence": "cc0",
+  "page": "https://freesound.org/people/dmnvz/sounds/397882"
+ },
+ {
+  "file": "assets/sigh/fs-425905_dogs-breath.mp3",
+  "category": "sigh",
+  "source": "freesound (downloaded by the user)",
+  "freesound_id": 425905,
+  "title": "dog's breath",
+  "creator": "NatalieTre",
+  "licence": "cc0",
+  "page": "https://freesound.org/people/NatalieTre/sounds/425905"
  }
 ]

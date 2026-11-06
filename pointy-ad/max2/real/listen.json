@@ -840,5 +840,215 @@
     ]
    }
   ]
+ },
+ "assets/sigh/fs-397882_dog-breathing.mp3": {
+  "category": "sigh",
+  "query": "a dog sighing, one long breathy exhale through the nose",
+  "takes": [
+   {
+    "start": 2.028,
+    "end": 3.985,
+    "z": 6.94,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.995,
+    "match": "strong",
+    "match_z": 6.94,
+    "closest_alt": [
+     {
+      "query": "a dog barking",
+      "p": 0.0,
+      "z": 3.22,
+      "cosine": 0.134
+     },
+     {
+      "query": "a dog growling",
+      "p": 0.0,
+      "z": 3.95,
+      "cosine": 0.232
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": -0.13,
+      "cosine": -0.226
+     }
+    ]
+   },
+   {
+    "start": 3.993,
+    "end": 5.86,
+    "z": 6.82,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.994,
+    "match": "strong",
+    "match_z": 6.82,
+    "closest_alt": [
+     {
+      "query": "a dog barking",
+      "p": 0.0,
+      "z": 3.26,
+      "cosine": 0.139
+     },
+     {
+      "query": "a dog growling",
+      "p": 0.0,
+      "z": 4.11,
+      "cosine": 0.247
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": -0.14,
+      "cosine": -0.229
+     }
+    ]
+   },
+   {
+    "start": 0.157,
+    "end": 2.01,
+    "z": 6.8,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.995,
+    "match": "strong",
+    "match_z": 6.8,
+    "closest_alt": [
+     {
+      "query": "a dog barking",
+      "p": 0.0,
+      "z": 3.5,
+      "cosine": 0.168
+     },
+     {
+      "query": "a dog growling",
+      "p": 0.001,
+      "z": 4.23,
+      "cosine": 0.266
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": -0.06,
+      "cosine": -0.208
+     }
+    ]
+   }
+  ]
+ },
+ "assets/sigh/fs-425905_dogs-breath.mp3": {
+  "category": "sigh",
+  "query": "a dog sighing, one long breathy exhale through the nose",
+  "takes": [
+   {
+    "start": 5.458,
+    "end": 7.415,
+    "z": 5.18,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.987,
+    "match": "strong",
+    "match_z": 5.18,
+    "closest_alt": [
+     {
+      "query": "a dog barking",
+      "p": 0.0,
+      "z": 2.6,
+      "cosine": 0.148
+     },
+     {
+      "query": "a dog growling",
+      "p": 0.114,
+      "z": 4.3,
+      "cosine": 0.323
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": 0.43,
+      "cosine": -0.107
+     }
+    ]
+   },
+   {
+    "start": 2.092,
+    "end": 3.35,
+    "z": 5.12,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.99,
+    "match": "strong",
+    "match_z": 5.12,
+    "closest_alt": [
+     {
+      "query": "a dog barking",
+      "p": 0.0,
+      "z": 0.05,
+      "cosine": -0.108
+     },
+     {
+      "query": "a dog growling",
+      "p": 0.0,
+      "z": 2.43,
+      "cosine": 0.153
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": 0.16,
+      "cosine": -0.177
+     }
+    ]
+   },
+   {
+    "start": 0.348,
+    "end": 0.7,
+    "z": 4.89,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.989,
+    "match": "strong",
+    "match_z": 4.89,
+    "closest_alt": [
+     {
+      "query": "a dog barking",
+      "p": 0.0,
+      "z": 0.91,
+      "cosine": 0.033
+     },
+     {
+      "query": "a dog growling",
+      "p": 0.0,
+      "z": 2.01,
+      "cosine": 0.174
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": 0.68,
+      "cosine": -0.069
+     }
+    ]
+   }
+  ]
  }
 }

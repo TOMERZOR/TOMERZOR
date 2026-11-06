@@ -323,6 +323,9 @@ export class GameRoom {
       // cards this player has already played, so the room deals them new ones
       const seen = Array.isArray(msg.seen) ? msg.seen.filter((x) => typeof x === "string" && x.length <= 40).slice(-400) : [];
       if (!pid) return;
+      // one connection is one player: it can't take the other seat with a second id
+      const already = this.sockets.get(ws);
+      if (already != null && already >= 0 && this.seats[already] && this.seats[already].pid !== pid) return;
       let i = this.seats.findIndex((s) => s.pid === pid);
       if (i < 0) {
         if (this.seats.length >= 2) { this.send(ws, { t: "full" }); return; }

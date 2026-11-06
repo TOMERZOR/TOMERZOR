@@ -575,6 +575,26 @@ document.fonts && document.fonts.ready.then(() => placeKnob(false));
 
 applyLang();
 
+// A phone can keep an old copy of the page open for days. When a newer version is
+// live, reload once: right away on opening, or on coming back to the tab when no
+// game is being played and no answer is on screen.
+const myVersion = (document.querySelector('script[src*="js/app.js"]')?.getAttribute("src").match(/v=(\d+)/) || [])[1];
+async function checkVersion(onOpen) {
+  if (!myVersion) return;
+  try {
+    const res = await fetch(`${location.pathname}?fresh=${Date.now()}`, { cache: "no-store" });
+    const live = ((await res.text()).match(/js\/app\.js\?v=(\d+)/) || [])[1];
+    if (!live || live === myVersion) return;
+    const busy = mode === "game" || !els.result.hidden;
+    if (!onOpen && busy) return;
+    if (sessionStorage.getItem("odds:reloaded") === live) return; // once per version
+    sessionStorage.setItem("odds:reloaded", live);
+    location.reload();
+  } catch { /* offline: keep what we have */ }
+}
+checkVersion(true);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkVersion(false); });
+
 const params = new URLSearchParams(location.search);
 if (params.get("room") || params.get("mode") === "game") {
   setMode("game", { push: false, animate: false });

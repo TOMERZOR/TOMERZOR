@@ -131,6 +131,27 @@ export function overlapSwap(container, update) {
   ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: EXIT, easing: EASE_IN, fill: "forwards" }).finished.catch(() => {}).then(() => ghost.remove());
 }
 
+// The old card flies off to one side (from wherever a drag left it) while the update
+// puts the new card in place; the new one comes in from the other side.
+export function flyOut(container, update, dir = -1, from = 0) {
+  if (!container || reduced()) { update(); return null; }
+  const r = container.getBoundingClientRect();
+  const ghost = container.cloneNode(true);
+  ghost.removeAttribute("id");
+  ghost.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.inert = true;
+  ghost.style.cssText = `position:fixed;left:${r.left - from}px;top:${r.top}px;width:${r.width}px;margin:0;pointer-events:none;z-index:5;transform:none`;
+  document.body.append(ghost);
+  update();
+  const dist = innerWidth * 1.1;
+  ghost.animate([
+    { transform: `translateX(${from}px) rotate(${from * 0.04}deg)`, opacity: 1 },
+    { transform: `translateX(${from + dir * dist}px) rotate(${dir * 9}deg)`, opacity: 0 },
+  ], { duration: EXIT + 40, easing: EASE_IN, fill: "forwards" }).finished.catch(() => {}).then(() => ghost.remove());
+  return ghost;
+}
+
 // Past the end of where something can go, it gives a little and springs back (no overshoot).
 export function rubberNudge(el, dx = 4) {
   return run(el, [{ transform: "translateX(0)" }, { transform: `translateX(${dx}px)`, offset: 0.35 }, { transform: "translateX(0)" }], { duration: 260, easing: EASE_OUT });

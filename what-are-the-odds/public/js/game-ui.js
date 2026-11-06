@@ -39,6 +39,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   let lastScores = null;
   let deferred = false;
   let tapPoint = null; // where the last choice was touched, for the colour mask
+  let fly = null; // { dir, from }: the card being sent off by the next button or a swipe
 
   const t = (k, v) => fmt(L, k, v);
   const s = () => STR[L];
@@ -274,13 +275,17 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   function scoreHtml(m) {
     if (m.kind === "solo") {
       const lives = Array.from({ length: SOLO_LIVES }, (_, i) => `<i class="${i < solo.lives ? "" : "lost"}"></i>`).join("");
-      return `<div class="score"><span class="score__p is-turn"><span class="score__n" data-score="0">${solo.score}</span><span>${s().streak}</span></span><span class="lives" aria-label="${solo.lives}/${SOLO_LIVES}">${lives}</span></div>`;
+      return `<div class="score score--solo"><span class="score__p is-turn"><span class="score__n" data-score="0">${solo.score}</span><span>${s().streak}</span></span><span class="lives" aria-label="${solo.lives}/${SOLO_LIVES}">${lives}</span>${exitBtn()}</div>`;
     }
     const seat = (p, i) => {
       const off = m.online && p.connected === false ? `<span class="score__off">offline</span>` : "";
       return `<span class="score__p ${m.v.turn === i && m.phase !== "over" ? "is-turn" : ""}"><span class="score__name">${esc(m.names[i])}</span><span class="score__n" data-score="${i}">${p.score}</span>${off}</span>`;
     };
-    return `<div class="score">${m.v.players.map(seat).join("")}</div>`;
+    return `<div class="score">${m.v.players.map(seat).join("")}${exitBtn()}</div>`;
+  }
+
+  function exitBtn() {
+    return `<button class="iconbtn g-exit" type="button" data-act="exit" aria-label="${s().exit}" title="${s().exit}">${icon("x")}</button>`;
   }
 
   function verdictHtml(m) {
@@ -298,7 +303,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       const isBest = solo.score > solo.startBest;
       return `<div class="over">
         <h2>${s().soloOver}</h2>
-        <div class="final">${t("soloScore", { n: solo.score })}</div>
+        <div class="final">${solo.score === 1 ? s().soloScore1 : t("soloScore", { n: solo.score })}</div>
         <p class="g-sub">${isBest ? s().newBest : t("best", { n: solo.best })}</p>
         <div class="g-next"><button class="btn" type="button" data-act="solo">${s().playAgain}</button><button class="btn btn--quiet" type="button" data-act="exit">${s().exit}</button></div>
       </div>`;
@@ -332,28 +337,39 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
         : `<div class="challenge" id="g-challenge"><p>${t("waitChallenge", { name: esc(m.other) })}</p>${timer}</div>`;
     }
 
-    const reveal = revealing ? `
-      <p class="odds" id="g-odds"><span class="odds__pre" id="g-pre"></span><span class="odds__num" id="g-num"></span></p>
-      <p class="odds__alt" id="g-alt"></p>
-      <div id="g-after" ${settled ? "" : "hidden"}>
-        ${verdictHtml(m)}
+    const answer = revealing ? `
+      <div class="answer">
+        <p class="odds" id="g-odds"><span class="odds__pre" id="g-pre"></span><span class="odds__num" id="g-num"></span></p>
+        <p class="odds__alt" id="g-alt" hidden></p>
+        <div id="g-verdict" ${settled ? "" : "hidden"}>${verdictHtml(m)}</div>
+      </div>` : "";
+
+    const more = revealing ? `
+      <div class="more" id="g-more" ${settled ? "" : "hidden"}>
         <p class="card__x">${esc(fact[L].x)}</p>
         <p class="card__src">${esc(s().source + fact.src)}</p>
-        ${m.phase === "reveal" ? `<div class="g-next"><button class="btn" type="button" data-act="next">${s().next}</button></div>` : ""}
       </div>` : "";
 
     const q = L === "he" ? `${s().prefix}${fact[L].q}` : `${s().prefix} ${fact[L].q}`;
     return `
-      <article class="card" id="g-card" lang="${L}">
+      <article class="card ${revealing && settled && m.phase === "reveal" ? "is-swipeable" : ""}" id="g-card" lang="${L}">
         <p class="card__q">${esc(q)}?</p>
         <p class="card__t">${s().vs} <bdi>${esc(thresholdLabel(m.card.t, L))}</bdi></p>
-        <div class="choices">
-          ${choice("up", "arrow-up", s().higher)}
-          ${choice("down", "arrow-down", s().lower)}
-        </div>
+        ${answer}
+        <div class="slot" id="g-slot">${slotHtml(m, settled, choice)}</div>
         ${challenge}
-        ${reveal}
+        ${more}
       </article>`;
+  }
+
+  // Right where the thumb already is: the two choices, then "next" (or the end of the game).
+  function slotHtml(m, settled, choice) {
+    const revealing = m.phase === "reveal" || m.phase === "over";
+    if (revealing && settled) {
+      if (m.phase === "over") return overHtml(m);
+      return `<button class="btn btn--next" type="button" data-act="next"><span>${s().next}</span>${icon("arrow-right", "icon flip")}</button>`;
+    }
+    return `<div class="choices">${choice("up", "arrow-up", s().higher)}${choice("down", "arrow-down", s().lower)}</div>`;
   }
 
   function renderCard(m) {
@@ -366,14 +382,17 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
 
     const html = `
       ${scoreHtml(m)}
-      <p class="turn" id="g-turn">${m.phase === "over" ? "" : m.turnText}</p>
-      ${cardHtml(m, fact, settled)}
-      ${m.phase === "over" && settled ? overHtml(m) : ""}
-      <div class="g-back"><button class="textbtn" type="button" data-act="exit">${icon("arrow-left", "icon flip")}${s().exit}</button></div>`;
+      ${m.kind === "solo" || m.phase === "over" ? "" : `<p class="turn" id="g-turn">${m.turnText}</p>`}
+      ${cardHtml(m, fact, settled)}`;
 
     const oldCard = root.querySelector("#g-card");
-    if (isNew && oldCard && lastCardKey) {
-      // the old card fades out on top while the new one comes in: the states overlap
+    if (isNew && oldCard && lastCardKey && fly) {
+      // moved on with the button or a swipe: the old card flies off, the new one comes in from the other side
+      motion.flyOut(oldCard, () => { root.innerHTML = html; }, fly.dir, fly.from);
+      motion.enterFrom(root.querySelector("#g-card"), { dx: -fly.dir * 48, dy: 0, duration: 300 });
+      fly = null;
+    } else if (isNew && oldCard && lastCardKey) {
+      // the other phone moved on: the old card fades out on top while the new one comes in
       motion.overlapSwap(oldCard, () => { root.innerHTML = html; });
       motion.enterFrom(root.querySelector("#g-card"), { dy: 10 });
     } else {
@@ -419,13 +438,21 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     roll(els, fact.p, L, { duration: 2300 }).then(() => {
       if (anim.key !== key) return; // left the game while it rolled
       anim.done = true;
-      const after = root.querySelector("#g-after");
-      if (after) {
-        after.hidden = false;
-        // the verdict's colour is revealed by a mask, then the details settle 30ms apart
-        motion.wipeIn(after.querySelector(".verdict"));
-        motion.stagger([...after.children].slice(1), { delay: 60 });
+      const verdict = root.querySelector("#g-verdict");
+      if (verdict) {
+        verdict.hidden = false;
+        // the verdict's colour is revealed by a mask
+        motion.wipeIn(verdict.firstElementChild);
       }
+      // the choices become "next" in the same spot: old and new overlap
+      const slot = root.querySelector("#g-slot");
+      if (slot && m.phase === "reveal") {
+        motion.overlapSwap(slot, () => { slot.innerHTML = slotHtml(m, true); });
+        motion.enterFrom(slot.firstElementChild, { dy: 6, delay: 40 });
+        root.querySelector("#g-card").classList.add("is-swipeable");
+      }
+      const more = root.querySelector("#g-more");
+      if (more) { more.hidden = false; motion.stagger(more.children, { delay: 120 }); }
       // sounds from each player's point of view: a wrong guess always buzzes for the guesser
       let scorer = null;
       if (m.kind === "solo") {
@@ -458,7 +485,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
         deferred = false;
         render();
         const over = root.querySelector(".over");
-        if (over) motion.stagger(over.children, { delay: 500 });
+        if (over) motion.stagger(over.children, { delay: 400 });
       }
       const next = root.querySelector('[data-act="next"], [data-act="rematch"], [data-act="solo"]');
       if (next) next.focus({ preventScroll: true });
@@ -470,6 +497,58 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     motion.morph(() => { update(); render(); });
     void next;
   }
+
+  // Moving on is its own little reward: a whoosh, a buzz, and the card flies off.
+  function advance(dir, from) {
+    sound.whoosh();
+    fly = { dir: dir || -1, from: from || 0 };
+    if (mode === "solo") { nextSolo(); render(); }
+    else if (mode === "pass" && match) { match.next(); render(); }
+    else if (mode === "online" && net) net.send({ t: "next" });
+  }
+
+  // Swipe the answered card away to move on. Before it's answered it only gives a
+  // little (rubber band) and comes back.
+  (() => {
+    let drag = null;
+    root.addEventListener("pointerdown", (e) => {
+      const card = e.target.closest("#g-card");
+      if (!card || e.target.closest("button, a, input") || (e.pointerType === "mouse" && e.button !== 0)) return;
+      drag = { card, x: e.clientX, y: e.clientY, t: performance.now(), dx: 0, live: false, id: e.pointerId, free: card.classList.contains("is-swipeable") };
+    });
+    root.addEventListener("pointermove", (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x;
+      const dy = e.clientY - drag.y;
+      if (!drag.live) {
+        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag = null; return; } // scrolling
+        if (Math.abs(dx) < 8) return;
+        drag.live = true;
+        drag.card.setPointerCapture(e.pointerId);
+        drag.card.getAnimations().forEach((a) => a.cancel());
+      }
+      drag.dx = drag.free ? dx : motion.rubber(dx, 70);
+      drag.card.style.transform = `translateX(${drag.dx}px) rotate(${drag.dx * 0.04}deg)`;
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag;
+      drag = null;
+      if (!d.live) return;
+      const v = Math.abs(d.dx) / Math.max(1, performance.now() - d.t);
+      if (d.free && (Math.abs(d.dx) > 90 || (Math.abs(d.dx) > 30 && v > 0.6))) {
+        d.card.style.transform = "";
+        advance(Math.sign(d.dx), d.dx);
+        return;
+      }
+      // not far enough: back to the middle, easing out, no overshoot
+      const from = d.card.style.transform;
+      d.card.style.transform = "";
+      if (!motion.reduced()) d.card.animate([{ transform: from }, { transform: "none" }], { duration: 240, easing: motion.EASE_OUT });
+    };
+    root.addEventListener("pointerup", end);
+    root.addEventListener("pointercancel", end);
+  })();
 
   // ---------- input ----------
   root.addEventListener("pointerdown", (e) => {
@@ -520,13 +599,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       else if (mode === "online" && net) net.send({ t: "challenge", yes: act === "challenge" });
       return;
     }
-    if (act === "next") {
-      sound.tap();
-      if (mode === "solo") { nextSolo(); render(); }
-      else if (mode === "pass" && match) { match.next(); render(); }
-      else if (mode === "online" && net) net.send({ t: "next" });
-      return;
-    }
+    if (act === "next") { advance(-1, 0); return; }
     if (act === "rematch") {
       sound.tap();
       if (mode === "pass" && match) { match.rematch(); anim = { key: null, done: true }; lastCardKey = null; render(); }

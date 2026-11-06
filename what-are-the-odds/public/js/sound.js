@@ -141,6 +141,32 @@ export function steal() {
   haptic([10, 40, 14]);
 }
 
+// Moving on to the next card: a quick airy sweep.
+export function whoosh() {
+  const ac = audio();
+  if (!ac) return;
+  const t = ac.currentTime;
+  const len = 0.32;
+  const buf = ac.createBuffer(1, Math.floor(ac.sampleRate * len), ac.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = ac.createBufferSource();
+  src.buffer = buf;
+  const bp = ac.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 1.2;
+  bp.frequency.setValueAtTime(500, t);
+  bp.frequency.exponentialRampToValueAtTime(3200, t + len * 0.8);
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32, t + 0.06);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+  src.connect(bp).connect(g).connect(master);
+  src.start(t);
+  blip(1318.5, { at: 0.12, dur: 0.16, gain: 0.06 });
+  haptic([8, 30, 14]);
+}
+
 export function tap() {
   click(0.12, 1800);
   haptic(6);

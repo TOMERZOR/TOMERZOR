@@ -4,7 +4,7 @@ The clips keep their own native audio (keys, breath, room); this adds a quiet su
 100 BPM that start on the key press, thin out under the frustration shot, come back when Pointy opens,
 and resolve under the call to action, plus the UI sounds (bloom, typing, swish, pings, success chime).
 
-usage: python3 score.py timeline.json out.wav
+usage: python3 score.py timeline.json out.wav [--no-music]   (--no-music keeps only the UI sweeteners)
 """
 import json
 import sys
@@ -152,7 +152,7 @@ while t0 < DUR - 0.8:
     n += 1
 add(pad([440.0, 523.25, 659.25, 880.0], 2.4), DUR - 2.6, 0.08, 0, MU)
 
-mix = FX + MU * 0.8
+mix = FX + (0 if "--no-music" in sys.argv else MU * 0.8)
 fo = int(0.3 * SR)
 mix[-fo:] *= np.linspace(1, 0, fo)[:, None] ** 2
 mix = np.tanh(mix * 1.1) / np.tanh(1.1)

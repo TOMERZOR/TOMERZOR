@@ -1,4 +1,4 @@
-// Screenshots every .slide in index.html to slides/01.png … 08.png (1080×1350) and writes a preview strip.
+// Screenshots every .slide in layout.html to slides/01.png … 08.png (1080×1350) and writes a preview strip.
 //   node render.cjs
 const { chromium } = require("playwright");
 const { execFileSync } = require("child_process");
@@ -10,7 +10,7 @@ const path = require("path");
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1080, height: 1350 }, deviceScaleFactor: 1 });
-  await page.goto("file://" + path.join(__dirname, "index.html"));
+  await page.goto("file://" + path.join(__dirname, "layout.html"));
   await page.evaluate(async () => {
     await Promise.all([400, 500, 600, 700, 800, 900].map((w) => document.fonts.load(`${w} 40px Heebo`, "אבג abc 123")));
     await document.fonts.ready;

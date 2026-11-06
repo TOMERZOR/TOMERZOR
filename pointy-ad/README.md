@@ -22,7 +22,15 @@ node render.cjs --snap 1.6,10.5 snaps    # צילום של רגעים בודדי
 
 `carousel/slides/01.png` עד `08.png`: שמונה שקפים של 1080×1350 (4:5), שמסבירים את המוצר על לפטופ: הבעיה, מה זה Pointy, שלושת הצעדים (⌥ Space, שואלים בעברית, הסמן מצביע), "עובד בכל תוכנה", וקריאה לפעולה עם "פלאגין". הכיתוב לפוסט נמצא ב-`carousel/caption.txt`.
 
-לרנדר מחדש: `node carousel/render.cjs`. המקור הוא `carousel/index.html`, ופתיחה שלו בדפדפן מציגה את כל השקפים זה לצד זה.
+הלפטופ בשקפים הוא צילום מוצר ריאליסטי של MacBook שנוצר ב-Higgsfield, עם מסך ירוק (`carousel/assets/macbook-green.png`). תוכן המסך של כל שקף מודבק לתוכו בפרספקטיבה. שקף 4 משתמש בצילום המקרו של מקש ⌥ מהמודעה המצולמת.
+
+לרנדר מחדש:
+```
+cd pointy-ad/carousel
+node screens.cjs      # תוכן המסך של כל שקף מתוך index.html
+python3 compose.py    # מדביק את המסכים בצילום, מסיר את ההחזר הירוק ומוסיף את אור המסך
+node render.cjs       # הכותרות מתוך layout.html, ופלט ל-slides/01.png עד 08.png
+```
 
 ## מודעה מצולמת (Higgsfield)
 

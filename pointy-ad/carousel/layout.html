@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Pointy · קרוסלה</title>
+<link rel="stylesheet" href="../composition/fonts/local.css">
+<style>
+/* The final carousel: each slide is a photographed MacBook (work/base-0N.png, made by compose.py)
+   with the headline on top. render.cjs captures every .slide at 1080×1350. */
+:root { --txt: #FFF8F1; --mut: #C9BEB4; --or: #F08A2E; --or1: #FFB45C; --font: "Heebo", "Inter", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #050403; }
+body { font-family: var(--font); color: var(--txt); -webkit-font-smoothing: antialiased; }
+#slides { display: flex; direction: ltr; width: max-content; }
+.slide { position: relative; width: 1080px; height: 1350px; overflow: hidden; direction: rtl; flex: none; background: #0C0907 center / cover no-repeat; }
+.shade { position: absolute; left: 0; right: 0; pointer-events: none; }
+.top { position: absolute; top: 48px; left: 60px; right: 60px; display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 14px; font: 800 34px Inter, Heebo, sans-serif; letter-spacing: -.03em; }
+.brand svg { width: 50px; height: 50px; }
+.pg { font: 600 26px Inter, sans-serif; color: var(--mut); direction: ltr; padding: 8px 18px; border-radius: 999px; border: 1.5px solid rgba(255, 255, 255, .16); background: rgba(0, 0, 0, .2); }
+.pg.swipe { color: var(--txt); font-family: Heebo, sans-serif; font-weight: 700; background: rgba(255, 255, 255, .1); direction: rtl; }
+.copy { position: absolute; left: 64px; right: 64px; }
+.kick { display: inline-flex; align-items: center; gap: 12px; font-size: 30px; font-weight: 800; color: var(--or1); }
+.kick b { display: inline-grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--or); color: #1A0E05; font: 800 28px Inter, sans-serif; }
+h2 { margin: 12px 0 0; font-size: 84px; font-weight: 900; line-height: 1.04; letter-spacing: -.035em; text-shadow: 0 4px 30px rgba(0, 0, 0, .45); }
+h2 .or { color: var(--or1); }
+.copy p { margin: 18px 0 0; font-size: 32px; font-weight: 500; line-height: 1.38; color: var(--mut); letter-spacing: -.01em; text-shadow: 0 2px 16px rgba(0, 0, 0, .5); }
+.copy p b { color: var(--txt); font-weight: 700; }
+.pill { display: inline-block; padding: 0 28px 6px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; box-shadow: 0 18px 50px -10px rgba(240, 120, 30, .75); text-shadow: none; }
+.chips { position: absolute; left: 40px; right: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 12px; padding: 13px 26px; border-radius: 999px; background: rgba(20, 14, 10, .72); border: 1.5px solid rgba(255, 255, 255, .16); font-size: 30px; font-weight: 700; backdrop-filter: blur(10px); }
+.chip svg { width: 30px; height: 30px; color: var(--or1); }
+.url { position: absolute; left: 0; right: 0; text-align: center; font: 700 30px Inter, sans-serif; color: rgba(255, 248, 241, .8); direction: ltr; text-shadow: 0 2px 10px rgba(0, 0, 0, .7); }
+.callout { position: absolute; padding: 12px 22px; border-radius: 999px; background: rgba(15, 11, 8, .82); border: 1.5px solid rgba(240, 138, 46, .7); font-size: 28px; font-weight: 700; white-space: nowrap; box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .7); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="lgo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB85E"/><stop offset="1" stop-color="#EC6512"/></linearGradient>
+  <symbol id="logo" viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="url(#lgo)"/><path d="M8 26 Q8 6 28 6 L72 6 Q92 6 92 26 L92 38 Q50 30 8 46 Z" fill="rgba(255,255,255,.14)"/><path d="M34 29 L71 46 Q75 48 71 50 L56 55 L49 70 Q47 74 45 70 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+<div id="slides"></div>
+<script>
+const logo = `<svg><use href="#logo"/></svg>`;
+const N = 8;
+const TOPSHADE = `<div class="shade" style="top:0;height:620px;background:linear-gradient(rgba(8,5,3,.55),rgba(8,5,3,0))"></div>`;
+const SLIDES = [
+  { copy: `<h2>על מה<br><span class="or">לוחצים פה?!</span></h2><p>יש דרך מהירה יותר מיוטיוב. <b>הנה איך היא עובדת.</b></p>`, swipe: true },
+  { copy: `<div class="kick">הבעיה</div><h2>14 דקות מדריך<br><span class="or">בשביל כפתור אחד.</span></h2><p>מחפשים, מדלגים, חוזרים… ועדיין לא מוצאים איפה זה.</p>` },
+  { copy: `<div class="kick">הכירו את Pointy</div><h2>עוזר AI שמראה לך<br><span class="or">בדיוק על מה ללחוץ.</span></h2><p>יושב בשורת התפריטים של המחשב, ועובד מעל <b>כל תוכנה</b>.</p>` },
+  { copy: `<div class="kick"><b>1</b> איך זה עובד</div><h2>לוחצים <bdi dir="ltr" class="or" style="font-family:Inter,Heebo;letter-spacing:-.02em">⌥ Space</bdi><br>בכל אפליקציה.</h2><p>לא משנה באיזו תוכנה אתם. Pointy נפתח מעליה.</p>`, bottom: true },
+  { copy: `<div class="kick"><b>2</b> איך זה עובד</div><h2>שואלים בעברית.<br><span class="or">כותבים או אומרים.</span></h2><p>בלי מונחים מקצועיים. בדיוק כמו שהייתם שואלים חבר.</p>` },
+  { copy: `<div class="kick"><b>3</b> איך זה עובד</div><h2>הסמן הכתום מצביע,<br><span class="or">צעד אחרי צעד.</span></h2><p>לוחצים איפה שהוא מראה, אומרים <b>"עשיתי"</b>, וממשיכים.</p>` },
+  { copy: `<div class="kick">לא רק עריכה</div><h2>עובד בכל תוכנה.<br><span class="or">גם בעברית.</span></h2><p>טבלת ציר, הסרת רקע, תוכן עניינים, מדפסת. <b>שואלים, והוא מראה.</b></p>` },
+  { copy: `<div class="kick">רוצים לנסות?</div><h2>שלחו לי בדירקט<br>את המילה <span class="pill">פלאגין</span></h2><p>ואשלח לכם את <b>Pointy</b> ישר להודעות.</p>`,
+    extra: `<div class="chips" style="top:1188px">
+        <span class="chip"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8 20 L16 20 M12 16 L12 20" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>מק · ווינדוס</span>
+        <span class="chip"><svg viewBox="0 0 24 24"><path d="M4 5 Q4 3 6 3 L18 3 Q20 3 20 5 L20 14 Q20 16 18 16 L10 16 L5 20 L5 16 Q4 16 4 14 Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg>מדבר עברית באמת</span>
+        <span class="chip"><svg viewBox="0 0 24 24"><use href="#check"/></svg>מתחילים בחינם</span></div>
+      <div class="url" style="bottom:28px">trypointy.com</div>` },
+];
+document.getElementById("slides").innerHTML = SLIDES.map((s, i) => {
+  const n = String(i + 1).padStart(2, "0");
+  const copyPos = s.bottom ? "bottom:96px" : "top:126px";
+  const shade = s.bottom ? `<div class="shade" style="bottom:0;height:760px;background:linear-gradient(rgba(8,5,3,0),rgba(8,5,3,.88) 55%)"></div><div class="shade" style="top:0;height:240px;background:linear-gradient(rgba(8,5,3,.6),rgba(8,5,3,0))"></div>` : TOPSHADE;
+  return `<section class="slide" id="s${i + 1}" style="background-image:url(work/base-${n}.png)">${shade}
+    <div class="top"><div class="brand">${logo}Pointy</div>${s.swipe ? `<div class="pg swipe">החליקו <span style="font-family:Inter">←</span></div>` : `<div class="pg">${i + 1}/${N}</div>`}</div>
+    <div class="copy" style="${copyPos}">${s.copy}</div>${s.extra || ""}</section>`;
+}).join("");
+</script>
+</body>
+</html>

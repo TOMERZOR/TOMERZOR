@@ -75,4 +75,35 @@ dialog input { width: 100%; font: 16px monospace; padding: 10px; border-radius: 
 dialog menu { padding: 0; margin: 14px 0 0; display: flex; justify-content: flex-start; }
 dialog menu button { font: 700 16px var(--font); background: var(--brick); color: var(--gypsum); border: 0; border-radius: 10px; padding: 10px 20px; }
 
+.top { position: relative; }
+.gear {
+  position: absolute; inset-inline-end: 12px; top: 18px; display: inline-flex; align-items: center; gap: 6px;
+  border: 2px solid #e2d2b6; background: #fff; color: var(--ink); border-radius: 999px; padding: 6px 12px 6px 10px;
+  font: 600 13px var(--font); cursor: pointer; max-width: 44vw;
+}
+.gear svg { width: 18px; height: 18px; fill: var(--brick); flex: none; }
+.gear span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 480px) { .top { justify-content: flex-start; padding-inline-start: 16px; } }
+
+dialog.sheet { width: min(96vw, 480px); max-height: 88dvh; overflow: auto; padding: 18px 18px 14px; }
+dialog::backdrop { background: rgba(42,26,18,.45); }
+.sheet fieldset { border: 0; padding: 0; margin: 14px 0 0; }
+.sheet legend { font-weight: 700; font-size: 17px; margin-bottom: 8px; }
+.options { display: grid; gap: 8px; }
+.opt {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+  background: #fff; border: 2px solid #e2d2b6; border-radius: 14px; padding: 10px 12px; cursor: pointer;
+}
+.opt:has(input:checked) { border-color: var(--brick); background: #fff6ea; box-shadow: 0 0 0 2px rgba(138,59,31,.15); }
+.opt input { accent-color: var(--brick); width: 18px; height: 18px; margin: 0; }
+.opt b { display: block; font-size: 16px; }
+.opt small { color: var(--muted); font-size: 13px; }
+.opt .tag { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 8px; background: var(--sand); color: var(--brick-deep); white-space: nowrap; }
+.opt .tag.fast { background: #e3f1e0; color: #2f6b2a; }
+.opt .tag.smart { background: #e3ecf7; color: #234f80; }
+.speed { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 16px; font-weight: 700; }
+.speed input { grid-column: 1 / -1; accent-color: var(--brick); }
+.sheet .note { color: var(--muted); font-size: 14px; margin: 12px 0 0; }
+.sheet menu button.primary { width: 100%; font-size: 18px; padding: 12px; }
+
 @media (prefers-reduced-motion: reduce) { .bubble { animation: none; } }

@@ -5,6 +5,66 @@ const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 
 const mascot = new Mascot($('mascot'));
+
+// ---- model & voice choices (sent as per-conversation overrides) ----
+const LLMS = [
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', desc: 'ברירת המחדל – מהיר ומדבר עברית יפה', tag: 'מומלץ', cls: 'fast' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite', desc: 'הכי מהיר, קצת פחות מעמיק', tag: 'הכי מהיר', cls: 'fast' },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash', desc: 'הדור החדש של Gemini', tag: 'מהיר', cls: 'fast' },
+  { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5', desc: 'מהיר, חם ומדויק', tag: 'מהיר', cls: 'fast' },
+  { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5', desc: 'חכם מאוד, עונה קצת יותר לאט', tag: 'הכי חכם', cls: 'smart' },
+  { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini', desc: 'מהיר וקליל', tag: 'מהיר', cls: 'fast' },
+  { id: 'gpt-5.5', name: 'GPT-5.5', desc: 'חכם, עם השהיה ארוכה יותר', tag: 'חכם', cls: 'smart' },
+];
+const VOICES = [
+  { id: '8sZ9Z3Jy28CGLLCmKEHn', name: 'ויקטור', desc: 'חם וטוב לב (ברירת המחדל)' },
+  { id: 'ZiofZHcEBTn5sRySe5h8', name: 'נמרוד', desc: 'חם ובטוח' },
+  { id: '6Ijsl5024dyMrE00loVE', name: 'הרצל', desc: 'רגוע ומדוד' },
+  { id: 'l7Q9rbdCC6j3J5dNlOOg', name: 'איתמר', desc: 'ברור, קריין' },
+];
+const store = {
+  get(k, d) { try { return localStorage.getItem('zakai.' + k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('zakai.' + k, v); } catch {} },
+};
+const prefs = {
+  llm: store.get('llm', LLMS[0].id),
+  voice: store.get('voice', VOICES[0].id),
+  speed: parseFloat(store.get('speed', '0.92')),
+};
+if (!LLMS.some(m => m.id === prefs.llm)) prefs.llm = LLMS[0].id;
+if (!VOICES.some(v => v.id === prefs.voice)) prefs.voice = VOICES[0].id;
+
+function renderChip() {
+  $('modelChip').textContent = LLMS.find(m => m.id === prefs.llm).name;
+}
+function renderOptions() {
+  $('llmOptions').innerHTML = LLMS.map(m => `
+    <label class="opt"><input type="radio" name="llm" value="${m.id}" ${m.id === prefs.llm ? 'checked' : ''}>
+      <span><b>${m.name}</b><small>${m.desc}</small></span><span class="tag ${m.cls}">${m.tag}</span></label>`).join('');
+  $('voiceOptions').innerHTML = VOICES.map(v => `
+    <label class="opt"><input type="radio" name="voice" value="${v.id}" ${v.id === prefs.voice ? 'checked' : ''}>
+      <span><b>${v.name}</b><small>${v.desc}</small></span><span></span></label>`).join('');
+  $('speedInput').value = prefs.speed;
+  $('speedOut').textContent = prefs.speed.toFixed(2);
+}
+renderChip();
+
+$('speedInput').addEventListener('input', e => { $('speedOut').textContent = (+e.target.value).toFixed(2); });
+$('settingsBtn').addEventListener('click', () => {
+  renderOptions();
+  $('settingsNote').textContent = convo ? 'שמירה תתחיל שיחה חדשה עם ההגדרות החדשות.' : 'השינוי ייכנס לתוקף בשיחה הבאה.';
+  $('settings').showModal();
+});
+$('settings').addEventListener('close', async () => {
+  if ($('settings').returnValue !== 'save') return;
+  const f = $('settings').querySelector('form');
+  const next = { llm: f.llm.value, voice: f.voice.value, speed: +$('speedInput').value };
+  const changed = next.llm !== prefs.llm || next.voice !== prefs.voice || next.speed !== prefs.speed;
+  Object.assign(prefs, next);
+  store.set('llm', prefs.llm); store.set('voice', prefs.voice); store.set('speed', String(prefs.speed));
+  renderChip();
+  if (changed && convo) { await convo.endSession(); stopped(); await start(); }
+});
 let convo = null;
 let starting = false;
 let mode = 'listening';
@@ -71,6 +131,10 @@ async function start() {
     convo = await Conversation.startSession({
       agentId: id,
       connectionType: 'webrtc',
+      overrides: {
+        agent: { prompt: { llm: prefs.llm } },
+        tts: { voiceId: prefs.voice, speed: prefs.speed },
+      },
       onConnect: () => { document.body.dataset.live = '1'; $('micLabel').textContent = 'סיים שיחה'; setState('listening'); },
       onDisconnect: () => stopped(),
       onError: (msg) => { console.error(msg); $('status').textContent = 'אוי, משהו השתבש בחיבור. נסה שוב.'; },

@@ -13,6 +13,10 @@
 <body>
   <header class="top">
     <img class="wordmark" src="../zakai-transparent.svg" alt="זכiA">
+    <button class="gear" id="settingsBtn" aria-label="הגדרות: בחירת מודל וקול">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z" transform="translate(-1 0)"/></svg>
+      <span id="modelChip">Gemini 3.5 Flash</span>
+    </button>
   </header>
 
   <main class="stage">
@@ -38,6 +42,29 @@
       <ol id="log"></ol>
     </details>
   </section>
+
+  <dialog id="settings" class="sheet">
+    <form method="dialog">
+      <h2>ההגדרות של זכאי</h2>
+
+      <fieldset>
+        <legend>המוח (מודל שפה)</legend>
+        <div class="options" id="llmOptions"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>הקול</legend>
+        <div class="options" id="voiceOptions"></div>
+      </fieldset>
+
+      <label class="speed">קצב דיבור <output id="speedOut">0.92</output>
+        <input id="speedInput" type="range" min="0.7" max="1.2" step="0.02" value="0.92">
+      </label>
+
+      <p class="note" id="settingsNote">השינוי ייכנס לתוקף בשיחה הבאה.</p>
+      <menu><button value="save" class="primary">שמור</button></menu>
+    </form>
+  </dialog>
 
   <dialog id="setup">
     <form method="dialog">

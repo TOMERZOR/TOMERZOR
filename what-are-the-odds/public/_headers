@@ -1,0 +1,14 @@
+# Cloudflare serves these headers with the static files.
+# The page and its code always check for a newer version, so a phone never keeps an old copy.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/js/*
+  Cache-Control: no-cache
+/css/*
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

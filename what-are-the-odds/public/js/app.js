@@ -129,6 +129,8 @@ function setRelated(ids, lang, title) {
 
 function startCard(question, lang) {
   stopRoll();
+  els.viewCurious.classList.add("has-result");
+  if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: reduced() ? "auto" : "smooth" });
   els.result.hidden = false;
   els.result.lang = lang;
   els.result.dir = lang === "he" ? "rtl" : "ltr";
@@ -194,7 +196,7 @@ async function showFact(fact, question, lang, related, { animate = true } = {}) 
   els.source.textContent = (sameQuestion ? "" : `${s.answered}${fact[lang].q} · `) + s.source + fact.src;
   current = { question, lang, view: { kind: "fact", id: fact.id, related } };
   const seq = askSeq;
-  if (animate) await roll(els, fact.p, lang);
+  if (animate) await roll(els, fact.p, lang, { duration: 3000 });
   else await roll(els, fact.p, lang, { duration: 0, silent: true });
   if (seq !== askSeq) return;
   paintMeter(fact.p, lang);
@@ -215,7 +217,7 @@ async function showAi(view, question, lang) {
   if (view.kind === "ai") {
     setBadge("ai", `${s.badgeAi} · ${s.conf[view.confidence] || s.conf.low}`);
     els.compare.textContent = compare(view.p, lang);
-    await roll(els, view.p, lang);
+    await roll(els, view.p, lang, { duration: 3000 });
     if (seq !== askSeq) return;
     paintMeter(view.p, lang);
   } else {
@@ -329,7 +331,6 @@ async function ask(raw, { factId } = {}) {
 
   startCard(q, lang);
   thinking(true);
-  if (!reduced()) els.result.scrollIntoView({ behavior: "smooth", block: "nearest" });
   const minThink = sleep(reduced() ? 0 : 900);
 
   const direct = factId ? factById(factId) : null;

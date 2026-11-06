@@ -22,12 +22,12 @@ export function steps(p, lang) {
   if (p >= 0.01 || p === 0) {
     const P = p * 100;
     const from = p === 0 ? 50 : 0;
-    const K = p === 0 ? 18 : Math.max(12, Math.min(30, Math.round(P >= 10 ? P / 2.2 : P * 3)));
+    const K = p === 0 ? 24 : Math.max(14, Math.min(40, Math.round(P >= 10 ? P / 1.3 : P * 4)));
     for (let k = 0; k < K; k++) push("", pctLabel(from + (P - from) * (k / K), Math.max(P, from)));
   } else {
     const L = Math.log10(1 / p);
     const start = Math.log10(2);
-    const K = Math.max(16, Math.min(40, Math.round(14 + 3 * L)));
+    const K = Math.max(20, Math.min(44, Math.round(18 + 3.5 * L)));
     for (let k = 0; k < K; k++) {
       const n = 10 ** (start + (L - start) * (k / K));
       const b = bigNumber(Number(n.toPrecision(2)), lang);
@@ -86,7 +86,7 @@ export function roll(els, p, lang, { duration = 2600, silent = false } = {}) {
 
   const list = steps(p, lang);
   const K = list.length;
-  const power = 2.6; // value(t) = 1 - (1 - t)^power: fast start, long slow finish
+  const power = 3; // value(t) = 1 - (1 - t)^3: races up, then crawls into the answer
   const times = list.map((_, k) => duration * (1 - (1 - k / K) ** (1 / power)));
   const timers = [];
   let cancelled = false;

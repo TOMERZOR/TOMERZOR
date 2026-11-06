@@ -118,7 +118,9 @@ button { cursor: pointer; -webkit-user-select: none; user-select: none; }
 @keyframes view-in { from { opacity: 0; transform: translateY(10px); } }
 
 /* ---------- ask: one line, "מה הסיכויים ש" + what you type + the dice ---------- */
-#view-curious { padding-top: clamp(48px, 20vh, 180px); }
+#view-curious { padding-top: clamp(48px, 20vh, 180px); transition: padding-top .7s var(--ease-out); }
+/* once there's an answer, the line rises so the answer sits right under it */
+#view-curious.has-result { padding-top: 18px; }
 .ask {
   display: flex; align-items: center; gap: 6px; min-width: 0; padding: 6px; padding-inline-start: 22px;
   background: var(--surface); border-radius: 999px; box-shadow: var(--shadow), inset 0 0 0 1px var(--line);
@@ -159,7 +161,7 @@ button { cursor: pointer; -webkit-user-select: none; user-select: none; }
 @keyframes dice { 40% { transform: rotate(200deg) scale(.85); } 100% { transform: rotate(360deg); } }
 
 /* ---------- result ---------- */
-.result { margin-top: 40px; }
+.result { margin-top: 22px; }
 .result__q { margin: 0; font-size: 18px; font-weight: 400; color: var(--ink-2); line-height: 1.4; }
 .thinking { margin: 18px 0 0; font-size: clamp(24px, 6.5vw, 30px); font-weight: 400; display: flex; align-items: baseline; gap: 2px; }
 .thinking > span:first-child {

@@ -13,6 +13,10 @@ Bag and wishlist are kept in the visitor's browser (localStorage). Checkout and 
 
 Preview locally: `npx http-server .` and open http://localhost:8080
 
+## What are the odds?
+
+A free site in Hebrew and English: finish "מה הסיכוי..." and get the real odds, with a source or a labelled AI estimate. Start with `what-are-the-odds/README.md`.
+
 ## LUNÉ dropshipping store
 
 A complete Hebrew dropshipping store for a satin heatless curling set: Shopify theme, product import, policies, Facebook ads and launch plan. Start with `dropship/README.md`.

@@ -1,0 +1,22 @@
+# What are the odds? on Cloudflare Workers: the site (public/) and its API (worker/).
+# Deployed by .github/workflows/what-are-the-odds.yml on every push to its branch,
+# or by hand with `npx wrangler deploy` from this folder.
+name = "what-are-the-odds"
+main = "worker/worker.js"
+compatibility_date = "2026-10-01"
+
+# Files in public/ are served directly; anything else (the /api routes) reaches the Worker.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Workers AI answers questions that aren't in the checked list (free daily allowance).
+[ai]
+binding = "AI"
+
+[vars]
+AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+AI_FALLBACK_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast"
+
+[observability]
+enabled = true

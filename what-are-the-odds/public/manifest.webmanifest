@@ -1,0 +1,12 @@
+{
+  "name": "What are the odds?",
+  "short_name": "Odds",
+  "description": "מה הסיכוי ש...? כתבו כל שאלה וקבלו את הסיכוי האמיתי.",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F3EFE6",
+  "theme_color": "#F3EFE6",
+  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

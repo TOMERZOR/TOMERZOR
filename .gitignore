@@ -56,3 +56,8 @@ hekerut/site/public/
 hekerut/server/node_modules/
 hekerut/server/.wrangler/
 hekerut/site/.wrangler/
+
+# What are the odds
+what-are-the-odds/.wrangler/
+what-are-the-odds/deploy.log
+what-are-the-odds/node_modules/

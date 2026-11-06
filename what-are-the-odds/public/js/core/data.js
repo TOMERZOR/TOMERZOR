@@ -1,0 +1,552 @@
+// The checked answers: real statistics and exact math, each with where it comes from.
+// Shared by the page (instant answers, works offline) and the Worker (answers these
+// before asking the AI).
+//
+// Each entry:
+//   id    unique, used in links (?id=...)
+//   cat   category id (see CATEGORIES)
+//   p     the probability, 0..1 (0 = impossible)
+//   k     keyword groups; every group must match the question. A keyword matches a
+//         word in the question (after Hebrew prefixes ו ה ש ב ל מ כ are stripped).
+//         "stem*" matches any word starting with stem; "two words" matches a phrase.
+//   o     optional keywords: not required, but count as "understood" words
+//   he/en q: the question as shown after "מה הסיכוי" / "What are the odds"
+//         x: the explanation
+//   src   where the number comes from
+//
+// Numbers are rounded on purpose. Where sources disagree, the explanation says so.
+
+export const CATEGORIES = [
+  { id: "birth", he: "לידה וגוף", en: "Birth & body", icon: "👶" },
+  { id: "games", he: "משחקים ומזל", en: "Games & luck", icon: "🎲" },
+  { id: "money", he: "כסף והגרלות", en: "Money & lotteries", icon: "💰" },
+  { id: "danger", he: "סכנות", en: "Danger", icon: "⚡" },
+  { id: "space", he: "חלל וטבע", en: "Space & nature", icon: "🌍" },
+  { id: "life", he: "חיים ויומיום", en: "Life & everyday", icon: "☕" },
+  { id: "animals", he: "בעלי חיים", en: "Animals", icon: "🦞" },
+  { id: "tech", he: "מספרים ומחשבים", en: "Numbers & computers", icon: "🔐" },
+];
+
+const BORN = ["נולד*", "יוולד*", "היוולד*", "תיוולד*", "לידה", "ללדת", "תינוק*", "born", "birth*", "baby", "babies"];
+
+export const FACTS = [
+  // ---------- Birth & body ----------
+  {
+    id: "boy", cat: "birth", p: 0.512,
+    k: [["בן", "בנים", "זכר", "ילד", "boy", "boys", "male", "son"]], o: BORN,
+    he: { q: "להיוולד בן", x: "בכל העולם נולדים בערך 105 בנים על כל 100 בנות. הטבע \"מפצה\" מראש, כי בנים נוטים יותר למות בגיל צעיר." },
+    en: { q: "of being born a boy", x: "Worldwide, about 105 boys are born for every 100 girls. Nature seems to over-produce boys slightly, since young males are more likely to die early." },
+    src: "WHO / UN World Population Prospects, sex ratio at birth",
+  },
+  {
+    id: "girl", cat: "birth", p: 0.488,
+    k: [["בת", "בנות", "נקבה", "ילדה", "girl", "girls", "female", "daughter"]], o: BORN,
+    he: { q: "להיוולד בת", x: "על כל 100 בנות נולדים בערך 105 בנים, אז הסיכוי לבת קצת פחות מחצי." },
+    en: { q: "of being born a girl", x: "About 105 boys are born for every 100 girls, so a girl is slightly less than a coin flip." },
+    src: "WHO / UN World Population Prospects, sex ratio at birth",
+  },
+  {
+    id: "no-ears", cat: "birth", p: 1 / 7500,
+    k: [["אוזן", "אוזניים", "אוזנים", "אזניים", "ear", "ears", "anotia", "microtia", "אנוטיה", "מיקרוטיה"], ["בלי", "ללא", "חסר*", "אין", "without", "missing", "no", "חסרות"]], o: BORN,
+    he: { q: "להיוולד בלי אוזניים", x: "אוזן חיצונית חסרה או לא מפותחת (מיקרוטיה/אנוטיה) מופיעה בערך בלידה אחת מכל 5,000 עד 10,000, ובדרך כלל רק בצד אחד. היעדר מלא של שתי האוזניים נדיר בהרבה. בכל מקרה השמיעה הפנימית לרוב קיימת, ויש היום שחזורים ומכשירי שמיעה טובים." },
+    en: { q: "of being born without ears", x: "A missing or underdeveloped outer ear (microtia/anotia) happens in roughly 1 in 5,000–10,000 births, usually on one side only. Missing both ears completely is far rarer. The inner ear often works, and reconstruction and hearing devices help a lot." },
+    src: "CDC, birth defects: anotia/microtia",
+  },
+  {
+    id: "twins", cat: "birth", p: 1 / 83,
+    k: [["תאומ*", "twin*"]], o: BORN.concat(["ללדת", "have", "get", "לקבל"]),
+    he: { q: "ללדת תאומים", x: "בעולם בערך 12 מכל 1,000 לידות הן לידות תאומים. טיפולי פוריות ולידה בגיל מבוגר יותר מעלים את הסיכוי, ולכן הוא עלה מאוד ב־40 השנים האחרונות." },
+    en: { q: "of having twins", x: "Worldwide about 12 of every 1,000 deliveries are twins. Fertility treatment and older mothers raise the odds, which is why twin births rose sharply over the past 40 years." },
+    src: "Monden, Pison & Smits, Human Reproduction (2021)",
+  },
+  {
+    id: "identical-twins", cat: "birth", p: 1 / 250,
+    k: [["תאומ*", "twin*"], ["זהים", "זהות", "identical", "monozygotic"]], o: BORN,
+    he: { q: "ללדת תאומים זהים", x: "תאומים זהים (מביצית אחת שהתפצלה) קורים בערך ב־3 עד 4 מכל 1,000 לידות, כמעט באותו שיעור בכל העולם. זה כנראה מקרי, לא תורשתי." },
+    en: { q: "of having identical twins", x: "Identical twins (one egg that splits) happen in about 3–4 of every 1,000 births, at nearly the same rate everywhere. It seems to be random rather than inherited." },
+    src: "Hall, Twinning (The Lancet, 2003)",
+  },
+  {
+    id: "triplets", cat: "birth", p: 1 / 8000,
+    k: [["שלישי*", "triplet*"]], o: BORN.concat(["טבעי", "טבעית", "naturally"]),
+    he: { q: "ללדת שלישייה (באופן טבעי)", x: "לפי \"חוק הלין\" הישן, אם תאומים הם 1 מתוך 89 לידות, שלישייה היא בערך 1 מתוך 89², כלומר 1 מתוך 8,000. טיפולי פוריות מעלים את זה הרבה." },
+    en: { q: "of having triplets (naturally)", x: "By the old Hellin's rule: if twins are 1 in 89 births, triplets are about 1 in 89², so roughly 1 in 8,000. Fertility treatment raises it a lot." },
+    src: "Hellin's law, natural multiple births",
+  },
+  {
+    id: "leap-day", cat: "birth", p: 1 / 1461,
+    k: [["29", "פברואר", "february", "feb", "leap", "מעוברת", "מעובר"]], o: BORN.concat(["יום", "day", "בפברואר"]),
+    he: { q: "להיוולד ב־29 בפברואר", x: "29 בפברואר מגיע פעם בארבע שנים, כלומר יום אחד מתוך 1,461. בעולם יש בערך 5 מיליון אנשים שנולדו בו." },
+    en: { q: "of being born on February 29", x: "February 29 comes once every four years: one day out of 1,461. About 5 million people alive today were born on it." },
+    src: "Calendar math",
+  },
+  {
+    id: "left-handed", cat: "birth", p: 0.1,
+    k: [["שמאלי*", "שמאל", "left-hand*", "lefty", "lefties", "left handed"]],
+    he: { q: "להיות שמאלי", x: "בערך אחד מכל עשרה אנשים בעולם הוא שמאלי, ושיעור זה יציב כבר אלפי שנים. אצל גברים זה קצת יותר נפוץ." },
+    en: { q: "of being left-handed", x: "About 1 in 10 people is left-handed, a share that has stayed stable for thousands of years. It is slightly more common in men." },
+    src: "Papadatou-Pastou et al., Psychological Bulletin (2020)",
+  },
+  {
+    id: "red-hair", cat: "birth", p: 0.015,
+    k: [["ג'ינג'י*", "גינגי*", "גינג'י*", "ג׳ינג׳י*", "אדום", "אדומה", "redhead*", "ginger", "red"]], o: ["שיער", "hair", "להיות", "born"],
+    he: { q: "להיות ג׳ינג׳י", x: "בעולם רק 1% עד 2% מהאנשים ג׳ינג׳ים. בסקוטלנד ובאירלנד זה כבר בערך 10%. צריך לרשת את הגן משני ההורים." },
+    en: { q: "of being a redhead", x: "Only 1–2% of people worldwide have red hair. In Scotland and Ireland it is around 10%. You need the gene from both parents." },
+    src: "Genetics Home Reference (MC1R gene)",
+  },
+  {
+    id: "green-eyes", cat: "birth", p: 0.02,
+    k: [["ירוק*", "green"], ["עיניים", "עינים", "עין", "eye", "eyes"]],
+    he: { q: "להיוולד עם עיניים ירוקות", x: "רק כ־2% מאוכלוסיית העולם עם עיניים ירוקות, הצבע הנדיר ביותר מבין הנפוצים. הכי הרבה יש בצפון ובמרכז אירופה." },
+    en: { q: "of having green eyes", x: "Only about 2% of the world has green eyes, the rarest of the common eye colors. They are most frequent in northern and central Europe." },
+    src: "American Academy of Ophthalmology",
+  },
+  {
+    id: "extra-finger", cat: "birth", p: 1 / 700,
+    k: [["אצבע*", "finger*", "toe*", "polydactyl*", "פולידקטיליה"]], o: BORN.concat(["שש", "6", "שישה", "נוספת", "עודפת", "extra", "six"]),
+    he: { q: "להיוולד עם אצבע נוספת", x: "אצבע נוספת ביד או ברגל (פולידקטיליה) היא אחד המומים הנפוצים: בערך לידה אחת מכל 500 עד 1,000. לרוב זה מטופל בניתוח פשוט." },
+    en: { q: "of being born with an extra finger", x: "An extra finger or toe (polydactyly) is one of the most common birth differences: about 1 in 500–1,000 births. It is usually fixed with simple surgery." },
+    src: "Cleveland Clinic / NIH MedlinePlus",
+  },
+  {
+    id: "color-blind", cat: "birth", p: 0.08,
+    k: [["עיוורון", "עיוור", "עיוורת", "color blind*", "colour blind*", "colorblind*", "colourblind*", "daltonism"]], o: ["צבעים", "colors", "colours", "גבר", "man", "men"],
+    he: { q: "להיות עיוור צבעים", x: "בערך 1 מכל 12 גברים (8%) ורק 1 מכל 200 נשים (0.5%). הגן נמצא על כרומוזום X, ולגברים יש רק אחד כזה." },
+    en: { q: "of being color blind", x: "About 1 in 12 men (8%) but only 1 in 200 women (0.5%). The gene sits on the X chromosome, and men have only one." },
+    src: "National Eye Institute (NIH)",
+  },
+  {
+    id: "perfect-pitch", cat: "birth", p: 1 / 10000,
+    k: [["שמיעה מוחלטת", "perfect pitch", "absolute pitch"]], o: ["שמיעה", "pitch"],
+    he: { q: "שיש לי שמיעה מוחלטת", x: "היכולת לזהות תו בלי צליל ייחוס נדירה: בערך אחד מכל 10,000 אנשים. בקרב מוזיקאים שהתחילו לנגן לפני גיל 6 היא נפוצה בהרבה." },
+    en: { q: "of having perfect pitch", x: "Naming a note without a reference tone is rare: about 1 in 10,000 people. It is far more common among musicians who started before age 6." },
+    src: "Deutsch, Absolute Pitch (Psychology of Music, 2013)",
+  },
+  {
+    id: "iq-140", cat: "birth", p: 0.0038,
+    k: [["iq", "גאון", "גאונה", "genius", "מנת משכל"]], o: ["140", "מעל", "above", "over"],
+    he: { q: "שיש לי IQ מעל 140", x: "מבחני IQ בנויים כך שהממוצע 100 וסטיית התקן 15. 140 זה 2.67 סטיות תקן מעל הממוצע, ורק כ־0.4% מהאנשים שם, בערך 1 מתוך 260." },
+    en: { q: "of having an IQ over 140", x: "IQ tests are built with a mean of 100 and a standard deviation of 15. 140 is 2.67 deviations above the mean, where about 0.4% of people are, roughly 1 in 260." },
+    src: "Normal distribution of IQ scores",
+  },
+  {
+    id: "ab-negative", cat: "birth", p: 0.006,
+    k: [["ab", "איי בי"], ["שלילי", "מינוס", "negative", "neg"]], o: ["סוג", "דם", "blood", "type"],
+    he: { q: "שסוג הדם שלי AB שלילי", x: "AB שלילי הוא סוג הדם הנדיר ביותר: בערך 0.6% מהאנשים בארה״ב ופחות מ־1% בישראל." },
+    en: { q: "of having AB negative blood", x: "AB negative is the rarest main blood type: about 0.6% of people in the US and under 1% in Israel." },
+    src: "American Red Cross / Magen David Adom",
+  },
+  {
+    id: "albino", cat: "birth", p: 1 / 18000,
+    k: [["לבקן", "לבקנית", "לבקנות", "אלבינו", "albino", "albinism"]], o: BORN,
+    he: { q: "להיוולד לבקן", x: "לבקנות (חוסר פיגמנט בעור, בשיער ובעיניים) מופיעה בערך בלידה אחת מכל 17,000 עד 20,000 באירופה ובצפון אמריקה, ובחלק מאזורי אפריקה בתדירות גבוהה בהרבה." },
+    en: { q: "of being born with albinism", x: "Albinism (no pigment in skin, hair and eyes) happens in about 1 in 17,000–20,000 births in Europe and North America, and much more often in parts of Africa." },
+    src: "NIH MedlinePlus Genetics",
+  },
+  {
+    id: "due-date", cat: "birth", p: 0.04,
+    k: [["תאריך", "due date", "due"], ["משוער", "המשוער", "due date", "due", "בדיוק", "exactly", "on"]], o: BORN,
+    he: { q: "שתינוק ייוולד בדיוק בתאריך המשוער", x: "רק בערך 4% מהתינוקות נולדים בדיוק בתאריך המשוער. רובם נולדים בטווח של שבועיים לפניו או אחריו." },
+    en: { q: "that a baby is born on its due date", x: "Only about 4% of babies arrive on their exact due date. Most come within two weeks either side." },
+    src: "Jukic et al., Human Reproduction (2013)",
+  },
+  {
+    id: "heart-defect", cat: "birth", p: 0.01,
+    k: [["לב", "heart"], ["מום", "מומים", "defect*", "congenital"]], o: BORN,
+    he: { q: "להיוולד עם מום לב", x: "מומי לב מולדים הם המומים הנפוצים ביותר: בערך תינוק אחד מכל 100. רובם קלים, ורבים לא צריכים טיפול בכלל." },
+    en: { q: "of being born with a heart defect", x: "Congenital heart defects are the most common birth defect: about 1 in 100 babies. Most are mild, and many need no treatment at all." },
+    src: "CDC, congenital heart defects",
+  },
+  {
+    id: "israel-born", cat: "birth", p: 0.00137,
+    k: [["ישראל", "בארץ", "israel", "israeli"]], o: BORN,
+    he: { q: "להיוולד בישראל", x: "בישראל נולדים כ־180 אלף תינוקות בשנה, מתוך כ־132 מיליון בעולם. כלומר בערך תינוק אחד מכל 730 בעולם נולד בישראל." },
+    en: { q: "of being born in Israel", x: "About 180,000 babies are born in Israel each year, out of about 132 million worldwide: roughly 1 in every 730 babies on Earth." },
+    src: "Israel CBS / UN World Population Prospects",
+  },
+  {
+    id: "peanut-allergy", cat: "birth", p: 0.02,
+    k: [["בוטנ*", "peanut*"]], o: ["אלרגי*", "allerg*"],
+    he: { q: "להיות אלרגי לבוטנים", x: "בערך 2% מהילדים במדינות מערביות אלרגיים לבוטנים. בישראל השיעור נמוך במיוחד, אולי כי תינוקות אוכלים במבה מגיל צעיר." },
+    en: { q: "of being allergic to peanuts", x: "About 2% of children in Western countries are allergic to peanuts. Israel's rate is notably low, possibly because babies eat Bamba early, which inspired the LEAP study." },
+    src: "Du Toit et al., NEJM (LEAP study, 2015)",
+  },
+
+  // ---------- Games & luck ----------
+  {
+    id: "coin-heads", cat: "games", p: 0.5,
+    k: [["מטבע", "coin"]], o: ["עץ", "פלי", "heads", "tails", "הטלה", "flip", "toss", "ייפול", "יצא"],
+    he: { q: "שמטבע ייפול על עץ", x: "חצי. ובכל זאת, מחקר שהטיל 350 אלף מטבעות מצא שמטבע נוחת על אותו צד שהתחיל ממנו ב־50.8% מהפעמים." },
+    en: { q: "of a coin landing heads", x: "One half. Although a study of 350,000 flips found coins land on the side they started on 50.8% of the time." },
+    src: "Bartoš et al. (2023), 350,757 coin flips",
+  },
+  {
+    id: "coin-edge", cat: "games", p: 1 / 6000,
+    k: [["מטבע", "coin"], ["צד", "דופן", "קצה", "edge", "side"]], o: ["עומד", "ייפול", "land*", "on"],
+    he: { q: "שמטבע ינחת על הצד", x: "ניסוי עם מטבע ניקל אמריקאי העריך שבערך פעם אחת מכל 6,000 הטלות הוא נעצר עומד על הדופן. מטבע עבה יותר עומד הרבה יותר בקלות." },
+    en: { q: "of a coin landing on its edge", x: "Experiments with a US nickel estimate it stops on its edge about once in 6,000 tosses. Thicker coins do it far more often." },
+    src: "Murray & Teare, Physical Review E (1993)",
+  },
+  {
+    id: "ten-heads", cat: "games", p: 1 / 1024,
+    k: [["מטבע", "coin", "heads", "עץ"], ["10", "עשר", "עשרה", "ten", "row", "ברצף", "רצוף"]], o: ["פעמים", "times", "עץ", "flips"],
+    he: { q: "לקבל עץ 10 פעמים ברצף", x: "כל הטלה היא חצי, אז עשר ברצף הן ½ בחזקת 10: אחת מתוך 1,024. והמטבע לא \"זוכר\": הסיכוי שההטלה ה־11 תהיה עץ עדיין חצי." },
+    en: { q: "of flipping 10 heads in a row", x: "Each flip is ½, so ten in a row is ½ to the 10th: 1 in 1,024. The coin has no memory: the 11th flip is still 50/50." },
+    src: "Exact math",
+  },
+  {
+    id: "dice-six", cat: "games", p: 1 / 6,
+    k: [["קובי*", "דייס", "dice", "six", "שש"]], o: ["שש", "6", "six", "לקבל", "roll*", "אחד", "one"],
+    he: { q: "לקבל 6 בקובייה", x: "לקובייה יש שש פאות שוות, אז כל מספר יוצא בסיכוי של אחד משש." },
+    en: { q: "of rolling a six", x: "A fair die has six equal faces, so each number comes up 1 time in 6." },
+    src: "Exact math",
+  },
+  {
+    id: "double-six", cat: "games", p: 1 / 36,
+    k: [["קובי*", "dice", "שש", "six", "sixes", "שש-בש", "שש בש"], ["שתי", "שני", "דאבל", "double", "two", "both", "pair", "snake", "שש-שש", "שש שש", "boxcars"]], o: ["6", "לקבל", "roll*"],
+    he: { q: "לקבל שש-שש בשתי קוביות", x: "לכל קובייה 6 תוצאות, אז לשתיים יש 36 צירופים, ורק אחד מהם הוא שש-שש." },
+    en: { q: "of rolling double six", x: "Two dice have 6 × 6 = 36 combinations, and only one of them is double six." },
+    src: "Exact math",
+  },
+  {
+    id: "yahtzee", cat: "games", p: 1 / 1296,
+    k: [["yahtzee", "יאצי", "יאטזי", "five of a kind", "חמש קוביות", "5 קוביות", "five dice"]],
+    he: { q: "לקבל יאצי בהטלה אחת", x: "חמש קוביות זהות בהטלה אחת: הראשונה קובעת את המספר, וכל אחת מארבע האחרות צריכה להתאים (1/6⁴), כלומר 1 מתוך 1,296." },
+    en: { q: "of a Yahtzee in one roll", x: "Five matching dice in one roll: the first sets the number and the other four must match (1/6⁴), so 1 in 1,296." },
+    src: "Exact math",
+  },
+  {
+    id: "royal-flush", cat: "games", p: 1 / 649740,
+    k: [["רויאל", "royal"], ["פלאש", "flush"]], o: ["פוקר", "poker", "קלפים", "cards", "5"],
+    he: { q: "לקבל רויאל פלאש בפוקר", x: "יש 2,598,960 ידיים אפשריות של 5 קלפים, ורק 4 מהן הן רויאל פלאש (אחת לכל צורה). בטקסס הולדם, עם 7 קלפים, זה 1 מתוך 30,940." },
+    en: { q: "of being dealt a royal flush", x: "There are 2,598,960 possible 5-card hands and only 4 are royal flushes, one per suit. In Texas Hold'em, using 7 cards, it is 1 in 30,940." },
+    src: "Exact math (combinatorics)",
+  },
+  {
+    id: "four-kind", cat: "games", p: 1 / 4165,
+    k: [["רביעייה", "רביעיה", "four of a kind", "quads", "פוקר"]], o: ["poker", "קלפים", "cards"],
+    he: { q: "לקבל רביעייה בפוקר", x: "ביד של 5 קלפים יש 624 ידיים שהן רביעייה מתוך 2,598,960: אחת מכל 4,165." },
+    en: { q: "of getting four of a kind", x: "Of 2,598,960 five-card hands, 624 are four of a kind: 1 in 4,165." },
+    src: "Exact math (combinatorics)",
+  },
+  {
+    id: "full-house", cat: "games", p: 1 / 694,
+    k: [["פול האוס", "פולהאוס", "full house"]], o: ["poker", "פוקר"],
+    he: { q: "לקבל פול האוס בפוקר", x: "3,744 ידיים של 5 קלפים הן פול האוס, מתוך 2,598,960: בערך אחת מכל 694." },
+    en: { q: "of getting a full house", x: "3,744 of the 2,598,960 five-card hands are a full house: about 1 in 694." },
+    src: "Exact math (combinatorics)",
+  },
+  {
+    id: "blackjack", cat: "games", p: 0.0483,
+    k: [["בלאק ג'ק", "בלאקג'ק", "בלאק ג׳ק", "בלאקג׳ק", "blackjack"]], o: ["לקבל", "dealt", "natural"],
+    he: { q: "לקבל בלאק ג׳ק בחלוקה", x: "אס ועוד קלף ששווה 10 בשני הקלפים הראשונים: בערך 4.8%, כלומר פעם אחת מכל 21 ידיים." },
+    en: { q: "of being dealt a blackjack", x: "An ace plus a 10-value card in your first two cards: about 4.8%, once every 21 hands." },
+    src: "Exact math (single deck)",
+  },
+  {
+    id: "deck-order", cat: "games", p: 1 / 8.07e67,
+    k: [["חפיסה", "קלפים", "deck", "cards", "shuffle*", "ערבוב", "ערבבתי", "לערבב"]], o: ["סדר", "order", "אותו", "same", "52", "ever", "פעם"],
+    he: { q: "שחפיסה מעורבבת היתה כבר בסדר הזה אי פעם", x: "מספר הסדרים האפשריים של 52 קלפים הוא 52 עצרת, מספר עם 68 ספרות. גם אם כל אדם בהיסטוריה היה מערבב בכל שנייה, כמעט בטוח שהסדר שבידך מעולם לא הופיע." },
+    en: { q: "that a shuffled deck was ever in this order before", x: "There are 52! orders, a 68-digit number. Even if everyone who ever lived shuffled every second, the order in your hands has almost surely never existed before." },
+    src: "Exact math (52 factorial)",
+  },
+  {
+    id: "birthday-23", cat: "games", p: 0.507,
+    k: [["יום הולדת", "ימי הולדת", "birthday*", "birth day"], ["23", "שניים", "two", "shar*", "משותף", "אותו", "same", "קבוצה", "group", "כיתה", "class", "room"]], o: ["אנשים", "people"],
+    he: { q: "שבקבוצה של 23 אנשים לשניים יש אותו יום הולדת", x: "\"פרדוקס יום ההולדת\": זה נשמע נדיר, אבל ב־23 אנשים יש 253 זוגות, ולכן הסיכוי כבר 50.7%. ב־70 אנשים זה 99.9%." },
+    en: { q: "that 2 people in a group of 23 share a birthday", x: "The birthday paradox: 23 people make 253 pairs, so the chance is already 50.7%. With 70 people it is 99.9%." },
+    src: "Exact math (birthday problem)",
+  },
+  {
+    id: "same-birthday", cat: "games", p: 1 / 365,
+    k: [["יום הולדת", "birthday*", "יום ההולדת"], ["אותו", "same", "share*", "משותף", "זהה", "כמו", "guess", "לנחש"]], o: ["שלי", "my", "someone", "מישהו", "stranger", "זר"],
+    he: { q: "שלאדם זר יש אותו יום הולדת כמו שלי", x: "בערך 1 מתוך 365 (מעט יותר בספטמבר, שבו נולדים הכי הרבה תינוקות)." },
+    en: { q: "that a stranger shares my birthday", x: "About 1 in 365 (a little higher in September, the busiest month for births)." },
+    src: "Calendar math",
+  },
+  {
+    id: "rps", cat: "games", p: 1 / 3,
+    k: [["אבן", "rock"], ["נייר", "paper"]], o: ["מספריים", "scissors", "לנצח", "win"],
+    he: { q: "לנצח באבן נייר ומספריים", x: "שליש לנצח, שליש להפסיד ושליש תיקו, אם היריב באמת בוחר באקראי. בפועל אנשים פותחים הכי הרבה באבן." },
+    en: { q: "of winning rock paper scissors", x: "One third win, one third lose, one third tie, if your opponent is truly random. In practice people open with rock most often." },
+    src: "Exact math",
+  },
+  {
+    id: "monty-hall", cat: "games", p: 2 / 3,
+    k: [["מונטי", "monty", "שלוש דלתות", "3 דלתות", "three doors", "דלתות", "doors"]], o: ["הול", "hall", "להחליף", "מחליפ*", "בעי*", "דלת", "switch", "לנצח", "win", "problem"],
+    he: { q: "לזכות בבעיית מונטי הול אם מחליפים דלת", x: "אם מחליפים, הסיכוי לזכות הוא שני שליש, לא חצי. הבחירה הראשונה צדקה רק בשליש מהמקרים, והמנחה תמיד פותח דלת ריקה." },
+    en: { q: "of winning Monty Hall if you switch", x: "Switching wins 2/3 of the time, not 1/2. Your first pick was right only 1/3 of the time, and the host always opens an empty door." },
+    src: "Exact math (Monty Hall problem)",
+  },
+  {
+    id: "bracket", cat: "games", p: 1 / 9.2e18,
+    k: [["bracket", "march madness", "ברקט"]], o: ["perfect", "מושלם", "ncaa"],
+    he: { q: "לנחש ברקט מושלם של מרץ׳ מאדנס", x: "63 משחקים, ואם כל אחד הוא הטלת מטבע: 2 בחזקת 63, כלומר 1 מתוך 9.2 קווינטיליון. גם אם יודעים כדורסל זה עדיין בערך 1 מתוך מאות מיליארדים." },
+    en: { q: "of a perfect March Madness bracket", x: "63 games; if each were a coin flip that is 2⁶³, 1 in 9.2 quintillion. Even knowing basketball, estimates are still around 1 in hundreds of billions." },
+    src: "Exact math / NCAA",
+  },
+  {
+    id: "hole-in-one", cat: "games", p: 1 / 12500,
+    k: [["hole in one", "hole-in-one", "הול אין וואן", "חור באחת", "חור במכה"]], o: ["גולף", "golf"],
+    he: { q: "לקלוע הול אין וואן בגולף", x: "לשחקן חובב: בערך 1 מתוך 12,500 בכל גומה קצרה (פאר 3). לשחקן מקצועי: בערך 1 מתוך 2,500." },
+    en: { q: "of a hole in one", x: "For an amateur: about 1 in 12,500 per par-3 hole. For a tour pro: about 1 in 2,500." },
+    src: "National Hole-in-One Registry",
+  },
+  {
+    id: "perfect-bowling", cat: "games", p: 1 / 11500,
+    k: [["באולינג", "bowling"]], o: ["300", "מושלם", "perfect", "game", "משחק"],
+    he: { q: "לעשות משחק מושלם (300) בבאולינג", x: "12 סטרייקים ברצף. לשחקן חובב ממוצע ההערכה היא בערך 1 מתוך 11,500 משחקים." },
+    en: { q: "of bowling a perfect 300 game", x: "Twelve strikes in a row. For an average amateur the estimate is about 1 in 11,500 games." },
+    src: "United States Bowling Congress estimate",
+  },
+  {
+    id: "four-leaf", cat: "games", p: 1 / 5000,
+    k: [["תלתן", "clover", "shamrock"]], o: ["ארבעה", "four", "4", "עלים", "leaf", "leaves", "למצוא", "find"],
+    he: { q: "למצוא תלתן בן ארבעה עלים", x: "ההערכה המקובלת היא אחד מכל 5,000 עד 10,000 תלתנים. סקר של כ־5 מיליון תלתנים מצא 1 מכל 5,000." },
+    en: { q: "of finding a four-leaf clover", x: "The usual estimate is 1 in 5,000–10,000 clovers. A count of about 5 million clovers found 1 in 5,000." },
+    src: "Hedges, The Journal of Heredity / 2017 survey",
+  },
+  {
+    id: "pin", cat: "games", p: 1 / 10000,
+    k: [["קוד", "סיסמ*", "pin", "code"], ["4", "ארבע", "ארבעה", "four", "pin", "כרטיס", "card", "אשראי", "טלפון", "phone"]], o: ["לנחש", "guess", "ספרות", "digit*", "ניסיון", "try"],
+    he: { q: "לנחש קוד של 4 ספרות בניסיון אחד", x: "יש 10,000 קודים מ־0000 עד 9999. אבל אנשים לא בוחרים באקראי: 1234 לבד הוא בערך 10% מהקודים." },
+    en: { q: "of guessing a 4-digit PIN in one try", x: "There are 10,000 codes from 0000 to 9999. But people aren't random: 1234 alone is about 10% of PINs." },
+    src: "Exact math / DataGenetics PIN analysis",
+  },
+
+  // ---------- Money & lotteries ----------
+  {
+    id: "lotto-israel", cat: "money", p: 1 / 16273488,
+    k: [["לוטו", "lotto", "הגרלה", "הגרלת", "lottery", "פיס"]], o: ["לזכות", "win", "ראשון", "ראשי", "jackpot", "פרס", "ישראל", "israel", "בפיס"],
+    he: { q: "לזכות בלוטו (פרס ראשון)", x: "צריך לנחש 6 מספרים מתוך 37 (2,324,784 צירופים) וגם את המספר החזק מתוך 7. ביחד: 1 מתוך 16,273,488 לכל טבלה." },
+    en: { q: "of winning the Israeli Lotto jackpot", x: "Pick 6 of 37 numbers (2,324,784 combinations) and the strong number out of 7: together 1 in 16,273,488 per line." },
+    src: "Mifal HaPais rules (exact math)",
+  },
+  {
+    id: "powerball", cat: "money", p: 1 / 292201338,
+    k: [["powerball", "פאוורבול", "פאורבול"]], o: ["jackpot", "win", "לזכות"],
+    he: { q: "לזכות בג׳קפוט של פאוורבול", x: "5 מספרים מתוך 69 וכדור אדום מתוך 26: 1 מתוך 292,201,338." },
+    en: { q: "of winning the Powerball jackpot", x: "5 of 69 numbers plus 1 red ball of 26: 1 in 292,201,338." },
+    src: "Powerball official odds",
+  },
+  {
+    id: "euromillions", cat: "money", p: 1 / 139838160,
+    k: [["euromillion*", "יורומיליונס", "יורו מיליונס"]], o: ["jackpot", "win"],
+    he: { q: "לזכות בג׳קפוט של יורומיליונס", x: "5 מספרים מתוך 50 ו־2 כוכבים מתוך 12: 1 מתוך 139,838,160." },
+    en: { q: "of winning the EuroMillions jackpot", x: "5 of 50 numbers and 2 Lucky Stars of 12: 1 in 139,838,160." },
+    src: "EuroMillions official odds",
+  },
+  {
+    id: "billionaire", cat: "money", p: 1 / 2900000,
+    k: [["מיליארדר*", "billionaire*"]], o: ["להיות", "become", "להפוך"],
+    he: { q: "להיות מיליארדר", x: "לפי פורבס יש בעולם כ־2,800 מיליארדרים, מתוך יותר מ־8 מיליארד אנשים: בערך 1 מתוך 2.9 מיליון." },
+    en: { q: "of becoming a billionaire", x: "Forbes counts about 2,800 billionaires among more than 8 billion people: roughly 1 in 2.9 million." },
+    src: "Forbes World's Billionaires (2024)",
+  },
+  {
+    id: "millionaire", cat: "money", p: 0.011,
+    k: [["מיליונר*", "millionaire*"]], o: ["להיות", "become", "דולר", "dollar*"],
+    he: { q: "להיות מיליונר (בדולרים)", x: "לפי UBS בעולם יש כ־58 מיליון איש עם הון של מיליון דולר ומעלה, בערך 1.1% מהמבוגרים והילדים יחד (וכ־1.5% מהמבוגרים)." },
+    en: { q: "of being a (dollar) millionaire", x: "UBS counts about 58 million people worth $1 million or more, around 1.1% of everyone (about 1.5% of adults)." },
+    src: "UBS Global Wealth Report (2024)",
+  },
+  {
+    id: "harvard", cat: "money", p: 0.036,
+    k: [["הרווארד", "harvard"]], o: ["להתקבל", "get", "into", "admitted", "accept*"],
+    he: { q: "להתקבל להרווארד", x: "למחזור 2028 הגישו כ־54 אלף מועמדים והתקבלו כ־1,950: בערך 3.6%." },
+    en: { q: "of getting into Harvard", x: "For the class of 2028 about 54,000 applied and about 1,950 were admitted: around 3.6%." },
+    src: "Harvard Gazette (2024)",
+  },
+  {
+    id: "nasa", cat: "money", p: 1 / 1200,
+    k: [["אסטרונאוט*", "astronaut*", "nasa", "נאס\"א", "נאסא", "נאס״א"]], o: ["להיות", "become", "להתקבל"],
+    he: { q: "להתקבל לנאס״א כאסטרונאוט", x: "במחזור 2021 הגישו יותר מ־12 אלף מועמדים, ונבחרו 10. כלומר בערך 1 מתוך 1,200 מועמדים, וגם הם עם תארים מתקדמים או שנים כטייסים." },
+    en: { q: "of becoming a NASA astronaut", x: "In 2021 more than 12,000 people applied and 10 were chosen: about 1 in 1,200 applicants, most with advanced degrees or test-pilot years." },
+    src: "NASA astronaut class of 2021",
+  },
+  {
+    id: "nba", cat: "money", p: 0.0003,
+    k: [["nba", "אן בי איי", "כדורסלן"]], o: ["להגיע", "make", "become", "להיות", "מקצועי", "pro", "high", "school", "player*", "draft*", "תיכון", "יגיע"],
+    he: { q: "שכדורסלן תיכון יגיע ל־NBA", x: "לפי ה־NCAA רק כ־3 מכל 10,000 שחקני כדורסל בתיכון בארה״ב נבחרים בדראפט של ה־NBA." },
+    en: { q: "of a high-school player making the NBA", x: "According to the NCAA, only about 3 in 10,000 US high-school basketball players get drafted into the NBA." },
+    src: "NCAA, Estimated probability of competing in professional athletics",
+  },
+
+  // ---------- Danger ----------
+  {
+    id: "lightning-year", cat: "danger", p: 1 / 1222000,
+    k: [["ברק", "ברקים", "lightning"]], o: ["פגע", "יפגע", "ייפגע", "להיפגע", "struck", "hit", "שנה", "השנה", "year", "this", "שיפגע"],
+    he: { q: "שיפגע בי ברק השנה", x: "בארה״ב בערך 1 מתוך 1.2 מיליון בשנה. לאורך חיים שלמים (80 שנה) זה כבר 1 מתוך 15,300. רוב הנפגעים שורדים." },
+    en: { q: "of being struck by lightning this year", x: "In the US about 1 in 1.2 million per year. Over a lifetime (80 years) it is 1 in 15,300. Most people struck survive." },
+    src: "US National Weather Service",
+  },
+  {
+    id: "shark", cat: "danger", p: 1 / 3748067,
+    k: [["כריש*", "shark*"]], o: ["למות", "ימות", "killed", "die", "התקפה", "attack*", "נשיכה", "bite", "ייטרף"],
+    he: { q: "למות מהתקפת כריש", x: "הסיכון לאורך החיים בארה״ב הוא 1 מתוך 3.7 מיליון. בכל העולם מתים מכרישים בערך 5 עד 10 אנשים בשנה, ובני אדם הורגים עשרות מיליוני כרישים." },
+    en: { q: "of being killed by a shark", x: "The lifetime risk in the US is 1 in 3.7 million. Sharks kill about 5–10 people a year worldwide, while people kill tens of millions of sharks." },
+    src: "International Shark Attack File (Florida Museum)",
+  },
+  {
+    id: "plane-crash", cat: "danger", p: 1 / 13700000,
+    k: [["מטוס", "מטוסים", "טיסה", "טיסות", "plane", "planes", "flight", "flights", "flying", "airplane", "aviation"], ["למות", "ימות", "אמות", "נמות", "מוות", "נהרג", "להיהרג", "התרסקות", "יתרסק", "תתרסק", "ייפול", "die", "dying", "death", "killed", "crash*", "fall*"]], o: ["בטיסה", "אחת", "single", "one"],
+    he: { q: "למות בטיסה", x: "בתעופה המסחרית בעולם, לפי נתוני 2018–2022, הסיכון למות בטיסה בודדת הוא בערך 1 מתוך 13.7 מיליון. הנסיעה לשדה התעופה מסוכנת יותר." },
+    en: { q: "of dying on a flight", x: "For commercial flights worldwide in 2018–2022, the risk of dying on a single flight was about 1 in 13.7 million. The drive to the airport is riskier." },
+    src: "Barnett, MIT (2024)",
+  },
+  {
+    id: "car-crash", cat: "danger", p: 1 / 93,
+    k: [["תאונ*", "רכב", "מכונית", "דרכים", "car", "cars", "road", "traffic", "driving"], ["למות", "ימות", "אמות", "מוות", "נהרג", "להיהרג", "die", "dying", "death", "killed", "fatal"]], o: ["crash*", "accident*", "בחיים", "lifetime", "תאונת", "במהלך", "החיים"],
+    he: { q: "למות בתאונת דרכים במהלך החיים", x: "בארה״ב הסיכון לאורך החיים הוא כ־1 מתוך 93. בישראל, עם כ־400–450 הרוגים בשנה, הוא נמוך יותר: בערך 1 מתוך 200." },
+    en: { q: "of dying in a car crash in your lifetime", x: "In the US the lifetime risk is about 1 in 93. Israel, with about 400–450 road deaths a year, is lower: around 1 in 200." },
+    src: "National Safety Council / Israel CBS",
+  },
+  {
+    id: "dog-bite", cat: "danger", p: 1 / 75,
+    k: [["כלב", "כלבים", "dog", "dogs"]], o: ["נשיכה", "ינשוך", "יינשך", "bit*", "bite", "השנה", "year"],
+    he: { q: "שכלב ינשוך אותי השנה", x: "בארה״ב יש כ־4.5 מיליון נשיכות כלבים בשנה, בערך אחת לכל 75 אנשים. ילדים בסיכון הכי גבוה." },
+    en: { q: "of being bitten by a dog this year", x: "The US sees about 4.5 million dog bites a year, about 1 for every 75 people. Children are most at risk." },
+    src: "CDC / AVMA",
+  },
+  {
+    id: "asteroid", cat: "danger", p: 1 / 100000000,
+    k: [["אסטרואיד*", "מטאור*", "asteroid*", "meteor*", "comet", "שביט"]], o: ["יפגע", "hit", "יחסל", "יכחיד", "ישמיד", "wipe*", "השנה", "this", "year", "דינוזאורים", "dinosaur*", "כדור", "earth", "הארץ"],
+    he: { q: "שאסטרואיד בגודל של זה שהכחיד את הדינוזאורים יפגע השנה", x: "סלע בקוטר 10 ק״מ פוגע בכדור הארץ בערך פעם ב־100 מיליון שנה. נאס״א עוקבת אחרי כמעט כל הגדולים, ואף אחד מהם לא בדרך אלינו." },
+    en: { q: "of a dinosaur-killer asteroid hitting this year", x: "A 10 km rock hits Earth about once every 100 million years. NASA tracks nearly all the big ones, and none is headed our way." },
+    src: "NASA Planetary Defense",
+  },
+  {
+    id: "yellowstone", cat: "danger", p: 1 / 730000,
+    k: [["ילוסטון", "yellowstone", "סופר וולקן", "סופר-וולקן", "supervolcano", "super volcano"]], o: ["יתפרץ", "התפרצות", "erupt*", "השנה", "this", "year"],
+    he: { q: "שהר הגעש ילוסטון יתפרץ השנה", x: "לפי המכון הגאולוגי האמריקאי הסיכוי להתפרצות-על השנה הוא בערך 1 מתוך 730,000, כמו הסיכוי לפגיעת אסטרואיד גדול." },
+    en: { q: "of Yellowstone erupting this year", x: "The US Geological Survey puts a super-eruption this year at about 1 in 730,000, similar to a large asteroid impact." },
+    src: "USGS Yellowstone Volcano Observatory",
+  },
+
+  // ---------- Space & nature ----------
+  {
+    id: "sun-explode", cat: "space", p: 0,
+    k: [["שמש", "השמש", "sun"], ["תתפוצץ", "יתפוצץ", "התפוצץ*", "להתפוצץ", "פיצוץ", "תפוצץ", "סופרנובה", "explode*", "explosion", "blow up", "blows up", "supernova", "boom"]], o: ["מחר", "tomorrow", "היום", "today", "השנה"],
+    he: { q: "שהשמש תתפוצץ מחר", x: "אפס. השמש קטנה מדי כדי להתפוצץ בסופרנובה: לזה צריך כוכב כבד פי 8 לפחות. בעוד כ־5 מיליארד שנה היא תתנפח לענק אדום ואז תתכווץ לננס לבן, לאט מאוד ובלי פיצוץ." },
+    en: { q: "that the sun explodes tomorrow", x: "Zero. The Sun is too small to go supernova; that takes a star at least 8 times heavier. In about 5 billion years it will swell into a red giant and then shrink to a white dwarf, slowly and without a bang." },
+    src: "NASA, the life cycle of the Sun",
+  },
+  {
+    id: "sun-rise", cat: "space", p: 1,
+    k: [["שמש", "השמש", "sun"], ["תזרח", "זריחה", "rise*", "come up", "comes up"]], o: ["מחר", "tomorrow"],
+    he: { q: "שהשמש תזרח מחר", x: "כמעט בוודאות מוחלטת: היא זורחת כבר 4.5 מיליארד שנה, וכדור הארץ ימשיך להסתובב. (אם אתה מעל חוג הקוטב בחורף, היא דווקא לא תזרח.)" },
+    en: { q: "that the sun rises tomorrow", x: "As certain as anything gets: it has risen for 4.5 billion years and Earth will keep spinning. (Unless you're above the Arctic Circle in winter.)" },
+    src: "Astronomy",
+  },
+  {
+    id: "earth-stop", cat: "space", p: 0,
+    k: [["כדור הארץ", "כדה\"א", "earth"], ["יפסיק", "תפסיק", "ייעצר", "תיעצר", "stop*", "spinning"]], o: ["להסתובב", "מחר", "tomorrow", "rotating"],
+    he: { q: "שכדור הארץ יפסיק להסתובב מחר", x: "בלתי אפשרי פיזיקלית: אין כוח שיכול לעצור כזאת מסה בבת אחת. הסיבוב אכן מאט, אבל ב־2 אלפיות שנייה למאה שנה." },
+    en: { q: "that Earth stops spinning tomorrow", x: "Physically impossible: nothing could stop that much mass at once. Earth's spin does slow, by about 2 milliseconds per century." },
+    src: "NASA / IERS",
+  },
+  {
+    id: "eclipse", cat: "space", p: 1 / 375,
+    k: [["ליקוי", "eclipse"]], o: ["חמה", "מלא", "total", "solar", "לראות", "see", "השנה", "year", "מהבית", "home"],
+    he: { q: "לראות ליקוי חמה מלא מהבית השנה", x: "כל נקודה על פני כדור הארץ רואה ליקוי חמה מלא בממוצע פעם ב־375 שנה. כדי לראות אחד, בדרך כלל צריך לנסוע אליו." },
+    en: { q: "of seeing a total solar eclipse from home this year", x: "Any given spot on Earth sees a total solar eclipse about once every 375 years on average. To see one, you usually travel to it." },
+    src: "Meeus, Mathematical Astronomy Morsels",
+  },
+  {
+    id: "pearl", cat: "space", p: 1 / 10000,
+    k: [["פנינ*", "pearl*"]], o: ["צדפה", "צדפות", "oyster*", "למצוא", "find"],
+    he: { q: "למצוא פנינה בצדפה", x: "בצדפות פרא, בערך אחת מכל 10,000 מכילה פנינה, ורק מעטות מהן יפות. כמעט כל הפנינים בחנויות מגודלות בחוות." },
+    en: { q: "of finding a pearl in an oyster", x: "About 1 in 10,000 wild oysters holds a pearl, and only a few of those are pretty. Nearly all pearls in shops are farmed." },
+    src: "Gemological Institute of America",
+  },
+  {
+    id: "double-yolk", cat: "space", p: 1 / 1000,
+    k: [["חלמון", "חלמונים", "yolk*"]], o: ["כפול", "שני", "שניים", "double", "two", "ביצה", "egg"],
+    he: { q: "למצוא ביצה עם שני חלמונים", x: "בערך ביצה אחת מכל 1,000. נפוץ יותר אצל תרנגולות צעירות שרק התחילו להטיל." },
+    en: { q: "of an egg with two yolks", x: "About 1 egg in 1,000. More common from young hens that have just started laying." },
+    src: "British Egg Information Service",
+  },
+
+  // ---------- Life & everyday ----------
+  {
+    id: "toast", cat: "life", p: 0.62,
+    k: [["טוסט", "פרוסה", "לחם", "toast", "bread"]], o: ["חמאה", "butter", "ייפול", "falls", "fall", "drop*", "צד", "side", "down"],
+    he: { q: "שטוסט ייפול על הצד עם החמאה", x: "בניסוי עם כמעט 10,000 הפלות מגובה שולחן, 62% נחתו עם החמאה למטה. גובה השולחן פשוט מאפשר לפרוסה להשלים חצי סיבוב." },
+    en: { q: "of toast landing butter-side down", x: "In an experiment with almost 10,000 drops from table height, 62% landed butter-side down. A table is just high enough for half a turn." },
+    src: "Robert Matthews, Aston University (2001)",
+  },
+  {
+    id: "eight-billion", cat: "life", p: 1 / 8200000000,
+    k: [["אדם", "מישהו", "person", "someone", "random"], ["אקראי", "random", "כלשהו", "בעולם", "world", "earth"]], o: ["זה", "אני", "you", "me", "is", "הוא", "יהיה"],
+    he: { q: "שאדם אקראי בעולם הוא אני", x: "אחד מתוך כ־8.2 מיליארד אנשים שחיים היום." },
+    en: { q: "that a random person on Earth is you", x: "One in about 8.2 billion people alive today." },
+    src: "UN World Population Prospects (2024)",
+  },
+  {
+    id: "weekend-birthday", cat: "life", p: 2 / 7,
+    k: [["יום הולדת", "birthday"], ["סוף שבוע", "סופ\"ש", "סופש", "weekend", "שבת", "saturday"]],
+    he: { q: "שיום ההולדת שלי ייפול בסוף שבוע", x: "שני ימים מתוך שבעה: בערך 29%. (בישראל, אם סוף שבוע הוא שישי-שבת.)" },
+    en: { q: "that my birthday falls on a weekend", x: "Two days out of seven: about 29%." },
+    src: "Calendar math",
+  },
+  {
+    id: "pill-fail", cat: "life", p: 0.07,
+    k: [["גלולה", "גלולות", "pill"]], o: ["להיכנס", "הריון", "pregnant", "pregnancy", "fail*", "כשל", "שנה", "year"],
+    he: { q: "להיכנס להריון כשלוקחים גלולות", x: "בשימוש מושלם פחות מ־1% בשנה. בשימוש אמיתי (גלולות שנשכחות וכו׳) בערך 7% בשנה." },
+    en: { q: "of getting pregnant on the pill", x: "With perfect use under 1% a year. With typical use (missed pills and so on) about 7% a year." },
+    src: "CDC, contraceptive effectiveness",
+  },
+  {
+    id: "condom-fail", cat: "life", p: 0.13,
+    k: [["קונדום", "קונדומים", "condom*"]], o: ["להיכנס", "הריון", "pregnant", "fail*", "ייקרע", "break*", "שנה", "year"],
+    he: { q: "להיכנס להריון עם קונדום", x: "בשימוש מושלם בערך 2% בשנה. בשימוש אמיתי בערך 13% בשנה, בעיקר בגלל שימוש לא נכון או לא עקבי." },
+    en: { q: "of getting pregnant using condoms", x: "With perfect use about 2% a year. With typical use about 13% a year, mostly from incorrect or inconsistent use." },
+    src: "CDC, contraceptive effectiveness",
+  },
+  {
+    id: "pregnant-month", cat: "life", p: 0.2,
+    k: [["הריון", "להיכנס להריון", "להרות", "pregnan*", "conceive"]], o: ["חודש", "month", "cycle", "מחזור", "ניסיון", "trying"],
+    he: { q: "להיכנס להריון בחודש מסוים כשמנסים", x: "לזוג בריא בשנות ה־20 או ה־30 המוקדמות: בערך 20% עד 25% בכל מחזור. כ־85% מצליחים תוך שנה." },
+    en: { q: "of getting pregnant in a given month of trying", x: "For a healthy couple in their 20s or early 30s: about 20–25% each cycle. About 85% succeed within a year." },
+    src: "ACOG / American Society for Reproductive Medicine",
+  },
+
+  // ---------- Animals ----------
+  {
+    id: "blue-lobster", cat: "animals", p: 1 / 2000000,
+    k: [["לובסטר", "לובסטרים", "lobster*"]], o: ["כחול", "blue", "למצוא", "catch", "find"],
+    he: { q: "לתפוס לובסטר כחול", x: "ההערכה הנפוצה היא 1 מתוך 2 מיליון, בגלל מוטציה שגורמת לעודף חלבון אחד בקליפה. לובסטר צהוב נדיר עוד יותר (1 מתוך 30 מיליון)." },
+    en: { q: "of catching a blue lobster", x: "The common estimate is 1 in 2 million, from a mutation that overproduces one shell protein. Yellow lobsters are even rarer (about 1 in 30 million)." },
+    src: "Lobster Institute, University of Maine (estimate)",
+  },
+  {
+    id: "male-calico", cat: "animals", p: 1 / 3000,
+    k: [["קליקו", "calico", "tortoiseshell", "שלושה צבעים", "תלת צבעי", "תלת-צבעי", "טריקולור"]], o: ["חתול", "cat", "זכר", "male"],
+    he: { q: "שחתול קליקו (שלושה צבעים) הוא זכר", x: "הצבעים האלה צריכים שני כרומוזומי X, אז כמעט כל הקליקו נקבות. זכר קליקו (XXY) יוצא בערך אחד מכל 3,000, ובדרך כלל הוא עקר." },
+    en: { q: "that a calico cat is male", x: "The pattern needs two X chromosomes, so almost all calicos are female. A male calico (XXY) is about 1 in 3,000 and usually sterile." },
+    src: "University of Missouri College of Veterinary Medicine",
+  },
+  {
+    id: "cat-feet", cat: "animals", p: 0.9,
+    k: [["חתול", "חתולה", "cat", "cats"], ["רגליים", "רגלים", "feet", "נוחת", "ינחת", "land*", "ייפול", "fall*"]],
+    he: { q: "שחתול ינחת על הרגליים", x: "לחתולים יש \"רפלקס התהפכות\" שמתחיל כבר מגובה של כ־30 ס״מ. מחקר וטרינרי על 132 חתולים שנפלו מבניינים מצא ש־90% שרדו." },
+    en: { q: "that a cat lands on its feet", x: "Cats have a righting reflex that works from about 30 cm up. A veterinary study of 132 cats that fell from buildings found 90% survived." },
+    src: "Whitney & Mehlhaff, JAVMA (1987)",
+  },
+
+  // ---------- Numbers & computers ----------
+  {
+    id: "bitcoin-key", cat: "tech", p: 1 / 1.16e77,
+    k: [["ביטקוין", "bitcoin", "ארנק", "wallet", "מפתח פרטי", "private key"]], o: ["לנחש", "guess", "מפתח", "key", "לפרוץ", "hack", "crack"],
+    he: { q: "לנחש מפתח פרטי של ביטקוין", x: "יש 2 בחזקת 256 מפתחות אפשריים, קרוב למספר האטומים ביקום הנראה. אפילו כל המחשבים בעולם לא יגיעו לזה עד שהשמש תכבה." },
+    en: { q: "of guessing a Bitcoin private key", x: "There are 2²⁵⁶ possible keys, close to the number of atoms in the observable universe. All the world's computers couldn't get there before the Sun dies." },
+    src: "Exact math (secp256k1)",
+  },
+  {
+    id: "password-8", cat: "tech", p: 1 / 208827064576,
+    k: [["סיסמ*", "password*"]], o: ["8", "שמונה", "eight", "תווים", "char*", "אותיות", "letter*", "lowercase", "קטנות", "digit*", "try", "ניסיון"],
+    he: { q: "לנחש סיסמה של 8 אותיות קטנות בניסיון אחד", x: "26 אותיות בכל אחד מ־8 מקומות: 26⁸ = כמעט 209 מיליארד. נשמע הרבה, אבל מחשב חזק בודק את כולן תוך דקות. לכן כדאי סיסמה ארוכה יותר." },
+    en: { q: "of guessing an 8-letter lowercase password in one try", x: "26 letters in each of 8 places: 26⁸, nearly 209 billion. Sounds like a lot, but a strong computer tries them all in minutes, so go longer." },
+    src: "Exact math",
+  },
+];

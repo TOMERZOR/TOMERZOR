@@ -1,0 +1,10 @@
+{
+  "name": "what-are-the-odds",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "npx --yes wrangler@4 dev",
+    "deploy": "npx --yes wrangler@4 deploy"
+  }
+}

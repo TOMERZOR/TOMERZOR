@@ -217,11 +217,11 @@ with wave.open(tmp, "wb") as w:
     w.setframerate(SR)
     w.writeframes((np.clip(mix / max(1.0, np.abs(mix).max()), -1, 1) * 32767).astype("<i2").tobytes())
 # loudness: measure, then gain to -14 LUFS with a true-peak limiter at -1 dBTP
-meas = subprocess.run(["ffmpeg", "-hide_banner", "-i", tmp, "-af", "loudnorm=I=-14:TP=-1:LRA=11:print_format=json", "-f", "null", "-"],
+meas = subprocess.run(["ffmpeg", "-hide_banner", "-i", tmp, "-af", "loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json", "-f", "null", "-"],
                       capture_output=True, text=True).stderr
 js = json.loads(meas[meas.rindex("{"):meas.rindex("}") + 1])
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-af",
-                f"loudnorm=I=-14:TP=-1:LRA=11:measured_I={js['input_i']}:measured_TP={js['input_tp']}:measured_LRA={js['input_lra']}:"
+                f"loudnorm=I=-14:TP=-1.5:LRA=11:measured_I={js['input_i']}:measured_TP={js['input_tp']}:measured_LRA={js['input_lra']}:"
                 f"measured_thresh={js['input_thresh']}:offset={js['target_offset']}:linear=true,aresample=48000",
                 "-c:a", "pcm_s16le", out_path], check=True)
 os.remove(tmp)

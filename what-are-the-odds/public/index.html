@@ -13,65 +13,54 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" href="fonts/assistant-hebrew-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
 <a class="skip" href="#q" data-t="skip">דלגו לשאלה</a>
 
 <header class="bar">
-  <a class="mark" href="./" dir="ltr">What are the odds<span>?</span></a>
+  <a class="mark" href="./" dir="ltr">What are the odds?</a>
   <div class="bar__tools">
     <button class="iconbtn" type="button" id="sound" aria-pressed="true"></button>
-    <button class="iconbtn iconbtn--text" type="button" id="lang">EN</button>
+    <button class="textbtn" type="button" id="lang">English</button>
   </div>
 </header>
 
-<div class="modes" role="tablist" aria-label="Mode">
+<div class="modes" role="tablist" aria-label="Mode" data-mode="curious">
   <button class="modes__tab" role="tab" type="button" id="tab-curious" aria-controls="view-curious" aria-selected="true" data-t="curious">סתם סקרן</button>
   <button class="modes__tab" role="tab" type="button" id="tab-game" aria-controls="view-game" aria-selected="false" data-t="game">משחק</button>
-  <span class="modes__thumb" aria-hidden="true"></span>
+  <span class="modes__knob" aria-hidden="true"></span>
 </div>
 
-<main>
+<main class="stage">
   <section class="view" id="view-curious" role="tabpanel" aria-labelledby="tab-curious">
     <form class="ask" id="ask" autocomplete="off" role="search">
-      <label class="ask__line" for="q">
-        <input id="q" name="q" type="text" maxlength="170" enterkeyhint="go" spellcheck="false" value="מה הסיכוי ש" aria-label="מה הסיכוי ש...">
-      </label>
+      <input id="q" name="q" type="text" maxlength="170" enterkeyhint="go" spellcheck="false" value="מה הסיכוי ש" aria-label="מה הסיכוי ש...">
       <button class="ask__dice" type="button" id="random"></button>
     </form>
 
     <section class="result" id="result" aria-live="polite" hidden>
-      <p class="result__q" id="r-q"></p>
-      <p class="thinking" id="r-thinking" hidden><span data-t="thinking">מחשב סיכויים</span><span class="thinking__dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
-      <div class="result__body" id="r-body">
-        <div class="odds" id="r-odds">
-          <span class="odds__pre" id="r-pre"></span>
-          <span class="odds__num" id="r-num"></span>
-          <span class="odds__alt" id="r-alt"></span>
-        </div>
-        <div class="after" id="r-after">
-          <p class="badge" id="r-badge"></p>
-          <div class="meter" id="r-meter" aria-hidden="true">
-            <div class="meter__track"><div class="meter__fill" id="r-fill"></div><div class="meter__dot" id="r-dot"></div></div>
-            <div class="meter__marks" id="r-marks"></div>
-            <div class="meter__ends"><span data-t="impossible">בלתי אפשרי</span><span data-t="certain">ודאי</span></div>
-          </div>
-          <p class="compare" id="r-compare"></p>
-          <p class="explain" id="r-explain"></p>
-          <p class="source" id="r-source"></p>
-          <div class="actions">
-            <button class="pill pill--ink" type="button" id="share"></button>
-            <button class="pill" type="button" id="again" data-t="again">שאלה אחרת</button>
+      <div class="result__stack">
+        <p class="thinking" id="r-thinking" hidden><span data-t="thinking">מחשב סיכויים</span><span class="thinking__dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
+        <div class="result__body" id="r-body">
+          <p class="odds" id="r-odds"><span class="odds__pre" id="r-pre"></span><span class="odds__num" id="r-num"></span></p>
+          <p class="odds__alt" id="r-alt"></p>
+          <div class="after" id="r-after">
+            <p class="compare" id="r-compare"></p>
+            <p class="explain" id="r-explain"></p>
+            <p class="source" id="r-source"></p>
+            <div class="actions">
+              <button class="textbtn" type="button" id="share"></button>
+              <button class="textbtn" type="button" id="again" data-t="again">שאלה אחרת</button>
+            </div>
           </div>
         </div>
       </div>
       <div class="related" id="r-related" hidden>
         <p class="related__title" id="r-related-title"></p>
-        <div class="chips" id="r-related-list"></div>
+        <div class="related__list" id="r-related-list"></div>
       </div>
     </section>
-
   </section>
 
   <section class="view" id="view-game" role="tabpanel" aria-labelledby="tab-game" hidden>
@@ -80,12 +69,10 @@
 </main>
 
 <footer class="foot">
-  <p data-t="foot1">סטטיסטיקה על אוכלוסיות, לא תחזית עליך. לא ייעוץ רפואי, משפטי או כלכלי.</p>
+  <p data-t="foot1">סטטיסטיקה על אוכלוסיות, לא תחזית עליך. לא ייעוץ רפואי, משפטי או כלכלי</p>
 </footer>
 
-<div class="toast" id="toast" role="status" hidden></div>
-
-<script src="js/config.js?v=5"></script>
-<script type="module" src="js/app.js?v=5"></script>
+<script src="js/config.js?v=7"></script>
+<script type="module" src="js/app.js?v=7"></script>
 </body>
 </html>

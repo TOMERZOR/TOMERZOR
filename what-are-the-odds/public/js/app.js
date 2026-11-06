@@ -1,23 +1,23 @@
 import { FACTS } from "./core/data.js";
 import { findFact, factById, needsCare, normalize, stripOpener } from "./core/match.js";
-import { compare, plain, LANDMARKS } from "./core/format.js";
+import { compare, plain } from "./core/format.js";
 import { QUESTION_POOL } from "./core/questions.js";
-import { STR, fmt } from "./i18n.js";
+import { STR } from "./i18n.js";
 import { icon } from "./icons.js";
 import { roll, stopRoll } from "./roll.js";
 import * as sound from "./sound.js";
+import * as motion from "./motion.js";
 import { initGame } from "./game-ui.js";
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  form: $("ask"), q: $("q"), random: $("random"), result: $("result"), rq: $("r-q"), thinking: $("r-thinking"),
+  form: $("ask"), q: $("q"), random: $("random"), result: $("result"), thinking: $("r-thinking"),
   body: $("r-body"), odds: $("r-odds"), pre: $("r-pre"), num: $("r-num"), alt: $("r-alt"), after: $("r-after"),
-  badge: $("r-badge"), meter: $("r-meter"), fill: $("r-fill"), dot: $("r-dot"), marks: $("r-marks"),
   compare: $("r-compare"), explain: $("r-explain"), source: $("r-source"), share: $("share"), again: $("again"),
   related: $("r-related"), relatedTitle: $("r-related-title"), relatedList: $("r-related-list"),
-  lang: $("lang"), sound: $("sound"), toast: $("toast"),
+  lang: $("lang"), sound: $("sound"),
   tabCurious: $("tab-curious"), tabGame: $("tab-game"), viewCurious: $("view-curious"), viewGame: $("view-game"),
-  modes: document.querySelector(".modes"),
+  modes: document.querySelector(".modes"), knob: document.querySelector(".modes__knob"),
 };
 
 const store = {
@@ -26,10 +26,11 @@ const store = {
 };
 
 const hasHebrew = (s) => /[א-ת]/.test(s);
-const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduced = motion.reduced;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let ui = store.get("odds:lang") || (/^(he|iw)\b/i.test(navigator.language || "") ? "he" : "en");
+let mode = "curious";
 let current = null; // { question, lang, view }
 let askSeq = 0;
 
@@ -47,7 +48,7 @@ function applyLang() {
     if (typeof v === "string") el.textContent = v;
   });
   els.lang.textContent = s.langBtn;
-  els.lang.setAttribute("aria-label", s.langLabel);
+  els.lang.lang = ui === "he" ? "en" : "he";
   // a question from the list switches language with the page; anything else keeps its own
   const was = typed();
   const known = QUESTION_POOL.find((x) => x.he === was || x.en === was);
@@ -57,7 +58,9 @@ function applyLang() {
   els.random.setAttribute("aria-label", s.random);
   els.random.title = s.random;
   els.share.innerHTML = `${icon("share-network")}<span>${s.share}</span>`;
-  paintSound();
+  els.share._base = null;
+  paintSound(false);
+  placeKnob(false);
   game.setLang(ui);
   if (current && current.view.kind === "fact") {
     const f = factById(current.view.id);
@@ -67,18 +70,18 @@ function applyLang() {
   }
 }
 
-function paintSound() {
+// The sound icon crossfades with a blur when it changes.
+function paintSound(animate = true) {
   const on = sound.soundOn();
-  els.sound.innerHTML = icon(on ? "speaker-high" : "speaker-slash");
+  const html = icon(on ? "speaker-high" : "speaker-slash");
+  if (animate) motion.crossfade(els.sound, html);
+  else els.sound.innerHTML = html;
   els.sound.setAttribute("aria-pressed", String(on));
   els.sound.setAttribute("aria-label", STR[ui][on ? "soundOn" : "soundOff"]);
 }
 
 // ---------- the box: "מה הסיכוי ש" is real text in the field, and it stays ----------
-// The opener is part of the input's value. The caret can't go into it and
-// Backspace can't eat it, so you just keep typing where it ends.
 let shownPrefix = els.q.value; // the page starts with the Hebrew opener in the box
-// The opener speaks the language of the question: Hebrew text gets "מה הסיכוי ש".
 function prefixText(t = "") {
   const lang = hasHebrew(t) ? "he" : /[a-z]/i.test(t) ? "en" : ui;
   return STR[lang].prefix + (lang === "en" ? " " : "");
@@ -87,7 +90,6 @@ function prefixText(t = "") {
 function typed() {
   const v = els.q.value;
   if (shownPrefix && v.startsWith(shownPrefix)) return v.slice(shownPrefix.length);
-  // the opener got damaged (select-all and type, paste over it): keep what follows the intact part
   let i = 0;
   while (shownPrefix && i < v.length && i < shownPrefix.length && v[i] === shownPrefix[i]) i++;
   return v.slice(i);
@@ -105,18 +107,24 @@ function clampCaret() {
   if (a < min || b < min) els.q.setSelectionRange(Math.max(a, min), Math.max(b, min));
 }
 
+// Backspace at the start of what you typed: the opener gives a little and springs back.
+function boundaryNudge() {
+  const dir = getComputedStyle(els.q).direction === "rtl" ? 4 : -4;
+  motion.rubberNudge(els.q, dir);
+  sound.haptic(6);
+}
+
 els.q.addEventListener("input", () => {
   if (!els.q.value.startsWith(shownPrefix)) {
-    const rest = typed();
-    setTyped(rest);
+    setTyped(typed());
     els.q.setSelectionRange(els.q.value.length, els.q.value.length);
   }
 });
 els.q.addEventListener("keydown", (e) => {
   const min = shownPrefix.length;
   const { selectionStart: a, selectionEnd: b } = els.q;
-  if (e.key === "Backspace" && a === b && a <= min) e.preventDefault();
-  if ((e.key === "Home" || (e.key === "ArrowUp")) && !e.shiftKey) { e.preventDefault(); els.q.setSelectionRange(min, min); }
+  if (e.key === "Backspace" && a === b && a <= min) { e.preventDefault(); boundaryNudge(); }
+  if ((e.key === "Home" || e.key === "ArrowUp") && !e.shiftKey) { e.preventDefault(); els.q.setSelectionRange(min, min); }
 });
 els.q.addEventListener("focus", () => requestAnimationFrame(() => {
   if (els.q.selectionStart <= shownPrefix.length) els.q.setSelectionRange(els.q.value.length, els.q.value.length);
@@ -125,24 +133,89 @@ document.addEventListener("selectionchange", clampCaret);
 els.q.addEventListener("click", clampCaret);
 els.q.addEventListener("keyup", clampCaret);
 
-// ---------- modes ----------
-function setMode(mode, { push = true } = {}) {
-  const game = mode === "game";
-  els.modes.dataset.mode = mode;
-  els.tabCurious.setAttribute("aria-selected", String(!game));
-  els.tabGame.setAttribute("aria-selected", String(game));
-  els.viewCurious.hidden = game;
-  els.viewGame.hidden = !game;
+// ---------- modes: the knob moves, stretches 12% on the way, and can be dragged ----------
+function tabFor(m) { return m === "game" ? els.tabGame : els.tabCurious; }
+function knobX(m) {
+  const t = tabFor(m);
+  return t.offsetLeft + t.offsetWidth / 2 - els.knob.offsetWidth / 2;
+}
+let knobAt = null;
+function placeKnob(animate = true, x = knobX(mode)) {
+  const from = knobAt;
+  knobAt = x;
+  els.knob.style.transform = `translateX(${x}px)`;
+  if (!animate || from == null || from === x || reduced()) return;
+  els.knob.animate([
+    { transform: `translateX(${from}px) scaleX(1)` },
+    { transform: `translateX(${(from + x) / 2}px) scaleX(1.12)`, offset: 0.5 },
+    { transform: `translateX(${x}px) scaleX(1)` },
+  ], { duration: motion.MOVE, easing: motion.EASE_IN_OUT });
+}
+
+function setMode(next, { push = true, animate = true } = {}) {
+  if (next === mode && animate) return;
+  const prev = mode;
+  mode = next;
+  const toGame = next === "game";
+  els.modes.dataset.mode = next;
+  els.tabCurious.setAttribute("aria-selected", String(!toGame));
+  els.tabGame.setAttribute("aria-selected", String(toGame));
+  placeKnob(animate);
+  const show = toGame ? els.viewGame : els.viewCurious;
+  const hide = toGame ? els.viewCurious : els.viewGame;
+  // the two views overlap: the old one fades out while the new one fades in
+  show.hidden = false;
+  if (animate && prev !== next && !reduced()) {
+    hide.inert = true;
+    motion.exitTo(hide, { dy: 0 }).then(() => { if (mode === next) { hide.hidden = true; hide.inert = false; hide.getAnimations().forEach((a) => a.cancel()); } });
+    motion.enterFrom(show, { dy: 0 });
+  } else {
+    hide.hidden = true;
+  }
   if (push) {
     const url = new URL(location.href);
-    if (game) url.searchParams.set("mode", "game");
+    if (toGame) url.searchParams.set("mode", "game");
     else { url.searchParams.delete("mode"); url.searchParams.delete("room"); }
     history.replaceState(null, "", url);
   }
 }
 
+// Drag the knob between the two words; past either end it rubber-bands.
+(() => {
+  let start = null;
+  els.modes.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    start = { x: e.clientX, knob: knobAt, moved: false, id: e.pointerId };
+  });
+  els.modes.addEventListener("pointermove", (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x;
+    if (!start.moved && Math.abs(dx) < 6) return;
+    start.moved = true;
+    els.modes.classList.add("is-dragging");
+    els.modes.setPointerCapture(e.pointerId);
+    const lo = Math.min(knobX("curious"), knobX("game"));
+    const hi = Math.max(knobX("curious"), knobX("game"));
+    let x = start.knob + dx;
+    if (x < lo) x = lo + motion.rubber(x - lo, 60);
+    if (x > hi) x = hi + motion.rubber(x - hi, 60);
+    knobAt = x;
+    els.knob.style.transform = `translateX(${x}px)`;
+  });
+  const end = (e) => {
+    if (!start || e.pointerId !== start.id) return;
+    const wasDrag = start.moved;
+    start = null;
+    els.modes.classList.remove("is-dragging");
+    if (!wasDrag) return;
+    const near = Math.abs(knobAt - knobX("curious")) < Math.abs(knobAt - knobX("game")) ? "curious" : "game";
+    if (near !== mode) { sound.tap(); setMode(near); } else placeKnob(true);
+  };
+  els.modes.addEventListener("pointerup", end);
+  els.modes.addEventListener("pointercancel", end);
+})();
+
 // ---------- result ----------
-// What's in the box plus "מה הסיכויים ש" / "What are the odds that", unless they typed it.
 export function fullQuestion(text, lang) {
   const t = String(text || "").trim().replace(/[?？!.]+$/, "");
   if (stripOpener(normalize(t)) !== normalize(t)) return t;
@@ -154,34 +227,34 @@ function questionLine(text, lang) {
   return `${fullQuestion(text, lang)}?`;
 }
 
-function chip(entry, lang) {
-  const b = document.createElement("button");
-  b.type = "button";
-  b.className = "chip";
-  b.textContent = entry[lang].q;
-  b.addEventListener("click", () => {
-    sound.unlock();
-    setTyped(entry[lang].q);
-    ask(entry[lang].q, { factId: entry.id });
-  });
-  return b;
-}
-
 function setRelated(ids, lang, title) {
   const facts = (ids || []).map((id) => factById(id)).filter(Boolean).slice(0, 4);
   els.related.hidden = !facts.length;
   els.relatedTitle.textContent = title;
-  els.relatedList.replaceChildren(...facts.map((f) => chip(f, lang)));
+  els.relatedList.replaceChildren(...facts.map((f) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "textbtn";
+    b.textContent = questionLine(f[lang].q, lang);
+    b.addEventListener("click", () => {
+      sound.unlock();
+      setTyped(f[lang].q);
+      ask(f[lang].q, { factId: f.id });
+    });
+    return b;
+  }));
+  if (facts.length) motion.stagger(els.relatedList.children, { delay: 120 });
 }
 
-function startCard(question, lang) {
+function startCard(lang) {
   stopRoll();
+  const firstTime = els.result.hidden;
   els.viewCurious.classList.add("has-result");
   if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: reduced() ? "auto" : "smooth" });
   els.result.hidden = false;
   els.result.lang = lang;
   els.result.dir = lang === "he" ? "rtl" : "ltr";
-  els.rq.textContent = questionLine(question, lang);
+  els.result.getAnimations().forEach((a) => a.cancel());
   els.body.querySelectorAll(".care").forEach((n) => n.remove());
   els.after.classList.remove("is-in");
   els.related.hidden = true;
@@ -191,89 +264,68 @@ function startCard(question, lang) {
   els.num.className = "odds__num";
   els.alt.textContent = "";
   els.alt.classList.remove("is-in");
-  [els.badge, els.meter, els.compare, els.explain, els.source, els.share].forEach((n) => { n.hidden = false; });
+  [els.compare, els.explain, els.source, els.share].forEach((n) => { n.hidden = false; });
   [els.compare, els.explain, els.source].forEach((n) => { n.textContent = ""; });
-  els.fill.style.transform = "";
-  els.dot.style.insetInlineStart = "0%";
+  // it enters from the field above it, the thing that asked
+  if (firstTime) motion.enterFrom(els.result, { dy: -10 });
 }
 
+// Thinking and the answer share one spot: one fades out as the other comes in.
 function thinking(on) {
-  els.thinking.hidden = !on;
-  els.body.hidden = on;
+  if (on) {
+    els.thinking.hidden = false;
+    els.thinking.getAnimations().forEach((a) => a.cancel());
+    els.body.hidden = true;
+    motion.enterFrom(els.thinking, { dy: -6 });
+    return;
+  }
+  els.body.hidden = false;
+  if (els.thinking.hidden) return;
+  motion.exitTo(els.thinking, { dy: 6 }).then(() => { els.thinking.hidden = true; els.thinking.getAnimations().forEach((a) => a.cancel()); });
 }
 
-const MIN_LOG = -10;
-function paintMeter(p, lang) {
-  els.meter.hidden = false;
-  const log = p <= 0 ? -Infinity : Math.log10(p);
-  const pos = p <= 0 ? 0 : Math.max(0, Math.min(1, (log - MIN_LOG) / -MIN_LOG));
-  els.marks.replaceChildren(...LANDMARKS.filter((l) => l.short).map((l) => {
-    const m = document.createElement("span");
-    m.className = "mark-tick";
-    m.style.insetInlineStart = `${((Math.log10(l.p) - MIN_LOG) / -MIN_LOG) * 100}%`;
-    m.textContent = l.short[lang];
-    return m;
-  }));
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    els.fill.style.transform = `scaleX(${pos})`;
-    els.dot.style.insetInlineStart = `${pos * 100}%`;
-  }));
-}
-
+// Details settle one after another, 30ms apart, once the number has landed.
 function revealAfter() {
-  [...els.after.children].forEach((c, i) => c.style.setProperty("--i", i));
   els.after.classList.add("is-in");
-}
-
-function setBadge(kind, text) {
-  const ic = kind === "fact" ? icon("check") : "";
-  els.badge.className = `badge badge--${kind}`;
-  els.badge.innerHTML = `${ic}<span></span>`;
-  els.badge.lastChild.textContent = text;
+  motion.stagger([...els.after.children].filter((c) => !c.hidden && (c.textContent.trim() || c.children.length)));
 }
 
 async function showFact(fact, question, lang, related, { animate = true } = {}) {
   const s = STR[lang];
-  startCard(question, lang);
+  startCard(lang);
   thinking(false);
   const sameQuestion = stripOpener(normalize(fullQuestion(question, lang))) === stripOpener(normalize(fullQuestion(fact[lang].q, lang)));
-  setBadge("fact", s.badgeFact);
   els.compare.textContent = compare(fact.p, lang, fact.id);
   els.explain.textContent = fact[lang].x;
-  els.source.textContent = (sameQuestion ? "" : `${s.answered}${fact[lang].q} · `) + s.source + fact.src;
+  els.source.textContent = [s.badgeFact, sameQuestion ? "" : `${s.answered}${questionLine(fact[lang].q, lang)}`, s.source + fact.src].filter(Boolean).join(" · ");
   current = { question, lang, view: { kind: "fact", id: fact.id, related } };
   const seq = askSeq;
-  if (animate) await roll(els, fact.p, lang, { duration: 3000 });
-  else await roll(els, fact.p, lang, { duration: 0, silent: true });
+  await roll(els, fact.p, lang, animate ? { duration: 3000 } : { duration: 0, silent: true });
   if (seq !== askSeq) return;
-  paintMeter(fact.p, lang);
   revealAfter();
 }
 
 async function showAi(view, question, lang) {
   const s = STR[lang];
-  startCard(question, lang);
+  startCard(lang);
   thinking(false);
   current = { question, lang, view };
-  const bits = [];
+  const bits = [view.kind === "ai" ? `${s.badgeAi}, ${s.conf[view.confidence] || s.conf.low}` : s.badgeUnknown];
   if (view.timeframe) bits.push(view.timeframe);
   if (view.basis) bits.push(s.basis + view.basis);
   els.source.textContent = bits.join(" · ");
   els.explain.textContent = view.explanation;
   const seq = askSeq;
   if (view.kind === "ai") {
-    setBadge("ai", `${s.badgeAi} · ${s.conf[view.confidence] || s.conf.low}`);
     els.compare.textContent = compare(view.p, lang);
     await roll(els, view.p, lang, { duration: 3000 });
     if (seq !== askSeq) return;
-    paintMeter(view.p, lang);
   } else {
-    setBadge("unknown", s.badgeUnknown);
     els.num.textContent = s.unknownNum;
     els.num.classList.add("is-final");
     els.alt.textContent = s.unknownAlt;
     els.alt.classList.add("is-in");
-    els.meter.hidden = true;
+    motion.enterFrom(els.num, { dy: 8 });
     sound.land();
   }
   revealAfter();
@@ -281,11 +333,9 @@ async function showAi(view, question, lang) {
 
 function showNone(reason, question, lang, related) {
   const s = STR[lang];
-  startCard(question, lang);
+  startCard(lang);
   thinking(false);
   els.odds.hidden = true;
-  els.badge.hidden = true;
-  els.meter.hidden = true;
   els.share.hidden = true;
   els.compare.textContent = s.noneTitle;
   els.explain.textContent = s.none[reason] || s.none["ai-failed"];
@@ -298,10 +348,10 @@ function showNone(reason, question, lang, related) {
 
 function showCare(question, lang) {
   const s = STR[lang];
-  startCard(question, lang);
+  startCard(lang);
   thinking(false);
   els.odds.hidden = true;
-  [els.badge, els.meter, els.share].forEach((n) => { n.hidden = true; });
+  els.share.hidden = true;
   const box = document.createElement("div");
   box.className = "care";
   const h = document.createElement("h3");
@@ -319,6 +369,7 @@ function showCare(question, lang) {
     box.append(line);
   }
   els.body.prepend(box);
+  motion.stagger(box.children);
   revealAfter();
   current = { question, lang, view: { kind: "care" } };
 }
@@ -327,6 +378,21 @@ function shuffle(a) {
   const r = a.slice();
   for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; }
   return r;
+}
+
+// "Another question": the answer leaves back up into the field, 20% faster than it came.
+async function clearResult() {
+  askSeq++;
+  stopRoll();
+  if (!els.result.hidden) {
+    await motion.exitTo(els.result, { dy: -10 });
+    els.result.hidden = true;
+    els.result.getAnimations().forEach((a) => a.cancel());
+  }
+  current = null;
+  setTyped("");
+  els.q.focus({ preventScroll: true });
+  updateUrl({});
 }
 
 // ---------- asking ----------
@@ -368,7 +434,7 @@ function updateUrl(params) {
 
 async function ask(raw, { factId } = {}) {
   const q = String(raw || "").replace(/\s+/g, " ").trim().slice(0, 140);
-  if (!q) { els.q.focus(); return; }
+  if (!q) { els.q.focus(); boundaryNudge(); return; }
   const seq = ++askSeq;
   const lang = hasHebrew(q) ? "he" : /[a-z]/i.test(q) ? "en" : ui;
   const full = fullQuestion(q, lang);
@@ -376,7 +442,7 @@ async function ask(raw, { factId } = {}) {
 
   if (needsCare(full)) { showCare(q, lang); return; }
 
-  startCard(q, lang);
+  startCard(lang);
   thinking(true);
   const minThink = sleep(reduced() ? 0 : 900);
 
@@ -425,24 +491,27 @@ async function randomQuestion() {
   ask(text, { factId: pick.id || undefined });
 }
 
-// ---------- share ----------
-function toast(text) {
-  els.toast.textContent = text;
-  els.toast.hidden = false;
-  clearTimeout(toast.t);
-  toast.t = setTimeout(() => { els.toast.hidden = true; }, 2200);
-}
-
-export async function shareLink(url, text) {
+// ---------- share: the button itself says "copied", crossfading icon and label ----------
+export async function shareLink(url, text, button) {
   if (navigator.share) {
     try { await navigator.share({ title: "What are the odds?", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
   }
   try {
     await navigator.clipboard.writeText(`${text}\n${url}`);
-    toast(STR[ui].copied);
+    confirmOn(button);
   } catch {
     prompt("", url);
   }
+}
+
+function confirmOn(button) {
+  if (!button) return;
+  if (!button._base) button._base = button.innerHTML;
+  const base = button._base;
+  motion.crossfade(button, `${icon("check")}<span>${STR[ui].copiedShort}</span>`);
+  clearTimeout(button._t);
+  button._t = setTimeout(() => { motion.crossfade(button, base); button._base = null; }, 1800);
+  sound.tap();
 }
 
 function shareCurrent() {
@@ -453,7 +522,7 @@ function shareCurrent() {
   let answerText = "";
   if (view.kind === "fact") answerText = plain(factById(view.id).p, lang);
   else if (view.kind === "ai") answerText = plain(view.p, lang);
-  shareLink(url.href, `${questionLine(question, lang)} ${answerText}`.trim());
+  shareLink(url.href, `${questionLine(question, lang)} ${answerText}`.trim(), els.share);
 }
 
 // ---------- wire up ----------
@@ -477,25 +546,23 @@ els.sound.addEventListener("click", () => {
   if (sound.soundOn()) sound.tap();
 });
 els.share.addEventListener("click", shareCurrent);
-els.again.addEventListener("click", () => {
-  setTyped("");
-  els.q.focus({ preventScroll: true });
-  els.form.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
-});
+els.again.addEventListener("click", clearResult);
 els.tabCurious.addEventListener("click", () => { sound.tap(); setMode("curious"); });
 els.tabGame.addEventListener("click", () => { sound.unlock(); sound.tap(); setMode("game"); });
-document.querySelector(".modes").addEventListener("keydown", (e) => {
+els.modes.addEventListener("keydown", (e) => {
   if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-  const next = els.tabCurious.getAttribute("aria-selected") === "true" ? "game" : "curious";
+  const next = mode === "curious" ? "game" : "curious";
   setMode(next);
-  (next === "game" ? els.tabGame : els.tabCurious).focus();
+  tabFor(next).focus();
 });
+addEventListener("resize", () => placeKnob(false));
+document.fonts && document.fonts.ready.then(() => placeKnob(false));
 
 applyLang();
 
 const params = new URLSearchParams(location.search);
 if (params.get("room") || params.get("mode") === "game") {
-  setMode("game", { push: false });
+  setMode("game", { push: false, animate: false });
   if (params.get("room")) game.openRoom(params.get("room"));
 } else if (params.get("id") && factById(params.get("id"))) {
   const f = factById(params.get("id"));

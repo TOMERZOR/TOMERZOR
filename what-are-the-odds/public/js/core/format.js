@@ -60,10 +60,10 @@ export function describe(p, lang = "he") {
   if (!(p >= 0)) p = 0;
   if (p > 1) p = 1;
   if (p === 0) {
-    return { main: { kind: "zero", text: "0%" }, alt: he ? "בלתי אפשרי" : "impossible", oneIn: null, log: -Infinity };
+    return { main: { kind: "zero", text: "0%" }, alt: "", oneIn: null, log: -Infinity };
   }
   if (p === 1) {
-    return { main: { kind: "certain", text: "100%" }, alt: he ? "ודאי" : "certain", oneIn: 1, log: 0 };
+    return { main: { kind: "certain", text: "100%" }, alt: "", oneIn: 1, log: 0 };
   }
   const oneIn = 1 / p;
   const n = bigNumber(oneIn, lang);
@@ -71,17 +71,13 @@ export function describe(p, lang = "he") {
   const pct = percent(p);
   if (p >= 0.01) {
     // "51%", alt "about 1 in 2". Odds near even read better as "about 1 in 2".
-    let alt;
-    if (p >= 0.95) alt = he ? "כמעט בטוח" : "almost certain";
-    else if (p >= 0.3) {
-      const tens = Math.round(p * 10);
-      alt = he ? `בערך ${tens} מתוך 10` : `about ${tens} in 10`;
-    } else alt = (he ? "בערך " : "about ") + ratio;
+    // a second number only when it says something the first doesn't: small percentages
+    const alt = p < 0.1 ? (he ? "בערך " : "about ") + ratio : "";
     return { main: { kind: "percent", text: pct }, alt, oneIn, log: Math.log10(p) };
   }
   return {
     main: { kind: "oneIn", text: n.text, exp: n.exp },
-    alt: pct ? pct : he ? "פחות ממיליארדית האחוז" : "less than a billionth of a percent",
+    alt: "",
     oneIn,
     log: Math.log10(p),
   };
@@ -127,14 +123,14 @@ export function compare(p, lang = "he", selfId = null) {
   // Hebrew glues "than" (מ) to the word; before a digit or Latin it takes a maqaf
   const than = (l) => (he ? (/^[0-9A-Za-z]/.test(l.he) ? "מ־" : "מ") + l.he : l.en);
   const close = (a) => a && Math.abs(Math.log10(a.p) - Math.log10(p)) < 0.08;
-  if (close(above)) return he ? `בערך כמו ${above.he}.` : `About the same as ${above.en}.`;
-  if (close(below)) return he ? `בערך כמו ${below.he}.` : `About the same as ${below.en}.`;
+  if (close(above)) return he ? `בערך כמו ${above.he}` : `About the same as ${above.en}`;
+  if (close(below)) return he ? `בערך כמו ${below.he}` : `About the same as ${below.en}`;
   if (above && below) {
     return he
-      ? `פחות סביר ${than(above)}, אבל יותר סביר ${than(below)}.`
-      : `Less likely than ${above.en}, but more likely than ${below.en}.`;
+      ? `פחות סביר ${than(above)}, אבל יותר סביר ${than(below)}`
+      : `Less likely than ${above.en}, but more likely than ${below.en}`;
   }
-  if (above) return he ? `פחות סביר אפילו ${than(above)}.` : `Even less likely than ${above.en}.`;
-  if (below) return he ? `יותר סביר ${than(below)}.` : `More likely than ${below.en}.`;
+  if (above) return he ? `פחות סביר אפילו ${than(above)}` : `Even less likely than ${above.en}`;
+  if (below) return he ? `יותר סביר ${than(below)}` : `More likely than ${below.en}`;
   return "";
 }

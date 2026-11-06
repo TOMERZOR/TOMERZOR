@@ -108,9 +108,10 @@ export function roll(els, p, lang, { duration = 2600, silent = false } = {}) {
     timers.push(setTimeout(() => {
       if (cancelled) return;
       paint(els, fin, true);
+      // it settles, no overshoot
       els.num.animate(
-        [{ transform: "scale(0.94)", opacity: 0.6 }, { transform: "scale(1.04)", opacity: 1, offset: 0.55 }, { transform: "scale(1)" }],
-        { duration: 460, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" },
+        [{ transform: "scale(0.97)", opacity: 0.7 }, { transform: "scale(1)", opacity: 1 }],
+        { duration: 240, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
       );
       els.alt.classList.add("is-in");
       land();

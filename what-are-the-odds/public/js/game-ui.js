@@ -6,6 +6,7 @@ import { STR, fmt, esc } from "./i18n.js";
 import { icon } from "./icons.js";
 import { roll, stopRoll } from "./roll.js";
 import * as sound from "./sound.js";
+import * as motion from "./motion.js";
 
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -32,8 +33,11 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   let error = "";
   let anim = { key: null, done: true }; // the reveal roll for the current card
   let lastCardKey = null;
+  let lastPhase = null;
   let lastTurn = null;
+  let lastScores = null;
   let deferred = false;
+  let tapPoint = null; // where the last choice was touched, for the colour mask
 
   const t = (k, v) => fmt(L, k, v);
   const s = () => STR[L];
@@ -135,6 +139,8 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     screen = "menu";
     stopRoll();
     anim = { key: null, done: true };
+    lastCardKey = null;
+    lastScores = null;
     onRoom(null);
     render();
   }
@@ -155,23 +161,33 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   function render() {
     if (!anim.done) { deferred = true; return; }
     root.lang = L;
-    if (screen === "menu") return paint(menuHtml());
-    if (screen === "pass-setup") return paint(passSetupHtml());
-    if (screen === "online-setup") return paint(onlineSetupHtml());
-    if (screen === "lobby") return paint(lobbyHtml());
+    if (screen === "menu") return paintScreen(menuHtml());
+    if (screen === "pass-setup") return paintScreen(passSetupHtml());
+    if (screen === "online-setup") return paintScreen(onlineSetupHtml());
+    if (screen === "lobby") return paintScreen(lobbyHtml());
     if (mode === "solo") return renderCard(soloModel());
     const v = view();
-    if (!v) return paint(lobbyHtml());
+    if (!v) return paintScreen(lobbyHtml());
     renderCard(duoModel(v));
   }
 
-  function paint(html) {
+  let lastScreenHtmlKey = null;
+  function paintScreen(html) {
+    const key = screen;
     root.innerHTML = html;
+    lastCardKey = null;
+    if (key !== lastScreenHtmlKey) {
+      // rows of a new screen settle in, 30ms apart
+      motion.stagger(root.querySelectorAll(".g-title, .g-sub, .g-option, .g-field, .g-form > .btn, .g-rules, .lobby > *, .g-back"));
+    }
+    lastScreenHtmlKey = key;
   }
+
+  const headName = (act) => `style="view-transition-name: g-head-${act}"`;
 
   function menuHtml() {
     const opt = (act, ic, title, sub) => `
-      <button class="g-option" type="button" data-act="${act}">${icon(ic)}<span><b>${title}</b><small>${sub}</small></span>${icon("arrow-right", "icon flip go")}</button>`;
+      <button class="g-option" type="button" data-act="${act}">${icon(ic)}<span><b ${act !== "solo" ? headName(act) : ""}>${title}</b><small>${sub}</small></span>${icon("arrow-right", "icon flip go")}</button>`;
     return `
       <h1 class="g-title">${s().gTitle}</h1>
       <p class="g-sub">${s().gSub}</p>
@@ -180,39 +196,39 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
         ${opt("pass-setup", "device-mobile", s().pass, s().passSub)}
         ${opt("online-setup", "link", s().online, s().onlineSub)}
       </div>
-      <p class="g-sub" style="font-size:15px;margin-top:22px">${s().rules}</p>
-      ${error ? `<p class="g-sub" style="color:var(--bad)">${esc(error)}</p>` : ""}`;
+      <p class="g-rules">${s().rules}</p>
+      ${error ? `<p class="g-error">${esc(error)}</p>` : ""}`;
   }
 
   function passSetupHtml() {
     const [a, b] = JSON.parse(store.get("odds:names") || "[]");
     return `
-      <h1 class="g-title">${s().pass}</h1>
+      <h1 class="g-title" ${headName("pass-setup")}>${s().pass}</h1>
       <form class="g-form" data-form="pass">
         <div class="g-field"><label for="n1">${s().p1}</label><input class="g-input" id="n1" name="n1" maxlength="20" value="${esc(a || "")}" placeholder="${s().p1}"></div>
         <div class="g-field"><label for="n2">${s().p2}</label><input class="g-input" id="n2" name="n2" maxlength="20" value="${esc(b || "")}" placeholder="${s().p2}"></div>
-        <button class="pill pill--ink pill--big" type="submit">${s().start}</button>
+        <button class="btn" type="submit">${s().start}</button>
       </form>
-      <div class="g-back"><button class="g-link" type="button" data-act="menu">${icon("arrow-left", "icon flip")}${s().back}</button></div>`;
+      <div class="g-back"><button class="textbtn" type="button" data-act="menu">${icon("arrow-left", "icon flip")}${s().back}</button></div>`;
   }
 
   function onlineSetupHtml() {
     const name = esc(store.get("odds:name") || "");
     const joining = Boolean(joinCode);
     return `
-      <h1 class="g-title">${s().online}</h1>
+      <h1 class="g-title" ${headName("online-setup")}>${s().online}</h1>
       <form class="g-form" data-form="online">
         <div class="g-field"><label for="nm">${s().yourName}</label><input class="g-input" id="nm" name="nm" maxlength="20" value="${name}" required autocomplete="nickname"></div>
-        ${joining ? "" : `<button class="pill pill--ink pill--big" type="submit" name="act" value="create">${s().create}</button>`}
-        <div class="g-field" style="margin-top:${joining ? 0 : 14}px">
+        ${joining ? "" : `<button class="btn" type="submit" name="act" value="create">${s().create}</button>`}
+        <div class="g-field" style="margin-top:${joining ? 0 : 12}px">
           <label for="code">${joining ? s().code : s().haveCode}</label>
-          <input class="g-input" id="code" name="code" maxlength="4" value="${esc(joinCode)}" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" style="direction:ltr;letter-spacing:.2em;text-transform:uppercase" aria-describedby="code-hint">
-          <small id="code-hint" style="color:var(--ink-3)">${s().badCode}</small>
+          <input class="g-input" id="code" name="code" maxlength="4" value="${esc(joinCode)}" placeholder="ABCD" autocapitalize="characters" autocomplete="off" spellcheck="false" style="direction:ltr" aria-describedby="code-hint">
+          <span class="g-hint" id="code-hint">${s().badCode}</span>
         </div>
-        <button class="pill ${joining ? "pill--ink pill--big" : ""}" type="submit" name="act" value="join">${s().join}</button>
+        <button class="btn ${joining ? "" : "btn--quiet"}" type="submit" name="act" value="join">${s().join}</button>
       </form>
-      ${error ? `<p class="g-sub" style="color:var(--bad)">${esc(error)}</p>` : ""}
-      <div class="g-back"><button class="g-link" type="button" data-act="menu">${icon("arrow-left", "icon flip")}${s().back}</button></div>`;
+      ${error ? `<p class="g-error">${esc(error)}</p>` : ""}
+      <div class="g-back"><button class="textbtn" type="button" data-act="menu">${icon("arrow-left", "icon flip")}${s().back}</button></div>`;
   }
 
   function lobbyHtml() {
@@ -222,18 +238,17 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       <div class="lobby">
         <p>${s().invite}</p>
         <div class="lobby__code">${esc(code)}</div>
-        <button class="pill pill--ink" type="button" data-act="invite">${icon("share-network")}<span>${s().shareLink}</span></button>
-        <p class="thinking" style="font-size:22px;margin-top:22px"><span>${s().waiting}</span><span class="thinking__dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
+        <button class="btn" type="button" data-act="invite">${icon("share-network")}<span>${s().shareLink}</span></button>
+        <p class="thinking"><span>${s().waiting}</span><span class="thinking__dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
       </div>
-      ${error ? `<p class="g-sub" style="color:var(--bad)">${esc(error)}</p>` : ""}
-      <div class="g-back"><button class="g-link" type="button" data-act="exit">${icon("arrow-left", "icon flip")}${s().back}</button></div>`;
+      ${error ? `<p class="g-error">${esc(error)}</p>` : ""}
+      <div class="g-back"><button class="textbtn" type="button" data-act="exit">${icon("arrow-left", "icon flip")}${s().back}</button></div>`;
   }
 
-  // A model the card renderer understands, from solo state.
   function soloModel() {
     return {
       kind: "solo", key: `solo:${solo.round}:${solo.card.id}`, card: solo.card, phase: solo.phase, guess: solo.guess,
-      result: solo.result, canGuess: solo.phase === "guess", turnHtml: "",
+      result: solo.result, canGuess: solo.phase === "guess", turnText: "", scores: [solo.score],
     };
   }
 
@@ -242,47 +257,38 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     const active = names[v.turn];
     const other = names[1 - v.turn];
     const online = v.me != null;
-    let turnHtml;
-    if (online) turnHtml = v.me === v.turn ? s().yourTurn : t("theirTurn", { name: esc(active) });
-    else turnHtml = t("turnOf", { name: esc(active) });
+    let turnText;
+    if (online) turnText = v.me === v.turn ? s().yourTurn : t("theirTurn", { name: esc(active) });
+    else turnText = t("turnOf", { name: esc(active) });
     return {
       kind: online ? "online" : "pass", key: `duo:${v.round}:${v.card.id}`, v, names, active, other, online,
-      card: v.card, phase: v.phase, guess: v.guess, result: v.result, turnHtml,
+      card: v.card, phase: v.phase, guess: v.guess, result: v.result, turnText,
       canGuess: v.phase === "guess" && (!online || v.me === v.turn),
       canChallenge: v.phase === "challenge" && (!online || v.me !== v.turn),
+      scores: v.players.map((p) => p.score),
     };
   }
 
-  function boardHtml(m) {
+  function scoreHtml(m) {
     if (m.kind === "solo") {
       const lives = Array.from({ length: SOLO_LIVES }, (_, i) => `<i class="${i < solo.lives ? "" : "lost"}"></i>`).join("");
-      return `<div class="board board--solo"><div class="streak">${solo.score}<small>${s().streak}</small></div><div class="lives" aria-label="${solo.lives}/${SOLO_LIVES}">${lives}</div></div>`;
+      return `<div class="score"><span class="score__p is-turn"><span class="score__n" data-score="0">${solo.score}</span><span>${s().streak}</span></span><span class="lives" aria-label="${solo.lives}/${SOLO_LIVES}">${lives}</span></div>`;
     }
     const seat = (p, i) => {
-      const pips = Array.from({ length: WIN_SCORE }, (_, k) => `<i class="${k < p.score ? "on" : ""}"></i>`).join("");
-      const tokens = p.tokens === 0 ? s().tokens0 : p.tokens === 1 ? s().tokens1 : t("tokens", { n: p.tokens });
-      const off = m.online && p.connected === false ? `<span class="off" title="offline"></span>` : "";
-      return `<div class="seat ${m.v.turn === i && m.phase !== "over" ? "is-turn" : ""}">
-        <div class="seat__name">${off}${esc(m.names[i])}</div>
-        <div class="seat__row"><div class="pips" aria-label="${p.score}/${WIN_SCORE}">${pips}</div><span class="tokens">${tokens}</span></div>
-      </div>`;
+      const off = m.online && p.connected === false ? `<span class="score__off">offline</span>` : "";
+      return `<span class="score__p ${m.v.turn === i && m.phase !== "over" ? "is-turn" : ""}"><span class="score__name">${esc(m.names[i])}</span><span class="score__n" data-score="${i}">${p.score}</span>${off}</span>`;
     };
-    return `<div class="board">${m.v.players.map(seat).join("")}</div>`;
+    return `<div class="score">${m.v.players.map(seat).join("")}</div>`;
   }
 
-  function verdict(m) {
+  function verdictHtml(m) {
     const r = m.result;
-    if (m.kind === "solo") {
-      return r.correct
-        ? `<span class="verdict verdict--good">${icon("check")}${s().right}</span>`
-        : `<span class="verdict verdict--bad">${icon("x")}${s().wrong}</span>`;
-    }
+    if (m.kind === "solo") return `<p class="verdict ${r.correct ? "verdict--good" : "verdict--bad"}">${r.correct ? s().right : s().wrong}</p>`;
     const challenged = m.v.challenged;
     let text;
     if (r.correct) text = t(challenged ? "rightBeatChallenge" : "rightPoint", { name: esc(m.active) });
     else text = challenged ? t("stolen", { name: esc(m.other) }) : s().wrongNone;
-    const good = r.correct || challenged;
-    return `<span class="verdict ${good ? "verdict--good" : "verdict--bad"}">${icon(good ? "check" : "x")}${text}</span>`;
+    return `<p class="verdict ${r.correct || challenged ? "verdict--good" : "verdict--bad"}">${text}</p>`;
   }
 
   function overHtml(m) {
@@ -290,83 +296,106 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       const isBest = solo.score > 0 && solo.score >= solo.best;
       return `<div class="over">
         <h2>${s().soloOver}</h2>
-        <div class="score">${t("soloScore", { n: solo.score })}</div>
-        <p class="g-sub" style="margin-inline:auto">${isBest ? s().newBest : t("best", { n: solo.best })}</p>
-        <div class="g-next"><button class="pill pill--ink pill--big" type="button" data-act="solo">${s().playAgain}</button><button class="pill pill--big" type="button" data-act="exit">${s().exit}</button></div>
+        <div class="final">${t("soloScore", { n: solo.score })}</div>
+        <p class="g-sub">${isBest ? s().newBest : t("best", { n: solo.best })}</p>
+        <div class="g-next"><button class="btn" type="button" data-act="solo">${s().playAgain}</button><button class="btn btn--quiet" type="button" data-act="exit">${s().exit}</button></div>
       </div>`;
     }
     const v = m.v;
-    let title;
-    if (m.online) title = v.winner === v.me ? s().youWin : s().youLose;
-    else title = t("wins", { name: esc(m.names[v.winner]) });
+    const title = m.online ? (v.winner === v.me ? s().youWin : s().youLose) : t("wins", { name: esc(m.names[v.winner]) });
     return `<div class="over">
-      ${icon("crown", "icon icon--crown")}
       <h2>${title}</h2>
-      <div class="score">${v.players[0].score} : ${v.players[1].score}</div>
-      <div class="g-next"><button class="pill pill--ink pill--big" type="button" data-act="rematch">${s().rematch}</button><button class="pill pill--big" type="button" data-act="exit">${s().exit}</button></div>
+      <div class="final">${v.players[0].score} : ${v.players[1].score}</div>
+      <div class="g-next"><button class="btn" type="button" data-act="rematch">${s().rematch}</button><button class="btn btn--quiet" type="button" data-act="exit">${s().exit}</button></div>
     </div>`;
   }
 
-  function renderCard(m) {
-    const fact = factFor(m.card.id);
-    const q = fact[L].q;
+  function cardHtml(m, fact, settled) {
     const revealing = m.phase === "reveal" || m.phase === "over";
-    const isNew = m.key !== lastCardKey;
-    const needsRoll = revealing && anim.key !== m.key;
-    const settled = revealing && !needsRoll;
-
-    const up = `${icon("arrow-up")}${s().higher}`;
-    const down = `${icon("arrow-down")}${s().lower}`;
     const picked = (dir) => (m.guess === dir ? "is-picked" : m.guess ? "is-dim" : "");
     const dis = m.canGuess ? "" : "disabled";
+    const choice = (dir, ic, label) => `<button class="choice ${picked(dir)}" type="button" data-act="${dir}" ${dis}>${m.guess === dir ? `<span class="choice__fill"></span>` : ""}<span class="choice__label">${icon(ic)}${label}</span></button>`;
 
     let challenge = "";
     if (m.phase === "challenge") {
       const dirText = m.guess === "up" ? s().higher : s().lower;
       const other = m.v.players[1 - m.v.turn];
-      if (m.canChallenge) {
-        challenge = `<div class="challenge">
-          <p>${t("picked", { name: esc(m.active), dir: dirText })} ${t("challengeAsk", { name: esc(m.other) })}</p>
-          <div class="row"><button class="pill pill--accent" type="button" data-act="challenge">${t("challengeBtn", { n: other.tokens })}</button><button class="pill" type="button" data-act="no-challenge">${s().noChallenge}</button></div>
-          ${m.online ? `<div class="timer" id="g-timer"></div>` : ""}
-        </div>`;
-      } else {
-        challenge = `<div class="challenge"><p>${t("waitChallenge", { name: esc(m.other) })}</p>${m.online ? `<div class="timer" id="g-timer"></div>` : ""}</div>`;
-      }
+      const timer = m.online ? `<div class="timer" id="g-timer"></div>` : "";
+      challenge = m.canChallenge
+        ? `<div class="challenge" id="g-challenge">
+            <p>${t("picked", { name: esc(m.active), dir: dirText })}. ${t("challengeAsk", { name: esc(m.other) })}</p>
+            <div class="row"><button class="btn btn--accent" type="button" data-act="challenge">${t("challengeBtn", { n: other.tokens })}</button><button class="btn btn--quiet" type="button" data-act="no-challenge">${s().noChallenge}</button></div>
+            ${timer}
+          </div>`
+        : `<div class="challenge" id="g-challenge"><p>${t("waitChallenge", { name: esc(m.other) })}</p>${timer}</div>`;
     }
 
-    let reveal = "";
-    if (revealing) {
-      reveal = `
-        <div class="odds" id="g-odds"><span class="odds__pre" id="g-pre"></span><span class="odds__num" id="g-num"></span><span class="odds__alt" id="g-alt"></span></div>
-        <div id="g-after" ${settled ? "" : "hidden"}>
-          ${verdict(m)}
-          <p class="card__x">${esc(fact[L].x)}</p>
-          <p class="card__src">${esc(s().source + fact.src)}</p>
-          ${m.phase === "reveal" ? `<div class="g-next"><button class="pill pill--ink pill--big" type="button" data-act="next">${s().next}</button></div>` : ""}
-        </div>`;
-    }
+    const reveal = revealing ? `
+      <p class="odds" id="g-odds"><span class="odds__pre" id="g-pre"></span><span class="odds__num" id="g-num"></span></p>
+      <p class="odds__alt" id="g-alt"></p>
+      <div id="g-after" ${settled ? "" : "hidden"}>
+        ${verdictHtml(m)}
+        <p class="card__x">${esc(fact[L].x)}</p>
+        <p class="card__src">${esc(s().source + fact.src)}</p>
+        ${m.phase === "reveal" ? `<div class="g-next"><button class="btn" type="button" data-act="next">${s().next}</button></div>` : ""}
+      </div>` : "";
 
-    paint(`
-      ${boardHtml(m)}
-      <p class="turn">${m.phase === "over" ? "" : m.turnHtml}</p>
-      <article class="card ${isNew ? "is-new" : ""}" lang="${L}">
-        <p class="card__q">${esc(L === "he" ? `${s().prefix}${q}` : `${s().prefix} ${q}`)}?</p>
-        <p class="card__vs">${s().vs}</p>
-        <div class="card__t"><bdi>${esc(thresholdLabel(m.card.t, L))}</bdi></div>
+    const q = L === "he" ? `${s().prefix}${fact[L].q}` : `${s().prefix} ${fact[L].q}`;
+    return `
+      <article class="card" id="g-card" lang="${L}">
+        <p class="card__q">${esc(q)}?</p>
+        <p class="card__t">${s().vs} <bdi>${esc(thresholdLabel(m.card.t, L))}</bdi></p>
         <div class="choices">
-          <button class="choice ${picked("up")}" type="button" data-act="up" ${dis}>${up}</button>
-          <button class="choice ${picked("down")}" type="button" data-act="down" ${dis}>${down}</button>
+          ${choice("up", "arrow-up", s().higher)}
+          ${choice("down", "arrow-down", s().lower)}
         </div>
         ${challenge}
         ${reveal}
-      </article>
+      </article>`;
+  }
+
+  function renderCard(m) {
+    const fact = factFor(m.card.id);
+    const revealing = m.phase === "reveal" || m.phase === "over";
+    const isNew = m.key !== lastCardKey;
+    const needsRoll = revealing && anim.key !== m.key;
+    const settled = revealing && !needsRoll;
+    const phaseChanged = !isNew && m.phase !== lastPhase;
+
+    const html = `
+      ${scoreHtml(m)}
+      <p class="turn" id="g-turn">${m.phase === "over" ? "" : m.turnText}</p>
+      ${cardHtml(m, fact, settled)}
       ${m.phase === "over" && settled ? overHtml(m) : ""}
-      <div class="g-back"><button class="g-link" type="button" data-act="exit">${icon("arrow-left", "icon flip")}${s().exit}</button></div>`);
+      <div class="g-back"><button class="textbtn" type="button" data-act="exit">${icon("arrow-left", "icon flip")}${s().exit}</button></div>`;
+
+    const oldCard = root.querySelector("#g-card");
+    if (isNew && oldCard && lastCardKey) {
+      // the old card fades out on top while the new one comes in: the states overlap
+      motion.overlapSwap(oldCard, () => { root.innerHTML = html; });
+      motion.enterFrom(root.querySelector("#g-card"), { dy: 10 });
+    } else {
+      root.innerHTML = html;
+      if (isNew) motion.stagger(root.querySelectorAll(".score, .turn, #g-card"));
+    }
+    lastScreenHtmlKey = "play";
 
     if (isNew && lastCardKey && m.kind !== "solo" && lastTurn !== m.v.turn) sound.turnChange();
+
+    // the picked choice fills with colour from where it was touched
+    if (phaseChanged && m.guess && (lastPhase === "guess")) {
+      const fill = root.querySelector(".choice.is-picked .choice__fill");
+      if (fill) motion.maskFrom(fill, tapPoint ? tapPoint.x : null, tapPoint ? tapPoint.y : null);
+      tapPoint = null;
+    }
+
+    // the challenge question is a popover from the choices above it
+    if (m.phase === "challenge" && (phaseChanged || isNew)) motion.popIn(root.querySelector("#g-challenge"), "top");
+
     lastCardKey = m.key;
+    lastPhase = m.phase;
     if (m.v) lastTurn = m.v.turn;
+    lastScores = m.scores.slice();
 
     // challenge countdown (online)
     const timer = root.querySelector("#g-timer");
@@ -383,42 +412,74 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     }
     anim = { key: m.key, done: false };
     const key = m.key;
+    motion.enterFrom(root.querySelector("#g-odds"), { dy: -8 });
     roll(els, fact.p, L, { duration: 2300 }).then(() => {
       if (anim.key !== key) return; // left the game while it rolled
       anim.done = true;
       const after = root.querySelector("#g-after");
-      if (after) after.hidden = false;
+      if (after) {
+        after.hidden = false;
+        // the verdict's colour is revealed by a mask, then the details settle 30ms apart
+        motion.wipeIn(after.querySelector(".verdict"));
+        motion.stagger([...after.children].slice(1), { delay: 60 });
+      }
       let good;
-      if (m.kind === "solo") good = m.result.correct;
-      else if (m.online) good = m.result.scorer === m.v.me;
-      else good = m.result.scorer != null;
+      let scorer = null;
+      if (m.kind === "solo") { good = m.result.correct; scorer = good ? 0 : null; }
+      else {
+        scorer = m.result.scorer;
+        good = m.online ? scorer === m.v.me : scorer != null;
+      }
       (good ? sound.correct : sound.wrong)();
-      if (deferred || m.phase === "over") { deferred = false; render(); }
+      // a point travels on an arc from the answer to the score, which pulses to confirm
+      if (scorer != null) {
+        const target = root.querySelector(`[data-score="${scorer}"]`);
+        const from = root.querySelector("#g-num");
+        motion.arc(from, target).then(() => motion.pulse(target));
+      }
+      if (deferred || m.phase === "over") {
+        deferred = false;
+        render();
+        const over = root.querySelector(".over");
+        if (over) motion.stagger(over.children, { delay: 500 });
+      }
       const next = root.querySelector('[data-act="next"], [data-act="rematch"], [data-act="solo"]');
       if (next) next.focus({ preventScroll: true });
     });
   }
 
+  // a menu row grows into the heading of the screen it opens (shared element)
+  function go(next, update) {
+    motion.morph(() => { update(); render(); });
+    void next;
+  }
+
   // ---------- input ----------
+  root.addEventListener("pointerdown", (e) => {
+    const b = e.target.closest(".choice");
+    if (b) tapPoint = { x: e.clientX, y: e.clientY };
+  });
+
   root.addEventListener("click", (e) => {
     const b = e.target.closest("[data-act]");
     if (!b || b.disabled) return;
     sound.unlock();
     const act = b.dataset.act;
     error = act === "menu" ? "" : error;
-    if (act === "menu") { screen = "menu"; joinCode = ""; render(); return; }
+    if (act === "menu") { go("menu", () => { screen = "menu"; joinCode = ""; }); return; }
     if (act === "exit") { leave(); return; }
-    if (act === "solo") { sound.tap(); mode = "solo"; screen = "play"; anim = { key: null, done: true }; newSolo(); render(); return; }
-    if (act === "pass-setup") { sound.tap(); screen = "pass-setup"; render(); return; }
-    if (act === "online-setup") { sound.tap(); error = ""; screen = "online-setup"; render(); return; }
+    if (act === "solo") { sound.tap(); mode = "solo"; screen = "play"; anim = { key: null, done: true }; lastCardKey = null; newSolo(); render(); return; }
+    if (act === "pass-setup") { sound.tap(); go(act, () => { screen = "pass-setup"; }); return; }
+    if (act === "online-setup") { sound.tap(); go(act, () => { error = ""; screen = "online-setup"; }); return; }
     if (act === "invite" && net) {
       const url = new URL(location.origin + location.pathname);
       url.searchParams.set("room", net.code);
-      shareLink(url.href, `${s().inviteText} (${net.code})`);
+      shareLink(url.href, `${s().inviteText} (${net.code})`, b);
       return;
     }
     if (act === "up" || act === "down") {
       sound.tap();
+      if (!tapPoint) { const r = b.getBoundingClientRect(); tapPoint = { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
       if (mode === "solo" && solo.phase === "guess") {
         solo.guess = act;
         const correct = isCorrect(factFor(solo.card.id).p, solo.card.t, act);
@@ -451,7 +512,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     }
     if (act === "rematch") {
       sound.tap();
-      if (mode === "pass" && match) { match.rematch(); anim = { key: null, done: true }; render(); }
+      if (mode === "pass" && match) { match.rematch(); anim = { key: null, done: true }; lastCardKey = null; render(); }
       else if (mode === "online" && net) net.send({ t: "rematch" });
     }
   });
@@ -468,17 +529,18 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       mode = "pass";
       screen = "play";
       anim = { key: null, done: true };
+      lastCardKey = null;
       sound.tap();
       render();
       return;
     }
     if (form.dataset.form === "online") {
       const name = form.nm.value.trim().slice(0, 20);
-      if (!name) { form.nm.focus(); return; }
+      if (!name) { form.nm.focus(); motion.rubberNudge(form.nm, 4); return; }
       const act = e.submitter ? e.submitter.value : (joinCode ? "join" : "create");
       if (act === "create") { createRoom(name); return; }
       const code = form.code.value.trim().toUpperCase();
-      if (!/^[A-Z]{4}$/.test(code)) { form.code.focus(); return; }
+      if (!/^[A-Z]{4}$/.test(code)) { form.code.focus(); motion.rubberNudge(form.code, 4); return; }
       joinCode = "";
       enterRoom(code, name);
     }
@@ -487,7 +549,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   render();
 
   return {
-    setLang(l) { L = l; if (anim.done) render(); else deferred = true; },
+    setLang(l) { L = l; lastScreenHtmlKey = null; if (anim.done) render(); else deferred = true; },
     openRoom(code) {
       const c = String(code || "").toUpperCase();
       if (!/^[A-Z]{4}$/.test(c)) return;

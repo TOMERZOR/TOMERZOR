@@ -51,11 +51,25 @@ place("whoosh_b", c["cursor"] + .15, .35)            # the cursor flies in
 place("click_b", c["click"], .55)                    # and clicks the poster
 place("wipe_b", c["wipe"] + .2, .6)                   # the orange wipe
 place("logo_a", c["logo"] + .25, .7)                  # the logo lands
-place("taps_a", c["letters"] + .1, .3, fade_out=.6)   # the letters
+place("taps_a", c["letters"] + .1, .3)               # the letters
 place("keys_b", c["press"], .75)                      # ⌥ + Space
 place("chime_b", c["pill"] + .05, .45)                # closing chime
 
-fo = int(.35 * SR)
+# a soft room around the dry effects, so every hit blooms and fades into the next instead of stopping short
+rng = np.random.default_rng(7)
+ir_len = int(2.2 * SR)
+t = np.arange(ir_len) / SR
+ir = rng.standard_normal((ir_len, 2)) * np.exp(-t / .5)[:, None] * np.minimum(1, t / .012)[:, None]
+spec = np.fft.rfft(ir, axis=0)
+f = np.fft.rfftfreq(ir_len, 1 / SR)
+spec *= (1 / np.sqrt(1 + (f / 5000) ** 4))[:, None] * (f > 120)[:, None]        # darker, no rumble
+ir = np.fft.irfft(spec, ir_len, axis=0)
+ir /= np.sqrt((ir ** 2).sum(0))
+L = N + ir_len
+wet = np.fft.irfft(np.fft.rfft(OUT, L, axis=0) * np.fft.rfft(ir, L, axis=0), L, axis=0)[:N]
+OUT = OUT + wet * .32
+
+fo = int(.6 * SR)
 OUT[-fo:] *= np.linspace(1, 0, fo)[:, None] ** 2
 peak = np.max(np.abs(OUT))
 if peak > .85:

@@ -71,12 +71,59 @@ SFX_DIRS = [os.path.join(HERE, "sfx"), os.path.join(HERE, "..", "max", "sfx")]
 _cache = {}
 
 
+PICKS = json.load(open(os.path.join(HERE, "real", "picks.json")))
+
+
+def resample(x, st):
+    """Pitch by resampling (as a tape would): +st semitones is shorter and higher."""
+    if not st:
+        return x
+    r = 2 ** (st / 12)
+    n = int(len(x) / r)
+    idx = np.arange(n) * r
+    return np.stack([np.interp(idx, np.arange(len(x)), x[:, c]) for c in range(2)], 1)
+
+
 def sample(name):
+    """A real recording from real/picks.json (trimmed, pitched, cut at its peak for a riser), else a file in sfx/."""
     if name not in _cache:
-        p = next(os.path.join(d, name + ".mp3") for d in SFX_DIRS if os.path.exists(os.path.join(d, name + ".mp3")))
-        x = decode(p)
+        pk = PICKS.get(name)
+        if pk and not pk.get("slices"):
+            x = decode(os.path.join(HERE, "real", pk["file"]), pk["start"], pk["end"] - pk["start"])
+            x = resample(x, pk.get("pitch", 0))
+            if pk.get("to_peak"):                  # a swell: keep it up to its loudest moment, so it ends on the cut
+                e = np.sqrt(np.convolve((x ** 2).mean(1), np.ones(960) / 960, "same"))
+                x = x[: int(np.argmax(e)) + int(.02 * SR)]
+            if pk.get("keep"):
+                a = attack(x)
+                x = x[max(0, a - int(.02 * SR)): a + int(pk["keep"] * SR)]
+            x = fade(x, .004, .06)
+        else:
+            p = next(os.path.join(d, name + ".mp3") for d in SFX_DIRS if os.path.exists(os.path.join(d, name + ".mp3")))
+            x = decode(p)
         _cache[name] = x / max(1e-9, np.abs(x).max())
     return _cache[name]
+
+
+def keystrokes(n=24):
+    """Single key presses sliced from one real laptop keyboard recording (one board for the whole film)."""
+    pk = PICKS["keys"]
+    x = decode(os.path.join(HERE, "real", pk["file"]))
+    e = np.sqrt(np.convolve((x ** 2).mean(1), np.ones(240) / 240, "same"))
+    thr = np.percentile(e, 97) * .35
+    on = np.where((e[1:] > thr) & (e[:-1] <= thr))[0]
+    hits, out = [], []
+    for a in on:
+        if hits and a - hits[-1] < int(.11 * SR):
+            continue
+        hits.append(a)
+    for a in hits:
+        s = x[max(0, a - int(.004 * SR)): a + int(.09 * SR)]
+        nxt = e[a + int(.09 * SR): a + int(.12 * SR)]
+        if len(s) < int(.09 * SR) or (len(nxt) and nxt.max() > thr):   # another key right after: not clean
+            continue
+        out.append(fade(s / max(1e-9, np.abs(s).max()), .002, .03))
+    return out[:n]
 
 
 def place(bus, name, t, gain, first_hit=False, end_at=None, x=None):
@@ -160,41 +207,34 @@ if not NO_MUSIC:
 # ---------- effects ----------
 fx = np.zeros((N, 2))
 for e in TL["sfx"]:
-    place(fx, e["name"], e["at"], e["gain"], e.get("first_hit", False), e.get("end_at"))
+    if e["name"] != "key":                     # the paw's keys are placed below, from the sliced keyboard
+        place(fx, e["name"], e["at"], e["gain"], e.get("first_hit", False), e.get("end_at"))
 seg = {s["id"]: s for s in TL["segs"]}
-# the screen inserts: Pointy's UI (times inside each insert, see screens/index.html)
+# the screen inserts: Pointy's UI, one real click voice and one real keyboard for the whole film
 i1, i2, i3 = seg["i1"]["t0"], seg["i2"]["t0"], seg["i3"]["t0"]
-place(fx, "typing_b", i1 + .06, .22)
-place(fx, "taps_b", i1 + 1.03, .3)          # the step card appears
-place(fx, "click_b", i1 + 1.47, .4)         # the cursor presses on A1
-place(fx, "click_b", i2 + .39, .3)          # Insert
-place(fx, "click_b", i2 + .79, .3)          # Chart
-place(fx, "logo_b", i2 + .86, .2)          # the chart pops in
-place(fx, "chime_a", i3 + .49, .3)          # "All done"
-place(fx, "taps_a", seg["i4"]["t0"] + .64, .25)   # the speech bubble
-# one keystroke per typed letter of "Two weeks later."
-keys = sample("keys_a")
-env = np.sqrt(np.convolve((keys ** 2).mean(1), np.ones(240) / 240, "same"))
-on = np.where((env[1:] > env.max() * .25) & (env[:-1] <= env.max() * .25))[0]
-hits = []
-for a in on:
-    if hits and a - hits[-1] < int(.09 * SR):
-        continue
-    hits.append(a)
-strokes = [fade(keys[max(0, a - 120): a + int(.1 * SR)], .002, .04) for a in hits]
-strokes = [s for s in strokes if len(s) > 1000][:24] or [fade(sample("keys_b")[: int(.12 * SR)], .002, .04)]
+STROKES = keystrokes()
+place(fx, "typing", i1 + .06, .16)
+place(fx, "pop", i1 + 1.03, .28)            # the step card appears
+place(fx, "click", i1 + 1.47, .36)          # the cursor presses on A1
+place(fx, "click", i2 + .39, .36)           # Insert
+place(fx, "click", i2 + .79, .36)           # Chart
+place(fx, "pop", i2 + .86, .24)             # the chart pops in
+place(fx, "bell_f", i3 + .49, .16)          # "All done": a glockenspiel note in the music's key
+place(fx, "pop_hi", seg["i4"]["t0"] + .64, .24)   # the speech bubble
+# Max's paw: option, then space (the space bar is the deeper, longer key)
+for k, at in enumerate(e["at"] for e in TL["sfx"] if e["name"] == "key"):
+    add(fx, STROKES[k * 5 % len(STROKES)] if k == 0 else resample(STROKES[(k * 5 + 3) % len(STROKES)], -2), at - .004, .5)
+# one keystroke per typed letter of "Two weeks later." (vary the take and the level, never the pitch)
 for j, tt in enumerate(CUES["typing"]):
-    s = strokes[j % len(strokes)]
-    add(fx, s, tt - 120 / SR, .42 * (1 + .12 * rng.standard_normal()))
-# the outro
+    add(fx, STROKES[j % len(STROKES)], tt - .004, .42 * 10 ** (rng.normal(0, 1.5) / 20))
+# the outro: a swish for the cursor, the click, a slower swish on the wipe, ONE soft note on the logo, the click on the full stop
 c = CUES["outro"]
-place(fx, "whoosh_b", c["cursor"] + .2, .2)
-place(fx, "click_b", c["click"], .3)
-place(fx, "wipe_b", c["wipe"] + .18, .18)
-place(fx, "bass_b", c["logo"] + .04, .16)
-place(fx, "taps_a", c["letters"] + .08, .12)
-place(fx, "whoosh_a", c["glide"] + .25, .1)
-place(fx, "click_a", c["dot"], .28)
+place(fx, "whip", c["cursor"] + .2, .18)
+place(fx, "click", c["click"], .3)
+place(fx, "wipe", c["wipe"] + .18, .16)
+place(fx, "bell_f", c["logo"] + .06, .14)
+place(fx, "whip", c["glide"] + .25, .07)
+place(fx, "click", c["dot"], .28)
 
 # a short, dark room around the dry effects
 ir_len = int(1.4 * SR)

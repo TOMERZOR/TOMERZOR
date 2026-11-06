@@ -104,16 +104,17 @@ def at_src(id, frame):             # timeline time of a source frame inside a cl
 
 SFX = [
     dict(name="sigh2_b", at=6.9, gain=.5),
-    dict(name="slam_b", at=at_src("s3", 200), gain=.9),
-    dict(name="keys_b", at=at_src("s5", 20), gain=.38, first_hit=True),
-    dict(name="keys_b", at=at_src("s5", 44), gain=.42, first_hit=True),
-    dict(name="riser_b", at=seg("s6")["t0"], gain=.45, end_at=T_H),
-    dict(name="sip_a", at=seg("s8")["t0"] + .85, gain=.6),
-    dict(name="whip_b", at=at_src("s9a", 38), gain=.5),
-    dict(name="whip_b", at=at_src("s9a", 93), gain=.5),
-    dict(name="whip_b", at=seg("s9b")["t0"] - .02, gain=.45),
-    dict(name="hello_a", at=seg("i4")["t0"] + .12, gain=.26),
-    dict(name="ting_a", at=at_src("s14", 147), gain=.35),
+    dict(name="slam", at=at_src("s3", 200), gain=.9),
+    dict(name="key", at=at_src("s5", 20), gain=.5),
+    dict(name="key", at=at_src("s5", 44), gain=.5),
+    dict(name="riser", at=seg("s6")["t0"], gain=.45, end_at=T_H),
+    dict(name="sip", at=seg("s8")["t0"] + .85, gain=.6),
+    dict(name="whip", at=at_src("s9a", 38), gain=.5),
+    dict(name="whip", at=at_src("s9a", 93), gain=.5),
+    dict(name="whip", at=seg("s9b")["t0"] - .02, gain=.45),
+    dict(name="pop", at=seg("i4")["t0"] + .12, gain=.26),
+    dict(name="wood", at=seg("i4")["t0"] + .2, gain=.18),
+    dict(name="wood", at=at_src("s14", 147), gain=.35),
 ]
 
 out = dict(fps=FPS, src_fps=SRC, beat=BEAT, end=END, music_at=music_at, music_hit=MUSIC_HIT,

@@ -13,6 +13,7 @@ function trim(n, digits) {
 export function bigNumber(n, lang = "he") {
   const w = WORDS[lang] || WORDS.en;
   if (!isFinite(n)) return { text: "∞" };
+  n = Number(n.toPrecision(12)); // 1 / 1e-9 is 999999999.9999999
   if (n < 10) return { text: trim(n, n < 1.5 ? 2 : 1) };
   if (n < 1e5) return { text: Math.round(n).toLocaleString("en-US") };
   const scales = [
@@ -100,7 +101,7 @@ export function plain(p, lang = "he") {
 // Familiar odds to compare against, most likely first.
 export const LANDMARKS = [
   { id: "coin-heads", p: 1 / 2, he: "עץ בהטלת מטבע", en: "heads on a coin flip", short: { he: "מטבע", en: "Coin" } },
-  { id: "dice-six", p: 1 / 6, he: "6 בקובייה", en: "rolling a six", short: { he: "קובייה", en: "Die" } },
+  { id: "dice-six", p: 1 / 6, he: "6 בקובייה", en: "rolling a six" },
   { id: "left-handed", p: 1 / 10, he: "להיות שמאלי", en: "being left-handed" },
   { id: "double-six", p: 1 / 36, he: "שש-שש בשתי קוביות", en: "rolling double six" },
   { id: "ten-heads", p: 1 / 1024, he: "10 פעמים עץ ברצף", en: "10 heads in a row" },

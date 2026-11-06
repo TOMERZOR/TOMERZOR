@@ -3,12 +3,15 @@
 // only answers the API:
 //   GET  /api/health
 //   POST /api/odds   { q, lang }  ->  { kind: "fact" | "ai" | "unknown" | "care" | "none", ... }
+//   POST /api/room                ->  { code }   a new game room for two phones
+//   GET  /api/room/:code/ws       ->  WebSocket into that room (a Durable Object)
 //
 // Checked answers (public/js/core/data.js) come first. Anything else goes to
 // Workers AI (free daily allowance on Cloudflare), and the answer is marked as an
 // AI estimate so nobody mistakes it for a statistic.
 
 import { findFact, needsCare, normalize, stripOpener } from "../public/js/core/match.js";
+import { Match } from "../public/js/core/game.js";
 
 const VERSION = 1;
 const MAX_Q = 160;
@@ -197,7 +200,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors() });
 
     if (url.pathname === "/api/health") {
-      return json({ service: "what-are-the-odds", ok: true, ai: Boolean(env.AI), version: VERSION });
+      return json({ service: "what-are-the-odds", ok: true, ai: Boolean(env.AI), rooms: Boolean(env.ROOMS), version: VERSION });
     }
 
     if (url.pathname === "/api/odds") {
@@ -213,7 +216,146 @@ export default {
       return json(result);
     }
 
+    if (url.pathname === "/api/room" && request.method === "POST") {
+      if (!env.ROOMS) return json({ error: "rooms unavailable" }, 503);
+      return json({ code: newCode() });
+    }
+
+    const room = url.pathname.match(/^\/api\/room\/([A-Za-z]{4})\/ws$/);
+    if (room) {
+      if (!env.ROOMS) return json({ error: "rooms unavailable" }, 503);
+      if (request.headers.get("Upgrade") !== "websocket") return json({ error: "websocket only" }, 426);
+      const code = room[1].toUpperCase();
+      const stub = env.ROOMS.get(env.ROOMS.idFromName(code));
+      return stub.fetch(request);
+    }
+
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return json({ error: "not found" }, 404);
   },
 };
+
+// ---------- game rooms ----------
+
+const CODE_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+export function newCode() {
+  let c = "";
+  const bytes = crypto.getRandomValues(new Uint8Array(4));
+  for (const b of bytes) c += CODE_LETTERS[b % CODE_LETTERS.length];
+  return c;
+}
+
+const CHALLENGE_MS = 9000;
+const clean = (s, max) => String(s || "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, max);
+
+// One room = one match between two phones. Players are seats (kept by a private
+// id in each browser), so a reload or a dropped connection puts you back in place.
+export class GameRoom {
+  constructor(ctx, env) {
+    this.ctx = ctx;
+    this.env = env;
+    this.sockets = new Map(); // WebSocket -> seat index (or -1 before joining)
+    this.seats = []; // { pid, name }
+    this.match = null;
+    this.timer = null;
+    this.challengeEndsAt = 0;
+    this.code = "";
+  }
+
+  async fetch(request) {
+    const m = new URL(request.url).pathname.match(/\/api\/room\/([A-Za-z]{4})\/ws$/);
+    this.code = m ? m[1].toUpperCase() : this.code;
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    server.accept();
+    this.sockets.set(server, -1);
+    server.addEventListener("message", (e) => this.onMessage(server, e.data));
+    server.addEventListener("close", () => this.drop(server));
+    server.addEventListener("error", () => this.drop(server));
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  drop(ws) {
+    if (!this.sockets.has(ws)) return;
+    this.sockets.delete(ws);
+    this.broadcast();
+  }
+
+  send(ws, msg) {
+    try { ws.send(JSON.stringify(msg)); } catch { this.sockets.delete(ws); }
+  }
+
+  connected(i) {
+    for (const seat of this.sockets.values()) if (seat === i) return true;
+    return false;
+  }
+
+  broadcast() {
+    const seats = this.seats.map((s, i) => ({ name: s.name, connected: this.connected(i) }));
+    const match = this.match ? this.match.view() : null;
+    for (const [ws, you] of this.sockets) {
+      this.send(ws, { t: "state", code: this.code, you, seats, match, challengeEndsAt: this.challengeEndsAt, now: Date.now() });
+    }
+  }
+
+  armChallengeTimer() {
+    clearTimeout(this.timer);
+    this.challengeEndsAt = 0;
+    if (!this.match || this.match.phase !== "challenge") return;
+    this.challengeEndsAt = Date.now() + CHALLENGE_MS;
+    this.timer = setTimeout(() => {
+      if (this.match && this.match.phase === "challenge") {
+        this.match.challenge(false);
+        this.challengeEndsAt = 0;
+        this.broadcast();
+      }
+    }, CHALLENGE_MS);
+  }
+
+  onMessage(ws, raw) {
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+    if (!msg || typeof msg.t !== "string") return;
+
+    if (msg.t === "join") {
+      const pid = clean(msg.pid, 40);
+      const name = clean(msg.name, 20) || "?";
+      if (!pid) return;
+      let i = this.seats.findIndex((s) => s.pid === pid);
+      if (i < 0) {
+        if (this.seats.length >= 2) { this.send(ws, { t: "full" }); return; }
+        this.seats.push({ pid, name });
+        i = this.seats.length - 1;
+      } else {
+        this.seats[i].name = name;
+      }
+      this.sockets.set(ws, i);
+      if (this.match) this.match.players[i].name = name;
+      if (!this.match && this.seats.length === 2) {
+        this.match = new Match({ seed: (crypto.getRandomValues(new Uint32Array(1))[0] % 2147483646) + 1, names: this.seats.map((s) => s.name) });
+      }
+      this.broadcast();
+      return;
+    }
+
+    if (msg.t === "ping") { this.send(ws, { t: "pong" }); return; }
+
+    const me = this.sockets.get(ws);
+    const m = this.match;
+    if (me == null || me < 0 || !m) return;
+    let changed = false;
+    if (msg.t === "guess" && m.turn === me) {
+      changed = m.guessed(msg.dir);
+      if (changed) this.armChallengeTimer();
+    } else if (msg.t === "challenge" && m.phase === "challenge" && m.turn !== me) {
+      changed = m.challenge(Boolean(msg.yes));
+      this.armChallengeTimer();
+    } else if (msg.t === "next") {
+      changed = m.next();
+    } else if (msg.t === "rematch" && m.phase === "over") {
+      m.rematch();
+      changed = true;
+    }
+    if (changed) this.broadcast();
+  }
+}

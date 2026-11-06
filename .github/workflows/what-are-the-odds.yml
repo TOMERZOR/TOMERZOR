@@ -67,6 +67,7 @@ jobs:
           for i in 1 2 3 4 5 6; do
             if curl -fsS "$url/api/health" | grep -q '"service":"what-are-the-odds"' && curl -fsS "$url/" | grep -q 'What are the odds'; then
               curl -fsS -X POST "$url/api/odds" -H 'content-type: application/json' -d '{"q":"להיוולד בן","lang":"he"}' | grep -q '"id":"boy"' || { echo "::error::/api/odds did not answer a checked question"; exit 1; }
+              curl -fsS -X POST "$url/api/room" | grep -qE '"code":"[A-Z]{4}"' || { echo "::error::/api/room did not make a game room"; exit 1; }
               ai=$(curl -sS -X POST "$url/api/odds" -H 'content-type: application/json' -d '{"q":"that it snows in Tel Aviv this year","lang":"en"}')
               echo "AI check: $ai"
               echo "$ai" | grep -qE '"kind":"(ai|unknown)"' || echo "::warning::Workers AI did not answer: $ai"

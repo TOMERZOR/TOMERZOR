@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Pointy · live-action overlay</title>
+<link rel="stylesheet" href="../../composition/fonts/local.css">
+<style>
+/* Transparent 1080×1920 overlay drawn over the Higgsfield footage: Hebrew supers, the Pointy UI and the CTA.
+   render(t) is a pure function of time; edit.cjs captures it with a transparent background. */
+:root { --txt: #FFF8F1; --or: #F08A2E; --or1: #FFB45C; --or2: #E8620F; --font: "Heebo", "Inter", system-ui, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: transparent; }
+body { font-family: var(--font); color: var(--txt); -webkit-font-smoothing: antialiased; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; }
+.L { position: absolute; will-change: transform, opacity, filter; }
+.w { display: inline-block; }
+.sup { left: 60px; right: 60px; text-align: center; font-weight: 900; letter-spacing: -.035em; line-height: 1.04; text-shadow: 0 4px 24px rgba(0, 0, 0, .55), 0 1px 3px rgba(0, 0, 0, .5); }
+.or { color: var(--or1); }
+.shade { left: 0; right: 0; height: 900px; pointer-events: none; }
+.keys { left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 26px; direction: ltr; }
+.key { height: 170px; border-radius: 36px; display: grid; place-items: center; font: 700 80px Inter, sans-serif; color: #F4EEE8;
+  background: linear-gradient(180deg, rgba(70, 60, 54, .92), rgba(38, 32, 28, .92)); box-shadow: 0 14px 0 rgba(17, 13, 11, .95), inset 0 2px 0 rgba(255, 255, 255, .16), 0 0 70px rgba(240, 138, 46, .55); }
+.plus { font: 800 76px Inter, sans-serif; color: var(--or1); text-shadow: 0 0 30px rgba(240, 138, 46, .8); }
+.ask { left: 70px; right: 70px; height: 128px; border-radius: 64px; display: flex; align-items: center; gap: 22px; padding: 0 38px;
+  background: linear-gradient(rgba(27, 22, 19, .9), rgba(27, 22, 19, .9)) padding-box, linear-gradient(90deg, #FFB45C, #E8620F) border-box; border: 4px solid transparent;
+  box-shadow: 0 0 70px rgba(240, 138, 46, .45), 0 30px 60px -20px rgba(0, 0, 0, .7); backdrop-filter: blur(18px); font-size: 46px; font-weight: 600; letter-spacing: -.015em; white-space: nowrap; }
+.ask svg { width: 54px; height: 54px; flex: none; color: var(--or); }
+.caret { display: inline-block; width: 4px; height: 54px; background: var(--or); border-radius: 2px; vertical-align: middle; }
+.card { left: 150px; width: 780px; padding: 30px 38px 32px; border-radius: 40px; background: rgba(238, 233, 228, .96); color: #1A1512; text-align: right; box-shadow: 0 40px 90px -20px rgba(0, 0, 0, .8); }
+.card .st { display: flex; align-items: center; gap: 12px; font-size: 32px; font-weight: 800; color: var(--or2); }
+.card .st svg { width: 38px; height: 38px; }
+.card h4 { margin: 10px 0 6px; font-size: 50px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; }
+.card p { margin: 0; font-size: 34px; font-weight: 500; color: #554B44; }
+.card .prog { display: flex; gap: 10px; margin: 22px 0 22px; }
+.card .prog i { flex: 1; height: 11px; border-radius: 6px; background: #D3CAC2; }
+.card .prog i.on { background: var(--or); }
+.card .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 34px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; font-size: 36px; font-weight: 800; }
+.ok { left: 0; right: 0; display: flex; justify-content: center; }
+.ok span { display: inline-flex; align-items: center; gap: 16px; padding: 22px 46px; border-radius: 999px; background: #1F7A4C; color: #fff; font-size: 54px; font-weight: 800; box-shadow: 0 30px 70px -18px rgba(0, 0, 0, .8); }
+.pcur { width: 110px; height: 110px; filter: drop-shadow(0 0 24px rgba(240, 138, 46, .9)) drop-shadow(0 8px 14px rgba(0, 0, 0, .45)); }
+.pill { display: inline-block; padding: 0 36px 8px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; box-shadow: 0 20px 60px -10px rgba(240, 120, 30, .8); text-shadow: none; }
+.logo svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 24px 50px rgba(240, 110, 20, .55)); }
+.url { left: 0; right: 0; text-align: center; font: 700 44px Inter, Heebo, sans-serif; color: rgba(255, 248, 241, .85); direction: ltr; text-shadow: 0 2px 14px rgba(0, 0, 0, .6); }
+#fade { left: 0; top: 0; width: 1080px; height: 1920px; background: #000; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="lgo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB85E"/><stop offset="1" stop-color="#EC6512"/></linearGradient>
+  <symbol id="logo" viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="url(#lgo)"/><path d="M8 26 Q8 6 28 6 L72 6 Q92 6 92 26 L92 38 Q50 30 8 46 Z" fill="rgba(255,255,255,.14)"/><path d="M34 29 L71 46 Q75 48 71 50 L56 55 L49 70 Q47 74 45 70 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path fill="currentColor" d="M10 2.5 L11.6 8.2 Q12 9.6 13.4 10 L19 11.6 L13.4 13.2 Q12 13.6 11.6 15 L10 20.7 L8.4 15 Q8 13.6 6.6 13.2 L1 11.6 L6.6 10 Q8 9.6 8.4 8.2 Z"/><path fill="currentColor" d="M19 1.5 L19.7 3.8 L22 4.5 L19.7 5.2 L19 7.5 L18.3 5.2 L16 4.5 L18.3 3.8 Z"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="pcur" viewBox="0 0 60 60"><path d="M7 5 L52 24 Q56 26 52 28 L33 34 L25 53 Q23 57 21 53 Z" fill="#F08A2E" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></symbol>
+</defs></svg>
+<div id="stage">
+  <div class="L shade" id="shadeT" style="top:0;background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0))"></div>
+  <div class="L shade" id="shadeB" style="bottom:0;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.6))"></div>
+
+  <div class="L sup" id="a1" style="top:250px;font-size:104px"><div><span class="w">הקיצור</span> <span class="w">הכי</span> <span class="w">שווה</span></div><div><span class="w">במק</span> <span class="w or">שלכם</span></div></div>
+  <div class="L keys" id="a2" style="top:300px"><div class="key" style="width:170px">⌥</div><div class="plus">+</div><div class="key" style="width:420px">Space</div></div>
+
+  <div class="L sup" id="b1" style="top:270px;font-size:96px"><div><span class="w">14</span> <span class="w">דקות</span> <span class="w">מדריך…</span></div><div class="or"><span class="w">בשביל</span> <span class="w">כפתור</span> <span class="w">אחד.</span></div></div>
+
+  <div class="L sup" id="c1" style="top:250px;font-size:100px"><span class="w">שואלים</span> <span class="w or">בעברית.</span></div>
+  <div class="L ask" id="ask" style="top:1330px"><svg><use href="#spark"/></svg><span id="askq"></span><span class="caret" id="askc"></span></div>
+  <div class="L" id="cur" style="left:0;top:0"><svg class="pcur"><use href="#pcur"/></svg></div>
+
+  <div class="L sup" id="d1" style="top:250px;font-size:92px"><div><span class="w">הסמן</span> <span class="w">מראה</span> <span class="w">לך</span></div><div class="or"><span class="w">בדיוק</span> <span class="w">על</span> <span class="w">מה</span> <span class="w">ללחוץ.</span></div></div>
+  <div class="L card" id="card" style="top:1330px"><div class="st"><svg><use href="#logo"/></svg><span id="cst">שלב 1 מתוך 3</span></div><h4 id="ch"></h4><p id="cp"></p>
+    <div class="prog"><i id="g1"></i><i id="g2"></i><i id="g3"></i></div><span class="btn">עשיתי <svg style="width:36px;height:36px"><use href="#check"/></svg></span></div>
+  <div class="L ok" id="ok" style="top:1300px"><span><svg style="width:54px;height:54px"><use href="#check"/></svg>בוצע. בלי מדריך.</span></div>
+
+  <div class="L logo" id="elogo" style="left:450px;top:230px;width:180px;height:180px"><svg><use href="#logo"/></svg></div>
+  <div class="L sup" id="e1" style="top:450px;font-size:96px">שלחו לי בדירקט</div>
+  <div class="L sup" id="e2" style="top:565px;font-size:96px">את המילה <span class="pill" id="epill">פלאגין</span></div>
+  <div class="L sup" id="e3" style="top:1440px;font-size:56px;font-weight:800">ואשלח לכם את <bdi style="font-family:Inter">Pointy</bdi> 🎁</div>
+  <div class="L url" id="eurl" style="top:1530px">trypointy.com</div>
+  <div class="L" id="fade"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const T = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const outExpo = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+const outCubic = (p) => 1 - Math.pow(1 - p, 3);
+const inOutCubic = (p) => (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const outBack = (p) => { const c = 1.9; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const spring = (p) => (p <= 0 ? 0 : p >= 1 ? 1 : 1 - Math.exp(-6.5 * p) * Math.cos(10.5 * p));
+function vis(el, op, tf = "", blur = 0) { el.style.opacity = op; el.style.transform = tf; el.style.filter = blur > .05 ? `blur(${blur}px)` : ""; el.style.visibility = op <= .001 ? "hidden" : "visible"; }
+const W = (el) => [...el.querySelectorAll(".w")];
+function rise(spans, t, at, st = .07, dur = .5, dist = 60) { spans.forEach((s, i) => { const p = T(t, at + i * st, at + i * st + dur); vis(s, clamp(p * 2.2), `translateY(${(1 - outExpo(p)) * dist}px)`, (1 - outCubic(p)) * 12); }); }
+/* a block that is on screen from a to b: words rise in, the block blurs out */
+function block(el, t, a, b, words = true) {
+  if (t < a - .01 || t > b + .25) { vis(el, 0); return; }
+  const o = T(t, b, b + .22);
+  vis(el, 1 - o, `translateY(${-o * 40}px)`, o * 14);
+  if (words) rise(W(el), t, a);
+}
+function pop(el, t, at, dur = .55, from = .5, extra = "") { const p = T(t, at, at + dur); vis(el, clamp(p * 3), `${extra} scale(${lerp(from, 1, spring(p))})`); }
+function schedule(text, a, b) { const n = [...text].length; return [...text].map((_, i) => a + (b - a) * ((i + 1) / n)); }
+
+/* the edit timeline (seconds in the finished ad); edit.cjs fills in the cut points */
+const TL = window.TL || { s2: 4.0, s3: 7.75, s4: 12.55, s5: 16.55, end: 21.55, press: 2.1 };
+window.__dur = TL.end;
+const Q = "איך עושים זום-אין איטי לסרטון?";
+const STEPS = [["שלב 1 מתוך 3", "הפעלת Keyframe ל-Scale", "לחצו על השעון ליד Scale"], ["שלב 2 מתוך 3", "הזזת סמן הזמן", "גררו אותו לסוף הקליפ"], ["שלב 3 מתוך 3", "הגדלה ל-130", "שנו את הערך ל-130"]];
+
+function render(t) {
+  const { s2, s3, s4, s5, end, press } = TL;
+  // soft shading behind the text so it reads over any footage
+  vis($("shadeT"), t < s5 ? .9 : 1); vis($("shadeB"), t >= s3 ? 1 : .6);
+
+  /* S1 hook */
+  block($("a1"), t, -.7, press - .05);
+  const a2 = $("a2");
+  if (t >= press && t < s2 + .2) { const p = T(t, press, press + .45), o = T(t, s2 - .15, s2 + .1); vis(a2, clamp(p * 4) * (1 - o), `scale(${lerp(1.5, 1, outBack(p))})`, (1 - outCubic(p)) * 10 + o * 12); [...a2.querySelectorAll(".key")].forEach((k) => k.style.transform = `translateY(${t < press + .12 ? 12 : 0}px)`); }
+  else vis(a2, 0);
+
+  /* S2 pain */
+  const b1 = $("b1");
+  if (t >= s2 && t < s3 + .25) { const o = T(t, s3 - .15, s3 + .1); vis(b1, 1 - o, "", o * 12); const w = W(b1); rise(w.slice(0, 3), t, s2 + .15); rise(w.slice(3), t, s2 + .65); } else vis(b1, 0);
+
+  /* S3 ask */
+  block($("c1"), t, s3 + .3, s4 - .1);
+  const ask = $("ask");
+  if (t >= s3 + 1.2 && t < s4 + .2) {
+    pop(ask, t, s3 + 1.2, .5, .7); ask.style.opacity = Math.min(+ask.style.opacity, 1 - T(t, s4 - .2, s4 + .05));
+    const times = schedule(Q, s3 + 1.4, s3 + 2.6); let n = 0; while (n < times.length && times[n] <= t) n++;
+    $("askq").textContent = Q.slice(0, n);
+    $("askc").style.opacity = t < s3 + 2.7 || Math.floor(t * 2.5) % 2 ? 1 : 0;
+  } else vis(ask, 0);
+  const cur = $("cur");
+  if (t >= s3 + 2.9 && t < s4 + .1) {
+    const p = outCubic(T(t, s3 + 2.9, s3 + 3.6));
+    const x0 = 860, y0 = 1330, x1 = 560, y1 = 760;
+    const x = lerp(x0, x1, p) - Math.sin(Math.PI * p) * 120, y = lerp(y0, y1, p);
+    vis(cur, Math.min(T(t, s3 + 2.9, s3 + 3.05), 1 - T(t, s4 - .2, s4)), `translate(${x}px, ${y}px) scale(${1 - .15 * Math.sin(Math.PI * T(t, s3 + 3.65, s3 + 3.8))})`);
+  } else vis(cur, 0);
+
+  /* S4 steps */
+  block($("d1"), t, s4 + .2, s5 - .1);
+  const card = $("card");
+  const k = [s4 + .5, s4 + 1.4, s4 + 2.2];
+  if (t >= k[0] && t < s4 + 3.0) {
+    const i = t < k[1] ? 0 : t < k[2] ? 1 : 2;
+    $("cst").textContent = STEPS[i][0]; $("ch").textContent = STEPS[i][1]; $("cp").textContent = STEPS[i][2];
+    [1, 2, 3].forEach((n) => $("g" + n).classList.toggle("on", n <= i + 1));
+    pop(card, t, k[0], .5, .7, `translateY(${(1 - outExpo(T(t, k[0], k[0] + .3))) * 40}px)`);
+    const bump = Math.max(0, ...k.slice(1).map((x) => Math.sin(Math.PI * T(t, x, x + .18))));
+    card.style.transform += ` scale(${1 - .04 * bump})`;
+    card.style.opacity = Math.min(+card.style.opacity, 1 - T(t, s4 + 2.85, s4 + 3.0));
+  } else vis(card, 0);
+  const ok = $("ok");
+  if (t >= s4 + 3.0 && t < s5 + .1) { pop(ok, t, s4 + 3.0, .5, .5); ok.style.opacity = Math.min(+ok.style.opacity, 1 - T(t, s5 - .1, s5 + .05)); } else vis(ok, 0);
+
+  /* S5 CTA */
+  if (t >= s5) {
+    pop($("elogo"), t, s5 + .3, .7, .2, `rotate(${(1 - spring(T(t, s5 + .3, s5 + 1))) * -20}deg)`);
+    rise([$("e1")], t, s5 + .5, 0, .5, 60);
+    rise([$("e2")], t, s5 + .75, 0, .5, 60);
+    const pp = T(t, s5 + 1.0, s5 + 1.6);
+    $("epill").style.transform = `scale(${t < s5 + 1.0 ? 1 : lerp(1.5, 1, spring(pp))}) rotate(${(1 - spring(pp)) * -8}deg)`;
+    rise([$("e3")], t, s5 + 1.5, 0, .5, 40);
+    rise([$("eurl")], t, s5 + 1.8, 0, .5, 30);
+  } else ["elogo", "e1", "e2", "e3", "eurl"].forEach((id) => vis($(id), 0));
+  vis($("fade"), T(t, end - .3, end));
+}
+window.__render = render;
+</script>
+</body>
+</html>

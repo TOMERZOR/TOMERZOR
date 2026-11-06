@@ -111,5 +111,734 @@
  "assets/sigh/fs-274841_dog-sighing-snorting.mp3": {
   "category": "sigh",
   "error": "cannot decode /home/user/TOMERZOR/pointy-ad/max2/real/assets/sigh/fs-274841_dog-sighing-snorting.mp3: Error opening input files: Invalid argument"
+ },
+ "assets/slam/fs-387929_putting-a-large-book-down.mp3": {
+  "category": "slam",
+  "query": "a heavy stack of paper dropped flat on a table, one thud",
+  "takes": [
+   {
+    "start": 1.542,
+    "end": 1.925,
+    "z": 2.85,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 1.0,
+    "match": "plausible",
+    "match_z": 2.85,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.001,
+      "z": 1.61,
+      "cosine": 0.164
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.002,
+      "z": 1.44,
+      "cosine": 0.174
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.0,
+      "z": -0.1,
+      "cosine": 0.004
+     }
+    ]
+   },
+   {
+    "start": 1.925,
+    "end": 3.806,
+    "z": 3.02,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.992,
+    "match": "strong",
+    "match_z": 3.02,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.0,
+      "z": 1.02,
+      "cosine": 0.095
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 0.64,
+      "cosine": 0.089
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.87,
+      "z": 3.32,
+      "cosine": 0.353
+     }
+    ]
+   },
+   {
+    "start": 3.806,
+    "end": 4.255,
+    "z": 2.89,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.998,
+    "match": "plausible",
+    "match_z": 2.89,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.0,
+      "z": 0.85,
+      "cosine": 0.126
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 0.31,
+      "cosine": 0.097
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.026,
+      "z": 1.85,
+      "cosine": 0.281
+     }
+    ]
+   }
+  ]
+ },
+ "assets/slam/fs-416416_drop-stack-of-paper-whoomp-wav.mp3": {
+  "category": "slam",
+  "query": "a heavy stack of paper dropped flat on a table, one thud",
+  "takes": [
+   {
+    "start": 0.022,
+    "end": 0.43,
+    "z": 3.51,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.996,
+    "match": "strong",
+    "match_z": 3.51,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.005,
+      "z": 2.49,
+      "cosine": 0.201
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 1.15,
+      "cosine": 0.078
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.0,
+      "z": 0.48,
+      "cosine": 0.015
+     }
+    ]
+   }
+  ]
+ },
+ "assets/slam/fs-524752_dropping-paperstack.mp3": {
+  "category": "slam",
+  "query": "a heavy stack of paper dropped flat on a table, one thud",
+  "takes": [
+   {
+    "start": 5.896,
+    "end": 7.823,
+    "z": 5.19,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.983,
+    "match": "strong",
+    "match_z": 5.19,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.0,
+      "z": 2.18,
+      "cosine": 0.13
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 0.92,
+      "cosine": 0.043
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.001,
+      "z": 2.88,
+      "cosine": 0.237
+     }
+    ]
+   },
+   {
+    "start": 2.088,
+    "end": 4.015,
+    "z": 4.91,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.996,
+    "match": "strong",
+    "match_z": 4.91,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.0,
+      "z": 2.3,
+      "cosine": 0.137
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 0.0,
+      "cosine": -0.031
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.043,
+      "z": 3.73,
+      "cosine": 0.302
+     }
+    ]
+   },
+   {
+    "start": 4.015,
+    "end": 5.896,
+    "z": 4.14,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.989,
+    "match": "strong",
+    "match_z": 4.14,
+    "closest_alt": [
+     {
+      "query": "a door slamming",
+      "p": 0.0,
+      "z": 1.1,
+      "cosine": 0.019
+     },
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 0.79,
+      "cosine": 0.018
+     },
+     {
+      "query": "paper rustling",
+      "p": 0.014,
+      "z": 2.8,
+      "cosine": 0.228
+     }
+    ]
+   }
+  ]
+ },
+ "assets/keyboard/fs-215744_typing-on-a-laptop-keyboard.mp3": {
+  "category": "keyboard",
+  "query": "a single laptop keyboard key press",
+  "takes": [
+   {
+    "start": 8.095,
+    "end": 8.425,
+    "z": 4.61,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.997,
+    "match": "strong",
+    "match_z": 4.61,
+    "closest_alt": [
+     {
+      "query": "a mouse click",
+      "p": 0.0,
+      "z": 1.97,
+      "cosine": 0.236
+     },
+     {
+      "query": "a typewriter key",
+      "p": 0.0,
+      "z": 2.19,
+      "cosine": 0.25
+     }
+    ]
+   },
+   {
+    "start": 2.09,
+    "end": 2.465,
+    "z": 4.55,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.995,
+    "match": "strong",
+    "match_z": 4.55,
+    "closest_alt": [
+     {
+      "query": "a mouse click",
+      "p": 0.0,
+      "z": 2.03,
+      "cosine": 0.22
+     },
+     {
+      "query": "a typewriter key",
+      "p": 0.0,
+      "z": 2.94,
+      "cosine": 0.296
+     }
+    ]
+   },
+   {
+    "start": 13.206,
+    "end": 13.595,
+    "z": 4.54,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.995,
+    "match": "strong",
+    "match_z": 4.54,
+    "closest_alt": [
+     {
+      "query": "a mouse click",
+      "p": 0.0,
+      "z": 1.86,
+      "cosine": 0.192
+     },
+     {
+      "query": "a typewriter key",
+      "p": 0.006,
+      "z": 3.77,
+      "cosine": 0.379
+     }
+    ]
+   }
+  ]
+ },
+ "assets/riser/fs-219836_cymbal-swell-3-wav.mp3": {
+  "category": "riser",
+  "query": "a cymbal swell rising in volume",
+  "takes": [
+   {
+    "start": 0.9,
+    "end": 2.7,
+    "z": 4.61,
+    "kind": "window",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.899,
+    "match": "strong",
+    "match_z": 4.61,
+    "closest_alt": [
+     {
+      "query": "a crash cymbal hit",
+      "p": 0.096,
+      "z": 4.37,
+      "cosine": 0.316
+     },
+     {
+      "query": "white noise",
+      "p": 0.0,
+      "z": 0.15,
+      "cosine": 0.006
+     }
+    ]
+   },
+   {
+    "start": 2.7,
+    "end": 4.5,
+    "z": 4.25,
+    "kind": "window",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.861,
+    "match": "strong",
+    "match_z": 4.25,
+    "closest_alt": [
+     {
+      "query": "a crash cymbal hit",
+      "p": 0.267,
+      "z": 4.38,
+      "cosine": 0.275
+     },
+     {
+      "query": "white noise",
+      "p": 0.0,
+      "z": 0.41,
+      "cosine": -0.019
+     }
+    ]
+   },
+   {
+    "start": 6.3,
+    "end": 8.1,
+    "z": 3.72,
+    "kind": "window",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.888,
+    "match": "strong",
+    "match_z": 3.72,
+    "closest_alt": [
+     {
+      "query": "a crash cymbal hit",
+      "p": 0.993,
+      "z": 5.72,
+      "cosine": 0.417
+     },
+     {
+      "query": "white noise",
+      "p": 0.0,
+      "z": 0.35,
+      "cosine": 0.017
+     }
+    ]
+   }
+  ]
+ },
+ "assets/whoosh/fs-59995_swosh-08-flac----stick-cutting-air.mp3": {
+  "category": "whoosh",
+  "query": "a fast air swish of a stick",
+  "takes": [
+   {
+    "start": 0.014,
+    "end": 0.185,
+    "z": 4.6,
+    "kind": "stroke",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.967,
+    "match": "strong",
+    "match_z": 4.6,
+    "closest_alt": [
+     {
+      "query": "wind",
+      "p": 0.0,
+      "z": 1.42,
+      "cosine": 0.13
+     },
+     {
+      "query": "a jet engine",
+      "p": 0.0,
+      "z": 0.98,
+      "cosine": 0.044
+     }
+    ]
+   }
+  ]
+ },
+ "assets/whoosh/fs-60026_swosh-swoosh-whoosh-air-sound--free--hig.mp3": {
+  "category": "whoosh",
+  "query": "a fast air swish of a stick",
+  "takes": [
+   {
+    "start": 0.019,
+    "end": 0.385,
+    "z": 4.41,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.963,
+    "match": "strong",
+    "match_z": 4.41,
+    "closest_alt": [
+     {
+      "query": "wind",
+      "p": 0.0,
+      "z": 1.34,
+      "cosine": 0.08
+     },
+     {
+      "query": "a jet engine",
+      "p": 0.0,
+      "z": 0.95,
+      "cosine": -0.001
+     }
+    ]
+   }
+  ]
+ },
+ "assets/click/fs-347544_mouse-click-sounds.mp3": {
+  "category": "click",
+  "query": "a single computer mouse click",
+  "takes": [
+   {
+    "start": 0.095,
+    "end": 0.26,
+    "z": 4.22,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.94,
+    "match": "strong",
+    "match_z": 4.22,
+    "closest_alt": [
+     {
+      "query": "a keyboard key press",
+      "p": 0.008,
+      "z": 2.6,
+      "cosine": 0.355
+     },
+     {
+      "query": "a finger snap",
+      "p": 0.0,
+      "z": 1.05,
+      "cosine": 0.177
+     }
+    ]
+   },
+   {
+    "start": 1.093,
+    "end": 1.23,
+    "z": 4.12,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.934,
+    "match": "strong",
+    "match_z": 4.12,
+    "closest_alt": [
+     {
+      "query": "a keyboard key press",
+      "p": 0.009,
+      "z": 2.38,
+      "cosine": 0.303
+     },
+     {
+      "query": "a finger snap",
+      "p": 0.0,
+      "z": 1.47,
+      "cosine": 0.2
+     }
+    ]
+   },
+   {
+    "start": 1.808,
+    "end": 1.9,
+    "z": 3.4,
+    "kind": "stroke",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.937,
+    "match": "strong",
+    "match_z": 3.4,
+    "closest_alt": [
+     {
+      "query": "a keyboard key press",
+      "p": 0.245,
+      "z": 2.85,
+      "cosine": 0.41
+     },
+     {
+      "query": "a finger snap",
+      "p": 0.0,
+      "z": 0.89,
+      "cosine": 0.135
+     }
+    ]
+   }
+  ]
+ },
+ "assets/pop/fs-573153_mouth-pop.mp3": {
+  "category": "pop",
+  "query": "a soft round mouth pop",
+  "takes": [
+   {
+    "start": 0.011,
+    "end": 0.2,
+    "z": 3.56,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.929,
+    "match": "strong",
+    "match_z": 3.56,
+    "closest_alt": [
+     {
+      "query": "a gunshot",
+      "p": 0.0,
+      "z": 0.6,
+      "cosine": 0.047
+     },
+     {
+      "query": "a balloon burst",
+      "p": 0.0,
+      "z": 1.57,
+      "cosine": 0.152
+     }
+    ]
+   }
+  ]
+ },
+ "assets/bell/fs-11088_g1-wav.mp3": {
+  "category": "bell",
+  "query": "a single glockenspiel note ringing",
+  "takes": [
+   {
+    "start": 0.011,
+    "end": 1.89,
+    "z": 4.08,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.885,
+    "match": "strong",
+    "match_z": 4.08,
+    "closest_alt": [
+     {
+      "query": "a doorbell",
+      "p": 0.002,
+      "z": 2.3,
+      "cosine": 0.271
+     },
+     {
+      "query": "a synthesizer beep",
+      "p": 0.0,
+      "z": 0.63,
+      "cosine": 0.076
+     }
+    ]
+   },
+   {
+    "start": 2.459,
+    "end": 2.773,
+    "z": 3.26,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "uncertain",
+    "p_real": 0.359,
+    "match": "strong",
+    "match_z": 3.26,
+    "closest_alt": [
+     {
+      "query": "a doorbell",
+      "p": 0.002,
+      "z": 1.34,
+      "cosine": 0.269
+     },
+     {
+      "query": "a synthesizer beep",
+      "p": 0.013,
+      "z": 2.08,
+      "cosine": 0.324
+     }
+    ]
+   },
+   {
+    "start": 3.22,
+    "end": 3.51,
+    "z": 2.57,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "uncertain",
+    "p_real": 0.257,
+    "match": "plausible",
+    "match_z": 2.57,
+    "closest_alt": [
+     {
+      "query": "a doorbell",
+      "p": 0.002,
+      "z": 1.14,
+      "cosine": 0.238
+     },
+     {
+      "query": "a synthesizer beep",
+      "p": 0.863,
+      "z": 3.01,
+      "cosine": 0.389
+     }
+    ]
+   }
+  ]
+ },
+ "assets/wood/fs-218460_wood-block-hit.mp3": {
+  "category": "wood",
+  "query": "a wooden block hit",
+  "takes": [
+   {
+    "start": 0.011,
+    "end": 0.284,
+    "z": 5.08,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.936,
+    "match": "strong",
+    "match_z": 5.12,
+    "closest_alt": [
+     {
+      "query": "a door knock",
+      "p": 0.0,
+      "z": 1.75,
+      "cosine": 0.058
+     },
+     {
+      "query": "a clap",
+      "p": 0.0,
+      "z": 0.61,
+      "cosine": 0.03
+     }
+    ]
+   }
+  ]
  }
 }

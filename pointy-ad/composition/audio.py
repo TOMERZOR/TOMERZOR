@@ -6,13 +6,18 @@ A minor (Am F C G). Before the reveal there is only a low pad, the timer's ticks
 drops on the ⌥ Space press (6.3 s), stops for the timer hitting zero (19.8 s) and comes back for the
 call to action. The music is ducked on every kick so the effects stay clear.
 
-usage: python3 audio.py sfx.json out.wav
+usage: python3 audio.py sfx.json out.wav [--no-music]
+
+--no-music leaves the music bus silent and keeps every sound effect, for an effects-only soundtrack.
 """
 import json
 import sys
 import wave
 
 import numpy as np
+
+ARGS = [a for a in sys.argv[1:] if not a.startswith("--")]
+NO_MUSIC = "--no-music" in sys.argv[1:]
 
 SR = 48000
 DUR = 25.0
@@ -156,7 +161,7 @@ def ding():
     return norm(bell(1318.5, 1.6, .5) + 0.8 * bell(1975.5, 1.6, .45) + 0.4 * bell(2637.0, 1.6, .3))
 
 
-cues = json.load(open(sys.argv[1]))
+cues = json.load(open(ARGS[0]))
 for t, kind in cues:
     j = rng.uniform(-0.15, 0.15)
     if kind == "key":
@@ -335,6 +340,8 @@ add(K, 24.3, 0.8, 0, MU)
 
 # ---------------- mix ----------------
 MU *= duck[:, None] * 0.62
+if NO_MUSIC:
+    MU[:] = 0
 mix = FX + MU
 fade = np.ones(N)
 fo = int(0.35 * SR)
@@ -343,9 +350,9 @@ mix *= fade[:, None]
 mix = np.tanh(mix * 1.15) / np.tanh(1.15)
 mix = mix / np.max(np.abs(mix)) * 0.89
 pcm = (mix * 32767).astype("<i2")
-with wave.open(sys.argv[2], "wb") as w:
+with wave.open(ARGS[1], "wb") as w:
     w.setnchannels(2)
     w.setsampwidth(2)
     w.setframerate(SR)
     w.writeframes(pcm.tobytes())
-print("wrote", sys.argv[2], len(cues), "cues")
+print("wrote", ARGS[1], len(cues), "cues", "(no music)" if NO_MUSIC else "")

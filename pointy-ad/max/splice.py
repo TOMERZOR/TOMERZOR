@@ -33,7 +33,7 @@ print(f"last shot of the main clip starts at frame {cut} ({t_cut:.3f}s)")
 
 W, H = fs[0].shape[1], fs[0].shape[0]
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", main, "-i", shot, "-filter_complex",
-                f"[0:v]trim=end={t_cut:.4f},setpts=PTS-STARTPTS,fps={fps}[a];[0:a]atrim=end={t_cut:.4f},asetpts=PTS-STARTPTS,aresample=48000[aa];"
+                f"[0:v]trim=end_frame={cut},setpts=PTS-STARTPTS,fps={fps}[a];[0:a]atrim=end={cut / fps:.6f},asetpts=PTS-STARTPTS,aresample=48000[aa];"
                 f"[1:v]scale={W}:{H},setsar=1,fps={fps},setpts=PTS-STARTPTS[b];[1:a]aresample=48000,asetpts=PTS-STARTPTS[ba];"
                 "[a][aa][b][ba]concat=n=2:v=1:a=1[v][au]",
                 "-map", "[v]", "-map", "[au]", "-c:v", "libx264", "-crf", "12", "-preset", "medium", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", out], check=True)

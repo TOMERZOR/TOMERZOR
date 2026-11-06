@@ -96,7 +96,9 @@ def place(bus, name, t, gain, first_hit=False, end_at=None, x=None):
 # ---------- the clips' own sound ----------
 amb = np.zeros((N, 2))
 AMB_GAIN = {"s1": 1.3, "s2": .8, "s3": .55, "s4": 2.6, "s5": .7, "s6": .55, "h1": .32, "h2": .32, "h3": .32, "h4": .32,
-            "s8": .9, "s9": .75, "s12": 1.4, "s14": 1.4}
+            "s8": .5, "s9": .75, "s9a": .75, "s9b": .75, "s12": 1.4, "s14": 1.4}
+# Seedance's own dog noises are muted where we put ours: its "sigh" in s2 came out as a voiced huff
+MUTE = [(6.55, 7.95, .08)]                     # (from, to, gain), with 60 ms ramps
 XF = .03
 for s in TL["segs"]:
     if s["kind"] != "clip":
@@ -106,6 +108,10 @@ for s in TL["segs"]:
     d = s["t1"] - s["t0"]
     x = decode(os.path.join(HERE, "clips", src + ".mp4"), max(0, a - XF / 2), d + XF)
     add(amb, fade(x, XF, XF), s["t0"] - XF / 2, AMB_GAIN.get(s["id"], .8))
+tt_ = np.arange(N) / SR
+for a_, b_, g_ in MUTE:
+    k_ = np.clip(np.minimum((tt_ - a_) / .06, (b_ - tt_) / .06), 0, 1)
+    amb *= (1 - k_ * (1 - g_))[:, None]
 # the wink shot's room runs on into the outro and fades under the wipe
 o = TL["outro_at"]
 x = decode(os.path.join(HERE, "clips", "g5.mp4"), 170 / 24, 1.2)

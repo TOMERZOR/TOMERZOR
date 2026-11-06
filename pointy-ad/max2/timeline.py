@@ -49,9 +49,10 @@ clip("s6", "g2eye", 72, 144)       # the eye, Pointy reflected in it
 
 # act 2: the hyperlapse, cut on the beat; the music drops on its first frame
 T_H = t
-plan = [("h1", "g3", 0, 4, {}), ("i1", "ins1", None, 4, {}), ("h2", "g3", 70, 3, {"flip": True}),
-        ("i2", "ins2", None, 3, {}), ("h3", "g3", 128, 3, {}), ("i3", "ins3", None, 2, {}),
-        ("h4", "g3", 205, 3, {"flip": True})]
+# g3 is one continuous 360° orbit (front, side, behind, other side, front; day to night), cut in order
+plan = [("h1", "g3", 0, 4, {}), ("i1", "ins1", None, 4, {}), ("h2", "g3", 58, 3, {}),
+        ("i2", "ins2", None, 3, {}), ("h3", "g3", 103, 3, {}), ("i3", "ins3", None, 2, {}),
+        ("h4", "g3", 157, 3, {})]
 beats = 0
 for id, src, a, n, kw in plan:
     t0, t1 = q(T_H + beats * BEAT), q(T_H + (beats + n) * BEAT)
@@ -63,8 +64,9 @@ for id, src, a, n, kw in plan:
 t = q(T_H + beats * BEAT)
 
 # act 3: the payoff
-clip("s8", "g4", 0, 84)            # beer
-clip("s9", "g4", 100, 289)         # the coworker, whip to the desk, whip back, whip to Max smiling
+clip("s8", "g4", 0, 72)            # beer
+clip("s9a", "g4b", 6, 140)         # the coworker glances, whip to the finished desk, whip back: impressed
+clip("s9b", "g4", 220, 289)        # mid-whip from her to Max, smiling
 other("card", "card", 1.75, text="Two weeks later.")
 clip("s12", "g5", 12, 118)         # the poster
 other("i4", "insert", 1.5, scene="hello")
@@ -101,15 +103,15 @@ def at_src(id, frame):             # timeline time of a source frame inside a cl
 
 
 SFX = [
-    dict(name="sigh_b", at=6.85, gain=.4),
+    dict(name="sigh2_b", at=6.9, gain=.5),
     dict(name="slam_b", at=at_src("s3", 200), gain=.9),
     dict(name="keys_b", at=at_src("s5", 20), gain=.38, first_hit=True),
     dict(name="keys_b", at=at_src("s5", 44), gain=.42, first_hit=True),
     dict(name="riser_b", at=seg("s6")["t0"], gain=.45, end_at=T_H),
-    dict(name="beer_a", at=seg("s8")["t0"] + .85, gain=.55),
-    dict(name="whip_b", at=at_src("s9", 121), gain=.5),
-    dict(name="whip_b", at=at_src("s9", 164), gain=.5),
-    dict(name="whip_b", at=at_src("s9", 219), gain=.45),
+    dict(name="sip_a", at=seg("s8")["t0"] + .85, gain=.6),
+    dict(name="whip_b", at=at_src("s9a", 38), gain=.5),
+    dict(name="whip_b", at=at_src("s9a", 93), gain=.5),
+    dict(name="whip_b", at=seg("s9b")["t0"] - .02, gain=.45),
     dict(name="hello_a", at=seg("i4")["t0"] + .12, gain=.26),
     dict(name="ting_a", at=at_src("s14", 147), gain=.35),
 ]

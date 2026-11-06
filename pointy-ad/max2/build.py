@@ -1,9 +1,9 @@
 """Cuts the picture of "This is Max." from work/timeline.json: 1920×1080 at 48 fps, no titles, no sound.
 
 Clips are read frame-exactly (source frame a + output frame // 2, since 48 = 2 × 24), so a cut can
-never pull in a stray frame. The hyperlapse plates get a slow camera move (push, roll and drift, some
-mirrored) so the four cuts feel like one camera circling Max. The card is black; the outro runs the
-end of the wink shot on and holds it (the outro wipes it away).
+never pull in a stray frame. The hyperlapse plates (one 360° orbit, cut in four on the beat) get a
+slight push-in. The card is black; the outro runs the end of the wink shot on and holds it (the
+outro wipes it away).
 
 usage: python3 build.py <out.mp4> [clips dir] [inserts dir]
 """
@@ -22,9 +22,8 @@ inserts = sys.argv[3] if len(sys.argv) > 3 else os.path.join(HERE, "work")
 TL = json.load(open(os.path.join(HERE, "work", "timeline.json")))
 W, H, FPS = 1920, 1080, TL["fps"]
 
-# hyperlapse moves: (zoom from, to), (roll degrees from, to), (drift as a fraction of width from, to)
-MOVES = {"h1": ((1.10, 1.17), (-2.4, 1.0), (.03, -.02)), "h2": ((1.17, 1.11), (2.0, -1.4), (-.03, .02)),
-         "h3": ((1.11, 1.19), (-1.4, 2.0), (.02, -.03)), "h4": ((1.19, 1.10), (1.6, -2.4), (-.02, .03))}
+# hyperlapse: the orbit is in the footage now; each plate only gets a slight push-in
+MOVES = {h: ((1.0, 1.035), (0.0, 0.0), (0.0, 0.0)) for h in ("h1", "h2", "h3", "h4")}
 
 
 class Reader:

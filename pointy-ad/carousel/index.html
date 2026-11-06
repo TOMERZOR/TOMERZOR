@@ -243,11 +243,12 @@ const sheet = () => { let h = '<span class="h"></span>'; for (const c of "ABCDEF
   const H = ["Month", "Rent", "Food", "Travel", "Fun", "Total"], M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
   for (let r = 1; r <= 11; r++) { h += `<span class="h">${r}</span>`; for (let c = 0; c < 6; c++) h += r === 1 ? `<span style="font-weight:700">${H[c]}</span>` : `<span>${c === 0 ? M[r - 2] : (300 + ((r * 37 + c * 91) % 27) * 97).toLocaleString("en")}</span>`; }
   return h; };
-const apps = [
-  `<div class="win light" style="left:0;top:0"><div class="tb"><i></i><i></i><i></i><span>Budget.xlsx · Spreadsheet</span></div>
+const sheetWin = (hot = false) => `<div class="win light" style="left:0;top:0"><div class="tb"><i></i><i></i><i></i><span>Budget.xlsx · Spreadsheet</span></div>
     <div class="rib"><span>Home</span><span class="on">Insert</span><span>Formulas</span><span>Data</span></div>
-    <div class="tools"><div class="tool hot"><i style="background:#3E9E68"></i>PivotTable</div><div class="tool"><i></i>Table</div><div class="tool"><i></i>Chart</div><div class="tool"><i></i>Image</div></div>
-    <div class="grid">${sheet()}</div></div>`,
+    <div class="tools"><div class="tool ${hot ? "hot" : ""}"><i style="background:#3E9E68"></i>PivotTable</div><div class="tool"><i></i>Table</div><div class="tool"><i></i>Chart</div><div class="tool"><i></i>Image</div></div>
+    <div class="grid">${sheet()}</div></div>`;
+const apps = [
+  sheetWin(true),
   `<div class="win" style="left:0;top:0"><div class="tb"><i></i><i></i><i></i><span>portrait.png · Photo Editor</span></div>
     <div class="canvas"><svg viewBox="0 0 520 640"><rect width="520" height="640" rx="14" fill="url(#pbg)"/><circle cx="260" cy="250" r="96" fill="#3B2A23"/><path d="M90 640 Q100 410 260 400 Q420 410 430 640 Z" fill="#E8523F"/></svg></div>
     <div class="rpanel"><div>Adjust</div><div>Filters</div><div class="hot">Remove Background</div><div>Crop</div><div>Export</div></div></div>`,
@@ -271,7 +272,7 @@ const N = 8;
 const SLIDES = [
   { // 1 cover
     copy: `<h2>על מה<br><span class="or">לוחצים פה?!</span></h2><p>יש דרך מהירה יותר מיוטיוב. <b>הנה איך היא עובדת.</b></p>`,
-    screen: `<div class="wall"></div>${menubar("Video Editor")}${sc(editor(), 40, 58, .82)}
+    screen: `<div class="wall"></div>${menubar("Spreadsheet")}${sc(sheetWin(), 40, 58, .82)}
       <svg class="scur" style="left:520px;top:300px"><use href="#scur"/></svg>
       <div class="qb" style="left:150px;top:150px;transform:rotate(-8deg)">?</div><div class="qb" style="left:640px;top:110px;transform:rotate(10deg)">?</div>
       <div class="qb" style="left:600px;top:400px;transform:rotate(-12deg)">?</div><div class="qb" style="left:300px;top:430px;transform:rotate(6deg)">?</div>`,
@@ -281,8 +282,8 @@ const SLIDES = [
     kick: "הבעיה",
     copy: `<h2>14 דקות מדריך<br><span class="or">בשביל כפתור אחד.</span></h2><p>מחפשים, מדלגים, חוזרים… ועדיין לא מוצאים איפה זה.</p>`,
     screen: `<div class="wall"></div>${menubar("Browser")}
-      <div style="position:absolute;left:150px;right:150px;top:52px;height:52px;border-radius:26px;background:rgba(255,255,255,.1);display:flex;align-items:center;gap:12px;padding:0 22px;font:600 22px var(--font);color:#EEE;direction:rtl">🔍 איך עושים זום-אין בעריכה</div>
-      ${sc(`<div class="player" style="left:0;top:0"><div class="thumb"><div class="big">איך עושים<br><span>זום-אין?</span></div><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3 L21 12 L5 21 Z" fill="#fff"/></svg></div><div class="dur">05:31 / 14:37</div><div class="bar"><i></i></div></div><div class="meta">מדריך מלא למתחילים: איך עושים זום-אין בעריכה<small>שיעור 1 מתוך 12 · 14:37</small></div></div>`, 152, 122, .6)}`,
+      <div style="position:absolute;left:150px;right:150px;top:52px;height:52px;border-radius:26px;background:rgba(255,255,255,.1);display:flex;align-items:center;gap:12px;padding:0 22px;font:600 22px var(--font);color:#EEE;direction:rtl">🔍 איך עושים טבלת ציר</div>
+      ${sc(`<div class="player" style="left:0;top:0"><div class="thumb"><div class="big">איך עושים<br><span>טבלת ציר?</span></div><div class="play"><svg viewBox="0 0 24 24"><path d="M5 3 L21 12 L5 21 Z" fill="#fff"/></svg></div><div class="dur">05:31 / 14:37</div><div class="bar"><i></i></div></div><div class="meta">מדריך מלא למתחילים: טבלאות ציר מאפס<small>שיעור 1 מתוך 12 · 14:37</small></div></div>`, 152, 122, .6)}`,
   },
   { // 3 meet pointy
     kick: "הכירו את Pointy",
@@ -300,7 +301,7 @@ const SLIDES = [
   { // 4 step 1
     kick: `<b>1</b> איך זה עובד`,
     copy: `<h2>לוחצים <bdi dir="ltr" class="or" style="font-family:Inter,Heebo;letter-spacing:-.02em">⌥ Space</bdi><br>בכל אפליקציה.</h2><p>לא משנה באיזו תוכנה אתם. Pointy נפתח מעליה.</p>`,
-    screen: `<div class="wall"></div>${menubar("Video Editor")}${sc(editor(), 40, 58, .82)}
+    screen: `<div class="wall"></div>${menubar("Spreadsheet")}${sc(sheetWin(), 40, 58, .82)}
       <div style="position:absolute;inset:32px 0 0;background:rgba(0,0,0,.45)"></div>
       ${ask(110, 238, 660, `<span class="ph">מה תרצו לעשות?</span><span class="caret"></span>`)}`,
     hot: ["opt", "space"],
@@ -308,24 +309,24 @@ const SLIDES = [
   { // 5 step 2
     kick: `<b>2</b> איך זה עובד`,
     copy: `<h2>שואלים בעברית.<br><span class="or">כותבים או אומרים.</span></h2><p>בלי מונחים מקצועיים. בדיוק כמו שהייתם שואלים חבר.</p>`,
-    screen: `<div class="wall"></div>${menubar("Video Editor")}${sc(editor(), 40, 58, .82)}
+    screen: `<div class="wall"></div>${menubar("Spreadsheet")}${sc(sheetWin(), 40, 58, .82)}
       <div style="position:absolute;inset:32px 0 0;background:rgba(0,0,0,.45)"></div>
-      ${ask(70, 238, 740, `<span>איך עושים זום-אין איטי לסרטון?</span><span class="caret"></span>`, "on")}
+      ${ask(70, 238, 740, `<span>איך עושים טבלת ציר מהנתונים?</span><span class="caret"></span>`, "on")}
       <div class="tag" style="left:96px;top:330px">🎙️ אפשר גם להגיד בקול</div>`,
   },
   { // 6 step 3
     kick: `<b>3</b> איך זה עובד`,
     copy: `<h2>הסמן הכתום מצביע,<br><span class="or">צעד אחרי צעד.</span></h2><p>לוחצים איפה שהוא מראה, אומרים <b>"עשיתי"</b>, וממשיכים.</p>`,
-    screen: `<div class="wall"></div>${menubar("Video Editor")}${sc(editor({ hotSw: true }), 40, 58, .82)}
-      ${pcur(88, 273)}${card(220, 150, 1, "הפעלת Keyframe ל-Scale", "לחצו על השעון ליד Scale")}`,
+    screen: `<div class="wall"></div>${menubar("Spreadsheet")}${sc(sheetWin(true), 40, 58, .82)}
+      ${pcur(117, 195)}${card(250, 175, 1, "הוספת טבלת ציר", "לחצו על PivotTable בלשונית Insert")}`,
   },
   { // 7 any app
-    kick: "לא רק עריכה",
-    copy: `<h2>עובד בכל תוכנה.<br><span class="or">גם בעברית.</span></h2><p>טבלת ציר, הסרת רקע, תוכן עניינים, מדפסת.<br><b>שואלים, והוא מראה.</b></p>`,
+    kick: "לא משנה מה אתם עושים",
+    copy: `<h2>עובד בכל תוכנה.<br><span class="or">גם בעברית.</span></h2><p>עריכת וידאו, הסרת רקע, תוכן עניינים, מדפסת.<br><b>שואלים, והוא מראה.</b></p>`,
     screen: `<div class="wall"></div>${menubar("Finder")}
-      ${sc(apps[0], 24, 48, .43)}${sc(apps[1], 452, 48, .43)}${sc(apps[2], 24, 300, .43)}${sc(apps[3], 452, 300, .43)}
-      ${pcur(70, 128, false)}${pcur(816, 202, false)}${pcur(80, 380, false)}${pcur(560, 466, false)}
-      <div class="tag" style="left:150px;top:228px">איך עושים טבלת ציר?</div><div class="tag" style="left:500px;top:240px">איך מסירים רקע?</div>
+      ${sc(editor({ hotSw: true }), 24, 48, .43)}${sc(apps[1], 452, 48, .43)}${sc(apps[2], 24, 300, .43)}${sc(apps[3], 452, 300, .43)}
+      ${pcur(39, 160, false)}${pcur(816, 202, false)}${pcur(80, 380, false)}${pcur(560, 466, false)}
+      <div class="tag" style="left:150px;top:228px">איך עושים זום-אין?</div><div class="tag" style="left:500px;top:240px">איך מסירים רקע?</div>
       <div class="tag" style="left:132px;top:490px">איך מוסיפים תוכן עניינים?</div><div class="tag" style="left:620px;top:490px">איך מחברים מדפסת?</div>`,
   },
   { // 8 CTA

@@ -32,6 +32,8 @@ python3 compose.py    # מדביק את המסכים בצילום, מסיר את
 node render.cjs       # הכותרות מתוך layout.html, ופלט ל-slides/01.png עד 08.png
 ```
 
+גרסת 9:16 (1080×1920) לסטוריז ולרילס נמצאת ב-`carousel/slides-916/`. מרנדרים אותה עם `python3 compose.py 916` ואחריו `node render.cjs 916`.
+
 ## מודעה מצולמת (Higgsfield)
 
 `higgsfield/pointy-live.mp4`: מודעה באורך 21.5 שניות, 1080×1920 ב-24fps, עם צילומים ריאליסטיים שנוצרו ב-Higgsfield. הסטילס נוצרו ב-Nano Banana Pro והווידאו ב-Cinema Studio 4.0 (בסך הכול 392 קרדיטים). הטקסט בעברית, ה-UI של Pointy והקריאה לפעולה מצוירים מעל הצילום מתוך `higgsfield/edit/overlay.html`. הסאונד הוא האודיו המקורי של הקליפים, יחד עם ביט ואפקטים מ-`higgsfield/edit/score.py`.

@@ -6,15 +6,18 @@
 - adds a faint glass sheen to the display,
 - slide 4 uses the macro photo of the ⌥ key instead of the laptop.
 
-usage: python3 compose.py   (reads assets/ and work/screen-0N.png, writes work/base-0N.png)
+usage: python3 compose.py [916]   (reads assets/ and work/screen-0N.png, writes work/base-0N.png, or base-0N-916.png at 1080×1920)
 """
 import os
+import sys
 
 import numpy as np
 from PIL import Image, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-W, H = 1080, 1350
+TALL = len(sys.argv) > 1 and sys.argv[1] == "916"
+W, H = (1080, 1920) if TALL else (1080, 1350)
+SUF = "-916" if TALL else ""
 
 
 def coeffs(dst, src):
@@ -61,8 +64,9 @@ spill_light = (below * across)[..., None]
 for i in range(1, 9):
     if i == 4:
         macro = Image.open(os.path.join(HERE, "..", "higgsfield", "keyframes", "k1-macro.jpg")).convert("RGB")
-        macro = macro.crop((0, 560, macro.width, 560 + round(macro.width * 1.25)))
-        fit(macro).save(os.path.join(HERE, "work", "base-04.png"))
+        if not TALL:
+            macro = macro.crop((0, 560, macro.width, 560 + round(macro.width * 1.25)))
+        fit(macro).save(os.path.join(HERE, "work", f"base-04{SUF}.png"))
         continue
     scr = Image.open(os.path.join(HERE, "work", f"screen-{i:02d}.png")).convert("RGB")
     warped = np.asarray(scr.transform(photo.size, Image.PERSPECTIVE,
@@ -76,5 +80,5 @@ for i in range(1, 9):
     out = lit * (1 - alpha[..., None]) + disp * alpha[..., None]
     img = Image.fromarray(np.clip(out, 0, 255).astype(np.uint8))
     img = img.filter(ImageFilter.UnsharpMask(radius=1.2, percent=30, threshold=2))
-    fit(img).save(os.path.join(HERE, "work", f"base-{i:02d}.png"))
+    fit(img).save(os.path.join(HERE, "work", f"base-{i:02d}{SUF}.png"))
     print("wrote base", i)

@@ -97,7 +97,7 @@ def sample(name):
             if pk.get("keep"):
                 a = attack(x)
                 x = x[max(0, a - int(.02 * SR)): a + int(pk["keep"] * SR)]
-            x = fade(x, .004, .06)
+            x = fade(x, pk.get("fade_in", .004), pk.get("fade_out", .06))
         else:
             p = next(os.path.join(d, name + ".mp3") for d in SFX_DIRS if os.path.exists(os.path.join(d, name + ".mp3")))
             x = decode(p)
@@ -145,7 +145,7 @@ amb = np.zeros((N, 2))
 AMB_GAIN = {"s1": 1.3, "s2": .8, "s3": .55, "s4": 2.6, "s5": .7, "s6": .55, "h1": .32, "h2": .32, "h3": .32, "h4": .32,
             "s8": .5, "s9": .75, "s9a": .75, "s9b": .75, "s12": 1.4, "s14": 1.4}
 # Seedance's own dog noises are muted where we put ours: its "sigh" in s2 came out as a voiced huff
-MUTE = [(6.55, 7.95, .08)]                     # (from, to, gain), with 60 ms ramps
+MUTE = [(6.78, 7.95, .25)]                     # (from, to, gain), with 60 ms ramps
 XF = .03
 for s in TL["segs"]:
     if s["kind"] != "clip":
@@ -263,12 +263,13 @@ with wave.open(tmp, "wb") as w:
     w.setframerate(SR)
     w.writeframes((np.clip(mix / max(1.0, np.abs(mix).max()), -1, 1) * 32767).astype("<i2").tobytes())
 # loudness: measure, then gain to -14 LUFS with a true-peak limiter at -1 dBTP
-meas = subprocess.run(["ffmpeg", "-hide_banner", "-i", tmp, "-af", "loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json", "-f", "null", "-"],
+meas = subprocess.run(["ffmpeg", "-hide_banner", "-i", tmp, "-af", "loudnorm=I=-14:TP=-2.2:LRA=11:print_format=json", "-f", "null", "-"],
                       capture_output=True, text=True).stderr
 js = json.loads(meas[meas.rindex("{"):meas.rindex("}") + 1])
+# one gain to -14 LUFS, then an oversampled limiter with headroom for the AAC encode (which can add ~1 dB)
+gain = -14.0 - float(js["input_i"])
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", tmp, "-af",
-                f"loudnorm=I=-14:TP=-1.5:LRA=11:measured_I={js['input_i']}:measured_TP={js['input_tp']}:measured_LRA={js['input_lra']}:"
-                f"measured_thresh={js['input_thresh']}:offset={js['target_offset']}:linear=true,aresample=48000",
+                f"volume={gain:.2f}dB,aresample=192000,alimiter=limit=0.80:attack=1:release=60:level=disabled,aresample=48000",
                 "-c:a", "pcm_s16le", out_path], check=True)
 os.remove(tmp)
 print("wrote", out_path, "(input", js["input_i"], "LUFS)")

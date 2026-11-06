@@ -2,7 +2,7 @@
 
 Real recordings from Freesound (found through Openverse). CC0 needs no credit; it is listed anyway.
 
-- "Dog Breathing" by dmnvz, CC0, https://freesound.org/people/dmnvz/sounds/397882
+- "Dog Whimper 2" by aunrea, CC0, https://freesound.org/people/aunrea/sounds/495661
 - "g1.wav" by angstrom, CC0, https://freesound.org/people/angstrom/sounds/11088
 - "Mouse click sounds" by Masgame, CC0, https://freesound.org/people/Masgame/sounds/347544
 - "typing on a laptop keyboard" by supersnd, CC0, https://freesound.org/people/supersnd/sounds/215744

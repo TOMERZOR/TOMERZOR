@@ -64,9 +64,11 @@
   "file": "assets/keyboard/fs-215744_typing-on-a-laptop-keyboard.mp3",
   "slices": true
  },
- "sigh": {
-  "file": "assets/sigh/fs-397882_dog-breathing.mp3",
-  "start": 2.03,
-  "end": 3.98
+ "whimper": {
+  "file": "assets/whimper/fs-495661_dog-whimper-2.mp3",
+  "start": 4.07,
+  "end": 5.25,
+  "fade_out": 0.25,
+  "fade_in": 0.04
  }
 }

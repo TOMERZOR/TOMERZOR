@@ -1,0 +1,115 @@
+{
+ "assets/sigh/fs-274841_koira--huokauksia--tuhinaa-sis\u00e4ll\u00e4---a-d.mp3": {
+  "category": "sigh",
+  "error": "cannot decode /home/user/TOMERZOR/pointy-ad/max2/real/assets/sigh/fs-274841_koira--huokauksia--tuhinaa-sis\u00e4ll\u00e4---a-d.mp3: Error opening input files: Invalid argument"
+ },
+ "assets/sip/fs-411973_sipping-drink.mp3": {
+  "category": "sip",
+  "query": "a single sip and swallow of a drink",
+  "takes": [
+   {
+    "start": 3.839,
+    "end": 4.32,
+    "z": 4.52,
+    "kind": "event",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.983,
+    "match": "strong",
+    "match_z": 4.52,
+    "closest_alt": [
+     {
+      "query": "glasses clinking together",
+      "p": 0.0,
+      "z": 1.94,
+      "cosine": 0.148
+     },
+     {
+      "query": "liquid pouring",
+      "p": 0.0,
+      "z": 1.48,
+      "cosine": 0.128
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": 1.41,
+      "cosine": -0.002
+     }
+    ]
+   },
+   {
+    "start": 2.487,
+    "end": 2.6,
+    "z": 3.15,
+    "kind": "stroke",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.877,
+    "match": "strong",
+    "match_z": 3.15,
+    "closest_alt": [
+     {
+      "query": "glasses clinking together",
+      "p": 0.001,
+      "z": 1.14,
+      "cosine": 0.157
+     },
+     {
+      "query": "liquid pouring",
+      "p": 0.252,
+      "z": 2.44,
+      "cosine": 0.295
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": 0.9,
+      "cosine": 0.029
+     }
+    ]
+   },
+   {
+    "start": 1.393,
+    "end": 1.485,
+    "z": 2.55,
+    "kind": "stroke",
+    "head": null,
+    "tail": null,
+    "notes": null,
+    "real": "real or pro-produced",
+    "p_real": 0.97,
+    "match": "plausible",
+    "match_z": 2.55,
+    "closest_alt": [
+     {
+      "query": "glasses clinking together",
+      "p": 0.267,
+      "z": 2.14,
+      "cosine": 0.272
+     },
+     {
+      "query": "liquid pouring",
+      "p": 0.003,
+      "z": 0.84,
+      "cosine": 0.152
+     },
+     {
+      "query": "a person speaking",
+      "p": 0.0,
+      "z": 1.47,
+      "cosine": 0.096
+     }
+    ]
+   }
+  ]
+ },
+ "assets/sigh/fs-274841_dog-sighing-snorting.mp3": {
+  "category": "sigh",
+  "error": "cannot decode /home/user/TOMERZOR/pointy-ad/max2/real/assets/sigh/fs-274841_dog-sighing-snorting.mp3: Error opening input files: Invalid argument"
+ }
+}

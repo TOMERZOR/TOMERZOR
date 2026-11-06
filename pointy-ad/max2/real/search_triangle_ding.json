@@ -1,0 +1,134 @@
+[
+ {
+  "id": "79bea88d-30ab-42a3-8757-79e43ef9b3a2",
+  "title": "chime.wav",
+  "dur": 2.6,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "hypocore",
+  "url": "https://cdn.freesound.org/previews/164/164088_2975503-hq.mp3",
+  "page": "https://freesound.org/people/hypocore/sounds/164088",
+  "fmt": "mp3"
+ },
+ {
+  "id": "62bd743e-9881-4fcb-a7d9-211033ba6c0e",
+  "title": "ding.wav",
+  "dur": 1.06,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "OwlStorm",
+  "url": "https://cdn.freesound.org/previews/23/23152_140737-hq.mp3",
+  "page": "https://freesound.org/people/OwlStorm/sounds/23152",
+  "fmt": "mp3"
+ },
+ {
+  "id": "d63f9b47-b05e-482f-b46a-a8c127b35dbf",
+  "title": "Triangle.wav",
+  "dur": 4.53,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "alberto96",
+  "url": "https://cdn.freesound.org/previews/274/274273_5228688-hq.mp3",
+  "page": "https://freesound.org/people/alberto96/sounds/274273",
+  "fmt": "mp3"
+ },
+ {
+  "id": "76ebb7d9-c868-4d24-ab12-0853ae71aaae",
+  "title": "Triangle_Open_02",
+  "dur": 4.03,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "cabled_mess",
+  "url": "https://cdn.freesound.org/previews/349/349503_5450487-hq.mp3",
+  "page": "https://freesound.org/people/cabled_mess/sounds/349503",
+  "fmt": "mp3"
+ },
+ {
+  "id": "92598910-9980-4f96-861b-61b930573599",
+  "title": "Triangle_Open_01",
+  "dur": 6.92,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "cabled_mess",
+  "url": "https://cdn.freesound.org/previews/349/349501_5450487-hq.mp3",
+  "page": "https://freesound.org/people/cabled_mess/sounds/349501",
+  "fmt": "mp3"
+ },
+ {
+  "id": "33570d7b-04ce-493d-9820-14d83cddd9bf",
+  "title": "Triangle_Open_03",
+  "dur": 5.21,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "cabled_mess",
+  "url": "https://cdn.freesound.org/previews/349/349502_5450487-hq.mp3",
+  "page": "https://freesound.org/people/cabled_mess/sounds/349502",
+  "fmt": "mp3"
+ },
+ {
+  "id": "8fc2eb18-9ee1-4e65-8647-e1fcb4527771",
+  "title": "Steel Bar.wav",
+  "dur": 7.33,
+  "lic": "by",
+  "src": "freesound",
+  "creator": "Benboncan",
+  "url": "https://cdn.freesound.org/previews/72/72890_634166-hq.mp3",
+  "page": "https://freesound.org/people/Benboncan/sounds/72890",
+  "fmt": "mp3"
+ },
+ {
+  "id": "ab6b9e7a-24ad-41c6-8b37-3a14b2db9717",
+  "title": "Single_Triangle_Hits_soft_medium_loud.wav",
+  "dur": 31.77,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "jcdecha",
+  "url": "https://cdn.freesound.org/previews/235/235464_3843719-hq.mp3",
+  "page": "https://freesound.org/people/jcdecha/sounds/235464",
+  "fmt": "mp3"
+ },
+ {
+  "id": "c9d8045b-0b91-44fb-8af3-7c1d7ea7d495",
+  "title": "Triangle instrument.wav",
+  "dur": 35.25,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "Jandre160108",
+  "url": "https://cdn.freesound.org/previews/437/437403_5947177-hq.mp3",
+  "page": "https://freesound.org/people/Jandre160108/sounds/437403",
+  "fmt": "mp3"
+ },
+ {
+  "id": "ab2ae6de-618f-4f57-a39b-a0e8e34033b0",
+  "title": "triangle.wav",
+  "dur": 42.72,
+  "lic": "by",
+  "src": "freesound",
+  "creator": "plingativator",
+  "url": "https://cdn.freesound.org/previews/188/188890_1163762-hq.mp3",
+  "page": "https://freesound.org/people/plingativator/sounds/188890",
+  "fmt": "mp3"
+ },
+ {
+  "id": "9698ceed-225f-43e1-93cd-766edf76c926",
+  "title": "Triangle.wav",
+  "dur": 22.2,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "Tairblenn",
+  "url": "https://cdn.freesound.org/previews/545/545512_11663790-hq.mp3",
+  "page": "https://freesound.org/people/Tairblenn/sounds/545512",
+  "fmt": "mp3"
+ },
+ {
+  "id": "774b41e2-6b57-4ca7-96fd-cee10f163acf",
+  "title": "Triangle Ring - 4 Rings",
+  "dur": 24.09,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "el_boss",
+  "url": "https://cdn.freesound.org/previews/625/625656_9129912-hq.mp3",
+  "page": "https://freesound.org/people/el_boss/sounds/625656",
+  "fmt": "mp3"
+ }
+]

@@ -1,0 +1,46 @@
+[
+ {
+  "id": "622292b5-764e-4fc5-a99c-6781b20e7007",
+  "title": "LL-Q1860 (eng)-Flame, not lame-rubber stamp",
+  "dur": 1.12,
+  "lic": "cc0",
+  "src": "wikimedia_audio",
+  "creator": "Speaker: Flame, not lame Recorder: Flame, not lame",
+  "url": "https://upload.wikimedia.org/wikipedia/commons/9/94/LL-Q1860_%28eng%29-Flame%2C_not_lame-rubber_stamp.wav",
+  "page": "https://commons.wikimedia.org/w/index.php?curid=157028816",
+  "fmt": "wav"
+ },
+ {
+  "id": "c154424d-43c2-455c-a232-e5b2c2cfa45f",
+  "title": "es-stamp.wav",
+  "dur": 5.23,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "eddies2000",
+  "url": "https://cdn.freesound.org/previews/448/448474_9090982-hq.mp3",
+  "page": "https://freesound.org/people/eddies2000/sounds/448474",
+  "fmt": "mp3"
+ },
+ {
+  "id": "f65de1b6-13d5-4a1e-a99a-6f00ce0be2c7",
+  "title": "Thump.mp3",
+  "dur": 0.71,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "mpuffenbarger",
+  "url": "https://cdn.freesound.org/previews/683/683031_4257513-hq.mp3",
+  "page": "https://freesound.org/people/mpuffenbarger/sounds/683031",
+  "fmt": "mp3"
+ },
+ {
+  "id": "e5f3310d-568f-4abb-b7af-942ebb53e81b",
+  "title": "17_stamp, rubber, plastic.wav",
+  "dur": 15.58,
+  "lic": "cc0",
+  "src": "freesound",
+  "creator": "15FPanska_KristynaHaupt",
+  "url": "https://cdn.freesound.org/previews/461/461888_9681967-hq.mp3",
+  "page": "https://freesound.org/people/15FPanska_KristynaHaupt/sounds/461888",
+  "fmt": "mp3"
+ }
+]

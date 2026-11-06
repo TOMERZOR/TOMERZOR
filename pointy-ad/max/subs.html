@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Max · subtitles</title>
+<link rel="stylesheet" href="../composition/fonts/local.css">
+<style>
+/* Transparent 1920×1080 overlay for the Max short: film-style yellow subtitles and the end title.
+   render(t) is a pure function of time; edit.cjs captures it with a transparent background. */
+html, body { margin: 0; background: transparent; }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Heebo", sans-serif; }
+.sub { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; font-size: 52px; font-weight: 600; color: #FFE24A; letter-spacing: -.005em;
+  text-shadow: 0 0 2px rgba(0, 0, 0, .9), 0 2px 6px rgba(0, 0, 0, .85), 0 0 22px rgba(0, 0, 0, .5); opacity: 0; }
+.sub bdi { font-family: Inter, Heebo, sans-serif; }
+#end { position: absolute; left: 0; right: 0; bottom: 0; padding-bottom: 46px; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; padding-top: 120px; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.55)); }
+#end .row { display: flex; align-items: center; gap: 22px; direction: ltr; }
+#end svg { width: 84px; height: 84px; filter: drop-shadow(0 20px 40px rgba(240, 110, 20, .5)); }
+#end b { font: 800 80px Inter, sans-serif; letter-spacing: -.05em; color: #fff; text-shadow: 0 4px 24px rgba(0, 0, 0, .45); }
+#end span { font-size: 46px; font-weight: 700; color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .6); }
+#end span em { font-style: normal; display: inline-block; padding: 0 22px 4px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; text-shadow: none; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="lgo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB85E"/><stop offset="1" stop-color="#EC6512"/></linearGradient>
+  <symbol id="logo" viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="url(#lgo)"/><path d="M8 26 Q8 6 28 6 L72 6 Q92 6 92 26 L92 38 Q50 30 8 46 Z" fill="rgba(255,255,255,.14)"/><path d="M34 29 L71 46 Q75 48 71 50 L56 55 L49 70 Q47 74 45 70 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></symbol>
+</defs></svg>
+<div id="stage"><div id="subs"></div>
+  <div id="end"><div class="row"><svg><use href="#logo"/></svg><b>Pointy</b></div><span>מורידים בחינם מהקישור <em>בביו</em></span></div>
+</div>
+<script>
+// [start, end, text]; edit.cjs may override with window.SUBS
+const SUBS = window.SUBS || [
+  [0.3, 3.0, "אני עובד פה כבר שלוש שנים."],
+  [3.25, 6.15, "אף אחד לא יודע שאני לא מוצא את כפתור הייצוא."],
+  [6.45, 8.9, "עד היום."],
+  [9.2, 11.65, "<bdi>⌥ + Space</bdi>. והוא פשוט מראה לי איפה."],
+  [11.95, 13.5, "עכשיו אני העובד של החודש."],
+];
+const END = window.END_AT || 13.55;
+const host = document.getElementById("subs");
+host.innerHTML = SUBS.map((s, i) => `<div class="sub" id="u${i}">${s[2]}</div>`).join("");
+const clamp = (v) => Math.min(1, Math.max(0, v));
+function render(t) {
+  SUBS.forEach(([a, b], i) => { document.getElementById("u" + i).style.opacity = clamp((t - a) / .12) * clamp((b - t) / .12); });
+  const e = clamp((t - END) / .5);
+  const el = document.getElementById("end");
+  el.style.opacity = e; el.style.transform = `translateY(${(1 - e) * 30}px)`;
+}
+window.__render = render;
+</script>
+</body>
+</html>

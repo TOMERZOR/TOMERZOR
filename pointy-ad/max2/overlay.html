@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Max 2 · titles</title>
+<style>
+/* Everything drawn over the footage of "This is Max.", 1920×1080, transparent, as a pure function of
+   time: window.__render(t). The cut list comes from work/timeline.json (window.TL, injected by
+   build.cjs). Draws: the narrator's subtitles (big and centred for "This… is Max.", small at the
+   bottom after that, and only while he speaks), the typed "Two weeks later." card, and the outro. */
+:root { --bg: #0C0907; --txt: #F7F2EC; --mut: #A99E94; --or1: #FFB45C; --or: #F08A2E; --or2: #E8620F; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+body { font-family: Inter, system-ui, sans-serif; color: var(--txt); -webkit-font-smoothing: antialiased; }
+.abs { position: absolute; }
+#big { left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: .26em;
+  font: 700 156px "Inter Display", Inter, sans-serif; letter-spacing: -.035em; text-shadow: 0 6px 40px rgba(0, 0, 0, .38), 0 2px 6px rgba(0, 0, 0, .25); }
+#small { left: 0; right: 0; bottom: 84px; text-align: center; font: 500 42px Inter, sans-serif; letter-spacing: -.008em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .6), 0 1px 3px rgba(0, 0, 0, .5); }
+.w { display: inline-block; white-space: pre; will-change: transform, opacity, filter; }
+#card { inset: 0; background: #000; display: grid; place-items: center; }
+#card .tx { font: 500 50px Inter, sans-serif; letter-spacing: .01em; color: #EDE6DE; }
+#card .caret { display: inline-block; width: 4px; height: 52px; margin-left: 6px; background: var(--or); vertical-align: -6px; border-radius: 2px; }
+#outro { inset: 0; overflow: hidden; }
+#wipe { inset: 0; background: radial-gradient(1100px 700px at 50% 46%, #1A120D, var(--bg) 70%); }
+#rim { border-radius: 50%; border: 2px solid rgba(240, 138, 46, .9); box-shadow: 0 0 30px rgba(240, 138, 46, .45); }
+#glow { left: 50%; top: 46%; width: 1400px; height: 900px; margin: -450px 0 0 -700px; background: radial-gradient(closest-side, rgba(240, 120, 30, .16), transparent); }
+#lock { left: 0; right: 0; top: 0; height: 1080px; }
+#logo { width: 132px; height: 132px; }
+#word { font: 700 148px "Inter Display", Inter, sans-serif; letter-spacing: -.045em; line-height: 1; display: flex; overflow: hidden; padding-bottom: 14px; }
+#tag { font: 500 52px Inter, sans-serif; letter-spacing: -.01em; color: #BDB2A8; white-space: nowrap; }
+#tag .dot { display: inline-block; color: #BDB2A8; transform-origin: 50% 80%; }
+.cur { width: 64px; height: 64px; transform-origin: 7px 5px; filter: drop-shadow(0 0 16px rgba(240, 138, 46, .85)) drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+.ring { border-radius: 50%; border: 3px solid var(--or); }
+#grain { inset: -50%; opacity: .05; mix-blend-mode: overlay; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="lgo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB85E"/><stop offset="1" stop-color="#EC6512"/></linearGradient>
+    <symbol id="logo-s" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="26" fill="url(#lgo)"/>
+      <path d="M8 26 Q8 6 28 6 L72 6 Q92 6 92 26 L92 38 Q50 30 8 46 Z" fill="rgba(255,255,255,.14)"/>
+      <path d="M34 29 L71 46 Q75 48 71 50 L56 55 L49 70 Q47 74 45 70 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="pcur" viewBox="0 0 60 60"><path d="M7 5 L52 24 Q56 26 52 28 L33 34 L25 53 Q23 57 21 53 Z" fill="#F08A2E" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></symbol>
+    <filter id="noise"><feTurbulence id="turb" type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="1"/><feColorMatrix type="saturate" values="0"/></filter>
+  </defs>
+</svg>
+<div id="big" class="abs"></div>
+<div id="small" class="abs"></div>
+<div id="card" class="abs"><div class="tx"><span id="typed"></span><span class="caret" id="caret"></span></div></div>
+<div id="outro" class="abs">
+  <div id="wipe" class="abs"></div>
+  <div id="glow" class="abs"></div>
+  <div id="rim" class="abs"></div>
+  <div id="lock" class="abs">
+    <svg id="logo" class="abs"><use href="#logo-s"/></svg>
+    <div id="word" class="abs"></div>
+    <div id="tag" class="abs"><span id="tagw"></span><span class="dot" id="dot">.</span></div>
+  </div>
+  <svg id="grain" class="abs" width="2880" height="1620"><rect width="100%" height="100%" filter="url(#noise)"/></svg>
+</div>
+<div id="trail" class="abs"></div>
+<svg id="cur" class="abs cur"><use href="#pcur"/></svg>
+<div id="r1" class="abs ring"></div><div id="r2" class="abs ring"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const span = (t, a, b) => clamp((t - a) / (b - a));
+const out3 = (k) => 1 - Math.pow(1 - clamp(k), 3);
+const out5 = (k) => 1 - Math.pow(1 - clamp(k), 5);
+const io = (k) => (k = clamp(k), k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const spring = (k, f = 9, d = 7) => { k = Math.max(0, k); return 1 - Math.exp(-d * k) * Math.cos(f * k); };
+
+const TL = window.TL;
+const seg = (id) => TL.segs.find((s) => s.id === id);
+const O = TL.outro_at, CLICK = TL.outro_click;
+
+// ---------- subtitles: word times spread over each spoken line by length ----------
+const LINES = TL.vo.filter((v) => v.style !== "none").map((v) => {
+  const dur = v.b - v.a, words = v.text.split(" ");
+  const wt = words.map((w) => w.replace(/[^A-Za-z0-9]/g, "").length + 1.5), sum = wt.reduce((a, b) => a + b, 0);
+  let acc = 0;
+  const at = words.map((w, i) => { const s = v.at + (acc / sum) * dur * .9; acc += wt[i]; return s; });
+  return { ...v, words, wat: at, end: v.at + dur };
+});
+function subtitles(t) {
+  const big = $("#big"), small = $("#small");
+  let bh = "", sh = "";
+  for (const L of LINES) {
+    if (t < L.at - .05 || t > L.end + .45) continue;
+    const fadeOut = 1 - span(t, L.end + .22, L.end + .42);
+    const html = L.words.map((w, i) => {
+      const k = span(t, L.wat[i] - .02, L.wat[i] + (L.style === "big" ? .2 : .16));
+      const e = out3(k), rise = L.style === "big" ? 18 : 7;
+      return `<span class="w" style="opacity:${(e * fadeOut).toFixed(3)};transform:translateY(${((1 - e) * rise).toFixed(2)}px);filter:blur(${((1 - e) * (L.style === "big" ? 8 : 3)).toFixed(2)}px)">${w}</span>`;
+    }).join(L.style === "big" ? "" : " ");
+    if (L.style === "big") bh += html; else sh += html;
+  }
+  big.innerHTML = bh; small.innerHTML = sh;
+}
+
+// ---------- "Two weeks later." ----------
+const CARD = seg("card"), CARD_TXT = CARD.text, TYPE_AT = CARD.t0 + .3, PER = .058;
+const TYPED = [...CARD_TXT].map((c, i) => TYPE_AT + i * PER + (c === " " ? .02 : 0) + (i > 3 ? .03 : 0) + (i > 9 ? .02 : 0));
+function card(t) {
+  const c = $("#card"); const on = t >= CARD.t0 && t < CARD.t1; c.style.display = on ? "" : "none"; if (!on) return;
+  const n = TYPED.filter((x) => x <= t).length;
+  $("#typed").textContent = CARD_TXT.slice(0, n);
+  const typing = n < CARD_TXT.length;
+  $("#caret").style.opacity = typing || Math.floor((t - CARD.t0) * 2.4) % 2 === 0 ? 1 : 0;
+  c.querySelector(".tx").style.opacity = 1 - span(t, CARD.t1 - .12, CARD.t1);
+}
+
+// ---------- outro ----------
+const NAME = "Pointy", TAG = ["easy", "to", "click"];
+// lock-up geometry (measured once fonts are in): logo, gap, word, all centred as a group
+let G = null;
+function measure() {
+  const w = $("#word"); w.innerHTML = NAME.split("").map((c) => `<span class="w">${c}</span>`).join("");
+  $("#tagw").innerHTML = TAG.map((x) => `<span class="w">${x}</span>`).join(" ");
+  const ww = w.getBoundingClientRect().width, wh = w.getBoundingClientRect().height, tw = $("#tag").getBoundingClientRect().width;
+  const LOGO = 132, GAP = 34, total = LOGO + GAP + ww, x0 = (1920 - total) / 2, cy = 500;
+  G = { logoX: x0, logoY: cy - LOGO / 2, wordX: x0 + LOGO + GAP, wordY: cy - wh / 2 + 6, tagX: (1920 - tw) / 2, tagY: cy + 106, tw };
+  Object.assign($("#logo").style, { left: G.logoX + "px", top: G.logoY + "px" });
+  Object.assign($("#word").style, { left: G.wordX + "px", top: G.wordY + "px" });
+  Object.assign($("#tag").style, { left: G.tagX + "px", top: G.tagY + "px" });
+}
+function cursorAt(x, y, s, rot, vx = 0, vy = 0, op = 1) {
+  const c = $("#cur"); c.style.display = op > 0 ? "" : "none";
+  c.style.transform = `translate(${x - 7}px, ${y - 5}px) scale(${s}) rotate(${rot}deg)`; c.style.opacity = op;
+  // a short motion trail along the velocity, in place of a shutter
+  const tr = $("#trail"); const sp = Math.hypot(vx, vy);
+  if (sp < 300 || op <= 0) { tr.innerHTML = ""; return; }
+  let h = "";
+  for (let i = 1; i <= 4; i++) {
+    const k = i * .012;
+    h += `<svg class="abs cur" style="left:0;top:0;opacity:${(.28 / i).toFixed(3)};transform:translate(${x - vx * k - 7}px, ${y - vy * k - 5}px) scale(${s}) rotate(${rot}deg)"><use href="#pcur"/></svg>`;
+  }
+  tr.innerHTML = h;
+}
+function ring(id, x, y, k, d0, d1, op = 1) {
+  const r = $(id), on = k > 0 && k < 1; r.style.display = on ? "" : "none"; if (!on) return;
+  const d = lerp(d0, d1, out3(k)); Object.assign(r.style, { width: d + "px", height: d + "px", left: x - d / 2 + "px", top: y - d / 2 + "px", opacity: (1 - k) * op });
+}
+const CX = 960, CY = 500;
+function cursorPath(u) {         // u = seconds into the outro; the fly-in from the right, where the laptop is
+  const k = out5(span(u, 0, .55)), x = lerp(2010, CX + 6, k), y = lerp(740, CY - 4, k) - Math.sin(Math.PI * k) * 60;
+  return [x, y];
+}
+function outro(t) {
+  const u = t - O, on = u >= 0; $("#outro").style.display = on ? "" : "none";
+  if (!on) { cursorAt(0, 0, 1, 0, 0, 0, 0); ring("#r1", 0, 0, 0); ring("#r2", 0, 0, 0); return; }
+  // 1. the cursor flies in and clicks
+  const [x, y] = cursorPath(u), [px, py] = cursorPath(u - 1 / 48);
+  const press = u > .55 && u < .7 ? 1 - .14 * Math.sin(Math.PI * span(u, .55, .7)) : 1;
+  const morph = span(u, .98, 1.18);                                   // the cursor becomes the logo's own cursor
+  cursorAt(x, y, 1.15 * press * (1 - .55 * io(morph)), lerp(-14, 0, out3(span(u, 0, .55))), (x - px) * 48, (y - py) * 48, 1 - io(morph));
+  ring("#r1", CX, CY, span(u, .55, 1.0), 30, 220);
+  ring("#r2", CX, CY, span(u, .6, 1.15), 30, 420, .45);
+  // 2. the dark opens from the click
+  const wk = io(span(u, .6, 1.08)), R = lerp(0, 1250, wk);
+  $("#wipe").style.clipPath = `circle(${R}px at ${CX}px ${CY}px)`;
+  const rim = $("#rim"); rim.style.display = wk > 0 && wk < 1 ? "" : "none";
+  Object.assign(rim.style, { width: 2 * R + "px", height: 2 * R + "px", left: CX - R + "px", top: CY - R + "px", opacity: 1 - wk });
+  $("#glow").style.opacity = out3(span(u, .9, 1.6));
+  $("#turb").setAttribute("seed", String(Math.floor(t * 48) % 97));
+  // 3. the logo lands where the cursor clicked, then slides into the lock-up as the name rises
+  const lk = span(u, 1.0, 1.55), ls = spring(lk * 1.25, 10, 7.5);
+  const slide = io(span(u, 1.08, 1.46));
+  const lg = $("#logo");
+  const lx = lerp(CX - 66, G.logoX, slide), ly = lerp(CY - 66, G.logoY, slide);
+  lg.style.left = lx + "px"; lg.style.top = ly + "px";
+  lg.style.transform = `scale(${Math.max(0, ls)})`; lg.style.opacity = clamp(lk * 6);
+  [...$("#word").children].forEach((c, i) => {
+    const k = out5(span(u, 1.3 + i * .035, 1.74 + i * .035));
+    c.style.transform = `translateY(${(1 - k) * 110}%)`; c.style.opacity = clamp(k * 3);
+  });
+  [...$("#tagw").children].forEach((c, i) => {
+    const k = out3(span(u, 2.02 + i * .12, 2.42 + i * .12));
+    c.style.transform = `translateY(${(1 - k) * 16}px)`; c.style.opacity = k; c.style.filter = `blur(${(1 - k) * 4}px)`;
+  });
+  // 4. a small cursor glides to the full stop and clicks it on the song's last hit; the dot turns orange
+  const dot = $("#dot"), dr = dot.getBoundingClientRect();
+  const dx = dr.left + dr.width / 2 + 2, dy = dr.top + dr.height * .72;
+  const dk = span(u, CLICK, CLICK + .5);
+  dot.style.opacity = clamp(span(u, 2.3, 2.5));
+  dot.style.color = dk > 0 ? "var(--or)" : "";
+  dot.style.transform = `scale(${dk > 0 ? 1 + .9 * (1 - spring(dk * 1.4, 12, 6)) * (dk < 1 ? 1 : 0) + .0 : 1})`;
+  if (u > 2.45 && u < 1e9) {
+    const gk = io(span(u, 2.45, CLICK)), sx0 = G.logoX + 66, sy0 = G.logoY + 80;
+    const gx = lerp(sx0, dx, gk), gy = lerp(sy0, dy, gk) - Math.sin(Math.PI * gk) * 70;
+    const gp = u > CLICK && u < CLICK + .14 ? 1 - .16 * Math.sin(Math.PI * span(u, CLICK, CLICK + .14)) : 1;
+    const fade = 1 - span(u, CLICK + .7, CLICK + 1.0);
+    if (fade > 0) cursorAt(gx, gy, .62 * gp, -6 * (1 - gk), 0, 0, clamp(span(u, 2.45, 2.6) * 3) * fade);
+    ring("#r1", dx, dy, span(u, CLICK, CLICK + .5), 14, 120);
+    ring("#r2", dx, dy, span(u, CLICK + .05, CLICK + .65), 14, 210, .4);
+  }
+  // a slow breath on the whole lock-up while it holds
+  $("#lock").style.transform = `scale(${1 + .018 * io(span(u, 1.6, 4.6))})`;
+}
+
+window.__render = (t) => { subtitles(t); card(t); outro(t); };
+window.__cues = () => ({
+  typing: TYPED,
+  outro: { cursor: O + .08, click: O + .55, wipe: O + .62, logo: O + 1.02, letters: O + 1.24, tag: O + 2.04, glide: O + 2.47, dot: O + CLICK },
+});
+document.fonts.ready.then(() => { measure(); window.__ready = true; });
+</script>
+</body>
+</html>

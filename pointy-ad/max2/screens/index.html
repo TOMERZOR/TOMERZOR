@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Max 2 · laptop screen</title>
+<style>
+/* The laptop screen Max is looking at, 1440×900, as a pure function of time: window.__render(scene, t).
+   Scenes: ins1 / ins2 / ins3 (Pointy walks Max through making a chart), hello (Pointy says hi),
+   eye (what is reflected in Max's eye). window.__cam(scene, t) is where a handheld camera filming the
+   screen points: { x, y, w } in screen px (w = how many screen px fit across the frame). */
+:root { --or1: #FFB45C; --or: #F08A2E; --or2: #E8620F; --ink: #1A1512; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1440px; height: 900px; overflow: hidden; background: #000; }
+body { font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+#scr { position: absolute; inset: 0; overflow: hidden; }
+.wall { position: absolute; inset: 0; background: radial-gradient(700px 500px at 75% 25%, rgba(240, 138, 46, .45), transparent 62%), radial-gradient(600px 500px at 10% 95%, rgba(110, 50, 140, .45), transparent 65%), linear-gradient(160deg, #3B2416, #120D0A 72%); }
+.mbar { position: absolute; top: 0; left: 0; right: 0; height: 30px; background: rgba(28, 22, 18, .78); display: flex; align-items: center; gap: 20px; padding: 0 16px; font: 600 14px Inter; color: #EEE; z-index: 3; }
+.mbar .dot { width: 13px; height: 13px; border-radius: 50%; background: #EEE; }
+.mbar .r { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+.mbar svg { width: 20px; height: 20px; }
+.win { position: absolute; left: 40px; top: 44px; width: 1360px; height: 836px; border-radius: 14px; overflow: hidden; background: #F7F5F2; color: #222; box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .8); border: 1px solid rgba(0, 0, 0, .25); }
+.tb { height: 44px; display: flex; align-items: center; gap: 9px; padding: 0 16px; background: #E9E6E2; border-bottom: 1px solid #D6D2CD; font: 600 16px Inter; color: #6D6760; }
+.tb i { width: 13px; height: 13px; border-radius: 50%; background: #FF5F57; } .tb i:nth-child(2) { background: #FEBC2E; } .tb i:nth-child(3) { background: #28C840; margin-right: 14px; }
+.tabs { height: 40px; display: flex; gap: 30px; align-items: center; padding: 0 24px; font: 500 17px Inter; color: #6A645E; border-bottom: 1px solid #E0DCD7; position: relative; }
+.tabs span { position: relative; padding: 8px 4px; border-radius: 8px; }
+.tabs span.on { color: #1E6E3E; font-weight: 700; }
+.tabs span.on::after { content: ""; position: absolute; left: 4px; right: 4px; bottom: -1px; height: 3px; border-radius: 2px; background: #1E6E3E; }
+.tools { height: 84px; display: flex; gap: 14px; align-items: center; padding: 0 18px; border-bottom: 1px solid #E0DCD7; background: #FCFBF9; }
+.tool { height: 68px; min-width: 104px; padding: 0 12px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; font: 500 15px Inter; color: #444; border: 2px solid transparent; }
+.tool i { width: 30px; height: 22px; border-radius: 4px; background: #C9D3CE; display: block; }
+.grid { position: absolute; left: 0; top: 168px; right: 0; bottom: 0; }
+.cell { position: absolute; height: 40px; border-right: 1px solid #E3DFDA; border-bottom: 1px solid #E3DFDA; font: 500 17px Inter; color: #2B2724; padding: 10px 12px; text-align: right; white-space: nowrap; }
+.cell.h { background: #EEEBE7; color: #8A847E; text-align: center; font-weight: 600; height: 34px; padding: 7px 0; }
+.cell.b { font-weight: 700; text-align: left; }
+.sel { position: absolute; border: 3px solid #1E6E3E; background: rgba(30, 110, 62, .1); z-index: 2; }
+.sel::after { content: ""; position: absolute; right: -6px; bottom: -6px; width: 9px; height: 9px; background: #1E6E3E; border: 2px solid #fff; }
+.chart { position: absolute; left: 860px; top: 252px; width: 500px; height: 520px; background: #fff; border: 1px solid #D9D5D0; border-radius: 6px; box-shadow: 0 14px 40px -12px rgba(0, 0, 0, .3); transform-origin: 50% 60%; z-index: 3; padding: 22px 26px; }
+.chart h6 { margin: 0; height: 36px; font: 700 26px Inter; color: #2B2724; text-align: center; letter-spacing: -.01em; }
+.chart h6.ph { color: #B5AFA9; font-weight: 500; }
+.chart .plot { position: absolute; left: 50px; right: 26px; top: 84px; bottom: 56px; border-left: 2px solid #CFCAC4; border-bottom: 2px solid #CFCAC4; display: flex; align-items: flex-end; gap: 9px; padding: 0 10px; }
+.chart .plot i { flex: 1; border-radius: 4px 4px 0 0; background: linear-gradient(#5AA97A, #2F7D52); }
+.chart .lab { position: absolute; left: 60px; right: 36px; bottom: 22px; display: flex; justify-content: space-between; font: 500 13px Inter; color: #8A847E; }
+/* Pointy */
+.ask { position: absolute; left: 360px; top: 150px; width: 720px; height: 78px; border-radius: 39px; display: flex; align-items: center; gap: 16px; padding: 0 30px; z-index: 6;
+  background: linear-gradient(#1B1613, #1B1613) padding-box, linear-gradient(90deg, #FFB45C, #E8620F) border-box; border: 3px solid transparent;
+  box-shadow: 0 0 60px rgba(240, 138, 46, .5), 0 24px 50px -12px rgba(0, 0, 0, .7); font: 600 28px Inter; color: #F7F2EC; white-space: nowrap; transform-origin: 50% 50%; }
+.ask .spark { width: 34px; height: 34px; color: var(--or); flex: none; }
+.ask .ph { color: #776E66; }
+.ask .caret { display: inline-block; width: 3px; height: 34px; background: var(--or); border-radius: 2px; vertical-align: middle; margin-left: 2px; }
+.ask .mic { width: 28px; height: 28px; color: #7A716A; margin-left: auto; flex: none; }
+.think { position: absolute; left: 400px; top: 244px; z-index: 6; font: 600 22px Inter; color: #F7F2EC; display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-radius: 999px; background: rgba(27, 22, 19, .92); }
+.think b { background: linear-gradient(90deg, #FFB45C, #FFF4E6, #E8620F); -webkit-background-clip: text; background-clip: text; color: transparent; background-size: 200% 100%; }
+.think svg { width: 24px; height: 24px; color: var(--or); }
+.card { position: absolute; width: 380px; padding: 18px 22px 20px; border-radius: 20px; background: rgba(250, 246, 242, .98); color: var(--ink); z-index: 7; box-shadow: 0 26px 60px -14px rgba(0, 0, 0, .55), 0 0 0 2px rgba(240, 138, 46, .55); }
+.card .st { display: flex; align-items: center; gap: 9px; font: 800 15px Inter; letter-spacing: .06em; color: var(--or2); }
+.card .st svg { width: 22px; height: 22px; }
+.card h4 { margin: 8px 0 4px; font: 800 30px Inter; letter-spacing: -.02em; line-height: 1.1; }
+.card p { margin: 0; font: 500 19px Inter; color: #5B514A; }
+.card .prog { display: flex; gap: 6px; margin: 14px 0 12px; }
+.card .prog i { flex: 1; height: 6px; border-radius: 3px; background: #D9CFC6; } .card .prog i.on { background: var(--or); }
+.card .btn { display: inline-flex; align-items: center; gap: 7px; padding: 7px 18px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; font: 800 18px Inter; }
+.toast { position: absolute; z-index: 8; display: flex; align-items: center; gap: 14px; padding: 16px 26px 16px 18px; border-radius: 22px; background: #1B1613; color: #F7F2EC; font: 700 28px Inter; box-shadow: 0 0 0 3px rgba(240, 138, 46, .8), 0 0 60px rgba(240, 138, 46, .55), 0 20px 40px -10px rgba(0, 0, 0, .7); transform-origin: 0 50%; }
+.toast svg { width: 46px; height: 46px; }
+.pcur { position: absolute; left: 0; top: 0; width: 58px; height: 58px; z-index: 10; transform-origin: 7px 5px; filter: drop-shadow(0 0 14px rgba(240, 138, 46, .9)) drop-shadow(0 5px 8px rgba(0, 0, 0, .5)); }
+.ring { position: absolute; border-radius: 50%; border: 3px solid var(--or); z-index: 9; }
+.hot { border-color: var(--or) !important; box-shadow: 0 0 0 5px rgba(240, 138, 46, .35), 0 0 34px rgba(240, 138, 46, .6); }
+.dim { position: absolute; inset: 0; background: rgba(10, 7, 5, .55); z-index: 5; }
+.hey { position: absolute; left: 0; top: 0; z-index: 8; transform-origin: 50% 100%; }
+.hey .lg { width: 170px; height: 170px; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .6)) drop-shadow(0 0 50px rgba(240, 138, 46, .6)); }
+.bub { position: absolute; z-index: 9; padding: 16px 26px; border-radius: 28px 28px 28px 6px; background: #FAF6F2; color: var(--ink); font: 800 40px Inter; letter-spacing: -.02em; white-space: nowrap; box-shadow: 0 20px 40px -10px rgba(0, 0, 0, .6); transform-origin: 0 100%; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="lgo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB85E"/><stop offset="1" stop-color="#EC6512"/></linearGradient>
+    <symbol id="logo" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="26" fill="url(#lgo)"/>
+      <path d="M8 26 Q8 6 28 6 L72 6 Q92 6 92 26 L92 38 Q50 30 8 46 Z" fill="rgba(255,255,255,.14)"/>
+      <path d="M34 29 L71 46 Q75 48 71 50 L56 55 L49 70 Q47 74 45 70 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="spark" viewBox="0 0 24 24"><path fill="currentColor" d="M10 2.5 L11.6 8.2 Q12 9.6 13.4 10 L19 11.6 L13.4 13.2 Q12 13.6 11.6 15 L10 20.7 L8.4 15 Q8 13.6 6.6 13.2 L1 11.6 L6.6 10 Q8 9.6 8.4 8.2 Z"/><path fill="currentColor" d="M19 1.5 L19.7 3.8 L22 4.5 L19.7 5.2 L19 7.5 L18.3 5.2 L16 4.5 L18.3 3.8 Z"/></symbol>
+    <symbol id="mic" viewBox="0 0 24 24"><rect x="8.5" y="2.5" width="7" height="12" rx="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 11 Q5 18 12 18 Q19 18 19 11 M12 18 L12 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="pcur" viewBox="0 0 60 60"><path d="M7 5 L52 24 Q56 26 52 28 L33 34 L25 53 Q23 57 21 53 Z" fill="#F08A2E" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+<div id="scr"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const io = (k) => (k = clamp(k), k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);     // ease in-out cubic
+const out = (k) => 1 - Math.pow(1 - clamp(k), 3);
+const back = (k) => { k = clamp(k); const c = 1.7; return 1 + (c + 1) * Math.pow(k - 1, 3) + c * Math.pow(k - 1, 2); };
+const spring = (k) => { k = Math.max(0, k); return 1 - Math.exp(-7 * k) * Math.cos(11 * k); };   // settles with a small overshoot
+const span = (t, a, b) => clamp((t - a) / (b - a));
+
+// ---------- the spreadsheet ----------
+const COLX = (c) => 50 + c * 150, ROWY = (r) => 34 + (r - 1) * 40;                // inside .grid
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const val = (r, c) => (4200 + ((r * 53 + c * 97) % 31) * 211 + r * 140).toLocaleString("en");
+let grid = "";
+"ABCDEFGHI".split("").forEach((L, c) => grid += `<div class="cell h" style="left:${COLX(c)}px;top:0;width:150px">${L}</div>`);
+grid += `<div class="cell h" style="left:0;top:0;width:50px"></div>`;
+for (let r = 1; r <= 16; r++) {
+  grid += `<div class="cell h" style="left:0;top:${ROWY(r)}px;width:50px;height:40px;padding-top:10px">${r}</div>`;
+  for (let c = 0; c < 9; c++) {
+    let tx = "";
+    if (r === 1 && c < 5) tx = ["Month", "North", "South", "East", "West"][c];
+    else if (r >= 2 && r <= 13 && c === 0) tx = MONTHS[r - 2];
+    else if (r >= 2 && r <= 13 && c < 5) tx = val(r, c);
+    grid += `<div class="cell ${r === 1 || c === 0 ? "b" : ""}" style="left:${COLX(c)}px;top:${ROWY(r)}px;width:150px">${tx}</div>`;
+  }
+}
+// screen coordinates of a cell centre
+const WX = 40, WY = 44 + 168;
+const cellXY = (c, r) => [WX + COLX(c) + 75, WY + ROWY(r) + 20];
+
+const BARS = [42, 55, 48, 63, 58, 71, 66, 79, 74, 86, 81, 95];
+$("#scr").innerHTML = `
+  <div class="wall"></div>
+  <div class="mbar"><span class="dot"></span><b>Spreadsheet</b><span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Data</span><span>Window</span>
+    <span class="r"><svg><use href="#logo"/></svg><span>Tue 10:41</span></span></div>
+  <div class="win">
+    <div class="tb"><i></i><i></i><i></i><span>Q3 Revenue.xlsx</span></div>
+    <div class="tabs"><span>Home</span><span id="tIns">Insert</span><span>Formulas</span><span>Data</span><span>Review</span><span>View</span></div>
+    <div class="tools"><div class="tool"><i style="background:#3E9E68"></i>PivotTable</div><div class="tool"><i></i>Table</div><div class="tool" id="tChart"><i style="background:#5AA97A"></i>Chart</div><div class="tool"><i></i>Shapes</div><div class="tool"><i></i>Image</div><div class="tool"><i></i>Text Box</div></div>
+    <div class="grid">${grid}<div class="sel" id="sel"></div></div>
+  </div>
+  <div class="chart" id="chart"><h6 id="ctitle" class="ph">Chart Title</h6><div class="plot">${BARS.map(() => "<i></i>").join("")}</div>
+    <div class="lab">${MONTHS.map((m) => `<span>${m[0]}</span>`).join("")}</div></div>
+  <div class="dim" id="dim"></div>
+  <div class="ask" id="ask"><svg class="spark"><use href="#spark"/></svg><span id="q"></span><svg class="mic"><use href="#mic"/></svg></div>
+  <div class="think" id="think"><svg><use href="#spark"/></svg><b>Pointy AI is thinking…</b></div>
+  <div class="card" id="card"><div class="st"><svg><use href="#logo"/></svg><span id="cst"></span></div><h4 id="ch"></h4><p id="cp"></p>
+    <div class="prog"><i></i><i></i><i></i></div><span class="btn">Done <svg style="width:18px;height:18px"><use href="#check"/></svg></span></div>
+  <div class="toast" id="toast"><svg><use href="#logo"/></svg>All done <span style="color:var(--or1)">✓</span></div>
+  <div class="hey" id="hey"><svg class="lg"><use href="#logo"/></svg></div>
+  <div class="bub" id="bub">hi Max! 👋</div>
+  <div class="ring" id="r1"></div><div class="ring" id="r2"></div>
+  <svg class="pcur" id="cur"><use href="#pcur"/></svg>`;
+
+function show(el, on, extra = "") { el.style.display = on ? "" : "none"; if (on && extra) el.style.cssText += extra; }
+function place(el, x, y) { el.style.left = x + "px"; el.style.top = y + "px"; }
+function cursor(x, y, s = 1, rot = 0, on = true) {
+  const c = $("#cur"); c.style.display = on ? "" : "none";
+  c.style.transform = `translate(${x - 7}px, ${y - 5}px) scale(${s}) rotate(${rot}deg)`;
+}
+function rings(x, y, k, s = 1) {     // a click: two rings spreading from the cursor tip, k = 0..1
+  [["#r1", 1], ["#r2", 1.8]].forEach(([id, m]) => {
+    const r = $(id), on = k > 0 && k < 1; r.style.display = on ? "" : "none"; if (!on) return;
+    const d = (20 + 90 * out(k)) * m * s; r.style.width = r.style.height = d + "px";
+    r.style.left = x - d / 2 + "px"; r.style.top = y - d / 2 + "px"; r.style.opacity = (1 - k) * (m > 1 ? .5 : 1);
+  });
+}
+function card(n, title, body, x, y, k) {
+  const c = $("#card"); show(c, k > 0); if (k <= 0) return;
+  $("#cst").textContent = `STEP ${n} OF 3`; $("#ch").textContent = title; $("#cp").textContent = body;
+  c.querySelectorAll(".prog i").forEach((i, j) => i.className = j < n ? "on" : "");
+  place(c, x, y + 16 * (1 - out(k))); c.style.opacity = out(k); c.style.transform = `scale(${.94 + .06 * back(k)})`;
+}
+function selection(r1, c1, r2, c2, on = true) {
+  const s = $("#sel"); s.style.display = on ? "" : "none"; if (!on) return;
+  const x1 = COLX(Math.min(c1, c2)), x2 = COLX(Math.max(c1, c2)) + 150, y1 = ROWY(Math.min(r1, r2)), y2 = ROWY(Math.max(r1, r2)) + 40;
+  Object.assign(s.style, { left: x1 + "px", top: y1 + "px", width: x2 - x1 + "px", height: y2 - y1 + "px" });
+}
+function chart(k, title = "") {
+  const c = $("#chart"); show(c, k > 0); if (k <= 0) return;
+  c.style.transform = `scale(${.6 + .4 * spring(k * 1.4)})`; c.style.opacity = clamp(k * 4);
+  c.querySelectorAll(".plot i").forEach((b, j) => b.style.height = BARS[j] * out(span(k, .15 + j * .03, .6 + j * .03)) + "%");
+  const h = $("#ctitle"); h.className = title ? "" : "ph"; h.textContent = title || "Chart Title";
+}
+function reset() {
+  ["#ask", "#think", "#card", "#toast", "#hey", "#bub", "#chart", "#r1", "#r2", "#dim"].forEach((s) => $(s).style.display = "none");
+  selection(0, 0, 0, 0, false); cursor(0, 0, 1, 0, false);
+  $("#tIns").className = ""; $("#tChart").className = "tool";
+  $("#ask").style.transform = ""; $("#ask").style.opacity = 1;
+}
+function ask(text, n, caret, k = 1) {
+  const a = $("#ask"); a.style.display = ""; a.style.opacity = clamp(k * 3); a.style.transform = `scale(${.92 + .08 * back(k)})`;
+  $("#q").innerHTML = n > 0 ? `${text.slice(0, n)}${caret ? '<span class="caret"></span>' : ""}` : `<span class="ph">Ask Pointy anything…</span>${caret ? '<span class="caret"></span>' : ""}`;
+}
+const Q = "how do I make a chart from this?";
+const A1 = cellXY(0, 1), E13 = cellXY(4, 13), INS = [WX + 128, 44 + 44 + 20], CHART = [WX + 18 + 2 * 118 + 52, 44 + 84 + 42];
+
+// ---------- scenes: each returns where the cursor is, for the camera ----------
+const SCENES = {
+  ins1(t) {
+    const typed = Math.round(Q.length * span(t, .06, .8));
+    ask(Q, typed, t < .85 || Math.floor(t * 6) % 2 === 0, 1);
+    show($("#think"), t > .82 && t < 1.2); $("#think b").style.backgroundPosition = `${-200 * t}% 0`;
+    card(1, "Select your data", "Drag from A1 to E13", 905, 300, span(t, 1.02, 1.22));
+    let x = 760, y = 236;
+    if (t > 1.08) {
+      const k = io(span(t, 1.08, 1.46)); x = lerp(760, A1[0] - 50, k); y = lerp(236, A1[1] - 4, k);
+      if (t > 1.5) { const d = io(span(t, 1.5, 1.93)); x = lerp(A1[0] - 50, E13[0], d); y = lerp(A1[1] - 4, E13[1], d);
+        const r2 = Math.max(1, Math.round(lerp(1, 13, d))), c2 = Math.round(lerp(0, 4, d)); selection(1, 0, r2, c2); }
+      cursor(x, y, 1.15); rings(x, y, span(t, 1.46, 1.8));
+    }
+    return { x, y, follow: t > 1.0, aim: t > 1.5 ? [x * .65 + 520 * .35, y * .65 + 480 * .35] : null };
+  },
+  ins2(t) {
+    selection(1, 0, 13, 4);
+    card(2, "Insert a chart", "Insert  →  Chart", INS[0] + 30, INS[1] + 120, 1);
+    let x = E13[0], y = E13[1];
+    const k1 = io(span(t, 0, .38)); x = lerp(E13[0], INS[0], k1); y = lerp(E13[1], INS[1], k1);
+    if (t > .4) $("#tIns").className = "on";
+    if (t > .5) $("#tChart").className = "tool hot";
+    const k2 = io(span(t, .48, .78)); x = lerp(x, CHART[0], k2); y = lerp(y, CHART[1], k2);
+    cursor(x, y, 1.15); rings(x, y, t < .7 ? span(t, .38, .7) : span(t, .78, 1.1));
+    chart(span(t, .84, 1.45));
+    if (t > .84) show($("#card"), false);
+    return { x, y, chartAt: t > .9 ? [1110, 500] : null };
+  },
+  ins3(t) {
+    selection(1, 0, 13, 4); $("#tIns").className = "on";
+    const T = "Q3 Revenue"; const n = Math.round(T.length * span(t, .02, .4));
+    chart(1, n ? T.slice(0, n) : "");
+    card(3, "Name your chart", "Click the title and type", 860 - 400, 300, span(t, -.2, .05) * (t < .45 ? 1 : 1 - span(t, .45, .55)));
+    const tk = span(t, .48, .75); show($("#toast"), tk > 0);
+    if (tk > 0) { place($("#toast"), 935, 545); $("#toast").style.transform = `scale(${spring(tk * 1.6) * .98})`; $("#toast").style.opacity = clamp(tk * 4); }
+    const x = lerp(1010, 1215, io(span(t, .3, .55))) + 8 * Math.sin(t * 9) * span(t, .55, .9), y = lerp(290, 560, io(span(t, .3, .55))) - 22 * Math.abs(Math.sin(t * 11)) * span(t, .6, .95);
+    cursor(x, y, 1.15);
+    return { x: 1105, y: 445 };
+  },
+  hello(t) {
+    selection(1, 0, 13, 4); chart(1, "Q3 Revenue");
+    const d = $("#dim"); d.style.display = ""; d.style.opacity = .9 * out(span(t, 0, .3));
+    const k = span(t, .08, .6), h = $("#hey"); h.style.display = k > 0 ? "" : "none";
+    place(h, 720 - 85, 470 - 85); h.style.transform = `translateY(${60 * (1 - out(k))}px) scale(${spring(k * 1.3)}) rotate(${-8 * (1 - spring(k * 1.3))}deg)`;
+    const w = span(t, .5, 1.45);                                   // the cursor waves hello
+    cursor(720 + 112, 470 - 30, 1.6, w > 0 ? 24 * Math.sin(w * Math.PI * 4) * (1 - w * .3) : 0, t > .42);
+    const b = span(t, .62, 1.0), bu = $("#bub"); bu.style.display = b > 0 ? "" : "none";
+    place(bu, 720 + 96, 470 - 182); bu.style.transform = `scale(${spring(b * 1.4)})`; bu.style.opacity = clamp(b * 5);
+    return { x: 800, y: 420 };
+  },
+  eye(t) {
+    ask(Q, Math.round(Q.length * span(t, .35, 1.0)), true, out(span(t, .05, .35)));
+    card(1, "Select your data", "Drag from A1 to E13", A1[0] + 40, A1[1] + 54, span(t, 1.9, 2.15));
+    const k = io(span(t, .8, 1.9)), x = lerp(1180, A1[0], k), y = lerp(720, A1[1], k);
+    cursor(x, y, 4.6, 0, t > .6); rings(x, y, span(t, 1.9, 2.4), 4);
+    if (t > 2.0) selection(1, 0, Math.round(lerp(1, 13, io(span(t, 2.0, 2.9)))), Math.round(lerp(0, 4, io(span(t, 2.0, 2.9)))));
+    return { x: 720, y: 450 };
+  },
+};
+
+window.__render = (scene, t) => { reset(); return SCENES[scene](t); };
+
+// the camera: a spring that chases where the action is, so it lags and settles like a hand-held camera
+const CAMW = { ins1: [800, 640], ins2: [640, 720], ins3: [740, 700], hello: [740, 680], eye: [1440, 1440] };
+window.__cam = (scene, t) => {
+  if (scene === "eye") { reset(); SCENES.eye(t); return { x: 720, y: 450, w: 1440 }; }
+  const target = (u) => {
+    const r = SCENES[scene](u + .14);
+    if (scene === "ins1" && !r.follow) return [720, 196];
+    if (r.chartAt) return r.chartAt;
+    if (r.aim) return r.aim;
+    return [r.x + 40, r.y + 30];
+  };
+  let [x, y] = target(0), vx = 0, vy = 0;
+  const w0 = 12, dt = 1 / 240;
+  for (let u = 0; u < t; u += dt) {
+    const [tx, ty] = target(u);
+    vx += (w0 * w0 * (tx - x) - 2 * w0 * vx) * dt; vy += (w0 * w0 * (ty - y) - 2 * w0 * vy) * dt;
+    x += vx * dt; y += vy * dt;
+  }
+  const [wa, wb] = CAMW[scene], dur = { ins1: 1.94, ins2: 1.46, ins3: .96, hello: 1.5 }[scene];
+  reset(); SCENES[scene](t);                      // leave the page showing time t
+  return { x, y, w: lerp(wa, wb, io(t / dur)) };
+};
+</script>
+</body>
+</html>

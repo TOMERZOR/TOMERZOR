@@ -1,5 +1,5 @@
 // Burns the yellow subtitles and the end title (subs.html) over the Seedance clip, keeping its native audio.
-//   node edit.cjs <clip.mp4> <out.mp4>
+//   node edit.cjs <clip.mp4> <out.mp4> [--no-subs]
 const { chromium } = require("playwright");
 const { spawn, execFileSync } = require("child_process");
 const path = require("path");
@@ -13,6 +13,8 @@ const FPS = 24;
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  // --no-subs keeps only the end title
+  if (process.argv.includes("--no-subs")) await page.addInitScript(() => { window.SUBS = []; });
   await page.goto("file://" + path.join(__dirname, "subs.html"));
   await page.evaluate(async () => { await Promise.all([600, 700, 800].map((x) => document.fonts.load(`${x} 40px Heebo`, "אבג abc"))); await document.fonts.ready; });
   const p = spawn("ffmpeg", ["-y", "-loglevel", "error", "-i", clip, "-f", "image2pipe", "-framerate", String(FPS), "-i", "-",

@@ -1,7 +1,8 @@
 // The game screens: a menu, solo (a streak with 3 lives), two players on one phone,
 // and two phones in a room on the server. All of them draw the same card.
 
-import { Match, WIN_SCORE, SOLO_LIVES, rng, shuffledIds, makeThreshold, isCorrect, thresholdLabel, factFor } from "./core/game.js";
+import { Match, WIN_SCORE, SOLO_LIVES, rng, orderedDeck, makeThreshold, isCorrect, thresholdLabel, factFor } from "./core/game.js";
+import { seenList, markSeen } from "./seen.js";
 import { STR, fmt, esc } from "./i18n.js";
 import { icon } from "./icons.js";
 import { roll, stopRoll } from "./roll.js";
@@ -45,7 +46,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   // ---------- solo ----------
   function newSolo() {
     const rand = rng((Math.random() * 2 ** 31) >>> 0);
-    solo = { rand, deck: shuffledIds(rand), i: -1, lives: SOLO_LIVES, score: 0, best: Number(store.get("odds:best") || 0), round: 0 };
+    solo = { rand, deck: orderedDeck(rand, seenList()), i: -1, lives: SOLO_LIVES, score: 0, best: Number(store.get("odds:best") || 0), round: 0 };
     nextSolo();
   }
   function nextSolo() {
@@ -77,7 +78,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       ws.onopen = () => {
         tries = 0;
         me.connected = true;
-        ws.send(JSON.stringify({ t: "join", pid: pid(), name }));
+        ws.send(JSON.stringify({ t: "join", pid: pid(), name, seen: seenList().slice(-400) }));
         clearInterval(ping);
         ping = setInterval(() => me.send({ t: "ping" }), 20000);
         render();
@@ -380,6 +381,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
     }
     lastScreenHtmlKey = "play";
 
+    if (isNew) markSeen(m.card.id); // never dealt to this player again until every card has been
     if (isNew && lastCardKey && m.kind !== "solo" && lastTurn !== m.v.turn) sound.turnChange();
 
     // the picked choice fills with colour from where it was touched
@@ -423,14 +425,28 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
         motion.wipeIn(after.querySelector(".verdict"));
         motion.stagger([...after.children].slice(1), { delay: 60 });
       }
-      let good;
+      // sounds from each player's point of view: a wrong guess always buzzes for the guesser
       let scorer = null;
-      if (m.kind === "solo") { good = m.result.correct; scorer = good ? 0 : null; }
-      else {
+      if (m.kind === "solo") {
+        scorer = m.result.correct ? 0 : null;
+        (m.result.correct ? sound.correct : sound.wrong)();
+      } else {
         scorer = m.result.scorer;
-        good = m.online ? scorer === m.v.me : scorer != null;
+        const stolen = !m.result.correct && scorer != null;
+        if (m.online && m.v.me !== m.v.turn) {
+          // I was watching: my challenge won, or they got it right, or they missed
+          if (scorer === m.v.me) sound.steal();
+          else if (m.result.correct) sound.wrong();
+          else sound.correct();
+        } else {
+          // the guesser (or the shared phone): right, or wrong, then the steal
+          if (m.result.correct) sound.correct();
+          else {
+            sound.wrong();
+            if (stolen && !m.online) setTimeout(sound.steal, 700);
+          }
+        }
       }
-      (good ? sound.correct : sound.wrong)();
       // a point travels on an arc from the answer to the score, which pulses to confirm
       if (scorer != null) {
         const target = root.querySelector(`[data-score="${scorer}"]`);
@@ -525,7 +541,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
       const n1 = form.n1.value.trim().slice(0, 20) || s().p1;
       const n2 = form.n2.value.trim().slice(0, 20) || s().p2;
       store.set("odds:names", JSON.stringify([form.n1.value.trim(), form.n2.value.trim()]));
-      match = new Match({ seed: (Math.random() * 2 ** 31) >>> 0, names: [n1, n2] });
+      match = new Match({ seed: (Math.random() * 2 ** 31) >>> 0, names: [n1, n2], seen: seenList() });
       mode = "pass";
       screen = "play";
       anim = { key: null, done: true };

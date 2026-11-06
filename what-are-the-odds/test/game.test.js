@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { FACTS } from "../public/js/core/data.js";
 import { QUESTION_POOL } from "../public/js/core/questions.js";
-import { Match, makeThreshold, isCorrect, rng, thresholdLabel, WIN_SCORE, TOKENS } from "../public/js/core/game.js";
+import { Match, makeThreshold, isCorrect, rng, thresholdLabel, orderedDeck, WIN_SCORE, TOKENS } from "../public/js/core/game.js";
 import { newCode } from "../worker/worker.js";
 
-test("the random pool has 320 questions in both languages, no repeats", () => {
-  assert.equal(QUESTION_POOL.length, 320);
-  assert.equal(new Set(QUESTION_POOL.map((q) => q.he)).size, 320);
+test("the random pool has at least 360 questions in both languages, no repeats", () => {
+  assert.ok(QUESTION_POOL.length >= 360);
+  assert.equal(new Set(QUESTION_POOL.map((q) => q.he)).size, QUESTION_POOL.length);
+  assert.equal(new Set(QUESTION_POOL.map((q) => q.en)).size, QUESTION_POOL.length);
   assert.ok(QUESTION_POOL.every((q) => q.he && q.en));
 });
 
@@ -70,4 +71,32 @@ test("no em or en dashes in anything people read", () => {
     const text = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.ok(!/[–—]/.test(text), `${file} has a long dash`);
   }
+});
+
+test("a player never gets a card they've seen until every card has been played", () => {
+  const all = FACTS.map((f) => f.id);
+  const seen = all.slice(0, 100);
+  const deck = orderedDeck(rng(5), seen);
+  assert.equal(deck.length, all.length);
+  assert.equal(new Set(deck).size, all.length);
+  const firstFresh = deck.slice(0, all.length - seen.length);
+  assert.ok(firstFresh.every((id) => !seen.includes(id)), "unseen cards come first");
+  assert.deepEqual(deck.slice(all.length - seen.length), seen, "then seen ones, oldest first");
+});
+
+test("a match deals unseen cards, and a rematch doesn't repeat the cards just played", () => {
+  const seen = FACTS.slice(0, 40).map((f) => f.id);
+  const m = new Match({ seed: 9, names: ["a", "b"], seen });
+  const dealt = [];
+  for (let i = 0; i < 30; i++) {
+    dealt.push(m.card.id);
+    m.guessed("up");
+    if (m.phase === "challenge") m.challenge(false);
+    if (m.phase === "over") break;
+    m.next();
+  }
+  assert.ok(dealt.every((id) => !seen.includes(id)), "no previously seen card");
+  assert.equal(new Set(dealt).size, dealt.length, "no repeats within a match");
+  m.rematch();
+  assert.ok(!dealt.includes(m.card.id) && !seen.includes(m.card.id), "rematch starts with a fresh card");
 });

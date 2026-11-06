@@ -255,7 +255,7 @@ export class GameRoom {
     this.ctx = ctx;
     this.env = env;
     this.sockets = new Map(); // WebSocket -> seat index (or -1 before joining)
-    this.seats = []; // { pid, name }
+    this.seats = []; // { pid, name, seen }
     this.match = null;
     this.timer = null;
     this.challengeEndsAt = 0;
@@ -320,19 +320,23 @@ export class GameRoom {
     if (msg.t === "join") {
       const pid = clean(msg.pid, 40);
       const name = clean(msg.name, 20) || "?";
+      // cards this player has already played, so the room deals them new ones
+      const seen = Array.isArray(msg.seen) ? msg.seen.filter((x) => typeof x === "string" && x.length <= 40).slice(-400) : [];
       if (!pid) return;
       let i = this.seats.findIndex((s) => s.pid === pid);
       if (i < 0) {
         if (this.seats.length >= 2) { this.send(ws, { t: "full" }); return; }
-        this.seats.push({ pid, name });
+        this.seats.push({ pid, name, seen });
         i = this.seats.length - 1;
       } else {
         this.seats[i].name = name;
+        this.seats[i].seen = seen;
       }
       this.sockets.set(ws, i);
       if (this.match) this.match.players[i].name = name;
       if (!this.match && this.seats.length === 2) {
-        this.match = new Match({ seed: (crypto.getRandomValues(new Uint32Array(1))[0] % 2147483646) + 1, names: this.seats.map((s) => s.name) });
+        const seen = [...new Set(this.seats.flatMap((s) => s.seen || []))];
+        this.match = new Match({ seed: (crypto.getRandomValues(new Uint32Array(1))[0] % 2147483646) + 1, names: this.seats.map((s) => s.name), seen });
       }
       this.broadcast();
       return;

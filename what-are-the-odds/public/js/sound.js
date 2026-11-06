@@ -96,10 +96,46 @@ export function correct() {
   haptic([12, 50, 12, 50, 22]);
 }
 
+// "You got it wrong": a game-show buzz, two low notes sliding down, with a soft thud.
 export function wrong() {
-  blip(311, { dur: 0.22, gain: 0.16, type: "triangle", glide: 0.8 });
-  blip(233, { at: 0.12, dur: 0.34, gain: 0.16, type: "triangle", glide: 0.75 });
-  haptic([20, 60, 20]);
+  const ac = audio();
+  if (!ac) return;
+  const t = ac.currentTime;
+  const note = (f0, f1, at, dur) => {
+    const o = ac.createOscillator();
+    const o2 = ac.createOscillator();
+    const lp = ac.createBiquadFilter();
+    const g = ac.createGain();
+    o.type = "sawtooth";
+    o2.type = "square";
+    o.frequency.setValueAtTime(f0, t + at);
+    o.frequency.exponentialRampToValueAtTime(f1, t + at + dur);
+    o2.frequency.setValueAtTime(f0 * 0.995, t + at);
+    o2.frequency.exponentialRampToValueAtTime(f1 * 0.995, t + at + dur);
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(1400, t + at);
+    lp.frequency.exponentialRampToValueAtTime(500, t + at + dur);
+    g.gain.setValueAtTime(0.0001, t + at);
+    g.gain.exponentialRampToValueAtTime(0.13, t + at + 0.015);
+    g.gain.setValueAtTime(0.13, t + at + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + at + dur);
+    o.connect(lp);
+    o2.connect(lp);
+    lp.connect(g).connect(master);
+    o.start(t + at); o2.start(t + at);
+    o.stop(t + at + dur + 0.05); o2.stop(t + at + dur + 0.05);
+  };
+  note(196, 174, 0, 0.26);      // G3 sliding down
+  note(147, 104, 0.24, 0.52);   // D3 sliding further down
+  blip(70, { at: 0.02, dur: 0.18, gain: 0.22, glide: 0.6 }); // the thud
+  haptic([30, 60, 50]);
+}
+
+// The other player's challenge just paid off: a short bright two-note rise.
+export function steal() {
+  blip(784, { dur: 0.14, gain: 0.12 });
+  blip(1175, { at: 0.1, dur: 0.3, gain: 0.12 });
+  haptic([10, 40, 14]);
 }
 
 export function tap() {

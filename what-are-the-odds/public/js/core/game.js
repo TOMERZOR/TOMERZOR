@@ -25,6 +25,17 @@ export function rng(seed) {
   };
 }
 
+// The deck for a player who has already seen some cards: everything unseen first
+// (shuffled), then the ones they've seen, oldest first. So nothing repeats until
+// every card has been played, and then the longest-forgotten come back first.
+export function orderedDeck(rand, seen = [], facts = FACTS) {
+  const known = new Set(facts.map((f) => f.id));
+  const seenList = [...new Set(seen)].filter((id) => known.has(id));
+  const seenSet = new Set(seenList);
+  const fresh = shuffledIds(rand, facts.filter((f) => !seenSet.has(f.id)));
+  return fresh.concat(seenList);
+}
+
 export function shuffledIds(rand, facts = FACTS) {
   const ids = facts.map((f) => f.id);
   for (let i = ids.length - 1; i > 0; i--) {
@@ -106,15 +117,18 @@ export function factFor(id) {
  * phase: "guess" -> ("challenge") -> "reveal" -> next card ... -> "over"
  */
 export class Match {
-  constructor({ seed = Date.now() % 2147483647, names = ["", ""] } = {}) {
+  // seen: card ids the players have already played (oldest first); they come last
+  constructor({ seed = Date.now() % 2147483647, names = ["", ""], seen = [] } = {}) {
     this.seed = seed;
+    this.seen = seen.slice();
+    this.played = [];
     this.players = names.map((name) => ({ name, score: 0, tokens: TOKENS }));
     this.start();
   }
 
   start() {
     this.rand = rng(this.seed);
-    this.deck = shuffledIds(this.rand);
+    this.deck = orderedDeck(this.rand, this.seen.concat(this.played));
     this.index = -1;
     this.players.forEach((p) => { p.score = 0; p.tokens = TOKENS; });
     this.turn = Math.floor(this.rand() * 2);
@@ -127,6 +141,7 @@ export class Match {
     if (switchTurn) this.turn = 1 - this.turn;
     this.index = (this.index + 1) % this.deck.length;
     const id = this.deck[this.index];
+    this.played = this.played.filter((x) => x !== id).concat(id);
     this.card = { id, t: makeThreshold(factFor(id).p, this.rand) };
     this.phase = "guess";
     this.guess = null;

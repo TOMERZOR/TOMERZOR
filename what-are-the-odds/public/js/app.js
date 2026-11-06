@@ -8,6 +8,7 @@ import { roll, stopRoll } from "./roll.js";
 import * as sound from "./sound.js";
 import * as motion from "./motion.js";
 import { initGame } from "./game-ui.js";
+import { pickUnseen } from "./seen.js";
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -471,7 +472,7 @@ async function ask(raw, { factId } = {}) {
 // Type the random question into the box, then ask it.
 async function randomQuestion() {
   sound.unlock();
-  const pick = QUESTION_POOL[Math.floor(Math.random() * QUESTION_POOL.length)];
+  const pick = pickUnseen(QUESTION_POOL, (x) => x.id || `o:${x.he}`);
   const text = pick[ui];
   els.random.classList.remove("is-rolling");
   void els.random.offsetWidth;

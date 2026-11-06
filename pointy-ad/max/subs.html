@@ -2,52 +2,130 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>Max · subtitles</title>
+<title>Max · overlay</title>
 <link rel="stylesheet" href="../composition/fonts/local.css">
 <style>
-/* Transparent 1920×1080 overlay for the Max short: film-style yellow subtitles and the end title.
+/* Transparent 1920×1080 overlay for the Max short: optional film-style subtitles and the Pointy outro
+   (the orange cursor clicks the poster, an orange wipe, then the animated end card).
    render(t) is a pure function of time; edit.cjs captures it with a transparent background. */
+:root { --or: #F08A2E; --or1: #FFB45C; --or2: #E8620F; }
 html, body { margin: 0; background: transparent; }
-#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Heebo", sans-serif; }
-.sub { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; font-size: 52px; font-weight: 600; color: #FFE24A; letter-spacing: -.005em;
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Heebo", sans-serif; color: #FFF8F1; }
+.L { position: absolute; will-change: transform, opacity; }
+.sub { left: 0; right: 0; bottom: 70px; text-align: center; font-size: 52px; font-weight: 600; color: #FFE24A;
   text-shadow: 0 0 2px rgba(0, 0, 0, .9), 0 2px 6px rgba(0, 0, 0, .85), 0 0 22px rgba(0, 0, 0, .5); opacity: 0; }
-.sub bdi { font-family: Inter, Heebo, sans-serif; }
-#end { position: absolute; left: 0; right: 0; bottom: 0; padding-bottom: 46px; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; padding-top: 120px; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.55)); }
-#end .row { display: flex; align-items: center; gap: 22px; direction: ltr; }
-#end svg { width: 84px; height: 84px; filter: drop-shadow(0 20px 40px rgba(240, 110, 20, .5)); }
-#end b { font: 800 80px Inter, sans-serif; letter-spacing: -.05em; color: #fff; text-shadow: 0 4px 24px rgba(0, 0, 0, .45); }
-#end span { font-size: 46px; font-weight: 700; color: #fff; text-shadow: 0 2px 16px rgba(0, 0, 0, .6); }
-#end span em { font-style: normal; display: inline-block; padding: 0 22px 4px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; text-shadow: none; }
+#cur { left: 0; top: 0; width: 120px; height: 120px; filter: drop-shadow(0 0 26px rgba(240, 138, 46, .95)) drop-shadow(0 10px 16px rgba(0, 0, 0, .45)); transform-origin: 13px 10px; }
+.ring { border-radius: 50%; border: 6px solid var(--or1); }
+#wipe { left: 0; top: 0; width: 100px; height: 100px; margin: -50px 0 0 -50px; border-radius: 50%; background: radial-gradient(circle, #FFB45C, #F08A2E 55%, #E8620F); }
+#card { left: 0; top: 0; width: 100px; height: 100px; margin: -50px 0 0 -50px; border-radius: 50%;
+  background: radial-gradient(closest-side, #2A1A0F, #120B07 70%, #0C0806); overflow: hidden; }
+#glow { left: 960px; top: 470px; width: 1500px; height: 1500px; margin: -750px 0 0 -750px; border-radius: 50%; background: radial-gradient(closest-side, rgba(240, 120, 30, .35), rgba(240, 120, 30, 0)); }
+#logo { left: 860px; top: 190px; width: 200px; height: 200px; }
+#logo svg { width: 100%; height: 100%; filter: drop-shadow(0 30px 60px rgba(240, 110, 20, .6)); }
+#word { left: 0; right: 0; top: 400px; text-align: center; font: 800 150px Inter, sans-serif; letter-spacing: -.05em; direction: ltr; }
+#word span { display: inline-block; }
+#keys { left: 0; right: 0; top: 610px; display: flex; justify-content: center; align-items: center; gap: 22px; direction: ltr; }
+.key { height: 110px; border-radius: 26px; display: grid; place-items: center; font: 700 52px Inter, sans-serif; color: #F4EEE8;
+  background: linear-gradient(180deg, #3D3530, #27211D); box-shadow: 0 10px 0 #110D0B, inset 0 2px 0 rgba(255, 255, 255, .14), 0 26px 50px -10px rgba(0, 0, 0, .7); }
+.plus { font: 800 52px Inter, sans-serif; color: var(--or1); }
+#tag { left: 0; right: 0; top: 770px; text-align: center; font-size: 54px; font-weight: 800; letter-spacing: -.02em; }
+#tag em { font-style: normal; color: var(--or1); }
+#pill { left: 0; right: 0; top: 870px; display: flex; justify-content: center; }
+#pill span { display: inline-block; padding: 10px 40px 14px; border-radius: 999px; background: linear-gradient(180deg, #FFA048, #EC6F18); color: #1A0E05; font-size: 44px; font-weight: 800; box-shadow: 0 20px 50px -10px rgba(240, 120, 30, .7); }
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute"><defs>
   <linearGradient id="lgo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB85E"/><stop offset="1" stop-color="#EC6512"/></linearGradient>
   <symbol id="logo" viewBox="0 0 100 100"><rect width="100" height="100" rx="26" fill="url(#lgo)"/><path d="M8 26 Q8 6 28 6 L72 6 Q92 6 92 26 L92 38 Q50 30 8 46 Z" fill="rgba(255,255,255,.14)"/><path d="M34 29 L71 46 Q75 48 71 50 L56 55 L49 70 Q47 74 45 70 Z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round"/></symbol>
+  <symbol id="pcur" viewBox="0 0 60 60"><path d="M7 5 L52 24 Q56 26 52 28 L33 34 L25 53 Q23 57 21 53 Z" fill="#F08A2E" stroke="#fff" stroke-width="4" stroke-linejoin="round"/></symbol>
 </defs></svg>
-<div id="stage"><div id="subs"></div>
-  <div id="end"><div class="row"><svg><use href="#logo"/></svg><b>Pointy</b></div><span>מורידים בחינם מהקישור <em>בביו</em></span></div>
+<div id="stage">
+  <div id="subs"></div>
+  <div class="L ring" id="r1"></div><div class="L ring" id="r2"></div>
+  <div class="L" id="wipe"></div>
+  <div class="L" id="card"></div>
+  <div class="L" id="glow"></div>
+  <div class="L" id="logo"><svg><use href="#logo"/></svg></div>
+  <div class="L" id="word"></div>
+  <div class="L" id="keys"><div class="key" style="width:110px">⌥</div><div class="plus">+</div><div class="key" style="width:300px">Space</div></div>
+  <div class="L" id="tag">מראה לך בדיוק <em>על מה ללחוץ.</em></div>
+  <div class="L" id="pill"><span>מורידים בחינם מהקישור בביו</span></div>
+  <svg class="L" id="cur"><use href="#pcur"/></svg>
 </div>
 <script>
-// [start, end, text]; edit.cjs may override with window.SUBS
-const SUBS = window.SUBS || [
-  [0.3, 3.0, "אני עובד פה כבר שלוש שנים."],
-  [3.25, 6.15, "אף אחד לא יודע שאני לא מוצא את כפתור הייצוא."],
-  [6.45, 8.9, "עד היום."],
-  [9.2, 11.65, "<bdi>⌥ + Space</bdi>. והוא פשוט מראה לי איפה."],
-  [11.95, 13.5, "עכשיו אני העובד של החודש."],
-];
-const END = window.END_AT || 13.55;
-const host = document.getElementById("subs");
-host.innerHTML = SUBS.map((s, i) => `<div class="sub" id="u${i}">${s[2]}</div>`).join("");
-const clamp = (v) => Math.min(1, Math.max(0, v));
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const T = (t, a, b) => clamp((t - a) / (b - a));
+const lerp = (a, b, p) => a + (b - a) * p;
+const outCubic = (p) => 1 - Math.pow(1 - p, 3);
+const inOutCubic = (p) => (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const outExpo = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+const spring = (p) => (p <= 0 ? 0 : p >= 1 ? 1 : 1 - Math.exp(-6.5 * p) * Math.cos(10.5 * p));
+function vis(el, op, tf = "") { el.style.opacity = op; el.style.transform = tf; el.style.visibility = op <= .001 ? "hidden" : "visible"; }
+
+// subtitles are off unless edit.cjs passes them in
+const SUBS = window.SUBS || [];
+$("subs").innerHTML = SUBS.map((s, i) => `<div class="L sub" id="u${i}">${s[2]}</div>`).join("");
+$("word").innerHTML = [..."Pointy"].map((c) => `<span>${c}</span>`).join("");
+
+// outro timing: O = the moment the cursor appears; the click lands on the poster at (TX, TY)
+const O = window.OUTRO_AT || 13.9;
+const TX = window.TARGET_X || 1050, TY = window.TARGET_Y || 330;
+const click = O + .5, wipe = O + .58, card = O + 1.15;
+window.__dur = window.END || (O + 4.3);
+
 function render(t) {
-  SUBS.forEach(([a, b], i) => { document.getElementById("u" + i).style.opacity = clamp((t - a) / .12) * clamp((b - t) / .12); });
-  const e = clamp((t - END) / .5);
-  const el = document.getElementById("end");
-  el.style.opacity = e; el.style.transform = `translateY(${(1 - e) * 30}px)`;
+  SUBS.forEach(([a, b], i) => { $("u" + i).style.opacity = clamp((t - a) / .12) * clamp((b - t) / .12); });
+
+  /* the cursor flies in from the bottom right and clicks the poster */
+  const cur = $("cur");
+  if (t >= O && t < wipe + .25) {
+    const p = outCubic(T(t, O, click));
+    const x = lerp(1980, TX, p) + Math.sin(Math.PI * p) * 140, y = lerp(1120, TY, p);
+    const s = 1 - .2 * Math.sin(Math.PI * T(t, click, click + .14));
+    vis(cur, Math.min(T(t, O, O + .08), 1 - T(t, wipe + .1, wipe + .25)), `translate(${x - 13}px, ${y - 10}px) scale(${s})`);
+  } else vis(cur, 0);
+  [["r1", 0], ["r2", .1]].forEach(([id, d]) => {
+    const p = T(t, click + d, click + d + .5), el = $(id);
+    el.style.left = TX - 40 + "px"; el.style.top = TY - 40 + "px"; el.style.width = el.style.height = "80px";
+    vis(el, p > 0 && p < 1 ? 1 - p : 0, `scale(${.5 + outCubic(p) * 2.6})`);
+  });
+
+  /* an orange circle grows out of the click, then the dark card grows inside it, leaving an orange rim */
+  const w = $("wipe"), wp = T(t, wipe, wipe + .55);
+  w.style.left = TX + "px"; w.style.top = TY + "px";
+  vis(w, wp > 0 ? 1 : 0, `scale(${outExpo(wp) * 50})`);
+  const c = $("card"), cp = T(t, card - .1, card + .5);
+  c.style.left = lerp(TX, 960, outCubic(cp)) + "px"; c.style.top = lerp(TY, 540, outCubic(cp)) + "px";
+  vis(c, cp > 0 ? 1 : 0, `scale(${inOutCubic(cp) * 46})`);
+
+  /* end card */
+  const on = t >= card;
+  const drift = on ? 1 + .03 * T(t, card, window.__dur) : 1;
+  vis($("glow"), on ? clamp((t - card) / .4) * (.85 + .15 * Math.sin(t * 3)) : 0, `scale(${drift})`);
+  const lp = T(t, card + .05, card + .85);
+  vis($("logo"), on ? clamp(lp * 4) : 0, `translateY(${(1 - outExpo(lp)) * -260}px) scale(${lerp(.4, 1, spring(lp))}) rotate(${(1 - spring(lp)) * -25}deg)`);
+  [...$("word").children].forEach((s, i) => {
+    const p = T(t, card + .3 + i * .05, card + .3 + i * .05 + .45);
+    vis(s, clamp(p * 2.5), `translateY(${(1 - outExpo(p)) * 80}px)`);
+  });
+  vis($("word"), on ? 1 : 0, `scale(${drift})`);
+  const kp = T(t, card + .65, card + 1.05), press = t >= card + 1.1 && t < card + 1.25;
+  vis($("keys"), on ? clamp(kp * 3) : 0, `translateY(${(1 - outExpo(kp)) * 60}px)`);
+  [...$("keys").querySelectorAll(".key")].forEach((k) => {
+    k.style.transform = press ? "translateY(9px)" : "";
+    k.style.boxShadow = press || t >= card + 1.25 ? "0 2px 0 #110D0B, inset 0 2px 0 rgba(255,255,255,.14), 0 0 40px rgba(240,138,46,.8)" : "";
+    k.style.background = t >= card + 1.25 ? "linear-gradient(180deg, #FFA048, #EC6F18)" : "";
+    k.style.color = t >= card + 1.25 ? "#1A0E05" : "";
+  });
+  const tp = T(t, card + 1.35, card + 1.8);
+  vis($("tag"), on ? clamp(tp * 2) : 0, `translateY(${(1 - outExpo(tp)) * 40}px)`);
+  const pp = T(t, card + 1.75, card + 2.35);
+  vis($("pill"), on ? clamp(pp * 3) : 0, `scale(${lerp(.6, 1, spring(pp))})`);
 }
 window.__render = render;
+window.__cues = { cursor: O, click, wipe, card, logo: card + .1, letters: card + .3, press: card + 1.1, tag: card + 1.35, pill: card + 1.8 };
 </script>
 </body>
 </html>

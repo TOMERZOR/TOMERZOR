@@ -48,7 +48,11 @@ function applyLang() {
   });
   els.lang.textContent = s.langBtn;
   els.lang.setAttribute("aria-label", s.langLabel);
-  els.q.placeholder = s.placeholders[0];
+  // a question from the list switches language with the page; anything else keeps its own
+  const was = typed();
+  const known = QUESTION_POOL.find((x) => x.he === was || x.en === was);
+  setTyped(known ? known[ui] : was);
+  els.q.setAttribute("aria-label", `${s.prefix}...`);
   els.random.innerHTML = icon("dice-five");
   els.random.setAttribute("aria-label", s.random);
   els.random.title = s.random;
@@ -57,7 +61,7 @@ function applyLang() {
   game.setLang(ui);
   if (current && current.view.kind === "fact") {
     const f = factById(current.view.id);
-    els.q.value = f[ui].q;
+    setTyped(f[ui].q);
     showFact(f, f[ui].q, ui, current.view.related, { animate: false });
     updateUrl({ q: f[ui].q });
   }
@@ -70,13 +74,56 @@ function paintSound() {
   els.sound.setAttribute("aria-label", STR[ui][on ? "soundOn" : "soundOff"]);
 }
 
-let phIndex = 0;
-setInterval(() => {
-  if (document.activeElement === els.q || els.q.value || document.hidden) return;
-  const list = STR[ui].placeholders;
-  phIndex = (phIndex + 1) % list.length;
-  els.q.placeholder = list[phIndex];
-}, 3200);
+// ---------- the box: "מה הסיכוי ש" is real text in the field, and it stays ----------
+// The opener is part of the input's value. The caret can't go into it and
+// Backspace can't eat it, so you just keep typing where it ends.
+let shownPrefix = els.q.value; // the page starts with the Hebrew opener in the box
+// The opener speaks the language of the question: Hebrew text gets "מה הסיכוי ש".
+function prefixText(t = "") {
+  const lang = hasHebrew(t) ? "he" : /[a-z]/i.test(t) ? "en" : ui;
+  return STR[lang].prefix + (lang === "en" ? " " : "");
+}
+
+function typed() {
+  const v = els.q.value;
+  if (shownPrefix && v.startsWith(shownPrefix)) return v.slice(shownPrefix.length);
+  // the opener got damaged (select-all and type, paste over it): keep what follows the intact part
+  let i = 0;
+  while (shownPrefix && i < v.length && i < shownPrefix.length && v[i] === shownPrefix[i]) i++;
+  return v.slice(i);
+}
+
+function setTyped(t) {
+  shownPrefix = prefixText(t || "");
+  els.q.value = shownPrefix + (t || "");
+}
+
+function clampCaret() {
+  if (document.activeElement !== els.q) return;
+  const min = shownPrefix.length;
+  const { selectionStart: a, selectionEnd: b } = els.q;
+  if (a < min || b < min) els.q.setSelectionRange(Math.max(a, min), Math.max(b, min));
+}
+
+els.q.addEventListener("input", () => {
+  if (!els.q.value.startsWith(shownPrefix)) {
+    const rest = typed();
+    setTyped(rest);
+    els.q.setSelectionRange(els.q.value.length, els.q.value.length);
+  }
+});
+els.q.addEventListener("keydown", (e) => {
+  const min = shownPrefix.length;
+  const { selectionStart: a, selectionEnd: b } = els.q;
+  if (e.key === "Backspace" && a === b && a <= min) e.preventDefault();
+  if ((e.key === "Home" || (e.key === "ArrowUp")) && !e.shiftKey) { e.preventDefault(); els.q.setSelectionRange(min, min); }
+});
+els.q.addEventListener("focus", () => requestAnimationFrame(() => {
+  if (els.q.selectionStart <= shownPrefix.length) els.q.setSelectionRange(els.q.value.length, els.q.value.length);
+}));
+document.addEventListener("selectionchange", clampCaret);
+els.q.addEventListener("click", clampCaret);
+els.q.addEventListener("keyup", clampCaret);
 
 // ---------- modes ----------
 function setMode(mode, { push = true } = {}) {
@@ -99,7 +146,7 @@ function setMode(mode, { push = true } = {}) {
 export function fullQuestion(text, lang) {
   const t = String(text || "").trim().replace(/[?？!.]+$/, "");
   if (stripOpener(normalize(t)) !== normalize(t)) return t;
-  if (lang === "he") return `מה הסיכויים ${t.startsWith("ש") ? t : `ש${t}`}`;
+  if (lang === "he") return `מה הסיכוי ${t.startsWith("ש") ? t : `ש${t}`}`;
   return /^(that|of|to)\b/i.test(t) ? `What are the odds ${t}` : `What are the odds that ${t}`;
 }
 
@@ -114,7 +161,7 @@ function chip(entry, lang) {
   b.textContent = entry[lang].q;
   b.addEventListener("click", () => {
     sound.unlock();
-    els.q.value = entry[lang].q;
+    setTyped(entry[lang].q);
     ask(entry[lang].q, { factId: entry.id });
   });
   return b;
@@ -365,15 +412,15 @@ async function randomQuestion() {
   els.random.classList.add("is-rolling");
   const seq = ++askSeq;
   if (!reduced()) {
-    els.q.value = "";
+    setTyped("");
     for (let i = 1; i <= text.length; i++) {
-      els.q.value = text.slice(0, i);
+      setTyped(text.slice(0, i));
       if (i % 3 === 0) sound.tap();
       await sleep(i < 4 ? 40 : 16);
       if (seq !== askSeq) return;
     }
   } else {
-    els.q.value = text;
+    setTyped(text);
   }
   ask(text, { factId: pick.id || undefined });
 }
@@ -416,7 +463,7 @@ els.form.addEventListener("submit", (e) => {
   e.preventDefault();
   sound.unlock();
   els.q.blur();
-  ask(els.q.value);
+  ask(typed());
 });
 els.random.addEventListener("click", randomQuestion);
 els.lang.addEventListener("click", () => {
@@ -431,7 +478,7 @@ els.sound.addEventListener("click", () => {
 });
 els.share.addEventListener("click", shareCurrent);
 els.again.addEventListener("click", () => {
-  els.q.value = "";
+  setTyped("");
   els.q.focus({ preventScroll: true });
   els.form.scrollIntoView({ behavior: reduced() ? "auto" : "smooth", block: "start" });
 });
@@ -452,9 +499,9 @@ if (params.get("room") || params.get("mode") === "game") {
   if (params.get("room")) game.openRoom(params.get("room"));
 } else if (params.get("id") && factById(params.get("id"))) {
   const f = factById(params.get("id"));
-  els.q.value = f[ui].q;
+  setTyped(f[ui].q);
   ask(f[ui].q, { factId: f.id });
 } else if (params.get("q")) {
-  els.q.value = params.get("q");
+  setTyped(params.get("q"));
   ask(params.get("q"));
 }

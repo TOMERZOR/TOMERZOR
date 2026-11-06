@@ -2,7 +2,7 @@
 
 export const STR = {
   he: {
-    skip: "דלגו לשאלה", curious: "סתם סקרן", game: "משחק", prefix: "מה הסיכויים ש", go: "בדקו",
+    skip: "דלגו לשאלה", curious: "סתם סקרן", game: "משחק", prefix: "מה הסיכוי ש", go: "בדקו",
     random: "שאלה אקראית", thinking: "מחשב סיכויים", impossible: "בלתי אפשרי", certain: "ודאי",
     share: "שתפו", again: "שאלה אחרת", related: "אולי התכוונתם:", relatedMore: "עוד שאלות:",
     browse: "כל השאלות הבדוקות", soundOn: "צליל פועל", soundOff: "צליל כבוי", langBtn: "EN", langLabel: "English",

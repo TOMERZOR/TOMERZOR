@@ -13,7 +13,7 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="preload" href="fonts/assistant-hebrew-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="css/style.css?v=4">
+<link rel="stylesheet" href="css/style.css?v=5">
 </head>
 <body>
 <a class="skip" href="#q" data-t="skip">דלגו לשאלה</a>
@@ -36,8 +36,7 @@
   <section class="view" id="view-curious" role="tabpanel" aria-labelledby="tab-curious">
     <form class="ask" id="ask" autocomplete="off" role="search">
       <label class="ask__line" for="q">
-        <span class="ask__prefix" data-t="prefix">מה הסיכויים ש</span>
-        <input id="q" name="q" type="text" maxlength="140" enterkeyhint="go" spellcheck="false" placeholder="השמש תתפוצץ מחר">
+        <input id="q" name="q" type="text" maxlength="170" enterkeyhint="go" spellcheck="false" value="מה הסיכוי ש" aria-label="מה הסיכוי ש...">
       </label>
       <button class="ask__dice" type="button" id="random"></button>
     </form>
@@ -86,7 +85,7 @@
 
 <div class="toast" id="toast" role="status" hidden></div>
 
-<script src="js/config.js?v=4"></script>
-<script type="module" src="js/app.js?v=4"></script>
+<script src="js/config.js?v=5"></script>
+<script type="module" src="js/app.js?v=5"></script>
 </body>
 </html>

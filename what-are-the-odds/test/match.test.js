@@ -44,7 +44,7 @@ for (const q of ["שהחברה שלי תעזוב אותי", "that my flight is d
 
 test("every fact answers its own question, in both languages, with and without the opener", () => {
   for (const f of FACTS) {
-    for (const q of [f.he.q, `מה הסיכויים ש${f.he.q}`, f.en.q, `What are the odds that ${f.en.q}`]) {
+    for (const q of [f.he.q, `מה הסיכוי ש${f.he.q}`, `מה הסיכויים ש${f.he.q}`, f.en.q, `What are the odds that ${f.en.q}`]) {
       const r = findFact(q);
       assert.equal(r.fact && r.fact.id, f.id, `${f.id}: "${q}" matched ${r.fact && r.fact.id}`);
     }
@@ -53,7 +53,7 @@ test("every fact answers its own question, in both languages, with and without t
 
 test("open questions in the random pool never borrow a checked fact's answer", () => {
   for (const x of QUESTION_POOL.filter((p) => !p.id)) {
-    for (const q of [`מה הסיכויים ש${x.he}`, `What are the odds that ${x.en}`]) {
+    for (const q of [`מה הסיכוי ש${x.he}`, `מה הסיכויים ש${x.he}`, `What are the odds that ${x.en}`]) {
       const r = findFact(q);
       assert.equal(r.fact, null, `"${q}" matched ${r.fact && r.fact.id}`);
     }

@@ -1,5 +1,5 @@
 // The "random question" pool: every checked fact plus these open questions, 320 in all: 97 checked, 223 open.
-// Each one finishes "מה הסיכויים ש..." / "What are the odds that...".
+// Each one finishes "מה הסיכוי ש..." / "What are the odds that...".
 // Open questions go to the AI estimate like anything a person types.
 
 import { FACTS } from "./data.js";

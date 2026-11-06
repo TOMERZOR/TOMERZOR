@@ -12,7 +12,7 @@ const args = process.argv.slice(2);
 const [clip, out] = args;
 const opt = (k) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : null; };
 const dur = parseFloat(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", clip]).toString());
-const FPS = 24;
+const FPS = 48;   // exactly double the 24 fps footage: the clip plays as before, the outro animation gets twice the frames
 const OUTRO_AT = +(dur - 1.15).toFixed(3);     // the wipe covers the frame just as the clip ends
 const END = +(OUTRO_AT + 4.3).toFixed(3);
 const TAIL = END - dur;

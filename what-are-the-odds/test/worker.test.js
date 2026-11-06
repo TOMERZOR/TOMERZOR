@@ -89,8 +89,20 @@ test("rate limit", async () => {
 
 test("bad input", async () => {
   assert.equal((await worker.fetch(post({ q: "" }), {})).status, 400);
-  assert.equal((await worker.fetch(post({ q: "x".repeat(200) }), {})).status, 400);
+  assert.equal((await worker.fetch(post({ q: "x".repeat(201) }), {})).status, 400);
   assert.equal((await worker.fetch(new Request("https://odds.test/api/odds"), {})).status, 405);
+});
+
+test("JSON that isn't an object is a 400, not a crash", async () => {
+  for (const body of [null, [], "x", 5]) {
+    assert.equal((await worker.fetch(post(body), {})).status, 400);
+  }
+});
+
+test("the longest question the page sends (140 typed + the English opener) is accepted", async () => {
+  const q = `What are the odds that ${"a".repeat(140)}`;
+  const res = await worker.fetch(post({ q, lang: "en" }), {});
+  assert.equal(res.status, 200);
 });
 
 test("no AI binding", async () => {

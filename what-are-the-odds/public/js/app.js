@@ -96,9 +96,17 @@ function typed() {
   return v.slice(i);
 }
 
+// a link or a paste that already starts with the opener shouldn't show it twice
+function withoutOpener(t) {
+  const s = String(t || "");
+  if (s.startsWith(STR.he.prefix)) return s.slice(STR.he.prefix.length);
+  return s.replace(/^\s*what are the odds that\s+/i, "");
+}
+
 function setTyped(t) {
-  shownPrefix = prefixText(t || "");
-  els.q.value = shownPrefix + (t || "");
+  t = withoutOpener(t);
+  shownPrefix = prefixText(t);
+  els.q.value = shownPrefix + t;
 }
 
 function clampCaret() {
@@ -116,7 +124,7 @@ function boundaryNudge() {
 }
 
 els.q.addEventListener("input", () => {
-  if (!els.q.value.startsWith(shownPrefix)) {
+  if (!els.q.value.startsWith(shownPrefix) || withoutOpener(typed()) !== typed()) {
     setTyped(typed());
     els.q.setSelectionRange(els.q.value.length, els.q.value.length);
   }
@@ -166,6 +174,9 @@ function setMode(next, { push = true, animate = true } = {}) {
   const hide = toGame ? els.viewCurious : els.viewGame;
   // the two views overlap: the old one fades out while the new one fades in
   show.hidden = false;
+  // switching back before the last switch finished: drop its exit (fill: forwards) and inert
+  show.inert = false;
+  show.getAnimations().forEach((a) => a.cancel());
   if (animate && prev !== next && !reduced()) {
     hide.inert = true;
     motion.exitTo(hide, { dy: 0 }).then(() => { if (mode === next) { hide.hidden = true; hide.inert = false; hide.getAnimations().forEach((a) => a.cancel()); } });
@@ -282,7 +293,8 @@ function thinking(on) {
   }
   els.body.hidden = false;
   if (els.thinking.hidden) return;
-  motion.exitTo(els.thinking, { dy: 6 }).then(() => { els.thinking.hidden = true; els.thinking.getAnimations().forEach((a) => a.cancel()); });
+  // a new question may start thinking again before this exit ends: leave it showing then
+  motion.exitTo(els.thinking, { dy: 6 }).then(() => { if (els.body.hidden) return; els.thinking.hidden = true; els.thinking.getAnimations().forEach((a) => a.cancel()); });
 }
 
 // Details settle one after another, 30ms apart, once the number has landed.
@@ -383,10 +395,11 @@ function shuffle(a) {
 
 // "Another question": the answer leaves back up into the field, 20% faster than it came.
 async function clearResult() {
-  askSeq++;
+  const seq = ++askSeq;
   stopRoll();
   if (!els.result.hidden) {
     await motion.exitTo(els.result, { dy: -10 });
+    if (seq !== askSeq) return; // a new question was asked while the answer was leaving
     els.result.hidden = true;
     els.result.getAnimations().forEach((a) => a.cancel());
   }
@@ -437,6 +450,7 @@ async function ask(raw, { factId } = {}) {
   const q = String(raw || "").replace(/\s+/g, " ").trim().slice(0, 140);
   if (!q) { els.q.focus(); boundaryNudge(); return; }
   const seq = ++askSeq;
+  current = null; // the last answer is gone: a language switch now mustn't bring it back
   const lang = hasHebrew(q) ? "he" : /[a-z]/i.test(q) ? "en" : ui;
   const full = fullQuestion(q, lang);
   updateUrl({ q });

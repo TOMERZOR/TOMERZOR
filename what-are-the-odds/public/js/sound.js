@@ -14,6 +14,9 @@ let on = store.get("odds:sound") !== "off";
 
 function audio() {
   if (!on) return null;
+  // before the first tap or key press (a ?q= link rolling on load) the browser won't play
+  // anything, and every attempt logs a warning
+  if (!ctx && navigator.userActivation && !navigator.userActivation.hasBeenActive) return null;
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
@@ -165,7 +168,10 @@ function iosTick() {
     iosSwitch.append(input);
     document.body.append(iosSwitch);
   }
+  // clicking the label focuses the switch: give focus back, or the keyboard closes mid-typing
+  const had = document.activeElement;
   iosSwitch.click();
+  if (had && had !== document.activeElement && had !== document.body && had.focus) had.focus({ preventScroll: true });
 }
 export function haptic(pattern = 6) {
   if (!on) return;

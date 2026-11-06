@@ -47,6 +47,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
   function newSolo() {
     const rand = rng((Math.random() * 2 ** 31) >>> 0);
     solo = { rand, deck: orderedDeck(rand, seenList()), i: -1, lives: SOLO_LIVES, score: 0, best: Number(store.get("odds:best") || 0), round: 0 };
+    solo.startBest = solo.best; // a new best has to beat this, not tie it
     nextSolo();
   }
   function nextSolo() {
@@ -294,7 +295,7 @@ export function initGame(root, { apiBase = "", shareLink, lang = "he", onRoom = 
 
   function overHtml(m) {
     if (m.kind === "solo") {
-      const isBest = solo.score > 0 && solo.score >= solo.best;
+      const isBest = solo.score > solo.startBest;
       return `<div class="over">
         <h2>${s().soloOver}</h2>
         <div class="final">${t("soloScore", { n: solo.score })}</div>

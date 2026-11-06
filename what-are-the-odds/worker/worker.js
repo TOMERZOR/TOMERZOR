@@ -14,7 +14,7 @@ import { findFact, needsCare, normalize, stripOpener } from "../public/js/core/m
 import { Match } from "../public/js/core/game.js";
 
 const VERSION = 1;
-const MAX_Q = 160;
+const MAX_Q = 200; // the page sends up to 140 typed characters plus the opener
 const DEFAULT_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const DEFAULT_FALLBACK = "@cf/meta/llama-3.1-8b-instruct-fast";
 
@@ -207,8 +207,8 @@ export default {
       if (request.method !== "POST") return json({ error: "POST only" }, 405);
       let body;
       try { body = await request.json(); } catch { return json({ error: "bad json" }, 400); }
-      const q = typeof body.q === "string" ? body.q.replace(/\s+/g, " ").trim() : "";
-      const lang = body.lang === "en" ? "en" : "he";
+      const q = body && typeof body.q === "string" ? body.q.replace(/\s+/g, " ").trim() : "";
+      const lang = body && body.lang === "en" ? "en" : "he";
       if (q.length < 2) return json({ error: "empty" }, 400);
       if (q.length > MAX_Q) return json({ error: "too long" }, 400);
       const ip = request.headers.get("cf-connecting-ip") || "unknown";

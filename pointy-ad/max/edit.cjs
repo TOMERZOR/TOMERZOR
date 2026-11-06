@@ -42,7 +42,7 @@ fs.mkdirSync(work, { recursive: true });
   const p = spawn("ffmpeg", ["-y", "-loglevel", "error", "-i", clip, "-f", "image2pipe", "-framerate", String(FPS), "-i", "-", "-i", path.join(work, "sting.wav"),
     "-filter_complex",
     `[0:v]fps=${FPS},scale=1920:1080:flags=lanczos,setsar=1,tpad=stop_mode=clone:stop_duration=${TAIL.toFixed(3)}[bg];[1:v]format=rgba[ov];` +
-    `[bg][ov]overlay=0:0:format=auto,format=yuv420p[v];[0:a]afade=t=out:st=${(dur - 0.75).toFixed(3)}:d=0.75,apad=whole_dur=${END}[ca];[ca][2:a]amix=inputs=2:normalize=0,alimiter=limit=0.89[a]`,
+    `[bg][ov]overlay=0:0:format=auto,format=yuv420p[v];[0:a]afade=t=out:st=${(dur - 0.75).toFixed(3)}:d=0.75,apad=whole_dur=${END}[ca];[2:a]volume=-4dB[st];[ca][st]amix=inputs=2:normalize=0,alimiter=limit=0.89[a]`,
     "-map", "[v]", "-map", "[a]", "-t", String(END), "-c:v", "libx264", "-preset", "slow", "-crf", "17", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out],
     { stdio: ["pipe", "inherit", "inherit"] });
   p.on("exit", (code) => { if (code) { console.error("ffmpeg failed with code", code); process.exit(1); } });   // never wait on a dead encoder

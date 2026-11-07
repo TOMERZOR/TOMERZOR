@@ -56,3 +56,7 @@ hekerut/site/public/
 hekerut/server/node_modules/
 hekerut/server/.wrangler/
 hekerut/site/.wrangler/
+
+# Oscars video: photos, votes, audio and renders stay local (public repo)
+oscars/private/
+oscars/node_modules/

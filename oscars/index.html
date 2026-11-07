@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>האוסקרים של הפלגה</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* 1920×1080 stage. Every frame is render(t) from engine.js; nothing animates by itself.
+   Open the page to preview it playing; ?t=12.5 shows a single frame; ?render is used by render.mjs. */
+:root {
+  --gold-grad: linear-gradient(180deg, #fff8dc 0%, #ffe18a 28%, #d9a33a 52%, #ffe7a0 70%, #b07a1c 100%);
+  --ink: #fff7e6;
+  --font: "Rubik", system-ui, sans-serif;
+  --display: "Suez One", "Rubik", serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+body { display: grid; place-items: center; font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; flex: none; transform-origin: 50% 50%; background: #000; }
+body.render #stage { transform: none !important; }
+#world { position: absolute; inset: 0; transform-origin: 50% 50%; }
+#world > canvas, #trans { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+#content { position: absolute; inset: 0; }
+.scene { position: absolute; inset: 0; display: none; }
+.bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; }
+#barT { top: 0; } #barB { bottom: 0; }
+#vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 50%, transparent 52%, rgba(0,0,0,.78) 100%); }
+#grain { position: absolute; inset: -2px; pointer-events: none; mix-blend-mode: overlay; opacity: .07; }
+#flash { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+#fade { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+.abs { position: absolute; }
+.p { position: absolute; left: 0; top: 0; }
+.ico { position: absolute; left: 0; top: 0; display: block; user-select: none; }
+.center { position: absolute; left: 0; right: 0; text-align: center; }
+.w { display: inline-block; white-space: pre; }
+
+/* ---------- gold type ---------- */
+.gold {
+  background-image: linear-gradient(100deg, transparent 0 40%, rgba(255,255,255,.95) 50%, transparent 60% 100%), var(--gold-grad);
+  background-size: 300% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 5px 0 rgba(70,40,0,.85)) drop-shadow(0 0 34px rgba(255,190,70,.38));
+}
+.gold-spans > .w {
+  background-image: linear-gradient(100deg, transparent 0 40%, rgba(255,255,255,.95) 50%, transparent 60% 100%), var(--gold-grad);
+  background-size: 300% 100%, 100% 100%; background-repeat: no-repeat;
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.gold-spans { filter: drop-shadow(0 5px 0 rgba(70,40,0,.85)) drop-shadow(0 0 34px rgba(255,190,70,.38)); }
+.display { font-family: var(--display); line-height: 1.02; }
+.eyebrow { white-space: nowrap; font-family: var(--font); font-weight: 700; letter-spacing: .14em; font-size: 30px; color: #f6d98b; text-transform: uppercase; }
+
+/* ---------- curtains ---------- */
+.curtain { position: absolute; top: 0; bottom: 0; width: 52%;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.35), transparent 18%, transparent 80%, rgba(0,0,0,.55)),
+    repeating-linear-gradient(90deg, #5c0711 0px, #9d1426 38px, #c91f35 70px, #8a0f20 104px, #4d050d 140px);
+  box-shadow: inset 0 0 120px rgba(0,0,0,.6); }
+.curtain.l, .curtain.r { left: 0; }
+.valance { position: absolute; left: 0; right: 0; top: 0; height: 120px;
+  background: repeating-radial-gradient(circle at 50% -40px, #b31a2e 0 60px, #6d0915 60px 64px);
+  background-size: 160px 160px; box-shadow: 0 14px 40px rgba(0,0,0,.6); }
+.valance::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 14px; background: linear-gradient(90deg, #a8771f, #ffe39a, #b8862a, #ffe39a, #a8771f); }
+
+/* ---------- photos ---------- */
+.polaroid { position: absolute; background: #fbf8f1; padding: 18px 18px 70px; box-shadow: 0 30px 60px rgba(0,0,0,.55), 0 4px 10px rgba(0,0,0,.4); }
+.polaroid img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.photo-full { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- faces ---------- */
+.face { position: absolute; border-radius: 50%; overflow: hidden; background: #241a0e; }
+.face img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.face .ini { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--display); color: #2a1a05;
+  background: radial-gradient(circle at 35% 30%, #fff1c4, #e3b04f 55%, #9a6a1a); }
+.ring { position: absolute; border-radius: 50%; padding: 10px;
+  background: conic-gradient(from 0deg, #fff3c4, #d39b30, #fff7da, #b5801f, #ffeab0, #c08a26, #fff3c4);
+  box-shadow: 0 0 0 4px rgba(60,35,0,.6), 0 0 60px rgba(255,200,90,.45), 0 20px 50px rgba(0,0,0,.6); }
+.ring.silver { background: conic-gradient(from 0deg, #ffffff, #9aa4b1, #f1f4f8, #7d8693, #ffffff); box-shadow: 0 0 0 4px rgba(0,0,0,.4), 0 0 40px rgba(220,230,255,.3), 0 20px 50px rgba(0,0,0,.6); }
+.ring.bronze { background: conic-gradient(from 0deg, #ffd2a6, #a8612a, #ffd9b8, #8a4a1b, #ffd2a6); box-shadow: 0 0 0 4px rgba(0,0,0,.4), 0 0 40px rgba(255,170,110,.3), 0 20px 50px rgba(0,0,0,.6); }
+.ring > .face { position: relative; width: 100%; height: 100%; }
+
+/* ---------- cards & chips ---------- */
+.card { position: absolute; border-radius: 34px; background: linear-gradient(160deg, rgba(40,30,18,.92), rgba(12,9,6,.94));
+  box-shadow: 0 40px 90px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,214,120,.35); }
+.pill { white-space: nowrap; display: inline-flex; align-items: center; gap: 14px; padding: 12px 30px; border-radius: 999px; font-weight: 700;
+  background: rgba(0,0,0,.45); box-shadow: inset 0 0 0 2px rgba(255,220,140,.5); color: #ffe7a6; }
+.name { font-family: var(--display); color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,.6), 0 0 26px rgba(0,0,0,.6); }
+.votes { font-weight: 700; color: #ffe08a; }
+
+/* ---------- chart ---------- */
+.row { position: absolute; right: 0; height: 64px; display: flex; align-items: center; }
+.bar-fill { position: absolute; top: 8px; bottom: 8px; border-radius: 14px; }
+.bar-label { position: absolute; font-weight: 700; color: #fff; white-space: nowrap; }
+.bar-num { position: absolute; font-family: var(--display); color: #fff; }
+
+/* ---------- quote card ---------- */
+.quote { position: absolute; font-weight: 700; line-height: 1.28; color: #fff; text-align: center; text-wrap: balance; }
+.qmark { position: absolute; font-family: "Frank Ruhl Libre", serif; font-weight: 900; color: rgba(255,214,120,.9); font-size: 260px; line-height: 1; }
+.bubble { position: absolute; background: #fff; color: #1b1206; border-radius: 40px; padding: 22px 36px; font-weight: 800; box-shadow: 0 20px 40px rgba(0,0,0,.45); white-space: nowrap; }
+.bubble::after { content: ""; position: absolute; bottom: -26px; right: 60px; border: 18px solid transparent; border-top: 22px solid #fff; border-right-width: 0; }
+.tape { position: absolute; height: 76px; background: repeating-linear-gradient(-45deg, #ffe600 0 50px, #111 50px 100px); box-shadow: 0 10px 30px rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; }
+.tape span { background: #ffe600; color: #111; font-weight: 900; font-size: 40px; padding: 2px 24px; letter-spacing: .04em; }
+.grid-cell { position: absolute; display: grid; place-items: center; font-weight: 800; border-radius: 8px; }
+.scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.28) 0 2px, transparent 2px 5px); pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <canvas id="back" width="1920" height="1080"></canvas>
+    <div id="content"></div>
+    <canvas id="top" width="1920" height="1080"></canvas>
+  </div>
+  <div id="barT" class="bar"></div><div id="barB" class="bar"></div>
+  <div id="vignette"></div>
+  <div id="grain"></div>
+  <div id="flash"></div>
+  <canvas id="trans" width="1920" height="1080"></canvas>
+  <div id="fade"></div>
+</div>
+<script src="icons.js"></script>
+<script src="engine.js"></script>
+<script src="scenes.js"></script>
+</body>
+</html>

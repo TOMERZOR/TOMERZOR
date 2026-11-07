@@ -819,9 +819,9 @@ function winPart(root, t0, ph, th, cat, winner, quotes) {
   medal.style.position = "static";
   vp.prepend(medal);
   const st1 = statue(L, 600), st2 = statue(L, 600);
+  const deco = winDecor(L, th, cat, label);
   const bubble = quotes.length ? P("div", "bubble", L, `״${quotes[0]}״`) : null;
   if (bubble) bubble.style.fontSize = "46px";
-  const deco = winDecor(L, th, cat, label);
   // sound
   cue("s_boom", t, 1);
   cue("crash", t, 0.8);
@@ -873,8 +873,8 @@ function winDecor(L, th, cat, label) {
     extras.push((lt, out) => { put(g.box, 300, 560, 0.85, -3, clamp((lt - 1) * 3) * (1 - out)); g.update(lt - 1.3, 0.22); });
   }
   if (th.motif === "lions") {
-    const c = icon("crown", 200, L);
-    extras.push((lt, out) => put(c, W / 2, lerp(-200, 190, E.outBounce(seg(lt, 0.9, 1.6))), 1, -8, clamp((lt - 0.9) * 6) * (1 - out)));
+    const c = icon("crown", 150, L);
+    extras.push((lt, out) => put(c, W / 2 + 10, lerp(-200, 232, E.outBounce(seg(lt, 0.9, 1.6))), 1, -10, clamp((lt - 0.9) * 6) * (1 - out)));
   }
   if (th.motif === "yellow") {
     const s = P("div", "", L);
@@ -883,8 +883,8 @@ function winDecor(L, th, cat, label) {
     extras.push((lt, out) => put(s, W / 2, 440, E.outElastic(seg(lt, 0.05, 0.8)), lt * 6, 0.85 * (1 - out)));
   }
   if (th.motif === "weird") {
-    const u = icon("flying-saucer", 220, L);
-    extras.push((lt, out) => put(u, W / 2 + Math.sin(lt * 1.3) * 60, 150 + Math.sin(lt * 3) * 10, pop(lt, 1), Math.sin(lt * 2) * 8, 1 - out));
+    const u = icon("flying-saucer", 200, L);
+    extras.push((lt, out) => put(u, 1500 + Math.sin(lt * 1.3) * 50, 190 + Math.sin(lt * 3) * 10, pop(lt, 1), Math.sin(lt * 2) * 8, 1 - out));
   }
   if (th.motif === "model") {
     const fl = Array.from({ length: 10 }, (_, i) => { const e = P("div", "", L); Object.assign(e.style, { width: "300px", height: "300px", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,255,255,.95), rgba(255,255,255,.35) 25%, transparent 65%)" }); return { e, t: 0.9 + i * 0.45 + r() * 0.2, x: 150 + r() * (W - 300), y: 150 + r() * 600 }; });

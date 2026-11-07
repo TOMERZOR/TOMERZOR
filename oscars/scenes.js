@@ -66,6 +66,7 @@ const GOLD_RGB = "255,205,110";
 
 // ---------------------------------------------------------------- helpers
 let DATA, FACES;
+const SHORT = new URLSearchParams(location.search).has("short"); // the ~3 minute cut
 const LANDSCAPE = new Set();
 function P(tag, cls, parent, html) { const e = el(tag, "p " + (cls || ""), parent, html); return e; }
 function layer(root) { const L = P("div", "", root); L.style.width = W + "px"; L.style.height = H + "px"; return L; }
@@ -581,7 +582,10 @@ function statsScene() {
 }
 
 function titleScene(cat, idx, th) {
-  const DUR = 6;
+  const vlen = (DATA.voice || {})["v_c" + (idx + 1)] || 2;
+  const DUR = SHORT ? Math.max(2.5, qb(vlen + 0.75)) : 6;
+  const kk = SHORT ? 0.45 : 1; // entrance timings
+  const sk = SHORT ? 0.55 : 1; // sound timings
   scene("title-" + cat.id, DUR, (root, t0) => {
     mark(idx % 2 ? "groove2" : "groove", t0);
     const mot = motif(th.motif, root, th, 100 + idx * 13);
@@ -603,14 +607,15 @@ function titleScene(cat, idx, th) {
     if (post) Object.assign(post.style, { fontSize: "76px", fontWeight: 800, color: "#fff", textShadow: "0 4px 18px rgba(0,0,0,.8)", whiteSpace: "nowrap" });
     const q = P("div", "", root, "?");
     Object.assign(q.style, { fontFamily: '"Suez One"', fontSize: "200px", color: th.color, textShadow: "0 6px 0 rgba(0,0,0,.6)" });
-    cue("v_c" + (idx + 1), t0 + 0.85, 1.25);
-    cue("hit", t0 + 0.55, 0.6);
+    cue("v_c" + (idx + 1), t0 + 0.85 * kk, 1.25);
+    cue("hit", t0 + 0.55 * kk, 0.6);
     const sfxAt = { couple: 0.95, lions: 1.35, yellow: 0.45, burnt: 0.3, model: 1.15, slacker: 2.4, weird: 0.4 }[th.motif] ?? 2.3;
-    cue(th.sfx, t0 + sfxAt, th.motif === "lions" ? 0.75 : 0.65);
-    if (th.motif === "slacker") cue("s_scratch", t0 + 2.8, 0.6);
-    if (th.motif === "yellow") cue("s_splash", t0 + 1.1, 0.4);
-    if (th.motif === "model") cue("s_flash", t0 + 1.3, 0.5);
-    if (th.motif === "couple") cue("pop", t0 + 1.25, 0.9);
+    // short cut: the category's sound lands right after the announcer, not on top of him
+    cue(th.sfx, t0 + (SHORT ? Math.max(sfxAt * sk, 0.85 * kk + vlen - 0.35) : sfxAt), (th.motif === "lions" ? 0.75 : 0.65) * (SHORT ? 0.85 : 1));
+    if (th.motif === "slacker") cue("s_scratch", t0 + 2.8 * sk, 0.6);
+    if (th.motif === "yellow") cue("s_splash", t0 + 1.1 * sk, 0.4);
+    if (th.motif === "model") cue("s_flash", t0 + 1.3 * sk, 0.5);
+    if (th.motif === "couple") cue("pop", t0 + 1.25 * sk, 0.9);
     const n = (th.pre ? 1 : 0) + 1 + (th.post ? 1 : 0);
     const ys = n === 3 ? [330, 520, 740] : [460, 700];
     return {
@@ -620,27 +625,28 @@ function titleScene(cat, idx, th) {
         if (th.motif === "weird") ENV.stars = 1;
         if (th.motif === "moment") { ENV.tint = "#3a2a10"; ENV.vignette = 0.95; }
         mot(lt);
-        const out = E.inC(seg(lt, 5.45, 6));
-        put(chip, W / 2, 95 - (1 - E.outBack(seg(lt, 0.2, 0.7))) * 160, 1, 0, 1 - out);
-        put(dots, W / 2, 168, 1, 0, clamp((lt - 0.4) * 3) * (1 - out));
+        const out = E.inC(seg(lt, DUR - (SHORT ? 0.35 : 0.55), DUR));
+        put(chip, W / 2, 95 - (1 - E.outBack(seg(lt, 0.2 * kk, 0.2 * kk + 0.5))) * 160, 1, 0, 1 - out);
+        put(dots, W / 2, 168, 1, 0, clamp((lt - 0.4 * kk) * 3) * (1 - out));
         let k = 0;
         const zoom = 1 + out * 0.5;
-        if (pre) { put(pre, W / 2, ys[k++], pop(lt, 0.45) * zoom, 0, clamp((lt - 0.45) * 4) * (1 - out)); }
+        if (pre) { put(pre, W / 2, ys[k++], pop(lt, 0.45 * kk) * zoom, 0, clamp((lt - 0.45 * kk) * 4) * (1 - out)); }
         const glitch = th.motif === "forget" ? (Math.floor(lt * 12) % 5 === 0 ? (hash(Math.floor(lt * 12)) - 0.5) * 30 : 0) : 0;
         const wob = th.motif === "weird" ? ` skewX(${(Math.sin(lt * 3) * 6).toFixed(2)}deg)` : "";
         put(main, W / 2 + glitch, ys[k++], zoom, th.motif === "funny" || th.motif === "lol" ? Math.sin(lt * 5) * 2 : 0, 1 - out, wob);
-        mw.forEach((w, i) => { const a = 0.65 + i * 0.16; css(w, { transform: `scale(${(lt < a ? 0 : E.outBack(seg(lt, a, a + 0.5), 2.4)).toFixed(3)})`, opacity: lt < a ? "0" : "1" }); });
+        mw.forEach((w, i) => { const a = (0.65 + i * 0.16) * kk; css(w, { transform: `scale(${(lt < a ? 0 : E.outBack(seg(lt, a, a + 0.5), 2.4)).toFixed(3)})`, opacity: lt < a ? "0" : "1" }); });
         if (th.motif === "forget") css(main, { textShadow: lt % 0.4 < 0.08 ? "8px 0 #ff2a6d, -8px 0 #05d9e8" : "none" });
-        if (post) put(post, W / 2, ys[k++], pop(lt, 1.15) * zoom, 0, clamp((lt - 1.15) * 4) * (1 - out));
+        if (post) put(post, W / 2, ys[k++], pop(lt, 1.15 * kk) * zoom, 0, clamp((lt - 1.15 * kk) * 4) * (1 - out));
         const last = post || main;
-        put(q, W / 2 - (last.offsetWidth / 2) * zoom - 70, ys[n - 1] - 6, pop(lt, 1.6, 0.6) * zoom, -12 + Math.sin(lt * 4) * 6, 1 - out);
+        put(q, W / 2 - (last.offsetWidth / 2) * zoom - 70, ys[n - 1] - 6, pop(lt, 1.6 * kk, 0.6) * zoom, -12 + Math.sin(lt * 4) * 6, 1 - out);
       },
     };
   });
 }
 
 function countdownScene(cat, idx, th) {
-  const DUR = 3.5;
+  const st = SHORT ? 0.5 : 1, a0 = SHORT ? 0 : 0.5; // seconds per number, first number
+  const DUR = a0 + 3 * st;
   scene("count-" + cat.id, DUR, (root, t0) => {
     mark("tension", t0);
     const ring = P("div", "", root);
@@ -652,8 +658,8 @@ function countdownScene(cat, idx, th) {
     const shock = [0, 1, 2].map(() => { const e = P("div", "", root); Object.assign(e.style, { width: "400px", height: "400px", borderRadius: "50%", border: `10px solid ${th.color}` }); return e; });
     const label = P("div", "", root, THEMES[cat.id].main);
     Object.assign(label.style, { fontSize: "44px", fontWeight: 800, color: "rgba(255,255,255,.8)", whiteSpace: "nowrap", letterSpacing: ".05em" });
-    [0.5, 1.5, 2.5].forEach((a, i) => { cue("tock", t0 + a, 0.9 + i * 0.15); });
-    cue("s_riser", t0 + 0.55, 0.75);
+    [0, 1, 2].forEach((i) => { cue("tock", t0 + a0 + i * st, 0.9 + i * 0.15); });
+    if (SHORT) cue("rise15", t0, 0.7); else cue("s_riser", t0 + 0.55, 0.75);
     transition(t0 + DUR, "flash");
     return {
       update(lt) {
@@ -661,20 +667,20 @@ function countdownScene(cat, idx, th) {
         ENV.bokeh = 0.3; ENV.vignette = 0.95;
         ENV.zoom = 1 + lt * 0.012;
         put(lines, W / 2, 540, 1, lt * 25, clamp(lt * 3) * 0.9);
-        const k = Math.floor(clamp((lt - 0.5) / 1, 0, 2.999));
-        const frac = clamp((lt - 0.5) - k);
-        css(arc, { strokeDashoffset: (lt < 0.5 ? 2136.3 * (1 - E.outC(seg(lt, 0, 0.5))) : 2136.3 * frac).toFixed(1) });
-        put(ring, W / 2, 540, 1 + (lt > 0.5 ? 0.04 * (1 - E.outC(clamp(frac * 4))) : 0), 0, 1);
+        const k = Math.floor(clamp((lt - a0) / st, 0, 2.999));
+        const frac = clamp((lt - a0) / st - k);
+        css(arc, { strokeDashoffset: (lt < a0 ? 2136.3 * (1 - E.outC(seg(lt, 0, a0))) : 2136.3 * frac).toFixed(1) });
+        put(ring, W / 2, 540, 1 + (lt >= a0 ? 0.04 * (1 - E.outC(clamp(frac * 4))) : 0), 0, 1);
         nums.forEach((nEl, i) => {
-          const a = 0.5 + i, p = seg(lt, a, a + 0.32);
-          const on = lt >= a && lt < a + 1;
-          const exit = seg(lt, a + 0.8, a + 1);
+          const a = a0 + i * st, p = seg(lt, a, a + 0.32 * st);
+          const on = lt >= a && lt < a + st;
+          const exit = seg(lt, a + 0.8 * st, a + st);
           put(nEl, W / 2, 520, on ? lerp(2.4, 1, E.outExpo(p)) * (1 + exit * 0.4) : 0, on ? (1 - E.outC(p)) * -14 : 0, on ? 1 - exit : 0);
           shine(nEl, lt * 2, 1);
-          const sp = seg(lt, a, a + 0.6);
+          const sp = seg(lt, a, a + 0.6 * st);
           put(shock[i], W / 2, 540, 0.8 + sp * 3, 0, lt >= a && sp < 1 ? (1 - sp) * 0.8 : 0);
         });
-        if (lt > 0.5) ENV.shake = 0.25 * (1 - clamp(frac * 3)) * (k + 1) / 2;
+        if (lt >= a0) ENV.shake = 0.25 * (1 - clamp(frac * 3)) * (k + 1) / 2;
         put(label, W / 2, 1000, 1, 0, clamp(lt * 4) * 0.9);
       },
     };
@@ -765,7 +771,7 @@ function levelPart(root, t0, ph, th, cat) {
   };
 }
 
-function drumPart(root, t0, ph, th, cat, goesVoice) {
+function drumPart(root, t0, ph, th, cat, goesVoice, short) {
   const L = layer(root);
   mark("stop", t0 + ph.a);
   const cone = P("div", "", L);
@@ -780,8 +786,11 @@ function drumPart(root, t0, ph, th, cat, goesVoice) {
   Object.assign(cap.style, { fontSize: "58px", fontWeight: 800, color: "#fff", whiteSpace: "nowrap", textShadow: "0 4px 20px #000" });
   fitLine(cap, 1600, 58, 30);
   const dur = ph.b - ph.a;
-  cue(goesVoice, t0 + ph.a + 0.15, 1.3);
-  cue("s_drumroll", t0 + ph.a + Math.max(0, dur - 2.05), 0.95);
+  if (short) cue("roll1", t0 + ph.a, 0.9);
+  else {
+    cue(goesVoice, t0 + ph.a + 0.15, 1.3);
+    cue("s_drumroll", t0 + ph.a + Math.max(0, dur - 2.05), 0.95);
+  }
   return (lt0) => {
     const lt = lt0 - ph.a;
     if (lt < 0 || lt > dur) { css(L, { display: "none" }); return; }
@@ -1323,8 +1332,388 @@ function outroScene() {
   });
 }
 
+// ================================================================ the ~3 minute cut (?short)
+// Same look, tighter story: per category a short title, a one-beat-per-number countdown, and one
+// podium screen where third and second pop up, a one-second drum roll, and the winner lands.
+
+// a pill with a mini face (or two for couples) and the name, for tied places
+function nameChip(parent, label, metal) {
+  const c = P("div", "", parent);
+  Object.assign(c.style, { display: "flex", alignItems: "center", gap: "10px", padding: "6px 22px 6px 8px", borderRadius: "999px", background: "rgba(0,0,0,.55)", boxShadow: "inset 0 0 0 2px rgba(255,220,140,.45)", whiteSpace: "nowrap" });
+  const who = splitCouple(label) || [personOf(label) || (label === "אמא של אופק" ? "אופק" : label)];
+  who.forEach((nm) => {
+    const f = faceRing(c, nm, 50, metal);
+    f.classList.remove("p");
+    Object.assign(f.style, { position: "relative", padding: "3px", flex: "none" });
+  });
+  const t = el("div", "", c, label);
+  Object.assign(t.style, { fontSize: "32px", fontWeight: 800, color: "#fff" });
+  return c;
+}
+
+function podiumScene(cat, idx, th) {
+  const DUR = 6.5;
+  const T3 = 0.5, T2 = 1.1, TD = 1.7, TW = 2.7; // third, second, drum roll, winner
+  scene("podium-" + cat.id, DUR, (root, t0) => {
+    mark("level", t0); mark("stop", t0 + TD); mark("win", t0 + TW);
+    const lv = cat.podium;
+    const FLOOR = 1050;
+    const PED = [{ x: 960, h: 300, w: 400, face: 290 }, { x: 1450, h: 205, w: 380, face: 210 }, { x: 470, h: 145, w: 380, face: 185 }];
+    const winner = lv[0];
+    const quotes = cat.results.filter((r) => winner.names.includes(r.label)).flatMap((r) => r.quotes);
+    const top = P("div", "eyebrow", root, "האוסקר ל");
+    top.style.fontSize = "32px";
+    const catName = P("div", "", root, cat.title);
+    Object.assign(catName.style, { fontSize: "54px", fontWeight: 900, whiteSpace: "nowrap", color: th.color, textShadow: "0 3px 14px #000" });
+    const st1 = statue(root, 420), st2 = statue(root, 420);
+    const disc = P("div", "ring", root);
+    disc.style.width = disc.style.height = "260px";
+    const din = el("div", "face", disc);
+    Object.assign(din.style, { position: "relative", width: "100%", height: "100%", display: "grid", placeItems: "center", background: "radial-gradient(circle at 40% 35%, #3a2a12, #120b04)" });
+    const qm = el("div", "gold display", din, "?");
+    qm.style.fontSize = "170px";
+    const cone = P("div", "", root);
+    Object.assign(cone.style, { width: "700px", height: "1100px", background: "linear-gradient(180deg, rgba(255,240,200,.5), rgba(255,240,200,.04))", clipPath: "polygon(44% 0, 56% 0, 100% 100%, 0 100%)", filter: "blur(6px)" });
+    const peds = PED.map((p, r) => {
+      const L = lv[r];
+      if (!L) return null;
+      const box = P("div", "", root);
+      Object.assign(box.style, { width: p.w + "px", height: p.h + "px", borderRadius: "10px 10px 0 0", background: METAL_GRAD[r].replace("180deg", "90deg"), boxShadow: "inset 0 10px 0 rgba(255,255,255,.35), inset 0 -30px 60px rgba(0,0,0,.35), 0 30px 60px rgba(0,0,0,.6)" });
+      const num = el("div", "", box, String(r + 1));
+      Object.assign(num.style, { position: "absolute", left: 0, right: 0, bottom: "-6px", textAlign: "center", fontFamily: '"Suez One"', fontSize: (r === 0 ? 150 : r === 1 ? 110 : 80) + "px", lineHeight: 1, color: "rgba(0,0,0,.16)" });
+      const multi = L.names.length > 1;
+      const nm = el("div", "", box, multi ? "שוויון!" : L.names[0]);
+      Object.assign(nm.style, { position: "absolute", left: "50%", transform: "translateX(-50%)", top: r === 2 ? "8px" : "16px", fontFamily: '"Suez One"', lineHeight: 1.1, color: "#1b1206", textShadow: "0 2px 0 rgba(255,255,255,.4)", whiteSpace: "nowrap" });
+      fitLine(nm, p.w - 36, r === 0 ? 76 : r === 1 ? 60 : 50, 24);
+      const vt = el("div", "", box, votesText(L.votes) + (multi ? " לכל אחד" : ""));
+      Object.assign(vt.style, { position: "absolute", left: 0, right: 0, top: (r === 0 ? 112 : r === 1 ? 92 : 70) + "px", textAlign: "center", fontWeight: 800, fontSize: (r === 2 ? 26 : 32) + "px", color: "rgba(27,18,6,.8)" });
+      const items = multi
+        ? L.names.map((n) => nameChip(root, n, METAL[r]))
+        : [entryVisual(root, L.names[0], splitCouple(L.names[0]) ? p.face * 0.82 : p.face, METAL[r])];
+      const tAt = [TW, T2, T3][r];
+      items.forEach((_, i) => cue("pop", t0 + tAt + i * 0.08, r === 0 ? 0 : 0.8));
+      if (r > 0) cue("s_applause", t0 + tAt + 0.1, r === 1 ? 0.45 : 0.35);
+      return { box, items, multi, p, r, tAt };
+    });
+    const bubble = quotes.length ? P("div", "bubble", root, `״${quotes[0]}״`) : null;
+    if (bubble) bubble.style.fontSize = "42px";
+    const t = t0 + TW;
+    cue("s_boom", t, 1); cue("crash", t, 0.8); cue("s_fanfare", t + 0.05, 0.85); cue("s_cheer", t + 0.1, 0.9);
+    if (bubble) cue("pop", t + 0.8, 0.7);
+    burst(t + 0.02, { kind: "confetti", x: 0, y: H, angle: -1.0, spread: 0.8, n: 160, speed: 2200 });
+    burst(t + 0.02, { kind: "confetti", x: W, y: H, angle: -2.14, spread: 0.8, n: 160, speed: 2200 });
+    burst(t + 0.05, { kind: "spark", x: W / 2, y: 560, n: 80, speed: 1300, gravity: 800, life: 2 });
+    cue("s_whoosh", t0, 0.45);
+    transition(t0 + DUR, "wipe", [th.color, "#0d0905", "#f2c14e"]);
+    return {
+      update(lt) {
+        setThemeEnv(th, 0.8);
+        ENV.bokeh = 0.5; ENV.beams = 0.3; ENV.glowY = 0.53;
+        const drum = lt >= TD && lt < TW, won = lt >= TW;
+        if (drum) { ENV.glow = 0.2; ENV.vignette = 1; ENV.bokeh = 0.15; ENV.zoom = 1 + (lt - TD) * 0.02; }
+        if (won) { const w = lt - TW; ENV.rays = clamp(w * 3); ENV.raysColor = GOLD_RGB; ENV.glow = 1; ENV.shake = w < 0.45 ? 1 - w / 0.45 : 0; if (w < 0.3) ENV.flash = 0.6 * (1 - w / 0.3); }
+        const out = E.inC(seg(lt, DUR - 0.35, DUR));
+        put(top, W / 2, 62, 1, 0, clamp(lt * 4) * (1 - out));
+        put(catName, W / 2, 118, pop(lt, 0.05), 0, clamp(lt * 4) * (1 - out));
+        put(cone, W / 2, 520, 1, 0, drum ? clamp((lt - TD) * 4) * (0.85 + 0.15 * Math.sin(lt * 30)) : 0);
+        put(disc, W / 2, FLOOR - 300 - 22 - 145, (drum ? pop(lt, TD, 0.35) : 0) * (1 + 0.05 * Math.abs(Math.sin(lt * 18))), 0, drum ? 1 : 0);
+        shine(qm, lt * 2, 1.3);
+        const order = [2, 1, 0];
+        peds.forEach((pd) => {
+          if (!pd) return;
+          const { p, r } = pd;
+          const o = order[r];
+          const rise = E.outBack(seg(lt, 0.05 + o * 0.12, 0.55 + o * 0.12), 1.2);
+          const topY = FLOOR - p.h;
+          put(pd.box, p.x, FLOOR - p.h / 2 + (1 - rise) * (p.h + 120) + out * 400, 1, 0, 1);
+          pd.items.forEach((it, i) => {
+            const a = pd.tAt + i * 0.08;
+            const s = lt < a ? 0 : r === 0 ? lerp(0.2, 1, E.outBack(seg(lt, a, a + 0.5), 1.8)) : pop(lt, a, 0.45);
+            const y = pd.multi ? topY - 52 - i * 70 : topY - 22 - p.face / 2;
+            put(it, p.x, y + Math.sin(lt * 2 + i + r) * 5 + out * 400, s, 0, clamp(s * 3) * (1 - out));
+          });
+        });
+        const su = E.outBack(seg(lt, TW, TW + 0.7), 1.3), bob = Math.sin(lt * 1.6) * 8;
+        put(st1, 130, lerp(1500, 830, su) + bob, 1, -4, won ? 1 - out : 0);
+        put(st2, W - 130, lerp(1500, 830, su) - bob, 1, 4, won ? 1 - out : 0);
+        if (bubble) put(bubble, W / 2 - 430, 330, pop(lt, TW + 0.8), 3, clamp((lt - TW - 0.8) * 5) * (1 - out));
+      },
+    };
+  });
+}
+
+function textShortScene(cat, idx, th) {
+  const win = cat.groups[0];
+  const wd = qb(5.2 + win.quotes.join("").length * 0.035);
+  const T = [{ kind: "drum", a: 0, b: 1.0 }, { kind: "twin", g: win, a: 1.0, b: 1.0 + wd }];
+  scene("text-" + cat.id, 1.0 + wd, (root, t0, dur) => {
+    const parts = [drumPart(root, t0, T[0], th, cat, null, true), groupCard(root, t0, T[1], th, cat, true)];
+    transition(t0 + dur, "wipe", [th.color, "#0d0905", "#f2c14e"]);
+    return { update(lt) { setThemeEnv(th, 0.8); ENV.bokeh = 0.45; for (const p of parts) p(lt); } };
+  });
+}
+
+function introShort() {
+  const DUR = 13.5;
+  scene("intro", DUR, (root, t0) => {
+    const M = DATA.meta;
+    mark("intro", t0);
+    mark("drop", t0 + 6.5);
+    const curL = P("div", "curtain l", root), curR = P("div", "curtain r", root), val = P("div", "valance", root);
+    const ladies = P("div", "", root, "גבירותיי ורבותיי");
+    Object.assign(ladies.style, { fontFamily: '"Frank Ruhl Libre"', fontWeight: 900, fontSize: "96px", color: "#fff3d0", textShadow: "0 6px 20px rgba(0,0,0,.8)", whiteSpace: "nowrap" });
+    const l1 = P("div", "gold display", root, "ברוכים הבאים"); l1.style.whiteSpace = "nowrap";
+    fitLine(l1, 1500, 170);
+    const l2 = P("div", "gold-spans display", root);
+    const base = chars(l2, "לאוסקרים");
+    const extra = [0, 1, 2].map(() => el("span", "w", l2, "ם"));
+    fitLine(l2, 1250, 250, 120);
+    const l3 = P("div", "gold-spans display", root);
+    const w3 = words(l3, M.group);
+    l3.style.fontSize = "190px";
+    const st1 = statue(root, 560), st2 = statue(root, 560);
+    const r = rng(42);
+    const pols = M.blitz.slice(0, 4).map((f, i) => {
+      const land = LANDSCAPE.has(f);
+      const p = P("div", "polaroid", root);
+      p.style.width = (land ? 640 : 440) + "px";
+      p.style.height = (land ? 540 : 640) + "px";
+      img("private/photos/" + f, "", p);
+      return { p, x: 420 + i * 360 + (r() - 0.5) * 120, y: 380 + r() * 300, rot: (r() - 0.5) * 22, t: 9 + i * 0.5 };
+    });
+    const by = P("div", "eyebrow", root, "נערך על ידי");
+    by.style.fontSize = "40px";
+    const ed = P("div", "gold display", root, M.editor);
+    ed.style.fontSize = "170px"; ed.style.whiteSpace = "nowrap";
+    const king = P("div", "display", root, M.editorTitle);
+    Object.assign(king.style, { fontSize: "150px", color: "#fff", textShadow: "0 0 40px rgba(255,200,80,.9), 0 6px 0 #6b470f", whiteSpace: "nowrap" });
+    const tf = faceRing(root, M.editorFace, 260);
+    const crown = icon("crown", 190, root);
+    const V = 0.5; // the announcer starts here; his phrases drive the cuts
+    cue("s_boom", t0 + V - 0.05, 0.35);
+    cue("v_intro", t0 + V, 1.3);
+    cue("s_boom", t0 + V + 2.39, 0.9);
+    cue("s_whoosh", t0 + V + 3.3, 0.6);
+    extra.forEach((_, i) => cue("pop", t0 + V + 4.35 + i * 0.2, 0.9));
+    cue("s_boom", t0 + V + 6.15, 1);
+    cue("shimmer", t0 + V + 6.3, 0.8);
+    burst(t0 + V + 6.15, { kind: "spark", x: W / 2, y: 780, n: 90, speed: 1500, gravity: 900, life: 2.2, size: 1.2 });
+    burst(t0 + V + 6.2, { kind: "confetti", x: 0, y: H, angle: -1.0, spread: 0.9, n: 160, speed: 2100 });
+    burst(t0 + V + 6.2, { kind: "confetti", x: W, y: H, angle: -2.14, spread: 0.9, n: 160, speed: 2100 });
+    pols.forEach((p, i) => { cue("shutter", t0 + p.t, 0.9); if (i % 2 === 0) cue("s_flash", t0 + p.t - 0.02, 0.35); });
+    cue("s_whoosh", t0 + 10.9, 0.7);
+    cue("hit", t0 + 11.3, 0.8);
+    cue("s_boom", t0 + 11.9, 0.8);
+    cue("s_boing", t0 + 12.2, 0.9);
+    cue("shimmer", t0 + 12.25, 0.9);
+    burst(t0 + 12.2, { kind: "spark", x: W / 2, y: 300, n: 60, speed: 1100, gravity: 700, life: 1.8 });
+    transition(t0 + DUR, "wipe", ["#f2c14e", "#1b1206", "#fff3c4"]);
+    const A = V + 2.39, OPEN = V + 3.3, L2 = V + 3.81, G1 = V + 5.05, G2 = V + 6.15;
+    return {
+      update(lt) {
+        ENV.tint = "#160f06"; ENV.tint2 = "#020101"; ENV.glow = lt < V ? 0.1 : 0.8;
+        ENV.bokeh = 0.6; ENV.beams = lt < V ? 0 : lt < 9 ? 0.85 : 0.55;
+        if (lt >= V && lt < V + 0.35) ENV.flash = 1 - seg(lt, V, V + 0.35);
+        if (lt >= G2 && lt < G2 + 0.3) ENV.flash = 0.7 * (1 - seg(lt, G2, G2 + 0.3));
+        ENV.shake = (lt > V && lt < V + 0.5 ? 1 - seg(lt, V, V + 0.5) : 0) + (lt > A && lt < A + 0.5 ? 1 - seg(lt, A, A + 0.5) : 0) + (lt > G2 && lt < G2 + 0.55 ? 1.2 * (1 - seg(lt, G2, G2 + 0.55)) : 0);
+        const op = E.ioC(seg(lt, OPEN, OPEN + 1.2));
+        const cv = lt >= V && lt < OPEN + 1.4 ? 1 : 0;
+        put(curL, W * 0.26 - op * 1050, H / 2, 1, 0, cv);
+        put(curR, W * 0.74 + op * 1050, H / 2, 1, 0, cv);
+        put(val, W / 2, 60 - op * 160, 1, 0, cv);
+        put(ladies, W / 2, 540, 0.9 + 0.1 * E.outC(seg(lt, V, V + 0.6)), 0, env(lt, V + 0.05, A - 0.1, 0.3, 0.25));
+        const s1 = lt < A ? 0 : lerp(2.6, 1, E.outExpo(seg(lt, A, A + 0.24)));
+        const y1 = lerp(540, 250, E.ioC(seg(lt, OPEN, OPEN + 1)));
+        const out = E.inC(seg(lt, 8.5, 9.0));
+        put(l1, W / 2, y1 - out * 60, s1 * (1 - out * 0.2), 0, lt < A ? 0 : (1 - out) * clamp((lt - A) * 6));
+        shine(l1, lt, 2.6);
+        put(l2, W / 2, 500 - out * 40, 1 - out * 0.2, 0, lt < L2 ? 0 : 1 - out);
+        base.forEach((c, i) => { const a = L2 + i * 0.04; css(c, { transform: `translateY(${((1 - E.outBack(seg(lt, a, a + 0.32))) * -220).toFixed(1)}px)`, opacity: clamp((lt - a) * 8).toFixed(2) }); });
+        extra.forEach((c, i) => { const a = V + 4.35 + i * 0.2, p = seg(lt, a, a + 0.32); css(c, { transform: `scale(${(lt < a ? 0 : E.outElastic(p)).toFixed(3)}, ${(lt < a ? 0 : 1 + 0.4 * (1 - E.outC(p))).toFixed(3)})`, opacity: lt < a ? "0" : "1" }); });
+        [...base, ...extra].forEach((c, i) => shine(c, lt, 2.6, 0.5 + i * 0.05));
+        w3.forEach((w, i) => { const a = i ? G2 : G1; css(w, { transform: `scale(${(lt < a ? 0 : lerp(2.2, 1, E.outExpo(seg(lt, a, a + 0.28)))).toFixed(3)})`, opacity: lt < a ? "0" : "1" }); });
+        put(l3, W / 2, 760 - out * 20, 1 - out * 0.2, 0, lt < G1 ? 0 : 1 - out);
+        w3.forEach((c, i) => shine(c, lt, 2.6, 1.0 + i * 0.2));
+        const su = E.outBack(seg(lt, G2, G2 + 0.75), 1.4), sb = Math.sin(lt * 1.6) * 8;
+        put(st1, 165, lerp(1500, 620, su) + sb, 1, -4, lt < G2 ? 0 : 1 - out);
+        put(st2, W - 165, lerp(1500, 620, su) - sb, 1, 4, lt < G2 ? 0 : 1 - out);
+        pols.forEach((p, i) => {
+          const a = lt - p.t, outP = E.inBack(seg(lt, 10.8, 11.2));
+          const sIn = a < 0 ? 0 : lerp(1.8, 1, E.outExpo(seg(a, 0, 0.25)));
+          put(p.p, p.x + outP * (i % 2 ? 1 : -1) * 2400, p.y, sIn, p.rot + (1 - E.outC(seg(a, 0, 0.3))) * 20, a < 0 ? 0 : 1 - seg(lt, 11, 11.2));
+          if (a >= 0 && a < 0.1) ENV.flash = Math.max(ENV.flash, 0.38 * (1 - a / 0.1));
+        });
+        const cOut = E.inC(seg(lt, DUR - 0.45, DUR));
+        put(tf, W / 2, 300, pop(lt, 11.1, 0.5) * (1 - cOut), 0, lt < 11.1 ? 0 : 1 - cOut);
+        put(by, W / 2, 520, 1, 0, env(lt, 11.0, DUR, 0.35, 0.45));
+        put(ed, W / 2, 650, lt < 11.3 ? 0 : lerp(1.6, 1, E.outExpo(seg(lt, 11.3, 11.6))) * (1 - cOut * 0.3), 0, lt < 11.3 ? 0 : 1 - cOut);
+        shine(ed, lt, 2.2);
+        put(king, W / 2, 840, lt < 11.9 ? 0 : lerp(3, 1, E.outExpo(seg(lt, 11.9, 12.15))), Math.sin(lt * 3) * 2, lt < 11.9 ? 0 : 1 - cOut);
+        if (lt > 11.9 && lt < 12.3) ENV.shake = 1 - seg(lt, 11.9, 12.3);
+        put(crown, W / 2 + 6, lerp(-200, 158, E.outBounce(seg(lt, 12.2, 12.9))), 1, -8 + Math.sin(lt * 3) * 4, lt < 12.2 ? 0 : 1 - cOut);
+      },
+    };
+  });
+}
+
+function specialShort() {
+  const people = DATA.mentions.filter((m) => FACES.has(m.name));
+  const DUR = 9.5;
+  scene("special", DUR, (root, t0) => {
+    mark("special", t0);
+    cue("v_special_short", t0 + 0.3, 1.25);
+    const sp = P("div", "eyebrow", root, "פרס מיוחד");
+    sp.style.fontSize = "52px";
+    const big = P("div", "gold display", root, "פרס מפעל חיים");
+    big.style.fontSize = "190px"; big.style.whiteSpace = "nowrap";
+    const q = P("div", "", root, "מי הוזכר הכי הרבה בטופס?");
+    Object.assign(q.style, { fontSize: "60px", fontWeight: 800, whiteSpace: "nowrap" });
+    cue("s_boom", t0 + 0.3, 0.55);
+    cue("shimmer", t0 + 2.0, 0.7);
+    burst(t0 + 0.3, { kind: "spark", x: W / 2, y: 520, n: 80, speed: 1400, gravity: 900, life: 2 });
+    const race = layer(root);
+    const max = people[0].count, rowH = 62;
+    const rows = people.map((m, i) => {
+      const row = P("div", "", race);
+      Object.assign(row.style, { width: "1640px", height: rowH + "px" });
+      const f = faceRing(row, m.name, 54, "");
+      Object.assign(f.style, { position: "absolute", right: "4px", top: "4px", left: "auto", padding: "3px" });
+      f.classList.remove("p");
+      const lab = el("div", "bar-label", row, m.name);
+      Object.assign(lab.style, { right: "78px", top: "50%", transform: "translateY(-50%)", fontSize: "38px" });
+      const fill = el("div", "bar-fill", row);
+      Object.assign(fill.style, { right: "250px", top: "12px", bottom: "12px", background: i === 0 ? METAL_GRAD[0].replace("180deg", "90deg") : "linear-gradient(90deg, rgba(255,205,110,.45), rgba(255,205,110,.85))" });
+      const num = el("div", "bar-num", row, "0");
+      Object.assign(num.style, { top: "50%", fontSize: "42px" });
+      return { row, fill, num, m, d: i * 0.06 };
+    });
+    for (let k = 0; k < 12; k++) cue("tick", t0 + 2.6 + k * 0.15, 0.25);
+    const Lw = people[0];
+    const wr = faceRing(root, Lw.name, 380, "");
+    const crown = icon("crown", 190, root);
+    const wn = P("div", "gold display", root, Lw.name);
+    wn.style.fontSize = "170px";
+    const catsWith = DATA.categories.filter((c) => JSON.stringify(c).includes(Lw.name)).length;
+    const wl = P("div", "pill", root, `${Lw.count} אזכורים · ב־${catsWith} קטגוריות שונות`);
+    wl.style.fontSize = "46px";
+    const wt = 5.5;
+    mark("win", t0 + wt);
+    cue("s_boom", t0 + wt, 1); cue("crash", t0 + wt, 0.8); cue("s_fanfare", t0 + wt + 0.05, 0.85); cue("s_cheer", t0 + wt + 0.1, 1);
+    cue("s_boing", t0 + wt + 0.9, 0.7);
+    burst(t0 + wt + 0.02, { kind: "confetti", x: 0, y: H, angle: -1.0, spread: 0.8, n: 170, speed: 2200 });
+    burst(t0 + wt + 0.02, { kind: "confetti", x: W, y: H, angle: -2.14, spread: 0.8, n: 170, speed: 2200 });
+    transition(t0 + DUR, "wipe");
+    return {
+      update(lt) {
+        ENV.tint = "#1a1206"; ENV.tint2 = "#020101"; ENV.glow = 0.8; ENV.bokeh = 0.6; ENV.beams = lt < 2.4 ? 0.7 : 0.3;
+        if (lt > 0.3 && lt < 0.8) ENV.shake = 1 - seg(lt, 0.3, 0.8);
+        const o1 = E.inC(seg(lt, 2.1, 2.5));
+        put(sp, W / 2, 330, pop(lt, 0.05), 0, clamp(lt * 4) * (1 - o1));
+        put(big, W / 2, 500, lt < 0.3 ? 0 : lerp(2, 1, E.outExpo(seg(lt, 0.3, 0.6))) * (1 - o1 * 0.3), 0, lt < 0.3 ? 0 : 1 - o1);
+        shine(big, lt, 2.2);
+        put(q, W / 2, 690, pop(lt, 1.0), 0, clamp((lt - 1.0) * 4) * (1 - o1));
+        const rOn = env(lt, 2.4, 5.45, 0.3, 0.3);
+        css(race, { display: rOn > 0 ? "block" : "none" });
+        if (rOn > 0) rows.forEach((row, i) => {
+          const v = row.m.count * E.outC(seg(lt, 2.6 + row.d, 4.4 + row.d)), w = (v / max) * 1180;
+          put(row.row, W / 2, 140 + i * rowH + rowH / 2, 1, 0, rOn * clamp((lt - 2.4 - i * 0.03) * 5));
+          css(row.fill, { width: Math.max(6, w).toFixed(1) + "px" });
+          css(row.num, { right: (250 + Math.max(6, w) + 16).toFixed(1) + "px", transform: "translateY(-50%)" });
+          row.num.textContent = String(Math.round(v));
+        });
+        const w0 = lt - wt;
+        if (w0 > 0) { ENV.rays = clamp(w0 * 3); ENV.raysColor = GOLD_RGB; ENV.glow = 1; ENV.shake = w0 < 0.5 ? 1 - w0 / 0.5 : 0; if (w0 < 0.3) ENV.flash = 0.6 * (1 - w0 / 0.3); }
+        const o2 = E.inC(seg(lt, DUR - 0.4, DUR));
+        put(wr, W / 2, 410, w0 < 0 ? 0 : E.outBack(seg(w0, 0, 0.6), 1.8) * (1 - o2 * 0.3), 0, w0 < 0 ? 0 : 1 - o2);
+        put(crown, W / 2, lerp(-200, 195, E.outBounce(seg(w0, 0.9, 1.6))), 1, -8, w0 < 0.9 ? 0 : 1 - o2);
+        put(wn, W / 2, 740, w0 < 0.2 ? 0 : lerp(1.7, 1, E.outExpo(seg(w0, 0.2, 0.55))), 0, w0 < 0.2 ? 0 : 1 - o2);
+        shine(wn, lt, 2.2);
+        put(wl, W / 2, 890, pop(w0, 0.6), 0, clamp((w0 - 0.6) * 4) * (1 - o2));
+      },
+    };
+  });
+}
+
+function outroShort() {
+  const DUR = 10;
+  scene("outro", DUR, (root, t0) => {
+    const M = DATA.meta;
+    mark("outro", t0);
+    cue("v_outro", t0 + 0.3, 1.3);
+    const bgp = img("private/photos/" + M.outroPhoto, "photo-full", root);
+    bgp.style.filter = "blur(26px) brightness(.45) saturate(1.2)";
+    const pol = P("div", "polaroid", root);
+    pol.style.width = "600px"; pol.style.height = "820px";
+    const pim = img("private/photos/" + M.outroPhoto, "", pol);
+    const thanks = P("div", "", root, "תודה שהייתם");
+    Object.assign(thanks.style, { fontSize: "80px", fontWeight: 800, whiteSpace: "nowrap", textShadow: "0 4px 18px #000" });
+    const pg = P("div", "gold display", root, M.group);
+    pg.style.fontSize = "190px"; pg.style.whiteSpace = "nowrap";
+    const stamp = P("div", "", root, M.slogan);
+    Object.assign(stamp.style, { fontFamily: '"Suez One"', fontSize: "120px", color: "#fff", padding: "10px 60px", borderRadius: "30px", background: "linear-gradient(135deg,#c1121f,#7a0a13)", boxShadow: "0 0 0 8px #f2c14e, 0 30px 60px rgba(0,0,0,.6)", whiteSpace: "nowrap" });
+    const SL = 0.3 + 2.92; // the slogan, on the announcer's word
+    cue("s_fireworks", t0 + SL - 0.2, 0.8);
+    cue("s_boom", t0 + SL, 0.9);
+    cue("s_cheer", t0 + SL + 0.05, 0.7);
+    [0, 0.7, 1.4, 2.1].forEach((a, i) => burst(t0 + SL + a, { kind: "firework", x: 300 + hash(i + 3) * 1320, y: 200 + hash(i + 7) * 260, n: 110, speed: 900, gravity: 220, life: 2.2, colors: [["#ffd166", "#fff3c4"], ["#ef476f", "#ffb3c6"], ["#06d6a0", "#b8ffe9"], ["#4cc9f0", "#dff7ff"]][i % 4] }));
+    const by = P("div", "eyebrow", root, "נערך על ידי");
+    by.style.fontSize = "40px";
+    const ed = P("div", "gold display", root, M.editor);
+    ed.style.fontSize = "170px"; ed.style.whiteSpace = "nowrap";
+    const king = P("div", "display", root, M.editorTitle);
+    Object.assign(king.style, { fontSize: "140px", color: "#fff", textShadow: "0 0 40px rgba(255,200,80,.9), 0 6px 0 #6b470f" });
+    const tf = faceRing(root, M.editorFace, 240);
+    const crown = icon("crown", 170, root);
+    const fin = P("div", "", root, `האוסקרים של ${M.group} · ${M.year}`);
+    Object.assign(fin.style, { fontSize: "40px", fontWeight: 600, letterSpacing: ".12em", color: "#d9c08a", whiteSpace: "nowrap" });
+    const C = 5.6;
+    cue("s_whoosh", t0 + C - 0.2, 0.6);
+    cue("hit", t0 + C + 0.2, 0.8);
+    cue("s_boom", t0 + C + 0.8, 0.8);
+    cue("s_boing", t0 + C + 1.1, 0.8);
+    cue("shimmer", t0 + C + 1.15, 0.9);
+    mark("end", t0 + 8);
+    return {
+      update(lt) {
+        ENV.tint = "#120c06"; ENV.tint2 = "#020101"; ENV.glow = 0.6; ENV.bokeh = 0.6;
+        const a1 = env(lt, 0, C, 0.4, 0.4);
+        put(bgp, W / 2, H / 2, 1.12 - lt * 0.01, 0, a1);
+        put(pol, 520, 545, lerp(1.08, 1, E.outC(seg(lt, 0, 1))), -3, a1);
+        css(pim, { transform: `scale(${(1.1 - lt * 0.01).toFixed(4)})` });
+        put(thanks, 1300, 300, pop(lt, 0.3), 0, clamp((lt - 0.3) * 3) * a1);
+        put(pg, 1300, 480, pop(lt, 0.8), 0, clamp((lt - 0.8) * 3) * a1);
+        shine(pg, lt, 2.4);
+        put(stamp, 1300, 720, lt < SL ? 0 : lerp(3, 1, E.outExpo(seg(lt, SL, SL + 0.28))), -6, lt < SL ? 0 : a1);
+        if (lt > SL && lt < SL + 0.5) ENV.shake = 1 - seg(lt, SL, SL + 0.5);
+        const c1 = env(lt, C, DUR, 0.35, 1.2);
+        put(tf, W / 2, 290, pop(lt, C + 0.05), 0, c1);
+        put(by, W / 2, 500, 1, 0, c1);
+        put(ed, W / 2, 630, lt < C + 0.2 ? 0 : lerp(1.6, 1, E.outExpo(seg(lt, C + 0.2, C + 0.5))), 0, lt < C + 0.2 ? 0 : c1);
+        shine(ed, lt, 2.2);
+        put(king, W / 2, 810, lt < C + 0.8 ? 0 : lerp(3, 1, E.outExpo(seg(lt, C + 0.8, C + 1.05))), 0, lt < C + 0.8 ? 0 : c1);
+        put(crown, W / 2 + 6, lerp(-200, 160, E.outBounce(seg(lt, C + 1.1, C + 1.8))), 1, -8, lt < C + 1.1 ? 0 : c1);
+        put(fin, W / 2, 980, 1, 0, env(lt, C + 1.2, DUR, 0.5, 1.2));
+        ENV.fade = seg(lt, DUR - 1.1, DUR);
+      },
+    };
+  });
+}
+
 // ---------------------------------------------------------------- build
 function buildTimeline() {
+  if (SHORT) {
+    introShort();
+    DATA.categories.forEach((cat, i) => {
+      const th = THEMES[cat.id];
+      transition(CURSOR, "wipe", [th.color, "#0d0905", "#f2c14e"]);
+      titleScene(cat, i, th);
+      countdownScene(cat, i, th);
+      if (cat.kind === "text") textShortScene(cat, i, th); else podiumScene(cat, i, th);
+    });
+    specialShort();
+    outroShort();
+    return;
+  }
   introScene();
   statsScene();
   const goes = ["v_goes1", "v_goes2", "v_goes3"];

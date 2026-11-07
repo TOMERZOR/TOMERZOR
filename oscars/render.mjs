@@ -2,7 +2,7 @@
 // run in parallel, each piping JPEG frames into its own ffmpeg; the parts are then joined.
 // Also writes the sound cue list (sfx.json) and music sections (marks.json) for audio.py.
 // Serve this folder first: python3 -m http.server 8811 --bind 127.0.0.1
-//   node render.mjs [out.mp4] [--workers 4] [--from 0] [--to end] [--fps 30]
+//   node render.mjs [out.mp4] [--workers 4] [--from 0] [--to end] [--fps 30] [--short]
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -14,7 +14,7 @@ const opt = (k, d) => { const i = args.indexOf("--" + k); return i >= 0 ? args[i
 const OUT = args[0] && !args[0].startsWith("--") ? args[0] : "private/out/frames.mp4";
 const FPS = +opt("fps", 30);
 const WORKERS = +opt("workers", 4);
-const URL = process.env.URL || "http://127.0.0.1:8811/index.html?render";
+const URL = (process.env.URL || "http://127.0.0.1:8811/index.html?render") + (args.includes("--short") ? "&short" : "");
 const TMP = path.join(path.dirname(OUT), "parts");
 fs.mkdirSync(TMP, { recursive: true });
 

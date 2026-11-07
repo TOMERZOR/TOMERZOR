@@ -100,7 +100,12 @@ def main():
                     mentions[p] += 1
     cfg_path = Path(SRC).with_name("config.json")  # names, slogan and photo choices stay private
     cfg = json.load(open(cfg_path, encoding="utf-8")) if cfg_path.exists() else {}
-    out = OrderedDict(meta=cfg, voters=len(data), categories=cats,
+    import wave  # announcer line lengths, so title cards can fit their line
+    voice = {}
+    for f in sorted(Path("private/audio/wav").glob("v_*.wav")):
+        with wave.open(str(f)) as w:
+            voice[f.stem] = round(w.getnframes() / w.getframerate(), 3)
+    out = OrderedDict(meta=cfg, voice=voice, voters=len(data), categories=cats,
                       mentions=[{"name": k, "count": v} for k, v in mentions.most_common()], people=PEOPLE)
     json.dump(out, open(OUT, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 

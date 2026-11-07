@@ -13,7 +13,7 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
-await page.goto(process.env.URL || "http://127.0.0.1:8811/index.html?render");
+await page.goto((process.env.URL || "http://127.0.0.1:8811/index.html?render") + (process.argv.includes("--short") ? "&short" : ""));
 await page.waitForFunction(() => window.__ready === true, null, { timeout: 120000 });
 const info = await page.evaluate(() => ({ dur: window.__dur, scenes: window.__scenes, cues: window.__sfx.length }));
 console.log("duration", info.dur.toFixed(1), "s, cues", info.cues);

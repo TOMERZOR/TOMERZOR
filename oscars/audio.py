@@ -330,6 +330,21 @@ def synth(name, i):
             t = tt(1.4)
             add(s, sum(np.sin(2 * np.pi * hz(n) * m * t) * np.exp(-t / (0.7 / m)) / m for m in (1, 2.4)), j * 0.05, 0.12)
         return s
+    if name == "rise15":  # 1.5 s riser for the quick countdown
+        d = 1.5
+        t = tt(d)
+        f = 180 * (1400 / 180) ** (t / d)
+        s = saw(1, d) * 0  # placeholder for shape
+        s = np.sin(2 * np.pi * np.cumsum(f) / SR) * 0.3 + bp(noise(d), 1500, 9000) * 0.5
+        return s * (t / d) ** 2.2 * np.clip((d - t) / 0.02, 0, 1)
+    if name == "roll1":  # one-second snare roll, 16ths speeding up to 32nds, crescendo
+        s = np.zeros(int(1.1 * SR))
+        x, k = 0.0, 0
+        while x < 1.0:
+            add(s, snare(), x, 0.35 + 0.65 * x)
+            x += 0.125 - 0.0625 * min(1, x / 0.6)
+            k += 1
+        return s
     if name == "glitchblip":
         s = np.zeros(int(0.35 * SR))
         for j in range(6):

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Full-bleed square: phones cut their own rounded shape. The five dots stay well
+       inside the central circle that Android's maskable icons keep. -->
+  <rect width="1024" height="1024" fill="#E8541E"/>
+  <g fill="#FFFFFF">
+    <circle cx="336" cy="336" r="76"/>
+    <circle cx="688" cy="336" r="76"/>
+    <circle cx="512" cy="512" r="76"/>
+    <circle cx="336" cy="688" r="76"/>
+    <circle cx="688" cy="688" r="76"/>
+  </g>
+</svg>

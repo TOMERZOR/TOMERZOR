@@ -1,12 +1,19 @@
 {
   "name": "What are the odds?",
   "short_name": "Odds",
-  "description": "מה הסיכוי ש...? כתבו כל שאלה וקבלו את הסיכוי האמיתי.",
+  "description": "מה הסיכוי ש...? כתבו כל שאלה וקבלו את הסיכוי האמיתי, או שחקו מול חבר: גבוה או נמוך?",
   "lang": "he",
   "dir": "rtl",
+  "id": "./",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#F3EFE6",
-  "theme_color": "#F3EFE6",
-  "icons": [{ "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+  "background_color": "#F6F6F4",
+  "theme_color": "#F6F6F4",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
 }

@@ -99,7 +99,14 @@ export function roll(els, p, lang, { duration = 3000, silent = false } = {}) {
   let last = null;
   let lastChange = 0;
   let lastTick = -1e9;
-  const MIN_TICK_GAP = 28; // when values fly by, ticks blur into a whirr instead of a buzz
+  // The sound is a wheel with notches, not one tick per number: the notches pass
+  // quickly at first and further and further apart, so you hear it slow down even
+  // when a big number is still changing every frame. Then the last few visible
+  // steps (each 0.1, each whole number) tick on their own.
+  const NOTCHES = 46;
+  const wheel = (t) => 1 - (1 - t) ** 1.6;
+  let notch = 0;
+  const MIN_TICK_GAP = 34;
 
   return new Promise((resolve) => {
     const finish = () => {
@@ -134,10 +141,16 @@ export function roll(els, p, lang, { duration = 3000, silent = false } = {}) {
             { duration: Math.min(160, gap * 0.6), easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
           );
         }
-        if (now - lastTick >= MIN_TICK_GAP) {
+        if (gap >= 110 && notch >= NOTCHES - 1 && now - lastTick >= 80) {
           lastTick = now;
-          tick(e);
+          tick(1 + Math.min(0.15, (t - 0.85) * 0.8));
         }
+      }
+      const n = Math.floor(NOTCHES * wheel(t));
+      if (n > notch && n < NOTCHES && now - lastTick >= MIN_TICK_GAP) {
+        notch = n;
+        lastTick = now;
+        tick(n / NOTCHES);
       }
       if (t < 1) raf = requestAnimationFrame(frame);
       else finish();

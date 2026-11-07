@@ -75,15 +75,17 @@ function click(gain = 0.25, freq = 3200) {
   const g = ac.createGain();
   g.gain.value = gain;
   s.connect(f).connect(g).connect(master);
-  s.start();
+  s.start(ac.currentTime);
 }
 
-// progress 0..1: low and soft at the start, higher and brighter near the answer
+// progress 0..1 (a little past 1 for the very last steps): low and soft at the
+// start, higher and brighter near the answer. Each tick is short (about 20ms of
+// tone) so that even at 25 a second they stay separate clicks, not a buzz.
 export function tick(progress = 0) {
-  const p = Math.max(0, Math.min(1, progress));
-  const freq = 380 * 2 ** (p * 1.7); // about 380 Hz up to 1240 Hz
-  click(0.16 + p * 0.12, 2400 + p * 2600);
-  blip(freq, { dur: 0.045, gain: 0.12 + p * 0.1, type: "triangle" });
+  const p = Math.max(0, Math.min(1.15, progress));
+  const freq = 400 * 2 ** (p * 1.65); // about 400 Hz up to 1250 Hz, a touch more at the very end
+  click(0.2 + p * 0.12, 2200 + p * 2400);
+  blip(freq, { dur: 0.022, gain: 0.17 + p * 0.09, type: "triangle" });
   haptic(4);
 }
 

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<!-- Pointy · "the cursor is the film" — a onetake composition (skill: .claude/skills/onetake, PolyForm Noncommercial) -->
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>Pointy · onetake</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#F4EFE7}
+canvas{position:absolute;left:0;top:0;width:1080px;height:1920px}
+#hud{position:absolute;right:16px;bottom:12px;font:22px monospace;color:#c00;display:none}
+#warm{position:absolute;left:-9999px;top:0;font-family:Heebo}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas><div id="hud"></div>
+<div id="warm"><b style="font-weight:500">אב Ab</b><b style="font-weight:700">אב Ab</b><b style="font-weight:800">אב Ab</b></div>
+<script src="motion.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// Every value is a pure function of t. One canvas; a keyed, operated camera over one world.
+// The subject is one orange point: dot → caret → arrow → icon. BEATS.md is the beat sheet.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+const W = 1080, H = 1920, DUR = 15, WH = { W, H };
+const C = { paper: '#F4EFE7', ink: '#1C1813', mute: '#978E83', line: '#DCD3C6', card: '#FBF8F3', key: '#DDD4C7',
+  img: '#E3DACC', hill: '#CDC3B4', subj: '#3A332C', chkA: '#E8E1D6', chkB: '#FBF8F3', lat: '#D4CABC', or: '#EE7A22', or2: '#F79B45', ord: '#D2600E' };
+const { clamp, lerp, seg, sstep, ssstep, ease } = OM, spr = OM.spring;
+const F = (w, s) => `${w} ${s}px Heebo`;
+
+// ───────────────────────────── timeline (seconds) ─────────────────────────────
+const T = {
+  keysIn: 0.10, press: 0.80, keysOut: 1.08, dotPop: 0.84, hop0: 0.90, land: 1.40,
+  barIn: 1.42, barDone: 1.85, type0: 1.95, cps: 26, send: 3.45,
+  winIn: 3.70, winDone: 4.35, fly0: 3.80, land1: 4.85, card1: 4.95, click1: 5.55, remove: 5.65, done1: 6.35,
+  iris2: 7.45, fly2: 7.95, land2: 8.25, click2: 8.32, iris3: 8.45, fly3: 8.75, land3: 9.05, click3: 9.12,
+  words1: 7.50, words2: 9.10, wordsOut: 9.85, fold: 9.90, foldEnd: 10.45, glide: 10.40, center: 10.95,
+  tag1: 10.80, tag2: 11.05, tagOut: 11.85, icon: 11.95, mark: 12.30, cta: 13.00, pill: 13.25,
+};
+const CLICKS = [T.click1, T.click2, T.click3];
+
+// ───────────────────────────── world layout (1080×1920 at zoom 1) ─────────────────────────────
+const OPT = { x: 270, y: 830, w: 170, h: 150, r: 26 }, SPC = { x: 460, y: 830, w: 350, h: 150, r: 26 };
+const BAR = { x: 100, y: 1035, w: 880, h: 90, r: 45 }, BARY = 1080, TX_R = 902;
+const WIN = { x: 60, y: 470, w: 960, h: 1000, r: 30 };
+const DOT0 = { x: 540, y: 812 };
+const IMG = { x: 100, y: 580, w: 580, h: 700 };
+const ROW = i => ({ x: 710, y: 600 + i * 86, w: 270, h: 70 });
+const PROP = i => ({ y: 1060 + i * 60 }), VAL = i => ({ x: 760, y: 1064 + i * 60, w: 150, h: 42 });
+const TB = i => ({ x: 110 + i * 130, y: 590, w: 120, h: 46 });
+const CARD = { x: 100, y: 1320, w: 880, h: 110, r: 22 };
+const T1 = { x: 905, y: 812 }, T2 = { x: 885, y: 1090 }, T3 = { x: 330, y: 622 }, CEN = { x: 520, y: 880 };
+const IC = { x: 540, y: 930, s: 250 };
+const Q = ['איך מסירים רקע מתמונה?', 'איך עושים זום-אין איטי?', 'איך מוסיפים גרף לטבלה?'];
+const STEP = [['לחצו על Remove BG', 'הרקע הוסר. זהו.'], ['הגדילו את Scale ל-130'], ['לחצו על Chart']];
+const TARGET = [ROW(2), VAL(1), TB(1)];
+const LANDS = [T.land1, T.land2, T.land3];
+
+// ───────────────────────────── camera: keyed, then operated (hand + shakes) ─────────────────────────────
+const KEYS = [
+  { t: 0.00, x: 540, y: 905, zoom: 1.75 },
+  { t: 0.86, x: 540, y: 905, zoom: 1.75 },
+  { t: 1.12, x: 600, y: 860, zoom: 1.62, curve: ease.sineInOut },
+  { t: 1.36, x: 760, y: 1060, zoom: 1.58, curve: ease.expoInOut },
+  { t: 1.95, x: 720, y: 1075, zoom: 1.45, curve: ease.cubicInOut },
+  { t: 2.85, x: 575, y: 1075, zoom: 1.45, curve: ease.sineInOut },
+  { t: 3.45, x: 575, y: 1075, zoom: 1.45 },
+  { t: 4.30, x: 540, y: 965, zoom: 1.00, curve: ease.cubicInOut },
+  { t: 4.75, x: 640, y: 890, zoom: 1.10, curve: ease.expoInOut },
+  { t: 5.45, x: 720, y: 860, zoom: 1.30, curve: ease.sineInOut },
+  { t: 6.30, x: 540, y: 960, zoom: 1.04, curve: ease.cubicInOut },
+  { t: 7.40, x: 540, y: 960, zoom: 1.04 },
+  { t: 8.15, x: 600, y: 990, zoom: 1.07, curve: ease.expoInOut },
+  { t: 8.95, x: 490, y: 900, zoom: 1.07, curve: ease.expoInOut },
+  { t: 9.85, x: 490, y: 900, zoom: 1.07 },
+  { t: 10.75, x: 530, y: 1000, zoom: 1.30, curve: ease.cubicInOut },
+  { t: 11.85, x: 530, y: 1000, zoom: 1.30 },
+  { t: 12.45, x: 540, y: 1115, zoom: 1.15, curve: ease.cubicInOut },
+  { t: 15.00, x: 540, y: 1115, zoom: 1.15 },
+];
+const HITS = [[T.press, 6, 10], [T.land, 7, 10], [T.land1, 7, 9], [T.click1, 4, 12], [T.land2, 6, 10], [T.land3, 6, 10], [T.icon + 0.08, 10, 8]];
+const RESTS = [[2.85, 3.45], [6.40, 7.35], [9.15, 9.85], [11.15, 11.85], [13.40, 15.5]];
+function handEnv(t) { let r = 0; for (const [a, b] of RESTS) r = Math.max(r, sstep(a - 0.3, a, t) * (1 - sstep(b, b + 0.3, t))); return sstep(0.1, 0.6, t) * (1 - r); }
+function camAt(t) {
+  const c = OM.camera(t, KEYS, WH), e = handEnv(t) * 4.0;
+  let x = c.x + e * (Math.sin(1.7 * t) + 0.6 * Math.sin(2.9 * t + 1)) / c.zoom, y = c.y + e * (Math.sin(1.3 * t + 2) + 0.5 * Math.sin(3.3 * t)) / c.zoom, rot = c.rot;
+  for (const [th, amp, decay] of HITS) { const s = OM.shake(t, th, { amp, decay, seed: Math.round(th * 100) }); x += s.x / c.zoom; y += s.y / c.zoom; rot += s.rot; }
+  return { x, y, zoom: c.zoom, rot };
+}
+
+// ───────────────────────────── canvas ─────────────────────────────
+const DPR = Math.max(1, window.devicePixelRatio || 1);
+const cv = document.getElementById('cv'); cv.width = W * DPR; cv.height = H * DPR;
+const g = cv.getContext('2d');
+let CAM, VIEW;
+const setM = M => g.setTransform(DPR * M[0], DPR * M[1], DPR * M[2], DPR * M[3], DPR * M[4], DPR * M[5]);
+const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, Math.max(0, Math.min(r, w / 2, h / 2))); };
+function text(s, x, y, font, color, align = 'right', dir = 'rtl', alpha = 1) {
+  if (alpha <= 0.002) return; g.save(); g.globalAlpha *= alpha; g.font = font; g.fillStyle = color; g.textAlign = align; g.direction = dir; g.textBaseline = 'alphabetic'; g.fillText(s, x, y); g.restore();
+}
+function shadow(blur, dy, a) { const k = DPR * CAM.zoom; g.shadowColor = `rgba(60,40,20,${a})`; g.shadowBlur = blur * k; g.shadowOffsetY = dy * k; }
+const noShadow = () => { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; };
+
+// fixed grain (a dark-ish ground bands after encoding otherwise) — decided once, never on the render path
+const GRAIN = (() => { const n = document.createElement('canvas'); n.width = n.height = 256; const c = n.getContext('2d'), d = c.createImageData(256, 256), r = OM.rng(11);
+  for (let i = 0; i < 256 * 256; i++) { const v = r() < 0.5 ? 0 : 255; d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = Math.floor(r() * 7); } c.putImageData(d, 0, 0); return n; })();
+
+// ───────────────────────────── measured in __ready ─────────────────────────────
+let TW = [], P0 = { x: 0, y: 0 }, MARKW = [], MARK_X0 = 0;
+function measure() {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.direction = 'rtl'; g.font = F(500, 42);
+  TW = [...Array(Q[0].length + 1).keys()].map(n => g.measureText(Q[0].slice(0, n)).width);
+  P0 = { x: TX_R - TW[TW.length - 1] - 8, y: BARY - 27 };
+  g.direction = 'ltr'; g.font = F(800, 132); MARKW = [...'Pointy'].map(ch => g.measureText(ch).width);
+  MARK_X0 = 540 - MARKW.reduce((a, b) => a + b, 0) / 2;
+}
+
+// ───────────────────────────── the point ─────────────────────────────
+const ARROW = [[0, 0], [40, 16], [21, 21], [16, 40]];     // the Pointy pointer, tip at the origin
+const caretX = t => TX_R - TW[OM.typeOn(t, T.type0, Q[0], { cps: T.cps }).n] - 8;
+const PATH = [
+  { t0: T.fly0, t1: T.land1, to: T1, arc: 230, curve: ease.quintInOut },
+  { t0: T.fly2, t1: T.land2, to: T2, arc: 70, curve: ease.expoInOut },
+  { t0: T.fly3, t1: T.land3, to: T3, arc: 90, curve: ease.expoInOut },
+  { t0: T.glide, t1: T.center, to: CEN, arc: 90, curve: ease.quintInOut },
+];
+function tipAt(t) {
+  let p = P0;
+  for (const s of PATH) {
+    if (t < s.t0) return p;
+    if (t <= s.t1) { const u = s.curve(seg(t, s.t0, s.t1)); return { x: lerp(p.x, s.to.x, u), y: lerp(p.y, s.to.y, u) - s.arc * 4 * u * (1 - u) }; }
+    p = s.to;
+  }
+  return p;
+}
+// → {kind:'rect', cx, cy, w, h, r} | {kind:'poly', pts, out, col} ; pos = the point the camera and probe follow
+function pointer(t) {
+  if (t < T.dotPop) return null;
+  if (t < T.land) {
+    const s = Math.max(0, spr(t - T.dotPop, 0.5, 18)), p = OM.hop(t, T.hop0, T.land, DOT0, { x: TX_R - 8, y: BARY }, { height: 260 });
+    const im = OM.impact(t, T.land); return { kind: 'rect', cx: p.x, cy: p.y, w: 28 * s, h: 28 * s, r: 14 * s, pos: p };
+  }
+  if (t < T.send) {
+    const k = spr(t - T.land, 0.55, 22), cx = caretX(t), blink = t > T.type0 ? OM.typeOn(t, T.type0, Q[0], { cps: T.cps }).caret : 1;
+    return { kind: 'rect', cx, cy: BARY, w: Math.max(3, lerp(28, 6, k)), h: lerp(28, 54, k), r: lerp(14, 3, k), op: blink, pos: { x: cx, y: BARY } };
+  }
+  // caret → arrow, then the arrow; then it becomes the arrow inside the icon
+  const km = clamp(spr(t - T.send, 0.62, 20), 0, 1.2), cx = P0.x + 8 - 0 * 1, top = { x: P0.x, y: P0.y };
+  let tip = t < T.fly0 ? top : tipAt(t), S = 1.6, col = C.or, out = clamp(km, 0, 1);
+  if (t >= T.icon) { const ki = spr(t - T.icon, 0.62, 15); const goal = { x: IC.x - 20 * 3.3 - 2, y: IC.y - 20 * 3.3 - 4 };
+    tip = { x: lerp(CEN.x, goal.x, ki), y: lerp(CEN.y, goal.y, ki) }; S = lerp(1.6, 3.3, ki); out = 1 - clamp(ki * 1.4, 0, 1); col = ki; }
+  for (const c of CLICKS) { const d = t - c; if (d >= 0 && d < 0.14) S *= 0.84; }
+  const caret = [[-3, -27], [3, -27], [3, 27], [-3, 27]].map(([x, y]) => [P0.x + x, BARY + y]);
+  const arrow = ARROW.map(([x, y]) => [tip.x + x * S, tip.y + y * S]);
+  const pts = t < T.send + 0.6 ? caret.map((c, i) => [lerp(c[0], arrow[i][0], km), lerp(c[1], arrow[i][1], km)]) : arrow;
+  return { kind: 'poly', pts, out, col, pos: tip, S };
+}
+function drawPointer(t) {
+  const p = pointer(t); if (!p) return;
+  g.save();
+  if (p.kind === 'rect') { g.globalAlpha = p.op ?? 1; rr(p.cx - p.w / 2, p.cy - p.h / 2, p.w, p.h, p.r); shadow(10, 3, 0.18); g.fillStyle = C.or; g.fill(); }
+  else {
+    const path = () => { g.beginPath(); p.pts.forEach(([x, y], i) => i ? g.lineTo(x, y) : g.moveTo(x, y)); g.closePath(); };
+    g.lineJoin = 'round';
+    if (p.out > 0.01) { path(); g.globalAlpha = p.out; g.lineWidth = 10; g.strokeStyle = '#fff'; shadow(14, 4, 0.22); g.stroke(); noShadow(); g.globalAlpha = 1; }
+    const fill = typeof p.col === 'number' ? mix(C.or, '#ffffff', p.col) : p.col;
+    path(); g.fillStyle = fill; g.fill(); g.lineWidth = 5; g.strokeStyle = fill; g.stroke();
+  }
+  g.restore();
+}
+function mix(a, b, k) { const pa = [1, 3, 5].map(i => parseInt(a.slice(i, i + 2), 16)), pb = [1, 3, 5].map(i => parseInt(b.slice(i, i + 2), 16)); return `rgb(${pa.map((v, i) => Math.round(lerp(v, pb[i], clamp(k)))).join(',')})`; }
+
+// ───────────────────────────── keys ─────────────────────────────
+function drawKey(K, t, i) {
+  const e = OM.popIn(t, T.keysIn + i * 0.07, { rise: 70, s0: 0.9 }), o = OM.liftOut(t, T.keysOut + i * 0.04, { dur: 0.3, dist: 140, blur: 0 });
+  const op = e.op * o.op; if (op <= 0.002) return;
+  const down = 9 * (sstep(T.press - 0.05, T.press, t) - sstep(T.press + 0.10, T.press + 0.26, t));
+  const cx = K.x + K.w / 2, cy = K.y + K.h / 2;
+  g.save(); g.globalAlpha = op; g.translate(cx, cy + e.dy + o.dy); g.scale(e.s * o.s, e.s * o.s); g.translate(-cx, -cy);
+  g.lineWidth = 2.5; g.strokeStyle = C.ink;
+  rr(K.x, K.y + 12, K.w, K.h, K.r); g.fillStyle = C.key; shadow(24, 10, 0.16); g.fill(); noShadow(); g.stroke();
+  const y = K.y + down; rr(K.x, y, K.w, K.h, K.r); g.fillStyle = C.card; g.fill(); g.stroke();
+  if (i === 0) { // ⌥ drawn as strokes (Heebo has no U+2325)
+    const gx = K.x + K.w / 2, gy = y + 58; g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+    g.moveTo(gx - 26, gy - 13); g.lineTo(gx - 8, gy - 13); g.lineTo(gx + 8, gy + 13); g.lineTo(gx + 26, gy + 13); g.moveTo(gx + 6, gy - 13); g.lineTo(gx + 26, gy - 13); g.stroke();
+    text('option', gx, y + 122, F(500, 26), C.ink, 'center', 'ltr');
+  } else text('space', K.x + K.w / 2, y + 122, F(500, 26), C.ink, 'center', 'ltr');
+  g.restore();
+}
+
+// ───────────────────────────── bar → window ─────────────────────────────
+function shellRect(t) {
+  if (t < T.winIn) { const m = OM.morphRect(t, T.barIn, T.barDone, { x: TX_R - 22, y: BARY - 14, w: 28, h: 28, r: 14 }, BAR); return m; }
+  return OM.morphRect(t, T.winIn, T.winDone, BAR, WIN);
+}
+function irisR(t) { // the window's current clip radius around the arrow for the fold (Infinity = none)
+  if (t < T.fold) return Infinity;
+  const ir = OM.iris(t, T.fold, T.foldEnd, T3.x - WIN.x, T3.y - WIN.y, { W: WIN.w, H: WIN.h, curve: ease.quintInOut });
+  return farOf(T3) * (1 - ir.k);                  // the iris run backwards: the window closes into the arrow
+}
+const farOf = p => Math.max(...[[WIN.x, WIN.y], [WIN.x + WIN.w, WIN.y], [WIN.x, WIN.y + WIN.h], [WIN.x + WIN.w, WIN.y + WIN.h]].map(([x, y]) => Math.hypot(x - p.x, y - p.y))) + 4;
+function openR(t, t0, at) { const k = ease.expoOut(seg(t, t0, t0 + 0.5)); return k * farOf(at); }
+
+function drawShell(t) {
+  if (t < T.barIn) return;
+  const R = shellRect(t), kw = t < T.winIn ? 0 : ease.expoOut(seg(t, T.winIn, T.winDone));
+  const fr = irisR(t); if (fr <= 0.5) return;
+  g.save();
+  if (fr < Infinity) { const tp = tipAt(t); g.beginPath(); g.arc(T3.x, T3.y, fr, 0, Math.PI * 2); g.clip(); }
+  rr(R.x, R.y, R.w, R.h, lerp(45, 30, kw)); g.fillStyle = C.card; shadow(lerp(20, 50, kw), lerp(6, 18, kw), 0.14); g.fill(); noShadow();
+  g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke();
+  if (t < T.winIn + 0.2) { // bar contents: sparkle, mic, the typed question
+    const a = sstep(T.barIn + 0.2, T.barIn + 0.45, t) * (1 - sstep(T.winIn, T.winIn + 0.2, t));
+    g.save(); g.globalAlpha = a; sparkle(944, BARY, 16, C.or); mic(142, BARY); g.restore();
+    if (t < T.winIn) { const ty = OM.typeOn(t, T.type0, Q[0], { cps: T.cps }); text(ty.str, TX_R, BARY + 15, F(500, 42), C.ink); }
+  }
+  if (t >= T.winIn) {
+    g.save(); rr(R.x, R.y, R.w, R.h, 30); g.clip();
+    const ta = sstep(0.45, 0.9, kw);  // title bar
+    g.globalAlpha = ta; g.strokeStyle = C.line; g.lineWidth = 2; g.beginPath(); g.moveTo(R.x, R.y + 72); g.lineTo(R.x + R.w, R.y + 72); g.stroke();
+    [0, 1, 2].forEach(i => { g.beginPath(); g.arc(R.x + 40 + i * 30, R.y + 36, 9, 0, Math.PI * 2); g.fillStyle = C.line; g.fill(); });
+    g.globalAlpha = 1;
+    // the apps: each new one opens from the arrow inside the window
+    const a1 = sstep(T.winIn + 0.35, T.winIn + 0.75, t);
+    drawApp(0, t, a1, kw);
+    for (const [i, t0, at] of [[1, T.iris2, T1], [2, T.iris3, T2]]) {
+      if (t < t0) continue; const r = openR(t, t0, at);
+      g.save(); g.beginPath(); g.arc(at.x, at.y, r, 0, Math.PI * 2); g.clip(); rr(R.x, R.y, R.w, R.h, 30); g.fillStyle = C.card; g.fill(); drawApp(i, t, 1, 1); g.restore();
+      if (r < farOf(at) - 2) { g.beginPath(); g.arc(at.x, at.y, r, 0, Math.PI * 2); g.lineWidth = 6; g.strokeStyle = C.or; g.stroke(); }
+    }
+    g.restore();
+    rr(R.x, R.y, R.w, R.h, 30); g.lineWidth = 2.5; g.strokeStyle = C.ink; g.stroke();
+  }
+  g.restore();
+  if (fr < Infinity && fr > 2) { g.beginPath(); g.arc(T3.x, T3.y, fr, 0, Math.PI * 2); g.lineWidth = 6; g.strokeStyle = C.or; g.globalAlpha = sstep(0, 0.1, seg(t, T.fold, T.foldEnd)); g.stroke(); g.globalAlpha = 1; }
+}
+function sparkle(x, y, r, col) { g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rad = i % 2 ? r * 0.32 : r; g.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad); } g.closePath(); g.fillStyle = col; g.fill(); }
+function mic(x, y) { g.lineWidth = 3; g.strokeStyle = C.mute; g.lineCap = 'round'; rr(x - 7, y - 16, 14, 22, 7); g.stroke(); g.beginPath(); g.arc(x, y - 2, 13, 0.1 * Math.PI, 0.9 * Math.PI); g.stroke(); g.beginPath(); g.moveTo(x, y + 11); g.lineTo(x, y + 17); g.stroke(); }
+
+// ───────────────────────────── the three apps ─────────────────────────────
+function title(i, t, kw) {
+  if (i === 0) { const k = kw; text(Q[0], lerp(TX_R, WIN.x + WIN.w - 36, k), lerp(BARY + 15, WIN.y + 46, k), F(500, lerp(42, 27, k)), k < 0.5 ? C.ink : C.mute); }
+  else text(Q[i], WIN.x + WIN.w - 36, WIN.y + 46, F(500, 27), C.mute);
+}
+function ringOn(i, t) { const land = LANDS[i]; if (t < land) return; const end = i === 0 ? T.click1 + 0.45 : 99;
+  const a = sstep(land, land + 0.08, t) * (1 - sstep(end - 0.2, end, t)); if (a <= 0) return;
+  const s = 1 - spr(t - land, 0.45, 16), R = TARGET[i], pad = 7 + 16 * s;
+  g.save(); g.globalAlpha = a; rr(R.x - pad, R.y - pad, R.w + pad * 2, R.h + pad * 2, 16 + pad); g.lineWidth = 4; g.strokeStyle = C.or; g.stroke(); g.restore(); }
+function stepCard(i, t, a) {
+  let dy = 0, s = 1, op = a; if (i === 0) { const e = OM.popIn(t, T.card1, { rise: 30 }); dy = e.dy; s = e.s; op *= e.op; }
+  if (op <= 0.002) return;
+  const done = i === 0 && t >= T.done1, tk = OM.tick(t, T.done1);
+  g.save(); g.globalAlpha = op; const cx = CARD.x + CARD.w / 2, cy = CARD.y + CARD.h / 2; g.translate(cx, cy + dy); g.scale(s, s); g.translate(-cx, -cy);
+  rr(CARD.x, CARD.y, CARD.w, CARD.h, CARD.r); g.fillStyle = '#fff'; shadow(26, 8, 0.12); g.fill(); noShadow(); g.lineWidth = 2; g.strokeStyle = C.line; g.stroke();
+  const bx = CARD.x + CARD.w - 62, by = cy;   // badge: step number, or a tick
+  g.save(); g.translate(bx, by); if (done) g.scale(tk.s, tk.s); g.beginPath(); g.arc(0, 0, 24, 0, Math.PI * 2); g.fillStyle = C.or; g.fill();
+  if (done) { g.lineWidth = 5; g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = '#fff'; g.beginPath(); g.moveTo(-10, 1); g.lineTo(-3, 9); g.lineTo(11, -8); g.stroke(); }
+  else text(String(i + 1), 0, 10, F(800, 28), '#fff', 'center', 'ltr');
+  g.restore();
+  text(done ? STEP[0][1] : STEP[i][0], bx - 46, cy + 12, F(500, 34), C.ink);
+  g.restore();
+}
+function drawApp(i, t, a, kw) {
+  title(i, t, kw);
+  if (a <= 0.002) return;
+  g.save(); g.globalAlpha = a;
+  if (i === 0) appPhoto(t); else if (i === 1) appVideo(t); else appSheet(t);
+  ringOn(i, t);
+  g.restore();
+  stepCard(i, t, a);
+}
+function appPhoto(t) {
+  g.save(); rr(IMG.x, IMG.y, IMG.w, IMG.h, 16); g.clip();
+  g.fillStyle = C.img; g.fillRect(IMG.x, IMG.y, IMG.w, IMG.h);
+  g.fillStyle = C.hill; g.beginPath(); g.moveTo(IMG.x, 1010); g.quadraticCurveTo(250, 900, 400, 990); g.quadraticCurveTo(560, 1080, 680, 960); g.lineTo(680, 1280); g.lineTo(100, 1280); g.fill();
+  g.beginPath(); g.arc(560, 700, 46, 0, Math.PI * 2); g.fill();
+  if (t >= T.remove) { // the background dissolves from the subject outward
+    const r = ease.expoOut(seg(t, T.remove, T.remove + 0.7)) * 760; g.save(); g.beginPath(); g.arc(390, 980, r, 0, Math.PI * 2); g.clip();
+    for (let y = IMG.y; y < IMG.y + IMG.h; y += 28) for (let x = IMG.x; x < IMG.x + IMG.w; x += 28) { g.fillStyle = ((x - IMG.x) / 28 + (y - IMG.y) / 28) % 2 ? C.chkA : C.chkB; g.fillRect(x, y, 28, 28); }
+    g.restore();
+  }
+  g.fillStyle = C.subj; g.beginPath(); g.ellipse(390, 1250, 205, 215, 0, Math.PI, 2 * Math.PI); g.fill(); g.beginPath(); g.arc(390, 860, 98, 0, Math.PI * 2); g.fill();
+  g.restore();
+  rr(IMG.x, IMG.y, IMG.w, IMG.h, 16); g.lineWidth = 2; g.strokeStyle = C.line; g.stroke();
+  ['Adjust', 'Filters', 'Remove BG', 'Crop', 'Export'].forEach((lab, i) => {
+    const R = ROW(i), on = i === 2 && t >= T.click1, p = OM.press(t, T.click1, { depth: 0.06 });
+    g.save(); if (i === 2) { const cx = R.x + R.w / 2, cy = R.y + R.h / 2; g.translate(cx, cy); g.scale(p.s, p.s); g.translate(-cx, -cy); }
+    rr(R.x, R.y, R.w, R.h, 14); g.fillStyle = on ? C.or : '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = on ? C.or : C.line; g.stroke();
+    text(lab, R.x + 26, R.y + 45, F(500, 29), on ? '#fff' : C.ink, 'left', 'ltr'); g.restore();
+  });
+}
+function appVideo(t) {
+  const P = { x: 100, y: 580, w: 880, h: 420 }; g.save(); rr(P.x, P.y, P.w, P.h, 16); g.clip(); g.fillStyle = C.img; g.fillRect(P.x, P.y, P.w, P.h);
+  const z = t >= T.click2 ? 1 + 0.3 * ease.expoOut(seg(t, T.click2, T.click2 + 0.5)) : 1; g.translate(540, 790); g.scale(z, z); g.translate(-540, -790);
+  g.fillStyle = C.hill; g.beginPath(); g.arc(700, 720, 60, 0, Math.PI * 2); g.fill(); g.beginPath(); g.moveTo(100, 900); g.quadraticCurveTo(330, 760, 560, 880); g.quadraticCurveTo(760, 980, 980, 840); g.lineTo(980, 1000); g.lineTo(100, 1000); g.fill();
+  g.fillStyle = C.subj; g.beginPath(); g.moveTo(420, 1000); g.lineTo(470, 880); g.lineTo(520, 1000); g.fill(); g.restore();
+  rr(P.x, P.y, P.w, P.h, 16); g.lineWidth = 2; g.strokeStyle = C.line; g.stroke();
+  text('Motion', 112, 1040, F(700, 26), C.mute, 'left', 'ltr');
+  [['Position', '960, 540'], ['Scale', t >= T.click2 ? '130' : '100'], ['Rotation', '0°'], ['Opacity', '100%']].forEach(([lab, v], i) => {
+    const y = PROP(i).y; text(lab, 130, y + 40, F(500, 29), C.ink, 'left', 'ltr');
+    const V = VAL(i), on = i === 1 && t >= T.click2; rr(V.x, V.y, V.w, V.h, 10); g.fillStyle = on ? C.or : '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = on ? C.or : C.line; g.stroke();
+    text(v, V.x + 18, V.y + 31, F(500, 26), on ? '#fff' : C.ink, 'left', 'ltr');
+    g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath(); g.moveTo(100, y + 58); g.lineTo(980, y + 58); g.stroke();
+  });
+}
+function appSheet(t) {
+  ['Insert', 'Chart', 'Table', 'Format'].forEach((lab, i) => { const B = TB(i), on = i === 1 && t >= T.click3;
+    rr(B.x, B.y, B.w, B.h, 10); g.fillStyle = on ? C.or : '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = on ? C.or : C.line; g.stroke();
+    text(lab, B.x + B.w / 2, B.y + 32, F(500, 25), on ? '#fff' : C.ink, 'center', 'ltr'); });
+  const x0 = 100, y0 = 664, cw = 176, rh = 62, cols = 'ABCDE', data = [['Month', 'Sales', 'Cost', 'Net', 'Δ'], ['Jan', '420', '310', '110', '+4%'], ['Feb', '465', '322', '143', '+9%'], ['Mar', '512', '340', '172', '+6%'], ['Apr', '498', '351', '147', '−3%'], ['May', '560', '362', '198', '+12%'], ['Jun', '604', '371', '233', '+8%'], ['Jul', '641', '388', '253', '+6%'], ['Aug', '688', '395', '293', '+7%']];
+  g.fillStyle = '#F1ECE3'; g.fillRect(x0, y0, cw * 5, 44);
+  for (let c = 0; c < 5; c++) text(cols[c], x0 + c * cw + cw / 2, y0 + 31, F(500, 22), C.mute, 'center', 'ltr');
+  data.forEach((row, r) => row.forEach((v, c) => text(v, x0 + c * cw + 18, y0 + 44 + r * rh + 41, F(r ? 500 : 700, 26), C.ink, 'left', 'ltr')));
+  g.strokeStyle = C.line; g.lineWidth = 1.5; g.beginPath();
+  for (let c = 0; c <= 5; c++) { g.moveTo(x0 + c * cw, y0); g.lineTo(x0 + c * cw, y0 + 44 + 9 * rh); }
+  for (let r = 0; r <= 9; r++) { g.moveTo(x0, y0 + 44 + r * rh); g.lineTo(x0 + cw * 5, y0 + 44 + r * rh); } g.stroke();
+}
+
+// ───────────────────────────── words, claim, lockup ─────────────────────────────
+function words(list, cx, y, font, colors, t0, stagger, tOut) {
+  g.font = font; g.direction = 'rtl'; const ws = list.map(w => g.measureText(w).width), gap = 18, total = ws.reduce((a, b) => a + b, 0) + gap * (list.length - 1);
+  let x = cx + total / 2; const o = tOut ? OM.liftOut(0 + tNow, tOut, { dur: 0.25, dist: 60, blur: 0 }) : { op: 1, dy: 0 };
+  list.forEach((w, i) => { const r = OM.wordRise(tNow, t0 + i * stagger);
+    g.save(); g.translate(x - ws[i] / 2, y + r.y + o.dy); g.scale(r.s, r.s); text(w, ws[i] / 2, 0, font, colors[i], 'right', 'rtl', r.op * o.op); g.restore(); x -= ws[i] + gap; });
+}
+let tNow = 0;
+function drawWords(t) {
+  if (t >= T.words1 - 0.05 && t < T.wordsOut + 0.3) {
+    words(['בכל', 'אפליקציה.'], 540, 330, F(800, 78), [C.ink, C.ink], T.words1, 0.16, T.wordsOut);
+    words(['בעברית.'], 540, 418, F(800, 78), [C.or], T.words2, 0, T.wordsOut);
+  }
+  if (t >= T.tag1 - 0.05 && t < T.tagOut + 0.3) {
+    words(['מראה', 'לך', 'בדיוק'], 540, 1060, F(800, 66), [C.ink, C.ink, C.ink], T.tag1, 0.09, T.tagOut);
+    words(['על', 'מה', 'ללחוץ.'], 540, 1140, F(800, 66), [C.or, C.or, C.or], T.tag2, 0.09, T.tagOut);
+  }
+}
+function drawIcon(t) {
+  if (t < T.icon) return; const k = Math.max(0, spr(t - T.icon, 0.55, 16)), im = OM.impact(t, T.icon + 0.08, { sqx: 0.06, sqy: 0.08 }), s = IC.s * k;
+  g.save(); g.translate(IC.x, IC.y); g.scale(im.sx, im.sy);
+  const gr = g.createLinearGradient(0, -s / 2, 0, s / 2); gr.addColorStop(0, C.or2); gr.addColorStop(1, C.ord);
+  rr(-s / 2, -s / 2, s, s, s * 0.25); g.fillStyle = gr; shadow(40, 16, 0.25); g.fill(); noShadow(); g.restore();
+}
+function drawMark(t) {
+  if (t < T.mark - 0.05) return; let x = MARK_X0;
+  [...'Pointy'].forEach((ch, i) => { const d = OM.letterDrop(t, T.mark, i);
+    g.save(); g.translate(x + MARKW[i] / 2, 1192 + d.y); g.scale(d.sx, d.sy); text(ch, 0, 0, F(800, 132), C.ink, 'center', 'ltr', d.op); g.restore(); x += MARKW[i]; });
+  if (t >= T.cta - 0.05) { words(['שלחו', 'לי', 'בדירקט', 'את', 'המילה'], 540, 1300, F(500, 42), Array(5).fill(C.ink), T.cta, 0.05);
+    const e = OM.popIn(t, T.pill, { rise: 24, zeta: 0.5 }); if (e.op > 0.002) { g.save(); g.globalAlpha = e.op; g.translate(540, 1372 + e.dy); g.scale(e.s, e.s);
+      rr(-120, -42, 240, 84, 42); g.fillStyle = C.or; g.fill(); text('פלאגין', 0, 16, F(800, 46), '#fff', 'center', 'rtl'); g.restore(); } }
+}
+
+// ───────────────────────────── seek ─────────────────────────────
+function seek(t) {
+  tNow = t; CAM = camAt(t); VIEW = OM.view(CAM, WH);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0); g.fillStyle = C.paper; g.fillRect(0, 0, W, H);
+  const L = OM.lattice(CAM, { W, H, depth: 1.2, spacing: 48, px: 1.7 }); setM(L.matrix); g.fillStyle = C.lat; g.beginPath();
+  for (let y = L.y0; y <= L.y1; y += L.spacing) for (let x = L.x0; x <= L.x1; x += L.spacing) { g.moveTo(x + L.r, y); g.arc(x, y, L.r, 0, Math.PI * 2); } g.fill();
+  setM(VIEW);
+  drawKey(OPT, t, 0); drawKey(SPC, t, 1);
+  drawShell(t); drawWords(t); drawIcon(t); drawMark(t); drawPointer(t);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const v = g.createRadialGradient(W / 2, H * 0.48, H * 0.3, W / 2, H / 2, H * 0.75); v.addColorStop(0, 'rgba(90,70,50,0)'); v.addColorStop(1, 'rgba(90,70,50,0.10)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+  g.fillStyle = g.createPattern(GRAIN, 'repeat'); g.fillRect(0, 0, W, H);
+  document.getElementById('hud').textContent = 't=' + t.toFixed(3);
+}
+
+// ───────────────────────────── contract ─────────────────────────────
+function ptrPos(t) { const p = pointer(t); return p ? p.pos : DOT0; }
+function screenOf(t) { const cam = camAt(t), M = OM.view(cam, WH), p = ptrPos(t), R = t >= T.barIn ? shellRect(t) : { x: 540, y: 900, w: 0, h: 0 };
+  return { cam, sp: OM.project(M, p.x, p.y), c1: OM.project(M, R.x, R.y), c2: OM.project(M, R.x + R.w, R.y + R.h), ir: (Math.min(irisR(t), 1400) + openR(t, T.iris2, T1) + openR(t, T.iris3, T2)) * cam.zoom }; }
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+window.__motion = (t0, t1) => { const a = screenOf(t0), b = screenOf(t1), m = camAt((t0 + t1) / 2);
+  return Math.max(OM.screenTravel(a.cam, b.cam, m, WH), dist(a.sp, b.sp), dist(a.c1, b.c1), dist(a.c2, b.c2), Math.abs(a.ir - b.ir)); };
+window.__track = t => { const M = OM.view(camAt(t), WH), p = ptrPos(t), out = { pointer: OM.projectBox(M, { x: p.x - 24, y: p.y - 24, w: 48, h: 48, op: t >= T.dotPop ? 1 : 0 }) };
+  if (t >= T.barIn && irisR(t) > 1) { const R = shellRect(t); out.window = OM.projectBox(M, { x: R.x, y: R.y, w: R.w, h: R.h, op: 1 }); }
+  if (t >= T.mark) out.mark = OM.projectBox(M, { x: MARK_X0, y: 1092, w: MARKW.reduce((a, b) => a + b, 0), h: 110, op: 1 });
+  return out; };
+window.__events = () => {
+  const ev = [{ t: T.keysIn, k: 'keys' }, { t: T.press, k: 'press' }, { t: T.dotPop, k: 'pop' }, { t: T.land, k: 'land' }, { t: T.barIn, k: 'bar' }];
+  for (let i = 0; i < Q[0].length; i++) if (Q[0][i] !== ' ') ev.push({ t: T.type0 + i / T.cps, k: 'type' });
+  ev.push({ t: T.send, k: 'send' }, { t: T.winIn, k: 'open' }, { t: T.fly0, k: 'fly', d: T.land1 - T.fly0 }, { t: T.land1, k: 'point' }, { t: T.card1, k: 'card' },
+    { t: T.click1, k: 'click' }, { t: T.remove, k: 'remove' }, { t: T.done1, k: 'done' },
+    { t: T.iris2, k: 'iris' }, { t: T.words1, k: 'word' }, { t: T.fly2, k: 'whip' }, { t: T.land2, k: 'point' }, { t: T.click2, k: 'click' },
+    { t: T.iris3, k: 'iris' }, { t: T.fly3, k: 'whip' }, { t: T.land3, k: 'point' }, { t: T.click3, k: 'click' }, { t: T.words2, k: 'word' },
+    { t: T.fold, k: 'fold' }, { t: T.center, k: 'settle' }, { t: T.tag1, k: 'word' }, { t: T.tag2, k: 'word' },
+    { t: T.icon, k: 'icon' }, { t: T.mark, k: 'mark' }, { t: T.pill, k: 'pill' });
+  return ev.map(e => ({ ...e, x: OM.project(OM.view(camAt(e.t), WH), ptrPos(e.t).x, 0)[0] }));
+};
+window.__meta = { dur: DUR, fps: 30, w: W, h: H, inFrame: { pointer: [0.95, DUR], mark: [12.9, DUR, 'whole'] } };
+window.__seek = async t => { seek(t); return true; };
+window.__ready = document.fonts.ready
+  .then(() => Promise.all([500, 700, 800].map(w => document.fonts.load(F(w, 40), 'אבג Abc'))))
+  .then(() => { measure(); seek(0); return true; });
+const q = new URLSearchParams(location.search);
+if (q.has('t')) __ready.then(() => seek(parseFloat(q.get('t'))));
+if (q.has('hud')) document.getElementById('hud').style.display = 'block';
+if (q.has('play')) __ready.then(() => { const t0 = performance.now(); (function loop() { seek(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); })(); });
+</script>
+</body>
+</html>

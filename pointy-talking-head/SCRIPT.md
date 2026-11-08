@@ -1,6 +1,6 @@
 # Pointy — talking-head video script
 
-**Format:** vertical 9:16 Reel / TikTok · about 40 seconds · Hebrew · presenter to camera, with screen-recording inserts
+**Format:** vertical 9:16 Reel / TikTok · about 40–45 seconds · Hebrew · presenter to camera, with screen-recording inserts
 **Goal:** a viewer who has never heard of Pointy sends the word "פלאגין" in a DM
 **Rules:** written against `CONTENT-PRINCIPLES.md`. The check is at the bottom.
 
@@ -13,25 +13,25 @@ First-person verbs are written for either presenter ("לוחץ/ת" = say "לוח
 | # | time | picture | what you say (Hebrew) | on-screen text |
 |---|---|---|---|---|
 | 1 | 0:00–0:03 | **HOOK.** Close-up to camera, a little too close. Hold your phone up to the lens with a YouTube tutorial paused at 00:18 / 14:37 | **"14 דקות של מדריך ביוטיוב. בשביל כפתור אחד."** | 14:37 ⏱️ בשביל כפתור אחד |
-| 2 | 0:03–0:09 | Back to a normal close-up. Small, tired gestures: skip forward, rewind | "מדלגים קדימה, חוזרים אחורה, עוצרים… ובסוף אצלכם זה בכלל נראה אחרת." | |
+| 2 | 0:03–0:09 | Back to a normal close-up. Small, tired gestures: skip forward, rewind | "מדלגים, חוזרים, עוצרים… ובסוף אצלכם זה בכלל נראה אחרת." | |
 | 3 | 0:09–0:12 | Lean in, lower your voice: a secret between friends | "וזה לא אתם. התוכנות פשוט לא אומרות לכם איפה הדברים." | זה לא אתם. |
 | 4 | 0:12–0:14 | Turn your laptop toward the camera | "אז תראו מה אני עושה היום, עם Pointy." | Pointy (with the orange icon) |
-| 5 | 0:14–0:27 | **DEMO, real screen recording, real speed.** Your face small in a bottom corner. A stopwatch in the top corner starts at the key press | "אני בפרמייר, רוצה/ה זום-אין איטי לסרטון. לוחץ/ת **אופשן ורווח**, ושואל/ת בעברית, כמו שהייתי שואל/ת חבר: 'איך עושים זום-אין איטי?' … ועכשיו תסתכלו על הסמן הכתום. הוא מראה לי בדיוק על מה ללחוץ. לוחץ/ת, 'עשיתי', והוא מראה את הצעד הבא." | ⌥ Space · שואלים בעברית · הסמן מראה איפה |
+| 5 | 0:14–0:27 | **DEMO, real screen recording, real speed.** Your face small in a bottom corner. A stopwatch in the top corner starts at the key press | "אני בפרמייר, רוצה/ה זום-אין איטי לסרטון. לוחץ/ת **אופשן ורווח**, ושואל/ת בעברית, כמו שהייתי שואל/ת חבר: 'איך עושים זום-אין איטי?' … תסתכלו על הסמן הכתום. הוא מראה לי בדיוק על מה ללחוץ. לוחץ/ת, 'עשיתי', והוא מראה את הצעד הבא." | ⌥ Space · שואלים בעברית · הסמן מראה איפה |
 | 6 | 0:27–0:30 | The result plays. Freeze the stopwatch on screen | "[הזמן האמיתי מהשעון] שניות. בלי מדריך." | ⏱️ [real time] |
 | 7 | 0:30–0:34 | Three fast cuts, about 1 s each: a spreadsheet, removing a background, a system setting. The cursor points in each | "וזה לא רק פרמייר. גיליונות, תמונות, הגדרות של המחשב. במק ובווינדוס." | בכל תוכנה · מק · ווינדוס |
-| 8 | 0:34–0:40 | **CTA.** Back to you, warm, to camera. Hold up a phone showing a DM with the word | "מתחילים בחינם. רוצים לנסות? **שלחו לי בדירקט את המילה 'פלאגין'**, ואני שולח/ת לכם את הלינק." | שלחו לי בדירקט: **פלאגין** (in an orange pill) |
+| 8 | 0:34–0:40 | **CTA.** Back to you, warm, to camera. Hold up a phone showing a DM with the word | "מתחילים בחינם. **שלחו לי בדירקט את המילה 'פלאגין'**, ואני שולח/ת לכם את הלינק." | שלחו לי בדירקט: **פלאגין** (in an orange pill) |
 
-**Whole text, to read aloud and time** (about 95 words ≈ 38–42 s):
+**Whole text, to read aloud and time** (about 100 words ≈ 40–45 s at a natural pace):
 
 > 14 דקות של מדריך ביוטיוב. בשביל כפתור אחד.
-> מדלגים קדימה, חוזרים אחורה, עוצרים… ובסוף אצלכם זה בכלל נראה אחרת.
+> מדלגים, חוזרים, עוצרים… ובסוף אצלכם זה בכלל נראה אחרת.
 > וזה לא אתם. התוכנות פשוט לא אומרות לכם איפה הדברים.
 > אז תראו מה אני עושה היום, עם Pointy.
 > אני בפרמייר, רוצה זום-אין איטי לסרטון. לוחץ אופשן ורווח, ושואל בעברית, כמו שהייתי שואל חבר: "איך עושים זום-אין איטי?"
-> ועכשיו תסתכלו על הסמן הכתום. הוא מראה לי בדיוק על מה ללחוץ. לוחץ, "עשיתי", והוא מראה את הצעד הבא.
+> תסתכלו על הסמן הכתום. הוא מראה לי בדיוק על מה ללחוץ. לוחץ, "עשיתי", והוא מראה את הצעד הבא.
 > [X] שניות. בלי מדריך.
 > וזה לא רק פרמייר. גיליונות, תמונות, הגדרות של המחשב. במק ובווינדוס.
-> מתחילים בחינם. רוצים לנסות? שלחו לי בדירקט את המילה "פלאגין", ואני שולח לכם את הלינק.
+> מתחילים בחינם. שלחו לי בדירקט את המילה "פלאגין", ואני שולח לכם את הלינק.
 
 ---
 

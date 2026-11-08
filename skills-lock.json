@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "creating-content-principles": {
+      "source": "jeremydhoover-blip/hoover-content-system",
+      "sourceType": "github",
+      "skillPath": "skills/content-strategy/creating-content-principles/SKILL.md",
+      "computedHash": "cf5092146a0f0064203288220cc60a4b635523484bd331ac3e1c9f8c42b720ee",
+      "installMode": "copy"
+    }
+  }
+}

@@ -63,8 +63,18 @@ def wav(path, x):
     x = np.clip(x, -1, 1); w = wave.open(path, "wb"); w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR)
     w.writeframes((x * 32767).astype(np.int16).tobytes()); w.close()
 wav(os.path.join(HERE, "sfx.wav"), sfx)
-# the mix: speech on top, effects ~10 dB under it, a gentle limiter, −14 LUFS for Reels
-subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", os.path.join(HERE, "vo.wav"), "-i", os.path.join(HERE, "sfx.wav"), "-filter_complex",
-                "[0:a]loudnorm=I=-16:TP=-2[v];[1:a]volume=0.5[f];[v][f]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.89:level=disabled,loudnorm=I=-14:TP=-1.5:LRA=9",
-                "-ar", "48000", "-ac", "2", os.path.join(HERE, "mix.wav")], check=True)
+# the mix: fixed gains measured first (no streaming loudnorm: its look-ahead dropped the last seconds of the voice),
+# the effects ~10 dB under the voice, a limiter, then one static gain to -14 LUFS.
+import re
+def lufs(path, pre=""):
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-i", path, "-af", (pre + "," if pre else "") + "ebur128", "-f", "null", "-"], capture_output=True, text=True).stderr
+    return float(re.findall(r"I:\s+(-?[0-9.]+) LUFS", r)[-1])
+VO, FX, MIX = os.path.join(HERE, "vo.wav"), os.path.join(HERE, "sfx.wav"), os.path.join(HERE, "mix.wav")
+gv = -16.0 - lufs(VO)
+chain = f"[0:a]volume={gv:.2f}dB[v];[1:a]volume=0.5[f];[v][f]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.89:level=disabled:attack=3:release=60"
+tmp = os.path.join(HERE, "_mix_pre.wav")
+subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", VO, "-i", FX, "-filter_complex", chain, "-ar", "48000", "-ac", "2", tmp], check=True)
+gm = -14.0 - lufs(tmp)
+subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", tmp, "-af", f"volume={gm:.2f}dB,alimiter=limit=0.85:level=disabled", "-ar", "48000", "-ac", "2", MIX], check=True)
+os.remove(tmp)
 print("wrote sfx.wav, mix.wav", len(ev), "events")

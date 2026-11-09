@@ -26,7 +26,7 @@ const clean = s => s.replace(/[.,?!:"]/g, '');
 const V = (word, k = 0) => { const ws = WORDS.filter(w => clean(w.w) === word); if (!ws[k]) throw new Error('no word ' + word); return ws[k].t0; };
 const K = { four: V('4'), button: V('כפתור'), today: V('היום'), help: V('שיעזור'), easy: V('ומאוד'), alt: V('Alt'), sp1: V('ורווח'), opt: V('אופשן'), sp2: V('ורווח', 1),
   record: V('פשוט', 1), sees: V('והוא'), useful: V('וזה'), learned: V('אני'), comment: V('תגיבו'), plugin: V('פלאגין'), send: V('ואשלח'), link: V('קישור') };
-const SPEECH_END = 28.5, DUR = SPEECH_END + 1.15;
+const SPEECH_END = 28.13, DUR = SPEECH_END + 1.15;
 
 // ───────── shots: A = his footage (graded, cut); B = demo clips from the reel ─────────
 const SHOTS = [
@@ -36,9 +36,9 @@ const SHOTS = [
   { t0: 7.97, t1: 10.6, src: '07-premiere-excel-aftereffects', off: 0 },
   { t0: 10.6, t1: 14.8, src: 'gs-E-bar', off: 0 },
   { t0: 14.8, t1: 19.85, src: 'gs-F-ask-point', off: 0 },
-  { t0: 19.85, t1: 21.52, src: '06-zoom-ready', off: 0.2 },
-  { t0: 21.52, t1: 25.4, src: 'gs-H-steps', off: 0 },
-  { t0: 25.4, t1: SPEECH_END, src: 'LOGO', off: 0 },
+  { t0: 19.85, t1: 21.47, src: '06-zoom-ready', off: 0.2 },
+  { t0: 21.47, t1: 25.03, src: 'gs-H-steps', off: 0 },
+  { t0: 25.03, t1: SPEECH_END, src: 'LOGO', off: 0 },
   { t0: SPEECH_END, t1: DUR + 1, src: '09-end-card', off: 0 },
 ];
 const NF = window.NFRAMES || {};
@@ -70,7 +70,7 @@ function pointyIcon(cx, cy, s, a = 1) { if (s < 1) return; g.save(); g.globalAlp
 
 // ───────── the green screen: the animation behind, him in front ─────────
 const BG_UP = 230, P = { s: 0.74 };
-const PERSON_GRADE = new URLSearchParams(location.search).get('grade') || 'contrast(1.34) brightness(0.92) saturate(1.2) sepia(0.06)';
+const PERSON_GRADE = new URLSearchParams(location.search).get('grade') || 'contrast(1.3) brightness(0.93) saturate(1.1)';
 function personFrame(t) { return frame('P', clamp(Math.round(t * FPS), 0, (NF.P || 853) - 1)); }
 function drawShot(t) {
   const { s, img } = shotFrame(t);
@@ -82,7 +82,7 @@ function drawShot(t) {
   const gr = g.createLinearGradient(0, H - BG_UP - 380, 0, H); gr.addColorStop(0, 'rgba(8,6,12,0)'); gr.addColorStop(0.5, 'rgba(8,6,12,0.85)'); gr.addColorStop(1, 'rgba(8,6,12,1)'); g.fillStyle = gr; g.fillRect(0, H - BG_UP - 380, W, BG_UP + 380);
   const p = personFrame(t); if (!p.complete || !p.naturalWidth) return;
   const w = W * P.s, h = H * P.s, x = (W - w) / 2, y = H - h + 40;
-  g.save(); g.shadowColor = 'rgba(240,138,46,0.16)'; g.shadowBlur = 60; g.drawImage(p, x, y, w, h); g.restore();   // a hint of screen light at his edges
+  g.save(); g.shadowColor = 'rgba(240,160,110,0.10)'; g.shadowBlur = 60; g.drawImage(p, x, y, w, h); g.restore();   // a hint of screen light at his edges
   // the grade on him: the bright window had flattened him — deeper blacks, more contrast and colour, a touch warmer
   g.save(); g.filter = PERSON_GRADE; g.drawImage(p, x, y, w, h); g.restore();
 }
@@ -118,7 +118,7 @@ function overlays(t) {
 
 // ───────── captions ─────────
 const GROUPS = (() => { const out = []; let cur = []; const flush = () => { if (cur.length) out.push(cur), cur = []; };
-  const SEGB = [3.6, 5.75, 7.97, 14.8, 19.85, 21.52, 25.4], crosses = (a, b) => SEGB.some(x => a.t0 < x && b.t0 >= x - 0.05);
+  const SEGB = [3.6, 5.75, 7.97, 14.8, 19.85, 21.47, 25.03], crosses = (a, b) => SEGB.some(x => a.t0 < x && b.t0 >= x - 0.05);
   WORDS.forEach((w, i) => { const prev = WORDS[i - 1]; if (cur.length && (crosses(prev, w) || w.t0 - prev.t1 > 0.35 || cur.length >= 4 || cur.map(x => x.w).join(' ').length > 16)) flush(); cur.push(w); if (/[.,?]$/.test(w.w)) flush(); }); flush();
   return out.map(ws => ({ ws, t0: ws[0].t0 - 0.04, t1: ws[ws.length - 1].t1 + 0.1 })); })();
 GROUPS.forEach((gp, i) => { const nx = GROUPS[i + 1]; if (nx) gp.t1 = Math.min(nx.t0, gp.t1 + 0.3); });

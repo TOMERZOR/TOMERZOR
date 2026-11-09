@@ -19,7 +19,7 @@ sess = ort.InferenceSession(M, so, providers=["CPUExecutionProvider"]); rec = [n
 xs = np.linspace(0, 1, 1024, dtype=np.float32)
 def curve(x, lift, gain, gamma, s):
     y = lift + (gain - lift) * np.power(x, gamma); return np.clip(y + s * (y - 0.5) * (1 - np.abs(2 * y - 1)), 0, 1)
-LUT = np.stack([curve(xs, 0.012, 1.0, 0.91, 0.18), curve(xs, 0.012, 0.965, 0.97, 0.18), curve(xs, 0.024, 0.9, 1.02, 0.15)], 1)
+LUT = np.stack([curve(xs, 0.010, 0.975, 0.98, 0.2), curve(xs, 0.010, 0.975, 0.98, 0.2), curve(xs, 0.014, 0.98, 0.97, 0.2)], 1)   # neutral: contrast, no warm cast
 dbg = int(a.debug[0]) if a.debug else -1; n = 0
 while True:
     b = dec.stdout.read(W * H * 3)

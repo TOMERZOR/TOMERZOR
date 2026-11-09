@@ -269,7 +269,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
           </button>
           <button class="opt" type="button" role="menuitemradio" data-persona="arsit" aria-checked="false">
-            <b>ערסית 2.5</b><span>חדה, מהירה ושרופה על כל דבר.</span>
+            <b>צ'אחלה 2.5</b><span>חדה, מהירה ושרופה על כל דבר.</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
           </button>
         </div>
@@ -333,10 +333,10 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let variant = 0, timer = 0, current = null, copyTimer = 0;
 
-  /* בחירת מודל: ערס 3.5 או ערסית 2.5. נשמר בדפדפן */
+  /* בחירת מודל: ערס 3.5 או צ'אחלה 2.5. נשמר בדפדפן */
   const PERSONAS = {
     ars: { name: "ערס 3.5", who: "ערס", hints: ["מה שלומך?", "אני מאחר קצת, אני תקוע בפקק", "תודה רבה על העזרה", "זה יקר מדי, תן לי הנחה", "אני אוהב אותך"] },
-    arsit: { name: "ערסית 2.5", who: "ערסית", hints: ["מה שלומך?", "זה מצחיק מאוד", "אני מאחרת קצת", "תפסיק להציק לי", "אני מאוד רוצה את השמלה הזאת"] }
+    arsit: { name: "צ'אחלה 2.5", who: "צ'אחלה", hints: ["מה שלומך?", "זה מצחיק מאוד", "אני מאחרת קצת", "תפסיק להציק לי", "אני מאוד רוצה את השמלה הזאת"] }
   };
   let persona = "ars";
   try { if (PERSONAS[localStorage.getItem("arslate.persona")]) persona = localStorage.getItem("arslate.persona"); } catch (e) {}

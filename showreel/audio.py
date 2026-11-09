@@ -1,9 +1,7 @@
-"""Soundtrack for the ArsLate showreel: narration, music and effects, synthesized and mixed from scratch.
+"""Soundtrack for the ArsLate showreel: narration and effects (no music), mixed from scratch.
 
 - The narration (vo.mp3, ElevenLabs) is cut into its nine lines and placed where the picture wants them
   (vo.json `segs`), so the words land on the cuts.
-- The music is a darbuka maqsum groove with bass, pad and a plucked Hijaz hook at 100 BPM. It opens as a
-  quiet pad, drops on the logo, breathes under the narrator (side-chain ducking) and ends on the outro hit.
 - Sound effects follow the page's own cue list (sfx.json), so a key click lands on the frame its letter appears.
 
 usage: python3 audio.py sfx.json vo.f32 vo.json out.wav
@@ -17,7 +15,7 @@ import numpy as np
 SR = 48000
 rng = np.random.default_rng(11)
 cues = json.load(open(sys.argv[1]))
-SFX, MARKS = cues["sfx"], cues["marks"]
+SFX = cues["sfx"] if isinstance(cues, dict) else cues
 VO = json.load(open(sys.argv[3]))
 DUR = VO["dur"]
 N = int(SR * DUR)
@@ -176,98 +174,6 @@ for t, kind in SFX:
     elif kind == "strike":
         add(FX_L, FX_R, swoosh(0.22, 1500, 4000, 3), t, 0.3, 0.2)
 
-# ---------------- music ----------------
-BPM = 100
-S16 = 60 / BPM / 4
-BAR = S16 * 16
-HZ = {"C2": 65.41, "D2": 73.42, "Eb2": 77.78, "F#2": 92.50, "G2": 98.0, "A2": 110.0,
-      "D3": 146.83, "Eb3": 155.56, "F#3": 185.0, "G3": 196.0, "A3": 220.0, "Bb3": 233.08, "C4": 261.63,
-      "D4": 293.66, "Eb4": 311.13, "F#4": 369.99, "G4": 392.0, "A4": 440.0, "Bb4": 466.16, "C5": 523.25, "D5": 587.33}
-
-
-def doum():
-    d = 0.4
-    s = sine(glide(150, 78, d, 22), d) * env(d, 0.002, 0.16)
-    s += bandpass(rng.standard_normal(int(d * SR)), 60, 400) * env(d, 0.001, 0.03) * 0.6
-    return norm(s)
-
-
-def tek(soft=False):
-    d = 0.09
-    n = rng.standard_normal(int(d * SR))
-    s = bandpass(n, 2500, 8000) * env(d, 0.0004, 0.012) + sine(980, d) * env(d, 0.0005, 0.02) * 0.5
-    return norm(s) * (0.45 if soft else 1)
-
-
-def bass(freq, d):
-    t = tt(d)
-    s = sum(np.sin(2 * np.pi * freq * m * t) / m * np.exp(-t * (2 + m * 3)) for m in range(1, 7))
-    return s * np.minimum(1, t / 0.004) * np.minimum(1, (d - t) / 0.03)
-
-
-def pad(freqs, d):
-    t = tt(d)
-    s = np.zeros(len(t))
-    for f in freqs:
-        for det in (-0.12, 0.12):
-            s += sum(np.sin(2 * np.pi * (f + det * f / 100) * m * t + m) / (m * m) for m in range(1, 5))
-    swell = np.minimum(1, t / 0.35) * np.minimum(1, (d - t) / 0.3)
-    return s * swell / len(freqs)
-
-
-def pluck(freq, d=0.9):
-    n = int(SR / freq)
-    buf = rng.uniform(-1, 1, n)
-    out = np.zeros(int(d * SR))
-    for i in range(len(out)):
-        out[i] = buf[i % n]
-        buf[i % n] = 0.996 * 0.5 * (buf[i % n] + buf[(i + 1) % n])
-    return out * np.minimum(1, tt(d) / 0.002)
-
-
-MAQSUM = {0: "D", 2: "T", 4: "k", 6: "T", 8: "D", 10: "k", 12: "T", 14: "k", 15: "k"}
-FILL = {0: "D", 2: "T", 4: "k", 6: "T", 8: "D", 10: "k", 11: "k", 12: "T", 13: "T", 14: "T", 15: "T"}
-BASS_A = {0: "D2", 3: "D2", 6: "Eb2", 8: "D2", 11: "F#2", 14: "Eb2"}
-BASS_B = {0: "D2", 3: "D2", 6: "C2", 8: "D2", 11: "Eb2", 14: "D2"}
-CHORDS = [["D3", "F#3", "A3"], ["D3", "F#3", "A3"], ["Eb3", "G3", "Bb3"], ["D3", "F#3", "A3"]]
-HOOK = [(0, "D4"), (2, "Eb4"), (4, "F#4"), (6, "G4"), (8, "A4"), (11, "G4"), (12, "F#4"), (14, "Eb4"), (16, "D4")]
-D_, T_, K_ = doum(), tek(), tek(True)
-
-
-def bar_at(t0, n, fill=False, hook=False, drums=True, bass_on=True):
-    pat = FILL if fill else MAQSUM
-    if drums:
-        for st, h in pat.items():
-            g = {"D": 0.55, "T": 0.32, "k": 0.32}[h]
-            add(MUS_L, MUS_R, {"D": D_, "T": T_, "k": K_}[h], t0 + st * S16 + rng.uniform(0, .004), g, {"D": 0, "T": .25, "k": -.25}[h])
-    if bass_on:
-        for st, note in (BASS_A if n % 2 == 0 else BASS_B).items():
-            add(MUS_L, MUS_R, bass(HZ[note], S16 * 2.6), t0 + st * S16, 0.42)
-    add(MUS_L, MUS_R, pad([HZ[x] for x in CHORDS[n % 4]], BAR), t0, 0.07)
-    if hook:
-        for st, note in HOOK:
-            add(MUS_L, MUS_R, pluck(HZ[note] * 2, 0.8), t0 + st * S16, 0.22, 0.3)
-
-
-tLogo, tOut, tChips, tCnt = MARKS["tLogo"], MARKS["tOut"], MARKS["tChips"], MARKS["tCnt"]
-# intro: a sparse, slightly uneasy pad and a single soft pulse, so the formal message feels awkward
-add(MUS_L, MUS_R, pad([HZ["D3"], HZ["A3"], HZ["Eb4"]], tLogo - 0.3), 0.2, 0.05)
-for k in range(int((tLogo - 1) / (S16 * 4))):
-    add(MUS_L, MUS_R, K_, 0.6 + k * S16 * 4, 0.12, 0.2)
-# groove from the logo to just before the outro; drums drop out for the stats bar so the counters can tick
-t0, n = tLogo, 0
-while t0 + BAR <= tOut - 0.3:
-    drums = not (tCnt - 0.3 <= t0 < tCnt + BAR - 0.3)
-    bar_at(t0, n, fill=(n % 4 == 3), hook=(n in (0, 4, 8)), drums=drums)
-    t0 += BAR
-    n += 1
-# outro: hit, one hook bar, final doum and a rising pluck chord
-bar_at(tOut + 0.25, 0, hook=True)
-add(MUS_L, MUS_R, D_, tChips, 0.6)
-add(MUS_L, MUS_R, bass(HZ["D2"], 1.4), tChips, 0.45)
-for k, note in enumerate(["D4", "F#4", "A4", "D5"]):
-    add(MUS_L, MUS_R, pluck(HZ[note], 1.6), tChips + k * 0.03, 0.18, (k - 1.5) * .2)
-
 # ---------------- narration ----------------
 raw = np.fromfile(sys.argv[2], dtype=np.float32).reshape(-1, 2)
 for seg in VO["segs"]:
@@ -283,26 +189,11 @@ for seg in VO["segs"]:
     add(VO_L, VO_R, piece[:, 1], at, 1.0, 0.02)
 
 # ---------------- mix ----------------
-# side-chain: the music ducks under the voice with a quick attack and a slow release
-vo_env = np.abs(VO_L + VO_R) / 2
-win = int(0.02 * SR)
-vo_env = np.convolve(vo_env, np.ones(win) / win, mode="same")
-duck = np.ones(N)
-g = 1.0
-atk, rel = np.exp(-1 / (0.012 * SR)), np.exp(-1 / (0.35 * SR))
-target = np.where(vo_env > 0.02, 0.38, 1.0)
-for i in range(N):  # one-pole follower, vectorizing this would lose the asymmetry
-    c = atk if target[i] < g else rel
-    g = c * g + (1 - c) * target[i]
-    duck[i] = g
-music_gain = 0.55
-vo_gain = 0.95
-mix_L = MUS_L * duck * music_gain + FX_L + VO_L * vo_gain
-mix_R = MUS_R * duck * music_gain + FX_R + VO_R * vo_gain
-mix = np.stack([mix_L, mix_R], 1)
-fo = int(0.8 * SR)
+vo_gain = 1.0
+mix = np.stack([FX_L + VO_L * vo_gain, FX_R + VO_R * vo_gain], 1)
+fo = int(0.6 * SR)
 mix[-fo:] *= (np.linspace(1, 0, fo) ** 2)[:, None]
-mix = np.tanh(mix * 1.15) / np.tanh(1.15)
+mix = np.tanh(mix * 1.1) / np.tanh(1.1)
 mix = mix / np.max(np.abs(mix)) * 0.92
 pcm = (mix * 32767).astype("<i2")
 with wave.open(sys.argv[4], "wb") as w:

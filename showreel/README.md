@@ -19,7 +19,7 @@
 ffmpeg -i vo.wav -ac 2 -ar 48000 -f f32le vo48.f32
 # sfx.json: {sfx: window.__sfx} מהדף (ראו render.js)
 python3 audio.py sfx.json vo48.f32 vo.json audio.wav
-python3 ../.claude/skills/onetake/scripts/render.py index.html --out showreel.mp4 --sfx audio.wav --width 1080 --height 1920
+python3 render.py index.html --out showreel.mp4 --sfx audio.wav --width 1080 --height 1920
 ```
 
 התסריט של הקריין נמצא ב־`vo.json` תחת `lines`. כדי לשנות טקסט צריך להקליט מחדש, לתמלל ולהריץ את

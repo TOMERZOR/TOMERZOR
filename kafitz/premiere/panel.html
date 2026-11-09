@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>קפיץ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Heebo:wght@900&family=Secular+One&family=Suez+One&family=Fredoka:wght@700&family=Karantina:wght@700&family=Varela+Round&family=Assistant:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="panel.css">
+</head>
+<body class="ppro">
+
+<header class="p-head">
+  <img src="../img/icon.svg" width="22" height="22" alt="">
+  <div class="p-seq">
+    <b id="seqName">קפיץ</b>
+    <small id="seqMeta">מחפש סיקוונס…</small>
+  </div>
+  <button class="icon-btn" id="refresh" title="רענון" aria-label="רענון"><i class="ph ph-arrows-clockwise"></i></button>
+</header>
+
+<section class="p-empty" id="noSeq" hidden>
+  <i class="ph ph-film-slate"></i>
+  <p>פתחו סיקוונס בפרימייר ולחצו על רענון.</p>
+</section>
+
+<main id="main" hidden>
+  <div class="p-go">
+    <button class="btn primary wide" id="transcribe"><i class="ph ph-waveform"></i><span id="transcribeLabel">תמלול הסיקוונס</span></button>
+    <p class="p-note" id="clipNote">יתומללו הקליפים המסומנים בטיימליין. בלי סימון: כל מה שעל A1.</p>
+  </div>
+
+  <div class="stage p-stage" id="stage">
+    <video id="video" playsinline preload="auto" muted></video>
+    <canvas id="overlay"></canvas>
+    <div class="status" id="status" hidden>
+      <div class="status-row">
+        <span id="statusText">מכין…</span>
+        <button class="icon-btn" id="cancelRun" aria-label="עצירה"><i class="ph ph-x"></i></button>
+      </div>
+      <div class="bar"><i id="statusBar"></i></div>
+    </div>
+  </div>
+  <div class="transport">
+    <button class="icon-btn" id="playBtn" aria-label="ניגון"><i class="ph-fill ph-play"></i></button>
+    <span class="time" id="time">0:00</span>
+    <label class="p-follow"><input type="checkbox" id="follow" checked> עוקב אחרי הסמן של פרימייר</label>
+  </div>
+
+  <aside class="panel p-panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="style">עיצוב</button>
+      <button role="tab" aria-selected="false" data-tab="text">טקסט <span class="count" id="pageCount"></span></button>
+    </div>
+    <div class="tab-body" id="tab-style"></div>
+    <div class="tab-body" id="tab-text" hidden>
+      <div class="redo">
+        <div class="field two">
+          <div><label for="engine">מנוע תמלול</label><select id="engine"></select></div>
+          <div><label for="lang">שפה</label><select id="lang"></select></div>
+        </div>
+        <p class="engine-note" id="engineNote"></p>
+        <div class="field" id="keyField" hidden>
+          <label for="apiKey">מפתח ElevenLabs</label>
+          <input type="password" id="apiKey" autocomplete="off" placeholder="sk_…" dir="ltr">
+          <small>נשמר רק במחשב הזה. השמע נשלח ל-ElevenLabs לתמלול.</small>
+        </div>
+      </div>
+      <ol class="captions" id="captions"></ol>
+      <p class="empty-list" id="emptyList">עוד אין כתוביות. לחצו על "תמלול הסיקוונס".</p>
+    </div>
+  </aside>
+</main>
+
+<footer class="p-foot" id="foot" hidden>
+  <button class="btn primary" id="place"><i class="ph ph-stack-plus"></i><span id="placeLabel">הוספה לטיימליין</span></button>
+  <button class="btn ghost" id="srt" title="כתוביות רגילות של פרימייר, בלי אנימציה"><i class="ph ph-subtitles"></i><span>כתוביות פרימייר</span></button>
+</footer>
+
+<div class="modal" id="renderModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="renderTitle">
+    <h2 id="renderTitle">מכין את הכתוביות</h2>
+    <p id="renderText">מצייר את הפריימים…</p>
+    <div class="bar big"><i id="renderBar"></i></div>
+    <button class="btn ghost" id="renderCancel">ביטול</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module" src="panel.js"></script>
+</body>
+</html>

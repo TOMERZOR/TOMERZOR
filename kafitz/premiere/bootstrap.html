@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>קפיץ</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1e1e1e; color: #9b9ba3; font: 14px system-ui, sans-serif; overflow: hidden; }
+  iframe { border: 0; width: 100%; height: 100%; display: block; }
+  p { padding: 24px; }
+</style>
+</head>
+<body>
+<p id="msg">טוען…</p>
+<script>
+// Starts the local server (Node) and shows the panel from it in an iframe, then relays the panel's
+// calls to Premiere (ExtendScript in host/kafitz.jsx).
+(function () {
+  var msg = document.getElementById('msg');
+  var nodeRequire = (window.cep_node && window.cep_node.require) || window.require;
+  if (!nodeRequire || !window.__adobe_cep__) { msg.textContent = 'הפאנל צריך לרוץ בתוך Premiere Pro.'; return; }
+  var path = nodeRequire('path');
+  var here = decodeURIComponent(location.pathname);
+  if (/^\/[A-Za-z]:/.test(here)) here = here.slice(1); // Windows: /C:/... -> C:/...
+  var root = path.dirname(path.normalize(here));
+  var server = nodeRequire(path.join(root, 'premiere', 'server.js'));
+  server.start(root, function (err, info) {
+    if (err) { msg.textContent = 'לא הצלחתי להפעיל את הפאנל: ' + err.message; return; }
+    var origin = 'http://127.0.0.1:' + info.port;
+    var frame = document.createElement('iframe');
+    frame.allow = 'autoplay; clipboard-write';
+    frame.src = origin + '/premiere/panel.html#t=' + info.token;
+    document.body.replaceChildren(frame);
+    window.addEventListener('message', function (e) {
+      if (e.origin !== origin || !e.data || !/^\w+$/.test(e.data.fn || '')) return;
+      var args = (e.data.args || []).map(function (a) { return JSON.stringify(a); }).join(',');
+      window.__adobe_cep__.evalScript('kafitz.' + e.data.fn + '(' + args + ')', function (result) {
+        frame.contentWindow.postMessage({ id: e.data.id, result: result }, origin);
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

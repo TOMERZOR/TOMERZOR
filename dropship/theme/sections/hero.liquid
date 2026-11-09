@@ -1,0 +1,65 @@
+{%- liquid
+  assign img = section.settings.image
+-%}
+<section class="hero">
+  <div class="hero__media">
+    {%- if img != blank -%}
+      {{ img | image_url: width: 1800 | image_tag: loading: 'eager', fetchpriority: 'high', sizes: '(min-width: 990px) 58vw, 100vw', widths: '600, 900, 1200, 1500, 1800', alt: img.alt }}
+    {%- else -%}
+      <img src="{{ 'asleep.jpg' | asset_url }}" alt="אישה ישנה עם מוט סלסול מסאטן בשיער" width="800" height="1000" loading="eager" fetchpriority="high">
+    {%- endif -%}
+  </div>
+  <div class="hero__copy">
+    <h1 class="hero__title display">{{ section.settings.title }}</h1>
+    {%- if section.settings.text != blank -%}<p class="hero__text">{{ section.settings.text }}</p>{%- endif -%}
+    <div class="hero__ctas">
+      <a class="btn btn--light" href="#buy">{{ section.settings.button_text }} {% render 'icon', name: 'arrow' %}</a>
+      {%- if section.settings.secondary_text != blank -%}
+        <a class="btn btn--ghost" href="#how">{{ section.settings.secondary_text }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "באנר ראשי",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "תמונה (לאורך, 4:5)"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת (עד 6 מילים)",
+      "default": "הולכת לישון. מתעוררת עם תלתלים."
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "טקסט (עד 20 מילים)",
+      "default": "מוט ספוג עטוף סאטן. מגלגלים עליו את השיער לפני השינה ומשחררים בבוקר, בלי לחמם את השיער."
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "כפתור ראשי (גלילה לרכישה)",
+      "default": "להזמנה"
+    },
+    {
+      "type": "text",
+      "id": "secondary_text",
+      "label": "כפתור משני (גלילה ל'איך זה עובד')",
+      "default": "איך זה עובד"
+    }
+  ],
+  "presets": [
+    {
+      "name": "באנר ראשי"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,22 @@
+{%- comment -%}
+  Price in shekels, independent of the store's money format: ₪119, ₪1,374, ₪89.50.
+  Usage: render 'money', cents: variant.price
+{%- endcomment -%}
+{%- liquid
+  assign c = cents | default: 0 | plus: 0 | round
+  assign whole = c | divided_by: 100
+  assign rem = c | modulo: 100
+  if whole >= 1000
+    assign th = whole | divided_by: 1000
+    assign hu = whole | modulo: 1000 | prepend: '00' | slice: -3, 3
+    assign w = th | append: ',' | append: hu
+  else
+    assign w = whole | append: ''
+  endif
+  if rem > 0
+    assign r = rem | prepend: '0' | slice: -2, 2
+    echo '₪' | append: w | append: '.' | append: r
+  else
+    echo '₪' | append: w
+  endif
+-%}

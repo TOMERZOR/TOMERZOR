@@ -13,6 +13,10 @@ Bag and wishlist are kept in the visitor's browser (localStorage). Checkout and 
 
 Preview locally: `npx http-server .` and open http://localhost:8080
 
+## LUNÉ dropshipping store
+
+A complete Hebrew dropshipping store for a satin heatless curling set: Shopify theme, product import, policies, Facebook ads and launch plan. Start with `dropship/README.md`.
+
 ## Shopify
 
 The Shopify version of the store is in `shopify-theme/` (also published as the `shopify-theme` branch). Setup steps, policies, pages and a product import file are in `shopify-setup/`; start with `shopify-setup/README.md`.

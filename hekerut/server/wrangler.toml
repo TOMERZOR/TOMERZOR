@@ -1,0 +1,14 @@
+# היכרות בקליק server on Cloudflare Workers. Deploy with the GitHub workflow
+# (.github/workflows/hekerut-api.yml) or `npx wrangler deploy` from this folder.
+name = "hekerut-api"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# One Durable Object holds the whole network (SQLite): profiles, follows and activity.
+[[durable_objects.bindings]]
+name = "NETWORK"
+class_name = "NetworkDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["NetworkDO"]

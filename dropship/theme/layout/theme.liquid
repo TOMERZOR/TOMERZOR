@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-scheme="{{ settings.color_scheme | default: 'auto' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="{% if settings.color_scheme == 'light' %}light{% else %}light dark{% endif %}">
+  <meta name="theme-color" content="{{ settings.color_bg }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  {%- if settings.favicon != blank -%}
+    <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 64, height: 64 }}">
+  {%- else -%}
+    <link rel="icon" type="image/png" href="{{ 'favicon.png' | asset_url }}">
+  {%- endif -%}
+  {%- liquid
+    assign brand = settings.brand_name | default: shop.name
+    if request.page_type == 'index' and page_title == shop.name
+      assign doc_title = brand | append: ' | ' | append: settings.home_title
+    elsif page_title contains brand
+      assign doc_title = page_title
+    else
+      assign doc_title = page_title | append: ' | ' | append: brand
+    endif
+    if current_page > 1
+      assign doc_title = doc_title | append: ' - עמוד ' | append: current_page
+    endif
+    assign doc_description = page_description | default: settings.seo_description
+  -%}
+  <title>{{ doc_title }}</title>
+  {%- if doc_description != blank -%}
+    <meta name="description" content="{{ doc_description | escape }}">
+  {%- endif -%}
+  {% render 'meta-tags' %}
+
+  {{ 'karantina-700-hebrew.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+  {{ 'heebo-hebrew.woff2' | asset_url | preload_tag: as: 'font', type: 'font/woff2', crossorigin: 'anonymous' }}
+  {% render 'theme-tokens' %}
+  {{ 'theme.css' | asset_url | stylesheet_tag }}
+  <script>
+    window.theme = {
+      routes: {
+        root: {{ routes.root_url | json }},
+        cart: {{ routes.cart_url | json }},
+        cartAdd: {{ routes.cart_add_url | json }},
+        cartChange: {{ routes.cart_change_url | json }}
+      }
+    };
+    document.documentElement.classList.add('js');
+  </script>
+  <script src="{{ 'theme.js' | asset_url }}" defer></script>
+
+  {{ content_for_header }}
+</head>
+
+<body class="template-{{ template.name | handle }}">
+  <a class="skip-link" href="#MainContent">דילוג לתוכן</a>
+
+  {% sections 'header-group' %}
+
+  <main id="MainContent" tabindex="-1">
+    {{ content_for_layout }}
+  </main>
+
+  {% sections 'footer-group' %}
+</body>
+</html>

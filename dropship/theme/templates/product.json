@@ -1,0 +1,185 @@
+{
+  "sections": {
+    "main": {
+      "type": "main-product",
+      "settings": {}
+    },
+    "night": {
+      "type": "night-morning",
+      "settings": {}
+    },
+    "benefits": {
+      "type": "benefits",
+      "settings": {},
+      "blocks": {
+        "b1": {
+          "type": "tile",
+          "settings": {
+            "fallback": "satin-macro.jpg",
+            "title": "סאטן חלק",
+            "text": "פחות חיכוך על השיער בזמן השינה, ולכן פחות קרזול בבוקר."
+          }
+        },
+        "b2": {
+          "type": "tile",
+          "settings": {
+            "style": "accent",
+            "figure": "5",
+            "title": "דקות של גלגול בערב",
+            "text": "זה כל הזמן שזה לוקח. בבוקר רק משחררות ומפזרות עם האצבעות."
+          }
+        },
+        "b3": {
+          "type": "tile",
+          "settings": {
+            "fallback": "hero-night.jpg",
+            "title": "רך מספיק לישון איתו",
+            "text": "ספוג מרופד לכל האורך, בלי קליפסים ובלי חלקים קשים."
+          }
+        },
+        "b4": {
+          "type": "tile",
+          "settings": {
+            "fallback": "colors.jpg",
+            "title": "3 צבעים",
+            "text": "שמפניה, שחור וורוד פודרה. בכל סט 2 גומיות ושקית."
+          }
+        }
+      },
+      "block_order": [
+        "b1",
+        "b2",
+        "b3",
+        "b4"
+      ]
+    },
+    "steps": {
+      "type": "steps",
+      "settings": {
+        "bg": "tint"
+      },
+      "blocks": {
+        "s1": {
+          "type": "step",
+          "settings": {
+            "fallback": "step-1.jpg",
+            "title": "מניחות",
+            "text": "מניחות את המוט על הראש כמו קשת, כשהאמצע בקו השיער."
+          }
+        },
+        "s2": {
+          "type": "step",
+          "settings": {
+            "fallback": "step-2.jpg",
+            "title": "מגלגלות",
+            "text": "מלפפות קווצה סביב המוט ומוסיפות שיער בכל סיבוב. אותו דבר בצד השני."
+          }
+        },
+        "s3": {
+          "type": "step",
+          "settings": {
+            "fallback": "step-3.jpg",
+            "title": "ישנות",
+            "text": "סוגרות את הקצוות עם גומיות הסאטן, הולכות לישון ומשחררות בבוקר."
+          }
+        }
+      },
+      "block_order": [
+        "s1",
+        "s2",
+        "s3"
+      ]
+    },
+    "compare": {
+      "type": "comparison",
+      "settings": {}
+    },
+    "gift": {
+      "type": "image-with-text",
+      "settings": {}
+    },
+    "reviews": {
+      "type": "apps",
+      "settings": {}
+    },
+    "faq": {
+      "type": "faq",
+      "settings": {},
+      "blocks": {
+        "q1": {
+          "type": "question",
+          "settings": {
+            "question": "לאיזה אורך שיער זה מתאים?",
+            "answer": "<p>הכי טוב לשיער באורך כתפיים ומטה. בשיער קצר יותר קשה ללפף את השיער סביב המוט.</p>"
+          }
+        },
+        "q2": {
+          "type": "question",
+          "settings": {
+            "question": "שיער רטוב או יבש?",
+            "answer": "<p>הכי טוב על שיער לח כמעט יבש. שיער רטוב מדי לא יתייבש עד הבוקר, ושיער יבש לגמרי יחזיק פחות. אפשר לרסס מעט מים או קרם תלתלים לפני הגלגול.</p>"
+          }
+        },
+        "q3": {
+          "type": "question",
+          "settings": {
+            "question": "כמה זמן צריך להשאיר?",
+            "answer": "<p>לפחות 3-4 שעות, והכי טוב לילה שלם.</p>"
+          }
+        },
+        "q4": {
+          "type": "question",
+          "settings": {
+            "question": "כמה זמן מחזיקים התלתלים?",
+            "answer": "<p>זה תלוי בסוג השיער, בדרך כלל יום עד יומיים. ספריי קיבוע קל עוזר לשיער חלק במיוחד.</p>"
+          }
+        },
+        "q5": {
+          "type": "question",
+          "settings": {
+            "question": "נוח לישון עם זה?",
+            "answer": "<p>המוט עשוי ספוג רך עטוף בסאטן. רוב הנשים מתרגלות אחרי לילה או שניים.</p>"
+          }
+        },
+        "q6": {
+          "type": "question",
+          "settings": {
+            "question": "מתי ההזמנה תגיע?",
+            "answer": "<p>המשלוח חינם ומגיע עם מספר מעקב. זמן האספקה הוא בדרך כלל 10-15 ימי עסקים, ולא יותר מ-18. מספר המעקב נשלח במייל כשהחבילה יוצאת.</p>"
+          }
+        },
+        "q7": {
+          "type": "question",
+          "settings": {
+            "question": "אפשר להחזיר?",
+            "answer": "<p>כן. אפשר לבטל את העסקה תוך 14 יום מיום קבלת המוצר, בהתאם לחוק הגנת הצרכן. הפרטים המלאים במדיניות הביטולים וההחזרות.</p>"
+          }
+        }
+      },
+      "block_order": [
+        "q1",
+        "q2",
+        "q3",
+        "q4",
+        "q5",
+        "q6",
+        "q7"
+      ]
+    },
+    "cta": {
+      "type": "rich-text",
+      "settings": {}
+    }
+  },
+  "order": [
+    "main",
+    "night",
+    "benefits",
+    "steps",
+    "compare",
+    "gift",
+    "reviews",
+    "faq",
+    "cta"
+  ]
+}

@@ -1,0 +1,91 @@
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container">
+    <div class="section-head reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+    </div>
+    <div class="versus">
+      <div class="versus__card versus__card--us reveal">
+        <p class="versus__title">{{ section.settings.us }}</p>
+        <ul class="versus__list">
+          {%- assign lines = section.settings.us_points | newline_to_br | split: '<br />' -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+        </ul>
+      </div>
+      <div class="versus__card versus__card--them reveal" style="--i: 1">
+        <p class="versus__title">{{ section.settings.them }}</p>
+        <ul class="versus__list">
+          {%- assign lines = section.settings.them_cons | newline_to_br | split: '<br />' -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'x' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+          {%- assign lines = section.settings.them_pros | newline_to_br | split: '<br />' -%}
+          {%- for l in lines -%}{%- assign t = l | strip -%}{%- if t != blank -%}<li>{% render 'icon', name: 'check' %}<span>{{ t }}</span></li>{%- endif -%}{%- endfor -%}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "השוואה",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "סאטן מול מסלסל"
+    },
+    {
+      "type": "text",
+      "id": "us",
+      "label": "הכרטיס שלנו",
+      "default": "סט LUNÉ"
+    },
+    {
+      "type": "textarea",
+      "id": "us_points",
+      "label": "יתרונות שלנו (שורה לכל יתרון)",
+      "default": "בלי חום על השיער\nעובד בזמן שאת ישנה\nבלי חשמל ובלי שקע\nנכנס לכל תיק נסיעות"
+    },
+    {
+      "type": "text",
+      "id": "them",
+      "label": "הכרטיס השני",
+      "default": "מסלסל ופן"
+    },
+    {
+      "type": "textarea",
+      "id": "them_cons",
+      "label": "חסרונות (שורה לכל אחד)",
+      "default": "חום גבוה על השיער\nזמן מול המראה בבוקר\nצריך חשמל ושקע"
+    },
+    {
+      "type": "textarea",
+      "id": "them_pros",
+      "label": "יתרונות אמיתיים שלהם (הוגנות בונה אמון)",
+      "default": "תוצאה מהירה יותר"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "tint",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "presets": [
+    {
+      "name": "השוואה"
+    }
+  ]
+}
+{% endschema %}

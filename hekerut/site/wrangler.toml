@@ -1,0 +1,7 @@
+# The app itself (the static files in hekerut/), served by Cloudflare at its own address.
+# The deploy workflow (.github/workflows/hekerut-api.yml) copies the files into ./public first.
+name = "hekerut"
+compatibility_date = "2026-10-01"
+
+[assets]
+directory = "./public"

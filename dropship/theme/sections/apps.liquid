@@ -1,0 +1,49 @@
+{%- if section.blocks.size > 0 -%}
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container">
+    {%- if section.settings.title != blank -%}<h2 class="display h2" style="margin-bottom: var(--s-6)">{{ section.settings.title }}</h2>{%- endif -%}
+    {%- for block in section.blocks -%}{% render block %}{%- endfor -%}
+  </div>
+</section>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "אפליקציות (ביקורות)",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "מה הלקוחות אומרות"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "alt",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "blocks": [
+    {
+      "type": "@app"
+    }
+  ],
+  "presets": [
+    {
+      "name": "אפליקציות (ביקורות)"
+    }
+  ]
+}
+{% endschema %}

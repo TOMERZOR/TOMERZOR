@@ -1,0 +1,102 @@
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container faq">
+    <div class="faq__side reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
+      {%- if settings.whatsapp_number != blank -%}
+        <a class="btn btn--ghost btn--small" href="https://wa.me/{{ settings.whatsapp_number | remove: '+' | remove: ' ' | remove: '-' }}" target="_blank" rel="noopener">{% render 'icon', name: 'whatsapp' %} צור קשר</a>
+      {%- elsif section.settings.contact_page != blank -%}
+        <a class="btn btn--ghost btn--small" href="{{ section.settings.contact_page.url }}">צור קשר</a>
+      {%- endif -%}
+    </div>
+    <div class="accordion reveal" style="--i: 1">
+      {%- for block in section.blocks -%}
+        <details class="accordion__item" {{ block.shopify_attributes }}>
+          <summary>{{ block.settings.question }} {% render 'icon', name: 'chevron' %}</summary>
+          <div class="accordion__body rte">{{ block.settings.answer }}</div>
+        </details>
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+{%- if section.blocks.size > 0 -%}
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {%- for block in section.blocks -%}
+        {"@type": "Question", "name": {{ block.settings.question | json }}, "acceptedAnswer": {"@type": "Answer", "text": {{ block.settings.answer | strip_html | json }}}}{% unless forloop.last %},{% endunless %}
+      {%- endfor -%}
+    ]
+  }
+</script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "שאלות נפוצות",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "שאלות נפוצות"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "טקסט",
+      "default": "לא מצאת תשובה? נחזור אלייך תוך יום עסקים."
+    },
+    {
+      "type": "page",
+      "id": "contact_page",
+      "label": "עמוד צור קשר (אם אין וואטסאפ)"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "tint",
+          "label": "משני"
+        }
+      ],
+      "default": ""
+    }
+  ],
+  "max_blocks": 12,
+  "blocks": [
+    {
+      "type": "question",
+      "name": "שאלה",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "שאלה",
+          "default": "שאלה"
+        },
+        {
+          "type": "richtext",
+          "id": "answer",
+          "label": "תשובה",
+          "default": "<p>תשובה</p>"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "שאלות נפוצות"
+    }
+  ]
+}
+{% endschema %}

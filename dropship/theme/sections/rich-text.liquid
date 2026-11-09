@@ -1,0 +1,59 @@
+<section class="section{% if section.settings.bg == 'tint' %} section--tint{% endif %}">
+  <div class="container closer reveal">
+    <div class="closer__copy">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      {%- if section.settings.text != blank -%}<p class="lead">{{ section.settings.text }}</p>{%- endif -%}
+    </div>
+    {%- if section.settings.button_text != blank -%}
+      <a class="btn" href="#buy">{{ section.settings.button_text }}</a>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "קריאה לפעולה",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "הזמנה היום, תלתלים בעוד כשבועיים"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "טקסט",
+      "default": "משלוח חינם עם מספר מעקב, וביטול עסקה עד 14 יום מהקבלה."
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "טקסט כפתור",
+      "default": "להזמנה"
+    },
+    {
+      "type": "select",
+      "id": "bg",
+      "label": "רקע",
+      "options": [
+        {
+          "value": "",
+          "label": "רגיל"
+        },
+        {
+          "value": "tint",
+          "label": "משני"
+        }
+      ],
+      "default": "tint"
+    }
+  ],
+  "presets": [
+    {
+      "name": "קריאה לפעולה"
+    }
+  ]
+}
+{% endschema %}

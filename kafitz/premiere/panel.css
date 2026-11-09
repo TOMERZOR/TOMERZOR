@@ -1,0 +1,44 @@
+/* Premiere panel: the site's styles, re-fitted to a narrow dockable panel and Premiere's greys. */
+body.ppro {
+  --bg: #1e1e1e;
+  --surface: #262626;
+  --surface-2: #2e2e2e;
+  font-size: 13px;
+  min-height: 100vh;
+  padding-bottom: 64px;
+}
+.p-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 5; background: var(--bg);
+}
+.p-seq { flex: 1; min-width: 0; display: grid; line-height: 1.3; }
+.p-seq b { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-seq small { color: var(--muted); font-size: 12px; direction: rtl; }
+.p-empty { padding: 48px 24px; text-align: center; color: var(--muted); }
+.p-empty i { font-size: 40px; color: var(--accent); }
+
+#main { padding: 12px; display: grid; gap: 12px; }
+.p-go .btn { height: 42px; }
+.p-note { color: var(--muted); font-size: 12px; margin: 6px 2px 0; }
+.p-stage { width: 100%; max-height: 42vh; background: #000; margin: 0; }
+.p-stage canvas { cursor: grab; }
+.transport { margin-top: -4px; }
+.transport .time { min-width: 0; text-align: start; flex: 1; }
+.p-follow { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; cursor: pointer; }
+.p-follow input { accent-color: var(--accent); margin: 0; }
+
+.p-panel { position: static; max-height: none; overflow: visible; }
+.p-panel .tab-body { overflow: visible; padding: 4px 14px 16px; }
+.p-panel .anims { grid-template-columns: repeat(3, 1fr); }
+.p-panel .fonts { grid-template-columns: repeat(4, 1fr); }
+.p-panel .fonts button { font-size: 15px; height: 40px; }
+
+.p-foot {
+  position: fixed; bottom: 0; inset-inline: 0; z-index: 10;
+  display: flex; gap: 8px; padding: 10px 12px;
+  background: rgba(30, 30, 30, 0.94); backdrop-filter: blur(8px); border-top: 1px solid var(--line);
+}
+.p-foot .btn.primary { flex: 1; }
+.p-foot .btn.ghost span { display: inline; }
+@media (max-width: 360px) { .p-foot .btn.ghost span { display: none; } }

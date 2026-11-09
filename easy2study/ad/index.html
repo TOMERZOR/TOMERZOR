@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Easy2Study · פרסומת</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* Every frame is a pure function of time: render(t) sets all styles, nothing animates on its own.
+   The stage is 1080×1920. Open the page to preview it looping; ?render&t=3.2 shows one frame.
+   Same tokens as the app (css/app.css), at stage scale. */
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-hebrew-wght-normal.woff2") format("woff2"); font-weight: 300 900; unicode-range: U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+@font-face { font-family: "Rubik"; src: url("../fonts/rubik-latin-wght-normal.woff2") format("woff2"); font-weight: 300 900; unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+:root {
+  --bg: #f4f7f5; --surface: #ffffff; --surface-2: #ebf0ed; --ink: #14201b; --ink-2: #44524c; --ink-3: #5f6c66; --line: #dbe3df;
+  --accent: #1d7656; --accent-strong: #155c43; --accent-soft: #dff0e8; --accent-soft-ink: #155c43;
+  --shadow: 0 2px 4px rgb(20 32 27 / .05), 0 30px 70px -30px rgb(20 32 27 / .28);
+  --font: "Rubik", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #dfe7e3; overflow: hidden; }
+body { display: grid; place-items: center; font-family: var(--font); color: var(--ink); -webkit-font-smoothing: antialiased; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; flex: none; transform-origin: 50% 50%; background: var(--bg); }
+body.render { display: block; }
+body.render #stage { transform: none !important; }
+.layer { position: absolute; inset: 0; will-change: transform, opacity, filter; }
+.icon { width: 1em; height: 1em; fill: currentColor; flex: none; }
+.glow { position: absolute; width: 1500px; height: 1500px; border-radius: 50%; left: -210px; top: -320px; background: radial-gradient(closest-side, rgb(29 118 86 / .10), transparent); }
+
+/* ---------- Big type ---------- */
+.big { position: absolute; left: 90px; right: 90px; font-weight: 800; font-size: 104px; line-height: 1.08; letter-spacing: -.035em; text-align: center; }
+.big .w { display: inline-block; will-change: transform, opacity; }
+.green { color: var(--accent); }
+.mute { color: var(--ink-3); }
+
+/* ---------- Scene 1: the page that doesn't go in ---------- */
+.page { position: absolute; left: 150px; top: 690px; width: 780px; height: 980px; border-radius: 40px; background: var(--surface); box-shadow: var(--shadow); padding: 70px 66px; overflow: hidden; }
+.page__h { height: 34px; width: 54%; border-radius: 99px; background: #c9d2ce; margin-bottom: 44px; }
+.page .ln { height: 18px; border-radius: 99px; background: #dfe5e2; margin-bottom: 26px; will-change: transform, opacity, filter; }
+.page .ln.hl { background: #cfd8d4; }
+.clock { position: absolute; left: 96px; top: 600px; width: 150px; height: 150px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); }
+.clock::before { content: ""; position: absolute; inset: 14px; border-radius: 50%; border: 6px solid var(--ink); }
+.clock i { position: absolute; left: 72px; bottom: 75px; width: 6px; border-radius: 3px; background: var(--ink); transform-origin: 50% 100%; }
+.clock i.h { height: 34px; } .clock i.m { height: 48px; background: var(--accent); }
+.clock b { position: absolute; left: 68px; top: 68px; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); }
+
+/* ---------- Scene 2: tried everything ---------- */
+.tried { position: absolute; left: 110px; right: 110px; top: 560px; display: grid; gap: 34px; }
+.tcard { position: relative; display: flex; align-items: center; gap: 34px; height: 178px; padding: 0 50px; border-radius: 44px; background: var(--surface); box-shadow: var(--shadow); font-size: 60px; font-weight: 600; letter-spacing: -.02em; will-change: transform, opacity; }
+.tcard .ic { width: 96px; height: 96px; border-radius: 30px; display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2); font-size: 56px; flex: none; }
+.tcard .txt { position: relative; }
+.tcard .strike { position: absolute; right: -10px; top: 52%; height: 8px; border-radius: 4px; background: var(--ink); transform-origin: right; }
+.tcard .x { margin-inline-start: auto; width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff; font-size: 40px; }
+.tried__t { position: absolute; left: 0; right: 0; top: 330px; text-align: center; font-size: 78px; font-weight: 800; letter-spacing: -.03em; }
+
+/* ---------- Scene 3: reveal ---------- */
+#reveal { background: var(--accent); clip-path: circle(0px at 540px 1010px); color: #fff; }
+#reveal .glow2 { position: absolute; width: 1600px; height: 1600px; left: -260px; top: -500px; border-radius: 50%; background: radial-gradient(closest-side, rgb(255 255 255 / .16), transparent); }
+.logo { position: absolute; left: 390px; top: 600px; width: 300px; height: 300px; border-radius: 76px; background: #fff; box-shadow: 0 40px 80px -30px rgb(0 0 0 / .35); }
+.logo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.logo path { fill: none; stroke: var(--accent); stroke-width: 11; stroke-linecap: round; stroke-linejoin: round; }
+.wordmark { position: absolute; left: 0; right: 0; top: 990px; text-align: center; direction: ltr; font-size: 150px; font-weight: 800; letter-spacing: -.045em; }
+.wordmark span { display: inline-block; }
+.wordmark .two { color: #b8f0d6; }
+.tag { position: absolute; left: 0; right: 0; top: 1210px; text-align: center; font-size: 72px; font-weight: 600; letter-spacing: -.02em; color: rgb(255 255 255 / .9); }
+.tag .w { display: inline-block; }
+
+/* ---------- Phone scenes ---------- */
+.cap { position: absolute; left: 70px; right: 70px; top: 150px; text-align: center; }
+.cap__t { font-size: 92px; font-weight: 800; letter-spacing: -.035em; line-height: 1.08; }
+.cap__s { margin-top: 22px; font-size: 48px; font-weight: 500; color: var(--ink-2); letter-spacing: -.01em; }
+.cap .w { display: inline-block; }
+.phone { position: absolute; left: 175px; top: 540px; width: 730px; height: 1330px; border-radius: 110px; background: #14201b; padding: 22px; box-shadow: 0 60px 120px -40px rgb(20 32 27 / .55), inset 0 0 0 3px #2a3631; will-change: transform; }
+.screen { position: relative; width: 100%; height: 100%; border-radius: 90px; overflow: hidden; background: var(--bg); }
+.island { position: absolute; left: 50%; top: 22px; width: 210px; height: 58px; margin-left: -105px; border-radius: 99px; background: #0b100e; z-index: 9; }
+.scr { position: absolute; inset: 0; padding: 120px 40px 0; will-change: transform, opacity; }
+
+/* app pieces, at phone scale (about 1.7× the app) */
+.topbar { display: flex; align-items: center; gap: 18px; height: 80px; }
+.ibtn { width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; font-size: 40px; color: var(--ink-2); flex: none; }
+.ibtn.on { background: var(--accent-soft); color: var(--accent-soft-ink); }
+.prog { flex: 1; display: flex; gap: 8px; direction: rtl; }
+.prog i { flex: 1; height: 10px; border-radius: 99px; background: var(--line); position: relative; overflow: hidden; }
+.prog i b { position: absolute; inset: 0; background: var(--accent); transform-origin: right; }
+.got { display: inline-flex; align-items: center; gap: 8px; height: 60px; padding: 0 22px; border-radius: 99px; background: var(--accent-soft); color: var(--accent-soft-ink); font-weight: 700; font-size: 32px; }
+.got .icon { font-size: 28px; }
+.kick { margin: 26px 4px 18px; color: var(--ink-3); font-size: 28px; font-weight: 500; }
+.bite { position: relative; padding: 44px 38px 38px; border-radius: 44px; background: var(--surface); box-shadow: var(--shadow); }
+.bite h3 { margin: 0 0 22px; font-size: 48px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
+.bite p { margin: 0; font-size: 33px; line-height: 1.65; }
+.bite .line { display: block; will-change: transform, opacity; }
+.term { font-weight: 600; color: var(--accent-soft-ink); background: var(--accent-soft); border-radius: 12px; padding: 0 .25em; }
+.frac { display: inline-grid; justify-items: center; line-height: 1.02; font-weight: 700; vertical-align: middle; margin: 0 .12em; direction: ltr; font-variant-numeric: tabular-nums; }
+.frac i { display: block; width: 100%; border-top: 3px solid currentColor; margin: 3px 0 2px; }
+.pie { position: relative; width: 210px; height: 210px; margin: 26px auto 6px; border-radius: 50%; box-shadow: inset 0 0 0 3px var(--line); }
+.pie__cuts { position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(from 0deg, transparent 0 43.6deg, var(--surface) 43.6deg 45deg); }
+.piecap { text-align: center; font-size: 40px; }
+.bar { position: absolute; left: 40px; right: 40px; bottom: 50px; display: grid; grid-template-columns: 1fr 1.25fr; gap: 18px; }
+.btn { height: 104px; border-radius: 99px; display: flex; align-items: center; justify-content: center; gap: 16px; font-weight: 600; font-size: 36px; will-change: transform; }
+.btn .icon { font-size: 40px; }
+.btn--p { background: var(--accent); color: #fff; box-shadow: 0 18px 36px -18px var(--accent); }
+.btn--l { background: var(--surface); box-shadow: inset 0 0 0 3px var(--line); }
+.btn--l .icon { color: var(--accent); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 36px 50px; border-radius: 56px 56px 0 0; background: var(--bg); box-shadow: 0 -30px 70px -20px rgb(20 32 27 / .3); will-change: transform; }
+.sheet__grip { width: 80px; height: 9px; border-radius: 99px; background: var(--line); margin: 0 auto 28px; }
+.sheet h4 { margin: 0 0 8px; font-size: 46px; font-weight: 700; }
+.sheet .sub { margin: 0 0 26px; color: var(--ink-2); font-size: 30px; }
+.opt { display: flex; align-items: center; gap: 24px; padding: 22px 26px; margin-bottom: 18px; border-radius: 36px; background: var(--surface); box-shadow: inset 0 0 0 3px var(--line); will-change: transform; }
+.opt .oi { width: 72px; height: 72px; border-radius: 24px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: 38px; flex: none; }
+.opt b { display: block; font-size: 34px; font-weight: 600; }
+.opt small { color: var(--ink-3); font-size: 27px; }
+.scrim { position: absolute; inset: 0; background: rgb(20 32 27 / .34); }
+.extra { margin-top: 26px; padding: 26px 30px; border-radius: 30px; background: var(--surface-2); will-change: transform, opacity; }
+.extra__l { display: flex; align-items: center; gap: 12px; font-size: 26px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
+.extra__l .icon { color: var(--accent); font-size: 32px; }
+.extra p { font-size: 32px; line-height: 1.55; }
+.steps { display: grid; gap: 14px; margin-top: 24px; }
+.step { display: flex; gap: 20px; align-items: center; padding: 20px 24px; border-radius: 28px; background: var(--surface-2); font-size: 31px; will-change: transform, opacity; }
+.step .n { width: 50px; height: 50px; border-radius: 16px; flex: none; display: grid; place-items: center; background: var(--surface); font-weight: 700; font-size: 28px; }
+.step.now { background: var(--accent-soft); color: var(--accent-soft-ink); }
+.step.now .n { background: var(--accent); color: #fff; }
+.veq { display: flex; justify-content: center; align-items: flex-start; gap: 12px; margin-top: 26px; padding: 26px 18px; border-radius: 34px; background: var(--surface-2); direction: ltr; }
+.veq span { display: grid; justify-items: center; gap: 8px; padding: 12px 12px; border-radius: 24px; background: var(--surface); min-width: 0; will-change: transform, opacity; }
+.veq span.op { background: transparent; min-width: 0; padding: 14px 2px; color: var(--accent); }
+.veq b { font-size: 44px; font-weight: 700; }
+.veq small { direction: rtl; font-size: 22px; color: var(--ink-2); }
+.badge { display: inline-flex; align-items: center; gap: 10px; padding: 8px 22px; border-radius: 99px; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: 26px; font-weight: 700; margin-bottom: 18px; }
+.answers { display: grid; gap: 18px; margin-top: 8px; }
+.ans { display: flex; align-items: center; gap: 24px; height: 124px; padding: 0 30px; border-radius: 40px; background: var(--surface); box-shadow: inset 0 0 0 3px var(--line); font-size: 38px; font-weight: 500; will-change: transform, opacity; }
+.ans .k { width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; background: var(--surface-2); font-weight: 700; font-size: 30px; flex: none; }
+.ans.right { background: var(--accent-soft); box-shadow: inset 0 0 0 4px var(--accent); }
+.ans.right .k { background: var(--accent); color: #fff; }
+.fb { display: flex; gap: 22px; align-items: center; margin-top: 22px; padding: 26px 30px; border-radius: 36px; background: var(--accent-soft); color: var(--accent-soft-ink); font-size: 32px; will-change: transform, opacity; }
+.fb .fi { width: 70px; height: 70px; border-radius: 22px; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 38px; flex: none; }
+.fb b { display: block; font-size: 38px; }
+.path { display: grid; gap: 0; margin-top: 30px; }
+.pstep { position: relative; display: flex; gap: 26px; padding-bottom: 34px; }
+.pstep:not(:last-child)::after { content: ""; position: absolute; right: 39px; top: 88px; bottom: 6px; width: 5px; border-radius: 3px; background: var(--line); }
+.pstep .fill { position: absolute; right: 39px; top: 88px; bottom: 6px; width: 5px; border-radius: 3px; background: var(--accent); transform-origin: top; z-index: 1; }
+.node { position: relative; width: 84px; height: 84px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--surface); box-shadow: inset 0 0 0 4px var(--line); color: var(--ink-3); font-weight: 700; font-size: 34px; z-index: 2; }
+.node .chk { position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 40px; }
+.pbody { padding-top: 12px; }
+.pbody b { display: block; font-size: 36px; font-weight: 600; }
+.pbody small { color: var(--ink-3); font-size: 27px; }
+.ptitle { font-size: 56px; font-weight: 800; letter-spacing: -.03em; margin: 16px 4px 4px; }
+.tap { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; background: rgb(20 32 27 / .16); box-shadow: 0 0 0 4px rgb(255 255 255 / .9); z-index: 20; will-change: transform, opacity; }
+
+/* ---------- Outro ---------- */
+#outro .logo { top: 520px; }
+#outro .wordmark { top: 900px; color: var(--ink); }
+#outro .wordmark .two { color: var(--accent); }
+.o-tag { position: absolute; left: 0; right: 0; top: 1110px; text-align: center; font-size: 76px; font-weight: 700; letter-spacing: -.03em; }
+.o-tag .w { display: inline-block; }
+.chips { position: absolute; left: 80px; right: 80px; top: 1290px; display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+.chip { display: inline-flex; align-items: center; gap: 12px; height: 86px; padding: 0 34px; border-radius: 99px; background: var(--surface); box-shadow: inset 0 0 0 3px var(--line); font-size: 38px; font-weight: 600; will-change: transform, opacity; }
+.chip .icon { color: var(--accent); font-size: 38px; }
+.url { position: absolute; left: 0; right: 0; top: 1560px; text-align: center; }
+.url span { display: inline-flex; align-items: center; gap: 16px; height: 110px; padding: 0 50px; border-radius: 99px; background: var(--accent); color: #fff; font-size: 40px; font-weight: 700; direction: ltr; letter-spacing: -.01em; box-shadow: 0 24px 50px -20px var(--accent); }
+
+/* confetti */
+.burst i { position: absolute; width: 22px; height: 22px; border-radius: 6px; background: var(--accent); will-change: transform, opacity; }
+.burst i:nth-child(3n) { background: #8fd9b6; border-radius: 99px; }
+.burst i:nth-child(4n) { background: #f2c94c; width: 16px; height: 16px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><symbol id="two" viewBox="0 0 100 100"><path d="M34 40c0-11 7.5-17.5 16.5-17.5S67 28.5 67 38.5C67 54 34 60 34 77h34"/></symbol></defs>
+</svg>
+<div id="stage">
+  <div class="layer" id="bg"><div class="glow"></div></div>
+
+  <!-- 1: the page that doesn't go in -->
+  <div class="layer" id="s1">
+    <div class="big" id="s1a" style="top:250px"></div>
+    <div class="big mute" id="s1b" style="top:250px"></div>
+    <div class="clock" id="clock"><i class="h"></i><i class="m"></i><b></b></div>
+    <div class="page" id="page"><div class="page__h"></div></div>
+  </div>
+
+  <!-- 2: tried everything -->
+  <div class="layer" id="s2">
+    <div class="tried__t" id="triedT">ניסיתם כבר הכל:</div>
+    <div class="tried" id="tried"></div>
+    <div class="big" id="s2a" style="top:720px"></div>
+    <div class="big green" id="s2b" style="top:860px"></div>
+  </div>
+
+  <!-- 3: reveal -->
+  <div class="layer" id="reveal">
+    <div class="glow2"></div>
+    <div class="logo" id="logo"><svg viewBox="0 0 100 100"><path id="logoPath" d="M34 40c0-11 7.5-17.5 16.5-17.5S67 28.5 67 38.5C67 54 34 60 34 77h34"/></svg></div>
+    <div class="wordmark" id="wm"></div>
+    <div class="tag" id="tag"></div>
+  </div>
+
+  <!-- 4-7: the app -->
+  <div class="layer" id="app">
+    <div class="cap" id="cap1"><div class="cap__t"></div><div class="cap__s"></div></div>
+    <div class="cap" id="cap2"><div class="cap__t"></div><div class="cap__s"></div></div>
+    <div class="cap" id="cap3"><div class="cap__t"></div><div class="cap__s"></div></div>
+    <div class="cap" id="cap4"><div class="cap__t"></div><div class="cap__s"></div></div>
+    <div class="phone" id="phone"><div class="screen" id="screen"><div class="island"></div>
+
+      <!-- A: small bites -->
+      <div class="scr" id="scrA">
+        <div class="topbar"><span class="ibtn"><svg class="icon"><use href="../icons/sprite.svg#i-x"/></svg></span><span class="prog" id="progA"></span><span class="got" id="gotA"><svg class="icon"><use href="../icons/sprite.svg#i-check"/></svg><b>0</b></span><span class="ibtn on"><svg class="icon"><use href="../icons/sprite.svg#i-speaker-high"/></svg></span></div>
+        <div class="kick">שברים · 1 מתוך 6</div>
+        <div class="bite">
+          <h3>מה זה שבר?</h3>
+          <p><span class="line" id="a1"><span class="term">שבר</span> הוא חלק מתוך משהו שלם.</span><span class="line" id="a2">כמו פיצה שחתכו למשולשים.</span></p>
+          <div class="pie" id="pie"><span class="pie__cuts"></span></div>
+          <div class="piecap" id="piecap"><span class="frac"><span>1</span><i></i><span>8</span></span></div>
+        </div>
+        <div class="bar"><span class="btn btn--l"><svg class="icon"><use href="../icons/sprite.svg#i-question"/></svg>לא הבנתי</span><span class="btn btn--p" id="okA">הבנתי <svg class="icon"><use href="../icons/sprite.svg#i-arrow-left"/></svg></span></div>
+      </div>
+
+      <!-- B: "I didn't get it" -->
+      <div class="scr" id="scrB">
+        <div class="topbar"><span class="ibtn"><svg class="icon"><use href="../icons/sprite.svg#i-x"/></svg></span><span class="prog" id="progB"></span><span class="got"><svg class="icon"><use href="../icons/sprite.svg#i-check"/></svg><b>1</b></span><span class="ibtn on"><svg class="icon"><use href="../icons/sprite.svg#i-speaker-high"/></svg></span></div>
+        <div class="kick">שברים · 2 מתוך 6</div>
+        <div class="bite">
+          <h3>המספר למטה והמספר למעלה</h3>
+          <p><span class="line">המספר למטה הוא ה<span class="term">מכנה</span>: לכמה חלקים חתכו.</span><span class="line">המספר למעלה הוא ה<span class="term">מונה</span>: כמה חלקים לקחנו.</span></p>
+          <div class="extra" id="extraB"><div class="extra__l"><svg class="icon"><use href="../icons/sprite.svg#i-feather"/></svg>במילים פשוטות יותר</div><p>למטה: לכמה חתיכות חתכו.<br>למעלה: כמה חתיכות לקחנו.</p></div>
+        </div>
+        <div class="bar"><span class="btn btn--l" id="lostB"><svg class="icon"><use href="../icons/sprite.svg#i-question"/></svg>לא הבנתי</span><span class="btn btn--p">הבנתי <svg class="icon"><use href="../icons/sprite.svg#i-arrow-left"/></svg></span></div>
+        <div class="scrim" id="scrimB"></div>
+        <div class="sheet" id="sheetB">
+          <div class="sheet__grip"></div>
+          <h4>מה לא ברור?</h4>
+          <p class="sub">זה בסדר גמור. ככה לומדים.</p>
+          <div class="opt" id="optB1"><span class="oi"><svg class="icon"><use href="../icons/sprite.svg#i-feather"/></svg></span><span><b>להסביר יותר פשוט</b><small>במילים קלות יותר</small></span></div>
+          <div class="opt"><span class="oi"><svg class="icon"><use href="../icons/sprite.svg#i-lightbulb"/></svg></span><span><b>דוגמה מהחיים</b><small>משהו שמכירים</small></span></div>
+          <div class="opt"><span class="oi"><svg class="icon"><use href="../icons/sprite.svg#i-arrow-counter-clockwise"/></svg></span><span><b>לא הבנתי כלום</b><small>נסביר מההתחלה, בדרך אחרת</small></span></div>
+        </div>
+      </div>
+
+      <!-- C: step by step -->
+      <div class="scr" id="scrC">
+        <div class="topbar"><span class="ibtn"><svg class="icon"><use href="../icons/sprite.svg#i-x"/></svg></span><span class="prog" id="progC"></span><span class="got"><svg class="icon"><use href="../icons/sprite.svg#i-check"/></svg><b>4</b></span><span class="ibtn on"><svg class="icon"><use href="../icons/sprite.svg#i-speaker-high"/></svg></span></div>
+        <div class="kick">שברים · 5 מתוך 6</div>
+        <div class="bite">
+          <span class="badge"><svg class="icon"><use href="../icons/sprite.svg#i-pencil-simple-line"/></svg>דוגמה פתורה</span>
+          <h3>מחברים שברים</h3>
+          <div class="steps" id="stepsC"></div>
+          <div class="veq" id="veqC"></div>
+        </div>
+      </div>
+
+      <!-- D: it works -->
+      <div class="scr" id="scrD">
+        <div class="topbar"><span class="ibtn"><svg class="icon"><use href="../icons/sprite.svg#i-x"/></svg></span><span class="prog" id="progD"></span><span class="got" id="gotD"><svg class="icon"><use href="../icons/sprite.svg#i-check"/></svg><b>5</b></span><span class="ibtn on"><svg class="icon"><use href="../icons/sprite.svg#i-speaker-high"/></svg></span></div>
+        <div class="kick">בדיקה קטנה, בלי ציון</div>
+        <div class="bite">
+          <h3>מה גדול יותר?</h3>
+          <div class="answers">
+            <div class="ans" id="ansR"><span class="k">א</span><span class="frac"><span>1</span><i></i><span>3</span></span></div>
+            <div class="ans" id="ansW"><span class="k">ב</span><span class="frac"><span>1</span><i></i><span>6</span></span></div>
+          </div>
+          <div class="fb" id="fbD"><span class="fi"><svg class="icon"><use href="../icons/sprite.svg#i-check"/></svg></span><span><b>נכון!</b>חתכו לפחות חלקים, אז כל חלק גדול יותר.</span></div>
+        </div>
+      </div>
+
+      <!-- E: the path fills in -->
+      <div class="scr" id="scrE">
+        <div class="topbar"><span class="ibtn"><svg class="icon"><use href="../icons/sprite.svg#i-arrow-right"/></svg></span><span style="flex:1"></span><span class="kick" style="margin:0" id="countE">3 מתוך 4 שלבים</span></div>
+        <div class="ptitle">שברים למבחן</div>
+        <div class="path" id="pathE"></div>
+      </div>
+
+      <div class="tap" id="tap"></div>
+    </div></div>
+  </div>
+
+  <!-- 8: outro -->
+  <div class="layer" id="outro">
+    <div class="logo" id="ologo"><svg viewBox="0 0 100 100"><path id="ologoPath" d="M34 40c0-11 7.5-17.5 16.5-17.5S67 28.5 67 38.5C67 54 34 60 34 77h34"/></svg></div>
+    <div class="wordmark" id="owm"></div>
+    <div class="o-tag" id="otag"></div>
+    <div class="chips" id="chips"></div>
+    <div class="url"><span id="url"><svg class="icon"><use href="../icons/sprite.svg#i-arrow-left"/></svg>tomerzor.github.io/TOMERZOR/easy2study</span></div>
+  </div>
+
+  <div class="layer burst" id="burst" style="pointer-events:none"></div>
+</div>
+
+<script>
+const DUR = 31;
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const ic = (n) => `<svg class="icon"><use href="../icons/sprite.svg#i-${n}"/></svg>`;
+
+/* ---------- easing ---------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const k = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (x) => 1 - Math.pow(1 - x, 3);
+const eo5 = (x) => 1 - Math.pow(1 - x, 5);
+const eio = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const back = (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+// deterministic noise for jitter
+const hash = (n) => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s); };
+
+// Whole scenes and screens switch with display: a word set to visibility:visible
+// inside a hidden parent would still show.
+const show = (el, on) => { el.style.display = on ? "" : "none"; return on; };
+function vis(el, op, tf = "", blur = 0) {
+  el.style.opacity = op;
+  el.style.transform = tf;
+  el.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : "";
+  el.style.visibility = op <= 0.001 ? "hidden" : "visible";
+}
+// a word/line rising in
+function rise(els, t, at, stagger = 0.07, dur = 0.6, dist = 70) {
+  els.forEach((el, i) => { const p = eo5(k(t, at + i * stagger, at + i * stagger + dur)); vis(el, p, `translateY(${(1 - p) * dist}px)`, (1 - p) * 10); });
+}
+// leaving: fade up and blur
+function leave(el, t, at, dur = 0.4, dist = -40) {
+  const p = eio(k(t, at, at + dur));
+  return { op: 1 - p, tf: `translateY(${p * dist}px)`, blur: p * 12 };
+}
+function pop(el, t, at, dur = 0.55, from = 0.5) {
+  const p = k(t, at, at + dur);
+  vis(el, Math.min(1, p * 2.5), `scale(${lerp(from, 1, back(p))})`);
+}
+// Where an element's center sits inside a container, in the container's own pixels.
+function centerIn(el, box) {
+  const s = $("#stage").getBoundingClientRect().width / 1080;
+  const a = el.getBoundingClientRect(), b = box.getBoundingClientRect();
+  return { x: (a.left + a.width / 2 - b.left) / s, y: (a.top + a.height / 2 - b.top) / s };
+}
+function words(el, text) { el.innerHTML = text.split(" ").map((w) => `<span class="w">${w}</span>`).join(" "); return [...el.querySelectorAll(".w")]; }
+function chars(el, html) { el.innerHTML = html; return [...el.querySelectorAll("span")]; }
+
+/* ---------- build ---------- */
+const s1a = words($("#s1a"), "יושב שעות מול החומר.");
+const s1b = words($("#s1b"), "ושום דבר לא נכנס.");
+const page = $("#page");
+const LINES = [];
+for (let i = 0; i < 26; i++) {
+  const d = document.createElement("div");
+  d.className = "ln" + (i % 7 === 3 ? " hl" : "");
+  d.style.width = `${70 + hash(i + 1) * 30}%`;
+  page.appendChild(d);
+  LINES.push(d);
+}
+const TRIED = [["graduation-cap", "book-open-text", "עוד שיעור פרטי"], ["", "chat-circle-text", "עוד הסבר מהמורה"], ["", "clock", "עוד ערב של ויכוחים"]];
+$("#tried").innerHTML = TRIED.map(([, i, txt]) => `<div class="tcard"><span class="ic">${ic(i)}</span><span class="txt">${txt}<i class="strike"></i></span><span class="x">${ic("x")}</span></div>`).join("");
+const tcards = $$(".tcard");
+const s2a = words($("#s2a"), "הוא לא עצלן.");
+const s2b = words($("#s2b"), "הוא צריך הסבר אחר.");
+const wm = chars($("#wm"), "Easy<span class=two>2</span>Study".replace(/(^|>)([^<]+)(?=<|$)/g, (m, a, txt) => a + [...txt].map((c) => `<span>${c}</span>`).join("")));
+const tag = words($("#tag"), "ללמוד בקצב שלו.");
+const CAPS = [
+  ["בחתיכות קטנות.", "משפט או שניים בכל פעם."],
+  ["לא הבין? זה בסדר.", "תמיד יש כפתור \"לא הבנתי\"."],
+  ["צעד אחר צעד.", "עם תרשימים שזזים מול העיניים."],
+  ["והוא מבין.", "ורוצה עוד."],
+];
+const caps = CAPS.map(([a, b], i) => {
+  const c = $(`#cap${i + 1}`);
+  return { el: c, t: words(c.querySelector(".cap__t"), a), s: words(c.querySelector(".cap__s"), b) };
+});
+const progHTML = (n, done) => Array.from({ length: n }, (_, i) => `<i><b style="transform:scaleX(${i < done ? 1 : 0})"></b></i>`).join("");
+$("#progA").innerHTML = progHTML(9, 0);
+$("#progB").innerHTML = progHTML(9, 2);
+$("#progC").innerHTML = progHTML(9, 6);
+$("#progD").innerHTML = progHTML(9, 7);
+const STEPS = ["בודקים שהמכנים שווים: 5 ו-5", "מחברים את המונים: 1 + 2 = 3", "המכנה נשאר 5", "התשובה: שלוש חמישיות"];
+$("#stepsC").innerHTML = STEPS.map((s, i) => `<div class="step"><span class="n">${i + 1}</span><span>${s}</span></div>`).join("");
+const steps = $$(".step");
+const F = (a, b) => `<span class="frac"><span>${a}</span><i></i><span>${b}</span></span>`;
+$("#veqC").innerHTML = [[F(1, 5), "חתיכה אחת"], ["+", ""], [F(2, 5), "עוד שתיים"], ["=", ""], [F(3, 5), "שלוש מחמש"]].map(([b, s]) => `<span class="${s ? "" : "op"}"><b>${b}</b>${s ? `<small>${s}</small>` : ""}</span>`).join("");
+const veq = $$("#veqC > span");
+const PATH = [["מה זה שבר", "חלק מתוך שלם"], ["מונה ומכנה", "למטה, למעלה"], ["חיבור שברים", "עם אותו מכנה"], ["מבחן תרגול", "שאלות על כל החומר"]];
+$("#pathE").innerHTML = PATH.map(([a, b], i) => `<div class="pstep">${i < PATH.length - 1 ? '<i class="fill"></i>' : ""}<span class="node">${i < 3 ? i + 1 : ic("list-checks")}<span class="chk">${ic("check")}</span></span><span class="pbody"><b>${a}</b><small>${b}</small></span></div>`).join("");
+const pnodes = $$(".pstep .chk"), pfills = $$(".pstep .fill");
+const owm = chars($("#owm"), "Easy<span class=two>2</span>Study".replace(/(^|>)([^<]+)(?=<|$)/g, (m, a, txt) => a + [...txt].map((c) => `<span>${c}</span>`).join("")));
+const otag = words($("#otag"), "כל נושא. בקצב שלו.");
+$("#chips").innerHTML = [["lightbulb", "קשב וריכוז"], ["book-open-text", "דיסלקציה"], ["heart", "לחץ מבחנים"], ["feather", "גם לעצלנים"]].map(([i, t]) => `<span class="chip">${ic(i)}${t}</span>`).join("");
+const chipEls = $$(".chip");
+// confetti, fixed paths
+const BURST = [];
+for (let i = 0; i < 34; i++) {
+  const el = document.createElement("i");
+  $("#burst").appendChild(el);
+  const a = (Math.PI * 2 * i) / 34 + hash(i + 9) * 0.5;
+  BURST.push({ el, dx: Math.cos(a) * (240 + hash(i + 3) * 260), dy: Math.sin(a) * (200 + hash(i + 5) * 240) - 120, r: hash(i + 7) * 720 - 360 });
+}
+
+/* ---------- sound cues (read by audio.py) ---------- */
+const SFX = [];
+(function cues() {
+  for (let x = 0.15; x < 2.6; x += 0.5) SFX.push(["tick", x]);
+  SFX.push(["scatter", 2.55], ["drone_out", 4.2]);
+  [4.65, 5.25, 5.85].forEach((x, i) => SFX.push(["pop", x], ["scratch", x + 0.42]));
+  SFX.push(["swoosh", 7.05], ["word", 7.25], ["word", 8.05], ["riser", 8.7], ["boom", 9.75], ["shimmer", 10.35], ["swoosh", 12.45]);
+  SFX.push(["tap", 15.55], ["tick", 15.62]);
+  SFX.push(["tap", 17.25], ["swoosh", 17.35], ["tap", 18.45], ["pop", 18.95]);
+  [21.05, 21.6, 22.15, 22.7].forEach((x) => SFX.push(["step", x]));
+  [23.25, 23.5, 23.75, 24.0, 24.25].forEach((x) => SFX.push(["blip", x]));
+  SFX.push(["tap", 25.2], ["chime", 25.25], ["burst", 25.3], ["swoosh", 26.3]);
+  [26.75, 27.15, 27.55, 27.95].forEach((x, i) => SFX.push(["rise", x, i]));
+  SFX.push(["boom", 28.45], ["shimmer", 28.9]);
+})();
+
+/* ================= render ================= */
+function render(t) {
+  // ---------- 1: hook (0 - 4.5) ----------
+  const s1on = t < 4.7;
+  show($("#s1"), s1on);
+  if (s1on) {
+    const push = 1 + k(t, 0, 4.5) * 0.06;
+    const out = eio(k(t, 4.0, 4.6));
+    vis($("#s1"), 1 - out, `scale(${push})`, out * 14);
+    rise(s1a, t, 0.15, 0.1, 0.6);
+    if (t > 2.4) { const l = leave(null, t, 2.4, 0.35); s1a.forEach((w) => vis(w, l.op, l.tf, l.blur)); }
+    rise(s1b, t, 2.55, 0.1, 0.6);
+    // the clock runs fast: hours go by
+    const spin = eo(k(t, 0, 2.6)) * 720 + k(t, 2.6, 4.5) * 120;
+    $(".clock .m").style.transform = `rotate(${spin}deg)`;
+    $(".clock .h").style.transform = `rotate(${spin / 12 + 40}deg)`;
+    pop($("#clock"), t, 0.3, 0.6, 0.3);
+    pop(page, t, 0.05, 0.7, 0.92);
+    // the lines shake loose and blur away
+    const mess = eio(k(t, 2.5, 4.3));
+    LINES.forEach((ln, i) => {
+      const jx = (hash(i * 3.1) - 0.5) * 2, jy = (hash(i * 7.7) - 0.5) * 2;
+      const wob = Math.sin(t * 22 + i) * 6 * k(t, 2.0, 2.6);
+      const dx = jx * 320 * mess, dy = jy * 260 * mess + mess * mess * 200;
+      vis(ln, 1 - mess * 0.85, `translate(${dx + wob}px, ${dy}px) rotate(${jx * 30 * mess}deg)`, mess * 8);
+    });
+  }
+
+  // ---------- 2: tried everything (4.4 - 9.8) ----------
+  const s2on = t > 4.3 && t < 9.9;
+  show($("#s2"), s2on);
+  if (s2on) {
+    const tt = $("#triedT");
+    const tin = eo5(k(t, 4.4, 5.0)), tout = eio(k(t, 6.85, 7.2));
+    vis(tt, tin * (1 - tout), `translateY(${(1 - tin) * 50 - tout * 40}px)`, tout * 10);
+    tcards.forEach((c, i) => {
+      const at = 4.6 + i * 0.6;
+      const p = k(t, at, at + 0.55);
+      const gone = eio(k(t, 6.85 + i * 0.05, 7.25 + i * 0.05));
+      const dim = k(t, at + 0.45, at + 0.75);
+      vis(c, Math.min(1, p * 2.4) * (1 - dim * 0.45) * (1 - gone), `translateY(${(1 - eo5(p)) * 120 + gone * 90}px) scale(${lerp(0.85, 1, back(p)) - gone * 0.06})`, gone * 10);
+      c.querySelector(".strike").style.transform = `scaleX(${eo(k(t, at + 0.42, at + 0.72))})`;
+      const x = c.querySelector(".x");
+      const xp = k(t, at + 0.5, at + 0.85);
+      vis(x, Math.min(1, xp * 3), `scale(${lerp(0.3, 1, back(xp))})`);
+    });
+    rise(s2a, t, 7.25, 0.09, 0.6);
+    rise(s2b, t, 8.05, 0.09, 0.6);
+    // the green "אחר" becomes the reveal point
+    const fade = eio(k(t, 9.5, 9.85));
+    $("#s2a").style.opacity = 1 - fade;
+  }
+
+  // ---------- 3: reveal (9.6 - 12.8) ----------
+  const rv = $("#reveal");
+  const rin = eio(k(t, 9.6, 10.15));
+  const rout = eio(k(t, 12.35, 12.85));
+  const rOn = t > 9.55 && t < 12.9;
+  show(rv, rOn);
+  if (rOn) {
+    rv.style.clipPath = `circle(${Math.round(rin * 1500 * (1 - rout))}px at 540px ${Math.round(lerp(940, 1010, rin))}px)`;
+    pop($("#logo"), t, 10.0, 0.7, 0.2);
+    const draw = eo(k(t, 10.25, 10.95));
+    $("#logoPath").style.strokeDasharray = 130;
+    $("#logoPath").style.strokeDashoffset = 130 * (1 - draw);
+    wm.forEach((c, i) => { const p = eo5(k(t, 10.45 + i * 0.035, 10.95 + i * 0.035)); vis(c, p, `translateY(${(1 - p) * 90}px) rotate(${(1 - p) * 8}deg)`); });
+    rise(tag, t, 11.2, 0.09, 0.6, 50);
+  }
+
+  // ---------- 4-7: the app (12.4 - 28.6) ----------
+  const appOn = t > 12.3 && t < 28.9;
+  const app = $("#app");
+  show(app, appOn);
+  if (appOn) {
+    const ph = $("#phone");
+    const pin = eo5(k(t, 12.4, 13.3));
+    const pout = eio(k(t, 28.15, 28.75));
+    const sway = Math.sin(t * 0.9) * 0.6;
+    ph.style.transform = `translateY(${(1 - pin) * 1300 + pout * 1300}px) rotate(${sway * (1 - pout)}deg)`;
+    // captions: one per scene
+    const CAPT = [[12.8, 16.45], [16.6, 20.45], [20.6, 24.45], [24.6, 28.2]];
+    caps.forEach((c, i) => {
+      const [a, b] = CAPT[i];
+      const on = t > a - 0.05 && t < b + 0.45;
+      show(c.el, on);
+      if (!on) return;
+      rise(c.t, t, a, 0.08, 0.55, 60);
+      rise(c.s, t, a + 0.3, 0.05, 0.55, 40);
+      const l = leave(null, t, b, 0.4);
+      if (t > b) [...c.t, ...c.s].forEach((w) => vis(w, l.op, l.tf, l.blur));
+    });
+    // screens slide: each one in from the left (forward in Hebrew), out to the right
+    const SCR = [["#scrA", 12.4, 16.5], ["#scrB", 16.5, 20.5], ["#scrC", 20.5, 24.5], ["#scrD", 24.5, 26.3], ["#scrE", 26.3, 29]];
+    SCR.forEach(([id, a, b], i) => {
+      const el = $(id);
+      const inP = i === 0 ? 1 : eo5(k(t, a, a + 0.5));
+      const outP = eio(k(t, b, b + 0.5));
+      const on = t >= a && t < b + 0.5;
+      show(el, on);
+      if (on) el.style.transform = `translateX(${(1 - inP) * -760 + outP * 760}px)`;
+    });
+
+    // A: bite lines, the pie fills, "got it"
+    rise([$("#a1"), $("#a2")], t, 13.2, 0.35, 0.6, 30);
+    const pieP = eo(k(t, 14.1, 14.9));
+    $("#pie").style.background = `conic-gradient(var(--accent) ${pieP * 45}deg, var(--surface-2) 0)`;
+    pop($("#pie"), t, 13.9, 0.5, 0.7);
+    pop($("#piecap"), t, 14.7, 0.45, 0.4);
+    const pressA = k(t, 15.45, 15.7);
+    $("#okA").style.transform = `scale(${1 - Math.sin(pressA * Math.PI) * 0.06})`;
+    const gotA = $("#gotA");
+    gotA.querySelector("b").textContent = t > 15.6 ? 1 : 0;
+    const bumpA = k(t, 15.6, 16.0);
+    gotA.style.transform = `scale(${1 + Math.sin(bumpA * Math.PI) * 0.28})`;
+    $("#progA").querySelector("b").style.transform = `scaleX(${0.45 + eo(k(t, 15.6, 16.0)) * 0.55})`;
+
+    // B: "didn't get it" sheet, then the simpler explanation
+    const sheetIn = eo5(k(t, 17.3, 17.8)), sheetOut = eio(k(t, 18.5, 18.85));
+    const sh = sheetIn * (1 - sheetOut);
+    $("#sheetB").style.transform = `translateY(${(1 - sh) * 110}%)`;
+    vis($("#scrimB"), sh, "");
+    $("#lostB").style.transform = `scale(${1 - Math.sin(k(t, 17.15, 17.4) * Math.PI) * 0.06})`;
+    $("#optB1").style.transform = `scale(${1 - Math.sin(k(t, 18.35, 18.6) * Math.PI) * 0.05})`;
+    const ex = k(t, 18.95, 19.5);
+    vis($("#extraB"), Math.min(1, ex * 2), `translateY(${(1 - eo5(ex)) * 50}px)`);
+    $("#extraB").style.display = t > 18.9 ? "block" : "none";
+
+    // C: steps one by one, then the equation builds
+    steps.forEach((s, i) => {
+      const at = 21.05 + i * 0.55;
+      const p = k(t, at, at + 0.5);
+      s.style.display = t > at - 0.02 ? "flex" : "none";
+      vis(s, Math.min(1, p * 2), `translateY(${(1 - eo5(p)) * 40}px)`);
+      s.classList.toggle("now", t > at && t < at + 0.55 && i < steps.length - 1 || (i === steps.length - 1 && t > at));
+    });
+    $("#veqC").style.display = t > 23.15 ? "flex" : "none";
+    veq.forEach((v, i) => pop(v, t, 23.25 + i * 0.25, 0.5, 0.4));
+
+    // D: the right answer, confetti
+    const tapR = k(t, 25.1, 25.35);
+    const ansR = $("#ansR");
+    ansR.style.transform = `scale(${1 - Math.sin(tapR * Math.PI) * 0.05})`;
+    ansR.classList.toggle("right", t > 25.25);
+    $("#ansW").style.opacity = t > 25.25 ? 0.45 : 1;
+    const fb = k(t, 25.4, 25.9);
+    vis($("#fbD"), Math.min(1, fb * 2), `translateY(${(1 - eo5(fb)) * 40}px)`);
+    $("#fbD").style.display = t > 25.35 ? "flex" : "none";
+    const gD = $("#gotD");
+    gD.querySelector("b").textContent = t > 25.3 ? 6 : 5;
+    gD.style.transform = `scale(${1 + Math.sin(k(t, 25.3, 25.7) * Math.PI) * 0.28})`;
+
+    // E: the path fills, node by node
+    pnodes.forEach((n, i) => {
+      const at = 26.75 + i * 0.4;
+      const p = k(t, at, at + 0.45);
+      vis(n, Math.min(1, p * 3), `scale(${lerp(0.3, 1, back(p))})`);
+      if (pfills[i]) pfills[i].style.transform = `scaleY(${eo(k(t, at + 0.15, at + 0.5))})`;
+    });
+    const done = pnodes.filter((_, i) => t > 26.75 + i * 0.4).length;
+    $("#countE").textContent = `${Math.max(done, 0)} מתוך 4 שלבים`;
+
+    // finger taps
+    const TAPS = [[15.55, "#okA"], [17.25, "#lostB"], [18.45, "#optB1"], [25.2, "#ansR"]];
+    const tap = $("#tap");
+    let shown = false;
+    TAPS.forEach(([at, sel]) => {
+      const p = k(t, at - 0.25, at + 0.35);
+      if (p > 0 && p < 1) {
+        shown = true;
+        const c = centerIn($(sel), $("#screen"));
+        tap.style.left = c.x + "px"; tap.style.top = c.y + "px";
+        const press = Math.sin(k(t, at - 0.05, at + 0.2) * Math.PI);
+        vis(tap, Math.sin(p * Math.PI) * 1.4, `scale(${1 - press * 0.25})`);
+      }
+    });
+    if (!shown) vis(tap, 0, "");
+  }
+
+  // confetti for the right answer (stage coords: the answer card)
+  const bp = k(t, 25.3, 26.4);
+  BURST.forEach((b) => {
+    if (bp <= 0 || bp >= 1) { b.el.style.visibility = "hidden"; return; }
+    const e = eo(bp);
+    if (!b.at) b.at = centerIn($("#ansR"), $("#stage"));
+    b.el.style.left = b.at.x + "px"; b.el.style.top = b.at.y + "px";
+    vis(b.el, 1 - k(bp, 0.6, 1), `translate(${b.dx * e}px, ${b.dy * e + bp * bp * 260}px) rotate(${b.r * e}deg)`);
+  });
+
+  // ---------- 8: outro (28.3 - 31) ----------
+  const oOn = t > 28.3;
+  show($("#outro"), oOn);
+  if (oOn) {
+    pop($("#ologo"), t, 28.4, 0.7, 0.2);
+    const draw = eo(k(t, 28.6, 29.2));
+    $("#ologoPath").style.strokeDasharray = 130;
+    $("#ologoPath").style.strokeDashoffset = 130 * (1 - draw);
+    $("#ologo").style.background = "var(--accent)";
+    $("#ologoPath").style.stroke = "#fff";
+    owm.forEach((c, i) => { const p = eo5(k(t, 28.7 + i * 0.03, 29.2 + i * 0.03)); vis(c, p, `translateY(${(1 - p) * 80}px)`); });
+    rise(otag, t, 29.15, 0.09, 0.55, 50);
+    chipEls.forEach((c, i) => pop(c, t, 29.6 + i * 0.12, 0.5, 0.6));
+    const u = k(t, 30.05, 30.55);
+    vis($("#url"), Math.min(1, u * 2), `translateY(${(1 - eo5(u)) * 40}px) scale(${lerp(0.9, 1, eo5(u))})`);
+  }
+
+  // background breathes a little
+  $(".glow").style.transform = `translate(${Math.sin(t * 0.4) * 60}px, ${Math.cos(t * 0.3) * 50}px)`;
+}
+
+/* ================= preview / render ================= */
+window.__render = render; window.__dur = DUR; window.__sfx = SFX;
+const params = new URLSearchParams(location.search);
+const fit = () => { const s = Math.min(innerWidth / 1080, innerHeight / 1920); $("#stage").style.transform = `scale(${s})`; };
+if (params.has("render")) { document.body.classList.add("render"); render(+params.get("t") || 0); }
+else {
+  fit(); addEventListener("resize", fit);
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); };
+  document.fonts.ready.then(loop);
+}
+</script>
+</body>
+</html>

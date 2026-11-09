@@ -1,0 +1,17 @@
+{
+  "name": "zman",
+  "private": true,
+  "type": "module",
+  "description": "Satellite map with a year slider: real photos since 2014, an estimated reconstruction back to 10,000 BCE.",
+  "scripts": {
+    "start": "npx http-server . -p 8080 -c-1",
+    "test": "node --test test/*.test.mjs",
+    "build": "esbuild src/tile-worker.js --bundle --format=iife --minify --legal-comments=eof --outfile=js/tile-worker.js"
+  },
+  "devDependencies": {
+    "@mapbox/vector-tile": "^1.3.1",
+    "esbuild": "^0.28.2",
+    "pbf": "^3.3.0",
+    "vt-pbf": "^3.1.3"
+  }
+}

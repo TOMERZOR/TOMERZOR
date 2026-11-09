@@ -1,0 +1,73 @@
+<section class="band">
+  <div class="band__media">
+    {%- if section.settings.image != blank -%}
+      {{ section.settings.image | image_url: width: 2000 | image_tag: loading: 'lazy', sizes: '100vw', widths: '600, 900, 1200, 1600, 2000', alt: section.settings.image.alt }}
+    {%- elsif section.settings.fallback != blank -%}
+      <img src="{{ section.settings.fallback | asset_url }}" alt="{{ section.settings.alt | escape }}" width="1000" height="1000" loading="lazy">
+    {%- endif -%}
+  </div>
+  <div class="container band__inner">
+    <div class="band__copy reveal">
+      <h2 class="display h2">{{ section.settings.title }}</h2>
+      <div class="lead rte">{{ section.settings.text }}</div>
+      {%- if section.settings.button_text != blank -%}
+        <a class="btn btn--light" href="#buy"{% if section.settings.pick != blank %} data-pick="{{ section.settings.pick | escape }}"{% endif %}>{{ section.settings.button_text }}</a>
+      {%- endif -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "באנר תמונה רחב",
+  "tag": "div",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "תמונה"
+    },
+    {
+      "type": "text",
+      "id": "fallback",
+      "label": "תמונת ברירת מחדל מהערכה",
+      "default": "gift.jpg"
+    },
+    {
+      "type": "text",
+      "id": "alt",
+      "label": "תיאור התמונה (נגישות)",
+      "default": "שני סטי סאטן בקופסת מתנה"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "כותרת",
+      "default": "סט לך, סט למתנה"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "טקסט",
+      "default": "<p>כל סט מגיע בשקית סאטן משלו. בחבילה של 2 כל סט יוצא 90 ₪ במקום 119 ₪.</p>"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "טקסט כפתור",
+      "default": "לחבילת 2 סטים"
+    },
+    {
+      "type": "text",
+      "id": "pick",
+      "label": "חבילה שתיבחר אוטומטית בלחיצה",
+      "default": "2 סטים"
+    }
+  ],
+  "presets": [
+    {
+      "name": "תמונה עם טקסט"
+    }
+  ]
+}
+{% endschema %}

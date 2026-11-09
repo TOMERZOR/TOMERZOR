@@ -1,0 +1,20 @@
+# Mabat market server on Cloudflare Workers. Deploy with the GitHub workflow
+# (.github/workflows/mabat-market.yml) or `npx wrangler deploy` from this folder.
+name = "mabat-market"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# One Durable Object holds the whole market: bars, analyses, the feed and the phones.
+[[durable_objects.bindings]]
+name = "MARKET"
+class_name = "Market"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Market"]
+
+# Wakes the scan every minute.
+[triggers]
+crons = ["* * * * *"]
+
+# SEC_USER_AGENT ("Your Name you@example.com") can be set as a secret instead of in the app.

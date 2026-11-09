@@ -1,0 +1,102 @@
+# היכרות בקליק has its own home: every push to its branch deploys the server (hekerut/server/)
+# and the app (the static files in hekerut/) to Cloudflare, with no merge needed.
+#   App:    https://hekerut.moffy-app.workers.dev
+#   Server: https://hekerut-api.moffy-app.workers.dev
+# Needs the repository secret CLOUDFLARE_API_TOKEN ("Edit Cloudflare Workers" template), and
+# CLOUDFLARE_ACCOUNT_ID only if the token reaches several accounts.
+# Until the token exists, the workflow skips itself instead of failing.
+name: Deploy היכרות בקליק
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/military-social-app-zbkrwn]
+    paths: ["hekerut/**", ".github/workflows/hekerut-api.yml"]
+
+concurrency:
+  group: hekerut-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping the deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Test
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: hekerut/server
+        run: npm test
+
+      - name: Deploy the server
+        if: steps.secrets.outputs.ready == 'true'
+        id: server
+        working-directory: hekerut/server
+        run: |
+          npx --yes wrangler@4 deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -z "$url" ]; then echo "::error::Could not find the workers.dev address in the deploy output"; exit 1; fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check the server answers
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ steps.server.outputs.url }}/health" | tee health.json | grep -q '"service":"hekerut-api"'; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::The server did not answer /health"; cat health.json; exit 1
+
+      - name: Check the app points at this server
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          if ! grep -q "server: \"${{ steps.server.outputs.url }}\"" hekerut/js/config.js; then
+            echo "::error::hekerut/js/config.js should have server: \"${{ steps.server.outputs.url }}\""; exit 1
+          fi
+
+      - name: Deploy the app
+        if: steps.secrets.outputs.ready == 'true'
+        id: site
+        working-directory: hekerut/site
+        run: |
+          mkdir -p public
+          cp -r ../index.html ../manifest.webmanifest ../sw.js ../css ../js ../fonts ../img ../vendor public/
+          npx --yes wrangler@4 deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -z "$url" ]; then echo "::error::Could not find the workers.dev address in the deploy output"; exit 1; fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Check the app answers
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ steps.site.outputs.url }}/" | grep -q 'היכרות בקליק'; then
+              echo "::notice::היכרות בקליק is live at ${{ steps.site.outputs.url }}"
+              grep -q "site: \"${{ steps.site.outputs.url }}\"" hekerut/js/config.js || echo "::warning::hekerut/js/config.js has a different site address than ${{ steps.site.outputs.url }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::The app did not answer"; exit 1

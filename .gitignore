@@ -22,3 +22,37 @@ koli/server/.dev.vars
 arslate/worker/node_modules/
 arslate/worker/.wrangler/
 arslate/worker/.dev.vars
+
+# Easy2Study
+easy2study/worker/node_modules/
+easy2study/worker/.wrangler/
+easy2study/worker/.dev.vars
+
+# Guess The Distance
+guess-the-distance/node_modules/
+guess-the-distance/.wrangler/
+
+# Easy2Study ad: build files
+easy2study/ad/frames.mp4
+easy2study/ad/audio.wav
+easy2study/ad/sfx.json
+easy2study/ad/node_modules
+
+# Shomer relay
+shomer/relay/.wrangler/
+shomer/relay/node_modules/
+
+# Remind. server
+remind/server/.wrangler/
+remind/server/node_modules/
+
+# Living Room
+livingroom/server/node_modules/
+livingroom/server/.wrangler/
+livingroom/server/.dev.vars
+
+# היכרות בקליק
+hekerut/site/public/
+hekerut/server/node_modules/
+hekerut/server/.wrangler/
+hekerut/site/.wrangler/

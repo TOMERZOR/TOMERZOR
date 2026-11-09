@@ -19,7 +19,7 @@ canvas{position:absolute;left:0;top:0;width:1080px;height:1920px}
 <script src="motion.js"></script>
 <script src="vo.js"></script>
 <script>
-const W = 1080, H = 1920;
+const W = 1080, H = 1920, QS = new URLSearchParams(location.search);
 const { clamp, lerp, seg, sstep, ease } = OM, spr = OM.spring;
 const F = (w, s) => `${w} ${s}px Heebo`;
 const C = { or: '#F08A2E', or2: '#FFAE5C', ord: '#D2600E', red: '#FF3B30', ppBlue: '#37a3f0' };
@@ -328,10 +328,10 @@ function captions(t) { const gp = GROUPS.find(x => t >= x.t0 && t < x.t1); if (!
 function seek(t) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0b0910'; g.fillRect(0, 0, W, H);
   if (t < MC) drawStage(t); else drawMission(t);
-  lostMark(t); ytCard(t); introLogo(t); keys(t); if (!CLEAN) { appChips(t); cta(t); captions(t); } endCard(t);
+  lostMark(t); ytCard(t); introLogo(t); if (!QS.has('nokeys')) keys(t); if (!CLEAN) { appChips(t); cta(t); captions(t); } endCard(t);
   document.getElementById('hud').textContent = 't=' + t.toFixed(2);
 }
-const QS = new URLSearchParams(location.search), CLEAN = QS.has('clean'), FROM = parseFloat(QS.get('from') || '0'), LEN = QS.has('len') ? parseFloat(QS.get('len')) : null;
+const CLEAN = QS.has('clean'), FROM = parseFloat(QS.get('from') || '0'), LEN = QS.has('len') ? parseFloat(QS.get('len')) : null;
 window.__seek = async t => { seek(t + FROM); return true; };
 window.__meta = { dur: LEN ?? DUR, fps: 30, w: W, h: H };
 // how far anything travels on screen between t0 and t1 (output px): render.py sizes each frame's motion blur from it

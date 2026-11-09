@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<!-- Pointy — founder story (phone talking head + demo cut-ins). onetake composition: pure f(t), beats on his words. -->
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>Pointy · founder story</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#000}
+canvas{position:absolute;left:0;top:0;width:1080px;height:1920px}
+#warm{position:absolute;left:-9999px;top:0;font-family:Heebo}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="warm"><b style="font-weight:500">אב Ab</b><b style="font-weight:700">אב Ab</b><b style="font-weight:800">אב Ab</b></div>
+<script src="motion.js"></script>
+<script src="words.js"></script>
+<script>
+const W = 1080, H = 1920, FPS = 30;
+const { clamp, lerp, seg, sstep, ease } = OM, spr = OM.spring;
+const F = (w, s) => `${w} ${s}px Heebo`;
+const C = { or: '#F08A2E', or2: '#FFAE5C', ord: '#D2600E' };
+const cv = document.getElementById('cv'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+const clean = s => s.replace(/[.,?!:"]/g, '');
+const V = (word, k = 0) => { const ws = WORDS.filter(w => clean(w.w) === word); if (!ws[k]) throw new Error('no word ' + word); return ws[k].t0; };
+const K = { four: V('4'), button: V('כפתור'), today: V('היום'), help: V('שיעזור'), easy: V('ומאוד'), alt: V('Alt'), sp1: V('ורווח'), opt: V('אופשן'), sp2: V('ורווח', 1),
+  record: V('פשוט', 1), sees: V('והוא'), useful: V('וזה'), learned: V('אני'), comment: V('תגיבו'), plugin: V('פלאגין'), send: V('ואשלח'), link: V('קישור') };
+const SPEECH_END = 28.5, DUR = SPEECH_END + 1.15;
+
+// ───────── shots: A = his footage (graded, cut); B = demo clips from the reel ─────────
+const SHOTS = [
+  { t0: 0, t1: 3.6, src: 'gs-A-hook', off: 0 },
+  { t0: 3.6, t1: 5.75, src: 'gs-B-logo', off: 0 },
+  { t0: 5.75, t1: 7.97, src: '08-mission-control', off: 0 },
+  { t0: 7.97, t1: 10.6, src: '07-premiere-excel-aftereffects', off: 0 },
+  { t0: 10.6, t1: 14.8, src: 'gs-E-bar', off: 0 },
+  { t0: 14.8, t1: 19.85, src: 'gs-F-ask-point', off: 0 },
+  { t0: 19.85, t1: 21.52, src: '06-zoom-ready', off: 0.2 },
+  { t0: 21.52, t1: 25.4, src: 'gs-H-steps', off: 0 },
+  { t0: 25.4, t1: SPEECH_END, src: 'LOGO', off: 0 },
+  { t0: SPEECH_END, t1: DUR + 1, src: '09-end-card', off: 0 },
+];
+const NF = window.NFRAMES || {};
+const imgs = new Map();
+function frame(src, i) { const key = src + '/' + i; if (!imgs.has(key)) { const im = new Image(); im.src = `f/${src}/${String(i + 1).padStart(5, '0')}.${src === 'P' ? 'webp' : 'jpg'}`; imgs.set(key, im); if (imgs.size > 60) imgs.delete(imgs.keys().next().value); } return imgs.get(key); }
+function shotAt(t) { return SHOTS.find(s => t >= s.t0 && t < s.t1) || SHOTS[SHOTS.length - 1]; }
+function shotFrame(t) { const s = shotAt(t); const local = s.src === 'A' ? t : (s.off + t - s.t0); const n = NF[s.src] || 9999; return { s, img: frame(s.src, clamp(Math.round(local * FPS), 0, n - 1)) }; }
+
+// ───────── helpers ─────────
+const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, Math.max(0, Math.min(r, w / 2, h / 2))); };
+function text(s, x, y, font, color, align = 'right', dir = 'rtl', alpha = 1) { if (alpha <= 0.003) return; g.save(); g.globalAlpha *= alpha; g.font = font; g.fillStyle = color; g.textAlign = align; g.direction = dir; g.textBaseline = 'alphabetic'; g.fillText(s, x, y); g.restore(); }
+function shadow(b, dy, a) { g.shadowColor = `rgba(0,0,0,${a})`; g.shadowBlur = b; g.shadowOffsetY = dy; }
+const noShadow = () => { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; };
+const pop = (t, t0, o) => OM.popIn(t, t0, { rise: 40, s0: 0.6, ds: 0.4, zeta: 0.55, omega: 16, ...o });
+function ARROW(x, y, S, col) { const P = [[0, 0], [40, 16], [21, 21], [16, 40]].map(([a, b]) => [x + a * S, y + b * S]); g.beginPath(); P.forEach(([a, b], i) => i ? g.lineTo(a, b) : g.moveTo(a, b)); g.closePath(); g.fillStyle = col; g.fill(); g.lineJoin = 'round'; g.lineWidth = 2.4 * S; g.strokeStyle = col; g.stroke(); }
+function chip(cx, cy, label, t0, t, { out = 99, icon = null, font = F(800, 44), bg = 'rgba(22,18,28,0.88)' } = {}) {
+  if (t < t0 - 0.02 || t > out + 0.4) return; const e = pop(t, t0), o = OM.liftOut(t, out, { dur: 0.25, dist: 40, blur: 0 });
+  g.save(); g.font = font; const tw = g.measureText(label).width, iw = icon ? 74 : 0, w = tw + 64 + iw, h = 96;
+  g.globalAlpha = e.op * o.op; g.translate(cx, cy + e.dy + o.dy); g.scale(e.s, e.s);
+  rr(-w / 2, -h / 2, w, h, h / 2); shadow(30, 10, 0.45); g.fillStyle = bg; g.fill(); noShadow(); g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,0.16)'; g.stroke();
+  if (icon) icon(w / 2 - 32 - 28, 0); text(label, w / 2 - 32 - iw, 15, font, '#fff', 'right', 'rtl'); g.restore();
+}
+function keycap(cx, cy, w, h, label, sub, down, alpha) { g.save(); g.globalAlpha = alpha; g.translate(cx, cy);
+  rr(-w / 2, -h / 2 + 14, w, h, 26); shadow(30, 14, 0.55); g.fillStyle = '#0d0c10'; g.fill(); noShadow();
+  rr(-w / 2, -h / 2 + down, w, h - 4, 26); const gr = g.createLinearGradient(0, -h / 2, 0, h / 2); gr.addColorStop(0, '#3a3740'); gr.addColorStop(1, '#25232a'); g.fillStyle = gr; g.fill();
+  g.lineWidth = 2.5; g.strokeStyle = down > 3 ? C.or : 'rgba(255,255,255,0.2)'; g.stroke();
+  text(label, 0, -h / 2 + down + 72, F(800, 50), '#fff', 'center', 'ltr'); if (sub) text(sub, 0, h / 2 + down - 24, F(500, 24), '#b9b3c2', 'center', 'ltr'); g.restore(); }
+function pointyIcon(cx, cy, s, a = 1) { if (s < 1) return; g.save(); g.globalAlpha *= a; g.translate(cx, cy); const gr = g.createLinearGradient(0, -s / 2, 0, s / 2); gr.addColorStop(0, C.or2); gr.addColorStop(1, C.ord); rr(-s / 2, -s / 2, s, s, s * 0.26); shadow(s * 0.25, s * 0.08, 0.5); g.fillStyle = gr; g.fill(); noShadow(); ARROW(-s * 0.27, -s * 0.27, s / 75, '#fff'); g.restore(); }
+
+// ───────── the green screen: the animation behind, him in front ─────────
+const BG_UP = 230, P = { s: 0.74 };
+const PERSON_GRADE = new URLSearchParams(location.search).get('grade') || 'contrast(1.34) brightness(0.92) saturate(1.2) sepia(0.06)';
+function personFrame(t) { return frame('P', clamp(Math.round(t * FPS), 0, (NF.P || 853) - 1)); }
+function drawShot(t) {
+  const { s, img } = shotFrame(t);
+  if (s.src === 'LOGO') { const gr = g.createRadialGradient(540, 560, 60, 540, 700, 1100); gr.addColorStop(0, '#2a1a30'); gr.addColorStop(1, '#0b0910'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    const e = pop(t, s.t0, { s0: 0.4, ds: 0.6 }); pointyIcon(540, 210 + e.dy, 170 * e.s, e.op); text('Pointy', 540, 385 + e.dy, F(800, 84), '#fff', 'center', 'ltr', e.op); }
+  else if (img.complete && img.naturalWidth) g.drawImage(img, 0, -BG_UP, W, H);
+  if (s.src === '09-end-card') return;
+  // the floor of the frame darkens into him
+  const gr = g.createLinearGradient(0, H - BG_UP - 380, 0, H); gr.addColorStop(0, 'rgba(8,6,12,0)'); gr.addColorStop(0.5, 'rgba(8,6,12,0.85)'); gr.addColorStop(1, 'rgba(8,6,12,1)'); g.fillStyle = gr; g.fillRect(0, H - BG_UP - 380, W, BG_UP + 380);
+  const p = personFrame(t); if (!p.complete || !p.naturalWidth) return;
+  const w = W * P.s, h = H * P.s, x = (W - w) / 2, y = H - h + 40;
+  g.save(); g.shadowColor = 'rgba(240,138,46,0.16)'; g.shadowBlur = 60; g.drawImage(p, x, y, w, h); g.restore();   // a hint of screen light at his edges
+  // the grade on him: the bright window had flattened him — deeper blacks, more contrast and colour, a touch warmer
+  g.save(); g.filter = PERSON_GRADE; g.drawImage(p, x, y, w, h); g.restore();
+}
+// ───────── graphics on his shots ─────────
+function overlays(t) {
+  // hook: "4 hours"
+  chip(320, 330, '⏳ 4 שעות', K.four, t, { out: 3.55 });
+  chip(740, 450, 'בשביל כפתור אחד 🤦', K.button, t, { out: 3.55, font: F(800, 38) });
+  // the shortcut, on his words: Alt + Space (Windows), then ⌥ + Space (Mac)
+  const t0 = K.alt - 0.35, t1 = 14.65; if (t > t0 - 0.05 && t < t1 + 0.4) {
+    const e = pop(t, t0, { rise: 60, s0: 0.8, ds: 0.2 }), o = OM.liftOut(t, t1, { dur: 0.25, dist: 60, blur: 0 }), a = e.op * o.op;
+    const dn = tp => 10 * (sstep(tp - 0.05, tp, t) - sstep(tp + 0.12, tp + 0.28, t)), mac = t >= K.opt - 0.12;
+    const fl = Math.abs(Math.cos(Math.PI * clamp(seg(t, K.opt - 0.3, K.opt - 0.05), 0, 1)));
+    g.save(); g.translate(0, e.dy + o.dy);
+    g.save(); g.translate(355, 560); g.scale(Math.max(0.03, fl), 1); g.translate(-355, -560); keycap(355, 560, 210, 170, mac ? '⌥' : 'Alt', mac ? 'option' : null, mac ? dn(K.opt) : dn(K.alt), a); g.restore();
+    text('+', 488, 577, F(800, 56), '#fff', 'center', 'ltr', a); keycap(720, 560, 380, 170, 'space', null, dn(K.sp1) + dn(K.sp2), a);
+    g.restore();
+    chip(540, 395, mac ? 'במק' : 'בווינדוס', mac ? K.opt - 0.12 : t0, t, { out: mac ? t1 : K.opt - 0.2, font: F(800, 40) });
+  }
+  // the ask: comment the word, get the link
+  if (t > K.comment - 0.1 && t < SPEECH_END + 0.1) {
+    const e = pop(t, K.comment - 0.1, { rise: 120, s0: 0.9, ds: 0.1, zeta: 0.7 }), word = 'פלאגין', n = clamp(Math.floor(seg(t, K.plugin - 0.05, K.plugin + 0.35) * word.length), 0, word.length);
+    g.save(); g.globalAlpha = e.op; g.translate(0, e.dy);
+    rr(60, 470, 960, 150, 75); shadow(50, 18, 0.55); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill(); noShadow();
+    g.beginPath(); g.arc(150, 545, 46, 0, Math.PI * 2); g.fillStyle = C.or; g.fill(); g.save(); ARROW(132, 526, 0.62, '#fff'); g.restore();
+    text(n ? word.slice(0, n) : 'הוסיפו תגובה...', 930, 565, F(800, n ? 52 : 40), n ? '#111' : '#9a96a0');
+    const sent = t > K.send, p = OM.press(t, K.send, { depth: 0.2 });
+    g.save(); g.translate(250, 545); g.scale(p.s, p.s); g.beginPath(); g.arc(0, 0, 38, 0, Math.PI * 2); g.fillStyle = sent ? C.or : '#e6e3ea'; g.fill(); g.beginPath(); g.moveTo(-14, -16); g.lineTo(16, 0); g.lineTo(-14, 16); g.lineTo(-8, 0); g.closePath(); g.fillStyle = sent ? '#fff' : '#9a96a0'; g.fill(); g.restore();
+    g.restore();
+    if (t > K.link - 0.1) { const k = pop(t, K.link - 0.1, { rise: 60 }); g.save(); g.globalAlpha = k.op; g.translate(540, 700 + k.dy); g.scale(k.s, k.s); rr(-280, -58, 560, 116, 58); shadow(40, 14, 0.5); g.fillStyle = C.or; g.fill(); noShadow(); text('📩 קישור בפרטי', 0, 16, F(800, 44), '#fff', 'center'); g.restore(); }
+  }
+}
+
+// ───────── captions ─────────
+const GROUPS = (() => { const out = []; let cur = []; const flush = () => { if (cur.length) out.push(cur), cur = []; };
+  const SEGB = [3.6, 5.75, 7.97, 14.8, 19.85, 21.52, 25.4], crosses = (a, b) => SEGB.some(x => a.t0 < x && b.t0 >= x - 0.05);
+  WORDS.forEach((w, i) => { const prev = WORDS[i - 1]; if (cur.length && (crosses(prev, w) || w.t0 - prev.t1 > 0.35 || cur.length >= 4 || cur.map(x => x.w).join(' ').length > 16)) flush(); cur.push(w); if (/[.,?]$/.test(w.w)) flush(); }); flush();
+  return out.map(ws => ({ ws, t0: ws[0].t0 - 0.04, t1: ws[ws.length - 1].t1 + 0.1 })); })();
+GROUPS.forEach((gp, i) => { const nx = GROUPS[i + 1]; if (nx) gp.t1 = Math.min(nx.t0, gp.t1 + 0.3); });
+function captions(t) { const gp = GROUPS.find(x => t >= x.t0 && t < x.t1); if (!gp || t > SPEECH_END) return;
+  // like the reference: big heavy white words on the seam, a soft shadow, no outline, no colour
+  const y = 905, font = F(900, 92), cl = s => s.replace(/[.,]$/, ''), e = OM.popIn(t, gp.t0, { rise: 14, s0: 0.92, ds: 0.08, zeta: 0.6, omega: 24 });
+  const words = gp.ws.map(w => cl(w.w)), GAP = 46;
+  g.save(); g.font = font; g.direction = 'rtl'; g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  let size = 92, ws, total; const measure = () => { ws = words.map(w => g.measureText(w).width); total = ws.reduce((p, q) => p + q, 0) + GAP * (words.length - 1); };
+  measure(); while (total > 980 && size > 60) { size -= 4; g.font = F(900, size); measure(); }
+  // a soft dark band so the white words read on any background (a bright Excel, a white swipe)
+  { const band = g.createLinearGradient(0, y - 150, 0, y + 70); band.addColorStop(0, 'rgba(0,0,0,0)'); band.addColorStop(0.45, `rgba(0,0,0,${0.42 * e.op})`); band.addColorStop(0.8, `rgba(0,0,0,${0.42 * e.op})`); band.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = band; g.fillRect(0, y - 150, W, 220); }
+  g.globalAlpha = e.op; g.translate(540, y + e.dy); g.scale(e.s, e.s);
+  const draw = (blur, dy, a) => { g.shadowColor = `rgba(0,0,0,${a})`; g.shadowBlur = blur; g.shadowOffsetY = dy; g.fillStyle = '#fff'; let x = total / 2; words.forEach((w, i) => { g.fillText(w, x - ws[i] / 2, 0); x -= ws[i] + GAP; }); };
+  draw(18, 5, 0.55); draw(4, 2, 0.35);
+  g.restore(); }
+function seek(t) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, W, H); drawShot(t); overlays(t); captions(t); }
+const ready = im => im.complete ? Promise.resolve() : new Promise(r => { im.onload = r; im.onerror = r; });
+window.__seek = async t => { const { img } = shotFrame(t); await Promise.all([ready(img), ready(personFrame(t))]); seek(t); return true; };
+window.__meta = { dur: DUR, fps: FPS, w: W, h: H, cuts: SHOTS.slice(1).map(s => s.t0) };
+window.__events = () => { const ev = [], add = (t, k) => ev.push({ t, k, x: 540 });
+  add(K.four, 'pop'); add(K.button, 'pop'); SHOTS.slice(1).forEach(s => add(s.t0, s.src === 'A' ? 'swipe' : 'whoosh'));
+  add(K.alt - 0.35, 'pop'); [K.alt, K.sp1, K.opt, K.sp2].forEach(t => add(t, 'key')); add(K.opt - 0.25, 'flip');
+  for (let i = 0; i < 14; i++) add(15.05 + i * 0.11, 'type'); add(19.33, 'ding'); add(19.97, 'success');
+  add(K.comment - 0.1, 'whoosh'); for (let i = 0; i < 6; i++) add(K.plugin - 0.05 + i * 0.07, 'type'); add(K.send, 'send'); add(K.link - 0.1, 'success');
+  return ev.sort((a, b) => a.t - b.t); };
+window.__ready = document.fonts.ready.then(() => Promise.all([500, 700, 800, 900].map(w => document.fonts.load(F(w, 40), 'אבג Abc')))).then(() => window.__seek(0));
+</script>
+</body>
+</html>

@@ -539,12 +539,12 @@ window.__seek = async (t) => { render(t); await new Promise((r) => requestAnimat
 window.__render = render; window.__dur = DUR;
 const params = new URLSearchParams(location.search);
 if (params.has("render")) { document.body.classList.add("render"); window.__ready.then(() => render(+params.get("t") || 0)); }
-else if (params.has("play") || !params.has("t")) {
+else if (params.has("play")) {
   const fit = () => { const s = Math.min(innerWidth / 1080, innerHeight / 1920) * .96; $("stage").style.transform = `scale(${s})`; };
   addEventListener("resize", fit); fit();
   const t0 = performance.now(); const loop = () => { render(((performance.now() - t0) / 1000) % DUR); requestAnimationFrame(loop); };
   window.__ready.then(loop);
-} else { window.__ready.then(() => render(+params.get("t"))); }
+} else { window.__ready.then(() => render(+(params.get("t") || 0))); }   // no params: a still page that waits for __seek (the renderer)
 </script>
 </body>
 </html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<!-- Pointy — narrated screen reel (TikTok / Instagram, 1080×1920, Hebrew). A onetake composition: every value is a pure
+     function of t, every beat sits on a word of the voiceover (vo.js = word timings of the chosen take). -->
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<title>Pointy · screen reel</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#000}
+canvas{position:absolute;left:0;top:0;width:1080px;height:1920px}
+#hud{position:absolute;left:16px;top:12px;font:24px monospace;color:#f33;display:none;z-index:9}
+#warm{position:absolute;left:-9999px;top:0;font-family:Heebo}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas><div id="hud"></div>
+<div id="warm"><b style="font-weight:500">אב Ab</b><b style="font-weight:700">אב Ab</b><b style="font-weight:800">אב Ab</b></div>
+<script src="motion.js"></script>
+<script src="vo.js"></script>
+<script>
+const W = 1080, H = 1920;
+const { clamp, lerp, seg, sstep, ease } = OM, spr = OM.spring;
+const F = (w, s) => `${w} ${s}px Heebo`;
+const C = { or: '#F08A2E', or2: '#FFAE5C', ord: '#D2600E', red: '#FF3B30', ppBlue: '#37a3f0' };
+const cv = document.getElementById('cv'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+
+// ───────────────────────────── beats on words ─────────────────────────────
+const clean = s => s.replace(/[.,?!:"]/g, '');
+const V = (word, k = 0) => { const ws = VO.filter(w => clean(w.w) === word); if (!ws[k]) throw new Error('no word ' + word + ' #' + k); return ws[k].t0; };
+const VE = (word, k = 0) => VO.filter(w => clean(w.w) === word)[k].t1;
+const K = {
+  stuck: V('נתקעתם'), button: V('הכפתור'), instead: V('במקום'), n14: V('14'), yt: V('ביוטיוב'), meet: V('תכירו'), pointy: V('פוינטי'),
+  press: V('לוחצים'), opt: V('אופשן'), space: V('ורווח'), ask: V('ושואלים'), type0: V('איך'), typeEnd: VE('איטי'),
+  looks: V('מסתכל'), cursor: V('והסמן'), shows: V('מראה'), click: V('ללחוץ'), press2: V('לוחצים', 1), done: V('עשיתי'), next: V('בשלב'),
+  thatsit: V('וזהו'), ready: V('מוכן'), noguide: V('בלי'), every: V('בכל'), excel: V('אקסל'), ae: V('אפטר'), all: V('כל'),
+  mac: V('במק'), win: V('ובווינדוס'), want: V('רוצים'), comment: V('תגיבו'), plugin: V('פלאגין'), dm: V('בפרטי'), end: VO[VO.length - 1].t1,
+};
+const ENTER = K.typeEnd + 0.12;
+const T = { land1: K.shows, card1: K.shows + 0.15, click1: K.press2 + 0.05, land2: K.next - 0.05, click2: K.next + 0.45,
+  land3: K.thatsit + 0.05, val3: K.thatsit + 0.25, play: K.ready - 0.45 };
+const SW1 = K.every + 0.3, SW2 = K.ae - 0.45, MC = K.all + 0.15;     // app switches and Mission Control
+const DUR = K.end + 1.35;
+
+// ───────────────────────────── assets ─────────────────────────────
+const IMG = { pr: new Image(), xl: new Image(), ae: new Image() };
+IMG.pr.src = 'premiere.jpg'; IMG.xl.src = 'excel.jpg'; IMG.ae.src = 'ae.jpg';
+const BLUR = {};      // a blurred, darkened copy of each app for the backdrop, made once
+function makeBlur(k) { const c = document.createElement('canvas'); c.width = 270; c.height = 480; const x = c.getContext('2d');
+  x.filter = 'blur(10px) brightness(0.42) saturate(1.3)'; x.drawImage(IMG[k], 1300, 0, 1240, 2160, -30, -30, 330, 540); BLUR[k] = c; }
+
+// ───────────────────────────── helpers ─────────────────────────────
+const rr = (x, y, w, h, r) => { g.beginPath(); g.roundRect(x, y, w, h, Math.max(0, Math.min(r, w / 2, h / 2))); };
+function text(s, x, y, font, color, align = 'right', dir = 'rtl', alpha = 1) { if (alpha <= 0.003) return; g.save(); g.globalAlpha *= alpha; g.font = font; g.fillStyle = color; g.textAlign = align; g.direction = dir; g.textBaseline = 'alphabetic'; g.fillText(s, x, y); g.restore(); }
+function shadow(b, dy, a, col = '0,0,0') { g.shadowColor = `rgba(${col},${a})`; g.shadowBlur = b; g.shadowOffsetY = dy; }
+const noShadow = () => { g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0; };
+const pop = (t, t0, o) => OM.popIn(t, t0, { rise: 40, s0: 0.6, ds: 0.4, zeta: 0.55, omega: 16, ...o });
+function ARROW(x, y, S, col, outline = 1) {
+  const P = [[0, 0], [40, 16], [21, 21], [16, 40]].map(([a, b]) => [x + a * S, y + b * S]);
+  const path = () => { g.beginPath(); P.forEach(([a, b], i) => i ? g.lineTo(a, b) : g.moveTo(a, b)); g.closePath(); };
+  g.save(); g.lineJoin = 'round';
+  if (outline) { path(); g.lineWidth = 5 * S; g.strokeStyle = '#fff'; shadow(10 * S, 3 * S, 0.35); g.stroke(); noShadow(); }
+  path(); g.fillStyle = col; g.fill(); g.lineWidth = 2.4 * S; g.strokeStyle = col; g.stroke(); g.restore();
+}
+function MACCURSOR(x, y, s = 1) { g.save(); g.translate(x, y); g.scale(s, s); g.beginPath();
+  g.moveTo(0, 0); g.lineTo(0, 22); g.lineTo(5.2, 17); g.lineTo(9, 25.5); g.lineTo(12.4, 24); g.lineTo(8.8, 15.8); g.lineTo(15.6, 15.6); g.closePath();
+  shadow(4, 1.5, 0.45); g.fillStyle = '#000'; g.fill(); noShadow(); g.lineWidth = 1.6; g.strokeStyle = '#fff'; g.lineJoin = 'round'; g.stroke(); g.restore(); }
+function sparkle(x, y, r, col) { g.beginPath(); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, d = i % 2 ? r * 0.3 : r; g.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d); } g.closePath(); g.fillStyle = col; g.fill(); }
+function pointyIcon(cx, cy, s, alpha = 1) { if (alpha <= 0.003 || s <= 0.5) return; g.save(); g.globalAlpha *= alpha; g.translate(cx, cy);
+  const gr = g.createLinearGradient(0, -s / 2, 0, s / 2); gr.addColorStop(0, C.or2); gr.addColorStop(1, C.ord);
+  rr(-s / 2, -s / 2, s, s, s * 0.26); shadow(s * 0.25, s * 0.08, 0.5); g.fillStyle = gr; g.fill(); noShadow(); ARROW(-s * 0.27, -s * 0.27, s / 75, '#fff', 0); g.restore(); }
+function chip(cx, cy, label, t0, t, { out = 99, icon = null, font = F(800, 44) } = {}) {
+  if (t < t0 - 0.02 || t > out + 0.4) return; const e = pop(t, t0), o = OM.liftOut(t, out, { dur: 0.25, dist: 40, blur: 0 });
+  g.save(); g.font = font; const tw = g.measureText(label).width, iw = icon ? 74 : 0, w = tw + 64 + iw, h = 96;
+  g.globalAlpha = e.op * o.op; g.translate(cx, cy + e.dy + o.dy); g.scale(e.s, e.s);
+  rr(-w / 2, -h / 2, w, h, h / 2); shadow(30, 10, 0.45); g.fillStyle = 'rgba(22,18,28,0.9)'; g.fill(); noShadow(); g.lineWidth = 2; g.strokeStyle = 'rgba(255,255,255,0.16)'; g.stroke();
+  if (icon) icon(-w / 2 + 32 + 28, 0); text(label, -w / 2 + 32 + iw, 15, font, '#fff', 'left', 'ltr'); g.restore();
+}
+function glass(R, r, tint, img) { g.save(); rr(R.x, R.y, R.w, R.h, r); shadow(40, 14, 0.5); g.fillStyle = 'rgba(40,40,46,0.35)'; g.fill(); noShadow(); g.clip();
+  if (img && img.complete) { const m = 40; g.filter = 'blur(16px)'; g.drawImage(img, (R.x - m) * 2, (R.y - 26 - m) * 2 * 1080 / 1054, (R.w + 2 * m) * 2, (R.h + 2 * m) * 2 * 1080 / 1054, R.x - m, R.y - m, R.w + 2 * m, R.h + 2 * m); g.filter = 'none'; }
+  tint(); g.restore(); rr(R.x, R.y, R.w, R.h, r); g.lineWidth = 1.5; g.strokeStyle = 'rgba(255,255,255,0.65)'; g.stroke(); }
+const whiteTint = (R, a = 0.82) => () => { g.fillStyle = `rgba(246,246,248,${a})`; g.fillRect(R.x - 50, R.y - 50, R.w + 100, R.h + 100); };
+const rainbowTint = R => () => { g.fillStyle = 'rgba(250,250,252,0.55)'; g.fillRect(R.x, R.y, R.w, R.h);
+  const gr = g.createLinearGradient(R.x + R.w, R.y, R.x, R.y + R.h); gr.addColorStop(0, 'rgba(165,205,255,0.62)'); gr.addColorStop(0.5, 'rgba(196,240,206,0.55)'); gr.addColorStop(1, 'rgba(252,240,160,0.62)'); g.fillStyle = gr; g.fillRect(R.x, R.y, R.w, R.h); };
+function pill(x, y, w, h, label, fill, fg, outline) { rr(x, y, w, h, h / 2); if (fill) { g.fillStyle = fill; g.fill(); } if (outline) { g.lineWidth = 1.6; g.strokeStyle = outline; g.stroke(); } text(label, x + w / 2, y + h / 2 + 7, F(800, 18), fg, 'center'); }
+
+// ───────────────────────────── the screens (screen space 1920×1080) ─────────────────────────────
+const PY = y => 26 + y * (1054 / 1080), PR = (x, y, w, h) => ({ x, y: PY(y), w, h: h * 1054 / 1080 });
+const CLIP = PR(1036, 860, 826, 33), STOPW = { x: 78, y: PY(282) }, SCALEV = PR(333, 271, 52, 22), MON = PR(1066, 113, 762, 398);
+const BAR = { x: 560, y: 118, w: 800, h: 66 }, SUG = { x: 576, y: 196, w: 768, h: 232 };
+const APPS = {
+  pr: { name: 'Premiere Pro', q: 'איך עושים זום אין איטי?', look: 'Adobe Premiere' },
+  xl: { name: 'Excel', q: 'איך מוסיפים גרף עמודות?', look: 'Microsoft Excel', target: { x: 1092, y: PY(160) }, ring: PR(1060, 120, 66, 66), card: 'לחצו על Column ובחרו גרף', steps: 2 },
+  ae: { name: 'After Effects', q: 'איך עושים פייד-אין לטקסט?', look: 'Adobe After Effects', target: { x: 212, y: PY(956) }, ring: PR(196, 942, 32, 30), card: 'לחצו על השעון ליד Opacity', steps: 3 },
+};
+const PT = [   // Pointy's pointer in Premiere
+  { t0: ENTER + 0.35, t1: T.land1, from: { x: 1240, y: 150 }, to: { x: CLIP.x + 470, y: CLIP.y + 22 }, arc: 160 },
+  { t0: K.next - 0.4, t1: T.land2, to: { x: STOPW.x + 12, y: STOPW.y + 10 }, arc: 120 },
+  { t0: T.land2 + 0.6, t1: T.land3, to: { x: SCALEV.x + 40, y: SCALEV.y + 16 }, arc: 40 },
+];
+function pointerAt(t) { let p = PT[0].from;
+  for (const s of PT) { if (t < s.t0) return p; if (t <= s.t1) { const u = ease.expoInOut(seg(t, s.t0, s.t1)); return { x: lerp(p.x, s.to.x, u), y: lerp(p.y, s.to.y, u) - s.arc * 4 * u * (1 - u) }; } p = s.to; } return p; }
+const STEPS = [
+  { R: { x: 1250, y: 548, w: 450, h: 246 }, t0: () => T.card1, t1: () => K.done + 0.25, title: 'בחירת הקליפ', desc: ['לחצו על הקליפ sunset_beach.mp4', 'בטיימליין כדי לבחור אותו.'] },
+  { R: { x: 108, y: 330, w: 450, h: 246 }, t0: () => T.land2 + 0.02, t1: () => T.land3 - 0.2, title: 'הפעלת Keyframe ל-Scale', desc: ['ב-Effect Controls לחצו על', 'השעון שליד Scale.'] },
+  { R: { x: 108, y: 330, w: 450, h: 246 }, t0: () => T.land3 + 0.02, t1: () => T.play + 0.1, title: 'הגדלה ל-130', desc: ['הזיזו את הסמן לסוף הקליפ', 'ושנו את Scale ל-130.'] },
+];
+const DONEBTN = { x: STEPS[0].R.x + 22, y: STEPS[0].R.y + STEPS[0].R.h - 60 };
+// the user's own mouse: lost at first, then following Pointy's lead
+const MK = [
+  { t: 0, x: 600, y: 470 }, { t: 0.5, x: 330, y: 300 }, { t: 0.95, x: 820, y: 620 }, { t: 1.4, x: 1500, y: 360 }, { t: 1.85, x: 560, y: 900 }, { t: 2.4, x: 1180, y: 960 },
+  { t: T.land1 + 0.1, x: 1400, y: 1000 }, { t: T.click1 - 0.08, x: CLIP.x + 520, y: CLIP.y + 20 }, { t: T.click1 + 0.12, x: CLIP.x + 520, y: CLIP.y + 20 },
+  { t: K.done - 0.08, x: DONEBTN.x + 62, y: DONEBTN.y + 22 }, { t: K.done + 0.15, x: DONEBTN.x + 62, y: DONEBTN.y + 22 },
+  { t: T.click2 - 0.08, x: STOPW.x + 2, y: STOPW.y + 2 }, { t: T.click2 + 0.12, x: STOPW.x + 2, y: STOPW.y + 2 },
+  { t: T.val3 - 0.06, x: SCALEV.x + 30, y: SCALEV.y + 12 }, { t: T.play + 0.8, x: SCALEV.x + 80, y: SCALEV.y + 60 },
+];
+function mouseAt(t) { for (let i = 0; i < MK.length - 1; i++) if (t <= MK[i + 1].t) { const u = ease.cubicInOut(seg(t, MK[i].t, MK[i + 1].t)); return { x: lerp(MK[i].x, MK[i + 1].x, u), y: lerp(MK[i].y, MK[i + 1].y, u) }; } return MK[MK.length - 1]; }
+const CLICKS = [T.click1, K.done, T.click2, T.val3], clickDown = t => CLICKS.some(c => t >= c && t < c + 0.12);
+
+function menuBar(app, t) {
+  g.fillStyle = '#26232b'; g.fillRect(0, 0, 1920, 26);
+  text('', 22, 19, F(500, 17), '#fff', 'left', 'ltr'); text(APPS[app].name, 52, 19, F(700, 15), '#fff', 'left', 'ltr');
+  text('File    Edit    View    Window    Help', 52 + APPS[app].name.length * 9 + 30, 19, F(500, 15), '#e8e6ea', 'left', 'ltr');
+  text('Mon 9:41', 1900, 19, F(500, 15), '#fff', 'right', 'ltr');
+  const on = t > K.space - 0.1; g.save(); rr(1560, 3, 150, 20, 10); g.fillStyle = on ? 'rgba(240,138,46,0.28)' : 'rgba(255,255,255,0.12)'; g.fill();
+  g.beginPath(); g.arc(1578, 13, 8, 0, Math.PI * 2); g.fillStyle = C.or; g.fill(); ARROW(1574, 9, 0.2, '#fff', 0); sparkle(1610, 13, 6, '#ddd'); g.beginPath(); g.arc(1640, 13, 6, 0, Math.PI * 2); g.lineWidth = 1.5; g.strokeStyle = '#ddd'; g.stroke(); g.restore();
+  g.fillStyle = 'rgba(255,255,255,0.85)'; g.fillRect(1802, 8, 22, 11); g.fillRect(1824, 11, 2, 5);
+}
+function askBar(app, t, n, t0, t1, enter) {     // the frosted ask bar, open between t0 and t1, n chars of the question typed
+  const k = t < t1 ? clamp(spr(t - t0, 0.62, 17), 0, 1.08) : 1 - sstep(t1, t1 + 0.3, t); if (k <= 0.01 || t < t0) return;
+  const R = BAR, cy = R.y + R.h / 2, Q = APPS[app].q, str = Q.slice(0, n);
+  g.save(); g.globalAlpha *= clamp(k, 0, 1); g.translate(R.x + R.w / 2, cy); g.scale(0.92 + 0.08 * k, 0.92 + 0.08 * k); g.translate(-R.x - R.w / 2, -cy);
+  glass(R, R.h / 2, whiteTint(R), IMG[app]); ARROW(R.x + 24, cy - 12, 0.6, C.or, 0);
+  if (n === 0) text('Ask Pointy how to do anything on your screen...', R.x + 64, cy + 8, F(500, 23), '#77767e', 'left', 'ltr');
+  else text(str, R.x + 64, cy + 8, F(500, 25), '#1d1c22', 'left', 'rtl');
+  if (t < enter && (n < Q.length || Math.floor(t * 2.4) % 2 === 0)) { g.fillStyle = '#1d1c22'; g.fillRect(R.x + 60, cy - 14, 2, 28); }
+  g.strokeStyle = '#8e8d94'; g.lineWidth = 2.2; g.lineCap = 'round'; rr(R.x + R.w - 96, cy - 13, 11, 18, 6); g.stroke(); g.beginPath(); g.arc(R.x + R.w - 90.5, cy - 2, 10, 0.15 * Math.PI, 0.85 * Math.PI); g.stroke();
+  const sp = OM.press(t, enter, { depth: 0.18 }); g.save(); g.translate(R.x + R.w - 38, cy); g.scale(sp.s, sp.s); g.beginPath(); g.arc(0, 0, 21, 0, Math.PI * 2); g.fillStyle = n > 0 ? C.or : '#f2b27a'; g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 9); g.lineTo(0, -9); g.moveTo(-7, -2); g.lineTo(0, -9); g.lineTo(7, -2); g.stroke(); g.restore();
+  g.restore();
+}
+function rings(x, y, t, t0, t1) { if (t < t0 || t > t1 + 0.25) return; const a = sstep(t0, t0 + 0.12, t) * (1 - sstep(t1, t1 + 0.25, t)), base = g.globalAlpha;
+  g.save(); g.globalAlpha = base * a; const gl = g.createRadialGradient(x, y, 0, x, y, 30); gl.addColorStop(0, 'rgba(240,138,46,0.55)'); gl.addColorStop(1, 'rgba(240,138,46,0)'); g.fillStyle = gl; g.beginPath(); g.arc(x, y, 30, 0, Math.PI * 2); g.fill();
+  for (let i = 0; i < 3; i++) { const u = ((t - t0) * 1.3 + i / 3) % 1; g.globalAlpha = base * a * (1 - u) * 0.9; g.beginPath(); g.arc(x, y, 12 + 34 * u, 0, Math.PI * 2); g.lineWidth = 3; g.strokeStyle = C.or; g.stroke(); } g.restore(); }
+function stepCard(R, t, t0, t1, i, total, title, desc, app, doneT = null) {
+  if (t < t0 - 0.02 || t > t1 + 0.3) return; const e = pop(t, t0, { rise: 22, s0: 0.86, ds: 0.14 }), o = 1 - sstep(t1, t1 + 0.18, t);
+  g.save(); g.globalAlpha *= e.op * o; g.translate(R.x + R.w / 2, R.y + R.h / 2 + e.dy); g.scale(e.s, e.s); g.translate(-R.x - R.w / 2, -R.y - R.h / 2);
+  glass(R, 24, rainbowTint(R), IMG[app]);
+  text(`שלב ${i + 1} מתוך ${total}`, R.x + R.w - 24, R.y + 38, F(800, 18), '#e0701a'); sparkle(R.x + R.w - 134, R.y + 32, 7, '#e0701a');
+  g.strokeStyle = '#55545c'; g.lineWidth = 2; g.beginPath(); g.moveTo(R.x + 22, R.y + 24); g.lineTo(R.x + 34, R.y + 36); g.moveTo(R.x + 34, R.y + 24); g.lineTo(R.x + 22, R.y + 36); g.stroke();
+  text(title, R.x + R.w - 24, R.y + 76, F(800, 27), '#15141a'); desc.forEach((d, j) => text(d, R.x + R.w - 24, R.y + 108 + j * 26, F(500, 19), '#3b3a42'));
+  for (let k = 0; k < total; k++) { const w = (R.w - 48) / total; rr(R.x + R.w - 24 - (k + 1) * w + 4, R.y + 166, w - 8, 5, 3); g.fillStyle = k <= i ? C.or : 'rgba(0,0,0,0.12)'; g.fill(); }
+  const b = { x: R.x + 22, y: R.y + R.h - 60, w: 124, h: 40 }, done = doneT !== null && t >= doneT, pr = doneT !== null ? OM.press(t, doneT, { depth: 0.12 }) : { s: 1 };
+  g.save(); g.translate(b.x + b.w / 2, b.y + b.h / 2); g.scale(pr.s, pr.s); g.translate(-b.x - b.w / 2, -b.y - b.h / 2); pill(b.x, b.y, b.w, b.h, done ? '✓ בוצע' : 'עשיתי ✓', done ? '#33b36a' : C.or, '#fff'); g.restore();
+  pill(b.x + b.w + 10, b.y, 116, b.h, 'הראה שוב', 'rgba(255,255,255,0.5)', '#2a2930', 'rgba(0,0,0,0.18)'); text('⌘ מקשים', R.x + R.w - 24, b.y + 27, F(500, 17), '#55545c');
+  g.restore();
+}
+function readingPill(app, x, y, t, t0, t1) { if (t < t0 || t > t1 + 0.25) return; const a = sstep(t0, t0 + 0.15, t) * (1 - sstep(t1, t1 + 0.25, t)), R = { x, y, w: 300, h: 46 };
+  g.save(); g.globalAlpha *= a; glass(R, 23, whiteTint(R, 0.88), IMG[app]); g.beginPath(); g.arc(x + R.w - 24, y + 23, 7 + 1.5 * Math.sin(t * 12), 0, Math.PI * 2); g.fillStyle = C.or; g.fill();
+  text(`קורא את ${APPS[app].look}`, x + R.w - 40, y + 30, F(700, 19), '#2a2930', 'right', 'rtl'); g.restore(); }
+
+function screenPremiere(t) {
+  menuBar('pr', t); const im = IMG.pr; if (im.complete) g.drawImage(im, 0, 26, 1920, 1054);
+  const selected = t >= T.click1, stopOn = t >= T.click2, val130 = t >= T.val3, playing = t >= T.play;
+  if (selected) { rr(CLIP.x - 1, CLIP.y - 1, CLIP.w + 2, CLIP.h + 2, 3); g.lineWidth = 2.5; g.strokeStyle = '#fff'; g.stroke(); }
+  if (stopOn) { g.beginPath(); g.arc(STOPW.x, STOPW.y, 11, 0, Math.PI * 2); g.fillStyle = '#1d1e1d'; g.fill();
+    g.beginPath(); g.arc(STOPW.x, STOPW.y + 1, 8, 0, Math.PI * 2); g.lineWidth = 2.2; g.strokeStyle = C.ppBlue; g.stroke(); g.beginPath(); g.moveTo(STOPW.x, STOPW.y + 1); g.lineTo(STOPW.x, STOPW.y - 4); g.stroke();
+    const kf = x => { g.save(); g.translate(x, STOPW.y); g.rotate(Math.PI / 4); g.fillStyle = '#c9cdd6'; g.fillRect(-5, -5, 10, 10); g.restore(); }; kf(689); if (val130) kf(945); }
+  if (val130) { g.fillStyle = '#1d1e1d'; g.fillRect(SCALEV.x - 2, SCALEV.y - 1, SCALEV.w + 8, SCALEV.h + 2); const tk = OM.tick(t, T.val3); g.save(); g.translate(SCALEV.x, SCALEV.y + 17); g.scale(tk.s, tk.s); text('130.0', 2, 0, F(500, 18), '#4aa8ff', 'left', 'ltr'); g.restore();
+    if (im.complete) g.drawImage(im, 2074, 1500, 8, 580, 1033, PY(750), 4, 290);
+    g.fillStyle = C.ppBlue; g.fillRect(1723, PY(762), 2, PY(1045) - PY(762)); g.beginPath(); g.moveTo(1717, PY(758)); g.lineTo(1731, PY(758)); g.lineTo(1724, PY(770)); g.closePath(); g.fill();
+    g.fillStyle = '#1d1d1d'; g.fillRect(785, PY(708), 140, 30); text('00:00:10:00', 787, PY(732), F(700, 23), '#f5c518', 'left', 'ltr'); }
+  if (playing && im.complete) { const z = 1 + 0.3 * ease.sineInOut(seg(t, T.play, T.play + 1.8)), sw = 762 * 2 / z, sh = 398 * 2 / z;
+    g.drawImage(im, 1066 * 2 + (762 * 2 - sw) / 2, 113 * 2 + (398 * 2 - sh) / 2, sw, sh, MON.x, MON.y, MON.w, MON.h);
+    g.fillStyle = '#1d1d1d'; g.fillRect(1002, PY(518), 130, 30); text(`00:00:0${Math.min(9, Math.floor((t - T.play) * 5))}:${String(Math.floor(((t - T.play) * 5 % 1) * 24)).padStart(2, '0')}`, 1004, PY(541), F(700, 22), '#f5c518', 'left', 'ltr'); }
+  // Pointy
+  const n = clamp(Math.floor(seg(t, K.type0, K.typeEnd) * APPS.pr.q.length), 0, APPS.pr.q.length);
+  askBar('pr', t, n, K.space + 0.04, ENTER + 0.35, ENTER);
+  const sugK = clamp(spr(t - (K.space + 0.2), 0.7, 16), 0, 1) * (1 - sstep(K.type0 - 0.12, K.type0 + 0.12, t));
+  if (sugK > 0.01 && t > K.space + 0.15) { const R = SUG; g.save(); g.globalAlpha *= sugK; g.translate(0, (1 - sugK) * -14); glass(R, 20, whiteTint(R, 0.78), IMG.pr);
+    rr(R.x + 22, R.y + 22, 26, 26, 6); g.fillStyle = '#2a1f6e'; g.fill(); text('Pr', R.x + 35, R.y + 41, F(800, 15), '#a99cff', 'center', 'ltr'); text('Looking at Adobe Premiere', R.x + 60, R.y + 41, F(500, 19), '#55545c', 'left', 'ltr');
+    ['איך לעשות אפקט מהבהב בין שני קליפים', 'איך מוסיפים כתוביות אוטומטיות', 'איך עושים צבע קולנועי'].forEach((q, i) => { const y = R.y + 88 + i * 40; g.strokeStyle = '#8e8d94'; g.lineWidth = 1.8; g.beginPath(); g.arc(R.x + 35, y - 7, 9, 0, Math.PI * 2); g.moveTo(R.x + 35, y - 12); g.lineTo(R.x + 35, y - 7); g.lineTo(R.x + 39, y - 4); g.stroke(); text(q, R.x + 60, y, F(500, 21), '#2a2930', 'left', 'rtl'); });
+    sparkle(R.x + 35, R.y + 207, 9, '#8e8d94'); text('What can I do in Adobe Premiere?', R.x + 60, R.y + 214, F(500, 20), '#55545c', 'left', 'ltr'); g.restore(); }
+  if (t > ENTER) { const p = pointerAt(t); readingPill('pr', p.x + 46, p.y + 22, t, ENTER + 0.05, T.land1 - 0.05); }
+  rings(PT[0].to.x, PT[0].to.y, t, T.land1, K.done); rings(PT[1].to.x, PT[1].to.y, t, T.land2, T.land3); rings(PT[2].to.x, PT[2].to.y, t, T.land3, T.play + 0.2);
+  STEPS.forEach((S, i) => stepCard(S.R, t, S.t0(), S.t1(), i, 3, S.title, S.desc, 'pr', i === 0 ? K.done : null));
+  if (t > T.play + 0.2) { const R = { x: 1220, y: 300, w: 460, h: 200 }, e = pop(t, T.play + 0.2, { rise: 22, s0: 0.86, ds: 0.14 }); g.save(); g.globalAlpha *= e.op; g.translate(R.x + R.w / 2, R.y + R.h / 2 + e.dy); g.scale(e.s, e.s); g.translate(-R.x - R.w / 2, -R.y - R.h / 2);
+    glass(R, 24, rainbowTint(R), IMG.pr); g.beginPath(); g.arc(R.x + R.w - 44, R.y + 46, 20, 0, Math.PI * 2); g.fillStyle = C.or; g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 4; g.lineCap = 'round'; g.beginPath(); g.moveTo(R.x + R.w - 53, R.y + 46); g.lineTo(R.x + R.w - 46, R.y + 53); g.lineTo(R.x + R.w - 34, R.y + 39); g.stroke();
+    text('זום-אין איטי מוכן!', R.x + R.w - 76, R.y + 56, F(800, 27), '#15141a'); text('לחצו Play כדי לראות את התוצאה.', R.x + R.w - 24, R.y + 98, F(500, 19), '#3b3a42');
+    pill(R.x + 22, R.y + R.h - 62, 140, 40, 'שאלה נוספת', C.or, '#fff'); pill(R.x + 172, R.y + R.h - 62, 90, 40, 'סגור', 'rgba(255,255,255,0.5)', '#2a2930', 'rgba(0,0,0,0.18)'); g.restore(); }
+  if (t > ENTER + 0.3) { const p = pointerAt(t); ARROW(p.x, p.y, 1.25, C.or); }
+  const m = mouseAt(t); MACCURSOR(m.x, m.y, clickDown(t) ? 1.15 : 1.35);
+}
+function screenApp(app, t, t0) {     // Excel / After Effects: the same Pointy, a quicker pass
+  menuBar(app, t); const A = APPS[app], im = IMG[app]; if (im.complete) g.drawImage(im, 0, 26, 1920, 1054);
+  const q = A.q, n = clamp(Math.floor(seg(t, t0 + 0.02, t0 + 0.3) * q.length), 0, q.length), enter = t0 + 0.33, land = t0 + 0.62;
+  askBar(app, t, n, t0 - 0.1, enter + 0.25, enter);
+  const from = { x: 1240, y: 150 }, u = ease.expoInOut(seg(t, enter + 0.1, land)), p = { x: lerp(from.x, A.target.x, u), y: lerp(from.y, A.target.y, u) - 140 * 4 * u * (1 - u) };
+  rings(A.target.x, A.target.y, t, land, 99);
+  const R = app === 'xl' ? { x: 1120, y: 230, w: 450, h: 246 } : { x: 260, y: 600, w: 450, h: 246 };
+  stepCard(R, t, land + 0.1, 99, 0, A.steps, app === 'xl' ? 'הוספת גרף עמודות' : 'פייד-אין לטקסט', [A.card], app);
+  if (t > enter + 0.05) ARROW(p.x, p.y, 1.25, C.or);
+}
+function drawScreen(app, t) { if (app === 'pr') screenPremiere(t); else screenApp(app, t, app === 'xl' ? SW1 + 0.22 : SW2 + 0.2); }
+
+// ───────────────────────────── camera (screen space), keyed on the words ─────────────────────────────
+const CAM = [
+  { t: 0, x: 760, y: 600, zoom: 1.12 }, { t: K.instead - 0.05, x: 980, y: 560, zoom: 0.98, curve: ease.sineInOut },
+  { t: K.press, x: 960, y: 540, zoom: 0.9, curve: ease.cubicInOut },
+  { t: K.space + 0.3, x: 960, y: 250, zoom: 1.2, curve: ease.expoInOut },
+  { t: K.typeEnd, x: 960, y: 210, zoom: 1.3, curve: ease.sineInOut },
+  { t: T.land1 - 0.05, x: 1340, y: 770, zoom: 1.5, curve: ease.expoInOut },
+  { t: K.done + 0.1, x: 1350, y: 760, zoom: 1.55, curve: ease.sineInOut },
+  { t: T.land2 - 0.05, x: 330, y: 360, zoom: 1.6, curve: ease.expoInOut },
+  { t: T.land3 + 0.15, x: 340, y: 380, zoom: 1.6 },
+  { t: T.play + 0.1, x: 1400, y: 330, zoom: 1.1, curve: ease.expoInOut },
+  { t: K.every - 0.05, x: 1400, y: 330, zoom: 1.12 },
+  { t: SW1 + 0.4, x: 1180, y: 320, zoom: 1.2, curve: ease.cubicInOut },
+  { t: SW1 + 0.95, x: 1010, y: 300, zoom: 1.4, curve: ease.expoInOut },
+  { t: SW2 + 0.4, x: 520, y: 720, zoom: 1.25, curve: ease.cubicInOut },
+  { t: SW2 + 0.85, x: 420, y: 820, zoom: 1.45, curve: ease.expoInOut },
+  { t: MC + 1, x: 380, y: 860, zoom: 1.45 },
+];
+const HITS = [[T.land1, 6, 10], [T.land2, 6, 10], [T.play + 0.2, 4, 10]];
+function camAt(t) { const c = OM.camera(t, CAM, { W: 1920, H: 1080 }); let { x, y } = c;
+  for (const [th, amp, dec] of HITS) { const s = OM.shake(t, th, { amp, decay: dec, seed: Math.round(th * 100) }); x += s.x / c.zoom; y += s.y / c.zoom; }
+  return { x, y, zoom: c.zoom }; }
+function appAt(t) { if (t < SW1) return ['pr', null, 0]; if (t < SW1 + 0.45) return ['pr', 'xl', ease.cubicInOut(seg(t, SW1, SW1 + 0.45))]; if (t < SW2) return ['xl', null, 0]; if (t < SW2 + 0.45) return ['xl', 'ae', ease.cubicInOut(seg(t, SW2, SW2 + 0.45))]; return ['ae', null, 0]; }
+
+function drawStage(t) {
+  const [a, b, u] = appAt(t), c = camAt(t);
+  // backdrop: the current app, blurred, behind the floating screen
+  const bk = BLUR[u < 0.5 ? a : b]; if (bk) g.drawImage(bk, 0, 0, W, H);
+  const v = g.createRadialGradient(W / 2, H / 2, 300, W / 2, H / 2, 1200); v.addColorStop(0, 'rgba(0,0,0,0.1)'); v.addColorStop(1, 'rgba(0,0,0,0.6)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+  const one = (app, off) => { g.save(); g.translate(W / 2, H / 2); g.scale(c.zoom, c.zoom); g.translate(-c.x + off, -c.y);
+    rr(0, 0, 1920, 1080, 18); shadow(80, 30, 0.7); g.fillStyle = '#111'; g.fill(); noShadow(); g.clip(); drawScreen(app, t); g.restore(); };
+  if (!b) one(a, 0); else { one(a, -u * 2100); one(b, (1 - u) * 2100); }
+}
+// Mission Control: the three apps stacked, Pointy pointing in each
+function drawMission(t) {
+  const k = ease.expoOut(seg(t, MC, MC + 0.6)), f = sstep(K.want + 0.1, K.want + 0.5, t);
+  const bk = BLUR.ae; if (bk) g.drawImage(bk, 0, 0, W, H); g.fillStyle = `rgba(10,8,14,${0.35 + 0.45 * k})`; g.fillRect(0, 0, W, H);
+  const tiles = [['pr', 150], ['xl', 650], ['ae', 1150]], s = lerp(1.5, 0.4, k);
+  tiles.forEach(([app, ty], i) => { const from = app === 'ae' ? { x: W / 2 - 400 * 1.5, y: H / 2 - 840 * 1.5 } : { x: W / 2 - 960 * s, y: -1200 + i * 300 };
+    const x = lerp(from.x, W / 2 - 960 * 0.4, k), y = lerp(app === 'ae' ? from.y : 2200, ty, app === 'ae' ? k : ease.expoOut(seg(t, MC + 0.1 * i, MC + 0.6 + 0.1 * i)));
+    g.save(); g.globalAlpha = 1 - f; g.translate(x, y); g.scale(s, s); rr(0, 0, 1920, 1080, 30); shadow(70, 24, 0.7); g.fillStyle = '#111'; g.fill(); noShadow(); g.clip(); drawScreen(app, app === 'pr' ? T.play + 2.5 : t); g.restore();
+    text(APPS[app].name, W / 2, ty - 18 + (1 - k) * 40, F(800, 30), 'rgba(255,255,255,0.85)', 'center', 'ltr', k * (1 - f)); });
+}
+
+// ───────────────────────────── overlays ─────────────────────────────
+function ytCard(t) {
+  const t0 = K.instead - 0.05, t1 = K.meet - 0.15; if (t < t0 - 0.05 || t > t1 + 0.4) return;
+  const e = pop(t, t0, { rise: 80, s0: 0.85, ds: 0.15 }), o = OM.liftOut(t, t1, { dur: 0.3, dist: 80, blur: 0 });
+  const X = 90, Y = 560, Wd = 900, Ht = 400;
+  g.save(); g.globalAlpha = e.op * o.op; g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(0, 0, W, H);
+  g.translate(540, Y + Ht / 2 + e.dy + o.dy); g.scale(e.s, e.s); g.translate(-540, -(Y + Ht / 2));
+  rr(X, Y, Wd, Ht, 30); shadow(60, 22, 0.6); g.fillStyle = '#0f0f12'; g.fill(); noShadow();
+  g.save(); rr(X, Y, Wd, Ht - 76, 30); g.clip(); const gr = g.createLinearGradient(X, Y, X + Wd, Y + Ht); gr.addColorStop(0, '#2a2140'); gr.addColorStop(1, '#40203a'); g.fillStyle = gr; g.fillRect(X, Y, Wd, Ht);
+  text('מדריך מלא:', X + Wd - 40, Y + 90, F(800, 52), '#fff'); rr(X + Wd - 420, Y + 115, 380, 92, 14); g.fillStyle = '#FFD60A'; g.fill(); text('זום-אין איטי', X + Wd - 60, Y + 182, F(800, 58), '#111');
+  g.beginPath(); g.arc(X + 170, Y + 160, 62, 0, Math.PI * 2); g.fillStyle = 'rgba(0,0,0,0.55)'; g.fill(); g.beginPath(); g.moveTo(X + 150, Y + 128); g.lineTo(X + 202, Y + 160); g.lineTo(X + 150, Y + 192); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.restore();
+  const p = 0.02 + 0.05 * seg(t, t0, t1), bx = X + 30, by = Y + Ht - 46, bw = Wd - 60;
+  rr(bx, by, bw, 8, 4); g.fillStyle = 'rgba(255,255,255,0.25)'; g.fill(); rr(bx, by, bw * p, 8, 4); g.fillStyle = C.red; g.fill(); g.beginPath(); g.arc(bx + bw * p, by + 4, 11, 0, Math.PI * 2); g.fill();
+  const secs = Math.round(p * 877), k14 = OM.impact(t, K.n14 + 0.05, { sqx: 0.35, sqy: 0.35 });
+  text(`${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')} / `, X + 32, Y + Ht - 72, F(700, 32), '#fff', 'left', 'ltr');
+  g.save(); g.translate(X + 32 + 118, Y + Ht - 82); g.scale(k14.sx * (t > K.n14 ? 1.3 : 1), k14.sx * (t > K.n14 ? 1.3 : 1)); text('14:37', 0, 10, F(800, 32), t > K.n14 ? '#FFD60A' : '#fff', 'left', 'ltr'); g.restore();
+  g.restore();
+}
+function lostMark(t) {     // the hook: "?" over the lost cursor
+  if (t > K.instead + 0.1) return; const e = pop(t, K.button - 0.1, { s0: 0.3, ds: 0.7 }), w = OM.impact(t, K.button + 0.15, { sqx: 0.2, sqy: 0.2 }), o = 1 - sstep(K.instead - 0.15, K.instead + 0.05, t);
+  if (t < K.button - 0.12) return; g.save(); g.globalAlpha = e.op * o; g.translate(800, 520 + e.dy); g.scale(e.s * w.sx, e.s * w.sy); g.rotate(0.12 * Math.sin(t * 5));
+  g.beginPath(); g.arc(0, 0, 96, 0, Math.PI * 2); shadow(40, 14, 0.5); g.fillStyle = C.or; g.fill(); noShadow(); text('?', 0, 48, F(800, 136), '#fff', 'center', 'ltr'); g.restore();
+}
+function introLogo(t) {   // "meet Pointy": the icon lands, then flies up into the menu bar
+  const t0 = K.meet + 0.15, t1 = K.press - 0.05; if (t < t0 - 0.05 || t > t1 + 0.5) return;
+  const e = pop(t, t0, { s0: 0.2, ds: 0.8, omega: 18 }), fly = ease.expoInOut(seg(t, t1, t1 + 0.45));
+  const c = camAt(t1 + 0.45), mb = { x: W / 2 + (1578 - c.x) * c.zoom, y: H / 2 + (13 - c.y) * c.zoom };
+  g.save(); g.globalAlpha = 1 - sstep(t1, t1 + 0.2, t) * 0.0; g.fillStyle = `rgba(0,0,0,${0.45 * (1 - fly)})`; g.fillRect(0, 0, W, H);
+  pointyIcon(lerp(540, mb.x, fly), lerp(820, mb.y, fly) + e.dy * (1 - fly), lerp(260 * e.s, 16, fly), 1 - sstep(0.85, 1, fly));
+  text('Pointy', 540, 1050 + e.dy, F(800, 120), '#fff', 'center', 'ltr', e.op * (1 - sstep(0, 0.3, fly)));
+  g.restore();
+}
+function keycap(cx, cy, w, h, label, sub, down, alpha) { g.save(); g.globalAlpha = alpha; g.translate(cx, cy);
+  rr(-w / 2, -h / 2 + 14, w, h, 26); shadow(30, 14, 0.55); g.fillStyle = '#0d0c10'; g.fill(); noShadow();
+  rr(-w / 2, -h / 2 + down, w, h - 4, 26); const gr = g.createLinearGradient(0, -h / 2, 0, h / 2); gr.addColorStop(0, '#3a3740'); gr.addColorStop(1, '#25232a'); g.fillStyle = gr; g.fill();
+  g.lineWidth = 2; g.strokeStyle = down > 3 ? C.or : 'rgba(255,255,255,0.18)'; g.stroke();
+  text(label, 0, -h / 2 + down + 70, F(800, 46), '#fff', 'center', 'ltr'); if (sub) text(sub, 0, h / 2 + down - 26, F(500, 24), '#b9b3c2', 'center', 'ltr'); g.restore(); }
+function keys(t) { const t0 = K.press - 0.05, t1 = K.ask + 0.2; if (t < t0 - 0.05 || t > t1 + 0.4) return;
+  const e = pop(t, t0, { rise: 60, s0: 0.8, ds: 0.2 }), o = OM.liftOut(t, t1, { dur: 0.3, dist: 60, blur: 0 }), a = e.op * o.op, dn = tp => 10 * (sstep(tp - 0.05, tp, t) - sstep(tp + 0.12, tp + 0.28, t));
+  g.save(); g.translate(0, e.dy + o.dy); keycap(355, 1180, 210, 170, '⌥', 'option', dn(K.opt), a); text('+', 488, 1197, F(800, 54), '#fff', 'center', 'ltr', a); keycap(720, 1180, 380, 170, 'space', null, dn(K.space), a);
+  g.restore(); chip(540, 1370, 'Windows: Alt + Space', K.space + 0.2, t, { out: t1, font: F(800, 34) }); }
+function appChips(t) {
+  const key = lab => (x, y) => { g.save(); g.translate(x, y); rr(-28, -26, 56, 52, 10); g.fillStyle = '#2b2830'; g.fill(); text(lab, 0, 13, F(800, lab.length > 1 ? 20 : 30), '#fff', 'center', 'ltr'); g.restore(); };
+  const out = K.want - 0.1; chip(300, 860, 'Mac', K.mac, t, { out, icon: key('⌥') }); chip(780, 860, 'Windows', K.win, t, { out, icon: key('Alt') });
+}
+function cta(t) {
+  if (t < K.want - 0.05) return; const fe = 1 - sstep(K.end + 0.2, K.end + 0.5, t);
+  const e = pop(t, K.comment - 0.2, { rise: 120, s0: 0.9, ds: 0.1, zeta: 0.7 }), word = 'פלאגין', n = clamp(Math.floor(seg(t, K.plugin - 0.1, K.plugin + 0.35) * word.length), 0, word.length);
+  const big = pop(t, K.want, { s0: 0.4, ds: 0.6 }); pointyIcon(540, 640 + big.dy, 230 * big.s, big.op * fe); text('Pointy', 540, 870 + big.dy, F(800, 110), '#fff', 'center', 'ltr', big.op * fe);
+  if (t < K.comment - 0.25) return;
+  g.save(); g.globalAlpha = e.op * fe; g.translate(0, e.dy);
+  rr(60, 1020, 960, 150, 75); shadow(50, 18, 0.55); g.fillStyle = 'rgba(255,255,255,0.97)'; g.fill(); noShadow();
+  g.beginPath(); g.arc(150, 1095, 46, 0, Math.PI * 2); const gr = g.createLinearGradient(110, 1050, 190, 1140); gr.addColorStop(0, C.or2); gr.addColorStop(1, C.ord); g.fillStyle = gr; g.fill(); ARROW(132, 1076, 0.62, '#fff', 0);
+  text(n ? word.slice(0, n) : 'הוסיפו תגובה...', 930, 1115, F(800, n ? 52 : 40), n ? '#111' : '#9a96a0');
+  const sent = t > K.plugin + 0.6, p = OM.press(t, K.plugin + 0.6, { depth: 0.2 });
+  g.save(); g.translate(250, 1095); g.scale(p.s, p.s); g.beginPath(); g.arc(0, 0, 38, 0, Math.PI * 2); g.fillStyle = sent ? C.or : '#e6e3ea'; g.fill(); g.beginPath(); g.moveTo(-14, -16); g.lineTo(16, 0); g.lineTo(-14, 16); g.lineTo(-8, 0); g.closePath(); g.fillStyle = sent ? '#fff' : '#9a96a0'; g.fill(); g.restore();
+  g.restore();
+  if (t > K.dm - 0.25) { const k = pop(t, K.dm - 0.25, { rise: 60 }); g.save(); g.globalAlpha = k.op * fe; g.translate(540, 1280 + k.dy); g.scale(k.s, k.s); rr(-310, -60, 620, 120, 60); shadow(40, 14, 0.5); g.fillStyle = C.or; g.fill(); noShadow(); text('📩 קישור בפרטי', 0, 16, F(800, 44), '#fff', 'center'); g.restore(); }
+}
+function endCard(t) { const t0 = K.end + 0.2; if (t < t0) return; const k = sstep(t0, t0 + 0.3, t); g.fillStyle = `rgba(12,9,18,${0.92 * k})`; g.fillRect(0, 0, W, H);
+  const e = pop(t, t0 + 0.1, { s0: 0.3, ds: 0.7, omega: 15 }); pointyIcon(540, 800 + e.dy, 230 * e.s, e.op); text('Pointy', 540, 1040 + e.dy, F(800, 120), '#fff', 'center', 'ltr', e.op);
+  const e2 = pop(t, t0 + 0.3, { rise: 30 }); text('תגיבו "פלאגין" לקבלת הלינק', 540, 1150 + e2.dy, F(800, 50), C.or2, 'center', 'rtl', e2.op); text('מק · ווינדוס', 540, 1225 + e2.dy, F(700, 40), 'rgba(255,255,255,0.75)', 'center', 'rtl', e2.op); }
+
+// ───────────────────────────── captions: big, 2–3 words, the spoken word lights up ─────────────────────────────
+const GROUPS = (() => { const out = []; let cur = []; const flush = () => { if (cur.length) out.push(cur), cur = []; };
+  VO.forEach((w, i) => { const prev = VO[i - 1]; if (cur.length && (w.t0 - prev.t1 > 0.35 || cur.length >= 3 || cur.map(x => x.w).join(' ').length > 14)) flush(); cur.push(w); if (/[.,?]$/.test(w.w)) flush(); }); flush();
+  return out.map(ws => ({ ws, t0: ws[0].t0 - 0.04, t1: ws[ws.length - 1].t1 + 0.1 })); })();
+GROUPS.forEach((gp, i) => { const nx = GROUPS[i + 1]; if (nx) gp.t1 = Math.min(nx.t0, gp.t1 + 0.3); });
+function captions(t) { const gp = GROUPS.find(x => t >= x.t0 && t < x.t1); if (!gp || t > K.end + 0.2) return;
+  const y = t > K.want - 0.1 ? 1500 : (t > MC ? 1720 : 1560), font = F(800, 78), cl = s => s.replace(/[.,]$/, '');
+  const e = OM.popIn(t, gp.t0, { rise: 18, s0: 0.86, ds: 0.14, zeta: 0.55, omega: 22 });
+  g.save(); g.font = font; g.direction = 'rtl'; const sp = 38, ws = gp.ws.map(w => g.measureText(cl(w.w)).width), total = ws.reduce((a, b) => a + b, 0) + sp * (ws.length - 1);
+  g.translate(540, y + e.dy); g.scale(e.s, e.s); g.globalAlpha = e.op; let x = total / 2;
+  gp.ws.forEach((w, i) => { const on = t >= w.t0 - 0.03 && t < w.t1 + 0.12; g.save(); g.translate(x - ws[i] / 2, 0); g.scale(on ? 1.04 : 1, on ? 1.04 : 1);
+    g.lineWidth = 14; g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,0.9)'; g.textAlign = 'center'; g.strokeText(cl(w.w), 0, 0); g.fillStyle = on ? '#FFC24A' : '#fff'; g.fillText(cl(w.w), 0, 0); g.restore(); x -= ws[i] + sp; });
+  g.restore(); }
+
+// ───────────────────────────── seek ─────────────────────────────
+function seek(t) {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0b0910'; g.fillRect(0, 0, W, H);
+  if (t < MC) drawStage(t); else drawMission(t);
+  lostMark(t); ytCard(t); introLogo(t); keys(t); appChips(t); cta(t); endCard(t); captions(t);
+  document.getElementById('hud').textContent = 't=' + t.toFixed(2);
+}
+window.__seek = async t => { seek(t); return true; };
+window.__meta = { dur: DUR, fps: 30, w: W, h: H };
+window.__events = () => { const ev = [], add = (t, k) => ev.push({ t, k, x: 540 });
+  [0.5, 0.95, 1.4, 1.85].forEach(t => add(t, 'tick')); add(K.button, 'pop'); add(K.instead - 0.05, 'whoosh'); add(K.n14, 'pop'); add(K.meet + 0.15, 'pop'); add(K.press - 0.05, 'whip');
+  add(K.opt, 'key'); add(K.space, 'key'); add(K.space + 0.06, 'open'); const q = APPS.pr.q; for (let i = 0; i < q.length; i++) if (q[i] !== ' ') add(K.type0 + (K.typeEnd - K.type0) * i / q.length, 'type');
+  add(ENTER, 'enter'); add(ENTER + 0.35, 'fly'); add(T.land1, 'ding'); CLICKS.forEach(c => add(c, 'click')); add(K.next - 0.4, 'whip'); add(T.land2, 'tick'); add(T.land3, 'tick'); add(T.play + 0.2, 'success');
+  [SW1, SW2].forEach(s => { add(s, 'swipe'); for (let i = 0; i < 7; i++) add(s + 0.22 + i * 0.04, 'type'); add(s + 0.53, 'enter'); add(s + 0.84, 'ding'); });
+  add(MC, 'whoosh'); add(K.mac, 'pop'); add(K.win, 'pop'); add(K.want, 'pop'); add(K.comment - 0.2, 'whoosh'); for (let i = 0; i < 6; i++) add(K.plugin - 0.1 + i * 0.075, 'type'); add(K.plugin + 0.6, 'send'); add(K.dm - 0.25, 'success'); add(K.end + 0.3, 'pop');
+  return ev.sort((a, b) => a.t - b.t); };
+window.__ready = document.fonts.ready.then(() => Promise.all([500, 700, 800].map(w => document.fonts.load(F(w, 40), 'אבג Abc'))))
+  .then(() => Promise.all(Object.values(IMG).map(i => i.decode()))).then(() => { Object.keys(IMG).forEach(makeBlur); seek(0); return true; });
+const qs = new URLSearchParams(location.search); if (qs.has('hud')) document.getElementById('hud').style.display = 'block';
+if (qs.has('t')) __ready.then(() => seek(parseFloat(qs.get('t'))));
+</script>
+</body>
+</html>

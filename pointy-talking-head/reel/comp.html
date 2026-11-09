@@ -328,11 +328,12 @@ function captions(t) { const gp = GROUPS.find(x => t >= x.t0 && t < x.t1); if (!
 function seek(t) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0b0910'; g.fillRect(0, 0, W, H);
   if (t < MC) drawStage(t); else drawMission(t);
-  lostMark(t); ytCard(t); introLogo(t); keys(t); appChips(t); cta(t); endCard(t); captions(t);
+  lostMark(t); ytCard(t); introLogo(t); keys(t); if (!CLEAN) { appChips(t); cta(t); captions(t); } endCard(t);
   document.getElementById('hud').textContent = 't=' + t.toFixed(2);
 }
-window.__seek = async t => { seek(t); return true; };
-window.__meta = { dur: DUR, fps: 30, w: W, h: H };
+const QS = new URLSearchParams(location.search), CLEAN = QS.has('clean'), FROM = parseFloat(QS.get('from') || '0'), LEN = QS.has('len') ? parseFloat(QS.get('len')) : null;
+window.__seek = async t => { seek(t + FROM); return true; };
+window.__meta = { dur: LEN ?? DUR, fps: 30, w: W, h: H };
 // how far anything travels on screen between t0 and t1 (output px): render.py sizes each frame's motion blur from it
 function screenPts(t) {
   const c = camAt(t), [a, b, u] = appAt(t), off = b ? -u * 2100 : 0, P = [];
@@ -340,7 +341,7 @@ function screenPts(t) {
   if (t >= ENTER) { const p = pointerAt(t); P.push([W / 2 + (p.x - c.x) * c.zoom, H / 2 + (p.y - c.y) * c.zoom]); }
   return P;
 }
-window.__motion = (t0, t1) => {
+window.__motion = (t0, t1) => { t0 += FROM; t1 += FROM;
   if (t1 > MC - 0.05) return t0 < MC + 0.8 ? 260 : 20;                      // Mission Control fly-in, then calm
   if (t1 > K.press - 0.1 && t0 < K.press + 0.5) return 300;                 // the logo flies into the menu bar
   const a = screenPts(t0), b = screenPts(t1); let d = 0; a.forEach((p, i) => { d = Math.max(d, Math.hypot(p[0] - b[i][0], p[1] - b[i][1])); });

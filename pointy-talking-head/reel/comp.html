@@ -333,6 +333,19 @@ function seek(t) {
 }
 window.__seek = async t => { seek(t); return true; };
 window.__meta = { dur: DUR, fps: 30, w: W, h: H };
+// how far anything travels on screen between t0 and t1 (output px): render.py sizes each frame's motion blur from it
+function screenPts(t) {
+  const c = camAt(t), [a, b, u] = appAt(t), off = b ? -u * 2100 : 0, P = [];
+  for (const [x, y] of [[0, 0], [1920, 0], [0, 1080], [1920, 1080], [960, 540]]) P.push([W / 2 + (x + off - c.x) * c.zoom, H / 2 + (y - c.y) * c.zoom]);
+  if (t >= ENTER) { const p = pointerAt(t); P.push([W / 2 + (p.x - c.x) * c.zoom, H / 2 + (p.y - c.y) * c.zoom]); }
+  return P;
+}
+window.__motion = (t0, t1) => {
+  if (t1 > MC - 0.05) return t0 < MC + 0.8 ? 260 : 20;                      // Mission Control fly-in, then calm
+  if (t1 > K.press - 0.1 && t0 < K.press + 0.5) return 300;                 // the logo flies into the menu bar
+  const a = screenPts(t0), b = screenPts(t1); let d = 0; a.forEach((p, i) => { d = Math.max(d, Math.hypot(p[0] - b[i][0], p[1] - b[i][1])); });
+  return d;
+};
 window.__events = () => { const ev = [], add = (t, k) => ev.push({ t, k, x: 540 });
   [0.5, 0.95, 1.4, 1.85].forEach(t => add(t, 'tick')); add(K.button, 'pop'); add(K.instead - 0.05, 'whoosh'); add(K.n14, 'pop'); add(K.meet + 0.15, 'pop'); add(K.press - 0.05, 'whip');
   add(K.opt, 'key'); add(K.space, 'key'); add(K.space + 0.06, 'open'); const q = APPS.pr.q; for (let i = 0; i < q.length; i++) if (q[i] !== ' ') add(K.type0 + (K.typeEnd - K.type0) * i / q.length, 'type');

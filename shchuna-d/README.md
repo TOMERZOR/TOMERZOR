@@ -78,6 +78,15 @@ npm run apk                  # sync + gradle assembleDebug
 
 המשחק כולו ארוז בתוך האפליקציה (מסך מלא, לרוחב, בלי שורת כתובת); מצב הסיפור עובד בלי רשת. ה־APK הוא debug: להפצה בחנות צריך חתימה (`Build → Generate Signed Bundle` ב־Android Studio).
 
+## iOS
+
+```bash
+cd app && npm i
+npm run ios                  # sync + פותח את ios/App/App.xcodeproj ב־Xcode
+```
+
+ב־Xcode: בוחרים את ה־target ״App״ ← Signing & Capabilities ← מסמנים Automatically manage signing ובוחרים Team, מחברים אייפון, בוחרים אותו כיעד ולוחצים Run. המשחק ארוז כולו באפליקציה (לרוחב, מסך מלא). ה־workflow ״שכונה ד׳ · iOS״ בונה ‎.ipa לא חתום, או חותם ומעלה ל־TestFlight אם הוגדרו הסודות שבראש הקובץ.
+
 ## שרת האונליין
 
 `server/src/room.ts` הוא ממסר: כל לקוח מדמה את השחקן שלו, החדר מעביר הודעות ושומר את תוכנית השוד. הוא רץ ב־Cloudflare Workers (ה־workflow ״שכונה ד׳ · server״ פורס אותו בכל push) וגם באתר המשחק ב־Higgsfield. להרצה מקומית:

@@ -87,7 +87,8 @@ export class Gfx {
     const ua = navigator.userAgent;
     const mobile = /Android|iPhone|iPad|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && window.innerWidth < 1100);
     const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
-    if (mobile) return (mem >= 6 && cores >= 8) ? 'medium' : 'low';
+    // Safari does not report memory; a six-core iPhone is recent enough for shadows and post-processing
+    if (mobile) return ((mem >= 6 && cores >= 8) || (/iPhone|iPad/.test(ua) && cores >= 6)) ? 'medium' : 'low';
     return cores >= 8 ? 'high' : 'medium';
   }
 

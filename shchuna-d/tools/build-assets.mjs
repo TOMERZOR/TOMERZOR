@@ -6,8 +6,8 @@
 //   node build-assets.mjs c_hero v_sedan                  (some)
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, prune, textureCompress, meshopt, weld } from '@gltf-transform/functions';
-import { MeshoptEncoder } from 'meshoptimizer';
+import { dedup, prune, textureCompress, meshopt, weld, simplify, compactPrimitive } from '@gltf-transform/functions';
+import { MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,7 +19,7 @@ const OUT = path.join(here, '../assets/models');
 const ANIM = path.join(here, '../assets/anim');
 fs.mkdirSync(OUT, { recursive: true }); fs.mkdirSync(ANIM, { recursive: true });
 
-await MeshoptEncoder.ready;
+await MeshoptEncoder.ready; await MeshoptSimplifier.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS)
   .registerDependencies({ 'meshopt.encoder': MeshoptEncoder });
 
@@ -49,6 +49,16 @@ const MODELS = {
   p_chair: { src: 'p_chair.glb', tex: 256 },
   p_cat: { src: 'p_cat.glb', tex: 512 },
   p_atm: { src: 'p_atm.glb', tex: 512 },
+  // the neighbourhood itself: `tris` is the triangle budget each piece is simplified to
+  b_blockA: { src: 'env/blockA.glb', tex: 2048, tris: 5000 },
+  b_blockB: { src: 'env/blockB.glb', tex: 2048, tris: 5000 },
+  b_blockC: { src: 'env/blockC.glb', tex: 2048, tris: 5000 },
+  b_shops: { src: 'env/shops.glb', tex: 2048, tris: 4500 },
+  e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 220 },
+  e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
+  e_ficus: { src: 'env/ficus.glb', tex: 1024, tris: 1800, sloppy: 4000 },
+  e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 900 },
+  e_shelter: { src: 'env/shelter.glb', tex: 1024, tris: 900 },
 };
 // clip name -> raw file. The clip is stored without mesh; the game retargets it onto every character.
 const CLIPS = {
@@ -56,6 +66,8 @@ const CLIPS = {
   kick: 'clip_kick.glb', hit: 'clip_hit.glb', knockdown: 'clip_knockdown.glb', standup: 'clip_standup.glb',
   sit: 'clip_sit.glb', talk: 'clip_talk.glb', jump: 'clip_jump.glb', guard: 'clip_guard.glb', dance: 'clip_dance.glb',
 };
+
+const triCount = (root) => root.listMeshes().reduce((n, me) => n + me.listPrimitives().reduce((k, p) => k + (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3, 0), 0);
 
 // column-major 4x4 helpers (no dependency needed for two functions)
 function invert4(a) {
@@ -113,15 +125,28 @@ for (const [name, m] of Object.entries(MODELS)) {
     }
     mat.setAlphaMode('OPAQUE');
   }
+  const before = triCount(root);
   await doc.transform(
     dedup(), prune({ keepLeaves: true }),
     textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [m.tex, m.tex], quality: 82 }),
     ...(m.char ? [] : [weld()]),
-    meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
+    ...(m.tris ? [simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, m.tris / Math.max(1, triCount(root))), error: 1, lockBorder: false })] : []),
   );
+  // Foliage is thousands of loose leaves that edge-collapse cannot merge; the grid-based
+  // simplifier can, at the price of a rougher silhouette.
+  if (m.sloppy && triCount(root) > m.sloppy * 1.3) {
+    for (const me of root.listMeshes()) for (const p of me.listPrimitives()) {
+      const idx = new Uint32Array(p.getIndices().getArray()), pos = new Float32Array(p.getAttribute('POSITION').getArray());
+      const want = Math.max(3, Math.floor((idx.length / 3) * (m.sloppy / triCount(root))) * 3);
+      const [out2] = MeshoptSimplifier.simplifySloppy(idx, pos, 3, null, want, 1);
+      p.getIndices().setArray(out2);
+      compactPrimitive(p);
+    }
+  }
+  await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   const out = path.join(OUT, name + '.glb');
   await io.write(out, doc);
-  console.log('model', name, kb(src), '->', kb(out));
+  console.log('model', name, kb(src), '->', kb(out), m.tris ? `${before} -> ${triCount(root)} tris` : '');
 }
 
 for (const [name, file] of Object.entries(CLIPS)) {

@@ -1,49 +1,96 @@
 {
-  "note": "Higgsfield generation ledger for שכונה ד׳. Concept images (nano_banana_2 / gpt_image_2_6) feed image-to-3D jobs.",
-  "cdn": "https://d8j0ntlcm91z4.cloudfront.net/user_3ArYh7JJOHk1SxOZqJFdwiDPp9D/",
-  "concept": {
-    "c_hero": "411a17ea-c95b-424e-980b-e2a3b4362805",
-    "c_shimi": "2f4a0dab-9d40-4689-afdc-ee81728134bf",
-    "c_rival": "49cab5b4-0caa-42a4-a90a-fc090249a07a",
-    "c_goon": "9a9fe0fa-2b25-44f5-98f8-d7941d7eaaaa",
-    "c_cop": "e4590d1d-7c61-4584-93ba-f2bb5ec24155",
-    "c_savta": "7e231ef7-4c75-4f68-91f9-95e99cfe39fe",
-    "c_dod": "d5187d3f-bb6a-48b1-9af4-bd9a386f5688",
-    "c_girl": "e5bd76cc-db50-4da3-a189-556b720990b0",
-    "c_boss": "8e53ad08-8de2-4bfc-b5bf-b05873666b5e",
-    "c_mom": "deb2a97b-920e-46b7-9181-74b4b04661f5",
-    "v_sedan": "83ab833e-b9aa-4c7e-99de-8247cc275b7e",
-    "v_hatch": "fed8d234-c6ac-4db7-8625-d925c7935efc",
-    "v_pickup": "b7fb932b-3e47-4e21-a026-83368d791218",
-    "v_van": "4692cf4c-4ece-449f-841e-4a3816c78d7e",
-    "v_police": "b37de9fe-1ec9-4d0f-9714-cda5fb025cc2",
-    "v_moped": "fecf503e-47a0-4ff9-a079-50eecbbac38b",
-    "v_bus": "f641e58c-0f17-41ae-9e06-5f053b298d65",
-    "v_armored": "5f8c1715-88af-41fd-8e07-a4526cf095ac",
-    "v_truck": "533a41fe-ef27-4518-9be1-ffca265a84f9",
-    "v_tractor": "57bdbfb9-4e53-4794-a685-5c7ca0d3e879",
-    "p_dumpster": "4cd060e5-a9d4-4df4-9556-48f65346cda9",
-    "p_chair": "b8af6d25-05e0-4612-a580-a674afa903a9",
-    "p_atm": "7a824a62-be45-4377-a2c3-449656b1c110",
-    "p_cat": "13007d41-dd0d-475f-b8c6-29741de5dece"
+ "note": "Higgsfield generation ledger for שכונה ד׳. Concept images (nano_banana_2 / gpt_image_2_6) feed image-to-3D jobs.",
+ "cdn": "https://d8j0ntlcm91z4.cloudfront.net/user_3ArYh7JJOHk1SxOZqJFdwiDPp9D/",
+ "concept": {
+  "c_hero": "411a17ea-c95b-424e-980b-e2a3b4362805",
+  "c_shimi": "2f4a0dab-9d40-4689-afdc-ee81728134bf",
+  "c_rival": "49cab5b4-0caa-42a4-a90a-fc090249a07a",
+  "c_goon": "9a9fe0fa-2b25-44f5-98f8-d7941d7eaaaa",
+  "c_cop": "e4590d1d-7c61-4584-93ba-f2bb5ec24155",
+  "c_savta": "7e231ef7-4c75-4f68-91f9-95e99cfe39fe",
+  "c_dod": "d5187d3f-bb6a-48b1-9af4-bd9a386f5688",
+  "c_girl": "e5bd76cc-db50-4da3-a189-556b720990b0",
+  "c_boss": "8e53ad08-8de2-4bfc-b5bf-b05873666b5e",
+  "c_mom": "deb2a97b-920e-46b7-9181-74b4b04661f5",
+  "v_sedan": "83ab833e-b9aa-4c7e-99de-8247cc275b7e",
+  "v_hatch": "fed8d234-c6ac-4db7-8625-d925c7935efc",
+  "v_pickup": "b7fb932b-3e47-4e21-a026-83368d791218",
+  "v_van": "4692cf4c-4ece-449f-841e-4a3816c78d7e",
+  "v_police": "b37de9fe-1ec9-4d0f-9714-cda5fb025cc2",
+  "v_moped": "fecf503e-47a0-4ff9-a079-50eecbbac38b",
+  "v_bus": "f641e58c-0f17-41ae-9e06-5f053b298d65",
+  "v_armored": "5f8c1715-88af-41fd-8e07-a4526cf095ac",
+  "v_truck": "533a41fe-ef27-4518-9be1-ffca265a84f9",
+  "v_tractor": "57bdbfb9-4e53-4794-a685-5c7ca0d3e879",
+  "p_dumpster": "4cd060e5-a9d4-4df4-9556-48f65346cda9",
+  "p_chair": "b8af6d25-05e0-4612-a580-a674afa903a9",
+  "p_atm": "7a824a62-be45-4377-a2c3-449656b1c110",
+  "p_cat": "13007d41-dd0d-475f-b8c6-29741de5dece"
+ },
+ "model3d": {
+  "c_hero": "dd553b64-3687-4f40-9225-b82b7bcf55f9",
+  "c_rival": "fdd657c7-d9cc-489a-b4da-95e8c35273f8",
+  "c_goon": "ebde339f-49c8-4897-aef4-327ed1a982c4",
+  "c_cop": "77606360-1c7b-49d8-aa3b-394b8d488382",
+  "c_savta": "daa9a0d4-d4fc-4b65-a390-0e732ed4ac9e",
+  "c_dod": "276ebbc2-dace-46b0-9079-992a39dc8a2a",
+  "c_girl": "ec501074-846e-46d0-8fec-7dbd6085b080",
+  "c_boss": "fb53e949-56f0-496b-992f-b2e25a9ae80b",
+  "c_mom": "7c05b3cb-6cfe-4a6f-a226-ee37de0a538e",
+  "v_sedan": "9159b311-0d0a-42d5-ad92-869e618964ac",
+  "v_pickup": "b7c4c5c7-8527-45c5-a0d0-544a0c7d4ffe",
+  "v_moped": "90cf18e8-ac1f-4643-9ee6-8596390b5f9a",
+  "v_bus": "1b1aea62-8a6e-41f3-87f4-defdae7caa16",
+  "v_tractor": "0e81da1d-e143-40f6-bcf4-367e187414df",
+  "p_dumpster": "76babe38-02d6-4326-a691-cb9ff8019ad2",
+  "p_chair": "c3a91935-f211-41b2-acee-d0fe051f9928",
+  "p_cat": "a40bd3fe-4524-4f4f-8545-3bb7a022fb4b"
+ },
+ "environment": {
+  "b_shops": {
+   "image_job": "95d31165-cb03-4ce5-874e-f208f70ed5ff",
+   "model_job": "505eb90d-857d-4f1c-bfe3-b07092589db3",
+   "model": "tripo_h3_1_image_to_3d"
   },
-  "model3d": {
-    "c_hero": "dd553b64-3687-4f40-9225-b82b7bcf55f9",
-    "c_rival": "fdd657c7-d9cc-489a-b4da-95e8c35273f8",
-    "c_goon": "ebde339f-49c8-4897-aef4-327ed1a982c4",
-    "c_cop": "77606360-1c7b-49d8-aa3b-394b8d488382",
-    "c_savta": "daa9a0d4-d4fc-4b65-a390-0e732ed4ac9e",
-    "c_dod": "276ebbc2-dace-46b0-9079-992a39dc8a2a",
-    "c_girl": "ec501074-846e-46d0-8fec-7dbd6085b080",
-    "c_boss": "fb53e949-56f0-496b-992f-b2e25a9ae80b",
-    "c_mom": "7c05b3cb-6cfe-4a6f-a226-ee37de0a538e",
-    "v_sedan": "9159b311-0d0a-42d5-ad92-869e618964ac",
-    "v_pickup": "b7c4c5c7-8527-45c5-a0d0-544a0c7d4ffe",
-    "v_moped": "90cf18e8-ac1f-4643-9ee6-8596390b5f9a",
-    "v_bus": "1b1aea62-8a6e-41f3-87f4-defdae7caa16",
-    "v_tractor": "0e81da1d-e143-40f6-bcf4-367e187414df",
-    "p_dumpster": "76babe38-02d6-4326-a691-cb9ff8019ad2",
-    "p_chair": "c3a91935-f211-41b2-acee-d0fe051f9928",
-    "p_cat": "a40bd3fe-4524-4f4f-8545-3bb7a022fb4b"
+  "b_blockA": {
+   "image_job": "49bfe440-3f54-4619-b38d-d7884f2f9a67",
+   "model_job": "88280190-cf11-450e-9093-6a4a28ad310c",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "b_blockB": {
+   "image_job": "869d60cb-1b93-4220-a3ec-681df658f358",
+   "model_job": "cab1e5d1-407d-4495-b9b8-ccd86faccff0",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "b_blockC": {
+   "image_job": "54882560-c08d-4d4f-997a-5e473e503818",
+   "model_job": "1b0dcde0-36ce-4590-a7a1-b6cd6fcd37db",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "e_lamp": {
+   "image_job": "3437b12c-1a9b-4e8a-9295-e8ac2d578eec",
+   "model_job": "67f7efa4-3412-4ac6-9e7c-1feaf6167926",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "e_palm": {
+   "image_job": "bdf37e43-f5ec-42ba-a9af-5b7cabd08733",
+   "model_job": "beedf889-f789-4d63-a7f4-39b62c256208",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "e_ficus": {
+   "image_job": "6b6593cc-38b7-4b64-82c3-bde367dd7e93",
+   "model_job": "7dc018bc-0ca9-4a63-bc49-bbdcb20cafcf",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "e_busstop": {
+   "image_job": "19337ab2-4cf6-462b-8481-8e5f54860a38",
+   "model_job": "d9bd800c-74da-4a07-8cff-044467e1f864",
+   "model": "tripo_h3_1_image_to_3d"
+  },
+  "e_shelter": {
+   "image_job": "a4b741b1-2627-4ca3-8b06-6664d96af88f",
+   "model_job": "8329cf6e-3d07-4f8e-b353-5072f6b684fd",
+   "model": "tripo_h3_1_image_to_3d"
   }
+ }
 }

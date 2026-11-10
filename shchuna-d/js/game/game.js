@@ -55,7 +55,7 @@ export class Game {
     await loadFonts();
     this.assets = new Assets();
     const list = [];
-    const models = new Set(Object.values(VEHICLES).map((v) => v.model).concat(['p_dumpster', 'p_chair', 'p_atm', 'p_cat']));
+    const models = new Set(Object.values(VEHICLES).map((v) => v.model).concat(['p_dumpster', 'p_chair', 'p_atm', 'p_cat', 'b_blockA', 'b_blockB', 'b_blockC', 'b_shops', 'e_lamp', 'e_palm', 'e_ficus', 'e_busstop', 'e_shelter']));
     for (const m of models) list.push({ type: 'model', name: m, url: `assets/models/${m}.glb` });
     for (const m of new Set(Object.values(CHARS).map((c) => c.model))) list.push({ type: 'char', name: m, url: `assets/models/${m}.glb` });
     for (const c of CLIP_NAMES) list.push({ type: 'clip', name: c, url: `assets/anim/${c}.glb` });

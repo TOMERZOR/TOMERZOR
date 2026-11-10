@@ -17,6 +17,9 @@ const GRAF = ['שכונה ד׳ לנצח', 'ד׳', 'מוות לחובות', 'אמ
   'חאלס', 'ועד בית = מאפיה', 'מי שקורא חייב לי 50', 'עמידר תתקנו', 'אחי', 'ביבי בוז׳י שניהם', 'ג׳ = 0', 'סבתא רואה הכל'];
 const GRAF_G = ['שכונה ג׳ שולטת', 'ג׳', 'ד׳ = פארש', 'רק ג׳', 'אזור שלנו'];
 
+// Yaw that turns each generated model's street side to local +Z (found by looking at them).
+const FACE = { b_shops: Math.PI, b_blockA: Math.PI, b_blockC: Math.PI };
+
 export class CityBuilder {
   constructor(gfx, mats, physics, models) {
     this.gfx = gfx; this.mats = mats; this.M = mats.M; this.physics = physics; this.models = models || {};
@@ -77,6 +80,14 @@ export class CityBuilder {
 
   // ---- Street furniture ----------------------------------------------------
   lamp(ch, x, z, yaw, warm = true, tall = 8) {
+    if (this.models.e_lamp) {
+      const [ax, az] = this.at(x, z, yaw, 0, 1.1);
+      this.stand(ch, 'e_lamp', (x + ax) / 2, (z + az) / 2, yaw, tall + 0.25);
+      ch.get('glow').floor(ax, CURB + 0.035, az, 17, 17, 0, [0, 0, 1, 1], warm ? [1, 0.62, 0.28] : [0.72, 0.82, 1]);
+      this.lamps.push({ x: ax, y: tall - 0.3, z: az, warm });
+      this.solid(x, z, 0.14, 0.14, 0, 3);
+      return;
+    }
     const grey = rgb('#7d8388');
     ch.get('paint').cyl(x, CURB, z, 0.11, 0.07, tall, 6, shade(grey, 0.8), grey, false);
     const [ax, az] = this.at(x, z, yaw, 0, 1.1);
@@ -92,6 +103,12 @@ export class CityBuilder {
   }
 
   tree(ch, x, z, s = 1, rng = this.rng, kind = 'ficus') {
+    if (this.models.e_ficus) {
+      const hgt = (kind === 'euc' ? 9.5 : kind === 'bush' ? 3.2 : 6.4) * s * rng.f(0.9, 1.12);
+      this.stand(ch, 'e_ficus', x, z, rng.f(6.28), hgt);
+      this.solid(x, z, 0.3 * s, 0.3 * s, 0, 2.6 * s);
+      return;
+    }
     const y = CURB;
     const bark = kind === 'euc' ? rgb('#b8ae9a') : rgb('#5b4a3a');
     const th = (kind === 'euc' ? 5.2 : 2.6) * s;
@@ -127,6 +144,11 @@ export class CityBuilder {
   }
 
   palm(ch, x, z, h = 8, rng = this.rng) {
+    if (this.models.e_palm) {
+      this.stand(ch, 'e_palm', x, z, rng.f(6.28), h + 2.6);
+      this.solid(x, z, 0.3, 0.3, 0, h);
+      return;
+    }
     const y = CURB, bark = rgb('#7a6650');
     let px = x, pz = z; const lean = rng.f(-0.25, 0.25), la = rng.f(6.28);
     const segs = 4;
@@ -189,6 +211,32 @@ export class CityBuilder {
     ch.get(key).add(md.geometry, m.multiply(md.matrix));
     return true;
   }
+  // A generated model stretched to a box: len along local X, dep along local Z, hgt up.
+  // FACE turns each model so its street side looks along local +Z.
+  fit(ch, name, x, z, yaw, len, dep, hgt, y = CURB) {
+    const md = this.models[name];
+    if (!md) return false;
+    const pre = new THREE.Matrix4().makeRotationY((md.longX ? 0 : Math.PI / 2) + (FACE[name] || 0));
+    const L = Math.max(md.size.x, md.size.z), D = Math.min(md.size.x, md.size.z), ky = hgt / md.size.y;
+    const m = new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeScale(len / L, ky, dep / D));
+    m.setPosition(x, y - md.minY * ky, z);
+    const key = 'mdl_' + name;
+    if (!this.M[key]) this.M[key] = md.material;
+    ch.get(key).add(md.geometry, m.multiply(pre).multiply(md.matrix));
+    return true;
+  }
+  // A generated model scaled uniformly to a height.
+  stand(ch, name, x, z, yaw, hgt, y = CURB) {
+    const md = this.models[name];
+    if (!md) return false;
+    const k = hgt / md.size.y;
+    const m = new THREE.Matrix4().makeRotationY(yaw + (FACE[name] || 0)).multiply(new THREE.Matrix4().makeScale(k, k, k));
+    m.setPosition(x, y - md.minY * k, z);
+    const key = 'mdl_' + name;
+    if (!this.M[key]) this.M[key] = md.material;
+    ch.get(key).add(md.geometry, m.multiply(md.matrix));
+    return true;
+  }
   dumpster(ch, x, z, yaw) {
     if (!this.model(ch, 'p_dumpster', x, z, yaw, 2.3)) ch.get('paint').box(x, CURB, z, 2.2, 1.4, 1.3, yaw, { c: rgb('#3f6b4a') });
     this.solid(x, z, 1.15, 0.75, yaw, 1.5);
@@ -209,6 +257,13 @@ export class CityBuilder {
   crate(ch, x, z, yaw, col, h = 0.35) { ch.get('paint').box(x, CURB, z, 0.6, h, 0.4, yaw, { c: shade(col, 0.8), cTop: col }); }
 
   busStop(ch, x, z, yaw, name) {
+    if (this.models.e_busstop) {
+      this.stand(ch, 'e_busstop', x, z, yaw, 2.9);
+      const [bx, bz] = this.at(x, z, yaw, 0, -0.55);
+      this.solid(bx, bz, 1.6, 0.08, yaw, 2.3);
+      this.seats.push({ x, z, yaw, kind: 'bench' });
+      return;
+    }
     const P = ch.get('paint'), fr = rgb('#4d5a63');
     for (const s of [-1.5, 1.5]) for (const d of [-0.5, 0.5]) { const [px, pz] = this.at(x, z, yaw, s, d); P.cyl(px, CURB, pz, 0.05, 0.05, 2.4, 5, fr, fr, false); }
     P.box(x, CURB + 2.4, z, 3.4, 0.08, 1.5, yaw, { c: rgb('#c9ced2') });
@@ -238,6 +293,11 @@ export class CityBuilder {
   // o: x,z,len,yaw, floors, pilotis, tint, trim, seed, number, gimel, name
   slab(ch, o) {
     const rng = new Rng(o.seed || 1);
+    // With a generated building available the procedural pass still runs for its collision,
+    // doors and hang-outs, but draws into a chunk that is never built.
+    const pick = o.pilotis ? 'b_blockB' : ((o.seed || 1) % 2 ? 'b_blockA' : 'b_blockC');
+    const mdl = this.models[pick] ? pick : null, real = ch;
+    if (mdl) ch = new Chunk('void');
     const { x, z, len } = o, yaw = o.yaw || 0, dep = o.dep || 10.4, floors = o.floors || 4;
     const pil = !!o.pilotis, y0 = pil ? 2.95 : CURB;
     const H = floors * FH, top = y0 + H;
@@ -387,6 +447,19 @@ export class CityBuilder {
       }
       ch.get('concrete').floor(x, CURB + 0.01, z, len, dep, yaw, [0, 0, len / 4, dep / 4], rgb('#aaa69b'));
     }
+    if (mdl) {
+      const n = Math.max(1, Math.round(len / 34)), piece = len / n;
+      for (let i = 0; i < n; i++) {
+        const [mx, mz] = this.at(x, z, yaw, -len / 2 + piece * (i + 0.5), 0);
+        // generated from one photo, each block has a real street side and a bare back:
+        // two half-depth copies back to back give it two fronts
+        const d2 = (dep + (pil ? 0.6 : 1.5)) / 2;
+        for (const s of [1, -1]) {
+          const [hx, hz] = this.at(mx, mz, yaw, 0, s * d2 / 2);
+          this.fit(real, mdl, hx, hz, yaw + (s > 0 ? 0 : Math.PI), piece, d2, (top - CURB) * 1.13);
+        }
+      }
+    }
     return { top, y0, front, seg, nEnt };
   }
 
@@ -394,6 +467,15 @@ export class CityBuilder {
   // units: [{name, sub, bg, fg, kind:'store'|'roller'|'open', w}]
   shops(ch, o) {
     const { x, z, len, units } = o, yaw = o.yaw || 0, dep = o.dep || 8, H = o.h || 3.7;
+    const real = ch, mdl = !!this.models.b_shops;
+    if (mdl) {
+      ch = new Chunk('void');
+      const n = Math.max(1, Math.round(len / 16)), piece = len / n;
+      for (let i = 0; i < n; i++) {
+        const [mx, mz] = this.at(x, z, yaw, -len / 2 + piece * (i + 0.5), 0.7);
+        this.fit(real, 'b_shops', mx, mz, yaw, piece, dep + 1.6, H * 1.32);
+      }
+    }
     const tint = o.tint || PAL[2];
     ch.get('plaster').box(x, CURB, z, len, H, dep, yaw, { c: shade(tint, 0.8), cTop: tint, s: 3.4, skip: 'Yy' });
     ch.get('roof').floor(x, CURB + H, z, len, dep, yaw, [0, 0, len / 6, dep / 6]);
@@ -471,6 +553,7 @@ export class CityBuilder {
   // Public bomb shelter with a mural.
   shelter(ch, x, z, yaw, idx = 0) {
     const w = 7, d = 5, H = 2.4;
+    if (this.fit(ch, 'e_shelter', x, z, yaw, w, d, 3.1)) { this.solid(x, z, w / 2, d / 2, yaw, H); this.foot(x, z, w / 2, d / 2, yaw, 'shelter'); return; }
     ch.get('concrete').box(x, CURB, z, w, H, d, yaw, { c: rgb('#b7b3a8'), cTop: rgb('#cbc7bc'), s: 2.5 });
     this.solid(x, z, w / 2, d / 2, yaw, H); this.foot(x, z, w / 2, d / 2, yaw, 'shelter');
     const mural = this.mats.signs.add(288, 96, (g, ww, hh) => drawMural(g, ww, hh, idx));

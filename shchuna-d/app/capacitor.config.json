@@ -3,6 +3,20 @@
   "appName": "שכונה ד׳",
   "webDir": "www",
   "backgroundColor": "#0d0f12",
-  "android": { "backgroundColor": "#0d0f12", "allowMixedContent": false, "webContentsDebuggingEnabled": false },
-  "server": { "androidScheme": "https" }
+  "android": {
+    "backgroundColor": "#0d0f12",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "ios": {
+    "backgroundColor": "#0d0f12",
+    "contentInset": "never",
+    "scrollEnabled": false,
+    "allowsLinkPreview": false,
+    "preferredContentMode": "mobile"
+  }
 }

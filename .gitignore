@@ -72,3 +72,6 @@ shchuna-d/server/public/
 shchuna-d/server/package-lock.json
 shchuna-d/server/.wrangler/
 shchuna-d/dist/
+shchuna-d/app/ios/App/App/public/
+shchuna-d/app/ios/App/build/
+shchuna-d/app/ios/DerivedData/

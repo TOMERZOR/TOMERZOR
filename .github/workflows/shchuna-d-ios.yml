@@ -1,0 +1,49 @@
+# Builds the iOS app of שכונה ד׳ (shchuna-d/app, a Capacitor shell around the game) on a
+# macOS runner and keeps an UNSIGNED .ipa as a workflow artifact. Apple only lets signed apps
+# run on a phone: sign this file with your own Apple ID (Sideloadly, AltStore, or Xcode), or
+# open shchuna-d/app/ios/App/App.xcodeproj on a Mac and run it on your device.
+name: שכונה ד׳ · iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loving-sagan-0etvis, main]
+    paths: ["shchuna-d/app/**", "shchuna-d/js/**", "shchuna-d/assets/**", ".github/workflows/shchuna-d-ios.yml"]
+
+concurrency:
+  group: shchuna-d-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install and sync
+        working-directory: shchuna-d/app
+        run: |
+          npm ci || npm install
+          node sync.mjs
+          npx cap sync ios
+      - name: Build (unsigned)
+        working-directory: shchuna-d/app/ios/App
+        run: |
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            | tail -n 40
+          app=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name "*.app" | head -n 1)
+          test -n "$app"
+          mkdir -p Payload && cp -R "$app" Payload/
+          zip -qry shchuna-d-unsigned.ipa Payload
+          ls -la shchuna-d-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shchuna-d-unsigned-ipa
+          path: shchuna-d/app/ios/App/shchuna-d-unsigned.ipa
+          if-no-files-found: error

@@ -71,3 +71,4 @@ shchuna-d/server/node_modules/
 shchuna-d/server/public/
 shchuna-d/server/package-lock.json
 shchuna-d/server/.wrangler/
+shchuna-d/dist/

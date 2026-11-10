@@ -9,14 +9,32 @@
     "start": "node sync.mjs && electron .",
     "win": "node sync.mjs && electron-builder --win portable --x64"
   },
-  "devDependencies": { "electron": "33.2.0", "electron-builder": "25.1.8" },
+  "devDependencies": {
+    "electron": "33.2.0",
+    "electron-builder": "25.1.8"
+  },
   "build": {
     "appId": "com.tomerzor.shchunad",
     "productName": "Shchuna D",
-    "files": ["main.js", "www/**/*"],
+    "files": [
+      "main.js",
+      "www/**/*"
+    ],
     "asar": false,
-    "directories": { "output": "out" },
-    "win": { "target": "portable", "signAndEditExecutable": false },
-    "portable": { "artifactName": "ShchunaD.exe" }
+    "directories": {
+      "output": "out"
+    },
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "ShchunaD.exe"
+    },
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-US",
+      "he"
+    ]
   }
 }

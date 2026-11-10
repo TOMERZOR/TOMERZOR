@@ -239,13 +239,18 @@ export class CityBuilder {
   }
   // Dry summer weeds scattered over a rectangle of open ground (thistles, wild oats).
   weeds(ch, x, z, w, d, per = 9) {
-    if (!this.models.e_weeds) return;
     const rng = this.weedRng || (this.weedRng = new Rng(4127));
     const n = Math.min(90, Math.round((w * d) / per));
     for (let i = 0; i < n; i++) {
       const px = x + rng.f(-w / 2 + 0.4, w / 2 - 0.4), pz = z + rng.f(-d / 2 + 0.4, d / 2 - 0.4);
       if (!this.physics.circleFree(px, pz, 0.5, 0, 2) || onRoad(px, pz)) continue;
-      this.stand(ch, 'e_weeds', px, pz, rng.f(6.28), rng.f(0.45, 1.05), CURB - 0.03);
+      // three crossed cards cut from a photograph of the real thing, sunk so the soil clod stays underground
+      const h = rng.f(0.5, 1.1), r = h * 0.5, a0 = rng.f(3.14), W = ch.get('weed'), y0 = CURB - h * 0.13, y1 = y0 + h;
+      const tone = rng.f(0.82, 1.05), col = [tone, tone * rng.f(0.95, 1), tone * rng.f(0.85, 1)];
+      for (let k = 0; k < 3; k++) {
+        const a = a0 + k * 1.047, cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+        W.quad([px - cx, y0, pz - cz], [px + cx, y0, pz + cz], [px + cx, y1, pz + cz], [px - cx, y1, pz - cz], [0, 0, 1, 1], col);
+      }
     }
   }
   dumpster(ch, x, z, yaw) {

@@ -371,6 +371,7 @@ export async function createMaterials(gfx) {
     T[n] = await load(`assets/tex/${n}.webp`, aniso);
     T[n + 'N'] = gfx.q.shadow ? await load(`assets/tex/${n}_n.webp`, aniso, false) : null;
   }));
+  T.weeds = await load('assets/tex/weeds.webp', aniso);
   const win = buildWinAtlas(aniso);
   const signs = new Atlas(2048, 4096, 'sign'), decals = new Atlas(2048, 2048, 'decal');
   // First decal cell is solid white: road paint and plain decals sample it and use vertex colour.
@@ -380,6 +381,7 @@ export async function createMaterials(gfx) {
   const nrm = (n, s = 1) => (T[n + 'N'] ? { normalMap: T[n + 'N'], normalScale: new THREE.Vector2(s, s) } : {});
   const M = {
     plaster: std(Object.assign({ map: T.plaster }, nrm('plaster', 0.9))),
+    weed: std({ map: T.weeds, alphaTest: 0.42, side: THREE.DoubleSide, roughness: 1 }),
     concrete: std(Object.assign({ map: T.concrete, roughness: 0.88 }, nrm('concrete', 0.7))),
     asphalt: std(Object.assign({ map: T.asphalt, roughness: 0.86 }, nrm('asphalt', 0.9))),
     paving: std(Object.assign({ map: T.paving, roughness: 0.9 }, nrm('paving', 1.0))),

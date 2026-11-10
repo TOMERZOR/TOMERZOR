@@ -48,7 +48,9 @@ export class Missions {
       if (m.online || this.done.has(m.id)) continue;
       if (m.after && !m.after.every((id) => this.done.has(id))) continue;
       const pos = P(m.at); if (!pos) continue;
-      const s = { m, pos, beacon: this.beacon(pos, 1.8), blip: this.game.ui.addBlip(pos, '#f5b301', { shape: 'sq' }), track: this.game.ui.track(() => pos, m.giver || m.title) };
+      const pp = this.game.player.pos;
+      // a marker you are already standing in (after a failure, a load) waits until you step out and back
+      const s = { m, pos, armed: dist2(pp.x, pp.z, pos.x, pos.z) > 3.4 * 3.4, beacon: this.beacon(pos, 1.8), blip: this.game.ui.addBlip(pos, '#f5b301', { shape: 'sq' }), track: this.game.ui.track(() => pos, m.giver || m.title) };
       this.starts.push(s);
       break;                                  // one story beat at a time
     }
@@ -59,7 +61,7 @@ export class Missions {
   async start(m, opt = {}) {
     if (this.active || this.busy) return;
     const g = this.game;
-    this.busy = true; this.active = m;
+    this.busy = true; this.active = m; this.pendingAbort = null; this.aborting = false;
     for (const s of this.starts) { this.dropBeacon(s.beacon); g.ui.removeBlip(s.blip); g.ui.untrack(s.track); }
     this.starts = [];
     const ctx = this.ctx = new Ctx(this, m);
@@ -73,6 +75,7 @@ export class Missions {
       else { console.error('mission error', e); result = 'fail'; reason = 'משהו השתבש'; }
     }
     this.lastResult = { id: m.id, result, reason };
+    this.pendingAbort = null;
     ctx.cleanup(result);
     this.waits.length = 0; this.fails.length = 0; this.target = null; this.timer = null;
     g.ui.objective(''); g.ui.hideDialog(); g.endCutscene(true);
@@ -81,6 +84,7 @@ export class Missions {
       this.done.add(m.id);
       g.audio.jingle('pass');
       if (m.reward) g.player.addMoney(m.reward, 'mission');
+      g.save();                               // before the banner: quitting during it must not lose the mission
       if (!m.silent) await g.ui.banner('', 'המשימה הושלמה', m.passLine || '', { reward: m.reward || 0, hold: 3400 });
       g.save();
     } else if (reason !== 'quit') {
@@ -94,7 +98,8 @@ export class Missions {
     return result;
   }
   fail(reason) {
-    if (!this.active) return;
+    if (!this.active || this.aborting) return;
+    this.aborting = true;
     const e = new Abort(reason || '');
     const w = this.waits; this.waits = [];
     for (const x of w) x.rej(e);
@@ -122,6 +127,7 @@ export class Missions {
     // walking into the marker starts the mission
     for (const s of this.starts) {
       const d2 = dist2(pl.pos.x, pl.pos.z, s.pos.x, s.pos.z);
+      if (!s.armed) { if (d2 > 3.4 * 3.4) s.armed = true; continue; }
       if (d2 < 2.2 * 2.2 && !pl.vehicle && pl.actor.alive && g.wanted.level === 0) { this.start(s.m); return; }
       if (d2 < 9 * 9 && g.wanted.level > 0) g.ui.prompt('!', 'קודם תיפטר מהמשטרה');
       else if (d2 < 7 * 7 && pl.vehicle) g.ui.prompt('F', 'צא מהרכב כדי להתחיל');
@@ -277,7 +283,7 @@ class Ctx {
     v.ai = new RouteAI(v, points.map(P), speed); v.parked = false; v.wake();
     return v.ai;
   }
-  hostile(list, target) { for (const a of list) { if (!a || a.ko) continue; a.ai.script = null; a.ai.mode = 'fight'; a.ai.target = target || this.nearestCrew(a); a.ai.keep = true; } }
+  hostile(list, target) { for (const a of list) { if (!a || a.ko) continue; a.ai.script = null; a.ai.mode = 'fight'; a.ai.target = target || this.nearestCrew(a); a.ai.hunt = !target; a.ai.keep = true; } }
   follow(a, leader) { a.ai.script = null; a.ai.leader = leader || this.player.actor; a.ai.mode = 'follow'; }
   send(a, place, speed = 2, then = 'script') { const p = P(place); a.ai.script = null; a.ai.mode = 'goto'; a.ai.dest = { x: p.x, z: p.z, r: 1.2, speed }; a.ai.then = then; a.ai.arrived = false; if (a.state !== 'idle') a.setState('idle'); }
   // Beat everybody in the list.
@@ -327,15 +333,22 @@ class Ctx {
     for (const m of [...this.marks]) this.unmark(m);
     for (const b of this.beacons) this.ms.dropBeacon(b);
     for (const fn of this.cleanups) { try { fn(); } catch (e) { /* already gone */ } }
+    // a failed job clears its stage, or a retry would meet the old cast (and the old moped) on the same marks
+    const scrap = result !== 'pass' && !this.online;
     for (const a of this.peds) {
       if (!w.actors.includes(a)) continue;
+      if (scrap && !a.vehicle) { w.removeActor(a); continue; }
       a.ai.keep = false; a.ai.script = null; a.ai.leader = null; a.story = false;
       if (a.vehicle) continue;
       if (a.state === 'sit' || a.state === 'talk' || a.state === 'dance') a.setState('idle');
       if (a.ai.mode === 'fight' && result === 'pass') { a.ai.mode = 'flee'; a.ai.threat = g.player.actor; a.ai.t = 0; }
       else if (a.ai.mode !== 'fight') { a.ai.mode = 'flee'; a.ai.threat = g.player.actor; a.ai.t = 5; }
     }
-    for (const v of this.cars) { v.keep = false; if (v.ai instanceof RouteAI) { v.ai = null; v.despawn = true; } }
+    for (const v of this.cars) {
+      v.keep = false;
+      if (v.ai instanceof RouteAI) { v.ai = null; v.despawn = true; v.in.throttle = 0; v.in.brake = 1; }
+      if (scrap && g.player.vehicle !== v && w.vehicles.includes(v) && !(v.driver && v.driver.isPlayer)) w.removeVehicle(v);
+    }
     w.density = 1; g.wanted.frozen = false; g.wanted.cap = 5;
     if (g.player.actor.ko && result !== 'pass') { /* respawn is handled by the game */ }
   }

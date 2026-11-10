@@ -182,6 +182,7 @@ export class Hud {
   }
   prompt(key, text) {
     const k = key + '|' + text;
+    if (text) this.promptAt = this.game.time;
     if (k === this.promptKey) return;
     this.promptKey = k;
     if (!text) { this.promptEl.classList.add('hidden'); return; }
@@ -227,7 +228,7 @@ export class Hud {
     const c = el('div', 'card', `<small>${small}</small><h1>${title}</h1>` + (sub ? `<p>${sub}</p>` : '')); this.over.appendChild(c);
     setTimeout(() => { c.style.transition = 'opacity .6s'; c.style.opacity = '0'; setTimeout(() => c.remove(), 620); }, hold);
   }
-  cinema(on) { this.cine.classList.toggle('on', on); this.root.classList.toggle('off', on || !this.game.playing); if (this.touchEl) this.touchEl.classList.toggle('hidden', on); }
+  cinema(on) { this.cine.classList.toggle('on', on); this.root.classList.toggle('off', on || !this.game.playing); if (this.touchEl) { this.touchEl.classList.toggle('cine', on); this.game.input.tapAdvances = on; } }
   dialog(face, who, line, color) {
     if (!this.dlgEl) { this.dlgEl = el('div', 'dlg', '<div class="face"></div><div class="body"><div class="who"></div><div class="line"></div></div><span class="more"></span>'); this.over.appendChild(this.dlgEl); }
     const d = this.dlgEl;

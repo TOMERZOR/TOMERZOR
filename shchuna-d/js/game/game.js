@@ -127,18 +127,23 @@ export class Game {
 
   // ---- modes --------------------------------------------------------------------------
   resetWorld() {
+    this.session = (this.session || 0) + 1;      // lets slow async tails notice the world was replaced
     this.world.clearAll(); this.wanted.clear(true); this.wanted.hide();
     if (this.player.vehicle) this.player.leaveVehicle(true);
     this.player.actor.revive(1); this.player.control = true;
     this.sky.paused = false;
   }
   async newGame(skipTo) {
+    if (this._loading) return; this._loading = true;
+    try { await this._newGame(skipTo); } finally { this._loading = false; }
+  }
+  async _newGame(skipTo) {
     this.fade(true); await new Promise((r) => setTimeout(r, 450));
     this.resetWorld(); this.mode = 'story';
     this.missions.load(null); this.player.money = 40; this.player.stats = { kos: 0, cars: 0, dist: 0, busted: 0, wasted: 0, earned: 0 };
     const s = POI.busArrive; this.player.actor.place(s.x, s.z, 0); this.cam.snap(Math.PI);
     this.sky.setHour(16.6); this.sky.day = 0;
-    if (skipTo && skipTo !== '1') { for (const m of STORY) { if (m.id === skipTo) break; this.missions.done.add(m.id); } const h = POI.home; this.player.actor.place(h.x, h.z + 2, 0); this.player.money = 2500; }
+    if (skipTo && skipTo !== '1') { for (const m of STORY) { if (m.id === skipTo) break; this.missions.done.add(m.id); } const h = POI.home; this.player.actor.place(h.x, h.z + 5, 0); this.player.money = 2500; }
     this.enterPlay();
     this.missions.refreshStarts();
     this.fade(false);
@@ -149,7 +154,7 @@ export class Game {
     this.fade(true); await new Promise((r) => setTimeout(r, 450));
     this.resetWorld(); this.mode = 'story';
     this.missions.load(s.story); this.player.load(s.player); this.sky.setHour(s.hour || 12); this.sky.day = s.day || 0;
-    const h = POI.home; this.player.actor.place(h.x, h.z + 2, 0); this.cam.snap(Math.PI);
+    const h = POI.home; this.player.actor.place(h.x, h.z + 5, 0); this.cam.snap(Math.PI);
     this.enterPlay(); this.missions.refreshStarts(); this.fade(false);
   }
   enterPlay() {
@@ -171,22 +176,26 @@ export class Game {
   // ---- being knocked out ----------------------------------------------------------------
   async onPlayerDown(from) {
     if (this._down) return; this._down = true;
-    const g = this, pl = this.player;
+    const g = this, pl = this.player, session = this.session;
+    const gone = () => { if (this.session === session) return false; this._down = false; this.input.enabled = true; return true; };
     const copNear = this.world.actors.some((a) => a.faction === 'cop' && !a.ko && dist2(a.pos.x, a.pos.z, pl.pos.x, pl.pos.z) < 16 * 16);
     const busted = this.wanted.level > 0 && (copNear || (from && from.faction === 'cop'));
     if (this.missions.active && this.mode !== 'online') this.missions.fail(busted ? 'נעצרת' : 'איבדת את ההכרה');
     this.input.enabled = false;
     await new Promise((r) => setTimeout(r, 1400));
+    if (gone()) return;
+    this.input.enabled = false;                  // the failed mission's teardown switched it back on
     this.fade(true);
     await this.ui.banner(busted ? 'busted' : 'bad', busted ? 'נעצרת' : 'התעלפת', busted ? 'ערבות, עורך דין, וטופס אחד שאף אחד לא מוצא.' : 'התעוררת בבית. אמא לא שואלת שאלות. היא רק מסתכלת.', { hold: 2800 });
+    if (gone()) { this.fade(false); return; }
     const fee = Math.min(busted ? 1500 : 600, Math.round(pl.money * (busted ? 0.12 : 0.06)));
     if (fee > 0) pl.addMoney(-fee, 'fee');
     if (busted) pl.stats.busted++; else pl.stats.wasted++;
-    this.wanted.clear(true);
+    if (!(this.mode === 'online' && this.missions.active)) this.wanted.clear(true);   // the crew still has to lose the heat
     if (pl.vehicle) pl.leaveVehicle(true);
     const p = this.mode === 'online' ? { x: POI.plaza.x, z: POI.plaza.z + 3 } : busted ? POI.police : POI.home;
-    pl.actor.revive(busted ? 0.7 : 0.6); pl.actor.place(p.x, p.z + 1.5, 0); this.cam.snap(Math.PI);
-    this.sky.setHour((this.sky.hour + 5) % 24);
+    pl.actor.revive(busted ? 0.7 : 0.6); pl.actor.place(p.x, p.z + (p === POI.home ? 5 : 1.5), 0); this.cam.snap(Math.PI);
+    if (this.mode !== 'online') this.sky.setHour((this.sky.hour + 5) % 24);
     this.input.enabled = true; this._down = false;
     this.fade(false);
     this.save();
@@ -218,7 +227,7 @@ export class Game {
       for (const v of this.world.vehicles) { if (v.wreck) continue; const dx = a.pos.x - v.pos.x, dz = a.pos.z - v.pos.z; const f = dx * v.fx + dz * v.fz, s = -dx * v.fz + dz * v.fx; if (Math.hypot(Math.max(0, Math.abs(f) - v.len / 2), Math.max(0, Math.abs(s) - v.wid / 2)) < 2.4) { near = v; break; } }
       if (near) { this.ui.prompt(inp.lastDevice === 'pad' ? 'Y' : inp.touch ? 'רכב' : 'F', (near.driver ? 'קח את ה' : 'היכנס ל') + near.def.name); return; }
     } else if (pl.vehicle && pl.vehicle.wreck) { this.ui.prompt(inp.touch ? 'רכב' : 'F', 'צא מהרכב'); return; }
-    if (!this.missions.active || !this.ui.promptKey.startsWith('!')) this.ui.prompt('', '');
+    if (this.ui.promptAt !== this.time) this.ui.prompt('', '');     // unless a mission asked for one this step
   }
 
   frame(now) {
@@ -234,7 +243,11 @@ export class Game {
       else if (this.input.pressed.map && !this.paused && !this.cutscene) this.menu.pause('map');
       else if (this.input.pressed.phone && !this.paused && !this.cutscene) this.menu.phone();
     }
-    if (this.playing && !this.paused) {
+    // online the world belongs to the whole crew: a menu only takes the local player's hands off
+    const held = this.paused && this.mode === 'online';
+    if (this.playing && (!this.paused || held)) {
+      const ctl = this.player.control;
+      if (held) { this.player.control = false; const v = this.player.vehicle; if (v) { v.in.throttle = 0; v.in.brake = 0.4; v.in.steer = 0; v.in.hand = false; } }
       // the simulation advances in steps of at most 1/30 s so slow frames stay stable
       const sim = dt * this.timeScale, steps = Math.min(this.timeScale > 1 ? 60 : 6, Math.max(1, Math.ceil(sim * 30))), h = sim / steps;
       for (let i = 0; i < steps; i++) {
@@ -244,8 +257,9 @@ export class Game {
         this.wanted.update(h);
         this.missions.update(h);
         this.net.update(h);
-        if (i === 0) { this.updateSpots(); const p = this.input.pressed; for (const k in p) p[k] = false; }
+        if (i === 0) { if (!held) this.updateSpots(); const p = this.input.pressed; for (const k in p) p[k] = false; }
       }
+      if (held) this.player.control = ctl;
       this.cam.update(dt);
       this.fx.update(dt);
       this.ui.update(dt);

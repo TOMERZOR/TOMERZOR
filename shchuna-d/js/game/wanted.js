@@ -40,7 +40,7 @@ export class Wanted {
   set(level) { this.heat = level + 0.2; const b = this.level; this.level = level; this.evade = 14 + level * 6; this.seen = true; if (level !== b) this.game.bus.emit('wanted', level, b); }
   clear(quiet) {
     const b = this.level; this.heat = 0; this.level = 0; this.pending.length = 0; this.flash = false;
-    for (const v of this.units) { v.siren = false; v.keep = false; if (v.ai instanceof ChaseAI) { v.despawn = true; v.ai = null; } }
+    for (const v of this.units) { v.siren = false; v.keep = false; if (v.ai instanceof ChaseAI) { v.despawn = true; v.ai = null; v.in.throttle = 0; v.in.brake = 1; v.in.steer = 0; v.in.rev = false; v.in.hand = false; } }
     this.units.length = 0;
     for (const a of this.game.world.actors) if (a.faction === 'cop' && a.ai && a.ai.mode === 'fight') { a.ai.keep = false; this.game.world.settle(a); }
     if (b > 0 && !quiet) this.game.bus.emit('wanted', 0, b);

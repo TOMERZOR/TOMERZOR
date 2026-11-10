@@ -59,7 +59,7 @@ export class Online {
     this.leave(true);
     let ws;
     try { ws = new WebSocket(wsBase() + '/ws/' + room); } catch (e) { this.lobby('אין חיבור לשרת'); return; }
-    this.ws = ws; this.room = room; let opened = false;
+    this.ws = ws; this.room = room; this.full = false; let opened = false;
     ws.onopen = () => { opened = true; ws.send(JSON.stringify({ t: 'join', id: this.profile.id, name })); this.pingT = setInterval(() => { if (ws.readyState === 1) ws.send('__ping'); }, 20000); };
     ws.onmessage = (ev) => { if (ev.data === '__pong') return; let m; try { m = JSON.parse(ev.data); } catch (e) { return; } this.onMessage(m); };
     ws.onclose = (ev) => {
@@ -67,7 +67,7 @@ export class Online {
       if (this.ws !== ws) return;
       const was = this.active; this.ws = null; this.cleanupWorld(); this.active = false;
       if (was) { g.ui.notify('החיבור לחדר נותק', 'bad'); g.toMenu(); setTimeout(() => this.lobby('החיבור נותק'), 50); }
-      else if (g.menu.panel) this.lobby(ev.code === 1006 && !opened ? 'לא הצלחתי להתחבר. בדוק חיבור לאינטרנט.' : 'החדר מלא או לא זמין');
+      else if (g.menu.panel) this.lobby(this.full || ev.code === 4001 ? 'החדר מלא (עד ארבעה שחקנים)' : ev.code === 1006 && !opened ? 'לא הצלחתי להתחבר. בדוק חיבור לאינטרנט.' : 'החדר לא זמין כרגע');
     };
     ws.onerror = () => {};
   }
@@ -86,8 +86,16 @@ export class Online {
         if (m.left) { this.removePeer(m.id); } else { this.addPeer(m.id, m.name); g.ui.notify(m.name + ' נכנס לחדר', 'ok'); }
         break;
       case 'host':
-        this.hostId = m.id; { const was = this.isHost; this.isHost = m.id === this.profile.id; if (this.isHost && !was) { g.ui.notify('אתה המארח עכשיו', ''); this.clearGhosts(); this.remoteObj = null; g.ui.objective(''); } }
+        if (m.id === this.hostId) break;
+        this.hostId = m.id;
+        {
+          const was = this.isHost; this.isHost = m.id === this.profile.id;
+          // the old host's job is gone for everybody, not only for whoever inherits the room
+          if (!g.missions.active) { this.clearGhosts(); this.remoteObj = null; g.ui.objective(''); g.missions.target = null; }
+          if (this.isHost && !was) { g.ui.notify('אתה המארח עכשיו', ''); this.eidSeq = 1; if (this.plan && this.plan.run) this.send({ t: 'plan', patch: { run: null } }); }
+        }
         break;
+      case 'err': if (m.error === 'full') this.full = true; break;
       case 'plan': this.plan = m.plan || {}; if (g.menu.kind === 'pause' && this.boardOpen) this.board(); break;
       case 's': { const p = this.peers.get(m.id); if (p) this.onSnapshot(p, m); break; }
       case 'e': this.onEvent(m); break;
@@ -139,7 +147,7 @@ export class Online {
   }
   cleanupWorld() {
     for (const id of [...this.peers.keys()]) { const p = this.peers.get(id); this.game.ui.untrack(p.track); if (p.veh) this.game.world.removeVehicle(p.veh); this.game.world.removeActor(p.actor); }
-    this.peers.clear(); this.clearGhosts(); this.remoteObj = null;
+    this.peers.clear(); this.clearGhosts(); this.remoteObj = null; this.game.missions.target = null;
   }
   leave(quiet) {
     clearInterval(this.pingT);
@@ -159,21 +167,28 @@ export class Online {
   }
   onEvent(m) {
     const g = this.game, pl = g.player;
+    // only the host runs the job; everything but a punch report has to come from them
+    if (m.k !== 'hit' && m.id !== this.hostId) return;
+    const esc = (s) => String(s == null ? '' : s).slice(0, 300).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const num = (v, lo, hi) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : lo);
     switch (m.k) {
       case 'ents': this.applyEnts(m); break;
-      case 'obj': this.remoteObj = m; break;
+      case 'obj':        // objectives carry <em> highlights and nothing else
+        m.html = esc(m.html).replace(/&lt;em&gt;/g, '<em>').replace(/&lt;em class=&quot;num&quot;&gt;/g, '<em class="num">').replace(/&lt;\/em&gt;/g, '</em>');
+        m.x = m.x === null || m.x === undefined ? null : num(m.x, -2000, 2000); m.z = num(m.z, -2000, 2000);
+        this.remoteObj = m; break;
       case 'hit': {                       // a crew member punched one of the host's mission actors
         if (!this.isHost) break;
         const a = g.world.actors.find((o) => o.eid === m.eid); const by = this.peers.get(m.id);
-        if (a && by) a.takeHit(m.dmg, by.actor, m.dx, m.dz, !!m.heavy, m.heavy ? 5 : 2);
+        if (a && by) a.takeHit(num(m.dmg, 0, 80), by.actor, num(m.dx, -1, 1), num(m.dz, -1, 1), !!m.heavy, m.heavy ? 5 : 2);
         break;
       }
-      case 'dmg': if (m.to === this.profile.id) pl.actor.takeHit(m.dmg, null, m.dx, m.dz, !!m.heavy, m.heavy ? 5 : 2); break;
-      case 'want': if (!this.isHost) { if (m.lvl > 0) g.wanted.set(m.lvl); else g.wanted.clear(); } break;
-      case 'pay': pl.addMoney(m.amount, 'heist'); this.profile.done += m.done ? 1 : 0; this.saveProfile(); g.audio.jingle('pass'); g.ui.banner('', m.title, m.sub || '', { reward: m.amount, hold: 3600 }); break;
-      case 'end': this.clearGhosts(); this.remoteObj = null; g.ui.objective(''); if (m.result !== 'pass') { g.audio.jingle('fail'); g.ui.banner('bad', 'העבודה נכשלה', m.reason || '', { hold: 2800 }); } break;
-      case 'note': g.ui.notify(m.text, m.kind || ''); break;
-      case 'say': g.ui.subtitle(m.who, m.text, m.color); break;
+      case 'dmg': if (m.to === this.profile.id) pl.actor.takeHit(num(m.dmg, 0, 80), null, num(m.dx, -1, 1), num(m.dz, -1, 1), !!m.heavy, m.heavy ? 5 : 2); break;
+      case 'want': if (!this.isHost) { const lvl = Math.round(num(m.lvl, 0, 5)); if (lvl > 0) g.wanted.set(lvl); else g.wanted.clear(); } break;
+      case 'pay': { const amount = Math.round(num(m.amount, 0, 250000)); pl.addMoney(amount, 'heist'); this.profile.done += m.done ? 1 : 0; this.saveProfile(); g.audio.jingle('pass'); g.ui.banner('', esc(m.title), esc(m.sub), { reward: amount, hold: 3600 }); break; }
+      case 'end': this.clearGhosts(); this.remoteObj = null; g.ui.objective(''); g.missions.target = null; if (m.result !== 'pass') { g.audio.jingle('fail'); g.ui.banner('bad', 'העבודה נכשלה', esc(m.reason), { hold: 2800 }); } break;
+      case 'note': g.ui.notify(esc(m.text), /^[a-z]{0,8}$/.test(m.kind || '') ? m.kind || '' : ''); break;
+      case 'say': g.ui.subtitle(esc(m.who), esc(m.text), /^#[0-9a-f]{3,8}$/i.test(m.color || '') ? m.color : undefined); break;
       default: break;
     }
   }
@@ -183,9 +198,10 @@ export class Online {
     for (const e of m.l || []) {
       const [eid, kind, x, z, h, anim, ko, foe] = e; seenA.add(eid);
       let a = this.ghosts.get(eid);
+      if (a && a.gkind !== kind) { g.ui.untrack(a.track); w.removeActor(a); this.ghosts.delete(eid); a = null; }
       if (!a) {
         a = w.spawnPed(kind, x, z, h, { keep: true }); if (!a) continue;
-        a.ai = null; a.remote = true; a.eid = eid; a.gx = x; a.gz = z; a.gh = h;
+        a.ai = null; a.remote = true; a.eid = eid; a.gkind = kind; a.gx = x; a.gz = z; a.gh = h;
         a.onRemoteHit = (dmg, heavy, dx, dz) => { this.event({ k: 'hit', eid, dmg: Math.round(dmg), heavy: heavy ? 1 : 0, dx: +dx.toFixed(2), dz: +dz.toFixed(2) }); };
         if (foe) a.track = g.ui.track(() => (a.ko ? null : a.pos), '', 'foe');
         this.ghosts.set(eid, a);

@@ -263,7 +263,7 @@ export class World {
       const next = this.nearestActor(a, 22, undefined, (o) => !o.ko && !o.vehicle && o.ai && o.ai.mode === 'fight' && o.faction !== a.faction && (ENEMIES[a.faction] || []).includes(o.faction));
       if (next) { ai.target = next; return; }
       // mission cast keeps hunting whoever of the crew is still standing
-      if (a.story && g.missions.ctx) { const t2 = g.missions.ctx.nearestCrew(a); if (t2 && !t2.ko && t2 !== t) { ai.target = t2; return; } }
+      if (ai.hunt && g.missions.ctx) { const t2 = g.missions.ctx.nearestCrew(a); if (t2 && !t2.ko && t2 !== t) { ai.target = t2; return; } }
       ai.target = null; ai.slot = false;
       if (ai.reinforce) { ai.mode = 'flee'; ai.threat = g.player.actor; ai.t = 2; ai.keep = false; } else this.settle(a);
       return;

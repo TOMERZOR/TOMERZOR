@@ -32,7 +32,8 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       const a = KEYMAP[e.code];
       if (!a) return;
-      if (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+      const typing = e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+      if (!typing && (e.code === 'Tab' || e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
       if (!this.keys[e.code]) this._queued[a] = true;
       this.keys[e.code] = true; this.lastDevice = 'kb';
     });
@@ -64,6 +65,7 @@ export class Input {
     const R = 56;
     const setKnob = () => { knobEl.style.transform = `translate(${this.stick.x * R}px, ${-this.stick.y * R}px)`; };
     root.addEventListener('touchstart', (e) => {
+      if (this.tapAdvances) { this._queued.interact = true; e.preventDefault(); return; }   // any tap moves a dialogue on
       for (const t of e.changedTouches) {
         const el = t.target.closest ? t.target.closest('[data-act]') : null;
         if (el) { const a = el.dataset.act; this.btnHeld[a] = t.identifier; this._queued[a] = true; el.classList.add('on'); continue; }

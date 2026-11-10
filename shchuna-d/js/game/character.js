@@ -203,7 +203,7 @@ export class Actor {
       if (this.queued && this.stateT > this.attackLen * 0.72) { const q = this.queued; this.setState('idle'); this.attack(q); }
     } else if (this.state === 'down') {
       this.downT -= dt;
-      if (this.downT <= 0 && !this.isPlayer) {
+      if (this.downT <= 0 && !(this.isPlayer && this.ko)) {
         if (this.ko) { this.ko = false; this.hp = Math.max(this.hp, this.maxHp * 0.35); }
         this.play('standup', 0.15, { once: true, speed: 4.2, restart: true }); this.setState('getup');
       }

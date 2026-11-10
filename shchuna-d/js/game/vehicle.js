@@ -116,7 +116,7 @@ export class Vehicle {
     if (thr > 0) vf += def.acc * thr * Math.max(0, 1 - (vf / top) ** 2) * dt * (vf < 0 ? 2 : 1);
     if (brk > 0) {
       if (vf > 0.6) vf = Math.max(0, vf - 15 * brk * dt);
-      else if (alive) vf -= def.acc * 0.6 * brk * Math.max(0, 1 - (vf / (-top * 0.32)) ** 2) * dt;      // reverse
+      else if (alive && (inp.rev || (this.driver && this.driver.isPlayer))) vf -= def.acc * 0.6 * brk * Math.max(0, 1 - (vf / (-top * 0.32)) ** 2) * dt;      // reverse
       else vf = damp(vf, 0, 3, dt);
     }
     vf -= vf * (0.06 + Math.abs(vf) * 0.0028) * dt;
@@ -333,7 +333,8 @@ export class ChaseAI {
         tx = L.ax + L.ux * t2; tz = L.az + L.uz * t2;
       }
     } else if (t.vx !== undefined) { tx += t.vx * 0.5; tz += t.vz * 0.5; }
-    if (this.rev > 0) { this.rev -= dt; v.in.throttle = 0; v.in.brake = 1; v.in.steer = -steerTo(v, tx, tz); return; }
+    if (this.rev > 0) { this.rev -= dt; v.in.throttle = 0; v.in.brake = 1; v.in.rev = true; v.in.steer = -steerTo(v, tx, tz); return; }
+    v.in.rev = false;
     v.in.steer = steerTo(v, tx, tz);
     const sharp = Math.abs(v.in.steer) > 0.75;
     const want = d < 9 && (t.speed || 0) < 2 ? 0 : (sharp ? 9 : v.def.top);

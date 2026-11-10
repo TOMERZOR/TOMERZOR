@@ -39,7 +39,7 @@ export class Room extends DurableObject<Env> {
 
   override async fetch(request: Request): Promise<Response> {
     if (request.headers.get("Upgrade") !== "websocket") return new Response("expected a websocket upgrade", { status: 426 });
-    if (this.members().length >= MAX_PLAYERS) return new Response("room is full", { status: 409 });
+    // a full room is refused at join time, over the socket, so the client can say why
     const pair = new WebSocketPair();
     this.ctx.acceptWebSocket(pair[1]!);
     return new Response(null, { status: 101, webSocket: pair[0] });
@@ -70,14 +70,23 @@ export class Room extends DurableObject<Env> {
       if (!id) return this.send(ws, { t: "err", error: "missing id" });
       const before = this.members();
       // the same player reconnecting replaces their old socket
-      for (const m of before) if (m.who.id === id) { try { m.ws.close(4000, "replaced"); } catch { /* gone */ } }
-      const seq = ((await this.ctx.storage.get<number>("seq")) ?? 0) + 1;
-      await this.ctx.storage.put("seq", seq);
+      let seq = 0;
+      for (const m of before) if (m.who.id === id) { seq = m.who.seq; try { m.ws.close(4000, "replaced"); } catch { /* gone */ } }
+      if (!seq && before.length >= MAX_PLAYERS) {
+        this.send(ws, { t: "err", error: "full" });
+        try { ws.close(4001, "full"); } catch { /* gone */ }
+        return;
+      }
+      if (!seq) {                                       // a reconnecting player keeps their place (and the host role)
+        seq = ((await this.ctx.storage.get<number>("seq")) ?? 0) + 1;
+        await this.ctx.storage.put("seq", seq);
+      }
       ws.serializeAttachment({ id, name, seq } satisfies Who);
       const all = this.members().filter((m) => m.ws === ws || m.who.id !== id);
       const plan = (await this.ctx.storage.get("plan")) ?? {};
       this.send(ws, { t: "hello", you: id, host: all[0]!.who.id, peers: all.filter((m) => m.ws !== ws).map((m) => ({ id: m.who.id, name: m.who.name })), plan });
       this.others(ws, JSON.stringify({ t: "peer", id, name }));
+      this.others(ws, JSON.stringify({ t: "host", id: all[0]!.who.id }));
       return;
     }
     if (!me) return this.send(ws, { t: "err", error: "join first" });
@@ -106,7 +115,13 @@ export class Room extends DurableObject<Env> {
     if (rest.some((m) => m.who.id === me.id)) return;          // replaced by a reconnect
     const left = JSON.stringify({ t: "peer", id: me.id, left: true });
     for (const m of rest) this.send(m.ws, left);
-    if (rest.length) { const host = JSON.stringify({ t: "host", id: rest[0]!.who.id }); for (const m of rest) this.send(m.ws, host); }
+    if (rest.length) {
+      const host = JSON.stringify({ t: "host", id: rest[0]!.who.id }); for (const m of rest) this.send(m.ws, host);
+      if (me.seq < rest[0]!.who.seq) {                  // the host left: whatever job was running died with them
+        const plan = ((await this.ctx.storage.get("plan")) as Record<string, unknown>) ?? {};
+        if (plan.run) { plan.run = null; await this.ctx.storage.put("plan", plan); const data = JSON.stringify({ t: "plan", plan }); for (const m of rest) this.send(m.ws, data); }
+      }
+    }
     else await this.ctx.storage.deleteAll();                    // empty room: forget the plan
   }
   override async webSocketError(ws: WebSocket): Promise<void> { await this.webSocketClose(ws); }

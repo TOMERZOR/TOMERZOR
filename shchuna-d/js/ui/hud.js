@@ -132,7 +132,7 @@ export class Hud {
       else if (a.faction === 'cop' && game.wanted.level > 0) dot(a.pos.x, a.pos.z, '#2f7bff', 3, false);
     }
     for (const b of this.blips) { const p = b.pos(); if (p) { if (b.shape === 'sq') { const [sx, sy] = proj(p.x, p.z, true); g.fillStyle = b.color; g.strokeStyle = '#0d0f12'; g.lineWidth = 1.5; g.save(); g.translate(sx, sy); g.rotate(0.785); g.fillRect(-4.5, -4.5, 9, 9); g.strokeRect(-4.5, -4.5, 9, 9); g.restore(); } else dot(p.x, p.z, b.color, b.r || 5, true); } }
-    if (game.net && game.net.peers) for (const p of game.net.peers.values()) dot(p.x, p.z, '#6fd08c', 4.5, true);
+    if (game.net && game.net.peers) for (const p of game.net.peers.values()) if (p.seen) dot(p.actor.pos.x, p.actor.pos.z, '#6fd08c', 4.5, true);
     // the player
     const ang = (pl.vehicle ? pl.vehicle.yaw : pa.heading);
     g.save(); g.translate(cx, cy); g.rotate(yaw + Math.PI - ang);

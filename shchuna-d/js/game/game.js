@@ -170,18 +170,17 @@ export class Game {
     const g = this, pl = this.player;
     const copNear = this.world.actors.some((a) => a.faction === 'cop' && !a.ko && dist2(a.pos.x, a.pos.z, pl.pos.x, pl.pos.z) < 16 * 16);
     const busted = this.wanted.level > 0 && (copNear || (from && from.faction === 'cop'));
-    if (this.missions.active) this.missions.fail(busted ? 'נעצרת' : 'איבדת את ההכרה');
+    if (this.missions.active && this.mode !== 'online') this.missions.fail(busted ? 'נעצרת' : 'איבדת את ההכרה');
     this.input.enabled = false;
     await new Promise((r) => setTimeout(r, 1400));
     this.fade(true);
     await this.ui.banner(busted ? 'busted' : 'bad', busted ? 'נעצרת' : 'התעלפת', busted ? 'ערבות, עורך דין, וטופס אחד שאף אחד לא מוצא.' : 'התעוררת בבית. אמא לא שואלת שאלות. היא רק מסתכלת.', { hold: 2800 });
-    if (this.mode === 'online') { this.net.onDown(); }
     const fee = Math.min(busted ? 1500 : 600, Math.round(pl.money * (busted ? 0.12 : 0.06)));
     if (fee > 0) pl.addMoney(-fee, 'fee');
     if (busted) pl.stats.busted++; else pl.stats.wasted++;
     this.wanted.clear(true);
     if (pl.vehicle) pl.leaveVehicle(true);
-    const p = busted ? POI.police : POI.home;
+    const p = this.mode === 'online' ? { x: POI.plaza.x, z: POI.plaza.z + 3 } : busted ? POI.police : POI.home;
     pl.actor.revive(busted ? 0.7 : 0.6); pl.actor.place(p.x, p.z + 1.5, 0); this.cam.snap(Math.PI);
     this.sky.setHour((this.sky.hour + 5) % 24);
     this.input.enabled = true; this._down = false;

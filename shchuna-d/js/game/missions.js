@@ -141,6 +141,28 @@ class Ctx {
     this.poi = POI;
   }
   get flags() { return this.ms.flags; }
+  get online() { return this.game.mode === 'online'; }
+  // ---- crew helpers: offline the crew is just the player ---------------------------------
+  driving(v) { return this.player.vehicle === v || !!v.remoteDriver; }
+  anyCrewNear(place, r, onFoot) {
+    const p = place.x !== undefined ? place : P(place), g = this.game;
+    if (!this.online) return dist2(g.player.pos.x, g.player.pos.z, p.x, p.z) < r * r && (!onFoot || !g.player.vehicle);
+    if (dist2(g.player.pos.x, g.player.pos.z, p.x, p.z) < r * r && (!onFoot || !g.player.vehicle)) return true;
+    for (const q of g.net.peers.values()) if (q.seen && dist2(q.actor.pos.x, q.actor.pos.z, p.x, p.z) < r * r && (!onFoot || !q.vinfo)) return true;
+    return false;
+  }
+  crewAllDown() {
+    if (!this.online) return false;
+    if (!this.player.actor.ko) return false;
+    for (const q of this.game.net.peers.values()) if (q.seen && !q.ko) return false;
+    return true;
+  }
+  nearestCrew(from) {
+    const g = this.game; let best = null, bd = 1e12;
+    const list = this.online ? g.net.crewActors() : [g.player.actor];
+    for (const a of list) { if (a.ko) continue; const d = dist2(a.pos.x, a.pos.z, from.pos.x, from.pos.z); if (d < bd) { bd = d; best = a; } }
+    return best || g.player.actor;
+  }
   P(p) { return P(p); }
 
   // ---- text and staging -------------------------------------------------------------
@@ -177,10 +199,10 @@ class Ctx {
     for (const k in actors) if (actors[k].state === 'talk') actors[k].gesture('idle');
     ui.hideDialog(); g.endCutscene();
   }
-  say(k, text, dur) { const sp = this.ms.speakers[k] || { name: k }; this.game.ui.subtitle(sp.name, text, sp.color, dur); return this.ms.sleep(dur || Math.max(2.2, text.length * 0.062)); }
+  say(k, text, dur) { const sp = this.ms.speakers[k] || { name: k }; this.game.ui.subtitle(sp.name, text, sp.color, dur); if (this.online) this.game.net.event({ k: 'say', who: sp.name, text, color: sp.color }); return this.ms.sleep(dur || Math.max(2.2, text.length * 0.062)); }
   line(k, text) { const sp = this.ms.speakers[k] || { name: k }; this.game.ui.subtitle(sp.name, text, sp.color); }
   sms(from, text) { this.game.ui.notify(text, 'sms', from); }
-  note(text, kind) { this.game.ui.notify(text, kind || ''); }
+  note(text, kind) { this.game.ui.notify(text, kind || ''); if (this.online) this.game.net.event({ k: 'note', text, kind: kind || '' }); }
   wait(sec) { return this.ms.sleep(sec); }
   async fade(on, hold = 0.5) { this.game.fade(on); await this.ms.sleep(hold); }
   hour(h) { this.game.sky.setHour(h); }
@@ -203,8 +225,14 @@ class Ctx {
       await this.ms.wait(() => {
         const pl = g.player;
         g.ui.objective(text, this.hud(opt));
-        if (opt.vehicle && pl.vehicle !== opt.vehicle) { g.ui.objective(opt.back || 'חזור לרכב', this.hud(opt)); this.ms.target = opt.vehicle.pos; return false; }
+        if (opt.vehicle) {
+          const v = opt.vehicle;
+          if (!this.driving(v)) { g.ui.objective(opt.back || 'חזור לרכב', this.hud(opt)); this.ms.target = v.pos; return false; }
+          this.ms.target = pos;
+          return dist2(v.pos.x, v.pos.z, pos.x, pos.z) < r * r && (!opt.slow || v.speed < 3 || !!v.remoteDriver);
+        }
         this.ms.target = pos;
+        if (this.online) return this.anyCrewNear(pos, r, opt.onFoot);
         if (dist2(pl.pos.x, pl.pos.z, pos.x, pos.z) > r * r) return false;
         if (opt.onFoot && pl.vehicle) { g.ui.prompt('F', 'צא מהרכב'); return false; }
         if (opt.slow && pl.speed > 3) return false;
@@ -232,12 +260,14 @@ class Ctx {
     a.ai.script = opt.mode ? null : true; a.story = true;
     if (opt.name) a.label = opt.name;
     if (opt.sit) a.sit(true);
+    this.game.net.tag(a);
     this.peds.push(a); return a;
   }
   car(type, place, yaw, opt = {}) {
     const p = P(place);
     const v = this.game.world.spawnVehicle(type, p.x + (opt.dx || 0), p.z + (opt.dz || 0), yaw !== undefined ? yaw : (p.yaw || 0), { parked: opt.parked !== false, tint: opt.tint });
     v.keep = true; v.tagFree = !!opt.free; v.owned = !!opt.owned;
+    this.game.net.tag(v);
     this.cars.push(v); return v;
   }
   drive(v, points, speed = 11, kind = 'dod') {
@@ -246,7 +276,7 @@ class Ctx {
     v.ai = new RouteAI(v, points.map(P), speed); v.parked = false; v.wake();
     return v.ai;
   }
-  hostile(list, target) { for (const a of list) { if (!a || a.ko) continue; a.ai.script = null; a.ai.mode = 'fight'; a.ai.target = target || this.player.actor; a.ai.keep = true; } }
+  hostile(list, target) { for (const a of list) { if (!a || a.ko) continue; a.ai.script = null; a.ai.mode = 'fight'; a.ai.target = target || this.nearestCrew(a); a.ai.keep = true; } }
   follow(a, leader) { a.ai.script = null; a.ai.leader = leader || this.player.actor; a.ai.mode = 'follow'; }
   send(a, place, speed = 2, then = 'script') { const p = P(place); a.ai.script = null; a.ai.mode = 'goto'; a.ai.dest = { x: p.x, z: p.z, r: 1.2, speed }; a.ai.then = then; a.ai.arrived = false; if (a.state !== 'idle') a.setState('idle'); }
   // Beat everybody in the list.
@@ -258,7 +288,8 @@ class Ctx {
     finally { marks.forEach((m) => this.unmark(m)); }
   }
   near(a, b, r) { const pa = a.pos || P(a), pb = b.pos || P(b); return dist2(pa.x, pa.z, pb.x, pb.z) < r * r; }
-  wanted(level) { if (level === 0) this.game.wanted.clear(true); else this.game.wanted.set(level); }
+  wanted(level) { if (level === 0) { this.game.wanted.clear(true); if (this.online) this.game.net.event({ k: 'want', lvl: 0 }); } else this.game.wanted.set(level); }
+  // online the crew shakes the police together: the host's level is what counts
   async loseCops(text = 'התחמק מהמשטרה') { if (this.game.wanted.level > 0) await this.until(() => this.game.wanted.level === 0, text); }
   teleport(place, heading) { const p = P(place); this.player.teleport(p.x, p.z, heading !== undefined ? heading : (p.yaw || 0)); }
   money(n) { this.player.addMoney(n, 'mission'); }
@@ -270,7 +301,8 @@ class Ctx {
     this.ms.target = pos;
     try {
       await this.ms.wait((dt) => {
-        const pl = this.player, inside = dist2(pl.pos.x, pl.pos.z, pos.x, pos.z) < r * r && (!opt.onFoot || !pl.vehicle) && (!opt.vehicle || pl.vehicle === opt.vehicle);
+        const pl = this.player;
+        const inside = opt.vehicle ? (this.driving(opt.vehicle) && dist2(opt.vehicle.pos.x, opt.vehicle.pos.z, pos.x, pos.z) < r * r) : this.online ? this.anyCrewNear(pos, r, opt.onFoot) : (dist2(pl.pos.x, pl.pos.z, pos.x, pos.z) < r * r && (!opt.onFoot || !pl.vehicle));
         if (inside && (!opt.cond || opt.cond())) t += dt; else if (opt.decay) t = Math.max(0, t - dt * opt.decay);
         this.game.ui.objective(text, Object.assign(this.hud(), { meter: t / seconds }));
         return t >= seconds;

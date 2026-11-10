@@ -130,6 +130,7 @@ export class Actor {
     for (const o of w.actors) {
       if (o === this || o.ko || o.vehicle || o.invuln > 0) continue;
       if (!this.isPlayer && o.faction === this.faction) continue;
+      if (this.isPlayer && o.peerId) continue;                 // no friendly fire between crew
       const dx = o.pos.x - this.pos.x, dz = o.pos.z - this.pos.z, d = Math.hypot(dx, dz);
       if (d > a.reach + o.radius || d < 0.01) continue;
       if ((dx * fx + dz * fz) / d < 0.45) continue;
@@ -145,6 +146,8 @@ export class Actor {
 
   takeHit(dmg, from, dx, dz, heavy, push = 2) {
     if (this.ko || this.invuln > 0) return;
+    // somebody else's simulation owns this body: tell them, do not decide here
+    if (this.onRemoteHit) { if (!this.peerId || this.game.net.isHost) this.onRemoteHit(dmg, heavy, dx, dz); this.game.bus.emit('hurt', this, from, 0, heavy); return; }
     this.hp -= dmg; this.combatT = 8; this.stagger += dmg * (heavy ? 2.2 : 1);
     this.vel.x += dx * push; this.vel.z += dz * push;
     this.game.bus.emit('hurt', this, from, dmg, heavy);
@@ -183,6 +186,7 @@ export class Actor {
   // ---- per-frame --------------------------------------------------------------------
   update(dt) {
     this.stateT += dt;
+    if (this.remote) { if (this.mixer && this.root.visible) this.mixer.update(dt); return; }
     if (this.invuln > 0) this.invuln -= dt;
     if (this.combatT > 0) this.combatT -= dt;
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }

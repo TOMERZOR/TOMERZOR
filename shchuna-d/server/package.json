@@ -1,0 +1,12 @@
+{
+  "name": "shchuna-d-server",
+  "private": true,
+  "type": "module",
+  "description": "Online rooms for שכונה ד׳: a WebSocket relay on a Cloudflare Durable Object.",
+  "scripts": {
+    "sync": "rm -rf public && mkdir public && cp -r ../index.html ../css ../js ../fonts ../vendor public/ && mkdir -p public/assets && cp -r ../assets/models ../assets/anim ../assets/tex ../assets/img ../assets/audio public/assets/",
+    "dev": "npm run sync && wrangler dev --port 8787",
+    "deploy": "npm run sync && wrangler deploy"
+  },
+  "devDependencies": { "@cloudflare/workers-types": "^4.20250501.0", "typescript": "^5.6.0", "wrangler": "^4.0.0" }
+}

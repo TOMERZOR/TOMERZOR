@@ -1,0 +1,10 @@
+{
+  // Stand-alone deploy of the online room server (and a copy of the game) on Cloudflare Workers.
+  // The live game is also hosted on Higgsfield (shchuna-d.higgsfield.app) with the same room code.
+  "name": "shchuna-d",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-05-01",
+  "assets": { "directory": "./public", "binding": "ASSETS", "not_found_handling": "none" },
+  "durable_objects": { "bindings": [{ "name": "ROOMS", "class_name": "Room" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }]
+}

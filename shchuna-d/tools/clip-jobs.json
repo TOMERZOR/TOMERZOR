@@ -1,7 +1,42 @@
-{ "hero_base_idle": "dd553b64-3687-4f40-9225-b82b7bcf55f9",
-  "clips": { "walk": "17fc4df2-b7e1-4990-928e-2f503510e8ad", "run": "f5a9a39b-ec8a-41f4-966b-9d4496c538c3", "jab": "bdebe3b8-5730-47da-bf53-b9c50812f54a",
-    "hook": "8b451eae-1e20-4ed2-82ce-ee61ae4e4a03", "kick": "3d3d0568-f32a-46fd-b7cc-d1b1cd210769", "hit": "c857191d-30a1-489b-9e2f-ec613e6229b7",
-    "knockdown": "f2b77049-1c5e-4ae4-82fd-7730f3792be8", "standup": "bec72601-7234-4096-9f77-cfa9e0830646", "sit": "54353cc0-eb60-42c6-b58e-94f0cd448165",
-    "talk": "c178cabd-3a93-4b31-b18b-37efa1b8b5c3", "jump": "4d6890f4-e391-4ed3-962b-65d6ef974154", "guard": "5ff23f55-7872-4ed3-9b4b-a8238cca405f", "dance": "f003074e-78d6-40a8-bbe8-b99e65ee427d" },
-  "rig": { "c_rival": "a7ad87f2-9414-4e62-9dec-406fcc983292" },
-  "model3d_more": { "v_hatch": "559ab297-e7c5-41ac-8c47-72d208ad8389", "v_van": "69fbacb1-19e4-4198-847f-fdc6db8d6a69", "v_police": "9fa41538-8167-4c12-b0b7-041ff9a54775", "v_armored": "087c78bf-3505-4ab2-b34b-04ffd7be2c9b", "v_truck": "a2f61afb-6b0a-4361-8c8d-b0b9655a2dca", "c_shimi": "b5a6d00a-59a3-48f0-ad3a-8cf7fc887392", "p_atm": "713e9f34-0683-41fd-aeae-bb255d91499b" } }
+{
+ "hero_base_idle": "dd553b64-3687-4f40-9225-b82b7bcf55f9",
+ "clips": {
+  "walk": "17fc4df2-b7e1-4990-928e-2f503510e8ad",
+  "run": "f5a9a39b-ec8a-41f4-966b-9d4496c538c3",
+  "jab": "bdebe3b8-5730-47da-bf53-b9c50812f54a",
+  "hook": "8b451eae-1e20-4ed2-82ce-ee61ae4e4a03",
+  "kick": "3d3d0568-f32a-46fd-b7cc-d1b1cd210769",
+  "hit": "c857191d-30a1-489b-9e2f-ec613e6229b7",
+  "knockdown": "f2b77049-1c5e-4ae4-82fd-7730f3792be8",
+  "standup": "bec72601-7234-4096-9f77-cfa9e0830646",
+  "sit": "54353cc0-eb60-42c6-b58e-94f0cd448165",
+  "talk": "c178cabd-3a93-4b31-b18b-37efa1b8b5c3",
+  "jump": "4d6890f4-e391-4ed3-962b-65d6ef974154",
+  "guard": "5ff23f55-7872-4ed3-9b4b-a8238cca405f",
+  "dance": "f003074e-78d6-40a8-bbe8-b99e65ee427d"
+ },
+ "rig": {
+  "c_rival": "a7ad87f2-9414-4e62-9dec-406fcc983292"
+ },
+ "model3d_more": {
+  "v_hatch": "559ab297-e7c5-41ac-8c47-72d208ad8389",
+  "v_van": "69fbacb1-19e4-4198-847f-fdc6db8d6a69",
+  "v_police": "9fa41538-8167-4c12-b0b7-041ff9a54775",
+  "v_armored": "087c78bf-3505-4ab2-b34b-04ffd7be2c9b",
+  "v_truck": "a2f61afb-6b0a-4361-8c8d-b0b9655a2dca",
+  "c_shimi": "b5a6d00a-59a3-48f0-ad3a-8cf7fc887392",
+  "p_atm": "713e9f34-0683-41fd-aeae-bb255d91499b"
+ },
+ "rig_note": "The first rig pass ran on meshes facing +X and came out misaligned; rig2 is the pass on meshes turned to +Z (tools/rig-src).",
+ "rig2": {
+  "c_rival": "19cb6c8c-6f77-410c-ae4a-11901e1108d1",
+  "c_shimi": "fb5bb00d-fe6e-4b4a-9596-03cc26c387a2",
+  "c_goon": "bfeb0701-6c74-44b8-989d-e50954d59da2",
+  "c_cop": "f304b2d9-6629-4419-a010-2879879c798c",
+  "c_savta": "aef24c69-72dc-4ebc-8c32-c7b3194d617d",
+  "c_dod": "be46b4d3-f8bf-4333-95b2-365abb5556de",
+  "c_girl": "ab50c5ab-a78b-47fc-96d4-f4de0d04cc87",
+  "c_boss": "4a4fd3a9-1e14-4446-9c27-418be5ce4cf5",
+  "c_mom": "b8aadad4-af40-4dc6-906f-8fa47c976ea0"
+ }
+}

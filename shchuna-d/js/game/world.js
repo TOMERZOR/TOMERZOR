@@ -262,6 +262,8 @@ export class World {
       // look for the next enemy, otherwise calm down
       const next = this.nearestActor(a, 22, undefined, (o) => !o.ko && !o.vehicle && o.ai && o.ai.mode === 'fight' && o.faction !== a.faction && (ENEMIES[a.faction] || []).includes(o.faction));
       if (next) { ai.target = next; return; }
+      // mission cast keeps hunting whoever of the crew is still standing
+      if (a.story && g.missions.ctx) { const t2 = g.missions.ctx.nearestCrew(a); if (t2 && !t2.ko && t2 !== t) { ai.target = t2; return; } }
       ai.target = null; ai.slot = false;
       if (ai.reinforce) { ai.mode = 'flee'; ai.threat = g.player.actor; ai.t = 2; ai.keep = false; } else this.settle(a);
       return;
@@ -314,7 +316,7 @@ export class World {
       const want = Math.round(q.peds * (1 - night * 0.55) * this.density);
       let n = 0;
       for (let i = this.actors.length - 1; i >= 0; i--) {
-        const a = this.actors[i]; if (!a.ai || a.ai.keep) continue;
+        const a = this.actors[i]; if (!a.ai || a.ai.keep || a.remote) continue;
         const d2 = dist2(a.pos.x, a.pos.z, pl.x, pl.z);
         a.lod = d2 > 45 * 45 ? 1 : 0;
         if (d2 > 150 * 150 || (d2 > 95 * 95 && !visible(a.pos.x, a.pos.z) && a.ai.mode !== 'fight')) { this.removeActor(a); continue; }
@@ -414,24 +416,24 @@ export class World {
   update(dt) {
     const g = this.game;
     this.populate(dt);
-    for (const a of this.actors) { if (a.ai && !a.isPlayer) this.think(a, dt); a.update(dt); }
+    for (const a of this.actors) { if (a.ai && !a.isPlayer && !a.remote) this.think(a, dt); a.update(dt); }
     // people do not walk through each other
     const A = this.actors;
     for (let i = 0; i < A.length; i++) {
-      const a = A[i]; if (a.vehicle) continue;
+      const a = A[i]; if (a.vehicle || !a.root.visible) continue;
       for (let j = i + 1; j < A.length; j++) {
-        const b = A[j]; if (b.vehicle) continue;
+        const b = A[j]; if (b.vehicle || !b.root.visible) continue;
         const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, d2 = dx * dx + dz * dz, min = a.radius + b.radius;
         if (d2 >= min * min || d2 < 1e-6) continue;
         if (a.state === 'down' || b.state === 'down') continue;
         const d = Math.sqrt(d2), p = (min - d) / 2, nx = dx / d, nz = dz / d;
-        const wa = a.isPlayer || a.state === 'sit' ? 0.25 : 1, wb = b.isPlayer || b.state === 'sit' ? 0.25 : 1, s = wa + wb;
+        const wa = a.remote ? 0 : a.isPlayer || a.state === 'sit' ? 0.25 : 1, wb = b.remote ? 0 : b.isPlayer || b.state === 'sit' ? 0.25 : 1, s = wa + wb || 1;
         a.pos.x -= nx * p * 2 * (wa / s); a.pos.z -= nz * p * 2 * (wa / s); b.pos.x += nx * p * 2 * (wb / s); b.pos.z += nz * p * 2 * (wb / s);
         const pl = a.isPlayer ? a : b.isPlayer ? b : null, o = pl === a ? b : a;
         if (pl && pl.speed > 4.2 && o.ai && o.ai.mode !== 'fight' && o.state === 'idle' && (o.ai.bumpT || 0) < g.time) { o.ai.bumpT = g.time + 5; g.ui.bark(o, rnd(BARKS.bump)); o.vel.x += nx * 2; o.vel.z += nz * 2; }
       }
     }
-    for (const v of this.vehicles) { if (v.ai && !v.wreck) v.ai.update(g, dt); else if (!v.driver) { v.in.throttle = 0; v.in.brake = 0.3; v.in.steer = 0; } v.update(dt); }
+    for (const v of this.vehicles) { if (v.remoteDriver || v.ghost && v !== g.player.vehicle) { v.updateLights(dt, 0); continue; } if (v.ai && !v.wreck) v.ai.update(g, dt); else if (!v.driver) { v.in.throttle = 0; v.in.brake = 0.3; v.in.steer = 0; } v.update(dt); }
     collideVehicles(g, this.vehicles);
     collideVehicleActors(g, this.vehicles.filter((v) => !v.sleep), this.actors);
     for (const a of this.actors) if (a.vehicle) { a.pos.copy(a.vehicle.pos); a.heading = a.vehicle.yaw; }
@@ -470,7 +472,7 @@ export class World {
   }
 
   clearAll() {
-    for (const a of [...this.actors]) if (!a.isPlayer) this.removeActor(a);
+    for (const a of [...this.actors]) if (!a.isPlayer && !a.peerId) this.removeActor(a);
     for (const v of [...this.vehicles]) { v.keep = false; if (v.driver && v.driver.isPlayer) continue; this.removeVehicle(v); }
     this.spotOwner.clear(); this.parkOwner.clear();
   }

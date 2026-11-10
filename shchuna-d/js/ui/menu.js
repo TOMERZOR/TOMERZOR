@@ -124,15 +124,16 @@ export class Menu {
     s.appendChild(side); this.panel = el('div', 'panel'); s.appendChild(this.panel);
     this.list(side, [
       { label: 'המשך', action: () => this.resume() },
-      { label: 'מפה', action: () => this.map() },
+      g.mode === 'online' ? { label: 'לוח שודים', hint: g.net.isHost ? 'אתה המארח' : 'המארח מחליט', action: () => g.net.board() } : null,
+      { label: 'מפה', action: () => { g.net.boardOpen = false; this.map(); } },
       { label: 'מצב', action: () => this.status() },
       { label: 'הגדרות', action: () => this.settings() },
       g.missions.active ? { label: 'נטוש משימה', action: () => { g.missions.fail('המשימה ננטשה'); this.resume(); } } : null,
       { label: 'תפריט ראשי', hint: g.mode === 'story' ? 'ההתקדמות נשמרת אחרי כל משימה' : '', action: () => { this.close(); g.paused = false; g.toMenu(); } },
     ]);
-    if (tab === 'map') this.map(); else this.status();
+    if (tab === 'map') this.map(); else if (g.mode === 'online') g.net.board(); else this.status();
   }
-  resume() { const g = this.game; this.close(); g.paused = false; g.audio.pause(false); if (!g.input.touch) { const c = g.gfx.canvas; if (c.requestPointerLock) { try { c.requestPointerLock(); } catch (e) { /* needs a gesture */ } } } }
+  resume() { const g = this.game; g.net.boardOpen = false; this.close(); g.paused = false; g.audio.pause(false); if (!g.input.touch) { const c = g.gfx.canvas; if (c.requestPointerLock) { try { c.requestPointerLock(); } catch (e) { /* needs a gesture */ } } } }
   map() {
     this.panel.innerHTML = '<h3>קריית שמש</h3>';
     const cv = el('canvas', 'bigmap'); cv.width = cv.height = 900; this.panel.appendChild(cv);

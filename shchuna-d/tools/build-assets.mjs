@@ -77,9 +77,9 @@ const MODELS = {
   e_crane: { src: 'env/crane.glb', tex: 1024, tris: 2500 },
   e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 500, half: 'x' },
   e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
-  e_ficus: { src: 'env/ficus2.glb', tex: 1024, tris: 3500, sloppy: 3500 },
-  e_euc: { src: 'env/euc.glb', tex: 1024, tris: 3000, sloppy: 3000 },
-  e_bush: { src: 'env/bush.glb', tex: 512, tris: 1500, sloppy: 1800 },
+  e_ficus: { src: 'env/ficus2.glb', tex: 48, tris: 5000, sloppy: 4500 },
+  e_euc: { src: 'env/euc.glb', tex: 48, tris: 4000, sloppy: 3500 },
+  e_bush: { src: 'env/bush.glb', tex: 48, tris: 2500, sloppy: 2200 },
   e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 2500 },
   e_shelter: { src: 'env/shelter.glb', tex: 1024, tris: 6000 },
 };
@@ -168,7 +168,7 @@ for (const [name, m] of Object.entries(MODELS)) {
     dedup(), prune({ keepLeaves: true }),
     textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [m.tex, m.tex], quality: 82 }),
     ...(m.char ? [] : [weld()]),
-    ...(m.tris ? [simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, m.tris / Math.max(1, triCount(root))), error: 0.01, lockBorder: false })] : []),
+    ...(m.tris ? [simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, m.tris / Math.max(1, triCount(root))), error: m.err || 0.01, lockBorder: false })] : []),
   );
   // Foliage is thousands of loose leaves that edge-collapse cannot merge; the grid-based
   // simplifier can, at the price of a rougher silhouette.

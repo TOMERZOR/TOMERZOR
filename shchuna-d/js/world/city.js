@@ -26,6 +26,18 @@ const FACE = {};
 const SIGNS = {
   b_shops: { tex: 'signs_shops', rects: [[0.03, 0.28, 0.555, 0.67], [0.295, 0.5, 0.555, 0.67], [0.52, 0.705, 0.555, 0.67], [0.72, 0.97, 0.555, 0.67]] },
   b_shops2: { tex: 'signs_shops2', rects: [[0.03, 0.277, 0.545, 0.675], [0.29, 0.5, 0.545, 0.675], [0.52, 0.732, 0.545, 0.675], [0.753, 0.97, 0.545, 0.675]] },
+  b_garage: { tex: 'signs_wide', n: 8, rects: [[0.17, 0.84, 0.66, 0.84, 0]] },
+  b_scrap: { tex: 'signs_wide', n: 8, rects: [[0.17, 0.83, 0.52, 0.74, 1]] },
+  b_hangarA: { tex: 'signs_wide', n: 8, rects: [[0.3, 0.72, 0.66, 0.8, 2]] },
+  b_hangarB: { tex: 'signs_wide', n: 8, rects: [[0.255, 0.79, 0.7, 0.82, 3]] },
+  b_gas: { tex: 'signs_wide', n: 8, rects: [[0.28, 0.72, 0.775, 0.895, 4]] },
+  b_wedding: { tex: 'signs_wide', n: 8, rects: [[0.23, 0.77, 0.755, 0.895, 5]] },
+  b_matnas: { tex: 'signs_wide', n: 8, rects: [[0.18, 0.51, 0.335, 0.425, 6]] },
+  b_bituach: { tex: 'signs_wide', n: 8, rects: [[0.31, 0.68, 0.235, 0.315, 7]] },
+  b_police: { tex: 'signs_civic', n: 6, rects: [[0.35, 0.615, 0.265, 0.345, 0]] },
+  b_city: { tex: 'signs_civic', n: 6, rects: [[0.27, 0.61, 0.31, 0.41, 1]] },
+  b_school: { tex: 'signs_civic', n: 6, rects: [[0.8, 0.97, 0.43, 0.53, 2]] },
+  b_tower: { tex: 'signs_civic', n: 6, rects: [[0.3, 0.72, 0.14, 0.17, 3]] },
   b_shops3: { tex: 'signs_shops3', rects: [[0.06, 0.277, 0.5, 0.645], [0.31, 0.497, 0.5, 0.645], [0.52, 0.702, 0.5, 0.645], [0.74, 0.932, 0.5, 0.645]] },
 };
 
@@ -254,17 +266,17 @@ export class CityBuilder {
       const probe = new THREE.Mesh(md.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
       probe.matrixAutoUpdate = false; probe.matrix.copy(new THREE.Matrix4().makeRotationY(turn).multiply(md.matrix)); probe.matrixWorld.copy(probe.matrix);
       const ray = new THREE.Raycaster(), dir = new THREE.Vector3(0, 0, -1), o = new THREE.Vector3();
-      md.boards = def.rects.map(([u0, u1, v0, v1], i) => {
+      md.boards = def.rects.map(([u0, u1, v0, v1, band], i) => {
         let front = -Infinity;
         for (const fu of [0.03, 0.15, 0.3, 0.5, 0.7, 0.85, 0.97]) for (const fv of [0.1, 0.5, 0.9]) {
           o.set((u0 + (u1 - u0) * fu - 0.5) * L, md.minY + (v0 + (v1 - v0) * fv) * md.size.y, 50);
           ray.set(o, dir); const hit = ray.intersectObject(probe, false)[0];
           if (hit) front = Math.max(front, hit.point.z);
         }
-        return { x0: (u0 - 0.5) * L, x1: (u1 - 0.5) * L, y0: v0 * md.size.y, y1: v1 * md.size.y, z: front, i };
+        return { x0: (u0 - 0.5) * L, x1: (u1 - 0.5) * L, y0: v0 * md.size.y, y1: v1 * md.size.y, z: front, i: band === undefined ? i : band };
       }).filter((b) => b.z > -Infinity);
     }
-    const B = ch.get('sgn_' + def.tex), n = def.rects.length;
+    const B = ch.get('sgn_' + def.tex), n = def.n || def.rects.length;
     for (const b of md.boards) {
       const lz = b.z * kz + 0.06, ya = y + b.y0 * ky, yb = y + b.y1 * ky;
       const [ax, az] = this.at(x, z, yaw, b.x0 * kx, lz), [bx, bz] = this.at(x, z, yaw, b.x1 * kx, lz);

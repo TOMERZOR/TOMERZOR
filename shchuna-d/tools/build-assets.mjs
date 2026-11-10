@@ -53,7 +53,7 @@ const MODELS = {
   b_blockA: { src: 'env/blockA.glb', tex: 2048, tris: 5000 },
   b_blockB: { src: 'env/blockB.glb', tex: 2048, tris: 5000 },
   b_blockC: { src: 'env/blockC.glb', tex: 2048, tris: 5000 },
-  b_shops: { src: 'env/shops.glb', tex: 2048, tris: 4500 },
+  b_shops: { src: 'env/shops.glb', tex: 4096, tris: 9000 },
   e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 220 },
   e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
   e_ficus: { src: 'env/ficus.glb', tex: 1024, tris: 1800, sloppy: 4000 },

@@ -5,7 +5,7 @@ import { Chunk, rgb, shade, mix } from './geo.js';
 import { WIN, drawSign, drawPoster, drawGraffiti } from './textures.js';
 import { Rng } from '../core/util.js';
 import {
-  XS, ZS, SIDEWALK, CURB, roads, roadW, blocks, setPOI, WORLD_HALF,
+  XS, ZS, SIDEWALK, CURB, roads, roadW, blocks, setPOI, WORLD_HALF, onRoad,
 } from './map.js';
 import { fillZone, buildOutskirts } from './zones.js';
 
@@ -236,6 +236,17 @@ export class CityBuilder {
     if (!this.M[key]) this.M[key] = md.material;
     ch.get(key).add(md.geometry, m.multiply(md.matrix));
     return true;
+  }
+  // Dry summer weeds scattered over a rectangle of open ground (thistles, wild oats).
+  weeds(ch, x, z, w, d, per = 9) {
+    if (!this.models.e_weeds) return;
+    const rng = this.weedRng || (this.weedRng = new Rng(4127));
+    const n = Math.min(90, Math.round((w * d) / per));
+    for (let i = 0; i < n; i++) {
+      const px = x + rng.f(-w / 2 + 0.4, w / 2 - 0.4), pz = z + rng.f(-d / 2 + 0.4, d / 2 - 0.4);
+      if (!this.physics.circleFree(px, pz, 0.5, 0, 2) || onRoad(px, pz)) continue;
+      this.stand(ch, 'e_weeds', px, pz, rng.f(6.28), rng.f(0.45, 1.05), CURB - 0.03);
+    }
   }
   dumpster(ch, x, z, yaw) {
     if (!this.model(ch, 'p_dumpster', x, z, yaw, 2.3)) ch.get('paint').box(x, CURB, z, 2.2, 1.4, 1.3, yaw, { c: rgb('#3f6b4a') });
@@ -632,7 +643,7 @@ export class CityBuilder {
   pavement(ch, b, rng) {
     const P = ch.get('paving'), PA = ch.get('paint');
     const o = SIDEWALK, x0 = b.x0 - o, x1 = b.x1 + o, z0 = b.z0 - o, z1 = b.z1 + o;
-    const uv = (w, d) => [0, 0, w / 2.6, d / 2.6];
+    const uv = (w, d) => [0, 0, w / 1.5, d / 1.5];
     P.floor((x0 + x1) / 2, CURB, z0 + o / 2, x1 - x0, o, 0, uv(x1 - x0, o));
     P.floor((x0 + x1) / 2, CURB, z1 - o / 2, x1 - x0, o, 0, uv(x1 - x0, o));
     P.floor(x0 + o / 2, CURB, (b.z0 + b.z1) / 2, o, b.d, 0, uv(o, b.d));
@@ -719,7 +730,9 @@ export class CityBuilder {
     for (const b of blocks) {
       const ch = this.chunk(b.id), rng = new Rng(1000 + b.c * 31 + b.r * 977);
       this.pavement(ch, b, rng);
+      this.later = [];
       fillZone(this, ch, b, rng);
+      for (const fn of this.later) fn();          // ground cover goes in once the block's solids exist
       this.addChunk(ch);
     }
     buildOutskirts(this);

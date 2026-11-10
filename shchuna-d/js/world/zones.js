@@ -12,9 +12,11 @@ const BASE_TINT = { sand: [0.8, 0.76, 0.68], paving: [0.86, 0.85, 0.82] };
 function base(B, ch, b, mat, k = 5, col) {
   col = col || BASE_TINT[mat];
   ch.get(mat).floor(b.cx, CURB - 0.004, b.cz, b.w, b.d, 0, [b.x0 / k, b.z0 / k, b.x1 / k, b.z1 / k], col);
+  if (mat === 'grass' || mat === 'sand') B.later.push(() => B.weeds(ch, b.cx, b.cz, b.w - 8, b.d - 8, mat === 'grass' ? 120 : 260));
 }
 function patch(ch, mat, x, z, w, d, k = 5, col) {
   ch.get(mat).floor(x, CURB + 0.004, z, w, d, 0, [(x - w / 2) / k, (z - d / 2) / k, (x + w / 2) / k, (z + d / 2) / k], col);
+  if (mat === 'grass' && patch.B) patch.B.later.push(() => patch.B.weeds(ch, x, z, w, d, 7));
 }
 function sitGroup(B, ch, x, z, rng, kind = 'yard') {
   B.table(ch, x, z);
@@ -94,7 +96,7 @@ function residential(B, ch, b, rng, o = {}) {
 
 // ---- The commercial centre -------------------------------------------------------
 function center(B, ch, b, rng) {
-  base(B, ch, b, 'paving', 2.6);
+  base(B, ch, b, 'paving', 1.5);
   const n = b.z0 + 5.5;
   B.shops(ch, { x: b.cx, z: n, len: b.w - 26, dep: 9, yaw: 0, tint: rgb('#d9d2bd'), units: [
     { name: 'פיצוציית הנסיך', sub: 'פתוח 24/7 · גם בשבת · אל תגידו', bg: '#b3261e', bg2: '#7d1711', fg: '#ffe17a', poi: 'kiosk', hang: 'kiosk', awning: '#b3261e' },
@@ -138,7 +140,7 @@ function center(B, ch, b, rng) {
 
 // ---- The shuk --------------------------------------------------------------------
 function shuk(B, ch, b, rng) {
-  base(B, ch, b, 'paving', 2.6, [0.9, 0.88, 0.84]);
+  base(B, ch, b, 'paving', 1.5, [0.9, 0.88, 0.84]);
   const goods = [['עגבניות', '4.90', '#d9301f'], ['מלפפונים', '3.90', '#3d8a3a'], ['תפוזים', '5.90', '#f08a1c'], ['אבטיח', '2.90', '#2f7a44'], ['תבלינים', 'לפי משקל', '#b5651d'],
     ['זיתים', '19.90', '#4b5a2a'], ['גרעינים', '12.90', '#2b2b2b'], ['בננות', '6.90', '#f2cf3a'], ['חצילים', '4.50', '#4a235a'], ['דגים', 'טרי מאתמול', '#6b8ea3'], ['לימונים', '5.50', '#f0dc3a'], ['פיצוחים', '14.90', '#8a5a2b']];
   const tarp = ['#b3261e', '#1f6aa5', '#2d8a4e', '#f5b301', '#d9d2bd', '#e8762c'];
@@ -316,7 +318,7 @@ function wedding(B, ch, b, rng) {
 
 // ---- Government corner: police, national insurance, town hall ---------------------------------
 function civic(B, ch, b, rng) {
-  base(B, ch, b, 'paving', 2.6);
+  base(B, ch, b, 'paving', 1.5);
   B.civic(ch, { x: b.x0 + 26, z: b.z0 + 16, w: 40, d: 18, floors: 3, tint: '#dfe6ee', seed: 3, kind: 'police', poi: 'police', win: 'bars',
     sign: { text: 'משטרת קריית שמש', sub: 'מוקד 100 · נא להמתין על הקו', bg: '#17324d', fg: '#fff' } });
   ch.get('paint').box(b.x0 + 26, CURB + 10.5, b.z0 + 16, 0.12, 6, 0.12, 0, { c: rgb('#c9ced2') });
@@ -396,7 +398,7 @@ function towers(B, ch, b, rng) {
   const r = B.sign({ text: 'נווה יוקרה', sub: 'קהילה סגורה · הכניסה לדיירים (ולשליחים)', bg: '#17324d', fg: '#e0b84a', font: '"Suez One"' }, 512, 128);
   ch.get('sign').panel(b.x0 + m, b.cz - 12, -H, 0, CURB + 0.5, 5, 1.25, 0.14, r);
   setPOI('towers', b.x0 - 1, b.cz, { yaw: H });
-  patch(ch, 'paving', b.cx, b.cz, b.w - 12, 7, 2.6);
+  patch(ch, 'paving', b.cx, b.cz, b.w - 12, 7, 1.5);
   B.lot(ch, b.cx + 6, b.z1 - 12, 50, 15, 0, 'lux');
   for (let i = 0; i < 10; i++) B.palm(ch, b.x0 + 10 + i * 9.4, b.cz + (i % 2 ? 5.5 : -5.5), rng.f(7, 9), rng);
 }
@@ -435,6 +437,7 @@ function station(B, ch, b, rng) {
 }
 
 export function fillZone(B, ch, b, rng) {
+  patch.B = B;
   switch (b.zone) {
     case 'gimel': return residential(B, ch, b, rng, { gimel: true });
     case 'home': return residential(B, ch, b, rng, { home: true, alongX: true });

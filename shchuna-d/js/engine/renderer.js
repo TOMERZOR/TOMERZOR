@@ -4,20 +4,21 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 export const QUALITY = {
-  low:    { label: 'נמוכה',  dpr: 1.0,  shadow: 0,    post: false, bloom: false, far: 420, peds: 14, cars: 8,  env: false, aniso: 2, lamps: 0 },
-  medium: { label: 'בינונית', dpr: 1.25, shadow: 1024, post: true,  bloom: false, far: 560, peds: 22, cars: 12, env: true,  aniso: 4, lamps: 3 },
-  high:   { label: 'גבוהה',  dpr: 1.5,  shadow: 2048, post: true,  bloom: true,  far: 720, peds: 30, cars: 16, env: true,  aniso: 8, lamps: 5 },
-  ultra:  { label: 'אולטרה', dpr: 2.0,  shadow: 4096, post: true,  bloom: true,  far: 900, peds: 38, cars: 20, env: true,  aniso: 16, lamps: 8 },
+  low:    { label: 'נמוכה',  dpr: 1.0,  shadow: 0,    post: false, bloom: false, far: 420, peds: 14, cars: 8,  env: false, aniso: 2, lamps: 0, ao: false },
+  medium: { label: 'בינונית', dpr: 1.25, shadow: 1024, post: true,  bloom: false, far: 560, peds: 22, cars: 12, env: true,  aniso: 4, lamps: 3, ao: false },
+  high:   { label: 'גבוהה',  dpr: 1.5,  shadow: 2048, post: true,  bloom: true,  far: 720, peds: 30, cars: 16, env: true,  aniso: 8, lamps: 5, ao: true },
+  ultra:  { label: 'אולטרה', dpr: 2.0,  shadow: 4096, post: true,  bloom: true,  far: 900, peds: 38, cars: 20, env: true,  aniso: 16, lamps: 8, ao: true },
 };
 
 // Final grade in display space: FXAA, gentle split-toning, vignette, film grain.
 const FinalShader = {
   uniforms: {
     tDiffuse: { value: null }, resolution: { value: new THREE.Vector2(1, 1) }, time: { value: 0 },
-    vignette: { value: 0.32 }, grain: { value: 0.035 }, saturation: { value: 1.06 }, hurt: { value: 0 },
+    vignette: { value: 0.3 }, grain: { value: 0.018 }, saturation: { value: 1.12 }, hurt: { value: 0 },
     tint: { value: new THREE.Vector3(1, 1, 1) }, fxaa: { value: 1 },
   },
   vertexShader: /* glsl */`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
@@ -49,6 +50,7 @@ const FinalShader = {
       vec3 c = aa(vUv);
       float l = luma(c);
       c = mix(vec3(l), c, saturation);
+      c = clamp((c - 0.5) * 1.1 + 0.5, 0.0, 1.0);          // a little more bite after the filmic curve
       // warm highlights, cool shadows
       c += (vec3(0.018, 0.008, -0.02) * smoothstep(0.45, 1.0, l)) + (vec3(-0.012, 0.004, 0.02) * (1.0 - smoothstep(0.0, 0.4, l)));
       c *= tint;
@@ -100,6 +102,14 @@ export class Gfx {
       const rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, samples: 0 });
       const c = this.composer = new EffectComposer(r, rt);
       c.addPass(new RenderPass(this.scene, this.camera));
+      if (q.ao) {
+        // contact shadows under balconies, cars and people: what glues objects to the ground
+        this.ao = new GTAOPass(this.scene, this.camera, 256, 256);
+        this.ao.updateGtaoMaterial({ radius: 1.1, distanceExponent: 1.4, thickness: 1.2, scale: 1.15, samples: 12, screenSpaceRadius: false });
+        this.ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, rings: 2, samples: 8 });
+        this.ao.blendIntensity = 0.9;
+        c.addPass(this.ao);
+      } else this.ao = null;
       if (q.bloom) {
         this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.25, 0.55, 0.97);
         c.addPass(this.bloom);

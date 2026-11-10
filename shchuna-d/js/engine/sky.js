@@ -114,14 +114,14 @@ export class SkySystem {
     this.night = clamp(this.night, 0, 1);
 
     this.sun.color.copy(a.sun).lerp(b.sun, t);
-    this.sun.intensity = lerp(a.si, b.si, t) * 0.66;
+    this.sun.intensity = lerp(a.si, b.si, t) * lerp(0.98, 0.66, this.night);
     this.hemi.color.copy(a.sky).lerp(b.sky, t);
     this.hemi.groundColor.copy(a.gnd).lerp(b.gnd, t);
-    this.hemi.intensity = lerp(a.hi, b.hi, t) * (this.gfx.q.env ? 0.42 : 0.9);
+    this.hemi.intensity = lerp(a.hi, b.hi, t) * (this.gfx.q.env ? lerp(0.3, 0.42, this.night) : lerp(0.7, 0.9, this.night));
     const fog = this.gfx.scene.fog;
     fog.color.copy(a.fog).lerp(b.fog, t);
-    fog.density = lerp(0.00115, 0.00095, this.night) * (720 / this.gfx.q.far) ** 0.8;
-    this.gfx.renderer.toneMappingExposure = lerp(a.exp, b.exp, t);
+    fog.density = lerp(0.0007, 0.00095, this.night) * (720 / this.gfx.q.far) ** 0.8;
+    this.gfx.renderer.toneMappingExposure = lerp(a.exp, b.exp, t) * lerp(0.9, 1, this.night);
     if (this.gfx.bloom) this.gfx.bloom.strength = lerp(0.14, 0.34, this.night);
 
     // Sky dome follows the camera; the shader wants the real sun even at night (below horizon = dark).

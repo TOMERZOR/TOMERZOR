@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8"><title>viewer</title>
+<style>html,body{margin:0;background:#8a9aa8;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three.module.min.js","three/addons/":"../vendor/addons/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q = new URLSearchParams(location.search);
+const files = (q.get('f') || '').split(',');
+const t = parseFloat(q.get('t') || '0.5'), yaw = parseFloat(q.get('yaw') || '0.6');
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+r.setSize(innerWidth, innerHeight); document.body.appendChild(r.domElement);
+r.toneMapping = THREE.ACESFilmicToneMapping;
+const s = new THREE.Scene(); s.background = new THREE.Color(0x8a9aa8); s.add(new THREE.HemisphereLight(0xffffff, 0x777766, 2.2));
+const d = new THREE.DirectionalLight(0xffffff, 2.5); d.position.set(3, 6, 4); s.add(d);
+const cam = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.05, 200);
+const L = new GLTFLoader(); const info = [];
+let i = 0;
+for (const f of files) {
+  const g = await L.loadAsync(f);
+  const o = g.scene; const box = new THREE.Box3().setFromObject(o); const sz = box.getSize(new THREE.Vector3());
+  const k = 1.8 / Math.max(sz.x, sz.y, sz.z); o.scale.multiplyScalar(k);
+  const b2 = new THREE.Box3().setFromObject(o); const c = b2.getCenter(new THREE.Vector3());
+  const h = new THREE.Group(); h.add(o); o.position.sub(c); o.position.y += (b2.max.y - b2.min.y) / 2;
+  h.position.x = (i - (files.length - 1) / 2) * 2.2; h.rotation.y = yaw; s.add(h);
+  if (g.animations.length) { const m = new THREE.AnimationMixer(o); const a = m.clipAction(g.animations[g.animations.length - 1]); a.play(); m.setTime(a.getClip().duration * t); }
+  info.push(f.split('/').pop() + ' size ' + sz.toArray().map(v => v.toFixed(2)).join('x') + ' anims ' + g.animations.map(a => a.name + ':' + a.duration.toFixed(2)).join('|'));
+  i++;
+}
+const W = files.length * 2.2;
+cam.position.set(0, 1.2, Math.max(3.4, W * 0.62)); cam.lookAt(0, 0.9, 0);
+r.render(s, cam); window.__info = info; document.title = 'ready';
+</script>

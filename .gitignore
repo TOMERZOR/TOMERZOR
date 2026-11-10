@@ -56,3 +56,16 @@ hekerut/site/public/
 hekerut/server/node_modules/
 hekerut/server/.wrangler/
 hekerut/site/.wrangler/
+
+# שכונה ד׳: raw generated assets are re-downloadable (see shchuna-d/tools/*.json), keep the repo lean
+shchuna-d/assets/raw/
+shchuna-d/tools/node_modules
+shchuna-d/tools/node_modules/
+shchuna-d/app/node_modules/
+shchuna-d/app/www/
+shchuna-d/app/android/.gradle/
+shchuna-d/app/android/build/
+shchuna-d/app/android/app/build/
+shchuna-d/app/android/local.properties
+shchuna-d/server/node_modules/
+shchuna-d/server/.wrangler/

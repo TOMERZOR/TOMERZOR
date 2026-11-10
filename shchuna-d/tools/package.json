@@ -1,0 +1,14 @@
+{
+  "name": "shchuna-d-tools",
+  "private": true,
+  "type": "module",
+  "description": "Asset pipeline for שכונה ד׳: optimises the raw generated GLBs and textures.",
+  "scripts": { "assets": "node build-assets.mjs", "textures": "python3 build-textures.py" },
+  "dependencies": {
+    "@gltf-transform/core": "^4.1.0",
+    "@gltf-transform/extensions": "^4.1.0",
+    "@gltf-transform/functions": "^4.1.0",
+    "meshoptimizer": "^0.22.0",
+    "sharp": "^0.33.5"
+  }
+}

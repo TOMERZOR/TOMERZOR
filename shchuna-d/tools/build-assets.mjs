@@ -77,7 +77,7 @@ const MODELS = {
   e_crane: { src: 'env/crane.glb', tex: 1024, tris: 2500 },
   e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 500, half: 'x' },
   e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
-  e_ficus: { src: 'env/ficus2.glb', tex: 48, tris: 5000, sloppy: 4500 },
+  e_ficus: { src: 'env/ficus3.glb', tex: 1024, tris: 7000 },
   e_euc: { src: 'env/euc.glb', tex: 48, tris: 4000, sloppy: 3500 },
   e_bush: { src: 'env/bush.glb', tex: 48, tris: 2500, sloppy: 2200 },
   e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 2500 },

@@ -147,7 +147,7 @@ export class Game {
     this.fade(true); await new Promise((r) => setTimeout(r, 450));
     this.resetWorld(); this.mode = 'story';
     this.missions.load(null); this.player.money = 40; this.player.stats = { kos: 0, cars: 0, dist: 0, busted: 0, wasted: 0, earned: 0 };
-    const s = POI.busArrive; this.player.actor.place(s.x, s.z, 0); this.cam.snap(Math.PI);
+    const s = POI.busArrive; this.player.actor.place(s.x, s.z, s.yaw || 0); this.cam.snap((s.yaw || 0) + Math.PI);
     this.sky.setHour(16.6); this.sky.day = 0;
     if (skipTo && skipTo !== '1') { for (const m of STORY) { if (m.id === skipTo) break; this.missions.done.add(m.id); } const h = POI.home; this.player.actor.place(h.x, h.z + 5, 0); this.player.money = 2500; }
     this.enterPlay();

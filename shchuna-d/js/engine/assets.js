@@ -12,6 +12,8 @@ loader.setMeshoptDecoder(MeshoptDecoder);
 
 export const CLIP_NAMES = ['idle', 'walk', 'run', 'jab', 'hook', 'kick', 'hit', 'knockdown', 'standup', 'sit', 'talk', 'jump', 'guard', 'dance'];
 const LOOPING = { idle: 1, walk: 1, run: 1, sit: 1, talk: 1, guard: 1, dance: 1 };
+// Some generated clips start turned away from where the character is heading; degrees to turn them back.
+const TURN = { jump: 40, talk: 16, hit: 28 };
 
 export class Assets {
   constructor() {
@@ -112,6 +114,45 @@ export class Assets {
     return obj;
   }
 
+  // Standing still, built from the bind pose: arms lowered out of the A-pose, slow breathing, the head
+  // drifting a little. (The generated "idle" is a fighter's split stance turned 43 degrees off the heading
+  // that looks back over its shoulder, so everybody twisted aside whenever they stopped walking.)
+  standClip(order, bones, bindQ, bindP, parentQi, hipsRest, faceYaw) {
+    const dur = 6, n = 61, times = new Float32Array(n), tracks = {}, hip = new Float32Array(n * 3);
+    const U = new THREE.Vector3(0, 1, 0), F = new THREE.Vector3(Math.sin(faceYaw), 0, Math.cos(faceYaw));
+    const Lv = bindP.LeftArm.clone().sub(bindP.RightArm).setY(0).normalize();        // the model's own left
+    const rest = {};
+    for (const [side, sg] of [['Left', 1], ['Right', -1]]) {
+      const arm = side + 'Arm', fore = side + 'ForeArm';
+      if (!bindP[arm] || !bindP[fore]) continue;
+      const hang = U.clone().multiplyScalar(-Math.cos(0.15)).addScaledVector(Lv, sg * Math.sin(0.15)).addScaledVector(F, 0.03).normalize();
+      rest[arm] = new THREE.Quaternion().setFromUnitVectors(bindP[fore].clone().sub(bindP[arm]).normalize(), hang);
+      rest[fore] = new THREE.Quaternion().setFromAxisAngle(Lv, 0.2);                 // elbows a little bent
+    }
+    for (const bn of order) tracks[bn] = new Float32Array(n * 4);
+    const D = {}, world = {}, e = new THREE.Quaternion(), q = new THREE.Quaternion(), ID = new THREE.Quaternion();
+    for (let f = 0; f < n; f++) {
+      const t = f / (n - 1), breath = Math.sin(t * Math.PI * 4), sway = Math.sin(t * Math.PI * 2);
+      times[f] = t * dur;
+      const live = { Spine02: [F, 0.008 * sway], Spine01: [Lv, 0.013 * breath], neck: [Lv, -0.009 * breath], Head: [U, 0.05 * Math.sin(t * Math.PI * 2 + 1)] };
+      for (const bn of order) {
+        const parent = bones[bn].parent, pn = parent && parent.isBone && D[parent.name] ? parent.name : null;
+        const d = (D[bn] || (D[bn] = new THREE.Quaternion())).copy(pn ? D[pn] : ID);
+        if (rest[bn]) d.premultiply(rest[bn]);
+        if (live[bn]) d.premultiply(e.setFromAxisAngle(live[bn][0], live[bn][1]));
+        const w = (world[bn] || (world[bn] = new THREE.Quaternion())).copy(d).multiply(bindQ[bn]);
+        if (pn) q.copy(world[pn]).invert().multiply(w); else q.copy(parentQi).multiply(w);
+        const arr = tracks[bn]; arr[f * 4] = q.x; arr[f * 4 + 1] = q.y; arr[f * 4 + 2] = q.z; arr[f * 4 + 3] = q.w;
+      }
+      hip[f * 3] = hipsRest.x; hip[f * 3 + 1] = hipsRest.y; hip[f * 3 + 2] = hipsRest.z;
+    }
+    const kf = Object.keys(tracks).map((bn) => new THREE.QuaternionKeyframeTrack(bn + '.quaternion', times, tracks[bn]));
+    kf.push(new THREE.VectorKeyframeTrack('Hips.position', times, hip));
+    const clip = new THREE.AnimationClip('idle', dur, kf);
+    clip.userData = { loop: true };
+    return clip;
+  }
+
   // World-space retarget. Every rig here is the same 24-bone humanoid bound in an A-pose, but each
   // was rigged separately and faces its own way, so for every frame the rotation a source bone has
   // made away from its BIND pose (in world space, turned to the target's facing) is replayed on the
@@ -164,6 +205,7 @@ export class Assets {
         const hipPos = new Float32Array(n * 3), hp = new THREE.Vector3();
         const ratio = tBindP.Hips.y / src.hipsY, keep = keepXZ[an] ? 1 : 0;
         Y.setFromAxisAngle(UP, ch.faceYaw - src.faceYaw); Yi.copy(Y).invert();
+        const turn = TURN[an] ? new THREE.Quaternion().setFromAxisAngle(UP, TURN[an] * Math.PI / 180) : null;
         for (let f = 0; f < n; f++) {
           times[f] = (f / (n - 1)) * dur;
           src.mixer.setTime(Math.min(dur - 1e-4, times[f])); src.scene.updateMatrixWorld(true);
@@ -172,6 +214,7 @@ export class Assets {
             sb.getWorldQuaternion(q);
             qa.copy(src.bindQ[bn]).invert(); q.multiply(qa);                 // world delta from bind
             q.premultiply(Y).multiply(Yi).multiply(tBindQ[bn]);              // turned to the target, applied to its bind
+            if (turn) q.premultiply(turn);
             (world[bn] || (world[bn] = new THREE.Quaternion())).copy(q);
             const parent = tBones[bn].parent;
             if (parent && parent.isBone && world[parent.name]) qb.copy(world[parent.name]).invert().multiply(q);
@@ -180,7 +223,7 @@ export class Assets {
           }
           // hips travel in metres, scaled by leg length; sideways root motion only where the move needs it
           hp.copy(src.bones.Hips.position).sub(src.hipsRest).applyQuaternion(src.parentQ).multiplyScalar(src.parentScale * ratio);
-          hp.applyQuaternion(Y); hp.x *= keep; hp.z *= keep;
+          hp.applyQuaternion(Y); if (turn) hp.applyQuaternion(turn); hp.x *= keep; hp.z *= keep;
           hp.applyQuaternion(tParentQi).divideScalar(rootScale);
           hipPos[f * 3] = tHipsRest.x + hp.x; hipPos[f * 3 + 1] = tHipsRest.y + hp.y; hipPos[f * 3 + 2] = tHipsRest.z + hp.z;
         }
@@ -191,6 +234,7 @@ export class Assets {
         clip.userData = { loop: !!LOOPING[an] };
         ch.clips[an] = clip;
       }
+      ch.clips.idle = this.standClip(order, tBones, tBindQ, tBindP, tParentQi, tHipsRest, ch.faceYaw);
     }
     for (const an of names) { const s = this.clipSrc[an]; if (s.mixer) { s.mixer.stopAllAction(); s.mixer = null; } }
   }

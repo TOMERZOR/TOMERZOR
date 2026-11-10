@@ -13,8 +13,9 @@ export class GameCamera {
     this.shot = null;           // { pos, look, fov } for cutscenes
     this.shotBlend = 0;
     this.pos = new THREE.Vector3(0, 5, 5);
+    this.meshT = 0; this.meshHit = 99;
   }
-  snap(yaw) { this.yaw = yaw; this.pitch = 0.18; this.hard = true; }
+  snap(yaw) { this.yaw = yaw; this.pitch = 0.18; this.hard = true; this.meshT = 0; }
   shake(a) { this.trauma = Math.min(1, this.trauma + a); }
   setShot(shot) { this.shot = shot; if (shot && shot.cut) this.shotBlend = 1; }
 
@@ -50,7 +51,10 @@ export class GameCamera {
     _d.set(Math.sin(this.yaw) * cp, sp2, Math.cos(this.yaw) * cp);
     // pull in when a wall is in the way
     const hit = g.physics.raycast(this.target.x, this.target.y, this.target.z, _d.x, _d.y, _d.z, wantDist + 0.3);
-    let d = Math.min(wantDist, hit - 0.3);
+    // station roofs, shop awnings and bus shelters are meshes without a box; asked a few times a second
+    this.meshT -= dt;
+    if (this.meshT <= 0) { this.meshT = 0.06; this.meshHit = g.city.rayModels(this.target, _d, wantDist + 0.3); }
+    let d = Math.min(wantDist, hit - 0.3, this.meshHit - 0.3);
     const groundClear = (this.target.y - 0.35) / Math.max(0.05, -_d.y);
     if (_d.y < 0 && d > groundClear) d = groundClear;
     d = Math.max(0.7, d);

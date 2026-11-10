@@ -41,6 +41,8 @@ const SIGNS = {
   b_shops3: { tex: 'signs_shops3', rects: [[0.06, 0.277, 0.5, 0.645], [0.31, 0.497, 0.5, 0.645], [0.52, 0.702, 0.5, 0.645], [0.74, 0.932, 0.5, 0.645]] },
 };
 
+const CAM_BLOCK = /^(b_station|b_shops|b_gas|b_skeleton|e_shelter|e_busstop|e_stall)/;
+
 export class CityBuilder {
   constructor(gfx, mats, physics, models) {
     this.gfx = gfx; this.mats = mats; this.M = mats.M; this.physics = physics; this.models = models || {};
@@ -838,7 +840,27 @@ export class CityBuilder {
       mesh.castShadow = cast; mesh.receiveShadow = true; mesh.name = ch.id + ':' + name;
       (this.instanced || (this.instanced = [])).push(mesh);
       this.group.add(mesh);
+      // canopies, awnings and open frames have no collision box: the camera asks the mesh itself
+      if (CAM_BLOCK.test(name)) {
+        const bb = md.geometry.boundingBox || (md.geometry.computeBoundingBox(), md.geometry.boundingBox);
+        (this.camBlock || (this.camBlock = [])).push({ geometry: md.geometry, mats: list, boxes: list.map((m) => bb.clone().applyMatrix4(m)) });
+      }
     }
+  }
+  // Distance along a ray to the nearest roof, awning or shelter that exists only as a model.
+  rayModels(origin, dir, max) {
+    if (!this.camBlock) return max;
+    const R = this._ray || (this._ray = new THREE.Raycaster()), probe = this._probe || (this._probe = new THREE.Mesh(undefined, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })));
+    R.set(origin, dir); R.near = 0; R.far = max;
+    let best = max; const hits = [];
+    for (const cb of this.camBlock) for (let i = 0; i < cb.boxes.length; i++) {
+      const box = cb.boxes[i];
+      if (box.distanceToPoint(origin) > best || !R.ray.intersectsBox(box)) continue;
+      probe.geometry = cb.geometry; probe.matrixWorld.copy(cb.mats[i]);
+      hits.length = 0; probe.raycast(R, hits);
+      for (const h of hits) if (h.distance < best) best = h.distance;
+    }
+    return best;
   }
 
   build() {

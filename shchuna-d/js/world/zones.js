@@ -436,7 +436,7 @@ function station(B, ch, b, rng) {
     B.hang.push({ x: x + 1, z: z + rng.f(-8, 8), r: 1.5, kind: 'bus' });
     B.parking.push({ x: x + 5.6, z: z, yaw: 0, kind: 'bus' });
   }
-  setPOI('busArrive', b.x0 + 16 + 2, b.z0 + 20);
+  setPOI('busArrive', b.x0 + 16 + 2, b.z0 + 42, { yaw: Math.PI });      // off the end of platform 1, in the open, facing the station
   B.shops(ch, { x: b.x0 + 34, z: b.z0 + 5.5, len: 52, dep: 8, yaw: 0, tint: rgb('#d3d0c7'), units: [
     { name: 'קופות', sub: 'סגור. תמיד היה סגור', kind: 'roller', bg: '#3c6b54', fg: '#fff' },
     { name: 'קיוסק התחנה', sub: 'בגט · שתייה · מטען ב־40₪', bg: '#e8762c', fg: '#fff', hang: 'kiosk' },

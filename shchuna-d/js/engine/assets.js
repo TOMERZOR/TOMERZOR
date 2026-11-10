@@ -51,6 +51,7 @@ export class Assets {
       if (o.isMesh) {
         o.castShadow = true; o.receiveShadow = true;
         const m = o.material; if (m.map) m.map.anisotropy = 4;
+        this.capTexture(m, /^b_shops/.test(name) ? this.texCap * 2 : this.texCap);
         m.envMapIntensity = 1;
       }
     });
@@ -60,6 +61,18 @@ export class Assets {
       scene, mesh, geometry: mesh.geometry, material: mesh.material, matrix, size, centre,
       len: Math.max(size.x, size.z), minY: box.min.y, longX: size.x > size.z,
     };
+  }
+
+  // On a phone the whole town's textures at full size do not fit the memory a web view is given.
+  // Each map is redrawn at most `cap` pixels wide and the original bitmap is released.
+  capTexture(mat, cap) {
+    const t = mat && mat.map, img = t && t.image;
+    if (!cap || !img || Math.max(img.width, img.height) <= cap) return;
+    const k = cap / Math.max(img.width, img.height), cv = document.createElement('canvas');
+    cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+    const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, cv.width, cv.height);
+    if (img.close) img.close();
+    t.image = cv; t.needsUpdate = true;
   }
 
   async loadChar(name, url, opt) {

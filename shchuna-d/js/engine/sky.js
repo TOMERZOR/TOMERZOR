@@ -76,7 +76,7 @@ export class SkySystem {
     this.sun.castShadow = q.shadow > 0;
     if (q.shadow) {
       s.mapSize.set(q.shadow, q.shadow);
-      const R = q.shadow >= 2048 ? 70 : 48;
+      const R = q.shadow >= 4096 ? 60 : q.shadow >= 2048 ? 42 : 30;      // tight enough for chair legs to cast
       const c = s.camera; c.left = -R; c.right = R; c.top = R; c.bottom = -R; c.near = 1; c.far = 420; c.updateProjectionMatrix();
       this.shadowR = R;
       if (s.map) { s.map.dispose(); s.map = null; }

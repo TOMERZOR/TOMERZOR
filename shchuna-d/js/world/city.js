@@ -61,6 +61,8 @@ export class CityBuilder {
       gr.addColorStop(0, 'rgba(70,50,30,0.55)'); gr.addColorStop(1, 'rgba(70,50,30,0)');
       g.fillStyle = gr; g.beginPath(); g.moveTo(w * 0.3, 0); g.lineTo(w * 0.7, 0); g.lineTo(w * 0.9, h); g.lineTo(w * 0.1, h); g.fill();
     });
+    // soft dark patch that sits under small furniture, whose legs are thinner than a shadow texel
+    this.blob = mats.decals.add(64, 64, (g, w, h) => { const r = g.createRadialGradient(w / 2, h / 2, 2, w / 2, h / 2, w / 2); r.addColorStop(0, 'rgba(0,0,0,0.5)'); r.addColorStop(0.6, 'rgba(0,0,0,0.26)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); });
     this.oil = mats.decals.add(96, 96, (g, w, h) => {
       const r = new Rng(3);
       for (let i = 0; i < 9; i++) { const x = r.f(20, w - 20), y = r.f(20, h - 20), q = r.f(8, 26); const gr = g.createRadialGradient(x, y, 0, x, y, q); gr.addColorStop(0, 'rgba(15,15,18,0.6)'); gr.addColorStop(1, 'rgba(15,15,18,0)'); g.fillStyle = gr; g.fillRect(x - q, y - q, q * 2, q * 2); }
@@ -240,8 +242,14 @@ export class CityBuilder {
     m.scale(new THREE.Vector3(k, k, k)); m.setPosition(x, y - md.minY * k, z);
     const key = 'mdl_' + name;
     if (!this.M[key]) { this.M[key] = md.material; }
-    ch.get(key).add(md.geometry, m.multiply(md.matrix));
+    this.place1(ch, name, m.multiply(md.matrix));
     return true;
+  }
+  // One more copy of a model in this chunk. Copies are drawn as instances of the model's own
+  // geometry, so a block of forty flats costs one mesh in memory however often it repeats.
+  place1(ch, name, matrix) {
+    if (!ch.inst) ch.inst = {};
+    (ch.inst[name] || (ch.inst[name] = [])).push(matrix.clone());
   }
   // The generator always returns a model with its photographed front towards +X. Returns the
   // turn that brings that front to local +Z, and the model's extent along and across the street.
@@ -260,7 +268,7 @@ export class CityBuilder {
     m.setPosition(x, y - md.minY * ky, z);
     const key = 'mdl_' + name;
     if (!this.M[key]) { this.M[key] = md.material; if (/^b_(block|tower|bituach|city|police|school|matnas)/.test(name)) this.mats.lightWindows(md.material, name === 'b_tower' ? 0.5 : 0.38); }
-    ch.get(key).add(md.geometry, m.multiply(pre).multiply(md.matrix));
+    this.place1(ch, name, m.multiply(pre).multiply(md.matrix));
     this.boards(ch, name, md, x, z, yaw, len / L, ky, dep / D, y);
     return true;
   }
@@ -313,7 +321,7 @@ export class CityBuilder {
     m.setPosition(x, y - md.minY * k, z);
     const key = 'mdl_' + name;
     if (!this.M[key]) this.M[key] = md.material;
-    ch.get(key).add(md.geometry, m.multiply(md.matrix));
+    this.place1(ch, name, m.multiply(md.matrix));
     return true;
   }
   // Dry summer weeds scattered over a rectangle of open ground (thistles, wild oats).
@@ -339,11 +347,13 @@ export class CityBuilder {
     ch.get('decal').floor(x, CURB + 0.012, z, 3.6, 3.2, yaw, this.oil);
   }
   chair(ch, x, z, yaw) {
+    ch.get('decal').floor(x, CURB + 0.016, z, 0.95, 0.95, yaw, this.blob);
     if (!this.model(ch, 'p_chair', x, z, yaw, 0.84)) ch.get('paint').box(x, CURB, z, 0.5, 0.45, 0.5, yaw, { c: rgb('#eceadf') });
     const [sx, sz] = this.at(x, z, yaw, 0, 0.05);
     this.seats.push({ x: sx, z: sz, yaw, kind: 'chair' });
   }
   table(ch, x, z) {
+    ch.get('decal').floor(x, CURB + 0.018, z, 1.5, 1.5, 0, this.blob);
     const w = rgb('#eceadf');
     ch.get('paint').cyl(x, CURB, z, 0.05, 0.05, 0.7, 5, w, w, false);
     ch.get('paint').cyl(x, CURB + 0.7, z, 0.5, 0.5, 0.04, 10, w, w, true);
@@ -818,6 +828,15 @@ export class CityBuilder {
       if (!mesh) continue;
       mesh.name = ch.id + ':' + name;
       if (name === 'glow' || name === 'decal') mesh.renderOrder = name === 'glow' ? 3 : 2;
+      this.group.add(mesh);
+    }
+    for (const name of Object.keys(ch.inst || {})) {
+      const md = this.models[name], list = ch.inst[name];
+      const mesh = new THREE.InstancedMesh(md.geometry, this.M['mdl_' + name], list.length);
+      list.forEach((m, i) => mesh.setMatrixAt(i, m));
+      mesh.instanceMatrix.needsUpdate = true; mesh.computeBoundingSphere(); mesh.computeBoundingBox();
+      mesh.castShadow = cast; mesh.receiveShadow = true; mesh.name = ch.id + ':' + name;
+      (this.instanced || (this.instanced = [])).push(mesh);
       this.group.add(mesh);
     }
   }

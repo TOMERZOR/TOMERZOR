@@ -195,7 +195,7 @@ export class Vehicle {
 
 // Each generated model has its own idea of which end is the front; this turns them all to +Z.
 export const FRONT_FIX = {
-  v_sedan: 0, v_hatch: 0, v_pickup: 0, v_van: 0, v_police: 0, v_armored: 0, v_truck: 0, v_bus: 0, v_tractor: 0, v_moped: 0,
+  v_sedan: 0, v_hatch: Math.PI, v_pickup: Math.PI, v_van: Math.PI, v_police: Math.PI, v_armored: 0, v_truck: Math.PI, v_bus: 0, v_tractor: 0, v_moped: Math.PI,
 };
 
 // ---- Vehicle against vehicle and against people -------------------------------------------

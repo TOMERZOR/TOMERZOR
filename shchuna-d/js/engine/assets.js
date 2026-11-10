@@ -90,88 +90,81 @@ export class Assets {
     return obj;
   }
 
-  // World-space retarget: the delta each source bone makes from its rest pose is replayed on the
-  // target's rest pose. Works because every rig here is the same 24-bone humanoid bound in an A-pose.
+  // World-space retarget. Every rig here is the same 24-bone humanoid bound in an A-pose, but each
+  // was rigged separately and faces its own way, so for every frame the rotation a source bone has
+  // made away from its BIND pose (in world space, turned to the target's facing) is replayed on the
+  // target bone's bind pose. Bind poses come from the inverse bind matrices, never from node transforms.
   retargetAll() {
-    const FPS = 30;
-    const names = Object.keys(this.clipSrc);
+    const FPS = 30, names = Object.keys(this.clipSrc);
     if (!names.length) return;
     const q = new THREE.Quaternion(), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
     const Y = new THREE.Quaternion(), Yi = new THREE.Quaternion(), UP = new THREE.Vector3(0, 1, 0);
-    // Which way a rig faces, from its hip joints: forward = up × (left hip → right hip).
-    const facing = (bones) => {
-      const l = bones.LeftUpLeg, r = bones.RightUpLeg;
-      if (!l || !r) return 0;
-      const lr = r.getWorldPosition(new THREE.Vector3()).sub(l.getWorldPosition(new THREE.Vector3()));
-      const f = new THREE.Vector3().crossVectors(UP, lr);
-      return Math.atan2(f.x, f.z);
-    };
-    const bonesOf = (root) => { const m = {}; root.traverse((o) => { if (o.isBone) m[o.name] = o; }); return m; };
-    const restOf = (bones) => {
-      const r = {};
-      for (const k in bones) { const b = bones[k]; r[k] = { local: b.quaternion.clone(), world: b.getWorldQuaternion(new THREE.Quaternion()), pos: b.position.clone() }; }
-      return r;
-    };
+    const facing = (L, R) => { const f = new THREE.Vector3().crossVectors(UP, R.clone().sub(L)); return Math.atan2(f.x, f.z); };
+    const keepXZ = { knockdown: 1, standup: 1, hit: 1, jab: 1, hook: 1, kick: 1, dance: 1 };
+
+    // source skeletons: bind pose was stored in userData by tools/build-assets.mjs
+    for (const an of names) {
+      const src = this.clipSrc[an]; src.scene.updateMatrixWorld(true);
+      src.bones = {}; src.bindQ = {}; src.bindP = {};
+      src.scene.traverse((o) => { if (o.userData && o.userData.bq) { src.bones[o.name] = o; src.bindQ[o.name] = new THREE.Quaternion().fromArray(o.userData.bq); src.bindP[o.name] = new THREE.Vector3().fromArray(o.userData.bp); } });
+      const hips = src.bones.Hips; src.ok = !!(hips && src.bones.LeftUpLeg && src.bones.RightUpLeg);
+      if (!src.ok) { console.warn('clip without bind data', an); continue; }
+      src.parentInv = new THREE.Matrix4().copy(hips.parent.matrixWorld).invert();
+      src.parentQ = hips.parent.getWorldQuaternion(new THREE.Quaternion());
+      src.parentScale = hips.parent.getWorldScale(new THREE.Vector3()).y;
+      src.hipsRest = src.bindP.Hips.clone().applyMatrix4(src.parentInv);        // hips bind position, parent-local
+      src.hipsY = src.bindP.Hips.y;
+      src.faceYaw = facing(src.bindP.LeftUpLeg, src.bindP.RightUpLeg);
+      src.mixer = new THREE.AnimationMixer(src.scene); src.mixer.clipAction(src.clip).play();
+    }
+
     for (const cn of Object.keys(this.chars)) {
-      const ch = this.chars[cn];
-      ch.scene.updateMatrixWorld(true);
-      const tBones = bonesOf(ch.scene), tRest = restOf(tBones);
+      const ch = this.chars[cn]; ch.scene.updateMatrixWorld(true);
+      const tBones = {}, tBindQ = {}, tBindP = {};
+      ch.scene.traverse((o) => {
+        if (!o.isBone || !o.userData || !o.userData.bq) return;
+        tBones[o.name] = o; tBindQ[o.name] = new THREE.Quaternion().fromArray(o.userData.bq); tBindP[o.name] = new THREE.Vector3().fromArray(o.userData.bp);
+      });
       const tHips = tBones.Hips;
-      const order = []; ch.scene.traverse((o) => { if (o.isBone) order.push(o.name); });   // parents first
-      const tHipsWorldY = tHips ? tHips.getWorldPosition(new THREE.Vector3()).y : 1;
-      const rootScale = tHips && tHips.parent ? tHips.parent.getWorldScale(new THREE.Vector3()).y : 1;
-      const tParentQ = tHips && tHips.parent ? tHips.parent.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
-      const tParentQi = tParentQ.clone().invert();
-      ch.faceYaw = facing(tBones);
+      if (!tHips || !tBindP.LeftUpLeg) { console.warn('unexpected skeleton', cn); continue; }
+      const order = []; ch.scene.traverse((o) => { if (o.isBone && tBones[o.name]) order.push(o.name); });      // parents first
+      const tParentInv = new THREE.Matrix4().copy(tHips.parent.matrixWorld).invert();
+      const tParentQi = tHips.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+      const rootScale = tHips.parent.getWorldScale(new THREE.Vector3()).y;
+      const tHipsRest = tBindP.Hips.clone().applyMatrix4(tParentInv);
+      ch.faceYaw = facing(tBindP.LeftUpLeg, tBindP.RightUpLeg);
+      // the model's lowest point in its bind pose, for standing it on the ground
       for (const an of names) {
-        const src = this.clipSrc[an];
-        src.scene.updateMatrixWorld(true);
-        if (!src.bones) {
-          src.bones = {}; src.scene.traverse((o) => { if (o.name && tBones[o.name]) src.bones[o.name] = o; }); src.rest = restOf(src.bones);
-          src.hipsY = src.bones.Hips ? src.bones.Hips.getWorldPosition(new THREE.Vector3()).y : 1;
-          src.hipsRest = src.bones.Hips ? src.bones.Hips.position.clone() : new THREE.Vector3();
-          src.parentScale = src.bones.Hips && src.bones.Hips.parent ? src.bones.Hips.parent.getWorldScale(new THREE.Vector3()).y : 1;
-          src.parentQ = src.bones.Hips && src.bones.Hips.parent ? src.bones.Hips.parent.getWorldQuaternion(new THREE.Quaternion()) : new THREE.Quaternion();
-          src.faceYaw = facing(src.bones);
-          src.mixer = new THREE.AnimationMixer(src.scene);
-          src.action = src.mixer.clipAction(src.clip); src.action.play();
-        }
+        const src = this.clipSrc[an]; if (!src.ok) continue;
         const dur = src.clip.duration, n = Math.max(2, Math.round(dur * FPS) + 1);
-        const times = new Float32Array(n);
-        const tracks = {}, world = {};
+        const times = new Float32Array(n), tracks = {}, world = {};
         for (const bn of order) if (src.bones[bn]) tracks[bn] = new Float32Array(n * 4);
-        const hipPos = new Float32Array(n * 3);
-        const hp = new THREE.Vector3();
-        const ratio = tHipsWorldY / src.hipsY;
+        const hipPos = new Float32Array(n * 3), hp = new THREE.Vector3();
+        const ratio = tBindP.Hips.y / src.hipsY, keep = keepXZ[an] ? 1 : 0;
         Y.setFromAxisAngle(UP, ch.faceYaw - src.faceYaw); Yi.copy(Y).invert();
         for (let f = 0; f < n; f++) {
-          const t = Math.min(dur - 1e-4, (f / (n - 1)) * dur); times[f] = (f / (n - 1)) * dur;
-          src.mixer.setTime(t); src.scene.updateMatrixWorld(true);
+          times[f] = (f / (n - 1)) * dur;
+          src.mixer.setTime(Math.min(dur - 1e-4, times[f])); src.scene.updateMatrixWorld(true);
           for (const bn of order) {
             const sb = src.bones[bn]; if (!sb) continue;
             sb.getWorldQuaternion(q);
-            // world delta from rest, applied to the target's rest orientation
-            qa.copy(src.rest[bn].world).invert(); q.multiply(qa);
-            q.premultiply(Y).multiply(Yi).multiply(tRest[bn].world);
-            world[bn] = (world[bn] || new THREE.Quaternion()).copy(q);
+            qa.copy(src.bindQ[bn]).invert(); q.multiply(qa);                 // world delta from bind
+            q.premultiply(Y).multiply(Yi).multiply(tBindQ[bn]);              // turned to the target, applied to its bind
+            (world[bn] || (world[bn] = new THREE.Quaternion())).copy(q);
             const parent = tBones[bn].parent;
             if (parent && parent.isBone && world[parent.name]) qb.copy(world[parent.name]).invert().multiply(q);
-            else if (parent) { parent.getWorldQuaternion(qb).invert().multiply(q); }
-            else qb.copy(q);
+            else qb.copy(tParentQi).multiply(q);
             const arr = tracks[bn]; arr[f * 4] = qb.x; arr[f * 4 + 1] = qb.y; arr[f * 4 + 2] = qb.z; arr[f * 4 + 3] = qb.w;
           }
-          if (src.bones.Hips && tHips) {
-            // hips travel, scaled by leg length; horizontal root motion is removed (the game moves the character)
-            const keepXZ = (an === 'knockdown' || an === 'standup' || an === 'hit' || an === 'jab' || an === 'hook' || an === 'kick' || an === 'dance') ? 1 : 0;
-            hp.copy(src.bones.Hips.position).sub(src.hipsRest).applyQuaternion(src.parentQ).multiplyScalar(src.parentScale * ratio);
-            hp.applyQuaternion(Y); hp.x *= keepXZ; hp.z *= keepXZ;
-            hp.applyQuaternion(tParentQi).divideScalar(rootScale);
-            hipPos[f * 3] = tRest.Hips.pos.x + hp.x; hipPos[f * 3 + 1] = tRest.Hips.pos.y + hp.y; hipPos[f * 3 + 2] = tRest.Hips.pos.z + hp.z;
-          }
+          // hips travel in metres, scaled by leg length; sideways root motion only where the move needs it
+          hp.copy(src.bones.Hips.position).sub(src.hipsRest).applyQuaternion(src.parentQ).multiplyScalar(src.parentScale * ratio);
+          hp.applyQuaternion(Y); hp.x *= keep; hp.z *= keep;
+          hp.applyQuaternion(tParentQi).divideScalar(rootScale);
+          hipPos[f * 3] = tHipsRest.x + hp.x; hipPos[f * 3 + 1] = tHipsRest.y + hp.y; hipPos[f * 3 + 2] = tHipsRest.z + hp.z;
         }
         const kf = [];
         for (const bn of Object.keys(tracks)) kf.push(new THREE.QuaternionKeyframeTrack(bn + '.quaternion', times, tracks[bn]));
-        if (tHips && src.bones.Hips) kf.push(new THREE.VectorKeyframeTrack('Hips.position', times, hipPos));
+        kf.push(new THREE.VectorKeyframeTrack('Hips.position', times, hipPos));
         const clip = new THREE.AnimationClip(an, dur, kf);
         clip.userData = { loop: !!LOOPING[an] };
         ch.clips[an] = clip;

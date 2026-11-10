@@ -21,12 +21,12 @@ for (const f of files) {
   const k = 1.8 / Math.max(sz.x, sz.y, sz.z); o.scale.multiplyScalar(k);
   const b2 = new THREE.Box3().setFromObject(o); const c = b2.getCenter(new THREE.Vector3());
   const h = new THREE.Group(); h.add(o); o.position.sub(c); o.position.y += (b2.max.y - b2.min.y) / 2;
-  h.position.x = (i - (files.length - 1) / 2) * 2.2; h.rotation.y = yaw; s.add(h);
+  if (q.get('side')) h.position.z = (i - (files.length - 1) / 2) * 1.6; else h.position.x = (i - (files.length - 1) / 2) * 2.2; h.rotation.y = yaw; s.add(h);
   if (g.animations.length) { const m = new THREE.AnimationMixer(o); const a = m.clipAction(g.animations[g.animations.length - 1]); a.play(); m.setTime(a.getClip().duration * t); }
   info.push(f.split('/').pop() + ' size ' + sz.toArray().map(v => v.toFixed(2)).join('x') + ' anims ' + g.animations.map(a => a.name + ':' + a.duration.toFixed(2)).join('|'));
   i++;
 }
 const W = files.length * 2.2;
-cam.position.set(0, 1.2, Math.max(3.4, W * 0.62)); cam.lookAt(0, 0.9, 0);
+if (q.get('side')) { cam.position.set(Math.max(3.4, W * 0.62), 1.2, 0); } else cam.position.set(0, 1.2, Math.max(3.4, W * 0.62)); cam.lookAt(0, 0.9, 0);
 r.render(s, cam); window.__info = info; document.title = 'ready';
 </script>

@@ -2,7 +2,7 @@
 // asset-manifest.json, so a start downloads only what changed since the last one, and with no
 // network at all the last version still runs. Copies of the game that ship without a manifest
 // (the phone apps, a plain static host) are left alone: every request goes to the network.
-const CACHE = 'shchuna-d-1';
+const CACHE = 'shchuna-d-2';
 const SCOPE = new URL('./', self.location.href).pathname;
 let manifest = null, checked = 0;
 
@@ -39,17 +39,21 @@ async function serve(req, path) {
   const cache = await caches.open(CACHE), key = path + '?h=' + h;
   const hit = await cache.match(key);
   if (hit) return hit;
-  const res = await fetch(path, { cache: 'no-cache' });
-  if (res.ok && res.status === 200) cache.put(key, res.clone()).catch(() => { /* disk full: still playable from the network */ });
+  // The host answers "index.html" with a redirect to the folder, and a page may not be loaded from a
+  // redirected response: ask for the folder itself, and hand on a plain copy of whatever comes back.
+  let res = await fetch(path === 'index.html' ? './' : path, { cache: 'no-cache' });
+  if (res.redirected) res = new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
+  if (res.status === 200) cache.put(key, res.clone()).catch(() => { /* disk full: still playable from the network */ });
   return res;
 }
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', (e) => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== self.location.origin || !url.pathname.startsWith(SCOPE) || req.headers.has('range')) return;
   const path = decodeURIComponent(url.pathname.slice(SCOPE.length)) || 'index.html';
   if (path === 'asset-manifest.json' || path === 'sw.js' || path === 'health' || path === 'ws' || path.startsWith('ws/')) return;
-  e.respondWith(serve(req, path));
+  // whatever goes wrong in here, the network still gets its chance
+  e.respondWith(serve(req, path).catch(() => fetch(req)));
 });

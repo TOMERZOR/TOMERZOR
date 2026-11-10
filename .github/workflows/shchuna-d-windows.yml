@@ -1,0 +1,38 @@
+# Builds the Windows version of שכונה ד׳ (shchuna-d/desktop, an Electron shell around the game)
+# and keeps it as a workflow artifact: a plain folder with "Shchuna D.exe" inside, no installer
+# and no self-extracting step. Download the artifact, unzip it anywhere, run the exe.
+name: שכונה ד׳ · Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loving-sagan-0etvis, main]
+    paths: ["shchuna-d/desktop/**", "shchuna-d/js/**", "shchuna-d/assets/**", ".github/workflows/shchuna-d-windows.yml"]
+
+concurrency:
+  group: shchuna-d-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build
+        working-directory: shchuna-d/desktop
+        run: |
+          npm install
+          node sync.mjs
+          npx electron-builder --win dir --x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shchuna-d-windows
+          path: shchuna-d/desktop/out/win-unpacked
+          if-no-files-found: error
+          compression-level: 6

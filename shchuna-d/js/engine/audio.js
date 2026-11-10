@@ -41,6 +41,7 @@ export class GameAudio {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     this.applyVolume(); this.ready = true;
     this.startAmbience();
+    if (this.wantMenu && !this.game.playing) this.music('assets/audio/menu.m4a');
   }
   applyVolume() { if (!this.ctx) return; this.master.gain.value = this.vol.master; this.sfx.gain.value = this.vol.sfx; this.musicG.gain.value = this.vol.music; if (this.radioEl) this.radioEl.volume = clamp(this.vol.music * this.vol.master * 0.8, 0, 1); if (this.musicEl) this.musicEl.volume = clamp(this.vol.music * this.vol.master * 0.7, 0, 1); }
 
@@ -98,7 +99,10 @@ export class GameAudio {
   }
 
   // ---- music ------------------------------------------------------------------------
+  // The title theme starts as soon as the browser allows sound (first tap or key).
+  menuMusic() { this.wantMenu = true; if (this.ready && !this.musicEl) this.music('assets/audio/menu.m4a'); }
   music(file, loop = true) {
+    if (!file) this.wantMenu = false;
     if (this.musicEl) { const old = this.musicEl; this.musicEl = null; this.fade(old, 0, 700, () => old.pause()); }
     if (!file) return;
     const a = this.musicEl = new Audio(file); a.loop = loop; a.volume = 0;

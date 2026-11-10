@@ -72,6 +72,6 @@ export const ENEMIES = { dalet: ['gimel', 'goon'], gimel: ['dalet'], goon: ['dal
 
 export const RADIO = [
   { id: 'off', name: 'רדיו כבוי' },
-  { id: 'darom', name: 'רדיו דרום 97.5', file: 'assets/audio/radio_darom.mp3', tag: 'ים־תיכוני · טראפ מזרחי' },
-  { id: 'lev', name: 'קול הלב 101', file: 'assets/audio/radio_lev.mp3', tag: 'חפלות · דרבוקות · חתונות' },
+  { id: 'darom', name: 'רדיו דרום 97.5', file: 'assets/audio/radio_darom.m4a', tag: 'ים־תיכוני · טראפ מזרחי' },
+  { id: 'lev', name: 'קול הלב 101', file: 'assets/audio/radio_lev.m4a', tag: 'חפלות · דרבוקות · חתונות' },
 ];

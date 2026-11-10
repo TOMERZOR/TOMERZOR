@@ -1,0 +1,8 @@
+{
+  "appId": "com.tomerzor.shchunad",
+  "appName": "שכונה ד׳",
+  "webDir": "www",
+  "backgroundColor": "#0d0f12",
+  "android": { "backgroundColor": "#0d0f12", "allowMixedContent": false, "webContentsDebuggingEnabled": false },
+  "server": { "androidScheme": "https" }
+}

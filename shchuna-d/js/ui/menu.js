@@ -58,6 +58,7 @@ export class Menu {
   // ---- title ---------------------------------------------------------------------------
   main() {
     const g = this.game, s = this.open('main');
+    g.audio.menuMusic();
     const side = el('div', 'side', `<div class="title">שכונה ד׳</div><div class="tag">קריית שמש · סיפור מהבלוקים</div>`);
     s.appendChild(side);
     this.panel = el('div', 'panel'); s.appendChild(this.panel);

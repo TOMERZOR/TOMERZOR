@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>icon</title>
+<link rel="stylesheet" href="../css/fonts.css">
+<style>
+  html,body{margin:0;background:#0d0f12}
+  .i{width:1024px;height:1024px;position:relative;overflow:hidden;background:linear-gradient(180deg,#22313c 0%,#c9824a 58%,#e9b35c 100%)}
+  .i.fg{background:none}
+  .sun{position:absolute;left:50%;top:60%;width:560px;height:560px;margin:-280px;border-radius:50%;background:radial-gradient(circle,#ffe7a8 0%,#f5b301 46%,rgba(245,179,1,0) 70%)}
+  .blk{position:absolute;left:0;right:0;bottom:0;height:42%;background:#0d0f12;clip-path:polygon(0 30%,12% 30%,12% 12%,20% 12%,20% 30%,46% 30%,46% 0,54% 0,54% 30%,80% 30%,80% 14%,88% 14%,88% 30%,100% 30%,100% 100%,0 100%)}
+  .win{position:absolute;bottom:6%;left:8%;right:8%;height:20%;background:repeating-linear-gradient(90deg,transparent 0 5.2%,#f5b301 5.2% 8.4%,transparent 8.4% 12.5%);-webkit-mask:repeating-linear-gradient(0deg,#000 0 26%,transparent 26% 50%);opacity:.9}
+  .t{position:absolute;left:0;right:0;top:9%;text-align:center;font:700 560px/0.9 'Karantina';color:#f3efe6;text-shadow:0 14px 0 rgba(13,15,18,.55)}
+  .fg .t{top:22%;font-size:430px}
+</style>
+<div class="i" id="full"><div class="sun"></div><div class="blk"></div><div class="win"></div><div class="t">ד׳</div></div>
+<script>document.fonts.load('700 100px Karantina','ד׳').then(()=>document.fonts.ready).then(()=>{document.title='ready'})</script>

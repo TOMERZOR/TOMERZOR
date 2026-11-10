@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">שכונה ד׳</string>
+    <string name="title_activity_main">שכונה ד׳</string>
+    <string name="package_name">com.tomerzor.shchunad</string>
+    <string name="custom_url_scheme">com.tomerzor.shchunad</string>
+</resources>

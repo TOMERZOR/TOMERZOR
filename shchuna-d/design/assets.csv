@@ -1,0 +1,32 @@
+id,role,type,description,size/ratio,source
+c_hero,player character,3d rigged,Nehorai: fade haircut / teal track jacket / crossbody pouch,1.78 m,Higgsfield image_to_3d (rig + idle)
+c_shimi,ally / dalet crew,3d rigged,stocky friend in red tracksuit and slides,1.72 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_rival,gimel crew,3d rigged,lean youth in black hoodie and purple shorts,1.76 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_goon,debt collector,3d rigged,huge bald bearded man in leather jacket,1.92 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_cop,police / guard,3d rigged,patrol officer in light-blue shirt and cap (no insignia),1.80 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_savta,pedestrian / Savta Mazal,3d rigged,grandmother in headscarf and floral dress,1.55 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_dod,pedestrian / shop owner,3d rigged,pot-bellied man in undershirt and kippah,1.70 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_girl,pedestrian / Shiran,3d rigged,young woman in mustard hoodie and jeans,1.66 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_boss,Jojo / suits,3d rigged,slick grey-haired man in white linen shirt,1.78 m,Higgsfield tripo_h3_1 + 3d_rigging
+c_mom,mother / pedestrian,3d rigged,tired warm woman in burgundy blouse and denim skirt,1.62 m,Higgsfield tripo_h3_1 + 3d_rigging
+clips,animation,14 clips,idle walk run jab hook kick hit knockdown standup sit talk jump guard dance,-,Higgsfield 3d_rigging on the hero (retargeted in game)
+v_sedan,vehicle,3d,1990s white family sedan (tinted per instance; also the taxi),4.3 m,Higgsfield tripo_h3_1
+v_hatch,vehicle,3d,small city hatchback,3.85 m,Higgsfield tripo_h3_1
+v_pickup,vehicle,3d,single-cab utility pickup,5.1 m,Higgsfield tripo_h3_1
+v_van,vehicle,3d,commercial panel van,5.2 m,Higgsfield tripo_h3_1
+v_police,vehicle,3d,white patrol car with blue stripe,4.5 m,Higgsfield tripo_h3_1
+v_armored,vehicle,3d,cash-in-transit truck,6.0 m,Higgsfield tripo_h3_1
+v_truck,vehicle,3d,box delivery truck,6.4 m,Higgsfield tripo_h3_1
+v_bus,vehicle,3d,green and white city bus,11.5 m,Higgsfield tripo_h3_1
+v_tractor,vehicle,3d,yellow backhoe loader,6.8 m,Higgsfield tripo_h3_1
+v_moped,vehicle,3d,delivery maxi-scooter with top box,2.15 m,Higgsfield tripo_h3_1
+p_dumpster,street prop,3d,green rounded municipal dumpster,2.3 m,Higgsfield tripo_h3_1
+p_chair,street prop,3d,white plastic monobloc chair,0.84 m,Higgsfield tripo_h3_1
+p_atm,street prop,3d,outdoor cash machine,2.3 m,Higgsfield tripo_h3_1
+p_cat,ambient animal,3d,ginger street cat,0.42 m,Higgsfield tripo_h3_1
+plaster concrete asphalt paving sand grass roof,surface textures,tile + normal,seamless 1k tiles made tileable in tools/build-textures.py,1:1,Higgsfield nano_banana_2
+key,menu / loading art,image,Nehorai in front of the block at golden hour,16:9,Higgsfield gpt_image_2_6
+face_*,dialogue portraits,image,crops of the character concept images,1:1,derived
+menu radio_darom radio_lev,music,audio,title theme and two radio stations (instrumental loops),40 s,Higgsfield sonilo_music
+windows signs posters graffiti murals,world detail,canvas,drawn at load with real Hebrew type (js/world/textures.js),-,procedural
+sfx,sound effects,synth,hits engine siren footsteps ambience (js/engine/audio.js),-,procedural

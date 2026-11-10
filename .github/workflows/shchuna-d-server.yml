@@ -1,0 +1,78 @@
+# Deploys the online room server of שכונה ד׳ (shchuna-d/server) to Cloudflare Workers:
+# a Durable Object that relays between the players in a room, plus a full copy of the game.
+# Then writes the Worker's address into shchuna-d/js/net/config.js so every other copy
+# (the Android app, a static host) knows where the rooms are.
+# Needs the repository secret CLOUDFLARE_API_TOKEN; without it the workflow skips itself.
+name: שכונה ד׳ · server
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/loving-sagan-0etvis, main]
+    paths: ["shchuna-d/**", "!shchuna-d/js/net/config.js", "!shchuna-d/app/**", ".github/workflows/shchuna-d-server.yml"]
+
+concurrency:
+  group: shchuna-d-server
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # to save the server address in the game's config
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is not set; skipping the deploy."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          node-version: 22
+
+      - name: Deploy
+        if: steps.secrets.outputs.ready == 'true'
+        id: deploy
+        working-directory: shchuna-d/server
+        run: |
+          npm install
+          npm run sync
+          npx wrangler deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -n 1)
+          if [ -z "$url" ]; then echo "::error::Could not find the workers.dev address in the deploy output"; exit 1; fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice::שכונה ד׳ is live at $url"
+
+      - name: Check the server answers
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "${{ steps.deploy.outputs.url }}/health" | tee health.json | grep -q '"game":"shchuna-d"'; then exit 0; fi
+            sleep 10
+          done
+          echo "::error::The server did not answer /health"; cat health.json; exit 1
+
+      - name: Point the game at the server
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          API_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          sed -i -E "s|^(  server: )\"[^\"]*\",|\1\"$API_URL\",|" shchuna-d/js/net/config.js
+          if git diff --quiet; then echo "The game already uses $API_URL"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "שכונה ד׳: use the deployed room server at $API_URL"
+          git push

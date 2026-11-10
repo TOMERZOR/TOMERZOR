@@ -72,6 +72,7 @@ export class Missions {
       if (e && e.abort) { result = 'fail'; reason = e.message; }
       else { console.error('mission error', e); result = 'fail'; reason = 'משהו השתבש'; }
     }
+    this.lastResult = { id: m.id, result, reason };
     ctx.cleanup(result);
     this.waits.length = 0; this.fails.length = 0; this.target = null; this.timer = null;
     g.ui.objective(''); g.ui.hideDialog(); g.endCutscene(true);

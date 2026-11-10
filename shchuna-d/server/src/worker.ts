@@ -14,6 +14,7 @@ export default {
       if (!ROOM_RE.test(room)) return new Response("invalid room name", { status: 400 });
       return env.ROOMS.get(env.ROOMS.idFromName(room.toUpperCase())).fetch(request);
     }
+    if (url.pathname === "/health") return Response.json({ game: "shchuna-d", ok: true }, { headers: { "access-control-allow-origin": "*" } });
     if (request.method === "GET" && request.headers.get("Accept")?.includes("text/html")) return env.ASSETS.fetch(new Request(new URL("/", url), request));
     return new Response("not found", { status: 404 });
   },

@@ -5,16 +5,18 @@ import { HEISTS, heistMissions } from '../game/heists.js';
 import { VEHICLES } from '../game/defs.js';
 import { POI, groundY } from '../world/map.js';
 import { el, fmtMoney, dampAngle, clamp } from '../core/util.js';
+import { NET } from './config.js';
 
 const PROFILE_KEY = 'shchunaD.online.v1';
 const COLORS = [0xffffff, 0xffb070, 0x9ad0ff, 0xb8f0a0];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 export function wsBase() {
-  const h = location.hostname, local = location.port === '8787';
-  if (h.endsWith('higgsfield.app') || local) return (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+  const h = location.hostname;
+  const own = h.endsWith('.workers.dev') || h.endsWith('higgsfield.app') || location.port === '8787';
   const q = new URLSearchParams(location.search).get('server');
-  return q || 'wss://shchuna-d.higgsfield.app';
+  const base = q || (own ? location.origin : NET.server);
+  return base.replace(/^http/, 'ws').replace(/\/$/, '');
 }
 
 export class Online {

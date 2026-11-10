@@ -82,7 +82,7 @@ const MODELS = {
   e_ficus: { src: 'env/ficus3.glb', tex: 1024, tris: 7000 },
   e_euc: { src: 'env/euc2.glb', tex: 1024, tris: 6000 },
   e_bush: { src: 'env/bush.glb', tex: 48, tris: 2500, sloppy: 2200 },
-  e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 2500 },
+  e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 4000 },
   e_shelter: { src: 'env/shelter.glb', tex: 1024, tris: 6000 },
 };
 // clip name -> raw file. The clip is stored without mesh; the game retargets it onto every character.

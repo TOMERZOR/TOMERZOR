@@ -217,6 +217,16 @@ export class CityBuilder {
   wall(ch, x0, z0, x1, z1, h = 1, t = 0.2, col = PAL[2], mat = 'plaster') {
     const len = Math.hypot(x1 - x0, z1 - z0), yaw = Math.atan2(x1 - x0, z1 - z0) - Math.PI / 2;
     const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    if (this.models.e_wall && h <= 2.2) {
+      // sections of a generated wall laid end to end, every other one turned round
+      const n = Math.max(1, Math.round(len / 6)), piece = len / n;
+      for (let i = 0; i < n; i++) {
+        const [mx, mz] = this.at(cx, cz, yaw, -len / 2 + piece * (i + 0.5), 0);
+        this.fit(ch, 'e_wall', mx, mz, yaw + (i % 2 ? Math.PI : 0), piece, Math.max(t, 0.3), h);
+      }
+      this.solid(cx, cz, len / 2, t / 2, yaw, h);
+      return;
+    }
     ch.get(mat).box(cx, CURB, cz, len, h, t, yaw, { c: shade(col, 0.82), cTop: col, s: 3 });
     this.solid(cx, cz, len / 2, t / 2, yaw, h);
   }
@@ -366,6 +376,17 @@ export class CityBuilder {
   }
 
   streetSign(ch, x, z, yaw, name, sub) {
+    const idx = roads.findIndex((r) => r.name === name);
+    if (idx >= 0 && idx < 12 && this.M.sgn_signs_streets) {
+      // a generated pole, and the street's plate from the plate sheet on both faces
+      if (!this.stand(ch, 'e_signpost', x, z, yaw, 3.05)) ch.get('paint').cyl(x, CURB, z, 0.04, 0.04, 2.9, 5, rgb('#8c9296'), rgb('#8c9296'), false);
+      const B = ch.get('sgn_signs_streets'), v0 = 1 - (idx + 1) / 12, v1 = 1 - idx / 12, y0 = CURB + 2.5, y1 = y0 + 0.22;
+      for (const s of [1, -1]) {
+        const [ax, az] = this.at(x, z, yaw, s * 0.08, s * 0.03), [bx, bz] = this.at(x, z, yaw, s * 1.5, s * 0.03);
+        B.quad([ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az], [0.18, v0, 0.82, v1]);
+      }
+      return;
+    }
     const P = ch.get('paint'), grey = rgb('#8c9296');
     P.cyl(x, CURB, z, 0.04, 0.04, 2.9, 5, grey, grey, false);
     const r = this.sign({ style: 'street', text: name, sub }, 256, 96);

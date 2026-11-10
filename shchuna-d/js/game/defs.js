@@ -77,4 +77,4 @@ export const RADIO = [
 ];
 
 // Generated buildings and street furniture beyond the first set (assets/models/<name>.glb).
-export const ENV_MODELS = ['b_school', 'b_police', 'b_bituach', 'b_city', 'b_wedding', 'b_matnas', 'b_garage', 'b_scrap', 'b_hangarA', 'b_hangarB', 'b_tower', 'b_skeleton', 'b_gas', 'e_stall', 'b_shops2', 'b_shops3', 'b_blockD', 'b_blockE', 'e_bench', 'e_crane', 'e_euc', 'e_bush', 'b_station', ];
+export const ENV_MODELS = ['b_school', 'b_police', 'b_bituach', 'b_city', 'b_wedding', 'b_matnas', 'b_garage', 'b_scrap', 'b_hangarA', 'b_hangarB', 'b_tower', 'b_skeleton', 'b_gas', 'e_stall', 'b_shops2', 'b_shops3', 'b_blockD', 'b_blockE', 'e_bench', 'e_crane', 'e_euc', 'e_bush', 'b_station', 'e_signpost', 'e_wall', ];

@@ -364,7 +364,7 @@ function blobShadow() {
 
 // ---- Material set ----------------------------------------------------------------
 // Sign sheets mounted over generated models (see CityBuilder.boards).
-export const SIGN_SHEETS = ['signs_shops', 'signs_shops2', 'signs_shops3', 'signs_wide', 'signs_civic'];
+export const SIGN_SHEETS = ['signs_shops', 'signs_shops2', 'signs_shops3', 'signs_wide', 'signs_civic', 'signs_streets'];
 
 export async function createMaterials(gfx) {
   const aniso = Math.min(gfx.q.aniso, gfx.maxAniso);

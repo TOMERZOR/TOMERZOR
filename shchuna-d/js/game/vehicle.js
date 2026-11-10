@@ -9,6 +9,7 @@ import { groundY, nearestLane, nearestNode, routeNodes, WORLD_HALF } from '../wo
 const _p = { x: 0, z: 0, y: 0 };
 let vid = 1;
 const glowGeo = new THREE.PlaneGeometry(1, 1);
+const SADDLE = 0.45;                 // how high the sitting clip holds the seat of the trousers
 
 export class Vehicle {
   constructor(game, type, opt = {}) {
@@ -95,6 +96,14 @@ export class Vehicle {
     const s = this.def.bike ? 0.75 : this.wid / 2 + 0.6;
     out.x = this.pos.x - rx * s * side + this.fx * (this.def.seat[2] * 0.3); out.z = this.pos.z - rz * s * side + this.fz * (this.def.seat[2] * 0.3);
     return out;
+  }
+  // A rider sits on the saddle, turns and leans with the bike. (A car's driver is hidden inside.)
+  seatRider(a) {
+    const s = this.def.seat, up = s[1] - SADDLE, c = Math.cos(this.roll), sn = Math.sin(this.roll);
+    const rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);             // the bike's own +X in the world
+    a.pos.set(this.pos.x + this.fx * s[2] - rx * sn * up, this.pos.y + c * up, this.pos.z + this.fz * s[2] - rz * sn * up);
+    a.root.rotation.set(0, this.yaw, this.roll, 'YXZ');
+    if (a.state !== 'sit' && !a.ko) a.sit(true);
   }
   wake() { this.sleep = false; this.idleT = 0; }
 

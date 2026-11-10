@@ -191,8 +191,9 @@ export class Actor {
     if (this.combatT > 0) this.combatT -= dt;
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
     this.stagger = Math.max(0, this.stagger - dt * 9);
-    if (this.vehicle) { this.root.visible = this.visible && !!this.vehicle.def.bike; if (this.mixer && this.root.visible) this.mixer.update(dt); return; }
+    if (this.vehicle) { this.root.visible = this.visible && !!this.vehicle.def.bike; this.shadow.visible = false; if (this.mixer && this.root.visible) this.mixer.update(dt); return; }
     this.root.visible = this.visible;
+    if (!this.shadow.visible) { this.shadow.visible = true; this.root.rotation.set(0, this.heading, 0); if (this.state === 'sit') this.setState('idle'); }      // just got off a bike
 
     const w = this.wish; let sp = 0, mx = 0, mz = 0;
     if (this.state === 'idle' || this.state === 'jump') { sp = w.speed * this.speedMul; mx = w.x; mz = w.z; }

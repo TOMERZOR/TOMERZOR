@@ -436,7 +436,7 @@ export class World {
     for (const v of this.vehicles) { if (v.remoteDriver || v.ghost && v !== g.player.vehicle) { v.updateLights(dt, 0); continue; } if (v.ai && !v.wreck) v.ai.update(g, dt); else if (!v.driver) { v.in.throttle = 0; v.in.brake = 0.3; v.in.steer = 0; } v.update(dt); }
     collideVehicles(g, this.vehicles);
     collideVehicleActors(g, this.vehicles.filter((v) => !v.sleep), this.actors);
-    for (const a of this.actors) if (a.vehicle) { a.pos.copy(a.vehicle.pos); a.heading = a.vehicle.yaw; }
+    for (const a of this.actors) if (a.vehicle) { const v = a.vehicle; a.heading = v.yaw; if (v.def.bike) v.seatRider(a); else a.pos.copy(v.pos); }
     this.updateCats(dt);
   }
 

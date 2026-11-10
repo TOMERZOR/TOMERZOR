@@ -94,6 +94,9 @@ export class Game {
     this.bus.on('wreck', (v) => { if (v === this.player.vehicle) this.ui.notify('הרכב גמור. צא ממנו.', 'bad'); this.fx.puff(v.pos.x, v.pos.y + 1, v.pos.z); });
     this.bus.on('wanted', (lvl, before) => { if (lvl > before && lvl === 1) this.ui.notify('המשטרה מחפשת אותך. תיעלם להם מהעיניים.', 'cop'); });
     this.bus.on('crash', (v, imp) => { if (v === this.player.vehicle && imp > 4) { this.cam.shake(clamp(imp / 20, 0.1, 0.7)); this.input.vibrate(60); } });
+    // Esc hands the mouse back to the browser before the page ever sees the key: losing the mouse
+    // in the middle of play is the pause button.
+    document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && this.playing && !this.paused && !this.cutscene && !this.menu.screen && !this.input.touch && this.input.wantLock) this.menu.pause(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.playing && !this.paused && !this.net.active) this.menu.pause(); });
     prog(1);
     // menu backdrop: the block at golden hour

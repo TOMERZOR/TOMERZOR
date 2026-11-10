@@ -304,7 +304,7 @@ function gas(B, ch, b, rng) {
 function wedding(B, ch, b, rng) {
   base(B, ch, b, 'asphalt', 6, [0.8, 0.8, 0.8]);
   const x = b.cx + 10, z = b.cz - 12, w = 52, d = 34;
-  B.civic(ch, { x, z, w, d, floors: 2, yaw: Math.PI, tint: '#f1ead8', seed: 7, kind: 'wedding', win: 'open', lit: 0.9, poi: 'wedding', signW: 14,
+  B.civic(ch, { x, z, w, d, floors: 2, yaw: 0, tint: '#f1ead8', seed: 7, kind: 'wedding', win: 'open', lit: 0.9, poi: 'wedding', signW: 14,
     sign: { text: 'אולמי ורסאי', sub: 'אירועים · כנסים · מנה שנייה בתוספת תשלום', bg: '#16181d', fg: '#e0b84a', font: '"Suez One"' } });
   // a portico that tries very hard
   const gold = rgb('#d2ab45'), white = rgb('#f3efe6');

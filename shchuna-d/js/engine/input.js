@@ -42,7 +42,7 @@ export class Input {
 
     canvas.addEventListener('mousedown', (e) => {
       if (this.touch) return;
-      if (!this.locked && this.wantLock) { canvas.requestPointerLock && canvas.requestPointerLock(); return; }
+      if (!this.locked && this.wantLock) { this.lock(); return; }
       if (e.button === 0) { this._queued.punch = true; this.keys.Mouse0 = true; }
       if (e.button === 2) { this._queued.kick = true; this.keys.Mouse2 = true; }
     });
@@ -57,6 +57,13 @@ export class Input {
     window.addEventListener('gamepadconnected', (e) => { this.gamepadIndex = e.gamepad.index; });
     window.addEventListener('gamepaddisconnected', () => { this.gamepadIndex = -1; });
     this.wantLock = false;
+  }
+
+  // Take the mouse for the camera. Only works inside a click or key press, and the browser may still
+  // say no (it does for a second after Esc); the next click on the view asks again.
+  lock() {
+    if (this.touch || this.locked || !this.canvas.requestPointerLock) return;
+    try { const p = this.canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* not now */ }
   }
 
   // Touch layer: built by the HUD, which hands us the elements.

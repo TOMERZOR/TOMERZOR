@@ -26,11 +26,11 @@ const FACE = {};
 const SIGNS = {
   b_shops: { tex: 'signs_shops', rects: [[0.03, 0.28, 0.555, 0.67], [0.295, 0.5, 0.555, 0.67], [0.52, 0.705, 0.555, 0.67], [0.72, 0.97, 0.555, 0.67]] },
   b_shops2: { tex: 'signs_shops2', rects: [[0.03, 0.277, 0.545, 0.675], [0.29, 0.5, 0.545, 0.675], [0.52, 0.732, 0.545, 0.675], [0.753, 0.97, 0.545, 0.675]] },
-  b_garage: { tex: 'signs_wide', n: 8, rects: [[0.17, 0.84, 0.66, 0.84, 0]] },
+  b_garage: { tex: 'signs_wide', n: 8, rects: [[0.17, 0.84, 0.625, 0.84, 0]] },
   b_scrap: { tex: 'signs_wide', n: 8, rects: [[0.17, 0.83, 0.52, 0.74, 1]] },
   b_hangarA: { tex: 'signs_wide', n: 8, rects: [[0.3, 0.72, 0.66, 0.8, 2]] },
   b_hangarB: { tex: 'signs_wide', n: 8, rects: [[0.255, 0.79, 0.7, 0.82, 3]] },
-  b_gas: { tex: 'signs_wide', n: 8, rects: [[0.28, 0.72, 0.775, 0.895, 4]] },
+  b_gas: { tex: 'signs_wide', n: 8, rects: [[0.28, 0.8, 0.725, 0.875, 4], [0.37, 0.82, 0.725, 0.875, 4, 1], [0.04, 0.46, 0.725, 0.875, 4, 2], [0.4, 0.85, 0.725, 0.875, 4, 3]] },
   b_wedding: { tex: 'signs_wide', n: 8, rects: [[0.23, 0.77, 0.755, 0.895, 5]] },
   b_matnas: { tex: 'signs_wide', n: 8, rects: [[0.18, 0.51, 0.335, 0.425, 6]] },
   b_bituach: { tex: 'signs_wide', n: 8, rects: [[0.31, 0.68, 0.235, 0.315, 7]] },
@@ -41,6 +41,8 @@ const SIGNS = {
   b_shops3: { tex: 'signs_shops3', rects: [[0.06, 0.277, 0.5, 0.645], [0.31, 0.497, 0.5, 0.645], [0.52, 0.702, 0.5, 0.645], [0.74, 0.932, 0.5, 0.645]] },
 };
 
+// End-wall colour of each generated block and how far up its height the wall itself goes.
+const GABLE = { b_blockA: ['#d2c6a6', 0.98], b_blockB: ['#bfa462', 1.0], b_blockC: ['#c2a497', 1.0], b_blockD: ['#dcdad3', 1.0] };
 const CAM_BLOCK = /^(b_station|b_shops|b_gas|b_skeleton|e_shelter|e_busstop|e_stall)/;
 
 export class CityBuilder {
@@ -282,24 +284,28 @@ export class CityBuilder {
     const def = SIGNS[name];
     if (!def || !this.M['sgn_' + def.tex]) return;
     if (!md.boards) {
-      const [turn, L] = this.frame(name, md);
+      const [turn, L, D] = this.frame(name, md);
       const probe = new THREE.Mesh(md.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
       probe.matrixAutoUpdate = false; probe.matrix.copy(new THREE.Matrix4().makeRotationY(turn).multiply(md.matrix)); probe.matrixWorld.copy(probe.matrix);
-      const ray = new THREE.Raycaster(), dir = new THREE.Vector3(0, 0, -1), o = new THREE.Vector3();
-      md.boards = def.rects.map(([u0, u1, v0, v1, band], i) => {
-        let front = -Infinity;
+      const ray = new THREE.Raycaster(), dir = new THREE.Vector3(), o = new THREE.Vector3();
+      // a sixth number picks the wall: 0 the street front, 1 the right end, 2 the back, 3 the left end
+      md.boards = def.rects.map(([u0, u1, v0, v1, band, face = 0], i) => {
+        const phi = face * Math.PI / 2, tx = Math.cos(phi), tz = -Math.sin(phi), nx = Math.sin(phi), nz = Math.cos(phi), W = face % 2 ? D : L;
+        let front = -Infinity; dir.set(-nx, 0, -nz);
         for (const fu of [0.03, 0.15, 0.3, 0.5, 0.7, 0.85, 0.97]) for (const fv of [0.1, 0.5, 0.9]) {
-          o.set((u0 + (u1 - u0) * fu - 0.5) * L, md.minY + (v0 + (v1 - v0) * fv) * md.size.y, 50);
+          const a = (u0 + (u1 - u0) * fu - 0.5) * W;
+          o.set(tx * a + nx * 50, md.minY + (v0 + (v1 - v0) * fv) * md.size.y, tz * a + nz * 50);
           ray.set(o, dir); const hit = ray.intersectObject(probe, false)[0];
-          if (hit) front = Math.max(front, hit.point.z);
+          if (hit) front = Math.max(front, hit.point.x * nx + hit.point.z * nz);
         }
-        return { x0: (u0 - 0.5) * L, x1: (u1 - 0.5) * L, y0: v0 * md.size.y, y1: v1 * md.size.y, z: front, i: band === undefined ? i : band };
-      }).filter((b) => b.z > -Infinity);
+        return { a0: (u0 - 0.5) * W, a1: (u1 - 0.5) * W, y0: v0 * md.size.y, y1: v1 * md.size.y, f: front, tx, tz, nx, nz, i: band === undefined ? i : band };
+      }).filter((b) => b.f > -Infinity);
     }
     const B = ch.get('sgn_' + def.tex), n = def.n || def.rects.length;
     for (const b of md.boards) {
-      const lz = b.z * kz + 0.06, ya = y + b.y0 * ky, yb = y + b.y1 * ky;
-      const [ax, az] = this.at(x, z, yaw, b.x0 * kx, lz), [bx, bz] = this.at(x, z, yaw, b.x1 * kx, lz);
+      const ya = y + b.y0 * ky, yb = y + b.y1 * ky;
+      const P = (a) => this.at(x, z, yaw, (b.tx * a + b.nx * b.f) * kx + b.nx * 0.06, (b.tz * a + b.nz * b.f) * kz + b.nz * 0.06);
+      const [ax, az] = P(b.a0), [bx, bz] = P(b.a1);
       B.quad([ax, ya, az], [bx, ya, bz], [bx, yb, bz], [ax, yb, az], [0, 1 - (b.i + 1) / n, 1, 1 - b.i / n]);
     }
   }
@@ -413,7 +419,7 @@ export class CityBuilder {
     const rng = new Rng(o.seed || 1);
     // With a generated building available the procedural pass still runs for its collision,
     // doors and hang-outs, but draws into a chunk that is never built.
-    const flat = ['b_blockA', 'b_blockC', 'b_blockD', 'b_blockE'].filter((k) => this.models[k]);
+    const flat = ['b_blockA', 'b_blockC', 'b_blockD'].filter((k) => this.models[k]);
     const pick = o.pilotis ? 'b_blockB' : (flat[(o.seed || 1) % Math.max(1, flat.length)] || 'b_blockA');
     const mdl = this.models[pick] ? pick : null, real = ch;
     if (mdl) ch = new Chunk('void');
@@ -577,6 +583,20 @@ export class CityBuilder {
           const [hx, hz] = this.at(mx, mz, yaw, 0, s * d2 / 2);
           this.fit(real, mdl, hx, hz, yaw + (s > 0 ? 0 : Math.PI), piece, d2, (top - CURB) * 1.13);
         }
+      }
+      // The two halves meet in a seam down each gable. A rendered end wall in the block's own colour
+      // covers it and carries what the gable always had: small windows, the block number, a tag.
+      const G = GABLE[mdl] || GABLE.b_blockA, gc = rgb(G[0]), gd = dep + (pil ? 0.6 : 1.5) + 0.1, gy = pil ? y0 : CURB, gh = CURB + (top - CURB) * G[1] - gy;
+      for (const s of [1, -1]) {
+        const [gx, gz] = this.at(x, z, yaw, s * (len / 2 + 0.02), 0), ey = yaw + s * Math.PI / 2, out = len / 2 + 0.1;
+        real.get('plaster').box(gx, gy, gz, 0.14, gh, gd, yaw, { c: shade(gc, 0.84), cTop: gc, s: 3.4 });
+        for (let f = 0; f < floors; f++) for (const lx of [-gd / 4, gd / 4]) {
+          if (rng.chance(0.25)) continue;
+          real.get(rng.chance(0.3) ? 'winLit' : 'win').panel(x, z, ey, lx, y0 + f * FH + 1.15, 0.85, 1.05, out, WIN[rng.pick(['bars', 'shutClosed', 'shutHalf', 'shutDirty'])]);
+        }
+        for (let i = 0; i < 3; i++) if (rng.chance(0.75)) { const sh = rng.f(2.2, 4.4); real.get('decal').panel(x, z, ey, rng.f(-gd / 2 + 0.6, gd / 2 - 0.6), gy + gh - sh - 0.05, rng.f(0.5, 1.1), sh, out + 0.003, this.stain); }     // rain streaks from the roof edge
+        if (o.number) real.get('decal').panel(x, z, ey, 0, top - 2.3, 2.4, 1.5, out + 0.005, this.graffiti(String(o.number), '#2b3440'));
+        if (!pil && rng.chance(0.7)) this.tag(real, x, z, ey, rng.f(-1.5, 1.5), CURB + rng.f(0.5, 1.2), out + 0.006, rng, o.gimel);
       }
     }
     return { top, y0, front, seg, nEnt };

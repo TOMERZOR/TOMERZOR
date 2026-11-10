@@ -64,8 +64,8 @@ export class Menu {
     s.appendChild(side);
     this.panel = el('div', 'panel'); s.appendChild(this.panel);
     this.list(side, [
-      g.hasSave() ? { label: 'המשך', hint: 'מהשמירה האחרונה', action: () => g.continueGame() } : null,
-      { label: 'סיפור חדש', hint: 'נהוראי חוזר הביתה', action: () => (g.hasSave() ? this.confirmNew() : g.newGame()) },
+      g.hasSave() ? { label: 'המשך', hint: 'מהשמירה האחרונה', action: () => { g.input.lock(); g.continueGame(); } } : null,
+      { label: 'סיפור חדש', hint: 'נהוראי חוזר הביתה', action: () => { if (g.hasSave()) this.confirmNew(); else { g.input.lock(); g.newGame(); } } },
       { label: 'אונליין', hint: 'שודים עם חברים', action: () => g.net.lobby() },
       { label: 'הגדרות', action: () => this.settings() },
       { label: 'קרדיטים', action: () => this.credits() },
@@ -75,7 +75,7 @@ export class Menu {
   confirmNew() {
     const p = this.panel; p.innerHTML = '<h3>להתחיל מחדש?</h3><p class="lead">יש שמירה קיימת. סיפור חדש ימחק אותה.</p>';
     const row = el('div'); row.style.cssText = 'display:flex;gap:.8rem;margin-top:1.2rem'; p.appendChild(row);
-    const y = el('button', 'btn', 'כן, מהתחלה'); y.onclick = () => this.game.newGame(); const n = el('button', 'btn ghost', 'ביטול'); n.onclick = () => { p.innerHTML = ''; };
+    const y = el('button', 'btn', 'כן, מהתחלה'); y.onclick = () => { this.game.input.lock(); this.game.newGame(); }; const n = el('button', 'btn ghost', 'ביטול'); n.onclick = () => { p.innerHTML = ''; };
     row.append(y, n);
   }
   credits() {
@@ -135,7 +135,7 @@ export class Menu {
     ]);
     if (tab === 'map') this.map(); else if (g.mode === 'online') g.net.board(); else this.status();
   }
-  resume() { const g = this.game; g.net.boardOpen = false; this.close(); g.paused = false; g.audio.pause(false); if (!g.input.touch) { const c = g.gfx.canvas; if (c.requestPointerLock) { try { c.requestPointerLock(); } catch (e) { /* needs a gesture */ } } } }
+  resume() { const g = this.game; g.net.boardOpen = false; this.close(); g.paused = false; g.audio.pause(false); g.input.lock(); }
   map() {
     this.panel.innerHTML = '<h3>קריית שמש</h3>';
     const cv = el('canvas', 'bigmap'); cv.width = cv.height = 900; this.panel.appendChild(cv);

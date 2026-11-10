@@ -25,6 +25,7 @@ export class Hud {
       <div class="goal hidden"><span class="txt"></span><span class="timer num hidden"></span><div class="meter hidden"><i></i></div></div>
       <div class="subs"></div>
       <div class="prompt hidden"></div>
+      <div class="lockhint hidden">לחץ על המסך כדי לשלוט במצלמה עם העכבר</div>
       <div class="br"><div class="zone"></div><div class="speedo hidden"><span class="num">0</span><small>קמ״ש</small></div></div>`;
     ui.appendChild(root);
     const q = (s) => root.querySelector(s);
@@ -33,7 +34,7 @@ export class Hud {
     this.whereB = q('.where b'); this.whereS = q('.where span'); this.feed = q('.feed');
     this.moneyEl = q('.money'); this.clockEl = q('.clock'); this.beacons = q('.beacons');
     this.goalEl = q('.goal'); this.goalTxt = q('.goal .txt'); this.timerEl = q('.goal .timer'); this.meterEl = q('.goal .meter'); this.meterFill = q('.goal .meter i');
-    this.subsEl = q('.subs'); this.promptEl = q('.prompt'); this.zoneEl = q('.zone'); this.speedo = q('.speedo'); this.speedNum = q('.speedo .num');
+    this.subsEl = q('.subs'); this.promptEl = q('.prompt'); this.lockEl = q('.lockhint'); this.zoneEl = q('.zone'); this.speedo = q('.speedo'); this.speedNum = q('.speedo .num');
     this.layer = el('div'); this.layer.style.cssText = 'position:absolute;inset:0;overflow:hidden'; ui.appendChild(this.layer);
     this.cine = el('div', 'bars-cine'); ui.appendChild(this.cine);
     this.over = el('div'); this.over.style.cssText = 'position:absolute;inset:0'; ui.appendChild(this.over);
@@ -276,6 +277,8 @@ export class Hud {
     this.stFill.style.transform = `scaleX(${clamp(pl.stamina, 0, 1)})`;
     // money counts up rather than jumping
     if (this.moneyShown !== pl.money) { const d = pl.money - this.moneyShown; this.moneyShown = Math.abs(d) < 2 ? pl.money : this.moneyShown + d * Math.min(1, dt * 7); this.moneyEl.textContent = fmtMoney(this.moneyShown); }
+    const inp = game.input;
+    this.lockEl.classList.toggle('hidden', !(game.playing && !game.paused && inp.wantLock && !inp.locked && !inp.touch && inp.lastDevice !== 'pad'));
     const lvl = game.wanted.level;
     if (lvl !== this.lastWanted) { this.lastWanted = lvl; [...this.beacons.children].forEach((b, i) => b.classList.toggle('on', i < lvl)); }
     this.beacons.classList.toggle('flash', lvl > 0 && game.wanted.flash);

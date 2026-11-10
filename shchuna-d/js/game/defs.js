@@ -35,12 +35,12 @@ export const CIV_MIX = ['dod', 'dod', 'savta', 'girl', 'girl', 'mom', 'suit', 'y
 // Vehicles. len/wid in metres, mass in tonnes-ish, top speed m/s. front: which model axis faces forward.
 export const VEHICLES = {
   sedan:   { model: 'v_sedan',   name: 'סוסיתא 1.6',      len: 4.3, wid: 1.72, hgt: 1.42, mass: 1.1, top: 36, acc: 7.5, grip: 1.0, tints: [0xffffff, 0xc9302a, 0x2a4f9a, 0x8e8e8e, 0x23262b, 0xc8b070, 0x3a7a5a], seat: [0.38, 0.55, 0.1] },
-  hatch:   { model: 'v_hatch',   name: 'גטס עירונית',      len: 3.85, wid: 1.68, hgt: 1.5, mass: 1.0, top: 34, acc: 7.0, grip: 1.05, tints: [0xffffff, 0xd9d9d9, 0xb3261e, 0x3d5f9e, 0x6a6a6a, 0xf0c040], seat: [0.36, 0.55, 0.05] },
+  hatch:   { model: 'v_hatch',   name: 'נמלה עירונית',     len: 3.85, wid: 1.68, hgt: 1.5, mass: 1.0, top: 34, acc: 7.0, grip: 1.05, tints: [0xffffff, 0xd9d9d9, 0xb3261e, 0x3d5f9e, 0x6a6a6a, 0xf0c040], seat: [0.36, 0.55, 0.05] },
   pickup:  { model: 'v_pickup',  name: 'טנדר מגנום',       len: 5.1, wid: 1.82, hgt: 1.75, mass: 1.7, top: 33, acc: 6.5, grip: 0.92, tints: [0xffffff, 0xd9d2bd, 0x9a9a9a, 0x7a3a2a], seat: [0.42, 0.75, 0.5] },
-  van:     { model: 'v_van',     name: 'טרנזיט עבודה',     len: 5.2, wid: 1.95, hgt: 2.3, mass: 2.0, top: 30, acc: 5.5, grip: 0.88, tints: [0xffffff, 0xe8e8e8, 0xf0d060], seat: [0.45, 0.9, 1.2] },
+  van:     { model: 'v_van',     name: 'ואן קבלנים',       len: 5.2, wid: 1.95, hgt: 2.3, mass: 2.0, top: 30, acc: 5.5, grip: 0.88, tints: [0xffffff, 0xe8e8e8, 0xf0d060], seat: [0.45, 0.9, 1.2] },
   taxi:    { model: 'v_sedan',   name: 'מונית',            len: 4.3, wid: 1.72, hgt: 1.42, mass: 1.1, top: 37, acc: 7.8, grip: 1.0, tints: [0xffffff], seat: [0.38, 0.55, 0.1], roofSign: 0xf5d020 },
   police:  { model: 'v_police',  name: 'ניידת',            len: 4.5, wid: 1.82, hgt: 1.7, mass: 1.5, top: 42, acc: 9.5, grip: 1.12, tints: [0xffffff], seat: [0.4, 0.7, 0.2], siren: true },
-  armored: { model: 'v_armored', name: 'רכב ברינגס',       len: 6.0, wid: 2.3, hgt: 2.7, mass: 5.5, top: 26, acc: 4.2, grip: 0.85, tints: [0xffffff], seat: [0.5, 1.2, 1.4], tough: 4 },
+  armored: { model: 'v_armored', name: 'משוריין כספים',    len: 6.0, wid: 2.3, hgt: 2.7, mass: 5.5, top: 26, acc: 4.2, grip: 0.85, tints: [0xffffff], seat: [0.5, 1.2, 1.4], tough: 4 },
   truck:   { model: 'v_truck',   name: 'משאית חלוקה',      len: 6.4, wid: 2.3, hgt: 3.0, mass: 4.0, top: 27, acc: 4.5, grip: 0.85, tints: [0xffffff, 0xe8e0c8], seat: [0.5, 1.3, 2.0], tough: 2 },
   bus:     { model: 'v_bus',     name: 'אוטובוס קו 7',     len: 11.5, wid: 2.55, hgt: 3.1, mass: 9.0, top: 24, acc: 3.6, grip: 0.8, tints: [0xffffff], seat: [0.7, 1.3, 4.2], tough: 3 },
   tractor: { model: 'v_tractor', name: 'שופל',             len: 6.8, wid: 2.4, hgt: 3.6, mass: 7.0, top: 13, acc: 4.0, grip: 0.9, tints: [0xffffff], seat: [0, 1.9, 0.3], tough: 4 },

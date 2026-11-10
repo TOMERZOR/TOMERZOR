@@ -262,6 +262,7 @@ export class Hud {
       <div class="tbtn rect" data-act="pause" style="right:50%;transform:translateX(160%);top:calc(.8rem + var(--safe-t))">תפריט</div>
       <div class="tbtn rect" data-act="phone" style="right:50%;transform:translateX(-60%);top:calc(.8rem + var(--safe-t))">טלפון</div>`;
     this.ui.insertBefore(t, this.layer);
+    document.body.classList.add('is-touch');
     const btns = {}; t.querySelectorAll('[data-act]').forEach((b) => { btns[b.dataset.act] = b; });
     this.tFoot = t.querySelector('.foot'); this.tCar = t.querySelector('.car'); this.tInteract = btns.interact;
     this.game.input.bindTouch(t, t.querySelector('.stick'), t.querySelector('.stick i'), btns);

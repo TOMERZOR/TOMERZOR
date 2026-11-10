@@ -82,7 +82,8 @@ export class Game {
     this.net = new Online(this);
     this.menu = new Menu(this);
     setupWorldSpots(this);
-    if (this.input.touch || 'ontouchstart' in window || navigator.maxTouchPoints > 0) { if (matchMedia('(pointer: coarse)').matches || this.q.has('touch')) this.ui.buildTouch(); }
+    const fingers = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (this.q.has('touch') || (fingers && matchMedia('(pointer: coarse)').matches)) this.ui.buildTouch();
     this.bus.on('ko', (victim, from) => { if (victim === this.player.actor) this.onPlayerDown(from); });
     this.bus.on('wreck', (v) => { if (v === this.player.vehicle) this.ui.notify('הרכב גמור. צא ממנו.', 'bad'); this.fx.puff(v.pos.x, v.pos.y + 1, v.pos.z); });
     this.bus.on('wanted', (lvl, before) => { if (lvl > before && lvl === 1) this.ui.notify('המשטרה מחפשת אותך. תיעלם להם מהעיניים.', 'cop'); });

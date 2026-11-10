@@ -14,11 +14,12 @@ export class Menu {
     window.addEventListener('keydown', (e) => this.key(e));
   }
 
-  close() { if (this.screen) { this.screen.remove(); this.screen = null; } this.items = []; this.kind = ''; }
+  close() { if (this.screen) { this.screen.remove(); this.screen = null; } this.items = []; this.kind = ''; document.body.classList.remove('menu-open'); }
   open(kind, cls = 'menu') {
     this.close(); this.kind = kind;
     const s = this.screen = el('div', 'screen ' + cls);
     this.ui.appendChild(s);
+    document.body.classList.add('menu-open');      // the HUD steps aside for a full-screen menu
     if (document.pointerLockElement) document.exitPointerLock();
     return s;
   }
@@ -120,7 +121,7 @@ export class Menu {
     const g = this.game;
     if (!g.playing || g.cutscene) return;
     g.paused = true; g.audio.pause(true);
-    const s = this.open('pause');
+    const s = this.open('pause', 'menu dim');
     const side = el('div', 'side', `<div class="title" style="font-size:4.6rem">הפסקה</div><div class="tag">${g.mode === 'online' ? 'אונליין · חדר ' + (g.net.room || '') : 'מצב סיפור'}</div>`);
     s.appendChild(side); this.panel = el('div', 'panel'); s.appendChild(this.panel);
     this.list(side, [
@@ -167,6 +168,7 @@ export class Menu {
     const s = this.screen = el('div', 'screen'); s.style.background = 'rgba(13,15,18,.35)';
     s.onclick = (e) => { if (e.target === s) this.resume(); };
     this.ui.appendChild(s);
+    document.body.classList.add('menu-open');      // the HUD steps aside for a full-screen menu
     if (document.pointerLockElement) document.exitPointerLock();
     const ph = el('div', 'phone', `<div class="bar"><span>${g.sky.clock()}</span><span>ס־לקום ▂▄▆</span></div><h5>שלום, נהוראי</h5><div class="list"></div>`);
     s.appendChild(ph);

@@ -9,6 +9,7 @@ import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { dedup, prune, textureCompress, meshopt, weld, simplify, compactPrimitive } from '@gltf-transform/functions';
 import { MeshoptEncoder, MeshoptSimplifier } from 'meshoptimizer';
 import sharp from 'sharp';
+import { ktx2 } from 'ktx2-encoder/gltf-transform';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -93,6 +94,31 @@ const CLIPS = {
   kick: 'clip_kick.glb', hit: 'clip_hit.glb', knockdown: 'clip_knockdown.glb', standup: 'clip_standup.glb',
   sit: 'clip_sit.glb', talk: 'clip_talk.glb', jump: 'clip_jump.glb', guard: 'clip_guard.glb', dance: 'clip_dance.glb',
 };
+
+// KTX2=0 keeps WebP textures (smaller download, several times the GPU memory)
+const KTX2 = process.env.KTX2 !== '0';
+const imageDecoder = async (buffer) => {
+  const { data, info } = await sharp(buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  return { data: new Uint8Array(data), width: info.width, height: info.height };
+};
+// Buildings whose windows light up at night: the glass in the base colour (dark, cool pixels)
+// is found once here and a random share of it is written into an emissive map.
+const LIT = /^b_(block|tower|bituach|city|police|school|matnas)/;
+async function litWindows(doc, mat, share) {
+  const base = mat.getBaseColorTexture(); if (!base) return;
+  const S = 1024, { data } = await sharp(Buffer.from(base.getImage())).resize(S, S, { fit: 'fill' }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const out = Buffer.alloc(S * S * 3);
+  const cell = (x, y) => { let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; return (h & 1023) / 1023; };
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const i = (y * S + x) * 3, r = data[i], g = data[i + 1], b = data[i + 2], lum = r * 0.3 + g * 0.59 + b * 0.11;
+    const glass = lum < 78 && b > r - 12 && Math.max(r, g, b) - Math.min(r, g, b) < 60;
+    const c = cell(x >> 5, y >> 5), on = glass && c < share, k = on ? 0.55 + (1 - lum / 78) * 0.45 : 0, tv = on && c < share * 0.18;
+    out[i] = (tv ? 150 : 255) * k; out[i + 1] = (tv ? 190 : 196) * k; out[i + 2] = (tv ? 255 : 120) * k;
+  }
+  const png = await sharp(out, { raw: { width: S, height: S, channels: 3 } }).png().toBuffer();
+  const tex = doc.createTexture('lit').setImage(new Uint8Array(png)).setMimeType('image/png');
+  mat.setEmissiveTexture(tex).setEmissiveFactor([1, 1, 1]);
+}
 
 const triCount = (root) => root.listMeshes().reduce((n, me) => n + me.listPrimitives().reduce((k, p) => k + (p.getIndices() ? p.getIndices().getCount() : p.getAttribute('POSITION').getCount()) / 3, 0), 0);
 
@@ -183,7 +209,7 @@ for (const [name, m] of Object.entries(MODELS)) {
   }
   await doc.transform(
     dedup(), prune({ keepLeaves: true }),
-    textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [m.tex, m.tex], quality: 82 }),
+    textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [m.tex, m.tex], quality: KTX2 ? 96 : 82 }),
     ...(m.char ? [] : [weld()]),
     ...(m.tris ? [simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, m.tris / Math.max(1, triCount(root))), error: m.err || 0.01, lockBorder: false })] : []),
   );
@@ -198,6 +224,8 @@ for (const [name, m] of Object.entries(MODELS)) {
       compactPrimitive(p);
     }
   }
+  if (LIT.test(name)) for (const mat of root.listMaterials()) await litWindows(doc, mat, name === 'b_tower' ? 0.5 : 0.38);
+  if (KTX2) await doc.transform(ktx2({ isUASTC: true, generateMipmap: true, enableDebug: false, imageDecoder }));
   await doc.transform(meshopt({ encoder: MeshoptEncoder, level: 'medium' }));
   const out = path.join(OUT, name + '.glb');
   await io.write(out, doc);

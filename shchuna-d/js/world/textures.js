@@ -418,8 +418,10 @@ export async function createMaterials(gfx) {
   // for glass (dark, cool pixels) and a random share of it is made to glow.
   const homes = [];
   const lightWindows = (mat, share = 0.38) => {
+    if (mat.userData.lit) return;
+    if (mat.emissiveMap) { mat.userData.lit = true; mat.emissive = new THREE.Color(0xffffff); mat.emissiveIntensity = 0; homes.push(mat); return; }   // baked by the asset tool
     const img = mat.map && mat.map.image;
-    if (!img || mat.userData.lit) return;
+    if (!img || mat.map.isCompressedTexture) return;
     mat.userData.lit = true;
     const S = 1024, cv = document.createElement('canvas'); cv.width = cv.height = S;
     const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, S, S);

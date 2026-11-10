@@ -54,12 +54,13 @@ export class Game {
     prog(0.05);
     await loadFonts();
     this.assets = new Assets();
+    this.assets.useKTX2(this.gfx.renderer);
     const list = [];
     const models = new Set(Object.values(VEHICLES).map((v) => v.model).concat(['p_dumpster', 'p_chair', 'p_atm', 'p_cat', 'b_blockA', 'b_blockB', 'b_blockC', 'b_shops', 'e_lamp', 'e_palm', 'e_ficus', 'e_busstop', 'e_shelter'].concat(ENV_MODELS)));
     // phones get the light model set: a browser tab there is killed long before a desktop one would be
     const ua = navigator.userAgent, phone = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
     this.phone = (phone || this.q.has('phone')) && !this.q.has('full');
-    this.assets.texCap = this.phone ? 1024 : 0;
+    this.assets.texCap = 0;                    // compressed textures fit a phone at full size
     const dir = 'assets/models';
     for (const m of models) list.push({ type: 'model', name: m, url: `${dir}/${m}.glb` });
     for (const m of new Set(Object.values(CHARS).map((c) => c.model))) list.push({ type: 'char', name: m, url: `${dir}/${m}.glb` });

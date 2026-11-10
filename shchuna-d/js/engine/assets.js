@@ -5,6 +5,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
@@ -17,6 +19,13 @@ export class Assets {
     this.chars = {};      // rigged characters: { scene, height, clips:{} }
     this.clipSrc = {};    // source skeleton + clip per animation
     this.failed = [];
+  }
+
+  // Textures ship GPU-compressed (KTX2): they stay compressed in video memory, which is what lets a
+  // phone hold the whole town at full resolution.
+  useKTX2(renderer) {
+    const k = new KTX2Loader().setTranscoderPath(new URL('../../vendor/addons/libs/basis/', import.meta.url).href).detectSupport(renderer);
+    loader.setKTX2Loader(k);
   }
 
   async gltf(url) {
@@ -67,7 +76,7 @@ export class Assets {
   // Each map is redrawn at most `cap` pixels wide and the original bitmap is released.
   capTexture(mat, cap) {
     const t = mat && mat.map, img = t && t.image;
-    if (!cap || !img || Math.max(img.width, img.height) <= cap) return;
+    if (!cap || !img || t.isCompressedTexture || Math.max(img.width, img.height) <= cap) return;
     const k = cap / Math.max(img.width, img.height), cv = document.createElement('canvas');
     cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
     const g = cv.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, cv.width, cv.height);

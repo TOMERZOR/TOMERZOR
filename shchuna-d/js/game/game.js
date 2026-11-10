@@ -56,8 +56,13 @@ export class Game {
     this.assets = new Assets();
     const list = [];
     const models = new Set(Object.values(VEHICLES).map((v) => v.model).concat(['p_dumpster', 'p_chair', 'p_atm', 'p_cat', 'b_blockA', 'b_blockB', 'b_blockC', 'b_shops', 'e_lamp', 'e_palm', 'e_ficus', 'e_busstop', 'e_shelter'].concat(ENV_MODELS)));
-    for (const m of models) list.push({ type: 'model', name: m, url: `assets/models/${m}.glb` });
-    for (const m of new Set(Object.values(CHARS).map((c) => c.model))) list.push({ type: 'char', name: m, url: `assets/models/${m}.glb` });
+    // phones get the light model set: a browser tab there is killed long before a desktop one would be
+    const ua = navigator.userAgent, phone = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua));
+    this.lite = this.q.has('lite');          // the light set is not built yet: opt-in only, phones are not switched to it
+    void phone;
+    const dir = this.lite ? 'assets/models-lite' : 'assets/models';
+    for (const m of models) list.push({ type: 'model', name: m, url: `${dir}/${m}.glb` });
+    for (const m of new Set(Object.values(CHARS).map((c) => c.model))) list.push({ type: 'char', name: m, url: `${dir}/${m}.glb` });
     for (const c of CLIP_NAMES) list.push({ type: 'clip', name: c, url: `assets/anim/${c}.glb` });
     await this.assets.load(list, (p) => prog(0.05 + p * 0.6));
     prog(0.68, 'בונה את הבלוקים…');

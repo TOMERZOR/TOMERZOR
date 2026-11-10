@@ -15,7 +15,9 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const RAW = path.join(here, '../assets/raw');
-const OUT = path.join(here, '../assets/models');
+// LITE=1 builds the phone set into assets/models-lite: a third of the triangles, textures at most 1024
+const LITE = !!process.env.LITE;
+const OUT = path.join(here, LITE ? '../assets/models-lite' : '../assets/models');
 const ANIM = path.join(here, '../assets/anim');
 fs.mkdirSync(OUT, { recursive: true }); fs.mkdirSync(ANIM, { recursive: true });
 
@@ -138,6 +140,7 @@ for (const [name, m] of Object.entries(MODELS)) {
   if (!fs.existsSync(src)) { console.log('skip (missing)', name); continue; }
   const doc = await io.read(src);
   const root = doc.getRoot();
+  if (LITE) { m.tex = Math.min(m.tex, m.char ? 512 : /^b_/.test(name) ? 1024 : 512); if (m.tris) m.tris = Math.round(m.tris * (/^b_/.test(name) ? 0.3 : 0.5)); if (m.sloppy) m.sloppy = Math.round(m.sloppy * 0.6); }
   if (m.char) {
     for (const a of root.listAnimations()) a.dispose();
     storeBind(root);                    // before meshopt rewrites the inverse bind matrices

@@ -21,6 +21,13 @@ const GRAF_G = ['שכונה ג׳ שולטת', 'ג׳', 'ד׳ = פארש', 'רק �
 const CIVIC = { school: 'b_school', police: 'b_police', wedding: 'b_wedding', bituach: 'b_bituach', city: 'b_city', matnas: 'b_matnas' };
 const HANGAR = { garage: 'b_garage', scrap: 'b_scrap', depot: 'b_hangarA', moshav: 'b_hangarB' };
 const FACE = {};
+// name -> sign sheet (assets/tex/<tex>.webp, boards stacked top to bottom) and each board's
+// [u0, u1, v0, v1] on the model's front: u along its length left to right, v up its height.
+const SIGNS = {
+  b_shops: { tex: 'signs_shops', rects: [[0.03, 0.28, 0.555, 0.67], [0.295, 0.5, 0.555, 0.67], [0.52, 0.705, 0.555, 0.67], [0.72, 0.97, 0.555, 0.67]] },
+  b_shops2: { tex: 'signs_shops2', rects: [[0.03, 0.277, 0.545, 0.675], [0.29, 0.5, 0.545, 0.675], [0.52, 0.732, 0.545, 0.675], [0.753, 0.97, 0.545, 0.675]] },
+  b_shops3: { tex: 'signs_shops3', rects: [[0.06, 0.277, 0.5, 0.645], [0.31, 0.497, 0.5, 0.645], [0.52, 0.702, 0.5, 0.645], [0.74, 0.932, 0.5, 0.645]] },
+};
 
 export class CityBuilder {
   constructor(gfx, mats, physics, models) {
@@ -232,7 +239,37 @@ export class CityBuilder {
     const key = 'mdl_' + name;
     if (!this.M[key]) this.M[key] = md.material;
     ch.get(key).add(md.geometry, m.multiply(pre).multiply(md.matrix));
+    this.boards(ch, name, md, x, z, yaw, len / L, ky, dep / D, y);
     return true;
+  }
+  // The 3D generator repaints lettering and gets Hebrew wrong, so each sign on a model is
+  // covered by a board carrying the sign as it was designed. SIGNS gives each board's place on
+  // the model's front (fractions of its length and height); how far forward that spot sits is
+  // measured once per model by casting rays at the mesh.
+  boards(ch, name, md, x, z, yaw, kx, ky, kz, y) {
+    const def = SIGNS[name];
+    if (!def || !this.M['sgn_' + def.tex]) return;
+    if (!md.boards) {
+      const [turn, L] = this.frame(name, md);
+      const probe = new THREE.Mesh(md.geometry, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
+      probe.matrixAutoUpdate = false; probe.matrix.copy(new THREE.Matrix4().makeRotationY(turn).multiply(md.matrix)); probe.matrixWorld.copy(probe.matrix);
+      const ray = new THREE.Raycaster(), dir = new THREE.Vector3(0, 0, -1), o = new THREE.Vector3();
+      md.boards = def.rects.map(([u0, u1, v0, v1], i) => {
+        let front = -Infinity;
+        for (const fu of [0.03, 0.15, 0.3, 0.5, 0.7, 0.85, 0.97]) for (const fv of [0.1, 0.5, 0.9]) {
+          o.set((u0 + (u1 - u0) * fu - 0.5) * L, md.minY + (v0 + (v1 - v0) * fv) * md.size.y, 50);
+          ray.set(o, dir); const hit = ray.intersectObject(probe, false)[0];
+          if (hit) front = Math.max(front, hit.point.z);
+        }
+        return { x0: (u0 - 0.5) * L, x1: (u1 - 0.5) * L, y0: v0 * md.size.y, y1: v1 * md.size.y, z: front, i };
+      }).filter((b) => b.z > -Infinity);
+    }
+    const B = ch.get('sgn_' + def.tex), n = def.rects.length;
+    for (const b of md.boards) {
+      const lz = b.z * kz + 0.06, ya = y + b.y0 * ky, yb = y + b.y1 * ky;
+      const [ax, az] = this.at(x, z, yaw, b.x0 * kx, lz), [bx, bz] = this.at(x, z, yaw, b.x1 * kx, lz);
+      B.quad([ax, ya, az], [bx, ya, bz], [bx, yb, bz], [ax, yb, az], [0, 1 - (b.i + 1) / n, 1, 1 - b.i / n]);
+    }
   }
   // A generated building scaled as a whole so its long side is `len`: proportions stay the architect's.
   // Depth and height may each give by up to `slack` towards the lot they stand on.

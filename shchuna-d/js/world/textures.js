@@ -363,6 +363,9 @@ function blobShadow() {
 }
 
 // ---- Material set ----------------------------------------------------------------
+// Sign sheets mounted over generated models (see CityBuilder.boards).
+export const SIGN_SHEETS = ['signs_shops', 'signs_shops2', 'signs_shops3'];
+
 export async function createMaterials(gfx) {
   const aniso = Math.min(gfx.q.aniso, gfx.maxAniso);
   const T = {};
@@ -372,6 +375,8 @@ export async function createMaterials(gfx) {
     T[n + 'N'] = gfx.q.shadow ? await load(`assets/tex/${n}_n.webp`, aniso, false) : null;
   }));
   T.weeds = await load('assets/tex/weeds.webp', aniso);
+  const sheets = {};
+  await Promise.all(SIGN_SHEETS.map(async (n) => { sheets[n] = await load(`assets/tex/${n}.webp`, aniso).catch(() => null); }));
   const win = buildWinAtlas(aniso);
   const signs = new Atlas(2048, 4096, 'sign'), decals = new Atlas(2048, 2048, 'decal');
   // First decal cell is solid white: road paint and plain decals sample it and use vertex colour.
@@ -409,7 +414,10 @@ export async function createMaterials(gfx) {
     M.decal.map = dt; M.decal.needsUpdate = true;
   };
   // Lamps, windows and signs come on at dusk.
+  const boards = [];
+  for (const n of SIGN_SHEETS) if (sheets[n]) { M['sgn_' + n] = std({ map: sheets[n], roughness: 0.6, emissive: new THREE.Color(0xffffff), emissiveMap: sheets[n], emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); boards.push(M['sgn_' + n]); }
   const setNight = (n) => {
+    for (const b of boards) b.emissiveIntensity = n * 0.55;
     M.winLit.emissiveIntensity = n * 0.6;
     M.sign.emissiveIntensity = 0.04 + n * 0.5;
     M.glow.opacity = n * 0.5;

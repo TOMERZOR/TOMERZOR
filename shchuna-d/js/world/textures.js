@@ -408,8 +408,8 @@ export async function createMaterials(gfx) {
   };
   // Lamps, windows and signs come on at dusk.
   const setNight = (n) => {
-    M.winLit.emissiveIntensity = n * 1.15;
-    M.sign.emissiveIntensity = 0.04 + n * 0.72;
+    M.winLit.emissiveIntensity = n * 0.6;
+    M.sign.emissiveIntensity = 0.04 + n * 0.5;
     M.glow.opacity = n * 0.5;
     M.bulb.color.setScalar(0.25 + n * 2.2);
   };

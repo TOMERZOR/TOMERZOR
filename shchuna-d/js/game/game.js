@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { Gfx } from '../engine/renderer.js';
 import { SkySystem } from '../engine/sky.js';
+import { LampLights } from '../engine/lamps.js';
 import { Physics } from '../engine/physics.js';
 import { Assets, CLIP_NAMES } from '../engine/assets.js';
 import { Input } from '../engine/input.js';
@@ -68,6 +69,8 @@ export class Game {
     prog(0.86, 'מעיר את השכנים…');
     await new Promise((r) => setTimeout(r, 30));
     this.sky = new SkySystem(this.gfx);
+    this.lampLights = new LampLights(this.gfx.scene, this.city.lamps);
+    this.lampLights.setCount(this.gfx.q.lamps);
     this.fx = new Fx(this);
     this.world = new World(this);
     this.cam = new GameCamera(this);
@@ -114,7 +117,7 @@ export class Game {
   applyQuality(name) {
     this.settings.quality = name; this.saveSettings();
     const q = name === 'auto' ? Gfx.autoQuality() : name;
-    this.gfx.setQuality(q); this.sky.applyQuality();
+    this.gfx.setQuality(q); this.sky.applyQuality(); this.lampLights.setCount(this.gfx.q.lamps);
   }
 
   fade(on) { document.getElementById('fade').classList.toggle('on', on); }
@@ -257,6 +260,7 @@ export class Game {
       this.sky.update(dt, c.position);
     } else { this.ui.update(0); }
     this.mats.setNight(this.sky.night);
+    this.lampLights.update(dt, this.playing ? this.player.pos : this.gfx.camera.position, this.sky.night);
     this.audio.update(dt);
     this.gfx.render(dt);
     this.input.endFrame();

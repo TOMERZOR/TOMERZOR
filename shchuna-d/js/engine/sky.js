@@ -7,16 +7,16 @@ import { clamp, lerp, smoothstep } from '../core/util.js';
 const C = (hex) => new THREE.Color(hex);
 // Keyframes over the day: hour, sun colour, sun intensity, sky/ground hemisphere, fog, exposure.
 const KEYS = [
-  { h: 0,    sun: C(0x6f86c9), si: 0.22, sky: C(0x1a2748), gnd: C(0x14161d), fog: C(0x0d1424), hi: 0.55, exp: 1.25 },
-  { h: 4.6,  sun: C(0x6f86c9), si: 0.22, sky: C(0x1b2a4d), gnd: C(0x15171e), fog: C(0x101829), hi: 0.55, exp: 1.25 },
+  { h: 0,    sun: C(0x6f86c9), si: 0.75, sky: C(0x3d5290), gnd: C(0x23262f), fog: C(0x121b30), hi: 1.3, exp: 1.5 },
+  { h: 4.6,  sun: C(0x6f86c9), si: 0.75, sky: C(0x3e5493), gnd: C(0x24272f), fog: C(0x131c31), hi: 1.3, exp: 1.5 },
   { h: 5.8,  sun: C(0xff9a5a), si: 1.2,  sky: C(0x7d8fb5), gnd: C(0x4a3f38), fog: C(0xc79a86), hi: 0.75, exp: 1.05 },
   { h: 7.2,  sun: C(0xffd9a8), si: 2.6,  sky: C(0xa9c4e6), gnd: C(0x7a6a55), fog: C(0xd8c6ae), hi: 0.95, exp: 0.98 },
   { h: 12.5, sun: C(0xfff3de), si: 3.4,  sky: C(0xbcd6f2), gnd: C(0x8f7d62), fog: C(0xd9d2c0), hi: 1.05, exp: 0.92 },
   { h: 16.5, sun: C(0xffe2b0), si: 3.0,  sky: C(0xb2cbe8), gnd: C(0x8a765a), fog: C(0xdccbb0), hi: 1.0,  exp: 0.95 },
   { h: 18.3, sun: C(0xff8a3c), si: 1.9,  sky: C(0x8f8fb0), gnd: C(0x5a4636), fog: C(0xd99468), hi: 0.8,  exp: 1.02 },
-  { h: 19.4, sun: C(0xc8607a), si: 0.5,  sky: C(0x3c416e), gnd: C(0x24222b), fog: C(0x4a3a55), hi: 0.6,  exp: 1.15 },
-  { h: 20.5, sun: C(0x6f86c9), si: 0.22, sky: C(0x1a2748), gnd: C(0x14161d), fog: C(0x0d1424), hi: 0.55, exp: 1.25 },
-  { h: 24,   sun: C(0x6f86c9), si: 0.22, sky: C(0x1a2748), gnd: C(0x14161d), fog: C(0x0d1424), hi: 0.55, exp: 1.25 },
+  { h: 19.4, sun: C(0xc8607a), si: 0.5,  sky: C(0x3c416e), gnd: C(0x24222b), fog: C(0x4a3a55), hi: 0.75, exp: 1.25 },
+  { h: 20.5, sun: C(0x6f86c9), si: 0.75, sky: C(0x3d5290), gnd: C(0x23262f), fog: C(0x121b30), hi: 1.3, exp: 1.5 },
+  { h: 24,   sun: C(0x6f86c9), si: 0.75, sky: C(0x3d5290), gnd: C(0x23262f), fog: C(0x121b30), hi: 1.3, exp: 1.5 },
 ];
 
 export class SkySystem {
@@ -38,7 +38,10 @@ export class SkySystem {
 
     this.sky = new Sky(); this.sky.scale.setScalar(4000);
     // the stock shader is tuned for half exposure; bring it down to sit with the scene
-    this.sky.material.fragmentShader = this.sky.material.fragmentShader.replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * 0.36, 1.0 );');
+    // and at night swap its grey residue for a deep blue that is lighter towards the horizon
+    this.sky.material.uniforms.uNight = { value: 0 };
+    this.sky.material.fragmentShader = 'uniform float uNight;\n' + this.sky.material.fragmentShader.replace('gl_FragColor = vec4( retColor, 1.0 );',
+      'float nUp = clamp( direction.y, 0.0, 1.0 ); vec3 nightCol = mix( vec3( 0.040, 0.058, 0.115 ), vec3( 0.008, 0.014, 0.042 ), pow( nUp, 0.45 ) );\n gl_FragColor = vec4( retColor * 0.36 * ( 1.0 - 0.8 * uNight ) + nightCol * uNight, 1.0 );');
     this.sky.material.depthWrite = false; this.sky.renderOrder = -10; this.sky.frustumCulled = false;
     const u = this.sky.material.uniforms;
     u.turbidity.value = 6; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.006; u.mieDirectionalG.value = 0.86;
@@ -117,9 +120,9 @@ export class SkySystem {
     this.hemi.intensity = lerp(a.hi, b.hi, t) * (this.gfx.q.env ? 0.42 : 0.9);
     const fog = this.gfx.scene.fog;
     fog.color.copy(a.fog).lerp(b.fog, t);
-    fog.density = lerp(0.00115, 0.0019, this.night) * (720 / this.gfx.q.far) ** 0.8;
+    fog.density = lerp(0.00115, 0.00095, this.night) * (720 / this.gfx.q.far) ** 0.8;
     this.gfx.renderer.toneMappingExposure = lerp(a.exp, b.exp, t);
-    if (this.gfx.bloom) this.gfx.bloom.strength = lerp(0.14, 0.62, this.night);
+    if (this.gfx.bloom) this.gfx.bloom.strength = lerp(0.14, 0.34, this.night);
 
     // Sky dome follows the camera; the shader wants the real sun even at night (below horizon = dark).
     this.sky.position.copy(focus);
@@ -127,6 +130,7 @@ export class SkySystem {
     if (isDay) su.sunPosition.value.copy(this.sunDir);
     else su.sunPosition.value.set(this.sunDir.x * -1, -0.25, 0.2).normalize();
     su.rayleigh.value = lerp(1.6, 0.25, this.night);
+    su.uNight.value = this.night;
     this.stars.position.copy(focus); this.stars.material.opacity = this.night * 0.9;
     this.moon.position.copy(focus).addScaledVector(this.sunDir, 1400);
     this.moon.material.opacity = isDay ? 0 : this.night;
@@ -151,7 +155,7 @@ export class SkySystem {
       const old = this.envRT;
       this.envRT = this.pmrem.fromScene(this.envScene, 0.02);
       this.gfx.scene.environment = this.envRT.texture;
-      this.gfx.scene.environmentIntensity = lerp(0.5, 0.14, this.night);
+      this.gfx.scene.environmentIntensity = lerp(0.5, 0.24, this.night);
       if (old) old.dispose();
     } else if (!this.gfx.q.env && this.gfx.scene.environment) this.gfx.scene.environment = null;
   }

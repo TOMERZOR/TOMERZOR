@@ -7,10 +7,10 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 export const QUALITY = {
-  low:    { label: 'נמוכה',  dpr: 1.0,  shadow: 0,    post: false, bloom: false, far: 420, peds: 14, cars: 8,  env: false, aniso: 2 },
-  medium: { label: 'בינונית', dpr: 1.25, shadow: 1024, post: true,  bloom: false, far: 560, peds: 22, cars: 12, env: true,  aniso: 4 },
-  high:   { label: 'גבוהה',  dpr: 1.5,  shadow: 2048, post: true,  bloom: true,  far: 720, peds: 30, cars: 16, env: true,  aniso: 8 },
-  ultra:  { label: 'אולטרה', dpr: 2.0,  shadow: 4096, post: true,  bloom: true,  far: 900, peds: 38, cars: 20, env: true,  aniso: 16 },
+  low:    { label: 'נמוכה',  dpr: 1.0,  shadow: 0,    post: false, bloom: false, far: 420, peds: 14, cars: 8,  env: false, aniso: 2, lamps: 0 },
+  medium: { label: 'בינונית', dpr: 1.25, shadow: 1024, post: true,  bloom: false, far: 560, peds: 22, cars: 12, env: true,  aniso: 4, lamps: 3 },
+  high:   { label: 'גבוהה',  dpr: 1.5,  shadow: 2048, post: true,  bloom: true,  far: 720, peds: 30, cars: 16, env: true,  aniso: 8, lamps: 5 },
+  ultra:  { label: 'אולטרה', dpr: 2.0,  shadow: 4096, post: true,  bloom: true,  far: 900, peds: 38, cars: 20, env: true,  aniso: 16, lamps: 8 },
 };
 
 // Final grade in display space: FXAA, gentle split-toning, vignette, film grain.
@@ -101,7 +101,7 @@ export class Gfx {
       const c = this.composer = new EffectComposer(r, rt);
       c.addPass(new RenderPass(this.scene, this.camera));
       if (q.bloom) {
-        this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.25, 0.6, 0.92);
+        this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.25, 0.55, 0.97);
         c.addPass(this.bloom);
       } else this.bloom = null;
       c.addPass(new OutputPass());

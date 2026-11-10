@@ -10,7 +10,7 @@ import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
-export const CLIP_NAMES = ['idle', 'walk', 'run', 'jab', 'hook', 'kick', 'hit', 'knockdown', 'standup', 'sit', 'talk', 'jump', 'guard', 'dance'];
+export const CLIP_NAMES = ['walk', 'run', 'jab', 'hook', 'kick', 'hit', 'knockdown', 'standup', 'sit', 'talk', 'jump', 'guard', 'dance'];
 const LOOPING = { idle: 1, walk: 1, run: 1, sit: 1, talk: 1, guard: 1, dance: 1 };
 // Some generated clips start turned away from where the character is heading; degrees to turn them back.
 const TURN = { jump: 40, talk: 16, hit: 28 };

@@ -3,6 +3,7 @@
 משחק עולם פתוח בתלת־ממד על החיים בבלוקים של **קריית שמש**, עיירת פיתוח בדיונית בדרום. מצב סיפור של 12 משימות עם נהוראי, ומצב אונליין של שודים עם הכנות לעד ארבעה שחקנים. סאטירה: הדמויות, העסקים והאירועים מומצאים; המצוקה שהם יושבים עליה אמיתית (ראו `design/research.md`).
 
 - **לשחק בדפדפן:** `https://shchuna-d.moffy-app.workers.dev` (פתוח לכולם, כולל האונליין) · עותק ב־Higgsfield: `https://shchuna-d.higgsfield.app` (דורש התחברות ל־Higgsfield)
+- **Windows:** `https://github.com/TOMERZOR/TOMERZOR/releases/download/shchuna-d-windows/ShchunaD-Windows.zip` (כ־110MB; לחלץ ולהפעיל את `Shchuna D.exe`). זו מעטפת בלבד: המשחק עצמו יורד מהאתר בהפעלה הראשונה, נשמר במחשב ומתעדכן לבד. אפשר גם בלי להוריד כלום: לפתוח את האתר ב־Chrome או Edge ולבחור ״התקן אפליקציה״
 - **אנדרואיד:** קובץ APK נבנה מ־`app/` (ראו למטה, או את ה־artifact של ה־workflow ״שכונה ד׳ · APK״)
 - **להריץ מקומית:** `npx http-server shchuna-d -p 8080` ולפתוח `http://localhost:8080` (אין שלב build)
 
@@ -67,6 +68,16 @@ python3 build-textures.py    # אריחים חוזרים + מפות נורמל
 ```
 
 כל דמות נרגגה בנפרד, אז האנימציות עוברות רטרגוט בזמן הטעינה מתנוחת ה־bind (`js/engine/assets.js`).
+
+## Windows ועדכון עצמי
+
+`desktop/` הוא חלון Electron שטוען את האתר החי; אין בו קובצי משחק. `sw.js` שומר במחשב כל קובץ לפי ה־hash שנכתב לו בפריסה (`server/manifest.mjs` כותב את `asset-manifest.json`), כך שכל הפעלה מורידה רק מה שהשתנה, ובלי רשת רצה הגרסה האחרונה שנשמרה. השמירות נשארות בין הפעלות כי הכתובת קבועה. ה־workflow ״שכונה ד׳ · Windows״ בונה את התיקייה ומעלה אותה כ־zip ל־release בשם `shchuna-d-windows`; צריך לבנות מחדש רק כשהמעטפת עצמה משתנה.
+
+```bash
+cd desktop && npm i
+npm start                    # החלון, מול האתר החי
+npm run win                  # out/win-unpacked (על Windows)
+```
 
 ## אנדרואיד
 

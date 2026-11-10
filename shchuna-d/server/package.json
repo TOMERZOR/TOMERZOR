@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Online rooms for שכונה ד׳: a WebSocket relay on a Cloudflare Durable Object.",
   "scripts": {
-    "sync": "rm -rf public && mkdir public && cp -r ../index.html ../css ../js ../fonts ../vendor public/ && mkdir -p public/assets && cp -r ../assets/models ../assets/anim ../assets/tex ../assets/img ../assets/audio public/assets/",
+    "sync": "rm -rf public && mkdir public && cp -r ../index.html ../sw.js ../manifest.webmanifest ../css ../js ../fonts ../vendor public/ && mkdir -p public/assets && cp -r ../assets/models ../assets/anim ../assets/tex ../assets/img ../assets/audio public/assets/ && node manifest.mjs",
     "dev": "npm run sync && wrangler dev --port 8787",
     "deploy": "npm run sync && wrangler deploy"
   },

@@ -1,13 +1,12 @@
 {
   "name": "shchuna-d-desktop",
   "private": true,
-  "version": "1.0.0",
-  "description": "שכונה ד׳ for Windows: the game in an Electron shell.",
+  "version": "1.1.0",
+  "description": "שכונה ד׳ for Windows: a window onto the live game, which updates itself.",
   "main": "main.js",
   "scripts": {
-    "sync": "node sync.mjs",
-    "start": "node sync.mjs && electron .",
-    "win": "node sync.mjs && electron-builder --win portable --x64"
+    "start": "electron .",
+    "win": "electron-builder --win dir --x64"
   },
   "devDependencies": {
     "electron": "33.2.0",
@@ -18,18 +17,14 @@
     "productName": "Shchuna D",
     "files": [
       "main.js",
-      "www/**/*"
+      "offline.html"
     ],
-    "asar": false,
     "directories": {
       "output": "out"
     },
     "win": {
-      "target": "portable",
+      "target": "dir",
       "signAndEditExecutable": false
-    },
-    "portable": {
-      "artifactName": "ShchunaD.exe"
     },
     "compression": "maximum",
     "electronLanguages": [

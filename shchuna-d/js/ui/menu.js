@@ -4,7 +4,7 @@ import { QUALITY } from '../engine/renderer.js';
 import { POI } from '../world/map.js';
 import { RADIO } from '../game/defs.js';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
 export class Menu {
   constructor(game) {
@@ -70,7 +70,12 @@ export class Menu {
       { label: 'הגדרות', action: () => this.settings() },
       { label: 'קרדיטים', action: () => this.credits() },
     ]);
-    side.appendChild(el('div', 'foot', `יצירה בדיונית וסאטירית. הדמויות, העסקים והאירועים מומצאים; המצוקה אמיתית.<br>גרסה ${VERSION}`));
+    const foot = el('div', 'foot', `יצירה בדיונית וסאטירית. הדמויות, העסקים והאירועים מומצאים; המצוקה אמיתית.<br>גרסה ${VERSION}`);
+    side.appendChild(foot);
+    // the live site says when it was last deployed, so an update that arrived by itself can be seen
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) fetch('asset-manifest.json').then((r) => (r.ok ? r.json() : null)).then((m) => {
+      if (m && m.at && foot.isConnected) foot.innerHTML += ` · עודכן ${new Date(m.at).toLocaleString('he-IL', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
+    }).catch(() => { /* offline */ });
   }
   confirmNew() {
     const p = this.panel; p.innerHTML = '<h3>להתחיל מחדש?</h3><p class="lead">יש שמירה קיימת. סיפור חדש ימחק אותה.</p>';

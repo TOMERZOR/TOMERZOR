@@ -1,26 +1,31 @@
-# Builds the Windows version of שכונה ד׳ (shchuna-d/desktop, an Electron shell around the game)
-# and keeps it as a workflow artifact: a plain folder with "Shchuna D.exe" inside, no installer
-# and no self-extracting step. Download the artifact, unzip it anywhere, run the exe.
+# Builds the Windows version of שכונה ד׳ (shchuna-d/desktop): a small Electron window onto the
+# live game. The game's own files are not inside it: the site keeps them on the player's computer
+# and updates them by itself, so this only needs rebuilding when the shell changes.
+# The folder is zipped and published as the release "shchuna-d-windows", which gives one fixed
+# download address:
+#   https://github.com/<owner>/<repo>/releases/download/shchuna-d-windows/ShchunaD-Windows.zip
 name: שכונה ד׳ · Windows
 
 on:
   workflow_dispatch:
   push:
     branches: [claude/loving-sagan-0etvis, main]
-    paths: ["shchuna-d/desktop/**", "shchuna-d/js/**", "shchuna-d/assets/**", ".github/workflows/shchuna-d-windows.yml"]
+    paths: ["shchuna-d/desktop/**", ".github/workflows/shchuna-d-windows.yml"]
 
 concurrency:
   group: shchuna-d-windows-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write   # to publish the zip on the release
 
 jobs:
   windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: shchuna-d/desktop
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -28,11 +33,27 @@ jobs:
         working-directory: shchuna-d/desktop
         run: |
           npm install
-          node sync.mjs
           npx electron-builder --win dir --x64
+      - name: Zip
+        shell: pwsh
+        run: |
+          Rename-Item -Path "shchuna-d/desktop/out/win-unpacked" -NewName "ShchunaD"
+          Compress-Archive -Path "shchuna-d/desktop/out/ShchunaD" -DestinationPath "ShchunaD-Windows.zip" -CompressionLevel Optimal
+          "{0:N0} MB" -f ((Get-Item ShchunaD-Windows.zip).Length / 1MB)
+      - name: Publish on the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view shchuna-d-windows --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create shchuna-d-windows --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+              --title "שכונה ד׳ for Windows" \
+              --notes "Unzip anywhere and run \"Shchuna D.exe\" from inside the folder. The game downloads on the first start and updates itself after that; this file does not need downloading again."
+          fi
+          gh release upload shchuna-d-windows ShchunaD-Windows.zip --repo "$GITHUB_REPOSITORY" --clobber
       - uses: actions/upload-artifact@v4
         with:
           name: shchuna-d-windows
-          path: shchuna-d/desktop/out/win-unpacked
+          path: ShchunaD-Windows.zip
           if-no-files-found: error
-          compression-level: 6
+          compression-level: 0

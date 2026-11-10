@@ -1,5 +1,5 @@
 // What stands on each city block, and what lies outside the grid.
-import { rgb, shade } from './geo.js';
+import { rgb, shade, Chunk } from './geo.js';
 import { WIN } from './textures.js';
 import { Rng } from '../core/util.js';
 import { CURB, setPOI, XS, ZS, WORLD_HALF } from './map.js';
@@ -151,6 +151,8 @@ function shuk(B, ch, b, rng) {
       const x = b.x0 + 14 + i * 11.6;
       for (const s of [-1, 1]) {
         const sz = z + s * 3.1, col = rgb(rng.pick(tarp)), g = goods[gi++ % goods.length];
+        const real = ch;
+        if (B.fit(real, 'e_stall', x, sz, s > 0 ? Math.PI : 0, 4.9, 3.1, 2.8)) ch = new Chunk('void');
         for (const cx of [-2.2, 2.2]) for (const cz of [-1.3, 1.3]) ch.get('paint').cyl(x + cx, CURB, sz + cz, 0.04, 0.04, 2.5, 5, rgb('#7b8085'), undefined, false);
         ch.get('cloth').box(x, CURB + 2.5, sz, 4.9, 0.05, 3.1, 0, { c: shade(col, 0.85), cTop: col });
         ch.get('paint').box(x, CURB, sz, 4, 0.8, 1.5, 0, { c: rgb('#8a7458'), cTop: rgb('#a08a68') });
@@ -159,6 +161,7 @@ function shuk(B, ch, b, rng) {
         const r = B.sign({ text: g[0], sub: g[1] + ' ₪ לקילו', bg: '#f3efe6', fg: '#b3261e', subFg: '#111', font: '"Heebo"', weight: 900, shadow: false }, 256, 96);
         ch.get('sign').panel(x, sz, s > 0 ? Math.PI : 0, 0, CURB + 1.75, 1.5, 0.56, 0.76, r);
         B.solid(x, sz, 2, 0.8, 0, 1.1);
+        ch = real;
         if (rng.chance(0.35)) B.crate(ch, x + rng.f(-2.3, 2.3), sz - s * 1.4, rng.f(3), gc);
       }
       B.hang.push({ x, z, r: 1.2, kind: 'shuk' });
@@ -272,6 +275,8 @@ function industrial(B, ch, b, rng) {
 function gas(B, ch, b, rng) {
   base(B, ch, b, 'asphalt', 6, [0.8, 0.8, 0.78]);
   const cx = b.cx - 8, cz = b.cz - 14;
+  const realG = ch;
+  if (B.fit(realG, 'b_gas', cx, cz, 0, 25, 15, 6.6)) ch = new Chunk('void');
   const P = ch.get('paint');
   for (const sx of [-9, 9]) for (const sz of [-5, 5]) { P.box(cx + sx, CURB, cz + sz, 0.5, 5.2, 0.5, 0, { c: rgb('#e9e7e0') }); B.solid(cx + sx, cz + sz, 0.3, 0.3, 0, 5); }
   P.box(cx, CURB + 5.2, cz, 24, 0.9, 14, 0, { c: rgb('#f3efe6'), cTop: rgb('#fdfdfd') });
@@ -279,6 +284,7 @@ function gas(B, ch, b, rng) {
   for (const [yaw, o] of [[0, 7.02], [Math.PI, 7.02]]) ch.get('sign').panel(cx, cz, yaw, 0, CURB + 5.28, 20, 0.74, o, band);
   ch.get('glow').floor(cx, CURB + 0.03, cz, 30, 20, 0, [0, 0, 1, 1], [0.85, 0.9, 1]);
   for (const sx of [-5, 5]) for (const sz of [-3.2, 3.2]) { ch.get('gloss').box(cx + sx, CURB + 0.15, cz + sz, 0.9, 1.6, 0.5, 0, { c: rgb('#e8762c'), cTop: rgb('#f3efe6') }); P.box(cx + sx, CURB, cz + sz, 2.6, 0.15, 1.1, 0, { c: rgb('#cfcbc0') }); B.solid(cx + sx, cz + sz, 0.6, 0.4, 0, 1.8); }
+  ch = realG;
   B.shops(ch, { x: b.cx - 8, z: b.z1 - 16, len: 30, dep: 9, yaw: Math.PI, tint: rgb('#ecebe4'), units: [
     { name: 'נוחות 24', sub: 'קפה · סנדוויץ׳ עצוב · כספומט', bg: '#e8762c', fg: '#fff', poi: 'gas', hang: 'kiosk' },
     { name: 'שטיפת רכב', sub: 'פנים + חוץ · ואקום רגשי', bg: '#2a6bff', fg: '#fff' },
@@ -341,26 +347,28 @@ function civic(B, ch, b, rng) {
 // ---- Construction site (pinui-binui) ---------------------------------------------------
 function site(B, ch, b, rng) {
   base(B, ch, b, 'sand', 5, [0.88, 0.84, 0.78]);
-  const m = 3, CO = ch.get('concrete'), P = ch.get('paint');
+  const m = 3, CO = ch.get('concrete'); let P = ch.get('paint');
   B.fence(ch, b.x0 + m, b.z0 + m, b.x1 - m, b.z0 + m, 2.6); B.fence(ch, b.x1 - m, b.z0 + m, b.x1 - m, b.z1 - m, 2.6);
   B.fence(ch, b.x0 + m, b.z1 - m, b.x1 - m, b.z1 - m, 2.6); B.fence(ch, b.x0 + m, b.z0 + m, b.x0 + m, b.cz - 5, 2.6); B.fence(ch, b.x0 + m, b.cz + 5, b.x0 + m, b.z1 - m, 2.6);
   setPOI('site', b.x0 - 1, b.cz, { yaw: H });
   // the skeleton of a tower
   const tx = b.cx + 8, tz = b.cz - 6, tw = 34, td = 24, floors = 7, grey = rgb('#b3afa4');
+  const skel = B.fit(ch, 'b_skeleton', tx, tz, 0, tw + 1, td + 1, floors * 3.4 + 3) ? new Chunk('void').get('concrete') : CO;
   for (let f = 0; f <= floors; f++) {
-    CO.box(tx, CURB + f * 3.4, tz, tw, 0.3, td, 0, { c: shade(grey, 0.85), cTop: grey, s: 3 });
+    skel.box(tx, CURB + f * 3.4, tz, tw, 0.3, td, 0, { c: shade(grey, 0.85), cTop: grey, s: 3 });
     if (f < floors) for (let i = 0; i <= 4; i++) for (let j = 0; j <= 3; j++) {
       const cx = tx - tw / 2 + 0.5 + (i * (tw - 1)) / 4, cz = tz - td / 2 + 0.5 + (j * (td - 1)) / 3;
-      CO.box(cx, CURB + f * 3.4 + 0.3, cz, 0.6, 3.1, 0.6, 0, { c: grey, s: 2, skip: 'Yy' });
+      skel.box(cx, CURB + f * 3.4 + 0.3, cz, 0.6, 3.1, 0.6, 0, { c: grey, s: 2, skip: 'Yy' });
       if (f === 0) B.solid(cx, cz, 0.32, 0.32, 0, 3.4);
     }
   }
   B.solid(tx, tz, tw / 2, td / 2, 0, 40, 3.4); B.foot(tx, tz, tw / 2, td / 2, 0, 'site');
   // crane
   const kx = b.x1 - 16, kz = b.z1 - 18, yel = rgb('#e8b21e');
+  const P0 = P; if (B.stand(ch, 'e_crane', kx, kz, 0, 46)) P = new Chunk('void').get('paint');
   P.box(kx, CURB, kz, 1.4, 44, 1.4, 0, { c: shade(yel, 0.8), cTop: yel }); P.box(kx + 10, CURB + 44, kz, 46, 1.1, 1.1, 0, { c: yel }); P.box(kx - 9, CURB + 42.6, kz, 4, 2.4, 2.2, 0, { c: rgb('#8d8f8c') });
   P.box(kx + 22, CURB + 30, kz, 0.06, 14, 0.06, 0, { c: rgb('#222') });
-  B.solid(kx, kz, 0.8, 0.8, 0, 44);
+  B.solid(kx, kz, 0.8, 0.8, 0, 44); P = P0;
   // sand heaps, pallets, site cabins
   for (let i = 0; i < 5; i++) { const x = b.x0 + rng.f(10, 30), z = b.z0 + rng.f(8, b.d - 8), r = rng.f(2.5, 4.5); ch.get('sand').cyl(x, CURB, z, r, 0.2, r * 0.55, 9, [0.9, 0.86, 0.78], [1, 0.97, 0.9], true); B.solid(x, z, r * 0.6, r * 0.6, 0, 1.2); }
   const cab = rgb('#e9e7e0');
@@ -384,12 +392,15 @@ function towers(B, ch, b, rng) {
   const glass = rgb('#dfe7ea');
   for (const [tx, tz] of [[b.cx - 20, b.cz - 14], [b.cx + 22, b.cz + 12]]) {
     const w = 22, d = 22, fl = 14, Ht = fl * 3.1;
+    const real = ch;
+    if (B.place(real, 'b_tower', tx, tz, tx > b.cx ? H : 0, w + 1.4, d + 1.4, Ht * 1.04, 1.6)) ch = new Chunk('void');
     ch.get('plaster').box(tx, CURB, tz, w, Ht, d, 0, { c: shade(glass, 0.9), cTop: [1, 1, 1], s: 4, skip: 'y' });
     for (let f = 0; f < fl; f++) for (let s = 0; s < 4; s++) for (let k = -2; k <= 2; k++) {
       ch.get(rng.chance(0.5) ? 'winLit' : 'win').panel(tx, tz, s * H, k * 4.1, CURB + f * 3.1 + 0.5, 3.5, 2.3, w / 2 + 0.02, WIN.open);
       if (k % 2 === 0) { const [bx, bz] = B.at(tx, tz, s * H, k * 4.1, w / 2 + 0.7); ch.get('gloss').box(bx, CURB + f * 3.1 + 0.3, bz, 3.7, 1.0, 1.4, s * H, { c: rgb('#8fb4c2'), cTop: rgb('#cfe3ea') }); }
     }
     B.solid(tx, tz, w / 2 + 0.7, d / 2 + 0.7, 0, Ht + 2); B.foot(tx, tz, w / 2, d / 2, 0, 'tower');
+    ch = real;
   }
   const m = 3;
   B.wall(ch, b.x0 + m, b.z0 + m, b.x1 - m, b.z0 + m, 1.9, 0.25, rgb('#f3efe6')); B.wall(ch, b.x1 - m, b.z0 + m, b.x1 - m, b.z1 - m, 1.9, 0.25, rgb('#f3efe6'));

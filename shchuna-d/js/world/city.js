@@ -18,7 +18,9 @@ const GRAF = ['שכונה ד׳ לנצח', 'ד׳', 'מוות לחובות', 'אמ
 const GRAF_G = ['שכונה ג׳ שולטת', 'ג׳', 'ד׳ = פארש', 'רק ג׳', 'אזור שלנו'];
 
 // Yaw that turns each generated model's street side to local +Z (found by looking at them).
-const FACE = { b_shops: Math.PI, b_blockA: Math.PI, b_blockC: Math.PI };
+const CIVIC = { school: 'b_school', police: 'b_police', wedding: 'b_wedding', bituach: 'b_bituach', city: 'b_city', matnas: 'b_matnas' };
+const HANGAR = { garage: 'b_garage', scrap: 'b_scrap', depot: 'b_hangarA', moshav: 'b_hangarB' };
+const FACE = {};
 
 export class CityBuilder {
   constructor(gfx, mats, physics, models) {
@@ -172,7 +174,7 @@ export class CityBuilder {
 
   bench(ch, x, z, yaw) {
     const wood = rgb('#8a5f3c'), iron = rgb('#3c4146');
-    const P = ch.get('paint');
+    const P = (this.fit(ch, 'e_bench', x, z, yaw, 1.9, 0.7, 0.95) ? new Chunk('void') : ch).get('paint');
     P.box(x, CURB + 0.42, z, 1.8, 0.06, 0.5, yaw, { c: wood });
     const [bx, bz] = this.at(x, z, yaw, 0, -0.27);
     P.box(bx, CURB + 0.5, bz, 1.8, 0.5, 0.06, yaw, { c: wood });
@@ -211,13 +213,19 @@ export class CityBuilder {
     ch.get(key).add(md.geometry, m.multiply(md.matrix));
     return true;
   }
+  // The generator always returns a model with its photographed front towards +X. Returns the
+  // turn that brings that front to local +Z, and the model's extent along and across the street.
+  frame(name, md) {
+    if (md.size.x > md.size.z * 1.3) return [(FACE[name] || 0), md.size.x, md.size.z];      // lying along X: front is a long side
+    return [-Math.PI / 2 + (FACE[name] || 0), md.size.z, md.size.x];
+  }
   // A generated model stretched to a box: len along local X, dep along local Z, hgt up.
   // FACE turns each model so its street side looks along local +Z.
   fit(ch, name, x, z, yaw, len, dep, hgt, y = CURB) {
     const md = this.models[name];
     if (!md) return false;
-    const pre = new THREE.Matrix4().makeRotationY((md.longX ? 0 : Math.PI / 2) + (FACE[name] || 0));
-    const L = Math.max(md.size.x, md.size.z), D = Math.min(md.size.x, md.size.z), ky = hgt / md.size.y;
+    const [turn, L, D] = this.frame(name, md);
+    const pre = new THREE.Matrix4().makeRotationY(turn), ky = hgt / md.size.y;
     const m = new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeScale(len / L, ky, dep / D));
     m.setPosition(x, y - md.minY * ky, z);
     const key = 'mdl_' + name;
@@ -225,12 +233,23 @@ export class CityBuilder {
     ch.get(key).add(md.geometry, m.multiply(pre).multiply(md.matrix));
     return true;
   }
+  // A generated building scaled as a whole so its long side is `len`: proportions stay the architect's.
+  // Depth and height may each give by up to `slack` towards the lot they stand on.
+  place(ch, name, x, z, yaw, len, dep, hgt, slack = 1.25) {
+    const md = this.models[name];
+    if (!md) return false;
+    const [, L, D] = this.frame(name, md), k = len / L;
+    const cl = (v, want) => Math.min(v * slack, Math.max(v / slack, want));
+    // a model deeper than its lot grows backwards: the street front stays where the door is
+    const dd = cl(D * k, dep), [px, pz] = this.at(x, z, yaw, 0, -(dd - dep) / 2);
+    return this.fit(ch, name, px, pz, yaw, len, dd, cl(md.size.y * k, hgt));
+  }
   // A generated model scaled uniformly to a height.
   stand(ch, name, x, z, yaw, hgt, y = CURB) {
     const md = this.models[name];
     if (!md) return false;
     const k = hgt / md.size.y;
-    const m = new THREE.Matrix4().makeRotationY(yaw + (FACE[name] || 0)).multiply(new THREE.Matrix4().makeScale(k, k, k));
+    const m = new THREE.Matrix4().makeRotationY(yaw - Math.PI / 2 + (FACE[name] || 0)).multiply(new THREE.Matrix4().makeScale(k, k, k));
     m.setPosition(x, y - md.minY * k, z);
     const key = 'mdl_' + name;
     if (!this.M[key]) this.M[key] = md.material;
@@ -311,7 +330,8 @@ export class CityBuilder {
     const rng = new Rng(o.seed || 1);
     // With a generated building available the procedural pass still runs for its collision,
     // doors and hang-outs, but draws into a chunk that is never built.
-    const pick = o.pilotis ? 'b_blockB' : ((o.seed || 1) % 2 ? 'b_blockA' : 'b_blockC');
+    const flat = ['b_blockA', 'b_blockC', 'b_blockD', 'b_blockE'].filter((k) => this.models[k]);
+    const pick = o.pilotis ? 'b_blockB' : (flat[(o.seed || 1) % Math.max(1, flat.length)] || 'b_blockA');
     const mdl = this.models[pick] ? pick : null, real = ch;
     if (mdl) ch = new Chunk('void');
     const { x, z, len } = o, yaw = o.yaw || 0, dep = o.dep || 10.4, floors = o.floors || 4;
@@ -483,13 +503,15 @@ export class CityBuilder {
   // units: [{name, sub, bg, fg, kind:'store'|'roller'|'open', w}]
   shops(ch, o) {
     const { x, z, len, units } = o, yaw = o.yaw || 0, dep = o.dep || 8, H = o.h || 3.7;
-    const real = ch, mdl = !!this.models.b_shops;
+    const real = ch;
+    const kinds = ['b_shops', 'b_shops2', 'b_shops3'].filter((k) => this.models[k]);
+    const mdl = kinds.length > 0, skin = kinds[Math.abs(Math.round(x * 0.37 + z * 0.11)) % Math.max(1, kinds.length)];
     if (mdl) {
       ch = new Chunk('void');
       const n = Math.max(1, Math.round(len / 16)), piece = len / n;
       for (let i = 0; i < n; i++) {
         const [mx, mz] = this.at(x, z, yaw, -len / 2 + piece * (i + 0.5), 0.7);
-        this.fit(real, 'b_shops', mx, mz, yaw, piece, dep + 1.6, H * 1.32);
+        this.fit(real, kinds.length > 1 && n > 1 ? kinds[(i + kinds.indexOf(skin)) % kinds.length] : skin, mx, mz, yaw, piece, dep + 1.6, H * 1.32);
       }
     }
     const tint = o.tint || PAL[2];
@@ -520,6 +542,8 @@ export class CityBuilder {
   // Generic institutional building with a grid of windows and a sign over the door.
   civic(ch, o) {
     const { x, z, w, d } = o, yaw = o.yaw || 0, floors = o.floors || 2, H = floors * 3.3 + 0.6;
+    const name = o.model || CIVIC[o.poi] || CIVIC[o.kind];
+    if (name && this.place(ch, name, x, z, yaw, w + 1, d + 1, H * 1.12)) ch = new Chunk('void');
     const tint = o.tint ? rgb(o.tint) : PAL[2], mat = o.mat || 'plaster';
     ch.get(mat).box(x, CURB, z, w, H, d, yaw, { c: shade(tint, 0.8), cTop: tint, s: 3.4, skip: 'Yy' });
     ch.get('roof').floor(x, CURB + H, z, w, d, yaw, [0, 0, w / 6, d / 6]);
@@ -550,6 +574,8 @@ export class CityBuilder {
   // Corrugated industrial shed with roller doors.
   hangar(ch, o) {
     const { x, z, w, d } = o, yaw = o.yaw || 0, H = o.h || 6.5;
+    const name = o.model || HANGAR[o.poi] || (Math.round(x + z) % 2 ? 'b_hangarA' : 'b_hangarB');
+    if (this.place(ch, name, x, z, yaw, w + 0.6, d + 0.6, H * 1.12)) ch = new Chunk('void');
     const tint = rgb(o.tint || '#aab4bb');
     ch.get('metal').box(x, CURB, z, w, H, d, yaw, { c: shade(tint, 0.75), cTop: tint, s: 2.2, skip: 'y' });
     this.solid(x, z, w / 2, d / 2, yaw, H + 1); this.foot(x, z, w / 2, d / 2, yaw, 'ind');

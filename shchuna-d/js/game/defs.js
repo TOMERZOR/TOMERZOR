@@ -75,3 +75,6 @@ export const RADIO = [
   { id: 'darom', name: 'רדיו דרום 97.5', file: 'assets/audio/radio_darom.m4a', tag: 'ים־תיכוני · טראפ מזרחי' },
   { id: 'lev', name: 'קול הלב 101', file: 'assets/audio/radio_lev.m4a', tag: 'חפלות · דרבוקות · חתונות' },
 ];
+
+// Generated buildings and street furniture beyond the first set (assets/models/<name>.glb).
+export const ENV_MODELS = ['b_school', 'b_police', 'b_bituach', 'b_city', 'b_wedding', 'b_matnas', 'b_garage', 'b_scrap', 'b_hangarA', 'b_hangarB', 'b_tower', ];

@@ -68,16 +68,18 @@ const MODELS = {
   b_skeleton: { src: 'env/skeleton.glb', tex: 2048, tris: 6000 },
   b_gas: { src: 'env/gas.glb', tex: 2048, tris: 6000 },
   b_station: { src: 'env/station.glb', tex: 2048, tris: 6000 },
-  b_shops2: { src: 'env/shops2.glb', tex: 2048, tris: 9000 },
-  b_shops3: { src: 'env/shops3.glb', tex: 2048, tris: 9000 },
+  b_shops2: { src: 'env/shops2.glb', tex: 4096, tris: 9000 },
+  b_shops3: { src: 'env/shops3.glb', tex: 4096, tris: 9000 },
   b_blockD: { src: 'env/blockD.glb', tex: 2048, tris: 6000 },
   b_blockE: { src: 'env/blockE.glb', tex: 2048, tris: 6000 },
-  e_stall: { src: 'env/stall.glb', tex: 1024, tris: 1500 },
+  e_stall: { src: 'env/stall.glb', tex: 1024, tris: 5000 },
   e_bench: { src: 'env/bench.glb', tex: 512, tris: 500 },
   e_crane: { src: 'env/crane.glb', tex: 1024, tris: 2500 },
-  e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 220 },
+  e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 500, half: 'x' },
   e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
-  e_ficus: { src: 'env/ficus.glb', tex: 1024, tris: 1800, sloppy: 4000 },
+  e_ficus: { src: 'env/ficus2.glb', tex: 1024, tris: 3500, sloppy: 3500 },
+  e_euc: { src: 'env/euc.glb', tex: 1024, tris: 3000, sloppy: 3000 },
+  e_bush: { src: 'env/bush.glb', tex: 512, tris: 1500, sloppy: 1800 },
   e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 900 },
   e_shelter: { src: 'env/shelter.glb', tex: 1024, tris: 900 },
 };
@@ -147,6 +149,21 @@ for (const [name, m] of Object.entries(MODELS)) {
     mat.setAlphaMode('OPAQUE');
   }
   const before = triCount(root);
+  if (m.half) {
+    // the generator sometimes returns the object twice, side by side: keep the copy on one side
+    for (const me of root.listMeshes()) for (const p of me.listPrimitives()) {
+      const pos = p.getAttribute('POSITION'), idx = p.getIndices().getArray(), ax = { x: 0, y: 1, z: 2 }[m.half];
+      let lo = Infinity, hi = -Infinity; const v = [0, 0, 0];
+      for (let i = 0; i < pos.getCount(); i++) { pos.getElement(i, v); lo = Math.min(lo, v[ax]); hi = Math.max(hi, v[ax]); }
+      const mid = (lo + hi) / 2, keep = [];
+      for (let i = 0; i < idx.length; i += 3) {
+        let c = 0; for (let k = 0; k < 3; k++) { pos.getElement(idx[i + k], v); c += v[ax]; }
+        if (c / 3 < mid) keep.push(idx[i], idx[i + 1], idx[i + 2]);
+      }
+      p.getIndices().setArray(new Uint32Array(keep));
+      compactPrimitive(p);
+    }
+  }
   await doc.transform(
     dedup(), prune({ keepLeaves: true }),
     textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [m.tex, m.tex], quality: 82 }),

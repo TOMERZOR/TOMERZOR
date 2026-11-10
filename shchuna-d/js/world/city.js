@@ -107,7 +107,8 @@ export class CityBuilder {
   tree(ch, x, z, s = 1, rng = this.rng, kind = 'ficus') {
     if (this.models.e_ficus) {
       const hgt = (kind === 'euc' ? 9.5 : kind === 'bush' ? 3.2 : 6.4) * s * rng.f(0.9, 1.12);
-      this.stand(ch, 'e_ficus', x, z, rng.f(6.28), hgt);
+      const mdl = kind === 'euc' && this.models.e_euc ? 'e_euc' : kind === 'bush' && this.models.e_bush ? 'e_bush' : 'e_ficus';
+      this.stand(ch, mdl, x, z, rng.f(6.28), hgt);
       this.solid(x, z, 0.3 * s, 0.3 * s, 0, 2.6 * s);
       return;
     }

@@ -417,16 +417,19 @@ function towers(B, ch, b, rng) {
 // ---- Bus station and community centre -----------------------------------------------------
 function station(B, ch, b, rng) {
   base(B, ch, b, 'asphalt', 6, [0.78, 0.78, 0.76]);
-  const P = ch.get('paint');
+  let P = ch.get('paint');
   // platforms with canopies
   for (let i = 0; i < 4; i++) {
     const x = b.x0 + 16 + i * 13, z = b.z0 + 24;
+    const realS = ch, Preal = P;
+    if (B.fit(realS, 'b_station', x, z, H, 27, 5.6, 3.9)) { ch = new Chunk('void'); P = ch.get('paint'); }
     ch.get('paving').box(x, CURB - 0.002, z, 4, 0.14, 26, 0, { c: rgb('#d2cfc5'), s: 2.6 });
     for (const zz of [-10, 0, 10]) { P.cyl(x, CURB + 0.14, z + zz, 0.09, 0.09, 3.3, 6, rgb('#3c6b54'), undefined, false); B.solid(x, z + zz, 0.12, 0.12, 0, 3.3); }
     ch.get('metal').box(x, CURB + 3.4, z, 5.4, 0.12, 27, 0, { c: rgb('#3c6b54'), cTop: rgb('#4f8a6d'), s: 1.5 });
     const r = B.sign({ text: ['רציף 1 · באר שבע', 'רציף 2 · תל אביב', 'רציף 3 · דימונה', 'רציף 4 · אין קו'][i], bg: '#16181d', fg: '#f5b301', font: '"Heebo"', weight: 700 }, 384, 64);
     ch.get('sign').panel(x, z - 13, Math.PI, 0, CURB + 2.7, 3.6, 0.6, 0.1, r); ch.get('sign').panel(x, z - 13, 0, 0, CURB + 2.7, 3.6, 0.6, 26.1, r);
     B.bench(ch, x, z - 5, H); B.bench(ch, x, z + 5, -H);
+    ch = realS; P = Preal;
     B.hang.push({ x: x + 1, z: z + rng.f(-8, 8), r: 1.5, kind: 'bus' });
     B.parking.push({ x: x + 5.6, z: z, yaw: 0, kind: 'bus' });
   }

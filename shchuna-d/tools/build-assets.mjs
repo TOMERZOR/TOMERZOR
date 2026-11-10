@@ -75,7 +75,7 @@ const MODELS = {
   e_stall: { src: 'env/stall.glb', tex: 1024, tris: 5000 },
   e_bench: { src: 'env/bench.glb', tex: 512, tris: 1500 },
   e_crane: { src: 'env/crane.glb', tex: 1024, tris: 2500 },
-  e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 500, half: 'x' },
+  e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 1600, half: 'x', straight: true },
   e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
   e_ficus: { src: 'env/ficus3.glb', tex: 1024, tris: 7000 },
   e_euc: { src: 'env/euc.glb', tex: 48, tris: 4000, sloppy: 3500 },
@@ -162,6 +162,18 @@ for (const [name, m] of Object.entries(MODELS)) {
       }
       p.getIndices().setArray(new Uint32Array(keep));
       compactPrimitive(p);
+    }
+  }
+  if (m.straight) {
+    // a pole that leans: shear it upright, measuring the lean between its foot and two thirds up
+    for (const me of root.listMeshes()) for (const p of me.listPrimitives()) {
+      const pos = p.getAttribute('POSITION'), v = [0, 0, 0];
+      let lo = Infinity, hi = -Infinity;
+      for (let i = 0; i < pos.getCount(); i++) { pos.getElement(i, v); lo = Math.min(lo, v[1]); hi = Math.max(hi, v[1]); }
+      const H = hi - lo, band = (a, b) => { let sx = 0, sz = 0, n = 0; for (let i = 0; i < pos.getCount(); i++) { pos.getElement(i, v); const t = (v[1] - lo) / H; if (t >= a && t < b) { sx += v[0]; sz += v[2]; n++; } } return [sx / n, sz / n]; };
+      const [x0, z0] = band(0.1, 0.2), [x1, z1] = band(0.6, 0.7), kx = (x1 - x0) / (0.5 * H), kz = (z1 - z0) / (0.5 * H);
+      for (let i = 0; i < pos.getCount(); i++) { pos.getElement(i, v); const dy = v[1] - lo; v[0] -= kx * dy; v[2] -= kz * dy; pos.setElement(i, v); }
+      console.log('  straightened', name, 'lean', kx.toFixed(3), kz.toFixed(3));
     }
   }
   await doc.transform(

@@ -414,14 +414,38 @@ export async function createMaterials(gfx) {
     M.decal.map = dt; M.decal.needsUpdate = true;
   };
   // Lamps, windows and signs come on at dusk.
+  // Generated buildings have no separate window layer, so at night their own texture is read
+  // for glass (dark, cool pixels) and a random share of it is made to glow.
+  const homes = [];
+  const lightWindows = (mat, share = 0.38) => {
+    const img = mat.map && mat.map.image;
+    if (!img || mat.userData.lit) return;
+    mat.userData.lit = true;
+    const S = 1024, cv = document.createElement('canvas'); cv.width = cv.height = S;
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, S, S);
+    const d = g.getImageData(0, 0, S, S), p = d.data;
+    const cell = (x, y) => { let h = (x * 374761393 + y * 668265263) >>> 0; h = ((h ^ (h >>> 13)) * 1274126177) >>> 0; return (h & 1023) / 1023; };
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const i = (y * S + x) * 4, r = p[i], gg = p[i + 1], b = p[i + 2], lum = r * 0.3 + gg * 0.59 + b * 0.11;
+      const glass = lum < 78 && b > r - 12 && Math.max(r, gg, b) - Math.min(r, gg, b) < 60;
+      const c = cell(x >> 5, y >> 5), on = glass && c < share;
+      const k = on ? 0.55 + (1 - lum / 78) * 0.45 : 0, tv = on && c < share * 0.18;
+      p[i] = (tv ? 150 : 255) * k; p[i + 1] = (tv ? 190 : 196) * k; p[i + 2] = (tv ? 255 : 120) * k;
+    }
+    g.putImageData(d, 0, 0);
+    const t = new THREE.CanvasTexture(cv); t.flipY = mat.map.flipY; t.colorSpace = THREE.SRGBColorSpace; t.wrapS = mat.map.wrapS; t.wrapT = mat.map.wrapT;
+    mat.emissiveMap = t; mat.emissive = new THREE.Color(0xffffff); mat.emissiveIntensity = 0; mat.needsUpdate = true;
+    homes.push(mat);
+  };
   const boards = [];
   for (const n of SIGN_SHEETS) if (sheets[n]) { M['sgn_' + n] = std({ map: sheets[n], roughness: 0.6, emissive: new THREE.Color(0xffffff), emissiveMap: sheets[n], emissiveIntensity: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); boards.push(M['sgn_' + n]); }
   const setNight = (n) => {
     for (const b of boards) b.emissiveIntensity = n * 0.55;
+    for (const h of homes) h.emissiveIntensity = n * 1.1;
     M.winLit.emissiveIntensity = n * 0.6;
     M.sign.emissiveIntensity = 0.04 + n * 0.5;
     M.glow.opacity = n * 0.5;
     M.bulb.color.setScalar(0.25 + n * 2.2);
   };
-  return { M, T, signs, decals, whiteRect, finish, setNight, aniso };
+  return { M, T, signs, decals, whiteRect, finish, setNight, aniso, lightWindows };
 }

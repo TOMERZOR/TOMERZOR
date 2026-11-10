@@ -249,7 +249,7 @@ export class CityBuilder {
     const m = new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeScale(len / L, ky, dep / D));
     m.setPosition(x, y - md.minY * ky, z);
     const key = 'mdl_' + name;
-    if (!this.M[key]) this.M[key] = md.material;
+    if (!this.M[key]) { this.M[key] = md.material; if (/^b_(block|tower|bituach|city|police|school|matnas)/.test(name)) this.mats.lightWindows(md.material, name === 'b_tower' ? 0.5 : 0.38); }
     ch.get(key).add(md.geometry, m.multiply(pre).multiply(md.matrix));
     this.boards(ch, name, md, x, z, yaw, len / L, ky, dep / D, y);
     return true;

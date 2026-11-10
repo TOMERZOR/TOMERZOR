@@ -50,38 +50,38 @@ const MODELS = {
   p_cat: { src: 'p_cat.glb', tex: 512 },
   p_atm: { src: 'p_atm.glb', tex: 512 },
   // the neighbourhood itself: `tris` is the triangle budget each piece is simplified to
-  b_blockA: { src: 'env/blockA.glb', tex: 2048, tris: 5000 },
-  b_blockB: { src: 'env/blockB.glb', tex: 2048, tris: 5000 },
-  b_blockC: { src: 'env/blockC.glb', tex: 2048, tris: 5000 },
-  b_shops: { src: 'env/shops.glb', tex: 4096, tris: 9000 },
-  b_school: { src: 'env/school.glb', tex: 2048, tris: 6000 },
-  b_police: { src: 'env/police.glb', tex: 2048, tris: 14000 },
-  b_bituach: { src: 'env/bituach.glb', tex: 2048, tris: 6000 },
-  b_city: { src: 'env/city.glb', tex: 2048, tris: 6000 },
-  b_wedding: { src: 'env/wedding.glb', tex: 2048, tris: 6000 },
-  b_matnas: { src: 'env/matnas.glb', tex: 2048, tris: 6000 },
-  b_garage: { src: 'env/garage.glb', tex: 2048, tris: 6000 },
-  b_scrap: { src: 'env/scrap.glb', tex: 2048, tris: 6000 },
-  b_hangarA: { src: 'env/hangarA.glb', tex: 2048, tris: 6000 },
-  b_hangarB: { src: 'env/hangarB.glb', tex: 2048, tris: 6000 },
-  b_tower: { src: 'env/tower.glb', tex: 2048, tris: 6000 },
-  b_skeleton: { src: 'env/skeleton.glb', tex: 2048, tris: 6000 },
-  b_gas: { src: 'env/gas.glb', tex: 2048, tris: 6000 },
-  b_station: { src: 'env/station.glb', tex: 2048, tris: 6000 },
-  b_shops2: { src: 'env/shops2.glb', tex: 4096, tris: 9000 },
-  b_shops3: { src: 'env/shops3.glb', tex: 4096, tris: 9000 },
-  b_blockD: { src: 'env/blockD.glb', tex: 2048, tris: 6000 },
-  b_blockE: { src: 'env/blockE.glb', tex: 2048, tris: 6000 },
+  b_blockA: { src: 'env/blockA.glb', tex: 2048, tris: 9000, half: '+x' },
+  b_blockB: { src: 'env/blockB.glb', tex: 2048, tris: 9000, half: '+x' },
+  b_blockC: { src: 'env/blockC.glb', tex: 2048, tris: 9000, half: '+x' },
+  b_shops: { src: 'env/shops.glb', tex: 4096, tris: 30000 },
+  b_school: { src: 'env/school.glb', tex: 2048, tris: 30000 },
+  b_police: { src: 'env/police.glb', tex: 2048, tris: 30000 },
+  b_bituach: { src: 'env/bituach.glb', tex: 2048, tris: 30000 },
+  b_city: { src: 'env/city.glb', tex: 2048, tris: 30000 },
+  b_wedding: { src: 'env/wedding.glb', tex: 2048, tris: 30000 },
+  b_matnas: { src: 'env/matnas.glb', tex: 2048, tris: 30000 },
+  b_garage: { src: 'env/garage.glb', tex: 2048, tris: 30000 },
+  b_scrap: { src: 'env/scrap.glb', tex: 2048, tris: 30000 },
+  b_hangarA: { src: 'env/hangarA.glb', tex: 2048, tris: 18000 },
+  b_hangarB: { src: 'env/hangarB.glb', tex: 2048, tris: 18000 },
+  b_tower: { src: 'env/tower.glb', tex: 2048, tris: 18000 },
+  b_skeleton: { src: 'env/skeleton.glb', tex: 2048, tris: 18000 },
+  b_gas: { src: 'env/gas.glb', tex: 2048, tris: 30000 },
+  b_station: { src: 'env/station.glb', tex: 2048, tris: 30000 },
+  b_shops2: { src: 'env/shops2.glb', tex: 4096, tris: 30000 },
+  b_shops3: { src: 'env/shops3.glb', tex: 4096, tris: 30000 },
+  b_blockD: { src: 'env/blockD.glb', tex: 2048, tris: 9000, half: '+x' },
+  b_blockE: { src: 'env/blockE.glb', tex: 2048, tris: 9000, half: '+x' },
   e_stall: { src: 'env/stall.glb', tex: 1024, tris: 5000 },
-  e_bench: { src: 'env/bench.glb', tex: 512, tris: 500 },
+  e_bench: { src: 'env/bench.glb', tex: 512, tris: 1500 },
   e_crane: { src: 'env/crane.glb', tex: 1024, tris: 2500 },
   e_lamp: { src: 'env/lamp.glb', tex: 512, tris: 500, half: 'x' },
   e_palm: { src: 'env/palm.glb', tex: 1024, tris: 700 },
   e_ficus: { src: 'env/ficus2.glb', tex: 1024, tris: 3500, sloppy: 3500 },
   e_euc: { src: 'env/euc.glb', tex: 1024, tris: 3000, sloppy: 3000 },
   e_bush: { src: 'env/bush.glb', tex: 512, tris: 1500, sloppy: 1800 },
-  e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 900 },
-  e_shelter: { src: 'env/shelter.glb', tex: 1024, tris: 900 },
+  e_busstop: { src: 'env/busstop.glb', tex: 1024, tris: 2500 },
+  e_shelter: { src: 'env/shelter.glb', tex: 1024, tris: 6000 },
 };
 // clip name -> raw file. The clip is stored without mesh; the game retargets it onto every character.
 const CLIPS = {
@@ -152,13 +152,13 @@ for (const [name, m] of Object.entries(MODELS)) {
   if (m.half) {
     // the generator sometimes returns the object twice, side by side: keep the copy on one side
     for (const me of root.listMeshes()) for (const p of me.listPrimitives()) {
-      const pos = p.getAttribute('POSITION'), idx = p.getIndices().getArray(), ax = { x: 0, y: 1, z: 2 }[m.half];
+      const pos = p.getAttribute('POSITION'), idx = p.getIndices().getArray(), ax = { x: 0, y: 1, z: 2 }[m.half.replace('+', '')];
       let lo = Infinity, hi = -Infinity; const v = [0, 0, 0];
       for (let i = 0; i < pos.getCount(); i++) { pos.getElement(i, v); lo = Math.min(lo, v[ax]); hi = Math.max(hi, v[ax]); }
-      const mid = (lo + hi) / 2, keep = [];
+      const mid = (lo + hi) / 2, keep = [], plus = m.half[0] === '+';
       for (let i = 0; i < idx.length; i += 3) {
         let c = 0; for (let k = 0; k < 3; k++) { pos.getElement(idx[i + k], v); c += v[ax]; }
-        if (c / 3 < mid) keep.push(idx[i], idx[i + 1], idx[i + 2]);
+        if (plus ? c / 3 > mid : c / 3 < mid) keep.push(idx[i], idx[i + 1], idx[i + 2]);
       }
       p.getIndices().setArray(new Uint32Array(keep));
       compactPrimitive(p);
@@ -168,7 +168,7 @@ for (const [name, m] of Object.entries(MODELS)) {
     dedup(), prune({ keepLeaves: true }),
     textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [m.tex, m.tex], quality: 82 }),
     ...(m.char ? [] : [weld()]),
-    ...(m.tris ? [simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, m.tris / Math.max(1, triCount(root))), error: 1, lockBorder: false })] : []),
+    ...(m.tris ? [simplify({ simplifier: MeshoptSimplifier, ratio: Math.min(1, m.tris / Math.max(1, triCount(root))), error: 0.01, lockBorder: false })] : []),
   );
   // Foliage is thousands of loose leaves that edge-collapse cannot merge; the grid-based
   // simplifier can, at the price of a rougher silhouette.

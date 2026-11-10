@@ -393,7 +393,10 @@ function towers(B, ch, b, rng) {
   for (const [tx, tz] of [[b.cx - 20, b.cz - 14], [b.cx + 22, b.cz + 12]]) {
     const w = 22, d = 22, fl = 14, Ht = fl * 3.1;
     const real = ch;
-    if (B.place(real, 'b_tower', tx, tz, tx > b.cx ? H : 0, w + 1.4, d + 1.4, Ht * 1.04, 1.6)) ch = new Chunk('void');
+    // the tower was modelled from its front: two front halves back to back leave no blank wall
+    let twin = false;
+    for (const s of [1, -1]) { const ty = (tx > b.cx ? H : 0) + (s > 0 ? 0 : Math.PI), [hx, hz] = B.at(tx, tz, tx > b.cx ? H : 0, 0, s * (d + 1.4) / 4); twin = B.fit(real, 'b_tower', hx, hz, ty, w + 1.4, (d + 1.4) / 2, Ht * 1.04) || twin; }
+    if (twin) ch = new Chunk('void');
     ch.get('plaster').box(tx, CURB, tz, w, Ht, d, 0, { c: shade(glass, 0.9), cTop: [1, 1, 1], s: 4, skip: 'y' });
     for (let f = 0; f < fl; f++) for (let s = 0; s < 4; s++) for (let k = -2; k <= 2; k++) {
       ch.get(rng.chance(0.5) ? 'winLit' : 'win').panel(tx, tz, s * H, k * 4.1, CURB + f * 3.1 + 0.5, 3.5, 2.3, w / 2 + 0.02, WIN.open);

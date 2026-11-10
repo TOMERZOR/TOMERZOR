@@ -1,7 +1,17 @@
 # Builds the iOS app of שכונה ד׳ (shchuna-d/app, a Capacitor shell around the game) on a
-# macOS runner and keeps an UNSIGNED .ipa as a workflow artifact. Apple only lets signed apps
-# run on a phone: sign this file with your own Apple ID (Sideloadly, AltStore, or Xcode), or
-# open shchuna-d/app/ios/App/App.xcodeproj on a Mac and run it on your device.
+# macOS runner.
+#
+# With the four repository secrets below it signs the app with your Apple Developer team and
+# uploads the build to TestFlight (App Store Connect). Without them it keeps an UNSIGNED .ipa
+# as a workflow artifact, which you can sign yourself (Sideloadly, AltStore, Xcode).
+#
+#   APPLE_TEAM_ID          the 10-character Team ID (developer.apple.com > Membership)
+#   ASC_KEY_ID             App Store Connect API key ID
+#   ASC_ISSUER_ID          App Store Connect API issuer ID
+#   ASC_KEY_P8             the contents of the AuthKey_XXXX.p8 file (the whole text)
+#
+# The API key needs the Admin role (cloud-managed signing certificates), and an app with the
+# bundle ID com.tomerzor.shchunad has to exist in App Store Connect before the first upload.
 name: שכונה ד׳ · iOS
 
 on:
@@ -31,7 +41,57 @@ jobs:
           npm ci || npm install
           node sync.mjs
           npx cap sync ios
+      - name: Check signing secrets
+        id: sign
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY: ${{ secrets.ASC_KEY_P8 }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          if [ -n "$TEAM" ] && [ -n "$KEY" ] && [ -n "$KEY_ID" ] && [ -n "$ISSUER" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Apple signing secrets are not set; building an unsigned .ipa."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build, sign and upload to TestFlight
+        if: steps.sign.outputs.ready == 'true'
+        working-directory: shchuna-d/app/ios/App
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY: ${{ secrets.ASC_KEY_P8 }}
+          KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/keys"
+          KEY_PATH="$RUNNER_TEMP/keys/AuthKey_${KEY_ID}.p8"
+          printf '%s\n' "$KEY" > "$KEY_PATH"
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER")
+          xcodebuild archive -project App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath build/App.xcarchive "${AUTH[@]}" \
+            DEVELOPMENT_TEAM="$TEAM" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            | tail -n 60
+          cat > export.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportOptionsPlist export.plist \
+            -exportPath build/export "${AUTH[@]}" | tail -n 60
+          rm -f "$KEY_PATH"
+          echo "::notice::Build $GITHUB_RUN_NUMBER was uploaded to App Store Connect. It appears in TestFlight after processing."
+
       - name: Build (unsigned)
+        if: steps.sign.outputs.ready != 'true'
         working-directory: shchuna-d/app/ios/App
         run: |
           xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos \
@@ -43,6 +103,7 @@ jobs:
           zip -qry shchuna-d-unsigned.ipa Payload
           ls -la shchuna-d-unsigned.ipa
       - uses: actions/upload-artifact@v4
+        if: steps.sign.outputs.ready != 'true'
         with:
           name: shchuna-d-unsigned-ipa
           path: shchuna-d/app/ios/App/shchuna-d-unsigned.ipa

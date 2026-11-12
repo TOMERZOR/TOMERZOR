@@ -1,0 +1,64 @@
+# One-off: ten years of daily prices and the dividend history from Nasdaq's public API, for the
+# momentum research (mabat/backtest/long). Runs only on pushes to claude/mabat-momentum.
+name: Mabat momentum data
+
+on:
+  push:
+    branches: [claude/mabat-momentum]
+    paths: [".github/workflows/mabat-momentum-data.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download prices and dividends
+        timeout-minutes: 30
+        run: |
+          mkdir -p mabat/backtest/long
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+          get() { curl -sS --max-time 40 --retry 2 --retry-delay 5 -A "$UA" -H "Accept: application/json, text/plain, */*" -H "Accept-Language: en-US,en;q=0.9" -o "$2" "$1"; }
+          ETFS="SPY XLK XLF XLE XLV XLY XLP XLI XLB XLU EFA AGG BIL IEF"
+          STOCKS="AAPL MSFT NVDA AMZN GOOGL META TSLA AVGO AMD NFLX ORCL CRM ADBE INTC QCOM MU PLTR UBER SHOP COIN JPM BAC GS V MA AXP UNH LLY JNJ MRK ABBV PFE COST WMT HD MCD NKE KO PEP DIS XOM CVX CAT BA GE CSCO IBM NOW AMAT TXN"
+          for t in $ETFS $STOCKS; do
+            class=stocks; case " $ETFS " in *" $t "*) class=etf;; esac
+            get "https://api.nasdaq.com/api/quote/$t/historical?assetclass=$class&fromdate=2016-01-01&todate=2026-12-31&limit=9999" prices.json || true
+            sleep 1
+            get "https://api.nasdaq.com/api/quote/$t/dividends?assetclass=$class" divs.json || echo '{}' > divs.json
+            python3 - "$t" <<'PY'
+          import json, sys
+          t = sys.argv[1]
+          num = lambda s: float(str(s).replace('$', '').replace(',', '')) if s not in (None, '', 'N/A') else None
+          def mdy(s):
+              m, d, y = s.split('/')
+              return f"{y}-{int(m):02d}-{int(d):02d}"
+          try:
+              rows = json.load(open('prices.json'))['data']['tradesTable']['rows']
+          except Exception:
+              rows = []
+          bars = sorted([[mdy(r['date']), num(r['open']), num(r['high']), num(r['low']), num(r['close'])] for r in rows if num(r.get('close'))])
+          try:
+              drows = (json.load(open('divs.json')).get('data') or {}).get('dividends', {}).get('rows') or []
+          except Exception:
+              drows = []
+          divs = sorted([[mdy(r['exOrEffDate']), num(r['amount'])] for r in drows if r.get('exOrEffDate') not in (None, 'N/A') and num(r.get('amount'))])
+          if bars:
+              json.dump({'t': t, 'bars': bars, 'dividends': divs}, open(f'mabat/backtest/long/{t}.json', 'w'), separators=(',', ':'))
+          print(t, len(bars), bars[0][0] if bars else '-', bars[-1][0] if bars else '-', 'dividends', len(divs))
+          PY
+            sleep 1
+          done
+          rm -f prices.json divs.json
+          ls mabat/backtest/long | wc -l
+
+      - name: Commit the data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mabat/backtest/long
+          git commit -m "Mabat momentum: ten years of prices and dividends downloaded $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push

@@ -1,0 +1,45 @@
+# One-off: downloads two years of daily bars for the Mabat backtest (50 stocks and SPY) and commits
+# them to this branch. Runs only on pushes to claude/mabat-backtest.
+name: Mabat backtest data
+
+on:
+  push:
+    branches: [claude/mabat-backtest]
+    paths: [".github/workflows/mabat-backtest-data.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download daily bars
+        run: |
+          mkdir -p mabat/backtest/data
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+          for t in SPY AAPL MSFT NVDA AMZN GOOGL META TSLA AVGO AMD NFLX ORCL CRM ADBE INTC QCOM MU PLTR UBER SHOP COIN JPM BAC GS V MA AXP UNH LLY JNJ MRK ABBV PFE COST WMT HD MCD NKE KO PEP DIS XOM CVX CAT BA GE CSCO IBM NOW AMAT TXN; do
+            ok=""
+            for host in query1 query2; do
+              if curl -fsS -A "$UA" "https://$host.finance.yahoo.com/v8/finance/chart/$t?range=2y&interval=1d&events=div%2Csplits" -o "mabat/backtest/data/$t.json" && grep -q '"timestamp"' "mabat/backtest/data/$t.json"; then ok=yahoo; break; fi
+              sleep 3
+            done
+            if [ -z "$ok" ]; then
+              rm -f "mabat/backtest/data/$t.json"
+              s=$(echo "$t" | tr 'A-Z' 'a-z')
+              if curl -fsS -A "$UA" "https://stooq.com/q/d/l/?s=$s.us&i=d&d1=20241101&d2=20261231" -o "mabat/backtest/data/$t.csv" && grep -q '^Date' "mabat/backtest/data/$t.csv"; then ok=stooq; else rm -f "mabat/backtest/data/$t.csv"; fi
+            fi
+            echo "$t ${ok:-FAILED}"
+            sleep 1
+          done
+          ls mabat/backtest/data | wc -l
+
+      - name: Commit the data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mabat/backtest/data
+          git commit -m "Mabat backtest: daily bars downloaded $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push

@@ -4,8 +4,15 @@
 //   node mabat/backtest/momentum-long.mjs
 //
 // Rules of play: monthly; the signal is read at the close of the day before the month's last
-// trading day, and the trade is made at the month's last close; 0.1% cost on every buy and sale;
-// total return (dividends reinvested on the ex-date).
+// trading day, and the trade is made at the month's last close; 0.1% cost on every buy and sale.
+//
+// Income, changed after the download and before any result was looked at: Nasdaq has no dividends
+// for funds and Yahoo refuses the runners, so
+//   - stocks and stock funds are priced without dividends, all alike (Nasdaq's stock dividends
+//     aren't adjusted for splits, so they can't be used either);
+//   - cash (CASH, in place of BIL) earns the 3-month T-bill rate of each day, from the Treasury;
+//   - bonds (BOND, in place of AGG) are a 7-year Treasury bought at par and rolled every day, priced
+//     from the Treasury's 7-year yield: coupon plus price change. IEF's price is the check.
 //
 // Strategies:
 //   sectors 12-1 top 3    the 3 of 9 sector funds with the best return from 12 months to 1 month back
@@ -36,7 +43,6 @@ const calendar = raw.SPY.bars.map(b => b[0]);
 const series = {}; // ticker -> Map(date -> total return index)
 for (const [t, d] of Object.entries(raw)) {
   const divs = new Map();
-  for (const [date, amt] of d.dividends || []) divs.set(date, (divs.get(date) || 0) + amt);
   const m = new Map();
   let idx = 1;
   let prev = null;
@@ -47,8 +53,47 @@ for (const [t, d] of Object.entries(raw)) {
   }
   series[t] = m;
 }
+
+// Treasury yields by date (percent), from the Treasury's yearly CSVs joined in one file.
+const yields = new Map();
+{
+  let cols = null;
+  for (const line of fs.readFileSync(path.join(here, 'long-yields.csv'), 'utf8').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const cells = line.split(',').map(c => c.replace(/"/g, ''));
+    if (cells[0] === 'Date') { cols = cells; continue; }
+    const [m, dd, y] = cells[0].split('/');
+    const row = {};
+    cols.forEach((c, k) => { if (k && cells[k] !== '') row[c] = Number(cells[k]); });
+    yields.set(`${y}-${m}-${dd}`, row);
+  }
+}
+const yieldOn = (date, col) => { for (let k = calendar.indexOf(date); k >= 0; k--) { const v = yields.get(calendar[k])?.[col]; if (v != null) return v / 100; } return null; };
+// A par bond with coupon c (yearly, paid twice a year) and m years left, priced at yield y.
+const parPrice = (c, y, m) => { const n = 2 * m; const v = (1 + y / 2) ** -n; return y ? (c / y) * (1 - v) + v : 1; };
+{
+  const cash = new Map();
+  const bond = new Map();
+  let ci = 1;
+  let bi = 1;
+  for (let k = 0; k < calendar.length; k++) {
+    const d = calendar[k];
+    if (k) {
+      const days = (Date.parse(d) - Date.parse(calendar[k - 1])) / 86400000;
+      const r3 = yieldOn(calendar[k - 1], '3 Mo');
+      const y0 = yieldOn(calendar[k - 1], '7 Yr');
+      const y1 = yieldOn(d, '7 Yr');
+      ci *= 1 + r3 * days / 365;
+      bi *= parPrice(y0, y1, 7 - days / 365) + y0 * days / 365;
+    }
+    cash.set(d, ci);
+    bond.set(d, bi);
+  }
+  series.CASH = cash;
+  series.BOND = bond;
+}
 const at = (t, date) => series[t]?.get(date) ?? null;
-const STOCKS = Object.keys(raw).filter(t => !SECTORS.includes(t) && !['SPY', 'EFA', 'AGG', 'BIL', 'IEF'].includes(t));
+const STOCKS = Object.keys(raw).filter(t => !SECTORS.includes(t) && !['SPY', 'EFA', 'AGG', 'BIL', 'IEF', 'CASH', 'BOND'].includes(t));
 
 // Return over trading days [i - from, i - to] on the calendar.
 function ret(t, i, from, to = 0) {
@@ -99,23 +144,23 @@ const top = (list, n, score) => list.map(t => [t, score(t)]).filter(([, s]) => s
 
 const STRATEGIES = {
   'SPY': () => ({ SPY: 1 }),
-  '60/40 SPY/AGG': () => ({ SPY: 0.6, AGG: 0.4 }),
+  '60/40 SPY/BOND': () => ({ SPY: 0.6, BOND: 0.4 }),
   'sectors equal': () => equal(SECTORS),
   'sectors 12-1 top 3': i => equal(top(SECTORS, 3, t => ret(t, i, 252, 21))),
   'sectors 6-1 top 3': i => equal(top(SECTORS, 3, t => ret(t, i, 126, 21))),
   'sectors 12-1 + cash': i => {
-    const bil = ret('BIL', i, 252);
+    const cash = ret('CASH', i, 252);
     const picks = top(SECTORS, 3, t => ret(t, i, 252, 21));
     const w = {};
-    for (const t of picks) { const k = ret(t, i, 252, 21) > bil ? t : 'BIL'; w[k] = (w[k] || 0) + 1 / 3; }
+    for (const t of picks) { const k = ret(t, i, 252, 21) > cash ? t : 'CASH'; w[k] = (w[k] || 0) + 1 / 3; }
     return w;
   },
   'dual momentum': i => {
     const spy = ret('SPY', i, 252);
     const efa = ret('EFA', i, 252);
-    const bil = ret('BIL', i, 252);
-    if (spy > bil) return { [efa > spy ? 'EFA' : 'SPY']: 1 };
-    return { AGG: 1 };
+    const cash = ret('CASH', i, 252);
+    if (spy > cash) return { [efa > spy ? 'EFA' : 'SPY']: 1 };
+    return { BOND: 1 };
   },
   '50 stocks equal (hindsight)': i => equal(STOCKS.filter(t => at(t, calendar[i]) != null)),
   'stocks 12-1 top 10 (hindsight)': i => equal(top(STOCKS, 10, t => ret(t, i, 252, 21))),
@@ -154,13 +199,28 @@ function byYear(curve) {
 }
 
 const curves = Object.fromEntries(Object.entries(STRATEGIES).map(([name, pick]) => [name, run(pick)]));
-const bil = measures(run(() => ({ BIL: 1 })));
+const bil = measures(run(() => ({ CASH: 1 })));
 const pct = v => `${(v * 100).toFixed(1)}%`.padStart(8);
 
 const first = curves.SPY[0][0];
 const last = curves.SPY.at(-1)[0];
 const report = { from: first, to: last, strategies: {} };
 console.log(`${first} .. ${last}   (T-bills ${pct(bil.cagr)} a year)\n`);
+// The check on the bond series: its monthly moves against IEF's price (which has no income here).
+{
+  const ends = calendar.filter((d, k) => d >= START && monthEnd(k));
+  const a = [];
+  const b = [];
+  for (let k = 1; k < ends.length; k++) { a.push(at('BOND', ends[k]) / at('BOND', ends[k - 1]) - 1); b.push(at('IEF', ends[k]) / at('IEF', ends[k - 1]) - 1); }
+  const mean = x => x.reduce((s, v) => s + v, 0) / x.length;
+  const ma = mean(a);
+  const mb = mean(b);
+  const corr = a.reduce((s, v, k) => s + (v - ma) * (b[k] - mb), 0) / Math.sqrt(a.reduce((s, v) => s + (v - ma) ** 2, 0) * b.reduce((s, v) => s + (v - mb) ** 2, 0));
+  const yrs = (Date.parse(ends.at(-1)) - Date.parse(ends[0])) / (365.25 * 86400000);
+  const cg = t => (at(t, ends.at(-1)) / at(t, ends[0])) ** (1 / yrs) - 1;
+  console.log(`bond check: monthly correlation with IEF ${corr.toFixed(3)}; a year: BOND ${pct(cg('BOND'))}, IEF price only ${pct(cg('IEF'))}\n`);
+  report.bondCheck = { corr, bond: cg('BOND'), iefPrice: cg('IEF') };
+}
 console.log('strategy'.padEnd(32) + ['a year', 'total', 'swings', 'max drop', 'return/risk'].map(h => h.padStart(12)).join(''));
 for (const [name, curve] of Object.entries(curves)) {
   const m = measures(curve);
@@ -181,3 +241,38 @@ for (const [name, curve] of Object.entries(curves)) {
   console.log(name.padEnd(32) + `${pct(a.cagr)} / ${pct(a.maxDD)}         ${pct(b.cagr)} / ${pct(b.maxDD)}`);
 }
 fs.writeFileSync(path.join(here, 'momentum-long.json'), JSON.stringify(report, null, 2));
+
+// ---------- Checks on the stock result, added after the table above was seen ----------
+// The 50 were picked in 2026, so they include today's winners. These ask whether ranking by
+// momentum adds anything inside that same group, where the hindsight is the same for every choice.
+{
+  const cagr = curve => measures(curve).cagr;
+  const top10 = cagr(curves['stocks 12-1 top 10 (hindsight)']);
+  const bottom10 = cagr(run(i => equal(top(STOCKS, 10, t => { const r = ret(t, i, 252, 21); return r == null ? null : -r; }))));
+  // 10 random stocks from those with a year of history, drawn again each month; seeded.
+  let seed = 7;
+  const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+  const randomRuns = [];
+  for (let k = 0; k < 200; k++) {
+    randomRuns.push(cagr(run(i => {
+      const pool = STOCKS.filter(t => ret(t, i, 252, 21) != null);
+      for (let j = pool.length - 1; j > 0; j--) { const r = Math.floor(rand() * (j + 1)); [pool[j], pool[r]] = [pool[r], pool[j]]; }
+      return equal(pool.slice(0, 10));
+    })));
+  }
+  randomRuns.sort((a, b) => a - b);
+  const beaten = randomRuns.filter(v => v < top10).length / randomRuns.length;
+  // Without the biggest winners of the whole period (the hindsight in its plainest form).
+  const whole = t => { const a = [...series[t].values()]; return a.at(-1) / a.find(v => v != null); };
+  const winners = [...STOCKS].sort((a, b) => whole(b) - whole(a)).slice(0, 5);
+  const rest = STOCKS.filter(t => !winners.includes(t));
+  const top10rest = cagr(run(i => equal(top(rest, 10, t => ret(t, i, 252, 21)))));
+  const ewRest = cagr(run(i => equal(rest.filter(t => at(t, calendar[i]) != null))));
+  console.log('\nchecks on the stocks (a year)');
+  console.log(`  top 10 by 12-1 momentum      ${pct(top10)}`);
+  console.log(`  bottom 10 by 12-1 momentum   ${pct(bottom10)}`);
+  console.log(`  10 random each month (200x)  median ${pct(randomRuns[100])}, 5%-95% ${pct(randomRuns[10])} .. ${pct(randomRuns[190])}; top 10 beat ${(beaten * 100).toFixed(0)}% of them`);
+  console.log(`  without ${winners.join(' ')}: top 10 ${pct(top10rest)}, all equal ${pct(ewRest)}`);
+  report.stockChecks = { top10, bottom10, random: { median: randomRuns[100], p5: randomRuns[10], p95: randomRuns[190], beaten }, withoutWinners: { removed: winners, top10: top10rest, equal: ewRest } };
+  fs.writeFileSync(path.join(here, 'momentum-long.json'), JSON.stringify(report, null, 2));
+}

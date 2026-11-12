@@ -27,41 +27,20 @@ jobs:
             cat y.csv >> mabat/backtest/long-tbill.csv 2>/dev/null || true
           done
           rm -f y.csv
-      - name: Fund dividends from Yahoo
-        timeout-minutes: 15
+      - name: Treasury yield curve
+        timeout-minutes: 6
         run: |
-          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
-          curl -sS --max-time 20 -c jar.txt -A "$UA" https://fc.yahoo.com -o /dev/null || true
-          CRUMB=$(curl -sS --max-time 20 -b jar.txt -A "$UA" https://query2.finance.yahoo.com/v1/test/getcrumb || true)
-          echo "crumb ${#CRUMB} chars"; CRUMB=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$CRUMB")
-          for t in SPY XLK XLF XLE XLV XLY XLP XLI XLB XLU EFA AGG BIL IEF; do
-            for host in query1 query2 query1; do
-              curl -sS --max-time 30 -b jar.txt -A "$UA" -o y.json "https://$host.finance.yahoo.com/v8/finance/chart/$t?period1=1451606400&period2=1800000000&interval=1mo&events=div&crumb=$CRUMB" || true
-              if grep -q '"dividends"' y.json; then break; fi
-              echo "$t $host: $(head -c 120 y.json)"; sleep 8
-            done
-            python3 - "$t" <<'PY'
-          import json, sys, datetime
-          t = sys.argv[1]
-          try:
-              r = json.load(open('y.json'))['chart']['result'][0]
-              ev = (r.get('events') or {}).get('dividends') or {}
-          except Exception:
-              ev = {}
-          divs = sorted([[datetime.datetime.utcfromtimestamp(v['date']).strftime('%Y-%m-%d'), v['amount']] for v in ev.values()])
-          if divs:
-              p = f'mabat/backtest/long/{t}.json'
-              d = json.load(open(p)); d['dividends'] = divs
-              json.dump(d, open(p, 'w'), separators=(',', ':'))
-          print(t, 'dividends', len(divs), divs[-1] if divs else None)
-          PY
-            sleep 3
+          : > mabat/backtest/long-yields.csv
+          for y in $(seq 2016 2026); do
+            curl -sS --http1.1 --max-time 40 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" -o y.csv "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/$y/all?type=daily_treasury_yield_curve&field_tdr_date_value=$y&page&_format=csv" || true
+            echo "$y $(wc -l < y.csv 2>/dev/null) $(head -c 200 y.csv 2>/dev/null | tr '\n' ' ')"
+            cat y.csv >> mabat/backtest/long-yields.csv 2>/dev/null || true
           done
-          rm -f y.json jar.txt
+          rm -f y.csv
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mabat/backtest/long mabat/backtest/long-tbill.csv || true
+          git add mabat/backtest/long-yields.csv || true
           git commit -m "Mabat momentum: fund income downloaded $(date -u +%Y-%m-%dT%H:%MZ)" || echo "nothing new"
           git push

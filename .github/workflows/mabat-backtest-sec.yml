@@ -1,0 +1,113 @@
+# One-off: downloads SEC EDGAR fundamentals (XBRL concepts) and filing lists for the Mabat backtest's
+# 50 stocks and commits them, slimmed, to mabat/backtest/sec/<TICKER>/. Runs only on pushes to
+# claude/mabat-backtest-sec that touch this file or mabat/backtest/sec-trigger.txt.
+# The SEC asks for a User-Agent naming the app and a contact; it comes only from the repo secret
+# SEC_USER_AGENT and is never printed. Without the secret the run prints a notice and does nothing.
+name: Mabat backtest SEC data
+
+on:
+  push:
+    branches: [claude/mabat-backtest-sec]
+    paths: [".github/workflows/mabat-backtest-sec.yml", "mabat/backtest/sec-trigger.txt"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mabat-backtest-sec
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download from the SEC
+        id: sec
+        timeout-minutes: 25
+        env:
+          UA: ${{ secrets.SEC_USER_AGENT }}
+        run: |
+          set -u
+          if [ -z "${UA:-}" ]; then
+            echo "::notice::The SEC_USER_AGENT secret is not set, so nothing was downloaded. Add it and push a change to mabat/backtest/sec-trigger.txt."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          OUT=mabat/backtest/sec
+          RAW=$(mktemp -d)
+          mkdir -p "$OUT"
+          # One request at a time, at least 0.25 s apart: under the SEC's 10 per second, and under 5.
+          get() { # url file -> prints the HTTP status
+            local code
+            code=$(curl -sS --compressed --max-time 30 --retry 2 -H "User-Agent: $UA" -H "Accept: application/json" -o "$2" -w '%{http_code}' "$1" 2>/dev/null) || code="${code:-000}"
+            sleep 0.25
+            echo "$code"
+          }
+          code=$(get https://www.sec.gov/files/company_tickers.json "$RAW/tickers.json")
+          echo "company_tickers.json: HTTP $code"
+          [ "$code" = 200 ] || exit 1
+
+          TICKERS=$(ls mabat/backtest/data | sed -E 's/(\.mabat)?\.(json|csv)$//' | sort -u | grep -vx SPY)
+          # ticker -> CIK; a Yahoo ticker with '-' (BRK-B) can be BRK.B at the SEC.
+          python3 - "$RAW/tickers.json" $TICKERS > "$RAW/ciks.txt" <<'PY'
+          import json, sys
+          rows = json.load(open(sys.argv[1])).values()
+          by = {}
+          for r in rows:
+              t = str(r.get("ticker", "")).upper()
+              by.setdefault(t, r["cik_str"])
+              by.setdefault(t.replace(".", "-"), r["cik_str"])
+          for t in sys.argv[2:]:
+              cik = by.get(t) or by.get(t.replace("-", "."))
+              print(t, str(cik).zfill(10) if cik else "-")
+          PY
+
+          TAGS="RevenueFromContractWithCustomerExcludingAssessedTax Revenues SalesRevenueNet RevenuesNetOfInterestExpense NetIncomeLoss OperatingIncomeLoss EarningsPerShareDiluted"
+          echo '{' > "$RAW/index.json"; first=1
+          while read -r t cik; do
+            if [ "$cik" = "-" ]; then echo "$t: no CIK at the SEC"; continue; fi
+            mkdir -p "$OUT/$t"
+            got=""
+            for tag in $TAGS; do
+              code=$(get "https://data.sec.gov/api/xbrl/companyconcept/CIK$cik/us-gaap/$tag.json" "$RAW/c.json")
+              if [ "$code" = 200 ]; then node mabat/backtest/sec-slim.mjs concept "$RAW/c.json" "$OUT/$t/$tag.json" && got="$got $tag"
+              elif [ "$code" != 404 ]; then echo "$t $tag: HTTP $code"; fi
+            done
+            code=$(get "https://data.sec.gov/submissions/CIK$cik.json" "$RAW/s.json")
+            pages=""
+            if [ "$code" = 200 ]; then
+              # Older filing pages that reach back into the backtest (from 2024-07 on).
+              for name in $(python3 -c "import json,sys; [print(f['name']) for f in json.load(open(sys.argv[1])).get('filings',{}).get('files',[]) if f.get('filingTo','')>='2024-07-01']" "$RAW/s.json"); do
+                c2=$(get "https://data.sec.gov/submissions/$name" "$RAW/$name")
+                if [ "$c2" = 200 ]; then pages="$pages $RAW/$name"; else echo "$t $name: HTTP $c2"; fi
+              done
+              node mabat/backtest/sec-slim.mjs submissions "$RAW/s.json" "$OUT/$t/submissions.json" $pages && got="$got submissions"
+            else echo "$t submissions: HTTP $code"; fi
+            echo "$t CIK$cik:$got"
+            [ $first = 1 ] || echo ',' >> "$RAW/index.json"; first=0
+            printf '"%s": {"cik": "%s", "files": "%s"}' "$t" "$cik" "${got# }" >> "$RAW/index.json"
+          done < "$RAW/ciks.txt"
+          echo '}' >> "$RAW/index.json"
+          python3 -c "import json,sys; d=json.load(open(sys.argv[1])); json.dump({k:{'cik':v['cik'],'files':v['files'].split()} for k,v in d.items()}, open(sys.argv[2],'w'), indent=1)" "$RAW/index.json" "$OUT/index.json"
+          echo "tickers with a submissions file: $(ls "$OUT"/*/submissions.json 2>/dev/null | wc -l)"
+          echo "tickers with a revenue tag: $(ls "$OUT"/*/{RevenueFromContractWithCustomerExcludingAssessedTax,Revenues,SalesRevenueNet,RevenuesNetOfInterestExpense}.json 2>/dev/null | xargs -r -n1 dirname | sort -u | wc -l)"
+          du -sh "$OUT"
+          rm -rf "$RAW"
+
+      - name: Commit the data
+        if: steps.sec.outputs.skip != '1'
+        timeout-minutes: 5
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mabat/backtest/sec
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -q -m "Mabat backtest: SEC fundamentals and filings downloaded $(date -u +%Y-%m-%dT%H:%MZ)"
+          git pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

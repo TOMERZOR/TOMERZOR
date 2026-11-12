@@ -3038,6 +3038,188 @@
       "pnl": -263.52,
       "returnPct": -2.64,
       "maxDrawdownPct": 5
+    },
+    "byMarket": {
+      "up": {
+        "trades": 71,
+        "skipped": 0,
+        "reachedT1": 28.2,
+        "reachedT2": 14.1,
+        "stoppedBeforeT1": 18.3,
+        "winRate": 36.6,
+        "avgR": 0.28,
+        "avgPct": 0.39,
+        "totalR": 19.89,
+        "stillOpen": 0,
+        "exits": {
+          "trend": 23,
+          "momentum": 11,
+          "time": 4,
+          "t2": 10,
+          "stop": 13,
+          "failed": 1,
+          "breakeven": 2,
+          "trail": 7
+        }
+      },
+      "flat": {
+        "trades": 12,
+        "skipped": 0,
+        "reachedT1": 8.3,
+        "reachedT2": 0,
+        "stoppedBeforeT1": 33.3,
+        "winRate": 33.3,
+        "avgR": -0.2,
+        "avgPct": -2.61,
+        "totalR": -2.46,
+        "stillOpen": 1,
+        "exits": {
+          "momentum": 1,
+          "time": 2,
+          "stop": 4,
+          "trend": 3,
+          "open": 1,
+          "breakeven": 1
+        }
+      },
+      "down": {
+        "trades": 21,
+        "skipped": 0,
+        "reachedT1": 14.3,
+        "reachedT2": 4.8,
+        "stoppedBeforeT1": 38.1,
+        "winRate": 42.9,
+        "avgR": -0.18,
+        "avgPct": -0.34,
+        "totalR": -3.86,
+        "stillOpen": 9,
+        "exits": {
+          "open": 9,
+          "stop": 8,
+          "trend": 2,
+          "breakeven": 1,
+          "t2": 1
+        }
+      }
+    },
+    "byQuarter": {
+      "2026-Q3": {
+        "trades": 54,
+        "skipped": 0,
+        "reachedT1": 22.2,
+        "reachedT2": 9.3,
+        "stoppedBeforeT1": 24.1,
+        "winRate": 35.2,
+        "avgR": 0.12,
+        "avgPct": 0.06,
+        "totalR": 6.58,
+        "stillOpen": 0,
+        "exits": {
+          "trend": 14,
+          "momentum": 11,
+          "time": 4,
+          "stop": 13,
+          "failed": 1,
+          "t2": 5,
+          "trail": 4,
+          "breakeven": 2
+        },
+        "spyPct": 2.37
+      },
+      "2026-Q4": {
+        "trades": 50,
+        "skipped": 0,
+        "reachedT1": 24,
+        "reachedT2": 12,
+        "stoppedBeforeT1": 24,
+        "winRate": 40,
+        "avgR": 0.14,
+        "avgPct": -0.28,
+        "totalR": 6.99,
+        "stillOpen": 10,
+        "exits": {
+          "momentum": 1,
+          "open": 10,
+          "t2": 6,
+          "stop": 12,
+          "trend": 14,
+          "breakeven": 2,
+          "time": 2,
+          "trail": 3
+        },
+        "spyPct": -0.52
+      }
+    },
+    "byScore": {
+      "under 70": {
+        "trades": 45,
+        "skipped": 0,
+        "reachedT1": 31.1,
+        "reachedT2": 15.6,
+        "stoppedBeforeT1": 28.9,
+        "winRate": 44.4,
+        "avgR": 0.31,
+        "avgPct": 0.27,
+        "totalR": 13.74,
+        "stillOpen": 2,
+        "exits": {
+          "trend": 12,
+          "momentum": 3,
+          "time": 3,
+          "stop": 13,
+          "open": 2,
+          "breakeven": 3,
+          "t2": 7,
+          "trail": 2
+        }
+      },
+      "70-74": {
+        "trades": 34,
+        "skipped": 0,
+        "reachedT1": 26.5,
+        "reachedT2": 11.8,
+        "stoppedBeforeT1": 14.7,
+        "winRate": 47.1,
+        "avgR": 0.27,
+        "avgPct": 0.44,
+        "totalR": 9.01,
+        "stillOpen": 5,
+        "exits": {
+          "open": 5,
+          "t2": 4,
+          "stop": 5,
+          "trend": 9,
+          "momentum": 2,
+          "failed": 1,
+          "time": 2,
+          "trail": 5,
+          "breakeven": 1
+        }
+      },
+      "75+": {
+        "trades": 25,
+        "skipped": 0,
+        "reachedT1": 4,
+        "reachedT2": 0,
+        "stoppedBeforeT1": 28,
+        "winRate": 12,
+        "avgR": -0.37,
+        "avgPct": -1.52,
+        "totalR": -9.18,
+        "stillOpen": 3,
+        "exits": {
+          "momentum": 7,
+          "stop": 7,
+          "trend": 7,
+          "open": 3,
+          "time": 1
+        }
+      }
+    },
+    "marketDays": {
+      "up": 44,
+      "flat": 11,
+      "down": 11
     }
   }
 }

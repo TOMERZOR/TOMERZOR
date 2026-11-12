@@ -53,6 +53,18 @@ const spyByDate = new Map();
   }));
 }
 
+// The market on a date: 'up' (SPY over a rising 50-day average), 'down' (under a falling one), else 'flat'.
+const regimeByDate = new Map();
+{
+  const closes = spyBars.map(b => b.c);
+  const s50 = sma(closes, 50);
+  spyBars.forEach((b, i) => {
+    if (s50[i] == null || s50[i - 10] == null) return;
+    const rising = s50[i] > s50[i - 10];
+    regimeByDate.set(barDate(b.t), b.c > s50[i] && rising ? 'up' : b.c < s50[i] && !rising ? 'down' : 'flat');
+  });
+}
+
 const indexAtOrBefore = (bars, date) => { let k = -1; bars.forEach((b, i) => { if (barDate(b.t) <= date) k = i; }); return k; };
 const round = (v, d = 2) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
 
@@ -237,6 +249,13 @@ function account(trades, budget = 10000) {
   return { budget, taken, skippedForCash: skipped, pnl: round(realized), returnPct: round((realized / budget) * 100), maxDrawdownPct: round(maxDrawdown, 1) };
 }
 out.partB.account = account(partB);
+const tradedB = partB.filter(x => !x.skipped);
+out.partB.byMarket = Object.fromEntries(['up', 'flat', 'down'].map(m => [m, stats(tradedB.filter(x => regimeByDate.get(x.signalDate) === m))]));
+const quarter = d => `${d.slice(0, 4)}-Q${Math.floor((Number(d.slice(5, 7)) - 1) / 3) + 1}`;
+out.partB.byQuarter = Object.fromEntries([...new Set(tradedB.map(x => quarter(x.signalDate)))].sort().map(q => [q, { ...stats(tradedB.filter(x => quarter(x.signalDate) === q)), spyPct: (() => { const inQ = spyBars.filter(b => quarter(barDate(b.t)) === q); return inQ.length ? round((inQ[inQ.length - 1].c / inQ[0].o - 1) * 100) : null; })() }]));
+out.partB.byScore = { 'under 70': stats(tradedB.filter(x => x.score < 70)), '70-74': stats(tradedB.filter(x => x.score >= 70 && x.score < 75)), '75+': stats(tradedB.filter(x => x.score >= 75)) };
+// The days of each market condition in the window, for context.
+out.partB.marketDays = [...regimeByDate.entries()].filter(([d]) => d >= START).reduce((a, [, m]) => ({ ...a, [m]: (a[m] || 0) + 1 }), {});
 
 fs.writeFileSync(path.join(here, 'results.json'), JSON.stringify(out, null, 2));
-console.log(JSON.stringify({ start: out.start, end: out.end, stocks: out.stocks, spyPct: out.spyPct, equalWeightPct: out.equalWeightPct, partA: { byStatus: out.partA.byStatus, trades: out.partA.trades }, partB: { ...stats(partB), account: out.partB.account } }, null, 2));
+console.log(JSON.stringify({ start: out.start, end: out.end, stocks: out.stocks, spyPct: out.spyPct, equalWeightPct: out.equalWeightPct, partA: { byStatus: out.partA.byStatus, trades: out.partA.trades }, partB: { ...stats(partB), account: out.partB.account, byMarket: out.partB.byMarket, marketDays: out.partB.marketDays, byScore: out.partB.byScore } }, null, 2));

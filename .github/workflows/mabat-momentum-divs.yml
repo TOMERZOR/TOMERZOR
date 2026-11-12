@@ -1,5 +1,5 @@
-# One-off: the funds' dividend history (the first download got none for funds). Tries both of
-# Nasdaq's asset classes and merges what it finds into mabat/backtest/long/<FUND>.json.
+# One-off: income for the funds, which Nasdaq doesn't list. T-bill rates from FRED (for cash), and
+# the funds' dividends from Yahoo where it answers. Merged into mabat/backtest/long.
 name: Mabat momentum fund dividends
 
 on:
@@ -15,43 +15,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download fund dividends
+      - name: T-bill rates
+        timeout-minutes: 5
+        run: |
+          curl -sS --max-time 60 --retry 3 -A "Mozilla/5.0" -o mabat/backtest/long-tbill.csv "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTB3&cosd=2016-01-01" || true
+          head -3 mabat/backtest/long-tbill.csv; wc -l mabat/backtest/long-tbill.csv
+      - name: Fund dividends from Yahoo
         timeout-minutes: 15
         run: |
           UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+          curl -sS --max-time 20 -c jar.txt -A "$UA" https://fc.yahoo.com -o /dev/null || true
+          CRUMB=$(curl -sS --max-time 20 -b jar.txt -A "$UA" https://query2.finance.yahoo.com/v1/test/getcrumb || true)
+          echo "crumb ${#CRUMB} chars"
           for t in SPY XLK XLF XLE XLV XLY XLP XLI XLB XLU EFA AGG BIL IEF; do
-            for class in etf stocks; do
-              curl -sS --max-time 40 --retry 2 -A "$UA" -H "Accept: application/json, text/plain, */*" -H "Accept-Language: en-US,en;q=0.9" -o divs.json "https://api.nasdaq.com/api/quote/$t/dividends?assetclass=$class" || true
-              n=$(python3 -c "import json; d=json.load(open('divs.json')); print(len(((d.get('data') or {}).get('dividends') or {}).get('rows') or []))" 2>/dev/null || echo 0)
-              echo "$t $class rows=$n $(head -c 160 divs.json | tr '\n' ' ')"
-              if [ "$n" -gt 0 ]; then break; fi
-              sleep 1
+            for host in query1 query2 query1; do
+              curl -sS --max-time 30 -b jar.txt -A "$UA" -o y.json "https://$host.finance.yahoo.com/v8/finance/chart/$t?period1=1451606400&period2=1800000000&interval=1mo&events=div&crumb=$CRUMB" || true
+              if grep -q '"dividends"' y.json; then break; fi
+              echo "$t $host: $(head -c 120 y.json)"; sleep 8
             done
             python3 - "$t" <<'PY'
-          import json, sys
+          import json, sys, datetime
           t = sys.argv[1]
-          num = lambda s: float(str(s).replace('$', '').replace(',', '')) if s not in (None, '', 'N/A') else None
-          def mdy(s):
-              m, d, y = s.split('/')
-              return f"{y}-{int(m):02d}-{int(d):02d}"
           try:
-              rows = ((json.load(open('divs.json')).get('data') or {}).get('dividends') or {}).get('rows') or []
+              r = json.load(open('y.json'))['chart']['result'][0]
+              ev = (r.get('events') or {}).get('dividends') or {}
           except Exception:
-              rows = []
-          divs = sorted([[mdy(r['exOrEffDate']), num(r['amount'])] for r in rows if r.get('exOrEffDate') not in (None, 'N/A') and num(r.get('amount'))])
-          p = f'mabat/backtest/long/{t}.json'
-          d = json.load(open(p))
-          d['dividends'] = divs
-          json.dump(d, open(p, 'w'), separators=(',', ':'))
+              ev = {}
+          divs = sorted([[datetime.datetime.utcfromtimestamp(v['date']).strftime('%Y-%m-%d'), v['amount']] for v in ev.values()])
+          if divs:
+              p = f'mabat/backtest/long/{t}.json'
+              d = json.load(open(p)); d['dividends'] = divs
+              json.dump(d, open(p, 'w'), separators=(',', ':'))
           print(t, 'dividends', len(divs), divs[-1] if divs else None)
           PY
-            sleep 1
+            sleep 3
           done
-          rm -f divs.json
+          rm -f y.json jar.txt
       - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mabat/backtest/long
-          git commit -m "Mabat momentum: fund dividends downloaded $(date -u +%Y-%m-%dT%H:%MZ)" || echo "nothing new"
+          git add mabat/backtest/long mabat/backtest/long-tbill.csv || true
+          git commit -m "Mabat momentum: fund income downloaded $(date -u +%Y-%m-%dT%H:%MZ)" || echo "nothing new"
           git push

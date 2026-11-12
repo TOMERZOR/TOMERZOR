@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: T-bill rates (Treasury)
+        if: false
         timeout-minutes: 6
         continue-on-error: true
         run: |
@@ -32,7 +33,7 @@ jobs:
           UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
           curl -sS --max-time 20 -c jar.txt -A "$UA" https://fc.yahoo.com -o /dev/null || true
           CRUMB=$(curl -sS --max-time 20 -b jar.txt -A "$UA" https://query2.finance.yahoo.com/v1/test/getcrumb || true)
-          echo "crumb ${#CRUMB} chars"
+          echo "crumb ${#CRUMB} chars"; CRUMB=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$CRUMB")
           for t in SPY XLK XLF XLE XLV XLY XLP XLI XLB XLU EFA AGG BIL IEF; do
             for host in query1 query2 query1; do
               curl -sS --max-time 30 -b jar.txt -A "$UA" -o y.json "https://$host.finance.yahoo.com/v8/finance/chart/$t?period1=1451606400&period2=1800000000&interval=1mo&events=div&crumb=$CRUMB" || true

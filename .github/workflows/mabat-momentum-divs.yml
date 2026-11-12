@@ -15,11 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: T-bill rates
-        timeout-minutes: 5
+      - name: T-bill rates (Treasury)
+        timeout-minutes: 6
+        continue-on-error: true
         run: |
-          for k in 1 2 3; do curl -sS --http1.1 --max-time 90 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" -o mabat/backtest/long-tbill.csv "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTB3&cosd=2016-01-01" && grep -q DTB3 mabat/backtest/long-tbill.csv && break; rm -f mabat/backtest/long-tbill.csv; sleep 10; done
-          head -3 mabat/backtest/long-tbill.csv || true; wc -l mabat/backtest/long-tbill.csv || true
+          : > mabat/backtest/long-tbill.csv
+          for y in $(seq 2016 2026); do
+            curl -sS --http1.1 --max-time 40 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" -o y.csv "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/$y/all?type=daily_treasury_bill_rates&field_tdr_date_value=$y&page&_format=csv" || true
+            echo "$y $(wc -l < y.csv 2>/dev/null) $(head -c 150 y.csv 2>/dev/null | tr '\n' ' ')"
+            cat y.csv >> mabat/backtest/long-tbill.csv 2>/dev/null || true
+          done
+          rm -f y.csv
       - name: Fund dividends from Yahoo
         timeout-minutes: 15
         run: |

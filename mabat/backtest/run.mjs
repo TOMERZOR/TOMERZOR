@@ -204,5 +204,39 @@ const out = {
   partA: { byStatus: Object.fromEntries(Object.entries(groups).map(([k, v]) => [k, { n: v.length, avgFwdPct: round(v.reduce((a, b) => a + b, 0) / v.length) }])), trades: stats(partA.filter(r => r.trade).map(r => r.trade)), rows: partA },
   partB: { ...stats(partB), bySetup: Object.fromEntries(Object.keys(PLAYBOOK).map(s => [s, stats(partB.filter(x => x.setup === s))]).filter(([, v]) => v.trades + v.skipped > 0)), trades: partB },
 };
+// A $10,000 account trading Part B's signals in date order: 1% risk per trade, at most 25% in one
+// stock, 10% kept in cash, no new trade without the cash for it (trader-budget, trader-risk).
+function account(trades, budget = 10000) {
+  const list = trades.filter(x => !x.skipped).sort((a, b) => (a.entryDate < b.entryDate ? -1 : a.entryDate > b.entryDate ? 1 : 0));
+  let cash = budget * 0.9;
+  let realized = 0;
+  let taken = 0;
+  let skipped = 0;
+  const open = [];
+  let peak = budget;
+  let maxDrawdown = 0;
+  for (const x of list) {
+    for (let k = open.length - 1; k >= 0; k--) {
+      if (open[k].exitDate < x.entryDate) {
+        cash += open[k].cost + open[k].pnl;
+        realized += open[k].pnl;
+        open.splice(k, 1);
+        peak = Math.max(peak, budget + realized);
+        maxDrawdown = Math.max(maxDrawdown, (peak - budget - realized) / peak * 100);
+      }
+    }
+    const R = x.entry - x.stop;
+    const shares = Math.min((budget * 0.01) / R, (budget * 0.25) / x.entry, cash / x.entry);
+    if (shares * x.entry < 50) { skipped++; continue; }
+    const cost = shares * x.entry;
+    cash -= cost;
+    taken++;
+    open.push({ exitDate: x.exitDate, cost, pnl: shares * x.r * R });
+  }
+  for (const o of open) { realized += o.pnl; }
+  return { budget, taken, skippedForCash: skipped, pnl: round(realized), returnPct: round((realized / budget) * 100), maxDrawdownPct: round(maxDrawdown, 1) };
+}
+out.partB.account = account(partB);
+
 fs.writeFileSync(path.join(here, 'results.json'), JSON.stringify(out, null, 2));
-console.log(JSON.stringify({ start: out.start, end: out.end, stocks: out.stocks, spyPct: out.spyPct, equalWeightPct: out.equalWeightPct, partA: { byStatus: out.partA.byStatus, trades: out.partA.trades }, partB: { ...stats(partB), bySetup: out.partB.bySetup } }, null, 2));
+console.log(JSON.stringify({ start: out.start, end: out.end, stocks: out.stocks, spyPct: out.spyPct, equalWeightPct: out.equalWeightPct, partA: { byStatus: out.partA.byStatus, trades: out.partA.trades }, partB: { ...stats(partB), account: out.partB.account } }, null, 2));

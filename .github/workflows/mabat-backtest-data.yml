@@ -17,24 +17,30 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download daily bars
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: |
           mkdir -p mabat/backtest/data
           UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+          # Yahoo wants a browser session: a cookie from fc.yahoo.com, then a crumb.
+          curl -sS --max-time 20 -c jar.txt -A "$UA" https://fc.yahoo.com -o /dev/null || true
+          CRUMB=$(curl -sS --max-time 20 -b jar.txt -A "$UA" https://query2.finance.yahoo.com/v1/test/getcrumb || true)
+          echo "crumb: ${CRUMB:0:4}... (${#CRUMB} chars)"
+          echo "Mabat server health:"; curl -sS --max-time 20 https://mabat-market.moffy-app.workers.dev/health | head -c 600; echo
           for t in SPY AAPL MSFT NVDA AMZN GOOGL META TSLA AVGO AMD NFLX ORCL CRM ADBE INTC QCOM MU PLTR UBER SHOP COIN JPM BAC GS V MA AXP UNH LLY JNJ MRK ABBV PFE COST WMT HD MCD NKE KO PEP DIS XOM CVX CAT BA GE CSCO IBM NOW AMAT TXN; do
             ok=""
-            for host in query1 query2; do
-              if curl -fsS --max-time 20 --retry 2 --retry-delay 3 -A "$UA" "https://$host.finance.yahoo.com/v8/finance/chart/$t?range=2y&interval=1d&events=div%2Csplits" -o "mabat/backtest/data/$t.json" && grep -q '"timestamp"' "mabat/backtest/data/$t.json"; then ok=yahoo; break; fi
-              sleep 3
-            done
-            if [ -z "$ok" ]; then
-              rm -f "mabat/backtest/data/$t.json"
-              s=$(echo "$t" | tr 'A-Z' 'a-z')
-              if curl -fsS --max-time 20 --retry 1 -A "$UA" "https://stooq.com/q/d/l/?s=$s.us&i=d&d1=20241101&d2=20261231" -o "mabat/backtest/data/$t.csv" && grep -q '^Date' "mabat/backtest/data/$t.csv"; then ok=stooq; else rm -f "mabat/backtest/data/$t.csv"; fi
+            # 1. the Mabat server's two years of bars
+            if curl -fsS --max-time 30 "https://mabat-market.moffy-app.workers.dev/t/$t" -o "mabat/backtest/data/$t.mabat.json" && python3 -c "import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if len(d.get('bars',[]))>=300 else 1)" "mabat/backtest/data/$t.mabat.json"; then ok=mabat; else rm -f "mabat/backtest/data/$t.mabat.json"; fi
+            # 2. Yahoo with the session
+            if [ -z "$ok" ] && [ -n "$CRUMB" ]; then
+              for host in query1 query2; do
+                if curl -fsS --max-time 20 -b jar.txt -A "$UA" "https://$host.finance.yahoo.com/v8/finance/chart/$t?range=2y&interval=1d&events=div%2Csplits&crumb=$CRUMB" -o "mabat/backtest/data/$t.json" && grep -q '"timestamp"' "mabat/backtest/data/$t.json"; then ok=yahoo; break; fi
+                rm -f "mabat/backtest/data/$t.json"; sleep 3
+              done
             fi
             echo "$t ${ok:-FAILED}"
             sleep 1
           done
+          rm -f jar.txt
           ls mabat/backtest/data | wc -l
 
       - name: Commit the data

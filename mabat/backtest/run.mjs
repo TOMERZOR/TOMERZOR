@@ -31,6 +31,9 @@ const START = process.argv[2] || '2026-08-12';
 const dataDir = process.env.MABAT_DATA || path.join(here, 'data');
 
 function load(t) {
+  // From the Mabat server's /t/<TICKER>: { bars: [[t, o, h, l, c, v], ...] }
+  const mabat = path.join(dataDir, `${t}.mabat.json`);
+  if (fs.existsSync(mabat)) return JSON.parse(fs.readFileSync(mabat, 'utf8')).bars.map(([t0, o, h, l, c, v]) => ({ t: t0, o, h, l, c, v }));
   const json = path.join(dataDir, `${t}.json`);
   const csv = path.join(dataDir, `${t}.csv`);
   if (fs.existsSync(json)) return parseChart(JSON.parse(fs.readFileSync(json, 'utf8'))).bars;
@@ -38,7 +41,7 @@ function load(t) {
   return null;
 }
 
-const tickers = fs.readdirSync(dataDir).map(f => f.replace(/\.(json|csv)$/, '')).filter(t => t !== 'SPY').sort();
+const tickers = [...new Set(fs.readdirSync(dataDir).map(f => f.replace(/(\.mabat)?\.(json|csv)$/, '')))].filter(t => t !== 'SPY').sort();
 const spyBars = load('SPY');
 const spyByDate = new Map();
 {

@@ -18,8 +18,8 @@ jobs:
       - name: T-bill rates
         timeout-minutes: 5
         run: |
-          curl -sS --max-time 60 --retry 3 -A "Mozilla/5.0" -o mabat/backtest/long-tbill.csv "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTB3&cosd=2016-01-01" || true
-          head -3 mabat/backtest/long-tbill.csv; wc -l mabat/backtest/long-tbill.csv
+          for k in 1 2 3; do curl -sS --http1.1 --max-time 90 -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" -o mabat/backtest/long-tbill.csv "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTB3&cosd=2016-01-01" && grep -q DTB3 mabat/backtest/long-tbill.csv && break; rm -f mabat/backtest/long-tbill.csv; sleep 10; done
+          head -3 mabat/backtest/long-tbill.csv || true; wc -l mabat/backtest/long-tbill.csv || true
       - name: Fund dividends from Yahoo
         timeout-minutes: 15
         run: |

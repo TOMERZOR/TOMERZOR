@@ -21,125 +21,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyze } from '../server/signals.js';
-import { PLAYBOOK, MANUAL } from '../server/plans.js';
-import { parseChart, parseStooq } from '../server/sources.js';
-import { sma, rsi, macd, atr } from '../server/indicators.js';
+import { PLAYBOOK } from '../server/plans.js';
 import { barDate } from '../server/clock.js';
+import { load, tickers, spyBars, regimeByDate, indexAtOrBefore, round, ctxFor, simulate, stats, account } from './lib.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const START = process.argv[2] || '2026-08-12';
-const dataDir = process.env.MABAT_DATA || path.join(here, 'data');
-
-function load(t) {
-  // From the Mabat server's /t/<TICKER>: { bars: [[t, o, h, l, c, v], ...] }
-  const mabat = path.join(dataDir, `${t}.mabat.json`);
-  if (fs.existsSync(mabat)) return JSON.parse(fs.readFileSync(mabat, 'utf8')).bars.map(([t0, o, h, l, c, v]) => ({ t: t0, o, h, l, c, v }));
-  const json = path.join(dataDir, `${t}.json`);
-  const csv = path.join(dataDir, `${t}.csv`);
-  if (fs.existsSync(json)) return parseChart(JSON.parse(fs.readFileSync(json, 'utf8'))).bars;
-  if (fs.existsSync(csv)) return parseStooq(fs.readFileSync(csv, 'utf8'), t).bars;
-  return null;
-}
-
-const tickers = [...new Set(fs.readdirSync(dataDir).map(f => f.replace(/(\.mabat)?\.(json|csv)$/, '')))].filter(t => t !== 'SPY').sort();
-const spyBars = load('SPY');
-const spyByDate = new Map();
-{
-  const closes = spyBars.map(b => b.c);
-  const s200 = sma(closes, 200);
-  spyBars.forEach((b, i) => spyByDate.set(barDate(b.t), {
-    ret63: i >= 63 ? (b.c / closes[i - 63] - 1) * 100 : null,
-    above200: s200[i] != null ? b.c > s200[i] : null,
-  }));
-}
-
-// The market on a date: 'up' (SPY over a rising 50-day average), 'down' (under a falling one), else 'flat'.
-const regimeByDate = new Map();
-{
-  const closes = spyBars.map(b => b.c);
-  const s50 = sma(closes, 50);
-  spyBars.forEach((b, i) => {
-    if (s50[i] == null || s50[i - 10] == null) return;
-    const rising = s50[i] > s50[i - 10];
-    regimeByDate.set(barDate(b.t), b.c > s50[i] && rising ? 'up' : b.c < s50[i] && !rising ? 'down' : 'flat');
-  });
-}
-
-const indexAtOrBefore = (bars, date) => { let k = -1; bars.forEach((b, i) => { if (barDate(b.t) <= date) k = i; }); return k; };
-const round = (v, d = 2) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10 ** d) / 10 ** d);
-
-// Plays a trade out from bar `from` (the entry bar), entered at `entry`.
-function simulate(bars, from, entry, plan) {
-  const p = PLAYBOOK[plan.setup] || MANUAL;
-  const R = entry - plan.stop;
-  const closes = bars.map(b => b.c);
-  const A = atr(bars, 14);
-  const s20 = sma(closes, 20);
-  const s50 = sma(closes, 50);
-  const s200 = sma(closes, 200);
-  const hist = macd(closes).hist;
-  const r14 = rsi(closes, 14);
-  let stopNow = plan.stop;
-  let stopKind = 'initial';
-  let open = 1; // the part of the position still held
-  let pnl = 0; // per share of the whole position
-  let t1Hit = false;
-  let t2Hit = false;
-  let highClose = entry;
-  let exit = null;
-  let exitDate = null;
-  const sell = (part, px) => { pnl += part * (px - entry); open -= part; };
-  let j = from;
-  for (; j < bars.length; j++) {
-    const b = bars[j];
-    const o = j === from ? entry : b.o;
-    if (b.l <= stopNow) {
-      sell(open, Math.min(o, stopNow));
-      exit = stopKind === 'initial' ? 'stop' : stopKind === 'breakeven' ? 'breakeven' : 'trail';
-      break;
-    }
-    if (!t1Hit && b.h >= plan.t1) {
-      t1Hit = true;
-      sell(0.5, Math.max(o, plan.t1));
-      if (entry > stopNow) { stopNow = entry; stopKind = 'breakeven'; }
-    }
-    if (t1Hit && b.h >= plan.t2) {
-      t2Hit = true;
-      sell(open, Math.max(o, plan.t2));
-      exit = 't2';
-      break;
-    }
-    // At the close: trailing stop, early exits, time stop.
-    highClose = Math.max(highClose, b.c);
-    if (highClose >= entry + R) {
-      const trail = highClose - p.trail * (A[j] || entry * 0.02);
-      if (trail > stopNow) { stopNow = trail; stopKind = 'trail'; }
-    }
-    const days = j - from;
-    let early = null;
-    if (days >= 1) {
-      const inv = p.invalidate;
-      if (inv === 'level' && plan.level && b.c < plan.level && !t1Hit) early = 'failed';
-      else if (inv === 'sma20' && !t1Hit && b.c < s20[j]) early = 'failed';
-      else if (inv === 'sma50' && b.c < s50[j]) early = 'trend';
-      else if (inv === 'sma200' && s200[j] && b.c < s200[j]) early = 'trend';
-      else if (inv === 'macd' && hist[j] < 0 && hist[j - 1] < 0) early = 'momentum';
-      else if (inv === 'rsi' && r14[j] > 70) early = 'done';
-    }
-    if (!early && p.days && days >= p.days && !t1Hit) early = 'time';
-    if (early) { sell(open, b.c); exit = early; break; }
-  }
-  const last = Math.min(j, bars.length - 1);
-  if (!exit) { sell(open, bars[bars.length - 1].c); exit = 'open'; }
-  exitDate = barDate(bars[last].t);
-  return {
-    entryDate: barDate(bars[from].t), entry: round(entry), stop: plan.stop, t1: plan.t1, t2: plan.t2,
-    exit, exitDate, days: last - from, t1Hit, t2Hit,
-    r: round(pnl / R), pct: round((pnl / entry) * 100), stoppedBeforeT1: !t1Hit && (exit === 'stop'),
-  };
-}
-
-const ctxFor = bars => ({ spy: spyByDate.get(barDate(bars[bars.length - 1].t)) || null });
 
 // ---------- Part A: the start date ----------
 const partA = [];
@@ -188,20 +75,6 @@ for (const t of tickers) {
 }
 
 // ---------- Summary ----------
-function stats(trades) {
-  const done = trades.filter(x => !x.skipped);
-  const n = done.length;
-  const pct = k => (n ? round((done.filter(k).length / n) * 100, 1) : null);
-  const avg = f => (n ? round(done.reduce((s, x) => s + f(x), 0) / n, 2) : null);
-  const by = {};
-  for (const x of done) by[x.exit] = (by[x.exit] || 0) + 1;
-  return {
-    trades: n, skipped: trades.length - n,
-    reachedT1: pct(x => x.t1Hit), reachedT2: pct(x => x.t2Hit), stoppedBeforeT1: pct(x => x.stoppedBeforeT1),
-    winRate: pct(x => x.r > 0), avgR: avg(x => x.r), avgPct: avg(x => x.pct), totalR: round(done.reduce((s, x) => s + x.r, 0), 2),
-    stillOpen: done.filter(x => x.exit === 'open').length, exits: by,
-  };
-}
 
 const last = barDate(spyBars[spyBars.length - 1].t);
 const spyStart = spyBars[indexAtOrBefore(spyBars, START)].c;
@@ -216,38 +89,6 @@ const out = {
   partA: { byStatus: Object.fromEntries(Object.entries(groups).map(([k, v]) => [k, { n: v.length, avgFwdPct: round(v.reduce((a, b) => a + b, 0) / v.length) }])), trades: stats(partA.filter(r => r.trade).map(r => r.trade)), rows: partA },
   partB: { ...stats(partB), bySetup: Object.fromEntries(Object.keys(PLAYBOOK).map(s => [s, stats(partB.filter(x => x.setup === s))]).filter(([, v]) => v.trades + v.skipped > 0)), trades: partB },
 };
-// A $10,000 account trading Part B's signals in date order: 1% risk per trade, at most 25% in one
-// stock, 10% kept in cash, no new trade without the cash for it (trader-budget, trader-risk).
-function account(trades, budget = 10000) {
-  const list = trades.filter(x => !x.skipped).sort((a, b) => (a.entryDate < b.entryDate ? -1 : a.entryDate > b.entryDate ? 1 : 0));
-  let cash = budget * 0.9;
-  let realized = 0;
-  let taken = 0;
-  let skipped = 0;
-  const open = [];
-  let peak = budget;
-  let maxDrawdown = 0;
-  for (const x of list) {
-    for (let k = open.length - 1; k >= 0; k--) {
-      if (open[k].exitDate < x.entryDate) {
-        cash += open[k].cost + open[k].pnl;
-        realized += open[k].pnl;
-        open.splice(k, 1);
-        peak = Math.max(peak, budget + realized);
-        maxDrawdown = Math.max(maxDrawdown, (peak - budget - realized) / peak * 100);
-      }
-    }
-    const R = x.entry - x.stop;
-    const shares = Math.min((budget * 0.01) / R, (budget * 0.25) / x.entry, cash / x.entry);
-    if (shares * x.entry < 50) { skipped++; continue; }
-    const cost = shares * x.entry;
-    cash -= cost;
-    taken++;
-    open.push({ exitDate: x.exitDate, cost, pnl: shares * x.r * R });
-  }
-  for (const o of open) { realized += o.pnl; }
-  return { budget, taken, skippedForCash: skipped, pnl: round(realized), returnPct: round((realized / budget) * 100), maxDrawdownPct: round(maxDrawdown, 1) };
-}
 out.partB.account = account(partB);
 const tradedB = partB.filter(x => !x.skipped);
 out.partB.byMarket = Object.fromEntries(['up', 'flat', 'down'].map(m => [m, stats(tradedB.filter(x => regimeByDate.get(x.signalDate) === m))]));

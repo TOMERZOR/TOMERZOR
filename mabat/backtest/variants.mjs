@@ -14,6 +14,7 @@ import { analyze } from '../server/signals.js';
 import { atr, priorLow } from '../server/indicators.js';
 import { barDate } from '../server/clock.js';
 import { load, tickers, regimeByDate, indexAtOrBefore, round, ctxFor, simulate, stats, account } from './lib.mjs';
+import { fundamentalsAsOf } from './pit.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const START = '2025-04-10';
@@ -59,6 +60,9 @@ function play(v) {
       if (v.skipSetups?.includes(c.setup)) continue;
       const plan = v.wideBreakout ? widerBreakoutStop(c) : c.levels;
       const o = bars[c.i + 1].o;
+      // trader-screener's P/E rule, with only the reports filed by the signal date: no stock over
+      // 45 times earnings or losing money. A stock without the numbers is not skipped.
+      if (v.skipExpensive && fundamentalsAsOf(t, c.date, o)?.rules?.find(r => r.id === 'pe')?.pass === false) continue;
       if (o > plan.maxEntry || o <= plan.stop) continue;
       const tr = simulate(bars, c.i + 1, o, plan, { noT2: v.noT2 });
       trades.push({ t, signalDate: c.date, setup: c.setup, score: c.score, market, ...tr });
@@ -89,6 +93,9 @@ const VARIANTS = {
   'up only + 70+ + wider stop': { markets: ['up'], minScore: 70, wideBreakout: true },
   'score 70+ + wider stop': { minScore: 70, wideBreakout: true },
   'score 75+ + wider stop': { minScore: 75, wideBreakout: true },
+  // Added after the SEC data arrived; chosen because the P/E rule split the training-period trades
+  // (fundamentals-effect.mjs), before this variant's test period was printed.
+  'skip expensive (P/E)': { skipExpensive: true },
 };
 // Chosen from the training period before the test period was printed.
 const CHOSEN = ['base', 'wider breakout stop', 'score 75+', 'score 70+ + wider stop', 'score 75+ + wider stop'];

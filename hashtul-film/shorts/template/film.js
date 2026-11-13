@@ -76,7 +76,7 @@
     E.cells.forEach((cell, i) => ev(T.cells0 + i * 0.06, 'cell', ...c(cell), 0.5));
     E.name.forEach((n, i) => ev(T.flip[n], n === 'יובל' ? 'reveal_big' : 'flip', ...c(E.cells[i]), 0.6 + i * 0.07));
     ev(T.tap, 'tap', ...c(E.cells[E.y]), 0.9);
-    ev(T.flip['יובל'] + 0.1, 'crowd_oooh', 215, 400, 1);
+    ev(T.flip['יובל'] + 0.1, 'crowd_oooh', ...c(E.cells[E.y]), 1);
     ev(T.laugh, 'react', ...c(E.cells[E.y]), 0.7);
   }
 

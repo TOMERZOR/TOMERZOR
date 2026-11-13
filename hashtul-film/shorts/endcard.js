@@ -16,7 +16,7 @@
  */
 (function () {
   'use strict';
-  const { $, $$, mk, put, hide, cssv, on, life, K, pulse, lerp, clamp, sstep, spring, ease, fix, M, Pt, G, H, SAFE } = KIT;
+  const { $, $$, mk, put, hide, cssv, on, life, K, pulse, lerp, clamp, sstep, spring, ease, fix, M, Pt, G, W, H, SAFE } = KIT;
 
   // times after t0 (the director's grid for 18 s shorts: whip at t0, wordmark ON the music's last hit at t0 + 1.0,
   // pitch 1.5, chip 1.9, line 2.2, still by 2.4, wink 2.6, end 3.0). The film's were cast .36, word .74, pitch 1.56,
@@ -89,7 +89,10 @@
         const band0 = SAFE.top + 70, band1 = H - SAFE.bottom - 40;
         const zoom = Math.min(1.06, (band1 - band0) / ((bot - top) * G));
         const cy = (top + bot) / 2 + ((H / 2) - (band0 + band1) / 2) / (zoom * G);
-        target = Pt(215, cy, zoom);
+        // the chip is the widest thing in the lower half: keep its right end (with its shadow) clear of the right 130 px
+        const chipW = M(KIT.$('.btn', h.cta)).w + 8, right = W / 2 + (h.ctaAt.x + chipW / 2 - 215) * zoom * G;
+        const cx = 215 + Math.max(0, right - (W - SAFE.right - 12)) / (zoom * G);
+        target = Pt(cx, cy, zoom);
         // the 18+ sticker sits far above the cast: bring it down just under the top safe line (the only layout change)
         const ar = M(h.adult), top0 = (ar.y * G - target.y) * zoom + H / 2;
         P.adultDy = Math.max(0, (SAFE.top + 24 - top0) / (zoom * G));

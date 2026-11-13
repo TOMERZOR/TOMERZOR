@@ -9,6 +9,42 @@ on its own beat grid and ducked under the hits, and the mix is mastered to -16 L
 
 usage: python3 audio/score.py [events.json] [mix.wav]   → audio/mix.wav (48 kHz stereo)
        python3 audio/score.py audio/events_clean.json audio/mix_clean.wav   (the clean cut)
+       python3 audio/score.py shorts/s1/events.json shorts/s1/mix.wav      (any other composition)
+
+events.json: {"T": {"dur": seconds, ...}, "events": [{"t", "kind", "pan", "v"}, ...], "music": {...} (optional)}
+  Event kinds are the keys of recipe(); an unknown kind is warned about once and skipped.
+  Stems: audio/stem_sfx.wav + audio/stem_music.wav when the mix is written into audio/, otherwise
+  <mix>_stem_sfx.wav + <mix>_stem_music.wav next to the mix.
+
+Without a "music" object the film's own edit is used (keyed on the film's T: flip.יובל, drum, figDrop, verdict,
+endPitch, cells0). With one, it is the music plan. All times are film seconds; "track" is take1.mp3 seconds.
+  "music": {
+    "segments": [{"t0": 0, "t1": 10, "track": 6.557, "gain": 1.0}, ...]
+        which part of the track plays when: track time = track + (t - t0) inside [t0, t1). Adjacent segments
+        (t1 of one == t0 of the next) join with an equal-power crossfade of `xfade` s that ENDS `xlead` s before
+        the join, so the new bar's downbeat (whose attack leads the nominal grid by ~33 ms in take1) is heard
+        whole and the old bar's next attack is never heard. A segment with no neighbour starts/stops with a
+        3 ms ramp. "gain" (optional, default 1) is a per-segment level (take1's intro is ~10 dB below its groove).
+        Joins should be bar-aligned: film bar lines on even seconds, track bar lines at 0.557 + 2k; the script
+        warns when a segment is off the beat grid or a join is not on a bar line of both sides.
+    "in":    [a, b]              fade-in ramp (optional; default: full level from the first segment)
+    "stops": [[a, b], ...]       music gain -> 0 from a (20 ms ramp ending at a) to b (back in 10 ms centred on b):
+                                 the breath before a hit. 4-number form [a0, a1, b0, b1]: down over a0..a1, up over b0..b1.
+    "thin":  [[a, b], ...]       low-passed (900 Hz) and lowered (x0.35), the suspense treatment under the film's drum
+                                 roll: in over 0.25 s from a, out over 0.02 s at b. 4-number form as for stops.
+    "brakes": [[a, b, back], ...]  tape stop: the music slows to a halt between a and b (pitch falls with it), is
+                                 silent until `back`, and comes back at full speed at `back` on the track time the
+                                 segments say (so `back` should be a bar/beat line). Pair with the "scratch" kind.
+    "out":   [a, b]              final fade (optional). Default: the track's own ending rings; only the last 0.15 s
+                                 before the film's end is faded so the cut cannot click.
+    "gain":  0.26                bed level under the action sounds (default 0.26, the film's).
+    "sections": [[t, gain], ...] optional section gains from time t on (applied in order).
+    "nudge": 0.0                 delay the whole music by this many s (segments and joins move with it; stops/thin/in/
+                                 out stay in film time). take1's attacks lead its nominal grid by ~31-33 ms in the
+                                 groove; nudge 0.03 puts them on the film grid.
+    "xfade": 0.02, "xlead": 0.04 join crossfade length and how far before the join it ends.
+    "file": "audio/src/music/take1.mp3"
+  }
 """
 import json, pathlib, subprocess, sys, re
 import numpy as np

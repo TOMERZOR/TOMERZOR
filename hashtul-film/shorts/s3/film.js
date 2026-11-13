@@ -30,7 +30,7 @@
 
   // ───────────────────────────── timeline (s) ─────────────────────────────
   const T = {
-    pov: -0.12, notYet: 0.5, stickOut: 2.4,                           // frame 0 already has the sticker landing
+    pov: -0.12, notYet: 0.5, stickOut: 1.86,                          // frame 0 already has the sticker landing
     fIn: 1.3, touch: 2.0, slideEnd: 2.86, lift: 2.92, tapLock: 3.5, fOut: 3.95,
     morph: 3.53, stamp: 3.68, tick: 3.6, btnSwap: 3.64,
     twist: 4.0, heroIn: 4.09, title: 4.05, cells0: 4.24, dive0: 4.06, dive1: 4.46,
@@ -187,8 +187,8 @@
       keys: [
         { t: 0, ...Pt(215, 260, 1.08) },
         { t: 0.95, ...Pt(215, 266, 1.08), curve: ex.sineInOut },
-        { t: 1.92, ...Pt(215, 494, 1.11), curve: ex.cubicInOut },
-        { t: 2.95, ...Pt(215, 500, 1.11), curve: ex.sineInOut },
+        { t: 1.92, ...Pt(215, 428, 1.0), curve: ex.cubicInOut },
+        { t: 2.95, ...Pt(215, 432, 1.0), curve: ex.sineInOut },
         { t: 3.4, ...Pt(215, 640, 1.0), curve: ex.cubicInOut },
         { t: 3.6, ...Pt(215, 642, 1.0), curve: ex.sineInOut },
         { t: 3.96, ...Pt(215, 380, 1.08), curve: ex.cubicInOut },
@@ -383,17 +383,17 @@
     const F = E.F;
     // "POV: אתם השתול" (frame 0 already has it landing) and the chip under it: they ride the world above the card,
     // so the camera's drift down to the bars carries them off the top of the frame (gone once they are out of it)
-    const pk = K(t, T.pov, 'pop'), gone = t >= T.stickOut;
-    worldPut(F.pov, 215, POVY, { s: lerp(1.9, 1, pk), r: lerp(-14, 0, pk), op: gone ? 0 : clamp(pk * 3) });
-    const nk = K(t, T.notYet, 'pop');
-    worldPut(F.notYet, 215, POVY + 45, t < T.notYet || gone ? { op: 0 } : { s: lerp(0.4, 1, nk), r: lerp(8, 2, nk), op: clamp(nk * 2) });
+    const pk = K(t, T.pov, 'pop'), pOut = cubicIn(seg(t, T.stickOut, T.stickOut + 0.22));
+    worldPut(F.pov, 215, POVY, { s: lerp(1.9, 1, pk) * (1 - 0.25 * pOut), r: lerp(-14, 0, pk) - 8 * pOut, y: -70 * pOut, op: clamp(pk * 3) * (1 - pOut) });
+    const nk = K(t, T.notYet, 'pop'), nOut = cubicIn(seg(t, T.stickOut - 0.08, T.stickOut + 0.12));
+    worldPut(F.notYet, 215, POVY + 45, t < T.notYet ? { op: 0 } : { s: lerp(0.4, 1, nk) * (1 - 0.25 * nOut), r: lerp(8, 2, nk), y: -50 * nOut, op: clamp(nk * 2) * (1 - nOut) });
     // "כל השאר נשאלו משהו אחר": rides the big card's bottom edge, under its text
     const R1y = 133 + M(E.R.heroCard).h * M(E.A.q).w / M(E.R.heroCard).w;
     const ok = K(t, T.others, 'pop'), oOut = cubicIn(seg(t, T.othersOut, T.othersOut + 0.2));
     worldPut(F.others, 215, R1y + 2, t < T.others ? { op: 0 } : { s: lerp(2.0, 1, ok) * (1 - 0.4 * oOut), r: lerp(-10, 0, ok), op: clamp(ok * 3) * (1 - oOut) });
     // your face peeks in at the card's corner, sweating
     const qk = K(t, T.peek, 'soft'), qOut = cubicIn(seg(t, T.peekOut, T.peekOut + 0.3));
-    worldPut(F.peek, lerp(-40, 16, qk) - 60 * qOut, R1y - 22, t < T.peek ? { op: 0 } : { r: lerp(40, 16, qk) + 3 * Math.sin((t - T.peek) * 5), op: t > T.peekOut + 0.3 ? 0 : 1 });
+    worldPut(F.peek, lerp(-40, 40, qk) - 90 * qOut, R1y - 22, t < T.peek ? { op: 0 } : { r: lerp(40, 16, qk) + 3 * Math.sin((t - T.peek) * 5), op: t > T.peekOut + 0.3 ? 0 : 1 });
     // "מהר, תאלתרו תירוץ!": stamped in the middle of the frame
     const hk = K(t, T.hurry, 'pop'), hOut = cubicIn(seg(t, T.hurryOut, T.hurryOut + 0.2));
     screenPut(F.hurry, t, 540, 900, t < T.hurry ? { op: 0 } : { s: lerp(2.4, 1, hk) * (1 - 0.5 * hOut), r: lerp(-16, 0, hk), op: clamp(hk * 3) * (1 - hOut) });

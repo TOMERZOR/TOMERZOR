@@ -120,13 +120,13 @@
   }
 
   // fixed layout of the fx pieces, game px
-  const HOOK_Y = [24, 55], HOOK_DROP = 22, ROW_Y = 172, ROW_DX = 47, ROW_X = 211, ROW_PUSH = 62;
+  const HOOK_Y = [24, 58], HOOK_DROP = 22, ROW_Y = 172, ROW_DX = 47, ROW_X = 211, ROW_PUSH = 62;
   // the row reads right to left as the grid's right column, then its left column, so each half drops into its column
   const ROW_SLOT = [0, 3, 1, 4, 2, 5];
   const diveT0 = i => T.dive0 + i * T.diveStep, diveDur = i => T.diveDur + 0.05 * Math.floor(i / 2);
   function layoutFx() {
     E.hookA.style.top = (HOOK_Y[0] - 19) + 'px'; E.hookB.style.top = (HOOK_Y[1] - 19) + 'px';
-    E.hookB.style.left = '-28px';
+    E.hookB.style.left = '46px';
     E.row.forEach((p, i) => { p.style.left = (ROW_X + (2.5 - ROW_SLOT[i]) * ROW_DX - 30) + 'px'; p.style.top = (ROW_Y - 20) + 'px'; });
   }
 

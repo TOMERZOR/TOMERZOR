@@ -33,6 +33,7 @@
     const s = document.createElement('style');
     s.textContent = `.cta{position:absolute;display:inline-flex;align-items:center;gap:10px;white-space:nowrap}
 .facts{position:absolute;white-space:nowrap}
+.facts.facts--cta{color:#fff;font-weight:900;font-size:20px}
 #phone .wordmark::after{transform:rotate(1.5deg) scaleX(var(--bar,1));transform-origin:100% 50%}
 #phone .wordmark .ltr{display:inline-block} #phone .w{display:inline-block;white-space:pre}`;
     document.head.appendChild(s);
@@ -69,7 +70,7 @@
       h.moleWobble = $('.home__mole .wobble', root);
       h.wordmark.__base = 'rotate(-4deg)';
       h.cta = mk('div', 'cta', root, `<span class="btn btn--md" style="width:auto;padding:0 26px;font-size:22px"><span class="num">${URL}</span></span>`);
-      h.facts = mk('p', 'lead facts', root, o.cta ? o.cta : FACTS);
+      h.facts = mk('p', 'lead facts' + (o.cta ? ' facts--cta' : ''), root, o.cta ? o.cta : FACTS);
     };
 
     P.measured = () => {

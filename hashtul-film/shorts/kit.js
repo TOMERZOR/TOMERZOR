@@ -37,7 +37,8 @@
  *              restEnv(t) (0 in rests)  rayAngle(t) (deg, the motion clock)  rays(el,t,a,op,sc,base)  wobble(t,el,from,amp)
  *   fx parts   finger(spec)  sweat(spec)  confetti(spec)  emoji(spec)   — spec = object or () => object (resolved after measure)
  *   sound      ev(t, kind, gx, gy, v)   (pan is computed from the camera at t, like the film)
- *   film       run({T, build, measure, camera, update, events, track})  → installs __meta __ready __seek __track __motion __events
+ *   film       run({T, build, measure, camera, update, events, track, music})  → installs __meta __ready __seek __track __motion __events
+ *              music: the short's music plan (object or function), written into the events file for audio/score.py; see MUSIC.md
  *              part(obj) registers an extra part with optional build/measured/camera(acc)/events/update(t,mat)/track(box) hooks.
  *   preview    comp.html?play · ?t=3.2&hud · &safe (draws the TikTok/Reels safe zone) · ?render (used by the tools)
  *
@@ -384,7 +385,7 @@
       d = Math.max(d, travel(a, m) + travel(m, b));
       return d;
     };
-    window.__events = () => ({ T, events: EV.map(e => { const M0 = view(camAt(e.t), { W, H }); const sx = M0[0] * e.gx * G + M0[2] * e.gy * G + M0[4]; return { t: +e.t.toFixed(4), kind: e.kind, pan: +clamp((sx - W / 2) / (W / 2), -1, 1).toFixed(3), v: e.v }; }) });
+    window.__events = () => ({ T, events: EV.map(e => { const M0 = view(camAt(e.t), { W, H }); const sx = M0[0] * e.gx * G + M0[2] * e.gy * G + M0[4]; return { t: +e.t.toFixed(4), kind: e.kind, pan: +clamp((sx - W / 2) / (W / 2), -1, 1).toFixed(3), v: e.v }; }), ...(film.music ? { music: typeof film.music === 'function' ? film.music() : film.music } : {}) });
     window.__unsafe = unsafe;
     window.__T = T;
 

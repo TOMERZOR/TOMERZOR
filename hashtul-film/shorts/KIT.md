@@ -83,7 +83,7 @@ Kinds that `audio/score.py` `recipe()` knows:
 - **Rewards:** `reward coins step land win confetti`
 - **Music ducking:** `logo_hit punch reveal_big verdict boom win crowd_* stamp lock` duck it harder.
 
-**Warning:** `audio/score.py` as written is the film's mixer. Its music part reads film keys from `T` (`flip.יובל`, `drum`, `figDrop`, `verdict`, `endPitch`, `cells0`), cuts `take1.mp3` for 41 s, and always writes `audio/stem_*.wav`. Do not run it on a short's events: that fails, or overwrites the film's stems. A short needs its own mixer that reuses `recipe()`.
+**Mixing a short.** `audio/score.py` now serves any composition: `python3 audio/score.py shorts/sN/events.json shorts/sN/mix.wav` (stems land beside the mix). The music edit is declared by the short itself: pass `music: {...}` to `KIT.run({...})` and it is written into the events file. The plan schema, the three base plans (A for S1, B for S2, C for S3), more event kinds (`count`, `scratch`, `ding`, `heartbeat`, `riser_bar`, …) and what every kind sounds like are in `MUSIC.md`, which is the authority on sound.
 
 ## The end card
 ```js

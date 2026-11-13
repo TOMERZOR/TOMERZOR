@@ -19,3 +19,4 @@ shorts/**/_frames/
 shorts/**/__pycache__/
 shorts/*/mix_stem_*.wav
 shorts/*/cap/
+shorts/bank/

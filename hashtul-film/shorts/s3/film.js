@@ -479,12 +479,12 @@
     ev(T.fIn + 0.1, 'swish', 300, 700, 0.3);
     ev(T.touch, 'tap', ...c(A.bars[PAIR.from - 1]), 0.8);
     STEPS.forEach((s, i) => { if (i >= PAIR.from) ev(s, 'type', ...c(A.bars[i]), 0.5 + 0.05 * (i - PAIR.from)); });
-    ev(STEPS[PAIR.max - 1] + 0.04, 'ding', ...c(A.ends[1]), 0.6);
+    ev(STEPS[PAIR.max - 1] + 0.04, 'ding', ...c(A.ends[1]), 1);
     ev(T.stickOut, 'swish', 215, 0, 0.3);
     ev(T.tapLock, 'lock', ...c(A.lock), 1);
     ev(T.morph + 0.02, 'swish', 215, 420, 0.5); ev(T.stamp + 0.02, 'stamp_soft', ...c(E.LK.stamp), 0.6);
     ev(T.tick, 'check', ...c(A.me), 0.6);
-    ev(T.twist, 'boom', 215, 160, 1); ev(T.twist + 0.02, 'flip', 215, 160, 0.9); ev(T.title + 0.05, 'title', 215, 100, 0.7);
+    ev(T.twist, 'reveal_big', 215, 160, 1); ev(T.twist + 0.02, 'flip', 215, 160, 0.6);   // sound QA: the twist must be a top moment ev(T.title + 0.05, 'title', 215, 100, 0.7);
     ev(T.dive0 + 0.05, 'swish', 300, 500, 0.5);
     R.cells.forEach((cell, i) => ev(T.cells0 + i * 0.05, 'cell', ...c(cell), 0.45));
     ev(T.others, 'stamp_soft', 215, 260, 0.7); ev(T.peek + 0.1, 'gulp', 20, 240, 0.9); ev(T.peek + 0.45, 'drip', 30, 220, 0.6);
@@ -494,7 +494,7 @@
     T.emoji.forEach((te, i) => ev(te, 'react', ...c(R.reactAt(EMO[i])), 0.7));
     ev(T.discuss, 'title', 215, 100, 0.7);
     ev(T.hurry, 'stamp', 215, 430, 1);
-    ev(T.vote0 + 0.02, 'whoosh', 215, 600, 0.7); ev(T.say + 0.02, 'title', 215, 440, 0.5);
+    ev(T.vote0 + 0.02, 'whoosh', 215, 600, 0.45); ev(T.say + 0.02, 'title', 215, 440, 0.5);
     PAIR.votes.forEach(([, to], j) => ev(T.minis0 + j * T.miniStep + T.miniDur, 'mini', ...c(tileOf(RS.tiles, to)), 0.55 + 0.05 * j));
     ev(T.lit, 'roulette', ...c(tileOf(RS.tiles, 'תומר')), 0.8);
     ev(T.hurryOut + 0.02, 'swish', 215, 430, 0.4);
@@ -502,9 +502,9 @@
     ev(T.figPop, 'pop', 215, 200, 0.9); ev(T.figPop + 0.02, 'whoosh', 215, 200, 0.5);
     ev(T.verdict, 'verdict', 130, 120, 1); ev(T.verdict + 0.04, 'crowd_cheer_b', 215, 250, 0.9); ev(T.verdict + 0.03, 'confetti', 215, 200, 0.8);
     ev(T.plate + 0.03, 'pop', 215, 320, 0.5);
-    ev(T.gain, 'coins', ...c(RS.lineGain), 0.8);
-    ev(T.card0, 'swish', 215, 500, 0.8); ev(T.tag, 'stamp_soft', ...c(RS.tag), 0.6); ev(T.bubble, 'pop', ...c(RS.bubble), 0.7);
-    ev(T.bubble + 0.12, 'crowd_laugh_b', 215, 480, 0.9);
+    ev(T.gain, 'coins', ...c(RS.lineGain), 1);
+    ev(T.card0, 'swish', 215, 500, 0.8); ev(T.tag, 'stamp_soft', ...c(RS.tag), 0.9); ev(T.bubble, 'pop', ...c(RS.bubble), 0.7);
+    ev(T.bubble + 0.12, 'crowd_laugh_b', 215, 480, 0.6);   // sound QA: was louder than "ברח!"
     ev(T.real + 0.03, 'pop', 215, 570, 0.35);
   }
 

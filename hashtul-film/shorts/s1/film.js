@@ -132,7 +132,7 @@
 
   // fixed layout of the fx pieces, game px
   const HOOK_Y = [24, 58];
-  const BIG_TOP = [20.5, 74, 128], BIG_DX = [10, -10, 22], BIG_CY = 364, BIG_Z = 0.915;          // the big hook block, game px (top of each sticker box)
+  const BIG_TOP = [22, 74.5, 128], BIG_DX = [10, -10, 22], BIG_CY = 364, BIG_Z = 0.915;          // the big hook block, game px (top of each sticker box)
   const tuckT = i => T.tuck0 + i * T.tuckStep;
   function layoutFx() {
     E.hookA.style.top = (HOOK_Y[0] - 19) + 'px'; E.hookB.style.top = (HOOK_Y[1] - 19) + 'px';
@@ -163,8 +163,8 @@
     return {
       keys: [
         { t: 0, ...Pt(222, BIG_CY, BIG_Z) },                            // the big hook and the six where their cells will be
-        { t: 0.8, ...Pt(222, BIG_CY, BIG_Z) },
-        { t: 2.0, ...Pt(222, 356, 0.90), curve: ease.cubicInOut },  // ease back as the card lands; the puzzle frame from here
+        { t: 1.75, ...Pt(222, BIG_CY, BIG_Z) },
+        { t: 2.0, ...Pt(222, 356, 0.90), curve: ease.sineInOut },  // ease back as the card lands; the puzzle frame from here
         { t: T.rest0, ...Pt(222, 356, 0.90) },
         { t: T.spot0, ...Pt(222, 356, 0.90) },
         { t: T.spot1, ...Pt(222, 366, 0.94), curve: ease.sineInOut },
@@ -174,7 +174,7 @@
         { t: T.end0, ...Pt(228, 398, 0.97) },
       ],
       hits: [[T.title + 0.02, 4, 12], [T.verdict, 18, 8]],
-      rests: [[0, 0.8], [2.0, T.spot1 - 0.15], [T.hold, T.end0]],
+      rests: [[0, 1.75], [2.0, T.spot1 - 0.15], [T.hold, T.end0]],
     };
   }
 
@@ -219,7 +219,7 @@
       const sc = t < ti ? 0 : lerp(0.5, 1, K(t, ti, 'pop'));          // the cell's own pop (uReveal), to follow its corner
       const kt = t < ti ? 0 : K(t, ti, 'soft');
       const corner = [cc[0] + (center(av)[0] - cc[0]) * sc, cc[1] + (center(av)[1] - cc[1]) * sc];
-      const home = [cc[0], cc[1] - (pc[1] - ac[1]) - 4];             // the avatar+name block on the cell (5 px high: the names clear the bottom line)
+      const home = [cc[0], cc[1] - (pc[1] - ac[1]) - 5];             // the avatar+name block on the cell (5 px high: the names clear the bottom line)
       const cx = lerp(home[0], corner[0], kt), cy = lerp(home[1], corner[1], kt);
       const squash = Math.abs(Math.cos(ry * Math.PI / 180));
       const x = cc[0] + (cx - cc[0]) * squash;

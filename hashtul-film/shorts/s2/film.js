@@ -228,8 +228,8 @@
   function events() {
     const c = el => center(M(el));
     const S = E.st;
-    ev(0.02, 'pop', ...c(S[0].introA), 0.6);
-    ev(T.stB, 'pop', ...c(S[0].introB), 0.75);
+    ev(0.02, 'bubble', ...c(S[0].introA), 0.7);           // sound QA: a fuller pop, the first sound
+    ev(T.stB, 'bubble', ...c(S[0].introB), 0.75);
     ev(T.foldA[0], 'swish', ...c(S[0].introA), 0.45); ev(T.foldA[1], 'cell', ...c(E.chip), 0.55);
     ev(T.foldB[0], 'swish', ...c(S[0].introB), 0.45); ev(T.foldB[1] - 0.04, 'mini', ...c(E.chip), 0.5);
     T.st.forEach((s, i) => {
@@ -237,15 +237,15 @@
       ev(s.card - (i ? 0.07 : 0.16), 'swish', card[0], card[1], 0.55);
       ev(s.card, 'thud', card[0], card[1], 0.9);
       S[i].words.forEach((w, j) => { if (j % 2 === 0) ev(s.card + 0.06 + j * 0.06, 'word', card[0], card[1], 0.3); });
-      ev(s.bubble, 'pop', bub[0], bub[1], 0.85);
+      ev(s.bubble, 'bubble', bub[0], bub[1], 0.85);           // sound QA: was 'pop', +4 dB over the groove only
       ev(s.flip - TURN, 'flip', card[0], card[1], 0.7);
-      ev(s.flip, i === 2 ? 'reveal_big' : 'boom', card[0], card[1], i === 2 ? 1 : 0.85);
-      ev(s.flip + 0.1, i === 1 ? 'crowd_laugh' : 'crowd_laugh_b', fig[0], fig[1], [0.75, 0.85, 1][i]);
+      ev(s.flip, i === 2 ? 'reveal_big' : 'boom', card[0], card[1], 1);
+      ev(s.flip + 0.1, ['crowd_laugh_b', 'crowd_laugh', 'crowd_laugh_c'][i], fig[0], fig[1], [0.75, 0.85, 1][i]);   // sound QA: a fresh take for the last one
       ev(s.flip + GULP, 'gulp', fig[0], fig[1] - 30, 0.8);
       ev(s.flip + GULP + 0.12, 'drip', fig[0] + 40, fig[1] - 40, 0.5);
-      if (s.whip) ev(s.whip + 0.02, 'whip', card[0] - 120, card[1], 0.9);
+      if (s.whip) ev(s.whip + 0.02, 'whip', card[0] - 120, card[1], 0.5);   // sound QA: the whips were louder than the flips
     });
-    ev(T.st[2].flip + 0.35, 'crowd_laugh', ...c(S[2].fig), 0.8);         // the biggest laugh: two takes
+    ev(T.st[2].flip + 0.3, 'crowd_laugh_b', ...c(S[2].fig), 0.55);      // the biggest laugh: two takes (1 s each, done before the cheer)
     ev(T.caught, 'stamp', ...c(S[2].verdict), 1);
     ev(T.caught + 0.06, 'crowd_cheer_b', ...c(S[2].fig), 0.85);
   }

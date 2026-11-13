@@ -356,7 +356,8 @@
 
   const music = {
     segments: [{ t0: 0, t1: 10, track: 6.557 }, { t0: 10, t1: 12, track: 32.557 }, { t0: 12, t1: 18, track: 35.557 }],
-    sections: [[9.45, 0.72]], gain: 0.26, nudge: 0.03,
+    sections: [[9.45, 0.72], [15.0, 0.6], [15.95, 1.3]],   // sound QA: the final crash is ducked by its own logo hit; give it back ~5 dB
+    gain: 0.26, nudge: 0.03,
     thin: [[6.0, 8.0]],
     stops: [[9.62, 10.0]],                                       // a breath: keeps the 9.5 pickup, cuts its tail before the drop
   };

@@ -264,7 +264,8 @@
   // music: plan B (MUSIC.md §3) with a breath before every flip
   const music = {
     segments: [{ t0: 0, t1: 12, track: 22.557 }, { t0: 12, t1: 18, track: 35.557 }],
-    sections: [[0, 0.72]], gain: 0.26, nudge: 0.03,
+    sections: [[0, 0.72], [15.95, 1.3]],   // sound QA: the final crash is ducked by its own logo hit; give it back ~5 dB
+    gain: 0.26, nudge: 0.03,
     stops: T.st.map(s => [s.hold, s.flip]),
   };
 

@@ -512,7 +512,8 @@
   // card, and a breath before "ברח!"
   const music = {
     segments: [{ t0: 0, t1: 4, track: 0.557 }, { t0: 4, t1: 12, track: 12.557 }, { t0: 12, t1: 18, track: 35.557 }],
-    sections: [[7.45, 0.72]], gain: 0.26, nudge: 0.03,
+    sections: [[7.45, 0.72], [15.95, 1.3]],   // sound QA: the final crash is ducked by its own logo hit; give it back ~5 dB
+    gain: 0.26, nudge: 0.03,
     stops: [[3.7, 4.0], [7.6, 8.0], [11.6, 12.0]],
     thin: [[4.5, 7.6]],                 // sound QA: the twist gets one full beat of music before the thin
   };

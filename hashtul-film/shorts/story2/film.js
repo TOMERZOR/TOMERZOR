@@ -127,20 +127,20 @@
   // ── sound (MUSIC.md §4) ──
   function events() {
     const c = el => center(M(el));
-    ev(T.drop0 + 0.05, 'drop', IC.x, IC.y - 120, 0.45);
-    ev(T.land, 'logo_hit', IC.x, IC.y, 1); ev(T.land, 'land', IC.x, IC.y, 0.6);   // sound QA: the hero's landing, over a thinned bed that opens on it
-    ev(T.tag, 'stamp_soft', ...c(E.tag), 0.65);
-    ev(T.title, 'title', ...c(E.title), 0.55);
-    E.chips.forEach((ch, i) => ev(T.chips[i], 'pop', ...c(ch), 0.55 + i * 0.07));
-    T.cards.slice(0, -1).forEach((tc, i) => ev(tc, 'deal', IC.x + Math.sin(FAN[i].a * Math.PI / 180) * 90, IC.y - 60, 0.35 + i * 0.04));
+    ev(T.drop0 + 0.05, 'drop', IC.x, IC.y - 120, 0.7);
+    ev(T.land, 'logo_hit', IC.x, IC.y, 0.85); ev(T.land, 'land', IC.x, IC.y, 0.55);   // sound QA: the hero's landing, over a thinned bed that opens on it
+    ev(T.tag, 'stamp_soft', ...c(E.tag), 0.9);
+    ev(T.title, 'title', ...c(E.title), 0.75);
+    E.chips.forEach((ch, i) => ev(T.chips[i], 'bubble', ...c(ch), 0.25 + 0.1 * i));   // sound QA: rising, the same chip sound as the other story
+    T.cards.slice(0, -1).forEach((tc, i) => ev(tc, 'deal', IC.x + Math.sin(FAN[i].a * Math.PI / 180) * 90, IC.y - 60, 0.6 + i * 0.06));   // sound QA: audible, rising with the fan
     ev(T.cards[6], 'deal_odd', IC.x, IC.y - 100, 0.7);
-    ev(T.crash, 'confetti', IC.x, IC.y - 30, 1);                       // the loudest moment, with the track's crash
+    ev(T.crash, 'confetti', IC.x, IC.y - 30, 0.45); ev(T.crash, 'riser_bar', IC.x, IC.y, 0.4);   // sound QA: the fan's build peaks on the crash                       // the loudest moment, with the track's crash
     ev(T.crash, 'boom', IC.x, IC.y, 1);
     ev(T.line, 'word', ...c(E.line), 0.3);                            // silent: nothing after 6.4 competes with the ring
   }
 
   const music = { segments: [{ t0: 0, t1: 8, track: 33.557 }], gain: 0.26, nudge: 0.03, sections: [[0, 0.72], [5.95, 1.8]],
-    thin: [[-1, -0.75, 0.97, 0.99]], out: [6.4, 7.95] };   // sound QA: a thinned bed opens on the landing; the ring fades under the tail
+    thin: [[-1, -0.75, 0.97, 0.99]], out: [6.2, 7.95] };   // sound QA: a thinned bed opens on the landing; the ring fades under the tail
 
   KIT.run({
     T, build, camera, update, events, music,

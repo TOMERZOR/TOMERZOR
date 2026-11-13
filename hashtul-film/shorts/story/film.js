@@ -195,14 +195,14 @@
   function events() {
     const c = el => { const r = M(el); return [r.x + r.w / 2, r.y + r.h / 2]; };
     const mark = M(E.wordmark), my = mark.y + mark.h / 2;
-    E.letters.forEach((l, i) => ev(T.word + i * T.wordStep + 0.09, i === 4 ? 'logo_hit' : 'letter', 215 + (2 - i) * 40, my, i === 4 ? 1 : 0.4)); ev(T.word + 4 * T.wordStep + 0.09, 'land', 215, my, 0.6);   // sound QA: a landing you feel
+    E.letters.forEach((l, i) => ev(T.word + i * T.wordStep + 0.09, i === 4 ? 'logo_hit' : 'letter', 215 + (2 - i) * 40, my, i === 4 ? 0.85 : 0.25)); ev(T.word + 4 * T.wordStep + 0.09, 'land', 215, my, 0.45);   // sound QA: a landing you feel
     ev(T.bar + 0.03, 'swish', 215, my + 30, 0.3);
     ev(T.adult + 0.03, 'pop', 370, gyOf(420), 0.35);
-    ev(T.live, 'stamp', ...c(E.liveRow), 0.4);
+    ev(T.live, 'stamp', ...c(E.liveRow), 0.55);
     ev(T.punch + 0.02, 'punch', ...c(E.pitchRow), 0.32);
-    E.chips.forEach((ch, i) => ev(T.chips[i], 'bubble', ...c(ch), 0.3 + 0.04 * i));
-    ev(T.slot0, 'swish', 215, SLOT.cy, 0.35);
-    ev(T.tap, 'confirm', 215, SLOT.cy, 1); ev(T.tap, 'boom', 215, SLOT.cy, 0.8);   // sound QA: the peak needs a body under the tap
+    E.chips.forEach((ch, i) => ev(T.chips[i], 'bubble', ...c(ch), 0.25 + 0.1 * i));   // sound QA: rising
+    ev(T.slot0, 'swish', 215, SLOT.cy, 0.7); ev(T.tap, 'riser_bar', 215, SLOT.cy, 0.3);   // sound QA: a 2 s build that peaks on the tap
+    ev(T.tap, 'confirm', 215, SLOT.cy, 1); ev(T.tap, 'boom', 215, SLOT.cy, 1);   // sound QA: the peak needs a body under the tap
     ev(T.here + 0.03, 'stamp_soft', ...c(E.hereRow), 0.6);
     ev(T.wink, 'glance', 215, gyOf(470), 0.5);
   }
@@ -215,7 +215,7 @@
   }));
 
   const music = { segments: [{ t0: 0, t1: 8, track: 33.557 }], gain: 0.26, nudge: 0.03, sections: [[0, 0.72], [5.95, 1.8]],
-    thin: [[-1, -0.75, 0.97, 0.99]], out: [6.4, 7.95] };   // sound QA: a thinned bed opens on the landing; the ring fades under the tail
+    thin: [[-1, -0.75, 0.97, 0.99]], out: [6.2, 7.95] };   // sound QA: a thinned bed opens on the landing; the ring fades under the tail
 
   KIT.run({
     T, build, measure, update, events, music,

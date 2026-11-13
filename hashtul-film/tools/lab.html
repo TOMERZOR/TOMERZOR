@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>hashtul lab</title>
+<link rel="stylesheet" href="../vendor/fonts.css">
+<link rel="stylesheet" href="../vendor/game.css">
+<style>
+  /* Renders one captured screen at the game's own 430×932 size, for side-by-side checks against ref/frames/*.png */
+  html, body { margin: 0; background: #000; }
+  .lab { width: 430px; height: 932px; position: relative; }
+  .lab * { animation: none !important; transition: none !important; }
+</style>
+</head>
+<body>
+<div class="stage lab"><div id="host" style="position:absolute;inset:0"></div></div>
+<script src="../vendor/screens.js"></script>
+<script>
+  const s = new URLSearchParams(location.search).get('s') || 'lobby';
+  document.getElementById('host').innerHTML = SCREENS[s];
+  window.__ready = document.fonts.ready.then(() => true);
+</script>
+</body>
+</html>

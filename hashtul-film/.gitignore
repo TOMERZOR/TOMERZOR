@@ -1,0 +1,13 @@
+# render scratch and anything rebuilt from sources
+out/
+audio/mix.wav
+audio/stem_*.wav
+audio/.tmp.wav
+tools/out_*.png
+# heavy reference captures (the HTML captures that vendor/ is built from stay)
+ref/frames/*.png
+ref/shots/
+ref/video/
+# signed download links (they expire, and are not needed once the takes are in audio/src/)
+audio/src/eleven_urls.json
+__pycache__/

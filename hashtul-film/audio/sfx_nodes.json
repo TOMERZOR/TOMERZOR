@@ -1,0 +1,21 @@
+{
+  "flow_id": "qZfsoJlzprhEbxRUMO4O",
+  "model": "eleven_text_to_sound_v2",
+  "nodes": {
+    "crowd_oooh": ["50ivkQeo40CmsREbO5VE", "Small group of friends in a living room going ooooh together in playful suspicion, close and short"],
+    "crowd_laugh": ["pFGn1qiFsLCu97WDLOCi", "Small group of friends bursting into loud laughter in a living room, close-mic"],
+    "crowd_cheer": ["hAxr23BSXFUrsGz9zZyR", "Small group of friends cheering yeah and clapping briefly in a living room"],
+    "stamp": ["a631LcT2aGa0BB6I83S3", "Rubber stamp slammed hard onto paper on a wooden table, one heavy thump"],
+    "gulp": ["YJTKD4of2yz0hxvkZ5J2", "Single nervous cartoon gulp, one loud swallow"],
+    "drip": ["UJekCmkDKWbryH4JujiA", "Single water droplet falling into water, tiny high plip"],
+    "riser": ["0aaacMqAqjauMfOnQ0uR", "Fast airy whoosh rising upward, short and smooth"],
+    "swish": ["QonoZyfbbA0LZwwgI17q", "Soft quick swish of a playing card sliding through the air"],
+    "pop": ["kDsDLtqTM39Uwq7Yw5G3", "Soft round cartoon bubble pop, short"],
+    "thud": ["gTUTSzWAEEn4tTXRQ7k4", "Soft cartoon thud of a small toy landing on a cushion"],
+    "deal": ["R552C9aLMrwQrcO9mmWY", "Playing card dealt onto a felt table, single crisp flick"],
+    "boom": ["l85XJKETRGOzxGH7bTGf", "Big comedic impact boom, deep cartoon hit with a short tail"],
+    "confetti": ["Ac27INFKgR2YWbuqLsC4", "Party popper burst with paper confetti falling"],
+    "roulette": ["dfgUn8c3w4JjCb3pZ3lP", "Single short click of a spinning prize wheel peg, wooden"]
+  },
+  "music": {"provider": "Higgsfield / elevenlabs_music_v2_5", "job_id": "0806a007-598b-493d-845d-ac33e51868fd", "duration": 44, "takes": 3}
+}

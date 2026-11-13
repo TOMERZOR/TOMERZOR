@@ -38,7 +38,7 @@
     flip: { 'תומר': 5.0, 'שירה': 5.5, 'נועה': 6.0, 'דנה': 6.5, 'איתי': 7.0, 'יובל': 8.0 },
     bar: 8.42, emoji: [8.4, 8.72, 9.06, 9.4], discuss: 9.0,
     hurry: 10.0, hurryOut: 11.22,
-    vote0: 10.74, vote1: 11.1, myst: 10.96, say: 11.02, minis0: 11.16, miniStep: 0.12, lit: 11.72, zz: 11.74,
+    vote0: 10.74, vote1: 11.1, myst: 10.96, say: 11.02, minis0: 11.08, miniStep: 0.09, miniDur: 0.28, lit: 11.74, zz: 11.6,
     figDrop: 11.8, verdict: 12.0, plate: 12.1, line: 12.5, gain: 12.62,
     card0: 12.8, tag: 12.95, fake: 13.05, bubble: 13.35, real: 13.6, hold: 13.6,
     end0: 15.0,
@@ -187,12 +187,12 @@
       keys: [
         { t: 0, ...Pt(215, 260, 1.08) },
         { t: 0.95, ...Pt(215, 266, 1.08), curve: ex.sineInOut },
-        { t: 1.92, ...Pt(215, 428, 1.0), curve: ex.cubicInOut },
-        { t: 2.95, ...Pt(215, 432, 1.0), curve: ex.sineInOut },
+        { t: 1.92, ...Pt(242, 442, 0.95), curve: ex.cubicInOut },          // the whole meter and both labels left of the right rail
+        { t: 2.95, ...Pt(242, 446, 0.95), curve: ex.sineInOut },
         { t: 3.4, ...Pt(215, 640, 1.0), curve: ex.cubicInOut },
         { t: 3.6, ...Pt(215, 642, 1.0), curve: ex.sineInOut },
-        { t: 3.96, ...Pt(215, 380, 1.08), curve: ex.cubicInOut },
-        { t: 5.6, ...Pt(215, 384, 1.08) },
+        { t: 3.96, ...Pt(215, 375, 1.08), curve: ex.cubicInOut },
+        { t: 5.6, ...Pt(215, 378, 1.08) },
         { t: 7.08, ...Pt(215, 470, 1.08), curve: ex.sineInOut },
         { t: 7.22, ...Pt(215, 474, 1.08), curve: ex.sineInOut },
         { t: 7.98, ...Fr(yc, 1.55), curve: ex.cubicInOut },
@@ -203,8 +203,8 @@
         { t: 11.74, ...Pt(215, 626, 0.95), curve: ex.sineInOut },
         { t: 12.04, ...Pt(215, 240, 1.25), curve: ex.expoOut },
         { t: 12.62, ...Pt(215, 256, 1.2), curve: ex.sineInOut },
-        { t: 13.45, ...Pt(215, 410, 1.05), curve: ex.cubicInOut },
-        { t: T.end0, ...Pt(215, 410, 1.05) },
+        { t: 13.45, ...Pt(240, 415, 1.0), curve: ex.cubicInOut },          // RTL lines start at the right: keep them off the right rail
+        { t: T.end0, ...Pt(240, 415, 1.0) },
       ],
       hits: [[T.tapLock + 0.02, 5, 12], [T.twist + 0.02, 14, 9], [T.flip[PAIR.plant] + 0.02, 14, 9], [T.hurry + 0.02, 6, 11], [T.verdict, 18, 8]],
       rests: [[0, 0.95], [T.touch + 0.05, 2.95], [3.96, 5.6], [8.05, 8.4], [9.05, 10.74], [13.5, T.end0]],
@@ -244,7 +244,7 @@
       const champ = i === 1 && v >= PAIR.max;
       cls(c, 'chip--dark', !champ); cls(c, 'chip--yellow', champ);
       const st = out(1);
-      put(c, { ...st, s: (st.s ?? 1) * (1 + (champ ? pulse(t, STEPS[PAIR.max - 1], 0.3, 6, 20) : 0)) });
+      put(c, { ...st, s: (st.s ?? 1) * (1 + (champ ? pulse(t, STEPS[PAIR.max - 1], 0.16, 6, 20) : 0)) });
     });
     txt(A.val, v ? String(v) : '?'); cls(A.val, 'is-empty', !v);
     put(A.val, { s: v ? 1 + pulse(t, vT, 0.24, 10, 26) : 1, base: '' });
@@ -362,7 +362,7 @@
     });
     put(RS.board, { op: t < tileIn ? 0 : 1, y: t >= T.verdict ? 6 * pulse(t, T.verdict, 1, 9, 30) : 0 });
     RS.minis.forEach((mi, j) => {
-      const [voter] = PAIR.votes[j], t0 = T.minis0 + j * T.miniStep, t1 = t0 + 0.34;
+      const [voter] = PAIR.votes[j], t0 = T.minis0 + j * T.miniStep, t1 = t0 + T.miniDur;
       if (t < t0) { put(mi, { op: 0 }); return; }
       const self = M(mi), from = M($('.result__tile-av', RS.tiles[RS.tileName.indexOf(voter)]));
       const k = ease.cubicInOut(seg(t, t0, t1));
@@ -371,7 +371,7 @@
       put(mi, { x: x - center(self)[0], y: y - center(self)[1], s, op: 1, base: '' });
     });
     RS.counts.forEach(([n, c]) => {
-      const lands = PAIR.votes.map((v, j) => (v[1] === n ? T.minis0 + j * T.miniStep + 0.34 : null)).filter(x => x != null);
+      const lands = PAIR.votes.map((v, j) => (v[1] === n ? T.minis0 + j * T.miniStep + T.miniDur : null)).filter(x => x != null);
       const got = lands.filter(x => t >= x).length;
       txt(c, String(got));
       put(c, got ? { s: lerp(0.3, 1, K(t, lands[0], 'bouncy')) * (1 + pulse(t, lands[got - 1], 0.3)), op: 1, base: '' } : { op: 0 });
@@ -396,7 +396,7 @@
     worldPut(F.peek, lerp(-40, 40, qk) - 90 * qOut, R1y - 22, t < T.peek ? { op: 0 } : { r: lerp(40, 16, qk) + 3 * Math.sin((t - T.peek) * 5), op: t > T.peekOut + 0.3 ? 0 : 1 });
     // "מהר, תאלתרו תירוץ!": stamped in the middle of the frame
     const hk = K(t, T.hurry, 'pop'), hOut = cubicIn(seg(t, T.hurryOut, T.hurryOut + 0.2));
-    screenPut(F.hurry, t, 540, 900, t < T.hurry ? { op: 0 } : { s: lerp(2.4, 1, hk) * (1 - 0.5 * hOut), r: lerp(-16, 0, hk), op: clamp(hk * 3) * (1 - hOut) });
+    screenPut(F.hurry, t, 520, 812, t < T.hurry ? { op: 0 } : { s: lerp(2.4, 1, hk) * (1 - 0.5 * hOut), r: lerp(-16, 0, hk), op: clamp(hk * 3) * (1 - hOut) });
   }
 
   function update(t) {
@@ -453,7 +453,7 @@
     ev(T.discuss, 'title', 215, 100, 0.7);
     ev(T.hurry, 'stamp', 215, 430, 1);
     ev(T.vote0 + 0.02, 'whoosh', 215, 600, 0.7); ev(T.say + 0.02, 'title', 215, 440, 0.5);
-    PAIR.votes.forEach(([, to], j) => ev(T.minis0 + j * T.miniStep + 0.34, 'mini', ...c(tileOf(RS.tiles, to)), 0.55 + 0.05 * j));
+    PAIR.votes.forEach(([, to], j) => ev(T.minis0 + j * T.miniStep + T.miniDur, 'mini', ...c(tileOf(RS.tiles, to)), 0.55 + 0.05 * j));
     ev(T.lit, 'roulette', ...c(tileOf(RS.tiles, 'תומר')), 0.8);
     ev(T.figDrop, 'drop', 215, 120, 0.9);
     ev(T.verdict, 'verdict', 130, 120, 1); ev(T.verdict + 0.04, 'crowd_cheer_b', 215, 250, 0.9); ev(T.verdict + 0.03, 'confetti', 215, 200, 0.8);
@@ -477,7 +477,7 @@
     T, build, measure, camera, update, events, music,
     track: box => {
       const F = E.F;
-      box('pov', $('.sticker', F.pov)); box('notyet', $('.chip', F.notYet)); box('others', $('.sticker', F.others)); box('hurry', $('.sticker', F.hurry));
+      box('pov', F.pov); box('notyet', F.notYet); box('others', F.others); box('hurry', F.hurry);
       box('question', E.A.q); box('tile', E.A.read); box('ends', E.A.ends[1]); box('herocard', E.R.heroCard); box('title', E.R.head); box('discuss', E.D.head);
       box('yuvalcell', E.R.cells[E.R.me]); box('verdict', E.RS.verdict); box('line', E.RS.line); box('card', E.RS.cardwrap);
     },

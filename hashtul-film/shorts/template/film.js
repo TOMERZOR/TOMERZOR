@@ -89,7 +89,7 @@
       taps: [T.tap], windows: [[T.fIn, T.fOut]],
     };
   });
-  KIT.emoji(() => { const r = M(E.cells[E.y]); return [{ t0: T.laugh, ch: '😂', from: [r.x + r.w / 2, r.y + r.h], to: [r.x + r.w * 0.3, r.y - 50] }]; });
+  KIT.emoji(() => { const r = M(E.cells[E.y]); return [{ t0: T.laugh, ch: '😂', from: [r.x + r.w * 0.3, r.y + r.h * 0.85], to: [r.x + r.w * 0.18, r.y + r.h * 0.22] }]; });
 
   KIT.run({ T, build, camera, update, events, track: box => { box('yuvalcell', E.cells[E.y]); box('grid', E.grid); } });
 })();

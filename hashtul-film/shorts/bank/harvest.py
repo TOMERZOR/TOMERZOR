@@ -21,7 +21,7 @@ Options:
 
 Behaviour: one room per game; settings rounds=N, answer 30s, discuss 0s, vote 20s;
 each player answers with a valid random value for the question kind, votes for a
-random other participant, the host sends `next` once in result/scores; after the
+random other participant, the host sends `next` once in discuss/result/scores; after the
 final the client sends `leave`. The seen keys of every round (state.round.seenKey)
 are stored in seen_keys.json and sent with the next `create` as the same bitset the
 web client sends, so the server serves unseen questions. Stops on `rate_limited`
@@ -184,6 +184,11 @@ class Player:
                 await asyncio.sleep(1.0)
                 await self.send({"t": "next"})
             return
+        if phase == "discuss" and self.host and key not in self.acted:
+            self.acted.add(key)
+            await asyncio.sleep(1.0)
+            await self.send({"t": "next"})
+            return
         if phase == "scores" and self.host and key not in self.acted:
             self.acted.add(key)
             await asyncio.sleep(0.5)
@@ -277,7 +282,7 @@ class Harvest:
         await host.send({"t": "start"})
         t0 = time.time()
         # host finishing (final phase) ends the game; non-hosts are told to stop too
-        done, pending = await asyncio.wait([tasks[0]], timeout=args.rounds * 150)
+        done, pending = await asyncio.wait([tasks[0]], timeout=args.rounds * 90)
         for p in players[1:]:
             p.done.set()
             try:

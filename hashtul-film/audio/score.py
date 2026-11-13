@@ -25,8 +25,9 @@ endPitch, cells0). With one, it is the music plan. All times are film seconds; "
         the join, so the new bar's downbeat (whose attack leads the nominal grid by ~33 ms in take1) is heard
         whole and the old bar's next attack is never heard. A segment with no neighbour starts/stops with a
         3 ms ramp. "gain" (optional, default 1) is a per-segment level (take1's intro is ~10 dB below its groove).
-        Joins should be bar-aligned: film bar lines on even seconds, track bar lines at 0.557 + 2k; the script
-        warns when a segment is off the beat grid or a join is not on a bar line of both sides.
+        Joins go on film bar lines (even seconds) and on a chord line of the track (take1 changes chord every 1 s,
+        at 0.557 + k; its bar lines are 0.557 + 2k, its 4-bar phrase starts 0.557 + 8k). The script warns when a
+        segment is off the beat grid or a join is not on both. See shorts/MUSIC.md for which joins are seamless.
     "in":    [a, b]              fade-in ramp (optional; default: full level from the first segment)
     "stops": [[a, b], ...]       music gain -> 0 from a (20 ms ramp ending at a) to b (back in 10 ms centred on b):
                                  the breath before a hit. 4-number form [a0, a1, b0, b1]: down over a0..a1, up over b0..b1.
@@ -127,6 +128,55 @@ def popper():
 
 SRC["roll"] = drumroll(); SRC["popper"] = popper()
 
+# ── sources for the kinds added for the shorts. Their own generator, so the film's random draws are untouched. ──
+rng2 = np.random.default_rng(57)
+
+
+def scratch():
+    """A record scratch: a short grain of noisy 'vinyl' tone dragged back and forth (pitch follows the hand)."""
+    n = int(SR * 0.34); t = np.arange(n) / SR
+    v = np.interp(t, [0, .06, .13, .2, .34], [0, 1, -0.6, 1.2, 0])          # hand speed
+    f = 300 + 1100 * np.abs(v); ph = np.cumsum(2 * np.pi * f / SR)
+    tone = np.sign(np.sin(ph)) * 0.35 + np.sin(ph)
+    noise = P.sweep_bp(rng2.standard_normal(n), 900, 2600, 1.4)
+    y = P.sat((tone * 0.5 + noise * 0.8) * (0.15 + np.abs(v)), 2.0)
+    y = P.bp(y, 1400, 0.7) * np.r_[np.linspace(0, 1, 96), np.ones(n - 96 - 960), np.linspace(1, 0, 960)]
+    return y / np.abs(y).max()
+
+
+def heartbeat():
+    """Lub-dub: two felt sub thumps 0.28 s apart."""
+    a = P.sub(55, 0.35); b = P.sub(48, 0.45) * 0.7; y = np.zeros(int(SR * 0.75))
+    y[:len(a)] += a; i = int(0.28 * SR); y[i:i + len(b)] += b[: len(y) - i]
+    return P.lp(y, 400) / np.abs(y).max()
+
+
+def shutter():
+    """A camera shutter: two clacks 45 ms apart, bright snap over a small wooden body."""
+    y = np.zeros(int(SR * 0.16))
+    for d, g in ((0.0, 1.0), (0.045, 0.75)):
+        k = P.wood(900, 0.06) * 0.5 + P.hp(rng2.standard_normal(int(0.06 * SR)), 2500) * np.exp(-np.arange(int(0.06 * SR)) / SR * 160)
+        i = int(d * SR); y[i:i + len(k)] += k[: len(y) - i] * g
+    return y / np.abs(y).max()
+
+
+def countblip(f=1046.5):
+    """The countdown blip: a short struck tone over a wood knock (the 3-2-1 under a timer)."""
+    y = P.glass(f, 0.35, 0.6); w = P.wood(f / 4, 0.12); y[:len(w)] += 0.6 * w
+    return y / np.abs(y).max()
+
+
+SRC["scratch"] = scratch(); SRC["heart"] = heartbeat(); SRC["shutter"] = shutter(); SRC["blip"] = countblip()
+SRC["ding"] = (lambda y: y / np.abs(y).max())(P.glass(1318.5, 1.0, 0.8) + 0.6 * np.r_[P.glass(1975.5, 0.8, 0.5), np.zeros(SR // 5)])
+SRC["buzz"] = clean(dec(G / "alarm.mp3"), end=0.5, fade=0.08)
+SRC["off"] = clean(dec(G / "off.wav"))
+SRC["riser_bar"] = clean(dec(EL / "riser_1.mp3"), thr=0.002, end=2.1, fade=0.03)   # a 2 s build that peaks at its end
+RISER_BAR_PK = int(np.argmax(np.abs(signal.hilbert(SRC["riser_bar"])) > 0.7)) / SR   # where it peaks (placed on t)
+SRC["riser_long"] = clean(dec(EL / "riser_4.mp3"), thr=0.01, end=3.0, fade=0.1)    # a long airy swell, 3 s
+SRC["laugh_b"] = clean(dec(EL / "crowd_laugh_1.mp3"), fade=0.3)
+SRC["cheer_b"] = clean(dec(EL / "crowd_cheer_2.mp3"), fade=0.3)
+SRC["oooh_b"] = clean(dec(EL / "crowd_oooh_1.mp3"), end=1.4, fade=0.3)
+
 
 def rate(x, r):
     if abs(r - 1) < 1e-3: return x
@@ -136,6 +186,10 @@ def rate(x, r):
 # kind → layers (source, gain, playback rate, room send, offset s). Rates vary a little so nothing repeats exactly.
 def recipe(kind, i, v):
     j = (rng.random() - 0.5)
+    return _table(i, v, j).get(kind, [])
+
+
+def _table(i, v, j):
     R = {
         "glance": [("tick", .16, 1.6, .25, 0)], "drip": [("drip", .5, 1.0, .35, 0)],
         "riser": [("riser", .5, 1.0, .45, 0)],
@@ -168,18 +222,36 @@ def recipe(kind, i, v):
         "step": [("thud", .55, .9 + .1 * i, .25, 0)], "land": [("thud", .6, 1.0, .25, 0), ("pop_b", .3, .9, .2, 0)],
         "win": [("win", .62, 1.0, .35, 0)], "confetti": [("popper", .34, 1.0, .35, 0)],
         "whip": [("riser_s", .62, 1.0, .35, -0.06), ("whoosh", .5, .85, .35, 0)],
+        # ── added for the shorts (new kinds only; nothing above changed) ──
+        "count": [("blip", .42, 1.0, .25, 0), ("tick", .3, 1.2, .15, 0)],                     # 3-2-1 blips, i-th call
+        "count_go": [("blip", .5, 2.0, .3, 0), ("start", .45, 1.0, .3, 0), ("e_boom2", .3, 1.1, .3, 0)],
+        "scratch": [("scratch", .5, 1.0 + .04 * j, .15, 0)],
+        "buzz": [("buzz", .42, 1.0, .25, 0)], "wrong": [("off", .6, .9, .2, 0), ("buzz", .25, .85, .25, 0)],
+        "ding": [("ding", .32, 1.0, .4, 0)], "heartbeat": [("heart", .45, 1.0, .1, 0)],
+        "shutter": [("shutter", .5, 1.0 + .03 * j, .2, 0)],
+        "riser_bar": [("riser_bar", .4, 1.0, .45, -RISER_BAR_PK)], "riser_long": [("riser_long", .35, 1.0, .5, 0)],
+        "crowd_laugh_b": [("laugh_b", .5, 1.0, .45, 0)], "crowd_cheer_b": [("cheer_b", .46, 1.0, .5, 0)],
+        "crowd_oooh_b": [("oooh_b", .44, 1.0, .5, 0)],
     }
-    return R.get(kind, [])
+    return R
 
 
-HITS = {"logo_hit", "punch", "reveal_big", "verdict", "boom", "win", "crowd_oooh", "crowd_cheer", "crowd_laugh", "stamp", "lock"}
+KINDS = set(_table(0, 1.0, 0.0))
+
+
+HITS = {"logo_hit", "punch", "reveal_big", "verdict", "boom", "win", "crowd_oooh", "crowd_cheer", "crowd_laugh", "stamp", "lock",
+        "count_go", "buzz", "wrong", "scratch", "crowd_laugh_b", "crowd_cheer_b", "crowd_oooh_b"}
 
 
 def main():
     dry = np.zeros((N, 2)); wet = np.zeros((N, 2)); duck = np.zeros(N)
-    seen = {}
+    seen = {}; warned = set()
     for e in EV["events"]:
-        k = e["kind"]; i = seen.get(k, 0); seen[k] = i + 1
+        k = e["kind"]
+        if k not in KINDS:
+            if k not in warned: print(f"warning: unknown event kind {k!r}: skipped", file=sys.stderr); warned.add(k)
+            continue
+        i = seen.get(k, 0); seen[k] = i + 1
         pan = float(e["pan"]) * 0.5
         for (src, g, r, send, off) in recipe(k, i, float(e.get("v", 1))):
             x = rate(SRC[src], r) * g * float(e.get("v", 1)) ** 0.5
@@ -194,37 +266,111 @@ def main():
     sfx = dry + room * 0.8
 
     # ── the music, cut on its own grid ──
-    tr = dec(ROOT / "audio/src/music/take1.mp3", 2)
     tf = np.arange(N) / SR
-    src_i = np.clip(((tf + MUSIC_OFFSET) * SR).astype(int), 0, len(tr) - 1)
-    mus = tr[src_i] * ((tf + MUSIC_OFFSET) * SR < len(tr))[:, None]
-    lowp = np.stack([P.lp(mus[:, c], 900, 2) for c in (0, 1)], 1)
-    def ramp(a, b): return np.clip((tf - a) / max(b - a, 1e-6), 0, 1)
-    T = EV["T"]
-    g = ramp(1.28, 1.62)                                                  # in with the pull-back (the cold open is quiet)
-    seven = T["flip"]["יובל"]
-    g *= 1 - ramp(seven - 0.36, seven - 0.32) * (1 - ramp(seven - 0.005, seven + 0.005))      # a stop before the 7
-    sus0, sus1, verdict = T["drum"] - 0.05, T["figDrop"], T["verdict"]
-    thin = ramp(sus0, sus0 + 0.25) * (1 - ramp(sus1, sus1 + 0.02))       # thinned under the drum and the spotlight
-    g *= 1 - ramp(sus1, sus1 + 0.03) * (1 - ramp(verdict - 0.005, verdict + 0.005))         # the breath before "נתפס!"
-    endhit = T["endPitch"] + 0.55
-    g *= 1 - ramp(endhit + 0.35, endhit + 0.95)                           # the last bar rings, then out
-    mix_m = mus * (1 - thin)[:, None] * 1.0 + lowp * thin[:, None] * 0.35
-    # duck under the hits: 100 ms hold, ~350 ms release
-    r_c = np.exp(-1 / (0.3 * SR))
-    env = np.clip(signal.lfilter([1 - r_c], [1, -r_c], duck) * 1.5, 0, 1)
-    gm = g * (1 - 0.5 * env)                                              # up to -6 dB under a hit, ~-2.5 under the rest
-    section = np.where(tf < T["cells0"], 1.0, 0.72)                        # the full groove is louder: take 3 dB off it
-    music = mix_m * (gm * section)[:, None] * 0.26                        # sits under the action sounds
+    plan = EV.get("music") or legacy_plan(EV["T"])
+    music = render_music(plan, tf, duck)
 
     m = sfx + music
     m = np.stack([P.hp(m[:, c], 32) for c in (0, 1)], 1)[: int(SR * DUR)]
     out = master(m)
     wavfile.write(str(MIX_PATH), SR, (np.clip(out, -1, 1) * 32767).astype(np.int16))
     # stems for checking balance
-    wavfile.write(str(ROOT / "audio/stem_sfx.wav"), SR, (np.clip(sfx[: int(SR * DUR)] * 0.5, -1, 1) * 32767).astype(np.int16))
-    wavfile.write(str(ROOT / "audio/stem_music.wav"), SR, (np.clip(music[: int(SR * DUR)] * 0.5, -1, 1) * 32767).astype(np.int16))
-    print("wrote", MIX_PATH.relative_to(ROOT), loud(MIX_PATH))
+    if MIX_PATH.resolve().parent == ROOT / "audio": st = {"sfx": ROOT / "audio/stem_sfx.wav", "music": ROOT / "audio/stem_music.wav"}
+    else: st = {k: MIX_PATH.with_name(f"{MIX_PATH.stem}_stem_{k}.wav") for k in ("sfx", "music")}
+    wavfile.write(str(st["sfx"]), SR, (np.clip(sfx[: int(SR * DUR)] * 0.5, -1, 1) * 32767).astype(np.int16))
+    wavfile.write(str(st["music"]), SR, (np.clip(music[: int(SR * DUR)] * 0.5, -1, 1) * 32767).astype(np.int16))
+    print("wrote", MIX_PATH, loud(MIX_PATH))
+
+
+def legacy_plan(T):
+    """The film's own music edit, as a plan (4-number ramps reproduce the original arithmetic exactly)."""
+    seven = T["flip"]["יובל"]
+    sus0, sus1, verdict = T["drum"] - 0.05, T["figDrop"], T["verdict"]
+    endhit = T["endPitch"] + 0.55
+    return {"segments": [{"t0": 0.0, "t1": float("inf"), "track": MUSIC_OFFSET}],
+            "in": [1.28, 1.62],                                                     # in with the pull-back
+            "stops": [[seven - 0.36, seven - 0.32, seven - 0.005, seven + 0.005],     # a stop before the 7
+                      [sus1, sus1 + 0.03, verdict - 0.005, verdict + 0.005]],         # the breath before "נתפס!"
+            "thin": [[sus0, sus0 + 0.25, sus1, sus1 + 0.02]],                       # under the drum and the spotlight
+            "out": [endhit + 0.35, endhit + 0.95],                                  # the last bar rings, then out
+            "sections": [[T["cells0"], 0.72]],                                      # the full groove is louder
+            "gain": 0.26, "_legacy": True}
+
+
+TRACK_GRID0, TRACK_BEAT = 0.557, 0.5                                       # take1: beats at 0.557 + 0.5 k, bars of 4
+
+
+def _warn_grid(segs, path):
+    if not str(path).endswith("take1.mp3"): return
+    def off(x, p): r = (x - TRACK_GRID0) % p; return min(r, p - r)
+    for k, sg in enumerate(segs):
+        if off(sg["track"] - sg["t0"], TRACK_BEAT) > 0.002:
+            print(f"warning: music segment {k} is off the beat grid (track - t0 = {sg['track'] - sg['t0']:.3f})", file=sys.stderr)
+        if k and segs[k - 1]["t1"] == sg["t0"] and (abs(sg["t0"] / 2 - round(sg["t0"] / 2)) > 1e-3 or off(sg["track"], 2 * TRACK_BEAT) > 0.002):
+            print(f"warning: music join at {sg['t0']} s is not on a film bar line (even s) or not on a track chord line (0.557 + k)", file=sys.stderr)
+
+
+def render_music(plan, tf, duck):
+    """Render a music plan (see the docstring) to an (N, 2) bed, ducked under the hits."""
+    path = ROOT / plan.get("file", "audio/src/music/take1.mp3")
+    tr = dec(path, 2)
+    legacy = plan.get("_legacy", False)
+    def ramp(a, b): return np.clip((tf - a) / max(b - a, 1e-6), 0, 1)
+    def window(w, d_in, d_out):                          # 1 inside [a, b] with the ramps of `stops`/`thin`
+        if len(w) == 4: a0, a1, b0, b1 = w
+        else: a, b = w; a0, a1, b0, b1 = a - d_in[0], a + d_in[1], b - d_out[0], b + d_out[1]
+        return ramp(a0, a1) * (1 - ramp(b0, b1))
+    segs = sorted(plan["segments"], key=lambda z: z["t0"])
+    if not legacy: _warn_grid(segs, path)
+    nudge = float(plan.get("nudge", 0.0)); xf = float(plan.get("xfade", 0.02)); xl = float(plan.get("xlead", 0.04))
+    tm = tf - nudge                                                       # music time (segments and joins live here)
+    # tape stops: warp music time inside [a, b] (speed 1 → 0), silence until `back`
+    brake_g = np.ones(N); frac = np.zeros(N, bool)
+    for a, b, back in plan.get("brakes", []):
+        u = np.clip((tf - a) / (b - a), 0, 1); inb = (tf >= a) & (tf < b)
+        tm = np.where(inb, (a - nudge) + (b - a) * (u - u * u / 2), tm); frac |= inb
+        brake_g *= 1 - ramp(b - 0.012, b) * (1 - ramp(back - 0.003, back))
+        brake_g *= 1 - 0.5 * ramp(a + 0.6 * (b - a), b)                  # the last of it sinks a little
+    mus = np.zeros((N, 2))
+    for k, sg in enumerate(segs):
+        t0, t1 = float(sg["t0"]), float(sg["t1"])
+        st = (tm - t0) + float(sg["track"])                              # track time
+        prev = k > 0 and segs[k - 1]["t1"] == sg["t0"]; nxt = k + 1 < len(segs) and segs[k + 1]["t0"] == sg["t1"]
+        if legacy:
+            w = None
+        else:
+            def ep(c, s): return np.clip((tm - c) / s, 0, 1)
+            a = ep(t0 - xl - xf, xf) if prev else (ep(t0 - xl, 0.003) if t0 > 0 else 1.0)
+            a = np.sin(0.5 * np.pi * a) if prev else a
+            b_ = ep(t1 - xl - xf, xf) if nxt else ep(t1 - xl - 0.003, 0.003)
+            b_ = np.cos(0.5 * np.pi * b_) if nxt else 1 - b_
+            if t1 == float("inf"): b_ = 1.0
+            w = a * b_ * float(sg.get("gain", 1.0))
+        live = (st * SR < len(tr)) & (st >= 0)
+        si = np.clip((st * SR).astype(int), 0, len(tr) - 1)
+        x = tr[si]
+        if frac.any():                                                    # fractional reads inside a brake
+            ff = np.clip(st[frac] * SR, 0, len(tr) - 1); i0 = ff.astype(int); i1 = np.minimum(i0 + 1, len(tr) - 1); d = (ff - i0)[:, None]
+            x[frac] = tr[i0] * (1 - d) + tr[i1] * d
+        seg = x * live[:, None]
+        mus += seg if w is None else seg * (w * 1.0 if np.ndim(w) else np.full(N, w))[:, None]
+    lowp = np.stack([P.lp(mus[:, c], float(plan.get("thin_lp", 900)), 2) for c in (0, 1)], 1)
+    g = ramp(*plan["in"]) if plan.get("in") else np.ones(N)
+    for w in plan.get("stops", []): g *= 1 - window(w, (0.02, 0.0), (0.005, 0.005))
+    thin = np.zeros(N)
+    for w in plan.get("thin", []): thin = np.maximum(thin, window(w, (0.0, 0.25), (0.0, 0.02)))
+    if plan.get("out"): g *= 1 - ramp(*plan["out"])
+    elif not legacy: g *= 1 - ramp(DUR - 0.15, DUR)
+    if not legacy: g *= ramp(0.0, 0.002)                                  # never start on a click
+    if plan.get("brakes"): g *= brake_g
+    mix_m = mus * (1 - thin)[:, None] * 1.0 + lowp * thin[:, None] * float(plan.get("thin_gain", 0.35))
+    # duck under the hits: 100 ms hold, ~350 ms release
+    r_c = np.exp(-1 / (0.3 * SR))
+    env = np.clip(signal.lfilter([1 - r_c], [1, -r_c], duck) * 1.5, 0, 1)
+    gm = g * (1 - 0.5 * env)                                              # up to -6 dB under a hit, ~-2.5 under the rest
+    section = np.ones(N)
+    for t, sgain in plan.get("sections", []): section = np.where(tf < t, section, sgain)
+    return mix_m * (gm * section)[:, None] * float(plan.get("gain", 0.26))  # sits under the action sounds
 
 
 def loud(path):

@@ -311,6 +311,10 @@
   function seek(t) {
     const T = FILM.T;
     t = clamp(t, 0, T.dur - 1e-6);
+    // Re-create the camera's compositor layers on every seek. Otherwise Chromium keeps a raster scale from earlier
+    // frames (e.g. sharper tiles after a zoomed-in close-up) and the same t can come out ±1 px different depending on
+    // what was drawn before it — the film has this too. Costs a re-layout of the visible screens (measured: see KIT.md).
+    if (!KIT.keepLayers) { cam.style.display = 'none'; void cam.offsetHeight; cam.style.display = ''; }
     CAM = camAt(t); MAT = view(CAM, { W, H });
     cam.style.transform = `matrix(${MAT.map(v => v.toFixed(5)).join(',')})`;
     drawDots(CAM);

@@ -57,8 +57,9 @@ The demo's own question text is only a placeholder. The questions and answers in
 
 - **Duration:** 18.0 s.
 - **Grid:** beats fall on every 0.5 s of film time, bar lines on even seconds. Big accents sit on bar lines, the rest on beats. Motion between them is free.
-- **End card:** `KIT.endcard({ t0: 15.0, cta: 'תצליחו לתפוס את השתול?' })`. The wordmark lands at 16.0 on the music's last hit. The frame is still from about 17.4, and the short ends at 18.0.
-- **Music:** each short declares its own `music` plan in its events (see `MUSIC.md`). Take the base segments from the sound engineer's plan for your short and add your own `stops` and `thin` ranges.
+- **End card:** `KIT.endcard({ t0: 15.0, cta: 'תצליחו לתפוס את השתול?' })` (S3 has its own `cta`, see its storyboard). The wordmark lands at 16.0 on the music's last hit. The frame is still from about 17.4, and the short ends at 18.0.
+- **Music:** each short declares its own `music` plan in its events (see `MUSIC.md`: plan A for S1, B for S2, C for S3). Take the base plan as it is, including `nudge`, and add your own `stops`, `thin` and `brakes`.
+- **After 12.0** the track's own bar lines fall on odd seconds (that is what lets its final crash land on 16.0). Beats and chord changes stay on the film grid, so accents on beats are still right.
 
 ## Hard rules
 

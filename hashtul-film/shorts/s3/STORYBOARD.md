@@ -53,7 +53,7 @@ Anchor times are fixed (they sit on the music). Everything between them is yours
 | 12.5 | **"עבדתם על כולם!"** and the "+300" chip | coin |
 | 12.8–13.7 | the card rises: tag "השאלה שלכם הייתה", "כמה אתם טובים בלשקר לאמא?", then the bubble "והתשובה: 10", then "כל השאר נשאלו: כמה אתם טובים בחניה ברוורס?" | swish, pop, laugh |
 | 13.8–15.0 | still: both questions and the 10 on one card | |
-| **15.0** | end card whips in | whip |
+| **15.0** | end card whips in, with its own line for this short: `cta: 'תצליחו לעבוד על כולם?'` (it answers "עבדתם על כולם!") | whip |
 | **16.0** | wordmark lands | the music's last hit |
 | 18.0 | end | |
 

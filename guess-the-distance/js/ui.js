@@ -1,5 +1,5 @@
 // Small DOM and feel helpers: element building, count-ups, toasts,
-// confetti, haptics, segmented controls.
+// confetti, haptics, the segmented control and the switch.
 
 import { getLang } from "./i18n.js";
 
@@ -23,14 +23,22 @@ export function onDesktopChange(fn) {
   desktopQuery.addEventListener?.("change", fn);
 }
 
-export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const motionQuery = matchMedia("(prefers-reduced-motion: reduce)");
+export const reducedMotion = () => motionQuery.matches;
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const easeOutQuint = (x) => 1 - Math.pow(1 - x, 5);
+const numFmt = (v) => Math.round(v).toLocaleString(getLang() === "he" ? "he-IL" : "en-US");
 
 // Count a number up, calling onTick with progress so sounds can follow.
-export function countUp(el, to, { from = 0, ms = 1200, format = (v) => Math.round(v).toLocaleString(getLang() === "he" ? "he-IL" : "en-US"), onTick, html: asHtml = false } = {}) {
+// Plain-text numbers keep the width of their final value while they count,
+// so the digits never shift sideways (tabular figures do the rest).
+export function countUp(el, to, { from = 0, ms = 1200, format = numFmt, onTick, html: asHtml = false } = {}) {
   return new Promise((resolve) => {
+    if (!asHtml) {
+      const wide = String(format(Math.max(Math.abs(to), Math.abs(from)))).length;
+      el.style.minWidth = `${wide}ch`;
+    }
     if (reducedMotion() || ms <= 0) {
       el[asHtml ? "innerHTML" : "textContent"] = format(to);
       resolve();
@@ -54,15 +62,19 @@ export function countUp(el, to, { from = 0, ms = 1200, format = (v) => Math.roun
   });
 }
 
+// A toast: a pill sticker that drops in from the top.
 let toastTimer;
-export function toast(msg, ms = 2400) {
+export function toast(msg, ms = 2400, { tone = "cloud" } = {}) {
   let el = $(".toast");
   if (!el) {
-    el = html('<div class="toast glass" role="status" aria-live="polite"></div>');
+    el = html('<div class="toast" role="status" aria-live="polite"><span class="toast-face"></span></div>');
     document.body.append(el);
   }
-  el.textContent = msg;
-  requestAnimationFrame(() => el.classList.add("on"));
+  el.className = `toast c-${tone}`;
+  el.firstElementChild.textContent = msg;
+  el.classList.remove("on");
+  void el.offsetWidth;
+  el.classList.add("on");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("on"), ms);
 }
@@ -117,8 +129,9 @@ export function haptic(pattern = "tap") {
   });
 }
 
-// Confetti, drawn on one full-screen canvas.
-export function confetti({ count = 140, colors = ["#ff2d87", "#ffcc00", "#34c759", "#0a84ff", "#af52de", "#ff9500"], origin = { x: 0.5, y: 0.35 } } = {}) {
+// Confetti, drawn on one full-screen canvas, in the game's palette.
+export const PARTY = ["#C8FF3D", "#FFD43B", "#6FC8FF", "#3BE3A0", "#19C6C6", "#FF8A2A", "#FF5A4E", "#FFFFFF"];
+export function confetti({ count = 140, colors = PARTY, origin = { x: 0.5, y: 0.35 } } = {}) {
   if (reducedMotion()) return;
   let cv = $("#fx");
   if (!cv) {
@@ -134,15 +147,26 @@ export function confetti({ count = 140, colors = ["#ff2d87", "#ffcc00", "#34c759
   const parts = Array.from({ length: count }, () => {
     const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.9;
     const v = 7 + Math.random() * 10;
+    const roll = Math.random();
     return {
       x: origin.x * W, y: origin.y * H,
       vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-      w: 6 + Math.random() * 6, h: 8 + Math.random() * 10,
+      w: 7 + Math.random() * 6, h: 9 + Math.random() * 10,
       r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
       c: colors[Math.floor(Math.random() * colors.length)],
-      round: Math.random() < 0.3,
+      shape: roll < 0.25 ? "dot" : roll < 0.4 ? "star" : "card",
     };
   });
+  const star = (s) => {
+    ctx.beginPath();
+    for (let k = 0; k < 8; k++) {
+      const rad = k % 2 ? s * 0.32 : s;
+      const ang = (k * Math.PI) / 4;
+      ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+    }
+    ctx.closePath();
+    ctx.fill();
+  };
   const t0 = performance.now();
   const frame = (now) => {
     const age = now - t0;
@@ -159,11 +183,12 @@ export function confetti({ count = 140, colors = ["#ff2d87", "#ffcc00", "#34c759
       ctx.translate(p.x, p.y);
       ctx.rotate(p.r);
       ctx.fillStyle = p.c;
-      if (p.round) {
+      if (p.shape === "dot") {
         ctx.beginPath();
         ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
         ctx.fill();
-      } else ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)));
+      } else if (p.shape === "star") star(p.w * 0.75);
+      else ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)));
       ctx.restore();
     }
     if (age < 2700) requestAnimationFrame(frame);
@@ -172,39 +197,73 @@ export function confetti({ count = 140, colors = ["#ff2d87", "#ffcc00", "#34c759
   requestAnimationFrame(frame);
 }
 
-// iOS-style segmented control. options: [[value, label], ...]
-export function segmented(el, options, value, onChange) {
-  el.classList.add("segmented");
+// The segmented control: a thick rail with a small sticker for a thumb. The
+// thumb slides on a spring and stretches a little on the way.
+// options: [[value, label], ...]
+export function segmented(el, options, value, onChange, { label = "" } = {}) {
+  el.classList.add("seg");
   el.setAttribute("role", "radiogroup");
-  el.innerHTML = `<span class="thumb"></span>` + options.map(([v, l]) => `<button type="button" role="radio" data-v="${esc(v)}">${esc(l)}</button>`).join("");
+  if (label) el.setAttribute("aria-label", label);
+  el.innerHTML = `<span class="seg-thumb" aria-hidden="true"></span>` + options.map(([v, l]) => `<button type="button" role="radio" data-juice="seg" data-v="${esc(v)}"><span>${esc(l)}</span></button>`).join("");
   const thumb = el.firstElementChild;
+  let placed = false;
+  const place = (animate) => {
+    const btn = el.querySelector(`button[data-v="${CSS.escape(value)}"]`) || el.querySelector("button");
+    if (!btn || !btn.offsetWidth) return;
+    const from = thumb.style.translate;
+    thumb.style.width = `${btn.offsetWidth}px`;
+    thumb.style.translate = `${btn.offsetLeft}px 0`;
+    if (animate && placed && from && from !== thumb.style.translate && !reducedMotion()) {
+      thumb.animate([{ scale: "1 1" }, { scale: "1.12 1", offset: 0.45 }, { scale: "1 1" }], { duration: 450, easing: "ease-out" });
+    }
+    thumb.classList.toggle("ready", true);
+    placed = true;
+  };
   const set = (v, fire) => {
     value = v;
-    const btns = $$("button", el);
-    btns.forEach((b) => b.setAttribute("aria-checked", String(b.dataset.v === v)));
-    const i = Math.max(0, options.findIndex(([x]) => x === v));
-    const pct = 100 / options.length;
-    thumb.style.width = `calc(${pct}% - ${6 / options.length}px)`;
-    thumb.style.insetInlineStart = `calc(${pct * i}% + 3px - ${(i * 6) / options.length}px)`;
+    el.querySelectorAll("button").forEach((b) => {
+      const on = b.dataset.v === v;
+      b.setAttribute("aria-checked", String(on));
+      b.tabIndex = on ? 0 : -1;
+    });
+    place(fire);
     if (fire) onChange(v);
   };
   el.addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (b && b.dataset.v !== value) set(b.dataset.v, true);
   });
+  // arrow keys move between options, like a native radio group
+  el.addEventListener("keydown", (e) => {
+    const keys = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 1, ArrowUp: -1 };
+    if (!(e.key in keys)) return;
+    e.preventDefault();
+    const rtl = getComputedStyle(el).direction === "rtl";
+    let step = keys[e.key];
+    if (rtl && (e.key === "ArrowRight" || e.key === "ArrowLeft")) step = -step;
+    const i = options.findIndex(([x]) => x === value);
+    const next = options[(i + step + options.length) % options.length][0];
+    set(next, true);
+    el.querySelector(`button[data-v="${CSS.escape(next)}"]`)?.focus();
+  });
   set(value, false);
+  // first layout (and fonts) can land after this call
+  requestAnimationFrame(() => place(false));
+  document.fonts?.ready.then(() => place(false));
+  if ("ResizeObserver" in window) new ResizeObserver(() => place(false)).observe(el);
   return { set: (v) => set(v, false) };
 }
 
-// A tiny press-and-feel helper for big buttons.
-export function onTap(el, fn) {
-  el.addEventListener("click", (e) => fn(e));
+// A switch with a candy knob.
+export function switchHtml(id, on, labelledBy) {
+  return `<button class="switch" type="button" role="switch" data-juice="switch" aria-checked="${on}" id="${id}" ${labelledBy ? `aria-labelledby="${labelledBy}"` : ""}><span class="knob"></span></button>`;
 }
 
-// A light tap on every button-like control, in one place.
+// A light tap on every button-like control that juice.js doesn't already
+// handle, in one place.
 export function tapHaptics(root = document) {
   root.addEventListener("click", (e) => {
-    const t = e.target.closest("button, .chip, .art-card, [role=switch], [role=tab], [role=radio]");
-    if (t && !t.disabled && !t.closest(".wheel")) haptic("tap");
+    const t = e.target.closest("button, .chip, [role=switch], [role=tab], [role=radio]");
+    if (t && !t.disabled && !t.closest(".wheel") && !t.closest("[data-juice]")) haptic("tap");
   }, true);
 }

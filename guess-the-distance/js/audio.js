@@ -328,7 +328,8 @@ function fx(fn) {
 
 let lastTick = 0;
 export const sfx = {
-  tap: () => fx((t) => tone(1100, t, 0.05, { vol: 0.06, send: null })),
+  // a lower tap for the main (lime or yellow) buttons
+  tap: (freq = 1100) => fx((t) => tone(freq, t, 0.05, { vol: 0.06, send: null })),
   tick: () => fx((t) => {
     if (t - lastTick < 0.025) return;
     lastTick = t;

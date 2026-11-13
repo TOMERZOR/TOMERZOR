@@ -484,7 +484,7 @@
     ev(T.tapLock, 'lock', ...c(A.lock), 1);
     ev(T.morph + 0.02, 'swish', 215, 420, 0.5); ev(T.stamp + 0.02, 'stamp_soft', ...c(E.LK.stamp), 0.6);
     ev(T.tick, 'check', ...c(A.me), 0.6);
-    ev(T.twist, 'reveal_big', 215, 160, 1); ev(T.twist + 0.02, 'flip', 215, 160, 0.6);   // sound QA: the twist must be a top moment ev(T.title + 0.05, 'title', 215, 100, 0.7);
+    ev(T.twist, 'reveal_big', 215, 160, 1); ev(T.twist, 'boom', 215, 160, 0.8); ev(T.twist + 0.02, 'flip', 215, 160, 0.6);   // sound QA: the twist must be a top moment ev(T.title + 0.05, 'title', 215, 100, 0.7);
     ev(T.dive0 + 0.05, 'swish', 300, 500, 0.5);
     R.cells.forEach((cell, i) => ev(T.cells0 + i * 0.05, 'cell', ...c(cell), 0.45));
     ev(T.others, 'stamp_soft', 215, 260, 0.7); ev(T.peek + 0.1, 'gulp', 20, 240, 0.9); ev(T.peek + 0.45, 'drip', 30, 220, 0.6);
@@ -514,7 +514,7 @@
     segments: [{ t0: 0, t1: 4, track: 0.557 }, { t0: 4, t1: 12, track: 12.557 }, { t0: 12, t1: 18, track: 35.557 }],
     sections: [[7.45, 0.72]], gain: 0.26, nudge: 0.03,
     stops: [[3.7, 4.0], [7.6, 8.0], [11.6, 12.0]],
-    thin: [[4.1, 7.6]],
+    thin: [[4.5, 7.6]],                 // sound QA: the twist gets one full beat of music before the thin
   };
 
   KIT.run({

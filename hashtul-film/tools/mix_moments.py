@@ -26,3 +26,10 @@ if big:
         m = M_at(b); print(f"  big {b:5.2f}: M {m:.1f} LUFS, rank {int((allm > m + 1e-9).sum()) + 1} of {len(allm)} event windows; median of all {np.median(allm):.1f}")
 print("opening M (0-0.4):", round(M_at(0), 1), " body median M:", round(float(np.median(Mv[(T > 1) & (T < 15)])), 1),
       " end M (17.6-18.0):", round(float(Mv[np.argmin(np.abs(T - T.max()))]), 1))
+if big:
+    # a 'moment' = the hit and what it sets off: the loudest 400 ms window starting in [t - 0.05, t + 0.8]
+    inb = np.zeros(len(T), bool)
+    for b in big: inb |= (T - 0.4 >= b - 0.05) & (T - 0.4 <= b + 0.8)
+    other = Mv[~inb & (T > 0.4)]; o_t = T[~inb & (T > 0.4)]
+    print("moments (max M over the hit and its 0.8 s aftermath):", [(b, round(float(Mv[(T - 0.4 >= b - 0.05) & (T - 0.4 <= b + 0.8)].max()), 1)) for b in big],
+          f"| loudest elsewhere {other.max():.1f} at {o_t[np.argmax(other)] - 0.4:.2f}; before the end card (windows ending by 15.0): {other[o_t <= 15].max():.1f} at {o_t[o_t <= 15][np.argmax(other[o_t <= 15])] - 0.4:.2f}")

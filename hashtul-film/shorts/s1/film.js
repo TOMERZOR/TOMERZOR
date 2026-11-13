@@ -132,7 +132,7 @@
 
   // fixed layout of the fx pieces, game px
   const HOOK_Y = [24, 58];
-  const BIG_TOP = [22, 74.5, 128], BIG_DX = [10, -10, 22], BIG_CY = 364, BIG_Z = 0.915;          // the big hook block, game px (top of each sticker box)
+  const BIG_TOP = [22, 74.5, 139], BIG_DX = [10, -10, 22], BIG_CY = 364, BIG_Z = 0.915;          // the big hook block, game px (top of each sticker box)
   const tuckT = i => T.tuck0 + i * T.tuckStep;
   function layoutFx() {
     E.hookA.style.top = (HOOK_Y[0] - 19) + 'px'; E.hookB.style.top = (HOOK_Y[1] - 19) + 'px';

@@ -228,7 +228,7 @@
   function events() {
     const c = el => center(M(el));
     const S = E.st;
-    ev(0.02, 'bubble', ...c(S[0].introA), 0.7);           // sound QA: a fuller pop, the first sound
+    ev(0.02, 'bubble', ...c(S[0].introA), 0.5);           // sound QA: a fuller pop, the first sound
     ev(T.stB, 'bubble', ...c(S[0].introB), 0.75);
     ev(T.foldA[0], 'swish', ...c(S[0].introA), 0.45); ev(T.foldA[1], 'cell', ...c(E.chip), 0.55);
     ev(T.foldB[0], 'swish', ...c(S[0].introB), 0.45); ev(T.foldB[1] - 0.04, 'mini', ...c(E.chip), 0.5);
@@ -243,10 +243,10 @@
       ev(s.flip + 0.1, ['crowd_laugh_b', 'crowd_laugh', 'crowd_laugh_c'][i], fig[0], fig[1], [0.75, 0.85, 1][i]);   // sound QA: a fresh take for the last one
       ev(s.flip + GULP, 'gulp', fig[0], fig[1] - 30, 0.8);
       ev(s.flip + GULP + 0.12, 'drip', fig[0] + 40, fig[1] - 40, 0.5);
-      if (s.whip) ev(s.whip + 0.02, 'whip', card[0] - 120, card[1], 0.5);   // sound QA: the whips were louder than the flips
+      if (s.whip) ev(s.whip + 0.02, 'whip', card[0] - 120, card[1], 0.35);   // sound QA: the whips were louder than the flips
     });
     ev(T.st[2].flip + 0.3, 'crowd_laugh_b', ...c(S[2].fig), 0.55);      // the biggest laugh: two takes (1 s each, done before the cheer)
-    ev(T.caught, 'stamp', ...c(S[2].verdict), 1);
+    ev(T.caught, 'verdict', ...c(S[2].verdict), 1);              // sound QA: the film's own "נתפס!" (stamp + boom)
     ev(T.caught + 0.06, 'crowd_cheer_b', ...c(S[2].fig), 0.85);
   }
 

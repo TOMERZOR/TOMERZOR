@@ -29,8 +29,10 @@ endPitch, cells0). With one, it is the music plan. All times are film seconds; "
         at 0.557 + k; its bar lines are 0.557 + 2k, its 4-bar phrase starts 0.557 + 8k). The script warns when a
         segment is off the beat grid or a join is not on both. See shorts/MUSIC.md for which joins are seamless.
     "in":    [a, b]              fade-in ramp (optional; default: full level from the first segment)
-    "stops": [[a, b], ...]       music gain -> 0 from a (20 ms ramp ending at a) to b (back in 10 ms centred on b):
-                                 the breath before a hit. 4-number form [a0, a1, b0, b1]: down over a0..a1, up over b0..b1.
+    "stops": [[a, b], ...]       music gain -> 0 from a (20 ms ramp ending at a) to b: the breath before a hit. The music
+                                 is back at full 1 ms before the re-entry downbeat's attack (for take1: b - 0.033 + nudge),
+                                 over 7 ms, so the downbeat lands whole. 4-number form [a0, a1, b0, b1]: down over a0..a1,
+                                 up over b0..b1.
     "thin":  [[a, b], ...]       low-passed (900 Hz) and lowered (x0.35), the suspense treatment under the film's drum
                                  roll: in over 0.25 s from a, out over 0.02 s at b. 4-number form as for stops.
     "brakes": [[a, b, back], ...]  tape stop: the music slows to a halt between a and b (pitch falls with it), is
@@ -301,6 +303,7 @@ def legacy_plan(T):
 
 
 TRACK_GRID0, TRACK_BEAT = 0.557, 0.5                                       # take1: beats at 0.557 + 0.5 k, bars of 4
+ATTACK_LEAD = 0.033                                                         # take1's attacks lead that grid by ~33 ms
 
 
 def _warn_grid(segs, path):
@@ -359,7 +362,8 @@ def render_music(plan, tf, duck):
         mus += seg if w is None else seg * (w * 1.0 if np.ndim(w) else np.full(N, w))[:, None]
     lowp = np.stack([P.lp(mus[:, c], float(plan.get("thin_lp", 900)), 2) for c in (0, 1)], 1)
     g = ramp(*plan["in"]) if plan.get("in") else np.ones(N)
-    for w in plan.get("stops", []): g *= 1 - window(w, (0.02, 0.0), (0.005, 0.005))
+    lead = max(0.0, ATTACK_LEAD - nudge) if str(path).endswith("take1.mp3") else 0.0
+    for w in plan.get("stops", []): g *= 1 - window(w, (0.02, 0.0), (lead + 0.008, -lead - 0.001))
     thin = np.zeros(N)
     for w in plan.get("thin", []): thin = np.maximum(thin, window(w, (0.0, 0.25), (0.0, 0.02)))
     if plan.get("out"): g *= 1 - ramp(*plan["out"])

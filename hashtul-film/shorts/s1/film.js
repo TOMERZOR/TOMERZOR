@@ -118,13 +118,13 @@
     E.hookB = mk('div', 's1-hook', KIT.fx, `<span class="sticker sticker--yellow" style="--tilt:3deg">${PAIR.hook2}</span>`);
     E.hookWords = $$('.s1-w', E.hookA);
     // the big hook of the first second: three stickers, settled at frame 0 (the yellow one lands at 0.5)
-    E.big = [[PAIR.hook[0], '', -4], [PAIR.hook[1], '', -1.5], [PAIR.hook2, ' sticker--yellow', 3]].map(([txt_, c, tilt]) => {
+    E.big = [[PAIR.hook[0], '', -3], [PAIR.hook[1], '', -1], [PAIR.hook2, ' sticker--yellow', 3]].map(([txt_, c, tilt]) => {
       const box = mk('div', 's1-hook s1-big', KIT.fx, `<span class="sticker${c}"><span>${txt_}</span></span>`);
       const st = $('.sticker', box); st.__base = `rotate(${tilt}deg)`; st.__tilt = tilt; st.style.transform = st.__base;
       return { box, st, text: $('span', st), tilt };
     });
     // the six, big, standing where their cells will be
-    E.six = CELLN.map(n => mk('div', 's1-p s1-six', KIT.fx, avatar(CODES[n], { size: 76, ring: ringOf(n) }) +
+    E.six = CELLN.map(n => mk('div', 's1-p s1-six', KIT.fx, avatar(CODES[n], { size: 84, ring: ringOf(n) }) +
       (n === PAIR.me ? '<span class="s1-me">אתם</span>' : `<span class="player__name">${n}</span>`)));
     E.sixAv = E.six.map(p => $('.avatar', p)); E.sixName = E.six.map(p => p.lastChild);
     E.emoji = mk('div', 'flyemoji', KIT.fx, '😂');
@@ -162,8 +162,8 @@
     const resTop = G.verdict.y - 10, resBot = card.y + card.h;
     return {
       keys: [
-        { t: 0, ...Pt(222, 374, 0.97) },                            // the big hook and the six where their cells will be
-        { t: 0.8, ...Pt(222, 374, 0.97) },
+        { t: 0, ...Pt(222, 376, 0.945) },                            // the big hook and the six where their cells will be
+        { t: 0.8, ...Pt(222, 376, 0.945) },
         { t: 2.0, ...Pt(222, 356, 0.90), curve: ease.cubicInOut },  // ease back as the card lands; the puzzle frame from here
         { t: T.rest0, ...Pt(222, 356, 0.90) },
         { t: T.spot0, ...Pt(222, 356, 0.90) },
@@ -203,8 +203,8 @@
     });
     const din = sstep(0.55, 0.9, kd);
     const out = cubicIn(seg(t, T.who - 0.1, T.who + 0.2));
-    put(E.hookA, { y: -60 * out, s: 1 - 0.2 * out, op: din * (1 - out), r: -4 * out });
-    put(E.hookB, { y: -60 * out, s: 1 - 0.2 * out, op: din * (1 - out), r: 4 * out });
+    put(E.hookA, { y: 6 * out, s: 1 - 0.3 * out, op: din * (1 - out), r: -4 * out });
+    put(E.hookB, { y: 6 * out, s: 1 - 0.3 * out, op: din * (1 - out), r: 4 * out });
   }
 
   function uRow(t) {
@@ -219,7 +219,7 @@
       const sc = t < ti ? 0 : lerp(0.5, 1, K(t, ti, 'pop'));          // the cell's own pop (uReveal), to follow its corner
       const kt = t < ti ? 0 : K(t, ti, 'soft');
       const corner = [cc[0] + (center(av)[0] - cc[0]) * sc, cc[1] + (center(av)[1] - cc[1]) * sc];
-      const home = [cc[0], cc[1] - (ac[1] - pc[1])];                 // the avatar+name block centred on the cell
+      const home = [cc[0], cc[1] - (ac[1] - pc[1]) - 5];             // the avatar+name block on the cell (5 px high: the names clear the bottom line)
       const cx = lerp(home[0], corner[0], kt), cy = lerp(home[1], corner[1], kt);
       const squash = Math.abs(Math.cos(ry * Math.PI / 180));
       const x = cc[0] + (cx - cc[0]) * squash;

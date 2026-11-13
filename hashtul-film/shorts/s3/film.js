@@ -37,9 +37,10 @@
     others: 4.6, peek: 4.62, peekOut: 5.95, othersOut: 5.85,
     flip: { 'תומר': 5.0, 'שירה': 5.5, 'נועה': 6.0, 'דנה': 6.5, 'איתי': 7.0, 'יובל': 8.0 },
     bar: 8.42, emoji: [8.4, 8.72, 9.06, 9.4], discuss: 9.0,
-    hurry: 10.0, hurryOut: 11.22,
-    vote0: 10.74, vote1: 11.1, myst: 10.96, say: 11.02, minis0: 11.08, miniStep: 0.09, miniDur: 0.28, lit: 11.74, zz: 11.6,
-    figDrop: 11.8, verdict: 12.0, plate: 12.1, line: 12.5, gain: 12.62,
+    hurry: 10.0, hurryOut: 10.7,                                       // gone (shrink and drop) by 10.88
+    vote0: 10.74, cardDur: 0.16, cardStep: 0.02, hopDur: 0.36, tiles0: 10.9, vote1: 11.0, tally: 11.0,
+    myst: 10.92, say: 11.0, minis0: 11.12, miniStep: 0.09, miniDur: 0.26, lit: 11.76, zz: 11.5,
+    figPop: 11.86, verdict: 12.0, plate: 12.1, line: 12.5, gain: 12.62,
     card0: 12.8, tag: 12.95, fake: 13.05, bubble: 13.35, real: 13.6, hold: 13.6,
     end0: 15.0,
   };
@@ -116,6 +117,7 @@
       .forEach(tl => RS.board.appendChild(tl));
     RS.tileName = RS.tiles.map(tl => $('.result__tile-name', tl).textContent.trim());
     RS.gains = $$('.result__tile .result__gain', rs);
+    RS.tileAv = RS.tiles.map(tl => $('.result__tile-av > .avatar', tl));
     RS.zz = $('.result__zz', rs);
     if (RS.zz) { const to = tileOf(RS.tiles, PAIR.abstain); if (!to.contains(RS.zz)) $('.result__tile-av', to).appendChild(RS.zz); }
     // minis: one per vote, the voter's own face, in the target tile (the capture's own .result__mini)
@@ -141,6 +143,9 @@
     F.others = mk('div', 's3ws', KIT.fx, `<span class="sticker sticker--white s3others" style="--tilt:2deg">${STICK.others}</span>`);
     F.hurry = mk('div', 's3ss', KIT.fx, `<span class="sticker sticker--yellow s3hurry" style="--tilt:-5deg">${STICK.hurry}</span>`);
     F.peek = mk('div', 's3ws', KIT.fx, KIT.avatar(CODES[PAIR.plant], { size: 66, mood: 'shock' }));
+    // each player's face hops from their answer card to their tile on the board
+    R.cellAv = R.cells.map(c => $('.reveal__front .avatar', c));
+    F.hops = R.name.map(n => mk('div', 's3ws', KIT.fx, KIT.avatar(CODES[n], { size: 50 })));
   }
 
   // ───────────────────────────── measure: the finger's path and what it lights ─────────────────────────────
@@ -183,6 +188,9 @@
   function camera() {
     const yc = M(E.R.cells[E.R.me]);
     const ex = ease;
+    // the tally frame: from the top of the "?" figure to the bottom of the board, inside the safe zone (150 … 1500)
+    const top = M(E.RS.myst).y - 8, bot = M(E.RS.board).y + M(E.RS.board).h + 8;
+    const tz = (1500 - 150) / ((bot - top) * G), TALLY = Pt(215, top + (960 - 150) / (G * tz), tz);
     return {
       keys: [
         { t: 0, ...Pt(215, 260, 1.08) },
@@ -199,15 +207,15 @@
         { t: 8.42, ...Fr(yc, 1.5, 0, -8), curve: ex.sineInOut },
         { t: 8.98, ...Pt(215, 430, 0.9), curve: ex.cubicInOut },
         { t: 10.74, ...Pt(215, 432, 0.9) },
-        { t: 11.14, ...Pt(215, 631, 0.95), curve: ex.cubicInOut },
-        { t: 11.74, ...Pt(215, 626, 0.95), curve: ex.sineInOut },
-        { t: 12.04, ...Pt(215, 240, 1.25), curve: ex.expoOut },
+        { t: T.tally, ...TALLY, curve: ex.cubicInOut },                   // one wide frame: "?", "השתול הוא…", the board
+        { t: T.verdict, ...TALLY },
+        { t: 12.4, ...Pt(215, 246, 1.23), curve: ex.cubicInOut },          // eases in as the name tag and the line arrive
         { t: 12.62, ...Pt(215, 256, 1.2), curve: ex.sineInOut },
         { t: 13.45, ...Pt(240, 415, 1.0), curve: ex.cubicInOut },          // RTL lines start at the right: keep them off the right rail
         { t: T.end0, ...Pt(240, 415, 1.0) },
       ],
       hits: [[T.tapLock + 0.02, 5, 12], [T.twist + 0.02, 14, 9], [T.flip[PAIR.plant] + 0.02, 14, 9], [T.hurry + 0.02, 6, 11], [T.verdict, 18, 8]],
-      rests: [[0, 0.95], [T.touch + 0.05, 2.95], [3.96, 5.6], [8.05, 8.4], [9.05, 10.74], [13.5, T.end0]],
+      rests: [[0, 0.95], [T.touch + 0.05, 2.95], [3.96, 5.6], [8.05, 8.4], [9.05, 10.74], [T.tally + 0.02, T.verdict], [13.5, T.end0]],
     };
   }
 
@@ -277,10 +285,11 @@
   function uReveal(t) {
     const R = E.R, vis = t >= T.twist - 0.02 && t < T.vote1 + 0.1; on(KIT.S.reveal, vis); if (!vis) return;
     hide(R.header); hide(R.q); R.foot.forEach(hide); hide(R.eggplant);
-    const out = sstep(T.vote0 - 0.05, T.vote0 + 0.2, t);
+    const out = cubicIn(seg(t, T.vote0 - 0.04, T.vote0 + 0.16));       // title and card shrink away (opaque until gone)
     // the title: "השאלה האמיתית" gives way to the discussion's "מי פה משקר?"
     const tk = K(t, T.title, 'pop'), dk = sstep(T.discuss - 0.06, T.discuss + 0.14, t);
     put(R.head, t < T.title ? { op: 0 } : { y: lerp(-34, 0, tk), s: lerp(0.7, 1, tk) * (1 - 0.3 * dk), op: clamp(tk * 2) * (1 - dk) });
+    void out;
     // the hero card: the answer card's other side, flipping in where the answer card was, then settling under the title
     const hc = M(R.heroCard), aq = M(E.A.q);
     const R1 = { x: aq.x, y: 133, w: aq.w, h: hc.h * aq.w / hc.w };
@@ -288,7 +297,7 @@
     const hk = K(t, T.heroIn, 'pop'), mk_ = K(t, T.heroIn + 0.06, 'soft');
     const v = lerpRect(R0, R1, mk_), st = toRect(hc, v, true);
     const ry = t < T.heroIn ? 90 : lerp(-90, 0, clamp(hk, 0, 1.1));
-    put(R.heroCard, { op: t < T.heroIn ? 0 : 1 - out, base: `translate(${fix(st.x)}px,${fix(st.y - 30 * out)}px) scale(${fix(st.sx, 4)}) perspective(1100px) rotateY(${fix(ry, 2)}deg) rotate(${fix(lerp(-1.3, -1.6, clamp(mk_)), 3)}deg)` });
+    put(R.heroCard, { op: t < T.heroIn || out >= 1 ? 0 : 1, base: `translate(${fix(st.x)}px,${fix(st.y - 40 * out)}px) scale(${fix(st.sx * (1 - 0.7 * out), 4)}) perspective(1100px) rotateY(${fix(ry, 2)}deg) rotate(${fix(lerp(-1.3, -1.6, clamp(mk_)), 3)}deg)` });
     // the cells arrive face down, flip on the beats (yours last), and at the vote shrink into the board's tiles
     R.cells.forEach((c, i) => {
       const n = R.name[i], big = n === PAIR.plant, tf = T.flip[n], ta = T.cells0 + i * 0.05;
@@ -299,45 +308,67 @@
       if (big && t >= T.dive1 - 0.04) s *= 1 + pulse(t, T.dive1 - 0.04, 0.1, 10, 26);        // your answer lands in it
       if (t >= tf) s *= 1 + (big ? pulse(t, tf, 0.16, 6, 20) : pulse(t, tf, 0.06, 10, 28));
       let st = t < ta ? { op: 0 } : { s, op: clamp(ck * 2) };
-      if (t >= T.vote0) {
-        const self = M(c), tile = M(E.RS.tiles[E.RS.tileName.indexOf(n)]);
-        const kv = ease.cubicInOut(seg(t, T.vote0 + i * 0.03, T.vote1 - 0.12 + i * 0.03));
-        st = { ...toRect(self, lerpRect(self, tile, kv), false), op: 1 - sstep(0.7, 0.95, kv) };
+      if (t >= cardStart(i)) {                                          // the vote: the card collapses into its own face
+        const self = center(M(c)), a = center(M(R.cellAv[i]));
+        const kv = ease.cubicOut(seg(t, cardStart(i), cardStart(i) + T.cardDur)), sc = 1 - kv;
+        st = kv >= 1 ? { op: 0 } : { x: (a[0] - self[0]) * (1 - sc), y: (a[1] - self[1]) * (1 - sc), s: Math.max(sc, 0.001), op: 1 };
       }
       put(c, st);
       if (big) put(R.figs[i], t < tf ? { base: '' } : { s: 1 + 1.2 * Math.max(0, 1 - spring(t - tf - 0.05, 0.42, 18)), base: '' });
     });
     // the reactions bar (no 🍆), its buttons kick as the reactions leave
-    put(R.reacts, life(t, T.bar, { y: 80 }, 'soft', {}, T.vote0 - 0.05, 0.25, { y: 90, op: 0 }));
+    put(R.reacts, t >= T.vote0 + 0.14 ? { op: 0 } : life(t, T.bar, { y: 80 }, 'soft', {}, T.vote0 - 0.05, 0.19, { y: 160 }));   // drops away, opaque
     R.reactBtns.forEach(b => {
       const j = EMO.findIndex(e => R.reactAt(e) === b), te = j >= 0 ? T.emoji[j] : null;
       put(b, b === R.eggplant ? { op: 0 } : { y: te != null && t >= te ? 3 * Math.max(0, pulse(t, te, 1, 14, 30)) : 0, s: te != null ? 1 + pulse(t, te, 0.15) : 1 });
     });
   }
   const EMO = ['🤨', '👀', '😂', '💀'];
+  const cardStart = i => T.vote0 + (5 - i) * T.cardStep;               // the reveal's cells, bottom row first
 
   function uDiscuss(t) {
     const D = E.D, vis = t >= T.discuss - 0.1 && t < T.vote1; on(KIT.S.discuss, vis); if (!vis) return;
     D.hide.forEach(hide);
     const k = K(t, T.discuss, 'bouncy');
-    put(D.head, t < T.discuss ? { op: 0 } : { s: lerp(1.6, 1, k) * (1 - 0.3 * sstep(T.vote0 - 0.05, T.vote0 + 0.2, t)), r: lerp(6, 0, k), op: clamp(k * 3) * (1 - sstep(T.vote0 - 0.05, T.vote0 + 0.15, t)) });
+    const out = cubicIn(seg(t, T.vote0 - 0.04, T.vote0 + 0.16));
+    put(D.head, t < T.discuss || out >= 1 ? { op: 0 } : { s: lerp(1.6, 1, k) * (1 - 0.7 * out), y: -30 * out, r: lerp(6, 0, k), op: clamp(k * 3) });
+  }
+
+  // the vote's hand-over: each card collapses into its face, opaque, in cardDur; the face hops to its tile (hopDur)
+  // (bottom row first, so every card is gone before the board, which is drawn above the reveal, pops in under it)
+  const hopStart = i => cardStart(i) + 0.02;
+  const hopLand = i => hopStart(i) + T.hopDur;
+  const R_IDX = n => E.R.name.indexOf(n);
+  // "ברח!" starts early enough that its pop spring first reaches full size (the impact) exactly at T.verdict
+  const STAMP_LEAD = (() => { let u = 0; while (K(u, 0, 'pop') < 1 && u < 1) u += 0.0005; return u; })();
+  function uHops(t) {
+    E.F.hops.forEach((el, i) => {
+      const t0 = hopStart(i), t1 = hopLand(i);
+      if (t < t0 || t >= t1) { hide(el); return; }
+      const n = E.R.name[i], A = M(E.R.cellAv[i]), B = M(E.RS.tileAv[E.RS.tileName.indexOf(n)]);
+      const k = ease.cubicInOut(seg(t, t0, t1));
+      const [x, y] = arcPt(center(A), center(B), k, 110 - i * 8);
+      worldPut(el, x, y, { s: lerp(A.w / 50, B.w / 50, k) * (1 + 0.25 * Math.sin(Math.PI * k)), r: Math.sin(Math.PI * k) * (i % 2 ? 12 : -12) });
+    });
   }
 
   function uResult(t) {
     const RS = E.RS, vis = t >= T.vote0 && t < T.end0 + 0.75; on(KIT.S.result, vis); if (!vis) return;
     hide(RS.header); hide(RS.foot); RS.gains.forEach(hide);
-    // the tally: the mystery figure and "השתול הוא…", until the figure drops
-    put(RS.myst, t < T.myst ? { op: 0 } : t < T.figDrop ? { s: lerp(0.5, 1, K(t, T.myst, 'bouncy')), op: 1 } : { s: 1 - 0.6 * seg(t, T.figDrop, T.figDrop + 0.15), op: 1 - seg(t, T.figDrop, T.figDrop + 0.12) });
-    put(RS.votesSay, life(t, T.say, { y: 20, s: 0.7 }, 'pop', {}, T.figDrop, 0.15, { op: 0, s: 0.8 }));
+    // the tally: the mystery figure and "השתול הוא…"; then the "?" pops into you, in place
+    const popK = seg(t, T.figPop - 0.04, T.figPop + 0.03);
+    put(RS.myst, t < T.myst || popK >= 1 ? { op: 0 } : { s: lerp(0.5, 1, K(t, T.myst, 'bouncy')) * (1 + 0.25 * popK), op: 1 });
+    const sOut = cubicIn(seg(t, T.figPop - 0.02, T.figPop + 0.14));
+    put(RS.votesSay, t < T.say || sOut >= 1 ? { op: 0 } : { ...life(t, T.say, { y: 20, s: 0.7 }, 'pop'), s: lerp(0.7, 1, K(t, T.say, 'pop')) * (1 - 0.7 * sOut) });
     cssv(RS.dots, '--dots', `"${'.'.repeat(t < T.say + 0.2 ? 0 : clamp(1 + Math.floor((t - T.say - 0.2) / 0.22), 1, 3))}"`);
-    // you drop in, smug; "ברח!" stamps on; the rays turn
-    const fk = spring(t - T.figDrop, 0.5, 16);
-    put(RS.fig, t < T.figDrop ? { op: 0 } : { y: lerp(-380, 0, clamp(fk, 0, 1.2)), s: lerp(1.15, 1, clamp(fk)), r: lerp(-16, 0, clamp(fk)), op: 1 });
+    // you pop out of the "?", smug; "ברח!" stamps on, its impact exactly on the bar line; the rays turn
+    put(RS.fig, t < T.figPop ? { op: 0 } : { s: lerp(0.45, 1, K(t, T.figPop, 'bouncy')), r: lerp(-10, 0, K(t, T.figPop, 'pop')), op: 1 });
     const land = T.verdict, im = OM.impact(t, land, { decay: 7, omega: 22, sqx: 0.18, sqy: 0.22 });
     put(RS.squash, t < land ? { base: '' } : { sx: im.sx, sy: im.sy, base: '' });
     KIT.wobble(t, RS.wob, T.verdict + 0.3);
     put(RS.rays, t < T.verdict - 0.05 ? { op: 0 } : { s: lerp(0.2, 1, K(t, T.verdict - 0.05, 'soft')), r: KIT.rayAngle(t) * 2, op: 1, base: '' });
-    put(RS.verdict, t < T.verdict ? { op: 0 } : { s: lerp(2.4, 1, K(t, T.verdict, 'pop')), r: lerp(-20, 0, K(t, T.verdict, 'pop')), op: clamp(K(t, T.verdict) * 3) });
+    const vt = T.verdict - STAMP_LEAD;
+    put(RS.verdict, t < vt ? { op: 0 } : { s: lerp(2.4, 1, K(t, vt, 'pop')), r: lerp(-20, 0, K(t, vt, 'pop')), op: 1 });
     // the plate, then the line and its +300
     put(RS.sayin, { base: '' });
     put(RS.plate, t < T.plate ? { op: 0 } : { s: lerp(0.3, 1, K(t, T.plate, 'bouncy')), r: lerp(-12, 0, K(t, T.plate)), op: clamp(K(t, T.plate) * 3) });
@@ -352,15 +383,18 @@
     put(RS.bubble, t < T.bubble ? { op: 0 } : { s: lerp(0.3, 1, K(t, T.bubble, 'bouncy')), op: clamp(K(t, T.bubble) * 2), base: '' });
     put(RS.real, life(t, T.real, { y: 12 }, 'soft'));
     // the board: tiles take over from the answer cards, the voters' faces fly in, the counts tick, the pick lights up
-    const tileIn = T.vote1 - 0.2;
+    const tileIn = T.tiles0;
     const lit = t >= T.lit && t < T.verdict;
     RS.tiles.forEach((tl, i) => {
-      const n = RS.tileName[i], ti = tileIn + i * 0.03;
-      put(tl, t < ti ? { op: 0 } : { op: sstep(ti, ti + 0.12, t), s: lit && n === 'תומר' ? 1 + 0.06 * K(t, T.lit) : 1 });
+      const n = RS.tileName[i], ti = tileIn + i * 0.025, land = hopLand(R_IDX(n));
+      const tk = K(t, ti, 'pop');
+      put(tl, t < ti ? { op: 0 } : { op: 1, s: lerp(0.6, 1, tk) * (lit && n === 'תומר' ? 1 + 0.06 * K(t, T.lit) : 1) });
+      put(RS.tileAv[i], t < land ? { op: 0 } : { s: 1 + pulse(t, land, 0.2, 10, 26), base: '' });
       cls(tl, 'is-lit', lit && n === 'תומר'); cls(tl, 'is-dim', lit && n !== 'תומר');
       cls(tl, 'is-mole', n === PAIR.plant && t >= T.verdict);
     });
-    put(RS.board, { op: t < tileIn ? 0 : 1, y: t >= T.verdict ? 6 * pulse(t, T.verdict, 1, 9, 30) : 0 });
+    put(RS.board, t < tileIn - 0.04 ? { op: 0 } : { s: lerp(0.85, 1, K(t, tileIn - 0.04, 'pop')), op: 1, y: t >= T.verdict ? 6 * pulse(t, T.verdict, 1, 9, 30) : 0 });
+
     RS.minis.forEach((mi, j) => {
       const [voter] = PAIR.votes[j], t0 = T.minis0 + j * T.miniStep, t1 = t0 + T.miniDur;
       if (t < t0) { put(mi, { op: 0 }); return; }
@@ -395,12 +429,12 @@
     const qk = K(t, T.peek, 'soft'), qOut = cubicIn(seg(t, T.peekOut, T.peekOut + 0.3));
     worldPut(F.peek, lerp(-40, 40, qk) - 90 * qOut, R1y - 22, t < T.peek ? { op: 0 } : { r: lerp(40, 16, qk) + 3 * Math.sin((t - T.peek) * 5), op: t > T.peekOut + 0.3 ? 0 : 1 });
     // "מהר, תאלתרו תירוץ!": stamped in the middle of the frame
-    const hk = K(t, T.hurry, 'pop'), hOut = cubicIn(seg(t, T.hurryOut, T.hurryOut + 0.2));
-    screenPut(F.hurry, t, 520, 812, t < T.hurry ? { op: 0 } : { s: lerp(2.4, 1, hk) * (1 - 0.5 * hOut), r: lerp(-16, 0, hk), op: clamp(hk * 3) * (1 - hOut) });
+    const hk = K(t, T.hurry, 'pop'), hOut = cubicIn(seg(t, T.hurryOut, T.hurryOut + 0.18));
+    screenPut(F.hurry, t, 520, 812, t < T.hurry || hOut >= 1 ? { op: 0 } : { s: lerp(2.4, 1, hk) * (1 - 0.75 * hOut), r: lerp(-16, 0, hk) + 10 * hOut, y: 160 * hOut, op: clamp(hk * 3) });
   }
 
   function update(t) {
-    uAnswer(t); uLocked(t); uReveal(t); uDiscuss(t); uResult(t); uStickers(t);
+    uAnswer(t); uLocked(t); uReveal(t); uDiscuss(t); uResult(t); uStickers(t); uHops(t);
   }
 
   // ───────────────────────────── fx parts ─────────────────────────────
@@ -455,7 +489,9 @@
     ev(T.vote0 + 0.02, 'whoosh', 215, 600, 0.7); ev(T.say + 0.02, 'title', 215, 440, 0.5);
     PAIR.votes.forEach(([, to], j) => ev(T.minis0 + j * T.miniStep + T.miniDur, 'mini', ...c(tileOf(RS.tiles, to)), 0.55 + 0.05 * j));
     ev(T.lit, 'roulette', ...c(tileOf(RS.tiles, 'תומר')), 0.8);
-    ev(T.figDrop, 'drop', 215, 120, 0.9);
+    ev(T.hurryOut + 0.02, 'swish', 215, 430, 0.4);
+    E.R.name.forEach((n, i) => ev(hopLand(i), 'join', ...c(tileOf(RS.tiles, n)), 0.35 + 0.04 * i));
+    ev(T.figPop, 'pop', 215, 200, 0.9); ev(T.figPop + 0.02, 'whoosh', 215, 200, 0.5);
     ev(T.verdict, 'verdict', 130, 120, 1); ev(T.verdict + 0.04, 'crowd_cheer_b', 215, 250, 0.9); ev(T.verdict + 0.03, 'confetti', 215, 200, 0.8);
     ev(T.plate + 0.03, 'pop', 215, 320, 0.5);
     ev(T.gain, 'coins', ...c(RS.lineGain), 0.8);

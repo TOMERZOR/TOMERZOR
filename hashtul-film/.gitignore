@@ -11,3 +11,4 @@ ref/video/
 # signed download links (they expire, and are not needed once the takes are in audio/src/)
 audio/src/eleven_urls.json
 __pycache__/
+_frames/

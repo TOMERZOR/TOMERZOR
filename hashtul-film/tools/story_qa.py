@@ -2,8 +2,8 @@
 """Two-moment check for a short loop (stories): momentary loudness (BS.1770, 400 ms windows, 10 ms hop).
 
   python3 tools/story_qa.py mix.wav 1.0 6.0
-For each big moment t: the loudest 400 ms window that contains t. 'elsewhere': the loudest window that contains
-neither. 'after': the loudest window starting at or after t_last + 0.5. Plus the loop seam and loudness.
+For each big moment t: the loudest 400 ms window that contains t. 'elsewhere': the loudest window that starts more than
+0.4 s from every moment (i.e. neither the hit nor its first 0.4 s of aftermath). 'after': the loudest window starting at or after t_last + 0.5. Plus the loop seam and loudness.
 """
 import sys, subprocess, re
 import numpy as np
@@ -18,7 +18,7 @@ st = np.arange(0, len(ms) - w, int(.01 * sr)) / sr
 M = np.array([-0.691 + 10 * np.log10((c[int(t * sr) + w] - c[int(t * sr)]) / w + 1e-14) for t in st])
 cont = np.zeros(len(st), bool); out = []
 for b in big:
-    m = (st <= b) & (st + 0.4 > b); cont |= m; out.append((b, round(float(M[m].max()), 1)))
+    m = (st <= b) & (st + 0.4 > b); cont |= (st > b - 0.4) & (st < b + 0.4); out.append((b, round(float(M[m].max()), 1)))
 o = ~cont; i = np.argmax(np.where(o, M, -999))
 af = st >= big[-1] + 0.5
 print("moments:", out, f"| elsewhere max {M[i]:.1f} (window at {st[i]:.2f})", f"| after {big[-1] + 0.5}: max {M[af].max():.1f}")

@@ -128,7 +128,7 @@
   function events() {
     const c = el => center(M(el));
     ev(T.drop0 + 0.05, 'drop', IC.x, IC.y - 120, 0.45);
-    ev(T.land, 'logo_hit', IC.x, IC.y, 1); ev(T.land, 'land', IC.x, IC.y, 0.8);   // sound QA: the hero's landing, over a thinned bed that opens on it
+    ev(T.land, 'logo_hit', IC.x, IC.y, 1); ev(T.land, 'land', IC.x, IC.y, 0.6);   // sound QA: the hero's landing, over a thinned bed that opens on it
     ev(T.tag, 'stamp_soft', ...c(E.tag), 0.65);
     ev(T.title, 'title', ...c(E.title), 0.55);
     E.chips.forEach((ch, i) => ev(T.chips[i], 'pop', ...c(ch), 0.55 + i * 0.07));
@@ -139,7 +139,7 @@
     ev(T.line, 'word', ...c(E.line), 0.3);                            // silent: nothing after 6.4 competes with the ring
   }
 
-  const music = { segments: [{ t0: 0, t1: 8, track: 33.557 }], gain: 0.26, nudge: 0.03, sections: [[0, 0.72], [5.95, 1.3]],
+  const music = { segments: [{ t0: 0, t1: 8, track: 33.557 }], gain: 0.26, nudge: 0.03, sections: [[0, 0.72], [5.95, 1.8]],
     thin: [[-1, -0.75, 0.97, 0.99]], out: [6.4, 7.95] };   // sound QA: a thinned bed opens on the landing; the ring fades under the tail
 
   KIT.run({

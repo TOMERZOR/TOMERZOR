@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<!-- the game's logo lockup (its cast + wordmark), lifted from its own home screen, on a transparent page -->
+<link rel="stylesheet" href="../vendor/fonts.css">
+<link rel="stylesheet" href="../vendor/game.css">
+<style>
+  html, body { margin: 0; background: transparent !important; min-height: 0 !important; }
+  * { animation: none !important; transition: none !important; }
+  #wrap { display: inline-block; padding: 30px 70px 56px; }
+  #hero { padding-top: 0 !important; }
+  body.mark-only .home__cast { display: none; }
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script src="../vendor/screens.js"></script>
+<script>
+  const tmp = document.createElement('div'); tmp.innerHTML = window.SCREENS.home;
+  const hero = document.createElement('div'); hero.className = 'home__hero'; hero.id = 'hero';
+  hero.append(tmp.querySelector('.home__cast'), tmp.querySelector('.wordmark'));
+  document.getElementById('wrap').append(hero);
+  if (location.search === '?mark') document.body.classList.add('mark-only');
+  window.__ready = document.fonts.ready.then(() => true);
+</script>
+</body>
+</html>

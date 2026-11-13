@@ -33,7 +33,7 @@
     btns: 4.40, fIn: 4.56, tapCode: 5.04, morph0: 5.10, morph1: 5.62, joinOnion: 5.44, joinTitle: 5.52, joinLead: 5.66,
     dig: [5.86, 6.00, 6.12, 6.24, 6.40], fly0: 6.56, fly1: 6.98,
     // C · the lobby fills
-    card: 6.68, head: 6.86, share: 6.98, panel: 7.02, joins: [7.18, 7.36, 7.50, 7.68, 7.82, 8.00], crown: 7.30, danaOn: 8.40,
+    card: 6.68, head: 6.86, lshare: 6.98, panel: 7.02, joins: [7.18, 7.36, 7.50, 7.68, 7.82, 8.00], lcrown: 7.30, danaOn: 8.40,
     pepper: 8.04, pepperOn: 8.54, settings: [8.66, 8.74], wait: 8.80, start: 9.34,
     // D · round intro
     lobbyOut: 9.40, rays0: 9.52, hdr: 9.56, introWord: 9.86, introNum: 9.98, introOf: 10.20, introLine: 10.36, mole: 10.52, introOut: 11.30,
@@ -615,13 +615,20 @@
     const joined = T.joins.filter(j => t >= j).length;
     html(L.chip, `<span class="num">${Math.max(1, joined)}</span> מתוך <span class="num">12</span> בחדר`);
     put(L.chip, life(t, T.head + 0.08, { y: -40, s: 0.6 }, 'pop', {}, ko, 0.3, { y: -60, op: 0 }));
-    put(L.share, life(t, T.share, { y: 40 }, 'soft', {}, ko, 0.3, { y: -200, op: 0 }));
+    put(L.share, life(t, T.lshare, { y: 40 }, 'soft', {}, ko, 0.3, { y: -200, op: 0 }));
     put(L.panel, life(t, T.panel, { s: 0.94 }, 'soft', {}, ko, 0.15, { op: 0, s: 0.97 }));
     L.players.forEach((p, i) => {
       const st = life(t, T.joins[i], { s: 0.4, r: -8 }, 'pop');
       put(p, { ...st, op: t >= ko + i * 0.03 ? 0 : st.op });    // each avatar flies on (fx) as the lobby closes
     });
-    put(L.badge, t < T.crown ? { op: 0 } : { y: lerp(-26, 0, K(t, T.crown, 'bouncy')), r: lerp(-30, 0, K(t, T.crown, 'bouncy')), op: clamp(K(t, T.crown) * 2) });
+    // the host's crown: drops on, hops while the room waits for him, pops off as he starts the round
+    const hopU = clamp((t - (T.wait + 0.12)) / 0.34), hop = hopU > 0 && hopU < 1 ? 4 * hopU * (1 - hopU) : 0;
+    const offU = clamp((t - (T.start - 0.10)) / 0.16);
+    const offS = offU <= 0 ? 1 : offU < 0.4 ? 1 + 0.18 * ease.quadOut(offU / 0.4) : 1.18 * (1 - cubicIn((offU - 0.4) / 0.6));
+    put(L.badge, t < T.lcrown ? { op: 0 } : {
+      y: lerp(-26, 0, K(t, T.lcrown, 'bouncy')) - 9 * hop - 10 * offU,
+      r: lerp(-30, 0, K(t, T.lcrown, 'bouncy')) + 12 * pulse(t, T.wait + 0.46, 1, 7, 30) + 20 * offU,
+      s: offS, op: clamp(K(t, T.lcrown) * 2) * (offU >= 1 ? 0 : 1) });
     put(L.me, t < T.joins[1] + 0.12 ? { op: 0 } : { s: K(t, T.joins[1] + 0.12, 'pop') });
     cls(L.danaAv, 'avatar--dimmed', t < T.danaOn);
     put(L.danaSmall, { op: t < T.danaOn ? 1 : 0 });
@@ -1127,7 +1134,7 @@
     ev(T.fly0 + 0.05, 'whoosh', 215, 250, 0.8);
     ev(T.card, 'thud', 215, 140, 0.6);
     T.joins.forEach((j, i) => ev(j + 0.02, 'join', ...c($('.avatar', E.lobby.players[i])), 0.7 + i * 0.05));
-    ev(T.crown + 0.12, 'crown', ...c(E.lobby.badge), 0.6); ev(T.danaOn, 'pop', ...c(E.lobby.danaAv), 0.5);
+    ev(T.lcrown + 0.12, 'crown', ...c(E.lobby.badge), 0.6); ev(T.danaOn, 'pop', ...c(E.lobby.danaAv), 0.5);
     ev(T.pepperOn, 'on', ...c(E.lobby.switch), 1);
     T.settings.forEach((s, i) => ev(s + 0.02, 'pop', 215 + (i ? -60 : 60), 560, 0.4));
     ev(T.start, 'start', 215, 470, 1);

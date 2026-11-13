@@ -2,7 +2,13 @@
 
 סרטון תדמית אנכי (1080×1920) של כ־41 שניות למשחק [השתול](https://hashtul.onrender.com). הסרטון מציג סבב שלם, מהקוד ועד הכתר, בטייק רציף אחד. מצלמה "מצולמת ביד" רודפת אחרי אצבע שמשחקת.
 
-הקובץ: `hashtul.mp4`.
+הקבצים:
+
+- **`hashtul.mp4`**: הסרטון המלא. השאלה של השתול היא "כמה פעמים בשבוע אתם נוגעים בעצמכם?", ומצב פלפל נדלק בלובי.
+- **`hashtul-clean.mp4`**: גרסה נקייה לטיקטוק ולרילס, בלי סקס על המסך.
+  - השאלה של השתול היא "כמה פעמים בשבוע אתם בודקים מה האקס מעלה?".
+  - מצב פלפל נשאר כבוי ("כבוי: שאלות נקיות").
+  - חוץ מזה היא זהה לגרסה המלאה, כולל ה־18+ של המשחק.
 
 ## המהלך
 
@@ -47,10 +53,15 @@ python3 tools/dump_events.py                  # זמני הסאונד מהסרט
 python3 audio/score.py                        # → audio/mix.wav
 python3 tools/render.py comp.html --out out/draft.mp4 --sfx audio/mix.wav --width 1080 --height 1920 --grain 2.5           # טיוטה 30fps
 python3 tools/render.py comp.html --out hashtul.mp4 --sfx audio/mix.wav --width 1080 --height 1920 --fps 60 --grain 2.5    # סופי 60fps
+
+# הגרסה הנקייה (?cut=clean). פס קול משלה, כי אין בה את הקליק של מתג הפלפל:
+python3 tools/dump_events.py cut=clean audio/events_clean.json
+python3 audio/score.py audio/events_clean.json audio/mix_clean.wav
+python3 tools/render.py "comp.html?cut=clean" --out out/clean/hashtul-clean.mp4 --sfx audio/mix_clean.wav --width 1080 --height 1920 --fps 60 --grain 2.5
 python3 tools/stills.py out/stills.png 2.6,13.9,18.95,28.6,38.8   # דף מגע של רגעים
 ```
 
-תצוגה מקדימה בדפדפן: `comp.html?play` (בזמן אמת) או `comp.html?t=18.95&hud` (פריים בודד).
+תצוגה מקדימה בדפדפן: `comp.html?play` (בזמן אמת) או `comp.html?t=18.95&hud` (פריים בודד). מוסיפים `&cut=clean` כדי לראות את הגרסה הנקייה.
 
 `tools/render.py`, `tools/probe.py` ו־`tools/verify_promo.py` הם עותקים של הסקריפטים של onetake עם תיקונים לפורמט אנכי, ועם `--grain`: גרעין קל בקידוד במקום שכבת רעש בדף, שהאטה כל צילום פי 2.4.
 

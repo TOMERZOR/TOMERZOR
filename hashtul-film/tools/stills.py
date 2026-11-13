@@ -1,4 +1,4 @@
-"""Contact sheet of the film at chosen times (portrait), plus any page errors. usage: stills.py out.png t1,t2,…"""
+"""Contact sheet of the film at chosen times (portrait), plus any page errors. usage: stills.py out.png t1,t2,… [tilewidth] [query]"""
 import asyncio, sys, pathlib
 from playwright.async_api import async_playwright
 from PIL import Image, ImageDraw
@@ -10,7 +10,8 @@ async def main():
     async with async_playwright() as p:
         br = await p.chromium.launch(); pg = await br.new_page(viewport={"width": 1080, "height": 1920})
         errs = []; pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("console", lambda m: errs.append(m.text) if m.type == "error" else None)
-        await pg.goto((ROOT / "comp.html").as_uri() + "?render"); await pg.evaluate("window.__ready")
+        q = sys.argv[4] if len(sys.argv) > 4 else ""
+        await pg.goto((ROOT / "comp.html").as_uri() + "?render" + ("&" + q if q else "")); await pg.evaluate("window.__ready")
         cols = min(len(times), 8); rows = (len(times) + cols - 1) // cols
         sheet = Image.new("RGB", (cols * tw, rows * (th + 26)), (12, 12, 12)); d = ImageDraw.Draw(sheet)
         for i, t in enumerate(times):

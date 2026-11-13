@@ -7,7 +7,8 @@ ElevenLabs sound-effect takes (audio/src/eleven/), and an original instrumental 
 ElevenLabs Music v2.5 via Higgsfield). Everything shares one synthetic room (onetake's sfx_palette), the music is cut
 on its own beat grid and ducked under the hits, and the mix is mastered to -16 LUFS with a -4 dBTP ceiling.
 
-usage: python3 audio/score.py            → audio/mix.wav (48 kHz stereo)
+usage: python3 audio/score.py [events.json] [mix.wav]   → audio/mix.wav (48 kHz stereo)
+       python3 audio/score.py audio/events_clean.json audio/mix_clean.wav   (the clean cut)
 """
 import json, pathlib, subprocess, sys, re
 import numpy as np
@@ -21,7 +22,9 @@ import sfx_palette as P                                     # noqa: E402  (the s
 SR = 48000
 IR = P.impulse(1.0)                                         # first: it draws from the palette's shared random generator
 rng = np.random.default_rng(23)
-EV = json.loads((ROOT / "audio/events.json").read_text())
+EV_PATH = ROOT / (sys.argv[1] if len(sys.argv) > 1 else "audio/events.json")
+MIX_PATH = ROOT / (sys.argv[2] if len(sys.argv) > 2 else "audio/mix.wav")
+EV = json.loads(EV_PATH.read_text())
 DUR = float(EV["T"]["dur"])
 N = int(SR * (DUR + 0.5))
 MUSIC_OFFSET = 0.107                                        # track time = film time + offset (puts the beats on the cuts)
@@ -181,11 +184,11 @@ def main():
     m = sfx + music
     m = np.stack([P.hp(m[:, c], 32) for c in (0, 1)], 1)[: int(SR * DUR)]
     out = master(m)
-    wavfile.write(str(ROOT / "audio/mix.wav"), SR, (np.clip(out, -1, 1) * 32767).astype(np.int16))
+    wavfile.write(str(MIX_PATH), SR, (np.clip(out, -1, 1) * 32767).astype(np.int16))
     # stems for checking balance
     wavfile.write(str(ROOT / "audio/stem_sfx.wav"), SR, (np.clip(sfx[: int(SR * DUR)] * 0.5, -1, 1) * 32767).astype(np.int16))
     wavfile.write(str(ROOT / "audio/stem_music.wav"), SR, (np.clip(music[: int(SR * DUR)] * 0.5, -1, 1) * 32767).astype(np.int16))
-    print("wrote audio/mix.wav", loud(ROOT / "audio/mix.wav"))
+    print("wrote", MIX_PATH.relative_to(ROOT), loud(MIX_PATH))
 
 
 def loud(path):

@@ -13,6 +13,9 @@
   const W = 1080, H = 1920, G = 2.5, FPS = 30;
   const cubicIn = u => u * u * u;
   const Q = new URLSearchParams(location.search);
+  // ?cut=clean: the cut for TikTok / Reels. No sex on screen: Yuval's question is about the ex, and pepper mode stays off.
+  const CLEAN = Q.get('cut') === 'clean';
+  const CLEAN_FAKE = 'כמה פעמים בשבוע אתם בודקים מה האקס מעלה?';
 
   // The game's own springs (framer-motion presets in its bundle) as ζ, ω — the film moves like the game.
   const SPR = {
@@ -283,6 +286,7 @@
     RS.plate = $('.result__plate', rs); RS.line = $('.result__line', rs);
     RS.cardwrap = $('.result__cardwrap', rs); RS.tag = $('.result__tag', rs); RS.fake = $('.result__fake', rs);
     RS.answerRow = $('.result__answer', rs); RS.bubble = $('.result__bubble', rs); RS.real = $('.result__real', rs);
+    if (CLEAN) document.querySelectorAll('.result__fake').forEach(el => { el.textContent = CLEAN_FAKE; });
     RS.board = $('.result__board', rs); RS.tiles = $$('.result__tile', rs);
     RS.tiles.sort((x, y) => E.reveal.cellName.indexOf($('.result__tile-name', x).textContent.trim()) - E.reveal.cellName.indexOf($('.result__tile-name', y).textContent.trim())).forEach(tl => RS.board.appendChild(tl));
     RS.tileName = RS.tiles.map(tl => $('.result__tile-name', tl).textContent.trim());
@@ -635,11 +639,12 @@
     const dn = Math.floor(((t - T.joins[5]) / 0.22) % 4); cssv(L.danaSmall && $('.dots', L.danaSmall), '--dots', `"${'.'.repeat(Math.max(0, dn))}"`);
     // pepper mode switches on (the host's hand, not ours)
     put(L.pepper, life(t, T.pepper, { y: 50 }, 'soft', {}, ko, 0.3, { y: 140, op: 0 }));
-    const pk = K(t, T.pepperOn, 'pop'), onNow = t >= T.pepperOn + 0.06;
+    const pk = CLEAN ? 0 : K(t, T.pepperOn, 'pop'), onNow = !CLEAN && t >= T.pepperOn + 0.06;
     cls(L.pepper, 'is-on', onNow); attr(L.switch, 'aria-checked', onNow ? 'true' : 'false'); attr(L.switch, 'disabled', null);
     cssv(L.switch, '--knob', `${fix(-28 * clamp(t < T.pepperOn ? 0 : pk, 0, 1.15))}px`);
     txt(L.pepperSub, onNow ? 'שאלות גסות, סקס וכל מה שלא נעים. 18+' : 'כבוי: שאלות נקיות');
-    put(L.pepperIcon, { r: t < T.pepperOn ? 0 : -14 * pk + 9 * pulse(t, T.pepperOn, 1, 6, 30), s: t < T.pepperOn ? 1 : 1 + 0.15 * pk, base: '' });
+    const still = CLEAN || t < T.pepperOn;
+    put(L.pepperIcon, { r: still ? 0 : -14 * pk + 9 * pulse(t, T.pepperOn, 1, 6, 30), s: still ? 1 : 1 + 0.15 * pk, base: '' });
     L.settings.forEach((c, i) => put(c, life(t, T.settings[i], { s: 0.4, r: -8 }, 'pop', {}, ko, 0.3, { y: 120, op: 0 })));
     // "waiting for Tomer to start" — the dots are the game's own
     const dots = t < T.wait ? 0 : 1 + Math.floor((t - T.wait) / 0.18) % 3;
@@ -1135,7 +1140,7 @@
     ev(T.card, 'thud', 215, 140, 0.6);
     T.joins.forEach((j, i) => ev(j + 0.02, 'join', ...c($('.avatar', E.lobby.players[i])), 0.7 + i * 0.05));
     ev(T.lcrown + 0.12, 'crown', ...c(E.lobby.badge), 0.6); ev(T.danaOn, 'pop', ...c(E.lobby.danaAv), 0.5);
-    ev(T.pepperOn, 'on', ...c(E.lobby.switch), 1);
+    if (!CLEAN) ev(T.pepperOn, 'on', ...c(E.lobby.switch), 1);
     T.settings.forEach((s, i) => ev(s + 0.02, 'pop', 215 + (i ? -60 : 60), 560, 0.4));
     ev(T.start, 'start', 215, 470, 1);
     ev(T.introNum + 0.06, 'boom_soft', 215, 330, 0.9); ev(T.introOf + 0.1, 'pop', 280, 300, 0.5); ev(T.introLine + 0.05, 'flip', 215, 420, 0.6);

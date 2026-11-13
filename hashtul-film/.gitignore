@@ -12,3 +12,4 @@ ref/video/
 audio/src/eleven_urls.json
 __pycache__/
 _frames/
+audio/mix_*.wav

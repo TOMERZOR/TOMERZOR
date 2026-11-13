@@ -38,8 +38,8 @@
     flip: { 'תומר': 5.0, 'שירה': 5.5, 'נועה': 6.0, 'דנה': 6.5, 'איתי': 7.0, 'יובל': 8.0 },
     bar: 8.42, emoji: [8.4, 8.72, 9.06, 9.4], discuss: 9.0,
     hurry: 10.0, hurryOut: 10.7,                                       // gone (shrink and drop) by 10.88
-    vote0: 10.74, cardDur: 0.16, cardStep: 0.02, hopDur: 0.36, tiles0: 10.9, vote1: 11.0, tally: 11.0,
-    myst: 10.92, say: 11.0, minis0: 11.12, miniStep: 0.09, miniDur: 0.26, lit: 11.76, zz: 11.5,
+    vote0: 10.74, cardDur: 0.16, cardStep: 0.02, hopDur: 0.3, tiles0: 10.9, vote1: 11.0, tally: 11.0,
+    myst: 10.92, say: 11.0, minis0: 11.14, miniStep: 0.07, miniDur: 0.22, lit: 11.64, zz: 11.4, push: 11.66,
     figPop: 11.86, verdict: 12.0, plate: 12.1, line: 12.5, gain: 12.62,
     card0: 12.8, tag: 12.95, fake: 13.05, bubble: 13.35, real: 13.6, hold: 13.6,
     end0: 15.0,
@@ -170,6 +170,7 @@
       { t: T.tapLock, x: lock[0] + 20, y: lock[1] },
       { t: T.fOut, x: lock[0] + 150, y: lock[1] + 250 },
     ];
+    { const vs = M(E.RS.votesSay); BOARD_DY = vs.y + vs.h + 16 - M(E.RS.board).y; }
     HAND.taps = [T.touch, T.tapLock]; HAND.holds = [[T.touch, T.lift]]; HAND.win = [[T.fIn, T.fOut]];
     // the value under the finger, as it slides (sampled once, so it only ever counts up)
     const xs = M(A.bars[0]), step = barX(0) - barX(1);
@@ -188,9 +189,12 @@
   function camera() {
     const yc = M(E.R.cells[E.R.me]);
     const ex = ease;
-    // the tally frame: from the top of the "?" figure to the bottom of the board, inside the safe zone (150 … 1500)
-    const top = M(E.RS.myst).y - 8, bot = M(E.RS.board).y + M(E.RS.board).h + 8;
-    const tz = (1500 - 150) / ((bot - top) * G), TALLY = Pt(215, top + (960 - 150) / (G * tz), tz);
+    // the tally frame: "?", "השתול הוא…" and the board (lifted under the title) as one group, the board ~85% of the
+    // frame's width, its bottom on the safe line, its right edge left of the right rail
+    const b = M(E.RS.board), top = M(E.RS.myst).y - 8, bot = b.y + BOARD_DY + b.h + 8;
+    const tz = Math.min(0.85 * W / (b.w * G), (1500 - 150) / ((bot - top) * G));
+    const TALLY = Pt(b.x + b.w - (945 - 540) / (G * tz), bot - (1500 - 960) / (G * tz), tz);
+    const CLOSE = Pt(215, 246, 1.23);
     return {
       keys: [
         { t: 0, ...Pt(215, 260, 1.08) },
@@ -207,15 +211,16 @@
         { t: 8.42, ...Fr(yc, 1.5, 0, -8), curve: ex.sineInOut },
         { t: 8.98, ...Pt(215, 430, 0.9), curve: ex.cubicInOut },
         { t: 10.74, ...Pt(215, 432, 0.9) },
-        { t: T.tally, ...TALLY, curve: ex.cubicInOut },                   // one wide frame: "?", "השתול הוא…", the board
-        { t: T.verdict, ...TALLY },
-        { t: 12.4, ...Pt(215, 246, 1.23), curve: ex.cubicInOut },          // eases in as the name tag and the line arrive
+        { t: T.tally, ...TALLY, curve: ex.cubicInOut },                   // one frame: "?", "השתול הוא…", the board
+        { t: T.push, ...TALLY },
+        { t: T.verdict, ...CLOSE, curve: cubicIn },                        // the push: slow, then fast, in by the stamp
+        { t: 12.4, ...CLOSE },
         { t: 12.62, ...Pt(215, 256, 1.2), curve: ex.sineInOut },
         { t: 13.45, ...Pt(240, 415, 1.0), curve: ex.cubicInOut },          // RTL lines start at the right: keep them off the right rail
         { t: T.end0, ...Pt(240, 415, 1.0) },
       ],
       hits: [[T.tapLock + 0.02, 5, 12], [T.twist + 0.02, 14, 9], [T.flip[PAIR.plant] + 0.02, 14, 9], [T.hurry + 0.02, 6, 11], [T.verdict, 18, 8]],
-      rests: [[0, 0.95], [T.touch + 0.05, 2.95], [3.96, 5.6], [8.05, 8.4], [9.05, 10.74], [T.tally + 0.02, T.verdict], [13.5, T.end0]],
+      rests: [[0, 0.95], [T.touch + 0.05, 2.95], [3.96, 5.6], [8.05, 8.4], [9.05, 10.74], [T.tally + 0.02, T.push], [13.5, T.end0]],
     };
   }
 
@@ -339,13 +344,16 @@
   const hopStart = i => cardStart(i) + 0.02;
   const hopLand = i => hopStart(i) + T.hopDur;
   const R_IDX = n => E.R.name.indexOf(n);
+  // for the tally the board sits right under "השתול הוא…"; it travels back down (out of frame) during the push
+  let BOARD_DY = 0;
+  const boardDy = t => BOARD_DY * (1 - ease.cubicInOut(seg(t, 11.8, 12.06)));
   // "ברח!" starts early enough that its pop spring first reaches full size (the impact) exactly at T.verdict
   const STAMP_LEAD = (() => { let u = 0; while (K(u, 0, 'pop') < 1 && u < 1) u += 0.0005; return u; })();
   function uHops(t) {
     E.F.hops.forEach((el, i) => {
       const t0 = hopStart(i), t1 = hopLand(i);
       if (t < t0 || t >= t1) { hide(el); return; }
-      const n = E.R.name[i], A = M(E.R.cellAv[i]), B = M(E.RS.tileAv[E.RS.tileName.indexOf(n)]);
+      const n = E.R.name[i], A = M(E.R.cellAv[i]), B0 = M(E.RS.tileAv[E.RS.tileName.indexOf(n)]), B = { ...B0, y: B0.y + boardDy(t1) };
       const k = ease.cubicInOut(seg(t, t0, t1));
       const [x, y] = arcPt(center(A), center(B), k, 110 - i * 8);
       worldPut(el, x, y, { s: lerp(A.w / 50, B.w / 50, k) * (1 + 0.25 * Math.sin(Math.PI * k)), r: Math.sin(Math.PI * k) * (i % 2 ? 12 : -12) });
@@ -393,7 +401,7 @@
       cls(tl, 'is-lit', lit && n === 'תומר'); cls(tl, 'is-dim', lit && n !== 'תומר');
       cls(tl, 'is-mole', n === PAIR.plant && t >= T.verdict);
     });
-    put(RS.board, t < tileIn - 0.04 ? { op: 0 } : { s: lerp(0.85, 1, K(t, tileIn - 0.04, 'pop')), op: 1, y: t >= T.verdict ? 6 * pulse(t, T.verdict, 1, 9, 30) : 0 });
+    put(RS.board, t < tileIn - 0.04 ? { op: 0 } : { s: lerp(0.85, 1, K(t, tileIn - 0.04, 'pop')), op: 1, y: boardDy(t) });
 
     RS.minis.forEach((mi, j) => {
       const [voter] = PAIR.votes[j], t0 = T.minis0 + j * T.miniStep, t1 = t0 + T.miniDur;

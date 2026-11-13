@@ -124,20 +124,20 @@
       return { box, st, text: $('span', st), tilt };
     });
     // the six, big, standing where their cells will be
-    E.six = CELLN.map(n => mk('div', 's1-p s1-six', KIT.fx, avatar(CODES[n], { size: 84, ring: ringOf(n) }) +
-      (n === PAIR.me ? '<span class="s1-me">אתם</span>' : `<span class="player__name">${n}</span>`)));
+    E.six = CELLN.map(n => mk('div', 's1-p s1-six', KIT.fx, avatar(CODES[n], { size: 115, ring: ringOf(n) }) +
+      (n === PAIR.me ? '<span class="s1-me">אתם</span>' : `<span class="s1-tag">${n}</span>`)));
     E.sixAv = E.six.map(p => $('.avatar', p)); E.sixName = E.six.map(p => p.lastChild);
     E.emoji = mk('div', 'flyemoji', KIT.fx, '😂');
   }
 
   // fixed layout of the fx pieces, game px
   const HOOK_Y = [24, 58];
-  const BIG_TOP = [44, 96, 148], BIG_DX = [14, -12, 26];          // the big hook block, game px (top of each sticker box)
+  const BIG_TOP = [20.5, 74, 128], BIG_DX = [10, -10, 22], BIG_CY = 364, BIG_Z = 0.915;          // the big hook block, game px (top of each sticker box)
   const tuckT = i => T.tuck0 + i * T.tuckStep;
   function layoutFx() {
     E.hookA.style.top = (HOOK_Y[0] - 19) + 'px'; E.hookB.style.top = (HOOK_Y[1] - 19) + 'px';
     E.hookB.style.left = '46px';
-    E.big.forEach((b, i) => { b.box.style.top = BIG_TOP[i] + 'px'; b.box.style.left = BIG_DX[i] + 'px'; });
+    E.big.forEach((b, i) => { b.box.style.top = BIG_TOP[i] + 'px'; b.box.style.left = (BIG_DX[i] - 85) + 'px'; });
   }
 
   let G = {}; window.__G = G;
@@ -162,8 +162,8 @@
     const resTop = G.verdict.y - 10, resBot = card.y + card.h;
     return {
       keys: [
-        { t: 0, ...Pt(222, 376, 0.945) },                            // the big hook and the six where their cells will be
-        { t: 0.8, ...Pt(222, 376, 0.945) },
+        { t: 0, ...Pt(222, BIG_CY, BIG_Z) },                            // the big hook and the six where their cells will be
+        { t: 0.8, ...Pt(222, BIG_CY, BIG_Z) },
         { t: 2.0, ...Pt(222, 356, 0.90), curve: ease.cubicInOut },  // ease back as the card lands; the puzzle frame from here
         { t: T.rest0, ...Pt(222, 356, 0.90) },
         { t: T.spot0, ...Pt(222, 356, 0.90) },
@@ -219,7 +219,7 @@
       const sc = t < ti ? 0 : lerp(0.5, 1, K(t, ti, 'pop'));          // the cell's own pop (uReveal), to follow its corner
       const kt = t < ti ? 0 : K(t, ti, 'soft');
       const corner = [cc[0] + (center(av)[0] - cc[0]) * sc, cc[1] + (center(av)[1] - cc[1]) * sc];
-      const home = [cc[0], cc[1] - (ac[1] - pc[1]) - 5];             // the avatar+name block on the cell (5 px high: the names clear the bottom line)
+      const home = [cc[0], cc[1] - (pc[1] - ac[1]) - 4];             // the avatar+name block on the cell (5 px high: the names clear the bottom line)
       const cx = lerp(home[0], corner[0], kt), cy = lerp(home[1], corner[1], kt);
       const squash = Math.abs(Math.cos(ry * Math.PI / 180));
       const x = cc[0] + (cx - cc[0]) * squash;

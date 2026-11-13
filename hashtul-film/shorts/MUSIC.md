@@ -210,6 +210,9 @@ These are new kinds only, built from takes and synthesis that already existed; n
 - `shutter`: a two-clack camera shutter. A screenshot, the "POV" frame or a photo.
 - `riser_bar`: a 2 s build that peaks **exactly at the event time**. Put `t` on the downbeat it leads into.
 - `riser_long`: a 3 s airy swell starting at `t`. A slow build under a reveal.
+- `bubble`: two layered pops, fuller than `pop`. A speech bubble or sticker popping in over the groove (added in sound QA: `pop` sat only +4 dB over the bed).
+- `flip_up`: a flip with a thud body and a pop, its pitch rising with each call (i). A row of cells flipping one per beat.
+- `crowd_laugh_c` **HIT**: a third 1 s laugh take, so a short's third laugh is not a repeat.
 - `crowd_laugh_b`, `crowd_cheer_b`, `crowd_oooh_b` **HIT**: alternative crowd takes. Use them so the second short doesn't reuse the same crowd as the film.
 
 A camera whip already exists (`whip`). The music-side "stop" tools live in the plan, not in `recipe()`:

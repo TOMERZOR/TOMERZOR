@@ -237,6 +237,8 @@ def _table(i, v, j):
         "crowd_oooh_b": [("oooh_b", .44, 1.0, .5, 0)],
         "bubble": [("pop_b", .55, 1.0 + .05 * j, .25, 0), ("pop_a", .45, .9, .2, 0)],          # a speech bubble / sticker popping in
         "crowd_laugh_c": [("laugh_c", .5, 1.0, .45, 0)],                                     # a third laugh take (1 s)
+        "flip_up": [("flip", .95, 1.0 + .06 * i, .2, 0), ("swish3", .4, 1.0 + .06 * i, .15, 0),       # a row of cells flipping on
+                    ("thud", .3, 1.2 + .05 * i, .2, 0), ("pop_b", .25, .9 + .08 * i, .2, 0.01)],      # the beats, pitch rising
     }
     return R
 

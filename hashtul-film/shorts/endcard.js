@@ -116,9 +116,9 @@
       const e = (t, kind, gx, gy, v) => { KIT.ev(t, kind, gx, gy + dy, v); P.events.push({ t, kind, gx, gy: gy + dy, v }); };
       P.events = [];
       const c = KIT.camAt(t0 + 0.1);                           // the whip starts wherever the camera is: centre it there
-      KIT.ev(t0 + 0.1, 'whip', c.x / G, c.y / G, 1); P.events.push({ t: t0 + 0.1, kind: 'whip', gx: c.x / G, gy: c.y / G, v: 1 });
+      KIT.ev(t0 + 0.1, 'whip', c.x / G, c.y / G, 0.5); P.events.push({ t: t0 + 0.1, kind: 'whip', gx: c.x / G, gy: c.y / G, v: 0.5 });
       for (let i = 0; i < 5; i++) e(T.word + i * 0.07 + 0.09, i === 4 ? 'logo_hit' : 'letter', 215 + (2 - i) * 50, 330, 0.9);
-      e(T.punch + 0.02, 'punch', 215, 450, 0.8); e(T.cta + 0.04, 'pop', 215, 520, 0.7);
+      e(T.punch + 0.02, 'punch', 215, 450, 0.45); e(T.cta + 0.04, 'pop', 215, 520, 0.4);
       e(T.wink, 'glance', 215, 300, 0.5);
     };
 

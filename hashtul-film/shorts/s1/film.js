@@ -333,11 +333,11 @@
     ev(T.title, 'thud', ...c(G.title), 0.8);
     ev(T.q, 'swish', ...c(G.q), 0.6);
     CELLN.forEach((n, i) => ev(cellIn(i), 'cell', ...c(G.cells[i]), 0.45));
-    T.flips.forEach((tf, i) => ev(tf, 'flip', ...c(G.cells[i]), 0.6 + 0.05 * i));
+    T.flips.forEach((tf, i) => ev(tf, 'flip_up', ...c(G.cells[i]), 0.75 + 0.05 * i));   // sound QA: the flips were 7 dB under the body
     ev(T.pull, 'riser', 215, 400, 0.25);
     ev(T.who, 'stamp', ...c(G.title), 0.8);
     T.counts.forEach(tc => ev(tc, 'count', ...c(G.title), 0.8));
-    SPOT.forEach(([ts, nm], i) => ev(ts, 'roulette', ...c(G.cells[CELLN.indexOf(nm)]), 0.45 + 0.4 * i / (SPOT.length - 1)));
+    SPOT.forEach(([ts, nm], i) => ev(ts, 'roulette', ...c(G.cells[CELLN.indexOf(nm)]), 1.0 + 0.4 * i / (SPOT.length - 1)));   // sound QA: ticks were buried under the riser
     ev(T.spot1, 'stamp_soft', ...c(G.cells[MI]), 0.8);
     ev(T.exit0, 'drop', 215, 500, 0.5);
     ev(T.leap, 'whoosh', ...c(G.cellAv[MI]), 0.6);
@@ -345,12 +345,12 @@
     ev(T.verdict, 'verdict', ...c(G.figAv), 1);
     ev(T.verdict + 0.05, 'crowd_cheer_b', 215, 300, 0.8);
     ev(T.plate, 'pop', ...c(G.plate), 0.5);
-    ev(T.gain, 'coins', ...c(G.line), 0.6);
-    ev(T.card0, 'swish', ...c(G.card), 0.6);
+    ev(T.gain, 'coins', ...c(G.line), 1); ev(T.gain, 'reward', ...c(G.line), 1);   // sound QA: was 3 dB under the groove
+    ev(T.card0, 'whoosh', ...c(G.card), 0.8);   // sound QA: a swish vanished under groove B
     ev(T.tag, 'stamp_soft', ...c(G.card), 0.5);
-    ev(T.fake, 'pop', ...c(G.card), 0.5);
+    ev(T.fake, 'bubble', ...c(G.card), 0.6);
     ev(T.bubble, 'pop', ...c(G.bubble), 0.8);
-    ev(T.laugh, 'crowd_laugh_b', ...c(G.bubble), 0.85);
+    ev(T.laugh, 'crowd_laugh_b', ...c(G.bubble), 0.6);   // sound QA: was louder than "נתפס!"
     ev(T.real, 'pop', ...c(G.card), 0.4);
   }
 

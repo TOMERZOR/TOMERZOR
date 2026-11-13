@@ -45,6 +45,8 @@
     const hero = $('.home__hero', root);
     E.rays = $('.home__rays', root); root.appendChild(E.rays);
     E.rays.style.cssText += ';top:auto;left:50%;';
+    // a tighter mask than the home screen's (20%→78%): the turning rays fade out by the pitch and never reach the chips
+    E.rays.style.webkitMaskImage = E.rays.style.maskImage = 'radial-gradient(closest-side,#000 18%,#0000 60%)';
     E.cast = $('.home__cast', root); E.castEach = $$('.home__cast > div', root);
     E.wordmark = $('.wordmark', root);
     E.pitch = $('.home__pitch', root);
@@ -138,7 +140,7 @@
   // ───────────────────────────── update ─────────────────────────────
   function update(t) {
     on(E.root, true);
-    // the ground's rays turn slowly from frame 0 (far above the slot; their mask is gone by y≈1150)
+    // the ground's rays turn slowly from frame 0 (their mask is gone by y≈950, above the chips)
     // 4°/s, easing to a stop by 7.6: the angle is the integral of 4·(1 − smoothstep(6.8, 7.6)), in closed form
     const ur = clamp((t - 6.8) / 0.8), tt = t < 6.8 ? t : 6.8 + 0.8 * (ur - (ur * ur * ur - ur * ur * ur * ur / 2));
     KIT.rays(E.rays, t, 4 * tt, 1);

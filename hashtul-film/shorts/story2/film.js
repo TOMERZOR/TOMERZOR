@@ -20,14 +20,14 @@
 
   // ── timeline (s): beats every 0.5; the track's final crash on 6.0 ──
   const T = {
-    drop0: 0.5, land: 1.0, tag: 1.5, word: 2.0, title: 2.5, chips: [3.0, 3.5, 4.0],
+    drop0: 0.5, land: 1.0, tag: 1.5, title: 2.0, chips: [3.0, 3.5, 4.0],   // the wordmark stands from frame 0
     cards: [5.0, 5.3, 5.54, 5.7, 5.8, 5.86, 5.9],                  // faster and faster; the last (pink) snaps out onto the crash
     crash: 6.0, line: 6.4, url: 6.62, still: 7.6, dur: 8.0,
   };
 
   // ── layout (game px) ──
   const IC = { x: 216, y: 200 };                                     // the icon's centre (144 px: 360 frame px)
-  const ROWS = { mark: 284, title: 374, chips: [420, 467, 514], line: 567, url: 598 };
+  const ROWS = { mark: 280, title: 365, chips: [426, 473, 520], line: 573, url: 604 };
   // the hand of cards: angle from straight up (deg), order of appearance; the pink one is straight up, last
   const FAN = [{ a: 27 }, { a: -27 }, { a: 54 }, { a: -54 }, { a: 80 }, { a: -80 }, { a: 0, pink: true }];
   const FAN_R = 112;
@@ -98,13 +98,10 @@
     // the tag stamps onto the corner; one last wobble on the crash
     const tk = K(t, T.tag, 'pop');
     put(E.tag, t < T.tag ? { op: 0 } : { s: lerp(2.3, 1, tk) * (1 + pulse(t, T.crash + 0.04, 0.06, 6, 20)), r: lerp(-22, 0, tk) + 9 * pulse(t, T.crash + 0.04, 1, 4.2, 13), op: clamp(tk * 3) });
-    // the wordmark: letters drop right to left, squash on landing, the pink bar swipes in (the end card's)
-    E.letters.forEach((l, i) => {
-      const d = OM.letterDrop(t, T.word, i, { stagger: 0.07, dist: 64, zeta: 0.45, omega: 24, squash: 0.0042, max: 0.3 });
-      put(l, { y: -d.y, sx: d.sx, sy: d.sy, op: d.op, base: '' });
-    });
-    KIT.cssv(E.mark, '--bar', fix(ease.expoOut(seg(t, T.word + 0.42, T.word + 0.77)), 3));
-    put(E.mark, { s: 1 + pulse(t, T.word + 0.34, 0.05) });
+    // the wordmark stands in its place from frame 0 (the cover); it gives a small nod when the icon lands above it
+    E.letters.forEach(l => put(l, { base: '' }));
+    KIT.cssv(E.mark, '--bar', '1');
+    put(E.mark, { s: 1 + pulse(t, T.land + 0.03, 0.035, 8, 24) });
     put(E.title, life(t, T.title, { y: 18, s: 0.6, r: -6 }, 'pop'));
     E.chips.forEach((c, i) => put(c, life(t, T.chips[i], { s: 0.35, r: i % 2 ? 10 : -10 }, 'pop')));
     // the hand of cards: each slides out from behind the icon and turns to its place
@@ -131,9 +128,8 @@
   function events() {
     const c = el => center(M(el));
     ev(T.drop0 + 0.05, 'drop', IC.x, IC.y - 120, 0.45);
-    ev(T.land, 'logo_hit', IC.x, IC.y, 0.7);                         // the loudest thing before the crash
+    ev(T.land, 'logo_hit', IC.x, IC.y, 0.1);                         // the loudest thing before the crash
     ev(T.tag, 'stamp_soft', ...c(E.tag), 0.65);
-    E.letters.forEach((l, i) => ev(T.word + i * 0.07 + 0.09, 'letter', ...c(l), 0.1));
     ev(T.title, 'title', ...c(E.title), 0.55);
     E.chips.forEach((ch, i) => ev(T.chips[i], 'pop', ...c(ch), 0.55 + i * 0.07));
     T.cards.slice(0, -1).forEach((tc, i) => ev(tc, 'deal', IC.x + Math.sin(FAN[i].a * Math.PI / 180) * 90, IC.y - 60, 0.35 + i * 0.04));

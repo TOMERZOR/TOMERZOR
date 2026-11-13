@@ -1,7 +1,7 @@
 // The signature: gradient blobs pulled into speed streaks, like a long
 // exposure from a moving car. Drawn once per card on a canvas.
 
-import { rngFrom } from "../core/rng.js";
+import { rngFrom } from "./rng.js";
 
 const cache = new Map();
 

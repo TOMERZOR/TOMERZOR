@@ -1,0 +1,18 @@
+כמה זמן לוקח מתל אביב לאילת? 🚗
+ניחשתי 4:10. האמת: 3 שעות ו־55 דקות.
+
+Guess The Distance: משחק ניחוש זמני נסיעה אמיתיים, בארץ ובעולם. מסלולים אמיתיים מ־OpenStreetMap, עד 5,000 נקודות לסיבוב, אתגר יומי, רצף, נגד השעון, ודו־קרב 1 על 1 בזמן אמת. בטלפון ובמחשב.
+
+אז… כמה זמן זה לוקח?
+https://guess-the-distance.moffy-app.workers.dev
+
+---
+קצר (לסטורי / טיקטוק):
+תל אביב ← אילת. כמה זמן? 🚗 Guess The Distance
+https://guess-the-distance.moffy-app.workers.dev
+
+---
+English:
+How long is Tel Aviv to Eilat by car? I said 4:10. It's 3:55.
+Guess The Distance: guess real travel times, watch the real route draw itself, duel a friend 1v1.
+https://guess-the-distance.moffy-app.workers.dev

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>השתול · story: עכשיו באוויר</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../vendor/game.css">
+<style>
+/* A short on the kit (../kit.js, ../endcard.js): the film's page shell, unchanged. 1080×1920. Every frame is a pure function of time: __seek(t) draws it (film.js). The UI is the game's own:
+   its stylesheet, fonts, captured screens and character generator (vendor/). The game's CSS animations and
+   transitions are switched off, so nothing moves unless the film moves it. */
+html, body { margin: 0; height: 100%; background: #0b0420; overflow: hidden; }
+body { display: grid; place-items: center; }
+body.render { display: block; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; flex: none; transform-origin: 50% 50%;
+  font-family: var(--font); color: #fff; }
+body.render #stage { transform: none !important; }
+#ground { position: absolute; inset: 0;
+  background: radial-gradient(120% 60% at 50% -10%, #8a3bf2 0%, transparent 60%),
+              radial-gradient(90% 50% at 100% 100%, #7a1fb8 0%, transparent 60%),
+              linear-gradient(180deg, var(--v-800) 0%, var(--v-900) 55%, var(--v-950) 100%); }
+#dots, #fxc { position: absolute; inset: 0; width: 1080px; height: 1920px; pointer-events: none; }
+#cam { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+#phone { position: absolute; left: 0; top: 0; width: 430px; height: 932px; transform-origin: 0 0; transform: scale(2.5); }
+.scr { position: absolute; left: 0; top: 0; width: 430px; height: 932px; display: none; }
+.scr.on { display: block; }
+#grain { position: absolute; inset: 0; pointer-events: none; background-repeat: repeat; }
+
+/* the game's own motion is replaced by the film's */
+#phone *, #phone *::before, #phone *::after { animation: none !important; transition: none !important; }
+#phone .screen__body { overflow: visible !important; }
+#phone .dots::after { content: var(--dots, "") !important; }
+#phone .switch::after { transform: translate(var(--knob, 0px)) !important; }
+#phone .wordmark::after { transform: rotate(1.5deg) scaleX(var(--bar, 1)); transform-origin: 100% 50%; }
+#phone .wordmark .ltr { display: inline-block; }
+#phone .w { display: inline-block; white-space: pre; }
+#phone .answer__q-text .w, #phone .result__fake .w { white-space: normal; }
+
+/* film-only pieces, drawn in the game's own language */
+#fx { position: absolute; left: 0; top: 0; width: 430px; height: 932px; pointer-events: none; }
+#fx > * { position: absolute; left: 0; top: 0; }
+.finger { width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%;
+  background: radial-gradient(circle at 38% 32%, #fff 0 42%, #efe6ff 78%); border: 3px solid var(--ink);
+  box-shadow: 0 4px 0 var(--ink), 0 12px 22px rgba(12, 2, 36, .45); }
+.ripple { width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; border: 3px solid #fff; box-sizing: border-box; }
+.dealcard { width: 78px; height: 50px; margin: -25px 0 0 -39px; border-radius: 12px; border: 2.5px solid var(--ink);
+  background: var(--cream); box-shadow: 0 3px 0 var(--ink); }
+.dealcard.is-pink { background: var(--pink); }
+.dealcard i { position: absolute; left: 12px; right: 12px; height: 5px; border-radius: 2px; background: #1b0a3640; }
+.dealcard.is-pink i { background: #ffffff8c; }
+.dealcard i:nth-child(1) { top: 13px; } .dealcard i:nth-child(2) { top: 24px; right: 26px; }
+.flyemoji { font-size: 34px; line-height: 1; margin: -17px 0 0 -17px; }
+.coinfly { width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; border: 2.5px solid var(--ink);
+  background: radial-gradient(circle at 35% 30%, #fff3b0 0 18%, var(--yellow) 40%, var(--yellow-d) 100%); }
+.sweatdrop { width: 14px; height: 20px; margin: -10px 0 0 -7px; }
+.ghostbtn { box-sizing: border-box; }
+.cta { position: absolute; display: inline-flex; align-items: center; gap: 10px; white-space: nowrap; }
+.cta .chip { height: 46px; padding: 0 20px; font-size: 21px; font-weight: 900; box-shadow: 0 5px 0 var(--ink); border-width: 3px; }
+.cta .chip svg { width: 22px; height: 22px; }
+.facts { position: absolute; white-space: nowrap; }
+body.hud #hud { display: block; }
+#hud { display: none; position: absolute; left: 12px; top: 12px; z-index: 99; font: 700 28px/1.2 ui-monospace, monospace; color: #0f0;
+  background: #000a; padding: 6px 10px; border-radius: 8px; direction: ltr; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="ground"></div>
+  <canvas id="dots" width="1080" height="1920"></canvas>
+  <div id="cam"><div id="phone"></div></div>
+  <canvas id="fxc" width="1080" height="1920"></canvas>
+  <div id="grain"></div>
+  <div id="hud"></div>
+</div>
+<script src="../../motion.js"></script>
+<script src="../../vendor/chars.js"></script>
+<script src="../../vendor/screens.js"></script>
+<script src="../kit.js"></script>
+
+<script src="film.js"></script>
+</body>
+</html>

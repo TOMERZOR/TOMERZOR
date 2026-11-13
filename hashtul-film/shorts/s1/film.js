@@ -17,7 +17,7 @@
     mole: 'תומר',                                              // the plant (the host: carrot, crown)
     host: 'תומר',
     cells: [['שירה', "ג'ירפה"], ['תומר', 'פינגווין'], ['דנה', 'אריה'], ['נועה', 'פיל'], ['יובל', 'נמר'], ['איתי', 'זברה']],
-    hook: 'אחד מהם קיבל שאלה אחרת', hook2: 'תמצאו אותו?',
+    hook: ['אחד מהם קיבל', 'שאלה אחרת'], hook2: 'תמצאו אותו?',  // the pink line, broken in two for the big hook
   };
   const CELLN = PAIR.cells.map(c => c[0]);
   const MI = CELLN.indexOf(PAIR.mole);
@@ -26,7 +26,8 @@
   const T = {
     hook2: 0.5,
     title: 1.0, q: 1.04, words: 1.14, wordStep: 0.075,
-    dive0: 1.40, diveStep: 0.04, diveDur: 0.30,
+    dock0: 0.86, dock1: 1.22,                                    // the big hook shrinks and docks as the title lands
+    tuck0: 1.40, tuckStep: 0.06,                                 // each cell pops around its avatar, which tucks into its corner
     flips: [2.0, 2.5, 3.0, 3.5, 4.0, 4.5],
     pull: 4.6, rest0: 5.2,
     who: 6.0, ring: 6.06, counts: [6.5, 7.0, 7.5], ringOut: 8.0,
@@ -111,30 +112,40 @@
     if (PAIR.mole === PAIR.host) { E.crown = mk('span', 's1-crown', E.squash, crownSVG); E.crown.__base = 'rotate(-12deg)'; }
 
     // fx: the hook stickers and the row of six (they dive into the cells)
-    E.hookA = mk('div', 's1-hook', KIT.fx, `<span class="sticker" style="--tilt:-3deg">${PAIR.hook}</span>`);
+    // the docked (small) hook: one pink line and the yellow one — the layout from 2.0 on
+    E.hookA = mk('div', 's1-hook', KIT.fx, `<span class="sticker" style="--tilt:-3deg"><span class="s1-w">${PAIR.hook[0]}</span> <span class="s1-w">${PAIR.hook[1]}</span></span>`);
     E.hookB = mk('div', 's1-hook', KIT.fx, `<span class="sticker sticker--yellow" style="--tilt:3deg">${PAIR.hook2}</span>`);
-    E.row = CELLN.map(n => mk('div', 's1-p', KIT.fx, avatar(CODES[n], { size: 44, ring: ringOf(n) }) +
+    E.hookWords = $$('.s1-w', E.hookA);
+    // the big hook of the first second: three stickers, settled at frame 0 (the yellow one lands at 0.5)
+    E.big = [[PAIR.hook[0], '', -4], [PAIR.hook[1], '', -1.5], [PAIR.hook2, ' sticker--yellow', 3]].map(([txt_, c, tilt]) => {
+      const box = mk('div', 's1-hook s1-big', KIT.fx, `<span class="sticker${c}"><span>${txt_}</span></span>`);
+      const st = $('.sticker', box); st.__base = `rotate(${tilt}deg)`; st.__tilt = tilt; st.style.transform = st.__base;
+      return { box, st, text: $('span', st), tilt };
+    });
+    // the six, big, standing where their cells will be
+    E.six = CELLN.map(n => mk('div', 's1-p s1-six', KIT.fx, avatar(CODES[n], { size: 76, ring: ringOf(n) }) +
       (n === PAIR.me ? '<span class="s1-me">אתם</span>' : `<span class="player__name">${n}</span>`)));
-    E.rowAv = E.row.map(p => $('.avatar', p)); E.rowName = E.row.map(p => p.lastChild);
+    E.sixAv = E.six.map(p => $('.avatar', p)); E.sixName = E.six.map(p => p.lastChild);
     E.emoji = mk('div', 'flyemoji', KIT.fx, '😂');
   }
 
   // fixed layout of the fx pieces, game px
-  const HOOK_Y = [24, 58], HOOK_DROP = 22, ROW_Y = 172, ROW_DX = 47, ROW_X = 211, ROW_PUSH = 62;
-  // the row reads right to left as the grid's right column, then its left column, so each half drops into its column
-  const ROW_SLOT = [0, 3, 1, 4, 2, 5];
-  const diveT0 = i => T.dive0 + i * T.diveStep, diveDur = i => T.diveDur + 0.05 * Math.floor(i / 2);
+  const HOOK_Y = [24, 58];
+  const BIG_TOP = [44, 96, 148], BIG_DX = [14, -12, 26];          // the big hook block, game px (top of each sticker box)
+  const tuckT = i => T.tuck0 + i * T.tuckStep;
   function layoutFx() {
     E.hookA.style.top = (HOOK_Y[0] - 19) + 'px'; E.hookB.style.top = (HOOK_Y[1] - 19) + 'px';
     E.hookB.style.left = '46px';
-    E.row.forEach((p, i) => { p.style.left = (ROW_X + (2.5 - ROW_SLOT[i]) * ROW_DX - 30) + 'px'; p.style.top = (ROW_Y - 20) + 'px'; });
+    E.big.forEach((b, i) => { b.box.style.top = BIG_TOP[i] + 'px'; b.box.style.left = BIG_DX[i] + 'px'; });
   }
 
   let G = {}; window.__G = G;
   function measure() {
     G.title = M(E.title); G.q = M(E.q); G.grid = M(E.grid);
     G.cells = E.cells.map(M); G.cellAv = E.cellAv.map(M);
-    G.row = E.rowAv.map(M);
+    G.six = E.six.map(M); G.sixAv = E.sixAv.map(M);
+    G.big = E.big.map(b => ({ st: M(b.st), text: M(b.text) }));
+    G.hookWords = E.hookWords.map(M); G.hookB = M($('.sticker', E.hookB));
     G.fig = M(E.figbox); G.card = M(E.cardwrap); G.verdict = M(E.verdict); G.line = M(E.line); G.plate = M(E.plate);
     G.figAv = M(E.figAv); G.bubble = M(E.bubble);
     // the ring sits to the left of the title, at the same height
@@ -150,14 +161,10 @@
     const resTop = G.verdict.y - 10, resBot = card.y + card.h;
     return {
       keys: [
-        { t: 0, ...Pt(222, 160, 1.22) },
-        { t: 0.6, ...Pt(222, 158, 1.22), curve: ease.sineInOut },
-        { t: 1.35, ...Pt(218, 190, 1.04), curve: ease.cubicInOut },
-        { t: 2.05, ...Pt(220, 300, 1.0), curve: ease.cubicInOut },
-        { t: 3.2, ...Pt(220, 336, 1.0), curve: ease.sineInOut },
-        { t: 3.9, ...Pt(220, 375, 0.95), curve: ease.cubicInOut },
-        { t: 4.6, ...Pt(220, 377, 0.95), curve: ease.sineInOut },
-        { t: T.rest0, ...Pt(222, 356, 0.90), curve: ease.cubicInOut },
+        { t: 0, ...Pt(222, 374, 0.97) },                            // the big hook and the six where their cells will be
+        { t: 0.8, ...Pt(222, 374, 0.97) },
+        { t: 2.0, ...Pt(222, 356, 0.90), curve: ease.cubicInOut },  // ease back as the card lands; the puzzle frame from here
+        { t: T.rest0, ...Pt(222, 356, 0.90) },
         { t: T.spot0, ...Pt(222, 356, 0.90) },
         { t: T.spot1, ...Pt(222, 366, 0.94), curve: ease.sineInOut },
         { t: T.land + 0.04, ...Fr(fig, 1.32, 0, 30), curve: ease.cubicInOut },
@@ -166,7 +173,7 @@
         { t: T.end0, ...Pt(228, 398, 0.97) },
       ],
       hits: [[T.title + 0.02, 4, 12], [T.verdict, 18, 8]],
-      rests: [[0, 0.95], [T.rest0, T.spot1 - 0.15], [T.hold, T.end0]],
+      rests: [[0, 0.8], [2.0, T.spot1 - 0.15], [T.hold, T.end0]],
     };
   }
 
@@ -181,33 +188,47 @@
   }
 
   function uHook(t) {
-    // on screen at frame 0; rises out of the title's way at 1.0; leaves at 6.0 as the title turns
-    const up = K(t, T.title - 0.04, 'soft');
-    const lift = HOOK_DROP * (1 - up);
+    // big at frame 0 (yellow lands at 0.5); shrinks and docks as the title lands; the docked form leaves at 6.0
+    const kd = ease.cubicInOut(seg(t, T.dock0, T.dock1));
+    const tgt = [G.hookWords[0], G.hookWords[1], G.hookB];
+    E.big.forEach((b, i) => {
+      const g = G.big[i], to = tgt[i];
+      const su = lerp(1, to.w / g.text.w, kd);
+      const bs = center(g.st), bt = center(g.text), st = center(to);
+      const dx = st[0] - bs[0] - (bt[0] - bs[0]) * (to.w / g.text.w), dy = st[1] - bs[1] - (bt[1] - bs[1]) * (to.w / g.text.w);
+      const pr = { x: dx * kd, y: dy * kd, s: su, r: ((i < 2 ? -3 : 3) - b.tilt) * kd, op: 1 - sstep(0.62, 0.95, kd) };
+      if (i === 2) { const kb = K(t, T.hook2, 'pop'); if (t < T.hook2) pr.op = 0; else { pr.s *= lerp(0.3, 1, kb); pr.r += lerp(-14, 0, kb); pr.op *= clamp(kb * 3); } }
+      put(b.st, pr);
+    });
+    const din = sstep(0.55, 0.9, kd);
     const out = cubicIn(seg(t, T.who - 0.1, T.who + 0.2));
-    put(E.hookA, { y: lift - 60 * out, s: 1 - 0.2 * out, op: 1 - out, r: -4 * out });
-    const kb = K(t, T.hook2, 'pop');
-    put(E.hookB, t < T.hook2 ? { op: 0 } : { y: lift - 60 * out, s: lerp(0.3, 1, kb) * (1 - 0.2 * out), r: lerp(-14, 0, kb) + 4 * out, op: clamp(kb * 3) * (1 - out) });
+    put(E.hookA, { y: -60 * out, s: 1 - 0.2 * out, op: din * (1 - out), r: -4 * out });
+    put(E.hookB, { y: -60 * out, s: 1 - 0.2 * out, op: din * (1 - out), r: 4 * out });
   }
 
   function uRow(t) {
-    // the six: calm in a row, nudged down by the card at 1.0, then each dives into its face-down cell
-    const push = K(t, T.title + 0.02, 'soft');
-    E.row.forEach((p, i) => {
-      const t0 = diveT0(i), t1 = t0 + diveDur(i);
-      if (t >= t1) { hide(p); return; }
-      const A = G.row[i], B = G.cells[i];
-      const a = [A.x + A.w / 2, A.y + A.h / 2 + ROW_PUSH * push];
-      const k = cubicIn(seg(t, t0, t1));
-      const [x, y] = arcPt(a, center(B), k, 46);
-      const s = lerp(1, 1.3, Math.sin(Math.PI * k)) * (1 - 0.62 * k);
-      const idle = t < t0 ? 1.5 * Math.sin(t * 3 + i * 1.3) : 0;     // breathing, so frame 0 is alive
-      put(p, { x: x - (A.x + A.w / 2), y: y - (A.y + A.h / 2) + idle, s, op: 1 - sstep(0.72, 1, k) });
-      put(E.rowName[i], { op: 1 - clamp((t - t0) / 0.12), base: '' });
+    // the six stand on their cells; each cell pops in around its avatar, which tucks into the cell's avatar corner and
+    // rides the face-down card until the flip hands over to the front's own avatar (at 90°, where both are edge-on)
+    E.six.forEach((p, i) => {
+      const ti = tuckT(i), tf = T.flips[i];
+      const fk = t < tf ? 0 : spring(t - tf, 0.6, 26), ry = lerp(180, 0, clamp(fk, 0, 1.08));
+      if (ry <= 90) { hide(p); return; }
+      const A = G.sixAv[i], P = G.six[i], C = G.cells[i], av = G.cellAv[i];
+      const cc = center(C), ac = center(A), pc = center(P);
+      const sc = t < ti ? 0 : lerp(0.5, 1, K(t, ti, 'pop'));          // the cell's own pop (uReveal), to follow its corner
+      const kt = t < ti ? 0 : K(t, ti, 'soft');
+      const corner = [cc[0] + (center(av)[0] - cc[0]) * sc, cc[1] + (center(av)[1] - cc[1]) * sc];
+      const home = [cc[0], cc[1] - (ac[1] - pc[1])];                 // the avatar+name block centred on the cell
+      const cx = lerp(home[0], corner[0], kt), cy = lerp(home[1], corner[1], kt);
+      const squash = Math.abs(Math.cos(ry * Math.PI / 180));
+      const x = cc[0] + (cx - cc[0]) * squash;
+      const s = lerp(1, av.w / A.w, kt);
+      put(p, { x: x - ac[0], y: cy - ac[1], sx: squash, s, op: 1 });
+      put(E.sixName[i], { op: 1 - clamp((t - ti) / 0.14), base: '' });
     });
   }
 
-  function cellIn(i) { return diveT0(i) + diveDur(i) - 0.05; }
+  function cellIn(i) { return tuckT(i); }
 
   function uReveal(t) {
     E.hideR.forEach(hide);
@@ -305,12 +326,12 @@
   // ───────────────────────────── sound ─────────────────────────────
   function events() {
     const c = r => center(r);
-    ev(0.0, 'pop', 215, HOOK_Y[0], 0.6);
-    ev(T.hook2, 'pop', 200, HOOK_Y[1], 0.7);
+    ev(0.0, 'pop', 215, BIG_TOP[0] + 30, 0.6);
+    ev(T.hook2, 'pop', 240, BIG_TOP[2] + 30, 0.8);
+    ev(T.dock0, 'swish', 215, 80, 0.45);
     ev(T.title, 'thud', ...c(G.title), 0.8);
     ev(T.q, 'swish', ...c(G.q), 0.6);
-    [0, 3].forEach(i => ev(diveT0(i), 'swish', ...c(G.cells[i]), 0.4));
-    CELLN.forEach((n, i) => ev(cellIn(i), 'cell', ...c(G.cells[i]), 0.35));
+    CELLN.forEach((n, i) => ev(cellIn(i), 'cell', ...c(G.cells[i]), 0.45));
     T.flips.forEach((tf, i) => ev(tf, 'flip', ...c(G.cells[i]), 0.6 + 0.05 * i));
     ev(T.pull, 'riser', 215, 400, 0.25);
     ev(T.who, 'stamp', ...c(G.title), 0.8);
@@ -346,6 +367,8 @@
     track(box) {                                                   // what must be read, while it is visible
       const b = (key, el, ...owners) => { if (owners.every(o => o.__op !== '0' && (!o.closest('.scr') || o.closest('.scr').classList.contains('on')))) box(key, el); };
       b('hookA', $('.sticker', E.hookA), E.hookA); b('hookB', $('.sticker', E.hookB), E.hookB);
+      E.big.forEach((g, i) => b('big' + i, g.st, g.st));
+      E.six.forEach((p, i) => b('name' + i, E.sixName[i], p, E.sixName[i]));
       b('title', $('h1', E.title), E.title); b('vtitle', $('h1', E.vtIn), E.vtIn); b('ring', E.timer, E.ring); b('q', E.qp, E.q);
       E.cells.forEach((c, i) => b('cell' + i, $('.ans', c), c));
       b('verdict', $('.sticker', E.verdict), E.verdict); b('plate', E.plate, E.plate, E.sayin); b('line', E.line, E.line, E.sayin);

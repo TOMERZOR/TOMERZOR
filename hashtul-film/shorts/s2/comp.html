@@ -62,7 +62,7 @@ body.render #stage { transform: none !important; }
    bubble and verdict sticker). Positions are station-local game px; a station is one 432×768 frame at zoom 1. ── */
 .s2st, .s2ride { width: 432px; height: 768px; }
 .s2st > *, .s2ride > * { position: absolute; }
-.s2card { left: 20px; top: 172px; width: 392px; height: 176px; perspective: 1100px; }
+.s2card { left: 20px; top: 172px; width: 392px; height: 176px; perspective: 1100px; z-index: 3; }
 .s2flip { position: absolute; inset: 0; transform-style: preserve-3d; }
 .s2face { position: absolute; inset: 0; }
 .s2face .answer__q { margin: 0; height: 100%; box-sizing: border-box; display: grid; align-content: center; padding: 24px 18px 18px; }

@@ -174,6 +174,7 @@ SRC["riser_bar"] = clean(dec(EL / "riser_1.mp3"), thr=0.002, end=2.1, fade=0.03)
 RISER_BAR_PK = int(np.argmax(np.abs(signal.hilbert(SRC["riser_bar"])) > 0.7)) / SR   # where it peaks (placed on t)
 SRC["riser_long"] = clean(dec(EL / "riser_4.mp3"), thr=0.01, end=3.0, fade=0.1)    # a long airy swell, 3 s
 SRC["laugh_b"] = clean(dec(EL / "crowd_laugh_1.mp3"), fade=0.3)
+SRC["laugh_c"] = clean(dec(EL / "crowd_laugh_2.mp3"), fade=0.3)
 SRC["cheer_b"] = clean(dec(EL / "crowd_cheer_2.mp3"), fade=0.3)
 SRC["oooh_b"] = clean(dec(EL / "crowd_oooh_1.mp3"), end=1.4, fade=0.3)
 
@@ -227,11 +228,13 @@ def _table(i, v, j):
         "count_go": [("blip", .5, 2.0, .3, 0), ("start", .45, 1.0, .3, 0), ("e_boom2", .3, 1.1, .3, 0)],
         "scratch": [("scratch", .5, 1.0 + .04 * j, .15, 0)],
         "buzz": [("buzz", .42, 1.0, .25, 0)], "wrong": [("off", .6, .9, .2, 0), ("buzz", .25, .85, .25, 0)],
-        "ding": [("ding", .32, 1.0, .4, 0)], "heartbeat": [("heart", .45, 1.0, .1, 0)],
+        "ding": [("ding", .42, 1.0, .4, 0)], "heartbeat": [("heart", .45, 1.0, .1, 0)],
         "shutter": [("shutter", .5, 1.0 + .03 * j, .2, 0)],
         "riser_bar": [("riser_bar", .4, 1.0, .45, -RISER_BAR_PK)], "riser_long": [("riser_long", .35, 1.0, .5, 0)],
         "crowd_laugh_b": [("laugh_b", .5, 1.0, .45, 0)], "crowd_cheer_b": [("cheer_b", .46, 1.0, .5, 0)],
         "crowd_oooh_b": [("oooh_b", .44, 1.0, .5, 0)],
+        "bubble": [("pop_b", .55, 1.0 + .05 * j, .25, 0), ("pop_a", .45, .9, .2, 0)],          # a speech bubble / sticker popping in
+        "crowd_laugh_c": [("laugh_c", .5, 1.0, .45, 0)],                                     # a third laugh take (1 s)
     }
     return R
 
@@ -240,7 +243,7 @@ KINDS = set(_table(0, 1.0, 0.0))
 
 
 HITS = {"logo_hit", "punch", "reveal_big", "verdict", "boom", "win", "crowd_oooh", "crowd_cheer", "crowd_laugh", "stamp", "lock",
-        "count_go", "buzz", "wrong", "scratch", "crowd_laugh_b", "crowd_cheer_b", "crowd_oooh_b"}
+        "count_go", "buzz", "wrong", "scratch", "crowd_laugh_b", "crowd_laugh_c", "crowd_cheer_b", "crowd_oooh_b"}
 
 
 def main():

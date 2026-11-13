@@ -72,6 +72,7 @@
     E.slots = E.cells.map(c => $('.reveal__slot', c));
     E.slots.forEach(s => s.classList.remove('is-fresh'));
     E.flips = E.cells.map(c => $('.reveal__flip', c));
+    E.flips.forEach(f => { f.style.transform = 'none'; });      // measure every card face-up (the capture had three turned)
     E.cellAv = E.cells.map((c, i) => {
       const [n, a] = PAIR.cells[i];
       const who = $('.reveal__who', c);

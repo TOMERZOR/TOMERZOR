@@ -13,3 +13,7 @@ audio/src/eleven_urls.json
 __pycache__/
 _frames/
 audio/mix_*.wav
+shorts/*/mix.wav
+shorts/*/stem_*.wav
+shorts/**/_frames/
+shorts/**/__pycache__/

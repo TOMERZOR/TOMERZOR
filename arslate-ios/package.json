@@ -1,0 +1,19 @@
+{
+  "name": "arslate-ios",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ערסלייט for iPhone: the web app (../arslate) in a native shell with Capacitor, haptics and AdMob rewarded ads.",
+  "scripts": {
+    "sync": "node sync.mjs && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "8.4.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.5.3"
+  }
+}

@@ -332,6 +332,8 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
   const app = $("app"), src = $("src"), out = $("out"), result = $("result"), send = $("send");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let variant = 0, timer = 0, current = null, copyTimer = 0;
+  /* באפליקציית האייפון (arslate-ios) יש כאן רטט, הסכמה לשליחה ל-AI ומכסה יומית עם סרטון פרסומת. באתר: ריק. */
+  const NATIVE = window.ARSLATE_NATIVE || {};
 
   /* בחירת מודל: ערס 3.5 או צ'אחלה 2.5. נשמר בדפדפן */
   const PERSONAS = {
@@ -392,6 +394,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
       }
     }
     result.classList.add("open");
+    if (NATIVE.haptic) NATIVE.haptic("result");
   }
 
   /* מצב AI: אם יש שרת (config.js), Claude מנסח מחדש. כל תקלה, מגבלה או סירוב נופלים בשקט למילון שבדפדפן. */
@@ -408,6 +411,8 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
       return;
     }
     const id = ++reqId;
+    if (NATIVE.beforeAI && !(await NATIVE.beforeAI())) { if (id === reqId) render(local()); return; }
+    if (id !== reqId) return;
     if (inflight) inflight.abort();
     inflight = new AbortController();
     const kill = setTimeout(() => inflight.abort(), 12000);
@@ -445,6 +450,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
   $("form").addEventListener("submit", e => {
     e.preventDefault();
     if (!src.value.trim()) return;
+    if (NATIVE.haptic) NATIVE.haptic("tap");
     clearTimeout(timer);
     setBusy(true);
     timer = setTimeout(run, 160);
@@ -475,7 +481,7 @@ h1 .who.swap { opacity: 0; transform: translateY(.15em) scale(.96); }
 
   $("share").addEventListener("click", async () => {
     if (!current) return;
-    const url = location.origin + location.pathname;
+    const url = (window.ARSLATE_CONFIG || {}).shareUrl || location.origin + location.pathname;
     if (navigator.share) {
       try { await navigator.share({ text: current.text, url }); } catch (e) {}
     } else {

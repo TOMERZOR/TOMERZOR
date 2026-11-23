@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Guess The Distance · component lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<link rel="stylesheet" href="../fonts/fonts.css">
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  /* lab-only: let the page scroll, and freeze hover for the screenshots */
+  body { overflow: auto; }
+  .lab { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 28px 18px 120px; }
+  .lab h1 { font-size: 88px; margin: 0 0 6px; }
+  .lab h1 em { font-style: normal; color: var(--lime); }
+  .lab > p { color: var(--fog); margin: 0 0 18px; }
+  .lab section { margin: 34px 0 0; }
+  .lab > section > h2 { font: 700 15px/1 var(--f-ui); color: var(--lime); letter-spacing: 0.04em; margin: 0 0 16px; text-transform: uppercase; }
+  .lab .hud { left: auto !important; right: auto !important; max-width: 860px !important; margin-inline: auto !important; }
+  .lab .row-lab { display: flex; flex-wrap: wrap; gap: 22px 16px; align-items: flex-end; }
+  .lab .cell { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .lab .cell > small { font: 600 12px/1 var(--f-ui); color: var(--fog); }
+  .lab .sim-hover:not(.is-pressed) > .face { translate: 0 -2px; }
+  .lab .sim-focus::before { content: ""; position: absolute; inset: -6px; border-radius: inherit; border: 3px solid var(--lime); box-shadow: 0 0 0 2px var(--ink); z-index: 2; }
+  .lab .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; }
+  .lab .sw { height: 84px; border-radius: 20px; padding: 10px 12px; display: flex; flex-direction: column; justify-content: flex-end; font: 700 13px/1.25 var(--f-ui); border: 2.5px solid var(--edge, rgba(255,255,255,.1)); box-shadow: 0 5px 0 var(--edge, rgba(0,0,0,.4)); }
+  .lab .sw small { font: 600 11px/1 var(--f-num); opacity: 0.75; }
+  .lab .night-map { position: relative; height: 760px; border-radius: 30px; overflow: hidden; background: radial-gradient(ellipse at 30% 30%, #1C232C 0 30%, transparent 31%), radial-gradient(ellipse at 70% 65%, #1C232C 0 34%, transparent 35%), #06111A; }
+  .lab .night-map::before { content: ""; position: absolute; inset: 0; background: url(../img/topo.svg) 0 0 / 640px repeat; opacity: 0.05; }
+  .lab .night-map .topbar, .lab .night-map .trip, .lab .night-map .sheet { position: absolute; }
+  .lab .night-map .sheet { pointer-events: auto; }
+  .lab .duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+  .lab .type-row { display: flex; flex-wrap: wrap; gap: 26px; align-items: baseline; }
+  .lab .lang { position: fixed; z-index: 40; top: 14px; inset-inline-end: 14px; }
+  .lab .light-plate { background: #fff; color: var(--ink); border-radius: 24px; padding: 18px; border: 2.5px solid var(--cloud-edge); box-shadow: 0 6px 0 var(--cloud-edge); }
+</style>
+</head>
+<body>
+<div id="bg" aria-hidden="true"><div class="topo"></div><div class="glow"></div></div>
+<main class="lab" id="lab"></main>
+<script type="module">
+import { initJuice, loading, success, error, select, land, attention, burst } from "../js/juice.js";
+import { segmented, switchHtml, html, $, $$, toast, confetti, esc } from "../js/ui.js";
+import { candy, ghost, iconBtn, toggleBtn, chip, modeCard, tag, sparkles, medal } from "../js/kit.js";
+import { icon, coin, img3d, AVATAR_3D } from "../js/icons.js";
+import { createPicker } from "../js/wheel.js";
+import { setLang } from "../js/i18n.js";
+
+setLang(new URLSearchParams(location.search).get("lang") === "en" ? "en" : "he");
+initJuice();
+const he = document.dir === "rtl";
+const T = (a, b) => (he ? a : b);
+
+const swatch = (name, hex, edge, dark) => `<div class="sw" style="background:${hex};color:${dark ? "#fff" : "#0E1116"};${edge ? `--edge:${edge}` : ""}">${name}<small>${hex}${edge ? ` · ${edge}` : ""}</small></div>`;
+const states = (tone, label) => {
+  const s = [
+    ["normal", ""], ["hover", "sim-hover"], ["pressed", "is-pressed"], ["focus", "sim-focus"],
+    ["disabled", "dis"], ["loading", "load"], ["success", "ok"], ["error", "is-error"],
+  ];
+  return s.map(([n, c]) => `<div class="cell">${candy({ text: label, tone, cls: c === "dis" || c === "load" || c === "ok" ? `st-${c}` : c })}<small>${n}</small></div>`).join("");
+};
+
+$("#lab").innerHTML = `
+  <div class="lang">${candy({ text: he ? "English" : "עברית", tone: "cloud", cls: "sm", id: "lang" })}</div>
+  <h1 class="display">Component <em>Lab</em></h1>
+  <p>${T("כל רכיב בכל מצב. לוחצים כדי לבדוק את התנועה, הצליל והרטט.", "Every component in every state. Press things to try the motion, sound and haptics.")}</p>
+
+  <section><h2>Palette</h2><div class="swatches">
+    ${swatch("coal", "#12161D", "", 1)}${swatch("night / ink", "#0E1116", "", 1)}${swatch("coal-2", "#1A1F27", "", 1)}${swatch("coal-3", "#232A35", "", 1)}${swatch("fog", "#A9B4C2")}
+    ${swatch("lime", "#C8FF3D", "#8EBA00")}${swatch("sun", "#FFD43B", "#B89504")}${swatch("sky", "#6FC8FF", "#2A89BC")}${swatch("mint", "#3BE3A0", "#059D6A")}
+    ${swatch("turquoise", "#19C6C6", "#068282")}${swatch("flame", "#FF8A2A", "#AC5601")}${swatch("coral", "#FF5A4E", "#B5000C")}${swatch("cloud", "#FFFFFF", "#B9C1CB")}${swatch("paper", "#EEF1F4", "#B9C1CB")}
+  </div></section>
+
+  <section><h2>Type</h2><div class="type-row">
+    <div class="display" style="font-size:96px">Guess <span class="lime">${T("מרחק", "Distance")}</span></div>
+    <div style="font:700 26px var(--f-ui)">Fredoka · ${T("כמה זמן זה לוקח?", "How long does it take?")}</div>
+    <div class="num" style="font:800 34px var(--f-num)">4,297 · 03:12:45</div>
+  </div></section>
+
+  <section><h2>Candy · primary</h2><div class="row-lab">${states("lime", T("ניחוש", "Guess"))}</div></section>
+  <section><h2>Candy · sun / secondary / danger</h2>
+    <div class="row-lab">${states("sun", T("שחקו", "Play"))}</div>
+    <div class="row-lab" style="margin-top:18px">${states("cloud", T("עוד משחק", "Play again"))}</div>
+    <div class="row-lab" style="margin-top:18px">${states("coral", T("יציאה", "Leave"))}</div>
+  </section>
+
+  <section><h2>${T("נסו בעצמכם", "Try them")}</h2><div class="row-lab">
+    <div class="cell">${candy({ text: T("ננעל? לחצו", "Lock in"), tone: "lime", id: "try-ok", cls: "lg" })}<small>success</small></div>
+    <div class="cell">${candy({ text: T("קוד שגוי", "Wrong code"), tone: "sun", id: "try-err" })}<small>error</small></div>
+    <div class="cell">${candy({ text: T("טוען ואז הצלחה", "Load, then done"), tone: "cloud", id: "try-load" })}<small>loading → success</small></div>
+    <div class="cell">${candy({ text: T("מצאו יריב", "Find opponent"), tone: "lime", id: "try-att", cls: "lg" })}<small>attention (4.5s)</small></div>
+    <div class="cell">${candy({ text: T("שלחו את הקישור", "Send the link"), tone: "cloud", id: "try-copy", ico: "share" })}<small>copied</small></div>
+    <div class="cell">${ghost({ text: T("ביטול", "Cancel") })}<small>ghost</small></div>
+    <div class="cell">${candy({ text: T("קונפטי", "Confetti"), tone: "mint", id: "try-conf" })}<small>party</small></div>
+    <div class="cell">${candy({ text: T("טוסט", "Toast"), tone: "sky", id: "try-toast" })}<small>toast</small></div>
+  </div></section>
+
+  <section><h2>Round buttons</h2><div class="row-lab">
+    <div class="cell">${iconBtn({ ico: "close", label: "close" })}<small>close</small></div>
+    <div class="cell">${iconBtn({ ico: "arrow", label: "next" })}<small>forward</small></div>
+    <div class="cell">${toggleBtn({ ico: "music", label: "music", on: true, id: "tg-m" })}<small>music on</small></div>
+    <div class="cell">${toggleBtn({ ico: "speaker", label: "sound", on: false, id: "tg-s" })}<small>sound off</small></div>
+    <div class="cell" style="background:#06111A;padding:12px;border-radius:20px">${iconBtn({ ico: "close", label: "close", hud: true })}<small>hud</small></div>
+    <div class="cell" style="background:#06111A;padding:12px;border-radius:20px">${iconBtn({ ico: "plus", label: "zoom in", hud: true })}<small>zoom</small></div>
+  </div></section>
+
+  <section><h2>Chips · segmented · switch</h2>
+    <div class="chips" id="chips">
+      ${chip({ map: "israel", label: T("ישראל", "Israel"), on: true })}${chip({ map: "world", label: T("העולם", "The World") })}${chip({ map: "walks", label: T("הליכות בעיר", "City Walks") })}${chip({ map: "flights", label: T("טיסות", "Flights") })}${chip({ map: "random", label: T("רנדומלי", "Random") })}
+    </div>
+    <div class="duo" style="margin-top:14px">
+      <div id="seg1"></div>
+      <div class="light-plate on-light"><div id="seg2"></div></div>
+    </div>
+    <div class="row-lab" style="margin-top:18px">
+      <div class="cell">${switchHtml("sw1", true)}<small>on</small></div>
+      <div class="cell">${switchHtml("sw2", false)}<small>off</small></div>
+    </div>
+  </section>
+
+  <section><h2>Cards</h2>
+    <div class="duo">
+      <div>
+        <div class="ticket" id="ticket">
+          ${img3d("calendar", { size: 92, cls: "tk-art art-hop", lazy: false })}
+          <div class="tk-head"><h3 class="tk-title">${T("האתגר היומי", "Daily Challenge")}</h3><div class="tk-sub">🇮🇱 ${T("ישראל · 5 סיבובים", "Israel · 5 rounds")}</div></div>
+          <div class="tk-perf" aria-hidden="true"><i class="notch s"></i><i class="notch e"></i></div>
+          <div class="tk-foot">${candy({ text: T("שחקו", "Play"), tone: "cloud", cls: "sm", icoEnd: "play", flip: true })}<span class="tk-next">${T("הבא בעוד", "Next in")}<b class="num">03:12:45</b></span></div>
+        </div>
+      </div>
+      <div class="modes" id="modes">
+        ${modeCard({ mode: "classic", title: T("קלאסי", "Classic"), sub: T("5 סיבובים", "5 rounds"), art: "trophy", tone: "sky", best: "24,310", tilt: -1.5 })}
+        ${modeCard({ mode: "streak", title: T("רצף", "Streak"), sub: T("כמה ברצף?", "How many in a row?"), art: "fire", tone: "flame", best: "7×", tilt: 1.5 })}
+        ${modeCard({ mode: "challenge", title: T("אתגר חבר", "Challenge"), sub: T("אותו מסלול", "Same rounds"), art: "link", tone: "turq", tilt: 1.2 })}
+        ${modeCard({ mode: "timed", title: T("נגד השעון", "Time Attack"), sub: T("30 שניות", "30 seconds"), art: "stopwatch", tone: "sun", tilt: -1.2 })}
+      </div>
+    </div>
+    <div class="row-lab" style="margin-top:20px">${candy({ text: T("נחיתה מחדש", "Land again"), tone: "cloud", cls: "sm", id: "reland" })}</div>
+  </section>
+
+  <section><h2>Coins · code tiles</h2>
+    <div class="row-lab">${Object.keys(AVATAR_3D).map((a) => coin(a, { size: 58 })).join("")}${coin("🙂", { size: 58 })}</div>
+    <div class="duo" style="margin-top:20px">
+      <div class="code-row"><div class="code-tiles" id="tiles">${[0, 1, 2, 3].map((i) => `<input class="tile" maxlength="1" aria-label="${i + 1}" autocomplete="off" autocapitalize="characters" spellcheck="false">`).join("")}</div>${candy({ text: T("הצטרפו", "Join"), tone: "lime", id: "join" })}</div>
+      <div class="room-code" id="room">${"KXDB".split("").map((c, i) => `<span class="tile flip" style="animation-delay:${i * 0.12}s">${c}</span>`).join("")}</div>
+    </div>
+  </section>
+
+  <section><h2>Round HUD</h2>
+    <div class="night-map">
+      <div class="topbar">
+        ${iconBtn({ ico: "close", label: "close", hud: true })}
+        <div class="pill-hud glass"><small>${T("סיבוב", "Round")}</small><b class="num">2/5</b></div>
+        <div class="spacer"></div>
+        <div class="pill-hud glass score"><b class="num">4,297</b></div>
+      </div>
+      <div class="trip glass">
+        <span class="mode-badge c-lime">${img3d("car", { size: 44, lazy: false })}</span>
+        <div class="trip-places">
+          <div class="trip-line"><i class="dot a"></i><b class="nm">${T("תל אביב", "Tel Aviv")}</b><span class="st">· ${T("רוטשילד", "Rothschild")}</span></div>
+          <div class="trip-line"><i class="dot b"></i><b class="nm">${T("אילת", "Eilat")}</b><span class="st">· ${T("הטיילת", "Promenade")}</span></div>
+        </div>
+        <div class="trip-meta">${tag(T("רכב", "Car"), { ico: "car" })}${tag(T("282 ק״מ בקו אווירי", "282 km as the crow flies"), { ico: "pin" })}</div>
+      </div>
+      <div class="sheet glass" style="width:min(100%,520px)">
+        <div class="grabber"></div>
+        <h2 class="ask">${T("כמה זמן זה לוקח?", "How long does it take?")}</h2>
+        <p class="sub">${T("ברכב, בלי פקקים", "By car, without traffic")}</p>
+        <div class="picker-host" id="ph"></div>
+        <div class="guess-row"><div class="ring-host timer-ring" id="ring"></div>${candy({ text: T("ניחוש", "Guess"), tone: "lime", id: "btn-guess", kbd: true })}</div>
+      </div>
+    </div>
+  </section>
+
+  <section><h2>Reveal pieces</h2>
+    <div class="duo">
+      <div class="glass" style="padding:18px">
+        <div class="rv-top">
+          <div><div class="answer-label">${T("זמן אמיתי", "Real time")}</div><div class="answer"><span class="num">4</span><small>${T("שע׳", "h")}</small><span class="num">10</span><small>${T("דק׳", "min")}</small></div><div class="answer-alt">${T("352 ק״מ · 84 קמ״ש", "352 km · 84 km/h")}</div></div>
+          <div class="verdict c-lime in"><b>${T("מדהים", "Amazing")}</b><span>${T("גבוה ב־4%", "4% too high")}</span></div>
+        </div>
+        <div class="nline tall" id="nl"></div>
+        <div class="points"><div class="points-row"><b class="num">4,512</b><span>${T("מתוך 5,000", "/ 5,000 points")}</span></div><div class="meter10" id="m10">${"<i></i>".repeat(10)}</div></div>
+        <div class="row-lab" style="margin-top:12px">${candy({ text: T("הדליקו את הפס", "Run the meter"), tone: "cloud", cls: "sm", id: "run-meter" })}</div>
+      </div>
+      <div class="row-lab" style="align-content:flex-start">
+        ${[["perfect", "gold", T("מושלם!", "Perfect!"), "star"], ["amazing", "lime", T("מדהים", "Amazing")], ["great", "mint", T("יפה מאוד", "Great")], ["good", "sky", T("לא רע", "Not bad")], ["ok", "sun", T("כמעט", "Close-ish")], ["miss", "coral", T("רחוק", "Way off")]].map(([k, c, w, a]) => `<div class="verdict c-${c} in" style="max-width:none">${a ? img3d(a, { size: 46, lazy: false }) : ""}<b>${w}</b><span>${k}</span></div>`).join("")}
+      </div>
+    </div>
+  </section>
+
+  <section><h2>Duel</h2>
+    <div class="night-map" style="height:auto;padding:16px">
+      <div class="hud" style="position:relative;padding:0">
+        <div class="hp glass you"><div class="who">${coin("🦊", { size: 34 })}<span class="nm">${T("אני", "You")}</span></div><div class="bar-row"><div class="bar"><i class="ghost" style="transform:scaleX(.9)"></i><i class="fill" style="transform:scaleX(.8)"></i><span class="ticks"></span></div><span class="val num">4,820</span></div></div>
+        <div class="hud-mid">${iconBtn({ ico: "close", label: "leave", hud: true })}<span class="mult-tag">${img3d("fire", { size: 18, lazy: false })}×1.5</span></div>
+        <div class="hp glass opp low"><div class="who">${coin("🐙", { size: 34 })}<span class="nm">Dana</span></div><div class="bar-row"><div class="bar"><i class="ghost" style="transform:scaleX(.35)"></i><i class="fill" style="transform:scaleX(.2)"></i><span class="ticks"></span></div><span class="val num">1,240</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section><h2>Profile · window</h2>
+    <div class="duo">
+      <div class="sticker c-sky player-card">
+        <div class="pc-art">${img3d("fox", { size: 150, lazy: false })}</div>
+        <h2 class="display pc-name">Dana</h2>
+        <div class="pc-chips"><span class="pc-chip">${img3d("party", { size: 26, lazy: false })}<b class="num">12</b>${T("משחקים", "Games")}</span><span class="pc-chip">${img3d("trophy", { size: 26, lazy: false })}<b class="num">4</b>${T("ניצחונות", "Wins")}</span><span class="pc-chip">${img3d("star", { size: 26, lazy: false })}<b class="num">3</b>${T("מושלמים", "Perfect")}</span></div>
+        <div class="medals">${medal({ art: "fire", value: "7", label: T("שיא רצף", "Best streak"), tone: "flame" })}${medal({ art: "trophy", value: "21,450", label: T("שיא קלאסי", "Best classic"), tone: "sun" })}${medal({ art: "star", value: "3", label: T("מושלמים", "Perfect"), tone: "mint" })}</div>
+      </div>
+      <div class="sticker c-cloud window on-light" style="margin-top:60px">
+        ${img3d("hourglass", { size: 84, cls: "w-art", lazy: false })}
+        <h2 class="display w-title">${T("לצאת מהמשחק?", "Leave the game?")}</h2>
+        <p>${T("יציאה תיחשב כהפסד.", "Leaving counts as a loss.")}</p>
+        <div class="actions two">${candy({ text: T("נשארים", "Stay"), tone: "lime" })}${candy({ text: T("יציאה", "Leave"), tone: "coral" })}</div>
+      </div>
+    </div>
+    <div class="list" style="margin-top:22px;max-width:560px">
+      <div class="row"><span class="ri c-sky">${icon("globe")}</span><span class="rl">${T("שפה", "Language")}</span><div id="seg3"></div></div>
+      <div class="row"><span class="ri c-lime">${icon("music")}</span><span class="rl">${T("מוזיקה", "Music")}</span>${switchHtml("sw3", true)}</div>
+      <div class="row"><span class="ri c-sun">${icon("speaker")}</span><span class="rl">${T("צלילים", "Sound")}</span>${switchHtml("sw4", true)}</div>
+    </div>
+  </section>
+
+  <section><h2>Radar</h2>
+    <div class="night-map" style="height:auto;padding:30px;display:grid;place-items:center">
+      <div class="radar"><div class="ring"></div><div class="ring"></div><div class="ring"></div><div class="grid"></div><div class="sweep"></div><div class="core">${coin("🦊", { size: 92 })}</div></div>
+    </div>
+  </section>
+`;
+
+// static states
+$$(".st-dis").forEach((b) => (b.disabled = true));
+$$(".st-load").forEach((b) => loading(b, true));
+$$(".st-ok").forEach((b) => success(b, he ? "ננעל" : "Locked", { sound: false }));
+
+$("#lang").addEventListener("click", () => {
+  const u = new URL(location.href);
+  u.searchParams.set("lang", he ? "en" : "he");
+  location.href = u;
+});
+$("#try-ok").addEventListener("click", (e) => success(e.currentTarget, he ? "ננעל" : "Locked", { revert: 1800 }));
+$("#try-err").addEventListener("click", (e) => error(e.currentTarget));
+$("#try-load").addEventListener("click", (e) => {
+  const b = e.currentTarget;
+  loading(b, true);
+  setTimeout(() => { loading(b, false); success(b, he ? "הצטרפת" : "Joined", { revert: 1800 }); }, 1400);
+});
+attention($("#try-att"));
+$("#try-copy").addEventListener("click", (e) => success(e.currentTarget, he ? "הועתק" : "Copied", { revert: 1600 }));
+$("#try-conf").addEventListener("click", () => confetti({ count: 140 }));
+$("#try-toast").addEventListener("click", () => toast(he ? "הקישור הועתק. שלחו לחבר!" : "Link copied. Send it to a friend!"));
+$$("[data-juice=toggle]").forEach((b) => b.addEventListener("click", () => b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"))));
+$("#chips").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip");
+  if (!c || c.classList.contains("on")) return;
+  $$("#chips .chip").forEach((x) => { x.classList.toggle("on", x === c); x.setAttribute("aria-checked", String(x === c)); });
+  select(c);
+});
+segmented($("#seg1"), [["time", he ? "זמן" : "Time"], ["distance", he ? "מרחק" : "Distance"]], "time", () => {});
+segmented($("#seg2"), [["easy", he ? "קל" : "Easy"], ["normal", he ? "רגיל" : "Normal"], ["hard", he ? "קשה" : "Hard"]], "normal", () => {});
+segmented($("#seg3"), [["he", "עברית"], ["en", "English"]], he ? "he" : "en", () => {}, { label: "language" });
+$$(".switch").forEach((s) => s.addEventListener("click", () => s.setAttribute("aria-checked", String(s.getAttribute("aria-checked") !== "true"))));
+land($$("#modes .mode-card"));
+$("#reland").addEventListener("click", () => land($$("#modes .mode-card")));
+$("#ticket").addEventListener("click", (e) => { if (!e.target.closest("button")) $("#ticket .candy").click(); });
+// code tiles: auto-advance, backspace, paste
+const tiles = $$("#tiles .tile");
+tiles.forEach((t, i) => {
+  t.addEventListener("input", () => {
+    t.value = t.value.toUpperCase().replace(/[^A-Z]/g, "").slice(-1);
+    t.classList.toggle("filled", !!t.value);
+    if (t.value && tiles[i + 1]) tiles[i + 1].focus();
+  });
+  t.addEventListener("keydown", (e) => { if (e.key === "Backspace" && !t.value && tiles[i - 1]) tiles[i - 1].focus(); });
+  t.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const s = (e.clipboardData.getData("text") || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4);
+    [...s].forEach((ch, k) => { if (tiles[k]) { tiles[k].value = ch; tiles[k].classList.add("filled"); } });
+    tiles[Math.min(3, s.length)]?.focus();
+  });
+});
+$("#join").addEventListener("click", () => {
+  const code = tiles.map((t) => t.value).join("");
+  if (code.length !== 4 || code !== "KXDB") error($("#tiles"));
+  else success($("#join"), he ? "הצטרפת" : "Joined", { revert: 1600 });
+});
+// wheel
+const picker = createPicker($("#ph"), { measure: "time", value: 250, onTick: () => {} });
+$("#btn-guess").addEventListener("click", (e) => { success(e.currentTarget, he ? "ננעל" : "Locked", { revert: 2000 }); });
+// timer ring look
+$("#ring").innerHTML = `<svg viewBox="0 0 62 62"><circle class="bg" cx="31" cy="31" r="27"/><circle class="fg" cx="31" cy="31" r="27" style="stroke-dasharray:169.6;stroke-dashoffset:60"/></svg><span class="num">51</span>`;
+// number line sample
+$("#nl").innerHTML = `<div class="rail"></div><div class="gap" style="left:38%;width:22%"></div>
+  <div class="mk actual" style="left:60%"><span class="lb">${he ? "4 שע׳ 10 דק׳" : "4 h 10 min"}</span><span class="flag">${icon("flag")}</span></div>
+  <div class="mk you low" style="left:38%">${coin("🦊", { size: 34 })}<span class="lb">${he ? "שלך · 4 שע׳" : "You · 4 h"}</span></div>
+  <div class="mk opp" style="left:80%"><span class="lb">Dana · 5 ${he ? "שע׳" : "h"}</span>${coin("🐙", { size: 34 })}</div>`;
+// meter
+const runMeter = () => {
+  const segs = $$("#m10 i");
+  segs.forEach((s) => s.classList.remove("on", "part"));
+  const score = 4512, per = 500, full = Math.floor(score / per), rest = (score % per) / per;
+  segs.forEach((s, i) => setTimeout(() => {
+    if (i < full) s.classList.add("on");
+    else if (i === full && rest > 0) { s.style.setProperty("--p", `${Math.round(rest * 100)}%`); s.classList.add("part"); }
+  }, 140 * i));
+};
+runMeter();
+$("#run-meter").addEventListener("click", runMeter);
+void picker; void burst; void html; void esc; void sparkles;
+</script>
+</body>
+</html>

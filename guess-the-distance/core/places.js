@@ -286,14 +286,14 @@ export const TRIPS = [
   ["flight", "hkg", "sin", 0, 235], ["flight", "la", "honolulu", 0, 345], ["flight", "mexico", "cancun", 0, 140],
 ];
 
-// The maps you can play, like GeoGuessr's maps. Gradient colors feed the
-// streaked card art.
+// The maps you can play, like GeoGuessr's maps. The colors are for display
+// only (the palette of the redesign); nothing else reads them.
 export const MAPS = {
-  israel: { he: "ישראל", en: "Israel", colors: ["#00b4ff", "#2346ff", "#7a2bff"], emoji: "🇮🇱" },
-  world: { he: "העולם", en: "The World", colors: ["#ffb340", "#ff3b6b", "#8f5bff"], emoji: "🌍" },
-  walks: { he: "הליכות בעיר", en: "City Walks", colors: ["#34e0a1", "#00a3ff", "#3a5bff"], emoji: "🚶" },
-  flights: { he: "טיסות", en: "Flights", colors: ["#7cc6ff", "#5b6bff", "#c04bff"], emoji: "✈️" },
-  random: { he: "מקומות רנדומליים", en: "Random Places", colors: ["#ff6a3d", "#ff2d87", "#ffd23f"], emoji: "🎲" },
+  israel: { he: "ישראל", en: "Israel", colors: ["#6FC8FF", "#19C6C6", "#3BE3A0"], emoji: "🇮🇱" },
+  world: { he: "העולם", en: "The World", colors: ["#FFD43B", "#FF8A2A", "#FF5A4E"], emoji: "🌍" },
+  walks: { he: "הליכות בעיר", en: "City Walks", colors: ["#3BE3A0", "#C8FF3D", "#19C6C6"], emoji: "🚶" },
+  flights: { he: "טיסות", en: "Flights", colors: ["#6FC8FF", "#FFFFFF", "#19C6C6"], emoji: "✈️" },
+  random: { he: "מקומות רנדומליים", en: "Random Places", colors: ["#FF8A2A", "#FFD43B", "#C8FF3D"], emoji: "🎲" },
 };
 
 export const MAP_IDS = Object.keys(MAPS);

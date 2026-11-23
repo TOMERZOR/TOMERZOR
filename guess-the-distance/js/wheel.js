@@ -37,6 +37,7 @@ class Wheel {
   mount() {
     this.el.scrollTop = this.index * ITEM;
     this.update(true);
+    this.aria();
   }
 
   update(silent = false) {
@@ -96,7 +97,12 @@ class Wheel {
     const step = { ArrowUp: -1, ArrowDown: 1, PageUp: -5, PageDown: 5 }[e.key];
     if (step) {
       e.preventDefault();
-      this.set(this.index + step, true);
+      // quick presses add up even while the wheel is still gliding
+      const from = this.pending ?? this.index;
+      this.pending = Math.max(0, Math.min(this.values.length - 1, from + step));
+      clearTimeout(this.pendingTimer);
+      this.pendingTimer = setTimeout(() => (this.pending = null), 700);
+      this.set(this.pending, true);
     } else if (e.key === "Home") {
       e.preventDefault();
       this.set(0, true);
@@ -122,10 +128,18 @@ export function createPicker(container, { measure, value, onTick, onChange }) {
   container.append(readout);
   let touched = false;
   const wheels = [];
+  const band = box.querySelector(".band");
+  // the selection band pulses on every notch, on top of the tick
+  const pulse = (cls) => {
+    band.classList.remove("tick", "locked");
+    void band.offsetWidth;
+    band.classList.add(cls);
+  };
   const changed = (_, user) => {
     if (user) {
       touched = true;
       onTick?.();
+      pulse("tick");
     }
     onChange?.(api.value);
   };
@@ -171,6 +185,8 @@ export function createPicker(container, { measure, value, onTick, onChange }) {
         w.el.tabIndex = on ? -1 : 0;
       });
       box.style.opacity = on ? 0.55 : "";
+      // locked in: the band flashes mint
+      if (on) pulse("locked");
     },
     focus() {
       wheels[0].el.focus({ preventScroll: true });

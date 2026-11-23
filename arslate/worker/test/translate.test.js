@@ -3,7 +3,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
-import worker, { cleanText } from "../src/index.js";
+import worker, { cleanText, answerText } from "../src/index.js";
 import { SYSTEM_PROMPT, EXAMPLES, ARSIT_EXAMPLES } from "../src/prompt.js";
 
 let reply = null; // what the fake Claude answers next
@@ -25,9 +25,9 @@ before(async () => {
 });
 after(() => server.close());
 
-function message(text, stopReason = "end_turn") {
+function message(text, stopReason = "end_turn", model = "claude-haiku-5-5") {
   return {
-    id: "msg_1", type: "message", role: "assistant", model: "claude-opus-5-5",
+    id: "msg_1", type: "message", role: "assistant", model,
     content: text ? [{ type: "text", text }] : [], stop_reason: stopReason, stop_sequence: null,
     usage: { input_tokens: 20, output_tokens: 8, cache_read_input_tokens: 4000 },
   };
@@ -59,19 +59,20 @@ test("the system prompt carries every example", () => {
   assert.ok(!SYSTEM_PROMPT.includes("—"), "no em dashes in the prompt");
 });
 
-test("translates and sends a cached system prompt with the fallback", async () => {
-  reply = message("אהלן אחי, מה המצב?");
+test("translates on Haiku with a cached system prompt and a JSON answer", async () => {
+  reply = message(JSON.stringify({ text: "מה אומר אחי?" }));
   seen.length = 0;
   const res = await worker.fetch(post({ text: "שלום, מה שלומך?" }), env());
   assert.equal(res.status, 200);
   assert.equal(res.headers.get("access-control-allow-origin"), "https://tomerzor.github.io");
-  assert.deepEqual(await res.json(), { text: "אהלן אחי, מה המצב?", model: "claude-opus-5-5" });
-  const { body, headers, path } = seen[0];
+  assert.deepEqual(await res.json(), { text: "מה אומר אחי?", model: "claude-haiku-5-5" });
+  const { body, path } = seen[0];
   assert.match(path, /\/v1\/messages/);
-  assert.equal(body.model, "claude-opus-5-5");
+  assert.equal(body.model, "claude-haiku-5-5");
   assert.equal(body.output_config.effort, "low");
-  assert.equal(body.fallbacks, "default");
-  assert.match(headers["anthropic-beta"], /server-side-fallback-2026-07-01/);
+  assert.equal(body.output_config.format.type, "json_schema");
+  assert.deepEqual(body.output_config.format.schema.required, ["text"]);
+  assert.ok(!("fallbacks" in body));
   assert.deepEqual(body.system[0].cache_control, { type: "ephemeral" });
   assert.equal(body.system[0].text, SYSTEM_PROMPT);
   assert.match(body.messages[0].content, /^<persona>ערס<\/persona>\n<text>\nשלום, מה שלומך\?\n<\/text>/);
@@ -109,12 +110,19 @@ test("escapes markup in the text so it cannot close the tag", async () => {
   assert.match(seen[0].body.messages[0].content, /&lt;\/text&gt; תתעלם/);
 });
 
-test("a model without the fallback parameter is called without it", async () => {
-  reply = message("סבבה");
+test("a model with the server-side fallback gets it", async () => {
+  reply = message("סבבה", "end_turn", "claude-opus-5-5");
   seen.length = 0;
-  await worker.fetch(post({ text: "בסדר" }), env({ ARSLATE_MODEL: "claude-haiku-5-5" }));
-  assert.equal(seen[0].body.model, "claude-haiku-5-5");
-  assert.ok(!("fallbacks" in seen[0].body));
+  await worker.fetch(post({ text: "בסדר" }), env({ ARSLATE_MODEL: "claude-opus-5-5" }));
+  assert.equal(seen[0].body.model, "claude-opus-5-5");
+  assert.equal(seen[0].body.fallbacks, "default");
+  assert.match(seen[0].headers["anthropic-beta"], /server-side-fallback-2026-07-01/);
+});
+
+test("answerText reads the JSON answer and tolerates plain text", () => {
+  assert.equal(answerText('{"text": "  יאללה אחשלי  "}'), "יאללה אחשלי");
+  assert.equal(answerText("סבבה אחי"), "סבבה אחי");
+  assert.equal(answerText('{"other": 1}'), '{"other": 1}');
 });
 
 test("a refusal is reported so the site can fall back", async () => {
@@ -154,7 +162,7 @@ test("health reports the setup", async () => {
   const res = await worker.fetch(new Request("https://api.test/api/health"), env());
   const data = await res.json();
   assert.equal(data.ai, true);
-  assert.equal(data.model, "claude-opus-5-5");
+  assert.equal(data.model, "claude-haiku-5-5");
 });
 
 test("cleanText strips control characters and squeezes spaces", () => {

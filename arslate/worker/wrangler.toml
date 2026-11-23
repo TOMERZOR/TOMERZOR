@@ -10,7 +10,7 @@ compatibility_flags = ["nodejs_compat"]
 ALLOWED_ORIGINS = "https://tomerzor.github.io,capacitor://localhost,http://localhost:8080,http://127.0.0.1:8080"
 # AI translations per visitor per day (needs the KV namespace below). 0 = no limit.
 DAILY_LIMIT = "60"
-ARSLATE_MODEL = "claude-opus-5-5"
+ARSLATE_MODEL = "claude-haiku-5-5"
 # Rewriting one short message is easy work: low effort keeps it fast and cheap.
 ARSLATE_EFFORT = "low"
 

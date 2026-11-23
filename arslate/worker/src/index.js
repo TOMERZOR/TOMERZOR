@@ -10,11 +10,29 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT, userMessage } from "./prompt.js";
 
-export const DEFAULT_MODEL = "claude-opus-5-5";
+export const DEFAULT_MODEL = "claude-haiku-5-5";
 const MAX_CHARS = 600;
 const CACHE_TTL = 60 * 60 * 24;
-// Models that accept the server-side refusal fallback (`fallbacks: "default"`).
+// Models that accept the server-side refusal fallback (`fallbacks: "default"`). Haiku has none: a refusal
+// falls back to the site's offline dictionary instead.
 const FALLBACK_MODELS = new Set(["claude-opus-5-5", "claude-opus-5", "claude-fable-5-1", "claude-sonnet-5-5"]);
+
+const ANSWER_SCHEMA = {
+  type: "object",
+  properties: { text: { type: "string", description: "The rewritten message only, in Hebrew." } },
+  required: ["text"],
+  additionalProperties: false,
+};
+
+/** The rewrite from the model's JSON answer; plain text (or anything unparsable) is used as is. */
+export function answerText(raw) {
+  const s = String(raw || "").trim();
+  try {
+    const v = JSON.parse(s);
+    if (v && typeof v.text === "string") return v.text.trim();
+  } catch (e) {}
+  return s;
+}
 
 function allowedOrigins(env) {
   return (env.ALLOWED_ORIGINS || "*").split(",").map((s) => s.trim()).filter(Boolean);
@@ -88,11 +106,12 @@ export async function translate({ text, previous, persona, env }) {
     max_tokens: 4000,
     system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
     messages: [{ role: "user", content: userMessage(text, previous, persona) }],
-    output_config: { effort: env.ARSLATE_EFFORT || "low" },
+    // The answer comes back as {"text": "..."}: no preamble, quotes or alternatives can slip around it.
+    output_config: { effort: env.ARSLATE_EFFORT || "low", format: { type: "json_schema", schema: ANSWER_SCHEMA } },
     ...(FALLBACK_MODELS.has(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" } : {}),
   });
   if (msg.stop_reason === "refusal") return { refused: true, model: msg.model, usage: msg.usage };
-  const out = msg.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+  const out = answerText(msg.content.filter((b) => b.type === "text").map((b) => b.text).join(""));
   return { text: out, model: msg.model, usage: msg.usage, truncated: msg.stop_reason === "max_tokens" };
 }
 

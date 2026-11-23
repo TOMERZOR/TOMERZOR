@@ -80,6 +80,33 @@ jobs:
           done
           echo "::error::The API did not report ai: true"; cat health.json; exit 1
 
+      - name: Sample translations
+        if: steps.secrets.outputs.ready == 'true'
+        # A few real translations in the log, to see the live model's voice after each deploy (never fails the job).
+        continue-on-error: true
+        env:
+          API_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          while IFS='|' read -r persona text; do
+            body=$(jq -nc --arg t "$text" --arg p "$persona" '{text: $t, persona: $p}')
+            out=$(curl -sS -X POST "$API_URL/api/translate" -H 'content-type: application/json' \
+              -H 'origin: https://tomerzor.github.io' --data "$body" | jq -r '.text // .error')
+            echo "[$persona] $text  =>  $out"
+          done <<'EOF_SAMPLES'
+          ars|שלום, מה שלומך?
+          ars|קניתי אוטו חדש והוא ממש יפה
+          ars|תביא לי מים בבקשה
+          ars|הבוס שלי מעצבן אותי, נמאס לי מהעבודה
+          ars|השכן שלי משקר כל הזמן
+          ars|אני מאחר קצת, אני תקוע בפקק
+          ars|תוכל לבדוק לי את הרכב השבוע? כמה זה יעלה?
+          ars|אתה רוצה לבוא למסיבה הערב?
+          arsit|איזה כלב חמוד
+          arsit|זה מצחיק מאוד
+          arsit|תעזבי אותי, אני עייפה
+          arsit|אני מאוד רוצה את השמלה הזאת
+          EOF_SAMPLES
+
       - name: Point the site at the API
         if: steps.secrets.outputs.ready == 'true'
         env:

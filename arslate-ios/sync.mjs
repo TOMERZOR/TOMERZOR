@@ -20,7 +20,7 @@ const NATIVE = {
 
 rmSync("www", { recursive: true, force: true });
 mkdirSync("www");
-cpSync("../arslate", "www", { recursive: true, filter: (p) => !/\/(worker|README\.md|privacy\.html)$/.test(p) && !p.includes("/worker/") });
+cpSync("../arslate", "www", { recursive: true, filter: (p) => !/\/(worker|README\.md|HANDOFF\.md|privacy\.html)$/.test(p) && !p.includes("/worker/") });
 copyFileSync("native.js", "www/native.js");
 
 writeFileSync("www/config.js",

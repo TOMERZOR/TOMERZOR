@@ -82,16 +82,23 @@
     if (!Ad || !CFG.rewardedId) return (adsReady = Promise.resolve(false));
     adsReady = (async () => {
       try {
-        let info = await Ad.requestConsentInfo();                       // GDPR (Google UMP)
-        if (info.isConsentFormAvailable && info.status === "REQUIRED") info = await Ad.showConsentForm();
-        if (info.canRequestAds === false) return false;
+        let info = null;
+        try {                                                          // GDPR (Google UMP)
+          info = await Ad.requestConsentInfo();
+          if (info.isConsentFormAvailable && info.status === "REQUIRED") info = await Ad.showConsentForm();
+        } catch (e) {
+          // נכשל כשאין טופס הסכמה מוגדר ב-AdMob (Privacy & messaging) או בלי רשת.
+          // לא חוסמים בגלל זה: מחוץ לאירופה לא צריך הסכמה, ו-Google מחליטה בעצמה מה מותר להציג.
+          info = null;
+        }
+        if (info && info.canRequestAds === false) { adsReady = null; return false; }
         try {                                                          // App Tracking Transparency, רק כשצריך פרסומת
           const st = await Ad.trackingAuthorizationStatus();
           if (st && st.status === "notDetermined") await Ad.requestTrackingAuthorization();
         } catch (e) {}
         await Ad.initialize({ initializeForTesting: !!CFG.testing });
         return true;
-      } catch (e) { return false; }
+      } catch (e) { adsReady = null; return false; }                   // ננסה שוב בפעם הבאה
     })();
     return adsReady;
   }
@@ -102,11 +109,12 @@
     adLoaded.then((ok) => { if (!ok) adLoaded = null; });
     return adLoaded;
   }
+  // "ok" = צפה עד הסוף וקיבל את הפרס, "cancel" = סגר לפני הסוף, "fail" = לא היה סרטון להציג
   async function watchAd() {
-    if (!(await preload())) return false;
+    if (!(await preload())) return "fail";
     adLoaded = null;
-    try { await P.AdMob.showRewardVideoAd(); return true; }
-    catch (e) { return false; }
+    try { await P.AdMob.showRewardVideoAd(); return "ok"; }
+    catch (e) { return e && e.code === "REWARDED_AD_CANCELLED" ? "cancel" : "fail"; }
     finally { setTimeout(preload, 1500); }
   }
 
@@ -122,7 +130,19 @@
         primary: `צפייה בסרטון, ועוד ${CFG.perAd}`,
         secondary: "להמשיך עם המילון",
       });
-      if (!want || !(await watchAd())) return false;
+      if (!want) return false;
+      let watched = await watchAd();
+      while (watched !== "ok") {                                       // אין סרטון: אומרים את זה, לא נופלים בשקט
+        if (watched === "cancel") return false;
+        const again = await sheet({
+          title: "הסרטון לא נטען",
+          body: "אין כרגע סרטון להציג. אפשר לנסות שוב עוד רגע, או להמשיך עם המילון שבמכשיר.",
+          primary: "לנסות שוב",
+          secondary: "להמשיך עם המילון",
+        });
+        if (!again) return false;
+        watched = await watchAd();
+      }
       q = quota(); q.bonus += CFG.perAd;
     }
     q.used += 1;

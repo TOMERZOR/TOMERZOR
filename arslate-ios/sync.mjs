@@ -5,7 +5,7 @@
 // Settings (environment variables, all optional):
 //   ARSLATE_API       the AI server       (default: the deployed Cloudflare worker)
 //   ADMOB_REWARDED    rewarded ad unit id (default: the real ArsLate unit; with ADMOB_TESTING on, the plugin swaps in Google's test unit)
-//   ADMOB_TESTING     "0" for real ads    (default: test ads)
+//   ADMOB_TESTING     "1" for Google test ads (default: real ads)
 //   FREE_PER_DAY      free AI translations a day (default 5)
 //   PER_AD            AI translations a rewarded ad adds (default 10)
 import { cpSync, rmSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
@@ -13,7 +13,7 @@ import { cpSync, rmSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } 
 const API = process.env.ARSLATE_API ?? "https://arslate-api.moffy-app.workers.dev";
 const NATIVE = {
   rewardedId: process.env.ADMOB_REWARDED || "ca-app-pub-4472181066002865/7969355780",
-  testing: process.env.ADMOB_TESTING !== "0",
+  testing: process.env.ADMOB_TESTING === "1",
   freePerDay: Number(process.env.FREE_PER_DAY || 5),
   perAd: Number(process.env.PER_AD || 10),
 };

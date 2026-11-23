@@ -49,7 +49,7 @@
         `<div style="font-weight:800;font-size:26px;letter-spacing:-.035em;line-height:1.15">${title}</div>` +
         `<div style="margin-top:10px;color:#4A5261;font-size:17px;line-height:1.5">${body}</div>` +
         `<button data-a="1" style="margin-top:22px;width:100%;height:56px;border:0;border-radius:999px;background:#0E1116;color:#fff;font:inherit;font-size:18px;font-weight:700">${primary}</button>` +
-        `<button data-a="0" style="margin-top:8px;width:100%;height:50px;border:0;border-radius:999px;background:transparent;color:#4A5261;font:inherit;font-size:16px;font-weight:600">${secondary}</button>`;
+        (secondary ? `<button data-a="0" style="margin-top:8px;width:100%;height:50px;border:0;border-radius:999px;background:transparent;color:#4A5261;font:inherit;font-size:16px;font-weight:600">${secondary}</button>` : "");
       wrap.appendChild(card);
       document.body.appendChild(wrap);
       requestAnimationFrame(() => { wrap.style.opacity = "1"; card.style.transform = "none"; });
@@ -132,16 +132,16 @@
       });
       if (!want) return false;
       let watched = await watchAd();
-      while (watched !== "ok") {                                       // אין סרטון: אומרים את זה, לא נופלים בשקט
-        if (watched === "cancel") return false;
-        const again = await sheet({
-          title: "הסרטון לא נטען",
-          body: "אין כרגע סרטון להציג. אפשר לנסות שוב עוד רגע, או להמשיך עם המילון שבמכשיר.",
-          primary: "לנסות שוב",
-          secondary: "להמשיך עם המילון",
+      if (watched === "fail") watched = await watchAd();               // עוד ניסיון אחד: לפעמים הטעינה הראשונה נופלת
+      if (watched === "cancel") return false;                          // סגר לפני הסוף: בלי פרס
+      if (watched === "fail") {
+        // אין סרטון להציג: אפליקציה חדשה ש-AdMob עוד לא אישר, חוסם פרסומות, רשת חלשה.
+        // זו לא אשמת המשתמש, אז נותנים את התרגומים בכל זאת. השרת עדיין מגביל ל-DAILY_LIMIT ביום לכל IP.
+        await sheet({
+          title: "אין סרטון כרגע",
+          body: `הפעם עלינו. קיבלת עוד ${CFG.perAd} תרגומים חכמים.`,
+          primary: "יאללה",
         });
-        if (!again) return false;
-        watched = await watchAd();
       }
       q = quota(); q.bonus += CFG.perAd;
     }

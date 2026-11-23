@@ -6,7 +6,7 @@
 - **מסך הסכמה** לפני התרגום החכם הראשון: הטקסט נשלח ל-Claude של Anthropic. בלי הסכמה הכל רץ במילון שבמכשיר. (אפל דורשת את זה מאז 2025, הנחיה 5.1.2(i).)
 - **מכסה יומית**: 5 תרגומים חכמים בחינם ביום. אחר כך סרטון פרסומת (AdMob Rewarded) נותן עוד 10. המילון שבמכשיר תמיד בלי הגבלה.
 
-כרגע הפרסומות הן **פרסומות בדיקה של Google** (מזהים ציבוריים). לפני החנות מחליפים במזהים שלך, ראו למטה.
+הפרסומות אמיתיות: האפליקציה והיחידה ב-AdMob כבר מוגדרות (`ca-app-pub-4472181066002865~1240295901`, Rewarded `ca-app-pub-4472181066002865/7969355780`). לבדיקה בלי פרסומות אמיתיות: `ADMOB_TESTING=1 npm run sync`. אם אין סרטון להציג (למשל לפני ש-AdMob אישר את האפליקציה), המשתמש מקבל את 10 התרגומים בכל זאת.
 
 ## להריץ על אייפון (מק עם Xcode עדכני)
 
@@ -26,18 +26,12 @@ npm run open         # פותח את Xcode
 | משתנה | ברירת מחדל | מה זה |
 | --- | --- | --- |
 | `ARSLATE_API` | השרת ב-Cloudflare | כתובת שרת ה-AI. ריק = רק המילון שבמכשיר |
-| `ADMOB_REWARDED` | יחידת בדיקה של Google | מזהה ה-Rewarded ad unit שלך מ-AdMob |
-| `ADMOB_TESTING` | `1` | `0` = פרסומות אמיתיות |
+| `ADMOB_REWARDED` | יחידת ה-Rewarded של ערסלייט | מזהה יחידת הפרסומת ב-AdMob |
+| `ADMOB_TESTING` | ריק (פרסומות אמיתיות) | `1` = פרסומות בדיקה של Google |
 | `FREE_PER_DAY` | `5` | תרגומים חכמים בחינם ביום |
 | `PER_AD` | `10` | כמה תרגומים סרטון אחד נותן |
 
-לגרסה לחנות:
-
-```bash
-ADMOB_REWARDED=ca-app-pub-XXXX/YYYY ADMOB_TESTING=0 npm run sync
-```
-
-ובנוסף, ב-`ios/App/App/Info.plist`: מחליפים את `GADApplicationIdentifier` במזהה האפליקציה שלך מ-AdMob (`ca-app-pub-XXXX~ZZZZ`), ומוסיפים ל-`SKAdNetworkItems` את הרשימה המלאה מ[המדריך של Google](https://developers.google.com/admob/ios/quick-start#update_your_infoplist).
+לגרסה לחנות פשוט `npm run sync` (המזהים כבר בפנים, וגם רשימת ה-`SKAdNetworkItems` המלאה ב-`Info.plist`). לפני כל העלאה מעלים את `CURRENT_PROJECT_VERSION` ב-`project.pbxproj` באחד.
 
 ## מה יש בפנים
 

@@ -14,6 +14,7 @@
   if (!Cap || !Cap.isNativePlatform || !Cap.isNativePlatform()) return;
   const P = Cap.Plugins || {};
   const CFG = Object.assign({ freePerDay: 5, perAd: 10, rewardedId: "", testing: true }, window.ARSLATE_NATIVE_CONFIG || {});
+  const PRIVACY_URL = "https://tomerzor.github.io/TOMERZOR/arslate/privacy.html";
 
   /* ---------- רטט ---------- */
   function haptic(kind) {
@@ -66,7 +67,9 @@
     if (c && !c.ok && Date.now() - c.at < 7 * 864e5) return false;   // ויתר: לא שואלים שוב שבוע
     const ok = await sheet({
       title: "תרגום חכם עם AI",
-      body: "כדי לתרגם כמו ערס אמיתי, הטקסט שכתבת נשלח לשרת שלנו ומשם ל-Claude של Anthropic, רק כדי לנסח אותו מחדש. לא שומרים אותו עם הפרטים שלך. בלי זה האפליקציה עובדת עם המילון שבמכשיר.",
+      body: "כדי לתרגם כמו ערס אמיתי, הטקסט שכתבת נשלח לשרת שלנו ומשם ל-Claude של Anthropic, רק כדי לנסח אותו מחדש. לא שומרים אותו עם הפרטים שלך. בלי זה האפליקציה עובדת עם המילון שבמכשיר. " +
+        // אפל דורשת קישור למדיניות הפרטיות גם בתוך האפליקציה. קישור חיצוני נפתח ב-Safari.
+        `<a href="${PRIVACY_URL}" style="color:#0E1116;font-weight:600">מדיניות הפרטיות</a>`,
       primary: "יאללה, מאשר",
       secondary: "רק המילון שבמכשיר",
     });

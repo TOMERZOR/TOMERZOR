@@ -96,7 +96,7 @@ cd arslate-ios && npm install && npm run sync && npm run open
    - ב-`Info.plist`: `GADApplicationIdentifier` = מזהה האפליקציה שלך, והרשימה המלאה של `SKAdNetworkItems` מהמדריך של Google.
    - `ADMOB_REWARDED=ca-app-pub-XXXX/YYYY ADMOB_TESTING=0 npm run sync`.
    - ב-AdMob: Privacy & messaging → טופס הסכמה ל-GDPR (הקוד כבר מציג אותו כשצריך).
-4. **מדיניות פרטיות:** `arslate/privacy.html` (יוצא לאוויר ב-`https://tomerzor.github.io/TOMERZOR/arslate/privacy.html`). צריך להחליף את `CONTACT_EMAIL` במייל ליצירת קשר.
+4. **מדיניות פרטיות:** `arslate/privacy.html` (יוצא לאוויר ב-`https://tomerzor.github.io/TOMERZOR/arslate/privacy.html`). מייל ליצירת קשר: tomerzoref11@gmail.com.
 5. **App Privacy ב-App Store Connect:**
    - User Content (הטקסט): App Functionality, לא מקושר לזהות, לא tracking.
    - Identifiers / Device ID ו-Usage Data של פרסומות: Third-Party Advertising, ו-tracking אם מאשרים ATT.

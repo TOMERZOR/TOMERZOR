@@ -1,6 +1,6 @@
 # ערסלייט ב-App Store: מה ממלאים ואיפה
 
-נכתב ב-23 בנובמבר 2026. האפליקציה כבר רשומה ב-App Store Connect (מזהה 6838284419, Bundle ID `com.tomerzor.arslate`, SKU `com.tomerzor.arslate`, שפה ראשית עברית). גרסה 1.0 build 3 הועלתה עם פרסומות אמיתיות.
+נכתב ב-23 בנובמבר 2026. האפליקציה כבר רשומה ב-App Store Connect (מזהה 6838284419, Bundle ID `com.tomerzor.arslate`, SKU `com.tomerzor.arslate`, שפה ראשית עברית). גרסה 1.0 build 4 הועלתה עם פרסומות אמיתיות וקישור למדיניות הפרטיות.
 
 נכנסים ל-appstoreconnect.apple.com → **Apps** → **ערסלייט**.
 
@@ -47,7 +47,7 @@
 
 **Version**: `1.0` · **Copyright**: `2026 Tomer Zoref`
 
-**Build**: לוחצים ➕ ובוחרים **1.0 (3)**. לא 1 ולא 2: בהן יש פרסומות בדיקה.
+**Build**: לוחצים ➕ ובוחרים **1.0 (4)**: היא הראשונה עם קישור למדיניות הפרטיות בתוך האפליקציה (1 ו-2 עם פרסומות בדיקה, 3 בלי הקישור).
 
 ---
 
@@ -97,7 +97,7 @@ Get Started → **Yes, we collect data**. מסמנים:
 ## 5. App Review Information (בגרסה 1.0, למטה)
 
 - Sign-in required: **No**
-- Contact: השם, הטלפון והמייל שלך.
+- Contact: Tomer Zoref, tomerzoref11@gmail.com, והטלפון שלך.
 - **Notes** (באנגלית, בשביל הבודק):
 ```
 ArsLate is a humor app: it rewrites ordinary Hebrew into Israeli street slang ("ars"). The slang includes profanity on purpose; the app is rated 18+.

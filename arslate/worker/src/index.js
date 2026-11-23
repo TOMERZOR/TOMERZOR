@@ -67,6 +67,13 @@ function json(data, status, cors) {
   });
 }
 
+let versionMemo = null;
+async function promptVersion(env) {
+  const model = env.ARSLATE_MODEL || DEFAULT_MODEL;
+  if (!versionMemo || versionMemo.model !== model) versionMemo = { model, v: (await sha256(model + "\n" + SYSTEM_PROMPT)).slice(0, 12) };
+  return versionMemo.v;
+}
+
 async function sha256(text) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -134,7 +141,8 @@ async function handleTranslate(request, env, cors) {
   const persona = body.persona === "arsit" ? "arsit" : "ars";
 
   // Only first versions are cached; "another version" always asks again.
-  const cacheKey = env.ARSLATE_KV && !previous ? `tr:${persona}:${await sha256(text)}` : null;
+  // The key includes the model and the instructions, so a new prompt or model never serves yesterday's answers.
+  const cacheKey = env.ARSLATE_KV && !previous ? `tr:${await promptVersion(env)}:${persona}:${await sha256(text)}` : null;
   if (cacheKey) {
     const hit = await env.ARSLATE_KV.get(cacheKey);
     if (hit) return json({ text: hit, cached: true }, 200, cors);
